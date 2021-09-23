@@ -1,5 +1,4 @@
-# LittleJS
-The Tiny JavaScript Game Engine That Can!
+# LittleJS - The Tiny JavaScript Game Engine That Can!
 
 ## Engine Features
 
