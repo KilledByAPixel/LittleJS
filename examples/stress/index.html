@@ -1,0 +1,108 @@
+<html><head><title>LittleJS Stress Test</title></head><body>
+<script src=../../engine/engine.all.min.js></script>
+<script>
+
+/*
+    LittleJS Stress Test
+    - Render over 50,000 sprites at 60 fps in Chrome
+    - Uses glOverlay mode in Firefox to improve performance
+    - All code and the image is contained in this html file
+*/
+
+'use strict';
+
+// keep our own list of simple sprites and track fps
+let sprites, timeMS, showFPS, statsDisplay, spriteColor, spriteAdditiveColor;
+
+// non chromium browsers like firefox may have slow compositing
+// so we use glOverlay mode to work around the issue
+glOverlay = !window['chrome'];
+
+engineInit(
+
+///////////////////////////////////////////////////////////////////////////////
+()=> // appInit 
+{
+    // set up camera and background
+    cameraPos = vec2(25, 12);
+    cameraScale = 32;
+    mainCanvas.style.background = '#555';
+    sprites = [];
+
+    // display stats using a div so when using glOverlay it still appears on top
+    document.body.appendChild(statsDisplay = document.createElement('div'));
+    statsDisplay.style = 'position:absolute;width:100%;top:9;font-size:9em;text-align:center;font-family:arial;user-select:none';
+},
+
+///////////////////////////////////////////////////////////////////////////////
+()=> // appUpdate
+{
+    // mouse click = change color
+    if (mouseWasPressed(0))
+        spriteColor = randColor(), spriteAdditiveColor = randColor(new Color(.5,.5,.5));
+
+    // mouse hold = add objects
+    if (mouseIsDown(0))
+        for(let i=100;i--;)
+            sprites.push({
+                pos:mousePos.add(randInCircle(2)),
+                angle:rand(), 
+                velocity:randInCircle(.2),
+                color:spriteColor = spriteColor.mutate(), 
+                additiveColor:spriteAdditiveColor.mutate()
+            });
+    
+    // mouse wheel = zoom
+    cameraScale = clamp(cameraScale*(1-mouseWheel/10), 1e3, 1);
+},
+
+///////////////////////////////////////////////////////////////////////////////
+()=> // appUpdatePost
+{
+},
+
+///////////////////////////////////////////////////////////////////////////////
+()=> // appRender
+{
+    // track fps and update stats
+    const frameTimeMS = Date.now();
+    showFPS = lerp(.05, 1e3/(frameTimeMS - timeMS||1), showFPS);
+    timeMS = frameTimeMS;
+    statsDisplay.innerText = sprites.length + ' Sprites\n' + showFPS.toFixed(1) + ' FPS';
+
+    const size = vec2(.5);
+    for(const sprite of sprites)
+    {
+        // keep sprites above 0
+        sprite.pos.y = max(sprite.pos.y, 0);
+
+        // apply gravity
+        sprite.velocity.y -= .005;
+        
+        // apply velocity
+        sprite.pos = sprite.pos.add(sprite.velocity);
+
+        // bounce
+        if (sprite.pos.y < 0)
+            sprite.velocity.y = rand(.5,.1);
+        
+        // clamp to sides
+        sprite.pos.x = mod(sprite.pos.x, 50);
+
+        // rotate sprite
+        sprite.angle += .01*sign(sprite.velocity.x);
+
+        // draw the sprite
+        glDraw(sprite.pos.x, sprite.pos.y, .5, .5, sprite.angle, 0, 0, 1, 1, 
+            sprite.color.rgbaInt(), sprite.additiveColor.rgbaInt());
+    }
+},
+
+///////////////////////////////////////////////////////////////////////////////
+()=> // appRenderPost
+{
+},
+'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAYklEQVR42u2TQQqAQAwDPfg6P5SX+b7VgkpDhNH7DuTSNGFZ6LJv66OTUWoz9M28sCXyw2xLpjc/CiQNQpIVFGaKZa+I538JZ4EDYSgAsCB+Pma5OwtgGWd2ZUCE4xr/6M4d3aFsj7DwoPQAAAAASUVORK5CYII=' // tile data
+);
+
+</script>
