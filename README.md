@@ -2,19 +2,19 @@
 
 ## Engine Features
 
-- Engine and debug system are separate from game code
-- Object oriented with base class engine object
-- Engine handles core update loop
+- Small footprint with no dependencies, starter project is under 6K zipped
+- Super fast rendering system for tile sheets, ~50,000 sprites at 60fps
+- Engine handles core update/render loop for you
+- Object oriented system with base class engine object
 - Base class object handles update, physics, collision, rendering, etc
 - Engine helper classes and functions like Vector2, Color, and Timer
-- Super fast rendering system for tile sheets, ~50,000 sprites at 60fps
 - Sound effects audio with zzfx and music with zzfxm, mp3s, or wavs
 - Input processing system with gamepad and touchscreen support
 - Tile layer rendering and collision system
 - Particle effect system
 - Debug tools and debug rendering system
 - Several easy to undersand example projects you can build on
-- A buld script for size coding compitions to minify your game
+- A build system for size coding compitions to minify your game
 
 ## Examples
 
