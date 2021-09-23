@@ -22,7 +22,7 @@
 ### [Hello World](https://killedbyapixel.github.io/LittleJS/) - Starter project
 ### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout) - Simple breakout style game
 ### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer) - Complex platformer with procedural levels and destruction
-### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress) - Max load test, target is ~50,000 at 60 fps in chrome, about half that on Firefox
+### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress) - Max sprite test, target is ~50,000 at 60 fps in chrome, about half that on Firefox
 
 Also check out my game [Space Huggers](https://github.com/KilledByAPixel/SpaceHuggers), an run and gun roguelike that I am building with this game engine.
 
