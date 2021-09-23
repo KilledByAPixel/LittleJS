@@ -7,7 +7,6 @@
 let levelSize, ball, paddle, score;
 
 engineInit(
-
 ///////////////////////////////////////////////////////////////////////////////
 ()=> // gameInit 
 {
@@ -50,6 +49,6 @@ engineInit(
     // draw text on top of everything
     drawText('Score: ' + score, cameraPos.add(vec2(0,21)), 2, new Color, .3);
 },
-
+///////////////////////////////////////////////////////////////////////////////
 'tiles.png' // all the tile art goes in this texture
 );

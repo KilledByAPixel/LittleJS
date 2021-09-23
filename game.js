@@ -6,8 +6,7 @@
 
 let particleEmiter;
 
-engineInit(
-
+engineInit( // startup LittleJS
 ///////////////////////////////////////////////////////////////////////////////
 ()=> // gameInit 
 {
@@ -88,6 +87,6 @@ engineInit(
     // draw text on top of everything
     drawText('Hello World', cameraPos, 3, new Color, .1);
 },
-
+///////////////////////////////////////////////////////////////////////////////
 'tiles.png' // all the tile art goes in this texture
 );

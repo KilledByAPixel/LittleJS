@@ -49,16 +49,8 @@ type %BUILD_FILENAME% >> index.html
 echo ^</script^> >> index.html
 del %BUILD_FILENAME%
 
-rem minify the png
-call imagemin ..\tiles.png > tiles.png
-if %ERRORLEVEL% NEQ 0 (
-    pause
-    exit /b %ERRORLEVEL%
-)
-
-rem zip the result, ect is recommended over advzip
-call advzip -a -4 -i 99 ..\%NAME%.zip index.html tiles.png
-rem call ..\ect -9 -strip -zip ..\%NAME%.zip index.html
+rem zip the result, ect is recommended
+call ect -9 -strip -zip ..\%NAME%.zip index.html tiles.png
 if %ERRORLEVEL% NEQ 0 (
     pause
     exit /b %ERRORLEVEL%
