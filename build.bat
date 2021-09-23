@@ -1,7 +1,7 @@
 rem Simple build script for LittleJS by Frank Force
 rem minfies and combines index.html and index.js and zips the result
 
-set NAME=app
+set NAME=game
 set BUILD_FOLDER=build
 set BUILD_FILENAME=index.js
 
@@ -15,8 +15,8 @@ cd %BUILD_FOLDER%
 type ..\engine\engine.all.min.js >> %BUILD_FILENAME%
 echo. >> %BUILD_FILENAME%
 
-rem add your app files to include here
-type ..\app.js >> %BUILD_FILENAME%
+rem add your game's files to include here
+type ..\game.js >> %BUILD_FILENAME%
 echo. >> %BUILD_FILENAME%
 
 rem minify code with closure
@@ -47,6 +47,7 @@ rem build the html
 echo ^<body^>^<script^> >> index.html
 type %BUILD_FILENAME% >> index.html
 echo ^</script^> >> index.html
+del %BUILD_FILENAME%
 
 rem minify the png
 call imagemin ..\tiles.png > tiles.png

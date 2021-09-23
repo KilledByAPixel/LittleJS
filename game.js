@@ -9,7 +9,7 @@ let particleEmiter;
 engineInit(
 
 ///////////////////////////////////////////////////////////////////////////////
-()=> // appInit 
+()=> // gameInit 
 {
     // create tile collision
     initTileCollision(vec2(35,20));
@@ -60,7 +60,7 @@ engineInit(
     particleEmiter.trailScale = 2;
 },
 ///////////////////////////////////////////////////////////////////////////////
-()=> // appUpdate
+()=> // gameUpdate
 {
     // play sound when mouse is pressed
     if (mouseWasPressed(0))
@@ -78,18 +78,18 @@ engineInit(
 
 },
 ///////////////////////////////////////////////////////////////////////////////
-()=> // appUpdatePost
+()=> // gameUpdatePost
 {
 
 },
 ///////////////////////////////////////////////////////////////////////////////
-()=> // appRender
+()=> // gameRender
 {
     // draw a grey square
     drawRect(cameraPos, tileCollisionSize.add(vec2(5)), new Color(.2,.2,.2));
 },
 ///////////////////////////////////////////////////////////////////////////////
-()=> // appRenderPost
+()=> // gameRenderPost
 {
     // draw text on top of everything
     drawText('Hello World', cameraPos, 3, new Color, .1);

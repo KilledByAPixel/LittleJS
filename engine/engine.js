@@ -1,5 +1,5 @@
 /*
-    LittleJS - The Little JavaScript Game Engine That Can - By Frank Force 2021
+    LittleJS - The Tiny JavaScript Game Engine That Can - By Frank Force 2021
 
     Engine Features
     - Engine and debug system are separate from game code
@@ -12,7 +12,7 @@
     - Input processing system with gamepad and touchscreen support
     - Tile layer rendering and collision system
     - Particle effect system
-    - Automatically calls appInit(), appUpdate(), appUpdatePost(), appRender(), appRenderPost()
+    - Automatically calls gameInit(), gameUpdate(), gameUpdatePost(), gameRender(), gameRenderPost()
     - Debug tools and debug rendering system
     - Call engineInit() to start it up!
 */
@@ -28,7 +28,7 @@ tileImageSize, tileImageSizeInverse, shrinkTilesX, shrinkTilesY, drawCount;
 const tileImage = new Image(); // the tile image used by everything
 
 // call this function to start the engine
-function engineInit(appInit, appUpdate, appUpdatePost, appRender, appRenderPost, tileImageSource)
+function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, tileImageSource)
 {
     // init engine when tiles load
     tileImage.onload = ()=>
@@ -47,7 +47,7 @@ function engineInit(appInit, appUpdate, appUpdatePost, appRender, appRenderPost,
 
         debugInit();
         glInit();
-        appInit();
+        gameInit();
         engineUpdate();
     };
 
@@ -91,9 +91,9 @@ function engineInit(appInit, appUpdate, appUpdatePost, appRender, appRenderPost,
         for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / FPS)
         {
             // main frame update
-            appUpdate();
+            gameUpdate();
             engineUpdateObjects();
-            appUpdatePost();
+            gameUpdatePost();
             debugUpdate();
 
             // update input
@@ -130,12 +130,12 @@ function engineInit(appInit, appUpdate, appUpdatePost, appRender, appRenderPost,
 
         // render sort then render while removing destroyed objects
         glPreRender(mainCanvas.width, mainCanvas.height);
-        appRender();
+        gameRender();
         engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
         for(const o of engineObjects)
             o.destroyed || o.render();
         glCopyToContext(mainContext);
-        appRenderPost();
+        gameRenderPost();
         debugRender();
 
         if (showWatermark)

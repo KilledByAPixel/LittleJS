@@ -9,12 +9,13 @@ let levelSize, ball, paddle, score;
 engineInit(
 
 ///////////////////////////////////////////////////////////////////////////////
-()=> // appInit 
+()=> // gameInit 
 {
+    fixedWidth = 1280, fixedHeight = 720; // 720p
     score = 0;
-    levelSize = vec2(72, 50);
-    paddle = new Paddle(vec2(levelSize.x/2-12,2));
+    levelSize = vec2(72, 40);
     cameraPos = levelSize.scale(.5);
+    paddle = new Paddle(vec2(levelSize.x/2-12,2));
 
     // spawn blocks
     const pos = vec2();
@@ -23,7 +24,7 @@ engineInit(
         new Block(pos);
 },
 ///////////////////////////////////////////////////////////////////////////////
-()=> // appUpdate
+()=> // gameUpdate
 {
     // spawn ball
     if (!ball && mouseWasPressed(0))
@@ -33,21 +34,21 @@ engineInit(
     }
 },
 ///////////////////////////////////////////////////////////////////////////////
-()=> // appUpdatePost
+()=> // gameUpdatePost
 {
 
 },
 ///////////////////////////////////////////////////////////////////////////////
-()=> // appRender
+()=> // gameRender
 {
     // draw a grey square for the background
     drawRect(cameraPos, levelSize, new Color(.2,.2,.2));
 },
 ///////////////////////////////////////////////////////////////////////////////
-()=> // appRenderPost
+()=> // gameRenderPost
 {
     // draw text on top of everything
-    drawText('Score: ' + score, cameraPos.add(vec2(0,23)), 3, new Color, .3);
+    drawText('Score: ' + score, cameraPos.add(vec2(0,21)), 2, new Color, .3);
 },
 
 'tiles.png' // all the tile art goes in this texture

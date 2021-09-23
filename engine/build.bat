@@ -1,6 +1,5 @@
-rem SIMPLE BUILD SCRIPT FOR JS13k by FRANK FORCE
+rem Simple build script for LittleJS Engine by Frank Force
 rem minfies and combines index.html and index.js and zips the result
-
 
 rem --- BUILD ENGINE DEBUG ---
 

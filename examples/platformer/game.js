@@ -12,7 +12,7 @@ const lowGraphicsSettings = glOverlay = !window['chrome'];
 engineInit(
 
 ///////////////////////////////////////////////////////////////////////////////
-()=> // appInit 
+()=> // gameInit 
 {
     gravity = -.01;
     cameraScale = 4*16;
@@ -21,7 +21,7 @@ engineInit(
 },
 
 ///////////////////////////////////////////////////////////////////////////////
-()=> // appUpdate
+()=> // gameUpdate
 {
     // respawn player
     if (player.deadTimer.get() > 1)
@@ -47,7 +47,7 @@ engineInit(
 },
 
 ///////////////////////////////////////////////////////////////////////////////
-()=> // appUpdatePost
+()=> // gameUpdatePost
 {
     // move camera to player
     cameraPos = cameraPos.lerp(player.pos, clamp(player.getAliveTime()/2));
@@ -57,14 +57,14 @@ engineInit(
 },
 
 ///////////////////////////////////////////////////////////////////////////////
-()=> // appRender
+()=> // gameRender
 {
     drawSky();
     drawStars();
 },
 
 ///////////////////////////////////////////////////////////////////////////////
-()=> // appRenderPost
+()=> // gameRenderPost
 {
 },
 

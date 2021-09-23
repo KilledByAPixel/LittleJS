@@ -21,7 +21,7 @@ glOverlay = !window['chrome'];
 engineInit(
 
 ///////////////////////////////////////////////////////////////////////////////
-()=> // appInit 
+()=> // gameInit 
 {
     // set up camera and background
     cameraPos = vec2(25, 12);
@@ -35,7 +35,7 @@ engineInit(
 },
 
 ///////////////////////////////////////////////////////////////////////////////
-()=> // appUpdate
+()=> // gameUpdate
 {
     // mouse click = change color
     if (mouseWasPressed(0))
@@ -57,12 +57,12 @@ engineInit(
 },
 
 ///////////////////////////////////////////////////////////////////////////////
-()=> // appUpdatePost
+()=> // gameUpdatePost
 {
 },
 
 ///////////////////////////////////////////////////////////////////////////////
-()=> // appRender
+()=> // gameRender
 {
     // track fps and update stats
     const frameTimeMS = Date.now();
@@ -99,7 +99,7 @@ engineInit(
 },
 
 ///////////////////////////////////////////////////////////////////////////////
-()=> // appRenderPost
+()=> // gameRenderPost
 {
 },
 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAYklEQVR42u2TQQqAQAwDPfg6P5SX+b7VgkpDhNH7DuTSNGFZ6LJv66OTUWoz9M28sCXyw2xLpjc/CiQNQpIVFGaKZa+I538JZ4EDYSgAsCB+Pma5OwtgGWd2ZUCE4xr/6M4d3aFsj7DwoPQAAAAASUVORK5CYII=' // tile data
