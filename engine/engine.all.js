@@ -615,7 +615,7 @@ let fixedWidth = 0, fixedHeight = 0; // use native resolution
 
 const defaultTileSize = vec2(16); // default size of tiles in pixels
 const tileBleedShrinkFix = .3;    // prevent tile bleeding from neighbors
-const pixelated = 1;              // use crisp pixels for pixel art
+let pixelated = 1;              // use crisp pixels for pixel art
 
 ///////////////////////////////////////////////////////////////////////////////
 // webgl config
@@ -697,7 +697,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         // setup html
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
         document.body.style = 'margin:0;overflow:hidden;background:#000';
-        mainCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);image-rendering:crisp-edges;image-rendering:pixelated';          // pixelated rendering
+        mainCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)' +
+            (pixelated ? ';image-rendering:crisp-edges;image-rendering:pixelated' : '');          // pixelated rendering
         mainContext = mainCanvas.getContext('2d');
 
         debugInit();

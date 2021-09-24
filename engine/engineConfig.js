@@ -18,7 +18,7 @@ let fixedWidth = 0, fixedHeight = 0; // use native resolution
 
 const defaultTileSize = vec2(16); // default size of tiles in pixels
 const tileBleedShrinkFix = .3;    // prevent tile bleeding from neighbors
-const pixelated = 1;              // use crisp pixels for pixel art
+let pixelated = 1;              // use crisp pixels for pixel art
 
 ///////////////////////////////////////////////////////////////////////////////
 // webgl config
