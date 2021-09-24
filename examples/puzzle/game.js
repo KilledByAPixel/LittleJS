@@ -7,7 +7,7 @@
 
 'use strict';
 
-const tileTypeCount = 4, fallTime = .2;
+const tileTypeCount = 6, fallTime = .2;
 const cameraOffset = vec2(0,.5);
 let music, levelSize, level, levelFall, fallTimer, dragStartPos, comboCount, score;
 
@@ -17,12 +17,13 @@ const setLevelTile = (pos,d) => level[pos.x + pos.y * levelSize.x] = d;
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
+    gravity = -.005;
     fixedWidth = 1920, fixedHeight = 1080; // 1080p
     mainCanvas.style.background = '#444';
 
     // randomize level
     level = [];
-    levelSize = vec2(18,10);
+    levelSize = vec2(16,8);
     const pos = vec2();
     for (pos.x = levelSize.x; pos.x--;)
     for (pos.y = levelSize.y; pos.y--;)
@@ -116,6 +117,7 @@ function gameUpdate()
                             // undo if no matches
                             if (!fallTimer.isSet())
                             {
+                                score = max(score-1, 0);
                                 zzfx(...[,,709,,,.07,,,,3.7,,,,3.6,,,.11]);
                                 setLevelTile(mouseTilePos, endTile);
                                 setLevelTile(dragStartPos, startTile);
@@ -174,14 +176,14 @@ function gameRender()
         drawCanvas2D(drawPos, vec2(1), 0, 0, context=>
         {
             context.shadowBlur = 0;
-            context.fillStyle = new Color().setHSLA(data/4,.7,.7).rgba();
+            context.fillStyle = new Color().setHSLA(data/4,data==4?0:.7,data==5?1:.7).rgba();
             if (dragStartPos && pos.x == dragStartPos.x && pos.y == dragStartPos.y)
                 context.fillStyle = '#fff'
             context.fillRect(-tileSize,-tileSize,2*tileSize,2*tileSize);
 
             context.shadowBlur = 9;
-            context.fillStyle = new Color().setHSLA(data/4,1,.5).rgba();
-            const icon = '♥♣♦♠♡♧♢♤'[data];
+            context.fillStyle = new Color().setHSLA(data/4,1,data==5?1:data==4?0:.5).rgba();
+            const icon = '♥♣♦♠●▴'[data];
             context.strokeText(icon,0,0);
             context.fillText(icon,0,0);
         });
@@ -199,7 +201,7 @@ function gameRender()
 function gameRenderPost()
 {
     // draw text on top of everything
-    drawText('Score: ' + score, cameraPos.add(vec2(0,5.1)), 1.2, new Color, .1);
+    drawText('Score: ' + score, cameraPos.add(vec2(0,4.1)), 1.2, new Color, .1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -211,13 +213,13 @@ function clearMatches()
 {
     // horizontal match check
     let removedCount = 0;
-    for (let y = levelSize.y; y--;)
+    let pos = vec2();
+    for (pos.y = levelSize.y; pos.y--;)
     {
         let runCount, runData;
-        for (let x = levelSize.x; x--;)
+        for (pos.x = levelSize.x; pos.x--;)
         {
-            const i = x+y*levelSize.x;
-            const data = level[i];
+            const data = getLevelTile(pos);
             if (data >= 0 && data == runData)
             {
                 ++runCount;
@@ -226,12 +228,12 @@ function clearMatches()
                     // remove run tiles
                     removedCount += runCount;
                     for (let j=runCount; j--;)
-                        level[i+j] = -1;
+                        removeTile(pos.add(vec2(j,0)));
                 }
                 else if (runCount > 3)
                 {
                     ++removedCount;
-                    level[i] = -1;
+                    removeTile(pos);
                 }
             }
             else
@@ -243,13 +245,12 @@ function clearMatches()
     }
 
     // vertical match check
-    for (let x = levelSize.x; x--;)
+    for (pos.x = levelSize.x; pos.x--;)
     {
         let runCount, runData;
-        for (let y = levelSize.y; y--;)
+        for (pos.y = levelSize.y; pos.y--;)
         {
-            const i = x+y*levelSize.x;
-            const data = level[i];
+            const data = getLevelTile(pos);
             if (data >= 0 && data == runData)
             {
                 ++runCount;
@@ -258,12 +259,12 @@ function clearMatches()
                     // remove run tiles
                     removedCount += runCount;
                     for (let j=runCount; j--;)
-                        level[i+j*levelSize.x] = -1;
+                        removeTile(pos.add(vec2(0,j)));
                 }
                 else if (runCount > 3)
                 {
                     ++removedCount;
-                    level[i] = -1;
+                    removeTile(pos);
                 }
             }
             else
@@ -281,4 +282,23 @@ function clearMatches()
     }
     else
         comboCount = 0;
+}
+
+function removeTile(pos)
+{
+    const data = getLevelTile(pos);
+    setLevelTile(pos, -1);
+
+    // spawn particles
+    const color1 = new Color().setHSLA(data/4,data==4?0:1,data==5?1:.5);
+    const color2 = color1.lerp(new Color, .5);
+    new ParticleEmitter(
+        pos.add(vec2(.5)), 1, .1, 400, PI,   // pos, emitSize, emitTime, emitRate, emiteCone
+        undefined, undefined,                // tileIndex, tileSize
+        color1, color2,                      // colorStartA, colorStartB
+        color1.scale(1,0), color2.scale(1,0),// colorEndA, colorEndB
+        .5, .2, .2, .05, .05, // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
+        .99, 1, 1, PI, .05,   // damping, angleDamping, gravityScale, particleCone, fadeRate, 
+        .5, 0, 1              // randomness, collide, additive, randomColorLinear, renderOrder
+    );
 }

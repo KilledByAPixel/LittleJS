@@ -140,11 +140,13 @@ function glCreateTexture(image)
 {
     if (!glEnable) return;
 
-    // build the texture
+    // build the texture, use a white pixel if no texture exists
     const texture = glContext.createTexture();
     glContext.bindTexture(gl_TEXTURE_2D, texture);
     if (image.src)
         glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
+    else
+        glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, 1, 1, 0, gl_RGBA, gl_UNSIGNED_BYTE, new Uint8Array([255, 255, 255, 255]));
     return texture;
 }
 
