@@ -151,7 +151,7 @@ function gameRender()
     });
 
     // draw the blocks
-    mainContext.font = '.9px"';
+    mainContext.font = '.5px"';
     mainContext.textAlign = 'center';
     mainContext.textBaseline = 'middle';
     mainContext.fillStyle = '#fff';
@@ -185,7 +185,7 @@ function gameRender()
 
             context.shadowBlur = 9;
             context.fillStyle = new Color().setHSLA(data/4,1,data==5?1:data==4?0:.5).rgba();
-            const icon = '♥♣♦♠●▴'[data];
+            const icon = '■▲◆▼●▰'[data];
             context.strokeText(icon,0,0);
             context.fillText(icon,0,0);
         });
@@ -292,14 +292,14 @@ function removeTile(pos)
     setLevelTile(pos, -1);
 
     // spawn particles
-    const color1 = new Color().setHSLA(data/4,data==4?0:1,data==5?1:.5);
+    const color1 = new Color().setHSLA(data/4,data==4?0:1,data==5?1:.5,.5);
     const color2 = color1.lerp(new Color, .5);
     new ParticleEmitter(
-        pos.add(vec2(.5)), 1, .1, 400, PI,   // pos, emitSize, emitTime, emitRate, emiteCone
+        pos.add(vec2(.5)), 1, .1, 100, PI,   // pos, emitSize, emitTime, emitRate, emiteCone
         undefined, undefined,                // tileIndex, tileSize
         color1, color2,                      // colorStartA, colorStartB
         color1.scale(1,0), color2.scale(1,0),// colorEndA, colorEndB
-        .5, .2, .2, .05, .05, // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
+        .5, .5, .5, .05, .05, // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
         .99, 1, 1, PI, .05,   // damping, angleDamping, gravityScale, particleCone, fadeRate, 
         .5, 0, 1              // randomness, collide, additive, randomColorLinear, renderOrder
     );

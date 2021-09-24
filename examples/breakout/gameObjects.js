@@ -44,13 +44,14 @@ class Block extends EngineObject
         ++score;
         zzfx(...[,,90,,.01,.03,4,,,,,,,9,50,.2,,.2,.01]);
 
-        const color = this.color;
+        const color1 = this.color;
+        const color2 = color1.lerp(new Color, .5);
         new ParticleEmitter(
-            this.pos, this.size, .1, 1e3, PI, // pos, emitSize, emitTime, emitRate, emiteCone
-            0, vec2(16),              // tileIndex, tileSize
-            this.color, this.color, // colorStartA, colorStartB
-            this.color.scale(1,0), this.color.scale(1,0), // colorEndA, colorEndB
-            .2, .4, .4, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
+            this.pos, this.size, .1, 200, PI,     // pos, emitSize, emitTime, emitRate, emiteCone
+            0, vec2(16),                          // tileIndex, tileSize
+            color1, color2,                       // colorStartA, colorStartB
+            color1.scale(1,0), color2.scale(1,0), // colorEndA, colorEndB
+            .2, 1, 1, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
             .99, .95, .4, PI, .1, // damping, angleDamping, gravityScale, particleCone, fadeRate, 
             1, 0, 1               // randomness, collide, additive, randomColorLinear, renderOrder
         );
