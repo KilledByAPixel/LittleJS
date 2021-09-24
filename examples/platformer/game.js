@@ -24,19 +24,24 @@ engineInit(
     // respawn player
     if (player.deadTimer.get() > 1)
     {
-        player = new Player(playerStartPos);
+        player = new Player(player.pos.add(vec2(0,1)));
+        player.velocity = vec2(0,.1);
         playSound(sound_jump);
     }
     
     // mouse wheel = zoom
     cameraScale = clamp(cameraScale*(1-mouseWheel/10), 1e3, 1);
-        
-    // T = drop test object
-    if (keyWasPressed(84))
+    
+    // C = drop crate
+    if (keyWasPressed(67))
         new Crate(mousePos);
-        
-    // E = make explosion
+    
+    // E = drop enemy
     if (keyWasPressed(69))
+        new Enemy(mousePos);
+
+    // X = make explosion
+    if (keyWasPressed(88))
         explosion(mousePos);
 
     // M = move player to mouse

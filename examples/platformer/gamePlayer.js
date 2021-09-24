@@ -15,7 +15,7 @@ class Player extends GameObject
     { 
         super(pos, vec2(.6,.95), 32);
 
-        new Weapon(this.pos, this);
+        new Weapon(this.lastPos = this.pos, this);
         this.groundTimer = new Timer;
         this.jumpTimer = new Timer;
         this.pressedJumpTimer = new Timer;
@@ -218,13 +218,22 @@ class Player extends GameObject
        
     render()
     {
-        const bodyPos = this.pos.add(vec2(0,.04-.04*Math.cos(this.walkCyclePercent*PI*2)));
-        drawTile(bodyPos.add(vec2(0,.5-this.size.y/2)), vec2(1), this.tileIndex, this.tileSize, this.color, this.angle, this.mirror);
+        let bodyPos = this.pos;
+        
+        if (!this.isDead())
+        {
+            // bounce pos with walk cycle
+            bodyPos = bodyPos.add(vec2(0,.04-.04*Math.cos(this.walkCyclePercent*PI*2)));
+
+            // make bottom flush
+            bodyPos = bodyPos.add(vec2(0,(this.drawSize.y-this.size.y)/2));
+        }
+        drawTile(bodyPos, this.drawSize, this.tileIndex, this.tileSize, this.color, this.angle, this.mirror);
     }
 
     damage(damage, damagingObject)
     {
-        if (this.destroyed || godMode)
+        if (this.isDead() || this.getAliveTime() < 1 || godMode)
             return;
 
         makeBlood(damagingObject ? damagingObject.pos : this.pos);
@@ -246,7 +255,7 @@ class Player extends GameObject
         const fallDirection = damagingObject ? sign(damagingObject.velocity.x) : randSign();
         this.angleVelocity = fallDirection*rand(.22,.14);
         this.angleDamping = .9;
-        this.renderOrder = 0;  // move to back layer
+        this.renderOrder = -1;  // move to back layer
     }
     
     collideWithTile(data, pos)

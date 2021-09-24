@@ -71,7 +71,7 @@ class Crate extends GameObject
         this.color = (new Color).setHSLA(rand(),1,.8);
         this.health = 5;
 
-        // make crate collide with other objects
+        // make it a solid object for collision
         this.setCollision(1, 1);
     }
 
@@ -80,8 +80,63 @@ class Crate extends GameObject
         if (this.isDestroyed)
             return;
 
+        playSound(sound_destroyObject, this.pos);
         makeDebris(this.pos, this.color);
         this.destroy();
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+class Enemy extends GameObject 
+{
+    constructor(pos, typeOverride) 
+    { 
+        super(pos, vec2(.9,.9), 8, vec2(16));
+
+        this.drawSize = vec2(1);
+        this.color = (new Color).setHSLA(rand(), 1, .7);
+        this.health = 5;
+        this.bounceTime = new Timer(rand(1e3));
+        this.setCollision(1);
+    }
+
+    update()
+    {
+        // jump around randomly
+        if (this.groundObject && rand() < .01)
+        {
+            this.velocity = vec2(rand(.1,-.1), rand(.4,.2));
+            playSound(sound_jump, this.pos);
+        }
+
+        // damage player if touching
+        if (player && isOverlapping(this.pos, this.size, player.pos, player.size))
+            player.damage(1, this);
+
+        super.update();
+    }
+
+    kill()
+    {
+        if (this.isDestroyed)
+            return;
+
+        playSound(sound_killEnemy, this.pos);
+        makeDebris(this.pos, this.color, 300);
+        this.destroy();
+    }
+       
+    render()
+    {
+        // bounce by changing size
+        const bounceTime = this.bounceTime.get()*6;
+        this.drawSize = vec2(1-.1*Math.sin(bounceTime), 1+.1*Math.sin(bounceTime));
+
+        // make bottom flush
+        let bodyPos = this.pos;
+        bodyPos = bodyPos.add(vec2(0,(this.drawSize.y-this.size.y)/2));
+        drawTile(bodyPos, this.drawSize, this.tileIndex, this.tileSize, this.color, this.angle, this.mirror);
     }
 }
 

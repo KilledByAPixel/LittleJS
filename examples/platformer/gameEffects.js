@@ -14,13 +14,14 @@
 // zzfx sound effects
 
 const sound_shoot =        [,,90,,.01,.03,4,,,,,,,9,50,.2,,.2,.01];
-const sound_destroyTile =  [.5,,1e3,.02,,.2,1,3,.1,,,,,1,-30,.5,,.5];
+const sound_destroyObject =[.5,,1e3,.02,,.2,1,3,.1,,,,,1,-30,.5,,.5];
 const sound_die =          [.5,.4,126,.05,,.2,1,2.09,,-4,,,1,1,1,.4,.03];
 const sound_jump =         [.4,.2,250,.04,,.04,,,1,,,,,3];
 const sound_dodge =        [.4,.2,150,.05,,.05,,,-1,,,,,4,,,,,.02];
 const sound_walk =         [.3,.1,70,,,.01,4,,,,-9,.1,,,,,,.5];
 const sound_explosion =    [2,.2,72,.01,.01,.2,4,,,,,,,1,,.5,.1,.5,.02];
 const sound_grenade =      [.5,.01,300,,,.02,3,.22,,,-9,.2,,,,,,.5];
+const sound_killEnemy =    [,,783,,.03,.02,1,2,,,940,.03,,,,,.2,.6,,.06];
 
 ///////////////////////////////////////////////////////////////////////////////
 // special effects
@@ -33,34 +34,20 @@ const persistentParticleDestroyCallback = (particle)=>
         tileLayer.drawTile(particle.pos, particle.size, particle.tileIndex, particle.tileSize, particle.color, particle.angle, particle.mirror);
 }
 
-function makeBlood(pos, amount=50)
-{
-    const emitter = new ParticleEmitter(
-        pos, 1, .1, amount, PI, // pos, emitSize, emitTime, emitRate, emiteCone
-        undefined, undefined,   // tileIndex, tileSize
-        new Color(1,0,0), new Color(.5,0,0), // colorStartA, colorStartB
-        new Color(1,0,0), new Color(.5,0,0), // colorEndA, colorEndB
-        3, .1, .1, .1, .1, // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
-        1, .95, .7, PI, 0,  // damping, angleDamping, gravityScale, particleCone, fadeRate, 
-        .5, 1              // randomness, collide, additive, randomColorLinear, renderOrder
-    );
-    emitter.particleDestroyCallback = persistentParticleDestroyCallback;
-    return emitter;
-}
-
-function makeDebris(pos, color = new Color, amount = 100)
+function makeBlood(pos, amount) { makeDebris(pos, new Color(1,0,0), 50, .1, 0); }
+function makeDebris(pos, color = new Color, amount = 100, size=.2, elasticity = .3)
 {
     const color2 = color.lerp(new Color, .5);
     const emitter = new ParticleEmitter(
-        pos, 1, .1, amount, PI, // pos, emitSize, emitTime, emitRate, emiteCone
-        undefined, undefined, // tileIndex, tileSize
-        color, color2,       // colorStartA, colorStartB
-        color, color2,       // colorEndA, colorEndB
-        3, .2, .2, .1, .05, // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
-        1, .95, .4, PI, 0,  // damping, angleDamping, gravityScale, particleCone, fadeRate, 
-        .5, 1               // randomness, collide, additive, randomColorLinear, renderOrder
+        pos, 1, .1, 100, PI, // pos, emitSize, emitTime, emitRate, emiteCone
+        undefined, undefined,  // tileIndex, tileSize
+        color, color2,         // colorStartA, colorStartB
+        color, color2,         // colorEndA, colorEndB
+        3, size,size, .1, .05, // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
+        1, .95, .4, PI, 0,     // damping, angleDamping, gravityScale, particleCone, fadeRate, 
+        .5, 1                  // randomness, collide, additive, randomColorLinear, renderOrder
     );
-    emitter.elasticity = .3;
+    emitter.elasticity = elasticity;
     emitter.particleDestroyCallback = persistentParticleDestroyCallback;
     return emitter;
 }
@@ -151,7 +138,7 @@ function destroyTile(pos, makeSound = 1, cleanNeighbors = 1, maxCascadeChance = 
     if (layerData)
     {
         makeDebris(centerPos, layerData.color.mutate());
-        makeSound && playSound(sound_destroyTile, centerPos);
+        makeSound && playSound(sound_destroyObject, centerPos);
 
         setTileCollisionData(pos, tileType_empty);
         tileLayer.setData(pos, new TileLayerData, 1); // set and clear tile

@@ -83,10 +83,9 @@ function buildTerrain(size)
     {
         const pos = vec2(rand(levelSize.x), rand(levelSize.y/2, 9));
         const height = rand(19,1)|0;
-        const isHole = rand() < .5;
         for(let x = rand(19,1)|0;--x;)
         for(let y = height;--y;)
-            setTileCollisionData(pos.add(vec2(x,y)), isHole ? tileType_empty : tileType_solid);
+            setTileCollisionData(pos.add(vec2(x,y)), tileType_empty);
     }
 
     // add ladders
@@ -119,11 +118,11 @@ function buildTerrain(size)
 
     // spawn crates
     for(let crateCount=100; crateCount--;)
-    {
-        // pick random pos
-        const pos = vec2(rand(levelSize.x)|0, rand(levelSize.y)|0);
-        new Crate(pos);
-    }
+        new Crate(vec2(rand(levelSize.x), rand(levelSize.y)));
+
+    // spawn enemies
+    for(let enemyCount=20; enemyCount--;)
+        new Enemy(vec2(rand(levelSize.x), rand(levelSize.y)));
 }
 
 function generateLevel()
