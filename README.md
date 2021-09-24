@@ -5,14 +5,14 @@
 - Small footprint with no dependencies, starter project is under 6K zipped
 - Super fast rendering system for tile sheets, ~50,000 sprites at 60fps
 - Open Sorce with MIT license so it can be used to make commercial games
-- Engine handles core update/render loop for you
+- Engine handles all the heavy lifting for you
 - Object oriented system with base class engine object
 - Base class object handles update, physics, collision, rendering, etc
 - Engine helper classes and functions like Vector2, Color, and Timer
 - Sound effects audio with zzfx and music with zzfxm, mp3s, or wavs
 - Input processing system with gamepad and touchscreen support
 - Tile layer rendering and collision system
-- Particle effect system
+- Particle effects system
 - Debug tools and debug rendering system
 - Several easy to undersand example projects you can build on
 - A build system for size coding compitions to minify your game
