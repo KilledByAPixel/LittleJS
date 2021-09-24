@@ -7,7 +7,7 @@
 
 'use strict';
 
-const tileTypeCount = 6, fallTime = .1;
+const tileTypeCount = 6, fallTime = .2;
 const cameraOffset = vec2(0,.5);
 let music, levelSize, level, levelFall, fallTimer, dragStartPos, comboCount, score;
 
