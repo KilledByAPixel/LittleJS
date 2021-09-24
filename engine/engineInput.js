@@ -122,7 +122,7 @@ if (touchInputEnable && window.ontouchstart !== undefined)
     ontouchstart = ontouchmove = ontouchend = e=>
     {
         e.button = 0; // all touches are left click
-        hadInput || zzfx(hadInput = 1) ; // fix mobile audio, force it to play a sound the first time
+        hadInput || zzfx(0, hadInput = 1) ; // fix mobile audio, force it to play a sound the first time
 
         // check if touching and pass to mouse events
         const touching = e.touches.length;

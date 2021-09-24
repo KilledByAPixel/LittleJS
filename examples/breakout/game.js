@@ -1,14 +1,13 @@
 /*
-    LittleJS Breakout
+    LittleJS Breakout Example
 */
 
 'use strict';
 
 let levelSize, ball, paddle, score;
 
-engineInit(
 ///////////////////////////////////////////////////////////////////////////////
-()=> // gameInit 
+function gameInit()
 {
     fixedWidth = 1280, fixedHeight = 720; // 720p
     score = 0;
@@ -21,9 +20,10 @@ engineInit(
     for(pos.x = 6; pos.x <= levelSize.x-6; pos.x += 4)
     for(pos.y = levelSize.y/2; pos.y <= levelSize.y-4; pos.y += 2)
         new Block(pos);
-},
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-()=> // gameUpdate
+function gameUpdate()
 {
     // spawn ball
     if (!ball && mouseWasPressed(0))
@@ -31,24 +31,29 @@ engineInit(
         ball = new Ball(vec2(levelSize.x/2, levelSize.y/2-6));
         zzfx(...[,0,500,,.04,.3,1,2,,,570,.02,.02,,,,.04]);
     }
-},
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-()=> // gameUpdatePost
+function gameUpdatePost()
 {
 
-},
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-()=> // gameRender
+function gameRender()
 {
     // draw a grey square for the background
     drawRect(cameraPos, levelSize, new Color(.2,.2,.2));
-},
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-()=> // gameRenderPost
+function gameRenderPost()
 {
     // draw text on top of everything
     drawText('Score: ' + score, cameraPos.add(vec2(0,21)), 2, new Color, .3);
-},
+    ball || drawText('Click to play', cameraPos.add(vec2(0,-5)), 2, new Color, .3);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-'tiles.png' // all the tile art goes in this texture
-);
+// Startup LittleJS Engine
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png');

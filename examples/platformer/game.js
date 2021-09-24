@@ -9,17 +9,17 @@
 // so we use glOverlay mode to work around the issue
 const lowGraphicsSettings = glOverlay = !window['chrome'];
 
-engineInit(
 ///////////////////////////////////////////////////////////////////////////////
-()=> // gameInit 
+function gameInit()
 {
     gravity = -.01;
     cameraScale = 4*16;
     gameTimer.set();
     buildLevel();
-},
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-()=> // gameUpdate
+function gameUpdate()
 {
     // respawn player
     if (player.deadTimer.get() > 1)
@@ -47,26 +47,30 @@ engineInit(
     // M = move player to mouse
     if (keyWasPressed(77))
         player.pos = mousePos;
-},
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-()=> // gameUpdatePost
+function gameUpdatePost()
 {
     // move camera to player
     cameraPos = cameraPos.lerp(player.pos, clamp(player.getAliveTime()/2));
 
     // update parallax background relative to camera
     updateParallaxLayers();
-},
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-()=> // gameRender
+function gameRender()
 {
     drawSky();
     drawStars();
-},
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-()=> // gameRenderPost
+function gameRenderPost()
 {
-},
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-'tiles.png' // all the tile art goes in this texture
-);
+// Startup LittleJS Engine
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png');

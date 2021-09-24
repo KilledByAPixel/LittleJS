@@ -1,5 +1,5 @@
 <html><head><title>LittleJS Stress Test</title></head><body>
-<script src=../../engine/engine.all.min.js></script>
+<script src=../../engine/engine.all.min.js?2></script>
 <script>
 
 /*
@@ -18,9 +18,8 @@ let sprites, timeMS, showFPS, statsDisplay, spriteColor, spriteAdditiveColor;
 // so we use glOverlay mode to work around the issue
 glOverlay = !window['chrome'];
 
-engineInit(
 ///////////////////////////////////////////////////////////////////////////////
-()=> // gameInit 
+function gameInit()
 {
     // set up camera and background
     cameraPos = vec2(25, 12);
@@ -31,9 +30,10 @@ engineInit(
     // display stats using a div so when using glOverlay it still appears on top
     document.body.appendChild(statsDisplay = document.createElement('div'));
     statsDisplay.style = 'position:absolute;width:100%;top:9;font-size:9em;text-align:center;font-family:arial;user-select:none';
-},
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-()=> // gameUpdate
+function gameUpdate()
 {
     // mouse click = change color
     if (mouseWasPressed(0))
@@ -52,13 +52,15 @@ engineInit(
     
     // mouse wheel = zoom
     cameraScale = clamp(cameraScale*(1-mouseWheel/10), 1e3, 1);
-},
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-()=> // gameUpdatePost
+function gameUpdatePost()
 {
-},
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-()=> // gameRender
+function gameRender()
 {
     // track fps and update stats
     const frameTimeMS = Date.now();
@@ -92,13 +94,19 @@ engineInit(
         glDraw(sprite.pos.x, sprite.pos.y, .5, .5, sprite.angle, 0, 0, 1, 1, 
             sprite.color.rgbaInt(), sprite.additiveColor.rgbaInt());
     }
-},
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-()=> // gameRenderPost
+function gameRenderPost()
 {
-},
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAYklEQVR42u2TQQqAQAwDPfg6P5SX+b7VgkpDhNH7DuTSNGFZ6LJv66OTUWoz9M28sCXyw2xLpjc/CiQNQpIVFGaKZa+I538JZ4EDYSgAsCB+Pma5OwtgGWd2ZUCE4xr/6M4d3aFsj7DwoPQAAAAASUVORK5CYII=' // tile data
-);
+// load tiles image via url data
+const tilesImageData = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAYklEQVR42u2TQQqAQAwDPfg6P5SX+b7VgkpDhNH7DuTSNGFZ6LJv66OTUWoz9M28sCXyw2xLpjc/CiQNQpIVFGaKZa+I538JZ4EDYSgAsCB+Pma5OwtgGWd2ZUCE4xr/6M4d3aFsj7DwoPQAAAAASUVORK5CYII=';
+
+///////////////////////////////////////////////////////////////////////////////
+// Startup LittleJS Engine
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, tilesImageData);
 
 </script>

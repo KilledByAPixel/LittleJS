@@ -607,9 +607,10 @@ const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 
 const maxWidth = 1920, maxHeight = 1200; // up to 1080p and 16:10
 let fixedWidth = 0, fixedHeight = 0; // use native resolution
-//const fixedWidth = 1280, fixedHeight = 720; // 720p
-//const fixedWidth = 128,  fixedHeight = 128; // PICO-8
-//const fixedWidth = 240,  fixedHeight = 136; // TIC-80
+//const fixedWidth = 1280, fixedHeight = 720;  // 720p
+//const fixedWidth = 1920, fixedHeight = 1080; // 1080p
+//const fixedWidth = 128,  fixedHeight = 128;  // PICO-8
+//const fixedWidth = 240,  fixedHeight = 136;  // TIC-80
 
 // tile sheet settings
 const defaultTileSize = vec2(16); // default size of tiles in pixels
@@ -646,7 +647,8 @@ const defaultSoundRange = 15;// distance where taper starts
 const soundTaperPecent = .5; // extra range added for sound taper
 const audioVolume = .5;      // volume for sound, music and speech
 /*
-    LittleJS - The Tiny JavaScript Game Engine That Can - By Frank Force 2021
+    LittleJS - The Tiny JavaScript Game Engine That Can
+    MIT License - Copyright 2019 Frank Force
 
     Engine Features
     - Engine and debug system are separate from game code
@@ -867,7 +869,8 @@ function playMusic(zzfxmMusic, loop=0)
     if (!soundEnable) return;
 
     const source = zzfxP(...zzfxM(...zzfxmMusic));
-    source.loop = loop;
+    if (source)
+        source.loop = loop;
     return source;
 }
 
@@ -913,8 +916,7 @@ const zzfxR = 44100; // sample rate
 const zzfx = (...z) => zzfxP(zzfxG(...z)); // generate and play sound
 function zzfxP(...samples)  // play samples
 {
-    // wait for user input to create audio context
-    if (!soundEnable || !hadInput) return;
+    if (!soundEnable) return;
     
     // create audio context
     if (!audioContext)
@@ -1800,7 +1802,7 @@ if (touchInputEnable && window.ontouchstart !== undefined)
     ontouchstart = ontouchmove = ontouchend = e=>
     {
         e.button = 0; // all touches are left click
-        hadInput || zzfx(hadInput = 1) ; // fix mobile audio, force it to play a sound the first time
+        hadInput || zzfx(0, hadInput = 1) ; // fix mobile audio, force it to play a sound the first time
 
         // check if touching and pass to mouse events
         const touching = e.touches.length;

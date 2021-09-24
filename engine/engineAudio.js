@@ -38,7 +38,8 @@ function playMusic(zzfxmMusic, loop=0)
     if (!soundEnable) return;
 
     const source = zzfxP(...zzfxM(...zzfxmMusic));
-    source.loop = loop;
+    if (source)
+        source.loop = loop;
     return source;
 }
 
@@ -84,8 +85,7 @@ const zzfxR = 44100; // sample rate
 const zzfx = (...z) => zzfxP(zzfxG(...z)); // generate and play sound
 function zzfxP(...samples)  // play samples
 {
-    // wait for user input to create audio context
-    if (!soundEnable || !hadInput) return;
+    if (!soundEnable) return;
     
     // create audio context
     if (!audioContext)

@@ -13,7 +13,7 @@
     - Input processing system with gamepad and touchscreen support
     - Tile layer rendering and collision system
     - Particle effect system
-    - Automatically calls gameInit(), gameUpdate(), gameUpdatePost(), appRender(), appRenderPost()
+    - Automatically calls gameInit(), gameUpdate(), gameUpdatePost(), gameRender(), gameRenderPost()
     - Debug tools and debug rendering system
     - Call engineInit() to start it up!
 */
@@ -29,7 +29,7 @@ tileImageSize, tileImageSizeInverse, shrinkTilesX, shrinkTilesY, drawCount;
 const tileImage = new Image(); // the tile image used by everything
 
 // call this function to start the engine
-function engineInit(gameInit, gameUpdate, gameUpdatePost, appRender, appRenderPost, tileImageSource)
+function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, tileImageSource)
 {
     // init engine when tiles load
     tileImage.onload = ()=>
@@ -131,12 +131,12 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, appRender, appRenderPo
 
         // render sort then render while removing destroyed objects
         glPreRender(mainCanvas.width, mainCanvas.height);
-        appRender();
+        gameRender();
         engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
         for(const o of engineObjects)
             o.destroyed || o.render();
         glCopyToContext(mainContext);
-        appRenderPost();
+        gameRenderPost();
         debugRender();
 
         if (showWatermark)

@@ -136,7 +136,7 @@ class Enemy extends GameObject
         // make bottom flush
         let bodyPos = this.pos;
         bodyPos = bodyPos.add(vec2(0,(this.drawSize.y-this.size.y)/2));
-        drawTile(bodyPos, this.drawSize, this.tileIndex, this.tileSize, this.color, this.angle, this.mirror);
+        drawTile(bodyPos, this.drawSize, this.tileIndex, this.tileSize, this.color, this.angle, this.mirror, this.additiveColor);
     }
 }
 

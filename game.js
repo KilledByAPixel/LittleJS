@@ -6,9 +6,8 @@
 
 let particleEmiter;
 
-engineInit( // startup LittleJS
 ///////////////////////////////////////////////////////////////////////////////
-()=> // gameInit 
+function gameInit()
 {
     // create tile collision and visible tile layer
     initTileCollision(vec2(35,20));
@@ -51,9 +50,10 @@ engineInit( // startup LittleJS
     );
     particleEmiter.elasticity = .3;
     particleEmiter.trailScale = 2;
-},
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-()=> // gameUpdate
+function gameUpdate()
 {
     // play sound when mouse is pressed
     if (mouseWasPressed(0))
@@ -68,25 +68,28 @@ engineInit( // startup LittleJS
     // move particles to mouse location if on screen
     if (mousePosScreen.x || mousePosScreen.y)
         particleEmiter.pos = mousePos;
+}
 
-},
 ///////////////////////////////////////////////////////////////////////////////
-()=> // gameUpdatePost
+function gameUpdatePost()
 {
 
-},
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-()=> // gameRender
+function gameRender()
 {
     // draw a grey square
     drawRect(cameraPos, tileCollisionSize.add(vec2(5)), new Color(.2,.2,.2));
-},
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-()=> // gameRenderPost
+function gameRenderPost()
 {
     // draw text on top of everything
     drawText('Hello World', cameraPos, 3, new Color, .1);
-},
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-'tiles.png' // all the tile art goes in this texture
-);
+// Startup LittleJS Engine
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png');

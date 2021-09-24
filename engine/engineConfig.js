@@ -12,9 +12,10 @@ const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 
 const maxWidth = 1920, maxHeight = 1200; // up to 1080p and 16:10
 let fixedWidth = 0, fixedHeight = 0; // use native resolution
-//const fixedWidth = 1280, fixedHeight = 720; // 720p
-//const fixedWidth = 128,  fixedHeight = 128; // PICO-8
-//const fixedWidth = 240,  fixedHeight = 136; // TIC-80
+//const fixedWidth = 1280, fixedHeight = 720;  // 720p
+//const fixedWidth = 1920, fixedHeight = 1080; // 1080p
+//const fixedWidth = 128,  fixedHeight = 128;  // PICO-8
+//const fixedWidth = 240,  fixedHeight = 136;  // TIC-80
 
 // tile sheet settings
 const defaultTileSize = vec2(16); // default size of tiles in pixels
