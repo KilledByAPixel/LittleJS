@@ -7,7 +7,7 @@
 
 'use strict';
 
-const tileTypeCount = 6, fallTime = .2;
+const tileTypeCount = 6, fallTime = .1;
 const cameraOffset = vec2(0,.5);
 let music, levelSize, level, levelFall, fallTimer, dragStartPos, comboCount, score;
 
@@ -107,7 +107,6 @@ function gameUpdate()
                         if (startTile >= 0 && endTile >= 0)
                         {
                             // swap tiles
-                            dragStartPos = 0;
                             setLevelTile(mouseTilePos, startTile);
                             setLevelTile(dragStartPos, endTile);
 
@@ -124,6 +123,7 @@ function gameUpdate()
                             }
                             else
                                 zzfx(...[.8,,224,.02,.02,.08,1,1.7,-13.9,,,,,,6.7]);
+                            dragStartPos = 0;
                         }
                     }
                 }
@@ -173,12 +173,14 @@ function gameRender()
         if (fallTimer.active() && levelFall[pos.x + pos.y*levelSize.x])
             drawPos.y += 1-fallTimer.getPercent();
         
+        const isDragTile = dragStartPos && dragStartPos && pos.x == dragStartPos.x && pos.y == dragStartPos.y;
+
         drawCanvas2D(drawPos, vec2(1), 0, 0, context=>
         {
             context.shadowBlur = 0;
             context.fillStyle = new Color().setHSLA(data/4,data==4?0:.7,data==5?1:.7).rgba();
-            if (dragStartPos && pos.x == dragStartPos.x && pos.y == dragStartPos.y)
-                context.fillStyle = '#fff'
+            if (isDragTile)
+                context.fillStyle = '#ff0';
             context.fillRect(-tileSize,-tileSize,2*tileSize,2*tileSize);
 
             context.shadowBlur = 9;
