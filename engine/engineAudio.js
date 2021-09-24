@@ -131,7 +131,7 @@ function zzfxG // generate samples
     repeatTime = repeatTime * zzfxR | 0;
 
     // generate waveform
-    for(length = attack + decay + sustain + release + delay | 0;
+    for (length = attack + decay + sustain + release + delay | 0;
         i < length; b[i++] = s)
     {
         if (!(++c%(bitCrush*100|0)))                      // bit crush
@@ -216,7 +216,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
   let beatLength = zzfxR / BPM * 60 >> 2;
 
   // for each channel in order until there are no more
-  for(; hasMore; channelIndex++) {
+  for (; hasMore; channelIndex++) {
 
     // reset current values
     sampleBuffer = [hasMore = notFirstBeat = pitch = outSampleOffset = 0];

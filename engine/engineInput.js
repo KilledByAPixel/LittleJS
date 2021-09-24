@@ -70,7 +70,7 @@ function updateGamepads()
 
     const gamepads = navigator.getGamepads();
     gamepadCount = 0;
-    for(let i = 0; i < navigator.getGamepads().length; ++i)
+    for (let i = 0; i < navigator.getGamepads().length; ++i)
     {
         // get or create gamepad data
         const gamepad = gamepads[i];

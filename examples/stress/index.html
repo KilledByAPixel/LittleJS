@@ -1,5 +1,6 @@
 <html><head><title>LittleJS Stress Test</title></head><body>
-<script src=../../engine/engine.all.min.js?2></script>
+<meta name=viewport content=width=device-width,initial-scale=1,user-scalable=0>
+<script src=../../engine/engine.all.min.js?3></script>
 <script>
 
 /*
@@ -8,6 +9,7 @@
     - Uses glOverlay mode in Firefox to improve performance
     - Also plays music in the background with zzfxm
     - All code and the image is contained in this html file
+    - Text displayed using a div so it appears on top in glOverlay mode
 */
 
 'use strict';
@@ -17,39 +19,64 @@ let sprites, timeMS, showFPS, statsDisplay, spriteColor, spriteAdditiveColor, mu
 
 // non chromium browsers like firefox may have slow compositing
 // so we use glOverlay mode to work around the issue
-glOverlay = !window['chrome'];
+glOverlay = !isChrome;
+
+///////////////////////////////////////////////////////////////////////////////
+
+class TestObject extends EngineObject 
+{
+    constructor(pos)
+    {
+        super(pos, vec2(1), 0, vec2(16), 0, spriteColor);
+
+        this.additiveColor = spriteAdditiveColor;
+        this.setCollision(1, 1);
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
-    // set up camera and background
-    cameraPos = vec2(25, 12);
-    cameraScale = 32;
+    // create tile collision
+    initTileCollision(vec2(80,50));
+    for (let x = tileCollisionSize.x; x--;)
+        setTileCollisionData(vec2(x,0), 1), setTileCollisionData(vec2(x,tileCollisionSize.y-1), 1);
+    for (let y = tileCollisionSize.y; y--;)
+        setTileCollisionData(vec2(0,y), 1), setTileCollisionData(vec2(tileCollisionSize.x-1,y), 1);
+
+    // set things up
+    cameraScale = 16;
+    cameraPos = tileCollisionSize.scale(.5);
     mainCanvas.style.background = '#555';
     sprites = [];
+    gravity = -.01;
 
     // display stats using a div so when using glOverlay it still appears on top
     document.body.appendChild(statsDisplay = document.createElement('div'));
-    statsDisplay.style = 'position:absolute;width:100%;top:9;font-size:9em;text-align:center;font-family:arial;user-select:none';
+    statsDisplay.style = 'position:absolute;width:100%;top:50%;left:50%;transform:translate(-50%,-50%);font-size:4em;text-align:center;font-family:arial;user-select:none';
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameUpdate()
 {
-    if (!music && mouseWasPressed(0))
+    if (!music && hadInput)
     {
         // play cached music to avoid pause when generating
         music = zzfxP(...song);
-        music.loop = 1;
+        if (music) music.loop = 1;
     }
 
     // mouse click = change color
-    if (mouseWasPressed(0))
-        spriteColor = randColor(), spriteAdditiveColor = randColor(new Color(.5,.5,.5));
+    if (mouseWasPressed(0) || mouseIsDown(2))
+        spriteColor = randColor(), spriteAdditiveColor = randColor(new Color(.5,.5,.5, 0), new Color(0,0,0,0));
+
+    // right click = drop test object
+    if (mouseIsDown(2))
+        new TestObject(mousePos);
 
     // mouse hold = add objects
     if (mouseIsDown(0))
-        for(let i=100;i--;)
+        for (let i=100;i--;)
             sprites.push({
                 pos:mousePos.add(randInCircle(2)),
                 angle:rand(), 
@@ -74,32 +101,41 @@ function gameRender()
     const frameTimeMS = Date.now();
     showFPS = lerp(.05, 1e3/(frameTimeMS - timeMS||1), showFPS);
     timeMS = frameTimeMS;
-    statsDisplay.innerText = sprites.length + ' Sprites\n' + showFPS.toFixed(1) + ' FPS';
+
+    const spriteCount = sprites.length
+    const objectCount = engineObjects.length;
+    statsDisplay.innerText = 
+        spriteCount + objectCount ?
+            spriteCount + ' Sprites\n' 
+            + objectCount + ' Objects\n' 
+            + showFPS.toFixed(1) + ' FPS'
+        : 'LittleJS Stress Test\nLeft Click = Add Particles\nRight Click = Add Objects';
 
     const size = vec2(.5);
-    for(const sprite of sprites)
+    for (const sprite of sprites)
     {
         // keep sprites above 0
         sprite.pos.y = max(sprite.pos.y, 0);
 
         // apply gravity
-        sprite.velocity.y -= .005;
+        sprite.velocity.y += gravity;
         
         // apply velocity
         sprite.pos = sprite.pos.add(sprite.velocity);
 
         // bounce
         if (sprite.pos.y < 0)
-            sprite.velocity.y = rand(.5,.1);
-        
-        // clamp to sides
-        sprite.pos.x = mod(sprite.pos.x, 50);
+            sprite.velocity.y = rand(1,.5);
+        if (sprite.pos.x < 0)
+            sprite.pos.x = 0, sprite.velocity.x *= -1;
+        if (sprite.pos.x > tileCollisionSize.x)
+            sprite.pos.x = tileCollisionSize.x, sprite.velocity.x *= -1;
 
         // rotate sprite
         sprite.angle += .01*sign(sprite.velocity.x);
 
         // draw the sprite
-        glDraw(sprite.pos.x, sprite.pos.y, .5, .5, sprite.angle, 0, 0, 1, 1, 
+        glDraw(sprite.pos.x, sprite.pos.y, 1, 1, sprite.angle, 0, 0, 1, 1, 
             sprite.color.rgbaInt(), sprite.additiveColor.rgbaInt());
     }
 }
@@ -119,7 +155,6 @@ engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, til
 
 ///////////////////////////////////////////////////////////////////////////////
 // cached music - Depp Loop
-const song = 
-zzfxM(...[[[,0,77,,,.7,2,.41,,,,,,,,.06],[,0,43,.01,,.3,2,,,,,,,,,.02,.01],[,0,170,.003,,.008,,.97,-35,53,,,,,,.1],[.8,0,270,,,.12,3,1.65,-2,,,,,4.5,,.02],[,0,86,,,,,.7,,,,.5,,6.7,1,.05],[,0,2200,,,.04,3,2,,,800,.02,,4.8,,.01,.1]],[[[1,-1,21,21,33,21,21,33,21,21,33,21,21,33,21,21,33,33,21,21,33,21,21,33,21,21,33,21,21,33,21,21,33,33,21,21,33,21,21,33,21,21,33,21,21,33,21,21,33,33,21,21,33,21,21,33,21,21,33,21,21,33,21,21,33,33],[3,1,24,,,,,,,,27,,,,,,,,,,,,,,,,27,,,,24,,,,24,,,,,,,,27,,,,,,,,,,,,,,,,24,,24,,24,,,,],[1,-1,21,,,,,,,,,,,,,,,,,,,,,,,,,,,,24,,,,23,,,,,,,,,,,,,,,,,,,,,,,,24,,23,,21,,,,],[,1,21,,,,,,,,,,,,,,,,,,,,,,,,,,,,24,,,,23,,,,,,,,,,,,,,,,,,,,,,,,24,,23,,21,,,,],[5,1,,,34,34,34,,,,,,34,34,,,,,34,,,,34,34,,,,,34,,,,34,,,,34,34,34,,,,,,34,,,,,,34,34,,,34,34,,,,,,,,,34,34],[4,1,,,,,,,24,,,,,,24,,24,,,,24,,,,24,,,,,,,,,,,,,,,,24,,,,,,24,,24,,,,24,,,,24,,,,,,,,,,]]],[0]]);
+const song = zzfxM(...[[[,0,77,,,.7,2,.41,,,,,,,,.06],[,0,43,.01,,.3,2,,,,,,,,,.02,.01],[,0,170,.003,,.008,,.97,-35,53,,,,,,.1],[.8,0,270,,,.12,3,1.65,-2,,,,,4.5,,.02],[,0,86,,,,,.7,,,,.5,,6.7,1,.05],[,0,2200,,,.04,3,2,,,800,.02,,4.8,,.01,.1]],[[[1,-1,21,21,33,21,21,33,21,21,33,21,21,33,21,21,33,33,21,21,33,21,21,33,21,21,33,21,21,33,21,21,33,33,21,21,33,21,21,33,21,21,33,21,21,33,21,21,33,33,21,21,33,21,21,33,21,21,33,21,21,33,21,21,33,33],[3,1,24,,,,,,,,27,,,,,,,,,,,,,,,,27,,,,24,,,,24,,,,,,,,27,,,,,,,,,,,,,,,,24,,24,,24,,,,],[1,-1,21,,,,,,,,,,,,,,,,,,,,,,,,,,,,24,,,,23,,,,,,,,,,,,,,,,,,,,,,,,24,,23,,21,,,,],[,1,21,,,,,,,,,,,,,,,,,,,,,,,,,,,,24,,,,23,,,,,,,,,,,,,,,,,,,,,,,,24,,23,,21,,,,],[5,1,,,34,34,34,,,,,,34,34,,,,,34,,,,34,34,,,,,34,,,,34,,,,34,34,34,,,,,,34,,,,,,34,34,,,34,34,,,,,,,,,34,34],[4,1,,,,,,,24,,,,,,24,,24,,,,24,,,,24,,,,,,,,,,,,,,,,24,,,,,,24,,24,,,,24,,,,24,,,,,,,,,,]]],[0]]);
 
 </script>

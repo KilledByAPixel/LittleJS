@@ -7,7 +7,7 @@
 
 // non chromium browsers like firefox may have slow compositing
 // so we use glOverlay mode to work around the issue
-const lowGraphicsSettings = glOverlay = !window['chrome'];
+const lowGraphicsSettings = glOverlay = !isChrome;
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
@@ -24,7 +24,7 @@ function gameUpdate()
     // respawn player
     if (player.deadTimer.get() > 1)
     {
-        player = new Player(player.pos.add(vec2(0,1)));
+        player = new Player(playerStartPos);
         player.velocity = vec2(0,.1);
         playSound(sound_jump);
     }

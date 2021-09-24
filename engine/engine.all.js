@@ -125,7 +125,7 @@ const debugRender = ()=>
 
     if (debugOverlay)
     {
-        for(const o of engineObjects)
+        for (const o of engineObjects)
         {
             if (o.canvas)
                 continue; // skip tile layers
@@ -148,7 +148,7 @@ const debugRender = ()=>
 
         // mouse pick
         let bestDistance = Infinity, bestObject;
-        for(const o of engineObjects)
+        for (const o of engineObjects)
         {
             const distance = mousePos.distanceSquared(o.pos);
             if (distance < bestDistance)
@@ -306,7 +306,7 @@ const debugToggleParticleEditor = ()=>
         div.style = 'position:absolute;top:10;left:10;color:#fff';
         document.body.appendChild(div);
 
-        for( const setting of debugParticleSettings)
+        for ( const setting of debugParticleSettings)
         {
             const input = setting[2] = document.createElement('input');
             const name = setting[0];
@@ -389,7 +389,7 @@ const debugToggleParticleEditor = ()=>
         {
             let code = '';
             let count = 0;
-            for( const setting of debugParticleSettings)
+            for ( const setting of debugParticleSettings)
             {
                 const name = setting[0];
                 const type = setting[1];
@@ -467,6 +467,7 @@ const debugParticleSettings =
 // helper functions
 
 const PI            = Math.PI;
+const isChrome      = window['chrome'];
 const abs           = (a)=>               a < 0 ? -a : a;
 const sign          = (a)=>               a < 0 ? -1 : 1;
 const min           = (a, b)=>            a < b ?  a : b;
@@ -480,6 +481,7 @@ const isOverlapping = (pA, sA, pB, sB)=>  abs(pA.x - pB.x)*2 < sA.x + sB.x & abs
 
 // random functions
 const rand         = (a=1, b=0)=>              b + (a-b)*Math.random();
+const randInt      = (a=1, b=0)=>              rand(a,b)|0;
 const randSign     = ()=>                      (rand(2)|0)*2-1;
 const randInCircle = (radius=1, minRadius=0)=> radius > 0 ? randVector(radius * rand(minRadius / radius, 1)**.5) : new Vector2;
 const randVector   = (length=1)=>              new Vector2().setAngle(rand(2*PI), length);
@@ -597,32 +599,32 @@ class Timer
     LittleJS Engine Configuration
 */
 
-const engineName = 'LittleJS';
-const engineVersion = 'v0.74';
-const defaultFont = 'arial'; // font used for text rendering
-const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
-
 ///////////////////////////////////////////////////////////////////////////////
-// screen settings
+// display settings
 
 const maxWidth = 1920, maxHeight = 1200; // up to 1080p and 16:10
+const defaultFont = 'arial'; // font used for text rendering
 let fixedWidth = 0, fixedHeight = 0; // use native resolution
 //const fixedWidth = 1280, fixedHeight = 720;  // 720p
 //const fixedWidth = 1920, fixedHeight = 1080; // 1080p
 //const fixedWidth = 128,  fixedHeight = 128;  // PICO-8
 //const fixedWidth = 240,  fixedHeight = 136;  // TIC-80
 
+///////////////////////////////////////////////////////////////////////////////
 // tile sheet settings
+
 const defaultTileSize = vec2(16); // default size of tiles in pixels
 const tileBleedShrinkFix = .3;    // prevent tile bleeding from neighbors
 const pixelated = 1;              // use crisp pixels for pixel art
 
 ///////////////////////////////////////////////////////////////////////////////
 // webgl config
-const glEnable = 1;     // can run without gl (texured coloring will be disabled)
+
+const glEnable = 1; // can run without gl (texured coloring will be disabled)
 
 ///////////////////////////////////////////////////////////////////////////////
 // object config
+
 const defaultObjectSize = vec2(.99);
 const defaultObjectMass = 1;
 const defaultObjectDamping = .99;
@@ -642,10 +644,10 @@ const copyWASDToDpad = 1;
 ///////////////////////////////////////////////////////////////////////////////
 // audio config
 
-const soundEnable = 1;       // all audio can be disabled
-const defaultSoundRange = 15;// distance where taper starts
-const soundTaperPecent = .5; // extra range added for sound taper
-let audioVolume = .3;        // volume for sound, music and speech
+const soundEnable = 1;        // all audio can be disabled
+let audioVolume = .3;         // volume for sound, music and speech
+const defaultSoundRange = 15; // distance where taper starts
+const soundTaperPecent = .5;  // extra range added for sound taper
 /*
     LittleJS - The Tiny JavaScript Game Engine That Can
     MIT License - Copyright 2019 Frank Force
@@ -667,6 +669,10 @@ let audioVolume = .3;        // volume for sound, music and speech
 */
 
 'use strict';
+
+const engineName = 'LittleJS';
+const engineVersion = 'v0.75';
+const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 
 // core engine variables
 let gravity=0, mainCanvas=0, mainContext=0, mainCanvasSize=vec2(), 
@@ -746,7 +752,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             debugUpdate();
 
             // update input
-            for(let deviceInputData of inputData)
+            for (let deviceInputData of inputData)
                 deviceInputData.map(k=> k.r = k.p = 0);
             mouseWheel = 0;
         }
@@ -781,7 +787,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         glPreRender(mainCanvas.width, mainCanvas.height);
         gameRender();
         engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
-        for(const o of engineObjects)
+        for (const o of engineObjects)
             o.destroyed || o.render();
         glCopyToContext(mainContext);
         gameRenderPost();
@@ -819,11 +825,11 @@ function engineUpdateObjects()
         if (!o.destroyed)
         {
             o.update();
-            for(const child of o.children)
+            for (const child of o.children)
                 updateObject(child);
         }
     }
-    for(const o of engineObjects)
+    for (const o of engineObjects)
         o.parent || updateObject(o);
     engineObjects = engineObjects.filter(o=>!o.destroyed);
     engineCollideObjects = engineCollideObjects.filter(o=>!o.destroyed);
@@ -962,7 +968,7 @@ function zzfxG // generate samples
     repeatTime = repeatTime * zzfxR | 0;
 
     // generate waveform
-    for(length = attack + decay + sustain + release + delay | 0;
+    for (length = attack + decay + sustain + release + delay | 0;
         i < length; b[i++] = s)
     {
         if (!(++c%(bitCrush*100|0)))                      // bit crush
@@ -1047,7 +1053,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
   let beatLength = zzfxR / BPM * 60 >> 2;
 
   // for each channel in order until there are no more
-  for(; hasMore; channelIndex++) {
+  for (; hasMore; channelIndex++) {
 
     // reset current values
     sampleBuffer = [hasMore = notFirstBeat = pitch = outSampleOffset = 0];
@@ -1203,7 +1209,7 @@ class EngineObject
         {
             // check collisions against solid objects
             const epsilon = 1e-3; // necessary to push slightly outside of the collision
-            for(const o of engineCollideObjects)
+            for (const o of engineCollideObjects)
             {
                 // non solid objects don't collide with eachother
                 if (!this.isSolid & !o.isSolid || o.destroyed || o.parent)
@@ -1345,7 +1351,7 @@ class EngineObject
         // disconnect from parent and destroy chidren
         this.destroyed = 1;
         this.parent && this.parent.removeChild(this);
-        for(const child of this.children)
+        for (const child of this.children)
             child.destroy(child.parent = 0);
     }
     collideWithTile(data, pos)        { return data > 0; }
@@ -1397,7 +1403,7 @@ class EngineObject
 function destroyAllObjects()
 {
     // remove all objects that are not persistent or are descendants of something persistent
-    for(const o of engineObjects)
+    for (const o of engineObjects)
         o.persistent || o.parent || o.destroy();
     engineObjects = engineObjects.filter(o=>!o.destroyed);
 }
@@ -1449,7 +1455,7 @@ function initTileCollision(size)
     // reset collision to be clear
     tileCollisionSize = size;
     tileCollision = [];
-    for(let i=tileCollision.length = tileCollisionSize.area(); i--;)
+    for (let i=tileCollision.length = tileCollisionSize.area(); i--;)
         tileCollision[i] = 0;
 }
 
@@ -1465,8 +1471,8 @@ function tileCollisionTest(pos, size=vec2(), object)
     const minY = max(Math.floor(pos.y - size.y*.5), 0);
     const maxX = min(Math.floor(pos.x + size.x*.5), tileCollisionSize.x-1);
     const maxY = min(Math.floor(pos.y + size.y*.5), tileCollisionSize.y-1);
-    for(let y = minY; y <= maxY; ++y)
-    for(let x = minX; x <= maxX; ++x)
+    for (let y = minY; y <= maxY; ++y)
+    for (let x = minX; x <= maxX; ++x)
     {
         const tileData = tileCollision[y*tileCollisionSize.x+x];
         if (tileData && (!object || object.collideWithTile(tileData, new Vector2(x, y))))
@@ -1486,7 +1492,7 @@ function tileCollisionRaycast(posStart, posEnd, object)
     const sx = sign(posDelta.x), sy = sign(posDelta.y);
     let e = dx + dy;
 
-    for(let x = posStart.x, y = posStart.y;;)
+    for (let x = posStart.x, y = posStart.y;;)
     {
         const tileData = getTileCollisionData(vec2(x,y));
         if (tileData && (object ? object.collideWithTileRaycast(tileData, new Vector2(x, y)) : tileData > 0))
@@ -1538,7 +1544,7 @@ class TileLayer extends EngineObject
 
         // init tile data
         this.data = [];
-        for(let j = this.size.area(); j--;)
+        for (let j = this.size.area(); j--;)
             this.data.push(new TileLayerData());
     }
 
@@ -1635,8 +1641,8 @@ class TileLayer extends EngineObject
 
     drawAllTileData()
     {
-        for(let x = this.size.x; x--;)
-        for(let y = this.size.y; y--;)
+        for (let x = this.size.x; x--;)
+        for (let y = this.size.y; y--;)
              this.drawTileData(vec2(x,y));
     }
 
@@ -1750,7 +1756,7 @@ function updateGamepads()
 
     const gamepads = navigator.getGamepads();
     gamepadCount = 0;
-    for(let i = 0; i < navigator.getGamepads().length; ++i)
+    for (let i = 0; i < navigator.getGamepads().length; ++i)
     {
         // get or create gamepad data
         const gamepad = gamepads[i];
@@ -1908,7 +1914,7 @@ class ParticleEmitter extends EngineObject
             if (this.emitRate)
             {
                 const rate = 1/this.emitRate;
-                for(this.emitTimeBuffer += timeDelta; this.emitTimeBuffer > 0; this.emitTimeBuffer -= rate)
+                for (this.emitTimeBuffer += timeDelta; this.emitTimeBuffer > 0; this.emitTimeBuffer -= rate)
                     this.emitParticle();
             }
         }
@@ -1959,7 +1965,7 @@ class ParticleEmitter extends EngineObject
         particle.additive        = this.additive;
         particle.renderOrder     = this.renderOrder;
         particle.trailScale      = this.trailScale;
-        particle.mirror          = rand(2)|0;
+        particle.mirror          = rand()<.5;
 
         // setup callbacks for particles
         particle.destroyCallback = this.particleDestroyCallback;

@@ -61,19 +61,19 @@ function explosion(pos, radius=3)
     const damage = radius*2;
 
     // destroy level
-    for(let x = -radius; x < radius; ++x)
+    for (let x = -radius; x < radius; ++x)
     {
         const h = (radius**2 - x**2)**.5;
-        for(let y = -h; y <= h; ++y)
+        for (let y = -h; y <= h; ++y)
             destroyTile(pos.add(vec2(x,y)), 0, 0);
     }
 
     // cleanup neighbors
     const cleanupRadius = radius + 1;
-    for(let x = -cleanupRadius; x < cleanupRadius; ++x)
+    for (let x = -cleanupRadius; x < cleanupRadius; ++x)
     {
         const h = (cleanupRadius**2 - x**2)**.5;
-        for(let y = -h; y < h; ++y)
+        for (let y = -h; y < h; ++y)
             decorateTile(pos.add(vec2(x,y)).int());
     }
 
@@ -146,8 +146,8 @@ function destroyTile(pos, makeSound = 1, cleanNeighbors = 1, maxCascadeChance = 
         // cleanup neighbors
         if (cleanNeighbors)
         {
-            for(let i=-1;i<=1;++i)
-            for(let j=-1;j<=1;++j)
+            for (let i=-1;i<=1;++i)
+            for (let j=-1;j<=1;++j)
                 decorateTile(pos.add(vec2(i,j)));
         }
     }
@@ -162,7 +162,7 @@ function decorateBackgroundTile(pos)
         return;
 
     // round corners
-    for(let i=4;i--;)
+    for (let i=4;i--;)
     {
         // check corner neighbors
         const neighborTileDataA = getTileBackgroundData(pos.add(vec2().setAngle(i*PI/2)));
@@ -194,7 +194,7 @@ function decorateTile(pos)
         return;
     }
 
-    for(let i=4;i--;)
+    for (let i=4;i--;)
     {
         // outline towards neighbors of differing type
         const neighborTileData = getTileCollisionData(pos.add(vec2().setAngle(i*PI/2)));
@@ -241,7 +241,7 @@ function drawStars()
     // draw stars and planets
     randSeed = skySeed;
     const largeStarCount = 9;
-    for(let i = lowGraphicsSettings ? 400 : 1e3; i--;)
+    for (let i = lowGraphicsSettings ? 400 : 1e3; i--;)
     {
         let size = randSeeded(6, 1);
         let speed = randSeeded() < .9 ? randSeeded(5) : randSeeded(99,9);
@@ -282,7 +282,7 @@ let tileParallaxLayers;
 function initParallaxLayers()
 {
     tileParallaxLayers = [];
-    for(let i=3; i--;)
+    for (let i=3; i--;)
     {
         // setup the layer
         const parallaxSize = vec2(600,300), startGroundLevel = rand(99,120)+i*30;
@@ -299,7 +299,7 @@ function initParallaxLayers()
 
         // draw mountains ranges
         let groundLevel = startGroundLevel, groundSlope = rand(1,-1);
-        for(let x=parallaxSize.x;x--;)
+        for (let x=parallaxSize.x;x--;)
             tileParallaxLayer.context.fillRect(x,groundLevel += groundSlope = rand() < .05 ? rand(1, -1) :
                 groundSlope + (startGroundLevel - groundLevel)/2e3, 1, parallaxSize.y)
     }

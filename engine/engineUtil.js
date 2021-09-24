@@ -13,6 +13,7 @@
 // helper functions
 
 const PI            = Math.PI;
+const isChrome      = window['chrome'];
 const abs           = (a)=>               a < 0 ? -a : a;
 const sign          = (a)=>               a < 0 ? -1 : 1;
 const min           = (a, b)=>            a < b ?  a : b;
@@ -26,6 +27,7 @@ const isOverlapping = (pA, sA, pB, sB)=>  abs(pA.x - pB.x)*2 < sA.x + sB.x & abs
 
 // random functions
 const rand         = (a=1, b=0)=>              b + (a-b)*Math.random();
+const randInt      = (a=1, b=0)=>              rand(a,b)|0;
 const randSign     = ()=>                      (rand(2)|0)*2-1;
 const randInCircle = (radius=1, minRadius=0)=> radius > 0 ? randVector(radius * rand(minRadius / radius, 1)**.5) : new Vector2;
 const randVector   = (length=1)=>              new Vector2().setAngle(rand(2*PI), length);

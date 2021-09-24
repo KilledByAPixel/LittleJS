@@ -85,7 +85,7 @@ class ParticleEmitter extends EngineObject
             if (this.emitRate)
             {
                 const rate = 1/this.emitRate;
-                for(this.emitTimeBuffer += timeDelta; this.emitTimeBuffer > 0; this.emitTimeBuffer -= rate)
+                for (this.emitTimeBuffer += timeDelta; this.emitTimeBuffer > 0; this.emitTimeBuffer -= rate)
                     this.emitParticle();
             }
         }
@@ -136,7 +136,7 @@ class ParticleEmitter extends EngineObject
         particle.additive        = this.additive;
         particle.renderOrder     = this.renderOrder;
         particle.trailScale      = this.trailScale;
-        particle.mirror          = rand(2)|0;
+        particle.mirror          = rand()<.5;
 
         // setup callbacks for particles
         particle.destroyCallback = this.particleDestroyCallback;

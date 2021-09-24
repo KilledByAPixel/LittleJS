@@ -85,7 +85,7 @@ class EngineObject
         {
             // check collisions against solid objects
             const epsilon = 1e-3; // necessary to push slightly outside of the collision
-            for(const o of engineCollideObjects)
+            for (const o of engineCollideObjects)
             {
                 // non solid objects don't collide with eachother
                 if (!this.isSolid & !o.isSolid || o.destroyed || o.parent)
@@ -227,7 +227,7 @@ class EngineObject
         // disconnect from parent and destroy chidren
         this.destroyed = 1;
         this.parent && this.parent.removeChild(this);
-        for(const child of this.children)
+        for (const child of this.children)
             child.destroy(child.parent = 0);
     }
     collideWithTile(data, pos)        { return data > 0; }
@@ -279,7 +279,7 @@ class EngineObject
 function destroyAllObjects()
 {
     // remove all objects that are not persistent or are descendants of something persistent
-    for(const o of engineObjects)
+    for (const o of engineObjects)
         o.persistent || o.parent || o.destroy();
     engineObjects = engineObjects.filter(o=>!o.destroyed);
 }

@@ -17,8 +17,8 @@ function gameInit()
 
     // spawn blocks
     const pos = vec2();
-    for(pos.x = 6; pos.x <= levelSize.x-6; pos.x += 4)
-    for(pos.y = levelSize.y/2; pos.y <= levelSize.y-4; pos.y += 2)
+    for (pos.x = 6; pos.x <= levelSize.x-6; pos.x += 4)
+    for (pos.y = levelSize.y/2; pos.y <= levelSize.y-4; pos.y += 2)
         new Block(pos);
 }
 

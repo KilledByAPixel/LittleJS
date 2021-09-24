@@ -13,7 +13,7 @@ const tileType_empty   = 0;
 const tileType_solid   = 1;
 
 let player, playerStartPos, tileLayer, tileBackgroundLayer, gameTimer = new Timer;
-let levelSize, levelColor, levelGroundColor;
+let levelSize, levelColor, levelGroundColor, warmup;
 
 let tileBackground;
 const setTileBackgroundData = (pos, data=0)=>
@@ -32,7 +32,7 @@ function buildTerrain(size)
     let groundLevel = startGroundLevel;
     let groundSlope = rand(1,-1);
     let backgroundDelta = 0, backgroundDeltaSlope = 0;
-    for(let x=0; x < size.x; x++)
+    for (let x=0; x < size.x; x++)
     {
         // pull slope towards start ground level
         groundLevel += groundSlope = rand() < .05 ? rand(1,-1) :
@@ -61,7 +61,7 @@ function buildTerrain(size)
         backgroundDelta = clamp(backgroundDelta, 3, -1)
 
         groundLevel = clamp(groundLevel, 99, 30);
-        for(let y=0; y < size.y; y++)
+        for (let y=0; y < size.y; y++)
         {
             const pos = vec2(x,y);
 
@@ -79,24 +79,24 @@ function buildTerrain(size)
     }
 
     // add random islands
-    for(let i=levelSize.x; i--;)
+    for (let i=levelSize.x; i--;)
     {
         const pos = vec2(rand(levelSize.x), rand(levelSize.y/2, 9));
-        const height = rand(19,1)|0;
-        for(let x = rand(19,1)|0;--x;)
-        for(let y = height;--y;)
+        const height = randInt(19,1);
+        for (let x = randInt(19,1);--x;)
+        for (let y = height;--y;)
             setTileCollisionData(pos.add(vec2(x,y)), tileType_empty);
     }
 
     // add ladders
-    for(let ladderCount=50; ladderCount--;)
+    for (let ladderCount=50; ladderCount--;)
     {
         // pick random pos
-        const pos = vec2(rand(levelSize.x)|0, rand(levelSize.y)|0)
+        const pos = vec2(randInt(levelSize.x), randInt(levelSize.y))
 
         // find good place to put ladders
         let state = 0, ladderTop;
-        for(; pos.y > 9; --pos.y)
+        for (; pos.y > 9; --pos.y)
         {
             const data = getTileCollisionData(pos);
             if (state == 0 ||  state == 2)
@@ -109,7 +109,7 @@ function buildTerrain(size)
             else if (state == 3 && data)
             {
                 // found solid again, build ladder
-                for(; ++pos.y <= ladderTop;)
+                for (; ++pos.y <= ladderTop;)
                     setTileCollisionData(pos, tileType_ladder);
                 break;
             }
@@ -117,11 +117,11 @@ function buildTerrain(size)
     }
 
     // spawn crates
-    for(let crateCount=100; crateCount--;)
-        new Crate(vec2(rand(levelSize.x), rand(levelSize.y)));
+    for (let crateCount=100; crateCount--;)
+        new Crate(vec2((randInt(levelSize.x))+.5, randInt(levelSize.y)));
 
     // spawn enemies
-    for(let enemyCount=20; enemyCount--;)
+    for (let enemyCount=20; enemyCount--;)
         new Enemy(vec2(rand(levelSize.x), rand(levelSize.y)));
 }
 
@@ -148,8 +148,8 @@ function makeTileLayers()
     tileBackgroundLayer.renderOrder = -2e3;
 
     const pos = vec2();
-    for(pos.x = levelSize.x; pos.x--;)
-    for(pos.y = levelSize.y; pos.y--;)
+    for (pos.x = levelSize.x; pos.x--;)
+    for (pos.y = levelSize.y; pos.y--;)
     {
         // foreground tiles
         let tileType = getTileCollisionData(pos);
@@ -160,8 +160,8 @@ function makeTileLayers()
             {
                 tileIndex = 5 + rand()**3*2|0;
                 color = levelColor.mutate(.03);
-                direction = rand(4)|0
-                mirror = rand(2)|0;
+                direction = randInt(4);
+                mirror = randInt(2);
             }
             else if (tileType == tileType_ladder)
                 tileIndex = 7;
@@ -174,7 +174,7 @@ function makeTileLayers()
         tileType = getTileBackgroundData(pos);
         if (tileType)
         {
-            const data = new TileLayerData(5 + rand()**3*2|0, rand(4)|0, rand(2)|0, levelColor.mutate().scale(.4,1));
+            const data = new TileLayerData(5 + rand()**3*2|0, randInt(4), randInt(2), levelColor.mutate().scale(.4,1));
             tileBackgroundLayer.setData(pos, data);
         }
     }
@@ -194,16 +194,18 @@ function buildLevel()
     
     // apply decoration to level tiles
     makeTileLayers();
-    for(let x=levelSize.x;x--;)
-    for(let y=levelSize.y;--y;)
+    for (let x=levelSize.x;x--;)
+    for (let y=levelSize.y;--y;)
     {
         decorateBackgroundTile(vec2(x,y));
         decorateTile(vec2(x,y));
     }
 
     // warm up level
-    for(let i=5*FPS; i--;)
+    warmup = 1;
+    for (let i=5*FPS; i--;)
         engineUpdateObjects();
+    warmup = 0;
 
     // spawn player
     player = new Player(cameraPos = playerStartPos);

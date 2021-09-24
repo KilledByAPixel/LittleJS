@@ -13,16 +13,16 @@ function gameInit()
     initTileCollision(vec2(35,20));
     const tileLayer = new TileLayer(vec2(), tileCollisionSize);
     const pos = vec2();
-    for(pos.x = tileCollisionSize.x; pos.x--;)
-    for(pos.y = tileCollisionSize.y; pos.y--;)
+    for (pos.x = tileCollisionSize.x; pos.x--;)
+    for (pos.y = tileCollisionSize.y; pos.y--;)
     {
         if (randSeeded() > .8)
         {
             setTileCollisionData(pos, 1);
 
             const tileIndex = 1;
-            const direction = rand(4)|0
-            const mirror = rand(2)|0;
+            const direction = randInt(4)
+            const mirror = randInt(2);
             const color = randColor();
             const data = new TileLayerData(tileIndex, direction, mirror, color);
             tileLayer.setData(pos, data);

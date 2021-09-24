@@ -22,7 +22,7 @@ function initTileCollision(size)
     // reset collision to be clear
     tileCollisionSize = size;
     tileCollision = [];
-    for(let i=tileCollision.length = tileCollisionSize.area(); i--;)
+    for (let i=tileCollision.length = tileCollisionSize.area(); i--;)
         tileCollision[i] = 0;
 }
 
@@ -38,8 +38,8 @@ function tileCollisionTest(pos, size=vec2(), object)
     const minY = max(Math.floor(pos.y - size.y*.5), 0);
     const maxX = min(Math.floor(pos.x + size.x*.5), tileCollisionSize.x-1);
     const maxY = min(Math.floor(pos.y + size.y*.5), tileCollisionSize.y-1);
-    for(let y = minY; y <= maxY; ++y)
-    for(let x = minX; x <= maxX; ++x)
+    for (let y = minY; y <= maxY; ++y)
+    for (let x = minX; x <= maxX; ++x)
     {
         const tileData = tileCollision[y*tileCollisionSize.x+x];
         if (tileData && (!object || object.collideWithTile(tileData, new Vector2(x, y))))
@@ -59,7 +59,7 @@ function tileCollisionRaycast(posStart, posEnd, object)
     const sx = sign(posDelta.x), sy = sign(posDelta.y);
     let e = dx + dy;
 
-    for(let x = posStart.x, y = posStart.y;;)
+    for (let x = posStart.x, y = posStart.y;;)
     {
         const tileData = getTileCollisionData(vec2(x,y));
         if (tileData && (object ? object.collideWithTileRaycast(tileData, new Vector2(x, y)) : tileData > 0))
@@ -111,7 +111,7 @@ class TileLayer extends EngineObject
 
         // init tile data
         this.data = [];
-        for(let j = this.size.area(); j--;)
+        for (let j = this.size.area(); j--;)
             this.data.push(new TileLayerData());
     }
 
@@ -208,8 +208,8 @@ class TileLayer extends EngineObject
 
     drawAllTileData()
     {
-        for(let x = this.size.x; x--;)
-        for(let y = this.size.y; y--;)
+        for (let x = this.size.x; x--;)
+        for (let y = this.size.y; y--;)
              this.drawTileData(vec2(x,y));
     }
 

@@ -125,7 +125,7 @@ const debugRender = ()=>
 
     if (debugOverlay)
     {
-        for(const o of engineObjects)
+        for (const o of engineObjects)
         {
             if (o.canvas)
                 continue; // skip tile layers
@@ -148,7 +148,7 @@ const debugRender = ()=>
 
         // mouse pick
         let bestDistance = Infinity, bestObject;
-        for(const o of engineObjects)
+        for (const o of engineObjects)
         {
             const distance = mousePos.distanceSquared(o.pos);
             if (distance < bestDistance)
@@ -306,7 +306,7 @@ const debugToggleParticleEditor = ()=>
         div.style = 'position:absolute;top:10;left:10;color:#fff';
         document.body.appendChild(div);
 
-        for( const setting of debugParticleSettings)
+        for ( const setting of debugParticleSettings)
         {
             const input = setting[2] = document.createElement('input');
             const name = setting[0];
@@ -389,7 +389,7 @@ const debugToggleParticleEditor = ()=>
         {
             let code = '';
             let count = 0;
-            for( const setting of debugParticleSettings)
+            for ( const setting of debugParticleSettings)
             {
                 const name = setting[0];
                 const type = setting[1];

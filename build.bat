@@ -22,11 +22,11 @@ echo. >> %BUILD_FILENAME%
 rem minify code with closure
 MOVE %BUILD_FILENAME% %BUILD_FILENAME%.temp
 call google-closure-compiler --js %BUILD_FILENAME%.temp --js_output_file %BUILD_FILENAME% --compilation_level ADVANCED --language_out ECMASCRIPT_2019 --warning_level VERBOSE --jscomp_off * --assume_function_wrapper
-del %BUILD_FILENAME%.temp
 if %ERRORLEVEL% NEQ 0 (
     pause
     exit /b %ERRORLEVEL%
 )
+del %BUILD_FILENAME%.temp
 
 rem more minification with uglify or terser (they both do about the same)
 call uglifyjs -o %BUILD_FILENAME% --compress --mangle -- %BUILD_FILENAME%

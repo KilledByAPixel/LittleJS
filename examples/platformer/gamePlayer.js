@@ -9,25 +9,26 @@
 
 'use strict';
 
-class Player extends GameObject 
+class Character extends GameObject 
 {
     constructor(pos)
     { 
         super(pos, vec2(.6,.95), 32);
 
         new Weapon(this.lastPos = this.pos, this);
-        this.groundTimer = new Timer;
-        this.jumpTimer = new Timer;
-        this.pressedJumpTimer = new Timer;
-        this.dodgeTimer = new Timer;
+        this.groundTimer        = new Timer;
+        this.jumpTimer          = new Timer;
+        this.pressedJumpTimer   = new Timer;
+        this.dodgeTimer         = new Timer;
         this.dodgeRechargeTimer = new Timer;
-        this.deadTimer = new Timer;
-        this.grendeThrowTimer = new Timer;
+        this.deadTimer          = new Timer;
+        this.grendeThrowTimer   = new Timer;
         this.drawSize = vec2(1);
         this.color = (new Color).setHSLA(rand(),1,.5);
         this.renderOrder = 10;
         this.walkCyclePercent = 0;
         this.health = 1;
+        this.moveInput = 0;
         this.setCollision(1);
     }
     
@@ -38,22 +39,14 @@ class Player extends GameObject
         if (this.isDead())
             return super.update();
 
-        // movement control
-        const moveInput = isUsingGamepad? gamepadStick(0) : 
-            vec2(keyIsDown(39) - keyIsDown(37), keyIsDown(38) - keyIsDown(40));
+        const moveInput = this.moveInput.copy();
         
         // jump
-        this.holdingJump = keyIsDown(38) || gamepadIsDown(0);
         if (!this.holdingJump)
             this.pressedJumpTimer.unset();
         else if (!this.wasHoldingJump || this.climbingWall)
             this.pressedJumpTimer.set(.3);
         this.wasHoldingJump = this.holdingJump;
-
-        // controls
-        this.holdingShoot  = mouseIsDown(0) || keyIsDown(90) || gamepadIsDown(2);
-        this.pressingThrow = mouseIsDown(2) || keyIsDown(67) || gamepadIsDown(1);
-        this.pressedDodge  = mouseIsDown(1) || keyIsDown(88) || gamepadIsDown(3);
 
         // wall climb
         this.climbingWall = 0;
@@ -99,7 +92,7 @@ class Player extends GameObject
 
         // allow grabbing ladder at head or feet
         let touchingLadder = 0;
-        for(let y=2;y--;)
+        for (let y=2;y--;)
         {
             const testPos = this.pos.add(vec2(0, y + .1*moveInput.y - this.size.y*.5));
             const collisionData = getTileCollisionData(testPos);
@@ -219,7 +212,6 @@ class Player extends GameObject
     render()
     {
         let bodyPos = this.pos;
-        
         if (!this.isDead())
         {
             // bounce pos with walk cycle
@@ -270,7 +262,7 @@ class Player extends GameObject
                 return;
 
             if (getTileCollisionData(pos.add(vec2(0,1)))      // above
-                && !getTileCollisionData(pos.add(vec2(1,0))) // left
+                && !getTileCollisionData(pos.add(vec2(1,0)))  // left
                 && !getTileCollisionData(pos.add(vec2(1,0)))) // right
                 return; // dont collide if something above it and nothing to left or right
 
@@ -278,15 +270,35 @@ class Player extends GameObject
             return !this.climbingLadder;
         }
 
-        // break blocks above
         const d = pos.y - this.pos.y;
         if (!this.climbingLadder && this.velocity.y > .1 && d > 0 && d < this.size.y*.5)
         if (destroyTile(pos))
         {
+            // break blocks above
             this.velocity.y = 0;
             return;
         }
 
         return 1;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+class Player extends Character
+{
+    update() 
+    {
+        // player controls
+        this.holdingJump   = keyIsDown(38) || gamepadIsDown(0);
+        this.holdingShoot  = mouseIsDown(0) || keyIsDown(90) || gamepadIsDown(2);
+        this.pressedDodge  = mouseIsDown(1) || keyIsDown(88) || gamepadIsDown(3);
+        this.pressingThrow = mouseIsDown(2) || keyIsDown(67) || gamepadIsDown(1);
+
+        // movement control
+        this.moveInput = isUsingGamepad ? gamepadStick(0) : 
+            vec2(keyIsDown(39) - keyIsDown(37), keyIsDown(38) - keyIsDown(40));
+
+        super.update();
     }
 }

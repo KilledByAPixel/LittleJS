@@ -20,6 +20,10 @@
 
 'use strict';
 
+const engineName = 'LittleJS';
+const engineVersion = 'v0.75';
+const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
+
 // core engine variables
 let gravity=0, mainCanvas=0, mainContext=0, mainCanvasSize=vec2(), 
 frame=0, time=0, realTime=0, paused=0, frameTimeLastMS=0, frameTimeBufferMS=0, debugFPS=0,
@@ -98,7 +102,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             debugUpdate();
 
             // update input
-            for(let deviceInputData of inputData)
+            for (let deviceInputData of inputData)
                 deviceInputData.map(k=> k.r = k.p = 0);
             mouseWheel = 0;
         }
@@ -133,7 +137,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         glPreRender(mainCanvas.width, mainCanvas.height);
         gameRender();
         engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
-        for(const o of engineObjects)
+        for (const o of engineObjects)
             o.destroyed || o.render();
         glCopyToContext(mainContext);
         gameRenderPost();
@@ -171,11 +175,11 @@ function engineUpdateObjects()
         if (!o.destroyed)
         {
             o.update();
-            for(const child of o.children)
+            for (const child of o.children)
                 updateObject(child);
         }
     }
-    for(const o of engineObjects)
+    for (const o of engineObjects)
         o.parent || updateObject(o);
     engineObjects = engineObjects.filter(o=>!o.destroyed);
     engineCollideObjects = engineCollideObjects.filter(o=>!o.destroyed);

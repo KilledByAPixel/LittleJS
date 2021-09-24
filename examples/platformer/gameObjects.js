@@ -33,7 +33,7 @@ class GameObject extends EngineObject
 
         // kill if below level
         if (!this.isDead() && this.pos.y < -9)
-            this.kill();
+            warmup ? this.destroy() : this.kill();
     }
 
     damage(damage, damagingObject)
@@ -44,7 +44,7 @@ class GameObject extends EngineObject
         
         // set damage timer;
         this.damageTimer.set();
-        for(const child of this.children)
+        for (const child of this.children)
             child.damageTimer && child.damageTimer.set();
 
         // apply damage and kill if necessary
@@ -66,7 +66,7 @@ class Crate extends GameObject
 {
     constructor(pos, typeOverride) 
     { 
-        super(pos, defaultObjectSize, 2, vec2(16), (rand(4)|0)*PI/2);
+        super(pos, defaultObjectSize, 2, vec2(16), (randInt(4))*PI/2);
 
         this.color = (new Color).setHSLA(rand(),1,.8);
         this.health = 5;
@@ -232,7 +232,7 @@ class Weapon extends EngineObject
         if (this.triggerIsDown)
         {
             // try to fire
-            for(; this.fireTimeBuffer > 0; this.fireTimeBuffer -= 1/this.fireRate)
+            for (; this.fireTimeBuffer > 0; this.fireTimeBuffer -= 1/this.fireRate)
             {
                 // create bullet
                 playSound(sound_shoot, this.pos);
