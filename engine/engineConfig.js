@@ -50,4 +50,4 @@ const copyWASDToDpad = 1;
 const soundEnable = 1;       // all audio can be disabled
 const defaultSoundRange = 15;// distance where taper starts
 const soundTaperPecent = .5; // extra range added for sound taper
-const audioVolume = .5;      // volume for sound, music and speech
+let audioVolume = .3;        // volume for sound, music and speech
