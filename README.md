@@ -3,7 +3,7 @@
 ## Engine Features
 
 - Small footprint with no dependencies, starter project is under 6K zipped
-- Super fast rendering system for tile sheets, ~50,000 sprites at 60fps
+- Super fast tile sheet rendering system, ~50,000 sprites at 60fps
 - Open Source with MIT license so it can be used to make commercial games
 - Engine handles all the heavy lifting for you
 - Object oriented system with base class engine object
