@@ -47,11 +47,11 @@ class Block extends EngineObject
         const color1 = this.color;
         const color2 = color1.lerp(new Color, .5);
         new ParticleEmitter(
-            this.pos, this.size, .1, 200, PI,     // pos, emitSize, emitTime, emitRate, emiteCone
+            this.pos, this.size, .1, 400, PI,     // pos, emitSize, emitTime, emitRate, emiteCone
             0, vec2(16),                          // tileIndex, tileSize
             color1, color2,                       // colorStartA, colorStartB
             color1.scale(1,0), color2.scale(1,0), // colorEndA, colorEndB
-            .2, 1, 1, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
+            .2, .6, .6, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
             .99, .95, .4, PI, .1, // damping, angleDamping, gravityScale, particleCone, fadeRate, 
             1, 0, 1               // randomness, collide, additive, randomColorLinear, renderOrder
         );

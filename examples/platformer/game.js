@@ -5,9 +5,7 @@
 
 'use strict';
 
-// non chromium browsers like firefox may have slow compositing
-// so we use glOverlay mode to work around the issue
-const lowGraphicsSettings = glOverlay = !isChrome;
+glOverlay = !isChrome; // faster rendering when not chrome
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()

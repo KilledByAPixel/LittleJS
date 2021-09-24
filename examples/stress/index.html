@@ -1,6 +1,6 @@
 <html><head><title>LittleJS Stress Test</title></head><body>
 <meta name=viewport content=width=device-width,initial-scale=1,user-scalable=0>
-<script src=../../engine/engine.all.min.js?8></script>
+<script src=../../engine/engine.all.min.js?9></script>
 <script>
 
 /*
@@ -14,12 +14,12 @@
 
 'use strict';
 
-// keep our own list of simple sprites and track fps
-let sprites, timeMS, showFPS, statsDisplay, spriteColor, spriteAdditiveColor, music;
-
 // non chromium browsers like firefox may have slow compositing
 // so we use glOverlay mode to work around the issue
 glOverlay = !isChrome;
+
+// keep our own list of simple sprites and track fps
+let sprites, timeMS, showFPS, statsDisplay, spriteColor, spriteAdditiveColor, music;
 
 ///////////////////////////////////////////////////////////////////////////////
 

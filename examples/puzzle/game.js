@@ -7,6 +7,8 @@
 
 'use strict';
 
+glOverlay = !isChrome; // faster rendering when not chrome
+
 const tileTypeCount = 6, fallTime = .2;
 const cameraOffset = vec2(0,.5);
 let music, levelSize, level, levelFall, fallTimer, dragStartPos, comboCount, score;
