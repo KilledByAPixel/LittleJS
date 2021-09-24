@@ -116,7 +116,8 @@ function updateGamepads()
 ///////////////////////////////////////////////////////////////////////////////
 // touch screen input
 
-if (touchInputEnable && window.ontouchstart !== undefined)
+const isTouchDevice = touchInputEnable && window.ontouchstart !== undefined;
+if (isTouchDevice)
 {
     // handle all touch events the same way
     ontouchstart = ontouchmove = ontouchend = e=>

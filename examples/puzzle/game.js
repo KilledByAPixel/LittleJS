@@ -14,6 +14,16 @@ let music, levelSize, level, levelFall, fallTimer, dragStartPos, comboCount, sco
 const getLevelTile = (pos)   => level[pos.x + pos.y * levelSize.x];
 const setLevelTile = (pos,d) => level[pos.x + pos.y * levelSize.x] = d;
 
+const tileColors = 
+[
+    new Color(1,1,1),
+    new Color(1,0,0),
+    new Color(1,1,0),
+    new Color(0,1,0),
+    new Color(0,.6,1),
+    new Color(.6,0,1),
+];
+
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
@@ -159,6 +169,8 @@ function gameRender()
     mainContext.lineWidth = .05;
     mainContext.shadowColor = '#000';
     
+    const showIcons = !isTouchDevice;
+
     const pos = vec2();
     const tileSize = .45;
     const mouseTilePos = mousePos.int();
@@ -172,22 +184,19 @@ function gameRender()
         let drawPos = pos.add(vec2(.5));
         if (fallTimer.active() && levelFall[pos.x + pos.y*levelSize.x])
             drawPos.y += 1-fallTimer.getPercent();
-        
-        const isDragTile = dragStartPos && dragStartPos && pos.x == dragStartPos.x && pos.y == dragStartPos.y;
-
         drawCanvas2D(drawPos, vec2(1), 0, 0, context=>
         {
             context.shadowBlur = 0;
-            context.fillStyle = new Color().setHSLA(data/4,data==4?0:.7,data==5?1:.7).rgba();
-            if (isDragTile)
-                context.fillStyle = '#ff0';
+            context.fillStyle = tileColors[data].rgba();
             context.fillRect(-tileSize,-tileSize,2*tileSize,2*tileSize);
 
             context.shadowBlur = 9;
-            context.fillStyle = new Color().setHSLA(data/4,1,data==5?1:data==4?0:.5).rgba();
-            const icon = '■▲◆▼●▰'[data];
-            context.strokeText(icon,0,0);
-            context.fillText(icon,0,0);
+            context.fillStyle = '#000';
+            if (showIcons)
+            {
+                const icon = '■▲◆▼●▰'[data];
+                context.strokeText(icon,0,0);
+            }
         });
     }
 
@@ -292,14 +301,14 @@ function removeTile(pos)
     setLevelTile(pos, -1);
 
     // spawn particles
-    const color1 = new Color().setHSLA(data/4,data==4?0:1,data==5?1:.5,.5);
+    const color1 = tileColors[data];
     const color2 = color1.lerp(new Color, .5);
     new ParticleEmitter(
         pos.add(vec2(.5)), 1, .1, 100, PI,   // pos, emitSize, emitTime, emitRate, emiteCone
         undefined, undefined,                // tileIndex, tileSize
         color1, color2,                      // colorStartA, colorStartB
         color1.scale(1,0), color2.scale(1,0),// colorEndA, colorEndB
-        .5, .5, .5, .05, .05, // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
+        .5, .3, .3, .05, .05, // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
         .99, 1, 1, PI, .05,   // damping, angleDamping, gravityScale, particleCone, fadeRate, 
         .5, 0, 1              // randomness, collide, additive, randomColorLinear, renderOrder
     );
