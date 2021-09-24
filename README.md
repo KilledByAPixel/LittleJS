@@ -5,17 +5,16 @@
 - Small footprint with no dependencies, starter project is under 6K zipped
 - Super fast tile sheet rendering system, ~50,000 sprites at 60fps
 - Open Source with MIT license so it can be used to make commercial games
-- Engine handles all the heavy lifting for you
 - Object oriented system with base class engine object
 - 2D physics and collision system for axis aligned boxes
 - Engine helper classes and functions like Vector2, Color, and Timer
 - Sound effects audio with zzfx and music with zzfxm, mp3s, or wavs
 - Input processing system with gamepad and touchscreen support
-- Tile layer rendering and collision system
+- Tile layer cached rendering and collision system
 - Particle effects system
 - Debug tools and debug rendering system
 - Several easy to understand example projects you can build on
-- A build system for size coding competitions to minify your game
+- A build system for size coding competitions
 
 ## Example Starter Projects
 
