@@ -24,7 +24,7 @@
 ### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer) - Complex platformer with procedural levels and destruction
 ### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress) - Max sprite test, target is ~50,000 at 60 fps in chrome, about half that on Firefox
 
-Also check out my game [Space Huggers](https://github.com/KilledByAPixel/SpaceHuggers), an run and gun roguelike that I am building with this game engine.
+Also check out [Space Huggers](https://github.com/KilledByAPixel/SpaceHuggers), a larger game that I am building with this engine.
 
 ## [LittleJS Trello Roadmap](https://trello.com/b/E9zf1Xak/littlejs)
 
