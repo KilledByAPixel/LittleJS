@@ -161,26 +161,23 @@ function decorateBackgroundTile(pos)
     if (tileData <= 0)
         return;
 
-    // round corners
+    // make round corners
     for (let i=4;i--;)
     {
         // check corner neighbors
         const neighborTileDataA = getTileBackgroundData(pos.add(vec2().setAngle(i*PI/2)));
         const neighborTileDataB = getTileBackgroundData(pos.add(vec2().setAngle((i+1)%4*PI/2)));
-
         if (neighborTileDataA > 0 | neighborTileDataB > 0)
             continue;
 
         const directionVector = vec2().setAngle(i*PI/2+PI/4, 10).int();
-        let drawPos = pos.add(vec2(.5))            // center
+        const drawPos = pos.add(vec2(.5))          // center
             .scale(16).add(directionVector).int(); // direction offset
 
         // clear rect without any scaling to prevent blur from filtering
         const s = 2;
         tileBackgroundLayer.context.clearRect(
-            drawPos.x - s/2|0, 
-            tileBackgroundLayer.canvas.height - drawPos.y - s/2|0, 
-            s|0, s|0);
+            drawPos.x - s/2, tileBackgroundLayer.canvas.height - drawPos.y - s/2, s, s);
     }
 }
 
@@ -201,17 +198,14 @@ function decorateTile(pos)
         if (neighborTileData == tileData)
             continue;
 
-        // hacky code to make pixel perfect outlines
-        let size = vec2( 16, 2);
-        i&1 && (size = size.flip());
-
-        const color = levelGroundColor.mutate(.1);
-        tileLayer.context.fillStyle = color.rgba();
-        const drawPos = pos.scale(16);
+        // make pixel perfect outlines
+        const size = i&1 ? vec2(2, 16) : vec2(16, 2);
+        tileLayer.context.fillStyle = levelGroundColor.mutate(.1).rgba();
+        const drawPos = pos.scale(16)
+            .add(vec2(i==1?14:0,(i==0?14:0)))
+            .subtract((i&1? vec2(0,8-size.y/2) : vec2(8-size.x/2,0)));
         tileLayer.context.fillRect(
-            drawPos.x +   ((i==1?14:0)+(i&1?0:8-size.x/2)) |0, 
-            tileLayer.canvas.height - drawPos.y + ((i==0?-14:0)-(i&1?8-size.y/2:0)) |0, 
-            size.x|0, -size.y|0);
+            drawPos.x, tileLayer.canvas.height - drawPos.y, size.x, -size.y);
     }
 }
 
