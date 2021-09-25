@@ -23,7 +23,7 @@ This is a work in progress. Very close to being done, still worning on a few thi
 
 ## Example Starter Projects
 
-### [Hello World](https://killedbyapixel.github.io/LittleJS/) - Empty Starter project
+### [Hello World](https://killedbyapixel.github.io/LittleJS/) - Clean starter project
 ### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle) - Match 3 style puzzle game that does not use pixelated rendering
 ### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer) - Platformer/shooter with procedural level generation and destruction
 ### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout) - Breakout style game using fixed canvas size rendering
