@@ -86,12 +86,6 @@ function gameUpdatePost()
 ///////////////////////////////////////////////////////////////////////////////
 function gameRender()
 {
-    // draw a grey square without using webgl
-    drawCanvas2D(cameraPos,  tileCollisionSize.add(vec2(5)), 0, 0, (context)=>
-    {
-        context.fillStyle='#333'
-        context.fillRect(-.5,-.5,1,1);
-    });
 }
 
 ///////////////////////////////////////////////////////////////////////////////
