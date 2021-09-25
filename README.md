@@ -22,8 +22,8 @@
 ### [Hello World](https://killedbyapixel.github.io/LittleJS/) - Empty Starter project
 ### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer) - Platformer/shooter with procedural level generation and destruction
 ### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout) - Breakout style game using fixed canvas size rendering
-### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle) - Match 3 style puzzle game that does not use a texture or webgl
-### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress) - Max sprite/object test, also demo of the music system
+### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle) - Match 3 style puzzle game that does not use pixelated rendering
+### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress) - Max sprite/object test and music system demo
 
 Also check out [Space Huggers](https://github.com/KilledByAPixel/SpaceHuggers), a larger game that I am building with this engine.
 
