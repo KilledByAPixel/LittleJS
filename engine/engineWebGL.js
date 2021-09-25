@@ -11,7 +11,7 @@
 'use strict';
 
 let glCanvas, glContext, glTileTexture, glActiveTexture, glShader, 
-    glPositionData, glColorData, glBatchCount, glDirty, glAdditive, glOverlay;
+    glPositionData, glColorData, glBatchCount, glDirty, glAdditive;
 
 function glInit()
 {

@@ -6,7 +6,7 @@
 // display settings
 
 const maxWidth = 1920, maxHeight = 1200; // up to 1080p and 16:10
-const defaultFont = 'arial'; // font used for text rendering
+let defaultFont = 'arial'; // font used for text rendering
 let fixedWidth = 0, fixedHeight = 0; // use native resolution
 //const fixedWidth = 1280, fixedHeight = 720;  // 720p
 //const fixedWidth = 1920, fixedHeight = 1080; // 1080p
@@ -24,6 +24,7 @@ let pixelated = 1;              // use crisp pixels for pixel art
 // webgl config
 
 const glEnable = 1; // can run without gl (texured coloring will be disabled)
+let glOverlay = 0;  // fix slow rendering in some browsers by not compositing the WebGL canvas
 
 ///////////////////////////////////////////////////////////////////////////////
 // object config
