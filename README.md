@@ -17,6 +17,10 @@
 - All example projects are compatible with mobile devices
 - A build system for size coding competitions
 
+## [LittleJS Trello Roadmap](https://trello.com/b/E9zf1Xak/littlejs)
+
+This is a work in progress. Very close to being done, still worning on a few things before offical release, thanks!
+
 ## Example Starter Projects
 
 ### [Hello World](https://killedbyapixel.github.io/LittleJS/) - Empty Starter project
@@ -26,9 +30,5 @@
 ### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress) - Max sprite/object test and music system demo
 
 Also check out [Space Huggers](https://github.com/KilledByAPixel/SpaceHuggers), a larger game that I am building with this engine.
-
-## [LittleJS Trello Roadmap](https://trello.com/b/E9zf1Xak/littlejs)
-
-This is a work in progress. Very close to being done, still worning on a few things before offical release, thanks!
 
 ![LittleJS Screenshot](screenshot.jpg)
