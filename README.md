@@ -1,25 +1,25 @@
 # ![LittleJS Logo](favicon.ico) LittleJS - The Tiny JavaScript Game Engine That Can!
 
-## What's the deal with LittleJS Engine?
+## Hello!
 
-LittleJS is lightweight JavaScript game engine with a WebGL rendering system. The goal of this project is to be both very small and easy to use for a variety of applications from game jams prototypes to commercial releases. This engine includes everything necessary to make most games including a super fast rendering system, physics, particles, sound effects, music, keyboard/mouse/gamepad input handling, update/render loop, and debug tools.
+LittleJS is lightweight 2D JavaScript game engine with a WebGL rendering system. The goal of this project is to be both very small and easy to use for a variety of applications from game jams prototypes to commercial releases. This engine includes everything necessary to make most games including a super fast rendering system, physics, particles, sound effects, music, keyboard/mouse/gamepad input handling, update/render loop, and debug tools. 🚂
 
 ## Features
 
-- Small footprint with no dependencies, starter project is under 6K zipped
+- Very small footprint with no dependencies
 - Super fast tile sheet rendering system, ~50,000 sprites at 60fps
-- Open Source with MIT license so it can be used to make commercial games
 - Object oriented system with base class engine object
 - 2D physics and collision system for axis aligned boxes
 - Engine helper classes and functions like Vector2, Color, and Timer
-- Sound effects audio with zzfx and music with zzfxm, mp3s, or wavs
+- Sound effects audio with [zzfx](https://killedbyapixel.github.io/ZzFX/) and music with [zzfxm](https://keithclark.github.io/ZzFXM/), mp3s, or wavs
 - Input processing system with gamepad and touchscreen support
-- Tile layer cached rendering and collision system
-- Particle effects system
-- Debug tools and debug rendering system
+- Tile layer cached rendering and collision system for level data
+- Particle effects system (particle editor/designer in progress)
 - Several easy to understand example projects you can build on
+- Debug tools and debug rendering system
 - All example projects are compatible with mobile devices
-- A build system for size coding competitions
+- A build system for size coding competitions, starter project builds to a 6k zip
+- Open Source with [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used to make commercial games
 
 ## [LittleJS Trello Roadmap](https://trello.com/b/E9zf1Xak/littlejs)
 
@@ -79,10 +79,9 @@ This will create your own object class called GameObject and the constructor wil
 
 ## Engine Configuration
 
-All engine settings are listed in [engineConfig.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engineConfig.js). Here is some info about the most important settings...
+All engine settings are listed in [engineConfig.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engineConfig.js). Here are the most important settings...
 
 - fixedWidth and fixedHeight - use a fixed canvas resolution, if not set uses native screen resolution
 - pixelated - disable blending in several places for pixel art style games
 - glOverlay - fix slow rendering in some browsers by not compositing the WebGL canvas
 - glEnable - run without WebGL but textured coloring is disabled and it is much slower
-
