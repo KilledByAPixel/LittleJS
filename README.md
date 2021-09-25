@@ -24,9 +24,9 @@ This is a work in progress. Very close to being done, still worning on a few thi
 ## Example Starter Projects
 
 ### [Hello World](https://killedbyapixel.github.io/LittleJS/) - Clean starter project
-### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle) - Match 3 style puzzle game that does not use pixelated rendering
-### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer) - Platformer/shooter with procedural level generation and destruction
-### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout) - Breakout style game using fixed canvas size rendering
+### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle) - Match 3 style puzzle game with HD rendering
+### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer) - Platformer with procedural level generation and destruction
+### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout) - Breakout style game using fixed canvas pixelized rendering
 ### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress) - Max sprite/object test and music system demo
 
 Also check out [Space Huggers](https://github.com/KilledByAPixel/SpaceHuggers), a larger game that I am building with this engine.
