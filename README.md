@@ -9,17 +9,18 @@ LittleJS is lightweight 2D JavaScript game engine with a WebGL rendering system.
 - Very small footprint with no dependencies
 - Super fast tile sheet rendering system, ~50,000 sprites at 60fps
 - Object oriented system with base class engine object
-- 2D physics and collision system for axis aligned boxes
-- Engine helper classes and functions like Vector2, Color, and Timer
-- Sound effects audio with [zzfx](https://killedbyapixel.github.io/ZzFX/) and music with [zzfxm](https://keithclark.github.io/ZzFXM/), mp3s, or wavs
-- Input processing system with gamepad and touchscreen support
+- 2D physics and collision handling for axis aligned boxes
+- Engine helper functions and classes like Vector2, Color, and Timer
+- Sound effects with [zzfx](https://killedbyapixel.github.io/ZzFX/) and music with [zzfxm](https://keithclark.github.io/ZzFXM/), mp3s, or wavs
+- Input processing system with keyboard, mouse, gamepad, and touch support
 - Tile layer cached rendering and collision system for level data
 - Particle effects system (particle editor/designer in progress)
 - Several easy to understand example projects you can build on
 - Debug tools and debug rendering system
 - All example projects are compatible with mobile devices
-- A build system for size coding competitions, starter project builds to a 6k zip
-- Open Source with [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used to make commercial games
+- Build system automatically combines everything, minifies, and removes unused code
+- For size coding competitions like [js13kGames](https://js13kgames.com/), starter project builds to a 6k zip
+- Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used to make commercial games
 
 ## [LittleJS Trello Roadmap](https://trello.com/b/E9zf1Xak/littlejs)
 
@@ -28,7 +29,7 @@ LittleJS is lightweight 2D JavaScript game engine with a WebGL rendering system.
 ### [Hello World](https://killedbyapixel.github.io/LittleJS/) - Clean starter project
 ### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle) - Match 3 style puzzle game with HD rendering
 ### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer) - Platformer with procedural level generation and destruction
-### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout) - Breakout style game using fixed canvas pixelized rendering
+### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout) - Breakout style game using pixelized 720p rendering
 ### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress) - Max sprite/object test and music system demo
 
 Also check out [Space Huggers](https://github.com/KilledByAPixel/SpaceHuggers), the best demonstration of this game engine features.
@@ -75,7 +76,7 @@ class MyObject extends EngineObject
 }
 ```
 
-This will create your own object class called GameObject and the constructor will add it to the list of objects. Engine objects are automatically updated and rendered until they are destroyed. You can override those functions to make the object behave however you want. See the examples for a complete demonstration.
+This will create your own object class called GameObject and the constructor will add it to the list of objects. Engine objects are automatically updated and rendered until they are destroyed. You can override those functions to make the object behave however you want. You can also draw sprites without using objects. See the examples for a complete demonstration.
 
 ## Engine Configuration
 
