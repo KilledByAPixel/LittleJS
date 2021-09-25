@@ -76,3 +76,13 @@ class MyObject extends EngineObject
 ```
 
 This will create your own object class called GameObject and the constructor will add it to the list of objects. Engine objects are automatically updated and rendered until they are destroyed. You can override those functions to make the object behave however you want. See the examples for a complete demonstration.
+
+## Engine Configuration
+
+All engine settings are listed in [engineConfig.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engineConfig.js). Here is some info about the most important settings...
+
+- fixedWidth and fixedHeight - use a fixed canvas resolution, if not set uses native screen resolution
+- pixelated - disabl blending in several places for pixel art style games
+- glOverlay - fix slow rendering in some browsers by not compositing the WebGL canvas
+- glEnable - run without WebGL but textured coloring is disabled and it is much slower
+
