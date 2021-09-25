@@ -2121,9 +2121,8 @@ function glSetBlendMode(additive)
 
     // setup blending
     glAdditive = additive;
-    glContext.blendFuncSeparate(
-        gl_SRC_ALPHA, additive ? gl_ONE : gl_ONE_MINUS_SRC_ALPHA, 
-        gl_ONE,       additive ? gl_ONE : gl_ONE_MINUS_SRC_ALPHA);
+    const destBlend = additive ? gl_ONE : gl_ONE_MINUS_SRC_ALPHA;
+    glContext.blendFuncSeparate(gl_SRC_ALPHA, destBlend, gl_ONE, destBlend);
     glContext.enable(gl_BLEND);
 }
 
