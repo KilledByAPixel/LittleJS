@@ -14,12 +14,13 @@ const cameraOffset = vec2(0,-.5);
 const backgroundColor = new Color(.3,.3,.3);
 const tileColors = 
 [
-    new Color(1,1,1),
     new Color(1,0,0),
+    new Color(1,1,1),
     new Color(1,1,0),
     new Color(0,1,0),
     new Color(0,.6,1),
     new Color(.6,0,1),
+    new Color(.5,.5,.5),
 ];
 const tileTypeCount = tileColors.length;
 
@@ -191,7 +192,7 @@ engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'ti
 function clearMatches()
 {
     // horizontal match check
-    let pos = vec2(), removedCount = 0;
+    const removedTiles = [], pos = vec2();
     for (pos.y = levelSize.y; pos.y--;)
     {
         let runCount, runData;
@@ -202,17 +203,10 @@ function clearMatches()
             {
                 ++runCount;
                 if (runCount == 3)
-                {
-                    // remove run tiles
-                    removedCount += runCount;
                     for (let j=runCount; j--;)
-                        removeTile(pos.add(vec2(j,0)));
-                }
+                        removedTiles[pos.x + j + pos.y * levelSize.x] = 1;
                 else if (runCount > 3)
-                {
-                    ++removedCount;
-                    removeTile(pos);
-                }
+                    removedTiles[pos.x + pos.y * levelSize.x] = 1;
             }
             else
             {
@@ -233,23 +227,44 @@ function clearMatches()
             {
                 ++runCount;
                 if (runCount == 3)
-                {
-                    // remove run tiles
-                    removedCount += runCount;
                     for (let j=runCount; j--;)
-                        removeTile(pos.add(vec2(0,j)));
-                }
+                        removedTiles[pos.x + (pos.y + j) * levelSize.x] = 1;
                 else if (runCount > 3)
-                {
-                    ++removedCount;
-                    removeTile(pos);
-                }
+                    removedTiles[pos.x + pos.y * levelSize.x] = 1;
             }
             else
             {
                 runData = data;
                 runCount = 1;
             }
+        }
+    }
+
+    // remove all tiles, set up like this incase an L or T shape is formed
+    let removedCount = 0;
+    for (pos.x = levelSize.x; pos.x--;)
+    for (pos.y = levelSize.y; pos.y--;)
+    {
+        if (removedTiles[pos.x + pos.y * levelSize.x])
+        {
+            // remove tile
+            const data = getTile(pos);
+            setTile(pos, -1);
+
+            // spawn particles
+            const color1 = tileColors[data];
+            const color2 = color1.lerp(new Color, .5);
+            new ParticleEmitter(
+                pos.add(vec2(.5)), 1, .1, 100, PI,   // pos, emitSize, emitTime, emitRate, emiteCone
+                undefined, undefined,                // tileIndex, tileSize
+                color1, color2,                      // colorStartA, colorStartB
+                color1.scale(1,0), color2.scale(1,0),// colorEndA, colorEndB
+                .5, .3, .3, .05, .05, // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
+                .99, 1, 1, PI, .05,   // damping, angleDamping, gravityScale, particleCone, fadeRate, 
+                .5, 0, 1              // randomness, collide, additive, randomColorLinear, renderOrder
+            );
+
+            ++removedCount;
         }
     }
 
@@ -260,23 +275,4 @@ function clearMatches()
     }
     else
         comboCount = 0;
-}
-
-function removeTile(pos)
-{
-    const data = getTile(pos);
-    setTile(pos, -1);
-
-    // spawn particles
-    const color1 = tileColors[data];
-    const color2 = color1.lerp(new Color, .5);
-    new ParticleEmitter(
-        pos.add(vec2(.5)), 1, .1, 100, PI,   // pos, emitSize, emitTime, emitRate, emiteCone
-        undefined, undefined,                // tileIndex, tileSize
-        color1, color2,                      // colorStartA, colorStartB
-        color1.scale(1,0), color2.scale(1,0),// colorEndA, colorEndB
-        .5, .3, .3, .05, .05, // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
-        .99, 1, 1, PI, .05,   // damping, angleDamping, gravityScale, particleCone, fadeRate, 
-        .5, 0, 1              // randomness, collide, additive, randomColorLinear, renderOrder
-    );
 }
