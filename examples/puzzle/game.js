@@ -123,7 +123,6 @@ function gameUpdate()
                         // undo if no matches
                         if (!fallTimer.isSet())
                         {
-                            score = max(score-1, 0);
                             zzfx(...[,,709,,,.07,,,,3.7,,,,3.6,,,.11]);
                             setTile(mouseTilePos, endTile);
                             setTile(dragStartPos, startTile);
