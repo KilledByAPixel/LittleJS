@@ -1,4 +1,4 @@
-# LittleJS - The Tiny JavaScript Game Engine That Can!
+# ![LittleJS Logo](favicon.ico) LittleJS - The Tiny JavaScript Game Engine That Can!
 
 ## Features
 
@@ -31,4 +31,4 @@ Also check out [Space Huggers](https://github.com/KilledByAPixel/SpaceHuggers), 
 
 This is a work in progress. Very close to being done, still worning on a few things before offical release, thanks!
 
-![LittleJS Logo](/favicon.ico)
+![LittleJS Screenshot](screenshot.jpg)
