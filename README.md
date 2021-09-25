@@ -23,8 +23,6 @@ LittleJS is lightweight JavaScript game engine with a WebGL rendering system. Th
 
 ## [LittleJS Trello Roadmap](https://trello.com/b/E9zf1Xak/littlejs)
 
-This is a work in progress. Very close to being done, still worning on a few things before offical release, thanks!
-
 ## Example Starter Projects
 
 ### [Hello World](https://killedbyapixel.github.io/LittleJS/) - Clean starter project
