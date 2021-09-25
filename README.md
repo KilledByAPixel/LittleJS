@@ -37,9 +37,9 @@ Also check out [Space Huggers](https://github.com/KilledByAPixel/SpaceHuggers), 
 
 ## How to use LittleJS
 
-It is recommended that you start by copying the [LittleJS Starter Project](https://killedbyapixel.github.io/LittleJS/) It is mostly empty with just a few things you can use to get started or remove. You can also download and include [engine.all.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.js) or [engine.all.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.min.js) for release builds.
+It is recommended that you start by copying the [LittleJS Starter Project](https://github.com/KilledByAPixel/LittleJS/blob/main/game.js) It is mostly empty with just a few things you can use to get started or remove. You can also download and include [engine.all.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.js) or [engine.all.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.min.js).
 
-To startup LittleJS you will call something like...
+To startup LittleJS call engineInit like this...
 
 ```javascript
 engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png');
@@ -47,32 +47,32 @@ engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'ti
 
 This will init the engine when tiles.png loads. Then call your gameInit function and other functions during the update/render loop.
 
-For most games you will want to extend EngineObject with your own objects, something like...
+For most games you will want to extend EngineObject with your own objects, something like this...
 
 ```javascript
-class GameObject extends EngineObject 
+class MyObject extends EngineObject 
 {
     constructor(pos, size, tileIndex, tileSize, angle, color)
     {
         super(pos, size, tileIndex, tileSize, angle, color);
         
-        // object init code here
+        // your object init code here
     }
 
     update()
     {
         super.update();
         
-        // object update code here
+        // your object update code here
     }
 
     render()
     {
         super.render();
         
-        // object render code here
+        // your object render code here
     }
 }
 ```
 
-This will create your own object class called GameObject and add it to the list of objects. It will automatically be updated and rendered until it is destroyed. You can override those functions to make the object behave however you want.
+This will create your own object class called GameObject and the constructor will add it to the list of objects. Engine objects are automatically updated and rendered until they are destroyed. You can override those functions to make the object behave however you want. See the examples for a complete demonstration.
