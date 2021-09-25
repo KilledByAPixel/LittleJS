@@ -122,6 +122,11 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             const aspect = innerWidth / innerHeight;
             mainCanvas.style.width = aspect < fixedAspect ? '100%' : '';
             mainCanvas.style.height = aspect < fixedAspect ? '' : '100%';
+            if (glCanvas)
+            {
+                glCanvas.style.width = mainCanvas.style.width;
+                glCanvas.style.height = mainCanvas.style.height;
+            }
         }
         else
         {

@@ -4,8 +4,6 @@
 
 'use strict';
 
-glOverlay = !isChrome; // faster rendering when not chrome
-
 let levelSize, ball, paddle, score;
 
 ///////////////////////////////////////////////////////////////////////////////

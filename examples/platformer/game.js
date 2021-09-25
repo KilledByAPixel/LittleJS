@@ -5,7 +5,7 @@
 
 'use strict';
 
-glOverlay = !isChrome; // faster rendering when not chrome
+glOverlay = !isChrome; // fix slow rendering when not chrome
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()

@@ -7,10 +7,11 @@
 
 'use strict';
 
-glOverlay = !isChrome; // faster rendering when not chrome
+glOverlay = !isChrome; // fix slow rendering when not chrome
 
 const tileTypeCount = 6, fallTime = .2;
-const cameraOffset = vec2(0,.5);
+const cameraOffset = vec2(0,-.5);
+const backgroundColor = new Color(.3,.3,.3);
 let music, levelSize, level, levelFall, fallTimer, dragStartPos, comboCount, score;
 
 const getLevelTile = (pos)   => level[pos.x + pos.y * levelSize.x];
@@ -31,11 +32,11 @@ function gameInit()
 {
     gravity = -.005;
     fixedWidth = 1920, fixedHeight = 1080; // 1080p
-    mainCanvas.style.background = '#444';
+    mainCanvas.style.background = backgroundColor.rgba();
 
     // randomize level
     level = [];
-    levelSize = vec2(16,8);
+    levelSize = vec2(12,6);
     const pos = vec2();
     for (pos.x = levelSize.x; pos.x--;)
     for (pos.y = levelSize.y; pos.y--;)
@@ -156,25 +157,11 @@ function gameUpdatePost()
 function gameRender()
 {
     // draw a black square for the background
-    drawCanvas2D(cameraPos.subtract(cameraOffset), levelSize, 0, 0, context=>
-    {
-        context.fillStyle = '#000';
-        context.fillRect(-.5,-.5,1,1);
-    });
+    drawRect(cameraPos.subtract(cameraOffset), levelSize, new Color(0,0,0));
 
     // draw the blocks
-    mainContext.font = '.5px"';
-    mainContext.textAlign = 'center';
-    mainContext.textBaseline = 'middle';
-    mainContext.fillStyle = '#fff';
-    mainContext.strokeStyle = '#000';
-    mainContext.lineWidth = .05;
-    mainContext.shadowColor = '#000';
-    
-    const showIcons = !isTouchDevice;
-
     const pos = vec2();
-    const tileSize = .45;
+    const tileSize = .95;
     const mouseTilePos = mousePos.int();
     for (pos.x = levelSize.x; pos.x--;)
     for (pos.y = levelSize.y; pos.y--;)
@@ -186,35 +173,18 @@ function gameRender()
         let drawPos = pos.add(vec2(.5));
         if (fallTimer.active() && levelFall[pos.x + pos.y*levelSize.x])
             drawPos.y += 1-fallTimer.getPercent();
-        drawCanvas2D(drawPos, vec2(1), 0, 0, context=>
-        {
-            context.shadowBlur = 0;
-            context.fillStyle = tileColors[data].rgba();
-            context.fillRect(-tileSize,-tileSize,2*tileSize,2*tileSize);
-
-            context.shadowBlur = 9;
-            context.fillStyle = '#000';
-            if (showIcons)
-            {
-                const icon = '■▲◆▼●▰'[data];
-                context.strokeText(icon,0,0);
-            }
-        });
+        drawRect(drawPos, vec2(tileSize), tileColors[data]);
     }
 
     // draw a grey square at top to cover up incomming tiles
-    drawCanvas2D(cameraPos.subtract(cameraOffset).add(vec2(0,levelSize.y)), levelSize, 0, 0, context=>
-    {
-        context.fillStyle = '#444';
-        context.fillRect(-.5,-.5,1,1);
-    });
+    drawRect(cameraPos.subtract(cameraOffset).add(vec2(0,levelSize.y)), levelSize, backgroundColor);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameRenderPost()
 {
     // draw text on top of everything
-    drawText('Score: ' + score, cameraPos.add(vec2(0,4.1)), 1.2, new Color, .1);
+    drawText('Score: ' + score, cameraPos.add(vec2(0,-3.1)), 1, new Color, .1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
