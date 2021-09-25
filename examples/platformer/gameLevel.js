@@ -78,14 +78,15 @@ function buildTerrain(size)
         }
     }
 
-    // add random islands
+    // add random holes
     for (let i=levelSize.x; i--;)
     {
         const pos = vec2(rand(levelSize.x), rand(levelSize.y/2, 9));
         const height = randInt(19,1);
-        for (let x = randInt(19,1);--x;)
-        for (let y = height;--y;)
-            setTileCollisionData(pos.add(vec2(x,y)), tileType_empty);
+        const offset = vec2();
+        for (offset.x = randInt(19,1); --offset.x;)
+        for (offset.y = height; --offset.y;)
+            setTileCollisionData(pos.add(offset), tileType_empty);
     }
 
     // add ladders
@@ -194,11 +195,12 @@ function buildLevel()
     
     // apply decoration to level tiles
     makeTileLayers();
-    for (let x=levelSize.x;x--;)
-    for (let y=levelSize.y;--y;)
+    const pos = vec2();
+    for (pos.x=levelSize.x; pos.x--;)
+    for (pos.y=levelSize.y; pos.y-->1;)
     {
-        decorateBackgroundTile(vec2(x,y));
-        decorateTile(vec2(x,y));
+        decorateBackgroundTile(pos);
+        decorateTile(pos);
     }
 
     // warm up level

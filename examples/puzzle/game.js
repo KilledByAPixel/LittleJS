@@ -9,14 +9,9 @@
 glOverlay = !isChrome; // fix slow rendering when not chrome
 pixelated = 0; // do not use pixelated rendering
 
-const tileTypeCount = 6, fallTime = .2;
+const fallTime = .2;
 const cameraOffset = vec2(0,-.5);
 const backgroundColor = new Color(.3,.3,.3);
-let music, levelSize, level, levelFall, fallTimer, dragStartPos, comboCount, score;
-
-const getLevelTile = (pos)   => level[pos.x + pos.y * levelSize.x];
-const setLevelTile = (pos,d) => level[pos.x + pos.y * levelSize.x] = d;
-
 const tileColors = 
 [
     new Color(1,1,1),
@@ -26,11 +21,16 @@ const tileColors =
     new Color(0,.6,1),
     new Color(.6,0,1),
 ];
+const tileTypeCount = tileColors.length;
+
+const getTile = (pos)       => level[pos.x + pos.y * levelSize.x];
+const setTile = (pos, data) => level[pos.x + pos.y * levelSize.x] = data;
+
+let level, levelSize, levelFall, fallTimer, dragStartPos, comboCount, score;
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
-    gravity = -.005;
     fixedWidth = 1920, fixedHeight = 1080; // 1080p
     mainCanvas.style.background = backgroundColor.rgba();
 
@@ -40,13 +40,13 @@ function gameInit()
     const pos = vec2();
     for (pos.x = levelSize.x; pos.x--;)
     for (pos.y = levelSize.y; pos.y--;)
-        setLevelTile(pos, randInt(tileTypeCount));
+        setTile(pos, randInt(tileTypeCount));
 
     cameraPos = levelSize.scale(.5).add(cameraOffset);
     cameraScale = 900/levelSize.y;
+    gravity = -.005;
     fallTimer = new Timer;
-    comboCount = 0;
-    score = 0;
+    comboCount = score = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -58,36 +58,35 @@ function gameUpdate()
         {
             // add more blocks in the top
             for(let x = 0; x < levelSize.x; ++x)
-                setLevelTile(vec2(x,levelSize.y),randInt(tileTypeCount));
+                setTile(vec2(x,levelSize.y),randInt(tileTypeCount));
         }
         
         // allow blocks to fall
         if (!fallTimer.active())
         {
             // check if there is more to fall
-            let keepFalling = 0;
             levelFall = [];
+            let keepFalling = 0;
             const pos = vec2();
             for (pos.x = levelSize.x; pos.x--;)
             for (pos.y = 0; pos.y<levelSize.y; pos.y++)
             {
+                const data = getTile(pos);
                 const abovePos = pos.add(vec2(0,1));
-                const data = getLevelTile(pos);
-                const aboveData = getLevelTile(abovePos);
+                const aboveData = getTile(abovePos);
                 if (data == -1 && aboveData >= 0)
                 {
-                    setLevelTile(pos, aboveData);
-                    setLevelTile(abovePos, -1);
-                    levelFall[pos.x+pos.y*levelSize.x] = 1;
-                    keepFalling = 1;
+                    setTile(pos, aboveData);
+                    setTile(abovePos, -1);
+                    levelFall[pos.x+pos.y*levelSize.x] = keepFalling = 1;
                 }
             }
 
             if (keepFalling)
             {
-                const p = percent(comboCount,0,9);
+                const p = percent(comboCount, 0, 9);
                 fallTimer.set(fallTime*p);
-                    zzfx(...[.2,,1922,,,.01,,1.42,,91,,,,,,,,,,.73]);
+                zzfx(...[.2,,1922,,,.01,,1.42,,91,,,,,,,,,,.73]);
             }
             else
                 fallTimer.unset();
@@ -107,34 +106,30 @@ function gameUpdate()
             }
             else if (mouseIsDown(0) && dragStartPos)
             {
-                if (dragStartPos.x != mouseTilePos.x || dragStartPos.y != mouseTilePos.y)
+                if ((abs(dragStartPos.x - mouseTilePos.x) == 1) ^ (abs(dragStartPos.y - mouseTilePos.y) == 1))
                 {
-                    // drag must be a neighbor tile
-                    if ((abs(dragStartPos.x - mouseTilePos.x) == 1) ^ (abs(dragStartPos.y - mouseTilePos.y) == 1))
+                    const startTile = getTile(dragStartPos);
+                    const endTile =   getTile(mouseTilePos);
+                    if (startTile >= 0 && endTile >= 0)
                     {
-                        const startTile = getLevelTile(dragStartPos);
-                        const endTile =   getLevelTile(mouseTilePos);
-                        if (startTile >= 0 && endTile >= 0)
+                        // swap tiles
+                        setTile(mouseTilePos, startTile);
+                        setTile(dragStartPos, endTile);
+
+                        // try to clear matches
+                        clearMatches();
+
+                        // undo if no matches
+                        if (!fallTimer.isSet())
                         {
-                            // swap tiles
-                            setLevelTile(mouseTilePos, startTile);
-                            setLevelTile(dragStartPos, endTile);
-
-                            // try to clear matches
-                            clearMatches();
-
-                            // undo if no matches
-                            if (!fallTimer.isSet())
-                            {
-                                score = max(score-1, 0);
-                                zzfx(...[,,709,,,.07,,,,3.7,,,,3.6,,,.11]);
-                                setLevelTile(mouseTilePos, endTile);
-                                setLevelTile(dragStartPos, startTile);
-                            }
-                            else
-                                zzfx(...[.4,.2,250,.04,,.04,,,1,,,,,3]);
-                            dragStartPos = 0;
+                            score = max(score-1, 0);
+                            zzfx(...[,,709,,,.07,,,,3.7,,,,3.6,,,.11]);
+                            setTile(mouseTilePos, endTile);
+                            setTile(dragStartPos, startTile);
                         }
+                        else
+                            zzfx(...[.4,.2,250,.04,,.04,,,1,,,,,3]);
+                        dragStartPos = 0;
                     }
                 }
             }
@@ -159,20 +154,17 @@ function gameRender()
     // draw the blocks
     const pos = vec2();
     const tileSize = .95;
-    const mouseTilePos = mousePos.int();
     const outlineColor = new Color(0,0,0);
     for (pos.x = levelSize.x; pos.x--;)
     for (pos.y = levelSize.y; pos.y--;)
     {
-        const data = getLevelTile(pos);
+        const data = getTile(pos);
         if (data == -1)
             continue;
 
-        let drawPos = pos.add(vec2(.5));
+        const drawPos = pos.add(vec2(.5));
         if (dragStartPos && pos.x == dragStartPos.x && pos.y == dragStartPos.y)
-        {
             drawRect(drawPos, vec2(1.05));
-        }
 
         if (fallTimer.active() && levelFall[pos.x + pos.y*levelSize.x])
             drawPos.y += 1-fallTimer.getPercent();
@@ -199,14 +191,13 @@ engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'ti
 function clearMatches()
 {
     // horizontal match check
-    let removedCount = 0;
-    let pos = vec2();
+    let pos = vec2(), removedCount = 0;
     for (pos.y = levelSize.y; pos.y--;)
     {
         let runCount, runData;
         for (pos.x = levelSize.x; pos.x--;)
         {
-            const data = getLevelTile(pos);
+            const data = getTile(pos);
             if (data >= 0 && data == runData)
             {
                 ++runCount;
@@ -237,7 +228,7 @@ function clearMatches()
         let runCount, runData;
         for (pos.y = levelSize.y; pos.y--;)
         {
-            const data = getLevelTile(pos);
+            const data = getTile(pos);
             if (data >= 0 && data == runData)
             {
                 ++runCount;
@@ -273,8 +264,8 @@ function clearMatches()
 
 function removeTile(pos)
 {
-    const data = getLevelTile(pos);
-    setLevelTile(pos, -1);
+    const data = getTile(pos);
+    setTile(pos, -1);
 
     // spawn particles
     const color1 = tileColors[data];

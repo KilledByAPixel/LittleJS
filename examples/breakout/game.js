@@ -10,10 +10,10 @@ let levelSize, ball, paddle, score;
 function gameInit()
 {
     fixedWidth = 1280, fixedHeight = 720; // 720p
-    score = 0;
     levelSize = vec2(72, 40);
     cameraPos = levelSize.scale(.5);
     paddle = new Paddle(vec2(levelSize.x/2-12,2));
+    score = 0;
 
     // spawn blocks
     const pos = vec2();

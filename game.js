@@ -11,6 +11,11 @@ let particleEmiter, overlayCanvas, overlayContext;
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
+    // create overlay canvas for hud
+    document.body.appendChild(overlayCanvas = document.createElement('canvas'));
+    overlayCanvas.style = mainCanvas.style.cssText;
+    overlayContext = overlayCanvas.getContext('2d');
+
     // create tile collision and visible tile layer
     initTileCollision(vec2(35,20));
     const tileLayer = new TileLayer(vec2(), tileCollisionSize);
@@ -52,11 +57,6 @@ function gameInit()
     );
     particleEmiter.elasticity = .3;
     particleEmiter.trailScale = 2;
-
-    // create overlay canvas for hud
-    document.body.appendChild(overlayCanvas = document.createElement('canvas'));
-    overlayCanvas.style = mainCanvas.style.cssText;
-    overlayContext = overlayCanvas.getContext('2d');
 }
 
 ///////////////////////////////////////////////////////////////////////////////

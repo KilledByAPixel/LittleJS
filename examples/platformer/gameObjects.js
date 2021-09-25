@@ -194,10 +194,10 @@ class Weapon extends EngineObject
         super(pos, vec2(.6), 2, vec2(8));
 
         // weapon settings
-        this.fireRate = 8;
-        this.bulletSpeed = .5;
+        this.fireRate     = 8;
+        this.bulletSpeed  = .5;
         this.bulletSpread = .1;
-        this.damage = 1;
+        this.damage       = 1;
 
         // prepare to fire
         this.renderOrder = parent.renderOrder + 1;

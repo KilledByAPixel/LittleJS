@@ -12,17 +12,16 @@ let overlayCanvas, overlayContext, kills, deaths;
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
-    kills = 0;
-    deaths = 0;
-    gravity = -.01;
-    cameraScale = 4*16;
-    gameTimer.set();
-    buildLevel();
-
     // create overlay canvas for hud
     document.body.appendChild(overlayCanvas = document.createElement('canvas'));
     overlayCanvas.style = mainCanvas.style.cssText;
     overlayContext = overlayCanvas.getContext('2d');
+
+    kills = deaths = 0;
+    gravity = -.01;
+    cameraScale = 4*16;
+    gameTimer.set();
+    buildLevel();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
