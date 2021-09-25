@@ -82,7 +82,7 @@ This will create your own object class called GameObject and the constructor wil
 All engine settings are listed in [engineConfig.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engineConfig.js). Here is some info about the most important settings...
 
 - fixedWidth and fixedHeight - use a fixed canvas resolution, if not set uses native screen resolution
-- pixelated - disabl blending in several places for pixel art style games
+- pixelated - disable blending in several places for pixel art style games
 - glOverlay - fix slow rendering in some browsers by not compositing the WebGL canvas
 - glEnable - run without WebGL but textured coloring is disabled and it is much slower
 
