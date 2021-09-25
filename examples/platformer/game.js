@@ -5,7 +5,7 @@
 
 'use strict';
 
-glOverlay = !isChrome; // fix slow rendering when not chrome
+const lowGraphicsSettings = glOverlay = !isChrome; // fix slow rendering when not chrome
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()

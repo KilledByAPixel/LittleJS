@@ -4,7 +4,9 @@
 
 'use strict';
 
-let particleEmiter;
+let particleEmiter, overlayCanvas, overlayContext;
+
+glOverlay = !isChrome; // fix slow rendering when not chrome
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
@@ -50,6 +52,11 @@ function gameInit()
     );
     particleEmiter.elasticity = .3;
     particleEmiter.trailScale = 2;
+
+    // create overlay canvas for hud
+    document.body.appendChild(overlayCanvas = document.createElement('canvas'));
+    overlayCanvas.style = mainCanvas.style.cssText;
+    overlayContext = overlayCanvas.getContext('2d');
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -79,15 +86,35 @@ function gameUpdatePost()
 ///////////////////////////////////////////////////////////////////////////////
 function gameRender()
 {
-    // draw a grey square
-    drawRect(cameraPos, tileCollisionSize.add(vec2(5)), new Color(.2,.2,.2));
+    // draw a grey square without using webgl
+    drawCanvas2D(cameraPos,  tileCollisionSize.add(vec2(5)), 0, 0, (context)=>
+    {
+        context.fillStyle='#333'
+        context.fillRect(-.5,-.5,1,1);
+    });
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameRenderPost()
 {
-    // draw text on top of everything
-    drawText('Hello World', cameraPos, 3, new Color, .1);
+    // clear overlay canvas
+    overlayCanvas.width = mainCanvas.width;
+    overlayCanvas.height = mainCanvas.height;
+    overlayCanvas.style.width = mainCanvas.style.width;
+    overlayCanvas.style.height = mainCanvas.style.height;
+
+    // draw to overlay canvas for hud rendering
+    const drawOverlayText = (text, x, y, size=100, lineWidth=2) =>
+    {
+        overlayContext.textAlign = 'center';
+        overlayContext.textBaseline = 'top';
+        overlayContext.font = size + 'px arial'
+        overlayContext.fillStyle = '#fff';
+        overlayContext.lineWidth = lineWidth;
+        overlayContext.strokeText(text, x, y);
+        overlayContext.fillText(text, x, y);
+    }
+    drawOverlayText('Hello World', overlayCanvas.width/2, 40);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

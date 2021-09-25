@@ -21,7 +21,7 @@
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = 'v0.75';
+const engineVersion = 'v1.0';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 
 // core engine variables

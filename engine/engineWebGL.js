@@ -10,8 +10,8 @@
 
 'use strict';
 
-let glCanvas, glContext, glTileTexture, glShader, glPositionData, glColorData, 
-    glBatchCount, glDirty, glAdditive, glOverlay;
+let glCanvas, glContext, glTileTexture, glActiveTexture, glShader, 
+    glPositionData, glColorData, glBatchCount, glDirty, glAdditive, glOverlay;
 
 function glInit()
 {
@@ -73,10 +73,6 @@ function glInit()
     initVertexAttribArray('t', gl_FLOAT, 4, 2);            // texture coords
     initVertexAttribArray('c', gl_UNSIGNED_BYTE, 1, 4, 1); // color
     initVertexAttribArray('b', gl_UNSIGNED_BYTE, 1, 4, 1); // additiveColor
-
-    // use point filtering for pixelated rendering
-    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, pixelated ? gl_NEAREST : gl_LINEAR);
-    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, pixelated ? gl_NEAREST : gl_LINEAR);
 }
 
 function glSetBlendMode(additive)
@@ -92,6 +88,16 @@ function glSetBlendMode(additive)
         gl_SRC_ALPHA, additive ? gl_ONE : gl_ONE_MINUS_SRC_ALPHA, 
         gl_ONE,       additive ? gl_ONE : gl_ONE_MINUS_SRC_ALPHA);
     glContext.enable(gl_BLEND);
+}
+
+function glSetTexture(texture=glTileTexture)
+{
+    if (!glEnable) return;
+        
+    if (texture != glActiveTexture)
+        glFlush();
+
+    glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = texture);
 }
 
 function glCompileShader(source, type)
@@ -140,13 +146,14 @@ function glCreateTexture(image)
 {
     if (!glEnable) return;
 
-    // build the texture, use a white pixel if no texture exists
+    // build the texture
     const texture = glContext.createTexture();
     glContext.bindTexture(gl_TEXTURE_2D, texture);
-    if (image.src)
-        glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
-    else
-        glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, 1, 1, 0, gl_RGBA, gl_UNSIGNED_BYTE, new Uint8Array([255, 255, 255, 255]));
+    glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
+
+    // use point filtering for pixelated rendering
+    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, pixelated ? gl_NEAREST : gl_LINEAR);
+    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, pixelated ? gl_NEAREST : gl_LINEAR);
     return texture;
 }
 
@@ -160,6 +167,7 @@ function glPreRender(width, height)
     glContext.viewport(0, 0, width, height);
 
     // set up the shader
+    glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = glTileTexture);
     glContext.useProgram(glShader);
     glSetBlendMode();
 
@@ -204,7 +212,7 @@ function glCopyToContext(context, forceDraw)
     }
 }
 
-function glDraw(x, y, sizeX, sizeY, angle, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgba=0xffffffff, rgbaAdditive=0x00000000)
+function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgba=0xffffffff, rgbaAdditive=0x00000000)
 {
     if (!glEnable) return;
     

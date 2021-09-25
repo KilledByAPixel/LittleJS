@@ -123,7 +123,7 @@ function explosion(pos, radius=3)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-function destroyTile(pos, makeSound = 1, cleanNeighbors = 1, maxCascadeChance = 1)
+function destroyTile(pos, makeSound = 1, cleanNeighbors = 1)
 {
     // pos must be an int
     pos = pos.int();

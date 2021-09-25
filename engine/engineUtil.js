@@ -24,6 +24,7 @@ const percent       = (v, max=1, min=0)=> max-min ? clamp((v-min) / (max-min)) :
 const lerp          = (p, max=1, min=0)=> min + clamp(p) * (max-min);
 const formatTime    = (t)=>               (t/60|0)+':'+(t%60<10?'0':'')+(t%60|0);
 const isOverlapping = (pA, sA, pB, sB)=>  abs(pA.x - pB.x)*2 < sA.x + sB.x & abs(pA.y - pB.y)*2 < sA.y + sB.y;
+const nearestPowerOfTwo = (v)=>           2**Math.ceil(Math.log2(v));
 
 // random functions
 const rand         = (a=1, b=0)=>              b + (a-b)*Math.random();

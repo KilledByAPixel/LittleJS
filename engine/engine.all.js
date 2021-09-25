@@ -478,6 +478,7 @@ const percent       = (v, max=1, min=0)=> max-min ? clamp((v-min) / (max-min)) :
 const lerp          = (p, max=1, min=0)=> min + clamp(p) * (max-min);
 const formatTime    = (t)=>               (t/60|0)+':'+(t%60<10?'0':'')+(t%60|0);
 const isOverlapping = (pA, sA, pB, sB)=>  abs(pA.x - pB.x)*2 < sA.x + sB.x & abs(pA.y - pB.y)*2 < sA.y + sB.y;
+const nearestPowerOfTwo = (v)=>           2**Math.ceil(Math.log2(v));
 
 // random functions
 const rand         = (a=1, b=0)=>              b + (a-b)*Math.random();
@@ -671,7 +672,7 @@ const soundTaperPecent = .5;  // extra range added for sound taper
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = 'v0.75';
+const engineVersion = 'v1.0';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 
 // core engine variables
@@ -2046,8 +2047,8 @@ class Particle extends EngineObject
 
 'use strict';
 
-let glCanvas, glContext, glTileTexture, glShader, glPositionData, glColorData, 
-    glBatchCount, glDirty, glAdditive, glOverlay;
+let glCanvas, glContext, glTileTexture, glActiveTexture, glShader, 
+    glPositionData, glColorData, glBatchCount, glDirty, glAdditive, glOverlay;
 
 function glInit()
 {
@@ -2109,10 +2110,6 @@ function glInit()
     initVertexAttribArray('t', gl_FLOAT, 4, 2);            // texture coords
     initVertexAttribArray('c', gl_UNSIGNED_BYTE, 1, 4, 1); // color
     initVertexAttribArray('b', gl_UNSIGNED_BYTE, 1, 4, 1); // additiveColor
-
-    // use point filtering for pixelated rendering
-    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, pixelated ? gl_NEAREST : gl_LINEAR);
-    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, pixelated ? gl_NEAREST : gl_LINEAR);
 }
 
 function glSetBlendMode(additive)
@@ -2128,6 +2125,16 @@ function glSetBlendMode(additive)
         gl_SRC_ALPHA, additive ? gl_ONE : gl_ONE_MINUS_SRC_ALPHA, 
         gl_ONE,       additive ? gl_ONE : gl_ONE_MINUS_SRC_ALPHA);
     glContext.enable(gl_BLEND);
+}
+
+function glSetTexture(texture=glTileTexture)
+{
+    if (!glEnable) return;
+        
+    if (texture != glActiveTexture)
+        glFlush();
+
+    glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = texture);
 }
 
 function glCompileShader(source, type)
@@ -2176,13 +2183,14 @@ function glCreateTexture(image)
 {
     if (!glEnable) return;
 
-    // build the texture, use a white pixel if no texture exists
+    // build the texture
     const texture = glContext.createTexture();
     glContext.bindTexture(gl_TEXTURE_2D, texture);
-    if (image.src)
-        glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
-    else
-        glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, 1, 1, 0, gl_RGBA, gl_UNSIGNED_BYTE, new Uint8Array([255, 255, 255, 255]));
+    glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
+
+    // use point filtering for pixelated rendering
+    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, pixelated ? gl_NEAREST : gl_LINEAR);
+    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, pixelated ? gl_NEAREST : gl_LINEAR);
     return texture;
 }
 
@@ -2196,6 +2204,7 @@ function glPreRender(width, height)
     glContext.viewport(0, 0, width, height);
 
     // set up the shader
+    glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = glTileTexture);
     glContext.useProgram(glShader);
     glSetBlendMode();
 
@@ -2240,7 +2249,7 @@ function glCopyToContext(context, forceDraw)
     }
 }
 
-function glDraw(x, y, sizeX, sizeY, angle, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgba=0xffffffff, rgbaAdditive=0x00000000)
+function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgba=0xffffffff, rgbaAdditive=0x00000000)
 {
     if (!glEnable) return;
     

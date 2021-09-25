@@ -87,14 +87,11 @@ function gameUpdate()
             {
                 const p = percent(comboCount,0,9);
                 fallTimer.set(fallTime*p);
-                    zzfx(...[.1,,1922,,,.01,,1.42,,91,,,,,,,,,,.73]);
+                    zzfx(...[.2,,1922,,,.01,,1.42,,91,,,,,,,,,,.73]);
             }
             else
                 fallTimer.unset();
         }
-
-        if (mouseWasPressed(0))
-            zzfx(...[.8,,60,.05,,.06,3,.64,2,-24,,,,,,,.01]);
     }
     else
     {
@@ -135,7 +132,7 @@ function gameUpdate()
                                 setLevelTile(dragStartPos, startTile);
                             }
                             else
-                                zzfx(...[.8,,224,.02,.02,.08,1,1.7,-13.9,,,,,,6.7]);
+                                zzfx(...[.4,.2,250,.04,,.04,,,1,,,,,3]);
                             dragStartPos = 0;
                         }
                     }
@@ -172,6 +169,11 @@ function gameRender()
             continue;
 
         let drawPos = pos.add(vec2(.5));
+        if (dragStartPos && pos.x == dragStartPos.x && pos.y == dragStartPos.y)
+        {
+            drawRect(drawPos, vec2(1.05));
+        }
+
         if (fallTimer.active() && levelFall[pos.x + pos.y*levelSize.x])
             drawPos.y += 1-fallTimer.getPercent();
         drawRect(drawPos, vec2(tileSize), tileColors[data]);
