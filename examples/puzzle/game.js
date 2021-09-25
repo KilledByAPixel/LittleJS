@@ -1,13 +1,13 @@
 /*
     LittleJS Puzzle Example
     - A match 3 style puzzle game to get you started
-    - Draws directly to Canvas2D without using WebGL
-    - Does not use a texture
+    - Uses a higher resolution texture
 */
 
 'use strict';
 
 glOverlay = !isChrome; // fix slow rendering when not chrome
+pixelated = 0; // do not use pixelated rendering
 
 const tileTypeCount = 6, fallTime = .2;
 const cameraOffset = vec2(0,-.5);
@@ -163,6 +163,7 @@ function gameRender()
     const pos = vec2();
     const tileSize = .95;
     const mouseTilePos = mousePos.int();
+    const outlineColor = new Color(0,0,0);
     for (pos.x = levelSize.x; pos.x--;)
     for (pos.y = levelSize.y; pos.y--;)
     {
@@ -174,6 +175,7 @@ function gameRender()
         if (fallTimer.active() && levelFall[pos.x + pos.y*levelSize.x])
             drawPos.y += 1-fallTimer.getPercent();
         drawRect(drawPos, vec2(tileSize), tileColors[data]);
+        drawTile(drawPos, vec2(tileSize/2), data, vec2(64), outlineColor);
     }
 
     // draw a grey square at top to cover up incomming tiles
@@ -189,7 +191,7 @@ function gameRenderPost()
 
 ///////////////////////////////////////////////////////////////////////////////
 // Startup LittleJS Engine
-engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png');
 
 ///////////////////////////////////////////////////////////////////////////////
 function clearMatches()
