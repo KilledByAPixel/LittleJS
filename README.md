@@ -1,6 +1,6 @@
 # LittleJS - The Tiny JavaScript Game Engine That Can!
 
-## Engine Features
+## Features
 
 - Small footprint with no dependencies, starter project is under 6K zipped
 - Super fast tile sheet rendering system, ~50,000 sprites at 60fps
