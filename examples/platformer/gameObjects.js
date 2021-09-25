@@ -122,6 +122,7 @@ class Enemy extends GameObject
         if (this.isDestroyed)
             return;
 
+        ++kills;
         playSound(sound_killEnemy, this.pos);
         makeDebris(this.pos, this.color, 300);
         this.destroy();

@@ -4,9 +4,9 @@
 
 'use strict';
 
-let particleEmiter, overlayCanvas, overlayContext;
-
 glOverlay = !isChrome; // fix slow rendering when not chrome
+
+let particleEmiter, overlayCanvas, overlayContext;
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
@@ -104,14 +104,14 @@ function gameRenderPost()
     overlayCanvas.style.height = mainCanvas.style.height;
 
     // draw to overlay canvas for hud rendering
-    const drawOverlayText = (text, x, y, size=100, lineWidth=2) =>
+    const drawOverlayText = (text, x, y, size=70, shadow=9) =>
     {
         overlayContext.textAlign = 'center';
         overlayContext.textBaseline = 'top';
         overlayContext.font = size + 'px arial'
         overlayContext.fillStyle = '#fff';
-        overlayContext.lineWidth = lineWidth;
-        overlayContext.strokeText(text, x, y);
+        overlayContext.shadowColor = '#000';
+        overlayContext.shadowBlur = shadow;
         overlayContext.fillText(text, x, y);
     }
     drawOverlayText('Hello World', overlayCanvas.width/2, 40);

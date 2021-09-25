@@ -82,7 +82,7 @@ class Character extends GameObject
             {
                 // throw greande
                 const grenade = new Grenade(this.pos);
-                grenade.velocity = this.velocity.add(vec2(this.getMirrorSign(),rand(.8,.7)).normalize(.25+rand(.02)));
+                grenade.velocity = this.velocity.add(vec2(this.getMirrorSign(),rand(.8,.7)).normalize(.2+rand(.02)));
                 grenade.angleVelocity = this.getMirrorSign() * rand(.8,.5);
                 playSound(sound_jump, this.pos);
                 this.grendeThrowTimer.set(1);
@@ -300,5 +300,11 @@ class Player extends Character
             vec2(keyIsDown(39) - keyIsDown(37), keyIsDown(38) - keyIsDown(40));
 
         super.update();
+    }
+
+    kill()
+    {
+        ++deaths;
+        super.kill();
     }
 }
