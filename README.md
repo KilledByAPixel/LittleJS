@@ -113,3 +113,4 @@ All engine settings are listed in [engineConfig.js](https://github.com/KilledByA
 - pixelated - disable blending in several places for pixel art style games
 - glOverlay - fix slow rendering in some browsers by not compositing the WebGL canvas
 - glEnable - run without WebGL but textured coloring is disabled and it is much slower
+- audioVolume - adjust volume of sounds and music
