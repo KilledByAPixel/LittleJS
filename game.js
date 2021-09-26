@@ -8,6 +8,9 @@ glOverlay = !isChrome; // fix slow rendering when not chrome
 
 let particleEmiter, overlayCanvas, overlayContext;
 
+// zzfx sounds
+const sound_click = [.5,1];
+
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
@@ -22,12 +25,12 @@ function gameInit()
     const pos = vec2();
 
     // get level data from the tiles image
+    const imageLevelDataRow = 1;
     mainContext.drawImage(tileImage,0,0);
-    const imageDataRow = 1;
     for (pos.x = tileCollisionSize.x; pos.x--;)
     for (pos.y = tileCollisionSize.y; pos.y--;)
     {
-        const data = mainContext.getImageData(pos.x, 16*(imageDataRow+1)-pos.y-1, 1, 1).data;
+        const data = mainContext.getImageData(pos.x, 16*(imageLevelDataRow+1)-pos.y-1, 1, 1).data;
         if (data[0])
         {
             setTileCollisionData(pos, 1);
@@ -70,7 +73,7 @@ function gameUpdate()
     // play sound when mouse is pressed
     if (mouseWasPressed(0))
     {
-        zzfx(.5,1);
+        playSound(sound_click);
         particleEmiter.colorStartA = new Color;
         particleEmiter.colorStartB = randColor();
         particleEmiter.colorEndA = particleEmiter.colorStartA.scale(1,0);

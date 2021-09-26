@@ -187,9 +187,7 @@ function glPreRender(width, height)
 
 function glFlush()
 {
-    if (!glEnable) return;
-    if (!glBatchCount)
-        return;
+    if (!glEnable || !glBatchCount) return;
 
     // draw all the sprites in the batch and reset the buffer
     glContext.bufferSubData(gl_ARRAY_BUFFER, 0, 
@@ -200,8 +198,7 @@ function glFlush()
 
 function glCopyToContext(context, forceDraw)
 {
-    if (!glEnable) return;
-    if (!glDirty)  return;
+    if (!glEnable || !glDirty)  return;
     
     // draw any sprites still in the buffer, copy to main canvas and clear
     glFlush();

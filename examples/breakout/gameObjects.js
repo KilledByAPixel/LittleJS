@@ -40,7 +40,7 @@ class Block extends EngineObject
         // destroy block when hit with ball
         this.destroy();
         ++score;
-        zzfx(...[,,90,,.01,.03,4,,,,,,,9,50,.2,,.2,.01]);
+        playSound(sound_breakBlock);
 
         const color1 = this.color;
         const color2 = color1.lerp(new Color, .5);
@@ -116,6 +116,8 @@ class Ball extends EngineObject
         // speed up
         const speed = min(1.1*this.velocity.length(), 1);
         this.velocity = this.velocity.normalize(speed);
-        zzfx(...[,,this.velocity.length()*1e3,,.03,.02,1,2,,,940,.03,,,,,.2,.6,,.06]);
+
+        // scale bounce sound pitch by speed
+        playSound(sound_bounce, 0, 0, 1, speed);
     }
 }

@@ -12,14 +12,15 @@
 const debug = 1;
 const enableAsserts = 1;
 const debugPointSize = .5;
-let debugRaycast = 0;
 
 let showWatermark = 1;
 let godMode = 0;
 let debugRects = [];
 let debugOverlay = 0;
 let debugPhysics = 0;
+let debugRaycast = 0;
 let debugParticles = 0;
+let debugMedals = 0;
 let debugCanvas = -1;
 let debugTakeScreenshot;
 let downloadLink;
@@ -856,7 +857,7 @@ function engineUpdateObjects()
 let audioContext; // audio context used by the engine
 
 // play a zzfx sound in world space with attenuation and culling
-function playSound(zzfxSound, pos, range=defaultSoundRange, volumeScale=1)
+function playSound(zzfxSound, pos, range=defaultSoundRange, volumeScale=1, pitchScale=1)
 {
     if (pos)
     {
@@ -872,8 +873,10 @@ function playSound(zzfxSound, pos, range=defaultSoundRange, volumeScale=1)
     // copy sound (so changes aren't permanant)
     zzfxSound = [...zzfxSound];
 
-    // scale volume
+    // scale volume and pitch
     zzfxSound[0] = (zzfxSound[0]||1) * volumeScale;
+    zzfxSound[2] = (zzfxSound[2]||220) * pitchScale;
+
     return zzfx(...zzfxSound);
 }
 
@@ -2225,9 +2228,7 @@ function glPreRender(width, height)
 
 function glFlush()
 {
-    if (!glEnable) return;
-    if (!glBatchCount)
-        return;
+    if (!glEnable || !glBatchCount) return;
 
     // draw all the sprites in the batch and reset the buffer
     glContext.bufferSubData(gl_ARRAY_BUFFER, 0, 
@@ -2238,8 +2239,7 @@ function glFlush()
 
 function glCopyToContext(context, forceDraw)
 {
-    if (!glEnable) return;
-    if (!glDirty)  return;
+    if (!glEnable || !glDirty)  return;
     
     // draw any sprites still in the buffer, copy to main canvas and clear
     glFlush();

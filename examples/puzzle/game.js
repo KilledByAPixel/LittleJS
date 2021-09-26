@@ -12,6 +12,16 @@ pixelated = 0; // do not use pixelated rendering
 const fallTime = .2;
 const cameraOffset = vec2(0,-.5);
 const backgroundColor = new Color(.3,.3,.3);
+
+// zzfx sounds
+const sound_goodMove = [.4,.2,250,.04,,.04,,,1,,,,,3];
+const sound_badMove =  [,,700,,,.07,,,,3.7,,,,3,,,.1];
+const sound_fall =     [.2,,1900,,,.01,,1.4,,91,,,,,,,,,,.7];
+
+let level, levelSize, levelFall, fallTimer, dragStartPos, comboCount, score;
+
+///////////////////////////////////////////////////////////////////////////////
+// tiles
 const tileColors = 
 [
     new Color(1,0,0),
@@ -26,8 +36,6 @@ const tileTypeCount = tileColors.length;
 
 const getTile = (pos)       => level[pos.x + pos.y * levelSize.x];
 const setTile = (pos, data) => level[pos.x + pos.y * levelSize.x] = data;
-
-let level, levelSize, levelFall, fallTimer, dragStartPos, comboCount, score;
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
@@ -55,6 +63,7 @@ function gameUpdate()
 {
     if (fallTimer.isSet())
     {
+        // update falling tiles
         if (fallTimer.elapsed())
         {
             // add more blocks in the top
@@ -87,7 +96,7 @@ function gameUpdate()
             {
                 const p = percent(comboCount, 0, 9);
                 fallTimer.set(fallTime*p);
-                zzfx(...[.2,,1922,,,.01,,1.42,,91,,,,,,,,,,.73]);
+                playSound(sound_fall);
             }
             else
                 fallTimer.unset();
@@ -123,12 +132,12 @@ function gameUpdate()
                         // undo if no matches
                         if (!fallTimer.isSet())
                         {
-                            zzfx(...[,,709,,,.07,,,,3.7,,,,3.6,,,.11]);
+                            playSound(sound_badMove);
                             setTile(mouseTilePos, endTile);
                             setTile(dragStartPos, startTile);
                         }
                         else
-                            zzfx(...[.4,.2,250,.04,,.04,,,1,,,,,3]);
+                            playSound(sound_goodMove);
                         dragStartPos = 0;
                     }
                 }
@@ -188,10 +197,11 @@ function gameRenderPost()
 engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png');
 
 ///////////////////////////////////////////////////////////////////////////////
+// find and remove all runs of 3 or higher
 function clearMatches()
 {
     // horizontal match check
-    const removedTiles = [], pos = vec2();
+    const removeTiles = [], pos = vec2();
     for (pos.y = levelSize.y; pos.y--;)
     {
         let runCount, runData;
@@ -203,9 +213,9 @@ function clearMatches()
                 ++runCount;
                 if (runCount == 3)
                     for (let j=runCount; j--;)
-                        removedTiles[pos.x + j + pos.y * levelSize.x] = 1;
+                        removeTiles[pos.x + j + pos.y * levelSize.x] = 1;
                 else if (runCount > 3)
-                    removedTiles[pos.x + pos.y * levelSize.x] = 1;
+                    removeTiles[pos.x + pos.y * levelSize.x] = 1;
             }
             else
             {
@@ -227,9 +237,9 @@ function clearMatches()
                 ++runCount;
                 if (runCount == 3)
                     for (let j=runCount; j--;)
-                        removedTiles[pos.x + (pos.y + j) * levelSize.x] = 1;
+                        removeTiles[pos.x + (pos.y + j) * levelSize.x] = 1;
                 else if (runCount > 3)
-                    removedTiles[pos.x + pos.y * levelSize.x] = 1;
+                    removeTiles[pos.x + pos.y * levelSize.x] = 1;
             }
             else
             {
@@ -239,14 +249,15 @@ function clearMatches()
         }
     }
 
-    // remove all tiles, set up like this incase an L or T shape is formed
+    // remove tiles all at once like this incase an L or T shape is formed
     let removedCount = 0;
     for (pos.x = levelSize.x; pos.x--;)
     for (pos.y = levelSize.y; pos.y--;)
     {
-        if (removedTiles[pos.x + pos.y * levelSize.x])
+        if (removeTiles[pos.x + pos.y * levelSize.x])
         {
             // remove tile
+            ++removedCount;
             const data = getTile(pos);
             setTile(pos, -1);
 
@@ -262,8 +273,6 @@ function clearMatches()
                 .99, 1, 1, PI, .05,   // damping, angleDamping, gravityScale, particleCone, fadeRate, 
                 .5, 0, 1              // randomness, collide, additive, randomColorLinear, renderOrder
             );
-
-            ++removedCount;
         }
     }
 

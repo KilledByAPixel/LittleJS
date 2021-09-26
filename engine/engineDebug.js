@@ -12,14 +12,15 @@
 const debug = 1;
 const enableAsserts = 1;
 const debugPointSize = .5;
-let debugRaycast = 0;
 
 let showWatermark = 1;
 let godMode = 0;
 let debugRects = [];
 let debugOverlay = 0;
 let debugPhysics = 0;
+let debugRaycast = 0;
 let debugParticles = 0;
+let debugMedals = 0;
 let debugCanvas = -1;
 let debugTakeScreenshot;
 let downloadLink;

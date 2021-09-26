@@ -4,6 +4,11 @@
 
 'use strict';
 
+// zzfx sounds
+const sound_start =      [,0,500,,.04,.3,1,2,,,570,.02,.02,,,,.04];
+const sound_breakBlock = [,,90,,.01,.03,4,,,,,,,9,50,.2,,.2,.01];
+const sound_bounce =     [,,1e3,,.03,.02,1,2,,,940,.03,,,,,.2,.6,,.06];
+
 let levelSize, ball, paddle, score;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -29,7 +34,7 @@ function gameUpdate()
     if (!ball && mouseWasPressed(0))
     {
         ball = new Ball(vec2(levelSize.x/2, levelSize.y/2-6));
-        zzfx(...[,0,500,,.04,.3,1,2,,,570,.02,.02,,,,.04]);
+        playSound(sound_start);
     }
 }
 

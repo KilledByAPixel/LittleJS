@@ -11,7 +11,7 @@
 let audioContext; // audio context used by the engine
 
 // play a zzfx sound in world space with attenuation and culling
-function playSound(zzfxSound, pos, range=defaultSoundRange, volumeScale=1)
+function playSound(zzfxSound, pos, range=defaultSoundRange, volumeScale=1, pitchScale=1)
 {
     if (pos)
     {
@@ -27,8 +27,10 @@ function playSound(zzfxSound, pos, range=defaultSoundRange, volumeScale=1)
     // copy sound (so changes aren't permanant)
     zzfxSound = [...zzfxSound];
 
-    // scale volume
+    // scale volume and pitch
     zzfxSound[0] = (zzfxSound[0]||1) * volumeScale;
+    zzfxSound[2] = (zzfxSound[2]||220) * pitchScale;
+
     return zzfx(...zzfxSound);
 }
 
