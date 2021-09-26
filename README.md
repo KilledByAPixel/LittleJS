@@ -40,7 +40,7 @@ Also check out [Space Huggers](https://github.com/KilledByAPixel/SpaceHuggers), 
 
 It is recommended that you start by copying the [LittleJS Starter Project](https://github.com/KilledByAPixel/LittleJS/blob/main/game.js) It is mostly empty with just a few things you can use to get started or remove. You can also download and include [engine.all.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.js) or [engine.all.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.min.js).
 
-To startup LittleJS, you must create 5 functions and call engineInit with a texture filename like this...
+To startup LittleJS, you must create 5 functions and call engineInit. A canvas will automatically be created and added to the document. You can use this template to get started.
 
 ```javascript
 
@@ -78,7 +78,9 @@ function gameRenderPost()
 engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png');
 ```
 
-For most games you will want to extend EngineObject with your own objects, something like this...
+For most games you will want to extend EngineObject with your own objects. This will create an object class called GameObject and the constructor automatically adds it to the list of objects. Engine objects are automatically updated and rendered until they are destroyed.
+
+You can override these functions to make objects behave however you want. See the examples for a complete demonstration.
 
 ```javascript
 class MyObject extends EngineObject 
@@ -86,27 +88,22 @@ class MyObject extends EngineObject
     constructor(pos, size, tileIndex, tileSize, angle, color)
     {
         super(pos, size, tileIndex, tileSize, angle, color);
-        
         // your object init code here
     }
 
     update()
     {
-        super.update();
-        
+        super.update(); // update object physics and position
         // your object update code here
     }
 
     render()
     {
-        super.render();
-        
+        super.render(); // draw object as a sprite
         // your object render code here
     }
 }
 ```
-
-This will create your own object class called GameObject and the constructor will add it to the list of objects. Engine objects are automatically updated and rendered until they are destroyed. You can override those functions to make the object behave however you want. You can also draw sprites without using objects. See the examples for a complete demonstration.
 
 ## Engine Configuration
 
