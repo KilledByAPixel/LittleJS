@@ -27,7 +27,7 @@ function gameInit()
     for (pos.x = tileCollisionSize.x; pos.x--;)
     for (pos.y = tileCollisionSize.y; pos.y--;)
     {
-        const data = mainContext.getImageData(pos.x, 16*(imageDataRow+1)-pos.y, 1, 1).data;
+        const data = mainContext.getImageData(pos.x, 16*(imageDataRow+1)-pos.y-1, 1, 1).data;
         if (data[0])
         {
             setTileCollisionData(pos, 1);
@@ -124,4 +124,4 @@ function gameRenderPost()
 
 ///////////////////////////////////////////////////////////////////////////////
 // Startup LittleJS Engine
-engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png?1');
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png?2');
