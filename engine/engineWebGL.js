@@ -153,6 +153,8 @@ function glCreateTexture(image)
     // use point filtering for pixelated rendering
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, pixelated ? gl_NEAREST : gl_LINEAR);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, pixelated ? gl_NEAREST : gl_LINEAR);
+    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_S, gl_CLAMP_TO_EDGE);
+    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_T, gl_CLAMP_TO_EDGE);
     return texture;
 }
 
@@ -190,7 +192,8 @@ function glFlush()
         return;
 
     // draw all the sprites in the batch and reset the buffer
-    glContext.bufferSubData(gl_ARRAY_BUFFER, 0, glPositionData.subarray(0, glBatchCount * gl_VERTICES_PER_QUAD * gl_INDICIES_PER_VERT));
+    glContext.bufferSubData(gl_ARRAY_BUFFER, 0, 
+        glPositionData.subarray(0, glBatchCount * gl_VERTICES_PER_QUAD * gl_INDICIES_PER_VERT));
     glContext.drawArrays(gl_TRIANGLES, 0, glBatchCount * gl_VERTICES_PER_QUAD);
     glBatchCount = 0;
 }
@@ -216,7 +219,7 @@ function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgb
     if (!glEnable) return;
     
     // flush if there is no room for more verts
-    if (glBatchCount >= gl_MAX_BATCH)
+    if (glBatchCount == gl_MAX_BATCH)
         glFlush();
         
     // setup 2 triangles to form a quad
@@ -306,7 +309,10 @@ gl_NEAREST = 9728,
 gl_LINEAR = 9729,
 gl_TEXTURE_MAG_FILTER = 10240,
 gl_TEXTURE_MIN_FILTER = 10241,
+gl_TEXTURE_WRAP_S = 10242,
+gl_TEXTURE_WRAP_T = 10243,
 gl_COLOR_BUFFER_BIT = 16384,
+gl_CLAMP_TO_EDGE = 33071,
 gl_ARRAY_BUFFER = 34962,
 gl_DYNAMIC_DRAW = 35048,
 gl_FRAGMENT_SHADER = 35632, 

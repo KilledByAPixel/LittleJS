@@ -604,7 +604,7 @@ class Timer
 // display settings
 
 const maxWidth = 1920, maxHeight = 1200; // up to 1080p and 16:10
-const defaultFont = 'arial'; // font used for text rendering
+let defaultFont = 'arial'; // font used for text rendering
 let fixedWidth = 0, fixedHeight = 0; // use native resolution
 //const fixedWidth = 1280, fixedHeight = 720;  // 720p
 //const fixedWidth = 1920, fixedHeight = 1080; // 1080p
@@ -622,6 +622,7 @@ let pixelated = 1;              // use crisp pixels for pixel art
 // webgl config
 
 const glEnable = 1; // can run without gl (texured coloring will be disabled)
+let glOverlay = 0;  // fix slow rendering in some browsers by not compositing the WebGL canvas
 
 ///////////////////////////////////////////////////////////////////////////////
 // object config
@@ -672,7 +673,7 @@ const soundTaperPecent = .5;  // extra range added for sound taper
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = 'v1.0';
+const engineVersion = 'v1.01';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 
 // core engine variables
@@ -2048,7 +2049,7 @@ class Particle extends EngineObject
 'use strict';
 
 let glCanvas, glContext, glTileTexture, glActiveTexture, glShader, 
-    glPositionData, glColorData, glBatchCount, glDirty, glAdditive, glOverlay;
+    glPositionData, glColorData, glBatchCount, glDirty, glAdditive;
 
 function glInit()
 {
@@ -2190,6 +2191,8 @@ function glCreateTexture(image)
     // use point filtering for pixelated rendering
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, pixelated ? gl_NEAREST : gl_LINEAR);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, pixelated ? gl_NEAREST : gl_LINEAR);
+    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_S, gl_CLAMP_TO_EDGE);
+    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_T, gl_CLAMP_TO_EDGE);
     return texture;
 }
 
@@ -2227,7 +2230,8 @@ function glFlush()
         return;
 
     // draw all the sprites in the batch and reset the buffer
-    glContext.bufferSubData(gl_ARRAY_BUFFER, 0, glPositionData.subarray(0, glBatchCount * gl_VERTICES_PER_QUAD * gl_INDICIES_PER_VERT));
+    glContext.bufferSubData(gl_ARRAY_BUFFER, 0, 
+        glPositionData.subarray(0, glBatchCount * gl_VERTICES_PER_QUAD * gl_INDICIES_PER_VERT));
     glContext.drawArrays(gl_TRIANGLES, 0, glBatchCount * gl_VERTICES_PER_QUAD);
     glBatchCount = 0;
 }
@@ -2253,7 +2257,7 @@ function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgb
     if (!glEnable) return;
     
     // flush if there is no room for more verts
-    if (glBatchCount >= gl_MAX_BATCH)
+    if (glBatchCount == gl_MAX_BATCH)
         glFlush();
         
     // setup 2 triangles to form a quad
@@ -2343,7 +2347,10 @@ gl_NEAREST = 9728,
 gl_LINEAR = 9729,
 gl_TEXTURE_MAG_FILTER = 10240,
 gl_TEXTURE_MIN_FILTER = 10241,
+gl_TEXTURE_WRAP_S = 10242,
+gl_TEXTURE_WRAP_T = 10243,
 gl_COLOR_BUFFER_BIT = 16384,
+gl_CLAMP_TO_EDGE = 33071,
 gl_ARRAY_BUFFER = 34962,
 gl_DYNAMIC_DRAW = 35048,
 gl_FRAGMENT_SHADER = 35632, 
