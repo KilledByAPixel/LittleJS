@@ -17,13 +17,18 @@ function gameInit()
     overlayContext = overlayCanvas.getContext('2d');
 
     // create tile collision and visible tile layer
-    initTileCollision(vec2(35,20));
+    initTileCollision(vec2(32,16));
     const tileLayer = new TileLayer(vec2(), tileCollisionSize);
     const pos = vec2();
+
+    // get level data from the tiles image
+    mainContext.drawImage(tileImage,0,0);
+    const imageDataRow = 1;
     for (pos.x = tileCollisionSize.x; pos.x--;)
     for (pos.y = tileCollisionSize.y; pos.y--;)
     {
-        if (randSeeded() > .8)
+        const data = mainContext.getImageData(pos.x, 16*(imageDataRow+1)-pos.y, 1, 1).data;
+        if (data[0])
         {
             setTileCollisionData(pos, 1);
 
@@ -119,4 +124,4 @@ function gameRenderPost()
 
 ///////////////////////////////////////////////////////////////////////////////
 // Startup LittleJS Engine
-engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png');
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png?1');
