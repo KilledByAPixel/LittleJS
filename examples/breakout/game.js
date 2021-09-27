@@ -59,7 +59,7 @@ function gameRenderPost()
     if (!blockCount)
         drawText('You Win!', cameraPos.add(vec2(0,-5)), 2, new Color, .2);
     else if (!ball)
-        drawText('Click to play', cameraPos.add(vec2(0,-5)), 2, new Color, .2);
+        drawText('Click to Play', cameraPos.add(vec2(0,-5)), 2, new Color, .2);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

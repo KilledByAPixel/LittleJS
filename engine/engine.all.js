@@ -674,7 +674,7 @@ const soundTaperPecent = .5;  // extra range added for sound taper
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = 'v1.01';
+const engineVersion = 'v1.02';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 
 // core engine variables

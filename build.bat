@@ -1,5 +1,6 @@
 rem Simple build script for LittleJS by Frank Force
-rem minfies and combines index.html and index.js and zips the result
+rem Minfies and combines index.html and index.js and zips the result
+rem Run engine\buildSetup.bat first to install dependencies
 
 set NAME=game
 set BUILD_FOLDER=build
@@ -37,7 +38,8 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 rem roadroaller compresses the code better then zip
-call roadroller %BUILD_FILENAME% -o %BUILD_FILENAME%
+copy %BUILD_FILENAME% roadroller_%BUILD_FILENAME%
+call roadroller roadroller_%BUILD_FILENAME% -o roadroller_%BUILD_FILENAME%
 if %ERRORLEVEL% NEQ 0 (
     pause
     exit /b %ERRORLEVEL%
@@ -45,9 +47,8 @@ if %ERRORLEVEL% NEQ 0 (
 
 rem build the html
 echo ^<body^>^<script^> >> index.html
-type %BUILD_FILENAME% >> index.html
+type roadroller_%BUILD_FILENAME% >> index.html
 echo ^</script^> >> index.html
-del %BUILD_FILENAME%
 
 rem zip the result, ect is recommended
 call ect -9 -strip -zip ..\%NAME%.zip index.html tiles.png
@@ -55,5 +56,7 @@ if %ERRORLEVEL% NEQ 0 (
     pause
     exit /b %ERRORLEVEL%
 )
+
+cd ..
 
 rem pause to see result
