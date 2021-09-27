@@ -22,7 +22,6 @@ echo ^<body^>^<script^> >> build\index.html
 type ..\build\index.js >> build\index.html
 echo ^</script^> >> build\index.html
 copy ..\tiles.png build\tiles.png
-copy ..\LICENSE build\LICENSE
 
 rem build with electron
 call electron-packager build --overwrite
