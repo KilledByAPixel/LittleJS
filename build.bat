@@ -6,6 +6,11 @@ set NAME=game
 set BUILD_FOLDER=build
 set BUILD_FILENAME=index.js
 
+rem rebuild engine first
+cd engine
+call build.bat
+cd ..
+
 rem remove old files
 del %NAME%.zip
 rmdir /s /q %BUILD_FOLDER%
