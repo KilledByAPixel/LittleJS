@@ -9,7 +9,7 @@ LittleJS is lightweight 2D JavaScript game engine with a super fast WebGL render
 ## Features
 
 - Very small footprint with no dependencies
-- Can render 10,000+ sprites at 60fps, several times more on a powerful machine
+- Can render 10,000+ objects at 60fps, several times more on a powerful machine
 - Object oriented system with base class engine object
 - 2D physics and collision handling for axis aligned boxes
 - Sound effects with [zzfx](https://killedbyapixel.github.io/ZzFX/) and music with [zzfxm](https://keithclark.github.io/ZzFXM/), mp3s, or wavs
