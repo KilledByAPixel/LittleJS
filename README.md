@@ -34,7 +34,7 @@ LittleJS is lightweight 2D JavaScript game engine with a WebGL rendering system.
 
 Also check out [Space Huggers](https://github.com/KilledByAPixel/SpaceHuggers), the best demonstration of this game engine features.
 
-![LittleJS Screenshot](screenshot.jpg)
+![LittleJS Screenshot](examples/screenshot.jpg)
 
 ## How to use LittleJS
 
