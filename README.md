@@ -27,7 +27,7 @@ LittleJS is lightweight 2D JavaScript game engine with a WebGL rendering system.
 ## Example Starter Projects
 
 ### [Hello World](https://killedbyapixel.github.io/LittleJS/) - Clean project with only a few things to get you started
-### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle) - Match 3 style puzzle game with HD rendering
+### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle) - Match 3 puzzle game with HD rendering and high score tracking
 ### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer) - Platformer/shooter with procedural generation and destruction
 ### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout) - Breakout style game using pixelized 720p rendering
 ### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress) - Max sprite/object test and music system demo
