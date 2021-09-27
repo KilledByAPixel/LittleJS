@@ -32,9 +32,7 @@ LittleJS is lightweight 2D JavaScript game engine with a WebGL rendering system.
 ### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout) - Breakout style game using pixelized 720p rendering
 ### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress) - Max sprite/object test and music system demo
 
-Also check out [Space Huggers](https://github.com/KilledByAPixel/SpaceHuggers), the best demonstration of this game engine features.
-
-![LittleJS Screenshot](screenshot.jpg)
+![LittleJS Screenshot](examples/screenshot.jpg)
 
 ## How to use LittleJS
 
@@ -114,3 +112,8 @@ All engine settings are listed in [engineConfig.js](https://github.com/KilledByA
 - glOverlay - fix slow rendering in some browsers by not compositing the WebGL canvas
 - glEnable - run without WebGL but textured coloring is disabled and it is much slower
 - audioVolume - adjust volume of sounds and music
+
+## Games Made With LittleJS
+
+- [Space Huggers](https://github.com/KilledByAPixel/SpaceHuggers) - A more developed version of the platformer example
+- Send me your games!
