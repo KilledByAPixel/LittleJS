@@ -119,3 +119,5 @@ All engine settings are listed in [engineConfig.js](https://github.com/KilledByA
 
 - [Space Huggers](https://github.com/KilledByAPixel/SpaceHuggers) - A more developed version of the platformer example
 - Send me your games!
+
+![LittleJS Logo](favicon.ico)
