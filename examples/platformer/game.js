@@ -7,7 +7,7 @@
 
 const lowGraphicsSettings = glOverlay = !isChrome; // fix slow rendering when not chrome
 
-let overlayCanvas, overlayContext, kills, deaths;
+let overlayCanvas, overlayContext, score, deaths;
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
@@ -17,7 +17,7 @@ function gameInit()
     overlayCanvas.style = mainCanvas.style.cssText;
     overlayContext = overlayCanvas.getContext('2d');
 
-    kills = deaths = 0;
+    score = deaths = 0;
     gravity = -.01;
     cameraScale = 4*16;
     gameTimer.set();
@@ -92,7 +92,7 @@ function gameRenderPost()
         overlayContext.shadowBlur = shadow;
         overlayContext.fillText(text, x, y);
     }
-    drawOverlayText('Kills: ' + kills,   overlayCanvas.width*1/3, 20);
+    drawOverlayText('Score: ' + score,   overlayCanvas.width*1/3, 20);
     drawOverlayText('Deaths: ' + deaths, overlayCanvas.width*2/3, 20);
 }
 

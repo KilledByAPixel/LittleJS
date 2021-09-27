@@ -33,6 +33,7 @@ class Block extends EngineObject
         // set to collide
         this.setCollision(1,1);
         this.mass = 0;
+        ++blockCount;
     }
 
     collideWithObject(o)              
@@ -40,6 +41,7 @@ class Block extends EngineObject
         // destroy block when hit with ball
         this.destroy();
         ++score;
+        --blockCount;
         playSound(sound_breakBlock);
 
         const color1 = this.color;

@@ -18,7 +18,7 @@ const sound_goodMove = [.4,.2,250,.04,,.04,,,1,,,,,3];
 const sound_badMove =  [,,700,,,.07,,,,3.7,,,,3,,,.1];
 const sound_fall =     [.2,,1900,,,.01,,1.4,,91,,,,,,,,,,.7];
 
-let level, levelSize, levelFall, fallTimer, dragStartPos, comboCount, score;
+let level, levelSize, levelFall, fallTimer, dragStartPos, comboCount, score, bestScore;
 
 ///////////////////////////////////////////////////////////////////////////////
 // tiles
@@ -56,6 +56,9 @@ function gameInit()
     gravity = -.005;
     fallTimer = new Timer;
     comboCount = score = 0;
+
+    // load high score
+    bestScore = localStorage['puzzleBestScore'] || 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -146,6 +149,13 @@ function gameUpdate()
                 dragStartPos = 0;
         }
     }
+
+    if (score > bestScore)
+    {
+        // update high score
+        bestScore = score;
+        localStorage['puzzleBestScore'] = bestScore;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -189,7 +199,8 @@ function gameRender()
 function gameRenderPost()
 {
     // draw text on top of everything
-    drawText('Score: ' + score, cameraPos.add(vec2(0,-3.1)), 1, new Color, .1);
+    drawText('Score: ' + score, cameraPos.add(vec2(-3,-3)), .9, new Color, .1);
+    drawText('Best: ' + bestScore, cameraPos.add(vec2(3,-3)), .9, new Color, .1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
