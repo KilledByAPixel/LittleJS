@@ -12,7 +12,7 @@ LittleJS is lightweight 2D JavaScript game engine with a super fast WebGL render
 - Can render 10,000+ objects at 60fps, several times more on a powerful machine
 - Object oriented system with base class engine object
 - 2D physics and collision handling for axis aligned boxes
-- Positional sound effects with [zzfx](https://killedbyapixel.github.io/ZzFX/) and music with [zzfxm](https://keithclark.github.io/ZzFXM/), mp3s, or wavs
+- Positional audio effects with [zzfx](https://killedbyapixel.github.io/ZzFX/) and music with [zzfxm](https://keithclark.github.io/ZzFXM/), mp3s, or wavs
 - Input processing system with keyboard, mouse, gamepad, and touch support
 - Engine helper functions and classes like Vector2, Color, and Timer
 - Tile layer cached rendering and collision system for level data
@@ -34,7 +34,7 @@ LittleJS is lightweight 2D JavaScript game engine with a super fast WebGL render
 ### [Hello World](https://killedbyapixel.github.io/LittleJS/) - Clean project with only a few things to get you started
 ### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle) - Match 3 puzzle game with HD rendering and high score tracking
 ### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer) - Platformer/shooter with procedural generation and destruction
-### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout) - Breakout style game using pixelized 720p rendering
+### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout) - Breakout game with mouse/touch or gamepad control and 720p rendering
 ### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress) - Max sprite/object test and music system demo
 
 ## How to use LittleJS
