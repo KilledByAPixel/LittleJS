@@ -648,10 +648,10 @@ const copyWASDToDpad = 1;
 ///////////////////////////////////////////////////////////////////////////////
 // audio config
 
-const soundEnable = 1;        // all audio can be disabled
-let audioVolume = .3;         // volume for sound, music and speech
-const defaultSoundRange = 15; // distance where taper starts
-const soundTaperPecent = .5;  // extra range added for sound taper
+const soundEnable = 1;      // all audio can be disabled
+let audioVolume = .3;       // volume for sound, music and speech
+let defaultSoundRange = 20; // distance where taper starts
+let soundTaperPecent = .5;  // extra range added for sound taper
 /*
     LittleJS - The Tiny JavaScript Game Engine That Can
     MIT License - Copyright 2019 Frank Force
@@ -675,7 +675,7 @@ const soundTaperPecent = .5;  // extra range added for sound taper
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = 'v1.02';
+const engineVersion = 'v1.03';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 
 // core engine variables
@@ -860,15 +860,22 @@ let audioContext; // audio context used by the engine
 // play a zzfx sound in world space with attenuation and culling
 function playSound(zzfxSound, pos, range=defaultSoundRange, volumeScale=1, pitchScale=1)
 {
+    let pan = 0;
     if (pos)
     {
-        const lengthSquared = cameraPos.distanceSquared(pos);
-        const maxRange = range * (soundTaperPecent + 1);
-        if (lengthSquared > maxRange**2)
-            return; // out of range
+        if (range)
+        {
+            const lengthSquared = cameraPos.distanceSquared(pos);
+            const maxRange = range * (soundTaperPecent + 1);
+            if (lengthSquared > maxRange**2)
+                return; // out of range
 
-        // attenuate volume by distance
-        volumeScale *= percent(lengthSquared**.5, range, maxRange);
+            // attenuate volume by distance
+            volumeScale *= percent(lengthSquared**.5, range, maxRange);
+        }
+
+        // get pan from screen space coords
+        pan = 2*worldToScreen(pos).x/mainCanvas.width-1;
     }
 
     // copy sound (so changes aren't permanant)
@@ -878,15 +885,15 @@ function playSound(zzfxSound, pos, range=defaultSoundRange, volumeScale=1, pitch
     zzfxSound[0] = (zzfxSound[0]||1) * volumeScale;
     zzfxSound[2] = (zzfxSound[2]||220) * pitchScale;
 
-    return zzfx(...zzfxSound);
+    return zzfxP(pan, zzfxG(...zzfxSound));
 }
 
 // render and play zzfxm music with an option to loop
-function playMusic(zzfxmMusic, loop=0) 
+function playMusic(zzfxmMusic, loop=0, pan=0) 
 {
     if (!soundEnable) return;
 
-    const source = zzfxP(...zzfxM(...zzfxmMusic));
+    const source = zzfxP(pan, ...zzfxM(...zzfxmMusic));
     if (source)
         source.loop = loop;
     return source;
@@ -931,8 +938,8 @@ const stopSpeech = ()=> speechSynthesis && speechSynthesis.cancel();
 // ZzFXMicro - Zuper Zmall Zound Zynth - v1.1.8 by Frank Force
 
 const zzfxR = 44100; // sample rate
-const zzfx = (...z) => zzfxP(zzfxG(...z)); // generate and play sound
-function zzfxP(...samples)  // play samples
+const zzfx = (...z) => zzfxP(0, zzfxG(...z)); // generate and play sound
+function zzfxP(pan,...samples)  // play samples
 {
     if (!soundEnable) return;
     
@@ -944,10 +951,16 @@ function zzfxP(...samples)  // play samples
     const buffer = audioContext.createBuffer(samples.length, samples[0].length, zzfxR), 
         source = audioContext.createBufferSource();
 
-    // copy samples to buffer and play
+    // copy samples to buffer
     samples.map((d,i)=> buffer.getChannelData(i).set(d));
     source.buffer = buffer;
-    source.connect(audioContext.destination);
+
+    // create pan node
+    pan = clamp(pan, 1, -1);
+    const panNode = new StereoPannerNode(audioContext, {'pan':pan});
+    source.connect(panNode).connect(audioContext.destination);
+
+    // play and return sound
     source.start();
     return source;
 }

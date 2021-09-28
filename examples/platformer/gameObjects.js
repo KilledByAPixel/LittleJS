@@ -103,15 +103,18 @@ class Enemy extends GameObject
 
     update()
     {
+        if (!player)
+            return;
+
         // jump around randomly
-        if (this.groundObject && rand() < .01)
+        if (this.groundObject && rand() < .01 && this.pos.distance(player.pos) < 20)
         {
             this.velocity = vec2(rand(.1,-.1), rand(.4,.2));
             playSound(sound_jump, this.pos);
         }
 
         // damage player if touching
-        if (player && isOverlapping(this.pos, this.size, player.pos, player.size))
+        if (isOverlapping(this.pos, this.size, player.pos, player.size))
             player.damage(1, this);
 
         super.update();

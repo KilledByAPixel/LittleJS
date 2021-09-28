@@ -73,7 +73,7 @@ function gameUpdate()
     // play sound when mouse is pressed
     if (mouseWasPressed(0))
     {
-        playSound(sound_click);
+        playSound(sound_click, mousePos);
         particleEmiter.colorStartA = new Color;
         particleEmiter.colorStartB = randColor();
         particleEmiter.colorEndA = particleEmiter.colorStartA.scale(1,0);
