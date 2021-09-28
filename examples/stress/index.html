@@ -62,7 +62,7 @@ function gameUpdate()
     if (!music && hadInput)
     {
         // play cached music to avoid pause when generating
-        music = zzfxP(...song);
+        music = zzfxP(0,...song);
         if (music) music.loop = 1;
     }
 
