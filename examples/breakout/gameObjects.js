@@ -18,8 +18,17 @@ class Paddle extends EngineObject
 
     update()
     {
-        // move to mouse
-        this.pos.x = clamp(mousePos.x, levelSize.x - this.size.x/2, this.size.x/2);
+        if (isUsingGamepad)
+        {
+            // control with gamepad
+            this.pos.x += gamepadStick(0).x;
+        }
+        else
+        {
+            // move to mouse
+            this.pos.x = mousePos.x;
+        }
+        this.pos.x = clamp(this.pos.x, levelSize.x - this.size.x/2, this.size.x/2);
     }
 }
 

@@ -31,7 +31,7 @@ function gameInit()
 function gameUpdate()
 {
     // spawn ball
-    if (!ball && mouseWasPressed(0))
+    if (!ball && (mouseWasPressed(0) || gamepadWasPressed(0)))
     {
         ball = new Ball(vec2(levelSize.x/2, levelSize.y/2-6));
         playSound(sound_start);
