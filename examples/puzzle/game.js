@@ -112,13 +112,20 @@ function gameUpdate()
         if (!fallTimer.isSet())
         {
             // mouse/touch control
-            const mouseTilePos = mousePos.int();
-            if (mouseWasPressed(0) && !dragStartPos)
+            const mouseTilePos = mousePos.floor();
+            if (!mousePos.arrayCheck(levelSize))
             {
+                // cancel drag if mouse is not in the level bounds
+                dragStartPos = 0;
+            }
+            else if (mouseWasPressed(0) && !dragStartPos)
+            {
+                // start drag
                 dragStartPos = mouseTilePos.copy();
             }
             else if (mouseIsDown(0) && dragStartPos)
             {
+                // if dragging to a neighbor tile
                 if ((abs(dragStartPos.x - mouseTilePos.x) == 1) ^ (abs(dragStartPos.y - mouseTilePos.y) == 1))
                 {
                     const startTile = getTile(dragStartPos);

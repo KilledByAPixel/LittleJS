@@ -75,8 +75,9 @@ class Vector2
     flip()                { return new Vector2(this.y, this.x); }
     invert()              { return new Vector2(this.y, -this.x); }
     round()               { return new Vector2(Math.round(this.x), Math.round(this.y)); }
-    lerp(v, p)            { ASSERT(v.x!=undefined); return this.add(v.subtract(this).scale(clamp(p))); }
+    floor()               { return new Vector2(Math.floor(this.x), Math.floor(this.y)); }
     int()                 { return new Vector2(this.x|0, this.y|0); }
+    lerp(v, p)            { ASSERT(v.x!=undefined); return this.add(v.subtract(this).scale(clamp(p))); }
     area()                { return this.x * this.y; }
     arrayCheck(arraySize) { return this.x >= 0 && this.y >= 0 && this.x < arraySize.x && this.y < arraySize.y; } 
 }
