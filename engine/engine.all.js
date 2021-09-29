@@ -891,11 +891,11 @@ function playSound(zzfxSound, pos, range=defaultSoundRange, volumeScale=1, pitch
 }
 
 // render and play zzfxm music with an option to loop
-function playMusic(zzfxmMusic, loop=0) 
+function playMusic(zzfxmMusic, loop=0, pan=0) 
 {
     if (!soundEnable) return;
-    
-    return playSamples(zzfxM(...zzfxmMusic), loop);
+
+    return playSamples(zzfxM(...zzfxmMusic), loop, pan);
 }
 
 // play cached samples to avoid pause when playing music/sounds
@@ -1755,7 +1755,7 @@ onkeyup     = e=>
     if (debug && e.target != document.body) return;
     const c = remapKeyCode(e.keyCode); inputData[0][c] && (inputData[0][c].d = 0, inputData[0][c].r = 1);
 }
-onmousedown = e=> (inputData[0][e.button] = {d:hadInput=1, p:1}, onmousemove(e));
+onmousedown = e=> (inputData[isUsingGamepad = 0][e.button] = {d:hadInput=1, p:1}, onmousemove(e));
 onmouseup   = e=> inputData[0][e.button] && (inputData[0][e.button].d = 0, inputData[0][e.button].r = 1);
 onmousemove = e=>
 {
@@ -2104,7 +2104,7 @@ function glInit()
         'varying vec2 v;'+          // return uv
         'varying vec4 d,e;'+        // return color, additiveColor
         'void main(){'+             // shader entry point
-        'gl_Position=m*vec4((s*cos(-a)+vec2(-s.y,s.x)*sin(-a))*.5+p,1,1);'+// transform position
+        'gl_Position=m*vec4((s*cos(-a)+vec2(-s.y,s)*sin(-a))*.5+p,1,1);'+// transform position
         'v=t;d=c;e=b;'+             // pass stuff to fragment shader
         '}'                         // end of shader
         ,

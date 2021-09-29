@@ -34,7 +34,7 @@ onkeyup     = e=>
     if (debug && e.target != document.body) return;
     const c = remapKeyCode(e.keyCode); inputData[0][c] && (inputData[0][c].d = 0, inputData[0][c].r = 1);
 }
-onmousedown = e=> (inputData[0][e.button] = {d:hadInput=1, p:1}, onmousemove(e));
+onmousedown = e=> (inputData[isUsingGamepad = 0][e.button] = {d:hadInput=1, p:1}, onmousemove(e));
 onmouseup   = e=> inputData[0][e.button] && (inputData[0][e.button].d = 0, inputData[0][e.button].r = 1);
 onmousemove = e=>
 {

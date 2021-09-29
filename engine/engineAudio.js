@@ -44,11 +44,11 @@ function playSound(zzfxSound, pos, range=defaultSoundRange, volumeScale=1, pitch
 }
 
 // render and play zzfxm music with an option to loop
-function playMusic(zzfxmMusic, loop=0) 
+function playMusic(zzfxmMusic, loop=0, pan=0) 
 {
     if (!soundEnable) return;
-    
-    return playSamples(zzfxM(...zzfxmMusic), loop);
+
+    return playSamples(zzfxM(...zzfxmMusic), loop, pan);
 }
 
 // play cached samples to avoid pause when playing music/sounds
