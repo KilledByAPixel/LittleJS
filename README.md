@@ -1,4 +1,4 @@
-# ![LittleJS Logo](favicon.ico) LittleJS - The Tiny JavaScript Game Engine That Can
+# ![LittleJS Logo](favicon.png) LittleJS - The Tiny JavaScript Game Engine That Can
 
 ## All aboard!
 
@@ -121,4 +121,4 @@ All engine settings are listed in [engineConfig.js](https://github.com/KilledByA
 - [Space Huggers](https://github.com/KilledByAPixel/SpaceHuggers) - A more developed version of the platformer example
 - Send me your games!
 
-![LittleJS Logo](favicon.ico)
+![LittleJS Logo](favicon.png)
