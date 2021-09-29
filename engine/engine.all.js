@@ -860,6 +860,8 @@ let audioContext; // audio context used by the engine
 // play a zzfx sound in world space with attenuation and culling
 function playSound(zzfxSound, pos, range=defaultSoundRange, volumeScale=1, pitchScale=1)
 {
+    if (!soundEnable) return;
+
     let pan = 0;
     if (pos)
     {
@@ -889,11 +891,19 @@ function playSound(zzfxSound, pos, range=defaultSoundRange, volumeScale=1, pitch
 }
 
 // render and play zzfxm music with an option to loop
-function playMusic(zzfxmMusic, loop=0, pan=0) 
+function playMusic(zzfxmMusic, loop=0) 
+{
+    if (!soundEnable) return;
+    
+    return playSamples(zzfxM(...zzfxmMusic), loop);
+}
+
+// play cached samples to avoid pause when playing music/sounds
+function playSamples(samples, loop=0, pan=0) 
 {
     if (!soundEnable) return;
 
-    const source = zzfxP(pan, ...zzfxM(...zzfxmMusic));
+    const source = zzfxP(pan,...samples);
     if (source)
         source.loop = loop;
     return source;
