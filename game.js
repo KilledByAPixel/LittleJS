@@ -14,11 +14,6 @@ const sound_click = [.5,1];
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
-    initMedals(
-        "LittleJS Game",
-        medal(0,'Test','text'));
-    
-
     // create overlay canvas for hud
     document.body.appendChild(overlayCanvas = document.createElement('canvas'));
     overlayCanvas.style = mainCanvas.style.cssText;
