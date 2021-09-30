@@ -22,7 +22,7 @@ LittleJS is a lightweight 2D JavaScript game engine with a super fast WebGL rend
 - All example projects are compatible with mobile devices
 - Build system automatically combines everything, minifies, and removes unused code
 - For size coding competitions like [js13kGames](https://js13kgames.com/), starter project builds to a 6k zip
-- You can build as a native Windows App with [electron](https://www.electronjs.org/) for distribution on platforms like Steam
+- You can build as a Windows executable with [electron](https://www.electronjs.org/) for distribution on platforms like Steam
 - Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used to make commercial games
 
 ## [LittleJS Trailer](https://youtu.be/chuBzGjv7Ms)
@@ -34,7 +34,7 @@ LittleJS is a lightweight 2D JavaScript game engine with a super fast WebGL rend
 ### [Hello World](https://killedbyapixel.github.io/LittleJS/) - Clean project with only a few things to get you started
 ### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle) - Match 3 puzzle game with HD rendering and high score tracking
 ### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer) - Platformer/shooter with procedural generation and destruction
-### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout) - Breakout game with mouse/touch or gamepad control and 720p rendering
+### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout) - Breakout game with mouse/touch or gamepad control
 ### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress) - Max sprite/object test and music system demo
 
 ## How to use LittleJS
