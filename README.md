@@ -1,6 +1,6 @@
 # ![LittleJS Logo](favicon.png) LittleJS - The Tiny JavaScript Game Engine That Can
 
-## Choo-Choo, All aboard!
+## All aboard!
 
 LittleJS is a lightweight 2D JavaScript game engine with a super fast WebGL rendering system. The goal of this project is to be small, simple, and easy to use for a variety of applications from size coding game jams to commercial releases. This engine has everything necessary for most games including super fast rendering, physics, particles, sound effects, music, keyboard/mouse/gamepad input handling, update/render loop, and debug tools. 🚂
 
@@ -9,7 +9,7 @@ LittleJS is a lightweight 2D JavaScript game engine with a super fast WebGL rend
 ## Features
 
 - Very small footprint with no dependencies
-- Can render 10,000+ objects at 60fps, several times more on a powerful machine
+- Can render 10,000+ objects at 60fps, often several times more
 - Object oriented system with base class engine object
 - 2D physics and collision handling for axis aligned boxes
 - Positional audio effects with [zzfx](https://killedbyapixel.github.io/ZzFX/) and music with [zzfxm](https://keithclark.github.io/ZzFXM/), mp3s, or wavs
@@ -19,7 +19,7 @@ LittleJS is a lightweight 2D JavaScript game engine with a super fast WebGL rend
 - Particle effects system (particle editor/designer in progress)
 - Several easy to understand example projects you can build on
 - Debug tools and debug rendering system
-- All example projects are compatible with mobile devices
+- Example projects are compatible with mobile devices
 - Build system automatically combines everything, minifies, and removes unused code
 - For size coding competitions like [js13kGames](https://js13kgames.com/), starter project builds to a 6k zip
 - You can build as a Windows executable with [electron](https://www.electronjs.org/) for distribution on platforms like Steam
@@ -40,6 +40,8 @@ LittleJS is a lightweight 2D JavaScript game engine with a super fast WebGL rend
 ## How to use LittleJS
 
 It is recommended that you start by copying the [LittleJS Starter Project](https://github.com/KilledByAPixel/LittleJS/blob/main/game.js) It is mostly empty with just a few things you can use to get started or remove. You can also download and include [engine.all.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.js) or [engine.all.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.min.js).
+
+In order to load files like images you will need to run a small web server or use an editor that does that for you like [Brackets](https://brackets.io/) or Vs Code with the [Live Server plugin](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer).
 
 To startup LittleJS, you must create 5 functions and call engineInit. A canvas will automatically be created and added to the document. You can use this template to get started.
 
