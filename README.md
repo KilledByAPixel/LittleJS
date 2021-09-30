@@ -1,6 +1,6 @@
 # ![LittleJS Logo](favicon.png) LittleJS - The Tiny JavaScript Game Engine That Can
 
-## All aboard!
+## Choo-Choo, All aboard!
 
 LittleJS is a lightweight 2D JavaScript game engine with a super fast WebGL rendering system. The goal of this project is to be small, simple, and easy to use for a variety of applications from size coding game jams to commercial releases. This engine has everything necessary for most games including super fast rendering, physics, particles, sound effects, music, keyboard/mouse/gamepad input handling, update/render loop, and debug tools. 🚂
 
