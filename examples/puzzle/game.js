@@ -11,7 +11,9 @@ pixelated = 0; // do not use pixelated rendering
 
 const fallTime = .2;
 const cameraOffset = vec2(0,-.5);
-const backgroundColor = new Color(.3,.3,.3);
+const backgroundColor = new Color(.2,.2,.2);
+const minMatchCount = 3;
+const highScoreKey = 'puzzleBestScore';
 
 // zzfx sounds
 const sound_goodMove = [.4,.2,250,.04,,.04,,,1,,,,,3];
@@ -40,8 +42,12 @@ const setTile = (pos, data) => level[pos.x + pos.y * levelSize.x] = data;
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
+    // setup canvas
     fixedWidth = 1920, fixedHeight = 1080; // 1080p
     mainCanvas.style.background = backgroundColor.rgba();
+
+    // load high score
+    bestScore = localStorage[highScoreKey] || 0;
 
     // randomize level
     level = [];
@@ -51,14 +57,12 @@ function gameInit()
     for (pos.y = levelSize.y; pos.y--;)
         setTile(pos, randInt(tileTypeCount));
 
+    // setup game
     cameraPos = levelSize.scale(.5).add(cameraOffset);
     cameraScale = 900/levelSize.y;
     gravity = -.005;
     fallTimer = new Timer;
     comboCount = score = 0;
-
-    // load high score
-    bestScore = localStorage['puzzleBestScore'] || 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -161,7 +165,7 @@ function gameUpdate()
     {
         // update high score
         bestScore = score;
-        localStorage['puzzleBestScore'] = bestScore;
+        localStorage[highScoreKey] = bestScore;
     }
 }
 
@@ -179,8 +183,6 @@ function gameRender()
 
     // draw the blocks
     const pos = vec2();
-    const tileSize = .95;
-    const outlineColor = new Color(0,0,0);
     for (pos.x = levelSize.x; pos.x--;)
     for (pos.y = levelSize.y; pos.y--;)
     {
@@ -188,14 +190,22 @@ function gameRender()
         if (data == -1)
             continue;
 
+        // highlight drag start
         const drawPos = pos.add(vec2(.5));
         if (dragStartPos && pos.x == dragStartPos.x && pos.y == dragStartPos.y)
             drawRect(drawPos, vec2(1.05));
 
+        // make pieces fall gradually
         if (fallTimer.active() && levelFall[pos.x + pos.y*levelSize.x])
             drawPos.y += 1-fallTimer.getPercent();
-        drawRect(drawPos, vec2(tileSize), tileColors[data]);
-        drawTile(drawPos, vec2(tileSize/2), data, vec2(64), outlineColor);
+
+        // draw background
+        const color = tileColors[data];
+        drawRect(drawPos, vec2(.95), color);
+        
+        // use darker color for icon
+        const color2 = color.scale(.8, 1);
+        drawTile(drawPos, vec2(.5), data, vec2(64), color2);
     }
 
     // draw a grey square at top to cover up incomming tiles
@@ -206,13 +216,13 @@ function gameRender()
 function gameRenderPost()
 {
     // draw text on top of everything
-    drawText('Score: ' + score, cameraPos.add(vec2(-3,-3)), .9, new Color, .1);
-    drawText('Best: ' + bestScore, cameraPos.add(vec2(3,-3)), .9, new Color, .1);
+    drawText('Score: ' + score,    cameraPos.add(vec2(-3,-3)), .9, new Color, .1);
+    drawText('Best: ' + bestScore, cameraPos.add(vec2( 3,-3)), .9, new Color, .1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Startup LittleJS Engine
-engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png');
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png?1');
 
 ///////////////////////////////////////////////////////////////////////////////
 // find and remove all runs of 3 or higher
@@ -228,12 +238,8 @@ function clearMatches()
             const data = getTile(pos);
             if (data >= 0 && data == runData)
             {
-                ++runCount;
-                if (runCount == 3)
-                    for (let j=runCount; j--;)
-                        removeTiles[pos.x + j + pos.y * levelSize.x] = 1;
-                else if (runCount > 3)
-                    removeTiles[pos.x + pos.y * levelSize.x] = 1;
+                for (let i=++runCount; runCount >= minMatchCount && i--;)
+                    removeTiles[pos.x + i + pos.y * levelSize.x] = 1;
             }
             else
             {
@@ -252,12 +258,8 @@ function clearMatches()
             const data = getTile(pos);
             if (data >= 0 && data == runData)
             {
-                ++runCount;
-                if (runCount == 3)
-                    for (let j=runCount; j--;)
-                        removeTiles[pos.x + (pos.y + j) * levelSize.x] = 1;
-                else if (runCount > 3)
-                    removeTiles[pos.x + pos.y * levelSize.x] = 1;
+                for (let i=++runCount; runCount >= minMatchCount && i--;)
+                    removeTiles[pos.x + (pos.y + i) * levelSize.x] = 1;
             }
             else
             {
@@ -267,7 +269,7 @@ function clearMatches()
         }
     }
 
-    // remove tiles all at once like this incase an L or T shape is formed
+    // remove tiles all at once like this to handle shapes like L or T
     let removedCount = 0;
     for (pos.x = levelSize.x; pos.x--;)
     for (pos.y = levelSize.y; pos.y--;)

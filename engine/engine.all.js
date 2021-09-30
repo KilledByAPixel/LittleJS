@@ -2104,7 +2104,7 @@ function glInit()
         'varying vec2 v;'+          // return uv
         'varying vec4 d,e;'+        // return color, additiveColor
         'void main(){'+             // shader entry point
-        'gl_Position=m*vec4((s*cos(-a)+vec2(-s.y,s)*sin(-a))*.5+p,1,1);'+// transform position
+        'gl_Position=m*vec4((s*cos(a)-vec2(-s.y,s)*sin(a))*.5+p,1,1);'+// transform position
         'v=t;d=c;e=b;'+             // pass stuff to fragment shader
         '}'                         // end of shader
         ,
