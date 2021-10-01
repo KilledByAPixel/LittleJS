@@ -112,7 +112,7 @@ class MyObject extends EngineObject
 
 All engine settings are listed in [engineConfig.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engineConfig.js). Here are the most important settings...
 
-- fixedWidth and fixedHeight - use a fixed canvas resolutio if set
+- fixedWidth and fixedHeight - use a fixed canvas resolution if set
 - pixelated - disable anti-aliasing for pixel art style games
 - glOverlay - fix slow rendering in some browsers by making the WebGL canvas visible instead of compositing
 - glEnable - run without WebGL, though it is slower to render sprites and textured coloring is disabled
