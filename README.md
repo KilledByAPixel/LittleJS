@@ -17,6 +17,7 @@ LittleJS is a lightweight 2D JavaScript game engine with a super fast WebGL rend
 - Engine helper functions and classes like Vector2, Color, and Timer
 - Tile layer cached rendering and collision system for level data
 - Particle effects system (particle editor/designer in progress)
+- Medal system tracks and displays achievements with Newgrounds and OS13k integration
 - Several easy to understand example projects you can build on
 - Debug tools and debug rendering system
 - Example projects are compatible with mobile devices
