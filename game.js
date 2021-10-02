@@ -18,7 +18,6 @@ const sound_click = [.5,1];
 // medals
 const medal_example    = new Medal(0, 'Example Medal', 'More info about the medal goes here.');
 const medal_tenClicks  = new Medal(1, 'Ten Clicks!',   'You have clicked 10 times.', '🖱️');
-const medal_newgrounds = new Medal(59543); // a medal set up with newgrounds
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
@@ -74,8 +73,8 @@ function gameInit()
     particleEmiter.elasticity = .3;
     particleEmiter.trailScale = 2;
 
-    // init medals and connect to newgrounds with AES-128 Base64 encryption
-    medalsInit('Hello World', overlayContext, '50367:TZmUUObe', 'gSwuuUahe/VmTn0M/MzSeg==');
+    // init medals
+    medalsInit('Hello World', overlayContext);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -94,7 +93,6 @@ function gameUpdate()
 
         // unlock medals
         medal_example.unlock();
-        medal_newgrounds.unlock();
         if (++clickCount == 10)
             medal_tenClicks.unlock();
     }
