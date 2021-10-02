@@ -139,6 +139,9 @@ if (isTouchDevice)
 
         // set was touching
         wasTouching = touching;
+
+        // prevent normal mouse events from being called
+        return !e.cancelable;
     }
     let wasTouching;
 }

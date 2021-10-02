@@ -17,11 +17,12 @@ mkdir build
 copy electron.js build\electron.js
 copy package.json build\package.json
 
-rem build the html and copy files
+rem copy files and build clean html
+xcopy /h /i /c /k /e /r /y ..\build\*.* .\build\
+del build\index.html
 echo ^<body^>^<script^> >> build\index.html
 type ..\build\index.js >> build\index.html
 echo ^</script^> >> build\index.html
-copy ..\tiles.png build\tiles.png
 
 rem build with electron
 call electron-packager build --overwrite

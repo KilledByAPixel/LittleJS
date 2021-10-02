@@ -6,17 +6,25 @@
 
 glOverlay = !isChrome; // fix slow rendering when not chrome
 
-let particleEmiter, overlayCanvas, overlayContext;
+// use an overlay canvas to make hud appear above gl canvas in glOverlay mode
+let overlayCanvas, overlayContext;
+
+// game variables
+let particleEmiter, clickCount = 0;
 
 // zzfx sounds
 const sound_click = [.5,1];
+
+// medals
+const medal_example    = new Medal(0, 'Example Medal', 'More info about the medal goes here.');
+const medal_tenClicks  = new Medal(1, 'Ten Clicks!',   'You have clicked 10 times.', '🖱️');
+const medal_newgrounds = new Medal(59543); // a medal set up with newgrounds
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
     // create overlay canvas for hud
     document.body.appendChild(overlayCanvas = document.createElement('canvas'));
-    overlayCanvas.style = mainCanvas.style.cssText;
     overlayContext = overlayCanvas.getContext('2d');
 
     // create tile collision and visible tile layer
@@ -65,19 +73,30 @@ function gameInit()
     );
     particleEmiter.elasticity = .3;
     particleEmiter.trailScale = 2;
+
+    // init medals and connect to newgrounds with AES-128 Base64 encryption
+    medalsInit('Hello World', overlayContext, '50367:TZmUUObe', 'gSwuuUahe/VmTn0M/MzSeg==');
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameUpdate()
 {
-    // play sound when mouse is pressed
     if (mouseWasPressed(0))
     {
+        // play sound when mouse is pressed
         playSound(sound_click, mousePos);
+
+        // change particle color
         particleEmiter.colorStartA = new Color;
         particleEmiter.colorStartB = randColor();
         particleEmiter.colorEndA = particleEmiter.colorStartA.scale(1,0);
         particleEmiter.colorEndB = particleEmiter.colorStartB.scale(1,0);
+
+        // unlock medals
+        medal_example.unlock();
+        medal_newgrounds.unlock();
+        if (++clickCount == 10)
+            medal_tenClicks.unlock();
     }
 
     // move particles to mouse location if on screen
@@ -108,18 +127,17 @@ function gameRenderPost()
     // clear overlay canvas
     overlayCanvas.width = mainCanvas.width;
     overlayCanvas.height = mainCanvas.height;
-    overlayCanvas.style.width = mainCanvas.style.width;
-    overlayCanvas.style.height = mainCanvas.style.height;
+    overlayCanvas.style = mainCanvas.style.cssText;
 
     // draw to overlay canvas for hud rendering
-    const drawOverlayText = (text, x, y, size=70, shadow=9) =>
+    const drawOverlayText = (text, x, y, size=70) =>
     {
         overlayContext.textAlign = 'center';
         overlayContext.textBaseline = 'top';
         overlayContext.font = size + 'px arial'
         overlayContext.fillStyle = '#fff';
-        overlayContext.shadowColor = '#000';
-        overlayContext.shadowBlur = shadow;
+        overlayContext.lineWidth = 3;
+        overlayContext.strokeText(text, x, y);
         overlayContext.fillText(text, x, y);
     }
     drawOverlayText('Hello World', overlayCanvas.width/2, 40);

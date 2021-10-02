@@ -15,18 +15,21 @@ rem remove old files
 del %NAME%.zip
 rmdir /s /q %BUILD_FOLDER%
 
-rem combine code
+rem copy engine release build
 mkdir %BUILD_FOLDER%
 cd %BUILD_FOLDER%
-type ..\engine\engine.all.min.js >> %BUILD_FILENAME%
+type ..\engine\engine.all.release.js >> %BUILD_FILENAME%
 echo. >> %BUILD_FILENAME%
 
 rem add your game's files to include here
 type ..\game.js >> %BUILD_FILENAME%
 echo. >> %BUILD_FILENAME%
 
+rem copy images to build folder
+copy ..\tiles.png tiles.png
+
 rem minify code with closure
-MOVE %BUILD_FILENAME% %BUILD_FILENAME%.temp
+move %BUILD_FILENAME% %BUILD_FILENAME%.temp
 call google-closure-compiler --js %BUILD_FILENAME%.temp --js_output_file %BUILD_FILENAME% --compilation_level ADVANCED --language_out ECMASCRIPT_2019 --warning_level VERBOSE --jscomp_off * --assume_function_wrapper
 if %ERRORLEVEL% NEQ 0 (
     pause

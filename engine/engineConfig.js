@@ -52,3 +52,9 @@ const soundEnable = 1;      // all audio can be disabled
 let audioVolume = .3;       // volume for sound, music and speech
 let defaultSoundRange = 20; // distance where taper starts
 let soundTaperPecent = .5;  // extra range added for sound taper
+
+///////////////////////////////////////////////////////////////////////////////
+// medals config
+
+const medalDisplayTime = 5;
+const medalDisplaySlideTime = .5;

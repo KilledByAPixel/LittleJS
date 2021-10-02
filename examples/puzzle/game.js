@@ -74,7 +74,7 @@ function gameUpdate()
         if (fallTimer.elapsed())
         {
             // add more blocks in the top
-            for(let x = 0; x < levelSize.x; ++x)
+            for (let x = 0; x < levelSize.x; ++x)
                 setTile(vec2(x,levelSize.y),randInt(tileTypeCount));
         }
         

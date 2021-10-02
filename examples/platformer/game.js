@@ -14,9 +14,9 @@ function gameInit()
 {
     // create overlay canvas for hud
     document.body.appendChild(overlayCanvas = document.createElement('canvas'));
-    overlayCanvas.style = mainCanvas.style.cssText;
     overlayContext = overlayCanvas.getContext('2d');
 
+    // setup game
     score = deaths = 0;
     gravity = -.01;
     cameraScale = 4*16;
@@ -78,18 +78,17 @@ function gameRenderPost()
     // clear overlay canvas
     overlayCanvas.width = mainCanvas.width;
     overlayCanvas.height = mainCanvas.height;
-    overlayCanvas.style.width = mainCanvas.style.width;
-    overlayCanvas.style.height = mainCanvas.style.height;
+    overlayCanvas.style = mainCanvas.style.cssText;
 
     // draw to overlay canvas for hud rendering
-    const drawOverlayText = (text, x, y, size=70, shadow=9) =>
+    const drawOverlayText = (text, x, y, size=70) =>
     {
         overlayContext.textAlign = 'center';
         overlayContext.textBaseline = 'top';
         overlayContext.font = size + 'px arial'
         overlayContext.fillStyle = '#fff';
-        overlayContext.shadowColor = '#000';
-        overlayContext.shadowBlur = shadow;
+        overlayContext.lineWidth = 3;
+        overlayContext.strokeText(text, x, y);
         overlayContext.fillText(text, x, y);
     }
     drawOverlayText('Score: ' + score,   overlayCanvas.width*1/3, 20);

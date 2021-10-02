@@ -21,16 +21,16 @@
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = 'v1.03';
+const engineVersion = '1.0.4';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
+const tileImage = new Image(); // everything uses the same tile sheet
 
 // core engine variables
-let gravity=0, mainCanvas=0, mainContext=0, mainCanvasSize=vec2(), 
-frame=0, time=0, realTime=0, paused=0, frameTimeLastMS=0, frameTimeBufferMS=0, debugFPS=0,
+let mainCanvas, mainContext, mainCanvasSize=vec2(), 
 engineObjects=[], engineCollideObjects=[],
 cameraPos=vec2(), cameraScale=max(defaultTileSize.x, defaultTileSize.y),
+frame=0, time=0, realTime=0, paused=0, frameTimeLastMS=0, frameTimeBufferMS=0, debugFPS=0, gravity=0, 
 tileImageSize, tileImageSizeInverse, shrinkTilesX, shrinkTilesY, drawCount;
-const tileImage = new Image(); // the tile image used by everything
 
 // call this function to start the engine
 function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, tileImageSource)
@@ -147,6 +147,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             o.destroyed || o.render();
         glCopyToContext(mainContext);
         gameRenderPost();
+        medalsRender();
         debugRender();
 
         if (showWatermark)
@@ -157,7 +158,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             mainContext.textBaseline = 'top';
             mainContext.font = '1em monospace';
             mainContext.fillStyle = '#000';
-            const text = engineName + ' ' + engineVersion + ' / ' 
+            const text = engineName + ' ' + 'v' + engineVersion + ' / ' 
                 + drawCount + ' / ' + engineObjects.length + ' / ' + debugFPS.toFixed(1);
             mainContext.fillText(text, mainCanvas.width-3, 3);
             mainContext.fillStyle = '#fff';
