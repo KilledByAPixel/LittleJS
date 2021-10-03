@@ -15,6 +15,7 @@ const debugOverlay = 0;
 const debugPhysics = 0;
 const debugParticles = 0;
 const debugRaycast = 0;
+const debugGamepads = 0;
 const debugMedals = 0;
 
 // allow debug commands to be removed from the final build

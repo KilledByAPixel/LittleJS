@@ -15,6 +15,7 @@ const debugOverlay = 0;
 const debugPhysics = 0;
 const debugParticles = 0;
 const debugRaycast = 0;
+const debugGamepads = 0;
 const debugMedals = 0;
 
 // allow debug commands to be removed from the final build
@@ -65,9 +66,9 @@ const randVector   = (length=1)=>              new Vector2().setAngle(rand(2*PI)
 const randColor    = (cA = new Color, cB = new Color(0,0,0,1), linear)=>
     linear ?  cA.lerp(cB, rand()) : new Color(rand(cA.r,cB.r),rand(cA.g,cB.g),rand(cA.b,cB.b),rand(cA.a,cB.a));
 
-// seeded random numbers - Xorshift
-let randSeed       = 1;
-const randSeeded   = (a=1, b=0)=>
+// seeded random numbers using xorshift
+let randSeed     = 1;
+const randSeeded = (a=1, b=0)=>
 {
     randSeed ^= randSeed << 13; randSeed ^= randSeed >>> 17; randSeed ^= randSeed << 5;
     return b + (a-b)*abs(randSeed % 1e9)/1e9;
@@ -168,8 +169,8 @@ class Timer
     set(timeLeft=0) { this.time = time + timeLeft; this.setTime = timeLeft; }
     unset()         { this.time = undefined; }
     isSet()         { return this.time != undefined; }
-    active()        { return time <= this.time; }  // is set and has no time left
-    elapsed()       { return time >  this.time; }  // is set and has time left
+    active()        { return time <= this.time; }
+    elapsed()       { return time >  this.time; }
     get()           { return this.isSet()? time - this.time : 0; }
     getPercent()    { return this.isSet()? percent(this.time - time, 0, this.setTime) : 0; }
 }
@@ -181,8 +182,8 @@ class Timer
 // display settings
 
 const maxWidth = 1920, maxHeight = 1200; // up to 1080p and 16:10
-let defaultFont = 'arial'; // font used for text rendering
-let fixedWidth = 0, fixedHeight = 0; // use native resolution
+let defaultFont = 'arial';               // font used for text rendering
+let fixedWidth = 0, fixedHeight = 0;     // use native resolution
 //const fixedWidth = 1280, fixedHeight = 720;  // 720p
 //const fixedWidth = 1920, fixedHeight = 1080; // 1080p
 //const fixedWidth = 128,  fixedHeight = 128;  // PICO-8
@@ -193,7 +194,7 @@ let fixedWidth = 0, fixedHeight = 0; // use native resolution
 
 const defaultTileSize = vec2(16); // default size of tiles in pixels
 const tileBleedShrinkFix = .3;    // prevent tile bleeding from neighbors
-let pixelated = 1;              // use crisp pixels for pixel art
+let pixelated = 1;                // use crisp pixels for pixel art
 
 ///////////////////////////////////////////////////////////////////////////////
 // webgl config
@@ -204,21 +205,21 @@ let glOverlay = 0;  // fix slow rendering in some browsers by not compositing th
 ///////////////////////////////////////////////////////////////////////////////
 // object config
 
-const defaultObjectSize = vec2(.99);
-const defaultObjectMass = 1;
-const defaultObjectDamping = .99;
-const defaultObjectAngleDamping = .99;
-const defaultObjectElasticity = 0;
-const defaultObjectFriction = .8;
-const maxObjectSpeed = 1;
+const defaultObjectSize = vec2(.99);   // size of objecs, tiny bit less then 1 to fit in holes
+const defaultObjectMass = 1;           // how heavy are objects for collison calcuations
+const defaultObjectDamping = .99;      // how much to slow velocity by each frame 0-1
+const defaultObjectAngleDamping = .99; // how much to slow angular velocity each frame 0-1
+const defaultObjectElasticity = 0;     // how much to bounce 0-1
+const defaultObjectFriction = .8;      // how much to slow when touching 0-1
+const maxObjectSpeed = 1;              // camp max speed to avoid fast objects missing collisions
 
 ///////////////////////////////////////////////////////////////////////////////
 // input config
 
-const gamepadsEnable = 1;
-const touchInputEnable = 1;
-const copyGamepadDirectionToStick = 1;
-const copyWASDToDpad = 1;
+const gamepadsEnable = 1;              // should gamepads be allowed
+const touchInputEnable = 1;            // touch input is routed to mouse
+const copyGamepadDirectionToStick = 1; // allow players to use dpad as analog stick
+const copyWASDToDpad = 1;              // allow players to use WASD as direction keys
 
 ///////////////////////////////////////////////////////////////////////////////
 // audio config
@@ -231,8 +232,11 @@ let soundTaperPecent = .5;  // extra range added for sound taper
 ///////////////////////////////////////////////////////////////////////////////
 // medals config
 
-const medalDisplayTime = 5;
-const medalDisplaySlideTime = .5;
+const medalDisplayTime = 5;       // how long to show medals
+const medalDisplaySlideTime = .5; // how quick to slide on/off medals
+const medalDisplayWidth = 640;    // width of medal display
+const medalDisplayHeight = 99;    // height of medal display
+const medalDisplayIconSize = 80;  // size of icon in medal display
 /*
     LittleJS - The Tiny JavaScript Game Engine That Can
     MIT License - Copyright 2019 Frank Force
@@ -283,9 +287,10 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
         document.body.style = 'margin:0;overflow:hidden;background:#000';
         mainCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)' +
-            (pixelated ? ';image-rendering:crisp-edges;image-rendering:pixelated' : '');          // pixelated rendering
+            (pixelated ? ';image-rendering:crisp-edges;image-rendering:pixelated' : ''); // pixelated rendering
         mainContext = mainCanvas.getContext('2d');
 
+        // init stuff and start engine
         debugInit();
         glInit();
         gameInit();
@@ -423,8 +428,12 @@ function engineUpdateObjects()
     }
     for (const o of engineObjects)
         o.parent || updateObject(o);
+
+    // remove destroyed objects
     engineObjects = engineObjects.filter(o=>!o.destroyed);
     engineCollideObjects = engineCollideObjects.filter(o=>!o.destroyed);
+
+    // increment frame and update time
     time = ++frame / FPS;
 }
 /*
@@ -745,6 +754,7 @@ function forEachObject(pos, size=0, callbackFunction=(o)=>1, collideObjectsOnly=
 
 'use strict';
 
+// convert between screen and world coordinates
 const screenToWorld = (screenPos)=>
     screenPos.add(vec2(.5)).subtract(mainCanvasSize.scale(.5)).multiply(vec2(1/cameraScale,-1/cameraScale)).add(cameraPos);
 const worldToScreen = (worldPos)=>
@@ -879,9 +889,9 @@ function setBlendMode(additive)
 
 // input for all devices including keyboard, mouse, and gamepad. (d=down, p=pressed, r=released)
 const inputData = [[]];
-const keyIsDown      = (key, device=0)=> inputData[device][key] && inputData[device][key].d ? 1 : 0;
-const keyWasPressed  = (key, device=0)=> inputData[device][key] && inputData[device][key].p ? 1 : 0;
-const keyWasReleased = (key, device=0)=> inputData[device][key] && inputData[device][key].r ? 1 : 0;
+const keyIsDown      = (key, device=0)=> inputData[device] && inputData[device][key] && inputData[device][key].d ? 1 : 0;
+const keyWasPressed  = (key, device=0)=> inputData[device] && inputData[device][key] && inputData[device][key].p ? 1 : 0;
+const keyWasReleased = (key, device=0)=> inputData[device] && inputData[device][key] && inputData[device][key].r ? 1 : 0;
 const clearInput     = ()=> inputData[0].length = 0;
 
 // mouse input is stored with keyboard
@@ -924,23 +934,21 @@ const remapKeyCode = c=> copyWASDToDpad ? c==87?38 : c==83?40 : c==65?37 : c==68
 // gamepad
 
 let isUsingGamepad = 0;
-let gamepadCount = 0;
-const gamepadStick       = (stick,  gamepad=0)=> gamepad < gamepadCount ? inputData[gamepad+1].stickData[stick] : vec2();
-const gamepadIsDown      = (button, gamepad=0)=> gamepad < gamepadCount ? keyIsDown     (button, gamepad+1) : 0;
-const gamepadWasPressed  = (button, gamepad=0)=> gamepad < gamepadCount ? keyWasPressed (button, gamepad+1) : 0;
-const gamepadWasReleased = (button, gamepad=0)=> gamepad < gamepadCount ? keyWasReleased(button, gamepad+1) : 0;
+const gamepadStick       = (stick,  gamepad=0)=> inputData[gamepad+1] ? inputData[gamepad+1].stickData[stick] || vec2() : vec2();
+const gamepadIsDown      = (button, gamepad=0)=> keyIsDown     (button, gamepad+1);
+const gamepadWasPressed  = (button, gamepad=0)=> keyWasPressed (button, gamepad+1);
+const gamepadWasReleased = (button, gamepad=0)=> keyWasReleased(button, gamepad+1);
 
 function updateGamepads()
 {
-    if (!navigator.getGamepads || !gamepadsEnable)
+    if (!gamepadsEnable) return;
+
+    if (!navigator.getGamepads || !document.hasFocus() && !debug)
         return;
 
-    if (!document.hasFocus() && !debug)
-        return;
-
+    // poll gamepads
     const gamepads = navigator.getGamepads();
-    gamepadCount = 0;
-    for (let i = 0; i < navigator.getGamepads().length; ++i)
+    for (let i = gamepads.length; i--;)
     {
         // get or create gamepad data
         const gamepad = gamepads[i];
@@ -948,37 +956,61 @@ function updateGamepads()
         if (!data)
         {
             data = inputData[i+1] = [];
-            data.stickData = [vec2(), vec2()];
+            data.stickData = [];
         }
 
-        if (gamepad && gamepad.axes.length >= 2)
+        if (gamepad)
         {
-            gamepadCount = i+1;
-
-            // read analog sticks and clamp dead zone
+            // read clamp dead zone of analog sticks
             const deadZone = .3, deadZoneMax = .8;
             const applyDeadZone = (v)=> 
                 v >  deadZone ?  percent( v, deadZoneMax, deadZone) : 
                 v < -deadZone ? -percent(-v, deadZoneMax, deadZone) : 0;
-            data.stickData[0] = vec2(applyDeadZone(gamepad.axes[0]), applyDeadZone(-gamepad.axes[1]));
+
+            // read analog sticks
+            for (let j = 0; j < gamepad.axes.length-1; j+=2)
+                data.stickData[j>>1] = vec2(applyDeadZone(gamepad.axes[j]), applyDeadZone(-gamepad.axes[j+1])).clampLength();
+            
+            // read buttons
+            for (let j = gamepad.buttons.length; j--;)
+            {
+                const button = gamepad.buttons[j];
+                inputData[i+1][j] = button.pressed ? {d:1, p:!gamepadIsDown(j,i)} : 
+                inputData[i+1][j] = {r:gamepadIsDown(j,i)}
+                isUsingGamepad |= button.pressed && !i;
+            }
             
             if (copyGamepadDirectionToStick)
             {
                 // copy dpad to left analog stick when pressed
                 if (gamepadIsDown(12,i)|gamepadIsDown(13,i)|gamepadIsDown(14,i)|gamepadIsDown(15,i))
-                    data.stickData[0] = vec2(gamepadIsDown(15,i) - gamepadIsDown(14,i), gamepadIsDown(12,i) - gamepadIsDown(13,i));
+                    data.stickData[0] = vec2(
+                        gamepadIsDown(15,i) - gamepadIsDown(14,i), 
+                        gamepadIsDown(12,i) - gamepadIsDown(13,i)
+                    ).clampLength();
             }
 
-            // clamp stick input to unit vector
-            data.stickData[0] = data.stickData[0].clampLength();
-            
-            // read buttons
-            gamepad.buttons.map((button, j)=>
+            if (debugGamepads)
             {
-                inputData[i+1][j] = button.pressed ? {d:1, p:!gamepadIsDown(j,i)} : 
-                inputData[i+1][j] = {r:gamepadIsDown(j,i)}
-                isUsingGamepad |= button.pressed && !i;
-            });
+                // gamepad debug display
+                const stickScale = 2;
+                const buttonScale = .5;
+                const centerPos = cameraPos;
+                for (let j = data.stickData.length; j--;)
+                {
+                    const drawPos = centerPos.add(vec2(j*stickScale*2,i*stickScale*3));
+                    const stickPos = drawPos.add(data.stickData[j].scale(stickScale));
+                    debugCircle(drawPos, stickScale, '#fff7',0,1);
+                    debugLine(drawPos, stickPos, '#f00');
+                    debugPoint(stickPos, '#f00');
+                }
+                for (let j = gamepad.buttons.length; j--;)
+                {
+                    const drawPos = centerPos.add(vec2(j*buttonScale*2, i*stickScale*3-stickScale-buttonScale));
+                    const pressed = gamepad.buttons[j].pressed;
+                    debugCircle(drawPos, buttonScale, pressed ? '#f00' : '#fff7', 0, 1);
+                }
+            }
         }
     }
 }
@@ -1037,6 +1069,7 @@ function playSound(zzfxSound, pos, range=defaultSoundRange, volumeScale=1, pitch
     {
         if (range)
         {
+            // apply range based fade
             const lengthSquared = cameraPos.distanceSquared(pos);
             const maxRange = range * (soundTaperPecent + 1);
             if (lengthSquared > maxRange**2)
@@ -1057,6 +1090,7 @@ function playSound(zzfxSound, pos, range=defaultSoundRange, volumeScale=1, pitch
     zzfxSound[0] = (zzfxSound[0]||1) * volumeScale;
     zzfxSound[2] = (zzfxSound[2]||220) * pitchScale;
 
+    // play the sound
     return zzfxP(pan, zzfxG(...zzfxSound));
 }
 
@@ -1079,8 +1113,6 @@ function playSamples(samples, loop=0, pan=0)
     return source;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
 // play mp3 or wav audio from a local file or url
 function playAudioFile(url, loop=0, volumeScale=1)
 {
@@ -1093,7 +1125,6 @@ function playAudioFile(url, loop=0, volumeScale=1)
     return audio;
 }
 
-///////////////////////////////////////////////////////////////////////////////
 // speak text with passed in settings
 function speak(text, language='', volume=1, rate=1, pitch=1)
 {
@@ -1112,6 +1143,7 @@ function speak(text, language='', volume=1, rate=1, pitch=1)
     speechSynthesis.speak(utterance);
 }
 
+// stop all queued speech
 const stopSpeech = ()=> speechSynthesis && speechSynthesis.cancel();
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1348,21 +1380,21 @@ const tileLayerCanvasCache = [];
 
 function initTileCollision(size)
 {
-    // reset collision to be clear
     tileCollisionSize = size;
     tileCollision = [];
     for (let i=tileCollision.length = tileCollisionSize.area(); i--;)
         tileCollision[i] = 0;
 }
 
+// set and get collision data
 const setTileCollisionData = (pos, data=0)=>
     pos.arrayCheck(tileCollisionSize) && (tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] = data);
 const getTileCollisionData = (pos)=>
     pos.arrayCheck(tileCollisionSize) ? tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] : 0;
 
+// check if there is collision in a given area
 function tileCollisionTest(pos, size=vec2(), object)
 {
-    // check if there is collision in a given area
     const minX = max(Math.floor(pos.x - size.x*.5), 0);
     const minY = max(Math.floor(pos.y - size.y*.5), 0);
     const maxX = min(Math.floor(pos.x + size.x*.5), tileCollisionSize.x-1);
@@ -1377,7 +1409,7 @@ function tileCollisionTest(pos, size=vec2(), object)
 }
 
 // return the center of tile if any that is hit (this does not return the exact hit point)
-// todo: return the exact hit point, it must still be inside the hit tile
+// todo: a way to get the exact hit point, it must still register as inside the hit tile
 function tileCollisionRaycast(posStart, posEnd, object)
 {
     // test if a ray collides with tiles from start to end
@@ -1431,7 +1463,6 @@ class TileLayer extends EngineObject
         // create new canvas if necessary
         this.canvas = tileLayerCanvasCache.length ? tileLayerCanvasCache.pop() : document.createElement('canvas');
         this.context = this.canvas.getContext('2d');
-
         this.scale = scale;
         this.tileSize = defaultTileSize.copy();
         this.layer = layer;
@@ -1493,7 +1524,6 @@ class TileLayer extends EngineObject
         // clear and set size
         const width = this.size.x * this.tileSize.x;
         const height = this.size.y * this.tileSize.y;
-
         if (clear)
         {
             this.canvas.width  = width;
@@ -1556,9 +1586,9 @@ class TileLayer extends EngineObject
         context.restore();
     }
 
+    // draw a tile directly onto the layer canvas
     drawTile(pos, size=vec2(1), tileIndex=0, tileSize=defaultTileSize, color=new Color, angle=0, mirror)
     {
-        // draw a tile directly onto the layer canvas
         this.drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
             if (tileIndex < 0)
@@ -1744,7 +1774,6 @@ class Particle extends EngineObject
         const p = min((time - this.spawnTime) / this.lifeTime, 1);
         const radius = this.sizeStart + p * this.sizeEndDelta;
         const size = new Vector2(radius, radius);
-
         const fadeRate = this.fadeRate*.5;
         const color = new Color(
             this.colorStart.r + p * this.colorEndDelta.r,
@@ -1772,11 +1801,11 @@ class Particle extends EngineObject
 
         if (p == 1)
         {
+            // destroy particle when it's time runs out
             this.color = color;
             this.size = size;
             this.destroyCallback && this.destroyCallback(this);
             this.destroyed = 1;
-            return;
         }
     }
 }
@@ -1790,9 +1819,9 @@ class Particle extends EngineObject
 'use strict';
 
 const medals = [], medalDisplayQueue = [];
-let medalGameName, medalContext, medalDisplayTimer;
+let medalGameName = engineName, medalContext, medalDisplayTimer;
 
-function medalsInit(gameName=engineName, context=mainContext, newgroundsAppID, newgroundsCipher)
+function medalsInit(gameName, context, newgroundsAppID, newgroundsCipher)
 {
     medalGameName = gameName;
     medalContext = context;
@@ -1846,17 +1875,14 @@ class Medal
 
     render(hidePercent=0)
     {
-        const width = 500;
-        const height = 99;
-        const iconSize = 64;
-        const y = -height*hidePercent;
+        const y = -medalDisplayHeight*hidePercent;
 
         // draw containing rect and clip to that region
-        const context = medalContext;
+        const context = medalContext || mainContext;
         context.save();
         context.beginPath();
-        context.fillStyle = '#eee'
-        context.fill(context.rect(0, y, width, height));
+        context.fillStyle = '#ddd'
+        context.fill(context.rect(0, y, medalDisplayWidth, medalDisplayHeight));
         context.strokeStyle = context.fillStyle = '#000';
         context.lineWidth = 2; 
         context.stroke();
@@ -1867,15 +1893,16 @@ class Medal
         context.textBaseline = 'middle';
         context.font = '3em '+ defaultFont;
         if (this.image)
-            context.drawImage(this.image, 15, y+(height-iconSize)/2, iconSize, iconSize);
+            context.drawImage(this.image, 15, y+(medalDisplayHeight-medalDisplayIconSize)/2, 
+                medalDisplayIconSize, medalDisplayIconSize);
         else
-            context.fillText(this.icon, 45, y+height/2); // show icon if there is no image
+            context.fillText(this.icon, 15+medalDisplayIconSize/2, y+medalDisplayHeight/2); // show icon if there is no image
 
         // draw the text
         context.textAlign = 'left';
-        context.fillText(this.name, 90, y+35);
+        context.fillText(this.name, medalDisplayIconSize+25, y+35);
         context.font = '1.5em '+ defaultFont;
-        context.restore(context.fillText(this.description, 90, y+70));
+        context.restore(context.fillText(this.description, medalDisplayIconSize+25, y+70));
     }
 }
 
@@ -2027,7 +2054,7 @@ function glInit()
 
     // create the canvas and tile texture
     glCanvas = document.createElement('canvas');
-    glContext = glCanvas.getContext('webgl', {antialias:!pixelated});
+    glContext = glCanvas.getContext('webgl');
     glTileTexture = glCreateTexture(tileImage);
 
     if (glOverlay)

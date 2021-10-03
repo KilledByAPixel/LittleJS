@@ -8,9 +8,9 @@
 'use strict';
 
 const medals = [], medalDisplayQueue = [];
-let medalGameName, medalContext, medalDisplayTimer;
+let medalGameName = engineName, medalContext, medalDisplayTimer;
 
-function medalsInit(gameName=engineName, context=mainContext, newgroundsAppID, newgroundsCipher)
+function medalsInit(gameName, context, newgroundsAppID, newgroundsCipher)
 {
     medalGameName = gameName;
     medalContext = context;
@@ -64,17 +64,14 @@ class Medal
 
     render(hidePercent=0)
     {
-        const width = 500;
-        const height = 99;
-        const iconSize = 64;
-        const y = -height*hidePercent;
+        const y = -medalDisplayHeight*hidePercent;
 
         // draw containing rect and clip to that region
-        const context = medalContext;
+        const context = medalContext || mainContext;
         context.save();
         context.beginPath();
-        context.fillStyle = '#eee'
-        context.fill(context.rect(0, y, width, height));
+        context.fillStyle = '#ddd'
+        context.fill(context.rect(0, y, medalDisplayWidth, medalDisplayHeight));
         context.strokeStyle = context.fillStyle = '#000';
         context.lineWidth = 2; 
         context.stroke();
@@ -85,15 +82,16 @@ class Medal
         context.textBaseline = 'middle';
         context.font = '3em '+ defaultFont;
         if (this.image)
-            context.drawImage(this.image, 15, y+(height-iconSize)/2, iconSize, iconSize);
+            context.drawImage(this.image, 15, y+(medalDisplayHeight-medalDisplayIconSize)/2, 
+                medalDisplayIconSize, medalDisplayIconSize);
         else
-            context.fillText(this.icon, 45, y+height/2); // show icon if there is no image
+            context.fillText(this.icon, 15+medalDisplayIconSize/2, y+medalDisplayHeight/2); // show icon if there is no image
 
         // draw the text
         context.textAlign = 'left';
-        context.fillText(this.name, 90, y+35);
+        context.fillText(this.name, medalDisplayIconSize+25, y+35);
         context.font = '1.5em '+ defaultFont;
-        context.restore(context.fillText(this.description, 90, y+70));
+        context.restore(context.fillText(this.description, medalDisplayIconSize+25, y+70));
     }
 }
 

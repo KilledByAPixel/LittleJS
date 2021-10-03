@@ -48,9 +48,10 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
         document.body.style = 'margin:0;overflow:hidden;background:#000';
         mainCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)' +
-            (pixelated ? ';image-rendering:crisp-edges;image-rendering:pixelated' : '');          // pixelated rendering
+            (pixelated ? ';image-rendering:crisp-edges;image-rendering:pixelated' : ''); // pixelated rendering
         mainContext = mainCanvas.getContext('2d');
 
+        // init stuff and start engine
         debugInit();
         glInit();
         gameInit();
@@ -188,7 +189,11 @@ function engineUpdateObjects()
     }
     for (const o of engineObjects)
         o.parent || updateObject(o);
+
+    // remove destroyed objects
     engineObjects = engineObjects.filter(o=>!o.destroyed);
     engineCollideObjects = engineCollideObjects.filter(o=>!o.destroyed);
+
+    // increment frame and update time
     time = ++frame / FPS;
 }

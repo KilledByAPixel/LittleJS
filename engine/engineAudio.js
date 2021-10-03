@@ -20,6 +20,7 @@ function playSound(zzfxSound, pos, range=defaultSoundRange, volumeScale=1, pitch
     {
         if (range)
         {
+            // apply range based fade
             const lengthSquared = cameraPos.distanceSquared(pos);
             const maxRange = range * (soundTaperPecent + 1);
             if (lengthSquared > maxRange**2)
@@ -40,6 +41,7 @@ function playSound(zzfxSound, pos, range=defaultSoundRange, volumeScale=1, pitch
     zzfxSound[0] = (zzfxSound[0]||1) * volumeScale;
     zzfxSound[2] = (zzfxSound[2]||220) * pitchScale;
 
+    // play the sound
     return zzfxP(pan, zzfxG(...zzfxSound));
 }
 
@@ -62,8 +64,6 @@ function playSamples(samples, loop=0, pan=0)
     return source;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
 // play mp3 or wav audio from a local file or url
 function playAudioFile(url, loop=0, volumeScale=1)
 {
@@ -76,7 +76,6 @@ function playAudioFile(url, loop=0, volumeScale=1)
     return audio;
 }
 
-///////////////////////////////////////////////////////////////////////////////
 // speak text with passed in settings
 function speak(text, language='', volume=1, rate=1, pitch=1)
 {
@@ -95,6 +94,7 @@ function speak(text, language='', volume=1, rate=1, pitch=1)
     speechSynthesis.speak(utterance);
 }
 
+// stop all queued speech
 const stopSpeech = ()=> speechSynthesis && speechSynthesis.cancel();
 
 ///////////////////////////////////////////////////////////////////////////////

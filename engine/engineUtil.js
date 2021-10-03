@@ -35,9 +35,9 @@ const randVector   = (length=1)=>              new Vector2().setAngle(rand(2*PI)
 const randColor    = (cA = new Color, cB = new Color(0,0,0,1), linear)=>
     linear ?  cA.lerp(cB, rand()) : new Color(rand(cA.r,cB.r),rand(cA.g,cB.g),rand(cA.b,cB.b),rand(cA.a,cB.a));
 
-// seeded random numbers - Xorshift
-let randSeed       = 1;
-const randSeeded   = (a=1, b=0)=>
+// seeded random numbers using xorshift
+let randSeed     = 1;
+const randSeeded = (a=1, b=0)=>
 {
     randSeed ^= randSeed << 13; randSeed ^= randSeed >>> 17; randSeed ^= randSeed << 5;
     return b + (a-b)*abs(randSeed % 1e9)/1e9;
@@ -138,8 +138,8 @@ class Timer
     set(timeLeft=0) { this.time = time + timeLeft; this.setTime = timeLeft; }
     unset()         { this.time = undefined; }
     isSet()         { return this.time != undefined; }
-    active()        { return time <= this.time; }  // is set and has no time left
-    elapsed()       { return time >  this.time; }  // is set and has time left
+    active()        { return time <= this.time; }
+    elapsed()       { return time >  this.time; }
     get()           { return this.isSet()? time - this.time : 0; }
     getPercent()    { return this.isSet()? percent(this.time - time, 0, this.setTime) : 0; }
 }

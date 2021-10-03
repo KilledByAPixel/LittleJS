@@ -162,7 +162,6 @@ class Particle extends EngineObject
         const p = min((time - this.spawnTime) / this.lifeTime, 1);
         const radius = this.sizeStart + p * this.sizeEndDelta;
         const size = new Vector2(radius, radius);
-
         const fadeRate = this.fadeRate*.5;
         const color = new Color(
             this.colorStart.r + p * this.colorEndDelta.r,
@@ -190,11 +189,11 @@ class Particle extends EngineObject
 
         if (p == 1)
         {
+            // destroy particle when it's time runs out
             this.color = color;
             this.size = size;
             this.destroyCallback && this.destroyCallback(this);
             this.destroyed = 1;
-            return;
         }
     }
 }

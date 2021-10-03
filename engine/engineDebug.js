@@ -20,6 +20,7 @@ let debugOverlay = 0;
 let debugPhysics = 0;
 let debugRaycast = 0;
 let debugParticles = 0;
+let debugGamepads = 0;
 let debugMedals = 0;
 let debugCanvas = -1;
 let debugTakeScreenshot;
@@ -27,12 +28,16 @@ let downloadLink;
 
 // debug helper functions
 const ASSERT = enableAsserts ? (...assert)=> console.assert(...assert) : ()=>{};
-const debugRect = (pos, size=0, color='#fff', time=0, angle=0, fill=0)=> 
+const debugRect = (pos, size=vec2(0), color='#fff', time=0, angle=0, fill=0)=> 
 {
     ASSERT(typeof color == 'string'); // pass in regular html strings as colors
-    debugRects.push({pos, size, color, time:new Timer(time), angle, fill});
+    debugRects.push({pos, size:vec2(size), color, time:new Timer(time), angle, fill});
 }
-const debugCircle = (pos, radius, color, time, fill=0)=> debugRect(pos, radius, color, time, fill);
+const debugCircle = (pos, radius, color, time=0, fill=0)=>
+{
+    ASSERT(typeof color == 'string'); // pass in regular html strings as colors
+    debugRects.push({pos, size:radius, color, time:new Timer(time), angle:0, fill});
+}
 const debugPoint = (pos, color, time, angle)=> debugRect(pos, 0, color, time, angle);
 const debugLine = (posA, posB, color, thickness=.1, time)=>
 {

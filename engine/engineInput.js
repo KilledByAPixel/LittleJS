@@ -9,9 +9,9 @@
 
 // input for all devices including keyboard, mouse, and gamepad. (d=down, p=pressed, r=released)
 const inputData = [[]];
-const keyIsDown      = (key, device=0)=> inputData[device][key] && inputData[device][key].d ? 1 : 0;
-const keyWasPressed  = (key, device=0)=> inputData[device][key] && inputData[device][key].p ? 1 : 0;
-const keyWasReleased = (key, device=0)=> inputData[device][key] && inputData[device][key].r ? 1 : 0;
+const keyIsDown      = (key, device=0)=> inputData[device] && inputData[device][key] && inputData[device][key].d ? 1 : 0;
+const keyWasPressed  = (key, device=0)=> inputData[device] && inputData[device][key] && inputData[device][key].p ? 1 : 0;
+const keyWasReleased = (key, device=0)=> inputData[device] && inputData[device][key] && inputData[device][key].r ? 1 : 0;
 const clearInput     = ()=> inputData[0].length = 0;
 
 // mouse input is stored with keyboard
@@ -54,23 +54,21 @@ const remapKeyCode = c=> copyWASDToDpad ? c==87?38 : c==83?40 : c==65?37 : c==68
 // gamepad
 
 let isUsingGamepad = 0;
-let gamepadCount = 0;
-const gamepadStick       = (stick,  gamepad=0)=> gamepad < gamepadCount ? inputData[gamepad+1].stickData[stick] : vec2();
-const gamepadIsDown      = (button, gamepad=0)=> gamepad < gamepadCount ? keyIsDown     (button, gamepad+1) : 0;
-const gamepadWasPressed  = (button, gamepad=0)=> gamepad < gamepadCount ? keyWasPressed (button, gamepad+1) : 0;
-const gamepadWasReleased = (button, gamepad=0)=> gamepad < gamepadCount ? keyWasReleased(button, gamepad+1) : 0;
+const gamepadStick       = (stick,  gamepad=0)=> inputData[gamepad+1] ? inputData[gamepad+1].stickData[stick] || vec2() : vec2();
+const gamepadIsDown      = (button, gamepad=0)=> keyIsDown     (button, gamepad+1);
+const gamepadWasPressed  = (button, gamepad=0)=> keyWasPressed (button, gamepad+1);
+const gamepadWasReleased = (button, gamepad=0)=> keyWasReleased(button, gamepad+1);
 
 function updateGamepads()
 {
-    if (!navigator.getGamepads || !gamepadsEnable)
+    if (!gamepadsEnable) return;
+
+    if (!navigator.getGamepads || !document.hasFocus() && !debug)
         return;
 
-    if (!document.hasFocus() && !debug)
-        return;
-
+    // poll gamepads
     const gamepads = navigator.getGamepads();
-    gamepadCount = 0;
-    for (let i = 0; i < navigator.getGamepads().length; ++i)
+    for (let i = gamepads.length; i--;)
     {
         // get or create gamepad data
         const gamepad = gamepads[i];
@@ -78,37 +76,61 @@ function updateGamepads()
         if (!data)
         {
             data = inputData[i+1] = [];
-            data.stickData = [vec2(), vec2()];
+            data.stickData = [];
         }
 
-        if (gamepad && gamepad.axes.length >= 2)
+        if (gamepad)
         {
-            gamepadCount = i+1;
-
-            // read analog sticks and clamp dead zone
+            // read clamp dead zone of analog sticks
             const deadZone = .3, deadZoneMax = .8;
             const applyDeadZone = (v)=> 
                 v >  deadZone ?  percent( v, deadZoneMax, deadZone) : 
                 v < -deadZone ? -percent(-v, deadZoneMax, deadZone) : 0;
-            data.stickData[0] = vec2(applyDeadZone(gamepad.axes[0]), applyDeadZone(-gamepad.axes[1]));
+
+            // read analog sticks
+            for (let j = 0; j < gamepad.axes.length-1; j+=2)
+                data.stickData[j>>1] = vec2(applyDeadZone(gamepad.axes[j]), applyDeadZone(-gamepad.axes[j+1])).clampLength();
+            
+            // read buttons
+            for (let j = gamepad.buttons.length; j--;)
+            {
+                const button = gamepad.buttons[j];
+                inputData[i+1][j] = button.pressed ? {d:1, p:!gamepadIsDown(j,i)} : 
+                inputData[i+1][j] = {r:gamepadIsDown(j,i)}
+                isUsingGamepad |= button.pressed && !i;
+            }
             
             if (copyGamepadDirectionToStick)
             {
                 // copy dpad to left analog stick when pressed
                 if (gamepadIsDown(12,i)|gamepadIsDown(13,i)|gamepadIsDown(14,i)|gamepadIsDown(15,i))
-                    data.stickData[0] = vec2(gamepadIsDown(15,i) - gamepadIsDown(14,i), gamepadIsDown(12,i) - gamepadIsDown(13,i));
+                    data.stickData[0] = vec2(
+                        gamepadIsDown(15,i) - gamepadIsDown(14,i), 
+                        gamepadIsDown(12,i) - gamepadIsDown(13,i)
+                    ).clampLength();
             }
 
-            // clamp stick input to unit vector
-            data.stickData[0] = data.stickData[0].clampLength();
-            
-            // read buttons
-            gamepad.buttons.map((button, j)=>
+            if (debugGamepads)
             {
-                inputData[i+1][j] = button.pressed ? {d:1, p:!gamepadIsDown(j,i)} : 
-                inputData[i+1][j] = {r:gamepadIsDown(j,i)}
-                isUsingGamepad |= button.pressed && !i;
-            });
+                // gamepad debug display
+                const stickScale = 2;
+                const buttonScale = .5;
+                const centerPos = cameraPos;
+                for (let j = data.stickData.length; j--;)
+                {
+                    const drawPos = centerPos.add(vec2(j*stickScale*2,i*stickScale*3));
+                    const stickPos = drawPos.add(data.stickData[j].scale(stickScale));
+                    debugCircle(drawPos, stickScale, '#fff7',0,1);
+                    debugLine(drawPos, stickPos, '#f00');
+                    debugPoint(stickPos, '#f00');
+                }
+                for (let j = gamepad.buttons.length; j--;)
+                {
+                    const drawPos = centerPos.add(vec2(j*buttonScale*2, i*stickScale*3-stickScale-buttonScale));
+                    const pressed = gamepad.buttons[j].pressed;
+                    debugCircle(drawPos, buttonScale, pressed ? '#f00' : '#fff7', 0, 1);
+                }
+            }
         }
     }
 }

@@ -19,21 +19,21 @@ const tileLayerCanvasCache = [];
 
 function initTileCollision(size)
 {
-    // reset collision to be clear
     tileCollisionSize = size;
     tileCollision = [];
     for (let i=tileCollision.length = tileCollisionSize.area(); i--;)
         tileCollision[i] = 0;
 }
 
+// set and get collision data
 const setTileCollisionData = (pos, data=0)=>
     pos.arrayCheck(tileCollisionSize) && (tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] = data);
 const getTileCollisionData = (pos)=>
     pos.arrayCheck(tileCollisionSize) ? tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] : 0;
 
+// check if there is collision in a given area
 function tileCollisionTest(pos, size=vec2(), object)
 {
-    // check if there is collision in a given area
     const minX = max(Math.floor(pos.x - size.x*.5), 0);
     const minY = max(Math.floor(pos.y - size.y*.5), 0);
     const maxX = min(Math.floor(pos.x + size.x*.5), tileCollisionSize.x-1);
@@ -48,7 +48,7 @@ function tileCollisionTest(pos, size=vec2(), object)
 }
 
 // return the center of tile if any that is hit (this does not return the exact hit point)
-// todo: return the exact hit point, it must still be inside the hit tile
+// todo: a way to get the exact hit point, it must still register as inside the hit tile
 function tileCollisionRaycast(posStart, posEnd, object)
 {
     // test if a ray collides with tiles from start to end
@@ -102,7 +102,6 @@ class TileLayer extends EngineObject
         // create new canvas if necessary
         this.canvas = tileLayerCanvasCache.length ? tileLayerCanvasCache.pop() : document.createElement('canvas');
         this.context = this.canvas.getContext('2d');
-
         this.scale = scale;
         this.tileSize = defaultTileSize.copy();
         this.layer = layer;
@@ -164,7 +163,6 @@ class TileLayer extends EngineObject
         // clear and set size
         const width = this.size.x * this.tileSize.x;
         const height = this.size.y * this.tileSize.y;
-
         if (clear)
         {
             this.canvas.width  = width;
@@ -227,9 +225,9 @@ class TileLayer extends EngineObject
         context.restore();
     }
 
+    // draw a tile directly onto the layer canvas
     drawTile(pos, size=vec2(1), tileIndex=0, tileSize=defaultTileSize, color=new Color, angle=0, mirror)
     {
-        // draw a tile directly onto the layer canvas
         this.drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
             if (tileIndex < 0)
