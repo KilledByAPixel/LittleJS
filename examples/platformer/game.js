@@ -22,6 +22,9 @@ function gameInit()
     cameraScale = 4*16;
     gameTimer.set();
     buildLevel();
+
+    // init medals
+    medalsInit('LitleJS Platformer', overlayContext);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

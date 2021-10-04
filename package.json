@@ -1,0 +1,25 @@
+{
+  "name": "littlejsengine",
+  "version": "1.0.4",
+  "description": "LittleJS - Tiny and Fast HTML5 Game Engine",
+  "main": "engine/engine.all.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KilledByAPixel/LittleJS.git"
+  },
+  "keywords": [
+    "HTML5",
+    "JavaScript",
+    "game",
+    "library",
+    "JS13K",
+    "webgl",
+    "engine"
+  ],
+  "author": "Frank Force",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/KilledByAPixel/LittleJS/issues"
+  },
+  "homepage": "https://github.com/KilledByAPixel/LittleJS"
+}
