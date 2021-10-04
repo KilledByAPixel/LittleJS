@@ -52,6 +52,8 @@ const debugAABB = (pA, pB, sA, sB, color)=>
     debugRect(minPos.lerp(maxPos,.5), maxPos.subtract(minPos), color);
 }
 
+const debugClear = ()=> debugRects = [];
+
 // save a canvas to disk
 const debugSaveCanvas = (canvas, filename = engineName + '.png') =>
 {

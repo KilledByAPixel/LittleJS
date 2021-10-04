@@ -7,19 +7,20 @@
 
 'use strict';
 
-const medals = [], medalDisplayQueue = [];
-let medalGameName = engineName, medalContext, medalDisplayTimer;
+const medals = [], medalsDisplayQueue = [];
+let medalsPreventUnlock, medalsGameName = engineName, medalsContext, medalsDisplayTimer, newgrounds;
 
 function medalsInit(gameName, context, newgroundsAppID, newgroundsCipher)
 {
-    medalGameName = gameName;
-    medalContext = context;
+    medalsGameName = gameName;
+    medalsContext = context;
 
     // check if medals are unlocked
     debugMedals || medals.forEach(medal=> medal.unlocked = localStorage[medal.storageKey()]);
 
     // start up newgrounds only if requested
-    newgroundsAppID && initNewgrounds(newgroundsAppID, newgroundsCipher);
+    if (newgroundsAppID)
+        newgrounds = new Newgrounds(newgroundsAppID, newgroundsCipher);
 }
 
 class Medal
@@ -45,21 +46,21 @@ class Medal
 
     unlock()
     {
-        if (this.unlocked)
+        if (medalsPreventUnlock || this.unlocked)
             return;
 
         // save the medal
         localStorage[this.storageKey()] = this.unlocked = 1;
-        medalDisplayQueue.push(this);
+        medalsDisplayQueue.push(this);
 
         // save for newgrounds and OS13K
         newgrounds && newgrounds.unlockMedal(this.id);
-        localStorage['OS13kTrophy,' + this.icon + ',' + medalGameName + ',' + this.name] = this.description;
+        localStorage['OS13kTrophy,' + this.icon + ',' + medalsGameName + ',' + this.name] = this.description;
     }
  
     storageKey()
     {
-        return medalGameName + '_medal_' + this.id;
+        return medalsGameName + '_medal_' + this.id;
     }
 
     render(hidePercent=0)
@@ -67,7 +68,7 @@ class Medal
         const y = -medalDisplayHeight*hidePercent;
 
         // draw containing rect and clip to that region
-        const context = medalContext || mainContext;
+        const context = medalsContext || mainContext;
         context.save();
         context.beginPath();
         context.fillStyle = '#ddd'
@@ -98,16 +99,16 @@ class Medal
 // engine automatically renders medals
 function medalsRender()
 {
-    if (!medalDisplayQueue.length)
+    if (!medalsDisplayQueue.length)
         return;
     
     // update first medal in queue
-    const medal = medalDisplayQueue[0];
-    const time = realTime - medalDisplayTimer;
-    if (!medalDisplayTimer)
-        medalDisplayTimer = realTime;
+    const medal = medalsDisplayQueue[0];
+    const time = realTime - medalsDisplayTimer;
+    if (!medalsDisplayTimer)
+        medalsDisplayTimer = realTime;
     else if (time > medalDisplayTime)
-        medalDisplayQueue.shift(medalDisplayTimer = 0);
+        medalsDisplayQueue.shift(medalsDisplayTimer = 0);
     else
     {
         // slide on/off medals
@@ -122,102 +123,99 @@ function medalsRender()
 ///////////////////////////////////////////////////////////////////////////////
 // Newgrounds API wrapper
 
-let newgrounds = 0;
-function initNewgrounds(app_id, cipher)
+class Newgrounds
 {
-    ASSERT(!newgrounds && app_id);
-    newgrounds =
+    constructor(app_id, cipher)
     {
-        init()
+        ASSERT(!newgrounds && app_id);
+        this.app_id = app_id;
+        this.cipher = cipher;
+
+        // create an instance of CryptoJS for encrypted calls
+        if (cipher)
+            this.cryptoJS = CryptoJS();
+
+        // get session id from url search params
+        const url = new URL(window.location.href);
+        this.session_id = url.searchParams.get('ngio_session_id') || 0;
+
+        // get medals
+        const medalsResult = this.call('Medal.getList', 0, 0);
+        this.medals = medalsResult ? medalsResult.result.data['medals'] : [];
+        debugMedals && console.log(this.medals);
+        for (const newgroundsMedal of this.medals)
         {
-            // create an instance of CryptoJS for encrypted calls 
-            if (cipher)
-                this.cryptoJS = CryptoJS();
-
-            // get session id from url search params
-            const url = new URL(window.location.href);
-            this.session_id = url.searchParams.get('ngio_session_id') || 0;
-
-            // get medals
-            const medalsResult = this.call('Medal.getList', 0, 0);
-            this.medals = medalsResult ? medalsResult.result.data['medals'] : [];
-            debugMedals && console.log(this.medals);
-            for (const newgroundsMedal of this.medals)
+            const medal = medals[newgroundsMedal['id']];
+            if (medal)
             {
-                const medal = medals[newgroundsMedal['id']];
-                if (medal)
-                {
-                    // copy newgrounds metal data
-                    medal.name = newgroundsMedal['name'];
-                    medal.description = newgroundsMedal['description'];
-                    medal.unlocked = newgroundsMedal['unlocked'];
-                    medal.image = new Image();
-                    medal.image.src = newgroundsMedal['icon'];
-                }
+                // copy newgrounds medal data
+                medal.name = newgroundsMedal['name'];
+                medal.description = newgroundsMedal['description'];
+                medal.unlocked = newgroundsMedal['unlocked'];
+                medal.image = new Image();
+                medal.image.src = newgroundsMedal['icon'];
             }
-        
-            // get scoreboards
-            const scoreboardResult = this.call('ScoreBoard.getBoards', 0, 0);
-            this.scoreboards = scoreboardResult ? scoreboardResult.result.data.scoreboards : [];
-            debugMedals && console.log(this.scoreboards);
-        },
-
-        unlockMedal(id)
-        {
-            return this.call('Medal.unlock', {'id':id});
-        },
-
-        postScore(id, value)
-        {
-            return this.call('ScoreBoard.postScore', {'id':id, 'value':value});
-        },
-
-        getScores(id, user=0, social=0, skip=0, limit=10)
-        {
-            return this.call('ScoreBoard.getScores', 
-                {'id':id, 'user':user, 'social':social, 'skip':skip, 'limit':limit}, 0);
-        },
-        
-        call(component, parameters=0, async=1)
-        {
-            // build the input object
-            const input = 
-            {
-                'app_id':     app_id,
-                'session_id': this.session_id,
-                'call':       this.encryptCall({'component':component, 'parameters':parameters})
-            };
-
-            // build post data
-            const formData = new FormData();
-            formData.append('input', JSON.stringify(input));
-            
-            // send post data
-            const xmlHttp = new XMLHttpRequest();
-            const url = 'https://newgrounds.io/gateway_v3.php';
-            xmlHttp.open('POST', url, !debugMedals && async);
-            xmlHttp.send(formData);
-            debugMedals && console.log(xmlHttp.responseText);
-            return xmlHttp.responseText && JSON.parse(xmlHttp.responseText);
-        },
-        
-        encryptCall(call)
-        {
-            if (!cipher)
-                return call;
-            
-            // encrypt using AES-128 Base64 with cryptoJS
-            const cryptoJS = this.cryptoJS;
-            const aesKey = cryptoJS['enc']['Base64']['parse'](cipher);
-            const iv = cryptoJS['lib']['WordArray']['random'](16);
-            const encrypted = cryptoJS['AES']['encrypt'](JSON.stringify(call), aesKey, {'iv':iv});
-            call['secure'] = cryptoJS['enc']['Base64']['stringify'](iv.concat(encrypted['ciphertext']));
-            call['parameters'] = 0;
-            return call;
-        },
+        }
+    
+        // get scoreboards
+        const scoreboardResult = this.call('ScoreBoard.getBoards', 0, 0);
+        this.scoreboards = scoreboardResult ? scoreboardResult.result.data.scoreboards : [];
+        debugMedals && console.log(this.scoreboards);
     }
 
-    newgrounds.init();
+    unlockMedal(id)
+    {
+        return this.call('Medal.unlock', {'id':id});
+    }
+
+    postScore(id, value)
+    {
+        return this.call('ScoreBoard.postScore', {'id':id, 'value':value});
+    }
+
+    getScores(id, user=0, social=0, skip=0, limit=10)
+    {
+        return this.call('ScoreBoard.getScores', 
+            {'id':id, 'user':user, 'social':social, 'skip':skip, 'limit':limit}, 0);
+    }
+    
+    call(component, parameters=0, async=1)
+    {
+        // build the input object
+        const input = 
+        {
+            'app_id':     this.app_id,
+            'session_id': this.session_id,
+            'call':       this.encryptCall({'component':component, 'parameters':parameters})
+        };
+
+        // build post data
+        const formData = new FormData();
+        formData.append('input', JSON.stringify(input));
+        
+        // send post data
+        const xmlHttp = new XMLHttpRequest();
+        const url = 'https://newgrounds.io/gateway_v3.php';
+        xmlHttp.open('POST', url, !debugMedals && async);
+        xmlHttp.send(formData);
+        debugMedals && console.log(xmlHttp.responseText);
+        return xmlHttp.responseText && JSON.parse(xmlHttp.responseText);
+    }
+    
+    encryptCall(call)
+    {
+        if (!this.cipher)
+            return call;
+        
+        // encrypt using AES-128 Base64 with cryptoJS
+        const cryptoJS = this.cryptoJS;
+        const aesKey = cryptoJS['enc']['Base64']['parse'](this.cipher);
+        const iv = cryptoJS['lib']['WordArray']['random'](16);
+        const encrypted = cryptoJS['AES']['encrypt'](JSON.stringify(call), aesKey, {'iv':iv});
+        call['secure'] = cryptoJS['enc']['Base64']['stringify'](iv.concat(encrypted['ciphertext']));
+        call['parameters'] = 0;
+        return call;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
