@@ -296,7 +296,7 @@ class Player extends Character
         this.pressingThrow = mouseIsDown(2) || keyIsDown(67) || gamepadIsDown(1);
 
         // movement control
-        this.moveInput = isUsingGamepad ? gamepadStick(0) : 
+        this.moveInput = usingGamepad ? gamepadStick(0) : 
             vec2(keyIsDown(39) - keyIsDown(37), keyIsDown(38) - keyIsDown(40));
 
         super.update();

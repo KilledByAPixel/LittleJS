@@ -18,7 +18,7 @@ class Paddle extends EngineObject
 
     update()
     {
-        if (isUsingGamepad)
+        if (usingGamepad)
         {
             // control with gamepad
             this.pos.x += gamepadStick(0).x;

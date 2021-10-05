@@ -103,6 +103,8 @@ class Enemy extends GameObject
 
     update()
     {
+        super.update();
+        
         if (!player)
             return;
 
@@ -116,8 +118,6 @@ class Enemy extends GameObject
         // damage player if touching
         if (isOverlapping(this.pos, this.size, player.pos, player.size))
             player.damage(1, this);
-
-        super.update();
     }
 
     kill()
@@ -271,6 +271,7 @@ class Bullet extends EngineObject
         this.gravityScale = 0;
         this.renderOrder = 100;
         this.drawSize = vec2(.2,.5);
+        this.range = 20;
         this.setCollision(1);
     }
 
@@ -286,6 +287,9 @@ class Bullet extends EngineObject
         });
 
         this.angle = this.velocity.angle();
+        this.range -= this.velocity.length();
+        if (this.range < 0)
+            this.kill();
     }
     
     collideWithObject(o)

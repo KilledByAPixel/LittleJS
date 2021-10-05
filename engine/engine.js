@@ -21,7 +21,7 @@
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = '1.0.5';
+const engineVersion = '1.0.6';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 const tileImage = new Image(); // everything uses the same tile sheet
 
@@ -146,7 +146,6 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
         for (const o of engineObjects)
             o.destroyed || o.render();
-        glCopyToContext(mainContext);
         gameRenderPost();
         medalsRender();
         debugRender();
@@ -167,7 +166,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             drawCount = 0;
         }
 
-        // copy anything left in the buffer if necessary
+        // copy anything left in the webgl buffer
         glCopyToContext(mainContext);
     }
 

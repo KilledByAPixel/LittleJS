@@ -27,14 +27,14 @@ const mouseWasReleased = keyWasReleased;
 onkeydown   = e=>
 {
     if (debug && e.target != document.body) return;
-    e.repeat || (inputData[isUsingGamepad = 0][remapKeyCode(e.keyCode)] = {d:hadInput=1, p:1});
+    e.repeat || (inputData[usingGamepad = 0][remapKeyCode(e.keyCode)] = {d:hadInput=1, p:1});
 }
 onkeyup     = e=>
 {
     if (debug && e.target != document.body) return;
     const c = remapKeyCode(e.keyCode); inputData[0][c] && (inputData[0][c].d = 0, inputData[0][c].r = 1);
 }
-onmousedown = e=> (inputData[isUsingGamepad = 0][e.button] = {d:hadInput=1, p:1}, onmousemove(e));
+onmousedown = e=> (inputData[usingGamepad = 0][e.button] = {d:hadInput=1, p:1}, onmousemove(e));
 onmouseup   = e=> inputData[0][e.button] && (inputData[0][e.button].d = 0, inputData[0][e.button].r = 1);
 onmousemove = e=>
 {
@@ -53,7 +53,7 @@ const remapKeyCode = c=> copyWASDToDpad ? c==87?38 : c==83?40 : c==65?37 : c==68
 ////////////////////////////////////////////////////////////////////
 // gamepad
 
-let isUsingGamepad = 0;
+let usingGamepad = 0;
 const gamepadStick       = (stick,  gamepad=0)=> inputData[gamepad+1] ? inputData[gamepad+1].stickData[stick] || vec2() : vec2();
 const gamepadIsDown      = (button, gamepad=0)=> keyIsDown     (button, gamepad+1);
 const gamepadWasPressed  = (button, gamepad=0)=> keyWasPressed (button, gamepad+1);
@@ -97,7 +97,7 @@ function updateGamepads()
                 const button = gamepad.buttons[j];
                 inputData[i+1][j] = button.pressed ? {d:1, p:!gamepadIsDown(j,i)} : 
                 inputData[i+1][j] = {r:gamepadIsDown(j,i)}
-                isUsingGamepad |= button.pressed && !i;
+                usingGamepad |= button.pressed && !i;
             }
             
             if (copyGamepadDirectionToStick)

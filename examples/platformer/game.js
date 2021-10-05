@@ -88,7 +88,7 @@ function gameRenderPost()
     {
         overlayContext.textAlign = 'center';
         overlayContext.textBaseline = 'top';
-        overlayContext.font = size + 'px arial'
+        overlayContext.font = size + 'px arial';
         overlayContext.fillStyle = '#fff';
         overlayContext.lineWidth = 3;
         overlayContext.strokeText(text, x, y);
