@@ -28,4 +28,5 @@ const debugCircle     = ()=> {}
 const debugPoint      = ()=> {}
 const debugLine       = ()=> {}
 const debugAABB       = ()=> {}
+const debugClear      = ()=> {}
 const debugSaveCanvas = ()=> {}

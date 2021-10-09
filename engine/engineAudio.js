@@ -115,7 +115,7 @@ function zzfxP(pan,...samples)  // play samples
         source = audioContext.createBufferSource();
 
     // copy samples to buffer
-    samples.map((d,i)=> buffer.getChannelData(i).set(d));
+    samples.forEach((d,i)=> buffer.getChannelData(i).set(d));
     source.buffer = buffer;
 
     // create pan node
@@ -247,7 +247,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
     sampleBuffer = [hasMore = notFirstBeat = pitch = outSampleOffset = 0];
 
     // for each pattern in sequence
-    sequence.map((patternIndex, sequenceIndex) => {
+    sequence.forEach((patternIndex, sequenceIndex) => {
       // get pattern for current channel, use empty 1 note pattern if none found
       patternChannel = patterns[patternIndex][channelIndex] || [0, 0, 0];
 

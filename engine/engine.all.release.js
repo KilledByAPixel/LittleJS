@@ -28,6 +28,7 @@ const debugCircle     = ()=> {}
 const debugPoint      = ()=> {}
 const debugLine       = ()=> {}
 const debugAABB       = ()=> {}
+const debugClear      = ()=> {}
 const debugSaveCanvas = ()=> {}
 
 /*
@@ -260,7 +261,7 @@ const medalDisplayIconSize = 80;  // size of icon in medal display
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = '1.0.6';
+const engineVersion = '1.0.7';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 const tileImage = new Image(); // everything uses the same tile sheet
 
@@ -303,21 +304,16 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         requestAnimationFrame(engineUpdate);
         
         if (!document.hasFocus())
-            inputData[0].length = 0; // clear input when lost focus
+            inputData[0].length = 0; // clear input when lost focus (prevent stuck keys)
 
         // prepare to update time
         const realFrameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
         let frameTimeDeltaMS = realFrameTimeDeltaMS;
+        if (debug)
+            frameTimeDeltaMS *= keyIsDown(107) ? 5 : keyIsDown(109) ? .2 : 1; // +/- to speed/slow time
         frameTimeLastMS = frameTimeMS;
         realTime = frameTimeMS / 1e3;
-        if (debug)
-            frameTimeDeltaMS *= keyIsDown(107) ? 5 : keyIsDown(109) ? .2 : 1;
-        if (!paused)
-            frameTimeBufferMS += frameTimeDeltaMS;
-
-        // update frame
-        mousePos = screenToWorld(mousePosScreen);
-        updateGamepads();
+        frameTimeBufferMS += !paused * frameTimeDeltaMS;
 
         // apply time delta smoothing, improves smoothness of framerate in some browsers
         let deltaSmooth = 0;
@@ -332,23 +328,36 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
         // clamp incase of extra long frames (slow framerate)
         frameTimeBufferMS = min(frameTimeBufferMS, 50);
+
+        // prepare to update the frame
+        mousePos = screenToWorld(mousePosScreen);
+        updateGamepads();
         
-        // update the frame
-        for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / FPS)
+        // update the frame if enough time has passed
+        if (frameTimeBufferMS >= 0)
         {
-            // main frame update
             gameUpdate();
             engineUpdateObjects();
-            gameUpdatePost();
-            debugUpdate();
-
-            // update input
-            for (let deviceInputData of inputData)
-                deviceInputData.map(k=> k.r = k.p = 0);
-            mouseWheel = 0;
+            frameTimeBufferMS -= 1e3 / FPS;
         }
 
-        // add the smoothing back in
+        // do post update
+        gameUpdatePost();
+        debugUpdate();
+
+        // update input
+        for (const deviceInputData of inputData)
+            deviceInputData.forEach(k=> k.r = k.p = 0);
+        mouseWheel = 0;
+
+        // update more frames if necessary in case of slow framerates
+        for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / FPS)
+        {
+            gameUpdate();
+            engineUpdateObjects();
+        }
+
+        // add the time smoothing back in
         frameTimeBufferMS += deltaSmooth;
 
         if (fixedWidth)
@@ -589,7 +598,7 @@ class EngineObject
                     }
                     debugPhysics && smallStepUp && (abs(oldPos.x - o.pos.x)*2 > sx) && console.log('stepUp', oldPos.y - o.pos.y);
                 }
-                if (!smallStepUp && isBlockedX) // resolve x collision
+                if (!smallStepUp && (isBlockedX || !isBlockedY)) // resolve x collision
                 {
                     // push outside collision
                     this.pos.x = o.pos.x + (sx*.5 + epsilon) * sign(oldPos.x - o.pos.x);
@@ -1163,7 +1172,7 @@ function zzfxP(pan,...samples)  // play samples
         source = audioContext.createBufferSource();
 
     // copy samples to buffer
-    samples.map((d,i)=> buffer.getChannelData(i).set(d));
+    samples.forEach((d,i)=> buffer.getChannelData(i).set(d));
     source.buffer = buffer;
 
     // create pan node
@@ -1295,7 +1304,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
     sampleBuffer = [hasMore = notFirstBeat = pitch = outSampleOffset = 0];
 
     // for each pattern in sequence
-    sequence.map((patternIndex, sequenceIndex) => {
+    sequence.forEach((patternIndex, sequenceIndex) => {
       // get pattern for current channel, use empty 1 note pattern if none found
       patternChannel = patterns[patternIndex][channelIndex] || [0, 0, 0];
 
@@ -1795,7 +1804,7 @@ class Particle extends EngineObject
         }
         else
             drawTile(this.pos, size, this.tileIndex, this.tileSize, color, this.angle, this.mirror);
-        this.additive && setBlendMode()
+        this.additive && setBlendMode();
         debugParticles && debugRect(this.pos, size, '#f005', 0, this.angle);
 
         if (p == 1)

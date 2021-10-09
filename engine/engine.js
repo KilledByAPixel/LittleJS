@@ -21,7 +21,7 @@
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = '1.0.6';
+const engineVersion = '1.0.7';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 const tileImage = new Image(); // everything uses the same tile sheet
 
@@ -64,21 +64,16 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         requestAnimationFrame(engineUpdate);
         
         if (!document.hasFocus())
-            inputData[0].length = 0; // clear input when lost focus
+            inputData[0].length = 0; // clear input when lost focus (prevent stuck keys)
 
         // prepare to update time
         const realFrameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
         let frameTimeDeltaMS = realFrameTimeDeltaMS;
+        if (debug)
+            frameTimeDeltaMS *= keyIsDown(107) ? 5 : keyIsDown(109) ? .2 : 1; // +/- to speed/slow time
         frameTimeLastMS = frameTimeMS;
         realTime = frameTimeMS / 1e3;
-        if (debug)
-            frameTimeDeltaMS *= keyIsDown(107) ? 5 : keyIsDown(109) ? .2 : 1;
-        if (!paused)
-            frameTimeBufferMS += frameTimeDeltaMS;
-
-        // update frame
-        mousePos = screenToWorld(mousePosScreen);
-        updateGamepads();
+        frameTimeBufferMS += !paused * frameTimeDeltaMS;
 
         // apply time delta smoothing, improves smoothness of framerate in some browsers
         let deltaSmooth = 0;
@@ -93,23 +88,36 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
         // clamp incase of extra long frames (slow framerate)
         frameTimeBufferMS = min(frameTimeBufferMS, 50);
+
+        // prepare to update the frame
+        mousePos = screenToWorld(mousePosScreen);
+        updateGamepads();
         
-        // update the frame
-        for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / FPS)
+        // update the frame if enough time has passed
+        if (frameTimeBufferMS >= 0)
         {
-            // main frame update
             gameUpdate();
             engineUpdateObjects();
-            gameUpdatePost();
-            debugUpdate();
-
-            // update input
-            for (let deviceInputData of inputData)
-                deviceInputData.map(k=> k.r = k.p = 0);
-            mouseWheel = 0;
+            frameTimeBufferMS -= 1e3 / FPS;
         }
 
-        // add the smoothing back in
+        // do post update
+        gameUpdatePost();
+        debugUpdate();
+
+        // update input
+        for (const deviceInputData of inputData)
+            deviceInputData.forEach(k=> k.r = k.p = 0);
+        mouseWheel = 0;
+
+        // update more frames if necessary in case of slow framerates
+        for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / FPS)
+        {
+            gameUpdate();
+            engineUpdateObjects();
+        }
+
+        // add the time smoothing back in
         frameTimeBufferMS += deltaSmooth;
 
         if (fixedWidth)

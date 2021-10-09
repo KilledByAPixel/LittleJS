@@ -184,7 +184,7 @@ class Particle extends EngineObject
         }
         else
             drawTile(this.pos, size, this.tileIndex, this.tileSize, color, this.angle, this.mirror);
-        this.additive && setBlendMode()
+        this.additive && setBlendMode();
         debugParticles && debugRect(this.pos, size, '#f005', 0, this.angle);
 
         if (p == 1)

@@ -215,7 +215,7 @@ class Character extends GameObject
         if (!this.isDead())
         {
             // bounce pos with walk cycle
-            bodyPos = bodyPos.add(vec2(0,.04-.04*Math.cos(this.walkCyclePercent*PI*2)));
+            bodyPos = bodyPos.add(vec2(0,.05*Math.sin(this.walkCyclePercent*PI)));
 
             // make bottom flush
             bodyPos = bodyPos.add(vec2(0,(this.drawSize.y-this.size.y)/2));
