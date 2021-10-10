@@ -115,9 +115,9 @@ All engine settings are listed in [engineConfig.js](https://github.com/KilledByA
 
 - fixedWidth and fixedHeight - use a fixed canvas resolution if set
 - pixelated - disable anti-aliasing for pixel art style games
+- audioVolume - adjust volume of sound effects, music, and speech
 - glOverlay - fix slow rendering in some browsers by making the WebGL canvas visible instead of compositing
 - glEnable - run without WebGL, though it is slower to render sprites and textured coloring is disabled
-- audioVolume - adjust volume of sound effects, music, and speech
 
 ## Games Made With LittleJS
 
