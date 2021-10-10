@@ -2,7 +2,7 @@
 
 ## All aboard!
 
-LittleJS is a lightweight 2D JavaScript game engine with a super fast WebGL rendering system. The goal of this project is to be small, simple, and easy to use for a variety of applications from size coding game jams to commercial releases. This engine has everything necessary for most games including super fast rendering, physics, particles, sound effects, music, keyboard/mouse/gamepad input handling, update/render loop, and debug tools. 🚂
+LittleJS is a super lightweight 2D JavaScript game engine with a fast WebGL rendering system. The goal of this project is to be small, simple, and easy to use for a variety of applications from size coding game jams to commercial releases. This engine has everything necessary for most games including fast rendering, physics, particles, sound effects, music, keyboard/mouse/gamepad input handling, update/render loop, and debug tools. 🚂
 
 ![LittleJS Screenshot](examples/screenshot.jpg)
 
@@ -23,7 +23,7 @@ LittleJS is a lightweight 2D JavaScript game engine with a super fast WebGL rend
 - Example projects are compatible with mobile devices
 - Build system automatically combines everything, minifies, and removes unused code
 - For size coding competitions like [js13kGames](https://js13kgames.com/), starter project builds to a 7KB zip
-- You can build as a Windows executable with [electron](https://www.electronjs.org/) for distribution on platforms like Steam
+- Easily build a Windows executable with [electron](https://www.electronjs.org/) for distribution on platforms like Steam
 - Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used to make commercial games
 
 ## [LittleJS Trailer](https://youtu.be/chuBzGjv7Ms)
@@ -40,11 +40,11 @@ LittleJS is a lightweight 2D JavaScript game engine with a super fast WebGL rend
 
 ## How to use LittleJS
 
-It is recommended that you start by copying the [LittleJS Starter Project](https://github.com/KilledByAPixel/LittleJS/blob/main/game.js) It is mostly empty with just a few things you can use to get started or remove. You can also download and include [engine.all.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.js) or [engine.all.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.min.js).
+It is recommended that you start by copying the [LittleJS Starter Project](https://github.com/KilledByAPixel/LittleJS/blob/main/game.js) This file is mostly empty with just a few things you can use to get started or remove. You can also download and include [engine.all.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.js) or [engine.all.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.min.js).
 
-In order to load files like images you will need to run a small web server like http-server on npm. I prefer to use an editor that does this for me automatically like [Brackets](https://brackets.io/) or Vs Code with the [Live Server plugin](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer).
+In order to load files like images you will need to run a small web server like http-server on npm. I prefer to use an editor that does this for me automatically like [Brackets](https://brackets.io/) or VS Code with the [Live Server plugin](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer).
 
-To startup LittleJS, you must create 5 functions and call engineInit. A canvas will automatically be created and added to the document. You can use this template to get started.
+To startup LittleJS, you must create 5 functions and pass them to engineInit. A canvas will automatically be created and added to the document. You can use this template to get started.
 
 ```javascript
 
@@ -82,9 +82,9 @@ function gameRenderPost()
 engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png');
 ```
 
-For most games you will want to extend EngineObject with your own objects. This will create an object class called GameObject and the constructor automatically adds it to the list of objects. Engine objects are automatically updated and rendered until they are destroyed.
+Though not required, LittleJS is intended to be used as an object oriented system by extending the base class EngineObject with your own. This lightweight class provides many useful features including physics, collision, parent/child system, and sorted rendering. Engine objects are automatically added to the global list of objects where they will be updated and rendered until destroyed. 
 
-You can override these functions to make objects behave however you want. See the examples for a complete demonstration.
+Here is a template you can use to make objects that behave however you want. See the examples for a complete demonstration.
 
 ```javascript
 class MyObject extends EngineObject 
@@ -111,11 +111,11 @@ class MyObject extends EngineObject
 
 ## Engine Configuration
 
-All engine settings are listed in [engineConfig.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engineConfig.js). Here are the most important settings...
+All engine settings are in [engineConfig.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engineConfig.js). Here are the most important settings...
 
-- fixedWidth and fixedHeight - use a fixed canvas resolution if set
-- pixelated - disable anti-aliasing for pixel art style games
-- audioVolume - adjust volume of sound effects, music, and speech
+- fixedWidth and fixedHeight - use a fixed canvas resolution if set (disabled by default)
+- pixelated - disable anti-aliasing for pixel art style games (enabled by default)
+- audioVolume - adjust volume of sound effects, music, and speech (.3 or less recommended)
 - glOverlay - fix slow rendering in some browsers by making the WebGL canvas visible instead of compositing
 - glEnable - run without WebGL, though it is slower to render sprites and textured coloring is disabled
 
