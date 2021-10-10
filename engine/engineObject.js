@@ -46,11 +46,12 @@ class EngineObject
     
     update()
     {
-        if (this.parent)
+        const parent = this.parent;
+        if (parent)
         {
             // copy parent pos/angle
-            this.pos = this.localPos.multiply(vec2(this.getMirrorSign(),1)).rotate(-this.parent.angle).add(this.parent.pos);
-            this.angle = this.getMirrorSign()*this.localAngle + this.parent.angle;
+            this.pos = this.localPos.multiply(vec2(parent.getMirrorSign(),1)).rotate(-parent.angle).add(parent.pos);
+            this.angle = parent.getMirrorSign()*this.localAngle + parent.angle;
             return;
         }
 

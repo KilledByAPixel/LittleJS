@@ -7,12 +7,13 @@
 
 'use strict';
 
-// input for all devices including keyboard, mouse, and gamepad. (d=down, p=pressed, r=released)
+
+// input for all devices including keyboard, mouse, and gamepad. (d=1, p=2, r=4)
 const inputData = [[]];
-const keyIsDown      = (key, device=0)=> inputData[device] && inputData[device][key] && inputData[device][key].d ? 1 : 0;
-const keyWasPressed  = (key, device=0)=> inputData[device] && inputData[device][key] && inputData[device][key].p ? 1 : 0;
-const keyWasReleased = (key, device=0)=> inputData[device] && inputData[device][key] && inputData[device][key].r ? 1 : 0;
-const clearInput     = ()=> inputData[0].length = 0;
+const keyIsDown      = (key, device=0)=> inputData[device] && inputData[device][key] & 1 ? 1 : 0;
+const keyWasPressed  = (key, device=0)=> inputData[device] && inputData[device][key] & 2 ? 1 : 0;
+const keyWasReleased = (key, device=0)=> inputData[device] && inputData[device][key] & 4 ? 1 : 0;
+const clearInput     = ()=> inputData[0] = [];
 
 // mouse input is stored with keyboard
 let hadInput   = 0;
@@ -23,25 +24,23 @@ const mouseIsDown      = keyIsDown;
 const mouseWasPressed  = keyWasPressed;
 const mouseWasReleased = keyWasReleased;
 
-// handle input events
+// input event handlers
 onkeydown   = e=>
 {
     if (debug && e.target != document.body) return;
-    e.repeat || (inputData[usingGamepad = 0][remapKeyCode(e.keyCode)] = {d:hadInput=1, p:1});
+    e.repeat || (inputData[usingGamepad = 0][remapKeyCode(e.keyCode)] = (hadInput = 1) + 2);
 }
 onkeyup     = e=>
 {
     if (debug && e.target != document.body) return;
-    const c = remapKeyCode(e.keyCode); inputData[0][c] && (inputData[0][c].d = 0, inputData[0][c].r = 1);
+    inputData[0][remapKeyCode(e.keyCode)] = 4;
 }
-onmousedown = e=> (inputData[usingGamepad = 0][e.button] = {d:hadInput=1, p:1}, onmousemove(e));
-onmouseup   = e=> inputData[0][e.button] && (inputData[0][e.button].d = 0, inputData[0][e.button].r = 1);
+onmousedown = e=> (inputData[usingGamepad = 0][e.button] = (hadInput = 1) + 2, onmousemove(e));
+onmouseup   = e=> inputData[0][e.button] = 4;
 onmousemove = e=>
 {
-    if (!mainCanvas)
-        return;
-
     // convert mouse pos to canvas space
+    if (!mainCanvas) return;
     const rect = mainCanvas.getBoundingClientRect();
     mousePosScreen.x = mainCanvasSize.x * percent(e.x, rect.right, rect.left);
     mousePosScreen.y = mainCanvasSize.y * percent(e.y, rect.bottom, rect.top);
@@ -58,6 +57,16 @@ const gamepadStick       = (stick,  gamepad=0)=> inputData[gamepad+1] ? inputDat
 const gamepadIsDown      = (button, gamepad=0)=> keyIsDown     (button, gamepad+1);
 const gamepadWasPressed  = (button, gamepad=0)=> keyWasPressed (button, gamepad+1);
 const gamepadWasReleased = (button, gamepad=0)=> keyWasReleased(button, gamepad+1);
+
+////////////////////////////////////////////////////////////////////
+// update functions called by engine
+function updateInput()
+{
+    for (const deviceInputData of inputData)
+    for (const i in deviceInputData)
+        deviceInputData[i]>0 && (deviceInputData[i] &= 1);
+    mouseWheel = 0;
+}
 
 function updateGamepads()
 {
@@ -95,8 +104,7 @@ function updateGamepads()
             for (let j = gamepad.buttons.length; j--;)
             {
                 const button = gamepad.buttons[j];
-                inputData[i+1][j] = button.pressed ? {d:1, p:!gamepadIsDown(j,i)} : 
-                inputData[i+1][j] = {r:gamepadIsDown(j,i)}
+                inputData[i+1][j] = button.pressed ? 1 + 2*!gamepadIsDown(j,i) : 4*gamepadIsDown(j,i);
                 usingGamepad |= button.pressed && !i;
             }
             

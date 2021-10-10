@@ -1,4 +1,8 @@
 /*
+    LittleJS - The Tiny JavaScript Game Engine That Can
+    MIT License - Copyright 2019 Frank Force
+*/
+/*
     LittleJS Debug System
     
     Debug Features
@@ -107,6 +111,7 @@ const debugUpdate = ()=>
     }
     if (keyWasPressed(55)) // 7
     {
+        debugGamepads = !debugGamepads;
     }
     if (keyWasPressed(56)) // 8
     {
@@ -258,12 +263,15 @@ const debugRender = ()=>
             mainContext.fillText('5: Save Screenshot', x, y += h);
             //mainContext.fillStyle = debugParticleEditor ? '#f00' : '#fff';
             //mainContext.fillText('6: Particle Editor', x, y += h);
+            mainContext.fillStyle = debugGamepads ? '#f00' : '#fff';
+            mainContext.fillText('7: Debug Gamepads', x, y += h);
         }
         else
         {
             mainContext.fillText(debugPhysics ? 'Debug Physics' : '', x, y += h);
             mainContext.fillText(debugParticles ? 'Debug Particles' : '', x, y += h);
             mainContext.fillText(godMode ? 'God Mode' : '', x, y += h);
+            mainContext.fillText(debugGamepads ? 'Debug Gamepads' : '', x, y += h);
         }
     
         mainContext.shadowBlur = 0;

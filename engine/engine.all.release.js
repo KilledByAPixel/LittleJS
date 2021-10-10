@@ -1,8 +1,12 @@
 /*
+    LittleJS - The Tiny JavaScript Game Engine That Can
+    MIT License - Copyright 2019 Frank Force
+*/
+/*
     LittleJS - Build include file
     By Frank Force 2021
 
-    This file is automatically included first by the build system.
+    This file is used for release builds in place of engineDebug.js
 */
 
 
@@ -18,7 +22,7 @@ const debugRaycast = 0;
 const debugGamepads = 0;
 const debugMedals = 0;
 
-// allow debug commands to be removed from the final build
+// debug commands are automatically removed from the final build
 const ASSERT          = ()=> {}
 const debugInit       = ()=> {}
 const debugUpdate     = ()=> {}
@@ -261,7 +265,7 @@ const medalDisplayIconSize = 80;  // size of icon in medal display
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = '1.0.7';
+const engineVersion = '1.0.8';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 const tileImage = new Image(); // everything uses the same tile sheet
 
@@ -333,9 +337,9 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         mousePos = screenToWorld(mousePosScreen);
         updateGamepads();
         
-        // update the frame if enough time has passed
         if (frameTimeBufferMS >= 0)
         {
+            // update the frame if enough time has passed
             gameUpdate();
             engineUpdateObjects();
             frameTimeBufferMS -= 1e3 / FPS;
@@ -344,11 +348,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         // do post update
         gameUpdatePost();
         debugUpdate();
-
-        // update input
-        for (const deviceInputData of inputData)
-            deviceInputData.forEach(k=> k.r = k.p = 0);
-        mouseWheel = 0;
+        updateInput();
 
         // update more frames if necessary in case of slow framerates
         for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / FPS)
@@ -397,6 +397,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         gameRenderPost();
         medalsRender();
         debugRender();
+        glCopyToContext(mainContext);
 
         if (showWatermark)
         {
@@ -413,9 +414,6 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             mainContext.fillText(text, mainCanvas.width-2, 2);
             drawCount = 0;
         }
-
-        // copy anything left in the webgl buffer
-        glCopyToContext(mainContext);
     }
 
     // set tile image source to load the image and start the engine
@@ -492,11 +490,12 @@ class EngineObject
     
     update()
     {
-        if (this.parent)
+        const parent = this.parent;
+        if (parent)
         {
             // copy parent pos/angle
-            this.pos = this.localPos.multiply(vec2(this.getMirrorSign(),1)).rotate(-this.parent.angle).add(this.parent.pos);
-            this.angle = this.getMirrorSign()*this.localAngle + this.parent.angle;
+            this.pos = this.localPos.multiply(vec2(parent.getMirrorSign(),1)).rotate(-parent.angle).add(parent.pos);
+            this.angle = parent.getMirrorSign()*this.localAngle + parent.angle;
             return;
         }
 
@@ -895,12 +894,13 @@ function setBlendMode(additive)
 
 'use strict';
 
-// input for all devices including keyboard, mouse, and gamepad. (d=down, p=pressed, r=released)
+
+// input for all devices including keyboard, mouse, and gamepad. (d=1, p=2, r=4)
 const inputData = [[]];
-const keyIsDown      = (key, device=0)=> inputData[device] && inputData[device][key] && inputData[device][key].d ? 1 : 0;
-const keyWasPressed  = (key, device=0)=> inputData[device] && inputData[device][key] && inputData[device][key].p ? 1 : 0;
-const keyWasReleased = (key, device=0)=> inputData[device] && inputData[device][key] && inputData[device][key].r ? 1 : 0;
-const clearInput     = ()=> inputData[0].length = 0;
+const keyIsDown      = (key, device=0)=> inputData[device] && inputData[device][key] & 1 ? 1 : 0;
+const keyWasPressed  = (key, device=0)=> inputData[device] && inputData[device][key] & 2 ? 1 : 0;
+const keyWasReleased = (key, device=0)=> inputData[device] && inputData[device][key] & 4 ? 1 : 0;
+const clearInput     = ()=> inputData[0] = [];
 
 // mouse input is stored with keyboard
 let hadInput   = 0;
@@ -911,25 +911,23 @@ const mouseIsDown      = keyIsDown;
 const mouseWasPressed  = keyWasPressed;
 const mouseWasReleased = keyWasReleased;
 
-// handle input events
+// input event handlers
 onkeydown   = e=>
 {
     if (debug && e.target != document.body) return;
-    e.repeat || (inputData[usingGamepad = 0][remapKeyCode(e.keyCode)] = {d:hadInput=1, p:1});
+    e.repeat || (inputData[usingGamepad = 0][remapKeyCode(e.keyCode)] = (hadInput = 1) + 2);
 }
 onkeyup     = e=>
 {
     if (debug && e.target != document.body) return;
-    const c = remapKeyCode(e.keyCode); inputData[0][c] && (inputData[0][c].d = 0, inputData[0][c].r = 1);
+    inputData[0][remapKeyCode(e.keyCode)] = 4;
 }
-onmousedown = e=> (inputData[usingGamepad = 0][e.button] = {d:hadInput=1, p:1}, onmousemove(e));
-onmouseup   = e=> inputData[0][e.button] && (inputData[0][e.button].d = 0, inputData[0][e.button].r = 1);
+onmousedown = e=> (inputData[usingGamepad = 0][e.button] = (hadInput = 1) + 2, onmousemove(e));
+onmouseup   = e=> inputData[0][e.button] = 4;
 onmousemove = e=>
 {
-    if (!mainCanvas)
-        return;
-
     // convert mouse pos to canvas space
+    if (!mainCanvas) return;
     const rect = mainCanvas.getBoundingClientRect();
     mousePosScreen.x = mainCanvasSize.x * percent(e.x, rect.right, rect.left);
     mousePosScreen.y = mainCanvasSize.y * percent(e.y, rect.bottom, rect.top);
@@ -946,6 +944,16 @@ const gamepadStick       = (stick,  gamepad=0)=> inputData[gamepad+1] ? inputDat
 const gamepadIsDown      = (button, gamepad=0)=> keyIsDown     (button, gamepad+1);
 const gamepadWasPressed  = (button, gamepad=0)=> keyWasPressed (button, gamepad+1);
 const gamepadWasReleased = (button, gamepad=0)=> keyWasReleased(button, gamepad+1);
+
+////////////////////////////////////////////////////////////////////
+// update functions called by engine
+function updateInput()
+{
+    for (const deviceInputData of inputData)
+    for (const i in deviceInputData)
+        deviceInputData[i]>0 && (deviceInputData[i] &= 1);
+    mouseWheel = 0;
+}
 
 function updateGamepads()
 {
@@ -983,8 +991,7 @@ function updateGamepads()
             for (let j = gamepad.buttons.length; j--;)
             {
                 const button = gamepad.buttons[j];
-                inputData[i+1][j] = button.pressed ? {d:1, p:!gamepadIsDown(j,i)} : 
-                inputData[i+1][j] = {r:gamepadIsDown(j,i)}
+                inputData[i+1][j] = button.pressed ? 1 + 2*!gamepadIsDown(j,i) : 4*gamepadIsDown(j,i);
                 usingGamepad |= button.pressed && !i;
             }
             

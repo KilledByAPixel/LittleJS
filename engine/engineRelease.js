@@ -1,8 +1,12 @@
 /*
+    LittleJS - The Tiny JavaScript Game Engine That Can
+    MIT License - Copyright 2019 Frank Force
+*/
+/*
     LittleJS - Build include file
     By Frank Force 2021
 
-    This file is automatically included first by the build system.
+    This file is used for release builds in place of engineDebug.js
 */
 
 
@@ -18,7 +22,7 @@ const debugRaycast = 0;
 const debugGamepads = 0;
 const debugMedals = 0;
 
-// allow debug commands to be removed from the final build
+// debug commands are automatically removed from the final build
 const ASSERT          = ()=> {}
 const debugInit       = ()=> {}
 const debugUpdate     = ()=> {}

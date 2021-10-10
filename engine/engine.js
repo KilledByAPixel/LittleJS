@@ -21,7 +21,7 @@
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = '1.0.7';
+const engineVersion = '1.0.8';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 const tileImage = new Image(); // everything uses the same tile sheet
 
@@ -93,9 +93,9 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         mousePos = screenToWorld(mousePosScreen);
         updateGamepads();
         
-        // update the frame if enough time has passed
         if (frameTimeBufferMS >= 0)
         {
+            // update the frame if enough time has passed
             gameUpdate();
             engineUpdateObjects();
             frameTimeBufferMS -= 1e3 / FPS;
@@ -104,11 +104,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         // do post update
         gameUpdatePost();
         debugUpdate();
-
-        // update input
-        for (const deviceInputData of inputData)
-            deviceInputData.forEach(k=> k.r = k.p = 0);
-        mouseWheel = 0;
+        updateInput();
 
         // update more frames if necessary in case of slow framerates
         for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / FPS)
@@ -157,6 +153,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         gameRenderPost();
         medalsRender();
         debugRender();
+        glCopyToContext(mainContext);
 
         if (showWatermark)
         {
@@ -173,9 +170,6 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             mainContext.fillText(text, mainCanvas.width-2, 2);
             drawCount = 0;
         }
-
-        // copy anything left in the webgl buffer
-        glCopyToContext(mainContext);
     }
 
     // set tile image source to load the image and start the engine
