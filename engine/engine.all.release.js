@@ -265,7 +265,7 @@ const medalDisplayIconSize = 80;  // size of icon in medal display
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = '1.0.8';
+const engineVersion = '1.0.9';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 const tileImage = new Image(); // everything uses the same tile sheet
 
@@ -337,24 +337,26 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         mousePos = screenToWorld(mousePosScreen);
         updateGamepads();
         
-        if (frameTimeBufferMS >= 0)
+        if (paused)
         {
-            // update the frame if enough time has passed
-            gameUpdate();
-            engineUpdateObjects();
-            frameTimeBufferMS -= 1e3 / FPS;
+            // do post update even when paused
+            gameUpdatePost();
+            debugUpdate();
+            updateInput();
         }
-
-        // do post update
-        gameUpdatePost();
-        debugUpdate();
-        updateInput();
-
-        // update more frames if necessary in case of slow framerates
-        for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / FPS)
+        else
         {
-            gameUpdate();
-            engineUpdateObjects();
+            // update multiple frames if necessary in case of slow framerate
+            for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / FPS)
+            {
+                gameUpdate();
+                engineUpdateObjects();
+
+                // do post update
+                gameUpdatePost();
+                debugUpdate();
+                updateInput();
+            }
         }
 
         // add the time smoothing back in
