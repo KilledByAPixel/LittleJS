@@ -894,35 +894,47 @@ function setBlendMode(additive)
 
 'use strict';
 
-
-// input for all devices including keyboard, mouse, and gamepad. (d=1, p=2, r=4)
-const inputData = [[]];
+// input for all devices including keyboard, mouse, and gamepad
+let hadInput         = 0;
 const keyIsDown      = (key, device=0)=> inputData[device] && inputData[device][key] & 1 ? 1 : 0;
 const keyWasPressed  = (key, device=0)=> inputData[device] && inputData[device][key] & 2 ? 1 : 0;
 const keyWasReleased = (key, device=0)=> inputData[device] && inputData[device][key] & 4 ? 1 : 0;
 const clearInput     = ()=> inputData[0] = [];
 
-// mouse input is stored with keyboard
-let hadInput   = 0;
-let mouseWheel = 0;
-let mousePosScreen = vec2();
-let mousePos = vec2();
+// mouse input
 const mouseIsDown      = keyIsDown;
 const mouseWasPressed  = keyWasPressed;
 const mouseWasReleased = keyWasReleased;
+let mousePos           = vec2();
+let mousePosScreen     = vec2();
+let mouseWheel         = 0;
 
-// input event handlers
+// gamepad input
+let usingGamepad = 0;
+const gamepadIsDown      = (button, gamepad=0)=> keyIsDown     (button, gamepad+1);
+const gamepadWasPressed  = (button, gamepad=0)=> keyWasPressed (button, gamepad+1);
+const gamepadWasReleased = (button, gamepad=0)=> keyWasReleased(button, gamepad+1);
+const gamepadStick       = (stick,  gamepad=0)=> inputData[gamepad+1] ? inputData[gamepad+1].stickData[stick] || vec2() : vec2();
+
+///////////////////////////////////////////////////////////////////////////////
+
+// keyboard event handlers
+const inputData = [[]];
 onkeydown   = e=>
 {
     if (debug && e.target != document.body) return;
-    e.repeat || (inputData[usingGamepad = 0][remapKeyCode(e.keyCode)] = (hadInput = 1) + 2);
+    e.repeat || (inputData[usingGamepad = 0][remapKeyCode(e.keyCode)] = 3);
+    hadInput = 1;
 }
 onkeyup     = e=>
 {
     if (debug && e.target != document.body) return;
     inputData[0][remapKeyCode(e.keyCode)] = 4;
 }
-onmousedown = e=> (inputData[usingGamepad = 0][e.button] = (hadInput = 1) + 2, onmousemove(e));
+const remapKeyCode = c=> copyWASDToDpad ? c==87?38 : c==83?40 : c==65?37 : c==68?39 : c : c;
+
+// mouse event handlers
+onmousedown = e=> (inputData[usingGamepad = 0][e.button] = 3, hadInput = 1, onmousemove(e));
 onmouseup   = e=> inputData[0][e.button] = 4;
 onmousemove = e=>
 {
@@ -934,19 +946,8 @@ onmousemove = e=>
 }
 onwheel = e=> e.ctrlKey || (mouseWheel = sign(e.deltaY));
 oncontextmenu = e=> !1; // prevent right click menu
-const remapKeyCode = c=> copyWASDToDpad ? c==87?38 : c==83?40 : c==65?37 : c==68?39 : c : c;
 
-////////////////////////////////////////////////////////////////////
-// gamepad
-
-let usingGamepad = 0;
-const gamepadStick       = (stick,  gamepad=0)=> inputData[gamepad+1] ? inputData[gamepad+1].stickData[stick] || vec2() : vec2();
-const gamepadIsDown      = (button, gamepad=0)=> keyIsDown     (button, gamepad+1);
-const gamepadWasPressed  = (button, gamepad=0)=> keyWasPressed (button, gamepad+1);
-const gamepadWasReleased = (button, gamepad=0)=> keyWasReleased(button, gamepad+1);
-
-////////////////////////////////////////////////////////////////////
-// update functions called by engine
+// input update called by engine
 function updateInput()
 {
     for (const deviceInputData of inputData)
@@ -954,6 +955,9 @@ function updateInput()
         deviceInputData[i]>0 && (deviceInputData[i] &= 1);
     mouseWheel = 0;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// gamepad input
 
 function updateGamepads()
 {
@@ -1032,7 +1036,6 @@ function updateGamepads()
 
 ///////////////////////////////////////////////////////////////////////////////
 // touch screen input
-
 const isTouchDevice = touchInputEnable && window.ontouchstart !== undefined;
 if (isTouchDevice)
 {
@@ -1040,19 +1043,20 @@ if (isTouchDevice)
     ontouchstart = ontouchmove = ontouchend = e=>
     {
         e.button = 0; // all touches are left click
-        hadInput || zzfx(0, hadInput = 1) ; // fix mobile audio, force it to play a sound the first time
 
         // check if touching and pass to mouse events
         const touching = e.touches.length;
         if (touching)
         {
+            hadInput || zzfx(0) ; // fix mobile audio, force it to play a sound the first time
+
             // set event pos and pass it along
             e.x = e.touches[0].clientX;
             e.y = e.touches[0].clientY;
             wasTouching ? onmousemove(e) : onmousedown(e);
         }
         else if (wasTouching)
-            wasTouching && onmouseup(e);
+            onmouseup(e);
 
         // set was touching
         wasTouching = touching;
