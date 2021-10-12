@@ -411,15 +411,15 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         {
             // update fps
             debugFPS = lerp(.05, 1e3/(realFrameTimeDeltaMS||1), debugFPS);
-            mainContext.textAlign = 'right';
-            mainContext.textBaseline = 'top';
-            mainContext.font = '1em monospace';
-            mainContext.fillStyle = '#000';
+            overlayContext.textAlign = 'right';
+            overlayContext.textBaseline = 'top';
+            overlayContext.font = '1em monospace';
+            overlayContext.fillStyle = '#000';
             const text = engineName + ' ' + 'v' + engineVersion + ' / ' 
                 + drawCount + ' / ' + engineObjects.length + ' / ' + debugFPS.toFixed(1);
-            mainContext.fillText(text, mainCanvas.width-3, 3);
-            mainContext.fillStyle = '#fff';
-            mainContext.fillText(text, mainCanvas.width-2, 2);
+            overlayContext.fillText(text, mainCanvas.width-3, 3);
+            overlayContext.fillStyle = '#fff';
+            overlayContext.fillText(text, mainCanvas.width-2, 2);
             drawCount = 0;
         }
     }
