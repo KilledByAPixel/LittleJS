@@ -15,6 +15,7 @@ const sound_click = [.5,1];
 // medals
 const medal_example    = new Medal(0, 'Example Medal', 'More info about the medal goes here.');
 const medal_tenClicks  = new Medal(1, 'Ten Clicks!',   'You have clicked 10 times.', '🖱️');
+medalsInit('Hello World');
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
@@ -65,9 +66,6 @@ function gameInit()
     );
     particleEmiter.elasticity = .3;
     particleEmiter.trailScale = 2;
-
-    // init medals
-    medalsInit('Hello World');
 }
 
 ///////////////////////////////////////////////////////////////////////////////
