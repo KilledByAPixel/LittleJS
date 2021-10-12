@@ -314,7 +314,7 @@ const debugRender = ()=>
         overlayContext.shadowBlur = 0;
     }
 
-    debugRects = debugRects.filter(r=>r.time.get()>0);
+    debugRects = debugRects.filter(r=>r.time.get()<0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -1021,6 +1021,7 @@ const isTouchDevice = touchInputEnable && window.ontouchstart !== undefined;
 if (isTouchDevice)
 {
     // handle all touch events the same way
+    let wasTouching;
     ontouchstart = ontouchmove = ontouchend = e=>
     {
         e.button = 0; // all touches are left click
@@ -1045,7 +1046,6 @@ if (isTouchDevice)
         // prevent normal mouse events from being called
         return !e.cancelable;
     }
-    let wasTouching;
 }
 /*
     LittleJS Audio System
