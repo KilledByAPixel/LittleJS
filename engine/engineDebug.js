@@ -19,7 +19,7 @@ const debugPointSize = .5;
 
 let showWatermark = 1;
 let godMode = 0;
-let debugRects = [];
+let debugPrimitives = [];
 let debugOverlay = 0;
 let debugPhysics = 0;
 let debugRaycast = 0;
@@ -35,12 +35,12 @@ const ASSERT = enableAsserts ? (...assert)=> console.assert(...assert) : ()=>{};
 const debugRect = (pos, size=vec2(0), color='#fff', time=0, angle=0, fill=0)=> 
 {
     ASSERT(typeof color == 'string'); // pass in regular html strings as colors
-    debugRects.push({pos, size:vec2(size), color, time:new Timer(time), angle, fill});
+    debugPrimitives.push({pos, size:vec2(size), color, time:new Timer(time), angle, fill});
 }
-const debugCircle = (pos, radius, color='#fff', time=0, fill=0)=>
+const debugCircle = (pos, radius=0, color='#fff', time=0, fill=0)=>
 {
     ASSERT(typeof color == 'string'); // pass in regular html strings as colors
-    debugRects.push({pos, size:radius, color, time:new Timer(time), angle:0, fill});
+    debugPrimitives.push({pos, size:radius, color, time:new Timer(time), angle:0, fill});
 }
 const debugPoint = (pos, color, time, angle)=> debugRect(pos, 0, color, time, angle);
 const debugLine = (posA, posB, color, thickness=.1, time)=>
@@ -56,7 +56,7 @@ const debugAABB = (pA, pB, sA, sB, color)=>
     debugRect(minPos.lerp(maxPos,.5), maxPos.subtract(minPos), color);
 }
 
-const debugClear = ()=> debugRects = [];
+const debugClear = ()=> debugPrimitives = [];
 
 // save a canvas to disk
 const debugSaveCanvas = (canvas, filename = engineName + '.png') =>
@@ -99,7 +99,6 @@ const debugUpdate = ()=>
     {
         godMode = !godMode;
     }
-        
     if (keyWasPressed(53)) // 5
     {
         debugTakeScreenshot = 1;
@@ -123,9 +122,6 @@ const debugUpdate = ()=>
     {
         showWatermark = !showWatermark;
     }
-
-    // asserts to check for things that could go wrong
-    ASSERT(gravity <= 0) // only supports downward gravity
 }
 
 const debugRender = ()=>
@@ -234,7 +230,7 @@ const debugRender = ()=>
         // render debug rects
         overlayContext.lineWidth = 1;
         const pointSize = debugPointSize * cameraScale;
-        debugRects.forEach(r=>
+        debugPrimitives.forEach(r=>
         {
             // create canvas transform from world space to screen space
             const pos = worldToScreen(r.pos);
@@ -314,7 +310,7 @@ const debugRender = ()=>
         overlayContext.shadowBlur = 0;
     }
 
-    debugRects = debugRects.filter(r=>r.time.get()<0);
+    debugPrimitives = debugPrimitives.filter(r=>r.time.get()<0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
