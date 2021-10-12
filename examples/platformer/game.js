@@ -7,15 +7,11 @@
 
 const lowGraphicsSettings = glOverlay = !isChrome; // fix slow rendering when not chrome
 
-let overlayCanvas, overlayContext, score, deaths;
+let score, deaths;
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
-    // create overlay canvas for hud
-    document.body.appendChild(overlayCanvas = document.createElement('canvas'));
-    overlayContext = overlayCanvas.getContext('2d');
-
     // setup game
     score = deaths = 0;
     gravity = -.01;
@@ -24,7 +20,7 @@ function gameInit()
     buildLevel();
 
     // init medals
-    medalsInit('LitleJS Platformer', overlayContext);
+    medalsInit('LitleJS Platformer');
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -78,11 +74,6 @@ function gameRender()
 ///////////////////////////////////////////////////////////////////////////////
 function gameRenderPost()
 {
-    // clear overlay canvas
-    overlayCanvas.width = mainCanvas.width;
-    overlayCanvas.height = mainCanvas.height;
-    overlayCanvas.style = mainCanvas.style.cssText;
-
     // draw to overlay canvas for hud rendering
     const drawOverlayText = (text, x, y, size=70) =>
     {

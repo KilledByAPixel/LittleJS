@@ -178,9 +178,9 @@ class Character extends GameObject
         super.update();
 
         // update walk cycle
+        const speed = this.velocity.length();
         if (this.climbingLadder || this.groundTimer.active() && !this.dodgeTimer.active())
         {
-            const speed = this.velocity.length();
             this.walkCyclePercent += speed * .5;
             this.walkCyclePercent = speed > .01 ? mod(this.walkCyclePercent, 1) : 0;
         }
@@ -188,8 +188,8 @@ class Character extends GameObject
             this.walkCyclePercent = 0;
 
         // update walk sound
-        this.walkSoundTime += abs(this.velocity.x);
-        if (abs(this.velocity.x) > .01 && this.groundTimer.active() && !this.dodgeTimer.active())
+        this.walkSoundTime += speed;
+        if (speed > .01 && ((this.climbingLadder || this.groundTimer.active()) && !this.dodgeTimer.active()))
         {
             if (this.walkSoundTime > 1)
             {

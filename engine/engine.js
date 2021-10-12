@@ -21,16 +21,16 @@
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = '1.0.9';
+const engineVersion = '1.0.10';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 const tileImage = new Image(); // everything uses the same tile sheet
 
 // core engine variables
-let mainCanvas, mainContext, mainCanvasSize=vec2(), 
-engineObjects=[], engineCollideObjects=[],
-cameraPos=vec2(), cameraScale=max(defaultTileSize.x, defaultTileSize.y),
-frame=0, time=0, realTime=0, paused=0, frameTimeLastMS=0, frameTimeBufferMS=0, debugFPS=0, gravity=0, 
-tileImageSize, tileImageSizeInverse, shrinkTilesX, shrinkTilesY, drawCount;
+let mainCanvas, mainContext, overlayCanvas, overlayContext, mainCanvasSize=vec2(), 
+    engineObjects=[], engineCollideObjects=[],
+    cameraPos=vec2(), cameraScale=max(defaultTileSize.x, defaultTileSize.y),
+    frame=0, time=0, realTime=0, paused=0, frameTimeLastMS=0, frameTimeBufferMS=0, debugFPS=0, gravity=0, 
+    tileImageSize, tileImageSizeInverse, shrinkTilesX, shrinkTilesY, drawCount;
 
 // call this function to start the engine
 function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, tileImageSource)
@@ -54,6 +54,12 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         // init stuff and start engine
         debugInit();
         glInit();
+
+        // create overlay canvas for hud to appear above gl canvas
+        document.body.appendChild(overlayCanvas = document.createElement('canvas'));
+        overlayCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
+        overlayContext = overlayCanvas.getContext('2d');
+
         gameInit();
         engineUpdate();
     };
@@ -127,8 +133,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             // fit to window width if smaller
             const fixedAspect = fixedWidth / fixedHeight;
             const aspect = innerWidth / innerHeight;
-            mainCanvas.style.width = aspect < fixedAspect ? '100%' : '';
-            mainCanvas.style.height = aspect < fixedAspect ? '' : '100%';
+            overlayCanvas.style.width = mainCanvas.style.width = aspect < fixedAspect ? '100%' : '';
+            overlayCanvas.style.height = mainCanvas.style.height = aspect < fixedAspect ? '' : '100%';
             if (glCanvas)
             {
                 glCanvas.style.width = mainCanvas.style.width;
@@ -137,13 +143,13 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         }
         else
         {
-            // fill the window
+            // clear and fill the window
             mainCanvas.width = min(innerWidth, maxWidth);
             mainCanvas.height = min(innerHeight, maxHeight);
         }
-
-        // save canvas size
-        mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
+        
+        // save canvas size and clear overlay canvas
+        mainCanvasSize = vec2(overlayCanvas.width = mainCanvas.width, overlayCanvas.height = mainCanvas.height);
         mainContext.imageSmoothingEnabled = !pixelated; // disable smoothing for pixel art
 
         // render sort then render while removing destroyed objects

@@ -6,9 +6,6 @@
 
 glOverlay = !isChrome; // fix slow rendering when not chrome
 
-// use an overlay canvas to make hud appear above gl canvas in glOverlay mode
-let overlayCanvas, overlayContext;
-
 // game variables
 let particleEmiter, clickCount = 0;
 
@@ -22,10 +19,6 @@ const medal_tenClicks  = new Medal(1, 'Ten Clicks!',   'You have clicked 10 time
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
-    // create overlay canvas for hud
-    document.body.appendChild(overlayCanvas = document.createElement('canvas'));
-    overlayContext = overlayCanvas.getContext('2d');
-
     // create tile collision and visible tile layer
     initTileCollision(vec2(32,16));
     const tileLayer = new TileLayer(vec2(), tileCollisionSize);
@@ -74,7 +67,7 @@ function gameInit()
     particleEmiter.trailScale = 2;
 
     // init medals
-    medalsInit('Hello World', overlayContext);
+    medalsInit('Hello World');
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -122,11 +115,6 @@ function gameRender()
 ///////////////////////////////////////////////////////////////////////////////
 function gameRenderPost()
 {
-    // clear overlay canvas
-    overlayCanvas.width = mainCanvas.width;
-    overlayCanvas.height = mainCanvas.height;
-    overlayCanvas.style = mainCanvas.style.cssText;
-
     // draw to overlay canvas for hud rendering
     const drawOverlayText = (text, x, y, size=70) =>
     {

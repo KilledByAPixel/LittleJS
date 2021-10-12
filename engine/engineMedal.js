@@ -8,12 +8,11 @@
 'use strict';
 
 const medals = [], medalsDisplayQueue = [];
-let medalsPreventUnlock, medalsGameName = engineName, medalsContext, medalsDisplayTimer, newgrounds;
+let medalsPreventUnlock, medalsGameName = engineName, medalsDisplayTimer, newgrounds;
 
-function medalsInit(gameName, context, newgroundsAppID, newgroundsCipher)
+function medalsInit(gameName, newgroundsAppID, newgroundsCipher)
 {
     medalsGameName = gameName;
-    medalsContext = context;
 
     // check if medals are unlocked
     debugMedals || medals.forEach(medal=> medal.unlocked = localStorage[medal.storageKey()]);
@@ -68,7 +67,7 @@ class Medal
         const y = -medalDisplayHeight*hidePercent;
 
         // draw containing rect and clip to that region
-        const context = medalsContext || mainContext;
+        const context = overlayContext;
         context.save();
         context.beginPath();
         context.fillStyle = '#ddd'

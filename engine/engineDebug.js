@@ -37,7 +37,7 @@ const debugRect = (pos, size=vec2(0), color='#fff', time=0, angle=0, fill=0)=>
     ASSERT(typeof color == 'string'); // pass in regular html strings as colors
     debugRects.push({pos, size:vec2(size), color, time:new Timer(time), angle, fill});
 }
-const debugCircle = (pos, radius, color, time=0, fill=0)=>
+const debugCircle = (pos, radius, color='#fff', time=0, fill=0)=>
 {
     ASSERT(typeof color == 'string'); // pass in regular html strings as colors
     debugRects.push({pos, size:radius, color, time:new Timer(time), angle:0, fill});
@@ -130,10 +130,44 @@ const debugUpdate = ()=>
 
 const debugRender = ()=>
 {
+    glCopyToContext(mainContext);
+
     if (debugTakeScreenshot)
     {
         debugSaveCanvas(mainCanvas);
         debugTakeScreenshot = 0;
+    }
+
+    if (debugGamepads && gamepadsEnable && navigator.getGamepads)
+    {
+        // poll gamepads
+        const gamepads = navigator.getGamepads();
+        for (let i = gamepads.length; i--;)
+        {
+            const gamepad = gamepads[i];
+            if (gamepad)
+            {
+                // gamepad debug display
+                const stickScale = 1;
+                const buttonScale = .2;
+                const centerPos = cameraPos;
+                const sticks = stickData[i];
+                for (let j = sticks.length; j--;)
+                {
+                    const drawPos = centerPos.add(vec2(j*stickScale*2,i*stickScale*3));
+                    const stickPos = drawPos.add(sticks[j].scale(stickScale));
+                    debugCircle(drawPos, stickScale, '#fff7',0,1);
+                    debugLine(drawPos, stickPos, '#f00');
+                    debugPoint(stickPos, '#f00');
+                }
+                for (let j = gamepad.buttons.length; j--;)
+                {
+                    const drawPos = centerPos.add(vec2(j*buttonScale*2, i*stickScale*3-stickScale-buttonScale));
+                    const pressed = gamepad.buttons[j].pressed;
+                    debugCircle(drawPos, buttonScale, pressed ? '#f00' : '#fff7', 0, 1);
+                }
+            }
+        }
     }
 
     if (debugOverlay)
@@ -173,6 +207,8 @@ const debugRender = ()=>
         
         if (bestObject)
         {
+            const saveContext = mainContext;
+            mainContext = overlayContext
             const raycastHitPos = tileCollisionRaycast(bestObject.pos, mousePos);
             raycastHitPos && drawRect(raycastHitPos.int().add(vec2(.5)), vec2(1), new Color(0,1,1,.3));
             drawRect(mousePos.int().add(vec2(.5)), vec2(1), new Color(0,0,1,.5));
@@ -188,6 +224,7 @@ const debugRender = ()=>
             drawText('vel = ' + printVec2(bestObject.velocity), pos = pos.add(height), ...args);
             drawText('size = ' + printVec2(bestObject.size), pos = pos.add(height), ...args);
             drawText('collision = ' + getTileCollisionData(mousePos), pos = mousePos.subtract(height), ...args);
+            mainContext = saveContext;
         }
 
         glCopyToContext(mainContext);
@@ -195,89 +232,89 @@ const debugRender = ()=>
 
     {
         // render debug rects
-        mainContext.lineWidth = 1;
+        overlayContext.lineWidth = 1;
         const pointSize = debugPointSize * cameraScale;
         debugRects.forEach(r=>
         {
             // create canvas transform from world space to screen space
             const pos = worldToScreen(r.pos);
             
-            mainContext.save();
-            mainContext.lineWidth = 2;
-            mainContext.translate(pos.x|0, pos.y|0);
-            mainContext.rotate(r.angle);
-            mainContext.fillStyle = mainContext.strokeStyle = r.color;
+            overlayContext.save();
+            overlayContext.lineWidth = 2;
+            overlayContext.translate(pos.x|0, pos.y|0);
+            overlayContext.rotate(r.angle);
+            overlayContext.fillStyle = overlayContext.strokeStyle = r.color;
 
             if (r.size == 0 || r.size.x === 0 && r.size.y === 0 )
             {
                 // point
-                mainContext.fillRect(-pointSize/2, -1, pointSize, 3), 
-                mainContext.fillRect(-1, -pointSize/2, 3, pointSize);
+                overlayContext.fillRect(-pointSize/2, -1, pointSize, 3), 
+                overlayContext.fillRect(-1, -pointSize/2, 3, pointSize);
             }
             else if (r.size.x != undefined)
             {
                 // rect
                 const w = r.size.x*cameraScale|0, h = r.size.y*cameraScale|0;
-                r.fill && mainContext.fillRect(-w/2|0, -h/2|0, w, h),
-                mainContext.strokeRect(-w/2|0, -h/2|0, w, h);
+                r.fill && overlayContext.fillRect(-w/2|0, -h/2|0, w, h),
+                overlayContext.strokeRect(-w/2|0, -h/2|0, w, h);
             }
             else
             {
                 // circle
-                mainContext.beginPath();
-                mainContext.arc(0, 0, r.size*cameraScale, 0, 9);
-                r.fill && mainContext.fill();
-                mainContext.stroke();
+                overlayContext.beginPath();
+                overlayContext.arc(0, 0, r.size*cameraScale, 0, 9);
+                r.fill && overlayContext.fill();
+                overlayContext.stroke();
             }
 
-            mainContext.restore();
+            overlayContext.restore();
         });
 
-        mainContext.fillStyle = mainContext.strokeStyle = '#fff';
+        overlayContext.fillStyle = overlayContext.strokeStyle = '#fff';
     }
 
     {
         let x = 9, y = -20, h = 30;
-        mainContext.fillStyle = '#fff';
-        mainContext.textAlign = 'left';
-        mainContext.textBaseline = 'top';
-        mainContext.font = '28px monospace';
-        mainContext.shadowColor = '#000';
-        mainContext.shadowBlur = 9;
+        overlayContext.fillStyle = '#fff';
+        overlayContext.textAlign = 'left';
+        overlayContext.textBaseline = 'top';
+        overlayContext.font = '28px monospace';
+        overlayContext.shadowColor = '#000';
+        overlayContext.shadowBlur = 9;
 
         if (debugOverlay)
         {
-            mainContext.fillText(engineName, x, y += h);
-            mainContext.fillText('Objects: ' + engineObjects.length, x, y += h);
-            mainContext.fillText('Time: ' + formatTime(time), x, y += h);
-            mainContext.fillText('---------', x, y += h);
-            mainContext.fillStyle = '#f00';
-            mainContext.fillText('~: Debug Overlay', x, y += h);
-            mainContext.fillStyle = debugPhysics ? '#f00' : '#fff';
-            mainContext.fillText('1: Debug Physics', x, y += h);
-            mainContext.fillStyle = debugParticles ? '#f00' : '#fff';
-            mainContext.fillText('2: Debug Particles', x, y += h);
-            mainContext.fillStyle = godMode ? '#f00' : '#fff';
-            mainContext.fillText('3: God Mode', x, y += h);
-            mainContext.fillStyle = '#fff';
-            mainContext.fillText('5: Save Screenshot', x, y += h);
-            //mainContext.fillStyle = debugParticleEditor ? '#f00' : '#fff';
-            //mainContext.fillText('6: Particle Editor', x, y += h);
-            mainContext.fillStyle = debugGamepads ? '#f00' : '#fff';
-            mainContext.fillText('7: Debug Gamepads', x, y += h);
+            overlayContext.fillText(engineName, x, y += h);
+            overlayContext.fillText('Objects: ' + engineObjects.length, x, y += h);
+            overlayContext.fillText('Time: ' + formatTime(time), x, y += h);
+            overlayContext.fillText('---------', x, y += h);
+            overlayContext.fillStyle = '#f00';
+            overlayContext.fillText('~: Debug Overlay', x, y += h);
+            overlayContext.fillStyle = debugPhysics ? '#f00' : '#fff';
+            overlayContext.fillText('1: Debug Physics', x, y += h);
+            overlayContext.fillStyle = debugParticles ? '#f00' : '#fff';
+            overlayContext.fillText('2: Debug Particles', x, y += h);
+            overlayContext.fillStyle = godMode ? '#f00' : '#fff';
+            overlayContext.fillText('3: God Mode', x, y += h);
+            overlayContext.fillStyle = '#fff';
+            overlayContext.fillText('5: Save Screenshot', x, y += h);
+            //overlayContext.fillStyle = debugParticleEditor ? '#f00' : '#fff';
+            //overlayContext.fillText('6: Particle Editor', x, y += h);
+            overlayContext.fillStyle = debugGamepads ? '#f00' : '#fff';
+            overlayContext.fillText('7: Debug Gamepads', x, y += h);
         }
         else
         {
-            mainContext.fillText(debugPhysics ? 'Debug Physics' : '', x, y += h);
-            mainContext.fillText(debugParticles ? 'Debug Particles' : '', x, y += h);
-            mainContext.fillText(godMode ? 'God Mode' : '', x, y += h);
-            mainContext.fillText(debugGamepads ? 'Debug Gamepads' : '', x, y += h);
+            overlayContext.fillText(debugPhysics ? 'Debug Physics' : '', x, y += h);
+            overlayContext.fillText(debugParticles ? 'Debug Particles' : '', x, y += h);
+            overlayContext.fillText(godMode ? 'God Mode' : '', x, y += h);
+            overlayContext.fillText(debugGamepads ? 'Debug Gamepads' : '', x, y += h);
         }
     
-        mainContext.shadowBlur = 0;
+        overlayContext.shadowBlur = 0;
     }
 
-    debugRects = debugRects.filter(r=>!r.time.elapsed());
+    debugRects = debugRects.filter(r=>r.time.get()>0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -27,7 +27,7 @@ let usingGamepad = 0;
 const gamepadIsDown      = (button, gamepad=0)=> keyIsDown     (button, gamepad+1);
 const gamepadWasPressed  = (button, gamepad=0)=> keyWasPressed (button, gamepad+1);
 const gamepadWasReleased = (button, gamepad=0)=> keyWasReleased(button, gamepad+1);
-const gamepadStick       = (stick,  gamepad=0)=> inputData[gamepad+1] ? inputData[gamepad+1].stickData[stick] || vec2() : vec2();
+const gamepadStick       = (stick,  gamepad=0)=> stickData[gamepad] ? stickData[gamepad][stick] || vec2() : vec2();
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -65,18 +65,17 @@ function updateInput()
 {
     for (const deviceInputData of inputData)
     for (const i in deviceInputData)
-        deviceInputData[i]>0 && (deviceInputData[i] &= 1);
+        deviceInputData[i] &= 1;
     mouseWheel = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // gamepad input
 
+const stickData = [];
 function updateGamepads()
 {
-    if (!gamepadsEnable) return;
-
-    if (!navigator.getGamepads || !document.hasFocus() && !debug)
+    if (!gamepadsEnable || !navigator.getGamepads || !document.hasFocus() && !debug)
         return;
 
     // poll gamepads
@@ -85,12 +84,8 @@ function updateGamepads()
     {
         // get or create gamepad data
         const gamepad = gamepads[i];
-        let data = inputData[i+1];
-        if (!data)
-        {
-            data = inputData[i+1] = [];
-            data.stickData = [];
-        }
+        const data = inputData[i+1] || (inputData[i+1] = []);
+        const sticks = stickData[i] || (stickData[i] = []);
 
         if (gamepad)
         {
@@ -102,13 +97,13 @@ function updateGamepads()
 
             // read analog sticks
             for (let j = 0; j < gamepad.axes.length-1; j+=2)
-                data.stickData[j>>1] = vec2(applyDeadZone(gamepad.axes[j]), applyDeadZone(-gamepad.axes[j+1])).clampLength();
+                sticks[j>>1] = vec2(applyDeadZone(gamepad.axes[j]), applyDeadZone(-gamepad.axes[j+1])).clampLength();
             
             // read buttons
             for (let j = gamepad.buttons.length; j--;)
             {
                 const button = gamepad.buttons[j];
-                inputData[i+1][j] = button.pressed ? 1 + 2*!gamepadIsDown(j,i) : 4*gamepadIsDown(j,i);
+                data[j] = button.pressed ? 1 + 2*!gamepadIsDown(j,i) : 4*gamepadIsDown(j,i);
                 usingGamepad |= button.pressed && !i;
             }
             
@@ -116,32 +111,10 @@ function updateGamepads()
             {
                 // copy dpad to left analog stick when pressed
                 if (gamepadIsDown(12,i)|gamepadIsDown(13,i)|gamepadIsDown(14,i)|gamepadIsDown(15,i))
-                    data.stickData[0] = vec2(
+                    sticks[0] = vec2(
                         gamepadIsDown(15,i) - gamepadIsDown(14,i), 
                         gamepadIsDown(12,i) - gamepadIsDown(13,i)
                     ).clampLength();
-            }
-
-            if (debugGamepads)
-            {
-                // gamepad debug display
-                const stickScale = 2;
-                const buttonScale = .5;
-                const centerPos = cameraPos;
-                for (let j = data.stickData.length; j--;)
-                {
-                    const drawPos = centerPos.add(vec2(j*stickScale*2,i*stickScale*3));
-                    const stickPos = drawPos.add(data.stickData[j].scale(stickScale));
-                    debugCircle(drawPos, stickScale, '#fff7',0,1);
-                    debugLine(drawPos, stickPos, '#f00');
-                    debugPoint(stickPos, '#f00');
-                }
-                for (let j = gamepad.buttons.length; j--;)
-                {
-                    const drawPos = centerPos.add(vec2(j*buttonScale*2, i*stickScale*3-stickScale-buttonScale));
-                    const pressed = gamepad.buttons[j].pressed;
-                    debugCircle(drawPos, buttonScale, pressed ? '#f00' : '#fff7', 0, 1);
-                }
             }
         }
     }

@@ -265,16 +265,16 @@ const medalDisplayIconSize = 80;  // size of icon in medal display
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = '1.0.9';
+const engineVersion = '1.0.10';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 const tileImage = new Image(); // everything uses the same tile sheet
 
 // core engine variables
-let mainCanvas, mainContext, mainCanvasSize=vec2(), 
-engineObjects=[], engineCollideObjects=[],
-cameraPos=vec2(), cameraScale=max(defaultTileSize.x, defaultTileSize.y),
-frame=0, time=0, realTime=0, paused=0, frameTimeLastMS=0, frameTimeBufferMS=0, debugFPS=0, gravity=0, 
-tileImageSize, tileImageSizeInverse, shrinkTilesX, shrinkTilesY, drawCount;
+let mainCanvas, mainContext, overlayCanvas, overlayContext, mainCanvasSize=vec2(), 
+    engineObjects=[], engineCollideObjects=[],
+    cameraPos=vec2(), cameraScale=max(defaultTileSize.x, defaultTileSize.y),
+    frame=0, time=0, realTime=0, paused=0, frameTimeLastMS=0, frameTimeBufferMS=0, debugFPS=0, gravity=0, 
+    tileImageSize, tileImageSizeInverse, shrinkTilesX, shrinkTilesY, drawCount;
 
 // call this function to start the engine
 function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, tileImageSource)
@@ -298,6 +298,12 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         // init stuff and start engine
         debugInit();
         glInit();
+
+        // create overlay canvas for hud to appear above gl canvas
+        document.body.appendChild(overlayCanvas = document.createElement('canvas'));
+        overlayCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
+        overlayContext = overlayCanvas.getContext('2d');
+
         gameInit();
         engineUpdate();
     };
@@ -371,8 +377,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             // fit to window width if smaller
             const fixedAspect = fixedWidth / fixedHeight;
             const aspect = innerWidth / innerHeight;
-            mainCanvas.style.width = aspect < fixedAspect ? '100%' : '';
-            mainCanvas.style.height = aspect < fixedAspect ? '' : '100%';
+            overlayCanvas.style.width = mainCanvas.style.width = aspect < fixedAspect ? '100%' : '';
+            overlayCanvas.style.height = mainCanvas.style.height = aspect < fixedAspect ? '' : '100%';
             if (glCanvas)
             {
                 glCanvas.style.width = mainCanvas.style.width;
@@ -381,13 +387,13 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         }
         else
         {
-            // fill the window
+            // clear and fill the window
             mainCanvas.width = min(innerWidth, maxWidth);
             mainCanvas.height = min(innerHeight, maxHeight);
         }
-
-        // save canvas size
-        mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
+        
+        // save canvas size and clear overlay canvas
+        mainCanvasSize = vec2(overlayCanvas.width = mainCanvas.width, overlayCanvas.height = mainCanvas.height);
         mainContext.imageSmoothingEnabled = !pixelated; // disable smoothing for pixel art
 
         // render sort then render while removing destroyed objects
@@ -916,7 +922,7 @@ let usingGamepad = 0;
 const gamepadIsDown      = (button, gamepad=0)=> keyIsDown     (button, gamepad+1);
 const gamepadWasPressed  = (button, gamepad=0)=> keyWasPressed (button, gamepad+1);
 const gamepadWasReleased = (button, gamepad=0)=> keyWasReleased(button, gamepad+1);
-const gamepadStick       = (stick,  gamepad=0)=> inputData[gamepad+1] ? inputData[gamepad+1].stickData[stick] || vec2() : vec2();
+const gamepadStick       = (stick,  gamepad=0)=> stickData[gamepad] ? stickData[gamepad][stick] || vec2() : vec2();
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -954,18 +960,17 @@ function updateInput()
 {
     for (const deviceInputData of inputData)
     for (const i in deviceInputData)
-        deviceInputData[i]>0 && (deviceInputData[i] &= 1);
+        deviceInputData[i] &= 1;
     mouseWheel = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // gamepad input
 
+const stickData = [];
 function updateGamepads()
 {
-    if (!gamepadsEnable) return;
-
-    if (!navigator.getGamepads || !document.hasFocus() && !debug)
+    if (!gamepadsEnable || !navigator.getGamepads || !document.hasFocus() && !debug)
         return;
 
     // poll gamepads
@@ -974,12 +979,8 @@ function updateGamepads()
     {
         // get or create gamepad data
         const gamepad = gamepads[i];
-        let data = inputData[i+1];
-        if (!data)
-        {
-            data = inputData[i+1] = [];
-            data.stickData = [];
-        }
+        const data = inputData[i+1] || (inputData[i+1] = []);
+        const sticks = stickData[i] || (stickData[i] = []);
 
         if (gamepad)
         {
@@ -991,13 +992,13 @@ function updateGamepads()
 
             // read analog sticks
             for (let j = 0; j < gamepad.axes.length-1; j+=2)
-                data.stickData[j>>1] = vec2(applyDeadZone(gamepad.axes[j]), applyDeadZone(-gamepad.axes[j+1])).clampLength();
+                sticks[j>>1] = vec2(applyDeadZone(gamepad.axes[j]), applyDeadZone(-gamepad.axes[j+1])).clampLength();
             
             // read buttons
             for (let j = gamepad.buttons.length; j--;)
             {
                 const button = gamepad.buttons[j];
-                inputData[i+1][j] = button.pressed ? 1 + 2*!gamepadIsDown(j,i) : 4*gamepadIsDown(j,i);
+                data[j] = button.pressed ? 1 + 2*!gamepadIsDown(j,i) : 4*gamepadIsDown(j,i);
                 usingGamepad |= button.pressed && !i;
             }
             
@@ -1005,32 +1006,10 @@ function updateGamepads()
             {
                 // copy dpad to left analog stick when pressed
                 if (gamepadIsDown(12,i)|gamepadIsDown(13,i)|gamepadIsDown(14,i)|gamepadIsDown(15,i))
-                    data.stickData[0] = vec2(
+                    sticks[0] = vec2(
                         gamepadIsDown(15,i) - gamepadIsDown(14,i), 
                         gamepadIsDown(12,i) - gamepadIsDown(13,i)
                     ).clampLength();
-            }
-
-            if (debugGamepads)
-            {
-                // gamepad debug display
-                const stickScale = 2;
-                const buttonScale = .5;
-                const centerPos = cameraPos;
-                for (let j = data.stickData.length; j--;)
-                {
-                    const drawPos = centerPos.add(vec2(j*stickScale*2,i*stickScale*3));
-                    const stickPos = drawPos.add(data.stickData[j].scale(stickScale));
-                    debugCircle(drawPos, stickScale, '#fff7',0,1);
-                    debugLine(drawPos, stickPos, '#f00');
-                    debugPoint(stickPos, '#f00');
-                }
-                for (let j = gamepad.buttons.length; j--;)
-                {
-                    const drawPos = centerPos.add(vec2(j*buttonScale*2, i*stickScale*3-stickScale-buttonScale));
-                    const pressed = gamepad.buttons[j].pressed;
-                    debugCircle(drawPos, buttonScale, pressed ? '#f00' : '#fff7', 0, 1);
-                }
             }
         }
     }
@@ -1840,12 +1819,11 @@ class Particle extends EngineObject
 'use strict';
 
 const medals = [], medalsDisplayQueue = [];
-let medalsPreventUnlock, medalsGameName = engineName, medalsContext, medalsDisplayTimer, newgrounds;
+let medalsPreventUnlock, medalsGameName = engineName, medalsDisplayTimer, newgrounds;
 
-function medalsInit(gameName, context, newgroundsAppID, newgroundsCipher)
+function medalsInit(gameName, newgroundsAppID, newgroundsCipher)
 {
     medalsGameName = gameName;
-    medalsContext = context;
 
     // check if medals are unlocked
     debugMedals || medals.forEach(medal=> medal.unlocked = localStorage[medal.storageKey()]);
@@ -1900,7 +1878,7 @@ class Medal
         const y = -medalDisplayHeight*hidePercent;
 
         // draw containing rect and clip to that region
-        const context = medalsContext || mainContext;
+        const context = overlayContext;
         context.save();
         context.beginPath();
         context.fillStyle = '#ddd'
