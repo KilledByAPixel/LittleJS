@@ -1109,11 +1109,11 @@ class Music
         this.cachedSamples = zzfxM(...zzfxMusic);
     }
 
-    play(loop = 1)
+    play(volume = 1, loop = 1)
     {
         if (!soundEnable) return;
 
-        return playSamples(this.cachedSamples, loop);
+        return playSamples(this.cachedSamples, volume, 1, 0, loop);
     }
 }
 
