@@ -17,8 +17,12 @@ class Sound
 
         this.range = range;
         this.taper = taper;
+
+        // get randomness from sound to apply when played
         this.randomness = zzfxSound[1] || 0;
         zzfxSound[1] = 0;
+
+        // generate sound now for fast playback
         this.cachedSamples = zzfxG(...zzfxSound);
     }
 
