@@ -21,7 +21,7 @@
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = '1.0.12';
+const engineVersion = '1.0.13';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 const tileImage = new Image(); // everything uses the same tile sheet
 
@@ -68,11 +68,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     const engineUpdate = (frameTimeMS=0)=>
     {
         requestAnimationFrame(engineUpdate);
-        
-        if (!document.hasFocus())
-            inputData[0].length = 0; // clear input when lost focus (prevent stuck keys)
 
-        // prepare to update time
+        // update time keeping
         const realFrameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
         let frameTimeDeltaMS = realFrameTimeDeltaMS;
         if (debug)
@@ -81,6 +78,9 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         realTime = frameTimeMS / 1e3;
         frameTimeBufferMS += !paused * frameTimeDeltaMS;
 
+        // clamp incase of extra long frames (slow framerate)
+        frameTimeBufferMS = min(frameTimeBufferMS, 50);
+
         // apply time delta smoothing, improves smoothness of framerate in some browsers
         let deltaSmooth = 0;
         if (frameTimeBufferMS < 0 && frameTimeBufferMS > -9)
@@ -88,36 +88,30 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             // force an update each frame if time is close enough (not just a fast refresh rate)
             deltaSmooth = frameTimeBufferMS;
             frameTimeBufferMS = 0;
-            //debug && frameTimeBufferMS < 0 && console.log('time smoothing: ' + -deltaSmooth);
         }
-        //debug && frameTimeBufferMS < 0 && console.log('skipped frame! ' + -frameTimeBufferMS);
-
-        // clamp incase of extra long frames (slow framerate)
-        frameTimeBufferMS = min(frameTimeBufferMS, 50);
-
-        // prepare to update the frame
-        mousePos = screenToWorld(mousePosScreen);
-        updateGamepads();
         
         if (paused)
         {
             // do post update even when paused
-            gameUpdatePost();
+            inputUpdate();
             debugUpdate();
-            updateInput();
+            gameUpdatePost();
+            inputUpdatePost();
         }
         else
         {
             // update multiple frames if necessary in case of slow framerate
             for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / FPS)
             {
+                // update game and objects
+                inputUpdate();
                 gameUpdate();
                 engineUpdateObjects();
 
                 // do post update
-                gameUpdatePost();
                 debugUpdate();
-                updateInput();
+                gameUpdatePost();
+                inputUpdatePost();
             }
         }
 
@@ -126,25 +120,28 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
         if (fixedWidth)
         {
-            // clear and fill window if smaller
-            mainCanvas.width = fixedWidth;
+            // clear set fixed size
+            mainCanvas.width  = fixedWidth;
             mainCanvas.height = fixedHeight;
             
-            // fit to window width if smaller
-            const fixedAspect = fixedWidth / fixedHeight;
-            const aspect = innerWidth / innerHeight;
-            overlayCanvas.style.width = mainCanvas.style.width = aspect < fixedAspect ? '100%' : '';
-            overlayCanvas.style.height = mainCanvas.style.height = aspect < fixedAspect ? '' : '100%';
-            if (glCanvas)
+            if (fixedFitToWindow)
             {
-                glCanvas.style.width = mainCanvas.style.width;
-                glCanvas.style.height = mainCanvas.style.height;
+                // fit to window by adding space on top or bottom if necessary
+                const aspect = innerWidth / innerHeight;
+                const fixedAspect = fixedWidth / fixedHeight;
+                mainCanvas.style.width  = overlayCanvas.style.width  = aspect < fixedAspect ? '100%' : '';
+                mainCanvas.style.height = overlayCanvas.style.height = aspect < fixedAspect ? '' : '100%';
+                if (glCanvas)
+                {
+                    glCanvas.style.width  = mainCanvas.style.width;
+                    glCanvas.style.height = mainCanvas.style.height;
+                }
             }
         }
         else
         {
-            // clear and fill the window
-            mainCanvas.width = min(innerWidth, maxWidth);
+            // clear and set size to same as window
+            mainCanvas.width  = min(innerWidth,  maxWidth);
             mainCanvas.height = min(innerHeight, maxHeight);
         }
         

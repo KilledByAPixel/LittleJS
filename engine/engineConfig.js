@@ -8,6 +8,7 @@
 const maxWidth = 1920, maxHeight = 1200; // up to 1080p and 16:10
 let defaultFont = 'arial';               // font used for text rendering
 let fixedWidth = 0, fixedHeight = 0;     // use native resolution
+let fixedFitToWindow = 1;                // stretch canvas to fit window
 //const fixedWidth = 1280, fixedHeight = 720;  // 720p
 //const fixedWidth = 1920, fixedHeight = 1080; // 1080p
 //const fixedWidth = 128,  fixedHeight = 128;  // PICO-8

@@ -60,9 +60,24 @@ onmousemove = e=>
 onwheel = e=> e.ctrlKey || (mouseWheel = sign(e.deltaY));
 oncontextmenu = e=> !1; // prevent right click menu
 
+///////////////////////////////////////////////////////////////////////////////
 // input update called by engine
-function updateInput()
+
+function inputUpdate()
 {
+    // clear input when lost focus (prevent stuck keys)
+    document.hasFocus() || clearInput();
+
+    // update mouse world space position
+    mousePos = screenToWorld(mousePosScreen);
+
+    // update gamepads if enabled
+    gamepadsUpdate();
+}
+
+function inputUpdatePost()
+{
+    // clear input to prepare for next frame
     for (const deviceInputData of inputData)
     for (const i in deviceInputData)
         deviceInputData[i] &= 1;
@@ -73,7 +88,7 @@ function updateInput()
 // gamepad input
 
 const stickData = [];
-function updateGamepads()
+function gamepadsUpdate()
 {
     if (!gamepadsEnable || !navigator.getGamepads || !document.hasFocus() && !debug)
         return;

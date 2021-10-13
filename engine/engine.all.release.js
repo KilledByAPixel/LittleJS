@@ -189,6 +189,7 @@ class Timer
 const maxWidth = 1920, maxHeight = 1200; // up to 1080p and 16:10
 let defaultFont = 'arial';               // font used for text rendering
 let fixedWidth = 0, fixedHeight = 0;     // use native resolution
+let fixedFitToWindow = 1;                // stretch canvas to fit window
 //const fixedWidth = 1280, fixedHeight = 720;  // 720p
 //const fixedWidth = 1920, fixedHeight = 1080; // 1080p
 //const fixedWidth = 128,  fixedHeight = 128;  // PICO-8
@@ -265,7 +266,7 @@ const medalDisplayIconSize = 80;  // size of icon in medal display
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = '1.0.12';
+const engineVersion = '1.0.13';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 const tileImage = new Image(); // everything uses the same tile sheet
 
@@ -312,11 +313,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     const engineUpdate = (frameTimeMS=0)=>
     {
         requestAnimationFrame(engineUpdate);
-        
-        if (!document.hasFocus())
-            inputData[0].length = 0; // clear input when lost focus (prevent stuck keys)
 
-        // prepare to update time
+        // update time keeping
         const realFrameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
         let frameTimeDeltaMS = realFrameTimeDeltaMS;
         if (debug)
@@ -325,6 +323,9 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         realTime = frameTimeMS / 1e3;
         frameTimeBufferMS += !paused * frameTimeDeltaMS;
 
+        // clamp incase of extra long frames (slow framerate)
+        frameTimeBufferMS = min(frameTimeBufferMS, 50);
+
         // apply time delta smoothing, improves smoothness of framerate in some browsers
         let deltaSmooth = 0;
         if (frameTimeBufferMS < 0 && frameTimeBufferMS > -9)
@@ -332,36 +333,30 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             // force an update each frame if time is close enough (not just a fast refresh rate)
             deltaSmooth = frameTimeBufferMS;
             frameTimeBufferMS = 0;
-            //debug && frameTimeBufferMS < 0 && console.log('time smoothing: ' + -deltaSmooth);
         }
-        //debug && frameTimeBufferMS < 0 && console.log('skipped frame! ' + -frameTimeBufferMS);
-
-        // clamp incase of extra long frames (slow framerate)
-        frameTimeBufferMS = min(frameTimeBufferMS, 50);
-
-        // prepare to update the frame
-        mousePos = screenToWorld(mousePosScreen);
-        updateGamepads();
         
         if (paused)
         {
             // do post update even when paused
-            gameUpdatePost();
+            inputUpdate();
             debugUpdate();
-            updateInput();
+            gameUpdatePost();
+            inputUpdatePost();
         }
         else
         {
             // update multiple frames if necessary in case of slow framerate
             for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / FPS)
             {
+                // update game and objects
+                inputUpdate();
                 gameUpdate();
                 engineUpdateObjects();
 
                 // do post update
-                gameUpdatePost();
                 debugUpdate();
-                updateInput();
+                gameUpdatePost();
+                inputUpdatePost();
             }
         }
 
@@ -370,25 +365,28 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
         if (fixedWidth)
         {
-            // clear and fill window if smaller
-            mainCanvas.width = fixedWidth;
+            // clear set fixed size
+            mainCanvas.width  = fixedWidth;
             mainCanvas.height = fixedHeight;
             
-            // fit to window width if smaller
-            const fixedAspect = fixedWidth / fixedHeight;
-            const aspect = innerWidth / innerHeight;
-            overlayCanvas.style.width = mainCanvas.style.width = aspect < fixedAspect ? '100%' : '';
-            overlayCanvas.style.height = mainCanvas.style.height = aspect < fixedAspect ? '' : '100%';
-            if (glCanvas)
+            if (fixedFitToWindow)
             {
-                glCanvas.style.width = mainCanvas.style.width;
-                glCanvas.style.height = mainCanvas.style.height;
+                // fit to window by adding space on top or bottom if necessary
+                const aspect = innerWidth / innerHeight;
+                const fixedAspect = fixedWidth / fixedHeight;
+                mainCanvas.style.width  = overlayCanvas.style.width  = aspect < fixedAspect ? '100%' : '';
+                mainCanvas.style.height = overlayCanvas.style.height = aspect < fixedAspect ? '' : '100%';
+                if (glCanvas)
+                {
+                    glCanvas.style.width  = mainCanvas.style.width;
+                    glCanvas.style.height = mainCanvas.style.height;
+                }
             }
         }
         else
         {
-            // clear and fill the window
-            mainCanvas.width = min(innerWidth, maxWidth);
+            // clear and set size to same as window
+            mainCanvas.width  = min(innerWidth,  maxWidth);
             mainCanvas.height = min(innerHeight, maxHeight);
         }
         
@@ -955,9 +953,24 @@ onmousemove = e=>
 onwheel = e=> e.ctrlKey || (mouseWheel = sign(e.deltaY));
 oncontextmenu = e=> !1; // prevent right click menu
 
+///////////////////////////////////////////////////////////////////////////////
 // input update called by engine
-function updateInput()
+
+function inputUpdate()
 {
+    // clear input when lost focus (prevent stuck keys)
+    document.hasFocus() || clearInput();
+
+    // update mouse world space position
+    mousePos = screenToWorld(mousePosScreen);
+
+    // update gamepads if enabled
+    gamepadsUpdate();
+}
+
+function inputUpdatePost()
+{
+    // clear input to prepare for next frame
     for (const deviceInputData of inputData)
     for (const i in deviceInputData)
         deviceInputData[i] &= 1;
@@ -968,7 +981,7 @@ function updateInput()
 // gamepad input
 
 const stickData = [];
-function updateGamepads()
+function gamepadsUpdate()
 {
     if (!gamepadsEnable || !navigator.getGamepads || !document.hasFocus() && !debug)
         return;
@@ -1066,8 +1079,12 @@ class Sound
 
         this.range = range;
         this.taper = taper;
+
+        // get randomness from sound to apply when played
         this.randomness = zzfxSound[1] || 0;
         zzfxSound[1] = 0;
+
+        // generate sound now for fast playback
         this.cachedSamples = zzfxG(...zzfxSound);
     }
 
