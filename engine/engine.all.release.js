@@ -947,13 +947,13 @@ function inputUpdatePost()
 
 ///////////////////////////////////////////////////////////////////////////////
 // keyboard event handlers
-onkeydown   = e=>
+onkeydown = e=>
 {
     if (debug && e.target != document.body) return;
     e.repeat || (inputData[usingGamepad = 0][remapKeyCode(e.keyCode)] = 3);
     hadInput = 1;
 }
-onkeyup     = e=>
+onkeyup = e=>
 {
     if (debug && e.target != document.body) return;
     inputData[0][remapKeyCode(e.keyCode)] = 4;
@@ -963,7 +963,7 @@ const remapKeyCode = c=> copyWASDToDpad ? c==87?38 : c==83?40 : c==65?37 : c==68
 ///////////////////////////////////////////////////////////////////////////////
 // mouse event handlers
 onmousedown = e=> (inputData[usingGamepad = 0][e.button] = 3, hadInput = 1, onmousemove(e));
-onmouseup   = e=> inputData[0][e.button] = 4;
+onmouseup   = e=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
 onmousemove = e=>
 {
     // convert mouse pos to canvas space
@@ -1010,17 +1010,15 @@ function gamepadsUpdate()
             {
                 const button = gamepad.buttons[j];
                 data[j] = button.pressed ? 1 + 2*!gamepadIsDown(j,i) : 4*gamepadIsDown(j,i);
-                usingGamepad |= button.pressed && !i;
+                usingGamepad |= !i && button.pressed;
             }
             
             if (copyGamepadDirectionToStick)
             {
                 // copy dpad to left analog stick when pressed
-                if (gamepadIsDown(12,i)|gamepadIsDown(13,i)|gamepadIsDown(14,i)|gamepadIsDown(15,i))
-                    sticks[0] = vec2(
-                        gamepadIsDown(15,i) - gamepadIsDown(14,i), 
-                        gamepadIsDown(12,i) - gamepadIsDown(13,i)
-                    ).clampLength();
+                const dpad = vec2(gamepadIsDown(15,i) - gamepadIsDown(14,i), gamepadIsDown(12,i) - gamepadIsDown(13,i));
+                if (dpad.lengthSquared())
+                    sticks[0] = dpad.clampLength();
             }
         }
     }
