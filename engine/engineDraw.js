@@ -96,34 +96,34 @@ function drawLine(posA, posB, thickness=.1, color)
 }
 
 // draw directly to the 2d canvas in world space (bipass webgl)
-function drawCanvas2D(pos, size, angle, mirror, drawFunction)
+function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainContext)
 {
     // create canvas transform from world space to screen space
     pos = worldToScreen(pos);
     size = size.scale(cameraScale);
-    mainContext.save();
-    mainContext.translate(pos.x+.5|0, pos.y-.5|0);
-    mainContext.rotate(angle);
-    mainContext.scale(mirror?-size.x:size.x, size.y);
-    drawFunction(mainContext);
-    mainContext.restore();
+    context.save();
+    context.translate(pos.x+.5|0, pos.y-.5|0);
+    context.rotate(angle);
+    context.scale(mirror?-size.x:size.x, size.y);
+    drawFunction(context);
+    context.restore();
 }
 
 // draw text in world space without canvas scaling because that messes up fonts
 function drawText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=defaultFont)
 {
     pos = worldToScreen(pos);
-    mainContext.font = size*cameraScale + 'px '+ font;
-    mainContext.textAlign = textAlign;
-    mainContext.textBaseline = 'middle';
+    overlayContext.font = size*cameraScale + 'px '+ font;
+    overlayContext.textAlign = textAlign;
+    overlayContext.textBaseline = 'middle';
     if (lineWidth)
     {
-        mainContext.lineWidth = lineWidth*cameraScale;
-        mainContext.strokeStyle = lineColor.rgba();
-        mainContext.strokeText(text, pos.x, pos.y);
+        overlayContext.lineWidth = lineWidth*cameraScale;
+        overlayContext.strokeStyle = lineColor.rgba();
+        overlayContext.strokeText(text, pos.x, pos.y);
     }
-    mainContext.fillStyle = color.rgba();
-    mainContext.fillText(text, pos.x, pos.y);
+    overlayContext.fillStyle = color.rgba();
+    overlayContext.fillText(text, pos.x, pos.y);
 }
 
 // enable additive or regular blend mode
