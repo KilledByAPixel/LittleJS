@@ -17,10 +17,9 @@ class Sound
 
         this.range = range;
         this.taper = taper;
-        this.zzfxSound = [...zzfxSound];
         this.randomness = zzfxSound[1] || 0;
-        this.zzfxSound[1] = 0;
-        this.cachedSamples = zzfxG(...this.zzfxSound);
+        zzfxSound[1] = 0;
+        this.cachedSamples = zzfxG(...zzfxSound);
     }
 
     play(pos, volumeScale=1, pitchScale=1)
@@ -61,24 +60,24 @@ class Music
         this.cachedSamples = zzfxM(...zzfxMusic);
     }
 
-    play(volume = 1, loop = 1)
+    play(volumeScale = 1, loop = 1)
     {
         if (!soundEnable) return;
 
-        return playSamples(this.cachedSamples, volume, 1, 0, loop);
+        return playSamples(this.cachedSamples, volumeScale, 1, 0, loop);
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 // play mp3 or wav audio from a local file or url
-function playAudioFile(url, loop=0, volume=1)
+function playAudioFile(url, volumeScale=1, loop=1)
 {
     if (!soundEnable) return;
 
     const audio = new Audio(url);
+    audio.volume = audioVolume * volumeScale;
     audio.loop = loop;
-    audio.volume = audioVolume * volume;
     audio.play();
     return audio;
 }
@@ -99,6 +98,7 @@ function speak(text, language='', volume=1, rate=1, pitch=1)
     utterance.rate = rate;
     utterance.pitch = pitch;
     speechSynthesis.speak(utterance);
+    return utterance;
 }
 
 // stop all queued speech

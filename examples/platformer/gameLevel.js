@@ -30,12 +30,12 @@ function buildTerrain(size)
     initTileCollision(size);
     let startGroundLevel = 80;
     let groundLevel = startGroundLevel;
-    let groundSlope = rand(1,-1);
+    let groundSlope = rand(-1,1);
     let backgroundDelta = 0, backgroundDeltaSlope = 0;
     for (let x=0; x < size.x; x++)
     {
         // pull slope towards start ground level
-        groundLevel += groundSlope = rand() < .05 ? rand(1,-1) :
+        groundLevel += groundSlope = rand() < .05 ? rand(-1,1) :
             groundSlope + (startGroundLevel - groundLevel)/1e3;
         
         // small jump
@@ -48,7 +48,7 @@ function buildTerrain(size)
             const jumpDelta = rand(19,-19);
             startGroundLevel = clamp(startGroundLevel + jumpDelta, 80, 20);
             groundLevel += jumpDelta;
-            groundSlope = rand(1,-1);
+            groundSlope = rand(-1,1);
         }
 
         backgroundDelta += backgroundDeltaSlope;
@@ -57,7 +57,7 @@ function buildTerrain(size)
         if (rand() < .1)
             backgroundDelta = 0;
         if (rand() < .1)
-            backgroundDeltaSlope = rand(1,-1);
+            backgroundDeltaSlope = rand(-1,1);
         backgroundDelta = clamp(backgroundDelta, 3, -1)
 
         groundLevel = clamp(groundLevel, 99, 30);

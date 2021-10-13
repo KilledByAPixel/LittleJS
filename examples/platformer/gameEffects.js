@@ -292,7 +292,7 @@ function initParallaxLayers()
         gradient.addColorStop(1,layerColor.subtract(new Color(1,1,1,0)).mutate(.1).clamp().rgba());
 
         // draw mountains ranges
-        let groundLevel = startGroundLevel, groundSlope = rand(1,-1);
+        let groundLevel = startGroundLevel, groundSlope = rand(-1,1);
         for (let x=parallaxSize.x;x--;)
             tileParallaxLayer.context.fillRect(x,groundLevel += groundSlope = rand() < .05 ? rand(1, -1) :
                 groundSlope + (startGroundLevel - groundLevel)/2e3, 1, parallaxSize.y)

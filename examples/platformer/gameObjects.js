@@ -243,7 +243,7 @@ class Weapon extends EngineObject
                 this.localAngle = -rand(.2,.15);
                 this.recoilTimer.set(.4);
                 const direction = vec2(this.getMirrorSign(this.bulletSpeed), 0);
-                const velocity = direction.rotate(rand(1,-1)*this.bulletSpread);
+                const velocity = direction.rotate(rand(-1,1)*this.bulletSpread);
                 new Bullet(this.pos, this.parent, velocity, this.damage);
 
                 // spawn shell particle
