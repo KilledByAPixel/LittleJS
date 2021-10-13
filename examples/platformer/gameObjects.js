@@ -80,7 +80,7 @@ class Crate extends GameObject
         if (this.isDestroyed)
             return;
 
-        playSound(sound_destroyObject, this.pos);
+        sound_destroyObject.play(this.pos);
         makeDebris(this.pos, this.color);
         this.destroy();
     }
@@ -112,7 +112,7 @@ class Enemy extends GameObject
         if (this.groundObject && rand() < .01 && this.pos.distance(player.pos) < 20)
         {
             this.velocity = vec2(rand(.1,-.1), rand(.4,.2));
-            playSound(sound_jump, this.pos);
+            sound_jump.play(this.pos);
         }
 
         // damage player if touching
@@ -126,7 +126,7 @@ class Enemy extends GameObject
             return;
 
         ++score;
-        playSound(sound_killEnemy, this.pos);
+        sound_killEnemy.play(this.pos);
         makeDebris(this.pos, this.color, 300);
         this.destroy();
     }
@@ -171,7 +171,7 @@ class Grenade extends GameObject
         }
         else if (this.beepTimer.elapsed())
         {
-            playSound(sound_grenade, this.pos)
+            sound_grenade.play(this.pos)
             this.beepTimer.set(1);
         }
     }
@@ -239,7 +239,7 @@ class Weapon extends EngineObject
             for (; this.fireTimeBuffer > 0; this.fireTimeBuffer -= 1/this.fireRate)
             {
                 // create bullet
-                playSound(sound_shoot, this.pos);
+                sound_shoot.play(this.pos);
                 this.localAngle = -rand(.2,.15);
                 this.recoilTimer.set(.4);
                 const direction = vec2(this.getMirrorSign(this.bulletSpeed), 0);

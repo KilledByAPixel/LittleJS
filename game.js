@@ -9,8 +9,8 @@ glOverlay = !isChrome; // fix slow rendering when not chrome
 // game variables
 let particleEmiter, clickCount = 0;
 
-// zzfx sounds
-const sound_click = [.5,1];
+// sound effects
+const sound_click = new Sound([.5,.5]);
 
 // medals
 const medal_example    = new Medal(0, 'Example Medal', 'More info about the medal goes here.');
@@ -74,7 +74,7 @@ function gameUpdate()
     if (mouseWasPressed(0))
     {
         // play sound when mouse is pressed
-        playSound(sound_click, mousePos);
+        sound_click.play(mousePos);
 
         // change particle color
         particleEmiter.colorStartA = new Color;

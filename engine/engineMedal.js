@@ -10,16 +10,12 @@
 const medals = [], medalsDisplayQueue = [];
 let medalsPreventUnlock, medalsGameName = engineName, medalsDisplayTimer, newgrounds;
 
-function medalsInit(gameName, newgroundsAppID, newgroundsCipher)
+function medalsInit(gameName = engineName)
 {
     medalsGameName = gameName;
 
     // check if medals are unlocked
     debugMedals || medals.forEach(medal=> medal.unlocked = localStorage[medal.storageKey()]);
-
-    // start up newgrounds only if requested
-    if (newgroundsAppID)
-        newgrounds = new Newgrounds(newgroundsAppID, newgroundsCipher);
 }
 
 class Medal

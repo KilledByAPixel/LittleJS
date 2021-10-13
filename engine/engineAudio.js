@@ -8,70 +8,76 @@
 
 'use strict';
 
-let audioContext; // audio context used by the engine
-
-// play a zzfx sound in world space with attenuation and culling
-function playSound(zzfxSound, pos, range=defaultSoundRange, volumeScale=1, pitchScale=1)
+class Sound
 {
-    if (!soundEnable) return;
-
-    let pan = 0;
-    if (pos)
+    constructor(zzfxSound, range=defaultSoundRange, taper=defaultSoundTaper)
     {
-        if (range)
-        {
-            // apply range based fade
-            const lengthSquared = cameraPos.distanceSquared(pos);
-            const maxRange = range * (soundTaperPecent + 1);
-            if (lengthSquared > maxRange**2)
-                return; // out of range
+        if (!soundEnable) return;
 
-            // attenuate volume by distance
-            volumeScale *= percent(lengthSquared**.5, range, maxRange);
-        }
-
-        // get pan from screen space coords
-        pan = 2*worldToScreen(pos).x/mainCanvas.width-1;
+        this.range = range;
+        this.taper = taper;
+        this.zzfxSound = [...zzfxSound];
+        this.randomness = zzfxSound[1] || 0;
+        this.zzfxSound[1] = 0;
+        this.cachedSamples = zzfxG(...this.zzfxSound);
     }
 
-    // copy sound (so changes aren't permanant)
-    zzfxSound = [...zzfxSound];
+    play(pos, volumeScale=1, pitchScale=1)
+    {
+        if (!soundEnable) return;
 
-    // scale volume and pitch
-    zzfxSound[0] = (zzfxSound[0]||1) * volumeScale;
-    zzfxSound[2] = (zzfxSound[2]||220) * pitchScale;
+        let pan = 0;
+        if (pos)
+        {
+            const range = this.range;
+            if (range)
+            {
+                // apply range based fade
+                const lengthSquared = cameraPos.distanceSquared(pos);
+                if (lengthSquared > range**2)
+                    return; // out of range
 
-    // play the sound
-    return zzfxP(pan, zzfxG(...zzfxSound));
+                // attenuate volume by distance
+                volumeScale *= percent(lengthSquared**.5, range*this.taper, range);
+            }
+
+            // get pan from screen space coords
+            pan = worldToScreen(pos).x * 2/mainCanvas.width - 1;
+        }
+
+        // play the sound
+        const playbackRate = pitchScale + pitchScale * this.randomness*rand(-1,1);
+        return playSamples([this.cachedSamples], volumeScale, playbackRate, pan);
+    }
 }
 
-// render and play zzfxm music with an option to loop
-function playMusic(zzfxmMusic, loop=0, pan=0) 
+class Music
 {
-    if (!soundEnable) return;
+    constructor(zzfxMusic)
+    {
+        if (!soundEnable) return;
 
-    return playSamples(zzfxM(...zzfxmMusic), loop, pan);
+        this.cachedSamples = zzfxM(...zzfxMusic);
+    }
+
+    play(loop = 1)
+    {
+        if (!soundEnable) return;
+
+        return playSamples(this.cachedSamples, loop);
+    }
 }
 
-// play cached samples to avoid pause when playing music/sounds
-function playSamples(samples, loop=0, pan=0) 
-{
-    if (!soundEnable) return;
-
-    const source = zzfxP(pan,...samples);
-    if (source)
-        source.loop = loop;
-    return source;
-}
+///////////////////////////////////////////////////////////////////////////////
 
 // play mp3 or wav audio from a local file or url
-function playAudioFile(url, loop=0, volumeScale=1)
+function playAudioFile(url, loop=0, volume=1)
 {
     if (!soundEnable) return;
 
     const audio = new Audio(url);
     audio.loop = loop;
-    audio.volume = volumeScale * audioVolume;
+    audio.volume = audioVolume * volume;
     audio.play();
     return audio;
 }
@@ -98,35 +104,44 @@ function speak(text, language='', volume=1, rate=1, pitch=1)
 const stopSpeech = ()=> speechSynthesis && speechSynthesis.cancel();
 
 ///////////////////////////////////////////////////////////////////////////////
-// ZzFXMicro - Zuper Zmall Zound Zynth - v1.1.8 by Frank Force
 
-const zzfxR = 44100; // sample rate
-const zzfx = (...z) => zzfxP(0, zzfxG(...z)); // generate and play sound
-function zzfxP(pan,...samples)  // play samples
+let audioContext; // audio context used by the engine
+
+// play cached samples with given settings
+function playSamples(sampleChannels, volume=1, playbackRate=1, pan=0, loop=0) 
 {
     if (!soundEnable) return;
-    
+
     // create audio context
     if (!audioContext)
         audioContext = new (window.AudioContext||webkitAudioContext);
 
     // create buffer and source
-    const buffer = audioContext.createBuffer(samples.length, samples[0].length, zzfxR), 
+    const buffer = audioContext.createBuffer(sampleChannels.length, sampleChannels[0].length, zzfxR), 
         source = audioContext.createBufferSource();
 
-    // copy samples to buffer
-    samples.forEach((d,i)=> buffer.getChannelData(i).set(d));
+    // copy samples to buffer and setup source
+    sampleChannels.forEach((c,i)=> buffer.getChannelData(i).set(c));
     source.buffer = buffer;
+    source.playbackRate.value = playbackRate;
+    source.loop = loop;
 
-    // create pan node
-    pan = clamp(pan, 1, -1);
-    const panNode = new StereoPannerNode(audioContext, {'pan':pan});
-    source.connect(panNode).connect(audioContext.destination);
+    // create pan and gain nodes
+    source
+        .connect(new StereoPannerNode(audioContext, {'pan':clamp(pan, 1, -1)}))
+        .connect(new GainNode(audioContext, {'gain':audioVolume*volume}))
+        .connect(audioContext.destination);
 
     // play and return sound
     source.start();
     return source;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// ZzFXMicro - Zuper Zmall Zound Zynth - v1.1.8 by Frank Force
+
+const zzfxR = 44100; // sample rate
+const zzfx = (...z) => playSamples([zzfxG(...z)]); // generate and play sound
 
 function zzfxG // generate samples
 (

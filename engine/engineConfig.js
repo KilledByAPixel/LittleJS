@@ -48,10 +48,10 @@ const copyWASDToDpad = 1;              // allow players to use WASD as direction
 ///////////////////////////////////////////////////////////////////////////////
 // audio config
 
-const soundEnable = 1;      // all audio can be disabled
-let audioVolume = .3;       // volume for sound, music and speech
-let defaultSoundRange = 20; // distance where taper starts
-let soundTaperPecent = .5;  // extra range added for sound taper
+const soundEnable = 1;        // all audio can be disabled
+let audioVolume = .3;         // volume for sound, music and speech
+const defaultSoundRange = 30; // range where sound no longer plays
+const defaultSoundTaper = .7; // what range percent to start tapering off sound 0-1
 
 ///////////////////////////////////////////////////////////////////////////////
 // medals config

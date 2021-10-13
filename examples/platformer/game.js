@@ -28,7 +28,7 @@ function gameUpdate()
     {
         player = new Player(playerStartPos);
         player.velocity = vec2(0,.1);
-        playSound(sound_jump);
+        sound_jump.play();
     }
     
     // mouse wheel = zoom

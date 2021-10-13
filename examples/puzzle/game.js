@@ -15,10 +15,10 @@ const backgroundColor = new Color(.2,.2,.2);
 const minMatchCount = 3;
 const highScoreKey = 'puzzleBestScore';
 
-// zzfx sounds
-const sound_goodMove = [.4,.2,250,.04,,.04,,,1,,,,,3];
-const sound_badMove =  [,,700,,,.07,,,,3.7,,,,3,,,.1];
-const sound_fall =     [.2,,1900,,,.01,,1.4,,91,,,,,,,,,,.7];
+// sound effects
+const sound_goodMove = new Sound([.4,.2,250,.04,,.04,,,1,,,,,3]);
+const sound_badMove = new Sound([,,700,,,.07,,,,3.7,,,,3,,,.1]);
+const sound_fall = new Sound([.2,,1900,,,.01,,1.4,,91,,,,,,,,,,.7]);
 
 let level, levelSize, levelFall, fallTimer, dragStartPos, comboCount, score, bestScore;
 
@@ -103,7 +103,7 @@ function gameUpdate()
             {
                 const p = percent(comboCount, 0, 9);
                 fallTimer.set(fallTime*p);
-                playSound(sound_fall);
+                sound_fall.play();
             }
             else
                 fallTimer.unset();
@@ -146,12 +146,12 @@ function gameUpdate()
                         // undo if no matches
                         if (!fallTimer.isSet())
                         {
-                            playSound(sound_badMove);
+                            sound_badMove.play();
                             setTile(mouseTilePos, endTile);
                             setTile(dragStartPos, startTile);
                         }
                         else
-                            playSound(sound_goodMove);
+                            sound_goodMove.play();
                         dragStartPos = 0;
                     }
                 }

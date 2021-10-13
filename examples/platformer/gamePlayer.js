@@ -73,7 +73,7 @@ class Character extends GameObject
                 this.dodgeTimer.set(.4);
                 this.dodgeRechargeTimer.set(2);
                 this.jumpTimer.unset();
-                playSound(sound_dodge, this.pos);
+                sound_dodge.play(this.pos);
 
                 if (!this.groundObject && this.getAliveTime() > .2)
                     this.velocity.y += .2;
@@ -84,7 +84,7 @@ class Character extends GameObject
                 const grenade = new Grenade(this.pos);
                 grenade.velocity = this.velocity.add(vec2(this.getMirrorSign(),rand(.8,.7)).normalize(.2+rand(.02)));
                 grenade.angleVelocity = this.getMirrorSign() * rand(.8,.5);
-                playSound(sound_jump, this.pos);
+                sound_jump.play(this.pos);
                 this.grendeThrowTimer.set(1);
             }
             this.wasPressingThrow = this.pressingThrow;
@@ -141,7 +141,7 @@ class Character extends GameObject
                         this.velocity.y = .15;
                         this.jumpTimer.set(.2);
                     }
-                    playSound(sound_jump, this.pos);
+                    sound_jump.play(this.pos);
                 }
             }
 
@@ -194,7 +194,7 @@ class Character extends GameObject
             if (this.walkSoundTime > 1)
             {
                 this.walkSoundTime = 0;
-                playSound(sound_walk, this.pos);
+                sound_walk.play(this.pos);
             }
         }
         else
@@ -238,7 +238,7 @@ class Character extends GameObject
             return;
 
         makeBlood(this.pos, 300);
-        playSound(sound_die, this.pos);
+        sound_die.play(this.pos);
 
         this.health = 0;
         this.weapon.destroy();

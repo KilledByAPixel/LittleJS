@@ -51,7 +51,7 @@ class Block extends EngineObject
         this.destroy();
         ++score;
         --blockCount;
-        playSound(sound_breakBlock, this.pos, 0);
+        sound_breakBlock.play(this.pos);
 
         const color1 = this.color;
         const color2 = color1.lerp(new Color, .5);
@@ -129,6 +129,6 @@ class Ball extends EngineObject
         this.velocity = this.velocity.normalize(speed);
 
         // scale bounce sound pitch by speed
-        playSound(sound_bounce, this.pos, 0, 1, speed);
+        sound_bounce.play(this.pos, 1, speed);
     }
 }

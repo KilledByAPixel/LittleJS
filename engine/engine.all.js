@@ -19,7 +19,7 @@ const debugPointSize = .5;
 
 let showWatermark = 1;
 let godMode = 0;
-let debugRects = [];
+let debugPrimitives = [];
 let debugOverlay = 0;
 let debugPhysics = 0;
 let debugRaycast = 0;
@@ -35,12 +35,12 @@ const ASSERT = enableAsserts ? (...assert)=> console.assert(...assert) : ()=>{};
 const debugRect = (pos, size=vec2(0), color='#fff', time=0, angle=0, fill=0)=> 
 {
     ASSERT(typeof color == 'string'); // pass in regular html strings as colors
-    debugRects.push({pos, size:vec2(size), color, time:new Timer(time), angle, fill});
+    debugPrimitives.push({pos, size:vec2(size), color, time:new Timer(time), angle, fill});
 }
-const debugCircle = (pos, radius, color='#fff', time=0, fill=0)=>
+const debugCircle = (pos, radius=0, color='#fff', time=0, fill=0)=>
 {
     ASSERT(typeof color == 'string'); // pass in regular html strings as colors
-    debugRects.push({pos, size:radius, color, time:new Timer(time), angle:0, fill});
+    debugPrimitives.push({pos, size:radius, color, time:new Timer(time), angle:0, fill});
 }
 const debugPoint = (pos, color, time, angle)=> debugRect(pos, 0, color, time, angle);
 const debugLine = (posA, posB, color, thickness=.1, time)=>
@@ -56,7 +56,7 @@ const debugAABB = (pA, pB, sA, sB, color)=>
     debugRect(minPos.lerp(maxPos,.5), maxPos.subtract(minPos), color);
 }
 
-const debugClear = ()=> debugRects = [];
+const debugClear = ()=> debugPrimitives = [];
 
 // save a canvas to disk
 const debugSaveCanvas = (canvas, filename = engineName + '.png') =>
@@ -99,7 +99,6 @@ const debugUpdate = ()=>
     {
         godMode = !godMode;
     }
-        
     if (keyWasPressed(53)) // 5
     {
         debugTakeScreenshot = 1;
@@ -123,9 +122,6 @@ const debugUpdate = ()=>
     {
         showWatermark = !showWatermark;
     }
-
-    // asserts to check for things that could go wrong
-    ASSERT(gravity <= 0) // only supports downward gravity
 }
 
 const debugRender = ()=>
@@ -234,7 +230,7 @@ const debugRender = ()=>
         // render debug rects
         overlayContext.lineWidth = 1;
         const pointSize = debugPointSize * cameraScale;
-        debugRects.forEach(r=>
+        debugPrimitives.forEach(r=>
         {
             // create canvas transform from world space to screen space
             const pos = worldToScreen(r.pos);
@@ -314,7 +310,7 @@ const debugRender = ()=>
         overlayContext.shadowBlur = 0;
     }
 
-    debugRects = debugRects.filter(r=>r.time.get()<0);
+    debugPrimitives = debugPrimitives.filter(r=>r.time.get()<0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -700,10 +696,10 @@ const copyWASDToDpad = 1;              // allow players to use WASD as direction
 ///////////////////////////////////////////////////////////////////////////////
 // audio config
 
-const soundEnable = 1;      // all audio can be disabled
-let audioVolume = .3;       // volume for sound, music and speech
-let defaultSoundRange = 20; // distance where taper starts
-let soundTaperPecent = .5;  // extra range added for sound taper
+const soundEnable = 1;        // all audio can be disabled
+let audioVolume = .3;         // volume for sound, music and speech
+const defaultSoundRange = 30; // range where sound no longer plays
+const defaultSoundTaper = .7; // what range percent to start tapering off sound 0-1
 
 ///////////////////////////////////////////////////////////////////////////////
 // medals config
@@ -736,7 +732,7 @@ const medalDisplayIconSize = 80;  // size of icon in medal display
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = '1.0.10';
+const engineVersion = '1.0.11';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 const tileImage = new Image(); // everything uses the same tile sheet
 
@@ -1528,70 +1524,76 @@ if (isTouchDevice)
 
 'use strict';
 
-let audioContext; // audio context used by the engine
-
-// play a zzfx sound in world space with attenuation and culling
-function playSound(zzfxSound, pos, range=defaultSoundRange, volumeScale=1, pitchScale=1)
+class Sound
 {
-    if (!soundEnable) return;
-
-    let pan = 0;
-    if (pos)
+    constructor(zzfxSound, range=defaultSoundRange, taper=defaultSoundTaper)
     {
-        if (range)
-        {
-            // apply range based fade
-            const lengthSquared = cameraPos.distanceSquared(pos);
-            const maxRange = range * (soundTaperPecent + 1);
-            if (lengthSquared > maxRange**2)
-                return; // out of range
+        if (!soundEnable) return;
 
-            // attenuate volume by distance
-            volumeScale *= percent(lengthSquared**.5, range, maxRange);
-        }
-
-        // get pan from screen space coords
-        pan = 2*worldToScreen(pos).x/mainCanvas.width-1;
+        this.range = range;
+        this.taper = taper;
+        this.zzfxSound = [...zzfxSound];
+        this.randomness = zzfxSound[1] || 0;
+        this.zzfxSound[1] = 0;
+        this.cachedSamples = zzfxG(...this.zzfxSound);
     }
 
-    // copy sound (so changes aren't permanant)
-    zzfxSound = [...zzfxSound];
+    play(pos, volumeScale=1, pitchScale=1)
+    {
+        if (!soundEnable) return;
 
-    // scale volume and pitch
-    zzfxSound[0] = (zzfxSound[0]||1) * volumeScale;
-    zzfxSound[2] = (zzfxSound[2]||220) * pitchScale;
+        let pan = 0;
+        if (pos)
+        {
+            const range = this.range;
+            if (range)
+            {
+                // apply range based fade
+                const lengthSquared = cameraPos.distanceSquared(pos);
+                if (lengthSquared > range**2)
+                    return; // out of range
 
-    // play the sound
-    return zzfxP(pan, zzfxG(...zzfxSound));
+                // attenuate volume by distance
+                volumeScale *= percent(lengthSquared**.5, range*this.taper, range);
+            }
+
+            // get pan from screen space coords
+            pan = worldToScreen(pos).x * 2/mainCanvas.width - 1;
+        }
+
+        // play the sound
+        const playbackRate = pitchScale + pitchScale * this.randomness*rand(-1,1);
+        return playSamples([this.cachedSamples], volumeScale, playbackRate, pan);
+    }
 }
 
-// render and play zzfxm music with an option to loop
-function playMusic(zzfxmMusic, loop=0, pan=0) 
+class Music
 {
-    if (!soundEnable) return;
+    constructor(zzfxMusic)
+    {
+        if (!soundEnable) return;
 
-    return playSamples(zzfxM(...zzfxmMusic), loop, pan);
+        this.cachedSamples = zzfxM(...zzfxMusic);
+    }
+
+    play(loop = 1)
+    {
+        if (!soundEnable) return;
+
+        return playSamples(this.cachedSamples, loop);
+    }
 }
 
-// play cached samples to avoid pause when playing music/sounds
-function playSamples(samples, loop=0, pan=0) 
-{
-    if (!soundEnable) return;
-
-    const source = zzfxP(pan,...samples);
-    if (source)
-        source.loop = loop;
-    return source;
-}
+///////////////////////////////////////////////////////////////////////////////
 
 // play mp3 or wav audio from a local file or url
-function playAudioFile(url, loop=0, volumeScale=1)
+function playAudioFile(url, loop=0, volume=1)
 {
     if (!soundEnable) return;
 
     const audio = new Audio(url);
     audio.loop = loop;
-    audio.volume = volumeScale * audioVolume;
+    audio.volume = audioVolume * volume;
     audio.play();
     return audio;
 }
@@ -1618,35 +1620,44 @@ function speak(text, language='', volume=1, rate=1, pitch=1)
 const stopSpeech = ()=> speechSynthesis && speechSynthesis.cancel();
 
 ///////////////////////////////////////////////////////////////////////////////
-// ZzFXMicro - Zuper Zmall Zound Zynth - v1.1.8 by Frank Force
 
-const zzfxR = 44100; // sample rate
-const zzfx = (...z) => zzfxP(0, zzfxG(...z)); // generate and play sound
-function zzfxP(pan,...samples)  // play samples
+let audioContext; // audio context used by the engine
+
+// play cached samples with given settings
+function playSamples(sampleChannels, volume=1, playbackRate=1, pan=0, loop=0) 
 {
     if (!soundEnable) return;
-    
+
     // create audio context
     if (!audioContext)
         audioContext = new (window.AudioContext||webkitAudioContext);
 
     // create buffer and source
-    const buffer = audioContext.createBuffer(samples.length, samples[0].length, zzfxR), 
+    const buffer = audioContext.createBuffer(sampleChannels.length, sampleChannels[0].length, zzfxR), 
         source = audioContext.createBufferSource();
 
-    // copy samples to buffer
-    samples.forEach((d,i)=> buffer.getChannelData(i).set(d));
+    // copy samples to buffer and setup source
+    sampleChannels.forEach((c,i)=> buffer.getChannelData(i).set(c));
     source.buffer = buffer;
+    source.playbackRate.value = playbackRate;
+    source.loop = loop;
 
-    // create pan node
-    pan = clamp(pan, 1, -1);
-    const panNode = new StereoPannerNode(audioContext, {'pan':pan});
-    source.connect(panNode).connect(audioContext.destination);
+    // create pan and gain nodes
+    source
+        .connect(new StereoPannerNode(audioContext, {'pan':clamp(pan, 1, -1)}))
+        .connect(new GainNode(audioContext, {'gain':audioVolume*volume}))
+        .connect(audioContext.destination);
 
     // play and return sound
     source.start();
     return source;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// ZzFXMicro - Zuper Zmall Zound Zynth - v1.1.8 by Frank Force
+
+const zzfxR = 44100; // sample rate
+const zzfx = (...z) => playSamples([zzfxG(...z)]); // generate and play sound
 
 function zzfxG // generate samples
 (
@@ -2292,16 +2303,12 @@ class Particle extends EngineObject
 const medals = [], medalsDisplayQueue = [];
 let medalsPreventUnlock, medalsGameName = engineName, medalsDisplayTimer, newgrounds;
 
-function medalsInit(gameName, newgroundsAppID, newgroundsCipher)
+function medalsInit(gameName = engineName)
 {
     medalsGameName = gameName;
 
     // check if medals are unlocked
     debugMedals || medals.forEach(medal=> medal.unlocked = localStorage[medal.storageKey()]);
-
-    // start up newgrounds only if requested
-    if (newgroundsAppID)
-        newgrounds = new Newgrounds(newgroundsAppID, newgroundsCipher);
 }
 
 class Medal
