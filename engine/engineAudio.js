@@ -155,7 +155,7 @@ function zzfxG // generate samples
     // init parameters
     let PI2 = PI*2, sign = v => v>0?1:-1,
         startSlide = slide *= 500 * PI2 / zzfxR / zzfxR, b=[],
-        startFrequency = frequency *= (1 + randomness*2*Math.random() - randomness) * PI2 / zzfxR,
+        startFrequency = frequency *= (1 + randomness*rand(-1,1)) * PI2 / zzfxR,
         t=0, tm=0, i=0, j=1, r=0, c=0, s=0, f, length;
         
     // scale by sample rate

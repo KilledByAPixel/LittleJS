@@ -8,13 +8,12 @@
 'use strict';
 
 const medals = [], medalsDisplayQueue = [];
-let medalsPreventUnlock, medalsGameName = engineName, medalsDisplayTimer, newgrounds;
+let medalsGameName, medalsPreventUnlock, medalsDisplayTimer, newgrounds;
 
-function medalsInit(gameName = engineName)
+function medalsInit(gameName)
 {
-    medalsGameName = gameName;
-
     // check if medals are unlocked
+    medalsGameName = gameName;
     debugMedals || medals.forEach(medal=> medal.unlocked = localStorage[medal.storageKey()]);
 }
 
@@ -45,6 +44,7 @@ class Medal
             return;
 
         // save the medal
+        ASSERT(medalsGameName); // game name must be set
         localStorage[this.storageKey()] = this.unlocked = 1;
         medalsDisplayQueue.push(this);
 

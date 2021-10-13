@@ -1204,7 +1204,7 @@ function zzfxG // generate samples
     // init parameters
     let PI2 = PI*2, sign = v => v>0?1:-1,
         startSlide = slide *= 500 * PI2 / zzfxR / zzfxR, b=[],
-        startFrequency = frequency *= (1 + randomness*2*Math.random() - randomness) * PI2 / zzfxR,
+        startFrequency = frequency *= (1 + randomness*rand(-1,1)) * PI2 / zzfxR,
         t=0, tm=0, i=0, j=1, r=0, c=0, s=0, f, length;
         
     // scale by sample rate
@@ -1834,13 +1834,12 @@ class Particle extends EngineObject
 'use strict';
 
 const medals = [], medalsDisplayQueue = [];
-let medalsPreventUnlock, medalsGameName = engineName, medalsDisplayTimer, newgrounds;
+let medalsGameName, medalsPreventUnlock, medalsDisplayTimer, newgrounds;
 
-function medalsInit(gameName = engineName)
+function medalsInit(gameName)
 {
-    medalsGameName = gameName;
-
     // check if medals are unlocked
+    medalsGameName = gameName;
     debugMedals || medals.forEach(medal=> medal.unlocked = localStorage[medal.storageKey()]);
 }
 
@@ -1871,6 +1870,7 @@ class Medal
             return;
 
         // save the medal
+        ASSERT(medalsGameName); // game name must be set
         localStorage[this.storageKey()] = this.unlocked = 1;
         medalsDisplayQueue.push(this);
 
