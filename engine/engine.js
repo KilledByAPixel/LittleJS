@@ -70,26 +70,16 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         requestAnimationFrame(engineUpdate);
 
         // update time keeping
-        const realFrameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
-        let frameTimeDeltaMS = realFrameTimeDeltaMS;
-        if (debug)
-            frameTimeDeltaMS *= keyIsDown(107) ? 5 : keyIsDown(109) ? .2 : 1; // +/- to speed/slow time
+        let frameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
         frameTimeLastMS = frameTimeMS;
-        realTime = frameTimeMS / 1e3;
-        frameTimeBufferMS += !paused * frameTimeDeltaMS;
-
-        // clamp incase of extra long frames (slow framerate)
-        frameTimeBufferMS = min(frameTimeBufferMS, 50);
-
-        // apply time delta smoothing, improves smoothness of framerate in some browsers
-        let deltaSmooth = 0;
-        if (frameTimeBufferMS < 0 && frameTimeBufferMS > -9)
+        if (debug)
         {
-            // force an update each frame if time is close enough (not just a fast refresh rate)
-            deltaSmooth = frameTimeBufferMS;
-            frameTimeBufferMS = 0;
+            debugFPS = lerp(.05, 1e3/(frameTimeDeltaMS||1), debugFPS);
+            frameTimeDeltaMS *= keyIsDown(107) ? 5 : keyIsDown(109) ? .2 : 1; // +/- to speed/slow time
         }
-        
+        realTime += frameTimeDeltaMS;
+        frameTimeBufferMS = min(frameTimeBufferMS + !paused * frameTimeDeltaMS, 50); // clamp incase of slow framerate
+
         if (paused)
         {
             // do post update even when paused
@@ -100,6 +90,15 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         }
         else
         {
+            // apply time delta smoothing, improves smoothness of framerate in some browsers
+            let deltaSmooth = 0;
+            if (frameTimeBufferMS < 0 && frameTimeBufferMS > -9)
+            {
+                // force an update each frame if time is close enough (not just a fast refresh rate)
+                deltaSmooth = frameTimeBufferMS;
+                frameTimeBufferMS = 0;
+            }
+            
             // update multiple frames if necessary in case of slow framerate
             for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / FPS)
             {
@@ -113,10 +112,10 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
                 gameUpdatePost();
                 inputUpdatePost();
             }
-        }
 
-        // add the time smoothing back in
-        frameTimeBufferMS += deltaSmooth;
+            // add the time smoothing back in
+            frameTimeBufferMS += deltaSmooth;
+        }
 
         if (fixedWidth)
         {
@@ -163,7 +162,6 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         if (showWatermark)
         {
             // update fps
-            debugFPS = lerp(.05, 1e3/(realFrameTimeDeltaMS||1), debugFPS);
             overlayContext.textAlign = 'right';
             overlayContext.textBaseline = 'top';
             overlayContext.font = '1em monospace';

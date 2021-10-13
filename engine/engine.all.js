@@ -782,26 +782,16 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         requestAnimationFrame(engineUpdate);
 
         // update time keeping
-        const realFrameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
-        let frameTimeDeltaMS = realFrameTimeDeltaMS;
-        if (debug)
-            frameTimeDeltaMS *= keyIsDown(107) ? 5 : keyIsDown(109) ? .2 : 1; // +/- to speed/slow time
+        let frameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
         frameTimeLastMS = frameTimeMS;
-        realTime = frameTimeMS / 1e3;
-        frameTimeBufferMS += !paused * frameTimeDeltaMS;
-
-        // clamp incase of extra long frames (slow framerate)
-        frameTimeBufferMS = min(frameTimeBufferMS, 50);
-
-        // apply time delta smoothing, improves smoothness of framerate in some browsers
-        let deltaSmooth = 0;
-        if (frameTimeBufferMS < 0 && frameTimeBufferMS > -9)
+        if (debug)
         {
-            // force an update each frame if time is close enough (not just a fast refresh rate)
-            deltaSmooth = frameTimeBufferMS;
-            frameTimeBufferMS = 0;
+            debugFPS = lerp(.05, 1e3/(frameTimeDeltaMS||1), debugFPS);
+            frameTimeDeltaMS *= keyIsDown(107) ? 5 : keyIsDown(109) ? .2 : 1; // +/- to speed/slow time
         }
-        
+        realTime += frameTimeDeltaMS;
+        frameTimeBufferMS = min(frameTimeBufferMS + !paused * frameTimeDeltaMS, 50); // clamp incase of slow framerate
+
         if (paused)
         {
             // do post update even when paused
@@ -812,6 +802,15 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         }
         else
         {
+            // apply time delta smoothing, improves smoothness of framerate in some browsers
+            let deltaSmooth = 0;
+            if (frameTimeBufferMS < 0 && frameTimeBufferMS > -9)
+            {
+                // force an update each frame if time is close enough (not just a fast refresh rate)
+                deltaSmooth = frameTimeBufferMS;
+                frameTimeBufferMS = 0;
+            }
+            
             // update multiple frames if necessary in case of slow framerate
             for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / FPS)
             {
@@ -825,10 +824,10 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
                 gameUpdatePost();
                 inputUpdatePost();
             }
-        }
 
-        // add the time smoothing back in
-        frameTimeBufferMS += deltaSmooth;
+            // add the time smoothing back in
+            frameTimeBufferMS += deltaSmooth;
+        }
 
         if (fixedWidth)
         {
@@ -875,7 +874,6 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         if (showWatermark)
         {
             // update fps
-            debugFPS = lerp(.05, 1e3/(realFrameTimeDeltaMS||1), debugFPS);
             overlayContext.textAlign = 'right';
             overlayContext.textBaseline = 'top';
             overlayContext.font = '1em monospace';
@@ -1336,7 +1334,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainCont
     context.restore();
 }
 
-// draw text in world space without canvas scaling because that messes up fonts
+// draw text on overlay canvas in world space
 function drawText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=defaultFont)
 {
     pos = worldToScreen(pos);
@@ -1390,38 +1388,9 @@ const gamepadWasReleased = (button, gamepad=0)=> keyWasReleased(button, gamepad+
 const gamepadStick       = (stick,  gamepad=0)=> stickData[gamepad] ? stickData[gamepad][stick] || vec2() : vec2();
 
 ///////////////////////////////////////////////////////////////////////////////
-
-// keyboard event handlers
-const inputData = [[]];
-onkeydown   = e=>
-{
-    if (debug && e.target != document.body) return;
-    e.repeat || (inputData[usingGamepad = 0][remapKeyCode(e.keyCode)] = 3);
-    hadInput = 1;
-}
-onkeyup     = e=>
-{
-    if (debug && e.target != document.body) return;
-    inputData[0][remapKeyCode(e.keyCode)] = 4;
-}
-const remapKeyCode = c=> copyWASDToDpad ? c==87?38 : c==83?40 : c==65?37 : c==68?39 : c : c;
-
-// mouse event handlers
-onmousedown = e=> (inputData[usingGamepad = 0][e.button] = 3, hadInput = 1, onmousemove(e));
-onmouseup   = e=> inputData[0][e.button] = 4;
-onmousemove = e=>
-{
-    // convert mouse pos to canvas space
-    if (!mainCanvas) return;
-    const rect = mainCanvas.getBoundingClientRect();
-    mousePosScreen.x = mainCanvasSize.x * percent(e.x, rect.right, rect.left);
-    mousePosScreen.y = mainCanvasSize.y * percent(e.y, rect.bottom, rect.top);
-}
-onwheel = e=> e.ctrlKey || (mouseWheel = sign(e.deltaY));
-oncontextmenu = e=> !1; // prevent right click menu
-
-///////////////////////////////////////////////////////////////////////////////
 // input update called by engine
+
+const inputData = [[]];
 
 function inputUpdate()
 {
@@ -1443,6 +1412,36 @@ function inputUpdatePost()
         deviceInputData[i] &= 1;
     mouseWheel = 0;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// keyboard event handlers
+onkeydown   = e=>
+{
+    if (debug && e.target != document.body) return;
+    e.repeat || (inputData[usingGamepad = 0][remapKeyCode(e.keyCode)] = 3);
+    hadInput = 1;
+}
+onkeyup     = e=>
+{
+    if (debug && e.target != document.body) return;
+    inputData[0][remapKeyCode(e.keyCode)] = 4;
+}
+const remapKeyCode = c=> copyWASDToDpad ? c==87?38 : c==83?40 : c==65?37 : c==68?39 : c : c;
+
+///////////////////////////////////////////////////////////////////////////////
+// mouse event handlers
+onmousedown = e=> (inputData[usingGamepad = 0][e.button] = 3, hadInput = 1, onmousemove(e));
+onmouseup   = e=> inputData[0][e.button] = 4;
+onmousemove = e=>
+{
+    // convert mouse pos to canvas space
+    if (!mainCanvas) return;
+    const rect = mainCanvas.getBoundingClientRect();
+    mousePosScreen.x = mainCanvasSize.x * percent(e.x, rect.right, rect.left);
+    mousePosScreen.y = mainCanvasSize.y * percent(e.y, rect.bottom, rect.top);
+}
+onwheel = e=> e.ctrlKey || (mouseWheel = sign(e.deltaY));
+oncontextmenu = e=> !1; // prevent right click menu
 
 ///////////////////////////////////////////////////////////////////////////////
 // gamepad input
@@ -1496,7 +1495,7 @@ function gamepadsUpdate()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// touch screen input
+// touch input
 const isTouchDevice = touchInputEnable && window.ontouchstart !== undefined;
 if (isTouchDevice)
 {
@@ -2333,13 +2332,12 @@ class Medal
     constructor(id, name, description='', icon='🏆', src)
     {
         ASSERT(id >= 0 && !medals[id]);
-        this.id = id;
+
+        // save attributes and add to list of medals
+        medals[this.id = id] = this;
         this.name = name;
         this.description = description;
         this.icon = icon;
-
-        // add to list of medals
-        medals[id] = this;
 
         if (src)
         {
@@ -2438,8 +2436,7 @@ class Newgrounds
         this.cipher = cipher;
 
         // create an instance of CryptoJS for encrypted calls
-        if (cipher)
-            this.cryptoJS = CryptoJS();
+        cipher && (this.cryptoJS = CryptoJS());
 
         // get session id from url search params
         const url = new URL(window.location.href);

@@ -22,13 +22,12 @@ class Medal
     constructor(id, name, description='', icon='🏆', src)
     {
         ASSERT(id >= 0 && !medals[id]);
-        this.id = id;
+
+        // save attributes and add to list of medals
+        medals[this.id = id] = this;
         this.name = name;
         this.description = description;
         this.icon = icon;
-
-        // add to list of medals
-        medals[id] = this;
 
         if (src)
         {
@@ -127,8 +126,7 @@ class Newgrounds
         this.cipher = cipher;
 
         // create an instance of CryptoJS for encrypted calls
-        if (cipher)
-            this.cryptoJS = CryptoJS();
+        cipher && (this.cryptoJS = CryptoJS());
 
         // get session id from url search params
         const url = new URL(window.location.href);

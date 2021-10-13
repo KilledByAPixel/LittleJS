@@ -109,7 +109,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainCont
     context.restore();
 }
 
-// draw text in world space without canvas scaling because that messes up fonts
+// draw text on overlay canvas in world space
 function drawText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=defaultFont)
 {
     pos = worldToScreen(pos);

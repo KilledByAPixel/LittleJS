@@ -30,38 +30,9 @@ const gamepadWasReleased = (button, gamepad=0)=> keyWasReleased(button, gamepad+
 const gamepadStick       = (stick,  gamepad=0)=> stickData[gamepad] ? stickData[gamepad][stick] || vec2() : vec2();
 
 ///////////////////////////////////////////////////////////////////////////////
-
-// keyboard event handlers
-const inputData = [[]];
-onkeydown   = e=>
-{
-    if (debug && e.target != document.body) return;
-    e.repeat || (inputData[usingGamepad = 0][remapKeyCode(e.keyCode)] = 3);
-    hadInput = 1;
-}
-onkeyup     = e=>
-{
-    if (debug && e.target != document.body) return;
-    inputData[0][remapKeyCode(e.keyCode)] = 4;
-}
-const remapKeyCode = c=> copyWASDToDpad ? c==87?38 : c==83?40 : c==65?37 : c==68?39 : c : c;
-
-// mouse event handlers
-onmousedown = e=> (inputData[usingGamepad = 0][e.button] = 3, hadInput = 1, onmousemove(e));
-onmouseup   = e=> inputData[0][e.button] = 4;
-onmousemove = e=>
-{
-    // convert mouse pos to canvas space
-    if (!mainCanvas) return;
-    const rect = mainCanvas.getBoundingClientRect();
-    mousePosScreen.x = mainCanvasSize.x * percent(e.x, rect.right, rect.left);
-    mousePosScreen.y = mainCanvasSize.y * percent(e.y, rect.bottom, rect.top);
-}
-onwheel = e=> e.ctrlKey || (mouseWheel = sign(e.deltaY));
-oncontextmenu = e=> !1; // prevent right click menu
-
-///////////////////////////////////////////////////////////////////////////////
 // input update called by engine
+
+const inputData = [[]];
 
 function inputUpdate()
 {
@@ -83,6 +54,36 @@ function inputUpdatePost()
         deviceInputData[i] &= 1;
     mouseWheel = 0;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// keyboard event handlers
+onkeydown   = e=>
+{
+    if (debug && e.target != document.body) return;
+    e.repeat || (inputData[usingGamepad = 0][remapKeyCode(e.keyCode)] = 3);
+    hadInput = 1;
+}
+onkeyup     = e=>
+{
+    if (debug && e.target != document.body) return;
+    inputData[0][remapKeyCode(e.keyCode)] = 4;
+}
+const remapKeyCode = c=> copyWASDToDpad ? c==87?38 : c==83?40 : c==65?37 : c==68?39 : c : c;
+
+///////////////////////////////////////////////////////////////////////////////
+// mouse event handlers
+onmousedown = e=> (inputData[usingGamepad = 0][e.button] = 3, hadInput = 1, onmousemove(e));
+onmouseup   = e=> inputData[0][e.button] = 4;
+onmousemove = e=>
+{
+    // convert mouse pos to canvas space
+    if (!mainCanvas) return;
+    const rect = mainCanvas.getBoundingClientRect();
+    mousePosScreen.x = mainCanvasSize.x * percent(e.x, rect.right, rect.left);
+    mousePosScreen.y = mainCanvasSize.y * percent(e.y, rect.bottom, rect.top);
+}
+onwheel = e=> e.ctrlKey || (mouseWheel = sign(e.deltaY));
+oncontextmenu = e=> !1; // prevent right click menu
 
 ///////////////////////////////////////////////////////////////////////////////
 // gamepad input
@@ -136,7 +137,7 @@ function gamepadsUpdate()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// touch screen input
+// touch input
 const isTouchDevice = touchInputEnable && window.ontouchstart !== undefined;
 if (isTouchDevice)
 {
