@@ -1,9 +1,10 @@
 /*
     LittleJS Audio System
-    - ZzFX Sound Effects
-    - ZzFXM Music
-    - Speech Synthesis
-    - Can attenuate zzfx sounds by camera range
+    - ZzFX Sound Effects and ZzFXM Music
+    - Caches sounds and music for fast playback
+    - Can attenuate and apply stereo panning to sounds
+    - Ability to play mp3, ogg, and wave files
+    - Speech Synthesis wrapper functions
 */
 
 'use strict';
