@@ -72,12 +72,11 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         // update time keeping
         let frameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
         frameTimeLastMS = frameTimeMS;
-        if (debug)
-        {
+        if (debug || showWatermark)
             debugFPS = lerp(.05, 1e3/(frameTimeDeltaMS||1), debugFPS);
+        if (debug)
             frameTimeDeltaMS *= keyIsDown(107) ? 5 : keyIsDown(109) ? .2 : 1; // +/- to speed/slow time
-        }
-        realTime += frameTimeDeltaMS;
+        realTime += frameTimeDeltaMS / 1e3;
         frameTimeBufferMS = min(frameTimeBufferMS + !paused * frameTimeDeltaMS, 50); // clamp incase of slow framerate
 
         if (paused)
