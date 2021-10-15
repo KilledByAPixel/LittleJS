@@ -133,7 +133,7 @@ class Newgrounds
         this.session_id = url.searchParams.get('ngio_session_id') || 0;
 
         // get medals
-        const medalsResult = this.call('Medal.getList', 0, 0);
+        const medalsResult = this.call('Medal.getList');
         this.medals = medalsResult ? medalsResult.result.data['medals'] : [];
         debugMedals && console.log(this.medals);
         for (const newgroundsMedal of this.medals)
@@ -151,28 +151,28 @@ class Newgrounds
         }
     
         // get scoreboards
-        const scoreboardResult = this.call('ScoreBoard.getBoards', 0, 0);
+        const scoreboardResult = this.call('ScoreBoard.getBoards');
         this.scoreboards = scoreboardResult ? scoreboardResult.result.data.scoreboards : [];
         debugMedals && console.log(this.scoreboards);
     }
 
     unlockMedal(id)
     {
-        return this.call('Medal.unlock', {'id':id});
+        return this.call('Medal.unlock', {'id':id}, 1);
     }
 
     postScore(id, value)
     {
-        return this.call('ScoreBoard.postScore', {'id':id, 'value':value});
+        return this.call('ScoreBoard.postScore', {'id':id, 'value':value}, 1);
     }
 
     getScores(id, user=0, social=0, skip=0, limit=10)
     {
         return this.call('ScoreBoard.getScores', 
-            {'id':id, 'user':user, 'social':social, 'skip':skip, 'limit':limit}, 0);
+            {'id':id, 'user':user, 'social':social, 'skip':skip, 'limit':limit});
     }
     
-    call(component, parameters=0, async=1)
+    call(component, parameters=0, async=0)
     {
         // build the input object
         const input = 

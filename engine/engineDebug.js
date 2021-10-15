@@ -61,7 +61,7 @@ const debugClear = ()=> debugPrimitives = [];
 // save a canvas to disk
 const debugSaveCanvas = (canvas, filename = engineName + '.png') =>
 {
-    downloadLink.download = "screenshot.png";
+    downloadLink.download = 'screenshot.png';
     downloadLink.href = canvas.toDataURL('image/png').replace('image/png','image/octet-stream');
     downloadLink.click();
 }
@@ -335,10 +335,10 @@ const debugToggleParticleEditor = ()=>
         const componentToHex = (c)=>
         {
             const hex = (c*255|0).toString(16);
-            return hex.length == 1 ? "0" + hex : hex;
+            return hex.length == 1 ? '0' + hex : hex;
         }
 
-        return "#" + componentToHex(color.r) + componentToHex(color.g) + componentToHex(color.b);
+        return '#' + componentToHex(color.r) + componentToHex(color.g) + componentToHex(color.b);
     }
     const hexToColor = (hex)=>
     {

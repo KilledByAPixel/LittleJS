@@ -38,7 +38,7 @@ class Sound
             {
                 // apply range based fade
                 const lengthSquared = cameraPos.distanceSquared(pos);
-                if (lengthSquared > range**2)
+                if (lengthSquared > range*range)
                     return; // out of range
 
                 // attenuate volume by distance

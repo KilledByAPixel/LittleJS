@@ -285,12 +285,11 @@ function destroyAllObjects()
     engineObjects = engineObjects.filter(o=>!o.destroyed);
 }
 
-function forEachObject(pos, size=0, callbackFunction=(o)=>1, collideObjectsOnly=1)
+function forEachObject(pos, size, callbackFunction, objectList=engineObjects)
 {
-    const objectList = collideObjectsOnly ? engineCollideObjects : engineObjects;
-    if (!size)
+    if (!pos)
     {
-        // no overlap test
+        // all objects
         for (const o of objectList)
             callbackFunction(o);
     }
@@ -303,7 +302,7 @@ function forEachObject(pos, size=0, callbackFunction=(o)=>1, collideObjectsOnly=
     else
     {
         // circle test
-        const sizeSquared = size**2;
+        const sizeSquared = size*size;
         for (const o of objectList)
             pos.distanceSquared(o.pos) < sizeSquared && callbackFunction(o);
     }
