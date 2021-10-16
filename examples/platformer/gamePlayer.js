@@ -94,7 +94,7 @@ class Character extends GameObject
         let touchingLadder = 0;
         for (let y=2;y--;)
         {
-            const testPos = this.pos.add(vec2(0, y + .1*moveInput.y - this.size.y*.5));
+            const testPos = this.pos.add(vec2(0, y + .1*moveInput.y - this.size.y/2));
             const collisionData = getTileCollisionData(testPos);
             touchingLadder |= collisionData == tileType_ladder;
         }
@@ -258,7 +258,7 @@ class Character extends GameObject
         if (data == tileType_ladder)
         {
             // handle ladder collisions
-            if (pos.y + 1 > this.lastPos.y - this.size.y*.5)
+            if (pos.y + 1 > this.lastPos.y - this.size.y/2)
                 return;
 
             if (getTileCollisionData(pos.add(vec2(0,1)))      // above
@@ -271,7 +271,7 @@ class Character extends GameObject
         }
 
         const d = pos.y - this.pos.y;
-        if (!this.climbingLadder && this.velocity.y > .1 && d > 0 && d < this.size.y*.5)
+        if (!this.climbingLadder && this.velocity.y > .1 && d > 0 && d < this.size.y/2)
         if (destroyTile(pos))
         {
             // break blocks above

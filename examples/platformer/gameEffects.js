@@ -63,7 +63,7 @@ function explosion(pos, radius=3)
     // destroy level
     for (let x = -radius; x < radius; ++x)
     {
-        const h = (radius**2 - x**2)**.5;
+        const h = (radius*radius - x*x)**.5;
         for (let y = -h; y <= h; ++y)
             destroyTile(pos.add(vec2(x,y)), 0, 0);
     }

@@ -61,6 +61,7 @@ const lerp          = (p, max=1, min=0)=> min + clamp(p) * (max-min);
 const formatTime    = (t)=>               (t/60|0)+':'+(t%60<10?'0':'')+(t%60|0);
 const isOverlapping = (pA, sA, pB, sB)=>  abs(pA.x - pB.x)*2 < sA.x + sB.x & abs(pA.y - pB.y)*2 < sA.y + sB.y;
 const nearestPowerOfTwo = (v)=>           2**Math.ceil(Math.log2(v));
+const wave          = (f=1,a=1,t=time)=>      a/2 * (1 - Math.cos(t*f*2*PI));
 
 // random functions
 const rand         = (a=1, b=0)=>              b + (a-b)*Math.random();
@@ -572,7 +573,7 @@ class EngineObject
                 if (smallStepUp || isBlockedY || !isBlockedX) // resolve y collision
                 {
                     // push outside object collision
-                    this.pos.y = o.pos.y + (sy*.5 + epsilon) * sign(oldPos.y - o.pos.y);
+                    this.pos.y = o.pos.y + (sy/2 + epsilon) * sign(oldPos.y - o.pos.y);
                     if (o.groundObject && wasMovingDown || !o.mass)
                     {
                         // set ground object if landed on something
@@ -603,7 +604,7 @@ class EngineObject
                 if (!smallStepUp && (isBlockedX || !isBlockedY)) // resolve x collision
                 {
                     // push outside collision
-                    this.pos.x = o.pos.x + (sx*.5 + epsilon) * sign(oldPos.x - o.pos.x);
+                    this.pos.x = o.pos.x + (sx/2 + epsilon) * sign(oldPos.x - o.pos.x);
                     if (o.mass)
                     {
                         // inelastic collision
@@ -732,25 +733,25 @@ function destroyAllObjects()
     engineObjects = engineObjects.filter(o=>!o.destroyed);
 }
 
-function forEachObject(pos, size, callbackFunction, objectList=engineObjects)
+function forEachObject(pos, size, callbackFunction, objects=engineObjects)
 {
     if (!pos)
     {
         // all objects
-        for (const o of objectList)
+        for (const o of objects)
             callbackFunction(o);
     }
     else if (size.x != undefined)
     {
         // aabb test
-        for (const o of objectList)
+        for (const o of objects)
             isOverlapping(pos, size, o.pos, o.size) && callbackFunction(o);
     }
     else
     {
         // circle test
         const sizeSquared = size*size;
-        for (const o of objectList)
+        for (const o of objects)
             pos.distanceSquared(o.pos) < sizeSquared && callbackFunction(o);
     }
 }
@@ -846,7 +847,7 @@ function drawRectScreenSpace(pos, size, color, angle)
 // draw a colored line between two points
 function drawLine(posA, posB, thickness=.1, color)
 {
-    const halfDelta = vec2((posB.x - posA.x)*.5, (posB.y - posA.y)*.5);
+    const halfDelta = vec2((posB.x - posA.x)/2 (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);
     drawRect(posA.add(halfDelta), size, color, halfDelta.angle());
 }
@@ -1423,10 +1424,10 @@ const getTileCollisionData = (pos)=>
 // check if there is collision in a given area
 function tileCollisionTest(pos, size=vec2(), object)
 {
-    const minX = max(Math.floor(pos.x - size.x*.5), 0);
-    const minY = max(Math.floor(pos.y - size.y*.5), 0);
-    const maxX = min(Math.floor(pos.x + size.x*.5), tileCollisionSize.x-1);
-    const maxY = min(Math.floor(pos.y + size.y*.5), tileCollisionSize.y-1);
+    const minX = max(Math.floor(pos.x - size.x/2), 0);
+    const minY = max(Math.floor(pos.y - size.y/2), 0);
+    const maxX = min(Math.floor(pos.x + size.x/2), tileCollisionSize.x-1);
+    const maxY = min(Math.floor(pos.y + size.y/2), tileCollisionSize.y-1);
     for (let y = minY; y <= maxY; ++y)
     for (let x = minX; x <= maxX; ++x)
     {
@@ -1802,7 +1803,7 @@ class Particle extends EngineObject
         const p = min((time - this.spawnTime) / this.lifeTime, 1);
         const radius = this.sizeStart + p * this.sizeEndDelta;
         const size = new Vector2(radius, radius);
-        const fadeRate = this.fadeRate*.5;
+        const fadeRate = this.fadeRate/2;
         const color = new Color(
             this.colorStart.r + p * this.colorEndDelta.r,
             this.colorStart.g + p * this.colorEndDelta.g,
@@ -1820,7 +1821,7 @@ class Particle extends EngineObject
             const trailLength = speed * this.trailScale;
             size.y = max(size.x, trailLength);
             this.angle = direction.angle();
-            drawTile(this.pos.add(direction.multiply(vec2(0,-trailLength*.5))), size, this.tileIndex, this.tileSize, color, this.angle, this.mirror);
+            drawTile(this.pos.add(direction.multiply(vec2(0,-trailLength/2))), size, this.tileIndex, this.tileSize, color, this.angle, this.mirror);
         }
         else
             drawTile(this.pos, size, this.tileIndex, this.tileSize, color, this.angle, this.mirror);
@@ -2076,7 +2077,7 @@ function glInit()
 
     // create the canvas and tile texture
     glCanvas = document.createElement('canvas');
-    glContext = glCanvas.getContext('webgl');
+    glContext = glCanvas.getContext('webgl',  {antialias:!pixelated});
     glTileTexture = glCreateTexture(tileImage);
 
     if (glOverlay)

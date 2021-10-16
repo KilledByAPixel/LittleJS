@@ -25,6 +25,7 @@ const lerp          = (p, max=1, min=0)=> min + clamp(p) * (max-min);
 const formatTime    = (t)=>               (t/60|0)+':'+(t%60<10?'0':'')+(t%60|0);
 const isOverlapping = (pA, sA, pB, sB)=>  abs(pA.x - pB.x)*2 < sA.x + sB.x & abs(pA.y - pB.y)*2 < sA.y + sB.y;
 const nearestPowerOfTwo = (v)=>           2**Math.ceil(Math.log2(v));
+const wave          = (f=1,a=1,t=time)=>      a/2 * (1 - Math.cos(t*f*2*PI));
 
 // random functions
 const rand         = (a=1, b=0)=>              b + (a-b)*Math.random();

@@ -125,7 +125,7 @@ class EngineObject
                 if (smallStepUp || isBlockedY || !isBlockedX) // resolve y collision
                 {
                     // push outside object collision
-                    this.pos.y = o.pos.y + (sy*.5 + epsilon) * sign(oldPos.y - o.pos.y);
+                    this.pos.y = o.pos.y + (sy/2 + epsilon) * sign(oldPos.y - o.pos.y);
                     if (o.groundObject && wasMovingDown || !o.mass)
                     {
                         // set ground object if landed on something
@@ -156,7 +156,7 @@ class EngineObject
                 if (!smallStepUp && (isBlockedX || !isBlockedY)) // resolve x collision
                 {
                     // push outside collision
-                    this.pos.x = o.pos.x + (sx*.5 + epsilon) * sign(oldPos.x - o.pos.x);
+                    this.pos.x = o.pos.x + (sx/2 + epsilon) * sign(oldPos.x - o.pos.x);
                     if (o.mass)
                     {
                         // inelastic collision
@@ -285,25 +285,25 @@ function destroyAllObjects()
     engineObjects = engineObjects.filter(o=>!o.destroyed);
 }
 
-function forEachObject(pos, size, callbackFunction, objectList=engineObjects)
+function forEachObject(pos, size, callbackFunction, objects=engineObjects)
 {
     if (!pos)
     {
         // all objects
-        for (const o of objectList)
+        for (const o of objects)
             callbackFunction(o);
     }
     else if (size.x != undefined)
     {
         // aabb test
-        for (const o of objectList)
+        for (const o of objects)
             isOverlapping(pos, size, o.pos, o.size) && callbackFunction(o);
     }
     else
     {
         // circle test
         const sizeSquared = size*size;
-        for (const o of objectList)
+        for (const o of objects)
             pos.distanceSquared(o.pos) < sizeSquared && callbackFunction(o);
     }
 }

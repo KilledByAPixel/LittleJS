@@ -45,7 +45,7 @@ const debugCircle = (pos, radius=0, color='#fff', time=0, fill=0)=>
 const debugPoint = (pos, color, time, angle)=> debugRect(pos, 0, color, time, angle);
 const debugLine = (posA, posB, color, thickness=.1, time)=>
 {
-    const halfDelta = vec2((posB.x - posA.x)*.5, (posB.y - posA.y)*.5);
+    const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);
     debugRect(posA.add(halfDelta), size, color, time, halfDelta.angle(), 1);
 }

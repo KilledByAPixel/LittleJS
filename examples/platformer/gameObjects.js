@@ -277,14 +277,14 @@ class Bullet extends EngineObject
 
     update()
     {
-        super.update();
-
         // check if hit someone
         forEachObject(this.pos, this.size, (o)=>
         {
             if (o.isGameObject)
                 this.collideWithObject(o)
         });
+            
+        super.update();
 
         this.angle = this.velocity.angle();
         this.range -= this.velocity.length();

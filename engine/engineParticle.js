@@ -162,7 +162,7 @@ class Particle extends EngineObject
         const p = min((time - this.spawnTime) / this.lifeTime, 1);
         const radius = this.sizeStart + p * this.sizeEndDelta;
         const size = new Vector2(radius, radius);
-        const fadeRate = this.fadeRate*.5;
+        const fadeRate = this.fadeRate/2;
         const color = new Color(
             this.colorStart.r + p * this.colorEndDelta.r,
             this.colorStart.g + p * this.colorEndDelta.g,
@@ -180,7 +180,7 @@ class Particle extends EngineObject
             const trailLength = speed * this.trailScale;
             size.y = max(size.x, trailLength);
             this.angle = direction.angle();
-            drawTile(this.pos.add(direction.multiply(vec2(0,-trailLength*.5))), size, this.tileIndex, this.tileSize, color, this.angle, this.mirror);
+            drawTile(this.pos.add(direction.multiply(vec2(0,-trailLength/2))), size, this.tileIndex, this.tileSize, color, this.angle, this.mirror);
         }
         else
             drawTile(this.pos, size, this.tileIndex, this.tileSize, color, this.angle, this.mirror);

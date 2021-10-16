@@ -19,7 +19,7 @@ function glInit()
 
     // create the canvas and tile texture
     glCanvas = document.createElement('canvas');
-    glContext = glCanvas.getContext('webgl');
+    glContext = glCanvas.getContext('webgl',  {antialias:!pixelated});
     glTileTexture = glCreateTexture(tileImage);
 
     if (glOverlay)

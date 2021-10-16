@@ -34,10 +34,10 @@ const getTileCollisionData = (pos)=>
 // check if there is collision in a given area
 function tileCollisionTest(pos, size=vec2(), object)
 {
-    const minX = max(Math.floor(pos.x - size.x*.5), 0);
-    const minY = max(Math.floor(pos.y - size.y*.5), 0);
-    const maxX = min(Math.floor(pos.x + size.x*.5), tileCollisionSize.x-1);
-    const maxY = min(Math.floor(pos.y + size.y*.5), tileCollisionSize.y-1);
+    const minX = max(Math.floor(pos.x - size.x/2), 0);
+    const minY = max(Math.floor(pos.y - size.y/2), 0);
+    const maxX = min(Math.floor(pos.x + size.x/2), tileCollisionSize.x-1);
+    const maxY = min(Math.floor(pos.y + size.y/2), tileCollisionSize.y-1);
     for (let y = minY; y <= maxY; ++y)
     for (let x = minX; x <= maxX; ++x)
     {
