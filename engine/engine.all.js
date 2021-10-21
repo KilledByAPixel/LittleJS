@@ -1314,7 +1314,7 @@ function drawRectScreenSpace(pos, size, color, angle)
 // draw a colored line between two points
 function drawLine(posA, posB, thickness=.1, color)
 {
-    const halfDelta = vec2((posB.x - posA.x)/2 (posB.y - posA.y)/2);
+    const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);
     drawRect(posA.add(halfDelta), size, color, halfDelta.angle());
 }
