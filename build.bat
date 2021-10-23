@@ -54,7 +54,7 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 rem build the html
-echo ^<body^>^<script^> >> index.html
+echo ^<body^>^<meta charset=utf-8^>^<script^> >> index.html
 type roadroller_%BUILD_FILENAME% >> index.html
 echo ^</script^> >> index.html
 

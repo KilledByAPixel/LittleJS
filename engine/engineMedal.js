@@ -59,34 +59,41 @@ class Medal
 
     render(hidePercent=0)
     {
+        const context = overlayContext;
+        const x = overlayCanvas.width - medalDisplayWidth;
         const y = -medalDisplayHeight*hidePercent;
 
         // draw containing rect and clip to that region
-        const context = overlayContext;
         context.save();
         context.beginPath();
         context.fillStyle = '#ddd'
-        context.fill(context.rect(0, y, medalDisplayWidth, medalDisplayHeight));
+        context.fill(context.rect(x, y, medalDisplayWidth, medalDisplayHeight));
         context.strokeStyle = context.fillStyle = '#000';
         context.lineWidth = 2; 
         context.stroke();
         context.clip();
 
+        this.renderIcon(x+15, y);
+
+        // draw the text
+        context.textAlign = 'left';
+        context.fillText(this.name, x+medalDisplayIconSize+25, y+35);
+        context.font = '1.5em '+ defaultFont;
+        context.restore(context.fillText(this.description, x+medalDisplayIconSize+25, y+70));
+    }
+
+    renderIcon(x,y)
+    {
         // draw the image or icon
+        const context = overlayContext;
         context.textAlign = 'center';
         context.textBaseline = 'middle';
         context.font = '3em '+ defaultFont;
         if (this.image)
-            context.drawImage(this.image, 15, y+(medalDisplayHeight-medalDisplayIconSize)/2, 
+            context.drawImage(this.image, x, y+(medalDisplayHeight-medalDisplayIconSize)/2, 
                 medalDisplayIconSize, medalDisplayIconSize);
         else
-            context.fillText(this.icon, 15+medalDisplayIconSize/2, y+medalDisplayHeight/2); // show icon if there is no image
-
-        // draw the text
-        context.textAlign = 'left';
-        context.fillText(this.name, medalDisplayIconSize+25, y+35);
-        context.font = '1.5em '+ defaultFont;
-        context.restore(context.fillText(this.description, medalDisplayIconSize+25, y+70));
+            context.fillText(this.icon, x+medalDisplayIconSize/2, y+medalDisplayHeight/2); // show icon if there is no image
     }
 }
 
@@ -131,6 +138,9 @@ class Newgrounds
         // get session id from url search params
         const url = new URL(window.location.href);
         this.session_id = url.searchParams.get('ngio_session_id') || 0;
+
+        if (this.session_id == 0)
+            return; // only use newgrounds when logged in
 
         // get medals
         const medalsResult = this.call('Medal.getList');

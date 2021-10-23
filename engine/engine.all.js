@@ -55,6 +55,11 @@ const debugAABB = (pA, pB, sA, sB, color)=>
     const maxPos = vec2(max(pA.x + sA.x/2, pB.x + sB.x/2), max(pA.y + sA.y/2, pB.y + sB.y/2));
     debugRect(minPos.lerp(maxPos,.5), maxPos.subtract(minPos), color);
 }
+const debugText = (text='', pos, size=1, color='#fff', time=0, angle=0, font='monospace')=> 
+{
+    ASSERT(typeof color == 'string'); // pass in regular html strings as colors
+    debugPrimitives.push({text, pos, size, color, time:new Timer(time), angle, font});
+}
 
 const debugClear = ()=> debugPrimitives = [];
 
@@ -82,46 +87,23 @@ const debugUpdate = ()=>
         return;
         
     if (keyWasPressed(192)) // ~
-    {
         debugOverlay = !debugOverlay;
-    }
     if (keyWasPressed(49)) // 1
-    {
-        debugPhysics = !debugPhysics;
-        debugParticles = 0;
-    }
+        debugPhysics = !debugPhysics, debugParticles = 0;
     if (keyWasPressed(50)) // 2
-    {
-        debugParticles = !debugParticles;
-        debugPhysics = 0;
-    }
+        debugParticles = !debugParticles, debugPhysics = 0;
     if (keyWasPressed(51)) // 3
-    {
         godMode = !godMode;
-    }
     if (keyWasPressed(53)) // 5
-    {
         debugTakeScreenshot = 1;
-    }
-    if (keyWasPressed(54)) // 6
-    {
-        //debugToggleParticleEditor();
-        //debugPhysics = debugParticles = 0;
-    }
+    //if (keyWasPressed(54)) // 6
+    //    debugToggleParticleEditor();
     if (keyWasPressed(55)) // 7
-    {
         debugGamepads = !debugGamepads;
-    }
-    if (keyWasPressed(56)) // 8
-    {
-    }
-    if (keyWasPressed(57)) // 9
-    {
-    }
+    //if (keyWasPressed(56)) // 8
+    //if (keyWasPressed(57)) // 9
     if (keyWasPressed(48)) // 0
-    {
         showWatermark = !showWatermark;
-    }
 }
 
 const debugRender = ()=>
@@ -161,6 +143,7 @@ const debugRender = ()=>
                     const drawPos = centerPos.add(vec2(j*buttonScale*2, i*stickScale*3-stickScale-buttonScale));
                     const pressed = gamepad.buttons[j].pressed;
                     debugCircle(drawPos, buttonScale, pressed ? '#f00' : '#fff7', 0, 1);
+                    debugText(j, drawPos, .2);
                 }
             }
         }
@@ -230,36 +213,43 @@ const debugRender = ()=>
         // render debug rects
         overlayContext.lineWidth = 1;
         const pointSize = debugPointSize * cameraScale;
-        debugPrimitives.forEach(r=>
+        debugPrimitives.forEach(p=>
         {
             // create canvas transform from world space to screen space
-            const pos = worldToScreen(r.pos);
+            const pos = worldToScreen(p.pos);
             
             overlayContext.save();
             overlayContext.lineWidth = 2;
             overlayContext.translate(pos.x|0, pos.y|0);
-            overlayContext.rotate(r.angle);
-            overlayContext.fillStyle = overlayContext.strokeStyle = r.color;
+            overlayContext.rotate(p.angle);
+            overlayContext.fillStyle = overlayContext.strokeStyle = p.color;
 
-            if (r.size == 0 || r.size.x === 0 && r.size.y === 0 )
+            if (p.text != undefined)
+            {
+                overlayContext.font = p.size*cameraScale + 'px '+ p.font;
+                overlayContext.textAlign = 'center';
+                overlayContext.textBaseline = 'middle';
+                overlayContext.fillText(p.text, 0, 0);
+            }
+            else if (p.size == 0 || p.size.x === 0 && p.size.y === 0 )
             {
                 // point
-                overlayContext.fillRect(-pointSize/2, -1, pointSize, 3), 
+                overlayContext.fillRect(-pointSize/2, -1, pointSize, 3);
                 overlayContext.fillRect(-1, -pointSize/2, 3, pointSize);
             }
-            else if (r.size.x != undefined)
+            else if (p.size.x != undefined)
             {
                 // rect
-                const w = r.size.x*cameraScale|0, h = r.size.y*cameraScale|0;
-                r.fill && overlayContext.fillRect(-w/2|0, -h/2|0, w, h),
+                const w = p.size.x*cameraScale|0, h = p.size.y*cameraScale|0;
+                p.fill && overlayContext.fillRect(-w/2|0, -h/2|0, w, h);
                 overlayContext.strokeRect(-w/2|0, -h/2|0, w, h);
             }
             else
             {
                 // circle
                 overlayContext.beginPath();
-                overlayContext.arc(0, 0, r.size*cameraScale, 0, 9);
-                r.fill && overlayContext.fill();
+                overlayContext.arc(0, 0, p.size*cameraScale, 0, 9);
+                p.fill && overlayContext.fill();
                 overlayContext.stroke();
             }
 
@@ -528,7 +518,8 @@ const lerp          = (p, max=1, min=0)=> min + clamp(p) * (max-min);
 const formatTime    = (t)=>               (t/60|0)+':'+(t%60<10?'0':'')+(t%60|0);
 const isOverlapping = (pA, sA, pB, sB)=>  abs(pA.x - pB.x)*2 < sA.x + sB.x & abs(pA.y - pB.y)*2 < sA.y + sB.y;
 const nearestPowerOfTwo = (v)=>           2**Math.ceil(Math.log2(v));
-const wave          = (f=1,a=1,t=time)=>      a/2 * (1 - Math.cos(t*f*2*PI));
+const wave          = (f=1,a=1,t=time)=>  a/2 * (1 - Math.cos(t*f*2*PI));
+const smoothStep    = (p)=>               p * p * (3 - 2 * p);
 
 // random functions
 const rand         = (a=1, b=0)=>              b + (a-b)*Math.random();
@@ -734,7 +725,7 @@ const medalDisplayIconSize = 80;  // size of icon in medal display
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = '1.0.13';
+const engineVersion = '1.0.14';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 const tileImage = new Image(); // everything uses the same tile sheet
 
@@ -1354,6 +1345,28 @@ function drawText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new
 function setBlendMode(additive)
 {
     glEnable ? glSetBlendMode(additive) : mainContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// fullscreen mode
+
+const isFullscreen =()=> document.fullscreenElement;
+function toggleFullscreen()
+{
+    if (isFullscreen())
+    {
+        if (document.exitFullscreen)
+            document.exitFullscreen();
+        else if (document.mozCancelFullScreen)
+            document.mozCancelFullScreen();
+    }
+    else
+    {
+        if (document.body.webkitRequestFullScreen)
+            document.body.webkitRequestFullScreen();
+        else if (document.body.mozRequestFullScreen)
+            document.body.mozRequestFullScreen();
+    }
 }
 /*
     LittleJS Input System
@@ -2366,34 +2379,41 @@ class Medal
 
     render(hidePercent=0)
     {
+        const context = overlayContext;
+        const x = overlayCanvas.width - medalDisplayWidth;
         const y = -medalDisplayHeight*hidePercent;
 
         // draw containing rect and clip to that region
-        const context = overlayContext;
         context.save();
         context.beginPath();
         context.fillStyle = '#ddd'
-        context.fill(context.rect(0, y, medalDisplayWidth, medalDisplayHeight));
+        context.fill(context.rect(x, y, medalDisplayWidth, medalDisplayHeight));
         context.strokeStyle = context.fillStyle = '#000';
         context.lineWidth = 2; 
         context.stroke();
         context.clip();
 
+        this.renderIcon(x+15, y);
+
+        // draw the text
+        context.textAlign = 'left';
+        context.fillText(this.name, x+medalDisplayIconSize+25, y+35);
+        context.font = '1.5em '+ defaultFont;
+        context.restore(context.fillText(this.description, x+medalDisplayIconSize+25, y+70));
+    }
+
+    renderIcon(x,y)
+    {
         // draw the image or icon
+        const context = overlayContext;
         context.textAlign = 'center';
         context.textBaseline = 'middle';
         context.font = '3em '+ defaultFont;
         if (this.image)
-            context.drawImage(this.image, 15, y+(medalDisplayHeight-medalDisplayIconSize)/2, 
+            context.drawImage(this.image, x, y+(medalDisplayHeight-medalDisplayIconSize)/2, 
                 medalDisplayIconSize, medalDisplayIconSize);
         else
-            context.fillText(this.icon, 15+medalDisplayIconSize/2, y+medalDisplayHeight/2); // show icon if there is no image
-
-        // draw the text
-        context.textAlign = 'left';
-        context.fillText(this.name, medalDisplayIconSize+25, y+35);
-        context.font = '1.5em '+ defaultFont;
-        context.restore(context.fillText(this.description, medalDisplayIconSize+25, y+70));
+            context.fillText(this.icon, x+medalDisplayIconSize/2, y+medalDisplayHeight/2); // show icon if there is no image
     }
 }
 
@@ -2438,6 +2458,9 @@ class Newgrounds
         // get session id from url search params
         const url = new URL(window.location.href);
         this.session_id = url.searchParams.get('ngio_session_id') || 0;
+
+        if (this.session_id == 0)
+            return; // only use newgrounds when logged in
 
         // get medals
         const medalsResult = this.call('Medal.getList');

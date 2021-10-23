@@ -61,7 +61,8 @@ const lerp          = (p, max=1, min=0)=> min + clamp(p) * (max-min);
 const formatTime    = (t)=>               (t/60|0)+':'+(t%60<10?'0':'')+(t%60|0);
 const isOverlapping = (pA, sA, pB, sB)=>  abs(pA.x - pB.x)*2 < sA.x + sB.x & abs(pA.y - pB.y)*2 < sA.y + sB.y;
 const nearestPowerOfTwo = (v)=>           2**Math.ceil(Math.log2(v));
-const wave          = (f=1,a=1,t=time)=>      a/2 * (1 - Math.cos(t*f*2*PI));
+const wave          = (f=1,a=1,t=time)=>  a/2 * (1 - Math.cos(t*f*2*PI));
+const smoothStep    = (p)=>               p * p * (3 - 2 * p);
 
 // random functions
 const rand         = (a=1, b=0)=>              b + (a-b)*Math.random();
@@ -267,7 +268,7 @@ const medalDisplayIconSize = 80;  // size of icon in medal display
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = '1.0.13';
+const engineVersion = '1.0.14';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 const tileImage = new Image(); // everything uses the same tile sheet
 
@@ -887,6 +888,28 @@ function drawText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new
 function setBlendMode(additive)
 {
     glEnable ? glSetBlendMode(additive) : mainContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// fullscreen mode
+
+const isFullscreen =()=> document.fullscreenElement;
+function toggleFullscreen()
+{
+    if (isFullscreen())
+    {
+        if (document.exitFullscreen)
+            document.exitFullscreen();
+        else if (document.mozCancelFullScreen)
+            document.mozCancelFullScreen();
+    }
+    else
+    {
+        if (document.body.webkitRequestFullScreen)
+            document.body.webkitRequestFullScreen();
+        else if (document.body.mozRequestFullScreen)
+            document.body.mozRequestFullScreen();
+    }
 }
 /*
     LittleJS Input System
@@ -1899,34 +1922,41 @@ class Medal
 
     render(hidePercent=0)
     {
+        const context = overlayContext;
+        const x = overlayCanvas.width - medalDisplayWidth;
         const y = -medalDisplayHeight*hidePercent;
 
         // draw containing rect and clip to that region
-        const context = overlayContext;
         context.save();
         context.beginPath();
         context.fillStyle = '#ddd'
-        context.fill(context.rect(0, y, medalDisplayWidth, medalDisplayHeight));
+        context.fill(context.rect(x, y, medalDisplayWidth, medalDisplayHeight));
         context.strokeStyle = context.fillStyle = '#000';
         context.lineWidth = 2; 
         context.stroke();
         context.clip();
 
+        this.renderIcon(x+15, y);
+
+        // draw the text
+        context.textAlign = 'left';
+        context.fillText(this.name, x+medalDisplayIconSize+25, y+35);
+        context.font = '1.5em '+ defaultFont;
+        context.restore(context.fillText(this.description, x+medalDisplayIconSize+25, y+70));
+    }
+
+    renderIcon(x,y)
+    {
         // draw the image or icon
+        const context = overlayContext;
         context.textAlign = 'center';
         context.textBaseline = 'middle';
         context.font = '3em '+ defaultFont;
         if (this.image)
-            context.drawImage(this.image, 15, y+(medalDisplayHeight-medalDisplayIconSize)/2, 
+            context.drawImage(this.image, x, y+(medalDisplayHeight-medalDisplayIconSize)/2, 
                 medalDisplayIconSize, medalDisplayIconSize);
         else
-            context.fillText(this.icon, 15+medalDisplayIconSize/2, y+medalDisplayHeight/2); // show icon if there is no image
-
-        // draw the text
-        context.textAlign = 'left';
-        context.fillText(this.name, medalDisplayIconSize+25, y+35);
-        context.font = '1.5em '+ defaultFont;
-        context.restore(context.fillText(this.description, medalDisplayIconSize+25, y+70));
+            context.fillText(this.icon, x+medalDisplayIconSize/2, y+medalDisplayHeight/2); // show icon if there is no image
     }
 }
 
@@ -1971,6 +2001,9 @@ class Newgrounds
         // get session id from url search params
         const url = new URL(window.location.href);
         this.session_id = url.searchParams.get('ngio_session_id') || 0;
+
+        if (this.session_id == 0)
+            return; // only use newgrounds when logged in
 
         // get medals
         const medalsResult = this.call('Medal.getList');

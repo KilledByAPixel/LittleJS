@@ -55,6 +55,11 @@ const debugAABB = (pA, pB, sA, sB, color)=>
     const maxPos = vec2(max(pA.x + sA.x/2, pB.x + sB.x/2), max(pA.y + sA.y/2, pB.y + sB.y/2));
     debugRect(minPos.lerp(maxPos,.5), maxPos.subtract(minPos), color);
 }
+const debugText = (text='', pos, size=1, color='#fff', time=0, angle=0, font='monospace')=> 
+{
+    ASSERT(typeof color == 'string'); // pass in regular html strings as colors
+    debugPrimitives.push({text, pos, size, color, time:new Timer(time), angle, font});
+}
 
 const debugClear = ()=> debugPrimitives = [];
 
@@ -82,46 +87,23 @@ const debugUpdate = ()=>
         return;
         
     if (keyWasPressed(192)) // ~
-    {
         debugOverlay = !debugOverlay;
-    }
     if (keyWasPressed(49)) // 1
-    {
-        debugPhysics = !debugPhysics;
-        debugParticles = 0;
-    }
+        debugPhysics = !debugPhysics, debugParticles = 0;
     if (keyWasPressed(50)) // 2
-    {
-        debugParticles = !debugParticles;
-        debugPhysics = 0;
-    }
+        debugParticles = !debugParticles, debugPhysics = 0;
     if (keyWasPressed(51)) // 3
-    {
         godMode = !godMode;
-    }
     if (keyWasPressed(53)) // 5
-    {
         debugTakeScreenshot = 1;
-    }
-    if (keyWasPressed(54)) // 6
-    {
-        //debugToggleParticleEditor();
-        //debugPhysics = debugParticles = 0;
-    }
+    //if (keyWasPressed(54)) // 6
+    //    debugToggleParticleEditor();
     if (keyWasPressed(55)) // 7
-    {
         debugGamepads = !debugGamepads;
-    }
-    if (keyWasPressed(56)) // 8
-    {
-    }
-    if (keyWasPressed(57)) // 9
-    {
-    }
+    //if (keyWasPressed(56)) // 8
+    //if (keyWasPressed(57)) // 9
     if (keyWasPressed(48)) // 0
-    {
         showWatermark = !showWatermark;
-    }
 }
 
 const debugRender = ()=>
@@ -161,6 +143,7 @@ const debugRender = ()=>
                     const drawPos = centerPos.add(vec2(j*buttonScale*2, i*stickScale*3-stickScale-buttonScale));
                     const pressed = gamepad.buttons[j].pressed;
                     debugCircle(drawPos, buttonScale, pressed ? '#f00' : '#fff7', 0, 1);
+                    debugText(j, drawPos, .2);
                 }
             }
         }
@@ -230,36 +213,43 @@ const debugRender = ()=>
         // render debug rects
         overlayContext.lineWidth = 1;
         const pointSize = debugPointSize * cameraScale;
-        debugPrimitives.forEach(r=>
+        debugPrimitives.forEach(p=>
         {
             // create canvas transform from world space to screen space
-            const pos = worldToScreen(r.pos);
+            const pos = worldToScreen(p.pos);
             
             overlayContext.save();
             overlayContext.lineWidth = 2;
             overlayContext.translate(pos.x|0, pos.y|0);
-            overlayContext.rotate(r.angle);
-            overlayContext.fillStyle = overlayContext.strokeStyle = r.color;
+            overlayContext.rotate(p.angle);
+            overlayContext.fillStyle = overlayContext.strokeStyle = p.color;
 
-            if (r.size == 0 || r.size.x === 0 && r.size.y === 0 )
+            if (p.text != undefined)
+            {
+                overlayContext.font = p.size*cameraScale + 'px '+ p.font;
+                overlayContext.textAlign = 'center';
+                overlayContext.textBaseline = 'middle';
+                overlayContext.fillText(p.text, 0, 0);
+            }
+            else if (p.size == 0 || p.size.x === 0 && p.size.y === 0 )
             {
                 // point
-                overlayContext.fillRect(-pointSize/2, -1, pointSize, 3), 
+                overlayContext.fillRect(-pointSize/2, -1, pointSize, 3);
                 overlayContext.fillRect(-1, -pointSize/2, 3, pointSize);
             }
-            else if (r.size.x != undefined)
+            else if (p.size.x != undefined)
             {
                 // rect
-                const w = r.size.x*cameraScale|0, h = r.size.y*cameraScale|0;
-                r.fill && overlayContext.fillRect(-w/2|0, -h/2|0, w, h),
+                const w = p.size.x*cameraScale|0, h = p.size.y*cameraScale|0;
+                p.fill && overlayContext.fillRect(-w/2|0, -h/2|0, w, h);
                 overlayContext.strokeRect(-w/2|0, -h/2|0, w, h);
             }
             else
             {
                 // circle
                 overlayContext.beginPath();
-                overlayContext.arc(0, 0, r.size*cameraScale, 0, 9);
-                r.fill && overlayContext.fill();
+                overlayContext.arc(0, 0, p.size*cameraScale, 0, 9);
+                p.fill && overlayContext.fill();
                 overlayContext.stroke();
             }
 

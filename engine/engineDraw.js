@@ -131,3 +131,25 @@ function setBlendMode(additive)
 {
     glEnable ? glSetBlendMode(additive) : mainContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// fullscreen mode
+
+const isFullscreen =()=> document.fullscreenElement;
+function toggleFullscreen()
+{
+    if (isFullscreen())
+    {
+        if (document.exitFullscreen)
+            document.exitFullscreen();
+        else if (document.mozCancelFullScreen)
+            document.mozCancelFullScreen();
+    }
+    else
+    {
+        if (document.body.webkitRequestFullScreen)
+            document.body.webkitRequestFullScreen();
+        else if (document.body.mozRequestFullScreen)
+            document.body.mozRequestFullScreen();
+    }
+}
