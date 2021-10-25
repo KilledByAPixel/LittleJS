@@ -254,7 +254,7 @@ function drawStars()
             (randSeeded(w)+time*speed)%w-extraSpace,
             (randSeeded(h)+time*speed*randSeeded())%h-extraSpace);
 
-        if (lowGraphicsMode)
+        if (glOverlay)
         {
             // drawing stars with gl is too slow in low graphics mode, just draw rects
             mainContext.fillStyle = color.rgba();
