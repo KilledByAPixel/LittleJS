@@ -233,7 +233,7 @@ const copyWASDToDpad = 1;              // allow players to use WASD as direction
 // audio config
 
 const soundEnable = 1;        // all audio can be disabled
-let audioVolume = .3;         // volume for sound, music and speech
+let audioVolume = .5;         // volume for sound, music and speech
 const defaultSoundRange = 30; // range where sound no longer plays
 const defaultSoundTaper = .7; // what range percent to start tapering off sound 0-1
 
@@ -268,7 +268,7 @@ const medalDisplayIconSize = 80;  // size of icon in medal display
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = '1.0.14';
+const engineVersion = '1.0.15';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 const tileImage = new Image(); // everything uses the same tile sheet
 
@@ -975,6 +975,7 @@ onkeydown = e=>
     if (debug && e.target != document.body) return;
     e.repeat || (inputData[usingGamepad = 0][remapKeyCode(e.keyCode)] = 3);
     hadInput = 1;
+    debug || e.preventDefault();
 }
 onkeyup = e=>
 {
@@ -985,7 +986,7 @@ const remapKeyCode = c=> copyWASDToDpad ? c==87?38 : c==83?40 : c==65?37 : c==68
 
 ///////////////////////////////////////////////////////////////////////////////
 // mouse event handlers
-onmousedown = e=> (inputData[usingGamepad = 0][e.button] = 3, hadInput = 1, onmousemove(e));
+onmousedown = e=> {inputData[usingGamepad = 0][e.button] = 3; hadInput = 1; onmousemove(e); e.button && e.preventDefault();}
 onmouseup   = e=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
 onmousemove = e=>
 {
@@ -1936,27 +1937,28 @@ class Medal
         context.stroke();
         context.clip();
 
-        this.renderIcon(x+15, y);
+        this.renderIcon(x+15+medalDisplayIconSize/2, y+medalDisplayHeight/2);
 
         // draw the text
         context.textAlign = 'left';
+        context.font = '3em '+ defaultFont;
         context.fillText(this.name, x+medalDisplayIconSize+25, y+35);
         context.font = '1.5em '+ defaultFont;
         context.restore(context.fillText(this.description, x+medalDisplayIconSize+25, y+70));
     }
 
-    renderIcon(x,y)
+    renderIcon(x, y, size=medalDisplayIconSize)
     {
         // draw the image or icon
         const context = overlayContext;
         context.textAlign = 'center';
         context.textBaseline = 'middle';
-        context.font = '3em '+ defaultFont;
+        context.font = size*.6 + 'px '+ defaultFont;
+        context.fillStyle = '#000';
         if (this.image)
-            context.drawImage(this.image, x, y+(medalDisplayHeight-medalDisplayIconSize)/2, 
-                medalDisplayIconSize, medalDisplayIconSize);
+            context.drawImage(this.image, x-size/2, y-size/2, size, size);
         else
-            context.fillText(this.icon, x+medalDisplayIconSize/2, y+medalDisplayHeight/2); // show icon if there is no image
+            context.fillText(this.icon, x, y); // show icon if there is no image
     }
 }
 
@@ -1994,6 +1996,7 @@ class Newgrounds
         ASSERT(!newgrounds && app_id);
         this.app_id = app_id;
         this.cipher = cipher;
+        this.host = location ? location.hostname : '';
 
         // create an instance of CryptoJS for encrypted calls
         cipher && (this.cryptoJS = CryptoJS());
@@ -2015,11 +2018,16 @@ class Newgrounds
             if (medal)
             {
                 // copy newgrounds medal data
-                medal.name = newgroundsMedal['name'];
+                medal.image =       new Image();
+                medal.image.src =   newgroundsMedal['icon'];
+                medal.name =        newgroundsMedal['name'];
                 medal.description = newgroundsMedal['description'];
-                medal.unlocked = newgroundsMedal['unlocked'];
-                medal.image = new Image();
-                medal.image.src = newgroundsMedal['icon'];
+                medal.unlocked =    newgroundsMedal['unlocked'];
+                medal.difficulty =  newgroundsMedal['difficulty'];
+                medal.value =       newgroundsMedal['value'];
+
+                if (medal.value)
+                    medal.description = medal.description + ' (' + medal.value + ')';
             }
         }
     
@@ -2029,22 +2037,13 @@ class Newgrounds
         debugMedals && console.log(this.scoreboards);
     }
 
-    unlockMedal(id)
-    {
-        return this.call('Medal.unlock', {'id':id}, 1);
-    }
-
-    postScore(id, value)
-    {
-        return this.call('ScoreBoard.postScore', {'id':id, 'value':value}, 1);
-    }
+    unlockMedal(id) { return this.call('Medal.unlock', {'id':id}, 1); }
+    postScore(id, value) { return this.call('ScoreBoard.postScore', {'id':id, 'value':value}, 1); }
+    logView() { return this.call('App.logView', {'host':this.host}, 1); }
 
     getScores(id, user=0, social=0, skip=0, limit=10)
-    {
-        return this.call('ScoreBoard.getScores', 
-            {'id':id, 'user':user, 'social':social, 'skip':skip, 'limit':limit});
-    }
-    
+    { return this.call('ScoreBoard.getScores', {'id':id, 'user':user, 'social':social, 'skip':skip, 'limit':limit}); }
+
     call(component, parameters=0, async=0)
     {
         // build the input object

@@ -112,6 +112,11 @@ const debugRender = ()=>
 
     if (debugTakeScreenshot)
     {
+        // composite canvas
+        glCopyToContext(mainContext, 1);
+        mainContext.drawImage(overlayCanvas, 0, 0);
+        overlayCanvas.width |= 0;
+
         debugSaveCanvas(mainCanvas);
         debugTakeScreenshot = 0;
     }

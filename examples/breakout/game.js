@@ -6,6 +6,8 @@
 
 let levelSize, ball, paddle, score, blockCount;
 
+glOverlay = 1; // use gl overlay for faster rendering
+
 // sound effects
 const sound_start      = new Sound([,0,500,,.04,.3,1,2,,,570,.02,.02,,,,.04]);
 const sound_breakBlock = new Sound([,,90,,.01,.03,4,,,,,,,9,50,.2,,.2,.01], 0);

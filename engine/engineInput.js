@@ -62,6 +62,7 @@ onkeydown = e=>
     if (debug && e.target != document.body) return;
     e.repeat || (inputData[usingGamepad = 0][remapKeyCode(e.keyCode)] = 3);
     hadInput = 1;
+    debug || e.preventDefault();
 }
 onkeyup = e=>
 {
@@ -72,7 +73,7 @@ const remapKeyCode = c=> copyWASDToDpad ? c==87?38 : c==83?40 : c==65?37 : c==68
 
 ///////////////////////////////////////////////////////////////////////////////
 // mouse event handlers
-onmousedown = e=> (inputData[usingGamepad = 0][e.button] = 3, hadInput = 1, onmousemove(e));
+onmousedown = e=> {inputData[usingGamepad = 0][e.button] = 3; hadInput = 1; onmousemove(e); e.button && e.preventDefault();}
 onmouseup   = e=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
 onmousemove = e=>
 {

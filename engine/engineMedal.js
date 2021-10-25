@@ -73,27 +73,28 @@ class Medal
         context.stroke();
         context.clip();
 
-        this.renderIcon(x+15, y);
+        this.renderIcon(x+15+medalDisplayIconSize/2, y+medalDisplayHeight/2);
 
         // draw the text
         context.textAlign = 'left';
+        context.font = '3em '+ defaultFont;
         context.fillText(this.name, x+medalDisplayIconSize+25, y+35);
         context.font = '1.5em '+ defaultFont;
         context.restore(context.fillText(this.description, x+medalDisplayIconSize+25, y+70));
     }
 
-    renderIcon(x,y)
+    renderIcon(x, y, size=medalDisplayIconSize)
     {
         // draw the image or icon
         const context = overlayContext;
         context.textAlign = 'center';
         context.textBaseline = 'middle';
-        context.font = '3em '+ defaultFont;
+        context.font = size*.6 + 'px '+ defaultFont;
+        context.fillStyle = '#000';
         if (this.image)
-            context.drawImage(this.image, x, y+(medalDisplayHeight-medalDisplayIconSize)/2, 
-                medalDisplayIconSize, medalDisplayIconSize);
+            context.drawImage(this.image, x-size/2, y-size/2, size, size);
         else
-            context.fillText(this.icon, x+medalDisplayIconSize/2, y+medalDisplayHeight/2); // show icon if there is no image
+            context.fillText(this.icon, x, y); // show icon if there is no image
     }
 }
 
@@ -131,6 +132,7 @@ class Newgrounds
         ASSERT(!newgrounds && app_id);
         this.app_id = app_id;
         this.cipher = cipher;
+        this.host = location ? location.hostname : '';
 
         // create an instance of CryptoJS for encrypted calls
         cipher && (this.cryptoJS = CryptoJS());
@@ -152,11 +154,16 @@ class Newgrounds
             if (medal)
             {
                 // copy newgrounds medal data
-                medal.name = newgroundsMedal['name'];
+                medal.image =       new Image();
+                medal.image.src =   newgroundsMedal['icon'];
+                medal.name =        newgroundsMedal['name'];
                 medal.description = newgroundsMedal['description'];
-                medal.unlocked = newgroundsMedal['unlocked'];
-                medal.image = new Image();
-                medal.image.src = newgroundsMedal['icon'];
+                medal.unlocked =    newgroundsMedal['unlocked'];
+                medal.difficulty =  newgroundsMedal['difficulty'];
+                medal.value =       newgroundsMedal['value'];
+
+                if (medal.value)
+                    medal.description = medal.description + ' (' + medal.value + ')';
             }
         }
     
@@ -166,22 +173,13 @@ class Newgrounds
         debugMedals && console.log(this.scoreboards);
     }
 
-    unlockMedal(id)
-    {
-        return this.call('Medal.unlock', {'id':id}, 1);
-    }
-
-    postScore(id, value)
-    {
-        return this.call('ScoreBoard.postScore', {'id':id, 'value':value}, 1);
-    }
+    unlockMedal(id) { return this.call('Medal.unlock', {'id':id}, 1); }
+    postScore(id, value) { return this.call('ScoreBoard.postScore', {'id':id, 'value':value}, 1); }
+    logView() { return this.call('App.logView', {'host':this.host}, 1); }
 
     getScores(id, user=0, social=0, skip=0, limit=10)
-    {
-        return this.call('ScoreBoard.getScores', 
-            {'id':id, 'user':user, 'social':social, 'skip':skip, 'limit':limit});
-    }
-    
+    { return this.call('ScoreBoard.getScores', {'id':id, 'user':user, 'social':social, 'skip':skip, 'limit':limit}); }
+
     call(component, parameters=0, async=0)
     {
         // build the input object

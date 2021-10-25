@@ -6,7 +6,7 @@
 
 'use strict';
 
-glOverlay = !isChrome; // fix slow rendering when not chrome
+glOverlay = 1; // use gl overlay for faster rendering
 pixelated = 0; // do not use pixelated rendering
 
 const fallTime = .2;
@@ -216,8 +216,8 @@ function gameRender()
 function gameRenderPost()
 {
     // draw text on top of everything
-    drawText('Score: ' + score,    cameraPos.add(vec2(-3,-3)), .9, new Color, .1);
-    drawText('Best: ' + bestScore, cameraPos.add(vec2( 3,-3)), .9, new Color, .1);
+    drawText('Score: ' + score,    cameraPos.add(vec2(-3,-3.1)), .9, new Color, .1);
+    drawText('Best: ' + bestScore, cameraPos.add(vec2( 3,-3.1)), .9, new Color, .1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

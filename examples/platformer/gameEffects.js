@@ -235,7 +235,7 @@ function drawStars()
     // draw stars and planets
     randSeed = skySeed;
     const largeStarCount = 9;
-    for (let i = lowGraphicsSettings ? 400 : 1e3; i--;)
+    for (let i = lowGraphicsMode ? 400 : 1e3; i--;)
     {
         let size = randSeeded(6, 1);
         let speed = randSeeded() < .9 ? randSeeded(5) : randSeeded(99,9);
@@ -254,7 +254,7 @@ function drawStars()
             (randSeeded(w)+time*speed)%w-extraSpace,
             (randSeeded(h)+time*speed*randSeeded())%h-extraSpace);
 
-        if (lowGraphicsSettings)
+        if (lowGraphicsMode)
         {
             // drawing stars with gl is too slow in low graphics mode, just draw rects
             mainContext.fillStyle = color.rgba();

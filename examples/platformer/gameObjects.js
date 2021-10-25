@@ -217,7 +217,7 @@ class Weapon extends EngineObject
             3, .1, .1, .15, .1, // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
             1, .95, 1, 0, 0,    // damping, angleDamping, gravityScale, particleCone, fadeRate, 
             .1, 1              // randomness, collide, additive, randomColorLinear, renderOrder
-        ));
+        ), vec2(.1,0), -.8);
         this.shellEmitter.elasticity = .5;
         this.shellEmitter.particleDestroyCallback = persistentParticleDestroyCallback;
     }
@@ -247,7 +247,6 @@ class Weapon extends EngineObject
                 new Bullet(this.pos, this.parent, velocity, this.damage);
 
                 // spawn shell particle
-                this.shellEmitter.localAngle = -.8*this.getMirrorSign();
                 this.shellEmitter.emitParticle();
             }
         }
