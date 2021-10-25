@@ -202,6 +202,9 @@ class EngineObject
                         // push out of collision and bounce
                         this.pos.y = oldPos.y;
                         this.velocity.y *= -this.elasticity;
+                        
+                        // allow it to get slightly closer to the ground next time
+                        this.velocity.y -= .9 * gravity * this.gravityScale / this.damping;
                     }
                     if (isBlockedX)
                     {

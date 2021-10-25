@@ -268,7 +268,7 @@ const medalDisplayIconSize = 80;  // size of icon in medal display
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = '1.0.15';
+const engineVersion = '1.0.16';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 const tileImage = new Image(); // everything uses the same tile sheet
 
@@ -651,6 +651,9 @@ class EngineObject
                         // push out of collision and bounce
                         this.pos.y = oldPos.y;
                         this.velocity.y *= -this.elasticity;
+                        
+                        // allow it to get slightly closer to the ground next time
+                        this.velocity.y -= .9 * gravity * this.gravityScale / this.damping;
                     }
                     if (isBlockedX)
                     {
