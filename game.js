@@ -4,8 +4,6 @@
 
 'use strict';
 
-glOverlay = 1; // use gl overlay for faster rendering
-
 // game variables
 let particleEmiter, clickCount = 0;
 

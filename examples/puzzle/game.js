@@ -6,7 +6,6 @@
 
 'use strict';
 
-glOverlay = 1; // use gl overlay for faster rendering
 pixelated = 0; // do not use pixelated rendering
 
 const fallTime = .2;

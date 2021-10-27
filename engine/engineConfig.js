@@ -25,7 +25,7 @@ let pixelated = 1;                // use crisp pixels for pixel art
 // webgl config
 
 const glEnable = 1; // can run without gl (texured coloring will be disabled)
-let glOverlay = 0;  // fix slow rendering in some browsers by not compositing the WebGL canvas
+let glOverlay = 1;  // fix slow rendering in some browsers by not compositing the WebGL canvas
 
 ///////////////////////////////////////////////////////////////////////////////
 // object config

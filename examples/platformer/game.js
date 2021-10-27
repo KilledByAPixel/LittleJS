@@ -5,9 +5,6 @@
 
 'use strict';
 
-const lowGraphicsMode = !isChrome; // fix slow rendering when not chrome
-glOverlay = 1; // use gl overlay for faster rendering
-
 let score, deaths;
 
 ///////////////////////////////////////////////////////////////////////////////
