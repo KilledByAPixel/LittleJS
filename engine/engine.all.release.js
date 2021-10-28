@@ -213,7 +213,7 @@ let glOverlay = 1;  // fix slow rendering in some browsers by not compositing th
 ///////////////////////////////////////////////////////////////////////////////
 // object config
 
-const defaultObjectSize = vec2(.999);  // size of objecs, tiny bit less then 1 to fit in holes
+const defaultObjectSize = vec2(1);     // size of objecs
 const defaultObjectMass = 1;           // how heavy are objects for collison calcuations
 const defaultObjectDamping = .99;      // how much to slow velocity by each frame 0-1
 const defaultObjectAngleDamping = .99; // how much to slow angular velocity each frame 0-1
@@ -268,7 +268,7 @@ const medalDisplayIconSize = 80;  // size of icon in medal display
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = '1.0.17';
+const engineVersion = '1.1.0';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 const tileImage = new Image(); // everything uses the same tile sheet
 
@@ -648,16 +648,20 @@ class EngineObject
                         // set if landed on ground
                         this.groundObject = wasMovingDown;
 
-                        // push out of collision and bounce
-                        this.pos.y = oldPos.y;
+                        // bounce velocity
                         this.velocity.y *= -this.elasticity;
-                        
-                        // allow it to get slightly closer to the ground next time
-                        this.velocity.y -= .9 * gravity * this.gravityScale / this.damping;
+
+                        // adjust next velocity to settle on ground
+                        const o = (oldPos.y - this.size.y/2|0) - (oldPos.y - this.size.y/2);
+                        if (o < 0 && o > -1 && o > this.damping * this.velocity.y + gravity * this.gravityScale) 
+                            this.velocity.y = this.damping ? (o - gravity * this.gravityScale) / this.damping : 0;
+
+                        // move to previous position
+                        this.pos.y = oldPos.y;
                     }
                     if (isBlockedX)
                     {
-                        // push out of collision and bounce
+                        // move to previous position and bounce
                         this.pos.x = oldPos.x;
                         this.velocity.x *= -this.elasticity;
                     }
@@ -1453,10 +1457,10 @@ function tileCollisionTest(pos, size=vec2(), object)
 {
     const minX = max(Math.floor(pos.x - size.x/2), 0);
     const minY = max(Math.floor(pos.y - size.y/2), 0);
-    const maxX = min(Math.floor(pos.x + size.x/2), tileCollisionSize.x-1);
-    const maxY = min(Math.floor(pos.y + size.y/2), tileCollisionSize.y-1);
-    for (let y = minY; y <= maxY; ++y)
-    for (let x = minX; x <= maxX; ++x)
+    const maxX = min(pos.x + size.x/2, tileCollisionSize.x-1);
+    const maxY = min(pos.y + size.y/2, tileCollisionSize.y-1);
+    for (let y = minY; y < maxY; ++y)
+    for (let x = minX; x < maxX; ++x)
     {
         const tileData = tileCollision[y*tileCollisionSize.x+x];
         if (tileData && (!object || object.collideWithTile(tileData, new Vector2(x, y))))

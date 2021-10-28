@@ -30,7 +30,7 @@ let glOverlay = 1;  // fix slow rendering in some browsers by not compositing th
 ///////////////////////////////////////////////////////////////////////////////
 // object config
 
-const defaultObjectSize = vec2(.999);  // size of objecs, tiny bit less then 1 to fit in holes
+const defaultObjectSize = vec2(1);     // size of objecs
 const defaultObjectMass = 1;           // how heavy are objects for collison calcuations
 const defaultObjectDamping = .99;      // how much to slow velocity by each frame 0-1
 const defaultObjectAngleDamping = .99; // how much to slow angular velocity each frame 0-1

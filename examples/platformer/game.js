@@ -32,8 +32,8 @@ function gameUpdate()
     // mouse wheel = zoom
     cameraScale = clamp(cameraScale*(1-mouseWheel/10), 1e3, 1);
     
-    // C = drop crate
-    if (keyWasPressed(67))
+    // T = drop test crate
+    if (keyWasPressed(84))
         new Crate(mousePos);
     
     // E = drop enemy

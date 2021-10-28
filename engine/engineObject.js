@@ -199,16 +199,20 @@ class EngineObject
                         // set if landed on ground
                         this.groundObject = wasMovingDown;
 
-                        // push out of collision and bounce
-                        this.pos.y = oldPos.y;
+                        // bounce velocity
                         this.velocity.y *= -this.elasticity;
-                        
-                        // allow it to get slightly closer to the ground next time
-                        this.velocity.y -= .9 * gravity * this.gravityScale / this.damping;
+
+                        // adjust next velocity to settle on ground
+                        const o = (oldPos.y - this.size.y/2|0) - (oldPos.y - this.size.y/2);
+                        if (o < 0 && o > -1 && o > this.damping * this.velocity.y + gravity * this.gravityScale) 
+                            this.velocity.y = this.damping ? (o - gravity * this.gravityScale) / this.damping : 0;
+
+                        // move to previous position
+                        this.pos.y = oldPos.y;
                     }
                     if (isBlockedX)
                     {
-                        // push out of collision and bounce
+                        // move to previous position and bounce
                         this.pos.x = oldPos.x;
                         this.velocity.x *= -this.elasticity;
                     }
