@@ -208,7 +208,7 @@ let pixelated = 1;                // use crisp pixels for pixel art
 // webgl config
 
 const glEnable = 1; // can run without gl (texured coloring will be disabled)
-let glOverlay = 0;  // fix slow rendering in some browsers by not compositing the WebGL canvas
+let glOverlay = 1;  // fix slow rendering in some browsers by not compositing the WebGL canvas
 
 ///////////////////////////////////////////////////////////////////////////////
 // object config
@@ -268,7 +268,7 @@ const medalDisplayIconSize = 80;  // size of icon in medal display
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = '1.0.16';
+const engineVersion = '1.0.17';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 const tileImage = new Image(); // everything uses the same tile sheet
 
