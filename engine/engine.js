@@ -21,7 +21,7 @@
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = '1.1.0';
+const engineVersion = '1.1.1';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 const tileImage = new Image(); // everything uses the same tile sheet
 

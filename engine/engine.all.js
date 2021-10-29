@@ -730,7 +730,7 @@ const medalDisplayIconSize = 80;  // size of icon in medal display
 'use strict';
 
 const engineName = 'LittleJS';
-const engineVersion = '1.1.0';
+const engineVersion = '1.1.1';
 const FPS = 60, timeDelta = 1/FPS; // engine uses a fixed time step
 const tileImage = new Image(); // everything uses the same tile sheet
 
@@ -1966,7 +1966,7 @@ function tileCollisionRaycast(posStart, posEnd, object)
 
 class TileLayerData
 {
-    constructor(tile=-1, direction=0, mirror=0, color=new Color)
+    constructor(tile, direction=0, mirror=0, color=new Color)
     {
         this.tile      = tile;
         this.direction = direction;
@@ -2081,10 +2081,13 @@ class TileLayer extends EngineObject
         const pos = layerPos.int().add(this.pos).add(vec2(.5));
         this.drawCanvas2D(pos, vec2(1), 0, 0, (context)=>context.clearRect(-.5, -.5, 1, 1));
 
-        // draw the tile
+        // draw the tile if not undefined
         const d = this.getData(layerPos);
-        ASSERT(d.tile < 0 || mainContext == this.context); // must call redrawStart() before drawing tiles
-        d.tile < 0 || drawTile(pos, vec2(1), d.tile || -1, this.tileSize, d.color, d.direction*PI/2, d.mirror);
+        if (d.tile != undefined)
+        {
+            ASSERT(mainContext == this.context); // must call redrawStart() before drawing tiles
+            drawTile(pos, vec2(1), d.tile, this.tileSize, d.color, d.direction*PI/2, d.mirror);
+        }
     }
 
     drawAllTileData()
