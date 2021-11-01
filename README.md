@@ -28,7 +28,7 @@ LittleJS is a super lightweight 2D JavaScript game engine with fast WebGL render
 - Easily build a Windows executable with [electron](https://www.electronjs.org/) for distribution on platforms like Steam
 - Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used to make commercial games
 
-## Example Starter Projects
+## Example Projects
 
 ### [Hello World](https://killedbyapixel.github.io/LittleJS/) - Clean project with only a few things to get you started
 ### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle) - Match 3 puzzle game with HD rendering and high score tracking
