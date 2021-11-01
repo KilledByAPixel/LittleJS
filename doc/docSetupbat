@@ -1,4 +1,0 @@
-rem Install these tools to build LittleJS documentation
-
-call npm install -g jsdoc
-call npm install clean-jsdoc-theme

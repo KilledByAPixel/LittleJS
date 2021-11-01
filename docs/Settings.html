@@ -1,0 +1,2885 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Adding favicon -->
+    
+    <link rel="icon" href="../favicon.png" />
+    
+
+    <!-- Adding meta -->
+    
+
+    <!-- Adding external script-->
+    
+
+    <!-- Adding external style-->
+    
+
+    <!-- Adding scripts-->
+    
+
+    <!-- Adding style-->
+    
+
+    <!-- Adding overlay script-->
+    
+
+    <!-- Adding overlay style-->
+    
+
+
+    <title>
+      Settings
+    </title>
+
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/third-party/ionicons.min.css">
+    <link type="text/css" rel="stylesheet" href="styles/third-party/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/reset.css">
+    <link type="text/css" rel="stylesheet" href="styles/clean-jsdoc-theme-base.css">
+    <link type="text/css" rel="stylesheet" href="styles/clean-jsdoc-theme-dark.css">
+    
+    <svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+    style="display:none">
+    <defs>
+        <symbol id="copy-icon" viewbox="0 0 488.3 488.3">
+            <g>
+                <path
+                    d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z" />
+                <path
+                    d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z" />
+            </g>
+        </symbol>
+        <symbol id='search-icon' viewBox="0 0 512 512">
+            <g>
+                <g>
+                    <path
+                        d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z" />
+                </g>
+            </g>
+            <g>
+                <g>
+                    <path
+                        d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z" />
+                </g>
+            </g>
+        </symbol>
+        <symbol id="down-icon" viewBox="0 0 16 16">
+            <path 
+                fill-rule="evenodd" 
+                clip-rule="evenodd" 
+                d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"
+            >
+            </path>
+        </symbol>
+    </defs>
+</svg>
+  </head>
+
+  <body>
+
+    <nav class="navbar" id="navbar">
+      <div class="navbar-heading" id="navbar-heading"><a href="index.html"><h2 class="navbar-heading-text">LittleJS - The Tiny JavaScript Game Engine That Can!</h2></a></div><div class="search-box" id="search-box"><div class="search-box-input-container"><input class="search-box-input" type="text" placeholder="Search..." id="search-box-input" /><svg class="search-icon" alt="search-icon"><use xlink:href="#search-icon"></use></svg></div><div class="search-item-container" id="search-item-container"><ul class="search-item-ul" id="search-item-ul"></ul></div></div><div class="sidebar-main-content" id="sidebar-main-content"><div class="accordion collapsed" id="4646111" > <h3 class="accordion-heading">Classes<svg><use xlink:href="#down-icon"></use></svg></h3><ul class="accordion-content"><li class="accordion collapsed child" id=9646568><div class="accordion-heading child"><a href="Color.html">Color</a><svg><use xlink:href="#down-icon"></use></svg></div><ul class='methods accordion-content'><li data-type='method'><a href="Color.html#add">add</a></li><li data-type='method'><a href="Color.html#clamp">clamp</a></li><li data-type='method'><a href="Color.html#copy">copy</a></li><li data-type='method'><a href="Color.html#divide">divide</a></li><li data-type='method'><a href="Color.html#lerp">lerp</a></li><li data-type='method'><a href="Color.html#multiply">multiply</a></li><li data-type='method'><a href="Color.html#mutate">mutate</a></li><li data-type='method'><a href="Color.html#rgba">rgba</a></li><li data-type='method'><a href="Color.html#rgbaInt">rgbaInt</a></li><li data-type='method'><a href="Color.html#scale">scale</a></li><li data-type='method'><a href="Color.html#setHSLA">setHSLA</a></li><li data-type='method'><a href="Color.html#subtract">subtract</a></li></ul></li><li class="accordion collapsed child" id=1112943><div class="accordion-heading child"><a href="EngineObject.html">EngineObject</a><svg><use xlink:href="#down-icon"></use></svg></div><ul class='methods accordion-content'><li data-type='method'><a href="EngineObject.html#addChild">addChild</a></li><li data-type='method'><a href="EngineObject.html#applyAcceleration">applyAcceleration</a></li><li data-type='method'><a href="EngineObject.html#applyForce">applyForce</a></li><li data-type='method'><a href="EngineObject.html#collideWithObject">collideWithObject</a></li><li data-type='method'><a href="EngineObject.html#collideWithTile">collideWithTile</a></li><li data-type='method'><a href="EngineObject.html#collideWithTileRaycast">collideWithTileRaycast</a></li><li data-type='method'><a href="EngineObject.html#destroy">destroy</a></li><li data-type='method'><a href="EngineObject.html#getAliveTime">getAliveTime</a></li><li data-type='method'><a href="EngineObject.html#getMirrorSign">getMirrorSign</a></li><li data-type='method'><a href="EngineObject.html#removeChild">removeChild</a></li><li data-type='method'><a href="EngineObject.html#render">render</a></li><li data-type='method'><a href="EngineObject.html#setCollision">setCollision</a></li><li data-type='method'><a href="EngineObject.html#update">update</a></li></ul></li><li class="accordion collapsed child" id=3021906><div class="accordion-heading child"><a href="Medal.html">Medal</a><svg><use xlink:href="#down-icon"></use></svg></div><ul class='methods accordion-content'><li data-type='method'><a href="Medal.html#render">render</a></li><li data-type='method'><a href="Medal.html#renderIcon">renderIcon</a></li><li data-type='method'><a href="Medal.html#storageKey">storageKey</a></li><li data-type='method'><a href="Medal.html#unlock">unlock</a></li></ul></li><li class="accordion collapsed child" id=2544108><div class="accordion-heading child"><a href="Music.html">Music</a><svg><use xlink:href="#down-icon"></use></svg></div><ul class='methods accordion-content'><li data-type='method'><a href="Music.html#play">play</a></li></ul></li><li class="accordion collapsed child" id=608665><div class="accordion-heading child"><a href="Newgrounds.html">Newgrounds</a><svg><use xlink:href="#down-icon"></use></svg></div><ul class='methods accordion-content'><li data-type='method'><a href="Newgrounds.html#call">call</a></li><li data-type='method'><a href="Newgrounds.html#getScores">getScores</a></li><li data-type='method'><a href="Newgrounds.html#logView">logView</a></li><li data-type='method'><a href="Newgrounds.html#postScore">postScore</a></li><li data-type='method'><a href="Newgrounds.html#unlockMedal">unlockMedal</a></li></ul></li><li class="accordion collapsed child" id=9215404><div class="accordion-heading child"><a href="Particle.html">Particle</a><svg><use xlink:href="#down-icon"></use></svg></div><ul class='methods accordion-content'><li data-type='method'><a href="Particle.html#render">render</a></li></ul></li><li class="accordion collapsed child" id=8373667><div class="accordion-heading child"><a href="ParticleEmitter.html">ParticleEmitter</a><svg><use xlink:href="#down-icon"></use></svg></div><ul class='methods accordion-content'><li data-type='method'><a href="ParticleEmitter.html#emitParticle">emitParticle</a></li><li data-type='method'><a href="ParticleEmitter.html#update">update</a></li></ul></li><li class="accordion collapsed child" id=8769235><div class="accordion-heading child"><a href="Sound.html">Sound</a><svg><use xlink:href="#down-icon"></use></svg></div><ul class='methods accordion-content'><li data-type='method'><a href="Sound.html#play">play</a></li><li data-type='method'><a href="Sound.html#playNote">playNote</a></li></ul></li><li class="accordion collapsed child" id=8747686><div class="accordion-heading child"><a href="TileLayer.html">TileLayer</a><svg><use xlink:href="#down-icon"></use></svg></div><ul class='methods accordion-content'><li data-type='method'><a href="TileLayer.html#.getTileCollisionData">getTileCollisionData</a></li><li data-type='method'><a href="TileLayer.html#.initTileCollision">initTileCollision</a></li><li data-type='method'><a href="TileLayer.html#.setTileCollisionData">setTileCollisionData</a></li><li data-type='method'><a href="TileLayer.html#.tileCollisionRaycast">tileCollisionRaycast</a></li><li data-type='method'><a href="TileLayer.html#.tileCollisionTest">tileCollisionTest</a></li><li data-type='method'><a href="TileLayer.html#destroy">destroy</a></li><li data-type='method'><a href="TileLayer.html#drawAllTileData">drawAllTileData</a></li><li data-type='method'><a href="TileLayer.html#drawCanvas2D">drawCanvas2D</a></li><li data-type='method'><a href="TileLayer.html#drawRect">drawRect</a></li><li data-type='method'><a href="TileLayer.html#drawTile">drawTile</a></li><li data-type='method'><a href="TileLayer.html#drawTileData">drawTileData</a></li><li data-type='method'><a href="TileLayer.html#getData">getData</a></li><li data-type='method'><a href="TileLayer.html#redraw">redraw</a></li><li data-type='method'><a href="TileLayer.html#redrawEnd">redrawEnd</a></li><li data-type='method'><a href="TileLayer.html#redrawStart">redrawStart</a></li><li data-type='method'><a href="TileLayer.html#setData">setData</a></li></ul></li><li class="accordion collapsed child" id=810619><div class="accordion-heading child"><a href="TileLayerData.html">TileLayerData</a><svg><use xlink:href="#down-icon"></use></svg></div><ul class='methods accordion-content'><li data-type='method'><a href="TileLayerData.html#clear">clear</a></li></ul></li><li class="accordion collapsed child" id=1034483><div class="accordion-heading child"><a href="Timer.html">Timer</a><svg><use xlink:href="#down-icon"></use></svg></div><ul class='methods accordion-content'><li data-type='method'><a href="Timer.html#active">active</a></li><li data-type='method'><a href="Timer.html#elapsed">elapsed</a></li><li data-type='method'><a href="Timer.html#get">get</a></li><li data-type='method'><a href="Timer.html#getPercent">getPercent</a></li><li data-type='method'><a href="Timer.html#isSet">isSet</a></li><li data-type='method'><a href="Timer.html#set">set</a></li><li data-type='method'><a href="Timer.html#unset">unset</a></li></ul></li><li class="accordion collapsed child" id=9581805><div class="accordion-heading child"><a href="Vector2.html">Vector2</a><svg><use xlink:href="#down-icon"></use></svg></div><ul class='methods accordion-content'><li data-type='method'><a href="Vector2.html#add">add</a></li><li data-type='method'><a href="Vector2.html#angle">angle</a></li><li data-type='method'><a href="Vector2.html#area">area</a></li><li data-type='method'><a href="Vector2.html#arrayCheck">arrayCheck</a></li><li data-type='method'><a href="Vector2.html#clampLength">clampLength</a></li><li data-type='method'><a href="Vector2.html#copy">copy</a></li><li data-type='method'><a href="Vector2.html#cross">cross</a></li><li data-type='method'><a href="Vector2.html#direction">direction</a></li><li data-type='method'><a href="Vector2.html#distance">distance</a></li><li data-type='method'><a href="Vector2.html#distanceSquared">distanceSquared</a></li><li data-type='method'><a href="Vector2.html#divide">divide</a></li><li data-type='method'><a href="Vector2.html#dot">dot</a></li><li data-type='method'><a href="Vector2.html#flip">flip</a></li><li data-type='method'><a href="Vector2.html#floor">floor</a></li><li data-type='method'><a href="Vector2.html#invert">invert</a></li><li data-type='method'><a href="Vector2.html#length">length</a></li><li data-type='method'><a href="Vector2.html#lengthSquared">lengthSquared</a></li><li data-type='method'><a href="Vector2.html#lerp">lerp</a></li><li data-type='method'><a href="Vector2.html#multiply">multiply</a></li><li data-type='method'><a href="Vector2.html#normalize">normalize</a></li><li data-type='method'><a href="Vector2.html#rotate">rotate</a></li><li data-type='method'><a href="Vector2.html#scale">scale</a></li><li data-type='method'><a href="Vector2.html#setAngle">setAngle</a></li><li data-type='method'><a href="Vector2.html#subtract">subtract</a></li></ul></li></ul> </div><div class="accordion collapsed" id="1643822" > <h3 class="accordion-heading">Namespaces<svg><use xlink:href="#down-icon"></use></svg></h3><ul class="accordion-content"><li class="accordion collapsed child" id=3496668><div class="accordion-heading child"><a href="Audio.html">Audio</a><svg><use xlink:href="#down-icon"></use></svg></div><ul class='methods accordion-content'><li data-type='method'><a href="Audio.html#.getNoteFrequency">getNoteFrequency</a></li><li data-type='method'><a href="Audio.html#.playAudioFile">playAudioFile</a></li><li data-type='method'><a href="Audio.html#.playSamples">playSamples</a></li><li data-type='method'><a href="Audio.html#.speak">speak</a></li><li data-type='method'><a href="Audio.html#.stopSpeech">stopSpeech</a></li><li data-type='method'><a href="Audio.html#.zzfx">zzfx</a></li><li data-type='method'><a href="Audio.html#.zzfxG">zzfxG</a></li><li data-type='method'><a href="Audio.html#.zzfxM">zzfxM</a></li></ul></li><li class="accordion collapsed child" id=7292674><div class="accordion-heading child"><a href="Debug.html">Debug</a><svg><use xlink:href="#down-icon"></use></svg></div><ul class='methods accordion-content'><li data-type='method'><a href="Debug.html#.debugAABB">debugAABB</a></li><li data-type='method'><a href="Debug.html#.debugCircle">debugCircle</a></li><li data-type='method'><a href="Debug.html#.debugClear">debugClear</a></li><li data-type='method'><a href="Debug.html#.debugLine">debugLine</a></li><li data-type='method'><a href="Debug.html#.debugPoint">debugPoint</a></li><li data-type='method'><a href="Debug.html#.debugRect">debugRect</a></li><li data-type='method'><a href="Debug.html#.debugSaveCanvas">debugSaveCanvas</a></li><li data-type='method'><a href="Debug.html#.debugText">debugText</a></li></ul></li><li class="accordion collapsed child" id=4692167><div class="accordion-heading child"><a href="Draw.html">Draw</a><svg><use xlink:href="#down-icon"></use></svg></div><ul class='methods accordion-content'><li data-type='method'><a href="Draw.html#.drawCanvas2D">drawCanvas2D</a></li><li data-type='method'><a href="Draw.html#.drawLine">drawLine</a></li><li data-type='method'><a href="Draw.html#.drawRect">drawRect</a></li><li data-type='method'><a href="Draw.html#.drawRectScreenSpace">drawRectScreenSpace</a></li><li data-type='method'><a href="Draw.html#.drawText">drawText</a></li><li data-type='method'><a href="Draw.html#.drawTile">drawTile</a></li><li data-type='method'><a href="Draw.html#.drawTileScreenSpace">drawTileScreenSpace</a></li><li data-type='method'><a href="Draw.html#.isFullscreen">isFullscreen</a></li><li data-type='method'><a href="Draw.html#.screenToWorld">screenToWorld</a></li><li data-type='method'><a href="Draw.html#.setBlendMode">setBlendMode</a></li><li data-type='method'><a href="Draw.html#.toggleFullscreen">toggleFullscreen</a></li><li data-type='method'><a href="Draw.html#.worldToScreen">worldToScreen</a></li></ul></li><li class="accordion collapsed child" id=5838015><div class="accordion-heading child"><a href="Input.html">Input</a><svg><use xlink:href="#down-icon"></use></svg></div><ul class='methods accordion-content'><li data-type='method'><a href="Input.html#.clearInput">clearInput</a></li><li data-type='method'><a href="Input.html#.gamepadIsDown">gamepadIsDown</a></li><li data-type='method'><a href="Input.html#.gamepadStick">gamepadStick</a></li><li data-type='method'><a href="Input.html#.gamepadWasPressed">gamepadWasPressed</a></li><li data-type='method'><a href="Input.html#.gamepadWasReleased">gamepadWasReleased</a></li><li data-type='method'><a href="Input.html#.keyIsDown">keyIsDown</a></li><li data-type='method'><a href="Input.html#.keyWasPressed">keyWasPressed</a></li><li data-type='method'><a href="Input.html#.keyWasReleased">keyWasReleased</a></li></ul></li><li class="accordion collapsed child" id=9124097><div class="accordion-heading child"><a href="Medals.html">Medals</a><svg><use xlink:href="#down-icon"></use></svg></div><ul class='methods accordion-content'><li data-type='method'><a href="Medals.html#.medalsInit">medalsInit</a></li></ul></li><li class="accordion collapsed child" id=5420325><div class="accordion-heading child"><a href="Random.html">Random</a><svg><use xlink:href="#down-icon"></use></svg></div><ul class='methods accordion-content'><li data-type='method'><a href="Random.html#.rand">rand</a></li><li data-type='method'><a href="Random.html#.randColor">randColor</a></li><li data-type='method'><a href="Random.html#.randInCircle">randInCircle</a></li><li data-type='method'><a href="Random.html#.randInt">randInt</a></li><li data-type='method'><a href="Random.html#.randSeeded">randSeeded</a></li><li data-type='method'><a href="Random.html#.randSign">randSign</a></li><li data-type='method'><a href="Random.html#.randVector">randVector</a></li></ul></li><li class="accordion-list" id=""><a href="Settings.html">Settings</a></li><li class="accordion collapsed child" id=9721003><div class="accordion-heading child"><a href="Utilities.html">Utilities</a><svg><use xlink:href="#down-icon"></use></svg></div><ul class='methods accordion-content'><li data-type='method'><a href="Utilities.html#.abs">abs</a></li><li data-type='method'><a href="Utilities.html#.clamp">clamp</a></li><li data-type='method'><a href="Utilities.html#.formatTime">formatTime</a></li><li data-type='method'><a href="Utilities.html#.isOverlapping">isOverlapping</a></li><li data-type='method'><a href="Utilities.html#.lerp">lerp</a></li><li data-type='method'><a href="Utilities.html#.max">max</a></li><li data-type='method'><a href="Utilities.html#.min">min</a></li><li data-type='method'><a href="Utilities.html#.mod">mod</a></li><li data-type='method'><a href="Utilities.html#.nearestPowerOfTwo">nearestPowerOfTwo</a></li><li data-type='method'><a href="Utilities.html#.percent">percent</a></li><li data-type='method'><a href="Utilities.html#.sign">sign</a></li><li data-type='method'><a href="Utilities.html#.smoothStep">smoothStep</a></li><li data-type='method'><a href="Utilities.html#.vec2">vec2</a></li><li data-type='method'><a href="Utilities.html#.wave">wave</a></li></ul></li><li class="accordion collapsed child" id=5231304><div class="accordion-heading child"><a href="WebGL.html">WebGL</a><svg><use xlink:href="#down-icon"></use></svg></div><ul class='methods accordion-content'><li data-type='method'><a href="WebGL.html#.glCompileShader">glCompileShader</a></li><li data-type='method'><a href="WebGL.html#.glCopyToContext">glCopyToContext</a></li><li data-type='method'><a href="WebGL.html#.glCreateBuffer">glCreateBuffer</a></li><li data-type='method'><a href="WebGL.html#.glCreateProgram">glCreateProgram</a></li><li data-type='method'><a href="WebGL.html#.glCreateTexture">glCreateTexture</a></li><li data-type='method'><a href="WebGL.html#.glFlush">glFlush</a></li><li data-type='method'><a href="WebGL.html#.glSetBlendMode">glSetBlendMode</a></li><li data-type='method'><a href="WebGL.html#.glSetTexture">glSetTexture</a></li></ul></li></ul> </div><div class="accordion collapsed" id="2864013" > <h3 class="accordion-heading">Global<svg><use xlink:href="#down-icon"></use></svg></h3><ul class="accordion-content"><li class="accordion-list" id=""><a href="global.html#engineCollideObjects">engineCollideObjects</a></li><li class="accordion-list" id=""><a href="global.html#engineInit">engineInit</a></li><li class="accordion-list" id=""><a href="global.html#engineName">engineName</a></li><li class="accordion-list" id=""><a href="global.html#engineObjects">engineObjects</a></li><li class="accordion-list" id=""><a href="global.html#engineObjectsCallback">engineObjectsCallback</a></li><li class="accordion-list" id=""><a href="global.html#engineObjectsDestroy">engineObjectsDestroy</a></li><li class="accordion-list" id=""><a href="global.html#engineObjectsUpdate">engineObjectsUpdate</a></li><li class="accordion-list" id=""><a href="global.html#engineVersion">engineVersion</a></li><li class="accordion-list" id=""><a href="global.html#FPS">FPS</a></li><li class="accordion-list" id=""><a href="global.html#frame">frame</a></li><li class="accordion-list" id=""><a href="global.html#paused">paused</a></li><li class="accordion-list" id=""><a href="global.html#time">time</a></li><li class="accordion-list" id=""><a href="global.html#timeDelta">timeDelta</a></li><li class="accordion-list" id=""><a href="global.html#timeReal">timeReal</a></li></ul> </div></div>
+      
+
+    </nav>
+    <div class="navbar-ham" id="navbar-ham">
+      <div>
+        <div class="first"></div>
+        <div class="second"></div>
+        <div class="third"></div>
+      </div>
+    </div>
+
+    <div id="main" class="main-content">
+      
+      <h1 id='page-title' class="page-title">
+        Settings
+      </h1>
+      
+
+      
+
+
+
+
+<section>
+
+
+<header>
+    
+        
+        <h2>
+        
+        Settings
+        
+        </h2>
+        
+        
+    
+</header>
+
+
+<article>
+    <div class="container-overview">
+    
+        
+            <div class="description">LittleJS Engine Settings</div>
+        
+
+        
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line1">line 1</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+        
+    
+    </div>
+
+    
+
+    
+
+    
+
+     
+
+    
+
+    
+        <h3 class="subsection-title">Members</h3>
+
+        
+            
+<h4 class="name" id=".audioVolume">
+    <a href="#.audioVolume">#</a>
+    <span class="type-signature">(static) </span>audioVolume<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    Volume scale to apply to all sound, music and speech
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >0.5</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line165">line 165</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".cameraPos">
+    <a href="#.cameraPos">#</a>
+    <span class="type-signature">(static) </span>cameraPos<span class="type-signature"> :<a href="Vector2.html">Vector2</a></span>
+</h4>
+
+
+
+
+<div class="description">
+    Position of camera in world space
+</div>
+
+
+
+    <div class="member-item-container flex">
+        <strong>Type: </strong>
+        <ul>
+            <li>
+                
+<span class="param-type"><a href="Vector2.html">Vector2</a></span>
+
+
+            </li>
+        </ul>
+    </div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line111">line 111</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".cameraScale">
+    <a href="#.cameraScale">#</a>
+    <span class="type-signature">(static) </span>cameraScale<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    Scale of camera in world space
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line116">line 116</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".copyGamepadDirectionToStick">
+    <a href="#.copyGamepadDirectionToStick">#</a>
+    <span class="type-signature">(static, constant) </span>copyGamepadDirectionToStick<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    Allow players to use dpad as analog stick
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >1</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line147">line 147</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".copyWASDToDpad">
+    <a href="#.copyWASDToDpad">#</a>
+    <span class="type-signature">(static, constant) </span>copyWASDToDpad<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    allow players to use WASD as direction keys
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >1</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line152">line 152</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".defaultFont">
+    <a href="#.defaultFont">#</a>
+    <span class="type-signature">(static) </span>defaultFont<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    Default font used for text rendering
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >arial</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line39">line 39</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".defaultObjectAngleDamping">
+    <a href="#.defaultObjectAngleDamping">#</a>
+    <span class="type-signature">(static, constant) </span>defaultObjectAngleDamping<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    How much to slow angular velocity each frame (0-1)
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >0.99</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line82">line 82</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".defaultObjectDamping">
+    <a href="#.defaultObjectDamping">#</a>
+    <span class="type-signature">(static, constant) </span>defaultObjectDamping<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    How much to slow velocity by each frame (0-1)
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >0.99</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line77">line 77</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".defaultObjectElasticity">
+    <a href="#.defaultObjectElasticity">#</a>
+    <span class="type-signature">(static, constant) </span>defaultObjectElasticity<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    How much to bounce when a collision occurs (0-1)
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line87">line 87</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".defaultObjectFriction">
+    <a href="#.defaultObjectFriction">#</a>
+    <span class="type-signature">(static, constant) </span>defaultObjectFriction<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    How much to slow when touching (0-1)
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >0.8</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line92">line 92</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".defaultObjectMass">
+    <a href="#.defaultObjectMass">#</a>
+    <span class="type-signature">(static, constant) </span>defaultObjectMass<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    Default object mass for collison calcuations (how heavy objects are)
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >1</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line72">line 72</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".defaultObjectSize">
+    <a href="#.defaultObjectSize">#</a>
+    <span class="type-signature">(static, constant) </span>defaultObjectSize<span class="type-signature"> :<a href="Vector2.html">Vector2</a></span>
+</h4>
+
+
+
+
+<div class="description">
+    Default size of objects
+</div>
+
+
+
+    <div class="member-item-container flex">
+        <strong>Type: </strong>
+        <ul>
+            <li>
+                
+<span class="param-type"><a href="Vector2.html">Vector2</a></span>
+
+
+            </li>
+        </ul>
+    </div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line67">line 67</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".defaultSoundRange">
+    <a href="#.defaultSoundRange">#</a>
+    <span class="type-signature">(static, constant) </span>defaultSoundRange<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    Default range where sound no longer plays
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >30</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line170">line 170</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".defaultSoundTaper">
+    <a href="#.defaultSoundTaper">#</a>
+    <span class="type-signature">(static, constant) </span>defaultSoundTaper<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    Default range percent to start tapering off sound (0-1)
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >0.7</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line175">line 175</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".defaultTileSize">
+    <a href="#.defaultTileSize">#</a>
+    <span class="type-signature">(static, constant) </span>defaultTileSize<span class="type-signature"> :<a href="Vector2.html">Vector2</a></span>
+</h4>
+
+
+
+
+<div class="description">
+    Default size of tiles in pixels
+</div>
+
+
+
+    <div class="member-item-container flex">
+        <strong>Type: </strong>
+        <ul>
+            <li>
+                
+<span class="param-type"><a href="Vector2.html">Vector2</a></span>
+
+
+            </li>
+        </ul>
+    </div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line48">line 48</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".fixedFitToWindow">
+    <a href="#.fixedFitToWindow">#</a>
+    <span class="type-signature">(static) </span>fixedFitToWindow<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    Fit to canvas to window by adding space on top or bottom if necessary
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >1</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line34">line 34</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".fixedHeight">
+    <a href="#.fixedHeight">#</a>
+    <span class="type-signature">(static) </span>fixedHeight<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    Fixed height, if enabled cavnvas size never changes
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line29">line 29</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".fixedWidth">
+    <a href="#.fixedWidth">#</a>
+    <span class="type-signature">(static) </span>fixedWidth<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    Fixed witdh, if enabled cavnvas size never changes
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line24">line 24</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".gamepadsEnable">
+    <a href="#.gamepadsEnable">#</a>
+    <span class="type-signature">(static, constant) </span>gamepadsEnable<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    Should gamepads be allowed
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >1</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line137">line 137</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".glEnable">
+    <a href="#.glEnable">#</a>
+    <span class="type-signature">(static, constant) </span>glEnable<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    Enable webgl rendering, webgl can be disabled and removed from build (with some features disabled)
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >1</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line124">line 124</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".glOverlay">
+    <a href="#.glOverlay">#</a>
+    <span class="type-signature">(static) </span>glOverlay<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    Fixes slow rendering in some browsers by not compositing the WebGL canvas
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >1</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line129">line 129</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".gravity">
+    <a href="#.gravity">#</a>
+    <span class="type-signature">(static) </span>gravity<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    How much gravity to apply to objects along the Y axis, negative is down
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line102">line 102</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".maxHeight">
+    <a href="#.maxHeight">#</a>
+    <span class="type-signature">(static, constant) </span>maxHeight<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    The max height of the canvas, centered if window is larger
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >1200</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line19">line 19</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".maxObjectSpeed">
+    <a href="#.maxObjectSpeed">#</a>
+    <span class="type-signature">(static, constant) </span>maxObjectSpeed<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    Clamp max speed to avoid fast objects missing collisions
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >1</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line97">line 97</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".maxWidth">
+    <a href="#.maxWidth">#</a>
+    <span class="type-signature">(static, constant) </span>maxWidth<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    The max width of the canvas, centered if window is larger
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >1920</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line14">line 14</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".medalDisplayHeight">
+    <a href="#.medalDisplayHeight">#</a>
+    <span class="type-signature">(static, constant) </span>medalDisplayHeight<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    Height of medal display
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >99</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line198">line 198</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".medalDisplayIconSize">
+    <a href="#.medalDisplayIconSize">#</a>
+    <span class="type-signature">(static, constant) </span>medalDisplayIconSize<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    Size of icon in medal display
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >80</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line203">line 203</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".medalDisplaySlideTime">
+    <a href="#.medalDisplaySlideTime">#</a>
+    <span class="type-signature">(static, constant) </span>medalDisplaySlideTime<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    How quickly to slide on/off medals in seconds
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >0.5</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line188">line 188</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".medalDisplayTime">
+    <a href="#.medalDisplayTime">#</a>
+    <span class="type-signature">(static, constant) </span>medalDisplayTime<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    How long to show medals for in seconds
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >5</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line183">line 183</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".medalDisplayWidth">
+    <a href="#.medalDisplayWidth">#</a>
+    <span class="type-signature">(static, constant) </span>medalDisplayWidth<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    Width of medal display
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >640</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line193">line 193</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".pixelated">
+    <a href="#.pixelated">#</a>
+    <span class="type-signature">(static) </span>pixelated<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    Use crisp pixels for pixel art if true
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >1</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line58">line 58</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".soundEnable">
+    <a href="#.soundEnable">#</a>
+    <span class="type-signature">(static, constant) </span>soundEnable<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    All audio code can be disabled and removed from build
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >1</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line160">line 160</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".tileBleedShrinkFix">
+    <a href="#.tileBleedShrinkFix">#</a>
+    <span class="type-signature">(static, constant) </span>tileBleedShrinkFix<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    Prevent tile bleeding from neighbors in pixels
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >0.3</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line53">line 53</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+            
+<h4 class="name" id=".touchInputEnable">
+    <a href="#.touchInputEnable">#</a>
+    <span class="type-signature">(static, constant) </span>touchInputEnable<span class="type-signature"></span>
+</h4>
+
+
+
+
+<div class="description">
+    If true touch input is routed to mouse functions
+</div>
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-default">Default Value:</dt>
+            <dd class="tag-default"><ul class="dummy">
+                    <li  >1</li>
+                </ul></dd>
+        </div>
+    
+
+    
+        <div class="details-item-container">
+            <dt class="tag-source">Source:</dt>
+            <dd class="tag-source"><ul class="dummy"><li>
+                <a href="engineSettings.js.html">engineSettings.js</a>, <a href="engineSettings.js.html#line142">line 142</a>
+            </li></ul></dd>
+        </div>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+        
+    
+
+    
+
+    
+
+    
+</article>
+
+</section>
+
+
+
+
+    </div>
+
+    <footer class="footer" id="footer">
+      <a href=https://github.com/KilledByAPixel/LittleJS>LittleJS - MIT License - Copyright 2021 Frank Force</a>
+    </footer>
+
+    <script src="scripts/third-party/prettify.js"></script>
+    <script src="scripts/third-party/lang-css.js"></script>
+    <script type="text/javascript" src="scripts/misc.js"></script>
+
+    <script>prettyPrint();</script>
+    <script src="scripts/linenumber.js"></script>
+    <script src="scripts/fix-code-block.js"></script>
+    <script src="scripts/fix-navbar.js"></script>
+    
+      <script src="scripts/search.js"></script>
+      <script src="scripts/third-party/fuse.js"></script>
+      <script>
+        var list = [{"title":"Color","link":"<a href=\"Color.html\">Color</a>"},{"title":"Color#add","link":"<a href=\"Color.html#add\">Color &rtrif; add</a>"},{"title":"Color#clamp","link":"<a href=\"Color.html#clamp\">Color &rtrif; clamp</a>"},{"title":"Color#copy","link":"<a href=\"Color.html#copy\">Color &rtrif; copy</a>"},{"title":"Color#divide","link":"<a href=\"Color.html#divide\">Color &rtrif; divide</a>"},{"title":"Color#lerp","link":"<a href=\"Color.html#lerp\">Color &rtrif; lerp</a>"},{"title":"Color#multiply","link":"<a href=\"Color.html#multiply\">Color &rtrif; multiply</a>"},{"title":"Color#mutate","link":"<a href=\"Color.html#mutate\">Color &rtrif; mutate</a>"},{"title":"Color#rgba","link":"<a href=\"Color.html#rgba\">Color &rtrif; rgba</a>"},{"title":"Color#rgbaInt","link":"<a href=\"Color.html#rgbaInt\">Color &rtrif; rgbaInt</a>"},{"title":"Color#scale","link":"<a href=\"Color.html#scale\">Color &rtrif; scale</a>"},{"title":"Color#setHSLA","link":"<a href=\"Color.html#setHSLA\">Color &rtrif; setHSLA</a>"},{"title":"Color#subtract","link":"<a href=\"Color.html#subtract\">Color &rtrif; subtract</a>"},{"title":"EngineObject","link":"<a href=\"EngineObject.html\">EngineObject</a>"},{"title":"EngineObject#addChild","link":"<a href=\"EngineObject.html#addChild\">EngineObject &rtrif; addChild</a>"},{"title":"EngineObject#applyAcceleration","link":"<a href=\"EngineObject.html#applyAcceleration\">EngineObject &rtrif; applyAcceleration</a>"},{"title":"EngineObject#applyForce","link":"<a href=\"EngineObject.html#applyForce\">EngineObject &rtrif; applyForce</a>"},{"title":"EngineObject#collideWithObject","link":"<a href=\"EngineObject.html#collideWithObject\">EngineObject &rtrif; collideWithObject</a>"},{"title":"EngineObject#collideWithTile","link":"<a href=\"EngineObject.html#collideWithTile\">EngineObject &rtrif; collideWithTile</a>"},{"title":"EngineObject#collideWithTileRaycast","link":"<a href=\"EngineObject.html#collideWithTileRaycast\">EngineObject &rtrif; collideWithTileRaycast</a>"},{"title":"EngineObject#destroy","link":"<a href=\"EngineObject.html#destroy\">EngineObject &rtrif; destroy</a>"},{"title":"EngineObject#getAliveTime","link":"<a href=\"EngineObject.html#getAliveTime\">EngineObject &rtrif; getAliveTime</a>"},{"title":"EngineObject#getMirrorSign","link":"<a href=\"EngineObject.html#getMirrorSign\">EngineObject &rtrif; getMirrorSign</a>"},{"title":"EngineObject#removeChild","link":"<a href=\"EngineObject.html#removeChild\">EngineObject &rtrif; removeChild</a>"},{"title":"EngineObject#render","link":"<a href=\"EngineObject.html#render\">EngineObject &rtrif; render</a>"},{"title":"EngineObject#setCollision","link":"<a href=\"EngineObject.html#setCollision\">EngineObject &rtrif; setCollision</a>"},{"title":"EngineObject#update","link":"<a href=\"EngineObject.html#update\">EngineObject &rtrif; update</a>"},{"title":"Medal","link":"<a href=\"Medal.html\">Medal</a>"},{"title":"Medal#render","link":"<a href=\"Medal.html#render\">Medal &rtrif; render</a>"},{"title":"Medal#renderIcon","link":"<a href=\"Medal.html#renderIcon\">Medal &rtrif; renderIcon</a>"},{"title":"Medal#storageKey","link":"<a href=\"Medal.html#storageKey\">Medal &rtrif; storageKey</a>"},{"title":"Medal#unlock","link":"<a href=\"Medal.html#unlock\">Medal &rtrif; unlock</a>"},{"title":"Music","link":"<a href=\"Music.html\">Music</a>"},{"title":"Music#play","link":"<a href=\"Music.html#play\">Music &rtrif; play</a>"},{"title":"Newgrounds","link":"<a href=\"Newgrounds.html\">Newgrounds</a>"},{"title":"Newgrounds#call","link":"<a href=\"Newgrounds.html#call\">Newgrounds &rtrif; call</a>"},{"title":"Newgrounds#getScores","link":"<a href=\"Newgrounds.html#getScores\">Newgrounds &rtrif; getScores</a>"},{"title":"Newgrounds#logView","link":"<a href=\"Newgrounds.html#logView\">Newgrounds &rtrif; logView</a>"},{"title":"Newgrounds#postScore","link":"<a href=\"Newgrounds.html#postScore\">Newgrounds &rtrif; postScore</a>"},{"title":"Newgrounds#unlockMedal","link":"<a href=\"Newgrounds.html#unlockMedal\">Newgrounds &rtrif; unlockMedal</a>"},{"title":"Particle","link":"<a href=\"Particle.html\">Particle</a>"},{"title":"Particle#render","link":"<a href=\"Particle.html#render\">Particle &rtrif; render</a>"},{"title":"ParticleEmitter","link":"<a href=\"ParticleEmitter.html\">ParticleEmitter</a>"},{"title":"ParticleEmitter#emitParticle","link":"<a href=\"ParticleEmitter.html#emitParticle\">ParticleEmitter &rtrif; emitParticle</a>"},{"title":"ParticleEmitter#update","link":"<a href=\"ParticleEmitter.html#update\">ParticleEmitter &rtrif; update</a>"},{"title":"Sound","link":"<a href=\"Sound.html\">Sound</a>"},{"title":"Sound#play","link":"<a href=\"Sound.html#play\">Sound &rtrif; play</a>"},{"title":"Sound#playNote","link":"<a href=\"Sound.html#playNote\">Sound &rtrif; playNote</a>"},{"title":"TileLayer","link":"<a href=\"TileLayer.html\">TileLayer</a>"},{"title":"TileLayer.getTileCollisionData","link":"<a href=\"TileLayer.html#.getTileCollisionData\">TileLayer.getTileCollisionData &rtrif; undefined</a>"},{"title":"TileLayer.initTileCollision","link":"<a href=\"TileLayer.html#.initTileCollision\">TileLayer.initTileCollision &rtrif; undefined</a>"},{"title":"TileLayer.setTileCollisionData","link":"<a href=\"TileLayer.html#.setTileCollisionData\">TileLayer.setTileCollisionData &rtrif; undefined</a>"},{"title":"TileLayer.tileCollisionRaycast","link":"<a href=\"TileLayer.html#.tileCollisionRaycast\">TileLayer.tileCollisionRaycast &rtrif; undefined</a>"},{"title":"TileLayer.tileCollisionTest","link":"<a href=\"TileLayer.html#.tileCollisionTest\">TileLayer.tileCollisionTest &rtrif; undefined</a>"},{"title":"TileLayer#destroy","link":"<a href=\"TileLayer.html#destroy\">TileLayer &rtrif; destroy</a>"},{"title":"TileLayer#drawAllTileData","link":"<a href=\"TileLayer.html#drawAllTileData\">TileLayer &rtrif; drawAllTileData</a>"},{"title":"TileLayer#drawCanvas2D","link":"<a href=\"TileLayer.html#drawCanvas2D\">TileLayer &rtrif; drawCanvas2D</a>"},{"title":"TileLayer#drawRect","link":"<a href=\"TileLayer.html#drawRect\">TileLayer &rtrif; drawRect</a>"},{"title":"TileLayer#drawTile","link":"<a href=\"TileLayer.html#drawTile\">TileLayer &rtrif; drawTile</a>"},{"title":"TileLayer#drawTileData","link":"<a href=\"TileLayer.html#drawTileData\">TileLayer &rtrif; drawTileData</a>"},{"title":"TileLayer#getData","link":"<a href=\"TileLayer.html#getData\">TileLayer &rtrif; getData</a>"},{"title":"TileLayer#redraw","link":"<a href=\"TileLayer.html#redraw\">TileLayer &rtrif; redraw</a>"},{"title":"TileLayer#redrawEnd","link":"<a href=\"TileLayer.html#redrawEnd\">TileLayer &rtrif; redrawEnd</a>"},{"title":"TileLayer#redrawStart","link":"<a href=\"TileLayer.html#redrawStart\">TileLayer &rtrif; redrawStart</a>"},{"title":"TileLayer#setData","link":"<a href=\"TileLayer.html#setData\">TileLayer &rtrif; setData</a>"},{"title":"TileLayerData","link":"<a href=\"TileLayerData.html\">TileLayerData</a>"},{"title":"TileLayerData#clear","link":"<a href=\"TileLayerData.html#clear\">TileLayerData &rtrif; clear</a>"},{"title":"Timer","link":"<a href=\"Timer.html\">Timer</a>"},{"title":"Timer#active","link":"<a href=\"Timer.html#active\">Timer &rtrif; active</a>"},{"title":"Timer#elapsed","link":"<a href=\"Timer.html#elapsed\">Timer &rtrif; elapsed</a>"},{"title":"Timer#get","link":"<a href=\"Timer.html#get\">Timer &rtrif; get</a>"},{"title":"Timer#getPercent","link":"<a href=\"Timer.html#getPercent\">Timer &rtrif; getPercent</a>"},{"title":"Timer#isSet","link":"<a href=\"Timer.html#isSet\">Timer &rtrif; isSet</a>"},{"title":"Timer#set","link":"<a href=\"Timer.html#set\">Timer &rtrif; set</a>"},{"title":"Timer#unset","link":"<a href=\"Timer.html#unset\">Timer &rtrif; unset</a>"},{"title":"Vector2","link":"<a href=\"Vector2.html\">Vector2</a>"},{"title":"Vector2#add","link":"<a href=\"Vector2.html#add\">Vector2 &rtrif; add</a>"},{"title":"Vector2#angle","link":"<a href=\"Vector2.html#angle\">Vector2 &rtrif; angle</a>"},{"title":"Vector2#area","link":"<a href=\"Vector2.html#area\">Vector2 &rtrif; area</a>"},{"title":"Vector2#arrayCheck","link":"<a href=\"Vector2.html#arrayCheck\">Vector2 &rtrif; arrayCheck</a>"},{"title":"Vector2#clampLength","link":"<a href=\"Vector2.html#clampLength\">Vector2 &rtrif; clampLength</a>"},{"title":"Vector2#copy","link":"<a href=\"Vector2.html#copy\">Vector2 &rtrif; copy</a>"},{"title":"Vector2#cross","link":"<a href=\"Vector2.html#cross\">Vector2 &rtrif; cross</a>"},{"title":"Vector2#direction","link":"<a href=\"Vector2.html#direction\">Vector2 &rtrif; direction</a>"},{"title":"Vector2#distance","link":"<a href=\"Vector2.html#distance\">Vector2 &rtrif; distance</a>"},{"title":"Vector2#distanceSquared","link":"<a href=\"Vector2.html#distanceSquared\">Vector2 &rtrif; distanceSquared</a>"},{"title":"Vector2#divide","link":"<a href=\"Vector2.html#divide\">Vector2 &rtrif; divide</a>"},{"title":"Vector2#dot","link":"<a href=\"Vector2.html#dot\">Vector2 &rtrif; dot</a>"},{"title":"Vector2#flip","link":"<a href=\"Vector2.html#flip\">Vector2 &rtrif; flip</a>"},{"title":"Vector2#floor","link":"<a href=\"Vector2.html#floor\">Vector2 &rtrif; floor</a>"},{"title":"Vector2#invert","link":"<a href=\"Vector2.html#invert\">Vector2 &rtrif; invert</a>"},{"title":"Vector2#length","link":"<a href=\"Vector2.html#length\">Vector2 &rtrif; length</a>"},{"title":"Vector2#lengthSquared","link":"<a href=\"Vector2.html#lengthSquared\">Vector2 &rtrif; lengthSquared</a>"},{"title":"Vector2#lerp","link":"<a href=\"Vector2.html#lerp\">Vector2 &rtrif; lerp</a>"},{"title":"Vector2#multiply","link":"<a href=\"Vector2.html#multiply\">Vector2 &rtrif; multiply</a>"},{"title":"Vector2#normalize","link":"<a href=\"Vector2.html#normalize\">Vector2 &rtrif; normalize</a>"},{"title":"Vector2#rotate","link":"<a href=\"Vector2.html#rotate\">Vector2 &rtrif; rotate</a>"},{"title":"Vector2#scale","link":"<a href=\"Vector2.html#scale\">Vector2 &rtrif; scale</a>"},{"title":"Vector2#setAngle","link":"<a href=\"Vector2.html#setAngle\">Vector2 &rtrif; setAngle</a>"},{"title":"Vector2#subtract","link":"<a href=\"Vector2.html#subtract\">Vector2 &rtrif; subtract</a>"},{"title":"Audio","link":"<a href=\"Audio.html\">Audio</a>"},{"title":"Audio.getNoteFrequency","link":"<a href=\"Audio.html#.getNoteFrequency\">Audio.getNoteFrequency &rtrif; undefined</a>"},{"title":"Audio.playAudioFile","link":"<a href=\"Audio.html#.playAudioFile\">Audio.playAudioFile &rtrif; undefined</a>"},{"title":"Audio.playSamples","link":"<a href=\"Audio.html#.playSamples\">Audio.playSamples &rtrif; undefined</a>"},{"title":"Audio.speak","link":"<a href=\"Audio.html#.speak\">Audio.speak &rtrif; undefined</a>"},{"title":"Audio.stopSpeech","link":"<a href=\"Audio.html#.stopSpeech\">Audio.stopSpeech &rtrif; undefined</a>"},{"title":"Audio.zzfx","link":"<a href=\"Audio.html#.zzfx\">Audio.zzfx &rtrif; undefined</a>"},{"title":"Audio.zzfxG","link":"<a href=\"Audio.html#.zzfxG\">Audio.zzfxG &rtrif; undefined</a>"},{"title":"Audio.zzfxM","link":"<a href=\"Audio.html#.zzfxM\">Audio.zzfxM &rtrif; undefined</a>"},{"title":"Debug","link":"<a href=\"Debug.html\">Debug</a>"},{"title":"Debug.debugAABB","link":"<a href=\"Debug.html#.debugAABB\">Debug.debugAABB &rtrif; undefined</a>"},{"title":"Debug.debugCircle","link":"<a href=\"Debug.html#.debugCircle\">Debug.debugCircle &rtrif; undefined</a>"},{"title":"Debug.debugClear","link":"<a href=\"Debug.html#.debugClear\">Debug.debugClear &rtrif; undefined</a>"},{"title":"Debug.debugLine","link":"<a href=\"Debug.html#.debugLine\">Debug.debugLine &rtrif; undefined</a>"},{"title":"Debug.debugPoint","link":"<a href=\"Debug.html#.debugPoint\">Debug.debugPoint &rtrif; undefined</a>"},{"title":"Debug.debugRect","link":"<a href=\"Debug.html#.debugRect\">Debug.debugRect &rtrif; undefined</a>"},{"title":"Debug.debugSaveCanvas","link":"<a href=\"Debug.html#.debugSaveCanvas\">Debug.debugSaveCanvas &rtrif; undefined</a>"},{"title":"Debug.debugText","link":"<a href=\"Debug.html#.debugText\">Debug.debugText &rtrif; undefined</a>"},{"title":"Draw","link":"<a href=\"Draw.html\">Draw</a>"},{"title":"Draw.drawCanvas2D","link":"<a href=\"Draw.html#.drawCanvas2D\">Draw.drawCanvas2D &rtrif; undefined</a>"},{"title":"Draw.drawLine","link":"<a href=\"Draw.html#.drawLine\">Draw.drawLine &rtrif; undefined</a>"},{"title":"Draw.drawRect","link":"<a href=\"Draw.html#.drawRect\">Draw.drawRect &rtrif; undefined</a>"},{"title":"Draw.drawRectScreenSpace","link":"<a href=\"Draw.html#.drawRectScreenSpace\">Draw.drawRectScreenSpace &rtrif; undefined</a>"},{"title":"Draw.drawText","link":"<a href=\"Draw.html#.drawText\">Draw.drawText &rtrif; undefined</a>"},{"title":"Draw.drawTile","link":"<a href=\"Draw.html#.drawTile\">Draw.drawTile &rtrif; undefined</a>"},{"title":"Draw.drawTileScreenSpace","link":"<a href=\"Draw.html#.drawTileScreenSpace\">Draw.drawTileScreenSpace &rtrif; undefined</a>"},{"title":"Draw.isFullscreen","link":"<a href=\"Draw.html#.isFullscreen\">Draw.isFullscreen &rtrif; undefined</a>"},{"title":"Draw.screenToWorld","link":"<a href=\"Draw.html#.screenToWorld\">Draw.screenToWorld &rtrif; undefined</a>"},{"title":"Draw.setBlendMode","link":"<a href=\"Draw.html#.setBlendMode\">Draw.setBlendMode &rtrif; undefined</a>"},{"title":"Draw.toggleFullscreen","link":"<a href=\"Draw.html#.toggleFullscreen\">Draw.toggleFullscreen &rtrif; undefined</a>"},{"title":"Draw.worldToScreen","link":"<a href=\"Draw.html#.worldToScreen\">Draw.worldToScreen &rtrif; undefined</a>"},{"title":"Input","link":"<a href=\"Input.html\">Input</a>"},{"title":"Input.clearInput","link":"<a href=\"Input.html#.clearInput\">Input.clearInput &rtrif; undefined</a>"},{"title":"Input.gamepadIsDown","link":"<a href=\"Input.html#.gamepadIsDown\">Input.gamepadIsDown &rtrif; undefined</a>"},{"title":"Input.gamepadStick","link":"<a href=\"Input.html#.gamepadStick\">Input.gamepadStick &rtrif; undefined</a>"},{"title":"Input.gamepadWasPressed","link":"<a href=\"Input.html#.gamepadWasPressed\">Input.gamepadWasPressed &rtrif; undefined</a>"},{"title":"Input.gamepadWasReleased","link":"<a href=\"Input.html#.gamepadWasReleased\">Input.gamepadWasReleased &rtrif; undefined</a>"},{"title":"Input.keyIsDown","link":"<a href=\"Input.html#.keyIsDown\">Input.keyIsDown &rtrif; undefined</a>"},{"title":"Input.keyWasPressed","link":"<a href=\"Input.html#.keyWasPressed\">Input.keyWasPressed &rtrif; undefined</a>"},{"title":"Input.keyWasReleased","link":"<a href=\"Input.html#.keyWasReleased\">Input.keyWasReleased &rtrif; undefined</a>"},{"title":"Medals","link":"<a href=\"Medals.html\">Medals</a>"},{"title":"Medals.medalsInit","link":"<a href=\"Medals.html#.medalsInit\">Medals.medalsInit &rtrif; undefined</a>"},{"title":"Random","link":"<a href=\"Random.html\">Random</a>"},{"title":"Random.rand","link":"<a href=\"Random.html#.rand\">Random.rand &rtrif; undefined</a>"},{"title":"Random.randColor","link":"<a href=\"Random.html#.randColor\">Random.randColor &rtrif; undefined</a>"},{"title":"Random.randInCircle","link":"<a href=\"Random.html#.randInCircle\">Random.randInCircle &rtrif; undefined</a>"},{"title":"Random.randInt","link":"<a href=\"Random.html#.randInt\">Random.randInt &rtrif; undefined</a>"},{"title":"Random.randSeeded","link":"<a href=\"Random.html#.randSeeded\">Random.randSeeded &rtrif; undefined</a>"},{"title":"Random.randSign","link":"<a href=\"Random.html#.randSign\">Random.randSign &rtrif; undefined</a>"},{"title":"Random.randVector","link":"<a href=\"Random.html#.randVector\">Random.randVector &rtrif; undefined</a>"},{"title":"Settings","link":"<a href=\"Settings.html\">Settings</a>"},{"title":"Utilities","link":"<a href=\"Utilities.html\">Utilities</a>"},{"title":"Utilities.abs","link":"<a href=\"Utilities.html#.abs\">Utilities.abs &rtrif; undefined</a>"},{"title":"Utilities.clamp","link":"<a href=\"Utilities.html#.clamp\">Utilities.clamp &rtrif; undefined</a>"},{"title":"Utilities.formatTime","link":"<a href=\"Utilities.html#.formatTime\">Utilities.formatTime &rtrif; undefined</a>"},{"title":"Utilities.isOverlapping","link":"<a href=\"Utilities.html#.isOverlapping\">Utilities.isOverlapping &rtrif; undefined</a>"},{"title":"Utilities.lerp","link":"<a href=\"Utilities.html#.lerp\">Utilities.lerp &rtrif; undefined</a>"},{"title":"Utilities.max","link":"<a href=\"Utilities.html#.max\">Utilities.max &rtrif; undefined</a>"},{"title":"Utilities.min","link":"<a href=\"Utilities.html#.min\">Utilities.min &rtrif; undefined</a>"},{"title":"Utilities.mod","link":"<a href=\"Utilities.html#.mod\">Utilities.mod &rtrif; undefined</a>"},{"title":"Utilities.nearestPowerOfTwo","link":"<a href=\"Utilities.html#.nearestPowerOfTwo\">Utilities.nearestPowerOfTwo &rtrif; undefined</a>"},{"title":"Utilities.percent","link":"<a href=\"Utilities.html#.percent\">Utilities.percent &rtrif; undefined</a>"},{"title":"Utilities.sign","link":"<a href=\"Utilities.html#.sign\">Utilities.sign &rtrif; undefined</a>"},{"title":"Utilities.smoothStep","link":"<a href=\"Utilities.html#.smoothStep\">Utilities.smoothStep &rtrif; undefined</a>"},{"title":"Utilities.vec2","link":"<a href=\"Utilities.html#.vec2\">Utilities.vec2 &rtrif; undefined</a>"},{"title":"Utilities.wave","link":"<a href=\"Utilities.html#.wave\">Utilities.wave &rtrif; undefined</a>"},{"title":"WebGL","link":"<a href=\"WebGL.html\">WebGL</a>"},{"title":"WebGL.glCompileShader","link":"<a href=\"WebGL.html#.glCompileShader\">WebGL.glCompileShader &rtrif; undefined</a>"},{"title":"WebGL.glCopyToContext","link":"<a href=\"WebGL.html#.glCopyToContext\">WebGL.glCopyToContext &rtrif; undefined</a>"},{"title":"WebGL.glCreateBuffer","link":"<a href=\"WebGL.html#.glCreateBuffer\">WebGL.glCreateBuffer &rtrif; undefined</a>"},{"title":"WebGL.glCreateProgram","link":"<a href=\"WebGL.html#.glCreateProgram\">WebGL.glCreateProgram &rtrif; undefined</a>"},{"title":"WebGL.glCreateTexture","link":"<a href=\"WebGL.html#.glCreateTexture\">WebGL.glCreateTexture &rtrif; undefined</a>"},{"title":"WebGL.glFlush","link":"<a href=\"WebGL.html#.glFlush\">WebGL.glFlush &rtrif; undefined</a>"},{"title":"WebGL.glSetBlendMode","link":"<a href=\"WebGL.html#.glSetBlendMode\">WebGL.glSetBlendMode &rtrif; undefined</a>"},{"title":"WebGL.glSetTexture","link":"<a href=\"WebGL.html#.glSetTexture\">WebGL.glSetTexture &rtrif; undefined</a>"},{"title":"engineCollideObjects","link":"<a href=\"global.html#engineCollideObjects\">engineCollideObjects</a>"},{"title":"engineInit","link":"<a href=\"global.html#engineInit\">engineInit</a>"},{"title":"engineName","link":"<a href=\"global.html#engineName\">engineName</a>"},{"title":"engineObjects","link":"<a href=\"global.html#engineObjects\">engineObjects</a>"},{"title":"engineObjectsCallback","link":"<a href=\"global.html#engineObjectsCallback\">engineObjectsCallback</a>"},{"title":"engineObjectsDestroy","link":"<a href=\"global.html#engineObjectsDestroy\">engineObjectsDestroy</a>"},{"title":"engineObjectsUpdate","link":"<a href=\"global.html#engineObjectsUpdate\">engineObjectsUpdate</a>"},{"title":"engineVersion","link":"<a href=\"global.html#engineVersion\">engineVersion</a>"},{"title":"FPS","link":"<a href=\"global.html#FPS\">FPS</a>"},{"title":"frame","link":"<a href=\"global.html#frame\">frame</a>"},{"title":"paused","link":"<a href=\"global.html#paused\">paused</a>"},{"title":"time","link":"<a href=\"global.html#time\">time</a>"},{"title":"timeDelta","link":"<a href=\"global.html#timeDelta\">timeDelta</a>"},{"title":"timeReal","link":"<a href=\"global.html#timeReal\">timeReal</a>"}];
+        var options = 
+          setupSearch(list, options)
+      </script>
+    
+
+    
+
+    
+
+    
+
+    
+
+
+  </body>
+
+</html>
