@@ -242,7 +242,7 @@ class Weapon extends EngineObject
                 sound_shoot.play(this.pos);
                 this.localAngle = -rand(.2,.15);
                 this.recoilTimer.set(.4);
-                const direction = vec2(this.getMirrorSign(this.bulletSpeed), 0);
+                const direction = vec2(this.bulletSpeed*this.getMirrorSign(), 0);
                 const velocity = direction.rotate(rand(-1,1)*this.bulletSpread);
                 new Bullet(this.pos, this.parent, velocity, this.damage);
 
