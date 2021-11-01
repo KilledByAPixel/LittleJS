@@ -99,17 +99,17 @@ class Music
      * // create some music
      * const music_example = new Music(
      * [
-     *     [                        // instruments
-     *       [,0,400]               // simple note
-     *     ],
-     *     [                        // patterns
-     *         [                    // pattern 1
-     *             [                // channel 0
-     *                 0, -1,       // instrument 0, left speaker
-     *                 1, 0, 9, 1   // channel notes
-     *             ],
-     *             [                // channel 1
-     *                 0, 1,        // instrument 1, right speaker
+     *     [                         // instruments
+     *       [,0,400]                // simple note
+     *     ], 
+     *     [                         // patterns
+     *         [                     // pattern 1
+     *             [                 // channel 0
+     *                 0, -1,        // instrument 0, left speaker
+     *                 1, 0, 9, 1    // channel notes
+     *             ], 
+     *             [                 // channel 1
+     *                 0, 1,         // instrument 1, right speaker
      *                 0, 12, 17, -1 // channel notes
      *             ]
      *         ],

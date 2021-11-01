@@ -6,26 +6,23 @@
  *  <br> - Collision layer is separate from visible layers
  *  <br> - Tile layers can be drawn to using their context with canvas2d
  *  <br> - It is recommended to have a visible layer that matches the collision
- *  @namespace TileLayer
+ *  @namespace TileCollision
  */
 
 'use strict';
 
-///////////////////////////////////////////////////////////////////////////////
-// Tile Collision
-
 /** The tile collision layer array, use setTileCollisionData and getTileCollisionData to access
- *  @memberof TileLayer */
+ *  @memberof TileCollision */
 let tileCollision = [];
 
 /** Size of the tile collision layer
  *  @type {Vector2} 
- *  @memberof TileLayer */
+ *  @memberof TileCollision */
 let tileCollisionSize = vec2();
 
 /** Clear and initialize tile collision
  *  @param {Vector2} size
- *  @memberof TileLayer */
+ *  @memberof TileCollision */
 function initTileCollision(size)
 {
     tileCollisionSize = size;
@@ -37,14 +34,14 @@ function initTileCollision(size)
 /** Set tile collision data
  *  @param {Vector2} pos
  *  @param {Number}  [data=0]
- *  @memberof TileLayer */
+ *  @memberof TileCollision */
 const setTileCollisionData = (pos, data=0)=>
     pos.arrayCheck(tileCollisionSize) && (tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] = data);
 
 /** Get tile collision data
  *  @param {Vector2} pos
  *  @return {Number}
- *  @memberof TileLayer */
+ *  @memberof TileCollision */
 const getTileCollisionData = (pos)=>
     pos.arrayCheck(tileCollisionSize) ? tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] : 0;
 
@@ -53,7 +50,7 @@ const getTileCollisionData = (pos)=>
  *  @param {Vector2}      [size=new Vector2(1,1)]
  *  @param {EngineObject} [object]
  *  @return {Boolean}
- *  @memberof TileLayer */
+ *  @memberof TileCollision */
 function tileCollisionTest(pos, size=vec2(), object)
 {
     const minX = max(Math.floor(pos.x - size.x/2), 0);
@@ -74,7 +71,7 @@ function tileCollisionTest(pos, size=vec2(), object)
  *  @param {Vector2}      posEnd
  *  @param {EngineObject} [object]
  *  @return {Vector2}
- *  @memberof TileLayer */
+ *  @memberof TileCollision */
 function tileCollisionRaycast(posStart, posEnd, object)
 {
     // test if a ray collides with tiles from start to end
@@ -114,11 +111,19 @@ const tileLayerCanvasCache = [];
 /** Tile layer data object stores info about how to render a tile */
 class TileLayerData
 {
-    /** Create a tile layer data object
-     *  @param {Number}  [tile] - The tile to use, untextured if undefined
-     *  @param {Number}  [direction=0] - Integer direction of tile, in 90 degree increments
-     *  @param {Boolean} [mirror=0] - If the tile should be mirrored along the x axis
-     *  @param {Color}   [color=new Color(1,1,1)] - Color of the tile
+    /** 
+     * Create a tile layer data object, one for each tile in a TileLayer
+     * @param {Number}  [tile] - The tile to use, untextured if undefined
+     * @param {Number}  [direction=0] - Integer direction of tile, in 90 degree increments
+     * @param {Boolean} [mirror=0] - If the tile should be mirrored along the x axis
+     * @param {Color}   [color=new Color(1,1,1)] - Color of the tile
+     * @example
+     * // create tile layer data with tile index 0 and random orientation and color
+     * const tileIndex = 0;
+     * const direction = randInt(4)
+     * const mirror = randInt(2);
+     * const color = randColor();
+     * const data = new TileLayerData(tileIndex, direction, mirror, color);
      */
     constructor(tile, direction=0, mirror=0, color=new Color)
     {
@@ -136,7 +141,7 @@ class TileLayerData
 class TileLayer extends EngineObject
 {
     /** 
-     * Create a tile layer data object
+     * Create a tile layer object
      * @param {Vector2} [position=new Vector2(0,0)] - World space position
      * @param {Vector2} [size=defaultObjectSize] - World space size
      * @param {Vector2} [scale=new Vector2(1,1)] - How much to scale this in world space

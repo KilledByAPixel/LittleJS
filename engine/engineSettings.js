@@ -141,12 +141,12 @@ const gamepadsEnable = 1;
  *  @memberof Settings */
 const touchInputEnable = 1;
 
-/** Allow players to use dpad as analog stick
+/** If true, the dpad also routes input to the analog stick (for better accessability)
  *  @default
  *  @memberof Settings */
 const copyGamepadDirectionToStick = 1;
 
-/** allow players to use WASD as direction keys
+/** If true the WASD keys are also routed to the direction keys (for better accessability)
  *  @default
  *  @memberof Settings */
 const copyWASDToDpad = 1;

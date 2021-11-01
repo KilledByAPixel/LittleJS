@@ -198,6 +198,7 @@ class Vector2
      * @example
      * let a = new Vector2(2, 3); // vector with coordinates (2, 3)
      * let b = new Vector2;       // vector with coordinates (0, 0)
+     * let c = vec2(4, 2);        // use the vec2 function to make a Vector2
      */
     constructor(x=0, y=0) { this.x = x; this.y = y; }
 

@@ -764,6 +764,7 @@ class Vector2
      * @example
      * let a = new Vector2(2, 3); // vector with coordinates (2, 3)
      * let b = new Vector2;       // vector with coordinates (0, 0)
+     * let c = vec2(4, 2);        // use the vec2 function to make a Vector2
      */
     constructor(x=0, y=0) { this.x = x; this.y = y; }
 
@@ -1178,12 +1179,12 @@ const gamepadsEnable = 1;
  *  @memberof Settings */
 const touchInputEnable = 1;
 
-/** Allow players to use dpad as analog stick
+/** If true, the dpad also routes input to the analog stick (for better accessability)
  *  @default
  *  @memberof Settings */
 const copyGamepadDirectionToStick = 1;
 
-/** allow players to use WASD as direction keys
+/** If true the WASD keys are also routed to the direction keys (for better accessability)
  *  @default
  *  @memberof Settings */
 const copyWASDToDpad = 1;
@@ -1262,7 +1263,7 @@ const medalDisplayIconSize = 80;
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.3';
+const engineVersion = '1.1.4';
 
 /** Frames per second to update objects
  *  @default */
@@ -1297,12 +1298,12 @@ let frameTimeLastMS = 0, frameTimeBufferMS = 0, debugFPS = 0,
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Start up LittleJS engine with your callback functions
- *  @param {Function} gameInit       - Called once after the engine starts up, setup the game
- *  @param {Function} gameUpdate     - Called every frame at 60 frames per second, handle input and update the game state
- *  @param {Function} gameUpdatePost - Called after physics and objects are updated, setup camera and prepare for render
- *  @param {Function} gameRender     - Called before objects are rendered, draw any background effects that appear behind objects
- *  @param {Function} gameRenderPost - Called after objects are rendered, draw effects or hud that appear above all objects
- *  @param {String} tileImageSource  - Tile image to use, everything starts when the image is finished loading
+ *  @param {Function} gameInit        - Called once after the engine starts up, setup the game
+ *  @param {Function} gameUpdate      - Called every frame at 60 frames per second, handle input and update the game state
+ *  @param {Function} gameUpdatePost  - Called after physics and objects are updated, setup camera and prepare for render
+ *  @param {Function} gameRender      - Called before objects are rendered, draw any background effects that appear behind objects
+ *  @param {Function} gameRenderPost  - Called after objects are rendered, draw effects or hud that appear above all objects
+ *  @param {String} [tileImageSource] - Tile image to use, everything starts when the image is finished loading
  */
 function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, tileImageSource)
 {
@@ -2449,17 +2450,17 @@ class Music
      * // create some music
      * const music_example = new Music(
      * [
-     *     [                        // instruments
-     *       [,0,400]               // simple note
-     *     ],
-     *     [                        // patterns
-     *         [                    // pattern 1
-     *             [                // channel 0
-     *                 0, -1,       // instrument 0, left speaker
-     *                 1, 0, 9, 1   // channel notes
-     *             ],
-     *             [                // channel 1
-     *                 0, 1,        // instrument 1, right speaker
+     *     [                         // instruments
+     *       [,0,400]                // simple note
+     *     ], 
+     *     [                         // patterns
+     *         [                     // pattern 1
+     *             [                 // channel 0
+     *                 0, -1,        // instrument 0, left speaker
+     *                 1, 0, 9, 1    // channel notes
+     *             ], 
+     *             [                 // channel 1
+     *                 0, 1,         // instrument 1, right speaker
      *                 0, 12, 17, -1 // channel notes
      *             ]
      *         ],
@@ -2801,26 +2802,23 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
  *  <br> - Collision layer is separate from visible layers
  *  <br> - Tile layers can be drawn to using their context with canvas2d
  *  <br> - It is recommended to have a visible layer that matches the collision
- *  @namespace TileLayer
+ *  @namespace TileCollision
  */
 
 'use strict';
 
-///////////////////////////////////////////////////////////////////////////////
-// Tile Collision
-
 /** The tile collision layer array, use setTileCollisionData and getTileCollisionData to access
- *  @memberof TileLayer */
+ *  @memberof TileCollision */
 let tileCollision = [];
 
 /** Size of the tile collision layer
  *  @type {Vector2} 
- *  @memberof TileLayer */
+ *  @memberof TileCollision */
 let tileCollisionSize = vec2();
 
 /** Clear and initialize tile collision
  *  @param {Vector2} size
- *  @memberof TileLayer */
+ *  @memberof TileCollision */
 function initTileCollision(size)
 {
     tileCollisionSize = size;
@@ -2832,14 +2830,14 @@ function initTileCollision(size)
 /** Set tile collision data
  *  @param {Vector2} pos
  *  @param {Number}  [data=0]
- *  @memberof TileLayer */
+ *  @memberof TileCollision */
 const setTileCollisionData = (pos, data=0)=>
     pos.arrayCheck(tileCollisionSize) && (tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] = data);
 
 /** Get tile collision data
  *  @param {Vector2} pos
  *  @return {Number}
- *  @memberof TileLayer */
+ *  @memberof TileCollision */
 const getTileCollisionData = (pos)=>
     pos.arrayCheck(tileCollisionSize) ? tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] : 0;
 
@@ -2848,7 +2846,7 @@ const getTileCollisionData = (pos)=>
  *  @param {Vector2}      [size=new Vector2(1,1)]
  *  @param {EngineObject} [object]
  *  @return {Boolean}
- *  @memberof TileLayer */
+ *  @memberof TileCollision */
 function tileCollisionTest(pos, size=vec2(), object)
 {
     const minX = max(Math.floor(pos.x - size.x/2), 0);
@@ -2869,7 +2867,7 @@ function tileCollisionTest(pos, size=vec2(), object)
  *  @param {Vector2}      posEnd
  *  @param {EngineObject} [object]
  *  @return {Vector2}
- *  @memberof TileLayer */
+ *  @memberof TileCollision */
 function tileCollisionRaycast(posStart, posEnd, object)
 {
     // test if a ray collides with tiles from start to end
@@ -2909,11 +2907,19 @@ const tileLayerCanvasCache = [];
 /** Tile layer data object stores info about how to render a tile */
 class TileLayerData
 {
-    /** Create a tile layer data object
-     *  @param {Number}  [tile] - The tile to use, untextured if undefined
-     *  @param {Number}  [direction=0] - Integer direction of tile, in 90 degree increments
-     *  @param {Boolean} [mirror=0] - If the tile should be mirrored along the x axis
-     *  @param {Color}   [color=new Color(1,1,1)] - Color of the tile
+    /** 
+     * Create a tile layer data object, one for each tile in a TileLayer
+     * @param {Number}  [tile] - The tile to use, untextured if undefined
+     * @param {Number}  [direction=0] - Integer direction of tile, in 90 degree increments
+     * @param {Boolean} [mirror=0] - If the tile should be mirrored along the x axis
+     * @param {Color}   [color=new Color(1,1,1)] - Color of the tile
+     * @example
+     * // create tile layer data with tile index 0 and random orientation and color
+     * const tileIndex = 0;
+     * const direction = randInt(4)
+     * const mirror = randInt(2);
+     * const color = randColor();
+     * const data = new TileLayerData(tileIndex, direction, mirror, color);
      */
     constructor(tile, direction=0, mirror=0, color=new Color)
     {
@@ -2931,7 +2937,7 @@ class TileLayerData
 class TileLayer extends EngineObject
 {
     /** 
-     * Create a tile layer data object
+     * Create a tile layer object
      * @param {Vector2} [position=new Vector2(0,0)] - World space position
      * @param {Vector2} [size=defaultObjectSize] - World space size
      * @param {Vector2} [scale=new Vector2(1,1)] - How much to scale this in world space

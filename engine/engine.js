@@ -22,7 +22,7 @@
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.3';
+const engineVersion = '1.1.4';
 
 /** Frames per second to update objects
  *  @default */
@@ -57,12 +57,12 @@ let frameTimeLastMS = 0, frameTimeBufferMS = 0, debugFPS = 0,
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Start up LittleJS engine with your callback functions
- *  @param {Function} gameInit       - Called once after the engine starts up, setup the game
- *  @param {Function} gameUpdate     - Called every frame at 60 frames per second, handle input and update the game state
- *  @param {Function} gameUpdatePost - Called after physics and objects are updated, setup camera and prepare for render
- *  @param {Function} gameRender     - Called before objects are rendered, draw any background effects that appear behind objects
- *  @param {Function} gameRenderPost - Called after objects are rendered, draw effects or hud that appear above all objects
- *  @param {String} tileImageSource  - Tile image to use, everything starts when the image is finished loading
+ *  @param {Function} gameInit        - Called once after the engine starts up, setup the game
+ *  @param {Function} gameUpdate      - Called every frame at 60 frames per second, handle input and update the game state
+ *  @param {Function} gameUpdatePost  - Called after physics and objects are updated, setup camera and prepare for render
+ *  @param {Function} gameRender      - Called before objects are rendered, draw any background effects that appear behind objects
+ *  @param {Function} gameRenderPost  - Called after objects are rendered, draw effects or hud that appear above all objects
+ *  @param {String} [tileImageSource] - Tile image to use, everything starts when the image is finished loading
  */
 function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, tileImageSource)
 {

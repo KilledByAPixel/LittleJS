@@ -1,6 +1,6 @@
 {
   "name": "littlejsengine",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "description": "LittleJS - Tiny and Fast HTML5 Game Engine",
   "main": "engine/engine.all.js",
   "repository": {
