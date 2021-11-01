@@ -10,7 +10,7 @@
 
 'use strict';
 
-/** Sound Object - Caches a zzfx sound for later use and can be played positionally */
+/** Sound Object - Stores a zzfx sound for later use and can be played positionally */
 class Sound
 {
     /** Create a sound object and cache the zzfx samples for later use
@@ -82,7 +82,7 @@ class Sound
     }
 }
 
-/** Music Object - Caches zzfx music for later use */
+/** Music Object - Stores a zzfx music track for later use */
 class Music
 {
     /** Create a music object and cache the zzfx music samples for later use

@@ -9,7 +9,7 @@
 
 'use strict';
 
-/** A shortcut to get the value pi
+/** A shortcut to get Math.PI
  *  @const
  *  @memberof Utilities */
 const PI = Math.PI;
@@ -194,22 +194,22 @@ class Vector2
     copy() { return new Vector2(this.x, this.y); }
 
     /** Returns a copy of this vector plus the vector passed in
-     *  @param {Vector2}
+     *  @param {Vector2} vector
      *  @return {Vector2} */
     add(v) { ASSERT(v.x!=undefined); return new Vector2(this.x + v.x, this.y + v.y); }
 
     /** Returns a copy of this vector minus the vector passed in
-     *  @param {Vector2}
+     *  @param {Vector2} vector
      *  @return {Vector2} */
     subtract(v) { ASSERT(v.x!=undefined); return new Vector2(this.x - v.x, this.y - v.y); }
 
     /** Returns a copy of this vector times the vector passed in
-     *  @param {Vector2}
+     *  @param {Vector2} vector
      *  @return {Vector2} */
     multiply(v) { ASSERT(v.x!=undefined); return new Vector2(this.x * v.x, this.y * v.y); }
 
     /** Returns a copy of this vector divided by the vector passed in
-     *  @param {Vector2}
+     *  @param {Vector2} vector
      *  @return {Vector2} */
     divide(v) { ASSERT(v.x!=undefined); return new Vector2(this.x / v.x, this.y / v.y); }
 
@@ -227,12 +227,12 @@ class Vector2
     lengthSquared() { return this.x**2 + this.y**2; }
 
     /** Returns the distance from this vector to vector passed in
-     * @param {Vector2}
+     * @param {Vector2} vector
      * @return {Number} */
     distance(v) { return this.distanceSquared(v)**.5; }
 
     /** Returns the distance squared from this vector to vector passed in
-     * @param {Vector2}
+     * @param {Vector2} vector
      * @return {Number} */
     distanceSquared(v) { return (this.x - v.x)**2 + (this.y - v.y)**2; }
 
@@ -247,12 +247,12 @@ class Vector2
     clampLength(length=1) { const l = this.length(); return l > length ? this.scale(length/l) : this; }
 
     /** Returns the dot product of this and the vector passed in
-     * @param {Vector2}
+     * @param {Vector2} vector
      * @return {Number} */
     dot(v) { ASSERT(v.x!=undefined); return this.x*v.x + this.y*v.y; }
 
     /** Returns the cross product of this and the vector passed in
-     * @param {Vector2}
+     * @param {Vector2} vector
      * @return {Number} */
     cross(v) { ASSERT(v.x!=undefined); return this.x*v.y - this.y*v.x; }
 
@@ -291,13 +291,13 @@ class Vector2
     area() { return this.x * this.y; }
 
     /** Returns a new vector that is p percent between this and the vector passed in
-     * @param {Vector2}
+     * @param {Vector2} vector
      * @param {Number} percent
      * @return {Vector2} */
     lerp(v, p) { ASSERT(v.x!=undefined); return this.add(v.subtract(this).scale(clamp(p))); }
 
     /** Returns true if this vector is within the bounds of an array size passed in
-     * @param {Vector2}
+     * @param {Vector2} arraySize
      * @return {Boolean} */
     arrayCheck(arraySize) { return this.x >= 0 && this.y >= 0 && this.x < arraySize.x && this.y < arraySize.y; } 
 }
@@ -319,22 +319,22 @@ class Color
     copy() { return new Color(this.r, this.g, this.b, this.a); }
 
     /** Returns a copy of this color plus the color passed in
-     * @param {Color}
+     * @param {Color} color
      * @return {Color} */
     add(c) { return new Color(this.r+c.r, this.g+c.g, this.b+c.b, this.a+c.a); }
 
     /** Returns a copy of this color minus the color passed in
-     * @param {Color}
+     * @param {Color} color
      * @return {Color} */
     subtract(c) { return new Color(this.r-c.r, this.g-c.g, this.b-c.b, this.a-c.a); }
 
     /** Returns a copy of this color times the color passed in
-     * @param {Color}
+     * @param {Color} color
      * @return {Color} */
     multiply(c) { return new Color(this.r*c.r, this.g*c.g, this.b*c.b, this.a*c.a); }
 
     /** Returns a copy of this color divided by the color passed in
-     * @param {Color}
+     * @param {Color} color
      * @return {Color} */
     divide(c) { return new Color(this.r/c.r, this.g/c.g, this.b/c.b, this.a/c.a); }
 
@@ -349,7 +349,7 @@ class Color
     clamp() { return new Color(clamp(this.r), clamp(this.g), clamp(this.b), clamp(this.a)); }
 
     /** Returns a new color that is p percent between this and the color passed in
-     * @param {Color}
+     * @param {Color} color
      * @param {Number} percent
      * @return {Color} */
     lerp(c, p) { return this.add(c.subtract(this).scale(clamp(p))); }

@@ -312,7 +312,7 @@ class EngineObject
 
     /** Set how this object collides
      *  @param {boolean} [collideSolidObjects=0] - Does it collide with solid objects
-     *  @param {boolean} [isSolid=0] - Is it able to collide and block other objects (expensive in large numbers)
+     *  @param {boolean} [isSolid=0] - Does it collide with and block other objects (expensive in large numbers)
      *  @param {boolean} [collideTiles=1] - Does it collide with the tile collision */
     setCollision(collideSolidObjects=0, isSolid=0, collideTiles=1)
     {

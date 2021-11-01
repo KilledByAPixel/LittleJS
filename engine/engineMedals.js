@@ -82,12 +82,6 @@ class Medal
         newgrounds && newgrounds.unlockMedal(this.id);
         localStorage['OS13kTrophy,' + this.icon + ',' + medalsSaveName + ',' + this.name] = this.description;
     }
- 
-    /** Unlocks a medal if not already unlocked */
-    storageKey()
-    {
-        return medalsSaveName + '_medal_' + this.id;
-    }
 
     /** Render a medal
      *  @param {Number} [hidePercent=0] - How much to slide the medal off screen
@@ -135,6 +129,12 @@ class Medal
             context.drawImage(this.image, x-size/2, y-size/2, size, size);
         else
             context.fillText(this.icon, x, y); // show icon if there is no image
+    }
+ 
+    // Get local storage key used by the medal
+    storageKey()
+    {
+        return medalsSaveName + '_medal_' + this.id;
     }
 }
 

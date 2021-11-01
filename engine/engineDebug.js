@@ -23,12 +23,12 @@ const enableAsserts = 1;
  *  @memberof Debug */
 const debugPointSize = .5;
 
-/** True if watermark with fps should be down
+/** True if watermark with FPS should be down
  *  @default
  *  @memberof Debug */
 let showWatermark = 1;
 
-/** True if god mode is enabled
+/** True if god mode is enabled, handle this however you want
  *  @default
  *  @memberof Debug */
 let godMode = 0;
@@ -40,7 +40,7 @@ debugParticles = 0, debugGamepads = 0, debugMedals = 0, debugTakeScreenshot, dow
 ///////////////////////////////////////////////////////////////////////////////
 // Debug helper functions
 
-/** Asserts if the experssion is false
+/** Asserts if the experssion is false, does not do anything in release builds
  *  @param {Boolean} assertion
  *  @param {Object} output
  *  @memberof Debug */
