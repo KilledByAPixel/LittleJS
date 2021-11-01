@@ -28,6 +28,8 @@ LittleJS is a super lightweight 2D JavaScript game engine with fast WebGL render
 
 ## [LittleJS Trailer](https://youtu.be/chuBzGjv7Ms)
 
+## [LittleJS Documentation](https://killedbyapixel.github.io/LittleJS/doc/out)
+
 ## [LittleJS Trello Roadmap](https://trello.com/b/E9zf1Xak/littlejs)
 
 ## Example Starter Projects
@@ -37,87 +39,6 @@ LittleJS is a super lightweight 2D JavaScript game engine with fast WebGL render
 ### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer) - Platformer/shooter with procedural generation and destruction
 ### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout) - Breakout game with mouse/touch or gamepad control
 ### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress) - Max sprite/object test and music system demo
-
-## How to use LittleJS
-
-It is recommended that you start by copying the [LittleJS Starter Project](https://github.com/KilledByAPixel/LittleJS/blob/main/game.js) This file is mostly empty with just a few things you can use to get started or remove. You can also download and include [engine.all.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.js) or [engine.all.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.min.js).
-
-In order to load files like images you will need to run a small web server like http-server on npm. I prefer to use an editor that does this for me automatically like [Brackets](https://brackets.io/) or VS Code with the [Live Server plugin](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer).
-
-To startup LittleJS, you must create 5 functions and pass them to engineInit. A canvas will automatically be created and added to the document. You can use this template to get started.
-
-```javascript
-
-function gameInit()
-{
-    // called once after the engine starts up
-    // setup the game
-}
-
-function gameUpdate()
-{
-    // called every frame at 60 frames per second
-    // handle input and update the game state
-}
-
-function gameUpdatePost()
-{
-    // called after physics and objects are updated
-    // setup camera and prepare for render
-}
-
-function gameRender()
-{
-    // called before objects are rendered
-    // draw any background effects that appear behind objects
-}
-
-function gameRenderPost()
-{
-    // called after objects are rendered
-    // draw effects or hud that appear above all objects
-}
-
-// startup LittleJS with your game functions after the tile image is loaded
-engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png');
-```
-
-Though not required, LittleJS is intended to be used as an object oriented system by extending the base class EngineObject with your own. This lightweight class provides many useful features including physics, collision, parent/child system, and sorted rendering. Engine objects are automatically added to the global list of objects where they will be updated and rendered until destroyed. 
-
-Here is a template you can use to make objects that behave however you want. See the examples for a complete demonstration.
-
-```javascript
-class MyObject extends EngineObject 
-{
-    constructor(pos, size, tileIndex, tileSize, angle, color)
-    {
-        super(pos, size, tileIndex, tileSize, angle, color);
-        // your object init code here
-    }
-
-    update()
-    {
-        super.update(); // update object physics and position
-        // your object update code here
-    }
-
-    render()
-    {
-        super.render(); // draw object as a sprite
-        // your object render code here
-    }
-}
-```
-
-## Engine Configuration
-
-All engine configuration is in [engineSettings.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engineSettings.js). Here are the most important settings...
-
-- fixedWidth and fixedHeight - use a fixed canvas resolution if set (disabled by default)
-- pixelated - disable anti-aliasing for pixel art style games (enabled by default)
-- audioVolume - adjust volume of sound effects, music, and speech (.3 or less recommended)
-- glOverlay - fix slow rendering in some browsers by making the WebGL canvas visible instead of compositing
-- glEnable - run without WebGL, though it is slower to render sprites and textured coloring is disabled
 
 ## Games Made With LittleJS
 
