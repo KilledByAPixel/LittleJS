@@ -25,8 +25,7 @@
             "theme": "dark",
             "favicon": "./static/favicon.png",
             "title": "LittleJS - The Tiny JavaScript Game Engine That Can!",
-            "footer": "<a href=https://github.com/KilledByAPixel/LittleJS>LittleJS - MIT License - Copyright 2021 Frank Force</a>",
-            "static_dir": ["./static/"]
+            "footer": "<a href=https://github.com/KilledByAPixel/LittleJS>LittleJS - MIT License - Copyright 2021 Frank Force</a>"
         }
     }
 }

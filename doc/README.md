@@ -1,10 +1,10 @@
-# ![LittleJS Logo](static/favicon.png) LittleJS - The Tiny JavaScript Game Engine That Can
+# ![LittleJS Logo](../../favicon.png) LittleJS - The Tiny JavaScript Game Engine That Can
 
 ## All aboard!
 
 LittleJS is a super lightweight 2D JavaScript game engine with fast WebGL rendering. It was designed to be small, simple, and easy to use for various applications, from game jams to commercial releases. This engine has everything necessary to make high-quality games, including fast rendering, physics, particles, sound effects, music, keyboard/mouse/gamepad input handling, update/render loop, and debug tools. 🚂
 
-![LittleJS Screenshot](static/screenshot.jpg)
+![LittleJS Screenshot](../../examples/screenshot.jpg)
 
 ## Features
 
@@ -124,4 +124,4 @@ All engine configuration is in [engineSettings.js](https://github.com/KilledByAP
 - [Space Huggers](https://github.com/KilledByAPixel/SpaceHuggers) - A more developed version of the platformer example
 - Send me your games!
 
-![LittleJS Logo](static/favicon.png)
+![LittleJS Logo](../../favicon.png)
