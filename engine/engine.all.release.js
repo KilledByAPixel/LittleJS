@@ -700,7 +700,7 @@ const medalDisplayIconSize = 80;
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.2';
+const engineVersion = '1.1.3';
 
 /** Frames per second to update objects
  *  @default */
@@ -744,8 +744,8 @@ let frameTimeLastMS = 0, frameTimeBufferMS = 0, debugFPS = 0,
  */
 function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, tileImageSource)
 {
-    // init engine when tiles load
-    tileImage.onload = ()=>
+    // init engine when tiles load or fail to load
+    tileImage.onerror = tileImage.onload = ()=>
     {
         // save tile image info
         tileImageSizeInverse = vec2(1).divide(tileImageSize = vec2(tileImage.width, tileImage.height));
@@ -3251,7 +3251,14 @@ function glCreateTexture(image)
     // build the texture
     const texture = glContext.createTexture();
     glContext.bindTexture(gl_TEXTURE_2D, texture);
-    glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
+    if (image.width && image.height)
+        glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
+    else
+    {
+        // use a white pixel if no tile image is found
+        const pixel = new Uint8Array([255, 255, 255, 255]);
+        glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, 1, 1, 0, gl_RGBA, gl_UNSIGNED_BYTE, pixel);
+    }
 
     // use point filtering for pixelated rendering
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, pixelated ? gl_NEAREST : gl_LINEAR);

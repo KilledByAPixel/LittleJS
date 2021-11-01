@@ -22,7 +22,7 @@
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.2';
+const engineVersion = '1.1.3';
 
 /** Frames per second to update objects
  *  @default */
@@ -66,8 +66,8 @@ let frameTimeLastMS = 0, frameTimeBufferMS = 0, debugFPS = 0,
  */
 function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, tileImageSource)
 {
-    // init engine when tiles load
-    tileImage.onload = ()=>
+    // init engine when tiles load or fail to load
+    tileImage.onerror = tileImage.onload = ()=>
     {
         // save tile image info
         tileImageSizeInverse = vec2(1).divide(tileImageSize = vec2(tileImage.width, tileImage.height));
