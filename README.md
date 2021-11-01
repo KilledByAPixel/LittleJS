@@ -8,6 +8,14 @@ LittleJS is a super lightweight 2D JavaScript game engine with fast WebGL render
 
 ![LittleJS Screenshot](examples/screenshot.jpg)
 
+## Example Projects
+
+### [Hello World](https://killedbyapixel.github.io/LittleJS/) - Clean project with only a few things to get you started
+### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle) - Match 3 puzzle game with HD rendering and high score tracking
+### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer) - Platformer/shooter with procedural generation and destruction
+### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout) - Breakout game with mouse/touch or gamepad control
+### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress) - Max sprite/object test and music system demo
+
 ## Features
 
 - Very small footprint with no dependencies
@@ -27,14 +35,6 @@ LittleJS is a super lightweight 2D JavaScript game engine with fast WebGL render
 - For size coding competitions like [js13kGames](https://js13kgames.com/), starter project builds to a 7KB zip
 - Easily build a Windows executable with [electron](https://www.electronjs.org/) for distribution on platforms like Steam
 - Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used to make commercial games
-
-## Example Projects
-
-### [Hello World](https://killedbyapixel.github.io/LittleJS/) - Clean project with only a few things to get you started
-### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle) - Match 3 puzzle game with HD rendering and high score tracking
-### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer) - Platformer/shooter with procedural generation and destruction
-### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout) - Breakout game with mouse/touch or gamepad control
-### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress) - Max sprite/object test and music system demo
 
 ## Games Made With LittleJS
 
