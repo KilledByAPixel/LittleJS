@@ -30,7 +30,7 @@ function initTileCollision(size)
 
 /** Set tile collision data
  *  @param {Vector2} pos
- *  @param {Number} [data=0]
+ *  @param {Number}  [data=0]
  *  @memberof TileLayer */
 const setTileCollisionData = (pos, data=0)=>
     pos.arrayCheck(tileCollisionSize) && (tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] = data);
@@ -43,8 +43,8 @@ const getTileCollisionData = (pos)=>
     pos.arrayCheck(tileCollisionSize) ? tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] : 0;
 
 /** Check if collision with another object should occur
- *  @param {Vector2} pos
- *  @param {Vector2} [size=new Vector2(1,1)]
+ *  @param {Vector2}      pos
+ *  @param {Vector2}      [size=new Vector2(1,1)]
  *  @param {EngineObject} [object]
  *  @return {Boolean}
  *  @memberof TileLayer */
@@ -64,8 +64,8 @@ function tileCollisionTest(pos, size=vec2(), object)
 }
 
 /** Return the center of tile if any that is hit (this does not return the exact hit point)
- *  @param {Vector2} posStart
- *  @param {Vector2} posEnd
+ *  @param {Vector2}      posStart
+ *  @param {Vector2}      posEnd
  *  @param {EngineObject} [object]
  *  @return {Vector2}
  *  @memberof TileLayer */
@@ -109,10 +109,10 @@ const tileLayerCanvasCache = [];
 class TileLayerData
 {
     /** Create a tile layer data object
-     *  @param {Number} [tile] - The tile to use, untextured if undefined
-     *  @param {Number} [direction=0] - Integer direction of tile, in 90 degree increments
+     *  @param {Number}  [tile] - The tile to use, untextured if undefined
+     *  @param {Number}  [direction=0] - Integer direction of tile, in 90 degree increments
      *  @param {Boolean} [mirror=0] - If the tile should be mirrored along the x axis
-     *  @param {Color} [color=new Color(1,1,1)] - Color of the tile
+     *  @param {Color}   [color=new Color(1,1,1)] - Color of the tile
      */
     constructor(tile, direction=0, mirror=0, color=new Color)
     {
@@ -133,7 +133,7 @@ class TileLayer extends EngineObject
      *  @param {Vector2} [position=new Vector2(0,0)] - World space position
      *  @param {Vector2} [size=defaultObjectSize] - World space size
      *  @param {Vector2} [scale=new Vector2(1,1)] - How much to scale this in world space
-     *  @param {Number} [renderOrder=0] - Objects sorted by renderOrder before being rendered
+     *  @param {Number}  [renderOrder=0] - Objects sorted by renderOrder before being rendered
      */
     constructor(pos, size, scale=vec2(1), renderOrder=0)
     {
@@ -213,7 +213,7 @@ class TileLayer extends EngineObject
     redrawStart(clear = 1)
     {
         // clear and set size
-        const width = this.size.x * this.tileSize.x;
+        const width  = this.size.x * this.tileSize.x;
         const height = this.size.y * this.tileSize.y;
         if (clear)
         {

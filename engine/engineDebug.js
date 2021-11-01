@@ -42,7 +42,7 @@ debugParticles = 0, debugGamepads = 0, debugMedals = 0, debugTakeScreenshot, dow
 
 /** Asserts if the experssion is false, does not do anything in release builds
  *  @param {Boolean} assertion
- *  @param {Object} output
+ *  @param {Object}  output
  *  @memberof Debug */
 const ASSERT = enableAsserts ? (...assert)=> console.assert(...assert) : ()=>{};
 

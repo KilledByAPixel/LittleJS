@@ -23,12 +23,12 @@ const enableAsserts = 1;
  *  @memberof Debug */
 const debugPointSize = .5;
 
-/** True if watermark with fps should be down
+/** True if watermark with FPS should be down
  *  @default
  *  @memberof Debug */
 let showWatermark = 1;
 
-/** True if god mode is enabled
+/** True if god mode is enabled, handle this however you want
  *  @default
  *  @memberof Debug */
 let godMode = 0;
@@ -40,9 +40,9 @@ debugParticles = 0, debugGamepads = 0, debugMedals = 0, debugTakeScreenshot, dow
 ///////////////////////////////////////////////////////////////////////////////
 // Debug helper functions
 
-/** Asserts if the experssion is false
+/** Asserts if the experssion is false, does not do anything in release builds
  *  @param {Boolean} assertion
- *  @param {Object} output
+ *  @param {Object}  output
  *  @memberof Debug */
 const ASSERT = enableAsserts ? (...assert)=> console.assert(...assert) : ()=>{};
 
@@ -575,7 +575,7 @@ const debugParticleSettings =
 
 'use strict';
 
-/** A shortcut to get the value pi
+/** A shortcut to get Math.PI
  *  @const
  *  @memberof Utilities */
 const PI = Math.PI;
@@ -715,8 +715,8 @@ const randInCircle = (radius=1, minRadius=0)=> radius > 0 ? randVector(radius * 
 const randVector = (length=1)=> new Vector2().setAngle(rand(2*PI), length);
 
 /** Returns a random color between the two passed in colors, combine components if linear
- *  @param {Color} [colorA=new Color(1,1,1,1)]
- *  @param {Color} [colorB=new Color(0,0,0,1)]
+ *  @param {Color}   [colorA=new Color(1,1,1,1)]
+ *  @param {Color}   [colorB=new Color(0,0,0,1)]
  *  @param {Boolean} [linear]
  *  @return {Color}
  *  @memberof Random */
@@ -760,22 +760,22 @@ class Vector2
     copy() { return new Vector2(this.x, this.y); }
 
     /** Returns a copy of this vector plus the vector passed in
-     *  @param {Vector2}
+     *  @param {Vector2} vector
      *  @return {Vector2} */
     add(v) { ASSERT(v.x!=undefined); return new Vector2(this.x + v.x, this.y + v.y); }
 
     /** Returns a copy of this vector minus the vector passed in
-     *  @param {Vector2}
+     *  @param {Vector2} vector
      *  @return {Vector2} */
     subtract(v) { ASSERT(v.x!=undefined); return new Vector2(this.x - v.x, this.y - v.y); }
 
     /** Returns a copy of this vector times the vector passed in
-     *  @param {Vector2}
+     *  @param {Vector2} vector
      *  @return {Vector2} */
     multiply(v) { ASSERT(v.x!=undefined); return new Vector2(this.x * v.x, this.y * v.y); }
 
     /** Returns a copy of this vector divided by the vector passed in
-     *  @param {Vector2}
+     *  @param {Vector2} vector
      *  @return {Vector2} */
     divide(v) { ASSERT(v.x!=undefined); return new Vector2(this.x / v.x, this.y / v.y); }
 
@@ -793,12 +793,12 @@ class Vector2
     lengthSquared() { return this.x**2 + this.y**2; }
 
     /** Returns the distance from this vector to vector passed in
-     * @param {Vector2}
+     * @param {Vector2} vector
      * @return {Number} */
     distance(v) { return this.distanceSquared(v)**.5; }
 
     /** Returns the distance squared from this vector to vector passed in
-     * @param {Vector2}
+     * @param {Vector2} vector
      * @return {Number} */
     distanceSquared(v) { return (this.x - v.x)**2 + (this.y - v.y)**2; }
 
@@ -813,12 +813,12 @@ class Vector2
     clampLength(length=1) { const l = this.length(); return l > length ? this.scale(length/l) : this; }
 
     /** Returns the dot product of this and the vector passed in
-     * @param {Vector2}
+     * @param {Vector2} vector
      * @return {Number} */
     dot(v) { ASSERT(v.x!=undefined); return this.x*v.x + this.y*v.y; }
 
     /** Returns the cross product of this and the vector passed in
-     * @param {Vector2}
+     * @param {Vector2} vector
      * @return {Number} */
     cross(v) { ASSERT(v.x!=undefined); return this.x*v.y - this.y*v.x; }
 
@@ -857,13 +857,13 @@ class Vector2
     area() { return this.x * this.y; }
 
     /** Returns a new vector that is p percent between this and the vector passed in
-     * @param {Vector2}
-     * @param {Number} percent
+     * @param {Vector2} vector
+     * @param {Number}  percent
      * @return {Vector2} */
     lerp(v, p) { ASSERT(v.x!=undefined); return this.add(v.subtract(this).scale(clamp(p))); }
 
     /** Returns true if this vector is within the bounds of an array size passed in
-     * @param {Vector2}
+     * @param {Vector2} arraySize
      * @return {Boolean} */
     arrayCheck(arraySize) { return this.x >= 0 && this.y >= 0 && this.x < arraySize.x && this.y < arraySize.y; } 
 }
@@ -885,22 +885,22 @@ class Color
     copy() { return new Color(this.r, this.g, this.b, this.a); }
 
     /** Returns a copy of this color plus the color passed in
-     * @param {Color}
+     * @param {Color} color
      * @return {Color} */
     add(c) { return new Color(this.r+c.r, this.g+c.g, this.b+c.b, this.a+c.a); }
 
     /** Returns a copy of this color minus the color passed in
-     * @param {Color}
+     * @param {Color} color
      * @return {Color} */
     subtract(c) { return new Color(this.r-c.r, this.g-c.g, this.b-c.b, this.a-c.a); }
 
     /** Returns a copy of this color times the color passed in
-     * @param {Color}
+     * @param {Color} color
      * @return {Color} */
     multiply(c) { return new Color(this.r*c.r, this.g*c.g, this.b*c.b, this.a*c.a); }
 
     /** Returns a copy of this color divided by the color passed in
-     * @param {Color}
+     * @param {Color} color
      * @return {Color} */
     divide(c) { return new Color(this.r/c.r, this.g/c.g, this.b/c.b, this.a/c.a); }
 
@@ -915,7 +915,7 @@ class Color
     clamp() { return new Color(clamp(this.r), clamp(this.g), clamp(this.b), clamp(this.a)); }
 
     /** Returns a new color that is p percent between this and the color passed in
-     * @param {Color}
+     * @param {Color}  color
      * @param {Number} percent
      * @return {Color} */
     lerp(c, p) { return this.add(c.subtract(this).scale(clamp(p))); }
@@ -1510,10 +1510,10 @@ class EngineObject
      * Create an engine object and adds it to the list of objects
      * @param {Vector2} [position=new Vector2(0,0)] - World space position of the object
      * @param {Vector2} [size=defaultObjectSize] - World space size of the object
-     * @param {Number} [tileIndex=-1] - Tile to use to render object, untextured if -1
+     * @param {Number}  [tileIndex=-1] - Tile to use to render object, untextured if -1
      * @param {Vector2} [tileSize=defaultTileSize] - Size of tile in source pixels
-     * @param {Number} [angle=0] - Angle to rotate the object
-     * @param {Color} [color] - Color to apply to tile when rendered
+     * @param {Number}  [angle=0] - Angle to rotate the object
+     * @param {Color}   [color] - Color to apply to tile when rendered
      */
     constructor(pos=vec2(), size=defaultObjectSize, tileIndex=-1, tileSize=defaultTileSize, angle=0, color)
     {
@@ -1742,13 +1742,13 @@ class EngineObject
     }
     
     /** Called to check if a tile collision should be resolved
-     *  @param {Number} tileData - the value of the tile at the position
+     *  @param {Number}  tileData - the value of the tile at the position
      *  @param {Vector2} pos - tile where the collision occured
      *  @return {Boolean} true if the collision should be resolved */
     collideWithTile(tileData, pos)        { return tileData > 0; }
     
     /** Called to check if a tile raycast hit
-     *  @param {Number} tileData - the value of the tile at the position
+     *  @param {Number}  tileData - the value of the tile at the position
      *  @param {Vector2} pos - tile where the raycast is
      *  @return {Boolean} true if the raycast should hit */
     collideWithTileRaycast(tileData, pos) { return tileData > 0; }
@@ -1777,8 +1777,8 @@ class EngineObject
 
     /** Attaches a child to this with a given local transform
      *  @param {EngineObject} child
-     *  @param {Vector2} [localPos=new Vector2]
-     *  @param {Number} [localAngle=0] */
+     *  @param {Vector2}      [localPos=new Vector2]
+     *  @param {Number}       [localAngle=0] */
     addChild(child, localPos=vec2(), localAngle=0)
     {
         ASSERT(!child.parent && !this.children.includes(child));
@@ -2330,7 +2330,7 @@ if (isTouchDevice)
 
 'use strict';
 
-/** Sound Object - Caches a zzfx sound for later use and can be played positionally */
+/** Sound Object - Stores a zzfx sound for later use and can be played positionally */
 class Sound
 {
     /** Create a sound object and cache the zzfx samples for later use
@@ -2402,7 +2402,7 @@ class Sound
     }
 }
 
-/** Music Object - Caches zzfx music for later use */
+/** Music Object - Stores a zzfx music track for later use */
 class Music
 {
     /** Create a music object and cache the zzfx music samples for later use
@@ -2762,7 +2762,7 @@ function initTileCollision(size)
 
 /** Set tile collision data
  *  @param {Vector2} pos
- *  @param {Number} [data=0]
+ *  @param {Number}  [data=0]
  *  @memberof TileLayer */
 const setTileCollisionData = (pos, data=0)=>
     pos.arrayCheck(tileCollisionSize) && (tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] = data);
@@ -2775,8 +2775,8 @@ const getTileCollisionData = (pos)=>
     pos.arrayCheck(tileCollisionSize) ? tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] : 0;
 
 /** Check if collision with another object should occur
- *  @param {Vector2} pos
- *  @param {Vector2} [size=new Vector2(1,1)]
+ *  @param {Vector2}      pos
+ *  @param {Vector2}      [size=new Vector2(1,1)]
  *  @param {EngineObject} [object]
  *  @return {Boolean}
  *  @memberof TileLayer */
@@ -2796,8 +2796,8 @@ function tileCollisionTest(pos, size=vec2(), object)
 }
 
 /** Return the center of tile if any that is hit (this does not return the exact hit point)
- *  @param {Vector2} posStart
- *  @param {Vector2} posEnd
+ *  @param {Vector2}      posStart
+ *  @param {Vector2}      posEnd
  *  @param {EngineObject} [object]
  *  @return {Vector2}
  *  @memberof TileLayer */
@@ -2841,10 +2841,10 @@ const tileLayerCanvasCache = [];
 class TileLayerData
 {
     /** Create a tile layer data object
-     *  @param {Number} [tile] - The tile to use, untextured if undefined
-     *  @param {Number} [direction=0] - Integer direction of tile, in 90 degree increments
+     *  @param {Number}  [tile] - The tile to use, untextured if undefined
+     *  @param {Number}  [direction=0] - Integer direction of tile, in 90 degree increments
      *  @param {Boolean} [mirror=0] - If the tile should be mirrored along the x axis
-     *  @param {Color} [color=new Color(1,1,1)] - Color of the tile
+     *  @param {Color}   [color=new Color(1,1,1)] - Color of the tile
      */
     constructor(tile, direction=0, mirror=0, color=new Color)
     {
@@ -2865,7 +2865,7 @@ class TileLayer extends EngineObject
      *  @param {Vector2} [position=new Vector2(0,0)] - World space position
      *  @param {Vector2} [size=defaultObjectSize] - World space size
      *  @param {Vector2} [scale=new Vector2(1,1)] - How much to scale this in world space
-     *  @param {Number} [renderOrder=0] - Objects sorted by renderOrder before being rendered
+     *  @param {Number}  [renderOrder=0] - Objects sorted by renderOrder before being rendered
      */
     constructor(pos, size, scale=vec2(1), renderOrder=0)
     {
@@ -2945,7 +2945,7 @@ class TileLayer extends EngineObject
     redrawStart(clear = 1)
     {
         // clear and set size
-        const width = this.size.x * this.tileSize.x;
+        const width  = this.size.x * this.tileSize.x;
         const height = this.size.y * this.tileSize.y;
         if (clear)
         {
@@ -3074,31 +3074,31 @@ class ParticleEmitter extends EngineObject
     /**
      * Create a particle system with the given settings
      * @param {Vector2} position          - World space position of the emitter
-     * @param {Number} [emitSize=0]       - World space size of the emitter (float for circle diameter, vec2 for rect)
-     * @param {Number} [emitTime=0]       - How long to stay alive (0 is forever)
-     * @param {Number} [emitRate=100]     - How many particles per second to spawn
-     * @param {Number} [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
-     * @param {Number} [tileIndex=-1]     - Index into tile sheet, if <0 no texture is applied
-     * @param {Number} [tileSize=defaultTileSize]    - Tile size for particles
-     * @param {Color} [colorStartA=new Color(1,1,1)] - Color at start of life 1, randomized between start colors
-     * @param {Color} [colorStartB=new Color(1,1,1)] - Color at start of life 2, randomized between start colors
-     * @param {Color} [colorEndA=new Color(1,1,1,0)] - Color at end of life 1, randomized between end colors
-     * @param {Color} [colorEndB=new Color(1,1,1,0)] - Color at end of life 2, randomized between end colors
-     * @param {Number} [particleTime=.5]      - How long particles live
-     * @param {Number} [sizeStart=.1]         - How big are particles at start
-     * @param {Number} [sizeEnd=1]            - How big are particles at end
-     * @param {Number} [speed=.1]             - How fast are particles when spawned
-     * @param {Number} [angleSpeed=.05]       - How fast are particles rotating
-     * @param {Number} [damping=1]            - How much to dampen particle speed
-     * @param {Number} [angleDamping=1]       - How much to dampen particle angular speed
-     * @param {Number} [gravityScale=0]       - How much does gravity effect particles
-     * @param {Number} [particleConeAngle=PI] - Cone for start particle angle
-     * @param {Number} [fadeRate=.1]          - How quick to fade in particles at start/end in percent of life
-     * @param {Number} [randomness=.2]        - Apply extra randomness percent
+     * @param {Number}  [emitSize=0]       - World space size of the emitter (float for circle diameter, vec2 for rect)
+     * @param {Number}  [emitTime=0]       - How long to stay alive (0 is forever)
+     * @param {Number}  [emitRate=100]     - How many particles per second to spawn
+     * @param {Number}  [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
+     * @param {Number}  [tileIndex=-1]     - Index into tile sheet, if <0 no texture is applied
+     * @param {Number}  [tileSize=defaultTileSize]    - Tile size for particles
+     * @param {Color}   [colorStartA=new Color(1,1,1)] - Color at start of life 1, randomized between start colors
+     * @param {Color}   [colorStartB=new Color(1,1,1)] - Color at start of life 2, randomized between start colors
+     * @param {Color}   [colorEndA=new Color(1,1,1,0)] - Color at end of life 1, randomized between end colors
+     * @param {Color}   [colorEndB=new Color(1,1,1,0)] - Color at end of life 2, randomized between end colors
+     * @param {Number}  [particleTime=.5]      - How long particles live
+     * @param {Number}  [sizeStart=.1]         - How big are particles at start
+     * @param {Number}  [sizeEnd=1]            - How big are particles at end
+     * @param {Number}  [speed=.1]             - How fast are particles when spawned
+     * @param {Number}  [angleSpeed=.05]       - How fast are particles rotating
+     * @param {Number}  [damping=1]            - How much to dampen particle speed
+     * @param {Number}  [angleDamping=1]       - How much to dampen particle angular speed
+     * @param {Number}  [gravityScale=0]       - How much does gravity effect particles
+     * @param {Number}  [particleConeAngle=PI] - Cone for start particle angle
+     * @param {Number}  [fadeRate=.1]          - How quick to fade in particles at start/end in percent of life
+     * @param {Number}  [randomness=.2]        - Apply extra randomness percent
      * @param {Boolean} [collideTiles=0]      - Do particles collide against tiles
      * @param {Boolean} [additive=0]          - Should particles use addtive blend
      * @param {Boolean} [randomColorLinear=0] - Should color be randomized linearly or across each component
-     * @param {Number} [renderOrder=0]        - Render order for particles (additive is above other stuff by default)
+     * @param {Number}  [renderOrder=0]        - Render order for particles (additive is above other stuff by default)
      */
     constructor
     ( 
@@ -3253,9 +3253,9 @@ class Particle extends EngineObject
     /**
      * Create a particle with the given settings
      * @param {Vector2} position                   - World space position of the particle
-     * @param {Number} [tileIndex=-1]              - Tile to use to render, untextured if -1
+     * @param {Number}  [tileIndex=-1]              - Tile to use to render, untextured if -1
      * @param {Vector2} [tileSize=defaultTileSize] - Size of tile in source pixels
-     * @param {Number} [angle=0]                   - Angle to rotate the particle
+     * @param {Number}  [angle=0]                   - Angle to rotate the particle
      */
     constructor(pos, tileIndex, tileSize, angle) { super(pos, new Vector2, tileIndex, tileSize, angle); }
 
@@ -3385,12 +3385,6 @@ class Medal
         newgrounds && newgrounds.unlockMedal(this.id);
         localStorage['OS13kTrophy,' + this.icon + ',' + medalsSaveName + ',' + this.name] = this.description;
     }
- 
-    /** Unlocks a medal if not already unlocked */
-    storageKey()
-    {
-        return medalsSaveName + '_medal_' + this.id;
-    }
 
     /** Render a medal
      *  @param {Number} [hidePercent=0] - How much to slide the medal off screen
@@ -3438,6 +3432,12 @@ class Medal
             context.drawImage(this.image, x-size/2, y-size/2, size, size);
         else
             context.fillText(this.icon, x, y); // show icon if there is no image
+    }
+ 
+    // Get local storage key used by the medal
+    storageKey()
+    {
+        return medalsSaveName + '_medal_' + this.id;
     }
 }
 
@@ -3720,7 +3720,7 @@ function glSetTexture(texture=glTileTexture)
 
 /** Compile WebGL shader of the given type, will throw errors if in debug mode
  *  @param {String} source
- *  @param type
+ *  @param          type
  *  @return {WebGLShader}
  *  @memberof WebGL */
 function glCompileShader(source, type)

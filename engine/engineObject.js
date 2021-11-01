@@ -23,10 +23,10 @@ class EngineObject
      * Create an engine object and adds it to the list of objects
      * @param {Vector2} [position=new Vector2(0,0)] - World space position of the object
      * @param {Vector2} [size=defaultObjectSize] - World space size of the object
-     * @param {Number} [tileIndex=-1] - Tile to use to render object, untextured if -1
+     * @param {Number}  [tileIndex=-1] - Tile to use to render object, untextured if -1
      * @param {Vector2} [tileSize=defaultTileSize] - Size of tile in source pixels
-     * @param {Number} [angle=0] - Angle to rotate the object
-     * @param {Color} [color] - Color to apply to tile when rendered
+     * @param {Number}  [angle=0] - Angle to rotate the object
+     * @param {Color}   [color] - Color to apply to tile when rendered
      */
     constructor(pos=vec2(), size=defaultObjectSize, tileIndex=-1, tileSize=defaultTileSize, angle=0, color)
     {
@@ -255,13 +255,13 @@ class EngineObject
     }
     
     /** Called to check if a tile collision should be resolved
-     *  @param {Number} tileData - the value of the tile at the position
+     *  @param {Number}  tileData - the value of the tile at the position
      *  @param {Vector2} pos - tile where the collision occured
      *  @return {Boolean} true if the collision should be resolved */
     collideWithTile(tileData, pos)        { return tileData > 0; }
     
     /** Called to check if a tile raycast hit
-     *  @param {Number} tileData - the value of the tile at the position
+     *  @param {Number}  tileData - the value of the tile at the position
      *  @param {Vector2} pos - tile where the raycast is
      *  @return {Boolean} true if the raycast should hit */
     collideWithTileRaycast(tileData, pos) { return tileData > 0; }
@@ -290,8 +290,8 @@ class EngineObject
 
     /** Attaches a child to this with a given local transform
      *  @param {EngineObject} child
-     *  @param {Vector2} [localPos=new Vector2]
-     *  @param {Number} [localAngle=0] */
+     *  @param {Vector2}      [localPos=new Vector2]
+     *  @param {Number}       [localAngle=0] */
     addChild(child, localPos=vec2(), localAngle=0)
     {
         ASSERT(!child.parent && !this.children.includes(child));

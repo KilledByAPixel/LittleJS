@@ -149,8 +149,8 @@ const randInCircle = (radius=1, minRadius=0)=> radius > 0 ? randVector(radius * 
 const randVector = (length=1)=> new Vector2().setAngle(rand(2*PI), length);
 
 /** Returns a random color between the two passed in colors, combine components if linear
- *  @param {Color} [colorA=new Color(1,1,1,1)]
- *  @param {Color} [colorB=new Color(0,0,0,1)]
+ *  @param {Color}   [colorA=new Color(1,1,1,1)]
+ *  @param {Color}   [colorB=new Color(0,0,0,1)]
  *  @param {Boolean} [linear]
  *  @return {Color}
  *  @memberof Random */
@@ -292,7 +292,7 @@ class Vector2
 
     /** Returns a new vector that is p percent between this and the vector passed in
      * @param {Vector2} vector
-     * @param {Number} percent
+     * @param {Number}  percent
      * @return {Vector2} */
     lerp(v, p) { ASSERT(v.x!=undefined); return this.add(v.subtract(this).scale(clamp(p))); }
 
@@ -349,7 +349,7 @@ class Color
     clamp() { return new Color(clamp(this.r), clamp(this.g), clamp(this.b), clamp(this.a)); }
 
     /** Returns a new color that is p percent between this and the color passed in
-     * @param {Color} color
+     * @param {Color}  color
      * @param {Number} percent
      * @return {Color} */
     lerp(c, p) { return this.add(c.subtract(this).scale(clamp(p))); }

@@ -127,7 +127,7 @@ function glSetTexture(texture=glTileTexture)
 
 /** Compile WebGL shader of the given type, will throw errors if in debug mode
  *  @param {String} source
- *  @param type
+ *  @param          type
  *  @return {WebGLShader}
  *  @memberof WebGL */
 function glCompileShader(source, type)
