@@ -28,7 +28,7 @@ LittleJS is a super lightweight 2D JavaScript game engine with fast WebGL render
 
 ## [LittleJS Trailer](https://youtu.be/chuBzGjv7Ms)
 
-## [LittleJS Documentation](https://killedbyapixel.github.io/LittleJS/doc/out)
+## [LittleJS Documentation](https://killedbyapixel.github.io/LittleJS/docs)
 
 ## [LittleJS Trello Roadmap](https://trello.com/b/E9zf1Xak/littlejs)
 
