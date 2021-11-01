@@ -269,8 +269,20 @@ function glCopyToContext(context, forceDraw)
     }
 }
 
-// Draw a sprite with the given parameters, used internally by draw functions
-function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgba=0xffffffff, rgbaAdditive=0x00000000)
+/** Add a sprite to the gl draw list, used by all gl draw functions
+ *  @param x
+ *  @param y
+ *  @param sizeX
+ *  @param sizeY
+ *  @param [angle=0]
+ *  @param [uv0X=0]
+ *  @param [uv0Y=0]
+ *  @param [uv1X=1]
+ *  @param [uv1Y=1]
+ *  @param [rgba=0xffffffff]
+ *  @param [rgbaAdditive=0]
+ *  @memberof WebGL */
+function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgba=0xffffffff, rgbaAdditive=0)
 {
     if (!glEnable) return;
     

@@ -174,19 +174,31 @@ const randSeeded = (a=1, b=0)=>
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** Create a 2d vector, can take another Vector2 to copy, 2 scalars, or 1 scalar
- *  @param {Number} [x=0]
- *  @param {Number} [y=0]
- *  @return {Vector2}
- *  @memberof Utilities */
+/** 
+ * Create a 2d vector, can take another Vector2 to copy, 2 scalars, or 1 scalar
+ * @param {Number} [x=0]
+ * @param {Number} [y=0]
+ * @return {Vector2}
+ * @example
+ * let a = vec2(0, 1); // vector with coordinates (0, 1)
+ * let b = vec2(a);    // copy a into b
+ * a = vec2(5);        // set a to (5, 5)
+ * b = vec2();         // set b to (0, 0)
+ * @memberof Utilities
+ */
 const vec2 = (x=0, y)=> x.x == undefined ? new Vector2(x, y == undefined? x : y) : new Vector2(x.x, x.y);
 
 /** 2D Vector object with vector math library */
 class Vector2
 {
-    /** Create a 2D vector with the x and y passed in, can also be created with vec2()
-     *  @param {Number} [x=0] - x axis position
-     *  @param {Number} [y=0] - y axis position */
+    /** 
+     * Create a 2D vector with the x and y passed in, can also be created with vec2()
+     * @param {Number} [x=0] - x axis position
+     * @param {Number} [y=0] - y axis position
+     * @example
+     * let a = new Vector2(2, 3); // vector with coordinates (2, 3)
+     * let b = new Vector2;       // vector with coordinates (0, 0)
+     */
     constructor(x=0, y=0) { this.x = x; this.y = y; }
 
     /** Returns a new vector that is a copy of this
@@ -307,11 +319,17 @@ class Vector2
 /** Color object (red, green, blue, alpha) with some helpful functions */
 class Color
 {
-    /** Create a color with the components passed in, white by default
-     *  @param {Number} [r=1] - red
-     *  @param {Number} [g=1] - green
-     *  @param {Number} [b=1] - blue
-     *  @param {Number} [a=1] - alpha */
+    /**
+     * Create a color with the components passed in, white by default
+     * @param {Number} [r=1] - red
+     * @param {Number} [g=1] - green
+     * @param {Number} [b=1] - blue
+     * @param {Number} [a=1] - alpha
+     * @example
+     * let a = new Color;             // white
+     * let b = new Color(1, 0, 0);    // red
+     * let c = new Color(0, 0, 0, 0); // transparent black
+     */
     constructor(r=1, g=1, b=1, a=1) { this.r=r; this.g=g; this.b=b; this.a=a; }
 
     /** Returns a new color that is a copy of this
@@ -412,8 +430,16 @@ class Color
 /** Timer object tracks how long has passed since it was set */
 class Timer
 {
-    /** Create a timer object set time passed in
-     *  @param {Number} [timeLeft] - How much time left before the timer elapses in seconds */
+    /**
+     * Create a timer object set time passed in
+     * @param {Number} [timeLeft] - How much time left before the timer elapses in seconds
+     * @example
+     * let a = new Timer;    // creates a timer that is not set
+     * a.set(3);             // sets the timer to 3 seconds
+     *
+     * let b = new Timer(1); // creates a timer with 1 second left
+     * b.unset();            // unsets the timer
+     */
     constructor(timeLeft) { this.time = timeLeft == undefined ? undefined : time + timeLeft; this.setTime = timeLeft; }
 
     /** Set the timer with seconds passed in

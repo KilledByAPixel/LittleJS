@@ -48,6 +48,12 @@ class Medal
      * @param {String} [description] - Description of the medal
      * @param {String} [icon='🏆'] - Icon for the medal
      * @param {String} [src] - Image location for the medal
+     * @example
+     * // create a medal
+     * const medal_example = new Medal(0, 'Example Medal', 'More info about the medal goes here.', '🎖️');
+     * 
+     * // unlock the medal
+     * medal_example.unlock();
      */
     constructor(id, name, description='', icon='🏆', src)
     {
@@ -171,6 +177,11 @@ class Newgrounds
      * Create a newgrounds object
      * @param {Number} app_id - The newgrounds App ID
      * @param {String} [cipher] - The encryption Key (AES-128/Base64)
+     * @example
+     * // create a newgrounds object, replace the app id and cipher with your own
+     * const app_id = '53123:1ZuSTQ9l';
+     * const cipher = 'enF0vGH@Mj/FRASKL23Q==';
+     * newgrounds = new Newgrounds(app_id, cipher);
      */
     constructor(app_id, cipher)
     {

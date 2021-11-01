@@ -27,6 +27,10 @@ class EngineObject
      * @param {Vector2} [tileSize=defaultTileSize] - Size of tile in source pixels
      * @param {Number}  [angle=0] - Angle to rotate the object
      * @param {Color}   [color] - Color to apply to tile when rendered
+     * @example
+     * // create an engine object, normally you would first extend the class with your own
+     * const pos = vec2(2,3);
+     * const object = new EngineObject(pos); 
      */
     constructor(pos=vec2(), size=defaultObjectSize, tileIndex=-1, tileSize=defaultTileSize, angle=0, color)
     {

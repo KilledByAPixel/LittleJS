@@ -204,19 +204,31 @@ const randSeeded = (a=1, b=0)=>
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** Create a 2d vector, can take another Vector2 to copy, 2 scalars, or 1 scalar
- *  @param {Number} [x=0]
- *  @param {Number} [y=0]
- *  @return {Vector2}
- *  @memberof Utilities */
+/** 
+ * Create a 2d vector, can take another Vector2 to copy, 2 scalars, or 1 scalar
+ * @param {Number} [x=0]
+ * @param {Number} [y=0]
+ * @return {Vector2}
+ * @example
+ * let a = vec2(0, 1); // vector with coordinates (0, 1)
+ * let b = vec2(a);    // copy a into b
+ * a = vec2(5);        // set a to (5, 5)
+ * b = vec2();         // set b to (0, 0)
+ * @memberof Utilities
+ */
 const vec2 = (x=0, y)=> x.x == undefined ? new Vector2(x, y == undefined? x : y) : new Vector2(x.x, x.y);
 
 /** 2D Vector object with vector math library */
 class Vector2
 {
-    /** Create a 2D vector with the x and y passed in, can also be created with vec2()
-     *  @param {Number} [x=0] - x axis position
-     *  @param {Number} [y=0] - y axis position */
+    /** 
+     * Create a 2D vector with the x and y passed in, can also be created with vec2()
+     * @param {Number} [x=0] - x axis position
+     * @param {Number} [y=0] - y axis position
+     * @example
+     * let a = new Vector2(2, 3); // vector with coordinates (2, 3)
+     * let b = new Vector2;       // vector with coordinates (0, 0)
+     */
     constructor(x=0, y=0) { this.x = x; this.y = y; }
 
     /** Returns a new vector that is a copy of this
@@ -337,11 +349,17 @@ class Vector2
 /** Color object (red, green, blue, alpha) with some helpful functions */
 class Color
 {
-    /** Create a color with the components passed in, white by default
-     *  @param {Number} [r=1] - red
-     *  @param {Number} [g=1] - green
-     *  @param {Number} [b=1] - blue
-     *  @param {Number} [a=1] - alpha */
+    /**
+     * Create a color with the components passed in, white by default
+     * @param {Number} [r=1] - red
+     * @param {Number} [g=1] - green
+     * @param {Number} [b=1] - blue
+     * @param {Number} [a=1] - alpha
+     * @example
+     * let a = new Color;             // white
+     * let b = new Color(1, 0, 0);    // red
+     * let c = new Color(0, 0, 0, 0); // transparent black
+     */
     constructor(r=1, g=1, b=1, a=1) { this.r=r; this.g=g; this.b=b; this.a=a; }
 
     /** Returns a new color that is a copy of this
@@ -442,8 +460,16 @@ class Color
 /** Timer object tracks how long has passed since it was set */
 class Timer
 {
-    /** Create a timer object set time passed in
-     *  @param {Number} [timeLeft] - How much time left before the timer elapses in seconds */
+    /**
+     * Create a timer object set time passed in
+     * @param {Number} [timeLeft] - How much time left before the timer elapses in seconds
+     * @example
+     * let a = new Timer;    // creates a timer that is not set
+     * a.set(3);             // sets the timer to 3 seconds
+     *
+     * let b = new Timer(1); // creates a timer with 1 second left
+     * b.unset();            // unsets the timer
+     */
     constructor(timeLeft) { this.time = timeLeft == undefined ? undefined : time + timeLeft; this.setTime = timeLeft; }
 
     /** Set the timer with seconds passed in
@@ -978,6 +1004,10 @@ class EngineObject
      * @param {Vector2} [tileSize=defaultTileSize] - Size of tile in source pixels
      * @param {Number}  [angle=0] - Angle to rotate the object
      * @param {Color}   [color] - Color to apply to tile when rendered
+     * @example
+     * // create an engine object, normally you would first extend the class with your own
+     * const pos = vec2(2,3);
+     * const object = new EngineObject(pos); 
      */
     constructor(pos=vec2(), size=defaultObjectSize, tileIndex=-1, tileSize=defaultTileSize, angle=0, color)
     {
@@ -1797,10 +1827,17 @@ if (isTouchDevice)
 /** Sound Object - Stores a zzfx sound for later use and can be played positionally */
 class Sound
 {
-    /** Create a sound object and cache the zzfx samples for later use
-     *  @param {Array}  zzfxSound - Array of zzfx parameters, ex. [.5,.5]
-     *  @param {Number} [range=defaultSoundRange] - World space max range of sound, will not play if camera is farther away
-     *  @param {Number} [taper=defaultSoundTaper] - At what percentage of range should it start tapering off
+    /**
+     * Create a sound object and cache the zzfx samples for later use
+     * @param {Array}  zzfxSound - Array of zzfx parameters, ex. [.5,.5]
+     * @param {Number} [range=defaultSoundRange] - World space max range of sound, will not play if camera is farther away
+     * @param {Number} [taper=defaultSoundTaper] - At what percentage of range should it start tapering off
+     * @example
+     * // create a sound
+     * const sound_example = new Sound([.5,.5]);
+     * 
+     * // play the sound
+     * sound_example.play();
      */
     constructor(zzfxSound, range=defaultSoundRange, taper=defaultSoundTaper)
     {
@@ -1869,8 +1906,34 @@ class Sound
 /** Music Object - Stores a zzfx music track for later use */
 class Music
 {
-    /** Create a music object and cache the zzfx music samples for later use
-     *  @param {Array} zzfxMusic - Array of zzfx music parameters
+    /**
+     * Create a music object and cache the zzfx music samples for later use
+     * @param {Array} zzfxMusic - Array of zzfx music parameters
+     * @example
+     * // create some music
+     * const music_example = new Music(
+     * [
+     *     [                        // instruments
+     *       [,0,400]               // simple note
+     *     ],
+     *     [                        // patterns
+     *         [                    // pattern 1
+     *             [                // channel 0
+     *                 0, -1,       // instrument 0, left speaker
+     *                 1, 0, 9, 1   // channel notes
+     *             ],
+     *             [                // channel 1
+     *                 0, 1,        // instrument 1, right speaker
+     *                 0, 12, 17, -1 // channel notes
+     *             ]
+     *         ],
+     *     ],
+     *     [0, 0, 0, 0], // sequence, play pattern 0 four times
+     *     90            // BPM
+     * ]);
+     * 
+     * // play the music
+     * music_example.play();
      */
     constructor(zzfxMusic)
     {
@@ -2210,8 +2273,14 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
 ///////////////////////////////////////////////////////////////////////////////
 // Tile Collision
 
-// Internal variables not exposed to documentation
-let tileCollision = [], tileCollisionSize = vec2();
+/** The tile collision layer array, use setTileCollisionData and getTileCollisionData to access
+ *  @memberof TileLayer */
+let tileCollision = [];
+
+/** Size of the tile collision layer
+ *  @type {Vector2} 
+ *  @memberof TileLayer */
+let tileCollisionSize = vec2();
 
 /** Clear and initialize tile collision
  *  @param {Vector2} size
@@ -2325,13 +2394,18 @@ class TileLayerData
 /** Tile layer object - cached rendering system for tile layers */
 class TileLayer extends EngineObject
 {
-    /** Create a tile layer data object
-     *  @param {Vector2} [position=new Vector2(0,0)] - World space position
-     *  @param {Vector2} [size=defaultObjectSize] - World space size
-     *  @param {Vector2} [scale=new Vector2(1,1)] - How much to scale this in world space
-     *  @param {Number}  [renderOrder=0] - Objects sorted by renderOrder before being rendered
+    /** 
+     * Create a tile layer data object
+     * @param {Vector2} [position=new Vector2(0,0)] - World space position
+     * @param {Vector2} [size=defaultObjectSize] - World space size
+     * @param {Vector2} [scale=new Vector2(1,1)] - How much to scale this in world space
+     * @param {Number}  [renderOrder=0] - Objects sorted by renderOrder before being rendered
+     * @example
+     * // create tile collision and visible tile layer
+     * initTileCollision(vec2(200,100));
+     * const tileLayer = new TileLayer();
      */
-    constructor(pos, size, scale=vec2(1), renderOrder=0)
+    constructor(pos, size=tileCollisionSize, scale=vec2(1), renderOrder=0)
     {
         super(pos, size);
 
@@ -2563,6 +2637,19 @@ class ParticleEmitter extends EngineObject
      * @param {Boolean} [additive=0]          - Should particles use addtive blend
      * @param {Boolean} [randomColorLinear=0] - Should color be randomized linearly or across each component
      * @param {Number}  [renderOrder=0]        - Render order for particles (additive is above other stuff by default)
+     * @example
+     * // create a particle emitter
+     * let pos = vec2(2,3);
+     * let particleEmiter = new ParticleEmitter
+     * (
+     *     pos, 1, 0, 500, PI,  // pos, emitSize, emitTime, emitRate, emiteCone
+     *     0, vec2(16),                            // tileIndex, tileSize
+     *     new Color, new Color(0,0,0),            // colorStartA, colorStartB
+     *     new Color(1,1,1,0), new Color(0,0,0,0), // colorEndA, colorEndB
+     *     2, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
+     *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate, 
+     *     .5, 1                // randomness, collide, additive, randomColorLinear, renderOrder
+     * );
      */
     constructor
     ( 
@@ -2815,6 +2902,12 @@ class Medal
      * @param {String} [description] - Description of the medal
      * @param {String} [icon='🏆'] - Icon for the medal
      * @param {String} [src] - Image location for the medal
+     * @example
+     * // create a medal
+     * const medal_example = new Medal(0, 'Example Medal', 'More info about the medal goes here.', '🎖️');
+     * 
+     * // unlock the medal
+     * medal_example.unlock();
      */
     constructor(id, name, description='', icon='🏆', src)
     {
@@ -2938,6 +3031,11 @@ class Newgrounds
      * Create a newgrounds object
      * @param {Number} app_id - The newgrounds App ID
      * @param {String} [cipher] - The encryption Key (AES-128/Base64)
+     * @example
+     * // create a newgrounds object, replace the app id and cipher with your own
+     * const app_id = '53123:1ZuSTQ9l';
+     * const cipher = 'enF0vGH@Mj/FRASKL23Q==';
+     * newgrounds = new Newgrounds(app_id, cipher);
      */
     constructor(app_id, cipher)
     {
@@ -3326,8 +3424,20 @@ function glCopyToContext(context, forceDraw)
     }
 }
 
-// Draw a sprite with the given parameters, used internally by draw functions
-function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgba=0xffffffff, rgbaAdditive=0x00000000)
+/** Add a sprite to the gl draw list, used by all gl draw functions
+ *  @param x
+ *  @param y
+ *  @param sizeX
+ *  @param sizeY
+ *  @param [angle=0]
+ *  @param [uv0X=0]
+ *  @param [uv0Y=0]
+ *  @param [uv1X=1]
+ *  @param [uv1Y=1]
+ *  @param [rgba=0xffffffff]
+ *  @param [rgbaAdditive=0]
+ *  @memberof WebGL */
+function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgba=0xffffffff, rgbaAdditive=0)
 {
     if (!glEnable) return;
     

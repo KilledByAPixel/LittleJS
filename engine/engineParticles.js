@@ -40,6 +40,19 @@ class ParticleEmitter extends EngineObject
      * @param {Boolean} [additive=0]          - Should particles use addtive blend
      * @param {Boolean} [randomColorLinear=0] - Should color be randomized linearly or across each component
      * @param {Number}  [renderOrder=0]        - Render order for particles (additive is above other stuff by default)
+     * @example
+     * // create a particle emitter
+     * let pos = vec2(2,3);
+     * let particleEmiter = new ParticleEmitter
+     * (
+     *     pos, 1, 0, 500, PI,  // pos, emitSize, emitTime, emitRate, emiteCone
+     *     0, vec2(16),                            // tileIndex, tileSize
+     *     new Color, new Color(0,0,0),            // colorStartA, colorStartB
+     *     new Color(1,1,1,0), new Color(0,0,0,0), // colorEndA, colorEndB
+     *     2, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
+     *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate, 
+     *     .5, 1                // randomness, collide, additive, randomColorLinear, renderOrder
+     * );
      */
     constructor
     ( 

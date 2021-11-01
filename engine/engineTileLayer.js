@@ -14,8 +14,14 @@
 ///////////////////////////////////////////////////////////////////////////////
 // Tile Collision
 
-// Internal variables not exposed to documentation
-let tileCollision = [], tileCollisionSize = vec2();
+/** The tile collision layer array, use setTileCollisionData and getTileCollisionData to access
+ *  @memberof TileLayer */
+let tileCollision = [];
+
+/** Size of the tile collision layer
+ *  @type {Vector2} 
+ *  @memberof TileLayer */
+let tileCollisionSize = vec2();
 
 /** Clear and initialize tile collision
  *  @param {Vector2} size
@@ -129,13 +135,18 @@ class TileLayerData
 /** Tile layer object - cached rendering system for tile layers */
 class TileLayer extends EngineObject
 {
-    /** Create a tile layer data object
-     *  @param {Vector2} [position=new Vector2(0,0)] - World space position
-     *  @param {Vector2} [size=defaultObjectSize] - World space size
-     *  @param {Vector2} [scale=new Vector2(1,1)] - How much to scale this in world space
-     *  @param {Number}  [renderOrder=0] - Objects sorted by renderOrder before being rendered
+    /** 
+     * Create a tile layer data object
+     * @param {Vector2} [position=new Vector2(0,0)] - World space position
+     * @param {Vector2} [size=defaultObjectSize] - World space size
+     * @param {Vector2} [scale=new Vector2(1,1)] - How much to scale this in world space
+     * @param {Number}  [renderOrder=0] - Objects sorted by renderOrder before being rendered
+     * @example
+     * // create tile collision and visible tile layer
+     * initTileCollision(vec2(200,100));
+     * const tileLayer = new TileLayer();
      */
-    constructor(pos, size, scale=vec2(1), renderOrder=0)
+    constructor(pos, size=tileCollisionSize, scale=vec2(1), renderOrder=0)
     {
         super(pos, size);
 
