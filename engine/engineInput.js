@@ -1,36 +1,104 @@
-/*
-    LittleJS Input System
-    - Tracks key down, pressed, and released
-    - Also tracks mouse buttons, position, and wheel
-    - Supports multiple gamepads
-*/
+/** 
+ *  LittleJS Input System
+ *  <br> - Tracks key down, pressed, and released
+ *  <br> - Also tracks mouse buttons, position, and wheel
+ *  <br> - Supports multiple gamepads
+ *  @namespace Input
+ */
 
 'use strict';
 
-// input for all devices including keyboard, mouse, and gamepad
-let hadInput         = 0;
-const keyIsDown      = (key, device=0)=> inputData[device] && inputData[device][key] & 1 ? 1 : 0;
-const keyWasPressed  = (key, device=0)=> inputData[device] && inputData[device][key] & 2 ? 1 : 0;
+/** Returns true if device key is down
+ *  @param {Number} key
+ *  @param {Number} [device=0]
+ *  @return {Boolean}
+ *  @memberof Input */
+const keyIsDown = (key, device=0)=> inputData[device] && inputData[device][key] & 1 ? 1 : 0;
+
+/** Returns true if device key was pressed this frame
+ *  @param {Number} key
+ *  @param {Number} [device=0]
+ *  @return {Boolean}
+ *  @memberof Input */
+const keyWasPressed = (key, device=0)=> inputData[device] && inputData[device][key] & 2 ? 1 : 0;
+
+/** Returns true if device key was released this frame
+ *  @param {Number} key
+ *  @param {Number} [device=0]
+ *  @return {Boolean}
+ *  @memberof Input */
 const keyWasReleased = (key, device=0)=> inputData[device] && inputData[device][key] & 4 ? 1 : 0;
-const clearInput     = ()=> inputData[0] = [];
 
-// mouse input
-const mouseIsDown      = keyIsDown;
-const mouseWasPressed  = keyWasPressed;
+/** Clears all input
+ *  @memberof Input */
+const clearInput = ()=> inputData[0] = [];
+
+/** Returns true if mouse button is down
+ *  @param {Number} button
+ *  @return {Boolean}
+ *  @memberof Input */
+const mouseIsDown = keyIsDown;
+
+/** Returns true if mouse button was pressed
+ *  @param {Number} button
+ *  @return {Boolean}
+ *  @memberof Input */
+const mouseWasPressed = keyWasPressed;
+
+/** Returns true if mouse button was released
+ *  @param {Number} button
+ *  @return {Boolean}
+ *  @memberof Input */
 const mouseWasReleased = keyWasReleased;
-let mousePos           = vec2();
-let mousePosScreen     = vec2();
-let mouseWheel         = 0;
 
-// gamepad input
+/** Mouse pos in world space
+ *  @type {Vector2}
+ *  @memberof Input */
+let mousePos = vec2();
+
+/** Mouse pos in screen space
+ *  @type {Vector2}
+ *  @memberof Input */
+let mousePosScreen = vec2();
+
+/** Mouse wheel delta this frame
+ *  @memberof Input */
+let mouseWheel = 0;
+
+/** Returns true if user is using gamepad (has more recently pressed a gamepad button)
+ *  @memberof Input */
 let usingGamepad = 0;
-const gamepadIsDown      = (button, gamepad=0)=> keyIsDown     (button, gamepad+1);
-const gamepadWasPressed  = (button, gamepad=0)=> keyWasPressed (button, gamepad+1);
+
+/** Returns true if gamepad button is down
+ *  @param {Number} button
+ *  @param {Number} [gamepad=0]
+ *  @return {Boolean}
+ *  @memberof Input */
+const gamepadIsDown = (button, gamepad=0)=> keyIsDown(button, gamepad+1);
+
+/** Returns true if gamepad button was pressed
+ *  @param {Number} button
+ *  @param {Number} [gamepad=0]
+ *  @return {Boolean}
+ *  @memberof Input */
+const gamepadWasPressed = (button, gamepad=0)=> keyWasPressed(button, gamepad+1);
+
+/** Returns true if gamepad button was released
+ *  @param {Number} button
+ *  @param {Number} [gamepad=0]
+ *  @return {Boolean}
+ *  @memberof Input */
 const gamepadWasReleased = (button, gamepad=0)=> keyWasReleased(button, gamepad+1);
-const gamepadStick       = (stick,  gamepad=0)=> stickData[gamepad] ? stickData[gamepad][stick] || vec2() : vec2();
+
+/** Returns gamepad stick value
+ *  @param {Number} stick
+ *  @param {Number} [gamepad=0]
+ *  @return {Vector2}
+ *  @memberof Input */
+const gamepadStick = (stick,  gamepad=0)=> stickData[gamepad] ? stickData[gamepad][stick] || vec2() : vec2();
 
 ///////////////////////////////////////////////////////////////////////////////
-// input update called by engine
+// Input update called by engine
 
 const inputData = [[]];
 
@@ -56,12 +124,12 @@ function inputUpdatePost()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// keyboard event handlers
+// Keyboard event handlers
+
 onkeydown = e=>
 {
     if (debug && e.target != document.body) return;
     e.repeat || (inputData[usingGamepad = 0][remapKeyCode(e.keyCode)] = 3);
-    hadInput = 1;
     debug || e.preventDefault();
 }
 onkeyup = e=>
@@ -72,8 +140,9 @@ onkeyup = e=>
 const remapKeyCode = c=> copyWASDToDpad ? c==87?38 : c==83?40 : c==65?37 : c==68?39 : c : c;
 
 ///////////////////////////////////////////////////////////////////////////////
-// mouse event handlers
-onmousedown = e=> {inputData[usingGamepad = 0][e.button] = 3; hadInput = 1; onmousemove(e); e.button && e.preventDefault();}
+// Mouse event handlers
+
+onmousedown = e=> {inputData[usingGamepad = 0][e.button] = 3; onmousemove(e); e.button && e.preventDefault();}
 onmouseup   = e=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
 onmousemove = e=>
 {
@@ -87,7 +156,7 @@ onwheel = e=> e.ctrlKey || (mouseWheel = sign(e.deltaY));
 oncontextmenu = e=> !1; // prevent right click menu
 
 ///////////////////////////////////////////////////////////////////////////////
-// gamepad input
+// Gamepad input
 
 const stickData = [];
 function gamepadsUpdate()
@@ -136,12 +205,16 @@ function gamepadsUpdate()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// touch input
+// Touch input
+
+/** True if a touch device has been detected
+ *  @const {boolean}
+ *  @memberof Input */
 const isTouchDevice = touchInputEnable && window.ontouchstart !== undefined;
 if (isTouchDevice)
 {
     // handle all touch events the same way
-    let wasTouching;
+    let wasTouching, hadTouchInput;
     ontouchstart = ontouchmove = ontouchend = e=>
     {
         e.button = 0; // all touches are left click
@@ -150,7 +223,7 @@ if (isTouchDevice)
         const touching = e.touches.length;
         if (touching)
         {
-            hadInput || zzfx(0) ; // fix mobile audio, force it to play a sound the first time
+            hadTouchInput || zzfx(0, hadTouchInput=1) ; // fix mobile audio, force it to play a sound the first time
 
             // set event pos and pass it along
             e.x = e.touches[0].clientX;

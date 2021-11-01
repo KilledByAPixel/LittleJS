@@ -59,9 +59,9 @@ class Character extends GameObject
         if (this.dodgeTimer.active())
         {
             // update roll
-            this.angle = this.getMirrorSign(2*PI*this.dodgeTimer.getPercent());
+            this.angle = this.getMirrorSign()*2*PI*this.dodgeTimer.getPercent();
             if (this.groundObject)
-                this.velocity.x += this.getMirrorSign(.1);
+                this.velocity.x += this.getMirrorSign()*.1;
         }
         else
         {

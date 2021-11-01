@@ -1,0 +1,32 @@
+{
+    "plugins": [],
+    "recurseDepth": 10,
+    "source": {
+        "include": ["../engine", "README.md"],
+        "exclude": ["../engine/engine.all.js","../engine/engine.all.min.js","../engine/engine.all.release.js"]
+    },
+    "sourceType": "module",
+    "tags": {
+        "allowUnknownTags": true,
+        "dictionaries": ["jsdoc","closure"]
+    },
+    "templates": {
+        "cleverLinks": false,
+        "monospaceLinks": false
+    },
+    "opts": {
+        "encoding": "utf8",
+        "readme": "./README.md",
+        "destination": "./out/",
+        "recurse": true,
+        "verbose": true,
+        "template": "../node_modules/clean-jsdoc-theme",
+        "theme_opts": {
+            "theme": "dark",
+            "favicon": "./static/favicon.png",
+            "title": "LittleJS - The Tiny JavaScript Game Engine That Can!",
+            "footer": "<a href=https://github.com/KilledByAPixel/LittleJS>LittleJS - MIT License - Copyright 2021 Frank Force</a>",
+            "static_dir": ["./static/"]
+        }
+    }
+}

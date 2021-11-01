@@ -1,22 +1,25 @@
-/*
-    LittleJS Tile Layer System
-    - Caches arrays of tiles to offscreen canvas for fast rendering
-    - Unlimted numbers of layers, allocates canvases as needed
-    - Interfaces with EngineObject for collision
-    - Collision layer is separate from visible layers
-    - Tile layers can be drawn to using their context with canvas2d
-    - It is recommended to have a visible layer that matches the collision
-*/
+/** 
+ *  LittleJS Tile Layer System
+ *  <br> - Caches arrays of tiles to offscreen canvas for fast rendering
+ *  <br> - Unlimted numbers of layers, allocates canvases as needed
+ *  <br> - Interfaces with EngineObject for collision
+ *  <br> - Collision layer is separate from visible layers
+ *  <br> - Tile layers can be drawn to using their context with canvas2d
+ *  <br> - It is recommended to have a visible layer that matches the collision
+ *  @namespace TileLayer
+ */
 
 'use strict';
 
 ///////////////////////////////////////////////////////////////////////////////
 // Tile Collision
 
-let tileCollision = [];
-let tileCollisionSize = vec2();
-const tileLayerCanvasCache = [];
+// Internal variables not exposed to documentation
+let tileCollision = [], tileCollisionSize = vec2();
 
+/** Clear and initialize tile collision
+ *  @param {Vector2} size
+ *  @memberof TileLayer */
 function initTileCollision(size)
 {
     tileCollisionSize = size;
@@ -25,13 +28,26 @@ function initTileCollision(size)
         tileCollision[i] = 0;
 }
 
-// set and get collision data
+/** Set tile collision data
+ *  @param {Vector2} pos
+ *  @param {Number} [data=0]
+ *  @memberof TileLayer */
 const setTileCollisionData = (pos, data=0)=>
     pos.arrayCheck(tileCollisionSize) && (tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] = data);
+
+/** Get tile collision data
+ *  @param {Vector2} pos
+ *  @return {Number}
+ *  @memberof TileLayer */
 const getTileCollisionData = (pos)=>
     pos.arrayCheck(tileCollisionSize) ? tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] : 0;
 
-// check if there is collision in a given area
+/** Check if collision with another object should occur
+ *  @param {Vector2} pos
+ *  @param {Vector2} [size=new Vector2(1,1)]
+ *  @param {EngineObject} [object]
+ *  @return {Boolean}
+ *  @memberof TileLayer */
 function tileCollisionTest(pos, size=vec2(), object)
 {
     const minX = max(Math.floor(pos.x - size.x/2), 0);
@@ -47,13 +63,18 @@ function tileCollisionTest(pos, size=vec2(), object)
     }
 }
 
-// return the center of tile if any that is hit (this does not return the exact hit point)
-// todo: a way to get the exact hit point, it must still register as inside the hit tile
+/** Return the center of tile if any that is hit (this does not return the exact hit point)
+ *  @param {Vector2} posStart
+ *  @param {Vector2} posEnd
+ *  @param {EngineObject} [object]
+ *  @return {Vector2}
+ *  @memberof TileLayer */
 function tileCollisionRaycast(posStart, posEnd, object)
 {
     // test if a ray collides with tiles from start to end
-    posStart = posStart.int();
-    posEnd = posEnd.int();
+    // todo: a way to get the exact hit point, it must still register as inside the hit tile
+    posStart = posStart.floor();
+    posEnd = posEnd.floor();
     const posDelta = posEnd.subtract(posStart);
     const dx = abs(posDelta.x),  dy = -abs(posDelta.y);
     const sx = sign(posDelta.x), sy = sign(posDelta.y);
@@ -81,8 +102,18 @@ function tileCollisionRaycast(posStart, posEnd, object)
 ///////////////////////////////////////////////////////////////////////////////
 // Tile Layer Rendering System
 
+// Reuse canvas autmatically when destroyed
+const tileLayerCanvasCache = [];
+
+/** Tile layer data object stores info about how to render a tile */
 class TileLayerData
 {
+    /** Create a tile layer data object
+     *  @param {Number} [tile] - The tile to use, untextured if undefined
+     *  @param {Number} [direction=0] - Integer direction of tile, in 90 degree increments
+     *  @param {Boolean} [mirror=0] - If the tile should be mirrored along the x axis
+     *  @param {Color} [color=new Color(1,1,1)] - Color of the tile
+     */
     constructor(tile, direction=0, mirror=0, color=new Color)
     {
         this.tile      = tile;
@@ -90,12 +121,21 @@ class TileLayerData
         this.mirror    = mirror;
         this.color     = color;
     }
+
+    /** Set this tile to clear, it will not be rendered */
     clear() { this.tile = this.direction = this.mirror = 0; color = new Color; }
 }
 
+/** Tile layer object - cached rendering system for tile layers */
 class TileLayer extends EngineObject
 {
-    constructor(pos, size, scale=vec2(1), layer=0)
+    /** Create a tile layer data object
+     *  @param {Vector2} [position=new Vector2(0,0)] - World space position
+     *  @param {Vector2} [size=defaultObjectSize] - World space size
+     *  @param {Vector2} [scale=new Vector2(1,1)] - How much to scale this in world space
+     *  @param {Number} [renderOrder=0] - Objects sorted by renderOrder before being rendered
+     */
+    constructor(pos, size, scale=vec2(1), renderOrder=0)
     {
         super(pos, size);
 
@@ -104,8 +144,7 @@ class TileLayer extends EngineObject
         this.context = this.canvas.getContext('2d');
         this.scale = scale;
         this.tileSize = defaultTileSize.copy();
-        this.layer = layer;
-        this.renderOrder = layer;
+        this.renderOrder = renderOrder;
         this.flushGLBeforeRender = 1;
 
         // init tile data
@@ -114,6 +153,7 @@ class TileLayer extends EngineObject
             this.data.push(new TileLayerData());
     }
 
+    /** Destroy this tile layer */
     destroy()
     {
         // add canvas back to the cache
@@ -121,6 +161,10 @@ class TileLayer extends EngineObject
         super.destroy();
     }
     
+    /** Set data at a given position in the array 
+     *  @param {Vector2}       position - Local position in array
+     *  @param {TileLayerData} data - Data to set
+     *  @param {Boolean}       [redraw=0] - Force the tile to redraw if true */
     setData(layerPos, data, redraw)
     {
         if (layerPos.arrayCheck(this.size))
@@ -130,10 +174,16 @@ class TileLayer extends EngineObject
         }
     }
     
+    /** Get data at a given position in the array 
+     *  @param {Vector2} layerPos - Local position in array
+     *  @return {TileLayerData} */
     getData(layerPos)
     { return layerPos.arrayCheck(this.size) && this.data[(layerPos.y|0)*this.size.x+layerPos.x|0]; }
     
-    update() {} // tile layers are not updated
+    // Tile layers are not updated
+    update() {}
+
+    // Render the tile layer, called automatically by the engine
     render()
     {
         ASSERT(mainContext != this.context); // must call redrawEnd() after drawing tiles
@@ -150,14 +200,16 @@ class TileLayer extends EngineObject
         );
     }
 
+    /** Draw all the tile data to an offscreen canvas using webgl if possible */
     redraw()
     {
-        // draw all the tile data to an offscreen canvas using webgl if possible
         this.redrawStart();
         this.drawAllTileData();
         this.redrawEnd();
     }
 
+    /** Call to start the redraw process
+     *  @param {Boolean} [clear=1] - Should it clear the canvas before drawing */
     redrawStart(clear = 1)
     {
         // clear and set size
@@ -182,6 +234,7 @@ class TileLayer extends EngineObject
         glPreRender(width, height);
     }
 
+    /** Call to end the redraw process */
     redrawEnd()
     {
         ASSERT(mainContext == this.context); // must call redrawStart() before drawing tiles
@@ -192,10 +245,12 @@ class TileLayer extends EngineObject
         [mainCanvasSize, mainCanvas, mainContext, cameraScale, cameraPos] = this.savedRenderSettings;
     }
 
+    /** Draw the tile at a given position
+     *  @param {Vector2} layerPos */
     drawTileData(layerPos)
     {
         // first clear out where the tile was
-        const pos = layerPos.int().add(this.pos).add(vec2(.5));
+        const pos = layerPos.floor().add(this.pos).add(vec2(.5));
         this.drawCanvas2D(pos, vec2(1), 0, 0, (context)=>context.clearRect(-.5, -.5, 1, 1));
 
         // draw the tile if not undefined
@@ -207,6 +262,7 @@ class TileLayer extends EngineObject
         }
     }
 
+    /** Draw all the tiles in this layer */
     drawAllTileData()
     {
         for (let x = this.size.x; x--;)
@@ -214,7 +270,12 @@ class TileLayer extends EngineObject
              this.drawTileData(vec2(x,y));
     }
 
-    // draw directly to the 2d canvas in world space (bipass webgl)
+    /** Draw directly to the 2d canvas in world space (bipass webgl)
+     *  @param {Vector2}  pos
+     *  @param {Vector2}  size
+     *  @param {Number}   angle
+     *  @param {Boolean}  mirror
+     *  @param {Function} drawFunction */
     drawCanvas2D(pos, size, angle, mirror, drawFunction)
     {
         const context = this.context;
@@ -228,8 +289,15 @@ class TileLayer extends EngineObject
         context.restore();
     }
 
-    // draw a tile directly onto the layer canvas
-    drawTile(pos, size=vec2(1), tileIndex=0, tileSize=defaultTileSize, color=new Color, angle=0, mirror)
+    /** Draw a tile directly onto the layer canvas
+     *  @param {Vector2} pos
+     *  @param {Vector2} [size=new Vector2(1,1)]
+     *  @param {Number}  [tileIndex=-1]
+     *  @param {Vector2} [tileSize=defaultTileSize]
+     *  @param {Color}   [color=new Color(1,1,1)]
+     *  @param {Number}  [angle=0]
+     *  @param {Boolean} [mirror=0] */
+    drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=defaultTileSize, color=new Color, angle=0, mirror)
     {
         this.drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
@@ -250,5 +318,10 @@ class TileLayer extends EngineObject
         });
     }
 
+    /** Draw a rectangle directly onto the layer canvas
+     *  @param {Vector2} pos
+     *  @param {Vector2} [size=new Vector2(1,1)]
+     *  @param {Color}   [color=new Color(1,1,1)]
+     *  @param {Number}  [angle=0] */
     drawRect(pos, size, color, angle) { this.drawTile(pos, size, -1, 0, color, angle, 0); }
 }

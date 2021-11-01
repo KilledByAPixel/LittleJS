@@ -1,22 +1,34 @@
 /*
-    LittleJS Object Base Class
-    - Base object class used by the engine
-    - Automatically adds self to object list
-    - Will be updated and rendered each frame
-    - Renders as a sprite from a tilesheet by default
-    - Can have color and addtive color applied
-    - 2d Physics and collision system
-    - Sorted by renderOrder
-    - Objects can have children attached
-    - Parents are updated before children, and set child transform
-    - Call destroy() to get rid of objects
+    LittleJS Object System
 */
 
 'use strict';
 
+/** 
+ *  LittleJS Object Base Object Class
+ *  <br> - Base object class used by the engine
+ *  <br> - Automatically adds self to object list
+ *  <br> - Will be updated and rendered each frame
+ *  <br> - Renders as a sprite from a tilesheet by default
+ *  <br> - Can have color and addtive color applied
+ *  <br> - 2d Physics and collision system
+ *  <br> - Sorted by renderOrder
+ *  <br> - Objects can have children attached
+ *  <br> - Parents are updated before children, and set child transform
+ *  <br> - Call destroy() to get rid of objects
+ */
 class EngineObject
 {
-    constructor(pos, size=defaultObjectSize, tileIndex=-1, tileSize=defaultTileSize, angle=0, color)
+    /**
+     * Create an engine object and adds it to the list of objects
+     * @param {Vector2} [position=new Vector2(0,0)] - World space position of the object
+     * @param {Vector2} [size=defaultObjectSize] - World space size of the object
+     * @param {Number} [tileIndex=-1] - Tile to use to render object, untextured if -1
+     * @param {Vector2} [tileSize=defaultTileSize] - Size of tile in source pixels
+     * @param {Number} [angle=0] - Angle to rotate the object
+     * @param {Color} [color] - Color to apply to tile when rendered
+     */
+    constructor(pos=vec2(), size=defaultObjectSize, tileIndex=-1, tileSize=defaultTileSize, angle=0, color)
     {
         // set passed in params
         ASSERT(pos && pos.x != undefined && size.x != undefined); // ensure pos and size are vec2s
@@ -44,6 +56,7 @@ class EngineObject
         engineObjects.push(this);
     }
     
+    /** Update the object transform and physics, called automatically by engine once each frame */
     update()
     {
         const parent = this.parent;
@@ -111,7 +124,7 @@ class EngineObject
                     if (o.mass) // push away if not fixed
                         o.velocity = o.velocity.subtract(velocity);
                         
-                    debugPhysics && debugAABB(this.pos, o.pos, this.size, o.size, '#f00');
+                    debugPhysics && debugAABB(this.pos, this.size, o.pos, o.size, '#f00');
                     continue;
                 }
 
@@ -177,7 +190,7 @@ class EngineObject
                         this.velocity.x *= -this.elasticity;
                 }
 
-                debugPhysics && debugAABB(this.pos, o.pos, this.size, o.size, '#f0f');
+                debugPhysics && debugAABB(this.pos, this.size, o.pos, o.size, '#f0f');
             }
         }
         if (this.collideTiles)
@@ -221,12 +234,14 @@ class EngineObject
         }
     }
        
+    /** Render the object, draws a tile by default, automatically called each frame, sorted by renderOrder */
     render()
     {
         // default object render
         drawTile(this.pos, this.drawSize || this.size, this.tileIndex, this.tileSize, this.color, this.angle, this.mirror, this.additiveColor);
     }
     
+    /** Destroy this object, destroy it's children, detach it's parent, and mark it for removal */
     destroy()             
     { 
         if (this.destroyed)
@@ -238,15 +253,45 @@ class EngineObject
         for (const child of this.children)
             child.destroy(child.parent = 0);
     }
-    collideWithTile(data, pos)        { return data > 0; }
-    collideWithTileRaycast(data, pos) { return data > 0; }
-    collideWithObject(o)              { return 1; }
-    getAliveTime()                    { return time - this.spawnTime; }
-    applyAcceleration(a)              { ASSERT(!this.isFixed()); this.velocity = this.velocity.add(a); }
-    applyForce(force)	              { this.applyAcceleration(force.scale(1/this.mass)); }
-    isFixed()                         { return !this.mass; }
-    getMirrorSign(s=1)                { return this.mirror ? -s : s; }
+    
+    /** Called to check if a tile collision should be resolved
+     *  @param {Number} tileData - the value of the tile at the position
+     *  @param {Vector2} pos - tile where the collision occured
+     *  @return {Boolean} true if the collision should be resolved */
+    collideWithTile(tileData, pos)        { return tileData > 0; }
+    
+    /** Called to check if a tile raycast hit
+     *  @param {Number} tileData - the value of the tile at the position
+     *  @param {Vector2} pos - tile where the raycast is
+     *  @return {Boolean} true if the raycast should hit */
+    collideWithTileRaycast(tileData, pos) { return tileData > 0; }
 
+    /** Called to check if a tile raycast hit
+     *  @param {EngineObject} object - the object to test against
+     *  @return {Boolean} true if the collision should be resolved
+     */
+    collideWithObject(o)              { return 1; }
+
+    /** How long since the object was created
+     *  @return {Number} */
+    getAliveTime()                    { return time - this.spawnTime; }
+
+    /** Apply acceleration to this object (adjust velocity, not affected by mass)
+     *  @param {Vector2} acceleration */
+    applyAcceleration(a)              { if (this.mass) this.velocity = this.velocity.add(a); }
+
+    /** Apply force to this object (adjust velocity, affected by mass)
+     *  @param {Vector2} force */
+    applyForce(force)	              { this.applyAcceleration(force.scale(1/this.mass)); }
+    
+    /** Get the direction of the mirror
+     *  @return {Number} -1 if this.mirror is true, or 1 if not mirrored */
+    getMirrorSign() { return this.mirror ? -1 : 1; }
+
+    /** Attaches a child to this with a given local transform
+     *  @param {EngineObject} child
+     *  @param {Vector2} [localPos=new Vector2]
+     *  @param {Number} [localAngle=0] */
     addChild(child, localPos=vec2(), localAngle=0)
     {
         ASSERT(!child.parent && !this.children.includes(child));
@@ -255,6 +300,9 @@ class EngineObject
         child.localPos = localPos.copy();
         child.localAngle = localAngle;
     }
+
+    /** Removes a child from this one
+     *  @param {EngineObject} child */
     removeChild(child)
     {
         ASSERT(child.parent == this && this.children.includes(child));
@@ -262,7 +310,11 @@ class EngineObject
         child.parent = 0;
     }
 
-    setCollision(collideSolidObjects, isSolid, collideTiles=1)
+    /** Set how this object collides
+     *  @param {boolean} [collideSolidObjects=0] - Does it collide with solid objects
+     *  @param {boolean} [isSolid=0] - Is it able to collide and block other objects (expensive in large numbers)
+     *  @param {boolean} [collideTiles=1] - Does it collide with the tile collision */
+    setCollision(collideSolidObjects=0, isSolid=0, collideTiles=1)
     {
         ASSERT(collideSolidObjects || !isSolid); // solid objects must be set to collide
 
@@ -281,36 +333,5 @@ class EngineObject
         this.collideSolidObjects = collideSolidObjects;
         this.isSolid = isSolid;
         this.collideTiles = collideTiles;
-    }
-}
-
-function destroyAllObjects()
-{
-    // remove all objects that are not persistent or are descendants of something persistent
-    for (const o of engineObjects)
-        o.persistent || o.parent || o.destroy();
-    engineObjects = engineObjects.filter(o=>!o.destroyed);
-}
-
-function forEachObject(pos, size, callbackFunction, objects=engineObjects)
-{
-    if (!pos)
-    {
-        // all objects
-        for (const o of objects)
-            callbackFunction(o);
-    }
-    else if (size.x != undefined)
-    {
-        // aabb test
-        for (const o of objects)
-            isOverlapping(pos, size, o.pos, o.size) && callbackFunction(o);
-    }
-    else
-    {
-        // circle test
-        const sizeSquared = size*size;
-        for (const o of objects)
-            pos.distanceSquared(o.pos) < sizeSquared && callbackFunction(o);
     }
 }

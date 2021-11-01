@@ -1,69 +1,137 @@
-/*
-    LittleJS - The Tiny JavaScript Game Engine That Can
-    MIT License - Copyright 2019 Frank Force
-*/
-/*
-    LittleJS Debug System
-    
-    Debug Features
-    - debug overlay with mouse pick
-    - debug primitive rendering
-    - save screenshots
-*/
+/** 
+ *  LittleJS Medal System
+ *  <br> - Debug overlay with mouse pick
+ *  <br> - Debug primitive rendering
+ *  <br> - Save screenshots to disk
+ *  @namespace Debug
+ */
 
 'use strict';
 
+/** True if debug is enabled
+ *  @default
+ *  @memberof Debug */
 const debug = 1;
+
+/** True if asserts are enaled
+ *  @default
+ *  @memberof Debug */
 const enableAsserts = 1;
+
+/** Size to render debug points by default
+ *  @default
+ *  @memberof Debug */
 const debugPointSize = .5;
 
+/** True if watermark with fps should be down
+ *  @default
+ *  @memberof Debug */
 let showWatermark = 1;
-let godMode = 0;
-let debugPrimitives = [];
-let debugOverlay = 0;
-let debugPhysics = 0;
-let debugRaycast = 0;
-let debugParticles = 0;
-let debugGamepads = 0;
-let debugMedals = 0;
-let debugCanvas = -1;
-let debugTakeScreenshot;
-let downloadLink;
 
-// debug helper functions
+/** True if god mode is enabled
+ *  @default
+ *  @memberof Debug */
+let godMode = 0;
+
+// Engine internal variables not exposed to documentation
+let debugPrimitives = [], debugOverlay = 0, debugPhysics = 0, debugRaycast = 0, 
+debugParticles = 0, debugGamepads = 0, debugMedals = 0, debugTakeScreenshot, downloadLink;
+
+///////////////////////////////////////////////////////////////////////////////
+// Debug helper functions
+
+/** Asserts if the experssion is false
+ *  @param {Boolean} assertion
+ *  @param {Object} output
+ *  @memberof Debug */
 const ASSERT = enableAsserts ? (...assert)=> console.assert(...assert) : ()=>{};
-const debugRect = (pos, size=vec2(0), color='#fff', time=0, angle=0, fill=0)=> 
+
+/** Draw a debug rectangle in world space
+ *  @param {Vector2} pos
+ *  @param {Vector2} [size=new Vector2()]
+ *  @param {String}  [color='#fff']
+ *  @param {Number}  [time=0]
+ *  @param {Number}  [angle=0]
+ *  @param {Boolean} [fill=0]
+ *  @memberof Debug */
+const debugRect = (pos, size=vec2(), color='#fff', time=0, angle=0, fill=0)=> 
 {
     ASSERT(typeof color == 'string'); // pass in regular html strings as colors
     debugPrimitives.push({pos, size:vec2(size), color, time:new Timer(time), angle, fill});
 }
+
+/** Draw a debug circle in world space
+ *  @param {Vector2} pos
+ *  @param {Number}  [radius=0]
+ *  @param {String}  [color='#fff']
+ *  @param {Number}  [time=0]
+ *  @param {Boolean} [fill=0]
+ *  @memberof Debug */
 const debugCircle = (pos, radius=0, color='#fff', time=0, fill=0)=>
 {
     ASSERT(typeof color == 'string'); // pass in regular html strings as colors
     debugPrimitives.push({pos, size:radius, color, time:new Timer(time), angle:0, fill});
 }
+
+/** Draw a debug point in world space
+ *  @param {Vector2} pos
+ *  @param {String}  [color='#fff']
+ *  @param {Number}  [time=0]
+ *  @param {Number}  [angle=0]
+ *  @memberof Debug */
 const debugPoint = (pos, color, time, angle)=> debugRect(pos, 0, color, time, angle);
+
+/** Draw a debug line in world space
+ *  @param {Vector2} posA
+ *  @param {Vector2} posB
+ *  @param {String}  [color='#fff']
+ *  @param {Number}  [thickness=.1]
+ *  @param {Number}  [time=0]
+ *  @memberof Debug */
 const debugLine = (posA, posB, color, thickness=.1, time)=>
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);
     debugRect(posA.add(halfDelta), size, color, time, halfDelta.angle(), 1);
 }
-const debugAABB = (pA, pB, sA, sB, color)=>
+
+/** Draw a debug axis aligned bounding box in world space
+ *  @param {Vector2} posA
+ *  @param {Vector2} sizeA
+ *  @param {Vector2} posB
+ *  @param {Vector2} sizeB
+ *  @param {String}  [color='#fff']
+ *  @memberof Debug */
+const debugAABB = (pA, sA, pB, sB, color)=>
 {
     const minPos = vec2(min(pA.x - sA.x/2, pB.x - sB.x/2), min(pA.y - sA.y/2, pB.y - sB.y/2));
     const maxPos = vec2(max(pA.x + sA.x/2, pB.x + sB.x/2), max(pA.y + sA.y/2, pB.y + sB.y/2));
     debugRect(minPos.lerp(maxPos,.5), maxPos.subtract(minPos), color);
 }
-const debugText = (text='', pos, size=1, color='#fff', time=0, angle=0, font='monospace')=> 
+
+/** Draw a debug axis aligned bounding box in world space
+ *  @param {String}  text
+ *  @param {Vector2} pos
+ *  @param {Number}  [size=1]
+ *  @param {String}  [color='#fff']
+ *  @param {Number}  [time=0]
+ *  @param {Number}  [angle=0]
+ *  @param {String}  [font='monospace']
+ *  @memberof Debug */
+const debugText = (text, pos, size=1, color='#fff', time=0, angle=0, font='monospace')=> 
 {
     ASSERT(typeof color == 'string'); // pass in regular html strings as colors
     debugPrimitives.push({text, pos, size, color, time:new Timer(time), angle, font});
 }
 
+/** Clear all debug primitives in the list
+ *  @memberof Debug */
 const debugClear = ()=> debugPrimitives = [];
 
-// save a canvas to disk
+/** Save a canvas to disk 
+ *  @param {HTMLCanvasElement} canvas
+ *  @param {String}            [filename]
+ *  @memberof Debug */
 const debugSaveCanvas = (canvas, filename = engineName + '.png') =>
 {
     downloadLink.download = 'screenshot.png';
@@ -72,7 +140,7 @@ const debugSaveCanvas = (canvas, filename = engineName + '.png') =>
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// engine debug function (called automatically)
+// Engine debug function (called automatically)
 
 const debugInit = ()=>
 {
@@ -194,8 +262,8 @@ const debugRender = ()=>
             const saveContext = mainContext;
             mainContext = overlayContext
             const raycastHitPos = tileCollisionRaycast(bestObject.pos, mousePos);
-            raycastHitPos && drawRect(raycastHitPos.int().add(vec2(.5)), vec2(1), new Color(0,1,1,.3));
-            drawRect(mousePos.int().add(vec2(.5)), vec2(1), new Color(0,0,1,.5));
+            raycastHitPos && drawRect(raycastHitPos.floor().add(vec2(.5)), vec2(1), new Color(0,1,1,.3));
+            drawRect(mousePos.floor().add(vec2(.5)), vec2(1), new Color(0,0,1,.5));
             drawLine(mousePos, bestObject.pos, .1, !raycastHitPos ? new Color(0,1,0,.5) : new Color(1,0,0,.5));
 
             let pos = mousePos.copy(), height = vec2(0,.5);
@@ -309,7 +377,7 @@ const debugRender = ()=>
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// particle system editor
+// particle system editor (work in progress)
 let debugParticleEditor = 0, debugParticleSystem, debugParticleSystemDiv, particleSystemCode;
 
 const debugToggleParticleEditor = ()=>

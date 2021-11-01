@@ -74,12 +74,12 @@ function explosion(pos, radius=3)
     {
         const h = (cleanupRadius**2 - x**2)**.5;
         for (let y = -h; y < h; ++y)
-            decorateTile(pos.add(vec2(x,y)).int());
+            decorateTile(pos.add(vec2(x,y)).floor());
     }
 
     // kill/push objects
     const maxRangeSquared = (radius*1.5)**2;
-    forEachObject(pos, radius*3, (o)=> 
+    engineObjectsCallback(pos, radius*3, (o)=> 
     {
         const d = o.pos.distance(pos);
         if (o.isGameObject)
@@ -126,7 +126,7 @@ function explosion(pos, radius=3)
 function destroyTile(pos, makeSound = 1, cleanNeighbors = 1)
 {
     // pos must be an int
-    pos = pos.int();
+    pos = pos.floor();
 
     // destroy tile
     const tileType = getTileCollisionData(pos);
@@ -170,9 +170,9 @@ function decorateBackgroundTile(pos)
         if (neighborTileDataA > 0 | neighborTileDataB > 0)
             continue;
 
-        const directionVector = vec2().setAngle(i*PI/2+PI/4, 10).int();
+        const directionVector = vec2().setAngle(i*PI/2+PI/4, 10).floor();
         const drawPos = pos.add(vec2(.5))          // center
-            .scale(16).add(directionVector).int(); // direction offset
+            .scale(16).add(directionVector).floor(); // direction offset
 
         // clear rect without any scaling to prevent blur from filtering
         const s = 2;

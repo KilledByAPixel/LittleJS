@@ -1,0 +1,324 @@
+::selection {
+    background: #ffce76;
+    color: #000;
+}
+
+body {
+    background-color: #121216;
+    color: #f8f8f9;
+}
+
+a,
+a:active {
+    color: #00abff;
+}
+
+hr {
+    border: 1px solid #333;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    color: #f8f8f9;
+}
+
+h1,
+h2 {
+    border-bottom: 0.0625rem solid #333;
+}
+
+.navbar {
+    background: #000;
+}
+
+.navbar-ham {
+    background: #444;
+}
+
+.navbar-ham .first,
+.navbar-ham .second,
+.navbar-ham .third {
+    background: #fff;
+}
+
+.navbar-resize {
+    background: #222;
+}
+
+.resize-dots-container .dots {
+    background-color: #fff;
+}
+
+
+.search-box-input-container {
+    background: #2a2b2c;
+}
+
+.search-icon {
+    fill: #aeaeae;
+}
+
+.search-box-input {
+    color: #fff;
+}
+
+.search-box-input::placeholder {
+    color: #aeaeae;
+}
+
+.search-box-input:focus + .search-icon {
+    fill: #fff;
+}
+
+.search-item-ul {
+    background: #333;
+}
+
+.search-item-ul li:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.search-item-ul a,
+.search-item-ul li {
+    color: #fff;
+}
+
+.accordion-heading {
+    color: #fff;
+    fill: #fff;
+}
+
+.accordion-content {
+    background: #111;
+}
+
+.accordion-content a {
+    color: #fff;
+}
+
+.methods.accordion-content {
+    background: #202020;
+}
+
+.menu-link {
+    color: #fff;
+}
+
+
+tt,
+code,
+kbd,
+samp {
+    background: #222;
+}
+
+
+.signature-attributes {
+    color: #aaa;
+}
+
+
+.ancestors {
+    color: #999;
+}
+
+.ancestors a {
+    color: #999 !important;
+}
+
+.important {
+    color: #950b02;
+}
+
+.type-signature {
+    color: #00918e;
+}
+
+.name,
+.name a {
+    color: #f7f7f7;
+}
+
+.details {
+    background: #000;
+    color: #fff;
+}
+
+.prettyprint,
+.pre-top-bar-container {
+    background: #000;
+}
+
+.member-item-container strong,
+.method-member-container strong {
+    color: #fff;
+}
+
+.pre-top-bar-container {
+    background: #090909;
+}
+
+.prettyprint.source,
+.prettyprint code {
+    background-color: #000;
+}
+
+.prettyprint.linenums li {
+    border-left: 3px #222831 solid;
+}
+
+/* stylelint-disable */
+.prettyprint.linenums li.selected,
+.prettyprint.linenums li.selected * {
+    background-color: #404040;
+}
+/* stylelint-enable */
+
+table .name,
+.params .name,
+.props .name,
+.name code {
+    color: #fff;
+}
+
+table td,
+.params td {
+    background-color: #000;
+    border-top: 1px solid #191919;
+}
+
+table thead tr,
+.params thead tr,
+.props thead tr {
+    background-color: #000;
+    color: #fff;
+}
+
+/* stylelint-disable */
+table .params thead tr,
+.params .params thead tr,
+.props .props thead tr {
+    background-color: #000;
+    color: #fff;
+}
+
+
+.disabled {
+    color: #aaaaaa;
+}
+
+.code-copy-icon-container {
+    fill: #fff;
+}
+
+.code-copy-icon-container:hover {
+    background-color: #333;
+}
+
+.code-lang-name {
+    color: #ff8a00;
+}
+
+.tooltip {
+    background: #ffce76;
+    color: #000;
+}
+
+.tooltip .pun,
+.tooltip .typ {
+    background: #ffce76;
+    color: #000;
+}
+
+/* code */
+.pln {
+    color: #ffdd4a;
+}
+
+.str {
+    color: #56e39f;
+}
+
+/* a keyword */
+.kwd {
+    color: #08b2e3;
+}
+
+/* a comment */
+.com {
+    color: #999;
+}
+
+/* a type name */
+.typ {
+    color: #ef6f6c;
+}
+
+/* a literal value */
+.lit {
+    color: #f5d67b;
+}
+
+/* punctuation */
+.pun {
+    color: #5adbff;
+}
+
+/* lisp open bracket */
+.opn {
+    color: #72e0d1;
+}
+
+/* lisp close bracket */
+.clo {
+    color: #72e0d1;
+}
+
+/* a markup tag name */
+.tag {
+    color: #007bff;
+}
+
+/* a markup attribute name */
+.atn {
+    color: #f5d67b;
+}
+
+/* a markup attribute value */
+.atv {
+    color: #3e999f;
+}
+
+/* a declaration */
+.dec {
+    color: #f5871f;
+}
+
+/* a variable name */
+.var {
+    color: #f5d67b;
+}
+
+/* a function name */
+.fun {
+    color: #4271ae;
+}
+
+
+blockquote {
+    background: #202020;
+    color: #fff;
+}
+
+ol.linenums li {
+    color: #fff;
+}
+
+code {
+    background: #333;
+    color: #fff;
+}

@@ -1,6 +1,6 @@
 {
   "name": "littlejsengine",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "LittleJS - Tiny and Fast HTML5 Game Engine",
   "main": "engine/engine.all.js",
   "repository": {
@@ -21,5 +21,8 @@
   "bugs": {
     "url": "https://github.com/KilledByAPixel/LittleJS/issues"
   },
-  "homepage": "https://github.com/KilledByAPixel/LittleJS"
+  "homepage": "https://github.com/KilledByAPixel/LittleJS",
+  "dependencies": {
+    "clean-jsdoc-theme": "^3.2.10"
+  }
 }

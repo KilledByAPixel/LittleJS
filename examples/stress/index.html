@@ -3,7 +3,7 @@
 <link rel=icon type=image/png href=../../favicon.png>
 </head><body>
 
-<script src=../../engine/engine.all.min.js?53></script>
+<script src=../../engine/engine.all.min.js?54></script>
 <script>
 
 /*
@@ -58,11 +58,8 @@ function gameInit()
 ///////////////////////////////////////////////////////////////////////////////
 function gameUpdate()
 {
-    if (!musicSource && hadInput)
-    {
-        // play music when there is input
+    if (!musicSource && mouseWasPressed(0))
         musicSource = music.play();
-    }
 
     // mouse click = change color
     if (mouseWasPressed(0) || mouseIsDown(2))

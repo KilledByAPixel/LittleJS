@@ -1,19 +1,68 @@
-/*
-    LittleJS Drawing System
-
-    - Super fast tile sheet rendering
-    - Utility functions for webgl
-*/
+/** 
+ *  LittleJS Drawing System
+ *  <br> - Hybrid with both Canvas2D and WebGL available
+ *  <br> - Super fast tile sheet rendering with WebGL
+ *  <br> - Can apply rotation, mirror, color and additive color
+ *  <br> - Many useful utility functions
+ *  @namespace Draw
+ */
 
 'use strict';
 
-// convert between screen and world coordinates
+/** Main tilesheet to use for batch rendering system
+ *  @type {Image}
+ *  @memberof Draw */
+const tileImage = new Image();
+
+/** The primary 2D canvas visible to the user
+ *  @type {HTMLCanvasElement}
+ *  @memberof Draw */
+let mainCanvas;
+
+/** 2d context for mainCanvas
+ *  @type {CanvasRenderingContext2D}
+ *  @memberof Draw */
+let mainContext;
+
+/** A canvas that appears on top of everything the same size as mainCanvas
+ *  @type {HTMLCanvasElement}
+ *  @memberof Draw */
+let overlayCanvas;
+
+/** 2d context for overlayCanvas
+ *  @type {CanvasRenderingContext2D}
+ *  @memberof Draw */
+let overlayContext;
+
+/** The size of the main canvas (and other secondary canvases: overlayCanvas and glCanvas) 
+ *  @type {Vector2}
+ *  @memberof Draw */
+let mainCanvasSize = vec2();
+
+/** Convert from screen to world space coordinates
+ *  @param {Vector2} screenPos
+ *  @return {Vector2}
+ *  @memberof Draw */
 const screenToWorld = (screenPos)=>
     screenPos.add(vec2(.5)).subtract(mainCanvasSize.scale(.5)).multiply(vec2(1/cameraScale,-1/cameraScale)).add(cameraPos);
+
+/** Convert from world to screen space coordinates
+ *  @param {Vector2} worldPos
+ *  @return {Vector2}
+ *  @memberof Draw */
 const worldToScreen = (worldPos)=>
     worldPos.subtract(cameraPos).multiply(vec2(cameraScale,-cameraScale)).add(mainCanvasSize.scale(.5)).subtract(vec2(.5));
 
-// draw textured tile centered on pos
+/** Draw textured tile centered on pos
+ *  @param {Vector2} pos - Center of the tile
+ *  @param {Vector2} [size=new Vector2(1,1)] - Size of the tile
+ *  @param {Number}  [tileIndex=-1] - Tile index to use, negative is untextured
+ *  @param {Vector2} [tileSize=defaultTileSize] - Tile size in source pixels
+ *  @param {Color}   [color=new Color(1,1,1)]
+ *  @param {Number}  [angle=0]
+ *  @param {Boolean} [mirror=0]
+ *  @param {Color}   [additiveColor=new Color(0,0,0,0)]
+ *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=defaultTileSize, color=new Color, angle=0, mirror, 
     additiveColor=new Color(0,0,0,0))
 {
@@ -69,25 +118,49 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=defaultTileSize, col
     }
 }
 
-// draw a colored untextured rect centered on pos
+/** Draw colored untextured rect centered on pos
+ *  @param {Vector2} pos
+ *  @param {Vector2} [size=new Vector2(1,1)]
+ *  @param {Color}   [color=new Color(1,1,1)]
+ *  @param {Number}  [angle=0]
+ *  @memberof Draw */
 function drawRect(pos, size, color, angle)
 {
     drawTile(pos, size, -1, defaultTileSize, color, angle);
 }
 
-// draw textured tile centered on pos in screen space
+/** Draw textured tile centered on pos in screen space
+ *  @param {Vector2} pos - Center of the tile
+ *  @param {Vector2} [size=new Vector2(1,1)] - Size of the tile
+ *  @param {Number}  [tileIndex=-1] - Tile index to use, negative is untextured
+ *  @param {Vector2} [tileSize=defaultTileSize] - Tile size in source pixels
+ *  @param {Color}   [color=new Color]
+ *  @param {Number}  [angle=0]
+ *  @param {Boolean} [mirror=0]
+ *  @param {Color}   [additiveColor=new Color(0,0,0,0)]
+ *  @memberof Draw */
 function drawTileScreenSpace(pos, size=vec2(1), tileIndex, tileSize, color, angle, mirror, additiveColor)
 {
     drawTile(screenToWorld(pos), size.scale(1/cameraScale), tileIndex, tileSize, color, angle, mirror, additiveColor);
 }
 
-// draw a colored untextured rect in screen space
+/** Draw colored untextured rectangle in screen space
+ *  @param {Vector2} pos
+ *  @param {Vector2} [size=new Vector2(1,1)]
+ *  @param {Color}   [color=new Color(1,1,1)]
+ *  @param {Number}  [angle=0]
+ *  @memberof Draw */
 function drawRectScreenSpace(pos, size, color, angle)
 {
     drawTileScreenSpace(pos, size, -1, defaultTileSize, color, angle);
 }
 
-// draw a colored line between two points
+/** Draw colored line between two points
+ *  @param {Vector2} posA
+ *  @param {Vector2} posB
+ *  @param {Number}  [thickness=.1]
+ *  @param {Color}   [color=new Color(1,1,1)]
+ *  @memberof Draw */
 function drawLine(posA, posB, thickness=.1, color)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
@@ -95,7 +168,14 @@ function drawLine(posA, posB, thickness=.1, color)
     drawRect(posA.add(halfDelta), size, color, halfDelta.angle());
 }
 
-// draw directly to the 2d canvas in world space (bipass webgl)
+/** Draw directly to a 2d canvas context in world space (bipass webgl)
+ *  @param {Vector2}  pos
+ *  @param {Vector2}  size
+ *  @param {Number}   angle
+ *  @param {Boolean}  mirror
+ *  @param {Function} drawFunction
+ *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @memberof Draw */
 function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainContext)
 {
     // create canvas transform from world space to screen space
@@ -109,7 +189,15 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainCont
     context.restore();
 }
 
-// draw text on overlay canvas in world space
+/** Draw text on overlay canvas in world space
+ *  @param {String}  text
+ *  @param {Vector2} pos
+ *  @param {Number}  [size=1]
+ *  @param {Color}   [color=new Color(1,1,1)]
+ *  @param {Number}  [lineWidth=0]
+ *  @param {Color}   [lineColor=new Color(0,0,0)]
+ *  @param {String}  [textAlign='center']
+ *  @memberof Draw */
 function drawText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=defaultFont)
 {
     pos = worldToScreen(pos);
@@ -126,16 +214,27 @@ function drawText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new
     overlayContext.fillText(text, pos.x, pos.y);
 }
 
-// enable additive or regular blend mode
+/** Enable additive or regular blend mode
+ *  @param {Boolean} [additive=0]
+ *  @memberof Draw */
 function setBlendMode(additive)
 {
-    glEnable ? glSetBlendMode(additive) : mainContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';
+    if (glEnable)
+        glSetBlendMode(additive);
+    else
+        mainContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// fullscreen mode
+// Fullscreen mode
 
+/** Returns true if fullscreen mode is active
+ *  @return {Boolean}
+ *  @memberof Draw */
 const isFullscreen =()=> document.fullscreenElement;
+
+/** Toggle fullsceen mode
+ *  @memberof Draw */
 function toggleFullscreen()
 {
     if (isFullscreen())

@@ -8,7 +8,11 @@ set BUILD_FILENAME=index.js
 
 rem rebuild engine first
 cd engine
-call build.bat
+call engineBuild.bat
+if %ERRORLEVEL% NEQ 0 (
+    pause
+    exit /b %ERRORLEVEL%
+)
 cd ..
 
 rem remove old files

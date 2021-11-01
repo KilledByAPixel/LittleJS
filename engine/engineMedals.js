@@ -1,24 +1,54 @@
-/*
-    LittleJS Medal System
-    - Tracks and displays medals
-    - Saves medals to local storage
-    - Newgrounds and OS13k integration
-*/
+/** 
+ *  LittleJS Medal System
+ *  <br> - Tracks and displays medals
+ *  <br> - Saves medals to local storage
+ *  <br> - Newgrounds and OS13k integration
+ *  @namespace Medals
+ */
 
 'use strict';
 
-const medals = [], medalsDisplayQueue = [];
-let medalsGameName, medalsPreventUnlock, medalsDisplayTimer, newgrounds;
+/** List of all medals
+ *  @memberof Medals */
+const medals = [];
 
-function medalsInit(gameName)
+/** Set to stop medals from being unlockable (like if cheats are enabled)
+ *  @memberof Medals */
+let medalsPreventUnlock;
+
+/** This can used to enable Newgrounds functionality
+ *  @type {Newgrounds}
+ *  @memberof Medals */
+let newgrounds;
+
+// Engine internal variables not exposed to documentation
+let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimer;
+
+///////////////////////////////////////////////////////////////////////////////
+
+/** Initialize medals with a save name used for storage
+ *  <br> - Checks if medals are unlocked
+ *  <br> - Call this after creating all medals
+ *  @param {String} saveName
+ *  @memberof Medals */
+function medalsInit(saveName)
 {
     // check if medals are unlocked
-    medalsGameName = gameName;
+    medalsSaveName = saveName;
     debugMedals || medals.forEach(medal=> medal.unlocked = localStorage[medal.storageKey()]);
 }
 
+/** Medal Object - Tracks an unlockable medal */
 class Medal
 {
+    /**
+     * Create an medal object and adds it to the list of medals
+     * @param {Number} id - The unique identifier of the medal
+     * @param {String} name - Name of the medal
+     * @param {String} [description] - Description of the medal
+     * @param {String} [icon='🏆'] - Icon for the medal
+     * @param {String} [src] - Image location for the medal
+     */
     constructor(id, name, description='', icon='🏆', src)
     {
         ASSERT(id >= 0 && !medals[id]);
@@ -37,26 +67,31 @@ class Medal
         }
     }
 
+    /** Unlocks a medal if not already unlocked */
     unlock()
     {
         if (medalsPreventUnlock || this.unlocked)
             return;
 
         // save the medal
-        ASSERT(medalsGameName); // game name must be set
+        ASSERT(medalsSaveName); // game name must be set
         localStorage[this.storageKey()] = this.unlocked = 1;
         medalsDisplayQueue.push(this);
 
         // save for newgrounds and OS13K
         newgrounds && newgrounds.unlockMedal(this.id);
-        localStorage['OS13kTrophy,' + this.icon + ',' + medalsGameName + ',' + this.name] = this.description;
+        localStorage['OS13kTrophy,' + this.icon + ',' + medalsSaveName + ',' + this.name] = this.description;
     }
  
+    /** Unlocks a medal if not already unlocked */
     storageKey()
     {
-        return medalsGameName + '_medal_' + this.id;
+        return medalsSaveName + '_medal_' + this.id;
     }
 
+    /** Render a medal
+     *  @param {Number} [hidePercent=0] - How much to slide the medal off screen
+     */
     render(hidePercent=0)
     {
         const context = overlayContext;
@@ -83,6 +118,11 @@ class Medal
         context.restore(context.fillText(this.description, x+medalDisplayIconSize+25, y+70));
     }
 
+    /** Render the icon for a medal
+     *  @param {Number} x - Screen space X position
+     *  @param {Number} y - Screen space Y position
+     *  @param {Number} [size=medalDisplayIconSize] - Screen space size
+     */
     renderIcon(x, y, size=medalDisplayIconSize)
     {
         // draw the image or icon
@@ -106,9 +146,9 @@ function medalsRender()
     
     // update first medal in queue
     const medal = medalsDisplayQueue[0];
-    const time = realTime - medalsDisplayTimer;
+    const time = timeReal - medalsDisplayTimer;
     if (!medalsDisplayTimer)
-        medalsDisplayTimer = realTime;
+        medalsDisplayTimer = timeReal;
     else if (time > medalDisplayTime)
         medalsDisplayQueue.shift(medalsDisplayTimer = 0);
     else
@@ -123,10 +163,15 @@ function medalsRender()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Newgrounds API wrapper
 
+/** Newgrounds API wrapper object */
 class Newgrounds
 {
+    /**
+     * Create a newgrounds object
+     * @param {Number} app_id - The newgrounds App ID
+     * @param {String} [cipher] - The encryption Key (AES-128/Base64)
+     */
     constructor(app_id, cipher)
     {
         ASSERT(!newgrounds && app_id);
@@ -173,21 +218,55 @@ class Newgrounds
         debugMedals && console.log(this.scoreboards);
     }
 
+    /** Send message to unlock a medal by id
+     * @param {Number} id - The medal id */
     unlockMedal(id) { return this.call('Medal.unlock', {'id':id}, 1); }
+
+    /** Send message to post score
+     * @param {Number} id - The scoreboard id
+     * @param {Number} value - The score value */
     postScore(id, value) { return this.call('ScoreBoard.postScore', {'id':id, 'value':value}, 1); }
+
+    /** Send message to log a view */
     logView() { return this.call('App.logView', {'host':this.host}, 1); }
 
+    /** Get scores from a scoreboard
+     * @param {Number} id - The scoreboard id
+     * @param {String} [user=0] - A user's id or name
+     * @param {Number} [social=0] - If true, only social scores will be loaded
+     * @param {Number} [skip=0] - Number of scores to skip before start
+     * @param {Number} [limit=10] - Number of scores to include in the list
+     * @return {Object} - The response JSON object
+     */
     getScores(id, user=0, social=0, skip=0, limit=10)
     { return this.call('ScoreBoard.getScores', {'id':id, 'user':user, 'social':social, 'skip':skip, 'limit':limit}); }
 
+    /** Send a message to call a component of the Newgrounds API
+     * @param {String}  component - Name of the component
+     * @param {Object}  [parameters=0] - Parameters to use for call
+     * @param {Boolean} [async=0] - If true, wait for response before continuing (will cause stall)
+     * @return {Object} - The response JSON object
+     */
     call(component, parameters=0, async=0)
     {
+        const call = {'component':component, 'parameters':parameters};
+        if (this.cipher)
+        {
+            // encrypt using AES-128 Base64 with cryptoJS
+            const cryptoJS = this.cryptoJS;
+            const aesKey = cryptoJS['enc']['Base64']['parse'](this.cipher);
+            const iv = cryptoJS['lib']['WordArray']['random'](16);
+            const encrypted = cryptoJS['AES']['encrypt'](JSON.stringify(call), aesKey, {'iv':iv});
+            call['secure'] = cryptoJS['enc']['Base64']['stringify'](iv.concat(encrypted['ciphertext']));
+            call['parameters'] = 0;
+        }
+
         // build the input object
         const input = 
         {
             'app_id':     this.app_id,
             'session_id': this.session_id,
-            'call':       this.encryptCall({'component':component, 'parameters':parameters})
+            'call':       call
         };
 
         // build post data
@@ -201,21 +280,6 @@ class Newgrounds
         xmlHttp.send(formData);
         debugMedals && console.log(xmlHttp.responseText);
         return xmlHttp.responseText && JSON.parse(xmlHttp.responseText);
-    }
-    
-    encryptCall(call)
-    {
-        if (!this.cipher)
-            return call;
-        
-        // encrypt using AES-128 Base64 with cryptoJS
-        const cryptoJS = this.cryptoJS;
-        const aesKey = cryptoJS['enc']['Base64']['parse'](this.cipher);
-        const iv = cryptoJS['lib']['WordArray']['random'](16);
-        const encrypted = cryptoJS['AES']['encrypt'](JSON.stringify(call), aesKey, {'iv':iv});
-        call['secure'] = cryptoJS['enc']['Base64']['stringify'](iv.concat(encrypted['ciphertext']));
-        call['parameters'] = 0;
-        return call;
     }
 }
 

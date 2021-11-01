@@ -129,7 +129,7 @@ function buildTerrain(size)
 function generateLevel()
 {
     // clear old level
-    destroyAllObjects();
+    engineObjectsDestroy();
 
     // randomize ground level hills
     buildTerrain(levelSize);
@@ -206,7 +206,7 @@ function buildLevel()
     // warm up level
     warmup = 1;
     for (let i=5*FPS; i--;)
-        engineUpdateObjects();
+        engineObjectsUpdate();
     warmup = 0;
 
     // spawn player

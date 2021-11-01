@@ -277,7 +277,7 @@ class Bullet extends EngineObject
     update()
     {
         // check if hit someone
-        forEachObject(this.pos, this.size, (o)=>
+        engineObjectsCallback(this.pos, this.size, (o)=>
         {
             if (o.isGameObject)
                 this.collideWithObject(o)

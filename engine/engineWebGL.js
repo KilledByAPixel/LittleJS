@@ -1,18 +1,37 @@
-/*
-    LittleJS WebGL Interface
-    - All webgl used by the engine is wrapped up here
-    - Can be disabled with glEnable to revert to 2D canvas rendering
-    - Batches sprite rendering on GPU for incredibly fast performance
-    - Sprite transform math is done in the shader where possible
-    - For normal stuff you won't need to call any functions in this file
-    - For advanced stuff there are helper functions to create shaders, textures, etc
-*/
+/** 
+ *  LittleJS WebGL Interface
+ *  <br> - All webgl used by the engine is wrapped up here
+ *  <br> - Can be disabled with glEnable to revert to 2D canvas rendering
+ *  <br> - Batches sprite rendering on GPU for incredibly fast performance
+ *  <br> - Sprite transform math is done in the shader where possible
+ *  <br> - For normal stuff you won't need to call any functions in this file
+ *  <br> - For advanced stuff there are helper functions to create shaders, textures, etc
+ *  @namespace WebGL
+ */
 
 'use strict';
 
-let glCanvas, glContext, glTileTexture, glActiveTexture, glShader, 
-    glPositionData, glColorData, glBatchCount, glDirty, glAdditive;
+/** The WebGL canvas which appears above the main canvas and below the overlay canvas
+ *  @type {HTMLCanvasElement}
+ *  @memberof WebGL */
+let glCanvas;
 
+/** 2d context for glCanvas 
+ *  @type {WebGLRenderingContext}
+ *  @memberof WebGL */
+let glContext;
+
+/** Main tile sheet texture automatically loaded by engine
+ *  @type {WebGLTexture}
+ *  @memberof WebGL */
+let glTileTexture;
+
+// WebGL internal variables not exposed to documentation
+let glActiveTexture, glShader, glPositionData, glColorData, glBatchCount, glDirty, glAdditive;
+
+///////////////////////////////////////////////////////////////////////////////
+
+// Init WebGL, called automatically by the engine
 function glInit()
 {
     if (!glEnable) return;
@@ -75,6 +94,9 @@ function glInit()
     initVertexAttribArray('b', gl_UNSIGNED_BYTE, 1, 4, 1); // additiveColor
 }
 
+/** Set the WebGl blend mode, normally you should call setBlendMode instead
+ *  @param {Boolean} [additive=0]
+ *  @memberof WebGL */
 function glSetBlendMode(additive)
 {
     if (!glEnable) return;
@@ -89,6 +111,10 @@ function glSetBlendMode(additive)
     glContext.enable(gl_BLEND);
 }
 
+/** Set the WebGl texture, not normally necessary unless multiple tile sheets are used
+ *  <br> - This may also flush the gl buffer resulting in more draw calls and worse performance
+ *  @param {WebGLTexture} [texture=glTileTexture]
+ *  @memberof WebGL */
 function glSetTexture(texture=glTileTexture)
 {
     if (!glEnable) return;
@@ -99,6 +125,11 @@ function glSetTexture(texture=glTileTexture)
     glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = texture);
 }
 
+/** Compile WebGL shader of the given type, will throw errors if in debug mode
+ *  @param {String} source
+ *  @param type
+ *  @return {WebGLShader}
+ *  @memberof WebGL */
 function glCompileShader(source, type)
 {
     if (!glEnable) return;
@@ -114,6 +145,11 @@ function glCompileShader(source, type)
     return shader;
 }
 
+/** Create WebGL program with given shaders
+ *  @param {WebGLShader} vsSource
+ *  @param {WebGLShader} fsSource
+ *  @return {WebGLProgram}
+ *  @memberof WebGL */
 function glCreateProgram(vsSource, fsSource)
 {
     if (!glEnable) return;
@@ -130,6 +166,12 @@ function glCreateProgram(vsSource, fsSource)
     return program;
 }
 
+/** Create WebGL buffer
+ *  @param bufferType
+ *  @param size
+ *  @param usage
+ *  @return {WebGLBuffer}
+ *  @memberof WebGL */
 function glCreateBuffer(bufferType, size, usage)
 {
     if (!glEnable) return;
@@ -141,6 +183,10 @@ function glCreateBuffer(bufferType, size, usage)
     return buffer;
 }
 
+/** Create WebGL texture from an image
+ *  @param {Image} image
+ *  @return {WebGLTexture}
+ *  @memberof WebGL */
 function glCreateTexture(image)
 {
     if (!glEnable) return;
@@ -158,6 +204,7 @@ function glCreateTexture(image)
     return texture;
 }
 
+// called automatically by engine before render
 function glPreRender(width, height)
 {
     if (!glEnable) return;
@@ -185,6 +232,8 @@ function glPreRender(width, height)
     );
 }
 
+/** Draw all sprites and clear out the buffer, called automatically by the system whenever necessary
+ *  @memberof WebGL */
 function glFlush()
 {
     if (!glEnable || !glBatchCount) return;
@@ -196,13 +245,15 @@ function glFlush()
     glBatchCount = 0;
 }
 
+/** Draw any sprites still in the buffer, copy to main canvas and clear
+ *  @param {CanvasRenderingContext2D} context
+ *  @param {Boolean} [forceDraw=0]
+ *  @memberof WebGL */
 function glCopyToContext(context, forceDraw)
 {
     if (!glEnable || !glDirty)  return;
     
-    // draw any sprites still in the buffer, copy to main canvas and clear
     glFlush();
-
     if (!glOverlay || forceDraw)
     {
         // do not draw/clear in overlay mode because the canvas is visible
@@ -211,6 +262,7 @@ function glCopyToContext(context, forceDraw)
     }
 }
 
+// Draw a sprite with the given parameters, used internally by draw functions
 function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgba=0xffffffff, rgbaAdditive=0x00000000)
 {
     if (!glEnable) return;
@@ -225,69 +277,45 @@ function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgb
 
     // vertex 0
     glPositionData[offset++] = angle;
-    glPositionData[offset++] = x;
-    glPositionData[offset++] = y;
-    glPositionData[offset++] = -sizeX;
-    glPositionData[offset++] = -sizeY;
-    glPositionData[offset++] = uv0X;
-    glPositionData[offset++] = uv1Y;
-    glColorData[offset++] = rgba;
-    glColorData[offset++] = rgbaAdditive;
+    glPositionData[offset++] = x;      glPositionData[offset++] = y;
+    glPositionData[offset++] = -sizeX; glPositionData[offset++] = -sizeY;
+    glPositionData[offset++] = uv0X;   glPositionData[offset++] = uv1Y;
+    glColorData[offset++]    = rgba;   glColorData[offset++]    = rgbaAdditive;
     
     // vertex 1
     glPositionData[offset++] = angle;
-    glPositionData[offset++] = x;
-    glPositionData[offset++] = y;
-    glPositionData[offset++] = sizeX;
-    glPositionData[offset++] = sizeY;
-    glPositionData[offset++] = uv1X;
-    glPositionData[offset++] = uv0Y;
-    glColorData[offset++] = rgba;
-    glColorData[offset++] = rgbaAdditive;
+    glPositionData[offset++] = x;      glPositionData[offset++] = y;
+    glPositionData[offset++] = sizeX;  glPositionData[offset++] = sizeY;
+    glPositionData[offset++] = uv1X;   glPositionData[offset++] = uv0Y;
+    glColorData[offset++]    = rgba;   glColorData[offset++]    = rgbaAdditive;
     
     // vertex 2
     glPositionData[offset++] = angle;
-    glPositionData[offset++] = x;
-    glPositionData[offset++] = y;
-    glPositionData[offset++] = -sizeX;
-    glPositionData[offset++] = sizeY;
-    glPositionData[offset++] = uv0X;
-    glPositionData[offset++] = uv0Y;
-    glColorData[offset++] = rgba;
-    glColorData[offset++] = rgbaAdditive;
+    glPositionData[offset++] = x;      glPositionData[offset++] = y;
+    glPositionData[offset++] = -sizeX; glPositionData[offset++] = sizeY;
+    glPositionData[offset++] = uv0X;   glPositionData[offset++] = uv0Y;
+    glColorData[offset++]    = rgba;   glColorData[offset++]    = rgbaAdditive;
     
     // vertex 0
     glPositionData[offset++] = angle;
-    glPositionData[offset++] = x;
-    glPositionData[offset++] = y;
-    glPositionData[offset++] = -sizeX;
-    glPositionData[offset++] = -sizeY;
-    glPositionData[offset++] = uv0X;
-    glPositionData[offset++] = uv1Y;
-    glColorData[offset++] = rgba;
-    glColorData[offset++] = rgbaAdditive;
+    glPositionData[offset++] = x;      glPositionData[offset++] = y;
+    glPositionData[offset++] = -sizeX; glPositionData[offset++] = -sizeY;
+    glPositionData[offset++] = uv0X;   glPositionData[offset++] = uv1Y;
+    glColorData[offset++]    = rgba;   glColorData[offset++]    = rgbaAdditive;
 
     // vertex 3
     glPositionData[offset++] = angle;
-    glPositionData[offset++] = x;
-    glPositionData[offset++] = y;
-    glPositionData[offset++] = sizeX;
-    glPositionData[offset++] = -sizeY;
-    glPositionData[offset++] = uv1X;
-    glPositionData[offset++] = uv1Y;
-    glColorData[offset++] = rgba;
-    glColorData[offset++] = rgbaAdditive;
+    glPositionData[offset++] = x;      glPositionData[offset++] = y;
+    glPositionData[offset++] = sizeX;  glPositionData[offset++] = -sizeY;
+    glPositionData[offset++] = uv1X;   glPositionData[offset++] = uv1Y;
+    glColorData[offset++]    = rgba;   glColorData[offset++]    = rgbaAdditive;
 
     // vertex 1
     glPositionData[offset++] = angle;
-    glPositionData[offset++] = x;
-    glPositionData[offset++] = y;
-    glPositionData[offset++] = sizeX;
-    glPositionData[offset++] = sizeY;
-    glPositionData[offset++] = uv1X;
-    glPositionData[offset++] = uv0Y;
-    glColorData[offset++] = rgba;
-    glColorData[offset++] = rgbaAdditive;
+    glPositionData[offset++] = x;      glPositionData[offset++] = y;
+    glPositionData[offset++] = sizeX;  glPositionData[offset++] = sizeY;
+    glPositionData[offset++] = uv1X;   glPositionData[offset++] = uv0Y;
+    glColorData[offset++]    = rgba;   glColorData[offset++]    = rgbaAdditive;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
