@@ -111,7 +111,7 @@ class MyObject extends EngineObject
 
 ## Engine Configuration
 
-All engine settings are in [engineConfig.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engineConfig.js). Here are the most important settings...
+All engine configuration is in [engineSettings.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engineSettings.js). Here are the most important settings...
 
 - fixedWidth and fixedHeight - use a fixed canvas resolution if set (disabled by default)
 - pixelated - disable anti-aliasing for pixel art style games (enabled by default)
