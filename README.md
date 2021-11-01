@@ -2,7 +2,7 @@
 
 ## All aboard!
 
-LittleJS is a super lightweight 2D JavaScript game engine with fast WebGL rendering. It was designed to be small, simple, and easy to use for various applications, from game jams to commercial releases. This engine has everything necessary to make high-quality games, including fast rendering, physics, particles, sound effects, music, keyboard/mouse/gamepad input handling, update/render loop, and debug tools. 🚂
+LittleJS is a super lightweight 2D JavaScript game engine with fast WebGL rendering. It is designed to be small, simple, and easy to use for various applications, from game jams to commercial releases. This engine has everything necessary to make high-quality games, including fast rendering, physics, particles, sound effects, music, keyboard/mouse/gamepad input handling, update/render loop, and debug tools. 🚂
 
 ## [LittleJS Documentation](https://killedbyapixel.github.io/LittleJS/docs) - [LittleJS Trailer](https://youtu.be/chuBzGjv7Ms) - [LittleJS Trello Roadmap](https://trello.com/b/E9zf1Xak/littlejs)
 
