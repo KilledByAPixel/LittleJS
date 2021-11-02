@@ -70,7 +70,7 @@ function gameRender()
 function gameRenderPost()
 {
     // draw to overlay canvas for hud rendering
-    const drawOverlayText = (text, x, y, size=70) =>
+    const drawText = (text, x, y, size=70) =>
     {
         overlayContext.textAlign = 'center';
         overlayContext.textBaseline = 'top';
@@ -80,8 +80,8 @@ function gameRenderPost()
         overlayContext.strokeText(text, x, y);
         overlayContext.fillText(text, x, y);
     }
-    drawOverlayText('Score: ' + score,   overlayCanvas.width*1/3, 20);
-    drawOverlayText('Deaths: ' + deaths, overlayCanvas.width*2/3, 20);
+    drawText('Score: ' + score,   overlayCanvas.width*1/3, 20);
+    drawText('Deaths: ' + deaths, overlayCanvas.width*2/3, 20);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

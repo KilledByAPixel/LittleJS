@@ -1556,7 +1556,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainCont
  *  @param {Color}   [lineColor=new Color(0,0,0)]
  *  @param {String}  [textAlign='center']
  *  @memberof Draw */
-function drawOverlayText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=defaultFont)
+function drawText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=defaultFont)
 {
     pos = worldToScreen(pos);
     overlayContext.font = size*cameraScale + 'px '+ font;

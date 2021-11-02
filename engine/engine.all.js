@@ -270,12 +270,12 @@ const debugRender = ()=>
             const printVec2 = (v)=> '(' + (v.x>0?' ':'') + (v.x).toFixed(2) + ',' + (v.y>0?' ':'')  + (v.y).toFixed(2) + ')';
             const args = [.5, new Color, .05, undefined, undefined, 'monospace'];
 
-            drawOverlayText('pos = ' + printVec2(bestObject.pos) 
+            drawText('pos = ' + printVec2(bestObject.pos) 
                 + (bestObject.angle>0?'  ':' ') + (bestObject.angle*180/PI).toFixed(1) + '°', 
                 pos = pos.add(height), ...args);
-            drawOverlayText('vel = ' + printVec2(bestObject.velocity), pos = pos.add(height), ...args);
-            drawOverlayText('size = ' + printVec2(bestObject.size), pos = pos.add(height), ...args);
-            drawOverlayText('collision = ' + getTileCollisionData(mousePos), pos = mousePos.subtract(height), ...args);
+            drawText('vel = ' + printVec2(bestObject.velocity), pos = pos.add(height), ...args);
+            drawText('size = ' + printVec2(bestObject.size), pos = pos.add(height), ...args);
+            drawText('collision = ' + getTileCollisionData(mousePos), pos = mousePos.subtract(height), ...args);
             mainContext = saveContext;
         }
 
@@ -1819,7 +1819,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainCont
  *  @param {Color}   [lineColor=new Color(0,0,0)]
  *  @param {String}  [textAlign='center']
  *  @memberof Draw */
-function drawOverlayText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=defaultFont)
+function drawText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=defaultFont)
 {
     pos = worldToScreen(pos);
     overlayContext.font = size*cameraScale + 'px '+ font;
