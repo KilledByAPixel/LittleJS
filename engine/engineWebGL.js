@@ -43,7 +43,7 @@ function glInit()
 
     if (glOverlay)
     {
-        // firefox is much faster without copying the gl buffer so we just overlay it with some tradeoffs
+        // some browsers are much faster without copying the gl buffer so we just overlay it instead
         document.body.appendChild(glCanvas);
         glCanvas.style = mainCanvas.style.cssText;
     }

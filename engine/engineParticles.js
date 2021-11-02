@@ -9,50 +9,50 @@
 
 /**
  * Particle Emitter - Spawns particles with the given settings
+ * @extends EngineObject
+ * @example
+ * // create a particle emitter
+ * let pos = vec2(2,3);
+ * let particleEmiter = new ParticleEmitter
+ * (
+ *     pos, 1, 0, 500, PI,  // pos, emitSize, emitTime, emitRate, emiteCone
+ *     0, vec2(16),                            // tileIndex, tileSize
+ *     new Color, new Color(0,0,0),            // colorStartA, colorStartB
+ *     new Color(1,1,1,0), new Color(0,0,0,0), // colorEndA, colorEndB
+ *     2, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
+ *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate, 
+ *     .5, 1                // randomness, collide, additive, randomColorLinear, renderOrder
+ * );
  */
 class ParticleEmitter extends EngineObject
 {
-    /**
-     * Create a particle system with the given settings
-     * @param {Vector2} position          - World space position of the emitter
-     * @param {Number}  [emitSize=0]       - World space size of the emitter (float for circle diameter, vec2 for rect)
-     * @param {Number}  [emitTime=0]       - How long to stay alive (0 is forever)
-     * @param {Number}  [emitRate=100]     - How many particles per second to spawn
-     * @param {Number}  [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
-     * @param {Number}  [tileIndex=-1]     - Index into tile sheet, if <0 no texture is applied
-     * @param {Number}  [tileSize=defaultTileSize]    - Tile size for particles
-     * @param {Color}   [colorStartA=new Color(1,1,1)] - Color at start of life 1, randomized between start colors
-     * @param {Color}   [colorStartB=new Color(1,1,1)] - Color at start of life 2, randomized between start colors
-     * @param {Color}   [colorEndA=new Color(1,1,1,0)] - Color at end of life 1, randomized between end colors
-     * @param {Color}   [colorEndB=new Color(1,1,1,0)] - Color at end of life 2, randomized between end colors
-     * @param {Number}  [particleTime=.5]      - How long particles live
-     * @param {Number}  [sizeStart=.1]         - How big are particles at start
-     * @param {Number}  [sizeEnd=1]            - How big are particles at end
-     * @param {Number}  [speed=.1]             - How fast are particles when spawned
-     * @param {Number}  [angleSpeed=.05]       - How fast are particles rotating
-     * @param {Number}  [damping=1]            - How much to dampen particle speed
-     * @param {Number}  [angleDamping=1]       - How much to dampen particle angular speed
-     * @param {Number}  [gravityScale=0]       - How much does gravity effect particles
-     * @param {Number}  [particleConeAngle=PI] - Cone for start particle angle
-     * @param {Number}  [fadeRate=.1]          - How quick to fade in particles at start/end in percent of life
-     * @param {Number}  [randomness=.2]        - Apply extra randomness percent
-     * @param {Boolean} [collideTiles=0]      - Do particles collide against tiles
-     * @param {Boolean} [additive=0]          - Should particles use addtive blend
-     * @param {Boolean} [randomColorLinear=0] - Should color be randomized linearly or across each component
-     * @param {Number}  [renderOrder=0]        - Render order for particles (additive is above other stuff by default)
-     * @example
-     * // create a particle emitter
-     * let pos = vec2(2,3);
-     * let particleEmiter = new ParticleEmitter
-     * (
-     *     pos, 1, 0, 500, PI,  // pos, emitSize, emitTime, emitRate, emiteCone
-     *     0, vec2(16),                            // tileIndex, tileSize
-     *     new Color, new Color(0,0,0),            // colorStartA, colorStartB
-     *     new Color(1,1,1,0), new Color(0,0,0,0), // colorEndA, colorEndB
-     *     2, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
-     *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate, 
-     *     .5, 1                // randomness, collide, additive, randomColorLinear, renderOrder
-     * );
+    /** Create a particle system with the given settings
+     *  @param {Vector2} position           - World space position of the emitter
+     *  @param {Number}  [emitSize=0]       - World space size of the emitter (float for circle diameter, vec2 for rect)
+     *  @param {Number}  [emitTime=0]       - How long to stay alive (0 is forever)
+     *  @param {Number}  [emitRate=100]     - How many particles per second to spawn
+     *  @param {Number}  [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
+     *  @param {Number}  [tileIndex=-1]     - Index into tile sheet, if <0 no texture is applied
+     *  @param {Number}  [tileSize=defaultTileSize]     - Tile size for particles
+     *  @param {Color}   [colorStartA=new Color(1,1,1)] - Color at start of life 1, randomized between start colors
+     *  @param {Color}   [colorStartB=new Color(1,1,1)] - Color at start of life 2, randomized between start colors
+     *  @param {Color}   [colorEndA=new Color(1,1,1,0)] - Color at end of life 1, randomized between end colors
+     *  @param {Color}   [colorEndB=new Color(1,1,1,0)] - Color at end of life 2, randomized between end colors
+     *  @param {Number}  [particleTime=.5]      - How long particles live
+     *  @param {Number}  [sizeStart=.1]         - How big are particles at start
+     *  @param {Number}  [sizeEnd=1]            - How big are particles at end
+     *  @param {Number}  [speed=.1]             - How fast are particles when spawned
+     *  @param {Number}  [angleSpeed=.05]       - How fast are particles rotating
+     *  @param {Number}  [damping=1]            - How much to dampen particle speed
+     *  @param {Number}  [angleDamping=1]       - How much to dampen particle angular speed
+     *  @param {Number}  [gravityScale=0]       - How much does gravity effect particles
+     *  @param {Number}  [particleConeAngle=PI] - Cone for start particle angle
+     *  @param {Number}  [fadeRate=.1]          - How quick to fade in particles at start/end in percent of life
+     *  @param {Number}  [randomness=.2]        - Apply extra randomness percent
+     *  @param {Boolean} [collideTiles=0]       - Do particles collide against tiles
+     *  @param {Boolean} [additive=0]           - Should particles use addtive blend
+     *  @param {Boolean} [randomColorLinear=0]  - Should color be randomized linearly or across each component
+     *  @param {Number}  [renderOrder=0]        - Render order for particles (additive is above other stuff by default)
      */
     constructor
     ( 
@@ -87,34 +87,60 @@ class ParticleEmitter extends EngineObject
         super(pos, new Vector2, tileIndex, tileSize);
 
         // emitter settings
+        /** @property {Number} - World space size of the emitter (float for circle diameter, vec2 for rect) */
         this.emitSize = emitSize
+        /** @property {Number} - How long to stay alive (0 is forever) */
         this.emitTime = emitTime;
+        /** @property {Number} - How many particles per second to spawn */
         this.emitRate = emitRate;
+        /** @property {Number} - Local angle to apply velocity to particles from emitter */
         this.emitConeAngle = emitConeAngle;
 
         // color settings
+        /** @property {Color} - Color at start of life 1, randomized between start colors */
         this.colorStartA = colorStartA;
+        /** @property {Color} - Color at start of life 2, randomized between start colors */
         this.colorStartB = colorStartB;
+        /** @property {Color} - Color at end of life 1, randomized between end colors */
         this.colorEndA   = colorEndA;
+        /** @property {Color} - Color at end of life 2, randomized between end colors */
         this.colorEndB   = colorEndB;
+        /** @property {Boolean} - Should color be randomized linearly or across each component */
         this.randomColorLinear = randomColorLinear;
 
         // particle settings
+        /** @property {Number} - How long particles live */
         this.particleTime      = particleTime;
+        /** @property {Number} -  How big are particles at start */
         this.sizeStart         = sizeStart;
+        /** @property {Number} - How big are particles at end */
         this.sizeEnd           = sizeEnd;
+        /** @property {Number} - How fast are particles when spawned */
         this.speed             = speed;
+        /** @property {Number} - How fast are particles rotating */
         this.angleSpeed        = angleSpeed;
+        /** @property {Number} - How much to dampen particle speed */
         this.damping           = damping;
+        /** @property {Number} - How much to dampen particle angular speed */
         this.angleDamping      = angleDamping;
+        /** @property {Number} - How much does gravity effect particles */
         this.gravityScale      = gravityScale;
+        /** @property {Number} - Cone for start particle angle */
         this.particleConeAngle = particleConeAngle;
+        /** @property {Number} - How quick to fade in particles at start/end in percent of life */
         this.fadeRate          = fadeRate;
+        /** @property {Number} - Apply extra randomness percent */
         this.randomness        = randomness;
+        /** @property {Number} - Do particles collide against tiles */
         this.collideTiles      = collideTiles;
+        /** @property {Number} - Should particles use addtive blend */
         this.additive          = additive;
+        /** @property {Number} - Render order for particles (additive is above other stuff by default) */
         this.renderOrder       = renderOrder;
-        this.trailScale        =  
+        /** @property {Number} - If set the partile is drawn as a trail, stretched in the drection of velocity */
+        this.trailScale        = 0;
+
+        // internal variables
         this.emitTimeBuffer    = 0;
     }
     
@@ -201,15 +227,16 @@ class ParticleEmitter extends EngineObject
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * Particle Object - Created automatically by Particle Emitters
+ * @extends EngineObject
  */
 class Particle extends EngineObject
 {
     /**
      * Create a particle with the given settings
      * @param {Vector2} position                   - World space position of the particle
-     * @param {Number}  [tileIndex=-1]              - Tile to use to render, untextured if -1
+     * @param {Number}  [tileIndex=-1]             - Tile to use to render, untextured if -1
      * @param {Vector2} [tileSize=defaultTileSize] - Size of tile in source pixels
-     * @param {Number}  [angle=0]                   - Angle to rotate the particle
+     * @param {Number}  [angle=0]                  - Angle to rotate the particle
      */
     constructor(pos, tileIndex, tileSize, angle) { super(pos, new Vector2, tileIndex, tileSize, angle); }
 

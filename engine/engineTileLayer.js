@@ -108,28 +108,32 @@ function tileCollisionRaycast(posStart, posEnd, object)
 // Reuse canvas autmatically when destroyed
 const tileLayerCanvasCache = [];
 
-/** Tile layer data object stores info about how to render a tile */
+/**
+ * Tile layer data object stores info about how to render a tile
+ * @example
+ * // create tile layer data with tile index 0 and random orientation and color
+ * const tileIndex = 0;
+ * const direction = randInt(4)
+ * const mirror = randInt(2);
+ * const color = randColor();
+ * const data = new TileLayerData(tileIndex, direction, mirror, color);
+ */
 class TileLayerData
 {
-    /** 
-     * Create a tile layer data object, one for each tile in a TileLayer
-     * @param {Number}  [tile] - The tile to use, untextured if undefined
-     * @param {Number}  [direction=0] - Integer direction of tile, in 90 degree increments
-     * @param {Boolean} [mirror=0] - If the tile should be mirrored along the x axis
-     * @param {Color}   [color=new Color(1,1,1)] - Color of the tile
-     * @example
-     * // create tile layer data with tile index 0 and random orientation and color
-     * const tileIndex = 0;
-     * const direction = randInt(4)
-     * const mirror = randInt(2);
-     * const color = randColor();
-     * const data = new TileLayerData(tileIndex, direction, mirror, color);
-     */
+    /** Create a tile layer data object, one for each tile in a TileLayer
+     *  @param {Number}  [tile] - The tile to use, untextured if undefined
+     *  @param {Number}  [direction=0] - Integer direction of tile, in 90 degree increments
+     *  @param {Boolean} [mirror=0] - If the tile should be mirrored along the x axis
+     *  @param {Color}   [color=new Color(1,1,1)] - Color of the tile */
     constructor(tile, direction=0, mirror=0, color=new Color)
     {
+        /** @property {Number} - The tile to use, untextured if undefined */
         this.tile      = tile;
+        /** @property {Number} - Integer direction of tile, in 90 degree increments */
         this.direction = direction;
+        /** @property {Boolean} - If the tile should be mirrored along the x axis */
         this.mirror    = mirror;
+        /** @property {Color}   - Color of the tile */
         this.color     = color;
     }
 
@@ -137,31 +141,40 @@ class TileLayerData
     clear() { this.tile = this.direction = this.mirror = 0; color = new Color; }
 }
 
-/** Tile layer object - cached rendering system for tile layers */
+/**
+ * Tile layer object - cached rendering system for tile layers
+ * <br> - Each Tile layer is rendered to an off screen canvas
+ * <br> - Tile layers are not rendered using WebGL to allow modifications at run time
+ * <br> - Tile layers are sorted
+ * @extends EngineObject
+ * @example
+ * // create tile collision and visible tile layer
+ * initTileCollision(vec2(200,100));
+ * const tileLayer = new TileLayer();
+ */
 class TileLayer extends EngineObject
 {
-    /** 
-     * Create a tile layer object
-     * @param {Vector2} [position=new Vector2(0,0)] - World space position
-     * @param {Vector2} [size=defaultObjectSize] - World space size
-     * @param {Vector2} [scale=new Vector2(1,1)] - How much to scale this in world space
-     * @param {Number}  [renderOrder=0] - Objects sorted by renderOrder before being rendered
-     * @example
-     * // create tile collision and visible tile layer
-     * initTileCollision(vec2(200,100));
-     * const tileLayer = new TileLayer();
+    /** Create a tile layer object
+     *  @param {Vector2} [position=new Vector2(0,0)] - World space position
+     *  @param {Vector2} [size=defaultObjectSize]    - World space size
+     *  @param {Vector2} [tileSize=defaultTileSize]  - Size of tiles in source pixels
+     *  @param {Vector2} [scale=new Vector2(1,1)]    - How much to scale this layer when rendered
+     *  @param {Number}  [renderOrder=0]             - Objects sorted by renderOrder before being rendered
+     *  @param {Boolean} [compositeGLBeforeRender=1] - If using WebGL and not glOverlay, composites the WebGL cache before drawing
      */
-    constructor(pos, size=tileCollisionSize, scale=vec2(1), renderOrder=0)
+    constructor(pos, size=tileCollisionSize, tileSize=defaultTileSize, scale=vec2(1), renderOrder=0, compositeGLBeforeRender=1)
     {
-        super(pos, size);
-
-        // create new canvas if necessary
-        this.canvas = tileLayerCanvasCache.length ? tileLayerCanvasCache.pop() : document.createElement('canvas');
-        this.context = this.canvas.getContext('2d');
-        this.scale = scale;
-        this.tileSize = defaultTileSize.copy();
+        super(pos, size, -1, tileSize);
         this.renderOrder = renderOrder;
-        this.flushGLBeforeRender = 1;
+
+        /** @property {HTMLCanvasElement} - The canvas used by this tile layer */
+        this.canvas = tileLayerCanvasCache.length ? tileLayerCanvasCache.pop() : document.createElement('canvas');
+        /** @property {CanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
+        this.context = this.canvas.getContext('2d');
+        /** @property {Vector2} - How much to scale this layer when rendered */
+        this.scale = scale;
+        /** @property {Boolean} - If using WebGL and not glOverlay, composites the WebGL cache before drawing */
+        this.compositeGLBeforeRender = compositeGLBeforeRender;
 
         // init tile data
         this.data = [];
@@ -204,8 +217,8 @@ class TileLayer extends EngineObject
     {
         ASSERT(mainContext != this.context); // must call redrawEnd() after drawing tiles
 
-        // flush and copy gl canvas because tile canvas does not use gl
-        this.flushGLBeforeRender && glEnable && glCopyToContext(mainContext);
+        // flush and copy gl canvas because tile canvas does not use webgl
+        glEnable && !glOverlay && this.compositeGLBeforeRender && glCopyToContext(mainContext);
         
         // draw the entire cached level onto the main canvas
         const pos = worldToScreen(this.pos.add(vec2(0,this.size.y*this.scale.y)));

@@ -38,22 +38,23 @@ function medalsInit(saveName)
     debugMedals || medals.forEach(medal=> medal.unlocked = localStorage[medal.storageKey()]);
 }
 
-/** Medal Object - Tracks an unlockable medal */
+/** 
+ * Medal Object - Tracks an unlockable medal 
+ * @example
+ * // create a medal
+ * const medal_example = new Medal(0, 'Example Medal', 'More info about the medal goes here.', '🎖️');
+ * 
+ * // unlock the medal
+ * medal_example.unlock();
+ */
 class Medal
 {
-    /**
-     * Create an medal object and adds it to the list of medals
-     * @param {Number} id - The unique identifier of the medal
-     * @param {String} name - Name of the medal
-     * @param {String} [description] - Description of the medal
-     * @param {String} [icon='🏆'] - Icon for the medal
-     * @param {String} [src] - Image location for the medal
-     * @example
-     * // create a medal
-     * const medal_example = new Medal(0, 'Example Medal', 'More info about the medal goes here.', '🎖️');
-     * 
-     * // unlock the medal
-     * medal_example.unlock();
+    /** Create an medal object and adds it to the list of medals
+     *  @param {Number} id - The unique identifier of the medal
+     *  @param {String} name - Name of the medal
+     *  @param {String} [description] - Description of the medal
+     *  @param {String} [icon='🏆'] - Icon for the medal
+     *  @param {String} [src] - Image location for the medal
      */
     constructor(id, name, description='', icon='🏆', src)
     {
@@ -170,19 +171,19 @@ function medalsRender()
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** Newgrounds API wrapper object */
+/** 
+ * Newgrounds API wrapper object
+ * @example
+ * // create a newgrounds object, replace the app id and cipher with your own
+ * const app_id = '53123:1ZuSTQ9l';
+ * const cipher = 'enF0vGH@Mj/FRASKL23Q==';
+ * newgrounds = new Newgrounds(app_id, cipher);
+ */
 class Newgrounds
 {
-    /**
-     * Create a newgrounds object
-     * @param {Number} app_id - The newgrounds App ID
-     * @param {String} [cipher] - The encryption Key (AES-128/Base64)
-     * @example
-     * // create a newgrounds object, replace the app id and cipher with your own
-     * const app_id = '53123:1ZuSTQ9l';
-     * const cipher = 'enF0vGH@Mj/FRASKL23Q==';
-     * newgrounds = new Newgrounds(app_id, cipher);
-     */
+    /** Create a newgrounds object
+     *  @param {Number} app_id - The newgrounds App ID
+     *  @param {String} [cipher] - The encryption Key (AES-128/Base64) */
     constructor(app_id, cipher)
     {
         ASSERT(!newgrounds && app_id);

@@ -76,7 +76,7 @@ const percent = (v, max=1, min=0)=> max-min ? clamp((v-min) / (max-min)) : 0;
  *  @memberof Utilities */
 const lerp = (p, max=1, min=0)=> min + clamp(p) * (max-min);
 
-/** Formats seconds to 00:00 style for display purposes 
+/** Formats seconds to mm:ss style for display purposes 
  *  @param {Number} t - time in seconds
  *  @return {String}
  *  @memberof Utilities */
@@ -188,19 +188,25 @@ const randSeeded = (a=1, b=0)=>
  */
 const vec2 = (x=0, y)=> x.x == undefined ? new Vector2(x, y == undefined? x : y) : new Vector2(x.x, x.y);
 
-/** 2D Vector object with vector math library */
+/** 
+ * 2D Vector object with vector math library
+ * @example
+ * let a = new Vector2(2, 3); // vector with coordinates (2, 3)
+ * let b = new Vector2;       // vector with coordinates (0, 0)
+ * let c = vec2(4, 2);        // use the vec2 function to make a Vector2
+ */
 class Vector2
 {
-    /** 
-     * Create a 2D vector with the x and y passed in, can also be created with vec2()
-     * @param {Number} [x=0] - x axis position
-     * @param {Number} [y=0] - y axis position
-     * @example
-     * let a = new Vector2(2, 3); // vector with coordinates (2, 3)
-     * let b = new Vector2;       // vector with coordinates (0, 0)
-     * let c = vec2(4, 2);        // use the vec2 function to make a Vector2
-     */
-    constructor(x=0, y=0) { this.x = x; this.y = y; }
+    /** Create a 2D vector with the x and y passed in, can also be created with vec2()
+     *  @param {Number} [x=0] - X axis location
+     *  @param {Number} [y=0] - Y axis location */
+    constructor(x=0, y=0)
+    {
+        /** @property {Number} - X axis location */
+        this.x = x;
+        /** @property {Number} - Y axis location */
+        this.y = y;
+    }
 
     /** Returns a new vector that is a copy of this
      *  @return {Vector2} */
@@ -317,21 +323,31 @@ class Vector2
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** Color object (red, green, blue, alpha) with some helpful functions */
+/** 
+ * Color object (red, green, blue, alpha) with some helpful functions
+ * @example
+ * let a = new Color;             // white
+ * let b = new Color(1, 0, 0);    // red
+ * let c = new Color(0, 0, 0, 0); // transparent black
+ */
 class Color
 {
-    /**
-     * Create a color with the components passed in, white by default
-     * @param {Number} [r=1] - red
-     * @param {Number} [g=1] - green
-     * @param {Number} [b=1] - blue
-     * @param {Number} [a=1] - alpha
-     * @example
-     * let a = new Color;             // white
-     * let b = new Color(1, 0, 0);    // red
-     * let c = new Color(0, 0, 0, 0); // transparent black
-     */
-    constructor(r=1, g=1, b=1, a=1) { this.r=r; this.g=g; this.b=b; this.a=a; }
+    /** Create a color with the components passed in, white by default
+     *  @param {Number} [r=1] - Red
+     *  @param {Number} [g=1] - Green
+     *  @param {Number} [b=1] - Blue
+     *  @param {Number} [a=1] - Alpha */
+    constructor(r=1, g=1, b=1, a=1)
+    {
+        /** @property {Number} - Red */
+        this.r = r;
+        /** @property {Number} - Green */
+        this.g = g;
+        /** @property {Number} - Blue */
+        this.b = b;
+        /** @property {Number} - Alpha */
+        this.a = a;
+    }
 
     /** Returns a new color that is a copy of this
      * @return {Color} */
@@ -428,19 +444,19 @@ class Color
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** Timer object tracks how long has passed since it was set */
+/**
+ * Timer object tracks how long has passed since it was set
+ * @example
+ * let a = new Timer;    // creates a timer that is not set
+ * a.set(3);             // sets the timer to 3 seconds
+ *
+ * let b = new Timer(1); // creates a timer with 1 second left
+ * b.unset();            // unsets the timer
+ */
 class Timer
 {
-    /**
-     * Create a timer object set time passed in
-     * @param {Number} [timeLeft] - How much time left before the timer elapses in seconds
-     * @example
-     * let a = new Timer;    // creates a timer that is not set
-     * a.set(3);             // sets the timer to 3 seconds
-     *
-     * let b = new Timer(1); // creates a timer with 1 second left
-     * b.unset();            // unsets the timer
-     */
+    /** Create a timer object set time passed in
+     *  @param {Number} [timeLeft] - How much time left before the timer elapses in seconds */
     constructor(timeLeft) { this.time = timeLeft == undefined ? undefined : time + timeLeft; this.setTime = timeLeft; }
 
     /** Set the timer with seconds passed in

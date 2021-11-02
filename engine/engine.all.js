@@ -1,5 +1,5 @@
 /** 
- *  LittleJS Medal System
+ *  LittleJS Debug System
  *  <br> - Debug overlay with mouse pick
  *  <br> - Debug primitive rendering
  *  <br> - Save screenshots to disk
@@ -270,12 +270,12 @@ const debugRender = ()=>
             const printVec2 = (v)=> '(' + (v.x>0?' ':'') + (v.x).toFixed(2) + ',' + (v.y>0?' ':'')  + (v.y).toFixed(2) + ')';
             const args = [.5, new Color, .05, undefined, undefined, 'monospace'];
 
-            drawText('pos = ' + printVec2(bestObject.pos) 
+            drawOverlayText('pos = ' + printVec2(bestObject.pos) 
                 + (bestObject.angle>0?'  ':' ') + (bestObject.angle*180/PI).toFixed(1) + '°', 
                 pos = pos.add(height), ...args);
-            drawText('vel = ' + printVec2(bestObject.velocity), pos = pos.add(height), ...args);
-            drawText('size = ' + printVec2(bestObject.size), pos = pos.add(height), ...args);
-            drawText('collision = ' + getTileCollisionData(mousePos), pos = mousePos.subtract(height), ...args);
+            drawOverlayText('vel = ' + printVec2(bestObject.velocity), pos = pos.add(height), ...args);
+            drawOverlayText('size = ' + printVec2(bestObject.size), pos = pos.add(height), ...args);
+            drawOverlayText('collision = ' + getTileCollisionData(mousePos), pos = mousePos.subtract(height), ...args);
             mainContext = saveContext;
         }
 
@@ -642,7 +642,7 @@ const percent = (v, max=1, min=0)=> max-min ? clamp((v-min) / (max-min)) : 0;
  *  @memberof Utilities */
 const lerp = (p, max=1, min=0)=> min + clamp(p) * (max-min);
 
-/** Formats seconds to 00:00 style for display purposes 
+/** Formats seconds to mm:ss style for display purposes 
  *  @param {Number} t - time in seconds
  *  @return {String}
  *  @memberof Utilities */
@@ -754,19 +754,25 @@ const randSeeded = (a=1, b=0)=>
  */
 const vec2 = (x=0, y)=> x.x == undefined ? new Vector2(x, y == undefined? x : y) : new Vector2(x.x, x.y);
 
-/** 2D Vector object with vector math library */
+/** 
+ * 2D Vector object with vector math library
+ * @example
+ * let a = new Vector2(2, 3); // vector with coordinates (2, 3)
+ * let b = new Vector2;       // vector with coordinates (0, 0)
+ * let c = vec2(4, 2);        // use the vec2 function to make a Vector2
+ */
 class Vector2
 {
-    /** 
-     * Create a 2D vector with the x and y passed in, can also be created with vec2()
-     * @param {Number} [x=0] - x axis position
-     * @param {Number} [y=0] - y axis position
-     * @example
-     * let a = new Vector2(2, 3); // vector with coordinates (2, 3)
-     * let b = new Vector2;       // vector with coordinates (0, 0)
-     * let c = vec2(4, 2);        // use the vec2 function to make a Vector2
-     */
-    constructor(x=0, y=0) { this.x = x; this.y = y; }
+    /** Create a 2D vector with the x and y passed in, can also be created with vec2()
+     *  @param {Number} [x=0] - X axis location
+     *  @param {Number} [y=0] - Y axis location */
+    constructor(x=0, y=0)
+    {
+        /** @property {Number} - X axis location */
+        this.x = x;
+        /** @property {Number} - Y axis location */
+        this.y = y;
+    }
 
     /** Returns a new vector that is a copy of this
      *  @return {Vector2} */
@@ -883,21 +889,31 @@ class Vector2
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** Color object (red, green, blue, alpha) with some helpful functions */
+/** 
+ * Color object (red, green, blue, alpha) with some helpful functions
+ * @example
+ * let a = new Color;             // white
+ * let b = new Color(1, 0, 0);    // red
+ * let c = new Color(0, 0, 0, 0); // transparent black
+ */
 class Color
 {
-    /**
-     * Create a color with the components passed in, white by default
-     * @param {Number} [r=1] - red
-     * @param {Number} [g=1] - green
-     * @param {Number} [b=1] - blue
-     * @param {Number} [a=1] - alpha
-     * @example
-     * let a = new Color;             // white
-     * let b = new Color(1, 0, 0);    // red
-     * let c = new Color(0, 0, 0, 0); // transparent black
-     */
-    constructor(r=1, g=1, b=1, a=1) { this.r=r; this.g=g; this.b=b; this.a=a; }
+    /** Create a color with the components passed in, white by default
+     *  @param {Number} [r=1] - Red
+     *  @param {Number} [g=1] - Green
+     *  @param {Number} [b=1] - Blue
+     *  @param {Number} [a=1] - Alpha */
+    constructor(r=1, g=1, b=1, a=1)
+    {
+        /** @property {Number} - Red */
+        this.r = r;
+        /** @property {Number} - Green */
+        this.g = g;
+        /** @property {Number} - Blue */
+        this.b = b;
+        /** @property {Number} - Alpha */
+        this.a = a;
+    }
 
     /** Returns a new color that is a copy of this
      * @return {Color} */
@@ -994,19 +1010,19 @@ class Color
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** Timer object tracks how long has passed since it was set */
+/**
+ * Timer object tracks how long has passed since it was set
+ * @example
+ * let a = new Timer;    // creates a timer that is not set
+ * a.set(3);             // sets the timer to 3 seconds
+ *
+ * let b = new Timer(1); // creates a timer with 1 second left
+ * b.unset();            // unsets the timer
+ */
 class Timer
 {
-    /**
-     * Create a timer object set time passed in
-     * @param {Number} [timeLeft] - How much time left before the timer elapses in seconds
-     * @example
-     * let a = new Timer;    // creates a timer that is not set
-     * a.set(3);             // sets the timer to 3 seconds
-     *
-     * let b = new Timer(1); // creates a timer with 1 second left
-     * b.unset();            // unsets the timer
-     */
+    /** Create a timer object set time passed in
+     *  @param {Number} [timeLeft] - How much time left before the timer elapses in seconds */
     constructor(timeLeft) { this.time = timeLeft == undefined ? undefined : time + timeLeft; this.setTime = timeLeft; }
 
     /** Set the timer with seconds passed in
@@ -1263,7 +1279,7 @@ const medalDisplayIconSize = 80;
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.4';
+const engineVersion = '1.1.5';
 
 /** Frames per second to update objects
  *  @default */
@@ -1519,55 +1535,74 @@ function engineObjectsCallback(pos, size, callbackFunction, objects=engineObject
 'use strict';
 
 /** 
- *  LittleJS Object Base Object Class
- *  <br> - Base object class used by the engine
- *  <br> - Automatically adds self to object list
- *  <br> - Will be updated and rendered each frame
- *  <br> - Renders as a sprite from a tilesheet by default
- *  <br> - Can have color and addtive color applied
- *  <br> - 2d Physics and collision system
- *  <br> - Sorted by renderOrder
- *  <br> - Objects can have children attached
- *  <br> - Parents are updated before children, and set child transform
- *  <br> - Call destroy() to get rid of objects
+ * LittleJS Object Base Object Class
+ * <br> - Base object class used by the engine
+ * <br> - Automatically adds self to object list
+ * <br> - Will be updated and rendered each frame
+ * <br> - Renders as a sprite from a tilesheet by default
+ * <br> - Can have color and addtive color applied
+ * <br> - 2d Physics and collision system
+ * <br> - Sorted by renderOrder
+ * <br> - Objects can have children attached
+ * <br> - Parents are updated before children, and set child transform
+ * <br> - Call destroy() to get rid of objects
+ * @example
+ * // create an engine object, normally you would first extend the class with your own
+ * const pos = vec2(2,3);
+ * const object = new EngineObject(pos); 
  */
 class EngineObject
 {
-    /**
-     * Create an engine object and adds it to the list of objects
-     * @param {Vector2} [position=new Vector2(0,0)] - World space position of the object
-     * @param {Vector2} [size=defaultObjectSize] - World space size of the object
-     * @param {Number}  [tileIndex=-1] - Tile to use to render object, untextured if -1
-     * @param {Vector2} [tileSize=defaultTileSize] - Size of tile in source pixels
-     * @param {Number}  [angle=0] - Angle to rotate the object
-     * @param {Color}   [color] - Color to apply to tile when rendered
-     * @example
-     * // create an engine object, normally you would first extend the class with your own
-     * const pos = vec2(2,3);
-     * const object = new EngineObject(pos); 
+    /** Create an engine object and adds it to the list of objects
+     *  @param {Vector2} [position=new Vector2(0,0)] - World space position of the object
+     *  @param {Vector2} [size=defaultObjectSize] - World space size of the object
+     *  @param {Number}  [tileIndex=-1] - Tile to use to render object, untextured if -1
+     *  @param {Vector2} [tileSize=defaultTileSize] - Size of tile in source pixels
+     *  @param {Number}  [angle=0] - Angle to rotate the object
+     *  @param {Color}   [color] - Color to apply to tile when rendered
      */
     constructor(pos=vec2(), size=defaultObjectSize, tileIndex=-1, tileSize=defaultTileSize, angle=0, color)
     {
         // set passed in params
         ASSERT(pos && pos.x != undefined && size.x != undefined); // ensure pos and size are vec2s
+
+        /** @property {Vector2} - World space position of the object */
         this.pos = pos.copy();
+        /** @property {Vector2} - World space width and height of the object */
         this.size = size;
+        /** @property {Vector2} - Size of object used for drawing, uses size if not set */
+        this.drawSize;
+        /** @property {Number}  - Tile to use to render object, untextured if -1 */
         this.tileIndex = tileIndex;
+        /** @property {Vector2} - Size of tile in source pixels */
         this.tileSize = tileSize;
+        /** @property {Number}  - Angle to rotate the object */
         this.angle = angle;
+        /** @property {Color}  - Color to apply when rendered */
         this.color = color;
+        /** @property {Color}  - Additive color to apply when rendered */
+        this.additiveColor;
 
-        // set physics defaults
+        // set object defaults
+        /** @property {Number} [mass=defaultObjectMass] - How heavy the object is */
         this.mass         = defaultObjectMass;
+        /** @property {Number} [damping=defaultObjectDamping] - How much to slow down velocity each frame (0-1) */
         this.damping      = defaultObjectDamping;
+        /** @property {Number} [angleDamping=defaultObjectAngleDamping] - How much to slow down rotation each frame (0-1) */
         this.angleDamping = defaultObjectAngleDamping;
+        /** @property {Number} [elasticity=defaultObjectElasticity] - How bouncy the object is when colliding (0-1) */
         this.elasticity   = defaultObjectElasticity;
+        /** @property {Number} [friction=defaultObjectFriction] - How much friction to apply when sliding (0-1) */
         this.friction     = defaultObjectFriction;
+        /** @property {Number} [gravityScale=1] - How much to scale gravity by for this object */
+        this.gravityScale = 1;
+        /** @property {Number} [renderOrder=0] - Objects are sorted by render order */
+        this.renderOrder = 0;
 
-        // init other object stuff
+        // init other internal object stuff
         this.spawnTime = time;
-        this.velocity = vec2(this.collideSolidObjects = this.renderOrder = this.angleVelocity = 0);
-        this.collideTiles = this.gravityScale = 1;
+        this.velocity = vec2(this.collideSolidObjects = this.angleVelocity = 0);
+        this.collideTiles = 1;
         this.children = [];
 
         // add to list of objects
@@ -1716,8 +1751,6 @@ class EngineObject
             // check collision against tiles
             if (tileCollisionTest(this.pos, this.size, this))
             {
-                //debugPhysics && debugRect(this.pos, this.size, '#ff0');
-
                 // if already was stuck in collision, don't do anything
                 // this should not happen unless something starts in collision
                 if (!tileCollisionTest(oldPos, this.size, this))
@@ -1908,21 +1941,22 @@ const screenToWorld = (screenPos)=>
 const worldToScreen = (worldPos)=>
     worldPos.subtract(cameraPos).multiply(vec2(cameraScale,-cameraScale)).add(mainCanvasSize.scale(.5)).subtract(vec2(.5));
 
-/** Draw textured tile centered on pos
+/** Draw textured tile centered on pos, with color applied if using WebGL
  *  @param {Vector2} pos - Center of the tile
  *  @param {Vector2} [size=new Vector2(1,1)] - Size of the tile
  *  @param {Number}  [tileIndex=-1] - Tile index to use, negative is untextured
  *  @param {Vector2} [tileSize=defaultTileSize] - Tile size in source pixels
- *  @param {Color}   [color=new Color(1,1,1)]
- *  @param {Number}  [angle=0]
- *  @param {Boolean} [mirror=0]
- *  @param {Color}   [additiveColor=new Color(0,0,0,0)]
+ *  @param {Color}   [color=new Color(1,1,1)] - Color to modulate with
+ *  @param {Number}  [angle=0] - Angle to rotate by
+ *  @param {Boolean} [mirror=0] - If true image is flipped along the Y axis
+ *  @param {Color}   [additiveColor=new Color(0,0,0,0)] - Additive color applied
+ *  @param {Boolean} [useWebGL=glEnable] - Use accelerated WebGL rendering if enabled
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=defaultTileSize, color=new Color, angle=0, mirror, 
-    additiveColor=new Color(0,0,0,0))
+    additiveColor=new Color(0,0,0,0), useWebGL=glEnable)
 {
     showWatermark && ++drawCount;
-    if (glEnable)
+    if (useWebGL && glEnable)
     {
         if (tileIndex < 0)
         {
@@ -1978,10 +2012,11 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=defaultTileSize, col
  *  @param {Vector2} [size=new Vector2(1,1)]
  *  @param {Color}   [color=new Color(1,1,1)]
  *  @param {Number}  [angle=0]
+ *  @param {Boolean} [useWebGL=glEnable]
  *  @memberof Draw */
-function drawRect(pos, size, color, angle)
+function drawRect(pos, size, color, angle, useWebGL)
 {
-    drawTile(pos, size, -1, defaultTileSize, color, angle);
+    drawTile(pos, size, -1, defaultTileSize, color, angle, 0, 0, useWebGL);
 }
 
 /** Draw textured tile centered on pos in screen space
@@ -1993,10 +2028,11 @@ function drawRect(pos, size, color, angle)
  *  @param {Number}  [angle=0]
  *  @param {Boolean} [mirror=0]
  *  @param {Color}   [additiveColor=new Color(0,0,0,0)]
+ *  @param {Boolean} [useWebGL=glEnable]
  *  @memberof Draw */
-function drawTileScreenSpace(pos, size=vec2(1), tileIndex, tileSize, color, angle, mirror, additiveColor)
+function drawTileScreenSpace(pos, size=vec2(1), tileIndex, tileSize, color, angle, mirror, additiveColor, useWebGL)
 {
-    drawTile(screenToWorld(pos), size.scale(1/cameraScale), tileIndex, tileSize, color, angle, mirror, additiveColor);
+    drawTile(screenToWorld(pos), size.scale(1/cameraScale), tileIndex, tileSize, color, angle, mirror, additiveColor, useWebGL);
 }
 
 /** Draw colored untextured rectangle in screen space
@@ -2004,10 +2040,11 @@ function drawTileScreenSpace(pos, size=vec2(1), tileIndex, tileSize, color, angl
  *  @param {Vector2} [size=new Vector2(1,1)]
  *  @param {Color}   [color=new Color(1,1,1)]
  *  @param {Number}  [angle=0]
+ *  @param {Boolean} [useWebGL=glEnable]
  *  @memberof Draw */
-function drawRectScreenSpace(pos, size, color, angle)
+function drawRectScreenSpace(pos, size, color, angle, useWebGL)
 {
-    drawTileScreenSpace(pos, size, -1, defaultTileSize, color, angle);
+    drawTileSrceenSpace(pos, size, -1, defaultTileSize, color, angle, 0, 0, useWebGL);
 }
 
 /** Draw colored line between two points
@@ -2015,15 +2052,16 @@ function drawRectScreenSpace(pos, size, color, angle)
  *  @param {Vector2} posB
  *  @param {Number}  [thickness=.1]
  *  @param {Color}   [color=new Color(1,1,1)]
+ *  @param {Boolean} [useWebGL=glEnable]
  *  @memberof Draw */
-function drawLine(posA, posB, thickness=.1, color)
+function drawLine(posA, posB, thickness=.1, color, useWebGL)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);
-    drawRect(posA.add(halfDelta), size, color, halfDelta.angle());
+    drawRect(posA.add(halfDelta), size, color, halfDelta.angle(), 0, 0, useWebGL);
 }
 
-/** Draw directly to a 2d canvas context in world space (bipass webgl)
+/** Draw directly to a 2d canvas context in world space
  *  @param {Vector2}  pos
  *  @param {Vector2}  size
  *  @param {Number}   angle
@@ -2053,7 +2091,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainCont
  *  @param {Color}   [lineColor=new Color(0,0,0)]
  *  @param {String}  [textAlign='center']
  *  @memberof Draw */
-function drawText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=defaultFont)
+function drawOverlayText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=defaultFont)
 {
     pos = worldToScreen(pos);
     overlayContext.font = size*cameraScale + 'px '+ font;
@@ -2069,7 +2107,7 @@ function drawText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new
     overlayContext.fillText(text, pos.x, pos.y);
 }
 
-/** Enable additive or regular blend mode
+/** Enable normal or additive blend mode
  *  @param {Boolean} [additive=0]
  *  @memberof Draw */
 function setBlendMode(additive)
@@ -2361,26 +2399,30 @@ if (isTouchDevice)
 
 'use strict';
 
-/** Sound Object - Stores a zzfx sound for later use and can be played positionally */
+/** 
+ * Sound Object - Stores a zzfx sound for later use and can be played positionally
+ * @example
+ * // create a sound
+ * const sound_example = new Sound([.5,.5]);
+ * 
+ * // play the sound
+ * sound_example.play();
+ */
 class Sound
 {
-    /**
-     * Create a sound object and cache the zzfx samples for later use
-     * @param {Array}  zzfxSound - Array of zzfx parameters, ex. [.5,.5]
-     * @param {Number} [range=defaultSoundRange] - World space max range of sound, will not play if camera is farther away
-     * @param {Number} [taper=defaultSoundTaper] - At what percentage of range should it start tapering off
-     * @example
-     * // create a sound
-     * const sound_example = new Sound([.5,.5]);
-     * 
-     * // play the sound
-     * sound_example.play();
+    /** Create a sound object and cache the zzfx samples for later use
+     *  @param {Array}  zzfxSound - Array of zzfx parameters, ex. [.5,.5]
+     *  @param {Number} [range=defaultSoundRange] - World space max range of sound, will not play if camera is farther away
+     *  @param {Number} [taper=defaultSoundTaper] - At what percentage of range should it start tapering off
      */
     constructor(zzfxSound, range=defaultSoundRange, taper=defaultSoundTaper)
     {
         if (!soundEnable) return;
 
+        /** @property {Number} - World space max range of sound, will not play if camera is farther away */
         this.range = range;
+
+        /** @property {Number} - At what percentage of range should it start tapering off */
         this.taper = taper;
 
         // get randomness from sound parameters
@@ -2440,37 +2482,38 @@ class Sound
     }
 }
 
-/** Music Object - Stores a zzfx music track for later use */
+/**
+ * Music Object - Stores a zzfx music track for later use
+ * @example
+ * // create some music
+ * const music_example = new Music(
+ * [
+ *     [                         // instruments
+ *       [,0,400]                // simple note
+ *     ], 
+ *     [                         // patterns
+ *         [                     // pattern 1
+ *             [                 // channel 0
+ *                 0, -1,        // instrument 0, left speaker
+ *                 1, 0, 9, 1    // channel notes
+ *             ], 
+ *             [                 // channel 1
+ *                 0, 1,         // instrument 1, right speaker
+ *                 0, 12, 17, -1 // channel notes
+ *             ]
+ *         ],
+ *     ],
+ *     [0, 0, 0, 0], // sequence, play pattern 0 four times
+ *     90            // BPM
+ * ]);
+ * 
+ * // play the music
+ * music_example.play();
+ */
 class Music
 {
-    /**
-     * Create a music object and cache the zzfx music samples for later use
-     * @param {Array} zzfxMusic - Array of zzfx music parameters
-     * @example
-     * // create some music
-     * const music_example = new Music(
-     * [
-     *     [                         // instruments
-     *       [,0,400]                // simple note
-     *     ], 
-     *     [                         // patterns
-     *         [                     // pattern 1
-     *             [                 // channel 0
-     *                 0, -1,        // instrument 0, left speaker
-     *                 1, 0, 9, 1    // channel notes
-     *             ], 
-     *             [                 // channel 1
-     *                 0, 1,         // instrument 1, right speaker
-     *                 0, 12, 17, -1 // channel notes
-     *             ]
-     *         ],
-     *     ],
-     *     [0, 0, 0, 0], // sequence, play pattern 0 four times
-     *     90            // BPM
-     * ]);
-     * 
-     * // play the music
-     * music_example.play();
+    /** Create a music object and cache the zzfx music samples for later use
+     *  @param {Array} zzfxMusic - Array of zzfx music parameters
      */
     constructor(zzfxMusic)
     {
@@ -2904,28 +2947,32 @@ function tileCollisionRaycast(posStart, posEnd, object)
 // Reuse canvas autmatically when destroyed
 const tileLayerCanvasCache = [];
 
-/** Tile layer data object stores info about how to render a tile */
+/**
+ * Tile layer data object stores info about how to render a tile
+ * @example
+ * // create tile layer data with tile index 0 and random orientation and color
+ * const tileIndex = 0;
+ * const direction = randInt(4)
+ * const mirror = randInt(2);
+ * const color = randColor();
+ * const data = new TileLayerData(tileIndex, direction, mirror, color);
+ */
 class TileLayerData
 {
-    /** 
-     * Create a tile layer data object, one for each tile in a TileLayer
-     * @param {Number}  [tile] - The tile to use, untextured if undefined
-     * @param {Number}  [direction=0] - Integer direction of tile, in 90 degree increments
-     * @param {Boolean} [mirror=0] - If the tile should be mirrored along the x axis
-     * @param {Color}   [color=new Color(1,1,1)] - Color of the tile
-     * @example
-     * // create tile layer data with tile index 0 and random orientation and color
-     * const tileIndex = 0;
-     * const direction = randInt(4)
-     * const mirror = randInt(2);
-     * const color = randColor();
-     * const data = new TileLayerData(tileIndex, direction, mirror, color);
-     */
+    /** Create a tile layer data object, one for each tile in a TileLayer
+     *  @param {Number}  [tile] - The tile to use, untextured if undefined
+     *  @param {Number}  [direction=0] - Integer direction of tile, in 90 degree increments
+     *  @param {Boolean} [mirror=0] - If the tile should be mirrored along the x axis
+     *  @param {Color}   [color=new Color(1,1,1)] - Color of the tile */
     constructor(tile, direction=0, mirror=0, color=new Color)
     {
+        /** @property {Number} - The tile to use, untextured if undefined */
         this.tile      = tile;
+        /** @property {Number} - Integer direction of tile, in 90 degree increments */
         this.direction = direction;
+        /** @property {Boolean} - If the tile should be mirrored along the x axis */
         this.mirror    = mirror;
+        /** @property {Color}   - Color of the tile */
         this.color     = color;
     }
 
@@ -2933,31 +2980,40 @@ class TileLayerData
     clear() { this.tile = this.direction = this.mirror = 0; color = new Color; }
 }
 
-/** Tile layer object - cached rendering system for tile layers */
+/**
+ * Tile layer object - cached rendering system for tile layers
+ * <br> - Each Tile layer is rendered to an off screen canvas
+ * <br> - Tile layers are not rendered using WebGL to allow modifications at run time
+ * <br> - Tile layers are sorted
+ * @extends EngineObject
+ * @example
+ * // create tile collision and visible tile layer
+ * initTileCollision(vec2(200,100));
+ * const tileLayer = new TileLayer();
+ */
 class TileLayer extends EngineObject
 {
-    /** 
-     * Create a tile layer object
-     * @param {Vector2} [position=new Vector2(0,0)] - World space position
-     * @param {Vector2} [size=defaultObjectSize] - World space size
-     * @param {Vector2} [scale=new Vector2(1,1)] - How much to scale this in world space
-     * @param {Number}  [renderOrder=0] - Objects sorted by renderOrder before being rendered
-     * @example
-     * // create tile collision and visible tile layer
-     * initTileCollision(vec2(200,100));
-     * const tileLayer = new TileLayer();
+    /** Create a tile layer object
+     *  @param {Vector2} [position=new Vector2(0,0)] - World space position
+     *  @param {Vector2} [size=defaultObjectSize]    - World space size
+     *  @param {Vector2} [tileSize=defaultTileSize]  - Size of tiles in source pixels
+     *  @param {Vector2} [scale=new Vector2(1,1)]    - How much to scale this layer when rendered
+     *  @param {Number}  [renderOrder=0]             - Objects sorted by renderOrder before being rendered
+     *  @param {Boolean} [compositeGLBeforeRender=1] - If using WebGL and not glOverlay, composites the WebGL cache before drawing
      */
-    constructor(pos, size=tileCollisionSize, scale=vec2(1), renderOrder=0)
+    constructor(pos, size=tileCollisionSize, tileSize=defaultTileSize, scale=vec2(1), renderOrder=0, compositeGLBeforeRender=1)
     {
-        super(pos, size);
-
-        // create new canvas if necessary
-        this.canvas = tileLayerCanvasCache.length ? tileLayerCanvasCache.pop() : document.createElement('canvas');
-        this.context = this.canvas.getContext('2d');
-        this.scale = scale;
-        this.tileSize = defaultTileSize.copy();
+        super(pos, size, -1, tileSize);
         this.renderOrder = renderOrder;
-        this.flushGLBeforeRender = 1;
+
+        /** @property {HTMLCanvasElement} - The canvas used by this tile layer */
+        this.canvas = tileLayerCanvasCache.length ? tileLayerCanvasCache.pop() : document.createElement('canvas');
+        /** @property {CanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
+        this.context = this.canvas.getContext('2d');
+        /** @property {Vector2} - How much to scale this layer when rendered */
+        this.scale = scale;
+        /** @property {Boolean} - If using WebGL and not glOverlay, composites the WebGL cache before drawing */
+        this.compositeGLBeforeRender = compositeGLBeforeRender;
 
         // init tile data
         this.data = [];
@@ -3000,8 +3056,8 @@ class TileLayer extends EngineObject
     {
         ASSERT(mainContext != this.context); // must call redrawEnd() after drawing tiles
 
-        // flush and copy gl canvas because tile canvas does not use gl
-        this.flushGLBeforeRender && glEnable && glCopyToContext(mainContext);
+        // flush and copy gl canvas because tile canvas does not use webgl
+        glEnable && !glOverlay && this.compositeGLBeforeRender && glCopyToContext(mainContext);
         
         // draw the entire cached level onto the main canvas
         const pos = worldToScreen(this.pos.add(vec2(0,this.size.y*this.scale.y)));
@@ -3148,50 +3204,50 @@ class TileLayer extends EngineObject
 
 /**
  * Particle Emitter - Spawns particles with the given settings
+ * @extends EngineObject
+ * @example
+ * // create a particle emitter
+ * let pos = vec2(2,3);
+ * let particleEmiter = new ParticleEmitter
+ * (
+ *     pos, 1, 0, 500, PI,  // pos, emitSize, emitTime, emitRate, emiteCone
+ *     0, vec2(16),                            // tileIndex, tileSize
+ *     new Color, new Color(0,0,0),            // colorStartA, colorStartB
+ *     new Color(1,1,1,0), new Color(0,0,0,0), // colorEndA, colorEndB
+ *     2, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
+ *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate, 
+ *     .5, 1                // randomness, collide, additive, randomColorLinear, renderOrder
+ * );
  */
 class ParticleEmitter extends EngineObject
 {
-    /**
-     * Create a particle system with the given settings
-     * @param {Vector2} position          - World space position of the emitter
-     * @param {Number}  [emitSize=0]       - World space size of the emitter (float for circle diameter, vec2 for rect)
-     * @param {Number}  [emitTime=0]       - How long to stay alive (0 is forever)
-     * @param {Number}  [emitRate=100]     - How many particles per second to spawn
-     * @param {Number}  [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
-     * @param {Number}  [tileIndex=-1]     - Index into tile sheet, if <0 no texture is applied
-     * @param {Number}  [tileSize=defaultTileSize]    - Tile size for particles
-     * @param {Color}   [colorStartA=new Color(1,1,1)] - Color at start of life 1, randomized between start colors
-     * @param {Color}   [colorStartB=new Color(1,1,1)] - Color at start of life 2, randomized between start colors
-     * @param {Color}   [colorEndA=new Color(1,1,1,0)] - Color at end of life 1, randomized between end colors
-     * @param {Color}   [colorEndB=new Color(1,1,1,0)] - Color at end of life 2, randomized between end colors
-     * @param {Number}  [particleTime=.5]      - How long particles live
-     * @param {Number}  [sizeStart=.1]         - How big are particles at start
-     * @param {Number}  [sizeEnd=1]            - How big are particles at end
-     * @param {Number}  [speed=.1]             - How fast are particles when spawned
-     * @param {Number}  [angleSpeed=.05]       - How fast are particles rotating
-     * @param {Number}  [damping=1]            - How much to dampen particle speed
-     * @param {Number}  [angleDamping=1]       - How much to dampen particle angular speed
-     * @param {Number}  [gravityScale=0]       - How much does gravity effect particles
-     * @param {Number}  [particleConeAngle=PI] - Cone for start particle angle
-     * @param {Number}  [fadeRate=.1]          - How quick to fade in particles at start/end in percent of life
-     * @param {Number}  [randomness=.2]        - Apply extra randomness percent
-     * @param {Boolean} [collideTiles=0]      - Do particles collide against tiles
-     * @param {Boolean} [additive=0]          - Should particles use addtive blend
-     * @param {Boolean} [randomColorLinear=0] - Should color be randomized linearly or across each component
-     * @param {Number}  [renderOrder=0]        - Render order for particles (additive is above other stuff by default)
-     * @example
-     * // create a particle emitter
-     * let pos = vec2(2,3);
-     * let particleEmiter = new ParticleEmitter
-     * (
-     *     pos, 1, 0, 500, PI,  // pos, emitSize, emitTime, emitRate, emiteCone
-     *     0, vec2(16),                            // tileIndex, tileSize
-     *     new Color, new Color(0,0,0),            // colorStartA, colorStartB
-     *     new Color(1,1,1,0), new Color(0,0,0,0), // colorEndA, colorEndB
-     *     2, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
-     *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate, 
-     *     .5, 1                // randomness, collide, additive, randomColorLinear, renderOrder
-     * );
+    /** Create a particle system with the given settings
+     *  @param {Vector2} position           - World space position of the emitter
+     *  @param {Number}  [emitSize=0]       - World space size of the emitter (float for circle diameter, vec2 for rect)
+     *  @param {Number}  [emitTime=0]       - How long to stay alive (0 is forever)
+     *  @param {Number}  [emitRate=100]     - How many particles per second to spawn
+     *  @param {Number}  [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
+     *  @param {Number}  [tileIndex=-1]     - Index into tile sheet, if <0 no texture is applied
+     *  @param {Number}  [tileSize=defaultTileSize]     - Tile size for particles
+     *  @param {Color}   [colorStartA=new Color(1,1,1)] - Color at start of life 1, randomized between start colors
+     *  @param {Color}   [colorStartB=new Color(1,1,1)] - Color at start of life 2, randomized between start colors
+     *  @param {Color}   [colorEndA=new Color(1,1,1,0)] - Color at end of life 1, randomized between end colors
+     *  @param {Color}   [colorEndB=new Color(1,1,1,0)] - Color at end of life 2, randomized between end colors
+     *  @param {Number}  [particleTime=.5]      - How long particles live
+     *  @param {Number}  [sizeStart=.1]         - How big are particles at start
+     *  @param {Number}  [sizeEnd=1]            - How big are particles at end
+     *  @param {Number}  [speed=.1]             - How fast are particles when spawned
+     *  @param {Number}  [angleSpeed=.05]       - How fast are particles rotating
+     *  @param {Number}  [damping=1]            - How much to dampen particle speed
+     *  @param {Number}  [angleDamping=1]       - How much to dampen particle angular speed
+     *  @param {Number}  [gravityScale=0]       - How much does gravity effect particles
+     *  @param {Number}  [particleConeAngle=PI] - Cone for start particle angle
+     *  @param {Number}  [fadeRate=.1]          - How quick to fade in particles at start/end in percent of life
+     *  @param {Number}  [randomness=.2]        - Apply extra randomness percent
+     *  @param {Boolean} [collideTiles=0]       - Do particles collide against tiles
+     *  @param {Boolean} [additive=0]           - Should particles use addtive blend
+     *  @param {Boolean} [randomColorLinear=0]  - Should color be randomized linearly or across each component
+     *  @param {Number}  [renderOrder=0]        - Render order for particles (additive is above other stuff by default)
      */
     constructor
     ( 
@@ -3226,34 +3282,60 @@ class ParticleEmitter extends EngineObject
         super(pos, new Vector2, tileIndex, tileSize);
 
         // emitter settings
+        /** @property {Number} - World space size of the emitter (float for circle diameter, vec2 for rect) */
         this.emitSize = emitSize
+        /** @property {Number} - How long to stay alive (0 is forever) */
         this.emitTime = emitTime;
+        /** @property {Number} - How many particles per second to spawn */
         this.emitRate = emitRate;
+        /** @property {Number} - Local angle to apply velocity to particles from emitter */
         this.emitConeAngle = emitConeAngle;
 
         // color settings
+        /** @property {Color} - Color at start of life 1, randomized between start colors */
         this.colorStartA = colorStartA;
+        /** @property {Color} - Color at start of life 2, randomized between start colors */
         this.colorStartB = colorStartB;
+        /** @property {Color} - Color at end of life 1, randomized between end colors */
         this.colorEndA   = colorEndA;
+        /** @property {Color} - Color at end of life 2, randomized between end colors */
         this.colorEndB   = colorEndB;
+        /** @property {Boolean} - Should color be randomized linearly or across each component */
         this.randomColorLinear = randomColorLinear;
 
         // particle settings
+        /** @property {Number} - How long particles live */
         this.particleTime      = particleTime;
+        /** @property {Number} -  How big are particles at start */
         this.sizeStart         = sizeStart;
+        /** @property {Number} - How big are particles at end */
         this.sizeEnd           = sizeEnd;
+        /** @property {Number} - How fast are particles when spawned */
         this.speed             = speed;
+        /** @property {Number} - How fast are particles rotating */
         this.angleSpeed        = angleSpeed;
+        /** @property {Number} - How much to dampen particle speed */
         this.damping           = damping;
+        /** @property {Number} - How much to dampen particle angular speed */
         this.angleDamping      = angleDamping;
+        /** @property {Number} - How much does gravity effect particles */
         this.gravityScale      = gravityScale;
+        /** @property {Number} - Cone for start particle angle */
         this.particleConeAngle = particleConeAngle;
+        /** @property {Number} - How quick to fade in particles at start/end in percent of life */
         this.fadeRate          = fadeRate;
+        /** @property {Number} - Apply extra randomness percent */
         this.randomness        = randomness;
+        /** @property {Number} - Do particles collide against tiles */
         this.collideTiles      = collideTiles;
+        /** @property {Number} - Should particles use addtive blend */
         this.additive          = additive;
+        /** @property {Number} - Render order for particles (additive is above other stuff by default) */
         this.renderOrder       = renderOrder;
-        this.trailScale        =  
+        /** @property {Number} - If set the partile is drawn as a trail, stretched in the drection of velocity */
+        this.trailScale        = 0;
+
+        // internal variables
         this.emitTimeBuffer    = 0;
     }
     
@@ -3340,15 +3422,16 @@ class ParticleEmitter extends EngineObject
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * Particle Object - Created automatically by Particle Emitters
+ * @extends EngineObject
  */
 class Particle extends EngineObject
 {
     /**
      * Create a particle with the given settings
      * @param {Vector2} position                   - World space position of the particle
-     * @param {Number}  [tileIndex=-1]              - Tile to use to render, untextured if -1
+     * @param {Number}  [tileIndex=-1]             - Tile to use to render, untextured if -1
      * @param {Vector2} [tileSize=defaultTileSize] - Size of tile in source pixels
-     * @param {Number}  [angle=0]                   - Angle to rotate the particle
+     * @param {Number}  [angle=0]                  - Angle to rotate the particle
      */
     constructor(pos, tileIndex, tileSize, angle) { super(pos, new Vector2, tileIndex, tileSize, angle); }
 
@@ -3434,22 +3517,23 @@ function medalsInit(saveName)
     debugMedals || medals.forEach(medal=> medal.unlocked = localStorage[medal.storageKey()]);
 }
 
-/** Medal Object - Tracks an unlockable medal */
+/** 
+ * Medal Object - Tracks an unlockable medal 
+ * @example
+ * // create a medal
+ * const medal_example = new Medal(0, 'Example Medal', 'More info about the medal goes here.', '🎖️');
+ * 
+ * // unlock the medal
+ * medal_example.unlock();
+ */
 class Medal
 {
-    /**
-     * Create an medal object and adds it to the list of medals
-     * @param {Number} id - The unique identifier of the medal
-     * @param {String} name - Name of the medal
-     * @param {String} [description] - Description of the medal
-     * @param {String} [icon='🏆'] - Icon for the medal
-     * @param {String} [src] - Image location for the medal
-     * @example
-     * // create a medal
-     * const medal_example = new Medal(0, 'Example Medal', 'More info about the medal goes here.', '🎖️');
-     * 
-     * // unlock the medal
-     * medal_example.unlock();
+    /** Create an medal object and adds it to the list of medals
+     *  @param {Number} id - The unique identifier of the medal
+     *  @param {String} name - Name of the medal
+     *  @param {String} [description] - Description of the medal
+     *  @param {String} [icon='🏆'] - Icon for the medal
+     *  @param {String} [src] - Image location for the medal
      */
     constructor(id, name, description='', icon='🏆', src)
     {
@@ -3566,19 +3650,19 @@ function medalsRender()
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** Newgrounds API wrapper object */
+/** 
+ * Newgrounds API wrapper object
+ * @example
+ * // create a newgrounds object, replace the app id and cipher with your own
+ * const app_id = '53123:1ZuSTQ9l';
+ * const cipher = 'enF0vGH@Mj/FRASKL23Q==';
+ * newgrounds = new Newgrounds(app_id, cipher);
+ */
 class Newgrounds
 {
-    /**
-     * Create a newgrounds object
-     * @param {Number} app_id - The newgrounds App ID
-     * @param {String} [cipher] - The encryption Key (AES-128/Base64)
-     * @example
-     * // create a newgrounds object, replace the app id and cipher with your own
-     * const app_id = '53123:1ZuSTQ9l';
-     * const cipher = 'enF0vGH@Mj/FRASKL23Q==';
-     * newgrounds = new Newgrounds(app_id, cipher);
-     */
+    /** Create a newgrounds object
+     *  @param {Number} app_id - The newgrounds App ID
+     *  @param {String} [cipher] - The encryption Key (AES-128/Base64) */
     constructor(app_id, cipher)
     {
         ASSERT(!newgrounds && app_id);
@@ -3740,7 +3824,7 @@ function glInit()
 
     if (glOverlay)
     {
-        // firefox is much faster without copying the gl buffer so we just overlay it with some tradeoffs
+        // some browsers are much faster without copying the gl buffer so we just overlay it instead
         document.body.appendChild(glCanvas);
         glCanvas.style = mainCanvas.style.cssText;
     }

@@ -1,5 +1,5 @@
 /** 
- *  LittleJS Medal System
+ *  LittleJS Debug System
  *  <br> - Debug overlay with mouse pick
  *  <br> - Debug primitive rendering
  *  <br> - Save screenshots to disk
@@ -270,12 +270,12 @@ const debugRender = ()=>
             const printVec2 = (v)=> '(' + (v.x>0?' ':'') + (v.x).toFixed(2) + ',' + (v.y>0?' ':'')  + (v.y).toFixed(2) + ')';
             const args = [.5, new Color, .05, undefined, undefined, 'monospace'];
 
-            drawText('pos = ' + printVec2(bestObject.pos) 
+            drawOverlayText('pos = ' + printVec2(bestObject.pos) 
                 + (bestObject.angle>0?'  ':' ') + (bestObject.angle*180/PI).toFixed(1) + '°', 
                 pos = pos.add(height), ...args);
-            drawText('vel = ' + printVec2(bestObject.velocity), pos = pos.add(height), ...args);
-            drawText('size = ' + printVec2(bestObject.size), pos = pos.add(height), ...args);
-            drawText('collision = ' + getTileCollisionData(mousePos), pos = mousePos.subtract(height), ...args);
+            drawOverlayText('vel = ' + printVec2(bestObject.velocity), pos = pos.add(height), ...args);
+            drawOverlayText('size = ' + printVec2(bestObject.size), pos = pos.add(height), ...args);
+            drawOverlayText('collision = ' + getTileCollisionData(mousePos), pos = mousePos.subtract(height), ...args);
             mainContext = saveContext;
         }
 

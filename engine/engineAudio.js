@@ -10,26 +10,30 @@
 
 'use strict';
 
-/** Sound Object - Stores a zzfx sound for later use and can be played positionally */
+/** 
+ * Sound Object - Stores a zzfx sound for later use and can be played positionally
+ * @example
+ * // create a sound
+ * const sound_example = new Sound([.5,.5]);
+ * 
+ * // play the sound
+ * sound_example.play();
+ */
 class Sound
 {
-    /**
-     * Create a sound object and cache the zzfx samples for later use
-     * @param {Array}  zzfxSound - Array of zzfx parameters, ex. [.5,.5]
-     * @param {Number} [range=defaultSoundRange] - World space max range of sound, will not play if camera is farther away
-     * @param {Number} [taper=defaultSoundTaper] - At what percentage of range should it start tapering off
-     * @example
-     * // create a sound
-     * const sound_example = new Sound([.5,.5]);
-     * 
-     * // play the sound
-     * sound_example.play();
+    /** Create a sound object and cache the zzfx samples for later use
+     *  @param {Array}  zzfxSound - Array of zzfx parameters, ex. [.5,.5]
+     *  @param {Number} [range=defaultSoundRange] - World space max range of sound, will not play if camera is farther away
+     *  @param {Number} [taper=defaultSoundTaper] - At what percentage of range should it start tapering off
      */
     constructor(zzfxSound, range=defaultSoundRange, taper=defaultSoundTaper)
     {
         if (!soundEnable) return;
 
+        /** @property {Number} - World space max range of sound, will not play if camera is farther away */
         this.range = range;
+
+        /** @property {Number} - At what percentage of range should it start tapering off */
         this.taper = taper;
 
         // get randomness from sound parameters
@@ -89,37 +93,38 @@ class Sound
     }
 }
 
-/** Music Object - Stores a zzfx music track for later use */
+/**
+ * Music Object - Stores a zzfx music track for later use
+ * @example
+ * // create some music
+ * const music_example = new Music(
+ * [
+ *     [                         // instruments
+ *       [,0,400]                // simple note
+ *     ], 
+ *     [                         // patterns
+ *         [                     // pattern 1
+ *             [                 // channel 0
+ *                 0, -1,        // instrument 0, left speaker
+ *                 1, 0, 9, 1    // channel notes
+ *             ], 
+ *             [                 // channel 1
+ *                 0, 1,         // instrument 1, right speaker
+ *                 0, 12, 17, -1 // channel notes
+ *             ]
+ *         ],
+ *     ],
+ *     [0, 0, 0, 0], // sequence, play pattern 0 four times
+ *     90            // BPM
+ * ]);
+ * 
+ * // play the music
+ * music_example.play();
+ */
 class Music
 {
-    /**
-     * Create a music object and cache the zzfx music samples for later use
-     * @param {Array} zzfxMusic - Array of zzfx music parameters
-     * @example
-     * // create some music
-     * const music_example = new Music(
-     * [
-     *     [                         // instruments
-     *       [,0,400]                // simple note
-     *     ], 
-     *     [                         // patterns
-     *         [                     // pattern 1
-     *             [                 // channel 0
-     *                 0, -1,        // instrument 0, left speaker
-     *                 1, 0, 9, 1    // channel notes
-     *             ], 
-     *             [                 // channel 1
-     *                 0, 1,         // instrument 1, right speaker
-     *                 0, 12, 17, -1 // channel notes
-     *             ]
-     *         ],
-     *     ],
-     *     [0, 0, 0, 0], // sequence, play pattern 0 four times
-     *     90            // BPM
-     * ]);
-     * 
-     * // play the music
-     * music_example.play();
+    /** Create a music object and cache the zzfx music samples for later use
+     *  @param {Array} zzfxMusic - Array of zzfx music parameters
      */
     constructor(zzfxMusic)
     {

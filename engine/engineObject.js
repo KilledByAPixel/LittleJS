@@ -5,55 +5,74 @@
 'use strict';
 
 /** 
- *  LittleJS Object Base Object Class
- *  <br> - Base object class used by the engine
- *  <br> - Automatically adds self to object list
- *  <br> - Will be updated and rendered each frame
- *  <br> - Renders as a sprite from a tilesheet by default
- *  <br> - Can have color and addtive color applied
- *  <br> - 2d Physics and collision system
- *  <br> - Sorted by renderOrder
- *  <br> - Objects can have children attached
- *  <br> - Parents are updated before children, and set child transform
- *  <br> - Call destroy() to get rid of objects
+ * LittleJS Object Base Object Class
+ * <br> - Base object class used by the engine
+ * <br> - Automatically adds self to object list
+ * <br> - Will be updated and rendered each frame
+ * <br> - Renders as a sprite from a tilesheet by default
+ * <br> - Can have color and addtive color applied
+ * <br> - 2d Physics and collision system
+ * <br> - Sorted by renderOrder
+ * <br> - Objects can have children attached
+ * <br> - Parents are updated before children, and set child transform
+ * <br> - Call destroy() to get rid of objects
+ * @example
+ * // create an engine object, normally you would first extend the class with your own
+ * const pos = vec2(2,3);
+ * const object = new EngineObject(pos); 
  */
 class EngineObject
 {
-    /**
-     * Create an engine object and adds it to the list of objects
-     * @param {Vector2} [position=new Vector2(0,0)] - World space position of the object
-     * @param {Vector2} [size=defaultObjectSize] - World space size of the object
-     * @param {Number}  [tileIndex=-1] - Tile to use to render object, untextured if -1
-     * @param {Vector2} [tileSize=defaultTileSize] - Size of tile in source pixels
-     * @param {Number}  [angle=0] - Angle to rotate the object
-     * @param {Color}   [color] - Color to apply to tile when rendered
-     * @example
-     * // create an engine object, normally you would first extend the class with your own
-     * const pos = vec2(2,3);
-     * const object = new EngineObject(pos); 
+    /** Create an engine object and adds it to the list of objects
+     *  @param {Vector2} [position=new Vector2(0,0)] - World space position of the object
+     *  @param {Vector2} [size=defaultObjectSize] - World space size of the object
+     *  @param {Number}  [tileIndex=-1] - Tile to use to render object, untextured if -1
+     *  @param {Vector2} [tileSize=defaultTileSize] - Size of tile in source pixels
+     *  @param {Number}  [angle=0] - Angle to rotate the object
+     *  @param {Color}   [color] - Color to apply to tile when rendered
      */
     constructor(pos=vec2(), size=defaultObjectSize, tileIndex=-1, tileSize=defaultTileSize, angle=0, color)
     {
         // set passed in params
         ASSERT(pos && pos.x != undefined && size.x != undefined); // ensure pos and size are vec2s
+
+        /** @property {Vector2} - World space position of the object */
         this.pos = pos.copy();
+        /** @property {Vector2} - World space width and height of the object */
         this.size = size;
+        /** @property {Vector2} - Size of object used for drawing, uses size if not set */
+        this.drawSize;
+        /** @property {Number}  - Tile to use to render object, untextured if -1 */
         this.tileIndex = tileIndex;
+        /** @property {Vector2} - Size of tile in source pixels */
         this.tileSize = tileSize;
+        /** @property {Number}  - Angle to rotate the object */
         this.angle = angle;
+        /** @property {Color}  - Color to apply when rendered */
         this.color = color;
+        /** @property {Color}  - Additive color to apply when rendered */
+        this.additiveColor;
 
-        // set physics defaults
+        // set object defaults
+        /** @property {Number} [mass=defaultObjectMass] - How heavy the object is */
         this.mass         = defaultObjectMass;
+        /** @property {Number} [damping=defaultObjectDamping] - How much to slow down velocity each frame (0-1) */
         this.damping      = defaultObjectDamping;
+        /** @property {Number} [angleDamping=defaultObjectAngleDamping] - How much to slow down rotation each frame (0-1) */
         this.angleDamping = defaultObjectAngleDamping;
+        /** @property {Number} [elasticity=defaultObjectElasticity] - How bouncy the object is when colliding (0-1) */
         this.elasticity   = defaultObjectElasticity;
+        /** @property {Number} [friction=defaultObjectFriction] - How much friction to apply when sliding (0-1) */
         this.friction     = defaultObjectFriction;
+        /** @property {Number} [gravityScale=1] - How much to scale gravity by for this object */
+        this.gravityScale = 1;
+        /** @property {Number} [renderOrder=0] - Objects are sorted by render order */
+        this.renderOrder = 0;
 
-        // init other object stuff
+        // init other internal object stuff
         this.spawnTime = time;
-        this.velocity = vec2(this.collideSolidObjects = this.renderOrder = this.angleVelocity = 0);
-        this.collideTiles = this.gravityScale = 1;
+        this.velocity = vec2(this.collideSolidObjects = this.angleVelocity = 0);
+        this.collideTiles = 1;
         this.children = [];
 
         // add to list of objects
@@ -202,8 +221,6 @@ class EngineObject
             // check collision against tiles
             if (tileCollisionTest(this.pos, this.size, this))
             {
-                //debugPhysics && debugRect(this.pos, this.size, '#ff0');
-
                 // if already was stuck in collision, don't do anything
                 // this should not happen unless something starts in collision
                 if (!tileCollisionTest(oldPos, this.size, this))

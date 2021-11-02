@@ -53,21 +53,22 @@ const screenToWorld = (screenPos)=>
 const worldToScreen = (worldPos)=>
     worldPos.subtract(cameraPos).multiply(vec2(cameraScale,-cameraScale)).add(mainCanvasSize.scale(.5)).subtract(vec2(.5));
 
-/** Draw textured tile centered on pos
+/** Draw textured tile centered on pos, with color applied if using WebGL
  *  @param {Vector2} pos - Center of the tile
  *  @param {Vector2} [size=new Vector2(1,1)] - Size of the tile
  *  @param {Number}  [tileIndex=-1] - Tile index to use, negative is untextured
  *  @param {Vector2} [tileSize=defaultTileSize] - Tile size in source pixels
- *  @param {Color}   [color=new Color(1,1,1)]
- *  @param {Number}  [angle=0]
- *  @param {Boolean} [mirror=0]
- *  @param {Color}   [additiveColor=new Color(0,0,0,0)]
+ *  @param {Color}   [color=new Color(1,1,1)] - Color to modulate with
+ *  @param {Number}  [angle=0] - Angle to rotate by
+ *  @param {Boolean} [mirror=0] - If true image is flipped along the Y axis
+ *  @param {Color}   [additiveColor=new Color(0,0,0,0)] - Additive color applied
+ *  @param {Boolean} [useWebGL=glEnable] - Use accelerated WebGL rendering if enabled
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=defaultTileSize, color=new Color, angle=0, mirror, 
-    additiveColor=new Color(0,0,0,0))
+    additiveColor=new Color(0,0,0,0), useWebGL=glEnable)
 {
     showWatermark && ++drawCount;
-    if (glEnable)
+    if (useWebGL && glEnable)
     {
         if (tileIndex < 0)
         {
@@ -123,10 +124,11 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=defaultTileSize, col
  *  @param {Vector2} [size=new Vector2(1,1)]
  *  @param {Color}   [color=new Color(1,1,1)]
  *  @param {Number}  [angle=0]
+ *  @param {Boolean} [useWebGL=glEnable]
  *  @memberof Draw */
-function drawRect(pos, size, color, angle)
+function drawRect(pos, size, color, angle, useWebGL)
 {
-    drawTile(pos, size, -1, defaultTileSize, color, angle);
+    drawTile(pos, size, -1, defaultTileSize, color, angle, 0, 0, useWebGL);
 }
 
 /** Draw textured tile centered on pos in screen space
@@ -138,10 +140,11 @@ function drawRect(pos, size, color, angle)
  *  @param {Number}  [angle=0]
  *  @param {Boolean} [mirror=0]
  *  @param {Color}   [additiveColor=new Color(0,0,0,0)]
+ *  @param {Boolean} [useWebGL=glEnable]
  *  @memberof Draw */
-function drawTileScreenSpace(pos, size=vec2(1), tileIndex, tileSize, color, angle, mirror, additiveColor)
+function drawTileScreenSpace(pos, size=vec2(1), tileIndex, tileSize, color, angle, mirror, additiveColor, useWebGL)
 {
-    drawTile(screenToWorld(pos), size.scale(1/cameraScale), tileIndex, tileSize, color, angle, mirror, additiveColor);
+    drawTile(screenToWorld(pos), size.scale(1/cameraScale), tileIndex, tileSize, color, angle, mirror, additiveColor, useWebGL);
 }
 
 /** Draw colored untextured rectangle in screen space
@@ -149,10 +152,11 @@ function drawTileScreenSpace(pos, size=vec2(1), tileIndex, tileSize, color, angl
  *  @param {Vector2} [size=new Vector2(1,1)]
  *  @param {Color}   [color=new Color(1,1,1)]
  *  @param {Number}  [angle=0]
+ *  @param {Boolean} [useWebGL=glEnable]
  *  @memberof Draw */
-function drawRectScreenSpace(pos, size, color, angle)
+function drawRectScreenSpace(pos, size, color, angle, useWebGL)
 {
-    drawTileScreenSpace(pos, size, -1, defaultTileSize, color, angle);
+    drawTileSrceenSpace(pos, size, -1, defaultTileSize, color, angle, 0, 0, useWebGL);
 }
 
 /** Draw colored line between two points
@@ -160,15 +164,16 @@ function drawRectScreenSpace(pos, size, color, angle)
  *  @param {Vector2} posB
  *  @param {Number}  [thickness=.1]
  *  @param {Color}   [color=new Color(1,1,1)]
+ *  @param {Boolean} [useWebGL=glEnable]
  *  @memberof Draw */
-function drawLine(posA, posB, thickness=.1, color)
+function drawLine(posA, posB, thickness=.1, color, useWebGL)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);
-    drawRect(posA.add(halfDelta), size, color, halfDelta.angle());
+    drawRect(posA.add(halfDelta), size, color, halfDelta.angle(), 0, 0, useWebGL);
 }
 
-/** Draw directly to a 2d canvas context in world space (bipass webgl)
+/** Draw directly to a 2d canvas context in world space
  *  @param {Vector2}  pos
  *  @param {Vector2}  size
  *  @param {Number}   angle
@@ -198,7 +203,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainCont
  *  @param {Color}   [lineColor=new Color(0,0,0)]
  *  @param {String}  [textAlign='center']
  *  @memberof Draw */
-function drawText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=defaultFont)
+function drawOverlayText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=defaultFont)
 {
     pos = worldToScreen(pos);
     overlayContext.font = size*cameraScale + 'px '+ font;
@@ -214,7 +219,7 @@ function drawText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new
     overlayContext.fillText(text, pos.x, pos.y);
 }
 
-/** Enable additive or regular blend mode
+/** Enable normal or additive blend mode
  *  @param {Boolean} [additive=0]
  *  @memberof Draw */
 function setBlendMode(additive)
