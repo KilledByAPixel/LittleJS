@@ -9,7 +9,7 @@
 
 'use strict';
 
-/** Main tilesheet to use for batch rendering system
+/** Tile sheet for batch rendering system
  *  @type {Image}
  *  @memberof Draw */
 const tileImage = new Image();
@@ -34,7 +34,7 @@ let overlayCanvas;
  *  @memberof Draw */
 let overlayContext;
 
-/** The size of the main canvas (and other secondary canvases: overlayCanvas and glCanvas) 
+/** The size of the main canvas (and other secondary canvases) 
  *  @type {Vector2}
  *  @memberof Draw */
 let mainCanvasSize = vec2();
@@ -53,26 +53,26 @@ const screenToWorld = (screenPos)=>
 const worldToScreen = (worldPos)=>
     worldPos.subtract(cameraPos).multiply(vec2(cameraScale,-cameraScale)).add(mainCanvasSize.scale(.5)).subtract(vec2(.5));
 
-/** Draw textured tile centered on pos, with color applied if using WebGL
- *  @param {Vector2} pos - Center of the tile
- *  @param {Vector2} [size=new Vector2(1,1)] - Size of the tile
- *  @param {Number}  [tileIndex=-1] - Tile index to use, negative is untextured
- *  @param {Vector2} [tileSize=defaultTileSize] - Tile size in source pixels
- *  @param {Color}   [color=new Color(1,1,1)] - Color to modulate with
- *  @param {Number}  [angle=0] - Angle to rotate by
- *  @param {Boolean} [mirror=0] - If true image is flipped along the Y axis
- *  @param {Color}   [additiveColor=new Color(0,0,0,0)] - Additive color applied
- *  @param {Boolean} [useWebGL=glEnable] - Use accelerated WebGL rendering if enabled
+/** Draw textured tile centered in world space, with color applied if using WebGL
+ *  @param {Vector2} pos                                - Center of the tile in world space
+ *  @param {Vector2} [size=new Vector2(1,1)]            - Size of the tile in world space, width and height
+ *  @param {Number}  [tileIndex=-1]                     - Tile index to use, negative is untextured
+ *  @param {Vector2} [tileSize=defaultTileSize]         - Tile size in source pixels
+ *  @param {Color}   [color=new Color(1,1,1)]           - Color to modulate with
+ *  @param {Number}  [angle=0]                          - Angle to rotate by
+ *  @param {Boolean} [mirror=0]                         - If true image is flipped along the Y axis
+ *  @param {Color}   [additiveColor=new Color(0,0,0,0)] - Additive color to be applied
+ *  @param {Boolean} [useWebGL=glEnable]                - Use accelerated WebGL rendering
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=defaultTileSize, color=new Color, angle=0, mirror, 
     additiveColor=new Color(0,0,0,0), useWebGL=glEnable)
 {
     showWatermark && ++drawCount;
-    if (useWebGL && glEnable)
+    if (glEnable && useWebGL)
     {
-        if (tileIndex < 0)
+        if (tileIndex < 0 || !tileImage.width)
         {
-            // if negative tile index, force untextured
+            // if negative tile index or image not found, force untextured
             glDraw(pos.x, pos.y, size.x, size.y, angle, 0, 0, 0, 0, 0, color.rgbaInt()); 
         }
         else
@@ -119,7 +119,7 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=defaultTileSize, col
     }
 }
 
-/** Draw colored untextured rect centered on pos
+/** Draw colored rect centered on pos
  *  @param {Vector2} pos
  *  @param {Vector2} [size=new Vector2(1,1)]
  *  @param {Color}   [color=new Color(1,1,1)]
@@ -132,9 +132,9 @@ function drawRect(pos, size, color, angle, useWebGL)
 }
 
 /** Draw textured tile centered on pos in screen space
- *  @param {Vector2} pos - Center of the tile
- *  @param {Vector2} [size=new Vector2(1,1)] - Size of the tile
- *  @param {Number}  [tileIndex=-1] - Tile index to use, negative is untextured
+ *  @param {Vector2} pos                        - Center of the tile
+ *  @param {Vector2} [size=new Vector2(1,1)]    - Size of the tile
+ *  @param {Number}  [tileIndex=-1]             - Tile index to use, negative is untextured
  *  @param {Vector2} [tileSize=defaultTileSize] - Tile size in source pixels
  *  @param {Color}   [color=new Color]
  *  @param {Number}  [angle=0]
@@ -147,7 +147,7 @@ function drawTileScreenSpace(pos, size=vec2(1), tileIndex, tileSize, color, angl
     drawTile(screenToWorld(pos), size.scale(1/cameraScale), tileIndex, tileSize, color, angle, mirror, additiveColor, useWebGL);
 }
 
-/** Draw colored untextured rectangle in screen space
+/** Draw colored rectangle in screen space
  *  @param {Vector2} pos
  *  @param {Vector2} [size=new Vector2(1,1)]
  *  @param {Color}   [color=new Color(1,1,1)]
@@ -221,10 +221,11 @@ function drawOverlayText(text, pos, size=1, color=new Color, lineWidth=0, lineCo
 
 /** Enable normal or additive blend mode
  *  @param {Boolean} [additive=0]
+ *  @param {Boolean} [useWebGL=glEnable]
  *  @memberof Draw */
-function setBlendMode(additive)
+function setBlendMode(additive, useWebGL=glEnable)
 {
-    if (glEnable)
+    if (glEnable && useWebGL)
         glSetBlendMode(additive);
     else
         mainContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';

@@ -15,8 +15,6 @@ type engineUtilities.js >> %OUTPUT_FILENAME%
 echo.>> %OUTPUT_FILENAME%
 type engineSettings.js >> %OUTPUT_FILENAME%
 echo.>> %OUTPUT_FILENAME%
-type engine.js >> %OUTPUT_FILENAME%
-echo.>> %OUTPUT_FILENAME%
 type engineObject.js >> %OUTPUT_FILENAME%
 echo.>> %OUTPUT_FILENAME%
 type engineDraw.js >> %OUTPUT_FILENAME%
@@ -32,6 +30,8 @@ echo.>> %OUTPUT_FILENAME%
 type engineMedals.js >> %OUTPUT_FILENAME%
 echo.>> %OUTPUT_FILENAME%
 type engineWebGL.js >> %OUTPUT_FILENAME%
+echo.>> %OUTPUT_FILENAME%
+type engine.js >> %OUTPUT_FILENAME%
 echo.>> %OUTPUT_FILENAME%
 
 rem --- BUILD ENGINE RELEASE ---

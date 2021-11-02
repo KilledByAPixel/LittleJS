@@ -1256,279 +1256,6 @@ const medalDisplayHeight = 99;
  *  @memberof Settings */
 const medalDisplayIconSize = 80;
 /*
-    LittleJS - The Tiny JavaScript Game Engine That Can!
-    MIT License - Copyright 2021 Frank Force
-
-    Engine Features
-    - Object oriented system with base class engine object
-    - Base class object handles update, physics, collision, rendering, etc
-    - Engine helper classes and functions like Vector2, Color, and Timer
-    - Super fast rendering system for tile sheets
-    - Sound effects audio with zzfx and music with zzfxm
-    - Input processing system with gamepad and touchscreen support
-    - Tile layer rendering and collision system
-    - Particle effect system
-    - Medal system tracks and displays achievements
-    - Debug tools and debug rendering system
-    - Call engineInit() to start it up!
-*/
-
-'use strict';
-
-/** Name of engine */
-const engineName = 'LittleJS';
-
-/** Version of engine */
-const engineVersion = '1.1.5';
-
-/** Frames per second to update objects
- *  @default */
-const FPS = 60;
-
-/** How many seconds each frame lasts, engine uses a fixed time step
- *  @default 1/60 */
-const timeDelta = 1/FPS;
-
-/** Array containing all engine objects */
-let engineObjects = [];
-
-/** Array containing only objects that are set to collide with other objects (for optimization) */
-let engineCollideObjects = [];
-
-/** Current update frame, used to calculate time */
-let frame = 0;
-
-/** Current engine time since start in seconds, derived from frame */
-let time = 0;
-
-/** Actual clock time since start in seconds (not affected by pause or frame rate clamping) */
-let timeReal = 0;
-
-/** Is the game paused? Causes time and objects to not be updated. */
-let paused = 0;
-
-// Engine internal variables not exposed to documentation
-let frameTimeLastMS = 0, frameTimeBufferMS = 0, debugFPS = 0, 
-    shrinkTilesX, shrinkTilesY, drawCount, tileImageSize, tileImageSizeInverse;
-
-///////////////////////////////////////////////////////////////////////////////
-
-/** Start up LittleJS engine with your callback functions
- *  @param {Function} gameInit        - Called once after the engine starts up, setup the game
- *  @param {Function} gameUpdate      - Called every frame at 60 frames per second, handle input and update the game state
- *  @param {Function} gameUpdatePost  - Called after physics and objects are updated, setup camera and prepare for render
- *  @param {Function} gameRender      - Called before objects are rendered, draw any background effects that appear behind objects
- *  @param {Function} gameRenderPost  - Called after objects are rendered, draw effects or hud that appear above all objects
- *  @param {String} [tileImageSource] - Tile image to use, everything starts when the image is finished loading
- */
-function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, tileImageSource)
-{
-    // init engine when tiles load or fail to load
-    tileImage.onerror = tileImage.onload = ()=>
-    {
-        // save tile image info
-        tileImageSizeInverse = vec2(1).divide(tileImageSize = vec2(tileImage.width, tileImage.height));
-        debug && (tileImage.onload=()=>ASSERT(1)); // tile sheet can not reloaded
-        shrinkTilesX = tileBleedShrinkFix/tileImageSize.x;
-        shrinkTilesY = tileBleedShrinkFix/tileImageSize.y;
-
-        // setup html
-        document.body.appendChild(mainCanvas = document.createElement('canvas'));
-        document.body.style = 'margin:0;overflow:hidden;background:#000';
-        mainCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)' +
-            (pixelated ? ';image-rendering:crisp-edges;image-rendering:pixelated' : ''); // pixelated rendering
-        mainContext = mainCanvas.getContext('2d');
-
-        // init stuff and start engine
-        debugInit();
-        glInit();
-
-        // create overlay canvas for hud to appear above gl canvas
-        document.body.appendChild(overlayCanvas = document.createElement('canvas'));
-        overlayCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
-        overlayContext = overlayCanvas.getContext('2d');
-
-        gameInit();
-        engineUpdate();
-    };
-
-    // main update loop
-    const engineUpdate = (frameTimeMS=0)=>
-    {
-        requestAnimationFrame(engineUpdate);
-
-        // update time keeping
-        let frameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
-        frameTimeLastMS = frameTimeMS;
-        if (debug || showWatermark)
-            debugFPS = lerp(.05, 1e3/(frameTimeDeltaMS||1), debugFPS);
-        if (debug)
-            frameTimeDeltaMS *= keyIsDown(107) ? 5 : keyIsDown(109) ? .2 : 1; // +/- to speed/slow time
-        timeReal += frameTimeDeltaMS / 1e3;
-        frameTimeBufferMS = min(frameTimeBufferMS + !paused * frameTimeDeltaMS, 50); // clamp incase of slow framerate
-
-        if (paused)
-        {
-            // do post update even when paused
-            inputUpdate();
-            debugUpdate();
-            gameUpdatePost();
-            inputUpdatePost();
-        }
-        else
-        {
-            // apply time delta smoothing, improves smoothness of framerate in some browsers
-            let deltaSmooth = 0;
-            if (frameTimeBufferMS < 0 && frameTimeBufferMS > -9)
-            {
-                // force an update each frame if time is close enough (not just a fast refresh rate)
-                deltaSmooth = frameTimeBufferMS;
-                frameTimeBufferMS = 0;
-            }
-            
-            // update multiple frames if necessary in case of slow framerate
-            for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / FPS)
-            {
-                // update game and objects
-                inputUpdate();
-                gameUpdate();
-                engineObjectsUpdate();
-
-                // do post update
-                debugUpdate();
-                gameUpdatePost();
-                inputUpdatePost();
-            }
-
-            // add the time smoothing back in
-            frameTimeBufferMS += deltaSmooth;
-        }
-
-        if (fixedWidth)
-        {
-            // clear set fixed size
-            mainCanvas.width  = fixedWidth;
-            mainCanvas.height = fixedHeight;
-            
-            if (fixedFitToWindow)
-            {
-                // fit to window by adding space on top or bottom if necessary
-                const aspect = innerWidth / innerHeight;
-                const fixedAspect = fixedWidth / fixedHeight;
-                mainCanvas.style.width  = overlayCanvas.style.width  = aspect < fixedAspect ? '100%' : '';
-                mainCanvas.style.height = overlayCanvas.style.height = aspect < fixedAspect ? '' : '100%';
-                if (glCanvas)
-                {
-                    glCanvas.style.width  = mainCanvas.style.width;
-                    glCanvas.style.height = mainCanvas.style.height;
-                }
-            }
-        }
-        else
-        {
-            // clear and set size to same as window
-            mainCanvas.width  = min(innerWidth,  maxWidth);
-            mainCanvas.height = min(innerHeight, maxHeight);
-        }
-        
-        // save canvas size and clear overlay canvas
-        mainCanvasSize = vec2(overlayCanvas.width = mainCanvas.width, overlayCanvas.height = mainCanvas.height);
-        mainContext.imageSmoothingEnabled = !pixelated; // disable smoothing for pixel art
-
-        // render sort then render while removing destroyed objects
-        glPreRender(mainCanvas.width, mainCanvas.height);
-        gameRender();
-        engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
-        for (const o of engineObjects)
-            o.destroyed || o.render();
-        gameRenderPost();
-        medalsRender();
-        debugRender();
-        glCopyToContext(mainContext);
-
-        if (showWatermark)
-        {
-            // update fps
-            overlayContext.textAlign = 'right';
-            overlayContext.textBaseline = 'top';
-            overlayContext.font = '1em monospace';
-            overlayContext.fillStyle = '#000';
-            const text = engineName + ' ' + 'v' + engineVersion + ' / ' 
-                + drawCount + ' / ' + engineObjects.length + ' / ' + debugFPS.toFixed(1);
-            overlayContext.fillText(text, mainCanvas.width-3, 3);
-            overlayContext.fillStyle = '#fff';
-            overlayContext.fillText(text, mainCanvas.width-2, 2);
-            drawCount = 0;
-        }
-    }
-
-    // set tile image source to load the image and start the engine
-    tileImageSource ? tileImage.src = tileImageSource : tileImage.onload();
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-
-/** Calls update on each engine object (recursively if child), removes destroyed objects, and updated time */
-function engineObjectsUpdate()
-{
-    // recursive object update
-    const updateObject = (o)=>
-    {
-        if (!o.destroyed)
-        {
-            o.update();
-            for (const child of o.children)
-                updateObject(child);
-        }
-    }
-    for (const o of engineObjects)
-        o.parent || updateObject(o);
-
-    // remove destroyed objects
-    engineObjects = engineObjects.filter(o=>!o.destroyed);
-    engineCollideObjects = engineCollideObjects.filter(o=>!o.destroyed);
-
-    // increment frame and update time
-    time = ++frame / FPS;
-}
-
-/** Detroy and remove all objects that are not persistent or descendants of a persistent object */
-function engineObjectsDestroy()
-{
-    for (const o of engineObjects)
-        o.persistent || o.parent || o.destroy();
-    engineObjects = engineObjects.filter(o=>!o.destroyed);
-}
-
-/** Triggers a callback for each object within a given area
- *  @param {Vector2} [pos] - Center of test area
- *  @param {Number} [size] - Radius of circle if float, rectangle size if Vector2
- *  @param {Function} [callbackFunction] - Calls this function on every object that passes the test
- *  @param {Array} [objects=engineObjects] - List of objects to check */
-function engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
-{
-    if (!pos)
-    {
-        // all objects
-        for (const o of objects)
-            callbackFunction(o);
-    }
-    else if (size.x != undefined)
-    {
-        // aabb test
-        for (const o of objects)
-            isOverlapping(pos, size, o.pos, o.size) && callbackFunction(o);
-    }
-    else
-    {
-        // circle test
-        const sizeSquared = size*size;
-        for (const o of objects)
-            pos.distanceSquared(o.pos) < sizeSquared && callbackFunction(o);
-    }
-}
-/*
     LittleJS Object System
 */
 
@@ -1898,7 +1625,7 @@ class EngineObject
 
 'use strict';
 
-/** Main tilesheet to use for batch rendering system
+/** Tile sheet for batch rendering system
  *  @type {Image}
  *  @memberof Draw */
 const tileImage = new Image();
@@ -1923,7 +1650,7 @@ let overlayCanvas;
  *  @memberof Draw */
 let overlayContext;
 
-/** The size of the main canvas (and other secondary canvases: overlayCanvas and glCanvas) 
+/** The size of the main canvas (and other secondary canvases) 
  *  @type {Vector2}
  *  @memberof Draw */
 let mainCanvasSize = vec2();
@@ -1942,26 +1669,26 @@ const screenToWorld = (screenPos)=>
 const worldToScreen = (worldPos)=>
     worldPos.subtract(cameraPos).multiply(vec2(cameraScale,-cameraScale)).add(mainCanvasSize.scale(.5)).subtract(vec2(.5));
 
-/** Draw textured tile centered on pos, with color applied if using WebGL
- *  @param {Vector2} pos - Center of the tile
- *  @param {Vector2} [size=new Vector2(1,1)] - Size of the tile
- *  @param {Number}  [tileIndex=-1] - Tile index to use, negative is untextured
- *  @param {Vector2} [tileSize=defaultTileSize] - Tile size in source pixels
- *  @param {Color}   [color=new Color(1,1,1)] - Color to modulate with
- *  @param {Number}  [angle=0] - Angle to rotate by
- *  @param {Boolean} [mirror=0] - If true image is flipped along the Y axis
- *  @param {Color}   [additiveColor=new Color(0,0,0,0)] - Additive color applied
- *  @param {Boolean} [useWebGL=glEnable] - Use accelerated WebGL rendering if enabled
+/** Draw textured tile centered in world space, with color applied if using WebGL
+ *  @param {Vector2} pos                                - Center of the tile in world space
+ *  @param {Vector2} [size=new Vector2(1,1)]            - Size of the tile in world space, width and height
+ *  @param {Number}  [tileIndex=-1]                     - Tile index to use, negative is untextured
+ *  @param {Vector2} [tileSize=defaultTileSize]         - Tile size in source pixels
+ *  @param {Color}   [color=new Color(1,1,1)]           - Color to modulate with
+ *  @param {Number}  [angle=0]                          - Angle to rotate by
+ *  @param {Boolean} [mirror=0]                         - If true image is flipped along the Y axis
+ *  @param {Color}   [additiveColor=new Color(0,0,0,0)] - Additive color to be applied
+ *  @param {Boolean} [useWebGL=glEnable]                - Use accelerated WebGL rendering
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=defaultTileSize, color=new Color, angle=0, mirror, 
     additiveColor=new Color(0,0,0,0), useWebGL=glEnable)
 {
     showWatermark && ++drawCount;
-    if (useWebGL && glEnable)
+    if (glEnable && useWebGL)
     {
-        if (tileIndex < 0)
+        if (tileIndex < 0 || !tileImage.width)
         {
-            // if negative tile index, force untextured
+            // if negative tile index or image not found, force untextured
             glDraw(pos.x, pos.y, size.x, size.y, angle, 0, 0, 0, 0, 0, color.rgbaInt()); 
         }
         else
@@ -2008,7 +1735,7 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=defaultTileSize, col
     }
 }
 
-/** Draw colored untextured rect centered on pos
+/** Draw colored rect centered on pos
  *  @param {Vector2} pos
  *  @param {Vector2} [size=new Vector2(1,1)]
  *  @param {Color}   [color=new Color(1,1,1)]
@@ -2021,9 +1748,9 @@ function drawRect(pos, size, color, angle, useWebGL)
 }
 
 /** Draw textured tile centered on pos in screen space
- *  @param {Vector2} pos - Center of the tile
- *  @param {Vector2} [size=new Vector2(1,1)] - Size of the tile
- *  @param {Number}  [tileIndex=-1] - Tile index to use, negative is untextured
+ *  @param {Vector2} pos                        - Center of the tile
+ *  @param {Vector2} [size=new Vector2(1,1)]    - Size of the tile
+ *  @param {Number}  [tileIndex=-1]             - Tile index to use, negative is untextured
  *  @param {Vector2} [tileSize=defaultTileSize] - Tile size in source pixels
  *  @param {Color}   [color=new Color]
  *  @param {Number}  [angle=0]
@@ -2036,7 +1763,7 @@ function drawTileScreenSpace(pos, size=vec2(1), tileIndex, tileSize, color, angl
     drawTile(screenToWorld(pos), size.scale(1/cameraScale), tileIndex, tileSize, color, angle, mirror, additiveColor, useWebGL);
 }
 
-/** Draw colored untextured rectangle in screen space
+/** Draw colored rectangle in screen space
  *  @param {Vector2} pos
  *  @param {Vector2} [size=new Vector2(1,1)]
  *  @param {Color}   [color=new Color(1,1,1)]
@@ -2110,10 +1837,11 @@ function drawOverlayText(text, pos, size=1, color=new Color, lineWidth=0, lineCo
 
 /** Enable normal or additive blend mode
  *  @param {Boolean} [additive=0]
+ *  @param {Boolean} [useWebGL=glEnable]
  *  @memberof Draw */
-function setBlendMode(additive)
+function setBlendMode(additive, useWebGL=glEnable)
 {
-    if (glEnable)
+    if (glEnable && useWebGL)
         glSetBlendMode(additive);
     else
         mainContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';
@@ -3224,7 +2952,7 @@ class ParticleEmitter extends EngineObject
      *  @param {Vector2} position           - World space position of the emitter
      *  @param {Number}  [emitSize=0]       - World space size of the emitter (float for circle diameter, vec2 for rect)
      *  @param {Number}  [emitTime=0]       - How long to stay alive (0 is forever)
-     *  @param {Number}  [emitRate=100]     - How many particles per second to spawn
+     *  @param {Number}  [emitRate=100]     - How many particles per second to spawn, does not emit if 0
      *  @param {Number}  [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
      *  @param {Number}  [tileIndex=-1]     - Index into tile sheet, if <0 no texture is applied
      *  @param {Number}  [tileSize=defaultTileSize]     - Tile size for particles
@@ -3285,7 +3013,7 @@ class ParticleEmitter extends EngineObject
         this.emitSize = emitSize
         /** @property {Number} - How long to stay alive (0 is forever) */
         this.emitTime = emitTime;
-        /** @property {Number} - How many particles per second to spawn */
+        /** @property {Number} - How many particles per second to spawn, does not emit if 0 */
         this.emitRate = emitRate;
         /** @property {Number} - Local angle to apply velocity to particles from emitter */
         this.emitConeAngle = emitConeAngle;
@@ -3961,26 +3689,19 @@ function glCreateBuffer(bufferType, size, usage)
     return buffer;
 }
 
-/** Create WebGL texture from an image
+/** Create WebGL texture from an image and set the texture settings
  *  @param {Image} image
  *  @return {WebGLTexture}
  *  @memberof WebGL */
 function glCreateTexture(image)
 {
-    if (!glEnable) return;
+    if (!glEnable || !image || !image.width) return;
 
     // build the texture
     const texture = glContext.createTexture();
     glContext.bindTexture(gl_TEXTURE_2D, texture);
-    if (image.width && image.height)
-        glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
-    else
-    {
-        // use a white pixel if no tile image is found
-        const pixel = new Uint8Array([255, 255, 255, 255]);
-        glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, 1, 1, 0, gl_RGBA, gl_UNSIGNED_BYTE, pixel);
-    }
-
+    glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
+        
     // use point filtering for pixelated rendering
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, pixelated ? gl_NEAREST : gl_LINEAR);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, pixelated ? gl_NEAREST : gl_LINEAR);
@@ -4147,3 +3868,276 @@ gl_VERTICES_PER_QUAD = 6,
 gl_INDICIES_PER_VERT = 9,
 gl_MAX_BATCH = 1<<16,
 gl_VERTEX_BYTE_STRIDE = 4 + (4 * 2) * 3 + (4) * 2; // float + vec2 * 3 + (char * 4) * 2
+/*
+    LittleJS - The Tiny JavaScript Game Engine That Can!
+    MIT License - Copyright 2021 Frank Force
+
+    Engine Features
+    - Object oriented system with base class engine object
+    - Base class object handles update, physics, collision, rendering, etc
+    - Engine helper classes and functions like Vector2, Color, and Timer
+    - Super fast rendering system for tile sheets
+    - Sound effects audio with zzfx and music with zzfxm
+    - Input processing system with gamepad and touchscreen support
+    - Tile layer rendering and collision system
+    - Particle effect system
+    - Medal system tracks and displays achievements
+    - Debug tools and debug rendering system
+    - Call engineInit() to start it up!
+*/
+
+'use strict';
+
+/** Name of engine */
+const engineName = 'LittleJS';
+
+/** Version of engine */
+const engineVersion = '1.1.5';
+
+/** Frames per second to update objects
+ *  @default */
+const FPS = 60;
+
+/** How many seconds each frame lasts, engine uses a fixed time step
+ *  @default 1/60 */
+const timeDelta = 1/FPS;
+
+/** Array containing all engine objects */
+let engineObjects = [];
+
+/** Array containing only objects that are set to collide with other objects (for optimization) */
+let engineCollideObjects = [];
+
+/** Current update frame, used to calculate time */
+let frame = 0;
+
+/** Current engine time since start in seconds, derived from frame */
+let time = 0;
+
+/** Actual clock time since start in seconds (not affected by pause or frame rate clamping) */
+let timeReal = 0;
+
+/** Is the game paused? Causes time and objects to not be updated. */
+let paused = 0;
+
+// Engine internal variables not exposed to documentation
+let frameTimeLastMS = 0, frameTimeBufferMS = 0, debugFPS = 0, 
+    shrinkTilesX, shrinkTilesY, drawCount, tileImageSize, tileImageSizeInverse;
+
+///////////////////////////////////////////////////////////////////////////////
+
+/** Start up LittleJS engine with your callback functions
+ *  @param {Function} gameInit        - Called once after the engine starts up, setup the game
+ *  @param {Function} gameUpdate      - Called every frame at 60 frames per second, handle input and update the game state
+ *  @param {Function} gameUpdatePost  - Called after physics and objects are updated, setup camera and prepare for render
+ *  @param {Function} gameRender      - Called before objects are rendered, draw any background effects that appear behind objects
+ *  @param {Function} gameRenderPost  - Called after objects are rendered, draw effects or hud that appear above all objects
+ *  @param {String} [tileImageSource] - Tile image to use, everything starts when the image is finished loading
+ */
+function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, tileImageSource)
+{
+    // init engine when tiles load or fail to load
+    tileImage.onerror = tileImage.onload = ()=>
+    {
+        // save tile image info
+        tileImageSizeInverse = vec2(1).divide(tileImageSize = vec2(tileImage.width, tileImage.height));
+        debug && (tileImage.onload=()=>ASSERT(1)); // tile sheet can not reloaded
+        shrinkTilesX = tileBleedShrinkFix/tileImageSize.x;
+        shrinkTilesY = tileBleedShrinkFix/tileImageSize.y;
+
+        // setup html
+        document.body.appendChild(mainCanvas = document.createElement('canvas'));
+        document.body.style = 'margin:0;overflow:hidden;background:#000';
+        mainCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)' +
+            (pixelated ? ';image-rendering:crisp-edges;image-rendering:pixelated' : ''); // pixelated rendering
+        mainContext = mainCanvas.getContext('2d');
+
+        // init stuff and start engine
+        debugInit();
+        glInit();
+
+        // create overlay canvas for hud to appear above gl canvas
+        document.body.appendChild(overlayCanvas = document.createElement('canvas'));
+        overlayCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
+        overlayContext = overlayCanvas.getContext('2d');
+
+        gameInit();
+        engineUpdate();
+    };
+
+    // main update loop
+    const engineUpdate = (frameTimeMS=0)=>
+    {
+        requestAnimationFrame(engineUpdate);
+
+        // update time keeping
+        let frameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
+        frameTimeLastMS = frameTimeMS;
+        if (debug || showWatermark)
+            debugFPS = lerp(.05, 1e3/(frameTimeDeltaMS||1), debugFPS);
+        if (debug)
+            frameTimeDeltaMS *= keyIsDown(107) ? 5 : keyIsDown(109) ? .2 : 1; // +/- to speed/slow time
+        timeReal += frameTimeDeltaMS / 1e3;
+        frameTimeBufferMS = min(frameTimeBufferMS + !paused * frameTimeDeltaMS, 50); // clamp incase of slow framerate
+
+        if (paused)
+        {
+            // do post update even when paused
+            inputUpdate();
+            debugUpdate();
+            gameUpdatePost();
+            inputUpdatePost();
+        }
+        else
+        {
+            // apply time delta smoothing, improves smoothness of framerate in some browsers
+            let deltaSmooth = 0;
+            if (frameTimeBufferMS < 0 && frameTimeBufferMS > -9)
+            {
+                // force an update each frame if time is close enough (not just a fast refresh rate)
+                deltaSmooth = frameTimeBufferMS;
+                frameTimeBufferMS = 0;
+            }
+            
+            // update multiple frames if necessary in case of slow framerate
+            for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / FPS)
+            {
+                // update game and objects
+                inputUpdate();
+                gameUpdate();
+                engineObjectsUpdate();
+
+                // do post update
+                debugUpdate();
+                gameUpdatePost();
+                inputUpdatePost();
+            }
+
+            // add the time smoothing back in
+            frameTimeBufferMS += deltaSmooth;
+        }
+
+        if (fixedWidth)
+        {
+            // clear set fixed size
+            mainCanvas.width  = fixedWidth;
+            mainCanvas.height = fixedHeight;
+            
+            if (fixedFitToWindow)
+            {
+                // fit to window by adding space on top or bottom if necessary
+                const aspect = innerWidth / innerHeight;
+                const fixedAspect = fixedWidth / fixedHeight;
+                mainCanvas.style.width  = overlayCanvas.style.width  = aspect < fixedAspect ? '100%' : '';
+                mainCanvas.style.height = overlayCanvas.style.height = aspect < fixedAspect ? '' : '100%';
+                if (glCanvas)
+                {
+                    glCanvas.style.width  = mainCanvas.style.width;
+                    glCanvas.style.height = mainCanvas.style.height;
+                }
+            }
+        }
+        else
+        {
+            // clear and set size to same as window
+            mainCanvas.width  = min(innerWidth,  maxWidth);
+            mainCanvas.height = min(innerHeight, maxHeight);
+        }
+        
+        // save canvas size and clear overlay canvas
+        mainCanvasSize = vec2(overlayCanvas.width = mainCanvas.width, overlayCanvas.height = mainCanvas.height);
+        mainContext.imageSmoothingEnabled = !pixelated; // disable smoothing for pixel art
+
+        // render sort then render while removing destroyed objects
+        glPreRender(mainCanvas.width, mainCanvas.height);
+        gameRender();
+        engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
+        for (const o of engineObjects)
+            o.destroyed || o.render();
+        gameRenderPost();
+        medalsRender();
+        debugRender();
+        glCopyToContext(mainContext);
+
+        if (showWatermark)
+        {
+            // update fps
+            overlayContext.textAlign = 'right';
+            overlayContext.textBaseline = 'top';
+            overlayContext.font = '1em monospace';
+            overlayContext.fillStyle = '#000';
+            const text = engineName + ' ' + 'v' + engineVersion + ' / ' 
+                + drawCount + ' / ' + engineObjects.length + ' / ' + debugFPS.toFixed(1);
+            overlayContext.fillText(text, mainCanvas.width-3, 3);
+            overlayContext.fillStyle = '#fff';
+            overlayContext.fillText(text, mainCanvas.width-2, 2);
+            drawCount = 0;
+        }
+    }
+
+    // set tile image source to load the image and start the engine
+    tileImageSource ? tileImage.src = tileImageSource : tileImage.onload();
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+/** Calls update on each engine object (recursively if child), removes destroyed objects, and updated time */
+function engineObjectsUpdate()
+{
+    // recursive object update
+    const updateObject = (o)=>
+    {
+        if (!o.destroyed)
+        {
+            o.update();
+            for (const child of o.children)
+                updateObject(child);
+        }
+    }
+    for (const o of engineObjects)
+        o.parent || updateObject(o);
+
+    // remove destroyed objects
+    engineObjects = engineObjects.filter(o=>!o.destroyed);
+    engineCollideObjects = engineCollideObjects.filter(o=>!o.destroyed);
+
+    // increment frame and update time
+    time = ++frame / FPS;
+}
+
+/** Detroy and remove all objects that are not persistent or descendants of a persistent object */
+function engineObjectsDestroy()
+{
+    for (const o of engineObjects)
+        o.persistent || o.parent || o.destroy();
+    engineObjects = engineObjects.filter(o=>!o.destroyed);
+}
+
+/** Triggers a callback for each object within a given area
+ *  @param {Vector2} [pos] - Center of test area
+ *  @param {Number} [size] - Radius of circle if float, rectangle size if Vector2
+ *  @param {Function} [callbackFunction] - Calls this function on every object that passes the test
+ *  @param {Array} [objects=engineObjects] - List of objects to check */
+function engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
+{
+    if (!pos)
+    {
+        // all objects
+        for (const o of objects)
+            callbackFunction(o);
+    }
+    else if (size.x != undefined)
+    {
+        // aabb test
+        for (const o of objects)
+            isOverlapping(pos, size, o.pos, o.size) && callbackFunction(o);
+    }
+    else
+    {
+        // circle test
+        const sizeSquared = size*size;
+        for (const o of objects)
+            pos.distanceSquared(o.pos) < sizeSquared && callbackFunction(o);
+    }
+}

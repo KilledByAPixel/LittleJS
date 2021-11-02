@@ -30,7 +30,7 @@ class ParticleEmitter extends EngineObject
      *  @param {Vector2} position           - World space position of the emitter
      *  @param {Number}  [emitSize=0]       - World space size of the emitter (float for circle diameter, vec2 for rect)
      *  @param {Number}  [emitTime=0]       - How long to stay alive (0 is forever)
-     *  @param {Number}  [emitRate=100]     - How many particles per second to spawn
+     *  @param {Number}  [emitRate=100]     - How many particles per second to spawn, does not emit if 0
      *  @param {Number}  [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
      *  @param {Number}  [tileIndex=-1]     - Index into tile sheet, if <0 no texture is applied
      *  @param {Number}  [tileSize=defaultTileSize]     - Tile size for particles
@@ -91,7 +91,7 @@ class ParticleEmitter extends EngineObject
         this.emitSize = emitSize
         /** @property {Number} - How long to stay alive (0 is forever) */
         this.emitTime = emitTime;
-        /** @property {Number} - How many particles per second to spawn */
+        /** @property {Number} - How many particles per second to spawn, does not emit if 0 */
         this.emitRate = emitRate;
         /** @property {Number} - Local angle to apply velocity to particles from emitter */
         this.emitConeAngle = emitConeAngle;
