@@ -30,8 +30,9 @@ class EngineObject
      *  @param {Vector2} [tileSize=defaultTileSize] - Size of tile in source pixels
      *  @param {Number}  [angle=0] - Angle to rotate the object
      *  @param {Color}   [color] - Color to apply to tile when rendered
+     *  @param {Number}  [renderOrder=0] - Objects sorted by renderOrder before being rendered
      */
-    constructor(pos=vec2(), size=defaultObjectSize, tileIndex=-1, tileSize=defaultTileSize, angle=0, color)
+    constructor(pos=vec2(), size=defaultObjectSize, tileIndex=-1, tileSize=defaultTileSize, angle=0, color, renderOrder=0)
     {
         // set passed in params
         ASSERT(pos && pos.x != undefined && size.x != undefined); // ensure pos and size are vec2s
@@ -67,7 +68,7 @@ class EngineObject
         /** @property {Number} [gravityScale=1] - How much to scale gravity by for this object */
         this.gravityScale = 1;
         /** @property {Number} [renderOrder=0] - Objects are sorted by render order */
-        this.renderOrder = 0;
+        this.renderOrder = renderOrder;
 
         // init other internal object stuff
         this.spawnTime = time;

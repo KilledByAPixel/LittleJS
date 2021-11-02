@@ -84,7 +84,7 @@ class ParticleEmitter extends EngineObject
         renderOrder = additive ? 1e9 : 0
     )
     {
-        super(pos, new Vector2, tileIndex, tileSize);
+        super(pos, new Vector2, tileIndex, tileSize, 0, undefined, renderOrder);
 
         // emitter settings
         /** @property {Number} - World space size of the emitter (float for circle diameter, vec2 for rect) */
@@ -135,8 +135,6 @@ class ParticleEmitter extends EngineObject
         this.collideTiles      = collideTiles;
         /** @property {Number} - Should particles use addtive blend */
         this.additive          = additive;
-        /** @property {Number} - Render order for particles (additive is above other stuff by default) */
-        this.renderOrder       = renderOrder;
         /** @property {Number} - If set the partile is drawn as a trail, stretched in the drection of velocity */
         this.trailScale        = 0;
 

@@ -1560,8 +1560,9 @@ class EngineObject
      *  @param {Vector2} [tileSize=defaultTileSize] - Size of tile in source pixels
      *  @param {Number}  [angle=0] - Angle to rotate the object
      *  @param {Color}   [color] - Color to apply to tile when rendered
+     *  @param {Number}  [renderOrder=0] - Objects sorted by renderOrder before being rendered
      */
-    constructor(pos=vec2(), size=defaultObjectSize, tileIndex=-1, tileSize=defaultTileSize, angle=0, color)
+    constructor(pos=vec2(), size=defaultObjectSize, tileIndex=-1, tileSize=defaultTileSize, angle=0, color, renderOrder=0)
     {
         // set passed in params
         ASSERT(pos && pos.x != undefined && size.x != undefined); // ensure pos and size are vec2s
@@ -1597,7 +1598,7 @@ class EngineObject
         /** @property {Number} [gravityScale=1] - How much to scale gravity by for this object */
         this.gravityScale = 1;
         /** @property {Number} [renderOrder=0] - Objects are sorted by render order */
-        this.renderOrder = 0;
+        this.renderOrder = renderOrder;
 
         // init other internal object stuff
         this.spawnTime = time;
@@ -2999,12 +3000,10 @@ class TileLayer extends EngineObject
      *  @param {Vector2} [tileSize=defaultTileSize]  - Size of tiles in source pixels
      *  @param {Vector2} [scale=new Vector2(1,1)]    - How much to scale this layer when rendered
      *  @param {Number}  [renderOrder=0]             - Objects sorted by renderOrder before being rendered
-     *  @param {Boolean} [compositeGLBeforeRender=1] - If using WebGL and not glOverlay, composites the WebGL cache before drawing
      */
-    constructor(pos, size=tileCollisionSize, tileSize=defaultTileSize, scale=vec2(1), renderOrder=0, compositeGLBeforeRender=1)
+    constructor(pos, size=tileCollisionSize, tileSize=defaultTileSize, scale=vec2(1), renderOrder=0)
     {
-        super(pos, size, -1, tileSize);
-        this.renderOrder = renderOrder;
+        super(pos, size, -1, tileSize, 0, undefined, renderOrder);
 
         /** @property {HTMLCanvasElement} - The canvas used by this tile layer */
         this.canvas = tileLayerCanvasCache.length ? tileLayerCanvasCache.pop() : document.createElement('canvas');
@@ -3012,8 +3011,8 @@ class TileLayer extends EngineObject
         this.context = this.canvas.getContext('2d');
         /** @property {Vector2} - How much to scale this layer when rendered */
         this.scale = scale;
-        /** @property {Boolean} - If using WebGL and not glOverlay, composites the WebGL cache before drawing */
-        this.compositeGLBeforeRender = compositeGLBeforeRender;
+        /** @property {Boolean} [isOverlay=0] - If true this layer will render to overlay canvas and appear above all objects */
+        this.isOverlay;
 
         // init tile data
         this.data = [];
@@ -3057,11 +3056,11 @@ class TileLayer extends EngineObject
         ASSERT(mainContext != this.context); // must call redrawEnd() after drawing tiles
 
         // flush and copy gl canvas because tile canvas does not use webgl
-        glEnable && !glOverlay && this.compositeGLBeforeRender && glCopyToContext(mainContext);
+        glEnable && !glOverlay && !this.isOverlay && glCopyToContext(mainContext);
         
         // draw the entire cached level onto the main canvas
         const pos = worldToScreen(this.pos.add(vec2(0,this.size.y*this.scale.y)));
-        mainContext.drawImage
+        (this.isOverlay ? overlayContext : mainContext).drawImage
         (
             this.canvas, pos.x, pos.y,
             cameraScale*this.size.x*this.scale.x, cameraScale*this.size.y*this.scale.y
@@ -3279,7 +3278,7 @@ class ParticleEmitter extends EngineObject
         renderOrder = additive ? 1e9 : 0
     )
     {
-        super(pos, new Vector2, tileIndex, tileSize);
+        super(pos, new Vector2, tileIndex, tileSize, 0, undefined, renderOrder);
 
         // emitter settings
         /** @property {Number} - World space size of the emitter (float for circle diameter, vec2 for rect) */
@@ -3330,8 +3329,6 @@ class ParticleEmitter extends EngineObject
         this.collideTiles      = collideTiles;
         /** @property {Number} - Should particles use addtive blend */
         this.additive          = additive;
-        /** @property {Number} - Render order for particles (additive is above other stuff by default) */
-        this.renderOrder       = renderOrder;
         /** @property {Number} - If set the partile is drawn as a trail, stretched in the drection of velocity */
         this.trailScale        = 0;
 

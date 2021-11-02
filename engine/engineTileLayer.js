@@ -160,12 +160,10 @@ class TileLayer extends EngineObject
      *  @param {Vector2} [tileSize=defaultTileSize]  - Size of tiles in source pixels
      *  @param {Vector2} [scale=new Vector2(1,1)]    - How much to scale this layer when rendered
      *  @param {Number}  [renderOrder=0]             - Objects sorted by renderOrder before being rendered
-     *  @param {Boolean} [compositeGLBeforeRender=1] - If using WebGL and not glOverlay, composites the WebGL cache before drawing
      */
-    constructor(pos, size=tileCollisionSize, tileSize=defaultTileSize, scale=vec2(1), renderOrder=0, compositeGLBeforeRender=1)
+    constructor(pos, size=tileCollisionSize, tileSize=defaultTileSize, scale=vec2(1), renderOrder=0)
     {
-        super(pos, size, -1, tileSize);
-        this.renderOrder = renderOrder;
+        super(pos, size, -1, tileSize, 0, undefined, renderOrder);
 
         /** @property {HTMLCanvasElement} - The canvas used by this tile layer */
         this.canvas = tileLayerCanvasCache.length ? tileLayerCanvasCache.pop() : document.createElement('canvas');
@@ -173,8 +171,8 @@ class TileLayer extends EngineObject
         this.context = this.canvas.getContext('2d');
         /** @property {Vector2} - How much to scale this layer when rendered */
         this.scale = scale;
-        /** @property {Boolean} - If using WebGL and not glOverlay, composites the WebGL cache before drawing */
-        this.compositeGLBeforeRender = compositeGLBeforeRender;
+        /** @property {Boolean} [isOverlay=0] - If true this layer will render to overlay canvas and appear above all objects */
+        this.isOverlay;
 
         // init tile data
         this.data = [];
@@ -218,11 +216,11 @@ class TileLayer extends EngineObject
         ASSERT(mainContext != this.context); // must call redrawEnd() after drawing tiles
 
         // flush and copy gl canvas because tile canvas does not use webgl
-        glEnable && !glOverlay && this.compositeGLBeforeRender && glCopyToContext(mainContext);
+        glEnable && !glOverlay && !this.isOverlay && glCopyToContext(mainContext);
         
         // draw the entire cached level onto the main canvas
         const pos = worldToScreen(this.pos.add(vec2(0,this.size.y*this.scale.y)));
-        mainContext.drawImage
+        (this.isOverlay ? overlayContext : mainContext).drawImage
         (
             this.canvas, pos.x, pos.y,
             cameraScale*this.size.x*this.scale.x, cameraScale*this.size.y*this.scale.y
