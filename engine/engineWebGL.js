@@ -27,7 +27,7 @@ let glContext;
 let glTileTexture;
 
 // WebGL internal variables not exposed to documentation
-let glActiveTexture, glShader, glPositionData, glColorData, glBatchCount, glDirty, glAdditive;
+let glActiveTexture, glShader, glPositionData, glColorData, glBatchCount, glBatchAdditive, glDirty, glAdditive;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -101,14 +101,8 @@ function glSetBlendMode(additive)
 {
     if (!glEnable) return;
         
-    if (additive != glAdditive)
-        glFlush();
-
     // setup blending
     glAdditive = additive;
-    const destBlend = additive ? gl_ONE : gl_ONE_MINUS_SRC_ALPHA;
-    glContext.blendFuncSeparate(gl_SRC_ALPHA, destBlend, gl_ONE, destBlend);
-    glContext.enable(gl_BLEND);
 }
 
 /** Set the WebGl texture, not normally necessary unless multiple tile sheets are used
@@ -238,11 +232,16 @@ function glFlush()
 {
     if (!glEnable || !glBatchCount) return;
 
+    const destBlend = glBatchAdditive ? gl_ONE : gl_ONE_MINUS_SRC_ALPHA;
+    glContext.blendFuncSeparate(gl_SRC_ALPHA, destBlend, gl_ONE, destBlend);
+    glContext.enable(gl_BLEND);
+
     // draw all the sprites in the batch and reset the buffer
     glContext.bufferSubData(gl_ARRAY_BUFFER, 0, 
         glPositionData.subarray(0, glBatchCount * gl_VERTICES_PER_QUAD * gl_INDICIES_PER_VERT));
     glContext.drawArrays(gl_TRIANGLES, 0, glBatchCount * gl_VERTICES_PER_QUAD);
     glBatchCount = 0;
+    glBatchAdditive = glAdditive;
 }
 
 /** Draw any sprites still in the buffer, copy to main canvas and clear
@@ -278,9 +277,9 @@ function glCopyToContext(context, forceDraw)
 function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgba=0xffffffff, rgbaAdditive=0)
 {
     if (!glEnable) return;
-    
-    // flush if there is no room for more verts
-    if (glBatchCount == gl_MAX_BATCH)
+
+    // flush if there is no room for more verts or if different blend mode
+    if (glBatchCount == gl_MAX_BATCH || glBatchAdditive != glAdditive)
         glFlush();
         
     // setup 2 triangles to form a quad
