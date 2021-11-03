@@ -730,7 +730,7 @@ const medalDisplayIconSize = 80;
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.8';
+const engineVersion = '1.1.9';
 
 /** Frames per second to update objects
  *  @default */

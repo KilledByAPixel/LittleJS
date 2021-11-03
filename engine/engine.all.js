@@ -3878,7 +3878,7 @@ gl_VERTEX_BYTE_STRIDE = 4 + (4 * 2) * 3 + (4) * 2; // float + vec2 * 3 + (char *
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.8';
+const engineVersion = '1.1.9';
 
 /** Frames per second to update objects
  *  @default */
