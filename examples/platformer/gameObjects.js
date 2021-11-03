@@ -66,7 +66,7 @@ class Crate extends GameObject
 {
     constructor(pos, typeOverride) 
     { 
-        super(pos, defaultObjectSize, 2, vec2(16), (randInt(4))*PI/2);
+        super(pos, objectDefaultSize, 2, vec2(16), (randInt(4))*PI/2);
 
         this.color = (new Color).setHSLA(rand(),1,.8);
         this.health = 5;

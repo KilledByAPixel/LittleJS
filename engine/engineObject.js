@@ -25,14 +25,14 @@ class EngineObject
 {
     /** Create an engine object and adds it to the list of objects
      *  @param {Vector2} [position=new Vector2(0,0)] - World space position of the object
-     *  @param {Vector2} [size=defaultObjectSize] - World space size of the object
+     *  @param {Vector2} [size=objectDefaultSize] - World space size of the object
      *  @param {Number}  [tileIndex=-1] - Tile to use to render object, untextured if -1
-     *  @param {Vector2} [tileSize=defaultTileSize] - Size of tile in source pixels
+     *  @param {Vector2} [tileSize=tileSizeDefault] - Size of tile in source pixels
      *  @param {Number}  [angle=0] - Angle to rotate the object
      *  @param {Color}   [color] - Color to apply to tile when rendered
      *  @param {Number}  [renderOrder=0] - Objects sorted by renderOrder before being rendered
      */
-    constructor(pos=vec2(), size=defaultObjectSize, tileIndex=-1, tileSize=defaultTileSize, angle=0, color, renderOrder=0)
+    constructor(pos=vec2(), size=objectDefaultSize, tileIndex=-1, tileSize=tileSizeDefault, angle=0, color, renderOrder=0)
     {
         // set passed in params
         ASSERT(pos && pos.x != undefined && size.x != undefined); // ensure pos and size are vec2s
@@ -55,16 +55,16 @@ class EngineObject
         this.additiveColor;
 
         // set object defaults
-        /** @property {Number} [mass=defaultObjectMass] - How heavy the object is */
-        this.mass         = defaultObjectMass;
-        /** @property {Number} [damping=defaultObjectDamping] - How much to slow down velocity each frame (0-1) */
-        this.damping      = defaultObjectDamping;
-        /** @property {Number} [angleDamping=defaultObjectAngleDamping] - How much to slow down rotation each frame (0-1) */
-        this.angleDamping = defaultObjectAngleDamping;
-        /** @property {Number} [elasticity=defaultObjectElasticity] - How bouncy the object is when colliding (0-1) */
-        this.elasticity   = defaultObjectElasticity;
-        /** @property {Number} [friction=defaultObjectFriction] - How much friction to apply when sliding (0-1) */
-        this.friction     = defaultObjectFriction;
+        /** @property {Number} [mass=objectDefaultMass] - How heavy the object is */
+        this.mass         = objectDefaultMass;
+        /** @property {Number} [damping=objectDefaultDamping] - How much to slow down velocity each frame (0-1) */
+        this.damping      = objectDefaultDamping;
+        /** @property {Number} [angleDamping=objectDefaultAngleDamping] - How much to slow down rotation each frame (0-1) */
+        this.angleDamping = objectDefaultAngleDamping;
+        /** @property {Number} [elasticity=objectDefaultElasticity] - How bouncy the object is when colliding (0-1) */
+        this.elasticity   = objectDefaultElasticity;
+        /** @property {Number} [friction=objectDefaultFriction] - How much friction to apply when sliding (0-1) */
+        this.friction     = objectDefaultFriction;
         /** @property {Number} [gravityScale=1] - How much to scale gravity by for this object */
         this.gravityScale = 1;
         /** @property {Number} [renderOrder=0] - Objects are sorted by render order */
@@ -93,8 +93,8 @@ class EngineObject
         }
 
         // limit max speed to prevent missing collisions
-        this.velocity.x = clamp(this.velocity.x, maxObjectSpeed, -maxObjectSpeed);
-        this.velocity.y = clamp(this.velocity.y, maxObjectSpeed, -maxObjectSpeed);
+        this.velocity.x = clamp(this.velocity.x, objectMaxSpeed, -objectMaxSpeed);
+        this.velocity.y = clamp(this.velocity.y, objectMaxSpeed, -objectMaxSpeed);
 
         // apply physics
         const oldPos = this.pos.copy();

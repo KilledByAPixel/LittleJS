@@ -23,10 +23,10 @@ class Sound
 {
     /** Create a sound object and cache the zzfx samples for later use
      *  @param {Array}  zzfxSound - Array of zzfx parameters, ex. [.5,.5]
-     *  @param {Number} [range=defaultSoundRange] - World space max range of sound, will not play if camera is farther away
-     *  @param {Number} [taper=defaultSoundTaper] - At what percentage of range should it start tapering off
+     *  @param {Number} [range=soundDefaultRange] - World space max range of sound, will not play if camera is farther away
+     *  @param {Number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering off
      */
-    constructor(zzfxSound, range=defaultSoundRange, taper=defaultSoundTaper)
+    constructor(zzfxSound, range=soundDefaultRange, taper=soundDefaultTaper)
     {
         if (!soundEnable) return;
 
@@ -157,7 +157,7 @@ function playAudioFile(url, volume=1, loop=1)
     if (!soundEnable) return;
 
     const audio = new Audio(url);
-    audio.volume = audioVolume * volume;
+    audio.volume = soundVolume * volume;
     audio.loop = loop;
     audio.play();
     return audio;
@@ -182,7 +182,7 @@ function speak(text, language='', volume=1, rate=1, pitch=1)
     // build utterance and speak
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = language;
-    utterance.volume = 2*volume*audioVolume;
+    utterance.volume = 2*volume*soundVolume;
     utterance.rate = rate;
     utterance.pitch = pitch;
     speechSynthesis.speak(utterance);
@@ -235,7 +235,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0)
     // create pan and gain nodes
     source
         .connect(new StereoPannerNode(audioContext, {'pan':clamp(pan, 1, -1)}))
-        .connect(new GainNode(audioContext, {'gain':audioVolume*volume}))
+        .connect(new GainNode(audioContext, {'gain':soundVolume*volume}))
         .connect(audioContext.destination);
 
     // play and return sound
@@ -303,7 +303,7 @@ function zzfxG
                     1 - tremolo + tremolo*Math.sin(PI2*i/repeatTime) // tremolo
                     : 1) *
                 sign(s)*(abs(s)**shapeCurve) *       // curve 0=square, 2=pointy
-                volume * audioVolume * (                  // envelope
+                volume * soundVolume * (                  // envelope
                 i < attack ? i/attack :                   // attack
                 i < attack + decay ?                      // decay
                 1-((i-attack)/decay)*(1-sustainVolume) :  // decay falloff

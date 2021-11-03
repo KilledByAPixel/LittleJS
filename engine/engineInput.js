@@ -67,7 +67,7 @@ let mouseWheel = 0;
 
 /** Returns true if user is using gamepad (has more recently pressed a gamepad button)
  *  @memberof Input */
-let usingGamepad = 0;
+let isUsingGamepad = 0;
 
 /** Returns true if gamepad button is down
  *  @param {Number} button
@@ -129,7 +129,7 @@ function inputUpdatePost()
 onkeydown = e=>
 {
     if (debug && e.target != document.body) return;
-    e.repeat || (inputData[usingGamepad = 0][remapKeyCode(e.keyCode)] = 3);
+    e.repeat || (inputData[isUsingGamepad = 0][remapKeyCode(e.keyCode)] = 3);
     debug || e.preventDefault();
 }
 onkeyup = e=>
@@ -137,12 +137,12 @@ onkeyup = e=>
     if (debug && e.target != document.body) return;
     inputData[0][remapKeyCode(e.keyCode)] = 4;
 }
-const remapKeyCode = c=> copyWASDToDpad ? c==87?38 : c==83?40 : c==65?37 : c==68?39 : c : c;
+const remapKeyCode = c=> inputWASDEmulateDirection ? c==87?38 : c==83?40 : c==65?37 : c==68?39 : c : c;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Mouse event handlers
 
-onmousedown = e=> {inputData[usingGamepad = 0][e.button] = 3; onmousemove(e); e.button && e.preventDefault();}
+onmousedown = e=> {inputData[isUsingGamepad = 0][e.button] = 3; onmousemove(e); e.button && e.preventDefault();}
 onmouseup   = e=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
 onmousemove = e=>
 {
@@ -190,10 +190,10 @@ function gamepadsUpdate()
             {
                 const button = gamepad.buttons[j];
                 data[j] = button.pressed ? 1 + 2*!gamepadIsDown(j,i) : 4*gamepadIsDown(j,i);
-                usingGamepad |= !i && button.pressed;
+                isUsingGamepad |= !i && button.pressed;
             }
             
-            if (copyGamepadDirectionToStick)
+            if (gamepadDirectionEmulateStick)
             {
                 // copy dpad to left analog stick when pressed
                 const dpad = vec2(gamepadIsDown(15,i) - gamepadIsDown(14,i), gamepadIsDown(12,i) - gamepadIsDown(13,i));
@@ -210,7 +210,7 @@ function gamepadsUpdate()
 /** True if a touch device has been detected
  *  @const {boolean}
  *  @memberof Input */
-const isTouchDevice = touchInputEnable && window.ontouchstart !== undefined;
+const isTouchDevice = inputTouchEnable && window.ontouchstart !== undefined;
 if (isTouchDevice)
 {
     // handle all touch events the same way

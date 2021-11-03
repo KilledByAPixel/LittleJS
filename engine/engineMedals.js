@@ -113,9 +113,9 @@ class Medal
 
         // draw the text
         context.textAlign = 'left';
-        context.font = '3em '+ defaultFont;
+        context.font = '3em '+ fontDefault;
         context.fillText(this.name, x+medalDisplayIconSize+25, y+35);
-        context.font = '1.5em '+ defaultFont;
+        context.font = '1.5em '+ fontDefault;
         context.restore(context.fillText(this.description, x+medalDisplayIconSize+25, y+70));
     }
 
@@ -130,7 +130,7 @@ class Medal
         const context = overlayContext;
         context.textAlign = 'center';
         context.textBaseline = 'middle';
-        context.font = size*.6 + 'px '+ defaultFont;
+        context.font = size*.6 + 'px '+ fontDefault;
         context.fillStyle = '#000';
         if (this.image)
             context.drawImage(this.image, x-size/2, y-size/2, size, size);

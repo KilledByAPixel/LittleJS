@@ -57,14 +57,14 @@ const worldToScreen = (worldPos)=>
  *  @param {Vector2} pos                                - Center of the tile in world space
  *  @param {Vector2} [size=new Vector2(1,1)]            - Size of the tile in world space, width and height
  *  @param {Number}  [tileIndex=-1]                     - Tile index to use, negative is untextured
- *  @param {Vector2} [tileSize=defaultTileSize]         - Tile size in source pixels
+ *  @param {Vector2} [tileSize=tileSizeDefault]         - Tile size in source pixels
  *  @param {Color}   [color=new Color(1,1,1)]           - Color to modulate with
  *  @param {Number}  [angle=0]                          - Angle to rotate by
  *  @param {Boolean} [mirror=0]                         - If true image is flipped along the Y axis
  *  @param {Color}   [additiveColor=new Color(0,0,0,0)] - Additive color to be applied
  *  @param {Boolean} [useWebGL=glEnable]                - Use accelerated WebGL rendering
  *  @memberof Draw */
-function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=defaultTileSize, color=new Color, angle=0, mirror, 
+function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, color=new Color, angle=0, mirror, 
     additiveColor=new Color(0,0,0,0), useWebGL=glEnable)
 {
     showWatermark && ++drawCount;
@@ -128,14 +128,14 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=defaultTileSize, col
  *  @memberof Draw */
 function drawRect(pos, size, color, angle, useWebGL)
 {
-    drawTile(pos, size, -1, defaultTileSize, color, angle, 0, 0, useWebGL);
+    drawTile(pos, size, -1, tileSizeDefault, color, angle, 0, 0, useWebGL);
 }
 
 /** Draw textured tile centered on pos in screen space
  *  @param {Vector2} pos                        - Center of the tile
  *  @param {Vector2} [size=new Vector2(1,1)]    - Size of the tile
  *  @param {Number}  [tileIndex=-1]             - Tile index to use, negative is untextured
- *  @param {Vector2} [tileSize=defaultTileSize] - Tile size in source pixels
+ *  @param {Vector2} [tileSize=tileSizeDefault] - Tile size in source pixels
  *  @param {Color}   [color=new Color]
  *  @param {Number}  [angle=0]
  *  @param {Boolean} [mirror=0]
@@ -156,7 +156,7 @@ function drawTileScreenSpace(pos, size=vec2(1), tileIndex, tileSize, color, angl
  *  @memberof Draw */
 function drawRectScreenSpace(pos, size, color, angle, useWebGL)
 {
-    drawTileSrceenSpace(pos, size, -1, defaultTileSize, color, angle, 0, 0, useWebGL);
+    drawTileSrceenSpace(pos, size, -1, tileSizeDefault, color, angle, 0, 0, useWebGL);
 }
 
 /** Draw colored line between two points
@@ -203,7 +203,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainCont
  *  @param {Color}   [lineColor=new Color(0,0,0)]
  *  @param {String}  [textAlign='center']
  *  @memberof Draw */
-function drawText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=defaultFont)
+function drawText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault)
 {
     pos = worldToScreen(pos);
     overlayContext.font = size*cameraScale + 'px '+ font;

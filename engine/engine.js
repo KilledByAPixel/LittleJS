@@ -22,7 +22,7 @@
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.6';
+const engineVersion = '1.1.8';
 
 /** Frames per second to update objects
  *  @default */
@@ -147,31 +147,28 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             frameTimeBufferMS += deltaSmooth;
         }
 
-        if (fixedWidth)
+        if (fixedSize.x)
         {
             // clear set fixed size
-            mainCanvas.width  = fixedWidth;
-            mainCanvas.height = fixedHeight;
+            mainCanvas.width  = fixedSize.x;
+            mainCanvas.height = fixedSize.y;
             
-            if (fixedFitToWindow)
+            // fit to window by adding space on top or bottom if necessary
+            const aspect = innerWidth / innerHeight;
+            const fixedAspect = mainCanvas.width / mainCanvas.height;
+            mainCanvas.style.width  = overlayCanvas.style.width  = aspect < fixedAspect ? '100%' : '';
+            mainCanvas.style.height = overlayCanvas.style.height = aspect < fixedAspect ? '' : '100%';
+            if (glCanvas)
             {
-                // fit to window by adding space on top or bottom if necessary
-                const aspect = innerWidth / innerHeight;
-                const fixedAspect = fixedWidth / fixedHeight;
-                mainCanvas.style.width  = overlayCanvas.style.width  = aspect < fixedAspect ? '100%' : '';
-                mainCanvas.style.height = overlayCanvas.style.height = aspect < fixedAspect ? '' : '100%';
-                if (glCanvas)
-                {
-                    glCanvas.style.width  = mainCanvas.style.width;
-                    glCanvas.style.height = mainCanvas.style.height;
-                }
+                glCanvas.style.width  = mainCanvas.style.width;
+                glCanvas.style.height = mainCanvas.style.height;
             }
         }
         else
         {
             // clear and set size to same as window
-            mainCanvas.width  = min(innerWidth,  maxWidth);
-            mainCanvas.height = min(innerHeight, maxHeight);
+            mainCanvas.width  = min(innerWidth,  maxSize.x);
+            mainCanvas.height = min(innerHeight, maxSize.y);
         }
         
         // save canvas size and clear overlay canvas

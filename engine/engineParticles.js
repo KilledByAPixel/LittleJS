@@ -33,7 +33,7 @@ class ParticleEmitter extends EngineObject
      *  @param {Number}  [emitRate=100]     - How many particles per second to spawn, does not emit if 0
      *  @param {Number}  [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
      *  @param {Number}  [tileIndex=-1]     - Index into tile sheet, if <0 no texture is applied
-     *  @param {Number}  [tileSize=defaultTileSize]     - Tile size for particles
+     *  @param {Number}  [tileSize=tileSizeDefault]     - Tile size for particles
      *  @param {Color}   [colorStartA=new Color(1,1,1)] - Color at start of life 1, randomized between start colors
      *  @param {Color}   [colorStartB=new Color(1,1,1)] - Color at start of life 2, randomized between start colors
      *  @param {Color}   [colorEndA=new Color(1,1,1,0)] - Color at end of life 1, randomized between end colors
@@ -62,7 +62,7 @@ class ParticleEmitter extends EngineObject
         emitRate = 100,
         emitConeAngle = PI,
         tileIndex = -1,
-        tileSize = defaultTileSize,
+        tileSize = tileSizeDefault,
         colorStartA = new Color,
         colorStartB = new Color,
         colorEndA = new Color(1,1,1,0),
@@ -233,7 +233,7 @@ class Particle extends EngineObject
      * Create a particle with the given settings
      * @param {Vector2} position                   - World space position of the particle
      * @param {Number}  [tileIndex=-1]             - Tile to use to render, untextured if -1
-     * @param {Vector2} [tileSize=defaultTileSize] - Size of tile in source pixels
+     * @param {Vector2} [tileSize=tileSizeDefault] - Size of tile in source pixels
      * @param {Number}  [angle=0]                  - Angle to rotate the particle
      */
     constructor(pos, tileIndex, tileSize, angle) { super(pos, new Vector2, tileIndex, tileSize, angle); }

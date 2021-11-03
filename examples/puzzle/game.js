@@ -42,7 +42,7 @@ const setTile = (pos, data) => level[pos.x + pos.y * levelSize.x] = data;
 function gameInit()
 {
     // setup canvas
-    fixedWidth = 1920, fixedHeight = 1080; // 1080p
+    fixedSize = vec2(1920, 1080); // 1080p
     mainCanvas.style.background = backgroundColor.rgba();
 
     // load high score

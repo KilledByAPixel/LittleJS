@@ -156,12 +156,12 @@ class TileLayer extends EngineObject
 {
     /** Create a tile layer object
      *  @param {Vector2} [position=new Vector2(0,0)] - World space position
-     *  @param {Vector2} [size=defaultObjectSize]    - World space size
-     *  @param {Vector2} [tileSize=defaultTileSize]  - Size of tiles in source pixels
+     *  @param {Vector2} [size=objectDefaultSize]    - World space size
+     *  @param {Vector2} [tileSize=tileSizeDefault]  - Size of tiles in source pixels
      *  @param {Vector2} [scale=new Vector2(1,1)]    - How much to scale this layer when rendered
      *  @param {Number}  [renderOrder=0]             - Objects sorted by renderOrder before being rendered
      */
-    constructor(pos, size=tileCollisionSize, tileSize=defaultTileSize, scale=vec2(1), renderOrder=0)
+    constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1), renderOrder=0)
     {
         super(pos, size, -1, tileSize, 0, undefined, renderOrder);
 
@@ -320,11 +320,11 @@ class TileLayer extends EngineObject
      *  @param {Vector2} pos
      *  @param {Vector2} [size=new Vector2(1,1)]
      *  @param {Number}  [tileIndex=-1]
-     *  @param {Vector2} [tileSize=defaultTileSize]
+     *  @param {Vector2} [tileSize=tileSizeDefault]
      *  @param {Color}   [color=new Color(1,1,1)]
      *  @param {Number}  [angle=0]
      *  @param {Boolean} [mirror=0] */
-    drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=defaultTileSize, color=new Color, angle=0, mirror)
+    drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, color=new Color, angle=0, mirror)
     {
         this.drawCanvas2D(pos, size, angle, mirror, (context)=>
         {

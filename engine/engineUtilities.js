@@ -333,10 +333,10 @@ class Vector2
 class Color
 {
     /** Create a color with the components passed in, white by default
-     *  @param {Number} [r=1] - Red
-     *  @param {Number} [g=1] - Green
-     *  @param {Number} [b=1] - Blue
-     *  @param {Number} [a=1] - Alpha */
+     *  @param {Number} [red=1]
+     *  @param {Number} [green=1]
+     *  @param {Number} [blue=1]
+     *  @param {Number} [alpha=1] */
     constructor(r=1, g=1, b=1, a=1)
     {
         /** @property {Number} - Red */

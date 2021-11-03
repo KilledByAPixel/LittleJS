@@ -899,10 +899,10 @@ class Vector2
 class Color
 {
     /** Create a color with the components passed in, white by default
-     *  @param {Number} [r=1] - Red
-     *  @param {Number} [g=1] - Green
-     *  @param {Number} [b=1] - Blue
-     *  @param {Number} [a=1] - Alpha */
+     *  @param {Number} [red=1]
+     *  @param {Number} [green=1]
+     *  @param {Number} [blue=1]
+     *  @param {Number} [alpha=1] */
     constructor(r=1, g=1, b=1, a=1)
     {
         /** @property {Number} - Red */
@@ -1062,35 +1062,27 @@ class Timer
 ///////////////////////////////////////////////////////////////////////////////
 // Display settings
 
-/** The max width of the canvas, centered if window is larger
+/** The max size of the canvas, centered if window is larger
+ *  @type {Vector2} 
  *  @default
  *  @memberof Settings */
-const maxWidth = 1920;
+const maxSize = vec2(1920, 1200);
 
-/** The max height of the canvas, centered if window is larger
+/** Fixed size of the canvas, if enabled cavnvas size never changes
+ *  @type {Vector2} 
  *  @default
  *  @memberof Settings */
-const maxHeight = 1200; // up to 1080p and 16:10
-
-/** Fixed witdh, if enabled cavnvas size never changes
- *  @default
- *  @memberof Settings */
-let fixedWidth = 0;
-
-/** Fixed height, if enabled cavnvas size never changes
- *  @default
- *  @memberof Settings */
-let fixedHeight = 0;
-
-/** Fit to canvas to window by adding space on top or bottom if necessary
- *  @default
- *  @memberof Settings */
-let fixedFitToWindow = 1;
+let fixedSize = vec2();
 
 /** Default font used for text rendering
  *  @default
  *  @memberof Settings */
-let defaultFont = 'arial';
+let fontDefault = 'arial';
+
+/** Use crisp pixels for pixel art if true
+ *  @default
+ *  @memberof Settings */
+let pixelated = 1;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Tile sheet settings
@@ -1099,17 +1091,12 @@ let defaultFont = 'arial';
  *  @type {Vector2} 
  *  @default
  *  @memberof Settings */
-const defaultTileSize = vec2(16);
+const tileSizeDefault = vec2(16);
 
 /** Prevent tile bleeding from neighbors in pixels
  *  @default
  *  @memberof Settings */
 const tileBleedShrinkFix = .3;
-
-/** Use crisp pixels for pixel art if true
- *  @default
- *  @memberof Settings */
-let pixelated = 1;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Object settings
@@ -1118,37 +1105,37 @@ let pixelated = 1;
  *  @type {Vector2} 
  *  @default
  *  @memberof Settings */
-const defaultObjectSize = vec2(1);
+const objectDefaultSize = vec2(1);
 
 /** Default object mass for collison calcuations (how heavy objects are)
  *  @default
  *  @memberof Settings */
-const defaultObjectMass = 1;
+const objectDefaultMass = 1;
 
 /** How much to slow velocity by each frame (0-1)
  *  @default
  *  @memberof Settings */
-const defaultObjectDamping = .99;
+const objectDefaultDamping = .99;
 
 /** How much to slow angular velocity each frame (0-1)
  *  @default
  *  @memberof Settings */
-const defaultObjectAngleDamping = .99;
+const objectDefaultAngleDamping = .99;
 
 /** How much to bounce when a collision occurs (0-1)
  *  @default
  *  @memberof Settings */
-const defaultObjectElasticity = 0;
+const objectDefaultElasticity = 0;
 
 /** How much to slow when touching (0-1)
  *  @default
  *  @memberof Settings */
-const defaultObjectFriction = .8;
+const objectDefaultFriction = .8;
 
 /** Clamp max speed to avoid fast objects missing collisions
  *  @default
  *  @memberof Settings */
-const maxObjectSpeed = 1;
+const objectMaxSpeed = 1;
 
 /** How much gravity to apply to objects along the Y axis, negative is down
  *  @default
@@ -1167,7 +1154,7 @@ let cameraPos = vec2();
 /** Scale of camera in world space
  *  @default
  *  @memberof Settings */
-let cameraScale = max(defaultTileSize.x, defaultTileSize.y);
+let cameraScale = max(tileSizeDefault.x, tileSizeDefault.y);
 
 ///////////////////////////////////////////////////////////////////////////////
 // WebGL settings
@@ -1190,43 +1177,43 @@ let glOverlay = 1;
  *  @memberof Settings */
 const gamepadsEnable = 1;
 
+/** If true, the dpad input is also routed to the left analog stick (for better accessability)
+ *  @default
+ *  @memberof Settings */
+const gamepadDirectionEmulateStick = 1;
+
 /** If true touch input is routed to mouse functions
  *  @default
  *  @memberof Settings */
-const touchInputEnable = 1;
-
-/** If true, the dpad also routes input to the analog stick (for better accessability)
- *  @default
- *  @memberof Settings */
-const copyGamepadDirectionToStick = 1;
+const inputTouchEnable = 1;
 
 /** If true the WASD keys are also routed to the direction keys (for better accessability)
  *  @default
  *  @memberof Settings */
-const copyWASDToDpad = 1;
+const inputWASDEmulateDirection = 1;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Audio settings
+
+/** Volume scale to apply to all sound, music and speech
+ *  @default
+ *  @memberof Settings */
+let soundVolume = .5;
 
 /** All audio code can be disabled and removed from build
  *  @default
  *  @memberof Settings */
 const soundEnable = 1;
 
-/** Volume scale to apply to all sound, music and speech
- *  @default
- *  @memberof Settings */
-let audioVolume = .5;
-
 /** Default range where sound no longer plays
  *  @default
  *  @memberof Settings */
-const defaultSoundRange = 30;
+const soundDefaultRange = 30;
 
 /** Default range percent to start tapering off sound (0-1)
  *  @default
  *  @memberof Settings */
-const defaultSoundTaper = .7;
+const soundDefaultTaper = .7;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Medals settings
@@ -1282,14 +1269,14 @@ class EngineObject
 {
     /** Create an engine object and adds it to the list of objects
      *  @param {Vector2} [position=new Vector2(0,0)] - World space position of the object
-     *  @param {Vector2} [size=defaultObjectSize] - World space size of the object
+     *  @param {Vector2} [size=objectDefaultSize] - World space size of the object
      *  @param {Number}  [tileIndex=-1] - Tile to use to render object, untextured if -1
-     *  @param {Vector2} [tileSize=defaultTileSize] - Size of tile in source pixels
+     *  @param {Vector2} [tileSize=tileSizeDefault] - Size of tile in source pixels
      *  @param {Number}  [angle=0] - Angle to rotate the object
      *  @param {Color}   [color] - Color to apply to tile when rendered
      *  @param {Number}  [renderOrder=0] - Objects sorted by renderOrder before being rendered
      */
-    constructor(pos=vec2(), size=defaultObjectSize, tileIndex=-1, tileSize=defaultTileSize, angle=0, color, renderOrder=0)
+    constructor(pos=vec2(), size=objectDefaultSize, tileIndex=-1, tileSize=tileSizeDefault, angle=0, color, renderOrder=0)
     {
         // set passed in params
         ASSERT(pos && pos.x != undefined && size.x != undefined); // ensure pos and size are vec2s
@@ -1312,16 +1299,16 @@ class EngineObject
         this.additiveColor;
 
         // set object defaults
-        /** @property {Number} [mass=defaultObjectMass] - How heavy the object is */
-        this.mass         = defaultObjectMass;
-        /** @property {Number} [damping=defaultObjectDamping] - How much to slow down velocity each frame (0-1) */
-        this.damping      = defaultObjectDamping;
-        /** @property {Number} [angleDamping=defaultObjectAngleDamping] - How much to slow down rotation each frame (0-1) */
-        this.angleDamping = defaultObjectAngleDamping;
-        /** @property {Number} [elasticity=defaultObjectElasticity] - How bouncy the object is when colliding (0-1) */
-        this.elasticity   = defaultObjectElasticity;
-        /** @property {Number} [friction=defaultObjectFriction] - How much friction to apply when sliding (0-1) */
-        this.friction     = defaultObjectFriction;
+        /** @property {Number} [mass=objectDefaultMass] - How heavy the object is */
+        this.mass         = objectDefaultMass;
+        /** @property {Number} [damping=objectDefaultDamping] - How much to slow down velocity each frame (0-1) */
+        this.damping      = objectDefaultDamping;
+        /** @property {Number} [angleDamping=objectDefaultAngleDamping] - How much to slow down rotation each frame (0-1) */
+        this.angleDamping = objectDefaultAngleDamping;
+        /** @property {Number} [elasticity=objectDefaultElasticity] - How bouncy the object is when colliding (0-1) */
+        this.elasticity   = objectDefaultElasticity;
+        /** @property {Number} [friction=objectDefaultFriction] - How much friction to apply when sliding (0-1) */
+        this.friction     = objectDefaultFriction;
         /** @property {Number} [gravityScale=1] - How much to scale gravity by for this object */
         this.gravityScale = 1;
         /** @property {Number} [renderOrder=0] - Objects are sorted by render order */
@@ -1350,8 +1337,8 @@ class EngineObject
         }
 
         // limit max speed to prevent missing collisions
-        this.velocity.x = clamp(this.velocity.x, maxObjectSpeed, -maxObjectSpeed);
-        this.velocity.y = clamp(this.velocity.y, maxObjectSpeed, -maxObjectSpeed);
+        this.velocity.x = clamp(this.velocity.x, objectMaxSpeed, -objectMaxSpeed);
+        this.velocity.y = clamp(this.velocity.y, objectMaxSpeed, -objectMaxSpeed);
 
         // apply physics
         const oldPos = this.pos.copy();
@@ -1673,14 +1660,14 @@ const worldToScreen = (worldPos)=>
  *  @param {Vector2} pos                                - Center of the tile in world space
  *  @param {Vector2} [size=new Vector2(1,1)]            - Size of the tile in world space, width and height
  *  @param {Number}  [tileIndex=-1]                     - Tile index to use, negative is untextured
- *  @param {Vector2} [tileSize=defaultTileSize]         - Tile size in source pixels
+ *  @param {Vector2} [tileSize=tileSizeDefault]         - Tile size in source pixels
  *  @param {Color}   [color=new Color(1,1,1)]           - Color to modulate with
  *  @param {Number}  [angle=0]                          - Angle to rotate by
  *  @param {Boolean} [mirror=0]                         - If true image is flipped along the Y axis
  *  @param {Color}   [additiveColor=new Color(0,0,0,0)] - Additive color to be applied
  *  @param {Boolean} [useWebGL=glEnable]                - Use accelerated WebGL rendering
  *  @memberof Draw */
-function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=defaultTileSize, color=new Color, angle=0, mirror, 
+function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, color=new Color, angle=0, mirror, 
     additiveColor=new Color(0,0,0,0), useWebGL=glEnable)
 {
     showWatermark && ++drawCount;
@@ -1744,14 +1731,14 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=defaultTileSize, col
  *  @memberof Draw */
 function drawRect(pos, size, color, angle, useWebGL)
 {
-    drawTile(pos, size, -1, defaultTileSize, color, angle, 0, 0, useWebGL);
+    drawTile(pos, size, -1, tileSizeDefault, color, angle, 0, 0, useWebGL);
 }
 
 /** Draw textured tile centered on pos in screen space
  *  @param {Vector2} pos                        - Center of the tile
  *  @param {Vector2} [size=new Vector2(1,1)]    - Size of the tile
  *  @param {Number}  [tileIndex=-1]             - Tile index to use, negative is untextured
- *  @param {Vector2} [tileSize=defaultTileSize] - Tile size in source pixels
+ *  @param {Vector2} [tileSize=tileSizeDefault] - Tile size in source pixels
  *  @param {Color}   [color=new Color]
  *  @param {Number}  [angle=0]
  *  @param {Boolean} [mirror=0]
@@ -1772,7 +1759,7 @@ function drawTileScreenSpace(pos, size=vec2(1), tileIndex, tileSize, color, angl
  *  @memberof Draw */
 function drawRectScreenSpace(pos, size, color, angle, useWebGL)
 {
-    drawTileSrceenSpace(pos, size, -1, defaultTileSize, color, angle, 0, 0, useWebGL);
+    drawTileSrceenSpace(pos, size, -1, tileSizeDefault, color, angle, 0, 0, useWebGL);
 }
 
 /** Draw colored line between two points
@@ -1819,7 +1806,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainCont
  *  @param {Color}   [lineColor=new Color(0,0,0)]
  *  @param {String}  [textAlign='center']
  *  @memberof Draw */
-function drawText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=defaultFont)
+function drawText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault)
 {
     pos = worldToScreen(pos);
     overlayContext.font = size*cameraScale + 'px '+ font;
@@ -1943,7 +1930,7 @@ let mouseWheel = 0;
 
 /** Returns true if user is using gamepad (has more recently pressed a gamepad button)
  *  @memberof Input */
-let usingGamepad = 0;
+let isUsingGamepad = 0;
 
 /** Returns true if gamepad button is down
  *  @param {Number} button
@@ -2005,7 +1992,7 @@ function inputUpdatePost()
 onkeydown = e=>
 {
     if (debug && e.target != document.body) return;
-    e.repeat || (inputData[usingGamepad = 0][remapKeyCode(e.keyCode)] = 3);
+    e.repeat || (inputData[isUsingGamepad = 0][remapKeyCode(e.keyCode)] = 3);
     debug || e.preventDefault();
 }
 onkeyup = e=>
@@ -2013,12 +2000,12 @@ onkeyup = e=>
     if (debug && e.target != document.body) return;
     inputData[0][remapKeyCode(e.keyCode)] = 4;
 }
-const remapKeyCode = c=> copyWASDToDpad ? c==87?38 : c==83?40 : c==65?37 : c==68?39 : c : c;
+const remapKeyCode = c=> inputWASDEmulateDirection ? c==87?38 : c==83?40 : c==65?37 : c==68?39 : c : c;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Mouse event handlers
 
-onmousedown = e=> {inputData[usingGamepad = 0][e.button] = 3; onmousemove(e); e.button && e.preventDefault();}
+onmousedown = e=> {inputData[isUsingGamepad = 0][e.button] = 3; onmousemove(e); e.button && e.preventDefault();}
 onmouseup   = e=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
 onmousemove = e=>
 {
@@ -2066,10 +2053,10 @@ function gamepadsUpdate()
             {
                 const button = gamepad.buttons[j];
                 data[j] = button.pressed ? 1 + 2*!gamepadIsDown(j,i) : 4*gamepadIsDown(j,i);
-                usingGamepad |= !i && button.pressed;
+                isUsingGamepad |= !i && button.pressed;
             }
             
-            if (copyGamepadDirectionToStick)
+            if (gamepadDirectionEmulateStick)
             {
                 // copy dpad to left analog stick when pressed
                 const dpad = vec2(gamepadIsDown(15,i) - gamepadIsDown(14,i), gamepadIsDown(12,i) - gamepadIsDown(13,i));
@@ -2086,7 +2073,7 @@ function gamepadsUpdate()
 /** True if a touch device has been detected
  *  @const {boolean}
  *  @memberof Input */
-const isTouchDevice = touchInputEnable && window.ontouchstart !== undefined;
+const isTouchDevice = inputTouchEnable && window.ontouchstart !== undefined;
 if (isTouchDevice)
 {
     // handle all touch events the same way
@@ -2141,10 +2128,10 @@ class Sound
 {
     /** Create a sound object and cache the zzfx samples for later use
      *  @param {Array}  zzfxSound - Array of zzfx parameters, ex. [.5,.5]
-     *  @param {Number} [range=defaultSoundRange] - World space max range of sound, will not play if camera is farther away
-     *  @param {Number} [taper=defaultSoundTaper] - At what percentage of range should it start tapering off
+     *  @param {Number} [range=soundDefaultRange] - World space max range of sound, will not play if camera is farther away
+     *  @param {Number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering off
      */
-    constructor(zzfxSound, range=defaultSoundRange, taper=defaultSoundTaper)
+    constructor(zzfxSound, range=soundDefaultRange, taper=soundDefaultTaper)
     {
         if (!soundEnable) return;
 
@@ -2275,7 +2262,7 @@ function playAudioFile(url, volume=1, loop=1)
     if (!soundEnable) return;
 
     const audio = new Audio(url);
-    audio.volume = audioVolume * volume;
+    audio.volume = soundVolume * volume;
     audio.loop = loop;
     audio.play();
     return audio;
@@ -2300,7 +2287,7 @@ function speak(text, language='', volume=1, rate=1, pitch=1)
     // build utterance and speak
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = language;
-    utterance.volume = 2*volume*audioVolume;
+    utterance.volume = 2*volume*soundVolume;
     utterance.rate = rate;
     utterance.pitch = pitch;
     speechSynthesis.speak(utterance);
@@ -2353,7 +2340,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0)
     // create pan and gain nodes
     source
         .connect(new StereoPannerNode(audioContext, {'pan':clamp(pan, 1, -1)}))
-        .connect(new GainNode(audioContext, {'gain':audioVolume*volume}))
+        .connect(new GainNode(audioContext, {'gain':soundVolume*volume}))
         .connect(audioContext.destination);
 
     // play and return sound
@@ -2421,7 +2408,7 @@ function zzfxG
                     1 - tremolo + tremolo*Math.sin(PI2*i/repeatTime) // tremolo
                     : 1) *
                 sign(s)*(abs(s)**shapeCurve) *       // curve 0=square, 2=pointy
-                volume * audioVolume * (                  // envelope
+                volume * soundVolume * (                  // envelope
                 i < attack ? i/attack :                   // attack
                 i < attack + decay ?                      // decay
                 1-((i-attack)/decay)*(1-sustainVolume) :  // decay falloff
@@ -2724,12 +2711,12 @@ class TileLayer extends EngineObject
 {
     /** Create a tile layer object
      *  @param {Vector2} [position=new Vector2(0,0)] - World space position
-     *  @param {Vector2} [size=defaultObjectSize]    - World space size
-     *  @param {Vector2} [tileSize=defaultTileSize]  - Size of tiles in source pixels
+     *  @param {Vector2} [size=objectDefaultSize]    - World space size
+     *  @param {Vector2} [tileSize=tileSizeDefault]  - Size of tiles in source pixels
      *  @param {Vector2} [scale=new Vector2(1,1)]    - How much to scale this layer when rendered
      *  @param {Number}  [renderOrder=0]             - Objects sorted by renderOrder before being rendered
      */
-    constructor(pos, size=tileCollisionSize, tileSize=defaultTileSize, scale=vec2(1), renderOrder=0)
+    constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1), renderOrder=0)
     {
         super(pos, size, -1, tileSize, 0, undefined, renderOrder);
 
@@ -2888,11 +2875,11 @@ class TileLayer extends EngineObject
      *  @param {Vector2} pos
      *  @param {Vector2} [size=new Vector2(1,1)]
      *  @param {Number}  [tileIndex=-1]
-     *  @param {Vector2} [tileSize=defaultTileSize]
+     *  @param {Vector2} [tileSize=tileSizeDefault]
      *  @param {Color}   [color=new Color(1,1,1)]
      *  @param {Number}  [angle=0]
      *  @param {Boolean} [mirror=0] */
-    drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=defaultTileSize, color=new Color, angle=0, mirror)
+    drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, color=new Color, angle=0, mirror)
     {
         this.drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
@@ -2955,7 +2942,7 @@ class ParticleEmitter extends EngineObject
      *  @param {Number}  [emitRate=100]     - How many particles per second to spawn, does not emit if 0
      *  @param {Number}  [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
      *  @param {Number}  [tileIndex=-1]     - Index into tile sheet, if <0 no texture is applied
-     *  @param {Number}  [tileSize=defaultTileSize]     - Tile size for particles
+     *  @param {Number}  [tileSize=tileSizeDefault]     - Tile size for particles
      *  @param {Color}   [colorStartA=new Color(1,1,1)] - Color at start of life 1, randomized between start colors
      *  @param {Color}   [colorStartB=new Color(1,1,1)] - Color at start of life 2, randomized between start colors
      *  @param {Color}   [colorEndA=new Color(1,1,1,0)] - Color at end of life 1, randomized between end colors
@@ -2984,7 +2971,7 @@ class ParticleEmitter extends EngineObject
         emitRate = 100,
         emitConeAngle = PI,
         tileIndex = -1,
-        tileSize = defaultTileSize,
+        tileSize = tileSizeDefault,
         colorStartA = new Color,
         colorStartB = new Color,
         colorEndA = new Color(1,1,1,0),
@@ -3155,7 +3142,7 @@ class Particle extends EngineObject
      * Create a particle with the given settings
      * @param {Vector2} position                   - World space position of the particle
      * @param {Number}  [tileIndex=-1]             - Tile to use to render, untextured if -1
-     * @param {Vector2} [tileSize=defaultTileSize] - Size of tile in source pixels
+     * @param {Vector2} [tileSize=tileSizeDefault] - Size of tile in source pixels
      * @param {Number}  [angle=0]                  - Angle to rotate the particle
      */
     constructor(pos, tileIndex, tileSize, angle) { super(pos, new Vector2, tileIndex, tileSize, angle); }
@@ -3317,9 +3304,9 @@ class Medal
 
         // draw the text
         context.textAlign = 'left';
-        context.font = '3em '+ defaultFont;
+        context.font = '3em '+ fontDefault;
         context.fillText(this.name, x+medalDisplayIconSize+25, y+35);
-        context.font = '1.5em '+ defaultFont;
+        context.font = '1.5em '+ fontDefault;
         context.restore(context.fillText(this.description, x+medalDisplayIconSize+25, y+70));
     }
 
@@ -3334,7 +3321,7 @@ class Medal
         const context = overlayContext;
         context.textAlign = 'center';
         context.textBaseline = 'middle';
-        context.font = size*.6 + 'px '+ defaultFont;
+        context.font = size*.6 + 'px '+ fontDefault;
         context.fillStyle = '#000';
         if (this.image)
             context.drawImage(this.image, x-size/2, y-size/2, size, size);
@@ -3891,7 +3878,7 @@ gl_VERTEX_BYTE_STRIDE = 4 + (4 * 2) * 3 + (4) * 2; // float + vec2 * 3 + (char *
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.6';
+const engineVersion = '1.1.8';
 
 /** Frames per second to update objects
  *  @default */
@@ -4016,31 +4003,28 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             frameTimeBufferMS += deltaSmooth;
         }
 
-        if (fixedWidth)
+        if (fixedSize.x)
         {
             // clear set fixed size
-            mainCanvas.width  = fixedWidth;
-            mainCanvas.height = fixedHeight;
+            mainCanvas.width  = fixedSize.x;
+            mainCanvas.height = fixedSize.y;
             
-            if (fixedFitToWindow)
+            // fit to window by adding space on top or bottom if necessary
+            const aspect = innerWidth / innerHeight;
+            const fixedAspect = mainCanvas.width / mainCanvas.height;
+            mainCanvas.style.width  = overlayCanvas.style.width  = aspect < fixedAspect ? '100%' : '';
+            mainCanvas.style.height = overlayCanvas.style.height = aspect < fixedAspect ? '' : '100%';
+            if (glCanvas)
             {
-                // fit to window by adding space on top or bottom if necessary
-                const aspect = innerWidth / innerHeight;
-                const fixedAspect = fixedWidth / fixedHeight;
-                mainCanvas.style.width  = overlayCanvas.style.width  = aspect < fixedAspect ? '100%' : '';
-                mainCanvas.style.height = overlayCanvas.style.height = aspect < fixedAspect ? '' : '100%';
-                if (glCanvas)
-                {
-                    glCanvas.style.width  = mainCanvas.style.width;
-                    glCanvas.style.height = mainCanvas.style.height;
-                }
+                glCanvas.style.width  = mainCanvas.style.width;
+                glCanvas.style.height = mainCanvas.style.height;
             }
         }
         else
         {
             // clear and set size to same as window
-            mainCanvas.width  = min(innerWidth,  maxWidth);
-            mainCanvas.height = min(innerHeight, maxHeight);
+            mainCanvas.width  = min(innerWidth,  maxSize.x);
+            mainCanvas.height = min(innerHeight, maxSize.y);
         }
         
         // save canvas size and clear overlay canvas
