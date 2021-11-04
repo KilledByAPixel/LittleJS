@@ -1075,7 +1075,7 @@ let fixedSize = vec2();
  *  @memberof Settings */
 let fontDefault = 'arial';
 
-/** Use crisp pixels for pixel art if true
+/** Disables anti aliasing for pixel art if true
  *  @default
  *  @memberof Settings */
 let pixelated = 1;
@@ -3538,7 +3538,7 @@ function glInit()
 
     // create the canvas and tile texture
     glCanvas = document.createElement('canvas');
-    glContext = glCanvas.getContext('webgl', {antialias:!pixelated});
+    glContext = glCanvas.getContext('webgl');
 
     glTileTexture = glCreateTexture(tileImage);
 
@@ -3883,7 +3883,7 @@ gl_VERTEX_BYTE_STRIDE = 4 + (4 * 2) * 3 + (4) * 2; // float + vec2 * 3 + (char *
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.13';
+const engineVersion = '1.1.14';
 
 /** Frames per second to update objects
  *  @default */
@@ -3940,9 +3940,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
         document.body.style = 'margin:0;overflow:hidden;background:#000' +
             ';user-select:none;-webkit-user-select:none;-moz-user-select:none'; // prevent user select
-        mainCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)' +
-            (pixelated ? ';image-rendering:crisp-edges;image-rendering:pixelated' : ''); // pixelated rendering
-
+        mainCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
         mainContext = mainCanvas.getContext('2d');
 
         // init stuff and start engine
@@ -3951,7 +3949,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
         // create overlay canvas for hud to appear above gl canvas
         document.body.appendChild(overlayCanvas = document.createElement('canvas'));
-        overlayCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
+        overlayCanvas.style = mainCanvas.style.cssText;
         overlayContext = overlayCanvas.getContext('2d');
 
         gameInit();

@@ -25,7 +25,7 @@ let fixedSize = vec2();
  *  @memberof Settings */
 let fontDefault = 'arial';
 
-/** Use crisp pixels for pixel art if true
+/** Disables anti aliasing for pixel art if true
  *  @default
  *  @memberof Settings */
 let pixelated = 1;
