@@ -1,17 +1,19 @@
 /** 
- *  LittleJS Audio System
- *  <br> - ZzFX Sound Effects and ZzFXM Music
- *  <br> - Caches sounds and music for fast playback
- *  <br> - Can attenuate and apply stereo panning to sounds
- *  <br> - Ability to play mp3, ogg, and wave files
- *  <br> - Speech synthesis wrapper functions
- *  @namespace Audio
+ * LittleJS Audio System
+ * <br> - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a>
+ * <br> - <a href=https://keithclark.github.io/ZzFXM/>ZzFXM Music</a>
+ * <br> - Caches sounds and music for fast playback
+ * <br> - Can attenuate and apply stereo panning to sounds
+ * <br> - Ability to play mp3, ogg, and wave files
+ * <br> - Speech synthesis wrapper functions
  */
 
 'use strict';
 
 /** 
  * Sound Object - Stores a zzfx sound for later use and can be played positionally
+ * <br>
+ * <br><b><a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a></b>
  * @example
  * // create a sound
  * const sound_example = new Sound([.5,.5]);
@@ -95,6 +97,8 @@ class Sound
 
 /**
  * Music Object - Stores a zzfx music track for later use
+ * <br>
+ * <br><b><a href=https://keithclark.github.io/ZzFXM/>Create music with the ZzFXM tracker.</a></b>
  * @example
  * // create some music
  * const music_example = new Music(
@@ -247,6 +251,8 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0)
 // ZzFXMicro - Zuper Zmall Zound Zynth - v1.1.8 by Frank Force
 
 /** Generate and play a ZzFX sound
+ *  <br>
+ *  <br><b><a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a></b>
  *  @param {Array} zzfxSound - Array of ZzFX parameters, ex. [.5,.5]
  *  @return {Array} - Array of audio samples
  *  @memberof Audio */

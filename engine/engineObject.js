@@ -16,6 +16,14 @@
  * <br> - Objects can have children attached
  * <br> - Parents are updated before children, and set child transform
  * <br> - Call destroy() to get rid of objects
+ * <br>
+ * <br>The physics system used by objects is simple and fast with some caveats...
+ * <br> - Collision uses the axis aligned size, the object's rotation angle is only for rendering
+ * <br> - Objects are guaranteed to not intersect tile collision from physics
+ * <br> - If an object starts or is moved inside tile collision, it will not collide with that tile
+ * <br> - Collision for objects can be set to be solid to block other objects
+ * <br> - Objects may get pushed into overlapping other solid objects, if so they will push away
+ * <br> - Solid objects are more performance intensive and should be used sparingly
  * @example
  * // create an engine object, normally you would first extend the class with your own
  * const pos = vec2(2,3);
@@ -25,12 +33,12 @@ class EngineObject
 {
     /** Create an engine object and adds it to the list of objects
      *  @param {Vector2} [position=new Vector2(0,0)] - World space position of the object
-     *  @param {Vector2} [size=objectDefaultSize] - World space size of the object
-     *  @param {Number}  [tileIndex=-1] - Tile to use to render object, untextured if -1
-     *  @param {Vector2} [tileSize=tileSizeDefault] - Size of tile in source pixels
-     *  @param {Number}  [angle=0] - Angle to rotate the object
-     *  @param {Color}   [color] - Color to apply to tile when rendered
-     *  @param {Number}  [renderOrder=0] - Objects sorted by renderOrder before being rendered
+     *  @param {Vector2} [size=objectDefaultSize]    - World space size of the object
+     *  @param {Number}  [tileIndex=-1]              - Tile to use to render object, untextured if -1
+     *  @param {Vector2} [tileSize=tileSizeDefault]  - Size of tile in source pixels
+     *  @param {Number}  [angle=0]                   - Angle to rotate the object
+     *  @param {Color}   [color]                     - Color to apply to tile when rendered
+     *  @param {Number}  [renderOrder=0]             - Objects sorted by renderOrder before being rendered
      */
     constructor(pos=vec2(), size=objectDefaultSize, tileIndex=-1, tileSize=tileSizeDefault, angle=0, color, renderOrder=0)
     {
@@ -49,25 +57,25 @@ class EngineObject
         this.tileSize = tileSize;
         /** @property {Number}  - Angle to rotate the object */
         this.angle = angle;
-        /** @property {Color}  - Color to apply when rendered */
+        /** @property {Color}   - Color to apply when rendered */
         this.color = color;
-        /** @property {Color}  - Additive color to apply when rendered */
+        /** @property {Color}   - Additive color to apply when rendered */
         this.additiveColor;
 
         // set object defaults
-        /** @property {Number} [mass=objectDefaultMass] - How heavy the object is */
+        /** @property {Number} [mass=objectDefaultMass]                 - How heavy the object is */
         this.mass         = objectDefaultMass;
-        /** @property {Number} [damping=objectDefaultDamping] - How much to slow down velocity each frame (0-1) */
+        /** @property {Number} [damping=objectDefaultDamping]           - How much to slow down velocity each frame (0-1) */
         this.damping      = objectDefaultDamping;
         /** @property {Number} [angleDamping=objectDefaultAngleDamping] - How much to slow down rotation each frame (0-1) */
         this.angleDamping = objectDefaultAngleDamping;
-        /** @property {Number} [elasticity=objectDefaultElasticity] - How bouncy the object is when colliding (0-1) */
+        /** @property {Number} [elasticity=objectDefaultElasticity]     - How bouncy the object is when colliding (0-1) */
         this.elasticity   = objectDefaultElasticity;
-        /** @property {Number} [friction=objectDefaultFriction] - How much friction to apply when sliding (0-1) */
+        /** @property {Number} [friction=objectDefaultFriction]         - How much friction to apply when sliding (0-1) */
         this.friction     = objectDefaultFriction;
-        /** @property {Number} [gravityScale=1] - How much to scale gravity by for this object */
+        /** @property {Number} [gravityScale=1]                         - How much to scale gravity by for this object */
         this.gravityScale = 1;
-        /** @property {Number} [renderOrder=0] - Objects are sorted by render order */
+        /** @property {Number} [renderOrder=0]                          - Objects are sorted by render order */
         this.renderOrder = renderOrder;
 
         // init other internal object stuff
@@ -126,11 +134,11 @@ class EngineObject
             for (const o of engineCollideObjects)
             {
                 // non solid objects don't collide with eachother
-                if (!this.isSolid & !o.isSolid || o.destroyed || o.parent)
+                if (!this.isSolid & !o.isSolid || o.destroyed || o.parent || o == this)
                     continue;
 
                 // check collision
-                if (!isOverlapping(this.pos, this.size, o.pos, o.size) || o == this)
+                if (!isOverlapping(this.pos, this.size, o.pos, o.size))
                     continue;
 
                 // pass collision to objects
@@ -278,19 +286,19 @@ class EngineObject
     
     /** Called to check if a tile collision should be resolved
      *  @param {Number}  tileData - the value of the tile at the position
-     *  @param {Vector2} pos - tile where the collision occured
-     *  @return {Boolean} true if the collision should be resolved */
+     *  @param {Vector2} pos      - tile where the collision occured
+     *  @return {Boolean}         - true if the collision should be resolved */
     collideWithTile(tileData, pos)        { return tileData > 0; }
     
     /** Called to check if a tile raycast hit
      *  @param {Number}  tileData - the value of the tile at the position
-     *  @param {Vector2} pos - tile where the raycast is
-     *  @return {Boolean} true if the raycast should hit */
+     *  @param {Vector2} pos      - tile where the raycast is
+     *  @return {Boolean}         - true if the raycast should hit */
     collideWithTileRaycast(tileData, pos) { return tileData > 0; }
 
     /** Called to check if a tile raycast hit
      *  @param {EngineObject} object - the object to test against
-     *  @return {Boolean} true if the collision should be resolved
+     *  @return {Boolean}            - true if the collision should be resolved
      */
     collideWithObject(o)              { return 1; }
 
@@ -334,8 +342,8 @@ class EngineObject
 
     /** Set how this object collides
      *  @param {boolean} [collideSolidObjects=0] - Does it collide with solid objects
-     *  @param {boolean} [isSolid=0] - Does it collide with and block other objects (expensive in large numbers)
-     *  @param {boolean} [collideTiles=1] - Does it collide with the tile collision */
+     *  @param {boolean} [isSolid=0]             - Does it collide with and block other objects (expensive in large numbers)
+     *  @param {boolean} [collideTiles=1]        - Does it collide with the tile collision */
     setCollision(collideSolidObjects=0, isSolid=0, collideTiles=1)
     {
         ASSERT(collideSolidObjects || !isSolid); // solid objects must be set to collide

@@ -1,9 +1,9 @@
 /** 
- *  LittleJS Medal System
- *  <br> - Tracks and displays medals
- *  <br> - Saves medals to local storage
- *  <br> - Newgrounds and OS13k integration
- *  @namespace Medals
+ * LittleJS Medal System
+ * <br> - Tracks and displays medals
+ * <br> - Saves medals to local storage
+ * <br> - Newgrounds and OS13k integration
+ * @namespace Medals
  */
 
 'use strict';
@@ -27,8 +27,8 @@ let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimer;
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Initialize medals with a save name used for storage
- *  <br> - Checks if medals are unlocked
  *  <br> - Call this after creating all medals
+ *  <br> - Checks if medals are unlocked
  *  @param {String} saveName
  *  @memberof Medals */
 function medalsInit(saveName)
@@ -44,17 +44,20 @@ function medalsInit(saveName)
  * // create a medal
  * const medal_example = new Medal(0, 'Example Medal', 'More info about the medal goes here.', '🎖️');
  * 
+ * // initialize medals
+ * medalsInit('Example Game');
+ * 
  * // unlock the medal
  * medal_example.unlock();
  */
 class Medal
 {
     /** Create an medal object and adds it to the list of medals
-     *  @param {Number} id - The unique identifier of the medal
-     *  @param {String} name - Name of the medal
+     *  @param {Number} id            - The unique identifier of the medal
+     *  @param {String} name          - Name of the medal
      *  @param {String} [description] - Description of the medal
-     *  @param {String} [icon='🏆'] - Icon for the medal
-     *  @param {String} [src] - Image location for the medal
+     *  @param {String} [icon='🏆']  - Icon for the medal
+     *  @param {String} [src]         - Image location for the medal
      */
     constructor(id, name, description='', icon='🏆', src)
     {
@@ -81,7 +84,7 @@ class Medal
             return;
 
         // save the medal
-        ASSERT(medalsSaveName); // game name must be set
+        ASSERT(medalsSaveName); // save name must be set
         localStorage[this.storageKey()] = this.unlocked = 1;
         medalsDisplayQueue.push(this);
 
@@ -182,7 +185,7 @@ function medalsRender()
 class Newgrounds
 {
     /** Create a newgrounds object
-     *  @param {Number} app_id - The newgrounds App ID
+     *  @param {Number} app_id   - The newgrounds App ID
      *  @param {String} [cipher] - The encryption Key (AES-128/Base64) */
     constructor(app_id, cipher)
     {
@@ -235,7 +238,7 @@ class Newgrounds
     unlockMedal(id) { return this.call('Medal.unlock', {'id':id}, 1); }
 
     /** Send message to post score
-     * @param {Number} id - The scoreboard id
+     * @param {Number} id    - The scoreboard id
      * @param {Number} value - The score value */
     postScore(id, value) { return this.call('ScoreBoard.postScore', {'id':id, 'value':value}, 1); }
 
@@ -243,21 +246,21 @@ class Newgrounds
     logView() { return this.call('App.logView', {'host':this.host}, 1); }
 
     /** Get scores from a scoreboard
-     * @param {Number} id - The scoreboard id
-     * @param {String} [user=0] - A user's id or name
+     * @param {Number} id         - The scoreboard id
+     * @param {String} [user=0]   - A user's id or name
      * @param {Number} [social=0] - If true, only social scores will be loaded
-     * @param {Number} [skip=0] - Number of scores to skip before start
+     * @param {Number} [skip=0]   - Number of scores to skip before start
      * @param {Number} [limit=10] - Number of scores to include in the list
-     * @return {Object} - The response JSON object
+     * @return {Object}           - The response JSON object
      */
     getScores(id, user=0, social=0, skip=0, limit=10)
     { return this.call('ScoreBoard.getScores', {'id':id, 'user':user, 'social':social, 'skip':skip, 'limit':limit}); }
 
     /** Send a message to call a component of the Newgrounds API
-     * @param {String}  component - Name of the component
+     * @param {String}  component      - Name of the component
      * @param {Object}  [parameters=0] - Parameters to use for call
-     * @param {Boolean} [async=0] - If true, wait for response before continuing (will cause stall)
-     * @return {Object} - The response JSON object
+     * @param {Boolean} [async=0]      - If true, don't wait for response before continuing (avoid stall)
+     * @return {Object}                - The response JSON object
      */
     call(component, parameters=0, async=0)
     {

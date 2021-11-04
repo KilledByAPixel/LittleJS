@@ -57,7 +57,7 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b %ERRORLEVEL%
 )
 
-rem build the html
+rem build the html, you can add html header and footers here
 echo ^<body^>^<meta charset=utf-8^>^<script^> >> index.html
 type roadroller_%BUILD_FILENAME% >> index.html
 echo ^</script^> >> index.html

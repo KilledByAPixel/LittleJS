@@ -1,12 +1,12 @@
 /** 
- *  LittleJS WebGL Interface
- *  <br> - All webgl used by the engine is wrapped up here
- *  <br> - Can be disabled with glEnable to revert to 2D canvas rendering
- *  <br> - Batches sprite rendering on GPU for incredibly fast performance
- *  <br> - Sprite transform math is done in the shader where possible
- *  <br> - For normal stuff you won't need to call any functions in this file
- *  <br> - For advanced stuff there are helper functions to create shaders, textures, etc
- *  @namespace WebGL
+ * LittleJS WebGL Interface
+ * <br> - All webgl used by the engine is wrapped up here
+ * <br> - For normal stuff you won't need to see or call anything in this file
+ * <br> - For advanced stuff there are helper functions to create shaders, textures, etc
+ * <br> - Can be disabled with glEnable to revert to 2D canvas rendering
+ * <br> - Batches sprite rendering on GPU for incredibly fast performance
+ * <br> - Sprite transform math is done in the shader where possible
+ * @namespace WebGL
  */
 
 'use strict';

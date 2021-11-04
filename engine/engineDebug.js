@@ -1,9 +1,9 @@
 /** 
- *  LittleJS Debug System
- *  <br> - Debug overlay with mouse pick
- *  <br> - Debug primitive rendering
- *  <br> - Save screenshots to disk
- *  @namespace Debug
+ * LittleJS Debug System
+ * <br> - Debug overlay with mouse pick
+ * <br> - Debug primitive rendering
+ * <br> - Save screenshots to disk
+ * @namespace Debug
  */
 
 'use strict';

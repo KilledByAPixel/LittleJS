@@ -1,12 +1,13 @@
 /** 
- *  LittleJS Tile Layer System
- *  <br> - Caches arrays of tiles to offscreen canvas for fast rendering
- *  <br> - Unlimted numbers of layers, allocates canvases as needed
- *  <br> - Interfaces with EngineObject for collision
- *  <br> - Collision layer is separate from visible layers
- *  <br> - Tile layers can be drawn to using their context with canvas2d
- *  <br> - It is recommended to have a visible layer that matches the collision
- *  @namespace TileCollision
+ * LittleJS Tile Layer System
+ * <br> - Caches arrays of tiles to off screen canvas for fast rendering
+ * <br> - Unlimted numbers of layers, allocates canvases as needed
+ * <br> - Interfaces with EngineObject for collision
+ * <br> - Collision layer is separate from visible layers
+ * <br> - It is recommended to have a visible layer that matches the collision
+ * <br> - Tile layers can be drawn to using their context with canvas2d
+ * <br> - Drawn directly to the main canvas without using WebGL
+ * @namespace TileCollision
  */
 
 'use strict';
@@ -121,15 +122,15 @@ const tileLayerCanvasCache = [];
 class TileLayerData
 {
     /** Create a tile layer data object, one for each tile in a TileLayer
-     *  @param {Number}  [tile] - The tile to use, untextured if undefined
-     *  @param {Number}  [direction=0] - Integer direction of tile, in 90 degree increments
-     *  @param {Boolean} [mirror=0] - If the tile should be mirrored along the x axis
+     *  @param {Number}  [tile]                   - The tile to use, untextured if undefined
+     *  @param {Number}  [direction=0]            - Integer direction of tile, in 90 degree increments
+     *  @param {Boolean} [mirror=0]               - If the tile should be mirrored along the x axis
      *  @param {Color}   [color=new Color(1,1,1)] - Color of the tile */
     constructor(tile, direction=0, mirror=0, color=new Color)
     {
-        /** @property {Number} - The tile to use, untextured if undefined */
+        /** @property {Number}  - The tile to use, untextured if undefined */
         this.tile      = tile;
-        /** @property {Number} - Integer direction of tile, in 90 degree increments */
+        /** @property {Number}  - Integer direction of tile, in 90 degree increments */
         this.direction = direction;
         /** @property {Boolean} - If the tile should be mirrored along the x axis */
         this.mirror    = mirror;
@@ -189,8 +190,8 @@ class TileLayer extends EngineObject
     }
     
     /** Set data at a given position in the array 
-     *  @param {Vector2}       position - Local position in array
-     *  @param {TileLayerData} data - Data to set
+     *  @param {Vector2}       position   - Local position in array
+     *  @param {TileLayerData} data       - Data to set
      *  @param {Boolean}       [redraw=0] - Force the tile to redraw if true */
     setData(layerPos, data, redraw)
     {

@@ -22,7 +22,7 @@
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.9';
+const engineVersion = '1.1.10';
 
 /** Frames per second to update objects
  *  @default */
@@ -77,7 +77,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
         // setup html
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
-        document.body.style = 'margin:0;overflow:hidden;background:#000';
+        document.body.style = 'margin:0;overflow:hidden;background:#000' +
+            ';user-select:none;-webkit-user-select:none;-moz-user-select:none'; // prevent user select
         mainCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)' +
             (pixelated ? ';image-rendering:crisp-edges;image-rendering:pixelated' : ''); // pixelated rendering
         mainContext = mainCanvas.getContext('2d');

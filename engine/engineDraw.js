@@ -1,10 +1,23 @@
 /** 
- *  LittleJS Drawing System
- *  <br> - Hybrid with both Canvas2D and WebGL available
- *  <br> - Super fast tile sheet rendering with WebGL
- *  <br> - Can apply rotation, mirror, color and additive color
- *  <br> - Many useful utility functions
- *  @namespace Draw
+ * LittleJS Drawing System
+ * <br> - Hybrid with both Canvas2D and WebGL available
+ * <br> - Super fast tile sheet rendering with WebGL
+ * <br> - Can apply rotation, mirror, color and additive color
+ * <br> - Many useful utility functions
+ * <br>
+ * <br>LittleJS uses a hybrid rendering solution with the best of both Canvas2D and WebGL.
+ * <br>There are 3 canvas/contexts available to draw to...
+ * <br> - mainCanvas - 2D background canvas, non WebGL stuff like tile layers are drawn here.
+ * <br> - glCanvas - Used by the accelerated WebGL batch rendering system.
+ * <br> - overlayCanvas - Another 2D canvas that appears on top of the other 2 canvases.
+ * <br>
+ * <br>The WebGL rendering system is very fast with some caveats...
+ * <br> - The default setup supports only 1 tile sheet, to support more call glCreateTexture and glSetTexture
+ * <br> - Switching blend modes (additive) or textures causes another draw call which is expensive in excess
+ * <br> - Group additive rendering together using renderOrder to mitigate this issue
+ * <br>
+ * <br>The LittleJS rendering solution is intentionally simple, feel free to adjust it for your needs!
+ * @namespace Draw
  */
 
 'use strict';
@@ -78,7 +91,7 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, col
         else
         {
             // calculate uvs and render
-            const cols = tileImage.width / tileSize.x |0;
+            const cols = tileImageSize.x / tileSize.x |0;
             const uvSizeX = tileSize.x * tileImageSizeInverse.x;
             const uvSizeY = tileSize.y * tileImageSizeInverse.y;
             const uvX = (tileIndex%cols)*uvSizeX, uvY = (tileIndex/cols|0)*uvSizeY;
@@ -107,7 +120,7 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, col
             else
             {
                 // calculate uvs and render
-                const cols = tileImage.width / tileSize.x |0;
+                const cols = tileImageSize.x / tileSize.x |0;
                 const sX = (tileIndex%cols)*tileSize.x   + tileBleedShrinkFix;
                 const sY = (tileIndex/cols|0)*tileSize.y + tileBleedShrinkFix;
                 const sWidth  = tileSize.x - 2*tileBleedShrinkFix;

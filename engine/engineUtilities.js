@@ -1,10 +1,10 @@
 /**
- *  LittleJS Utility Classes and Functions
- *  <br> - General purpose math library
- *  <br> - Vector2 - fast, simple, easy 2D vector class
- *  <br> - Color - holds a rgba color with some math functions
- *  <br> - Timer - tracks time automatically
- *  @namespace Utilities
+ * LittleJS Utility Classes and Functions
+ * <br> - General purpose math library
+ * <br> - Vector2 - fast, simple, easy 2D vector class
+ * <br> - Color - holds a rgba color with some math functions
+ * <br> - Timer - tracks time automatically
+ * @namespace Utilities
  */
 
 'use strict';
@@ -296,10 +296,6 @@ class Vector2
     /** Returns a copy of this vector that has been inverted
      * @return {Vector2} */
     invert() { return new Vector2(this.y, -this.x); }
-
-    /** Returns a copy of this vector with the axies flipped
-     * @return {Vector2} */
-    flip() { return new Vector2(this.y, this.x); }
 
     /** Returns a copy of this vector with each axis floored
      * @return {Vector2} */

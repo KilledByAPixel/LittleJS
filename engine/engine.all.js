@@ -1,9 +1,9 @@
 /** 
- *  LittleJS Debug System
- *  <br> - Debug overlay with mouse pick
- *  <br> - Debug primitive rendering
- *  <br> - Save screenshots to disk
- *  @namespace Debug
+ * LittleJS Debug System
+ * <br> - Debug overlay with mouse pick
+ * <br> - Debug primitive rendering
+ * <br> - Save screenshots to disk
+ * @namespace Debug
  */
 
 'use strict';
@@ -565,12 +565,12 @@ const debugParticleSettings =
     ['renderOrder'],
 ];
 /**
- *  LittleJS Utility Classes and Functions
- *  <br> - General purpose math library
- *  <br> - Vector2 - fast, simple, easy 2D vector class
- *  <br> - Color - holds a rgba color with some math functions
- *  <br> - Timer - tracks time automatically
- *  @namespace Utilities
+ * LittleJS Utility Classes and Functions
+ * <br> - General purpose math library
+ * <br> - Vector2 - fast, simple, easy 2D vector class
+ * <br> - Color - holds a rgba color with some math functions
+ * <br> - Timer - tracks time automatically
+ * @namespace Utilities
  */
 
 'use strict';
@@ -863,10 +863,6 @@ class Vector2
      * @return {Vector2} */
     invert() { return new Vector2(this.y, -this.x); }
 
-    /** Returns a copy of this vector with the axies flipped
-     * @return {Vector2} */
-    flip() { return new Vector2(this.y, this.x); }
-
     /** Returns a copy of this vector with each axis floored
      * @return {Vector2} */
     floor() { return new Vector2(Math.floor(this.x), Math.floor(this.y)); }
@@ -1053,8 +1049,8 @@ class Timer
     getPercent() { return this.isSet()? percent(this.time - time, 0, this.setTime) : 0; }
 }
 /**
- *  LittleJS Engine Settings
- *  @namespace Settings
+ * LittleJS Engine Settings
+ * @namespace Settings
  */
 
 'use strict';
@@ -1260,6 +1256,14 @@ const medalDisplayIconSize = 80;
  * <br> - Objects can have children attached
  * <br> - Parents are updated before children, and set child transform
  * <br> - Call destroy() to get rid of objects
+ * <br>
+ * <br>The physics system used by objects is simple and fast with some caveats...
+ * <br> - Collision uses the axis aligned size, the object's rotation angle is only for rendering
+ * <br> - Objects are guaranteed to not intersect tile collision from physics
+ * <br> - If an object starts or is moved inside tile collision, it will not collide with that tile
+ * <br> - Collision for objects can be set to be solid to block other objects
+ * <br> - Objects may get pushed into overlapping other solid objects, if so they will push away
+ * <br> - Solid objects are more performance intensive and should be used sparingly
  * @example
  * // create an engine object, normally you would first extend the class with your own
  * const pos = vec2(2,3);
@@ -1269,12 +1273,12 @@ class EngineObject
 {
     /** Create an engine object and adds it to the list of objects
      *  @param {Vector2} [position=new Vector2(0,0)] - World space position of the object
-     *  @param {Vector2} [size=objectDefaultSize] - World space size of the object
-     *  @param {Number}  [tileIndex=-1] - Tile to use to render object, untextured if -1
-     *  @param {Vector2} [tileSize=tileSizeDefault] - Size of tile in source pixels
-     *  @param {Number}  [angle=0] - Angle to rotate the object
-     *  @param {Color}   [color] - Color to apply to tile when rendered
-     *  @param {Number}  [renderOrder=0] - Objects sorted by renderOrder before being rendered
+     *  @param {Vector2} [size=objectDefaultSize]    - World space size of the object
+     *  @param {Number}  [tileIndex=-1]              - Tile to use to render object, untextured if -1
+     *  @param {Vector2} [tileSize=tileSizeDefault]  - Size of tile in source pixels
+     *  @param {Number}  [angle=0]                   - Angle to rotate the object
+     *  @param {Color}   [color]                     - Color to apply to tile when rendered
+     *  @param {Number}  [renderOrder=0]             - Objects sorted by renderOrder before being rendered
      */
     constructor(pos=vec2(), size=objectDefaultSize, tileIndex=-1, tileSize=tileSizeDefault, angle=0, color, renderOrder=0)
     {
@@ -1293,25 +1297,25 @@ class EngineObject
         this.tileSize = tileSize;
         /** @property {Number}  - Angle to rotate the object */
         this.angle = angle;
-        /** @property {Color}  - Color to apply when rendered */
+        /** @property {Color}   - Color to apply when rendered */
         this.color = color;
-        /** @property {Color}  - Additive color to apply when rendered */
+        /** @property {Color}   - Additive color to apply when rendered */
         this.additiveColor;
 
         // set object defaults
-        /** @property {Number} [mass=objectDefaultMass] - How heavy the object is */
+        /** @property {Number} [mass=objectDefaultMass]                 - How heavy the object is */
         this.mass         = objectDefaultMass;
-        /** @property {Number} [damping=objectDefaultDamping] - How much to slow down velocity each frame (0-1) */
+        /** @property {Number} [damping=objectDefaultDamping]           - How much to slow down velocity each frame (0-1) */
         this.damping      = objectDefaultDamping;
         /** @property {Number} [angleDamping=objectDefaultAngleDamping] - How much to slow down rotation each frame (0-1) */
         this.angleDamping = objectDefaultAngleDamping;
-        /** @property {Number} [elasticity=objectDefaultElasticity] - How bouncy the object is when colliding (0-1) */
+        /** @property {Number} [elasticity=objectDefaultElasticity]     - How bouncy the object is when colliding (0-1) */
         this.elasticity   = objectDefaultElasticity;
-        /** @property {Number} [friction=objectDefaultFriction] - How much friction to apply when sliding (0-1) */
+        /** @property {Number} [friction=objectDefaultFriction]         - How much friction to apply when sliding (0-1) */
         this.friction     = objectDefaultFriction;
-        /** @property {Number} [gravityScale=1] - How much to scale gravity by for this object */
+        /** @property {Number} [gravityScale=1]                         - How much to scale gravity by for this object */
         this.gravityScale = 1;
-        /** @property {Number} [renderOrder=0] - Objects are sorted by render order */
+        /** @property {Number} [renderOrder=0]                          - Objects are sorted by render order */
         this.renderOrder = renderOrder;
 
         // init other internal object stuff
@@ -1370,11 +1374,11 @@ class EngineObject
             for (const o of engineCollideObjects)
             {
                 // non solid objects don't collide with eachother
-                if (!this.isSolid & !o.isSolid || o.destroyed || o.parent)
+                if (!this.isSolid & !o.isSolid || o.destroyed || o.parent || o == this)
                     continue;
 
                 // check collision
-                if (!isOverlapping(this.pos, this.size, o.pos, o.size) || o == this)
+                if (!isOverlapping(this.pos, this.size, o.pos, o.size))
                     continue;
 
                 // pass collision to objects
@@ -1522,19 +1526,19 @@ class EngineObject
     
     /** Called to check if a tile collision should be resolved
      *  @param {Number}  tileData - the value of the tile at the position
-     *  @param {Vector2} pos - tile where the collision occured
-     *  @return {Boolean} true if the collision should be resolved */
+     *  @param {Vector2} pos      - tile where the collision occured
+     *  @return {Boolean}         - true if the collision should be resolved */
     collideWithTile(tileData, pos)        { return tileData > 0; }
     
     /** Called to check if a tile raycast hit
      *  @param {Number}  tileData - the value of the tile at the position
-     *  @param {Vector2} pos - tile where the raycast is
-     *  @return {Boolean} true if the raycast should hit */
+     *  @param {Vector2} pos      - tile where the raycast is
+     *  @return {Boolean}         - true if the raycast should hit */
     collideWithTileRaycast(tileData, pos) { return tileData > 0; }
 
     /** Called to check if a tile raycast hit
      *  @param {EngineObject} object - the object to test against
-     *  @return {Boolean} true if the collision should be resolved
+     *  @return {Boolean}            - true if the collision should be resolved
      */
     collideWithObject(o)              { return 1; }
 
@@ -1578,8 +1582,8 @@ class EngineObject
 
     /** Set how this object collides
      *  @param {boolean} [collideSolidObjects=0] - Does it collide with solid objects
-     *  @param {boolean} [isSolid=0] - Does it collide with and block other objects (expensive in large numbers)
-     *  @param {boolean} [collideTiles=1] - Does it collide with the tile collision */
+     *  @param {boolean} [isSolid=0]             - Does it collide with and block other objects (expensive in large numbers)
+     *  @param {boolean} [collideTiles=1]        - Does it collide with the tile collision */
     setCollision(collideSolidObjects=0, isSolid=0, collideTiles=1)
     {
         ASSERT(collideSolidObjects || !isSolid); // solid objects must be set to collide
@@ -1602,12 +1606,25 @@ class EngineObject
     }
 }
 /** 
- *  LittleJS Drawing System
- *  <br> - Hybrid with both Canvas2D and WebGL available
- *  <br> - Super fast tile sheet rendering with WebGL
- *  <br> - Can apply rotation, mirror, color and additive color
- *  <br> - Many useful utility functions
- *  @namespace Draw
+ * LittleJS Drawing System
+ * <br> - Hybrid with both Canvas2D and WebGL available
+ * <br> - Super fast tile sheet rendering with WebGL
+ * <br> - Can apply rotation, mirror, color and additive color
+ * <br> - Many useful utility functions
+ * <br>
+ * <br>LittleJS uses a hybrid rendering solution with the best of both Canvas2D and WebGL.
+ * <br>There are 3 canvas/contexts available to draw to...
+ * <br> - mainCanvas - 2D background canvas, non WebGL stuff like tile layers are drawn here.
+ * <br> - glCanvas - Used by the accelerated WebGL batch rendering system.
+ * <br> - overlayCanvas - Another 2D canvas that appears on top of the other 2 canvases.
+ * <br>
+ * <br>The WebGL rendering system is very fast with some caveats...
+ * <br> - The default setup supports only 1 tile sheet, to support more call glCreateTexture and glSetTexture
+ * <br> - Switching blend modes (additive) or textures causes another draw call which is expensive in excess
+ * <br> - Group additive rendering together using renderOrder to mitigate this issue
+ * <br>
+ * <br>The LittleJS rendering solution is intentionally simple, feel free to adjust it for your needs!
+ * @namespace Draw
  */
 
 'use strict';
@@ -1681,7 +1698,7 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, col
         else
         {
             // calculate uvs and render
-            const cols = tileImage.width / tileSize.x |0;
+            const cols = tileImageSize.x / tileSize.x |0;
             const uvSizeX = tileSize.x * tileImageSizeInverse.x;
             const uvSizeY = tileSize.y * tileImageSizeInverse.y;
             const uvX = (tileIndex%cols)*uvSizeX, uvY = (tileIndex/cols|0)*uvSizeY;
@@ -1710,7 +1727,7 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, col
             else
             {
                 // calculate uvs and render
-                const cols = tileImage.width / tileSize.x |0;
+                const cols = tileImageSize.x / tileSize.x |0;
                 const sX = (tileIndex%cols)*tileSize.x   + tileBleedShrinkFix;
                 const sY = (tileIndex/cols|0)*tileSize.y + tileBleedShrinkFix;
                 const sWidth  = tileSize.x - 2*tileBleedShrinkFix;
@@ -1862,11 +1879,11 @@ function toggleFullscreen()
     }
 }
 /** 
- *  LittleJS Input System
- *  <br> - Tracks key down, pressed, and released
- *  <br> - Also tracks mouse buttons, position, and wheel
- *  <br> - Supports multiple gamepads
- *  @namespace Input
+ * LittleJS Input System
+ * <br> - Tracks key down, pressed, and released
+ * <br> - Also tracks mouse buttons, position, and wheel
+ * <br> - Supports multiple gamepads
+ * @namespace Input
  */
 
 'use strict';
@@ -2103,20 +2120,56 @@ if (isTouchDevice)
         return !e.cancelable;
     }
 }
+
+function createTouchGamepad()
+{
+    if (!isTouchDevice)
+        return;
+
+    const size = 50;
+    const addButton = (text, key, offsetSide, offsetBottom=0, rightSide)=>
+    {
+        const button = document.createElement('button');
+        button.innerHTML = text;
+        button.style = `position:absolute;bottom:${offsetBottom*size};width:${size};height:${size}` +
+            `;z-index:9;border-radius:20px;font-size:40px;line-height:40px`
+
+        button.style[rightSide ? 'right' : 'left'] = offsetSide*size;
+        button.ontouchstart = (e)=> inputData[0][key] = 3;
+        button.ontouchend = (e)=> inputData[0][key] = 4;
+
+        document.body.appendChild(button);
+    }
+
+    // gamepad buttons
+    addButton('🡇', 40, 1, 0);
+    addButton('🡄', 37, 0, 1);
+    addButton('🡆', 39, 2, 1);
+    addButton('🡅', 38, 1, 2);
+    addButton('🅐', 32, 1, 0, 1);
+    addButton('🅧', 90, 2, 1, 1);
+    addButton('🅑', 67, 0, 1, 1);
+    addButton('🅨', 88, 1, 2, 1);
+
+    // disable touch events
+    ontouchstart = ontouchmove = ontouchend = (e) => {};
+}
 /** 
- *  LittleJS Audio System
- *  <br> - ZzFX Sound Effects and ZzFXM Music
- *  <br> - Caches sounds and music for fast playback
- *  <br> - Can attenuate and apply stereo panning to sounds
- *  <br> - Ability to play mp3, ogg, and wave files
- *  <br> - Speech synthesis wrapper functions
- *  @namespace Audio
+ * LittleJS Audio System
+ * <br> - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a>
+ * <br> - <a href=https://keithclark.github.io/ZzFXM/>ZzFXM Music</a>
+ * <br> - Caches sounds and music for fast playback
+ * <br> - Can attenuate and apply stereo panning to sounds
+ * <br> - Ability to play mp3, ogg, and wave files
+ * <br> - Speech synthesis wrapper functions
  */
 
 'use strict';
 
 /** 
  * Sound Object - Stores a zzfx sound for later use and can be played positionally
+ * <br>
+ * <br><b><a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a></b>
  * @example
  * // create a sound
  * const sound_example = new Sound([.5,.5]);
@@ -2200,6 +2253,8 @@ class Sound
 
 /**
  * Music Object - Stores a zzfx music track for later use
+ * <br>
+ * <br><b><a href=https://keithclark.github.io/ZzFXM/>Create music with the ZzFXM tracker.</a></b>
  * @example
  * // create some music
  * const music_example = new Music(
@@ -2352,6 +2407,8 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0)
 // ZzFXMicro - Zuper Zmall Zound Zynth - v1.1.8 by Frank Force
 
 /** Generate and play a ZzFX sound
+ *  <br>
+ *  <br><b><a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a></b>
  *  @param {Array} zzfxSound - Array of ZzFX parameters, ex. [.5,.5]
  *  @return {Array} - Array of audio samples
  *  @memberof Audio */
@@ -2554,14 +2611,15 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
   return [leftChannelBuffer, rightChannelBuffer];
 }
 /** 
- *  LittleJS Tile Layer System
- *  <br> - Caches arrays of tiles to offscreen canvas for fast rendering
- *  <br> - Unlimted numbers of layers, allocates canvases as needed
- *  <br> - Interfaces with EngineObject for collision
- *  <br> - Collision layer is separate from visible layers
- *  <br> - Tile layers can be drawn to using their context with canvas2d
- *  <br> - It is recommended to have a visible layer that matches the collision
- *  @namespace TileCollision
+ * LittleJS Tile Layer System
+ * <br> - Caches arrays of tiles to off screen canvas for fast rendering
+ * <br> - Unlimted numbers of layers, allocates canvases as needed
+ * <br> - Interfaces with EngineObject for collision
+ * <br> - Collision layer is separate from visible layers
+ * <br> - It is recommended to have a visible layer that matches the collision
+ * <br> - Tile layers can be drawn to using their context with canvas2d
+ * <br> - Drawn directly to the main canvas without using WebGL
+ * @namespace TileCollision
  */
 
 'use strict';
@@ -2676,15 +2734,15 @@ const tileLayerCanvasCache = [];
 class TileLayerData
 {
     /** Create a tile layer data object, one for each tile in a TileLayer
-     *  @param {Number}  [tile] - The tile to use, untextured if undefined
-     *  @param {Number}  [direction=0] - Integer direction of tile, in 90 degree increments
-     *  @param {Boolean} [mirror=0] - If the tile should be mirrored along the x axis
+     *  @param {Number}  [tile]                   - The tile to use, untextured if undefined
+     *  @param {Number}  [direction=0]            - Integer direction of tile, in 90 degree increments
+     *  @param {Boolean} [mirror=0]               - If the tile should be mirrored along the x axis
      *  @param {Color}   [color=new Color(1,1,1)] - Color of the tile */
     constructor(tile, direction=0, mirror=0, color=new Color)
     {
-        /** @property {Number} - The tile to use, untextured if undefined */
+        /** @property {Number}  - The tile to use, untextured if undefined */
         this.tile      = tile;
-        /** @property {Number} - Integer direction of tile, in 90 degree increments */
+        /** @property {Number}  - Integer direction of tile, in 90 degree increments */
         this.direction = direction;
         /** @property {Boolean} - If the tile should be mirrored along the x axis */
         this.mirror    = mirror;
@@ -2744,8 +2802,8 @@ class TileLayer extends EngineObject
     }
     
     /** Set data at a given position in the array 
-     *  @param {Vector2}       position - Local position in array
-     *  @param {TileLayerData} data - Data to set
+     *  @param {Vector2}       position   - Local position in array
+     *  @param {TileLayerData} data       - Data to set
      *  @param {Boolean}       [redraw=0] - Force the tile to redraw if true */
     setData(layerPos, data, redraw)
     {
@@ -3190,11 +3248,11 @@ class Particle extends EngineObject
     }
 }
 /** 
- *  LittleJS Medal System
- *  <br> - Tracks and displays medals
- *  <br> - Saves medals to local storage
- *  <br> - Newgrounds and OS13k integration
- *  @namespace Medals
+ * LittleJS Medal System
+ * <br> - Tracks and displays medals
+ * <br> - Saves medals to local storage
+ * <br> - Newgrounds and OS13k integration
+ * @namespace Medals
  */
 
 'use strict';
@@ -3218,8 +3276,8 @@ let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimer;
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Initialize medals with a save name used for storage
- *  <br> - Checks if medals are unlocked
  *  <br> - Call this after creating all medals
+ *  <br> - Checks if medals are unlocked
  *  @param {String} saveName
  *  @memberof Medals */
 function medalsInit(saveName)
@@ -3235,17 +3293,20 @@ function medalsInit(saveName)
  * // create a medal
  * const medal_example = new Medal(0, 'Example Medal', 'More info about the medal goes here.', '🎖️');
  * 
+ * // initialize medals
+ * medalsInit('Example Game');
+ * 
  * // unlock the medal
  * medal_example.unlock();
  */
 class Medal
 {
     /** Create an medal object and adds it to the list of medals
-     *  @param {Number} id - The unique identifier of the medal
-     *  @param {String} name - Name of the medal
+     *  @param {Number} id            - The unique identifier of the medal
+     *  @param {String} name          - Name of the medal
      *  @param {String} [description] - Description of the medal
-     *  @param {String} [icon='🏆'] - Icon for the medal
-     *  @param {String} [src] - Image location for the medal
+     *  @param {String} [icon='🏆']  - Icon for the medal
+     *  @param {String} [src]         - Image location for the medal
      */
     constructor(id, name, description='', icon='🏆', src)
     {
@@ -3272,7 +3333,7 @@ class Medal
             return;
 
         // save the medal
-        ASSERT(medalsSaveName); // game name must be set
+        ASSERT(medalsSaveName); // save name must be set
         localStorage[this.storageKey()] = this.unlocked = 1;
         medalsDisplayQueue.push(this);
 
@@ -3373,7 +3434,7 @@ function medalsRender()
 class Newgrounds
 {
     /** Create a newgrounds object
-     *  @param {Number} app_id - The newgrounds App ID
+     *  @param {Number} app_id   - The newgrounds App ID
      *  @param {String} [cipher] - The encryption Key (AES-128/Base64) */
     constructor(app_id, cipher)
     {
@@ -3426,7 +3487,7 @@ class Newgrounds
     unlockMedal(id) { return this.call('Medal.unlock', {'id':id}, 1); }
 
     /** Send message to post score
-     * @param {Number} id - The scoreboard id
+     * @param {Number} id    - The scoreboard id
      * @param {Number} value - The score value */
     postScore(id, value) { return this.call('ScoreBoard.postScore', {'id':id, 'value':value}, 1); }
 
@@ -3434,21 +3495,21 @@ class Newgrounds
     logView() { return this.call('App.logView', {'host':this.host}, 1); }
 
     /** Get scores from a scoreboard
-     * @param {Number} id - The scoreboard id
-     * @param {String} [user=0] - A user's id or name
+     * @param {Number} id         - The scoreboard id
+     * @param {String} [user=0]   - A user's id or name
      * @param {Number} [social=0] - If true, only social scores will be loaded
-     * @param {Number} [skip=0] - Number of scores to skip before start
+     * @param {Number} [skip=0]   - Number of scores to skip before start
      * @param {Number} [limit=10] - Number of scores to include in the list
-     * @return {Object} - The response JSON object
+     * @return {Object}           - The response JSON object
      */
     getScores(id, user=0, social=0, skip=0, limit=10)
     { return this.call('ScoreBoard.getScores', {'id':id, 'user':user, 'social':social, 'skip':skip, 'limit':limit}); }
 
     /** Send a message to call a component of the Newgrounds API
-     * @param {String}  component - Name of the component
+     * @param {String}  component      - Name of the component
      * @param {Object}  [parameters=0] - Parameters to use for call
-     * @param {Boolean} [async=0] - If true, wait for response before continuing (will cause stall)
-     * @return {Object} - The response JSON object
+     * @param {Boolean} [async=0]      - If true, don't wait for response before continuing (avoid stall)
+     * @return {Object}                - The response JSON object
      */
     call(component, parameters=0, async=0)
     {
@@ -3492,14 +3553,14 @@ class Newgrounds
 
 const CryptoJS=()=>eval(Function("[M='GBMGXz^oVYPPKKbB`agTXU|LxPc_ZBcMrZvCr~wyGfWrwk@ATqlqeTp^N?p{we}jIpEnB_sEr`l?YDkDhWhprc|Er|XETG?pTl`e}dIc[_N~}fzRycIfpW{HTolvoPB_FMe_eH~BTMx]yyOhv?biWPCGc]kABencBhgERHGf{OL`Dj`c^sh@canhy[secghiyotcdOWgO{tJIE^JtdGQRNSCrwKYciZOa]Y@tcRATYKzv|sXpboHcbCBf`}SKeXPFM|RiJsSNaIb]QPc[D]Jy_O^XkOVTZep`ONmntLL`Qz~UupHBX_Ia~WX]yTRJIxG`ioZ{fefLJFhdyYoyLPvqgH?b`[TMnTwwfzDXhfM?rKs^aFr|nyBdPmVHTtAjXoYUloEziWDCw_suyYT~lSMksI~ZNCS[Bex~j]Vz?kx`gdYSEMCsHpjbyxQvw|XxX_^nQYue{sBzVWQKYndtYQMWRef{bOHSfQhiNdtR{o?cUAHQAABThwHPT}F{VvFmgN`E@FiFYS`UJmpQNM`X|tPKHlccT}z}k{sACHL?Rt@MkWplxO`ASgh?hBsuuP|xD~LSH~KBlRs]t|l|_tQAroDRqWS^SEr[sYdPB}TAROtW{mIkE|dWOuLgLmJrucGLpebrAFKWjikTUzS|j}M}szasKOmrjy[?hpwnEfX[jGpLt@^v_eNwSQHNwtOtDgWD{rk|UgASs@mziIXrsHN_|hZuxXlPJOsA^^?QY^yGoCBx{ekLuZzRqQZdsNSx@ezDAn{XNj@fRXIwrDX?{ZQHwTEfu@GhxDOykqts|n{jOeZ@c`dvTY?e^]ATvWpb?SVyg]GC?SlzteilZJAL]mlhLjYZazY__qcVFYvt@|bIQnSno@OXyt]OulzkWqH`rYFWrwGs`v|~XeTsIssLrbmHZCYHiJrX}eEzSssH}]l]IhPQhPoQ}rCXLyhFIT[clhzYOvyHqigxmjz`phKUU^TPf[GRAIhNqSOdayFP@FmKmuIzMOeoqdpxyCOwCthcLq?n`L`tLIBboNn~uXeFcPE{C~mC`h]jUUUQe^`UqvzCutYCgct|SBrAeiYQW?X~KzCz}guXbsUw?pLsg@hDArw?KeJD[BN?GD@wgFWCiHq@Ypp_QKFixEKWqRp]oJFuVIEvjDcTFu~Zz]a{IcXhWuIdMQjJ]lwmGQ|]g~c]Hl]pl`Pd^?loIcsoNir_kikBYyg?NarXZEGYspt_vLBIoj}LI[uBFvm}tbqvC|xyR~a{kob|HlctZslTGtPDhBKsNsoZPuH`U`Fqg{gKnGSHVLJ^O`zmNgMn~{rsQuoymw^JY?iUBvw_~mMr|GrPHTERS[MiNpY[Mm{ggHpzRaJaoFomtdaQ_?xuTRm}@KjU~RtPsAdxa|uHmy}n^i||FVL[eQAPrWfLm^ndczgF~Nk~aplQvTUpHvnTya]kOenZlLAQIm{lPl@CCTchvCF[fI{^zPkeYZTiamoEcKmBMfZhk_j_~Fjp|wPVZlkh_nHu]@tP|hS@^G^PdsQ~f[RqgTDqezxNFcaO}HZhb|MMiNSYSAnQWCDJukT~e|OTgc}sf[cnr?fyzTa|EwEtRG|I~|IO}O]S|rp]CQ}}DWhSjC_|z|oY|FYl@WkCOoPuWuqr{fJu?Brs^_EBI[@_OCKs}?]O`jnDiXBvaIWhhMAQDNb{U`bqVR}oqVAvR@AZHEBY@depD]OLh`kf^UsHhzKT}CS}HQKy}Q~AeMydXPQztWSSzDnghULQgMAmbWIZ|lWWeEXrE^EeNoZApooEmrXe{NAnoDf`m}UNlRdqQ@jOc~HLOMWs]IDqJHYoMziEedGBPOxOb?[X`KxkFRg@`mgFYnP{hSaxwZfBQqTm}_?RSEaQga]w[vxc]hMne}VfSlqUeMo_iqmd`ilnJXnhdj^EEFifvZyxYFRf^VaqBhLyrGlk~qowqzHOBlOwtx?i{m~`n^G?Yxzxux}b{LSlx]dS~thO^lYE}bzKmUEzwW^{rPGhbEov[Plv??xtyKJshbG`KuO?hjBdS@Ru}iGpvFXJRrvOlrKN?`I_n_tplk}kgwSXuKylXbRQ]]?a|{xiT[li?k]CJpwy^o@ebyGQrPfF`aszGKp]baIx~H?ElETtFh]dz[OjGl@C?]VDhr}OE@V]wLTc[WErXacM{We`F|utKKjgllAxvsVYBZ@HcuMgLboFHVZmi}eIXAIFhS@A@FGRbjeoJWZ_NKd^oEH`qgy`q[Tq{x?LRP|GfBFFJV|fgZs`MLbpPYUdIV^]mD@FG]pYAT^A^RNCcXVrPsgk{jTrAIQPs_`mD}rOqAZA[}RETFz]WkXFTz_m{N@{W@_fPKZLT`@aIqf|L^Mb|crNqZ{BVsijzpGPEKQQZGlApDn`ruH}cvF|iXcNqK}cxe_U~HRnKV}sCYb`D~oGvwG[Ca|UaybXea~DdD~LiIbGRxJ_VGheI{ika}KC[OZJLn^IBkPrQj_EuoFwZ}DpoBRcK]Q}?EmTv~i_Tul{bky?Iit~tgS|o}JL_VYcCQdjeJ_MfaA`FgCgc[Ii|CBHwq~nbJeYTK{e`CNstKfTKPzw{jdhp|qsZyP_FcugxCFNpKitlR~vUrx^NrSVsSTaEgnxZTmKc`R|lGJeX}ccKLsQZQhsFkeFd|ckHIVTlGMg`~uPwuHRJS_CPuN_ogXe{Ba}dO_UBhuNXby|h?JlgBIqMKx^_u{molgL[W_iavNQuOq?ap]PGB`clAicnl@k~pA?MWHEZ{HuTLsCpOxxrKlBh]FyMjLdFl|nMIvTHyGAlPogqfZ?PlvlFJvYnDQd}R@uAhtJmDfe|iJqdkYr}r@mEjjIetDl_I`TELfoR|qTBu@Tic[BaXjP?dCS~MUK[HPRI}OUOwAaf|_}HZzrwXvbnNgltjTwkBE~MztTQhtRSWoQHajMoVyBBA`kdgK~h`o[J`dm~pm]tk@i`[F~F]DBlJKklrkR]SNw@{aG~Vhl`KINsQkOy?WhcqUMTGDOM_]bUjVd|Yh_KUCCgIJ|LDIGZCPls{RzbVWVLEhHvWBzKq|^N?DyJB|__aCUjoEgsARki}j@DQXS`RNU|DJ^a~d{sh_Iu{ONcUtSrGWW@cvUjefHHi}eSSGrNtO?cTPBShLqzwMVjWQQCCFB^culBjZHEK_{dO~Q`YhJYFn]jq~XSnG@[lQr]eKrjXpG~L^h~tDgEma^AUFThlaR{xyuP@[^VFwXSeUbVetufa@dX]CLyAnDV@Bs[DnpeghJw^?UIana}r_CKGDySoRudklbgio}kIDpA@McDoPK?iYcG?_zOmnWfJp}a[JLR[stXMo?_^Ng[whQlrDbrawZeSZ~SJstIObdDSfAA{MV}?gNunLOnbMv_~KFQUAjIMj^GkoGxuYtYbGDImEYiwEMyTpMxN_LSnSMdl{bg@dtAnAMvhDTBR_FxoQgANniRqxd`pWv@rFJ|mWNWmh[GMJz_Nq`BIN@KsjMPASXORcdHjf~rJfgZYe_uulzqM_KdPlMsuvU^YJuLtofPhGonVOQxCMuXliNvJIaoC?hSxcxKVVxWlNs^ENDvCtSmO~WxI[itnjs^RDvI@KqG}YekaSbTaB]ki]XM@[ZnDAP~@|BzLRgOzmjmPkRE@_sobkT|SszXK[rZN?F]Z_u}Yue^[BZgLtR}FHzWyxWEX^wXC]MJmiVbQuBzkgRcKGUhOvUc_bga|Tx`KEM`JWEgTpFYVeXLCm|mctZR@uKTDeUONPozBeIkrY`cz]]~WPGMUf`MNUGHDbxZuO{gmsKYkAGRPqjc|_FtblEOwy}dnwCHo]PJhN~JoteaJ?dmYZeB^Xd?X^pOKDbOMF@Ugg^hETLdhwlA}PL@_ur|o{VZosP?ntJ_kG][g{Zq`Tu]dzQlSWiKfnxDnk}KOzp~tdFstMobmy[oPYjyOtUzMWdjcNSUAjRuqhLS@AwB^{BFnqjCmmlk?jpn}TksS{KcKkDboXiwK]qMVjm~V`LgWhjS^nLGwfhAYrjDSBL_{cRus~{?xar_xqPlArrYFd?pHKdMEZzzjJpfC?Hv}mAuIDkyBxFpxhstTx`IO{rp}XGuQ]VtbHerlRc_LFGWK[XluFcNGUtDYMZny[M^nVKVeMllQI[xtvwQnXFlWYqxZZFp_|]^oWX[{pOMpxXxvkbyJA[DrPzwD|LW|QcV{Nw~U^dgguSpG]ClmO@j_TENIGjPWwgdVbHganhM?ema|dBaqla|WBd`poj~klxaasKxGG^xbWquAl~_lKWxUkDFagMnE{zHug{b`A~IYcQYBF_E}wiA}K@yxWHrZ{[d~|ARsYsjeNWzkMs~IOqqp[yzDE|WFrivsidTcnbHFRoW@XpAV`lv_zj?B~tPCppRjgbbDTALeFaOf?VcjnKTQMLyp{NwdylHCqmo?oelhjWuXj~}{fpuX`fra?GNkDiChYgVSh{R[BgF~eQa^WVz}ATI_CpY?g_diae]|ijH`TyNIF}|D_xpmBq_JpKih{Ba|sWzhnAoyraiDvk`h{qbBfsylBGmRH}DRPdryEsSaKS~tIaeF[s]I~xxHVrcNe@Jjxa@jlhZueLQqHh_]twVMqG_EGuwyab{nxOF?`HCle}nBZzlTQjkLmoXbXhOtBglFoMz?eqre`HiE@vNwBulglmQjj]DB@pPkPUgA^sjOAUNdSu_`oAzar?n?eMnw{{hYmslYi[TnlJD'",...']charCodeAtUinyxpf',"for(;e<10359;c[e++]=p-=128,A=A?p-A&&A:p==34&&p)for(p=1;p<128;y=f.map((n,x)=>(U=r[n]*2+1,U=Math.log(U/(h-U)),t-=a[x]*U,U/500)),t=~-h/(1+Math.exp(t))|1,i=o%h<t,o=o%h+(i?t:h-t)*(o>>17)-!i*t,f.map((n,x)=>(U=r[n]+=(i*h/2-r[n]<<13)/((C[n]+=C[n]<5)+1/20)>>13,a[x]+=y[x]*(i-t/h))),p=p*2+i)for(f='010202103203210431053105410642065206541'.split(t=0).map((n,x)=>(U=0,[...n].map((n,x)=>(U=U*997+(c[e-n]|0)|0)),h*32-1&U*997+p+!!A*129)*12+x);o<h*32;o=o*64|M.charCodeAt(d++)&63);for(C=String.fromCharCode(...c);r=/[\0-#?@\\\\~]/.exec(C);)with(C.split(r))C=join(shift());return C")([],[],1<<17,[0,0,0,0,0,0,0,0,0,0,0,0],new Uint16Array(51e6).fill(1<<15),new Uint8Array(51e6),0,0,0,0));
 /** 
- *  LittleJS WebGL Interface
- *  <br> - All webgl used by the engine is wrapped up here
- *  <br> - Can be disabled with glEnable to revert to 2D canvas rendering
- *  <br> - Batches sprite rendering on GPU for incredibly fast performance
- *  <br> - Sprite transform math is done in the shader where possible
- *  <br> - For normal stuff you won't need to call any functions in this file
- *  <br> - For advanced stuff there are helper functions to create shaders, textures, etc
- *  @namespace WebGL
+ * LittleJS WebGL Interface
+ * <br> - All webgl used by the engine is wrapped up here
+ * <br> - For normal stuff you won't need to see or call anything in this file
+ * <br> - For advanced stuff there are helper functions to create shaders, textures, etc
+ * <br> - Can be disabled with glEnable to revert to 2D canvas rendering
+ * <br> - Batches sprite rendering on GPU for incredibly fast performance
+ * <br> - Sprite transform math is done in the shader where possible
+ * @namespace WebGL
  */
 
 'use strict';
@@ -3878,7 +3939,7 @@ gl_VERTEX_BYTE_STRIDE = 4 + (4 * 2) * 3 + (4) * 2; // float + vec2 * 3 + (char *
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.9';
+const engineVersion = '1.1.10';
 
 /** Frames per second to update objects
  *  @default */
@@ -3933,7 +3994,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
         // setup html
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
-        document.body.style = 'margin:0;overflow:hidden;background:#000';
+        document.body.style = 'margin:0;overflow:hidden;background:#000' +
+            ';user-select:none;-webkit-user-select:none;-moz-user-select:none'; // prevent user select
         mainCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)' +
             (pixelated ? ';image-rendering:crisp-edges;image-rendering:pixelated' : ''); // pixelated rendering
         mainContext = mainCanvas.getContext('2d');

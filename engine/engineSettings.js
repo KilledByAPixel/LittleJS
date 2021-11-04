@@ -1,6 +1,6 @@
 /**
- *  LittleJS Engine Settings
- *  @namespace Settings
+ * LittleJS Engine Settings
+ * @namespace Settings
  */
 
 'use strict';
