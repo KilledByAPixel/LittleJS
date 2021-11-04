@@ -146,11 +146,13 @@ onmousedown = e=> {inputData[isUsingGamepad = 0][e.button] = 3; onmousemove(e); 
 onmouseup   = e=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
 onmousemove = e=>
 {
+    if (!mainCanvas)
+        return; // fix bug that can occur if user clicks before page loads
+
     // convert mouse pos to canvas space
-    if (!mainCanvas) return;
     const rect = mainCanvas.getBoundingClientRect();
-    mousePosScreen.x = mainCanvasSize.x * percent(e.x, rect.right, rect.left);
-    mousePosScreen.y = mainCanvasSize.y * percent(e.y, rect.bottom, rect.top);
+    mousePosScreen = mainCanvasSize.multiply(
+        vec2(percent(e.x, rect.right, rect.left), percent(e.y, rect.bottom, rect.top)));
 }
 onwheel = e=> e.ctrlKey || (mouseWheel = sign(e.deltaY));
 oncontextmenu = e=> !1; // prevent right click menu

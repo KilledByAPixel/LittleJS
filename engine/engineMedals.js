@@ -22,7 +22,7 @@ let medalsPreventUnlock;
 let newgrounds;
 
 // Engine internal variables not exposed to documentation
-let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimer;
+let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimeLast;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -103,8 +103,7 @@ class Medal
         const y = -medalDisplayHeight*hidePercent;
 
         // draw containing rect and clip to that region
-        context.save();
-        context.beginPath();
+        context.beginPath(context.save());
         context.fillStyle = '#ddd'
         context.fill(context.rect(x, y, medalDisplayWidth, medalDisplayHeight));
         context.strokeStyle = context.fillStyle = '#000';
@@ -112,13 +111,12 @@ class Medal
         context.stroke();
         context.clip();
 
+        // draw the icon and text
         this.renderIcon(x+15+medalDisplayIconSize/2, y+medalDisplayHeight/2);
-
-        // draw the text
         context.textAlign = 'left';
-        context.font = '3em '+ fontDefault;
+        context.font = '40px '+ fontDefault;
         context.fillText(this.name, x+medalDisplayIconSize+25, y+35);
-        context.font = '1.5em '+ fontDefault;
+        context.font = '25px '+ fontDefault;
         context.restore(context.fillText(this.description, x+medalDisplayIconSize+25, y+70));
     }
 
@@ -142,10 +140,7 @@ class Medal
     }
  
     // Get local storage key used by the medal
-    storageKey()
-    {
-        return medalsSaveName + '_medal_' + this.id;
-    }
+    storageKey() { return medalsSaveName + '_' + this.id; }
 }
 
 // engine automatically renders medals
@@ -156,11 +151,11 @@ function medalsRender()
     
     // update first medal in queue
     const medal = medalsDisplayQueue[0];
-    const time = timeReal - medalsDisplayTimer;
-    if (!medalsDisplayTimer)
-        medalsDisplayTimer = timeReal;
+    const time = timeReal - medalsDisplayTimeLast;
+    if (!medalsDisplayTimeLast)
+        medalsDisplayTimeLast = timeReal;
     else if (time > medalDisplayTime)
-        medalsDisplayQueue.shift(medalsDisplayTimer = 0);
+        medalsDisplayQueue.shift(medalsDisplayTimeLast = 0);
     else
     {
         // slide on/off medals

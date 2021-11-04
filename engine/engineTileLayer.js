@@ -54,10 +54,10 @@ const getTileCollisionData = (pos)=>
  *  @memberof TileCollision */
 function tileCollisionTest(pos, size=vec2(), object)
 {
-    const minX = max(Math.floor(pos.x - size.x/2), 0);
-    const minY = max(Math.floor(pos.y - size.y/2), 0);
-    const maxX = min(pos.x + size.x/2, tileCollisionSize.x-1);
-    const maxY = min(pos.y + size.y/2, tileCollisionSize.y-1);
+    const minX = max(pos.x - size.x/2|0, 0);
+    const minY = max(pos.y - size.y/2|0, 0);
+    const maxX = min(pos.x + size.x/2, tileCollisionSize.x);
+    const maxY = min(pos.y + size.y/2, tileCollisionSize.y);
     for (let y = minY; y < maxY; ++y)
     for (let x = minX; x < maxX; ++x)
     {
@@ -105,9 +105,6 @@ function tileCollisionRaycast(posStart, posEnd, object)
 
 ///////////////////////////////////////////////////////////////////////////////
 // Tile Layer Rendering System
-
-// Reuse canvas autmatically when destroyed
-const tileLayerCanvasCache = [];
 
 /**
  * Tile layer data object stores info about how to render a tile
@@ -166,27 +163,19 @@ class TileLayer extends EngineObject
     {
         super(pos, size, -1, tileSize, 0, undefined, renderOrder);
 
-        /** @property {HTMLCanvasElement} - The canvas used by this tile layer */
-        this.canvas = tileLayerCanvasCache.length ? tileLayerCanvasCache.pop() : document.createElement('canvas');
+        /** @property {HTMLCanvasElement}        - The canvas used by this tile layer */
+        this.canvas = document.createElement('canvas');
         /** @property {CanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
         this.context = this.canvas.getContext('2d');
-        /** @property {Vector2} - How much to scale this layer when rendered */
+        /** @property {Vector2}                  - How much to scale this layer when rendered */
         this.scale = scale;
-        /** @property {Boolean} [isOverlay=0] - If true this layer will render to overlay canvas and appear above all objects */
+        /** @property {Boolean} [isOverlay=0]    - If true this layer will render to overlay canvas and appear above all objects */
         this.isOverlay;
 
         // init tile data
         this.data = [];
         for (let j = this.size.area(); j--;)
             this.data.push(new TileLayerData());
-    }
-
-    /** Destroy this tile layer */
-    destroy()
-    {
-        // add canvas back to the cache
-        tileLayerCanvasCache.push(this.canvas);
-        super.destroy();
     }
     
     /** Set data at a given position in the array 
@@ -298,10 +287,10 @@ class TileLayer extends EngineObject
     /** Draw directly to the 2d canvas in world space (bipass webgl)
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
-     *  @param {Number}   angle
-     *  @param {Boolean}  mirror
+     *  @param {Number}   [angle=0]
+     *  @param {Boolean}  [mirror=0]
      *  @param {Function} drawFunction */
-    drawCanvas2D(pos, size, angle, mirror, drawFunction)
+    drawCanvas2D(pos, size, angle=0, mirror, drawFunction)
     {
         const context = this.context;
         context.save();
@@ -309,7 +298,7 @@ class TileLayer extends EngineObject
         size = size.multiply(this.tileSize);
         context.translate(pos.x, this.canvas.height - pos.y);
         context.rotate(angle);
-        context.scale(mirror?-size.x:size.x, size.y);
+        context.scale(mirror ? -size.x : size.x, size.y);
         drawFunction(context);
         context.restore();
     }
@@ -322,7 +311,7 @@ class TileLayer extends EngineObject
      *  @param {Color}   [color=new Color(1,1,1)]
      *  @param {Number}  [angle=0]
      *  @param {Boolean} [mirror=0] */
-    drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, color=new Color, angle=0, mirror)
+    drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, color=new Color, angle, mirror)
     {
         this.drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
@@ -348,5 +337,5 @@ class TileLayer extends EngineObject
      *  @param {Vector2} [size=new Vector2(1,1)]
      *  @param {Color}   [color=new Color(1,1,1)]
      *  @param {Number}  [angle=0] */
-    drawRect(pos, size, color, angle) { this.drawTile(pos, size, -1, 0, color, angle, 0); }
+    drawRect(pos, size, color, angle) { this.drawTile(pos, size, -1, 0, color, angle); }
 }

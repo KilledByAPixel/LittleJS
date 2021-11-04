@@ -202,7 +202,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainCont
     context.save();
     context.translate(pos.x+.5|0, pos.y-.5|0);
     context.rotate(angle);
-    context.scale(mirror?-size.x:size.x, size.y);
+    context.scale(mirror ? -size.x : size.x, size.y);
     drawFunction(context);
     context.restore();
 }

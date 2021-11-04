@@ -22,15 +22,15 @@
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.11';
+const engineVersion = '1.1.13';
 
 /** Frames per second to update objects
  *  @default */
-const FPS = 60;
+const frameRate = 60;
 
 /** How many seconds each frame lasts, engine uses a fixed time step
  *  @default 1/60 */
-const timeDelta = 1/FPS;
+const timeDelta = 1/frameRate;
 
 /** Array containing all engine objects */
 let engineObjects = [];
@@ -79,7 +79,9 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
         document.body.style = 'margin:0;overflow:hidden;background:#000' +
             ';user-select:none;-webkit-user-select:none;-moz-user-select:none'; // prevent user select
-        mainCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
+        mainCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)' +
+            (pixelated ? ';image-rendering:crisp-edges;image-rendering:pixelated' : ''); // pixelated rendering
+
         mainContext = mainCanvas.getContext('2d');
 
         // init stuff and start engine
@@ -130,7 +132,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             }
             
             // update multiple frames if necessary in case of slow framerate
-            for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / FPS)
+            for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / frameRate)
             {
                 // update game and objects
                 inputUpdate();
@@ -230,7 +232,7 @@ function engineObjectsUpdate()
     engineObjectsCollide = engineObjectsCollide.filter(o=>!o.destroyed);
 
     // increment frame and update time
-    time = ++frame / FPS;
+    time = ++frame / frameRate;
 }
 
 /** Detroy and remove all objects that are not persistent or descendants of a persistent object */
@@ -242,9 +244,9 @@ function engineObjectsDestroy()
 }
 
 /** Triggers a callback for each object within a given area
- *  @param {Vector2} [pos] - Center of test area
- *  @param {Number} [size] - Radius of circle if float, rectangle size if Vector2
- *  @param {Function} [callbackFunction] - Calls this function on every object that passes the test
+ *  @param {Vector2} [pos]                 - Center of test area
+ *  @param {Number} [size]                 - Radius of circle if float, rectangle size if Vector2
+ *  @param {Function} [callbackFunction]   - Calls this function on every object that passes the test
  *  @param {Array} [objects=engineObjects] - List of objects to check */
 function engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
 {

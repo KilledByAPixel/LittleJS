@@ -38,14 +38,15 @@ function glInit()
 
     // create the canvas and tile texture
     glCanvas = document.createElement('canvas');
-    glContext = glCanvas.getContext('webgl');
+    glContext = glCanvas.getContext('webgl', {antialias:!pixelated});
+
     glTileTexture = glCreateTexture(tileImage);
 
     if (glOverlay)
     {
         // some browsers are much faster without copying the gl buffer so we just overlay it instead
         document.body.appendChild(glCanvas);
-        glCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
+        glCanvas.style = mainCanvas.style.cssText;
     }
 
     // setup vertex and fragment shaders

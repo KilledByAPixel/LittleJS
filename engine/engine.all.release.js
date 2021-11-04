@@ -56,12 +56,6 @@ const isChrome = window['chrome'];
  *  @memberof Utilities */
 const abs = (a)=> a < 0 ? -a : a;
 
-/** Returns the sign of value passed in
- *  @param {Number} value
- *  @return {Number}
- *  @memberof Utilities */
-const sign = (a)=> a < 0 ? -1 : 1;
-
 /** Returns lowest of two values passed in
  *  @param {Number} valueA
  *  @param {Number} valueB
@@ -75,6 +69,12 @@ const min = (a, b)=> a < b ?  a : b;
  *  @return {Number}
  *  @memberof Utilities */
 const max = (a, b)=> a > b ?  a : b;
+
+/** Returns the sign of value passed in
+ *  @param {Number} value
+ *  @return {Number}
+ *  @memberof Utilities */
+const sign = (a)=> a < 0 ? -1 : 1;
 
 /** Returns first parm modulo the second param, but adjusted so negative numbers work as expected
  *  @param {Number} dividend
@@ -107,23 +107,17 @@ const percent = (v, max=1, min=0)=> max-min ? clamp((v-min) / (max-min)) : 0;
  *  @memberof Utilities */
 const lerp = (p, max=1, min=0)=> min + clamp(p) * (max-min);
 
-/** Formats seconds to mm:ss style for display purposes 
- *  @param {Number} t - time in seconds
- *  @return {String}
+/** Applies smoothstep function to the percentage value
+ *  @param {Number} value
+ *  @return {Number}
  *  @memberof Utilities */
-const formatTime = (t)=> (t/60|0)+':'+(t%60<10?'0':'')+(t%60|0);
+const smoothStep = (p)=> p * p * (3 - 2 * p);
 
 /** Returns the nearest power of two not less then the value
  *  @param {Number} value
  *  @return {Number}
  *  @memberof Utilities */
 const nearestPowerOfTwo = (v)=> 2**Math.ceil(Math.log2(v));
-
-/** Applies smoothstep function to the percentage value
- *  @param {Number} value
- *  @return {Number}
- *  @memberof Utilities */
-const smoothStep = (p)=> p * p * (3 - 2 * p);
 
 /** Returns true if two axis aligned bounding boxes are overlapping 
  *  @param {Vector2} pointA - Center of box A
@@ -141,6 +135,12 @@ const isOverlapping = (pA, sA, pB, sB)=> abs(pA.x - pB.x)*2 < sA.x + sB.x & abs(
  *  @return {Number}              - Value waving between 0 and amplitude
  *  @memberof Utilities */
 const wave = (frequency=1, amplitude=1, t=time)=> amplitude/2 * (1 - Math.cos(t*frequency*2*PI));
+
+/** Formats seconds to mm:ss style for display purposes 
+ *  @param {Number} t - time in seconds
+ *  @return {String}
+ *  @memberof Utilities */
+const formatTime = (t)=> (t/60|0)+':'+(t%60<10?'0':'')+(t%60|0);
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -164,7 +164,7 @@ const randInt = (a=1, b=0)=> rand(a,b)|0;
 /** Randomly returns either -1 or 1
  *  @return {Number}
  *  @memberof Random */
-const randSign = ()=> (rand(2)|0)*2-1;
+const randSign = ()=> (rand(2)|0) * 2 - 1;
 
 /** Returns a random Vector2 within a circular shape
  *  @param {Number} [radius=1]
@@ -200,7 +200,7 @@ let randSeed = 1;
 const randSeeded = (a=1, b=0)=>
 {
     randSeed ^= randSeed << 13; randSeed ^= randSeed >>> 17; randSeed ^= randSeed << 5; // xorshift
-    return b + (a-b)*abs(randSeed % 1e9)/1e9;
+    return b + (a-b) * abs(randSeed % 1e9) / 1e9;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -727,15 +727,15 @@ const medalDisplayIconSize = 80;
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.11';
+const engineVersion = '1.1.13';
 
 /** Frames per second to update objects
  *  @default */
-const FPS = 60;
+const frameRate = 60;
 
 /** How many seconds each frame lasts, engine uses a fixed time step
  *  @default 1/60 */
-const timeDelta = 1/FPS;
+const timeDelta = 1/frameRate;
 
 /** Array containing all engine objects */
 let engineObjects = [];
@@ -784,7 +784,9 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
         document.body.style = 'margin:0;overflow:hidden;background:#000' +
             ';user-select:none;-webkit-user-select:none;-moz-user-select:none'; // prevent user select
-        mainCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
+        mainCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)' +
+            (pixelated ? ';image-rendering:crisp-edges;image-rendering:pixelated' : ''); // pixelated rendering
+
         mainContext = mainCanvas.getContext('2d');
 
         // init stuff and start engine
@@ -835,7 +837,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             }
             
             // update multiple frames if necessary in case of slow framerate
-            for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / FPS)
+            for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / frameRate)
             {
                 // update game and objects
                 inputUpdate();
@@ -935,7 +937,7 @@ function engineObjectsUpdate()
     engineObjectsCollide = engineObjectsCollide.filter(o=>!o.destroyed);
 
     // increment frame and update time
-    time = ++frame / FPS;
+    time = ++frame / frameRate;
 }
 
 /** Detroy and remove all objects that are not persistent or descendants of a persistent object */
@@ -947,9 +949,9 @@ function engineObjectsDestroy()
 }
 
 /** Triggers a callback for each object within a given area
- *  @param {Vector2} [pos] - Center of test area
- *  @param {Number} [size] - Radius of circle if float, rectangle size if Vector2
- *  @param {Function} [callbackFunction] - Calls this function on every object that passes the test
+ *  @param {Vector2} [pos]                 - Center of test area
+ *  @param {Number} [size]                 - Radius of circle if float, rectangle size if Vector2
+ *  @param {Function} [callbackFunction]   - Calls this function on every object that passes the test
  *  @param {Array} [objects=engineObjects] - List of objects to check */
 function engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
 {
@@ -1541,7 +1543,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainCont
     context.save();
     context.translate(pos.x+.5|0, pos.y-.5|0);
     context.rotate(angle);
-    context.scale(mirror?-size.x:size.x, size.y);
+    context.scale(mirror ? -size.x : size.x, size.y);
     drawFunction(context);
     context.restore();
 }
@@ -1758,11 +1760,13 @@ onmousedown = e=> {inputData[isUsingGamepad = 0][e.button] = 3; onmousemove(e); 
 onmouseup   = e=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
 onmousemove = e=>
 {
+    if (!mainCanvas)
+        return; // fix bug that can occur if user clicks before page loads
+
     // convert mouse pos to canvas space
-    if (!mainCanvas) return;
     const rect = mainCanvas.getBoundingClientRect();
-    mousePosScreen.x = mainCanvasSize.x * percent(e.x, rect.right, rect.left);
-    mousePosScreen.y = mainCanvasSize.y * percent(e.y, rect.bottom, rect.top);
+    mousePosScreen = mainCanvasSize.multiply(
+        vec2(percent(e.x, rect.right, rect.left), percent(e.y, rect.bottom, rect.top)));
 }
 onwheel = e=> e.ctrlKey || (mouseWheel = sign(e.deltaY));
 oncontextmenu = e=> !1; // prevent right click menu
@@ -2364,10 +2368,10 @@ const getTileCollisionData = (pos)=>
  *  @memberof TileCollision */
 function tileCollisionTest(pos, size=vec2(), object)
 {
-    const minX = max(Math.floor(pos.x - size.x/2), 0);
-    const minY = max(Math.floor(pos.y - size.y/2), 0);
-    const maxX = min(pos.x + size.x/2, tileCollisionSize.x-1);
-    const maxY = min(pos.y + size.y/2, tileCollisionSize.y-1);
+    const minX = max(pos.x - size.x/2|0, 0);
+    const minY = max(pos.y - size.y/2|0, 0);
+    const maxX = min(pos.x + size.x/2, tileCollisionSize.x);
+    const maxY = min(pos.y + size.y/2, tileCollisionSize.y);
     for (let y = minY; y < maxY; ++y)
     for (let x = minX; x < maxX; ++x)
     {
@@ -2415,9 +2419,6 @@ function tileCollisionRaycast(posStart, posEnd, object)
 
 ///////////////////////////////////////////////////////////////////////////////
 // Tile Layer Rendering System
-
-// Reuse canvas autmatically when destroyed
-const tileLayerCanvasCache = [];
 
 /**
  * Tile layer data object stores info about how to render a tile
@@ -2476,27 +2477,19 @@ class TileLayer extends EngineObject
     {
         super(pos, size, -1, tileSize, 0, undefined, renderOrder);
 
-        /** @property {HTMLCanvasElement} - The canvas used by this tile layer */
-        this.canvas = tileLayerCanvasCache.length ? tileLayerCanvasCache.pop() : document.createElement('canvas');
+        /** @property {HTMLCanvasElement}        - The canvas used by this tile layer */
+        this.canvas = document.createElement('canvas');
         /** @property {CanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
         this.context = this.canvas.getContext('2d');
-        /** @property {Vector2} - How much to scale this layer when rendered */
+        /** @property {Vector2}                  - How much to scale this layer when rendered */
         this.scale = scale;
-        /** @property {Boolean} [isOverlay=0] - If true this layer will render to overlay canvas and appear above all objects */
+        /** @property {Boolean} [isOverlay=0]    - If true this layer will render to overlay canvas and appear above all objects */
         this.isOverlay;
 
         // init tile data
         this.data = [];
         for (let j = this.size.area(); j--;)
             this.data.push(new TileLayerData());
-    }
-
-    /** Destroy this tile layer */
-    destroy()
-    {
-        // add canvas back to the cache
-        tileLayerCanvasCache.push(this.canvas);
-        super.destroy();
     }
     
     /** Set data at a given position in the array 
@@ -2608,10 +2601,10 @@ class TileLayer extends EngineObject
     /** Draw directly to the 2d canvas in world space (bipass webgl)
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
-     *  @param {Number}   angle
-     *  @param {Boolean}  mirror
+     *  @param {Number}   [angle=0]
+     *  @param {Boolean}  [mirror=0]
      *  @param {Function} drawFunction */
-    drawCanvas2D(pos, size, angle, mirror, drawFunction)
+    drawCanvas2D(pos, size, angle=0, mirror, drawFunction)
     {
         const context = this.context;
         context.save();
@@ -2619,7 +2612,7 @@ class TileLayer extends EngineObject
         size = size.multiply(this.tileSize);
         context.translate(pos.x, this.canvas.height - pos.y);
         context.rotate(angle);
-        context.scale(mirror?-size.x:size.x, size.y);
+        context.scale(mirror ? -size.x : size.x, size.y);
         drawFunction(context);
         context.restore();
     }
@@ -2632,7 +2625,7 @@ class TileLayer extends EngineObject
      *  @param {Color}   [color=new Color(1,1,1)]
      *  @param {Number}  [angle=0]
      *  @param {Boolean} [mirror=0] */
-    drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, color=new Color, angle=0, mirror)
+    drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, color=new Color, angle, mirror)
     {
         this.drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
@@ -2658,7 +2651,7 @@ class TileLayer extends EngineObject
      *  @param {Vector2} [size=new Vector2(1,1)]
      *  @param {Color}   [color=new Color(1,1,1)]
      *  @param {Number}  [angle=0] */
-    drawRect(pos, size, color, angle) { this.drawTile(pos, size, -1, 0, color, angle, 0); }
+    drawRect(pos, size, color, angle) { this.drawTile(pos, size, -1, 0, color, angle); }
 }
 /*
     LittleJS Particle System
@@ -2966,7 +2959,7 @@ let medalsPreventUnlock;
 let newgrounds;
 
 // Engine internal variables not exposed to documentation
-let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimer;
+let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimeLast;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -3047,8 +3040,7 @@ class Medal
         const y = -medalDisplayHeight*hidePercent;
 
         // draw containing rect and clip to that region
-        context.save();
-        context.beginPath();
+        context.beginPath(context.save());
         context.fillStyle = '#ddd'
         context.fill(context.rect(x, y, medalDisplayWidth, medalDisplayHeight));
         context.strokeStyle = context.fillStyle = '#000';
@@ -3056,13 +3048,12 @@ class Medal
         context.stroke();
         context.clip();
 
+        // draw the icon and text
         this.renderIcon(x+15+medalDisplayIconSize/2, y+medalDisplayHeight/2);
-
-        // draw the text
         context.textAlign = 'left';
-        context.font = '3em '+ fontDefault;
+        context.font = '40px '+ fontDefault;
         context.fillText(this.name, x+medalDisplayIconSize+25, y+35);
-        context.font = '1.5em '+ fontDefault;
+        context.font = '25px '+ fontDefault;
         context.restore(context.fillText(this.description, x+medalDisplayIconSize+25, y+70));
     }
 
@@ -3086,10 +3077,7 @@ class Medal
     }
  
     // Get local storage key used by the medal
-    storageKey()
-    {
-        return medalsSaveName + '_medal_' + this.id;
-    }
+    storageKey() { return medalsSaveName + '_' + this.id; }
 }
 
 // engine automatically renders medals
@@ -3100,11 +3088,11 @@ function medalsRender()
     
     // update first medal in queue
     const medal = medalsDisplayQueue[0];
-    const time = timeReal - medalsDisplayTimer;
-    if (!medalsDisplayTimer)
-        medalsDisplayTimer = timeReal;
+    const time = timeReal - medalsDisplayTimeLast;
+    if (!medalsDisplayTimeLast)
+        medalsDisplayTimeLast = timeReal;
     else if (time > medalDisplayTime)
-        medalsDisplayQueue.shift(medalsDisplayTimer = 0);
+        medalsDisplayQueue.shift(medalsDisplayTimeLast = 0);
     else
     {
         // slide on/off medals
@@ -3287,14 +3275,15 @@ function glInit()
 
     // create the canvas and tile texture
     glCanvas = document.createElement('canvas');
-    glContext = glCanvas.getContext('webgl');
+    glContext = glCanvas.getContext('webgl', {antialias:!pixelated});
+
     glTileTexture = glCreateTexture(tileImage);
 
     if (glOverlay)
     {
         // some browsers are much faster without copying the gl buffer so we just overlay it instead
         document.body.appendChild(glCanvas);
-        glCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
+        glCanvas.style = mainCanvas.style.cssText;
     }
 
     // setup vertex and fragment shaders

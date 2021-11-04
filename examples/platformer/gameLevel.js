@@ -205,7 +205,7 @@ function buildLevel()
 
     // warm up level
     warmup = 1;
-    for (let i=5*FPS; i--;)
+    for (let i=5*frameRate; i--;)
         engineObjectsUpdate();
     warmup = 0;
 

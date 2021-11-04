@@ -25,12 +25,6 @@ const isChrome = window['chrome'];
  *  @memberof Utilities */
 const abs = (a)=> a < 0 ? -a : a;
 
-/** Returns the sign of value passed in
- *  @param {Number} value
- *  @return {Number}
- *  @memberof Utilities */
-const sign = (a)=> a < 0 ? -1 : 1;
-
 /** Returns lowest of two values passed in
  *  @param {Number} valueA
  *  @param {Number} valueB
@@ -44,6 +38,12 @@ const min = (a, b)=> a < b ?  a : b;
  *  @return {Number}
  *  @memberof Utilities */
 const max = (a, b)=> a > b ?  a : b;
+
+/** Returns the sign of value passed in
+ *  @param {Number} value
+ *  @return {Number}
+ *  @memberof Utilities */
+const sign = (a)=> a < 0 ? -1 : 1;
 
 /** Returns first parm modulo the second param, but adjusted so negative numbers work as expected
  *  @param {Number} dividend
@@ -76,23 +76,17 @@ const percent = (v, max=1, min=0)=> max-min ? clamp((v-min) / (max-min)) : 0;
  *  @memberof Utilities */
 const lerp = (p, max=1, min=0)=> min + clamp(p) * (max-min);
 
-/** Formats seconds to mm:ss style for display purposes 
- *  @param {Number} t - time in seconds
- *  @return {String}
+/** Applies smoothstep function to the percentage value
+ *  @param {Number} value
+ *  @return {Number}
  *  @memberof Utilities */
-const formatTime = (t)=> (t/60|0)+':'+(t%60<10?'0':'')+(t%60|0);
+const smoothStep = (p)=> p * p * (3 - 2 * p);
 
 /** Returns the nearest power of two not less then the value
  *  @param {Number} value
  *  @return {Number}
  *  @memberof Utilities */
 const nearestPowerOfTwo = (v)=> 2**Math.ceil(Math.log2(v));
-
-/** Applies smoothstep function to the percentage value
- *  @param {Number} value
- *  @return {Number}
- *  @memberof Utilities */
-const smoothStep = (p)=> p * p * (3 - 2 * p);
 
 /** Returns true if two axis aligned bounding boxes are overlapping 
  *  @param {Vector2} pointA - Center of box A
@@ -110,6 +104,12 @@ const isOverlapping = (pA, sA, pB, sB)=> abs(pA.x - pB.x)*2 < sA.x + sB.x & abs(
  *  @return {Number}              - Value waving between 0 and amplitude
  *  @memberof Utilities */
 const wave = (frequency=1, amplitude=1, t=time)=> amplitude/2 * (1 - Math.cos(t*frequency*2*PI));
+
+/** Formats seconds to mm:ss style for display purposes 
+ *  @param {Number} t - time in seconds
+ *  @return {String}
+ *  @memberof Utilities */
+const formatTime = (t)=> (t/60|0)+':'+(t%60<10?'0':'')+(t%60|0);
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -133,7 +133,7 @@ const randInt = (a=1, b=0)=> rand(a,b)|0;
 /** Randomly returns either -1 or 1
  *  @return {Number}
  *  @memberof Random */
-const randSign = ()=> (rand(2)|0)*2-1;
+const randSign = ()=> (rand(2)|0) * 2 - 1;
 
 /** Returns a random Vector2 within a circular shape
  *  @param {Number} [radius=1]
@@ -169,7 +169,7 @@ let randSeed = 1;
 const randSeeded = (a=1, b=0)=>
 {
     randSeed ^= randSeed << 13; randSeed ^= randSeed >>> 17; randSeed ^= randSeed << 5; // xorshift
-    return b + (a-b)*abs(randSeed % 1e9)/1e9;
+    return b + (a-b) * abs(randSeed % 1e9) / 1e9;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
