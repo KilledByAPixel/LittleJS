@@ -36,7 +36,7 @@ const timeDelta = 1/FPS;
 let engineObjects = [];
 
 /** Array containing only objects that are set to collide with other objects (for optimization) */
-let engineCollideObjects = [];
+let engineObjectsCollide = [];
 
 /** Current update frame, used to calculate time */
 let frame = 0;
@@ -227,7 +227,7 @@ function engineObjectsUpdate()
 
     // remove destroyed objects
     engineObjects = engineObjects.filter(o=>!o.destroyed);
-    engineCollideObjects = engineCollideObjects.filter(o=>!o.destroyed);
+    engineObjectsCollide = engineObjectsCollide.filter(o=>!o.destroyed);
 
     // increment frame and update time
     time = ++frame / FPS;

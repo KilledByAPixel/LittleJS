@@ -1371,7 +1371,7 @@ class EngineObject
         {
             // check collisions against solid objects
             const epsilon = 1e-3; // necessary to push slightly outside of the collision
-            for (const o of engineCollideObjects)
+            for (const o of engineObjectsCollide)
             {
                 // non solid objects don't collide with eachother
                 if (!this.isSolid & !o.isSolid || o.destroyed || o.parent || o == this)
@@ -1588,13 +1588,13 @@ class EngineObject
         // track collidable objects in separate list
         if (collideSolidObjects && !this.collideSolidObjects)
         {
-            ASSERT(!engineCollideObjects.includes(this));
-            engineCollideObjects.push(this);
+            ASSERT(!engineObjectsCollide.includes(this));
+            engineObjectsCollide.push(this);
         }
         else if (!collideSolidObjects && this.collideSolidObjects)
         {
-            ASSERT(engineCollideObjects.includes(this))
-            engineCollideObjects.splice(engineCollideObjects.indexOf(this), 1);
+            ASSERT(engineObjectsCollide.includes(this))
+            engineObjectsCollide.splice(engineObjectsCollide.indexOf(this), 1);
         }
 
         this.collideSolidObjects = collideSolidObjects;
@@ -3910,7 +3910,7 @@ const timeDelta = 1/FPS;
 let engineObjects = [];
 
 /** Array containing only objects that are set to collide with other objects (for optimization) */
-let engineCollideObjects = [];
+let engineObjectsCollide = [];
 
 /** Current update frame, used to calculate time */
 let frame = 0;
@@ -4101,7 +4101,7 @@ function engineObjectsUpdate()
 
     // remove destroyed objects
     engineObjects = engineObjects.filter(o=>!o.destroyed);
-    engineCollideObjects = engineCollideObjects.filter(o=>!o.destroyed);
+    engineObjectsCollide = engineObjectsCollide.filter(o=>!o.destroyed);
 
     // increment frame and update time
     time = ++frame / FPS;
