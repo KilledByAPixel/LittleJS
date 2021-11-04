@@ -22,7 +22,7 @@
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.10';
+const engineVersion = '1.1.11';
 
 /** Frames per second to update objects
  *  @default */
@@ -79,8 +79,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
         document.body.style = 'margin:0;overflow:hidden;background:#000' +
             ';user-select:none;-webkit-user-select:none;-moz-user-select:none'; // prevent user select
-        mainCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)' +
-            (pixelated ? ';image-rendering:crisp-edges;image-rendering:pixelated' : ''); // pixelated rendering
+        mainCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
         mainContext = mainCanvas.getContext('2d');
 
         // init stuff and start engine
@@ -177,7 +176,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         mainContext.imageSmoothingEnabled = !pixelated; // disable smoothing for pixel art
 
         // render sort then render while removing destroyed objects
-        glPreRender(mainCanvas.width, mainCanvas.height);
+        glPreRender(mainCanvas.width, mainCanvas.height, cameraPos.x, cameraPos.y, cameraScale);
         gameRender();
         engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
         for (const o of engineObjects)

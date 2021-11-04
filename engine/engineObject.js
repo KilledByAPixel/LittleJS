@@ -161,16 +161,15 @@ class EngineObject
                 }
 
                 // check for collision
-                const sx = this.size.x + o.size.x;
-                const sy = this.size.y + o.size.y;
-                const smallStepUp = (oldPos.y - o.pos.y)*2 > sy + gravity; // prefer to push up if small delta
-                const isBlockedX = abs(oldPos.y - o.pos.y)*2 < sy;
-                const isBlockedY = abs(oldPos.x - o.pos.x)*2 < sx;
+                const sizeBoth = this.size.add(o.size);
+                const smallStepUp = (oldPos.y - o.pos.y)*2 > sizeBoth.y + gravity; // prefer to push up if small delta
+                const isBlockedX = abs(oldPos.y - o.pos.y)*2 < sizeBoth.y;
+                const isBlockedY = abs(oldPos.x - o.pos.x)*2 < sizeBoth.x;
                 
                 if (smallStepUp || isBlockedY || !isBlockedX) // resolve y collision
                 {
                     // push outside object collision
-                    this.pos.y = o.pos.y + (sy/2 + epsilon) * sign(oldPos.y - o.pos.y);
+                    this.pos.y = o.pos.y + (sizeBoth.y/2 + epsilon) * sign(oldPos.y - o.pos.y);
                     if (o.groundObject && wasMovingDown || !o.mass)
                     {
                         // set ground object if landed on something
@@ -196,12 +195,11 @@ class EngineObject
                         this.velocity.y = lerp(elasticity, elastic0, inelastic);
                         o.velocity.y = lerp(elasticity, elastic1, inelastic);
                     }
-                    debugPhysics && smallStepUp && (abs(oldPos.x - o.pos.x)*2 > sx) && console.log('stepUp', oldPos.y - o.pos.y);
                 }
                 if (!smallStepUp && (isBlockedX || !isBlockedY)) // resolve x collision
                 {
                     // push outside collision
-                    this.pos.x = o.pos.x + (sx/2 + epsilon) * sign(oldPos.x - o.pos.x);
+                    this.pos.x = o.pos.x + (sizeBoth.x/2 + epsilon) * sign(oldPos.x - o.pos.x);
                     if (o.mass)
                     {
                         // inelastic collision
@@ -221,7 +219,6 @@ class EngineObject
                     else // bounce if other object is fixed
                         this.velocity.x *= -this.elasticity;
                 }
-
                 debugPhysics && debugAABB(this.pos, this.size, o.pos, o.size, '#f0f');
             }
         }

@@ -26,6 +26,7 @@ const debugCircle     = ()=> {}
 const debugPoint      = ()=> {}
 const debugLine       = ()=> {}
 const debugAABB       = ()=> {}
+const debugText       = ()=> {}
 const debugClear      = ()=> {}
 const debugSaveCanvas = ()=> {}
 /**
@@ -726,7 +727,7 @@ const medalDisplayIconSize = 80;
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.10';
+const engineVersion = '1.1.11';
 
 /** Frames per second to update objects
  *  @default */
@@ -783,8 +784,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
         document.body.style = 'margin:0;overflow:hidden;background:#000' +
             ';user-select:none;-webkit-user-select:none;-moz-user-select:none'; // prevent user select
-        mainCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)' +
-            (pixelated ? ';image-rendering:crisp-edges;image-rendering:pixelated' : ''); // pixelated rendering
+        mainCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
         mainContext = mainCanvas.getContext('2d');
 
         // init stuff and start engine
@@ -881,7 +881,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         mainContext.imageSmoothingEnabled = !pixelated; // disable smoothing for pixel art
 
         // render sort then render while removing destroyed objects
-        glPreRender(mainCanvas.width, mainCanvas.height);
+        glPreRender(mainCanvas.width, mainCanvas.height, cameraPos.x, cameraPos.y, cameraScale);
         gameRender();
         engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
         for (const o of engineObjects)
@@ -1136,16 +1136,15 @@ class EngineObject
                 }
 
                 // check for collision
-                const sx = this.size.x + o.size.x;
-                const sy = this.size.y + o.size.y;
-                const smallStepUp = (oldPos.y - o.pos.y)*2 > sy + gravity; // prefer to push up if small delta
-                const isBlockedX = abs(oldPos.y - o.pos.y)*2 < sy;
-                const isBlockedY = abs(oldPos.x - o.pos.x)*2 < sx;
+                const sizeBoth = this.size.add(o.size);
+                const smallStepUp = (oldPos.y - o.pos.y)*2 > sizeBoth.y + gravity; // prefer to push up if small delta
+                const isBlockedX = abs(oldPos.y - o.pos.y)*2 < sizeBoth.y;
+                const isBlockedY = abs(oldPos.x - o.pos.x)*2 < sizeBoth.x;
                 
                 if (smallStepUp || isBlockedY || !isBlockedX) // resolve y collision
                 {
                     // push outside object collision
-                    this.pos.y = o.pos.y + (sy/2 + epsilon) * sign(oldPos.y - o.pos.y);
+                    this.pos.y = o.pos.y + (sizeBoth.y/2 + epsilon) * sign(oldPos.y - o.pos.y);
                     if (o.groundObject && wasMovingDown || !o.mass)
                     {
                         // set ground object if landed on something
@@ -1171,12 +1170,11 @@ class EngineObject
                         this.velocity.y = lerp(elasticity, elastic0, inelastic);
                         o.velocity.y = lerp(elasticity, elastic1, inelastic);
                     }
-                    debugPhysics && smallStepUp && (abs(oldPos.x - o.pos.x)*2 > sx) && console.log('stepUp', oldPos.y - o.pos.y);
                 }
                 if (!smallStepUp && (isBlockedX || !isBlockedY)) // resolve x collision
                 {
                     // push outside collision
-                    this.pos.x = o.pos.x + (sx/2 + epsilon) * sign(oldPos.x - o.pos.x);
+                    this.pos.x = o.pos.x + (sizeBoth.x/2 + epsilon) * sign(oldPos.x - o.pos.x);
                     if (o.mass)
                     {
                         // inelastic collision
@@ -1196,7 +1194,6 @@ class EngineObject
                     else // bounce if other object is fixed
                         this.velocity.x *= -this.elasticity;
                 }
-
                 debugPhysics && debugAABB(this.pos, this.size, o.pos, o.size, '#f0f');
             }
         }
@@ -1854,40 +1851,6 @@ if (isTouchDevice)
         // prevent normal mouse events from being called
         return !e.cancelable;
     }
-}
-
-function createTouchGamepad()
-{
-    if (!isTouchDevice)
-        return;
-
-    const size = 50;
-    const addButton = (text, key, offsetSide, offsetBottom=0, rightSide)=>
-    {
-        const button = document.createElement('button');
-        button.innerHTML = text;
-        button.style = `position:absolute;bottom:${offsetBottom*size};width:${size};height:${size}` +
-            `;z-index:9;border-radius:20px;font-size:40px;line-height:40px`
-
-        button.style[rightSide ? 'right' : 'left'] = offsetSide*size;
-        button.ontouchstart = (e)=> inputData[0][key] = 3;
-        button.ontouchend = (e)=> inputData[0][key] = 4;
-
-        document.body.appendChild(button);
-    }
-
-    // gamepad buttons
-    addButton('🡇', 40, 1, 0);
-    addButton('🡄', 37, 0, 1);
-    addButton('🡆', 39, 2, 1);
-    addButton('🡅', 38, 1, 2);
-    addButton('🅐', 32, 1, 0, 1);
-    addButton('🅧', 90, 2, 1, 1);
-    addButton('🅑', 67, 0, 1, 1);
-    addButton('🅨', 88, 1, 2, 1);
-
-    // disable touch events
-    ontouchstart = ontouchmove = ontouchend = (e) => {};
 }
 /** 
  * LittleJS Audio System
@@ -2597,16 +2560,13 @@ class TileLayer extends EngineObject
         }
 
         // save current render settings
-        this.savedRenderSettings = [mainCanvasSize, mainCanvas, mainContext, cameraScale, cameraPos];
+        this.savedRenderSettings = [mainCanvas, mainContext];
 
         // set camera transform for renering
-        cameraScale = this.tileSize.x;
-        cameraPos = this.size.scale(.5);
         mainCanvas = this.canvas;
         mainContext = this.context;
         mainContext.imageSmoothingEnabled = !pixelated; // disable smoothing for pixel art
-        mainCanvasSize = vec2(width, height);
-        glPreRender(width, height);
+        glPreRender(width, height, this.size.x/2, this.size.y/2, this.tileSize.x);
     }
 
     /** Call to end the redraw process */
@@ -2617,7 +2577,7 @@ class TileLayer extends EngineObject
         //debugSaveCanvas(this.canvas);
 
         // set stuff back to normal
-        [mainCanvasSize, mainCanvas, mainContext, cameraScale, cameraPos] = this.savedRenderSettings;
+        [mainCanvas, mainContext] = this.savedRenderSettings;
     }
 
     /** Draw the tile at a given position
@@ -2883,34 +2843,34 @@ class ParticleEmitter extends EngineObject
         const randomizeScale = (v)=> v + v*rand(randomness, -randomness);
 
         // randomize particle settings
-        const particleTime  = randomizeScale(this.particleTime);
-        const sizeStart     = randomizeScale(this.sizeStart);
-        const sizeEnd       = randomizeScale(this.sizeEnd);
-        const speed         = randomizeScale(this.speed);
-        const angleSpeed    = randomizeScale(this.angleSpeed) * randSign();
-        const coneAngle     = rand(this.emitConeAngle, -this.emitConeAngle);
-        const colorStart    = randColor(this.colorStartA, this.colorStartB, this.randomColorLinear);
-        const colorEnd      = randColor(this.colorEndA,   this.colorEndB, this.randomColorLinear);
+        const particleTime = randomizeScale(this.particleTime);
+        const sizeStart    = randomizeScale(this.sizeStart);
+        const sizeEnd      = randomizeScale(this.sizeEnd);
+        const speed        = randomizeScale(this.speed);
+        const angleSpeed   = randomizeScale(this.angleSpeed) * randSign();
+        const coneAngle    = rand(this.emitConeAngle, -this.emitConeAngle);
+        const colorStart   = randColor(this.colorStartA, this.colorStartB, this.randomColorLinear);
+        const colorEnd     = randColor(this.colorEndA,   this.colorEndB, this.randomColorLinear);
 
         // build particle settings
-        particle.colorStart      = colorStart;
-        particle.colorEndDelta   = colorEnd.subtract(colorStart);
-        particle.velocity        = (new Vector2).setAngle(this.angle + coneAngle, speed);
-        particle.angleVelocity   = angleSpeed;
-        particle.lifeTime        = particleTime;
-        particle.sizeStart       = sizeStart;
-        particle.sizeEndDelta    = sizeEnd - sizeStart;
-        particle.fadeRate        = this.fadeRate;
-        particle.damping         = this.damping;
-        particle.angleDamping    = this.angleDamping;
-        particle.elasticity      = this.elasticity;
-        particle.friction        = this.friction;
-        particle.gravityScale    = this.gravityScale;
-        particle.collideTiles    = this.collideTiles;
-        particle.additive        = this.additive;
-        particle.renderOrder     = this.renderOrder;
-        particle.trailScale      = this.trailScale;
-        particle.mirror          = rand()<.5;
+        particle.colorStart    = colorStart;
+        particle.colorEndDelta = colorEnd.subtract(colorStart);
+        particle.velocity      = (new Vector2).setAngle(this.angle + coneAngle, speed);
+        particle.angleVelocity = angleSpeed;
+        particle.lifeTime      = particleTime;
+        particle.sizeStart     = sizeStart;
+        particle.sizeEndDelta  = sizeEnd - sizeStart;
+        particle.fadeRate      = this.fadeRate;
+        particle.damping       = this.damping;
+        particle.angleDamping  = this.angleDamping;
+        particle.elasticity    = this.elasticity;
+        particle.friction      = this.friction;
+        particle.gravityScale  = this.gravityScale;
+        particle.collideTiles  = this.collideTiles;
+        particle.additive      = this.additive;
+        particle.renderOrder   = this.renderOrder;
+        particle.trailScale    = this.trailScale;
+        particle.mirror        = rand()<.5;
 
         // setup callbacks for particles
         particle.destroyCallback = this.particleDestroyCallback;
@@ -3316,7 +3276,7 @@ let glContext;
 let glTileTexture;
 
 // WebGL internal variables not exposed to documentation
-let glActiveTexture, glShader, glPositionData, glColorData, glBatchCount, glBatchAdditive, glDirty, glAdditive;
+let glActiveTexture, glShader, glPositionData, glColorData, glBatchCount, glBatchAdditive, glAdditive;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -3327,14 +3287,14 @@ function glInit()
 
     // create the canvas and tile texture
     glCanvas = document.createElement('canvas');
-    glContext = glCanvas.getContext('webgl',  {antialias:!pixelated});
+    glContext = glCanvas.getContext('webgl');
     glTileTexture = glCreateTexture(tileImage);
 
     if (glOverlay)
     {
         // some browsers are much faster without copying the gl buffer so we just overlay it instead
         document.body.appendChild(glCanvas);
-        glCanvas.style = mainCanvas.style.cssText;
+        glCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
     }
 
     // setup vertex and fragment shaders
@@ -3374,7 +3334,7 @@ function glInit()
         glContext.vertexAttribPointer(location, size, type, normalize, gl_VERTEX_BYTE_STRIDE, offset);
         offset += size*typeSize;
     }
-    let offset = glDirty = glBatchCount = 0;
+    let offset = glBatchCount = 0;
     initVertexAttribArray('a', gl_FLOAT, 4, 1);            // angle
     initVertexAttribArray('p', gl_FLOAT, 4, 2);            // position
     initVertexAttribArray('s', gl_FLOAT, 4, 2);            // size
@@ -3488,14 +3448,12 @@ function glCreateTexture(image)
 }
 
 // called automatically by engine before render
-function glPreRender(width, height)
+function glPreRender(width, height, cameraX, cameraY, cameraScale)
 {
     if (!glEnable) return;
 
     // clear and set to same size as main canvas
-    glCanvas.width = width;
-    glCanvas.height = height;
-    glContext.viewport(0, 0, width, height);
+    glContext.viewport(0, 0, glCanvas.width = width, glCanvas.height = height);
 
     // set up the shader
     glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = glTileTexture);
@@ -3510,7 +3468,7 @@ function glPreRender(width, height)
             sx, 0, 0, 0,
             0, sy, 0, 0,
             1, 1, -1, 1,
-            -1-sx*cameraPos.x, -1-sy*cameraPos.y, 0, 0
+            -1-sx*cameraX, -1-sy*cameraY, 0, 0
         ])
     );
 }
@@ -3539,13 +3497,13 @@ function glFlush()
  *  @memberof WebGL */
 function glCopyToContext(context, forceDraw)
 {
-    if (!glEnable || !glDirty)  return;
+    if (!glEnable || !glBatchCount)  return;
     
     glFlush();
     if (!glOverlay || forceDraw)
     {
         // do not draw/clear in overlay mode because the canvas is visible
-        context.drawImage(glCanvas, 0, glAdditive = glDirty = 0);
+        context.drawImage(glCanvas, 0, 0);
         glContext.clear(gl_COLOR_BUFFER_BIT);
     }
 }
@@ -3573,7 +3531,6 @@ function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgb
         
     // setup 2 triangles to form a quad
     let offset = glBatchCount++ * gl_VERTICES_PER_QUAD * gl_INDICIES_PER_VERT;
-    glDirty = 1;
 
     // vertex 0
     glPositionData[offset++] = angle;

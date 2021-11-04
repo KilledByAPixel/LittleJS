@@ -27,7 +27,7 @@ let glContext;
 let glTileTexture;
 
 // WebGL internal variables not exposed to documentation
-let glActiveTexture, glShader, glPositionData, glColorData, glBatchCount, glBatchAdditive, glDirty, glAdditive;
+let glActiveTexture, glShader, glPositionData, glColorData, glBatchCount, glBatchAdditive, glAdditive;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -38,14 +38,14 @@ function glInit()
 
     // create the canvas and tile texture
     glCanvas = document.createElement('canvas');
-    glContext = glCanvas.getContext('webgl',  {antialias:!pixelated});
+    glContext = glCanvas.getContext('webgl');
     glTileTexture = glCreateTexture(tileImage);
 
     if (glOverlay)
     {
         // some browsers are much faster without copying the gl buffer so we just overlay it instead
         document.body.appendChild(glCanvas);
-        glCanvas.style = mainCanvas.style.cssText;
+        glCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
     }
 
     // setup vertex and fragment shaders
@@ -85,7 +85,7 @@ function glInit()
         glContext.vertexAttribPointer(location, size, type, normalize, gl_VERTEX_BYTE_STRIDE, offset);
         offset += size*typeSize;
     }
-    let offset = glDirty = glBatchCount = 0;
+    let offset = glBatchCount = 0;
     initVertexAttribArray('a', gl_FLOAT, 4, 1);            // angle
     initVertexAttribArray('p', gl_FLOAT, 4, 2);            // position
     initVertexAttribArray('s', gl_FLOAT, 4, 2);            // size
@@ -199,14 +199,12 @@ function glCreateTexture(image)
 }
 
 // called automatically by engine before render
-function glPreRender(width, height)
+function glPreRender(width, height, cameraX, cameraY, cameraScale)
 {
     if (!glEnable) return;
 
     // clear and set to same size as main canvas
-    glCanvas.width = width;
-    glCanvas.height = height;
-    glContext.viewport(0, 0, width, height);
+    glContext.viewport(0, 0, glCanvas.width = width, glCanvas.height = height);
 
     // set up the shader
     glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = glTileTexture);
@@ -221,7 +219,7 @@ function glPreRender(width, height)
             sx, 0, 0, 0,
             0, sy, 0, 0,
             1, 1, -1, 1,
-            -1-sx*cameraPos.x, -1-sy*cameraPos.y, 0, 0
+            -1-sx*cameraX, -1-sy*cameraY, 0, 0
         ])
     );
 }
@@ -250,13 +248,13 @@ function glFlush()
  *  @memberof WebGL */
 function glCopyToContext(context, forceDraw)
 {
-    if (!glEnable || !glDirty)  return;
+    if (!glEnable || !glBatchCount)  return;
     
     glFlush();
     if (!glOverlay || forceDraw)
     {
         // do not draw/clear in overlay mode because the canvas is visible
-        context.drawImage(glCanvas, 0, glAdditive = glDirty = 0);
+        context.drawImage(glCanvas, 0, 0);
         glContext.clear(gl_COLOR_BUFFER_BIT);
     }
 }
@@ -284,7 +282,6 @@ function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgb
         
     // setup 2 triangles to form a quad
     let offset = glBatchCount++ * gl_VERTICES_PER_QUAD * gl_INDICIES_PER_VERT;
-    glDirty = 1;
 
     // vertex 0
     glPositionData[offset++] = angle;

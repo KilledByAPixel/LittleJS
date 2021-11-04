@@ -181,34 +181,34 @@ class ParticleEmitter extends EngineObject
         const randomizeScale = (v)=> v + v*rand(randomness, -randomness);
 
         // randomize particle settings
-        const particleTime  = randomizeScale(this.particleTime);
-        const sizeStart     = randomizeScale(this.sizeStart);
-        const sizeEnd       = randomizeScale(this.sizeEnd);
-        const speed         = randomizeScale(this.speed);
-        const angleSpeed    = randomizeScale(this.angleSpeed) * randSign();
-        const coneAngle     = rand(this.emitConeAngle, -this.emitConeAngle);
-        const colorStart    = randColor(this.colorStartA, this.colorStartB, this.randomColorLinear);
-        const colorEnd      = randColor(this.colorEndA,   this.colorEndB, this.randomColorLinear);
+        const particleTime = randomizeScale(this.particleTime);
+        const sizeStart    = randomizeScale(this.sizeStart);
+        const sizeEnd      = randomizeScale(this.sizeEnd);
+        const speed        = randomizeScale(this.speed);
+        const angleSpeed   = randomizeScale(this.angleSpeed) * randSign();
+        const coneAngle    = rand(this.emitConeAngle, -this.emitConeAngle);
+        const colorStart   = randColor(this.colorStartA, this.colorStartB, this.randomColorLinear);
+        const colorEnd     = randColor(this.colorEndA,   this.colorEndB, this.randomColorLinear);
 
         // build particle settings
-        particle.colorStart      = colorStart;
-        particle.colorEndDelta   = colorEnd.subtract(colorStart);
-        particle.velocity        = (new Vector2).setAngle(this.angle + coneAngle, speed);
-        particle.angleVelocity   = angleSpeed;
-        particle.lifeTime        = particleTime;
-        particle.sizeStart       = sizeStart;
-        particle.sizeEndDelta    = sizeEnd - sizeStart;
-        particle.fadeRate        = this.fadeRate;
-        particle.damping         = this.damping;
-        particle.angleDamping    = this.angleDamping;
-        particle.elasticity      = this.elasticity;
-        particle.friction        = this.friction;
-        particle.gravityScale    = this.gravityScale;
-        particle.collideTiles    = this.collideTiles;
-        particle.additive        = this.additive;
-        particle.renderOrder     = this.renderOrder;
-        particle.trailScale      = this.trailScale;
-        particle.mirror          = rand()<.5;
+        particle.colorStart    = colorStart;
+        particle.colorEndDelta = colorEnd.subtract(colorStart);
+        particle.velocity      = (new Vector2).setAngle(this.angle + coneAngle, speed);
+        particle.angleVelocity = angleSpeed;
+        particle.lifeTime      = particleTime;
+        particle.sizeStart     = sizeStart;
+        particle.sizeEndDelta  = sizeEnd - sizeStart;
+        particle.fadeRate      = this.fadeRate;
+        particle.damping       = this.damping;
+        particle.angleDamping  = this.angleDamping;
+        particle.elasticity    = this.elasticity;
+        particle.friction      = this.friction;
+        particle.gravityScale  = this.gravityScale;
+        particle.collideTiles  = this.collideTiles;
+        particle.additive      = this.additive;
+        particle.renderOrder   = this.renderOrder;
+        particle.trailScale    = this.trailScale;
+        particle.mirror        = rand()<.5;
 
         // setup callbacks for particles
         particle.destroyCallback = this.particleDestroyCallback;

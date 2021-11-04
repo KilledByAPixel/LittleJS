@@ -240,37 +240,3 @@ if (isTouchDevice)
         return !e.cancelable;
     }
 }
-
-function createTouchGamepad()
-{
-    if (!isTouchDevice)
-        return;
-
-    const size = 50;
-    const addButton = (text, key, offsetSide, offsetBottom=0, rightSide)=>
-    {
-        const button = document.createElement('button');
-        button.innerHTML = text;
-        button.style = `position:absolute;bottom:${offsetBottom*size};width:${size};height:${size}` +
-            `;z-index:9;border-radius:20px;font-size:40px;line-height:40px`
-
-        button.style[rightSide ? 'right' : 'left'] = offsetSide*size;
-        button.ontouchstart = (e)=> inputData[0][key] = 3;
-        button.ontouchend = (e)=> inputData[0][key] = 4;
-
-        document.body.appendChild(button);
-    }
-
-    // gamepad buttons
-    addButton('🡇', 40, 1, 0);
-    addButton('🡄', 37, 0, 1);
-    addButton('🡆', 39, 2, 1);
-    addButton('🡅', 38, 1, 2);
-    addButton('🅐', 32, 1, 0, 1);
-    addButton('🅧', 90, 2, 1, 1);
-    addButton('🅑', 67, 0, 1, 1);
-    addButton('🅨', 88, 1, 2, 1);
-
-    // disable touch events
-    ontouchstart = ontouchmove = ontouchend = (e) => {};
-}

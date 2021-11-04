@@ -250,16 +250,13 @@ class TileLayer extends EngineObject
         }
 
         // save current render settings
-        this.savedRenderSettings = [mainCanvasSize, mainCanvas, mainContext, cameraScale, cameraPos];
+        this.savedRenderSettings = [mainCanvas, mainContext];
 
         // set camera transform for renering
-        cameraScale = this.tileSize.x;
-        cameraPos = this.size.scale(.5);
         mainCanvas = this.canvas;
         mainContext = this.context;
         mainContext.imageSmoothingEnabled = !pixelated; // disable smoothing for pixel art
-        mainCanvasSize = vec2(width, height);
-        glPreRender(width, height);
+        glPreRender(width, height, this.size.x/2, this.size.y/2, this.tileSize.x);
     }
 
     /** Call to end the redraw process */
@@ -270,7 +267,7 @@ class TileLayer extends EngineObject
         //debugSaveCanvas(this.canvas);
 
         // set stuff back to normal
-        [mainCanvasSize, mainCanvas, mainContext, cameraScale, cameraPos] = this.savedRenderSettings;
+        [mainCanvas, mainContext] = this.savedRenderSettings;
     }
 
     /** Draw the tile at a given position
