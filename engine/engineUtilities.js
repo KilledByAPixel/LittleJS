@@ -39,7 +39,7 @@ const min = (a, b)=> a < b ?  a : b;
  *  @memberof Utilities */
 const max = (a, b)=> a > b ?  a : b;
 
-/** Returns the sign of value passed in
+/** Returns the sign of value passed in (also returns 1 if 0)
  *  @param {Number} value
  *  @return {Number}
  *  @memberof Utilities */

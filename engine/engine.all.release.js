@@ -70,7 +70,7 @@ const min = (a, b)=> a < b ?  a : b;
  *  @memberof Utilities */
 const max = (a, b)=> a > b ?  a : b;
 
-/** Returns the sign of value passed in
+/** Returns the sign of value passed in (also returns 1 if 0)
  *  @param {Number} value
  *  @return {Number}
  *  @memberof Utilities */
@@ -783,7 +783,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         // setup html
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
         document.body.style = 'margin:0;overflow:hidden;background:#000' +
-            ';user-select:none;-webkit-user-select:none;-moz-user-select:none'; // prevent user select
+            (inputTouchEnable?';touch-action:none;user-select:none;-webkit-user-select:none;-moz-user-select:none':'');
         mainCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
         mainContext = mainCanvas.getContext('2d');
 
