@@ -19,9 +19,9 @@ LittleJS is a super lightweight 2D JavaScript game engine with fast WebGL render
 ## Features
 
 - Very small footprint with no dependencies
-- Can render 10,000+ objects at 60fps, often several times more
+- Can render 10,000+ objects at 60fps, often many times more
 - Object oriented system with base class engine object
-- 2D physics and collision handling for axis aligned boxes
+- Fast 2D physics and collision handling for axis aligned boxes
 - Positional audio effects with [zzfx](https://killedbyapixel.github.io/ZzFX/) and music with [zzfxm](https://keithclark.github.io/ZzFXM/), mp3s, or wavs
 - Input processing system with keyboard, mouse, gamepad, and touch support
 - Engine helper functions and classes like Vector2, Color, and Timer
@@ -29,8 +29,8 @@ LittleJS is a super lightweight 2D JavaScript game engine with fast WebGL render
 - Particle effects system (particle editor/designer in progress)
 - Medal system tracks and displays achievements with Newgrounds and OS13k integration
 - Several easy to understand example projects you can build on
+- All example projects are compatible with mobile devices
 - Debug tools and debug rendering system
-- Example projects are compatible with mobile devices
 - [Full documentation](https://killedbyapixel.github.io/LittleJS/docs) automatically generated from the source code block tags with [JSDoc](https://github.com/jsdoc/jsdoc)
 - Build system automatically combines everything, minifies, and removes unused code
 - For size coding competitions like [js13kGames](https://js13kgames.com/), starter project builds to a 7KB zip
