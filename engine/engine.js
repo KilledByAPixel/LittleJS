@@ -22,7 +22,7 @@
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.14';
+const engineVersion = '1.1.15';
 
 /** Frames per second to update objects
  *  @default */
@@ -78,7 +78,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         // setup html
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
         document.body.style = 'margin:0;overflow:hidden;background:#000' +
-            (inputTouchEnable?';touch-action:none;user-select:none;-webkit-user-select:none;-moz-user-select:none':'');
+            (touchMouseEnable?';touch-action:none;user-select:none;-webkit-user-select:none;-moz-user-select:none':'');
         mainCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
         mainContext = mainCanvas.getContext('2d');
 
@@ -90,8 +90,9 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         document.body.appendChild(overlayCanvas = document.createElement('canvas'));
         overlayCanvas.style = mainCanvas.style.cssText;
         overlayContext = overlayCanvas.getContext('2d');
-
+        
         gameInit();
+        touchGamepadCreate();
         engineUpdate();
     };
 
@@ -147,11 +148,11 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             frameTimeBufferMS += deltaSmooth;
         }
 
-        if (fixedSize.x)
+        if (canvasFixedSize.x)
         {
             // clear set fixed size
-            mainCanvas.width  = fixedSize.x;
-            mainCanvas.height = fixedSize.y;
+            mainCanvas.width  = canvasFixedSize.x;
+            mainCanvas.height = canvasFixedSize.y;
             
             // fit to window by adding space on top or bottom if necessary
             const aspect = innerWidth / innerHeight;
@@ -167,13 +168,13 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         else
         {
             // clear and set size to same as window
-            mainCanvas.width  = min(innerWidth,  maxSize.x);
-            mainCanvas.height = min(innerHeight, maxSize.y);
+            mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
+            mainCanvas.height = min(innerHeight, canvasMaxSize.y);
         }
         
         // save canvas size and clear overlay canvas
         mainCanvasSize = vec2(overlayCanvas.width = mainCanvas.width, overlayCanvas.height = mainCanvas.height);
-        mainContext.imageSmoothingEnabled = !pixelated; // disable smoothing for pixel art
+        mainContext.imageSmoothingEnabled = !cavasPixelated; // disable smoothing for pixel art
 
         // render sort then render while removing destroyed objects
         glPreRender(mainCanvas.width, mainCanvas.height, cameraPos.x, cameraPos.y, cameraScale);
@@ -183,6 +184,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             o.destroyed || o.render();
         gameRenderPost();
         medalsRender();
+        touchGamepadRender();
         debugRender();
         glCopyToContext(mainContext);
 

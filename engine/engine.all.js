@@ -580,11 +580,6 @@ const debugParticleSettings =
  *  @memberof Utilities */
 const PI = Math.PI;
 
-/** True if running a Chromium based browser
- *  @const
- *  @memberof Utilities */
-const isChrome = window['chrome'];
-
 /** Returns absoulte value of value passed in
  *  @param {Number} value
  *  @return {Number}
@@ -613,10 +608,10 @@ const sign = (a)=> a < 0 ? -1 : 1;
 
 /** Returns first parm modulo the second param, but adjusted so negative numbers work as expected
  *  @param {Number} dividend
- *  @param {Number} divisor
+ *  @param {Number} [divisor=1]
  *  @return {Number}
  *  @memberof Utilities */
-const mod = (a, b)=> ((a % b) + b) % b;
+const mod = (a, b=1)=> ((a % b) + b) % b;
 
 /** Clamps the value beween max and min
  *  @param {Number} value
@@ -1040,7 +1035,7 @@ class Timer
      * @return {Boolean} */
     elapsed() { return time >  this.time; }
 
-    /** Get how long since elapsed, returns 0 if not set
+    /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {Number} */
     get() { return this.isSet()? time - this.time : 0; }
 
@@ -1062,13 +1057,13 @@ class Timer
  *  @type {Vector2} 
  *  @default
  *  @memberof Settings */
-const maxSize = vec2(1920, 1200);
+const canvasMaxSize = vec2(1920, 1200);
 
 /** Fixed size of the canvas, if enabled cavnvas size never changes
  *  @type {Vector2} 
  *  @default
  *  @memberof Settings */
-let fixedSize = vec2();
+let canvasFixedSize = vec2();
 
 /** Default font used for text rendering
  *  @default
@@ -1078,7 +1073,7 @@ let fontDefault = 'arial';
 /** Disables anti aliasing for pixel art if true
  *  @default
  *  @memberof Settings */
-let pixelated = 1;
+let cavasPixelated = 1;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Tile sheet settings
@@ -1178,15 +1173,20 @@ const gamepadsEnable = 1;
  *  @memberof Settings */
 const gamepadDirectionEmulateStick = 1;
 
-/** If true touch input is routed to mouse functions
- *  @default
- *  @memberof Settings */
-const inputTouchEnable = 1;
-
 /** If true the WASD keys are also routed to the direction keys (for better accessability)
  *  @default
  *  @memberof Settings */
 const inputWASDEmulateDirection = 1;
+
+/** If true touch input is routed to mouse functions
+ *  @default
+ *  @memberof Settings */
+const touchMouseEnable = 1;
+
+/** Size of virutal gamepad for touch devices in pixels, 80 recommended
+ *  @default
+ *  @memberof Settings */
+let touchGamepadSize = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Audio settings
@@ -1880,6 +1880,7 @@ function toggleFullscreen()
  * <br> - Tracks key down, pressed, and released
  * <br> - Also tracks mouse buttons, position, and wheel
  * <br> - Supports multiple gamepads
+ * <br> - Virtual gamepad for touch devices with touchGamepadSize
  * @namespace Input
  */
 
@@ -2071,7 +2072,7 @@ function gamepadsUpdate()
                 data[j] = button.pressed ? 1 + 2*!gamepadIsDown(j,i) : 4*gamepadIsDown(j,i);
                 isUsingGamepad |= !i && button.pressed;
             }
-            
+
             if (gamepadDirectionEmulateStick)
             {
                 // copy dpad to left analog stick when pressed
@@ -2089,12 +2090,12 @@ function gamepadsUpdate()
 /** True if a touch device has been detected
  *  @const {boolean}
  *  @memberof Input */
-const isTouchDevice = inputTouchEnable && window.ontouchstart !== undefined;
-if (isTouchDevice)
+const isTouchDevice = window.ontouchstart !== undefined;
+if (touchMouseEnable && isTouchDevice)
 {
     // handle all touch events the same way
     let wasTouching, hadTouchInput;
-    ontouchstart = ontouchmove = ontouchend = e=>
+    ontouchstart = ontouchmove = ontouchend = (e)=>
     {
         e.button = 0; // all touches are left click
 
@@ -2118,6 +2119,105 @@ if (isTouchDevice)
         // prevent normal mouse events from being called
         return !e.cancelable;
     }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Touch gamepad - on screen virtual gamepad
+
+// create the touch gamepad, called automatically by the engine if touchGamepadSize is set
+const touchGamepadTimer = new Timer;
+function touchGamepadCreate()
+{
+    if (!touchGamepadSize || !isTouchDevice)
+        return;
+
+    ontouchstart = ontouchmove = ontouchend = (e)=> 
+    {
+        if (!touchGamepadSize)
+            return;
+            
+        const touching = e.touches.length;
+        if (touching)
+        {
+            touchGamepadTimer.isSet() || zzfx(0) ; // fix mobile audio, force it to play a sound the first time
+
+            // set that gamepad is active
+            isUsingGamepad = 1;
+            touchGamepadTimer.set();
+        }
+
+        // get center of left and right sides
+        const stickCenter = vec2(touchGamepadSize, overlayCanvas.height-touchGamepadSize);
+        const buttonCenter = vec2(overlayCanvas.width-touchGamepadSize, overlayCanvas.height-touchGamepadSize);
+
+        // update virtual gamepad
+        const data = inputData[1] || (inputData[1] = []);
+        const sticks = stickData[0] || (stickData[0] = []);
+        sticks[0] = vec2();
+
+        // check each touch point
+        const buttons = [];
+        for (const touch of e.touches)
+        {
+            const touchPos = vec2(touch.clientX, touch.clientY);
+            if (touchPos.distance(stickCenter) < touchGamepadSize)
+            {
+                // virtual analog stick
+                sticks[0] = touchPos.subtract(stickCenter).clampLength();
+                sticks[0].y = -sticks[0].y; // flip vertical
+            }
+            else if (touchPos.distance(buttonCenter) < touchGamepadSize)
+            {
+                // virtual buttons
+                const button = touchPos.subtract(buttonCenter).direction();
+                buttons[button == 2 ? 3 : button == 3 ? 2 : button] = 1; // fix button locations
+            }
+        }
+
+        // read virtual buttons
+        for (let j = data.length; j--;)
+            data[j] = buttons[j] ? 1 + 2*!gamepadIsDown(j,0) : 4*gamepadIsDown(j,0);
+    }
+}
+
+// render the touch gamepad, called automatically by the engine
+function touchGamepadRender()
+{
+    if (!touchGamepadSize || !touchGamepadTimer.isSet())
+        return;
+    
+    // fade off when not touching
+    const alpha = percent(touchGamepadTimer.get(), 4, 5);
+    if (!alpha)
+        return;
+
+    // setup the canvas
+    overlayContext.save();
+    overlayContext.globalAlpha = alpha;
+    overlayContext.fillStyle = '#fff2';
+    overlayContext.strokeStyle = '#fff8';
+    overlayContext.lineWidth = 2;
+
+    // draw left analog stick
+    const center = vec2(touchGamepadSize, overlayCanvas.height-touchGamepadSize);
+    overlayContext.beginPath();
+    overlayContext.arc(center.x,center.y,touchGamepadSize*.9,0,9);
+    overlayContext.fill();
+    overlayContext.stroke();
+
+    // draw right buttons
+    center.x = overlayCanvas.width - touchGamepadSize;
+    for (let i=4; i--;)
+    {
+        const pos = center.add((new Vector2).setAngle(i*PI/2, touchGamepadSize*.6));
+        overlayContext.beginPath();
+        overlayContext.arc(pos.x,pos.y,touchGamepadSize*.3,0,9);
+        overlayContext.fill();
+        overlayContext.stroke();
+    }
+
+    // set canvas back to normal
+    overlayContext.restore();
 }
 /** 
  * LittleJS Audio System
@@ -2821,7 +2921,7 @@ class TileLayer extends EngineObject
         // set camera transform for renering
         mainCanvas = this.canvas;
         mainContext = this.context;
-        mainContext.imageSmoothingEnabled = !pixelated; // disable smoothing for pixel art
+        mainContext.imageSmoothingEnabled = !cavasPixelated; // disable smoothing for pixel art
         glPreRender(width, height, this.size.x/2, this.size.y/2, this.tileSize.x);
     }
 
@@ -3299,13 +3399,14 @@ class Medal
     render(hidePercent=0)
     {
         const context = overlayContext;
-        const x = overlayCanvas.width - medalDisplayWidth;
+        const width = min(medalDisplayWidth, mainCanvas.width);
+        const x = overlayCanvas.width - width;
         const y = -medalDisplayHeight*hidePercent;
 
         // draw containing rect and clip to that region
         context.beginPath(context.save());
         context.fillStyle = '#ddd'
-        context.fill(context.rect(x, y, medalDisplayWidth, medalDisplayHeight));
+        context.fill(context.rect(x, y, width, medalDisplayHeight));
         context.strokeStyle = context.fillStyle = '#000';
         context.lineWidth = 2; 
         context.stroke();
@@ -3692,8 +3793,8 @@ function glCreateTexture(image)
     glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
         
     // use point filtering for pixelated rendering
-    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, pixelated ? gl_NEAREST : gl_LINEAR);
-    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, pixelated ? gl_NEAREST : gl_LINEAR);
+    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, cavasPixelated ? gl_NEAREST : gl_LINEAR);
+    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, cavasPixelated ? gl_NEAREST : gl_LINEAR);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_S, gl_CLAMP_TO_EDGE);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_T, gl_CLAMP_TO_EDGE);
     return texture;
@@ -3883,7 +3984,7 @@ gl_VERTEX_BYTE_STRIDE = 4 + (4 * 2) * 3 + (4) * 2; // float + vec2 * 3 + (char *
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.14';
+const engineVersion = '1.1.15';
 
 /** Frames per second to update objects
  *  @default */
@@ -3939,7 +4040,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         // setup html
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
         document.body.style = 'margin:0;overflow:hidden;background:#000' +
-            (inputTouchEnable?';touch-action:none;user-select:none;-webkit-user-select:none;-moz-user-select:none':'');
+            (touchMouseEnable?';touch-action:none;user-select:none;-webkit-user-select:none;-moz-user-select:none':'');
         mainCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
         mainContext = mainCanvas.getContext('2d');
 
@@ -3951,8 +4052,9 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         document.body.appendChild(overlayCanvas = document.createElement('canvas'));
         overlayCanvas.style = mainCanvas.style.cssText;
         overlayContext = overlayCanvas.getContext('2d');
-
+        
         gameInit();
+        touchGamepadCreate();
         engineUpdate();
     };
 
@@ -4008,11 +4110,11 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             frameTimeBufferMS += deltaSmooth;
         }
 
-        if (fixedSize.x)
+        if (canvasFixedSize.x)
         {
             // clear set fixed size
-            mainCanvas.width  = fixedSize.x;
-            mainCanvas.height = fixedSize.y;
+            mainCanvas.width  = canvasFixedSize.x;
+            mainCanvas.height = canvasFixedSize.y;
             
             // fit to window by adding space on top or bottom if necessary
             const aspect = innerWidth / innerHeight;
@@ -4028,13 +4130,13 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         else
         {
             // clear and set size to same as window
-            mainCanvas.width  = min(innerWidth,  maxSize.x);
-            mainCanvas.height = min(innerHeight, maxSize.y);
+            mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
+            mainCanvas.height = min(innerHeight, canvasMaxSize.y);
         }
         
         // save canvas size and clear overlay canvas
         mainCanvasSize = vec2(overlayCanvas.width = mainCanvas.width, overlayCanvas.height = mainCanvas.height);
-        mainContext.imageSmoothingEnabled = !pixelated; // disable smoothing for pixel art
+        mainContext.imageSmoothingEnabled = !cavasPixelated; // disable smoothing for pixel art
 
         // render sort then render while removing destroyed objects
         glPreRender(mainCanvas.width, mainCanvas.height, cameraPos.x, cameraPos.y, cameraScale);
@@ -4044,6 +4146,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             o.destroyed || o.render();
         gameRenderPost();
         medalsRender();
+        touchGamepadRender();
         debugRender();
         glCopyToContext(mainContext);
 

@@ -6,7 +6,7 @@
 
 'use strict';
 
-pixelated = 0; // do not use pixelated rendering
+cavasPixelated = 0; // do not use pixelated rendering
 
 const fallTime = .2;
 const cameraOffset = vec2(0,-.5);
@@ -42,7 +42,7 @@ const setTile = (pos, data) => level[pos.x + pos.y * levelSize.x] = data;
 function gameInit()
 {
     // setup canvas
-    fixedSize = vec2(1920, 1080); // 1080p
+    canvasFixedSize = vec2(1920, 1080); // 1080p
     mainCanvas.style.background = backgroundColor.rgba();
 
     // load high score

@@ -14,7 +14,7 @@ const sound_bounce     = new Sound([,,1e3,,.03,.02,1,2,,,940,.03,,,,,.2,.6,,.06]
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
-    fixedSize = vec2(1280, 720); // 720p
+    canvasFixedSize = vec2(1280, 720); // 720p
     levelSize = vec2(72, 40);
     cameraPos = levelSize.scale(.5);
     paddle = new Paddle(vec2(levelSize.x/2-12,2));

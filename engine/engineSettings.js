@@ -12,13 +12,13 @@
  *  @type {Vector2} 
  *  @default
  *  @memberof Settings */
-const maxSize = vec2(1920, 1200);
+const canvasMaxSize = vec2(1920, 1200);
 
 /** Fixed size of the canvas, if enabled cavnvas size never changes
  *  @type {Vector2} 
  *  @default
  *  @memberof Settings */
-let fixedSize = vec2();
+let canvasFixedSize = vec2();
 
 /** Default font used for text rendering
  *  @default
@@ -28,7 +28,7 @@ let fontDefault = 'arial';
 /** Disables anti aliasing for pixel art if true
  *  @default
  *  @memberof Settings */
-let pixelated = 1;
+let cavasPixelated = 1;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Tile sheet settings
@@ -128,15 +128,20 @@ const gamepadsEnable = 1;
  *  @memberof Settings */
 const gamepadDirectionEmulateStick = 1;
 
-/** If true touch input is routed to mouse functions
- *  @default
- *  @memberof Settings */
-const inputTouchEnable = 1;
-
 /** If true the WASD keys are also routed to the direction keys (for better accessability)
  *  @default
  *  @memberof Settings */
 const inputWASDEmulateDirection = 1;
+
+/** If true touch input is routed to mouse functions
+ *  @default
+ *  @memberof Settings */
+const touchMouseEnable = 1;
+
+/** Size of virutal gamepad for touch devices in pixels, 80 recommended
+ *  @default
+ *  @memberof Settings */
+let touchGamepadSize = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Audio settings

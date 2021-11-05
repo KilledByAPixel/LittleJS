@@ -244,7 +244,7 @@ class TileLayer extends EngineObject
         // set camera transform for renering
         mainCanvas = this.canvas;
         mainContext = this.context;
-        mainContext.imageSmoothingEnabled = !pixelated; // disable smoothing for pixel art
+        mainContext.imageSmoothingEnabled = !cavasPixelated; // disable smoothing for pixel art
         glPreRender(width, height, this.size.x/2, this.size.y/2, this.tileSize.x);
     }
 

@@ -3,6 +3,7 @@
  * <br> - Tracks key down, pressed, and released
  * <br> - Also tracks mouse buttons, position, and wheel
  * <br> - Supports multiple gamepads
+ * <br> - Virtual gamepad for touch devices with touchGamepadSize
  * @namespace Input
  */
 
@@ -194,7 +195,7 @@ function gamepadsUpdate()
                 data[j] = button.pressed ? 1 + 2*!gamepadIsDown(j,i) : 4*gamepadIsDown(j,i);
                 isUsingGamepad |= !i && button.pressed;
             }
-            
+
             if (gamepadDirectionEmulateStick)
             {
                 // copy dpad to left analog stick when pressed
@@ -212,12 +213,12 @@ function gamepadsUpdate()
 /** True if a touch device has been detected
  *  @const {boolean}
  *  @memberof Input */
-const isTouchDevice = inputTouchEnable && window.ontouchstart !== undefined;
-if (isTouchDevice)
+const isTouchDevice = window.ontouchstart !== undefined;
+if (touchMouseEnable && isTouchDevice)
 {
     // handle all touch events the same way
     let wasTouching, hadTouchInput;
-    ontouchstart = ontouchmove = ontouchend = e=>
+    ontouchstart = ontouchmove = ontouchend = (e)=>
     {
         e.button = 0; // all touches are left click
 
@@ -241,4 +242,103 @@ if (isTouchDevice)
         // prevent normal mouse events from being called
         return !e.cancelable;
     }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Touch gamepad - on screen virtual gamepad
+
+// create the touch gamepad, called automatically by the engine if touchGamepadSize is set
+const touchGamepadTimer = new Timer;
+function touchGamepadCreate()
+{
+    if (!touchGamepadSize || !isTouchDevice)
+        return;
+
+    ontouchstart = ontouchmove = ontouchend = (e)=> 
+    {
+        if (!touchGamepadSize)
+            return;
+            
+        const touching = e.touches.length;
+        if (touching)
+        {
+            touchGamepadTimer.isSet() || zzfx(0) ; // fix mobile audio, force it to play a sound the first time
+
+            // set that gamepad is active
+            isUsingGamepad = 1;
+            touchGamepadTimer.set();
+        }
+
+        // get center of left and right sides
+        const stickCenter = vec2(touchGamepadSize, overlayCanvas.height-touchGamepadSize);
+        const buttonCenter = vec2(overlayCanvas.width-touchGamepadSize, overlayCanvas.height-touchGamepadSize);
+
+        // update virtual gamepad
+        const data = inputData[1] || (inputData[1] = []);
+        const sticks = stickData[0] || (stickData[0] = []);
+        sticks[0] = vec2();
+
+        // check each touch point
+        const buttons = [];
+        for (const touch of e.touches)
+        {
+            const touchPos = vec2(touch.clientX, touch.clientY);
+            if (touchPos.distance(stickCenter) < touchGamepadSize)
+            {
+                // virtual analog stick
+                sticks[0] = touchPos.subtract(stickCenter).clampLength();
+                sticks[0].y = -sticks[0].y; // flip vertical
+            }
+            else if (touchPos.distance(buttonCenter) < touchGamepadSize)
+            {
+                // virtual buttons
+                const button = touchPos.subtract(buttonCenter).direction();
+                buttons[button == 2 ? 3 : button == 3 ? 2 : button] = 1; // fix button locations
+            }
+        }
+
+        // read virtual buttons
+        for (let j = data.length; j--;)
+            data[j] = buttons[j] ? 1 + 2*!gamepadIsDown(j,0) : 4*gamepadIsDown(j,0);
+    }
+}
+
+// render the touch gamepad, called automatically by the engine
+function touchGamepadRender()
+{
+    if (!touchGamepadSize || !touchGamepadTimer.isSet())
+        return;
+    
+    // fade off when not touching
+    const alpha = percent(touchGamepadTimer.get(), 4, 5);
+    if (!alpha)
+        return;
+
+    // setup the canvas
+    overlayContext.save();
+    overlayContext.globalAlpha = alpha;
+    overlayContext.fillStyle = '#fff2';
+    overlayContext.strokeStyle = '#fff8';
+    overlayContext.lineWidth = 2;
+
+    // draw left analog stick
+    const center = vec2(touchGamepadSize, overlayCanvas.height-touchGamepadSize);
+    overlayContext.beginPath();
+    overlayContext.arc(center.x,center.y,touchGamepadSize*.9,0,9);
+    overlayContext.fill();
+    overlayContext.stroke();
+
+    // draw right buttons
+    center.x = overlayCanvas.width - touchGamepadSize;
+    for (let i=4; i--;)
+    {
+        const pos = center.add((new Vector2).setAngle(i*PI/2, touchGamepadSize*.6));
+        overlayContext.beginPath();
+        overlayContext.arc(pos.x,pos.y,touchGamepadSize*.3,0,9);
+        overlayContext.fill();
+        overlayContext.stroke();
+    }
+
+    // set canvas back to normal
+    overlayContext.restore();
 }

@@ -14,11 +14,6 @@
  *  @memberof Utilities */
 const PI = Math.PI;
 
-/** True if running a Chromium based browser
- *  @const
- *  @memberof Utilities */
-const isChrome = window['chrome'];
-
 /** Returns absoulte value of value passed in
  *  @param {Number} value
  *  @return {Number}
@@ -47,10 +42,10 @@ const sign = (a)=> a < 0 ? -1 : 1;
 
 /** Returns first parm modulo the second param, but adjusted so negative numbers work as expected
  *  @param {Number} dividend
- *  @param {Number} divisor
+ *  @param {Number} [divisor=1]
  *  @return {Number}
  *  @memberof Utilities */
-const mod = (a, b)=> ((a % b) + b) % b;
+const mod = (a, b=1)=> ((a % b) + b) % b;
 
 /** Clamps the value beween max and min
  *  @param {Number} value
@@ -474,7 +469,7 @@ class Timer
      * @return {Boolean} */
     elapsed() { return time >  this.time; }
 
-    /** Get how long since elapsed, returns 0 if not set
+    /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {Number} */
     get() { return this.isSet()? time - this.time : 0; }
 

@@ -99,13 +99,14 @@ class Medal
     render(hidePercent=0)
     {
         const context = overlayContext;
-        const x = overlayCanvas.width - medalDisplayWidth;
+        const width = min(medalDisplayWidth, mainCanvas.width);
+        const x = overlayCanvas.width - width;
         const y = -medalDisplayHeight*hidePercent;
 
         // draw containing rect and clip to that region
         context.beginPath(context.save());
         context.fillStyle = '#ddd'
-        context.fill(context.rect(x, y, medalDisplayWidth, medalDisplayHeight));
+        context.fill(context.rect(x, y, width, medalDisplayHeight));
         context.strokeStyle = context.fillStyle = '#000';
         context.lineWidth = 2; 
         context.stroke();
