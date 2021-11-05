@@ -530,15 +530,15 @@ const canvasMaxSize = vec2(1920, 1200);
  *  @memberof Settings */
 let canvasFixedSize = vec2();
 
-/** Default font used for text rendering
- *  @default
- *  @memberof Settings */
-let fontDefault = 'arial';
-
 /** Disables anti aliasing for pixel art if true
  *  @default
  *  @memberof Settings */
 let cavasPixelated = 1;
+
+/** Default font used for text rendering
+ *  @default
+ *  @memberof Settings */
+let fontDefault = 'arial';
 
 ///////////////////////////////////////////////////////////////////////////////
 // Tile sheet settings
@@ -3389,7 +3389,7 @@ function glInit()
 
     // setup vertex and fragment shaders
     glShader = glCreateProgram(
-        'precision lowp float;'+    // use lowp for better performance
+        'precision highp float;'+   // use highp for better accuracy, lowp for better perf
         'uniform mat4 m;'+          // transform matrix
         'attribute float a;'+       // angle
         'attribute vec2 p,s,t;'+    // position, size, uv
@@ -3401,7 +3401,7 @@ function glInit()
         'v=t;d=c;e=b;'+             // pass stuff to fragment shader
         '}'                         // end of shader
         ,
-        'precision lowp float;'+             // use lowp for better performance
+        'precision highp float;'+            // use highp for better accuracy, lowp for better perf
         'varying vec2 v;'+                   // uv
         'varying vec4 d,e;'+                 // color, additiveColor
         'uniform sampler2D j;'+              // texture
@@ -3603,15 +3603,15 @@ function glCopyToContext(context, forceDraw)
  *  @param y
  *  @param sizeX
  *  @param sizeY
- *  @param [angle=0]
- *  @param [uv0X=0]
- *  @param [uv0Y=0]
- *  @param [uv1X=1]
- *  @param [uv1Y=1]
+ *  @param angle
+ *  @param uv0X
+ *  @param uv0Y
+ *  @param uv1X
+ *  @param uv1Y
  *  @param [rgba=0xffffffff]
  *  @param [rgbaAdditive=0]
  *  @memberof WebGL */
-function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgba=0xffffffff, rgbaAdditive=0)
+function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba=0xffffffff, rgbaAdditive=0)
 {
     if (!glEnable) return;
 

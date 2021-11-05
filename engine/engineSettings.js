@@ -20,15 +20,15 @@ const canvasMaxSize = vec2(1920, 1200);
  *  @memberof Settings */
 let canvasFixedSize = vec2();
 
-/** Default font used for text rendering
- *  @default
- *  @memberof Settings */
-let fontDefault = 'arial';
-
 /** Disables anti aliasing for pixel art if true
  *  @default
  *  @memberof Settings */
 let cavasPixelated = 1;
+
+/** Default font used for text rendering
+ *  @default
+ *  @memberof Settings */
+let fontDefault = 'arial';
 
 ///////////////////////////////////////////////////////////////////////////////
 // Tile sheet settings
