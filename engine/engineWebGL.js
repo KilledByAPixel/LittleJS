@@ -63,7 +63,7 @@ function glInit()
         'v=t;d=c;e=b;'+             // pass stuff to fragment shader
         '}'                         // end of shader
         ,
-        'precision highp float;'+            // use highp for better accuracy, lowp for better perf
+        'precision lowp float;'+             // use highp for better accuracy, lowp for better perf
         'varying vec2 v;'+                   // uv
         'varying vec4 d,e;'+                 // color, additiveColor
         'uniform sampler2D j;'+              // texture
