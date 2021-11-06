@@ -166,7 +166,7 @@ let soundVolume = .5;
 /** All audio code can be disabled and removed from build
  *  @default
  *  @memberof Settings */
-let soundEnable = 0;
+let soundEnable = 1;
 
 /** Default range where sound no longer plays
  *  @default

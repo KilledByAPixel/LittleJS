@@ -1211,7 +1211,7 @@ let soundVolume = .5;
 /** All audio code can be disabled and removed from build
  *  @default
  *  @memberof Settings */
-let soundEnable = 0;
+let soundEnable = 1;
 
 /** Default range where sound no longer plays
  *  @default
@@ -4008,7 +4008,7 @@ gl_VERTEX_BYTE_STRIDE = 4 + (4 * 2) * 3 + (4) * 2; // float + vec2 * 3 + (char *
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.18';
+const engineVersion = '1.1.19';
 
 /** Frames per second to update objects
  *  @default */

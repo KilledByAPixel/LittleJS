@@ -676,7 +676,7 @@ let soundVolume = .5;
 /** All audio code can be disabled and removed from build
  *  @default
  *  @memberof Settings */
-let soundEnable = 0;
+let soundEnable = 1;
 
 /** Default range where sound no longer plays
  *  @default
@@ -739,7 +739,7 @@ let medalDisplayIconSize = 80;
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.18';
+const engineVersion = '1.1.19';
 
 /** Frames per second to update objects
  *  @default */
