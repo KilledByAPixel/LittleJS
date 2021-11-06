@@ -239,13 +239,14 @@ class TileLayer extends EngineObject
         }
 
         // save current render settings
-        this.savedRenderSettings = [mainCanvas, mainContext];
+        this.savedRenderSettings = [mainCanvas, mainContext, cameraPos, cameraScale];
 
-        // set camera transform for renering
+        // use normal rendering system to render the tiles
         mainCanvas = this.canvas;
         mainContext = this.context;
-        mainContext.imageSmoothingEnabled = !cavasPixelated; // disable smoothing for pixel art
-        glPreRender(width, height, this.size.x/2, this.size.y/2, this.tileSize.x);
+        cameraPos = this.size.scale(.5);
+        cameraScale = this.tileSize.x;
+        enginePreRender();
     }
 
     /** Call to end the redraw process */
@@ -256,7 +257,7 @@ class TileLayer extends EngineObject
         //debugSaveCanvas(this.canvas);
 
         // set stuff back to normal
-        [mainCanvas, mainContext] = this.savedRenderSettings;
+        [mainCanvas, mainContext, cameraPos, cameraScale] = this.savedRenderSettings;
     }
 
     /** Draw the tile at a given position
@@ -284,7 +285,7 @@ class TileLayer extends EngineObject
              this.drawTileData(vec2(x,y));
     }
 
-    /** Draw directly to the 2d canvas in world space (bipass webgl)
+    /** Draw directly to the 2D canvas in world space (bipass webgl)
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
      *  @param {Number}   [angle=0]

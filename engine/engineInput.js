@@ -247,16 +247,16 @@ if (touchMouseEnable && isTouchDevice)
 ///////////////////////////////////////////////////////////////////////////////
 // Touch gamepad - on screen virtual gamepad
 
-// create the touch gamepad, called automatically by the engine if touchGamepadSize is set
+// create the touch gamepad, called automatically by the engine
 const touchGamepadTimer = new Timer;
 function touchGamepadCreate()
 {
-    if (!touchGamepadSize || !isTouchDevice)
+    if (!touchGamepadEnable || !isTouchDevice)
         return;
 
     ontouchstart = ontouchmove = ontouchend = (e)=> 
     {
-        if (!touchGamepadSize)
+        if (!touchGamepadEnable)
             return;
             
         const touching = e.touches.length;
@@ -312,7 +312,7 @@ function touchGamepadCreate()
 // render the touch gamepad, called automatically by the engine
 function touchGamepadRender()
 {
-    if (!touchGamepadSize || !touchGamepadTimer.isSet())
+    if (!touchGamepadEnable || !touchGamepadTimer.isSet())
         return;
     
     // fade off when not touching

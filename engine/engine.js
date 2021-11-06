@@ -22,7 +22,7 @@
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.17';
+const engineVersion = '1.1.18';
 
 /** Frames per second to update objects
  *  @default */
@@ -172,12 +172,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             mainCanvas.height = min(innerHeight, canvasMaxSize.y);
         }
         
-        // save canvas size and clear overlay canvas
-        mainCanvasSize = vec2(overlayCanvas.width = mainCanvas.width, overlayCanvas.height = mainCanvas.height);
-        mainContext.imageSmoothingEnabled = !cavasPixelated; // disable smoothing for pixel art
-
         // render sort then render while removing destroyed objects
-        glPreRender(mainCanvas.width, mainCanvas.height, cameraPos.x, cameraPos.y, cameraScale);
+        enginePreRender();
         gameRender();
         engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
         for (const o of engineObjects)
@@ -208,6 +204,14 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     tileImageSource ? tileImage.src = tileImageSource : tileImage.onload();
 }
 
+// called by engine to setup render system
+function enginePreRender()
+{
+    // save canvas size and clear canvases
+    mainCanvasSize = vec2(overlayCanvas.width = mainCanvas.width, overlayCanvas.height = mainCanvas.height);
+    mainContext.imageSmoothingEnabled = !cavasPixelated; // disable smoothing for pixel art
+    glPreRender(mainCanvas.width, mainCanvas.height, cameraPos.x, cameraPos.y, cameraScale);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 

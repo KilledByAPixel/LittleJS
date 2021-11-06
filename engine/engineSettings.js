@@ -12,7 +12,7 @@
  *  @type {Vector2} 
  *  @default
  *  @memberof Settings */
-const canvasMaxSize = vec2(1920, 1200);
+let canvasMaxSize = vec2(1920, 1200);
 
 /** Fixed size of the canvas, if enabled cavnvas size never changes
  *  @type {Vector2} 
@@ -37,12 +37,12 @@ let fontDefault = 'arial';
  *  @type {Vector2} 
  *  @default
  *  @memberof Settings */
-const tileSizeDefault = vec2(16);
+let tileSizeDefault = vec2(16);
 
 /** Prevent tile bleeding from neighbors in pixels
  *  @default
  *  @memberof Settings */
-const tileBleedShrinkFix = .3;
+let tileBleedShrinkFix = .3;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Object settings
@@ -51,37 +51,37 @@ const tileBleedShrinkFix = .3;
  *  @type {Vector2} 
  *  @default
  *  @memberof Settings */
-const objectDefaultSize = vec2(1);
+let objectDefaultSize = vec2(1);
 
 /** Default object mass for collison calcuations (how heavy objects are)
  *  @default
  *  @memberof Settings */
-const objectDefaultMass = 1;
+let objectDefaultMass = 1;
 
 /** How much to slow velocity by each frame (0-1)
  *  @default
  *  @memberof Settings */
-const objectDefaultDamping = .99;
+let objectDefaultDamping = .99;
 
 /** How much to slow angular velocity each frame (0-1)
  *  @default
  *  @memberof Settings */
-const objectDefaultAngleDamping = .99;
+let objectDefaultAngleDamping = .99;
 
 /** How much to bounce when a collision occurs (0-1)
  *  @default
  *  @memberof Settings */
-const objectDefaultElasticity = 0;
+let objectDefaultElasticity = 0;
 
 /** How much to slow when touching (0-1)
  *  @default
  *  @memberof Settings */
-const objectDefaultFriction = .8;
+let objectDefaultFriction = .8;
 
 /** Clamp max speed to avoid fast objects missing collisions
  *  @default
  *  @memberof Settings */
-const objectMaxSpeed = 1;
+let objectMaxSpeed = 1;
 
 /** How much gravity to apply to objects along the Y axis, negative is down
  *  @default
@@ -108,7 +108,7 @@ let cameraScale = max(tileSizeDefault.x, tileSizeDefault.y);
 /** Enable webgl rendering, webgl can be disabled and removed from build (with some features disabled)
  *  @default
  *  @memberof Settings */
-const glEnable = 1;
+let glEnable = 1;
 
 /** Fixes slow rendering in some browsers by not compositing the WebGL canvas
  *  @default
@@ -121,27 +121,34 @@ let glOverlay = 1;
 /** Should gamepads be allowed
  *  @default
  *  @memberof Settings */
-const gamepadsEnable = 1;
+let gamepadsEnable = 1;
 
 /** If true, the dpad input is also routed to the left analog stick (for better accessability)
  *  @default
  *  @memberof Settings */
-const gamepadDirectionEmulateStick = 1;
+let gamepadDirectionEmulateStick = 1;
 
 /** If true the WASD keys are also routed to the direction keys (for better accessability)
  *  @default
  *  @memberof Settings */
-const inputWASDEmulateDirection = 1;
+let inputWASDEmulateDirection = 1;
 
 /** If true touch input is routed to mouse functions
  *  @default
  *  @memberof Settings */
-const touchMouseEnable = 1;
+let touchMouseEnable = 1;
 
-/** Size of virutal gamepad for touch devices in pixels, 80 recommended
+/** True if touch gamepad should appear on mobile devices
+ *  <br> - Supports left analog stick, 4 face buttons and start button (button 9)
+ *  <br> - Must be set by end of gameInit to be activated
  *  @default
  *  @memberof Settings */
-let touchGamepadSize = 0;
+let touchGamepadEnable = 0;
+
+/** Size of virutal gamepad for touch devices in pixels
+ *  @default
+ *  @memberof Settings */
+let touchGamepadSize = 80;
 
 /** Transparency of touch gamepad overlay
  *  @default
@@ -159,17 +166,17 @@ let soundVolume = .5;
 /** All audio code can be disabled and removed from build
  *  @default
  *  @memberof Settings */
-const soundEnable = 1;
+let soundEnable = 0;
 
 /** Default range where sound no longer plays
  *  @default
  *  @memberof Settings */
-const soundDefaultRange = 30;
+let soundDefaultRange = 30;
 
 /** Default range percent to start tapering off sound (0-1)
  *  @default
  *  @memberof Settings */
-const soundDefaultTaper = .7;
+let soundDefaultTaper = .7;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Medals settings
@@ -177,24 +184,24 @@ const soundDefaultTaper = .7;
 /** How long to show medals for in seconds
  *  @default
  *  @memberof Settings */
-const medalDisplayTime = 5;
+let medalDisplayTime = 5;
 
 /** How quickly to slide on/off medals in seconds
  *  @default
  *  @memberof Settings */
-const medalDisplaySlideTime = .5;
+let medalDisplaySlideTime = .5;
 
 /** Width of medal display
  *  @default
  *  @memberof Settings */
-const medalDisplayWidth = 640;
+let medalDisplayWidth = 640;
 
 /** Height of medal display
  *  @default
  *  @memberof Settings */
-const medalDisplayHeight = 99;
+let medalDisplayHeight = 99;
 
 /** Size of icon in medal display
  *  @default
  *  @memberof Settings */
-const medalDisplayIconSize = 80;
+let medalDisplayIconSize = 80;

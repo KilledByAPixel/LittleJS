@@ -11,7 +11,7 @@ let score, deaths;
 function gameInit()
 {
     // enable touch gamepad on touch devices
-    touchGamepadSize = 80;
+    touchGamepadEnable = 1;
 
     // setup game
     score = deaths = 0;
