@@ -143,6 +143,11 @@ const touchMouseEnable = 1;
  *  @memberof Settings */
 let touchGamepadSize = 0;
 
+/** Transparency of touch gamepad overlay
+ *  @default
+ *  @memberof Settings */
+let touchGamepadAlpha = .5;
+
 ///////////////////////////////////////////////////////////////////////////////
 // Audio settings
 
