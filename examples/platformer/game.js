@@ -10,6 +10,9 @@ let score, deaths;
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
+    // enable touch gamepad on touch devices
+    touchGamepadSize = 80;
+
     // setup game
     score = deaths = 0;
     gravity = -.01;
