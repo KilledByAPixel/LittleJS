@@ -727,7 +727,7 @@ const medalDisplayIconSize = 80;
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.15';
+const engineVersion = '1.1.16';
 
 /** Frames per second to update objects
  *  @default */
@@ -1912,7 +1912,7 @@ function touchGamepadCreate()
         }
 
         // read virtual buttons
-        for (let j = data.length; j--;)
+        for (let j=4; j--;)
             data[j] = buttons[j] ? 1 + 2*!gamepadIsDown(j,0) : 4*gamepadIsDown(j,0);
     }
 }
