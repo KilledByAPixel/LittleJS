@@ -317,13 +317,13 @@ function touchGamepadRender()
     
     // fade off when not touching
     const alpha = percent(touchGamepadTimer.get(), 4, 5);
-    if (!alpha)
+    if (!alpha || paused)
         return;
 
     // setup the canvas
     overlayContext.save();
     overlayContext.globalAlpha = alpha*touchGamepadAlpha;
-    overlayContext.fillStyle = '#fff6';
+    overlayContext.fillStyle = '#fff7';
     overlayContext.strokeStyle = '#fff';
     overlayContext.lineWidth = 3;
 

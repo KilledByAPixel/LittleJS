@@ -153,7 +153,7 @@ let touchGamepadSize = 80;
 /** Transparency of touch gamepad overlay
  *  @default
  *  @memberof Settings */
-let touchGamepadAlpha = .5;
+let touchGamepadAlpha = .3;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Audio settings
