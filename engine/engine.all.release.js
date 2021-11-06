@@ -739,7 +739,7 @@ let medalDisplayIconSize = 80;
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.19';
+const engineVersion = '1.1.20';
 
 /** Frames per second to update objects
  *  @default */
@@ -909,7 +909,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             overlayContext.font = '1em monospace';
             overlayContext.fillStyle = '#000';
             const text = engineName + ' ' + 'v' + engineVersion + ' / ' 
-                + drawCount + ' / ' + engineObjects.length + ' / ' + debugFPS.toFixed(1);
+                + drawCount + ' / ' + engineObjects.length + ' / ' + debugFPS.toFixed(1)
+                + ' ' + (glEnable ? 'GL' : '2D') ;
             overlayContext.fillText(text, mainCanvas.width-3, 3);
             overlayContext.fillStyle = '#fff';
             overlayContext.fillText(text, mainCanvas.width-2, 2);
@@ -1946,7 +1947,7 @@ function touchGamepadRender()
         return;
     
     // fade off when not touching
-    const alpha = percent(touchGamepadTimer.get(), 4, 5);
+    const alpha = percent(touchGamepadTimer.get(), 3, 4);
     if (!alpha || paused)
         return;
 
@@ -1965,7 +1966,7 @@ function touchGamepadRender()
 
     // draw left analog stick
     overlayContext.beginPath();
-    overlayContext.arc(touchGamepadSize, mainCanvasSize.y-touchGamepadSize, touchGamepadSize*.9, 0,9);
+    overlayContext.arc(touchGamepadSize, mainCanvasSize.y-touchGamepadSize, touchGamepadSize/2, 0,9);
     overlayContext.fill();
     overlayContext.stroke();
 
@@ -1973,9 +1974,9 @@ function touchGamepadRender()
     const rightCenter = vec2(mainCanvasSize.x-touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
     for (let i=4; i--;)
     {
-        const pos = rightCenter.add((new Vector2).setAngle(i*PI/2, touchGamepadSize*.6));
+        const pos = rightCenter.add((new Vector2).setAngle(i*PI/2, touchGamepadSize/2));
         overlayContext.beginPath();
-        overlayContext.arc(pos.x, pos.y, touchGamepadSize*.3, 0,9);
+        overlayContext.arc(pos.x, pos.y, touchGamepadSize/4, 0,9);
         overlayContext.fill();
         overlayContext.stroke();
     }
@@ -3429,7 +3430,7 @@ function glInit()
         'v=t;d=c;e=b;'+             // pass stuff to fragment shader
         '}'                         // end of shader
         ,
-        'precision lowp float;'+             // use highp for better accuracy, lowp for better perf
+        'precision highp float;'+            // use highp for better accuracy, lowp for better perf
         'varying vec2 v;'+                   // uv
         'varying vec4 d,e;'+                 // color, additiveColor
         'uniform sampler2D j;'+              // texture

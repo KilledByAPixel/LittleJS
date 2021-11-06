@@ -316,7 +316,7 @@ function touchGamepadRender()
         return;
     
     // fade off when not touching
-    const alpha = percent(touchGamepadTimer.get(), 4, 5);
+    const alpha = percent(touchGamepadTimer.get(), 3, 4);
     if (!alpha || paused)
         return;
 
@@ -335,7 +335,7 @@ function touchGamepadRender()
 
     // draw left analog stick
     overlayContext.beginPath();
-    overlayContext.arc(touchGamepadSize, mainCanvasSize.y-touchGamepadSize, touchGamepadSize*.9, 0,9);
+    overlayContext.arc(touchGamepadSize, mainCanvasSize.y-touchGamepadSize, touchGamepadSize/2, 0,9);
     overlayContext.fill();
     overlayContext.stroke();
 
@@ -343,9 +343,9 @@ function touchGamepadRender()
     const rightCenter = vec2(mainCanvasSize.x-touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
     for (let i=4; i--;)
     {
-        const pos = rightCenter.add((new Vector2).setAngle(i*PI/2, touchGamepadSize*.6));
+        const pos = rightCenter.add((new Vector2).setAngle(i*PI/2, touchGamepadSize/2));
         overlayContext.beginPath();
-        overlayContext.arc(pos.x, pos.y, touchGamepadSize*.3, 0,9);
+        overlayContext.arc(pos.x, pos.y, touchGamepadSize/4, 0,9);
         overlayContext.fill();
         overlayContext.stroke();
     }

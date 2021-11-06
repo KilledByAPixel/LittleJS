@@ -22,7 +22,7 @@
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.19';
+const engineVersion = '1.1.20';
 
 /** Frames per second to update objects
  *  @default */
@@ -192,7 +192,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             overlayContext.font = '1em monospace';
             overlayContext.fillStyle = '#000';
             const text = engineName + ' ' + 'v' + engineVersion + ' / ' 
-                + drawCount + ' / ' + engineObjects.length + ' / ' + debugFPS.toFixed(1);
+                + drawCount + ' / ' + engineObjects.length + ' / ' + debugFPS.toFixed(1)
+                + ' ' + (glEnable ? 'GL' : '2D') ;
             overlayContext.fillText(text, mainCanvas.width-3, 3);
             overlayContext.fillStyle = '#fff';
             overlayContext.fillText(text, mainCanvas.width-2, 2);
