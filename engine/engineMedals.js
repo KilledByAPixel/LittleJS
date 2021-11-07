@@ -108,17 +108,17 @@ class Medal
         context.fillStyle = '#ddd'
         context.fill(context.rect(x, y, width, medalDisplayHeight));
         context.strokeStyle = context.fillStyle = '#000';
-        context.lineWidth = 2; 
-        context.stroke();
-        context.clip();
+        context.lineWidth = 3;
+        context.clip(context.stroke());
 
         // draw the icon and text
         this.renderIcon(x+15+medalDisplayIconSize/2, y+medalDisplayHeight/2);
         context.textAlign = 'left';
-        context.font = '40px '+ fontDefault;
-        context.fillText(this.name, x+medalDisplayIconSize+25, y+35);
-        context.font = '25px '+ fontDefault;
-        context.restore(context.fillText(this.description, x+medalDisplayIconSize+25, y+70));
+        context.font = '700 38px '+ fontDefault;
+        context.fillText(this.name, x+medalDisplayIconSize+25, y+28);
+        context.font = '24px '+ fontDefault;
+        context.fillText(this.description, x+medalDisplayIconSize+25, y+60);
+        context.restore();
     }
 
     /** Render the icon for a medal

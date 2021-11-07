@@ -157,6 +157,9 @@ function destroyTile(pos, makeSound = 1, cleanNeighbors = 1)
 
 function decorateBackgroundTile(pos)
 {
+    if (!tileBackgroundLayer)
+        return;
+
     const tileData = getTileBackgroundData(pos);
     if (tileData <= 0)
         return;

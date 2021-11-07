@@ -142,8 +142,9 @@ class TileLayerData
 /**
  * Tile layer object - cached rendering system for tile layers
  * <br> - Each Tile layer is rendered to an off screen canvas
- * <br> - Tile layers are not rendered using WebGL to allow modifications at run time
- * <br> - Tile layers are sorted
+ * <br> - To allow dynamic modifications, layers are rendered using canvas 2d
+ * <br> - Some devices like mobile phones are limited to 4k texture resolution
+ * <br> - So with 16x16 tiles this limits layers to 256x256 on mobile devices
  * @extends EngineObject
  * @example
  * // create tile collision and visible tile layer

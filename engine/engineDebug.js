@@ -1,8 +1,9 @@
 /** 
  * LittleJS Debug System
- * <br> - Debug overlay with mouse pick
+ * <br> - Press ~ to show debug overlay with mouse pick
+ * <br> - Number keys toggle debug functions
  * <br> - Debug primitive rendering
- * <br> - Save screenshots to disk
+ * <br> - Save a 2d canvas as an image
  * @namespace Debug
  */
 
@@ -34,7 +35,7 @@ let showWatermark = 1;
 let godMode = 0;
 
 // Engine internal variables not exposed to documentation
-let debugPrimitives = [], debugOverlay = 0, debugPhysics = 0, debugRaycast = 0, 
+let debugPrimitives = [], debugOverlay = 0, debugPhysics = 0, debugRaycast = 0, debugControlAllow = 0,
 debugParticles = 0, debugGamepads = 0, debugMedals = 0, debugTakeScreenshot, downloadLink;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -156,22 +157,27 @@ const debugUpdate = ()=>
         
     if (keyWasPressed(192)) // ~
         debugOverlay = !debugOverlay;
-    if (keyWasPressed(49)) // 1
-        debugPhysics = !debugPhysics, debugParticles = 0;
-    if (keyWasPressed(50)) // 2
-        debugParticles = !debugParticles, debugPhysics = 0;
-    if (keyWasPressed(51)) // 3
-        godMode = !godMode;
-    if (keyWasPressed(53)) // 5
-        debugTakeScreenshot = 1;
-    //if (keyWasPressed(54)) // 6
-    //    debugToggleParticleEditor();
-    if (keyWasPressed(55)) // 7
-        debugGamepads = !debugGamepads;
-    //if (keyWasPressed(56)) // 8
-    //if (keyWasPressed(57)) // 9
-    if (keyWasPressed(48)) // 0
-        showWatermark = !showWatermark;
+    if (debugOverlay || debugControlAllow)
+    {
+        // allow debug controls once overlay is opened
+        debugControlAllow = 1;
+        if (keyWasPressed(49)) // 1
+            debugPhysics = !debugPhysics, debugParticles = 0;
+        if (keyWasPressed(50)) // 2
+            debugParticles = !debugParticles, debugPhysics = 0;
+        if (keyWasPressed(51)) // 3
+            godMode = !godMode;
+        if (keyWasPressed(53)) // 5
+            debugTakeScreenshot = 1;
+        //if (keyWasPressed(54)) // 6
+        //    debugToggleParticleEditor();
+        if (keyWasPressed(55)) // 7
+            debugGamepads = !debugGamepads;
+        //if (keyWasPressed(56)) // 8
+        //if (keyWasPressed(57)) // 9
+        if (keyWasPressed(48)) // 0
+            showWatermark = !showWatermark;
+    }
 }
 
 const debugRender = ()=>
@@ -224,12 +230,24 @@ const debugRender = ()=>
 
     if (debugOverlay)
     {
+        // mouse pick
+        let bestDistance = Infinity, bestObject;
         for (const o of engineObjects)
         {
-            if (o.canvas)
+            if (o.canvas || o.destroyed)
                 continue; // skip tile layers
 
             const size = o.size.copy();
+            if (!size.x || !size.y)
+                continue;
+
+            const distance = mousePos.distanceSquared(o.pos);
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                bestObject = o
+            }
+
             size.x = max(size.x, .2);
             size.y = max(size.y, .2);
 
@@ -243,18 +261,6 @@ const debugRender = ()=>
             drawRect(o.pos, size, color);
             drawRect(o.pos, size.scale(.8), o.parent ? new Color(1,1,1,.5) : new Color(0,0,0,.8));
             o.parent && drawLine(o.pos, o.parent.pos, .1, new Color(0,0,1,.5));
-        }
-
-        // mouse pick
-        let bestDistance = Infinity, bestObject;
-        for (const o of engineObjects)
-        {
-            const distance = mousePos.distanceSquared(o.pos);
-            if (distance < bestDistance)
-            {
-                bestDistance = distance;
-                bestObject = o
-            }
         }
         
         if (bestObject)
@@ -275,7 +281,8 @@ const debugRender = ()=>
                 pos = pos.add(height), ...args);
             drawText('vel = ' + printVec2(bestObject.velocity), pos = pos.add(height), ...args);
             drawText('size = ' + printVec2(bestObject.size), pos = pos.add(height), ...args);
-            drawText('collision = ' + getTileCollisionData(mousePos), pos = mousePos.subtract(height), ...args);
+            drawText('type = ' + ( bestObject.constructor.name), pos = mousePos.subtract(height), ...args);
+            drawText('collision = ' + getTileCollisionData(mousePos), pos = mousePos.subtract(height.scale(2)), ...args);
             mainContext = saveContext;
         }
 
@@ -361,6 +368,24 @@ const debugRender = ()=>
             //overlayContext.fillText('6: Particle Editor', x, y += h);
             overlayContext.fillStyle = debugGamepads ? '#f00' : '#fff';
             overlayContext.fillText('7: Debug Gamepads', x, y += h);
+
+            let keysPressed = '';
+            for(const i in inputData[0])
+            {
+                if (i && keyIsDown(i, 0))
+                    keysPressed += i + ' ' ;
+            }
+            keysPressed && overlayContext.fillText('Keys Down: ' + keysPressed, x, y += h);
+
+            let buttonsPressed = '';
+            if (inputData[1])
+            for(const i in inputData[1])
+            {
+                if (i && keyIsDown(i, 1))
+                    buttonsPressed += i + ' ' ;
+            }
+            buttonsPressed && overlayContext.fillText('Gamepad: ' + buttonsPressed, x, y += h);
+
         }
         else
         {

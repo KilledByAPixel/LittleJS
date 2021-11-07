@@ -181,6 +181,13 @@ function makeTileLayers()
     }
     tileLayer.redraw();
     tileBackgroundLayer.redraw();
+
+    if (!glEnable)
+    {
+        // get rid of background if webgl is not enabled
+        tileBackgroundLayer.destroy();
+        tileBackgroundLayer = 0;
+    }
 }
 
 function buildLevel()

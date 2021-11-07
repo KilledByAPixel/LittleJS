@@ -1,8 +1,9 @@
 /** 
  * LittleJS Debug System
- * <br> - Debug overlay with mouse pick
+ * <br> - Press ~ to show debug overlay with mouse pick
+ * <br> - Number keys toggle debug functions
  * <br> - Debug primitive rendering
- * <br> - Save screenshots to disk
+ * <br> - Save a 2d canvas as an image
  * @namespace Debug
  */
 
@@ -34,7 +35,7 @@ let showWatermark = 1;
 let godMode = 0;
 
 // Engine internal variables not exposed to documentation
-let debugPrimitives = [], debugOverlay = 0, debugPhysics = 0, debugRaycast = 0, 
+let debugPrimitives = [], debugOverlay = 0, debugPhysics = 0, debugRaycast = 0, debugControlAllow = 0,
 debugParticles = 0, debugGamepads = 0, debugMedals = 0, debugTakeScreenshot, downloadLink;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -156,22 +157,27 @@ const debugUpdate = ()=>
         
     if (keyWasPressed(192)) // ~
         debugOverlay = !debugOverlay;
-    if (keyWasPressed(49)) // 1
-        debugPhysics = !debugPhysics, debugParticles = 0;
-    if (keyWasPressed(50)) // 2
-        debugParticles = !debugParticles, debugPhysics = 0;
-    if (keyWasPressed(51)) // 3
-        godMode = !godMode;
-    if (keyWasPressed(53)) // 5
-        debugTakeScreenshot = 1;
-    //if (keyWasPressed(54)) // 6
-    //    debugToggleParticleEditor();
-    if (keyWasPressed(55)) // 7
-        debugGamepads = !debugGamepads;
-    //if (keyWasPressed(56)) // 8
-    //if (keyWasPressed(57)) // 9
-    if (keyWasPressed(48)) // 0
-        showWatermark = !showWatermark;
+    if (debugOverlay || debugControlAllow)
+    {
+        // allow debug controls once overlay is opened
+        debugControlAllow = 1;
+        if (keyWasPressed(49)) // 1
+            debugPhysics = !debugPhysics, debugParticles = 0;
+        if (keyWasPressed(50)) // 2
+            debugParticles = !debugParticles, debugPhysics = 0;
+        if (keyWasPressed(51)) // 3
+            godMode = !godMode;
+        if (keyWasPressed(53)) // 5
+            debugTakeScreenshot = 1;
+        //if (keyWasPressed(54)) // 6
+        //    debugToggleParticleEditor();
+        if (keyWasPressed(55)) // 7
+            debugGamepads = !debugGamepads;
+        //if (keyWasPressed(56)) // 8
+        //if (keyWasPressed(57)) // 9
+        if (keyWasPressed(48)) // 0
+            showWatermark = !showWatermark;
+    }
 }
 
 const debugRender = ()=>
@@ -224,12 +230,24 @@ const debugRender = ()=>
 
     if (debugOverlay)
     {
+        // mouse pick
+        let bestDistance = Infinity, bestObject;
         for (const o of engineObjects)
         {
-            if (o.canvas)
+            if (o.canvas || o.destroyed)
                 continue; // skip tile layers
 
             const size = o.size.copy();
+            if (!size.x || !size.y)
+                continue;
+
+            const distance = mousePos.distanceSquared(o.pos);
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                bestObject = o
+            }
+
             size.x = max(size.x, .2);
             size.y = max(size.y, .2);
 
@@ -243,18 +261,6 @@ const debugRender = ()=>
             drawRect(o.pos, size, color);
             drawRect(o.pos, size.scale(.8), o.parent ? new Color(1,1,1,.5) : new Color(0,0,0,.8));
             o.parent && drawLine(o.pos, o.parent.pos, .1, new Color(0,0,1,.5));
-        }
-
-        // mouse pick
-        let bestDistance = Infinity, bestObject;
-        for (const o of engineObjects)
-        {
-            const distance = mousePos.distanceSquared(o.pos);
-            if (distance < bestDistance)
-            {
-                bestDistance = distance;
-                bestObject = o
-            }
         }
         
         if (bestObject)
@@ -275,7 +281,8 @@ const debugRender = ()=>
                 pos = pos.add(height), ...args);
             drawText('vel = ' + printVec2(bestObject.velocity), pos = pos.add(height), ...args);
             drawText('size = ' + printVec2(bestObject.size), pos = pos.add(height), ...args);
-            drawText('collision = ' + getTileCollisionData(mousePos), pos = mousePos.subtract(height), ...args);
+            drawText('type = ' + ( bestObject.constructor.name), pos = mousePos.subtract(height), ...args);
+            drawText('collision = ' + getTileCollisionData(mousePos), pos = mousePos.subtract(height.scale(2)), ...args);
             mainContext = saveContext;
         }
 
@@ -361,6 +368,24 @@ const debugRender = ()=>
             //overlayContext.fillText('6: Particle Editor', x, y += h);
             overlayContext.fillStyle = debugGamepads ? '#f00' : '#fff';
             overlayContext.fillText('7: Debug Gamepads', x, y += h);
+
+            let keysPressed = '';
+            for(const i in inputData[0])
+            {
+                if (i && keyIsDown(i, 0))
+                    keysPressed += i + ' ' ;
+            }
+            keysPressed && overlayContext.fillText('Keys Down: ' + keysPressed, x, y += h);
+
+            let buttonsPressed = '';
+            if (inputData[1])
+            for(const i in inputData[1])
+            {
+                if (i && keyIsDown(i, 1))
+                    buttonsPressed += i + ' ' ;
+            }
+            buttonsPressed && overlayContext.fillText('Gamepad: ' + buttonsPressed, x, y += h);
+
         }
         else
         {
@@ -751,10 +776,12 @@ const vec2 = (x=0, y)=> x.x == undefined ? new Vector2(x, y == undefined? x : y)
 
 /** 
  * 2D Vector object with vector math library
+ * <br> - Functions do not change this so they can be chained together
  * @example
  * let a = new Vector2(2, 3); // vector with coordinates (2, 3)
  * let b = new Vector2;       // vector with coordinates (0, 0)
  * let c = vec2(4, 2);        // use the vec2 function to make a Vector2
+ * let d = a.add(b).scale(5); // operators can be chained
  */
 class Vector2
 {
@@ -1244,12 +1271,12 @@ let medalDisplayWidth = 640;
 /** Height of medal display
  *  @default
  *  @memberof Settings */
-let medalDisplayHeight = 99;
+let medalDisplayHeight = 80;
 
 /** Size of icon in medal display
  *  @default
  *  @memberof Settings */
-let medalDisplayIconSize = 80;
+let medalDisplayIconSize = 50;
 /*
     LittleJS Object System
 */
@@ -1990,6 +2017,7 @@ const gamepadStick = (stick,  gamepad=0)=> stickData[gamepad] ? stickData[gamepa
 ///////////////////////////////////////////////////////////////////////////////
 // Input update called by engine
 
+// store input as a bit field for each key: 1 = isDown, 2 = wasPressed, 4 = wasReleased
 const inputData = [[]];
 
 function inputUpdate()
@@ -2842,8 +2870,9 @@ class TileLayerData
 /**
  * Tile layer object - cached rendering system for tile layers
  * <br> - Each Tile layer is rendered to an off screen canvas
- * <br> - Tile layers are not rendered using WebGL to allow modifications at run time
- * <br> - Tile layers are sorted
+ * <br> - To allow dynamic modifications, layers are rendered using canvas 2d
+ * <br> - Some devices like mobile phones are limited to 4k texture resolution
+ * <br> - So with 16x16 tiles this limits layers to 256x256 on mobile devices
  * @extends EngineObject
  * @example
  * // create tile collision and visible tile layer
@@ -3432,17 +3461,17 @@ class Medal
         context.fillStyle = '#ddd'
         context.fill(context.rect(x, y, width, medalDisplayHeight));
         context.strokeStyle = context.fillStyle = '#000';
-        context.lineWidth = 2; 
-        context.stroke();
-        context.clip();
+        context.lineWidth = 3;
+        context.clip(context.stroke());
 
         // draw the icon and text
         this.renderIcon(x+15+medalDisplayIconSize/2, y+medalDisplayHeight/2);
         context.textAlign = 'left';
-        context.font = '40px '+ fontDefault;
-        context.fillText(this.name, x+medalDisplayIconSize+25, y+35);
-        context.font = '25px '+ fontDefault;
-        context.restore(context.fillText(this.description, x+medalDisplayIconSize+25, y+70));
+        context.font = '700 38px '+ fontDefault;
+        context.fillText(this.name, x+medalDisplayIconSize+25, y+28);
+        context.font = '24px '+ fontDefault;
+        context.fillText(this.description, x+medalDisplayIconSize+25, y+60);
+        context.restore();
     }
 
     /** Render the icon for a medal

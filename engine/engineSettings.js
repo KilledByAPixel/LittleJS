@@ -199,9 +199,9 @@ let medalDisplayWidth = 640;
 /** Height of medal display
  *  @default
  *  @memberof Settings */
-let medalDisplayHeight = 99;
+let medalDisplayHeight = 80;
 
 /** Size of icon in medal display
  *  @default
  *  @memberof Settings */
-let medalDisplayIconSize = 80;
+let medalDisplayIconSize = 50;

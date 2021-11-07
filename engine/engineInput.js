@@ -101,6 +101,7 @@ const gamepadStick = (stick,  gamepad=0)=> stickData[gamepad] ? stickData[gamepa
 ///////////////////////////////////////////////////////////////////////////////
 // Input update called by engine
 
+// store input as a bit field for each key: 1 = isDown, 2 = wasPressed, 4 = wasReleased
 const inputData = [[]];
 
 function inputUpdate()

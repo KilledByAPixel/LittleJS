@@ -185,10 +185,12 @@ const vec2 = (x=0, y)=> x.x == undefined ? new Vector2(x, y == undefined? x : y)
 
 /** 
  * 2D Vector object with vector math library
+ * <br> - Functions do not change this so they can be chained together
  * @example
  * let a = new Vector2(2, 3); // vector with coordinates (2, 3)
  * let b = new Vector2;       // vector with coordinates (0, 0)
  * let c = vec2(4, 2);        // use the vec2 function to make a Vector2
+ * let d = a.add(b).scale(5); // operators can be chained
  */
 class Vector2
 {
