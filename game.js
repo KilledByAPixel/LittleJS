@@ -16,6 +16,17 @@ const medal_tenClicks  = new Medal(1, 'Ten Clicks!',   'You have clicked 10 time
 medalsInit('Hello World');
 
 ///////////////////////////////////////////////////////////////////////////////
+// hide canvas and show errors if there are any
+
+onerror = (...parameters)=>
+{
+    document.body.style.color = '#fff'
+    document.body.style.fontSize = '3em'
+    document.body.innerHTML = [parameters];
+    mainCanvas.style.display = glCanvas.style.display = overlayCanvas.style.display = 'none';
+}
+
+///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
     // create tile collision and visible tile layer
