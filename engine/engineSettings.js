@@ -133,11 +133,6 @@ let gamepadDirectionEmulateStick = 1;
  *  @memberof Settings */
 let inputWASDEmulateDirection = 1;
 
-/** If true touch input is routed to mouse functions
- *  @default
- *  @memberof Settings */
-let touchMouseEnable = 1;
-
 /** True if touch gamepad should appear on mobile devices
  *  <br> - Supports left analog stick, 4 face buttons and start button (button 9)
  *  <br> - Must be set by end of gameInit to be activated

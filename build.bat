@@ -58,6 +58,7 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 rem build the html, you can add html header and footers here
+rem type ..\header.html >> index.html
 echo ^<body^>^<meta charset=utf-8^>^<script^> >> index.html
 type roadroller_%BUILD_FILENAME% >> index.html
 echo ^</script^> >> index.html
