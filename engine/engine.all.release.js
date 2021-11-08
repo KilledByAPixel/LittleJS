@@ -667,6 +667,11 @@ let touchGamepadSize = 80;
  *  @memberof Settings */
 let touchGamepadAlpha = .3;
 
+/** Allow vibration hardware if it exists
+ *  @default
+ *  @memberof Settings */
+let vibrateEnable = 1;
+
 ///////////////////////////////////////////////////////////////////////////////
 // Audio settings
 
@@ -741,7 +746,7 @@ let medalDisplayIconSize = 50;
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.20';
+const engineVersion = '1.1.21';
 
 /** Frames per second to update objects
  *  @default */
@@ -1798,6 +1803,15 @@ oncontextmenu = e=> !1; // prevent right click menu
 const stickData = [];
 function gamepadsUpdate()
 {
+    if (touchGamepadEnable && touchGamepadInput)
+    {
+        const data = inputData[1] || (inputData[1] = []);
+
+        // read virtual gamepad buttons
+        for (let j=10; j--;)
+            data[j] = touchGamepadInput[j] ? 1 + 2*!gamepadIsDown(j,0) : 4*gamepadIsDown(j,0);
+    }
+
     if (!gamepadsEnable || !navigator.getGamepads || !document.hasFocus() && !debug)
         return;
 
@@ -1828,6 +1842,9 @@ function gamepadsUpdate()
                 const button = gamepad.buttons[j];
                 data[j] = button.pressed ? 1 + 2*!gamepadIsDown(j,i) : 4*gamepadIsDown(j,i);
                 isUsingGamepad |= !i && button.pressed;
+
+                if (touchGamepadEnable) // clear touch input if using real gamepad
+                    touchGamepadInput = [];
             }
 
             if (gamepadDirectionEmulateStick)
@@ -1840,6 +1857,20 @@ function gamepadsUpdate()
         }
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+/** Pulse the vibration hardware if it exists
+ *  @param {Number} [pattern=100] - a single value in miliseconds or vibration interval array
+ *  @memberof Input */
+const vibrate = (pattern)=>
+{
+    vibrateEnable && Navigator.vibrate && Navigator.vibrate(pattern);
+}
+
+/** Cancel any ongoing vibration
+ *  @memberof Input */
+const vibrateStop = ()=> vibrate(0);
 
 ///////////////////////////////////////////////////////////////////////////////
 // Touch input
@@ -1883,6 +1914,7 @@ if (touchMouseEnable && isTouchDevice)
 
 // create the touch gamepad, called automatically by the engine
 const touchGamepadTimer = new Timer;
+let touchGamepadInput = [];
 function touchGamepadCreate()
 {
     if (!touchGamepadEnable || !isTouchDevice)
@@ -1909,37 +1941,32 @@ function touchGamepadCreate()
         const startCenter = mainCanvasSize.scale(.5);
 
         // update virtual gamepad
-        const data = inputData[1] || (inputData[1] = []);
         const sticks = stickData[0] || (stickData[0] = []);
         sticks[0] = vec2();
 
         // check each touch point
-        const buttons = [];
+        touchGamepadInput = [];
         for (const touch of e.touches)
         {
             const touchPos = vec2(touch.clientX, touch.clientY);
             if (touchPos.distance(stickCenter) < touchGamepadSize)
             {
                 // virtual analog stick
-                sticks[0] = touchPos.subtract(stickCenter).clampLength();
+                sticks[0] = touchPos.subtract(stickCenter).clampLength(touchGamepadSize/2).scale(2/touchGamepadSize);
                 sticks[0].y = -sticks[0].y; // flip vertical
             }
             else if (touchPos.distance(buttonCenter) < touchGamepadSize)
             {
                 // virtual face buttons
                 const button = touchPos.subtract(buttonCenter).direction();
-                buttons[button > 2 ? 2 : button > 1 ? 3 : button] = 1; // fix button locations
+                touchGamepadInput[button > 2 ? 2 : button > 1 ? 3 : button] = 1; // fix button locations
             }
             else if (touchPos.distance(startCenter) < touchGamepadSize)
             {
                 // virtual start button
-                buttons[9] = 1;
+                touchGamepadInput[9] = 1;
             }
         }
-
-        // read virtual buttons
-        for (let j=10; j--;)
-            data[j] = buttons[j] ? 1 + 2*!gamepadIsDown(j,0) : 4*gamepadIsDown(j,0);
     }
 }
 
@@ -2184,7 +2211,7 @@ function speak(text, language='', volume=1, rate=1, pitch=1)
 
 /** Stop all queued speech
  *  @memberof Audio */
-const stopSpeech = ()=> speechSynthesis && speechSynthesis.cancel();
+const speakStop = ()=> speechSynthesis && speechSynthesis.cancel();
 
 /** Get frequency of a note on a musical scale
  *  @param {Number} semitoneOffset - How many semitones away from the root note

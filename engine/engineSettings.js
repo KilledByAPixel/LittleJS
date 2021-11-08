@@ -155,6 +155,11 @@ let touchGamepadSize = 80;
  *  @memberof Settings */
 let touchGamepadAlpha = .3;
 
+/** Allow vibration hardware if it exists
+ *  @default
+ *  @memberof Settings */
+let vibrateEnable = 1;
+
 ///////////////////////////////////////////////////////////////////////////////
 // Audio settings
 

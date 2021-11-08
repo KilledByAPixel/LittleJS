@@ -195,7 +195,7 @@ function speak(text, language='', volume=1, rate=1, pitch=1)
 
 /** Stop all queued speech
  *  @memberof Audio */
-const stopSpeech = ()=> speechSynthesis && speechSynthesis.cancel();
+const speakStop = ()=> speechSynthesis && speechSynthesis.cancel();
 
 /** Get frequency of a note on a musical scale
  *  @param {Number} semitoneOffset - How many semitones away from the root note
