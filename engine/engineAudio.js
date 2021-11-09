@@ -236,13 +236,17 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0)
     source.playbackRate.value = rate;
     source.loop = loop;
 
-    // create pan and gain nodes
+    // create gain node
+    const gainNode = audioContext.createGain();
+    gainNode.gain.value = soundVolume*volume;
+
+    // connect nodes to destination
     (
-        window.StereoPannerNode ? // check if stereo exists
+        window.StereoPannerNode ? // create pan node if possible
         source.connect(new StereoPannerNode(audioContext, {'pan':clamp(pan, 1, -1)}))
         : source
     )
-    .connect(new GainNode(audioContext, {'gain':soundVolume*volume}))
+    .connect(gainNode)
     .connect(audioContext.destination);
 
     // play and return sound

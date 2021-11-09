@@ -4,6 +4,9 @@
 
 'use strict';
 
+// popup errors if there are any (help diagnose issues on mobile devices)
+onerror = (...parameters)=> alert(parameters);
+
 // game variables
 let particleEmiter, clickCount = 0;
 
@@ -14,16 +17,6 @@ const sound_click = new Sound([.5,.5]);
 const medal_example    = new Medal(0, 'Example Medal', 'More info about the medal goes here.');
 const medal_tenClicks  = new Medal(1, 'Ten Clicks!',   'You have clicked 10 times.', '🖱️');
 medalsInit('Hello World');
-
-// show errors if there are any and hide the canvas
-if (debug)
-    onerror = (...parameters)=>
-    {
-        document.body.style.color = '#fff'
-        document.body.style.fontSize = '3em'
-        document.body.innerHTML = parameters;
-        mainCanvas.style.display = glCanvas.style.display = overlayCanvas.style.display = 'none';
-    }
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
