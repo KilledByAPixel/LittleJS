@@ -4,7 +4,7 @@
 
 LittleJS is a super lightweight JavaScript game engine with a fast hybrid rendering system. It provides everything necessary to make amazing games, including rendering, physics, particles, sound effects, music, input handling, and debug tools. LittleJS is designed to be extremely small yet powerful enough for a variety of applications, from game jams to commercial releases. The code is very well documented with a variety of examples to get you started. Choo-Choo! 🚂
 
-## [LittleJS Documentation](https://killedbyapixel.github.io/LittleJS/docs) - [LittleJS Trailer](https://youtu.be/chuBzGjv7Ms) - [LittleJS Trello Roadmap](https://trello.com/b/E9zf1Xak/littlejs)
+## [LittleJS Documentation](https://killedbyapixel.github.io/LittleJS/docs) - [LittleJS Trailer](https://youtu.be/chuBzGjv7Ms) - [LittleJS Trello](https://trello.com/b/E9zf1Xak/littlejs)
 
 ![LittleJS Screenshot](examples/screenshot.jpg)
 
@@ -36,6 +36,14 @@ LittleJS is a super lightweight JavaScript game engine with a fast hybrid render
 - For size coding competitions like [js13kGames](https://js13kgames.com/), starter project builds to a 7KB zip
 - Easily build a Windows executable with [electron](https://www.electronjs.org/) for distribution on platforms like Steam
 - Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used to make commercial games
+
+## Builds
+
+To easily include LittleJS in your game, you can use one of the 3 pre-built js files. These are also built automatically by the build scripts..
+
+- [engine.all.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.js) - The full game engine with debug mode available
+- [engine.all.release.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.release.js) - The engine optimized for release builds
+- [engine.all.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.min.js) - The engine in release mode and minified
 
 ## Games Made With LittleJS
 
