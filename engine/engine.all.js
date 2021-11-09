@@ -2546,18 +2546,18 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0)
     source.playbackRate.value = rate;
     source.loop = loop;
 
-    // create gain node
+    // create and connect gain node
     const gainNode = audioContext.createGain();
     gainNode.gain.value = soundVolume*volume;
+    gainNode.connect(audioContext.destination);
 
-    // connect nodes to destination
+    // connect source to gain
     (
         window.StereoPannerNode ? // create pan node if possible
         source.connect(new StereoPannerNode(audioContext, {'pan':clamp(pan, 1, -1)}))
         : source
     )
-    .connect(gainNode)
-    .connect(audioContext.destination);
+    .connect(gainNode);
 
     // play and return sound
     source.start();
@@ -4082,7 +4082,7 @@ gl_VERTEX_BYTE_STRIDE = 4 + (4 * 2) * 3 + (4) * 2; // float + vec2 * 3 + (char *
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.24';
+const engineVersion = '1.1.25';
 
 /** Frames per second to update objects
  *  @default */
