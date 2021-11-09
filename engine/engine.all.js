@@ -40,7 +40,7 @@ let showWatermark = 1;
 let godMode = 0;
 
 // Engine internal variables not exposed to documentation
-let debugPrimitives = [], debugOverlay = 0, debugPhysics = 0, debugRaycast = 0, debugControlAllow = 0,
+let debugPrimitives = [], debugOverlay = 0, debugPhysics = 0, debugRaycast = 0,
 debugParticles = 0, debugGamepads = 0, debugMedals = 0, debugTakeScreenshot, downloadLink;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -162,10 +162,8 @@ const debugUpdate = ()=>
         
     if (keyWasPressed(192)) // ~
         debugOverlay = !debugOverlay;
-    if (debugOverlay || debugControlAllow)
+    if (debugOverlay)
     {
-        // allow debug controls once overlay is opened
-        debugControlAllow = 1;
         if (keyWasPressed(49)) // 1
             debugPhysics = !debugPhysics, debugParticles = 0;
         if (keyWasPressed(50)) // 2

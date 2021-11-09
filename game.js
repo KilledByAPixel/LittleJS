@@ -16,13 +16,14 @@ const medal_tenClicks  = new Medal(1, 'Ten Clicks!',   'You have clicked 10 time
 medalsInit('Hello World');
 
 // show errors if there are any and hide the canvas
-onerror = (...parameters)=>
-{
-    document.body.style.color = '#fff'
-    document.body.style.fontSize = '3em'
-    document.body.innerHTML = parameters;
-    mainCanvas.style.display = glCanvas.style.display = overlayCanvas.style.display = 'none';
-}
+if (debug)
+    onerror = (...parameters)=>
+    {
+        document.body.style.color = '#fff'
+        document.body.style.fontSize = '3em'
+        document.body.innerHTML = parameters;
+        mainCanvas.style.display = glCanvas.style.display = overlayCanvas.style.display = 'none';
+    }
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
