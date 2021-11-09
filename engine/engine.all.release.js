@@ -1,5 +1,7 @@
 /*
-    LittleJS - Release build include file
+    LittleJS - Release Build
+    MIT License - Copyright 2021 Frank Force
+    
     - This file is used for release builds in place of engineDebug.js
     - Debug functionality will be disabled to lower size and increase performance
 */

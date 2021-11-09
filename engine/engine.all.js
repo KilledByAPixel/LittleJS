@@ -1,3 +1,8 @@
+/*
+    LittleJS - Debug Build
+    MIT License - Copyright 2021 Frank Force
+*/
+
 /** 
  * LittleJS Debug System
  * <br> - Press ~ to show debug overlay with mouse pick
