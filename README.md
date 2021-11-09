@@ -37,6 +37,14 @@ LittleJS is a super lightweight JavaScript game engine with a fast hybrid render
 - Easily build a Windows executable with [electron](https://www.electronjs.org/) for distribution on platforms like Steam
 - Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used to make commercial games
 
+## Builds
+
+To easily include LittleJS in your game, you can use one of the 3 pre-built js files. These are also built automatically by the build scripts..
+
+- [engine.all.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.js) - The full game engine with debug mode available
+- [engine.all.release.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.release.js) - The engine optimized for release builds
+- [engine.all.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.min.js) - The engine in release mode and minified
+
 ## Games Made With LittleJS
 
 - [Space Huggers](https://github.com/KilledByAPixel/SpaceHuggers) - A more developed version of the platformer example
