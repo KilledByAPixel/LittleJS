@@ -15,14 +15,12 @@ const medal_example    = new Medal(0, 'Example Medal', 'More info about the meda
 const medal_tenClicks  = new Medal(1, 'Ten Clicks!',   'You have clicked 10 times.', '🖱️');
 medalsInit('Hello World');
 
-///////////////////////////////////////////////////////////////////////////////
-// hide canvas and show errors if there are any
-
+// show errors if there are any and hide the canvas
 onerror = (...parameters)=>
 {
     document.body.style.color = '#fff'
     document.body.style.fontSize = '3em'
-    document.body.innerHTML = [parameters];
+    document.body.innerHTML = parameters;
     mainCanvas.style.display = glCanvas.style.display = overlayCanvas.style.display = 'none';
 }
 
