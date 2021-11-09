@@ -28,7 +28,7 @@ function buildTerrain(size)
 {
     tileBackground = [];
     initTileCollision(size);
-    let startGroundLevel = 80;
+    let startGroundLevel = 40;
     let groundLevel = startGroundLevel;
     let groundSlope = rand(-1,1);
     let backgroundDelta = 0, backgroundDeltaSlope = 0;
@@ -60,7 +60,7 @@ function buildTerrain(size)
             backgroundDeltaSlope = rand(-1,1);
         backgroundDelta = clamp(backgroundDelta, 3, -1)
 
-        groundLevel = clamp(groundLevel, 99, 30);
+        groundLevel = clamp(groundLevel, levelSize.y-20, 20);
         for (let y=0; y < size.y; y++)
         {
             const pos = vec2(x,y);
@@ -90,7 +90,7 @@ function buildTerrain(size)
     }
 
     // add ladders
-    for (let ladderCount=50; ladderCount--;)
+    for (let ladderCount = 40; ladderCount--;)
     {
         // pick random pos
         const pos = vec2(randInt(levelSize.x), randInt(levelSize.y))
@@ -122,7 +122,7 @@ function buildTerrain(size)
         new Crate(vec2((randInt(levelSize.x))+.5, randInt(levelSize.y)));
 
     // spawn enemies
-    for (let enemyCount=20; enemyCount--;)
+    for (let enemyCount=10; enemyCount--;)
         new Enemy(vec2(rand(levelSize.x), rand(levelSize.y)));
 }
 
@@ -192,7 +192,7 @@ function makeTileLayers()
 
 function buildLevel()
 {
-    levelSize = vec2(300,200);
+    levelSize = vec2(256);
     levelColor = randColor(new Color(.2,.2,.2), new Color(.8,.8,.8));
     levelGroundColor = levelColor.mutate().add(new Color(.4,.4,.4)).clamp();
 

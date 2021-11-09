@@ -88,6 +88,11 @@ let objectMaxSpeed = 1;
  *  @memberof Settings */
 let gravity = 0;
 
+/** Scales emit rate of particles, useful for low graphics mode (0 disables particle emitters)
+ *  @default
+ *  @memberof Settings */
+let particleEmitRateScale = 1;
+
 ///////////////////////////////////////////////////////////////////////////////
 // Camera settings
 

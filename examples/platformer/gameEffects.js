@@ -257,17 +257,11 @@ function drawStars()
             (randSeeded(w)+time*speed)%w-extraSpace,
             (randSeeded(h)+time*speed*randSeeded())%h-extraSpace);
 
-        if (glOverlay)
-        {
-            // drawing stars with gl is too slow in low graphics mode, just draw rects
-            mainContext.fillStyle = color.rgba();
-            if (size < 9)
-                mainContext.fillRect(screenPos.x, screenPos.y, size, size);
-            else
-                mainContext.beginPath(mainContext.fill(mainContext.arc(screenPos.x, screenPos.y, size, 0, 9)));
-        }
+        mainContext.fillStyle = color.rgba();
+        if (size < 9)
+            mainContext.fillRect(screenPos.x, screenPos.y, size, size);
         else
-            drawTileScreenSpace(screenPos, vec2(size), 0, vec2(16), color);
+            mainContext.beginPath(mainContext.fill(mainContext.arc(screenPos.x, screenPos.y, size, 0, 9)));
     }
 }
 

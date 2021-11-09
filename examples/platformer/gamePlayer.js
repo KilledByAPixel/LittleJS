@@ -24,7 +24,7 @@ class Character extends GameObject
         this.deadTimer          = new Timer;
         this.grendeThrowTimer   = new Timer;
         this.drawSize = vec2(1);
-        this.color = (new Color).setHSLA(rand(),1,.5);
+        this.color = (new Color).setHSLA(rand(),1,.7);
         this.renderOrder = 10;
         this.walkCyclePercent = 0;
         this.health = 1;
@@ -182,7 +182,7 @@ class Character extends GameObject
         if (this.climbingLadder || this.groundTimer.active() && !this.dodgeTimer.active())
         {
             this.walkCyclePercent += speed * .5;
-            this.walkCyclePercent = speed > .01 ? mod(this.walkCyclePercent, 1) : 0;
+            this.walkCyclePercent = speed > .01 ? mod(this.walkCyclePercent) : 0;
         }
         else
             this.walkCyclePercent = 0;

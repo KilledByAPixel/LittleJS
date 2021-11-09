@@ -152,9 +152,9 @@ class ParticleEmitter extends EngineObject
         if (!this.emitTime || this.getAliveTime() <= this.emitTime)
         {
             // emit particles
-            if (this.emitRate)
+            if (this.emitRate * particleEmitRateScale)
             {
-                const rate = 1/this.emitRate;
+                const rate = 1/this.emitRate/particleEmitRateScale;
                 for (this.emitTimeBuffer += timeDelta; this.emitTimeBuffer > 0; this.emitTimeBuffer -= rate)
                     this.emitParticle();
             }

@@ -1163,6 +1163,11 @@ let objectMaxSpeed = 1;
  *  @memberof Settings */
 let gravity = 0;
 
+/** Scales emit rate of particles, useful for low graphics mode (0 disables particle emitters)
+ *  @default
+ *  @memberof Settings */
+let particleEmitRateScale = 1;
+
 ///////////////////////////////////////////////////////////////////////////////
 // Camera settings
 
@@ -3256,9 +3261,9 @@ class ParticleEmitter extends EngineObject
         if (!this.emitTime || this.getAliveTime() <= this.emitTime)
         {
             // emit particles
-            if (this.emitRate)
+            if (this.emitRate * particleEmitRateScale)
             {
-                const rate = 1/this.emitRate;
+                const rate = 1/this.emitRate/particleEmitRateScale;
                 for (this.emitTimeBuffer += timeDelta; this.emitTimeBuffer > 0; this.emitTimeBuffer -= rate)
                     this.emitParticle();
             }
