@@ -150,7 +150,7 @@ class EngineObject
                     // if already was touching, try to push away
                     const deltaPos = oldPos.subtract(o.pos);
                     const length = deltaPos.length();
-                    const pushAwayAccel = .001; // push away if alread overlapping
+                    const pushAwayAccel = .001; // push away if already overlapping
                     const velocity = length < .01 ? randVector(pushAwayAccel) : deltaPos.scale(pushAwayAccel/length);
                     this.velocity = this.velocity.add(velocity);
                     if (o.mass) // push away if not fixed
@@ -344,18 +344,6 @@ class EngineObject
     setCollision(collideSolidObjects=0, isSolid=0, collideTiles=1)
     {
         ASSERT(collideSolidObjects || !isSolid); // solid objects must be set to collide
-
-        // track collidable objects in separate list
-        if (collideSolidObjects && !this.collideSolidObjects)
-        {
-            ASSERT(!engineObjectsCollide.includes(this));
-            engineObjectsCollide.push(this);
-        }
-        else if (!collideSolidObjects && this.collideSolidObjects)
-        {
-            ASSERT(engineObjectsCollide.includes(this))
-            engineObjectsCollide.splice(engineObjectsCollide.indexOf(this), 1);
-        }
 
         this.collideSolidObjects = collideSolidObjects;
         this.isSolid = isSolid;

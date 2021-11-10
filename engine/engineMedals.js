@@ -35,7 +35,7 @@ function medalsInit(saveName)
 {
     // check if medals are unlocked
     medalsSaveName = saveName;
-    debugMedals || medals.forEach(medal=> medal.unlocked = localStorage[medal.storageKey()]);
+    debugMedals || medals.forEach(medal=> medal.unlocked = 1 || localStorage[medal.storageKey()]);
 }
 
 /** 
@@ -68,13 +68,9 @@ class Medal
         this.name = name;
         this.description = description;
         this.icon = icon;
-
+        this.image = new Image();
         if (src)
-        {
-            // load image
-            this.image = new Image();
             this.image.src = src;
-        }
     }
 
     /** Unlocks a medal if not already unlocked */
@@ -104,20 +100,22 @@ class Medal
         const y = -medalDisplayHeight*hidePercent;
 
         // draw containing rect and clip to that region
-        context.beginPath(context.save());
+        context.save();
+        context.beginPath();
         context.fillStyle = '#ddd'
         context.fill(context.rect(x, y, width, medalDisplayHeight));
-        context.strokeStyle = context.fillStyle = '#000';
+        context.strokeStyle = '#000';
         context.lineWidth = 3;
-        context.clip(context.stroke());
+        context.stroke();
+        context.clip();
 
         // draw the icon and text
         this.renderIcon(x+15+medalDisplayIconSize/2, y+medalDisplayHeight/2);
         context.textAlign = 'left';
-        context.font = '700 38px '+ fontDefault;
-        context.fillText(this.name, x+medalDisplayIconSize+25, y+28);
+        context.font = '38px '+ fontDefault;
+        context.fillText(this.name, x+medalDisplayIconSize+30, y+28);
         context.font = '24px '+ fontDefault;
-        context.fillText(this.description, x+medalDisplayIconSize+25, y+60);
+        context.fillText(this.description, x+medalDisplayIconSize+30, y+60);
         context.restore();
     }
 
@@ -130,11 +128,11 @@ class Medal
     {
         // draw the image or icon
         const context = overlayContext;
+        context.fillStyle = '#000';
         context.textAlign = 'center';
         context.textBaseline = 'middle';
-        context.font = size*.6 + 'px '+ fontDefault;
-        context.fillStyle = '#000';
-        if (this.image)
+        context.font = size*.7 + 'px '+ fontDefault;
+        if (this.image.src)
             context.drawImage(this.image, x-size/2, y-size/2, size, size);
         else
             context.fillText(this.icon, x, y); // show icon if there is no image
@@ -210,7 +208,6 @@ class Newgrounds
             if (medal)
             {
                 // copy newgrounds medal data
-                medal.image =       new Image();
                 medal.image.src =   newgroundsMedal['icon'];
                 medal.name =        newgroundsMedal['name'];
                 medal.description = newgroundsMedal['description'];

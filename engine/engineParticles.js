@@ -51,7 +51,7 @@ class ParticleEmitter extends EngineObject
      *  @param {Number}  [randomness=.2]        - Apply extra randomness percent
      *  @param {Boolean} [collideTiles=0]       - Do particles collide against tiles
      *  @param {Boolean} [additive=0]           - Should particles use addtive blend
-     *  @param {Boolean} [randomColorLinear=0]  - Should color be randomized linearly or across each component
+     *  @param {Boolean} [randomColorLinear=1]  - Should color be randomized linearly or across each component
      *  @param {Number}  [renderOrder=0]        - Render order for particles (additive is above other stuff by default)
      */
     constructor

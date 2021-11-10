@@ -22,7 +22,7 @@
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.25';
+const engineVersion = '1.1.26';
 
 /** Frames per second to update objects
  *  @default */
@@ -35,7 +35,7 @@ const timeDelta = 1/frameRate;
 /** Array containing all engine objects */
 let engineObjects = [];
 
-/** Array containing only objects that are set to collide with other objects (for optimization) */
+/** Array containing only objects that are set to collide with other objects this frame (for optimization) */
 let engineObjectsCollide = [];
 
 /** Current update frame, used to calculate time */
@@ -51,8 +51,15 @@ let timeReal = 0;
 let paused = 0;
 
 // Engine internal variables not exposed to documentation
-let frameTimeLastMS = 0, frameTimeBufferMS = 0, debugFPS = 0, 
-    shrinkTilesX, shrinkTilesY, drawCount, tileImageSize, tileImageSizeInverse;
+let frameTimeLastMS = 0, frameTimeBufferMS = 0, tileImageSize, tileImageFixBleed;
+
+// Engine stat tracking, if showWatermark is true
+let averageFPS, drawCount;
+
+// css text used for elements created by engine
+const styleBody = 'margin:0;overflow:hidden;background:#000' +
+    ';touch-action:none;user-select:none;-webkit-user-select:none;-moz-user-select:none';
+const canvaStyle = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -70,17 +77,14 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     tileImage.onerror = tileImage.onload = ()=>
     {
         // save tile image info
-        tileImageSizeInverse = vec2(1).divide(tileImageSize = vec2(tileImage.width, tileImage.height));
+        tileImageFixBleed = vec2(tileFixBleedScale).divide(tileImageSize = vec2(tileImage.width, tileImage.height));
         debug && (tileImage.onload=()=>ASSERT(1)); // tile sheet can not reloaded
-        shrinkTilesX = tileBleedShrinkFix/tileImageSize.x;
-        shrinkTilesY = tileBleedShrinkFix/tileImageSize.y;
 
         // setup html
+        document.body.style = styleBody;
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
-        document.body.style = 'margin:0;overflow:hidden;background:#000' +
-            ';touch-action:none;user-select:none;-webkit-user-select:none;-moz-user-select:none';
-        mainCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
         mainContext = mainCanvas.getContext('2d');
+        mainCanvas.style = canvaStyle;
 
         // init stuff and start engine
         debugInit();
@@ -88,8 +92,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
         // create overlay canvas for hud to appear above gl canvas
         document.body.appendChild(overlayCanvas = document.createElement('canvas'));
-        overlayCanvas.style = mainCanvas.style.cssText;
         overlayContext = overlayCanvas.getContext('2d');
+        overlayCanvas.style = canvaStyle;
         
         gameInit();
         touchGamepadCreate();
@@ -105,7 +109,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         let frameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
         frameTimeLastMS = frameTimeMS;
         if (debug || showWatermark)
-            debugFPS = lerp(.05, 1e3/(frameTimeDeltaMS||1), debugFPS);
+            averageFPS = lerp(.05, 1e3/(frameTimeDeltaMS||1), averageFPS || 0);
         if (debug)
             frameTimeDeltaMS *= keyIsDown(107) ? 5 : keyIsDown(109) ? .2 : 1; // +/- to speed/slow time
         timeReal += frameTimeDeltaMS / 1e3;
@@ -192,7 +196,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             overlayContext.font = '1em monospace';
             overlayContext.fillStyle = '#000';
             const text = engineName + ' ' + 'v' + engineVersion + ' / ' 
-                + drawCount + ' / ' + engineObjects.length + ' / ' + debugFPS.toFixed(1)
+                + drawCount + ' / ' + engineObjects.length + ' / ' + averageFPS.toFixed(1)
                 + ' ' + (glEnable ? 'GL' : '2D') ;
             overlayContext.fillText(text, mainCanvas.width-3, 3);
             overlayContext.fillStyle = '#fff';
@@ -210,7 +214,11 @@ function enginePreRender()
 {
     // save canvas size and clear canvases
     mainCanvasSize = vec2(overlayCanvas.width = mainCanvas.width, overlayCanvas.height = mainCanvas.height);
-    mainContext.imageSmoothingEnabled = !cavasPixelated; // disable smoothing for pixel art
+
+    // disable smoothing for pixel art
+    mainContext.imageSmoothingEnabled = !cavasPixelated;
+
+    // setup gl rendering if enabled
     glPreRender(mainCanvas.width, mainCanvas.height, cameraPos.x, cameraPos.y, cameraScale);
 }
 
@@ -219,6 +227,9 @@ function enginePreRender()
 /** Calls update on each engine object (recursively if child), removes destroyed objects, and updated time */
 function engineObjectsUpdate()
 {
+    // get list of solid objects for physics optimzation
+    engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);
+
     // recursive object update
     const updateObject = (o)=>
     {
@@ -234,17 +245,16 @@ function engineObjectsUpdate()
 
     // remove destroyed objects
     engineObjects = engineObjects.filter(o=>!o.destroyed);
-    engineObjectsCollide = engineObjectsCollide.filter(o=>!o.destroyed);
 
     // increment frame and update time
     time = ++frame / frameRate;
 }
 
-/** Detroy and remove all objects that are not persistent or descendants of a persistent object */
+/** Destroy and remove all objects */
 function engineObjectsDestroy()
 {
     for (const o of engineObjects)
-        o.persistent || o.parent || o.destroy();
+        o.parent || o.destroy();
     engineObjects = engineObjects.filter(o=>!o.destroyed);
 }
 
@@ -255,21 +265,18 @@ function engineObjectsDestroy()
  *  @param {Array} [objects=engineObjects] - List of objects to check */
 function engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
 {
-    if (!pos)
+    if (!pos) // all objects
     {
-        // all objects
         for (const o of objects)
             callbackFunction(o);
     }
-    else if (size.x != undefined)
+    else if (size.x != undefined)  // bounding box test
     {
-        // aabb test
         for (const o of objects)
             isOverlapping(pos, size, o.pos, o.size) && callbackFunction(o);
     }
-    else
+    else  // circle test
     {
-        // circle test
         const sizeSquared = size*size;
         for (const o of objects)
             pos.distanceSquared(o.pos) < sizeSquared && callbackFunction(o);

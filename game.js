@@ -5,7 +5,8 @@
 'use strict';
 
 // popup errors if there are any (help diagnose issues on mobile devices)
-onerror = (...parameters)=> alert(parameters);
+if (debug)
+    onerror = (...parameters)=> alert(parameters);
 
 // game variables
 let particleEmiter, clickCount = 0;
@@ -14,7 +15,7 @@ let particleEmiter, clickCount = 0;
 const sound_click = new Sound([.5,.5]);
 
 // medals
-const medal_example    = new Medal(0, 'Example Medal', 'More info about the medal goes here.');
+const medal_example    = new Medal(0, 'Example Medal', 'Medal description goes here.');
 const medal_tenClicks  = new Medal(1, 'Ten Clicks!',   'You have clicked 10 times.', '🖱️');
 medalsInit('Hello World');
 

@@ -226,6 +226,13 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0)
     if (!audioContext)
         audioContext = new (window.AudioContext||webkitAudioContext);
 
+    // fix stalled audio
+    audioContext.resume();
+
+    // prevent sounds from building up if they can't be played
+    if (audioContext.state != 'running')
+        return;
+
     // create buffer and source
     const buffer = audioContext.createBuffer(sampleChannels.length, sampleChannels[0].length, zzfxR), 
         source = audioContext.createBufferSource();
@@ -236,7 +243,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0)
     source.playbackRate.value = rate;
     source.loop = loop;
 
-    // create and connect gain node
+    // create and connect gain node (createGain is more widley spported then GainNode construtor)
     const gainNode = audioContext.createGain();
     gainNode.gain.value = soundVolume*volume;
     gainNode.connect(audioContext.destination);

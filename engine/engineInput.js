@@ -32,11 +32,7 @@ const keyWasReleased = (key, device=0)=> inputData[device] && inputData[device][
 
 /** Clears all input
  *  @memberof Input */
-const clearInput = ()=>
-{
-    inputData[0] = [];
-    touchGamepadEnable && touchGamepadTimer.unset();
-}
+const clearInput = ()=> inputData = [[]];
 
 /** Returns true if mouse button is down
  *  @param {Number} button
@@ -106,10 +102,14 @@ const gamepadStick = (stick,  gamepad=0)=> stickData[gamepad] ? stickData[gamepa
 // Input update called by engine
 
 // store input as a bit field for each key: 1 = isDown, 2 = wasPressed, 4 = wasReleased
-const inputData = [[]];
+// mouse and keyboard are stored together in device 0, gamepads are in devices > 0
+let inputData = [[]];
 
 function inputUpdate()
 {
+    // clear input when lost focus (prevent stuck keys)
+    document.hasFocus() || clearInput();
+
     // update mouse world space position
     mousePos = screenToWorld(mousePosScreen);
 
@@ -125,9 +125,6 @@ function inputUpdatePost()
         deviceInputData[i] &= 1;
     mouseWheel = 0;
 }
-
-// clear input when lost focus (prevent stuck keys)
-onblur = (e)=> clearInput();
 
 ///////////////////////////////////////////////////////////////////////////////
 // Keyboard event handlers
@@ -281,10 +278,12 @@ if (isTouchDevice)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Touch gamepad - on screen virtual gamepad
+// touch gamepad, virtual on screen gamepad emulator for touch devices
+
+// touch input internal variables
+let touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadStick = vec2();
 
 // create the touch gamepad, called automatically by the engine
-let touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadStick = vec2();
 function touchGamepadCreate()
 {
     if (!touchGamepadEnable || !isTouchDevice)
@@ -303,10 +302,10 @@ function touchGamepadCreate()
         if (touching)
         {
             touchGamepadTimer.isSet() || zzfx(0) ; // fix mobile audio, force it to play a sound the first time
-            touchGamepadTimer.set();
 
             // set that gamepad is active
             isUsingGamepad = 1;
+            touchGamepadTimer.set();
 
             if (paused)
             {

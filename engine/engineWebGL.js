@@ -39,15 +39,11 @@ function glInit()
     // create the canvas and tile texture
     glCanvas = document.createElement('canvas');
     glContext = glCanvas.getContext('webgl');
-
+    glCanvas.style = canvaStyle;
     glTileTexture = glCreateTexture(tileImage);
 
-    if (glOverlay)
-    {
-        // some browsers are much faster without copying the gl buffer so we just overlay it instead
-        document.body.appendChild(glCanvas);
-        glCanvas.style = mainCanvas.style.cssText;
-    }
+    // some browsers are much faster without copying the gl buffer so we just overlay it instead
+    glOverlay && document.body.appendChild(glCanvas);
 
     // setup vertex and fragment shaders
     glShader = glCreateProgram(
@@ -79,6 +75,7 @@ function glInit()
     glColorData = new Uint32Array(glVertexData);
 
     // setup the vertex data array
+    let offset = glBatchCount = 0;
     const initVertexAttribArray = (name, type, typeSize, size, normalize=0)=>
     {
         const location = glContext.getAttribLocation(glShader, name);
@@ -86,7 +83,6 @@ function glInit()
         glContext.vertexAttribPointer(location, size, type, normalize, gl_VERTEX_BYTE_STRIDE, offset);
         offset += size*typeSize;
     }
-    let offset = glBatchCount = 0;
     initVertexAttribArray('a', gl_FLOAT, 4, 1);            // angle
     initVertexAttribArray('p', gl_FLOAT, 4, 2);            // position
     initVertexAttribArray('s', gl_FLOAT, 4, 2);            // size
@@ -113,7 +109,8 @@ function glSetBlendMode(additive)
 function glSetTexture(texture=glTileTexture)
 {
     if (!glEnable) return;
-        
+    
+    // must flush cache with the old texture to set a new one
     if (texture != glActiveTexture)
         glFlush();
 
@@ -249,7 +246,7 @@ function glFlush()
  *  @memberof WebGL */
 function glCopyToContext(context, forceDraw)
 {
-    if (!glEnable || !glBatchCount)  return;
+    if (!glEnable || !glBatchCount) return;
     
     glFlush();
     if (!glOverlay || forceDraw)

@@ -92,17 +92,13 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, col
         {
             // calculate uvs and render
             const cols = tileImageSize.x / tileSize.x |0;
-            const uvSizeX = tileSize.x * tileImageSizeInverse.x;
-            const uvSizeY = tileSize.y * tileImageSizeInverse.y;
+            const uvSizeX = tileSize.x / tileImageSize.x;
+            const uvSizeY = tileSize.y / tileImageSize.y;
             const uvX = (tileIndex%cols)*uvSizeX, uvY = (tileIndex/cols|0)*uvSizeY;
-
-            // shrink uvs to prevent bleeding
-            const shrinkTilesX = tileBleedShrinkFix * tileImageSizeInverse.x;
-            const shrinkTilesY = tileBleedShrinkFix * tileImageSizeInverse.y;
             
             glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
-                uvX + shrinkTilesX, uvY + shrinkTilesY, 
-                uvX - shrinkTilesX + uvSizeX, uvY - shrinkTilesX + uvSizeY, 
+                uvX + tileImageFixBleed.x, uvY + tileImageFixBleed.y, 
+                uvX - tileImageFixBleed.x + uvSizeX, uvY - tileImageFixBleed.y + uvSizeY, 
                 color.rgbaInt(), additiveColor.rgbaInt()); 
         }
     }
@@ -121,10 +117,10 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, col
             {
                 // calculate uvs and render
                 const cols = tileImageSize.x / tileSize.x |0;
-                const sX = (tileIndex%cols)*tileSize.x   + tileBleedShrinkFix;
-                const sY = (tileIndex/cols|0)*tileSize.y + tileBleedShrinkFix;
-                const sWidth  = tileSize.x - 2*tileBleedShrinkFix;
-                const sHeight = tileSize.y - 2*tileBleedShrinkFix;
+                const sX = (tileIndex%cols)*tileSize.x   + tileFixBleedScale;
+                const sY = (tileIndex/cols|0)*tileSize.y + tileFixBleedScale;
+                const sWidth  = tileSize.x - 2*tileFixBleedScale;
+                const sHeight = tileSize.y - 2*tileFixBleedScale;
                 context.globalAlpha = color.a; // only alpha is supported
                 context.drawImage(tileImage, sX, sY, sWidth, sHeight, -.5, -.5, 1, 1);
             }

@@ -556,7 +556,7 @@ let tileSizeDefault = vec2(16);
 /** Prevent tile bleeding from neighbors in pixels
  *  @default
  *  @memberof Settings */
-let tileBleedShrinkFix = .3;
+let tileFixBleedScale = .3;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Object settings
@@ -748,7 +748,7 @@ let medalDisplayIconSize = 50;
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.25';
+const engineVersion = '1.1.26';
 
 /** Frames per second to update objects
  *  @default */
@@ -761,7 +761,7 @@ const timeDelta = 1/frameRate;
 /** Array containing all engine objects */
 let engineObjects = [];
 
-/** Array containing only objects that are set to collide with other objects (for optimization) */
+/** Array containing only objects that are set to collide with other objects this frame (for optimization) */
 let engineObjectsCollide = [];
 
 /** Current update frame, used to calculate time */
@@ -777,8 +777,15 @@ let timeReal = 0;
 let paused = 0;
 
 // Engine internal variables not exposed to documentation
-let frameTimeLastMS = 0, frameTimeBufferMS = 0, debugFPS = 0, 
-    shrinkTilesX, shrinkTilesY, drawCount, tileImageSize, tileImageSizeInverse;
+let frameTimeLastMS = 0, frameTimeBufferMS = 0, tileImageSize, tileImageFixBleed;
+
+// Engine stat tracking, if showWatermark is true
+let averageFPS, drawCount;
+
+// css text used for elements created by engine
+const styleBody = 'margin:0;overflow:hidden;background:#000' +
+    ';touch-action:none;user-select:none;-webkit-user-select:none;-moz-user-select:none';
+const canvaStyle = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -796,17 +803,14 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     tileImage.onerror = tileImage.onload = ()=>
     {
         // save tile image info
-        tileImageSizeInverse = vec2(1).divide(tileImageSize = vec2(tileImage.width, tileImage.height));
+        tileImageFixBleed = vec2(tileFixBleedScale).divide(tileImageSize = vec2(tileImage.width, tileImage.height));
         debug && (tileImage.onload=()=>ASSERT(1)); // tile sheet can not reloaded
-        shrinkTilesX = tileBleedShrinkFix/tileImageSize.x;
-        shrinkTilesY = tileBleedShrinkFix/tileImageSize.y;
 
         // setup html
+        document.body.style = styleBody;
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
-        document.body.style = 'margin:0;overflow:hidden;background:#000' +
-            ';touch-action:none;user-select:none;-webkit-user-select:none;-moz-user-select:none';
-        mainCanvas.style = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
         mainContext = mainCanvas.getContext('2d');
+        mainCanvas.style = canvaStyle;
 
         // init stuff and start engine
         debugInit();
@@ -814,8 +818,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
         // create overlay canvas for hud to appear above gl canvas
         document.body.appendChild(overlayCanvas = document.createElement('canvas'));
-        overlayCanvas.style = mainCanvas.style.cssText;
         overlayContext = overlayCanvas.getContext('2d');
+        overlayCanvas.style = canvaStyle;
         
         gameInit();
         touchGamepadCreate();
@@ -831,7 +835,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         let frameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
         frameTimeLastMS = frameTimeMS;
         if (debug || showWatermark)
-            debugFPS = lerp(.05, 1e3/(frameTimeDeltaMS||1), debugFPS);
+            averageFPS = lerp(.05, 1e3/(frameTimeDeltaMS||1), averageFPS || 0);
         if (debug)
             frameTimeDeltaMS *= keyIsDown(107) ? 5 : keyIsDown(109) ? .2 : 1; // +/- to speed/slow time
         timeReal += frameTimeDeltaMS / 1e3;
@@ -918,7 +922,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             overlayContext.font = '1em monospace';
             overlayContext.fillStyle = '#000';
             const text = engineName + ' ' + 'v' + engineVersion + ' / ' 
-                + drawCount + ' / ' + engineObjects.length + ' / ' + debugFPS.toFixed(1)
+                + drawCount + ' / ' + engineObjects.length + ' / ' + averageFPS.toFixed(1)
                 + ' ' + (glEnable ? 'GL' : '2D') ;
             overlayContext.fillText(text, mainCanvas.width-3, 3);
             overlayContext.fillStyle = '#fff';
@@ -936,7 +940,11 @@ function enginePreRender()
 {
     // save canvas size and clear canvases
     mainCanvasSize = vec2(overlayCanvas.width = mainCanvas.width, overlayCanvas.height = mainCanvas.height);
-    mainContext.imageSmoothingEnabled = !cavasPixelated; // disable smoothing for pixel art
+
+    // disable smoothing for pixel art
+    mainContext.imageSmoothingEnabled = !cavasPixelated;
+
+    // setup gl rendering if enabled
     glPreRender(mainCanvas.width, mainCanvas.height, cameraPos.x, cameraPos.y, cameraScale);
 }
 
@@ -945,6 +953,9 @@ function enginePreRender()
 /** Calls update on each engine object (recursively if child), removes destroyed objects, and updated time */
 function engineObjectsUpdate()
 {
+    // get list of solid objects for physics optimzation
+    engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);
+
     // recursive object update
     const updateObject = (o)=>
     {
@@ -960,17 +971,16 @@ function engineObjectsUpdate()
 
     // remove destroyed objects
     engineObjects = engineObjects.filter(o=>!o.destroyed);
-    engineObjectsCollide = engineObjectsCollide.filter(o=>!o.destroyed);
 
     // increment frame and update time
     time = ++frame / frameRate;
 }
 
-/** Detroy and remove all objects that are not persistent or descendants of a persistent object */
+/** Destroy and remove all objects */
 function engineObjectsDestroy()
 {
     for (const o of engineObjects)
-        o.persistent || o.parent || o.destroy();
+        o.parent || o.destroy();
     engineObjects = engineObjects.filter(o=>!o.destroyed);
 }
 
@@ -981,21 +991,18 @@ function engineObjectsDestroy()
  *  @param {Array} [objects=engineObjects] - List of objects to check */
 function engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
 {
-    if (!pos)
+    if (!pos) // all objects
     {
-        // all objects
         for (const o of objects)
             callbackFunction(o);
     }
-    else if (size.x != undefined)
+    else if (size.x != undefined)  // bounding box test
     {
-        // aabb test
         for (const o of objects)
             isOverlapping(pos, size, o.pos, o.size) && callbackFunction(o);
     }
-    else
+    else  // circle test
     {
-        // circle test
         const sizeSquared = size*size;
         for (const o of objects)
             pos.distanceSquared(o.pos) < sizeSquared && callbackFunction(o);
@@ -1153,7 +1160,7 @@ class EngineObject
                     // if already was touching, try to push away
                     const deltaPos = oldPos.subtract(o.pos);
                     const length = deltaPos.length();
-                    const pushAwayAccel = .001; // push away if alread overlapping
+                    const pushAwayAccel = .001; // push away if already overlapping
                     const velocity = length < .01 ? randVector(pushAwayAccel) : deltaPos.scale(pushAwayAccel/length);
                     this.velocity = this.velocity.add(velocity);
                     if (o.mass) // push away if not fixed
@@ -1348,18 +1355,6 @@ class EngineObject
     {
         ASSERT(collideSolidObjects || !isSolid); // solid objects must be set to collide
 
-        // track collidable objects in separate list
-        if (collideSolidObjects && !this.collideSolidObjects)
-        {
-            ASSERT(!engineObjectsCollide.includes(this));
-            engineObjectsCollide.push(this);
-        }
-        else if (!collideSolidObjects && this.collideSolidObjects)
-        {
-            ASSERT(engineObjectsCollide.includes(this))
-            engineObjectsCollide.splice(engineObjectsCollide.indexOf(this), 1);
-        }
-
         this.collideSolidObjects = collideSolidObjects;
         this.isSolid = isSolid;
         this.collideTiles = collideTiles;
@@ -1459,17 +1454,13 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, col
         {
             // calculate uvs and render
             const cols = tileImageSize.x / tileSize.x |0;
-            const uvSizeX = tileSize.x * tileImageSizeInverse.x;
-            const uvSizeY = tileSize.y * tileImageSizeInverse.y;
+            const uvSizeX = tileSize.x / tileImageSize.x;
+            const uvSizeY = tileSize.y / tileImageSize.y;
             const uvX = (tileIndex%cols)*uvSizeX, uvY = (tileIndex/cols|0)*uvSizeY;
-
-            // shrink uvs to prevent bleeding
-            const shrinkTilesX = tileBleedShrinkFix * tileImageSizeInverse.x;
-            const shrinkTilesY = tileBleedShrinkFix * tileImageSizeInverse.y;
             
             glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
-                uvX + shrinkTilesX, uvY + shrinkTilesY, 
-                uvX - shrinkTilesX + uvSizeX, uvY - shrinkTilesX + uvSizeY, 
+                uvX + tileImageFixBleed.x, uvY + tileImageFixBleed.y, 
+                uvX - tileImageFixBleed.x + uvSizeX, uvY - tileImageFixBleed.y + uvSizeY, 
                 color.rgbaInt(), additiveColor.rgbaInt()); 
         }
     }
@@ -1488,10 +1479,10 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, col
             {
                 // calculate uvs and render
                 const cols = tileImageSize.x / tileSize.x |0;
-                const sX = (tileIndex%cols)*tileSize.x   + tileBleedShrinkFix;
-                const sY = (tileIndex/cols|0)*tileSize.y + tileBleedShrinkFix;
-                const sWidth  = tileSize.x - 2*tileBleedShrinkFix;
-                const sHeight = tileSize.y - 2*tileBleedShrinkFix;
+                const sX = (tileIndex%cols)*tileSize.x   + tileFixBleedScale;
+                const sY = (tileIndex/cols|0)*tileSize.y + tileFixBleedScale;
+                const sWidth  = tileSize.x - 2*tileFixBleedScale;
+                const sHeight = tileSize.y - 2*tileFixBleedScale;
                 context.globalAlpha = color.a; // only alpha is supported
                 context.drawImage(tileImage, sX, sY, sWidth, sHeight, -.5, -.5, 1, 1);
             }
@@ -1672,11 +1663,7 @@ const keyWasReleased = (key, device=0)=> inputData[device] && inputData[device][
 
 /** Clears all input
  *  @memberof Input */
-const clearInput = ()=>
-{
-    inputData[0] = [];
-    touchGamepadEnable && touchGamepadTimer.unset();
-}
+const clearInput = ()=> inputData = [[]];
 
 /** Returns true if mouse button is down
  *  @param {Number} button
@@ -1746,10 +1733,14 @@ const gamepadStick = (stick,  gamepad=0)=> stickData[gamepad] ? stickData[gamepa
 // Input update called by engine
 
 // store input as a bit field for each key: 1 = isDown, 2 = wasPressed, 4 = wasReleased
-const inputData = [[]];
+// mouse and keyboard are stored together in device 0, gamepads are in devices > 0
+let inputData = [[]];
 
 function inputUpdate()
 {
+    // clear input when lost focus (prevent stuck keys)
+    document.hasFocus() || clearInput();
+
     // update mouse world space position
     mousePos = screenToWorld(mousePosScreen);
 
@@ -1765,9 +1756,6 @@ function inputUpdatePost()
         deviceInputData[i] &= 1;
     mouseWheel = 0;
 }
-
-// clear input when lost focus (prevent stuck keys)
-onblur = (e)=> clearInput();
 
 ///////////////////////////////////////////////////////////////////////////////
 // Keyboard event handlers
@@ -1921,10 +1909,12 @@ if (isTouchDevice)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Touch gamepad - on screen virtual gamepad
+// touch gamepad, virtual on screen gamepad emulator for touch devices
+
+// touch input internal variables
+let touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadStick = vec2();
 
 // create the touch gamepad, called automatically by the engine
-let touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadStick = vec2();
 function touchGamepadCreate()
 {
     if (!touchGamepadEnable || !isTouchDevice)
@@ -1943,10 +1933,10 @@ function touchGamepadCreate()
         if (touching)
         {
             touchGamepadTimer.isSet() || zzfx(0) ; // fix mobile audio, force it to play a sound the first time
-            touchGamepadTimer.set();
 
             // set that gamepad is active
             isUsingGamepad = 1;
+            touchGamepadTimer.set();
 
             if (paused)
             {
@@ -2252,6 +2242,13 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0)
     if (!audioContext)
         audioContext = new (window.AudioContext||webkitAudioContext);
 
+    // fix stalled audio
+    audioContext.resume();
+
+    // prevent sounds from building up if they can't be played
+    if (audioContext.state != 'running')
+        return;
+
     // create buffer and source
     const buffer = audioContext.createBuffer(sampleChannels.length, sampleChannels[0].length, zzfxR), 
         source = audioContext.createBufferSource();
@@ -2262,7 +2259,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0)
     source.playbackRate.value = rate;
     source.loop = loop;
 
-    // create and connect gain node
+    // create and connect gain node (createGain is more widley spported then GainNode construtor)
     const gainNode = audioContext.createGain();
     gainNode.gain.value = soundVolume*volume;
     gainNode.connect(audioContext.destination);
@@ -2698,7 +2695,7 @@ class TileLayer extends EngineObject
         // flush and copy gl canvas because tile canvas does not use webgl
         glEnable && !glOverlay && !this.isOverlay && glCopyToContext(mainContext);
         
-        // draw the entire cached level onto the main canvas
+        // draw the entire cached level onto the canvas
         const pos = worldToScreen(this.pos.add(vec2(0,this.size.y*this.scale.y)));
         (this.isOverlay ? overlayContext : mainContext).drawImage
         (
@@ -2707,7 +2704,7 @@ class TileLayer extends EngineObject
         );
     }
 
-    /** Draw all the tile data to an offscreen canvas using webgl if possible */
+    /** Draw all the tile data to an offscreen canvas */
     redraw()
     {
         this.redrawStart();
@@ -2719,13 +2716,11 @@ class TileLayer extends EngineObject
      *  @param {Boolean} [clear=1] - Should it clear the canvas before drawing */
     redrawStart(clear = 1)
     {
-        // clear and set size
-        const width  = this.size.x * this.tileSize.x;
-        const height = this.size.y * this.tileSize.y;
         if (clear)
         {
-            this.canvas.width  = width;
-            this.canvas.height = height;
+            // clear and set size
+            this.canvas.width  = this.size.x * this.tileSize.x;
+            this.canvas.height = this.size.y * this.tileSize.y;
         }
 
         // save current render settings
@@ -2815,7 +2810,7 @@ class TileLayer extends EngineObject
             else
             {
                 const cols = tileImage.width/tileSize.x;
-                context.globalAlpha = color.a; // full color not supported in this mode
+                context.globalAlpha = color.a; // only alpha, no color, is supported in this mode
                 context.drawImage(tileImage, 
                     (tileIndex%cols)*tileSize.x, (tileIndex/cols|0)*tileSize.x, 
                     tileSize.x, tileSize.y, -.5, -.5, 1, 1);
@@ -2883,7 +2878,7 @@ class ParticleEmitter extends EngineObject
      *  @param {Number}  [randomness=.2]        - Apply extra randomness percent
      *  @param {Boolean} [collideTiles=0]       - Do particles collide against tiles
      *  @param {Boolean} [additive=0]           - Should particles use addtive blend
-     *  @param {Boolean} [randomColorLinear=0]  - Should color be randomized linearly or across each component
+     *  @param {Boolean} [randomColorLinear=1]  - Should color be randomized linearly or across each component
      *  @param {Number}  [renderOrder=0]        - Render order for particles (additive is above other stuff by default)
      */
     constructor
@@ -3149,7 +3144,7 @@ function medalsInit(saveName)
 {
     // check if medals are unlocked
     medalsSaveName = saveName;
-    debugMedals || medals.forEach(medal=> medal.unlocked = localStorage[medal.storageKey()]);
+    debugMedals || medals.forEach(medal=> medal.unlocked = 1 || localStorage[medal.storageKey()]);
 }
 
 /** 
@@ -3182,13 +3177,9 @@ class Medal
         this.name = name;
         this.description = description;
         this.icon = icon;
-
+        this.image = new Image();
         if (src)
-        {
-            // load image
-            this.image = new Image();
             this.image.src = src;
-        }
     }
 
     /** Unlocks a medal if not already unlocked */
@@ -3218,20 +3209,22 @@ class Medal
         const y = -medalDisplayHeight*hidePercent;
 
         // draw containing rect and clip to that region
-        context.beginPath(context.save());
+        context.save();
+        context.beginPath();
         context.fillStyle = '#ddd'
         context.fill(context.rect(x, y, width, medalDisplayHeight));
-        context.strokeStyle = context.fillStyle = '#000';
+        context.strokeStyle = '#000';
         context.lineWidth = 3;
-        context.clip(context.stroke());
+        context.stroke();
+        context.clip();
 
         // draw the icon and text
         this.renderIcon(x+15+medalDisplayIconSize/2, y+medalDisplayHeight/2);
         context.textAlign = 'left';
-        context.font = '700 38px '+ fontDefault;
-        context.fillText(this.name, x+medalDisplayIconSize+25, y+28);
+        context.font = '38px '+ fontDefault;
+        context.fillText(this.name, x+medalDisplayIconSize+30, y+28);
         context.font = '24px '+ fontDefault;
-        context.fillText(this.description, x+medalDisplayIconSize+25, y+60);
+        context.fillText(this.description, x+medalDisplayIconSize+30, y+60);
         context.restore();
     }
 
@@ -3244,11 +3237,11 @@ class Medal
     {
         // draw the image or icon
         const context = overlayContext;
+        context.fillStyle = '#000';
         context.textAlign = 'center';
         context.textBaseline = 'middle';
-        context.font = size*.6 + 'px '+ fontDefault;
-        context.fillStyle = '#000';
-        if (this.image)
+        context.font = size*.7 + 'px '+ fontDefault;
+        if (this.image.src)
             context.drawImage(this.image, x-size/2, y-size/2, size, size);
         else
             context.fillText(this.icon, x, y); // show icon if there is no image
@@ -3324,7 +3317,6 @@ class Newgrounds
             if (medal)
             {
                 // copy newgrounds medal data
-                medal.image =       new Image();
                 medal.image.src =   newgroundsMedal['icon'];
                 medal.name =        newgroundsMedal['name'];
                 medal.description = newgroundsMedal['description'];
@@ -3454,15 +3446,11 @@ function glInit()
     // create the canvas and tile texture
     glCanvas = document.createElement('canvas');
     glContext = glCanvas.getContext('webgl');
-
+    glCanvas.style = canvaStyle;
     glTileTexture = glCreateTexture(tileImage);
 
-    if (glOverlay)
-    {
-        // some browsers are much faster without copying the gl buffer so we just overlay it instead
-        document.body.appendChild(glCanvas);
-        glCanvas.style = mainCanvas.style.cssText;
-    }
+    // some browsers are much faster without copying the gl buffer so we just overlay it instead
+    glOverlay && document.body.appendChild(glCanvas);
 
     // setup vertex and fragment shaders
     glShader = glCreateProgram(
@@ -3494,6 +3482,7 @@ function glInit()
     glColorData = new Uint32Array(glVertexData);
 
     // setup the vertex data array
+    let offset = glBatchCount = 0;
     const initVertexAttribArray = (name, type, typeSize, size, normalize=0)=>
     {
         const location = glContext.getAttribLocation(glShader, name);
@@ -3501,7 +3490,6 @@ function glInit()
         glContext.vertexAttribPointer(location, size, type, normalize, gl_VERTEX_BYTE_STRIDE, offset);
         offset += size*typeSize;
     }
-    let offset = glBatchCount = 0;
     initVertexAttribArray('a', gl_FLOAT, 4, 1);            // angle
     initVertexAttribArray('p', gl_FLOAT, 4, 2);            // position
     initVertexAttribArray('s', gl_FLOAT, 4, 2);            // size
@@ -3528,7 +3516,8 @@ function glSetBlendMode(additive)
 function glSetTexture(texture=glTileTexture)
 {
     if (!glEnable) return;
-        
+    
+    // must flush cache with the old texture to set a new one
     if (texture != glActiveTexture)
         glFlush();
 
@@ -3664,7 +3653,7 @@ function glFlush()
  *  @memberof WebGL */
 function glCopyToContext(context, forceDraw)
 {
-    if (!glEnable || !glBatchCount)  return;
+    if (!glEnable || !glBatchCount) return;
     
     glFlush();
     if (!glOverlay || forceDraw)

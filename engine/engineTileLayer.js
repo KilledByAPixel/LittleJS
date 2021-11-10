@@ -209,7 +209,7 @@ class TileLayer extends EngineObject
         // flush and copy gl canvas because tile canvas does not use webgl
         glEnable && !glOverlay && !this.isOverlay && glCopyToContext(mainContext);
         
-        // draw the entire cached level onto the main canvas
+        // draw the entire cached level onto the canvas
         const pos = worldToScreen(this.pos.add(vec2(0,this.size.y*this.scale.y)));
         (this.isOverlay ? overlayContext : mainContext).drawImage
         (
@@ -218,7 +218,7 @@ class TileLayer extends EngineObject
         );
     }
 
-    /** Draw all the tile data to an offscreen canvas using webgl if possible */
+    /** Draw all the tile data to an offscreen canvas */
     redraw()
     {
         this.redrawStart();
@@ -230,13 +230,11 @@ class TileLayer extends EngineObject
      *  @param {Boolean} [clear=1] - Should it clear the canvas before drawing */
     redrawStart(clear = 1)
     {
-        // clear and set size
-        const width  = this.size.x * this.tileSize.x;
-        const height = this.size.y * this.tileSize.y;
         if (clear)
         {
-            this.canvas.width  = width;
-            this.canvas.height = height;
+            // clear and set size
+            this.canvas.width  = this.size.x * this.tileSize.x;
+            this.canvas.height = this.size.y * this.tileSize.y;
         }
 
         // save current render settings
@@ -326,7 +324,7 @@ class TileLayer extends EngineObject
             else
             {
                 const cols = tileImage.width/tileSize.x;
-                context.globalAlpha = color.a; // full color not supported in this mode
+                context.globalAlpha = color.a; // only alpha, no color, is supported in this mode
                 context.drawImage(tileImage, 
                     (tileIndex%cols)*tileSize.x, (tileIndex/cols|0)*tileSize.x, 
                     tileSize.x, tileSize.y, -.5, -.5, 1, 1);
