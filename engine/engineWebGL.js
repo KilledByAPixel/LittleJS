@@ -203,6 +203,7 @@ function glPreRender(width, height, cameraX, cameraY, cameraScale)
 
     // clear and set to same size as main canvas
     glContext.viewport(0, 0, glCanvas.width = width, glCanvas.height = height);
+    glContext.clear(gl_COLOR_BUFFER_BIT);
 
     // set up the shader
     glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = glTileTexture);
@@ -249,12 +250,10 @@ function glCopyToContext(context, forceDraw)
     if (!glEnable || !glBatchCount) return;
     
     glFlush();
+    
+    // do not draw in overlay mode because the canvas is visible
     if (!glOverlay || forceDraw)
-    {
-        // do not draw/clear in overlay mode because the canvas is visible
         context.drawImage(glCanvas, 0, 0);
-        glContext.clear(gl_COLOR_BUFFER_BIT);
-    }
 }
 
 /** Add a sprite to the gl draw list, used by all gl draw functions
