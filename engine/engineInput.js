@@ -281,7 +281,7 @@ if (isTouchDevice)
 // touch gamepad, virtual on screen gamepad emulator for touch devices
 
 // touch input internal variables
-let touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadStick = vec2();
+let touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadStick = vec2(), touchGamepadAnalog = 1;
 
 // create the touch gamepad, called automatically by the engine
 function touchGamepadCreate()
@@ -327,7 +327,14 @@ function touchGamepadCreate()
             if (touchPos.distance(stickCenter) < touchGamepadSize)
             {
                 // virtual analog stick
-                touchGamepadStick = touchPos.subtract(stickCenter).clampLength(touchGamepadSize/2).scale(2/touchGamepadSize);
+                if (touchGamepadAnalog)
+                    touchGamepadStick = touchPos.subtract(stickCenter).clampLength(touchGamepadSize/2).scale(2/touchGamepadSize);
+                else
+                {
+                    // 8 way dpad
+                    const angle = touchPos.subtract(stickCenter).angle();
+                    touchGamepadStick.setAngle((angle * 4 / PI + 8.5 | 0) * PI / 4);
+                }
             }
             else if (touchPos.distance(buttonCenter) < touchGamepadSize)
             {

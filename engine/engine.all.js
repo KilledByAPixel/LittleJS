@@ -2189,7 +2189,7 @@ if (isTouchDevice)
 // touch gamepad, virtual on screen gamepad emulator for touch devices
 
 // touch input internal variables
-let touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadStick = vec2();
+let touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadStick = vec2(), touchGamepadAnalog = 1;
 
 // create the touch gamepad, called automatically by the engine
 function touchGamepadCreate()
@@ -2235,7 +2235,14 @@ function touchGamepadCreate()
             if (touchPos.distance(stickCenter) < touchGamepadSize)
             {
                 // virtual analog stick
-                touchGamepadStick = touchPos.subtract(stickCenter).clampLength(touchGamepadSize/2).scale(2/touchGamepadSize);
+                if (touchGamepadAnalog)
+                    touchGamepadStick = touchPos.subtract(stickCenter).clampLength(touchGamepadSize/2).scale(2/touchGamepadSize);
+                else
+                {
+                    // 8 way dpad
+                    const angle = touchPos.subtract(stickCenter).angle();
+                    touchGamepadStick.setAngle((angle * 4 / PI + 8.5 | 0) * PI / 4);
+                }
             }
             else if (touchPos.distance(buttonCenter) < touchGamepadSize)
             {
@@ -3887,6 +3894,7 @@ function glPreRender(width, height, cameraX, cameraY, cameraScale)
 
     // clear and set to same size as main canvas
     glContext.viewport(0, 0, glCanvas.width = width, glCanvas.height = height);
+    glContext.clear(gl_COLOR_BUFFER_BIT);
 
     // set up the shader
     glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = glTileTexture);
@@ -3933,12 +3941,10 @@ function glCopyToContext(context, forceDraw)
     if (!glEnable || !glBatchCount) return;
     
     glFlush();
+    
+    // do not draw in overlay mode because the canvas is visible
     if (!glOverlay || forceDraw)
-    {
-        // do not draw/clear in overlay mode because the canvas is visible
         context.drawImage(glCanvas, 0, 0);
-        glContext.clear(gl_COLOR_BUFFER_BIT);
-    }
 }
 
 /** Add a sprite to the gl draw list, used by all gl draw functions
