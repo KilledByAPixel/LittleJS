@@ -2991,14 +2991,14 @@ class TileLayer extends EngineObject
     /** Draw all the tile data to an offscreen canvas */
     redraw()
     {
-        this.redrawStart();
+        this.redrawStart(1);
         this.drawAllTileData();
         this.redrawEnd();
     }
 
     /** Call to start the redraw process
-     *  @param {Boolean} [clear=1] - Should it clear the canvas before drawing */
-    redrawStart(clear = 1)
+     *  @param {Boolean} [clear=0] - Should it clear the canvas before drawing */
+    redrawStart(clear = 0)
     {
         if (clear)
         {
@@ -4070,7 +4070,7 @@ gl_VERTEX_BYTE_STRIDE = 4 + (4 * 2) * 3 + (4) * 2; // float + vec2 * 3 + (char *
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.26';
+const engineVersion = '1.1.27';
 
 /** Frames per second to update objects
  *  @default */

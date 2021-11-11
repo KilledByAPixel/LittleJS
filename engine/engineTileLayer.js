@@ -221,14 +221,14 @@ class TileLayer extends EngineObject
     /** Draw all the tile data to an offscreen canvas */
     redraw()
     {
-        this.redrawStart();
+        this.redrawStart(1);
         this.drawAllTileData();
         this.redrawEnd();
     }
 
     /** Call to start the redraw process
-     *  @param {Boolean} [clear=1] - Should it clear the canvas before drawing */
-    redrawStart(clear = 1)
+     *  @param {Boolean} [clear=0] - Should it clear the canvas before drawing */
+    redrawStart(clear = 0)
     {
         if (clear)
         {
