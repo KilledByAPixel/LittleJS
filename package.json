@@ -3,6 +3,7 @@
   "version": "1.1.26",
   "description": "LittleJS - Tiny and Fast HTML5 Game Engine",
   "main": "engine/engine.all.js",
+  "types": "@types/littlejsengine/index.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/KilledByAPixel/LittleJS.git"
@@ -21,5 +22,11 @@
   "bugs": {
     "url": "https://github.com/KilledByAPixel/LittleJS/issues"
   },
-  "homepage": "https://github.com/KilledByAPixel/LittleJS"
+  "scripts": {
+    "update-type-declaration": "tsc ./engine/engine.all.js --declaration --allowJs --emitDeclarationOnly --outFile @types/littlejsengine/index.d.ts"
+  },
+  "homepage": "https://github.com/KilledByAPixel/LittleJS",
+  "devDependencies": {
+    "typescript": "^4.0.0"
+  }
 }
