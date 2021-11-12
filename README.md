@@ -33,7 +33,7 @@ LittleJS is a super lightweight JavaScript game engine with a fast hybrid render
 - Debug tools and debug rendering system
 - [Full documentation](https://killedbyapixel.github.io/LittleJS/docs) automatically generated from the source code block tags with [JSDoc](https://github.com/jsdoc/jsdoc)
 - Build system automatically combines everything, minifies, and removes unused code
-- For size coding competitions like [js13kGames](https://js13kgames.com/), starter project builds to a 7KB zip
+- For size coding competitions like [js13kGames](https://js13kgames.com/), starter project builds to a 7KB zip with [Roadroller](https://github.com/lifthrasiir/roadroller)
 - Easily build a Windows executable with [electron](https://www.electronjs.org/) for distribution on platforms like Steam
 - Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used to make commercial games
 
@@ -44,6 +44,8 @@ To easily include LittleJS in your game, you can use one of the 3 pre-built js f
 - [engine.all.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.js) - The full game engine with debug mode available
 - [engine.all.release.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.release.js) - The engine optimized for release builds
 - [engine.all.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.min.js) - The engine in release mode and minified
+
+The hello world example includes a batch file [build.bat](https://github.com/KilledByAPixel/LittleJS/blob/main/build.bat) that compresses everything into a tiny zip file using google closure, uglifyjs, roadroller, and ect.
 
 ## Games Made With LittleJS
 
