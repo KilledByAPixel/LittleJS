@@ -101,8 +101,8 @@ class EngineObject
         }
 
         // limit max speed to prevent missing collisions
-        this.velocity.x = clamp(this.velocity.x, objectMaxSpeed, -objectMaxSpeed);
-        this.velocity.y = clamp(this.velocity.y, objectMaxSpeed, -objectMaxSpeed);
+        this.velocity.x = clamp(this.velocity.x, -objectMaxSpeed, objectMaxSpeed);
+        this.velocity.y = clamp(this.velocity.y, -objectMaxSpeed, objectMaxSpeed);
 
         // apply physics
         const oldPos = this.pos.copy();
@@ -192,8 +192,8 @@ class EngineObject
 
                         // lerp betwen elastic or inelastic based on elasticity
                         const elasticity = max(this.elasticity, o.elasticity);
-                        this.velocity.y = lerp(elasticity, elastic0, inelastic);
-                        o.velocity.y = lerp(elasticity, elastic1, inelastic);
+                        this.velocity.y = lerp(elasticity, inelastic, elastic0);
+                        o.velocity.y = lerp(elasticity, inelastic, elastic1);
                     }
                 }
                 if (!smallStepUp && (isBlockedX || !isBlockedY)) // resolve x collision
@@ -213,8 +213,8 @@ class EngineObject
 
                         // lerp betwen elastic or inelastic based on elasticity
                         const elasticity = max(this.elasticity, o.elasticity);
-                        this.velocity.x = lerp(elasticity, elastic0, inelastic);
-                        o.velocity.x = lerp(elasticity, elastic1, inelastic);
+                        this.velocity.x = lerp(elasticity, inelastic, elastic0);
+                        o.velocity.x = lerp(elasticity, inelastic, elastic1);
                     }
                     else // bounce if other object is fixed
                         this.velocity.x *= -this.elasticity;

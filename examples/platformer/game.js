@@ -33,7 +33,7 @@ function gameUpdate()
     }
     
     // mouse wheel = zoom
-    cameraScale = clamp(cameraScale*(1-mouseWheel/10), 1e3, 1);
+    cameraScale = clamp(cameraScale*(1-mouseWheel/10), 1, 1e3);
     
     // T = drop test crate
     if (keyWasPressed(84))

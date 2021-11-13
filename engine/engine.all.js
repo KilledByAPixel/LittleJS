@@ -7,6 +7,7 @@
  * LittleJS Debug System
  * <br> - Press ~ to show debug overlay with mouse pick
  * <br> - Number keys toggle debug functions
+ * <br> - +/- apply time scale
  * <br> - Debug primitive rendering
  * <br> - Save a 2d canvas as an image
  * @namespace Debug
@@ -643,27 +644,27 @@ const mod = (a, b=1)=> ((a % b) + b) % b;
 
 /** Clamps the value beween max and min
  *  @param {Number} value
- *  @param {Number} [max=1]
  *  @param {Number} [min=0]
+ *  @param {Number} [max=1]
  *  @return {Number}
  *  @memberof Utilities */
-const clamp = (v, max=1, min=0)=> (ASSERT(max > min), v < min ? min : v > max ? max : v);
+const clamp = (v, min=0, max=1)=> v < min ? min : v > max ? max : v;
 
 /** Returns what percentage the value is between max and min
  *  @param {Number} value
- *  @param {Number} [max=1]
  *  @param {Number} [min=0]
+ *  @param {Number} [max=1]
  *  @return {Number}
  *  @memberof Utilities */
-const percent = (v, max=1, min=0)=> max-min ? clamp((v-min) / (max-min)) : 0;
+const percent = (v, min=0, max=1)=> max-min ? clamp((v-min) / (max-min)) : 0;
 
 /** Linearly interpolates the percent value between max and min
  *  @param {Number} percent
- *  @param {Number} [max=1]
  *  @param {Number} [min=0]
+ *  @param {Number} [max=1]
  *  @return {Number}
  *  @memberof Utilities */
-const lerp = (p, max=1, min=0)=> min + clamp(p) * (max-min);
+const lerp = (p, min=0, max=1)=> min + clamp(p) * (max-min);
 
 /** Applies smoothstep function to the percentage value
  *  @param {Number} value
@@ -1071,7 +1072,7 @@ class Timer
 
     /** Get percentage elapsed based on time it was set to, returns 0 if not set
      * @return {Number} */
-    getPercent() { return this.isSet()? percent(this.time - time, 0, this.setTime) : 0; }
+    getPercent() { return this.isSet()? percent(this.time - time, this.setTime, 0) : 0; }
 }
 /**
  * LittleJS Engine Settings
@@ -1388,8 +1389,8 @@ class EngineObject
         }
 
         // limit max speed to prevent missing collisions
-        this.velocity.x = clamp(this.velocity.x, objectMaxSpeed, -objectMaxSpeed);
-        this.velocity.y = clamp(this.velocity.y, objectMaxSpeed, -objectMaxSpeed);
+        this.velocity.x = clamp(this.velocity.x, -objectMaxSpeed, objectMaxSpeed);
+        this.velocity.y = clamp(this.velocity.y, -objectMaxSpeed, objectMaxSpeed);
 
         // apply physics
         const oldPos = this.pos.copy();
@@ -1479,8 +1480,8 @@ class EngineObject
 
                         // lerp betwen elastic or inelastic based on elasticity
                         const elasticity = max(this.elasticity, o.elasticity);
-                        this.velocity.y = lerp(elasticity, elastic0, inelastic);
-                        o.velocity.y = lerp(elasticity, elastic1, inelastic);
+                        this.velocity.y = lerp(elasticity, inelastic, elastic0);
+                        o.velocity.y = lerp(elasticity, inelastic, elastic1);
                     }
                 }
                 if (!smallStepUp && (isBlockedX || !isBlockedY)) // resolve x collision
@@ -1500,8 +1501,8 @@ class EngineObject
 
                         // lerp betwen elastic or inelastic based on elasticity
                         const elasticity = max(this.elasticity, o.elasticity);
-                        this.velocity.x = lerp(elasticity, elastic0, inelastic);
-                        o.velocity.x = lerp(elasticity, elastic1, inelastic);
+                        this.velocity.x = lerp(elasticity, inelastic, elastic0);
+                        o.velocity.x = lerp(elasticity, inelastic, elastic1);
                     }
                     else // bounce if other object is fixed
                         this.velocity.x *= -this.elasticity;
@@ -2067,7 +2068,7 @@ const mouseToScreen = (mousePos)=>
 
     const rect = mainCanvas.getBoundingClientRect();
     return mainCanvasSize.multiply(
-        vec2(percent(mousePos.x, rect.right, rect.left), percent(mousePos.y, rect.bottom, rect.top)));
+        vec2(percent(mousePos.x, rect.left, rect.right), percent(mousePos.y, rect.top, rect.bottom)));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2108,8 +2109,8 @@ function gamepadsUpdate()
             // read clamp dead zone of analog sticks
             const deadZone = .3, deadZoneMax = .8;
             const applyDeadZone = (v)=> 
-                v >  deadZone ?  percent( v, deadZoneMax, deadZone) : 
-                v < -deadZone ? -percent(-v, deadZoneMax, deadZone) : 0;
+                v >  deadZone ?  percent( v, deadZone, deadZoneMax) : 
+                v < -deadZone ? -percent(-v, deadZone, deadZoneMax) : 0;
 
             // read analog sticks
             for (let j = 0; j < gamepad.axes.length-1; j+=2)
@@ -2266,7 +2267,7 @@ function touchGamepadRender()
         return;
     
     // fade off when not touching or paused
-    const alpha = percent(touchGamepadTimer.get(), 3, 4);
+    const alpha = percent(touchGamepadTimer.get(), 4, 3);
     if (!alpha || paused)
         return;
 
@@ -2369,7 +2370,7 @@ class Sound
                     return; // out of range
 
                 // attenuate volume by distance
-                volume *= percent(lengthSquared**.5, range*this.taper, range);
+                volume *= percent(lengthSquared**.5, range, range*this.taper);
             }
 
             // get pan from screen space coords
@@ -2551,7 +2552,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0)
     // connect source to gain
     (
         window.StereoPannerNode ? // create pan node if possible
-        source.connect(new StereoPannerNode(audioContext, {'pan':clamp(pan, 1, -1)}))
+        source.connect(new StereoPannerNode(audioContext, {'pan':clamp(pan, -1, 1)}))
         : source
     )
     .connect(gainNode);
@@ -2988,7 +2989,9 @@ class TileLayer extends EngineObject
         );
     }
 
-    /** Draw all the tile data to an offscreen canvas */
+    /** Draw all the tile data to an offscreen canvas 
+     *  - This may be slow in some browsers
+    */
     redraw()
     {
         this.redrawStart(1);
@@ -3730,7 +3733,7 @@ function glInit()
     // create the canvas and tile texture
     glCanvas = document.createElement('canvas');
     glContext = glCanvas.getContext('webgl');
-    glCanvas.style = canvaStyle;
+    glCanvas.style = styleCanvas;
     glTileTexture = glCreateTexture(tileImage);
 
     // some browsers are much faster without copying the gl buffer so we just overlay it instead
@@ -4070,7 +4073,7 @@ gl_VERTEX_BYTE_STRIDE = 4 + (4 * 2) * 3 + (4) * 2; // float + vec2 * 3 + (char *
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.27';
+const engineVersion = '1.1.3';
 
 /** Frames per second to update objects
  *  @default */
@@ -4107,7 +4110,7 @@ let averageFPS, drawCount;
 // css text used for elements created by engine
 const styleBody = 'margin:0;overflow:hidden;background:#000' +
     ';touch-action:none;user-select:none;-webkit-user-select:none;-moz-user-select:none';
-const canvaStyle = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
+const styleCanvas = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -4132,7 +4135,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         document.body.style = styleBody;
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
         mainContext = mainCanvas.getContext('2d');
-        mainCanvas.style = canvaStyle;
+        mainCanvas.style = styleCanvas;
 
         // init stuff and start engine
         debugInit();
@@ -4141,7 +4144,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         // create overlay canvas for hud to appear above gl canvas
         document.body.appendChild(overlayCanvas = document.createElement('canvas'));
         overlayContext = overlayCanvas.getContext('2d');
-        overlayCanvas.style = canvaStyle;
+        overlayCanvas.style = styleCanvas;
         
         gameInit();
         touchGamepadCreate();
@@ -4157,7 +4160,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         let frameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
         frameTimeLastMS = frameTimeMS;
         if (debug || showWatermark)
-            averageFPS = lerp(.05, 1e3/(frameTimeDeltaMS||1), averageFPS || 0);
+            averageFPS = lerp(.05, averageFPS || 0, 1e3/(frameTimeDeltaMS||1));
         if (debug)
             frameTimeDeltaMS *= keyIsDown(107) ? 5 : keyIsDown(109) ? .2 : 1; // +/- to speed/slow time
         timeReal += frameTimeDeltaMS / 1e3;

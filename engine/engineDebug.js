@@ -7,6 +7,7 @@
  * LittleJS Debug System
  * <br> - Press ~ to show debug overlay with mouse pick
  * <br> - Number keys toggle debug functions
+ * <br> - +/- apply time scale
  * <br> - Debug primitive rendering
  * <br> - Save a 2d canvas as an image
  * @namespace Debug

@@ -89,7 +89,7 @@ function explosion(pos, radius=3)
         }
 
         // push
-        const p = percent(d, radius, 2*radius);
+        const p = percent(d, 2*radius, radius);
         const force = o.pos.subtract(pos).normalize(p*radius*.2);
         o.applyForce(force);
         if (o.isDead && o.isDead())

@@ -100,7 +100,7 @@ function gameUpdate()
 
             if (keepFalling)
             {
-                const p = percent(comboCount, 0, 9);
+                const p = percent(comboCount, 9, 0);
                 fallTimer.set(fallTime*p);
                 sound_fall.play();
             }

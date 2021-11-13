@@ -39,7 +39,7 @@ function glInit()
     // create the canvas and tile texture
     glCanvas = document.createElement('canvas');
     glContext = glCanvas.getContext('webgl');
-    glCanvas.style = canvaStyle;
+    glCanvas.style = styleCanvas;
     glTileTexture = glCreateTexture(tileImage);
 
     // some browsers are much faster without copying the gl buffer so we just overlay it instead

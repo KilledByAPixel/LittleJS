@@ -69,7 +69,7 @@ class Sound
                     return; // out of range
 
                 // attenuate volume by distance
-                volume *= percent(lengthSquared**.5, range*this.taper, range);
+                volume *= percent(lengthSquared**.5, range, range*this.taper);
             }
 
             // get pan from screen space coords
@@ -251,7 +251,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0)
     // connect source to gain
     (
         window.StereoPannerNode ? // create pan node if possible
-        source.connect(new StereoPannerNode(audioContext, {'pan':clamp(pan, 1, -1)}))
+        source.connect(new StereoPannerNode(audioContext, {'pan':clamp(pan, -1, 1)}))
         : source
     )
     .connect(gainNode);

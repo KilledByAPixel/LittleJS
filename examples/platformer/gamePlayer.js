@@ -169,7 +169,7 @@ class Character extends GameObject
         
         // apply movement acceleration and clamp
         const maxCharacterSpeed = .2;
-        this.velocity.x = clamp(this.velocity.x + moveInput.x * .042, maxCharacterSpeed, -maxCharacterSpeed);
+        this.velocity.x = clamp(this.velocity.x + moveInput.x * .042, -maxCharacterSpeed, maxCharacterSpeed);
 
         // track last pos for ladder collision code
         this.lastPos = this.pos.copy();
@@ -292,8 +292,8 @@ class Player extends Character
         // player controls
         this.holdingJump   = keyIsDown(38) || gamepadIsDown(0);
         this.holdingShoot  = mouseIsDown(0) || keyIsDown(90) || gamepadIsDown(2);
-        this.pressedDodge  = mouseIsDown(1) || keyIsDown(88) || gamepadIsDown(3);
-        this.pressingThrow = mouseIsDown(2) || keyIsDown(67) || gamepadIsDown(1);
+        this.pressingThrow = mouseIsDown(1) || keyIsDown(67) || gamepadIsDown(1);
+        this.pressedDodge  = mouseIsDown(2) || keyIsDown(88) || gamepadIsDown(3);
 
         // movement control
         this.moveInput = isUsingGamepad ? gamepadStick(0) : 

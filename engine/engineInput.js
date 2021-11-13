@@ -159,7 +159,7 @@ const mouseToScreen = (mousePos)=>
 
     const rect = mainCanvas.getBoundingClientRect();
     return mainCanvasSize.multiply(
-        vec2(percent(mousePos.x, rect.right, rect.left), percent(mousePos.y, rect.bottom, rect.top)));
+        vec2(percent(mousePos.x, rect.left, rect.right), percent(mousePos.y, rect.top, rect.bottom)));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -200,8 +200,8 @@ function gamepadsUpdate()
             // read clamp dead zone of analog sticks
             const deadZone = .3, deadZoneMax = .8;
             const applyDeadZone = (v)=> 
-                v >  deadZone ?  percent( v, deadZoneMax, deadZone) : 
-                v < -deadZone ? -percent(-v, deadZoneMax, deadZone) : 0;
+                v >  deadZone ?  percent( v, deadZone, deadZoneMax) : 
+                v < -deadZone ? -percent(-v, deadZone, deadZoneMax) : 0;
 
             // read analog sticks
             for (let j = 0; j < gamepad.axes.length-1; j+=2)
@@ -358,7 +358,7 @@ function touchGamepadRender()
         return;
     
     // fade off when not touching or paused
-    const alpha = percent(touchGamepadTimer.get(), 3, 4);
+    const alpha = percent(touchGamepadTimer.get(), 4, 3);
     if (!alpha || paused)
         return;
 

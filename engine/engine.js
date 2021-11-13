@@ -22,7 +22,7 @@
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.27';
+const engineVersion = '1.1.3';
 
 /** Frames per second to update objects
  *  @default */
@@ -59,7 +59,7 @@ let averageFPS, drawCount;
 // css text used for elements created by engine
 const styleBody = 'margin:0;overflow:hidden;background:#000' +
     ';touch-action:none;user-select:none;-webkit-user-select:none;-moz-user-select:none';
-const canvaStyle = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
+const styleCanvas = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -84,7 +84,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         document.body.style = styleBody;
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
         mainContext = mainCanvas.getContext('2d');
-        mainCanvas.style = canvaStyle;
+        mainCanvas.style = styleCanvas;
 
         // init stuff and start engine
         debugInit();
@@ -93,7 +93,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         // create overlay canvas for hud to appear above gl canvas
         document.body.appendChild(overlayCanvas = document.createElement('canvas'));
         overlayContext = overlayCanvas.getContext('2d');
-        overlayCanvas.style = canvaStyle;
+        overlayCanvas.style = styleCanvas;
         
         gameInit();
         touchGamepadCreate();
@@ -109,7 +109,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         let frameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
         frameTimeLastMS = frameTimeMS;
         if (debug || showWatermark)
-            averageFPS = lerp(.05, 1e3/(frameTimeDeltaMS||1), averageFPS || 0);
+            averageFPS = lerp(.05, averageFPS || 0, 1e3/(frameTimeDeltaMS||1));
         if (debug)
             frameTimeDeltaMS *= keyIsDown(107) ? 5 : keyIsDown(109) ? .2 : 1; // +/- to speed/slow time
         timeReal += frameTimeDeltaMS / 1e3;

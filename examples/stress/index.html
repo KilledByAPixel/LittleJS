@@ -5,7 +5,7 @@
 <link rel=icon type=image/png href=../../favicon.png>
 </head><body>
 
-<script src=../../engine/engine.all.min.js?92></script>
+<script src=../../engine/engine.all.min.js?93></script>
 <script>
 
 /*
@@ -83,7 +83,7 @@ function gameUpdate()
             });
     
     // mouse wheel = zoom
-    cameraScale = clamp(cameraScale*(1-mouseWheel/10), 1e3, 1);
+    cameraScale = clamp(cameraScale*(1-mouseWheel/10), 1, 1e3);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -96,7 +96,7 @@ function gameRender()
 {
     // track fps and update stats
     const frameTimeMS = Date.now();
-    showFPS = lerp(.05, 1e3/(frameTimeMS - timeMS||1), showFPS);
+    showFPS = lerp(.05, showFPS, 1e3/(frameTimeMS - timeMS||1));
     timeMS = frameTimeMS;
 
     const spriteCount = sprites.length

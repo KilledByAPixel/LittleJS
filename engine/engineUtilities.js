@@ -49,27 +49,27 @@ const mod = (a, b=1)=> ((a % b) + b) % b;
 
 /** Clamps the value beween max and min
  *  @param {Number} value
- *  @param {Number} [max=1]
  *  @param {Number} [min=0]
+ *  @param {Number} [max=1]
  *  @return {Number}
  *  @memberof Utilities */
-const clamp = (v, max=1, min=0)=> (ASSERT(max > min), v < min ? min : v > max ? max : v);
+const clamp = (v, min=0, max=1)=> v < min ? min : v > max ? max : v;
 
 /** Returns what percentage the value is between max and min
  *  @param {Number} value
- *  @param {Number} [max=1]
  *  @param {Number} [min=0]
+ *  @param {Number} [max=1]
  *  @return {Number}
  *  @memberof Utilities */
-const percent = (v, max=1, min=0)=> max-min ? clamp((v-min) / (max-min)) : 0;
+const percent = (v, min=0, max=1)=> max-min ? clamp((v-min) / (max-min)) : 0;
 
 /** Linearly interpolates the percent value between max and min
  *  @param {Number} percent
- *  @param {Number} [max=1]
  *  @param {Number} [min=0]
+ *  @param {Number} [max=1]
  *  @return {Number}
  *  @memberof Utilities */
-const lerp = (p, max=1, min=0)=> min + clamp(p) * (max-min);
+const lerp = (p, min=0, max=1)=> min + clamp(p) * (max-min);
 
 /** Applies smoothstep function to the percentage value
  *  @param {Number} value
@@ -477,5 +477,5 @@ class Timer
 
     /** Get percentage elapsed based on time it was set to, returns 0 if not set
      * @return {Number} */
-    getPercent() { return this.isSet()? percent(this.time - time, 0, this.setTime) : 0; }
+    getPercent() { return this.isSet()? percent(this.time - time, this.setTime, 0) : 0; }
 }

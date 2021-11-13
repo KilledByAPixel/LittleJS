@@ -28,7 +28,7 @@ class Paddle extends EngineObject
             // move to mouse
             this.pos.x = mousePos.x;
         }
-        this.pos.x = clamp(this.pos.x, levelSize.x - this.size.x/2, this.size.x/2);
+        this.pos.x = clamp(this.pos.x, this.size.x/2, levelSize.x - this.size.x/2);
     }
 }
 

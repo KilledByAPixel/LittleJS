@@ -46,7 +46,7 @@ function buildTerrain(size)
         {
             // big jump
             const jumpDelta = rand(19,-19);
-            startGroundLevel = clamp(startGroundLevel + jumpDelta, 80, 20);
+            startGroundLevel = clamp(startGroundLevel + jumpDelta, 20, 80);
             groundLevel += jumpDelta;
             groundSlope = rand(-1,1);
         }
@@ -58,9 +58,9 @@ function buildTerrain(size)
             backgroundDelta = 0;
         if (rand() < .1)
             backgroundDeltaSlope = rand(-1,1);
-        backgroundDelta = clamp(backgroundDelta, 3, -1)
+        backgroundDelta = clamp(backgroundDelta, -1, 3)
 
-        groundLevel = clamp(groundLevel, levelSize.y-20, 20);
+        groundLevel = clamp(groundLevel, 20, levelSize.y-20);
         for (let y=0; y < size.y; y++)
         {
             const pos = vec2(x,y);

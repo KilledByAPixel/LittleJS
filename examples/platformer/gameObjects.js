@@ -25,7 +25,7 @@ class GameObject extends EngineObject
         // flash white when damaged
         if (!this.isDead() && this.damageTimer.isSet())
         {
-            const a = .5*percent(this.damageTimer.get(), 0, .15);
+            const a = .5*percent(this.damageTimer.get(), .15, 0);
             this.additiveColor = new Color(a,a,a,0);
         }
         else

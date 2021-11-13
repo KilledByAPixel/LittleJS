@@ -218,7 +218,9 @@ class TileLayer extends EngineObject
         );
     }
 
-    /** Draw all the tile data to an offscreen canvas */
+    /** Draw all the tile data to an offscreen canvas 
+     *  - This may be slow in some browsers
+    */
     redraw()
     {
         this.redrawStart(1);
