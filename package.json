@@ -26,7 +26,7 @@
     "update-type-declaration": "tsc ./engine/engine.all.js --declaration --allowJs --emitDeclarationOnly --outFile @types/littlejsengine/index.d.ts"
   },
   "homepage": "https://github.com/KilledByAPixel/LittleJS",
-  "devDependencies": {
-    "typescript": "^4.0.0"
+  "optionalDependencies": {
+    "typescript": ">=4.x"
   }
 }
