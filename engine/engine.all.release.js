@@ -748,7 +748,7 @@ let medalDisplayIconSize = 50;
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.3';
+const engineVersion = '1.1.4';
 
 /** Frames per second to update objects
  *  @default */
@@ -1042,7 +1042,7 @@ function engineObjectsCallback(pos, size, callbackFunction, objects=engineObject
 class EngineObject
 {
     /** Create an engine object and adds it to the list of objects
-     *  @param {Vector2} [position=new Vector2(0,0)] - World space position of the object
+     *  @param {Vector2} [position=new Vector2()]    - World space position of the object
      *  @param {Vector2} [size=objectDefaultSize]    - World space size of the object
      *  @param {Number}  [tileIndex=-1]              - Tile to use to render object, untextured if -1
      *  @param {Vector2} [tileSize=tileSizeDefault]  - Size of tile in source pixels
@@ -1088,11 +1088,16 @@ class EngineObject
         /** @property {Number} [renderOrder=0]                          - Objects are sorted by render order */
         this.renderOrder = renderOrder;
 
+        /** @property {Vector2} [velocity=new Vector2()]                - Velocity of the object */
+        this.velocity = new Vector2();
+
+        /** @property {Number} [angleVelocity=0]                        - Angular velocity of the object */
+        this.angleVelocity = 0;
+
         // init other internal object stuff
         this.spawnTime = time;
-        this.velocity = vec2(this.collideSolidObjects = this.angleVelocity = 0);
-        this.collideTiles = 1;
         this.children = [];
+        this.collideTiles = 1;
 
         // add to list of objects
         engineObjects.push(this);
@@ -2647,11 +2652,11 @@ class TileLayerData
 class TileLayer extends EngineObject
 {
     /** Create a tile layer object
-     *  @param {Vector2} [position=new Vector2(0,0)] - World space position
-     *  @param {Vector2} [size=objectDefaultSize]    - World space size
-     *  @param {Vector2} [tileSize=tileSizeDefault]  - Size of tiles in source pixels
-     *  @param {Vector2} [scale=new Vector2(1,1)]    - How much to scale this layer when rendered
-     *  @param {Number}  [renderOrder=0]             - Objects sorted by renderOrder before being rendered
+     *  @param {Vector2} [position=new Vector2()]   - World space position
+     *  @param {Vector2} [size=objectDefaultSize]   - World space size
+     *  @param {Vector2} [tileSize=tileSizeDefault] - Size of tiles in source pixels
+     *  @param {Vector2} [scale=new Vector2(1,1)]   - How much to scale this layer when rendered
+     *  @param {Number}  [renderOrder=0]            - Objects sorted by renderOrder before being rendered
      */
     constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1), renderOrder=0)
     {

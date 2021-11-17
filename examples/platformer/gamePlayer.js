@@ -126,7 +126,12 @@ class Character extends GameObject
         {
             // update jumping and ground check
             if (this.groundObject || this.climbingWall)
+            {
+                if (!this.groundTimer.isSet())
+                    sound_walk.play(this.pos); // land sound
+                    
                 this.groundTimer.set(.1);
+            }
 
             if (this.groundTimer.active() && !this.dodgeTimer.active())
             {
@@ -189,16 +194,16 @@ class Character extends GameObject
 
         // update walk sound
         this.walkSoundTime += speed;
-        if (speed > .01 && ((this.climbingLadder || this.groundTimer.active()) && !this.dodgeTimer.active()))
+        if (speed > .001 && ((this.climbingLadder || this.groundTimer.active()) && !this.dodgeTimer.active()))
         {
             if (this.walkSoundTime > 1)
             {
-                this.walkSoundTime = 0;
+                this.walkSoundTime = this.walkSoundTime%1;
                 sound_walk.play(this.pos);
             }
         }
         else
-            this.walkSoundTime = .5;
+            this.walkSoundTime = 0;
 
         // update mirror
         if (moveInput.x && !this.dodgeTimer.active())
