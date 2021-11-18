@@ -16,7 +16,6 @@ const sound_click = new Sound([.5,.5]);
 
 // medals
 const medal_example    = new Medal(0, 'Example Medal', 'Medal description goes here.');
-const medal_tenClicks  = new Medal(1, 'Ten Clicks!',   'You have clicked 10 times.', '🖱️');
 medalsInit('Hello World');
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -86,8 +85,6 @@ function gameUpdate()
 
         // unlock medals
         medal_example.unlock();
-        if (++clickCount == 10)
-            medal_tenClicks.unlock();
     }
 
     // move particles to mouse location if on screen

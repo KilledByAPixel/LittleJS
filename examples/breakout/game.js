@@ -47,8 +47,10 @@ function gameUpdatePost()
 ///////////////////////////////////////////////////////////////////////////////
 function gameRender()
 {
+    drawRect(cameraPos, levelSize.scale(2), new Color(.5,.5,.5));
+
     // draw a grey square for the background
-    drawRect(cameraPos, levelSize, new Color(.2,.2,.2));
+    drawRect(cameraPos, levelSize, new Color(.1,.1,.1));
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -249,7 +249,7 @@ class EngineObject
 
                         // adjust next velocity to settle on ground
                         const o = (oldPos.y - this.size.y/2|0) - (oldPos.y - this.size.y/2);
-                        if (o < 0 && o > -1 && o > this.damping * this.velocity.y + gravity * this.gravityScale) 
+                        if (o < 0 && o > this.damping * this.velocity.y + gravity * this.gravityScale) 
                             this.velocity.y = this.damping ? (o - gravity * this.gravityScale) / this.damping : 0;
 
                         // move to previous position

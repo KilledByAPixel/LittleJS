@@ -84,11 +84,11 @@ const smoothStep = (p)=> p * p * (3 - 2 * p);
 const nearestPowerOfTwo = (v)=> 2**Math.ceil(Math.log2(v));
 
 /** Returns true if two axis aligned bounding boxes are overlapping 
- *  @param {Vector2} pointA - Center of box A
- *  @param {Vector2} sizeA  - Size of box A
- *  @param {Vector2} pointB - Center of box B
- *  @param {Vector2} sizeB  - Size of box B
- *  @return {Boolean}       - True if overlapping
+ *  @param {Vector2} pointA  - Center of box A
+ *  @param {Vector2} sizeA   - Size of box A
+ *  @param {Vector2} pointB  - Center of box B
+ *  @param {Vector2} [sizeB] - Size of box B
+ *  @return {Boolean}        - True if overlapping
  *  @memberof Utilities */
 const isOverlapping = (pA, sA, pB, sB)=> abs(pA.x - pB.x)*2 < sA.x + sB.x & abs(pA.y - pB.y)*2 < sA.y + sB.y;
 

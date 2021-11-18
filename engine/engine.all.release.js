@@ -117,11 +117,11 @@ const smoothStep = (p)=> p * p * (3 - 2 * p);
 const nearestPowerOfTwo = (v)=> 2**Math.ceil(Math.log2(v));
 
 /** Returns true if two axis aligned bounding boxes are overlapping 
- *  @param {Vector2} pointA - Center of box A
- *  @param {Vector2} sizeA  - Size of box A
- *  @param {Vector2} pointB - Center of box B
- *  @param {Vector2} sizeB  - Size of box B
- *  @return {Boolean}       - True if overlapping
+ *  @param {Vector2} pointA  - Center of box A
+ *  @param {Vector2} sizeA   - Size of box A
+ *  @param {Vector2} pointB  - Center of box B
+ *  @param {Vector2} [sizeB] - Size of box B
+ *  @return {Boolean}        - True if overlapping
  *  @memberof Utilities */
 const isOverlapping = (pA, sA, pB, sB)=> abs(pA.x - pB.x)*2 < sA.x + sB.x & abs(pA.y - pB.y)*2 < sA.y + sB.y;
 
@@ -748,7 +748,7 @@ let medalDisplayIconSize = 50;
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.4';
+const engineVersion = '1.1.5';
 
 /** Frames per second to update objects
  *  @default */
@@ -785,7 +785,7 @@ let averageFPS, drawCount;
 // css text used for elements created by engine
 const styleBody = 'margin:0;overflow:hidden;background:#000' +
     ';touch-action:none;user-select:none;-webkit-user-select:none;-moz-user-select:none';
-const styleCanvas = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
+const styleCanvas = 'position:absolute';
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -886,13 +886,24 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             
             // fit to window by adding space on top or bottom if necessary
             const aspect = innerWidth / innerHeight;
-            const fixedAspect = mainCanvas.width / mainCanvas.height;
-            mainCanvas.style.width  = overlayCanvas.style.width  = aspect < fixedAspect ? '100%' : '';
-            mainCanvas.style.height = overlayCanvas.style.height = aspect < fixedAspect ? '' : '100%';
-            if (glCanvas)
+            const fixedAspect = canvasFixedSize.x / canvasFixedSize.y;
+
+            // clear css
+            mainCanvas.style.width  = overlayCanvas.style.width  = 
+            mainCanvas.style.height = overlayCanvas.style.height = 
+            mainCanvas.style.top    = overlayCanvas.style.top    = 
+            mainCanvas.style.left   = overlayCanvas.style.left   = '';
+
+            // letterbox center canvas
+            if (aspect < fixedAspect)
             {
-                glCanvas.style.width  = mainCanvas.style.width;
-                glCanvas.style.height = mainCanvas.style.height;
+                mainCanvas.style.width = overlayCanvas.style.width = innerWidth;
+                mainCanvas.style.top   = overlayCanvas.style.top = (innerHeight - innerWidth/fixedAspect)/2;
+            }
+            else
+            {
+                mainCanvas.style.height = overlayCanvas.style.height = innerHeight;
+                mainCanvas.style.left   = overlayCanvas.style.left = (innerWidth - innerHeight*fixedAspect)/2;
             }
         }
         else
@@ -900,6 +911,18 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             // clear and set size to same as window
             mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
             mainCanvas.height = min(innerHeight, canvasMaxSize.y);
+
+            // center canvas
+            overlayCanvas.style.top  = mainCanvas.style.top  = (innerHeight - mainCanvas.height)/2;
+            overlayCanvas.style.left = mainCanvas.style.left = (innerWidth  - mainCanvas.width)/2;
+        }
+    
+        if (glEnable)
+        {
+            glCanvas.style.width  = mainCanvas.style.width;
+            glCanvas.style.height = mainCanvas.style.height;
+            glCanvas.style.top    = mainCanvas.style.top;
+            glCanvas.style.left   = mainCanvas.style.left;
         }
         
         // render sort then render while removing destroyed objects
@@ -1259,7 +1282,7 @@ class EngineObject
 
                         // adjust next velocity to settle on ground
                         const o = (oldPos.y - this.size.y/2|0) - (oldPos.y - this.size.y/2);
-                        if (o < 0 && o > -1 && o > this.damping * this.velocity.y + gravity * this.gravityScale) 
+                        if (o < 0 && o > this.damping * this.velocity.y + gravity * this.gravityScale) 
                             this.velocity.y = this.damping ? (o - gravity * this.gravityScale) / this.damping : 0;
 
                         // move to previous position
@@ -3459,7 +3482,7 @@ function glInit()
 
     // create the canvas and tile texture
     glCanvas = document.createElement('canvas');
-    glContext = glCanvas.getContext('webgl');
+    glContext = glCanvas.getContext('webgl', {antialias: false});
     glCanvas.style = styleCanvas;
     glTileTexture = glCreateTexture(tileImage);
 
