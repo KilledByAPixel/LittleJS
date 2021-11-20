@@ -203,6 +203,18 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainCont
     context.restore();
 }
 
+/** Enable normal or additive blend mode
+ *  @param {Boolean} [additive=0]
+ *  @param {Boolean} [useWebGL=glEnable]
+ *  @memberof Draw */
+function setBlendMode(additive, useWebGL=glEnable)
+{
+    if (glEnable && useWebGL)
+        glSetBlendMode(additive);
+    else
+        mainContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';
+}
+
 /** Draw text on overlay canvas in world space
  *  @param {String}  text
  *  @param {Vector2} pos
@@ -228,16 +240,89 @@ function drawText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new
     overlayContext.fillText(text, pos.x, pos.y);
 }
 
-/** Enable normal or additive blend mode
- *  @param {Boolean} [additive=0]
- *  @param {Boolean} [useWebGL=glEnable]
- *  @memberof Draw */
-function setBlendMode(additive, useWebGL=glEnable)
+///////////////////////////////////////////////////////////////////////////////
+
+/** 
+ * Font Image Object - Draw text on a 2D canvas by using characters in an image
+ * <br> - 96 characters are stored in a texture to make a fixed width font
+ * <br> - Uses a default 8x8 font if none is supplied
+ * @example
+ * // use built in font
+ * const font = new ImageFont;
+ * 
+ * // draw text
+ * font.drawTextScreen("LittleJS\nHello World!", vec2(50), 4);
+ */
+class FontImage
 {
-    if (glEnable && useWebGL)
-        glSetBlendMode(additive);
-    else
-        mainContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';
+    /** Create an image font
+     *  @param {Image}   [image] - The image the font is stored in, if undefined the default font is used
+     *  @param {Vector2} [tileSize=vec2(8)] - The size of the font source tiles
+     *  @param {Number}  [startTileIndex=0] - Tile index in image where font starts
+     *  @param {CanvasRenderingContext2D} [context=overlayContext] - context to draw to
+     */
+    constructor(image, tileSize=vec2(8), startTileIndex=0, context=overlayContext)
+    {
+        if (!image)
+        {
+            // use default font image
+            image = new Image();
+            image.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAAYAQAAAAA9+x6JAAAAAnRSTlMAAHaTzTgAAAGlSURBVHjabZABhxxBEIUf6MCIBdFY+Q0PMNgfUyCgMSAaZUR+WYEH2gpYSBzgAAeIRetkWs4lS76BmvZ1db0CWMoJ65oNk+R0P4/LcAcyrAK1lF2FZCGARZt0CZNEEmxTGN/aapbXKeQrUyoRaQrW8wIQZeTPsDw6Ojh4ObfeF9+BwJKnMD7wB1472DMtjaSsBBgycVD6pwaykGCI0iJRC8lOYD5x0mdkAwh+8T78ozu9khlG/AvxgGHi3v0+hqueFZL3+emgjRr1BGjWERIXxcuzJpRU2jKjA09SKCIOocX4qYOYwlqzMZdDGD3U+3VwucftSV3dKd1OpOWstw4SWwtdFWqJKmOl2VwT4m2GplnHVaLWl8KwNIWqmSJctWpIHi6nnySOior/8P7h7xc2BBIuCObYHjaEM7dtgJiCIYDgo0Dm71+RvfvutvdtFcvd+973uyadzO+/AkkHd4m5cTQdhEkqyoYFh7ArNGwKd96mEG4qt1Uk8xT+3Nk1O6ip75FM6yi7vQr7nMGSatZZzSNFv+ynotSPFBh4xYENk3j392TyG/1jMiGCn31DAAAAAElFTkSuQmCC';
+        }
+
+        this.image = image;
+        this.startTileIndex = startTileIndex;
+        this.tileSize = tileSize;
+        this.context = context;
+    }
+
+    /** Draw text in screen space using the image font
+     *  @param {String}  text
+     *  @param {Vector2} pos
+     *  @param {Number}  [scale=4]
+     *  @param {Boolean} [center]
+     */
+    drawTextScreen(text, pos, scale=4, center)
+    {
+        const context = this.context;
+        context.save();
+        context.imageSmoothingEnabled = !cavasPixelated;
+
+        const size = this.tileSize;
+        const cols = this.image.width / this.tileSize.x |0;
+        text.split('\n').forEach((line, i)=>
+        {
+            const centerOffset = center ? line.length * size.x * scale / 2 |0 : 0;
+            for(let j=line.length; j--;)
+            {
+                // draw each character
+                let charCode = line[j].charCodeAt();
+                if (charCode < 32 || charCode > 127)
+                    charCode = 127; // unknown character
+
+                // get the character source location and draw it
+                const tile = this.startTileIndex + charCode - 32;
+                const x = tile % cols;
+                const y = tile / cols |0;
+                context.drawImage(this.image, x * size.x, y * size.y, size.x, size.y, 
+                    pos.x + size.x * scale * j - centerOffset, pos.y + size.y * scale * i, 
+                    size.x * scale, size.y * scale);
+            }
+        });
+
+        context.restore();
+    }
+
+    /** Draw text in world space using the image font
+     *  @param {String}  text
+     *  @param {Vector2} pos
+     *  @param {Number}  [scale=.25]
+     *  @param {Boolean} [center]
+     */
+    drawText(text, pos, scale=1, center)
+    {
+        this.drawTextScreen(text, worldToScreen(pos).floor(), scale*cameraScale, center);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

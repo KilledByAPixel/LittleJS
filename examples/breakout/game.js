@@ -47,21 +47,21 @@ function gameUpdatePost()
 ///////////////////////////////////////////////////////////////////////////////
 function gameRender()
 {
-    drawRect(cameraPos, levelSize.scale(2), new Color(.5,.5,.5));
-
-    // draw a grey square for the background
+    // draw a the background
+    drawRect(cameraPos, levelSize.scale(2), new Color(.4,.4,.4));
     drawRect(cameraPos, levelSize, new Color(.1,.1,.1));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameRenderPost()
 {
-    // draw text on top of everything
-    drawText('Score: ' + score, cameraPos.add(vec2(0,21)), 2, new Color, .2);
+    // use built in image font for text
+    const font = new FontImage;
+    font.drawText('Score: ' + score, cameraPos.add(vec2(0,22)), .2, 1);
     if (!blockCount)
-        drawText('You Win!', cameraPos.add(vec2(0,-5)), 2, new Color, .2);
+        font.drawText('You Win!', cameraPos.add(vec2(0,-5)), .25, 1);
     else if (!ball)
-        drawText('Click to Play', cameraPos.add(vec2(0,-5)), 2, new Color, .2);
+        font.drawText('Click to Play', cameraPos.add(vec2(0,-5)), .25, 1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
