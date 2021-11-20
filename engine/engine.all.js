@@ -1903,21 +1903,23 @@ class FontImage
     /** Create an image font
      *  @param {Image}   [image] - The image the font is stored in, if undefined the default font is used
      *  @param {Vector2} [tileSize=vec2(8)] - The size of the font source tiles
+     *  @param {Vector2} [gapSize=vec2(0,1)] - How much extra space to add
      *  @param {Number}  [startTileIndex=0] - Tile index in image where font starts
      *  @param {CanvasRenderingContext2D} [context=overlayContext] - context to draw to
      */
-    constructor(image, tileSize=vec2(8), startTileIndex=0, context=overlayContext)
+    constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1), startTileIndex=0, context=overlayContext)
     {
         if (!image)
         {
             // use default font image
             image = new Image();
-            image.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAAYAQAAAAA9+x6JAAAAAnRSTlMAAHaTzTgAAAGlSURBVHjabZABhxxBEIUf6MCIBdFY+Q0PMNgfUyCgMSAaZUR+WYEH2gpYSBzgAAeIRetkWs4lS76BmvZ1db0CWMoJ65oNk+R0P4/LcAcyrAK1lF2FZCGARZt0CZNEEmxTGN/aapbXKeQrUyoRaQrW8wIQZeTPsDw6Ojh4ObfeF9+BwJKnMD7wB1472DMtjaSsBBgycVD6pwaykGCI0iJRC8lOYD5x0mdkAwh+8T78ozu9khlG/AvxgGHi3v0+hqueFZL3+emgjRr1BGjWERIXxcuzJpRU2jKjA09SKCIOocX4qYOYwlqzMZdDGD3U+3VwucftSV3dKd1OpOWstw4SWwtdFWqJKmOl2VwT4m2GplnHVaLWl8KwNIWqmSJctWpIHi6nnySOior/8P7h7xc2BBIuCObYHjaEM7dtgJiCIYDgo0Dm71+RvfvutvdtFcvd+973uyadzO+/AkkHd4m5cTQdhEkqyoYFh7ArNGwKd96mEG4qt1Uk8xT+3Nk1O6ip75FM6yi7vQr7nMGSatZZzSNFv+ynotSPFBh4xYENk3j392TyG/1jMiGCn31DAAAAAElFTkSuQmCC';
+            image.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAAYAQAAAAA9+x6JAAAAAnRSTlMAAHaTzTgAAAGiSURBVHjaZZABhxxBEIUf6MCIBdFY+Q0PMNgf0yCgsSAaZcT9sgIPtBWwIA5wgAPEoHUyJeeSlW+gjK+fegWw1hPWNRcEyWh2npdpBmSUBrRaN1WSlQAWXaWLF0kkwR7C/N7XUvIaQr4xpeqeQigjLwBRZ/6KkufAACcv5z7GYhvgWHII8xN/4C2hvLCkmZSVgIJMHNTxpYOsJOiitEjUQnIQAFFP+opoQfCbjWmfzWiNzCjEvxAPFARmw/Y5Te0sl2zEp4M+m7cToJjdJS7y1xcFlFT7EtWBZ8nl7uLSff7UgYewtlyY6yHM4RrjNrnsfn/W0DBK9xNZctZ7gsTeXTe5eqLqXFlKnAn+vkNXzH6TqPW10ksKoSlauKk1TcncZLSTxNnQ8Av/8RGPXOFIuMCZ/fpwIZx5vU4QIRQ44HwUyHx/QrZhm5VtXFex7ja2se0KBpnPT0DSwS4xd86uAy+SqnLBgkPY5JolhJ33ENyK6n0VyRzCnzebIkFdY/NUtM66lTdhix1KUss6q5snH5ftVJXG0QITb1gUDvzD3z/BbyOLMirwCtPzAAAAAElFTkSuQmCC';
         }
 
         this.image = image;
-        this.startTileIndex = startTileIndex;
         this.tileSize = tileSize;
+        this.paddingSize = paddingSize;
+        this.startTileIndex = startTileIndex;
         this.context = context;
     }
 
@@ -1934,6 +1936,7 @@ class FontImage
         context.imageSmoothingEnabled = !cavasPixelated;
 
         const size = this.tileSize;
+        const drawSize = size.add(this.paddingSize).scale(scale);
         const cols = this.image.width / this.tileSize.x |0;
         text.split('\n').forEach((line, i)=>
         {
@@ -1950,7 +1953,7 @@ class FontImage
                 const x = tile % cols;
                 const y = tile / cols |0;
                 context.drawImage(this.image, x * size.x, y * size.y, size.x, size.y, 
-                    pos.x + size.x * scale * j - centerOffset, pos.y + size.y * scale * i, 
+                    pos.x + drawSize.x * j - centerOffset, pos.y + drawSize.y * i, 
                     size.x * scale, size.y * scale);
             }
         });
