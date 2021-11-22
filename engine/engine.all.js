@@ -350,9 +350,9 @@ const debugRender = ()=>
         overlayContext.shadowColor = '#000';
         overlayContext.shadowBlur = 9;
 
+        let x = 9, y = -20, h = 30;
         if (debugOverlay)
         {
-            let x = 9, y = -20, h = 30;
             overlayContext.fillText(engineName, x, y += h);
             overlayContext.fillText('Objects: ' + engineObjects.length, x, y += h);
             overlayContext.fillText('Time: ' + formatTime(time), x, y += h);
@@ -1756,7 +1756,7 @@ class FontImage
                 const tile = this.startTileIndex + charCode - 32;
                 const x = tile % cols;
                 const y = tile / cols |0;
-                const drawPos = pos.add(vec2(j,i).scale(drawSize));
+                const drawPos = pos.add(vec2(j,i).multiply(drawSize));
                 context.drawImage(this.image, x * size.x, y * size.y, size.x, size.y, 
                     drawPos.x - centerOffset, drawPos.y, size.x * scale, size.y * scale);
             }

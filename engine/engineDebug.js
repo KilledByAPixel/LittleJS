@@ -350,9 +350,9 @@ const debugRender = ()=>
         overlayContext.shadowColor = '#000';
         overlayContext.shadowBlur = 9;
 
+        let x = 9, y = -20, h = 30;
         if (debugOverlay)
         {
-            let x = 9, y = -20, h = 30;
             overlayContext.fillText(engineName, x, y += h);
             overlayContext.fillText('Objects: ' + engineObjects.length, x, y += h);
             overlayContext.fillText('Time: ' + formatTime(time), x, y += h);

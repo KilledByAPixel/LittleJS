@@ -1,0 +1,222 @@
+<html><head><meta charset=utf-8>
+<meta name=viewport content=width=device-width,height=device-height,initial-scale=1,maximum-scale=1>
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=mobile-web-app-capable content=yes>
+<link rel=icon type=image/png href=../../favicon.png>
+</head><body>
+
+<script src=../../engine/engine.all.js?97></script>
+<script>
+
+'use strict';
+
+
+let debugParticleEditor = 0, debugParticleSystem, debugParticleSystemDiv, particleSystemCode;
+
+
+
+const debugParticleSettings = 
+[
+    ['emitSize'],
+    ['emitTime'],
+    ['emitRate'],
+    ['emitConeAngle'],
+    ['tileIndex'],
+    ['tileSizeX', 'tileSize'],
+    ['tileSizeY', 'tileSize'],
+    ['colorStartA', 'color'],
+    ['colorStartB', 'color'],
+    ['colorStartAlpha', 'alpha'],
+    ['colorEndA',   'color'],
+    ['colorEndB',   'color'],
+    ['colorEndAlpha', 'alpha'],
+    ['particleTime'],
+    ['sizeStart'],
+    ['sizeEnd'],
+    ['speed'],
+    ['angleSpeed'],
+    ['damping'],
+    ['angleDamping'],
+    ['gravityScale'],
+    ['particleConeAngle'],
+    ['fadeRate'],
+    ['randomness'],
+    ['collideTiles'],
+    ['additive'],
+    ['randomColorComponents'],
+    ['renderOrder'],
+];
+
+
+const colorToHex = (color)=>
+{
+    const componentToHex = (c)=>
+    {
+        const hex = (c*255|0).toString(16);
+        return hex.length == 1 ? '0' + hex : hex;
+    }
+
+    return '#' + componentToHex(color.r) + componentToHex(color.g) + componentToHex(color.b);
+}
+const hexToColor = (hex)=>
+{
+    return new Color(
+        parseInt(hex.substr(1,2), 16)/255,
+        parseInt(hex.substr(3,2), 16)/255,
+        parseInt(hex.substr(5,2), 16)/255)
+}
+
+const updateCode = ()=>
+{
+    let code = '';
+    let count = 0;
+    for ( const setting of debugParticleSettings)
+    {
+        const name = setting[0];
+        const type = setting[1];
+        let value;
+        if (name == 'tileSizeX' || type == 'alpha')
+            continue;
+
+        if (count++)
+            code += ', ';
+
+        if (name == 'tileSizeY')
+        {
+            value = `vec2(${debugParticleSystem.tileSize.x},${debugParticleSystem.tileSize.y})`;
+        }
+        else if (type == 'color')
+        {
+            const c = debugParticleSystem[name];
+            value = `new Color(${c.r},${c.g},${c.b},${c.a})`;
+        }
+        else
+            value = debugParticleSystem[name];
+        code += value;
+    }
+
+    particleSystemCode.value = '...[' + code + ']';
+}
+
+///////////////////////////////////////////////////////////////////////////////
+function gameInit()
+{
+        if (!debugParticleSystem || debugParticleSystem.destroyed)
+            debugParticleSystem = new ParticleEmitter(cameraPos);
+
+
+    const div = debugParticleSystemDiv = document.createElement('div');
+    div.innerHTML = '<big><b>Particle Editor';
+    div.style = 'position:absolute;top:10;left:10;color:#fff';
+    document.body.appendChild(div);
+
+    for ( const setting of debugParticleSettings)
+    {
+        const input = setting[2] = document.createElement('input');
+        const name = setting[0];
+        const type = setting[1];
+        if (type)
+        {
+            if (type == 'color')
+            {
+                input.type = type;
+                const color = debugParticleSystem[name];
+                input.value = colorToHex(color);
+            }
+            else if (type == 'alpha' && name == 'colorStartAlpha')
+                input.value = debugParticleSystem.colorStartA.a;
+            else if (type == 'alpha' && name == 'colorEndAlpha')
+                input.value = debugParticleSystem.colorEndA.a;
+            else if (name == 'tileSizeX')
+                input.value = debugParticleSystem.tileSize.x;
+            else if (name == 'tileSizeY')
+                input.value = debugParticleSystem.tileSize.y;
+        }
+        else
+            input.value = debugParticleSystem[name] || '0';
+
+        input.oninput = (e)=>
+        {
+            const inputFloat = parseFloat(input.value) || 0;
+            if (type)
+            {
+                if (type == 'color')
+                {
+                    const color = hexToColor(input.value);
+                    debugParticleSystem[name].r = color.r;
+                    debugParticleSystem[name].g = color.g;
+                    debugParticleSystem[name].b = color.b;
+                }
+                else if (type == 'alpha' && name == 'colorStartAlpha')
+                {
+                    debugParticleSystem.colorStartA.a = clamp(inputFloat);
+                    debugParticleSystem.colorStartB.a = clamp(inputFloat);
+                }
+                else if (type == 'alpha' && name == 'colorEndAlpha')
+                {
+                    debugParticleSystem.colorEndA.a = clamp(inputFloat);
+                    debugParticleSystem.colorEndB.a = clamp(inputFloat);
+                }
+                else if (name == 'tileSizeX')
+                {
+                    debugParticleSystem.tileSize = vec2(parseInt(input.value), debugParticleSystem.tileSize.y);
+                }
+                else if (name == 'tileSizeY')
+                {
+                    debugParticleSystem.tileSize.y = vec2(debugParticleSystem.tileSize.x, parseInt(input.value));
+                }
+            }
+            else
+                debugParticleSystem[name] = inputFloat;
+
+            updateCode();
+        }
+        div.appendChild(document.createElement('br'));
+        div.appendChild(input);
+        div.appendChild(document.createTextNode(' ' + name));
+    }
+
+    div.appendChild(document.createElement('br'));
+    div.appendChild(document.createElement('br'));
+    div.appendChild(particleSystemCode = document.createElement('input'));
+    particleSystemCode.disabled = true;
+    div.appendChild(document.createTextNode(' code'));
+
+    div.appendChild(document.createElement('br'));
+    const button = document.createElement('button')
+    div.appendChild(button);
+    button.innerHTML = 'Copy To Clipboard';
+    
+    button.onclick = (e)=> navigator.clipboard.writeText(particleSystemCode.value); 
+
+    updateCode();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+function gameUpdate()
+{
+}
+
+///////////////////////////////////////////////////////////////////////////////
+function gameUpdatePost()
+{
+
+}
+
+///////////////////////////////////////////////////////////////////////////////
+function gameRender()
+{
+}
+
+///////////////////////////////////////////////////////////////////////////////
+function gameRenderPost()
+{
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Startup LittleJS Engine
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png');
+
+
+
+</script>
