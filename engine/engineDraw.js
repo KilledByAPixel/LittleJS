@@ -244,21 +244,22 @@ function drawText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new
 
 /** 
  * Font Image Object - Draw text on a 2D canvas by using characters in an image
- * <br> - 96 characters are stored in a texture to make a fixed width font
+ * <br> - 96 characters (from space to tilde) are stored in an image
  * <br> - Uses a default 8x8 font if none is supplied
+ * <br> - You can also use fonts from the main tile sheet
  * @example
  * // use built in font
  * const font = new ImageFont;
  * 
  * // draw text
- * font.drawTextScreen("LittleJS\nHello World!", vec2(50), 4);
+ * font.drawTextScreen("LittleJS\nHello World!", vec2(200, 50));
  */
 class FontImage
 {
     /** Create an image font
      *  @param {Image}   [image] - The image the font is stored in, if undefined the default font is used
      *  @param {Vector2} [tileSize=vec2(8)] - The size of the font source tiles
-     *  @param {Vector2} [gapSize=vec2(0,1)] - How much extra space to add
+     *  @param {Vector2} [paddingSize=vec2(0,1)] - How much extra space to add between characters
      *  @param {Number}  [startTileIndex=0] - Tile index in image where font starts
      *  @param {CanvasRenderingContext2D} [context=overlayContext] - context to draw to
      */
@@ -307,9 +308,9 @@ class FontImage
                 const tile = this.startTileIndex + charCode - 32;
                 const x = tile % cols;
                 const y = tile / cols |0;
+                const drawPos = pos.add(vec2(j,i).scale(drawSize));
                 context.drawImage(this.image, x * size.x, y * size.y, size.x, size.y, 
-                    pos.x + drawSize.x * j - centerOffset, pos.y + drawSize.y * i, 
-                    size.x * scale, size.y * scale);
+                    drawPos.x - centerOffset, drawPos.y, size.x * scale, size.y * scale);
             }
         });
 
@@ -324,7 +325,7 @@ class FontImage
      */
     drawText(text, pos, scale=1, center)
     {
-        this.drawTextScreen(text, worldToScreen(pos).floor(), scale*cameraScale, center);
+        this.drawTextScreen(text, worldToScreen(pos).floor(), scale*cameraScale|0, center);
     }
 }
 

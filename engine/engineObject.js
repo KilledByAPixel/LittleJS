@@ -77,10 +77,8 @@ class EngineObject
         this.gravityScale = 1;
         /** @property {Number} [renderOrder=0]                          - Objects are sorted by render order */
         this.renderOrder = renderOrder;
-
         /** @property {Vector2} [velocity=new Vector2()]                - Velocity of the object */
         this.velocity = new Vector2();
-
         /** @property {Number} [angleVelocity=0]                        - Angular velocity of the object */
         this.angleVelocity = 0;
 

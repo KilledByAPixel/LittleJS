@@ -87,7 +87,15 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 rem lightly minify with uglify
-call uglifyjs -o  %OUTPUT_FILENAME% -- %OUTPUT_FILENAME%
+call uglifyjs -o %OUTPUT_FILENAME% -- %OUTPUT_FILENAME%
+if %ERRORLEVEL% NEQ 0 (
+    pause
+    exit /b %ERRORLEVEL%
+)
+
+rem --- BUILD TYPESCRIPT DEFINITIONS ---
+
+call tsc engine.all.js --declaration --allowJs --emitDeclarationOnly --outFile index.d.ts
 if %ERRORLEVEL% NEQ 0 (
     pause
     exit /b %ERRORLEVEL%
