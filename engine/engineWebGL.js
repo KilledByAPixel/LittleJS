@@ -49,14 +49,13 @@ function glInit()
     glShader = glCreateProgram(
         'precision highp float;'+   // use highp for better accuracy, lowp for better perf
         'uniform mat4 m;'+          // transform matrix
-        'attribute float a;'+       // angle
-        'attribute vec2 p,s,t;'+    // position, size, uv
-        'attribute vec4 c,b;'+      // color, additiveColor
+        'attribute vec2 p,t;'+      // position, uv
+        'attribute vec4 c,a;'+      // color, additiveColor
         'varying vec2 v;'+          // return uv
         'varying vec4 d,e;'+        // return color, additiveColor
         'void main(){'+             // shader entry point
-        'gl_Position=m*vec4((s*cos(a)-vec2(-s.y,s)*sin(a))*.5+p,1,1);'+// transform position
-        'v=t;d=c;e=b;'+             // pass stuff to fragment shader
+        'gl_Position=m*vec4(p,1,1);'+// transform position
+        'v=t;d=c;e=a;'+             // pass stuff to fragment shader
         '}'                         // end of shader
         ,
         'precision highp float;'+            // use highp for better accuracy, lowp for better perf
@@ -83,12 +82,10 @@ function glInit()
         glContext.vertexAttribPointer(location, size, type, normalize, gl_VERTEX_BYTE_STRIDE, offset);
         offset += size*typeSize;
     }
-    initVertexAttribArray('a', gl_FLOAT, 4, 1);            // angle
     initVertexAttribArray('p', gl_FLOAT, 4, 2);            // position
-    initVertexAttribArray('s', gl_FLOAT, 4, 2);            // size
     initVertexAttribArray('t', gl_FLOAT, 4, 2);            // texture coords
     initVertexAttribArray('c', gl_UNSIGNED_BYTE, 1, 4, 1); // color
-    initVertexAttribArray('b', gl_UNSIGNED_BYTE, 1, 4, 1); // additiveColor
+    initVertexAttribArray('a', gl_UNSIGNED_BYTE, 1, 4, 1); // additiveColor
 }
 
 /** Set the WebGl blend mode, normally you should call setBlendMode instead
@@ -276,51 +273,49 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba=0xffffff
     // flush if there is no room for more verts or if different blend mode
     if (glBatchCount == gl_MAX_BATCH || glBatchAdditive != glAdditive)
         glFlush();
+
+    // prepare to create the verts from size and angle
+    const c = Math.cos(angle)/2, s = Math.sin(angle)/2;
+    const cX = c*sizeX, cY = c*sizeY, sX = s*sizeX, sY = s*sizeY;
         
     // setup 2 triangles to form a quad
     let offset = glBatchCount++ * gl_VERTICES_PER_QUAD * gl_INDICIES_PER_VERT;
 
     // vertex 0
-    glPositionData[offset++] = angle;
-    glPositionData[offset++] = x;      glPositionData[offset++] = y;
-    glPositionData[offset++] = -sizeX; glPositionData[offset++] = -sizeY;
-    glPositionData[offset++] = uv0X;   glPositionData[offset++] = uv1Y;
-    glColorData[offset++]    = rgba;   glColorData[offset++]    = rgbaAdditive;
+    glPositionData[offset++] = x - cX - sY;
+    glPositionData[offset++] = y - cY + sX;
+    glPositionData[offset++] = uv0X; glPositionData[offset++] = uv1Y;
+    glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
     
     // vertex 1
-    glPositionData[offset++] = angle;
-    glPositionData[offset++] = x;      glPositionData[offset++] = y;
-    glPositionData[offset++] = sizeX;  glPositionData[offset++] = sizeY;
-    glPositionData[offset++] = uv1X;   glPositionData[offset++] = uv0Y;
-    glColorData[offset++]    = rgba;   glColorData[offset++]    = rgbaAdditive;
+    glPositionData[offset++] = x + cX + sY;
+    glPositionData[offset++] = y + cY - sX;
+    glPositionData[offset++] = uv1X; glPositionData[offset++] = uv0Y;
+    glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
     
     // vertex 2
-    glPositionData[offset++] = angle;
-    glPositionData[offset++] = x;      glPositionData[offset++] = y;
-    glPositionData[offset++] = -sizeX; glPositionData[offset++] = sizeY;
-    glPositionData[offset++] = uv0X;   glPositionData[offset++] = uv0Y;
-    glColorData[offset++]    = rgba;   glColorData[offset++]    = rgbaAdditive;
+    glPositionData[offset++] = x - cX + sY;
+    glPositionData[offset++] = y + cY + sX;
+    glPositionData[offset++] = uv0X; glPositionData[offset++] = uv0Y;
+    glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
     
     // vertex 0
-    glPositionData[offset++] = angle;
-    glPositionData[offset++] = x;      glPositionData[offset++] = y;
-    glPositionData[offset++] = -sizeX; glPositionData[offset++] = -sizeY;
-    glPositionData[offset++] = uv0X;   glPositionData[offset++] = uv1Y;
-    glColorData[offset++]    = rgba;   glColorData[offset++]    = rgbaAdditive;
+    glPositionData[offset++] = x - cX - sY;      
+    glPositionData[offset++] = y - cY + sX;  
+    glPositionData[offset++] = uv0X; glPositionData[offset++] = uv1Y;
+    glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
 
     // vertex 3
-    glPositionData[offset++] = angle;
-    glPositionData[offset++] = x;      glPositionData[offset++] = y;
-    glPositionData[offset++] = sizeX;  glPositionData[offset++] = -sizeY;
-    glPositionData[offset++] = uv1X;   glPositionData[offset++] = uv1Y;
-    glColorData[offset++]    = rgba;   glColorData[offset++]    = rgbaAdditive;
+    glPositionData[offset++] = x + cX - sY;
+    glPositionData[offset++] = y - cY - sX;
+    glPositionData[offset++] = uv1X; glPositionData[offset++] = uv1Y;
+    glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
 
     // vertex 1
-    glPositionData[offset++] = angle;
-    glPositionData[offset++] = x;      glPositionData[offset++] = y;
-    glPositionData[offset++] = sizeX;  glPositionData[offset++] = sizeY;
-    glPositionData[offset++] = uv1X;   glPositionData[offset++] = uv0Y;
-    glColorData[offset++]    = rgba;   glColorData[offset++]    = rgbaAdditive;
+    glPositionData[offset++] = x + cX + sY;
+    glPositionData[offset++] = y + cY - sX;
+    glPositionData[offset++] = uv1X; glPositionData[offset++] = uv0Y;
+    glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -352,6 +347,6 @@ gl_LINK_STATUS = 35714,
 
 // constants for batch rendering
 gl_VERTICES_PER_QUAD = 6,
-gl_INDICIES_PER_VERT = 9,
+gl_INDICIES_PER_VERT = 6,
 gl_MAX_BATCH = 1<<16,
-gl_VERTEX_BYTE_STRIDE = 4 + (4 * 2) * 3 + (4) * 2; // float + vec2 * 3 + (char * 4) * 2
+gl_VERTEX_BYTE_STRIDE = (4 * 2) * 2 + (4) * 2; // vec2 * 2 + (char * 4) * 2

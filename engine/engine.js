@@ -22,7 +22,7 @@
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.1.7';
+const engineVersion = '1.1.8';
 
 /** Frames per second to update objects
  *  @default */

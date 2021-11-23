@@ -1577,13 +1577,13 @@ declare const gl_VERTEX_SHADER: 35633;
 declare const gl_COMPILE_STATUS: 35713;
 declare const gl_LINK_STATUS: 35714;
 declare const gl_VERTICES_PER_QUAD: 6;
-declare const gl_INDICIES_PER_VERT: 9;
+declare const gl_INDICIES_PER_VERT: 6;
 declare const gl_MAX_BATCH: number;
 declare const gl_VERTEX_BYTE_STRIDE: number;
 /** Name of engine */
 declare const engineName: "LittleJS";
 /** Version of engine */
-declare const engineVersion: "1.1.7";
+declare const engineVersion: "1.1.8";
 /** Frames per second to update objects
  *  @default */
 declare const frameRate: 60;
