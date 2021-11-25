@@ -1647,6 +1647,9 @@ function drawText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new
  * // draw text
  * font.drawTextScreen("LittleJS\nHello World!", vec2(200, 50));
  */
+
+let engineFontImage;
+
 class FontImage
 {
     /** Create an image font
@@ -1658,14 +1661,14 @@ class FontImage
      */
     constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1), startTileIndex=0, context=overlayContext)
     {
-        if (!image)
+        if (!image && !engineFontImage)
         {
-            // use default font image
-            image = new Image();
-            image.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAAYAQAAAAA9+x6JAAAAAnRSTlMAAHaTzTgAAAGiSURBVHjaZZABhxxBEIUf6MCIBdFY+Q0PMNgf0yCgsSAaZcT9sgIPtBWwIA5wgAPEoHUyJeeSlW+gjK+fegWw1hPWNRcEyWh2npdpBmSUBrRaN1WSlQAWXaWLF0kkwR7C/N7XUvIaQr4xpeqeQigjLwBRZ/6KkufAACcv5z7GYhvgWHII8xN/4C2hvLCkmZSVgIJMHNTxpYOsJOiitEjUQnIQAFFP+opoQfCbjWmfzWiNzCjEvxAPFARmw/Y5Te0sl2zEp4M+m7cToJjdJS7y1xcFlFT7EtWBZ8nl7uLSff7UgYewtlyY6yHM4RrjNrnsfn/W0DBK9xNZctZ7gsTeXTe5eqLqXFlKnAn+vkNXzH6TqPW10ksKoSlauKk1TcncZLSTxNnQ8Av/8RGPXOFIuMCZ/fpwIZx5vU4QIRQ44HwUyHx/QrZhm5VtXFex7ja2se0KBpnPT0DSwS4xd86uAy+SqnLBgkPY5JolhJ33ENyK6n0VyRzCnzebIkFdY/NUtM66lTdhix1KUss6q5snH5ftVJXG0QITb1gUDvzD3z/BbyOLMirwCtPzAAAAAElFTkSuQmCC';
+            // load default font image
+            engineFontImage = new Image();
+            engineFontImage.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAAYAQAAAAA9+x6JAAAAAnRSTlMAAHaTzTgAAAGiSURBVHjaZZABhxxBEIUf6MCIBdFY+Q0PMNgf0yCgsSAaZcT9sgIPtBWwIA5wgAPEoHUyJeeSlW+gjK+fegWw1hPWNRcEyWh2npdpBmSUBrRaN1WSlQAWXaWLF0kkwR7C/N7XUvIaQr4xpeqeQigjLwBRZ/6KkufAACcv5z7GYhvgWHII8xN/4C2hvLCkmZSVgIJMHNTxpYOsJOiitEjUQnIQAFFP+opoQfCbjWmfzWiNzCjEvxAPFARmw/Y5Te0sl2zEp4M+m7cToJjdJS7y1xcFlFT7EtWBZ8nl7uLSff7UgYewtlyY6yHM4RrjNrnsfn/W0DBK9xNZctZ7gsTeXTe5eqLqXFlKnAn+vkNXzH6TqPW10ksKoSlauKk1TcncZLSTxNnQ8Av/8RGPXOFIuMCZ/fpwIZx5vU4QIRQ44HwUyHx/QrZhm5VtXFex7ja2se0KBpnPT0DSwS4xd86uAy+SqnLBgkPY5JolhJ33ENyK6n0VyRzCnzebIkFdY/NUtM66lTdhix1KUss6q5snH5ftVJXG0QITb1gUDvzD3z/BbyOLMirwCtPzAAAAAElFTkSuQmCC';
         }
 
-        this.image = image;
+        this.image = image || engineFontImage;
         this.tileSize = tileSize;
         this.paddingSize = paddingSize;
         this.startTileIndex = startTileIndex;

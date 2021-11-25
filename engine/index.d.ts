@@ -978,6 +978,7 @@ declare function worldToScreen(worldPos: Vector2): Vector2;
  * // draw text
  * font.drawTextScreen("LittleJS\nHello World!", vec2(200, 50));
  */
+declare let engineFontImage: any;
 declare class FontImage {
     /** Create an image font
      *  @param {Image}   [image] - The image the font is stored in, if undefined the default font is used
@@ -987,7 +988,7 @@ declare class FontImage {
      *  @param {CanvasRenderingContext2D} [context=overlayContext] - context to draw to
      */
     constructor(image?: new (width?: number, height?: number) => HTMLImageElement, tileSize?: Vector2, paddingSize?: Vector2, startTileIndex?: number, context?: CanvasRenderingContext2D);
-    image: new (width?: number, height?: number) => HTMLImageElement;
+    image: any;
     tileSize: Vector2;
     paddingSize: Vector2;
     startTileIndex: number;
