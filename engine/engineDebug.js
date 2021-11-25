@@ -160,6 +160,11 @@ const debugUpdate = ()=>
 {
     if (!debug)
         return;
+
+    // hack: fix issue when testing mobile where canvas isn't centered
+    // does not seem to effect actual mobile devices   
+    mainCanvas.style.height = overlayCanvas.style.height = 
+        mainCanvas.style.width = overlayCanvas.style.width = '100%';
         
     if (keyWasPressed(192)) // ~
         debugOverlay = !debugOverlay;

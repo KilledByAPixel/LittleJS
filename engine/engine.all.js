@@ -160,6 +160,11 @@ const debugUpdate = ()=>
 {
     if (!debug)
         return;
+
+    // hack: fix issue when testing mobile where canvas isn't centered
+    // does not seem to effect actual mobile devices   
+    mainCanvas.style.height = overlayCanvas.style.height = 
+        mainCanvas.style.width = overlayCanvas.style.width = '100%';
         
     if (keyWasPressed(192)) // ~
         debugOverlay = !debugOverlay;
@@ -3986,7 +3991,7 @@ gl_VERTEX_BYTE_STRIDE = (4 * 2) * 2 + (4) * 2; // vec2 * 2 + (char * 4) * 2
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.2.0';
+const engineVersion = '1.2.1';
 
 /** Frames per second to update objects
  *  @default */

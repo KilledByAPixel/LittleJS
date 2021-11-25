@@ -1586,7 +1586,7 @@ declare const gl_VERTEX_BYTE_STRIDE: number;
 /** Name of engine */
 declare const engineName: "LittleJS";
 /** Version of engine */
-declare const engineVersion: "1.2.0";
+declare const engineVersion: "1.2.1";
 /** Frames per second to update objects
  *  @default */
 declare const frameRate: 60;
