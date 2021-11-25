@@ -19,23 +19,19 @@ LittleJS is a super lightweight JavaScript game engine with a fast hybrid render
 ## Features
 
 - Very small footprint with no dependencies
-- Can render 10,000+ objects at 60fps, often many times more
-- Object oriented system with base class engine object
-- Fast 2D physics and collision handling for axis aligned boxes
+- Can update and render 10,000+ objects at 60fps, often many times more
+- Object oriented system with fast 2D physics and collision handling for axis aligned boxes
 - Positional audio effects with [zzfx](https://killedbyapixel.github.io/ZzFX/) and music with [zzfxm](https://keithclark.github.io/ZzFXM/), mp3s, or wavs
 - Input processing system with keyboard, mouse, gamepad, and touch support
-- Engine helper functions and classes like Vector2, Color, and Timer
-- Tile layer cached rendering and collision system for level data
 - Particle effects system (particle editor/designer in progress)
 - Medal system tracks and displays achievements with Newgrounds and OS13k integration
 - Several easy to understand example projects you can build on
-- All example projects are compatible with mobile devices
 - Debug tools and debug rendering system
 - [Full documentation](https://killedbyapixel.github.io/LittleJS/docs) automatically generated from the source code block tags with [JSDoc](https://github.com/jsdoc/jsdoc)
 - Build system automatically combines everything, minifies, and removes unused code
 - For size coding competitions like [js13kGames](https://js13kgames.com/), starter project builds to a 7KB zip with [Roadroller](https://github.com/lifthrasiir/roadroller)
-- Easily build a Windows executable with [electron](https://www.electronjs.org/) for distribution on platforms like Steam
-- Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used to make commercial games
+- Easily build a Windows executable with [Electron](https://www.electronjs.org/) for distribution on platforms like Steam
+- Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used for anything you want
 
 ## Builds
 
