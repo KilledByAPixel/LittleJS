@@ -47,24 +47,24 @@ function glInit()
 
     // setup vertex and fragment shaders
     glShader = glCreateProgram(
-        'precision highp float;'+   // use highp for better accuracy, lowp for better perf
-        'uniform mat4 m;'+          // transform matrix
-        'attribute vec2 p,t;'+      // position, uv
-        'attribute vec4 c,a;'+      // color, additiveColor
-        'varying vec2 v;'+          // return uv
-        'varying vec4 d,e;'+        // return color, additiveColor
-        'void main(){'+             // shader entry point
-        'gl_Position=m*vec4(p,1,1);'+// transform position
-        'v=t;d=c;e=a;'+             // pass stuff to fragment shader
-        '}'                         // end of shader
+        'precision highp float;'+     // use highp for better accuracy, lowp for better perf
+        'uniform mat4 m;'+            // transform matrix
+        'attribute vec2 p,t;'+        // position, uv
+        'attribute vec4 c,a;'+        // color, additiveColor
+        'varying vec2 v;'+            // return uv
+        'varying vec4 d,e;'+          // return color, additiveColor
+        'void main(){'+               // shader entry point
+        'gl_Position=m*vec4(p,1,1);'+ // transform position
+        'v=t;d=c;e=a;'+               // pass stuff to fragment shader
+        '}'                           // end of shader
         ,
-        'precision highp float;'+            // use highp for better accuracy, lowp for better perf
-        'varying vec2 v;'+                   // uv
-        'varying vec4 d,e;'+                 // color, additiveColor
-        'uniform sampler2D j;'+              // texture
-        'void main(){'+                      // shader entry point
-        'gl_FragColor=texture2D(j,v)*d+e;'+  // modulate texture by color plus additive
-        '}'                                  // end of shader
+        'precision highp float;'+           // use highp for better accuracy, lowp for better perf
+        'varying vec2 v;'+                  // uv
+        'varying vec4 d,e;'+                // color, additiveColor
+        'uniform sampler2D s;'+             // texture
+        'void main(){'+                     // shader entry point
+        'gl_FragColor=texture2D(s,v)*d+e;'+ // modulate texture by color plus additive
+        '}'                                 // end of shader
     );
 
     // init buffers
@@ -276,44 +276,44 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba=0xffffff
 
     // prepare to create the verts from size and angle
     const c = Math.cos(angle)/2, s = Math.sin(angle)/2;
-    const cX = c*sizeX, cY = c*sizeY, sX = s*sizeX, sY = s*sizeY;
+    const cx = c*sizeX, cy = c*sizeY, sx = s*sizeX, sy = s*sizeY;
         
     // setup 2 triangles to form a quad
     let offset = glBatchCount++ * gl_VERTICES_PER_QUAD * gl_INDICIES_PER_VERT;
 
     // vertex 0
-    glPositionData[offset++] = x - cX - sY;
-    glPositionData[offset++] = y - cY + sX;
+    glPositionData[offset++] = x - cx - sy;
+    glPositionData[offset++] = y - cy + sx;
     glPositionData[offset++] = uv0X; glPositionData[offset++] = uv1Y;
     glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
     
     // vertex 1
-    glPositionData[offset++] = x + cX + sY;
-    glPositionData[offset++] = y + cY - sX;
+    glPositionData[offset++] = x + cx + sy;
+    glPositionData[offset++] = y + cy - sx;
     glPositionData[offset++] = uv1X; glPositionData[offset++] = uv0Y;
     glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
     
     // vertex 2
-    glPositionData[offset++] = x - cX + sY;
-    glPositionData[offset++] = y + cY + sX;
+    glPositionData[offset++] = x - cx + sy;
+    glPositionData[offset++] = y + cy + sx;
     glPositionData[offset++] = uv0X; glPositionData[offset++] = uv0Y;
     glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
     
     // vertex 0
-    glPositionData[offset++] = x - cX - sY;      
-    glPositionData[offset++] = y - cY + sX;  
+    glPositionData[offset++] = x - cx - sy;      
+    glPositionData[offset++] = y - cy + sx;  
     glPositionData[offset++] = uv0X; glPositionData[offset++] = uv1Y;
     glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
 
     // vertex 3
-    glPositionData[offset++] = x + cX - sY;
-    glPositionData[offset++] = y - cY - sX;
+    glPositionData[offset++] = x + cx - sy;
+    glPositionData[offset++] = y - cy - sx;
     glPositionData[offset++] = uv1X; glPositionData[offset++] = uv1Y;
     glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
 
     // vertex 1
-    glPositionData[offset++] = x + cX + sY;
-    glPositionData[offset++] = y + cY - sX;
+    glPositionData[offset++] = x + cx + sy;
+    glPositionData[offset++] = y + cy - sx;
     glPositionData[offset++] = uv1X; glPositionData[offset++] = uv0Y;
     glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
 }

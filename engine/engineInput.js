@@ -281,7 +281,7 @@ if (isTouchDevice)
 // touch gamepad, virtual on screen gamepad emulator for touch devices
 
 // touch input internal variables
-let touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadStick = vec2(), touchGamepadAnalog = 1;
+let touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadStick = vec2();
 
 // create the touch gamepad, called automatically by the engine
 function touchGamepadCreate()
@@ -328,7 +328,7 @@ function touchGamepadCreate()
             {
                 // virtual analog stick
                 if (touchGamepadAnalog)
-                    touchGamepadStick = touchPos.subtract(stickCenter).clampLength(touchGamepadSize/2).scale(2/touchGamepadSize);
+                    touchGamepadStick = touchPos.subtract(stickCenter).scale(2/touchGamepadSize).clampLength();
                 else
                 {
                     // 8 way dpad
@@ -369,12 +369,28 @@ function touchGamepadRender()
     overlayContext.lineWidth = 3;
 
     // draw left analog stick
-    overlayContext.fillStyle = gamepadStick(0).length() > 0 ? '#fff' : '#000';
+    overlayContext.fillStyle = touchGamepadStick.lengthSquared() > 0 ? '#fff' : '#000';
     overlayContext.beginPath();
-    overlayContext.arc(touchGamepadSize, mainCanvasSize.y-touchGamepadSize, touchGamepadSize/2, 0,9);
-    overlayContext.fill();
-    overlayContext.stroke();
 
+    const leftCenter = vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
+    if (touchGamepadAnalog)
+    {
+        overlayContext.arc(leftCenter.x, leftCenter.y, touchGamepadSize/2, 0, 9);
+        overlayContext.fill();
+        overlayContext.stroke();
+    }
+    else // draw cross shaped gamepad
+    {
+        for(let i=10; i--;)
+        {
+            const angle = i*PI/4;
+            overlayContext.arc(leftCenter.x, leftCenter.y,touchGamepadSize*.6, angle + PI/8, angle + PI/8);
+            i%2 && overlayContext.arc(leftCenter.x, leftCenter.y, touchGamepadSize*.33, angle, angle);
+            i==1 && overlayContext.fill();
+        }
+        overlayContext.stroke();
+    }
+    
     // draw right face buttons
     const rightCenter = vec2(mainCanvasSize.x-touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
     for (let i=4; i--;)

@@ -1026,6 +1026,11 @@ let inputWASDEmulateDirection = 1;
  *  @memberof Settings */
 let touchGamepadEnable = 0;
 
+/** True if touch gamepad should be analog stick or false to use if 8 way dpad
+ *  @default
+ *  @memberof Settings */
+let touchGamepadAnalog = 1;
+
 /** Size of virutal gamepad for touch devices in pixels
  *  @default
  *  @memberof Settings */
@@ -2087,7 +2092,7 @@ if (isTouchDevice)
 // touch gamepad, virtual on screen gamepad emulator for touch devices
 
 // touch input internal variables
-let touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadStick = vec2(), touchGamepadAnalog = 1;
+let touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadStick = vec2();
 
 // create the touch gamepad, called automatically by the engine
 function touchGamepadCreate()
@@ -2134,7 +2139,7 @@ function touchGamepadCreate()
             {
                 // virtual analog stick
                 if (touchGamepadAnalog)
-                    touchGamepadStick = touchPos.subtract(stickCenter).clampLength(touchGamepadSize/2).scale(2/touchGamepadSize);
+                    touchGamepadStick = touchPos.subtract(stickCenter).scale(2/touchGamepadSize).clampLength();
                 else
                 {
                     // 8 way dpad
@@ -2175,12 +2180,28 @@ function touchGamepadRender()
     overlayContext.lineWidth = 3;
 
     // draw left analog stick
-    overlayContext.fillStyle = gamepadStick(0).length() > 0 ? '#fff' : '#000';
+    overlayContext.fillStyle = touchGamepadStick.lengthSquared() > 0 ? '#fff' : '#000';
     overlayContext.beginPath();
-    overlayContext.arc(touchGamepadSize, mainCanvasSize.y-touchGamepadSize, touchGamepadSize/2, 0,9);
-    overlayContext.fill();
-    overlayContext.stroke();
 
+    const leftCenter = vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
+    if (touchGamepadAnalog)
+    {
+        overlayContext.arc(leftCenter.x, leftCenter.y, touchGamepadSize/2, 0, 9);
+        overlayContext.fill();
+        overlayContext.stroke();
+    }
+    else // draw cross shaped gamepad
+    {
+        for(let i=10; i--;)
+        {
+            const angle = i*PI/4;
+            overlayContext.arc(leftCenter.x, leftCenter.y,touchGamepadSize*.6, angle + PI/8, angle + PI/8);
+            i%2 && overlayContext.arc(leftCenter.x, leftCenter.y, touchGamepadSize*.33, angle, angle);
+            i==1 && overlayContext.fill();
+        }
+        overlayContext.stroke();
+    }
+    
     // draw right face buttons
     const rightCenter = vec2(mainCanvasSize.x-touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
     for (let i=4; i--;)
@@ -3638,24 +3659,24 @@ function glInit()
 
     // setup vertex and fragment shaders
     glShader = glCreateProgram(
-        'precision highp float;'+   // use highp for better accuracy, lowp for better perf
-        'uniform mat4 m;'+          // transform matrix
-        'attribute vec2 p,t;'+      // position, uv
-        'attribute vec4 c,a;'+      // color, additiveColor
-        'varying vec2 v;'+          // return uv
-        'varying vec4 d,e;'+        // return color, additiveColor
-        'void main(){'+             // shader entry point
-        'gl_Position=m*vec4(p,1,1);'+// transform position
-        'v=t;d=c;e=a;'+             // pass stuff to fragment shader
-        '}'                         // end of shader
+        'precision highp float;'+     // use highp for better accuracy, lowp for better perf
+        'uniform mat4 m;'+            // transform matrix
+        'attribute vec2 p,t;'+        // position, uv
+        'attribute vec4 c,a;'+        // color, additiveColor
+        'varying vec2 v;'+            // return uv
+        'varying vec4 d,e;'+          // return color, additiveColor
+        'void main(){'+               // shader entry point
+        'gl_Position=m*vec4(p,1,1);'+ // transform position
+        'v=t;d=c;e=a;'+               // pass stuff to fragment shader
+        '}'                           // end of shader
         ,
-        'precision highp float;'+            // use highp for better accuracy, lowp for better perf
-        'varying vec2 v;'+                   // uv
-        'varying vec4 d,e;'+                 // color, additiveColor
-        'uniform sampler2D j;'+              // texture
-        'void main(){'+                      // shader entry point
-        'gl_FragColor=texture2D(j,v)*d+e;'+  // modulate texture by color plus additive
-        '}'                                  // end of shader
+        'precision highp float;'+           // use highp for better accuracy, lowp for better perf
+        'varying vec2 v;'+                  // uv
+        'varying vec4 d,e;'+                // color, additiveColor
+        'uniform sampler2D s;'+             // texture
+        'void main(){'+                     // shader entry point
+        'gl_FragColor=texture2D(s,v)*d+e;'+ // modulate texture by color plus additive
+        '}'                                 // end of shader
     );
 
     // init buffers
@@ -3867,44 +3888,44 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba=0xffffff
 
     // prepare to create the verts from size and angle
     const c = Math.cos(angle)/2, s = Math.sin(angle)/2;
-    const cX = c*sizeX, cY = c*sizeY, sX = s*sizeX, sY = s*sizeY;
+    const cx = c*sizeX, cy = c*sizeY, sx = s*sizeX, sy = s*sizeY;
         
     // setup 2 triangles to form a quad
     let offset = glBatchCount++ * gl_VERTICES_PER_QUAD * gl_INDICIES_PER_VERT;
 
     // vertex 0
-    glPositionData[offset++] = x - cX - sY;
-    glPositionData[offset++] = y - cY + sX;
+    glPositionData[offset++] = x - cx - sy;
+    glPositionData[offset++] = y - cy + sx;
     glPositionData[offset++] = uv0X; glPositionData[offset++] = uv1Y;
     glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
     
     // vertex 1
-    glPositionData[offset++] = x + cX + sY;
-    glPositionData[offset++] = y + cY - sX;
+    glPositionData[offset++] = x + cx + sy;
+    glPositionData[offset++] = y + cy - sx;
     glPositionData[offset++] = uv1X; glPositionData[offset++] = uv0Y;
     glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
     
     // vertex 2
-    glPositionData[offset++] = x - cX + sY;
-    glPositionData[offset++] = y + cY + sX;
+    glPositionData[offset++] = x - cx + sy;
+    glPositionData[offset++] = y + cy + sx;
     glPositionData[offset++] = uv0X; glPositionData[offset++] = uv0Y;
     glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
     
     // vertex 0
-    glPositionData[offset++] = x - cX - sY;      
-    glPositionData[offset++] = y - cY + sX;  
+    glPositionData[offset++] = x - cx - sy;      
+    glPositionData[offset++] = y - cy + sx;  
     glPositionData[offset++] = uv0X; glPositionData[offset++] = uv1Y;
     glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
 
     // vertex 3
-    glPositionData[offset++] = x + cX - sY;
-    glPositionData[offset++] = y - cY - sX;
+    glPositionData[offset++] = x + cx - sy;
+    glPositionData[offset++] = y - cy - sx;
     glPositionData[offset++] = uv1X; glPositionData[offset++] = uv1Y;
     glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
 
     // vertex 1
-    glPositionData[offset++] = x + cX + sY;
-    glPositionData[offset++] = y + cY - sX;
+    glPositionData[offset++] = x + cx + sy;
+    glPositionData[offset++] = y + cy - sx;
     glPositionData[offset++] = uv1X; glPositionData[offset++] = uv0Y;
     glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
 }

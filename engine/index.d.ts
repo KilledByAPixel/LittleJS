@@ -760,6 +760,10 @@ declare let inputWASDEmulateDirection: number;
  *  @default
  *  @memberof Settings */
 declare let touchGamepadEnable: number;
+/** True if touch gamepad should be analog stick or false to use if 8 way dpad
+ *  @default
+ *  @memberof Settings */
+declare let touchGamepadAnalog: number;
 /** Size of virutal gamepad for touch devices in pixels
  *  @default
  *  @memberof Settings */
@@ -1102,7 +1106,6 @@ declare const isTouchDevice: boolean;
 declare let touchGamepadTimer: Timer;
 declare let touchGamepadButtons: any[];
 declare let touchGamepadStick: Vector2;
-declare let touchGamepadAnalog: number;
 /**
  * Sound Object - Stores a zzfx sound for later use and can be played positionally
  * <br>

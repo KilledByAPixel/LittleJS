@@ -145,6 +145,11 @@ let inputWASDEmulateDirection = 1;
  *  @memberof Settings */
 let touchGamepadEnable = 0;
 
+/** True if touch gamepad should be analog stick or false to use if 8 way dpad
+ *  @default
+ *  @memberof Settings */
+let touchGamepadAnalog = 1;
+
 /** Size of virutal gamepad for touch devices in pixels
  *  @default
  *  @memberof Settings */
