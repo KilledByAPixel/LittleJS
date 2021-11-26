@@ -272,7 +272,7 @@ class FontImage
         {
             // load default font image
             engineFontImage = new Image();
-            engineFontImage.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAAYAQAAAAA9+x6JAAAAAnRSTlMAAHaTzTgAAAGiSURBVHjaZZABhxxBEIUf6MCIBdFY+Q0PMNgf0yCgsSAaZcT9sgIPtBWwIA5wgAPEoHUyJeeSlW+gjK+fegWw1hPWNRcEyWh2npdpBmSUBrRaN1WSlQAWXaWLF0kkwR7C/N7XUvIaQr4xpeqeQigjLwBRZ/6KkufAACcv5z7GYhvgWHII8xN/4C2hvLCkmZSVgIJMHNTxpYOsJOiitEjUQnIQAFFP+opoQfCbjWmfzWiNzCjEvxAPFARmw/Y5Te0sl2zEp4M+m7cToJjdJS7y1xcFlFT7EtWBZ8nl7uLSff7UgYewtlyY6yHM4RrjNrnsfn/W0DBK9xNZctZ7gsTeXTe5eqLqXFlKnAn+vkNXzH6TqPW10ksKoSlauKk1TcncZLSTxNnQ8Av/8RGPXOFIuMCZ/fpwIZx5vU4QIRQ44HwUyHx/QrZhm5VtXFex7ja2se0KBpnPT0DSwS4xd86uAy+SqnLBgkPY5JolhJ33ENyK6n0VyRzCnzebIkFdY/NUtM66lTdhix1KUss6q5snH5ftVJXG0QITb1gUDvzD3z/BbyOLMirwCtPzAAAAAElFTkSuQmCC';
+            engineFontImage.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAAYAQAAAAA9+x6JAAAAAnRSTlMAAHaTzTgAAAGiSURBVHjaZZABhxxBEIUf6ECLBdFY+Q0PMNgf0yCgsSAGZcT9sgIPtBWwIA5wgAPEoHUyJeeSlW+gjK+fegWwtROWpVQEyWh2npdpBmTUFVhb29RINgLIukoXr5LIAvYQ5ve+1FqWEMqNKTX3FAJHyQDRZvmKWubAACcv5z5Gtg2oyCWE+Yk/8JZQX1jTTCpKAFGIgza+dJCNBF2UskRlsgwitHbSV0QLgt9sTPtsRlvJjEr8C/FARWA2bJ/TtJ7lko34dNDn6usJUMzuErP89UUBJbWeozrwLLncXczd508deAjLWipLO4Q5XGPcJvPu92cNDaN0P5G1FL0nSOzddZOrJ6rNhbXGmeDvO3TF7DeJWl4bvaYQTNHCTeuqKZmbjHaSOFes+IX/+IhHrnAkXOAsfn24EM68XieIECoccD4KZLk/odiwzeo2rovYdhvb2HYFgyznJyDpYJdYOmfXgVdJTaUi4xA2uWYNYec9BLeqdl9EsoTw582mSFDX2DxVLbNt9U3YYoeatBad1c2Tj8t2akrjaIGJNywKB/7h75/gN3vCMSaadIUTAAAAAElFTkSuQmCC';
         }
 
         this.image = image || engineFontImage;
