@@ -1518,8 +1518,6 @@ declare class Newgrounds {
      * @param {Number} id    - The scoreboard id
      * @param {Number} value - The score value */
     postScore(id: number, value: number): any;
-    /** Send message to log a view */
-    logView(): any;
     /** Get scores from a scoreboard
      * @param {Number} id         - The scoreboard id
      * @param {String} [user=0]   - A user's id or name
@@ -1529,6 +1527,8 @@ declare class Newgrounds {
      * @return {Object}           - The response JSON object
      */
     getScores(id: number, user?: string, social?: number, skip?: number, limit?: number): any;
+    /** Send message to log a view */
+    logView(): any;
     /** Send a message to call a component of the Newgrounds API
      * @param {String}  component      - Name of the component
      * @param {Object}  [parameters=0] - Parameters to use for call
@@ -1587,7 +1587,7 @@ declare const gl_VERTEX_BYTE_STRIDE: number;
 /** Name of engine */
 declare const engineName: "LittleJS";
 /** Version of engine */
-declare const engineVersion: "1.2.1";
+declare const engineVersion: "1.2.2";
 /** Frames per second to update objects
  *  @default */
 declare const frameRate: 60;
@@ -1613,4 +1613,4 @@ declare let tileImageFixBleed: any;
 declare let averageFPS: any;
 declare let drawCount: any;
 declare const styleBody: string;
-declare const styleCanvas: "position:absolute";
+declare const styleCanvas: "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)";

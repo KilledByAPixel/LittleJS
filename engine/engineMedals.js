@@ -235,9 +235,6 @@ class Newgrounds
      * @param {Number} value - The score value */
     postScore(id, value) { return this.call('ScoreBoard.postScore', {'id':id, 'value':value}, 1); }
 
-    /** Send message to log a view */
-    logView() { return this.call('App.logView', {'host':this.host}, 1); }
-
     /** Get scores from a scoreboard
      * @param {Number} id         - The scoreboard id
      * @param {String} [user=0]   - A user's id or name
@@ -248,6 +245,9 @@ class Newgrounds
      */
     getScores(id, user=0, social=0, skip=0, limit=10)
     { return this.call('ScoreBoard.getScores', {'id':id, 'user':user, 'social':social, 'skip':skip, 'limit':limit}); }
+
+    /** Send message to log a view */
+    logView() { return this.call('App.logView', {'host':this.host}, 1); }
 
     /** Send a message to call a component of the Newgrounds API
      * @param {String}  component      - Name of the component
