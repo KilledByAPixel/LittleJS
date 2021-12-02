@@ -1341,9 +1341,9 @@ declare class TileLayer extends EngineObject {
  * let pos = vec2(2,3);
  * let particleEmiter = new ParticleEmitter
  * (
- *     pos, 1, 0, 500, PI,  // pos, emitSize, emitTime, emitRate, emiteCone
+ *     pos, 0, 1, 0, 500, PI,  // pos, angle, emitSize, emitTime, emitRate, emiteCone
  *     0, vec2(16),                            // tileIndex, tileSize
- *     new Color, new Color(0,0,0),            // colorStartA, colorStartB
+ *     new Color(1,1,1),   new Color(0,0,0),   // colorStartA, colorStartB
  *     new Color(1,1,1,0), new Color(0,0,0,0), // colorEndA, colorEndB
  *     2, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
  *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate,
@@ -1353,6 +1353,7 @@ declare class TileLayer extends EngineObject {
 declare class ParticleEmitter extends EngineObject {
     /** Create a particle system with the given settings
      *  @param {Vector2} position           - World space position of the emitter
+     *  @param {Number}  [angle=0]          - Angle to rotate the object
      *  @param {Number}  [emitSize=0]       - World space size of the emitter (float for circle diameter, vec2 for rect)
      *  @param {Number}  [emitTime=0]       - How long to stay alive (0 is forever)
      *  @param {Number}  [emitRate=100]     - How many particles per second to spawn, does not emit if 0
@@ -1379,7 +1380,7 @@ declare class ParticleEmitter extends EngineObject {
      *  @param {Boolean} [randomColorLinear=1]  - Should color be randomized linearly or across each component
      *  @param {Number}  [renderOrder=0]        - Render order for particles (additive is above other stuff by default)
      */
-    constructor(pos: any, emitSize?: number, emitTime?: number, emitRate?: number, emitConeAngle?: number, tileIndex?: number, tileSize?: number, colorStartA?: Color, colorStartB?: Color, colorEndA?: Color, colorEndB?: Color, particleTime?: number, sizeStart?: number, sizeEnd?: number, speed?: number, angleSpeed?: number, damping?: number, angleDamping?: number, gravityScale?: number, particleConeAngle?: number, fadeRate?: number, randomness?: number, collideTiles?: boolean, additive?: boolean, randomColorLinear?: boolean, renderOrder?: number);
+    constructor(pos: any, angle?: number, emitSize?: number, emitTime?: number, emitRate?: number, emitConeAngle?: number, tileIndex?: number, tileSize?: number, colorStartA?: Color, colorStartB?: Color, colorEndA?: Color, colorEndB?: Color, particleTime?: number, sizeStart?: number, sizeEnd?: number, speed?: number, angleSpeed?: number, damping?: number, angleDamping?: number, gravityScale?: number, particleConeAngle?: number, fadeRate?: number, randomness?: number, collideTiles?: boolean, additive?: boolean, randomColorLinear?: boolean, renderOrder?: number);
     /** @property {Number} - World space size of the emitter (float for circle diameter, vec2 for rect) */
     emitSize: number;
     /** @property {Number} - How long to stay alive (0 is forever) */
@@ -1587,7 +1588,7 @@ declare const gl_VERTEX_BYTE_STRIDE: number;
 /** Name of engine */
 declare const engineName: "LittleJS";
 /** Version of engine */
-declare const engineVersion: "1.2.2";
+declare const engineVersion: "1.2.3";
 /** Frames per second to update objects
  *  @default */
 declare const frameRate: 60;

@@ -57,12 +57,12 @@ function gameInit()
     // create particle emitter
     const center = tileCollisionSize.scale(.5).add(vec2(0,9));
     particleEmiter = new ParticleEmitter(
-        center, 1, 0, 500, PI, // pos, emitSize, emitTime, emitRate, emiteCone
+        center, 0, 1, 0, 500, PI, // pos, angle, emitSize, emitTime, emitRate, emiteCone
         0, vec2(16),                            // tileIndex, tileSize
-        new Color, new Color(0,0,0),            // colorStartA, colorStartB
+        new Color(1,1,1),   new Color(0,0,0),   // colorStartA, colorStartB
         new Color(1,1,1,0), new Color(0,0,0,0), // colorEndA, colorEndB
-        2, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
-        .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate, 
+        2, .2, .2, .1, .05,     // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
+        .99, 1, 1, PI, .05,     // damping, angleDamping, gravityScale, particleCone, fadeRate, 
         .5, 1, 1                // randomness, collide, additive, randomColorLinear, renderOrder
     );
     particleEmiter.elasticity = .3;

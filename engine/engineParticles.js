@@ -15,9 +15,9 @@
  * let pos = vec2(2,3);
  * let particleEmiter = new ParticleEmitter
  * (
- *     pos, 1, 0, 500, PI,  // pos, emitSize, emitTime, emitRate, emiteCone
+ *     pos, 0, 1, 0, 500, PI,  // pos, angle, emitSize, emitTime, emitRate, emiteCone
  *     0, vec2(16),                            // tileIndex, tileSize
- *     new Color, new Color(0,0,0),            // colorStartA, colorStartB
+ *     new Color(1,1,1),   new Color(0,0,0),   // colorStartA, colorStartB
  *     new Color(1,1,1,0), new Color(0,0,0,0), // colorEndA, colorEndB
  *     2, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
  *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate, 
@@ -28,6 +28,7 @@ class ParticleEmitter extends EngineObject
 {
     /** Create a particle system with the given settings
      *  @param {Vector2} position           - World space position of the emitter
+     *  @param {Number}  [angle=0]          - Angle to rotate the object
      *  @param {Number}  [emitSize=0]       - World space size of the emitter (float for circle diameter, vec2 for rect)
      *  @param {Number}  [emitTime=0]       - How long to stay alive (0 is forever)
      *  @param {Number}  [emitRate=100]     - How many particles per second to spawn, does not emit if 0
@@ -57,6 +58,7 @@ class ParticleEmitter extends EngineObject
     constructor
     ( 
         pos,
+        angle,
         emitSize = 0,
         emitTime = 0,
         emitRate = 100,
@@ -84,7 +86,7 @@ class ParticleEmitter extends EngineObject
         renderOrder = additive ? 1e9 : 0
     )
     {
-        super(pos, new Vector2, tileIndex, tileSize, 0, undefined, renderOrder);
+        super(pos, new Vector2, tileIndex, tileSize, angle, undefined, renderOrder);
 
         // emitter settings
         /** @property {Number} - World space size of the emitter (float for circle diameter, vec2 for rect) */

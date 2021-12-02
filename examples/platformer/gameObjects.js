@@ -210,7 +210,7 @@ class Weapon extends EngineObject
 
         // shell effect
         this.addChild(this.shellEmitter = new ParticleEmitter(
-            vec2(), 0, 0, 0, .1,  // pos, emitSize, emitTime, emitRate, emiteCone
+            vec2(), 0, 0, 0, 0, .1,  // pos, angle, emitSize, emitTime, emitRate, emiteCone
             undefined, undefined, // tileIndex, tileSize
             new Color(1,.8,.5), new Color(.9,.7,.5), // colorStartA, colorStartB
             new Color(1,.8,.5), new Color(.9,.7,.5), // colorEndA, colorEndB
@@ -321,7 +321,7 @@ class Bullet extends EngineObject
 
         // spark effects
         const emitter = new ParticleEmitter(
-            this.pos, 0, .1, 100, .5, // pos, emitSize, emitTime, emitRate, emiteCone
+            this.pos, 0, 0, .1, 100, .5, // pos, angle, emitSize, emitTime, emitRate, emiteCone
             undefined, undefined,     // tileIndex, tileSize
             new Color(1,1,0), new Color(1,0,0), // colorStartA, colorStartB
             new Color(1,1,0), new Color(1,0,0), // colorEndA, colorEndB

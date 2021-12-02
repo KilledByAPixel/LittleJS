@@ -284,7 +284,7 @@ function clearMatches()
             const color1 = tileColors[data];
             const color2 = color1.lerp(new Color, .5);
             new ParticleEmitter(
-                pos.add(vec2(.5)), 1, .1, 100, PI,   // pos, emitSize, emitTime, emitRate, emiteCone
+                pos.add(vec2(.5)), 0, 1, .1, 100, PI,// pos, angle, emitSize, emitTime, emitRate, emiteCone
                 undefined, undefined,                // tileIndex, tileSize
                 color1, color2,                      // colorStartA, colorStartB
                 color1.scale(1,0), color2.scale(1,0),// colorEndA, colorEndB

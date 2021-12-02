@@ -39,7 +39,7 @@ function makeDebris(pos, color = new Color, amount = 100, size=.2, elasticity = 
 {
     const color2 = color.lerp(new Color, .5);
     const emitter = new ParticleEmitter(
-        pos, 1, .1, 100, PI, // pos, emitSize, emitTime, emitRate, emiteCone
+        pos, 0, 1, .1, 100, PI, // pos, angle, emitSize, emitTime, emitRate, emiteCone
         undefined, undefined,  // tileIndex, tileSize
         color, color2,         // colorStartA, colorStartB
         color, color2,         // colorEndA, colorEndB
@@ -100,7 +100,7 @@ function explosion(pos, radius=3)
 
     // smoke
     new ParticleEmitter(
-        pos, radius/2, .2, 50*radius, PI, // pos, emitSize, emitTime, emitRate, emiteCone
+        pos, 0, radius/2, .2, 50*radius, PI, // pos, angle, emitSize, emitTime, emitRate, emiteCone
         0, undefined,        // tileIndex, tileSize
         new Color(0,0,0), new Color(0,0,0), // colorStartA, colorStartB
         new Color(0,0,0,0), new Color(0,0,0,0), // colorEndA, colorEndB
@@ -111,7 +111,7 @@ function explosion(pos, radius=3)
 
     // fire
     new ParticleEmitter(
-        pos, radius/2, .1, 100*radius, PI, // pos, emitSize, emitTime, emitRate, emiteCone
+        pos, 0, radius/2, .1, 100*radius, PI, // pos, angle, emitSize, emitTime, emitRate, emiteCone
         0, undefined,        // tileIndex, tileSize
         new Color(1,.5,.1), new Color(1,.1,.1), // colorStartA, colorStartB
         new Color(1,.5,.1,0), new Color(1,.1,.1,0), // colorEndA, colorEndB
