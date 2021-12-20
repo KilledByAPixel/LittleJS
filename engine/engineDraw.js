@@ -165,7 +165,7 @@ function drawTileScreenSpace(pos, size=vec2(1), tileIndex, tileSize, color, angl
  *  @memberof Draw */
 function drawRectScreenSpace(pos, size, color, angle, useWebGL)
 {
-    drawTileSrceenSpace(pos, size, -1, tileSizeDefault, color, angle, 0, 0, useWebGL);
+    drawTileScreenSpace(pos, size, -1, tileSizeDefault, color, angle, 0, 0, useWebGL);
 }
 
 /** Draw colored line between two points
