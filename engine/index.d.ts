@@ -843,7 +843,7 @@ declare class EngineObject {
      *  @param {Vector2} [size=objectDefaultSize]    - World space size of the object
      *  @param {Number}  [tileIndex=-1]              - Tile to use to render object, untextured if -1
      *  @param {Vector2} [tileSize=tileSizeDefault]  - Size of tile in source pixels
-     *  @param {Number}  [angle=0]                   - Angle to rotate the object
+     *  @param {Number}  [angle=0]                   - Angle the object is rotated by
      *  @param {Color}   [color]                     - Color to apply to tile when rendered
      *  @param {Number}  [renderOrder=0]             - Objects sorted by renderOrder before being rendered
      */
@@ -1272,12 +1272,12 @@ declare class TileLayerData {
  */
 declare class TileLayer extends EngineObject {
     /** Create a tile layer object
-     *  @param {Vector2} [position=new Vector2()]   - World space position
-     *  @param {Vector2} [size=objectDefaultSize]   - World space size
-     *  @param {Vector2} [tileSize=tileSizeDefault] - Size of tiles in source pixels
-     *  @param {Vector2} [scale=new Vector2(1,1)]   - How much to scale this layer when rendered
-     *  @param {Number}  [renderOrder=0]            - Objects sorted by renderOrder before being rendered
-     */
+        *  @param {Vector2} [position=new Vector2()]   - World space position
+        *  @param {Vector2} [size=tileCollisionSize]   - World space size
+        *  @param {Vector2} [tileSize=tileSizeDefault] - Size of tiles in source pixels
+        *  @param {Vector2} [scale=new Vector2(1,1)]   - How much to scale this layer when rendered
+        *  @param {Number}  [renderOrder=0]            - Objects sorted by renderOrder before being rendered
+        */
     constructor(pos: any, size?: Vector2, tileSize?: Vector2, scale?: Vector2, renderOrder?: number);
     /** @property {HTMLCanvasElement}        - The canvas used by this tile layer */
     canvas: HTMLCanvasElement;
@@ -1353,7 +1353,7 @@ declare class TileLayer extends EngineObject {
 declare class ParticleEmitter extends EngineObject {
     /** Create a particle system with the given settings
      *  @param {Vector2} position           - World space position of the emitter
-     *  @param {Number}  [angle=0]          - Angle to rotate the object
+     *  @param {Number}  [angle=0]          - Angle to emit the particles
      *  @param {Number}  [emitSize=0]       - World space size of the emitter (float for circle diameter, vec2 for rect)
      *  @param {Number}  [emitTime=0]       - How long to stay alive (0 is forever)
      *  @param {Number}  [emitRate=100]     - How many particles per second to spawn, does not emit if 0

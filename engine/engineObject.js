@@ -36,7 +36,7 @@ class EngineObject
      *  @param {Vector2} [size=objectDefaultSize]    - World space size of the object
      *  @param {Number}  [tileIndex=-1]              - Tile to use to render object, untextured if -1
      *  @param {Vector2} [tileSize=tileSizeDefault]  - Size of tile in source pixels
-     *  @param {Number}  [angle=0]                   - Angle to rotate the object
+     *  @param {Number}  [angle=0]                   - Angle the object is rotated by
      *  @param {Color}   [color]                     - Color to apply to tile when rendered
      *  @param {Number}  [renderOrder=0]             - Objects sorted by renderOrder before being rendered
      */
