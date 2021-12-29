@@ -165,7 +165,7 @@ function drawTileScreenSpace(pos, size=vec2(1), tileIndex, tileSize, color, angl
  *  @memberof Draw */
 function drawRectScreenSpace(pos, size, color, angle, useWebGL)
 {
-    drawTileScreenSpace(pos, size, -1, tileSizeDefault, color, angle, 0, 0, useWebGL);
+    drawTileSrceenSpace(pos, size, -1, tileSizeDefault, color, angle, 0, 0, useWebGL);
 }
 
 /** Draw colored line between two points
@@ -215,7 +215,8 @@ function setBlendMode(additive, useWebGL=glEnable)
         mainContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';
 }
 
-/** Draw text on overlay canvas in world space
+/** Draw text on overlay canvas in screen space
+ *  Automatically splits new lines into rows
  *  @param {String}  text
  *  @param {Vector2} pos
  *  @param {Number}  [size=1]
@@ -224,20 +225,37 @@ function setBlendMode(additive, useWebGL=glEnable)
  *  @param {Color}   [lineColor=new Color(0,0,0)]
  *  @param {String}  [textAlign='center']
  *  @memberof Draw */
-function drawText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault)
+function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault)
 {
-    pos = worldToScreen(pos);
-    overlayContext.font = size*cameraScale + 'px '+ font;
-    overlayContext.textAlign = textAlign;
-    overlayContext.textBaseline = 'middle';
-    if (lineWidth)
-    {
-        overlayContext.lineWidth = lineWidth*cameraScale;
-        overlayContext.strokeStyle = lineColor.rgba();
-        overlayContext.strokeText(text, pos.x, pos.y);
-    }
     overlayContext.fillStyle = color.rgba();
-    overlayContext.fillText(text, pos.x, pos.y);
+    overlayContext.lineWidth = lineWidth *= cameraScale;
+    overlayContext.strokeStyle = lineColor.rgba();
+    overlayContext.textAlign = textAlign;
+    overlayContext.font = size + 'px '+ font;
+    overlayContext.textBaseline = 'middle';
+
+    pos = pos.copy();
+    text.split('\n').forEach(line=>
+    {
+        lineWidth && overlayContext.strokeText(line, pos.x, pos.y);
+        overlayContext.fillText(line, pos.x, pos.y);
+        pos.y += size;
+    });
+}
+
+/** Draw text on overlay canvas in world space
+ *  Automatically splits new lines into rows
+ *  @param {String}  text
+ *  @param {Vector2} pos
+ *  @param {Number}  [size=1]
+ *  @param {Color}   [color=new Color(1,1,1)]
+ *  @param {Number}  [lineWidth=0]
+ *  @param {Color}   [lineColor=new Color(0,0,0)]
+ *  @param {String}  [textAlign='center']
+ *  @memberof Draw */
+function drawText(text, pos, size=1, color, lineWidth, lineColor, textAlign, font)
+{
+    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth, lineColor, textAlign, font);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

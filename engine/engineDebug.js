@@ -273,17 +273,11 @@ const debugRender = ()=>
             drawRect(mousePos.floor().add(vec2(.5)), vec2(1), new Color(0,0,1,.5));
             drawLine(mousePos, bestObject.pos, .1, !raycastHitPos ? new Color(0,1,0,.5) : new Color(1,0,0,.5));
 
-            let pos = mousePos.copy(), height = vec2(0,.5);
-            const printVec2 = (v)=> '(' + (v.x>0?' ':'') + (v.x).toFixed(2) + ',' + (v.y>0?' ':'')  + (v.y).toFixed(2) + ')';
-            const args = [.5, new Color, .05, undefined, undefined, 'monospace'];
-
-            drawText('pos = ' + printVec2(bestObject.pos) 
-                + (bestObject.angle>0?'  ':' ') + (bestObject.angle*180/PI).toFixed(1) + '°', 
-                pos = pos.add(height), ...args);
-            drawText('vel = ' + printVec2(bestObject.velocity), pos = pos.add(height), ...args);
-            drawText('size = ' + printVec2(bestObject.size), pos = pos.add(height), ...args);
-            drawText('type = ' + ( bestObject.constructor.name), pos = mousePos.subtract(height), ...args);
-            drawText('collision = ' + getTileCollisionData(mousePos), pos = mousePos.subtract(height.scale(2)), ...args);
+            const debugText = 'mouse pos = ' + mousePos + 
+                '\nmouse collision = ' + getTileCollisionData(mousePos) + 
+                '\n\n--- object info ---\n' +
+                bestObject.toString();
+            drawTextScreen(debugText, mousePosScreen, 24, new Color, .05, undefined, undefined, 'monospace');
             mainContext = saveContext;
         }
 

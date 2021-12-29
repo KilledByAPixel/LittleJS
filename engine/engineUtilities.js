@@ -311,7 +311,13 @@ class Vector2
     /** Returns true if this vector is within the bounds of an array size passed in
      * @param {Vector2} arraySize
      * @return {Boolean} */
-    arrayCheck(arraySize) { return this.x >= 0 && this.y >= 0 && this.x < arraySize.x && this.y < arraySize.y; } 
+    arrayCheck(arraySize) { return this.x >= 0 && this.y >= 0 && this.x < arraySize.x && this.y < arraySize.y; }
+
+    /** Returns this vector expressed as a string
+     * @param {float} digits - precision to display
+     * @return {String} */
+    toString(digits=3) 
+    { return `(${(this.x<0?'':' ') + this.x.toFixed(digits)},${(this.y<0?'':' ') + this.y.toFixed(digits)} )`; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -433,6 +439,12 @@ class Color
         ASSERT(this.r>=0 && this.r<=1 && this.g>=0 && this.g<=1 && this.b>=0 && this.b<=1 && this.a>=0 && this.a<=1);
         return (this.r*255|0) + (this.g*255<<8) + (this.b*255<<16) + (this.a*255<<24); 
     }
+
+    /** Returns this color expressed as a string
+     * @param {float} digits - precision to display
+     * @return {String} */
+    toString(digits=3) 
+    { return `( ${this.r.toFixed(digits)}, ${this.g.toFixed(digits)}, ${this.b.toFixed(digits)}, ${this.a.toFixed(digits)} )`; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -478,4 +490,8 @@ class Timer
     /** Get percentage elapsed based on time it was set to, returns 0 if not set
      * @return {Number} */
     getPercent() { return this.isSet()? percent(this.time - time, this.setTime, 0) : 0; }
+    
+    /** Returns this timer expressed as a string
+     * @return {String} */
+    toString() { return this.unset() ? 'unset' : Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ); }
 }

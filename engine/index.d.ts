@@ -60,7 +60,8 @@ declare function drawCanvas2D(pos: Vector2, size: Vector2, angle: number, mirror
  *  @param {Boolean} [useWebGL=glEnable]
  *  @memberof Draw */
 declare function setBlendMode(additive?: boolean, useWebGL?: boolean): void;
-/** Draw text on overlay canvas in world space
+/** Draw text on overlay canvas in screen space
+ *  Automatically splits new lines into rows
  *  @param {String}  text
  *  @param {Vector2} pos
  *  @param {Number}  [size=1]
@@ -69,7 +70,18 @@ declare function setBlendMode(additive?: boolean, useWebGL?: boolean): void;
  *  @param {Color}   [lineColor=new Color(0,0,0)]
  *  @param {String}  [textAlign='center']
  *  @memberof Draw */
-declare function drawText(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: string, font?: string): void;
+declare function drawTextScreen(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: string, font?: string): void;
+/** Draw text on overlay canvas in world space
+ *  Automatically splits new lines into rows
+ *  @param {String}  text
+ *  @param {Vector2} pos
+ *  @param {Number}  [size=1]
+ *  @param {Color}   [color=new Color(1,1,1)]
+ *  @param {Number}  [lineWidth=0]
+ *  @param {Color}   [lineColor=new Color(0,0,0)]
+ *  @param {String}  [textAlign='center']
+ *  @memberof Draw */
+declare function drawText(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: string, font: any): void;
 /** Toggle fullsceen mode
  *  @memberof Draw */
 declare function toggleFullscreen(): void;
@@ -551,6 +563,10 @@ declare class Vector2 {
      * @param {Vector2} arraySize
      * @return {Boolean} */
     arrayCheck(arraySize: Vector2): boolean;
+    /** Returns this vector expressed as a string
+     * @param {float} digits - precision to display
+     * @return {String} */
+    toString(digits?: float): string;
 }
 /**
  * Color object (red, green, blue, alpha) with some helpful functions
@@ -624,6 +640,10 @@ declare class Color {
     /** Returns this color expressed as 32 bit integer value
      * @return {Number} */
     rgbaInt(): number;
+    /** Returns this color expressed as a string
+     * @param {float} digits - precision to display
+     * @return {String} */
+    toString(digits?: float): string;
 }
 /**
  * Timer object tracks how long has passed since it was set
@@ -660,6 +680,9 @@ declare class Timer {
     /** Get percentage elapsed based on time it was set to, returns 0 if not set
      * @return {Number} */
     getPercent(): number;
+    /** Returns this timer expressed as a string
+     * @return {String} */
+    toString(): string;
 }
 /** The max size of the canvas, centered if window is larger
  *  @type {Vector2}
@@ -931,6 +954,7 @@ declare class EngineObject {
     setCollision(collideSolidObjects?: boolean, isSolid?: boolean, collideTiles?: boolean): void;
     collideSolidObjects: boolean;
     isSolid: boolean;
+    toString(): string;
 }
 /** Tile sheet for batch rendering system
  *  @type {Image}
@@ -1588,7 +1612,7 @@ declare const gl_VERTEX_BYTE_STRIDE: number;
 /** Name of engine */
 declare const engineName: "LittleJS";
 /** Version of engine */
-declare const engineVersion: "1.2.3";
+declare const engineVersion: "1.2.4";
 /** Frames per second to update objects
  *  @default */
 declare const frameRate: 60;

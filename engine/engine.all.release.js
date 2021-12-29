@@ -344,7 +344,13 @@ class Vector2
     /** Returns true if this vector is within the bounds of an array size passed in
      * @param {Vector2} arraySize
      * @return {Boolean} */
-    arrayCheck(arraySize) { return this.x >= 0 && this.y >= 0 && this.x < arraySize.x && this.y < arraySize.y; } 
+    arrayCheck(arraySize) { return this.x >= 0 && this.y >= 0 && this.x < arraySize.x && this.y < arraySize.y; }
+
+    /** Returns this vector expressed as a string
+     * @param {float} digits - precision to display
+     * @return {String} */
+    toString(digits=3) 
+    { return `(${(this.x<0?'':' ') + this.x.toFixed(digits)},${(this.y<0?'':' ') + this.y.toFixed(digits)} )`; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -466,6 +472,12 @@ class Color
         ASSERT(this.r>=0 && this.r<=1 && this.g>=0 && this.g<=1 && this.b>=0 && this.b<=1 && this.a>=0 && this.a<=1);
         return (this.r*255|0) + (this.g*255<<8) + (this.b*255<<16) + (this.a*255<<24); 
     }
+
+    /** Returns this color expressed as a string
+     * @param {float} digits - precision to display
+     * @return {String} */
+    toString(digits=3) 
+    { return `( ${this.r.toFixed(digits)}, ${this.g.toFixed(digits)}, ${this.b.toFixed(digits)}, ${this.a.toFixed(digits)} )`; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -511,6 +523,10 @@ class Timer
     /** Get percentage elapsed based on time it was set to, returns 0 if not set
      * @return {Number} */
     getPercent() { return this.isSet()? percent(this.time - time, this.setTime, 0) : 0; }
+    
+    /** Returns this timer expressed as a string
+     * @return {String} */
+    toString() { return this.unset() ? 'unset' : Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ); }
 }
 /**
  * LittleJS Engine Settings
@@ -753,7 +769,7 @@ let medalDisplayIconSize = 50;
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.2.3';
+const engineVersion = '1.2.4';
 
 /** Frames per second to update objects
  *  @default */
@@ -1367,6 +1383,22 @@ class EngineObject
         this.isSolid = isSolid;
         this.collideTiles = collideTiles;
     }
+
+    toString()
+    {
+        let text = 'type = ' + this.constructor.name;
+        if (this.pos.x || this.pos.y)
+            text += '\npos = ' + this.pos;
+        if (this.velocity.x || this.velocity.y)
+            text += '\nvelocity = ' + this.velocity;
+        if (this.size.x || this.size.y)
+            text += '\nsize = ' + this.size;
+        if (this.angle)
+            text += '\nangle = ' + this.angle.toFixed(3);
+        if (this.color)
+            text += '\ncolor = ' + this.color;
+        return text;
+    }
 }
 /** 
  * LittleJS Drawing System
@@ -1585,7 +1617,8 @@ function setBlendMode(additive, useWebGL=glEnable)
         mainContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';
 }
 
-/** Draw text on overlay canvas in world space
+/** Draw text on overlay canvas in screen space
+ *  Automatically splits new lines into rows
  *  @param {String}  text
  *  @param {Vector2} pos
  *  @param {Number}  [size=1]
@@ -1594,20 +1627,37 @@ function setBlendMode(additive, useWebGL=glEnable)
  *  @param {Color}   [lineColor=new Color(0,0,0)]
  *  @param {String}  [textAlign='center']
  *  @memberof Draw */
-function drawText(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault)
+function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault)
 {
-    pos = worldToScreen(pos);
-    overlayContext.font = size*cameraScale + 'px '+ font;
-    overlayContext.textAlign = textAlign;
-    overlayContext.textBaseline = 'middle';
-    if (lineWidth)
-    {
-        overlayContext.lineWidth = lineWidth*cameraScale;
-        overlayContext.strokeStyle = lineColor.rgba();
-        overlayContext.strokeText(text, pos.x, pos.y);
-    }
     overlayContext.fillStyle = color.rgba();
-    overlayContext.fillText(text, pos.x, pos.y);
+    overlayContext.lineWidth = lineWidth *= cameraScale;
+    overlayContext.strokeStyle = lineColor.rgba();
+    overlayContext.textAlign = textAlign;
+    overlayContext.font = size + 'px '+ font;
+    overlayContext.textBaseline = 'middle';
+
+    pos = pos.copy();
+    text.split('\n').forEach(line=>
+    {
+        lineWidth && overlayContext.strokeText(line, pos.x, pos.y);
+        overlayContext.fillText(line, pos.x, pos.y);
+        pos.y += size;
+    });
+}
+
+/** Draw text on overlay canvas in world space
+ *  Automatically splits new lines into rows
+ *  @param {String}  text
+ *  @param {Vector2} pos
+ *  @param {Number}  [size=1]
+ *  @param {Color}   [color=new Color(1,1,1)]
+ *  @param {Number}  [lineWidth=0]
+ *  @param {Color}   [lineColor=new Color(0,0,0)]
+ *  @param {String}  [textAlign='center']
+ *  @memberof Draw */
+function drawText(text, pos, size=1, color, lineWidth, lineColor, textAlign, font)
+{
+    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth, lineColor, textAlign, font);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
