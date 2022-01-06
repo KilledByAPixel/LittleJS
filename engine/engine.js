@@ -86,6 +86,17 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         mainContext = mainCanvas.getContext('2d');
         mainCanvas.style = styleCanvas;
 
+        // if webgl is enabled, first check if it's supported
+        function isWebGLSupported(canvas) {
+            try {
+                return !!window.WebGLRenderingContext &&
+                (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
+            } catch(e) {
+                return false;
+            }
+        };
+        glEnable = glEnable && isWebGLSupported(mainCanvas);
+
         // init stuff and start engine
         debugInit();
         glInit();
