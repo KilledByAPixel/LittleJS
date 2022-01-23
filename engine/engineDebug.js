@@ -286,11 +286,12 @@ const debugRender = ()=>
 
     {
         // draw debug primitives
-        overlayContext.save();
         overlayContext.lineWidth = 2;
         const pointSize = debugPointSize * cameraScale;
         debugPrimitives.forEach(p=>
         {
+            overlayContext.save();
+
             // create canvas transform from world space to screen space
             const pos = worldToScreen(p.pos);
             
@@ -326,12 +327,12 @@ const debugRender = ()=>
                 p.fill && overlayContext.fill();
                 overlayContext.stroke();
             }
+            
+            overlayContext.restore();
         });
 
         // remove expired pritives
         debugPrimitives = debugPrimitives.filter(r=>r.time.get()<0);
-
-        overlayContext.restore();
     }
 
     {

@@ -224,6 +224,9 @@ class Newgrounds
         const scoreboardResult = this.call('ScoreBoard.getBoards');
         this.scoreboards = scoreboardResult ? scoreboardResult.result.data.scoreboards : [];
         debugMedals && console.log(this.scoreboards);
+
+        const keepAliveMS = 5 * 60 * 1e3;
+        setInterval(()=>this.call('Gateway.ping', 0, 1), keepAliveMS);
     }
 
     /** Send message to unlock a medal by id

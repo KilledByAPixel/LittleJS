@@ -286,11 +286,12 @@ const debugRender = ()=>
 
     {
         // draw debug primitives
-        overlayContext.save();
         overlayContext.lineWidth = 2;
         const pointSize = debugPointSize * cameraScale;
         debugPrimitives.forEach(p=>
         {
+            overlayContext.save();
+
             // create canvas transform from world space to screen space
             const pos = worldToScreen(p.pos);
             
@@ -326,12 +327,12 @@ const debugRender = ()=>
                 p.fill && overlayContext.fill();
                 overlayContext.stroke();
             }
+            
+            overlayContext.restore();
         });
 
         // remove expired pritives
         debugPrimitives = debugPrimitives.filter(r=>r.time.get()<0);
-
-        overlayContext.restore();
     }
 
     {
@@ -3587,6 +3588,9 @@ class Newgrounds
         const scoreboardResult = this.call('ScoreBoard.getBoards');
         this.scoreboards = scoreboardResult ? scoreboardResult.result.data.scoreboards : [];
         debugMedals && console.log(this.scoreboards);
+
+        const keepAliveMS = 5 * 60 * 1e3;
+        setInterval(()=>this.call('Gateway.ping', 0, 1), keepAliveMS);
     }
 
     /** Send message to unlock a medal by id
@@ -4035,7 +4039,7 @@ gl_VERTEX_BYTE_STRIDE = (4 * 2) * 2 + (4) * 2; // vec2 * 2 + (char * 4) * 2
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.2.4';
+const engineVersion = '1.2.6';
 
 /** Frames per second to update objects
  *  @default */
