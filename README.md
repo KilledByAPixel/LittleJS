@@ -4,7 +4,7 @@
 
 LittleJS is a super lightweight JavaScript game engine with a fast hybrid rendering system. It provides everything necessary to make amazing games, including rendering, physics, particles, sound effects, music, input handling, and debug tools. LittleJS is designed to be extremely small yet powerful enough for a variety of applications, from game jams to commercial releases. The code is very well documented with a variety of examples to get you started. Choo-Choo! 🚂
 
-## [LittleJS Documentation](https://killedbyapixel.github.io/LittleJS/docs) - [LittleJS Trailer](https://youtu.be/chuBzGjv7Ms) - [LittleJS Trello](https://trello.com/b/E9zf1Xak/littlejs)
+## [LittleJS Documentation](https://killedbyapixel.github.io/LittleJS/docs) - [LittleJS Trailer](https://youtu.be/chuBzGjv7Ms) - [LittleJS Trello](https://trello.com/b/E9zf1Xak/littlejs) - [LittleJS Discord](https://discord.gg/BupepDka)
 
 ![LittleJS Screenshot](examples/screenshot.jpg)
 
@@ -18,7 +18,7 @@ LittleJS is a super lightweight JavaScript game engine with a fast hybrid render
 
 ## Features
 
-- Very small footprint with no dependencies
+- Extremely tiny footprint with no dependencies, less than 50 KB uncompressed.
 - Can update and render 10,000+ objects at 60fps, often many times more
 - Object oriented system with fast 2D physics and collision handling for axis aligned boxes
 - Positional audio effects with [zzfx](https://killedbyapixel.github.io/ZzFX/) and music with [zzfxm](https://keithclark.github.io/ZzFXM/), mp3s, or wavs
