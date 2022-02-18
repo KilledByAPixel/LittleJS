@@ -850,8 +850,6 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     // main update loop
     const engineUpdate = (frameTimeMS=0)=>
     {
-        requestAnimationFrame(engineUpdate);
-
         // update time keeping
         let frameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
         frameTimeLastMS = frameTimeMS;
@@ -950,6 +948,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             overlayContext.fillText(text, mainCanvas.width-2, 2);
             drawCount = 0;
         }
+
+        requestAnimationFrame(engineUpdate);
     }
 
     // set tile image source to load the image and start the engine
