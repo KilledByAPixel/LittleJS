@@ -1,0 +1,366 @@
+<html><head><meta charset=utf-8>
+<meta name=viewport content=width=device-width,height=device-height,initial-scale=1,maximum-scale=1>
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=mobile-web-app-capable content=yes>
+<link rel=icon type=image/png href=favicon.png>
+<style>
+input
+{
+    width:99px;
+}
+button
+{
+    margin:1px;
+}
+</style>
+</head><body>
+
+<script src=../../engine/engineDebug.js?103></script>
+<script src=../../engine/engineUtilities.js?103></script>
+<script src=../../engine/engineSettings.js?103></script>
+<script src=../../engine/engineObject.js?103></script>
+<script src=../../engine/engineDraw.js?103></script>
+<script src=../../engine/engineInput.js?103></script>
+<script src=../../engine/engineAudio.js?103></script>
+<script src=../../engine/engineTileLayer.js?103></script>
+<script src=../../engine/engineParticles.js?103></script>
+<script src=../../engine/engineMedals.js?103></script>
+<script src=../../engine/engineWebGL.js?103></script>
+<script src=../../engine/engine.js?103></script>
+<script>
+
+'use strict';
+
+let particleEditor = 0, particleSystem, particleSystemDiv, particleSystemCode;
+let inputCondense;
+let restartTimer = new Timer();
+const storagePrefix = 'particles_';
+
+const particleSettings = [];
+function addSetting(name, type, min, max, step, description)
+{
+    particleSettings.push({name, type:type||'number', min, max, step, description});
+}
+
+addSetting('emitSize',         '', 0, 1e9, .1);
+addSetting('emitTime',         '', 0, 1e9, .1);
+addSetting('emitRate',         '', 0, 1e9, 1);
+addSetting('emitConeAngle',    '', 0, 1e9, .01);
+addSetting('tileIndex',        '', -1, 1e9, 1);
+addSetting('tileSizeX',        '', 0, 1e9, 1);
+addSetting('tileSizeY',        '', 0, 1e9, 1);
+addSetting('colorStartA',      'color');
+addSetting('colorStartB',      'color');
+addSetting('colorEndA',        'color');
+addSetting('colorEndB',        'color');
+addSetting('colorAlphaStartA', 'alpha', 0,    1,   .01);
+addSetting('colorAlphaStartB', 'alpha', 0,    1,   .01);
+addSetting('colorAlphaEndA',   'alpha', 0,    1,   .01);
+addSetting('colorAlphaEndB',   'alpha', 0,    1,   .01);
+addSetting('particleTime',     '', 0,    1e9, .1);
+addSetting('sizeStart',        '', 0,    1e9, .01);
+addSetting('sizeEnd',          '', 0,    1e9, .01);
+addSetting('speed',            '', 0,    1e9, .01);
+addSetting('angleSpeed',       '', 0,    1e9, .01);
+addSetting('damping',          '', 0,    1,   .01);
+addSetting('angleDamping',     '', 0,    1,   .01);
+addSetting('gravityScale',     '', -1e9, 1e9, .1);
+addSetting('particleConeAngle','', 0,    1e9, .1);
+addSetting('fadeRate',         '', 0,    1,   .01);
+addSetting('randomness',       '', 0,    1,   .01);
+addSetting('collideTiles',     'checkbox');
+addSetting('additive',         'checkbox');
+addSetting('randomColorLinear','checkbox');
+
+function makeEmitter()
+{
+    particleSystem = new ParticleEmitter(cameraPos);
+    particleSystem.emitConeAngle =
+        particleSystem.particleConeAngle = 3.14;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+function gameInit()
+{
+    makeEmitter();
+    gravity = -.01;
+    cameraScale = 50;
+
+    const div = particleSystemDiv = document.createElement('div');
+    div.innerHTML = '<big><b>LittleJS Particle Tool';
+    div.style = 'position:absolute;top:10;left:10;color:#fff';
+    document.body.appendChild(div);
+
+    for (const setting of particleSettings)
+    {
+        const input = setting.input = document.createElement('input');
+        const name = setting.name;
+        input.oninput = (e)=> updateParticles();
+        input.type = setting.type == 'alpha' ? 'number' : setting.type;
+        if (setting.min !== undefined)
+            input.min = setting.min;
+        if (setting.max !== undefined)
+            input.max = setting.max;
+        if (setting.step !== undefined)
+            input.step = setting.step;
+        if (name == 'emitConeAngle' || name  == 'particleConeAngle')
+            particleSystem[name] = 3.14; // simplify pi
+
+        div.appendChild(document.createElement('br'));
+        div.appendChild(input);
+        div.appendChild(document.createTextNode(' ' + name));
+    }
+
+    div.appendChild(document.createElement('br'));
+    div.appendChild(document.createElement('br'));
+
+    {
+        const button = document.createElement('button')
+        div.appendChild(button);
+        button.innerHTML = 'Copy To Clipboard';
+        button.onclick = (e)=> navigator.clipboard.writeText(particleSystemCode.value);
+    }
+    {
+        const button = document.createElement('button');
+        div.appendChild(button);
+        button.innerHTML = 'Reset';
+        button.onclick = (e)=>
+        {
+            if (!confirm('Reset to default?'))
+                return;
+            particleSystem.destroy();
+            makeEmitter();
+            updateInputs(0);
+            cameraScale = 50;
+        }
+    }
+    {
+        inputCondense = document.createElement('input');
+        div.appendChild(inputCondense);
+        inputCondense.checked = 'true';
+        inputCondense.type = 'checkbox';
+        inputCondense.style.width = 'initial';
+        inputCondense.oninput = (e)=> updateParticles();
+        div.appendChild(document.createTextNode(' Condense'));
+    }
+    
+    //div.appendChild(document.createTextNode('JavaScript Code... '));
+    div.appendChild(document.createElement('br'));
+    div.appendChild(particleSystemCode = document.createElement('textarea'));
+    particleSystemCode.style.width = 500;
+    particleSystemCode.style.height = 100;
+    particleSystemCode.disabled = true;
+
+    updateInputs(0);
+
+    // load from storage
+    for (const setting of particleSettings)
+    {
+        const type = setting.type;
+        const storageName = storagePrefix + setting.name;
+        const savedValue = localStorage[storageName];
+        if (savedValue == undefined)
+            continue;
+
+        if (type == 'checkbox')
+            setting.input.checked = savedValue == 'true';
+        else
+            setting.input.value = savedValue;
+    }
+
+    updateParticles();
+}
+
+function updateParticles()
+{
+    for (const setting of particleSettings)
+    {
+        const input = setting.input;
+        const name = setting.name;
+        const type = setting.type;
+        const inputFloat = parseFloat(input.value) || 0;
+        if (type == 'color')
+        {
+            const color = new Color().setHex(input.value);
+            particleSystem[name].r = color.r;
+            particleSystem[name].g = color.g;
+            particleSystem[name].b = color.b;
+        }
+        else if (type == 'alpha')
+        {
+            if (name == 'colorAlphaStartA')
+                particleSystem.colorStartA.a = clamp(inputFloat);
+            else if (name == 'colorAlphaStartB')
+                particleSystem.colorStartB.a = clamp(inputFloat);
+            else if (name == 'colorAlphaEndA')
+                particleSystem.colorEndA.a   = clamp(inputFloat);
+            else if (name == 'colorAlphaEndB')
+                particleSystem.colorEndB.a   = clamp(inputFloat);
+        }
+        else if (name == 'tileSizeX')
+        {
+            particleSystem.tileSize = vec2(parseInt(input.value), particleSystem.tileSize.y);
+        }
+        else if (name == 'tileSizeY')
+        {
+            particleSystem.tileSize = vec2(particleSystem.tileSize.x, parseInt(input.value));
+        }
+        else if (type == 'checkbox')
+            particleSystem[name] = input.checked ? 1 : 0;
+        else if (name == 'emitRate')
+            particleSystem[name] = min(inputFloat,1e3);
+        else
+            particleSystem[name] = clamp(inputFloat, setting.min, setting.max);
+    }
+    updateInputs();
+}
+
+function updateInputs(save=1)
+{
+    for (const setting of particleSettings)
+    {
+        const input = setting.input;
+        const name = setting.name;
+        const type = setting.type;
+        
+        if (type == 'color')
+        {
+            const color = particleSystem[name];
+            input.value = color.hex();
+        }
+        else if (type == 'alpha')
+        {
+            if (name == 'colorAlphaStartA')
+                input.value = particleSystem.colorStartA.a;
+            else if (name == 'colorAlphaStartB')
+                input.value = particleSystem.colorStartB.a;
+            else if (name == 'colorAlphaEndA')
+                input.value = particleSystem.colorEndA.a;
+            else if (name == 'colorAlphaEndB')
+                input.value = particleSystem.colorEndB.a;
+        }
+        else if (name == 'tileSizeX')
+            input.value = particleSystem.tileSize.x;
+        else if (name == 'tileSizeY')
+            input.value = particleSystem.tileSize.y;
+        else if (type == 'checkbox')
+            input.checked = particleSystem[name];
+        else
+            input.value = particleSystem[name] || '0';
+
+        if (save)
+        {
+            const storageName = storagePrefix + setting.name;
+            localStorage[storageName] = type == 'checkbox' ? 
+                input.checked : input.value;
+        }
+    }
+    particleSystemCode.value = getCode();
+}
+
+function getCode()
+{
+    const condense = inputCondense.checked;
+    let code = '';
+
+    // https://www.codingem.com/javascript-how-to-limit-decimal-places/
+    Number.prototype.round = function(n) {
+        const d = Math.pow(10, n);
+        return Math.round((this + Number.EPSILON) * d) / d;
+    }
+
+    code = 'new ParticleEmitter(';
+    if (condense)
+        code += 'vec2(), 0, ';
+    else
+        code += '\n  vec2(), 0,\t//position, angle\n';
+
+    let count = 0;
+    for (const setting of particleSettings)
+    {
+        const name = setting.name;
+        const type = setting.type;
+        let value;
+        if (name == 'tileSizeX' || type == 'alpha')
+            continue;
+
+        if (name == 'tileSizeY')
+            value = `vec2(${particleSystem.tileSize.x}, ${particleSystem.tileSize.y})`;
+        else if (type == 'color')
+        {
+            const c = particleSystem[name];
+            const p = 3;
+            value = `new Color(${c.r.round(p)}, ${c.g.round(p)}, ${c.b.round(p)}, ${c.a.round(p)})`;
+        }
+        else if (type == 'checkbox')
+            value = particleSystem[name] ? 1 : 0;
+        else
+            value = particleSystem[name].round(3);
+        if (!condense)
+            code += '  ';
+        code += value;
+
+        const isEnd = name == 'randomColorLinear';
+        if (!condense)
+        {
+            code += ',\t// ' + name;
+            if (!isEnd)
+                code += '\n';
+        }
+        else if (!isEnd)
+            code += ', ';
+    }
+
+
+    if (condense)
+        code += ');';
+    else
+        code += '\n); // particle emitter';
+
+    return code;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+function gameUpdate()
+{
+    if (!restartTimer.isSet() && particleSystem.destroyed)
+        restartTimer.set(1);
+    else if (restartTimer.elapsed())
+    {
+        restartTimer.unset()
+        makeEmitter();
+        updateParticles();
+    }
+
+    if (document.activeElement == document.body)
+    {
+        particleSystem.pos = mouseIsDown(0) ? mousePos : vec2();
+        if (mouseWheel)
+        {
+            cameraScale -= sign(mouseWheel)*cameraScale/5;
+            cameraScale = clamp(cameraScale, 10, 300);
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+function gameUpdatePost()
+{
+
+}
+
+///////////////////////////////////////////////////////////////////////////////
+function gameRender()
+{
+}
+
+///////////////////////////////////////////////////////////////////////////////
+function gameRenderPost()
+{
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Startup LittleJS Engine
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png');
+
+</script>

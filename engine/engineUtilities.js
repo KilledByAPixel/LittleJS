@@ -388,7 +388,7 @@ class Color
      * @return {Color} */
     lerp(c, p) { return this.add(c.subtract(this).scale(clamp(p))); }
 
-    /** Sets this color given a hue, saturation, lightness , and alpha
+    /** Sets this color given a hue, saturation, lightness, and alpha
      * @param {Number} [hue=0]
      * @param {Number} [saturation=0]
      * @param {Number} [lightness=1]
@@ -438,6 +438,28 @@ class Color
     {
         ASSERT(this.r>=0 && this.r<=1 && this.g>=0 && this.g<=1 && this.b>=0 && this.b<=1 && this.a>=0 && this.a<=1);
         return (this.r*255|0) + (this.g*255<<8) + (this.b*255<<16) + (this.a*255<<24); 
+    }
+
+    /** Returns this color expressed as a hex code
+     * @return {String} */
+    hex()
+    {
+        const toHex = (c)=> ((c=c*255|0)<16 ? '0' : '') + c.toString(16);
+        return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b);
+    }
+
+    /** Set this color from a hex code
+     * @param {String} hex - html hex code
+     * @return {Color} */
+    setHex(hex)
+    {
+        const fromHex = (a)=> parseInt(hex.slice(a,a+2), 16)/255;
+        this.r = fromHex(1);
+        this.g = fromHex(3),
+        this.b = fromHex(5);
+        this.a = 1;
+        ASSERT(this.r>=0 && this.r<=1 && this.g>=0 && this.g<=1 && this.b>=0 && this.b<=1);
+        return this;
     }
 
     /** Returns this color expressed as a string
