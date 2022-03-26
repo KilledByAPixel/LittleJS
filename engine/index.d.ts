@@ -622,7 +622,7 @@ declare class Color {
      * @param {Number} percent
      * @return {Color} */
     lerp(c: any, p: any): Color;
-    /** Sets this color given a hue, saturation, lightness , and alpha
+    /** Sets this color given a hue, saturation, lightness, and alpha
      * @param {Number} [hue=0]
      * @param {Number} [saturation=0]
      * @param {Number} [lightness=1]
@@ -640,6 +640,13 @@ declare class Color {
     /** Returns this color expressed as 32 bit integer value
      * @return {Number} */
     rgbaInt(): number;
+    /** Returns this color expressed as a hex code
+     * @return {String} */
+    hex(): string;
+    /** Set this color from a hex code
+     * @param {String} hex - html hex code
+     * @return {Color} */
+    setHex(hex: string): Color;
     /** Returns this color expressed as a string
      * @param {float} digits - precision to display
      * @return {String} */
@@ -1612,7 +1619,7 @@ declare const gl_VERTEX_BYTE_STRIDE: number;
 /** Name of engine */
 declare const engineName: "LittleJS";
 /** Version of engine */
-declare const engineVersion: "1.2.6";
+declare const engineVersion: "1.2.7";
 /** Frames per second to update objects
  *  @default */
 declare const frameRate: 60;

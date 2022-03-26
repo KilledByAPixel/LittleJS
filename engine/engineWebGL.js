@@ -47,7 +47,7 @@ function glInit()
 
     // setup vertex and fragment shaders
     glShader = glCreateProgram(
-        'precision highp float;'+     // use highp for better accuracy, lowp for better perf
+        'precision highp float;'+     // use highp for better accuracy
         'uniform mat4 m;'+            // transform matrix
         'attribute vec2 p,t;'+        // position, uv
         'attribute vec4 c,a;'+        // color, additiveColor
@@ -58,7 +58,7 @@ function glInit()
         'v=t;d=c;e=a;'+               // pass stuff to fragment shader
         '}'                           // end of shader
         ,
-        'precision highp float;'+           // use highp for better accuracy, lowp for better perf
+        'precision highp float;'+           // use highp for better accuracy
         'varying vec2 v;'+                  // uv
         'varying vec4 d,e;'+                // color, additiveColor
         'uniform sampler2D s;'+             // texture

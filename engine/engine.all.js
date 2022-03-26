@@ -783,7 +783,7 @@ class Color
      * @return {Color} */
     lerp(c, p) { return this.add(c.subtract(this).scale(clamp(p))); }
 
-    /** Sets this color given a hue, saturation, lightness , and alpha
+    /** Sets this color given a hue, saturation, lightness, and alpha
      * @param {Number} [hue=0]
      * @param {Number} [saturation=0]
      * @param {Number} [lightness=1]
@@ -835,6 +835,28 @@ class Color
         return (this.r*255|0) + (this.g*255<<8) + (this.b*255<<16) + (this.a*255<<24); 
     }
 
+    /** Returns this color expressed as a hex code
+     * @return {String} */
+    hex()
+    {
+        const toHex = (c)=> ((c=c*255|0)<16 ? '0' : '') + c.toString(16);
+        return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b);
+    }
+
+    /** Set this color from a hex code
+     * @param {String} hex - html hex code
+     * @return {Color} */
+    setHex(hex)
+    {
+        const fromHex = (a)=> parseInt(hex.slice(a,a+2), 16)/255;
+        this.r = fromHex(1);
+        this.g = fromHex(3),
+        this.b = fromHex(5);
+        this.a = 1;
+        ASSERT(this.r>=0 && this.r<=1 && this.g>=0 && this.g<=1 && this.b>=0 && this.b<=1);
+        return this;
+    }
+
     /** Returns this color expressed as a string
      * @param {float} digits - precision to display
      * @return {String} */
@@ -876,7 +898,7 @@ class Timer
 
     /** Returns true if set and elapsed
      * @return {Boolean} */
-    elapsed() { return time >  this.time; }
+    elapsed() { return time > this.time; }
 
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {Number} */
@@ -3399,7 +3421,7 @@ function medalsInit(saveName)
 {
     // check if medals are unlocked
     medalsSaveName = saveName;
-    debugMedals || medals.forEach(medal=> medal.unlocked = 1 || localStorage[medal.storageKey()]);
+    debugMedals || medals.forEach(medal=> localStorage[medal.storageKey()]);
 }
 
 /** 
@@ -3712,7 +3734,7 @@ function glInit()
 
     // setup vertex and fragment shaders
     glShader = glCreateProgram(
-        'precision highp float;'+     // use highp for better accuracy, lowp for better perf
+        'precision highp float;'+     // use highp for better accuracy
         'uniform mat4 m;'+            // transform matrix
         'attribute vec2 p,t;'+        // position, uv
         'attribute vec4 c,a;'+        // color, additiveColor
@@ -3723,7 +3745,7 @@ function glInit()
         'v=t;d=c;e=a;'+               // pass stuff to fragment shader
         '}'                           // end of shader
         ,
-        'precision highp float;'+           // use highp for better accuracy, lowp for better perf
+        'precision highp float;'+           // use highp for better accuracy
         'varying vec2 v;'+                  // uv
         'varying vec4 d,e;'+                // color, additiveColor
         'uniform sampler2D s;'+             // texture
@@ -4039,7 +4061,7 @@ gl_VERTEX_BYTE_STRIDE = (4 * 2) * 2 + (4) * 2; // vec2 * 2 + (char * 4) * 2
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.2.6';
+const engineVersion = '1.2.7';
 
 /** Frames per second to update objects
  *  @default */

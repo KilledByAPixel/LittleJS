@@ -503,7 +503,7 @@ class Timer
 
     /** Returns true if set and elapsed
      * @return {Boolean} */
-    elapsed() { return time >  this.time; }
+    elapsed() { return time > this.time; }
 
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {Number} */
