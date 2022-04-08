@@ -44,6 +44,14 @@ To easily include LittleJS in your game, you can use one of the 3 pre-built js f
 
 The hello world example includes a batch file [build.bat](https://github.com/KilledByAPixel/LittleJS/blob/main/build.bat) that compresses everything into a tiny zip file using Google Closure, UglifyJS, Roadroller, and ECT.
 
+To build with LittleJS you will need to install several NPM packages. This is only necessary for building and not required to use the engine. You can install these packages globally with the following commands...
+
+    npm install -g google-closure-compiler
+    npm install -g uglify-js
+    npm install -g roadroller
+    npm install -g ect-bin
+    npm install -g typescript
+
 ## Games Made With LittleJS
 
 - [Space Huggers](https://github.com/KilledByAPixel/SpaceHuggers) - A more developed version of the platformer example
