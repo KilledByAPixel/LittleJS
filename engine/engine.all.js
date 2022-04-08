@@ -3098,7 +3098,8 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
      *  @param {Vector2} [size=new Vector2(1,1)]
      *  @param {Color}   [color=new Color(1,1,1)]
      *  @param {Number}  [angle=0] */
-    drawRect(pos, size, color, angle) { this.drawTile(pos, size, -1, 0, color, angle); }
+    drawRect(pos, size, color, angle) 
+    { this.drawTile(pos, size, -1, 0, color, angle); }
 }
 /*
     LittleJS Particle System

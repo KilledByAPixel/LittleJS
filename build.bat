@@ -1,6 +1,6 @@
 rem Simple build script for LittleJS by Frank Force
 rem Minfies and combines index.html and index.js and zips the result
-rem Run engine\buildSetup.bat first to install dependencies
+rem See the readme for a list of required dependencies.
 
 set NAME=game
 set BUILD_FOLDER=build
