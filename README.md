@@ -4,7 +4,7 @@
 
 LittleJS is a super lightweight JavaScript game engine with a fast hybrid rendering system. It provides everything necessary to make amazing games, including rendering, physics, particles, sound effects, music, input handling, and debug tools. LittleJS is designed to be extremely small yet powerful enough for a variety of applications, from game jams to commercial releases. The code is very well documented with a variety of examples to get you started. Choo-Choo! 🚂
 
-## [LittleJS Documentation](https://killedbyapixel.github.io/LittleJS/docs) - [LittleJS Trailer](https://youtu.be/chuBzGjv7Ms) - [LittleJS Trello](https://trello.com/b/E9zf1Xak/littlejs) - [LittleJS Discord](https://discord.gg/BupepDka)
+## [LittleJS Documentation](https://killedbyapixel.github.io/LittleJS/docs) - [LittleJS Trailer](https://youtu.be/chuBzGjv7Ms) - [LittleJS Trello](https://trello.com/b/E9zf1Xak/littlejs) - [LittleJS Discord](https://discord.gg/zb7hcGkyZe)
 
 ![LittleJS Screenshot](examples/screenshot.jpg)
 
@@ -43,6 +43,14 @@ To easily include LittleJS in your game, you can use one of the 3 pre-built js f
 - [engine.all.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.min.js) - The engine in release mode and minified
 
 The hello world example includes a batch file [build.bat](https://github.com/KilledByAPixel/LittleJS/blob/main/build.bat) that compresses everything into a tiny zip file using Google Closure, UglifyJS, Roadroller, and ECT.
+
+To build with LittleJS you will need to install several NPM packages. This is only necessary for building and not required to use the engine. You can install these packages globally with the following commands...
+
+    npm install -g google-closure-compiler
+    npm install -g uglify-js
+    npm install -g roadroller
+    npm install -g ect-bin
+    npm install -g typescript
 
 ## Games Made With LittleJS
 
