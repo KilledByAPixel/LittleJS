@@ -110,7 +110,7 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, col
             if (tileIndex < 0)
             {
                 // if negative tile index, force untextured
-                context.fillStyle = color.rgba();
+                context.fillStyle = color;
                 context.fillRect(-.5, -.5, 1, 1);
             }
             else
@@ -227,9 +227,9 @@ function setBlendMode(additive, useWebGL=glEnable)
  *  @memberof Draw */
 function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault)
 {
-    overlayContext.fillStyle = color.rgba();
+    overlayContext.fillStyle = color;
     overlayContext.lineWidth = lineWidth *= cameraScale;
-    overlayContext.strokeStyle = lineColor.rgba();
+    overlayContext.strokeStyle = lineColor;
     overlayContext.textAlign = textAlign;
     overlayContext.font = size + 'px '+ font;
     overlayContext.textBaseline = 'middle';

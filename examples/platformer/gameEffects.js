@@ -203,7 +203,7 @@ function decorateTile(pos)
 
         // make pixel perfect outlines
         const size = i&1 ? vec2(2, 16) : vec2(16, 2);
-        tileLayer.context.fillStyle = levelGroundColor.mutate(.1).rgba();
+        tileLayer.context.fillStyle = levelGroundColor.mutate(.1);
         const drawPos = pos.scale(16)
             .add(vec2(i==1?14:0,(i==0?14:0)))
             .subtract((i&1? vec2(0,8-size.y/2) : vec2(8-size.x/2,0)));
@@ -228,8 +228,8 @@ function drawSky()
 {
     // fill background with a gradient
     const gradient = mainContext.fillStyle = mainContext.createLinearGradient(0, 0, 0, mainCanvas.height);
-    gradient.addColorStop(0, skyColor.rgba());
-    gradient.addColorStop(1, horizonColor.rgba());
+    gradient.addColorStop(0, skyColor);
+    gradient.addColorStop(1, horizonColor);
     mainContext.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
 }
 
@@ -257,7 +257,7 @@ function drawStars()
             (randSeeded(w)+time*speed)%w-extraSpace,
             (randSeeded(h)+time*speed*randSeeded())%h-extraSpace);
 
-        mainContext.fillStyle = color.rgba();
+        mainContext.fillStyle = color;
         if (size < 9)
             mainContext.fillRect(screenPos.x, screenPos.y, size, size);
         else
@@ -285,8 +285,8 @@ function initParallaxLayers()
         const layerColor = levelColor.mutate(.2).lerp(skyColor,.95-i*.15);
         const gradient = tileParallaxLayer.context.fillStyle = 
             tileParallaxLayer.context.createLinearGradient(0,0,0,tileParallaxLayer.canvas.height = parallaxSize.y);
-        gradient.addColorStop(0,layerColor.rgba());
-        gradient.addColorStop(1,layerColor.subtract(new Color(1,1,1,0)).mutate(.1).clamp().rgba());
+        gradient.addColorStop(0,layerColor);
+        gradient.addColorStop(1,layerColor.subtract(new Color(1,1,1,0)).mutate(.1).clamp());
 
         // draw mountains ranges
         let groundLevel = startGroundLevel, groundSlope = rand(-1,1);

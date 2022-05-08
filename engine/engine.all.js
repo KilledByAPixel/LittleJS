@@ -819,15 +819,15 @@ class Color
         ).clamp();
     }
 
-    /** Returns this color expressed as an rgba string
+    /** Returns this color expressed as an CSS color value
      * @return {String} */
-    rgba()      
+    toString()      
     { 
         ASSERT(this.r>=0 && this.r<=1 && this.g>=0 && this.g<=1 && this.b>=0 && this.b<=1 && this.a>=0 && this.a<=1);
         return `rgb(${this.r*255|0},${this.g*255|0},${this.b*255|0},${this.a})`; 
     }
     
-    /** Returns this color expressed as 32 bit integer value
+    /** Returns this color expressed as 32 bit integer RGBA value
      * @return {Number} */
     rgbaInt()  
     {
@@ -856,12 +856,6 @@ class Color
         ASSERT(this.r>=0 && this.r<=1 && this.g>=0 && this.g<=1 && this.b>=0 && this.b<=1);
         return this;
     }
-
-    /** Returns this color expressed as a string
-     * @param {float} digits - precision to display
-     * @return {String} */
-    toString(digits=3) 
-    { return `( ${this.r.toFixed(digits)}, ${this.g.toFixed(digits)}, ${this.b.toFixed(digits)}, ${this.a.toFixed(digits)} )`; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1612,7 +1606,7 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, col
             if (tileIndex < 0)
             {
                 // if negative tile index, force untextured
-                context.fillStyle = color.rgba();
+                context.fillStyle = color;
                 context.fillRect(-.5, -.5, 1, 1);
             }
             else
@@ -1729,9 +1723,9 @@ function setBlendMode(additive, useWebGL=glEnable)
  *  @memberof Draw */
 function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault)
 {
-    overlayContext.fillStyle = color.rgba();
+    overlayContext.fillStyle = color;
     overlayContext.lineWidth = lineWidth *= cameraScale;
-    overlayContext.strokeStyle = lineColor.rgba();
+    overlayContext.strokeStyle = lineColor;
     overlayContext.textAlign = textAlign;
     overlayContext.font = size + 'px '+ font;
     overlayContext.textBaseline = 'middle';
@@ -3079,7 +3073,7 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
             if (tileIndex < 0)
             {
                 // untextured
-                context.fillStyle = color.rgba();
+                context.fillStyle = color;
                 context.fillRect(-.5, -.5, 1, 1);
             }
             else
@@ -4062,7 +4056,7 @@ gl_VERTEX_BYTE_STRIDE = (4 * 2) * 2 + (4) * 2; // vec2 * 2 + (char * 4) * 2
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.2.7';
+const engineVersion = '1.2.8';
 
 /** Frames per second to update objects
  *  @default */

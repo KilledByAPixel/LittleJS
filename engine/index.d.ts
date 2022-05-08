@@ -634,10 +634,10 @@ declare class Color {
      * @param {Number} [alphaAmount=0]
      * @return {Color} */
     mutate(amount?: number, alphaAmount?: number): Color;
-    /** Returns this color expressed as an rgba string
+    /** Returns this color expressed as an CSS color value
      * @return {String} */
-    rgba(): string;
-    /** Returns this color expressed as 32 bit integer value
+    toString(): string;
+    /** Returns this color expressed as 32 bit integer RGBA value
      * @return {Number} */
     rgbaInt(): number;
     /** Returns this color expressed as a hex code
@@ -647,10 +647,6 @@ declare class Color {
      * @param {String} hex - html hex code
      * @return {Color} */
     setHex(hex: string): Color;
-    /** Returns this color expressed as a string
-     * @param {float} digits - precision to display
-     * @return {String} */
-    toString(digits?: float): string;
 }
 /**
  * Timer object tracks how long has passed since it was set
@@ -1619,7 +1615,7 @@ declare const gl_VERTEX_BYTE_STRIDE: number;
 /** Name of engine */
 declare const engineName: "LittleJS";
 /** Version of engine */
-declare const engineVersion: "1.2.7";
+declare const engineVersion: "1.2.8";
 /** Frames per second to update objects
  *  @default */
 declare const frameRate: 60;

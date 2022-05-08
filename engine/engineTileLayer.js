@@ -320,7 +320,7 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
             if (tileIndex < 0)
             {
                 // untextured
-                context.fillStyle = color.rgba();
+                context.fillStyle = color;
                 context.fillRect(-.5, -.5, 1, 1);
             }
             else

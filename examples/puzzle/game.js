@@ -43,7 +43,7 @@ function gameInit()
 {
     // setup canvas
     canvasFixedSize = vec2(1920, 1080); // 1080p
-    mainCanvas.style.background = backgroundColor.rgba();
+    mainCanvas.style.background = backgroundColor;
 
     // load high score
     bestScore = localStorage[highScoreKey] || 0;
