@@ -79,7 +79,7 @@ copy engine.all.release.js %OUTPUT_FILENAME%
 
 rem check code with closure
 move %OUTPUT_FILENAME% %OUTPUT_FILENAME%.temp
-call google-closure-compiler --js %OUTPUT_FILENAME%.temp --js_output_file %OUTPUT_FILENAME% --language_out ECMASCRIPT_2019 --warning_level VERBOSE --jscomp_off *
+call npx google-closure-compiler --js=%OUTPUT_FILENAME%.temp --js_output_file=%OUTPUT_FILENAME% --language_out=ECMASCRIPT_2019 --warning_level=VERBOSE --jscomp_off=*
 del %OUTPUT_FILENAME%.temp
 if %ERRORLEVEL% NEQ 0 (
     pause
@@ -87,7 +87,7 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 rem lightly minify with uglify
-call uglifyjs -o %OUTPUT_FILENAME% -- %OUTPUT_FILENAME%
+call npx uglifyjs -o %OUTPUT_FILENAME% -- %OUTPUT_FILENAME%
 if %ERRORLEVEL% NEQ 0 (
     pause
     exit /b %ERRORLEVEL%
@@ -95,7 +95,7 @@ if %ERRORLEVEL% NEQ 0 (
 
 rem --- BUILD TYPESCRIPT DEFINITIONS ---
 
-call tsc engine.all.js --declaration --allowJs --emitDeclarationOnly --outFile index.d.ts
+call npx tsc engine.all.js --declaration --allowJs --emitDeclarationOnly --outFile index.d.ts
 if %ERRORLEVEL% NEQ 0 (
     pause
     exit /b %ERRORLEVEL%

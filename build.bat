@@ -1,6 +1,6 @@
 rem Simple build script for LittleJS by Frank Force
 rem Minfies and combines index.html and index.js and zips the result
-rem See the readme for a list of required dependencies.
+rem Run buildSetup.bat to install required dependencies.
 
 set NAME=game
 set BUILD_FOLDER=build
@@ -34,7 +34,7 @@ copy ..\tiles.png tiles.png
 
 rem minify code with closure
 move %BUILD_FILENAME% %BUILD_FILENAME%.temp
-call google-closure-compiler --js %BUILD_FILENAME%.temp --js_output_file %BUILD_FILENAME% --compilation_level ADVANCED --language_out ECMASCRIPT_2019 --warning_level VERBOSE --jscomp_off * --assume_function_wrapper
+call npx google-closure-compiler --js=%BUILD_FILENAME%.temp --js_output_file=%BUILD_FILENAME% --compilation_level=ADVANCED --language_out=ECMASCRIPT_2019 --warning_level=VERBOSE --jscomp_off=* --assume_function_wrapper
 if %ERRORLEVEL% NEQ 0 (
     pause
     exit /b %ERRORLEVEL%
@@ -42,7 +42,7 @@ if %ERRORLEVEL% NEQ 0 (
 del %BUILD_FILENAME%.temp
 
 rem more minification with uglify or terser (they both do about the same)
-call uglifyjs -o %BUILD_FILENAME% --compress --mangle -- %BUILD_FILENAME%
+call npx uglifyjs -o %BUILD_FILENAME% --compress --mangle -- %BUILD_FILENAME%
 rem call terser -o %BUILD_FILENAME% --compress --mangle -- %BUILD_FILENAME%
 if %ERRORLEVEL% NEQ 0 (
     pause
@@ -51,7 +51,7 @@ if %ERRORLEVEL% NEQ 0 (
 
 rem roadroaller compresses the code better then zip
 copy %BUILD_FILENAME% roadroller_%BUILD_FILENAME%
-call roadroller roadroller_%BUILD_FILENAME% -o roadroller_%BUILD_FILENAME%
+call npx roadroller roadroller_%BUILD_FILENAME% -o roadroller_%BUILD_FILENAME%
 if %ERRORLEVEL% NEQ 0 (
     pause
     exit /b %ERRORLEVEL%
@@ -64,7 +64,7 @@ type roadroller_%BUILD_FILENAME% >> index.html
 echo ^</script^> >> index.html
 
 rem zip the result, ect is recommended
-call ect -9 -strip -zip ..\%NAME%.zip index.html tiles.png
+call ..\node_modules\ect-bin\vendor\win32\ect.exe -9 -strip -zip ..\%NAME%.zip index.html tiles.png
 if %ERRORLEVEL% NEQ 0 (
     pause
     exit /b %ERRORLEVEL%

@@ -1442,6 +1442,8 @@ declare class ParticleEmitter extends EngineObject {
     fadeRate: number;
     /** @property {Number} - Apply extra randomness percent */
     randomness: number;
+    /** @property {Number} - Do particles collide against tiles */
+    collideTiles: boolean;
     /** @property {Number} - Should particles use addtive blend */
     additive: boolean;
     /** @property {Number} - If set the partile is drawn as a trail, stretched in the drection of velocity */
@@ -1615,7 +1617,7 @@ declare const gl_VERTEX_BYTE_STRIDE: number;
 /** Name of engine */
 declare const engineName: "LittleJS";
 /** Version of engine */
-declare const engineVersion: "1.2.9";
+declare const engineVersion: "1.3.0";
 /** Frames per second to update objects
  *  @default */
 declare const frameRate: 60;
