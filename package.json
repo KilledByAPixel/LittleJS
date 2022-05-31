@@ -1,11 +1,18 @@
 {
   "name": "littlejsengine",
-  "version": "1.2.7",
+  "version": "1.2.9",
   "description": "LittleJS - Tiny and Fast HTML5 Game Engine",
   "main": "engine/engine.all.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/KilledByAPixel/LittleJS.git"
+  },
+  "dependencies": {
+    "google-closure-compiler": "^20220502.0.0",
+    "uglify-js": "^3.15.5",
+    "roadroller": "^2.1.0",
+    "ect-bin": "^1.4.1",
+    "typescript": "^4.7.2"
   },
   "keywords": [
     "HTML5",
