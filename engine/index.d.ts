@@ -643,6 +643,9 @@ declare class Color {
     /** Returns this color expressed as a hex code
      * @return {String} */
     hex(): string;
+    /** Returns this color expressed in hsla format
+     * @return {Array} */
+    getHSLA(): any[];
     /** Set this color from a hex code
      * @param {String} hex - html hex code
      * @return {Color} */
@@ -1617,7 +1620,7 @@ declare const gl_VERTEX_BYTE_STRIDE: number;
 /** Name of engine */
 declare const engineName: "LittleJS";
 /** Version of engine */
-declare const engineVersion: "1.3.0";
+declare const engineVersion: "1.3.1";
 /** Frames per second to update objects
  *  @default */
 declare const frameRate: 60;

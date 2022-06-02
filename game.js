@@ -5,8 +5,7 @@
 'use strict';
 
 // popup errors if there are any (help diagnose issues on mobile devices)
-if (debug)
-    onerror = (...parameters)=> alert(parameters);
+//onerror = (...parameters)=> alert(parameters);
 
 // game variables
 let particleEmiter, clickCount = 0;

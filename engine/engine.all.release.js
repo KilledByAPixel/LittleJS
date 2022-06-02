@@ -481,6 +481,34 @@ class Color
         return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b);
     }
 
+    /** Returns this color expressed in hsla format
+     * @return {Array} */
+    getHSLA()
+    {
+        const r = this.r;
+        const g = this.g;
+        const b = this.b;
+        const a = this.a;
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        const l = (max + min) / 2;
+        
+        let h = 0, s = 0;
+        if (max != min)
+        {
+            let d = max - min;
+            s = l > .5 ? d / (2 - max - min) : d / (max + min);
+            if (r == max)
+                h = (g - b) / d + (g < b ? 6 : 0);
+            else if (g == max)
+                h = (b - r) / d + 2;
+            else if (b == max)
+                h =  (r - g) / d + 4;
+        }
+
+        return [h / 6, s, l, a];
+    }
+
     /** Set this color from a hex code
      * @param {String} hex - html hex code
      * @return {Color} */
@@ -542,7 +570,7 @@ class Timer
     
     /** Returns this timer expressed as a string
      * @return {String} */
-    toString() { return this.unset() ? 'unset' : Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ); }
+    toString() { if (debug) { return this.unset() ? 'unset' : Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ); } }
 }
 /**
  * LittleJS Engine Settings
@@ -785,7 +813,7 @@ let medalDisplayIconSize = 50;
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.3.0';
+const engineVersion = '1.3.1';
 
 /** Frames per second to update objects
  *  @default */
@@ -1402,18 +1430,21 @@ class EngineObject
 
     toString()
     {
-        let text = 'type = ' + this.constructor.name;
-        if (this.pos.x || this.pos.y)
-            text += '\npos = ' + this.pos;
-        if (this.velocity.x || this.velocity.y)
-            text += '\nvelocity = ' + this.velocity;
-        if (this.size.x || this.size.y)
-            text += '\nsize = ' + this.size;
-        if (this.angle)
-            text += '\nangle = ' + this.angle.toFixed(3);
-        if (this.color)
-            text += '\ncolor = ' + this.color;
-        return text;
+        if (debug)
+        {
+            let text = 'type = ' + this.constructor.name;
+            if (this.pos.x || this.pos.y)
+                text += '\npos = ' + this.pos;
+            if (this.velocity.x || this.velocity.y)
+                text += '\nvelocity = ' + this.velocity;
+            if (this.size.x || this.size.y)
+                text += '\nsize = ' + this.size;
+            if (this.angle)
+                text += '\nangle = ' + this.angle.toFixed(3);
+            if (this.color)
+                text += '\ncolor = ' + this.color;
+            return text;
+        }
     }
 }
 /** 
