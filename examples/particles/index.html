@@ -32,7 +32,7 @@ button
 'use strict';
 
 let particleEditor = 0, particleSystem, particleSystemDiv, particleSystemCode;
-let inputCondense;
+let inputExpand;
 let restartTimer = new Timer();
 const storagePrefix = 'particles_';
 
@@ -42,35 +42,35 @@ function addSetting(name, type, min, max, step, description)
     particleSettings.push({name, type:type||'number', min, max, step, description});
 }
 
-addSetting('emitSize',         '', 0, 1e9, .1);
-addSetting('emitTime',         '', 0, 1e9, .1);
-addSetting('emitRate',         '', 0, 1e9, 1);
-addSetting('emitConeAngle',    '', 0, 1e9, .01);
-addSetting('tileIndex',        '', -1, 1e9, 1);
-addSetting('tileSizeX',        '', 0, 1e9, 1);
-addSetting('tileSizeY',        '', 0, 1e9, 1);
-addSetting('colorStartA',      'color');
-addSetting('colorStartB',      'color');
-addSetting('colorEndA',        'color');
-addSetting('colorEndB',        'color');
-addSetting('colorAlphaStartA', 'alpha', 0,    1,   .01);
-addSetting('colorAlphaStartB', 'alpha', 0,    1,   .01);
-addSetting('colorAlphaEndA',   'alpha', 0,    1,   .01);
-addSetting('colorAlphaEndB',   'alpha', 0,    1,   .01);
-addSetting('particleTime',     '', 0,    1e9, .1);
-addSetting('sizeStart',        '', 0,    1e9, .01);
-addSetting('sizeEnd',          '', 0,    1e9, .01);
-addSetting('speed',            '', 0,    1e9, .01);
-addSetting('angleSpeed',       '', 0,    1e9, .01);
-addSetting('damping',          '', 0,    1,   .01);
-addSetting('angleDamping',     '', 0,    1,   .01);
-addSetting('gravityScale',     '', -1e9, 1e9, .1);
-addSetting('particleConeAngle','', 0,    1e9, .1);
-addSetting('fadeRate',         '', 0,    1,   .01);
-addSetting('randomness',       '', 0,    1,   .01);
-addSetting('collideTiles',     'checkbox');
-addSetting('additive',         'checkbox');
-addSetting('randomColorLinear','checkbox');
+addSetting('emitSize',         '', 0, 1e9, .1, 'World space size of the emitter');
+addSetting('emitTime',         '', 0, 1e9, .1, 'How long to stay alive (0 is forever)');
+addSetting('emitRate',         '', 0, 1e9, 1,  'How many particles per second to spawn, does not emit if 0');
+addSetting('emitConeAngle',    '', 0, 1e9, .01,'Local angle to apply velocity to particles from emitter');
+addSetting('tileIndex',        '', -1, 1e9, 1, 'Tile to use to render object (-1 is untextured)');
+addSetting('tileSizeX',        '', 0, 1e9, 1, 'X Size of texture tile in source pixelss');
+addSetting('tileSizeY',        '', 0, 1e9, 1, 'Y Size of texture tile in source pixelss');
+addSetting('colorStartA',      'color',0,0,0, 'Color at start of life 1');
+addSetting('colorStartB',      'color',0,0,0, 'Color at start of life 2');
+addSetting('colorEndA',        'color',0,0,0, 'Color at end of life 1');
+addSetting('colorEndB',        'color',0,0,0, 'Color at end of life 2');
+addSetting('colorAlphaStartA', 'alpha', 0,    1,   .01, 'Alpha at start of life 1');
+addSetting('colorAlphaStartB', 'alpha', 0,    1,   .01, 'Alpha at start of life 2');
+addSetting('colorAlphaEndA',   'alpha', 0,    1,   .01, 'Alpha at end of life 1');
+addSetting('colorAlphaEndB',   'alpha', 0,    1,   .01, 'Alpha at end of life 2');
+addSetting('particleTime',     '', 0,    1e9, .1, 'How long particles live');
+addSetting('sizeStart',        '', 0,    1e9, .01,'How big are particles at start');
+addSetting('sizeEnd',          '', 0,    1e9, .01,'How big are particles at end');
+addSetting('speed',            '', 0,    1e9, .01,'How fast are particles when spawned');
+addSetting('angleSpeed',       '', 0,    1e9, .01,'How fast are particles rotating');
+addSetting('damping',          '', 0,    1,   .01,'How much to dampen particle speed');
+addSetting('angleDamping',     '', 0,    1,   .01,'How much to dampen particle angular speed');
+addSetting('gravityScale',     '', -1e9, 1e9, .1, 'How much does gravity effect particles');
+addSetting('particleConeAngle','', 0,    1e9, .1, 'Cone for start particle angle');
+addSetting('fadeRate',         '', 0,    1,   .01,'How quickly particles fade in percent of life');
+addSetting('randomness',       '', 0,    1,   .01,'Apply extra randomness percent');
+addSetting('collideTiles',     'checkbox',0,0,0,  'Do particles collide against tiles?');
+addSetting('additive',         'checkbox',0,0,0,  'Should particles use addtive blend?');
+addSetting('randomColorLinear','checkbox',0,0,0,  'Should color be randomized linearly?');
 
 function makeEmitter()
 {
@@ -95,8 +95,10 @@ function gameInit()
     {
         const input = setting.input = document.createElement('input');
         const name = setting.name;
-        input.oninput = (e)=> updateParticles();
         input.type = setting.type == 'alpha' ? 'number' : setting.type;
+        input.title = setting.description;
+        input.oninput = (e)=> updateParticles(setting.type == 'checkbox');
+        input.onblur = (e)=> updateParticles(1);
         if (setting.min !== undefined)
             input.min = setting.min;
         if (setting.max !== undefined)
@@ -135,13 +137,12 @@ function gameInit()
         }
     }
     {
-        inputCondense = document.createElement('input');
-        div.appendChild(inputCondense);
-        inputCondense.checked = 'true';
-        inputCondense.type = 'checkbox';
-        inputCondense.style.width = 'initial';
-        inputCondense.oninput = (e)=> updateParticles();
-        div.appendChild(document.createTextNode(' Condense'));
+        inputExpand = document.createElement('input');
+        div.appendChild(inputExpand);
+        inputExpand.type = 'checkbox';
+        inputExpand.style.width = 'initial';
+        inputExpand.oninput = (e)=> updateParticles(1);
+        div.appendChild(document.createTextNode(' Expand'));
     }
     
     //div.appendChild(document.createTextNode('JavaScript Code... '));
@@ -171,7 +172,7 @@ function gameInit()
     updateParticles();
 }
 
-function updateParticles()
+function updateParticles(shouldUpdateInput)
 {
     for (const setting of particleSettings)
     {
@@ -212,7 +213,7 @@ function updateParticles()
         else
             particleSystem[name] = clamp(inputFloat, setting.min, setting.max);
     }
-    updateInputs();
+    shouldUpdateInput && updateInputs()
 }
 
 function updateInputs(save=1)
@@ -260,7 +261,7 @@ function updateInputs(save=1)
 
 function getCode()
 {
-    const condense = inputCondense.checked;
+    const expand = inputExpand.checked;
     let code = '';
 
     // https://www.codingem.com/javascript-how-to-limit-decimal-places/
@@ -270,10 +271,10 @@ function getCode()
     }
 
     code = 'new ParticleEmitter(';
-    if (condense)
-        code += 'vec2(), 0, ';
-    else
+    if (expand)
         code += '\n  vec2(), 0,\t//position, angle\n';
+    else
+        code += 'vec2(), 0, ';
 
     let count = 0;
     for (const setting of particleSettings)
@@ -296,12 +297,12 @@ function getCode()
             value = particleSystem[name] ? 1 : 0;
         else
             value = particleSystem[name].round(3);
-        if (!condense)
+        if (expand)
             code += '  ';
         code += value;
 
         const isEnd = name == 'randomColorLinear';
-        if (!condense)
+        if (expand)
         {
             code += ',\t// ' + name;
             if (!isEnd)
@@ -311,11 +312,10 @@ function getCode()
             code += ', ';
     }
 
-
-    if (condense)
-        code += ');';
-    else
+    if (expand)
         code += '\n); // particle emitter';
+    else
+        code += ');';
 
     return code;
 }

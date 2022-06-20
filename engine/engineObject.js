@@ -34,7 +34,7 @@ class EngineObject
     /** Create an engine object and adds it to the list of objects
      *  @param {Vector2} [position=new Vector2()]    - World space position of the object
      *  @param {Vector2} [size=objectDefaultSize]    - World space size of the object
-     *  @param {Number}  [tileIndex=-1]              - Tile to use to render object, untextured if -1
+     *  @param {Number}  [tileIndex=-1]              - Tile to use to render object (-1 is untextured)
      *  @param {Vector2} [tileSize=tileSizeDefault]  - Size of tile in source pixels
      *  @param {Number}  [angle=0]                   - Angle the object is rotated by
      *  @param {Color}   [color]                     - Color to apply to tile when rendered
@@ -51,7 +51,7 @@ class EngineObject
         this.size = size;
         /** @property {Vector2} - Size of object used for drawing, uses size if not set */
         this.drawSize;
-        /** @property {Number}  - Tile to use to render object, untextured if -1 */
+        /** @property {Number}  - Tile to use to render object (-1 is untextured) */
         this.tileIndex = tileIndex;
         /** @property {Vector2} - Size of tile in source pixels */
         this.tileSize = tileSize;
@@ -63,7 +63,7 @@ class EngineObject
         this.additiveColor;
 
         // set object defaults
-        /** @property {Number} [mass=objectDefaultMass]                 - How heavy the object is */
+        /** @property {Number} [mass=objectDefaultMass]                 - How heavy the object is, static if 0 */
         this.mass         = objectDefaultMass;
         /** @property {Number} [damping=objectDefaultDamping]           - How much to slow down velocity each frame (0-1) */
         this.damping      = objectDefaultDamping;
