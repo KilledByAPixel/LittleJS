@@ -129,7 +129,9 @@ function gameUpdate()
             else if (mouseIsDown(0) && dragStartPos)
             {
                 // if dragging to a neighbor tile
-                if ((abs(dragStartPos.x - mouseTilePos.x) == 1) ^ (abs(dragStartPos.y - mouseTilePos.y) == 1))
+                const dx = abs(dragStartPos.x - mouseTilePos.x);
+                const dy = abs(dragStartPos.y - mouseTilePos.y);
+                if (dx == 1 && dy == 0 || dx == 0 && dy == 1)
                 {
                     const startTile = getTile(dragStartPos);
                     const endTile =   getTile(mouseTilePos);
