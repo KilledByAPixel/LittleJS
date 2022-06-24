@@ -117,7 +117,7 @@ class EngineObject
         ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
         ASSERT(this.damping >= 0 && this.damping <= 1);
 
-        if (!this.mass) // do not update collision for fixed objects
+        if (!enablePhysicsSolver || !this.mass) // do not update collision for fixed objects
             return;
 
         const wasMovingDown = this.velocity.y < 0;

@@ -989,6 +989,11 @@ let tileFixBleedScale = .3;
  *  @memberof Settings */
 let objectDefaultSize = vec2(1);
 
+/** Enable physics solver for collisions between objects
+ *  @default
+ *  @memberof Settings */
+let enablePhysicsSolver = 1;
+
 /** Default object mass for collison calcuations (how heavy objects are)
  *  @default
  *  @memberof Settings */
@@ -1187,7 +1192,7 @@ class EngineObject
     /** Create an engine object and adds it to the list of objects
      *  @param {Vector2} [position=new Vector2()]    - World space position of the object
      *  @param {Vector2} [size=objectDefaultSize]    - World space size of the object
-     *  @param {Number}  [tileIndex=-1]              - Tile to use to render object, untextured if -1
+     *  @param {Number}  [tileIndex=-1]              - Tile to use to render object (-1 is untextured)
      *  @param {Vector2} [tileSize=tileSizeDefault]  - Size of tile in source pixels
      *  @param {Number}  [angle=0]                   - Angle the object is rotated by
      *  @param {Color}   [color]                     - Color to apply to tile when rendered
@@ -1204,7 +1209,7 @@ class EngineObject
         this.size = size;
         /** @property {Vector2} - Size of object used for drawing, uses size if not set */
         this.drawSize;
-        /** @property {Number}  - Tile to use to render object, untextured if -1 */
+        /** @property {Number}  - Tile to use to render object (-1 is untextured) */
         this.tileIndex = tileIndex;
         /** @property {Vector2} - Size of tile in source pixels */
         this.tileSize = tileSize;
@@ -1216,7 +1221,7 @@ class EngineObject
         this.additiveColor;
 
         // set object defaults
-        /** @property {Number} [mass=objectDefaultMass]                 - How heavy the object is */
+        /** @property {Number} [mass=objectDefaultMass]                 - How heavy the object is, static if 0 */
         this.mass         = objectDefaultMass;
         /** @property {Number} [damping=objectDefaultDamping]           - How much to slow down velocity each frame (0-1) */
         this.damping      = objectDefaultDamping;
@@ -1270,7 +1275,7 @@ class EngineObject
         ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
         ASSERT(this.damping >= 0 && this.damping <= 1);
 
-        if (!this.mass) // do not update collision for fixed objects
+        if (!enablePhysicsSolver || !this.mass) // do not update collision for fixed objects
             return;
 
         const wasMovingDown = this.velocity.y < 0;
@@ -3241,7 +3246,7 @@ class ParticleEmitter extends EngineObject
         // particle settings
         /** @property {Number} - How long particles live */
         this.particleTime      = particleTime;
-        /** @property {Number} -  How big are particles at start */
+        /** @property {Number} - How big are particles at start */
         this.sizeStart         = sizeStart;
         /** @property {Number} - How big are particles at end */
         this.sizeEnd           = sizeEnd;

@@ -53,6 +53,11 @@ let tileFixBleedScale = .3;
  *  @memberof Settings */
 let objectDefaultSize = vec2(1);
 
+/** Enable physics solver for collisions between objects
+ *  @default
+ *  @memberof Settings */
+let enablePhysicsSolver = 1;
+
 /** Default object mass for collison calcuations (how heavy objects are)
  *  @default
  *  @memberof Settings */

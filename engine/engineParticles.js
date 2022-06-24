@@ -113,7 +113,7 @@ class ParticleEmitter extends EngineObject
         // particle settings
         /** @property {Number} - How long particles live */
         this.particleTime      = particleTime;
-        /** @property {Number} -  How big are particles at start */
+        /** @property {Number} - How big are particles at start */
         this.sizeStart         = sizeStart;
         /** @property {Number} - How big are particles at end */
         this.sizeEnd           = sizeEnd;
