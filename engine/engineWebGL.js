@@ -244,7 +244,7 @@ function glFlush()
  *  @memberof WebGL */
 function glCopyToContext(context, forceDraw)
 {
-    if (!glEnable || !glBatchCount) return;
+    if ((!glEnable || !glBatchCount) && !forceDraw) return;
     
     glFlush();
     
