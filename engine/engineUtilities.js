@@ -300,7 +300,7 @@ class Vector2
 
     /** Returns the area this vector covers as a rectangle
      * @return {Number} */
-    area() { return this.x * this.y; }
+    area() { return abs(this.x * this.y); }
 
     /** Returns a new vector that is p percent between this and the vector passed in
      * @param {Vector2} vector
