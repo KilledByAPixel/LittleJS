@@ -192,7 +192,7 @@ class Newgrounds
         cipher && (this.cryptoJS = CryptoJS());
 
         // get session id from url search params
-        const url = new URL(window.location.href);
+        const url = new URL(location.href);
         this.session_id = url.searchParams.get('ngio_session_id') || 0;
 
         if (this.session_id == 0)

@@ -695,7 +695,7 @@ class Vector2
 
     /** Returns the area this vector covers as a rectangle
      * @return {Number} */
-    area() { return this.x * this.y; }
+    area() { return abs(this.x * this.y); }
 
     /** Returns a new vector that is p percent between this and the vector passed in
      * @param {Vector2} vector
@@ -1981,6 +1981,10 @@ let mouseWheel = 0;
  *  @memberof Input */
 let isUsingGamepad = 0;
 
+/** Prevents input continuing to the default browser handling (true by default in release builds)
+ *  @memberof Input */
+let preventDefaultInput = !debug;
+
 /** Returns true if gamepad button is down
  *  @param {Number} button
  *  @param {Number} [gamepad=0]
@@ -2044,7 +2048,7 @@ onkeydown = (e)=>
 {
     if (debug && e.target != document.body) return;
     e.repeat || (inputData[isUsingGamepad = 0][remapKeyCode(e.keyCode)] = 3);
-    debug || e.preventDefault();
+    preventDefaultInput && e.preventDefault();
 }
 onkeyup = (e)=>
 {
@@ -3609,7 +3613,7 @@ class Newgrounds
         cipher && (this.cryptoJS = CryptoJS());
 
         // get session id from url search params
-        const url = new URL(window.location.href);
+        const url = new URL(location.href);
         this.session_id = url.searchParams.get('ngio_session_id') || 0;
 
         if (this.session_id == 0)
@@ -3962,7 +3966,7 @@ function glFlush()
  *  @memberof WebGL */
 function glCopyToContext(context, forceDraw)
 {
-    if (!glEnable || !glBatchCount) return;
+    if ((!glEnable || !glBatchCount) && !forceDraw) return;
     
     glFlush();
     
@@ -4092,7 +4096,7 @@ gl_VERTEX_BYTE_STRIDE = (4 * 2) * 2 + (4) * 2; // vec2 * 2 + (char * 4) * 2
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.3.1';
+const engineVersion = '1.3.2';
 
 /** Frames per second to update objects
  *  @default */

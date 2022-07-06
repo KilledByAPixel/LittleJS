@@ -1099,6 +1099,9 @@ declare let mouseWheel: number;
 /** Returns true if user is using gamepad (has more recently pressed a gamepad button)
  *  @memberof Input */
 declare let isUsingGamepad: number;
+/** Prevents input continuing to the default browser handling (true by default in release builds)
+ *  @memberof Input */
+declare let preventDefaultInput: boolean;
 /** Returns true if gamepad button is down
  *  @param {Number} button
  *  @param {Number} [gamepad=0]
@@ -1624,7 +1627,7 @@ declare const gl_VERTEX_BYTE_STRIDE: number;
 /** Name of engine */
 declare const engineName: "LittleJS";
 /** Version of engine */
-declare const engineVersion: "1.3.1";
+declare const engineVersion: "1.3.2";
 /** Frames per second to update objects
  *  @default */
 declare const frameRate: 60;
