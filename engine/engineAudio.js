@@ -289,8 +289,7 @@ function zzfxG
 )
 {
     // init parameters
-    let PI2 = PI*2, sign = v => v>0?1:-1,
-        startSlide = slide *= 500 * PI2 / zzfxR / zzfxR, b=[],
+    let PI2 = PI*2, startSlide = slide *= 500 * PI2 / zzfxR / zzfxR, b=[],
         startFrequency = frequency *= (1 + randomness*rand(-1,1)) * PI2 / zzfxR,
         t=0, tm=0, i=0, j=1, r=0, c=0, s=0, f, length;
         
@@ -314,15 +313,15 @@ function zzfxG
         {
             s = shape? shape>1? shape>2? shape>3?         // wave shape
                 Math.sin((t%PI2)**3) :                    // 4 noise
-                Math.max(Math.min(Math.tan(t),1),-1):     // 3 tan
+                max(min(Math.tan(t),1),-1):               // 3 tan
                 1-(2*t/PI2%2+2)%2:                        // 2 saw
-                1-4*abs(Math.round(t/PI2)-t/PI2):    // 1 triangle
+                1-4*abs(Math.round(t/PI2)-t/PI2):         // 1 triangle
                 Math.sin(t);                              // 0 sin
                 
             s = (repeatTime ?
                     1 - tremolo + tremolo*Math.sin(PI2*i/repeatTime) // tremolo
                     : 1) *
-                sign(s)*(abs(s)**shapeCurve) *       // curve 0=square, 2=pointy
+                sign(s)*(abs(s)**shapeCurve) *            // curve 0=square, 2=pointy
                 volume * soundVolume * (                  // envelope
                 i < attack ? i/attack :                   // attack
                 i < attack + decay ?                      // decay
@@ -383,7 +382,6 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
   let notFirstBeat;
   let stop;
   let instrument;
-  let pitch;
   let attenuation;
   let outSampleOffset;
   let isSequenceEnd;
@@ -402,7 +400,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
   for (; hasMore; channelIndex++) {
 
     // reset current values
-    sampleBuffer = [hasMore = notFirstBeat = pitch = outSampleOffset = 0];
+    sampleBuffer = [hasMore = notFirstBeat = outSampleOffset = 0];
 
     // for each pattern in sequence
     sequence.forEach((patternIndex, sequenceIndex) => {

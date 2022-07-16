@@ -14,7 +14,7 @@ let particleEmiter, clickCount = 0;
 const sound_click = new Sound([.5,.5]);
 
 // medals
-const medal_example    = new Medal(0, 'Example Medal', 'Medal description goes here.');
+const medal_example = new Medal(0, 'Example Medal', 'Medal description goes here.');
 medalsInit('Hello World');
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -108,17 +108,7 @@ function gameRender()
 function gameRenderPost()
 {
     // draw to overlay canvas for hud rendering
-    const drawText = (text, x, y, size=70) =>
-    {
-        overlayContext.textAlign = 'center';
-        overlayContext.textBaseline = 'top';
-        overlayContext.font = size + 'px arial';
-        overlayContext.fillStyle = '#fff';
-        overlayContext.lineWidth = 3;
-        overlayContext.strokeText(text, x, y);
-        overlayContext.fillText(text, x, y);
-    }
-    drawText('Hello World', overlayCanvas.width/2, 40);
+    drawTextScreen('Hello World', vec2(overlayCanvas.width/2, 80), 80, new Color, 9);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -49,7 +49,7 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b %ERRORLEVEL%
 )
 
-rem roadroaller compresses the code better then zip
+rem roadroller compresses the code better then zip
 copy %BUILD_FILENAME% roadroller_%BUILD_FILENAME%
 call npx roadroller roadroller_%BUILD_FILENAME% -o roadroller_%BUILD_FILENAME%
 if %ERRORLEVEL% NEQ 0 (

@@ -94,7 +94,6 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 rem --- BUILD TYPESCRIPT DEFINITIONS ---
-
 call npx tsc engine.all.js --declaration --allowJs --emitDeclarationOnly --outFile index.d.ts
 if %ERRORLEVEL% NEQ 0 (
     pause

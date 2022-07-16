@@ -70,9 +70,9 @@ let mouseWheel = 0;
  *  @memberof Input */
 let isUsingGamepad = 0;
 
-/** Prevents input continuing to the default browser handling (true by default in release builds)
+/** Prevents input continuing to the default browser handling (false by default)
  *  @memberof Input */
-let preventDefaultInput = !debug;
+let preventDefaultInput = 0;
 
 /** Returns true if gamepad button is down
  *  @param {Number} button

@@ -228,11 +228,12 @@ function setBlendMode(additive, useWebGL=glEnable)
 function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault)
 {
     overlayContext.fillStyle = color;
-    overlayContext.lineWidth = lineWidth *= cameraScale;
+    overlayContext.lineWidth = lineWidth;
     overlayContext.strokeStyle = lineColor;
     overlayContext.textAlign = textAlign;
     overlayContext.font = size + 'px '+ font;
     overlayContext.textBaseline = 'middle';
+    overlayContext.lineJoin = 'round';
 
     pos = pos.copy();
     text.split('\n').forEach(line=>
@@ -255,7 +256,7 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
  *  @memberof Draw */
 function drawText(text, pos, size=1, color, lineWidth, lineColor, textAlign, font)
 {
-    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth, lineColor, textAlign, font);
+    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
