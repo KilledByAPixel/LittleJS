@@ -1285,7 +1285,7 @@ class EngineObject
             const groundSpeed = this.groundObject.velocity ? this.groundObject.velocity.x : 0;
             this.velocity.x = groundSpeed + (this.velocity.x - groundSpeed) * this.friction;
             this.groundObject = 0;
-            //debugPhysics && debugPoint(this.pos.subtract(vec2(0,this.size.y/2)), '#0f0');
+            //debugOverlay && debugPhysics && debugPoint(this.pos.subtract(vec2(0,this.size.y/2)), '#0f0');
         }
 
         if (this.collideSolidObjects)
@@ -1317,7 +1317,7 @@ class EngineObject
                     if (o.mass) // push away if not fixed
                         o.velocity = o.velocity.subtract(velocity);
                         
-                    debugPhysics && debugAABB(this.pos, this.size, o.pos, o.size, '#f00');
+                    debugOverlay && debugPhysics && debugAABB(this.pos, this.size, o.pos, o.size, '#f00');
                     continue;
                 }
 
@@ -1380,7 +1380,7 @@ class EngineObject
                     else // bounce if other object is fixed
                         this.velocity.x *= -this.elasticity;
                 }
-                debugPhysics && debugAABB(this.pos, this.size, o.pos, o.size, '#f0f');
+                debugOverlay && debugPhysics && debugAABB(this.pos, this.size, o.pos, o.size, '#f0f');
             }
         }
         if (this.collideTiles)
@@ -1768,7 +1768,7 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
     overlayContext.lineJoin = 'round';
 
     pos = pos.copy();
-    text.split('\n').forEach(line=>
+    (text+'').split('\n').forEach(line=>
     {
         lineWidth && overlayContext.strokeText(line, pos.x, pos.y);
         overlayContext.fillText(line, pos.x, pos.y);
@@ -4095,7 +4095,7 @@ gl_VERTEX_BYTE_STRIDE = (4 * 2) * 2 + (4) * 2; // vec2 * 2 + (char * 4) * 2
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.3.3';
+const engineVersion = '1.3.4';
 
 /** Frames per second to update objects
  *  @default */

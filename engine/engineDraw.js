@@ -236,7 +236,7 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
     overlayContext.lineJoin = 'round';
 
     pos = pos.copy();
-    text.split('\n').forEach(line=>
+    (text+'').split('\n').forEach(line=>
     {
         lineWidth && overlayContext.strokeText(line, pos.x, pos.y);
         overlayContext.fillText(line, pos.x, pos.y);
