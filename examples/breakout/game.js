@@ -57,11 +57,11 @@ function gameRenderPost()
 {
     // use built in image font for text
     const font = new FontImage;
-    font.drawText('Score: ' + score, cameraPos.add(vec2(0,22)), .2);
+    font.drawText('Score: ' + score, cameraPos.add(vec2(0,22)), .2, 1);
     if (!blockCount)
-        font.drawText('You Win!', cameraPos.add(vec2(0,-5)), .25);
+        font.drawText('You Win!', cameraPos.add(vec2(0,-5)), .25, 1);
     else if (!ball)
-        font.drawText('Click to Play', cameraPos.add(vec2(0,-5)), .25);
+        font.drawText('Click to Play', cameraPos.add(vec2(0,-5)), .25, 1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

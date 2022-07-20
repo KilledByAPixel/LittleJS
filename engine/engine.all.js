@@ -1839,7 +1839,7 @@ class FontImage
      *  @param {Number}  [scale=4]
      *  @param {Boolean} [center]
      */
-    drawTextScreen(text, pos, scale=4, center=1)
+    drawTextScreen(text, pos, scale=4, center)
     {
         const context = this.context;
         context.save();
