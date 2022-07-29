@@ -8,7 +8,7 @@
 //onerror = (...parameters)=> alert(parameters);
 
 // game variables
-let particleEmiter, clickCount = 0;
+let particleEmiter;
 
 // sound effects
 const sound_click = new Sound([.5,.5]);
@@ -21,13 +21,13 @@ medalsInit('Hello World');
 function gameInit()
 {
     // create tile collision and visible tile layer
-    initTileCollision(vec2(32,16));
+    initTileCollision(vec2(32, 16));
     const tileLayer = new TileLayer(vec2(), tileCollisionSize);
     const pos = vec2();
 
     // get level data from the tiles image
     const imageLevelDataRow = 1;
-    mainContext.drawImage(tileImage,0,0);
+    mainContext.drawImage(tileImage, 0, 0);
     for (pos.x = tileCollisionSize.x; pos.x--;)
     for (pos.y = tileCollisionSize.y; pos.y--;)
     {
@@ -64,8 +64,8 @@ function gameInit()
         .99, 1, 1, PI, .05,     // damping, angleDamping, gravityScale, particleCone, fadeRate, 
         .5, 1, 1                // randomness, collide, additive, randomColorLinear, renderOrder
     );
-    particleEmiter.elasticity = .3;
-    particleEmiter.trailScale = 2;
+    particleEmiter.elasticity = .3; // bounce when it collides
+    particleEmiter.trailScale = 2;  // stretch in direction of motion
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -76,7 +76,7 @@ function gameUpdate()
         // play sound when mouse is pressed
         sound_click.play(mousePos);
 
-        // change particle color
+        // change particle color and set to fade out
         particleEmiter.colorStartA = new Color;
         particleEmiter.colorStartB = randColor();
         particleEmiter.colorEndA = particleEmiter.colorStartA.scale(1,0);
@@ -87,7 +87,7 @@ function gameUpdate()
     }
 
     // move particles to mouse location if on screen
-    if (mousePosScreen.x || mousePosScreen.y)
+    if (mousePosScreen.x)
         particleEmiter.pos = mousePos;
 }
 

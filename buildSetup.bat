@@ -5,3 +5,6 @@ call npm install uglify-js
 call npm install roadroller
 call npm install ect-bin
 call npm install typescript
+
+echo Finishd installing LittleJS build dependencies.
+pause

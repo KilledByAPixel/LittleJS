@@ -240,7 +240,7 @@ declare const enableAsserts: 1;
  *  @default
  *  @memberof Debug */
 declare const debugPointSize: 0.5;
-/** True if watermark with FPS should be down
+/** True if watermark with FPS should be down, false in release builds
  *  @default
  *  @memberof Debug */
 declare let showWatermark: number;
@@ -1627,7 +1627,7 @@ declare const gl_VERTEX_BYTE_STRIDE: number;
 /** Name of engine */
 declare const engineName: "LittleJS";
 /** Version of engine */
-declare const engineVersion: "1.3.4";
+declare const engineVersion: "1.3.5";
 /** Frames per second to update objects
  *  @default */
 declare const frameRate: 60;

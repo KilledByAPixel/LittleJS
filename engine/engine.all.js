@@ -30,7 +30,7 @@ const enableAsserts = 1;
  *  @memberof Debug */
 const debugPointSize = .5;
 
-/** True if watermark with FPS should be down
+/** True if watermark with FPS should be down, false in release builds
  *  @default
  *  @memberof Debug */
 let showWatermark = 1;
@@ -650,7 +650,7 @@ class Vector2
     /** Returns a new vector in same direction as this one with the length passed in
      * @param {Number} [length=1]
      * @return {Vector2} */
-    normalize(length=1) { const l = this.length(); return l ? this.scale(length/l) : new Vector2(length); }
+    normalize(length=1) { const l = this.length(); return l ? this.scale(length/l) : new Vector2(0, length); }
 
     /** Returns a new vector clamped to length passed in
      * @param {Number} [length=1]
@@ -4095,7 +4095,7 @@ gl_VERTEX_BYTE_STRIDE = (4 * 2) * 2 + (4) * 2; // vec2 * 2 + (char * 4) * 2
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.3.4';
+const engineVersion = '1.3.5';
 
 /** Frames per second to update objects
  *  @default */

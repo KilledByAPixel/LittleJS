@@ -255,7 +255,7 @@ class Vector2
     /** Returns a new vector in same direction as this one with the length passed in
      * @param {Number} [length=1]
      * @return {Vector2} */
-    normalize(length=1) { const l = this.length(); return l ? this.scale(length/l) : new Vector2(length); }
+    normalize(length=1) { const l = this.length(); return l ? this.scale(length/l) : new Vector2(0, length); }
 
     /** Returns a new vector clamped to length passed in
      * @param {Number} [length=1]

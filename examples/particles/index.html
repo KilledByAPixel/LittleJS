@@ -50,13 +50,13 @@ addSetting('tileIndex',        '', -1, 1e9, 1, 'Tile to use to render object (-1
 addSetting('tileSizeX',        '', 0, 1e9, 1, 'X Size of texture tile in source pixelss');
 addSetting('tileSizeY',        '', 0, 1e9, 1, 'Y Size of texture tile in source pixelss');
 addSetting('colorStartA',      'color',0,0,0, 'Color at start of life 1');
+addSetting('colorStartA_alpha', 'alpha', 0,    1,   .01, 'Alpha at start of life 1');
 addSetting('colorStartB',      'color',0,0,0, 'Color at start of life 2');
+addSetting('colorStartB_alpha', 'alpha', 0,    1,   .01, 'Alpha at start of life 2');
 addSetting('colorEndA',        'color',0,0,0, 'Color at end of life 1');
+addSetting('colorEndA_alpha',   'alpha', 0,    1,   .01, 'Alpha at end of life 1');
 addSetting('colorEndB',        'color',0,0,0, 'Color at end of life 2');
-addSetting('colorAlphaStartA', 'alpha', 0,    1,   .01, 'Alpha at start of life 1');
-addSetting('colorAlphaStartB', 'alpha', 0,    1,   .01, 'Alpha at start of life 2');
-addSetting('colorAlphaEndA',   'alpha', 0,    1,   .01, 'Alpha at end of life 1');
-addSetting('colorAlphaEndB',   'alpha', 0,    1,   .01, 'Alpha at end of life 2');
+addSetting('colorEndB_alpha',   'alpha', 0,    1,   .01, 'Alpha at end of life 2');
 addSetting('particleTime',     '', 0,    1e9, .1, 'How long particles live');
 addSetting('sizeStart',        '', 0,    1e9, .01,'How big are particles at start');
 addSetting('sizeEnd',          '', 0,    1e9, .01,'How big are particles at end');
@@ -76,7 +76,7 @@ function makeEmitter()
 {
     particleSystem = new ParticleEmitter(cameraPos);
     particleSystem.emitConeAngle =
-        particleSystem.particleConeAngle = 3.14;
+    particleSystem.particleConeAngle = 3.14;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -93,6 +93,41 @@ function gameInit()
 
     for (const setting of particleSettings)
     {
+        // get default value
+        // todo: clean this up
+        let defaultValue = '';
+        {
+            const name = setting.name;
+            const type = setting.type;
+            
+            if (type == 'color')
+            {
+                const color = particleSystem[name];
+                defaultValue = color.hex();
+            }
+            else if (type == 'alpha')
+            {
+                if (name == 'colorStartA_alpha')
+                    defaultValue = particleSystem.colorStartA.a;
+                else if (name == 'colorStartB_alpha')
+                    defaultValue = particleSystem.colorStartB.a;
+                else if (name == 'colorEndA_alpha')
+                    defaultValue = particleSystem.colorEndA.a;
+                else if (name == 'colorEndB_alpha')
+                    defaultValue = particleSystem.colorEndB.a;
+            }
+            else if (name == 'tileSizeX')
+                defaultValue = particleSystem.tileSize.x;
+            else if (name == 'tileSizeY')
+                defaultValue = particleSystem.tileSize.y;
+            else if (type == 'checkbox')
+                defaultValue = particleSystem[name];
+            else
+                defaultValue = particleSystem[name] || '0';
+        }
+
+        div.appendChild(document.createElement('br'));
+
         const input = setting.input = document.createElement('input');
         const name = setting.name;
         input.type = setting.type == 'alpha' ? 'number' : setting.type;
@@ -107,8 +142,18 @@ function gameInit()
             input.step = setting.step;
         if (name == 'emitConeAngle' || name  == 'particleConeAngle')
             particleSystem[name] = 3.14; // simplify pi
+        
+        const inputReset = document.createElement('button');
+        inputReset.innerText = '♻️';
+        inputReset.onclick = (e)=> 
+        {
+            setting.type == 'checkbox'? 
+                setting.input.checked = defaultValue : 
+                setting.input.value = defaultValue;
+            updateParticles(1);
+        }
+        div.appendChild(inputReset);
 
-        div.appendChild(document.createElement('br'));
         div.appendChild(input);
         div.appendChild(document.createTextNode(' ' + name));
     }
@@ -189,13 +234,13 @@ function updateParticles(shouldUpdateInput)
         }
         else if (type == 'alpha')
         {
-            if (name == 'colorAlphaStartA')
+            if (name == 'colorStartA_alpha')
                 particleSystem.colorStartA.a = clamp(inputFloat);
-            else if (name == 'colorAlphaStartB')
+            else if (name == 'colorStartB_alpha')
                 particleSystem.colorStartB.a = clamp(inputFloat);
-            else if (name == 'colorAlphaEndA')
+            else if (name == 'colorEndA_alpha')
                 particleSystem.colorEndA.a   = clamp(inputFloat);
-            else if (name == 'colorAlphaEndB')
+            else if (name == 'colorEndB_alpha')
                 particleSystem.colorEndB.a   = clamp(inputFloat);
         }
         else if (name == 'tileSizeX')
@@ -219,44 +264,47 @@ function updateParticles(shouldUpdateInput)
 function updateInputs(save=1)
 {
     for (const setting of particleSettings)
-    {
-        const input = setting.input;
-        const name = setting.name;
-        const type = setting.type;
-        
-        if (type == 'color')
-        {
-            const color = particleSystem[name];
-            input.value = color.hex();
-        }
-        else if (type == 'alpha')
-        {
-            if (name == 'colorAlphaStartA')
-                input.value = particleSystem.colorStartA.a;
-            else if (name == 'colorAlphaStartB')
-                input.value = particleSystem.colorStartB.a;
-            else if (name == 'colorAlphaEndA')
-                input.value = particleSystem.colorEndA.a;
-            else if (name == 'colorAlphaEndB')
-                input.value = particleSystem.colorEndB.a;
-        }
-        else if (name == 'tileSizeX')
-            input.value = particleSystem.tileSize.x;
-        else if (name == 'tileSizeY')
-            input.value = particleSystem.tileSize.y;
-        else if (type == 'checkbox')
-            input.checked = particleSystem[name];
-        else
-            input.value = particleSystem[name] || '0';
-
-        if (save)
-        {
-            const storageName = storagePrefix + setting.name;
-            localStorage[storageName] = type == 'checkbox' ? 
-                input.checked : input.value;
-        }
-    }
+        updateSetting(setting, save);
     particleSystemCode.value = getCode();
+}
+
+function updateSetting(setting, save=1)
+{
+    const input = setting.input;
+    const name = setting.name;
+    const type = setting.type;
+    
+    if (type == 'color')
+    {
+        const color = particleSystem[name];
+        input.value = color.hex();
+    }
+    else if (type == 'alpha')
+    {
+        if (name == 'colorStartA_alpha')
+            input.value = particleSystem.colorStartA.a;
+        else if (name == 'colorStartB_alpha')
+            input.value = particleSystem.colorStartB.a;
+        else if (name == 'colorEndA_alpha')
+            input.value = particleSystem.colorEndA.a;
+        else if (name == 'colorEndB_alpha')
+            input.value = particleSystem.colorEndB.a;
+    }
+    else if (name == 'tileSizeX')
+        input.value = particleSystem.tileSize.x;
+    else if (name == 'tileSizeY')
+        input.value = particleSystem.tileSize.y;
+    else if (type == 'checkbox')
+        input.checked = particleSystem[name];
+    else
+        input.value = particleSystem[name] || '0';
+
+    if (save)
+    {
+        const storageName = storagePrefix + setting.name;
+        localStorage[storageName] = type == 'checkbox' ? 
+            input.checked : input.value;
+    }
 }
 
 function getCode()
