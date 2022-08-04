@@ -46,7 +46,9 @@ The hello world example includes a batch file [build.bat](https://github.com/Kil
 
 ## Games Made With LittleJS
 
-- [Space Huggers](https://github.com/KilledByAPixel/SpaceHuggers) - A more developed version of the platformer example
+- [Space Huggers](https://www.newgrounds.com/portal/view/819609) - Run and gun platformer with procedural levels
+- [Space Huggers - JS13k Edition](https://github.com/KilledByAPixel/SpaceHuggers) - Original js13k game with source code
+- [Isletopia](https://store.steampowered.com/app/1861260/Isletopia) - Relaxing strategy game of greenifying barren islands
 - Send me your games!
 
 ![LittleJS Logo](favicon.png)
