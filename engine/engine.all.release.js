@@ -8,9 +8,9 @@
 
 'use strict';
 
+let showWatermark = 0;
+let godMode = 0;
 const debug = 0;
-const showWatermark = 0;
-const godMode = 0;
 const debugOverlay = 0;
 const debugPhysics = 0;
 const debugParticles = 0;
@@ -818,7 +818,7 @@ let medalDisplayIconSize = 50;
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.3.6';
+const engineVersion = '1.3.7';
 
 /** Frames per second to update objects
  *  @default */

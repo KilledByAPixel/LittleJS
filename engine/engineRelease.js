@@ -8,9 +8,9 @@
 
 'use strict';
 
+let showWatermark = 0;
+let godMode = 0;
 const debug = 0;
-const showWatermark = 0;
-const godMode = 0;
 const debugOverlay = 0;
 const debugPhysics = 0;
 const debugParticles = 0;
