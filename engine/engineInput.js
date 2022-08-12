@@ -162,7 +162,7 @@ const mouseToScreen = (mousePos)=>
         return vec2(); // fix bug that can occur if user clicks before page loads
 
     const rect = mainCanvas.getBoundingClientRect();
-    return mainCanvasSize.multiply(
+    return vec2(mainCanvas.width, mainCanvas.height).multiply(
         vec2(percent(mousePos.x, rect.left, rect.right), percent(mousePos.y, rect.top, rect.bottom)));
 }
 

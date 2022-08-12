@@ -53,18 +53,26 @@ let overlayContext;
 let mainCanvasSize = vec2();
 
 /** Convert from screen to world space coordinates
+ *  - if calling outside of render, you may need to manually set mainCanvasSize
  *  @param {Vector2} screenPos
  *  @return {Vector2}
  *  @memberof Draw */
 const screenToWorld = (screenPos)=>
-    screenPos.add(vec2(.5)).subtract(mainCanvasSize.scale(.5)).multiply(vec2(1/cameraScale,-1/cameraScale)).add(cameraPos);
+{
+    ASSERT(mainCanvasSize.x && mainCanvasSize.y, 'mainCanvasSize is invalid');
+    return screenPos.add(vec2(.5)).subtract(mainCanvasSize.scale(.5)).multiply(vec2(1/cameraScale,-1/cameraScale)).add(cameraPos);
+}
 
 /** Convert from world to screen space coordinates
+ *  - if calling outside of render, you may need to manually set mainCanvasSize
  *  @param {Vector2} worldPos
  *  @return {Vector2}
  *  @memberof Draw */
 const worldToScreen = (worldPos)=>
-    worldPos.subtract(cameraPos).multiply(vec2(cameraScale,-cameraScale)).add(mainCanvasSize.scale(.5)).subtract(vec2(.5));
+{
+    ASSERT(mainCanvasSize.x && mainCanvasSize.y, 'mainCanvasSize is invalid');
+    return worldPos.subtract(cameraPos).multiply(vec2(cameraScale,-cameraScale)).add(mainCanvasSize.scale(.5)).subtract(vec2(.5));
+}
 
 /** Draw textured tile centered in world space, with color applied if using WebGL
  *  @param {Vector2} pos                                - Center of the tile in world space

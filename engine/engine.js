@@ -113,6 +113,33 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         timeReal += frameTimeDeltaMS / 1e3;
         frameTimeBufferMS = min(frameTimeBufferMS + !paused * frameTimeDeltaMS, 50); // clamp incase of slow framerate
 
+        if (canvasFixedSize.x)
+        {
+            // clear set fixed size
+            overlayCanvas.width  = mainCanvas.width  = canvasFixedSize.x;
+            overlayCanvas.height = mainCanvas.height = canvasFixedSize.y;
+            
+            // fit to window by adding space on top or bottom if necessary
+            const aspect = innerWidth / innerHeight;
+            const fixedAspect = mainCanvas.width / mainCanvas.height;
+            mainCanvas.style.width  = overlayCanvas.style.width  = aspect < fixedAspect ? '100%' : '';
+            mainCanvas.style.height = overlayCanvas.style.height = aspect < fixedAspect ? '' : '100%';
+            if (glCanvas)
+            {
+                glCanvas.style.width  = mainCanvas.style.width;
+                glCanvas.style.height = mainCanvas.style.height;
+            }
+        }
+        else
+        {
+            // clear and set size to same as window
+             overlayCanvas.width  = mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
+             overlayCanvas.height = mainCanvas.height = min(innerHeight, canvasMaxSize.y);
+        }
+        
+        // save canvas size
+        mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
+
         if (paused)
         {
             // do post update even when paused
@@ -148,30 +175,6 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
             // add the time smoothing back in
             frameTimeBufferMS += deltaSmooth;
-        }
-
-        if (canvasFixedSize.x)
-        {
-            // clear set fixed size
-            mainCanvas.width  = canvasFixedSize.x;
-            mainCanvas.height = canvasFixedSize.y;
-            
-            // fit to window by adding space on top or bottom if necessary
-            const aspect = innerWidth / innerHeight;
-            const fixedAspect = mainCanvas.width / mainCanvas.height;
-            mainCanvas.style.width  = overlayCanvas.style.width  = aspect < fixedAspect ? '100%' : '';
-            mainCanvas.style.height = overlayCanvas.style.height = aspect < fixedAspect ? '' : '100%';
-            if (glCanvas)
-            {
-                glCanvas.style.width  = mainCanvas.style.width;
-                glCanvas.style.height = mainCanvas.style.height;
-            }
-        }
-        else
-        {
-            // clear and set size to same as window
-            mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
-            mainCanvas.height = min(innerHeight, canvasMaxSize.y);
         }
         
         // render sort then render while removing destroyed objects
@@ -212,8 +215,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 // called by engine to setup render system
 function enginePreRender()
 {
-    // save canvas size and clear canvases
-    mainCanvasSize = vec2(overlayCanvas.width = mainCanvas.width, overlayCanvas.height = mainCanvas.height);
+    // save canvas size
+    mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
 
     // disable smoothing for pixel art
     mainContext.imageSmoothingEnabled = !cavasPixelated;

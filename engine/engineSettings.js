@@ -14,7 +14,8 @@
  *  @memberof Settings */
 let canvasMaxSize = vec2(1920, 1200);
 
-/** Fixed size of the canvas, if enabled cavnvas size never changes
+/** Fixed size of the canvas, if enabled canvas size never changes
+ * - you may also need to set mainCanvasSize if using screen space coords in startup
  *  @type {Vector2} 
  *  @default
  *  @memberof Settings */

@@ -695,7 +695,8 @@ declare class Timer {
  *  @default
  *  @memberof Settings */
 declare let canvasMaxSize: Vector2;
-/** Fixed size of the canvas, if enabled cavnvas size never changes
+/** Fixed size of the canvas, if enabled canvas size never changes
+ * - you may also need to set mainCanvasSize if using screen space coords in startup
  *  @type {Vector2}
  *  @default
  *  @memberof Settings */
@@ -991,11 +992,13 @@ declare let overlayContext: CanvasRenderingContext2D;
  *  @memberof Draw */
 declare let mainCanvasSize: Vector2;
 /** Convert from screen to world space coordinates
+ *  - if calling outside of render, you may need to manually set mainCanvasSize
  *  @param {Vector2} screenPos
  *  @return {Vector2}
  *  @memberof Draw */
 declare function screenToWorld(screenPos: Vector2): Vector2;
 /** Convert from world to screen space coordinates
+ *  - if calling outside of render, you may need to manually set mainCanvasSize
  *  @param {Vector2} worldPos
  *  @return {Vector2}
  *  @memberof Draw */
