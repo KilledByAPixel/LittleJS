@@ -409,6 +409,34 @@ class Color
         return this;
     }
 
+    /** Returns this color expressed in hsla format
+     * @return {Array} */
+    getHSLA()
+    {
+        const r = this.r;
+        const g = this.g;
+        const b = this.b;
+        const a = this.a;
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        const l = (max + min) / 2;
+        
+        let h = 0, s = 0;
+        if (max != min)
+        {
+            let d = max - min;
+            s = l > .5 ? d / (2 - max - min) : d / (max + min);
+            if (r == max)
+                h = (g - b) / d + (g < b ? 6 : 0);
+            else if (g == max)
+                h = (b - r) / d + 2;
+            else if (b == max)
+                h =  (r - g) / d + 4;
+        }
+
+        return [h / 6, s, l, a];
+    }
+
     /** Returns a new color that has each component randomly adjusted
      * @param {Number} [amount=.05]
      * @param {Number} [alphaAmount=0]
@@ -440,42 +468,6 @@ class Color
         return (this.r*255|0) + (this.g*255<<8) + (this.b*255<<16) + (this.a*255<<24); 
     }
 
-    /** Returns this color expressed as a hex code
-     * @return {String} */
-    hex()
-    {
-        const toHex = (c)=> ((c=c*255|0)<16 ? '0' : '') + c.toString(16);
-        return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b);
-    }
-
-    /** Returns this color expressed in hsla format
-     * @return {Array} */
-    getHSLA()
-    {
-        const r = this.r;
-        const g = this.g;
-        const b = this.b;
-        const a = this.a;
-        const max = Math.max(r, g, b);
-        const min = Math.min(r, g, b);
-        const l = (max + min) / 2;
-        
-        let h = 0, s = 0;
-        if (max != min)
-        {
-            let d = max - min;
-            s = l > .5 ? d / (2 - max - min) : d / (max + min);
-            if (r == max)
-                h = (g - b) / d + (g < b ? 6 : 0);
-            else if (g == max)
-                h = (b - r) / d + 2;
-            else if (b == max)
-                h =  (r - g) / d + 4;
-        }
-
-        return [h / 6, s, l, a];
-    }
-
     /** Set this color from a hex code
      * @param {String} hex - html hex code
      * @return {Color} */
@@ -488,6 +480,14 @@ class Color
         this.a = 1;
         ASSERT(this.r>=0 && this.r<=1 && this.g>=0 && this.g<=1 && this.b>=0 && this.b<=1);
         return this;
+    }
+
+    /** Returns this color expressed as a hex code
+     * @return {String} */
+    getHex()
+    {
+        const toHex = (c)=> ((c=c*255|0)<16 ? '0' : '') + c.toString(16);
+        return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b);
     }
 }
 

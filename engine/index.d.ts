@@ -629,6 +629,9 @@ declare class Color {
      * @param {Number} [alpha=1]
      * @return {Color} */
     setHSLA(h?: number, s?: number, l?: number, a?: number): Color;
+    /** Returns this color expressed in hsla format
+     * @return {Array} */
+    getHSLA(): any[];
     /** Returns a new color that has each component randomly adjusted
      * @param {Number} [amount=.05]
      * @param {Number} [alphaAmount=0]
@@ -640,16 +643,13 @@ declare class Color {
     /** Returns this color expressed as 32 bit integer RGBA value
      * @return {Number} */
     rgbaInt(): number;
-    /** Returns this color expressed as a hex code
-     * @return {String} */
-    hex(): string;
-    /** Returns this color expressed in hsla format
-     * @return {Array} */
-    getHSLA(): any[];
     /** Set this color from a hex code
      * @param {String} hex - html hex code
      * @return {Color} */
     setHex(hex: string): Color;
+    /** Returns this color expressed as a hex code
+     * @return {String} */
+    getHex(): string;
 }
 /**
  * Timer object tracks how long has passed since it was set
@@ -1627,7 +1627,7 @@ declare const gl_VERTEX_BYTE_STRIDE: number;
 /** Name of engine */
 declare const engineName: "LittleJS";
 /** Version of engine */
-declare const engineVersion: "1.3.5";
+declare const engineVersion: "1.3.6";
 /** Frames per second to update objects
  *  @default */
 declare const frameRate: 60;
