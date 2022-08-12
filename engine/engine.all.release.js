@@ -588,7 +588,8 @@ class Timer
  *  @memberof Settings */
 let canvasMaxSize = vec2(1920, 1200);
 
-/** Fixed size of the canvas, if enabled cavnvas size never changes
+/** Fixed size of the canvas, if enabled canvas size never changes
+ * - you may also need to set mainCanvasSize if using screen space coords in startup
  *  @type {Vector2} 
  *  @default
  *  @memberof Settings */
@@ -909,6 +910,33 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         timeReal += frameTimeDeltaMS / 1e3;
         frameTimeBufferMS = min(frameTimeBufferMS + !paused * frameTimeDeltaMS, 50); // clamp incase of slow framerate
 
+        if (canvasFixedSize.x)
+        {
+            // clear set fixed size
+            overlayCanvas.width  = mainCanvas.width  = canvasFixedSize.x;
+            overlayCanvas.height = mainCanvas.height = canvasFixedSize.y;
+            
+            // fit to window by adding space on top or bottom if necessary
+            const aspect = innerWidth / innerHeight;
+            const fixedAspect = mainCanvas.width / mainCanvas.height;
+            mainCanvas.style.width  = overlayCanvas.style.width  = aspect < fixedAspect ? '100%' : '';
+            mainCanvas.style.height = overlayCanvas.style.height = aspect < fixedAspect ? '' : '100%';
+            if (glCanvas)
+            {
+                glCanvas.style.width  = mainCanvas.style.width;
+                glCanvas.style.height = mainCanvas.style.height;
+            }
+        }
+        else
+        {
+            // clear and set size to same as window
+             overlayCanvas.width  = mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
+             overlayCanvas.height = mainCanvas.height = min(innerHeight, canvasMaxSize.y);
+        }
+        
+        // save canvas size
+        mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
+
         if (paused)
         {
             // do post update even when paused
@@ -944,30 +972,6 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
             // add the time smoothing back in
             frameTimeBufferMS += deltaSmooth;
-        }
-
-        if (canvasFixedSize.x)
-        {
-            // clear set fixed size
-            mainCanvas.width  = canvasFixedSize.x;
-            mainCanvas.height = canvasFixedSize.y;
-            
-            // fit to window by adding space on top or bottom if necessary
-            const aspect = innerWidth / innerHeight;
-            const fixedAspect = mainCanvas.width / mainCanvas.height;
-            mainCanvas.style.width  = overlayCanvas.style.width  = aspect < fixedAspect ? '100%' : '';
-            mainCanvas.style.height = overlayCanvas.style.height = aspect < fixedAspect ? '' : '100%';
-            if (glCanvas)
-            {
-                glCanvas.style.width  = mainCanvas.style.width;
-                glCanvas.style.height = mainCanvas.style.height;
-            }
-        }
-        else
-        {
-            // clear and set size to same as window
-            mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
-            mainCanvas.height = min(innerHeight, canvasMaxSize.y);
         }
         
         // render sort then render while removing destroyed objects
@@ -1008,8 +1012,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 // called by engine to setup render system
 function enginePreRender()
 {
-    // save canvas size and clear canvases
-    mainCanvasSize = vec2(overlayCanvas.width = mainCanvas.width, overlayCanvas.height = mainCanvas.height);
+    // save canvas size
+    mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
 
     // disable smoothing for pixel art
     mainContext.imageSmoothingEnabled = !cavasPixelated;
@@ -1507,18 +1511,26 @@ let overlayContext;
 let mainCanvasSize = vec2();
 
 /** Convert from screen to world space coordinates
+ *  - if calling outside of render, you may need to manually set mainCanvasSize
  *  @param {Vector2} screenPos
  *  @return {Vector2}
  *  @memberof Draw */
 const screenToWorld = (screenPos)=>
-    screenPos.add(vec2(.5)).subtract(mainCanvasSize.scale(.5)).multiply(vec2(1/cameraScale,-1/cameraScale)).add(cameraPos);
+{
+    ASSERT(mainCanvasSize.x && mainCanvasSize.y, 'mainCanvasSize is invalid');
+    return screenPos.add(vec2(.5)).subtract(mainCanvasSize.scale(.5)).multiply(vec2(1/cameraScale,-1/cameraScale)).add(cameraPos);
+}
 
 /** Convert from world to screen space coordinates
+ *  - if calling outside of render, you may need to manually set mainCanvasSize
  *  @param {Vector2} worldPos
  *  @return {Vector2}
  *  @memberof Draw */
 const worldToScreen = (worldPos)=>
-    worldPos.subtract(cameraPos).multiply(vec2(cameraScale,-cameraScale)).add(mainCanvasSize.scale(.5)).subtract(vec2(.5));
+{
+    ASSERT(mainCanvasSize.x && mainCanvasSize.y, 'mainCanvasSize is invalid');
+    return worldPos.subtract(cameraPos).multiply(vec2(cameraScale,-cameraScale)).add(mainCanvasSize.scale(.5)).subtract(vec2(.5));
+}
 
 /** Draw textured tile centered in world space, with color applied if using WebGL
  *  @param {Vector2} pos                                - Center of the tile in world space
@@ -1996,7 +2008,7 @@ const mouseToScreen = (mousePos)=>
         return vec2(); // fix bug that can occur if user clicks before page loads
 
     const rect = mainCanvas.getBoundingClientRect();
-    return mainCanvasSize.multiply(
+    return vec2(mainCanvas.width, mainCanvas.height).multiply(
         vec2(percent(mousePos.x, rect.left, rect.right), percent(mousePos.y, rect.top, rect.bottom)));
 }
 
