@@ -69,6 +69,7 @@ class Medal
         this.description = description;
         this.icon = icon;
         this.image = new Image();
+        this.image.crossOrigin = 'anonymous';
         if (src)
             this.image.src = src;
     }

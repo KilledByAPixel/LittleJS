@@ -26,6 +26,7 @@
  *  @type {Image}
  *  @memberof Draw */
 const tileImage = new Image();
+tileImage.crossOrigin = 'anonymous';
 
 /** The primary 2D canvas visible to the user
  *  @type {HTMLCanvasElement}

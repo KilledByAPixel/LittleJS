@@ -1559,6 +1559,7 @@ class EngineObject
  *  @type {Image}
  *  @memberof Draw */
 const tileImage = new Image();
+tileImage.crossOrigin = 'anonymous';
 
 /** The primary 2D canvas visible to the user
  *  @type {HTMLCanvasElement}
@@ -3498,6 +3499,7 @@ class Medal
         this.description = description;
         this.icon = icon;
         this.image = new Image();
+        this.image.crossOrigin = 'anonymous';
         if (src)
             this.image.src = src;
     }
