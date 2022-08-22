@@ -187,7 +187,7 @@ function drawLine(posA, posB, thickness=.1, color, useWebGL)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);
-    drawRect(posA.add(halfDelta), size, color, halfDelta.angle(), 0, 0, useWebGL);
+    drawRect(posA.add(halfDelta), size, color, halfDelta.angle(), useWebGL);
 }
 
 /** Draw directly to a 2d canvas context in world space
