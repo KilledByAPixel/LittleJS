@@ -14,7 +14,7 @@ let particleEmiter;
 const sound_click = new Sound([.5,.5]);
 
 // medals
-const medal_example = new Medal(0, 'Example Medal', 'Medal description goes here.');
+const medal_example = new Medal(0, 'Example Medal', 'Welcome to LittleJS!');
 medalsInit('Hello World');
 
 ///////////////////////////////////////////////////////////////////////////////

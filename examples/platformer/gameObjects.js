@@ -25,7 +25,7 @@ class GameObject extends EngineObject
         // flash white when damaged
         if (!this.isDead() && this.damageTimer.isSet())
         {
-            const a = .5*percent(this.damageTimer.get(), .15, 0);
+            const a = .5*percent(this.damageTimer, .15, 0);
             this.additiveColor = new Color(a,a,a,0);
         }
         else
@@ -134,7 +134,7 @@ class Enemy extends GameObject
     render()
     {
         // bounce by changing size
-        const bounceTime = this.bounceTime.get()*6;
+        const bounceTime = this.bounceTime*6;
         this.drawSize = vec2(1-.1*Math.sin(bounceTime), 1+.1*Math.sin(bounceTime));
 
         // make bottom flush

@@ -362,7 +362,7 @@ function touchGamepadRender()
         return;
     
     // fade off when not touching or paused
-    const alpha = percent(touchGamepadTimer.get(), 4, 3);
+    const alpha = percent(touchGamepadTimer, 4, 3);
     if (!alpha || paused)
         return;
 

@@ -356,6 +356,28 @@ class Vector2
 ///////////////////////////////////////////////////////////////////////////////
 
 /** 
+ * Create a color object with RGBA values
+ * @param {Number} [r=1]
+ * @param {Number} [g=1]
+ * @param {Number} [b=1]
+ * @param {Number} [a=1]
+ * @return {Color}
+ * @memberof Utilities
+ */
+const colorRGBA = (r, g, b, a)=> new Color(r, g, b, a);
+
+/** 
+ * Create a color object with HSLA values
+ * @param {Number} [h=0]
+ * @param {Number} [s=0]
+ * @param {Number} [l=1]
+ * @param {Number} [a=1]
+ * @return {Color}
+ * @memberof Utilities
+ */
+const colorHSLA = (h, s, l, a)=> new Color().setHSLA(h, s, l, a);
+
+/** 
  * Color object (red, green, blue, alpha) with some helpful functions
  * @example
  * let a = new Color;             // white
@@ -571,6 +593,10 @@ class Timer
     /** Returns this timer expressed as a string
      * @return {String} */
     toString() { if (debug) { return this.unset() ? 'unset' : Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ); } }
+    
+    /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
+     * @return {Number} */
+    valueOf()               { return this.get(); }
 }
 /**
  * LittleJS Engine Settings
@@ -819,7 +845,7 @@ let medalDisplayIconSize = 50;
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.3.8';
+const engineVersion = '1.4.0';
 
 /** Frames per second to update objects
  *  @default */
@@ -1645,7 +1671,7 @@ function drawLine(posA, posB, thickness=.1, color, useWebGL)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);
-    drawRect(posA.add(halfDelta), size, color, halfDelta.angle(), 0, 0, useWebGL);
+    drawRect(posA.add(halfDelta), size, color, halfDelta.angle(), useWebGL);
 }
 
 /** Draw directly to a 2d canvas context in world space
@@ -1662,7 +1688,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainCont
     pos = worldToScreen(pos);
     size = size.scale(cameraScale);
     context.save();
-    context.translate(pos.x+.5|0, pos.y-.5|0);
+    context.translate(pos.x+.5|0, pos.y+.5|0);
     context.rotate(angle);
     context.scale(mirror ? -size.x : size.x, size.y);
     drawFunction(context);
@@ -1782,7 +1808,7 @@ class FontImage
         const size = this.tileSize;
         const drawSize = size.add(this.paddingSize).scale(scale);
         const cols = this.image.width / this.tileSize.x |0;
-        text.split('\n').forEach((line, i)=>
+        (text+'').split('\n').forEach((line, i)=>
         {
             const centerOffset = center ? line.length * size.x * scale / 2 |0 : 0;
             for(let j=line.length; j--;)
@@ -2208,7 +2234,7 @@ function touchGamepadRender()
         return;
     
     // fade off when not touching or paused
-    const alpha = percent(touchGamepadTimer.get(), 4, 3);
+    const alpha = percent(touchGamepadTimer, 4, 3);
     if (!alpha || paused)
         return;
 
@@ -3054,7 +3080,7 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
                 const cols = tileImage.width/tileSize.x;
                 context.globalAlpha = color.a; // only alpha, no color, is supported in this mode
                 context.drawImage(tileImage, 
-                    (tileIndex%cols)*tileSize.x, (tileIndex/cols|0)*tileSize.x, 
+                    (tileIndex%cols)*tileSize.x, (tileIndex/cols|0)*tileSize.y, 
                     tileSize.x, tileSize.y, -.5, -.5, 1, 1);
             }
         });
@@ -3899,7 +3925,7 @@ function glFlush()
  *  @memberof WebGL */
 function glCopyToContext(context, forceDraw)
 {
-    if ((!glEnable || !glBatchCount) && !forceDraw) return;
+    if (!glEnable || !glBatchCount && !forceDraw) return;
     
     glFlush();
     

@@ -204,7 +204,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainCont
     pos = worldToScreen(pos);
     size = size.scale(cameraScale);
     context.save();
-    context.translate(pos.x+.5|0, pos.y-.5|0);
+    context.translate(pos.x+.5|0, pos.y+.5|0);
     context.rotate(angle);
     context.scale(mirror ? -size.x : size.x, size.y);
     drawFunction(context);
@@ -324,7 +324,7 @@ class FontImage
         const size = this.tileSize;
         const drawSize = size.add(this.paddingSize).scale(scale);
         const cols = this.image.width / this.tileSize.x |0;
-        text.split('\n').forEach((line, i)=>
+        (text+'').split('\n').forEach((line, i)=>
         {
             const centerOffset = center ? line.length * size.x * scale / 2 |0 : 0;
             for(let j=line.length; j--;)

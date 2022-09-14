@@ -332,7 +332,7 @@ const debugRender = ()=>
         });
 
         // remove expired pritives
-        debugPrimitives = debugPrimitives.filter(r=>r.time.get()<0);
+        debugPrimitives = debugPrimitives.filter(r=>r.time<0);
     }
 
     {

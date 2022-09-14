@@ -323,6 +323,28 @@ class Vector2
 ///////////////////////////////////////////////////////////////////////////////
 
 /** 
+ * Create a color object with RGBA values
+ * @param {Number} [r=1]
+ * @param {Number} [g=1]
+ * @param {Number} [b=1]
+ * @param {Number} [a=1]
+ * @return {Color}
+ * @memberof Utilities
+ */
+const colorRGBA = (r, g, b, a)=> new Color(r, g, b, a);
+
+/** 
+ * Create a color object with HSLA values
+ * @param {Number} [h=0]
+ * @param {Number} [s=0]
+ * @param {Number} [l=1]
+ * @param {Number} [a=1]
+ * @return {Color}
+ * @memberof Utilities
+ */
+const colorHSLA = (h, s, l, a)=> new Color().setHSLA(h, s, l, a);
+
+/** 
  * Color object (red, green, blue, alpha) with some helpful functions
  * @example
  * let a = new Color;             // white
@@ -538,4 +560,8 @@ class Timer
     /** Returns this timer expressed as a string
      * @return {String} */
     toString() { if (debug) { return this.unset() ? 'unset' : Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ); } }
+    
+    /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
+     * @return {Number} */
+    valueOf()               { return this.get(); }
 }

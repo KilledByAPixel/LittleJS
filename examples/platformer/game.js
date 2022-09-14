@@ -25,7 +25,7 @@ function gameInit()
 function gameUpdate()
 {
     // respawn player
-    if (player.deadTimer.get() > 1)
+    if (player.deadTimer > 1)
     {
         player = new Player(playerStartPos);
         player.velocity = vec2(0,.1);

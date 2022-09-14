@@ -569,6 +569,26 @@ declare class Vector2 {
     toString(digits?: float): string;
 }
 /**
+ * Create a color object with RGBA values
+ * @param {Number} [r=1]
+ * @param {Number} [g=1]
+ * @param {Number} [b=1]
+ * @param {Number} [a=1]
+ * @return {Color}
+ * @memberof Utilities
+ */
+declare function colorRGBA(r?: number, g?: number, b?: number, a?: number): Color;
+/**
+ * Create a color object with HSLA values
+ * @param {Number} [h=0]
+ * @param {Number} [s=0]
+ * @param {Number} [l=1]
+ * @param {Number} [a=1]
+ * @return {Color}
+ * @memberof Utilities
+ */
+declare function colorHSLA(h?: number, s?: number, l?: number, a?: number): Color;
+/**
  * Color object (red, green, blue, alpha) with some helpful functions
  * @example
  * let a = new Color;             // white
@@ -689,6 +709,9 @@ declare class Timer {
     /** Returns this timer expressed as a string
      * @return {String} */
     toString(): string;
+    /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
+     * @return {Number} */
+    valueOf(): number;
 }
 /** The max size of the canvas, centered if window is larger
  *  @type {Vector2}
@@ -1630,7 +1653,7 @@ declare const gl_VERTEX_BYTE_STRIDE: number;
 /** Name of engine */
 declare const engineName: "LittleJS";
 /** Version of engine */
-declare const engineVersion: "1.3.8";
+declare const engineVersion: "1.4.0";
 /** Frames per second to update objects
  *  @default */
 declare const frameRate: 60;
