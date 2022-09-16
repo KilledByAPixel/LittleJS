@@ -47,8 +47,13 @@ The hello world example includes a batch file [build.bat](https://github.com/Kil
 ## Games Made With LittleJS
 
 - [Space Huggers](https://www.newgrounds.com/portal/view/819609) - Run and gun platformer with procedural levels
-- [Space Huggers - JS13k Edition](https://github.com/KilledByAPixel/SpaceHuggers) - Original js13k game with source code
+- [Space Huggers - JS13K Edition](https://github.com/KilledByAPixel/SpaceHuggers) - Original js13k game with source code
 - [Isletopia](https://store.steampowered.com/app/1861260/Isletopia) - Relaxing strategy game of greenifying barren islands
+- [Dead Again](https://js13kgames.com/entries/dead-again) - Top down survial horror by [sanojian & repsej](https://github.com/sanojian/js13k_2022)
+- [Hel's Trial](https://js13kgames.com/entries/hels-trial) - Turn based RPG by [Sebastian Dorn](https://github.com/sebadorn/js13k-2022-death)
+- [Bit Butcher](https://js13kgames.com/entries/bit-butcher) - Survival crafting game by [Deathray Games](https://github.com/deathraygames/bit-butcher)
+- [Necrotic Commander](https://js13kgames.com/entries/necrotic-commander) - Tower defense game by [Daniel Jeffery](https://github.com/d-jeffery/NecroticCommander)
 - Send me your games!
+
 
 ![LittleJS Logo](favicon.png)
