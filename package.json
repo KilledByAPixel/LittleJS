@@ -35,7 +35,7 @@
   "scripts": {
     "check-filesize": "filesize.bat game.zip",
     "build:esm": "node --experimental-modules build-esm.mjs",
-    "build": "build.bat && build:esm && npm run check-filesize"
+    "build": "build.bat && npm run build:esm && npm run check-filesize"
   },
   "dependencies": {
     "ect-bin": "^1.4.1",
