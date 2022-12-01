@@ -43,6 +43,17 @@ To easily include LittleJS in your game, you can use one of the 3 pre-built js f
 
 The hello world example includes a batch file [build.bat](https://github.com/KilledByAPixel/LittleJS/blob/main/build.bat) that compresses everything into a tiny zip file using Google Closure, UglifyJS, Roadroller, and ECT. You must run [buildSetup.bat](https://github.com/KilledByAPixel/LittleJS/blob/main/buildSetup.bat) to install the necessary npm dependencies.
 
+## Debugging
+
+Debug builds of LittleJS have a special menu that can be opened by pressing ~, the tilde key.
+
+- ~: Debug Overlay
+- 1: Debug Physics
+- 2: Debug Particles
+- 3: Debug Gamepads
+- 4: God Mode
+- 5: Save Screenshot
+
 ## Games Made With LittleJS
 
 - [Space Huggers](https://www.newgrounds.com/portal/view/819609) - Run and gun platformer with procedural levels
@@ -53,6 +64,5 @@ The hello world example includes a batch file [build.bat](https://github.com/Kil
 - [Bit Butcher](https://js13kgames.com/entries/bit-butcher) - Survival crafting game by [Deathray Games](https://github.com/deathraygames/bit-butcher)
 - [Necrotic Commander](https://js13kgames.com/entries/necrotic-commander) - Tower defense game by [Daniel Jeffery](https://github.com/d-jeffery/NecroticCommander)
 - Send me your games!
-
 
 ![LittleJS Logo](favicon.png)
