@@ -1846,7 +1846,7 @@ let engineFontImage;
 class FontImage
 {
     /** Create an image font
-     *  @param {Image}   [image] - The image the font is stored in, if undefined the default font is used
+     *  @param {HTMLImageElement}   [image] - The image the font is stored in, if undefined the default font is used
      *  @param {Vector2} [tileSize=vec2(8)] - The size of the font source tiles
      *  @param {Vector2} [paddingSize=vec2(0,1)] - How much extra space to add between characters
      *  @param {Number}  [startTileIndex=0] - Tile index in image where font starts
@@ -1945,6 +1945,7 @@ function toggleFullscreen()
             document.body.mozRequestFullScreen();
     }
 }
+
 /** 
  * LittleJS Input System
  * <br> - Tracks key down, pressed, and released
@@ -4394,7 +4395,9 @@ function engineObjectsCallback(pos, size, callbackFunction, objects=engineObject
     }
 }
 
+// This file contains exports neessary when LittleJS is used as a module
 
+// TODO: Add setters and getters for all variables that devs will need to modify and are currently internal
 const setTileSizeDefault = (v2) => tileSizeDefault = v2;
 const setRandSeed = (s) => randSeed = s;
 const setCameraPos = (pos) => cameraPos = pos;
@@ -4410,6 +4413,8 @@ const getMouseWheel = () => mouseWheel;
 const getUsingGamepad = () => isUsingGamepad;
 const getTileCollisionSize = () => tileCollisionSize;
 
+// This is a full list of everything in engine.all except the gl_ constants
+// TODO: Remove internal variables from this list
 export {
 	// ---------- Custom methods
 	setTileSizeDefault,
@@ -4441,8 +4446,8 @@ export {
 	debugGamepads,
 	debugMedals,
 	debugTakeScreenshot,
-	downloadLink,
-	ASSERT,
+	//downloadLink,
+	//ASSERT,
 	debugRect,
 	debugCircle,
 	debugPoint,
@@ -4564,24 +4569,24 @@ export {
 	gamepadWasPressed,
 	gamepadWasReleased,
 	gamepadStick,
-	inputData,
+	//inputData,
 	inputUpdate,
 	inputUpdatePost,
 	// onkeydown,
 	// onkeyup,
-	remapKeyCode,
+	//remapKeyCode,
 	// onmousedown,
 	// onmouseup,
 	// onmousemove,
 	// onwheel,
 	// oncontextmenu,
 	mouseToScreen,
-	stickData,
+	//stickData,
 	gamepadsUpdate,
 	vibrate,
 	vibrateStop,
 	isTouchDevice,
-	touchGamepadTimer,
+	//touchGamepadTimer,
 	touchGamepadCreate,
 	touchGamepadRender,
 	// sound
@@ -4594,9 +4599,9 @@ export {
 	audioContext,
 	playSamples,
 	zzfx,
-	zzfxR,
-	zzfxG,
-	zzfxM,
+	//zzfxR,
+	//zzfxG,
+	//zzfxM,
 	// tiles
 	tileCollision,
 	tileCollisionSize,
@@ -4619,7 +4624,7 @@ export {
 	Medal,
 	medalsRender,
 	Newgrounds,
-	CryptoJS,
+	//CryptoJS,
 	// WebGL
 	glCanvas,
 	glContext,
@@ -4649,16 +4654,16 @@ export {
 	frameRate,
 	timeDelta,
 	engineObjects,
-	engineObjectsCollide,
+	//engineObjectsCollide,
 	frame,
 	time,
 	timeReal,
 	paused,
-	frameTimeLastMS,
+	//frameTimeLastMS,
 	averageFPS,
-	drawCount,
-	styleBody,
-	styleCanvas,
+	//drawCount,
+	//styleBody,
+	//styleCanvas,
 	engineInit,
 	enginePreRender,
 	engineObjectsUpdate,

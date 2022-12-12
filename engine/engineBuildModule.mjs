@@ -5,7 +5,7 @@ const files = [
 	{ engine: './engine/engine.all.release.js', output: './engine/engine.all.release.module.js' },
 ];
 
-const footerFile = fs.readFileSync('./engine/engine-esm-footer.js');
+const footerFile = fs.readFileSync('./engine/engineExportModule.js');
 
 files.forEach(({ engine, output }) => {
 	const engineFile = fs.readFileSync(engine);

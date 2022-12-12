@@ -1846,7 +1846,7 @@ let engineFontImage;
 class FontImage
 {
     /** Create an image font
-     *  @param {Image}   [image] - The image the font is stored in, if undefined the default font is used
+     *  @param {HTMLImageElement}   [image] - The image the font is stored in, if undefined the default font is used
      *  @param {Vector2} [tileSize=vec2(8)] - The size of the font source tiles
      *  @param {Vector2} [paddingSize=vec2(0,1)] - How much extra space to add between characters
      *  @param {Number}  [startTileIndex=0] - Tile index in image where font starts
@@ -1945,6 +1945,7 @@ function toggleFullscreen()
             document.body.mozRequestFullScreen();
     }
 }
+
 /** 
  * LittleJS Input System
  * <br> - Tracks key down, pressed, and released

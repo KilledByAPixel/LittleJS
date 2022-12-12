@@ -1041,13 +1041,13 @@ declare function worldToScreen(worldPos: Vector2): Vector2;
 declare let engineFontImage: any;
 declare class FontImage {
     /** Create an image font
-     *  @param {Image}   [image] - The image the font is stored in, if undefined the default font is used
+     *  @param {HTMLImageElement}   [image] - The image the font is stored in, if undefined the default font is used
      *  @param {Vector2} [tileSize=vec2(8)] - The size of the font source tiles
      *  @param {Vector2} [paddingSize=vec2(0,1)] - How much extra space to add between characters
      *  @param {Number}  [startTileIndex=0] - Tile index in image where font starts
      *  @param {CanvasRenderingContext2D} [context=overlayContext] - context to draw to
      */
-    constructor(image?: new (width?: number, height?: number) => HTMLImageElement, tileSize?: Vector2, paddingSize?: Vector2, startTileIndex?: number, context?: CanvasRenderingContext2D);
+    constructor(image?: HTMLImageElement, tileSize?: Vector2, paddingSize?: Vector2, startTileIndex?: number, context?: CanvasRenderingContext2D);
     image: any;
     tileSize: Vector2;
     paddingSize: Vector2;
