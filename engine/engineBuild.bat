@@ -79,7 +79,7 @@ copy engine.all.release.js %OUTPUT_FILENAME%
 
 rem check code with closure
 move %OUTPUT_FILENAME% %OUTPUT_FILENAME%.temp
-call npx google-closure-compiler --js=%OUTPUT_FILENAME%.temp --js_output_file=%OUTPUT_FILENAME% --language_out=ECMASCRIPT_2019 --warning_level=VERBOSE --jscomp_off=*
+call npx google-closure-compiler --js=%OUTPUT_FILENAME%.temp --js_output_file=%OUTPUT_FILENAME% --language_out=ECMASCRIPT_2021 --warning_level=VERBOSE --jscomp_off=*
 del %OUTPUT_FILENAME%.temp
 if %ERRORLEVEL% NEQ 0 (
     pause

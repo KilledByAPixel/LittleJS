@@ -34,7 +34,7 @@ copy ..\tiles.png tiles.png
 
 rem minify code with closure
 move %BUILD_FILENAME% %BUILD_FILENAME%.temp
-call npx google-closure-compiler --js=%BUILD_FILENAME%.temp --js_output_file=%BUILD_FILENAME% --compilation_level=ADVANCED --language_out=ECMASCRIPT_2019 --warning_level=VERBOSE --jscomp_off=* --assume_function_wrapper
+call npx google-closure-compiler --js=%BUILD_FILENAME%.temp --js_output_file=%BUILD_FILENAME% --compilation_level=ADVANCED --language_out=ECMASCRIPT_2021 --warning_level=VERBOSE --jscomp_off=* --assume_function_wrapper
 if %ERRORLEVEL% NEQ 0 (
     pause
     exit /b %ERRORLEVEL%
