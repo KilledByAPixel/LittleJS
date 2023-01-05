@@ -19,7 +19,7 @@ const sound_goodMove = new Sound([.4,.2,250,.04,,.04,,,1,,,,,3]);
 const sound_badMove = new Sound([,,700,,,.07,,,,3.7,,,,3,,,.1]);
 const sound_fall = new Sound([.2,,1900,,,.01,,1.4,,91,,,,,,,,,,.7]);
 
-let level, levelSize, levelFall, fallTimer, dragStartPos, comboCount, score, bestScore;
+let level, levelSize, levelFall, fallTimer, dragStartPos, comboCount, score, bestScore, moves;
 
 ///////////////////////////////////////////////////////////////////////////////
 // tiles
@@ -114,6 +114,40 @@ function gameUpdate()
         clearMatches();
         if (!fallTimer.isSet())
         {
+            moves = 0;
+            const pos = vec2();
+            for (let y=0; y<levelSize.y; y++) {
+                pos.y = y;
+                for (let x=0; x<levelSize.x; x++) {
+                    pos.x = x;
+                    const data = getTile(pos);
+                    // move left, 3 in a row
+                    if (x>3 && level[(pos.x-3) + pos.y * levelSize.x] == data && level[(pos.x-2) + pos.y * levelSize.x] == data) moves++;
+                    // move left, 3 in a column
+                    if (x>1 && y>1 && level[(pos.x-1) + (pos.y-1) * levelSize.x] == data && level[(pos.x-1) + (pos.y-2) * levelSize.x] == data) moves++;
+                    else if (x>1 && y>0 && y<levelSize.y-1 && level[(pos.x-1) + (pos.y+1) * levelSize.x] == data && level[(pos.x-1) + (pos.y-1) * levelSize.x] == data) moves++;
+                    else if (x>1 && y<levelSize.y-2 && level[(pos.x-1) + (pos.y+1) * levelSize.x] == data && level[(pos.x-1) + (pos.y+2) * levelSize.x] == data) moves++;
+                    // move right, 3 in a row
+                    if (x<levelSize.x-4 && level[(pos.x+2) + pos.y * levelSize.x] == data && level[(pos.x+3) + pos.y * levelSize.x] == data) moves++;
+                    // move right, 3 in a column
+                    if (x<levelSize.x-2 && y>1 && level[(pos.x+1) + (pos.y-1) * levelSize.x] == data && level[(pos.x+1) + (pos.y-2) * levelSize.x] == data) moves++;
+                    else if (x<levelSize.x-2 && y>0 && y<levelSize.y-1 && level[(pos.x+1) + (pos.y+1) * levelSize.x] == data && level[(pos.x+1) + (pos.y-1) * levelSize.x] == data) moves++;
+                    else if (x<levelSize.x-2 && y<levelSize.y-2 && level[(pos.x+1) + (pos.y+1) * levelSize.x] == data && level[(pos.x+1) + (pos.y+2) * levelSize.x] == data) moves++;
+                    // move down, 3 in a column
+                    if (y>3 && level[pos.x + (pos.y-3) * levelSize.x] == data && level[pos.x + (pos.y-2) * levelSize.x] == data) moves++;
+                    // move down, 3 in a row
+                    if (y>1 && x>1 && level[(pos.x-1) + (pos.y-1) * levelSize.x] == data && level[(pos.x-2) + (pos.y-1) * levelSize.x] == data) moves++;
+                    else if (y>1 && x>0 && x<levelSize.x-1 && level[(pos.x-1) + (pos.y-1) * levelSize.x] == data && level[(pos.x+1) + (pos.y-1) * levelSize.x] == data) moves++;
+                    else if (y>1 && x<levelSize.x-2 && level[(pos.x+1) + (pos.y-1) * levelSize.x] == data && level[(pos.x+2) + (pos.y-1) * levelSize.x] == data) moves++;
+                    // move up, 3 in a column
+                    if (y<levelSize.y-4 && level[pos.x + (pos.y+2) * levelSize.x] == data && level[pos.x + (pos.y+3) * levelSize.x] == data) moves++;
+                    // move up, 3 in a row
+                    if (y<levelSize.y-2 && x>1 && level[(pos.x-2) + (pos.y+1) * levelSize.x] == data && level[(pos.x-1) + (pos.y+1) * levelSize.x] == data) moves++;
+                    else if (y<levelSize.y-2 && x>0 && x<levelSize.x-1 && level[(pos.x-1) + (pos.y+1) * levelSize.x] == data && level[(pos.x+1) + (pos.y+1) * levelSize.x] == data) moves++;
+                    else if (y<levelSize.y-2 && x<levelSize.x-2 && level[(pos.x+1) + (pos.y+1) * levelSize.x] == data && level[(pos.x+2) + (pos.y+1) * levelSize.x] == data) moves++;
+                }
+            }
+
             // mouse/touch control
             const mouseTilePos = mousePos.floor();
             if (!mousePos.arrayCheck(levelSize))
@@ -217,8 +251,9 @@ function gameRender()
 function gameRenderPost()
 {
     // draw text on top of everything
-    drawText('Score: ' + score,    cameraPos.add(vec2(-3,-3.1)), .9, new Color, .1);
-    drawText('Best: ' + bestScore, cameraPos.add(vec2( 3,-3.1)), .9, new Color, .1);
+    drawText('Score: ' + score,    cameraPos.add(vec2(-4,-3.1)), .6, new Color, .1);
+    drawText('Moves: ' + moves,    cameraPos.add(vec2(0,-3.1)), .6, new Color, .1);
+    drawText('Best: ' + bestScore, cameraPos.add(vec2( 4,-3.1)), .6, new Color, .1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
