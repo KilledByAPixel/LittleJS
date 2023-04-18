@@ -57,6 +57,7 @@ Debug builds of LittleJS have a special menu that can be opened by pressing ~, t
 ## Games Made With LittleJS
 
 - [Space Huggers](https://www.newgrounds.com/portal/view/819609) - Run and gun platformer with procedural levels
+- [Undergrowth](https://undergrowth.squidband.uk/) - An interactive music videogame for the band Squid.
 - [Space Huggers - JS13K Edition](https://github.com/KilledByAPixel/SpaceHuggers) - Original js13k game with source code
 - [Isletopia](https://store.steampowered.com/app/1861260/Isletopia) - Relaxing strategy game of greenifying barren islands
 - [Dead Again](https://js13kgames.com/entries/dead-again) - Top down survial horror by [sanojian & repsej](https://github.com/sanojian/js13k_2022)
