@@ -112,7 +112,7 @@ let inputData = [[]];
 function inputUpdate()
 {
     // clear input when lost focus (prevent stuck keys)
-    document.hasFocus() || clearInput();
+    isTouchDevice || document.hasFocus() || clearInput();
 
     // update mouse world space position
     mousePos = screenToWorld(mousePosScreen);
@@ -254,7 +254,7 @@ const isTouchDevice = window.ontouchstart !== undefined;
 if (isTouchDevice)
 {
     // handle all touch events the same way
-    let wasTouching, hadTouchInput;
+    let wasTouching, hadTouch;
     ontouchstart = ontouchmove = ontouchend = (e)=>
     {
         e.button = 0; // all touches are left click
@@ -263,7 +263,8 @@ if (isTouchDevice)
         const touching = e.touches.length;
         if (touching)
         {
-            hadTouchInput || zzfx(0, hadTouchInput=1) ; // fix mobile audio, force it to play a sound the first time
+            // fix mobile audio, force it to play a sound on first touch
+            hadTouch || zzfx(0, hadTouch=1);
 
             // set event pos and pass it along
             e.x = e.touches[0].clientX;
@@ -276,8 +277,8 @@ if (isTouchDevice)
         // set was touching
         wasTouching = touching;
 
-        // prevent normal mouse events from being called
-        return !e.cancelable;
+        // must return true so the document will get focus
+        return true;
     }
 }
 

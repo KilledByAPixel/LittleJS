@@ -22,7 +22,7 @@
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.4.0';
+const engineVersion = '1.4.1';
 
 /** Frames per second to update objects
  *  @default */
@@ -88,7 +88,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
         // init stuff and start engine
         debugInit();
-        glInit();
+        glEnable && glInit();
 
         // create overlay canvas for hud to appear above gl canvas
         document.body.appendChild(overlayCanvas = document.createElement('canvas'));
@@ -108,10 +108,14 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         frameTimeLastMS = frameTimeMS;
         if (debug || showWatermark)
             averageFPS = lerp(.05, averageFPS || 0, 1e3/(frameTimeDeltaMS||1));
+        const debugSpeedUp   = debug && keyIsDown(107); // +
+        const debugSpeedDown = debug && keyIsDown(109); // -
         if (debug)
-            frameTimeDeltaMS *= keyIsDown(107) ? 5 : keyIsDown(109) ? .2 : 1; // +/- to speed/slow time
+            frameTimeDeltaMS *= debugSpeedUp ? 5 : debugSpeedDown ? .2 : 1; // +/- to speed/slow time
         timeReal += frameTimeDeltaMS / 1e3;
-        frameTimeBufferMS = min(frameTimeBufferMS + !paused * frameTimeDeltaMS, 50); // clamp incase of slow framerate
+        frameTimeBufferMS += !paused * frameTimeDeltaMS;
+        if (!debugSpeedUp)
+            frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp incase of slow framerate
 
         if (canvasFixedSize.x)
         {
@@ -187,7 +191,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         medalsRender();
         touchGamepadRender();
         debugRender();
-        glCopyToContext(mainContext);
+        glEnable && glCopyToContext(mainContext);
 
         if (showWatermark)
         {
@@ -222,7 +226,7 @@ function enginePreRender()
     mainContext.imageSmoothingEnabled = !cavasPixelated;
 
     // setup gl rendering if enabled
-    glPreRender(mainCanvas.width, mainCanvas.height, cameraPos.x, cameraPos.y, cameraScale);
+    glEnable && glPreRender(mainCanvas.width, mainCanvas.height, cameraPos.x, cameraPos.y, cameraScale);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

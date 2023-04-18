@@ -34,8 +34,6 @@ let glActiveTexture, glShader, glPositionData, glColorData, glBatchCount, glBatc
 // Init WebGL, called automatically by the engine
 function glInit()
 {
-    if (!glEnable) return;
-
     // create the canvas and tile texture
     glCanvas = document.createElement('canvas');
     glContext = glCanvas.getContext('webgl', {antialias: false});
@@ -93,8 +91,6 @@ function glInit()
  *  @memberof WebGL */
 function glSetBlendMode(additive)
 {
-    if (!glEnable) return;
-        
     // setup blending
     glAdditive = additive;
 }
@@ -105,8 +101,6 @@ function glSetBlendMode(additive)
  *  @memberof WebGL */
 function glSetTexture(texture=glTileTexture)
 {
-    if (!glEnable) return;
-    
     // must flush cache with the old texture to set a new one
     if (texture != glActiveTexture)
         glFlush();
@@ -121,8 +115,6 @@ function glSetTexture(texture=glTileTexture)
  *  @memberof WebGL */
 function glCompileShader(source, type)
 {
-    if (!glEnable) return;
-
     // build the shader
     const shader = glContext.createShader(type);
     glContext.shaderSource(shader, source);
@@ -141,8 +133,6 @@ function glCompileShader(source, type)
  *  @memberof WebGL */
 function glCreateProgram(vsSource, fsSource)
 {
-    if (!glEnable) return;
-
     // build the program
     const program = glContext.createProgram();
     glContext.attachShader(program, glCompileShader(vsSource, gl_VERTEX_SHADER));
@@ -163,8 +153,6 @@ function glCreateProgram(vsSource, fsSource)
  *  @memberof WebGL */
 function glCreateBuffer(bufferType, size, usage)
 {
-    if (!glEnable) return;
-
     // build the buffer
     const buffer = glContext.createBuffer();
     glContext.bindBuffer(bufferType, buffer);
@@ -178,7 +166,7 @@ function glCreateBuffer(bufferType, size, usage)
  *  @memberof WebGL */
 function glCreateTexture(image)
 {
-    if (!glEnable || !image || !image.width) return;
+    if (!image || !image.width) return;
 
     // build the texture
     const texture = glContext.createTexture();
@@ -196,8 +184,6 @@ function glCreateTexture(image)
 // called automatically by engine before render
 function glPreRender(width, height, cameraX, cameraY, cameraScale)
 {
-    if (!glEnable) return;
-
     // clear and set to same size as main canvas
     glContext.viewport(0, 0, glCanvas.width = width, glCanvas.height = height);
     glContext.clear(gl_COLOR_BUFFER_BIT);
@@ -224,7 +210,7 @@ function glPreRender(width, height, cameraX, cameraY, cameraScale)
  *  @memberof WebGL */
 function glFlush()
 {
-    if (!glEnable || !glBatchCount) return;
+    if (!glBatchCount) return;
 
     const destBlend = glBatchAdditive ? gl_ONE : gl_ONE_MINUS_SRC_ALPHA;
     glContext.blendFuncSeparate(gl_SRC_ALPHA, destBlend, gl_ONE, destBlend);
@@ -244,7 +230,7 @@ function glFlush()
  *  @memberof WebGL */
 function glCopyToContext(context, forceDraw)
 {
-    if (!glEnable || !glBatchCount && !forceDraw) return;
+    if (!glBatchCount && !forceDraw) return;
     
     glFlush();
     
@@ -268,8 +254,6 @@ function glCopyToContext(context, forceDraw)
  *  @memberof WebGL */
 function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba=0xffffffff, rgbaAdditive=0)
 {
-    if (!glEnable) return;
-
     // flush if there is no room for more verts or if different blend mode
     if (glBatchCount == gl_MAX_BATCH || glBatchAdditive != glAdditive)
         glFlush();
@@ -328,6 +312,7 @@ gl_ONE_MINUS_SRC_ALPHA = 771,
 gl_BLEND = 3042,
 gl_TEXTURE_2D = 3553,
 gl_UNSIGNED_BYTE = 5121,
+gl_BYTE = 5120,
 gl_FLOAT = 5126,
 gl_RGBA = 6408,
 gl_NEAREST = 9728,
@@ -339,11 +324,13 @@ gl_TEXTURE_WRAP_T = 10243,
 gl_COLOR_BUFFER_BIT = 16384,
 gl_CLAMP_TO_EDGE = 33071,
 gl_ARRAY_BUFFER = 34962,
+gl_STATIC_DRAW = 35044,
 gl_DYNAMIC_DRAW = 35048,
 gl_FRAGMENT_SHADER = 35632, 
 gl_VERTEX_SHADER = 35633,
 gl_COMPILE_STATUS = 35713,
 gl_LINK_STATUS = 35714,
+gl_UNPACK_FLIP_Y_WEBGL = 37440,
 
 // constants for batch rendering
 gl_VERTICES_PER_QUAD = 6,

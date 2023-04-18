@@ -845,7 +845,7 @@ let medalDisplayIconSize = 50;
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.4.0';
+const engineVersion = '1.4.1';
 
 /** Frames per second to update objects
  *  @default */
@@ -911,7 +911,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
         // init stuff and start engine
         debugInit();
-        glInit();
+        glEnable && glInit();
 
         // create overlay canvas for hud to appear above gl canvas
         document.body.appendChild(overlayCanvas = document.createElement('canvas'));
@@ -931,10 +931,14 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         frameTimeLastMS = frameTimeMS;
         if (debug || showWatermark)
             averageFPS = lerp(.05, averageFPS || 0, 1e3/(frameTimeDeltaMS||1));
+        const debugSpeedUp   = debug && keyIsDown(107); // +
+        const debugSpeedDown = debug && keyIsDown(109); // -
         if (debug)
-            frameTimeDeltaMS *= keyIsDown(107) ? 5 : keyIsDown(109) ? .2 : 1; // +/- to speed/slow time
+            frameTimeDeltaMS *= debugSpeedUp ? 5 : debugSpeedDown ? .2 : 1; // +/- to speed/slow time
         timeReal += frameTimeDeltaMS / 1e3;
-        frameTimeBufferMS = min(frameTimeBufferMS + !paused * frameTimeDeltaMS, 50); // clamp incase of slow framerate
+        frameTimeBufferMS += !paused * frameTimeDeltaMS;
+        if (!debugSpeedUp)
+            frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp incase of slow framerate
 
         if (canvasFixedSize.x)
         {
@@ -1010,7 +1014,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         medalsRender();
         touchGamepadRender();
         debugRender();
-        glCopyToContext(mainContext);
+        glEnable && glCopyToContext(mainContext);
 
         if (showWatermark)
         {
@@ -1045,7 +1049,7 @@ function enginePreRender()
     mainContext.imageSmoothingEnabled = !cavasPixelated;
 
     // setup gl rendering if enabled
-    glPreRender(mainCanvas.width, mainCanvas.height, cameraPos.x, cameraPos.y, cameraScale);
+    glEnable && glPreRender(mainCanvas.width, mainCanvas.height, cameraPos.x, cameraPos.y, cameraScale);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1406,7 +1410,7 @@ class EngineObject
      *  @return {Boolean}         - true if the raycast should hit */
     collideWithTileRaycast(tileData, pos) { return tileData > 0; }
 
-    /** Called to check if a tile raycast hit
+    /** Called to check if a object collision should be resolved
      *  @param {EngineObject} object - the object to test against
      *  @return {Boolean}            - true if the collision should be resolved
      */
@@ -1717,21 +1721,21 @@ function setBlendMode(additive, useWebGL=glEnable)
  *  @param {Color}   [lineColor=new Color(0,0,0)]
  *  @param {String}  [textAlign='center']
  *  @memberof Draw */
-function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault)
+function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, context=overlayContext)
 {
-    overlayContext.fillStyle = color;
-    overlayContext.lineWidth = lineWidth;
-    overlayContext.strokeStyle = lineColor;
-    overlayContext.textAlign = textAlign;
-    overlayContext.font = size + 'px '+ font;
-    overlayContext.textBaseline = 'middle';
-    overlayContext.lineJoin = 'round';
+    context.fillStyle = color;
+    context.lineWidth = lineWidth;
+    context.strokeStyle = lineColor;
+    context.textAlign = textAlign;
+    context.font = size + 'px '+ font;
+    context.textBaseline = 'middle';
+    context.lineJoin = 'round';
 
     pos = pos.copy();
     (text+'').split('\n').forEach(line=>
     {
-        lineWidth && overlayContext.strokeText(line, pos.x, pos.y);
-        overlayContext.fillText(line, pos.x, pos.y);
+        lineWidth && context.strokeText(line, pos.x, pos.y);
+        context.fillText(line, pos.x, pos.y);
         pos.y += size;
     });
 }
@@ -1748,7 +1752,7 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
  *  @memberof Draw */
 function drawText(text, pos, size=1, color, lineWidth, lineColor, textAlign, font)
 {
-    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font);
+    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, mainContext);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1985,7 +1989,7 @@ let inputData = [[]];
 function inputUpdate()
 {
     // clear input when lost focus (prevent stuck keys)
-    document.hasFocus() || clearInput();
+    isTouchDevice || document.hasFocus() || clearInput();
 
     // update mouse world space position
     mousePos = screenToWorld(mousePosScreen);
@@ -2127,7 +2131,7 @@ const isTouchDevice = window.ontouchstart !== undefined;
 if (isTouchDevice)
 {
     // handle all touch events the same way
-    let wasTouching, hadTouchInput;
+    let wasTouching, hadTouch;
     ontouchstart = ontouchmove = ontouchend = (e)=>
     {
         e.button = 0; // all touches are left click
@@ -2136,7 +2140,8 @@ if (isTouchDevice)
         const touching = e.touches.length;
         if (touching)
         {
-            hadTouchInput || zzfx(0, hadTouchInput=1) ; // fix mobile audio, force it to play a sound the first time
+            // fix mobile audio, force it to play a sound on first touch
+            hadTouch || zzfx(0, hadTouch=1);
 
             // set event pos and pass it along
             e.x = e.touches[0].clientX;
@@ -2149,8 +2154,8 @@ if (isTouchDevice)
         // set was touching
         wasTouching = touching;
 
-        // prevent normal mouse events from being called
-        return !e.cancelable;
+        // must return true so the document will get focus
+        return true;
     }
 }
 
@@ -3007,7 +3012,7 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
     redrawEnd()
     {
         ASSERT(mainContext == this.context); // must call redrawStart() before drawing tiles
-        glCopyToContext(mainContext, 1);
+        glEnable && glCopyToContext(mainContext, 1);
         //debugSaveCanvas(this.canvas);
 
         // set stuff back to normal
@@ -3416,7 +3421,7 @@ function medalsInit(saveName)
 {
     // check if medals are unlocked
     medalsSaveName = saveName;
-    debugMedals || medals.forEach(medal=> localStorage[medal.storageKey()]);
+    debugMedals || medals.forEach(medal=> medal.unlocked = (localStorage[medal.storageKey()] | 0));
 }
 
 /** 
@@ -3716,8 +3721,6 @@ let glActiveTexture, glShader, glPositionData, glColorData, glBatchCount, glBatc
 // Init WebGL, called automatically by the engine
 function glInit()
 {
-    if (!glEnable) return;
-
     // create the canvas and tile texture
     glCanvas = document.createElement('canvas');
     glContext = glCanvas.getContext('webgl', {antialias: false});
@@ -3775,8 +3778,6 @@ function glInit()
  *  @memberof WebGL */
 function glSetBlendMode(additive)
 {
-    if (!glEnable) return;
-        
     // setup blending
     glAdditive = additive;
 }
@@ -3787,8 +3788,6 @@ function glSetBlendMode(additive)
  *  @memberof WebGL */
 function glSetTexture(texture=glTileTexture)
 {
-    if (!glEnable) return;
-    
     // must flush cache with the old texture to set a new one
     if (texture != glActiveTexture)
         glFlush();
@@ -3803,8 +3802,6 @@ function glSetTexture(texture=glTileTexture)
  *  @memberof WebGL */
 function glCompileShader(source, type)
 {
-    if (!glEnable) return;
-
     // build the shader
     const shader = glContext.createShader(type);
     glContext.shaderSource(shader, source);
@@ -3823,8 +3820,6 @@ function glCompileShader(source, type)
  *  @memberof WebGL */
 function glCreateProgram(vsSource, fsSource)
 {
-    if (!glEnable) return;
-
     // build the program
     const program = glContext.createProgram();
     glContext.attachShader(program, glCompileShader(vsSource, gl_VERTEX_SHADER));
@@ -3845,8 +3840,6 @@ function glCreateProgram(vsSource, fsSource)
  *  @memberof WebGL */
 function glCreateBuffer(bufferType, size, usage)
 {
-    if (!glEnable) return;
-
     // build the buffer
     const buffer = glContext.createBuffer();
     glContext.bindBuffer(bufferType, buffer);
@@ -3860,7 +3853,7 @@ function glCreateBuffer(bufferType, size, usage)
  *  @memberof WebGL */
 function glCreateTexture(image)
 {
-    if (!glEnable || !image || !image.width) return;
+    if (!image || !image.width) return;
 
     // build the texture
     const texture = glContext.createTexture();
@@ -3878,8 +3871,6 @@ function glCreateTexture(image)
 // called automatically by engine before render
 function glPreRender(width, height, cameraX, cameraY, cameraScale)
 {
-    if (!glEnable) return;
-
     // clear and set to same size as main canvas
     glContext.viewport(0, 0, glCanvas.width = width, glCanvas.height = height);
     glContext.clear(gl_COLOR_BUFFER_BIT);
@@ -3906,7 +3897,7 @@ function glPreRender(width, height, cameraX, cameraY, cameraScale)
  *  @memberof WebGL */
 function glFlush()
 {
-    if (!glEnable || !glBatchCount) return;
+    if (!glBatchCount) return;
 
     const destBlend = glBatchAdditive ? gl_ONE : gl_ONE_MINUS_SRC_ALPHA;
     glContext.blendFuncSeparate(gl_SRC_ALPHA, destBlend, gl_ONE, destBlend);
@@ -3926,7 +3917,7 @@ function glFlush()
  *  @memberof WebGL */
 function glCopyToContext(context, forceDraw)
 {
-    if (!glEnable || !glBatchCount && !forceDraw) return;
+    if (!glBatchCount && !forceDraw) return;
     
     glFlush();
     
@@ -3950,8 +3941,6 @@ function glCopyToContext(context, forceDraw)
  *  @memberof WebGL */
 function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba=0xffffffff, rgbaAdditive=0)
 {
-    if (!glEnable) return;
-
     // flush if there is no room for more verts or if different blend mode
     if (glBatchCount == gl_MAX_BATCH || glBatchAdditive != glAdditive)
         glFlush();
@@ -4010,6 +3999,7 @@ gl_ONE_MINUS_SRC_ALPHA = 771,
 gl_BLEND = 3042,
 gl_TEXTURE_2D = 3553,
 gl_UNSIGNED_BYTE = 5121,
+gl_BYTE = 5120,
 gl_FLOAT = 5126,
 gl_RGBA = 6408,
 gl_NEAREST = 9728,
@@ -4021,11 +4011,13 @@ gl_TEXTURE_WRAP_T = 10243,
 gl_COLOR_BUFFER_BIT = 16384,
 gl_CLAMP_TO_EDGE = 33071,
 gl_ARRAY_BUFFER = 34962,
+gl_STATIC_DRAW = 35044,
 gl_DYNAMIC_DRAW = 35048,
 gl_FRAGMENT_SHADER = 35632, 
 gl_VERTEX_SHADER = 35633,
 gl_COMPILE_STATUS = 35713,
 gl_LINK_STATUS = 35714,
+gl_UNPACK_FLIP_Y_WEBGL = 37440,
 
 // constants for batch rendering
 gl_VERTICES_PER_QUAD = 6,

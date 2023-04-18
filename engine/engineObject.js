@@ -296,7 +296,7 @@ class EngineObject
      *  @return {Boolean}         - true if the raycast should hit */
     collideWithTileRaycast(tileData, pos) { return tileData > 0; }
 
-    /** Called to check if a tile raycast hit
+    /** Called to check if a object collision should be resolved
      *  @param {EngineObject} object - the object to test against
      *  @return {Boolean}            - true if the collision should be resolved
      */

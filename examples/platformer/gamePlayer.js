@@ -15,7 +15,8 @@ class Character extends GameObject
     { 
         super(pos, vec2(.6,.95), 32);
 
-        new Weapon(this.lastPos = this.pos, this);
+        this.weapon = new Weapon(pos, this);
+        this.lastPos = pos;
         this.groundTimer        = new Timer;
         this.jumpTimer          = new Timer;
         this.pressedJumpTimer   = new Timer;
@@ -103,8 +104,8 @@ class Character extends GameObject
         else if (moveInput.y)
             this.climbingLadder = 1;
 
-        // update weapon trigger
-        this.weapon.triggerIsDown = this.holdingShoot && !this.dodgeTimer.active();
+        if (this.weapon) // update weapon trigger
+            this.weapon.triggerIsDown = this.holdingShoot && !this.dodgeTimer.active();
 
         // update ladder
         if (this.climbingLadder)
@@ -246,7 +247,8 @@ class Character extends GameObject
         sound_die.play(this.pos);
 
         this.health = 0;
-        this.weapon.destroy();
+        if (this.weapon)
+            this.weapon.destroy();
         this.deadTimer.set();
         this.size = this.size.scale(.5);
         const fallDirection = damagingObject ? sign(damagingObject.velocity.x) : randSign();

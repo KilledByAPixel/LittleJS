@@ -233,21 +233,21 @@ function setBlendMode(additive, useWebGL=glEnable)
  *  @param {Color}   [lineColor=new Color(0,0,0)]
  *  @param {String}  [textAlign='center']
  *  @memberof Draw */
-function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault)
+function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, context=overlayContext)
 {
-    overlayContext.fillStyle = color;
-    overlayContext.lineWidth = lineWidth;
-    overlayContext.strokeStyle = lineColor;
-    overlayContext.textAlign = textAlign;
-    overlayContext.font = size + 'px '+ font;
-    overlayContext.textBaseline = 'middle';
-    overlayContext.lineJoin = 'round';
+    context.fillStyle = color;
+    context.lineWidth = lineWidth;
+    context.strokeStyle = lineColor;
+    context.textAlign = textAlign;
+    context.font = size + 'px '+ font;
+    context.textBaseline = 'middle';
+    context.lineJoin = 'round';
 
     pos = pos.copy();
     (text+'').split('\n').forEach(line=>
     {
-        lineWidth && overlayContext.strokeText(line, pos.x, pos.y);
-        overlayContext.fillText(line, pos.x, pos.y);
+        lineWidth && context.strokeText(line, pos.x, pos.y);
+        context.fillText(line, pos.x, pos.y);
         pos.y += size;
     });
 }
@@ -264,7 +264,7 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
  *  @memberof Draw */
 function drawText(text, pos, size=1, color, lineWidth, lineColor, textAlign, font)
 {
-    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font);
+    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, mainContext);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -206,7 +206,7 @@ class Weapon extends EngineObject
         this.renderOrder = parent.renderOrder + 1;
         this.fireTimeBuffer = this.localAngle = 0;
         this.recoilTimer = new Timer;
-        parent.addChild(parent.weapon = this, vec2(.6,0));
+        parent.addChild(this, vec2(.6,0));
 
         // shell effect
         this.addChild(this.shellEmitter = new ParticleEmitter(

@@ -254,7 +254,7 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
     redrawEnd()
     {
         ASSERT(mainContext == this.context); // must call redrawStart() before drawing tiles
-        glCopyToContext(mainContext, 1);
+        glEnable && glCopyToContext(mainContext, 1);
         //debugSaveCanvas(this.canvas);
 
         // set stuff back to normal

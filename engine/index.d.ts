@@ -70,7 +70,7 @@ declare function setBlendMode(additive?: boolean, useWebGL?: boolean): void;
  *  @param {Color}   [lineColor=new Color(0,0,0)]
  *  @param {String}  [textAlign='center']
  *  @memberof Draw */
-declare function drawTextScreen(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: string, font?: string): void;
+declare function drawTextScreen(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: string, font?: string, context?: CanvasRenderingContext2D): void;
 /** Draw text on overlay canvas in world space
  *  Automatically splits new lines into rows
  *  @param {String}  text
@@ -956,7 +956,7 @@ declare class EngineObject {
      *  @param {Vector2} pos      - tile where the raycast is
      *  @return {Boolean}         - true if the raycast should hit */
     collideWithTileRaycast(tileData: number, pos: Vector2): boolean;
-    /** Called to check if a tile raycast hit
+    /** Called to check if a object collision should be resolved
      *  @param {EngineObject} object - the object to test against
      *  @return {Boolean}            - true if the collision should be resolved
      */
@@ -1630,6 +1630,7 @@ declare const gl_ONE_MINUS_SRC_ALPHA: 771;
 declare const gl_BLEND: 3042;
 declare const gl_TEXTURE_2D: 3553;
 declare const gl_UNSIGNED_BYTE: 5121;
+declare const gl_BYTE: 5120;
 declare const gl_FLOAT: 5126;
 declare const gl_RGBA: 6408;
 declare const gl_NEAREST: 9728;
@@ -1641,11 +1642,13 @@ declare const gl_TEXTURE_WRAP_T: 10243;
 declare const gl_COLOR_BUFFER_BIT: 16384;
 declare const gl_CLAMP_TO_EDGE: 33071;
 declare const gl_ARRAY_BUFFER: 34962;
+declare const gl_STATIC_DRAW: 35044;
 declare const gl_DYNAMIC_DRAW: 35048;
 declare const gl_FRAGMENT_SHADER: 35632;
 declare const gl_VERTEX_SHADER: 35633;
 declare const gl_COMPILE_STATUS: 35713;
 declare const gl_LINK_STATUS: 35714;
+declare const gl_UNPACK_FLIP_Y_WEBGL: 37440;
 declare const gl_VERTICES_PER_QUAD: 6;
 declare const gl_INDICIES_PER_VERT: 6;
 declare const gl_MAX_BATCH: number;
@@ -1653,7 +1656,7 @@ declare const gl_VERTEX_BYTE_STRIDE: number;
 /** Name of engine */
 declare const engineName: "LittleJS";
 /** Version of engine */
-declare const engineVersion: "1.4.0";
+declare const engineVersion: "1.4.1";
 /** Frames per second to update objects
  *  @default */
 declare const frameRate: 60;
