@@ -28,6 +28,7 @@ LittleJS is a super lightweight JavaScript game engine with a fast hybrid render
 - Several easy to understand example projects you can build on
 - Debug tools and debug rendering system
 - [Full documentation](https://killedbyapixel.github.io/LittleJS/docs) automatically generated from the source code block tags with [JSDoc](https://github.com/jsdoc/jsdoc)
+- Apply Shadertoy compatible shaders for post processinge effects.
 - Build system automatically combines everything, minifies, and removes unused code
 - For size coding competitions like [js13kGames](https://js13kgames.com/), starter project builds to a 7KB zip file
 - Easily build a Windows executable with [Electron](https://www.electronjs.org/) for distribution on platforms like Steam
