@@ -20,7 +20,6 @@ let particleEmiter;
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
-    //initPostProcess(); // set up a post processing shader
 
     // create tile collision and visible tile layer
     initTileCollision(vec2(32, 16));
@@ -68,6 +67,8 @@ function gameInit()
     );
     particleEmiter.elasticity = .3; // bounce when it collides
     particleEmiter.trailScale = 2;  // stretch in direction of motion
+
+    initPostProcess(); // set up a post processing shader
 }
 
 ///////////////////////////////////////////////////////////////////////////////

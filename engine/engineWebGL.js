@@ -292,7 +292,7 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba=0xffffff
 ///////////////////////////////////////////////////////////////////////////////
 // post processing - can be enabled to pass other canvases through a final shader
 
-let glPostArrayBuffer, glPostShader, glPostTexture0, glPostTexture1;
+let glPostShader, glPostArrayBuffer, glPostTexture0, glPostTexture1;
 
 /** Set up a post processing shader, this may be slow on some browsers.
  *  @param {String} shaderCode
@@ -340,7 +340,11 @@ function glRenderPostProcess()
     if (!glPostShader)
         return;
     
-    glFlush(); // clear out the buffer
+    const width = mainCanvas.width, height = mainCanvas.height;
+    if (glEnable)
+        glFlush(); // clear out the buffer
+    else
+        glContext.viewport(0, 0, glCanvas.width = width, glCanvas.height = height); // set viewport
 
     // setup shader program to draw one triangle
     glContext.useProgram(glPostShader);
@@ -353,9 +357,12 @@ function glRenderPostProcess()
     glContext.activeTexture(gl_TEXTURE0);
     glContext.bindTexture(gl_TEXTURE_2D, glPostTexture0);
     glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, mainCanvas);
-    glContext.activeTexture(gl_TEXTURE1);
-    glContext.bindTexture(gl_TEXTURE_2D, glPostTexture1);
-    glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, glCanvas);
+    if (glEnable)
+    {
+        glContext.activeTexture(gl_TEXTURE1);
+        glContext.bindTexture(gl_TEXTURE_2D, glPostTexture1);
+        glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, glCanvas);
+    }
 
     // set vertex position attribute
     const vertexByteStride = 8;
@@ -368,7 +375,7 @@ function glRenderPostProcess()
     glContext.uniform1i(uniformLocation('iChannel0'), 0);
     glContext.uniform1i(uniformLocation('iChannel1'), 1); 
     glContext.uniform1f(uniformLocation('iTime'), time);
-    glContext.uniform3f(uniformLocation('iResolution'), glCanvas.width, glCanvas.height, 1);
+    glContext.uniform3f(uniformLocation('iResolution'), width, height, 1);
     glContext.drawArrays(gl_TRIANGLES, 0, 3);
 }
 

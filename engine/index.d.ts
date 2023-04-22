@@ -1625,8 +1625,8 @@ declare let glColorData: any;
 declare let glBatchCount: any;
 declare let glBatchAdditive: any;
 declare let glAdditive: any;
-declare let glPostArrayBuffer: any;
 declare let glPostShader: any;
+declare let glPostArrayBuffer: any;
 declare let glPostTexture0: any;
 declare let glPostTexture1: any;
 declare const gl_ONE: 1;
@@ -1664,7 +1664,7 @@ declare const gl_VERTEX_BYTE_STRIDE: number;
 /** Name of engine */
 declare const engineName: "LittleJS";
 /** Version of engine */
-declare const engineVersion: "1.4.2";
+declare const engineVersion: "1.4.3";
 /** Frames per second to update objects
  *  @default */
 declare const frameRate: 60;
