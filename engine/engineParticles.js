@@ -54,6 +54,7 @@ class ParticleEmitter extends EngineObject
      *  @param {Boolean} [additive=0]           - Should particles use addtive blend
      *  @param {Boolean} [randomColorLinear=1]  - Should color be randomized linearly or across each component
      *  @param {Number}  [renderOrder=0]        - Render order for particles (additive is above other stuff by default)
+     *  @param {Boolean}  [localSpace=0]        - Should it be in local space of emitter (world space is default)
      */
     constructor
     ( 
@@ -83,7 +84,8 @@ class ParticleEmitter extends EngineObject
         collideTiles,
         additive,
         randomColorLinear = 1,
-        renderOrder = additive ? 1e9 : 0
+        renderOrder = additive ? 1e9 : 0,
+        localSpace
     )
     {
         super(pos, new Vector2, tileIndex, tileSize, angle, undefined, renderOrder);
@@ -137,6 +139,8 @@ class ParticleEmitter extends EngineObject
         this.collideTiles      = collideTiles;
         /** @property {Number} - Should particles use addtive blend */
         this.additive          = additive;
+        /** @property {Boolean} - Should it be in local space of emitter */
+        this.localSpace          = localSpace;
         /** @property {Number} - If set the partile is drawn as a trail, stretched in the drection of velocity */
         this.trailScale        = 0;
 
@@ -172,30 +176,38 @@ class ParticleEmitter extends EngineObject
     emitParticle()
     {
         // spawn a particle
-        const pos = this.emitSize.x != undefined ? // check if vec2 was used for size
-            (new Vector2(rand(-.5,.5), rand(-.5,.5))).multiply(this.emitSize).rotate(this.angle) // box emitter
-            : randInCircle(this.emitSize * .5);                                                  // circle emitter
-        const particle = new Particle(this.pos.add(pos), this.tileIndex, this.tileSize, 
-            this.angle + rand(this.particleConeAngle, -this.particleConeAngle));
+        let pos = this.emitSize.x != undefined ? // check if vec2 was used for size
+            (new Vector2(rand(-.5,.5), rand(-.5,.5)))
+                .multiply(this.emitSize).rotate(this.angle) // box emitter
+            : randInCircle(this.emitSize * .5);             // circle emitter
+        let angle = rand(this.particleConeAngle, -this.particleConeAngle);
+        if (!this.localSpace)
+        {
+            pos = this.pos.add(pos);
+            angle += this.angle;
+        }
+            
+        const particle = new Particle(pos, this.tileIndex, this.tileSize, angle);
 
         // randomness scales each paremeter by a percentage
         const randomness = this.randomness;
         const randomizeScale = (v)=> v + v*rand(randomness, -randomness);
 
         // randomize particle settings
-        const particleTime = randomizeScale(this.particleTime);
-        const sizeStart    = randomizeScale(this.sizeStart);
-        const sizeEnd      = randomizeScale(this.sizeEnd);
-        const speed        = randomizeScale(this.speed);
-        const angleSpeed   = randomizeScale(this.angleSpeed) * randSign();
-        const coneAngle    = rand(this.emitConeAngle, -this.emitConeAngle);
-        const colorStart   = randColor(this.colorStartA, this.colorStartB, this.randomColorLinear);
-        const colorEnd     = randColor(this.colorEndA,   this.colorEndB, this.randomColorLinear);
+        const particleTime  = randomizeScale(this.particleTime);
+        const sizeStart     = randomizeScale(this.sizeStart);
+        const sizeEnd       = randomizeScale(this.sizeEnd);
+        const speed         = randomizeScale(this.speed);
+        const angleSpeed    = randomizeScale(this.angleSpeed) * randSign();
+        const coneAngle     = rand(this.emitConeAngle, -this.emitConeAngle);
+        const colorStart    = randColor(this.colorStartA, this.colorStartB, this.randomColorLinear);
+        const colorEnd      = randColor(this.colorEndA,   this.colorEndB, this.randomColorLinear);
+        const velocityAngle = this.localSpace ? coneAngle : this.angle + coneAngle;
 
         // build particle settings
         particle.colorStart    = colorStart;
         particle.colorEndDelta = colorEnd.subtract(colorStart);
-        particle.velocity      = (new Vector2).setAngle(this.angle + coneAngle, speed);
+        particle.velocity      = (new Vector2).setAngle(velocityAngle, speed);
         particle.angleVelocity = angleSpeed;
         particle.lifeTime      = particleTime;
         particle.sizeStart     = sizeStart;
@@ -211,6 +223,7 @@ class ParticleEmitter extends EngineObject
         particle.renderOrder   = this.renderOrder;
         particle.trailScale    = this.trailScale;
         particle.mirror        = rand()<.5;
+        particle.localSpaceEmitter = this.localSpace && this;
 
         // setup callbacks for particles
         particle.destroyCallback = this.particleDestroyCallback;
@@ -257,20 +270,31 @@ class Particle extends EngineObject
 
         // draw the particle
         this.additive && setBlendMode(1);
+
+        let pos = this.pos, angle = this.angle;
+        if (this.localSpaceEmitter)
+        {
+            // in local space of emitter
+            pos = this.localSpaceEmitter.pos.add(pos.rotate(-this.localSpaceEmitter.angle)); 
+            angle += this.localSpaceEmitter.angle;
+        }
         if (this.trailScale)
         {
             // trail style particles
-            const speed = this.velocity.length();
-            const direction = this.velocity.scale(1/speed);
+            let velocity = this.velocity;
+            if (this.localSpaceEmitter)
+                velocity = velocity.rotate(-this.localSpaceEmitter.angle);
+            const speed = velocity.length();
+            const direction = velocity.scale(1/speed);
             const trailLength = speed * this.trailScale;
             size.y = max(size.x, trailLength);
-            this.angle = direction.angle();
-            drawTile(this.pos.add(direction.multiply(vec2(0,-trailLength/2))), size, this.tileIndex, this.tileSize, color, this.angle, this.mirror);
+            angle = direction.angle();
+            drawTile(pos.add(direction.multiply(vec2(0,-trailLength/2))), size, this.tileIndex, this.tileSize, color, angle, this.mirror);
         }
         else
-            drawTile(this.pos, size, this.tileIndex, this.tileSize, color, this.angle, this.mirror);
+            drawTile(pos, size, this.tileIndex, this.tileSize, color, angle, this.mirror);
         this.additive && setBlendMode();
-        debugParticles && debugRect(this.pos, size, '#f005', 0, this.angle);
+        debugParticles && debugRect(pos, size, '#f005', 0, angle);
 
         if (p == 1)
         {

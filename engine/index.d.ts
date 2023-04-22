@@ -1442,8 +1442,9 @@ declare class ParticleEmitter extends EngineObject {
      *  @param {Boolean} [additive=0]           - Should particles use addtive blend
      *  @param {Boolean} [randomColorLinear=1]  - Should color be randomized linearly or across each component
      *  @param {Number}  [renderOrder=0]        - Render order for particles (additive is above other stuff by default)
+     *  @param {Boolean}  [localSpace=0]        - Should it be in local space of emitter (world space is default)
      */
-    constructor(pos: any, angle?: number, emitSize?: number, emitTime?: number, emitRate?: number, emitConeAngle?: number, tileIndex?: number, tileSize?: number, colorStartA?: Color, colorStartB?: Color, colorEndA?: Color, colorEndB?: Color, particleTime?: number, sizeStart?: number, sizeEnd?: number, speed?: number, angleSpeed?: number, damping?: number, angleDamping?: number, gravityScale?: number, particleConeAngle?: number, fadeRate?: number, randomness?: number, collideTiles?: boolean, additive?: boolean, randomColorLinear?: boolean, renderOrder?: number);
+    constructor(pos: any, angle?: number, emitSize?: number, emitTime?: number, emitRate?: number, emitConeAngle?: number, tileIndex?: number, tileSize?: number, colorStartA?: Color, colorStartB?: Color, colorEndA?: Color, colorEndB?: Color, particleTime?: number, sizeStart?: number, sizeEnd?: number, speed?: number, angleSpeed?: number, damping?: number, angleDamping?: number, gravityScale?: number, particleConeAngle?: number, fadeRate?: number, randomness?: number, collideTiles?: boolean, additive?: boolean, randomColorLinear?: boolean, renderOrder?: number, localSpace?: boolean);
     /** @property {Number} - World space size of the emitter (float for circle diameter, vec2 for rect) */
     emitSize: number;
     /** @property {Number} - How long to stay alive (0 is forever) */
@@ -1482,6 +1483,8 @@ declare class ParticleEmitter extends EngineObject {
     collideTiles: boolean;
     /** @property {Number} - Should particles use addtive blend */
     additive: boolean;
+    /** @property {Boolean} - Should it be in local space of emitter */
+    localSpace: boolean;
     /** @property {Number} - If set the partile is drawn as a trail, stretched in the drection of velocity */
     trailScale: number;
     emitTimeBuffer: number;
