@@ -15,6 +15,7 @@ LittleJS is a super lightweight JavaScript game engine with a fast hybrid render
 ### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer) - Platformer/shooter with procedural generation and destruction
 ### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout) - Breakout game with mouse/touch or gamepad control
 ### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress) - Max sprite/object test and music system demo
+### [Particle System Designer](https://killedbyapixel.github.io/LittleJS/examples/particles) - Particle system editor and visualizer
 
 ## Features
 
@@ -28,6 +29,7 @@ LittleJS is a super lightweight JavaScript game engine with a fast hybrid render
 - Several easy to understand example projects you can build on
 - Debug tools and debug rendering system
 - [Full documentation](https://killedbyapixel.github.io/LittleJS/docs) automatically generated from the source code block tags with [JSDoc](https://github.com/jsdoc/jsdoc)
+- Apply Shadertoy compatible shaders for post processinge effects.
 - Build system automatically combines everything, minifies, and removes unused code
 - For size coding competitions like [js13kGames](https://js13kgames.com/), starter project builds to a 7KB zip file
 - Easily build a Windows executable with [Electron](https://www.electronjs.org/) for distribution on platforms like Steam
@@ -35,7 +37,7 @@ LittleJS is a super lightweight JavaScript game engine with a fast hybrid render
 
 ## Builds
 
-To easily include LittleJS in your game, you can use one of the 3 pre-built js files. These are also built automatically by the build scripts..
+To easily include LittleJS in your game, you can use one of the 3 pre-built js files. These are also built automatically by the build scripts.
 
 - [engine.all.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.js) - The full game engine with debug mode available
 - [engine.all.release.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.release.js) - The engine optimized for release builds
@@ -57,7 +59,7 @@ Debug builds of LittleJS have a special menu that can be opened by pressing ~, t
 ## Games Made With LittleJS
 
 - [Space Huggers](https://www.newgrounds.com/portal/view/819609) - Run and gun platformer with procedural levels
-- [Undergrowth](https://undergrowth.squidband.uk/) - An interactive music videogame for the band Squid.
+- [Undergrowth](https://undergrowth.squidband.uk/) - An interactive music videogame for the band Squid
 - [Space Huggers - JS13K Edition](https://github.com/KilledByAPixel/SpaceHuggers) - Original js13k game with source code
 - [Isletopia](https://store.steampowered.com/app/1861260/Isletopia) - Relaxing strategy game of greenifying barren islands
 - [Dead Again](https://js13kgames.com/entries/dead-again) - Top down survial horror by [sanojian & repsej](https://github.com/sanojian/js13k_2022)
