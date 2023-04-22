@@ -27,7 +27,7 @@ let glContext;
 let glTileTexture;
 
 // WebGL internal variables not exposed to documentation
-let glActiveTexture, glShader, glPositionData, glColorData, glBatchCount, glBatchAdditive, glAdditive;
+let glActiveTexture, glShader, glArrayBuffer, glVertexData, glPositionData, glColorData, glBatchCount, glBatchAdditive, glAdditive;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -66,24 +66,11 @@ function glInit()
     );
 
     // init buffers
-    const glVertexData = new ArrayBuffer(gl_MAX_BATCH * gl_VERTICES_PER_QUAD * gl_VERTEX_BYTE_STRIDE);
-    glCreateBuffer(gl_ARRAY_BUFFER, glVertexData.byteLength, gl_DYNAMIC_DRAW);
+    glVertexData = new ArrayBuffer(gl_MAX_BATCH * gl_VERTICES_PER_QUAD * gl_VERTEX_BYTE_STRIDE);
+    glArrayBuffer = glContext.createBuffer();
     glPositionData = new Float32Array(glVertexData);
     glColorData = new Uint32Array(glVertexData);
-
-    // setup the vertex data array
-    let offset = glBatchCount = 0;
-    const initVertexAttribArray = (name, type, typeSize, size, normalize=0)=>
-    {
-        const location = glContext.getAttribLocation(glShader, name);
-        glContext.enableVertexAttribArray(location);
-        glContext.vertexAttribPointer(location, size, type, normalize, gl_VERTEX_BYTE_STRIDE, offset);
-        offset += size*typeSize;
-    }
-    initVertexAttribArray('p', gl_FLOAT, 4, 2);            // position
-    initVertexAttribArray('t', gl_FLOAT, 4, 2);            // texture coords
-    initVertexAttribArray('c', gl_UNSIGNED_BYTE, 1, 4, 1); // color
-    initVertexAttribArray('a', gl_UNSIGNED_BYTE, 1, 4, 1); // additiveColor
+    glBatchCount = 0;
 }
 
 /** Set the WebGl blend mode, normally you should call setBlendMode instead
@@ -145,33 +132,16 @@ function glCreateProgram(vsSource, fsSource)
     return program;
 }
 
-/** Create WebGL buffer
- *  @param bufferType
- *  @param size
- *  @param usage
- *  @return {WebGLBuffer}
- *  @memberof WebGL */
-function glCreateBuffer(bufferType, size, usage)
-{
-    // build the buffer
-    const buffer = glContext.createBuffer();
-    glContext.bindBuffer(bufferType, buffer);
-    glContext.bufferData(bufferType, size, usage);
-    return buffer;
-}
-
 /** Create WebGL texture from an image and set the texture settings
  *  @param {Image} image
  *  @return {WebGLTexture}
  *  @memberof WebGL */
 function glCreateTexture(image)
 {
-    if (!image || !image.width) return;
-
     // build the texture
     const texture = glContext.createTexture();
     glContext.bindTexture(gl_TEXTURE_2D, texture);
-    glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
+    image && image.width && glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
         
     // use point filtering for pixelated rendering
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, cavasPixelated ? gl_NEAREST : gl_LINEAR);
@@ -189,9 +159,26 @@ function glPreRender(width, height, cameraX, cameraY, cameraScale)
     glContext.clear(gl_COLOR_BUFFER_BIT);
 
     // set up the shader
-    glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = glTileTexture);
     glContext.useProgram(glShader);
+    glContext.activeTexture(gl_TEXTURE0);
+    glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = glTileTexture);
+    glContext.bindBuffer(gl_ARRAY_BUFFER, glArrayBuffer);
+    glContext.bufferData(gl_ARRAY_BUFFER, glVertexData.byteLength, gl_DYNAMIC_DRAW);
     glSetBlendMode();
+    
+    // set vertex attributes
+    let offset = 0;
+    const initVertexAttribArray = (name, type, typeSize, size, normalize=0)=>
+    {
+        const location = glContext.getAttribLocation(glShader, name);
+        glContext.enableVertexAttribArray(location);
+        glContext.vertexAttribPointer(location, size, type, normalize, gl_VERTEX_BYTE_STRIDE, offset);
+        offset += size*typeSize;
+    }
+    initVertexAttribArray('p', gl_FLOAT, 4, 2);            // position
+    initVertexAttribArray('t', gl_FLOAT, 4, 2);            // texture coords
+    initVertexAttribArray('c', gl_UNSIGNED_BYTE, 1, 4, 1); // color
+    initVertexAttribArray('a', gl_UNSIGNED_BYTE, 1, 4, 1); // additiveColor
 
     // build the transform matrix
     const sx = 2 * cameraScale / width;
@@ -303,6 +290,89 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba=0xffffff
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// post processing - can be enabled to pass other canvases through a final shader
+
+let glPostArrayBuffer, glPostShader, glPostTexture0, glPostTexture1;
+
+/** Set up a post processing shader, this may be slow on some browsers.
+ *  @param {String} shaderCode
+ *  @memberof WebGL */
+function glInitPostProcess(shaderCode)
+{
+    ASSERT(!glPostShader); // can only have 1 post effects shader
+
+    if (!shaderCode) // default shader
+        shaderCode =
+            'void mainImage(out vec4 c,in vec2 p){'+
+            'p/=iResolution.xy;'+
+            'c=texture2D(iChannel0,p)+texture2D(iChannel1,p);}';
+
+    // create the shader
+    glPostShader = glCreateProgram(
+        'precision highp float;'+        // use highp for better accuracy
+        'attribute vec2 p;'+             // position
+        'void main(){'+                  // shader entry point
+        'gl_Position=vec4(p,1,1);'+      // set position
+        '}'                              // end of shader
+        ,
+        'precision highp float;'+        // use highp for better accuracy
+        'uniform sampler2D iChannel0,iChannel1;'+ // textures
+        'uniform vec3 iResolution;'+     // size of output texture
+        'uniform float iTime;'+          // time passed
+        shaderCode + '\n'+               // insert custom shader code
+        'void main(){'+                  // shader entry point
+        'mainImage(gl_FragColor,gl_FragCoord.xy);'+ // pass in color/position
+        'gl_FragColor.a=1.;'+            // always use full alpha
+        '}'                              // end of shader
+    );
+    glPostArrayBuffer = glContext.createBuffer();
+    glPostTexture0 = glCreateTexture();
+    glPostTexture1 = glCreateTexture();
+
+    // hide the original 2d canvas
+    mainCanvas.style.visibility = 'hidden';
+}
+
+/** Render the post processing shader
+ *  @memberof WebGL */
+function glRenderPostProcess()
+{
+    if (!glPostShader)
+        return;
+    
+    glFlush(); // clear out the buffer
+
+    // setup shader program to draw one triangle
+    glContext.useProgram(glPostShader);
+    glContext.disable(gl_BLEND);
+    glContext.bindBuffer(gl_ARRAY_BUFFER, glPostArrayBuffer);
+    glContext.bufferData(gl_ARRAY_BUFFER, new Float32Array([-3,1,1,-3,1,1]), gl_STATIC_DRAW);
+    glContext.pixelStorei(gl_UNPACK_FLIP_Y_WEBGL, true);
+
+    // set textures, pass in the 2d canvas and gl canvas in separate texture channels
+    glContext.activeTexture(gl_TEXTURE0);
+    glContext.bindTexture(gl_TEXTURE_2D, glPostTexture0);
+    glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, mainCanvas);
+    glContext.activeTexture(gl_TEXTURE1);
+    glContext.bindTexture(gl_TEXTURE_2D, glPostTexture1);
+    glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, glCanvas);
+
+    // set vertex position attribute
+    const vertexByteStride = 8;
+    const pLocation = glContext.getAttribLocation(glPostShader, 'p');
+    glContext.enableVertexAttribArray(pLocation);
+    glContext.vertexAttribPointer(pLocation, 2, gl_FLOAT, 0, vertexByteStride, 0);
+
+    // set uniforms and draw
+    const uniformLocation = (name)=>glContext.getUniformLocation(glPostShader, name);
+    glContext.uniform1i(uniformLocation('iChannel0'), 0);
+    glContext.uniform1i(uniformLocation('iChannel1'), 1); 
+    glContext.uniform1f(uniformLocation('iTime'), time);
+    glContext.uniform3f(uniformLocation('iResolution'), glCanvas.width, glCanvas.height, 1);
+    glContext.drawArrays(gl_TRIANGLES, 0, 3);
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // store gl constants as integers so their name doesn't use space in minifed
 const 
 gl_ONE = 1,
@@ -323,6 +393,8 @@ gl_TEXTURE_WRAP_S = 10242,
 gl_TEXTURE_WRAP_T = 10243,
 gl_COLOR_BUFFER_BIT = 16384,
 gl_CLAMP_TO_EDGE = 33071,
+gl_TEXTURE0 = 33984,
+gl_TEXTURE1 = 33985,
 gl_ARRAY_BUFFER = 34962,
 gl_STATIC_DRAW = 35044,
 gl_DYNAMIC_DRAW = 35048,

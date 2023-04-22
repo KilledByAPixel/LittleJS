@@ -173,13 +173,6 @@ declare function glCompileShader(source: string, type: any): WebGLShader;
  *  @return {WebGLProgram}
  *  @memberof WebGL */
 declare function glCreateProgram(vsSource: WebGLShader, fsSource: WebGLShader): WebGLProgram;
-/** Create WebGL buffer
- *  @param bufferType
- *  @param size
- *  @param usage
- *  @return {WebGLBuffer}
- *  @memberof WebGL */
-declare function glCreateBuffer(bufferType: any, size: any, usage: any): WebGLBuffer;
 /** Create WebGL texture from an image and set the texture settings
  *  @param {Image} image
  *  @return {WebGLTexture}
@@ -208,6 +201,13 @@ declare function glCopyToContext(context: CanvasRenderingContext2D, forceDraw?: 
  *  @param [rgbaAdditive=0]
  *  @memberof WebGL */
 declare function glDraw(x: any, y: any, sizeX: any, sizeY: any, angle: any, uv0X: any, uv0Y: any, uv1X: any, uv1Y: any, rgba?: number, rgbaAdditive?: number): void;
+/** Set up a post processing shader, this may be slow on some browsers.
+ *  @param {String} shaderCode
+ *  @memberof WebGL */
+declare function glInitPostProcess(shaderCode: string): void;
+/** Render the post processing shader
+ *  @memberof WebGL */
+declare function glRenderPostProcess(): void;
 /** Start up LittleJS engine with your callback functions
  *  @param {Function} gameInit        - Called once after the engine starts up, setup the game
  *  @param {Function} gameUpdate      - Called every frame at 60 frames per second, handle input and update the game state
@@ -1159,10 +1159,10 @@ declare const stickData: any[];
 /** Pulse the vibration hardware if it exists
  *  @param {Number} [pattern=100] - a single value in miliseconds or vibration interval array
  *  @memberof Input */
-declare function vibrate(pattern?: number): any;
+declare function vibrate(pattern?: number): boolean;
 /** Cancel any ongoing vibration
  *  @memberof Input */
-declare function vibrateStop(): any;
+declare function vibrateStop(): boolean;
 /** True if a touch device has been detected
  *  @const {boolean}
  *  @memberof Input */
@@ -1618,11 +1618,17 @@ declare let glContext: WebGLRenderingContext;
 declare let glTileTexture: WebGLTexture;
 declare let glActiveTexture: any;
 declare let glShader: any;
+declare let glArrayBuffer: any;
+declare let glVertexData: any;
 declare let glPositionData: any;
 declare let glColorData: any;
 declare let glBatchCount: any;
 declare let glBatchAdditive: any;
 declare let glAdditive: any;
+declare let glPostArrayBuffer: any;
+declare let glPostShader: any;
+declare let glPostTexture0: any;
+declare let glPostTexture1: any;
 declare const gl_ONE: 1;
 declare const gl_TRIANGLES: 4;
 declare const gl_SRC_ALPHA: 770;
@@ -1641,6 +1647,8 @@ declare const gl_TEXTURE_WRAP_S: 10242;
 declare const gl_TEXTURE_WRAP_T: 10243;
 declare const gl_COLOR_BUFFER_BIT: 16384;
 declare const gl_CLAMP_TO_EDGE: 33071;
+declare const gl_TEXTURE0: 33984;
+declare const gl_TEXTURE1: 33985;
 declare const gl_ARRAY_BUFFER: 34962;
 declare const gl_STATIC_DRAW: 35044;
 declare const gl_DYNAMIC_DRAW: 35048;
@@ -1656,7 +1664,7 @@ declare const gl_VERTEX_BYTE_STRIDE: number;
 /** Name of engine */
 declare const engineName: "LittleJS";
 /** Version of engine */
-declare const engineVersion: "1.4.1";
+declare const engineVersion: "1.4.2";
 /** Frames per second to update objects
  *  @default */
 declare const frameRate: 60;

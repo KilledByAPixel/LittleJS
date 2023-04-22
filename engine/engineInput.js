@@ -187,7 +187,7 @@ function gamepadsUpdate()
         }
     }
 
-    if (!gamepadsEnable || !navigator.getGamepads || !document.hasFocus() && !debug)
+    if (!gamepadsEnable || !navigator || !navigator.getGamepads || !document.hasFocus() && !debug)
         return;
 
     // poll gamepads
@@ -236,7 +236,7 @@ function gamepadsUpdate()
 /** Pulse the vibration hardware if it exists
  *  @param {Number} [pattern=100] - a single value in miliseconds or vibration interval array
  *  @memberof Input */
-const vibrate = (pattern)=> vibrateEnable && Navigator.vibrate && Navigator.vibrate(pattern);
+const vibrate = (pattern)=> vibrateEnable && navigator && navigator.vibrate && navigator.vibrate(pattern);
 
 /** Cancel any ongoing vibration
  *  @memberof Input */

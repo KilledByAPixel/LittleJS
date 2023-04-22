@@ -22,7 +22,7 @@
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.4.1';
+const engineVersion = '1.4.2';
 
 /** Frames per second to update objects
  *  @default */
@@ -188,6 +188,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         for (const o of engineObjects)
             o.destroyed || o.render();
         gameRenderPost();
+        glRenderPostProcess();
         medalsRender();
         touchGamepadRender();
         debugRender();
