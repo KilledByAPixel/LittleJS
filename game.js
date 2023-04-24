@@ -129,7 +129,7 @@ function initPostProcess()
         vec2 i=floor(p),f=fract(p),u=f*f*(3.-2.*f);
         return mix(mix(hash(i),hash(i+vec2(1,0)),u.x),mix(hash(i+vec2(0,1)),hash(i+1.),u.x),u.y);
     }
-    void mainImage(out vec4 c, in vec2 p)
+    void mainImage(out vec4 c, vec2 p)
     {
         const float scanlineScale = 800.;
         const float scanlineAlpha = .3;
@@ -147,7 +147,6 @@ function initPostProcess()
         // init output color
         c = vec4(0);
         c += texture2D(iChannel0,p);
-        c += texture2D(iChannel1,p);
 
         // tv static noise
         c += staticNoise * hash(vec2(p*staticNoiseScale+mod(iTime*1e4,7777.)));

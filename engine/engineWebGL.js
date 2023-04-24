@@ -292,9 +292,9 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba=0xffffff
 ///////////////////////////////////////////////////////////////////////////////
 // post processing - can be enabled to pass other canvases through a final shader
 
-let glPostShader, glPostArrayBuffer, glPostTexture0, glPostTexture1;
+let glPostShader, glPostArrayBuffer, glPostTexture;
 
-/** Set up a post processing shader, this may be slow on some browsers.
+/** Set up a post processing shader
  *  @param {String} shaderCode
  *  @memberof WebGL */
 function glInitPostProcess(shaderCode)
@@ -302,10 +302,7 @@ function glInitPostProcess(shaderCode)
     ASSERT(!glPostShader); // can only have 1 post effects shader
 
     if (!shaderCode) // default shader
-        shaderCode =
-            'void mainImage(out vec4 c,in vec2 p){'+
-            'p/=iResolution.xy;'+
-            'c=texture2D(iChannel0,p)+texture2D(iChannel1,p);}';
+        shaderCode = 'void mainImage(out vec4 c,vec2 p){c=texture2D(iChannel0,p/iResolution.xy);}';
 
     // create the shader
     glPostShader = glCreateProgram(
@@ -316,33 +313,37 @@ function glInitPostProcess(shaderCode)
         '}'                              // end of shader
         ,
         'precision highp float;'+        // use highp for better accuracy
-        'uniform sampler2D iChannel0,iChannel1;'+ // textures
+        'uniform sampler2D iChannel0;'+  // input texture
         'uniform vec3 iResolution;'+     // size of output texture
         'uniform float iTime;'+          // time passed
-        shaderCode + '\n'+               // insert custom shader code
+        '\n' + shaderCode + '\n'+        // insert custom shader code
         'void main(){'+                  // shader entry point
-        'mainImage(gl_FragColor,gl_FragCoord.xy);'+ // pass in color/position
+        'mainImage(gl_FragColor,gl_FragCoord.xy);'+ // call post process function
         'gl_FragColor.a=1.;'+            // always use full alpha
         '}'                              // end of shader
     );
+
+    // create buffer and texture
     glPostArrayBuffer = glContext.createBuffer();
-    glPostTexture0 = glCreateTexture();
-    glPostTexture1 = glCreateTexture();
+    glPostTexture = glCreateTexture();
 
     // hide the original 2d canvas
     mainCanvas.style.visibility = 'hidden';
 }
 
-/** Render the post processing shader
- *  @memberof WebGL */
+// Render the post processing shader, called automatically by the engine
 function glRenderPostProcess()
 {
     if (!glPostShader)
         return;
     
+    // prepare to render post process shader
     const width = mainCanvas.width, height = mainCanvas.height;
     if (glEnable)
+    {
         glFlush(); // clear out the buffer
+        mainContext.drawImage(glCanvas, 0, 0); // copy to the main canvas
+    }
     else
         glContext.viewport(0, 0, glCanvas.width = width, glCanvas.height = height); // set viewport
 
@@ -355,14 +356,8 @@ function glRenderPostProcess()
 
     // set textures, pass in the 2d canvas and gl canvas in separate texture channels
     glContext.activeTexture(gl_TEXTURE0);
-    glContext.bindTexture(gl_TEXTURE_2D, glPostTexture0);
+    glContext.bindTexture(gl_TEXTURE_2D, glPostTexture);
     glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, mainCanvas);
-    if (glEnable)
-    {
-        glContext.activeTexture(gl_TEXTURE1);
-        glContext.bindTexture(gl_TEXTURE_2D, glPostTexture1);
-        glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, glCanvas);
-    }
 
     // set vertex position attribute
     const vertexByteStride = 8;
@@ -373,7 +368,6 @@ function glRenderPostProcess()
     // set uniforms and draw
     const uniformLocation = (name)=>glContext.getUniformLocation(glPostShader, name);
     glContext.uniform1i(uniformLocation('iChannel0'), 0);
-    glContext.uniform1i(uniformLocation('iChannel1'), 1); 
     glContext.uniform1f(uniformLocation('iTime'), time);
     glContext.uniform3f(uniformLocation('iResolution'), width, height, 1);
     glContext.drawArrays(gl_TRIANGLES, 0, 3);
