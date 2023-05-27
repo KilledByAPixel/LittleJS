@@ -29,7 +29,7 @@ LittleJS is a super lightweight JavaScript game engine with a fast hybrid render
 - Particle effects system (particle editor/designer in progress)
 - Medal system tracks and displays achievements with Newgrounds and OS13k integration
 - Several easy to understand example projects you can build on
-- Apply Shadertoy compatible shaders for post processinge effects
+- Apply [Shadertoy](https://www.shadertoy.com) compatible shaders for post processinge effects
 - Debug tools and debug rendering system
 - [Full documentation](https://killedbyapixel.github.io/LittleJS/docs) automatically generated from the source code block tags with [JSDoc](https://github.com/jsdoc/jsdoc)
 - Build system automatically combines everything, minifies, and removes unused code
