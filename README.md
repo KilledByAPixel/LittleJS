@@ -2,13 +2,15 @@
 
 ## All aboard!
 
-LittleJS is a super lightweight JavaScript game engine with a fast hybrid rendering system. It provides everything necessary to make amazing games, including rendering, physics, particles, sound effects, music, input handling, and debug tools. LittleJS is designed to be extremely small yet powerful enough for a variety of applications, from game jams to commercial releases. The code is very well documented with a variety of examples to get you started. Choo-Choo! 🚂
-
-## [LittleJS Documentation](https://killedbyapixel.github.io/LittleJS/docs) - [LittleJS Trailer](https://youtu.be/chuBzGjv7Ms) - [LittleJS Discord](https://discord.gg/zb7hcGkyZe)
+LittleJS is a super lightweight JavaScript game engine with a fast hybrid rendering system. It provides a comprehensive set of tools including rendering, physics, particles, sound effects, music, input handling, and debug tools. The code is very clean and well documented with a variety of examples to get you started. Choo-Choo! 🚂
+<div align="center">
+  
+## [Documentation](https://killedbyapixel.github.io/LittleJS/docs) | [Trailer](https://youtu.be/chuBzGjv7Ms) | [Discord](https://discord.gg/zb7hcGkyZe)
+</div>
 
 ![LittleJS Screenshot](examples/screenshot.jpg)
 
-## Example Projects
+## Examples
 
 ### [Hello World](https://killedbyapixel.github.io/LittleJS/) - Clean project with only a few things to get you started
 ### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle) - Match 3 puzzle game with HD rendering and high score tracking
@@ -27,7 +29,7 @@ LittleJS is a super lightweight JavaScript game engine with a fast hybrid render
 - Particle effects system (particle editor/designer in progress)
 - Medal system tracks and displays achievements with Newgrounds and OS13k integration
 - Several easy to understand example projects you can build on
-- Apply Shadertoy compatible shaders for post processinge effects
+- Apply [Shadertoy](https://www.shadertoy.com) compatible shaders for post processinge effects
 - Debug tools and debug rendering system
 - [Full documentation](https://killedbyapixel.github.io/LittleJS/docs) automatically generated from the source code block tags with [JSDoc](https://github.com/jsdoc/jsdoc)
 - Build system automatically combines everything, minifies, and removes unused code
