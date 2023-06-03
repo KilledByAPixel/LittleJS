@@ -201,12 +201,10 @@ declare function glCopyToContext(context: CanvasRenderingContext2D, forceDraw?: 
  *  @param [rgbaAdditive=0]
  *  @memberof WebGL */
 declare function glDraw(x: any, y: any, sizeX: any, sizeY: any, angle: any, uv0X: any, uv0Y: any, uv1X: any, uv1Y: any, rgba?: number, rgbaAdditive?: number): void;
-/** Set up a post processing shader, this may be slow on some browsers.
+/** Set up a post processing shader
  *  @param {String} shaderCode
  *  @memberof WebGL */
 declare function glInitPostProcess(shaderCode: string): void;
-/** Render the post processing shader
- *  @memberof WebGL */
 declare function glRenderPostProcess(): void;
 /** Start up LittleJS engine with your callback functions
  *  @param {Function} gameInit        - Called once after the engine starts up, setup the game
@@ -1630,8 +1628,7 @@ declare let glBatchAdditive: any;
 declare let glAdditive: any;
 declare let glPostShader: any;
 declare let glPostArrayBuffer: any;
-declare let glPostTexture0: any;
-declare let glPostTexture1: any;
+declare let glPostTexture: any;
 declare const gl_ONE: 1;
 declare const gl_TRIANGLES: 4;
 declare const gl_SRC_ALPHA: 770;
