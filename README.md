@@ -15,7 +15,7 @@ LittleJS is a super lightweight JavaScript game engine with a fast hybrid render
 ### [Hello World](https://killedbyapixel.github.io/LittleJS/) - Clean project with only a few things to get you started
 ### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle) - Match 3 puzzle game with HD rendering and high score tracking
 ### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer) - Platformer/shooter with procedural generation and destruction
-### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout) - Breakout game with mouse/touch or gamepad control
+### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout) - Breakout game with post processing effect
 ### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress) - Max sprite/object test and music system demo
 ### [Particle System Designer](https://killedbyapixel.github.io/LittleJS/examples/particles) - Particle system editor and visualizer
 
