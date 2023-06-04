@@ -5,7 +5,7 @@
 'use strict';
 
 // popup errors if there are any (help diagnose issues on mobile devices)
-//onerror = (...parameters)=> alert(parameters);
+//onerror = (...e)=> alert(e);
 
 // sound effects
 const sound_click = new Sound([.5,.5]);
@@ -66,8 +66,6 @@ function gameInit()
     );
     particleEmiter.elasticity = .3; // bounce when it collides
     particleEmiter.trailScale = 2;  // stretch in direction of motion
-
-    //initPostProcess(); // set up a post processing shader
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -111,54 +109,6 @@ function gameRenderPost()
 {
     // draw to overlay canvas for hud rendering
     drawTextScreen('Hello World', vec2(overlayCanvas.width/2, 80), 80, new Color, 9);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// an example shader that can be used to apply a post processing effect
-function initPostProcess()
-{
-    const tvPostProcessCode = `
-    // Simple TV Shader Code
-    float hash(vec2 p)
-    {
-        p=fract(p*.3197);
-        return fract(1.+sin(51.*p.x+73.*p.y)*13753.3);
-    }
-    float noise(vec2 p)
-    {
-        vec2 i=floor(p),f=fract(p),u=f*f*(3.-2.*f);
-        return mix(mix(hash(i),hash(i+vec2(1,0)),u.x),mix(hash(i+vec2(0,1)),hash(i+1.),u.x),u.y);
-    }
-    void mainImage(out vec4 c, vec2 p)
-    {
-        const float scanlineScale = 800.;
-        const float scanlineAlpha = .3;
-        const float staticNoise = .2;
-        const float staticNoiseScale = 1931.7;
-        const float fuzz = .002;
-        const float fuzzScale = 1730.;
-        const float vignette = 2.;
-
-        p /= iResolution.xy;
-
-        // apply fuzz as horizontal offset
-        p.x += fuzz*(noise(vec2(p.y*fuzzScale, iTime*9.))*2.-1.);
-
-        // init output color
-        c = vec4(0);
-        c += texture2D(iChannel0,p);
-
-        // tv static noise
-        c += staticNoise * hash(vec2(p*staticNoiseScale+mod(iTime*1e4,7777.)));
-
-        // scan lines
-        c *= 1. + scanlineAlpha*sin(p.y*scanlineScale);
-
-        // black vignette around the outside
-        float dx = 2.*p.x - 1., dy = 2.*p.y - 1.;
-        c *= 1.-pow((dx*dx + dy*dy)/vignette, 6.);
-    }`;
-    glInitPostProcess(tvPostProcessCode);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
