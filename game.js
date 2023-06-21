@@ -108,7 +108,7 @@ function gameRender()
 function gameRenderPost()
 {
     // draw to overlay canvas for hud rendering
-    drawTextScreen('Hello World', vec2(overlayCanvas.width/2, 80), 80, new Color, 9);
+    drawTextScreen('Hello World', vec2(mainCanvasSize.x/2, 80), 80);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
