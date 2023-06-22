@@ -29,11 +29,12 @@ class Paddle extends EngineObject
             this.pos.x = mousePos.x;
         }
         this.pos.x = clamp(this.pos.x, this.size.x/2, levelSize.x - this.size.x/2);
+        super.update();
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-class Block extends EngineObject 
+class Brick extends EngineObject 
 {
     constructor(pos)
     {
@@ -42,27 +43,28 @@ class Block extends EngineObject
         // set to collide
         this.setCollision(1,1);
         this.mass = 0;
-        ++blockCount;
+        ++brickCount;
     }
 
     collideWithObject(o)              
     {
-        // destroy block when hit with ball
+        // destroy brick when hit with ball
         this.destroy();
         ++score;
-        --blockCount;
-        sound_breakBlock.play(this.pos);
+        --brickCount;
+        sound_break.play(this.pos);
 
         const color1 = this.color;
         const color2 = color1.lerp(new Color, .5);
         new ParticleEmitter(
-            this.pos, 0, this.size, .1, 200, PI,  // pos, angle, emitSize, emitTime, emitRate, emiteCone
+            this.pos, 0,                          // emitPos, emitAngle
+            this.size, .1, 200, PI,               // emitSize, emitTime, emitRate, emiteCone
             0, vec2(16),                          // tileIndex, tileSize
             color1, color2,                       // colorStartA, colorStartB
             color1.scale(1,0), color2.scale(1,0), // colorEndA, colorEndB
-            .2, 1, 1, .1, .05,    // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
-            .99, .95, .4, PI, .1, // damping, angleDamping, gravityScale, particleCone, fadeRate, 
-            1, 0, 1               // randomness, collide, additive, randomColorLinear, renderOrder
+            .2, 1, 2, .1, .05,  // time, sizeStart, sizeEnd, speed, angleSpeed
+            .99, .95, .4, PI,   // damping, angleDamping, gravityScale, cone
+            .1, .5, 0, 1        // fadeRate, randomness, collide, additive
         );
         
         return 1;

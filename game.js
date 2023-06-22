@@ -4,9 +4,6 @@
 
 'use strict';
 
-// popup errors if there are any (help diagnose issues on mobile devices)
-//onerror = (...e)=> alert(e);
-
 // sound effects
 const sound_click = new Sound([.5,.5]);
 
@@ -56,13 +53,14 @@ function gameInit()
     // create particle emitter
     const center = tileCollisionSize.scale(.5).add(vec2(0,9));
     particleEmiter = new ParticleEmitter(
-        center, 0, 1, 0, 500, PI, // pos, angle, emitSize, emitTime, emitRate, emiteCone
+        center, 0,                              // emitPos, emitAngle
+        1, 0, 500, PI,                          // emitSize, emitTime, emitRate, emiteCone
         0, vec2(16),                            // tileIndex, tileSize
         new Color(1,1,1),   new Color(0,0,0),   // colorStartA, colorStartB
         new Color(1,1,1,0), new Color(0,0,0,0), // colorEndA, colorEndB
-        2, .2, .2, .1, .05,     // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
-        .99, 1, 1, PI, .05,     // damping, angleDamping, gravityScale, particleCone, fadeRate, 
-        .5, 1, 1                // randomness, collide, additive, randomColorLinear, renderOrder
+        2, .2, .2, .1, .05,   // time, sizeStart, sizeEnd, speed, angleSpeed
+        .99, 1, 1, PI,        // damping, angleDamping, gravityScale, cone
+        .05, .5, 1, 1         // fadeRate, randomness, collide, additive
     );
     particleEmiter.elasticity = .3; // bounce when it collides
     particleEmiter.trailScale = 2;  // stretch in direction of motion
