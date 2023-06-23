@@ -101,8 +101,7 @@ function initPostProcess()
 
         // tv static noise
         const float staticNoise = .1;
-        const float staticNoiseScale = 1931.7;
-        c += staticNoise * hash(vec2(p*staticNoiseScale+mod(iTime*1e4,7777.)));
+        c += staticNoise * hash(vec2(p + mod(iTime, 1e3)));
 
         // scan lines
         const float scanlineScale = 800.;
