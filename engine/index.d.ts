@@ -980,8 +980,8 @@ declare class EngineObject {
      *  @param {EngineObject} child */
     removeChild(child: EngineObject): void;
     /** Set how this object collides
-     *  @param {boolean} [collideSolidObjects=0] - Does it collide with solid objects
-     *  @param {boolean} [isSolid=0]             - Does it collide with and block other objects (expensive in large numbers)
+     *  @param {boolean} [collideSolidObjects=1] - Does it collide with solid objects
+     *  @param {boolean} [isSolid=1]             - Does it collide with and block other objects (expensive in large numbers)
      *  @param {boolean} [collideTiles=1]        - Does it collide with the tile collision */
     setCollision(collideSolidObjects?: boolean, isSolid?: boolean, collideTiles?: boolean): void;
     collideSolidObjects: boolean;
@@ -1664,7 +1664,7 @@ declare const gl_VERTEX_BYTE_STRIDE: number;
 /** Name of engine */
 declare const engineName: "LittleJS";
 /** Version of engine */
-declare const engineVersion: "1.4.3";
+declare const engineVersion: "1.4.4";
 /** Frames per second to update objects
  *  @default */
 declare const frameRate: 60;

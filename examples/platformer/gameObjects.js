@@ -72,7 +72,7 @@ class Crate extends GameObject
         this.health = 5;
 
         // make it a solid object for collision
-        this.setCollision(1, 1);
+        this.setCollision();
     }
 
     kill()
@@ -98,7 +98,7 @@ class Enemy extends GameObject
         this.color = (new Color).setHSLA(rand(), 1, .7);
         this.health = 5;
         this.bounceTime = new Timer(rand(1e3));
-        this.setCollision(1);
+        this.setCollision(1,0);
     }
 
     update()
@@ -157,7 +157,7 @@ class Grenade extends GameObject
         this.friction     = .9;
         this.angleDamping = .96;
         this.renderOrder  = 1e8;
-        this.setCollision(1);
+        this.setCollision(1,0);
     }
 
     update()
@@ -271,7 +271,7 @@ class Bullet extends EngineObject
         this.renderOrder = 100;
         this.drawSize = vec2(.2,.5);
         this.range = 20;
-        this.setCollision(1);
+        this.setCollision(1,0);
     }
 
     update()

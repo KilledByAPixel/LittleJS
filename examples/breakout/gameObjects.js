@@ -12,7 +12,7 @@ class Paddle extends EngineObject
         super(pos, vec2(8,1));
 
         // set to collide
-        this.setCollision(1,1);
+        this.setCollision();
         this.mass = 0;
     }
 
@@ -41,7 +41,7 @@ class Brick extends EngineObject
         super(pos, vec2(4,2), 1, vec2(32,16), 0, randColor());
 
         // set to collide
-        this.setCollision(1,1);
+        this.setCollision();
         this.mass = 0;
         ++brickCount;
     }
@@ -79,7 +79,7 @@ class Ball extends EngineObject
         super(pos, vec2(1), 0);
 
         // make a bouncy ball
-        this.setCollision(1);
+        this.setCollision();
         this.velocity = vec2(randSign(), -1).scale(.2);
         this.elasticity = 1;
         this.damping = 1;

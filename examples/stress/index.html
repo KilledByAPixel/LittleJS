@@ -5,7 +5,7 @@
 <link rel=icon type=image/png href=../../favicon.png>
 </head><body>
 
-<script src=../../engine/engine.all.min.js?115></script>
+<script src=../../engine/engine.all.min.js?116></script>
 <script>
 
 /*
@@ -31,7 +31,7 @@ class TestObject extends EngineObject
         super(pos, vec2(1), 0, vec2(16), 0, spriteColor);
 
         this.additiveColor = spriteAdditiveColor;
-        this.setCollision(1, 1);
+        this.setCollision();
     }
 }
 
