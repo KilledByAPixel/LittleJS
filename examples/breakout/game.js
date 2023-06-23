@@ -50,8 +50,8 @@ function gameUpdatePost()
 function gameRender()
 {
     // draw a the background
-    drawRect(cameraPos, levelSize.scale(2), new Color(.4,.4,.4));
-    drawRect(cameraPos, levelSize, new Color(.1,.1,.1));
+    drawRect(cameraPos, levelSize.scale(2), new Color(.5,.5,.5));
+    drawRect(cameraPos, levelSize, new Color(.05,.05,.05));
 }
 
 ///////////////////////////////////////////////////////////////////////////////

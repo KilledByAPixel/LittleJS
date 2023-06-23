@@ -266,7 +266,7 @@ const debugRender = ()=>
             const raycastHitPos = tileCollisionRaycast(bestObject.pos, mousePos);
             raycastHitPos && drawRect(raycastHitPos.floor().add(vec2(.5)), vec2(1), new Color(0,1,1,.3));
             drawRect(mousePos.floor().add(vec2(.5)), vec2(1), new Color(0,0,1,.5), 0, 0);
-            drawLine(mousePos, bestObject.pos, .2, raycastHitPos ? new Color(1,0,0,.5) : new Color(0,1,0,.5), 0);
+            drawLine(mousePos, bestObject.pos, .1, raycastHitPos ? new Color(1,0,0,.5) : new Color(0,1,0,.5), 0);
 
             const debugText = 'mouse pos = ' + mousePos + 
                 '\nmouse collision = ' + getTileCollisionData(mousePos) + 

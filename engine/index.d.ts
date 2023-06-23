@@ -658,16 +658,13 @@ declare class Color {
     /** Returns this color expressed as an CSS color value
      * @return {String} */
     toString(): string;
-    /** Returns this color expressed as 32 bit integer RGBA value
-     * @return {Number} */
-    rgbaInt(): number;
     /** Set this color from a hex code
      * @param {String} hex - html hex code
      * @return {Color} */
     setHex(hex: string): Color;
-    /** Returns this color expressed as a hex code
-     * @return {String} */
-    getHex(): string;
+    /** Returns this color expressed as 32 bit RGBA value
+     * @return {Number} */
+    rgbaInt(): number;
 }
 /**
  * Timer object tracks how long has passed since it was set
@@ -1689,5 +1686,5 @@ declare let tileImageSize: any;
 declare let tileImageFixBleed: any;
 declare let averageFPS: any;
 declare let drawCount: any;
-declare const styleBody: string;
+declare const styleBody: "margin:0;overflow:hidden;background:#000";
 declare const styleCanvas: "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)";

@@ -266,7 +266,7 @@ const debugRender = ()=>
             const raycastHitPos = tileCollisionRaycast(bestObject.pos, mousePos);
             raycastHitPos && drawRect(raycastHitPos.floor().add(vec2(.5)), vec2(1), new Color(0,1,1,.3));
             drawRect(mousePos.floor().add(vec2(.5)), vec2(1), new Color(0,0,1,.5), 0, 0);
-            drawLine(mousePos, bestObject.pos, .2, raycastHitPos ? new Color(1,0,0,.5) : new Color(0,1,0,.5), 0);
+            drawLine(mousePos, bestObject.pos, .1, raycastHitPos ? new Color(1,0,0,.5) : new Color(0,1,0,.5), 0);
 
             const debugText = 'mouse pos = ' + mousePos + 
                 '\nmouse collision = ' + getTileCollisionData(mousePos) + 
@@ -823,10 +823,10 @@ class Color
      * @return {Array} */
     getHSLA()
     {
-        const r = this.r;
-        const g = this.g;
-        const b = this.b;
-        const a = this.a;
+        const r = clamp(this.r);
+        const g = clamp(this.g);
+        const b = clamp(this.b);
+        const a = clamp(this.a);
         const max = Math.max(r, g, b);
         const min = Math.min(r, g, b);
         const l = (max + min) / 2;
@@ -866,16 +866,8 @@ class Color
      * @return {String} */
     toString()      
     { 
-        ASSERT(this.r>=0 && this.r<=1 && this.g>=0 && this.g<=1 && this.b>=0 && this.b<=1 && this.a>=0 && this.a<=1);
-        return `rgb(${this.r*255|0},${this.g*255|0},${this.b*255|0},${this.a})`; 
-    }
-    
-    /** Returns this color expressed as 32 bit integer RGBA value
-     * @return {Number} */
-    rgbaInt()  
-    {
-        ASSERT(this.r>=0 && this.r<=1 && this.g>=0 && this.g<=1 && this.b>=0 && this.b<=1 && this.a>=0 && this.a<=1);
-        return (this.r*255|0) + (this.g*255<<8) + (this.b*255<<16) + (this.a*255<<24); 
+        const toHex = (c)=> ((c=c*255|0)<16 ? '0' : '') + c.toString(16);
+        return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b);
     }
 
     /** Set this color from a hex code
@@ -883,21 +875,24 @@ class Color
      * @return {Color} */
     setHex(hex)
     {
-        const fromHex = (a)=> parseInt(hex.slice(a,a+2), 16)/255;
+        const fromHex = (c)=> clamp(parseInt(hex.slice(c,c+2),16)/255);
         this.r = fromHex(1);
         this.g = fromHex(3),
         this.b = fromHex(5);
         this.a = 1;
-        ASSERT(this.r>=0 && this.r<=1 && this.g>=0 && this.g<=1 && this.b>=0 && this.b<=1);
         return this;
     }
-
-    /** Returns this color expressed as a hex code
-     * @return {String} */
-    getHex()
+    
+    /** Returns this color expressed as 32 bit RGBA value
+     * @return {Number} */
+    rgbaInt()  
     {
-        const toHex = (c)=> ((c=c*255|0)<16 ? '0' : '') + c.toString(16);
-        return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b);
+        const toByte = (c)=> clamp(c)*255|0;
+        const r = toByte(this.r);
+        const g = toByte(this.g)<<8;
+        const b = toByte(this.b)<<16;
+        const a = toByte(this.a)<<24;
+        return r + g + b + a;
     }
 }
 
@@ -4244,8 +4239,7 @@ let frameTimeLastMS = 0, frameTimeBufferMS = 0, tileImageSize, tileImageFixBleed
 let averageFPS, drawCount;
 
 // css text used for elements created by engine
-const styleBody = 'margin:0;overflow:hidden;background:#000' +
-    ';touch-action:none;user-select:none;-webkit-user-select:none;-moz-user-select:none';
+const styleBody = 'margin:0;overflow:hidden;background:#000';
 const styleCanvas = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
 
 ///////////////////////////////////////////////////////////////////////////////
