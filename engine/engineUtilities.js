@@ -479,7 +479,7 @@ class Color
     toString()      
     { 
         const toHex = (c)=> ((c=c*255|0)<16 ? '0' : '') + c.toString(16);
-        return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b);
+        return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b) + toHex(this.a);
     }
 
     /** Set this color from a hex code
@@ -491,7 +491,7 @@ class Color
         this.r = fromHex(1);
         this.g = fromHex(3),
         this.b = fromHex(5);
-        this.a = 1;
+        this.a = hex.length > 7 ? fromHex(7) : 1;
         return this;
     }
     
