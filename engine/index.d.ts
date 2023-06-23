@@ -655,9 +655,10 @@ declare class Color {
      * @param {Number} [alphaAmount=0]
      * @return {Color} */
     mutate(amount?: number, alphaAmount?: number): Color;
-    /** Returns this color expressed as an CSS color value
+    /** Returns this color expressed as a hex color code
+     * @param {Boolean} [useAlpha=1] - if alpha should be included in result
      * @return {String} */
-    toString(): string;
+    toString(useAlpha?: boolean): string;
     /** Set this color from a hex code
      * @param {String} hex - html hex code
      * @return {Color} */
@@ -1661,7 +1662,7 @@ declare const gl_VERTEX_BYTE_STRIDE: number;
 /** Name of engine */
 declare const engineName: "LittleJS";
 /** Version of engine */
-declare const engineVersion: "1.4.4";
+declare const engineVersion: "1.4.5";
 /** Frames per second to update objects
  *  @default */
 declare const frameRate: 60;

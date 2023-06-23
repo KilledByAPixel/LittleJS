@@ -15,18 +15,18 @@ button
 </style>
 </head><body>
 
-<script src=../../engine/engineDebug.js?118></script>
-<script src=../../engine/engineUtilities.js?118></script>
-<script src=../../engine/engineSettings.js?118></script>
-<script src=../../engine/engineObject.js?118></script>
-<script src=../../engine/engineDraw.js?118></script>
-<script src=../../engine/engineInput.js?118></script>
-<script src=../../engine/engineAudio.js?118></script>
-<script src=../../engine/engineTileLayer.js?118></script>
-<script src=../../engine/engineParticles.js?118></script>
-<script src=../../engine/engineMedals.js?118></script>
-<script src=../../engine/engineWebGL.js?118></script>
-<script src=../../engine/engine.js?118></script>
+<script src=../../engine/engineDebug.js?117></script>
+<script src=../../engine/engineUtilities.js?117></script>
+<script src=../../engine/engineSettings.js?117></script>
+<script src=../../engine/engineObject.js?117></script>
+<script src=../../engine/engineDraw.js?117></script>
+<script src=../../engine/engineInput.js?117></script>
+<script src=../../engine/engineAudio.js?117></script>
+<script src=../../engine/engineTileLayer.js?117></script>
+<script src=../../engine/engineParticles.js?117></script>
+<script src=../../engine/engineMedals.js?117></script>
+<script src=../../engine/engineWebGL.js?117></script>
+<script src=../../engine/engine.js?117></script>
 <script>
 
 'use strict';
@@ -103,7 +103,7 @@ function gameInit()
             if (type == 'color')
             {
                 const color = particleSystem[name];
-                defaultValue = color;
+                defaultValue = color.toString(0);
             }
             else if (type == 'alpha')
             {
@@ -215,7 +215,6 @@ function gameInit()
     }
 
     updateParticles();
-    particleSystemCode.value = getCode();
 }
 
 function updateParticles(shouldUpdateInput)
@@ -278,7 +277,7 @@ function updateSetting(setting, save=1)
     if (type == 'color')
     {
         const color = particleSystem[name];
-        input.value = color;
+        input.value = color.toString(0);
     }
     else if (type == 'alpha')
     {

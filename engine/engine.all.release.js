@@ -507,12 +507,13 @@ class Color
         ).clamp();
     }
 
-    /** Returns this color expressed as an CSS color value
+    /** Returns this color expressed as a hex color code
+     * @param {Boolean} [useAlpha=1] - if alpha should be included in result
      * @return {String} */
-    toString()      
+    toString(useAlpha = 1)      
     { 
         const toHex = (c)=> ((c=c*255|0)<16 ? '0' : '') + c.toString(16);
-        return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b) + toHex(this.a);
+        return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b) + (useAlpha ? toHex(this.a) : '');
     }
 
     /** Set this color from a hex code
@@ -840,7 +841,7 @@ let medalDisplayIconSize = 50;
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.4.4';
+const engineVersion = '1.4.5';
 
 /** Frames per second to update objects
  *  @default */
