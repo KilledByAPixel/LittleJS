@@ -233,55 +233,49 @@ const debugRender = ()=>
 
     if (debugOverlay)
     {
+        const saveContext = mainContext;
+        mainContext = overlayContext;
+
         // mouse pick
         let bestDistance = Infinity, bestObject;
         for (const o of engineObjects)
         {
             if (o.canvas || o.destroyed)
-                continue; // skip tile layers
-
-            const size = o.size.copy();
-            if (!size.x || !size.y)
+                continue;
+            if (!o.size.x || !o.size.y)
                 continue;
 
             const distance = mousePos.distanceSquared(o.pos);
             if (distance < bestDistance)
             {
                 bestDistance = distance;
-                bestObject = o
+                bestObject = o;
             }
 
             // show object info
-            const color = new Color(
-                o.collideTiles?1:0, 
-                o.collideSolidObjects?1:0,
-                o.isSolid?1:0, 
-                o.parent ? .2 : .5);
-            size.x = max(size.x, .2);
-            size.y = max(size.y, .2);
-            drawRect(o.pos, size, color);
-            drawRect(o.pos, size.scale(.8), o.parent ? new Color(1,1,1,.5) : new Color(0,0,0,.8));
-            o.parent && drawLine(o.pos, o.parent.pos, .1, new Color(0,0,1,.5));
+            const size = vec2(max(o.size.x, .2), max(o.size.y, .2));
+            const color1 = new Color(!!o.collideTiles, !!o.collideSolidObjects, !!o.isSolid, o.parent?.2:.5);
+            const color2 = o.parent ? new Color(1,1,1,.5) : new Color(0,0,0,.8);
+            drawRect(o.pos, size, color1, o.angle, 0);
+            drawRect(o.pos, size.scale(.8), color2, o.angle, 0);
+            o.parent && drawLine(o.pos, o.parent.pos, .1, new Color(0,0,1,.5), 0);
         }
         
         if (bestObject)
         {
-            const saveContext = mainContext;
-            mainContext = overlayContext
             const raycastHitPos = tileCollisionRaycast(bestObject.pos, mousePos);
             raycastHitPos && drawRect(raycastHitPos.floor().add(vec2(.5)), vec2(1), new Color(0,1,1,.3));
-            drawRect(mousePos.floor().add(vec2(.5)), vec2(1), new Color(0,0,1,.5));
-            drawLine(mousePos, bestObject.pos, .1, !raycastHitPos ? new Color(0,1,0,.5) : new Color(1,0,0,.5));
+            drawRect(mousePos.floor().add(vec2(.5)), vec2(1), new Color(0,0,1,.5), 0, 0);
+            drawLine(mousePos, bestObject.pos, .2, raycastHitPos ? new Color(1,0,0,.5) : new Color(0,1,0,.5), 0);
 
             const debugText = 'mouse pos = ' + mousePos + 
                 '\nmouse collision = ' + getTileCollisionData(mousePos) + 
                 '\n\n--- object info ---\n' +
                 bestObject.toString();
-            drawTextScreen(debugText, mousePosScreen, 24, new Color, .05, undefined, undefined, 'monospace');
-            mainContext = saveContext;
+            drawTextScreen(debugText, mousePosScreen, 24, new Color, .05, 0, 0, 'monospace');
         }
 
-        glCopyToContext(mainContext);
+        glCopyToContext(mainContext = saveContext);
     }
 
     {
@@ -294,7 +288,6 @@ const debugRender = ()=>
 
             // create canvas transform from world space to screen space
             const pos = worldToScreen(p.pos);
-            
             overlayContext.translate(pos.x|0, pos.y|0);
             overlayContext.rotate(p.angle);
             overlayContext.fillStyle = overlayContext.strokeStyle = p.color;
