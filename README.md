@@ -46,6 +46,11 @@ To easily include LittleJS in your game, you can use one of the 3 pre-built js f
 - [engine.all.release.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.release.js) - The engine optimized for release builds
 - [engine.all.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.min.js) - The engine in release mode and minified
 
+LittleJS can also be imported as a module. There are two module includes that are automatically built.
+
+- [engine.all.module.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.module.js) - The engine exported as a module with debug mode available
+- [engine.all.release.module.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.release.module.js) - The engine exported as a module in release mode
+
 The hello world example includes a batch file [build.bat](https://github.com/KilledByAPixel/LittleJS/blob/main/build.bat) that compresses everything into a tiny zip file using Google Closure, UglifyJS, Roadroller, and ECT. You must run [buildSetup.bat](https://github.com/KilledByAPixel/LittleJS/blob/main/buildSetup.bat) to install the necessary npm dependencies.
 
 ## Debugging
