@@ -4,14 +4,12 @@
 
 'use strict';
 
-
-// load zzfx module into global scope
+// import module
 import * as LittleJS from '../../engine/engine.all.module.js';
-
 const Vector2 = LittleJS.Vector2;
-const Color = LittleJS.Color;
-const Timer = LittleJS.Timer;
-const vec2 = LittleJS.vec2;
+const Color   = LittleJS.Color;
+const Timer   = LittleJS.Timer;
+const vec2    = LittleJS.vec2;
 
 // sound effects
 const sound_click = new LittleJS.Sound([.5,.5]);
