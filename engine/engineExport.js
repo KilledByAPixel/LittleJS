@@ -43,7 +43,6 @@ const setMedalDisplayWidth =            (v)=> medalDisplayWidth = v;
 const setMedalDisplayHeight =           (v)=> medalDisplayHeight = v;
 const setMedalDisplayIconSize =         (v)=> medalDisplayIconSize = v;
 const setMedalsPreventUnlock =          (v)=> medalsPreventUnlock = v;
-const setDebugPointSize =               (v)=> debugPointSize = v;
 const setShowWatermark =                (v)=> showWatermark = v;
 const setGodMode =                      (v)=> godMode = v;
 
@@ -88,7 +87,6 @@ export {
 	setMedalDisplayHeight,
 	setMedalDisplayIconSize,
 	setMedalsPreventUnlock,
-	setDebugPointSize,
 	setShowWatermark,
 	setGodMode,
 
@@ -133,7 +131,6 @@ export {
 	
 	// Globals
 	debug,
-	debugPointSize,
 	showWatermark,
 	godMode,
 	// Debug

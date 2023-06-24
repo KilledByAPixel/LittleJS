@@ -1,6 +1,6 @@
 {
   "name": "littlejsengine",
-  "version": "1.4.5",
+  "version": "1.4.6",
   "description": "LittleJS - Tiny and Fast HTML5 Game Engine",
   "main": "engine/engine.all.module.js",
   "repository": {
@@ -23,14 +23,13 @@
   },
   "homepage": "https://github.com/KilledByAPixel/LittleJS",
   "scripts": {
-    "build:esm": "node --experimental-modules engine/engineBuildModule.mjs",
-    "build": "build.bat && npm run build:esm && npm run check-filesize"
+    "build": "build.bat"
   },
   "dependencies": {
     "ect-bin": "^1.4.1",
     "google-closure-compiler": "^20221102.0.1",
     "roadroller": "^2.1.0",
-    "typescript": "^4.9.4",
+    "typescript": "^4.9.5",
     "uglify-js": "^3.17.4"
   }
 }

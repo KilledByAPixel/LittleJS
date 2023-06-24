@@ -841,7 +841,7 @@ let medalDisplayIconSize = 50;
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.4.5';
+const engineVersion = '1.4.6';
 
 /** Frames per second to update objects
  *  @default */
@@ -4167,7 +4167,6 @@ const setMedalDisplayWidth =            (v)=> medalDisplayWidth = v;
 const setMedalDisplayHeight =           (v)=> medalDisplayHeight = v;
 const setMedalDisplayIconSize =         (v)=> medalDisplayIconSize = v;
 const setMedalsPreventUnlock =          (v)=> medalsPreventUnlock = v;
-const setDebugPointSize =               (v)=> debugPointSize = v;
 const setShowWatermark =                (v)=> showWatermark = v;
 const setGodMode =                      (v)=> godMode = v;
 
@@ -4212,7 +4211,6 @@ export {
 	setMedalDisplayHeight,
 	setMedalDisplayIconSize,
 	setMedalsPreventUnlock,
-	setDebugPointSize,
 	setShowWatermark,
 	setGodMode,
 
@@ -4257,7 +4255,6 @@ export {
 	
 	// Globals
 	debug,
-	debugPointSize,
 	showWatermark,
 	godMode,
 	// Debug
@@ -4458,4 +4455,3 @@ export {
 	engineObjectsDestroy,
 	engineObjectsCallback,
 };
-
