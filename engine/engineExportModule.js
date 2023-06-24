@@ -179,7 +179,7 @@ export {
 	randInCircle,
 	randVector,
 	randColor,
-	randSeed, // Add get/set
+	randSeed,
 	randSeeded,
 
 	// More utilities
@@ -286,8 +286,8 @@ export {
 	// Medals
 	medals,
 	medalsPreventUnlock,
-	newgrounds,
 	medalsInit,
+	newgroundsInit,
 	Medal,
 	//medalsRender,
 	Newgrounds,

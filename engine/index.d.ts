@@ -151,6 +151,11 @@ declare function tileCollisionRaycast(posStart: Vector2, posEnd: Vector2, object
  *  @memberof Medals */
 declare function medalsInit(saveName: string): void;
 declare function medalsRender(): void;
+/** This can used to enable Newgrounds functionality
+ *  @param {Number} app_id   - The newgrounds App ID
+ *  @param {String} [cipher] - The encryption Key (AES-128/Base64)
+ *  @memberof Medals */
+declare function newgroundsInit(app_id: number, cipher?: string): void;
 declare function glInit(): void;
 /** Set the WebGl blend mode, normally you should call setBlendMode instead
  *  @param {Boolean} [additive=0]
@@ -1508,10 +1513,6 @@ declare const medals: any[];
 /** Set to stop medals from being unlockable (like if cheats are enabled)
  *  @memberof Medals */
 declare let medalsPreventUnlock: any;
-/** This can used to enable Newgrounds functionality
- *  @type {Newgrounds}
- *  @memberof Medals */
-declare let newgrounds: Newgrounds;
 declare let medalsDisplayQueue: any[];
 declare let medalsSaveName: any;
 declare let medalsDisplayTimeLast: any;
@@ -1556,6 +1557,7 @@ declare class Medal {
     renderIcon(x: number, y: number, size?: number): void;
     storageKey(): string;
 }
+declare let newgrounds: any;
 /**
  * Newgrounds API wrapper object
  * @example

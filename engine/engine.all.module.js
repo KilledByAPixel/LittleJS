@@ -3486,11 +3486,6 @@ const medals = [];
  *  @memberof Medals */
 let medalsPreventUnlock;
 
-/** This can used to enable Newgrounds functionality
- *  @type {Newgrounds}
- *  @memberof Medals */
-let newgrounds;
-
 // Engine internal variables not exposed to documentation
 let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimeLast;
 
@@ -3637,6 +3632,15 @@ function medalsRender()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+// global Newgrounds object
+let newgrounds;
+
+/** This can used to enable Newgrounds functionality
+ *  @param {Number} app_id   - The newgrounds App ID
+ *  @param {String} [cipher] - The encryption Key (AES-128/Base64)
+ *  @memberof Medals */
+function newgroundsInit(app_id, cipher) { newgrounds = new Newgrounds(app_id, cipher); }
 
 /** 
  * Newgrounds API wrapper object
@@ -4654,7 +4658,7 @@ export {
 	randInCircle,
 	randVector,
 	randColor,
-	randSeed, // Add get/set
+	randSeed,
 	randSeeded,
 
 	// More utilities
@@ -4761,8 +4765,8 @@ export {
 	// Medals
 	medals,
 	medalsPreventUnlock,
-	newgrounds,
 	medalsInit,
+	newgroundsInit,
 	Medal,
 	//medalsRender,
 	Newgrounds,
