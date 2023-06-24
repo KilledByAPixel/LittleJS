@@ -755,7 +755,7 @@ let touchGamepadAnalog = 1;
 /** Size of virutal gamepad for touch devices in pixels
  *  @default
  *  @memberof Settings */
-let touchGamepadSize = 80;
+let touchGamepadSize = 99;
 
 /** Transparency of touch gamepad overlay
  *  @default
@@ -876,7 +876,7 @@ let frameTimeLastMS = 0, frameTimeBufferMS = 0, tileImageSize, tileImageFixBleed
 let averageFPS, drawCount;
 
 // css text used for elements created by engine
-const styleBody = 'margin:0;overflow:hidden;background:#000';
+const styleBody = 'margin:0;overflow:hidden;background:#000;touch-action:none';
 const styleCanvas = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
 
 ///////////////////////////////////////////////////////////////////////////////

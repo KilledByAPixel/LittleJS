@@ -1689,5 +1689,5 @@ declare let tileImageSize: any;
 declare let tileImageFixBleed: any;
 declare let averageFPS: any;
 declare let drawCount: any;
-declare const styleBody: "margin:0;overflow:hidden;background:#000";
+declare const styleBody: "margin:0;overflow:hidden;background:#000;touch-action:none";
 declare const styleCanvas: "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)";

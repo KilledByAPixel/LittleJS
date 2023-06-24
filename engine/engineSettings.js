@@ -159,7 +159,7 @@ let touchGamepadAnalog = 1;
 /** Size of virutal gamepad for touch devices in pixels
  *  @default
  *  @memberof Settings */
-let touchGamepadSize = 80;
+let touchGamepadSize = 99;
 
 /** Transparency of touch gamepad overlay
  *  @default
