@@ -4477,7 +4477,10 @@ function engineObjectsCallback(pos, size, callbackFunction, objects=engineObject
     }
 }
 
-// This file contains exports neessary when LittleJS is used as a module
+/** 
+ * LittleJS Module Export
+ * <br> - Export engine as a module with extra functions where necessary
+ */
 
 // setters for all variables that devs will need to modify
 const setCameraPos =                    (v)=> cameraPos = v;
@@ -4523,7 +4526,6 @@ const setDebugPointSize =               (v)=> debugPointSize = v;
 const setShowWatermark =                (v)=> showWatermark = v;
 const setGodMode =                      (v)=> godMode = v;
 
-// This is a full list of everything in engine.all
 export {
 	// Custom methods
 	setCameraPos,
@@ -4651,6 +4653,7 @@ export {
 	isOverlapping,
 	wave,
 	formatTime,
+
 	// Random
 	rand,
 	randInt,
@@ -4661,13 +4664,13 @@ export {
 	randSeed,
 	randSeeded,
 
-	// More utilities
-	vec2,
+	// Utility Classes
 	Vector2,
-	colorRGBA,
-	colorHSLA,
 	Color,
 	Timer,
+	vec2,
+	colorRGBA,
+	colorHSLA,
 
 	// Base
 	EngineObject,
@@ -4810,3 +4813,4 @@ export {
 	engineObjectsDestroy,
 	engineObjectsCallback,
 };
+

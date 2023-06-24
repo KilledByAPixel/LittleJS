@@ -94,8 +94,27 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 rem --- BUILD TYPESCRIPT DEFINITIONS ---
+
 call npx tsc engine.all.js --declaration --allowJs --emitDeclarationOnly --outFile index.d.ts
 if %ERRORLEVEL% NEQ 0 (
     pause
     exit /b %ERRORLEVEL%
 )
+
+rem --- BUILD ENGINE MODULE ---
+
+set OUTPUT_FILENAME=engine.all.module.js
+del %OUTPUT_FILENAME%
+type engine.all.js >> %OUTPUT_FILENAME%
+echo.>> %OUTPUT_FILENAME%
+type engineExport.js >> %OUTPUT_FILENAME%
+echo.>> %OUTPUT_FILENAME%
+
+rem --- BUILD ENGINE MODULE RELEASE ---
+
+set OUTPUT_FILENAME=engine.all.release.module.js
+del %OUTPUT_FILENAME%
+type engine.all.release.js >> %OUTPUT_FILENAME%
+echo.>> %OUTPUT_FILENAME%
+type engineExport.js >> %OUTPUT_FILENAME%
+echo.>> %OUTPUT_FILENAME%
