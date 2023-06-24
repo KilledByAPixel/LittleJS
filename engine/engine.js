@@ -22,7 +22,7 @@
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.4.6';
+const engineVersion = '1.4.7';
 
 /** Frames per second to update objects
  *  @default */
@@ -51,14 +51,10 @@ let timeReal = 0;
 let paused = 0;
 
 // Engine internal variables not exposed to documentation
-let frameTimeLastMS = 0, frameTimeBufferMS = 0, tileImageSize, tileImageFixBleed;
+let tileImageSize, tileImageFixBleed;
 
 // Engine stat tracking, if showWatermark is true
 let averageFPS, drawCount;
-
-// css text used for elements created by engine
-const styleBody = 'margin:0;overflow:hidden;background:#000;touch-action:none';
-const styleCanvas = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -79,11 +75,16 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         tileImageFixBleed = vec2(tileFixBleedScale).divide(tileImageSize = vec2(tileImage.width, tileImage.height));
         debug && (tileImage.onload=()=>ASSERT(1)); // tile sheet can not reloaded
 
+        // setup css
+        const styleBody = 'margin:0;overflow:hidden;background:#000' + // fill the window
+            ';touch-action:none' + // prevent mobile pinch to resize
+            ';user-select:none' +  // prevent mobile hold to select
+            ';-webkit-user-select:none;-moz-user-select:none'; // compatibility for mobile
+
         // setup html
         document.body.style = styleBody;
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
         mainContext = mainCanvas.getContext('2d');
-        mainCanvas.style = styleCanvas;
 
         // init stuff and start engine
         debugInit();
@@ -92,12 +93,18 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         // create overlay canvas for hud to appear above gl canvas
         document.body.appendChild(overlayCanvas = document.createElement('canvas'));
         overlayContext = overlayCanvas.getContext('2d');
-        overlayCanvas.style = styleCanvas;
+
+        // set canvas style to fill the window
+        const styleCanvas = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
+        (glCanvas||mainCanvas).style = overlayCanvas.style = mainCanvas.style = styleCanvas;
         
         gameInit();
         touchGamepadCreate();
         engineUpdate();
     };
+
+    // frame time tracking
+    let frameTimeLastMS = 0, frameTimeBufferMS = 0;
 
     // main update loop
     const engineUpdate = (frameTimeMS=0)=>
