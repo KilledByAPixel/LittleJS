@@ -253,6 +253,10 @@ const isTouchDevice = window.ontouchstart !== undefined;
 // try to enable touch mouse
 if (isTouchDevice)
 {
+    // override mouse events
+    const mouseDown = onmousedown, mouseUp = onmouseup, mouseMove = onmousemove;
+    onmousedown = onmouseup = onmousemove = (e)=> 0;
+
     // handle all touch events the same way
     let wasTouching, hadTouch;
     ontouchstart = ontouchmove = ontouchend = (e)=>
@@ -269,10 +273,10 @@ if (isTouchDevice)
             // set event pos and pass it along
             e.x = e.touches[0].clientX;
             e.y = e.touches[0].clientY;
-            wasTouching ? onmousemove(e) : onmousedown(e);
+            wasTouching ? mouseMove(e) : mouseDown(e);
         }
         else if (wasTouching)
-            onmouseup(e);
+            mouseUp(e);
 
         // set was touching
         wasTouching = touching;
