@@ -468,10 +468,10 @@ class Color
      * @return {Array} */
     getHSLA()
     {
-        const r = this.r;
-        const g = this.g;
-        const b = this.b;
-        const a = this.a;
+        const r = clamp(this.r);
+        const g = clamp(this.g);
+        const b = clamp(this.b);
+        const a = clamp(this.a);
         const max = Math.max(r, g, b);
         const min = Math.min(r, g, b);
         const l = (max + min) / 2;
@@ -507,20 +507,13 @@ class Color
         ).clamp();
     }
 
-    /** Returns this color expressed as an CSS color value
+    /** Returns this color expressed as a hex color code
+     * @param {Boolean} [useAlpha=1] - if alpha should be included in result
      * @return {String} */
-    toString()      
+    toString(useAlpha = 1)      
     { 
-        ASSERT(this.r>=0 && this.r<=1 && this.g>=0 && this.g<=1 && this.b>=0 && this.b<=1 && this.a>=0 && this.a<=1);
-        return `rgb(${this.r*255|0},${this.g*255|0},${this.b*255|0},${this.a})`; 
-    }
-    
-    /** Returns this color expressed as 32 bit integer RGBA value
-     * @return {Number} */
-    rgbaInt()  
-    {
-        ASSERT(this.r>=0 && this.r<=1 && this.g>=0 && this.g<=1 && this.b>=0 && this.b<=1 && this.a>=0 && this.a<=1);
-        return (this.r*255|0) + (this.g*255<<8) + (this.b*255<<16) + (this.a*255<<24); 
+        const toHex = (c)=> ((c=c*255|0)<16 ? '0' : '') + c.toString(16);
+        return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b) + (useAlpha ? toHex(this.a) : '');
     }
 
     /** Set this color from a hex code
@@ -528,21 +521,24 @@ class Color
      * @return {Color} */
     setHex(hex)
     {
-        const fromHex = (a)=> parseInt(hex.slice(a,a+2), 16)/255;
+        const fromHex = (c)=> clamp(parseInt(hex.slice(c,c+2),16)/255);
         this.r = fromHex(1);
         this.g = fromHex(3),
         this.b = fromHex(5);
-        this.a = 1;
-        ASSERT(this.r>=0 && this.r<=1 && this.g>=0 && this.g<=1 && this.b>=0 && this.b<=1);
+        this.a = hex.length > 7 ? fromHex(7) : 1;
         return this;
     }
-
-    /** Returns this color expressed as a hex code
-     * @return {String} */
-    getHex()
+    
+    /** Returns this color expressed as 32 bit RGBA value
+     * @return {Number} */
+    rgbaInt()  
     {
-        const toHex = (c)=> ((c=c*255|0)<16 ? '0' : '') + c.toString(16);
-        return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b);
+        const toByte = (c)=> clamp(c)*255|0;
+        const r = toByte(this.r);
+        const g = toByte(this.g)<<8;
+        const b = toByte(this.b)<<16;
+        const a = toByte(this.a)<<24;
+        return r + g + b + a;
     }
 }
 
@@ -845,7 +841,7 @@ let medalDisplayIconSize = 50;
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.4.0';
+const engineVersion = '1.4.5';
 
 /** Frames per second to update objects
  *  @default */
@@ -880,8 +876,7 @@ let frameTimeLastMS = 0, frameTimeBufferMS = 0, tileImageSize, tileImageFixBleed
 let averageFPS, drawCount;
 
 // css text used for elements created by engine
-const styleBody = 'margin:0;overflow:hidden;background:#000' +
-    ';touch-action:none;user-select:none;-webkit-user-select:none;-moz-user-select:none';
+const styleBody = 'margin:0;overflow:hidden;background:#000';
 const styleCanvas = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -911,7 +906,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
         // init stuff and start engine
         debugInit();
-        glInit();
+        glEnable && glInit();
 
         // create overlay canvas for hud to appear above gl canvas
         document.body.appendChild(overlayCanvas = document.createElement('canvas'));
@@ -931,10 +926,14 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         frameTimeLastMS = frameTimeMS;
         if (debug || showWatermark)
             averageFPS = lerp(.05, averageFPS || 0, 1e3/(frameTimeDeltaMS||1));
+        const debugSpeedUp   = debug && keyIsDown(107); // +
+        const debugSpeedDown = debug && keyIsDown(109); // -
         if (debug)
-            frameTimeDeltaMS *= keyIsDown(107) ? 5 : keyIsDown(109) ? .2 : 1; // +/- to speed/slow time
+            frameTimeDeltaMS *= debugSpeedUp ? 5 : debugSpeedDown ? .2 : 1; // +/- to speed/slow time
         timeReal += frameTimeDeltaMS / 1e3;
-        frameTimeBufferMS = min(frameTimeBufferMS + !paused * frameTimeDeltaMS, 50); // clamp incase of slow framerate
+        frameTimeBufferMS += !paused * frameTimeDeltaMS;
+        if (!debugSpeedUp)
+            frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp incase of slow framerate
 
         if (canvasFixedSize.x)
         {
@@ -1007,10 +1006,11 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         for (const o of engineObjects)
             o.destroyed || o.render();
         gameRenderPost();
+        glRenderPostProcess();
         medalsRender();
         touchGamepadRender();
         debugRender();
-        glCopyToContext(mainContext);
+        glEnable && glCopyToContext(mainContext);
 
         if (showWatermark)
         {
@@ -1045,7 +1045,7 @@ function enginePreRender()
     mainContext.imageSmoothingEnabled = !cavasPixelated;
 
     // setup gl rendering if enabled
-    glPreRender(mainCanvas.width, mainCanvas.height, cameraPos.x, cameraPos.y, cameraScale);
+    glEnable && glPreRender(mainCanvas.width, mainCanvas.height, cameraPos.x, cameraPos.y, cameraScale);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1406,7 +1406,7 @@ class EngineObject
      *  @return {Boolean}         - true if the raycast should hit */
     collideWithTileRaycast(tileData, pos) { return tileData > 0; }
 
-    /** Called to check if a tile raycast hit
+    /** Called to check if a object collision should be resolved
      *  @param {EngineObject} object - the object to test against
      *  @return {Boolean}            - true if the collision should be resolved
      */
@@ -1451,10 +1451,10 @@ class EngineObject
     }
 
     /** Set how this object collides
-     *  @param {boolean} [collideSolidObjects=0] - Does it collide with solid objects
-     *  @param {boolean} [isSolid=0]             - Does it collide with and block other objects (expensive in large numbers)
+     *  @param {boolean} [collideSolidObjects=1] - Does it collide with solid objects
+     *  @param {boolean} [isSolid=1]             - Does it collide with and block other objects (expensive in large numbers)
      *  @param {boolean} [collideTiles=1]        - Does it collide with the tile collision */
-    setCollision(collideSolidObjects=0, isSolid=0, collideTiles=1)
+    setCollision(collideSolidObjects=1, isSolid=1, collideTiles=1)
     {
         ASSERT(collideSolidObjects || !isSolid); // solid objects must be set to collide
 
@@ -1717,21 +1717,21 @@ function setBlendMode(additive, useWebGL=glEnable)
  *  @param {Color}   [lineColor=new Color(0,0,0)]
  *  @param {String}  [textAlign='center']
  *  @memberof Draw */
-function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault)
+function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, context=overlayContext)
 {
-    overlayContext.fillStyle = color;
-    overlayContext.lineWidth = lineWidth;
-    overlayContext.strokeStyle = lineColor;
-    overlayContext.textAlign = textAlign;
-    overlayContext.font = size + 'px '+ font;
-    overlayContext.textBaseline = 'middle';
-    overlayContext.lineJoin = 'round';
+    context.fillStyle = color;
+    context.lineWidth = lineWidth;
+    context.strokeStyle = lineColor;
+    context.textAlign = textAlign;
+    context.font = size + 'px '+ font;
+    context.textBaseline = 'middle';
+    context.lineJoin = 'round';
 
     pos = pos.copy();
     (text+'').split('\n').forEach(line=>
     {
-        lineWidth && overlayContext.strokeText(line, pos.x, pos.y);
-        overlayContext.fillText(line, pos.x, pos.y);
+        lineWidth && context.strokeText(line, pos.x, pos.y);
+        context.fillText(line, pos.x, pos.y);
         pos.y += size;
     });
 }
@@ -1748,7 +1748,7 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
  *  @memberof Draw */
 function drawText(text, pos, size=1, color, lineWidth, lineColor, textAlign, font)
 {
-    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font);
+    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, mainContext);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1985,7 +1985,7 @@ let inputData = [[]];
 function inputUpdate()
 {
     // clear input when lost focus (prevent stuck keys)
-    document.hasFocus() || clearInput();
+    isTouchDevice || document.hasFocus() || clearInput();
 
     // update mouse world space position
     mousePos = screenToWorld(mousePosScreen);
@@ -2060,7 +2060,7 @@ function gamepadsUpdate()
         }
     }
 
-    if (!gamepadsEnable || !navigator.getGamepads || !document.hasFocus() && !debug)
+    if (!gamepadsEnable || !navigator || !navigator.getGamepads || !document.hasFocus() && !debug)
         return;
 
     // poll gamepads
@@ -2109,7 +2109,7 @@ function gamepadsUpdate()
 /** Pulse the vibration hardware if it exists
  *  @param {Number} [pattern=100] - a single value in miliseconds or vibration interval array
  *  @memberof Input */
-const vibrate = (pattern)=> vibrateEnable && Navigator.vibrate && Navigator.vibrate(pattern);
+const vibrate = (pattern)=> vibrateEnable && navigator && navigator.vibrate && navigator.vibrate(pattern);
 
 /** Cancel any ongoing vibration
  *  @memberof Input */
@@ -2127,7 +2127,7 @@ const isTouchDevice = window.ontouchstart !== undefined;
 if (isTouchDevice)
 {
     // handle all touch events the same way
-    let wasTouching, hadTouchInput;
+    let wasTouching, hadTouch;
     ontouchstart = ontouchmove = ontouchend = (e)=>
     {
         e.button = 0; // all touches are left click
@@ -2136,7 +2136,8 @@ if (isTouchDevice)
         const touching = e.touches.length;
         if (touching)
         {
-            hadTouchInput || zzfx(0, hadTouchInput=1) ; // fix mobile audio, force it to play a sound the first time
+            // fix mobile audio, force it to play a sound on first touch
+            hadTouch || zzfx(0, hadTouch=1);
 
             // set event pos and pass it along
             e.x = e.touches[0].clientX;
@@ -2149,8 +2150,8 @@ if (isTouchDevice)
         // set was touching
         wasTouching = touching;
 
-        // prevent normal mouse events from being called
-        return !e.cancelable;
+        // must return true so the document will get focus
+        return true;
     }
 }
 
@@ -3007,7 +3008,7 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
     redrawEnd()
     {
         ASSERT(mainContext == this.context); // must call redrawStart() before drawing tiles
-        glCopyToContext(mainContext, 1);
+        glEnable && glCopyToContext(mainContext, 1);
         //debugSaveCanvas(this.canvas);
 
         // set stuff back to normal
@@ -3151,6 +3152,7 @@ class ParticleEmitter extends EngineObject
      *  @param {Boolean} [additive=0]           - Should particles use addtive blend
      *  @param {Boolean} [randomColorLinear=1]  - Should color be randomized linearly or across each component
      *  @param {Number}  [renderOrder=0]        - Render order for particles (additive is above other stuff by default)
+     *  @param {Boolean}  [localSpace=0]        - Should it be in local space of emitter (world space is default)
      */
     constructor
     ( 
@@ -3180,7 +3182,8 @@ class ParticleEmitter extends EngineObject
         collideTiles,
         additive,
         randomColorLinear = 1,
-        renderOrder = additive ? 1e9 : 0
+        renderOrder = additive ? 1e9 : 0,
+        localSpace
     )
     {
         super(pos, new Vector2, tileIndex, tileSize, angle, undefined, renderOrder);
@@ -3234,6 +3237,8 @@ class ParticleEmitter extends EngineObject
         this.collideTiles      = collideTiles;
         /** @property {Number} - Should particles use addtive blend */
         this.additive          = additive;
+        /** @property {Boolean} - Should it be in local space of emitter */
+        this.localSpace          = localSpace;
         /** @property {Number} - If set the partile is drawn as a trail, stretched in the drection of velocity */
         this.trailScale        = 0;
 
@@ -3269,30 +3274,38 @@ class ParticleEmitter extends EngineObject
     emitParticle()
     {
         // spawn a particle
-        const pos = this.emitSize.x != undefined ? // check if vec2 was used for size
-            (new Vector2(rand(-.5,.5), rand(-.5,.5))).multiply(this.emitSize).rotate(this.angle) // box emitter
-            : randInCircle(this.emitSize * .5);                                                  // circle emitter
-        const particle = new Particle(this.pos.add(pos), this.tileIndex, this.tileSize, 
-            this.angle + rand(this.particleConeAngle, -this.particleConeAngle));
+        let pos = this.emitSize.x != undefined ? // check if vec2 was used for size
+            (new Vector2(rand(-.5,.5), rand(-.5,.5)))
+                .multiply(this.emitSize).rotate(this.angle) // box emitter
+            : randInCircle(this.emitSize * .5);             // circle emitter
+        let angle = rand(this.particleConeAngle, -this.particleConeAngle);
+        if (!this.localSpace)
+        {
+            pos = this.pos.add(pos);
+            angle += this.angle;
+        }
+            
+        const particle = new Particle(pos, this.tileIndex, this.tileSize, angle);
 
         // randomness scales each paremeter by a percentage
         const randomness = this.randomness;
         const randomizeScale = (v)=> v + v*rand(randomness, -randomness);
 
         // randomize particle settings
-        const particleTime = randomizeScale(this.particleTime);
-        const sizeStart    = randomizeScale(this.sizeStart);
-        const sizeEnd      = randomizeScale(this.sizeEnd);
-        const speed        = randomizeScale(this.speed);
-        const angleSpeed   = randomizeScale(this.angleSpeed) * randSign();
-        const coneAngle    = rand(this.emitConeAngle, -this.emitConeAngle);
-        const colorStart   = randColor(this.colorStartA, this.colorStartB, this.randomColorLinear);
-        const colorEnd     = randColor(this.colorEndA,   this.colorEndB, this.randomColorLinear);
+        const particleTime  = randomizeScale(this.particleTime);
+        const sizeStart     = randomizeScale(this.sizeStart);
+        const sizeEnd       = randomizeScale(this.sizeEnd);
+        const speed         = randomizeScale(this.speed);
+        const angleSpeed    = randomizeScale(this.angleSpeed) * randSign();
+        const coneAngle     = rand(this.emitConeAngle, -this.emitConeAngle);
+        const colorStart    = randColor(this.colorStartA, this.colorStartB, this.randomColorLinear);
+        const colorEnd      = randColor(this.colorEndA,   this.colorEndB, this.randomColorLinear);
+        const velocityAngle = this.localSpace ? coneAngle : this.angle + coneAngle;
 
         // build particle settings
         particle.colorStart    = colorStart;
         particle.colorEndDelta = colorEnd.subtract(colorStart);
-        particle.velocity      = (new Vector2).setAngle(this.angle + coneAngle, speed);
+        particle.velocity      = (new Vector2).setAngle(velocityAngle, speed);
         particle.angleVelocity = angleSpeed;
         particle.lifeTime      = particleTime;
         particle.sizeStart     = sizeStart;
@@ -3308,6 +3321,7 @@ class ParticleEmitter extends EngineObject
         particle.renderOrder   = this.renderOrder;
         particle.trailScale    = this.trailScale;
         particle.mirror        = rand()<.5;
+        particle.localSpaceEmitter = this.localSpace && this;
 
         // setup callbacks for particles
         particle.destroyCallback = this.particleDestroyCallback;
@@ -3354,20 +3368,31 @@ class Particle extends EngineObject
 
         // draw the particle
         this.additive && setBlendMode(1);
+
+        let pos = this.pos, angle = this.angle;
+        if (this.localSpaceEmitter)
+        {
+            // in local space of emitter
+            pos = this.localSpaceEmitter.pos.add(pos.rotate(-this.localSpaceEmitter.angle)); 
+            angle += this.localSpaceEmitter.angle;
+        }
         if (this.trailScale)
         {
             // trail style particles
-            const speed = this.velocity.length();
-            const direction = this.velocity.scale(1/speed);
+            let velocity = this.velocity;
+            if (this.localSpaceEmitter)
+                velocity = velocity.rotate(-this.localSpaceEmitter.angle);
+            const speed = velocity.length();
+            const direction = velocity.scale(1/speed);
             const trailLength = speed * this.trailScale;
             size.y = max(size.x, trailLength);
-            this.angle = direction.angle();
-            drawTile(this.pos.add(direction.multiply(vec2(0,-trailLength/2))), size, this.tileIndex, this.tileSize, color, this.angle, this.mirror);
+            angle = direction.angle();
+            drawTile(pos.add(direction.multiply(vec2(0,-trailLength/2))), size, this.tileIndex, this.tileSize, color, angle, this.mirror);
         }
         else
-            drawTile(this.pos, size, this.tileIndex, this.tileSize, color, this.angle, this.mirror);
+            drawTile(pos, size, this.tileIndex, this.tileSize, color, angle, this.mirror);
         this.additive && setBlendMode();
-        debugParticles && debugRect(this.pos, size, '#f005', 0, this.angle);
+        debugParticles && debugRect(pos, size, '#f005', 0, angle);
 
         if (p == 1)
         {
@@ -3416,7 +3441,7 @@ function medalsInit(saveName)
 {
     // check if medals are unlocked
     medalsSaveName = saveName;
-    debugMedals || medals.forEach(medal=> localStorage[medal.storageKey()]);
+    debugMedals || medals.forEach(medal=> medal.unlocked = (localStorage[medal.storageKey()] | 0));
 }
 
 /** 
@@ -3709,15 +3734,13 @@ let glContext;
 let glTileTexture;
 
 // WebGL internal variables not exposed to documentation
-let glActiveTexture, glShader, glPositionData, glColorData, glBatchCount, glBatchAdditive, glAdditive;
+let glActiveTexture, glShader, glArrayBuffer, glVertexData, glPositionData, glColorData, glBatchCount, glBatchAdditive, glAdditive;
 
 ///////////////////////////////////////////////////////////////////////////////
 
 // Init WebGL, called automatically by the engine
 function glInit()
 {
-    if (!glEnable) return;
-
     // create the canvas and tile texture
     glCanvas = document.createElement('canvas');
     glContext = glCanvas.getContext('webgl', {antialias: false});
@@ -3750,24 +3773,11 @@ function glInit()
     );
 
     // init buffers
-    const glVertexData = new ArrayBuffer(gl_MAX_BATCH * gl_VERTICES_PER_QUAD * gl_VERTEX_BYTE_STRIDE);
-    glCreateBuffer(gl_ARRAY_BUFFER, glVertexData.byteLength, gl_DYNAMIC_DRAW);
+    glVertexData = new ArrayBuffer(gl_MAX_BATCH * gl_VERTICES_PER_QUAD * gl_VERTEX_BYTE_STRIDE);
+    glArrayBuffer = glContext.createBuffer();
     glPositionData = new Float32Array(glVertexData);
     glColorData = new Uint32Array(glVertexData);
-
-    // setup the vertex data array
-    let offset = glBatchCount = 0;
-    const initVertexAttribArray = (name, type, typeSize, size, normalize=0)=>
-    {
-        const location = glContext.getAttribLocation(glShader, name);
-        glContext.enableVertexAttribArray(location);
-        glContext.vertexAttribPointer(location, size, type, normalize, gl_VERTEX_BYTE_STRIDE, offset);
-        offset += size*typeSize;
-    }
-    initVertexAttribArray('p', gl_FLOAT, 4, 2);            // position
-    initVertexAttribArray('t', gl_FLOAT, 4, 2);            // texture coords
-    initVertexAttribArray('c', gl_UNSIGNED_BYTE, 1, 4, 1); // color
-    initVertexAttribArray('a', gl_UNSIGNED_BYTE, 1, 4, 1); // additiveColor
+    glBatchCount = 0;
 }
 
 /** Set the WebGl blend mode, normally you should call setBlendMode instead
@@ -3775,8 +3785,6 @@ function glInit()
  *  @memberof WebGL */
 function glSetBlendMode(additive)
 {
-    if (!glEnable) return;
-        
     // setup blending
     glAdditive = additive;
 }
@@ -3787,8 +3795,6 @@ function glSetBlendMode(additive)
  *  @memberof WebGL */
 function glSetTexture(texture=glTileTexture)
 {
-    if (!glEnable) return;
-    
     // must flush cache with the old texture to set a new one
     if (texture != glActiveTexture)
         glFlush();
@@ -3803,8 +3809,6 @@ function glSetTexture(texture=glTileTexture)
  *  @memberof WebGL */
 function glCompileShader(source, type)
 {
-    if (!glEnable) return;
-
     // build the shader
     const shader = glContext.createShader(type);
     glContext.shaderSource(shader, source);
@@ -3823,8 +3827,6 @@ function glCompileShader(source, type)
  *  @memberof WebGL */
 function glCreateProgram(vsSource, fsSource)
 {
-    if (!glEnable) return;
-
     // build the program
     const program = glContext.createProgram();
     glContext.attachShader(program, glCompileShader(vsSource, gl_VERTEX_SHADER));
@@ -3837,35 +3839,16 @@ function glCreateProgram(vsSource, fsSource)
     return program;
 }
 
-/** Create WebGL buffer
- *  @param bufferType
- *  @param size
- *  @param usage
- *  @return {WebGLBuffer}
- *  @memberof WebGL */
-function glCreateBuffer(bufferType, size, usage)
-{
-    if (!glEnable) return;
-
-    // build the buffer
-    const buffer = glContext.createBuffer();
-    glContext.bindBuffer(bufferType, buffer);
-    glContext.bufferData(bufferType, size, usage);
-    return buffer;
-}
-
 /** Create WebGL texture from an image and set the texture settings
  *  @param {Image} image
  *  @return {WebGLTexture}
  *  @memberof WebGL */
 function glCreateTexture(image)
 {
-    if (!glEnable || !image || !image.width) return;
-
     // build the texture
     const texture = glContext.createTexture();
     glContext.bindTexture(gl_TEXTURE_2D, texture);
-    glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
+    image && image.width && glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
         
     // use point filtering for pixelated rendering
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, cavasPixelated ? gl_NEAREST : gl_LINEAR);
@@ -3878,16 +3861,31 @@ function glCreateTexture(image)
 // called automatically by engine before render
 function glPreRender(width, height, cameraX, cameraY, cameraScale)
 {
-    if (!glEnable) return;
-
     // clear and set to same size as main canvas
     glContext.viewport(0, 0, glCanvas.width = width, glCanvas.height = height);
     glContext.clear(gl_COLOR_BUFFER_BIT);
 
     // set up the shader
-    glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = glTileTexture);
     glContext.useProgram(glShader);
+    glContext.activeTexture(gl_TEXTURE0);
+    glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = glTileTexture);
+    glContext.bindBuffer(gl_ARRAY_BUFFER, glArrayBuffer);
+    glContext.bufferData(gl_ARRAY_BUFFER, glVertexData.byteLength, gl_DYNAMIC_DRAW);
     glSetBlendMode();
+    
+    // set vertex attributes
+    let offset = 0;
+    const initVertexAttribArray = (name, type, typeSize, size, normalize=0)=>
+    {
+        const location = glContext.getAttribLocation(glShader, name);
+        glContext.enableVertexAttribArray(location);
+        glContext.vertexAttribPointer(location, size, type, normalize, gl_VERTEX_BYTE_STRIDE, offset);
+        offset += size*typeSize;
+    }
+    initVertexAttribArray('p', gl_FLOAT, 4, 2);            // position
+    initVertexAttribArray('t', gl_FLOAT, 4, 2);            // texture coords
+    initVertexAttribArray('c', gl_UNSIGNED_BYTE, 1, 4, 1); // color
+    initVertexAttribArray('a', gl_UNSIGNED_BYTE, 1, 4, 1); // additiveColor
 
     // build the transform matrix
     const sx = 2 * cameraScale / width;
@@ -3906,7 +3904,7 @@ function glPreRender(width, height, cameraX, cameraY, cameraScale)
  *  @memberof WebGL */
 function glFlush()
 {
-    if (!glEnable || !glBatchCount) return;
+    if (!glBatchCount) return;
 
     const destBlend = glBatchAdditive ? gl_ONE : gl_ONE_MINUS_SRC_ALPHA;
     glContext.blendFuncSeparate(gl_SRC_ALPHA, destBlend, gl_ONE, destBlend);
@@ -3926,7 +3924,7 @@ function glFlush()
  *  @memberof WebGL */
 function glCopyToContext(context, forceDraw)
 {
-    if (!glEnable || !glBatchCount && !forceDraw) return;
+    if (!glBatchCount && !forceDraw) return;
     
     glFlush();
     
@@ -3950,8 +3948,6 @@ function glCopyToContext(context, forceDraw)
  *  @memberof WebGL */
 function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba=0xffffffff, rgbaAdditive=0)
 {
-    if (!glEnable) return;
-
     // flush if there is no room for more verts or if different blend mode
     if (glBatchCount == gl_MAX_BATCH || glBatchAdditive != glAdditive)
         glFlush();
@@ -4001,6 +3997,90 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba=0xffffff
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// post processing - can be enabled to pass other canvases through a final shader
+
+let glPostShader, glPostArrayBuffer, glPostTexture;
+
+/** Set up a post processing shader
+ *  @param {String} shaderCode
+ *  @memberof WebGL */
+function glInitPostProcess(shaderCode)
+{
+    ASSERT(!glPostShader); // can only have 1 post effects shader
+
+    if (!shaderCode) // default shader
+        shaderCode = 'void mainImage(out vec4 c,vec2 p){c=texture2D(iChannel0,p/iResolution.xy);}';
+
+    // create the shader
+    glPostShader = glCreateProgram(
+        'precision highp float;'+        // use highp for better accuracy
+        'attribute vec2 p;'+             // position
+        'void main(){'+                  // shader entry point
+        'gl_Position=vec4(p,1,1);'+      // set position
+        '}'                              // end of shader
+        ,
+        'precision highp float;'+        // use highp for better accuracy
+        'uniform sampler2D iChannel0;'+  // input texture
+        'uniform vec3 iResolution;'+     // size of output texture
+        'uniform float iTime;'+          // time passed
+        '\n' + shaderCode + '\n'+        // insert custom shader code
+        'void main(){'+                  // shader entry point
+        'mainImage(gl_FragColor,gl_FragCoord.xy);'+ // call post process function
+        'gl_FragColor.a=1.;'+            // always use full alpha
+        '}'                              // end of shader
+    );
+
+    // create buffer and texture
+    glPostArrayBuffer = glContext.createBuffer();
+    glPostTexture = glCreateTexture();
+
+    // hide the original 2d canvas
+    mainCanvas.style.visibility = 'hidden';
+}
+
+// Render the post processing shader, called automatically by the engine
+function glRenderPostProcess()
+{
+    if (!glPostShader)
+        return;
+    
+    // prepare to render post process shader
+    const width = mainCanvas.width, height = mainCanvas.height;
+    if (glEnable)
+    {
+        glFlush(); // clear out the buffer
+        mainContext.drawImage(glCanvas, 0, 0); // copy to the main canvas
+    }
+    else
+        glContext.viewport(0, 0, glCanvas.width = width, glCanvas.height = height); // set viewport
+
+    // setup shader program to draw one triangle
+    glContext.useProgram(glPostShader);
+    glContext.disable(gl_BLEND);
+    glContext.bindBuffer(gl_ARRAY_BUFFER, glPostArrayBuffer);
+    glContext.bufferData(gl_ARRAY_BUFFER, new Float32Array([-3,1,1,-3,1,1]), gl_STATIC_DRAW);
+    glContext.pixelStorei(gl_UNPACK_FLIP_Y_WEBGL, true);
+
+    // set textures, pass in the 2d canvas and gl canvas in separate texture channels
+    glContext.activeTexture(gl_TEXTURE0);
+    glContext.bindTexture(gl_TEXTURE_2D, glPostTexture);
+    glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, mainCanvas);
+
+    // set vertex position attribute
+    const vertexByteStride = 8;
+    const pLocation = glContext.getAttribLocation(glPostShader, 'p');
+    glContext.enableVertexAttribArray(pLocation);
+    glContext.vertexAttribPointer(pLocation, 2, gl_FLOAT, 0, vertexByteStride, 0);
+
+    // set uniforms and draw
+    const uniformLocation = (name)=>glContext.getUniformLocation(glPostShader, name);
+    glContext.uniform1i(uniformLocation('iChannel0'), 0);
+    glContext.uniform1f(uniformLocation('iTime'), time);
+    glContext.uniform3f(uniformLocation('iResolution'), width, height, 1);
+    glContext.drawArrays(gl_TRIANGLES, 0, 3);
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // store gl constants as integers so their name doesn't use space in minifed
 const 
 gl_ONE = 1,
@@ -4010,6 +4090,7 @@ gl_ONE_MINUS_SRC_ALPHA = 771,
 gl_BLEND = 3042,
 gl_TEXTURE_2D = 3553,
 gl_UNSIGNED_BYTE = 5121,
+gl_BYTE = 5120,
 gl_FLOAT = 5126,
 gl_RGBA = 6408,
 gl_NEAREST = 9728,
@@ -4020,12 +4101,16 @@ gl_TEXTURE_WRAP_S = 10242,
 gl_TEXTURE_WRAP_T = 10243,
 gl_COLOR_BUFFER_BIT = 16384,
 gl_CLAMP_TO_EDGE = 33071,
+gl_TEXTURE0 = 33984,
+gl_TEXTURE1 = 33985,
 gl_ARRAY_BUFFER = 34962,
+gl_STATIC_DRAW = 35044,
 gl_DYNAMIC_DRAW = 35048,
 gl_FRAGMENT_SHADER = 35632, 
 gl_VERTEX_SHADER = 35633,
 gl_COMPILE_STATUS = 35713,
 gl_LINK_STATUS = 35714,
+gl_UNPACK_FLIP_Y_WEBGL = 37440,
 
 // constants for batch rendering
 gl_VERTICES_PER_QUAD = 6,
@@ -4035,100 +4120,97 @@ gl_VERTEX_BYTE_STRIDE = (4 * 2) * 2 + (4) * 2; // vec2 * 2 + (char * 4) * 2
 
 // This file contains exports neessary when LittleJS is used as a module
 
-// TODO: Add setters and getters for all variables that devs will need to modify and are currently internal
-const setTileSizeDefault = (v2) => tileSizeDefault = v2;
-const setRandSeed = (s) => randSeed = s;
-const setCameraPos = (pos) => cameraPos = pos;
-const setCameraScale = (scale) => cameraScale = scale;
-const setGravity = (g) => gravity = g;
+// setters for all variables that devs will need to modify
+const setCameraPos =                    (v)=> cameraPos = v;
+const setCameraScale =                  (v)=> cameraScale = v;
+const setRandSeed =                     (v)=> randSeed = v;
+const setCanvasMaxSize =                (v)=> canvasMaxSize = v;
+const setCanvasFixedSize =              (v)=> canvasFixedSize = v;
+const setCavasPixelated =               (v)=> cavasPixelated = v;
+const setFontDefault =                  (v)=> fontDefault = v;
+const setTileSizeDefault =              (v)=> tileSizeDefault = v;
+const setTileFixBleedScale =            (v)=> tileFixBleedScale = v;
+const setObjectDefaultSize =            (v)=> objectDefaultSize = v;
+const setEnablePhysicsSolver =          (v)=> enablePhysicsSolver = v;
+const setObjectDefaultMass =            (v)=> objectDefaultMass = v;
+const setObjectDefaultDamping =         (v)=> objectDefaultDamping = v;
+const setObjectDefaultAngleDamping =    (v)=> objectDefaultAngleDamping = v;
+const setObjectDefaultElasticity =      (v)=> objectDefaultElasticity = v;
+const setObjectDefaultFriction =        (v)=> objectDefaultFriction = v;
+const setObjectMaxSpeed =               (v)=> objectMaxSpeed = v;
+const setGravity =                      (v)=> gravity = v;
+const setParticleEmitRateScale =        (v)=> particleEmitRateScale = v;
+const setGlEnable =                     (v)=> glEnable = v;
+const setGlOverlay =                    (v)=> glOverlay = v;
+const setGamepadsEnable =               (v)=> gamepadsEnable = v;
+const setGamepadDirectionEmulateStick = (v)=> gamepadDirectionEmulateStick = v;
+const setInputWASDEmulateDirection =    (v)=> inputWASDEmulateDirection = v;
+const setTouchGamepadEnable =           (v)=> touchGamepadEnable = v;
+const setTouchGamepadAnalog =           (v)=> touchGamepadAnalog = v;
+const setTouchGamepadSize =             (v)=> touchGamepadSize = v;
+const setTouchGamepadAlpha =            (v)=> touchGamepadAlpha = v;
+const setVibrateEnable =                (v)=> vibrateEnable = v;
+const setSoundVolume =                  (v)=> soundVolume = v;
+const setSoundEnable =                  (v)=> soundEnable = v;
+const setSoundDefaultRange =            (v)=> soundDefaultRange = v;
+const setSoundDefaultTaper =            (v)=> soundDefaultTaper = v;
+const setMedalDisplayTime =             (v)=> medalDisplayTime = v;
+const setMedalDisplaySlideTime =        (v)=> medalDisplaySlideTime = v;
+const setMedalDisplayWidth =            (v)=> medalDisplayWidth = v;
+const setMedalDisplayHeight =           (v)=> medalDisplayHeight = v;
+const setMedalDisplayIconSize =         (v)=> medalDisplayIconSize = v;
+const setMedalsPreventUnlock =          (v)=> medalsPreventUnlock = v;
+const setDebugPointSize =               (v)=> debugPointSize = v;
+const setShowWatermark =                (v)=> showWatermark = v;
+const setGodMode =                      (v)=> godMode = v;
 
-const getMainContext = () => mainContext;
-const getOverlayCanvas = () => overlayCanvas;
-const getCameraPos = () => cameraPos;
-const getCameraScale = () => cameraScale;
-const getMousePos = () => mousePos;
-const getMouseWheel = () => mouseWheel;
-const getUsingGamepad = () => isUsingGamepad;
-const getTileCollisionSize = () => tileCollisionSize;
-
-// This is a full list of everything in engine.all except the gl_ constants
-// TODO: Remove internal variables from this list
+// This is a full list of everything in engine.all
 export {
-	// ---------- Custom methods
-	setTileSizeDefault,
-	setRandSeed,
+	// Custom methods
 	setCameraPos,
 	setCameraScale,
+	setRandSeed,
+	setCanvasMaxSize,
+	setCanvasFixedSize,
+	setCavasPixelated,
+	setFontDefault,
+	setTileSizeDefault,
+	setTileFixBleedScale,
+	setObjectDefaultSize,
+	setEnablePhysicsSolver,
+	setObjectDefaultMass,
+	setObjectDefaultDamping,
+	setObjectDefaultAngleDamping,
+	setObjectDefaultElasticity,
+	setObjectDefaultFriction,
+	setObjectMaxSpeed,
 	setGravity,
-	getMainContext,
-	getOverlayCanvas,
-	getCameraPos,
-	getCameraScale,
-	getMousePos,
-	getMouseWheel,
-	getUsingGamepad,
-	getTileCollisionSize,
-	// ---------- Engine Methods and Variables
-	// Globals
-	debug,
-	enableAsserts,
-	debugPointSize,
-	showWatermark,
-	godMode,
-	// Debug
-	debugPrimitives,
-	debugOverlay,
-	debugPhysics,
-	debugRaycast,
-	debugParticles,
-	debugGamepads,
-	debugMedals,
-	debugTakeScreenshot,
-	//downloadLink,
-	//ASSERT,
-	debugRect,
-	debugCircle,
-	debugPoint,
-	debugLine,
-	debugAABB,
-	debugText,
-	debugClear,
-	debugSaveCanvas,
-	debugInit,
-	debugUpdate,
-	debugRender,
-	// Utilities
-	PI,
-	abs,
-	min,
-	max,
-	sign,
-	mod,
-	clamp,
-	percent,
-	lerp,
-	smoothStep,
-	nearestPowerOfTwo,
-	isOverlapping,
-	wave,
-	formatTime,
-	// Random
-	rand,
-	randInt,
-	randSign,
-	randInCircle,
-	randVector,
-	randColor,
-	randSeed, // Add get/set
-	randSeeded,
-	// More utilities
-	vec2,
-	Vector2,
-	colorRGBA,
-	colorHSLA,
-	Color,
-	Timer,
-	// Settings -- Could all use get/set methods
+	setParticleEmitRateScale,
+	setGlEnable,
+	setGlOverlay,
+	setGamepadsEnable,
+	setGamepadDirectionEmulateStick,
+	setInputWASDEmulateDirection,
+	setTouchGamepadEnable,
+	setTouchGamepadAnalog,
+	setTouchGamepadSize,
+	setTouchGamepadAlpha,
+	setVibrateEnable,
+	setSoundVolume,
+	setSoundEnable,
+	setSoundDefaultRange,
+	setSoundDefaultTaper,
+	setMedalDisplayTime,
+	setMedalDisplaySlideTime,
+	setMedalDisplayWidth,
+	setMedalDisplayHeight,
+	setMedalDisplayIconSize,
+	setMedalsPreventUnlock,
+	setDebugPointSize,
+	setShowWatermark,
+	setGodMode,
+
+	// Settings
 	canvasMaxSize,
 	canvasFixedSize,
 	cavasPixelated,
@@ -4166,8 +4248,71 @@ export {
 	medalDisplayWidth,
 	medalDisplayHeight,
 	medalDisplayIconSize,
+	
+	// Globals
+	debug,
+	debugPointSize,
+	showWatermark,
+	godMode,
+	// Debug
+	//debugPrimitives,
+	//debugOverlay,
+	//debugPhysics,
+	//debugRaycast,
+	//debugParticles,
+	//debugGamepads,
+	//debugMedals,
+	//debugTakeScreenshot,
+	//downloadLink,
+	//ASSERT,
+	debugRect,
+	debugCircle,
+	debugPoint,
+	debugLine,
+	debugAABB,
+	debugText,
+	debugClear,
+	debugSaveCanvas,
+	//debugInit,
+	//debugUpdate,
+	//debugRender,
+
+	// Utilities
+	PI,
+	abs,
+	min,
+	max,
+	sign,
+	mod,
+	clamp,
+	percent,
+	lerp,
+	smoothStep,
+	nearestPowerOfTwo,
+	isOverlapping,
+	wave,
+	formatTime,
+	// Random
+	rand,
+	randInt,
+	randSign,
+	randInCircle,
+	randVector,
+	randColor,
+	randSeed, // Add get/set
+	randSeeded,
+
+	// More utilities
+	vec2,
+	Vector2,
+	colorRGBA,
+	colorHSLA,
+	Color,
+	Timer,
+
 	// Base
 	EngineObject,
+
 	// Draw
 	tileImage,
 	mainCanvas,
@@ -4190,6 +4335,7 @@ export {
 	FontImage,
 	isFullscreen,
 	toggleFullscreen,
+
 	// Input
 	keyIsDown,
 	keyWasPressed,
@@ -4208,8 +4354,8 @@ export {
 	gamepadWasReleased,
 	gamepadStick,
 	//inputData,
-	inputUpdate,
-	inputUpdatePost,
+	//inputUpdate,
+	//inputUpdatePost,
 	// onkeydown,
 	// onkeyup,
 	//remapKeyCode,
@@ -4227,7 +4373,8 @@ export {
 	//touchGamepadTimer,
 	touchGamepadCreate,
 	touchGamepadRender,
-	// sound
+
+	// Audio
 	Sound,
 	Music,
 	playAudioFile,
@@ -4240,7 +4387,8 @@ export {
 	//zzfxR,
 	//zzfxG,
 	//zzfxM,
-	// tiles
+
+	// Tiles
 	tileCollision,
 	tileCollisionSize,
 	initTileCollision,
@@ -4250,42 +4398,37 @@ export {
 	tileCollisionRaycast,
 	TileLayerData,
 	TileLayer,
+
 	// Particles
 	ParticleEmitter,
 	Particle,
-	// Other
+
+	// Medals
 	medals,
 	medalsPreventUnlock,
 	newgrounds,
-	medalsDisplayQueue,
 	medalsInit,
 	Medal,
-	medalsRender,
+	//medalsRender,
 	Newgrounds,
 	//CryptoJS,
+
 	// WebGL
 	glCanvas,
 	glContext,
-	glTileTexture,
-	glActiveTexture,
-	glShader,
-	glPositionData,
-	glColorData,
-	glBatchCount,
-	glBatchAdditive,
-	glAdditive,
-	glInit,
+	//glInit,
 	glSetBlendMode,
 	glSetTexture,
 	glCompileShader,
 	glCreateProgram,
-	glCreateBuffer,
 	glCreateTexture,
-	glPreRender,
-	glFlush,
-	glCopyToContext,
-	glDraw,
-	// Various "gl_" constants (ignored)
+	//glPreRender,
+	//glFlush,
+	//glCopyToContext,
+	//glDraw,
+	glInitPostProcess,
+	//glRenderPostProcess,
+
 	// Engine
 	engineName,
 	engineVersion,
@@ -4298,13 +4441,13 @@ export {
 	timeReal,
 	paused,
 	//frameTimeLastMS,
-	averageFPS,
+	//averageFPS,
 	//drawCount,
 	//styleBody,
 	//styleCanvas,
 	engineInit,
-	enginePreRender,
-	engineObjectsUpdate,
+	//enginePreRender,
+	//engineObjectsUpdate,
 	engineObjectsDestroy,
 	engineObjectsCallback,
 };
