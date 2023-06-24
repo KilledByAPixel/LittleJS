@@ -1664,7 +1664,7 @@ declare const gl_VERTEX_BYTE_STRIDE: number;
 /** Name of engine */
 declare const engineName: "LittleJS";
 /** Version of engine */
-declare const engineVersion: "1.4.6";
+declare const engineVersion: "1.4.7";
 /** Frames per second to update objects
  *  @default */
 declare const frameRate: 60;
@@ -1683,11 +1683,7 @@ declare let time: number;
 declare let timeReal: number;
 /** Is the game paused? Causes time and objects to not be updated. */
 declare let paused: number;
-declare let frameTimeLastMS: number;
-declare let frameTimeBufferMS: number;
 declare let tileImageSize: any;
 declare let tileImageFixBleed: any;
 declare let averageFPS: any;
 declare let drawCount: any;
-declare const styleBody: "margin:0;overflow:hidden;background:#000;touch-action:none";
-declare const styleCanvas: "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)";
