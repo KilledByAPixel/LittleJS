@@ -112,9 +112,9 @@ echo.>> %OUTPUT_FILENAME%
 
 rem --- BUILD ENGINE MODULE RELEASE ---
 
-set OUTPUT_FILENAME=engine.all.release.module.js
+set OUTPUT_FILENAME=engine.all.module.min.js
 del %OUTPUT_FILENAME%
-type engine.all.release.js >> %OUTPUT_FILENAME%
+type engine.all.min.js >> %OUTPUT_FILENAME%
 echo.>> %OUTPUT_FILENAME%
 type engineExport.js >> %OUTPUT_FILENAME%
 echo.>> %OUTPUT_FILENAME%
