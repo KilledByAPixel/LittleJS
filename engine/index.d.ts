@@ -202,10 +202,10 @@ declare function glCopyToContext(context: CanvasRenderingContext2D, forceDraw?: 
  *  @param uv0Y
  *  @param uv1X
  *  @param uv1Y
- *  @param [rgba=0xffffffff]
+ *  @param rgba
  *  @param [rgbaAdditive=0]
  *  @memberof WebGL */
-declare function glDraw(x: any, y: any, sizeX: any, sizeY: any, angle: any, uv0X: any, uv0Y: any, uv1X: any, uv1Y: any, rgba?: number, rgbaAdditive?: number): void;
+declare function glDraw(x: any, y: any, sizeX: any, sizeY: any, angle: any, uv0X: any, uv0Y: any, uv1X: any, uv1Y: any, rgba: any, rgbaAdditive?: number): void;
 /** Set up a post processing shader
  *  @param {String} shaderCode
  *  @memberof WebGL */
@@ -225,7 +225,7 @@ declare function setPaused(_paused: any): void;
  */
 declare function engineInit(gameInit: Function, gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, tileImageSource?: string): void;
 declare function enginePreRender(): void;
-/** Calls update on each engine object, removes destroyed objects, updates time */
+/** Update each engine object, remove destroyed objects, and update time */
 declare function engineObjectsUpdate(): void;
 /** Destroy and remove all objects */
 declare function engineObjectsDestroy(): void;
@@ -471,6 +471,13 @@ declare function randSeeded(a?: number, b?: number): number;
  * @memberof Utilities
  */
 declare function vec2(x?: number, y?: number): Vector2;
+/**
+ * Check if object is a valid Vector2
+ * @param {Vector2} vector
+ * @return {Boolean}
+ * @memberof Utilities
+ */
+declare function isVector2(v: any): boolean;
 /**
  * 2D Vector object with vector math library
  * <br> - Functions do not change this so they can be chained together
@@ -722,6 +729,15 @@ declare class Timer {
      * @return {Number} */
     valueOf(): number;
 }
+/** Position of camera in world space
+ *  @type {Vector2}
+ *  @default
+ *  @memberof Settings */
+declare let cameraPos: Vector2;
+/** Scale of camera in world space
+ *  @default
+ *  @memberof Settings */
+declare let cameraScale: number;
 /** The max size of the canvas, centered if window is larger
  *  @type {Vector2}
  *  @default
@@ -741,6 +757,14 @@ declare let cavasPixelated: number;
  *  @default
  *  @memberof Settings */
 declare let fontDefault: string;
+/** Enable webgl rendering, webgl can be disabled and removed from build (with some features disabled)
+ *  @default
+ *  @memberof Settings */
+declare let glEnable: number;
+/** Fixes slow rendering in some browsers by not compositing the WebGL canvas
+ *  @default
+ *  @memberof Settings */
+declare let glOverlay: number;
 /** Default size of tiles in pixels
  *  @type {Vector2}
  *  @default
@@ -791,23 +815,6 @@ declare let gravity: number;
  *  @default
  *  @memberof Settings */
 declare let particleEmitRateScale: number;
-/** Position of camera in world space
- *  @type {Vector2}
- *  @default
- *  @memberof Settings */
-declare let cameraPos: Vector2;
-/** Scale of camera in world space
- *  @default
- *  @memberof Settings */
-declare let cameraScale: number;
-/** Enable webgl rendering, webgl can be disabled and removed from build (with some features disabled)
- *  @default
- *  @memberof Settings */
-declare let glEnable: number;
-/** Fixes slow rendering in some browsers by not compositing the WebGL canvas
- *  @default
- *  @memberof Settings */
-declare let glOverlay: number;
 /** Should gamepads be allowed
  *  @default
  *  @memberof Settings */
@@ -999,10 +1006,6 @@ declare class EngineObject {
     isSolid: boolean;
     toString(): string;
 }
-/** Tile sheet for batch rendering system
- *  @type {Image}
- *  @memberof Draw */
-declare const tileImage: new (width?: number, height?: number) => HTMLImageElement;
 /** The primary 2D canvas visible to the user
  *  @type {HTMLCanvasElement}
  *  @memberof Draw */
@@ -1023,6 +1026,13 @@ declare let overlayContext: CanvasRenderingContext2D;
  *  @type {Vector2}
  *  @memberof Draw */
 declare let mainCanvasSize: Vector2;
+/** Tile sheet for batch rendering system
+ *  @type {Image}
+ *  @memberof Draw */
+declare const tileImage: new (width?: number, height?: number) => HTMLImageElement;
+declare let tileImageSize: any;
+declare let tileImageFixBleed: any;
+declare let drawCount: any;
 /** Convert from screen to world space coordinates
  *  - if calling outside of render, you may need to manually set mainCanvasSize
  *  @param {Vector2} screenPos
@@ -1177,8 +1187,8 @@ declare function vibrateStop(): boolean;
  *  @memberof Input */
 declare const isTouchDevice: boolean;
 declare let touchGamepadTimer: Timer;
-declare let touchGamepadButtons: any[];
-declare let touchGamepadStick: Vector2;
+declare let touchGamepadButtons: any;
+declare let touchGamepadStick: any;
 /**
  * Sound Object - Stores a zzfx sound for later use and can be played positionally
  * <br>
@@ -1562,7 +1572,7 @@ declare class Medal {
      *  @param {Number} y - Screen space Y position
      *  @param {Number} [size=medalDisplayIconSize] - Screen space size
      */
-    renderIcon(x: number, y: number, size?: number): void;
+    renderIcon(pos: any, size?: number): void;
     storageKey(): string;
 }
 declare let newgrounds: any;
@@ -1579,10 +1589,10 @@ declare class Newgrounds {
      *  @param {Number} app_id   - The newgrounds App ID
      *  @param {String} [cipher] - The encryption Key (AES-128/Base64) */
     constructor(app_id: number, cipher?: string);
+    cryptoJS: any;
     app_id: number;
     cipher: string;
     host: string;
-    cryptoJS: any;
     session_id: string | number;
     medals: any;
     scoreboards: any;
@@ -1612,7 +1622,6 @@ declare class Newgrounds {
      */
     call(component: string, parameters?: any, async?: boolean): any;
 }
-declare function CryptoJS(): any;
 /** The WebGL canvas which appears above the main canvas and below the overlay canvas
  *  @type {HTMLCanvasElement}
  *  @memberof WebGL */
@@ -1628,7 +1637,6 @@ declare let glTileTexture: WebGLTexture;
 declare let glActiveTexture: any;
 declare let glShader: any;
 declare let glArrayBuffer: any;
-declare let glVertexData: any;
 declare let glPositionData: any;
 declare let glColorData: any;
 declare let glBatchCount: any;
@@ -1669,10 +1677,11 @@ declare const gl_VERTICES_PER_QUAD: 6;
 declare const gl_INDICIES_PER_VERT: 6;
 declare const gl_MAX_BATCH: number;
 declare const gl_VERTEX_BYTE_STRIDE: number;
+declare const gl_VERTEX_BUFFER_SIZE: number;
 /** Name of engine */
 declare const engineName: "LittleJS";
 /** Version of engine */
-declare const engineVersion: "1.4.7";
+declare const engineVersion: "1.4.8";
 /** Frames per second to update objects
  *  @default */
 declare const frameRate: 60;
@@ -1691,6 +1700,3 @@ declare let time: number;
 declare let timeReal: number;
 /** Is the game paused? Causes time and objects to not be updated */
 declare let paused: number;
-declare let tileImageSize: any;
-declare let tileImageFixBleed: any;
-declare let drawCount: any;

@@ -189,6 +189,14 @@ const randSeeded = (a=1, b=0)=>
 const vec2 = (x=0, y)=> x.x == undefined ? new Vector2(x, y == undefined? x : y) : new Vector2(x.x, x.y);
 
 /** 
+ * Check if object is a valid Vector2
+ * @param {Vector2} vector
+ * @return {Boolean}
+ * @memberof Utilities
+ */
+const isVector2 = (v)=> !isNaN(v.x) && !isNaN(v.y);
+
+/** 
  * 2D Vector object with vector math library
  * <br> - Functions do not change this so they can be chained together
  * @example
@@ -217,27 +225,27 @@ class Vector2
     /** Returns a copy of this vector plus the vector passed in
      *  @param {Vector2} vector
      *  @return {Vector2} */
-    add(v) { ASSERT(v.x!=undefined); return new Vector2(this.x + v.x, this.y + v.y); }
+    add(v) { ASSERT(isVector2(v)); return new Vector2(this.x + v.x, this.y + v.y); }
 
     /** Returns a copy of this vector minus the vector passed in
      *  @param {Vector2} vector
      *  @return {Vector2} */
-    subtract(v) { ASSERT(v.x!=undefined); return new Vector2(this.x - v.x, this.y - v.y); }
+    subtract(v) { ASSERT(isVector2(v)); return new Vector2(this.x - v.x, this.y - v.y); }
 
     /** Returns a copy of this vector times the vector passed in
      *  @param {Vector2} vector
      *  @return {Vector2} */
-    multiply(v) { ASSERT(v.x!=undefined); return new Vector2(this.x * v.x, this.y * v.y); }
+    multiply(v) { ASSERT(isVector2(v)); return new Vector2(this.x * v.x, this.y * v.y); }
 
     /** Returns a copy of this vector divided by the vector passed in
      *  @param {Vector2} vector
      *  @return {Vector2} */
-    divide(v) { ASSERT(v.x!=undefined); return new Vector2(this.x / v.x, this.y / v.y); }
+    divide(v) { ASSERT(isVector2(v)); return new Vector2(this.x / v.x, this.y / v.y); }
 
     /** Returns a copy of this vector scaled by the vector passed in
      *  @param {Number} scale
      *  @return {Vector2} */
-    scale(s) { ASSERT(s.x==undefined); return new Vector2(this.x * s, this.y * s); }
+    scale(s) { ASSERT(!isVector2(s)); return new Vector2(this.x * s, this.y * s); }
 
     /** Returns the length of this vector
      * @return {Number} */
@@ -270,12 +278,12 @@ class Vector2
     /** Returns the dot product of this and the vector passed in
      * @param {Vector2} vector
      * @return {Number} */
-    dot(v) { ASSERT(v.x!=undefined); return this.x*v.x + this.y*v.y; }
+    dot(v) { ASSERT(isVector2(v)); return this.x*v.x + this.y*v.y; }
 
     /** Returns the cross product of this and the vector passed in
      * @param {Vector2} vector
      * @return {Number} */
-    cross(v) { ASSERT(v.x!=undefined); return this.x*v.y - this.y*v.x; }
+    cross(v) { ASSERT(isVector2(v)); return this.x*v.y - this.y*v.x; }
 
     /** Returns the angle of this vector, up is angle 0
      * @return {Number} */
@@ -311,7 +319,7 @@ class Vector2
      * @param {Vector2} vector
      * @param {Number}  percent
      * @return {Vector2} */
-    lerp(v, p) { ASSERT(v.x!=undefined); return this.add(v.subtract(this).scale(clamp(p))); }
+    lerp(v, p) { ASSERT(isVector2(v)); return this.add(v.subtract(this).scale(clamp(p))); }
 
     /** Returns true if this vector is within the bounds of an array size passed in
      * @param {Vector2} arraySize

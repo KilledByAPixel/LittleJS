@@ -4,10 +4,14 @@
  */
 
 // Setters for all variables that devs will need to modify
+const setCameraPos =                    (v)=> cameraPos = v;
+const setCameraScale =                  (v)=> cameraScale = v;
 const setCanvasMaxSize =                (v)=> canvasMaxSize = v;
 const setCanvasFixedSize =              (v)=> canvasFixedSize = v;
 const setCavasPixelated =               (v)=> cavasPixelated = v;
 const setFontDefault =                  (v)=> fontDefault = v;
+const setGlEnable =                     (v)=> glEnable = v;
+const setGlOverlay =                    (v)=> glOverlay = v;
 const setTileSizeDefault =              (v)=> tileSizeDefault = v;
 const setTileFixBleedScale =            (v)=> tileFixBleedScale = v;
 const setObjectDefaultSize =            (v)=> objectDefaultSize = v;
@@ -20,10 +24,6 @@ const setObjectDefaultFriction =        (v)=> objectDefaultFriction = v;
 const setObjectMaxSpeed =               (v)=> objectMaxSpeed = v;
 const setGravity =                      (v)=> gravity = v;
 const setParticleEmitRateScale =        (v)=> particleEmitRateScale = v;
-const setCameraPos =                    (v)=> cameraPos = v;
-const setCameraScale =                  (v)=> cameraScale = v;
-const setGlEnable =                     (v)=> glEnable = v;
-const setGlOverlay =                    (v)=> glOverlay = v;
 const setGamepadsEnable =               (v)=> gamepadsEnable = v;
 const setGamepadDirectionEmulateStick = (v)=> gamepadDirectionEmulateStick = v;
 const setInputWASDEmulateDirection =    (v)=> inputWASDEmulateDirection = v;
@@ -45,10 +45,14 @@ const setMedalsPreventUnlock =          (v)=> medalsPreventUnlock = v;
 
 export {
 	// Setters for global variables
+	setCameraPos,
+	setCameraScale,
 	setCanvasMaxSize,
 	setCanvasFixedSize,
 	setCavasPixelated,
 	setFontDefault,
+	setGlEnable,
+	setGlOverlay,
 	setTileSizeDefault,
 	setTileFixBleedScale,
 	setObjectDefaultSize,
@@ -61,10 +65,6 @@ export {
 	setObjectMaxSpeed,
 	setGravity,
 	setParticleEmitRateScale,
-	setCameraPos,
-	setCameraScale,
-	setGlEnable,
-	setGlOverlay,
 	setGamepadsEnable,
 	setGamepadDirectionEmulateStick,
 	setInputWASDEmulateDirection,

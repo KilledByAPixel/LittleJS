@@ -43,7 +43,7 @@ class EngineObject
     constructor(pos=vec2(), size=objectDefaultSize, tileIndex=-1, tileSize=tileSizeDefault, angle=0, color, renderOrder=0)
     {
         // set passed in params
-        ASSERT(pos && pos.x != undefined && size.x != undefined); // ensure pos and size are vec2s
+        ASSERT(isVector2(pos) && isVector2(size)); // ensure pos and size are vec2s
 
         /** @property {Vector2} - World space position of the object */
         this.pos = pos.copy();
@@ -133,7 +133,7 @@ class EngineObject
         if (this.collideSolidObjects)
         {
             // check collisions against solid objects
-            const epsilon = 1e-3; // necessary to push slightly outside of the collision
+            const epsilon = .001; // necessary to push slightly outside of the collision
             for (const o of engineObjectsCollide)
             {
                 // non solid objects don't collide with eachother

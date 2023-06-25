@@ -254,11 +254,10 @@ const isTouchDevice = window.ontouchstart !== undefined;
 if (isTouchDevice)
 {
     // override mouse events
-    const mouseDown = onmousedown, mouseUp = onmouseup, mouseMove = onmousemove;
-    onmousedown = onmouseup = onmousemove = (e)=> 0;
+    let wasTouching, hadTouch, mouseDown = onmousedown, mouseUp = onmouseup;
+    onmousedown = onmouseup = ()=> 0;
 
     // handle all touch events the same way
-    let wasTouching, hadTouch;
     ontouchstart = ontouchmove = ontouchend = (e)=>
     {
         e.button = 0; // all touches are left click
@@ -273,7 +272,7 @@ if (isTouchDevice)
             // set event pos and pass it along
             e.x = e.touches[0].clientX;
             e.y = e.touches[0].clientY;
-            wasTouching ? mouseMove(e) : mouseDown(e);
+            wasTouching ? onmousemove(e) : mouseDown(e);
         }
         else if (wasTouching)
             mouseUp(e);
@@ -290,7 +289,7 @@ if (isTouchDevice)
 // touch gamepad, virtual on screen gamepad emulator for touch devices
 
 // touch input internal variables
-let touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadStick = vec2();
+let touchGamepadTimer = new Timer, touchGamepadButtons, touchGamepadStick;
 
 // create the touch gamepad, called automatically by the engine
 function touchGamepadCreate()
@@ -298,11 +297,13 @@ function touchGamepadCreate()
     if (!touchGamepadEnable || !isTouchDevice)
         return;
 
+    // touch input internal variables
+    touchGamepadButtons = [];
+    touchGamepadStick = vec2();
+
+    let hadTouch;
     ontouchstart = ontouchmove = ontouchend = (e)=> 
     {
-        if (!touchGamepadEnable)
-            return;
-
         // clear touch gamepad input
         touchGamepadStick = vec2();
         touchGamepadButtons = [];
@@ -310,7 +311,8 @@ function touchGamepadCreate()
         const touching = e.touches.length;
         if (touching)
         {
-            touchGamepadTimer.isSet() || zzfx(0) ; // fix mobile audio, force it to play a sound the first time
+            // fix mobile audio, force it to play a sound on first touch
+            hadTouch || zzfx(0, hadTouch=1);
 
             // set that gamepad is active
             isUsingGamepad = 1;

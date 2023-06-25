@@ -27,7 +27,7 @@ let glContext;
 let glTileTexture;
 
 // WebGL internal variables not exposed to documentation
-let glActiveTexture, glShader, glArrayBuffer, glVertexData, glPositionData, glColorData, glBatchCount, glBatchAdditive, glAdditive;
+let glActiveTexture, glShader, glArrayBuffer, glPositionData, glColorData, glBatchCount, glBatchAdditive, glAdditive;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -48,27 +48,25 @@ function glInit()
         'uniform mat4 m;'+            // transform matrix
         'attribute vec2 p,t;'+        // position, uv
         'attribute vec4 c,a;'+        // color, additiveColor
-        'varying vec2 v;'+            // return uv
-        'varying vec4 d,e;'+          // return color, additiveColor
+        'varying vec4 v,d,e;'+        // return uv, color, additiveColor
         'void main(){'+               // shader entry point
         'gl_Position=m*vec4(p,1,1);'+ // transform position
-        'v=t;d=c;e=a;'+               // pass stuff to fragment shader
+        'v=vec4(t,p);d=c;e=a;'+       // pass stuff to fragment shader
         '}'                           // end of shader
         ,
-        'precision highp float;'+           // use highp for better accuracy
-        'varying vec2 v;'+                  // uv
-        'varying vec4 d,e;'+                // color, additiveColor
-        'uniform sampler2D s;'+             // texture
-        'void main(){'+                     // shader entry point
-        'gl_FragColor=texture2D(s,v)*d+e;'+ // modulate texture by color plus additive
-        '}'                                 // end of shader
+        'precision highp float;'+              // use highp for better accuracy
+        'varying vec4 v,d,e;'+                 // uv, color, additiveColor
+        'uniform sampler2D s;'+                // texture
+        'void main(){'+                        // shader entry point
+        'gl_FragColor=texture2D(s,v.xy)*d+e;'+ // modulate texture by color plus additive
+        '}'                                    // end of shader
     );
 
     // init buffers
-    glVertexData = new ArrayBuffer(gl_MAX_BATCH * gl_VERTICES_PER_QUAD * gl_VERTEX_BYTE_STRIDE);
+    const vertexData = new ArrayBuffer(gl_VERTEX_BUFFER_SIZE);
     glArrayBuffer = glContext.createBuffer();
-    glPositionData = new Float32Array(glVertexData);
-    glColorData = new Uint32Array(glVertexData);
+    glPositionData = new Float32Array(vertexData);
+    glColorData = new Uint32Array(vertexData);
     glBatchCount = 0;
 }
 
@@ -163,7 +161,7 @@ function glPreRender()
     glContext.activeTexture(gl_TEXTURE0);
     glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = glTileTexture);
     glContext.bindBuffer(gl_ARRAY_BUFFER, glArrayBuffer);
-    glContext.bufferData(gl_ARRAY_BUFFER, glVertexData.byteLength, gl_DYNAMIC_DRAW);
+    glContext.bufferData(gl_ARRAY_BUFFER, gl_VERTEX_BUFFER_SIZE, gl_DYNAMIC_DRAW);
     glSetBlendMode();
     
     // set vertex attributes
@@ -236,10 +234,10 @@ function glCopyToContext(context, forceDraw)
  *  @param uv0Y
  *  @param uv1X
  *  @param uv1Y
- *  @param [rgba=0xffffffff]
+ *  @param rgba
  *  @param [rgbaAdditive=0]
  *  @memberof WebGL */
-function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba=0xffffffff, rgbaAdditive=0)
+function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdditive=0)
 {
     // flush if there is no room for more verts or if different blend mode
     if (glBatchCount == gl_MAX_BATCH || glBatchAdditive != glAdditive)
@@ -250,43 +248,16 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba=0xffffff
     const cx = c*sizeX, cy = c*sizeY, sx = s*sizeX, sy = s*sizeY;
         
     // setup 2 triangles to form a quad
-    let offset = glBatchCount++ * gl_VERTICES_PER_QUAD * gl_INDICIES_PER_VERT;
-
-    // vertex 0
-    glPositionData[offset++] = x - cx - sy;
-    glPositionData[offset++] = y - cy + sx;
-    glPositionData[offset++] = uv0X; glPositionData[offset++] = uv1Y;
-    glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
-    
-    // vertex 1
-    glPositionData[offset++] = x + cx + sy;
-    glPositionData[offset++] = y + cy - sx;
-    glPositionData[offset++] = uv1X; glPositionData[offset++] = uv0Y;
-    glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
-    
-    // vertex 2
-    glPositionData[offset++] = x - cx + sy;
-    glPositionData[offset++] = y + cy + sx;
-    glPositionData[offset++] = uv0X; glPositionData[offset++] = uv0Y;
-    glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
-    
-    // vertex 0
-    glPositionData[offset++] = x - cx - sy;      
-    glPositionData[offset++] = y - cy + sx;  
-    glPositionData[offset++] = uv0X; glPositionData[offset++] = uv1Y;
-    glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
-
-    // vertex 3
-    glPositionData[offset++] = x + cx - sy;
-    glPositionData[offset++] = y - cy - sx;
-    glPositionData[offset++] = uv1X; glPositionData[offset++] = uv1Y;
-    glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
-
-    // vertex 1
-    glPositionData[offset++] = x + cx + sy;
-    glPositionData[offset++] = y + cy - sx;
-    glPositionData[offset++] = uv1X; glPositionData[offset++] = uv0Y;
-    glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
+    for(let i=6, offset = glBatchCount++ * gl_VERTICES_PER_QUAD * gl_INDICIES_PER_VERT; i--;)
+    {
+        const a = i-4&&i>1, b = i-5&&i-2&&i-1;
+        glPositionData[offset++] = x + (a?-cx:cx) + (b?sy:-sy);
+        glPositionData[offset++] = y + (b?cy:-cy) + (a?sx:-sx);
+        glPositionData[offset++] = a ? uv0X : uv1X; 
+        glPositionData[offset++] = b ? uv0Y : uv1Y;
+        glColorData[offset++] = rgba; 
+        glColorData[offset++] = rgbaAdditive;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -410,4 +381,5 @@ gl_UNPACK_FLIP_Y_WEBGL = 37440,
 gl_VERTICES_PER_QUAD = 6,
 gl_INDICIES_PER_VERT = 6,
 gl_MAX_BATCH = 1<<16,
-gl_VERTEX_BYTE_STRIDE = (4 * 2) * 2 + (4) * 2; // vec2 * 2 + (char * 4) * 2
+gl_VERTEX_BYTE_STRIDE = (4 * 2) * 2 + (4) * 2, // vec2 * 2 + (char * 4) * 2
+gl_VERTEX_BUFFER_SIZE = gl_MAX_BATCH * gl_VERTICES_PER_QUAD * gl_VERTEX_BYTE_STRIDE;

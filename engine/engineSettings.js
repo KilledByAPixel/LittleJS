@@ -6,6 +6,20 @@
 'use strict';
 
 ///////////////////////////////////////////////////////////////////////////////
+// Camera settings
+
+/** Position of camera in world space
+ *  @type {Vector2}
+ *  @default
+ *  @memberof Settings */
+let cameraPos = vec2();
+
+/** Scale of camera in world space
+ *  @default
+ *  @memberof Settings */
+let cameraScale = 16;
+
+///////////////////////////////////////////////////////////////////////////////
 // Display settings
 
 /** The max size of the canvas, centered if window is larger
@@ -30,6 +44,19 @@ let cavasPixelated = 1;
  *  @default
  *  @memberof Settings */
 let fontDefault = 'arial';
+
+///////////////////////////////////////////////////////////////////////////////
+// WebGL settings
+
+/** Enable webgl rendering, webgl can be disabled and removed from build (with some features disabled)
+ *  @default
+ *  @memberof Settings */
+let glEnable = 1;
+
+/** Fixes slow rendering in some browsers by not compositing the WebGL canvas
+ *  @default
+ *  @memberof Settings */
+let glOverlay = 1;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Tile sheet settings
@@ -98,33 +125,6 @@ let gravity = 0;
  *  @default
  *  @memberof Settings */
 let particleEmitRateScale = 1;
-
-///////////////////////////////////////////////////////////////////////////////
-// Camera settings
-
-/** Position of camera in world space
- *  @type {Vector2}
- *  @default
- *  @memberof Settings */
-let cameraPos = vec2();
-
-/** Scale of camera in world space
- *  @default
- *  @memberof Settings */
-let cameraScale = max(tileSizeDefault.x, tileSizeDefault.y);
-
-///////////////////////////////////////////////////////////////////////////////
-// WebGL settings
-
-/** Enable webgl rendering, webgl can be disabled and removed from build (with some features disabled)
- *  @default
- *  @memberof Settings */
-let glEnable = 1;
-
-/** Fixes slow rendering in some browsers by not compositing the WebGL canvas
- *  @default
- *  @memberof Settings */
-let glOverlay = 1;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Input settings

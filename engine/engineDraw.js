@@ -22,11 +22,6 @@
 
 'use strict';
 
-/** Tile sheet for batch rendering system
- *  @type {Image}
- *  @memberof Draw */
-const tileImage = new Image();
-
 /** The primary 2D canvas visible to the user
  *  @type {HTMLCanvasElement}
  *  @memberof Draw */
@@ -51,6 +46,14 @@ let overlayContext;
  *  @type {Vector2}
  *  @memberof Draw */
 let mainCanvasSize = vec2();
+
+/** Tile sheet for batch rendering system
+ *  @type {Image}
+ *  @memberof Draw */
+const tileImage = new Image();
+
+// Engine internal variables not exposed to documentation
+let tileImageSize, tileImageFixBleed, drawCount;
 
 /** Convert from screen to world space coordinates
  *  - if calling outside of render, you may need to manually set mainCanvasSize
@@ -375,14 +378,7 @@ function toggleFullscreen()
     {
         if (document.exitFullscreen)
             document.exitFullscreen();
-        else if (document.mozCancelFullScreen)
-            document.mozCancelFullScreen();
     }
-    else
-    {
-        if (document.body.webkitRequestFullScreen)
-            document.body.webkitRequestFullScreen();
-        else if (document.body.mozRequestFullScreen)
-            document.body.mozRequestFullScreen();
-    }
+    else if (document.body.requestFullscreen)
+            document.body.requestFullscreen();
 }

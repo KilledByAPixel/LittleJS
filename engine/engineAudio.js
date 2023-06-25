@@ -224,7 +224,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0)
 
     // create audio context
     if (!audioContext)
-        audioContext = new (window.AudioContext||webkitAudioContext);
+        audioContext = new AudioContext;
 
     // fix stalled audio
     audioContext.resume();
@@ -243,18 +243,13 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0)
     source.playbackRate.value = rate;
     source.loop = loop;
 
-    // create and connect gain node (createGain is more widley spported then GainNode construtor)
+    // create and connect gain node (createGain is more widely spported then GainNode construtor)
     const gainNode = audioContext.createGain();
     gainNode.gain.value = soundVolume*volume;
     gainNode.connect(audioContext.destination);
 
-    // connect source to gain
-    (
-        window.StereoPannerNode ? // create pan node if possible
-        source.connect(new StereoPannerNode(audioContext, {'pan':clamp(pan, -1, 1)}))
-        : source
-    )
-    .connect(gainNode);
+    // connect source to stereo panner and gain
+    source.connect(new StereoPannerNode(audioContext, {'pan':clamp(pan, -1, 1)})).connect(gainNode);
 
     // play and return sound
     source.start();

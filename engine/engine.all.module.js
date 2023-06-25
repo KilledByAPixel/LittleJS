@@ -577,6 +577,14 @@ const randSeeded = (a=1, b=0)=>
 const vec2 = (x=0, y)=> x.x == undefined ? new Vector2(x, y == undefined? x : y) : new Vector2(x.x, x.y);
 
 /** 
+ * Check if object is a valid Vector2
+ * @param {Vector2} vector
+ * @return {Boolean}
+ * @memberof Utilities
+ */
+const isVector2 = (v)=> !isNaN(v.x) && !isNaN(v.y);
+
+/** 
  * 2D Vector object with vector math library
  * <br> - Functions do not change this so they can be chained together
  * @example
@@ -605,27 +613,27 @@ class Vector2
     /** Returns a copy of this vector plus the vector passed in
      *  @param {Vector2} vector
      *  @return {Vector2} */
-    add(v) { ASSERT(v.x!=undefined); return new Vector2(this.x + v.x, this.y + v.y); }
+    add(v) { ASSERT(isVector2(v)); return new Vector2(this.x + v.x, this.y + v.y); }
 
     /** Returns a copy of this vector minus the vector passed in
      *  @param {Vector2} vector
      *  @return {Vector2} */
-    subtract(v) { ASSERT(v.x!=undefined); return new Vector2(this.x - v.x, this.y - v.y); }
+    subtract(v) { ASSERT(isVector2(v)); return new Vector2(this.x - v.x, this.y - v.y); }
 
     /** Returns a copy of this vector times the vector passed in
      *  @param {Vector2} vector
      *  @return {Vector2} */
-    multiply(v) { ASSERT(v.x!=undefined); return new Vector2(this.x * v.x, this.y * v.y); }
+    multiply(v) { ASSERT(isVector2(v)); return new Vector2(this.x * v.x, this.y * v.y); }
 
     /** Returns a copy of this vector divided by the vector passed in
      *  @param {Vector2} vector
      *  @return {Vector2} */
-    divide(v) { ASSERT(v.x!=undefined); return new Vector2(this.x / v.x, this.y / v.y); }
+    divide(v) { ASSERT(isVector2(v)); return new Vector2(this.x / v.x, this.y / v.y); }
 
     /** Returns a copy of this vector scaled by the vector passed in
      *  @param {Number} scale
      *  @return {Vector2} */
-    scale(s) { ASSERT(s.x==undefined); return new Vector2(this.x * s, this.y * s); }
+    scale(s) { ASSERT(!isVector2(s)); return new Vector2(this.x * s, this.y * s); }
 
     /** Returns the length of this vector
      * @return {Number} */
@@ -658,12 +666,12 @@ class Vector2
     /** Returns the dot product of this and the vector passed in
      * @param {Vector2} vector
      * @return {Number} */
-    dot(v) { ASSERT(v.x!=undefined); return this.x*v.x + this.y*v.y; }
+    dot(v) { ASSERT(isVector2(v)); return this.x*v.x + this.y*v.y; }
 
     /** Returns the cross product of this and the vector passed in
      * @param {Vector2} vector
      * @return {Number} */
-    cross(v) { ASSERT(v.x!=undefined); return this.x*v.y - this.y*v.x; }
+    cross(v) { ASSERT(isVector2(v)); return this.x*v.y - this.y*v.x; }
 
     /** Returns the angle of this vector, up is angle 0
      * @return {Number} */
@@ -699,7 +707,7 @@ class Vector2
      * @param {Vector2} vector
      * @param {Number}  percent
      * @return {Vector2} */
-    lerp(v, p) { ASSERT(v.x!=undefined); return this.add(v.subtract(this).scale(clamp(p))); }
+    lerp(v, p) { ASSERT(isVector2(v)); return this.add(v.subtract(this).scale(clamp(p))); }
 
     /** Returns true if this vector is within the bounds of an array size passed in
      * @param {Vector2} arraySize
@@ -962,6 +970,20 @@ class Timer
 'use strict';
 
 ///////////////////////////////////////////////////////////////////////////////
+// Camera settings
+
+/** Position of camera in world space
+ *  @type {Vector2}
+ *  @default
+ *  @memberof Settings */
+let cameraPos = vec2();
+
+/** Scale of camera in world space
+ *  @default
+ *  @memberof Settings */
+let cameraScale = 16;
+
+///////////////////////////////////////////////////////////////////////////////
 // Display settings
 
 /** The max size of the canvas, centered if window is larger
@@ -986,6 +1008,19 @@ let cavasPixelated = 1;
  *  @default
  *  @memberof Settings */
 let fontDefault = 'arial';
+
+///////////////////////////////////////////////////////////////////////////////
+// WebGL settings
+
+/** Enable webgl rendering, webgl can be disabled and removed from build (with some features disabled)
+ *  @default
+ *  @memberof Settings */
+let glEnable = 1;
+
+/** Fixes slow rendering in some browsers by not compositing the WebGL canvas
+ *  @default
+ *  @memberof Settings */
+let glOverlay = 1;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Tile sheet settings
@@ -1054,33 +1089,6 @@ let gravity = 0;
  *  @default
  *  @memberof Settings */
 let particleEmitRateScale = 1;
-
-///////////////////////////////////////////////////////////////////////////////
-// Camera settings
-
-/** Position of camera in world space
- *  @type {Vector2}
- *  @default
- *  @memberof Settings */
-let cameraPos = vec2();
-
-/** Scale of camera in world space
- *  @default
- *  @memberof Settings */
-let cameraScale = max(tileSizeDefault.x, tileSizeDefault.y);
-
-///////////////////////////////////////////////////////////////////////////////
-// WebGL settings
-
-/** Enable webgl rendering, webgl can be disabled and removed from build (with some features disabled)
- *  @default
- *  @memberof Settings */
-let glEnable = 1;
-
-/** Fixes slow rendering in some browsers by not compositing the WebGL canvas
- *  @default
- *  @memberof Settings */
-let glOverlay = 1;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Input settings
@@ -1222,7 +1230,7 @@ class EngineObject
     constructor(pos=vec2(), size=objectDefaultSize, tileIndex=-1, tileSize=tileSizeDefault, angle=0, color, renderOrder=0)
     {
         // set passed in params
-        ASSERT(pos && pos.x != undefined && size.x != undefined); // ensure pos and size are vec2s
+        ASSERT(isVector2(pos) && isVector2(size)); // ensure pos and size are vec2s
 
         /** @property {Vector2} - World space position of the object */
         this.pos = pos.copy();
@@ -1312,7 +1320,7 @@ class EngineObject
         if (this.collideSolidObjects)
         {
             // check collisions against solid objects
-            const epsilon = 1e-3; // necessary to push slightly outside of the collision
+            const epsilon = .001; // necessary to push slightly outside of the collision
             for (const o of engineObjectsCollide)
             {
                 // non solid objects don't collide with eachother
@@ -1575,11 +1583,6 @@ class EngineObject
 
 'use strict';
 
-/** Tile sheet for batch rendering system
- *  @type {Image}
- *  @memberof Draw */
-const tileImage = new Image();
-
 /** The primary 2D canvas visible to the user
  *  @type {HTMLCanvasElement}
  *  @memberof Draw */
@@ -1604,6 +1607,14 @@ let overlayContext;
  *  @type {Vector2}
  *  @memberof Draw */
 let mainCanvasSize = vec2();
+
+/** Tile sheet for batch rendering system
+ *  @type {Image}
+ *  @memberof Draw */
+const tileImage = new Image();
+
+// Engine internal variables not exposed to documentation
+let tileImageSize, tileImageFixBleed, drawCount;
 
 /** Convert from screen to world space coordinates
  *  - if calling outside of render, you may need to manually set mainCanvasSize
@@ -1928,16 +1939,9 @@ function toggleFullscreen()
     {
         if (document.exitFullscreen)
             document.exitFullscreen();
-        else if (document.mozCancelFullScreen)
-            document.mozCancelFullScreen();
     }
-    else
-    {
-        if (document.body.webkitRequestFullScreen)
-            document.body.webkitRequestFullScreen();
-        else if (document.body.mozRequestFullScreen)
-            document.body.mozRequestFullScreen();
-    }
+    else if (document.body.requestFullscreen)
+            document.body.requestFullscreen();
 }
 
 /** 
@@ -2196,11 +2200,10 @@ const isTouchDevice = window.ontouchstart !== undefined;
 if (isTouchDevice)
 {
     // override mouse events
-    const mouseDown = onmousedown, mouseUp = onmouseup, mouseMove = onmousemove;
-    onmousedown = onmouseup = onmousemove = (e)=> 0;
+    let wasTouching, hadTouch, mouseDown = onmousedown, mouseUp = onmouseup;
+    onmousedown = onmouseup = ()=> 0;
 
     // handle all touch events the same way
-    let wasTouching, hadTouch;
     ontouchstart = ontouchmove = ontouchend = (e)=>
     {
         e.button = 0; // all touches are left click
@@ -2215,7 +2218,7 @@ if (isTouchDevice)
             // set event pos and pass it along
             e.x = e.touches[0].clientX;
             e.y = e.touches[0].clientY;
-            wasTouching ? mouseMove(e) : mouseDown(e);
+            wasTouching ? onmousemove(e) : mouseDown(e);
         }
         else if (wasTouching)
             mouseUp(e);
@@ -2232,7 +2235,7 @@ if (isTouchDevice)
 // touch gamepad, virtual on screen gamepad emulator for touch devices
 
 // touch input internal variables
-let touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadStick = vec2();
+let touchGamepadTimer = new Timer, touchGamepadButtons, touchGamepadStick;
 
 // create the touch gamepad, called automatically by the engine
 function touchGamepadCreate()
@@ -2240,11 +2243,13 @@ function touchGamepadCreate()
     if (!touchGamepadEnable || !isTouchDevice)
         return;
 
+    // touch input internal variables
+    touchGamepadButtons = [];
+    touchGamepadStick = vec2();
+
+    let hadTouch;
     ontouchstart = ontouchmove = ontouchend = (e)=> 
     {
-        if (!touchGamepadEnable)
-            return;
-
         // clear touch gamepad input
         touchGamepadStick = vec2();
         touchGamepadButtons = [];
@@ -2252,7 +2257,8 @@ function touchGamepadCreate()
         const touching = e.touches.length;
         if (touching)
         {
-            touchGamepadTimer.isSet() || zzfx(0) ; // fix mobile audio, force it to play a sound the first time
+            // fix mobile audio, force it to play a sound on first touch
+            hadTouch || zzfx(0, hadTouch=1);
 
             // set that gamepad is active
             isUsingGamepad = 1;
@@ -2583,7 +2589,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0)
 
     // create audio context
     if (!audioContext)
-        audioContext = new (window.AudioContext||webkitAudioContext);
+        audioContext = new AudioContext;
 
     // fix stalled audio
     audioContext.resume();
@@ -2602,18 +2608,13 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0)
     source.playbackRate.value = rate;
     source.loop = loop;
 
-    // create and connect gain node (createGain is more widley spported then GainNode construtor)
+    // create and connect gain node (createGain is more widely spported then GainNode construtor)
     const gainNode = audioContext.createGain();
     gainNode.gain.value = soundVolume*volume;
     gainNode.connect(audioContext.destination);
 
-    // connect source to gain
-    (
-        window.StereoPannerNode ? // create pan node if possible
-        source.connect(new StereoPannerNode(audioContext, {'pan':clamp(pan, -1, 1)}))
-        : source
-    )
-    .connect(gainNode);
+    // connect source to stereo panner and gain
+    source.connect(new StereoPannerNode(audioContext, {'pan':clamp(pan, -1, 1)})).connect(gainNode);
 
     // play and return sound
     source.start();
@@ -3539,9 +3540,11 @@ class Medal
         this.name = name;
         this.description = description;
         this.icon = icon;
-        this.image = new Image();
         if (src)
+        {
+            this.image = new Image();
             this.image.src = src;
+        }
     }
 
     /** Unlocks a medal if not already unlocked */
@@ -3554,10 +3557,7 @@ class Medal
         ASSERT(medalsSaveName); // save name must be set
         localStorage[this.storageKey()] = this.unlocked = 1;
         medalsDisplayQueue.push(this);
-
-        // save for newgrounds and OS13K
         newgrounds && newgrounds.unlockMedal(this.id);
-        localStorage['OS13kTrophy,' + this.icon + ',' + medalsSaveName + ',' + this.name] = this.description;
     }
 
     /** Render a medal
@@ -3573,20 +3573,19 @@ class Medal
         // draw containing rect and clip to that region
         context.save();
         context.beginPath();
-        context.fillStyle = '#ddd'
-        context.fill(context.rect(x, y, width, medalDisplayHeight));
-        context.strokeStyle = '#000';
+        context.fillStyle = new Color(.9,.9,.9);
+        context.strokeStyle = new Color(0,0,0);
         context.lineWidth = 3;
+        context.fill(context.rect(x, y, width, medalDisplayHeight));
         context.stroke();
         context.clip();
 
         // draw the icon and text
-        this.renderIcon(x+15+medalDisplayIconSize/2, y+medalDisplayHeight/2);
-        context.textAlign = 'left';
-        context.font = '38px '+ fontDefault;
-        context.fillText(this.name, x+medalDisplayIconSize+30, y+28);
-        context.font = '24px '+ fontDefault;
-        context.fillText(this.description, x+medalDisplayIconSize+30, y+60);
+        this.renderIcon(vec2(x+15+medalDisplayIconSize/2, y+medalDisplayHeight/2));
+        const pos = vec2(x+medalDisplayIconSize+30, y+28);
+        drawTextScreen(this.name, pos, 38, new Color(0,0,0), 0, 0, 'left');
+        pos.y += 32;
+        drawTextScreen(this.description, pos, 24, new Color(0,0,0), 0, 0, 'left');
         context.restore();
     }
 
@@ -3595,18 +3594,13 @@ class Medal
      *  @param {Number} y - Screen space Y position
      *  @param {Number} [size=medalDisplayIconSize] - Screen space size
      */
-    renderIcon(x, y, size=medalDisplayIconSize)
+    renderIcon(pos, size=medalDisplayIconSize)
     {
         // draw the image or icon
-        const context = overlayContext;
-        context.fillStyle = '#000';
-        context.textAlign = 'center';
-        context.textBaseline = 'middle';
-        context.font = size*.7 + 'px '+ fontDefault;
-        if (this.image.src)
-            context.drawImage(this.image, x-size/2, y-size/2, size, size);
+        if (this.image)
+            overlayContext.drawImage(this.image, pos.x-size/2, pos.y-size/2, size, size);
         else
-            context.fillText(this.icon, x, y); // show icon if there is no image
+            drawTextScreen(this.icon, pos, size*.7, new Color(0,0,0));
     }
  
     // Get local storage key used by the medal
@@ -3664,12 +3658,20 @@ class Newgrounds
     constructor(app_id, cipher)
     {
         ASSERT(!newgrounds && app_id);
+
+        // create an instance of CryptoJS for encrypted calls
+        if (cipher)
+        {
+            ///////////////////////////////////////////////////////////////////////////////
+            // Crypto-JS - https://github.com/brix/crypto-js [The MIT License (MIT)]
+            // Copyright (c) 2009-2013 Jeff Mott  Copyright (c) 2013-2016 Evan Vosberg
+
+            this.cryptoJS = eval(Function("[M='GBMGXz^oVYPPKKbB`agTXU|LxPc_ZBcMrZvCr~wyGfWrwk@ATqlqeTp^N?p{we}jIpEnB_sEr`l?YDkDhWhprc|Er|XETG?pTl`e}dIc[_N~}fzRycIfpW{HTolvoPB_FMe_eH~BTMx]yyOhv?biWPCGc]kABencBhgERHGf{OL`Dj`c^sh@canhy[secghiyotcdOWgO{tJIE^JtdGQRNSCrwKYciZOa]Y@tcRATYKzv|sXpboHcbCBf`}SKeXPFM|RiJsSNaIb]QPc[D]Jy_O^XkOVTZep`ONmntLL`Qz~UupHBX_Ia~WX]yTRJIxG`ioZ{fefLJFhdyYoyLPvqgH?b`[TMnTwwfzDXhfM?rKs^aFr|nyBdPmVHTtAjXoYUloEziWDCw_suyYT~lSMksI~ZNCS[Bex~j]Vz?kx`gdYSEMCsHpjbyxQvw|XxX_^nQYue{sBzVWQKYndtYQMWRef{bOHSfQhiNdtR{o?cUAHQAABThwHPT}F{VvFmgN`E@FiFYS`UJmpQNM`X|tPKHlccT}z}k{sACHL?Rt@MkWplxO`ASgh?hBsuuP|xD~LSH~KBlRs]t|l|_tQAroDRqWS^SEr[sYdPB}TAROtW{mIkE|dWOuLgLmJrucGLpebrAFKWjikTUzS|j}M}szasKOmrjy[?hpwnEfX[jGpLt@^v_eNwSQHNwtOtDgWD{rk|UgASs@mziIXrsHN_|hZuxXlPJOsA^^?QY^yGoCBx{ekLuZzRqQZdsNSx@ezDAn{XNj@fRXIwrDX?{ZQHwTEfu@GhxDOykqts|n{jOeZ@c`dvTY?e^]ATvWpb?SVyg]GC?SlzteilZJAL]mlhLjYZazY__qcVFYvt@|bIQnSno@OXyt]OulzkWqH`rYFWrwGs`v|~XeTsIssLrbmHZCYHiJrX}eEzSssH}]l]IhPQhPoQ}rCXLyhFIT[clhzYOvyHqigxmjz`phKUU^TPf[GRAIhNqSOdayFP@FmKmuIzMOeoqdpxyCOwCthcLq?n`L`tLIBboNn~uXeFcPE{C~mC`h]jUUUQe^`UqvzCutYCgct|SBrAeiYQW?X~KzCz}guXbsUw?pLsg@hDArw?KeJD[BN?GD@wgFWCiHq@Ypp_QKFixEKWqRp]oJFuVIEvjDcTFu~Zz]a{IcXhWuIdMQjJ]lwmGQ|]g~c]Hl]pl`Pd^?loIcsoNir_kikBYyg?NarXZEGYspt_vLBIoj}LI[uBFvm}tbqvC|xyR~a{kob|HlctZslTGtPDhBKsNsoZPuH`U`Fqg{gKnGSHVLJ^O`zmNgMn~{rsQuoymw^JY?iUBvw_~mMr|GrPHTERS[MiNpY[Mm{ggHpzRaJaoFomtdaQ_?xuTRm}@KjU~RtPsAdxa|uHmy}n^i||FVL[eQAPrWfLm^ndczgF~Nk~aplQvTUpHvnTya]kOenZlLAQIm{lPl@CCTchvCF[fI{^zPkeYZTiamoEcKmBMfZhk_j_~Fjp|wPVZlkh_nHu]@tP|hS@^G^PdsQ~f[RqgTDqezxNFcaO}HZhb|MMiNSYSAnQWCDJukT~e|OTgc}sf[cnr?fyzTa|EwEtRG|I~|IO}O]S|rp]CQ}}DWhSjC_|z|oY|FYl@WkCOoPuWuqr{fJu?Brs^_EBI[@_OCKs}?]O`jnDiXBvaIWhhMAQDNb{U`bqVR}oqVAvR@AZHEBY@depD]OLh`kf^UsHhzKT}CS}HQKy}Q~AeMydXPQztWSSzDnghULQgMAmbWIZ|lWWeEXrE^EeNoZApooEmrXe{NAnoDf`m}UNlRdqQ@jOc~HLOMWs]IDqJHYoMziEedGBPOxOb?[X`KxkFRg@`mgFYnP{hSaxwZfBQqTm}_?RSEaQga]w[vxc]hMne}VfSlqUeMo_iqmd`ilnJXnhdj^EEFifvZyxYFRf^VaqBhLyrGlk~qowqzHOBlOwtx?i{m~`n^G?Yxzxux}b{LSlx]dS~thO^lYE}bzKmUEzwW^{rPGhbEov[Plv??xtyKJshbG`KuO?hjBdS@Ru}iGpvFXJRrvOlrKN?`I_n_tplk}kgwSXuKylXbRQ]]?a|{xiT[li?k]CJpwy^o@ebyGQrPfF`aszGKp]baIx~H?ElETtFh]dz[OjGl@C?]VDhr}OE@V]wLTc[WErXacM{We`F|utKKjgllAxvsVYBZ@HcuMgLboFHVZmi}eIXAIFhS@A@FGRbjeoJWZ_NKd^oEH`qgy`q[Tq{x?LRP|GfBFFJV|fgZs`MLbpPYUdIV^]mD@FG]pYAT^A^RNCcXVrPsgk{jTrAIQPs_`mD}rOqAZA[}RETFz]WkXFTz_m{N@{W@_fPKZLT`@aIqf|L^Mb|crNqZ{BVsijzpGPEKQQZGlApDn`ruH}cvF|iXcNqK}cxe_U~HRnKV}sCYb`D~oGvwG[Ca|UaybXea~DdD~LiIbGRxJ_VGheI{ika}KC[OZJLn^IBkPrQj_EuoFwZ}DpoBRcK]Q}?EmTv~i_Tul{bky?Iit~tgS|o}JL_VYcCQdjeJ_MfaA`FgCgc[Ii|CBHwq~nbJeYTK{e`CNstKfTKPzw{jdhp|qsZyP_FcugxCFNpKitlR~vUrx^NrSVsSTaEgnxZTmKc`R|lGJeX}ccKLsQZQhsFkeFd|ckHIVTlGMg`~uPwuHRJS_CPuN_ogXe{Ba}dO_UBhuNXby|h?JlgBIqMKx^_u{molgL[W_iavNQuOq?ap]PGB`clAicnl@k~pA?MWHEZ{HuTLsCpOxxrKlBh]FyMjLdFl|nMIvTHyGAlPogqfZ?PlvlFJvYnDQd}R@uAhtJmDfe|iJqdkYr}r@mEjjIetDl_I`TELfoR|qTBu@Tic[BaXjP?dCS~MUK[HPRI}OUOwAaf|_}HZzrwXvbnNgltjTwkBE~MztTQhtRSWoQHajMoVyBBA`kdgK~h`o[J`dm~pm]tk@i`[F~F]DBlJKklrkR]SNw@{aG~Vhl`KINsQkOy?WhcqUMTGDOM_]bUjVd|Yh_KUCCgIJ|LDIGZCPls{RzbVWVLEhHvWBzKq|^N?DyJB|__aCUjoEgsARki}j@DQXS`RNU|DJ^a~d{sh_Iu{ONcUtSrGWW@cvUjefHHi}eSSGrNtO?cTPBShLqzwMVjWQQCCFB^culBjZHEK_{dO~Q`YhJYFn]jq~XSnG@[lQr]eKrjXpG~L^h~tDgEma^AUFThlaR{xyuP@[^VFwXSeUbVetufa@dX]CLyAnDV@Bs[DnpeghJw^?UIana}r_CKGDySoRudklbgio}kIDpA@McDoPK?iYcG?_zOmnWfJp}a[JLR[stXMo?_^Ng[whQlrDbrawZeSZ~SJstIObdDSfAA{MV}?gNunLOnbMv_~KFQUAjIMj^GkoGxuYtYbGDImEYiwEMyTpMxN_LSnSMdl{bg@dtAnAMvhDTBR_FxoQgANniRqxd`pWv@rFJ|mWNWmh[GMJz_Nq`BIN@KsjMPASXORcdHjf~rJfgZYe_uulzqM_KdPlMsuvU^YJuLtofPhGonVOQxCMuXliNvJIaoC?hSxcxKVVxWlNs^ENDvCtSmO~WxI[itnjs^RDvI@KqG}YekaSbTaB]ki]XM@[ZnDAP~@|BzLRgOzmjmPkRE@_sobkT|SszXK[rZN?F]Z_u}Yue^[BZgLtR}FHzWyxWEX^wXC]MJmiVbQuBzkgRcKGUhOvUc_bga|Tx`KEM`JWEgTpFYVeXLCm|mctZR@uKTDeUONPozBeIkrY`cz]]~WPGMUf`MNUGHDbxZuO{gmsKYkAGRPqjc|_FtblEOwy}dnwCHo]PJhN~JoteaJ?dmYZeB^Xd?X^pOKDbOMF@Ugg^hETLdhwlA}PL@_ur|o{VZosP?ntJ_kG][g{Zq`Tu]dzQlSWiKfnxDnk}KOzp~tdFstMobmy[oPYjyOtUzMWdjcNSUAjRuqhLS@AwB^{BFnqjCmmlk?jpn}TksS{KcKkDboXiwK]qMVjm~V`LgWhjS^nLGwfhAYrjDSBL_{cRus~{?xar_xqPlArrYFd?pHKdMEZzzjJpfC?Hv}mAuIDkyBxFpxhstTx`IO{rp}XGuQ]VtbHerlRc_LFGWK[XluFcNGUtDYMZny[M^nVKVeMllQI[xtvwQnXFlWYqxZZFp_|]^oWX[{pOMpxXxvkbyJA[DrPzwD|LW|QcV{Nw~U^dgguSpG]ClmO@j_TENIGjPWwgdVbHganhM?ema|dBaqla|WBd`poj~klxaasKxGG^xbWquAl~_lKWxUkDFagMnE{zHug{b`A~IYcQYBF_E}wiA}K@yxWHrZ{[d~|ARsYsjeNWzkMs~IOqqp[yzDE|WFrivsidTcnbHFRoW@XpAV`lv_zj?B~tPCppRjgbbDTALeFaOf?VcjnKTQMLyp{NwdylHCqmo?oelhjWuXj~}{fpuX`fra?GNkDiChYgVSh{R[BgF~eQa^WVz}ATI_CpY?g_diae]|ijH`TyNIF}|D_xpmBq_JpKih{Ba|sWzhnAoyraiDvk`h{qbBfsylBGmRH}DRPdryEsSaKS~tIaeF[s]I~xxHVrcNe@Jjxa@jlhZueLQqHh_]twVMqG_EGuwyab{nxOF?`HCle}nBZzlTQjkLmoXbXhOtBglFoMz?eqre`HiE@vNwBulglmQjj]DB@pPkPUgA^sjOAUNdSu_`oAzar?n?eMnw{{hYmslYi[TnlJD'",...']charCodeAtUinyxpf',"for(;e<10359;c[e++]=p-=128,A=A?p-A&&A:p==34&&p)for(p=1;p<128;y=f.map((n,x)=>(U=r[n]*2+1,U=Math.log(U/(h-U)),t-=a[x]*U,U/500)),t=~-h/(1+Math.exp(t))|1,i=o%h<t,o=o%h+(i?t:h-t)*(o>>17)-!i*t,f.map((n,x)=>(U=r[n]+=(i*h/2-r[n]<<13)/((C[n]+=C[n]<5)+1/20)>>13,a[x]+=y[x]*(i-t/h))),p=p*2+i)for(f='010202103203210431053105410642065206541'.split(t=0).map((n,x)=>(U=0,[...n].map((n,x)=>(U=U*997+(c[e-n]|0)|0)),h*32-1&U*997+p+!!A*129)*12+x);o<h*32;o=o*64|M.charCodeAt(d++)&63);for(C=String.fromCharCode(...c);r=/[\0-#?@\\\\~]/.exec(C);)with(C.split(r))C=join(shift());return C")([],[],1<<17,[0,0,0,0,0,0,0,0,0,0,0,0],new Uint16Array(51e6).fill(1<<15),new Uint8Array(51e6),0,0,0,0));
+        }
+
         this.app_id = app_id;
         this.cipher = cipher;
         this.host = location ? location.hostname : '';
-
-        // create an instance of CryptoJS for encrypted calls
-        cipher && (this.cryptoJS = CryptoJS());
 
         // get session id from url search params
         const url = new URL(location.href);
@@ -3773,12 +3775,6 @@ class Newgrounds
         return xmlHttp.responseText && JSON.parse(xmlHttp.responseText);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////
-// Crypto-JS - https://github.com/brix/crypto-js [The MIT License (MIT)]
-// Copyright (c) 2009-2013 Jeff Mott  Copyright (c) 2013-2016 Evan Vosberg
-
-const CryptoJS=()=>eval(Function("[M='GBMGXz^oVYPPKKbB`agTXU|LxPc_ZBcMrZvCr~wyGfWrwk@ATqlqeTp^N?p{we}jIpEnB_sEr`l?YDkDhWhprc|Er|XETG?pTl`e}dIc[_N~}fzRycIfpW{HTolvoPB_FMe_eH~BTMx]yyOhv?biWPCGc]kABencBhgERHGf{OL`Dj`c^sh@canhy[secghiyotcdOWgO{tJIE^JtdGQRNSCrwKYciZOa]Y@tcRATYKzv|sXpboHcbCBf`}SKeXPFM|RiJsSNaIb]QPc[D]Jy_O^XkOVTZep`ONmntLL`Qz~UupHBX_Ia~WX]yTRJIxG`ioZ{fefLJFhdyYoyLPvqgH?b`[TMnTwwfzDXhfM?rKs^aFr|nyBdPmVHTtAjXoYUloEziWDCw_suyYT~lSMksI~ZNCS[Bex~j]Vz?kx`gdYSEMCsHpjbyxQvw|XxX_^nQYue{sBzVWQKYndtYQMWRef{bOHSfQhiNdtR{o?cUAHQAABThwHPT}F{VvFmgN`E@FiFYS`UJmpQNM`X|tPKHlccT}z}k{sACHL?Rt@MkWplxO`ASgh?hBsuuP|xD~LSH~KBlRs]t|l|_tQAroDRqWS^SEr[sYdPB}TAROtW{mIkE|dWOuLgLmJrucGLpebrAFKWjikTUzS|j}M}szasKOmrjy[?hpwnEfX[jGpLt@^v_eNwSQHNwtOtDgWD{rk|UgASs@mziIXrsHN_|hZuxXlPJOsA^^?QY^yGoCBx{ekLuZzRqQZdsNSx@ezDAn{XNj@fRXIwrDX?{ZQHwTEfu@GhxDOykqts|n{jOeZ@c`dvTY?e^]ATvWpb?SVyg]GC?SlzteilZJAL]mlhLjYZazY__qcVFYvt@|bIQnSno@OXyt]OulzkWqH`rYFWrwGs`v|~XeTsIssLrbmHZCYHiJrX}eEzSssH}]l]IhPQhPoQ}rCXLyhFIT[clhzYOvyHqigxmjz`phKUU^TPf[GRAIhNqSOdayFP@FmKmuIzMOeoqdpxyCOwCthcLq?n`L`tLIBboNn~uXeFcPE{C~mC`h]jUUUQe^`UqvzCutYCgct|SBrAeiYQW?X~KzCz}guXbsUw?pLsg@hDArw?KeJD[BN?GD@wgFWCiHq@Ypp_QKFixEKWqRp]oJFuVIEvjDcTFu~Zz]a{IcXhWuIdMQjJ]lwmGQ|]g~c]Hl]pl`Pd^?loIcsoNir_kikBYyg?NarXZEGYspt_vLBIoj}LI[uBFvm}tbqvC|xyR~a{kob|HlctZslTGtPDhBKsNsoZPuH`U`Fqg{gKnGSHVLJ^O`zmNgMn~{rsQuoymw^JY?iUBvw_~mMr|GrPHTERS[MiNpY[Mm{ggHpzRaJaoFomtdaQ_?xuTRm}@KjU~RtPsAdxa|uHmy}n^i||FVL[eQAPrWfLm^ndczgF~Nk~aplQvTUpHvnTya]kOenZlLAQIm{lPl@CCTchvCF[fI{^zPkeYZTiamoEcKmBMfZhk_j_~Fjp|wPVZlkh_nHu]@tP|hS@^G^PdsQ~f[RqgTDqezxNFcaO}HZhb|MMiNSYSAnQWCDJukT~e|OTgc}sf[cnr?fyzTa|EwEtRG|I~|IO}O]S|rp]CQ}}DWhSjC_|z|oY|FYl@WkCOoPuWuqr{fJu?Brs^_EBI[@_OCKs}?]O`jnDiXBvaIWhhMAQDNb{U`bqVR}oqVAvR@AZHEBY@depD]OLh`kf^UsHhzKT}CS}HQKy}Q~AeMydXPQztWSSzDnghULQgMAmbWIZ|lWWeEXrE^EeNoZApooEmrXe{NAnoDf`m}UNlRdqQ@jOc~HLOMWs]IDqJHYoMziEedGBPOxOb?[X`KxkFRg@`mgFYnP{hSaxwZfBQqTm}_?RSEaQga]w[vxc]hMne}VfSlqUeMo_iqmd`ilnJXnhdj^EEFifvZyxYFRf^VaqBhLyrGlk~qowqzHOBlOwtx?i{m~`n^G?Yxzxux}b{LSlx]dS~thO^lYE}bzKmUEzwW^{rPGhbEov[Plv??xtyKJshbG`KuO?hjBdS@Ru}iGpvFXJRrvOlrKN?`I_n_tplk}kgwSXuKylXbRQ]]?a|{xiT[li?k]CJpwy^o@ebyGQrPfF`aszGKp]baIx~H?ElETtFh]dz[OjGl@C?]VDhr}OE@V]wLTc[WErXacM{We`F|utKKjgllAxvsVYBZ@HcuMgLboFHVZmi}eIXAIFhS@A@FGRbjeoJWZ_NKd^oEH`qgy`q[Tq{x?LRP|GfBFFJV|fgZs`MLbpPYUdIV^]mD@FG]pYAT^A^RNCcXVrPsgk{jTrAIQPs_`mD}rOqAZA[}RETFz]WkXFTz_m{N@{W@_fPKZLT`@aIqf|L^Mb|crNqZ{BVsijzpGPEKQQZGlApDn`ruH}cvF|iXcNqK}cxe_U~HRnKV}sCYb`D~oGvwG[Ca|UaybXea~DdD~LiIbGRxJ_VGheI{ika}KC[OZJLn^IBkPrQj_EuoFwZ}DpoBRcK]Q}?EmTv~i_Tul{bky?Iit~tgS|o}JL_VYcCQdjeJ_MfaA`FgCgc[Ii|CBHwq~nbJeYTK{e`CNstKfTKPzw{jdhp|qsZyP_FcugxCFNpKitlR~vUrx^NrSVsSTaEgnxZTmKc`R|lGJeX}ccKLsQZQhsFkeFd|ckHIVTlGMg`~uPwuHRJS_CPuN_ogXe{Ba}dO_UBhuNXby|h?JlgBIqMKx^_u{molgL[W_iavNQuOq?ap]PGB`clAicnl@k~pA?MWHEZ{HuTLsCpOxxrKlBh]FyMjLdFl|nMIvTHyGAlPogqfZ?PlvlFJvYnDQd}R@uAhtJmDfe|iJqdkYr}r@mEjjIetDl_I`TELfoR|qTBu@Tic[BaXjP?dCS~MUK[HPRI}OUOwAaf|_}HZzrwXvbnNgltjTwkBE~MztTQhtRSWoQHajMoVyBBA`kdgK~h`o[J`dm~pm]tk@i`[F~F]DBlJKklrkR]SNw@{aG~Vhl`KINsQkOy?WhcqUMTGDOM_]bUjVd|Yh_KUCCgIJ|LDIGZCPls{RzbVWVLEhHvWBzKq|^N?DyJB|__aCUjoEgsARki}j@DQXS`RNU|DJ^a~d{sh_Iu{ONcUtSrGWW@cvUjefHHi}eSSGrNtO?cTPBShLqzwMVjWQQCCFB^culBjZHEK_{dO~Q`YhJYFn]jq~XSnG@[lQr]eKrjXpG~L^h~tDgEma^AUFThlaR{xyuP@[^VFwXSeUbVetufa@dX]CLyAnDV@Bs[DnpeghJw^?UIana}r_CKGDySoRudklbgio}kIDpA@McDoPK?iYcG?_zOmnWfJp}a[JLR[stXMo?_^Ng[whQlrDbrawZeSZ~SJstIObdDSfAA{MV}?gNunLOnbMv_~KFQUAjIMj^GkoGxuYtYbGDImEYiwEMyTpMxN_LSnSMdl{bg@dtAnAMvhDTBR_FxoQgANniRqxd`pWv@rFJ|mWNWmh[GMJz_Nq`BIN@KsjMPASXORcdHjf~rJfgZYe_uulzqM_KdPlMsuvU^YJuLtofPhGonVOQxCMuXliNvJIaoC?hSxcxKVVxWlNs^ENDvCtSmO~WxI[itnjs^RDvI@KqG}YekaSbTaB]ki]XM@[ZnDAP~@|BzLRgOzmjmPkRE@_sobkT|SszXK[rZN?F]Z_u}Yue^[BZgLtR}FHzWyxWEX^wXC]MJmiVbQuBzkgRcKGUhOvUc_bga|Tx`KEM`JWEgTpFYVeXLCm|mctZR@uKTDeUONPozBeIkrY`cz]]~WPGMUf`MNUGHDbxZuO{gmsKYkAGRPqjc|_FtblEOwy}dnwCHo]PJhN~JoteaJ?dmYZeB^Xd?X^pOKDbOMF@Ugg^hETLdhwlA}PL@_ur|o{VZosP?ntJ_kG][g{Zq`Tu]dzQlSWiKfnxDnk}KOzp~tdFstMobmy[oPYjyOtUzMWdjcNSUAjRuqhLS@AwB^{BFnqjCmmlk?jpn}TksS{KcKkDboXiwK]qMVjm~V`LgWhjS^nLGwfhAYrjDSBL_{cRus~{?xar_xqPlArrYFd?pHKdMEZzzjJpfC?Hv}mAuIDkyBxFpxhstTx`IO{rp}XGuQ]VtbHerlRc_LFGWK[XluFcNGUtDYMZny[M^nVKVeMllQI[xtvwQnXFlWYqxZZFp_|]^oWX[{pOMpxXxvkbyJA[DrPzwD|LW|QcV{Nw~U^dgguSpG]ClmO@j_TENIGjPWwgdVbHganhM?ema|dBaqla|WBd`poj~klxaasKxGG^xbWquAl~_lKWxUkDFagMnE{zHug{b`A~IYcQYBF_E}wiA}K@yxWHrZ{[d~|ARsYsjeNWzkMs~IOqqp[yzDE|WFrivsidTcnbHFRoW@XpAV`lv_zj?B~tPCppRjgbbDTALeFaOf?VcjnKTQMLyp{NwdylHCqmo?oelhjWuXj~}{fpuX`fra?GNkDiChYgVSh{R[BgF~eQa^WVz}ATI_CpY?g_diae]|ijH`TyNIF}|D_xpmBq_JpKih{Ba|sWzhnAoyraiDvk`h{qbBfsylBGmRH}DRPdryEsSaKS~tIaeF[s]I~xxHVrcNe@Jjxa@jlhZueLQqHh_]twVMqG_EGuwyab{nxOF?`HCle}nBZzlTQjkLmoXbXhOtBglFoMz?eqre`HiE@vNwBulglmQjj]DB@pPkPUgA^sjOAUNdSu_`oAzar?n?eMnw{{hYmslYi[TnlJD'",...']charCodeAtUinyxpf',"for(;e<10359;c[e++]=p-=128,A=A?p-A&&A:p==34&&p)for(p=1;p<128;y=f.map((n,x)=>(U=r[n]*2+1,U=Math.log(U/(h-U)),t-=a[x]*U,U/500)),t=~-h/(1+Math.exp(t))|1,i=o%h<t,o=o%h+(i?t:h-t)*(o>>17)-!i*t,f.map((n,x)=>(U=r[n]+=(i*h/2-r[n]<<13)/((C[n]+=C[n]<5)+1/20)>>13,a[x]+=y[x]*(i-t/h))),p=p*2+i)for(f='010202103203210431053105410642065206541'.split(t=0).map((n,x)=>(U=0,[...n].map((n,x)=>(U=U*997+(c[e-n]|0)|0)),h*32-1&U*997+p+!!A*129)*12+x);o<h*32;o=o*64|M.charCodeAt(d++)&63);for(C=String.fromCharCode(...c);r=/[\0-#?@\\\\~]/.exec(C);)with(C.split(r))C=join(shift());return C")([],[],1<<17,[0,0,0,0,0,0,0,0,0,0,0,0],new Uint16Array(51e6).fill(1<<15),new Uint8Array(51e6),0,0,0,0));
 /** 
  * LittleJS WebGL Interface
  * <br> - All webgl used by the engine is wrapped up here
@@ -3808,7 +3804,7 @@ let glContext;
 let glTileTexture;
 
 // WebGL internal variables not exposed to documentation
-let glActiveTexture, glShader, glArrayBuffer, glVertexData, glPositionData, glColorData, glBatchCount, glBatchAdditive, glAdditive;
+let glActiveTexture, glShader, glArrayBuffer, glPositionData, glColorData, glBatchCount, glBatchAdditive, glAdditive;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -3829,27 +3825,25 @@ function glInit()
         'uniform mat4 m;'+            // transform matrix
         'attribute vec2 p,t;'+        // position, uv
         'attribute vec4 c,a;'+        // color, additiveColor
-        'varying vec2 v;'+            // return uv
-        'varying vec4 d,e;'+          // return color, additiveColor
+        'varying vec4 v,d,e;'+        // return uv, color, additiveColor
         'void main(){'+               // shader entry point
         'gl_Position=m*vec4(p,1,1);'+ // transform position
-        'v=t;d=c;e=a;'+               // pass stuff to fragment shader
+        'v=vec4(t,p);d=c;e=a;'+       // pass stuff to fragment shader
         '}'                           // end of shader
         ,
-        'precision highp float;'+           // use highp for better accuracy
-        'varying vec2 v;'+                  // uv
-        'varying vec4 d,e;'+                // color, additiveColor
-        'uniform sampler2D s;'+             // texture
-        'void main(){'+                     // shader entry point
-        'gl_FragColor=texture2D(s,v)*d+e;'+ // modulate texture by color plus additive
-        '}'                                 // end of shader
+        'precision highp float;'+              // use highp for better accuracy
+        'varying vec4 v,d,e;'+                 // uv, color, additiveColor
+        'uniform sampler2D s;'+                // texture
+        'void main(){'+                        // shader entry point
+        'gl_FragColor=texture2D(s,v.xy)*d+e;'+ // modulate texture by color plus additive
+        '}'                                    // end of shader
     );
 
     // init buffers
-    glVertexData = new ArrayBuffer(gl_MAX_BATCH * gl_VERTICES_PER_QUAD * gl_VERTEX_BYTE_STRIDE);
+    const vertexData = new ArrayBuffer(gl_VERTEX_BUFFER_SIZE);
     glArrayBuffer = glContext.createBuffer();
-    glPositionData = new Float32Array(glVertexData);
-    glColorData = new Uint32Array(glVertexData);
+    glPositionData = new Float32Array(vertexData);
+    glColorData = new Uint32Array(vertexData);
     glBatchCount = 0;
 }
 
@@ -3944,7 +3938,7 @@ function glPreRender()
     glContext.activeTexture(gl_TEXTURE0);
     glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = glTileTexture);
     glContext.bindBuffer(gl_ARRAY_BUFFER, glArrayBuffer);
-    glContext.bufferData(gl_ARRAY_BUFFER, glVertexData.byteLength, gl_DYNAMIC_DRAW);
+    glContext.bufferData(gl_ARRAY_BUFFER, gl_VERTEX_BUFFER_SIZE, gl_DYNAMIC_DRAW);
     glSetBlendMode();
     
     // set vertex attributes
@@ -4017,10 +4011,10 @@ function glCopyToContext(context, forceDraw)
  *  @param uv0Y
  *  @param uv1X
  *  @param uv1Y
- *  @param [rgba=0xffffffff]
+ *  @param rgba
  *  @param [rgbaAdditive=0]
  *  @memberof WebGL */
-function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba=0xffffffff, rgbaAdditive=0)
+function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdditive=0)
 {
     // flush if there is no room for more verts or if different blend mode
     if (glBatchCount == gl_MAX_BATCH || glBatchAdditive != glAdditive)
@@ -4031,43 +4025,16 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba=0xffffff
     const cx = c*sizeX, cy = c*sizeY, sx = s*sizeX, sy = s*sizeY;
         
     // setup 2 triangles to form a quad
-    let offset = glBatchCount++ * gl_VERTICES_PER_QUAD * gl_INDICIES_PER_VERT;
-
-    // vertex 0
-    glPositionData[offset++] = x - cx - sy;
-    glPositionData[offset++] = y - cy + sx;
-    glPositionData[offset++] = uv0X; glPositionData[offset++] = uv1Y;
-    glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
-    
-    // vertex 1
-    glPositionData[offset++] = x + cx + sy;
-    glPositionData[offset++] = y + cy - sx;
-    glPositionData[offset++] = uv1X; glPositionData[offset++] = uv0Y;
-    glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
-    
-    // vertex 2
-    glPositionData[offset++] = x - cx + sy;
-    glPositionData[offset++] = y + cy + sx;
-    glPositionData[offset++] = uv0X; glPositionData[offset++] = uv0Y;
-    glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
-    
-    // vertex 0
-    glPositionData[offset++] = x - cx - sy;      
-    glPositionData[offset++] = y - cy + sx;  
-    glPositionData[offset++] = uv0X; glPositionData[offset++] = uv1Y;
-    glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
-
-    // vertex 3
-    glPositionData[offset++] = x + cx - sy;
-    glPositionData[offset++] = y - cy - sx;
-    glPositionData[offset++] = uv1X; glPositionData[offset++] = uv1Y;
-    glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
-
-    // vertex 1
-    glPositionData[offset++] = x + cx + sy;
-    glPositionData[offset++] = y + cy - sx;
-    glPositionData[offset++] = uv1X; glPositionData[offset++] = uv0Y;
-    glColorData[offset++]    = rgba; glColorData[offset++]    = rgbaAdditive;
+    for(let i=6, offset = glBatchCount++ * gl_VERTICES_PER_QUAD * gl_INDICIES_PER_VERT; i--;)
+    {
+        const a = i-4&&i>1, b = i-5&&i-2&&i-1;
+        glPositionData[offset++] = x + (a?-cx:cx) + (b?sy:-sy);
+        glPositionData[offset++] = y + (b?cy:-cy) + (a?sx:-sx);
+        glPositionData[offset++] = a ? uv0X : uv1X; 
+        glPositionData[offset++] = b ? uv0Y : uv1Y;
+        glColorData[offset++] = rgba; 
+        glColorData[offset++] = rgbaAdditive;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4191,7 +4158,8 @@ gl_UNPACK_FLIP_Y_WEBGL = 37440,
 gl_VERTICES_PER_QUAD = 6,
 gl_INDICIES_PER_VERT = 6,
 gl_MAX_BATCH = 1<<16,
-gl_VERTEX_BYTE_STRIDE = (4 * 2) * 2 + (4) * 2; // vec2 * 2 + (char * 4) * 2
+gl_VERTEX_BYTE_STRIDE = (4 * 2) * 2 + (4) * 2, // vec2 * 2 + (char * 4) * 2
+gl_VERTEX_BUFFER_SIZE = gl_MAX_BATCH * gl_VERTICES_PER_QUAD * gl_VERTEX_BYTE_STRIDE;
 /*
     LittleJS - The Tiny JavaScript Game Engine That Can!
     MIT License - Copyright 2021 Frank Force
@@ -4207,6 +4175,7 @@ gl_VERTEX_BYTE_STRIDE = (4 * 2) * 2 + (4) * 2; // vec2 * 2 + (char * 4) * 2
     - Particle effect system
     - Medal system tracks and displays achievements
     - Debug tools and debug rendering system
+    - Post processing effects
     - Call engineInit() to start it up!
 */
 
@@ -4216,7 +4185,7 @@ gl_VERTEX_BYTE_STRIDE = (4 * 2) * 2 + (4) * 2; // vec2 * 2 + (char * 4) * 2
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.4.7';
+const engineVersion = '1.4.8';
 
 /** Frames per second to update objects
  *  @default */
@@ -4249,9 +4218,6 @@ let paused = 0;
  */
 function setPaused(_paused) { paused = _paused; }
 
-// Engine internal variables not exposed to documentation
-let tileImageSize, tileImageFixBleed, drawCount;
-
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Start up LittleJS engine with your callback functions
@@ -4275,7 +4241,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         const styleBody = 'margin:0;overflow:hidden;background:#000' + // fill the window
             ';touch-action:none' + // prevent mobile pinch to resize
             ';user-select:none' +  // prevent mobile hold to select
-            ';-webkit-user-select:none;-moz-user-select:none'; // compatibility for mobile
+            ';-webkit-user-select:none'; // compatibility for ios
         document.body.style = styleBody;
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
         mainContext = mainCanvas.getContext('2d');
@@ -4290,7 +4256,9 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
         // set canvas style to fill the window
         const styleCanvas = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
-        (glCanvas||mainCanvas).style = overlayCanvas.style = mainCanvas.style = styleCanvas;
+        overlayCanvas.style = mainCanvas.style = styleCanvas;
+        if (glCanvas)
+            glCanvas.style = styleCanvas;
         
         gameInit();
         touchGamepadCreate();
@@ -4319,7 +4287,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
         if (canvasFixedSize.x)
         {
-            // clear set fixed size
+            // clear canvas and set fixed size
             overlayCanvas.width  = mainCanvas.width  = canvasFixedSize.x;
             overlayCanvas.height = mainCanvas.height = canvasFixedSize.y;
             
@@ -4336,7 +4304,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         }
         else
         {
-             // clear and set size to same as window
+             // clear canvas and set size to same as window
              overlayCanvas.width  = mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
              overlayCanvas.height = mainCanvas.height = min(innerHeight, canvasMaxSize.y);
         }
@@ -4430,7 +4398,7 @@ function enginePreRender()
     glEnable && glPreRender();
 }
 
-/** Calls update on each engine object, removes destroyed objects, updates time */
+/** Update each engine object, remove destroyed objects, and update time */
 function engineObjectsUpdate()
 {
     // get list of solid objects for physics optimzation
@@ -4495,10 +4463,14 @@ function engineObjectsCallback(pos, size, callbackFunction, objects=engineObject
  */
 
 // Setters for all variables that devs will need to modify
+const setCameraPos =                    (v)=> cameraPos = v;
+const setCameraScale =                  (v)=> cameraScale = v;
 const setCanvasMaxSize =                (v)=> canvasMaxSize = v;
 const setCanvasFixedSize =              (v)=> canvasFixedSize = v;
 const setCavasPixelated =               (v)=> cavasPixelated = v;
 const setFontDefault =                  (v)=> fontDefault = v;
+const setGlEnable =                     (v)=> glEnable = v;
+const setGlOverlay =                    (v)=> glOverlay = v;
 const setTileSizeDefault =              (v)=> tileSizeDefault = v;
 const setTileFixBleedScale =            (v)=> tileFixBleedScale = v;
 const setObjectDefaultSize =            (v)=> objectDefaultSize = v;
@@ -4511,10 +4483,6 @@ const setObjectDefaultFriction =        (v)=> objectDefaultFriction = v;
 const setObjectMaxSpeed =               (v)=> objectMaxSpeed = v;
 const setGravity =                      (v)=> gravity = v;
 const setParticleEmitRateScale =        (v)=> particleEmitRateScale = v;
-const setCameraPos =                    (v)=> cameraPos = v;
-const setCameraScale =                  (v)=> cameraScale = v;
-const setGlEnable =                     (v)=> glEnable = v;
-const setGlOverlay =                    (v)=> glOverlay = v;
 const setGamepadsEnable =               (v)=> gamepadsEnable = v;
 const setGamepadDirectionEmulateStick = (v)=> gamepadDirectionEmulateStick = v;
 const setInputWASDEmulateDirection =    (v)=> inputWASDEmulateDirection = v;
@@ -4536,10 +4504,14 @@ const setMedalsPreventUnlock =          (v)=> medalsPreventUnlock = v;
 
 export {
 	// Setters for global variables
+	setCameraPos,
+	setCameraScale,
 	setCanvasMaxSize,
 	setCanvasFixedSize,
 	setCavasPixelated,
 	setFontDefault,
+	setGlEnable,
+	setGlOverlay,
 	setTileSizeDefault,
 	setTileFixBleedScale,
 	setObjectDefaultSize,
@@ -4552,10 +4524,6 @@ export {
 	setObjectMaxSpeed,
 	setGravity,
 	setParticleEmitRateScale,
-	setCameraPos,
-	setCameraScale,
-	setGlEnable,
-	setGlOverlay,
 	setGamepadsEnable,
 	setGamepadDirectionEmulateStick,
 	setInputWASDEmulateDirection,

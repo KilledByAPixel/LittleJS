@@ -13,6 +13,7 @@
     - Particle effect system
     - Medal system tracks and displays achievements
     - Debug tools and debug rendering system
+    - Post processing effects
     - Call engineInit() to start it up!
 */
 
@@ -22,7 +23,7 @@
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.4.7';
+const engineVersion = '1.4.8';
 
 /** Frames per second to update objects
  *  @default */
@@ -55,9 +56,6 @@ let paused = 0;
  */
 function setPaused(_paused) { paused = _paused; }
 
-// Engine internal variables not exposed to documentation
-let tileImageSize, tileImageFixBleed, drawCount;
-
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Start up LittleJS engine with your callback functions
@@ -81,7 +79,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         const styleBody = 'margin:0;overflow:hidden;background:#000' + // fill the window
             ';touch-action:none' + // prevent mobile pinch to resize
             ';user-select:none' +  // prevent mobile hold to select
-            ';-webkit-user-select:none;-moz-user-select:none'; // compatibility for mobile
+            ';-webkit-user-select:none'; // compatibility for ios
         document.body.style = styleBody;
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
         mainContext = mainCanvas.getContext('2d');
@@ -96,7 +94,9 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
         // set canvas style to fill the window
         const styleCanvas = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
-        (glCanvas||mainCanvas).style = overlayCanvas.style = mainCanvas.style = styleCanvas;
+        overlayCanvas.style = mainCanvas.style = styleCanvas;
+        if (glCanvas)
+            glCanvas.style = styleCanvas;
         
         gameInit();
         touchGamepadCreate();
@@ -125,7 +125,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
         if (canvasFixedSize.x)
         {
-            // clear set fixed size
+            // clear canvas and set fixed size
             overlayCanvas.width  = mainCanvas.width  = canvasFixedSize.x;
             overlayCanvas.height = mainCanvas.height = canvasFixedSize.y;
             
@@ -142,7 +142,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         }
         else
         {
-             // clear and set size to same as window
+             // clear canvas and set size to same as window
              overlayCanvas.width  = mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
              overlayCanvas.height = mainCanvas.height = min(innerHeight, canvasMaxSize.y);
         }
@@ -236,7 +236,7 @@ function enginePreRender()
     glEnable && glPreRender();
 }
 
-/** Calls update on each engine object, removes destroyed objects, updates time */
+/** Update each engine object, remove destroyed objects, and update time */
 function engineObjectsUpdate()
 {
     // get list of solid objects for physics optimzation

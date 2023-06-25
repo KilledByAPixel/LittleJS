@@ -33,13 +33,12 @@ rem copy images to build folder
 copy ..\tiles.png tiles.png
 
 rem minify code with closure
-move %BUILD_FILENAME% %BUILD_FILENAME%.temp
-call npx google-closure-compiler --js=%BUILD_FILENAME%.temp --js_output_file=%BUILD_FILENAME% --compilation_level=ADVANCED --language_out=ECMASCRIPT_2021 --warning_level=VERBOSE --jscomp_off=* --assume_function_wrapper
+move %BUILD_FILENAME% temp_%BUILD_FILENAME%
+call npx google-closure-compiler --js=temp_%BUILD_FILENAME% --js_output_file=%BUILD_FILENAME% --compilation_level=ADVANCED --language_out=ECMASCRIPT_2021 --warning_level=VERBOSE --jscomp_off=* --assume_function_wrapper
 if %ERRORLEVEL% NEQ 0 (
     pause
     exit /b %ERRORLEVEL%
 )
-del %BUILD_FILENAME%.temp
 
 rem more minification with uglify or terser (they both do about the same)
 call npx uglifyjs -o %BUILD_FILENAME% --compress --mangle -- %BUILD_FILENAME%
@@ -62,6 +61,11 @@ rem type ..\header.html >> index.html
 echo ^<body^>^<meta charset=utf-8^>^<script^> >> index.html
 type roadroller_%BUILD_FILENAME% >> index.html
 echo ^</script^> >> index.html
+
+rem delete intermediate files
+del %BUILD_FILENAME%
+del temp_%BUILD_FILENAME%
+del roadroller_%BUILD_FILENAME%
 
 rem zip the result, ect is recommended
 call ..\node_modules\ect-bin\vendor\win32\ect.exe -9 -strip -zip ..\%NAME%.zip index.html tiles.png
