@@ -27,7 +27,7 @@ LittleJS is a super lightweight JavaScript game engine with a fast hybrid render
 - Positional audio effects with [ZzFX](https://killedbyapixel.github.io/ZzFX/) and music with [ZzFXM](https://keithclark.github.io/ZzFXM/), mp3s, or wavs
 - Input processing system with keyboard, mouse, gamepad, and touch support
 - Particle effects system (particle editor/designer in progress)
-- Medal system tracks and displays achievements with Newgrounds and OS13k integration
+- Medal system tracks and displays achievements with Newgrounds integration
 - Several easy to understand example projects you can build on
 - Apply [Shadertoy](https://www.shadertoy.com) compatible shaders for post processinge effects
 - Debug tools and debug rendering system
