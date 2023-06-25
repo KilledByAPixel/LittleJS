@@ -76,7 +76,7 @@ const worldToScreen = (worldPos)=>
 
 /** Draw textured tile centered in world space, with color applied if using WebGL
  *  @param {Vector2} pos                                - Center of the tile in world space
- *  @param {Vector2} [size=new Vector2(1,1)]            - Size of the tile in world space, width and height
+ *  @param {Vector2} [size=new Vector2(1,1)]            - Size of the tile in world space
  *  @param {Number}  [tileIndex=-1]                     - Tile index to use, negative is untextured
  *  @param {Vector2} [tileSize=tileSizeDefault]         - Tile size in source pixels
  *  @param {Color}   [color=new Color(1,1,1)]           - Color to modulate with

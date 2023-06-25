@@ -232,21 +232,23 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
      *  @param {Boolean} [clear=0] - Should it clear the canvas before drawing */
     redrawStart(clear = 0)
     {
-        if (clear)
-        {
-            // clear and set size
-            this.canvas.width  = this.size.x * this.tileSize.x;
-            this.canvas.height = this.size.y * this.tileSize.y;
-        }
-
         // save current render settings
-        this.savedRenderSettings = [mainCanvas, mainContext, cameraPos, cameraScale];
+        this.savedRenderSettings = [mainCanvas, mainContext, mainCanvasSize, cameraPos, cameraScale];
 
-        // use normal rendering system to render the tiles
+        // hack: use normal rendering system to render the tiles
         mainCanvas = this.canvas;
         mainContext = this.context;
         cameraPos = this.size.scale(.5);
         cameraScale = this.tileSize.x;
+
+        if (clear)
+        {
+            // clear and set size
+            mainCanvas.width  = this.size.x * this.tileSize.x;
+            mainCanvas.height = this.size.y * this.tileSize.y;
+        }
+
+        // begin a new render for the tile canvas
         enginePreRender();
     }
 
@@ -258,7 +260,7 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
         //debugSaveCanvas(this.canvas);
 
         // set stuff back to normal
-        [mainCanvas, mainContext, cameraPos, cameraScale] = this.savedRenderSettings;
+        [mainCanvas, mainContext, mainCanvasSize, cameraPos, cameraScale] = this.savedRenderSettings;
     }
 
     /** Draw the tile at a given position

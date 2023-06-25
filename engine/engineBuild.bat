@@ -118,3 +118,10 @@ type engine.all.min.js >> %OUTPUT_FILENAME%
 echo.>> %OUTPUT_FILENAME%
 type engineExport.js >> %OUTPUT_FILENAME%
 echo.>> %OUTPUT_FILENAME%
+
+rem lightly minify with uglify
+call npx uglifyjs -o %OUTPUT_FILENAME% -- %OUTPUT_FILENAME%
+if %ERRORLEVEL% NEQ 0 (
+    pause
+    exit /b %ERRORLEVEL%
+)

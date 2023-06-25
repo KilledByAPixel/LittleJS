@@ -152,9 +152,14 @@ const randVector = (length=1)=> new Vector2().setAngle(rand(2*PI), length);
 const randColor = (cA = new Color, cB = new Color(0,0,0,1), linear)=>
     linear ? cA.lerp(cB, rand()) : new Color(rand(cA.r,cB.r),rand(cA.g,cB.g),rand(cA.b,cB.b),rand(cA.a,cB.a));
 
-/** The seed used by the randSeeded function, should not be 0
+/** Seed used by the randSeeded function
  *  @memberof Random */
 let randSeed = 1;
+
+/** Set seed used by the randSeeded function, should not be 0
+ *  @param {Number} seed
+ *  @memberof Random */
+const setRandSeed = (seed)=> randSeed = seed;
 
 /** Returns a seeded random value between the two values passed in using randSeed
  *  @param {Number} [valueA=1]

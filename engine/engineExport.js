@@ -3,10 +3,7 @@
  * <br> - Export engine as a module with extra functions where necessary
  */
 
-// setters for all variables that devs will need to modify
-const setCameraPos =                    (v)=> cameraPos = v;
-const setCameraScale =                  (v)=> cameraScale = v;
-const setRandSeed =                     (v)=> randSeed = v;
+// Setters for all variables that devs will need to modify
 const setCanvasMaxSize =                (v)=> canvasMaxSize = v;
 const setCanvasFixedSize =              (v)=> canvasFixedSize = v;
 const setCavasPixelated =               (v)=> cavasPixelated = v;
@@ -23,6 +20,8 @@ const setObjectDefaultFriction =        (v)=> objectDefaultFriction = v;
 const setObjectMaxSpeed =               (v)=> objectMaxSpeed = v;
 const setGravity =                      (v)=> gravity = v;
 const setParticleEmitRateScale =        (v)=> particleEmitRateScale = v;
+const setCameraPos =                    (v)=> cameraPos = v;
+const setCameraScale =                  (v)=> cameraScale = v;
 const setGlEnable =                     (v)=> glEnable = v;
 const setGlOverlay =                    (v)=> glOverlay = v;
 const setGamepadsEnable =               (v)=> gamepadsEnable = v;
@@ -43,14 +42,9 @@ const setMedalDisplayWidth =            (v)=> medalDisplayWidth = v;
 const setMedalDisplayHeight =           (v)=> medalDisplayHeight = v;
 const setMedalDisplayIconSize =         (v)=> medalDisplayIconSize = v;
 const setMedalsPreventUnlock =          (v)=> medalsPreventUnlock = v;
-const setShowWatermark =                (v)=> showWatermark = v;
-const setGodMode =                      (v)=> godMode = v;
 
 export {
-	// Custom methods
-	setCameraPos,
-	setCameraScale,
-	setRandSeed,
+	// Setters for global variables
 	setCanvasMaxSize,
 	setCanvasFixedSize,
 	setCavasPixelated,
@@ -67,6 +61,8 @@ export {
 	setObjectMaxSpeed,
 	setGravity,
 	setParticleEmitRateScale,
+	setCameraPos,
+	setCameraScale,
 	setGlEnable,
 	setGlOverlay,
 	setGamepadsEnable,
@@ -87,8 +83,6 @@ export {
 	setMedalDisplayHeight,
 	setMedalDisplayIconSize,
 	setMedalsPreventUnlock,
-	setShowWatermark,
-	setGodMode,
 
 	// Settings
 	canvasMaxSize,
@@ -180,6 +174,7 @@ export {
 	randVector,
 	randColor,
 	randSeed,
+	setRandSeed,
 	randSeeded,
 
 	// Utility Classes
@@ -244,15 +239,12 @@ export {
 	// onmousemove,
 	// onwheel,
 	// oncontextmenu,
-	mouseToScreen,
 	//stickData,
+	mouseToScreen,
 	gamepadsUpdate,
 	vibrate,
 	vibrateStop,
 	isTouchDevice,
-	//touchGamepadTimer,
-	touchGamepadCreate,
-	touchGamepadRender,
 
 	// Audio
 	Sound,
@@ -320,11 +312,9 @@ export {
 	time,
 	timeReal,
 	paused,
-	averageFPS,
-	drawCount,
+	setPaused,
 	engineInit,
-	//enginePreRender,
-	//engineObjectsUpdate,
+	engineObjectsUpdate,
 	engineObjectsDestroy,
 	engineObjectsCallback,
 };

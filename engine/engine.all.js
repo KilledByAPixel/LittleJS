@@ -540,9 +540,14 @@ const randVector = (length=1)=> new Vector2().setAngle(rand(2*PI), length);
 const randColor = (cA = new Color, cB = new Color(0,0,0,1), linear)=>
     linear ? cA.lerp(cB, rand()) : new Color(rand(cA.r,cB.r),rand(cA.g,cB.g),rand(cA.b,cB.b),rand(cA.a,cB.a));
 
-/** The seed used by the randSeeded function, should not be 0
+/** Seed used by the randSeeded function
  *  @memberof Random */
 let randSeed = 1;
+
+/** Set seed used by the randSeeded function, should not be 0
+ *  @param {Number} seed
+ *  @memberof Random */
+const setRandSeed = (seed)=> randSeed = seed;
 
 /** Returns a seeded random value between the two values passed in using randSeed
  *  @param {Number} [valueA=1]
@@ -1624,7 +1629,7 @@ const worldToScreen = (worldPos)=>
 
 /** Draw textured tile centered in world space, with color applied if using WebGL
  *  @param {Vector2} pos                                - Center of the tile in world space
- *  @param {Vector2} [size=new Vector2(1,1)]            - Size of the tile in world space, width and height
+ *  @param {Vector2} [size=new Vector2(1,1)]            - Size of the tile in world space
  *  @param {Number}  [tileIndex=-1]                     - Tile index to use, negative is untextured
  *  @param {Vector2} [tileSize=tileSizeDefault]         - Tile size in source pixels
  *  @param {Color}   [color=new Color(1,1,1)]           - Color to modulate with
@@ -3054,21 +3059,23 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
      *  @param {Boolean} [clear=0] - Should it clear the canvas before drawing */
     redrawStart(clear = 0)
     {
-        if (clear)
-        {
-            // clear and set size
-            this.canvas.width  = this.size.x * this.tileSize.x;
-            this.canvas.height = this.size.y * this.tileSize.y;
-        }
-
         // save current render settings
-        this.savedRenderSettings = [mainCanvas, mainContext, cameraPos, cameraScale];
+        this.savedRenderSettings = [mainCanvas, mainContext, mainCanvasSize, cameraPos, cameraScale];
 
-        // use normal rendering system to render the tiles
+        // hack: use normal rendering system to render the tiles
         mainCanvas = this.canvas;
         mainContext = this.context;
         cameraPos = this.size.scale(.5);
         cameraScale = this.tileSize.x;
+
+        if (clear)
+        {
+            // clear and set size
+            mainCanvas.width  = this.size.x * this.tileSize.x;
+            mainCanvas.height = this.size.y * this.tileSize.y;
+        }
+
+        // begin a new render for the tile canvas
         enginePreRender();
     }
 
@@ -3080,7 +3087,7 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
         //debugSaveCanvas(this.canvas);
 
         // set stuff back to normal
-        [mainCanvas, mainContext, cameraPos, cameraScale] = this.savedRenderSettings;
+        [mainCanvas, mainContext, mainCanvasSize, cameraPos, cameraScale] = this.savedRenderSettings;
     }
 
     /** Draw the tile at a given position
@@ -4237,14 +4244,16 @@ let time = 0;
 /** Actual clock time since start in seconds (not affected by pause or frame rate clamping) */
 let timeReal = 0;
 
-/** Is the game paused? Causes time and objects to not be updated. */
+/** Is the game paused? Causes time and objects to not be updated */
 let paused = 0;
 
-// Engine internal variables not exposed to documentation
-let tileImageSize, tileImageFixBleed;
+/** Set if game is paused
+ *  @param {Boolean} paused
+ */
+function setPaused(_paused) { paused = _paused; }
 
-// Engine stat tracking, if showWatermark is true
-let averageFPS, drawCount;
+// Engine internal variables not exposed to documentation
+let tileImageSize, tileImageFixBleed, drawCount;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -4294,16 +4303,16 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     };
 
     // frame time tracking
-    let frameTimeLastMS = 0, frameTimeBufferMS = 0;
+    let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
 
     // main update loop
-    const engineUpdate = (frameTimeMS=0)=>
+    function engineUpdate(frameTimeMS=0)
     {
         // update time keeping
         let frameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
         frameTimeLastMS = frameTimeMS;
         if (debug || showWatermark)
-            averageFPS = lerp(.05, averageFPS || 0, 1e3/(frameTimeDeltaMS||1));
+            averageFPS = lerp(.05, averageFPS, 1e3/(frameTimeDeltaMS||1));
         const debugSpeedUp   = debug && keyIsDown(107); // +
         const debugSpeedDown = debug && keyIsDown(109); // -
         if (debug)
@@ -4413,7 +4422,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     tileImageSource ? tileImage.src = tileImageSource : tileImage.onload();
 }
 
-// called by engine to setup render system
+// Called automatically by engine to setup render system
 function enginePreRender()
 {
     // save canvas size
@@ -4426,9 +4435,7 @@ function enginePreRender()
     glEnable && glPreRender(mainCanvas.width, mainCanvas.height, cameraPos.x, cameraPos.y, cameraScale);
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-/** Calls update on each engine object (recursively if child), removes destroyed objects, and updated time */
+/** Calls update on each engine object, removes destroyed objects, updates time */
 function engineObjectsUpdate()
 {
     // get list of solid objects for physics optimzation

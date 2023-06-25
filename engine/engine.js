@@ -47,14 +47,16 @@ let time = 0;
 /** Actual clock time since start in seconds (not affected by pause or frame rate clamping) */
 let timeReal = 0;
 
-/** Is the game paused? Causes time and objects to not be updated. */
+/** Is the game paused? Causes time and objects to not be updated */
 let paused = 0;
 
-// Engine internal variables not exposed to documentation
-let tileImageSize, tileImageFixBleed;
+/** Set if game is paused
+ *  @param {Boolean} paused
+ */
+function setPaused(_paused) { paused = _paused; }
 
-// Engine stat tracking, if showWatermark is true
-let averageFPS, drawCount;
+// Engine internal variables not exposed to documentation
+let tileImageSize, tileImageFixBleed, drawCount;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -104,16 +106,16 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     };
 
     // frame time tracking
-    let frameTimeLastMS = 0, frameTimeBufferMS = 0;
+    let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
 
     // main update loop
-    const engineUpdate = (frameTimeMS=0)=>
+    function engineUpdate(frameTimeMS=0)
     {
         // update time keeping
         let frameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
         frameTimeLastMS = frameTimeMS;
         if (debug || showWatermark)
-            averageFPS = lerp(.05, averageFPS || 0, 1e3/(frameTimeDeltaMS||1));
+            averageFPS = lerp(.05, averageFPS, 1e3/(frameTimeDeltaMS||1));
         const debugSpeedUp   = debug && keyIsDown(107); // +
         const debugSpeedDown = debug && keyIsDown(109); // -
         if (debug)
@@ -223,7 +225,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     tileImageSource ? tileImage.src = tileImageSource : tileImage.onload();
 }
 
-// called by engine to setup render system
+// Called automatically by engine to setup render system
 function enginePreRender()
 {
     // save canvas size
@@ -236,9 +238,7 @@ function enginePreRender()
     glEnable && glPreRender(mainCanvas.width, mainCanvas.height, cameraPos.x, cameraPos.y, cameraScale);
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-/** Calls update on each engine object (recursively if child), removes destroyed objects, and updated time */
+/** Calls update on each engine object, removes destroyed objects, updates time */
 function engineObjectsUpdate()
 {
     // get list of solid objects for physics optimzation

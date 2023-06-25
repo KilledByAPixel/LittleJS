@@ -1,6 +1,6 @@
 /** Draw textured tile centered in world space, with color applied if using WebGL
  *  @param {Vector2} pos                                - Center of the tile in world space
- *  @param {Vector2} [size=new Vector2(1,1)]            - Size of the tile in world space, width and height
+ *  @param {Vector2} [size=new Vector2(1,1)]            - Size of the tile in world space
  *  @param {Number}  [tileIndex=-1]                     - Tile index to use, negative is untextured
  *  @param {Vector2} [tileSize=tileSizeDefault]         - Tile size in source pixels
  *  @param {Color}   [color=new Color(1,1,1)]           - Color to modulate with
@@ -211,6 +211,10 @@ declare function glDraw(x: any, y: any, sizeX: any, sizeY: any, angle: any, uv0X
  *  @memberof WebGL */
 declare function glInitPostProcess(shaderCode: string): void;
 declare function glRenderPostProcess(): void;
+/** Set if game is paused
+ *  @param {Boolean} paused
+ */
+declare function setPaused(_paused: any): void;
 /** Start up LittleJS engine with your callback functions
  *  @param {Function} gameInit        - Called once after the engine starts up, setup the game
  *  @param {Function} gameUpdate      - Called every frame at 60 frames per second, handle input and update the game state
@@ -221,7 +225,7 @@ declare function glRenderPostProcess(): void;
  */
 declare function engineInit(gameInit: Function, gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, tileImageSource?: string): void;
 declare function enginePreRender(): void;
-/** Calls update on each engine object (recursively if child), removes destroyed objects, and updated time */
+/** Calls update on each engine object, removes destroyed objects, updates time */
 declare function engineObjectsUpdate(): void;
 /** Destroy and remove all objects */
 declare function engineObjectsDestroy(): void;
@@ -441,9 +445,13 @@ declare function randVector(length?: number): Vector2;
  *  @return {Color}
  *  @memberof Random */
 declare function randColor(cA?: Color, cB?: Color, linear?: boolean): Color;
-/** The seed used by the randSeeded function, should not be 0
+/** Seed used by the randSeeded function
  *  @memberof Random */
 declare let randSeed: number;
+/** Set seed used by the randSeeded function, should not be 0
+ *  @param {Number} seed
+ *  @memberof Random */
+declare function setRandSeed(seed: number): number;
 /** Returns a seeded random value between the two values passed in using randSeed
  *  @param {Number} [valueA=1]
  *  @param {Number} [valueB=0]
@@ -1681,9 +1689,8 @@ declare let frame: number;
 declare let time: number;
 /** Actual clock time since start in seconds (not affected by pause or frame rate clamping) */
 declare let timeReal: number;
-/** Is the game paused? Causes time and objects to not be updated. */
+/** Is the game paused? Causes time and objects to not be updated */
 declare let paused: number;
 declare let tileImageSize: any;
 declare let tileImageFixBleed: any;
-declare let averageFPS: any;
 declare let drawCount: any;
