@@ -77,13 +77,11 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         tileImageFixBleed = vec2(tileFixBleedScale).divide(tileImageSize = vec2(tileImage.width, tileImage.height));
         debug && (tileImage.onload=()=>ASSERT(1)); // tile sheet can not reloaded
 
-        // setup css
+        // setup html
         const styleBody = 'margin:0;overflow:hidden;background:#000' + // fill the window
             ';touch-action:none' + // prevent mobile pinch to resize
             ';user-select:none' +  // prevent mobile hold to select
             ';-webkit-user-select:none;-moz-user-select:none'; // compatibility for mobile
-
-        // setup html
         document.body.style = styleBody;
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
         mainContext = mainCanvas.getContext('2d');
@@ -106,7 +104,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     };
 
     // frame time tracking
-    let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
+    let frameTimeLastMS = 0, frameTimeBufferMS, averageFPS;
 
     // main update loop
     function engineUpdate(frameTimeMS=0)
@@ -144,7 +142,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         }
         else
         {
-            // clear and set size to same as window
+             // clear and set size to same as window
              overlayCanvas.width  = mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
              overlayCanvas.height = mainCanvas.height = min(innerHeight, canvasMaxSize.y);
         }
@@ -211,7 +209,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             overlayContext.fillStyle = '#000';
             const text = engineName + ' ' + 'v' + engineVersion + ' / ' 
                 + drawCount + ' / ' + engineObjects.length + ' / ' + averageFPS.toFixed(1)
-                + ' ' + (glEnable ? 'GL' : '2D') ;
+                + (glEnable ? ' GL' : ' 2D') ;
             overlayContext.fillText(text, mainCanvas.width-3, 3);
             overlayContext.fillStyle = '#fff';
             overlayContext.fillText(text, mainCanvas.width-2, 2);
@@ -235,7 +233,7 @@ function enginePreRender()
     mainContext.imageSmoothingEnabled = !cavasPixelated;
 
     // setup gl rendering if enabled
-    glEnable && glPreRender(mainCanvas.width, mainCanvas.height, cameraPos.x, cameraPos.y, cameraScale);
+    glEnable && glPreRender();
 }
 
 /** Calls update on each engine object, removes destroyed objects, updates time */

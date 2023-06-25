@@ -104,7 +104,7 @@ const wave = (frequency=1, amplitude=1, t=time)=> amplitude/2 * (1 - Math.cos(t*
  *  @param {Number} t - time in seconds
  *  @return {String}
  *  @memberof Utilities */
-const formatTime = (t)=> (t/60|0)+':'+(t%60<10?'0':'')+(t%60|0);
+const formatTime = (t)=> (t/60|0) + ':' + (t%60<10?'0':'') + (t%60|0);
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -128,7 +128,7 @@ const randInt = (a=1, b=0)=> rand(a,b)|0;
 /** Randomly returns either -1 or 1
  *  @return {Number}
  *  @memberof Random */
-const randSign = ()=> (rand(2)|0) * 2 - 1;
+const randSign = ()=> randInt(2) * 2 - 1;
 
 /** Returns a random Vector2 within a circular shape
  *  @param {Number} [radius=1]
@@ -322,7 +322,7 @@ class Vector2
      * @param {float} digits - precision to display
      * @return {String} */
     toString(digits=3) 
-    { return `(${(this.x<0?'':' ') + this.x.toFixed(digits)},${(this.y<0?'':' ') + this.y.toFixed(digits)} )`; }
+    { if (debug) { return `(${(this.x<0?'':' ') + this.x.toFixed(digits)},${(this.y<0?'':' ') + this.y.toFixed(digits)} )`; }}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -560,7 +560,7 @@ class Timer
     
     /** Returns this timer expressed as a string
      * @return {String} */
-    toString() { if (debug) { return this.unset() ? 'unset' : Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ); } }
+    toString() { if (debug) { return this.unset() ? 'unset' : Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ); }}
     
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {Number} */

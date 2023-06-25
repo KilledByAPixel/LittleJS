@@ -183,7 +183,7 @@ declare function glCreateProgram(vsSource: WebGLShader, fsSource: WebGLShader): 
  *  @return {WebGLTexture}
  *  @memberof WebGL */
 declare function glCreateTexture(image: new (width?: number, height?: number) => HTMLImageElement): WebGLTexture;
-declare function glPreRender(width: any, height: any, cameraX: any, cameraY: any, cameraScale: any): void;
+declare function glPreRender(): void;
 /** Draw all sprites and clear out the buffer, called automatically by the system whenever necessary
  *  @memberof WebGL */
 declare function glFlush(): void;

@@ -155,7 +155,7 @@ class ParticleEmitter extends EngineObject
         this.parent && super.update();
 
         // update emitter
-        if (!this.emitTime || this.getAliveTime() <= this.emitTime)
+        if (!this.emitTime | this.getAliveTime() <= this.emitTime)
         {
             // emit particles
             if (this.emitRate * particleEmitRateScale)
@@ -177,9 +177,9 @@ class ParticleEmitter extends EngineObject
     {
         // spawn a particle
         let pos = this.emitSize.x != undefined ? // check if vec2 was used for size
-            (new Vector2(rand(-.5,.5), rand(-.5,.5)))
-                .multiply(this.emitSize).rotate(this.angle) // box emitter
-            : randInCircle(this.emitSize * .5);             // circle emitter
+            (new Vector2(rand(-1,1), rand(-1,1)))
+                .multiply(this.emitSize/2).rotate(this.angle) // box emitter
+            : randInCircle(this.emitSize/2);                  // circle emitter
         let angle = rand(this.particleConeAngle, -this.particleConeAngle);
         if (!this.localSpace)
         {
@@ -222,7 +222,7 @@ class ParticleEmitter extends EngineObject
         particle.additive      = this.additive;
         particle.renderOrder   = this.renderOrder;
         particle.trailScale    = this.trailScale;
-        particle.mirror        = rand()<.5;
+        particle.mirror        = randInt(2);
         particle.localSpaceEmitter = this.localSpace && this;
 
         // setup callbacks for particles

@@ -143,18 +143,19 @@ function glCreateTexture(image)
     image && image.width && glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
         
     // use point filtering for pixelated rendering
-    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, cavasPixelated ? gl_NEAREST : gl_LINEAR);
-    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, cavasPixelated ? gl_NEAREST : gl_LINEAR);
+    const filter = cavasPixelated ? gl_NEAREST : gl_LINEAR;
+    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, filter);
+    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, filter);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_S, gl_CLAMP_TO_EDGE);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_T, gl_CLAMP_TO_EDGE);
     return texture;
 }
 
 // called automatically by engine before render
-function glPreRender(width, height, cameraX, cameraY, cameraScale)
+function glPreRender()
 {
     // clear and set to same size as main canvas
-    glContext.viewport(0, 0, glCanvas.width = width, glCanvas.height = height);
+    glContext.viewport(0, 0, glCanvas.width = mainCanvas.width, glCanvas.height = mainCanvas.height);
     glContext.clear(gl_COLOR_BUFFER_BIT);
 
     // set up the shader
@@ -180,14 +181,14 @@ function glPreRender(width, height, cameraX, cameraY, cameraScale)
     initVertexAttribArray('a', gl_UNSIGNED_BYTE, 1, 4, 1); // additiveColor
 
     // build the transform matrix
-    const sx = 2 * cameraScale / width;
-    const sy = 2 * cameraScale / height;
+    const sx = 2 * cameraScale / mainCanvas.width;
+    const sy = 2 * cameraScale / mainCanvas.height;
     glContext.uniformMatrix4fv(glContext.getUniformLocation(glShader, 'm'), 0,
         new Float32Array([
             sx, 0, 0, 0,
             0, sy, 0, 0,
             1, 1, -1, 1,
-            -1-sx*cameraX, -1-sy*cameraY, 0, 0
+            -1-sx*cameraPos.x, -1-sy*cameraPos.y, 0, 0
         ])
     );
 }
@@ -337,14 +338,15 @@ function glRenderPostProcess()
         return;
     
     // prepare to render post process shader
-    const width = mainCanvas.width, height = mainCanvas.height;
     if (glEnable)
     {
         glFlush(); // clear out the buffer
         mainContext.drawImage(glCanvas, 0, 0); // copy to the main canvas
     }
-    else
-        glContext.viewport(0, 0, glCanvas.width = width, glCanvas.height = height); // set viewport
+    else // set viewport
+        glContext.viewport(0, 0, 
+            glCanvas.width = mainCanvas.width, 
+            glCanvas.height = mainCanvas.height);
 
     // setup shader program to draw one triangle
     glContext.useProgram(glPostShader);
@@ -368,7 +370,7 @@ function glRenderPostProcess()
     const uniformLocation = (name)=>glContext.getUniformLocation(glPostShader, name);
     glContext.uniform1i(uniformLocation('iChannel0'), 0);
     glContext.uniform1f(uniformLocation('iTime'), time);
-    glContext.uniform3f(uniformLocation('iResolution'), width, height, 1);
+    glContext.uniform3f(uniformLocation('iResolution'), mainCanvas.width, mainCanvas.height, 1);
     glContext.drawArrays(gl_TRIANGLES, 0, 3);
 }
 

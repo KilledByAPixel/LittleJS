@@ -57,7 +57,7 @@ class Sound
     {
         if (!soundEnable) return;
 
-        let pan = 0;
+        let pan;
         if (pos)
         {
             const range = this.range;
@@ -87,7 +87,7 @@ class Sound
      *  @param {Number}  [volume=1] - How much to scale volume by (in addition to range fade)
      *  @return {AudioBufferSourceNode} - The audio, can be used to stop sound later
      */
-    playNote(semitoneOffset, pos, volume=1)
+    playNote(semitoneOffset, pos, volume)
     {
         if (!soundEnable) return;
 
@@ -142,7 +142,7 @@ class Music
      *  @param {Boolean} [loop=1] - True if the music should loop when it reaches the end
      *  @return {AudioBufferSourceNode} - The audio node, can be used to stop sound later
      */
-    play(volume = 1, loop = 1)
+    play(volume, loop = 1)
     {
         if (!soundEnable) return;
 
@@ -372,10 +372,8 @@ function zzfxG
  *  @memberof Audio */
 function zzfxM(instruments, patterns, sequence, BPM = 125) 
 {
+  let i, j, k;
   let instrumentParameters;
-  let i;
-  let j;
-  let k;
   let note;
   let sample;
   let patternChannel;

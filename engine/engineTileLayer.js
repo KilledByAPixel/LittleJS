@@ -77,14 +77,11 @@ function tileCollisionRaycast(posStart, posEnd, object)
 {
     // test if a ray collides with tiles from start to end
     // todo: a way to get the exact hit point, it must still register as inside the hit tile
-    posStart = posStart.floor();
-    posEnd = posEnd.floor();
-    const posDelta = posEnd.subtract(posStart);
+    const posDelta = (posEnd = posEnd.floor()).subtract(posStart = posStart.floor());
     const dx = abs(posDelta.x),  dy = -abs(posDelta.y);
     const sx = sign(posDelta.x), sy = sign(posDelta.y);
-    let e = dx + dy;
 
-    for (let x = posStart.x, y = posStart.y;;)
+    for (let x = posStart.x, y = posStart.y, e = dx + dy;;)
     {
         const tileData = getTileCollisionData(vec2(x,y));
         if (tileData && (object ? object.collideWithTileRaycast(tileData, new Vector2(x, y)) : tileData > 0))

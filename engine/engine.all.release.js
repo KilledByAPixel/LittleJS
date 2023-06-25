@@ -137,7 +137,7 @@ const wave = (frequency=1, amplitude=1, t=time)=> amplitude/2 * (1 - Math.cos(t*
  *  @param {Number} t - time in seconds
  *  @return {String}
  *  @memberof Utilities */
-const formatTime = (t)=> (t/60|0)+':'+(t%60<10?'0':'')+(t%60|0);
+const formatTime = (t)=> (t/60|0) + ':' + (t%60<10?'0':'') + (t%60|0);
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -161,7 +161,7 @@ const randInt = (a=1, b=0)=> rand(a,b)|0;
 /** Randomly returns either -1 or 1
  *  @return {Number}
  *  @memberof Random */
-const randSign = ()=> (rand(2)|0) * 2 - 1;
+const randSign = ()=> randInt(2) * 2 - 1;
 
 /** Returns a random Vector2 within a circular shape
  *  @param {Number} [radius=1]
@@ -355,7 +355,7 @@ class Vector2
      * @param {float} digits - precision to display
      * @return {String} */
     toString(digits=3) 
-    { return `(${(this.x<0?'':' ') + this.x.toFixed(digits)},${(this.y<0?'':' ') + this.y.toFixed(digits)} )`; }
+    { if (debug) { return `(${(this.x<0?'':' ') + this.x.toFixed(digits)},${(this.y<0?'':' ') + this.y.toFixed(digits)} )`; }}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -593,7 +593,7 @@ class Timer
     
     /** Returns this timer expressed as a string
      * @return {String} */
-    toString() { if (debug) { return this.unset() ? 'unset' : Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ); } }
+    toString() { if (debug) { return this.unset() ? 'unset' : Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ); }}
     
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {Number} */
@@ -901,13 +901,11 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         tileImageFixBleed = vec2(tileFixBleedScale).divide(tileImageSize = vec2(tileImage.width, tileImage.height));
         debug && (tileImage.onload=()=>ASSERT(1)); // tile sheet can not reloaded
 
-        // setup css
+        // setup html
         const styleBody = 'margin:0;overflow:hidden;background:#000' + // fill the window
             ';touch-action:none' + // prevent mobile pinch to resize
             ';user-select:none' +  // prevent mobile hold to select
             ';-webkit-user-select:none;-moz-user-select:none'; // compatibility for mobile
-
-        // setup html
         document.body.style = styleBody;
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
         mainContext = mainCanvas.getContext('2d');
@@ -930,7 +928,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     };
 
     // frame time tracking
-    let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
+    let frameTimeLastMS = 0, frameTimeBufferMS, averageFPS;
 
     // main update loop
     function engineUpdate(frameTimeMS=0)
@@ -968,7 +966,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         }
         else
         {
-            // clear and set size to same as window
+             // clear and set size to same as window
              overlayCanvas.width  = mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
              overlayCanvas.height = mainCanvas.height = min(innerHeight, canvasMaxSize.y);
         }
@@ -1035,7 +1033,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             overlayContext.fillStyle = '#000';
             const text = engineName + ' ' + 'v' + engineVersion + ' / ' 
                 + drawCount + ' / ' + engineObjects.length + ' / ' + averageFPS.toFixed(1)
-                + ' ' + (glEnable ? 'GL' : '2D') ;
+                + (glEnable ? ' GL' : ' 2D') ;
             overlayContext.fillText(text, mainCanvas.width-3, 3);
             overlayContext.fillStyle = '#fff';
             overlayContext.fillText(text, mainCanvas.width-2, 2);
@@ -1059,7 +1057,7 @@ function enginePreRender()
     mainContext.imageSmoothingEnabled = !cavasPixelated;
 
     // setup gl rendering if enabled
-    glEnable && glPreRender(mainCanvas.width, mainCanvas.height, cameraPos.x, cameraPos.y, cameraScale);
+    glEnable && glPreRender();
 }
 
 /** Calls update on each engine object, removes destroyed objects, updates time */
@@ -1791,7 +1789,7 @@ class FontImage
      */
     constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1), startTileIndex=0, context=overlayContext)
     {
-        if (!image && !engineFontImage)
+        if (!engineFontImage)
         {
             // load default font image
             engineFontImage = new Image();
@@ -1861,7 +1859,7 @@ class FontImage
 /** Returns true if fullscreen mode is active
  *  @return {Boolean}
  *  @memberof Draw */
-const isFullscreen =()=> document.fullscreenElement;
+const isFullscreen = ()=> document.fullscreenElement;
 
 /** Toggle fullsceen mode
  *  @memberof Draw */
@@ -2359,7 +2357,7 @@ class Sound
     {
         if (!soundEnable) return;
 
-        let pan = 0;
+        let pan;
         if (pos)
         {
             const range = this.range;
@@ -2389,7 +2387,7 @@ class Sound
      *  @param {Number}  [volume=1] - How much to scale volume by (in addition to range fade)
      *  @return {AudioBufferSourceNode} - The audio, can be used to stop sound later
      */
-    playNote(semitoneOffset, pos, volume=1)
+    playNote(semitoneOffset, pos, volume)
     {
         if (!soundEnable) return;
 
@@ -2444,7 +2442,7 @@ class Music
      *  @param {Boolean} [loop=1] - True if the music should loop when it reaches the end
      *  @return {AudioBufferSourceNode} - The audio node, can be used to stop sound later
      */
-    play(volume = 1, loop = 1)
+    play(volume, loop = 1)
     {
         if (!soundEnable) return;
 
@@ -2674,10 +2672,8 @@ function zzfxG
  *  @memberof Audio */
 function zzfxM(instruments, patterns, sequence, BPM = 125) 
 {
+  let i, j, k;
   let instrumentParameters;
-  let i;
-  let j;
-  let k;
   let note;
   let sample;
   let patternChannel;
@@ -2847,14 +2843,11 @@ function tileCollisionRaycast(posStart, posEnd, object)
 {
     // test if a ray collides with tiles from start to end
     // todo: a way to get the exact hit point, it must still register as inside the hit tile
-    posStart = posStart.floor();
-    posEnd = posEnd.floor();
-    const posDelta = posEnd.subtract(posStart);
+    const posDelta = (posEnd = posEnd.floor()).subtract(posStart = posStart.floor());
     const dx = abs(posDelta.x),  dy = -abs(posDelta.y);
     const sx = sign(posDelta.x), sy = sign(posDelta.y);
-    let e = dx + dy;
 
-    for (let x = posStart.x, y = posStart.y;;)
+    for (let x = posStart.x, y = posStart.y, e = dx + dy;;)
     {
         const tileData = getTileCollisionData(vec2(x,y));
         if (tileData && (object ? object.collideWithTileRaycast(tileData, new Vector2(x, y)) : tileData > 0))
@@ -3271,7 +3264,7 @@ class ParticleEmitter extends EngineObject
         this.parent && super.update();
 
         // update emitter
-        if (!this.emitTime || this.getAliveTime() <= this.emitTime)
+        if (!this.emitTime | this.getAliveTime() <= this.emitTime)
         {
             // emit particles
             if (this.emitRate * particleEmitRateScale)
@@ -3293,9 +3286,9 @@ class ParticleEmitter extends EngineObject
     {
         // spawn a particle
         let pos = this.emitSize.x != undefined ? // check if vec2 was used for size
-            (new Vector2(rand(-.5,.5), rand(-.5,.5)))
-                .multiply(this.emitSize).rotate(this.angle) // box emitter
-            : randInCircle(this.emitSize * .5);             // circle emitter
+            (new Vector2(rand(-1,1), rand(-1,1)))
+                .multiply(this.emitSize/2).rotate(this.angle) // box emitter
+            : randInCircle(this.emitSize/2);                  // circle emitter
         let angle = rand(this.particleConeAngle, -this.particleConeAngle);
         if (!this.localSpace)
         {
@@ -3338,7 +3331,7 @@ class ParticleEmitter extends EngineObject
         particle.additive      = this.additive;
         particle.renderOrder   = this.renderOrder;
         particle.trailScale    = this.trailScale;
-        particle.mirror        = rand()<.5;
+        particle.mirror        = randInt(2);
         particle.localSpaceEmitter = this.localSpace && this;
 
         // setup callbacks for particles
@@ -3872,18 +3865,19 @@ function glCreateTexture(image)
     image && image.width && glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
         
     // use point filtering for pixelated rendering
-    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, cavasPixelated ? gl_NEAREST : gl_LINEAR);
-    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, cavasPixelated ? gl_NEAREST : gl_LINEAR);
+    const filter = cavasPixelated ? gl_NEAREST : gl_LINEAR;
+    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, filter);
+    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, filter);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_S, gl_CLAMP_TO_EDGE);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_T, gl_CLAMP_TO_EDGE);
     return texture;
 }
 
 // called automatically by engine before render
-function glPreRender(width, height, cameraX, cameraY, cameraScale)
+function glPreRender()
 {
     // clear and set to same size as main canvas
-    glContext.viewport(0, 0, glCanvas.width = width, glCanvas.height = height);
+    glContext.viewport(0, 0, glCanvas.width = mainCanvas.width, glCanvas.height = mainCanvas.height);
     glContext.clear(gl_COLOR_BUFFER_BIT);
 
     // set up the shader
@@ -3909,14 +3903,14 @@ function glPreRender(width, height, cameraX, cameraY, cameraScale)
     initVertexAttribArray('a', gl_UNSIGNED_BYTE, 1, 4, 1); // additiveColor
 
     // build the transform matrix
-    const sx = 2 * cameraScale / width;
-    const sy = 2 * cameraScale / height;
+    const sx = 2 * cameraScale / mainCanvas.width;
+    const sy = 2 * cameraScale / mainCanvas.height;
     glContext.uniformMatrix4fv(glContext.getUniformLocation(glShader, 'm'), 0,
         new Float32Array([
             sx, 0, 0, 0,
             0, sy, 0, 0,
             1, 1, -1, 1,
-            -1-sx*cameraX, -1-sy*cameraY, 0, 0
+            -1-sx*cameraPos.x, -1-sy*cameraPos.y, 0, 0
         ])
     );
 }
@@ -4066,14 +4060,15 @@ function glRenderPostProcess()
         return;
     
     // prepare to render post process shader
-    const width = mainCanvas.width, height = mainCanvas.height;
     if (glEnable)
     {
         glFlush(); // clear out the buffer
         mainContext.drawImage(glCanvas, 0, 0); // copy to the main canvas
     }
-    else
-        glContext.viewport(0, 0, glCanvas.width = width, glCanvas.height = height); // set viewport
+    else // set viewport
+        glContext.viewport(0, 0, 
+            glCanvas.width = mainCanvas.width, 
+            glCanvas.height = mainCanvas.height);
 
     // setup shader program to draw one triangle
     glContext.useProgram(glPostShader);
@@ -4097,7 +4092,7 @@ function glRenderPostProcess()
     const uniformLocation = (name)=>glContext.getUniformLocation(glPostShader, name);
     glContext.uniform1i(uniformLocation('iChannel0'), 0);
     glContext.uniform1f(uniformLocation('iTime'), time);
-    glContext.uniform3f(uniformLocation('iResolution'), width, height, 1);
+    glContext.uniform3f(uniformLocation('iResolution'), mainCanvas.width, mainCanvas.height, 1);
     glContext.drawArrays(gl_TRIANGLES, 0, 3);
 }
 

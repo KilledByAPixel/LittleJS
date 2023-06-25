@@ -295,7 +295,7 @@ class FontImage
      */
     constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1), startTileIndex=0, context=overlayContext)
     {
-        if (!image && !engineFontImage)
+        if (!engineFontImage)
         {
             // load default font image
             engineFontImage = new Image();
@@ -365,7 +365,7 @@ class FontImage
 /** Returns true if fullscreen mode is active
  *  @return {Boolean}
  *  @memberof Draw */
-const isFullscreen =()=> document.fullscreenElement;
+const isFullscreen = ()=> document.fullscreenElement;
 
 /** Toggle fullsceen mode
  *  @memberof Draw */
