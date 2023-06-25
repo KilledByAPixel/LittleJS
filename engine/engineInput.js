@@ -14,7 +14,7 @@
  *  @param {Number} [device=0]
  *  @return {Boolean}
  *  @memberof Input */
-const keyIsDown = (key, device=0)=> inputData[device] && inputData[device][key] & 1 ? 1 : 0;
+const keyIsDown = (key, device=0)=> inputData[device] && inputData[device][key] & 1;
 
 /** Returns true if device key was pressed this frame
  *  @param {Number} key

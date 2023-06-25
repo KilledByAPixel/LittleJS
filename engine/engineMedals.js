@@ -63,11 +63,9 @@ class Medal
         this.name = name;
         this.description = description;
         this.icon = icon;
+        this.image = new Image;
         if (src)
-        {
-            this.image = new Image();
             this.image.src = src;
-        }
     }
 
     /** Unlocks a medal if not already unlocked */

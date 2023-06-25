@@ -94,9 +94,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
         // set canvas style to fill the window
         const styleCanvas = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
-        overlayCanvas.style = mainCanvas.style = styleCanvas;
-        if (glCanvas)
-            glCanvas.style = styleCanvas;
+        (glCanvas||mainCanvas).style = mainCanvas.style = overlayCanvas.style = styleCanvas;
         
         gameInit();
         touchGamepadCreate();
@@ -132,13 +130,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             // fit to window by adding space on top or bottom if necessary
             const aspect = innerWidth / innerHeight;
             const fixedAspect = mainCanvas.width / mainCanvas.height;
-            mainCanvas.style.width  = overlayCanvas.style.width  = aspect < fixedAspect ? '100%' : '';
-            mainCanvas.style.height = overlayCanvas.style.height = aspect < fixedAspect ? '' : '100%';
-            if (glCanvas)
-            {
-                glCanvas.style.width  = mainCanvas.style.width;
-                glCanvas.style.height = mainCanvas.style.height;
-            }
+            (glCanvas||mainCanvas).style.width = mainCanvas.style.width = overlayCanvas.style.width  = aspect < fixedAspect ? '100%' : '';
+            (glCanvas||mainCanvas).style.height = mainCanvas.style.height = overlayCanvas.style.height = aspect < fixedAspect ? '' : '100%';
         }
         else
         {

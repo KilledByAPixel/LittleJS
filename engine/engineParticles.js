@@ -251,7 +251,8 @@ class Particle extends EngineObject
      * @param {Vector2} [tileSize=tileSizeDefault] - Size of tile in source pixels
      * @param {Number}  [angle=0]                  - Angle to rotate the particle
      */
-    constructor(pos, tileIndex, tileSize, angle) { super(pos, new Vector2, tileIndex, tileSize, angle); }
+    constructor(pos, tileIndex, tileSize, angle)
+    { super(pos, new Vector2, tileIndex, tileSize, angle); }
 
     /** Render the particle, automatically called each frame, sorted by renderOrder */
     render()

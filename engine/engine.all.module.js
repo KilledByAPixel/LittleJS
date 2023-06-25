@@ -1611,7 +1611,7 @@ let mainCanvasSize = vec2();
 /** Tile sheet for batch rendering system
  *  @type {Image}
  *  @memberof Draw */
-const tileImage = new Image();
+const tileImage = new Image;
 
 // Engine internal variables not exposed to documentation
 let tileImageSize, tileImageFixBleed, drawCount;
@@ -1862,7 +1862,7 @@ class FontImage
         if (!engineFontImage)
         {
             // load default font image
-            engineFontImage = new Image();
+            engineFontImage = new Image;
             engineFontImage.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAAYAQAAAAA9+x6JAAAAAnRSTlMAAHaTzTgAAAGiSURBVHjaZZABhxxBEIUf6ECLBdFY+Q0PMNgf0yCgsSAGZcT9sgIPtBWwIA5wgAPEoHUyJeeSlW+gjK+fegWwtROWpVQEyWh2npdpBmTUFVhb29RINgLIukoXr5LIAvYQ5ve+1FqWEMqNKTX3FAJHyQDRZvmKWubAACcv5z5Gtg2oyCWE+Yk/8JZQX1jTTCpKAFGIgza+dJCNBF2UskRlsgwitHbSV0QLgt9sTPtsRlvJjEr8C/FARWA2bJ/TtJ7lko34dNDn6usJUMzuErP89UUBJbWeozrwLLncXczd508deAjLWipLO4Q5XGPcJvPu92cNDaN0P5G1FL0nSOzddZOrJ6rNhbXGmeDvO3TF7DeJWl4bvaYQTNHCTeuqKZmbjHaSOFes+IX/+IhHrnAkXOAsfn24EM68XieIECoccD4KZLk/odiwzeo2rovYdhvb2HYFgyznJyDpYJdYOmfXgVdJTaUi4xA2uWYNYec9BLeqdl9EsoTw582mSFDX2DxVLbNt9U3YYoeatBad1c2Tj8t2akrjaIGJNywKB/7h75/gN3vCMSaadIUTAAAAAElFTkSuQmCC';
         }
 
@@ -1960,7 +1960,7 @@ function toggleFullscreen()
  *  @param {Number} [device=0]
  *  @return {Boolean}
  *  @memberof Input */
-const keyIsDown = (key, device=0)=> inputData[device] && inputData[device][key] & 1 ? 1 : 0;
+const keyIsDown = (key, device=0)=> inputData[device] && inputData[device][key] & 1;
 
 /** Returns true if device key was pressed this frame
  *  @param {Number} key
@@ -2999,7 +2999,7 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
         // init tile data
         this.data = [];
         for (let j = this.size.area(); j--;)
-            this.data.push(new TileLayerData());
+            this.data.push(new TileLayerData);
     }
     
     /** Set data at a given position in the array 
@@ -3420,7 +3420,8 @@ class Particle extends EngineObject
      * @param {Vector2} [tileSize=tileSizeDefault] - Size of tile in source pixels
      * @param {Number}  [angle=0]                  - Angle to rotate the particle
      */
-    constructor(pos, tileIndex, tileSize, angle) { super(pos, new Vector2, tileIndex, tileSize, angle); }
+    constructor(pos, tileIndex, tileSize, angle)
+    { super(pos, new Vector2, tileIndex, tileSize, angle); }
 
     /** Render the particle, automatically called each frame, sorted by renderOrder */
     render()
@@ -3540,11 +3541,9 @@ class Medal
         this.name = name;
         this.description = description;
         this.icon = icon;
+        this.image = new Image;
         if (src)
-        {
-            this.image = new Image();
             this.image.src = src;
-        }
     }
 
     /** Unlocks a medal if not already unlocked */
@@ -4092,9 +4091,7 @@ function glRenderPostProcess()
         mainContext.drawImage(glCanvas, 0, 0); // copy to the main canvas
     }
     else // set viewport
-        glContext.viewport(0, 0, 
-            glCanvas.width = mainCanvas.width, 
-            glCanvas.height = mainCanvas.height);
+        glContext.viewport(0, 0, glCanvas.width = mainCanvas.width, glCanvas.height = mainCanvas.height);
 
     // setup shader program to draw one triangle
     glContext.useProgram(glPostShader);
@@ -4256,9 +4253,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
         // set canvas style to fill the window
         const styleCanvas = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
-        overlayCanvas.style = mainCanvas.style = styleCanvas;
-        if (glCanvas)
-            glCanvas.style = styleCanvas;
+        (glCanvas||mainCanvas).style = mainCanvas.style = overlayCanvas.style = styleCanvas;
         
         gameInit();
         touchGamepadCreate();
@@ -4294,13 +4289,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             // fit to window by adding space on top or bottom if necessary
             const aspect = innerWidth / innerHeight;
             const fixedAspect = mainCanvas.width / mainCanvas.height;
-            mainCanvas.style.width  = overlayCanvas.style.width  = aspect < fixedAspect ? '100%' : '';
-            mainCanvas.style.height = overlayCanvas.style.height = aspect < fixedAspect ? '' : '100%';
-            if (glCanvas)
-            {
-                glCanvas.style.width  = mainCanvas.style.width;
-                glCanvas.style.height = mainCanvas.style.height;
-            }
+            (glCanvas||mainCanvas).style.width = mainCanvas.style.width = overlayCanvas.style.width  = aspect < fixedAspect ? '100%' : '';
+            (glCanvas||mainCanvas).style.height = mainCanvas.style.height = overlayCanvas.style.height = aspect < fixedAspect ? '' : '100%';
         }
         else
         {

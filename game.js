@@ -19,12 +19,12 @@ function gameInit()
 {
     // create tile collision and visible tile layer
     initTileCollision(vec2(32, 16));
-    const tileLayer = new TileLayer(vec2(), tileCollisionSize);
+    const pos = vec2();
+    const tileLayer = new TileLayer(pos, tileCollisionSize);
 
     // get level data from the tiles image
     const imageLevelDataRow = 1;
     mainContext.drawImage(tileImage, 0, 0);
-    const pos = vec2();
     for (pos.x = tileCollisionSize.x; pos.x--;)
     for (pos.y = tileCollisionSize.y; pos.y--;)
     {

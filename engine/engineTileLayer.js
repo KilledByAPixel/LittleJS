@@ -173,7 +173,7 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
         // init tile data
         this.data = [];
         for (let j = this.size.area(); j--;)
-            this.data.push(new TileLayerData());
+            this.data.push(new TileLayerData);
     }
     
     /** Set data at a given position in the array 

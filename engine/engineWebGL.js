@@ -315,9 +315,7 @@ function glRenderPostProcess()
         mainContext.drawImage(glCanvas, 0, 0); // copy to the main canvas
     }
     else // set viewport
-        glContext.viewport(0, 0, 
-            glCanvas.width = mainCanvas.width, 
-            glCanvas.height = mainCanvas.height);
+        glContext.viewport(0, 0, glCanvas.width = mainCanvas.width, glCanvas.height = mainCanvas.height);
 
     // setup shader program to draw one triangle
     glContext.useProgram(glPostShader);
