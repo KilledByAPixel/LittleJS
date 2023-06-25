@@ -254,34 +254,40 @@ const isTouchDevice = window.ontouchstart !== undefined;
 if (isTouchDevice)
 {
     // override mouse events
-    let wasTouching, hadTouch, mouseDown = onmousedown, mouseUp = onmouseup;
+    let wasTouching, mouseDown = onmousedown, mouseUp = onmouseup;
     onmousedown = onmouseup = ()=> 0;
 
-    // handle all touch events the same way
-    ontouchstart = ontouchmove = ontouchend = (e)=>
+    // setup touch input
+    ontouchstart = (e)=>
     {
-        e.button = 0; // all touches are left click
+        // fix mobile audio, force it to play a sound on first touch
+        zzfx(0);
 
-        // check if touching and pass to mouse events
-        const touching = e.touches.length;
-        if (touching)
+        // handle all touch events the same way
+        ontouchstart = ontouchmove = ontouchend = (e)=>
         {
-            // fix mobile audio, force it to play a sound on first touch
-            hadTouch || zzfx(0, hadTouch=1);
+            e.button = 0; // all touches are left click
 
-            // set event pos and pass it along
-            e.x = e.touches[0].clientX;
-            e.y = e.touches[0].clientY;
-            wasTouching ? onmousemove(e) : mouseDown(e);
+            // check if touching and pass to mouse events
+            const touching = e.touches.length;
+            if (touching)
+            {
+                // set event pos and pass it along
+                e.x = e.touches[0].clientX;
+                e.y = e.touches[0].clientY;
+                wasTouching ? onmousemove(e) : mouseDown(e);
+            }
+            else if (wasTouching)
+                mouseUp(e);
+
+            // set was touching
+            wasTouching = touching;
+
+            // must return true so the document will get focus
+            return true;
         }
-        else if (wasTouching)
-            mouseUp(e);
 
-        // set was touching
-        wasTouching = touching;
-
-        // must return true so the document will get focus
-        return true;
+        return ontouchstart(e);
     }
 }
 
@@ -301,64 +307,69 @@ function touchGamepadCreate()
     touchGamepadButtons = [];
     touchGamepadStick = vec2();
 
-    let hadTouch;
-    ontouchstart = ontouchmove = ontouchend = (e)=> 
+    // setup touch input
+    ontouchstart = (e)=>
     {
-        // clear touch gamepad input
-        touchGamepadStick = vec2();
-        touchGamepadButtons = [];
-            
-        const touching = e.touches.length;
-        if (touching)
+        // fix mobile audio, force it to play a sound on first touch
+        zzfx(0);
+
+        ontouchstart = ontouchmove = ontouchend = (e)=> 
         {
-            // fix mobile audio, force it to play a sound on first touch
-            hadTouch || zzfx(0, hadTouch=1);
-
-            // set that gamepad is active
-            isUsingGamepad = 1;
-            touchGamepadTimer.set();
-
-            if (paused)
+            // clear touch gamepad input
+            touchGamepadStick = vec2();
+            touchGamepadButtons = [];
+                
+            const touching = e.touches.length;
+            if (touching)
             {
-                // touch anywhere to press start when paused
-                touchGamepadButtons[9] = 1;
-                return;
-            }
-        }
+                // set that gamepad is active
+                isUsingGamepad = 1;
+                touchGamepadTimer.set();
 
-        // get center of left and right sides
-        const stickCenter = vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
-        const buttonCenter = mainCanvasSize.subtract(vec2(touchGamepadSize, touchGamepadSize));
-        const startCenter = mainCanvasSize.scale(.5);
-
-        // check each touch point
-        for (const touch of e.touches)
-        {
-            const touchPos = mouseToScreen(vec2(touch.clientX, touch.clientY));
-            if (touchPos.distance(stickCenter) < touchGamepadSize)
-            {
-                // virtual analog stick
-                if (touchGamepadAnalog)
-                    touchGamepadStick = touchPos.subtract(stickCenter).scale(2/touchGamepadSize).clampLength();
-                else
+                if (paused)
                 {
-                    // 8 way dpad
-                    const angle = touchPos.subtract(stickCenter).angle();
-                    touchGamepadStick.setAngle((angle * 4 / PI + 8.5 | 0) * PI / 4);
+                    // touch anywhere to press start when paused
+                    touchGamepadButtons[9] = 1;
+                    return;
                 }
             }
-            else if (touchPos.distance(buttonCenter) < touchGamepadSize)
+
+            // get center of left and right sides
+            const stickCenter = vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
+            const buttonCenter = mainCanvasSize.subtract(vec2(touchGamepadSize, touchGamepadSize));
+            const startCenter = mainCanvasSize.scale(.5);
+
+            // check each touch point
+            for (const touch of e.touches)
             {
-                // virtual face buttons
-                const button = touchPos.subtract(buttonCenter).direction();
-                touchGamepadButtons[button] = 1;
-            }
-            else if (touchPos.distance(startCenter) < touchGamepadSize)
-            {
-                // virtual start button in center
-                touchGamepadButtons[9] = 1;
+                const touchPos = mouseToScreen(vec2(touch.clientX, touch.clientY));
+                if (touchPos.distance(stickCenter) < touchGamepadSize)
+                {
+                    // virtual analog stick
+                    if (touchGamepadAnalog)
+                        touchGamepadStick = touchPos.subtract(stickCenter).scale(2/touchGamepadSize).clampLength();
+                    else
+                    {
+                        // 8 way dpad
+                        const angle = touchPos.subtract(stickCenter).angle();
+                        touchGamepadStick.setAngle((angle * 4 / PI + 8.5 | 0) * PI / 4);
+                    }
+                }
+                else if (touchPos.distance(buttonCenter) < touchGamepadSize)
+                {
+                    // virtual face buttons
+                    const button = touchPos.subtract(buttonCenter).direction();
+                    touchGamepadButtons[button] = 1;
+                }
+                else if (touchPos.distance(startCenter) < touchGamepadSize)
+                {
+                    // virtual start button in center
+                    touchGamepadButtons[9] = 1;
+                }
             }
         }
+
+        return ontouchstart(e);
     }
 }
 
