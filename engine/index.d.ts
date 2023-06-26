@@ -1589,11 +1589,11 @@ declare class Newgrounds {
      *  @param {Number} app_id   - The newgrounds App ID
      *  @param {String} [cipher] - The encryption Key (AES-128/Base64) */
     constructor(app_id: number, cipher?: string);
-    cryptoJS: any;
     app_id: number;
     cipher: string;
     host: string;
-    session_id: string | number;
+    cryptoJS: any;
+    session_id: string;
     medals: any;
     scoreboards: any;
     /** Send message to unlock a medal by id
@@ -1621,6 +1621,7 @@ declare class Newgrounds {
      * @return {Object}                - The response JSON object
      */
     call(component: string, parameters?: any, async?: boolean): any;
+    CryptoJS(): any;
 }
 /** The WebGL canvas which appears above the main canvas and below the overlay canvas
  *  @type {HTMLCanvasElement}
