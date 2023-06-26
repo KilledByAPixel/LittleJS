@@ -177,9 +177,9 @@ class ParticleEmitter extends EngineObject
     {
         // spawn a particle
         let pos = this.emitSize.x != undefined ? // check if vec2 was used for size
-            (new Vector2(rand(-1,1), rand(-1,1)))
-                .multiply(this.emitSize/2).rotate(this.angle) // box emitter
-            : randInCircle(this.emitSize/2);                  // circle emitter
+            (new Vector2(rand(-.5,.5), rand(-.5,.5)))
+                .multiply(this.emitSize).rotate(this.angle) // box emitter
+            : randInCircle(this.emitSize/2);                // circle emitter
         let angle = rand(this.particleConeAngle, -this.particleConeAngle);
         if (!this.localSpace)
         {
