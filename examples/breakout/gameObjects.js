@@ -9,7 +9,7 @@ class Paddle extends EngineObject
 {
     constructor(pos)
     {
-        super(pos, vec2(8,1));
+        super(pos, vec2(5,.5));
 
         // set to collide
         this.setCollision();
@@ -38,7 +38,7 @@ class Brick extends EngineObject
 {
     constructor(pos)
     {
-        super(pos, vec2(4,2), 1, vec2(32,16), 0, randColor());
+        super(pos, vec2(2,1), 1, vec2(32,16), 0, randColor());
 
         // set to collide
         this.setCollision();
@@ -76,11 +76,11 @@ class Ball extends EngineObject
 {
     constructor(pos)
     {
-        super(pos, vec2(1), 0);
+        super(pos, vec2(.5), 0);
 
         // make a bouncy ball
         this.setCollision();
-        this.velocity = vec2(randSign(), -1).scale(.2);
+        this.velocity = vec2(randSign(), -1).scale(.1);
         this.elasticity = 1;
         this.damping = 1;
     }
@@ -117,7 +117,7 @@ class Ball extends EngineObject
         {
             // put english on the ball when it collides with paddle
             this.velocity = this.velocity.rotate(.2 * (this.pos.x - o.pos.x));
-            this.velocity.y = max(abs(this.velocity.y), .2);
+            this.velocity.y = max(-this.velocity.y, .2);
             this.bounce();
             return 0;
         }
@@ -127,7 +127,7 @@ class Ball extends EngineObject
     bounce()
     {
         // speed up
-        const speed = min(1.1*this.velocity.length(), 1);
+        const speed = min(1.05*this.velocity.length(), .5);
         this.velocity = this.velocity.normalize(speed);
 
         // scale bounce sound pitch by speed

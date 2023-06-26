@@ -109,9 +109,9 @@ class EngineObject
 
         // apply physics
         const oldPos = this.pos.copy();
-        this.pos.x += this.velocity.x = this.damping * this.velocity.x;
-        this.pos.y += this.velocity.y = this.damping * this.velocity.y + gravity * this.gravityScale;
-        this.angle += this.angleVelocity *= this.angleDamping;
+        this.velocity.y += gravity * this.gravityScale;
+        this.pos.x += this.velocity.x *= this.damping;
+        this.pos.y += this.velocity.y *= this.damping;
 
         // physics sanity checks
         ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);

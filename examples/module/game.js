@@ -12,7 +12,7 @@ const Timer   = LittleJS.Timer;
 const vec2    = LittleJS.vec2;
 
 // sound effects
-const sound_click = new LittleJS.Sound([.5,.5]);
+const sound_click = new LittleJS.Sound([1,.5]);
 
 // medals
 const medal_example = new LittleJS.Medal(0, 'Example Medal', 'Welcome to LittleJS!');
@@ -26,8 +26,8 @@ function gameInit()
 {
     // create tile collision and visible tile layer
     LittleJS.initTileCollision(vec2(32, 16));
-    const tileLayer = new LittleJS.TileLayer(vec2(), LittleJS.tileCollisionSize);
     const pos = vec2();
+    const tileLayer = new LittleJS.TileLayer(pos, LittleJS.tileCollisionSize);
 
     // get level data from the tiles image
     const imageLevelDataRow = 1;
@@ -36,24 +36,22 @@ function gameInit()
     for (pos.x = LittleJS.tileCollisionSize.x; pos.x--;)
     for (pos.y = LittleJS.tileCollisionSize.y; pos.y--;)
     {
-        const data = mainContext.getImageData(pos.x, 16*(imageLevelDataRow+1)-pos.y-1, 1, 1).data;
-        if (data[0])
+        const imageData = mainContext.getImageData(pos.x, 16*(imageLevelDataRow+1)-pos.y-1, 1, 1).data;
+        if (imageData[0])
         {
-            LittleJS.setTileCollisionData(pos, 1);
-
             const tileIndex = 1;
             const direction = LittleJS.randInt(4)
             const mirror = LittleJS.randInt(2);
             const color = LittleJS.randColor();
             const data = new LittleJS.TileLayerData(tileIndex, direction, mirror, color);
             tileLayer.setData(pos, data);
+            LittleJS.setTileCollisionData(pos, 1);
         }
     }
     tileLayer.redraw();
 
     // move camera to center of collision
     LittleJS.setCameraPos(LittleJS.tileCollisionSize.scale(.5));
-    LittleJS.setCameraScale(32);
 
     // enable gravity
     LittleJS.setGravity(-.01);

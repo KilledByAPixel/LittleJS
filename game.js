@@ -44,7 +44,6 @@ function gameInit()
 
     // move camera to center of collision
     cameraPos = tileCollisionSize.scale(.5);
-    cameraScale = 32;
 
     // enable gravity
     gravity = -.01;

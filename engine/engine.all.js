@@ -981,7 +981,7 @@ let cameraPos = vec2();
 /** Scale of camera in world space
  *  @default
  *  @memberof Settings */
-let cameraScale = 16;
+let cameraScale = 32;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Display settings
@@ -1151,7 +1151,7 @@ let soundVolume = .5;
 /** Default range where sound no longer plays
  *  @default
  *  @memberof Settings */
-let soundDefaultRange = 30;
+let soundDefaultRange = 40;
 
 /** Default range percent to start tapering off sound (0-1)
  *  @default
@@ -1182,7 +1182,8 @@ let medalDisplaySize = vec2(640, 80);
 let medalDisplayIconSize = 50;
 
 /** Set to stop medals from being unlockable (like if cheats are enabled)
- *  @memberof Medals */
+ *  @default
+ *  @memberof Settings */
 let medalsPreventUnlock;
 /*
     LittleJS Object System
@@ -1295,9 +1296,9 @@ class EngineObject
 
         // apply physics
         const oldPos = this.pos.copy();
-        this.pos.x += this.velocity.x = this.damping * this.velocity.x;
-        this.pos.y += this.velocity.y = this.damping * this.velocity.y + gravity * this.gravityScale;
-        this.angle += this.angleVelocity *= this.angleDamping;
+        this.velocity.y += gravity * this.gravityScale;
+        this.pos.x += this.velocity.x *= this.damping;
+        this.pos.y += this.velocity.y *= this.damping;
 
         // physics sanity checks
         ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);

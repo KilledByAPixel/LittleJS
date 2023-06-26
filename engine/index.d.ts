@@ -882,7 +882,8 @@ declare let medalDisplaySize: Vector2;
  *  @memberof Settings */
 declare let medalDisplayIconSize: number;
 /** Set to stop medals from being unlockable (like if cheats are enabled)
- *  @memberof Medals */
+ *  @default
+ *  @memberof Settings */
 declare let medalsPreventUnlock: any;
 /**
  * LittleJS Object Base Object Class

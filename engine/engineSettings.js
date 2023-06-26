@@ -17,7 +17,7 @@ let cameraPos = vec2();
 /** Scale of camera in world space
  *  @default
  *  @memberof Settings */
-let cameraScale = 16;
+let cameraScale = 32;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Display settings
@@ -187,7 +187,7 @@ let soundVolume = .5;
 /** Default range where sound no longer plays
  *  @default
  *  @memberof Settings */
-let soundDefaultRange = 30;
+let soundDefaultRange = 40;
 
 /** Default range percent to start tapering off sound (0-1)
  *  @default
@@ -218,5 +218,6 @@ let medalDisplaySize = vec2(640, 80);
 let medalDisplayIconSize = 50;
 
 /** Set to stop medals from being unlockable (like if cheats are enabled)
- *  @memberof Medals */
+ *  @default
+ *  @memberof Settings */
 let medalsPreventUnlock;
