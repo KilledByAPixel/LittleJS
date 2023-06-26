@@ -174,15 +174,15 @@ let vibrateEnable = 1;
 ///////////////////////////////////////////////////////////////////////////////
 // Audio settings
 
-/** Volume scale to apply to all sound, music and speech
- *  @default
- *  @memberof Settings */
-let soundVolume = .5;
-
 /** All audio code can be disabled and removed from build
  *  @default
  *  @memberof Settings */
 let soundEnable = 1;
+
+/** Volume scale to apply to all sound, music and speech
+ *  @default
+ *  @memberof Settings */
+let soundVolume = .5;
 
 /** Default range where sound no longer plays
  *  @default
@@ -207,17 +207,16 @@ let medalDisplayTime = 5;
  *  @memberof Settings */
 let medalDisplaySlideTime = .5;
 
-/** Width of medal display
+/** Size of medal display
  *  @default
  *  @memberof Settings */
-let medalDisplayWidth = 640;
-
-/** Height of medal display
- *  @default
- *  @memberof Settings */
-let medalDisplayHeight = 80;
+let medalDisplaySize = vec2(640, 80);
 
 /** Size of icon in medal display
  *  @default
  *  @memberof Settings */
 let medalDisplayIconSize = 50;
+
+/** Set to stop medals from being unlockable (like if cheats are enabled)
+ *  @memberof Medals */
+let medalsPreventUnlock;

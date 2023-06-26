@@ -12,10 +12,6 @@
  *  @memberof Medals */
 const medals = [];
 
-/** Set to stop medals from being unlockable (like if cheats are enabled)
- *  @memberof Medals */
-let medalsPreventUnlock;
-
 // Engine internal variables not exposed to documentation
 let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimeLast;
 
@@ -63,9 +59,8 @@ class Medal
         this.name = name;
         this.description = description;
         this.icon = icon;
-        this.image = new Image;
         if (src)
-            this.image.src = src;
+            (this.image = new Image).src = src;
     }
 
     /** Unlocks a medal if not already unlocked */
@@ -87,9 +82,9 @@ class Medal
     render(hidePercent=0)
     {
         const context = overlayContext;
-        const width = min(medalDisplayWidth, mainCanvas.width);
+        const width = min(medalDisplaySize.x, mainCanvas.width);
         const x = overlayCanvas.width - width;
-        const y = -medalDisplayHeight*hidePercent;
+        const y = -medalDisplaySize.y*hidePercent;
 
         // draw containing rect and clip to that region
         context.save();
@@ -97,12 +92,12 @@ class Medal
         context.fillStyle = new Color(.9,.9,.9);
         context.strokeStyle = new Color(0,0,0);
         context.lineWidth = 3;
-        context.fill(context.rect(x, y, width, medalDisplayHeight));
+        context.fill(context.rect(x, y, width, medalDisplaySize.y));
         context.stroke();
         context.clip();
 
         // draw the icon and text
-        this.renderIcon(vec2(x+15+medalDisplayIconSize/2, y+medalDisplayHeight/2));
+        this.renderIcon(vec2(x+15+medalDisplayIconSize/2, y+medalDisplaySize.y/2));
         const pos = vec2(x+medalDisplayIconSize+30, y+28);
         drawTextScreen(this.name, pos, 38, new Color(0,0,0), 0, 0, 'left');
         pos.y += 32;
@@ -205,6 +200,7 @@ class Newgrounds
             if (medal)
             {
                 // copy newgrounds medal data
+                medal.image =       new Image;
                 medal.image.src =   newgroundsMedal['icon'];
                 medal.name =        newgroundsMedal['name'];
                 medal.description = newgroundsMedal['description'];

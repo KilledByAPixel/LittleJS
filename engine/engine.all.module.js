@@ -1138,15 +1138,15 @@ let vibrateEnable = 1;
 ///////////////////////////////////////////////////////////////////////////////
 // Audio settings
 
-/** Volume scale to apply to all sound, music and speech
- *  @default
- *  @memberof Settings */
-let soundVolume = .5;
-
 /** All audio code can be disabled and removed from build
  *  @default
  *  @memberof Settings */
 let soundEnable = 1;
+
+/** Volume scale to apply to all sound, music and speech
+ *  @default
+ *  @memberof Settings */
+let soundVolume = .5;
 
 /** Default range where sound no longer plays
  *  @default
@@ -1171,20 +1171,19 @@ let medalDisplayTime = 5;
  *  @memberof Settings */
 let medalDisplaySlideTime = .5;
 
-/** Width of medal display
+/** Size of medal display
  *  @default
  *  @memberof Settings */
-let medalDisplayWidth = 640;
-
-/** Height of medal display
- *  @default
- *  @memberof Settings */
-let medalDisplayHeight = 80;
+let medalDisplaySize = vec2(640, 80);
 
 /** Size of icon in medal display
  *  @default
  *  @memberof Settings */
 let medalDisplayIconSize = 50;
+
+/** Set to stop medals from being unlockable (like if cheats are enabled)
+ *  @memberof Medals */
+let medalsPreventUnlock;
 /*
     LittleJS Object System
 */
@@ -1846,25 +1845,23 @@ function drawText(text, pos, size=1, color, lineWidth, lineColor, textAlign, fon
  * font.drawTextScreen("LittleJS\nHello World!", vec2(200, 50));
  */
 
+// default font image created by engine
 let engineFontImage;
 
 class FontImage
 {
     /** Create an image font
-     *  @param {HTMLImageElement}   [image] - The image the font is stored in, if undefined the default font is used
-     *  @param {Vector2} [tileSize=vec2(8)] - The size of the font source tiles
+     *  @param {HTMLImageElement} [image] - Image for the font, if undefined default font is used
+     *  @param {Vector2} [tileSize=vec2(8)] - Size of the font source tiles
      *  @param {Vector2} [paddingSize=vec2(0,1)] - How much extra space to add between characters
      *  @param {Number}  [startTileIndex=0] - Tile index in image where font starts
      *  @param {CanvasRenderingContext2D} [context=overlayContext] - context to draw to
      */
     constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1), startTileIndex=0, context=overlayContext)
     {
+        // load default font image
         if (!engineFontImage)
-        {
-            // load default font image
-            engineFontImage = new Image;
-            engineFontImage.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAAYAQAAAAA9+x6JAAAAAnRSTlMAAHaTzTgAAAGiSURBVHjaZZABhxxBEIUf6ECLBdFY+Q0PMNgf0yCgsSAGZcT9sgIPtBWwIA5wgAPEoHUyJeeSlW+gjK+fegWwtROWpVQEyWh2npdpBmTUFVhb29RINgLIukoXr5LIAvYQ5ve+1FqWEMqNKTX3FAJHyQDRZvmKWubAACcv5z5Gtg2oyCWE+Yk/8JZQX1jTTCpKAFGIgza+dJCNBF2UskRlsgwitHbSV0QLgt9sTPtsRlvJjEr8C/FARWA2bJ/TtJ7lko34dNDn6usJUMzuErP89UUBJbWeozrwLLncXczd508deAjLWipLO4Q5XGPcJvPu92cNDaN0P5G1FL0nSOzddZOrJ6rNhbXGmeDvO3TF7DeJWl4bvaYQTNHCTeuqKZmbjHaSOFes+IX/+IhHrnAkXOAsfn24EM68XieIECoccD4KZLk/odiwzeo2rovYdhvb2HYFgyznJyDpYJdYOmfXgVdJTaUi4xA2uWYNYec9BLeqdl9EsoTw582mSFDX2DxVLbNt9U3YYoeatBad1c2Tj8t2akrjaIGJNywKB/7h75/gN3vCMSaadIUTAAAAAElFTkSuQmCC';
-        }
+            (engineFontImage = new Image).src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAAYAQAAAAA9+x6JAAAAAnRSTlMAAHaTzTgAAAGiSURBVHjaZZABhxxBEIUf6ECLBdFY+Q0PMNgf0yCgsSAGZcT9sgIPtBWwIA5wgAPEoHUyJeeSlW+gjK+fegWwtROWpVQEyWh2npdpBmTUFVhb29RINgLIukoXr5LIAvYQ5ve+1FqWEMqNKTX3FAJHyQDRZvmKWubAACcv5z5Gtg2oyCWE+Yk/8JZQX1jTTCpKAFGIgza+dJCNBF2UskRlsgwitHbSV0QLgt9sTPtsRlvJjEr8C/FARWA2bJ/TtJ7lko34dNDn6usJUMzuErP89UUBJbWeozrwLLncXczd508deAjLWipLO4Q5XGPcJvPu92cNDaN0P5G1FL0nSOzddZOrJ6rNhbXGmeDvO3TF7DeJWl4bvaYQTNHCTeuqKZmbjHaSOFes+IX/+IhHrnAkXOAsfn24EM68XieIECoccD4KZLk/odiwzeo2rovYdhvb2HYFgyznJyDpYJdYOmfXgVdJTaUi4xA2uWYNYec9BLeqdl9EsoTw582mSFDX2DxVLbNt9U3YYoeatBad1c2Tj8t2akrjaIGJNywKB/7h75/gN3vCMSaadIUTAAAAAElFTkSuQmCC';
 
         this.image = image || engineFontImage;
         this.tileSize = tileSize;
@@ -3501,10 +3498,6 @@ class Particle extends EngineObject
  *  @memberof Medals */
 const medals = [];
 
-/** Set to stop medals from being unlockable (like if cheats are enabled)
- *  @memberof Medals */
-let medalsPreventUnlock;
-
 // Engine internal variables not exposed to documentation
 let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimeLast;
 
@@ -3552,9 +3545,8 @@ class Medal
         this.name = name;
         this.description = description;
         this.icon = icon;
-        this.image = new Image;
         if (src)
-            this.image.src = src;
+            (this.image = new Image).src = src;
     }
 
     /** Unlocks a medal if not already unlocked */
@@ -3576,9 +3568,9 @@ class Medal
     render(hidePercent=0)
     {
         const context = overlayContext;
-        const width = min(medalDisplayWidth, mainCanvas.width);
+        const width = min(medalDisplaySize.x, mainCanvas.width);
         const x = overlayCanvas.width - width;
-        const y = -medalDisplayHeight*hidePercent;
+        const y = -medalDisplaySize.y*hidePercent;
 
         // draw containing rect and clip to that region
         context.save();
@@ -3586,12 +3578,12 @@ class Medal
         context.fillStyle = new Color(.9,.9,.9);
         context.strokeStyle = new Color(0,0,0);
         context.lineWidth = 3;
-        context.fill(context.rect(x, y, width, medalDisplayHeight));
+        context.fill(context.rect(x, y, width, medalDisplaySize.y));
         context.stroke();
         context.clip();
 
         // draw the icon and text
-        this.renderIcon(vec2(x+15+medalDisplayIconSize/2, y+medalDisplayHeight/2));
+        this.renderIcon(vec2(x+15+medalDisplayIconSize/2, y+medalDisplaySize.y/2));
         const pos = vec2(x+medalDisplayIconSize+30, y+28);
         drawTextScreen(this.name, pos, 38, new Color(0,0,0), 0, 0, 'left');
         pos.y += 32;
@@ -3694,6 +3686,7 @@ class Newgrounds
             if (medal)
             {
                 // copy newgrounds medal data
+                medal.image =       new Image;
                 medal.image.src =   newgroundsMedal['icon'];
                 medal.name =        newgroundsMedal['name'];
                 medal.description = newgroundsMedal['description'];
@@ -4495,14 +4488,13 @@ const setTouchGamepadAnalog =           (v)=> touchGamepadAnalog = v;
 const setTouchGamepadSize =             (v)=> touchGamepadSize = v;
 const setTouchGamepadAlpha =            (v)=> touchGamepadAlpha = v;
 const setVibrateEnable =                (v)=> vibrateEnable = v;
-const setSoundVolume =                  (v)=> soundVolume = v;
 const setSoundEnable =                  (v)=> soundEnable = v;
+const setSoundVolume =                  (v)=> soundVolume = v;
 const setSoundDefaultRange =            (v)=> soundDefaultRange = v;
 const setSoundDefaultTaper =            (v)=> soundDefaultTaper = v;
 const setMedalDisplayTime =             (v)=> medalDisplayTime = v;
 const setMedalDisplaySlideTime =        (v)=> medalDisplaySlideTime = v;
-const setMedalDisplayWidth =            (v)=> medalDisplayWidth = v;
-const setMedalDisplayHeight =           (v)=> medalDisplayHeight = v;
+const setMedalDisplaySize =            	(v)=> medalDisplaySize = v;
 const setMedalDisplayIconSize =         (v)=> medalDisplayIconSize = v;
 const setMedalsPreventUnlock =          (v)=> medalsPreventUnlock = v;
 
@@ -4536,14 +4528,13 @@ export {
 	setTouchGamepadSize,
 	setTouchGamepadAlpha,
 	setVibrateEnable,
-	setSoundVolume,
 	setSoundEnable,
+	setSoundVolume,
 	setSoundDefaultRange,
 	setSoundDefaultTaper,
 	setMedalDisplayTime,
 	setMedalDisplaySlideTime,
-	setMedalDisplayWidth,
-	setMedalDisplayHeight,
+	setMedalDisplaySize,
 	setMedalDisplayIconSize,
 	setMedalsPreventUnlock,
 
@@ -4576,14 +4567,13 @@ export {
 	touchGamepadSize,
 	touchGamepadAlpha,
 	vibrateEnable,
-	soundVolume,
 	soundEnable,
+	soundVolume,
 	soundDefaultRange,
 	soundDefaultTaper,
 	medalDisplayTime,
 	medalDisplaySlideTime,
-	medalDisplayWidth,
-	medalDisplayHeight,
+	medalDisplaySize,
 	medalDisplayIconSize,
 	
 	// Globals

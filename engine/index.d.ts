@@ -849,14 +849,14 @@ declare let touchGamepadAlpha: number;
  *  @default
  *  @memberof Settings */
 declare let vibrateEnable: number;
-/** Volume scale to apply to all sound, music and speech
- *  @default
- *  @memberof Settings */
-declare let soundVolume: number;
 /** All audio code can be disabled and removed from build
  *  @default
  *  @memberof Settings */
 declare let soundEnable: number;
+/** Volume scale to apply to all sound, music and speech
+ *  @default
+ *  @memberof Settings */
+declare let soundVolume: number;
 /** Default range where sound no longer plays
  *  @default
  *  @memberof Settings */
@@ -873,18 +873,17 @@ declare let medalDisplayTime: number;
  *  @default
  *  @memberof Settings */
 declare let medalDisplaySlideTime: number;
-/** Width of medal display
+/** Size of medal display
  *  @default
  *  @memberof Settings */
-declare let medalDisplayWidth: number;
-/** Height of medal display
- *  @default
- *  @memberof Settings */
-declare let medalDisplayHeight: number;
+declare let medalDisplaySize: Vector2;
 /** Size of icon in medal display
  *  @default
  *  @memberof Settings */
 declare let medalDisplayIconSize: number;
+/** Set to stop medals from being unlockable (like if cheats are enabled)
+ *  @memberof Medals */
+declare let medalsPreventUnlock: any;
 /**
  * LittleJS Object Base Object Class
  * <br> - Base object class used by the engine
@@ -1060,8 +1059,8 @@ declare function worldToScreen(worldPos: Vector2): Vector2;
 declare let engineFontImage: any;
 declare class FontImage {
     /** Create an image font
-     *  @param {HTMLImageElement}   [image] - The image the font is stored in, if undefined the default font is used
-     *  @param {Vector2} [tileSize=vec2(8)] - The size of the font source tiles
+     *  @param {HTMLImageElement} [image] - Image for the font, if undefined default font is used
+     *  @param {Vector2} [tileSize=vec2(8)] - Size of the font source tiles
      *  @param {Vector2} [paddingSize=vec2(0,1)] - How much extra space to add between characters
      *  @param {Number}  [startTileIndex=0] - Tile index in image where font starts
      *  @param {CanvasRenderingContext2D} [context=overlayContext] - context to draw to
@@ -1528,9 +1527,6 @@ declare class Particle extends EngineObject {
 /** List of all medals
  *  @memberof Medals */
 declare const medals: any[];
-/** Set to stop medals from being unlockable (like if cheats are enabled)
- *  @memberof Medals */
-declare let medalsPreventUnlock: any;
 declare let medalsDisplayQueue: any[];
 declare let medalsSaveName: any;
 declare let medalsDisplayTimeLast: any;

@@ -32,14 +32,13 @@ const setTouchGamepadAnalog =           (v)=> touchGamepadAnalog = v;
 const setTouchGamepadSize =             (v)=> touchGamepadSize = v;
 const setTouchGamepadAlpha =            (v)=> touchGamepadAlpha = v;
 const setVibrateEnable =                (v)=> vibrateEnable = v;
-const setSoundVolume =                  (v)=> soundVolume = v;
 const setSoundEnable =                  (v)=> soundEnable = v;
+const setSoundVolume =                  (v)=> soundVolume = v;
 const setSoundDefaultRange =            (v)=> soundDefaultRange = v;
 const setSoundDefaultTaper =            (v)=> soundDefaultTaper = v;
 const setMedalDisplayTime =             (v)=> medalDisplayTime = v;
 const setMedalDisplaySlideTime =        (v)=> medalDisplaySlideTime = v;
-const setMedalDisplayWidth =            (v)=> medalDisplayWidth = v;
-const setMedalDisplayHeight =           (v)=> medalDisplayHeight = v;
+const setMedalDisplaySize =            	(v)=> medalDisplaySize = v;
 const setMedalDisplayIconSize =         (v)=> medalDisplayIconSize = v;
 const setMedalsPreventUnlock =          (v)=> medalsPreventUnlock = v;
 
@@ -73,14 +72,13 @@ export {
 	setTouchGamepadSize,
 	setTouchGamepadAlpha,
 	setVibrateEnable,
-	setSoundVolume,
 	setSoundEnable,
+	setSoundVolume,
 	setSoundDefaultRange,
 	setSoundDefaultTaper,
 	setMedalDisplayTime,
 	setMedalDisplaySlideTime,
-	setMedalDisplayWidth,
-	setMedalDisplayHeight,
+	setMedalDisplaySize,
 	setMedalDisplayIconSize,
 	setMedalsPreventUnlock,
 
@@ -113,14 +111,13 @@ export {
 	touchGamepadSize,
 	touchGamepadAlpha,
 	vibrateEnable,
-	soundVolume,
 	soundEnable,
+	soundVolume,
 	soundDefaultRange,
 	soundDefaultTaper,
 	medalDisplayTime,
 	medalDisplaySlideTime,
-	medalDisplayWidth,
-	medalDisplayHeight,
+	medalDisplaySize,
 	medalDisplayIconSize,
 	
 	// Globals
