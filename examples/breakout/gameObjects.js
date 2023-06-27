@@ -62,7 +62,7 @@ class Brick extends EngineObject
             0, vec2(16),                          // tileIndex, tileSize
             color1, color2,                       // colorStartA, colorStartB
             color1.scale(1,0), color2.scale(1,0), // colorEndA, colorEndB
-            .2, 1, 2, .1, .05,  // time, sizeStart, sizeEnd, speed, angleSpeed
+            .2, .5, 1, .05, .05,// time, sizeStart, sizeEnd, speed, angleSpeed
             .99, .95, .4, PI,   // damping, angleDamping, gravityScale, cone
             .1, .5, 0, 1        // fadeRate, randomness, collide, additive
         );

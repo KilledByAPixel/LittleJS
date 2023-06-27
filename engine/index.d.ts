@@ -1679,7 +1679,7 @@ declare const gl_VERTEX_BUFFER_SIZE: number;
 /** Name of engine */
 declare const engineName: "LittleJS";
 /** Version of engine */
-declare const engineVersion: "1.4.8";
+declare const engineVersion: "1.4.9";
 /** Frames per second to update objects
  *  @default */
 declare const frameRate: 60;

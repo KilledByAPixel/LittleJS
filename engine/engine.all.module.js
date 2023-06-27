@@ -1356,7 +1356,7 @@ class EngineObject
                 const isBlockedX = abs(oldPos.y - o.pos.y)*2 < sizeBoth.y;
                 const isBlockedY = abs(oldPos.x - o.pos.x)*2 < sizeBoth.x;
                 
-                if (smallStepUp || isBlockedY || !isBlockedX) // resolve y collision
+                if (smallStepUp | isBlockedY | !isBlockedX) // resolve y collision
                 {
                     // push outside object collision
                     this.pos.y = o.pos.y + (sizeBoth.y/2 + epsilon) * sign(oldPos.y - o.pos.y);
@@ -1386,7 +1386,7 @@ class EngineObject
                         o.velocity.y = lerp(elasticity, inelastic, elastic1);
                     }
                 }
-                if (!smallStepUp && (isBlockedX || !isBlockedY)) // resolve x collision
+                if (!smallStepUp & isBlockedX) // resolve x collision
                 {
                     // push outside collision
                     this.pos.x = o.pos.x + (sizeBoth.x/2 + epsilon) * sign(oldPos.x - o.pos.x);
@@ -1424,7 +1424,7 @@ class EngineObject
                     // test which side we bounced off (or both if a corner)
                     const isBlockedY = tileCollisionTest(new Vector2(oldPos.x, this.pos.y), this.size, this);
                     const isBlockedX = tileCollisionTest(new Vector2(this.pos.x, oldPos.y), this.size, this);
-                    if (isBlockedY || !isBlockedX)
+                    if (isBlockedY | !isBlockedX)
                     {
                         // set if landed on ground
                         this.groundObject = wasMovingDown;
@@ -4190,7 +4190,7 @@ gl_VERTEX_BUFFER_SIZE = gl_MAX_BATCH * gl_VERTICES_PER_QUAD * gl_VERTEX_BYTE_STR
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.4.8';
+const engineVersion = '1.4.9';
 
 /** Frames per second to update objects
  *  @default */
