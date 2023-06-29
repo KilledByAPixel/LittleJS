@@ -38,7 +38,7 @@ function gameInit()
         {
             const tileIndex = 1;
             const direction = LittleJS.randInt(4)
-            const mirror = LittleJS.randInt(2);
+            const mirror = LittleJS.randInt(2) ? true : false;
             const color = LittleJS.randColor();
             const data = new LittleJS.TileLayerData(tileIndex, direction, mirror, color);
             tileLayer.setData(pos, data);
@@ -63,7 +63,7 @@ function gameInit()
         new Color(1,1,1,0), new Color(0,0,0,0), // colorEndA, colorEndB
         2, .2, .2, .1, .05,   // time, sizeStart, sizeEnd, speed, angleSpeed
         .99, 1, 1, Math.PI,   // damping, angleDamping, gravityScale, cone
-        .05, .5, 1, 1         // fadeRate, randomness, collide, additive
+        .05, .5, true, true         // fadeRate, randomness, collide, additive
     );
     particleEmiter.elasticity = .3; // bounce when it collides
     particleEmiter.trailScale = 2;  // stretch in direction of motion
@@ -102,14 +102,14 @@ function gameUpdatePost()
 function gameRender()
 {
     // draw a grey square in the background without using webgl
-    LittleJS.drawRect(LittleJS.cameraPos, LittleJS.tileCollisionSize.add(vec2(5)), new Color(.2,.2,.2), 0, 0);
+    LittleJS.drawRect(LittleJS.cameraPos, LittleJS.tileCollisionSize.add(vec2(5)), new Color(.2,.2,.2), 0, false);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameRenderPost()
 {
     // draw to overlay canvas for hud rendering
-    LittleJS.drawTextScreen('LittleJS with Modules', vec2(LittleJS.mainCanvasSize.x/2, 80), 80);
+    LittleJS.drawTextScreen('LittleJS with TypeScript', vec2(LittleJS.mainCanvasSize.x/2, 80), 80);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

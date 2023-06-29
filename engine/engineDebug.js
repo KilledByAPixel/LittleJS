@@ -59,9 +59,9 @@ const ASSERT = enableAsserts ? (...assert)=> console.assert(...assert) : ()=>{};
  *  @param {String}  [color='#fff']
  *  @param {Number}  [time=0]
  *  @param {Number}  [angle=0]
- *  @param {Boolean} [fill=0]
+ *  @param {Boolean} [fill=false]
  *  @memberof Debug */
-const debugRect = (pos, size=vec2(), color='#fff', time=0, angle=0, fill=0)=> 
+const debugRect = (pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)=> 
 {
     ASSERT(typeof color == 'string'); // pass in regular html strings as colors
     debugPrimitives.push({pos, size:vec2(size), color, time:new Timer(time), angle, fill});
@@ -72,9 +72,9 @@ const debugRect = (pos, size=vec2(), color='#fff', time=0, angle=0, fill=0)=>
  *  @param {Number}  [radius=0]
  *  @param {String}  [color='#fff']
  *  @param {Number}  [time=0]
- *  @param {Boolean} [fill=0]
+ *  @param {Boolean} [fill=false]
  *  @memberof Debug */
-const debugCircle = (pos, radius=0, color='#fff', time=0, fill=0)=>
+const debugCircle = (pos, radius=0, color='#fff', time=0, fill=false)=>
 {
     ASSERT(typeof color == 'string'); // pass in regular html strings as colors
     debugPrimitives.push({pos, size:radius, color, time:new Timer(time), angle:0, fill});

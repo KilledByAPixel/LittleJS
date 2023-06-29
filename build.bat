@@ -39,6 +39,7 @@ if %ERRORLEVEL% NEQ 0 (
     pause
     exit /b %ERRORLEVEL%
 )
+del temp_%BUILD_FILENAME%
 
 rem more minification with uglify or terser (they both do about the same)
 call npx uglifyjs -o %BUILD_FILENAME% --compress --mangle -- %BUILD_FILENAME%
@@ -49,8 +50,7 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 rem roadroller compresses the code better then zip
-copy %BUILD_FILENAME% roadroller_%BUILD_FILENAME%
-call npx roadroller roadroller_%BUILD_FILENAME% -o roadroller_%BUILD_FILENAME%
+call npx roadroller %BUILD_FILENAME% -o %BUILD_FILENAME%
 if %ERRORLEVEL% NEQ 0 (
     pause
     exit /b %ERRORLEVEL%
@@ -58,14 +58,12 @@ if %ERRORLEVEL% NEQ 0 (
 
 rem build the html, you can add html header and footers here
 rem type ..\header.html >> index.html
-echo ^<body^>^<meta charset=utf-8^>^<script^> >> index.html
-type roadroller_%BUILD_FILENAME% >> index.html
+echo ^<body^>^<script^> >> index.html
+type %BUILD_FILENAME% >> index.html
 echo ^</script^> >> index.html
 
 rem delete intermediate files
 del %BUILD_FILENAME%
-del temp_%BUILD_FILENAME%
-del roadroller_%BUILD_FILENAME%
 
 rem zip the result, ect is recommended
 call ..\node_modules\ect-bin\vendor\win32\ect.exe -9 -strip -zip ..\%NAME%.zip index.html tiles.png

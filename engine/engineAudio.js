@@ -146,8 +146,21 @@ class Music
     {
         if (!soundEnable) return;
 
-        return playSamples(this.cachedSamples, volume, 1, 0, loop);
+        this.source = playSamples(this.cachedSamples, volume, 1, 0, loop);
     }
+
+    /** Stop the music */
+    stop()
+    {
+        if (this.source)
+            this.source.stop();
+        this.source = 0;
+    }
+
+    /** Check if music is playing
+     *  @return {Boolean}
+     */
+    isPlaying() { return this.source; }
 }
 
 /** Play an mp3 or wav audio from a local file or url

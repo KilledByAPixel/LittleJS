@@ -93,14 +93,6 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b %ERRORLEVEL%
 )
 
-rem --- BUILD TYPESCRIPT DEFINITIONS ---
-
-call npx tsc engine.all.js --declaration --allowJs --emitDeclarationOnly --outFile index.d.ts
-if %ERRORLEVEL% NEQ 0 (
-    pause
-    exit /b %ERRORLEVEL%
-)
-
 rem --- BUILD ENGINE MODULE ---
 
 set OUTPUT_FILENAME=engine.all.module.js
@@ -121,6 +113,14 @@ echo.>> %OUTPUT_FILENAME%
 
 rem lightly minify with uglify
 call npx uglifyjs -o %OUTPUT_FILENAME% -- %OUTPUT_FILENAME%
+if %ERRORLEVEL% NEQ 0 (
+    pause
+    exit /b %ERRORLEVEL%
+)
+
+rem --- BUILD TYPESCRIPT DEFINITIONS ---
+
+call npx tsc engine.all.module.js --declaration --allowJs --emitDeclarationOnly --outFile index.d.ts
 if %ERRORLEVEL% NEQ 0 (
     pause
     exit /b %ERRORLEVEL%

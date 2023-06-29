@@ -48,7 +48,7 @@ let overlayContext;
 let mainCanvasSize = vec2();
 
 /** Tile sheet for batch rendering system
- *  @type {Image}
+ *  @type {CanvasImageSource}
  *  @memberof Draw */
 const tileImage = new Image;
 

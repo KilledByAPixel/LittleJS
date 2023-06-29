@@ -59,9 +59,9 @@ const ASSERT = enableAsserts ? (...assert)=> console.assert(...assert) : ()=>{};
  *  @param {String}  [color='#fff']
  *  @param {Number}  [time=0]
  *  @param {Number}  [angle=0]
- *  @param {Boolean} [fill=0]
+ *  @param {Boolean} [fill=false]
  *  @memberof Debug */
-const debugRect = (pos, size=vec2(), color='#fff', time=0, angle=0, fill=0)=> 
+const debugRect = (pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)=> 
 {
     ASSERT(typeof color == 'string'); // pass in regular html strings as colors
     debugPrimitives.push({pos, size:vec2(size), color, time:new Timer(time), angle, fill});
@@ -72,9 +72,9 @@ const debugRect = (pos, size=vec2(), color='#fff', time=0, angle=0, fill=0)=>
  *  @param {Number}  [radius=0]
  *  @param {String}  [color='#fff']
  *  @param {Number}  [time=0]
- *  @param {Boolean} [fill=0]
+ *  @param {Boolean} [fill=false]
  *  @memberof Debug */
-const debugCircle = (pos, radius=0, color='#fff', time=0, fill=0)=>
+const debugCircle = (pos, radius=0, color='#fff', time=0, fill=false)=>
 {
     ASSERT(typeof color == 'string'); // pass in regular html strings as colors
     debugPrimitives.push({pos, size:radius, color, time:new Timer(time), angle:0, fill});
@@ -1528,9 +1528,9 @@ class EngineObject
     }
 
     /** Set how this object collides
-     *  @param {boolean} [collideSolidObjects=1] - Does it collide with solid objects
-     *  @param {boolean} [isSolid=1]             - Does it collide with and block other objects (expensive in large numbers)
-     *  @param {boolean} [collideTiles=1]        - Does it collide with the tile collision */
+     *  @param {Boolean} [collideSolidObjects=1] - Does it collide with solid objects
+     *  @param {Boolean} [isSolid=1]             - Does it collide with and block other objects (expensive in large numbers)
+     *  @param {Boolean} [collideTiles=1]        - Does it collide with the tile collision */
     setCollision(collideSolidObjects=1, isSolid=1, collideTiles=1)
     {
         ASSERT(collideSolidObjects || !isSolid); // solid objects must be set to collide
@@ -1540,6 +1540,8 @@ class EngineObject
         this.collideTiles = collideTiles;
     }
 
+    /** Returns string containg info about this object for debugging
+     *  @return {String} */
     toString()
     {
         if (debug)
@@ -1609,7 +1611,7 @@ let overlayContext;
 let mainCanvasSize = vec2();
 
 /** Tile sheet for batch rendering system
- *  @type {Image}
+ *  @type {CanvasImageSource}
  *  @memberof Draw */
 const tileImage = new Image;
 
@@ -2190,7 +2192,7 @@ const vibrateStop = ()=> vibrate(0);
 // Touch input
 
 /** True if a touch device has been detected
- *  @const {boolean}
+ *  @const {Boolean}
  *  @memberof Input */
 const isTouchDevice = window.ontouchstart !== undefined;
 
@@ -2520,8 +2522,21 @@ class Music
     {
         if (!soundEnable) return;
 
-        return playSamples(this.cachedSamples, volume, 1, 0, loop);
+        this.source = playSamples(this.cachedSamples, volume, 1, 0, loop);
     }
+
+    /** Stop the music */
+    stop()
+    {
+        if (this.source)
+            this.source.stop();
+        this.source = 0;
+    }
+
+    /** Check if music is playing
+     *  @return {Boolean}
+     */
+    isPlaying() { return this.source; }
 }
 
 /** Play an mp3 or wav audio from a local file or url
@@ -3212,7 +3227,7 @@ class ParticleEmitter extends EngineObject
      *  @param {Number}  [emitRate=100]     - How many particles per second to spawn, does not emit if 0
      *  @param {Number}  [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
      *  @param {Number}  [tileIndex=-1]     - Index into tile sheet, if <0 no texture is applied
-     *  @param {Number}  [tileSize=tileSizeDefault]     - Tile size for particles
+     *  @param {Vector2} [tileSize=tileSizeDefault]     - Tile size for particles
      *  @param {Color}   [colorStartA=new Color(1,1,1)] - Color at start of life 1, randomized between start colors
      *  @param {Color}   [colorStartB=new Color(1,1,1)] - Color at start of life 2, randomized between start colors
      *  @param {Color}   [colorEndA=new Color(1,1,1,0)] - Color at end of life 1, randomized between end colors
@@ -4190,7 +4205,7 @@ gl_VERTEX_BUFFER_SIZE = gl_MAX_BATCH * gl_VERTICES_PER_QUAD * gl_VERTEX_BYTE_STR
 const engineName = 'LittleJS';
 
 /** Version of engine */
-const engineVersion = '1.4.9';
+const engineVersion = '1.5.0';
 
 /** Frames per second to update objects
  *  @default */

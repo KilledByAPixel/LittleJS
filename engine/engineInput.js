@@ -246,7 +246,7 @@ const vibrateStop = ()=> vibrate(0);
 // Touch input
 
 /** True if a touch device has been detected
- *  @const {boolean}
+ *  @const {Boolean}
  *  @memberof Input */
 const isTouchDevice = window.ontouchstart !== undefined;
 
