@@ -265,7 +265,7 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
  *  @param {Color}   [lineColor=new Color(0,0,0)]
  *  @param {String}  [textAlign='center']
  *  @memberof Draw */
-function drawText(text, pos, size=1, color, lineWidth, lineColor, textAlign, font)
+function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font)
 {
     drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, mainContext);
 }

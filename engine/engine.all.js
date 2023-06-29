@@ -1828,7 +1828,7 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
  *  @param {Color}   [lineColor=new Color(0,0,0)]
  *  @param {String}  [textAlign='center']
  *  @memberof Draw */
-function drawText(text, pos, size=1, color, lineWidth, lineColor, textAlign, font)
+function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font)
 {
     drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, mainContext);
 }
@@ -4062,12 +4062,12 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdd
 ///////////////////////////////////////////////////////////////////////////////
 // post processing - can be enabled to pass other canvases through a final shader
 
-let glPostShader, glPostArrayBuffer, glPostTexture;
+let glPostShader, glPostArrayBuffer, glPostTexture, glPostIncludeOverlay;
 
 /** Set up a post processing shader
  *  @param {String} shaderCode
  *  @memberof WebGL */
-function glInitPostProcess(shaderCode)
+function glInitPostProcess(shaderCode, includeOverlay)
 {
     ASSERT(!glPostShader); // can only have 1 post effects shader
 
@@ -4096,6 +4096,7 @@ function glInitPostProcess(shaderCode)
     // create buffer and texture
     glPostArrayBuffer = glContext.createBuffer();
     glPostTexture = glCreateTexture();
+    glPostIncludeOverlay = includeOverlay;
 
     // hide the original 2d canvas
     mainCanvas.style.visibility = 'hidden';
@@ -4112,6 +4113,13 @@ function glRenderPostProcess()
     {
         glFlush(); // clear out the buffer
         mainContext.drawImage(glCanvas, 0, 0); // copy to the main canvas
+
+        if (glPostIncludeOverlay)
+        {
+            // copy overlay canvas so it will be included in post processing
+            mainContext.drawImage(overlayCanvas, 0, 0);
+            overlayCanvas.width |= 0;
+        }
     }
     else // set viewport
         glContext.viewport(0, 0, glCanvas.width = mainCanvas.width, glCanvas.height = mainCanvas.height);

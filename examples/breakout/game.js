@@ -113,7 +113,9 @@ function initPostProcess()
         float dx = 2.*p.x - 1., dy = 2.*p.y - 1.;
         c *= 1.-pow((dx*dx + dy*dy)/vignette, 6.);
     }`;
-    glInitPostProcess(televisionShader);
+
+    const includeOverlay = true;
+    glInitPostProcess(televisionShader, includeOverlay);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

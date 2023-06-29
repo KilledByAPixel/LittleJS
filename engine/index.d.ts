@@ -1568,7 +1568,7 @@ declare module "engine.all.module" {
     /** Set up a post processing shader
      *  @param {String} shaderCode
      *  @memberof WebGL */
-    export function glInitPostProcess(shaderCode: string): void;
+    export function glInitPostProcess(shaderCode: string, includeOverlay: any): void;
     /** Name of engine */
     export const engineName: "LittleJS";
     /** Version of engine */
