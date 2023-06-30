@@ -186,6 +186,16 @@ const setMedalDisplayIconSize = (size)=> medalDisplayIconSize = size;
  *  @memberof Settings */
 const setMedalsPreventUnlock = (prevent)=> medalsPreventUnlock = prevent;
 
+/** Set if watermark with FPS should be shown
+ *  @param {Boolean} show
+ *  @memberof Debug */
+const setShowWatermark = (show)=> showWatermark = show;
+
+/** Set if god mode is enabled
+ *  @param {Boolean} enable
+ *  @memberof Debug */
+const setGodMode = (enable)=> godMode = enable;
+
 export {
 	// Setters for global variables
 	setCameraPos,
@@ -224,6 +234,8 @@ export {
 	setMedalDisplaySize,
 	setMedalDisplayIconSize,
 	setMedalsPreventUnlock,
+	setShowWatermark,
+	setGodMode,
 
 	// Settings
 	canvasMaxSize,

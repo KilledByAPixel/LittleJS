@@ -33,7 +33,7 @@ const enableAsserts = 1;
  *  @memberof Debug */
 const debugPointSize = .5;
 
-/** True if watermark with FPS should be down, false in release builds
+/** True if watermark with FPS should be shown, false in release builds
  *  @type {Boolean}
  *  @default
  *  @memberof Debug */
@@ -4746,6 +4746,16 @@ const setMedalDisplayIconSize = (size)=> medalDisplayIconSize = size;
  *  @memberof Settings */
 const setMedalsPreventUnlock = (prevent)=> medalsPreventUnlock = prevent;
 
+/** Set if watermark with FPS should be shown
+ *  @param {Boolean} show
+ *  @memberof Debug */
+const setShowWatermark = (show)=> showWatermark = show;
+
+/** Set if god mode is enabled
+ *  @param {Boolean} enable
+ *  @memberof Debug */
+const setGodMode = (enable)=> godMode = enable;
+
 export {
 	// Setters for global variables
 	setCameraPos,
@@ -4784,6 +4794,8 @@ export {
 	setMedalDisplaySize,
 	setMedalDisplayIconSize,
 	setMedalsPreventUnlock,
+	setShowWatermark,
+	setGodMode,
 
 	// Settings
 	canvasMaxSize,

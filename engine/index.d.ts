@@ -147,6 +147,14 @@ declare module "engine.all.module" {
      *  @param {Boolean} preventUnlock
      *  @memberof Settings */
     export function setMedalsPreventUnlock(prevent: any): any;
+    /** Set if watermark with FPS should be shown
+     *  @param {Boolean} show
+     *  @memberof Debug */
+    export function setShowWatermark(show: boolean): boolean;
+    /** Set if god mode is enabled
+     *  @param {Boolean} enable
+     *  @memberof Debug */
+    export function setGodMode(enable: boolean): boolean;
     /** The max size of the canvas, centered if window is larger
      *  @type {Vector2}
      *  @default Vector2(1920,1200)
@@ -330,7 +338,7 @@ declare module "engine.all.module" {
      *  @default
      *  @memberof Debug */
     export const debug: boolean;
-    /** True if watermark with FPS should be down, false in release builds
+    /** True if watermark with FPS should be shown, false in release builds
      *  @type {Boolean}
      *  @default
      *  @memberof Debug */

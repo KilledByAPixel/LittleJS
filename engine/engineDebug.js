@@ -33,7 +33,7 @@ const enableAsserts = 1;
  *  @memberof Debug */
 const debugPointSize = .5;
 
-/** True if watermark with FPS should be down, false in release builds
+/** True if watermark with FPS should be shown, false in release builds
  *  @type {Boolean}
  *  @default
  *  @memberof Debug */
