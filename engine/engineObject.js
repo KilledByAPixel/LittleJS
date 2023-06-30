@@ -32,15 +32,15 @@
 class EngineObject
 {
     /** Create an engine object and adds it to the list of objects
-     *  @param {Vector2} [position=new Vector2()]    - World space position of the object
-     *  @param {Vector2} [size=objectDefaultSize]    - World space size of the object
+     *  @param {Vector2} [position=Vector2()]        - World space position of the object
+     *  @param {Vector2} [size=Vector2(1,1)]         - World space size of the object
      *  @param {Number}  [tileIndex=-1]              - Tile to use to render object (-1 is untextured)
      *  @param {Vector2} [tileSize=tileSizeDefault]  - Size of tile in source pixels
      *  @param {Number}  [angle=0]                   - Angle the object is rotated by
-     *  @param {Color}   [color]                     - Color to apply to tile when rendered
+     *  @param {Color}   [color=Color()]             - Color to apply to tile when rendered
      *  @param {Number}  [renderOrder=0]             - Objects sorted by renderOrder before being rendered
      */
-    constructor(pos=vec2(), size=objectDefaultSize, tileIndex=-1, tileSize=tileSizeDefault, angle=0, color, renderOrder=0)
+    constructor(pos=vec2(), size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, angle=0, color, renderOrder=0)
     {
         // set passed in params
         ASSERT(isVector2(pos) && isVector2(size)); // ensure pos and size are vec2s
@@ -77,7 +77,7 @@ class EngineObject
         this.gravityScale = 1;
         /** @property {Number} [renderOrder=0]                          - Objects are sorted by render order */
         this.renderOrder = renderOrder;
-        /** @property {Vector2} [velocity=new Vector2()]                - Velocity of the object */
+        /** @property {Vector2} [velocity=Vector2()]                    - Velocity of the object */
         this.velocity = new Vector2();
         /** @property {Number} [angleVelocity=0]                        - Angular velocity of the object */
         this.angleVelocity = 0;
@@ -320,7 +320,7 @@ class EngineObject
 
     /** Attaches a child to this with a given local transform
      *  @param {EngineObject} child
-     *  @param {Vector2}      [localPos=new Vector2]
+     *  @param {Vector2}      [localPos=Vector2()]
      *  @param {Number}       [localAngle=0] */
     addChild(child, localPos=vec2(), localAngle=0)
     {

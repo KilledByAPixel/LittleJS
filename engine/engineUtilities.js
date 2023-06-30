@@ -10,7 +10,8 @@
 'use strict';
 
 /** A shortcut to get Math.PI
- *  @const
+ *  @type {Number}
+ *  @default Math.PI
  *  @memberof Utilities */
 const PI = Math.PI;
 
@@ -144,8 +145,8 @@ const randInCircle = (radius=1, minRadius=0)=> radius > 0 ? randVector(radius * 
 const randVector = (length=1)=> new Vector2().setAngle(rand(2*PI), length);
 
 /** Returns a random color between the two passed in colors, combine components if linear
- *  @param {Color}   [colorA=new Color(1,1,1,1)]
- *  @param {Color}   [colorB=new Color(0,0,0,1)]
+ *  @param {Color}   [colorA=Color()]
+ *  @param {Color}   [colorB=Color(0,0,0,1)]
  *  @param {Boolean} [linear]
  *  @return {Color}
  *  @memberof Random */
@@ -153,6 +154,8 @@ const randColor = (cA = new Color, cB = new Color(0,0,0,1), linear)=>
     linear ? cA.lerp(cB, rand()) : new Color(rand(cA.r,cB.r),rand(cA.g,cB.g),rand(cA.b,cB.b),rand(cA.a,cB.a));
 
 /** Seed used by the randSeeded function
+ *  @type {Number}
+ *  @default
  *  @memberof Random */
 let randSeed = 1;
 
@@ -291,7 +294,8 @@ class Vector2
 
     /** Sets this vector with angle and length passed in
      * @param {Number} [angle=0]
-     * @param {Number} [length=1] */
+     * @param {Number} [length=1]
+     * @return {Vector2} */
     setAngle(a=0, length=1) { this.x = length*Math.sin(a); this.y = length*Math.cos(a); return this; }
 
     /** Returns copy of this vector rotated by the angle passed in
@@ -360,9 +364,11 @@ const colorHSLA = (h, s, l, a)=> new Color().setHSLA(h, s, l, a);
 /** 
  * Color object (red, green, blue, alpha) with some helpful functions
  * @example
- * let a = new Color;             // white
- * let b = new Color(1, 0, 0);    // red
- * let c = new Color(0, 0, 0, 0); // transparent black
+ * let a = new Color;              // white
+ * let b = new Color(1, 0, 0);     // red
+ * let c = new Color(0, 0, 0, 0);  // transparent black
+ * let d = colorRGBA(0, 0, 1);     // blue using rgb color
+ * let e = colorHSLA(.3, 1, .5);   // green using hsl color
  */
 class Color
 {

@@ -3,210 +3,347 @@ declare module "engine.all.module" {
      * LittleJS Module Export
      * <br> - Export engine as a module with extra functions where necessary
      */
-    export function setCameraPos(v: any): any;
-    export function setCameraScale(v: any): any;
-    export function setCanvasMaxSize(v: any): any;
-    export function setCanvasFixedSize(v: any): any;
-    export function setCavasPixelated(v: any): any;
-    export function setFontDefault(v: any): any;
-    export function setGlEnable(v: any): any;
-    export function setGlOverlay(v: any): any;
-    export function setTileSizeDefault(v: any): any;
-    export function setTileFixBleedScale(v: any): any;
-    export function setObjectDefaultSize(v: any): any;
-    export function setEnablePhysicsSolver(v: any): any;
-    export function setObjectDefaultMass(v: any): any;
-    export function setObjectDefaultDamping(v: any): any;
-    export function setObjectDefaultAngleDamping(v: any): any;
-    export function setObjectDefaultElasticity(v: any): any;
-    export function setObjectDefaultFriction(v: any): any;
-    export function setObjectMaxSpeed(v: any): any;
-    export function setGravity(v: any): any;
-    export function setParticleEmitRateScale(v: any): any;
-    export function setGamepadsEnable(v: any): any;
-    export function setGamepadDirectionEmulateStick(v: any): any;
-    export function setInputWASDEmulateDirection(v: any): any;
-    export function setTouchGamepadEnable(v: any): any;
-    export function setTouchGamepadAnalog(v: any): any;
-    export function setTouchGamepadSize(v: any): any;
-    export function setTouchGamepadAlpha(v: any): any;
-    export function setVibrateEnable(v: any): any;
-    export function setSoundEnable(v: any): any;
-    export function setSoundVolume(v: any): any;
-    export function setSoundDefaultRange(v: any): any;
-    export function setSoundDefaultTaper(v: any): any;
-    export function setMedalDisplayTime(v: any): any;
-    export function setMedalDisplaySlideTime(v: any): any;
-    export function setMedalDisplaySize(v: any): any;
-    export function setMedalDisplayIconSize(v: any): any;
-    export function setMedalsPreventUnlock(v: any): any;
+    /** Set position of camera in world space
+     *  @param {Vector2} pos
+     *  @memberof Settings */
+    export function setCameraPos(pos: Vector2): Vector2;
+    /** Set scale of camera in world space
+     *  @param {Number} scale
+     *  @memberof Settings */
+    export function setCameraScale(scale: number): number;
+    /** Set max size of the canvas
+     *  @param {Vector2} size
+     *  @memberof Settings */
+    export function setCanvasMaxSize(size: Vector2): Vector2;
+    /** Set fixed size of the canvas
+     *  @param {Vector2} size
+     *  @memberof Settings */
+    export function setCanvasFixedSize(size: Vector2): Vector2;
+    /** Disables anti aliasing for pixel art if true
+     *  @param {Boolean} pixelated
+     *  @memberof Settings */
+    export function setCavasPixelated(pixelated: boolean): boolean;
+    /** Set default font used for text rendering
+     *  @param {String} font
+     *  @memberof Settings */
+    export function setFontDefault(font: string): string;
+    /** Set if webgl rendering is enabled
+     *  @param {Boolean} enable
+     *  @memberof Settings */
+    export function setGlEnable(enable: boolean): boolean;
+    /** Set to not composite the WebGL canvas
+     *  @param {Boolean} overlay
+     *  @memberof Settings */
+    export function setGlOverlay(overlay: boolean): boolean;
+    /** Set default size of tiles in pixels
+     *  @param {Vector2} size
+     *  @memberof Settings */
+    export function setTileSizeDefault(size: Vector2): Vector2;
+    /** Set to prevent tile bleeding from neighbors in pixels
+     *  @param {Number} scale
+     *  @memberof Settings */
+    export function setTileFixBleedScale(scale: number): number;
+    /** Set if collisions between objects are enabled
+     *  @param {Boolean} enable
+     *  @memberof Settings */
+    export function setEnablePhysicsSolver(enable: boolean): boolean;
+    /** Set default object mass for collison calcuations
+     *  @param {Number} mass
+     *  @memberof Settings */
+    export function setObjectDefaultMass(mass: number): number;
+    /** Set how much to slow velocity by each frame
+     *  @param {Number} damping
+     *  @memberof Settings */
+    export function setObjectDefaultDamping(damp: any): any;
+    /** Set how much to slow angular velocity each frame
+     *  @param {Number} damping
+     *  @memberof Settings */
+    export function setObjectDefaultAngleDamping(damp: any): any;
+    /** Set how much to bounce when a collision occur
+     *  @param {Number} elasticity
+     *  @memberof Settings */
+    export function setObjectDefaultElasticity(elasticity: number): number;
+    /** Set how much to slow when touching
+     *  @param {Number} friction
+     *  @memberof Settings */
+    export function setObjectDefaultFriction(friction: number): number;
+    /** Set max speed to avoid fast objects missing collisions
+     *  @param {Number} speed
+     *  @memberof Settings */
+    export function setObjectMaxSpeed(speed: number): number;
+    /** Set how much gravity to apply to objects along the Y axis
+     *  @param {Number} gravity
+     *  @memberof Settings */
+    export function setGravity(g: any): any;
+    /** Set to scales emit rate of particles
+     *  @param {Number} scale
+     *  @memberof Settings */
+    export function setParticleEmitRateScale(scale: number): number;
+    /** Set if gamepads are enabled
+     *  @param {Boolean} enable
+     *  @memberof Settings */
+    export function setGamepadsEnable(enable: boolean): boolean;
+    /** Set if the dpad input is also routed to the left analog stick
+     *  @param {Boolean} enable
+     *  @memberof Settings */
+    export function setGamepadDirectionEmulateStick(enable: boolean): boolean;
+    /** Set if true the WASD keys are also routed to the direction keys
+     *  @param {Boolean} enable
+     *  @memberof Settings */
+    export function setInputWASDEmulateDirection(enable: boolean): boolean;
+    /** Set if touch gamepad should appear on mobile devices
+     *  @param {Boolean} enable
+     *  @memberof Settings */
+    export function setTouchGamepadEnable(enable: boolean): boolean;
+    /** Set if touch gamepad should be analog stick or 8 way dpad
+     *  @param {Boolean} analog
+     *  @memberof Settings */
+    export function setTouchGamepadAnalog(analog: boolean): boolean;
+    /** Set size of virutal gamepad for touch devices in pixels
+     *  @param {Number} size
+     *  @memberof Settings */
+    export function setTouchGamepadSize(size: number): number;
+    /** Set transparency of touch gamepad overlay
+     *  @param {Number} alpha
+     *  @memberof Settings */
+    export function setTouchGamepadAlpha(alpha: number): number;
+    /** Set to allow vibration hardware if it exists
+     *  @param {Boolean} enable
+     *  @memberof Settings */
+    export function setVibrateEnable(enable: boolean): boolean;
+    /** Set to disable all audio code
+     *  @param {Boolean} enable
+     *  @memberof Settings */
+    export function setSoundEnable(enable: boolean): boolean;
+    /** Set volume scale to apply to all sound, music and speech
+     *  @param {Number} volume
+     *  @memberof Settings */
+    export function setSoundVolume(volume: number): number;
+    /** Set default range where sound no longer plays
+     *  @param {Number} range
+     *  @memberof Settings */
+    export function setSoundDefaultRange(range: number): number;
+    /** Set default range percent to start tapering off sound
+     *  @param {Number} taper
+     *  @memberof Settings */
+    export function setSoundDefaultTaper(taper: number): number;
+    /** Set how long to show medals for in seconds
+     *  @param {Number} time
+     *  @memberof Settings */
+    export function setMedalDisplayTime(time: number): number;
+    /** Set how quickly to slide on/off medals in seconds
+     *  @param {Number} time
+     *  @memberof Settings */
+    export function setMedalDisplaySlideTime(time: number): number;
+    /** Set size of medal display
+     *  @param {Vector2} size
+     *  @memberof Settings */
+    export function setMedalDisplaySize(size: Vector2): Vector2;
+    /** Set size of icon in medal display
+     *  @param {Number} size
+     *  @memberof Settings */
+    export function setMedalDisplayIconSize(size: number): number;
+    /** Set to stop medals from being unlockable
+     *  @param {Boolean} preventUnlock
+     *  @memberof Settings */
+    export function setMedalsPreventUnlock(prevent: any): any;
     /** The max size of the canvas, centered if window is larger
      *  @type {Vector2}
-     *  @default
+     *  @default Vector2(1920,1200)
      *  @memberof Settings */
     export let canvasMaxSize: Vector2;
     /** Fixed size of the canvas, if enabled canvas size never changes
      * - you may also need to set mainCanvasSize if using screen space coords in startup
      *  @type {Vector2}
-     *  @default
+     *  @default Vector2()
      *  @memberof Settings */
     export let canvasFixedSize: Vector2;
     /** Disables anti aliasing for pixel art if true
+     *  @type {Boolean}
      *  @default
      *  @memberof Settings */
-    export let cavasPixelated: number;
+    export let cavasPixelated: boolean;
     /** Default font used for text rendering
+     *  @type {String}
      *  @default
      *  @memberof Settings */
     export let fontDefault: string;
     /** Default size of tiles in pixels
      *  @type {Vector2}
-     *  @default
+     *  @default Vector2(16,16)
      *  @memberof Settings */
     export let tileSizeDefault: Vector2;
     /** Prevent tile bleeding from neighbors in pixels
+     *  @type {Number}
      *  @default
      *  @memberof Settings */
     export let tileFixBleedScale: number;
-    /** Default size of objects
-     *  @type {Vector2}
-     *  @default
-     *  @memberof Settings */
-    export let objectDefaultSize: Vector2;
     /** Enable physics solver for collisions between objects
+     *  @type {Boolean}
      *  @default
      *  @memberof Settings */
-    export let enablePhysicsSolver: number;
+    export let enablePhysicsSolver: boolean;
     /** Default object mass for collison calcuations (how heavy objects are)
+     *  @type {Number}
      *  @default
      *  @memberof Settings */
     export let objectDefaultMass: number;
     /** How much to slow velocity by each frame (0-1)
+     *  @type {Number}
      *  @default
      *  @memberof Settings */
     export let objectDefaultDamping: number;
     /** How much to slow angular velocity each frame (0-1)
+     *  @type {Number}
      *  @default
      *  @memberof Settings */
     export let objectDefaultAngleDamping: number;
     /** How much to bounce when a collision occurs (0-1)
-     *  @default
+     *  @type {Number}
+     *  @default 0
      *  @memberof Settings */
     export let objectDefaultElasticity: number;
     /** How much to slow when touching (0-1)
+     *  @type {Number}
      *  @default
      *  @memberof Settings */
     export let objectDefaultFriction: number;
     /** Clamp max speed to avoid fast objects missing collisions
+     *  @type {Number}
      *  @default
      *  @memberof Settings */
     export let objectMaxSpeed: number;
     /** How much gravity to apply to objects along the Y axis, negative is down
-     *  @default
+     *  @type {Number}
+     *  @default 0
      *  @memberof Settings */
     export let gravity: number;
     /** Scales emit rate of particles, useful for low graphics mode (0 disables particle emitters)
+     *  @type {Number}
      *  @default
      *  @memberof Settings */
     export let particleEmitRateScale: number;
     /** Position of camera in world space
      *  @type {Vector2}
-     *  @default
+     *  @default Vector2()
      *  @memberof Settings */
     export let cameraPos: Vector2;
     /** Scale of camera in world space
+     *  @type {Number}
      *  @default
      *  @memberof Settings */
     export let cameraScale: number;
     /** Enable webgl rendering, webgl can be disabled and removed from build (with some features disabled)
+     *  @type {Boolean}
      *  @default
      *  @memberof Settings */
-    export let glEnable: number;
+    export let glEnable: boolean;
     /** Fixes slow rendering in some browsers by not compositing the WebGL canvas
+     *  @type {Boolean}
      *  @default
      *  @memberof Settings */
-    export let glOverlay: number;
+    export let glOverlay: boolean;
     /** Should gamepads be allowed
+     *  @type {Boolean}
      *  @default
      *  @memberof Settings */
-    export let gamepadsEnable: number;
+    export let gamepadsEnable: boolean;
     /** If true, the dpad input is also routed to the left analog stick (for better accessability)
+     *  @type {Boolean}
      *  @default
      *  @memberof Settings */
-    export let gamepadDirectionEmulateStick: number;
+    export let gamepadDirectionEmulateStick: boolean;
     /** If true the WASD keys are also routed to the direction keys (for better accessability)
+     *  @type {Boolean}
      *  @default
      *  @memberof Settings */
-    export let inputWASDEmulateDirection: number;
+    export let inputWASDEmulateDirection: boolean;
     /** True if touch gamepad should appear on mobile devices
      *  <br> - Supports left analog stick, 4 face buttons and start button (button 9)
      *  <br> - Must be set by end of gameInit to be activated
-     *  @default
+     *  @type {Boolean}
+     *  @default 0
      *  @memberof Settings */
-    export let touchGamepadEnable: number;
+    export let touchGamepadEnable: boolean;
     /** True if touch gamepad should be analog stick or false to use if 8 way dpad
+     *  @type {Boolean}
      *  @default
      *  @memberof Settings */
-    export let touchGamepadAnalog: number;
+    export let touchGamepadAnalog: boolean;
     /** Size of virutal gamepad for touch devices in pixels
+     *  @type {Number}
      *  @default
      *  @memberof Settings */
     export let touchGamepadSize: number;
     /** Transparency of touch gamepad overlay
+     *  @type {Number}
      *  @default
      *  @memberof Settings */
     export let touchGamepadAlpha: number;
     /** Allow vibration hardware if it exists
+     *  @type {Boolean}
      *  @default
      *  @memberof Settings */
-    export let vibrateEnable: number;
+    export let vibrateEnable: boolean;
     /** All audio code can be disabled and removed from build
+     *  @type {Boolean}
      *  @default
      *  @memberof Settings */
-    export let soundEnable: number;
+    export let soundEnable: boolean;
     /** Volume scale to apply to all sound, music and speech
+     *  @type {Number}
      *  @default
      *  @memberof Settings */
     export let soundVolume: number;
     /** Default range where sound no longer plays
+     *  @type {Number}
      *  @default
      *  @memberof Settings */
     export let soundDefaultRange: number;
     /** Default range percent to start tapering off sound (0-1)
+     *  @type {Number}
      *  @default
      *  @memberof Settings */
     export let soundDefaultTaper: number;
     /** How long to show medals for in seconds
+     *  @type {Number}
      *  @default
      *  @memberof Settings */
     export let medalDisplayTime: number;
     /** How quickly to slide on/off medals in seconds
+     *  @type {Number}
      *  @default
      *  @memberof Settings */
     export let medalDisplaySlideTime: number;
     /** Size of medal display
-     *  @default
+     *  @type {Vector2}
+     *  @default Vector2(640,80)
      *  @memberof Settings */
     export let medalDisplaySize: Vector2;
     /** Size of icon in medal display
+     *  @type {Number}
      *  @default
      *  @memberof Settings */
     export let medalDisplayIconSize: number;
     /** True if debug is enabled
+     *  @type {Boolean}
      *  @default
      *  @memberof Debug */
-    export const debug: 1;
+    export const debug: boolean;
     /** True if watermark with FPS should be down, false in release builds
+     *  @type {Boolean}
      *  @default
      *  @memberof Debug */
-    export let showWatermark: number;
+    export let showWatermark: boolean;
     /** True if god mode is enabled, handle this however you want
+     *  @type {Boolean}
      *  @default
      *  @memberof Debug */
-    export let godMode: number;
+    export let godMode: boolean;
+    export function ASSERT(...assert: any[]): void;
     /** Draw a debug rectangle in world space
      *  @param {Vector2} pos
-     *  @param {Vector2} [size=new Vector2()]
+     *  @param {Vector2} [size=Vector2()]
      *  @param {String}  [color='#fff']
      *  @param {Number}  [time=0]
      *  @param {Number}  [angle=0]
@@ -263,7 +400,8 @@ declare module "engine.all.module" {
      *  @memberof Debug */
     export function debugSaveCanvas(canvas: HTMLCanvasElement, filename?: string): void;
     /** A shortcut to get Math.PI
-     *  @const
+     *  @type {Number}
+     *  @default Math.PI
      *  @memberof Utilities */
     export const PI: number;
     /** Returns absoulte value of value passed in
@@ -375,13 +513,15 @@ declare module "engine.all.module" {
      *  @memberof Random */
     export function randVector(length?: number): Vector2;
     /** Returns a random color between the two passed in colors, combine components if linear
-     *  @param {Color}   [colorA=new Color(1,1,1,1)]
-     *  @param {Color}   [colorB=new Color(0,0,0,1)]
+     *  @param {Color}   [colorA=Color()]
+     *  @param {Color}   [colorB=Color(0,0,0,1)]
      *  @param {Boolean} [linear]
      *  @return {Color}
      *  @memberof Random */
     export function randColor(cA?: Color, cB?: Color, linear?: boolean): Color;
     /** Seed used by the randSeeded function
+     *  @type {Number}
+     *  @default
      *  @memberof Random */
     export let randSeed: number;
     /** Set seed used by the randSeeded function, should not be 0
@@ -470,7 +610,8 @@ declare module "engine.all.module" {
         angle(): number;
         /** Sets this vector with angle and length passed in
          * @param {Number} [angle=0]
-         * @param {Number} [length=1] */
+         * @param {Number} [length=1]
+         * @return {Vector2} */
         setAngle(a?: number, length?: number): Vector2;
         /** Returns copy of this vector rotated by the angle passed in
          * @param {Number} angle
@@ -505,9 +646,11 @@ declare module "engine.all.module" {
     /**
      * Color object (red, green, blue, alpha) with some helpful functions
      * @example
-     * let a = new Color;             // white
-     * let b = new Color(1, 0, 0);    // red
-     * let c = new Color(0, 0, 0, 0); // transparent black
+     * let a = new Color;              // white
+     * let b = new Color(1, 0, 0);     // red
+     * let c = new Color(0, 0, 0, 0);  // transparent black
+     * let d = colorRGBA(0, 0, 1);     // blue using rgb color
+     * let e = colorHSLA(.3, 1, .5);   // green using hsl color
      */
     export class Color {
         /** Create a color with the components passed in, white by default
@@ -685,12 +828,12 @@ declare module "engine.all.module" {
      */
     export class EngineObject {
         /** Create an engine object and adds it to the list of objects
-         *  @param {Vector2} [position=new Vector2()]    - World space position of the object
-         *  @param {Vector2} [size=objectDefaultSize]    - World space size of the object
+         *  @param {Vector2} [position=Vector2()]        - World space position of the object
+         *  @param {Vector2} [size=Vector2(1,1)]         - World space size of the object
          *  @param {Number}  [tileIndex=-1]              - Tile to use to render object (-1 is untextured)
          *  @param {Vector2} [tileSize=tileSizeDefault]  - Size of tile in source pixels
          *  @param {Number}  [angle=0]                   - Angle the object is rotated by
-         *  @param {Color}   [color]                     - Color to apply to tile when rendered
+         *  @param {Color}   [color=Color()]             - Color to apply to tile when rendered
          *  @param {Number}  [renderOrder=0]             - Objects sorted by renderOrder before being rendered
          */
         constructor(pos?: Vector2, size?: Vector2, tileIndex?: number, tileSize?: Vector2, angle?: number, color?: Color, renderOrder?: number);
@@ -720,7 +863,7 @@ declare module "engine.all.module" {
         gravityScale: number;
         /** @property {Number} [renderOrder=0]                          - Objects are sorted by render order */
         renderOrder: number;
-        /** @property {Vector2} [velocity=new Vector2()]                - Velocity of the object */
+        /** @property {Vector2} [velocity=Vector2()]                    - Velocity of the object */
         velocity: Vector2;
         /** @property {Number} [angleVelocity=0]                        - Angular velocity of the object */
         angleVelocity: number;
@@ -764,7 +907,7 @@ declare module "engine.all.module" {
         getMirrorSign(): number;
         /** Attaches a child to this with a given local transform
          *  @param {EngineObject} child
-         *  @param {Vector2}      [localPos=new Vector2]
+         *  @param {Vector2}      [localPos=Vector2()]
          *  @param {Number}       [localAngle=0] */
         addChild(child: EngineObject, localPos?: Vector2, localAngle?: number): void;
         /** Removes a child from this one
@@ -818,41 +961,41 @@ declare module "engine.all.module" {
      *  @memberof Draw */
     export function worldToScreen(worldPos: Vector2): Vector2;
     /** Draw textured tile centered in world space, with color applied if using WebGL
-     *  @param {Vector2} pos                                - Center of the tile in world space
-     *  @param {Vector2} [size=new Vector2(1,1)]            - Size of the tile in world space
-     *  @param {Number}  [tileIndex=-1]                     - Tile index to use, negative is untextured
-     *  @param {Vector2} [tileSize=tileSizeDefault]         - Tile size in source pixels
-     *  @param {Color}   [color=new Color(1,1,1)]           - Color to modulate with
-     *  @param {Number}  [angle=0]                          - Angle to rotate by
-     *  @param {Boolean} [mirror=0]                         - If true image is flipped along the Y axis
-     *  @param {Color}   [additiveColor=new Color(0,0,0,0)] - Additive color to be applied
-     *  @param {Boolean} [useWebGL=glEnable]                - Use accelerated WebGL rendering
+     *  @param {Vector2} pos                            - Center of the tile in world space
+     *  @param {Vector2} [size=Vector2(1,1)]            - Size of the tile in world space
+     *  @param {Number}  [tileIndex=-1]                 - Tile index to use, negative is untextured
+     *  @param {Vector2} [tileSize=tileSizeDefault]     - Tile size in source pixels
+     *  @param {Color}   [color=Color()]                - Color to modulate with
+     *  @param {Number}  [angle=0]                      - Angle to rotate by
+     *  @param {Boolean} [mirror=0]                     - If true image is flipped along the Y axis
+     *  @param {Color}   [additiveColor=Color(0,0,0,0)] - Additive color to be applied
+     *  @param {Boolean} [useWebGL=glEnable]            - Use accelerated WebGL rendering
      *  @memberof Draw */
     export function drawTile(pos: Vector2, size?: Vector2, tileIndex?: number, tileSize?: Vector2, color?: Color, angle?: number, mirror?: boolean, additiveColor?: Color, useWebGL?: boolean): void;
     /** Draw colored rect centered on pos
      *  @param {Vector2} pos
-     *  @param {Vector2} [size=new Vector2(1,1)]
-     *  @param {Color}   [color=new Color(1,1,1)]
+     *  @param {Vector2} [size=Vector2(1,1)]
+     *  @param {Color}   [color=Color()]
      *  @param {Number}  [angle=0]
      *  @param {Boolean} [useWebGL=glEnable]
      *  @memberof Draw */
     export function drawRect(pos: Vector2, size?: Vector2, color?: Color, angle?: number, useWebGL?: boolean): void;
     /** Draw textured tile centered on pos in screen space
      *  @param {Vector2} pos                        - Center of the tile
-     *  @param {Vector2} [size=new Vector2(1,1)]    - Size of the tile
+     *  @param {Vector2} [size=Vector2(1,1)]    - Size of the tile
      *  @param {Number}  [tileIndex=-1]             - Tile index to use, negative is untextured
      *  @param {Vector2} [tileSize=tileSizeDefault] - Tile size in source pixels
-     *  @param {Color}   [color=new Color]
+     *  @param {Color}   [color=Color()]
      *  @param {Number}  [angle=0]
      *  @param {Boolean} [mirror=0]
-     *  @param {Color}   [additiveColor=new Color(0,0,0,0)]
+     *  @param {Color}   [additiveColor=Color(0,0,0,0)]
      *  @param {Boolean} [useWebGL=glEnable]
      *  @memberof Draw */
     export function drawTileScreenSpace(pos: Vector2, size?: Vector2, tileIndex?: number, tileSize?: Vector2, color?: Color, angle?: number, mirror?: boolean, additiveColor?: Color, useWebGL?: boolean): void;
     /** Draw colored rectangle in screen space
      *  @param {Vector2} pos
-     *  @param {Vector2} [size=new Vector2(1,1)]
-     *  @param {Color}   [color=new Color(1,1,1)]
+     *  @param {Vector2} [size=Vector2(1,1)]
+     *  @param {Color}   [color=Color()]
      *  @param {Number}  [angle=0]
      *  @param {Boolean} [useWebGL=glEnable]
      *  @memberof Draw */
@@ -861,7 +1004,7 @@ declare module "engine.all.module" {
      *  @param {Vector2} posA
      *  @param {Vector2} posB
      *  @param {Number}  [thickness=.1]
-     *  @param {Color}   [color=new Color(1,1,1)]
+     *  @param {Color}   [color=Color()]
      *  @param {Boolean} [useWebGL=glEnable]
      *  @memberof Draw */
     export function drawLine(posA: Vector2, posB: Vector2, thickness?: number, color?: Color, useWebGL?: boolean): void;
@@ -884,9 +1027,9 @@ declare module "engine.all.module" {
      *  @param {String}  text
      *  @param {Vector2} pos
      *  @param {Number}  [size=1]
-     *  @param {Color}   [color=new Color(1,1,1)]
+     *  @param {Color}   [color=Color()]
      *  @param {Number}  [lineWidth=0]
-     *  @param {Color}   [lineColor=new Color(0,0,0)]
+     *  @param {Color}   [lineColor=Color(0,0,0)]
      *  @param {String}  [textAlign='center']
      *  @memberof Draw */
     export function drawTextScreen(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: string, font?: string, context?: CanvasRenderingContext2D): void;
@@ -895,12 +1038,13 @@ declare module "engine.all.module" {
      *  @param {String}  text
      *  @param {Vector2} pos
      *  @param {Number}  [size=1]
-     *  @param {Color}   [color=new Color(1,1,1)]
+     *  @param {Color}   [color=Color()]
      *  @param {Number}  [lineWidth=0]
-     *  @param {Color}   [lineColor=new Color(0,0,0)]
+     *  @param {Color}   [lineColor=Color(0,0,0)]
      *  @param {String}  [textAlign='center']
      *  @memberof Draw */
     export function drawText(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: string, font: any): void;
+    export let engineFontImage: any;
     /**
      * Font Image Object - Draw text on a 2D canvas by using characters in an image
      * <br> - 96 characters (from space to tilde) are stored in an image
@@ -913,7 +1057,6 @@ declare module "engine.all.module" {
      * // draw text
      * font.drawTextScreen("LittleJS\nHello World!", vec2(200, 50));
      */
-    export let engineFontImage: any;
     export class FontImage {
         /** Create an image font
          *  @param {HTMLImageElement} [image] - Image for the font, if undefined default font is used
@@ -998,14 +1141,17 @@ declare module "engine.all.module" {
      *  @memberof Input */
     export let mousePosScreen: Vector2;
     /** Mouse wheel delta this frame
+     *  @type {Number}
      *  @memberof Input */
     export let mouseWheel: number;
     /** Returns true if user is using gamepad (has more recently pressed a gamepad button)
+     *  @type {Boolean}
      *  @memberof Input */
-    export let isUsingGamepad: number;
+    export let isUsingGamepad: boolean;
     /** Prevents input continuing to the default browser handling (false by default)
+     *  @type {Boolean}
      *  @memberof Input */
-    export let preventDefaultInput: number;
+    export let preventDefaultInput: boolean;
     /** Returns true if gamepad button is down
      *  @param {Number} button
      *  @param {Number} [gamepad=0]
@@ -1040,7 +1186,6 @@ declare module "engine.all.module" {
      *  @memberof Input */
     export function vibrateStop(): boolean;
     /** True if a touch device has been detected
-     *  @const {Boolean}
      *  @memberof Input */
     export const isTouchDevice: boolean;
     /**
@@ -1178,6 +1323,7 @@ declare module "engine.all.module" {
      *  @memberof Audio */
     export function zzfx(...zzfxSound: any[]): any[];
     /** The tile collision layer array, use setTileCollisionData and getTileCollisionData to access
+     *  @type {Array}
      *  @memberof TileCollision */
     export let tileCollision: any[];
     /** Size of the tile collision layer
@@ -1200,7 +1346,7 @@ declare module "engine.all.module" {
     export function getTileCollisionData(pos: Vector2): number;
     /** Check if collision with another object should occur
      *  @param {Vector2}      pos
-     *  @param {Vector2}      [size=new Vector2(1,1)]
+     *  @param {Vector2}      [size=Vector2(1,1)]
      *  @param {EngineObject} [object]
      *  @return {Boolean}
      *  @memberof TileCollision */
@@ -1224,10 +1370,10 @@ declare module "engine.all.module" {
      */
     export class TileLayerData {
         /** Create a tile layer data object, one for each tile in a TileLayer
-         *  @param {Number}  [tile]                   - The tile to use, untextured if undefined
-         *  @param {Number}  [direction=0]            - Integer direction of tile, in 90 degree increments
-         *  @param {Boolean} [mirror=0]               - If the tile should be mirrored along the x axis
-         *  @param {Color}   [color=new Color(1,1,1)] - Color of the tile */
+         *  @param {Number}  [tile]          - The tile to use, untextured if undefined
+         *  @param {Number}  [direction=0]   - Integer direction of tile, in 90 degree increments
+         *  @param {Boolean} [mirror=0]      - If the tile should be mirrored along the x axis
+         *  @param {Color}   [color=Color()] - Color of the tile */
         constructor(tile?: number, direction?: number, mirror?: boolean, color?: Color);
         /** @property {Number}  - The tile to use, untextured if undefined */
         tile: number;
@@ -1254,10 +1400,10 @@ declare module "engine.all.module" {
      */
     export class TileLayer extends EngineObject {
         /** Create a tile layer object
-            *  @param {Vector2} [position=new Vector2()]   - World space position
+            *  @param {Vector2} [position=Vector2()]       - World space position
             *  @param {Vector2} [size=tileCollisionSize]   - World space size
             *  @param {Vector2} [tileSize=tileSizeDefault] - Size of tiles in source pixels
-            *  @param {Vector2} [scale=new Vector2(1,1)]   - How much to scale this layer when rendered
+            *  @param {Vector2} [scale=Vector2(1,1)]       - How much to scale this layer when rendered
             *  @param {Number}  [renderOrder=0]            - Objects sorted by renderOrder before being rendered
             */
         constructor(pos: any, size?: Vector2, tileSize?: Vector2, scale?: Vector2, renderOrder?: number);
@@ -1301,17 +1447,17 @@ declare module "engine.all.module" {
         drawCanvas2D(pos: Vector2, size: Vector2, angle?: number, mirror?: boolean, drawFunction: Function): void;
         /** Draw a tile directly onto the layer canvas
          *  @param {Vector2} pos
-         *  @param {Vector2} [size=new Vector2(1,1)]
+         *  @param {Vector2} [size=Vector2(1,1)]
          *  @param {Number}  [tileIndex=-1]
          *  @param {Vector2} [tileSize=tileSizeDefault]
-         *  @param {Color}   [color=new Color(1,1,1)]
+         *  @param {Color}   [color=Color()]
          *  @param {Number}  [angle=0]
          *  @param {Boolean} [mirror=0] */
         drawTile(pos: Vector2, size?: Vector2, tileIndex?: number, tileSize?: Vector2, color?: Color, angle?: number, mirror?: boolean): void;
         /** Draw a rectangle directly onto the layer canvas
          *  @param {Vector2} pos
-         *  @param {Vector2} [size=new Vector2(1,1)]
-         *  @param {Color}   [color=new Color(1,1,1)]
+         *  @param {Vector2} [size=Vector2(1,1)]
+         *  @param {Color}   [color=Color()]
          *  @param {Number}  [angle=0] */
         drawRect(pos: Vector2, size?: Vector2, color?: Color, angle?: number): void;
     }
@@ -1341,11 +1487,11 @@ declare module "engine.all.module" {
          *  @param {Number}  [emitRate=100]     - How many particles per second to spawn, does not emit if 0
          *  @param {Number}  [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
          *  @param {Number}  [tileIndex=-1]     - Index into tile sheet, if <0 no texture is applied
-         *  @param {Vector2} [tileSize=tileSizeDefault]     - Tile size for particles
-         *  @param {Color}   [colorStartA=new Color(1,1,1)] - Color at start of life 1, randomized between start colors
-         *  @param {Color}   [colorStartB=new Color(1,1,1)] - Color at start of life 2, randomized between start colors
-         *  @param {Color}   [colorEndA=new Color(1,1,1,0)] - Color at end of life 1, randomized between end colors
-         *  @param {Color}   [colorEndB=new Color(1,1,1,0)] - Color at end of life 2, randomized between end colors
+         *  @param {Vector2} [tileSize=tileSizeDefault] - Tile size for particles
+         *  @param {Color}   [colorStartA=Color()] - Color at start of life 1, randomized between start colors
+         *  @param {Color}   [colorStartB=Color()] - Color at start of life 2, randomized between start colors
+         *  @param {Color}   [colorEndA=Color(1,1,1,0)] - Color at end of life 1, randomized between end colors
+         *  @param {Color}   [colorEndB=Color(1,1,1,0)] - Color at end of life 2, randomized between end colors
          *  @param {Number}  [particleTime=.5]      - How long particles live
          *  @param {Number}  [sizeStart=.1]         - How big are particles at start
          *  @param {Number}  [sizeEnd=1]            - How big are particles at end
@@ -1426,12 +1572,14 @@ declare module "engine.all.module" {
         constructor(pos: any, tileIndex?: number, tileSize?: Vector2, angle?: number);
     }
     /** List of all medals
+     *  @type {Array}
      *  @memberof Medals */
     export const medals: any[];
     /** Set to stop medals from being unlockable (like if cheats are enabled)
-     *  @default
+     *  @type {Boolean}
+     *  @default 0
      *  @memberof Settings */
-    export let medalsPreventUnlock: any;
+    export let medalsPreventUnlock: boolean;
     /** Initialize medals with a save name used for storage
      *  <br> - Call this after creating all medals
      *  <br> - Checks if medals are unlocked
@@ -1567,31 +1715,53 @@ declare module "engine.all.module" {
     export function glCreateTexture(image: new (width?: number, height?: number) => HTMLImageElement): WebGLTexture;
     /** Set up a post processing shader
      *  @param {String} shaderCode
+     *  @param {Boolean} includeOverlay
      *  @memberof WebGL */
-    export function glInitPostProcess(shaderCode: string, includeOverlay: any): void;
-    /** Name of engine */
-    export const engineName: "LittleJS";
-    /** Version of engine */
-    export const engineVersion: "1.5.0";
+    export function glInitPostProcess(shaderCode: string, includeOverlay: boolean): void;
+    /** Name of engine
+     *  @type {String}
+     *  @default
+     *  @memberof Engine */
+    export const engineName: string;
+    /** Version of engine
+     *  @type {String}
+     *  @default
+     *  @memberof Engine */
+    export const engineVersion: string;
     /** Frames per second to update objects
-     *  @default */
-    export const frameRate: 60;
+     *  @type {Number}
+     *  @default
+     *  @memberof Engine */
+    export const frameRate: number;
     /** How many seconds each frame lasts, engine uses a fixed time step
-     *  @default 1/60 */
+     *  @type {Number}
+     *  @default 1/60
+     *  @memberof Engine */
     export const timeDelta: number;
-    /** Array containing all engine objects */
+    /** Array containing all engine objects
+     *  @type {Array}
+     *  @memberof Engine */
     export let engineObjects: any[];
-    /** Current update frame, used to calculate time */
+    /** Current update frame, used to calculate time
+     *  @type {Number}
+     *  @memberof Engine */
     export let frame: number;
-    /** Current engine time since start in seconds, derived from frame */
+    /** Current engine time since start in seconds, derived from frame
+     *  @type {Number}
+     *  @memberof Engine */
     export let time: number;
-    /** Actual clock time since start in seconds (not affected by pause or frame rate clamping) */
+    /** Actual clock time since start in seconds (not affected by pause or frame rate clamping)
+     *  @type {Number}
+     *  @memberof Engine */
     export let timeReal: number;
-    /** Is the game paused? Causes time and objects to not be updated */
-    export let paused: number;
+    /** Is the game paused? Causes time and objects to not be updated
+     *  @type {Boolean}
+     *  @default 0
+     *  @memberof Engine */
+    export let paused: boolean;
     /** Set if game is paused
      *  @param {Boolean} paused
-     */
+     *  @memberof Engine */
     export function setPaused(_paused: any): void;
     /** Start up LittleJS engine with your callback functions
      *  @param {Function} gameInit        - Called once after the engine starts up, setup the game
@@ -1600,16 +1770,19 @@ declare module "engine.all.module" {
      *  @param {Function} gameRender      - Called before objects are rendered, draw any background effects that appear behind objects
      *  @param {Function} gameRenderPost  - Called after objects are rendered, draw effects or hud that appear above all objects
      *  @param {String} [tileImageSource] - Tile image to use, everything starts when the image is finished loading
-     */
+     *  @memberof Engine */
     export function engineInit(gameInit: Function, gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, tileImageSource?: string): void;
-    /** Update each engine object, remove destroyed objects, and update time */
+    /** Update each engine object, remove destroyed objects, and update time
+     *  @memberof Engine */
     export function engineObjectsUpdate(): void;
-    /** Destroy and remove all objects */
+    /** Destroy and remove all objects
+     *  @memberof Engine */
     export function engineObjectsDestroy(): void;
     /** Triggers a callback for each object within a given area
      *  @param {Vector2} [pos]                 - Center of test area
      *  @param {Number} [size]                 - Radius of circle if float, rectangle size if Vector2
      *  @param {Function} [callbackFunction]   - Calls this function on every object that passes the test
-     *  @param {Array} [objects=engineObjects] - List of objects to check */
+     *  @param {Array} [objects=engineObjects] - List of objects to check
+     *  @memberof Engine */
     export function engineObjectsCallback(pos?: Vector2, size?: number, callbackFunction?: Function, objects?: any[]): void;
 }

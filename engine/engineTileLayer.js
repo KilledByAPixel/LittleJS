@@ -13,6 +13,7 @@
 'use strict';
 
 /** The tile collision layer array, use setTileCollisionData and getTileCollisionData to access
+ *  @type {Array} 
  *  @memberof TileCollision */
 let tileCollision = [];
 
@@ -48,7 +49,7 @@ const getTileCollisionData = (pos)=>
 
 /** Check if collision with another object should occur
  *  @param {Vector2}      pos
- *  @param {Vector2}      [size=new Vector2(1,1)]
+ *  @param {Vector2}      [size=Vector2(1,1)]
  *  @param {EngineObject} [object]
  *  @return {Boolean}
  *  @memberof TileCollision */
@@ -116,11 +117,11 @@ function tileCollisionRaycast(posStart, posEnd, object)
 class TileLayerData
 {
     /** Create a tile layer data object, one for each tile in a TileLayer
-     *  @param {Number}  [tile]                   - The tile to use, untextured if undefined
-     *  @param {Number}  [direction=0]            - Integer direction of tile, in 90 degree increments
-     *  @param {Boolean} [mirror=0]               - If the tile should be mirrored along the x axis
-     *  @param {Color}   [color=new Color(1,1,1)] - Color of the tile */
-    constructor(tile, direction=0, mirror=0, color=new Color)
+     *  @param {Number}  [tile]          - The tile to use, untextured if undefined
+     *  @param {Number}  [direction=0]   - Integer direction of tile, in 90 degree increments
+     *  @param {Boolean} [mirror=0]      - If the tile should be mirrored along the x axis
+     *  @param {Color}   [color=Color()] - Color of the tile */
+    constructor(tile, direction=0, mirror=0, color=new Color())
     {
         /** @property {Number}  - The tile to use, untextured if undefined */
         this.tile      = tile;
@@ -151,10 +152,10 @@ class TileLayerData
 class TileLayer extends EngineObject
 {
 /** Create a tile layer object
-    *  @param {Vector2} [position=new Vector2()]   - World space position
+    *  @param {Vector2} [position=Vector2()]       - World space position
     *  @param {Vector2} [size=tileCollisionSize]   - World space size
     *  @param {Vector2} [tileSize=tileSizeDefault] - Size of tiles in source pixels
-    *  @param {Vector2} [scale=new Vector2(1,1)]   - How much to scale this layer when rendered
+    *  @param {Vector2} [scale=Vector2(1,1)]       - How much to scale this layer when rendered
     *  @param {Number}  [renderOrder=0]            - Objects sorted by renderOrder before being rendered
     */
 constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1), renderOrder=0)
@@ -306,10 +307,10 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
 
     /** Draw a tile directly onto the layer canvas
      *  @param {Vector2} pos
-     *  @param {Vector2} [size=new Vector2(1,1)]
+     *  @param {Vector2} [size=Vector2(1,1)]
      *  @param {Number}  [tileIndex=-1]
      *  @param {Vector2} [tileSize=tileSizeDefault]
-     *  @param {Color}   [color=new Color(1,1,1)]
+     *  @param {Color}   [color=Color()]
      *  @param {Number}  [angle=0]
      *  @param {Boolean} [mirror=0] */
     drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, color=new Color, angle, mirror)
@@ -335,8 +336,8 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
 
     /** Draw a rectangle directly onto the layer canvas
      *  @param {Vector2} pos
-     *  @param {Vector2} [size=new Vector2(1,1)]
-     *  @param {Color}   [color=new Color(1,1,1)]
+     *  @param {Vector2} [size=Vector2(1,1)]
+     *  @param {Color}   [color=Color()]
      *  @param {Number}  [angle=0] */
     drawRect(pos, size, color, angle) 
     { this.drawTile(pos, size, -1, 0, color, angle); }

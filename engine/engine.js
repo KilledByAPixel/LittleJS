@@ -17,43 +17,71 @@
     - Call engineInit() to start it up!
 */
 
+/**
+ * LittleJS Engine Globals
+ * @namespace Engine
+ */
+
 'use strict';
 
-/** Name of engine */
+/** Name of engine
+ *  @type {String}
+ *  @default
+ *  @memberof Engine */
 const engineName = 'LittleJS';
 
-/** Version of engine */
-const engineVersion = '1.5.0';
+/** Version of engine
+ *  @type {String}
+ *  @default
+ *  @memberof Engine */
+const engineVersion = '1.5.1';
 
 /** Frames per second to update objects
- *  @default */
+ *  @type {Number}
+ *  @default
+ *  @memberof Engine */
 const frameRate = 60;
 
 /** How many seconds each frame lasts, engine uses a fixed time step
- *  @default 1/60 */
+ *  @type {Number}
+ *  @default 1/60
+ *  @memberof Engine */
 const timeDelta = 1/frameRate;
 
-/** Array containing all engine objects */
+/** Array containing all engine objects
+ *  @type {Array}
+ *  @memberof Engine */
 let engineObjects = [];
 
-/** Array containing only objects that are set to collide with other objects this frame (for optimization) */
+/** Array containing only objects that are set to collide with other objects this frame (for optimization)
+ *  @type {Array}
+ *  @memberof Engine */
 let engineObjectsCollide = [];
 
-/** Current update frame, used to calculate time */
+/** Current update frame, used to calculate time
+ *  @type {Number}
+ *  @memberof Engine */
 let frame = 0;
 
-/** Current engine time since start in seconds, derived from frame */
+/** Current engine time since start in seconds, derived from frame
+ *  @type {Number}
+ *  @memberof Engine */
 let time = 0;
 
-/** Actual clock time since start in seconds (not affected by pause or frame rate clamping) */
+/** Actual clock time since start in seconds (not affected by pause or frame rate clamping)
+ *  @type {Number}
+ *  @memberof Engine */
 let timeReal = 0;
 
-/** Is the game paused? Causes time and objects to not be updated */
+/** Is the game paused? Causes time and objects to not be updated
+ *  @type {Boolean}
+ *  @default 0
+ *  @memberof Engine */
 let paused = 0;
 
 /** Set if game is paused
  *  @param {Boolean} paused
- */
+ *  @memberof Engine */
 function setPaused(_paused) { paused = _paused; }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -65,7 +93,7 @@ function setPaused(_paused) { paused = _paused; }
  *  @param {Function} gameRender      - Called before objects are rendered, draw any background effects that appear behind objects
  *  @param {Function} gameRenderPost  - Called after objects are rendered, draw effects or hud that appear above all objects
  *  @param {String} [tileImageSource] - Tile image to use, everything starts when the image is finished loading
- */
+ *  @memberof Engine */
 function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, tileImageSource)
 {
     // init engine when tiles load or fail to load
@@ -229,7 +257,8 @@ function enginePreRender()
     glEnable && glPreRender();
 }
 
-/** Update each engine object, remove destroyed objects, and update time */
+/** Update each engine object, remove destroyed objects, and update time
+ *  @memberof Engine */
 function engineObjectsUpdate()
 {
     // get list of solid objects for physics optimzation
@@ -255,7 +284,8 @@ function engineObjectsUpdate()
     time = ++frame / frameRate;
 }
 
-/** Destroy and remove all objects */
+/** Destroy and remove all objects
+ *  @memberof Engine */
 function engineObjectsDestroy()
 {
     for (const o of engineObjects)
@@ -267,7 +297,8 @@ function engineObjectsDestroy()
  *  @param {Vector2} [pos]                 - Center of test area
  *  @param {Number} [size]                 - Radius of circle if float, rectangle size if Vector2
  *  @param {Function} [callbackFunction]   - Calls this function on every object that passes the test
- *  @param {Array} [objects=engineObjects] - List of objects to check */
+ *  @param {Array} [objects=engineObjects] - List of objects to check
+ *  @memberof Engine */
 function engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
 {
     if (!pos) // all objects

@@ -5,7 +5,7 @@
 <link rel=icon type=image/png href=../../favicon.png>
 </head><body>
 
-<script src=../../engine/engine.all.min.js?124></script>
+<script src=../../engine/engine.all.min.js?125></script>
 <script>
 
 /*
@@ -20,7 +20,7 @@
 'use strict';
 
 // keep our own list of simple sprites and track fps
-let sprites, timeMS, showFPS, statsDisplay, spriteColor, spriteAdditiveColor, musicSource;
+let sprites, timeMS, showFPS, statsDisplay, spriteColor, spriteAdditiveColor;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -60,8 +60,8 @@ function gameInit()
 ///////////////////////////////////////////////////////////////////////////////
 function gameUpdate()
 {
-    if (!musicSource && mouseWasPressed(0))
-        musicSource = music.play();
+    if (!music.isPlaying() && mouseWasPressed(0))
+        music.play();
 
     // mouse click = change color
     if (mouseWasPressed(0) || mouseIsDown(2))

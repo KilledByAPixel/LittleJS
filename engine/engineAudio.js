@@ -146,7 +146,7 @@ class Music
     {
         if (!soundEnable) return;
 
-        this.source = playSamples(this.cachedSamples, volume, 1, 0, loop);
+        return this.source = playSamples(this.cachedSamples, volume, 1, 0, loop);
     }
 
     /** Stop the music */

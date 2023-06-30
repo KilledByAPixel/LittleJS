@@ -35,18 +35,21 @@ const keyWasReleased = (key, device=0)=> inputData[device] && inputData[device][
 const clearInput = ()=> inputData = [[]];
 
 /** Returns true if mouse button is down
+ *  @function
  *  @param {Number} button
  *  @return {Boolean}
  *  @memberof Input */
 const mouseIsDown = keyIsDown;
 
 /** Returns true if mouse button was pressed
+ *  @function
  *  @param {Number} button
  *  @return {Boolean}
  *  @memberof Input */
 const mouseWasPressed = keyWasPressed;
 
 /** Returns true if mouse button was released
+ *  @function
  *  @param {Number} button
  *  @return {Boolean}
  *  @memberof Input */
@@ -63,14 +66,17 @@ let mousePos = vec2();
 let mousePosScreen = vec2();
 
 /** Mouse wheel delta this frame
+ *  @type {Number}
  *  @memberof Input */
 let mouseWheel = 0;
 
 /** Returns true if user is using gamepad (has more recently pressed a gamepad button)
+ *  @type {Boolean}
  *  @memberof Input */
 let isUsingGamepad = 0;
 
 /** Prevents input continuing to the default browser handling (false by default)
+ *  @type {Boolean}
  *  @memberof Input */
 let preventDefaultInput = 0;
 
@@ -246,7 +252,6 @@ const vibrateStop = ()=> vibrate(0);
 // Touch input
 
 /** True if a touch device has been detected
- *  @const {Boolean}
  *  @memberof Input */
 const isTouchDevice = window.ontouchstart !== undefined;
 

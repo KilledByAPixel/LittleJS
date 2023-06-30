@@ -9,6 +9,7 @@
 'use strict';
 
 /** List of all medals
+ *  @type {Array}
  *  @memberof Medals */
 const medals = [];
 

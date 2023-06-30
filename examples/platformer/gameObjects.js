@@ -64,9 +64,9 @@ class GameObject extends EngineObject
 
 class Crate extends GameObject 
 {
-    constructor(pos, typeOverride) 
+    constructor(pos) 
     { 
-        super(pos, objectDefaultSize, 2, vec2(16), (randInt(4))*PI/2);
+        super(pos, vec2(1), 2, vec2(16), (randInt(4))*PI/2);
 
         this.color = (new Color).setHSLA(rand(),1,.8);
         this.health = 5;
@@ -90,7 +90,7 @@ class Crate extends GameObject
 
 class Enemy extends GameObject 
 {
-    constructor(pos, typeOverride) 
+    constructor(pos) 
     { 
         super(pos, vec2(.9,.9), 8, vec2(16));
 

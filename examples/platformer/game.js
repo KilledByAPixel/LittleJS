@@ -16,6 +16,8 @@ function gameInit()
     // setup game
     score = deaths = 0;
     gravity = -.01;
+    objectDefaultDamping = .99;
+    objectDefaultAngleDamping = .99;
     cameraScale = 4*16;
     gameTimer.set();
     buildLevel();

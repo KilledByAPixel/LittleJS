@@ -16,26 +16,31 @@
 'use strict';
 
 /** True if debug is enabled
+ *  @type {Boolean}
  *  @default
  *  @memberof Debug */
 const debug = 1;
 
 /** True if asserts are enaled
+ *  @type {Boolean}
  *  @default
  *  @memberof Debug */
 const enableAsserts = 1;
 
 /** Size to render debug points by default
+ *  @type {Number}
  *  @default
  *  @memberof Debug */
 const debugPointSize = .5;
 
 /** True if watermark with FPS should be down, false in release builds
+ *  @type {Boolean}
  *  @default
  *  @memberof Debug */
 let showWatermark = 1;
 
 /** True if god mode is enabled, handle this however you want
+ *  @type {Boolean}
  *  @default
  *  @memberof Debug */
 let godMode = 0;
@@ -55,7 +60,7 @@ const ASSERT = enableAsserts ? (...assert)=> console.assert(...assert) : ()=>{};
 
 /** Draw a debug rectangle in world space
  *  @param {Vector2} pos
- *  @param {Vector2} [size=new Vector2()]
+ *  @param {Vector2} [size=Vector2()]
  *  @param {String}  [color='#fff']
  *  @param {Number}  [time=0]
  *  @param {Number}  [angle=0]

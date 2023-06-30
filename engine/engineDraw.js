@@ -78,15 +78,15 @@ const worldToScreen = (worldPos)=>
 }
 
 /** Draw textured tile centered in world space, with color applied if using WebGL
- *  @param {Vector2} pos                                - Center of the tile in world space
- *  @param {Vector2} [size=new Vector2(1,1)]            - Size of the tile in world space
- *  @param {Number}  [tileIndex=-1]                     - Tile index to use, negative is untextured
- *  @param {Vector2} [tileSize=tileSizeDefault]         - Tile size in source pixels
- *  @param {Color}   [color=new Color(1,1,1)]           - Color to modulate with
- *  @param {Number}  [angle=0]                          - Angle to rotate by
- *  @param {Boolean} [mirror=0]                         - If true image is flipped along the Y axis
- *  @param {Color}   [additiveColor=new Color(0,0,0,0)] - Additive color to be applied
- *  @param {Boolean} [useWebGL=glEnable]                - Use accelerated WebGL rendering
+ *  @param {Vector2} pos                            - Center of the tile in world space
+ *  @param {Vector2} [size=Vector2(1,1)]            - Size of the tile in world space
+ *  @param {Number}  [tileIndex=-1]                 - Tile index to use, negative is untextured
+ *  @param {Vector2} [tileSize=tileSizeDefault]     - Tile size in source pixels
+ *  @param {Color}   [color=Color()]                - Color to modulate with
+ *  @param {Number}  [angle=0]                      - Angle to rotate by
+ *  @param {Boolean} [mirror=0]                     - If true image is flipped along the Y axis
+ *  @param {Color}   [additiveColor=Color(0,0,0,0)] - Additive color to be applied
+ *  @param {Boolean} [useWebGL=glEnable]            - Use accelerated WebGL rendering
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, color=new Color, angle=0, mirror, 
     additiveColor=new Color(0,0,0,0), useWebGL=glEnable)
@@ -141,8 +141,8 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, col
 
 /** Draw colored rect centered on pos
  *  @param {Vector2} pos
- *  @param {Vector2} [size=new Vector2(1,1)]
- *  @param {Color}   [color=new Color(1,1,1)]
+ *  @param {Vector2} [size=Vector2(1,1)]
+ *  @param {Color}   [color=Color()]
  *  @param {Number}  [angle=0]
  *  @param {Boolean} [useWebGL=glEnable]
  *  @memberof Draw */
@@ -153,13 +153,13 @@ function drawRect(pos, size, color, angle, useWebGL)
 
 /** Draw textured tile centered on pos in screen space
  *  @param {Vector2} pos                        - Center of the tile
- *  @param {Vector2} [size=new Vector2(1,1)]    - Size of the tile
+ *  @param {Vector2} [size=Vector2(1,1)]    - Size of the tile
  *  @param {Number}  [tileIndex=-1]             - Tile index to use, negative is untextured
  *  @param {Vector2} [tileSize=tileSizeDefault] - Tile size in source pixels
- *  @param {Color}   [color=new Color]
+ *  @param {Color}   [color=Color()]
  *  @param {Number}  [angle=0]
  *  @param {Boolean} [mirror=0]
- *  @param {Color}   [additiveColor=new Color(0,0,0,0)]
+ *  @param {Color}   [additiveColor=Color(0,0,0,0)]
  *  @param {Boolean} [useWebGL=glEnable]
  *  @memberof Draw */
 function drawTileScreenSpace(pos, size=vec2(1), tileIndex, tileSize, color, angle, mirror, additiveColor, useWebGL)
@@ -169,8 +169,8 @@ function drawTileScreenSpace(pos, size=vec2(1), tileIndex, tileSize, color, angl
 
 /** Draw colored rectangle in screen space
  *  @param {Vector2} pos
- *  @param {Vector2} [size=new Vector2(1,1)]
- *  @param {Color}   [color=new Color(1,1,1)]
+ *  @param {Vector2} [size=Vector2(1,1)]
+ *  @param {Color}   [color=Color()]
  *  @param {Number}  [angle=0]
  *  @param {Boolean} [useWebGL=glEnable]
  *  @memberof Draw */
@@ -183,7 +183,7 @@ function drawRectScreenSpace(pos, size, color, angle, useWebGL)
  *  @param {Vector2} posA
  *  @param {Vector2} posB
  *  @param {Number}  [thickness=.1]
- *  @param {Color}   [color=new Color(1,1,1)]
+ *  @param {Color}   [color=Color()]
  *  @param {Boolean} [useWebGL=glEnable]
  *  @memberof Draw */
 function drawLine(posA, posB, thickness=.1, color, useWebGL)
@@ -231,9 +231,9 @@ function setBlendMode(additive, useWebGL=glEnable)
  *  @param {String}  text
  *  @param {Vector2} pos
  *  @param {Number}  [size=1]
- *  @param {Color}   [color=new Color(1,1,1)]
+ *  @param {Color}   [color=Color()]
  *  @param {Number}  [lineWidth=0]
- *  @param {Color}   [lineColor=new Color(0,0,0)]
+ *  @param {Color}   [lineColor=Color(0,0,0)]
  *  @param {String}  [textAlign='center']
  *  @memberof Draw */
 function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, context=overlayContext)
@@ -260,9 +260,9 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
  *  @param {String}  text
  *  @param {Vector2} pos
  *  @param {Number}  [size=1]
- *  @param {Color}   [color=new Color(1,1,1)]
+ *  @param {Color}   [color=Color()]
  *  @param {Number}  [lineWidth=0]
- *  @param {Color}   [lineColor=new Color(0,0,0)]
+ *  @param {Color}   [lineColor=Color(0,0,0)]
  *  @param {String}  [textAlign='center']
  *  @memberof Draw */
 function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font)
@@ -271,6 +271,8 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+let engineFontImage;
 
 /** 
  * Font Image Object - Draw text on a 2D canvas by using characters in an image
@@ -284,10 +286,6 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
  * // draw text
  * font.drawTextScreen("LittleJS\nHello World!", vec2(200, 50));
  */
-
-// default font image created by engine
-let engineFontImage;
-
 class FontImage
 {
     /** Create an image font

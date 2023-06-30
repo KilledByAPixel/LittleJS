@@ -16,26 +16,31 @@
 'use strict';
 
 /** True if debug is enabled
+ *  @type {Boolean}
  *  @default
  *  @memberof Debug */
 const debug = 1;
 
 /** True if asserts are enaled
+ *  @type {Boolean}
  *  @default
  *  @memberof Debug */
 const enableAsserts = 1;
 
 /** Size to render debug points by default
+ *  @type {Number}
  *  @default
  *  @memberof Debug */
 const debugPointSize = .5;
 
 /** True if watermark with FPS should be down, false in release builds
+ *  @type {Boolean}
  *  @default
  *  @memberof Debug */
 let showWatermark = 1;
 
 /** True if god mode is enabled, handle this however you want
+ *  @type {Boolean}
  *  @default
  *  @memberof Debug */
 let godMode = 0;
@@ -55,7 +60,7 @@ const ASSERT = enableAsserts ? (...assert)=> console.assert(...assert) : ()=>{};
 
 /** Draw a debug rectangle in world space
  *  @param {Vector2} pos
- *  @param {Vector2} [size=new Vector2()]
+ *  @param {Vector2} [size=Vector2()]
  *  @param {String}  [color='#fff']
  *  @param {Number}  [time=0]
  *  @param {Number}  [angle=0]
@@ -398,7 +403,8 @@ const debugRender = ()=>
 'use strict';
 
 /** A shortcut to get Math.PI
- *  @const
+ *  @type {Number}
+ *  @default Math.PI
  *  @memberof Utilities */
 const PI = Math.PI;
 
@@ -532,8 +538,8 @@ const randInCircle = (radius=1, minRadius=0)=> radius > 0 ? randVector(radius * 
 const randVector = (length=1)=> new Vector2().setAngle(rand(2*PI), length);
 
 /** Returns a random color between the two passed in colors, combine components if linear
- *  @param {Color}   [colorA=new Color(1,1,1,1)]
- *  @param {Color}   [colorB=new Color(0,0,0,1)]
+ *  @param {Color}   [colorA=Color()]
+ *  @param {Color}   [colorB=Color(0,0,0,1)]
  *  @param {Boolean} [linear]
  *  @return {Color}
  *  @memberof Random */
@@ -541,6 +547,8 @@ const randColor = (cA = new Color, cB = new Color(0,0,0,1), linear)=>
     linear ? cA.lerp(cB, rand()) : new Color(rand(cA.r,cB.r),rand(cA.g,cB.g),rand(cA.b,cB.b),rand(cA.a,cB.a));
 
 /** Seed used by the randSeeded function
+ *  @type {Number}
+ *  @default
  *  @memberof Random */
 let randSeed = 1;
 
@@ -679,7 +687,8 @@ class Vector2
 
     /** Sets this vector with angle and length passed in
      * @param {Number} [angle=0]
-     * @param {Number} [length=1] */
+     * @param {Number} [length=1]
+     * @return {Vector2} */
     setAngle(a=0, length=1) { this.x = length*Math.sin(a); this.y = length*Math.cos(a); return this; }
 
     /** Returns copy of this vector rotated by the angle passed in
@@ -748,9 +757,11 @@ const colorHSLA = (h, s, l, a)=> new Color().setHSLA(h, s, l, a);
 /** 
  * Color object (red, green, blue, alpha) with some helpful functions
  * @example
- * let a = new Color;             // white
- * let b = new Color(1, 0, 0);    // red
- * let c = new Color(0, 0, 0, 0); // transparent black
+ * let a = new Color;              // white
+ * let b = new Color(1, 0, 0);     // red
+ * let c = new Color(0, 0, 0, 0);  // transparent black
+ * let d = colorRGBA(0, 0, 1);     // blue using rgb color
+ * let e = colorHSLA(.3, 1, .5);   // green using hsl color
  */
 class Color
 {
@@ -974,11 +985,12 @@ class Timer
 
 /** Position of camera in world space
  *  @type {Vector2}
- *  @default
+ *  @default Vector2()
  *  @memberof Settings */
 let cameraPos = vec2();
 
 /** Scale of camera in world space
+ *  @type {Number}
  *  @default
  *  @memberof Settings */
 let cameraScale = 32;
@@ -987,24 +999,26 @@ let cameraScale = 32;
 // Display settings
 
 /** The max size of the canvas, centered if window is larger
- *  @type {Vector2} 
- *  @default
+ *  @type {Vector2}
+ *  @default Vector2(1920,1200)
  *  @memberof Settings */
 let canvasMaxSize = vec2(1920, 1200);
 
 /** Fixed size of the canvas, if enabled canvas size never changes
  * - you may also need to set mainCanvasSize if using screen space coords in startup
- *  @type {Vector2} 
- *  @default
+ *  @type {Vector2}
+ *  @default Vector2()
  *  @memberof Settings */
 let canvasFixedSize = vec2();
 
 /** Disables anti aliasing for pixel art if true
+ *  @type {Boolean}
  *  @default
  *  @memberof Settings */
 let cavasPixelated = 1;
 
 /** Default font used for text rendering
+ *  @type {String}
  *  @default
  *  @memberof Settings */
 let fontDefault = 'arial';
@@ -1013,11 +1027,13 @@ let fontDefault = 'arial';
 // WebGL settings
 
 /** Enable webgl rendering, webgl can be disabled and removed from build (with some features disabled)
+ *  @type {Boolean}
  *  @default
  *  @memberof Settings */
 let glEnable = 1;
 
 /** Fixes slow rendering in some browsers by not compositing the WebGL canvas
+ *  @type {Boolean}
  *  @default
  *  @memberof Settings */
 let glOverlay = 1;
@@ -1026,12 +1042,13 @@ let glOverlay = 1;
 // Tile sheet settings
 
 /** Default size of tiles in pixels
- *  @type {Vector2} 
- *  @default
+ *  @type {Vector2}
+ *  @default Vector2(16,16)
  *  @memberof Settings */
 let tileSizeDefault = vec2(16);
 
 /** Prevent tile bleeding from neighbors in pixels
+ *  @type {Number}
  *  @default
  *  @memberof Settings */
 let tileFixBleedScale = .3;
@@ -1039,53 +1056,56 @@ let tileFixBleedScale = .3;
 ///////////////////////////////////////////////////////////////////////////////
 // Object settings
 
-/** Default size of objects
- *  @type {Vector2} 
- *  @default
- *  @memberof Settings */
-let objectDefaultSize = vec2(1);
-
 /** Enable physics solver for collisions between objects
+ *  @type {Boolean}
  *  @default
  *  @memberof Settings */
 let enablePhysicsSolver = 1;
 
 /** Default object mass for collison calcuations (how heavy objects are)
+ *  @type {Number}
  *  @default
  *  @memberof Settings */
 let objectDefaultMass = 1;
 
 /** How much to slow velocity by each frame (0-1)
+ *  @type {Number}
  *  @default
  *  @memberof Settings */
-let objectDefaultDamping = .99;
+let objectDefaultDamping = 1;
 
 /** How much to slow angular velocity each frame (0-1)
+ *  @type {Number}
  *  @default
  *  @memberof Settings */
-let objectDefaultAngleDamping = .99;
+let objectDefaultAngleDamping = 1;
 
 /** How much to bounce when a collision occurs (0-1)
- *  @default
+ *  @type {Number}
+ *  @default 0
  *  @memberof Settings */
 let objectDefaultElasticity = 0;
 
 /** How much to slow when touching (0-1)
+ *  @type {Number}
  *  @default
  *  @memberof Settings */
 let objectDefaultFriction = .8;
 
 /** Clamp max speed to avoid fast objects missing collisions
+ *  @type {Number}
  *  @default
  *  @memberof Settings */
 let objectMaxSpeed = 1;
 
 /** How much gravity to apply to objects along the Y axis, negative is down
- *  @default
+ *  @type {Number}
+ *  @default 0
  *  @memberof Settings */
 let gravity = 0;
 
 /** Scales emit rate of particles, useful for low graphics mode (0 disables particle emitters)
+ *  @type {Number}
  *  @default
  *  @memberof Settings */
 let particleEmitRateScale = 1;
@@ -1094,16 +1114,19 @@ let particleEmitRateScale = 1;
 // Input settings
 
 /** Should gamepads be allowed
+ *  @type {Boolean}
  *  @default
  *  @memberof Settings */
 let gamepadsEnable = 1;
 
 /** If true, the dpad input is also routed to the left analog stick (for better accessability)
+ *  @type {Boolean}
  *  @default
  *  @memberof Settings */
 let gamepadDirectionEmulateStick = 1;
 
 /** If true the WASD keys are also routed to the direction keys (for better accessability)
+ *  @type {Boolean}
  *  @default
  *  @memberof Settings */
 let inputWASDEmulateDirection = 1;
@@ -1111,26 +1134,31 @@ let inputWASDEmulateDirection = 1;
 /** True if touch gamepad should appear on mobile devices
  *  <br> - Supports left analog stick, 4 face buttons and start button (button 9)
  *  <br> - Must be set by end of gameInit to be activated
- *  @default
+ *  @type {Boolean}
+ *  @default 0
  *  @memberof Settings */
 let touchGamepadEnable = 0;
 
 /** True if touch gamepad should be analog stick or false to use if 8 way dpad
+ *  @type {Boolean}
  *  @default
  *  @memberof Settings */
 let touchGamepadAnalog = 1;
 
 /** Size of virutal gamepad for touch devices in pixels
+ *  @type {Number}
  *  @default
  *  @memberof Settings */
 let touchGamepadSize = 99;
 
 /** Transparency of touch gamepad overlay
+ *  @type {Number}
  *  @default
  *  @memberof Settings */
 let touchGamepadAlpha = .3;
 
 /** Allow vibration hardware if it exists
+ *  @type {Boolean}
  *  @default
  *  @memberof Settings */
 let vibrateEnable = 1;
@@ -1139,21 +1167,25 @@ let vibrateEnable = 1;
 // Audio settings
 
 /** All audio code can be disabled and removed from build
+ *  @type {Boolean}
  *  @default
  *  @memberof Settings */
 let soundEnable = 1;
 
 /** Volume scale to apply to all sound, music and speech
+ *  @type {Number}
  *  @default
  *  @memberof Settings */
 let soundVolume = .5;
 
 /** Default range where sound no longer plays
+ *  @type {Number}
  *  @default
  *  @memberof Settings */
 let soundDefaultRange = 40;
 
 /** Default range percent to start tapering off sound (0-1)
+ *  @type {Number}
  *  @default
  *  @memberof Settings */
 let soundDefaultTaper = .7;
@@ -1162,27 +1194,32 @@ let soundDefaultTaper = .7;
 // Medals settings
 
 /** How long to show medals for in seconds
+ *  @type {Number}
  *  @default
  *  @memberof Settings */
 let medalDisplayTime = 5;
 
 /** How quickly to slide on/off medals in seconds
+ *  @type {Number}
  *  @default
  *  @memberof Settings */
 let medalDisplaySlideTime = .5;
 
 /** Size of medal display
- *  @default
+ *  @type {Vector2}
+ *  @default Vector2(640,80)
  *  @memberof Settings */
 let medalDisplaySize = vec2(640, 80);
 
 /** Size of icon in medal display
+ *  @type {Number}
  *  @default
  *  @memberof Settings */
 let medalDisplayIconSize = 50;
 
 /** Set to stop medals from being unlockable (like if cheats are enabled)
- *  @default
+ *  @type {Boolean}
+ *  @default 0
  *  @memberof Settings */
 let medalsPreventUnlock;
 /*
@@ -1219,15 +1256,15 @@ let medalsPreventUnlock;
 class EngineObject
 {
     /** Create an engine object and adds it to the list of objects
-     *  @param {Vector2} [position=new Vector2()]    - World space position of the object
-     *  @param {Vector2} [size=objectDefaultSize]    - World space size of the object
+     *  @param {Vector2} [position=Vector2()]        - World space position of the object
+     *  @param {Vector2} [size=Vector2(1,1)]         - World space size of the object
      *  @param {Number}  [tileIndex=-1]              - Tile to use to render object (-1 is untextured)
      *  @param {Vector2} [tileSize=tileSizeDefault]  - Size of tile in source pixels
      *  @param {Number}  [angle=0]                   - Angle the object is rotated by
-     *  @param {Color}   [color]                     - Color to apply to tile when rendered
+     *  @param {Color}   [color=Color()]             - Color to apply to tile when rendered
      *  @param {Number}  [renderOrder=0]             - Objects sorted by renderOrder before being rendered
      */
-    constructor(pos=vec2(), size=objectDefaultSize, tileIndex=-1, tileSize=tileSizeDefault, angle=0, color, renderOrder=0)
+    constructor(pos=vec2(), size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, angle=0, color, renderOrder=0)
     {
         // set passed in params
         ASSERT(isVector2(pos) && isVector2(size)); // ensure pos and size are vec2s
@@ -1264,7 +1301,7 @@ class EngineObject
         this.gravityScale = 1;
         /** @property {Number} [renderOrder=0]                          - Objects are sorted by render order */
         this.renderOrder = renderOrder;
-        /** @property {Vector2} [velocity=new Vector2()]                - Velocity of the object */
+        /** @property {Vector2} [velocity=Vector2()]                    - Velocity of the object */
         this.velocity = new Vector2();
         /** @property {Number} [angleVelocity=0]                        - Angular velocity of the object */
         this.angleVelocity = 0;
@@ -1507,7 +1544,7 @@ class EngineObject
 
     /** Attaches a child to this with a given local transform
      *  @param {EngineObject} child
-     *  @param {Vector2}      [localPos=new Vector2]
+     *  @param {Vector2}      [localPos=Vector2()]
      *  @param {Number}       [localAngle=0] */
     addChild(child, localPos=vec2(), localAngle=0)
     {
@@ -1641,15 +1678,15 @@ const worldToScreen = (worldPos)=>
 }
 
 /** Draw textured tile centered in world space, with color applied if using WebGL
- *  @param {Vector2} pos                                - Center of the tile in world space
- *  @param {Vector2} [size=new Vector2(1,1)]            - Size of the tile in world space
- *  @param {Number}  [tileIndex=-1]                     - Tile index to use, negative is untextured
- *  @param {Vector2} [tileSize=tileSizeDefault]         - Tile size in source pixels
- *  @param {Color}   [color=new Color(1,1,1)]           - Color to modulate with
- *  @param {Number}  [angle=0]                          - Angle to rotate by
- *  @param {Boolean} [mirror=0]                         - If true image is flipped along the Y axis
- *  @param {Color}   [additiveColor=new Color(0,0,0,0)] - Additive color to be applied
- *  @param {Boolean} [useWebGL=glEnable]                - Use accelerated WebGL rendering
+ *  @param {Vector2} pos                            - Center of the tile in world space
+ *  @param {Vector2} [size=Vector2(1,1)]            - Size of the tile in world space
+ *  @param {Number}  [tileIndex=-1]                 - Tile index to use, negative is untextured
+ *  @param {Vector2} [tileSize=tileSizeDefault]     - Tile size in source pixels
+ *  @param {Color}   [color=Color()]                - Color to modulate with
+ *  @param {Number}  [angle=0]                      - Angle to rotate by
+ *  @param {Boolean} [mirror=0]                     - If true image is flipped along the Y axis
+ *  @param {Color}   [additiveColor=Color(0,0,0,0)] - Additive color to be applied
+ *  @param {Boolean} [useWebGL=glEnable]            - Use accelerated WebGL rendering
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, color=new Color, angle=0, mirror, 
     additiveColor=new Color(0,0,0,0), useWebGL=glEnable)
@@ -1704,8 +1741,8 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, col
 
 /** Draw colored rect centered on pos
  *  @param {Vector2} pos
- *  @param {Vector2} [size=new Vector2(1,1)]
- *  @param {Color}   [color=new Color(1,1,1)]
+ *  @param {Vector2} [size=Vector2(1,1)]
+ *  @param {Color}   [color=Color()]
  *  @param {Number}  [angle=0]
  *  @param {Boolean} [useWebGL=glEnable]
  *  @memberof Draw */
@@ -1716,13 +1753,13 @@ function drawRect(pos, size, color, angle, useWebGL)
 
 /** Draw textured tile centered on pos in screen space
  *  @param {Vector2} pos                        - Center of the tile
- *  @param {Vector2} [size=new Vector2(1,1)]    - Size of the tile
+ *  @param {Vector2} [size=Vector2(1,1)]    - Size of the tile
  *  @param {Number}  [tileIndex=-1]             - Tile index to use, negative is untextured
  *  @param {Vector2} [tileSize=tileSizeDefault] - Tile size in source pixels
- *  @param {Color}   [color=new Color]
+ *  @param {Color}   [color=Color()]
  *  @param {Number}  [angle=0]
  *  @param {Boolean} [mirror=0]
- *  @param {Color}   [additiveColor=new Color(0,0,0,0)]
+ *  @param {Color}   [additiveColor=Color(0,0,0,0)]
  *  @param {Boolean} [useWebGL=glEnable]
  *  @memberof Draw */
 function drawTileScreenSpace(pos, size=vec2(1), tileIndex, tileSize, color, angle, mirror, additiveColor, useWebGL)
@@ -1732,8 +1769,8 @@ function drawTileScreenSpace(pos, size=vec2(1), tileIndex, tileSize, color, angl
 
 /** Draw colored rectangle in screen space
  *  @param {Vector2} pos
- *  @param {Vector2} [size=new Vector2(1,1)]
- *  @param {Color}   [color=new Color(1,1,1)]
+ *  @param {Vector2} [size=Vector2(1,1)]
+ *  @param {Color}   [color=Color()]
  *  @param {Number}  [angle=0]
  *  @param {Boolean} [useWebGL=glEnable]
  *  @memberof Draw */
@@ -1746,7 +1783,7 @@ function drawRectScreenSpace(pos, size, color, angle, useWebGL)
  *  @param {Vector2} posA
  *  @param {Vector2} posB
  *  @param {Number}  [thickness=.1]
- *  @param {Color}   [color=new Color(1,1,1)]
+ *  @param {Color}   [color=Color()]
  *  @param {Boolean} [useWebGL=glEnable]
  *  @memberof Draw */
 function drawLine(posA, posB, thickness=.1, color, useWebGL)
@@ -1794,9 +1831,9 @@ function setBlendMode(additive, useWebGL=glEnable)
  *  @param {String}  text
  *  @param {Vector2} pos
  *  @param {Number}  [size=1]
- *  @param {Color}   [color=new Color(1,1,1)]
+ *  @param {Color}   [color=Color()]
  *  @param {Number}  [lineWidth=0]
- *  @param {Color}   [lineColor=new Color(0,0,0)]
+ *  @param {Color}   [lineColor=Color(0,0,0)]
  *  @param {String}  [textAlign='center']
  *  @memberof Draw */
 function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, context=overlayContext)
@@ -1823,9 +1860,9 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
  *  @param {String}  text
  *  @param {Vector2} pos
  *  @param {Number}  [size=1]
- *  @param {Color}   [color=new Color(1,1,1)]
+ *  @param {Color}   [color=Color()]
  *  @param {Number}  [lineWidth=0]
- *  @param {Color}   [lineColor=new Color(0,0,0)]
+ *  @param {Color}   [lineColor=Color(0,0,0)]
  *  @param {String}  [textAlign='center']
  *  @memberof Draw */
 function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font)
@@ -1834,6 +1871,8 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+let engineFontImage;
 
 /** 
  * Font Image Object - Draw text on a 2D canvas by using characters in an image
@@ -1847,10 +1886,6 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
  * // draw text
  * font.drawTextScreen("LittleJS\nHello World!", vec2(200, 50));
  */
-
-// default font image created by engine
-let engineFontImage;
-
 class FontImage
 {
     /** Create an image font
@@ -1981,18 +2016,21 @@ const keyWasReleased = (key, device=0)=> inputData[device] && inputData[device][
 const clearInput = ()=> inputData = [[]];
 
 /** Returns true if mouse button is down
+ *  @function
  *  @param {Number} button
  *  @return {Boolean}
  *  @memberof Input */
 const mouseIsDown = keyIsDown;
 
 /** Returns true if mouse button was pressed
+ *  @function
  *  @param {Number} button
  *  @return {Boolean}
  *  @memberof Input */
 const mouseWasPressed = keyWasPressed;
 
 /** Returns true if mouse button was released
+ *  @function
  *  @param {Number} button
  *  @return {Boolean}
  *  @memberof Input */
@@ -2009,14 +2047,17 @@ let mousePos = vec2();
 let mousePosScreen = vec2();
 
 /** Mouse wheel delta this frame
+ *  @type {Number}
  *  @memberof Input */
 let mouseWheel = 0;
 
 /** Returns true if user is using gamepad (has more recently pressed a gamepad button)
+ *  @type {Boolean}
  *  @memberof Input */
 let isUsingGamepad = 0;
 
 /** Prevents input continuing to the default browser handling (false by default)
+ *  @type {Boolean}
  *  @memberof Input */
 let preventDefaultInput = 0;
 
@@ -2192,7 +2233,6 @@ const vibrateStop = ()=> vibrate(0);
 // Touch input
 
 /** True if a touch device has been detected
- *  @const {Boolean}
  *  @memberof Input */
 const isTouchDevice = window.ontouchstart !== undefined;
 
@@ -2522,7 +2562,7 @@ class Music
     {
         if (!soundEnable) return;
 
-        this.source = playSamples(this.cachedSamples, volume, 1, 0, loop);
+        return this.source = playSamples(this.cachedSamples, volume, 1, 0, loop);
     }
 
     /** Stop the music */
@@ -2863,6 +2903,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
 'use strict';
 
 /** The tile collision layer array, use setTileCollisionData and getTileCollisionData to access
+ *  @type {Array} 
  *  @memberof TileCollision */
 let tileCollision = [];
 
@@ -2898,7 +2939,7 @@ const getTileCollisionData = (pos)=>
 
 /** Check if collision with another object should occur
  *  @param {Vector2}      pos
- *  @param {Vector2}      [size=new Vector2(1,1)]
+ *  @param {Vector2}      [size=Vector2(1,1)]
  *  @param {EngineObject} [object]
  *  @return {Boolean}
  *  @memberof TileCollision */
@@ -2966,11 +3007,11 @@ function tileCollisionRaycast(posStart, posEnd, object)
 class TileLayerData
 {
     /** Create a tile layer data object, one for each tile in a TileLayer
-     *  @param {Number}  [tile]                   - The tile to use, untextured if undefined
-     *  @param {Number}  [direction=0]            - Integer direction of tile, in 90 degree increments
-     *  @param {Boolean} [mirror=0]               - If the tile should be mirrored along the x axis
-     *  @param {Color}   [color=new Color(1,1,1)] - Color of the tile */
-    constructor(tile, direction=0, mirror=0, color=new Color)
+     *  @param {Number}  [tile]          - The tile to use, untextured if undefined
+     *  @param {Number}  [direction=0]   - Integer direction of tile, in 90 degree increments
+     *  @param {Boolean} [mirror=0]      - If the tile should be mirrored along the x axis
+     *  @param {Color}   [color=Color()] - Color of the tile */
+    constructor(tile, direction=0, mirror=0, color=new Color())
     {
         /** @property {Number}  - The tile to use, untextured if undefined */
         this.tile      = tile;
@@ -3001,10 +3042,10 @@ class TileLayerData
 class TileLayer extends EngineObject
 {
 /** Create a tile layer object
-    *  @param {Vector2} [position=new Vector2()]   - World space position
+    *  @param {Vector2} [position=Vector2()]       - World space position
     *  @param {Vector2} [size=tileCollisionSize]   - World space size
     *  @param {Vector2} [tileSize=tileSizeDefault] - Size of tiles in source pixels
-    *  @param {Vector2} [scale=new Vector2(1,1)]   - How much to scale this layer when rendered
+    *  @param {Vector2} [scale=Vector2(1,1)]       - How much to scale this layer when rendered
     *  @param {Number}  [renderOrder=0]            - Objects sorted by renderOrder before being rendered
     */
 constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1), renderOrder=0)
@@ -3156,10 +3197,10 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
 
     /** Draw a tile directly onto the layer canvas
      *  @param {Vector2} pos
-     *  @param {Vector2} [size=new Vector2(1,1)]
+     *  @param {Vector2} [size=Vector2(1,1)]
      *  @param {Number}  [tileIndex=-1]
      *  @param {Vector2} [tileSize=tileSizeDefault]
-     *  @param {Color}   [color=new Color(1,1,1)]
+     *  @param {Color}   [color=Color()]
      *  @param {Number}  [angle=0]
      *  @param {Boolean} [mirror=0] */
     drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, color=new Color, angle, mirror)
@@ -3185,8 +3226,8 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
 
     /** Draw a rectangle directly onto the layer canvas
      *  @param {Vector2} pos
-     *  @param {Vector2} [size=new Vector2(1,1)]
-     *  @param {Color}   [color=new Color(1,1,1)]
+     *  @param {Vector2} [size=Vector2(1,1)]
+     *  @param {Color}   [color=Color()]
      *  @param {Number}  [angle=0] */
     drawRect(pos, size, color, angle) 
     { this.drawTile(pos, size, -1, 0, color, angle); }
@@ -3227,11 +3268,11 @@ class ParticleEmitter extends EngineObject
      *  @param {Number}  [emitRate=100]     - How many particles per second to spawn, does not emit if 0
      *  @param {Number}  [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
      *  @param {Number}  [tileIndex=-1]     - Index into tile sheet, if <0 no texture is applied
-     *  @param {Vector2} [tileSize=tileSizeDefault]     - Tile size for particles
-     *  @param {Color}   [colorStartA=new Color(1,1,1)] - Color at start of life 1, randomized between start colors
-     *  @param {Color}   [colorStartB=new Color(1,1,1)] - Color at start of life 2, randomized between start colors
-     *  @param {Color}   [colorEndA=new Color(1,1,1,0)] - Color at end of life 1, randomized between end colors
-     *  @param {Color}   [colorEndB=new Color(1,1,1,0)] - Color at end of life 2, randomized between end colors
+     *  @param {Vector2} [tileSize=tileSizeDefault] - Tile size for particles
+     *  @param {Color}   [colorStartA=Color()] - Color at start of life 1, randomized between start colors
+     *  @param {Color}   [colorStartB=Color()] - Color at start of life 2, randomized between start colors
+     *  @param {Color}   [colorEndA=Color(1,1,1,0)] - Color at end of life 1, randomized between end colors
+     *  @param {Color}   [colorEndB=Color(1,1,1,0)] - Color at end of life 2, randomized between end colors
      *  @param {Number}  [particleTime=.5]      - How long particles live
      *  @param {Number}  [sizeStart=.1]         - How big are particles at start
      *  @param {Number}  [sizeEnd=1]            - How big are particles at end
@@ -3511,6 +3552,7 @@ class Particle extends EngineObject
 'use strict';
 
 /** List of all medals
+ *  @type {Array}
  *  @memberof Medals */
 const medals = [];
 
@@ -4066,6 +4108,7 @@ let glPostShader, glPostArrayBuffer, glPostTexture, glPostIncludeOverlay;
 
 /** Set up a post processing shader
  *  @param {String} shaderCode
+ *  @param {Boolean} includeOverlay
  *  @memberof WebGL */
 function glInitPostProcess(shaderCode, includeOverlay)
 {
@@ -4113,16 +4156,16 @@ function glRenderPostProcess()
     {
         glFlush(); // clear out the buffer
         mainContext.drawImage(glCanvas, 0, 0); // copy to the main canvas
-
-        if (glPostIncludeOverlay)
-        {
-            // copy overlay canvas so it will be included in post processing
-            mainContext.drawImage(overlayCanvas, 0, 0);
-            overlayCanvas.width |= 0;
-        }
     }
     else // set viewport
         glContext.viewport(0, 0, glCanvas.width = mainCanvas.width, glCanvas.height = mainCanvas.height);
+
+    if (glPostIncludeOverlay)
+    {
+        // copy overlay canvas so it will be included in post processing
+        mainContext.drawImage(overlayCanvas, 0, 0);
+        overlayCanvas.width |= 0;
+    }
 
     // setup shader program to draw one triangle
     glContext.useProgram(glPostShader);
@@ -4207,43 +4250,71 @@ gl_VERTEX_BUFFER_SIZE = gl_MAX_BATCH * gl_VERTICES_PER_QUAD * gl_VERTEX_BYTE_STR
     - Call engineInit() to start it up!
 */
 
+/**
+ * LittleJS Engine Globals
+ * @namespace Engine
+ */
+
 'use strict';
 
-/** Name of engine */
+/** Name of engine
+ *  @type {String}
+ *  @default
+ *  @memberof Engine */
 const engineName = 'LittleJS';
 
-/** Version of engine */
-const engineVersion = '1.5.0';
+/** Version of engine
+ *  @type {String}
+ *  @default
+ *  @memberof Engine */
+const engineVersion = '1.5.1';
 
 /** Frames per second to update objects
- *  @default */
+ *  @type {Number}
+ *  @default
+ *  @memberof Engine */
 const frameRate = 60;
 
 /** How many seconds each frame lasts, engine uses a fixed time step
- *  @default 1/60 */
+ *  @type {Number}
+ *  @default 1/60
+ *  @memberof Engine */
 const timeDelta = 1/frameRate;
 
-/** Array containing all engine objects */
+/** Array containing all engine objects
+ *  @type {Array}
+ *  @memberof Engine */
 let engineObjects = [];
 
-/** Array containing only objects that are set to collide with other objects this frame (for optimization) */
+/** Array containing only objects that are set to collide with other objects this frame (for optimization)
+ *  @type {Array}
+ *  @memberof Engine */
 let engineObjectsCollide = [];
 
-/** Current update frame, used to calculate time */
+/** Current update frame, used to calculate time
+ *  @type {Number}
+ *  @memberof Engine */
 let frame = 0;
 
-/** Current engine time since start in seconds, derived from frame */
+/** Current engine time since start in seconds, derived from frame
+ *  @type {Number}
+ *  @memberof Engine */
 let time = 0;
 
-/** Actual clock time since start in seconds (not affected by pause or frame rate clamping) */
+/** Actual clock time since start in seconds (not affected by pause or frame rate clamping)
+ *  @type {Number}
+ *  @memberof Engine */
 let timeReal = 0;
 
-/** Is the game paused? Causes time and objects to not be updated */
+/** Is the game paused? Causes time and objects to not be updated
+ *  @type {Boolean}
+ *  @default 0
+ *  @memberof Engine */
 let paused = 0;
 
 /** Set if game is paused
  *  @param {Boolean} paused
- */
+ *  @memberof Engine */
 function setPaused(_paused) { paused = _paused; }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4255,7 +4326,7 @@ function setPaused(_paused) { paused = _paused; }
  *  @param {Function} gameRender      - Called before objects are rendered, draw any background effects that appear behind objects
  *  @param {Function} gameRenderPost  - Called after objects are rendered, draw effects or hud that appear above all objects
  *  @param {String} [tileImageSource] - Tile image to use, everything starts when the image is finished loading
- */
+ *  @memberof Engine */
 function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, tileImageSource)
 {
     // init engine when tiles load or fail to load
@@ -4419,7 +4490,8 @@ function enginePreRender()
     glEnable && glPreRender();
 }
 
-/** Update each engine object, remove destroyed objects, and update time */
+/** Update each engine object, remove destroyed objects, and update time
+ *  @memberof Engine */
 function engineObjectsUpdate()
 {
     // get list of solid objects for physics optimzation
@@ -4445,7 +4517,8 @@ function engineObjectsUpdate()
     time = ++frame / frameRate;
 }
 
-/** Destroy and remove all objects */
+/** Destroy and remove all objects
+ *  @memberof Engine */
 function engineObjectsDestroy()
 {
     for (const o of engineObjects)
@@ -4457,7 +4530,8 @@ function engineObjectsDestroy()
  *  @param {Vector2} [pos]                 - Center of test area
  *  @param {Number} [size]                 - Radius of circle if float, rectangle size if Vector2
  *  @param {Function} [callbackFunction]   - Calls this function on every object that passes the test
- *  @param {Array} [objects=engineObjects] - List of objects to check */
+ *  @param {Array} [objects=engineObjects] - List of objects to check
+ *  @memberof Engine */
 function engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
 {
     if (!pos) // all objects
