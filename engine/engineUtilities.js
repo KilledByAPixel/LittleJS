@@ -91,7 +91,7 @@ const nearestPowerOfTwo = (v)=> 2**Math.ceil(Math.log2(v));
  *  @param {Vector2} [sizeB] - Size of box B
  *  @return {Boolean}        - True if overlapping
  *  @memberof Utilities */
-const isOverlapping = (pA, sA, pB, sB)=> abs(pA.x - pB.x)*2 < sA.x + sB.x & abs(pA.y - pB.y)*2 < sA.y + sB.y;
+const isOverlapping = (pA, sA, pB, sB)=> abs(pA.x - pB.x)*2 < sA.x + sB.x && abs(pA.y - pB.y)*2 < sA.y + sB.y;
 
 /** Returns an oscillating wave between 0 and amplitude with frequency of 1 Hz by default
  *  @param {Number} [frequency=1] - Frequency of the wave in Hz

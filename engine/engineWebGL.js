@@ -323,7 +323,9 @@ function glRenderPostProcess()
     {
         // copy overlay canvas so it will be included in post processing
         mainContext.drawImage(overlayCanvas, 0, 0);
-        overlayCanvas.width |= 0;
+
+        // clear overlay canvas
+        overlayCanvas.width = mainCanvas.width;
     }
 
     // setup shader program to draw one triangle

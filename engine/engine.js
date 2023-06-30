@@ -142,8 +142,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             averageFPS = lerp(.05, averageFPS, 1e3/(frameTimeDeltaMS||1));
         const debugSpeedUp   = debug && keyIsDown(107); // +
         const debugSpeedDown = debug && keyIsDown(109); // -
-        if (debug)
-            frameTimeDeltaMS *= debugSpeedUp ? 5 : debugSpeedDown ? .2 : 1; // +/- to speed/slow time
+        if (debug) // +/- to speed/slow time
+            frameTimeDeltaMS *= debugSpeedUp ? 5 : debugSpeedDown ? .2 : 1;
         timeReal += frameTimeDeltaMS / 1e3;
         frameTimeBufferMS += !paused * frameTimeDeltaMS;
         if (!debugSpeedUp)
@@ -152,8 +152,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         if (canvasFixedSize.x)
         {
             // clear canvas and set fixed size
-            overlayCanvas.width  = mainCanvas.width  = canvasFixedSize.x;
-            overlayCanvas.height = mainCanvas.height = canvasFixedSize.y;
+            mainCanvas.width  = canvasFixedSize.x;
+            mainCanvas.height = canvasFixedSize.y;
             
             // fit to window by adding space on top or bottom if necessary
             const aspect = innerWidth / innerHeight;
@@ -164,10 +164,14 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         else
         {
              // clear canvas and set size to same as window
-             overlayCanvas.width  = mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
-             overlayCanvas.height = mainCanvas.height = min(innerHeight, canvasMaxSize.y);
+             mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
+             mainCanvas.height = min(innerHeight, canvasMaxSize.y);
         }
         
+        // clear overlay canvas and set size
+        overlayCanvas.width  = mainCanvas.width;
+        overlayCanvas.height = mainCanvas.height;
+
         // save canvas size
         mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
 
