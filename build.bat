@@ -6,11 +6,13 @@ set NAME=game
 set BUILD_FOLDER=build
 set BUILD_FILENAME=index.js
 
+rem install dev packages
+rem call npm install
+
 rem rebuild engine first
 cd engine
 call engineBuild.bat
 if %ERRORLEVEL% NEQ 0 (
-    pause
     exit /b %ERRORLEVEL%
 )
 cd ..
@@ -41,9 +43,8 @@ if %ERRORLEVEL% NEQ 0 (
 )
 del temp_%BUILD_FILENAME%
 
-rem more minification with uglify or terser (they both do about the same)
+rem more minification with uglify
 call npx uglifyjs -o %BUILD_FILENAME% --compress --mangle -- %BUILD_FILENAME%
-rem call terser -o %BUILD_FILENAME% --compress --mangle -- %BUILD_FILENAME%
 if %ERRORLEVEL% NEQ 0 (
     pause
     exit /b %ERRORLEVEL%
