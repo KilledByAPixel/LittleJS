@@ -67,7 +67,7 @@ Debug builds of LittleJS have a special menu that can be opened by pressing ~, t
 
 ## Simple Code
 
-This engine is made with simplicity in mind using simple and easy to read code. There are only a few files used by the entire engine...
+This engine is made with simplicity in mind using simple and easy to read code. There are only a few files used by the entire engine.
 
 - [engine.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engine.js) - Top level engine init, update, and render
 - [engineSettings.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineSettings.js) - Global engine settings
@@ -76,7 +76,7 @@ This engine is made with simplicity in mind using simple and easy to read code. 
 - [engineInput.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineInput.js) - Input for keyboard, mouse, touch, and gamepad
 - [engineUtilities.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineUtilities.js) - Vector2, Color, and Timer clases and math functions
 
-Optional Components, these components are built to synergize with the rest of the engine but are not necessary...
+Optional Components, these components are built to synergize with the rest of the engine but are not necessary.
 
 - [engineAudio.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineAudio.js) - Spacial sound effects, and zzfx sound generator
 - [engineTileLayer.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineTileLayer.js) - Tile layer rendering and collision
