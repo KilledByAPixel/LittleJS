@@ -43,16 +43,16 @@ LittleJS is a super lightweight JavaScript game engine with a fast hybrid render
 
 To easily include LittleJS in your game, you can use one of the 3 pre-built js files. These are also built automatically by the build scripts.
 
-- [engine.all.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.js) - The full game engine with debug mode available
-- [engine.all.release.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.release.js) - The engine optimized for release builds
-- [engine.all.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.min.js) - The engine in release mode and minified
+- [littlejs.js](https://github.com/KilledByAPixel/LittleJS/blob/main/build/littlejs.js) - The full game engine with debug mode available
+- [littlejs.release.js](https://github.com/KilledByAPixel/LittleJS/blob/main/build/littlejs.release.js) - The engine optimized for release builds
+- [littlejs.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/build/littlejs.min.js) - The engine in release mode and minified
 
 LittleJS can also be imported as a module. There are two module flavors that are automatically built.
 
-- [engine.all.module.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.module.js) - The engine exported as a module with debug mode available
-- [engine.all.module.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.all.module.min.js) - The engine exported as a module in release mode
+- [littlejs.esm.js](https://github.com/KilledByAPixel/LittleJS/blob/main/build/littlejs.esm.js) - The engine exported as a module with debug mode available
+- [littlejs.esm.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/build/littlejs.esm.min.js) - The engine exported as a minified module in release mode
 
-The hello world example includes a batch file [build.bat](https://github.com/KilledByAPixel/LittleJS/blob/main/build.bat) that compresses everything into a tiny zip file using Google Closure, UglifyJS, Roadroller, and ECT. You must run [buildSetup.bat](https://github.com/KilledByAPixel/LittleJS/blob/main/buildSetup.bat) to install the necessary npm dependencies.
+The starter project example includes a batch file [build.bat](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/starter/build.bat) that compresses everything into a tiny zip file using Google Closure, UglifyJS, Roadroller, and ECT. You must first run npm install to setup the necessary npm dependencies.
 
 ## Debugging
 
@@ -69,21 +69,21 @@ Debug builds of LittleJS have a special menu that can be opened by pressing ~, t
 
 This engine is made with simplicity in mind using simple and easy to read code. There are only a few files used by the entire engine...
 
-- [engine.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engine.js) - Top level engine init, update, and render
-- [engineSettings.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engineSettings.js) - Global engine settings
-- [engineObject.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engineObject.js) - Base object class and physics
-- [engineDraw.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engineDraw.js) - Code for canvas drawing and text
-- [engineInput.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engineInput.js) - Input for keyboard, mouse, touch, and gamepad
-- [engineUtilities.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engineUtilities.js) - Vector2, Color, and Timer clases and math functions
+- [engine.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engine.js) - Top level engine init, update, and render
+- [engineSettings.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineSettings.js) - Global engine settings
+- [engineObject.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineObject.js) - Base object class and physics
+- [engineDraw.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineDraw.js) - Code for canvas drawing and text
+- [engineInput.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineInput.js) - Input for keyboard, mouse, touch, and gamepad
+- [engineUtilities.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineUtilities.js) - Vector2, Color, and Timer clases and math functions
 
 Optional Components, these components are built to synergize with the rest of the engine but are not necessary...
 
-- [engineAudio.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engineAudio.js) - Spacial sound effects, and zzfx sound generator
-- [engineTileLayer.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engineTileLayer.js) - Tile layer rendering and collision
-- [engineParticles.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engineParticles.js) - Particle system with fast rendering and collision
-- [engineWebGL.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engineWebGL.js) - Super fast rendering with WebGL and post processing
-- [engineMedals.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engineMedals.js) - Achievement tracker with Newgrounds integration
-- [engineDebug.js](https://github.com/KilledByAPixel/LittleJS/blob/main/engine/engineDebug.js) - Debug rendering system and information overlay
+- [engineAudio.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineAudio.js) - Spacial sound effects, and zzfx sound generator
+- [engineTileLayer.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineTileLayer.js) - Tile layer rendering and collision
+- [engineParticles.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineParticles.js) - Particle system with fast rendering and collision
+- [engineWebGL.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineWebGL.js) - Super fast rendering with WebGL and post processing
+- [engineMedals.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineMedals.js) - Achievement tracker with Newgrounds integration
+- [engineDebug.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineDebug.js) - Debug rendering system and information overlay
 
 ## Games Made With LittleJS
 
