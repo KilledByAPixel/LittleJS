@@ -2,7 +2,7 @@
  * LittleJS Medal System
  * <br> - Tracks and displays medals
  * <br> - Saves medals to local storage
- * <br> - Newgrounds and OS13k integration
+ * <br> - Newgrounds integration
  * @namespace Medals
  */
 

@@ -4,16 +4,12 @@
 
 'use strict';
 
-// import module
-import * as LittleJS from '../../build/littlejs.esm.js';
-const {Vector2, Color, Timer, vec2} = LittleJS;
-
 // sound effects
-const sound_click = new LittleJS.Sound([1,.5]);
+const sound_click = new Sound([1,.5]);
 
 // medals
-const medal_example = new LittleJS.Medal(0, 'Example Medal', 'Welcome to LittleJS!');
-LittleJS.medalsInit('Hello World');
+const medal_example = new Medal(0, 'Example Medal', 'Welcome to LittleJS!');
+medalsInit('Hello World');
 
 // game variables
 let particleEmiter;
@@ -22,48 +18,46 @@ let particleEmiter;
 function gameInit()
 {
     // create tile collision and visible tile layer
-    LittleJS.initTileCollision(vec2(32, 16));
+    initTileCollision(vec2(32, 16));
     const pos = vec2();
-    const tileLayer = new LittleJS.TileLayer(pos, LittleJS.tileCollisionSize);
+    const tileLayer = new TileLayer(pos, tileCollisionSize);
 
     // get level data from the tiles image
     const imageLevelDataRow = 1;
-    const mainContext = LittleJS.mainContext;
-    mainContext.drawImage(LittleJS.tileImage, 0, 0);
-    for (pos.x = LittleJS.tileCollisionSize.x; pos.x--;)
-    for (pos.y = LittleJS.tileCollisionSize.y; pos.y--;)
+    mainContext.drawImage(tileImage, 0, 0);
+    for (pos.x = tileCollisionSize.x; pos.x--;)
+    for (pos.y = tileCollisionSize.y; pos.y--;)
     {
         const imageData = mainContext.getImageData(pos.x, 16*(imageLevelDataRow+1)-pos.y-1, 1, 1).data;
         if (imageData[0])
         {
             const tileIndex = 1;
-            const direction = LittleJS.randInt(4)
-            const mirror = LittleJS.randInt(2) ? true : false;
-            const color = LittleJS.randColor();
-            const data = new LittleJS.TileLayerData(tileIndex, direction, mirror, color);
+            const direction = randInt(4)
+            const mirror = randInt(2);
+            const color = randColor();
+            const data = new TileLayerData(tileIndex, direction, mirror, color);
             tileLayer.setData(pos, data);
-            LittleJS.setTileCollisionData(pos, 1);
+            setTileCollisionData(pos, 1);
         }
     }
     tileLayer.redraw();
 
     // move camera to center of collision
-    LittleJS.setCameraPos(LittleJS.tileCollisionSize.scale(.5));
+    cameraPos = tileCollisionSize.scale(.5);
 
     // enable gravity
-    LittleJS.setGravity(-.01);
+    gravity = -.01;
 
     // create particle emitter
-    const center = LittleJS.tileCollisionSize.scale(.5).add(vec2(0,9));
-    particleEmiter = new LittleJS.ParticleEmitter(
-        center, 0,                              // emitPos, emitAngle
-        1, 0, 500, Math.PI,                     // emitSize, emitTime, emitRate, emiteCone
+    particleEmiter = new ParticleEmitter(
+        vec2(16), 0,                            // emitPos, emitAngle
+        1, 0, 500, PI,                          // emitSize, emitTime, emitRate, emiteCone
         0, vec2(16),                            // tileIndex, tileSize
         new Color(1,1,1),   new Color(0,0,0),   // colorStartA, colorStartB
         new Color(1,1,1,0), new Color(0,0,0,0), // colorEndA, colorEndB
         2, .2, .2, .1, .05,   // time, sizeStart, sizeEnd, speed, angleSpeed
-        .99, 1, 1, Math.PI,   // damping, angleDamping, gravityScale, cone
-        .05, .5, true, true         // fadeRate, randomness, collide, additive
+        .99, 1, 1, PI,        // damping, angleDamping, gravityScale, cone
+        .05, .5, 1, 1         // fadeRate, randomness, collide, additive
     );
     particleEmiter.elasticity = .3; // bounce when it collides
     particleEmiter.trailScale = 2;  // stretch in direction of motion
@@ -72,14 +66,14 @@ function gameInit()
 ///////////////////////////////////////////////////////////////////////////////
 function gameUpdate()
 {
-    if (LittleJS.mouseWasPressed(0))
+    if (mouseWasPressed(0))
     {
         // play sound when mouse is pressed
-        sound_click.play(LittleJS.mousePos);
+        sound_click.play(mousePos);
 
         // change particle color and set to fade out
         particleEmiter.colorStartA = new Color;
-        particleEmiter.colorStartB = LittleJS.randColor();
+        particleEmiter.colorStartB = randColor();
         particleEmiter.colorEndA = particleEmiter.colorStartA.scale(1,0);
         particleEmiter.colorEndB = particleEmiter.colorStartB.scale(1,0);
 
@@ -88,8 +82,8 @@ function gameUpdate()
     }
 
     // move particles to mouse location if on screen
-    if (LittleJS.mousePosScreen.x)
-        particleEmiter.pos = LittleJS.mousePos;
+    if (mousePosScreen.x)
+        particleEmiter.pos = mousePos;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -102,16 +96,16 @@ function gameUpdatePost()
 function gameRender()
 {
     // draw a grey square in the background without using webgl
-    LittleJS.drawRect(LittleJS.cameraPos, LittleJS.tileCollisionSize.add(vec2(5)), new Color(.2,.2,.2), 0, false);
+    drawRect(cameraPos, tileCollisionSize.add(vec2(5)), new Color(.2,.2,.2), 0, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameRenderPost()
 {
     // draw to overlay canvas for hud rendering
-    LittleJS.drawTextScreen('LittleJS with TypeScript', vec2(LittleJS.mainCanvasSize.x/2, 80), 80);
+    drawTextScreen('LittleJS Engine Demo', vec2(mainCanvasSize.x/2, 80), 80);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Startup LittleJS Engine
-LittleJS.engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png');
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png');

@@ -1,4 +1,4 @@
-declare module "engine.all.module" {
+declare module "littlejs.esm" {
     /**
      * LittleJS Module Export
      * <br> - Export engine as a module with extra functions where necessary

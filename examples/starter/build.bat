@@ -1,6 +1,5 @@
 rem Simple build script for LittleJS by Frank Force
 rem Minfies and combines index.html and index.js and zips the result
-rem Run buildSetup.bat to install required dependencies.
 
 set NAME=game
 set BUILD_FOLDER=build
@@ -9,22 +8,24 @@ set BUILD_FILENAME=index.js
 rem install dev packages
 rem call npm install
 
-rem rebuild engine first
-cd engine
-call engineBuild.bat
-if %ERRORLEVEL% NEQ 0 (
-    exit /b %ERRORLEVEL%
-)
-cd ..
-
 rem remove old files
 del %NAME%.zip
 rmdir /s /q %BUILD_FOLDER%
 
 rem copy engine release build
 mkdir %BUILD_FOLDER%
-cd %BUILD_FOLDER%
-type ..\engine\engine.all.release.js >> %BUILD_FILENAME%
+pushd %BUILD_FOLDER%
+
+rem rebuild engine first
+pushd ..\..\..\src
+call engineBuild.bat
+if %ERRORLEVEL% NEQ 0 (
+    pause
+    exit /b %ERRORLEVEL%
+)
+popd
+
+type ..\..\..\build\littlejs.release.js >> %BUILD_FILENAME%
 echo. >> %BUILD_FILENAME%
 
 rem add your game's files to include here
@@ -67,12 +68,10 @@ rem delete intermediate files
 del %BUILD_FILENAME%
 
 rem zip the result, ect is recommended
-call ..\node_modules\ect-bin\vendor\win32\ect.exe -9 -strip -zip ..\%NAME%.zip index.html tiles.png
+call ..\..\..\node_modules\ect-bin\vendor\win32\ect.exe -9 -strip -zip ..\%NAME%.zip index.html tiles.png
 if %ERRORLEVEL% NEQ 0 (
     pause
     exit /b %ERRORLEVEL%
 )
 
-cd ..
-
-rem pause to see result
+popd

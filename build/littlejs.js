@@ -2123,15 +2123,15 @@ function inputUpdatePost()
 onkeydown = (e)=>
 {
     if (debug && e.target != document.body) return;
-    e.repeat || (inputData[isUsingGamepad = 0][remapKeyCode(e.keyCode)] = 3);
+    e.repeat || (inputData[isUsingGamepad = 0][remapKey(e.which)] = 3);
     preventDefaultInput && e.preventDefault();
 }
 onkeyup = (e)=>
 {
     if (debug && e.target != document.body) return;
-    inputData[0][remapKeyCode(e.keyCode)] = 4;
+    inputData[0][remapKey(e.which)] = 4;
 }
-const remapKeyCode = (c)=> inputWASDEmulateDirection ? c==87?38 : c==83?40 : c==65?37 : c==68?39 : c : c;
+const remapKey = (c)=> inputWASDEmulateDirection ? c==87?38 : c==83?40 : c==65?37 : c==68?39 : c : c;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Mouse event handlers
@@ -3545,7 +3545,7 @@ class Particle extends EngineObject
  * LittleJS Medal System
  * <br> - Tracks and displays medals
  * <br> - Saves medals to local storage
- * <br> - Newgrounds and OS13k integration
+ * <br> - Newgrounds integration
  * @namespace Medals
  */
 

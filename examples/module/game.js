@@ -5,7 +5,7 @@
 'use strict';
 
 // import module
-import * as LittleJS from '../../engine/engine.all.module.js';
+import * as LittleJS from '../../build/littlejs.esm.js';
 const {Vector2, Color, Timer, vec2} = LittleJS;
 
 // sound effects

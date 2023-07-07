@@ -23,7 +23,7 @@
   },
   "homepage": "https://github.com/KilledByAPixel/LittleJS",
   "scripts": {
-    "build": "build.bat"
+    "build": "cd src && engineBuild.bat"
   },
   "devDependencies": {
     "ect-bin": "~1.4.1",
