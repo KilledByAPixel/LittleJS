@@ -5,19 +5,19 @@
 LittleJS is a super lightweight JavaScript game engine with a fast hybrid rendering system. It provides a comprehensive set of tools including rendering, physics, particles, sound effects, music, input handling, and debug tools. The code is very clean and well documented with a variety of examples to get you started. Choo-Choo! 🚂
 <div align="center">
   
-## [Demo](https://killedbyapixel.github.io/LittleJS) | [Docs](https://killedbyapixel.github.io/LittleJS/docs) | [Trailer](https://youtu.be/chuBzGjv7Ms) | [Discord](https://discord.gg/zb7hcGkyZe)
+## [Demo](https://killedbyapixel.github.io/LittleJS/examples/starter/) | [Docs](https://killedbyapixel.github.io/LittleJS/docs) | [Trailer](https://youtu.be/chuBzGjv7Ms) | [Discord](https://discord.gg/zb7hcGkyZe)
 </div>
 
 ![LittleJS Screenshot](examples/screenshot.jpg)
 
 ## Examples
 
-### [Starter Project](https://killedbyapixel.github.io/LittleJS/](https://killedbyapixel.github.io/LittleJS/examples/starter/) - Clean example with only a few things to get you started
-### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Match 3 puzzle game with HD rendering and high score tracking
-### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/puzzle](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter with procedural generation and destruction
-### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/puzzle](https://killedbyapixel.github.io/LittleJS/examples/breakout/)- Breakout game with post processing effect
-### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/puzzle](https://killedbyapixel.github.io/LittleJS/examples/stress/) - Max sprite/object test and music system demo
-### [Particle System Designer](https://killedbyapixel.github.io/LittleJS/examples/particles](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Particle system editor and visualizer
+### [Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter/) - Clean demo with only a few things to get you started
+### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Match 3 puzzle game with HD rendering and high score tracking
+### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter with procedural generation and destruction
+### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/)- Breakout game with post processing effect
+### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress/) - Max sprite/object test and music system demo
+### [Particle System Designer](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Particle system editor and visualizer
 
 ## Features
 
