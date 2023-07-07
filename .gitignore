@@ -1,3 +1,10 @@
-node_modules/
-.npm
-.env
+
+# node files
+node_modules
+
+# example builds
+examples/starter/build
+examples/starter/*.zip
+examples/electron/build
+examples/electron/LittleJSGame-win32-x64
+examples/electron/package-lock.json
