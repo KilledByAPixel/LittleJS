@@ -52,7 +52,7 @@ LittleJS can also be imported as a module. There are two module flavors that are
 - [littlejs.esm.js](https://github.com/KilledByAPixel/LittleJS/blob/main/build/littlejs.esm.js) - The engine exported as a module with debug mode available
 - [littlejs.esm.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/build/littlejs.esm.min.js) - The engine exported as a minified module in release mode
 
-The starter project example includes a batch file [build.bat](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/starter/build.bat) that compresses everything into a tiny zip file using Google Closure, UglifyJS, Roadroller, and ECT. You must first run npm install to setup the necessary npm dependencies.
+There is an [enginebuild.bat](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineBuild.bat) file included that will rebuild the engine files. The starter project example also includes a batch file [build.bat](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/starter/build.bat) that compresses everything into a tiny zip file using Google Closure, UglifyJS, Roadroller, and ECT. You must first run npm install to setup the necessary npm dependencies.
 
 ## Debugging
 
