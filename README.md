@@ -1,4 +1,4 @@
-# ![LittleJS Logo](favicon.png) LittleJS - The Tiny JavaScript Game Engine That Can
+# ![LittleJS Logo](examples/favicon.png) LittleJS - The Tiny JavaScript Game Engine That Can
 
 ## All aboard!
 
@@ -12,12 +12,12 @@ LittleJS is a super lightweight JavaScript game engine with a fast hybrid render
 
 ## Examples
 
-### [Hello World](https://killedbyapixel.github.io/LittleJS/) - Clean project with only a few things to get you started
-### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle) - Match 3 puzzle game with HD rendering and high score tracking
-### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer) - Platformer/shooter with procedural generation and destruction
-### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout) - Breakout game with post processing effect
-### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress) - Max sprite/object test and music system demo
-### [Particle System Designer](https://killedbyapixel.github.io/LittleJS/examples/particles) - Particle system editor and visualizer
+### [Starter Project](https://killedbyapixel.github.io/LittleJS/](https://killedbyapixel.github.io/LittleJS/examples/starter/) - Clean example with only a few things to get you started
+### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Match 3 puzzle game with HD rendering and high score tracking
+### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/puzzle](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter with procedural generation and destruction
+### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/puzzle](https://killedbyapixel.github.io/LittleJS/examples/breakout/)- Breakout game with post processing effect
+### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/puzzle](https://killedbyapixel.github.io/LittleJS/examples/stress/) - Max sprite/object test and music system demo
+### [Particle System Designer](https://killedbyapixel.github.io/LittleJS/examples/particles](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Particle system editor and visualizer
 
 ## Features
 
@@ -100,4 +100,4 @@ Here are a few examples of amazing games made useing LittleJS.
 - [Boxing up Bamboo](https://patrickgh3.itch.io/boxing-up-bamboo) - A challenging puzzle game by [Patrick Traynor](https://cwpat.me/about)
 - Send me your games!
 
-![LittleJS Logo](favicon.png)
+![LittleJS Logo](examples/favicon.png)
