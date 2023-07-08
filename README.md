@@ -15,7 +15,7 @@ LittleJS is a super lightweight JavaScript game engine with a fast hybrid render
 ### [Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter/) - Clean demo with only a few things to get you started
 ### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Match 3 puzzle game with HD rendering and high score tracking
 ### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter with procedural generation and destruction
-### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/)- Breakout game with post processing effect
+### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/) - Breakout game with post processing effect
 ### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress/) - Max sprite/object test and music system demo
 ### [Particle System Designer](https://killedbyapixel.github.io/LittleJS/examples/particles/) - Particle system editor and visualizer
 
@@ -73,12 +73,12 @@ This engine is made with simplicity in mind using simple and easy to read code. 
 - [engineSettings.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineSettings.js) - Global engine settings
 - [engineObject.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineObject.js) - Base object class and physics
 - [engineDraw.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineDraw.js) - Code for canvas drawing and text
+- [engineAudio.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineAudio.js) - Spacial sound effects, and zzfx sound generator
 - [engineInput.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineInput.js) - Input for keyboard, mouse, touch, and gamepad
 - [engineUtilities.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineUtilities.js) - Vector2, Color, and Timer clases and math functions
 
 Optional Components, these components are built to synergize with the rest of the engine but are not necessary.
 
-- [engineAudio.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineAudio.js) - Spacial sound effects, and zzfx sound generator
 - [engineTileLayer.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineTileLayer.js) - Tile layer rendering and collision
 - [engineParticles.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineParticles.js) - Particle system with fast rendering and collision
 - [engineWebGL.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineWebGL.js) - Super fast rendering with WebGL and post processing
@@ -87,7 +87,7 @@ Optional Components, these components are built to synergize with the rest of th
 
 ## Games Made With LittleJS
 
-Here are a few examples of amazing games made useing LittleJS.
+Here are a few of the amazing games people are making with LittleJS.
 
 - [Space Huggers](https://www.newgrounds.com/portal/view/819609) - Run and gun platformer with procedural levels
 - [Undergrowth](https://undergrowth.squidband.uk/) - An interactive music videogame for the band Squid
