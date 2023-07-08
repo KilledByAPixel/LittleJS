@@ -226,6 +226,23 @@ function setBlendMode(additive, useWebGL=glEnable)
         mainContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';
 }
 
+/** Draw text on overlay canvas in world space
+ *  Automatically splits new lines into rows
+ *  @param {String}  text
+ *  @param {Vector2} pos
+ *  @param {Number}  [size=1]
+ *  @param {Color}   [color=Color()]
+ *  @param {Number}  [lineWidth=0]
+ *  @param {Color}   [lineColor=Color(0,0,0)]
+ *  @param {String}  [textAlign='center']
+ *  @param {String}  [font=fontDefault]
+ *  @param {CanvasRenderingContext2D} [context=overlayContext]
+ *  @memberof Draw */
+function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, context=overlayContext)
+{
+    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, context);
+}
+
 /** Draw text on overlay canvas in screen space
  *  Automatically splits new lines into rows
  *  @param {String}  text
@@ -235,6 +252,8 @@ function setBlendMode(additive, useWebGL=glEnable)
  *  @param {Number}  [lineWidth=0]
  *  @param {Color}   [lineColor=Color(0,0,0)]
  *  @param {String}  [textAlign='center']
+ *  @param {String}  [font=fontDefault]
+ *  @param {CanvasRenderingContext2D} [context=overlayContext]
  *  @memberof Draw */
 function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, context=overlayContext)
 {
@@ -253,21 +272,6 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
         context.fillText(line, pos.x, pos.y);
         pos.y += size;
     });
-}
-
-/** Draw text on overlay canvas in world space
- *  Automatically splits new lines into rows
- *  @param {String}  text
- *  @param {Vector2} pos
- *  @param {Number}  [size=1]
- *  @param {Color}   [color=Color()]
- *  @param {Number}  [lineWidth=0]
- *  @param {Color}   [lineColor=Color(0,0,0)]
- *  @param {String}  [textAlign='center']
- *  @memberof Draw */
-function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font)
-{
-    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, mainContext);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

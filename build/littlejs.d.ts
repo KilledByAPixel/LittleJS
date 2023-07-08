@@ -1039,6 +1039,8 @@ declare module "littlejs.esm" {
      *  @param {Number}  [lineWidth=0]
      *  @param {Color}   [lineColor=Color(0,0,0)]
      *  @param {String}  [textAlign='center']
+     *  @param {String}  [font=fontDefault]
+     *  @param {CanvasRenderingContext2D} [context=overlayContext]
      *  @memberof Draw */
     export function drawTextScreen(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: string, font?: string, context?: CanvasRenderingContext2D): void;
     /** Draw text on overlay canvas in world space
@@ -1050,8 +1052,10 @@ declare module "littlejs.esm" {
      *  @param {Number}  [lineWidth=0]
      *  @param {Color}   [lineColor=Color(0,0,0)]
      *  @param {String}  [textAlign='center']
+     *  @param {String}  [font=fontDefault]
+     *  @param {CanvasRenderingContext2D} [context=overlayContext]
      *  @memberof Draw */
-    export function drawText(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: string, font: any): void;
+    export function drawText(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: string, font?: string, context?: CanvasRenderingContext2D): void;
     export let engineFontImage: any;
     /**
      * Font Image Object - Draw text on a 2D canvas by using characters in an image
