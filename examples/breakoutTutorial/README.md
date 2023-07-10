@@ -8,6 +8,8 @@ You can get the LittleJS code using GitHub, or call npm install littlejsengine
 
 In this tutorial we will make a breakout style game with a player controllable paddle, a ball that bounces, and bricks that break when hit. This is a great introduction to LittleJS and takes only around 30 minutes to complete.
 
+![LittleJS Screenshot](images/9.png)
+
 Keep reading to learn how to make a breakout game with LittleJS…
 
 ## Create the Bricks
@@ -25,6 +27,8 @@ for(let y=0; y<=20; y++)
 ```
 
 That will make a square of 20×20 engine objects, we can adjust it as we go. It also assigns the color property of each brick to a random color.
+
+![LittleJS Screenshot](images/1.png)
 
 It is completely off center and may not look like much yet, but it’s a start!
 
@@ -56,6 +60,8 @@ We’ll also start with a blank slate by commenting out the default “Hello Wor
 ```javascript
 // drawTextScreen('Hello World!', mainCanvasSize.scale(.5), 80);
 ```
+
+![LittleJS Screenshot](images/2.png)
 
 It’s getting closer! The camera is now centered and blocks are rectangular.
 
@@ -95,6 +101,8 @@ for(let y=12; y<=levelSize.y-2; y+=1)
 }
 ```
 
+![LittleJS Screenshot](images/3.png)
+
 Now that looks almost like a breakout game!
 
 ## Create the Player Paddle
@@ -127,6 +135,8 @@ constructor()
     super(vec2(0,1), vec2(6,.5)); // set object position and size
 }
 ```
+
+![LittleJS Screenshot](images/4.png)
 
 Now there is a player controllable paddle that moves along the bottom of the screen.
 
@@ -180,6 +190,8 @@ Getting closer, the paddle is not pushed away but the ball doesn’t bounce eith
 this.elasticity = 1; // make object bounce
 ```
 
+![LittleJS Screenshot](images/5.png)
+
 It works! The ball now bounces off the paddle, still not the walls or blocks yet though.
 
 Before we continue, let’s make the ball a bit smaller by changing the super call in it’s constructor.
@@ -214,6 +226,8 @@ new Wall(vec2(levelSize.x+.5,levelSize.y/2), vec2(1,100)) // left
 new Wall(vec2(levelSize.x/2,levelSize.y+.5), vec2(100,1)) // right
 ```
 
+![LittleJS Screenshot](images/6.png)
+
 Now we have white walls around the outside that block the ball. These walls should be invisible so we will set their color to be transparent by adding another line to the Wall constructor.
 
 ```javascript
@@ -223,6 +237,8 @@ this.color = new Color(0,0,0,0); // make object invisible
 ## Debug Display
 
 This is a good time to try opening up the debug info by pressing ~. This feature will allow for a selection of debug overlays while also showing all game objects with more info displayed for the object closest to the mouse. It can be really useful when trying to diagnose bugs and understand what is going on.
+
+![LittleJS Screenshot](images/7.png)
 
 As you can see, the wall objects are still present even though they are now invisible.
 
@@ -291,9 +307,12 @@ But wait! This will cause the ball to careen through the bricks without bouncing
 return 1; // allow object to collide
 ```
 
+![LittleJS Screenshot](images/8.png)
+
 Success, we have breakout! All the core components are here though there are a few more changes we can make that will greatly increase the playability.
 
 ## Track the Player’s Score
+
 We can easily add a score tracker to the game by making a global score variable called score.
 
 ```javascript
@@ -311,6 +330,8 @@ And change that drawTextScreen code we had commented out in gameRenderPost to di
 ```javascript
 drawTextScreen("Score " + score, vec2(mainCanvasSize.x/2, 70), 50); // show score
 ```
+
+![LittleJS Screenshot](images/9.png)
 
 ## Add Sound Effects
 
@@ -407,6 +428,8 @@ new ParticleEmitter(
 );
 ```
 
+![LittleJS Screenshot](images/10.png)
+
 ## Improve Gameplay
 
 Last but certainly not least, let’s make a few small improvements to the gameplay. It would help to give the player some more control of where the ball goes when it hits the paddle. We can do this by adding a some code to the ball’s collideWithObject function.
@@ -479,8 +502,12 @@ sound_bounce.play(this.pos, 1, speed); // play bounce sound with pitch scaled by
 
 Now you know the basics of how to use the LittleJS engine! Feel free to continue building on this tutorial to make a more interesting breakout game. What kind of ideas would you like to include?
 
-You can also check out the breakout example game which extends this tutorial to show textured objects, post processing, and image fonts.
+![LittleJS Screenshot](images/11.png)
 
 There are several other example games you can use as a starting point for your own creations, or use a new blank project like we did for this example. What will you build with LittleJS?
+
+You can also check out the breakout example game which extends this tutorial to show textured objects, post processing, and image fonts.
+
+There are several other example games you can use as a starting point for your own creations, or use a new blank project like we did for this example. What will you build with LittleJS? 🚂
 
 Follow LittleJS on GitHub and join the LittleJS discord for latest news and updates. 🚂
