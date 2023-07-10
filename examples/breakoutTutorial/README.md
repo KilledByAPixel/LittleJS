@@ -243,6 +243,8 @@ This is a good time to try opening up the debug info by pressing ~. This feature
 
 As you can see, the wall objects are still present even though they are now invisible.
 
+You can use this debug display along with your browsers built in debuging panel which can be opened by pressing F12 in most browsers.
+
 ## Respawn the Ball
 
 We should respawn the ball when it goes below the screen so players can keep playing.
