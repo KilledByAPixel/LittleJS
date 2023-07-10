@@ -192,7 +192,7 @@ function makeTileLayers()
 
 function buildLevel()
 {
-    levelSize = vec2(256);
+    levelSize = vec2(128);
     levelColor = randColor(new Color(.2,.2,.2), new Color(.8,.8,.8));
     levelGroundColor = levelColor.mutate().add(new Color(.4,.4,.4)).clamp();
 
