@@ -1336,6 +1336,7 @@ class EngineObject
         this.velocity.y += gravity * this.gravityScale;
         this.pos.x += this.velocity.x *= this.damping;
         this.pos.y += this.velocity.y *= this.damping;
+        this.angle += this.angleVelocity *= this.angleDamping;
 
         // physics sanity checks
         ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
@@ -4272,7 +4273,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.6.0';
+const engineVersion = '1.6.1';
 
 /** Frames per second to update objects
  *  @type {Number}
