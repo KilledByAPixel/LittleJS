@@ -304,7 +304,9 @@ collideWithObject(o)
 }
 ```
 
-But wait! This will cause the ball to careen through the bricks without bouncing. Maybe fun for a special powerup, but not our goal here. This function should return a Boolean value to indicate if the collision needs to be resolved, if it returns false then the ball will not bounce. So the answer is to just add another line of code to the collideWithObject function that returns a truthy value indicating that the collision should occur.
+But wait! This will cause the ball to careen through the bricks without bouncing. Maybe fun for a special powerup, but not our goal here. This function should return a Boolean value to indicate if the collision needs to be resolved, if it returns false then the ball will not bounce.
+
+So the answer is to just add another line of code to the collideWithObject function that returns a truthy value indicating that the collision should occur.
 
 ```javascript
 return 1; // allow object to collide
