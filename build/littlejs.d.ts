@@ -657,8 +657,8 @@ declare module "littlejs.esm" {
      * let a = new Color;              // white
      * let b = new Color(1, 0, 0);     // red
      * let c = new Color(0, 0, 0, 0);  // transparent black
-     * let d = colorRGBA(0, 0, 1);     // blue using rgb color
-     * let e = colorHSLA(.3, 1, .5);   // green using hsl color
+     * let d = RGB(0, 0, 1);           // blue using rgb color
+     * let e = HSL(.3, 1, .5);         // green using hsl color
      */
     export class Color {
         /** Create a color with the components passed in, white by default
@@ -798,7 +798,7 @@ declare module "littlejs.esm" {
      * @return {Color}
      * @memberof Utilities
      */
-    export function colorRGBA(r?: number, g?: number, b?: number, a?: number): Color;
+    export function rgb(r?: number, g?: number, b?: number, a?: number): Color;
     /**
      * Create a color object with HSLA values
      * @param {Number} [h=0]
@@ -808,7 +808,7 @@ declare module "littlejs.esm" {
      * @return {Color}
      * @memberof Utilities
      */
-    export function colorHSLA(h?: number, s?: number, l?: number, a?: number): Color;
+    export function hsl(h?: number, s?: number, l?: number, a?: number): Color;
     /**
      * LittleJS Object Base Object Class
      * <br> - Base object class used by the engine

@@ -741,7 +741,7 @@ class Vector2
  * @return {Color}
  * @memberof Utilities
  */
-const colorRGBA = (r, g, b, a)=> new Color(r, g, b, a);
+const rgb = (r, g, b, a)=> new Color(r, g, b, a);
 
 /** 
  * Create a color object with HSLA values
@@ -752,7 +752,7 @@ const colorRGBA = (r, g, b, a)=> new Color(r, g, b, a);
  * @return {Color}
  * @memberof Utilities
  */
-const colorHSLA = (h, s, l, a)=> new Color().setHSLA(h, s, l, a);
+const hsl = (h, s, l, a)=> new Color().setHSLA(h, s, l, a);
 
 /** 
  * Color object (red, green, blue, alpha) with some helpful functions
@@ -760,8 +760,8 @@ const colorHSLA = (h, s, l, a)=> new Color().setHSLA(h, s, l, a);
  * let a = new Color;              // white
  * let b = new Color(1, 0, 0);     // red
  * let c = new Color(0, 0, 0, 0);  // transparent black
- * let d = colorRGBA(0, 0, 1);     // blue using rgb color
- * let e = colorHSLA(.3, 1, .5);   // green using hsl color
+ * let d = RGB(0, 0, 1);           // blue using rgb color
+ * let e = HSL(.3, 1, .5);         // green using hsl color
  */
 class Color
 {
@@ -1392,6 +1392,7 @@ class EngineObject
                 const smallStepUp = (oldPos.y - o.pos.y)*2 > sizeBoth.y + gravity; // prefer to push up if small delta
                 const isBlockedX = abs(oldPos.y - o.pos.y)*2 < sizeBoth.y;
                 const isBlockedY = abs(oldPos.x - o.pos.x)*2 < sizeBoth.x;
+                const elasticity = max(this.elasticity, o.elasticity);
                 
                 if (smallStepUp | isBlockedY | !isBlockedX) // resolve y collision
                 {
@@ -1404,7 +1405,7 @@ class EngineObject
                             this.groundObject = o;
 
                         // bounce if other object is fixed or grounded
-                        this.velocity.y *= -this.elasticity;
+                        this.velocity.y *= -elasticity;
                     }
                     else if (o.mass)
                     {
@@ -1418,7 +1419,6 @@ class EngineObject
                             + this.velocity.y * 2 * this.mass / (this.mass + o.mass);
 
                         // lerp betwen elastic or inelastic based on elasticity
-                        const elasticity = max(this.elasticity, o.elasticity);
                         this.velocity.y = lerp(elasticity, inelastic, elastic0);
                         o.velocity.y = lerp(elasticity, inelastic, elastic1);
                     }
@@ -1439,12 +1439,11 @@ class EngineObject
                             + this.velocity.x * 2 * this.mass / (this.mass + o.mass);
 
                         // lerp betwen elastic or inelastic based on elasticity
-                        const elasticity = max(this.elasticity, o.elasticity);
                         this.velocity.x = lerp(elasticity, inelastic, elastic0);
                         o.velocity.x = lerp(elasticity, inelastic, elastic1);
                     }
                     else // bounce if other object is fixed
-                        this.velocity.x *= -this.elasticity;
+                        this.velocity.x *= -elasticity;
                 }
                 debugOverlay && debugPhysics && debugAABB(this.pos, this.size, o.pos, o.size, '#f0f');
             }
