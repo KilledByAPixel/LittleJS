@@ -348,7 +348,7 @@ class Vector2
  * @return {Color}
  * @memberof Utilities
  */
-const colorRGBA = (r, g, b, a)=> new Color(r, g, b, a);
+const rgb = (r, g, b, a)=> new Color(r, g, b, a);
 
 /** 
  * Create a color object with HSLA values
@@ -359,7 +359,7 @@ const colorRGBA = (r, g, b, a)=> new Color(r, g, b, a);
  * @return {Color}
  * @memberof Utilities
  */
-const colorHSLA = (h, s, l, a)=> new Color().setHSLA(h, s, l, a);
+const hsl = (h, s, l, a)=> new Color().setHSLA(h, s, l, a);
 
 /** 
  * Color object (red, green, blue, alpha) with some helpful functions
@@ -367,8 +367,8 @@ const colorHSLA = (h, s, l, a)=> new Color().setHSLA(h, s, l, a);
  * let a = new Color;              // white
  * let b = new Color(1, 0, 0);     // red
  * let c = new Color(0, 0, 0, 0);  // transparent black
- * let d = colorRGBA(0, 0, 1);     // blue using rgb color
- * let e = colorHSLA(.3, 1, .5);   // green using hsl color
+ * let d = RGB(0, 0, 1);           // blue using rgb color
+ * let e = HSL(.3, 1, .5);         // green using hsl color
  */
 class Color
 {

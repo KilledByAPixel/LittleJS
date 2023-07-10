@@ -322,8 +322,8 @@ export {
 	Color,
 	Timer,
 	vec2,
-	colorRGBA,
-	colorHSLA,
+	rgb,
+	hsl,
 
 	// Base
 	EngineObject,
