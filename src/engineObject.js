@@ -168,6 +168,7 @@ class EngineObject
                 const smallStepUp = (oldPos.y - o.pos.y)*2 > sizeBoth.y + gravity; // prefer to push up if small delta
                 const isBlockedX = abs(oldPos.y - o.pos.y)*2 < sizeBoth.y;
                 const isBlockedY = abs(oldPos.x - o.pos.x)*2 < sizeBoth.x;
+                const elasticity = max(this.elasticity, o.elasticity);
                 
                 if (smallStepUp | isBlockedY | !isBlockedX) // resolve y collision
                 {
@@ -180,7 +181,7 @@ class EngineObject
                             this.groundObject = o;
 
                         // bounce if other object is fixed or grounded
-                        this.velocity.y *= -this.elasticity;
+                        this.velocity.y *= -elasticity;
                     }
                     else if (o.mass)
                     {
@@ -194,7 +195,6 @@ class EngineObject
                             + this.velocity.y * 2 * this.mass / (this.mass + o.mass);
 
                         // lerp betwen elastic or inelastic based on elasticity
-                        const elasticity = max(this.elasticity, o.elasticity);
                         this.velocity.y = lerp(elasticity, inelastic, elastic0);
                         o.velocity.y = lerp(elasticity, inelastic, elastic1);
                     }
@@ -215,12 +215,11 @@ class EngineObject
                             + this.velocity.x * 2 * this.mass / (this.mass + o.mass);
 
                         // lerp betwen elastic or inelastic based on elasticity
-                        const elasticity = max(this.elasticity, o.elasticity);
                         this.velocity.x = lerp(elasticity, inelastic, elastic0);
                         o.velocity.x = lerp(elasticity, inelastic, elastic1);
                     }
                     else // bounce if other object is fixed
-                        this.velocity.x *= -this.elasticity;
+                        this.velocity.x *= -elasticity;
                 }
                 debugOverlay && debugPhysics && debugAABB(this.pos, this.size, o.pos, o.size, '#f0f');
             }
