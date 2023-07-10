@@ -54,6 +54,10 @@ LittleJS can also be imported as a module. There are two module flavors that are
 
 There is an [enginebuild.bat](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineBuild.bat) file included that will rebuild the engine files. The starter project example also includes a batch file [build.bat](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/starter/build.bat) that compresses everything into a tiny zip file using Google Closure, UglifyJS, Roadroller, and ECT. You must first run npm install to setup the necessary npm dependencies.
 
+## Tutorial
+
+- [Breakout Tutorial](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/breakoutTutorial) - Shows how to make a simple game from scatch with LittleJS.
+
 ## Debugging
 
 Debug builds of LittleJS have a special menu that can be opened by pressing ~, the tilde key.
