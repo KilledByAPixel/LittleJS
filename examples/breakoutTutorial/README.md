@@ -2,9 +2,10 @@
 
 For this tutorial we will start with the empty project in the LittleJS examples folder. This is a blank template to start a new project.
 
-The empty project has only 3 files: one for html, one for js, and one image. The index.html and image files will not need to be changed for this example. The game.js file contains a stubbed out project with all the JavaScript code and is the only file we will be working with today.
+The empty project has only 3 files: one for html, one for js, and one image. The index.html and image files will not need to be changed for this example. The 
+[game.js](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/empty/game.js) file contains a stubbed out project with all the JavaScript code and is the only file we will be working with today.
 
-You can get the LittleJS code using GitHub, or call npm install littlejsengine
+You can get the [LittleJS code using GitHub](https://github.com/KilledByAPixel/LittleJS) or call ```npm install littlejsengine```
 
 In this tutorial we will make a breakout style game with a player controllable paddle, a ball that bounces, and bricks that break when hit. This is a great introduction to LittleJS and takes only around 30 minutes to complete.
 
@@ -200,7 +201,7 @@ Before we continue, let’s make the ball a bit smaller by changing the super ca
 super(pos, vec2(.5)); // set object position and size
 ```
 
-## Make Ball Bounce Off Walls
+## Make the Ball Bounce Off Walls
 
 Next, let’s make the ball bounce when it hits the top or sides of the screen. To do this, we will make a Wall object class that works similar to the paddle but without an update function.
 
@@ -337,7 +338,7 @@ drawTextScreen("Score " + score, vec2(mainCanvasSize.x/2, 70), 50); // show scor
 
 So far the game is completely silent. Let’s add sounds using ZzFX. This is a tiny sound effect generator that works in conjunction with LittleJS and can be used on it’s own too.
 
-We will start with the ball bounce sound. You can use the official ZzFX sound designer to create your own sound. I recommend using the Blip preset for this one.
+We will start with the ball bounce sound. [You can use the official ZzFX sound designer to create your own sound.](https://killedbyapixel.github.io/ZzFX/) I recommend using the Blip preset for this one.
 
 To make a sound effect with this system we will create a global object for each sound.
 
@@ -430,7 +431,7 @@ new ParticleEmitter(
 
 ![LittleJS Screenshot](images/10.png)
 
-## Improve Gameplay
+## Improve the Gameplay
 
 Last but certainly not least, let’s make a few small improvements to the gameplay. It would help to give the player some more control of where the ball goes when it hits the paddle. We can do this by adding a some code to the ball’s collideWithObject function.
 
@@ -484,7 +485,7 @@ const speed = min(1.04*this.velocity.length(), .5);
 this.velocity = this.velocity.normalize(speed);
 ```
 
-## Improve Sound
+## Improve the Sound
 
 Lets make the sound a bit more interesting by using positional audio. This lets the volume and panning be adjusted based on the sound’s on screen location. To enable this, just pass a position to the sound’s play function.
 
@@ -500,14 +501,14 @@ sound_bounce.play(this.pos, 1, speed); // play bounce sound with pitch scaled by
 
 ## Congratulations on Completing the Breakout Tutorial
 
-Now you know the basics of how to use the LittleJS engine! Feel free to continue building on this tutorial to make a more interesting breakout game. What kind of ideas would you like to include?
+Now you know the basics of how to use the LittleJS engine! [The final result with all the code from this tutorial is playable here.](https://killedbyapixel.github.io/LittleJS/examples/breakoutTutorial/)
+
+If you need a little help completing the tutoiral, [join us on the LittleJS discord](https://discord.gg/zb7hcGkyZe). 
+
+Feel free to continue building on this tutorial to make a more interesting breakout game. What kind of ideas would you like to include?
+
+You can also check out [the breakout example game](https://killedbyapixel.github.io/LittleJS/examples/breakout/) which extends this tutorial to show textured objects, post processing, and image fonts.
 
 ![LittleJS Screenshot](images/11.png)
 
-There are several other example games you can use as a starting point for your own creations, or use a new blank project like we did for this example. What will you build with LittleJS?
-
-You can also check out the breakout example game which extends this tutorial to show textured objects, post processing, and image fonts.
-
 There are several other example games you can use as a starting point for your own creations, or use a new blank project like we did for this example. What will you build with LittleJS? 🚂
-
-Follow LittleJS on GitHub and join the LittleJS discord for latest news and updates. 🚂
