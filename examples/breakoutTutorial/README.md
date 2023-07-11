@@ -13,6 +13,12 @@ In this tutorial we will make a breakout style game with a player controllable p
 
 ![LittleJS Screenshot](images/9.png)
 
+## Open the Project
+
+There is an empty template project provided in the examples folder to be used as a starting point. Go ahead and open the game.js file in whatever editor you prefer. I recommend [Visual Studio Code](https://code.visualstudio.com/). 
+
+Open the index.html file in a web browser to run the game, it will display hello world by default. I recommend using the live server plugin for VS Code for faster iteration.
+
 ## Create the Bricks
 
 The first step is to make a 2D grid of brick objects in gameInit. As a placeholder we will create an EngineObject for each cell in the grid and set it to have a random color.
