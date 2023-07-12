@@ -58,11 +58,12 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b %ERRORLEVEL%
 )
 
-rem build the html, you can add html header and footers here
+rem build the html, you can add an html header and footer here
 rem type ..\header.html >> index.html
-echo ^<body^>^<script^> >> index.html
+echo ^<script^> >> index.html
 type %BUILD_FILENAME% >> index.html
 echo ^</script^> >> index.html
+rem type ..\footer.html >> index.html
 
 rem delete intermediate files
 del %BUILD_FILENAME%
