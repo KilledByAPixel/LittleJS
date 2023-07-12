@@ -39,6 +39,24 @@ LittleJS is a super lightweight JavaScript game engine with a fast hybrid render
 - Can be imported as a JavaScript module and includes [an example module project](https://killedbyapixel.github.io/LittleJS/examples/module)
 - Compatible with TypeScript and includes [an example TS project](https://killedbyapixel.github.io/LittleJS/examples/typescript)
 
+## How to use LittleJS
+
+[You can use the empty example template as a starting point.](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/empty/game.js) This file contians just the minimal setup to start the engine. You can also download and include [littlejs.js](https://github.com/KilledByAPixel/LittleJS/blob/main/build/littlejs.js) or [littlejs.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/build/littlejs.min.js).
+
+In order to load files like images you will need to run a small web server like http-server on npm. I recommend an editor that does this for me automatically like [Visual Studio Code](https://code.visualstudio.com/) with the [Live Server plugin](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer).
+
+To startup LittleJS, you must create 5 functions and pass them to engineInit. A canvas will automatically be created and added to the document. 
+
+- Init - called only once after the engine starts up to setup the game
+- Update - called every frame at 60 frames per second to handle input and update the game state
+- Update Post - called every frame after physics and objects are updated, usually not needed
+- Render - called before objects are rendered, draw anything that appears behind objects
+- Render Post - called after objects are rendered, draw hud and post processing
+
+## Tutorial
+
+- [Breakout Tutorial](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/breakoutTutorial) - Shows how to make a simple game from scatch with LittleJS.
+
 ## Builds
 
 To easily include LittleJS in your game, you can use one of the 3 pre-built js files. These are also built automatically by the build scripts.
@@ -54,20 +72,34 @@ LittleJS can also be imported as a module. There are two module flavors that are
 
 There is an [enginebuild.bat](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineBuild.bat) file included that will rebuild the engine files. The starter project example also includes a batch file [build.bat](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/starter/build.bat) that compresses everything into a tiny zip file using Google Closure, UglifyJS, Roadroller, and ECT. You must first run npm install to setup the necessary npm dependencies.
 
-## Tutorial
+## LittleJS Objects
 
-- [Breakout Tutorial](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/breakoutTutorial) - Shows how to make a simple game from scatch with LittleJS.
+Though not required, LittleJS is intended to be used as an object oriented system by extending the base class [EngineObject](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineObject.js) with your own. This lightweight class provides many useful features including physics, collision, parent/child system, and sorted rendering. Engine objects are automatically added to the global list of objects where they will be updated and rendered until destroyed. 
 
-## Debugging
+Here is a template you can use to make objects that behave however you want. See the examples for a complete demonstration.
 
-Debug builds of LittleJS have a special menu that can be opened by pressing ~, the tilde key.
+```javascript
+class MyObject extends EngineObject 
+{
+    constructor(pos, size, tileIndex, tileSize, angle, color)
+    {
+        super(pos, size, tileIndex, tileSize, angle, color);
+        // your object init code here
+    }
 
-- ~: Debug Overlay
-- 1: Debug Physics
-- 2: Debug Particles
-- 3: Debug Gamepads
-- 4: God Mode
-- 5: Save Screenshot
+    update()
+    {
+        super.update(); // update object physics and position
+        // your object update code here
+    }
+
+    render()
+    {
+        super.render(); // draw object as a sprite
+        // your object render code here
+    }
+}
+```
 
 ## Simple Code
 
@@ -88,6 +120,17 @@ Optional Components, these components are built to synergize with the rest of th
 - [engineWebGL.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineWebGL.js) - Super fast rendering with WebGL and post processing
 - [engineMedals.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineMedals.js) - Achievement tracker with Newgrounds integration
 - [engineDebug.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineDebug.js) - Debug rendering system and information overlay
+
+## Debugging
+
+Debug builds of LittleJS have a special menu that can be opened by pressing ~ (tilde).
+
+- ~: Debug Overlay
+- 1: Debug Physics
+- 2: Debug Particles
+- 3: Debug Gamepads
+- 4: God Mode
+- 5: Save Screenshot
 
 ## Games Made With LittleJS
 
