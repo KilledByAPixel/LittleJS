@@ -45,14 +45,6 @@ LittleJS is a super lightweight JavaScript game engine with a fast hybrid render
 
 In order to load files like images you will need to run a small web server like http-server on npm. I recommend an editor that does this for me automatically like [Visual Studio Code](https://code.visualstudio.com/) with the [Live Server plugin](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer).
 
-To startup LittleJS, you must create 5 functions and pass them to engineInit. A canvas will automatically be created and added to the document. 
-
-- Init - called only once after the engine starts up to setup the game
-- Update - called every frame at 60 frames per second to handle input and update the game state
-- Update Post - called every frame after physics and objects are updated, usually not needed
-- Render - called before objects are rendered, draw anything that appears behind objects
-- Render Post - called after objects are rendered, draw hud and post processing
-
 ## Tutorial
 
 - [Breakout Tutorial](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/breakoutTutorial) - Shows how to make a simple game from scatch with LittleJS.
@@ -71,6 +63,16 @@ LittleJS can also be imported as a module. There are two module flavors that are
 - [littlejs.esm.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/build/littlejs.esm.min.js) - The engine exported as a minified module in release mode
 
 There is an [enginebuild.bat](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineBuild.bat) file included that will rebuild the engine files. The starter project example also includes a batch file [build.bat](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/starter/build.bat) that compresses everything into a tiny zip file using Google Closure, UglifyJS, Roadroller, and ECT. You must first run npm install to setup the necessary npm dependencies.
+
+## LittleJS Setup
+
+To start LittleJS, you must create 5 functions and pass them to engineInit. A canvas will automatically be created and added to the document. 
+
+- Init - called only once after the engine starts up to setup the game
+- Update - called every frame at 60 frames per second to handle input and update the game state
+- Update Post - called every frame after physics and objects are updated, usually not needed
+- Render - called before objects are rendered, draw anything that appears behind objects
+- Render Post - called after objects are rendered, draw hud and post processing
 
 ## LittleJS Objects
 
