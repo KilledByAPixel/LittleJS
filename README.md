@@ -131,7 +131,7 @@ class MyObject extends EngineObject
 }
 ```
 
-## Simple Code
+## Engine Source Code
 
 This engine is made with simplicity in mind using simple and easy to read code. There are only a few files used by the entire engine.
 
