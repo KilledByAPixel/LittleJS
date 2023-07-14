@@ -68,11 +68,40 @@ There is an [enginebuild.bat](https://github.com/KilledByAPixel/LittleJS/blob/ma
 
 To start LittleJS, you must create 5 functions and pass them to engineInit. A canvas will automatically be created and added to the document. 
 
-- Init - called only once after the engine starts up to setup the game
-- Update - called every frame at 60 frames per second to handle input and update the game state
-- Update Post - called every frame after physics and objects are updated, usually not needed
-- Render - called before objects are rendered, draw anything that appears behind objects
-- Render Post - called after objects are rendered, draw hud and post processing
+```javascript
+function gameInit()
+{
+    // called once after the engine starts up
+    // setup the game
+}
+
+function gameUpdate()
+{
+    // called every frame at 60 frames per second
+    // handle input and update the game state
+}
+
+function gameUpdatePost()
+{
+    // called after physics and objects are updated
+    // setup camera and prepare for render
+}
+
+function gameRender()
+{
+    // called before objects are rendered
+    // draw any background effects that appear behind objects
+}
+
+function gameRenderPost()
+{
+    // called after objects are rendered
+    // draw effects or hud that appear above all objects
+}
+
+// Startup LittleJS Engine
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png');
+```
 
 ## LittleJS Objects
 
@@ -86,19 +115,18 @@ class MyObject extends EngineObject
     constructor(pos, size, tileIndex, tileSize, angle, color)
     {
         super(pos, size, tileIndex, tileSize, angle, color);
-        // your object init code here
     }
 
     update()
     {
-        super.update(); // update object physics and position
-        // your object update code here
+        // update object physics and position
+        super.update(); 
     }
 
     render()
     {
-        super.render(); // draw object as a sprite
-        // your object render code here
+        // draw object as a sprite
+        super.render();
     }
 }
 ```
