@@ -23,41 +23,40 @@ LittleJS is a super lightweight JavaScript game engine with a fast hybrid render
 
 LittleJS is a small but powerful game engine with many features and no depenencies.
 
-### Graphics
+Graphics
 
 - Fast sprite and tile map rendering engine with WebGL
 - Update and render 10,000+ objects at 60fps, often many times more
 - Apply [Shadertoy](https://www.shadertoy.com) compatible shaders for post processinge effects
 
-### Audio
+Audio
 
-- Positional sound effects with [ZzFX](https://killedbyapixel.github.io/ZzFX/)
-- Music with [ZzFXM](https://keithclark.github.io/ZzFXM/), mp3s, or wavs
+- Positional sound effects with [ZzFX](https://killedbyapixel.github.io/ZzFX/) sound effect generator
+- Music with [ZzFXM](https://keithclark.github.io/ZzFXM/), mp3, or wav audio
 
-### Input
+Input
 
 - Input processing system for keyboard, mouse, gamepad, and touch
 
-### Physics
+Physics
 
 - 2D physics engine with collision handling for axis aligned boxes
 - Very fast collision handling for tile maps
 
-### Systems
+Flexability
 
+- Designed to work with all modern web bowsers and mobile devices
+- Compatible with TypeScript and includes [an example TS project](https://killedbyapixel.github.io/LittleJS/examples/typescript)
+- For size coding competitions like [js13kGames](https://js13kgames.com/), starter project builds to a 7KB zip file
+- Build to a Windows executable with [Electron](https://www.electronjs.org/) for distribution on platforms like Steam
+- Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used for anything you want
+
+Extra Systems
+
+- Debug rendering system
 - Particle effects system and design tool
 - Bitmap font rendering and includes a built in engine font
 - Medal system tracks and displays achievements with Newgrounds integration
-- Debug rendering system
-
-### Flexability
-
-- Designed to work with all modern web bowsers and mobile devices
-- For size coding competitions like [js13kGames](https://js13kgames.com/), starter project builds to a 7KB zip file
-- Build to a Windows executable with [Electron](https://www.electronjs.org/) for distribution on platforms like Steam
-- Can be imported as a JavaScript module and includes [an example module project](https://killedbyapixel.github.io/LittleJS/examples/module)
-- Compatible with TypeScript and includes [an example TS project](https://killedbyapixel.github.io/LittleJS/examples/typescript)
-- Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used for whatever you want!
 
 ## How to use LittleJS
 
