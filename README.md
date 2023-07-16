@@ -10,7 +10,7 @@ LittleJS is a super lightweight JavaScript game engine with a fast hybrid render
 
 ![LittleJS Screenshot](examples/screenshot.jpg)
 
-## Examples
+## Demos
 
 ### [Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter/) - Clean demo with only a few things to get you started
 ### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Match 3 puzzle game with HD rendering and high score tracking
@@ -22,19 +22,22 @@ LittleJS is a super lightweight JavaScript game engine with a fast hybrid render
 ## Features
 
 - Very small footprint with no dependencies
+- Fast sprite and tile map rendering engine with WebGL
 - Can update and render 10,000+ objects at 60fps, often many times more
-- Object oriented system with fast 2D physics and collision handling for axis aligned boxes
-- Positional audio effects with [ZzFX](https://killedbyapixel.github.io/ZzFX/) and music with [ZzFXM](https://keithclark.github.io/ZzFXM/), mp3s, or wavs
+- Object oriented system with 2D physics and collision handling for axis aligned boxes
+- Positional audio effects with [ZzFX](https://killedbyapixel.github.io/ZzFX/)
+- Music with [ZzFXM](https://keithclark.github.io/ZzFXM/), mp3s, or wavs
 - Input processing system with keyboard, mouse, gamepad, and touch support
-- Particle effects system (particle editor/designer in progress)
+- Bitmap font rendering with a built in engine font
 - Medal system tracks and displays achievements with Newgrounds integration
+- Particle effects system and design tool
 - Several easy to understand example projects you can build on
 - Apply [Shadertoy](https://www.shadertoy.com) compatible shaders for post processinge effects
 - Debug tools and debug rendering system
 - [Full documentation](https://killedbyapixel.github.io/LittleJS/docs) automatically generated from the source code block tags with [JSDoc](https://github.com/jsdoc/jsdoc)
 - Build system automatically combines everything, minifies, and removes unused code
 - For size coding competitions like [js13kGames](https://js13kgames.com/), starter project builds to a 7KB zip file
-- Easily build a Windows executable with [Electron](https://www.electronjs.org/) for distribution on platforms like Steam
+- Build to a Windows executable with [Electron](https://www.electronjs.org/) for distribution on platforms like Steam
 - Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used for anything you want
 - Can be imported as a JavaScript module and includes [an example module project](https://killedbyapixel.github.io/LittleJS/examples/module)
 - Compatible with TypeScript and includes [an example TS project](https://killedbyapixel.github.io/LittleJS/examples/typescript)
@@ -133,7 +136,7 @@ class MyObject extends EngineObject
 
 ## Engine Source Code
 
-This engine is made with simplicity in mind using simple and easy to read code. There are only a few files used by the entire engine.
+This engine is made with simplicity in mind using clean easy to read code. There are only a few files used by the entire engine.
 
 - [engine.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engine.js) - Top level engine init, update, and render
 - [engineSettings.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineSettings.js) - Global engine settings
