@@ -12,37 +12,56 @@ LittleJS is a super lightweight JavaScript game engine with a fast hybrid render
 
 ## Demos
 
-### [Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter/) - Clean demo with only a few things to get you started
+### [Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter/) - Clean example with only a few things to get you started
 ### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Match 3 puzzle game with HD rendering and high score tracking
 ### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter with procedural generation and destruction
 ### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/) - Breakout game with post processing effect
 ### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress/) - Max sprite/object test and music system demo
 ### [Particle System Designer](https://killedbyapixel.github.io/LittleJS/examples/particles/) - Particle system editor and visualizer
 
-## Features
+## About LittleJS
 
-- Very small footprint with no dependencies
+LittleJS is a small but powerful game engine with many features and no depenencies.
+
+### Graphics
+
 - Fast sprite and tile map rendering engine with WebGL
-- Can update and render 10,000+ objects at 60fps, often many times more
-- Object oriented system with 2D physics and collision handling for axis aligned boxes
-- Positional audio effects with [ZzFX](https://killedbyapixel.github.io/ZzFX/)
-- Music with [ZzFXM](https://keithclark.github.io/ZzFXM/), mp3s, or wavs
-- Input processing system with keyboard, mouse, gamepad, and touch support
-- Bitmap font rendering with a built in engine font
-- Medal system tracks and displays achievements with Newgrounds integration
-- Particle effects system and design tool
-- Several easy to understand example projects you can build on
+- Update and render 10,000+ objects at 60fps, often many times more
 - Apply [Shadertoy](https://www.shadertoy.com) compatible shaders for post processinge effects
-- Debug tools and debug rendering system
-- [Full documentation](https://killedbyapixel.github.io/LittleJS/docs) automatically generated from the source code block tags with [JSDoc](https://github.com/jsdoc/jsdoc)
-- Build system automatically combines everything, minifies, and removes unused code
+
+### Audio
+
+- Positional sound effects with [ZzFX](https://killedbyapixel.github.io/ZzFX/)
+- Music with [ZzFXM](https://keithclark.github.io/ZzFXM/), mp3s, or wavs
+
+### Input
+
+- Input processing system for keyboard, mouse, gamepad, and touch
+
+### Physics
+
+- 2D physics engine with collision handling for axis aligned boxes
+- Very fast collision handling for tile maps
+
+### Systems
+
+- Particle effects system and design tool
+- Bitmap font rendering and includes a built in engine font
+- Medal system tracks and displays achievements with Newgrounds integration
+- Debug rendering system
+
+### Flexability
+
+- Designed to work with all modern web bowsers and mobile devices
 - For size coding competitions like [js13kGames](https://js13kgames.com/), starter project builds to a 7KB zip file
 - Build to a Windows executable with [Electron](https://www.electronjs.org/) for distribution on platforms like Steam
-- Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used for anything you want
 - Can be imported as a JavaScript module and includes [an example module project](https://killedbyapixel.github.io/LittleJS/examples/module)
 - Compatible with TypeScript and includes [an example TS project](https://killedbyapixel.github.io/LittleJS/examples/typescript)
+- Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used for whatever you want!
 
 ## How to use LittleJS
+
+To use LittleJS download the latest package from GitHub or call ```npm install littlejsengine```. This package contains the engine and several small examples.
 
 [You can use the empty example template as a starting point.](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/empty/game.js) This file contians just the minimal setup to start the engine. You can also download and include [littlejs.js](https://github.com/KilledByAPixel/LittleJS/blob/main/build/littlejs.js) or [littlejs.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/build/littlejs.min.js).
 
@@ -65,7 +84,9 @@ LittleJS can also be imported as a module. There are two module flavors that are
 - [littlejs.esm.js](https://github.com/KilledByAPixel/LittleJS/blob/main/build/littlejs.esm.js) - The engine exported as a module with debug mode available
 - [littlejs.esm.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/build/littlejs.esm.min.js) - The engine exported as a minified module in release mode
 
-There is an [enginebuild.bat](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineBuild.bat) file included that will rebuild the engine files. The starter project example also includes a batch file [build.bat](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/starter/build.bat) that compresses everything into a tiny zip file using Google Closure, UglifyJS, Roadroller, and ECT. You must first run npm install to setup the necessary npm dependencies.
+To rebuild the engine you must first run ```npm install``` to setup the necessary npm dependencies. Then call ```npm run build``` to build the engine.
+
+The starter project example also includes a batch file [build.bat](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/starter/build.bat) that compresses everything into a tiny zip file using Google Closure, UglifyJS, Roadroller, and ECT.
 
 ## LittleJS Setup
 
@@ -115,9 +136,9 @@ Here is a template you can use to make objects that behave however you want. See
 ```javascript
 class MyObject extends EngineObject 
 {
-    constructor(pos, size, tileIndex, tileSize, angle, color)
+    constructor(pos, size, tileIndex, tileSize, angle)
     {
-        super(pos, size, tileIndex, tileSize, angle, color);
+        super(pos, size, tileIndex, tileSize, angle);
     }
 
     update()
