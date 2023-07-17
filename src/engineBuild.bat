@@ -7,7 +7,8 @@ rem --- BUILD ENGINE DEBUG ---
 set BUILD_FOLDER=build
 set ENGINE_NAME=littlejs
 
-cd ..
+pushd ..
+
 rem remove old files
 rmdir /s /q %BUILD_FOLDER%
 mkdir %BUILD_FOLDER%
@@ -127,4 +128,5 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b %ERRORLEVEL%
 )
 
+popd
 popd

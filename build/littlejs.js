@@ -2690,7 +2690,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// ZzFXMicro - Zuper Zmall Zound Zynth - v1.1.8 by Frank Force
+// ZzFXMicro - Zuper Zmall Zound Zynth - v1.2.0 by Frank Force
 
 /** Generate and play a ZzFX sound
  *  <br>
@@ -2716,11 +2716,11 @@ function zzfxG
     bitCrush = 0, delay = 0, sustainVolume = 1, decay = 0, tremolo = 0
 )
 {
-    // init parameters
+    // locals
     let PI2 = PI*2, startSlide = slide *= 500 * PI2 / zzfxR / zzfxR, b=[],
         startFrequency = frequency *= (1 + randomness*rand(-1,1)) * PI2 / zzfxR,
-        t=0, tm=0, i=0, j=1, r=0, c=0, s=0, f, length;
-        
+        t=0, tm=0, i=0, j=1, r=0, c=0, s=0, f, length
+
     // scale by sample rate
     attack = attack * zzfxR + 9; // minimum attack to prevent pop
     decay *= zzfxR;
@@ -2770,18 +2770,18 @@ function zzfxG
             Math.cos(modulation*tm++);                    // modulation
         t += f - f*noise*(1 - (Math.sin(i)+1)*1e9%2);     // noise
 
-        if (j && ++j > pitchJumpTime)       // pitch jump
+        if (j && ++j > pitchJumpTime)    // pitch jump
         {
-            frequency += pitchJump;         // apply pitch jump
-            startFrequency += pitchJump;    // also apply to start
-            j = 0;                          // reset pitch jump time
+            frequency += pitchJump;      // apply pitch jump
+            startFrequency += pitchJump; // also apply to start
+            j = 0;                       // reset pitch jump time
         }
 
         if (repeatTime && !(++r % repeatTime)) // repeat
         {
-            frequency = startFrequency;     // reset frequency
-            slide = startSlide;             // reset slide
-            j = j || 1;                     // reset pitch jump time
+            frequency = startFrequency;  // reset frequency
+            slide = startSlide;          // reset slide
+            j ||= 1;                     // reset pitch jump time
         }
     }
     
