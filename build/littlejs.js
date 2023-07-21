@@ -1838,7 +1838,7 @@ function setBlendMode(additive, useWebGL=glEnable)
  *  @param {String}  [font=fontDefault]
  *  @param {CanvasRenderingContext2D} [context=overlayContext]
  *  @memberof Draw */
-function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, context=overlayContext)
+function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, context)
 {
     drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, context);
 }
@@ -2277,6 +2277,9 @@ if (isTouchDevice)
             return true;
         }
 
+        // try to create touch game pad
+        touchGamepadEnable && touchGamepadCreate();
+
         return ontouchstart(e);
     }
 }
@@ -2290,76 +2293,69 @@ let touchGamepadTimer = new Timer, touchGamepadButtons, touchGamepadStick;
 // create the touch gamepad, called automatically by the engine
 function touchGamepadCreate()
 {
-    if (!touchGamepadEnable || !isTouchDevice)
-        return;
-
     // touch input internal variables
     touchGamepadButtons = [];
     touchGamepadStick = vec2();
 
-    // setup touch input
-    ontouchstart = (e)=>
+    let touchHandler = ontouchstart;
+    ontouchstart = ontouchmove = ontouchend = (e)=> 
     {
-        // fix mobile audio, force it to play a sound on first touch
-        zzfx(0);
-
-        ontouchstart = ontouchmove = ontouchend = (e)=> 
+        // clear touch gamepad input
+        touchGamepadStick = vec2();
+        touchGamepadButtons = [];
+            
+        const touching = e.touches.length;
+        if (touching)
         {
-            // clear touch gamepad input
-            touchGamepadStick = vec2();
-            touchGamepadButtons = [];
-                
-            const touching = e.touches.length;
-            if (touching)
+            touchGamepadTimer.set();
+            if (paused)
             {
-                // set that gamepad is active
-                isUsingGamepad = 1;
-                touchGamepadTimer.set();
-
-                if (paused)
-                {
-                    // touch anywhere to press start when paused
-                    touchGamepadButtons[9] = 1;
-                    return;
-                }
-            }
-
-            // get center of left and right sides
-            const stickCenter = vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
-            const buttonCenter = mainCanvasSize.subtract(vec2(touchGamepadSize, touchGamepadSize));
-            const startCenter = mainCanvasSize.scale(.5);
-
-            // check each touch point
-            for (const touch of e.touches)
-            {
-                const touchPos = mouseToScreen(vec2(touch.clientX, touch.clientY));
-                if (touchPos.distance(stickCenter) < touchGamepadSize)
-                {
-                    // virtual analog stick
-                    if (touchGamepadAnalog)
-                        touchGamepadStick = touchPos.subtract(stickCenter).scale(2/touchGamepadSize).clampLength();
-                    else
-                    {
-                        // 8 way dpad
-                        const angle = touchPos.subtract(stickCenter).angle();
-                        touchGamepadStick.setAngle((angle * 4 / PI + 8.5 | 0) * PI / 4);
-                    }
-                }
-                else if (touchPos.distance(buttonCenter) < touchGamepadSize)
-                {
-                    // virtual face buttons
-                    const button = touchPos.subtract(buttonCenter).direction();
-                    touchGamepadButtons[button] = 1;
-                }
-                else if (touchPos.distance(startCenter) < touchGamepadSize)
-                {
-                    // virtual start button in center
-                    touchGamepadButtons[9] = 1;
-                }
+                // touch anywhere to press start when paused
+                touchGamepadButtons[9] = 1;
+                return;
             }
         }
 
-        return ontouchstart(e);
+        // get center of left and right sides
+        const stickCenter = vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
+        const buttonCenter = mainCanvasSize.subtract(vec2(touchGamepadSize, touchGamepadSize));
+        const startCenter = mainCanvasSize.scale(.5);
+
+        // check each touch point
+        for (const touch of e.touches)
+        {
+            const touchPos = mouseToScreen(vec2(touch.clientX, touch.clientY));
+            if (touchPos.distance(stickCenter) < touchGamepadSize)
+            {
+                // virtual analog stick
+                if (touchGamepadAnalog)
+                    touchGamepadStick = touchPos.subtract(stickCenter).scale(2/touchGamepadSize).clampLength();
+                else
+                {
+                    // 8 way dpad
+                    const angle = touchPos.subtract(stickCenter).angle();
+                    touchGamepadStick.setAngle((angle * 4 / PI + 8.5 | 0) * PI / 4);
+                }
+            }
+            else if (touchPos.distance(buttonCenter) < touchGamepadSize)
+            {
+                // virtual face buttons
+                const button = touchPos.subtract(buttonCenter).direction();
+                touchGamepadButtons[button] = 1;
+            }
+            else if (touchPos.distance(startCenter) < touchGamepadSize)
+            {
+                // virtual start button in center
+                touchGamepadButtons[9] = 1;
+            }
+        }
+
+        // call default touch handler and set to using gamepad
+        touchHandler(e);
+        isUsingGamepad = 1;
+        
+        // must return true so the document will get focus
+        return true;
     }
 }
 
@@ -2385,7 +2381,7 @@ function touchGamepadRender()
     overlayContext.beginPath();
 
     const leftCenter = vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
-    if (touchGamepadAnalog)
+    if (touchGamepadAnalog) // draw circle shaped gamepad
     {
         overlayContext.arc(leftCenter.x, leftCenter.y, touchGamepadSize/2, 0, 9);
         overlayContext.fill();
@@ -4273,7 +4269,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.6.1';
+const engineVersion = '1.6.2';
 
 /** Frames per second to update objects
  *  @type {Number}
@@ -4364,7 +4360,6 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         (glCanvas||mainCanvas).style = mainCanvas.style = overlayCanvas.style = styleCanvas;
         
         gameInit();
-        touchGamepadCreate();
         engineUpdate();
     };
 

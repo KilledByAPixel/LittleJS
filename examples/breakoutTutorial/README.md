@@ -13,12 +13,6 @@ In this tutorial we will make a breakout style game with a player controllable p
 
 ![LittleJS Screenshot](images/9.png)
 
-## Open the Project
-
-There is an empty template project provided in the examples folder to be used as a starting point. Go ahead and open the game.js file in whatever editor you prefer. I recommend [Visual Studio Code](https://code.visualstudio.com/). 
-
-Open the index.html file in a web browser to run the game, it will display hello world by default. I recommend using the live server plugin for VS Code for faster iteration.
-
 ## Create the Bricks
 
 The first step is to make a 2D grid of brick objects in gameInit. As a placeholder we will create an EngineObject for each cell in the grid and set it to have a random color.
@@ -249,8 +243,6 @@ This is a good time to try opening up the debug info by pressing ~. This feature
 
 As you can see, the wall objects are still present even though they are now invisible.
 
-You can use this debug display along with your browsers built in debuging panel which can be opened by pressing F12 in most browsers.
-
 ## Respawn the Ball
 
 We should respawn the ball when it goes below the screen so players can keep playing.
@@ -310,9 +302,7 @@ collideWithObject(o)
 }
 ```
 
-But wait! This will cause the ball to careen through the bricks without bouncing. Maybe fun for a special powerup, but not our goal here. This function should return a Boolean value to indicate if the collision needs to be resolved, if it returns false then the ball will not bounce.
-
-So the answer is to just add another line of code to the collideWithObject function that returns a truthy value indicating that the collision should occur.
+But wait! This will cause the ball to careen through the bricks without bouncing. Maybe fun for a special powerup, but not our goal here. This function should return a Boolean value to indicate if the collision needs to be resolved, if it returns false then the ball will not bounce. So the answer is to just add another line of code to the collideWithObject function that returns a truthy value indicating that the collision should occur.
 
 ```javascript
 return 1; // allow object to collide

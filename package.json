@@ -1,6 +1,6 @@
 {
   "name": "littlejsengine",
-  "version": "1.6.0",
+  "version": "1.6.2",
   "description": "LittleJS - Tiny and Fast HTML5 Game Engine",
   "main": "engine/engine.all.module.js",
   "repository": {
@@ -26,10 +26,10 @@
     "build": "cd src && engineBuild.bat"
   },
   "devDependencies": {
-    "ect-bin": "~1.4.1",
     "google-closure-compiler": "~20230502.0.0",
     "roadroller": "~2.1.0",
+    "uglify-js": "~3.17.4",
     "typescript": "~5.1.6",
-    "uglify-js": "~3.17.4"
+    "ect-bin": "~1.4.1"
   }
 }
