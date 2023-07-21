@@ -238,7 +238,7 @@ function setBlendMode(additive, useWebGL=glEnable)
  *  @param {String}  [font=fontDefault]
  *  @param {CanvasRenderingContext2D} [context=overlayContext]
  *  @memberof Draw */
-function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, context=overlayContext)
+function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, context)
 {
     drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, context);
 }

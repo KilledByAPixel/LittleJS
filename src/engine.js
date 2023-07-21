@@ -34,7 +34,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.6.1';
+const engineVersion = '1.6.2';
 
 /** Frames per second to update objects
  *  @type {Number}
@@ -125,7 +125,6 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         (glCanvas||mainCanvas).style = mainCanvas.style = overlayCanvas.style = styleCanvas;
         
         gameInit();
-        touchGamepadCreate();
         engineUpdate();
     };
 
