@@ -179,7 +179,7 @@ You may have noticed that the ball goes right through the paddle and bricks. To 
 this.setCollision(); // make object collide
 ```
 
-Now the ball collides but unfortunately also pushes the paddle away, not quite what we want. To prevent he paddle from being moved by physics we will make it use static physics by setting it’s mass to 0 in the paddle constructor.
+Now the ball collides but unfortunately also pushes the paddle away, not quite what we want. To prevent the paddle from being moved by physics we will make it use static physics by setting it’s mass to 0 in the paddle constructor.
 
 ```javascript
 this.mass = 0; // make object have static physics
@@ -272,7 +272,7 @@ Don’t forget to destroy the old ball before creating the new one! Though it do
 
 ## Break the Bricks
 
-Still, the ball doesn’t collide with the bricks much less break them and it wouldn’t be breakout without that. So we need to make the brick collide with the ball, just like the walls, so let’s start with Brick class that is the same as Wall.
+Still, the ball doesn’t collide with the bricks much less breaks them and it wouldn’t be breakout without that. So we need to make the brick collide with the ball, just like the walls, so let’s start with Brick class that is the same as Wall.
 
 ```javascript
 class Brick extends EngineObject
@@ -293,7 +293,7 @@ And we will just change the for loop in gameInit to use the Brick class.
 const brick = new Brick(vec2(x,y), vec2(2,1)); // create a brick
 ```
 
-Now the ball will bounce off the bricks, but we want it to break the bricks. To do this we can the override the brick’s collideWithObject function which is called by the engine when the ball hits it. Instead of the default collide behavior, we just destroy the brick.
+Now the ball will bounce off the bricks, but we want it to break the bricks. To do this we can override the brick’s collideWithObject function which is called by the engine when the ball hits it. Instead of the default collide behavior, we just destroy the brick.
 
 ```javascript
 collideWithObject(o)              
@@ -433,7 +433,7 @@ new ParticleEmitter(
 
 ## Improve the Gameplay
 
-Last but certainly not least, let’s make a few small improvements to the gameplay. It would help to give the player some more control of where the ball goes when it hits the paddle. We can do this by adding a some code to the ball’s collideWithObject function.
+Last but certainly not least, let’s make a few small improvements to the gameplay. It would help to give the player some more control of where the ball goes when it hits the paddle. We can do this by adding some code to the ball’s collideWithObject function.
 
 This code will use the rotate function to modify the bounce angle based on the distance from the center of the paddle.
 
