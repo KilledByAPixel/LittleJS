@@ -196,6 +196,11 @@ const setShowWatermark = (show)=> showWatermark = show;
  *  @memberof Debug */
 const setGodMode = (enable)=> godMode = enable;
 
+/** Set key code used to toggle debug mode, Esc by default
+ *  @param {Number} key
+ *  @memberof Debug */
+const setDebugKey = (key)=> debugKey = key;
+
 export {
 	// Setters for global variables
 	setCameraPos,
@@ -236,6 +241,7 @@ export {
 	setMedalsPreventUnlock,
 	setShowWatermark,
 	setGodMode,
+	setDebugKey,
 
 	// Settings
 	canvasMaxSize,

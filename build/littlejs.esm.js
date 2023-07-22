@@ -45,6 +45,12 @@ let showWatermark = 1;
  *  @memberof Debug */
 let godMode = 0;
 
+/** Key code used to toggle debug mode, Esc by default
+ *  @type {Boolean}
+ *  @default
+ *  @memberof Debug */
+let debugKey = 27;
+
 // Engine internal variables not exposed to documentation
 let debugPrimitives = [], debugOverlay = 0, debugPhysics = 0, debugRaycast = 0,
 debugParticles = 0, debugGamepads = 0, debugMedals = 0, debugTakeScreenshot, downloadLink;
@@ -166,7 +172,7 @@ const debugUpdate = ()=>
     if (!debug)
         return;
 
-    if (keyWasPressed(27)) // Esc
+    if (keyWasPressed(debugKey)) // Esc
         debugOverlay = !debugOverlay;
     if (debugOverlay)
     {
@@ -4755,6 +4761,11 @@ const setShowWatermark = (show)=> showWatermark = show;
  *  @memberof Debug */
 const setGodMode = (enable)=> godMode = enable;
 
+/** Set key code used to toggle debug mode, Esc by default
+ *  @param {Number} key
+ *  @memberof Debug */
+const setDebugKey = (key)=> debugKey = key;
+
 export {
 	// Setters for global variables
 	setCameraPos,
@@ -4795,6 +4806,7 @@ export {
 	setMedalsPreventUnlock,
 	setShowWatermark,
 	setGodMode,
+	setDebugKey,
 
 	// Settings
 	canvasMaxSize,

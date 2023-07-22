@@ -155,6 +155,10 @@ declare module "littlejs.esm" {
      *  @param {Boolean} enable
      *  @memberof Debug */
     export function setGodMode(enable: boolean): boolean;
+    /** Set key code used to toggle debug mode, Esc by default
+     *  @param {Number} key
+     *  @memberof Debug */
+    export function setDebugKey(key: number): number;
     /** The max size of the canvas, centered if window is larger
      *  @type {Vector2}
      *  @default Vector2(1920,1200)
