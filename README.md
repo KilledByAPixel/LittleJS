@@ -176,9 +176,9 @@ Optional Components, these components are built to synergize with the rest of th
 
 ## Debugging
 
-Debug builds of LittleJS have a special menu that can be opened by pressing ~ (tilde).
+Debug builds of LittleJS have a special menu that can be opened by pressing the Esc key.
 
-- ~: Debug Overlay
+- Esc: Debug Overlay
 - 1: Debug Physics
 - 2: Debug Particles
 - 3: Debug Gamepads
