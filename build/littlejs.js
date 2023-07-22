@@ -166,7 +166,7 @@ const debugUpdate = ()=>
     if (!debug)
         return;
 
-    if (keyWasPressed(192)) // ~
+    if (keyWasPressed(27)) // Esc
         debugOverlay = !debugOverlay;
     if (debugOverlay)
     {
@@ -4269,7 +4269,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.6.2';
+const engineVersion = '1.6.3';
 
 /** Frames per second to update objects
  *  @type {Number}

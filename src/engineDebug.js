@@ -166,7 +166,7 @@ const debugUpdate = ()=>
     if (!debug)
         return;
 
-    if (keyWasPressed(192)) // ~
+    if (keyWasPressed(27)) // Esc
         debugOverlay = !debugOverlay;
     if (debugOverlay)
     {
