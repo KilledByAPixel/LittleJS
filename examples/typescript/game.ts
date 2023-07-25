@@ -6,7 +6,7 @@
 
 // import module
 import * as LittleJS from '../../build/littlejs.esm.js';
-const {Vector2, Color, Timer, vec2} = LittleJS;
+const {Color, vec2} = LittleJS;
 
 // sound effects
 const sound_click = new LittleJS.Sound([1,.5]);
@@ -16,7 +16,7 @@ const medal_example = new LittleJS.Medal(0, 'Example Medal', 'Welcome to LittleJ
 LittleJS.medalsInit('Hello World');
 
 // game variables
-let particleEmiter;
+let particleEmitter: LittleJS.ParticleEmitter;
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
@@ -55,7 +55,7 @@ function gameInit()
 
     // create particle emitter
     const center = LittleJS.tileCollisionSize.scale(.5).add(vec2(0,9));
-    particleEmiter = new LittleJS.ParticleEmitter(
+    particleEmitter = new LittleJS.ParticleEmitter(
         center, 0,                              // emitPos, emitAngle
         1, 0, 500, Math.PI,                     // emitSize, emitTime, emitRate, emiteCone
         0, vec2(16),                            // tileIndex, tileSize
@@ -65,8 +65,8 @@ function gameInit()
         .99, 1, 1, Math.PI,   // damping, angleDamping, gravityScale, cone
         .05, .5, true, true         // fadeRate, randomness, collide, additive
     );
-    particleEmiter.elasticity = .3; // bounce when it collides
-    particleEmiter.trailScale = 2;  // stretch in direction of motion
+    particleEmitter.elasticity = .3; // bounce when it collides
+    particleEmitter.trailScale = 2;  // stretch in direction of motion
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -78,10 +78,10 @@ function gameUpdate()
         sound_click.play(LittleJS.mousePos);
 
         // change particle color and set to fade out
-        particleEmiter.colorStartA = new Color;
-        particleEmiter.colorStartB = LittleJS.randColor();
-        particleEmiter.colorEndA = particleEmiter.colorStartA.scale(1,0);
-        particleEmiter.colorEndB = particleEmiter.colorStartB.scale(1,0);
+        particleEmitter.colorStartA = new Color;
+        particleEmitter.colorStartB = LittleJS.randColor();
+        particleEmitter.colorEndA = particleEmitter.colorStartA.scale(1,0);
+        particleEmitter.colorEndB = particleEmitter.colorStartB.scale(1,0);
 
         // unlock medals
         medal_example.unlock();
@@ -89,7 +89,7 @@ function gameUpdate()
 
     // move particles to mouse location if on screen
     if (LittleJS.mousePosScreen.x)
-        particleEmiter.pos = LittleJS.mousePos;
+        particleEmitter.pos = LittleJS.mousePos;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
