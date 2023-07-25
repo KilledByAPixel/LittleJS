@@ -12,7 +12,7 @@ const medal_example = new Medal(0, 'Example Medal', 'Welcome to LittleJS!');
 medalsInit('Hello World');
 
 // game variables
-let particleEmiter;
+let particleEmitter;
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
@@ -49,7 +49,7 @@ function gameInit()
     gravity = -.01;
 
     // create particle emitter
-    particleEmiter = new ParticleEmitter(
+    particleEmitter = new ParticleEmitter(
         vec2(16), 0,                            // emitPos, emitAngle
         1, 0, 500, PI,                          // emitSize, emitTime, emitRate, emiteCone
         0, vec2(16),                            // tileIndex, tileSize
@@ -59,8 +59,8 @@ function gameInit()
         .99, 1, 1, PI,        // damping, angleDamping, gravityScale, cone
         .05, .5, 1, 1         // fadeRate, randomness, collide, additive
     );
-    particleEmiter.elasticity = .3; // bounce when it collides
-    particleEmiter.trailScale = 2;  // stretch in direction of motion
+    particleEmitter.elasticity = .3; // bounce when it collides
+    particleEmitter.trailScale = 2;  // stretch in direction of motion
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -72,10 +72,10 @@ function gameUpdate()
         sound_click.play(mousePos);
 
         // change particle color and set to fade out
-        particleEmiter.colorStartA = new Color;
-        particleEmiter.colorStartB = randColor();
-        particleEmiter.colorEndA = particleEmiter.colorStartA.scale(1,0);
-        particleEmiter.colorEndB = particleEmiter.colorStartB.scale(1,0);
+        particleEmitter.colorStartA = new Color;
+        particleEmitter.colorStartB = randColor();
+        particleEmitter.colorEndA = particleEmitter.colorStartA.scale(1,0);
+        particleEmitter.colorEndB = particleEmitter.colorStartB.scale(1,0);
 
         // unlock medals
         medal_example.unlock();
@@ -83,7 +83,7 @@ function gameUpdate()
 
     // move particles to mouse location if on screen
     if (mousePosScreen.x)
-        particleEmiter.pos = mousePos;
+        particleEmitter.pos = mousePos;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
