@@ -37,7 +37,7 @@ echo ^</script^> >> index.html
 rem delete intermediate files
 del %BUILD_FILENAME%
 
-rem copy elecron files to build folder
+rem copy electron files to build folder
 copy ..\electron.js electron.js
 copy ..\package.json package.json
 
