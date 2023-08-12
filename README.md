@@ -37,9 +37,11 @@ Audio
 Input
 
 - Input processing system for keyboard, mouse, gamepad, and touch
+- On screen touch gamepad for mobile devices
 
 Physics
 
+- Kinematic physics object update 
 - 2D physics engine with collision handling for axis aligned boxes
 - Very fast collision handling for tile maps
 
