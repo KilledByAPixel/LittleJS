@@ -357,7 +357,7 @@ const debugRender = ()=>
             overlayContext.fillText('Time: ' + formatTime(time), x, y += h);
             overlayContext.fillText('---------', x, y += h);
             overlayContext.fillStyle = '#f00';
-            overlayContext.fillText('~: Debug Overlay', x, y += h);
+            overlayContext.fillText('ESC: Debug Overlay', x, y += h);
             overlayContext.fillStyle = debugPhysics ? '#f00' : '#fff';
             overlayContext.fillText('1: Debug Physics', x, y += h);
             overlayContext.fillStyle = debugParticles ? '#f00' : '#fff';
@@ -4275,7 +4275,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.6.3';
+const engineVersion = '1.6.4';
 
 /** Frames per second to update objects
  *  @type {Number}

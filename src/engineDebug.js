@@ -357,7 +357,7 @@ const debugRender = ()=>
             overlayContext.fillText('Time: ' + formatTime(time), x, y += h);
             overlayContext.fillText('---------', x, y += h);
             overlayContext.fillStyle = '#f00';
-            overlayContext.fillText('~: Debug Overlay', x, y += h);
+            overlayContext.fillText('ESC: Debug Overlay', x, y += h);
             overlayContext.fillStyle = debugPhysics ? '#f00' : '#fff';
             overlayContext.fillText('1: Debug Physics', x, y += h);
             overlayContext.fillStyle = debugParticles ? '#f00' : '#fff';
