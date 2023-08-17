@@ -1,8 +1,4 @@
 declare module "littlejs.esm" {
-    /**
-     * LittleJS Module Export
-     * <br> - Export engine as a module with extra functions where necessary
-     */
     /** Set position of camera in world space
      *  @param {Vector2} pos
      *  @memberof Settings */
@@ -779,7 +775,10 @@ declare module "littlejs.esm" {
         /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
          * @return {Number} */
         valueOf(): number;
-    }
+    } /**
+     * LittleJS Engine Settings
+     * @namespace Settings
+     */
     /**
      * Create a 2d vector, can take another Vector2 to copy, 2 scalars, or 1 scalar
      * @param {Number} [x=0]
@@ -935,7 +934,27 @@ declare module "littlejs.esm" {
         /** Returns string containg info about this object for debugging
          *  @return {String} */
         toString(): string;
-    }
+    } /**
+     * LittleJS Drawing System
+     * <br> - Hybrid with both Canvas2D and WebGL available
+     * <br> - Super fast tile sheet rendering with WebGL
+     * <br> - Can apply rotation, mirror, color and additive color
+     * <br> - Many useful utility functions
+     * <br>
+     * <br>LittleJS uses a hybrid rendering solution with the best of both Canvas2D and WebGL.
+     * <br>There are 3 canvas/contexts available to draw to...
+     * <br> - mainCanvas - 2D background canvas, non WebGL stuff like tile layers are drawn here.
+     * <br> - glCanvas - Used by the accelerated WebGL batch rendering system.
+     * <br> - overlayCanvas - Another 2D canvas that appears on top of the other 2 canvases.
+     * <br>
+     * <br>The WebGL rendering system is very fast with some caveats...
+     * <br> - The default setup supports only 1 tile sheet, to support more call glCreateTexture and glSetTexture
+     * <br> - Switching blend modes (additive) or textures causes another draw call which is expensive in excess
+     * <br> - Group additive rendering together using renderOrder to mitigate this issue
+     * <br>
+     * <br>The LittleJS rendering solution is intentionally simple, feel free to adjust it for your needs!
+     * @namespace Draw
+     */
     /** Tile sheet for batch rendering system
      *  @type {CanvasImageSource}
      *  @memberof Draw */
@@ -1586,7 +1605,13 @@ declare module "littlejs.esm" {
          * @param {Number}  [angle=0]                  - Angle to rotate the particle
          */
         constructor(pos: any, tileIndex?: number, tileSize?: Vector2, angle?: number);
-    }
+    } /**
+     * LittleJS Medal System
+     * <br> - Tracks and displays medals
+     * <br> - Saves medals to local storage
+     * <br> - Newgrounds integration
+     * @namespace Medals
+     */
     /** List of all medals
      *  @type {Array}
      *  @memberof Medals */
@@ -1694,7 +1719,16 @@ declare module "littlejs.esm" {
          */
         call(component: string, parameters?: any, async?: boolean): any;
         CryptoJS(): any;
-    }
+    } /**
+     * LittleJS WebGL Interface
+     * <br> - All webgl used by the engine is wrapped up here
+     * <br> - For normal stuff you won't need to see or call anything in this file
+     * <br> - For advanced stuff there are helper functions to create shaders, textures, etc
+     * <br> - Can be disabled with glEnable to revert to 2D canvas rendering
+     * <br> - Batches sprite rendering on GPU for incredibly fast performance
+     * <br> - Sprite transform math is done in the shader where possible
+     * @namespace WebGL
+     */
     /** The WebGL canvas which appears above the main canvas and below the overlay canvas
      *  @type {HTMLCanvasElement}
      *  @memberof WebGL */
@@ -1800,5 +1834,8 @@ declare module "littlejs.esm" {
      *  @param {Function} [callbackFunction]   - Calls this function on every object that passes the test
      *  @param {Array} [objects=engineObjects] - List of objects to check
      *  @memberof Engine */
-    export function engineObjectsCallback(pos?: Vector2, size?: number, callbackFunction?: Function, objects?: any[]): void;
+    export function engineObjectsCallback(pos?: Vector2, size?: number, callbackFunction?: Function, objects?: any[]): void; /**
+     * LittleJS Module Export
+     * <br> - Export engine as a module with extra functions where necessary
+     */
 }

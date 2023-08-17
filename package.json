@@ -23,7 +23,7 @@
   },
   "homepage": "https://github.com/KilledByAPixel/LittleJS",
   "scripts": {
-    "build": "cd src && engineBuild.bat"
+    "build": "node src/build/build.js"
   },
   "devDependencies": {
     "google-closure-compiler": "~20230502.0.0",
