@@ -49,9 +49,11 @@ class Build {
 
     // concat files into one buffer
     let buf = fs.readFileSync(files[0]);
+    buf += "\n";
     // Start with i = 1 since we init buffer with 0th index
     for (let i = 1; i < files.length; i += 1) {
       buf += fs.readFileSync(files[i]);
+      buf += "\n";
     }
 
     // output file
