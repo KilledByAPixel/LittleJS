@@ -14,9 +14,10 @@ fs.rmSync(BUILD_DIR, { recursive: true, force: true });
 fs.mkdirSync(BUILD_DIR);
 
 const closureCompilerStep = (filename) => {
+  fs.copyFileSync(filename, `${filename}.tmp`);
   try {
     child_process.execSync(
-      `npx google-closure-compiler --js=${filename} --js_output_file=${filename} --language_out=ECMASCRIPT_2021 --warning_level=VERBOSE`
+      `npx google-closure-compiler --js=${filename}.tmp --js_output_file=${filename} --language_out=ECMASCRIPT_2021 --warning_level=VERBOSE --jscomp_off="*"`
     );
   } catch (e) {
     console.error(e);
@@ -25,6 +26,7 @@ const closureCompilerStep = (filename) => {
     );
     process.exit(1);
   }
+  fs.rmSync(`${filename}.tmp`);
 };
 
 const uglifyBuildStep = (filename) => {
@@ -82,7 +84,7 @@ const uglifyBuildStep = (filename) => {
   build
     .addSourceFile(`build/${ENGINE_NAME}.release.js`)
     .setOutputFile(`build/${ENGINE_NAME}.min.js`)
-    // .addBuildStep(closureCompilerStep)
+    .addBuildStep(closureCompilerStep)
     .addBuildStep(uglifyBuildStep)
     .build();
 }
