@@ -1,15 +1,10 @@
-/*
-    LittleJS - Debug Build
-    MIT License - Copyright 2021 Frank Force
-*/
-
 /** 
  * LittleJS Debug System
- * <br> - Press ~ to show debug overlay with mouse pick
- * <br> - Number keys toggle debug functions
- * <br> - +/- apply time scale
- * <br> - Debug primitive rendering
- * <br> - Save a 2d canvas as an image
+ * - Press ~ to show debug overlay with mouse pick
+ * - Number keys toggle debug functions
+ * - +/- apply time scale
+ * - Debug primitive rendering
+ * - Save a 2d canvas as an image
  * @namespace Debug
  */
 
@@ -62,7 +57,7 @@ debugParticles = 0, debugGamepads = 0, debugMedals = 0, debugTakeScreenshot, dow
  *  @param {Boolean} assertion
  *  @param {Object}  output
  *  @memberof Debug */
-const ASSERT = enableAsserts ? (...assert)=> console.assert(...assert) : ()=>{};
+function ASSERT(...assert) { enableAsserts && console.assert(...assert); }
 
 /** Draw a debug rectangle in world space
  *  @param {Vector2} pos
@@ -72,7 +67,7 @@ const ASSERT = enableAsserts ? (...assert)=> console.assert(...assert) : ()=>{};
  *  @param {Number}  [angle=0]
  *  @param {Boolean} [fill=false]
  *  @memberof Debug */
-const debugRect = (pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)=> 
+function debugRect(pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)
 {
     ASSERT(typeof color == 'string'); // pass in regular html strings as colors
     debugPrimitives.push({pos, size:vec2(size), color, time:new Timer(time), angle, fill});
@@ -85,7 +80,7 @@ const debugRect = (pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)=
  *  @param {Number}  [time=0]
  *  @param {Boolean} [fill=false]
  *  @memberof Debug */
-const debugCircle = (pos, radius=0, color='#fff', time=0, fill=false)=>
+function debugCircle(pos, radius=0, color='#fff', time=0, fill=false)
 {
     ASSERT(typeof color == 'string'); // pass in regular html strings as colors
     debugPrimitives.push({pos, size:radius, color, time:new Timer(time), angle:0, fill});
@@ -97,7 +92,7 @@ const debugCircle = (pos, radius=0, color='#fff', time=0, fill=false)=>
  *  @param {Number}  [time=0]
  *  @param {Number}  [angle=0]
  *  @memberof Debug */
-const debugPoint = (pos, color, time, angle)=> debugRect(pos, 0, color, time, angle);
+function debugPoint(pos, color, time, angle) {debugRect(pos, 0, color, time, angle);}
 
 /** Draw a debug line in world space
  *  @param {Vector2} posA
@@ -106,7 +101,7 @@ const debugPoint = (pos, color, time, angle)=> debugRect(pos, 0, color, time, an
  *  @param {Number}  [thickness=.1]
  *  @param {Number}  [time=0]
  *  @memberof Debug */
-const debugLine = (posA, posB, color, thickness=.1, time)=>
+function debugLine(posA, posB, color, thickness=.1, time)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);
@@ -120,7 +115,7 @@ const debugLine = (posA, posB, color, thickness=.1, time)=>
  *  @param {Vector2} sizeB
  *  @param {String}  [color='#fff']
  *  @memberof Debug */
-const debugAABB = (pA, sA, pB, sB, color)=>
+function debugAABB(pA, sA, pB, sB, color)
 {
     const minPos = vec2(min(pA.x - sA.x/2, pB.x - sB.x/2), min(pA.y - sA.y/2, pB.y - sB.y/2));
     const maxPos = vec2(max(pA.x + sA.x/2, pB.x + sB.x/2), max(pA.y + sA.y/2, pB.y + sB.y/2));
@@ -136,7 +131,7 @@ const debugAABB = (pA, sA, pB, sB, color)=>
  *  @param {Number}  [angle=0]
  *  @param {String}  [font='monospace']
  *  @memberof Debug */
-const debugText = (text, pos, size=1, color='#fff', time=0, angle=0, font='monospace')=> 
+function debugText(text, pos, size=1, color='#fff', time=0, angle=0, font='monospace')
 {
     ASSERT(typeof color == 'string'); // pass in regular html strings as colors
     debugPrimitives.push({text, pos, size, color, time:new Timer(time), angle, font});
@@ -144,13 +139,13 @@ const debugText = (text, pos, size=1, color='#fff', time=0, angle=0, font='monos
 
 /** Clear all debug primitives in the list
  *  @memberof Debug */
-const debugClear = ()=> debugPrimitives = [];
+function debugClear() { debugPrimitives = []; }
 
 /** Save a canvas to disk 
  *  @param {HTMLCanvasElement} canvas
  *  @param {String}            [filename]
  *  @memberof Debug */
-const debugSaveCanvas = (canvas, filename = engineName + '.png') =>
+function debugSaveCanvas(canvas, filename = engineName + '.png')
 {
     downloadLink.download = 'screenshot.png';
     downloadLink.href = canvas.toDataURL('image/png').replace('image/png','image/octet-stream');
@@ -160,14 +155,14 @@ const debugSaveCanvas = (canvas, filename = engineName + '.png') =>
 ///////////////////////////////////////////////////////////////////////////////
 // Engine debug function (called automatically)
 
-const debugInit = ()=>
+function debugInit()
 {
     // create link for saving screenshots
     document.body.appendChild(downloadLink = document.createElement('a'));
     downloadLink.style.display = 'none';
 }
 
-const debugUpdate = ()=>
+function debugUpdate()
 {
     if (!debug)
         return;
@@ -195,7 +190,7 @@ const debugUpdate = ()=>
     }
 }
 
-const debugRender = ()=>
+function debugRender()
 {
     glCopyToContext(mainContext);
 

@@ -1,11 +1,11 @@
 /** 
  * LittleJS WebGL Interface
- * <br> - All webgl used by the engine is wrapped up here
- * <br> - For normal stuff you won't need to see or call anything in this file
- * <br> - For advanced stuff there are helper functions to create shaders, textures, etc
- * <br> - Can be disabled with glEnable to revert to 2D canvas rendering
- * <br> - Batches sprite rendering on GPU for incredibly fast performance
- * <br> - Sprite transform math is done in the shader where possible
+ * - All webgl used by the engine is wrapped up here
+ * - For normal stuff you won't need to see or call anything in this file
+ * - For advanced stuff there are helper functions to create shaders, textures, etc
+ * - Can be disabled with glEnable to revert to 2D canvas rendering
+ * - Batches sprite rendering on GPU for incredibly fast performance
+ * - Sprite transform math is done in the shader where possible
  * @namespace WebGL
  */
 
@@ -80,7 +80,7 @@ function glSetBlendMode(additive)
 }
 
 /** Set the WebGl texture, not normally necessary unless multiple tile sheets are used
- *  <br> - This may also flush the gl buffer resulting in more draw calls and worse performance
+ *  - This may also flush the gl buffer resulting in more draw calls and worse performance
  *  @param {WebGLTexture} [texture=glTileTexture]
  *  @memberof WebGL */
 function glSetTexture(texture=glTileTexture)

@@ -1,9 +1,9 @@
 /** 
  * LittleJS Input System
- * <br> - Tracks key down, pressed, and released
- * <br> - Also tracks mouse buttons, position, and wheel
- * <br> - Supports multiple gamepads
- * <br> - Virtual gamepad for touch devices with touchGamepadSize
+ * - Tracks key down, pressed, and released
+ * - Also tracks mouse buttons, position, and wheel
+ * - Supports multiple gamepads
+ * - Virtual gamepad for touch devices with touchGamepadSize
  * @namespace Input
  */
 
@@ -14,25 +14,28 @@
  *  @param {Number} [device=0]
  *  @return {Boolean}
  *  @memberof Input */
-const keyIsDown = (key, device=0)=> inputData[device] && inputData[device][key] & 1;
+function keyIsDown(key, device=0)
+{ return inputData[device] && inputData[device][key] & 1; }
 
 /** Returns true if device key was pressed this frame
  *  @param {Number} key
  *  @param {Number} [device=0]
  *  @return {Boolean}
  *  @memberof Input */
-const keyWasPressed = (key, device=0)=> inputData[device] && inputData[device][key] & 2 ? 1 : 0;
+function keyWasPressed(key, device=0)
+{ return inputData[device] && inputData[device][key] & 2 ? 1 : 0; }
 
 /** Returns true if device key was released this frame
  *  @param {Number} key
  *  @param {Number} [device=0]
  *  @return {Boolean}
  *  @memberof Input */
-const keyWasReleased = (key, device=0)=> inputData[device] && inputData[device][key] & 4 ? 1 : 0;
+function keyWasReleased(key, device=0)
+{ return inputData[device] && inputData[device][key] & 4 ? 1 : 0; }
 
 /** Clears all input
  *  @memberof Input */
-const clearInput = ()=> inputData = [[]];
+function clearInput() { inputData = [[]]; }
 
 /** Returns true if mouse button is down
  *  @function
@@ -85,28 +88,32 @@ let preventDefaultInput = 0;
  *  @param {Number} [gamepad=0]
  *  @return {Boolean}
  *  @memberof Input */
-const gamepadIsDown = (button, gamepad=0)=> keyIsDown(button, gamepad+1);
+function gamepadIsDown(button, gamepad=0)
+{ return keyIsDown(button, gamepad+1); }
 
 /** Returns true if gamepad button was pressed
  *  @param {Number} button
  *  @param {Number} [gamepad=0]
  *  @return {Boolean}
  *  @memberof Input */
-const gamepadWasPressed = (button, gamepad=0)=> keyWasPressed(button, gamepad+1);
+function gamepadWasPressed(button, gamepad=0)
+{ return keyWasPressed(button, gamepad+1); }
 
 /** Returns true if gamepad button was released
  *  @param {Number} button
  *  @param {Number} [gamepad=0]
  *  @return {Boolean}
  *  @memberof Input */
-const gamepadWasReleased = (button, gamepad=0)=> keyWasReleased(button, gamepad+1);
+function gamepadWasReleased(button, gamepad=0)
+{ return keyWasReleased(button, gamepad+1); }
 
 /** Returns gamepad stick value
  *  @param {Number} stick
  *  @param {Number} [gamepad=0]
  *  @return {Vector2}
  *  @memberof Input */
-const gamepadStick = (stick,  gamepad=0)=> stickData[gamepad] ? stickData[gamepad][stick] || vec2() : vec2();
+function gamepadStick(stick,  gamepad=0)
+{ return stickData[gamepad] ? stickData[gamepad][stick] || vec2() : vec2(); }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Input update called by engine
@@ -145,12 +152,18 @@ onkeydown = (e)=>
     e.repeat || (inputData[isUsingGamepad = 0][remapKey(e.which)] = 3);
     preventDefaultInput && e.preventDefault();
 }
+
 onkeyup = (e)=>
 {
     if (debug && e.target != document.body) return;
     inputData[0][remapKey(e.which)] = 4;
 }
-const remapKey = (c)=> inputWASDEmulateDirection ? c==87?38 : c==83?40 : c==65?37 : c==68?39 : c : c;
+
+function remapKey(c)
+{ 
+    return inputWASDEmulateDirection ? 
+        c==87?38 : c==83?40 : c==65?37 : c==68?39 : c : c; 
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Mouse event handlers
@@ -159,10 +172,10 @@ onmousedown = (e)=> {inputData[isUsingGamepad = 0][e.button] = 3; onmousemove(e)
 onmouseup   = (e)=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
 onmousemove = (e)=> mousePosScreen = mouseToScreen(e);
 onwheel = (e)=> e.ctrlKey || (mouseWheel = sign(e.deltaY));
-oncontextmenu = (e)=> !1; // prevent right click menu
+oncontextmenu = (e)=> false; // prevent right click menu
 
 // convert a mouse or touch event position to screen space
-const mouseToScreen = (mousePos)=>
+function mouseToScreen(mousePos)
 {
     if (!mainCanvas)
         return vec2(); // fix bug that can occur if user clicks before page loads
@@ -208,8 +221,7 @@ function gamepadsUpdate()
         if (gamepad)
         {
             // read clamp dead zone of analog sticks
-            const deadZone = .3, deadZoneMax = .8;
-            const applyDeadZone = (v)=> 
+            const deadZone = .3, deadZoneMax = .8, applyDeadZone = (v)=> 
                 v >  deadZone ?  percent( v, deadZone, deadZoneMax) : 
                 v < -deadZone ? -percent(-v, deadZone, deadZoneMax) : 0;
 
@@ -242,11 +254,12 @@ function gamepadsUpdate()
 /** Pulse the vibration hardware if it exists
  *  @param {Number} [pattern=100] - a single value in miliseconds or vibration interval array
  *  @memberof Input */
-const vibrate = (pattern)=> vibrateEnable && navigator && navigator.vibrate && navigator.vibrate(pattern);
+function vibrate(pattern)
+{ vibrateEnable && navigator && navigator.vibrate && navigator.vibrate(pattern); }
 
 /** Cancel any ongoing vibration
  *  @memberof Input */
-const vibrateStop = ()=> vibrate(0);
+function vibrateStop() { vibrate(0); }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Touch input

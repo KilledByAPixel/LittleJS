@@ -1,12 +1,12 @@
 /** 
  * LittleJS Tile Layer System
- * <br> - Caches arrays of tiles to off screen canvas for fast rendering
- * <br> - Unlimted numbers of layers, allocates canvases as needed
- * <br> - Interfaces with EngineObject for collision
- * <br> - Collision layer is separate from visible layers
- * <br> - It is recommended to have a visible layer that matches the collision
- * <br> - Tile layers can be drawn to using their context with canvas2d
- * <br> - Drawn directly to the main canvas without using WebGL
+ * - Caches arrays of tiles to off screen canvas for fast rendering
+ * - Unlimted numbers of layers, allocates canvases as needed
+ * - Interfaces with EngineObject for collision
+ * - Collision layer is separate from visible layers
+ * - It is recommended to have a visible layer that matches the collision
+ * - Tile layers can be drawn to using their context with canvas2d
+ * - Drawn directly to the main canvas without using WebGL
  * @namespace TileCollision
  */
 
@@ -37,15 +37,19 @@ function initTileCollision(size)
  *  @param {Vector2} pos
  *  @param {Number}  [data=0]
  *  @memberof TileCollision */
-const setTileCollisionData = (pos, data=0)=>
+function setTileCollisionData(pos, data=0)
+{
     pos.arrayCheck(tileCollisionSize) && (tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] = data);
+}
 
 /** Get tile collision data
  *  @param {Vector2} pos
  *  @return {Number}
  *  @memberof TileCollision */
-const getTileCollisionData = (pos)=>
-    pos.arrayCheck(tileCollisionSize) ? tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] : 0;
+function getTileCollisionData(pos)
+{
+    return pos.arrayCheck(tileCollisionSize) ? tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] : 0;
+}
 
 /** Check if collision with another object should occur
  *  @param {Vector2}      pos
@@ -139,10 +143,10 @@ class TileLayerData
 
 /**
  * Tile layer object - cached rendering system for tile layers
- * <br> - Each Tile layer is rendered to an off screen canvas
- * <br> - To allow dynamic modifications, layers are rendered using canvas 2d
- * <br> - Some devices like mobile phones are limited to 4k texture resolution
- * <br> - So with 16x16 tiles this limits layers to 256x256 on mobile devices
+ * - Each Tile layer is rendered to an off screen canvas
+ * - To allow dynamic modifications, layers are rendered using canvas 2d
+ * - Some devices like mobile phones are limited to 4k texture resolution
+ * - So with 16x16 tiles this limits layers to 256x256 on mobile devices
  * @extends EngineObject
  * @example
  * // create tile collision and visible tile layer

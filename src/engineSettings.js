@@ -157,8 +157,8 @@ let gamepadDirectionEmulateStick = 1;
 let inputWASDEmulateDirection = 1;
 
 /** True if touch gamepad should appear on mobile devices
- *  <br> - Supports left analog stick, 4 face buttons and start button (button 9)
- *  <br> - Must be set by end of gameInit to be activated
+ *  - Supports left analog stick, 4 face buttons and start button (button 9)
+ *  - Must be set by end of gameInit to be activated
  *  @type {Boolean}
  *  @default 0
  *  @memberof Settings */

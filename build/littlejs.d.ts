@@ -1,164 +1,164 @@
 declare module "littlejs.esm" {
     /**
      * LittleJS Module Export
-     * <br> - Export engine as a module with extra functions where necessary
+     * - Export engine as a module with extra functions where necessary
      */
     /** Set position of camera in world space
      *  @param {Vector2} pos
      *  @memberof Settings */
-    export function setCameraPos(pos: Vector2): Vector2;
+    export function setCameraPos(pos: Vector2): void;
     /** Set scale of camera in world space
      *  @param {Number} scale
      *  @memberof Settings */
-    export function setCameraScale(scale: number): number;
+    export function setCameraScale(scale: number): void;
     /** Set max size of the canvas
      *  @param {Vector2} size
      *  @memberof Settings */
-    export function setCanvasMaxSize(size: Vector2): Vector2;
+    export function setCanvasMaxSize(size: Vector2): void;
     /** Set fixed size of the canvas
      *  @param {Vector2} size
      *  @memberof Settings */
-    export function setCanvasFixedSize(size: Vector2): Vector2;
+    export function setCanvasFixedSize(size: Vector2): void;
     /** Disables anti aliasing for pixel art if true
      *  @param {Boolean} pixelated
      *  @memberof Settings */
-    export function setCavasPixelated(pixelated: boolean): boolean;
+    export function setCavasPixelated(pixelated: boolean): void;
     /** Set default font used for text rendering
      *  @param {String} font
      *  @memberof Settings */
-    export function setFontDefault(font: string): string;
+    export function setFontDefault(font: string): void;
     /** Set if webgl rendering is enabled
      *  @param {Boolean} enable
      *  @memberof Settings */
-    export function setGlEnable(enable: boolean): boolean;
+    export function setGlEnable(enable: boolean): void;
     /** Set to not composite the WebGL canvas
      *  @param {Boolean} overlay
      *  @memberof Settings */
-    export function setGlOverlay(overlay: boolean): boolean;
+    export function setGlOverlay(overlay: boolean): void;
     /** Set default size of tiles in pixels
      *  @param {Vector2} size
      *  @memberof Settings */
-    export function setTileSizeDefault(size: Vector2): Vector2;
+    export function setTileSizeDefault(size: Vector2): void;
     /** Set to prevent tile bleeding from neighbors in pixels
      *  @param {Number} scale
      *  @memberof Settings */
-    export function setTileFixBleedScale(scale: number): number;
+    export function setTileFixBleedScale(scale: number): void;
     /** Set if collisions between objects are enabled
      *  @param {Boolean} enable
      *  @memberof Settings */
-    export function setEnablePhysicsSolver(enable: boolean): boolean;
+    export function setEnablePhysicsSolver(enable: boolean): void;
     /** Set default object mass for collison calcuations
      *  @param {Number} mass
      *  @memberof Settings */
-    export function setObjectDefaultMass(mass: number): number;
+    export function setObjectDefaultMass(mass: number): void;
     /** Set how much to slow velocity by each frame
      *  @param {Number} damping
      *  @memberof Settings */
-    export function setObjectDefaultDamping(damp: any): any;
+    export function setObjectDefaultDamping(damp: any): void;
     /** Set how much to slow angular velocity each frame
      *  @param {Number} damping
      *  @memberof Settings */
-    export function setObjectDefaultAngleDamping(damp: any): any;
+    export function setObjectDefaultAngleDamping(damp: any): void;
     /** Set how much to bounce when a collision occur
      *  @param {Number} elasticity
      *  @memberof Settings */
-    export function setObjectDefaultElasticity(elasticity: number): number;
+    export function setObjectDefaultElasticity(elasticity: number): void;
     /** Set how much to slow when touching
      *  @param {Number} friction
      *  @memberof Settings */
-    export function setObjectDefaultFriction(friction: number): number;
+    export function setObjectDefaultFriction(friction: number): void;
     /** Set max speed to avoid fast objects missing collisions
      *  @param {Number} speed
      *  @memberof Settings */
-    export function setObjectMaxSpeed(speed: number): number;
+    export function setObjectMaxSpeed(speed: number): void;
     /** Set how much gravity to apply to objects along the Y axis
      *  @param {Number} gravity
      *  @memberof Settings */
-    export function setGravity(g: any): any;
+    export function setGravity(g: any): void;
     /** Set to scales emit rate of particles
      *  @param {Number} scale
      *  @memberof Settings */
-    export function setParticleEmitRateScale(scale: number): number;
+    export function setParticleEmitRateScale(scale: number): void;
     /** Set if gamepads are enabled
      *  @param {Boolean} enable
      *  @memberof Settings */
-    export function setGamepadsEnable(enable: boolean): boolean;
+    export function setGamepadsEnable(enable: boolean): void;
     /** Set if the dpad input is also routed to the left analog stick
      *  @param {Boolean} enable
      *  @memberof Settings */
-    export function setGamepadDirectionEmulateStick(enable: boolean): boolean;
+    export function setGamepadDirectionEmulateStick(enable: boolean): void;
     /** Set if true the WASD keys are also routed to the direction keys
      *  @param {Boolean} enable
      *  @memberof Settings */
-    export function setInputWASDEmulateDirection(enable: boolean): boolean;
+    export function setInputWASDEmulateDirection(enable: boolean): void;
     /** Set if touch gamepad should appear on mobile devices
      *  @param {Boolean} enable
      *  @memberof Settings */
-    export function setTouchGamepadEnable(enable: boolean): boolean;
+    export function setTouchGamepadEnable(enable: boolean): void;
     /** Set if touch gamepad should be analog stick or 8 way dpad
      *  @param {Boolean} analog
      *  @memberof Settings */
-    export function setTouchGamepadAnalog(analog: boolean): boolean;
+    export function setTouchGamepadAnalog(analog: boolean): void;
     /** Set size of virutal gamepad for touch devices in pixels
      *  @param {Number} size
      *  @memberof Settings */
-    export function setTouchGamepadSize(size: number): number;
+    export function setTouchGamepadSize(size: number): void;
     /** Set transparency of touch gamepad overlay
      *  @param {Number} alpha
      *  @memberof Settings */
-    export function setTouchGamepadAlpha(alpha: number): number;
+    export function setTouchGamepadAlpha(alpha: number): void;
     /** Set to allow vibration hardware if it exists
      *  @param {Boolean} enable
      *  @memberof Settings */
-    export function setVibrateEnable(enable: boolean): boolean;
+    export function setVibrateEnable(enable: boolean): void;
     /** Set to disable all audio code
      *  @param {Boolean} enable
      *  @memberof Settings */
-    export function setSoundEnable(enable: boolean): boolean;
+    export function setSoundEnable(enable: boolean): void;
     /** Set volume scale to apply to all sound, music and speech
      *  @param {Number} volume
      *  @memberof Settings */
-    export function setSoundVolume(volume: number): number;
+    export function setSoundVolume(volume: number): void;
     /** Set default range where sound no longer plays
      *  @param {Number} range
      *  @memberof Settings */
-    export function setSoundDefaultRange(range: number): number;
+    export function setSoundDefaultRange(range: number): void;
     /** Set default range percent to start tapering off sound
      *  @param {Number} taper
      *  @memberof Settings */
-    export function setSoundDefaultTaper(taper: number): number;
+    export function setSoundDefaultTaper(taper: number): void;
     /** Set how long to show medals for in seconds
      *  @param {Number} time
      *  @memberof Settings */
-    export function setMedalDisplayTime(time: number): number;
+    export function setMedalDisplayTime(time: number): void;
     /** Set how quickly to slide on/off medals in seconds
      *  @param {Number} time
      *  @memberof Settings */
-    export function setMedalDisplaySlideTime(time: number): number;
+    export function setMedalDisplaySlideTime(time: number): void;
     /** Set size of medal display
      *  @param {Vector2} size
      *  @memberof Settings */
-    export function setMedalDisplaySize(size: Vector2): Vector2;
+    export function setMedalDisplaySize(size: Vector2): void;
     /** Set size of icon in medal display
      *  @param {Number} size
      *  @memberof Settings */
-    export function setMedalDisplayIconSize(size: number): number;
+    export function setMedalDisplayIconSize(size: number): void;
     /** Set to stop medals from being unlockable
      *  @param {Boolean} preventUnlock
      *  @memberof Settings */
-    export function setMedalsPreventUnlock(prevent: any): any;
+    export function setMedalsPreventUnlock(prevent: any): void;
     /** Set if watermark with FPS should be shown
      *  @param {Boolean} show
      *  @memberof Debug */
-    export function setShowWatermark(show: boolean): boolean;
+    export function setShowWatermark(show: boolean): void;
     /** Set if god mode is enabled
      *  @param {Boolean} enable
      *  @memberof Debug */
-    export function setGodMode(enable: boolean): boolean;
+    export function setGodMode(enable: boolean): void;
     /** Set key code used to toggle debug mode, Esc by default
      *  @param {Number} key
      *  @memberof Debug */
-    export function setDebugKey(key: number): number;
+    export function setDebugKey(key: number): void;
     /** The max size of the canvas, centered if window is larger
      *  @type {Vector2}
      *  @default Vector2(1920,1200)
@@ -271,8 +271,8 @@ declare module "littlejs.esm" {
      *  @memberof Settings */
     export let inputWASDEmulateDirection: boolean;
     /** True if touch gamepad should appear on mobile devices
-     *  <br> - Supports left analog stick, 4 face buttons and start button (button 9)
-     *  <br> - Must be set by end of gameInit to be activated
+     *  - Supports left analog stick, 4 face buttons and start button (button 9)
+     *  - Must be set by end of gameInit to be activated
      *  @type {Boolean}
      *  @default 0
      *  @memberof Settings */
@@ -352,6 +352,10 @@ declare module "littlejs.esm" {
      *  @default
      *  @memberof Debug */
     export let godMode: boolean;
+    /** Asserts if the experssion is false, does not do anything in release builds
+     *  @param {Boolean} assertion
+     *  @param {Object}  output
+     *  @memberof Debug */
     export function ASSERT(...assert: any[]): void;
     /** Draw a debug rectangle in world space
      *  @param {Vector2} pos
@@ -405,7 +409,7 @@ declare module "littlejs.esm" {
     export function debugText(text: string, pos: Vector2, size?: number, color?: string, time?: number, angle?: number, font?: string): void;
     /** Clear all debug primitives in the list
      *  @memberof Debug */
-    export function debugClear(): any[];
+    export function debugClear(): void;
     /** Save a canvas to disk
      *  @param {HTMLCanvasElement} canvas
      *  @param {String}            [filename]
@@ -539,7 +543,7 @@ declare module "littlejs.esm" {
     /** Set seed used by the randSeeded function, should not be 0
      *  @param {Number} seed
      *  @memberof Random */
-    export function setRandSeed(seed: number): number;
+    export function setRandSeed(seed: number): void;
     /** Returns a seeded random value between the two values passed in using randSeed
      *  @param {Number} [valueA=1]
      *  @param {Number} [valueB=0]
@@ -548,7 +552,7 @@ declare module "littlejs.esm" {
     export function randSeeded(a?: number, b?: number): number;
     /**
      * 2D Vector object with vector math library
-     * <br> - Functions do not change this so they can be chained together
+     * - Functions do not change this so they can be chained together
      * @example
      * let a = new Vector2(2, 3); // vector with coordinates (2, 3)
      * let b = new Vector2;       // vector with coordinates (0, 0)
@@ -815,24 +819,24 @@ declare module "littlejs.esm" {
     export function hsl(h?: number, s?: number, l?: number, a?: number): Color;
     /**
      * LittleJS Object Base Object Class
-     * <br> - Base object class used by the engine
-     * <br> - Automatically adds self to object list
-     * <br> - Will be updated and rendered each frame
-     * <br> - Renders as a sprite from a tilesheet by default
-     * <br> - Can have color and addtive color applied
-     * <br> - 2d Physics and collision system
-     * <br> - Sorted by renderOrder
-     * <br> - Objects can have children attached
-     * <br> - Parents are updated before children, and set child transform
-     * <br> - Call destroy() to get rid of objects
-     * <br>
-     * <br>The physics system used by objects is simple and fast with some caveats...
-     * <br> - Collision uses the axis aligned size, the object's rotation angle is only for rendering
-     * <br> - Objects are guaranteed to not intersect tile collision from physics
-     * <br> - If an object starts or is moved inside tile collision, it will not collide with that tile
-     * <br> - Collision for objects can be set to be solid to block other objects
-     * <br> - Objects may get pushed into overlapping other solid objects, if so they will push away
-     * <br> - Solid objects are more performance intensive and should be used sparingly
+     * - Base object class used by the engine
+     * - Automatically adds self to object list
+     * - Will be updated and rendered each frame
+     * - Renders as a sprite from a tilesheet by default
+     * - Can have color and addtive color applied
+     * - 2d Physics and collision system
+     * - Sorted by renderOrder
+     * - Objects can have children attached
+     * - Parents are updated before children, and set child transform
+     * - Call destroy() to get rid of objects
+     *
+     * The physics system used by objects is simple and fast with some caveats...
+     * - Collision uses the axis aligned size, the object's rotation angle is only for rendering
+     * - Objects are guaranteed to not intersect tile collision from physics
+     * - If an object starts or is moved inside tile collision, it will not collide with that tile
+     * - Collision for objects can be set to be solid to block other objects
+     * - Objects may get pushed into overlapping other solid objects, if so they will push away
+     * - Solid objects are more performance intensive and should be used sparingly
      * @example
      * // create an engine object, normally you would first extend the class with your own
      * const pos = vec2(2,3);
@@ -1063,9 +1067,9 @@ declare module "littlejs.esm" {
     export let engineFontImage: any;
     /**
      * Font Image Object - Draw text on a 2D canvas by using characters in an image
-     * <br> - 96 characters (from space to tilde) are stored in an image
-     * <br> - Uses a default 8x8 font if none is supplied
-     * <br> - You can also use fonts from the main tile sheet
+     * - 96 characters (from space to tilde) are stored in an image
+     * - Uses a default 8x8 font if none is supplied
+     * - You can also use fonts from the main tile sheet
      * @example
      * // use built in font
      * const font = new ImageFont;
@@ -1129,7 +1133,7 @@ declare module "littlejs.esm" {
     export function keyWasReleased(key: number, device?: number): boolean;
     /** Clears all input
      *  @memberof Input */
-    export function clearInput(): any[][];
+    export function clearInput(): void;
     /** Returns true if device key is down
      *  @param {Number} key
      *  @param {Number} [device=0]
@@ -1197,17 +1201,17 @@ declare module "littlejs.esm" {
     /** Pulse the vibration hardware if it exists
      *  @param {Number} [pattern=100] - a single value in miliseconds or vibration interval array
      *  @memberof Input */
-    export function vibrate(pattern?: number): boolean;
+    export function vibrate(pattern?: number): void;
     /** Cancel any ongoing vibration
      *  @memberof Input */
-    export function vibrateStop(): boolean;
+    export function vibrateStop(): void;
     /** True if a touch device has been detected
      *  @memberof Input */
     export const isTouchDevice: boolean;
     /**
      * Sound Object - Stores a zzfx sound for later use and can be played positionally
-     * <br>
-     * <br><b><a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a></b>
+     *
+     * <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
      * @example
      * // create a sound
      * const sound_example = new Sound([.5,.5]);
@@ -1227,7 +1231,7 @@ declare module "littlejs.esm" {
         /** @property {Number} - At what percentage of range should it start tapering off */
         taper: number;
         randomness: any;
-        cachedSamples: number[];
+        cachedSamples: any[];
         /** Play the sound
          *  @param {Vector2} [pos] - World space position to play the sound, sound is not attenuated if null
          *  @param {Number}  [volume=1] - How much to scale volume by (in addition to range fade)
@@ -1246,8 +1250,8 @@ declare module "littlejs.esm" {
     }
     /**
      * Music Object - Stores a zzfx music track for later use
-     * <br>
-     * <br><b><a href=https://keithclark.github.io/ZzFXM/>Create music with the ZzFXM tracker.</a></b>
+     *
+     * <a href=https://keithclark.github.io/ZzFXM/>Create music with the ZzFXM tracker.</a>
      * @example
      * // create some music
      * const music_example = new Music(
@@ -1332,12 +1336,12 @@ declare module "littlejs.esm" {
      *  @memberof Audio */
     export function playSamples(sampleChannels: any[], volume?: number, rate?: number, pan?: number, loop?: boolean): AudioBufferSourceNode;
     /** Generate and play a ZzFX sound
-     *  <br>
-     *  <br><b><a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a></b>
+     *
+     *  <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
      *  @param {Array} zzfxSound - Array of ZzFX parameters, ex. [.5,.5]
-     *  @return {Array} - Array of audio samples
+     *  @return {AudioBufferSourceNode} - The audio node of the sound played
      *  @memberof Audio */
-    export function zzfx(...zzfxSound: any[]): any[];
+    export function zzfx(...zzfxSound: any[]): AudioBufferSourceNode;
     /** The tile collision layer array, use setTileCollisionData and getTileCollisionData to access
      *  @type {Array}
      *  @memberof TileCollision */
@@ -1354,7 +1358,7 @@ declare module "littlejs.esm" {
      *  @param {Vector2} pos
      *  @param {Number}  [data=0]
      *  @memberof TileCollision */
-    export function setTileCollisionData(pos: Vector2, data?: number): number;
+    export function setTileCollisionData(pos: Vector2, data?: number): void;
     /** Get tile collision data
      *  @param {Vector2} pos
      *  @return {Number}
@@ -1404,10 +1408,10 @@ declare module "littlejs.esm" {
     }
     /**
      * Tile layer object - cached rendering system for tile layers
-     * <br> - Each Tile layer is rendered to an off screen canvas
-     * <br> - To allow dynamic modifications, layers are rendered using canvas 2d
-     * <br> - Some devices like mobile phones are limited to 4k texture resolution
-     * <br> - So with 16x16 tiles this limits layers to 256x256 on mobile devices
+     * - Each Tile layer is rendered to an off screen canvas
+     * - To allow dynamic modifications, layers are rendered using canvas 2d
+     * - Some devices like mobile phones are limited to 4k texture resolution
+     * - So with 16x16 tiles this limits layers to 256x256 on mobile devices
      * @extends EngineObject
      * @example
      * // create tile collision and visible tile layer
@@ -1597,8 +1601,8 @@ declare module "littlejs.esm" {
      *  @memberof Settings */
     export let medalsPreventUnlock: boolean;
     /** Initialize medals with a save name used for storage
-     *  <br> - Call this after creating all medals
-     *  <br> - Checks if medals are unlocked
+     *  - Call this after creating all medals
+     *  - Checks if medals are unlocked
      *  @param {String} saveName
      *  @memberof Medals */
     export function medalsInit(saveName: string): void;
@@ -1708,7 +1712,7 @@ declare module "littlejs.esm" {
      *  @memberof WebGL */
     export function glSetBlendMode(additive?: boolean): void;
     /** Set the WebGl texture, not normally necessary unless multiple tile sheets are used
-     *  <br> - This may also flush the gl buffer resulting in more draw calls and worse performance
+     *  - This may also flush the gl buffer resulting in more draw calls and worse performance
      *  @param {WebGLTexture} [texture=glTileTexture]
      *  @memberof WebGL */
     export function glSetTexture(texture?: WebGLTexture): void;

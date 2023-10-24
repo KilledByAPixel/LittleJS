@@ -1,15 +1,10 @@
-/*
-    LittleJS - Debug Build
-    MIT License - Copyright 2021 Frank Force
-*/
-
 /** 
  * LittleJS Debug System
- * <br> - Press ~ to show debug overlay with mouse pick
- * <br> - Number keys toggle debug functions
- * <br> - +/- apply time scale
- * <br> - Debug primitive rendering
- * <br> - Save a 2d canvas as an image
+ * - Press ~ to show debug overlay with mouse pick
+ * - Number keys toggle debug functions
+ * - +/- apply time scale
+ * - Debug primitive rendering
+ * - Save a 2d canvas as an image
  * @namespace Debug
  */
 
@@ -62,7 +57,7 @@ debugParticles = 0, debugGamepads = 0, debugMedals = 0, debugTakeScreenshot, dow
  *  @param {Boolean} assertion
  *  @param {Object}  output
  *  @memberof Debug */
-const ASSERT = enableAsserts ? (...assert)=> console.assert(...assert) : ()=>{};
+function ASSERT(...assert) { enableAsserts && console.assert(...assert); }
 
 /** Draw a debug rectangle in world space
  *  @param {Vector2} pos
@@ -72,7 +67,7 @@ const ASSERT = enableAsserts ? (...assert)=> console.assert(...assert) : ()=>{};
  *  @param {Number}  [angle=0]
  *  @param {Boolean} [fill=false]
  *  @memberof Debug */
-const debugRect = (pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)=> 
+function debugRect(pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)
 {
     ASSERT(typeof color == 'string'); // pass in regular html strings as colors
     debugPrimitives.push({pos, size:vec2(size), color, time:new Timer(time), angle, fill});
@@ -85,7 +80,7 @@ const debugRect = (pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)=
  *  @param {Number}  [time=0]
  *  @param {Boolean} [fill=false]
  *  @memberof Debug */
-const debugCircle = (pos, radius=0, color='#fff', time=0, fill=false)=>
+function debugCircle(pos, radius=0, color='#fff', time=0, fill=false)
 {
     ASSERT(typeof color == 'string'); // pass in regular html strings as colors
     debugPrimitives.push({pos, size:radius, color, time:new Timer(time), angle:0, fill});
@@ -97,7 +92,7 @@ const debugCircle = (pos, radius=0, color='#fff', time=0, fill=false)=>
  *  @param {Number}  [time=0]
  *  @param {Number}  [angle=0]
  *  @memberof Debug */
-const debugPoint = (pos, color, time, angle)=> debugRect(pos, 0, color, time, angle);
+function debugPoint(pos, color, time, angle) {debugRect(pos, 0, color, time, angle);}
 
 /** Draw a debug line in world space
  *  @param {Vector2} posA
@@ -106,7 +101,7 @@ const debugPoint = (pos, color, time, angle)=> debugRect(pos, 0, color, time, an
  *  @param {Number}  [thickness=.1]
  *  @param {Number}  [time=0]
  *  @memberof Debug */
-const debugLine = (posA, posB, color, thickness=.1, time)=>
+function debugLine(posA, posB, color, thickness=.1, time)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);
@@ -120,7 +115,7 @@ const debugLine = (posA, posB, color, thickness=.1, time)=>
  *  @param {Vector2} sizeB
  *  @param {String}  [color='#fff']
  *  @memberof Debug */
-const debugAABB = (pA, sA, pB, sB, color)=>
+function debugAABB(pA, sA, pB, sB, color)
 {
     const minPos = vec2(min(pA.x - sA.x/2, pB.x - sB.x/2), min(pA.y - sA.y/2, pB.y - sB.y/2));
     const maxPos = vec2(max(pA.x + sA.x/2, pB.x + sB.x/2), max(pA.y + sA.y/2, pB.y + sB.y/2));
@@ -136,7 +131,7 @@ const debugAABB = (pA, sA, pB, sB, color)=>
  *  @param {Number}  [angle=0]
  *  @param {String}  [font='monospace']
  *  @memberof Debug */
-const debugText = (text, pos, size=1, color='#fff', time=0, angle=0, font='monospace')=> 
+function debugText(text, pos, size=1, color='#fff', time=0, angle=0, font='monospace')
 {
     ASSERT(typeof color == 'string'); // pass in regular html strings as colors
     debugPrimitives.push({text, pos, size, color, time:new Timer(time), angle, font});
@@ -144,13 +139,13 @@ const debugText = (text, pos, size=1, color='#fff', time=0, angle=0, font='monos
 
 /** Clear all debug primitives in the list
  *  @memberof Debug */
-const debugClear = ()=> debugPrimitives = [];
+function debugClear() { debugPrimitives = []; }
 
 /** Save a canvas to disk 
  *  @param {HTMLCanvasElement} canvas
  *  @param {String}            [filename]
  *  @memberof Debug */
-const debugSaveCanvas = (canvas, filename = engineName + '.png') =>
+function debugSaveCanvas(canvas, filename = engineName + '.png')
 {
     downloadLink.download = 'screenshot.png';
     downloadLink.href = canvas.toDataURL('image/png').replace('image/png','image/octet-stream');
@@ -160,14 +155,14 @@ const debugSaveCanvas = (canvas, filename = engineName + '.png') =>
 ///////////////////////////////////////////////////////////////////////////////
 // Engine debug function (called automatically)
 
-const debugInit = ()=>
+function debugInit()
 {
     // create link for saving screenshots
     document.body.appendChild(downloadLink = document.createElement('a'));
     downloadLink.style.display = 'none';
 }
 
-const debugUpdate = ()=>
+function debugUpdate()
 {
     if (!debug)
         return;
@@ -195,7 +190,7 @@ const debugUpdate = ()=>
     }
 }
 
-const debugRender = ()=>
+function debugRender()
 {
     glCopyToContext(mainContext);
 
@@ -399,10 +394,10 @@ const debugRender = ()=>
 }
 /**
  * LittleJS Utility Classes and Functions
- * <br> - General purpose math library
- * <br> - Vector2 - fast, simple, easy 2D vector class
- * <br> - Color - holds a rgba color with some math functions
- * <br> - Timer - tracks time automatically
+ * - General purpose math library
+ * - Vector2 - fast, simple, easy 2D vector class
+ * - Color - holds a rgba color with some math functions
+ * - Timer - tracks time automatically
  * @namespace Utilities
  */
 
@@ -418,34 +413,34 @@ const PI = Math.PI;
  *  @param {Number} value
  *  @return {Number}
  *  @memberof Utilities */
-const abs = (a)=> a < 0 ? -a : a;
+function abs(a) { return a < 0 ? -a : a; }
 
 /** Returns lowest of two values passed in
  *  @param {Number} valueA
  *  @param {Number} valueB
  *  @return {Number}
  *  @memberof Utilities */
-const min = (a, b)=> a < b ?  a : b;
+function min(a, b) { return a < b ?  a : b; }
 
 /** Returns highest of two values passed in
  *  @param {Number} valueA
  *  @param {Number} valueB
  *  @return {Number}
  *  @memberof Utilities */
-const max = (a, b)=> a > b ?  a : b;
+function max(a, b) { return a > b ?  a : b; }
 
 /** Returns the sign of value passed in (also returns 1 if 0)
  *  @param {Number} value
  *  @return {Number}
  *  @memberof Utilities */
-const sign = (a)=> a < 0 ? -1 : 1;
+function sign(a) { return a < 0 ? -1 : 1; }
 
 /** Returns first parm modulo the second param, but adjusted so negative numbers work as expected
  *  @param {Number} dividend
  *  @param {Number} [divisor=1]
  *  @return {Number}
  *  @memberof Utilities */
-const mod = (a, b=1)=> ((a % b) + b) % b;
+function mod(a, b=1) { return ((a % b) + b) % b; }
 
 /** Clamps the value beween max and min
  *  @param {Number} value
@@ -453,7 +448,8 @@ const mod = (a, b=1)=> ((a % b) + b) % b;
  *  @param {Number} [max=1]
  *  @return {Number}
  *  @memberof Utilities */
-const clamp = (v, min=0, max=1)=> v < min ? min : v > max ? max : v;
+function clamp(v, min=0, max=1)
+{ return v < min ? min : v > max ? max : v; }
 
 /** Returns what percentage the value is between max and min
  *  @param {Number} value
@@ -461,7 +457,8 @@ const clamp = (v, min=0, max=1)=> v < min ? min : v > max ? max : v;
  *  @param {Number} [max=1]
  *  @return {Number}
  *  @memberof Utilities */
-const percent = (v, min=0, max=1)=> max-min ? clamp((v-min) / (max-min)) : 0;
+function percent(v, min=0, max=1)
+{ return max-min ? clamp((v-min) / (max-min)) : 0; }
 
 /** Linearly interpolates the percent value between max and min
  *  @param {Number} percent
@@ -469,19 +466,19 @@ const percent = (v, min=0, max=1)=> max-min ? clamp((v-min) / (max-min)) : 0;
  *  @param {Number} [max=1]
  *  @return {Number}
  *  @memberof Utilities */
-const lerp = (p, min=0, max=1)=> min + clamp(p) * (max-min);
+function lerp(p, min=0, max=1){ return min + clamp(p) * (max-min); }
 
 /** Applies smoothstep function to the percentage value
  *  @param {Number} value
  *  @return {Number}
  *  @memberof Utilities */
-const smoothStep = (p)=> p * p * (3 - 2 * p);
+function smoothStep(p) { return p * p * (3 - 2 * p); }
 
 /** Returns the nearest power of two not less then the value
  *  @param {Number} value
  *  @return {Number}
  *  @memberof Utilities */
-const nearestPowerOfTwo = (v)=> 2**Math.ceil(Math.log2(v));
+function nearestPowerOfTwo(v) { return 2**Math.ceil(Math.log2(v)); }
 
 /** Returns true if two axis aligned bounding boxes are overlapping 
  *  @param {Vector2} pointA  - Center of box A
@@ -490,7 +487,8 @@ const nearestPowerOfTwo = (v)=> 2**Math.ceil(Math.log2(v));
  *  @param {Vector2} [sizeB] - Size of box B
  *  @return {Boolean}        - True if overlapping
  *  @memberof Utilities */
-const isOverlapping = (pA, sA, pB, sB)=> abs(pA.x - pB.x)*2 < sA.x + sB.x && abs(pA.y - pB.y)*2 < sA.y + sB.y;
+function isOverlapping(pA, sA, pB, sB)
+{ return abs(pA.x - pB.x)*2 < sA.x + sB.x && abs(pA.y - pB.y)*2 < sA.y + sB.y; }
 
 /** Returns an oscillating wave between 0 and amplitude with frequency of 1 Hz by default
  *  @param {Number} [frequency=1] - Frequency of the wave in Hz
@@ -498,13 +496,14 @@ const isOverlapping = (pA, sA, pB, sB)=> abs(pA.x - pB.x)*2 < sA.x + sB.x && abs
  *  @param {Number} [t=time]      - Value to use for time of the wave
  *  @return {Number}              - Value waving between 0 and amplitude
  *  @memberof Utilities */
-const wave = (frequency=1, amplitude=1, t=time)=> amplitude/2 * (1 - Math.cos(t*frequency*2*PI));
+function wave(frequency=1, amplitude=1, t=time)
+{ return amplitude/2 * (1 - Math.cos(t*frequency*2*PI)); }
 
 /** Formats seconds to mm:ss style for display purposes 
  *  @param {Number} t - time in seconds
  *  @return {String}
  *  @memberof Utilities */
-const formatTime = (t)=> (t/60|0) + ':' + (t%60<10?'0':'') + (t%60|0);
+function formatTime(t) { return (t/60|0) + ':' + (t%60<10?'0':'') + (t%60|0); }
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -516,32 +515,33 @@ const formatTime = (t)=> (t/60|0) + ':' + (t%60<10?'0':'') + (t%60|0);
  *  @param {Number} [valueB=0]
  *  @return {Number}
  *  @memberof Random */
-const rand = (a=1, b=0)=> b + (a-b)*Math.random();
+function rand(a=1, b=0) { return b + (a-b)*Math.random(); }
 
 /** Returns a floored random value the two values passed in
  *  @param {Number} [valueA=1]
  *  @param {Number} [valueB=0]
  *  @return {Number}
  *  @memberof Random */
-const randInt = (a=1, b=0)=> rand(a,b)|0;
+function randInt(a=1, b=0) { return rand(a,b)|0; }
 
 /** Randomly returns either -1 or 1
  *  @return {Number}
  *  @memberof Random */
-const randSign = ()=> randInt(2) * 2 - 1;
+function randSign() { return randInt(2) * 2 - 1; }
 
 /** Returns a random Vector2 within a circular shape
  *  @param {Number} [radius=1]
  *  @param {Number} [minRadius=0]
  *  @return {Vector2}
  *  @memberof Random */
-const randInCircle = (radius=1, minRadius=0)=> radius > 0 ? randVector(radius * rand(minRadius / radius, 1)**.5) : new Vector2;
+function randInCircle(radius=1, minRadius=0)
+{ return radius > 0 ? randVector(radius * rand(minRadius / radius, 1)**.5) : new Vector2; }
 
 /** Returns a random Vector2 with the passed in length
  *  @param {Number} [length=1]
  *  @return {Vector2}
  *  @memberof Random */
-const randVector = (length=1)=> new Vector2().setAngle(rand(2*PI), length);
+function randVector(length=1) { return new Vector2().setAngle(rand(2*PI), length); }
 
 /** Returns a random color between the two passed in colors, combine components if linear
  *  @param {Color}   [colorA=Color()]
@@ -549,8 +549,8 @@ const randVector = (length=1)=> new Vector2().setAngle(rand(2*PI), length);
  *  @param {Boolean} [linear]
  *  @return {Color}
  *  @memberof Random */
-const randColor = (cA = new Color, cB = new Color(0,0,0,1), linear)=>
-    linear ? cA.lerp(cB, rand()) : new Color(rand(cA.r,cB.r),rand(cA.g,cB.g),rand(cA.b,cB.b),rand(cA.a,cB.a));
+function randColor(cA = new Color, cB = new Color(0,0,0,1), linear)
+{ return linear ? cA.lerp(cB, rand()) : new Color(rand(cA.r,cB.r),rand(cA.g,cB.g),rand(cA.b,cB.b),rand(cA.a,cB.a)); }
 
 /** Seed used by the randSeeded function
  *  @type {Number}
@@ -561,16 +561,19 @@ let randSeed = 1;
 /** Set seed used by the randSeeded function, should not be 0
  *  @param {Number} seed
  *  @memberof Random */
-const setRandSeed = (seed)=> randSeed = seed;
+function setRandSeed(seed) { randSeed = seed; }
 
 /** Returns a seeded random value between the two values passed in using randSeed
  *  @param {Number} [valueA=1]
  *  @param {Number} [valueB=0]
  *  @return {Number}
  *  @memberof Random */
-const randSeeded = (a=1, b=0)=>
+function randSeeded(a=1, b=0)
 {
-    randSeed ^= randSeed << 13; randSeed ^= randSeed >>> 17; randSeed ^= randSeed << 5; // xorshift
+    // xorshift algorithm
+    randSeed ^= randSeed << 13; 
+    randSeed ^= randSeed >>> 17; 
+    randSeed ^= randSeed << 5;
     return b + (a-b) * abs(randSeed % 1e9) / 1e9;
 }
 
@@ -588,7 +591,8 @@ const randSeeded = (a=1, b=0)=>
  * b = vec2();         // set b to (0, 0)
  * @memberof Utilities
  */
-const vec2 = (x=0, y)=> x.x == undefined ? new Vector2(x, y == undefined? x : y) : new Vector2(x.x, x.y);
+function vec2(x=0, y)
+{ return x.x == undefined ? new Vector2(x, y == undefined? x : y) : new Vector2(x.x, x.y); }
 
 /** 
  * Check if object is a valid Vector2
@@ -596,11 +600,11 @@ const vec2 = (x=0, y)=> x.x == undefined ? new Vector2(x, y == undefined? x : y)
  * @return {Boolean}
  * @memberof Utilities
  */
-const isVector2 = (v)=> !isNaN(v.x) && !isNaN(v.y);
+function isVector2(v) { return !isNaN(v.x) && !isNaN(v.y); }
 
 /** 
  * 2D Vector object with vector math library
- * <br> - Functions do not change this so they can be chained together
+ * - Functions do not change this so they can be chained together
  * @example
  * let a = new Vector2(2, 3); // vector with coordinates (2, 3)
  * let b = new Vector2;       // vector with coordinates (0, 0)
@@ -747,7 +751,7 @@ class Vector2
  * @return {Color}
  * @memberof Utilities
  */
-const rgb = (r, g, b, a)=> new Color(r, g, b, a);
+function rgb(r, g, b, a) { return new Color(r, g, b, a); }
 
 /** 
  * Create a color object with HSLA values
@@ -758,7 +762,7 @@ const rgb = (r, g, b, a)=> new Color(r, g, b, a);
  * @return {Color}
  * @memberof Utilities
  */
-const hsl = (h, s, l, a)=> new Color().setHSLA(h, s, l, a);
+function hsl(h, s, l, a) { return new Color().setHSLA(h, s, l, a); }
 
 /** 
  * Color object (red, green, blue, alpha) with some helpful functions
@@ -1138,8 +1142,8 @@ let gamepadDirectionEmulateStick = 1;
 let inputWASDEmulateDirection = 1;
 
 /** True if touch gamepad should appear on mobile devices
- *  <br> - Supports left analog stick, 4 face buttons and start button (button 9)
- *  <br> - Must be set by end of gameInit to be activated
+ *  - Supports left analog stick, 4 face buttons and start button (button 9)
+ *  - Must be set by end of gameInit to be activated
  *  @type {Boolean}
  *  @default 0
  *  @memberof Settings */
@@ -1228,32 +1232,32 @@ let medalDisplayIconSize = 50;
  *  @default 0
  *  @memberof Settings */
 let medalsPreventUnlock;
-/*
-    LittleJS Object System
-*/
+/** 
+ * LittleJS Object System
+ */
 
 'use strict';
 
 /** 
  * LittleJS Object Base Object Class
- * <br> - Base object class used by the engine
- * <br> - Automatically adds self to object list
- * <br> - Will be updated and rendered each frame
- * <br> - Renders as a sprite from a tilesheet by default
- * <br> - Can have color and addtive color applied
- * <br> - 2d Physics and collision system
- * <br> - Sorted by renderOrder
- * <br> - Objects can have children attached
- * <br> - Parents are updated before children, and set child transform
- * <br> - Call destroy() to get rid of objects
- * <br>
- * <br>The physics system used by objects is simple and fast with some caveats...
- * <br> - Collision uses the axis aligned size, the object's rotation angle is only for rendering
- * <br> - Objects are guaranteed to not intersect tile collision from physics
- * <br> - If an object starts or is moved inside tile collision, it will not collide with that tile
- * <br> - Collision for objects can be set to be solid to block other objects
- * <br> - Objects may get pushed into overlapping other solid objects, if so they will push away
- * <br> - Solid objects are more performance intensive and should be used sparingly
+ * - Base object class used by the engine
+ * - Automatically adds self to object list
+ * - Will be updated and rendered each frame
+ * - Renders as a sprite from a tilesheet by default
+ * - Can have color and addtive color applied
+ * - 2d Physics and collision system
+ * - Sorted by renderOrder
+ * - Objects can have children attached
+ * - Parents are updated before children, and set child transform
+ * - Call destroy() to get rid of objects
+ *
+ * The physics system used by objects is simple and fast with some caveats...
+ * - Collision uses the axis aligned size, the object's rotation angle is only for rendering
+ * - Objects are guaranteed to not intersect tile collision from physics
+ * - If an object starts or is moved inside tile collision, it will not collide with that tile
+ * - Collision for objects can be set to be solid to block other objects
+ * - Objects may get pushed into overlapping other solid objects, if so they will push away
+ * - Solid objects are more performance intensive and should be used sparingly
  * @example
  * // create an engine object, normally you would first extend the class with your own
  * const pos = vec2(2,3);
@@ -1606,23 +1610,23 @@ class EngineObject
 }
 /** 
  * LittleJS Drawing System
- * <br> - Hybrid with both Canvas2D and WebGL available
- * <br> - Super fast tile sheet rendering with WebGL
- * <br> - Can apply rotation, mirror, color and additive color
- * <br> - Many useful utility functions
- * <br>
- * <br>LittleJS uses a hybrid rendering solution with the best of both Canvas2D and WebGL.
- * <br>There are 3 canvas/contexts available to draw to...
- * <br> - mainCanvas - 2D background canvas, non WebGL stuff like tile layers are drawn here.
- * <br> - glCanvas - Used by the accelerated WebGL batch rendering system.
- * <br> - overlayCanvas - Another 2D canvas that appears on top of the other 2 canvases.
- * <br>
- * <br>The WebGL rendering system is very fast with some caveats...
- * <br> - The default setup supports only 1 tile sheet, to support more call glCreateTexture and glSetTexture
- * <br> - Switching blend modes (additive) or textures causes another draw call which is expensive in excess
- * <br> - Group additive rendering together using renderOrder to mitigate this issue
- * <br>
- * <br>The LittleJS rendering solution is intentionally simple, feel free to adjust it for your needs!
+ * - Hybrid with both Canvas2D and WebGL available
+ * - Super fast tile sheet rendering with WebGL
+ * - Can apply rotation, mirror, color and additive color
+ * - Many useful utility functions
+ * 
+ * LittleJS uses a hybrid rendering solution with the best of both Canvas2D and WebGL.
+ * There are 3 canvas/contexts available to draw to...
+ * mainCanvas - 2D background canvas, non WebGL stuff like tile layers are drawn here.
+ * glCanvas - Used by the accelerated WebGL batch rendering system.
+ * overlayCanvas - Another 2D canvas that appears on top of the other 2 canvases.
+ * 
+ * The WebGL rendering system is very fast with some caveats...
+ * - The default setup supports only 1 tile sheet, to support more call glCreateTexture and glSetTexture
+ * - Switching blend modes (additive) or textures causes another draw call which is expensive in excess
+ * - Group additive rendering together using renderOrder to mitigate this issue
+ * 
+ * The LittleJS rendering solution is intentionally simple, feel free to adjust it for your needs!
  * @namespace Draw
  */
 
@@ -1666,7 +1670,7 @@ let tileImageSize, tileImageFixBleed, drawCount;
  *  @param {Vector2} screenPos
  *  @return {Vector2}
  *  @memberof Draw */
-const screenToWorld = (screenPos)=>
+function screenToWorld(screenPos)
 {
     ASSERT(mainCanvasSize.x && mainCanvasSize.y, 'mainCanvasSize is invalid');
     return screenPos.add(vec2(.5)).subtract(mainCanvasSize.scale(.5)).multiply(vec2(1/cameraScale,-1/cameraScale)).add(cameraPos);
@@ -1677,7 +1681,7 @@ const screenToWorld = (screenPos)=>
  *  @param {Vector2} worldPos
  *  @return {Vector2}
  *  @memberof Draw */
-const worldToScreen = (worldPos)=>
+function worldToScreen(worldPos)
 {
     ASSERT(mainCanvasSize.x && mainCanvasSize.y, 'mainCanvasSize is invalid');
     return worldPos.subtract(cameraPos).multiply(vec2(cameraScale,-cameraScale)).add(mainCanvasSize.scale(.5)).subtract(vec2(.5));
@@ -1886,9 +1890,9 @@ let engineFontImage;
 
 /** 
  * Font Image Object - Draw text on a 2D canvas by using characters in an image
- * <br> - 96 characters (from space to tilde) are stored in an image
- * <br> - Uses a default 8x8 font if none is supplied
- * <br> - You can also use fonts from the main tile sheet
+ * - 96 characters (from space to tilde) are stored in an image
+ * - Uses a default 8x8 font if none is supplied
+ * - You can also use fonts from the main tile sheet
  * @example
  * // use built in font
  * const font = new ImageFont;
@@ -1974,7 +1978,7 @@ class FontImage
 /** Returns true if fullscreen mode is active
  *  @return {Boolean}
  *  @memberof Draw */
-const isFullscreen = ()=> document.fullscreenElement;
+function isFullscreen() { return document.fullscreenElement; }
 
 /** Toggle fullsceen mode
  *  @memberof Draw */
@@ -1991,10 +1995,10 @@ function toggleFullscreen()
 
 /** 
  * LittleJS Input System
- * <br> - Tracks key down, pressed, and released
- * <br> - Also tracks mouse buttons, position, and wheel
- * <br> - Supports multiple gamepads
- * <br> - Virtual gamepad for touch devices with touchGamepadSize
+ * - Tracks key down, pressed, and released
+ * - Also tracks mouse buttons, position, and wheel
+ * - Supports multiple gamepads
+ * - Virtual gamepad for touch devices with touchGamepadSize
  * @namespace Input
  */
 
@@ -2005,25 +2009,28 @@ function toggleFullscreen()
  *  @param {Number} [device=0]
  *  @return {Boolean}
  *  @memberof Input */
-const keyIsDown = (key, device=0)=> inputData[device] && inputData[device][key] & 1;
+function keyIsDown(key, device=0)
+{ return inputData[device] && inputData[device][key] & 1; }
 
 /** Returns true if device key was pressed this frame
  *  @param {Number} key
  *  @param {Number} [device=0]
  *  @return {Boolean}
  *  @memberof Input */
-const keyWasPressed = (key, device=0)=> inputData[device] && inputData[device][key] & 2 ? 1 : 0;
+function keyWasPressed(key, device=0)
+{ return inputData[device] && inputData[device][key] & 2 ? 1 : 0; }
 
 /** Returns true if device key was released this frame
  *  @param {Number} key
  *  @param {Number} [device=0]
  *  @return {Boolean}
  *  @memberof Input */
-const keyWasReleased = (key, device=0)=> inputData[device] && inputData[device][key] & 4 ? 1 : 0;
+function keyWasReleased(key, device=0)
+{ return inputData[device] && inputData[device][key] & 4 ? 1 : 0; }
 
 /** Clears all input
  *  @memberof Input */
-const clearInput = ()=> inputData = [[]];
+function clearInput() { inputData = [[]]; }
 
 /** Returns true if mouse button is down
  *  @function
@@ -2076,28 +2083,32 @@ let preventDefaultInput = 0;
  *  @param {Number} [gamepad=0]
  *  @return {Boolean}
  *  @memberof Input */
-const gamepadIsDown = (button, gamepad=0)=> keyIsDown(button, gamepad+1);
+function gamepadIsDown(button, gamepad=0)
+{ return keyIsDown(button, gamepad+1); }
 
 /** Returns true if gamepad button was pressed
  *  @param {Number} button
  *  @param {Number} [gamepad=0]
  *  @return {Boolean}
  *  @memberof Input */
-const gamepadWasPressed = (button, gamepad=0)=> keyWasPressed(button, gamepad+1);
+function gamepadWasPressed(button, gamepad=0)
+{ return keyWasPressed(button, gamepad+1); }
 
 /** Returns true if gamepad button was released
  *  @param {Number} button
  *  @param {Number} [gamepad=0]
  *  @return {Boolean}
  *  @memberof Input */
-const gamepadWasReleased = (button, gamepad=0)=> keyWasReleased(button, gamepad+1);
+function gamepadWasReleased(button, gamepad=0)
+{ return keyWasReleased(button, gamepad+1); }
 
 /** Returns gamepad stick value
  *  @param {Number} stick
  *  @param {Number} [gamepad=0]
  *  @return {Vector2}
  *  @memberof Input */
-const gamepadStick = (stick,  gamepad=0)=> stickData[gamepad] ? stickData[gamepad][stick] || vec2() : vec2();
+function gamepadStick(stick,  gamepad=0)
+{ return stickData[gamepad] ? stickData[gamepad][stick] || vec2() : vec2(); }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Input update called by engine
@@ -2136,12 +2147,18 @@ onkeydown = (e)=>
     e.repeat || (inputData[isUsingGamepad = 0][remapKey(e.which)] = 3);
     preventDefaultInput && e.preventDefault();
 }
+
 onkeyup = (e)=>
 {
     if (debug && e.target != document.body) return;
     inputData[0][remapKey(e.which)] = 4;
 }
-const remapKey = (c)=> inputWASDEmulateDirection ? c==87?38 : c==83?40 : c==65?37 : c==68?39 : c : c;
+
+function remapKey(c)
+{ 
+    return inputWASDEmulateDirection ? 
+        c==87?38 : c==83?40 : c==65?37 : c==68?39 : c : c; 
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Mouse event handlers
@@ -2150,10 +2167,10 @@ onmousedown = (e)=> {inputData[isUsingGamepad = 0][e.button] = 3; onmousemove(e)
 onmouseup   = (e)=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
 onmousemove = (e)=> mousePosScreen = mouseToScreen(e);
 onwheel = (e)=> e.ctrlKey || (mouseWheel = sign(e.deltaY));
-oncontextmenu = (e)=> !1; // prevent right click menu
+oncontextmenu = (e)=> false; // prevent right click menu
 
 // convert a mouse or touch event position to screen space
-const mouseToScreen = (mousePos)=>
+function mouseToScreen(mousePos)
 {
     if (!mainCanvas)
         return vec2(); // fix bug that can occur if user clicks before page loads
@@ -2199,8 +2216,7 @@ function gamepadsUpdate()
         if (gamepad)
         {
             // read clamp dead zone of analog sticks
-            const deadZone = .3, deadZoneMax = .8;
-            const applyDeadZone = (v)=> 
+            const deadZone = .3, deadZoneMax = .8, applyDeadZone = (v)=> 
                 v >  deadZone ?  percent( v, deadZone, deadZoneMax) : 
                 v < -deadZone ? -percent(-v, deadZone, deadZoneMax) : 0;
 
@@ -2233,11 +2249,12 @@ function gamepadsUpdate()
 /** Pulse the vibration hardware if it exists
  *  @param {Number} [pattern=100] - a single value in miliseconds or vibration interval array
  *  @memberof Input */
-const vibrate = (pattern)=> vibrateEnable && navigator && navigator.vibrate && navigator.vibrate(pattern);
+function vibrate(pattern)
+{ vibrateEnable && navigator && navigator.vibrate && navigator.vibrate(pattern); }
 
 /** Cancel any ongoing vibration
  *  @memberof Input */
-const vibrateStop = ()=> vibrate(0);
+function vibrateStop() { vibrate(0); }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Touch input
@@ -2422,20 +2439,21 @@ function touchGamepadRender()
 }
 /** 
  * LittleJS Audio System
- * <br> - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a>
- * <br> - <a href=https://keithclark.github.io/ZzFXM/>ZzFXM Music</a>
- * <br> - Caches sounds and music for fast playback
- * <br> - Can attenuate and apply stereo panning to sounds
- * <br> - Ability to play mp3, ogg, and wave files
- * <br> - Speech synthesis wrapper functions
+ * - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a> - Sound Effect Generator
+ * - <a href=https://keithclark.github.io/ZzFXM/>ZzFXM Music</a> - Music System
+ * - Caches sounds and music for fast playback
+ * - Can attenuate and apply stereo panning to sounds
+ * - Ability to play mp3, ogg, and wave files
+ * - Speech synthesis wrapper functions
+ * @namespace Audio
  */
 
 'use strict';
 
 /** 
  * Sound Object - Stores a zzfx sound for later use and can be played positionally
- * <br>
- * <br><b><a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a></b>
+ * 
+ * <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
  * @example
  * // create a sound
  * const sound_example = new Sound([.5,.5]);
@@ -2519,8 +2537,8 @@ class Sound
 
 /**
  * Music Object - Stores a zzfx music track for later use
- * <br>
- * <br><b><a href=https://keithclark.github.io/ZzFXM/>Create music with the ZzFXM tracker.</a></b>
+ * 
+ * <a href=https://keithclark.github.io/ZzFXM/>Create music with the ZzFXM tracker.</a>
  * @example
  * // create some music
  * const music_example = new Music(
@@ -2630,14 +2648,15 @@ function speak(text, language='', volume=1, rate=1, pitch=1)
 
 /** Stop all queued speech
  *  @memberof Audio */
-const speakStop = ()=> speechSynthesis && speechSynthesis.cancel();
+function speakStop() {speechSynthesis && speechSynthesis.cancel();}
 
 /** Get frequency of a note on a musical scale
  *  @param {Number} semitoneOffset - How many semitones away from the root note
  *  @param {Number} [rootNoteFrequency=220] - Frequency at semitone offset 0
  *  @return {Number} - The frequency of the note
  *  @memberof Audio */
-const getNoteFrequency = (semitoneOffset, rootFrequency=220)=> rootFrequency * 2**(semitoneOffset/12); 
+function getNoteFrequency(semitoneOffset, rootFrequency=220)
+{ return rootFrequency * 2**(semitoneOffset/12); }
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -2695,12 +2714,12 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0)
 // ZzFXMicro - Zuper Zmall Zound Zynth - v1.2.0 by Frank Force
 
 /** Generate and play a ZzFX sound
- *  <br>
- *  <br><b><a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a></b>
+ *  
+ *  <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
  *  @param {Array} zzfxSound - Array of ZzFX parameters, ex. [.5,.5]
- *  @return {Array} - Array of audio samples
+ *  @return {AudioBufferSourceNode} - The audio node of the sound played
  *  @memberof Audio */
-const zzfx = (...zzfxSound) => playSamples([zzfxG(...zzfxSound)]);
+function zzfx(...zzfxSound) { return playSamples([zzfxG(...zzfxSound)]); }
 
 /** Sample rate used for all ZzFX sounds
  *  @default 44100
@@ -2708,7 +2727,29 @@ const zzfx = (...zzfxSound) => playSamples([zzfxG(...zzfxSound)]);
 const zzfxR = 44100; 
 
 /** Generate samples for a ZzFX sound
- *  @memberof Audio */
+ *  @param {Number}  [volume=1] - Volume scale (percent)
+ *  @param {Number}  [randomness=.05] - How much to randomize frequency (percent Hz)
+ *  @param {Number}  [frequency=220] - Frequency of sound (Hz)
+ *  @param {Number}  [attack=0] - Attack time, how fast sound starts (seconds)
+ *  @param {Number}  [sustain=0] - Sustain time, how long sound holds (seconds)
+ *  @param {Number}  [release=.1] - Release time, how fast sound fades out (seconds)
+ *  @param {Number}  [shape=0] - Shape of the sound wave
+ *  @param {Number}  [shapeCurve=1] - Squarenes of wave (0=square, 1=normal, 2=pointy)
+ *  @param {Number}  [slide=0] - How much to slide frequency (kHz/s)
+ *  @param {Number}  [deltaSlide=0] - How much to change slide (kHz/s/s)
+ *  @param {Number}  [pitchJump=0] - Frequency of pitch jump (Hz)
+ *  @param {Number}  [pitchJumpTime=0] - Time of pitch jump (seconds)
+ *  @param {Number}  [repeatTime=0] - Resets some parameters periodically (seconds)
+ *  @param {Number}  [noise=0] - How much random noise to add (percent)
+ *  @param {Number}  [modulation=0] - Frequency of modulation wave, negative flips phase (Hz)
+ *  @param {Number}  [bitCrush=0] - Resamples at a lower frequency in (samples*100)
+ *  @param {Number}  [delay=0] - Overlap sound with itself for reverb and flanger effects (seconds)
+ *  @param {Number}  [sustainVolume=1] - Volume level for sustain (percent)
+ *  @param {Number}  [decay=0] - Decay time, how long to reach sustain after attack (seconds)
+ *  @param {Number}  [tremolo=0] - Trembling effect, rate controlled by repeat time (precent)
+ *  @return {Array} - Array of audio samples
+ *  @memberof Audio
+ */
 function zzfxG
 (
     // parameters
@@ -2798,7 +2839,7 @@ function zzfxG
  *  @param {Array} patterns - Array of pattern data
  *  @param {Array} sequence - Array of pattern indexes
  *  @param {Number} [BPM=125] - Playback speed of the song in BPM
- *  @returns {Array} - Left and right channel sample data
+ *  @return {Array} - Left and right channel sample data
  *  @memberof Audio */
 function zzfxM(instruments, patterns, sequence, BPM = 125) 
 {
@@ -2896,13 +2937,13 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
 }
 /** 
  * LittleJS Tile Layer System
- * <br> - Caches arrays of tiles to off screen canvas for fast rendering
- * <br> - Unlimted numbers of layers, allocates canvases as needed
- * <br> - Interfaces with EngineObject for collision
- * <br> - Collision layer is separate from visible layers
- * <br> - It is recommended to have a visible layer that matches the collision
- * <br> - Tile layers can be drawn to using their context with canvas2d
- * <br> - Drawn directly to the main canvas without using WebGL
+ * - Caches arrays of tiles to off screen canvas for fast rendering
+ * - Unlimted numbers of layers, allocates canvases as needed
+ * - Interfaces with EngineObject for collision
+ * - Collision layer is separate from visible layers
+ * - It is recommended to have a visible layer that matches the collision
+ * - Tile layers can be drawn to using their context with canvas2d
+ * - Drawn directly to the main canvas without using WebGL
  * @namespace TileCollision
  */
 
@@ -2933,15 +2974,19 @@ function initTileCollision(size)
  *  @param {Vector2} pos
  *  @param {Number}  [data=0]
  *  @memberof TileCollision */
-const setTileCollisionData = (pos, data=0)=>
+function setTileCollisionData(pos, data=0)
+{
     pos.arrayCheck(tileCollisionSize) && (tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] = data);
+}
 
 /** Get tile collision data
  *  @param {Vector2} pos
  *  @return {Number}
  *  @memberof TileCollision */
-const getTileCollisionData = (pos)=>
-    pos.arrayCheck(tileCollisionSize) ? tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] : 0;
+function getTileCollisionData(pos)
+{
+    return pos.arrayCheck(tileCollisionSize) ? tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] : 0;
+}
 
 /** Check if collision with another object should occur
  *  @param {Vector2}      pos
@@ -3035,10 +3080,10 @@ class TileLayerData
 
 /**
  * Tile layer object - cached rendering system for tile layers
- * <br> - Each Tile layer is rendered to an off screen canvas
- * <br> - To allow dynamic modifications, layers are rendered using canvas 2d
- * <br> - Some devices like mobile phones are limited to 4k texture resolution
- * <br> - So with 16x16 tiles this limits layers to 256x256 on mobile devices
+ * - Each Tile layer is rendered to an off screen canvas
+ * - To allow dynamic modifications, layers are rendered using canvas 2d
+ * - Some devices like mobile phones are limited to 4k texture resolution
+ * - So with 16x16 tiles this limits layers to 256x256 on mobile devices
  * @extends EngineObject
  * @example
  * // create tile collision and visible tile layer
@@ -3238,12 +3283,9 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
     drawRect(pos, size, color, angle) 
     { this.drawTile(pos, size, -1, 0, color, angle); }
 }
-/*
-    LittleJS Particle System
-    - Spawns particles with randomness from parameters
-    - Updates particle physics
-    - Fast particle rendering
-*/
+/** 
+ * LittleJS Particle System
+ */
 
 'use strict';
 
@@ -3549,9 +3591,9 @@ class Particle extends EngineObject
 }
 /** 
  * LittleJS Medal System
- * <br> - Tracks and displays medals
- * <br> - Saves medals to local storage
- * <br> - Newgrounds integration
+ * - Tracks and displays medals
+ * - Saves medals to local storage
+ * - Newgrounds integration
  * @namespace Medals
  */
 
@@ -3568,8 +3610,8 @@ let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimeLast;
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Initialize medals with a save name used for storage
- *  <br> - Call this after creating all medals
- *  <br> - Checks if medals are unlocked
+ *  - Call this after creating all medals
+ *  - Checks if medals are unlocked
  *  @param {String} saveName
  *  @memberof Medals */
 function medalsInit(saveName)
@@ -3839,20 +3881,43 @@ class Newgrounds
     CryptoJS()
     {
         ///////////////////////////////////////////////////////////////////////////////
-        // Crypto-JS - https://github.com/brix/crypto-js [The MIT License (MIT)]
-        // Copyright (c) 2009-2013 Jeff Mott  Copyright (c) 2013-2016 Evan Vosberg
-
+        // Crypto-JS - https://github.com/brix/crypto-js - MIT License
+        //
+        // [The MIT License (MIT)](http://opensource.org/licenses/MIT)
+        // 
+        // Copyright (c) 2009-2013 Jeff Mott  
+        // Copyright (c) 2013-2016 Evan Vosberg
+        // 
+        // Permission is hereby granted, free of charge, to any person obtaining a copy
+        // of this software and associated documentation files (the "Software"), to deal
+        // in the Software without restriction, including without limitation the rights
+        // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        // copies of the Software, and to permit persons to whom the Software is
+        // furnished to do so, subject to the following conditions:
+        // 
+        // The above copyright notice and this permission notice shall be included in
+        // all copies or substantial portions of the Software.
+        // 
+        // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+        // THE SOFTWARE.
         return eval(Function("[M='GBMGXz^oVYPPKKbB`agTXU|LxPc_ZBcMrZvCr~wyGfWrwk@ATqlqeTp^N?p{we}jIpEnB_sEr`l?YDkDhWhprc|Er|XETG?pTl`e}dIc[_N~}fzRycIfpW{HTolvoPB_FMe_eH~BTMx]yyOhv?biWPCGc]kABencBhgERHGf{OL`Dj`c^sh@canhy[secghiyotcdOWgO{tJIE^JtdGQRNSCrwKYciZOa]Y@tcRATYKzv|sXpboHcbCBf`}SKeXPFM|RiJsSNaIb]QPc[D]Jy_O^XkOVTZep`ONmntLL`Qz~UupHBX_Ia~WX]yTRJIxG`ioZ{fefLJFhdyYoyLPvqgH?b`[TMnTwwfzDXhfM?rKs^aFr|nyBdPmVHTtAjXoYUloEziWDCw_suyYT~lSMksI~ZNCS[Bex~j]Vz?kx`gdYSEMCsHpjbyxQvw|XxX_^nQYue{sBzVWQKYndtYQMWRef{bOHSfQhiNdtR{o?cUAHQAABThwHPT}F{VvFmgN`E@FiFYS`UJmpQNM`X|tPKHlccT}z}k{sACHL?Rt@MkWplxO`ASgh?hBsuuP|xD~LSH~KBlRs]t|l|_tQAroDRqWS^SEr[sYdPB}TAROtW{mIkE|dWOuLgLmJrucGLpebrAFKWjikTUzS|j}M}szasKOmrjy[?hpwnEfX[jGpLt@^v_eNwSQHNwtOtDgWD{rk|UgASs@mziIXrsHN_|hZuxXlPJOsA^^?QY^yGoCBx{ekLuZzRqQZdsNSx@ezDAn{XNj@fRXIwrDX?{ZQHwTEfu@GhxDOykqts|n{jOeZ@c`dvTY?e^]ATvWpb?SVyg]GC?SlzteilZJAL]mlhLjYZazY__qcVFYvt@|bIQnSno@OXyt]OulzkWqH`rYFWrwGs`v|~XeTsIssLrbmHZCYHiJrX}eEzSssH}]l]IhPQhPoQ}rCXLyhFIT[clhzYOvyHqigxmjz`phKUU^TPf[GRAIhNqSOdayFP@FmKmuIzMOeoqdpxyCOwCthcLq?n`L`tLIBboNn~uXeFcPE{C~mC`h]jUUUQe^`UqvzCutYCgct|SBrAeiYQW?X~KzCz}guXbsUw?pLsg@hDArw?KeJD[BN?GD@wgFWCiHq@Ypp_QKFixEKWqRp]oJFuVIEvjDcTFu~Zz]a{IcXhWuIdMQjJ]lwmGQ|]g~c]Hl]pl`Pd^?loIcsoNir_kikBYyg?NarXZEGYspt_vLBIoj}LI[uBFvm}tbqvC|xyR~a{kob|HlctZslTGtPDhBKsNsoZPuH`U`Fqg{gKnGSHVLJ^O`zmNgMn~{rsQuoymw^JY?iUBvw_~mMr|GrPHTERS[MiNpY[Mm{ggHpzRaJaoFomtdaQ_?xuTRm}@KjU~RtPsAdxa|uHmy}n^i||FVL[eQAPrWfLm^ndczgF~Nk~aplQvTUpHvnTya]kOenZlLAQIm{lPl@CCTchvCF[fI{^zPkeYZTiamoEcKmBMfZhk_j_~Fjp|wPVZlkh_nHu]@tP|hS@^G^PdsQ~f[RqgTDqezxNFcaO}HZhb|MMiNSYSAnQWCDJukT~e|OTgc}sf[cnr?fyzTa|EwEtRG|I~|IO}O]S|rp]CQ}}DWhSjC_|z|oY|FYl@WkCOoPuWuqr{fJu?Brs^_EBI[@_OCKs}?]O`jnDiXBvaIWhhMAQDNb{U`bqVR}oqVAvR@AZHEBY@depD]OLh`kf^UsHhzKT}CS}HQKy}Q~AeMydXPQztWSSzDnghULQgMAmbWIZ|lWWeEXrE^EeNoZApooEmrXe{NAnoDf`m}UNlRdqQ@jOc~HLOMWs]IDqJHYoMziEedGBPOxOb?[X`KxkFRg@`mgFYnP{hSaxwZfBQqTm}_?RSEaQga]w[vxc]hMne}VfSlqUeMo_iqmd`ilnJXnhdj^EEFifvZyxYFRf^VaqBhLyrGlk~qowqzHOBlOwtx?i{m~`n^G?Yxzxux}b{LSlx]dS~thO^lYE}bzKmUEzwW^{rPGhbEov[Plv??xtyKJshbG`KuO?hjBdS@Ru}iGpvFXJRrvOlrKN?`I_n_tplk}kgwSXuKylXbRQ]]?a|{xiT[li?k]CJpwy^o@ebyGQrPfF`aszGKp]baIx~H?ElETtFh]dz[OjGl@C?]VDhr}OE@V]wLTc[WErXacM{We`F|utKKjgllAxvsVYBZ@HcuMgLboFHVZmi}eIXAIFhS@A@FGRbjeoJWZ_NKd^oEH`qgy`q[Tq{x?LRP|GfBFFJV|fgZs`MLbpPYUdIV^]mD@FG]pYAT^A^RNCcXVrPsgk{jTrAIQPs_`mD}rOqAZA[}RETFz]WkXFTz_m{N@{W@_fPKZLT`@aIqf|L^Mb|crNqZ{BVsijzpGPEKQQZGlApDn`ruH}cvF|iXcNqK}cxe_U~HRnKV}sCYb`D~oGvwG[Ca|UaybXea~DdD~LiIbGRxJ_VGheI{ika}KC[OZJLn^IBkPrQj_EuoFwZ}DpoBRcK]Q}?EmTv~i_Tul{bky?Iit~tgS|o}JL_VYcCQdjeJ_MfaA`FgCgc[Ii|CBHwq~nbJeYTK{e`CNstKfTKPzw{jdhp|qsZyP_FcugxCFNpKitlR~vUrx^NrSVsSTaEgnxZTmKc`R|lGJeX}ccKLsQZQhsFkeFd|ckHIVTlGMg`~uPwuHRJS_CPuN_ogXe{Ba}dO_UBhuNXby|h?JlgBIqMKx^_u{molgL[W_iavNQuOq?ap]PGB`clAicnl@k~pA?MWHEZ{HuTLsCpOxxrKlBh]FyMjLdFl|nMIvTHyGAlPogqfZ?PlvlFJvYnDQd}R@uAhtJmDfe|iJqdkYr}r@mEjjIetDl_I`TELfoR|qTBu@Tic[BaXjP?dCS~MUK[HPRI}OUOwAaf|_}HZzrwXvbnNgltjTwkBE~MztTQhtRSWoQHajMoVyBBA`kdgK~h`o[J`dm~pm]tk@i`[F~F]DBlJKklrkR]SNw@{aG~Vhl`KINsQkOy?WhcqUMTGDOM_]bUjVd|Yh_KUCCgIJ|LDIGZCPls{RzbVWVLEhHvWBzKq|^N?DyJB|__aCUjoEgsARki}j@DQXS`RNU|DJ^a~d{sh_Iu{ONcUtSrGWW@cvUjefHHi}eSSGrNtO?cTPBShLqzwMVjWQQCCFB^culBjZHEK_{dO~Q`YhJYFn]jq~XSnG@[lQr]eKrjXpG~L^h~tDgEma^AUFThlaR{xyuP@[^VFwXSeUbVetufa@dX]CLyAnDV@Bs[DnpeghJw^?UIana}r_CKGDySoRudklbgio}kIDpA@McDoPK?iYcG?_zOmnWfJp}a[JLR[stXMo?_^Ng[whQlrDbrawZeSZ~SJstIObdDSfAA{MV}?gNunLOnbMv_~KFQUAjIMj^GkoGxuYtYbGDImEYiwEMyTpMxN_LSnSMdl{bg@dtAnAMvhDTBR_FxoQgANniRqxd`pWv@rFJ|mWNWmh[GMJz_Nq`BIN@KsjMPASXORcdHjf~rJfgZYe_uulzqM_KdPlMsuvU^YJuLtofPhGonVOQxCMuXliNvJIaoC?hSxcxKVVxWlNs^ENDvCtSmO~WxI[itnjs^RDvI@KqG}YekaSbTaB]ki]XM@[ZnDAP~@|BzLRgOzmjmPkRE@_sobkT|SszXK[rZN?F]Z_u}Yue^[BZgLtR}FHzWyxWEX^wXC]MJmiVbQuBzkgRcKGUhOvUc_bga|Tx`KEM`JWEgTpFYVeXLCm|mctZR@uKTDeUONPozBeIkrY`cz]]~WPGMUf`MNUGHDbxZuO{gmsKYkAGRPqjc|_FtblEOwy}dnwCHo]PJhN~JoteaJ?dmYZeB^Xd?X^pOKDbOMF@Ugg^hETLdhwlA}PL@_ur|o{VZosP?ntJ_kG][g{Zq`Tu]dzQlSWiKfnxDnk}KOzp~tdFstMobmy[oPYjyOtUzMWdjcNSUAjRuqhLS@AwB^{BFnqjCmmlk?jpn}TksS{KcKkDboXiwK]qMVjm~V`LgWhjS^nLGwfhAYrjDSBL_{cRus~{?xar_xqPlArrYFd?pHKdMEZzzjJpfC?Hv}mAuIDkyBxFpxhstTx`IO{rp}XGuQ]VtbHerlRc_LFGWK[XluFcNGUtDYMZny[M^nVKVeMllQI[xtvwQnXFlWYqxZZFp_|]^oWX[{pOMpxXxvkbyJA[DrPzwD|LW|QcV{Nw~U^dgguSpG]ClmO@j_TENIGjPWwgdVbHganhM?ema|dBaqla|WBd`poj~klxaasKxGG^xbWquAl~_lKWxUkDFagMnE{zHug{b`A~IYcQYBF_E}wiA}K@yxWHrZ{[d~|ARsYsjeNWzkMs~IOqqp[yzDE|WFrivsidTcnbHFRoW@XpAV`lv_zj?B~tPCppRjgbbDTALeFaOf?VcjnKTQMLyp{NwdylHCqmo?oelhjWuXj~}{fpuX`fra?GNkDiChYgVSh{R[BgF~eQa^WVz}ATI_CpY?g_diae]|ijH`TyNIF}|D_xpmBq_JpKih{Ba|sWzhnAoyraiDvk`h{qbBfsylBGmRH}DRPdryEsSaKS~tIaeF[s]I~xxHVrcNe@Jjxa@jlhZueLQqHh_]twVMqG_EGuwyab{nxOF?`HCle}nBZzlTQjkLmoXbXhOtBglFoMz?eqre`HiE@vNwBulglmQjj]DB@pPkPUgA^sjOAUNdSu_`oAzar?n?eMnw{{hYmslYi[TnlJD'",...']charCodeAtUinyxpf',"for(;e<10359;c[e++]=p-=128,A=A?p-A&&A:p==34&&p)for(p=1;p<128;y=f.map((n,x)=>(U=r[n]*2+1,U=Math.log(U/(h-U)),t-=a[x]*U,U/500)),t=~-h/(1+Math.exp(t))|1,i=o%h<t,o=o%h+(i?t:h-t)*(o>>17)-!i*t,f.map((n,x)=>(U=r[n]+=(i*h/2-r[n]<<13)/((C[n]+=C[n]<5)+1/20)>>13,a[x]+=y[x]*(i-t/h))),p=p*2+i)for(f='010202103203210431053105410642065206541'.split(t=0).map((n,x)=>(U=0,[...n].map((n,x)=>(U=U*997+(c[e-n]|0)|0)),h*32-1&U*997+p+!!A*129)*12+x);o<h*32;o=o*64|M.charCodeAt(d++)&63);for(C=String.fromCharCode(...c);r=/[\0-#?@\\\\~]/.exec(C);)with(C.split(r))C=join(shift());return C")([],[],1<<17,[0,0,0,0,0,0,0,0,0,0,0,0],new Uint16Array(51e6).fill(1<<15),new Uint8Array(51e6),0,0,0,0));
+        // end of Crypto-JS
+        ///////////////////////////////////////////////////////////////////////////////
     }
 }
 /** 
  * LittleJS WebGL Interface
- * <br> - All webgl used by the engine is wrapped up here
- * <br> - For normal stuff you won't need to see or call anything in this file
- * <br> - For advanced stuff there are helper functions to create shaders, textures, etc
- * <br> - Can be disabled with glEnable to revert to 2D canvas rendering
- * <br> - Batches sprite rendering on GPU for incredibly fast performance
- * <br> - Sprite transform math is done in the shader where possible
+ * - All webgl used by the engine is wrapped up here
+ * - For normal stuff you won't need to see or call anything in this file
+ * - For advanced stuff there are helper functions to create shaders, textures, etc
+ * - Can be disabled with glEnable to revert to 2D canvas rendering
+ * - Batches sprite rendering on GPU for incredibly fast performance
+ * - Sprite transform math is done in the shader where possible
  * @namespace WebGL
  */
 
@@ -3927,7 +3992,7 @@ function glSetBlendMode(additive)
 }
 
 /** Set the WebGl texture, not normally necessary unless multiple tile sheets are used
- *  <br> - This may also flush the gl buffer resulting in more draw calls and worse performance
+ *  - This may also flush the gl buffer resulting in more draw calls and worse performance
  *  @param {WebGLTexture} [texture=glTileTexture]
  *  @memberof WebGL */
 function glSetTexture(texture=glTileTexture)
@@ -4239,27 +4304,23 @@ gl_INDICIES_PER_VERT = 6,
 gl_MAX_BATCH = 1<<16,
 gl_VERTEX_BYTE_STRIDE = (4 * 2) * 2 + (4) * 2, // vec2 * 2 + (char * 4) * 2
 gl_VERTEX_BUFFER_SIZE = gl_MAX_BATCH * gl_VERTICES_PER_QUAD * gl_VERTEX_BYTE_STRIDE;
-/*
-    LittleJS - The Tiny JavaScript Game Engine That Can!
-    MIT License - Copyright 2021 Frank Force
-
-    Engine Features
-    - Object oriented system with base class engine object
-    - Base class object handles update, physics, collision, rendering, etc
-    - Engine helper classes and functions like Vector2, Color, and Timer
-    - Super fast rendering system for tile sheets
-    - Sound effects audio with zzfx and music with zzfxm
-    - Input processing system with gamepad and touchscreen support
-    - Tile layer rendering and collision system
-    - Particle effect system
-    - Medal system tracks and displays achievements
-    - Debug tools and debug rendering system
-    - Post processing effects
-    - Call engineInit() to start it up!
-*/
-
-/**
- * LittleJS Engine Globals
+/** 
+ * LittleJS - The Tiny JavaScript Game Engine That Can!
+ * MIT License - Copyright 2021 Frank Force
+ * 
+ * Engine Features
+ * - Object oriented system with base class engine object
+ * - Base class object handles update, physics, collision, rendering, etc
+ * - Engine helper classes and functions like Vector2, Color, and Timer
+ * - Super fast rendering system for tile sheets
+ * - Sound effects audio with zzfx and music with zzfxm
+ * - Input processing system with gamepad and touchscreen support
+ * - Tile layer rendering and collision system
+ * - Particle effect system
+ * - Medal system tracks and displays achievements
+ * - Debug tools and debug rendering system
+ * - Post processing effects
+ * - Call engineInit() to start it up!
  * @namespace Engine
  */
 
@@ -4509,7 +4570,7 @@ function engineObjectsUpdate()
     engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);
 
     // recursive object update
-    const updateObject = (o)=>
+    function updateObject(o)
     {
         if (!o.destroyed)
         {

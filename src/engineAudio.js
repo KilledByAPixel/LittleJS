@@ -1,19 +1,20 @@
 /** 
  * LittleJS Audio System
- * <br> - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a>
- * <br> - <a href=https://keithclark.github.io/ZzFXM/>ZzFXM Music</a>
- * <br> - Caches sounds and music for fast playback
- * <br> - Can attenuate and apply stereo panning to sounds
- * <br> - Ability to play mp3, ogg, and wave files
- * <br> - Speech synthesis wrapper functions
+ * - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a> - Sound Effect Generator
+ * - <a href=https://keithclark.github.io/ZzFXM/>ZzFXM Music</a> - Music System
+ * - Caches sounds and music for fast playback
+ * - Can attenuate and apply stereo panning to sounds
+ * - Ability to play mp3, ogg, and wave files
+ * - Speech synthesis wrapper functions
+ * @namespace Audio
  */
 
 'use strict';
 
 /** 
  * Sound Object - Stores a zzfx sound for later use and can be played positionally
- * <br>
- * <br><b><a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a></b>
+ * 
+ * <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
  * @example
  * // create a sound
  * const sound_example = new Sound([.5,.5]);
@@ -97,8 +98,8 @@ class Sound
 
 /**
  * Music Object - Stores a zzfx music track for later use
- * <br>
- * <br><b><a href=https://keithclark.github.io/ZzFXM/>Create music with the ZzFXM tracker.</a></b>
+ * 
+ * <a href=https://keithclark.github.io/ZzFXM/>Create music with the ZzFXM tracker.</a>
  * @example
  * // create some music
  * const music_example = new Music(
@@ -208,14 +209,15 @@ function speak(text, language='', volume=1, rate=1, pitch=1)
 
 /** Stop all queued speech
  *  @memberof Audio */
-const speakStop = ()=> speechSynthesis && speechSynthesis.cancel();
+function speakStop() {speechSynthesis && speechSynthesis.cancel();}
 
 /** Get frequency of a note on a musical scale
  *  @param {Number} semitoneOffset - How many semitones away from the root note
  *  @param {Number} [rootNoteFrequency=220] - Frequency at semitone offset 0
  *  @return {Number} - The frequency of the note
  *  @memberof Audio */
-const getNoteFrequency = (semitoneOffset, rootFrequency=220)=> rootFrequency * 2**(semitoneOffset/12); 
+function getNoteFrequency(semitoneOffset, rootFrequency=220)
+{ return rootFrequency * 2**(semitoneOffset/12); }
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -273,12 +275,12 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0)
 // ZzFXMicro - Zuper Zmall Zound Zynth - v1.2.0 by Frank Force
 
 /** Generate and play a ZzFX sound
- *  <br>
- *  <br><b><a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a></b>
+ *  
+ *  <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
  *  @param {Array} zzfxSound - Array of ZzFX parameters, ex. [.5,.5]
- *  @return {Array} - Array of audio samples
+ *  @return {AudioBufferSourceNode} - The audio node of the sound played
  *  @memberof Audio */
-const zzfx = (...zzfxSound) => playSamples([zzfxG(...zzfxSound)]);
+function zzfx(...zzfxSound) { return playSamples([zzfxG(...zzfxSound)]); }
 
 /** Sample rate used for all ZzFX sounds
  *  @default 44100
@@ -286,7 +288,29 @@ const zzfx = (...zzfxSound) => playSamples([zzfxG(...zzfxSound)]);
 const zzfxR = 44100; 
 
 /** Generate samples for a ZzFX sound
- *  @memberof Audio */
+ *  @param {Number}  [volume=1] - Volume scale (percent)
+ *  @param {Number}  [randomness=.05] - How much to randomize frequency (percent Hz)
+ *  @param {Number}  [frequency=220] - Frequency of sound (Hz)
+ *  @param {Number}  [attack=0] - Attack time, how fast sound starts (seconds)
+ *  @param {Number}  [sustain=0] - Sustain time, how long sound holds (seconds)
+ *  @param {Number}  [release=.1] - Release time, how fast sound fades out (seconds)
+ *  @param {Number}  [shape=0] - Shape of the sound wave
+ *  @param {Number}  [shapeCurve=1] - Squarenes of wave (0=square, 1=normal, 2=pointy)
+ *  @param {Number}  [slide=0] - How much to slide frequency (kHz/s)
+ *  @param {Number}  [deltaSlide=0] - How much to change slide (kHz/s/s)
+ *  @param {Number}  [pitchJump=0] - Frequency of pitch jump (Hz)
+ *  @param {Number}  [pitchJumpTime=0] - Time of pitch jump (seconds)
+ *  @param {Number}  [repeatTime=0] - Resets some parameters periodically (seconds)
+ *  @param {Number}  [noise=0] - How much random noise to add (percent)
+ *  @param {Number}  [modulation=0] - Frequency of modulation wave, negative flips phase (Hz)
+ *  @param {Number}  [bitCrush=0] - Resamples at a lower frequency in (samples*100)
+ *  @param {Number}  [delay=0] - Overlap sound with itself for reverb and flanger effects (seconds)
+ *  @param {Number}  [sustainVolume=1] - Volume level for sustain (percent)
+ *  @param {Number}  [decay=0] - Decay time, how long to reach sustain after attack (seconds)
+ *  @param {Number}  [tremolo=0] - Trembling effect, rate controlled by repeat time (precent)
+ *  @return {Array} - Array of audio samples
+ *  @memberof Audio
+ */
 function zzfxG
 (
     // parameters
@@ -376,7 +400,7 @@ function zzfxG
  *  @param {Array} patterns - Array of pattern data
  *  @param {Array} sequence - Array of pattern indexes
  *  @param {Number} [BPM=125] - Playback speed of the song in BPM
- *  @returns {Array} - Left and right channel sample data
+ *  @return {Array} - Left and right channel sample data
  *  @memberof Audio */
 function zzfxM(instruments, patterns, sequence, BPM = 125) 
 {

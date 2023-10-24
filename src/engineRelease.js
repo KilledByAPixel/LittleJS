@@ -1,10 +1,9 @@
-/*
-    LittleJS - Release Build
-    MIT License - Copyright 2021 Frank Force
-    
-    - This file is used for release builds in place of engineDebug.js
-    - Debug functionality will be disabled to lower size and increase performance
-*/
+/** 
+ * LittleJS - Release Build
+ * MIT License - Copyright 2021 Frank Force
+ * - This file is used for release builds in place of engineDebug.js
+ * - Debug functionality is disabled to reduce size and increase performance
+ */
 
 'use strict';
 
@@ -20,15 +19,15 @@ const debugGamepads = 0;
 const debugMedals = 0;
 
 // debug commands are automatically removed from the final build
-const ASSERT          = ()=> {}
-const debugInit       = ()=> {}
-const debugUpdate     = ()=> {}
-const debugRender     = ()=> {}
-const debugRect       = ()=> {}
-const debugCircle     = ()=> {}
-const debugPoint      = ()=> {}
-const debugLine       = ()=> {}
-const debugAABB       = ()=> {}
-const debugText       = ()=> {}
-const debugClear      = ()=> {}
-const debugSaveCanvas = ()=> {}
+function ASSERT          (){}
+function debugInit       (){}
+function debugUpdate     (){}
+function debugRender     (){}
+function debugRect       (){}
+function debugCircle     (){}
+function debugPoint      (){}
+function debugLine       (){}
+function debugAABB       (){}
+function debugText       (){}
+function debugClear      (){}
+function debugSaveCanvas (){}

@@ -1,9 +1,9 @@
 /**
  * LittleJS Utility Classes and Functions
- * <br> - General purpose math library
- * <br> - Vector2 - fast, simple, easy 2D vector class
- * <br> - Color - holds a rgba color with some math functions
- * <br> - Timer - tracks time automatically
+ * - General purpose math library
+ * - Vector2 - fast, simple, easy 2D vector class
+ * - Color - holds a rgba color with some math functions
+ * - Timer - tracks time automatically
  * @namespace Utilities
  */
 
@@ -19,34 +19,34 @@ const PI = Math.PI;
  *  @param {Number} value
  *  @return {Number}
  *  @memberof Utilities */
-const abs = (a)=> a < 0 ? -a : a;
+function abs(a) { return a < 0 ? -a : a; }
 
 /** Returns lowest of two values passed in
  *  @param {Number} valueA
  *  @param {Number} valueB
  *  @return {Number}
  *  @memberof Utilities */
-const min = (a, b)=> a < b ?  a : b;
+function min(a, b) { return a < b ?  a : b; }
 
 /** Returns highest of two values passed in
  *  @param {Number} valueA
  *  @param {Number} valueB
  *  @return {Number}
  *  @memberof Utilities */
-const max = (a, b)=> a > b ?  a : b;
+function max(a, b) { return a > b ?  a : b; }
 
 /** Returns the sign of value passed in (also returns 1 if 0)
  *  @param {Number} value
  *  @return {Number}
  *  @memberof Utilities */
-const sign = (a)=> a < 0 ? -1 : 1;
+function sign(a) { return a < 0 ? -1 : 1; }
 
 /** Returns first parm modulo the second param, but adjusted so negative numbers work as expected
  *  @param {Number} dividend
  *  @param {Number} [divisor=1]
  *  @return {Number}
  *  @memberof Utilities */
-const mod = (a, b=1)=> ((a % b) + b) % b;
+function mod(a, b=1) { return ((a % b) + b) % b; }
 
 /** Clamps the value beween max and min
  *  @param {Number} value
@@ -54,7 +54,8 @@ const mod = (a, b=1)=> ((a % b) + b) % b;
  *  @param {Number} [max=1]
  *  @return {Number}
  *  @memberof Utilities */
-const clamp = (v, min=0, max=1)=> v < min ? min : v > max ? max : v;
+function clamp(v, min=0, max=1)
+{ return v < min ? min : v > max ? max : v; }
 
 /** Returns what percentage the value is between max and min
  *  @param {Number} value
@@ -62,7 +63,8 @@ const clamp = (v, min=0, max=1)=> v < min ? min : v > max ? max : v;
  *  @param {Number} [max=1]
  *  @return {Number}
  *  @memberof Utilities */
-const percent = (v, min=0, max=1)=> max-min ? clamp((v-min) / (max-min)) : 0;
+function percent(v, min=0, max=1)
+{ return max-min ? clamp((v-min) / (max-min)) : 0; }
 
 /** Linearly interpolates the percent value between max and min
  *  @param {Number} percent
@@ -70,19 +72,19 @@ const percent = (v, min=0, max=1)=> max-min ? clamp((v-min) / (max-min)) : 0;
  *  @param {Number} [max=1]
  *  @return {Number}
  *  @memberof Utilities */
-const lerp = (p, min=0, max=1)=> min + clamp(p) * (max-min);
+function lerp(p, min=0, max=1){ return min + clamp(p) * (max-min); }
 
 /** Applies smoothstep function to the percentage value
  *  @param {Number} value
  *  @return {Number}
  *  @memberof Utilities */
-const smoothStep = (p)=> p * p * (3 - 2 * p);
+function smoothStep(p) { return p * p * (3 - 2 * p); }
 
 /** Returns the nearest power of two not less then the value
  *  @param {Number} value
  *  @return {Number}
  *  @memberof Utilities */
-const nearestPowerOfTwo = (v)=> 2**Math.ceil(Math.log2(v));
+function nearestPowerOfTwo(v) { return 2**Math.ceil(Math.log2(v)); }
 
 /** Returns true if two axis aligned bounding boxes are overlapping 
  *  @param {Vector2} pointA  - Center of box A
@@ -91,7 +93,8 @@ const nearestPowerOfTwo = (v)=> 2**Math.ceil(Math.log2(v));
  *  @param {Vector2} [sizeB] - Size of box B
  *  @return {Boolean}        - True if overlapping
  *  @memberof Utilities */
-const isOverlapping = (pA, sA, pB, sB)=> abs(pA.x - pB.x)*2 < sA.x + sB.x && abs(pA.y - pB.y)*2 < sA.y + sB.y;
+function isOverlapping(pA, sA, pB, sB)
+{ return abs(pA.x - pB.x)*2 < sA.x + sB.x && abs(pA.y - pB.y)*2 < sA.y + sB.y; }
 
 /** Returns an oscillating wave between 0 and amplitude with frequency of 1 Hz by default
  *  @param {Number} [frequency=1] - Frequency of the wave in Hz
@@ -99,13 +102,14 @@ const isOverlapping = (pA, sA, pB, sB)=> abs(pA.x - pB.x)*2 < sA.x + sB.x && abs
  *  @param {Number} [t=time]      - Value to use for time of the wave
  *  @return {Number}              - Value waving between 0 and amplitude
  *  @memberof Utilities */
-const wave = (frequency=1, amplitude=1, t=time)=> amplitude/2 * (1 - Math.cos(t*frequency*2*PI));
+function wave(frequency=1, amplitude=1, t=time)
+{ return amplitude/2 * (1 - Math.cos(t*frequency*2*PI)); }
 
 /** Formats seconds to mm:ss style for display purposes 
  *  @param {Number} t - time in seconds
  *  @return {String}
  *  @memberof Utilities */
-const formatTime = (t)=> (t/60|0) + ':' + (t%60<10?'0':'') + (t%60|0);
+function formatTime(t) { return (t/60|0) + ':' + (t%60<10?'0':'') + (t%60|0); }
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -117,32 +121,33 @@ const formatTime = (t)=> (t/60|0) + ':' + (t%60<10?'0':'') + (t%60|0);
  *  @param {Number} [valueB=0]
  *  @return {Number}
  *  @memberof Random */
-const rand = (a=1, b=0)=> b + (a-b)*Math.random();
+function rand(a=1, b=0) { return b + (a-b)*Math.random(); }
 
 /** Returns a floored random value the two values passed in
  *  @param {Number} [valueA=1]
  *  @param {Number} [valueB=0]
  *  @return {Number}
  *  @memberof Random */
-const randInt = (a=1, b=0)=> rand(a,b)|0;
+function randInt(a=1, b=0) { return rand(a,b)|0; }
 
 /** Randomly returns either -1 or 1
  *  @return {Number}
  *  @memberof Random */
-const randSign = ()=> randInt(2) * 2 - 1;
+function randSign() { return randInt(2) * 2 - 1; }
 
 /** Returns a random Vector2 within a circular shape
  *  @param {Number} [radius=1]
  *  @param {Number} [minRadius=0]
  *  @return {Vector2}
  *  @memberof Random */
-const randInCircle = (radius=1, minRadius=0)=> radius > 0 ? randVector(radius * rand(minRadius / radius, 1)**.5) : new Vector2;
+function randInCircle(radius=1, minRadius=0)
+{ return radius > 0 ? randVector(radius * rand(minRadius / radius, 1)**.5) : new Vector2; }
 
 /** Returns a random Vector2 with the passed in length
  *  @param {Number} [length=1]
  *  @return {Vector2}
  *  @memberof Random */
-const randVector = (length=1)=> new Vector2().setAngle(rand(2*PI), length);
+function randVector(length=1) { return new Vector2().setAngle(rand(2*PI), length); }
 
 /** Returns a random color between the two passed in colors, combine components if linear
  *  @param {Color}   [colorA=Color()]
@@ -150,8 +155,8 @@ const randVector = (length=1)=> new Vector2().setAngle(rand(2*PI), length);
  *  @param {Boolean} [linear]
  *  @return {Color}
  *  @memberof Random */
-const randColor = (cA = new Color, cB = new Color(0,0,0,1), linear)=>
-    linear ? cA.lerp(cB, rand()) : new Color(rand(cA.r,cB.r),rand(cA.g,cB.g),rand(cA.b,cB.b),rand(cA.a,cB.a));
+function randColor(cA = new Color, cB = new Color(0,0,0,1), linear)
+{ return linear ? cA.lerp(cB, rand()) : new Color(rand(cA.r,cB.r),rand(cA.g,cB.g),rand(cA.b,cB.b),rand(cA.a,cB.a)); }
 
 /** Seed used by the randSeeded function
  *  @type {Number}
@@ -162,16 +167,19 @@ let randSeed = 1;
 /** Set seed used by the randSeeded function, should not be 0
  *  @param {Number} seed
  *  @memberof Random */
-const setRandSeed = (seed)=> randSeed = seed;
+function setRandSeed(seed) { randSeed = seed; }
 
 /** Returns a seeded random value between the two values passed in using randSeed
  *  @param {Number} [valueA=1]
  *  @param {Number} [valueB=0]
  *  @return {Number}
  *  @memberof Random */
-const randSeeded = (a=1, b=0)=>
+function randSeeded(a=1, b=0)
 {
-    randSeed ^= randSeed << 13; randSeed ^= randSeed >>> 17; randSeed ^= randSeed << 5; // xorshift
+    // xorshift algorithm
+    randSeed ^= randSeed << 13; 
+    randSeed ^= randSeed >>> 17; 
+    randSeed ^= randSeed << 5;
     return b + (a-b) * abs(randSeed % 1e9) / 1e9;
 }
 
@@ -189,7 +197,8 @@ const randSeeded = (a=1, b=0)=>
  * b = vec2();         // set b to (0, 0)
  * @memberof Utilities
  */
-const vec2 = (x=0, y)=> x.x == undefined ? new Vector2(x, y == undefined? x : y) : new Vector2(x.x, x.y);
+function vec2(x=0, y)
+{ return x.x == undefined ? new Vector2(x, y == undefined? x : y) : new Vector2(x.x, x.y); }
 
 /** 
  * Check if object is a valid Vector2
@@ -197,11 +206,11 @@ const vec2 = (x=0, y)=> x.x == undefined ? new Vector2(x, y == undefined? x : y)
  * @return {Boolean}
  * @memberof Utilities
  */
-const isVector2 = (v)=> !isNaN(v.x) && !isNaN(v.y);
+function isVector2(v) { return !isNaN(v.x) && !isNaN(v.y); }
 
 /** 
  * 2D Vector object with vector math library
- * <br> - Functions do not change this so they can be chained together
+ * - Functions do not change this so they can be chained together
  * @example
  * let a = new Vector2(2, 3); // vector with coordinates (2, 3)
  * let b = new Vector2;       // vector with coordinates (0, 0)
@@ -348,7 +357,7 @@ class Vector2
  * @return {Color}
  * @memberof Utilities
  */
-const rgb = (r, g, b, a)=> new Color(r, g, b, a);
+function rgb(r, g, b, a) { return new Color(r, g, b, a); }
 
 /** 
  * Create a color object with HSLA values
@@ -359,7 +368,7 @@ const rgb = (r, g, b, a)=> new Color(r, g, b, a);
  * @return {Color}
  * @memberof Utilities
  */
-const hsl = (h, s, l, a)=> new Color().setHSLA(h, s, l, a);
+function hsl(h, s, l, a) { return new Color().setHSLA(h, s, l, a); }
 
 /** 
  * Color object (red, green, blue, alpha) with some helpful functions

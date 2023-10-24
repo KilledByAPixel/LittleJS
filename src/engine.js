@@ -1,24 +1,20 @@
-/*
-    LittleJS - The Tiny JavaScript Game Engine That Can!
-    MIT License - Copyright 2021 Frank Force
-
-    Engine Features
-    - Object oriented system with base class engine object
-    - Base class object handles update, physics, collision, rendering, etc
-    - Engine helper classes and functions like Vector2, Color, and Timer
-    - Super fast rendering system for tile sheets
-    - Sound effects audio with zzfx and music with zzfxm
-    - Input processing system with gamepad and touchscreen support
-    - Tile layer rendering and collision system
-    - Particle effect system
-    - Medal system tracks and displays achievements
-    - Debug tools and debug rendering system
-    - Post processing effects
-    - Call engineInit() to start it up!
-*/
-
-/**
- * LittleJS Engine Globals
+/** 
+ * LittleJS - The Tiny JavaScript Game Engine That Can!
+ * MIT License - Copyright 2021 Frank Force
+ * 
+ * Engine Features
+ * - Object oriented system with base class engine object
+ * - Base class object handles update, physics, collision, rendering, etc
+ * - Engine helper classes and functions like Vector2, Color, and Timer
+ * - Super fast rendering system for tile sheets
+ * - Sound effects audio with zzfx and music with zzfxm
+ * - Input processing system with gamepad and touchscreen support
+ * - Tile layer rendering and collision system
+ * - Particle effect system
+ * - Medal system tracks and displays achievements
+ * - Debug tools and debug rendering system
+ * - Post processing effects
+ * - Call engineInit() to start it up!
  * @namespace Engine
  */
 
@@ -268,7 +264,7 @@ function engineObjectsUpdate()
     engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);
 
     // recursive object update
-    const updateObject = (o)=>
+    function updateObject(o)
     {
         if (!o.destroyed)
         {

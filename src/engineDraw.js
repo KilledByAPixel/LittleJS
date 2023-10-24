@@ -1,22 +1,22 @@
 /** 
  * LittleJS Drawing System
- * <br> - Hybrid with both Canvas2D and WebGL available
- * <br> - Super fast tile sheet rendering with WebGL
- * <br> - Can apply rotation, mirror, color and additive color
- * <br> - Many useful utility functions
- * <br>
- * <br>LittleJS uses a hybrid rendering solution with the best of both Canvas2D and WebGL.
- * <br>There are 3 canvas/contexts available to draw to...
- * <br> - mainCanvas - 2D background canvas, non WebGL stuff like tile layers are drawn here.
- * <br> - glCanvas - Used by the accelerated WebGL batch rendering system.
- * <br> - overlayCanvas - Another 2D canvas that appears on top of the other 2 canvases.
- * <br>
- * <br>The WebGL rendering system is very fast with some caveats...
- * <br> - The default setup supports only 1 tile sheet, to support more call glCreateTexture and glSetTexture
- * <br> - Switching blend modes (additive) or textures causes another draw call which is expensive in excess
- * <br> - Group additive rendering together using renderOrder to mitigate this issue
- * <br>
- * <br>The LittleJS rendering solution is intentionally simple, feel free to adjust it for your needs!
+ * - Hybrid with both Canvas2D and WebGL available
+ * - Super fast tile sheet rendering with WebGL
+ * - Can apply rotation, mirror, color and additive color
+ * - Many useful utility functions
+ * 
+ * LittleJS uses a hybrid rendering solution with the best of both Canvas2D and WebGL.
+ * There are 3 canvas/contexts available to draw to...
+ * mainCanvas - 2D background canvas, non WebGL stuff like tile layers are drawn here.
+ * glCanvas - Used by the accelerated WebGL batch rendering system.
+ * overlayCanvas - Another 2D canvas that appears on top of the other 2 canvases.
+ * 
+ * The WebGL rendering system is very fast with some caveats...
+ * - The default setup supports only 1 tile sheet, to support more call glCreateTexture and glSetTexture
+ * - Switching blend modes (additive) or textures causes another draw call which is expensive in excess
+ * - Group additive rendering together using renderOrder to mitigate this issue
+ * 
+ * The LittleJS rendering solution is intentionally simple, feel free to adjust it for your needs!
  * @namespace Draw
  */
 
@@ -60,7 +60,7 @@ let tileImageSize, tileImageFixBleed, drawCount;
  *  @param {Vector2} screenPos
  *  @return {Vector2}
  *  @memberof Draw */
-const screenToWorld = (screenPos)=>
+function screenToWorld(screenPos)
 {
     ASSERT(mainCanvasSize.x && mainCanvasSize.y, 'mainCanvasSize is invalid');
     return screenPos.add(vec2(.5)).subtract(mainCanvasSize.scale(.5)).multiply(vec2(1/cameraScale,-1/cameraScale)).add(cameraPos);
@@ -71,7 +71,7 @@ const screenToWorld = (screenPos)=>
  *  @param {Vector2} worldPos
  *  @return {Vector2}
  *  @memberof Draw */
-const worldToScreen = (worldPos)=>
+function worldToScreen(worldPos)
 {
     ASSERT(mainCanvasSize.x && mainCanvasSize.y, 'mainCanvasSize is invalid');
     return worldPos.subtract(cameraPos).multiply(vec2(cameraScale,-cameraScale)).add(mainCanvasSize.scale(.5)).subtract(vec2(.5));
@@ -280,9 +280,9 @@ let engineFontImage;
 
 /** 
  * Font Image Object - Draw text on a 2D canvas by using characters in an image
- * <br> - 96 characters (from space to tilde) are stored in an image
- * <br> - Uses a default 8x8 font if none is supplied
- * <br> - You can also use fonts from the main tile sheet
+ * - 96 characters (from space to tilde) are stored in an image
+ * - Uses a default 8x8 font if none is supplied
+ * - You can also use fonts from the main tile sheet
  * @example
  * // use built in font
  * const font = new ImageFont;
@@ -368,7 +368,7 @@ class FontImage
 /** Returns true if fullscreen mode is active
  *  @return {Boolean}
  *  @memberof Draw */
-const isFullscreen = ()=> document.fullscreenElement;
+function isFullscreen() { return document.fullscreenElement; }
 
 /** Toggle fullsceen mode
  *  @memberof Draw */

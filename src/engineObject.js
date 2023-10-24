@@ -1,29 +1,29 @@
-/*
-    LittleJS Object System
-*/
+/** 
+ * LittleJS Object System
+ */
 
 'use strict';
 
 /** 
  * LittleJS Object Base Object Class
- * <br> - Base object class used by the engine
- * <br> - Automatically adds self to object list
- * <br> - Will be updated and rendered each frame
- * <br> - Renders as a sprite from a tilesheet by default
- * <br> - Can have color and addtive color applied
- * <br> - 2d Physics and collision system
- * <br> - Sorted by renderOrder
- * <br> - Objects can have children attached
- * <br> - Parents are updated before children, and set child transform
- * <br> - Call destroy() to get rid of objects
- * <br>
- * <br>The physics system used by objects is simple and fast with some caveats...
- * <br> - Collision uses the axis aligned size, the object's rotation angle is only for rendering
- * <br> - Objects are guaranteed to not intersect tile collision from physics
- * <br> - If an object starts or is moved inside tile collision, it will not collide with that tile
- * <br> - Collision for objects can be set to be solid to block other objects
- * <br> - Objects may get pushed into overlapping other solid objects, if so they will push away
- * <br> - Solid objects are more performance intensive and should be used sparingly
+ * - Base object class used by the engine
+ * - Automatically adds self to object list
+ * - Will be updated and rendered each frame
+ * - Renders as a sprite from a tilesheet by default
+ * - Can have color and addtive color applied
+ * - 2d Physics and collision system
+ * - Sorted by renderOrder
+ * - Objects can have children attached
+ * - Parents are updated before children, and set child transform
+ * - Call destroy() to get rid of objects
+ *
+ * The physics system used by objects is simple and fast with some caveats...
+ * - Collision uses the axis aligned size, the object's rotation angle is only for rendering
+ * - Objects are guaranteed to not intersect tile collision from physics
+ * - If an object starts or is moved inside tile collision, it will not collide with that tile
+ * - Collision for objects can be set to be solid to block other objects
+ * - Objects may get pushed into overlapping other solid objects, if so they will push away
+ * - Solid objects are more performance intensive and should be used sparingly
  * @example
  * // create an engine object, normally you would first extend the class with your own
  * const pos = vec2(2,3);

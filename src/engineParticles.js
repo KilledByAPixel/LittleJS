@@ -1,9 +1,6 @@
-/*
-    LittleJS Particle System
-    - Spawns particles with randomness from parameters
-    - Updates particle physics
-    - Fast particle rendering
-*/
+/** 
+ * LittleJS Particle System
+ */
 
 'use strict';
 
