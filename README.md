@@ -201,6 +201,7 @@ Here are a few of the amazing games people are making with LittleJS.
 - [Bit Butcher](https://js13kgames.com/entries/bit-butcher) - Survival crafting game by [Deathray Games](https://github.com/deathraygames/bit-butcher)
 - [Necrotic Commander](https://js13kgames.com/entries/necrotic-commander) - Tower defense game by [Daniel Jeffery](https://github.com/d-jeffery/NecroticCommander)
 - [Boxing up Bamboo](https://patrickgh3.itch.io/boxing-up-bamboo) - A challenging puzzle game by [Patrick Traynor](https://cwpat.me/about)
+- [Samurai Sam](https://dev.js13kgames.com/2023/games/samurai-sam) - A Fruit Ninja inspired game by [John Edvard](https://reitgames.com)
 - Send me your games!
 
 ![LittleJS Logo](examples/favicon.png)
