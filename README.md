@@ -24,29 +24,29 @@ LittleJS is a super lightweight JavaScript game engine designed for modern web d
 
 LittleJS is a small but powerful game engine with many features and no depenencies.
 
-Graphics
+### Graphics
 
 - Fast sprite and tile map rendering engine with WebGL
 - Update and render 10,000+ objects at 60fps, often many times more
 - Apply [Shadertoy](https://www.shadertoy.com) compatible shaders for post processinge effects
 
-Audio
+### Audio
 
 - Positional sound effects with [ZzFX](https://killedbyapixel.github.io/ZzFX/) sound effect generator
 - Music with [ZzFXM](https://keithclark.github.io/ZzFXM/), mp3, or wav audio
 
-Input
+### Input
 
 - Input processing system for keyboard, mouse, gamepad, and touch
 - On screen touch gamepad for mobile devices
 
-Physics
+### Physics
 
 - Kinematic physics object update 
 - 2D physics engine with collision handling for axis aligned boxes
 - Very fast collision handling for tile maps
 
-Flexability
+### Flexability
 
 - Designed to work with all modern web bowsers and mobile devices
 - Compatible with TypeScript and includes [an example TS project](https://killedbyapixel.github.io/LittleJS/examples/typescript)
@@ -54,7 +54,7 @@ Flexability
 - Build to a Windows executable with [Electron](https://www.electronjs.org/) for distribution on platforms like Steam
 - Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used for anything you want
 
-Extra Systems
+### Extra Systems
 
 - Debug rendering system
 - Particle effects system and design tool
