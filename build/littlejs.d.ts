@@ -22,7 +22,7 @@ declare module "littlejs.esm" {
     /** Disables anti aliasing for pixel art if true
      *  @param {Boolean} pixelated
      *  @memberof Settings */
-    export function setCavasPixelated(pixelated: boolean): void;
+    export function setCanvasPixelated(pixelated: boolean): void;
     /** Set default font used for text rendering
      *  @param {String} font
      *  @memberof Settings */
@@ -170,11 +170,11 @@ declare module "littlejs.esm" {
      *  @default Vector2()
      *  @memberof Settings */
     export let canvasFixedSize: Vector2;
-    /** Disables anti aliasing for pixel art if true
+    /** Disables filtering for crisper pixel art if true
      *  @type {Boolean}
      *  @default
      *  @memberof Settings */
-    export let cavasPixelated: boolean;
+    export let canvasPixelated: boolean;
     /** Default font used for text rendering
      *  @type {String}
      *  @default

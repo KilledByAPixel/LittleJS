@@ -141,7 +141,7 @@ function glCreateTexture(image)
     image && image.width && glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
         
     // use point filtering for pixelated rendering
-    const filter = cavasPixelated ? gl_NEAREST : gl_LINEAR;
+    const filter = canvasPixelated ? gl_NEAREST : gl_LINEAR;
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, filter);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, filter);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_S, gl_CLAMP_TO_EDGE);

@@ -6,7 +6,7 @@
 
 'use strict';
 
-cavasPixelated = 0; // do not use pixelated rendering
+canvasPixelated = 0; // do not use pixelated rendering
 
 const fallTime = .2;
 const cameraOffset = vec2(0,-.5);

@@ -1021,11 +1021,11 @@ let canvasMaxSize = vec2(1920, 1200);
  *  @memberof Settings */
 let canvasFixedSize = vec2();
 
-/** Disables anti aliasing for pixel art if true
+/** Disables filtering for crisper pixel art if true
  *  @type {Boolean}
  *  @default
  *  @memberof Settings */
-let cavasPixelated = 1;
+let canvasPixelated = 1;
 
 /** Default font used for text rendering
  *  @type {String}
@@ -1932,7 +1932,7 @@ class FontImage
     {
         const context = this.context;
         context.save();
-        context.imageSmoothingEnabled = !cavasPixelated;
+        context.imageSmoothingEnabled = !canvasPixelated;
 
         const size = this.tileSize;
         const drawSize = size.add(this.paddingSize).scale(scale);
@@ -4053,7 +4053,7 @@ function glCreateTexture(image)
     image && image.width && glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
         
     // use point filtering for pixelated rendering
-    const filter = cavasPixelated ? gl_NEAREST : gl_LINEAR;
+    const filter = canvasPixelated ? gl_NEAREST : gl_LINEAR;
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, filter);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, filter);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_S, gl_CLAMP_TO_EDGE);
@@ -4336,7 +4336,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.6.4';
+const engineVersion = '1.6.6';
 
 /** Frames per second to update objects
  *  @type {Number}
@@ -4406,10 +4406,11 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         debug && (tileImage.onload=()=>ASSERT(1)); // tile sheet can not reloaded
 
         // setup html
-        const styleBody = 'margin:0;overflow:hidden;background:#000' + // fill the window
-            ';touch-action:none' + // prevent mobile pinch to resize
-            ';user-select:none' +  // prevent mobile hold to select
-            ';-webkit-user-select:none'; // compatibility for ios
+        const styleBody = 'margin:0;overflow:hidden;' + // fill the window
+            'background:#000;' +        // set background color
+            'touch-action:none;' +      // prevent mobile pinch to resize
+            'user-select:none;' +       // prevent mobile hold to select
+            '-webkit-user-select:none'; // compatibility for ios
         document.body.style = styleBody;
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
         mainContext = mainCanvas.getContext('2d');
@@ -4422,8 +4423,10 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         document.body.appendChild(overlayCanvas = document.createElement('canvas'));
         overlayContext = overlayCanvas.getContext('2d');
 
-        // set canvas style to fill the window
-        const styleCanvas = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)';
+        // set canvas style
+        const styleCanvas = 'position:absolute;' +
+            'top:50%;left:50%;transform:translate(-50%,-50%);' + // center the canvas
+            (canvasPixelated?'image-rendering:pixelated':'');     // set pixelated rendering
         (glCanvas||mainCanvas).style = mainCanvas.style = overlayCanvas.style = styleCanvas;
         
         gameInit();
@@ -4556,7 +4559,7 @@ function enginePreRender()
     mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
 
     // disable smoothing for pixel art
-    mainContext.imageSmoothingEnabled = !cavasPixelated;
+    mainContext.imageSmoothingEnabled = !canvasPixelated;
 
     // setup gl rendering if enabled
     glEnable && glPreRender();
@@ -4652,7 +4655,7 @@ function setCanvasFixedSize(size) { canvasFixedSize = size; }
 /** Disables anti aliasing for pixel art if true
  *  @param {Boolean} pixelated
  *  @memberof Settings */
-function setCavasPixelated(pixelated) { cavasPixelated = pixelated; }
+function setCanvasPixelated(pixelated) { canvasPixelated = pixelated; }
 
 /** Set default font used for text rendering
  *  @param {String} font
@@ -4830,7 +4833,7 @@ export {
 	setCameraScale,
 	setCanvasMaxSize,
 	setCanvasFixedSize,
-	setCavasPixelated,
+	setCanvasPixelated,
 	setFontDefault,
 	setGlEnable,
 	setGlOverlay,
@@ -4869,7 +4872,7 @@ export {
 	// Settings
 	canvasMaxSize,
 	canvasFixedSize,
-	cavasPixelated,
+	canvasPixelated,
 	fontDefault,
 	tileSizeDefault,
 	tileFixBleedScale,

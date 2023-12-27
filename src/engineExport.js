@@ -26,7 +26,7 @@ function setCanvasFixedSize(size) { canvasFixedSize = size; }
 /** Disables anti aliasing for pixel art if true
  *  @param {Boolean} pixelated
  *  @memberof Settings */
-function setCavasPixelated(pixelated) { cavasPixelated = pixelated; }
+function setCanvasPixelated(pixelated) { canvasPixelated = pixelated; }
 
 /** Set default font used for text rendering
  *  @param {String} font
@@ -204,7 +204,7 @@ export {
 	setCameraScale,
 	setCanvasMaxSize,
 	setCanvasFixedSize,
-	setCavasPixelated,
+	setCanvasPixelated,
 	setFontDefault,
 	setGlEnable,
 	setGlOverlay,
@@ -243,7 +243,7 @@ export {
 	// Settings
 	canvasMaxSize,
 	canvasFixedSize,
-	cavasPixelated,
+	canvasPixelated,
 	fontDefault,
 	tileSizeDefault,
 	tileFixBleedScale,

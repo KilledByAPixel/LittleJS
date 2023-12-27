@@ -36,11 +36,11 @@ let canvasMaxSize = vec2(1920, 1200);
  *  @memberof Settings */
 let canvasFixedSize = vec2();
 
-/** Disables anti aliasing for pixel art if true
+/** Disables filtering for crisper pixel art if true
  *  @type {Boolean}
  *  @default
  *  @memberof Settings */
-let cavasPixelated = 1;
+let canvasPixelated = 1;
 
 /** Default font used for text rendering
  *  @type {String}
