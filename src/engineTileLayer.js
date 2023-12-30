@@ -101,10 +101,10 @@ function tileCollisionRaycast(posStart, posEnd, object)
     while (xIntersection < totalLength || yIntersection < totalLength) {
         // Calculate the coordinates of the next tile to check
         if (xIntersection > yIntersection) {
-            pos = pos.add(vec2(0, sign(delta.y)));
+            pos.y += sign(delta.y);
             yIntersection += unit.y;
         } else {
-            pos = pos.add(vec2(sign(delta.x), 0));
+            pos.x += sign(delta.x);
             xIntersection += unit.x;
         }
         // Check for tile collision
