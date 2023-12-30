@@ -72,7 +72,7 @@ function tileCollisionTest(pos, size=vec2(), object)
     }
 }
 
-/** Return the center of tile if any that is hit (this does not return the exact hit point)
+/** Return the center of tile if any that is hit
  *  @param {Vector2}      posStart
  *  @param {Vector2}      posEnd
  *  @param {EngineObject} [object]
@@ -80,29 +80,55 @@ function tileCollisionTest(pos, size=vec2(), object)
  *  @memberof TileCollision */
 function tileCollisionRaycast(posStart, posEnd, object)
 {
-    // test if a ray collides with tiles from start to end
-    // todo: a way to get the exact hit point, it must still register as inside the hit tile
-    const posDelta = (posEnd = posEnd.floor()).subtract(posStart = posStart.floor());
-    const dx = abs(posDelta.x),  dy = -abs(posDelta.y);
-    const sx = sign(posDelta.x), sy = sign(posDelta.y);
+    // Test if a ray collides with tiles from start to end using DDA
+    const flooredPosStart = posStart.floor();
+    const delta = posEnd.subtract(posStart);
+    const totalLength = delta.length();
+    const normalizedDelta = delta.normalize();
+    // Length between 2 intersections for each dimension
+    const unit = vec2(abs(1 / normalizedDelta.x), abs(1 / normalizedDelta.y));
+    // Initiate the iteration variables (to support floating points coordinates)
+    let x =
+        delta.x < 0
+            ? (posStart.x - flooredPosStart.x) * unit.x
+            : (flooredPosStart.x + 1 - posStart.x) * unit.x;
+    let y =
+        delta.y < 0
+            ? (posStart.y - flooredPosStart.y) * unit.y
+            : (flooredPosStart.y + 1 - posStart.y) * unit.y;
 
-    for (let x = posStart.x, y = posStart.y, e = dx + dy;;)
-    {
-        const tileData = getTileCollisionData(vec2(x,y));
-        if (tileData && (object ? object.collideWithTileRaycast(tileData, new Vector2(x, y)) : tileData > 0))
-        {
-            debugRaycast && debugLine(posStart, posEnd, '#f00',.02, 1);
-            debugRaycast && debugPoint(new Vector2(x+.5, y+.5), '#ff0', 1);
-            return new Vector2(x+.5, y+.5);
+    while (x < totalLength || y < totalLength) {
+        // Calculate the coordinates of the next tile to check
+        let pos;
+        if (x > y) {
+            pos = posStart
+                .add(normalizedDelta.scale(y))
+                .add(vec2(0, 0.5 * sign(delta.y)))
+                .floor();
+            y += unit.y;
+        } else {
+            pos = posStart
+                .add(normalizedDelta.scale(x))
+                .add(vec2(0.5 * sign(delta.x), 0))
+                .floor();
+            x += unit.x;
         }
-
-        // update Bresenham line drawing algorithm
-        if (x == posEnd.x & y == posEnd.y) break;
-        const e2 = 2*e;
-        if (e2 >= dy) e += dy, x += sx;
-        if (e2 <= dx) e += dx, y += sy;
+        // Check for tile collision
+        const tileData = getTileCollisionData(pos);
+        if (
+            tileData &&
+            (object
+                ? object.collideWithTileRaycast(tileData, pos)
+                : tileData > 0)
+        ) {
+            const centeredPos = pos.add(vec2(0.5));
+            debugRaycast && debugLine(posStart, posEnd, "#f00", 0.02, 1);
+            debugRaycast && debugPoint(centeredPos, "#ff0", 1);
+            return centeredPos;
+        }
     }
-    debugRaycast && debugLine(posStart, posEnd, '#00f',.02, 1);
+
+    debugRaycast && debugLine(posStart, posEnd, "#00f", 0.02, 1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
