@@ -87,31 +87,25 @@ function tileCollisionRaycast(posStart, posEnd, object)
     const normalizedDelta = delta.normalize();
     // Length between 2 intersections for each dimension
     const unit = vec2(abs(1 / normalizedDelta.x), abs(1 / normalizedDelta.y));
-    // Initiate the iteration variables (to support floating points coordinates)
-    let x =
+    // Initiate the iteration variables
+    let xIntersection =
         delta.x < 0
             ? (posStart.x - flooredPosStart.x) * unit.x
             : (flooredPosStart.x + 1 - posStart.x) * unit.x;
-    let y =
+    let yIntersection =
         delta.y < 0
             ? (posStart.y - flooredPosStart.y) * unit.y
             : (flooredPosStart.y + 1 - posStart.y) * unit.y;
+    let pos = flooredPosStart;
 
-    while (x < totalLength || y < totalLength) {
+    while (xIntersection < totalLength || yIntersection < totalLength) {
         // Calculate the coordinates of the next tile to check
-        let pos;
-        if (x > y) {
-            pos = posStart
-                .add(normalizedDelta.scale(y))
-                .add(vec2(0, 0.5 * sign(delta.y)))
-                .floor();
-            y += unit.y;
+        if (xIntersection > yIntersection) {
+            pos = pos.add(vec2(0, sign(delta.y)));
+            yIntersection += unit.y;
         } else {
-            pos = posStart
-                .add(normalizedDelta.scale(x))
-                .add(vec2(0.5 * sign(delta.x), 0))
-                .floor();
-            x += unit.x;
+            pos = pos.add(vec2(sign(delta.x), 0));
+            xIntersection += unit.x;
         }
         // Check for tile collision
         const tileData = getTileCollisionData(pos);
