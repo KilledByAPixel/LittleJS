@@ -53,7 +53,7 @@ for(let y=0; y<=levelSize.y; y+=1)
 Let’s move the camera to the center of our level by setting the cameraPos variable to half the level size.
 
 ```javascript
-cameraPos = levelSize.scale(.5); // center camera in level
+setCameraPos(levelSize.scale(.5)); // center camera in level
 ```
 
 We’ll also start with a blank slate by commenting out the default “Hello World!” text in gameRenderPost.
@@ -73,7 +73,7 @@ For this example we will use a fixed size canvas. This will let the drawing canv
 To enable it we will set canvasFixedSize in gameInit to use 720p resolution.
 
 ```javascript
-canvasFixedSize = vec2(1280, 720); // use a 720p fixed size canvas
+setCanvasFixedSize(vec2(1280, 720)); // use a 720p fixed size canvas
 ```
 
 Before we tweak the level size, let’s add this bit of code to gameRender to show the size of the level. This will cause some rects to be drawn each frame before the engine objects. To create color objects we pass in RGB values between 0 and 1.
@@ -222,9 +222,9 @@ We can create walls on the sides and top by adding a few more lines of code to t
 
 ```javascript
 // create walls
-new Wall(vec2(-.5,levelSize.y/2),            vec2(1,100)) // top
-new Wall(vec2(levelSize.x+.5,levelSize.y/2), vec2(1,100)) // left
-new Wall(vec2(levelSize.x/2,levelSize.y+.5), vec2(100,1)) // right
+new Wall(vec2(-.5,levelSize.y/2),            vec2(1,100)) // left
+new Wall(vec2(levelSize.x+.5,levelSize.y/2), vec2(1,100)) // right
+new Wall(vec2(levelSize.x/2,levelSize.y+.5), vec2(100,1)) // top
 ```
 
 ![LittleJS Screenshot](images/6.png)
@@ -503,7 +503,7 @@ sound_bounce.play(this.pos, 1, speed); // play bounce sound with pitch scaled by
 
 Now you know the basics of how to use the LittleJS engine! [The final result with all the code from this tutorial is playable here.](https://killedbyapixel.github.io/LittleJS/examples/breakoutTutorial/)
 
-If you need a little help completing the tutoiral, [join us on the LittleJS discord](https://discord.gg/zb7hcGkyZe). 
+If you need a little help completing the tutorial, [join us on the LittleJS discord](https://discord.gg/zb7hcGkyZe). 
 
 Feel free to continue building on this tutorial to make a more interesting breakout game. What kind of ideas would you like to include?
 
