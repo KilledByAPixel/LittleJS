@@ -27,7 +27,7 @@ const engineSourceFiles =
     `${SOURCE_FOLDER}/engine.js`,
 ];
 
-console.log('Choo Choo.. Building LittleJS Engine!');
+console.log('Choo Choo... Building LittleJS Engine!');
 const startTime = Date.now();
 const fs = require('node:fs');
 const child_process = require('node:child_process');
@@ -78,7 +78,7 @@ Build
     [uglifyBuildStep]
 );
 
-console.log(`Build Completed in ${((Date.now() - startTime)/1e3).toFixed(2)} seconds!`);
+console.log(`Engine built in ${((Date.now() - startTime)/1e3).toFixed(2)} seconds!`);
 
 ///////////////////////////////////////////////////////////////////////////////
 

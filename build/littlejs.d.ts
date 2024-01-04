@@ -1371,7 +1371,7 @@ declare module "littlejs.esm" {
      *  @return {Boolean}
      *  @memberof TileCollision */
     export function tileCollisionTest(pos: Vector2, size?: Vector2, object?: EngineObject): boolean;
-    /** Return the center of tile if any that is hit (this does not return the exact hit point)
+    /** Return the center of tile if any that is hit (does not return the exact intersection)
      *  @param {Vector2}      posStart
      *  @param {Vector2}      posEnd
      *  @param {EngineObject} [object]

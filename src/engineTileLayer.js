@@ -72,7 +72,7 @@ function tileCollisionTest(pos, size=vec2(), object)
     }
 }
 
-/** Return the center of tile if any that is hit
+/** Return the center of tile if any that is hit (does not return the exact intersection)
  *  @param {Vector2}      posStart
  *  @param {Vector2}      posEnd
  *  @param {EngineObject} [object]
@@ -80,49 +80,42 @@ function tileCollisionTest(pos, size=vec2(), object)
  *  @memberof TileCollision */
 function tileCollisionRaycast(posStart, posEnd, object)
 {
-    // Test if a ray collides with tiles from start to end using DDA
-    const flooredPosStart = posStart.floor();
+    // test if a ray collides with tiles from start to end
+    // todo: a way to get the exact hit point, it must still be inside the hit tile
     const delta = posEnd.subtract(posStart);
     const totalLength = delta.length();
     const normalizedDelta = delta.normalize();
-    // Length between 2 intersections for each dimension
-    const unit = vec2(abs(1 / normalizedDelta.x), abs(1 / normalizedDelta.y));
-    // Initiate the iteration variables
-    let xIntersection =
-        delta.x < 0
-            ? (posStart.x - flooredPosStart.x) * unit.x
-            : (flooredPosStart.x + 1 - posStart.x) * unit.x;
-    let yIntersection =
-        delta.y < 0
-            ? (posStart.y - flooredPosStart.y) * unit.y
-            : (flooredPosStart.y + 1 - posStart.y) * unit.y;
-    let pos = flooredPosStart;
+    const unit = vec2(abs(1/normalizedDelta.x), abs(1/normalizedDelta.y));
+    const flooredPosStart = posStart.floor();
 
-    while (xIntersection < totalLength || yIntersection < totalLength) {
-        // Calculate the coordinates of the next tile to check
-        if (xIntersection > yIntersection) {
-            pos.y += sign(delta.y);
-            yIntersection += unit.y;
-        } else {
-            pos.x += sign(delta.x);
-            xIntersection += unit.x;
-        }
-        // Check for tile collision
+    // setup iteration variables
+    let pos = flooredPosStart;
+    let xi = unit.x * (delta.x < 0 ? posStart.x - pos.x : pos.x - posStart.x + 1);
+    let yi = unit.y * (delta.y < 0 ? posStart.y - pos.y : pos.y - posStart.y + 1);
+
+    while (1)
+    {
+        // check for tile collision
         const tileData = getTileCollisionData(pos);
-        if (
-            tileData &&
-            (object
-                ? object.collideWithTileRaycast(tileData, pos)
-                : tileData > 0)
-        ) {
-            const centeredPos = pos.add(vec2(0.5));
-            debugRaycast && debugLine(posStart, posEnd, "#f00", 0.02, 1);
-            debugRaycast && debugPoint(centeredPos, "#ff0", 1);
-            return centeredPos;
+        if (object ? object.collideWithTileRaycast(tileData, pos) : tileData > 0)
+        {
+            debugRaycast && debugLine(posStart, posEnd, '#f00', .02, 1);
+            debugRaycast && debugPoint(pos.add(vec2(.5)), '#ff0', 1);
+            return pos.add(vec2(.5));
         }
+
+        // check if past the end
+        if (xi > totalLength & yi > totalLength)
+            break;
+
+        // get coordinates of the next tile to check
+        if (xi > yi)
+            pos.y += sign(delta.y), yi += unit.y;
+        else
+            pos.x += sign(delta.x), xi += unit.x;
     }
 
-    debugRaycast && debugLine(posStart, posEnd, "#00f", 0.02, 1);
+    debugRaycast && debugLine(posStart, posEnd, '#00f', .02, 1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
