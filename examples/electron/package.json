@@ -3,15 +3,17 @@
   "version": "1.0.0",
   "description": "A minimal Electron application",
   "main": "electron.js",
-  "scripts": {},
+  "scripts": {
+    "build": "node build.js"
+  },
   "repository": "https://github.com/electron/electron-quick-start",
   "keywords": [
     "Electron",
     "LittleJS",
     "Game"
   ],
-  "author": "GitHub",
-  "license": "CC0-1.0",
+  "author": "Frank Force",
+  "license": "MIT",
   "devDependencies": {
     "electron": "~25.2.0",
     "electron-packager": "~17.1.1"
