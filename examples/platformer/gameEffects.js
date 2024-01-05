@@ -78,7 +78,6 @@ function explosion(pos, radius=3)
     }
 
     // kill/push objects
-    const maxRangeSquared = (radius*1.5)**2;
     engineObjectsCallback(pos, radius*3, (o)=> 
     {
         const d = o.pos.distance(pos);
@@ -170,7 +169,7 @@ function decorateBackgroundTile(pos)
         // check corner neighbors
         const neighborTileDataA = getTileBackgroundData(pos.add(vec2().setAngle(i*PI/2)));
         const neighborTileDataB = getTileBackgroundData(pos.add(vec2().setAngle((i+1)%4*PI/2)));
-        if (neighborTileDataA > 0 | neighborTileDataB > 0)
+        if (neighborTileDataA > 0 || neighborTileDataB > 0)
             continue;
 
         const directionVector = vec2().setAngle(i*PI/2+PI/4, 10).floor();

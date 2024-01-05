@@ -438,7 +438,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
       patternChannel = patterns[patternIndex][channelIndex] || [0, 0, 0];
 
       // check if there are more channels
-      hasMore |= !!patterns[patternIndex][channelIndex];
+      hasMore ||= !!patterns[patternIndex][channelIndex];
 
       // get next offset, use the length of first channel
       nextSampleOffset = outSampleOffset + (patterns[patternIndex][0].length - 2 - !notFirstBeat) * beatLength;
@@ -451,7 +451,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
 
         // stop if end, different instrument or new note
         stop = i == patternChannel.length + isSequenceEnd - 1 && isSequenceEnd ||
-            instrument != (patternChannel[0] || 0) | note | 0;
+            instrument != (patternChannel[0] || 0) || note;
 
         // fill buffer with samples for previous beat, most cpu intensive part
         for (j = 0; j < beatLength && notFirstBeat;

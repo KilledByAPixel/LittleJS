@@ -63,7 +63,11 @@ let tileImageSize, tileImageFixBleed, drawCount;
 function screenToWorld(screenPos)
 {
     ASSERT(mainCanvasSize.x && mainCanvasSize.y, 'mainCanvasSize is invalid');
-    return screenPos.add(vec2(.5)).subtract(mainCanvasSize.scale(.5)).multiply(vec2(1/cameraScale,-1/cameraScale)).add(cameraPos);
+    return screenPos
+        .add(vec2(.5))
+        .subtract(mainCanvasSize.scale(.5))
+        .multiply(vec2(1/cameraScale,-1/cameraScale))
+        .add(cameraPos);
 }
 
 /** Convert from world to screen space coordinates
@@ -74,7 +78,11 @@ function screenToWorld(screenPos)
 function worldToScreen(worldPos)
 {
     ASSERT(mainCanvasSize.x && mainCanvasSize.y, 'mainCanvasSize is invalid');
-    return worldPos.subtract(cameraPos).multiply(vec2(cameraScale,-cameraScale)).add(mainCanvasSize.scale(.5)).subtract(vec2(.5));
+    return worldPos
+        .subtract(cameraPos)
+        .multiply(vec2(cameraScale,-cameraScale))
+        .add(mainCanvasSize.scale(.5))
+        .subtract(vec2(.5));
 }
 
 /** Draw textured tile centered in world space, with color applied if using WebGL
@@ -88,8 +96,8 @@ function worldToScreen(worldPos)
  *  @param {Color}   [additiveColor=Color(0,0,0,0)] - Additive color to be applied
  *  @param {Boolean} [useWebGL=glEnable]            - Use accelerated WebGL rendering
  *  @memberof Draw */
-function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, color=new Color, angle=0, mirror, 
-    additiveColor=new Color(0,0,0,0), useWebGL=glEnable)
+function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, color=new Color,
+    angle=0, mirror, additiveColor=new Color(0,0,0,0), useWebGL=glEnable)
 {
     showWatermark && ++drawCount;
     if (glEnable && useWebGL)

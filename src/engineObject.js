@@ -138,15 +138,17 @@ class EngineObject
             for (const o of engineObjectsCollide)
             {
                 // non solid objects don't collide with eachother
-                if (!this.isSolid & !o.isSolid || o.destroyed || o.parent || o == this)
+                if (!this.isSolid && !o.isSolid || o.destroyed || o.parent || o == this)
                     continue;
 
                 // check collision
                 if (!isOverlapping(this.pos, this.size, o.pos, o.size))
                     continue;
 
-                // pass collision to objects
-                if (!this.collideWithObject(o) | !o.collideWithObject(this))
+                // notify objects of collision and check if should be resolved
+                const collide1 = this.collideWithObject(o);
+                const collide2 = o.collideWithObject(this);
+                if (!collide1 || !collide2)
                     continue;
 
                 if (isOverlapping(oldPos, this.size, o.pos, o.size))
@@ -171,7 +173,7 @@ class EngineObject
                 const isBlockedY = abs(oldPos.x - o.pos.x)*2 < sizeBoth.x;
                 const elasticity = max(this.elasticity, o.elasticity);
                 
-                if (smallStepUp | isBlockedY | !isBlockedX) // resolve y collision
+                if (smallStepUp || isBlockedY || !isBlockedX) // resolve y collision
                 {
                     // push outside object collision
                     this.pos.y = o.pos.y + (sizeBoth.y/2 + epsilon) * sign(oldPos.y - o.pos.y);
@@ -200,7 +202,7 @@ class EngineObject
                         o.velocity.y = lerp(elasticity, inelastic, elastic1);
                     }
                 }
-                if (!smallStepUp & isBlockedX) // resolve x collision
+                if (!smallStepUp && isBlockedX) // resolve x collision
                 {
                     // push outside collision
                     this.pos.x = o.pos.x + (sizeBoth.x/2 + epsilon) * sign(oldPos.x - o.pos.x);
@@ -237,7 +239,7 @@ class EngineObject
                     // test which side we bounced off (or both if a corner)
                     const isBlockedY = tileCollisionTest(vec2(oldPos.x, this.pos.y), this.size, this);
                     const isBlockedX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
-                    if (isBlockedY | !isBlockedX)
+                    if (isBlockedY || !isBlockedX)
                     {
                         // set if landed on ground
                         this.groundObject = wasMovingDown;

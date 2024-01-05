@@ -583,7 +583,7 @@ class Timer
     
     /** Returns this timer expressed as a string
      * @return {String} */
-    toString() { if (debug) { return this.unset() ? 'unset' : Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ); }}
+    toString() { if (debug) { return this.isSet() ? Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ) : 'unset'; }}
     
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {Number} */

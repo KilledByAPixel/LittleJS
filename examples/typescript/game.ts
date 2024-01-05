@@ -6,7 +6,7 @@
 
 // import module
 import * as LittleJS from '../../build/littlejs.esm.js';
-const {Color, vec2} = LittleJS;
+const {Vector2, Color, Timer, vec2} = LittleJS;
 
 // sound effects
 const sound_click = new LittleJS.Sound([1,.5]);
@@ -17,13 +17,14 @@ LittleJS.medalsInit('Hello World');
 
 // game variables
 let particleEmitter: LittleJS.ParticleEmitter;
+let gameTimer = new Timer;
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
     // create tile collision and visible tile layer
     LittleJS.initTileCollision(vec2(32, 16));
-    const pos = vec2();
+    const pos = new Vector2;
     const tileLayer = new LittleJS.TileLayer(pos, LittleJS.tileCollisionSize);
 
     // get level data from the tiles image
@@ -67,6 +68,9 @@ function gameInit()
     );
     particleEmitter.elasticity = .3; // bounce when it collides
     particleEmitter.trailScale = 2;  // stretch in direction of motion
+
+    // start the game timer
+    gameTimer.set();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -105,7 +105,7 @@ function tileCollisionRaycast(posStart, posEnd, object)
         }
 
         // check if past the end
-        if (xi > totalLength & yi > totalLength)
+        if (xi > totalLength && yi > totalLength)
             break;
 
         // get coordinates of the next tile to check

@@ -616,7 +616,7 @@ class Timer
     
     /** Returns this timer expressed as a string
      * @return {String} */
-    toString() { if (debug) { return this.unset() ? 'unset' : Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ); }}
+    toString() { if (debug) { return this.isSet() ? Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ) : 'unset'; }}
     
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {Number} */
@@ -951,7 +951,7 @@ class EngineObject
         /** @property {Number} [renderOrder=0]                          - Objects are sorted by render order */
         this.renderOrder = renderOrder;
         /** @property {Vector2} [velocity=Vector2()]                    - Velocity of the object */
-        this.velocity = new Vector2();
+        this.velocity = vec2();
         /** @property {Number} [angleVelocity=0]                        - Angular velocity of the object */
         this.angleVelocity = 0;
 
@@ -1011,15 +1011,17 @@ class EngineObject
             for (const o of engineObjectsCollide)
             {
                 // non solid objects don't collide with eachother
-                if (!this.isSolid & !o.isSolid || o.destroyed || o.parent || o == this)
+                if (!this.isSolid && !o.isSolid || o.destroyed || o.parent || o == this)
                     continue;
 
                 // check collision
                 if (!isOverlapping(this.pos, this.size, o.pos, o.size))
                     continue;
 
-                // pass collision to objects
-                if (!this.collideWithObject(o) | !o.collideWithObject(this))
+                // notify objects of collision and check if should be resolved
+                const collide1 = this.collideWithObject(o);
+                const collide2 = o.collideWithObject(this);
+                if (!collide1 || !collide2)
                     continue;
 
                 if (isOverlapping(oldPos, this.size, o.pos, o.size))
@@ -1044,7 +1046,7 @@ class EngineObject
                 const isBlockedY = abs(oldPos.x - o.pos.x)*2 < sizeBoth.x;
                 const elasticity = max(this.elasticity, o.elasticity);
                 
-                if (smallStepUp | isBlockedY | !isBlockedX) // resolve y collision
+                if (smallStepUp || isBlockedY || !isBlockedX) // resolve y collision
                 {
                     // push outside object collision
                     this.pos.y = o.pos.y + (sizeBoth.y/2 + epsilon) * sign(oldPos.y - o.pos.y);
@@ -1073,7 +1075,7 @@ class EngineObject
                         o.velocity.y = lerp(elasticity, inelastic, elastic1);
                     }
                 }
-                if (!smallStepUp & isBlockedX) // resolve x collision
+                if (!smallStepUp && isBlockedX) // resolve x collision
                 {
                     // push outside collision
                     this.pos.x = o.pos.x + (sizeBoth.x/2 + epsilon) * sign(oldPos.x - o.pos.x);
@@ -1108,9 +1110,9 @@ class EngineObject
                 if (!tileCollisionTest(oldPos, this.size, this))
                 {
                     // test which side we bounced off (or both if a corner)
-                    const isBlockedY = tileCollisionTest(new Vector2(oldPos.x, this.pos.y), this.size, this);
-                    const isBlockedX = tileCollisionTest(new Vector2(this.pos.x, oldPos.y), this.size, this);
-                    if (isBlockedY | !isBlockedX)
+                    const isBlockedY = tileCollisionTest(vec2(oldPos.x, this.pos.y), this.size, this);
+                    const isBlockedX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
+                    if (isBlockedY || !isBlockedX)
                     {
                         // set if landed on ground
                         this.groundObject = wasMovingDown;
@@ -1312,7 +1314,11 @@ let tileImageSize, tileImageFixBleed, drawCount;
 function screenToWorld(screenPos)
 {
     ASSERT(mainCanvasSize.x && mainCanvasSize.y, 'mainCanvasSize is invalid');
-    return screenPos.add(vec2(.5)).subtract(mainCanvasSize.scale(.5)).multiply(vec2(1/cameraScale,-1/cameraScale)).add(cameraPos);
+    return screenPos
+        .add(vec2(.5))
+        .subtract(mainCanvasSize.scale(.5))
+        .multiply(vec2(1/cameraScale,-1/cameraScale))
+        .add(cameraPos);
 }
 
 /** Convert from world to screen space coordinates
@@ -1323,7 +1329,11 @@ function screenToWorld(screenPos)
 function worldToScreen(worldPos)
 {
     ASSERT(mainCanvasSize.x && mainCanvasSize.y, 'mainCanvasSize is invalid');
-    return worldPos.subtract(cameraPos).multiply(vec2(cameraScale,-cameraScale)).add(mainCanvasSize.scale(.5)).subtract(vec2(.5));
+    return worldPos
+        .subtract(cameraPos)
+        .multiply(vec2(cameraScale,-cameraScale))
+        .add(mainCanvasSize.scale(.5))
+        .subtract(vec2(.5));
 }
 
 /** Draw textured tile centered in world space, with color applied if using WebGL
@@ -1337,8 +1347,8 @@ function worldToScreen(worldPos)
  *  @param {Color}   [additiveColor=Color(0,0,0,0)] - Additive color to be applied
  *  @param {Boolean} [useWebGL=glEnable]            - Use accelerated WebGL rendering
  *  @memberof Draw */
-function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, color=new Color, angle=0, mirror, 
-    additiveColor=new Color(0,0,0,0), useWebGL=glEnable)
+function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, color=new Color,
+    angle=0, mirror, additiveColor=new Color(0,0,0,0), useWebGL=glEnable)
 {
     showWatermark && ++drawCount;
     if (glEnable && useWebGL)
@@ -2065,7 +2075,7 @@ function touchGamepadRender()
     const rightCenter = vec2(mainCanvasSize.x-touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
     for (let i=4; i--;)
     {
-        const pos = rightCenter.add((new Vector2).setAngle(i*PI/2, touchGamepadSize/2));
+        const pos = rightCenter.add(vec2().setAngle(i*PI/2, touchGamepadSize/2));
         overlayContext.fillStyle = touchGamepadButtons[i] ? '#fff' : '#000';
         overlayContext.beginPath();
         overlayContext.arc(pos.x, pos.y, touchGamepadSize/4, 0,9);
@@ -2516,7 +2526,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
       patternChannel = patterns[patternIndex][channelIndex] || [0, 0, 0];
 
       // check if there are more channels
-      hasMore |= !!patterns[patternIndex][channelIndex];
+      hasMore ||= !!patterns[patternIndex][channelIndex];
 
       // get next offset, use the length of first channel
       nextSampleOffset = outSampleOffset + (patterns[patternIndex][0].length - 2 - !notFirstBeat) * beatLength;
@@ -2529,7 +2539,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
 
         // stop if end, different instrument or new note
         stop = i == patternChannel.length + isSequenceEnd - 1 && isSequenceEnd ||
-            instrument != (patternChannel[0] || 0) | note | 0;
+            instrument != (patternChannel[0] || 0) || note;
 
         // fill buffer with samples for previous beat, most cpu intensive part
         for (j = 0; j < beatLength && notFirstBeat;
@@ -2643,7 +2653,7 @@ function tileCollisionTest(pos, size=vec2(), object)
     for (let x = minX; x < maxX; ++x)
     {
         const tileData = tileCollision[y*tileCollisionSize.x+x];
-        if (tileData && (!object || object.collideWithTile(tileData, new Vector2(x, y))))
+        if (tileData && (!object || object.collideWithTile(tileData, vec2(x, y))))
             return 1;
     }
 }
@@ -2673,15 +2683,15 @@ function tileCollisionRaycast(posStart, posEnd, object)
     {
         // check for tile collision
         const tileData = getTileCollisionData(pos);
-        if (object ? object.collideWithTileRaycast(tileData, pos) : tileData > 0)
+        if (tileData && (!object || object.collideWithTile(tileData, pos)))
         {
-            debugRaycast && debugLine(posStart, posEnd, '#f00', .02, 1);
-            debugRaycast && debugPoint(pos.add(vec2(.5)), '#ff0', 1);
+            debugRaycast && debugLine(posStart, posEnd, '#f00', .02);
+            debugRaycast && debugPoint(pos.add(vec2(.5)), '#ff0');
             return pos.add(vec2(.5));
         }
 
         // check if past the end
-        if (xi > totalLength & yi > totalLength)
+        if (xi > totalLength && yi > totalLength)
             break;
 
         // get coordinates of the next tile to check
@@ -2691,7 +2701,7 @@ function tileCollisionRaycast(posStart, posEnd, object)
             pos.x += sign(delta.x), xi += unit.x;
     }
 
-    debugRaycast && debugLine(posStart, posEnd, '#00f', .02, 1);
+    debugRaycast && debugLine(posStart, posEnd, '#00f', .02);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3022,7 +3032,7 @@ class ParticleEmitter extends EngineObject
         localSpace
     )
     {
-        super(pos, new Vector2, tileIndex, tileSize, angle, undefined, renderOrder);
+        super(pos, vec2(), tileIndex, tileSize, angle, undefined, renderOrder);
 
         // emitter settings
         /** @property {Number} - World space size of the emitter (float for circle diameter, vec2 for rect) */
@@ -3089,7 +3099,7 @@ class ParticleEmitter extends EngineObject
         this.parent && super.update();
 
         // update emitter
-        if (!this.emitTime | this.getAliveTime() <= this.emitTime)
+        if (!this.emitTime || this.getAliveTime() <= this.emitTime)
         {
             // emit particles
             if (this.emitRate * particleEmitRateScale)
@@ -3111,7 +3121,7 @@ class ParticleEmitter extends EngineObject
     {
         // spawn a particle
         let pos = this.emitSize.x != undefined ? // check if vec2 was used for size
-            (new Vector2(rand(-.5,.5), rand(-.5,.5)))
+            vec2(rand(-.5,.5), rand(-.5,.5))
                 .multiply(this.emitSize).rotate(this.angle) // box emitter
             : randInCircle(this.emitSize/2);                // circle emitter
         let angle = rand(this.particleConeAngle, -this.particleConeAngle);
@@ -3141,7 +3151,7 @@ class ParticleEmitter extends EngineObject
         // build particle settings
         particle.colorStart    = colorStart;
         particle.colorEndDelta = colorEnd.subtract(colorStart);
-        particle.velocity      = (new Vector2).setAngle(velocityAngle, speed);
+        particle.velocity      = vec2().setAngle(velocityAngle, speed);
         particle.angleVelocity = angleSpeed;
         particle.lifeTime      = particleTime;
         particle.sizeStart     = sizeStart;
@@ -3186,7 +3196,7 @@ class Particle extends EngineObject
      * @param {Number}  [angle=0]                  - Angle to rotate the particle
      */
     constructor(pos, tileIndex, tileSize, angle)
-    { super(pos, new Vector2, tileIndex, tileSize, angle); }
+    { super(pos, vec2(), tileIndex, tileSize, angle); }
 
     /** Render the particle, automatically called each frame, sorted by renderOrder */
     render()
@@ -3194,7 +3204,7 @@ class Particle extends EngineObject
         // modulate size and color
         const p = min((time - this.spawnTime) / this.lifeTime, 1);
         const radius = this.sizeStart + p * this.sizeEndDelta;
-        const size = new Vector2(radius, radius);
+        const size = vec2(radius);
         const fadeRate = this.fadeRate/2;
         const color = new Color(
             this.colorStart.r + p * this.colorEndDelta.r,
@@ -3988,7 +3998,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.6.7';
+const engineVersion = '1.6.8';
 
 /** Frames per second to update objects
  *  @type {Number}
@@ -4078,7 +4088,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         // set canvas style
         const styleCanvas = 'position:absolute;' +
             'top:50%;left:50%;transform:translate(-50%,-50%);' + // center the canvas
-            (canvasPixelated?'image-rendering:pixelated':'');     // set pixelated rendering
+            (canvasPixelated?'image-rendering:pixelated':'');    // set pixelated rendering
         (glCanvas||mainCanvas).style = mainCanvas.style = overlayCanvas.style = styleCanvas;
         
         gameInit();

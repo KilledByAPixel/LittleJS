@@ -152,7 +152,7 @@ class ParticleEmitter extends EngineObject
         this.parent && super.update();
 
         // update emitter
-        if (!this.emitTime | this.getAliveTime() <= this.emitTime)
+        if (!this.emitTime || this.getAliveTime() <= this.emitTime)
         {
             // emit particles
             if (this.emitRate * particleEmitRateScale)

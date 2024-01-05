@@ -16,14 +16,14 @@ const medal_example = new LittleJS.Medal(0, 'Example Medal', 'Welcome to LittleJ
 LittleJS.medalsInit('Hello World');
 
 // game variables
-let particleEmiter;
+let particleEmiter, gameTimer;
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
     // create tile collision and visible tile layer
     LittleJS.initTileCollision(vec2(32, 16));
-    const pos = vec2();
+    const pos = new Vector2;
     const tileLayer = new LittleJS.TileLayer(pos, LittleJS.tileCollisionSize);
 
     // get level data from the tiles image
@@ -67,6 +67,10 @@ function gameInit()
     );
     particleEmiter.elasticity = .3; // bounce when it collides
     particleEmiter.trailScale = 2;  // stretch in direction of motion
+
+    // start the game timer
+    gameTimer = new Timer;
+    gameTimer.set();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

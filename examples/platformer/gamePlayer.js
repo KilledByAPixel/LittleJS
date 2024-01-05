@@ -97,7 +97,7 @@ class Character extends GameObject
         {
             const testPos = this.pos.add(vec2(0, y + .1*moveInput.y - this.size.y/2));
             const collisionData = getTileCollisionData(testPos);
-            touchingLadder |= collisionData == tileType_ladder;
+            touchingLadder ||= collisionData == tileType_ladder;
         }
         if (!touchingLadder)
             this.climbingLadder = 0;
