@@ -120,7 +120,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         // set canvas style
         const styleCanvas = 'position:absolute;' +
             'top:50%;left:50%;transform:translate(-50%,-50%);' + // center the canvas
-            (canvasPixelated?'image-rendering:pixelated':'');     // set pixelated rendering
+            (canvasPixelated?'image-rendering:pixelated':'');    // set pixelated rendering
         (glCanvas||mainCanvas).style = mainCanvas.style = overlayCanvas.style = styleCanvas;
         
         gameInit();

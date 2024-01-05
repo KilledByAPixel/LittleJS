@@ -103,7 +103,7 @@ function gameRender()
 function gameRenderPost()
 {
     // draw to overlay canvas for hud rendering
-    drawTextScreen('LittleJS Engine Demo', vec2(mainCanvasSize.x/2, 80), 80);
+    drawTextScreen('LittleJS Electron Demo', vec2(mainCanvasSize.x/2, 80), 80);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
