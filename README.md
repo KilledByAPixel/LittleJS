@@ -74,9 +74,7 @@ To use LittleJS download the latest package from GitHub or call ```npm install l
 
 If your game loads any files like images you will need to run a local web server. I recommend an editor that does this automatically like [Visual Studio Code](https://code.visualstudio.com/) with the [Live Server plugin](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer). You can also use [http-server](https://www.npmjs.com/package/http-server) via npm.
 
-## Tutorial
-
-- [Breakout Tutorial](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/breakoutTutorial) - Shows how to make a simple game from scatch with LittleJS.
+[The Breakout Tutorial](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/breakoutTutorial) is provided to demonstrate how to make a simple game from scratch. [The tutorial is also available on YouTube.](https://youtu.be/tSwDx-NWTXE?si=bkjMa8-7AN2Wg5MO)
 
 ## Builds
 
@@ -93,7 +91,27 @@ LittleJS can also be imported as a module. There are two module flavors that are
 
 To rebuild the engine you must first run ```npm install``` to setup the necessary npm dependencies. Then call ```npm run build``` to build the engine.
 
-The starter project example also includes a node js file [build.js](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/starter/build.js) that compresses everything into a tiny zip file using Google Closure, UglifyJS, Roadroller, and ECT.
+The starter project example also includes a node js file [build.js](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/starter/build.js) that compresses everything into a tiny zip file using Google Closure, UglifyJS, Roadroller, and ECT Zip.
+
+## Engine Source Code
+
+This engine is made with simplicity in mind using clean easy to read code. There are only a few files used by the entire engine.
+
+- [engine.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engine.js) - Top level engine init, update, and render
+- [engineSettings.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineSettings.js) - Global engine settings
+- [engineObject.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineObject.js) - Base object class and physics
+- [engineDraw.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineDraw.js) - Code for canvas drawing and text
+- [engineAudio.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineAudio.js) - Spacial sound effects, and zzfx sound generator
+- [engineInput.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineInput.js) - Input for keyboard, mouse, touch, and gamepad
+- [engineUtilities.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineUtilities.js) - Vector2, Color, and Timer clases and math functions
+
+Optional Components, these components are built to synergize with the rest of the engine but are not necessary.
+
+- [engineTileLayer.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineTileLayer.js) - Tile layer rendering and collision
+- [engineParticles.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineParticles.js) - Particle system with fast rendering and collision
+- [engineWebGL.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineWebGL.js) - Super fast rendering with WebGL and post processing
+- [engineMedals.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineMedals.js) - Achievement tracker with Newgrounds integration
+- [engineDebug.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineDebug.js) - Debug rendering system and information overlay
 
 ## LittleJS Setup
 
@@ -161,26 +179,6 @@ class MyObject extends EngineObject
     }
 }
 ```
-
-## Engine Source Code
-
-This engine is made with simplicity in mind using clean easy to read code. There are only a few files used by the entire engine.
-
-- [engine.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engine.js) - Top level engine init, update, and render
-- [engineSettings.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineSettings.js) - Global engine settings
-- [engineObject.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineObject.js) - Base object class and physics
-- [engineDraw.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineDraw.js) - Code for canvas drawing and text
-- [engineAudio.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineAudio.js) - Spacial sound effects, and zzfx sound generator
-- [engineInput.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineInput.js) - Input for keyboard, mouse, touch, and gamepad
-- [engineUtilities.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineUtilities.js) - Vector2, Color, and Timer clases and math functions
-
-Optional Components, these components are built to synergize with the rest of the engine but are not necessary.
-
-- [engineTileLayer.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineTileLayer.js) - Tile layer rendering and collision
-- [engineParticles.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineParticles.js) - Particle system with fast rendering and collision
-- [engineWebGL.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineWebGL.js) - Super fast rendering with WebGL and post processing
-- [engineMedals.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineMedals.js) - Achievement tracker with Newgrounds integration
-- [engineDebug.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineDebug.js) - Debug rendering system and information overlay
 
 ## Debugging
 
