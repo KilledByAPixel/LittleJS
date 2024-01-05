@@ -85,7 +85,7 @@ class ParticleEmitter extends EngineObject
         localSpace
     )
     {
-        super(pos, new Vector2, tileIndex, tileSize, angle, undefined, renderOrder);
+        super(pos, vec2(), tileIndex, tileSize, angle, undefined, renderOrder);
 
         // emitter settings
         /** @property {Number} - World space size of the emitter (float for circle diameter, vec2 for rect) */
@@ -174,7 +174,7 @@ class ParticleEmitter extends EngineObject
     {
         // spawn a particle
         let pos = this.emitSize.x != undefined ? // check if vec2 was used for size
-            (new Vector2(rand(-.5,.5), rand(-.5,.5)))
+            vec2(rand(-.5,.5), rand(-.5,.5))
                 .multiply(this.emitSize).rotate(this.angle) // box emitter
             : randInCircle(this.emitSize/2);                // circle emitter
         let angle = rand(this.particleConeAngle, -this.particleConeAngle);
@@ -204,7 +204,7 @@ class ParticleEmitter extends EngineObject
         // build particle settings
         particle.colorStart    = colorStart;
         particle.colorEndDelta = colorEnd.subtract(colorStart);
-        particle.velocity      = (new Vector2).setAngle(velocityAngle, speed);
+        particle.velocity      = vec2().setAngle(velocityAngle, speed);
         particle.angleVelocity = angleSpeed;
         particle.lifeTime      = particleTime;
         particle.sizeStart     = sizeStart;
@@ -249,7 +249,7 @@ class Particle extends EngineObject
      * @param {Number}  [angle=0]                  - Angle to rotate the particle
      */
     constructor(pos, tileIndex, tileSize, angle)
-    { super(pos, new Vector2, tileIndex, tileSize, angle); }
+    { super(pos, vec2(), tileIndex, tileSize, angle); }
 
     /** Render the particle, automatically called each frame, sorted by renderOrder */
     render()
@@ -257,7 +257,7 @@ class Particle extends EngineObject
         // modulate size and color
         const p = min((time - this.spawnTime) / this.lifeTime, 1);
         const radius = this.sizeStart + p * this.sizeEndDelta;
-        const size = new Vector2(radius, radius);
+        const size = vec2(radius);
         const fadeRate = this.fadeRate/2;
         const color = new Color(
             this.colorStart.r + p * this.colorEndDelta.r,

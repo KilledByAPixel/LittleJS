@@ -78,7 +78,7 @@ class EngineObject
         /** @property {Number} [renderOrder=0]                          - Objects are sorted by render order */
         this.renderOrder = renderOrder;
         /** @property {Vector2} [velocity=Vector2()]                    - Velocity of the object */
-        this.velocity = new Vector2();
+        this.velocity = vec2();
         /** @property {Number} [angleVelocity=0]                        - Angular velocity of the object */
         this.angleVelocity = 0;
 
@@ -235,8 +235,8 @@ class EngineObject
                 if (!tileCollisionTest(oldPos, this.size, this))
                 {
                     // test which side we bounced off (or both if a corner)
-                    const isBlockedY = tileCollisionTest(new Vector2(oldPos.x, this.pos.y), this.size, this);
-                    const isBlockedX = tileCollisionTest(new Vector2(this.pos.x, oldPos.y), this.size, this);
+                    const isBlockedY = tileCollisionTest(vec2(oldPos.x, this.pos.y), this.size, this);
+                    const isBlockedX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
                     if (isBlockedY | !isBlockedX)
                     {
                         // set if landed on ground

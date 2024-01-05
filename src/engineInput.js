@@ -431,7 +431,7 @@ function touchGamepadRender()
     const rightCenter = vec2(mainCanvasSize.x-touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
     for (let i=4; i--;)
     {
-        const pos = rightCenter.add((new Vector2).setAngle(i*PI/2, touchGamepadSize/2));
+        const pos = rightCenter.add(vec2().setAngle(i*PI/2, touchGamepadSize/2));
         overlayContext.fillStyle = touchGamepadButtons[i] ? '#fff' : '#000';
         overlayContext.beginPath();
         overlayContext.arc(pos.x, pos.y, touchGamepadSize/4, 0,9);

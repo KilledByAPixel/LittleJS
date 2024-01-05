@@ -67,7 +67,7 @@ function tileCollisionTest(pos, size=vec2(), object)
     for (let x = minX; x < maxX; ++x)
     {
         const tileData = tileCollision[y*tileCollisionSize.x+x];
-        if (tileData && (!object || object.collideWithTile(tileData, new Vector2(x, y))))
+        if (tileData && (!object || object.collideWithTile(tileData, vec2(x, y))))
             return 1;
     }
 }
