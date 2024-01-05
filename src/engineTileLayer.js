@@ -97,10 +97,10 @@ function tileCollisionRaycast(posStart, posEnd, object)
     {
         // check for tile collision
         const tileData = getTileCollisionData(pos);
-        if (object ? object.collideWithTileRaycast(tileData, pos) : tileData > 0)
+        if (tileData && (!object || object.collideWithTile(tileData, pos)))
         {
-            debugRaycast && debugLine(posStart, posEnd, '#f00', .02, 1);
-            debugRaycast && debugPoint(pos.add(vec2(.5)), '#ff0', 1);
+            debugRaycast && debugLine(posStart, posEnd, '#f00', .02);
+            debugRaycast && debugPoint(pos.add(vec2(.5)), '#ff0');
             return pos.add(vec2(.5));
         }
 
@@ -115,7 +115,7 @@ function tileCollisionRaycast(posStart, posEnd, object)
             pos.x += sign(delta.x), xi += unit.x;
     }
 
-    debugRaycast && debugLine(posStart, posEnd, '#00f', .02, 1);
+    debugRaycast && debugLine(posStart, posEnd, '#00f', .02);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
