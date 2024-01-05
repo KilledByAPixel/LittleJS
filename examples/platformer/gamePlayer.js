@@ -231,7 +231,7 @@ class Character extends GameObject
 
     damage(damage, damagingObject)
     {
-        if (this.isDead() || this.getAliveTime() < 1 || this.dodgeTimer.active() || godMode)
+        if (this.isDead() || this.getAliveTime() < 1 || this.dodgeTimer.active())
             return;
 
         makeBlood(damagingObject ? damagingObject.pos : this.pos);

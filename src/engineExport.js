@@ -188,11 +188,6 @@ function setMedalsPreventUnlock(prevent) { medalsPreventUnlock = prevent; }
  *  @memberof Debug */
 function setShowWatermark(show) { showWatermark = show; }
 
-/** Set if god mode is enabled
- *  @param {Boolean} enable
- *  @memberof Debug */
-function setGodMode(enable) { godMode = enable; }
-
 /** Set key code used to toggle debug mode, Esc by default
  *  @param {Number} key
  *  @memberof Debug */
@@ -237,7 +232,6 @@ export {
 	setMedalDisplayIconSize,
 	setMedalsPreventUnlock,
 	setShowWatermark,
-	setGodMode,
 	setDebugKey,
 
 	// Settings
@@ -280,7 +274,6 @@ export {
 	// Globals
 	debug,
 	showWatermark,
-	godMode,
 
 	// Debug
 	ASSERT,

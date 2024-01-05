@@ -72,7 +72,7 @@ Build
 
 Build
 (
-    'Build Engine -- ESM minified / release',
+    'Build Engine -- ESM minified release',
     `${BUILD_FOLDER}/${ENGINE_NAME}.esm.min.js`,
     [`${BUILD_FOLDER}/${ENGINE_NAME}.min.js`, `${SOURCE_FOLDER}/engineExport.js`],
     [uglifyBuildStep]

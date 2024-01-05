@@ -151,10 +151,6 @@ declare module "littlejs.esm" {
      *  @param {Boolean} show
      *  @memberof Debug */
     export function setShowWatermark(show: boolean): void;
-    /** Set if god mode is enabled
-     *  @param {Boolean} enable
-     *  @memberof Debug */
-    export function setGodMode(enable: boolean): void;
     /** Set key code used to toggle debug mode, Esc by default
      *  @param {Number} key
      *  @memberof Debug */
@@ -347,11 +343,6 @@ declare module "littlejs.esm" {
      *  @default
      *  @memberof Debug */
     export let showWatermark: boolean;
-    /** True if god mode is enabled, handle this however you want
-     *  @type {Boolean}
-     *  @default
-     *  @memberof Debug */
-    export let godMode: boolean;
     /** Asserts if the experssion is false, does not do anything in release builds
      *  @param {Boolean} assertion
      *  @param {Object}  output

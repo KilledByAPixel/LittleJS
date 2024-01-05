@@ -8,7 +8,6 @@
 'use strict';
 
 let showWatermark = 0;
-let godMode = 0;
 let debugKeyCode = 0;
 const debug = 0;
 const debugOverlay = 0;
@@ -3998,7 +3997,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.6.8';
+const engineVersion = '1.6.9';
 
 /** Frames per second to update objects
  *  @type {Number}

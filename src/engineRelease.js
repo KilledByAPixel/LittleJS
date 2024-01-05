@@ -8,7 +8,6 @@
 'use strict';
 
 let showWatermark = 0;
-let godMode = 0;
 let debugKeyCode = 0;
 const debug = 0;
 const debugOverlay = 0;

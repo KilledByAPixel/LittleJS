@@ -34,12 +34,6 @@ const debugPointSize = .5;
  *  @memberof Debug */
 let showWatermark = 1;
 
-/** True if god mode is enabled, handle this however you want
- *  @type {Boolean}
- *  @default
- *  @memberof Debug */
-let godMode = 0;
-
 /** Key code used to toggle debug mode, Esc by default
  *  @type {Boolean}
  *  @default
@@ -180,7 +174,7 @@ function debugUpdate()
         if (keyWasPressed(51)) // 3
             debugGamepads = !debugGamepads;
         if (keyWasPressed(52)) // 4
-            godMode = !godMode;
+            debugRaycast = !debugRaycast;
         if (keyWasPressed(53)) // 5
             debugTakeScreenshot = 1;
         //if (keyWasPressed(54)) // 6
@@ -359,8 +353,8 @@ function debugRender()
             overlayContext.fillText('2: Debug Particles', x, y += h);
             overlayContext.fillStyle = debugGamepads ? '#f00' : '#fff';
             overlayContext.fillText('3: Debug Gamepads', x, y += h);
-            overlayContext.fillStyle = godMode ? '#f00' : '#fff';
-            overlayContext.fillText('4: God Mode', x, y += h);
+            overlayContext.fillStyle = debugRaycast ? '#f00' : '#fff';
+            overlayContext.fillText('4: Debug Raycasts', x, y += h);
             overlayContext.fillStyle = '#fff';
             overlayContext.fillText('5: Save Screenshot', x, y += h);
 
@@ -385,7 +379,7 @@ function debugRender()
         {
             overlayContext.fillText(debugPhysics ? 'Debug Physics' : '', x, y += h);
             overlayContext.fillText(debugParticles ? 'Debug Particles' : '', x, y += h);
-            overlayContext.fillText(godMode ? 'God Mode' : '', x, y += h);
+            overlayContext.fillText(debugRaycast ? 'Debug Raycasts' : '', x, y += h);
             overlayContext.fillText(debugGamepads ? 'Debug Gamepads' : '', x, y += h);
         }
     
@@ -4359,7 +4353,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.6.8';
+const engineVersion = '1.6.9';
 
 /** Frames per second to update objects
  *  @type {Number}
@@ -4840,11 +4834,6 @@ function setMedalsPreventUnlock(prevent) { medalsPreventUnlock = prevent; }
  *  @memberof Debug */
 function setShowWatermark(show) { showWatermark = show; }
 
-/** Set if god mode is enabled
- *  @param {Boolean} enable
- *  @memberof Debug */
-function setGodMode(enable) { godMode = enable; }
-
 /** Set key code used to toggle debug mode, Esc by default
  *  @param {Number} key
  *  @memberof Debug */
@@ -4889,7 +4878,6 @@ export {
 	setMedalDisplayIconSize,
 	setMedalsPreventUnlock,
 	setShowWatermark,
-	setGodMode,
 	setDebugKey,
 
 	// Settings
@@ -4932,7 +4920,6 @@ export {
 	// Globals
 	debug,
 	showWatermark,
-	godMode,
 
 	// Debug
 	ASSERT,
