@@ -3,6 +3,7 @@
 [![NPM Package][npm]][npm-url]
 [![Build Size][build-size]][build-size-url]
 [![NPM Downloads][npm-downloads]][npmtrends-url]
+[![DeepScan][deepscan]][deepscan-url]
 
 ## All aboard!
 
@@ -216,3 +217,5 @@ Here are a few of the amazing games people are making with LittleJS.
 [build-size-url]: https://bundlephobia.com/result?p=littlejsengine
 [npm-downloads]: https://img.shields.io/npm/dw/littlejsengine
 [npmtrends-url]: https://www.npmtrends.com/littlejsengine
+[deepscan]: https://deepscan.io/api/teams/22950/projects/26229/branches/831487/badge/grade.svg
+[deepscan-url]: https://deepscan.io/dashboard#view=project&tid=22950&pid=26229&bid=831487
