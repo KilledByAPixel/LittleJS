@@ -8,7 +8,6 @@
 
 ## All aboard!
 
-
 LittleJS is a super lightweight JavaScript game engine designed for modern web development. With its fast hybrid rendering system, it offers a comprehensive suite of game development tools from rendering to sound effects. The code is very clean and well documented with a variety of examples to get you started. Choo-Choo! 🚂
 <div align="center">
   
@@ -214,7 +213,7 @@ Here are a few of the amazing games people are making with LittleJS.
 
 [npm]: https://img.shields.io/npm/v/littlejsengine
 [npm-url]: https://www.npmjs.com/package/littlejsengine
-[build-size]: https://badgen.net/bundlephobia/minzip/littlejsengine
+[build-size]: https://badgen.net/bundlephobia/minzip/littlejsengine?1
 [build-size-url]: https://bundlephobia.com/result?p=littlejsengine
 [npm-downloads]: https://img.shields.io/npm/dw/littlejsengine
 [npmtrends-url]: https://www.npmtrends.com/littlejsengine
