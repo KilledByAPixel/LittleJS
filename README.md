@@ -31,7 +31,7 @@ LittleJS is a small but powerful game engine with many features and no depenenci
 
 ### Graphics
 
-- Fast sprite and tile map rendering engine with WebGL
+- Crazy fast sprite and tile map rendering engine with WebGL
 - Update and render 10,000+ objects at 60fps, often many times more
 - Apply [Shadertoy](https://www.shadertoy.com) compatible shaders for post processinge effects
 
@@ -47,16 +47,15 @@ LittleJS is a small but powerful game engine with many features and no depenenci
 
 ### Physics
 
-- Kinematic physics object update 
 - 2D physics engine with collision handling for axis aligned boxes
-- Very fast collision handling for tile maps
+- Very fast collision handling and raycasting for tile maps
 
 ### Flexability
 
 - Designed to work with all modern web bowsers and mobile devices
 - Compatible with TypeScript and includes [an example TS project](https://killedbyapixel.github.io/LittleJS/examples/typescript)
 - For size coding competitions like [js13kGames](https://js13kgames.com/), starter project builds to a 7KB zip file
-- Build to a Windows executable with [Electron](https://www.electronjs.org/) for distribution on platforms like Steam
+- Builds to a Windows executable with [Electron](https://www.electronjs.org/) for distribution on platforms like Steam
 - Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used for anything you want
 
 ### Extra Systems
@@ -72,7 +71,7 @@ To use LittleJS download the latest package from GitHub or call ```npm install l
 
 [You can use the empty example template as a starting point.](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/empty/game.js) This file contains just the minimal setup to start the engine. You can also download and include [littlejs.js](https://github.com/KilledByAPixel/LittleJS/blob/main/build/littlejs.js) or [littlejs.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/build/littlejs.min.js).
 
-If your game loads any files like images you will need to run a local web server. I recommend an editor that does this automatically like [Visual Studio Code](https://code.visualstudio.com/) with the [Live Server plugin](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer). You can also use [http-server](https://www.npmjs.com/package/http-server) via npm.
+If your game loads any files like images you will need to run a local web server. Some editors can do this automatically like [Visual Studio Code](https://code.visualstudio.com/) with the [Live Server plugin](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer). You can also use [http-server](https://www.npmjs.com/package/http-server) via npm.
 
 [The Breakout Tutorial](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/breakoutTutorial) is provided to demonstrate how to make a simple game from scratch. [The tutorial is also available on YouTube.](https://youtu.be/tSwDx-NWTXE?si=bkjMa8-7AN2Wg5MO)
 
@@ -91,7 +90,7 @@ LittleJS can also be imported as a module. There are two module flavors that are
 
 To rebuild the engine you must first run ```npm install``` to setup the necessary npm dependencies. Then call ```npm run build``` to build the engine.
 
-The starter project example also includes a node js file [build.js](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/starter/build.js) that compresses everything into a tiny zip file using Google Closure, UglifyJS, Roadroller, and ECT Zip.
+The starter example project also includes a node js file [build.js](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/starter/build.js) that compresses everything into a tiny zip file using Google Closure, UglifyJS, Roadroller, and ECT Zip.
 
 ## Engine Source Code
 
@@ -112,6 +111,7 @@ Optional Components, these components are built to synergize with the rest of th
 - [engineWebGL.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineWebGL.js) - Super fast rendering with WebGL and post processing
 - [engineMedals.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineMedals.js) - Achievement tracker with Newgrounds integration
 - [engineDebug.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineDebug.js) - Debug rendering system and information overlay
+- [engineBuild.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineBuild.js) - Node script used to build the engine
 
 ## LittleJS Setup
 
