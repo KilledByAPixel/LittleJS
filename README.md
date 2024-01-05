@@ -188,7 +188,7 @@ Debug builds of LittleJS have a special menu that can be opened by pressing the 
 - 1: Debug Physics
 - 2: Debug Particles
 - 3: Debug Gamepads
-- 4: God Mode
+- 4: Debug Raycasts
 - 5: Save Screenshot
 
 ## Games Made With LittleJS
