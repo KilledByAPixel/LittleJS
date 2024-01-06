@@ -51,34 +51,34 @@ const PI = Math.PI;
  *  @param {Number} value
  *  @return {Number}
  *  @memberof Utilities */
-function abs(a) { return a < 0 ? -a : a; }
+function abs(value) { return Math.abs(value); }
 
 /** Returns lowest of two values passed in
  *  @param {Number} valueA
  *  @param {Number} valueB
  *  @return {Number}
  *  @memberof Utilities */
-function min(a, b) { return a < b ?  a : b; }
+function min(valueA, valueB) { return Math.min(valueA, valueB); }
 
 /** Returns highest of two values passed in
  *  @param {Number} valueA
  *  @param {Number} valueB
  *  @return {Number}
  *  @memberof Utilities */
-function max(a, b) { return a > b ?  a : b; }
+function max(valueA, valueB) { return Math.max(valueA, valueB); }
 
 /** Returns the sign of value passed in (also returns 1 if 0)
  *  @param {Number} value
  *  @return {Number}
  *  @memberof Utilities */
-function sign(a) { return a < 0 ? -1 : 1; }
+function sign(value) { return Math.sign(value); }
 
 /** Returns first parm modulo the second param, but adjusted so negative numbers work as expected
  *  @param {Number} dividend
  *  @param {Number} [divisor=1]
  *  @return {Number}
  *  @memberof Utilities */
-function mod(a, b=1) { return ((a % b) + b) % b; }
+function mod(dividend, divisor=1) { return ((dividend % divisor) + divisor) % divisor; }
 
 /** Clamps the value beween max and min
  *  @param {Number} value
@@ -86,8 +86,8 @@ function mod(a, b=1) { return ((a % b) + b) % b; }
  *  @param {Number} [max=1]
  *  @return {Number}
  *  @memberof Utilities */
-function clamp(v, min=0, max=1)
-{ return v < min ? min : v > max ? max : v; }
+function clamp(value, min=0, max=1)
+{ return value < min ? min : value > max ? max : value; }
 
 /** Returns what percentage the value is between max and min
  *  @param {Number} value
@@ -95,8 +95,8 @@ function clamp(v, min=0, max=1)
  *  @param {Number} [max=1]
  *  @return {Number}
  *  @memberof Utilities */
-function percent(v, min=0, max=1)
-{ return max-min ? clamp((v-min) / (max-min)) : 0; }
+function percent(value, min=0, max=1)
+{ return max-min ? clamp((value-min) / (max-min)) : 0; }
 
 /** Linearly interpolates the percent value between max and min
  *  @param {Number} percent
@@ -104,29 +104,32 @@ function percent(v, min=0, max=1)
  *  @param {Number} [max=1]
  *  @return {Number}
  *  @memberof Utilities */
-function lerp(p, min=0, max=1){ return min + clamp(p) * (max-min); }
+function lerp(percent, min=0, max=1){ return min + clamp(percent) * (max-min); }
 
 /** Applies smoothstep function to the percentage value
- *  @param {Number} value
+ *  @param {Number} percent
  *  @return {Number}
  *  @memberof Utilities */
-function smoothStep(p) { return p * p * (3 - 2 * p); }
+function smoothStep(percent) { return percent * percent * (3 - 2 * percent); }
 
 /** Returns the nearest power of two not less then the value
  *  @param {Number} value
  *  @return {Number}
  *  @memberof Utilities */
-function nearestPowerOfTwo(v) { return 2**Math.ceil(Math.log2(v)); }
+function nearestPowerOfTwo(value) { return 2**Math.ceil(Math.log2(value)); }
 
 /** Returns true if two axis aligned bounding boxes are overlapping 
  *  @param {Vector2} pointA  - Center of box A
  *  @param {Vector2} sizeA   - Size of box A
  *  @param {Vector2} pointB  - Center of box B
- *  @param {Vector2} [sizeB] - Size of box B
+ *  @param {Vector2} sizeB   - Size of box B
  *  @return {Boolean}        - True if overlapping
  *  @memberof Utilities */
-function isOverlapping(pA, sA, pB, sB)
-{ return abs(pA.x - pB.x)*2 < sA.x + sB.x && abs(pA.y - pB.y)*2 < sA.y + sB.y; }
+function isOverlapping(pointA, sizeA, pointB, sizeB)
+{ 
+    return abs(pointA.x - pointB.x)*2 < sizeA.x + sizeB.x 
+        && abs(pointA.y - pointB.y)*2 < sizeA.y + sizeB.y;
+}
 
 /** Returns an oscillating wave between 0 and amplitude with frequency of 1 Hz by default
  *  @param {Number} [frequency=1] - Frequency of the wave in Hz
@@ -153,14 +156,14 @@ function formatTime(t) { return (t/60|0) + ':' + (t%60<10?'0':'') + (t%60|0); }
  *  @param {Number} [valueB=0]
  *  @return {Number}
  *  @memberof Random */
-function rand(a=1, b=0) { return b + (a-b)*Math.random(); }
+function rand(valueA=1, valueB=0) { return valueB + Math.random() * (valueA-valueB); }
 
 /** Returns a floored random value the two values passed in
  *  @param {Number} [valueA=1]
  *  @param {Number} [valueB=0]
  *  @return {Number}
  *  @memberof Random */
-function randInt(a=1, b=0) { return rand(a,b)|0; }
+function randInt(valueA=1, valueB=0) { return Math.floor(rand(valueA,valueB)); }
 
 /** Randomly returns either -1 or 1
  *  @return {Number}
@@ -187,8 +190,11 @@ function randVector(length=1) { return new Vector2().setAngle(rand(2*PI), length
  *  @param {Boolean} [linear]
  *  @return {Color}
  *  @memberof Random */
-function randColor(cA = new Color, cB = new Color(0,0,0,1), linear)
-{ return linear ? cA.lerp(cB, rand()) : new Color(rand(cA.r,cB.r),rand(cA.g,cB.g),rand(cA.b,cB.b),rand(cA.a,cB.a)); }
+function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear)
+{
+    return linear ? colorA.lerp(colorB, rand()) : 
+        new Color(rand(colorA.r,colorB.r), rand(colorA.g,colorB.g), rand(colorA.b,colorB.b), rand(colorA.a,colorB.a));
+}
 
 /** Seed used by the randSeeded function
  *  @type {Number}
@@ -206,13 +212,13 @@ function setRandSeed(seed) { randSeed = seed; }
  *  @param {Number} [valueB=0]
  *  @return {Number}
  *  @memberof Random */
-function randSeeded(a=1, b=0)
+function randSeeded(valueA=1, valueB=0)
 {
     // xorshift algorithm
     randSeed ^= randSeed << 13; 
     randSeed ^= randSeed >>> 17; 
     randSeed ^= randSeed << 5;
-    return b + (a-b) * abs(randSeed % 1e9) / 1e9;
+    return valueB + (valueA-valueB) * abs(randSeed % 1e9) / 1e9;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -234,7 +240,7 @@ function vec2(x=0, y)
 
 /** 
  * Check if object is a valid Vector2
- * @param {Vector2} vector
+ * @param {Vector2} v
  * @return {Boolean}
  * @memberof Utilities
  */
@@ -267,27 +273,27 @@ class Vector2
     copy() { return new Vector2(this.x, this.y); }
 
     /** Returns a copy of this vector plus the vector passed in
-     *  @param {Vector2} vector
+     *  @param {Vector2} v
      *  @return {Vector2} */
     add(v) { ASSERT(isVector2(v)); return new Vector2(this.x + v.x, this.y + v.y); }
 
     /** Returns a copy of this vector minus the vector passed in
-     *  @param {Vector2} vector
+     *  @param {Vector2} v
      *  @return {Vector2} */
     subtract(v) { ASSERT(isVector2(v)); return new Vector2(this.x - v.x, this.y - v.y); }
 
     /** Returns a copy of this vector times the vector passed in
-     *  @param {Vector2} vector
+     *  @param {Vector2} v
      *  @return {Vector2} */
     multiply(v) { ASSERT(isVector2(v)); return new Vector2(this.x * v.x, this.y * v.y); }
 
     /** Returns a copy of this vector divided by the vector passed in
-     *  @param {Vector2} vector
+     *  @param {Vector2} v
      *  @return {Vector2} */
     divide(v) { ASSERT(isVector2(v)); return new Vector2(this.x / v.x, this.y / v.y); }
 
     /** Returns a copy of this vector scaled by the vector passed in
-     *  @param {Number} scale
+     *  @param {Number} s
      *  @return {Vector2} */
     scale(s) { ASSERT(!isVector2(s)); return new Vector2(this.x * s, this.y * s); }
 
@@ -300,12 +306,12 @@ class Vector2
     lengthSquared() { return this.x**2 + this.y**2; }
 
     /** Returns the distance from this vector to vector passed in
-     * @param {Vector2} vector
+     * @param {Vector2} v
      * @return {Number} */
     distance(v) { return this.distanceSquared(v)**.5; }
 
     /** Returns the distance squared from this vector to vector passed in
-     * @param {Vector2} vector
+     * @param {Vector2} v
      * @return {Number} */
     distanceSquared(v) { return (this.x - v.x)**2 + (this.y - v.y)**2; }
 
@@ -320,12 +326,12 @@ class Vector2
     clampLength(length=1) { const l = this.length(); return l > length ? this.scale(length/l) : this; }
 
     /** Returns the dot product of this and the vector passed in
-     * @param {Vector2} vector
+     * @param {Vector2} v
      * @return {Number} */
     dot(v) { ASSERT(isVector2(v)); return this.x*v.x + this.y*v.y; }
 
     /** Returns the cross product of this and the vector passed in
-     * @param {Vector2} vector
+     * @param {Vector2} v
      * @return {Number} */
     cross(v) { ASSERT(isVector2(v)); return this.x*v.y - this.y*v.x; }
 
@@ -337,12 +343,17 @@ class Vector2
      * @param {Number} [angle=0]
      * @param {Number} [length=1]
      * @return {Vector2} */
-    setAngle(a=0, length=1) { this.x = length*Math.sin(a); this.y = length*Math.cos(a); return this; }
+    setAngle(angle=0, length=1) 
+    { this.x = length*Math.sin(angle); this.y = length*Math.cos(angle); return this; }
 
     /** Returns copy of this vector rotated by the angle passed in
      * @param {Number} angle
      * @return {Vector2} */
-    rotate(a) { const c = Math.cos(a), s = Math.sin(a); return new Vector2(this.x*c-this.y*s, this.x*s+this.y*c); }
+    rotate(angle)
+    { 
+        const c = Math.cos(angle), s = Math.sin(angle); 
+        return new Vector2(this.x*c - this.y*s, this.x*s + this.y*c);
+    }
 
     /** Returns the integer direction of this vector, corrosponding to multiples of 90 degree rotation (0-3)
      * @return {Number} */
@@ -361,10 +372,11 @@ class Vector2
     area() { return abs(this.x * this.y); }
 
     /** Returns a new vector that is p percent between this and the vector passed in
-     * @param {Vector2} vector
+     * @param {Vector2} v
      * @param {Number}  percent
      * @return {Vector2} */
-    lerp(v, p) { ASSERT(isVector2(v)); return this.add(v.subtract(this).scale(clamp(p))); }
+    lerp(v, percent)
+    { ASSERT(isVector2(v)); return this.add(v.subtract(this).scale(clamp(percent))); }
 
     /** Returns true if this vector is within the bounds of an array size passed in
      * @param {Vector2} arraySize
@@ -418,16 +430,16 @@ class Color
      *  @param {Number} [green=1]
      *  @param {Number} [blue=1]
      *  @param {Number} [alpha=1] */
-    constructor(r=1, g=1, b=1, a=1)
+    constructor(red=1, green=1, blue=1, alpha=1)
     {
         /** @property {Number} - Red */
-        this.r = r;
+        this.r = red;
         /** @property {Number} - Green */
-        this.g = g;
+        this.g = green;
         /** @property {Number} - Blue */
-        this.b = b;
+        this.b = blue;
         /** @property {Number} - Alpha */
-        this.a = a;
+        this.a = alpha;
     }
 
     /** Returns a new color that is a copy of this
@@ -435,22 +447,22 @@ class Color
     copy() { return new Color(this.r, this.g, this.b, this.a); }
 
     /** Returns a copy of this color plus the color passed in
-     * @param {Color} color
+     * @param {Color} c
      * @return {Color} */
     add(c) { return new Color(this.r+c.r, this.g+c.g, this.b+c.b, this.a+c.a); }
 
     /** Returns a copy of this color minus the color passed in
-     * @param {Color} color
+     * @param {Color} c
      * @return {Color} */
     subtract(c) { return new Color(this.r-c.r, this.g-c.g, this.b-c.b, this.a-c.a); }
 
     /** Returns a copy of this color times the color passed in
-     * @param {Color} color
+     * @param {Color} c
      * @return {Color} */
     multiply(c) { return new Color(this.r*c.r, this.g*c.g, this.b*c.b, this.a*c.a); }
 
     /** Returns a copy of this color divided by the color passed in
-     * @param {Color} color
+     * @param {Color} c
      * @return {Color} */
     divide(c) { return new Color(this.r/c.r, this.g/c.g, this.b/c.b, this.a/c.a); }
 
@@ -458,23 +470,24 @@ class Color
      * @param {Number} scale
      * @param {Number} [alphaScale=scale]
      * @return {Color} */
-    scale(s, a=s) { return new Color(this.r*s, this.g*s, this.b*s, this.a*a); }
+    scale(scale, alphaScale=scale) 
+    { return new Color(this.r*scale, this.g*scale, this.b*scale, this.a*alphaScale); }
 
     /** Returns a copy of this color clamped to the valid range between 0 and 1
      * @return {Color} */
     clamp() { return new Color(clamp(this.r), clamp(this.g), clamp(this.b), clamp(this.a)); }
 
     /** Returns a new color that is p percent between this and the color passed in
-     * @param {Color}  color
+     * @param {Color}  c
      * @param {Number} percent
      * @return {Color} */
-    lerp(c, p) { return this.add(c.subtract(this).scale(clamp(p))); }
+    lerp(c, percent) { return this.add(c.subtract(this).scale(clamp(percent))); }
 
     /** Sets this color given a hue, saturation, lightness, and alpha
-     * @param {Number} [hue=0]
-     * @param {Number} [saturation=0]
-     * @param {Number} [lightness=1]
-     * @param {Number} [alpha=1]
+     * @param {Number} [h=0] Hue
+     * @param {Number} [s=0] Saturation
+     * @param {Number} [l=1] Lightness
+     * @param {Number} [a=1] Alpha
      * @return {Color} */
     setHSLA(h=0, s=0, l=1, a=1)
     {
@@ -1174,7 +1187,7 @@ class EngineObject
      *  @param {EngineObject} object - the object to test against
      *  @return {Boolean}            - true if the collision should be resolved
      */
-    collideWithObject(o)              { return 1; }
+    collideWithObject(object)         { return 1; }
 
     /** How long since the object was created
      *  @return {Number} */
@@ -1182,7 +1195,7 @@ class EngineObject
 
     /** Apply acceleration to this object (adjust velocity, not affected by mass)
      *  @param {Vector2} acceleration */
-    applyAcceleration(a)              { if (this.mass) this.velocity = this.velocity.add(a); }
+    applyAcceleration(acceleration)   { if (this.mass) this.velocity = this.velocity.add(acceleration); }
 
     /** Apply force to this object (adjust velocity, affected by mass)
      *  @param {Vector2} force */
@@ -3997,7 +4010,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.6.9';
+const engineVersion = '1.6.91';
 
 /** Frames per second to update objects
  *  @type {Number}
@@ -4095,7 +4108,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     };
 
     // frame time tracking
-    let frameTimeLastMS = 0, frameTimeBufferMS, averageFPS;
+    let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS;
 
     // main update loop
     function engineUpdate(frameTimeMS=0)

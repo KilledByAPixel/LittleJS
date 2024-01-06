@@ -30,7 +30,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.6.9';
+const engineVersion = '1.6.91';
 
 /** Frames per second to update objects
  *  @type {Number}
@@ -128,7 +128,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     };
 
     // frame time tracking
-    let frameTimeLastMS = 0, frameTimeBufferMS, averageFPS;
+    let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS;
 
     // main update loop
     function engineUpdate(frameTimeMS=0)

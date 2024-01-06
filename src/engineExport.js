@@ -181,7 +181,7 @@ function setMedalDisplayIconSize(size) { medalDisplayIconSize = size; }
 /** Set to stop medals from being unlockable
  *  @param {Boolean} preventUnlock
  *  @memberof Settings */
-function setMedalsPreventUnlock(prevent) { medalsPreventUnlock = prevent; }
+function setMedalsPreventUnlock(preventUnlock) { medalsPreventUnlock = preventUnlock; }
 
 /** Set if watermark with FPS should be shown
  *  @param {Boolean} show

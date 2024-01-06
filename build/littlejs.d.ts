@@ -146,7 +146,7 @@ declare module "littlejs.esm" {
     /** Set to stop medals from being unlockable
      *  @param {Boolean} preventUnlock
      *  @memberof Settings */
-    export function setMedalsPreventUnlock(prevent: any): void;
+    export function setMedalsPreventUnlock(preventUnlock: boolean): void;
     /** Set if watermark with FPS should be shown
      *  @param {Boolean} show
      *  @memberof Debug */
@@ -415,69 +415,69 @@ declare module "littlejs.esm" {
      *  @param {Number} value
      *  @return {Number}
      *  @memberof Utilities */
-    export function abs(a: any): number;
+    export function abs(value: number): number;
     /** Returns lowest of two values passed in
      *  @param {Number} valueA
      *  @param {Number} valueB
      *  @return {Number}
      *  @memberof Utilities */
-    export function min(a: any, b: any): number;
+    export function min(valueA: number, valueB: number): number;
     /** Returns highest of two values passed in
      *  @param {Number} valueA
      *  @param {Number} valueB
      *  @return {Number}
      *  @memberof Utilities */
-    export function max(a: any, b: any): number;
+    export function max(valueA: number, valueB: number): number;
     /** Returns the sign of value passed in (also returns 1 if 0)
      *  @param {Number} value
      *  @return {Number}
      *  @memberof Utilities */
-    export function sign(a: any): number;
+    export function sign(value: number): number;
     /** Returns first parm modulo the second param, but adjusted so negative numbers work as expected
      *  @param {Number} dividend
      *  @param {Number} [divisor=1]
      *  @return {Number}
      *  @memberof Utilities */
-    export function mod(a: any, b?: number): number;
+    export function mod(dividend: number, divisor?: number): number;
     /** Clamps the value beween max and min
      *  @param {Number} value
      *  @param {Number} [min=0]
      *  @param {Number} [max=1]
      *  @return {Number}
      *  @memberof Utilities */
-    export function clamp(v: any, min?: number, max?: number): number;
+    export function clamp(value: number, min?: number, max?: number): number;
     /** Returns what percentage the value is between max and min
      *  @param {Number} value
      *  @param {Number} [min=0]
      *  @param {Number} [max=1]
      *  @return {Number}
      *  @memberof Utilities */
-    export function percent(v: any, min?: number, max?: number): number;
+    export function percent(value: number, min?: number, max?: number): number;
     /** Linearly interpolates the percent value between max and min
      *  @param {Number} percent
      *  @param {Number} [min=0]
      *  @param {Number} [max=1]
      *  @return {Number}
      *  @memberof Utilities */
-    export function lerp(p: any, min?: number, max?: number): number;
+    export function lerp(percent: number, min?: number, max?: number): number;
     /** Applies smoothstep function to the percentage value
-     *  @param {Number} value
+     *  @param {Number} percent
      *  @return {Number}
      *  @memberof Utilities */
-    export function smoothStep(p: any): number;
+    export function smoothStep(percent: number): number;
     /** Returns the nearest power of two not less then the value
      *  @param {Number} value
      *  @return {Number}
      *  @memberof Utilities */
-    export function nearestPowerOfTwo(v: any): number;
+    export function nearestPowerOfTwo(value: number): number;
     /** Returns true if two axis aligned bounding boxes are overlapping
      *  @param {Vector2} pointA  - Center of box A
      *  @param {Vector2} sizeA   - Size of box A
      *  @param {Vector2} pointB  - Center of box B
-     *  @param {Vector2} [sizeB] - Size of box B
+     *  @param {Vector2} sizeB   - Size of box B
      *  @return {Boolean}        - True if overlapping
      *  @memberof Utilities */
-    export function isOverlapping(pA: any, sA: any, pB: any, sB: any): boolean;
+    export function isOverlapping(pointA: Vector2, sizeA: Vector2, pointB: Vector2, sizeB: Vector2): boolean;
     /** Returns an oscillating wave between 0 and amplitude with frequency of 1 Hz by default
      *  @param {Number} [frequency=1] - Frequency of the wave in Hz
      *  @param {Number} [amplitude=1] - Amplitude (max height) of the wave
@@ -497,13 +497,13 @@ declare module "littlejs.esm" {
      *  @param {Number} [valueB=0]
      *  @return {Number}
      *  @memberof Random */
-    export function rand(a?: number, b?: number): number;
+    export function rand(valueA?: number, valueB?: number): number;
     /** Returns a floored random value the two values passed in
      *  @param {Number} [valueA=1]
      *  @param {Number} [valueB=0]
      *  @return {Number}
      *  @memberof Random */
-    export function randInt(a?: number, b?: number): number;
+    export function randInt(valueA?: number, valueB?: number): number;
     /** Randomly returns either -1 or 1
      *  @return {Number}
      *  @memberof Random */
@@ -525,7 +525,7 @@ declare module "littlejs.esm" {
      *  @param {Boolean} [linear]
      *  @return {Color}
      *  @memberof Random */
-    export function randColor(cA?: Color, cB?: Color, linear?: boolean): Color;
+    export function randColor(colorA?: Color, colorB?: Color, linear?: boolean): Color;
     /** Seed used by the randSeeded function
      *  @type {Number}
      *  @default
@@ -540,7 +540,7 @@ declare module "littlejs.esm" {
      *  @param {Number} [valueB=0]
      *  @return {Number}
      *  @memberof Random */
-    export function randSeeded(a?: number, b?: number): number;
+    export function randSeeded(valueA?: number, valueB?: number): number;
     /**
      * 2D Vector object with vector math library
      * - Functions do not change this so they can be chained together
@@ -563,25 +563,25 @@ declare module "littlejs.esm" {
          *  @return {Vector2} */
         copy(): Vector2;
         /** Returns a copy of this vector plus the vector passed in
-         *  @param {Vector2} vector
+         *  @param {Vector2} v
          *  @return {Vector2} */
-        add(v: any): Vector2;
+        add(v: Vector2): Vector2;
         /** Returns a copy of this vector minus the vector passed in
-         *  @param {Vector2} vector
+         *  @param {Vector2} v
          *  @return {Vector2} */
-        subtract(v: any): Vector2;
+        subtract(v: Vector2): Vector2;
         /** Returns a copy of this vector times the vector passed in
-         *  @param {Vector2} vector
+         *  @param {Vector2} v
          *  @return {Vector2} */
-        multiply(v: any): Vector2;
+        multiply(v: Vector2): Vector2;
         /** Returns a copy of this vector divided by the vector passed in
-         *  @param {Vector2} vector
+         *  @param {Vector2} v
          *  @return {Vector2} */
-        divide(v: any): Vector2;
+        divide(v: Vector2): Vector2;
         /** Returns a copy of this vector scaled by the vector passed in
-         *  @param {Number} scale
+         *  @param {Number} s
          *  @return {Vector2} */
-        scale(s: any): Vector2;
+        scale(s: number): Vector2;
         /** Returns the length of this vector
          * @return {Number} */
         length(): number;
@@ -589,13 +589,13 @@ declare module "littlejs.esm" {
          * @return {Number} */
         lengthSquared(): number;
         /** Returns the distance from this vector to vector passed in
-         * @param {Vector2} vector
+         * @param {Vector2} v
          * @return {Number} */
-        distance(v: any): number;
+        distance(v: Vector2): number;
         /** Returns the distance squared from this vector to vector passed in
-         * @param {Vector2} vector
+         * @param {Vector2} v
          * @return {Number} */
-        distanceSquared(v: any): number;
+        distanceSquared(v: Vector2): number;
         /** Returns a new vector in same direction as this one with the length passed in
          * @param {Number} [length=1]
          * @return {Vector2} */
@@ -605,13 +605,13 @@ declare module "littlejs.esm" {
          * @return {Vector2} */
         clampLength(length?: number): Vector2;
         /** Returns the dot product of this and the vector passed in
-         * @param {Vector2} vector
+         * @param {Vector2} v
          * @return {Number} */
-        dot(v: any): number;
+        dot(v: Vector2): number;
         /** Returns the cross product of this and the vector passed in
-         * @param {Vector2} vector
+         * @param {Vector2} v
          * @return {Number} */
-        cross(v: any): number;
+        cross(v: Vector2): number;
         /** Returns the angle of this vector, up is angle 0
          * @return {Number} */
         angle(): number;
@@ -619,11 +619,11 @@ declare module "littlejs.esm" {
          * @param {Number} [angle=0]
          * @param {Number} [length=1]
          * @return {Vector2} */
-        setAngle(a?: number, length?: number): Vector2;
+        setAngle(angle?: number, length?: number): Vector2;
         /** Returns copy of this vector rotated by the angle passed in
          * @param {Number} angle
          * @return {Vector2} */
-        rotate(a: any): Vector2;
+        rotate(angle: number): Vector2;
         /** Returns the integer direction of this vector, corrosponding to multiples of 90 degree rotation (0-3)
          * @return {Number} */
         direction(): number;
@@ -637,10 +637,10 @@ declare module "littlejs.esm" {
          * @return {Number} */
         area(): number;
         /** Returns a new vector that is p percent between this and the vector passed in
-         * @param {Vector2} vector
+         * @param {Vector2} v
          * @param {Number}  percent
          * @return {Vector2} */
-        lerp(v: any, p: any): Vector2;
+        lerp(v: Vector2, percent: number): Vector2;
         /** Returns true if this vector is within the bounds of an array size passed in
          * @param {Vector2} arraySize
          * @return {Boolean} */
@@ -665,7 +665,7 @@ declare module "littlejs.esm" {
          *  @param {Number} [green=1]
          *  @param {Number} [blue=1]
          *  @param {Number} [alpha=1] */
-        constructor(r?: number, g?: number, b?: number, a?: number);
+        constructor(red?: number, green?: number, blue?: number, alpha?: number);
         /** @property {Number} - Red */
         r: number;
         /** @property {Number} - Green */
@@ -678,39 +678,39 @@ declare module "littlejs.esm" {
          * @return {Color} */
         copy(): Color;
         /** Returns a copy of this color plus the color passed in
-         * @param {Color} color
+         * @param {Color} c
          * @return {Color} */
-        add(c: any): Color;
+        add(c: Color): Color;
         /** Returns a copy of this color minus the color passed in
-         * @param {Color} color
+         * @param {Color} c
          * @return {Color} */
-        subtract(c: any): Color;
+        subtract(c: Color): Color;
         /** Returns a copy of this color times the color passed in
-         * @param {Color} color
+         * @param {Color} c
          * @return {Color} */
-        multiply(c: any): Color;
+        multiply(c: Color): Color;
         /** Returns a copy of this color divided by the color passed in
-         * @param {Color} color
+         * @param {Color} c
          * @return {Color} */
-        divide(c: any): Color;
+        divide(c: Color): Color;
         /** Returns a copy of this color scaled by the value passed in, alpha can be scaled separately
          * @param {Number} scale
          * @param {Number} [alphaScale=scale]
          * @return {Color} */
-        scale(s: any, a?: any): Color;
+        scale(scale: number, alphaScale?: number): Color;
         /** Returns a copy of this color clamped to the valid range between 0 and 1
          * @return {Color} */
         clamp(): Color;
         /** Returns a new color that is p percent between this and the color passed in
-         * @param {Color}  color
+         * @param {Color}  c
          * @param {Number} percent
          * @return {Color} */
-        lerp(c: any, p: any): Color;
+        lerp(c: Color, percent: number): Color;
         /** Sets this color given a hue, saturation, lightness, and alpha
-         * @param {Number} [hue=0]
-         * @param {Number} [saturation=0]
-         * @param {Number} [lightness=1]
-         * @param {Number} [alpha=1]
+         * @param {Number} [h=0] Hue
+         * @param {Number} [s=0] Saturation
+         * @param {Number} [l=1] Lightness
+         * @param {Number} [a=1] Alpha
          * @return {Color} */
         setHSLA(h?: number, s?: number, l?: number, a?: number): Color;
         /** Returns this color expressed in hsla format
@@ -899,13 +899,13 @@ declare module "littlejs.esm" {
          *  @param {EngineObject} object - the object to test against
          *  @return {Boolean}            - true if the collision should be resolved
          */
-        collideWithObject(o: any): boolean;
+        collideWithObject(object: EngineObject): boolean;
         /** How long since the object was created
          *  @return {Number} */
         getAliveTime(): number;
         /** Apply acceleration to this object (adjust velocity, not affected by mass)
          *  @param {Vector2} acceleration */
-        applyAcceleration(a: any): void;
+        applyAcceleration(acceleration: Vector2): void;
         /** Apply force to this object (adjust velocity, affected by mass)
          *  @param {Vector2} force */
         applyForce(force: Vector2): void;

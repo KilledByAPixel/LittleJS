@@ -302,7 +302,7 @@ class EngineObject
      *  @param {EngineObject} object - the object to test against
      *  @return {Boolean}            - true if the collision should be resolved
      */
-    collideWithObject(o)              { return 1; }
+    collideWithObject(object)         { return 1; }
 
     /** How long since the object was created
      *  @return {Number} */
@@ -310,7 +310,7 @@ class EngineObject
 
     /** Apply acceleration to this object (adjust velocity, not affected by mass)
      *  @param {Vector2} acceleration */
-    applyAcceleration(a)              { if (this.mass) this.velocity = this.velocity.add(a); }
+    applyAcceleration(acceleration)   { if (this.mass) this.velocity = this.velocity.add(acceleration); }
 
     /** Apply force to this object (adjust velocity, affected by mass)
      *  @param {Vector2} force */

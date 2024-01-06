@@ -74,7 +74,7 @@ function gameInit()
 
     const div = particleSystemDiv = document.createElement('div');
     div.innerHTML = '<big><b>LittleJS Particle Tool';
-    div.style = 'position:absolute;top:10;left:10;color:#fff';
+    div.style = 'position:absolute;top:10px;left:10px;color:#fff';
     document.body.appendChild(div);
 
     for (const setting of particleSettings)
@@ -178,8 +178,8 @@ function gameInit()
     //div.appendChild(document.createTextNode('JavaScript Code... '));
     div.appendChild(document.createElement('br'));
     div.appendChild(particleSystemCode = document.createElement('textarea'));
-    particleSystemCode.style.width = 500;
-    particleSystemCode.style.height = 100;
+    particleSystemCode.style.width = '500px';
+    particleSystemCode.style.height = '100px';
     particleSystemCode.disabled = true;
 
     updateInputs(0);
