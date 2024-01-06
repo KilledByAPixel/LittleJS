@@ -91,7 +91,7 @@ function htmlBuildStep(filename)
 {
     console.log(`Building html...`);
 
-    // copy files into a buffer
+    // create html file
     let buffer = '';
     buffer += '<script>';
     buffer += fs.readFileSync(filename);

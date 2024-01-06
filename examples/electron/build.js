@@ -80,7 +80,7 @@ function htmlBuildStep(filename)
 {
     console.log(`Building html...`);
 
-    // copy files into a buffer
+    // create html file
     let buffer = '<!DOCTYPE html>';
     buffer += '<script>';
     buffer += fs.readFileSync(filename) + '\n';
@@ -102,8 +102,4 @@ function electronBuildStep(filename)
     fs.copyFileSync('package.json', `${BUILD_FOLDER}/package.json`);
 
     child_process.execSync(`npx electron-packager ./${BUILD_FOLDER} --overwrite`, {stdio: 'inherit'});
-
-    //const ect = '../../../node_modules/ect-bin/vendor/win32/ect.exe';
-    //const args = ['-9', '-strip', '-zip', `../${PROGRAM_NAME}.zip`, 'index.html', ...dataFiles];
-    //child_process.spawnSync(ect, args, {stdio: 'inherit', cwd: BUILD_FOLDER});
 };

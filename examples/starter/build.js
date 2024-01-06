@@ -4,6 +4,7 @@
  * LittleJS Build System
  */
 
+const PROGRAM_TITLE = 'Little JS Starter Project';
 const PROGRAM_NAME = 'game';
 const BUILD_FOLDER = 'build';
 const sourceFiles =
@@ -85,8 +86,11 @@ function htmlBuildStep(filename)
 {
     console.log(`Building html...`);
 
-    // copy files into a buffer
+    // create html file
     let buffer = '<!DOCTYPE html>';
+    buffer += '<head>';
+    buffer += `<title>${PROGRAM_TITLE}</title>`;
+    buffer += '</head>';
     buffer += '<script>';
     buffer += fs.readFileSync(filename) + '\n';
     buffer += '</script>';
