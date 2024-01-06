@@ -23,6 +23,9 @@ const startTime = Date.now();
 const fs = require('node:fs');
 const child_process = require('node:child_process');
 
+// rebuild engine
+//child_process.execSync(`npm run build`, { stdio: 'inherit' });
+
 // remove old files and setup build folder
 fs.rmSync(BUILD_FOLDER, { recursive: true, force: true });
 fs.rmSync(`${PROGRAM_NAME}.zip`, { force: true });
@@ -36,10 +39,10 @@ Build
 (
     `${BUILD_FOLDER}/index.js`,
     sourceFiles,
-    [closureCompilerStep, uglifyBuildStep, htmlBuildStep, zipBuildStep]
+    [closureCompilerStep, uglifyBuildStep, roadrollerBuildStep, htmlBuildStep, zipBuildStep]
 );
 
-console.log('');
+console.log(``);
 console.log(`Build Completed in ${((Date.now() - startTime)/1e3).toFixed(2)} seconds!`);
 console.log(`Size of ${PROGRAM_NAME}.zip: ${fs.statSync(`${PROGRAM_NAME}.zip`).size} bytes`);
 
@@ -78,14 +81,20 @@ function uglifyBuildStep(filename)
     child_process.execSync(`npx uglifyjs ${filename} -c -m -o ${filename}`, {stdio: 'inherit'});
 };
 
+function roadrollerBuildStep(filename)
+{
+    console.log(`Running roadroller...`);
+    child_process.execSync(`npx roadroller ${filename} -o ${filename}`, {stdio: 'inherit'});
+};
+
 function htmlBuildStep(filename)
 {
     console.log(`Building html...`);
 
     // copy files into a buffer
-    let buffer = '<!DOCTYPE html>';
+    let buffer = '';
     buffer += '<script>';
-    buffer += fs.readFileSync(filename) + '\n';
+    buffer += fs.readFileSync(filename);
     buffer += '</script>';
 
     // output html file
@@ -95,7 +104,6 @@ function htmlBuildStep(filename)
 function zipBuildStep(filename)
 {
     console.log(`Zipping...`);
-    
     const ect = '../../../node_modules/ect-bin/vendor/win32/ect.exe';
     const args = ['-9', '-strip', '-zip', `../${PROGRAM_NAME}.zip`, 'index.html', ...dataFiles];
     child_process.spawnSync(ect, args, {stdio: 'inherit', cwd: BUILD_FOLDER});

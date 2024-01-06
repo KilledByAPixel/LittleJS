@@ -2,11 +2,6 @@
 
 /** 
  * LittleJS Build System
- * - Combine input files
- * - Run custom build steps
- * - Check for errors
- * - Output to build folder
- * @namespace Build
  */
 
 const PROGRAM_NAME = 'game';
@@ -86,7 +81,7 @@ function htmlBuildStep(filename)
     console.log(`Building html...`);
 
     // copy files into a buffer
-    let buffer = '';
+    let buffer = '<!DOCTYPE html>';
     buffer += '<script>';
     buffer += fs.readFileSync(filename) + '\n';
     buffer += '</script>';
