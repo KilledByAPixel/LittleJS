@@ -91,7 +91,7 @@ LittleJS can also be imported as a module. There are two module flavors that are
 
 To rebuild the engine you must first run ```npm install``` to setup the necessary npm dependencies. Then call ```npm run build``` to build the engine.
 
-The starter example project also includes a node js file [build.js](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/starter/build.js) that compresses everything into a tiny zip file using Google Closure, UglifyJS, Roadroller, and ECT Zip.
+The starter example project also includes a node js file [build.js](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/starter/build.js) that compresses everything into a tiny zip file using Google Closure, UglifyJS, and ECT Zip.
 
 ## Engine Source Code
 
@@ -112,6 +112,7 @@ Optional Components, these components are built to synergize with the rest of th
 - [engineWebGL.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineWebGL.js) - Super fast rendering with WebGL and post processing
 - [engineMedals.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineMedals.js) - Achievement tracker with Newgrounds integration
 - [engineDebug.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineDebug.js) - Debug rendering system and information overlay
+- [engineExport.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineExport.js) - Included when exporting engine as a module
 - [engineBuild.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineBuild.js) - Node script used to build the engine
 
 ## LittleJS Setup
