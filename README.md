@@ -33,8 +33,6 @@ LittleJS is a small but powerful game engine with many features and no depenenci
 
 - Super fast sprite and tile map rendering engine with WebGL
 - Update and render 10,000+ objects at 60fps, often many times more
-- Particle effects system and design tool
-- Bitmap font rendering and includes a built in engine font
 - Apply [Shadertoy](https://www.shadertoy.com) compatible shaders for post processinge effects
 
 ### Audio
@@ -59,6 +57,13 @@ LittleJS is a small but powerful game engine with many features and no depenenci
 - For size coding competitions like [js13kGames](https://js13kgames.com/), [a special example project builds to a 7KB zip file](https://killedbyapixel.github.io/LittleJS/examples/js13k)
 - Builds to a Windows executable with [Electron](https://www.electronjs.org/) for distribution on platforms like Steam
 - Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used for anything you want
+
+### And more...
+
+- Node.js build system
+- Debug primitives rendering system
+- Particle effects system and design tool
+- Bitmap font rendering and includes a built in engine font
 - Medal system tracks and displays achievements with Newgrounds integration
 
 ## How to use LittleJS
