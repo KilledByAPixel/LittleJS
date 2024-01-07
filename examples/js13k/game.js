@@ -1,5 +1,7 @@
 /*
-    LittleJS Hello World Starter Game
+    LittleJS JS13K Starter Game
+    - For size limited projects
+    - Builds to 7kb zip file
 */
 
 'use strict';

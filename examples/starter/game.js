@@ -1,5 +1,8 @@
 /*
-    LittleJS Hello World Starter Game
+    Little JS Starter Project
+    - A simple starter project for LittleJS
+    - Demos all the main engine features
+    - Builds to a zip file
 */
 
 'use strict';

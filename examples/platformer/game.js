@@ -1,6 +1,9 @@
 /*
-    LittleJS Platformer Example
-    - A platforming starter game with destructibe terrain
+    Little JS Platforming Game
+    - A basic platforming starter project
+    - Platforming phyics and controls
+    - Includes destructibe terrain
+    - Control with keyboard, mouse, touch, or gamepad
 */
 
 'use strict';

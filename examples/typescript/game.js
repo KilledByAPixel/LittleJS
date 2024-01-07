@@ -1,5 +1,7 @@
 /*
-    LittleJS Hello World Starter Game
+    Little TypeScript Demo
+    - A simple starter project
+    - Builds to a JavaScript file from TypeScript
 */
 'use strict';
 // import module

@@ -1,5 +1,7 @@
 /*
-    LittleJS Empty Project Example
+    Little JS Hello World Demo
+    - Just prints "Hello World!"
+    - A good starting point for new projects
 */
 
 'use strict';

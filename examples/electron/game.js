@@ -1,5 +1,7 @@
 /*
-    LittleJS Hello World Starter Game
+    Little JS Electron Demo
+    - A simple starter project
+    - Builds to an executable with Electron
 */
 
 'use strict';

@@ -1,5 +1,9 @@
 /*
-    LittleJS Breakout Example
+    Little JS Breakout Game
+    - A simple breakout game
+    - Includes sound and particles
+    - Uses a post processing effect
+    - Control with mouse, touch, or gamepad
 */
 
 'use strict';

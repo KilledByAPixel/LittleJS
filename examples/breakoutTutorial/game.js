@@ -1,5 +1,8 @@
 /*
     Little JS Breakout Tutorial
+    - Shows how to make a simple breakout game
+    - Includes sound and particles
+    - Control with mouse or touch
 */
 
 'use strict';

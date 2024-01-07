@@ -1,7 +1,9 @@
 /*
-    LittleJS Puzzle Example
-    - A match 3 style puzzle game to get you started
-    - Uses a higher resolution texture
+    Little Puzzle Game
+    - A simple match 3 style puzzle game
+    - Uses a high resolution texture
+    - Tracks high score in local storage
+    - Control with mouse or touch
 */
 
 'use strict';

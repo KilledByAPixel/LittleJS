@@ -1,5 +1,7 @@
 /*
-    LittleJS Hello World Starter Game
+    Little JS Module Demo
+    - A simple starter project
+    - Shows how to use LittleJS with modules
 */
 
 'use strict';
