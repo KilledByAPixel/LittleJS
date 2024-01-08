@@ -563,23 +563,23 @@ declare module "littlejs.esm" {
          *  @return {Vector2} */
         copy(): Vector2;
         /** Returns a copy of this vector plus the vector passed in
-         *  @param {Vector2} v
+         *  @param {Vector2} v - other vector
          *  @return {Vector2} */
         add(v: Vector2): Vector2;
         /** Returns a copy of this vector minus the vector passed in
-         *  @param {Vector2} v
+         *  @param {Vector2} v - other vector
          *  @return {Vector2} */
         subtract(v: Vector2): Vector2;
         /** Returns a copy of this vector times the vector passed in
-         *  @param {Vector2} v
+         *  @param {Vector2} v - other vector
          *  @return {Vector2} */
         multiply(v: Vector2): Vector2;
         /** Returns a copy of this vector divided by the vector passed in
-         *  @param {Vector2} v
+         *  @param {Vector2} v - other vector
          *  @return {Vector2} */
         divide(v: Vector2): Vector2;
         /** Returns a copy of this vector scaled by the vector passed in
-         *  @param {Number} s
+         *  @param {Number} s - scale
          *  @return {Vector2} */
         scale(s: number): Vector2;
         /** Returns the length of this vector
@@ -589,11 +589,11 @@ declare module "littlejs.esm" {
          * @return {Number} */
         lengthSquared(): number;
         /** Returns the distance from this vector to vector passed in
-         * @param {Vector2} v
+         * @param {Vector2} v - other vector
          * @return {Number} */
         distance(v: Vector2): number;
         /** Returns the distance squared from this vector to vector passed in
-         * @param {Vector2} v
+         * @param {Vector2} v - other vector
          * @return {Number} */
         distanceSquared(v: Vector2): number;
         /** Returns a new vector in same direction as this one with the length passed in
@@ -605,11 +605,11 @@ declare module "littlejs.esm" {
          * @return {Vector2} */
         clampLength(length?: number): Vector2;
         /** Returns the dot product of this and the vector passed in
-         * @param {Vector2} v
+         * @param {Vector2} v - other vector
          * @return {Number} */
         dot(v: Vector2): number;
         /** Returns the cross product of this and the vector passed in
-         * @param {Vector2} v
+         * @param {Vector2} v - other vector
          * @return {Number} */
         cross(v: Vector2): number;
         /** Returns the angle of this vector, up is angle 0
@@ -637,7 +637,7 @@ declare module "littlejs.esm" {
          * @return {Number} */
         area(): number;
         /** Returns a new vector that is p percent between this and the vector passed in
-         * @param {Vector2} v
+         * @param {Vector2} v - other vector
          * @param {Number}  percent
          * @return {Vector2} */
         lerp(v: Vector2, percent: number): Vector2;
@@ -660,12 +660,12 @@ declare module "littlejs.esm" {
      * let e = HSL(.3, 1, .5);         // green using hsl color
      */
     export class Color {
-        /** Create a color with the components passed in, white by default
-         *  @param {Number} [red=1]
-         *  @param {Number} [green=1]
-         *  @param {Number} [blue=1]
-         *  @param {Number} [alpha=1] */
-        constructor(red?: number, green?: number, blue?: number, alpha?: number);
+        /** Create a color with the rgba components passed in, white by default
+         *  @param {Number} [r=1] - red
+         *  @param {Number} [g=1] - green
+         *  @param {Number} [b=1] - blue
+         *  @param {Number} [a=1] - alpha*/
+        constructor(r?: number, g?: number, b?: number, a?: number);
         /** @property {Number} - Red */
         r: number;
         /** @property {Number} - Green */
@@ -678,19 +678,19 @@ declare module "littlejs.esm" {
          * @return {Color} */
         copy(): Color;
         /** Returns a copy of this color plus the color passed in
-         * @param {Color} c
+         * @param {Color} c - other color
          * @return {Color} */
         add(c: Color): Color;
         /** Returns a copy of this color minus the color passed in
-         * @param {Color} c
+         * @param {Color} c - other color
          * @return {Color} */
         subtract(c: Color): Color;
         /** Returns a copy of this color times the color passed in
-         * @param {Color} c
+         * @param {Color} c - other color
          * @return {Color} */
         multiply(c: Color): Color;
         /** Returns a copy of this color divided by the color passed in
-         * @param {Color} c
+         * @param {Color} c - other color
          * @return {Color} */
         divide(c: Color): Color;
         /** Returns a copy of this color scaled by the value passed in, alpha can be scaled separately
@@ -702,15 +702,15 @@ declare module "littlejs.esm" {
          * @return {Color} */
         clamp(): Color;
         /** Returns a new color that is p percent between this and the color passed in
-         * @param {Color}  c
+         * @param {Color}  c - other color
          * @param {Number} percent
          * @return {Color} */
         lerp(c: Color, percent: number): Color;
         /** Sets this color given a hue, saturation, lightness, and alpha
-         * @param {Number} [h=0] Hue
-         * @param {Number} [s=0] Saturation
-         * @param {Number} [l=1] Lightness
-         * @param {Number} [a=1] Alpha
+         * @param {Number} [h=0] - hue
+         * @param {Number} [s=0] - saturation
+         * @param {Number} [l=1] - lightness
+         * @param {Number} [a=1] - alpha
          * @return {Color} */
         setHSLA(h?: number, s?: number, l?: number, a?: number): Color;
         /** Returns this color expressed in hsla format
@@ -790,20 +790,20 @@ declare module "littlejs.esm" {
     export function vec2(x?: number, y?: number): Vector2;
     /**
      * Create a color object with RGBA values
-     * @param {Number} [r=1]
-     * @param {Number} [g=1]
-     * @param {Number} [b=1]
-     * @param {Number} [a=1]
+     * @param {Number} [r=1] - red
+     * @param {Number} [g=1] - green
+     * @param {Number} [b=1] - blue
+     * @param {Number} [a=1] - alpha
      * @return {Color}
      * @memberof Utilities
      */
     export function rgb(r?: number, g?: number, b?: number, a?: number): Color;
     /**
      * Create a color object with HSLA values
-     * @param {Number} [h=0]
-     * @param {Number} [s=0]
-     * @param {Number} [l=1]
-     * @param {Number} [a=1]
+     * @param {Number} [h=0] - hue
+     * @param {Number} [s=0] - saturation
+     * @param {Number} [l=1] - lightness
+     * @param {Number} [a=1] - alpha
      * @return {Color}
      * @memberof Utilities
      */

@@ -629,27 +629,27 @@ class Vector2
     copy() { return new Vector2(this.x, this.y); }
 
     /** Returns a copy of this vector plus the vector passed in
-     *  @param {Vector2} v
+     *  @param {Vector2} v - other vector
      *  @return {Vector2} */
     add(v) { ASSERT(isVector2(v)); return new Vector2(this.x + v.x, this.y + v.y); }
 
     /** Returns a copy of this vector minus the vector passed in
-     *  @param {Vector2} v
+     *  @param {Vector2} v - other vector
      *  @return {Vector2} */
     subtract(v) { ASSERT(isVector2(v)); return new Vector2(this.x - v.x, this.y - v.y); }
 
     /** Returns a copy of this vector times the vector passed in
-     *  @param {Vector2} v
+     *  @param {Vector2} v - other vector
      *  @return {Vector2} */
     multiply(v) { ASSERT(isVector2(v)); return new Vector2(this.x * v.x, this.y * v.y); }
 
     /** Returns a copy of this vector divided by the vector passed in
-     *  @param {Vector2} v
+     *  @param {Vector2} v - other vector
      *  @return {Vector2} */
     divide(v) { ASSERT(isVector2(v)); return new Vector2(this.x / v.x, this.y / v.y); }
 
     /** Returns a copy of this vector scaled by the vector passed in
-     *  @param {Number} s
+     *  @param {Number} s - scale
      *  @return {Vector2} */
     scale(s) { ASSERT(!isVector2(s)); return new Vector2(this.x * s, this.y * s); }
 
@@ -662,12 +662,12 @@ class Vector2
     lengthSquared() { return this.x**2 + this.y**2; }
 
     /** Returns the distance from this vector to vector passed in
-     * @param {Vector2} v
+     * @param {Vector2} v - other vector
      * @return {Number} */
     distance(v) { return this.distanceSquared(v)**.5; }
 
     /** Returns the distance squared from this vector to vector passed in
-     * @param {Vector2} v
+     * @param {Vector2} v - other vector
      * @return {Number} */
     distanceSquared(v) { return (this.x - v.x)**2 + (this.y - v.y)**2; }
 
@@ -682,12 +682,12 @@ class Vector2
     clampLength(length=1) { const l = this.length(); return l > length ? this.scale(length/l) : this; }
 
     /** Returns the dot product of this and the vector passed in
-     * @param {Vector2} v
+     * @param {Vector2} v - other vector
      * @return {Number} */
     dot(v) { ASSERT(isVector2(v)); return this.x*v.x + this.y*v.y; }
 
     /** Returns the cross product of this and the vector passed in
-     * @param {Vector2} v
+     * @param {Vector2} v - other vector
      * @return {Number} */
     cross(v) { ASSERT(isVector2(v)); return this.x*v.y - this.y*v.x; }
 
@@ -728,7 +728,7 @@ class Vector2
     area() { return abs(this.x * this.y); }
 
     /** Returns a new vector that is p percent between this and the vector passed in
-     * @param {Vector2} v
+     * @param {Vector2} v - other vector
      * @param {Number}  percent
      * @return {Vector2} */
     lerp(v, percent)
@@ -750,10 +750,10 @@ class Vector2
 
 /** 
  * Create a color object with RGBA values
- * @param {Number} [r=1]
- * @param {Number} [g=1]
- * @param {Number} [b=1]
- * @param {Number} [a=1]
+ * @param {Number} [r=1] - red
+ * @param {Number} [g=1] - green
+ * @param {Number} [b=1] - blue
+ * @param {Number} [a=1] - alpha
  * @return {Color}
  * @memberof Utilities
  */
@@ -761,10 +761,10 @@ function rgb(r, g, b, a) { return new Color(r, g, b, a); }
 
 /** 
  * Create a color object with HSLA values
- * @param {Number} [h=0]
- * @param {Number} [s=0]
- * @param {Number} [l=1]
- * @param {Number} [a=1]
+ * @param {Number} [h=0] - hue
+ * @param {Number} [s=0] - saturation
+ * @param {Number} [l=1] - lightness
+ * @param {Number} [a=1] - alpha
  * @return {Color}
  * @memberof Utilities
  */
@@ -781,21 +781,21 @@ function hsl(h, s, l, a) { return new Color().setHSLA(h, s, l, a); }
  */
 class Color
 {
-    /** Create a color with the components passed in, white by default
-     *  @param {Number} [red=1]
-     *  @param {Number} [green=1]
-     *  @param {Number} [blue=1]
-     *  @param {Number} [alpha=1] */
-    constructor(red=1, green=1, blue=1, alpha=1)
+    /** Create a color with the rgba components passed in, white by default
+     *  @param {Number} [r=1] - red
+     *  @param {Number} [g=1] - green
+     *  @param {Number} [b=1] - blue
+     *  @param {Number} [a=1] - alpha*/
+    constructor(r=1, g=1, b=1, a=1)
     {
         /** @property {Number} - Red */
-        this.r = red;
+        this.r = r;
         /** @property {Number} - Green */
-        this.g = green;
+        this.g = g;
         /** @property {Number} - Blue */
-        this.b = blue;
+        this.b = b;
         /** @property {Number} - Alpha */
-        this.a = alpha;
+        this.a = a;
     }
 
     /** Returns a new color that is a copy of this
@@ -803,22 +803,22 @@ class Color
     copy() { return new Color(this.r, this.g, this.b, this.a); }
 
     /** Returns a copy of this color plus the color passed in
-     * @param {Color} c
+     * @param {Color} c - other color
      * @return {Color} */
     add(c) { return new Color(this.r+c.r, this.g+c.g, this.b+c.b, this.a+c.a); }
 
     /** Returns a copy of this color minus the color passed in
-     * @param {Color} c
+     * @param {Color} c - other color
      * @return {Color} */
     subtract(c) { return new Color(this.r-c.r, this.g-c.g, this.b-c.b, this.a-c.a); }
 
     /** Returns a copy of this color times the color passed in
-     * @param {Color} c
+     * @param {Color} c - other color
      * @return {Color} */
     multiply(c) { return new Color(this.r*c.r, this.g*c.g, this.b*c.b, this.a*c.a); }
 
     /** Returns a copy of this color divided by the color passed in
-     * @param {Color} c
+     * @param {Color} c - other color
      * @return {Color} */
     divide(c) { return new Color(this.r/c.r, this.g/c.g, this.b/c.b, this.a/c.a); }
 
@@ -834,16 +834,16 @@ class Color
     clamp() { return new Color(clamp(this.r), clamp(this.g), clamp(this.b), clamp(this.a)); }
 
     /** Returns a new color that is p percent between this and the color passed in
-     * @param {Color}  c
+     * @param {Color}  c - other color
      * @param {Number} percent
      * @return {Color} */
     lerp(c, percent) { return this.add(c.subtract(this).scale(clamp(percent))); }
 
     /** Sets this color given a hue, saturation, lightness, and alpha
-     * @param {Number} [h=0] Hue
-     * @param {Number} [s=0] Saturation
-     * @param {Number} [l=1] Lightness
-     * @param {Number} [a=1] Alpha
+     * @param {Number} [h=0] - hue
+     * @param {Number} [s=0] - saturation
+     * @param {Number} [l=1] - lightness
+     * @param {Number} [a=1] - alpha
      * @return {Color} */
     setHSLA(h=0, s=0, l=1, a=1)
     {
@@ -4366,7 +4366,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.6.91';
+const engineVersion = '1.6.92';
 
 /** Frames per second to update objects
  *  @type {Number}
