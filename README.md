@@ -8,7 +8,10 @@
 
 ## All aboard!
 
-LittleJS is a super lightweight open source HTML5 game engine designed for modern web development. With its fast hybrid rendering system, it offers a comprehensive suite of game development tools from rendering to sound effects. The code is very clean and well documented with a variety of examples to get you started. Choo-Choo! 🚂
+LittleJS is a lightweight open source HTML5 game engine designed for modern web development.
+It's small footprint is packed with a comprehensive feature set, including hybrid rendering, physics, particles, sound effects, music, input handling, and debug tools.
+The code is very clean and well documented with a several examples to get you started. Choo-Choo! 🚂
+
 <div align="center">
   
 ## [Demo](https://killedbyapixel.github.io/LittleJS/examples/starter/) | [Docs](https://killedbyapixel.github.io/LittleJS/docs) | [Trailer](https://youtu.be/chuBzGjv7Ms) | [Discord](https://discord.gg/zb7hcGkyZe) | [Tutorial](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial)
