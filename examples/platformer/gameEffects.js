@@ -69,7 +69,7 @@ function explosion(pos, radius=3)
     }
 
     // cleanup neighbors
-    const cleanupRadius = radius + 1;
+    const cleanupRadius = radius + 2;
     for (let x = -cleanupRadius; x < cleanupRadius; ++x)
     {
         const h = (cleanupRadius**2 - x**2)**.5;
