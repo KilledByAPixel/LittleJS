@@ -26,8 +26,16 @@ const engineSourceFiles =
     `${SOURCE_FOLDER}/engineWebGL.js`,
     `${SOURCE_FOLDER}/engine.js`,
 ];
+const asciiArt =`
+        ~~~~°°°°ooo°oOo°ooOooOooOo.
+ __________   ________   ____ '°OoO.
+ |LittleJS|   |Engine|   |[]|_._._Y
+.|________|_._|______|_._|__|_|_|_|}
+  OOO  OOO     OO  OO     OO=OO---oo\\
+`;
 
-console.log('Choo Choo... Building LittleJS Engine!');
+console.log(asciiArt);
+console.log('Choo Choo... Building LittleJS Engine!\n');
 const startTime = Date.now();
 const fs = require('node:fs');
 const child_process = require('node:child_process');
