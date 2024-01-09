@@ -295,6 +295,8 @@ export {
 	mod,
 	clamp,
 	percent,
+	angleDistance,
+    angleLerp,
 	lerp,
 	smoothStep,
 	nearestPowerOfTwo,
