@@ -235,26 +235,27 @@ function drawSky()
 function drawStars()
 {
     // draw stars and planets
-    randSeed = skySeed;
+    const random = new RandomGenerator;
+    random.seed = skySeed;
     const largeStarCount = 9;
     for (let i = 1e3; i--;)
     {
-        let size = randSeeded(6, 1);
-        let speed = randSeeded() < .9 ? randSeeded(5) : randSeeded(99,9);
-        let color = (new Color).setHSLA(randSeeded(.2,-.3), randSeeded()**9, randSeeded(1,.5), randSeeded(.9,.3));
+        let size = random.rand(6, 1);
+        let speed = random.rand() < .9 ? random.rand(5) : random.rand(99,9);
+        let color = (new Color).setHSLA(random.rand(.2,-.3), random.rand()**9, random.rand(1,.5), random.rand(.9,.3));
         if (i < largeStarCount)
         {
             // large planets and suns
-            size = randSeeded()**3*99 + 9;
-            speed = randSeeded(5);
-            color = (new Color).setHSLA(randSeeded(), randSeeded(), randSeeded(1,.5)).add(skyColor.scale(.5)).clamp();
+            size = random.rand()**3*99 + 9;
+            speed = random.rand(5);
+            color = (new Color).setHSLA(random.rand(), random.rand(), random.rand(1,.5)).add(skyColor.scale(.5)).clamp();
         }
         
         const extraSpace = 200;
         const w = mainCanvas.width+2*extraSpace, h = mainCanvas.height+2*extraSpace;
         const screenPos = vec2(
-            (randSeeded(w)+time*speed)%w-extraSpace,
-            (randSeeded(h)+time*speed*randSeeded())%h-extraSpace);
+            (random.rand(w)+time*speed)%w-extraSpace,
+            (random.rand(h)+time*speed*random.rand())%h-extraSpace);
 
         mainContext.fillStyle = color;
         if (size < 9)

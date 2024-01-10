@@ -446,20 +446,48 @@ declare module "littlejs.esm" {
      *  @return {Number}
      *  @memberof Utilities */
     export function clamp(value: number, min?: number, max?: number): number;
-    /** Returns what percentage the value is between max and min
+    /** Returns what percentage the value is between valueA and valueB
      *  @param {Number} value
-     *  @param {Number} [min=0]
-     *  @param {Number} [max=1]
+     *  @param {Number} valueA
+     *  @param {Number} valueB
      *  @return {Number}
      *  @memberof Utilities */
-    export function percent(value: number, min?: number, max?: number): number;
-    /** Linearly interpolates the percent value between max and min
+    export function percent(value: number, valueA: number, valueB: number): number;
+    /** Returns signed wrapped distance between the two values passed in
+     *  @param {Number} valueA
+     *  @param {Number} valueB
+     *  @param {Number} [wrapSize=1]
+     *  @returns {Number}
+     *  @memberof Utilities */
+    export function distanceWrap(valueA: number, valueB: number, wrapSize?: number): number;
+    /** Linearly interpolates between values passed in with wrappping
      *  @param {Number} percent
-     *  @param {Number} [min=0]
-     *  @param {Number} [max=1]
+     *  @param {Number} valueA
+     *  @param {Number} valueB
+     *  @param {Number} [wrapSize=1]
+     *  @returns {Number}
+     *  @memberof Utilities */
+    export function lerpWrap(percent: number, valueA: number, valueB: number, wrapSize?: number): number;
+    /** Returns signed wrapped distance between the two angles passed in
+     *  @param {Number} angleA
+     *  @param {Number} angleB
+     *  @returns {Number}
+     *  @memberof Utilities */
+    export function distanceAngle(angleA: number, angleB: number): number;
+    /** Linearly interpolates between the angles passed in with wrappping
+     *  @param {Number} percent
+     *  @param {Number} angleA
+     *  @param {Number} angleB
+     *  @returns {Number}
+     *  @memberof Utilities */
+    export function lerpAngle(percent: number, angleA: number, angleB: number): number;
+    /** Linearly interpolates between values passed in using percent
+     *  @param {Number} percent
+     *  @param {Number} valueA
+     *  @param {Number} valueB
      *  @return {Number}
      *  @memberof Utilities */
-    export function lerp(percent: number, min?: number, max?: number): number;
+    export function lerp(percent: number, valueA: number, valueB: number): number;
     /** Applies smoothstep function to the percentage value
      *  @param {Number} percent
      *  @return {Number}
@@ -499,11 +527,11 @@ declare module "littlejs.esm" {
      *  @memberof Random */
     export function rand(valueA?: number, valueB?: number): number;
     /** Returns a floored random value the two values passed in
-     *  @param {Number} [valueA=1]
+     *  @param {Number} valueA
      *  @param {Number} [valueB=0]
      *  @return {Number}
      *  @memberof Random */
-    export function randInt(valueA?: number, valueB?: number): number;
+    export function randInt(valueA: number, valueB?: number): number;
     /** Randomly returns either -1 or 1
      *  @return {Number}
      *  @memberof Random */
@@ -526,21 +554,36 @@ declare module "littlejs.esm" {
      *  @return {Color}
      *  @memberof Random */
     export function randColor(colorA?: Color, colorB?: Color, linear?: boolean): Color;
-    /** Seed used by the randSeeded function
-     *  @type {Number}
-     *  @default
-     *  @memberof Random */
-    export let randSeed: number;
-    /** Set seed used by the randSeeded function, should not be 0
-     *  @param {Number} seed
-     *  @memberof Random */
-    export function setRandSeed(seed: number): void;
-    /** Returns a seeded random value between the two values passed in using randSeed
-     *  @param {Number} [valueA=1]
-     *  @param {Number} [valueB=0]
-     *  @return {Number}
-     *  @memberof Random */
-    export function randSeeded(valueA?: number, valueB?: number): number;
+    /**
+     * Seeded random number generator
+     * - Can be used to create a deterministic random number sequence
+     * @example
+     * let r = new RandomGenerator(123); // random number generator with seed 123
+     * let a = r.rand();                 // random value between 0 and 1
+     * let b = r.randInt(10);            // random integer between 0 and 9
+     * r.seed = 123;                     // reset the seed
+     * let c = r.rand();                 // the same value as a
+     */
+    export class RandomGenerator {
+        /** Create a random number generator with the seed passed in
+         *  @param {Number} seed - Starting seed */
+        constructor(seed: number);
+        /** @property {Number} - random seed */
+        seed: number;
+        /** Returns a seeded random value between the two values passed in
+        *  @param {Number} [valueA=1]
+        *  @param {Number} [valueB=0]
+        *  @return {Number} */
+        rand(valueA?: number, valueB?: number): number;
+        /** Returns a floored seeded random value the two values passed in
+        *  @param {Number} valueA
+        *  @param {Number} [valueB=0]
+        *  @return {Number} */
+        randInt(valueA: number, valueB?: number): number;
+        /** Randomly returns either -1 or 1 deterministically
+        *  @return {Number} */
+        randSign(): number;
+    }
     /**
      * 2D Vector object with vector math library
      * - Functions do not change this so they can be chained together

@@ -442,25 +442,58 @@ function mod(dividend, divisor=1) { return ((dividend % divisor) + divisor) % di
  *  @param {Number} [max=1]
  *  @return {Number}
  *  @memberof Utilities */
-function clamp(value, min=0, max=1)
-{ return value < min ? min : value > max ? max : value; }
+function clamp(value, min=0, max=1) { return value < min ? min : value > max ? max : value; }
 
-/** Returns what percentage the value is between max and min
+/** Returns what percentage the value is between valueA and valueB
  *  @param {Number} value
- *  @param {Number} [min=0]
- *  @param {Number} [max=1]
+ *  @param {Number} valueA
+ *  @param {Number} valueB
  *  @return {Number}
  *  @memberof Utilities */
-function percent(value, min=0, max=1)
-{ return max-min ? clamp((value-min) / (max-min)) : 0; }
+function percent(value, valueA, valueB)
+{ return valueB-valueA ? clamp((value-valueA) / (valueB-valueA)) : 0; }
 
-/** Linearly interpolates the percent value between max and min
+/** Linearly interpolates between values passed in using percent
  *  @param {Number} percent
- *  @param {Number} [min=0]
- *  @param {Number} [max=1]
+ *  @param {Number} valueA
+ *  @param {Number} valueB
  *  @return {Number}
  *  @memberof Utilities */
-function lerp(percent, min=0, max=1){ return min + clamp(percent) * (max-min); }
+function lerp(percent, valueA, valueB) { return valueA + clamp(percent) * (valueB-valueA); }
+
+/** Returns signed wrapped distance between the two values passed in
+ *  @param {Number} valueA
+ *  @param {Number} valueB
+ *  @param {Number} [wrapSize=1]
+ *  @returns {Number}
+ *  @memberof Utilities */
+function distanceWrap(valueA, valueB, wrapSize=1)
+{ const d = (valueA - valueB) % wrapSize; return d*2 % wrapSize - d; }
+
+/** Linearly interpolates between values passed in with wrappping
+ *  @param {Number} percent
+ *  @param {Number} valueA
+ *  @param {Number} valueB
+ *  @param {Number} [wrapSize=1]
+ *  @returns {Number}
+ *  @memberof Utilities */
+function lerpWrap(percent, valueA, valueB, wrapSize=1)
+{ return valueB + clamp(percent) * distanceWrap(valueA, valueB, wrapSize); }
+
+/** Returns signed wrapped distance between the two angles passed in
+ *  @param {Number} angleA
+ *  @param {Number} angleB
+ *  @returns {Number}
+ *  @memberof Utilities */
+function distanceAngle(angleA, angleB) { distanceWrap(angleA, angleB, 2*PI); }
+
+/** Linearly interpolates between the angles passed in with wrappping
+ *  @param {Number} percent
+ *  @param {Number} angleA
+ *  @param {Number} angleB
+ *  @returns {Number}
+ *  @memberof Utilities */
+function lerpAngle(percent, angleA, angleB) { return lerpWrap(percent, angleA, angleB, 2*PI); }
 
 /** Applies smoothstep function to the percentage value
  *  @param {Number} percent
@@ -515,11 +548,11 @@ function formatTime(t) { return (t/60|0) + ':' + (t%60<10?'0':'') + (t%60|0); }
 function rand(valueA=1, valueB=0) { return valueB + Math.random() * (valueA-valueB); }
 
 /** Returns a floored random value the two values passed in
- *  @param {Number} [valueA=1]
+ *  @param {Number} valueA
  *  @param {Number} [valueB=0]
  *  @return {Number}
  *  @memberof Random */
-function randInt(valueA=1, valueB=0) { return Math.floor(rand(valueA,valueB)); }
+function randInt(valueA, valueB=0) { return Math.floor(rand(valueA,valueB)); }
 
 /** Randomly returns either -1 or 1
  *  @return {Number}
@@ -552,29 +585,50 @@ function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear)
         new Color(rand(colorA.r,colorB.r), rand(colorA.g,colorB.g), rand(colorA.b,colorB.b), rand(colorA.a,colorB.a));
 }
 
-/** Seed used by the randSeeded function
- *  @type {Number}
- *  @default
- *  @memberof Random */
-let randSeed = 1;
+///////////////////////////////////////////////////////////////////////////////
 
-/** Set seed used by the randSeeded function, should not be 0
- *  @param {Number} seed
- *  @memberof Random */
-function setRandSeed(seed) { randSeed = seed; }
-
-/** Returns a seeded random value between the two values passed in using randSeed
- *  @param {Number} [valueA=1]
- *  @param {Number} [valueB=0]
- *  @return {Number}
- *  @memberof Random */
-function randSeeded(valueA=1, valueB=0)
+/** 
+ * Seeded random number generator
+ * - Can be used to create a deterministic random number sequence
+ * @example
+ * let r = new RandomGenerator(123); // random number generator with seed 123
+ * let a = r.rand();                 // random value between 0 and 1
+ * let b = r.randInt(10);            // random integer between 0 and 9
+ * r.seed = 123;                     // reset the seed
+ * let c = r.rand();                 // the same value as a
+ */
+class RandomGenerator
 {
-    // xorshift algorithm
-    randSeed ^= randSeed << 13; 
-    randSeed ^= randSeed >>> 17; 
-    randSeed ^= randSeed << 5;
-    return valueB + (valueA-valueB) * abs(randSeed % 1e9) / 1e9;
+    /** Create a random number generator with the seed passed in
+     *  @param {Number} seed - Starting seed */
+    constructor(seed)
+    {
+        /** @property {Number} - random seed */
+        this.seed = seed;
+    }
+
+    /** Returns a seeded random value between the two values passed in
+    *  @param {Number} [valueA=1]
+    *  @param {Number} [valueB=0]
+    *  @return {Number} */
+    rand(valueA=1, valueB=0)
+    {
+        // xorshift algorithm
+        this.seed ^= this.seed << 13; 
+        this.seed ^= this.seed >>> 17; 
+        this.seed ^= this.seed << 5;
+        return valueB + (valueA - valueB) * abs(this.seed % 1e9) / 1e9;
+    }
+
+    /** Returns a floored seeded random value the two values passed in
+    *  @param {Number} valueA
+    *  @param {Number} [valueB=0]
+    *  @return {Number} */
+    randInt(valueA, valueB=0) { return Math.floor(this.rand(valueA, valueB)); }
+
+    /** Randomly returns either -1 or 1 deterministically
+    *  @return {Number} */
+    randSign() { return this.randInt(2) * 2 - 1; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4366,7 +4420,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.6.92';
+const engineVersion = '1.6.93';
 
 /** Frames per second to update objects
  *  @type {Number}
@@ -4954,6 +5008,10 @@ export {
 	mod,
 	clamp,
 	percent,
+	distanceWrap,
+	lerpWrap,
+	distanceAngle,
+	lerpAngle,
 	lerp,
 	smoothStep,
 	nearestPowerOfTwo,
@@ -4968,11 +5026,9 @@ export {
 	randInCircle,
 	randVector,
 	randColor,
-	randSeed,
-	setRandSeed,
-	randSeeded,
 
 	// Utility Classes
+	RandomGenerator,
 	Vector2,
 	Color,
 	Timer,
