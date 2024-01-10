@@ -66,6 +66,27 @@ function clamp(value, min=0, max=1)
 function percent(value, min=0, max=1)
 { return max-min ? clamp((value-min) / (max-min)) : 0; }
 
+/** Returns signed distance between the two angles passed in
+ *  @param {Number} angle1
+ *  @param {Number} angle2
+ *  @returns {Number}
+ *  @memberof Utilities */
+function angleDistance(angle1, angle2) {
+    var max = 2 * PI;
+    var da = (angle1 - angle2) % max;
+    return ((2 * da) % max) - da;
+}
+
+/** Linearly interpolates between the angles passed in
+ *  @param {Number} Percent
+ *  @param {Number} angle1
+ *  @param {Number} angle2
+ *  @returns {Number}
+ *  @memberof Utilities */
+function angleLerp(p, angle1, angle2) {
+    return angle1 + p * angleDistance(angle1, angle2);
+}
+
 /** Linearly interpolates the percent value between max and min
  *  @param {Number} percent
  *  @param {Number} [min=0]
