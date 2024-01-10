@@ -64,7 +64,8 @@ LittleJS is a small but powerful game engine with many features and no depenenci
 ### And more...
 
 - Node.js build system
-- Debug primitives rendering system
+- 2D vector math library
+- Debug primitive rendering system
 - Particle effects system and design tool
 - Bitmap font rendering and includes a built in engine font
 - Medal system tracks and displays achievements with Newgrounds integration
