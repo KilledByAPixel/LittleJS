@@ -128,7 +128,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     };
 
     // frame time tracking
-    let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS;
+    let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
 
     // main update loop
     function engineUpdate(frameTimeMS=0)
