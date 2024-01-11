@@ -4,6 +4,7 @@
  * - Vector2 - fast, simple, easy 2D vector class
  * - Color - holds a rgba color with some math functions
  * - Timer - tracks time automatically
+ * - RandomGenerator - seeded random number generator
  * @namespace Utilities
  */
 

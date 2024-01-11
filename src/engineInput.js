@@ -1,9 +1,9 @@
 /** 
  * LittleJS Input System
- * - Tracks key down, pressed, and released
- * - Also tracks mouse buttons, position, and wheel
- * - Supports multiple gamepads
- * - Virtual gamepad for touch devices with touchGamepadSize
+ * - Tracks keyboard down, pressed, and released
+ * - Tracks mouse buttons, position, and wheel
+ * - Tracks multiple analog gamepads
+ * - Virtual gamepad for touch devices
  * @namespace Input
  */
 

@@ -1,6 +1,6 @@
 /** 
  * LittleJS Module Export
- * - Export engine as a module with extra functions where necessary
+ * - Export engine as a module with functions where necessary
  */
 
 /** Set position of camera in world space

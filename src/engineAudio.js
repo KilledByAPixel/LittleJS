@@ -1,11 +1,11 @@
 /** 
  * LittleJS Audio System
- * - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a> - Sound Effect Generator
- * - <a href=https://keithclark.github.io/ZzFXM/>ZzFXM Music</a> - Music System
+ * - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a> - ZzFX Sound Effect Generator
+ * - <a href=https://keithclark.github.io/ZzFXM/>ZzFXM Music</a> - ZzFXM Music System
  * - Caches sounds and music for fast playback
  * - Can attenuate and apply stereo panning to sounds
  * - Ability to play mp3, ogg, and wave files
- * - Speech synthesis wrapper functions
+ * - Speech synthesis functions
  * @namespace Audio
  */
 

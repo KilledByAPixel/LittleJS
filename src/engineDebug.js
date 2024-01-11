@@ -1,10 +1,10 @@
 /** 
  * LittleJS Debug System
- * - Press ~ to show debug overlay with mouse pick
+ * - Press Esc to show debug overlay with mouse pick
  * - Number keys toggle debug functions
  * - +/- apply time scale
  * - Debug primitive rendering
- * - Save a 2d canvas as an image
+ * - Save a 2d canvas as a png image
  * @namespace Debug
  */
 

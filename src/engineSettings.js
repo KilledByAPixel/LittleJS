@@ -1,5 +1,6 @@
 /**
  * LittleJS Engine Settings
+ * - All settings for the engine are here
  * @namespace Settings
  */
 
