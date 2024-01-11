@@ -203,6 +203,12 @@ function randInt(valueA, valueB=0) { return Math.floor(rand(valueA,valueB)); }
  *  @memberof Random */
 function randSign() { return randInt(2) * 2 - 1; }
 
+/** Returns a random Vector2 with the passed in length
+ *  @param {Number} [length=1]
+ *  @return {Vector2}
+ *  @memberof Random */
+function randVector(length=1) { return new Vector2().setAngle(rand(2*PI), length); }
+
 /** Returns a random Vector2 within a circular shape
  *  @param {Number} [radius=1]
  *  @param {Number} [minRadius=0]
@@ -210,12 +216,6 @@ function randSign() { return randInt(2) * 2 - 1; }
  *  @memberof Random */
 function randInCircle(radius=1, minRadius=0)
 { return radius > 0 ? randVector(radius * rand(minRadius / radius, 1)**.5) : new Vector2; }
-
-/** Returns a random Vector2 with the passed in length
- *  @param {Number} [length=1]
- *  @return {Vector2}
- *  @memberof Random */
-function randVector(length=1) { return new Vector2().setAngle(rand(2*PI), length); }
 
 /** Returns a random color between the two passed in colors, combine components if linear
  *  @param {Color}   [colorA=Color()]
@@ -255,7 +255,7 @@ class RandomGenerator
     *  @param {Number} [valueA=1]
     *  @param {Number} [valueB=0]
     *  @return {Number} */
-    rand(valueA=1, valueB=0)
+    float(valueA=1, valueB=0)
     {
         // xorshift algorithm
         this.seed ^= this.seed << 13; 
@@ -268,11 +268,11 @@ class RandomGenerator
     *  @param {Number} valueA
     *  @param {Number} [valueB=0]
     *  @return {Number} */
-    randInt(valueA, valueB=0) { return Math.floor(this.rand(valueA, valueB)); }
+    int(valueA, valueB=0) { return Math.floor(this.rand(valueA, valueB)); }
 
     /** Randomly returns either -1 or 1 deterministically
     *  @return {Number} */
-    randSign() { return this.randInt(2) * 2 - 1; }
+    sign() { return this.randInt(2) * 2 - 1; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4064,7 +4064,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.6.93';
+const engineVersion = '1.6.94';
 
 /** Frames per second to update objects
  *  @type {Number}

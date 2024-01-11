@@ -574,15 +574,15 @@ declare module "littlejs.esm" {
         *  @param {Number} [valueA=1]
         *  @param {Number} [valueB=0]
         *  @return {Number} */
-        rand(valueA?: number, valueB?: number): number;
+        float(valueA?: number, valueB?: number): number;
         /** Returns a floored seeded random value the two values passed in
         *  @param {Number} valueA
         *  @param {Number} [valueB=0]
         *  @return {Number} */
-        randInt(valueA: number, valueB?: number): number;
+        int(valueA: number, valueB?: number): number;
         /** Randomly returns either -1 or 1 deterministically
         *  @return {Number} */
-        randSign(): number;
+        sign(): number;
     }
     /**
      * 2D Vector object with vector math library

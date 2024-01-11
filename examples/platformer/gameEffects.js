@@ -240,22 +240,22 @@ function drawStars()
     const largeStarCount = 9;
     for (let i = 1e3; i--;)
     {
-        let size = random.rand(6, 1);
-        let speed = random.rand() < .9 ? random.rand(5) : random.rand(99,9);
-        let color = (new Color).setHSLA(random.rand(.2,-.3), random.rand()**9, random.rand(1,.5), random.rand(.9,.3));
+        let size = random.float(6, 1);
+        let speed = random.float() < .9 ? random.float(5) : random.float(99,9);
+        let color = (new Color).setHSLA(random.float(.2,-.3), random.float()**9, random.float(1,.5), random.float(.9,.3));
         if (i < largeStarCount)
         {
             // large planets and suns
-            size = random.rand()**3*99 + 9;
-            speed = random.rand(5);
-            color = (new Color).setHSLA(random.rand(), random.rand(), random.rand(1,.5)).add(skyColor.scale(.5)).clamp();
+            size = random.float()**3*99 + 9;
+            speed = random.float(5);
+            color = (new Color).setHSLA(random.float(), random.float(), random.float(1,.5)).add(skyColor.scale(.5)).clamp();
         }
         
         const extraSpace = 200;
         const w = mainCanvas.width+2*extraSpace, h = mainCanvas.height+2*extraSpace;
         const screenPos = vec2(
-            (random.rand(w)+time*speed)%w-extraSpace,
-            (random.rand(h)+time*speed*random.rand())%h-extraSpace);
+            (random.float(w)+time*speed)%w-extraSpace,
+            (random.float(h)+time*speed*random.float())%h-extraSpace);
 
         mainContext.fillStyle = color;
         if (size < 9)
