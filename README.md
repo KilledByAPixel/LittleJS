@@ -13,20 +13,12 @@ It's small footprint is packed with a comprehensive feature set, including hybri
 The code is very clean and well documented with a several examples to get you started. Choo-Choo! 🚂
 
 <div align="center">
-  
+
 ## [Demo](https://killedbyapixel.github.io/LittleJS/examples/starter/) | [Docs](https://killedbyapixel.github.io/LittleJS/docs) | [Trailer](https://youtu.be/chuBzGjv7Ms) | [Discord](https://discord.gg/zb7hcGkyZe) | [Tutorial](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial)
+
 </div>
 
 ![LittleJS Screenshot](examples/screenshot.jpg)
-
-## Demos
-
-### [Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter/) - Clean example with only a few things to get you started
-### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Match 3 puzzle game with HD rendering and high score tracking
-### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter with procedural generation and destruction
-### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/) - Breakout game with post processing effect
-### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress/) - Max sprite/object test and music system demo
-### [Particle System Designer](https://killedbyapixel.github.io/LittleJS/examples/particles/) - Particle system editor and visualizer
 
 ## About LittleJS
 
@@ -36,7 +28,7 @@ LittleJS is a small but powerful game engine with many features and no depenenci
 
 - Super fast sprite and tile map rendering engine with WebGL
 - Update and render 10,000+ objects at 60fps, often many times more
-- Particle effect system and design tool
+- Particle effect system and [design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
 - Apply [Shadertoy](https://www.shadertoy.com) compatible shaders for post processinge effects
 
 ### 🔊 Audio
@@ -70,6 +62,15 @@ LittleJS is a small but powerful game engine with many features and no depenenci
 - Particle effects system and design tool
 - Bitmap font rendering and includes a built in engine font
 - Medal system tracks and displays achievements with Newgrounds integration
+
+## Demos
+
+### [Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter/) - Clean example with only a few things to get you started
+### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Match 3 puzzle game with HD rendering and high score tracking
+### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter with procedural generation and destruction
+### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/) - Breakout game with post processing effect
+### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress/) - Max sprite/object test and music system demo
+### [Particle System Designer](https://killedbyapixel.github.io/LittleJS/examples/particles/) - Particle system editor and visualizer
 
 ## How to use LittleJS
 
