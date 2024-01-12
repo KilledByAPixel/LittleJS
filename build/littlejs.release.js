@@ -1,6 +1,7 @@
+// LittleJS - MIT License - Copyright 2021 Frank Force
+
 /** 
- * LittleJS - Release Build
- * MIT License - Copyright 2021 Frank Force
+ * LittleJS - Release Mode
  * - This file is used for release builds in place of engineDebug.js
  * - Debug functionality is disabled to reduce size and increase performance
  */
@@ -36,6 +37,7 @@ function debugSaveCanvas (){}
  * - Vector2 - fast, simple, easy 2D vector class
  * - Color - holds a rgba color with some math functions
  * - Timer - tracks time automatically
+ * - RandomGenerator - seeded random number generator
  * @namespace Utilities
  */
 
@@ -690,6 +692,7 @@ class Timer
 }
 /**
  * LittleJS Engine Settings
+ * - All settings for the engine are here
  * @namespace Settings
  */
 
@@ -945,12 +948,12 @@ let medalsPreventUnlock;
 
 /** 
  * LittleJS Object Base Object Class
- * - Base object class used by the engine
+ * - Top level object class used by the engine
  * - Automatically adds self to object list
  * - Will be updated and rendered each frame
  * - Renders as a sprite from a tilesheet by default
  * - Can have color and addtive color applied
- * - 2d Physics and collision system
+ * - 2D Physics and collision system
  * - Sorted by renderOrder
  * - Objects can have children attached
  * - Parents are updated before children, and set child transform
@@ -1317,9 +1320,10 @@ class EngineObject
 }
 /** 
  * LittleJS Drawing System
- * - Hybrid with both Canvas2D and WebGL available
+ * - Hybrid system with both Canvas2D and WebGL available
  * - Super fast tile sheet rendering with WebGL
  * - Can apply rotation, mirror, color and additive color
+ * - Font rendering system with built in engine font
  * - Many useful utility functions
  * 
  * LittleJS uses a hybrid rendering solution with the best of both Canvas2D and WebGL.
@@ -1329,7 +1333,6 @@ class EngineObject
  * overlayCanvas - Another 2D canvas that appears on top of the other 2 canvases.
  * 
  * The WebGL rendering system is very fast with some caveats...
- * - The default setup supports only 1 tile sheet, to support more call glCreateTexture and glSetTexture
  * - Switching blend modes (additive) or textures causes another draw call which is expensive in excess
  * - Group additive rendering together using renderOrder to mitigate this issue
  * 
@@ -1710,10 +1713,10 @@ function toggleFullscreen()
 
 /** 
  * LittleJS Input System
- * - Tracks key down, pressed, and released
- * - Also tracks mouse buttons, position, and wheel
- * - Supports multiple gamepads
- * - Virtual gamepad for touch devices with touchGamepadSize
+ * - Tracks keyboard down, pressed, and released
+ * - Tracks mouse buttons, position, and wheel
+ * - Tracks multiple analog gamepads
+ * - Virtual gamepad for touch devices
  * @namespace Input
  */
 
@@ -2154,12 +2157,12 @@ function touchGamepadRender()
 }
 /** 
  * LittleJS Audio System
- * - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a> - Sound Effect Generator
- * - <a href=https://keithclark.github.io/ZzFXM/>ZzFXM Music</a> - Music System
+ * - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a> - ZzFX Sound Effect Generator
+ * - <a href=https://keithclark.github.io/ZzFXM/>ZzFXM Music</a> - ZzFXM Music System
  * - Caches sounds and music for fast playback
  * - Can attenuate and apply stereo panning to sounds
  * - Ability to play mp3, ogg, and wave files
- * - Speech synthesis wrapper functions
+ * - Speech synthesis functions
  * @namespace Audio
  */
 
@@ -4064,7 +4067,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.6.94';
+const engineVersion = '1.7.0';
 
 /** Frames per second to update objects
  *  @type {Number}
@@ -4162,7 +4165,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     };
 
     // frame time tracking
-    let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS;
+    let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
 
     // main update loop
     function engineUpdate(frameTimeMS=0)

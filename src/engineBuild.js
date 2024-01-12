@@ -33,6 +33,7 @@ const asciiArt =`
 .|________|_._|______|_._|__|_|_|_|}
   OOO  OOO     OO  OO     OO=OO---oo\\
 `;
+const license = '// LittleJS - MIT License - Copyright 2021 Frank Force\n'
 
 console.log(asciiArt);
 console.log('Choo Choo... Building LittleJS Engine!\n');
@@ -52,14 +53,16 @@ Build
 (
     'Build Engine -- all',
     `${BUILD_FOLDER}/${ENGINE_NAME}.js`,
-    [`${SOURCE_FOLDER}/engineDebug.js`].concat(engineSourceFiles)
+    [`${SOURCE_FOLDER}/engineDebug.js`, ...engineSourceFiles],
+    [], license
 );
 
 Build
 (
     'Build Engine -- release',
     `${BUILD_FOLDER}/${ENGINE_NAME}.release.js`,
-    [`${SOURCE_FOLDER}/engineRelease.js`].concat(engineSourceFiles)
+    [`${SOURCE_FOLDER}/engineRelease.js`, ...engineSourceFiles],
+    [], license
 );
 
 Build
@@ -92,12 +95,14 @@ console.log(`Engine built in ${((Date.now() - startTime)/1e3).toFixed(2)} second
 
 // A single build with its own source files, build steps, and output file
 // - each build step is a callback that accepts a single filename
-function Build(message, outputFile, files=[], buildSteps=[])
+function Build(message, outputFile, files=[], buildSteps=[], topOfFileText)
 {
     console.log(message);
 
     // copy files into a buffer
     let buffer = '';
+    if (topOfFileText)
+        buffer +=  topOfFileText + '\n';
     for (const file of files)
         buffer += fs.readFileSync(file) + '\n';
 

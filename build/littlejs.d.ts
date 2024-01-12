@@ -1,7 +1,7 @@
 declare module "littlejs.esm" {
     /**
      * LittleJS Module Export
-     * - Export engine as a module with extra functions where necessary
+     * - Export engine as a module with functions where necessary
      */
     /** Set position of camera in world space
      *  @param {Vector2} pos
@@ -853,12 +853,12 @@ declare module "littlejs.esm" {
     export function hsl(h?: number, s?: number, l?: number, a?: number): Color;
     /**
      * LittleJS Object Base Object Class
-     * - Base object class used by the engine
+     * - Top level object class used by the engine
      * - Automatically adds self to object list
      * - Will be updated and rendered each frame
      * - Renders as a sprite from a tilesheet by default
      * - Can have color and addtive color applied
-     * - 2d Physics and collision system
+     * - 2D Physics and collision system
      * - Sorted by renderOrder
      * - Objects can have children attached
      * - Parents are updated before children, and set child transform
