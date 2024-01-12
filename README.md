@@ -6,7 +6,7 @@
 [![DeepScan][deepscan]][deepscan-url]
 [![Discord][discord]][discord-url]
 
-## All aboard!
+## 🚂 All aboard!
 
 LittleJS is a lightweight open source HTML5 game engine designed for modern web development.
 It's small footprint is packed with a comprehensive feature set, including hybrid rendering, physics, particles, sound effects, music, input handling, and debug tools.
