@@ -101,7 +101,8 @@ The starter example project also includes a node js file [build.js](https://gith
 
 ## Engine Source Code
 
-This engine is made with simplicity in mind using clean easy to read code. There are only a few files used by the entire engine.
+This engine is made with simplicity in mind using clean easy to read code.
+There are only a few core files used by the entire engine.
 
 - [engine.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engine.js) - Top level engine init, update, and render
 - [engineSettings.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineSettings.js) - Global engine settings
@@ -111,7 +112,7 @@ This engine is made with simplicity in mind using clean easy to read code. There
 - [engineInput.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineInput.js) - Input for keyboard, mouse, touch, and gamepad
 - [engineUtilities.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineUtilities.js) - Vector2, Color, and Timer clases and math functions
 
-Optional Components, these components are built to synergize with the rest of the engine but are not necessary.
+Optional Components, these components are built to synergize with the rest of the engine but are not required.
 
 - [engineTileLayer.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineTileLayer.js) - Tile layer rendering and collision
 - [engineParticles.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineParticles.js) - Particle system with fast rendering and collision
