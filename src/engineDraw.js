@@ -184,7 +184,7 @@ function drawPoly(points, color, useWebGL=glEnable)
 
 /** Draw textured tile centered on pos in screen space
  *  @param {Vector2} pos                        - Center of the tile
- *  @param {Vector2} [size=Vector2(1,1)]    - Size of the tile
+ *  @param {Vector2} [size=Vector2(1,1)]        - Size of the tile
  *  @param {Number}  [tileIndex=-1]             - Tile index to use, negative is untextured
  *  @param {Vector2} [tileSize=tileSizeDefault] - Tile size in source pixels
  *  @param {Color}   [color=Color()]

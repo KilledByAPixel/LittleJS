@@ -39,12 +39,15 @@ class Sound
         /** @property {Number} - At what percentage of range should it start tapering off */
         this.taper = taper;
 
-        // get randomness from sound parameters
-        this.randomness = zzfxSound[1] || 0;
-        zzfxSound[1] = 0;
+        /** @property {Number} - How much to randomize frequency each time sound plays */
+        this.randomness = 0;
 
-        // generate sound now for fast playback
-        this.cachedSamples = zzfxG(...zzfxSound);
+        if (zzfxSound)
+        {
+            // generate zzfx sound now for fast playback
+            this.randomness = zzfxSound[1] || (zzfxSound[1] = 0); 
+            this.cachedSamples = zzfxSound && zzfxG(...zzfxSound);
+        }
     }
 
     /** Play the sound
@@ -56,7 +59,7 @@ class Sound
      */
     play(pos, volume=1, pitch=1, randomnessScale=1)
     {
-        if (!soundEnable) return;
+        if (!soundEnable || !this.cachedSamples) return;
 
         let pan;
         if (pos)
@@ -89,10 +92,29 @@ class Sound
      *  @return {AudioBufferSourceNode} - The audio, can be used to stop sound later
      */
     playNote(semitoneOffset, pos, volume)
-    {
-        if (!soundEnable) return;
+    { return this.play(pos, volume, 2**(semitoneOffset/12), 0); }
+}
 
-        return this.play(pos, volume, 2**(semitoneOffset/12), 0);
+/** 
+ * Sound Wave Object - Stores a wave sound for later use and can be played positionally
+ */
+class SoundWave extends Sound
+{
+    /** Create a sound object and cache the wave file for later use
+     *  @param {String} waveFilename - Filename of wave file to load
+     *  @param {Number} [randomness=.05] - How much to randomize frequency each time sound plays
+     *  @param {Number} [range=soundDefaultRange] - World space max range of sound, will not play if camera is farther away
+     *  @param {Number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering off
+     */
+    constructor(waveFilename, randomness=.05, range, taper)
+    {
+        super(0, range, taper);
+        this.randomness = randomness;
+
+        fetch(waveFilename)
+        .then(response => response.arrayBuffer())
+        .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
+        .then(audioBuffer => this.cachedSamples = audioBuffer.getChannelData(0));
     }
 }
 
@@ -223,7 +245,7 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
 
 /** Audio context used by the engine
  *  @memberof Audio */
-let audioContext;
+let audioContext = new AudioContext;
 
 /** Play cached audio samples with given settings
  *  @param {Array}   sampleChannels - Array of arrays of samples to play (for stereo playback)
@@ -236,10 +258,6 @@ let audioContext;
 function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0) 
 {
     if (!soundEnable) return;
-
-    // create audio context
-    if (!audioContext)
-        audioContext = new AudioContext;
 
     // fix stalled audio
     audioContext.resume();
