@@ -159,6 +159,29 @@ function drawRect(pos, size, color, angle, useWebGL)
     drawTile(pos, size, -1, tileSizeDefault, color, angle, 0, 0, useWebGL);
 }
 
+/** Draw colored polygon using passed in points
+ *  @param {Array}   points - Array of Vector2 points
+ *  @param {Color}   [color=Color()]
+ *  @param {Boolean} [useWebGL=glEnable]
+ *  @memberof Draw */
+function drawPoly(points, color, useWebGL=glEnable)
+{
+    if (useWebGL)
+        glDrawPoints(points, color.rgbaInt());
+    else
+    {
+        // draw using canvas
+        mainContext.fillStyle = color;
+        mainContext.beginPath();
+        for (const point of points)
+        {
+            const pos = worldToScreen(point);
+            mainContext.lineTo(pos.x, pos.y);
+        }
+        mainContext.fill();
+    }
+}
+
 /** Draw textured tile centered on pos in screen space
  *  @param {Vector2} pos                        - Center of the tile
  *  @param {Vector2} [size=Vector2(1,1)]    - Size of the tile

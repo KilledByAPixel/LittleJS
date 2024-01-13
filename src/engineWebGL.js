@@ -203,8 +203,8 @@ function glFlush()
 
     // draw all the sprites in the batch and reset the buffer
     glContext.bufferSubData(gl_ARRAY_BUFFER, 0, 
-        glPositionData.subarray(0, glBatchCount * gl_VERTICES_PER_QUAD * gl_INDICIES_PER_VERT));
-    glContext.drawArrays(gl_TRIANGLES, 0, glBatchCount * gl_VERTICES_PER_QUAD);
+        glPositionData.subarray(0, glBatchCount * gl_INDICIES_PER_VERT));
+    glContext.drawArrays(gl_TRIANGLE_STRIP, 0, glBatchCount);
     glBatchCount = 0;
     glBatchAdditive = glAdditive;
 }
@@ -225,39 +225,75 @@ function glCopyToContext(context, forceDraw)
 }
 
 /** Add a sprite to the gl draw list, used by all gl draw functions
- *  @param x
- *  @param y
- *  @param sizeX
- *  @param sizeY
- *  @param angle
- *  @param uv0X
- *  @param uv0Y
- *  @param uv1X
- *  @param uv1Y
- *  @param rgba
- *  @param [rgbaAdditive=0]
+ *  @param {Number} x
+ *  @param {Number} y
+ *  @param {Number} sizeX
+ *  @param {Number} sizeY
+ *  @param {Number} angle
+ *  @param {Number} uv0X
+ *  @param {Number} uv0Y
+ *  @param {Number} uv1X
+ *  @param {Number} uv1Y
+ *  @param {Number} rgba
+ *  @param {Number} [rgbaAdditive=0]
  *  @memberof WebGL */
 function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdditive=0)
 {
-    // flush if there is no room for more verts or if different blend mode
-    if (glBatchCount == gl_MAX_BATCH || glBatchAdditive != glAdditive)
+    // flush if there is not enough room or if different blend mode
+    const vertCount = 6;
+    if (glBatchCount >= gl_MAX_BATCH-vertCount || glBatchAdditive != glAdditive)
         glFlush();
 
     // prepare to create the verts from size and angle
     const c = Math.cos(angle)/2, s = Math.sin(angle)/2;
     const cx = c*sizeX, cy = c*sizeY, sx = s*sizeX, sy = s*sizeY;
-        
-    // setup 2 triangles to form a quad
-    for(let i=6, offset = glBatchCount++ * gl_VERTICES_PER_QUAD * gl_INDICIES_PER_VERT; i--;)
+    const positionData = 
+    [
+        x-cx+sy, y+cy+sx, uv0X, uv0Y,
+        x-cx-sy, y-cy+sx, uv0X, uv1Y,
+        x+cx+sy, y+cy-sx, uv1X, uv0Y,
+        x+cx-sy, y-cy-sx, uv1X, uv1Y,
+    ];
+
+    // setup 2 triangle strip quad
+    for(let i = vertCount, offset = glBatchCount * gl_INDICIES_PER_VERT; i--;)
     {
-        const a = i-4&&i>1, b = i-5&&i-2&&i-1;
-        glPositionData[offset++] = x + (a?-cx:cx) + (b?sy:-sy);
-        glPositionData[offset++] = y + (b?cy:-cy) + (a?sx:-sx);
-        glPositionData[offset++] = a ? uv0X : uv1X; 
-        glPositionData[offset++] = b ? uv0Y : uv1Y;
+        let j = clamp(i-1, 0, 3)*4;  // degenerate tri at ends
+        glPositionData[offset++] = positionData[j++];
+        glPositionData[offset++] = positionData[j++];
+        glPositionData[offset++] = positionData[j++];
+        glPositionData[offset++] = positionData[j++];
         glColorData[offset++] = rgba; 
         glColorData[offset++] = rgbaAdditive;
     }
+    glBatchCount += vertCount;
+}
+
+/** Add a convex polygon to the gl draw list
+ *  @param {Array} points - Array of Vector2 points
+ *  @param {Number} rgba - Color of the polygon
+ *  @memberof WebGL */
+function glDrawPoints(points, rgba)
+{
+    // flush if there is not enough room or if different blend mode
+    const vertCount = points.length + 2;
+    if (glBatchCount >= gl_MAX_BATCH-vertCount || glBatchAdditive != glAdditive)
+        glFlush();
+  
+    // setup triangle strip from list of points
+    for(let i = vertCount, offset = glBatchCount * gl_INDICIES_PER_VERT; i--;)
+    {
+        const j = clamp(i-1, 0, vertCount-3);  // degenerate tri at ends
+        const h = j>>1;
+        const point = points[j%2? h : vertCount-3-h];
+        glPositionData[offset++] = point.x;
+        glPositionData[offset++] = point.y;
+        glPositionData[offset++] = 0; // uvx
+        glPositionData[offset++] = 0; // uvy
+        glColorData[offset++] = 0;    // nothing to tint
+        glColorData[offset++] = rgba; // apply rgba via additive
+    }
+    glBatchCount += vertCount;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -351,14 +387,14 @@ function glRenderPostProcess()
     glContext.uniform1i(uniformLocation('iChannel0'), 0);
     glContext.uniform1f(uniformLocation('iTime'), time);
     glContext.uniform3f(uniformLocation('iResolution'), mainCanvas.width, mainCanvas.height, 1);
-    glContext.drawArrays(gl_TRIANGLES, 0, 3);
+    glContext.drawArrays(gl_TRIANGLE_STRIP, 0, 3);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // store gl constants as integers so their name doesn't use space in minifed
 const 
 gl_ONE = 1,
-gl_TRIANGLES = 4,
+gl_TRIANGLE_STRIP = 5,
 gl_SRC_ALPHA = 770,
 gl_ONE_MINUS_SRC_ALPHA = 771,
 gl_BLEND = 3042,
@@ -389,6 +425,6 @@ gl_UNPACK_FLIP_Y_WEBGL = 37440,
 // constants for batch rendering
 gl_VERTICES_PER_QUAD = 6,
 gl_INDICIES_PER_VERT = 6,
-gl_MAX_BATCH = 1<<16,
+gl_MAX_BATCH = 1e5,
 gl_VERTEX_BYTE_STRIDE = (4 * 2) * 2 + (4) * 2, // vec2 * 2 + (char * 4) * 2
-gl_VERTEX_BUFFER_SIZE = gl_MAX_BATCH * gl_VERTICES_PER_QUAD * gl_VERTEX_BYTE_STRIDE;
+gl_VERTEX_BUFFER_SIZE = gl_MAX_BATCH * gl_VERTEX_BYTE_STRIDE;
