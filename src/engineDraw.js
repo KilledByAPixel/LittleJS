@@ -56,33 +56,31 @@ const tileImage = new Image;
 let tileImageSize, tileImageFixBleed, drawCount;
 
 /** Convert from screen to world space coordinates
- *  - if calling outside of render, you may need to manually set mainCanvasSize
  *  @param {Vector2} screenPos
  *  @return {Vector2}
  *  @memberof Draw */
 function screenToWorld(screenPos)
 {
     ASSERT(mainCanvasSize.x && mainCanvasSize.y, 'mainCanvasSize is invalid');
-    return screenPos
-        .add(vec2(.5))
-        .subtract(mainCanvasSize.scale(.5))
-        .multiply(vec2(1/cameraScale,-1/cameraScale))
-        .add(cameraPos);
+    return new Vector2
+    (
+        (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale + cameraPos.x,
+        (screenPos.y - mainCanvasSize.y/2 + .5) / -cameraScale + cameraPos.y
+    );
 }
 
 /** Convert from world to screen space coordinates
- *  - if calling outside of render, you may need to manually set mainCanvasSize
  *  @param {Vector2} worldPos
  *  @return {Vector2}
  *  @memberof Draw */
 function worldToScreen(worldPos)
 {
     ASSERT(mainCanvasSize.x && mainCanvasSize.y, 'mainCanvasSize is invalid');
-    return worldPos
-        .subtract(cameraPos)
-        .multiply(vec2(cameraScale,-cameraScale))
-        .add(mainCanvasSize.scale(.5))
-        .subtract(vec2(.5));
+    return new Vector2
+    (
+        (worldPos.x - cameraPos.x) *  cameraScale + mainCanvasSize.x/2 - .5,
+        (worldPos.y - cameraPos.y) * -cameraScale + mainCanvasSize.y/2 - .5
+    );
 }
 
 /** Draw textured tile centered in world space, with color applied if using WebGL
@@ -95,13 +93,21 @@ function worldToScreen(worldPos)
  *  @param {Boolean} [mirror=0]                     - If true image is flipped along the Y axis
  *  @param {Color}   [additiveColor=Color(0,0,0,0)] - Additive color to be applied
  *  @param {Boolean} [useWebGL=glEnable]            - Use accelerated WebGL rendering
+ *  @param {Boolean} [screenSpace=0]                - If true the pos and size are in screen space
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, color=new Color,
-    angle=0, mirror, additiveColor=new Color(0,0,0,0), useWebGL=glEnable)
+    angle=0, mirror, additiveColor=new Color(0,0,0,0), useWebGL=glEnable, screenSpace)
 {
     showWatermark && ++drawCount;
+    
     if (glEnable && useWebGL)
     {
+        if (screenSpace)
+        {
+            // convert to world space
+            pos = screenToWorld(pos);
+            size = size.scale(1/cameraScale);
+        }
         if (tileIndex < 0 || !tileImage.width)
         {
             // if negative tile index or image not found, force untextured
@@ -143,7 +149,7 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, col
                 context.globalAlpha = color.a; // only alpha is supported
                 context.drawImage(tileImage, sX, sY, sWidth, sHeight, -.5, -.5, 1, 1);
             }
-        });
+        }, undefined, screenSpace);
     }
 }
 
@@ -153,21 +159,21 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, col
  *  @param {Color}   [color=Color()]
  *  @param {Number}  [angle=0]
  *  @param {Boolean} [useWebGL=glEnable]
+ *  @param {Boolean} [screenSpace=0]
  *  @memberof Draw */
-function drawRect(pos, size, color, angle, useWebGL)
-{
-    drawTile(pos, size, -1, tileSizeDefault, color, angle, 0, 0, useWebGL);
-}
+function drawRect(pos, size, color, angle, useWebGL, screenSpace)
+{ drawTile(pos, size, -1, tileSizeDefault, color, angle, 0, undefined, useWebGL, screenSpace); }
 
 /** Draw colored polygon using passed in points
  *  @param {Array}   points - Array of Vector2 points
  *  @param {Color}   [color=Color()]
  *  @param {Boolean} [useWebGL=glEnable]
+ *  @param {Boolean} [screenSpace=0]
  *  @memberof Draw */
 function drawPoly(points, color, useWebGL=glEnable)
 {
     if (useWebGL)
-        glDrawPoints(points, color.rgbaInt());
+        glDrawPoints(screenSpace ? points.map(screenToWorld) : points, color.rgbaInt());
     else
     {
         // draw using canvas
@@ -175,39 +181,11 @@ function drawPoly(points, color, useWebGL=glEnable)
         mainContext.beginPath();
         for (const point of points)
         {
-            const pos = worldToScreen(point);
+            const pos = screenSpace ? point : worldToScreen(point);
             mainContext.lineTo(pos.x, pos.y);
         }
         mainContext.fill();
     }
-}
-
-/** Draw textured tile centered on pos in screen space
- *  @param {Vector2} pos                        - Center of the tile
- *  @param {Vector2} [size=Vector2(1,1)]        - Size of the tile
- *  @param {Number}  [tileIndex=-1]             - Tile index to use, negative is untextured
- *  @param {Vector2} [tileSize=tileSizeDefault] - Tile size in source pixels
- *  @param {Color}   [color=Color()]
- *  @param {Number}  [angle=0]
- *  @param {Boolean} [mirror=0]
- *  @param {Color}   [additiveColor=Color(0,0,0,0)]
- *  @param {Boolean} [useWebGL=glEnable]
- *  @memberof Draw */
-function drawTileScreenSpace(pos, size=vec2(1), tileIndex, tileSize, color, angle, mirror, additiveColor, useWebGL)
-{
-    drawTile(screenToWorld(pos), size.scale(1/cameraScale), tileIndex, tileSize, color, angle, mirror, additiveColor, useWebGL);
-}
-
-/** Draw colored rectangle in screen space
- *  @param {Vector2} pos
- *  @param {Vector2} [size=Vector2(1,1)]
- *  @param {Color}   [color=Color()]
- *  @param {Number}  [angle=0]
- *  @param {Boolean} [useWebGL=glEnable]
- *  @memberof Draw */
-function drawRectScreenSpace(pos, size, color, angle, useWebGL)
-{
-    drawTileScreenSpace(pos, size, -1, tileSizeDefault, color, angle, 0, 0, useWebGL);
 }
 
 /** Draw colored line between two points
@@ -216,12 +194,13 @@ function drawRectScreenSpace(pos, size, color, angle, useWebGL)
  *  @param {Number}  [thickness=.1]
  *  @param {Color}   [color=Color()]
  *  @param {Boolean} [useWebGL=glEnable]
+ *  @param {Boolean} [screenSpace=0]
  *  @memberof Draw */
 function drawLine(posA, posB, thickness=.1, color, useWebGL)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);
-    drawRect(posA.add(halfDelta), size, color, halfDelta.angle(), useWebGL);
+    drawRect(posA.add(halfDelta), size, color, halfDelta.angle(), useWebGL, screenSpace);
 }
 
 /** Draw directly to a 2d canvas context in world space
@@ -231,12 +210,16 @@ function drawLine(posA, posB, thickness=.1, color, useWebGL)
  *  @param {Boolean}  mirror
  *  @param {Function} drawFunction
  *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @param {Boolean} [screenSpace=0]
  *  @memberof Draw */
-function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainContext)
+function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainContext, screenSpace)
 {
-    // create canvas transform from world space to screen space
-    pos = worldToScreen(pos);
-    size = size.scale(cameraScale);
+    if (!screenSpace)
+    {
+        // create canvas transform from world space to screen space
+        pos = worldToScreen(pos);
+        size = size.scale(cameraScale);
+    }
     context.save();
     context.translate(pos.x+.5|0, pos.y+.5|0);
     context.rotate(angle);
@@ -343,6 +326,17 @@ class FontImage
         this.context = context;
     }
 
+    /** Draw text in world space using the image font
+     *  @param {String}  text
+     *  @param {Vector2} pos
+     *  @param {Number}  [scale=.25]
+     *  @param {Boolean} [center]
+     */
+    drawText(text, pos, scale=1, center)
+    {
+        this.drawTextScreen(text, worldToScreen(pos).floor(), scale*cameraScale|0, center);
+    }
+
     /** Draw text in screen space using the image font
      *  @param {String}  text
      *  @param {Vector2} pos
@@ -379,17 +373,6 @@ class FontImage
         });
 
         context.restore();
-    }
-
-    /** Draw text in world space using the image font
-     *  @param {String}  text
-     *  @param {Vector2} pos
-     *  @param {Number}  [scale=.25]
-     *  @param {Boolean} [center]
-     */
-    drawText(text, pos, scale=1, center)
-    {
-        this.drawTextScreen(text, worldToScreen(pos).floor(), scale*cameraScale|0, center);
     }
 }
 
