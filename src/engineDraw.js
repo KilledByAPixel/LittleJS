@@ -170,7 +170,7 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace)
  *  @param {Boolean} [useWebGL=glEnable]
  *  @param {Boolean} [screenSpace=0]
  *  @memberof Draw */
-function drawPoly(points, color, useWebGL=glEnable)
+function drawPoly(points, color=new Color, useWebGL=glEnable, screenSpace)
 {
     if (useWebGL)
         glDrawPoints(screenSpace ? points.map(screenToWorld) : points, color.rgbaInt());
