@@ -111,12 +111,17 @@ class SoundWave extends Sound
         super(0, range, taper);
         this.randomness = randomness;
 
+        if (!soundEnable) return;
+        if (!soundWaveDecoderContext)
+            soundDecoderContext = new AudioContext;
+
         fetch(waveFilename)
         .then(response => response.arrayBuffer())
-        .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
+        .then(arrayBuffer => soundWaveDecoderContext.decodeAudioData(arrayBuffer))
         .then(audioBuffer => this.cachedSamples = audioBuffer.getChannelData(0));
     }
 }
+let soundDecoderContext; // audio context used only to decode audio files
 
 /**
  * Music Object - Stores a zzfx music track for later use
@@ -245,7 +250,7 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
 
 /** Audio context used by the engine
  *  @memberof Audio */
-let audioContext = soundEnable ? new AudioContext : 0;
+let audioContext;
 
 /** Play cached audio samples with given settings
  *  @param {Array}   sampleChannels - Array of arrays of samples to play (for stereo playback)
@@ -258,6 +263,10 @@ let audioContext = soundEnable ? new AudioContext : 0;
 function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0) 
 {
     if (!soundEnable) return;
+
+    // create audio context if needed
+    if (!audioContext)
+        audioContext = new AudioContext;
 
     // prevent sounds from building up if they can't be played
     if (audioContext.state != 'running')
@@ -470,7 +479,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
 
         // stop if end, different instrument or new note
         stop = i == patternChannel.length + isSequenceEnd - 1 && isSequenceEnd ||
-            instrument != (patternChannel[0] || 0) || note;
+            instrument != (patternChannel[0] || 0) || note | 0;
 
         // fill buffer with samples for previous beat, most cpu intensive part
         for (j = 0; j < beatLength && notFirstBeat;

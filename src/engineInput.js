@@ -281,7 +281,8 @@ if (isTouchDevice)
         e.button = 0; // all touches are left click
 
         // fix stalled audio on mobile
-        soundEnable && audioContext.resume();
+        if (soundEnable)
+            audioContext ? audioContext.resume() : zzfx(0);
 
         // check if touching and pass to mouse events
         const touching = e.touches.length;
