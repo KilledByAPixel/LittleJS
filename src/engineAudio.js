@@ -245,7 +245,7 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
 
 /** Audio context used by the engine
  *  @memberof Audio */
-let audioContext = new AudioContext;
+let audioContext = soundEnable ? new AudioContext : 0;
 
 /** Play cached audio samples with given settings
  *  @param {Array}   sampleChannels - Array of arrays of samples to play (for stereo playback)
@@ -259,12 +259,13 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0)
 {
     if (!soundEnable) return;
 
-    // fix stalled audio
-    audioContext.resume();
-
     // prevent sounds from building up if they can't be played
     if (audioContext.state != 'running')
+    {
+        // fix stalled audio
+        audioContext.resume();
         return;
+    }
 
     // create buffer and source
     const buffer = audioContext.createBuffer(sampleChannels.length, sampleChannels[0].length, zzfxR), 

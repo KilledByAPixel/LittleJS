@@ -278,13 +278,14 @@ if (isTouchDevice)
     // setup touch input
     ontouchstart = (e)=>
     {
-        // fix mobile audio, force it to play a sound on first touch
-        zzfx(0);
-
         // handle all touch events the same way
         ontouchstart = ontouchmove = ontouchend = (e)=>
         {
             e.button = 0; // all touches are left click
+
+            // fix stalled audio on mobile
+            if (soundEnable && audioContext.state != 'running')
+                audioContext.resume();
 
             // check if touching and pass to mouse events
             const touching = e.touches.length;
