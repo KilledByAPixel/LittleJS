@@ -1994,41 +1994,32 @@ if (isTouchDevice)
     let wasTouching, mouseDown = onmousedown, mouseUp = onmouseup;
     onmousedown = onmouseup = ()=> 0;
 
-    // setup touch input
-    ontouchstart = (e)=>
+    // handle all touch events the same way
+    ontouchstart = ontouchmove = ontouchend = (e)=>
     {
-        // handle all touch events the same way
-        ontouchstart = ontouchmove = ontouchend = (e)=>
+        e.button = 0; // all touches are left click
+
+        // fix stalled audio on mobile
+        if (soundEnable)
+            audioContext ? audioContext.resume() : zzfx(0);
+
+        // check if touching and pass to mouse events
+        const touching = e.touches.length;
+        if (touching)
         {
-            e.button = 0; // all touches are left click
-
-            // fix stalled audio on mobile
-            if (soundEnable && audioContext.state != 'running')
-                audioContext.resume();
-
-            // check if touching and pass to mouse events
-            const touching = e.touches.length;
-            if (touching)
-            {
-                // set event pos and pass it along
-                e.x = e.touches[0].clientX;
-                e.y = e.touches[0].clientY;
-                wasTouching ? onmousemove(e) : mouseDown(e);
-            }
-            else if (wasTouching)
-                mouseUp(e);
-
-            // set was touching
-            wasTouching = touching;
-
-            // must return true so the document will get focus
-            return true;
+            // set event pos and pass it along
+            e.x = e.touches[0].clientX;
+            e.y = e.touches[0].clientY;
+            wasTouching ? onmousemove(e) : mouseDown(e);
         }
+        else if (wasTouching)
+            mouseUp(e);
 
-        // try to create touch game pad
-        touchGamepadEnable && touchGamepadCreate();
+        // set was touching
+        wasTouching = touching;
 
-        return ontouchstart(e);
+        // must return true so the document will get focus
+        return true;
     }
 }
 
@@ -2039,13 +2030,13 @@ if (isTouchDevice)
 let touchGamepadTimer = new Timer, touchGamepadButtons, touchGamepadStick;
 
 // create the touch gamepad, called automatically by the engine
-function touchGamepadCreate()
+if (touchGamepadEnable)
 {
     // touch input internal variables
     touchGamepadButtons = [];
     touchGamepadStick = vec2();
 
-    let touchHandler = ontouchstart;
+    const touchHandler = ontouchstart;
     ontouchstart = ontouchmove = ontouchend = (e)=> 
     {
         // clear touch gamepad input
@@ -2275,12 +2266,17 @@ class SoundWave extends Sound
         super(0, range, taper);
         this.randomness = randomness;
 
+        if (!soundEnable) return;
+        if (!soundWaveDecoderContext)
+            soundDecoderContext = new AudioContext;
+
         fetch(waveFilename)
         .then(response => response.arrayBuffer())
-        .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
+        .then(arrayBuffer => soundWaveDecoderContext.decodeAudioData(arrayBuffer))
         .then(audioBuffer => this.cachedSamples = audioBuffer.getChannelData(0));
     }
 }
+let soundDecoderContext; // audio context used only to decode audio files
 
 /**
  * Music Object - Stores a zzfx music track for later use
@@ -2409,7 +2405,7 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
 
 /** Audio context used by the engine
  *  @memberof Audio */
-let audioContext = soundEnable ? new AudioContext : 0;
+let audioContext;
 
 /** Play cached audio samples with given settings
  *  @param {Array}   sampleChannels - Array of arrays of samples to play (for stereo playback)
@@ -2422,6 +2418,10 @@ let audioContext = soundEnable ? new AudioContext : 0;
 function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0) 
 {
     if (!soundEnable) return;
+
+    // create audio context if needed
+    if (!audioContext)
+        audioContext = new AudioContext;
 
     // prevent sounds from building up if they can't be played
     if (audioContext.state != 'running')
@@ -2634,7 +2634,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
 
         // stop if end, different instrument or new note
         stop = i == patternChannel.length + isSequenceEnd - 1 && isSequenceEnd ||
-            instrument != (patternChannel[0] || 0) || note;
+            instrument != (patternChannel[0] || 0) || note | 0;
 
         // fill buffer with samples for previous beat, most cpu intensive part
         for (j = 0; j < beatLength && notFirstBeat;

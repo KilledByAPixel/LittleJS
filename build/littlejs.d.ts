@@ -1342,7 +1342,7 @@ declare module "littlejs.esm" {
     export function getNoteFrequency(semitoneOffset: number, rootFrequency?: number): number;
     /** Audio context used by the engine
      *  @memberof Audio */
-    export let audioContext: number | AudioContext;
+    export let audioContext: any;
     /** Play cached audio samples with given settings
      *  @param {Array}   sampleChannels - Array of arrays of samples to play (for stereo playback)
      *  @param {Number}  [volume=1] - How much to scale volume by
