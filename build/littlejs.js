@@ -1733,33 +1733,31 @@ const tileImage = new Image;
 let tileImageSize, tileImageFixBleed, drawCount;
 
 /** Convert from screen to world space coordinates
- *  - if calling outside of render, you may need to manually set mainCanvasSize
  *  @param {Vector2} screenPos
  *  @return {Vector2}
  *  @memberof Draw */
 function screenToWorld(screenPos)
 {
     ASSERT(mainCanvasSize.x && mainCanvasSize.y, 'mainCanvasSize is invalid');
-    return screenPos
-        .add(vec2(.5))
-        .subtract(mainCanvasSize.scale(.5))
-        .multiply(vec2(1/cameraScale,-1/cameraScale))
-        .add(cameraPos);
+    return new Vector2
+    (
+        (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale + cameraPos.x,
+        (screenPos.y - mainCanvasSize.y/2 + .5) / -cameraScale + cameraPos.y
+    );
 }
 
 /** Convert from world to screen space coordinates
- *  - if calling outside of render, you may need to manually set mainCanvasSize
  *  @param {Vector2} worldPos
  *  @return {Vector2}
  *  @memberof Draw */
 function worldToScreen(worldPos)
 {
     ASSERT(mainCanvasSize.x && mainCanvasSize.y, 'mainCanvasSize is invalid');
-    return worldPos
-        .subtract(cameraPos)
-        .multiply(vec2(cameraScale,-cameraScale))
-        .add(mainCanvasSize.scale(.5))
-        .subtract(vec2(.5));
+    return new Vector2
+    (
+        (worldPos.x - cameraPos.x) *  cameraScale + mainCanvasSize.x/2 - .5,
+        (worldPos.y - cameraPos.y) * -cameraScale + mainCanvasSize.y/2 - .5
+    );
 }
 
 /** Draw textured tile centered in world space, with color applied if using WebGL
@@ -1772,13 +1770,21 @@ function worldToScreen(worldPos)
  *  @param {Boolean} [mirror=0]                     - If true image is flipped along the Y axis
  *  @param {Color}   [additiveColor=Color(0,0,0,0)] - Additive color to be applied
  *  @param {Boolean} [useWebGL=glEnable]            - Use accelerated WebGL rendering
+ *  @param {Boolean} [screenSpace=0]                - If true the pos and size are in screen space
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, color=new Color,
-    angle=0, mirror, additiveColor=new Color(0,0,0,0), useWebGL=glEnable)
+    angle=0, mirror, additiveColor=new Color(0,0,0,0), useWebGL=glEnable, screenSpace)
 {
     showWatermark && ++drawCount;
+    
     if (glEnable && useWebGL)
     {
+        if (screenSpace)
+        {
+            // convert to world space
+            pos = screenToWorld(pos);
+            size = size.scale(1/cameraScale);
+        }
         if (tileIndex < 0 || !tileImage.width)
         {
             // if negative tile index or image not found, force untextured
@@ -1820,7 +1826,7 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, col
                 context.globalAlpha = color.a; // only alpha is supported
                 context.drawImage(tileImage, sX, sY, sWidth, sHeight, -.5, -.5, 1, 1);
             }
-        });
+        }, undefined, screenSpace);
     }
 }
 
@@ -1830,38 +1836,33 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, col
  *  @param {Color}   [color=Color()]
  *  @param {Number}  [angle=0]
  *  @param {Boolean} [useWebGL=glEnable]
+ *  @param {Boolean} [screenSpace=0]
  *  @memberof Draw */
-function drawRect(pos, size, color, angle, useWebGL)
-{
-    drawTile(pos, size, -1, tileSizeDefault, color, angle, 0, 0, useWebGL);
-}
+function drawRect(pos, size, color, angle, useWebGL, screenSpace)
+{ drawTile(pos, size, -1, tileSizeDefault, color, angle, 0, undefined, useWebGL, screenSpace); }
 
-/** Draw textured tile centered on pos in screen space
- *  @param {Vector2} pos                        - Center of the tile
- *  @param {Vector2} [size=Vector2(1,1)]    - Size of the tile
- *  @param {Number}  [tileIndex=-1]             - Tile index to use, negative is untextured
- *  @param {Vector2} [tileSize=tileSizeDefault] - Tile size in source pixels
+/** Draw colored polygon using passed in points
+ *  @param {Array}   points - Array of Vector2 points
  *  @param {Color}   [color=Color()]
- *  @param {Number}  [angle=0]
- *  @param {Boolean} [mirror=0]
- *  @param {Color}   [additiveColor=Color(0,0,0,0)]
  *  @param {Boolean} [useWebGL=glEnable]
+ *  @param {Boolean} [screenSpace=0]
  *  @memberof Draw */
-function drawTileScreenSpace(pos, size=vec2(1), tileIndex, tileSize, color, angle, mirror, additiveColor, useWebGL)
+function drawPoly(points, color=new Color, useWebGL=glEnable, screenSpace)
 {
-    drawTile(screenToWorld(pos), size.scale(1/cameraScale), tileIndex, tileSize, color, angle, mirror, additiveColor, useWebGL);
-}
-
-/** Draw colored rectangle in screen space
- *  @param {Vector2} pos
- *  @param {Vector2} [size=Vector2(1,1)]
- *  @param {Color}   [color=Color()]
- *  @param {Number}  [angle=0]
- *  @param {Boolean} [useWebGL=glEnable]
- *  @memberof Draw */
-function drawRectScreenSpace(pos, size, color, angle, useWebGL)
-{
-    drawTileScreenSpace(pos, size, -1, tileSizeDefault, color, angle, 0, 0, useWebGL);
+    if (useWebGL)
+        glDrawPoints(screenSpace ? points.map(screenToWorld) : points, color.rgbaInt());
+    else
+    {
+        // draw using canvas
+        mainContext.fillStyle = color;
+        mainContext.beginPath();
+        for (const point of points)
+        {
+            const pos = screenSpace ? point : worldToScreen(point);
+            mainContext.lineTo(pos.x, pos.y);
+        }
+        mainContext.fill();
+    }
 }
 
 /** Draw colored line between two points
@@ -1870,12 +1871,13 @@ function drawRectScreenSpace(pos, size, color, angle, useWebGL)
  *  @param {Number}  [thickness=.1]
  *  @param {Color}   [color=Color()]
  *  @param {Boolean} [useWebGL=glEnable]
+ *  @param {Boolean} [screenSpace=0]
  *  @memberof Draw */
 function drawLine(posA, posB, thickness=.1, color, useWebGL)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);
-    drawRect(posA.add(halfDelta), size, color, halfDelta.angle(), useWebGL);
+    drawRect(posA.add(halfDelta), size, color, halfDelta.angle(), useWebGL, screenSpace);
 }
 
 /** Draw directly to a 2d canvas context in world space
@@ -1885,12 +1887,16 @@ function drawLine(posA, posB, thickness=.1, color, useWebGL)
  *  @param {Boolean}  mirror
  *  @param {Function} drawFunction
  *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @param {Boolean} [screenSpace=0]
  *  @memberof Draw */
-function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainContext)
+function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainContext, screenSpace)
 {
-    // create canvas transform from world space to screen space
-    pos = worldToScreen(pos);
-    size = size.scale(cameraScale);
+    if (!screenSpace)
+    {
+        // create canvas transform from world space to screen space
+        pos = worldToScreen(pos);
+        size = size.scale(cameraScale);
+    }
     context.save();
     context.translate(pos.x+.5|0, pos.y+.5|0);
     context.rotate(angle);
@@ -1997,6 +2003,17 @@ class FontImage
         this.context = context;
     }
 
+    /** Draw text in world space using the image font
+     *  @param {String}  text
+     *  @param {Vector2} pos
+     *  @param {Number}  [scale=.25]
+     *  @param {Boolean} [center]
+     */
+    drawText(text, pos, scale=1, center)
+    {
+        this.drawTextScreen(text, worldToScreen(pos).floor(), scale*cameraScale|0, center);
+    }
+
     /** Draw text in screen space using the image font
      *  @param {String}  text
      *  @param {Vector2} pos
@@ -2033,17 +2050,6 @@ class FontImage
         });
 
         context.restore();
-    }
-
-    /** Draw text in world space using the image font
-     *  @param {String}  text
-     *  @param {Vector2} pos
-     *  @param {Number}  [scale=.25]
-     *  @param {Boolean} [center]
-     */
-    drawText(text, pos, scale=1, center)
-    {
-        this.drawTextScreen(text, worldToScreen(pos).floor(), scale*cameraScale|0, center);
     }
 }
 
@@ -2348,13 +2354,14 @@ if (isTouchDevice)
     // setup touch input
     ontouchstart = (e)=>
     {
-        // fix mobile audio, force it to play a sound on first touch
-        zzfx(0);
-
         // handle all touch events the same way
         ontouchstart = ontouchmove = ontouchend = (e)=>
         {
             e.button = 0; // all touches are left click
+
+            // fix stalled audio on mobile
+            if (soundEnable && audioContext.state != 'running')
+                audioContext.resume();
 
             // check if touching and pass to mouse events
             const touching = e.touches.length;
@@ -2553,12 +2560,15 @@ class Sound
         /** @property {Number} - At what percentage of range should it start tapering off */
         this.taper = taper;
 
-        // get randomness from sound parameters
-        this.randomness = zzfxSound[1] || 0;
-        zzfxSound[1] = 0;
+        /** @property {Number} - How much to randomize frequency each time sound plays */
+        this.randomness = 0;
 
-        // generate sound now for fast playback
-        this.cachedSamples = zzfxG(...zzfxSound);
+        if (zzfxSound)
+        {
+            // generate zzfx sound now for fast playback
+            this.randomness = zzfxSound[1] || (zzfxSound[1] = 0); 
+            this.cachedSamples = zzfxSound && zzfxG(...zzfxSound);
+        }
     }
 
     /** Play the sound
@@ -2570,7 +2580,7 @@ class Sound
      */
     play(pos, volume=1, pitch=1, randomnessScale=1)
     {
-        if (!soundEnable) return;
+        if (!soundEnable || !this.cachedSamples) return;
 
         let pan;
         if (pos)
@@ -2603,10 +2613,29 @@ class Sound
      *  @return {AudioBufferSourceNode} - The audio, can be used to stop sound later
      */
     playNote(semitoneOffset, pos, volume)
-    {
-        if (!soundEnable) return;
+    { return this.play(pos, volume, 2**(semitoneOffset/12), 0); }
+}
 
-        return this.play(pos, volume, 2**(semitoneOffset/12), 0);
+/** 
+ * Sound Wave Object - Stores a wave sound for later use and can be played positionally
+ */
+class SoundWave extends Sound
+{
+    /** Create a sound object and cache the wave file for later use
+     *  @param {String} waveFilename - Filename of wave file to load
+     *  @param {Number} [randomness=.05] - How much to randomize frequency each time sound plays
+     *  @param {Number} [range=soundDefaultRange] - World space max range of sound, will not play if camera is farther away
+     *  @param {Number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering off
+     */
+    constructor(waveFilename, randomness=.05, range, taper)
+    {
+        super(0, range, taper);
+        this.randomness = randomness;
+
+        fetch(waveFilename)
+        .then(response => response.arrayBuffer())
+        .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
+        .then(audioBuffer => this.cachedSamples = audioBuffer.getChannelData(0));
     }
 }
 
@@ -2737,7 +2766,7 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
 
 /** Audio context used by the engine
  *  @memberof Audio */
-let audioContext;
+let audioContext = soundEnable ? new AudioContext : 0;
 
 /** Play cached audio samples with given settings
  *  @param {Array}   sampleChannels - Array of arrays of samples to play (for stereo playback)
@@ -2751,16 +2780,13 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0)
 {
     if (!soundEnable) return;
 
-    // create audio context
-    if (!audioContext)
-        audioContext = new AudioContext;
-
-    // fix stalled audio
-    audioContext.resume();
-
     // prevent sounds from building up if they can't be played
     if (audioContext.state != 'running')
+    {
+        // fix stalled audio
+        audioContext.resume();
         return;
+    }
 
     // create buffer and source
     const buffer = audioContext.createBuffer(sampleChannels.length, sampleChannels[0].length, zzfxR), 
@@ -4203,8 +4229,8 @@ function glFlush()
 
     // draw all the sprites in the batch and reset the buffer
     glContext.bufferSubData(gl_ARRAY_BUFFER, 0, 
-        glPositionData.subarray(0, glBatchCount * gl_VERTICES_PER_QUAD * gl_INDICIES_PER_VERT));
-    glContext.drawArrays(gl_TRIANGLES, 0, glBatchCount * gl_VERTICES_PER_QUAD);
+        glPositionData.subarray(0, glBatchCount * gl_INDICIES_PER_VERT));
+    glContext.drawArrays(gl_TRIANGLE_STRIP, 0, glBatchCount);
     glBatchCount = 0;
     glBatchAdditive = glAdditive;
 }
@@ -4225,39 +4251,75 @@ function glCopyToContext(context, forceDraw)
 }
 
 /** Add a sprite to the gl draw list, used by all gl draw functions
- *  @param x
- *  @param y
- *  @param sizeX
- *  @param sizeY
- *  @param angle
- *  @param uv0X
- *  @param uv0Y
- *  @param uv1X
- *  @param uv1Y
- *  @param rgba
- *  @param [rgbaAdditive=0]
+ *  @param {Number} x
+ *  @param {Number} y
+ *  @param {Number} sizeX
+ *  @param {Number} sizeY
+ *  @param {Number} angle
+ *  @param {Number} uv0X
+ *  @param {Number} uv0Y
+ *  @param {Number} uv1X
+ *  @param {Number} uv1Y
+ *  @param {Number} rgba
+ *  @param {Number} [rgbaAdditive=0]
  *  @memberof WebGL */
 function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdditive=0)
 {
-    // flush if there is no room for more verts or if different blend mode
-    if (glBatchCount == gl_MAX_BATCH || glBatchAdditive != glAdditive)
+    // flush if there is not enough room or if different blend mode
+    const vertCount = 6;
+    if (glBatchCount >= gl_MAX_BATCH-vertCount || glBatchAdditive != glAdditive)
         glFlush();
 
     // prepare to create the verts from size and angle
     const c = Math.cos(angle)/2, s = Math.sin(angle)/2;
     const cx = c*sizeX, cy = c*sizeY, sx = s*sizeX, sy = s*sizeY;
-        
-    // setup 2 triangles to form a quad
-    for(let i=6, offset = glBatchCount++ * gl_VERTICES_PER_QUAD * gl_INDICIES_PER_VERT; i--;)
+    const positionData = 
+    [
+        x-cx+sy, y+cy+sx, uv0X, uv0Y,
+        x-cx-sy, y-cy+sx, uv0X, uv1Y,
+        x+cx+sy, y+cy-sx, uv1X, uv0Y,
+        x+cx-sy, y-cy-sx, uv1X, uv1Y,
+    ];
+
+    // setup 2 triangle strip quad
+    for(let i = vertCount, offset = glBatchCount * gl_INDICIES_PER_VERT; i--;)
     {
-        const a = i-4&&i>1, b = i-5&&i-2&&i-1;
-        glPositionData[offset++] = x + (a?-cx:cx) + (b?sy:-sy);
-        glPositionData[offset++] = y + (b?cy:-cy) + (a?sx:-sx);
-        glPositionData[offset++] = a ? uv0X : uv1X; 
-        glPositionData[offset++] = b ? uv0Y : uv1Y;
+        let j = clamp(i-1, 0, 3)*4;  // degenerate tri at ends
+        glPositionData[offset++] = positionData[j++];
+        glPositionData[offset++] = positionData[j++];
+        glPositionData[offset++] = positionData[j++];
+        glPositionData[offset++] = positionData[j++];
         glColorData[offset++] = rgba; 
         glColorData[offset++] = rgbaAdditive;
     }
+    glBatchCount += vertCount;
+}
+
+/** Add a convex polygon to the gl draw list
+ *  @param {Array} points - Array of Vector2 points
+ *  @param {Number} rgba - Color of the polygon
+ *  @memberof WebGL */
+function glDrawPoints(points, rgba)
+{
+    // flush if there is not enough room or if different blend mode
+    const vertCount = points.length + 2;
+    if (glBatchCount >= gl_MAX_BATCH-vertCount || glBatchAdditive != glAdditive)
+        glFlush();
+  
+    // setup triangle strip from list of points
+    for(let i = vertCount, offset = glBatchCount * gl_INDICIES_PER_VERT; i--;)
+    {
+        const j = clamp(i-1, 0, vertCount-3);  // degenerate tri at ends
+        const h = j>>1;
+        const point = points[j%2? h : vertCount-3-h];
+        glPositionData[offset++] = point.x;
+        glPositionData[offset++] = point.y;
+        glPositionData[offset++] = 0; // uvx
+        glPositionData[offset++] = 0; // uvy
+        glColorData[offset++] = 0;    // nothing to tint
+        glColorData[offset++] = rgba; // apply rgba via additive
+    }
+    glBatchCount += vertCount;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4351,14 +4413,14 @@ function glRenderPostProcess()
     glContext.uniform1i(uniformLocation('iChannel0'), 0);
     glContext.uniform1f(uniformLocation('iTime'), time);
     glContext.uniform3f(uniformLocation('iResolution'), mainCanvas.width, mainCanvas.height, 1);
-    glContext.drawArrays(gl_TRIANGLES, 0, 3);
+    glContext.drawArrays(gl_TRIANGLE_STRIP, 0, 3);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // store gl constants as integers so their name doesn't use space in minifed
 const 
 gl_ONE = 1,
-gl_TRIANGLES = 4,
+gl_TRIANGLE_STRIP = 5,
 gl_SRC_ALPHA = 770,
 gl_ONE_MINUS_SRC_ALPHA = 771,
 gl_BLEND = 3042,
@@ -4389,9 +4451,9 @@ gl_UNPACK_FLIP_Y_WEBGL = 37440,
 // constants for batch rendering
 gl_VERTICES_PER_QUAD = 6,
 gl_INDICIES_PER_VERT = 6,
-gl_MAX_BATCH = 1<<16,
+gl_MAX_BATCH = 1e5,
 gl_VERTEX_BYTE_STRIDE = (4 * 2) * 2 + (4) * 2, // vec2 * 2 + (char * 4) * 2
-gl_VERTEX_BUFFER_SIZE = gl_MAX_BATCH * gl_VERTICES_PER_QUAD * gl_VERTEX_BYTE_STRIDE;
+gl_VERTEX_BUFFER_SIZE = gl_MAX_BATCH * gl_VERTEX_BYTE_STRIDE;
 /** 
  * LittleJS - The Tiny JavaScript Game Engine That Can!
  * MIT License - Copyright 2021 Frank Force
@@ -4424,7 +4486,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.7.0';
+const engineVersion = '1.7.01';
 
 /** Frames per second to update objects
  *  @type {Number}

@@ -999,13 +999,11 @@ declare module "littlejs.esm" {
      *  @memberof Draw */
     export let mainCanvasSize: Vector2;
     /** Convert from screen to world space coordinates
-     *  - if calling outside of render, you may need to manually set mainCanvasSize
      *  @param {Vector2} screenPos
      *  @return {Vector2}
      *  @memberof Draw */
     export function screenToWorld(screenPos: Vector2): Vector2;
     /** Convert from world to screen space coordinates
-     *  - if calling outside of render, you may need to manually set mainCanvasSize
      *  @param {Vector2} worldPos
      *  @return {Vector2}
      *  @memberof Draw */
@@ -1020,42 +1018,25 @@ declare module "littlejs.esm" {
      *  @param {Boolean} [mirror=0]                     - If true image is flipped along the Y axis
      *  @param {Color}   [additiveColor=Color(0,0,0,0)] - Additive color to be applied
      *  @param {Boolean} [useWebGL=glEnable]            - Use accelerated WebGL rendering
+     *  @param {Boolean} [screenSpace=0]                - If true the pos and size are in screen space
      *  @memberof Draw */
-    export function drawTile(pos: Vector2, size?: Vector2, tileIndex?: number, tileSize?: Vector2, color?: Color, angle?: number, mirror?: boolean, additiveColor?: Color, useWebGL?: boolean): void;
+    export function drawTile(pos: Vector2, size?: Vector2, tileIndex?: number, tileSize?: Vector2, color?: Color, angle?: number, mirror?: boolean, additiveColor?: Color, useWebGL?: boolean, screenSpace?: boolean): void;
     /** Draw colored rect centered on pos
      *  @param {Vector2} pos
      *  @param {Vector2} [size=Vector2(1,1)]
      *  @param {Color}   [color=Color()]
      *  @param {Number}  [angle=0]
      *  @param {Boolean} [useWebGL=glEnable]
+     *  @param {Boolean} [screenSpace=0]
      *  @memberof Draw */
-    export function drawRect(pos: Vector2, size?: Vector2, color?: Color, angle?: number, useWebGL?: boolean): void;
-    /** Draw textured tile centered on pos in screen space
-     *  @param {Vector2} pos                        - Center of the tile
-     *  @param {Vector2} [size=Vector2(1,1)]    - Size of the tile
-     *  @param {Number}  [tileIndex=-1]             - Tile index to use, negative is untextured
-     *  @param {Vector2} [tileSize=tileSizeDefault] - Tile size in source pixels
-     *  @param {Color}   [color=Color()]
-     *  @param {Number}  [angle=0]
-     *  @param {Boolean} [mirror=0]
-     *  @param {Color}   [additiveColor=Color(0,0,0,0)]
-     *  @param {Boolean} [useWebGL=glEnable]
-     *  @memberof Draw */
-    export function drawTileScreenSpace(pos: Vector2, size?: Vector2, tileIndex?: number, tileSize?: Vector2, color?: Color, angle?: number, mirror?: boolean, additiveColor?: Color, useWebGL?: boolean): void;
-    /** Draw colored rectangle in screen space
-     *  @param {Vector2} pos
-     *  @param {Vector2} [size=Vector2(1,1)]
-     *  @param {Color}   [color=Color()]
-     *  @param {Number}  [angle=0]
-     *  @param {Boolean} [useWebGL=glEnable]
-     *  @memberof Draw */
-    export function drawRectScreenSpace(pos: Vector2, size?: Vector2, color?: Color, angle?: number, useWebGL?: boolean): void;
+    export function drawRect(pos: Vector2, size?: Vector2, color?: Color, angle?: number, useWebGL?: boolean, screenSpace?: boolean): void;
     /** Draw colored line between two points
      *  @param {Vector2} posA
      *  @param {Vector2} posB
      *  @param {Number}  [thickness=.1]
      *  @param {Color}   [color=Color()]
      *  @param {Boolean} [useWebGL=glEnable]
+     *  @param {Boolean} [screenSpace=0]
      *  @memberof Draw */
     export function drawLine(posA: Vector2, posB: Vector2, thickness?: number, color?: Color, useWebGL?: boolean): void;
     /** Draw directly to a 2d canvas context in world space
@@ -1065,8 +1046,9 @@ declare module "littlejs.esm" {
      *  @param {Boolean}  mirror
      *  @param {Function} drawFunction
      *  @param {CanvasRenderingContext2D} [context=mainContext]
+     *  @param {Boolean} [screenSpace=0]
      *  @memberof Draw */
-    export function drawCanvas2D(pos: Vector2, size: Vector2, angle: number, mirror: boolean, drawFunction: Function, context?: CanvasRenderingContext2D): void;
+    export function drawCanvas2D(pos: Vector2, size: Vector2, angle: number, mirror: boolean, drawFunction: Function, context?: CanvasRenderingContext2D, screenSpace?: boolean): void;
     /** Enable normal or additive blend mode
      *  @param {Boolean} [additive=0]
      *  @param {Boolean} [useWebGL=glEnable]
@@ -1125,13 +1107,6 @@ declare module "littlejs.esm" {
         paddingSize: Vector2;
         startTileIndex: number;
         context: CanvasRenderingContext2D;
-        /** Draw text in screen space using the image font
-         *  @param {String}  text
-         *  @param {Vector2} pos
-         *  @param {Number}  [scale=4]
-         *  @param {Boolean} [center]
-         */
-        drawTextScreen(text: string, pos: Vector2, scale?: number, center?: boolean): void;
         /** Draw text in world space using the image font
          *  @param {String}  text
          *  @param {Vector2} pos
@@ -1139,6 +1114,13 @@ declare module "littlejs.esm" {
          *  @param {Boolean} [center]
          */
         drawText(text: string, pos: Vector2, scale?: number, center?: boolean): void;
+        /** Draw text in screen space using the image font
+         *  @param {String}  text
+         *  @param {Vector2} pos
+         *  @param {Number}  [scale=4]
+         *  @param {Boolean} [center]
+         */
+        drawTextScreen(text: string, pos: Vector2, scale?: number, center?: boolean): void;
     }
     /** Returns true if fullscreen mode is active
      *  @return {Boolean}
@@ -1264,6 +1246,7 @@ declare module "littlejs.esm" {
         range: number;
         /** @property {Number} - At what percentage of range should it start tapering off */
         taper: number;
+        /** @property {Number} - How much to randomize frequency each time sound plays */
         randomness: any;
         cachedSamples: any[];
         /** Play the sound
@@ -1359,7 +1342,7 @@ declare module "littlejs.esm" {
     export function getNoteFrequency(semitoneOffset: number, rootFrequency?: number): number;
     /** Audio context used by the engine
      *  @memberof Audio */
-    export let audioContext: any;
+    export let audioContext: number | AudioContext;
     /** Play cached audio samples with given settings
      *  @param {Array}   sampleChannels - Array of arrays of samples to play (for stereo playback)
      *  @param {Number}  [volume=1] - How much to scale volume by
