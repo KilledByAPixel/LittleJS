@@ -275,41 +275,31 @@ if (isTouchDevice)
     let wasTouching, mouseDown = onmousedown, mouseUp = onmouseup;
     onmousedown = onmouseup = ()=> 0;
 
-    // setup touch input
-    ontouchstart = (e)=>
+    // handle all touch events the same way
+    ontouchstart = ontouchmove = ontouchend = (e)=>
     {
-        // handle all touch events the same way
-        ontouchstart = ontouchmove = ontouchend = (e)=>
+        e.button = 0; // all touches are left click
+
+        // fix stalled audio on mobile
+        soundEnable && audioContext.resume();
+
+        // check if touching and pass to mouse events
+        const touching = e.touches.length;
+        if (touching)
         {
-            e.button = 0; // all touches are left click
-
-            // fix stalled audio on mobile
-            if (soundEnable && audioContext.state != 'running')
-                audioContext.resume();
-
-            // check if touching and pass to mouse events
-            const touching = e.touches.length;
-            if (touching)
-            {
-                // set event pos and pass it along
-                e.x = e.touches[0].clientX;
-                e.y = e.touches[0].clientY;
-                wasTouching ? onmousemove(e) : mouseDown(e);
-            }
-            else if (wasTouching)
-                mouseUp(e);
-
-            // set was touching
-            wasTouching = touching;
-
-            // must return true so the document will get focus
-            return true;
+            // set event pos and pass it along
+            e.x = e.touches[0].clientX;
+            e.y = e.touches[0].clientY;
+            wasTouching ? onmousemove(e) : mouseDown(e);
         }
+        else if (wasTouching)
+            mouseUp(e);
 
-        // try to create touch game pad
-        touchGamepadEnable && touchGamepadCreate();
+        // set was touching
+        wasTouching = touching;
 
-        return ontouchstart(e);
+        // must return true so the document will get focus
+        return true;
     }
 }
 
@@ -320,13 +310,13 @@ if (isTouchDevice)
 let touchGamepadTimer = new Timer, touchGamepadButtons, touchGamepadStick;
 
 // create the touch gamepad, called automatically by the engine
-function touchGamepadCreate()
+if (touchGamepadEnable)
 {
     // touch input internal variables
     touchGamepadButtons = [];
     touchGamepadStick = vec2();
 
-    let touchHandler = ontouchstart;
+    const touchHandler = ontouchstart;
     ontouchstart = ontouchmove = ontouchend = (e)=> 
     {
         // clear touch gamepad input
