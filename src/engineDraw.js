@@ -179,11 +179,8 @@ function drawPoly(points, color=new Color, useWebGL=glEnable, screenSpace)
         // draw using canvas
         mainContext.fillStyle = color;
         mainContext.beginPath();
-        for (const point of points)
-        {
-            const pos = screenSpace ? point : worldToScreen(point);
-            mainContext.lineTo(pos.x, pos.y);
-        }
+        for (const point of screenSpace ? points : points.map(worldToScreen))
+            mainContext.lineTo(point.x, point.y);
         mainContext.fill();
     }
 }
