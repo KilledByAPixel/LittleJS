@@ -19,7 +19,7 @@
 'use strict';
 
 // keep our own list of simple sprites and track fps
-let sprites, timeMS, showFPS, statsDisplay, spriteColor, spriteAdditiveColor;
+let sprites, timeMS, fpsDisplay, statsDisplay, spriteColor, spriteAdditiveColor;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -95,7 +95,7 @@ function gameRender()
 {
     // track fps and update stats
     const frameTimeMS = Date.now();
-    showFPS = lerp(.05, showFPS, 1e3/(frameTimeMS - timeMS||1));
+    fpsDisplay = lerp(.05, fpsDisplay||0, 1e3/(frameTimeMS - timeMS||1));
     timeMS = frameTimeMS;
 
     const spriteCount = sprites.length
@@ -104,7 +104,7 @@ function gameRender()
         spriteCount + objectCount ?
             spriteCount + ' Sprites\n' 
             + objectCount + ' Objects\n' 
-            + showFPS.toFixed(1) + ' FPS'
+            + fpsDisplay.toFixed(1) + ' FPS'
         : 'LittleJS Stress Test\nLeft Click = Add Particles\nRight Click = Add Objects';
 
     const size = vec2(.5);
