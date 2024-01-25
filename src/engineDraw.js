@@ -61,7 +61,6 @@ let tileImageSize, tileImageFixBleed, drawCount;
  *  @memberof Draw */
 function screenToWorld(screenPos)
 {
-    ASSERT(mainCanvasSize.x && mainCanvasSize.y, 'mainCanvasSize is invalid');
     return new Vector2
     (
         (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale + cameraPos.x,
@@ -75,7 +74,6 @@ function screenToWorld(screenPos)
  *  @memberof Draw */
 function worldToScreen(worldPos)
 {
-    ASSERT(mainCanvasSize.x && mainCanvasSize.y, 'mainCanvasSize is invalid');
     return new Vector2
     (
         (worldPos.x - cameraPos.x) *  cameraScale + mainCanvasSize.x/2 - .5,
