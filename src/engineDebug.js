@@ -138,11 +138,27 @@ function debugClear() { debugPrimitives = []; }
 /** Save a canvas to disk 
  *  @param {HTMLCanvasElement} canvas
  *  @param {String}            [filename]
+ *  @param {String}            [type='image/png']
  *  @memberof Debug */
-function debugSaveCanvas(canvas, filename = engineName + '.png')
+function debugSaveCanvas(canvas, filename=engineName, type='image/png')
+{ debugSaveDataURL(canvas.toDataURL(type), filename); }
+
+/** Save a text file to disk 
+ *  @param {String}     text
+ *  @param {String}     [filename]
+ *  @param {String}     [type='text/plain']
+ *  @memberof Debug */
+function debugSaveText(text, filename=engineName, type='text/plain')
+{ debugSaveDataURL(URL.createObjectURL(new Blob([text], {'type':type})), filename); }
+
+/** Save a data url to disk 
+ *  @param {String}     dataURL
+ *  @param {String}     filename
+ *  @memberof Debug */
+function debugSaveDataURL(dataURL, filename)
 {
-    downloadLink.download = 'screenshot.png';
-    downloadLink.href = canvas.toDataURL('image/png').replace('image/png','image/octet-stream');
+    downloadLink.download = filename;
+    downloadLink.href = dataURL;
     downloadLink.click();
 }
 
