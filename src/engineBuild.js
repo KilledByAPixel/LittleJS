@@ -27,11 +27,11 @@ const engineSourceFiles =
     `${SOURCE_FOLDER}/engine.js`,
 ];
 const asciiArt =`
-        ~~~~°°°°ooo°oOo°ooOooOooOo.
- __________   ________   ____ '°OoO.
- |LittleJS|   |Engine|   |[]|_._._Y
-.|________|_._|______|_._|__|_|_|_|}
-  OOO  OOO     OO  OO     OO=OO---oo\\
+      ~~~~°°°°ooo°oOo°ooOooOooOo.
+ __________   ________   ____'°oO.
+ |LittleJS|   |Engine|   |[]|_._Y
+.|________|_._|______|_._|__|_|_|}
+  OOO  OOO     OO  OO     OO=OO-oo\\
 `;
 const license = '// LittleJS - MIT License - Copyright 2021 Frank Force\n'
 
