@@ -140,11 +140,27 @@ function debugClear() { debugPrimitives = []; }
 /** Save a canvas to disk 
  *  @param {HTMLCanvasElement} canvas
  *  @param {String}            [filename]
+ *  @param {String}            [type='image/png']
  *  @memberof Debug */
-function debugSaveCanvas(canvas, filename = engineName + '.png')
+function debugSaveCanvas(canvas, filename=engineName, type='image/png')
+{ debugSaveDataURL(canvas.toDataURL(type), filename); }
+
+/** Save a text file to disk 
+ *  @param {String}     text
+ *  @param {String}     [filename]
+ *  @param {String}     [type='text/plain']
+ *  @memberof Debug */
+function debugSaveText(text, filename=engineName, type='text/plain')
+{ debugSaveDataURL(URL.createObjectURL(new Blob([text], {'type':type})), filename); }
+
+/** Save a data url to disk 
+ *  @param {String}     dataURL
+ *  @param {String}     filename
+ *  @memberof Debug */
+function debugSaveDataURL(dataURL, filename)
 {
-    downloadLink.download = 'screenshot.png';
-    downloadLink.href = canvas.toDataURL('image/png').replace('image/png','image/octet-stream');
+    downloadLink.download = filename;
+    downloadLink.href = dataURL;
     downloadLink.click();
 }
 
@@ -1738,7 +1754,6 @@ let tileImageSize, tileImageFixBleed, drawCount;
  *  @memberof Draw */
 function screenToWorld(screenPos)
 {
-    ASSERT(mainCanvasSize.x && mainCanvasSize.y, 'mainCanvasSize is invalid');
     return new Vector2
     (
         (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale + cameraPos.x,
@@ -1752,7 +1767,6 @@ function screenToWorld(screenPos)
  *  @memberof Draw */
 function worldToScreen(worldPos)
 {
-    ASSERT(mainCanvasSize.x && mainCanvasSize.y, 'mainCanvasSize is invalid');
     return new Vector2
     (
         (worldPos.x - cameraPos.x) *  cameraScale + mainCanvasSize.x/2 - .5,
@@ -1856,11 +1870,8 @@ function drawPoly(points, color=new Color, useWebGL=glEnable, screenSpace)
         // draw using canvas
         mainContext.fillStyle = color;
         mainContext.beginPath();
-        for (const point of points)
-        {
-            const pos = screenSpace ? point : worldToScreen(point);
-            mainContext.lineTo(pos.x, pos.y);
-        }
+        for (const point of screenSpace ? points : points.map(worldToScreen))
+            mainContext.lineTo(point.x, point.y);
         mainContext.fill();
     }
 }

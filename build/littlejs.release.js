@@ -1381,7 +1381,6 @@ let tileImageSize, tileImageFixBleed, drawCount;
  *  @memberof Draw */
 function screenToWorld(screenPos)
 {
-    ASSERT(mainCanvasSize.x && mainCanvasSize.y, 'mainCanvasSize is invalid');
     return new Vector2
     (
         (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale + cameraPos.x,
@@ -1395,7 +1394,6 @@ function screenToWorld(screenPos)
  *  @memberof Draw */
 function worldToScreen(worldPos)
 {
-    ASSERT(mainCanvasSize.x && mainCanvasSize.y, 'mainCanvasSize is invalid');
     return new Vector2
     (
         (worldPos.x - cameraPos.x) *  cameraScale + mainCanvasSize.x/2 - .5,
@@ -1499,11 +1497,8 @@ function drawPoly(points, color=new Color, useWebGL=glEnable, screenSpace)
         // draw using canvas
         mainContext.fillStyle = color;
         mainContext.beginPath();
-        for (const point of points)
-        {
-            const pos = screenSpace ? point : worldToScreen(point);
-            mainContext.lineTo(pos.x, pos.y);
-        }
+        for (const point of screenSpace ? points : points.map(worldToScreen))
+            mainContext.lineTo(point.x, point.y);
         mainContext.fill();
     }
 }

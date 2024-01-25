@@ -404,8 +404,9 @@ declare module "littlejs.esm" {
     /** Save a canvas to disk
      *  @param {HTMLCanvasElement} canvas
      *  @param {String}            [filename]
+     *  @param {String}            [type='image/png']
      *  @memberof Debug */
-    export function debugSaveCanvas(canvas: HTMLCanvasElement, filename?: string): void;
+    export function debugSaveCanvas(canvas: HTMLCanvasElement, filename?: string, type?: string): void;
     /** A shortcut to get Math.PI
      *  @type {Number}
      *  @default Math.PI
