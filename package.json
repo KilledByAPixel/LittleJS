@@ -1,6 +1,6 @@
 {
   "name": "littlejsengine",
-  "version": "1.7.11",
+  "version": "1.7.12",
   "description": "LittleJS - Tiny and Fast HTML5 Game Engine",
   "main": "build/littlejs.esm.js",
   "repository": {
@@ -8,6 +8,7 @@
     "url": "git+https://github.com/KilledByAPixel/LittleJS.git"
   },
   "keywords": [
+    "LittleJS",
     "HTML5",
     "JavaScript",
     "game",

@@ -4497,7 +4497,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.7.11';
+const engineVersion = '1.7.12';
 
 /** Frames per second to update objects
  *  @type {Number}
@@ -5127,8 +5127,6 @@ export {
 	worldToScreen,
 	drawTile,
 	drawRect,
-	drawTileScreenSpace,
-	drawRectScreenSpace,
 	drawLine,
 	drawCanvas2D,
 	setBlendMode,
