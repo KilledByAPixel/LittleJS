@@ -1905,18 +1905,26 @@ function mouseToScreen(mousePos)
 const stickData = [];
 function gamepadsUpdate()
 {
-    if (touchGamepadEnable && touchGamepadTimer.isSet())
+    // update touch gamepad if enabled
+    if (touchGamepadEnable && isTouchDevice)
     {
-        // read virtual analog stick
-        const sticks = stickData[0] || (stickData[0] = []);
-        sticks[0] = vec2(touchGamepadStick.x, -touchGamepadStick.y); // flip vertical
+        // create the touch gamepad if it doesn't exist
+        if (!touchGamepadButtons)
+            createTouchGamepad();
 
-        // read virtual gamepad buttons
-        const data = inputData[1] || (inputData[1] = []);
-        for (let i=10; i--;)
+        if (touchGamepadTimer.isSet())
         {
-            const j = i == 3 ? 2 : i == 2 ? 3 : i; // fix button locations
-            data[j] = touchGamepadButtons[i] ? 1 + 2*!gamepadIsDown(j,0) : 4*gamepadIsDown(j,0);
+            // read virtual analog stick
+            const sticks = stickData[0] || (stickData[0] = []);
+            sticks[0] = vec2(touchGamepadStick.x, -touchGamepadStick.y); // flip vertical
+
+            // read virtual gamepad buttons
+            const data = inputData[1] || (inputData[1] = []);
+            for (let i=10; i--;)
+            {
+                const j = i == 3 ? 2 : i == 2 ? 3 : i; // fix button locations
+                data[j] = touchGamepadButtons[i] ? 1 + 2*!gamepadIsDown(j,0) : 4*gamepadIsDown(j,0);
+            }
         }
     }
 
@@ -2025,7 +2033,7 @@ if (isTouchDevice)
 let touchGamepadTimer = new Timer, touchGamepadButtons, touchGamepadStick;
 
 // create the touch gamepad, called automatically by the engine
-if (touchGamepadEnable)
+function createTouchGamepad()
 {
     // touch input internal variables
     touchGamepadButtons = [];
@@ -4124,7 +4132,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.7.13';
+const engineVersion = '1.7.14';
 
 /** Frames per second to update objects
  *  @type {Number}
