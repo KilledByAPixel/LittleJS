@@ -2398,6 +2398,9 @@ if (isTouchDevice)
         // set was touching
         wasTouching = touching;
 
+        // prevent default handling like copy and magnifier lens
+        e.preventDefault();
+
         // must return true so the document will get focus
         return true;
     }
@@ -4509,7 +4512,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.7.14';
+const engineVersion = '1.7.17';
 
 /** Frames per second to update objects
  *  @type {Number}
@@ -4579,11 +4582,13 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         debug && (tileImage.onload=()=>ASSERT(1)); // tile sheet can not reloaded
 
         // setup html
-        const styleBody = 'margin:0;overflow:hidden;' + // fill the window
-            'background:#000;' +        // set background color
-            'touch-action:none;' +      // prevent mobile pinch to resize
-            'user-select:none;' +       // prevent mobile hold to select
-            '-webkit-user-select:none'; // compatibility for ios
+        const styleBody = 
+            'margin:0;overflow:hidden;' + // fill the window
+            'background:#000;' +          // set background color
+            'touch-action:none;' +        // prevent mobile pinch to resize
+            'user-select:none;' +         // prevent mobile hold to select
+            '-webkit-user-select:none;' + // compatibility for ios
+            '-webkit-touch-callout:none'; // compatibility for ios
         document.body.style = styleBody;
         document.body.appendChild(mainCanvas = document.createElement('canvas'));
         mainContext = mainCanvas.getContext('2d');
@@ -4597,7 +4602,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         overlayContext = overlayCanvas.getContext('2d');
 
         // set canvas style
-        const styleCanvas = 'position:absolute;' +
+        const styleCanvas = 
+            'position:absolute;' +                               // position canvas              
             'top:50%;left:50%;transform:translate(-50%,-50%);' + // center the canvas
             (canvasPixelated?'image-rendering:pixelated':'');    // set pixelated rendering
         (glCanvas||mainCanvas).style = mainCanvas.style = overlayCanvas.style = styleCanvas;

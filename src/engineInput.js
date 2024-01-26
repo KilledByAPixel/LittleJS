@@ -307,6 +307,9 @@ if (isTouchDevice)
         // set was touching
         wasTouching = touching;
 
+        // prevent default handling like copy and magnifier lens
+        e.preventDefault();
+
         // must return true so the document will get focus
         return true;
     }
