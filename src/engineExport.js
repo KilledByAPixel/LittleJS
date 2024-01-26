@@ -337,8 +337,6 @@ export {
 	worldToScreen,
 	drawTile,
 	drawRect,
-	drawTileScreenSpace,
-	drawRectScreenSpace,
 	drawLine,
 	drawCanvas2D,
 	setBlendMode,
