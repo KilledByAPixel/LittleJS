@@ -191,7 +191,7 @@ function drawPoly(points, color=new Color, useWebGL=glEnable, screenSpace)
  *  @param {Boolean} [useWebGL=glEnable]
  *  @param {Boolean} [screenSpace=0]
  *  @memberof Draw */
-function drawLine(posA, posB, thickness=.1, color, useWebGL)
+function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);

@@ -213,7 +213,11 @@ function debugRender()
         mainContext.drawImage(overlayCanvas, 0, 0);
         overlayCanvas.width |= 0;
 
-        debugSaveCanvas(mainCanvas);
+        // remove alpha and save
+        const w = mainCanvas.width, h = mainCanvas.height;
+        overlayContext.fillRect(0,0,w,h);
+        overlayContext.drawImage(mainCanvas, 0, 0);
+        debugSaveCanvas(overlayCanvas);
         debugTakeScreenshot = 0;
     }
 
@@ -1884,7 +1888,7 @@ function drawPoly(points, color=new Color, useWebGL=glEnable, screenSpace)
  *  @param {Boolean} [useWebGL=glEnable]
  *  @param {Boolean} [screenSpace=0]
  *  @memberof Draw */
-function drawLine(posA, posB, thickness=.1, color, useWebGL)
+function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);
@@ -4497,7 +4501,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.7.12';
+const engineVersion = '1.7.13';
 
 /** Frames per second to update objects
  *  @type {Number}

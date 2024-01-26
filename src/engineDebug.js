@@ -211,7 +211,11 @@ function debugRender()
         mainContext.drawImage(overlayCanvas, 0, 0);
         overlayCanvas.width |= 0;
 
-        debugSaveCanvas(mainCanvas);
+        // remove alpha and save
+        const w = mainCanvas.width, h = mainCanvas.height;
+        overlayContext.fillRect(0,0,w,h);
+        overlayContext.drawImage(mainCanvas, 0, 0);
+        debugSaveCanvas(overlayCanvas);
         debugTakeScreenshot = 0;
     }
 

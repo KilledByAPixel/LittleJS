@@ -1039,7 +1039,7 @@ declare module "littlejs.esm" {
      *  @param {Boolean} [useWebGL=glEnable]
      *  @param {Boolean} [screenSpace=0]
      *  @memberof Draw */
-    export function drawLine(posA: Vector2, posB: Vector2, thickness?: number, color?: Color, useWebGL?: boolean): void;
+    export function drawLine(posA: Vector2, posB: Vector2, thickness?: number, color?: Color, useWebGL?: boolean, screenSpace?: boolean): void;
     /** Draw directly to a 2d canvas context in world space
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
