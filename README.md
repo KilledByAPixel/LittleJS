@@ -33,8 +33,8 @@ LittleJS is a small but powerful game engine with many features and no depenenci
 
 ### 🔊 Audio
 
-- Positional sound effects with [ZzFX](https://killedbyapixel.github.io/ZzFX/) sound effect generator
-- Music with [ZzFXM](https://keithclark.github.io/ZzFXM/), mp3, or wav audio
+- Positional sound effects with wav or [ZzFX](https://killedbyapixel.github.io/ZzFX/) sound effect generator
+- Music with mp3, ogg, wave, or [ZzFXM](https://keithclark.github.io/ZzFXM/)
 
 ### 🎮 Input
 
