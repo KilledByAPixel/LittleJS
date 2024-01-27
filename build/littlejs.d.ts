@@ -1249,22 +1249,39 @@ declare module "littlejs.esm" {
         taper: number;
         /** @property {Number} - How much to randomize frequency each time sound plays */
         randomness: any;
-        cachedSamples: any[];
+        sampleChannels: any[][];
+        sampleRate: number;
         /** Play the sound
          *  @param {Vector2} [pos] - World space position to play the sound, sound is not attenuated if null
          *  @param {Number}  [volume=1] - How much to scale volume by (in addition to range fade)
          *  @param {Number}  [pitch=1] - How much to scale pitch by (also adjusted by this.randomness)
          *  @param {Number}  [randomnessScale=1] - How much to scale randomness
-         *  @return {AudioBufferSourceNode} - The audio, can be used to stop sound later
+         *  @param {Boolean} [loop=0] - Should the sound loop
+         *  @return {AudioBufferSourceNode} - The audio source node
          */
-        play(pos?: Vector2, volume?: number, pitch?: number, randomnessScale?: number): AudioBufferSourceNode;
+        play(pos?: Vector2, volume?: number, pitch?: number, randomnessScale?: number, loop?: boolean): AudioBufferSourceNode;
+        source: number | AudioBufferSourceNode;
+        /** Stop the last instance of this sound that was played */
+        stop(): void;
         /** Play the sound as a note with a semitone offset
          *  @param {Number}  semitoneOffset - How many semitones to offset pitch
          *  @param {Vector2} [pos] - World space position to play the sound, sound is not attenuated if null
          *  @param {Number}  [volume=1] - How much to scale volume by (in addition to range fade)
-         *  @return {AudioBufferSourceNode} - The audio, can be used to stop sound later
+         *  @return {AudioBufferSourceNode} - The audio source node
          */
         playNote(semitoneOffset: number, pos?: Vector2, volume?: number): AudioBufferSourceNode;
+        /** Get how long this sound is in seconds
+         *  @return {Number} - How long the sound is in seconds (undefined if loading)
+         */
+        getDuration(): number;
+        /** Check if the last instance of this sound is playing
+         *  @return {Boolean} - True if the sound is playing
+         */
+        isPlaying(): boolean;
+        /** Check if sound is loading, for sounds fetched from a url
+         *  @return {Boolean} - True if sound is loading and not ready to play
+         */
+        isLoading(): boolean;
     }
     /**
      * Music Object - Stores a zzfx music track for later use
@@ -1296,30 +1313,23 @@ declare module "littlejs.esm" {
      * // play the music
      * music_example.play();
      */
-    export class Music {
+    export class Music extends Sound {
         /** Create a music object and cache the zzfx music samples for later use
          *  @param {Array} zzfxMusic - Array of zzfx music parameters
          */
         constructor(zzfxMusic: any[]);
-        cachedSamples: any[];
+        sampleChannels: any[];
         /** Play the music
          *  @param {Number}  [volume=1] - How much to scale volume by
-         *  @param {Boolean} [loop=1] - True if the music should loop when it reaches the end
-         *  @return {AudioBufferSourceNode} - The audio node, can be used to stop sound later
+         *  @param {Boolean} [loop=1] - True if the music should loop
+         *  @return {AudioBufferSourceNode} - The audio source node
          */
         play(volume?: number, loop?: boolean): AudioBufferSourceNode;
-        source: number | AudioBufferSourceNode;
-        /** Stop the music */
-        stop(): void;
-        /** Check if music is playing
-         *  @return {Boolean}
-         */
-        isPlaying(): boolean;
     }
-    /** Play an mp3 or wav audio from a local file or url
+    /** Play an mp3, ogg, or wav audio from a local file or url
      *  @param {String}  url - Location of sound file to play
      *  @param {Number}  [volume=1] - How much to scale volume by
-     *  @param {Boolean} [loop=1] - True if the music should loop when it reaches the end
+     *  @param {Boolean} [loop=1] - True if the music should loop
      *  @return {HTMLAudioElement} - The audio element for this sound
      *  @memberof Audio */
     export function playAudioFile(url: string, volume?: number, loop?: boolean): HTMLAudioElement;
@@ -1350,9 +1360,10 @@ declare module "littlejs.esm" {
      *  @param {Number}  [rate=1] - The playback rate to use
      *  @param {Number}  [pan=0] - How much to apply stereo panning
      *  @param {Boolean} [loop=0] - True if the sound should loop when it reaches the end
+     *  @param {Number}  [sampleRate=44100] - Sample rate for the sound
      *  @return {AudioBufferSourceNode} - The audio node of the sound played
      *  @memberof Audio */
-    export function playSamples(sampleChannels: any[], volume?: number, rate?: number, pan?: number, loop?: boolean): AudioBufferSourceNode;
+    export function playSamples(sampleChannels: any[], volume?: number, rate?: number, pan?: number, loop?: boolean, sampleRate?: number): AudioBufferSourceNode;
     /** Generate and play a ZzFX sound
      *
      *  <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>

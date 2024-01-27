@@ -1531,12 +1531,12 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainCont
 {
     if (!screenSpace)
     {
-        // create canvas transform from world space to screen space
+        // transform from world space to screen space
         pos = worldToScreen(pos);
         size = size.scale(cameraScale);
     }
     context.save();
-    context.translate(pos.x+.5|0, pos.y+.5|0);
+    context.translate(pos.x, pos.y);
     context.rotate(angle);
     context.scale(mirror ? -size.x : size.x, size.y);
     drawFunction(context);
@@ -2022,10 +2022,8 @@ if (isTouchDevice)
         wasTouching = touching;
 
         // prevent default handling like copy and magnifier lens
-        e.preventDefault();
-
-        // must return true so the document will get focus
-        return true;
+        if (document.hasFocus()) // allow document to get focus
+            e.preventDefault();
     }
 }
 
@@ -2206,8 +2204,9 @@ class Sound
         if (zzfxSound)
         {
             // generate zzfx sound now for fast playback
-            this.randomness = zzfxSound[1] || (zzfxSound[1] = 0); 
-            this.cachedSamples = zzfxSound && zzfxG(...zzfxSound);
+            this.randomness = zzfxSound[1] || (zzfxSound[1] = 0);
+            this.sampleChannels = [zzfxG(...zzfxSound)];
+            this.sampleRate = zzfxR;
         }
     }
 
@@ -2216,11 +2215,12 @@ class Sound
      *  @param {Number}  [volume=1] - How much to scale volume by (in addition to range fade)
      *  @param {Number}  [pitch=1] - How much to scale pitch by (also adjusted by this.randomness)
      *  @param {Number}  [randomnessScale=1] - How much to scale randomness
-     *  @return {AudioBufferSourceNode} - The audio, can be used to stop sound later
+     *  @param {Boolean} [loop=0] - Should the sound loop
+     *  @return {AudioBufferSourceNode} - The audio source node
      */
-    play(pos, volume=1, pitch=1, randomnessScale=1)
+    play(pos, volume=1, pitch=1, randomnessScale=1, loop=0)
     {
-        if (!soundEnable || !this.cachedSamples) return;
+        if (!soundEnable || !this.sampleChannels) return;
 
         let pan;
         if (pos)
@@ -2243,43 +2243,80 @@ class Sound
 
         // play the sound
         const playbackRate = pitch + pitch * this.randomness*randomnessScale*rand(-1,1);
-        return playSamples([this.cachedSamples], volume, playbackRate, pan);
+        return this.source = playSamples(this.sampleChannels, volume, playbackRate, pan, loop, this.sampleRate);
+    }
+
+    /** Stop the last instance of this sound that was played */
+    stop()
+    {
+        if (this.source)
+            this.source.stop();
+        this.source = 0;
     }
 
     /** Play the sound as a note with a semitone offset
      *  @param {Number}  semitoneOffset - How many semitones to offset pitch
      *  @param {Vector2} [pos] - World space position to play the sound, sound is not attenuated if null
      *  @param {Number}  [volume=1] - How much to scale volume by (in addition to range fade)
-     *  @return {AudioBufferSourceNode} - The audio, can be used to stop sound later
+     *  @return {AudioBufferSourceNode} - The audio source node
      */
     playNote(semitoneOffset, pos, volume)
     { return this.play(pos, volume, 2**(semitoneOffset/12), 0); }
+
+    /** Get how long this sound is in seconds
+     *  @return {Number} - How long the sound is in seconds (undefined if loading)
+     */
+    getDuration() 
+    { return this.sampleChannels && this.sampleChannels[0].length / this.sampleRate; }
+
+    /** Check if the last instance of this sound is playing
+     *  @return {Boolean} - True if the sound is playing
+     */
+    isPlaying() { return this.source && !this.source.ended; }
+
+    /** Check if sound is loading, for sounds fetched from a url
+     *  @return {Boolean} - True if sound is loading and not ready to play
+     */
+    isLoading() { return !this.sampleChannels; }
 }
 
 /** 
  * Sound Wave Object - Stores a wave sound for later use and can be played positionally
+ * - this can be used to play wave, mp3, and ogg files
+ * @example
+ * // create a sound
+ * const sound_example = new SoundWave('sound.mp3');
+ * 
+ * // play the sound
+ * sound_example.play();
  */
 class SoundWave extends Sound
 {
     /** Create a sound object and cache the wave file for later use
-     *  @param {String} waveFilename - Filename of wave file to load
-     *  @param {Number} [randomness=.05] - How much to randomize frequency each time sound plays
+     *  @param {String} filename - Filename of audio file to load
+     *  @param {Number} [randomness=0] - How much to randomize frequency each time sound plays
      *  @param {Number} [range=soundDefaultRange] - World space max range of sound, will not play if camera is farther away
      *  @param {Number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering off
      */
-    constructor(waveFilename, randomness=.05, range, taper)
+    constructor(filename, randomness=0, range, taper)
     {
         super(0, range, taper);
         this.randomness = randomness;
 
         if (!soundEnable) return;
-        if (!soundWaveDecoderContext)
+        if (!soundDecoderContext)
             soundDecoderContext = new AudioContext;
 
-        fetch(waveFilename)
+        fetch(filename)
         .then(response => response.arrayBuffer())
-        .then(arrayBuffer => soundWaveDecoderContext.decodeAudioData(arrayBuffer))
-        .then(audioBuffer => this.cachedSamples = audioBuffer.getChannelData(0));
+        .then(arrayBuffer => soundDecoderContext.decodeAudioData(arrayBuffer))
+        .then(audioBuffer => 
+        {
+            this.sampleChannels = [];
+            for (let i = audioBuffer.numberOfChannels; i--;)
+                this.sampleChannels[i] = audioBuffer.getChannelData(i);
+            this.sampleRate = audioBuffer.sampleRate;
+        });
     }
 }
 let soundDecoderContext; // audio context used only to decode audio files
@@ -2314,7 +2351,7 @@ let soundDecoderContext; // audio context used only to decode audio files
  * // play the music
  * music_example.play();
  */
-class Music
+class Music extends Sound
 {
     /** Create a music object and cache the zzfx music samples for later use
      *  @param {Array} zzfxMusic - Array of zzfx music parameters
@@ -2323,39 +2360,25 @@ class Music
     {
         if (!soundEnable) return;
 
-        this.cachedSamples = zzfxM(...zzfxMusic);
+        super();
+        this.randomness = 0;
+        this.sampleChannels = zzfxM(...zzfxMusic);
+        this.sampleRate = zzfxR;
     }
 
     /** Play the music
      *  @param {Number}  [volume=1] - How much to scale volume by
-     *  @param {Boolean} [loop=1] - True if the music should loop when it reaches the end
-     *  @return {AudioBufferSourceNode} - The audio node, can be used to stop sound later
+     *  @param {Boolean} [loop=1] - True if the music should loop
+     *  @return {AudioBufferSourceNode} - The audio source node
      */
     play(volume, loop = 1)
-    {
-        if (!soundEnable) return;
-
-        return this.source = playSamples(this.cachedSamples, volume, 1, 0, loop);
-    }
-
-    /** Stop the music */
-    stop()
-    {
-        if (this.source)
-            this.source.stop();
-        this.source = 0;
-    }
-
-    /** Check if music is playing
-     *  @return {Boolean}
-     */
-    isPlaying() { return this.source; }
+    { return super.play(0, volume, 1, 1, loop); }
 }
 
-/** Play an mp3 or wav audio from a local file or url
+/** Play an mp3, ogg, or wav audio from a local file or url
  *  @param {String}  url - Location of sound file to play
  *  @param {Number}  [volume=1] - How much to scale volume by
- *  @param {Boolean} [loop=1] - True if the music should loop when it reaches the end
+ *  @param {Boolean} [loop=1] - True if the music should loop
  *  @return {HTMLAudioElement} - The audio element for this sound
  *  @memberof Audio */
 function playAudioFile(url, volume=1, loop=1)
@@ -2419,9 +2442,10 @@ let audioContext;
  *  @param {Number}  [rate=1] - The playback rate to use
  *  @param {Number}  [pan=0] - How much to apply stereo panning
  *  @param {Boolean} [loop=0] - True if the sound should loop when it reaches the end
+ *  @param {Number}  [sampleRate=44100] - Sample rate for the sound
  *  @return {AudioBufferSourceNode} - The audio node of the sound played
  *  @memberof Audio */
-function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0) 
+function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0, sampleRate=zzfxR) 
 {
     if (!soundEnable) return;
 
@@ -2438,7 +2462,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0)
     }
 
     // create buffer and source
-    const buffer = audioContext.createBuffer(sampleChannels.length, sampleChannels[0].length, zzfxR), 
+    const buffer = audioContext.createBuffer(sampleChannels.length, sampleChannels[0].length, sampleRate), 
         source = audioContext.createBufferSource();
 
     // copy samples to buffer and setup source
@@ -3706,7 +3730,7 @@ let glActiveTexture, glShader, glArrayBuffer, glPositionData, glColorData, glBat
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// Init WebGL, called automatically by the engine
+// Initalize WebGL, called automatically by the engine
 function glInit()
 {
     // create the canvas and tile texture
@@ -3743,6 +3767,48 @@ function glInit()
     glPositionData = new Float32Array(vertexData);
     glColorData = new Uint32Array(vertexData);
     glBatchCount = 0;
+}
+
+// Setup render each frame, called automatically by engine
+function glPreRender()
+{
+    // clear and set to same size as main canvas
+    glContext.viewport(0, 0, glCanvas.width = mainCanvas.width, glCanvas.height = mainCanvas.height);
+    glContext.clear(gl_COLOR_BUFFER_BIT);
+
+    // set up the shader
+    glContext.useProgram(glShader);
+    glContext.activeTexture(gl_TEXTURE0);
+    glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = glTileTexture);
+    glContext.bindBuffer(gl_ARRAY_BUFFER, glArrayBuffer);
+    glContext.bufferData(gl_ARRAY_BUFFER, gl_VERTEX_BUFFER_SIZE, gl_DYNAMIC_DRAW);
+    glSetBlendMode();
+    
+    // set vertex attributes
+    let offset = 0;
+    const initVertexAttribArray = (name, type, typeSize, size, normalize=0)=>
+    {
+        const location = glContext.getAttribLocation(glShader, name);
+        glContext.enableVertexAttribArray(location);
+        glContext.vertexAttribPointer(location, size, type, normalize, gl_VERTEX_BYTE_STRIDE, offset);
+        offset += size*typeSize;
+    }
+    initVertexAttribArray('p', gl_FLOAT, 4, 2);            // position
+    initVertexAttribArray('t', gl_FLOAT, 4, 2);            // texture coords
+    initVertexAttribArray('c', gl_UNSIGNED_BYTE, 1, 4, 1); // color
+    initVertexAttribArray('a', gl_UNSIGNED_BYTE, 1, 4, 1); // additiveColor
+
+    // build the transform matrix
+    const sx = 2 * cameraScale / mainCanvas.width;
+    const sy = 2 * cameraScale / mainCanvas.height;
+    glContext.uniformMatrix4fv(glContext.getUniformLocation(glShader, 'm'), 0,
+        new Float32Array([
+            sx, 0, 0, 0,
+            0, sy, 0, 0,
+            1, 1, -1, 1,
+            -1-sx*cameraPos.x, -1-sy*cameraPos.y, 0, 0
+        ])
+    );
 }
 
 /** Set the WebGl blend mode, normally you should call setBlendMode instead
@@ -3822,48 +3888,6 @@ function glCreateTexture(image)
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_S, gl_CLAMP_TO_EDGE);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_T, gl_CLAMP_TO_EDGE);
     return texture;
-}
-
-// called automatically by engine before render
-function glPreRender()
-{
-    // clear and set to same size as main canvas
-    glContext.viewport(0, 0, glCanvas.width = mainCanvas.width, glCanvas.height = mainCanvas.height);
-    glContext.clear(gl_COLOR_BUFFER_BIT);
-
-    // set up the shader
-    glContext.useProgram(glShader);
-    glContext.activeTexture(gl_TEXTURE0);
-    glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = glTileTexture);
-    glContext.bindBuffer(gl_ARRAY_BUFFER, glArrayBuffer);
-    glContext.bufferData(gl_ARRAY_BUFFER, gl_VERTEX_BUFFER_SIZE, gl_DYNAMIC_DRAW);
-    glSetBlendMode();
-    
-    // set vertex attributes
-    let offset = 0;
-    const initVertexAttribArray = (name, type, typeSize, size, normalize=0)=>
-    {
-        const location = glContext.getAttribLocation(glShader, name);
-        glContext.enableVertexAttribArray(location);
-        glContext.vertexAttribPointer(location, size, type, normalize, gl_VERTEX_BYTE_STRIDE, offset);
-        offset += size*typeSize;
-    }
-    initVertexAttribArray('p', gl_FLOAT, 4, 2);            // position
-    initVertexAttribArray('t', gl_FLOAT, 4, 2);            // texture coords
-    initVertexAttribArray('c', gl_UNSIGNED_BYTE, 1, 4, 1); // color
-    initVertexAttribArray('a', gl_UNSIGNED_BYTE, 1, 4, 1); // additiveColor
-
-    // build the transform matrix
-    const sx = 2 * cameraScale / mainCanvas.width;
-    const sy = 2 * cameraScale / mainCanvas.height;
-    glContext.uniformMatrix4fv(glContext.getUniformLocation(glShader, 'm'), 0,
-        new Float32Array([
-            sx, 0, 0, 0,
-            0, sy, 0, 0,
-            1, 1, -1, 1,
-            -1-sx*cameraPos.x, -1-sy*cameraPos.y, 0, 0
-        ])
-    );
 }
 
 /** Draw all sprites and clear out the buffer, called automatically by the system whenever necessary
@@ -4135,7 +4159,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.7.17';
+const engineVersion = '1.7.18';
 
 /** Frames per second to update objects
  *  @type {Number}
