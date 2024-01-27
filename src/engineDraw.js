@@ -211,12 +211,12 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainCont
 {
     if (!screenSpace)
     {
-        // create canvas transform from world space to screen space
+        // transform from world space to screen space
         pos = worldToScreen(pos);
         size = size.scale(cameraScale);
     }
     context.save();
-    context.translate(pos.x+.5|0, pos.y+.5|0);
+    context.translate(pos.x, pos.y);
     context.rotate(angle);
     context.scale(mirror ? -size.x : size.x, size.y);
     drawFunction(context);
