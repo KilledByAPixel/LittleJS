@@ -112,12 +112,12 @@ class SoundWave extends Sound
         this.randomness = randomness;
 
         if (!soundEnable) return;
-        if (!soundWaveDecoderContext)
+        if (!soundDecoderContext)
             soundDecoderContext = new AudioContext;
 
         fetch(waveFilename)
         .then(response => response.arrayBuffer())
-        .then(arrayBuffer => soundWaveDecoderContext.decodeAudioData(arrayBuffer))
+        .then(arrayBuffer => soundDecoderContext.decodeAudioData(arrayBuffer))
         .then(audioBuffer => this.cachedSamples = audioBuffer.getChannelData(0));
     }
 }
