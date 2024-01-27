@@ -31,7 +31,7 @@ let glActiveTexture, glShader, glArrayBuffer, glPositionData, glColorData, glBat
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// Init WebGL, called automatically by the engine
+// Initalize WebGL, called automatically by the engine
 function glInit()
 {
     // create the canvas and tile texture
@@ -68,6 +68,48 @@ function glInit()
     glPositionData = new Float32Array(vertexData);
     glColorData = new Uint32Array(vertexData);
     glBatchCount = 0;
+}
+
+// Setup render each frame, called automatically by engine
+function glPreRender()
+{
+    // clear and set to same size as main canvas
+    glContext.viewport(0, 0, glCanvas.width = mainCanvas.width, glCanvas.height = mainCanvas.height);
+    glContext.clear(gl_COLOR_BUFFER_BIT);
+
+    // set up the shader
+    glContext.useProgram(glShader);
+    glContext.activeTexture(gl_TEXTURE0);
+    glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = glTileTexture);
+    glContext.bindBuffer(gl_ARRAY_BUFFER, glArrayBuffer);
+    glContext.bufferData(gl_ARRAY_BUFFER, gl_VERTEX_BUFFER_SIZE, gl_DYNAMIC_DRAW);
+    glSetBlendMode();
+    
+    // set vertex attributes
+    let offset = 0;
+    const initVertexAttribArray = (name, type, typeSize, size, normalize=0)=>
+    {
+        const location = glContext.getAttribLocation(glShader, name);
+        glContext.enableVertexAttribArray(location);
+        glContext.vertexAttribPointer(location, size, type, normalize, gl_VERTEX_BYTE_STRIDE, offset);
+        offset += size*typeSize;
+    }
+    initVertexAttribArray('p', gl_FLOAT, 4, 2);            // position
+    initVertexAttribArray('t', gl_FLOAT, 4, 2);            // texture coords
+    initVertexAttribArray('c', gl_UNSIGNED_BYTE, 1, 4, 1); // color
+    initVertexAttribArray('a', gl_UNSIGNED_BYTE, 1, 4, 1); // additiveColor
+
+    // build the transform matrix
+    const sx = 2 * cameraScale / mainCanvas.width;
+    const sy = 2 * cameraScale / mainCanvas.height;
+    glContext.uniformMatrix4fv(glContext.getUniformLocation(glShader, 'm'), 0,
+        new Float32Array([
+            sx, 0, 0, 0,
+            0, sy, 0, 0,
+            1, 1, -1, 1,
+            -1-sx*cameraPos.x, -1-sy*cameraPos.y, 0, 0
+        ])
+    );
 }
 
 /** Set the WebGl blend mode, normally you should call setBlendMode instead
@@ -147,48 +189,6 @@ function glCreateTexture(image)
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_S, gl_CLAMP_TO_EDGE);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_T, gl_CLAMP_TO_EDGE);
     return texture;
-}
-
-// called automatically by engine before render
-function glPreRender()
-{
-    // clear and set to same size as main canvas
-    glContext.viewport(0, 0, glCanvas.width = mainCanvas.width, glCanvas.height = mainCanvas.height);
-    glContext.clear(gl_COLOR_BUFFER_BIT);
-
-    // set up the shader
-    glContext.useProgram(glShader);
-    glContext.activeTexture(gl_TEXTURE0);
-    glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = glTileTexture);
-    glContext.bindBuffer(gl_ARRAY_BUFFER, glArrayBuffer);
-    glContext.bufferData(gl_ARRAY_BUFFER, gl_VERTEX_BUFFER_SIZE, gl_DYNAMIC_DRAW);
-    glSetBlendMode();
-    
-    // set vertex attributes
-    let offset = 0;
-    const initVertexAttribArray = (name, type, typeSize, size, normalize=0)=>
-    {
-        const location = glContext.getAttribLocation(glShader, name);
-        glContext.enableVertexAttribArray(location);
-        glContext.vertexAttribPointer(location, size, type, normalize, gl_VERTEX_BYTE_STRIDE, offset);
-        offset += size*typeSize;
-    }
-    initVertexAttribArray('p', gl_FLOAT, 4, 2);            // position
-    initVertexAttribArray('t', gl_FLOAT, 4, 2);            // texture coords
-    initVertexAttribArray('c', gl_UNSIGNED_BYTE, 1, 4, 1); // color
-    initVertexAttribArray('a', gl_UNSIGNED_BYTE, 1, 4, 1); // additiveColor
-
-    // build the transform matrix
-    const sx = 2 * cameraScale / mainCanvas.width;
-    const sy = 2 * cameraScale / mainCanvas.height;
-    glContext.uniformMatrix4fv(glContext.getUniformLocation(glShader, 'm'), 0,
-        new Float32Array([
-            sx, 0, 0, 0,
-            0, sy, 0, 0,
-            1, 1, -1, 1,
-            -1-sx*cameraPos.x, -1-sy*cameraPos.y, 0, 0
-        ])
-    );
 }
 
 /** Draw all sprites and clear out the buffer, called automatically by the system whenever necessary
