@@ -57,7 +57,7 @@ class Sound
      *  @param {Number}  [pitch=1] - How much to scale pitch by (also adjusted by this.randomness)
      *  @param {Number}  [randomnessScale=1] - How much to scale randomness
      *  @param {Boolean} [loop=0] - Should the sound loop
-     *  @return {AudioBufferSourceNode} - The audio, can be used to stop sound later
+     *  @return {AudioBufferSourceNode} - The audio source node
      */
     play(pos, volume=1, pitch=1, randomnessScale=1, loop=0)
     {
@@ -87,7 +87,7 @@ class Sound
         return this.source = playSamples(this.sampleChannels, volume, playbackRate, pan, loop, this.sampleRate);
     }
 
-    /** Stop the sound if it is playing */
+    /** Stop the last instance of this sound that was played */
     stop()
     {
         if (this.source)
@@ -99,7 +99,7 @@ class Sound
      *  @param {Number}  semitoneOffset - How many semitones to offset pitch
      *  @param {Vector2} [pos] - World space position to play the sound, sound is not attenuated if null
      *  @param {Number}  [volume=1] - How much to scale volume by (in addition to range fade)
-     *  @return {AudioBufferSourceNode} - The audio, can be used to stop sound later
+     *  @return {AudioBufferSourceNode} - The audio source node
      */
     playNote(semitoneOffset, pos, volume)
     { return this.play(pos, volume, 2**(semitoneOffset/12), 0); }
@@ -109,7 +109,7 @@ class Sound
      */
     isReady() { return this.sampleRate > 0; }
 
-    /** Check if sound is playing
+    /** Check if the last instance of this sound is playing
      *  @return {Boolean}
      */
     isPlaying() { return this.source && !this.source.ended; }
@@ -197,17 +197,17 @@ class Music extends Sound
 
     /** Play the music
      *  @param {Number}  [volume=1] - How much to scale volume by
-     *  @param {Boolean} [loop=1] - True if the music should loop when it reaches the end
-     *  @return {AudioBufferSourceNode} - The audio node, can be used to stop sound later
+     *  @param {Boolean} [loop=1] - True if the music should loop
+     *  @return {AudioBufferSourceNode} - The audio source node
      */
     play(volume, loop = 1)
     { return super.play(0, volume, 1, 1, loop); }
 }
 
-/** Play an mp3 or wav audio from a local file or url
+/** Play an mp3, ogg, or wav audio from a local file or url
  *  @param {String}  url - Location of sound file to play
  *  @param {Number}  [volume=1] - How much to scale volume by
- *  @param {Boolean} [loop=1] - True if the music should loop when it reaches the end
+ *  @param {Boolean} [loop=1] - True if the music should loop
  *  @return {HTMLAudioElement} - The audio element for this sound
  *  @memberof Audio */
 function playAudioFile(url, volume=1, loop=1)
