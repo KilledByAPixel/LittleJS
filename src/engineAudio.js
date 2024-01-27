@@ -104,30 +104,42 @@ class Sound
     playNote(semitoneOffset, pos, volume)
     { return this.play(pos, volume, 2**(semitoneOffset/12), 0); }
 
-    /** Check if sound is ready to be played
-     *  @return {Boolean} - True if sound is loaded and ready to play
+    /** Get how long this sound is in seconds
+     *  @return {Number} - How long the sound is in seconds (undefined if loading)
      */
-    isReady() { return this.sampleRate > 0; }
+    getDuration() 
+    { return this.sampleChannels && this.sampleChannels[0].length / this.sampleRate; }
 
     /** Check if the last instance of this sound is playing
-     *  @return {Boolean}
+     *  @return {Boolean} - True if the sound is playing
      */
     isPlaying() { return this.source && !this.source.ended; }
+
+    /** Check if sound is loading, for sounds fetched from a url
+     *  @return {Boolean} - True if sound is loading and not ready to play
+     */
+    isLoading() { return !this.sampleChannels; }
 }
 
 /** 
  * Sound Wave Object - Stores a wave sound for later use and can be played positionally
  * - this can be used to play wave, mp3, and ogg files
+ * @example
+ * // create a sound
+ * const sound_example = new SoundWave('sound.mp3');
+ * 
+ * // play the sound
+ * sound_example.play();
  */
 class SoundWave extends Sound
 {
     /** Create a sound object and cache the wave file for later use
-     *  @param {String} waveFilename - Filename of wave file to load
-     *  @param {Number} [randomness=.05] - How much to randomize frequency each time sound plays
+     *  @param {String} filename - Filename of audio file to load
+     *  @param {Number} [randomness=0] - How much to randomize frequency each time sound plays
      *  @param {Number} [range=soundDefaultRange] - World space max range of sound, will not play if camera is farther away
      *  @param {Number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering off
      */
-    constructor(waveFilename, randomness=.05, range, taper)
+    constructor(filename, randomness=0, range, taper)
     {
         super(0, range, taper);
         this.randomness = randomness;
@@ -136,7 +148,7 @@ class SoundWave extends Sound
         if (!soundDecoderContext)
             soundDecoderContext = new AudioContext;
 
-        fetch(waveFilename)
+        fetch(filename)
         .then(response => response.arrayBuffer())
         .then(arrayBuffer => soundDecoderContext.decodeAudioData(arrayBuffer))
         .then(audioBuffer => 
