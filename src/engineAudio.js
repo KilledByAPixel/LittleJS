@@ -199,9 +199,9 @@ class Music extends Sound
      */
     constructor(zzfxMusic)
     {
-        if (!soundEnable) return;
-
         super();
+
+        if (!soundEnable) return;
         this.randomness = 0;
         this.sampleChannels = zzfxM(...zzfxMusic);
         this.sampleRate = zzfxR;

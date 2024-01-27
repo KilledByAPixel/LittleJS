@@ -2735,9 +2735,9 @@ class Music extends Sound
      */
     constructor(zzfxMusic)
     {
-        if (!soundEnable) return;
-
         super();
+
+        if (!soundEnable) return;
         this.randomness = 0;
         this.sampleChannels = zzfxM(...zzfxMusic);
         this.sampleRate = zzfxR;
@@ -4536,7 +4536,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.7.18';
+const engineVersion = '1.7.19';
 
 /** Frames per second to update objects
  *  @type {Number}
