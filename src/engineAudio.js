@@ -45,8 +45,9 @@ class Sound
         if (zzfxSound)
         {
             // generate zzfx sound now for fast playback
-            this.randomness = zzfxSound[1] || (zzfxSound[1] = 0); 
-            this.cachedSamples = zzfxSound && zzfxG(...zzfxSound);
+            this.randomness = zzfxSound[1] || (zzfxSound[1] = 0);
+            this.sampleChannels = [zzfxG(...zzfxSound)];
+            this.sampleRate = zzfxR;
         }
     }
 
@@ -55,11 +56,12 @@ class Sound
      *  @param {Number}  [volume=1] - How much to scale volume by (in addition to range fade)
      *  @param {Number}  [pitch=1] - How much to scale pitch by (also adjusted by this.randomness)
      *  @param {Number}  [randomnessScale=1] - How much to scale randomness
+     *  @param {Boolean} [loop=0] - Should the sound loop
      *  @return {AudioBufferSourceNode} - The audio, can be used to stop sound later
      */
-    play(pos, volume=1, pitch=1, randomnessScale=1)
+    play(pos, volume=1, pitch=1, randomnessScale=1, loop=0)
     {
-        if (!soundEnable || !this.cachedSamples) return;
+        if (!soundEnable || !this.sampleChannels) return;
 
         let pan;
         if (pos)
@@ -82,7 +84,15 @@ class Sound
 
         // play the sound
         const playbackRate = pitch + pitch * this.randomness*randomnessScale*rand(-1,1);
-        return playSamples([this.cachedSamples], volume, playbackRate, pan);
+        return this.source = playSamples(this.sampleChannels, volume, playbackRate, pan, loop, this.sampleRate);
+    }
+
+    /** Stop the sound if it is playing */
+    stop()
+    {
+        if (this.source)
+            this.source.stop();
+        this.source = 0;
     }
 
     /** Play the sound as a note with a semitone offset
@@ -93,10 +103,21 @@ class Sound
      */
     playNote(semitoneOffset, pos, volume)
     { return this.play(pos, volume, 2**(semitoneOffset/12), 0); }
+
+    /** Check if sound is ready to be played
+     *  @return {Boolean} - True if sound is loaded and ready to play
+     */
+    isReady() { return this.sampleRate > 0; }
+
+    /** Check if sound is playing
+     *  @return {Boolean}
+     */
+    isPlaying() { return this.source && !this.source.ended; }
 }
 
 /** 
  * Sound Wave Object - Stores a wave sound for later use and can be played positionally
+ * - this can be used to play wave, mp3, and ogg files
  */
 class SoundWave extends Sound
 {
@@ -118,7 +139,13 @@ class SoundWave extends Sound
         fetch(waveFilename)
         .then(response => response.arrayBuffer())
         .then(arrayBuffer => soundDecoderContext.decodeAudioData(arrayBuffer))
-        .then(audioBuffer => this.cachedSamples = audioBuffer.getChannelData(0));
+        .then(audioBuffer => 
+        {
+            this.sampleChannels = [];
+            for (let i = audioBuffer.numberOfChannels; i--;)
+                this.sampleChannels[i] = audioBuffer.getChannelData(i);
+            this.sampleRate = audioBuffer.sampleRate;
+        });
     }
 }
 let soundDecoderContext; // audio context used only to decode audio files
@@ -153,7 +180,7 @@ let soundDecoderContext; // audio context used only to decode audio files
  * // play the music
  * music_example.play();
  */
-class Music
+class Music extends Sound
 {
     /** Create a music object and cache the zzfx music samples for later use
      *  @param {Array} zzfxMusic - Array of zzfx music parameters
@@ -162,7 +189,10 @@ class Music
     {
         if (!soundEnable) return;
 
-        this.cachedSamples = zzfxM(...zzfxMusic);
+        super();
+        this.randomness = 0;
+        this.sampleChannels = zzfxM(...zzfxMusic);
+        this.sampleRate = zzfxR;
     }
 
     /** Play the music
@@ -171,24 +201,7 @@ class Music
      *  @return {AudioBufferSourceNode} - The audio node, can be used to stop sound later
      */
     play(volume, loop = 1)
-    {
-        if (!soundEnable) return;
-
-        return this.source = playSamples(this.cachedSamples, volume, 1, 0, loop);
-    }
-
-    /** Stop the music */
-    stop()
-    {
-        if (this.source)
-            this.source.stop();
-        this.source = 0;
-    }
-
-    /** Check if music is playing
-     *  @return {Boolean}
-     */
-    isPlaying() { return this.source; }
+    { return super.play(0, volume, 1, 1, loop); }
 }
 
 /** Play an mp3 or wav audio from a local file or url
@@ -258,9 +271,10 @@ let audioContext;
  *  @param {Number}  [rate=1] - The playback rate to use
  *  @param {Number}  [pan=0] - How much to apply stereo panning
  *  @param {Boolean} [loop=0] - True if the sound should loop when it reaches the end
+ *  @param {Number}  [sampleRate=44100] - Sample rate for the sound
  *  @return {AudioBufferSourceNode} - The audio node of the sound played
  *  @memberof Audio */
-function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0) 
+function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0, sampleRate=zzfxR) 
 {
     if (!soundEnable) return;
 
@@ -277,7 +291,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0)
     }
 
     // create buffer and source
-    const buffer = audioContext.createBuffer(sampleChannels.length, sampleChannels[0].length, zzfxR), 
+    const buffer = audioContext.createBuffer(sampleChannels.length, sampleChannels[0].length, sampleRate), 
         source = audioContext.createBufferSource();
 
     // copy samples to buffer and setup source
