@@ -1,5 +1,7 @@
 // LittleJS - MIT License - Copyright 2021 Frank Force
 
+'use strict';
+
 /** 
  * LittleJS Debug System
  * - Press Esc to show debug overlay with mouse pick
@@ -10,7 +12,7 @@
  * @namespace Debug
  */
 
-'use strict';
+
 
 /** True if debug is enabled
  *  @type {Boolean}
@@ -418,7 +420,7 @@ function debugRender()
  * @namespace Utilities
  */
 
-'use strict';
+
 
 /** A shortcut to get Math.PI
  *  @type {Number}
@@ -1073,7 +1075,7 @@ class Timer
  * @namespace Settings
  */
 
-'use strict';
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Camera settings
@@ -1321,7 +1323,7 @@ let medalsPreventUnlock;
  * LittleJS Object System
  */
 
-'use strict';
+
 
 /** 
  * LittleJS Object Base Object Class
@@ -1717,7 +1719,7 @@ class EngineObject
  * @namespace Draw
  */
 
-'use strict';
+
 
 /** The primary 2D canvas visible to the user
  *  @type {HTMLCanvasElement}
@@ -2098,7 +2100,7 @@ function toggleFullscreen()
  * @namespace Input
  */
 
-'use strict';
+
 
 /** Returns true if device key is down
  *  @param {Number} key
@@ -2545,7 +2547,7 @@ function touchGamepadRender()
  * @namespace Audio
  */
 
-'use strict';
+
 
 /** 
  * Sound Object - Stores a zzfx sound for later use and can be played positionally
@@ -3098,7 +3100,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
  * @namespace TileCollision
  */
 
-'use strict';
+
 
 /** The tile collision layer array, use setTileCollisionData and getTileCollisionData to access
  *  @type {Array} 
@@ -3451,7 +3453,7 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
  * LittleJS Particle System
  */
 
-'use strict';
+
 
 /**
  * Particle Emitter - Spawns particles with the given settings
@@ -3761,7 +3763,7 @@ class Particle extends EngineObject
  * @namespace Medals
  */
 
-'use strict';
+
 
 /** List of all medals
  *  @type {Array}
@@ -4085,7 +4087,7 @@ class Newgrounds
  * @namespace WebGL
  */
 
-'use strict';
+
 
 /** The WebGL canvas which appears above the main canvas and below the overlay canvas
  *  @type {HTMLCanvasElement}
@@ -4524,7 +4526,7 @@ gl_VERTEX_BUFFER_SIZE = gl_MAX_BATCH * gl_VERTEX_BYTE_STRIDE;
  * @namespace Engine
  */
 
-'use strict';
+
 
 /** Name of engine
  *  @type {String}
@@ -4536,7 +4538,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.7.19';
+const engineVersion = '1.7.20';
 
 /** Frames per second to update objects
  *  @type {Number}

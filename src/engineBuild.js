@@ -98,13 +98,30 @@ console.log(`Engine built in ${((Date.now() - startTime)/1e3).toFixed(2)} second
 function Build(message, outputFile, files=[], buildSteps=[], topOfFileText)
 {
     console.log(message);
+    
+    const isPrimaryBuild = !!topOfFileText;
 
     // copy files into a buffer
     let buffer = '';
     if (topOfFileText)
-        buffer +=  topOfFileText + '\n';
+        buffer += topOfFileText + '\n';
+
+    // add strict mode to top of the first file
+    if (isPrimaryBuild)
+        buffer += "'use strict';\n\n";
+
     for (const file of files)
-        buffer += fs.readFileSync(file) + '\n';
+    {
+        // get file content
+        let fileContent = fs.readFileSync(file) + '\n';
+
+        // remove first 'use strict' from each file
+        if (isPrimaryBuild)
+            fileContent = fileContent.replace("'use strict';", '');
+
+        // add it to the buffer
+        buffer += fileContent;
+    }
 
     // output file
     fs.writeFileSync(outputFile, buffer, {flag: 'w+'});

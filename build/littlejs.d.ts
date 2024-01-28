@@ -231,6 +231,11 @@ declare module "littlejs.esm" {
      *  @default
      *  @memberof Settings */
     export let particleEmitRateScale: number;
+    /**
+     * LittleJS Engine Settings
+     * - All settings for the engine are here
+     * @namespace Settings
+     */
     /** Position of camera in world space
      *  @type {Vector2}
      *  @default Vector2()
@@ -333,6 +338,15 @@ declare module "littlejs.esm" {
      *  @default
      *  @memberof Settings */
     export let medalDisplayIconSize: number;
+    /**
+     * LittleJS Debug System
+     * - Press Esc to show debug overlay with mouse pick
+     * - Number keys toggle debug functions
+     * - +/- apply time scale
+     * - Debug primitive rendering
+     * - Save a 2d canvas as a png image
+     * @namespace Debug
+     */
     /** True if debug is enabled
      *  @type {Boolean}
      *  @default
@@ -407,6 +421,15 @@ declare module "littlejs.esm" {
      *  @param {String}            [type='image/png']
      *  @memberof Debug */
     export function debugSaveCanvas(canvas: HTMLCanvasElement, filename?: string, type?: string): void;
+    /**
+     * LittleJS Utility Classes and Functions
+     * - General purpose math library
+     * - Vector2 - fast, simple, easy 2D vector class
+     * - Color - holds a rgba color with some math functions
+     * - Timer - tracks time automatically
+     * - RandomGenerator - seeded random number generator
+     * @namespace Utilities
+     */
     /** A shortcut to get Math.PI
      *  @type {Number}
      *  @default Math.PI
@@ -853,6 +876,9 @@ declare module "littlejs.esm" {
      */
     export function hsl(h?: number, s?: number, l?: number, a?: number): Color;
     /**
+     * LittleJS Object System
+     */
+    /**
      * LittleJS Object Base Object Class
      * - Top level object class used by the engine
      * - Automatically adds self to object list
@@ -979,6 +1005,27 @@ declare module "littlejs.esm" {
      *  @type {CanvasImageSource}
      *  @memberof Draw */
     export const tileImage: CanvasImageSource;
+    /**
+     * LittleJS Drawing System
+     * - Hybrid system with both Canvas2D and WebGL available
+     * - Super fast tile sheet rendering with WebGL
+     * - Can apply rotation, mirror, color and additive color
+     * - Font rendering system with built in engine font
+     * - Many useful utility functions
+     *
+     * LittleJS uses a hybrid rendering solution with the best of both Canvas2D and WebGL.
+     * There are 3 canvas/contexts available to draw to...
+     * mainCanvas - 2D background canvas, non WebGL stuff like tile layers are drawn here.
+     * glCanvas - Used by the accelerated WebGL batch rendering system.
+     * overlayCanvas - Another 2D canvas that appears on top of the other 2 canvases.
+     *
+     * The WebGL rendering system is very fast with some caveats...
+     * - Switching blend modes (additive) or textures causes another draw call which is expensive in excess
+     * - Group additive rendering together using renderOrder to mitigate this issue
+     *
+     * The LittleJS rendering solution is intentionally simple, feel free to adjust it for your needs!
+     * @namespace Draw
+     */
     /** The primary 2D canvas visible to the user
      *  @type {HTMLCanvasElement}
      *  @memberof Draw */
@@ -1130,6 +1177,14 @@ declare module "littlejs.esm" {
     /** Toggle fullsceen mode
      *  @memberof Draw */
     export function toggleFullscreen(): void;
+    /**
+     * LittleJS Input System
+     * - Tracks keyboard down, pressed, and released
+     * - Tracks mouse buttons, position, and wheel
+     * - Tracks multiple analog gamepads
+     * - Virtual gamepad for touch devices
+     * @namespace Input
+     */
     /** Returns true if device key is down
      *  @param {Number} key
      *  @param {Number} [device=0]
@@ -1151,6 +1206,14 @@ declare module "littlejs.esm" {
     /** Clears all input
      *  @memberof Input */
     export function clearInput(): void;
+    /**
+     * LittleJS Input System
+     * - Tracks keyboard down, pressed, and released
+     * - Tracks mouse buttons, position, and wheel
+     * - Tracks multiple analog gamepads
+     * - Virtual gamepad for touch devices
+     * @namespace Input
+     */
     /** Returns true if device key is down
      *  @param {Number} key
      *  @param {Number} [device=0]
@@ -1225,6 +1288,16 @@ declare module "littlejs.esm" {
     /** True if a touch device has been detected
      *  @memberof Input */
     export const isTouchDevice: boolean;
+    /**
+     * LittleJS Audio System
+     * - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a> - ZzFX Sound Effect Generator
+     * - <a href=https://keithclark.github.io/ZzFXM/>ZzFXM Music</a> - ZzFXM Music System
+     * - Caches sounds and music for fast playback
+     * - Can attenuate and apply stereo panning to sounds
+     * - Ability to play mp3, ogg, and wave files
+     * - Speech synthesis functions
+     * @namespace Audio
+     */
     /**
      * Sound Object - Stores a zzfx sound for later use and can be played positionally
      *
@@ -1371,6 +1444,17 @@ declare module "littlejs.esm" {
      *  @return {AudioBufferSourceNode} - The audio node of the sound played
      *  @memberof Audio */
     export function zzfx(...zzfxSound: any[]): AudioBufferSourceNode;
+    /**
+     * LittleJS Tile Layer System
+     * - Caches arrays of tiles to off screen canvas for fast rendering
+     * - Unlimted numbers of layers, allocates canvases as needed
+     * - Interfaces with EngineObject for collision
+     * - Collision layer is separate from visible layers
+     * - It is recommended to have a visible layer that matches the collision
+     * - Tile layers can be drawn to using their context with canvas2d
+     * - Drawn directly to the main canvas without using WebGL
+     * @namespace TileCollision
+     */
     /** The tile collision layer array, use setTileCollisionData and getTileCollisionData to access
      *  @type {Array}
      *  @memberof TileCollision */
@@ -1511,6 +1595,9 @@ declare module "littlejs.esm" {
         drawRect(pos: Vector2, size?: Vector2, color?: Color, angle?: number): void;
     }
     /**
+     * LittleJS Particle System
+     */
+    /**
      * Particle Emitter - Spawns particles with the given settings
      * @extends EngineObject
      * @example
@@ -1620,6 +1707,13 @@ declare module "littlejs.esm" {
          */
         constructor(pos: any, tileIndex?: number, tileSize?: Vector2, angle?: number);
     }
+    /**
+     * LittleJS Medal System
+     * - Tracks and displays medals
+     * - Saves medals to local storage
+     * - Newgrounds integration
+     * @namespace Medals
+     */
     /** List of all medals
      *  @type {Array}
      *  @memberof Medals */
@@ -1728,6 +1822,16 @@ declare module "littlejs.esm" {
         call(component: string, parameters?: any, async?: boolean): any;
         CryptoJS(): any;
     }
+    /**
+     * LittleJS WebGL Interface
+     * - All webgl used by the engine is wrapped up here
+     * - For normal stuff you won't need to see or call anything in this file
+     * - For advanced stuff there are helper functions to create shaders, textures, etc
+     * - Can be disabled with glEnable to revert to 2D canvas rendering
+     * - Batches sprite rendering on GPU for incredibly fast performance
+     * - Sprite transform math is done in the shader where possible
+     * @namespace WebGL
+     */
     /** The WebGL canvas which appears above the main canvas and below the overlay canvas
      *  @type {HTMLCanvasElement}
      *  @memberof WebGL */
@@ -1767,6 +1871,25 @@ declare module "littlejs.esm" {
      *  @param {Boolean} includeOverlay
      *  @memberof WebGL */
     export function glInitPostProcess(shaderCode: string, includeOverlay: boolean): void;
+    /**
+     * LittleJS - The Tiny JavaScript Game Engine That Can!
+     * MIT License - Copyright 2021 Frank Force
+     *
+     * Engine Features
+     * - Object oriented system with base class engine object
+     * - Base class object handles update, physics, collision, rendering, etc
+     * - Engine helper classes and functions like Vector2, Color, and Timer
+     * - Super fast rendering system for tile sheets
+     * - Sound effects audio with zzfx and music with zzfxm
+     * - Input processing system with gamepad and touchscreen support
+     * - Tile layer rendering and collision system
+     * - Particle effect system
+     * - Medal system tracks and displays achievements
+     * - Debug tools and debug rendering system
+     * - Post processing effects
+     * - Call engineInit() to start it up!
+     * @namespace Engine
+     */
     /** Name of engine
      *  @type {String}
      *  @default
