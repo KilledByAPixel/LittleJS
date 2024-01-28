@@ -99,7 +99,7 @@ function gameUpdatePost()
 function gameRender()
 {
     // draw a grey square in the background without using webgl
-    drawRect(cameraPos, tileCollisionSize.add(vec2(5)), new Color(.2,.2,.2), 0, 0);
+    drawRect(cameraPos, tileCollisionSize.add(vec2(5)), new Color(.4,.4,.4), 0, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
