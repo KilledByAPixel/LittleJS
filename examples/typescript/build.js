@@ -4,6 +4,8 @@
  * LittleJS Build System
  */
 
+'use strict';
+
 const PROGRAM_NAME = 'game';
 const BUILD_FOLDER = 'build';
 const ROOT_FOLDER = 'examples/typescript';

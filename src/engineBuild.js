@@ -9,6 +9,8 @@
  * @namespace Build
  */
 
+'use strict';
+
 const ENGINE_NAME = 'littlejs';
 const BUILD_FOLDER = 'build';
 const SOURCE_FOLDER = 'src';
@@ -54,7 +56,7 @@ Build
     'Build Engine -- all',
     `${BUILD_FOLDER}/${ENGINE_NAME}.js`,
     [`${SOURCE_FOLDER}/engineDebug.js`, ...engineSourceFiles],
-    [], license
+    [], true
 );
 
 Build
@@ -62,7 +64,7 @@ Build
     'Build Engine -- release',
     `${BUILD_FOLDER}/${ENGINE_NAME}.release.js`,
     [`${SOURCE_FOLDER}/engineRelease.js`, ...engineSourceFiles],
-    [], license
+    [], true
 );
 
 Build
@@ -95,20 +97,18 @@ console.log(`Engine built in ${((Date.now() - startTime)/1e3).toFixed(2)} second
 
 // A single build with its own source files, build steps, and output file
 // - each build step is a callback that accepts a single filename
-function Build(message, outputFile, files=[], buildSteps=[], topOfFileText)
+function Build(message, outputFile, files=[], buildSteps=[], isPrimaryBuild)
 {
     console.log(message);
-    
-    const isPrimaryBuild = !!topOfFileText;
 
     // copy files into a buffer
     let buffer = '';
-    if (topOfFileText)
-        buffer += topOfFileText + '\n';
-
-    // add strict mode to top of the first file
     if (isPrimaryBuild)
+    {
+        // add license and strict mode to top
+        buffer += license + '\n';
         buffer += "'use strict';\n\n";
+    }
 
     for (const file of files)
     {

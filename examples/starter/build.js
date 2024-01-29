@@ -4,6 +4,8 @@
  * LittleJS Build System
  */
 
+'use strict';
+
 const PROGRAM_TITLE = 'Little JS Starter Project';
 const PROGRAM_NAME = 'game';
 const BUILD_FOLDER = 'build';
