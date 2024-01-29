@@ -1915,7 +1915,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainCont
         size = size.scale(cameraScale);
     }
     context.save();
-    context.translate(pos.x, pos.y);
+    context.translate(pos.x+.5, pos.y+.5);
     context.rotate(angle);
     context.scale(mirror ? -size.x : size.x, size.y);
     drawFunction(context);
@@ -2403,6 +2403,9 @@ if (isTouchDevice)
         // prevent default handling like copy and magnifier lens
         if (document.hasFocus()) // allow document to get focus
             e.preventDefault();
+        
+        // must return true so the document will get focus
+        return true;
     }
 }
 
@@ -4538,7 +4541,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.7.20';
+const engineVersion = '1.7.21';
 
 /** Frames per second to update objects
  *  @type {Number}
