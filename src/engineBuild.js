@@ -6,7 +6,6 @@
  * - Run custom build steps
  * - Check for errors
  * - Output to build folder
- * @namespace Build
  */
 
 'use strict';
