@@ -80,7 +80,7 @@ To use LittleJS download the latest package from GitHub or call ```npm install l
 
 If your game loads any files like images you will need to run a local web server. Some editors can do this automatically like [Visual Studio Code](https://code.visualstudio.com/) with the [Live Server plugin](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer). You can also use [http-server](https://www.npmjs.com/package/http-server) via npm.
 
-[The Breakout Tutorial](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/breakoutTutorial) is provided to demonstrate how to make a simple game from scratch. [The tutorial is also available on YouTube.](https://youtu.be/tSwDx-NWTXE?si=bkjMa8-7AN2Wg5MO)
+[The Breakout Tutorial](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial) is provided to demonstrate how to make a simple game from scratch. [The tutorial is also available on YouTube.](https://youtu.be/tSwDx-NWTXE?si=bkjMa8-7AN2Wg5MO)
 
 ## Builds
 
