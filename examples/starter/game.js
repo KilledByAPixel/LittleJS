@@ -45,15 +45,16 @@ function gameInit()
     }
     tileLayer.redraw();
 
-    // move camera to center of collision
-    cameraPos = tileCollisionSize.scale(.5);
+    // setup camera
+    cameraPos = vec2(16,8);
+    cameraScale = 48;
 
     // enable gravity
     gravity = -.01;
 
     // create particle emitter
     particleEmitter = new ParticleEmitter(
-        vec2(16), 0,                            // emitPos, emitAngle
+        vec2(16,15), 0,                         // emitPos, emitAngle
         1, 0, 500, PI,                          // emitSize, emitTime, emitRate, emiteCone
         0, vec2(16),                            // tileIndex, tileSize
         new Color(1,1,1),   new Color(0,0,0),   // colorStartA, colorStartB
@@ -99,14 +100,19 @@ function gameUpdatePost()
 function gameRender()
 {
     // draw a grey square in the background without using webgl
-    drawRect(cameraPos, tileCollisionSize.add(vec2(5)), new Color(.4,.4,.4), 0, 0);
+    drawRect(vec2(16,8), vec2(20,14), hsl(0,0,.6), 0, 0);
+    
+    // draw the logo as a tile
+    drawTile(vec2(21,5), vec2(4.5), 2);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameRenderPost()
 {
     // draw to overlay canvas for hud rendering
-    drawTextScreen('LittleJS Engine Demo', vec2(mainCanvasSize.x/2, 80), 80);
+    drawTextScreen('LittleJS Engine Demo', 
+        vec2(mainCanvasSize.x/2, 70), 80,   // position, size
+        hsl(0,0,1), 6, hsl(0,0,0));         // color, outline size and color
 }
 
 ///////////////////////////////////////////////////////////////////////////////
