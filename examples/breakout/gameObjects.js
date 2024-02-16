@@ -67,10 +67,15 @@ class Brick extends EngineObject
             0, vec2(16),                          // tileIndex, tileSize
             color1, color2,                       // colorStartA, colorStartB
             color1.scale(1,0), color2.scale(1,0), // colorEndA, colorEndB
-            .1, .3, 1, .05, .05,// time, sizeStart, sizeEnd, speed, angleSpeed
+            .5, .3, 1, .02, .05,// time, sizeStart, sizeEnd, speed, angleSpeed
             .99, .95, .4, PI,   // damping, angleDamping, gravityScale, cone
-            .1, .5, 0, 1        // fadeRate, randomness, collide, additive
+            .1, .8, 0, 1        // fadeRate, randomness, collide, additive
         );
+
+        // set ball trail color
+        if (o.trailEffect)
+            o.trailEffect.colorStartA = 
+            o.trailEffect.colorStartB = this.color.scale(.8);
         
         return 1;
     }
@@ -87,6 +92,20 @@ class Ball extends EngineObject
         this.setCollision();
         this.velocity = vec2(randSign(), -1).scale(.1);
         this.elasticity = 1;
+        
+        // attach a trail effect
+        const color = hsl(0,0,.2);
+        this.trailEffect = new ParticleEmitter(
+            this.pos, 0,                          // emitPos, emitAngle
+            this.size, 0, 80, PI,                 // emitSize, emitTime, emitRate, emiteCone
+            0, vec2(16),                          // tileIndex, tileSize
+            color, color,                         // colorStartA, colorStartB
+            color.scale(0), color.scale(0),       // colorEndA, colorEndB
+            2, .4, 1, .001, .05,// time, sizeStart, sizeEnd, speed, angleSpeed
+            .99, .95, 0, PI,    // damping, angleDamping, gravityScale, cone
+            .1, .5, 0, 1        // fadeRate, randomness, collide, additive
+        );
+        this.addChild(this.trailEffect);
     }
 
     update()
