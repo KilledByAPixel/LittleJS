@@ -82,7 +82,7 @@ If your game loads any files like images you will need to run a local web server
 
 [The Breakout Tutorial](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial) is provided to demonstrate how to make a simple game from scratch. [The tutorial is also available on YouTube.](https://youtu.be/tSwDx-NWTXE?si=bkjMa8-7AN2Wg5MO)
 
-[There is also a GitNation talk that explains how LittleJS works and some tips on how to use it.](https://portal.gitnation.org/contents/making-awesome-games-with-littlejs)
+[There is also a GitNation talk that explains how LittleJS works and some tips on how to use it.](https://youtu.be/_dXKU0WgAj8?si=ZDXLYAFDWp54hrGT)
 
 ## Builds
 
