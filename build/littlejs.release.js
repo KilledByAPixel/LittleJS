@@ -4164,7 +4164,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.7.21';
+const engineVersion = '1.7.22';
 
 /** Frames per second to update objects
  *  @type {Number}
@@ -4332,6 +4332,9 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             // update multiple frames if necessary in case of slow framerate
             for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / frameRate)
             {
+                // increment frame and update time
+                time = frame++ / frameRate;
+
                 // update game and objects
                 inputUpdate();
                 gameUpdate();
@@ -4418,9 +4421,6 @@ function engineObjectsUpdate()
 
     // remove destroyed objects
     engineObjects = engineObjects.filter(o=>!o.destroyed);
-
-    // increment frame and update time
-    time = ++frame / frameRate;
 }
 
 /** Destroy and remove all objects
