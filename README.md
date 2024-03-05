@@ -28,7 +28,7 @@ LittleJS is a small but powerful game engine with many features and no depenenci
 
 - Super fast sprite and tile map rendering engine with WebGL
 - Update and render over 10,000 objects at a solid 60fps
-- Robust particle effect system and [design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
+- Robust particle effect system and [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
 - Apply [Shadertoy](https://www.shadertoy.com) compatible shaders for post processinge effects
 
 ### 🔊 Audio
@@ -81,6 +81,8 @@ To use LittleJS download the latest package from GitHub or call ```npm install l
 If your game loads any files like images you will need to run a local web server. Some editors can do this automatically like [Visual Studio Code](https://code.visualstudio.com/) with the [Live Server plugin](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer). You can also use [http-server](https://www.npmjs.com/package/http-server) via npm.
 
 [The Breakout Tutorial](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial) is provided to demonstrate how to make a simple game from scratch. [The tutorial is also available on YouTube.](https://youtu.be/tSwDx-NWTXE?si=bkjMa8-7AN2Wg5MO)
+
+[There is also a GitNation talk that explains how LittleJS works and some tips on how to use it.](https://youtu.be/_dXKU0WgAj8?si=ZDXLYAFDWp54hrGT)
 
 ## Builds
 
