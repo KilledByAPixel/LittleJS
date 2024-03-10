@@ -303,6 +303,7 @@ function clearMatches()
     {
         score += ++comboCount*removedCount;
         fallTimer.set();
+        levelFall = [];
     }
     else
         comboCount = 0;
