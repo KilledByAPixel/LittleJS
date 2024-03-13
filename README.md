@@ -222,7 +222,7 @@ Here are a few of the amazing games people are making with LittleJS.
 
 [npm]: https://img.shields.io/npm/v/littlejsengine
 [npm-url]: https://www.npmjs.com/package/littlejsengine
-[build-size]: https://badgen.net/bundlephobia/minzip/littlejsengine?1
+[build-size]: https://img.shields.io/bundlephobia/minzip/littlejsengine
 [build-size-url]: https://bundlephobia.com/result?p=littlejsengine
 [npm-downloads]: https://img.shields.io/npm/dw/littlejsengine
 [npmtrends-url]: https://www.npmtrends.com/littlejsengine
