@@ -1732,8 +1732,9 @@ declare module "littlejs.esm" {
     /** This can used to enable Newgrounds functionality
      *  @param {Number} app_id   - The newgrounds App ID
      *  @param {String} [cipher] - The encryption Key (AES-128/Base64)
+     *  @param {Object} [cryptoJS] - An instance of CryptoJS, if there is a cipher
      *  @memberof Medals */
-    export function newgroundsInit(app_id: number, cipher?: string): void;
+    export function newgroundsInit(app_id: number, cipher?: string, cryptoJS?: any): void;
     /**
      * Medal Object - Tracks an unlockable medal
      * @example
@@ -1778,20 +1779,20 @@ declare module "littlejs.esm" {
     /**
      * Newgrounds API wrapper object
      * @example
-     * // create a newgrounds object, replace the app id and cipher with your own
+     * // create a newgrounds object, replace the app id with your own
      * const app_id = '53123:1ZuSTQ9l';
-     * const cipher = 'enF0vGH@Mj/FRASKL23Q==';
-     * newgrounds = new Newgrounds(app_id, cipher);
+     * newgrounds = new Newgrounds(app_id);
      */
     export class Newgrounds {
         /** Create a newgrounds object
          *  @param {Number} app_id   - The newgrounds App ID
-         *  @param {String} [cipher] - The encryption Key (AES-128/Base64) */
-        constructor(app_id: number, cipher?: string);
+         *  @param {String} [cipher] - The encryption Key (AES-128/Base64)
+         *  @param {Object} [cryptoJS] - An instance of CryptoJS, if there is a cipher */
+        constructor(app_id: number, cipher?: string, cryptoJS?: any);
         app_id: number;
         cipher: string;
-        host: string;
         cryptoJS: any;
+        host: string;
         session_id: string;
         medals: any;
         scoreboards: any;
@@ -1820,7 +1821,6 @@ declare module "littlejs.esm" {
          * @return {Object}                - The response JSON object
          */
         call(component: string, parameters?: any, async?: boolean): any;
-        CryptoJS(): any;
     }
     /**
      * LittleJS WebGL Interface
