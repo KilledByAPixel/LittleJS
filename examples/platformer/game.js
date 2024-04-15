@@ -78,13 +78,13 @@ function gameRender()
 function gameRenderPost()
 {
     // draw to overlay canvas for hud rendering
-    const drawText = (text, x, y, size=50) =>
+    const drawText = (text, x, y, size=40) =>
     {
         overlayContext.textAlign = 'center';
         overlayContext.textBaseline = 'top';
         overlayContext.font = size + 'px arial';
         overlayContext.fillStyle = '#fff';
-        overlayContext.lineWidth = 2;
+        overlayContext.lineWidth = 3;
         overlayContext.strokeText(text, x, y);
         overlayContext.fillText(text, x, y);
     }
