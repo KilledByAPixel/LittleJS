@@ -48,7 +48,7 @@ let overlayContext;
 let mainCanvasSize = vec2();
 
 /** Array containing tile sheet for batch rendering system
- *  @type {CanvasImageSource}
+ *  @type {Array}
  *  @memberof Draw */
 let textureInfos = [];
 
