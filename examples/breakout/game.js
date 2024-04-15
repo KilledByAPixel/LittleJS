@@ -101,12 +101,12 @@ function initPostProcess()
         p.x += fuzz*(noise(vec2(p.y*fuzzScale, iTime*9.))*2.-1.);
 
         // init output color
-        c = texture2D(iChannel0, p);
+        c = texture(iChannel0, p);
 
         // chromatic aberration
         const float chromatic = .003;
-        c.r = texture2D(iChannel0, p - vec2(chromatic, 0)).r;
-        c.b = texture2D(iChannel0, p + vec2(chromatic, 0)).b;
+        c.r = texture(iChannel0, p - vec2(chromatic, 0)).r;
+        c.b = texture(iChannel0, p + vec2(chromatic, 0)).b;
 
         // tv static noise
         const float staticNoise = .1;

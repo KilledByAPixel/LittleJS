@@ -1677,7 +1677,7 @@ function worldToScreen(worldPos)
 /** Draw textured tile centered in world space, with color applied if using WebGL
  *  @param {Vector2} pos                            - Center of the tile in world space
  *  @param {Vector2} [size=Vector2(1,1)]            - Size of the tile in world space
- *  @param {TileInfo} [tileInfo]                   - Tile info to use, untextured if undefined
+ *  @param {TileInfo}[tileInfo]                     - Tile info to use, untextured if undefined
  *  @param {Vector2} [tileSize=tileSizeDefault]     - Tile size in source pixels
  *  @param {Color}   [color=Color()]                - Color to modulate with
  *  @param {Number}  [angle=0]                      - Angle to rotate by
@@ -3978,29 +3978,32 @@ function glInit()
 {
     // create the canvas and textures
     glCanvas = document.createElement('canvas');
-    glContext = glCanvas.getContext('webgl', {antialias: !canvasPixelated});
+    glContext = glCanvas.getContext('webgl2');
 
     // some browsers are much faster without copying the gl buffer so we just overlay it instead
     glOverlay && document.body.appendChild(glCanvas);
 
     // setup vertex and fragment shaders
     glShader = glCreateProgram(
+        '#version 300 es\n' +         // specify GLSL ES version
         'precision highp float;'+     // use highp for better accuracy
         'uniform mat4 m;'+            // transform matrix
-        'attribute vec2 p,t;'+        // position, uv
-        'attribute vec4 c,a;'+        // color, additiveColor
-        'varying vec4 v,d,e;'+        // return uv, color, additiveColor
+        'in vec2 p,t;'+               // position, uv
+        'in vec4 c,a;'+               // color, additiveColor
+        'out vec4 v,d,e;'+            // return uv, color, additiveColor
         'void main(){'+               // shader entry point
         'gl_Position=m*vec4(p,1,1);'+ // transform position
         'v=vec4(t,p);d=c;e=a;'+       // pass stuff to fragment shader
         '}'                           // end of shader
         ,
-        'precision highp float;'+              // use highp for better accuracy
-        'varying vec4 v,d,e;'+                 // uv, color, additiveColor
-        'uniform sampler2D s;'+                // texture
-        'void main(){'+                        // shader entry point
-        'gl_FragColor=texture2D(s,v.xy)*d+e;'+ // modulate texture by color plus additive
-        '}'                                    // end of shader
+        '#version 300 es\n' +         // specify GLSL ES version
+        'precision highp float;'+     // use highp for better accuracy
+        'in vec4 v,d,e;'+             // uv, color, additiveColor
+        'uniform sampler2D s;'+       // texture
+        'out vec4 c;'+                // out color
+        'void main(){'+               // shader entry point
+        'c=texture(s,v.xy)*d+e;'+     // modulate texture by color plus additive
+        '}'                           // end of shader
     );
 
     // init buffers
@@ -4251,25 +4254,28 @@ function glInitPostProcess(shaderCode, includeOverlay)
 {
     ASSERT(!glPostShader); // can only have 1 post effects shader
 
-    if (!shaderCode) // default shader
-        shaderCode = 'void mainImage(out vec4 c,vec2 p){c=texture2D(iChannel0,p/iResolution.xy);}';
+    if (!shaderCode) // default pass through shader
+        shaderCode = 'void mainImage(out vec4 c,vec2 p){c=texture(iChannel0,p/iResolution.xy);}';
 
     // create the shader
     glPostShader = glCreateProgram(
+        '#version 300 es\n' +            // specify GLSL ES version
         'precision highp float;'+        // use highp for better accuracy
-        'attribute vec2 p;'+             // position
+        'in vec2 p;'+                    // position
         'void main(){'+                  // shader entry point
         'gl_Position=vec4(p,1,1);'+      // set position
         '}'                              // end of shader
         ,
+        '#version 300 es\n' +            // specify GLSL ES version
         'precision highp float;'+        // use highp for better accuracy
         'uniform sampler2D iChannel0;'+  // input texture
         'uniform vec3 iResolution;'+     // size of output texture
         'uniform float iTime;'+          // time passed
+        'out vec4 c;'+                   // out color
         '\n' + shaderCode + '\n'+        // insert custom shader code
         'void main(){'+                  // shader entry point
-        'mainImage(gl_FragColor,gl_FragCoord.xy);'+ // call post process function
-        'gl_FragColor.a=1.;'+            // always use full alpha
+        'mainImage(c,gl_FragCoord.xy);'+ // call post process function
+        'c.a=1.;'+                       // always use full alpha
         '}'                              // end of shader
     );
 
@@ -4402,7 +4408,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.8.0';
+const engineVersion = '1.8.1';
 
 /** Frames per second to update objects
  *  @type {Number}

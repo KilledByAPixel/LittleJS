@@ -53,7 +53,7 @@ for(let y=0; y<=levelSize.y; y+=1)
 Let’s move the camera to the center of our level by setting the cameraPos variable to half the level size.
 
 ```javascript
-cameraPos = levelSize.scale(.5); // center camera in level
+setCameraPos(levelSize.scale(.5)); // center camera in level
 ```
 
 We’ll also start with a blank slate by commenting out the default “Hello World!” text in gameRenderPost.
@@ -73,7 +73,7 @@ For this example we will use a fixed size canvas. This will let the drawing canv
 To enable it we will set canvasFixedSize in gameInit to use 720p resolution.
 
 ```javascript
-canvasFixedSize = vec2(1280, 720); // use a 720p fixed size canvas
+setCanvasFixedSize(vec2(1280, 720)); // use a 720p fixed size canvas
 ```
 
 Before we tweak the level size, let’s add this bit of code to gameRender to show the size of the level. This will cause some rects to be drawn each frame before the engine objects. To create color objects we pass in RGB values between 0 and 1.

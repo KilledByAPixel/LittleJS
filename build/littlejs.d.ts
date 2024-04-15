@@ -1096,7 +1096,7 @@ declare module "littlejs.esm" {
     /** Draw textured tile centered in world space, with color applied if using WebGL
      *  @param {Vector2} pos                            - Center of the tile in world space
      *  @param {Vector2} [size=Vector2(1,1)]            - Size of the tile in world space
-     *  @param {TileInfo} [tileInfo]                   - Tile info to use, untextured if undefined
+     *  @param {TileInfo}[tileInfo]                     - Tile info to use, untextured if undefined
      *  @param {Vector2} [tileSize=tileSizeDefault]     - Tile size in source pixels
      *  @param {Color}   [color=Color()]                - Color to modulate with
      *  @param {Number}  [angle=0]                      - Angle to rotate by
