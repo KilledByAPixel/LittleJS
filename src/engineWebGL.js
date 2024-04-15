@@ -6,6 +6,7 @@
  * - Can be disabled with glEnable to revert to 2D canvas rendering
  * - Batches sprite rendering on GPU for incredibly fast performance
  * - Sprite transform math is done in the shader where possible
+ * - Supports shadertoy style post processing shaders
  * @namespace WebGL
  */
 
@@ -401,7 +402,6 @@ gl_ONE_MINUS_SRC_ALPHA = 771,
 gl_BLEND = 3042,
 gl_TEXTURE_2D = 3553,
 gl_UNSIGNED_BYTE = 5121,
-gl_BYTE = 5120,
 gl_FLOAT = 5126,
 gl_RGBA = 6408,
 gl_NEAREST = 9728,
@@ -413,7 +413,6 @@ gl_TEXTURE_WRAP_T = 10243,
 gl_COLOR_BUFFER_BIT = 16384,
 gl_CLAMP_TO_EDGE = 33071,
 gl_TEXTURE0 = 33984,
-gl_TEXTURE1 = 33985,
 gl_ARRAY_BUFFER = 34962,
 gl_STATIC_DRAW = 35044,
 gl_DYNAMIC_DRAW = 35048,
@@ -424,7 +423,6 @@ gl_LINK_STATUS = 35714,
 gl_UNPACK_FLIP_Y_WEBGL = 37440,
 
 // constants for batch rendering
-gl_VERTICES_PER_QUAD = 6,
 gl_INDICIES_PER_VERT = 6,
 gl_MAX_BATCH = 1e5,
 gl_VERTEX_BYTE_STRIDE = (4 * 2) * 2 + (4) * 2, // vec2 * 2 + (char * 4) * 2

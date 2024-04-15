@@ -47,7 +47,7 @@ let overlayContext;
  *  @memberof Draw */
 let mainCanvasSize = vec2();
 
-/** Array containing tile sheet for batch rendering system
+/** Array containing texture info for batch rendering system
  *  @type {Array}
  *  @memberof Draw */
 let textureInfos = [];
@@ -60,11 +60,17 @@ let drawCount;
 /** 
  * Create a tile info object
  * - This can take vecs or floats for easier use and conversion
- *  @param {(Number|Vector2)} [pos=Vector2()]         - Position of tile in pixels
- *  @param {(Number|Vector2)} [size=tileSizeDefault]  - Size of tile in pixels
- *  @param {Number} [textureIndex=0]                  - Texture index to use
- *  @return {TileInfo}
- *  @memberof Draw
+ * - If an index is passed in, the tile size and index will determine the position
+ * @param {(Number|Vector2)} [pos=Vector2()]         - Top left corner of tile in pixels or index
+ * @param {(Number|Vector2)} [size=tileSizeDefault]  - Size of tile in pixels
+ * @param {Number} [textureIndex=0]                  - Texture index to use
+ * @return {TileInfo}
+ * @example
+ * tile(2)                       // a tile at index 2 using the default tile size (16)
+ * tile(5, 8)                    // a tile at index 5 using a tile size of 8
+ * tile(1, 16, 3)                // a tile at index 1 of size 16 on texture 3
+ * tile(vec2(4,8), vec2(30,10))  // a tile at pixel location (4,8) with a size of (30,10)
+ * @memberof Draw
  */
 function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0)
 {
@@ -98,13 +104,13 @@ function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0)
 class TileInfo
 {
     /** Create a tile info object
-     *  @param {Vector2} [pos=Vector2()]         - Position of tile in pixels
-     *  @param {Vector2} [size=tileSizeDefault]  - Size of tile in pixels
-     *  @param {Number}  [textureIndex=0]        - Texture index to use
+     *  @param {Vector2} [pos=Vector2()]        - Top left corner of tile in pixels
+     *  @param {Vector2} [size=tileSizeDefault] - Size of tile in pixels
+     *  @param {Number}  [textureIndex=0]       - Texture index to use
      */
     constructor(pos=vec2(), size=tileSizeDefault, textureIndex=0)
     {
-        /** @property {Vector2} - Position of tile in pixels */
+        /** @property {Vector2} - Top left corner of tile in pixels */
         this.pos = pos;
         /** @property {Vector2} - Size of tile in pixels */
         this.size = size;
@@ -117,12 +123,17 @@ class TileInfo
     *  @return {TileInfo}
     */
     offset(offset)
-    { return new TileInfo(this.pos.add(offset), this.size, this.textureIndex); }
+    {
+        return new TileInfo(this.pos.add(offset), this.size, this.textureIndex);
+    }
 
     /** Returns the texture info for this tile
     *  @return {TextureInfo}
     */
-    getTextureInfo() { return textureInfos[this.textureIndex]; }
+    getTextureInfo()
+    {
+        return textureInfos[this.textureIndex];
+    }
 }
 
 /** Texture Info - Stores info about each texture */

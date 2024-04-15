@@ -70,7 +70,6 @@ function gameInit()
     );
     particleEmitter.elasticity = .3; // bounce when it collides
     particleEmitter.trailScale = 2;  // stretch in direction of motion
-    
 }
 
 ///////////////////////////////////////////////////////////////////////////////
