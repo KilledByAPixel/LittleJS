@@ -40,7 +40,7 @@ function makeDebris(pos, color = new Color, amount = 100, size=.2, elasticity = 
     const color2 = color.lerp(new Color, .5);
     const emitter = new ParticleEmitter(
         pos, 0, 1, .1, 100, PI, // pos, angle, emitSize, emitTime, emitRate, emiteCone
-        undefined, undefined,  // tileIndex, tileSize
+        0,                     // tileInfo
         color, color2,         // colorStartA, colorStartB
         color, color2,         // colorEndA, colorEndB
         3, size,size, .1, .05, // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
