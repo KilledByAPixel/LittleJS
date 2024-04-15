@@ -334,13 +334,14 @@ constructor(pos, size=tileCollisionSize, tileInfo=tile(), scale=vec2(1), renderO
     {
         this.drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
-            if (tileInfo)
+            const textureInfo = tileInfo && tileInfo.getTextureInfo();
+            if (textureInfo)
             {
-                const textureInfo = textureInfos[tileInfo.textureIndex];
                 context.globalAlpha = color.a; // only alpha is supported
                 context.drawImage(textureInfo.image, 
                     tileInfo.pos.x,  tileInfo.pos.y, 
                     tileInfo.size.x, tileInfo.size.y, -.5, -.5, 1, 1);
+                context.globalAlpha = 1;
             }
             else
             {

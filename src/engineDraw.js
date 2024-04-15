@@ -79,8 +79,13 @@ function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0)
     if (pos.x == undefined)
     {
         const textureInfo = textureInfos[textureIndex];
-        const cols = textureInfo.size.x / size.x |0;
-        pos = vec2((pos%cols)*size.x, (pos/cols|0)*size.y);
+        if (textureInfo)
+        {
+            const cols = textureInfo.size.x / size.x |0;
+            pos = vec2((pos%cols)*size.x, (pos/cols|0)*size.y);
+        }
+        else
+            pos = vec2();
     }
 
     // return a tile info object
@@ -113,6 +118,11 @@ class TileInfo
     */
     offset(offset)
     { return new TileInfo(this.pos.add(offset), this.size, this.textureIndex); }
+
+    /** Returns the texture info for this tile
+    *  @return {TextureInfo}
+    */
+    getTextureInfo() { return textureInfos[this.textureIndex]; }
 }
 
 /** Texture Info - Stores info about each texture */
@@ -179,7 +189,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     // to fix old calls, replace with tile(tileIndex, tileSize)
 
     showWatermark && ++drawCount;
-    
+    const textureInfo = tileInfo && tileInfo.getTextureInfo();
     if (glEnable && useWebGL)
     {
         if (screenSpace)
@@ -189,20 +199,18 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
             size = size.scale(1/cameraScale);
         }
         
-        if (tileInfo)
+        if (textureInfo)
         {
             // calculate uvs and render
-            const textureInfo = textureInfos[tileInfo.textureIndex];
-            const uvSizeX = tileInfo.size.x / textureInfo.size.x;
-            const uvSizeY = tileInfo.size.y / textureInfo.size.y;
-            const uvX = tileInfo.pos.x / textureInfo.size.x;
-            const uvY = tileInfo.pos.y / textureInfo.size.y;
+            const x = tileInfo.pos.x / textureInfo.size.x;
+            const y = tileInfo.pos.y / textureInfo.size.y;
+            const w = tileInfo.size.x / textureInfo.size.x;
+            const h = tileInfo.size.y / textureInfo.size.y;
             const tileImageFixBleed = textureInfo.fixBleedSize;
-
             glSetTexture(textureInfo.glTexture);
             glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
-                uvX + tileImageFixBleed.x, uvY + tileImageFixBleed.y, 
-                uvX - tileImageFixBleed.x + uvSizeX, uvY - tileImageFixBleed.y + uvSizeY, 
+                x + tileImageFixBleed.x,     y + tileImageFixBleed.y, 
+                x - tileImageFixBleed.x + w, y - tileImageFixBleed.y + h, 
                 color.rgbaInt(), additiveColor.rgbaInt()); 
         }
         else
@@ -216,16 +224,16 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
         // normal canvas 2D rendering method (slower)
         drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
-            if (tileInfo)
+            if (textureInfo)
             {
                 // calculate uvs and render
-                const sX = tileInfo.pos.x + tileFixBleedScale;
-                const sY = tileInfo.pos.y + tileFixBleedScale;
-                const sWidth  = tileInfo.size.x - 2*tileFixBleedScale;
-                const sHeight = tileInfo.size.y - 2*tileFixBleedScale;
+                const x = tileInfo.pos.x + tileFixBleedScale;
+                const y = tileInfo.pos.y + tileFixBleedScale;
+                const w = tileInfo.size.x - 2*tileFixBleedScale;
+                const h = tileInfo.size.y - 2*tileFixBleedScale;
                 context.globalAlpha = color.a; // only alpha is supported
-                const textureInfo = textureInfos[tileInfo.textureIndex];
-                context.drawImage(textureInfo.image, sX, sY, sWidth, sHeight, -.5, -.5, 1, 1);
+                context.drawImage(textureInfo.image, x, y, w, h, -.5, -.5, 1, 1);
+                context.globalAlpha = 1; // set back to full alpha
             }
             else
             {
