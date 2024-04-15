@@ -994,18 +994,24 @@ declare module "littlejs.esm" {
          *  @return {String} */
         toString(): string;
     }
-    /** Array containing tile sheet for batch rendering system
-     *  @type {CanvasImageSource}
+    /** Array containing texture info for batch rendering system
+     *  @type {Array}
      *  @memberof Draw */
-    export let textureInfos: CanvasImageSource;
+    export let textureInfos: any[];
     /**
      * Create a tile info object
      * - This can take vecs or floats for easier use and conversion
-     *  @param {(Number|Vector2)} [pos=Vector2()]         - Position of tile in pixels
-     *  @param {(Number|Vector2)} [size=tileSizeDefault]  - Size of tile in pixels
-     *  @param {Number} [textureIndex=0]                  - Texture index to use
-     *  @return {TileInfo}
-     *  @memberof Draw
+     * - If an index is passed in, the tile size and index will determine the position
+     * @param {(Number|Vector2)} [pos=Vector2()]         - Top left corner of tile in pixels or index
+     * @param {(Number|Vector2)} [size=tileSizeDefault]  - Size of tile in pixels
+     * @param {Number} [textureIndex=0]                  - Texture index to use
+     * @return {TileInfo}
+     * @example
+     * tile(2)                       // a tile at index 2 using the default tile size (16)
+     * tile(5, 8)                    // a tile at index 5 using a tile size of 8
+     * tile(1, 16, 3)                // a tile at index 1 of size 16 on texture 3
+     * tile(vec2(4,8), vec2(30,10))  // a tile at pixel location (4,8) with a size of (30,10)
+     * @memberof Draw
      */
     export function tile(pos?: (number | Vector2), size?: (number | Vector2), textureIndex?: number): TileInfo;
     /**
@@ -1013,12 +1019,12 @@ declare module "littlejs.esm" {
      */
     export class TileInfo {
         /** Create a tile info object
-         *  @param {Vector2} [pos=Vector2()]         - Position of tile in pixels
-         *  @param {Vector2} [size=tileSizeDefault]  - Size of tile in pixels
-         *  @param {Number}  [textureIndex=0]        - Texture index to use
+         *  @param {Vector2} [pos=Vector2()]        - Top left corner of tile in pixels
+         *  @param {Vector2} [size=tileSizeDefault] - Size of tile in pixels
+         *  @param {Number}  [textureIndex=0]       - Texture index to use
          */
         constructor(pos?: Vector2, size?: Vector2, textureIndex?: number);
-        /** @property {Vector2} - Position of tile in pixels */
+        /** @property {Vector2} - Top left corner of tile in pixels */
         pos: Vector2;
         /** @property {Vector2} - Size of tile in pixels */
         size: Vector2;
@@ -1029,6 +1035,10 @@ declare module "littlejs.esm" {
         *  @return {TileInfo}
         */
         offset(offset: Vector2): TileInfo;
+        /** Returns the texture info for this tile
+        *  @return {TextureInfo}
+        */
+        getTextureInfo(): TextureInfo;
     }
     /** Texture Info - Stores info about each texture */
     export class TextureInfo {
@@ -1862,6 +1872,7 @@ declare module "littlejs.esm" {
      * - Can be disabled with glEnable to revert to 2D canvas rendering
      * - Batches sprite rendering on GPU for incredibly fast performance
      * - Sprite transform math is done in the shader where possible
+     * - Supports shadertoy style post processing shaders
      * @namespace WebGL
      */
     /** The WebGL canvas which appears above the main canvas and below the overlay canvas

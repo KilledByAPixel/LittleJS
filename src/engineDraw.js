@@ -123,17 +123,13 @@ class TileInfo
     *  @return {TileInfo}
     */
     offset(offset)
-    {
-        return new TileInfo(this.pos.add(offset), this.size, this.textureIndex);
-    }
+    { return new TileInfo(this.pos.add(offset), this.size, this.textureIndex); }
 
     /** Returns the texture info for this tile
     *  @return {TextureInfo}
     */
     getTextureInfo()
-    {
-        return textureInfos[this.textureIndex];
-    }
+    { return textureInfos[this.textureIndex]; }
 }
 
 /** Texture Info - Stores info about each texture */

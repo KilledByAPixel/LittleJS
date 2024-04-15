@@ -1561,8 +1561,8 @@ let overlayContext;
  *  @memberof Draw */
 let mainCanvasSize = vec2();
 
-/** Array containing tile sheet for batch rendering system
- *  @type {CanvasImageSource}
+/** Array containing texture info for batch rendering system
+ *  @type {Array}
  *  @memberof Draw */
 let textureInfos = [];
 
@@ -1574,11 +1574,17 @@ let drawCount;
 /** 
  * Create a tile info object
  * - This can take vecs or floats for easier use and conversion
- *  @param {(Number|Vector2)} [pos=Vector2()]         - Position of tile in pixels
- *  @param {(Number|Vector2)} [size=tileSizeDefault]  - Size of tile in pixels
- *  @param {Number} [textureIndex=0]                  - Texture index to use
- *  @return {TileInfo}
- *  @memberof Draw
+ * - If an index is passed in, the tile size and index will determine the position
+ * @param {(Number|Vector2)} [pos=Vector2()]         - Top left corner of tile in pixels or index
+ * @param {(Number|Vector2)} [size=tileSizeDefault]  - Size of tile in pixels
+ * @param {Number} [textureIndex=0]                  - Texture index to use
+ * @return {TileInfo}
+ * @example
+ * tile(2)                       // a tile at index 2 using the default tile size (16)
+ * tile(5, 8)                    // a tile at index 5 using a tile size of 8
+ * tile(1, 16, 3)                // a tile at index 1 of size 16 on texture 3
+ * tile(vec2(4,8), vec2(30,10))  // a tile at pixel location (4,8) with a size of (30,10)
+ * @memberof Draw
  */
 function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0)
 {
@@ -1593,8 +1599,13 @@ function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0)
     if (pos.x == undefined)
     {
         const textureInfo = textureInfos[textureIndex];
-        const cols = textureInfo.size.x / size.x |0;
-        pos = vec2((pos%cols)*size.x, (pos/cols|0)*size.y);
+        if (textureInfo)
+        {
+            const cols = textureInfo.size.x / size.x |0;
+            pos = vec2((pos%cols)*size.x, (pos/cols|0)*size.y);
+        }
+        else
+            pos = vec2();
     }
 
     // return a tile info object
@@ -1607,13 +1618,13 @@ function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0)
 class TileInfo
 {
     /** Create a tile info object
-     *  @param {Vector2} [pos=Vector2()]         - Position of tile in pixels
-     *  @param {Vector2} [size=tileSizeDefault]  - Size of tile in pixels
-     *  @param {Number}  [textureIndex=0]        - Texture index to use
+     *  @param {Vector2} [pos=Vector2()]        - Top left corner of tile in pixels
+     *  @param {Vector2} [size=tileSizeDefault] - Size of tile in pixels
+     *  @param {Number}  [textureIndex=0]       - Texture index to use
      */
     constructor(pos=vec2(), size=tileSizeDefault, textureIndex=0)
     {
-        /** @property {Vector2} - Position of tile in pixels */
+        /** @property {Vector2} - Top left corner of tile in pixels */
         this.pos = pos;
         /** @property {Vector2} - Size of tile in pixels */
         this.size = size;
@@ -1627,6 +1638,12 @@ class TileInfo
     */
     offset(offset)
     { return new TileInfo(this.pos.add(offset), this.size, this.textureIndex); }
+
+    /** Returns the texture info for this tile
+    *  @return {TextureInfo}
+    */
+    getTextureInfo()
+    { return textureInfos[this.textureIndex]; }
 }
 
 /** Texture Info - Stores info about each texture */
@@ -1693,7 +1710,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     // to fix old calls, replace with tile(tileIndex, tileSize)
 
     showWatermark && ++drawCount;
-    
+    const textureInfo = tileInfo && tileInfo.getTextureInfo();
     if (glEnable && useWebGL)
     {
         if (screenSpace)
@@ -1703,20 +1720,18 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
             size = size.scale(1/cameraScale);
         }
         
-        if (tileInfo)
+        if (textureInfo)
         {
             // calculate uvs and render
-            const textureInfo = textureInfos[tileInfo.textureIndex];
-            const uvSizeX = tileInfo.size.x / textureInfo.size.x;
-            const uvSizeY = tileInfo.size.y / textureInfo.size.y;
-            const uvX = tileInfo.pos.x / textureInfo.size.x;
-            const uvY = tileInfo.pos.y / textureInfo.size.y;
+            const x = tileInfo.pos.x / textureInfo.size.x;
+            const y = tileInfo.pos.y / textureInfo.size.y;
+            const w = tileInfo.size.x / textureInfo.size.x;
+            const h = tileInfo.size.y / textureInfo.size.y;
             const tileImageFixBleed = textureInfo.fixBleedSize;
-
             glSetTexture(textureInfo.glTexture);
             glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
-                uvX + tileImageFixBleed.x, uvY + tileImageFixBleed.y, 
-                uvX - tileImageFixBleed.x + uvSizeX, uvY - tileImageFixBleed.y + uvSizeY, 
+                x + tileImageFixBleed.x,     y + tileImageFixBleed.y, 
+                x - tileImageFixBleed.x + w, y - tileImageFixBleed.y + h, 
                 color.rgbaInt(), additiveColor.rgbaInt()); 
         }
         else
@@ -1730,16 +1745,16 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
         // normal canvas 2D rendering method (slower)
         drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
-            if (tileInfo)
+            if (textureInfo)
             {
                 // calculate uvs and render
-                const sX = tileInfo.pos.x + tileFixBleedScale;
-                const sY = tileInfo.pos.y + tileFixBleedScale;
-                const sWidth  = tileInfo.size.x - 2*tileFixBleedScale;
-                const sHeight = tileInfo.size.y - 2*tileFixBleedScale;
+                const x = tileInfo.pos.x + tileFixBleedScale;
+                const y = tileInfo.pos.y + tileFixBleedScale;
+                const w = tileInfo.size.x - 2*tileFixBleedScale;
+                const h = tileInfo.size.y - 2*tileFixBleedScale;
                 context.globalAlpha = color.a; // only alpha is supported
-                const textureInfo = textureInfos[tileInfo.textureIndex];
-                context.drawImage(textureInfo.image, sX, sY, sWidth, sHeight, -.5, -.5, 1, 1);
+                context.drawImage(textureInfo.image, x, y, w, h, -.5, -.5, 1, 1);
+                context.globalAlpha = 1; // set back to full alpha
             }
             else
             {
@@ -3325,13 +3340,14 @@ constructor(pos, size=tileCollisionSize, tileInfo=tile(), scale=vec2(1), renderO
     {
         this.drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
-            if (tileInfo)
+            const textureInfo = tileInfo && tileInfo.getTextureInfo();
+            if (textureInfo)
             {
-                const textureInfo = textureInfos[tileInfo.textureIndex];
                 context.globalAlpha = color.a; // only alpha is supported
                 context.drawImage(textureInfo.image, 
                     tileInfo.pos.x,  tileInfo.pos.y, 
                     tileInfo.size.x, tileInfo.size.y, -.5, -.5, 1, 1);
+                context.globalAlpha = 1;
             }
             else
             {
@@ -3953,6 +3969,7 @@ class Newgrounds
  * - Can be disabled with glEnable to revert to 2D canvas rendering
  * - Batches sprite rendering on GPU for incredibly fast performance
  * - Sprite transform math is done in the shader where possible
+ * - Supports shadertoy style post processing shaders
  * @namespace WebGL
  */
 
@@ -4254,7 +4271,7 @@ function glInitPostProcess(shaderCode, includeOverlay)
 {
     ASSERT(!glPostShader); // can only have 1 post effects shader
 
-    if (!shaderCode) // default pass through shader
+    if (!shaderCode) // default shader pass through
         shaderCode = 'void mainImage(out vec4 c,vec2 p){c=texture(iChannel0,p/iResolution.xy);}';
 
     // create the shader
@@ -4348,7 +4365,6 @@ gl_ONE_MINUS_SRC_ALPHA = 771,
 gl_BLEND = 3042,
 gl_TEXTURE_2D = 3553,
 gl_UNSIGNED_BYTE = 5121,
-gl_BYTE = 5120,
 gl_FLOAT = 5126,
 gl_RGBA = 6408,
 gl_NEAREST = 9728,
@@ -4360,7 +4376,6 @@ gl_TEXTURE_WRAP_T = 10243,
 gl_COLOR_BUFFER_BIT = 16384,
 gl_CLAMP_TO_EDGE = 33071,
 gl_TEXTURE0 = 33984,
-gl_TEXTURE1 = 33985,
 gl_ARRAY_BUFFER = 34962,
 gl_STATIC_DRAW = 35044,
 gl_DYNAMIC_DRAW = 35048,
@@ -4371,7 +4386,6 @@ gl_LINK_STATUS = 35714,
 gl_UNPACK_FLIP_Y_WEBGL = 37440,
 
 // constants for batch rendering
-gl_VERTICES_PER_QUAD = 6,
 gl_INDICIES_PER_VERT = 6,
 gl_MAX_BATCH = 1e5,
 gl_VERTEX_BYTE_STRIDE = (4 * 2) * 2 + (4) * 2, // vec2 * 2 + (char * 4) * 2
