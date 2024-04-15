@@ -32,18 +32,19 @@
 class EngineObject
 {
     /** Create an engine object and adds it to the list of objects
-     *  @param {Vector2} [position=Vector2()]        - World space position of the object
-     *  @param {Vector2} [size=Vector2(1,1)]         - World space size of the object
-     *  @param {Number}  [tileIndex=-1]              - Tile to use to render object (-1 is untextured)
-     *  @param {Vector2} [tileSize=tileSizeDefault]  - Size of tile in source pixels
-     *  @param {Number}  [angle=0]                   - Angle the object is rotated by
-     *  @param {Color}   [color=Color()]             - Color to apply to tile when rendered
-     *  @param {Number}  [renderOrder=0]             - Objects sorted by renderOrder before being rendered
+     *  @param {Vector2} [pos=Vector2()]            - World space position of the object
+     *  @param {Vector2} [size=Vector2(1,1)]        - World space size of the object
+     *  @param {TileInfo} [tileInfo]                - Tile info to render object (undefined is untextured)
+     *  @param {Number}  [angle=0]                  - Angle the object is rotated by
+     *  @param {Color}   [color=Color()]            - Color to apply to tile when rendered
+     *  @param {Number}  [renderOrder=0]            - Objects sorted by renderOrder before being rendered
      */
-    constructor(pos=vec2(), size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, angle=0, color, renderOrder=0)
+    constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color, renderOrder=0)
     {
         // set passed in params
         ASSERT(isVector2(pos) && isVector2(size)); // ensure pos and size are vec2s
+        ASSERT(typeof tileInfo !== 'number' || !tileInfo); // prevent old style calls
+        // to fix old calls, replace with tile(tileIndex, tileSize)
 
         /** @property {Vector2} - World space position of the object */
         this.pos = pos.copy();
@@ -51,10 +52,8 @@ class EngineObject
         this.size = size;
         /** @property {Vector2} - Size of object used for drawing, uses size if not set */
         this.drawSize;
-        /** @property {Number}  - Tile to use to render object (-1 is untextured) */
-        this.tileIndex = tileIndex;
-        /** @property {Vector2} - Size of tile in source pixels */
-        this.tileSize = tileSize;
+        /** @property {TileInfo} - Tile info to render object (undefined is untextured) */
+        this.tileInfo = tileInfo;
         /** @property {Number}  - Angle to rotate the object */
         this.angle = angle;
         /** @property {Color}   - Color to apply when rendered */
@@ -270,7 +269,7 @@ class EngineObject
     render()
     {
         // default object render
-        drawTile(this.pos, this.drawSize || this.size, this.tileIndex, this.tileSize, this.color, this.angle, this.mirror, this.additiveColor);
+        drawTile(this.pos, this.drawSize || this.size, this.tileInfo, this.color, this.angle, this.mirror, this.additiveColor);
     }
     
     /** Destroy this object, destroy it's children, detach it's parent, and mark it for removal */

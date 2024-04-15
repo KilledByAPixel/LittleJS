@@ -31,7 +31,8 @@ function gameInit()
     // get level data from the tiles image
     const imageLevelDataRow = 1;
     const mainContext = LittleJS.mainContext;
-    mainContext.drawImage(LittleJS.tileImage, 0, 0);
+    const tileImage = LittleJS.textureInfos[0].image;
+    mainContext.drawImage(tileImage, 0, 0);
     for (pos.x = LittleJS.tileCollisionSize.x; pos.x--;)
     for (pos.y = LittleJS.tileCollisionSize.y; pos.y--;)
     {
@@ -60,7 +61,7 @@ function gameInit()
     particleEmiter = new LittleJS.ParticleEmitter(
         center, 0,                              // emitPos, emitAngle
         1, 0, 500, Math.PI,                     // emitSize, emitTime, emitRate, emiteCone
-        0, vec2(16),                            // tileIndex, tileSize
+        LittleJS.tile(0, 16),                   // tileIndex, tileSize
         new Color(1,1,1),   new Color(0,0,0),   // colorStartA, colorStartB
         new Color(1,1,1,0), new Color(0,0,0,0), // colorEndA, colorEndB
         2, .2, .2, .1, .05,   // time, sizeStart, sizeEnd, speed, angleSpeed
@@ -120,4 +121,4 @@ function gameRenderPost()
 
 ///////////////////////////////////////////////////////////////////////////////
 // Startup LittleJS Engine
-LittleJS.engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png');
+LittleJS.engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);

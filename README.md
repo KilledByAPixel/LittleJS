@@ -172,9 +172,10 @@ Here is a template you can use to make objects that behave however you want. See
 ```javascript
 class MyObject extends EngineObject 
 {
-    constructor(pos, size, tileIndex, tileSize, angle)
+    constructor(pos, size, tileInfo, angle)
     {
-        super(pos, size, tileIndex, tileSize, angle);
+        super(pos, size, tileInfo, angle);
+        // setup object
     }
 
     update()

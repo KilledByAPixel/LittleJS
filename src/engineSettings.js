@@ -73,7 +73,7 @@ let glOverlay = 1;
  *  @memberof Settings */
 let tileSizeDefault = vec2(16);
 
-/** Prevent tile bleeding from neighbors in pixels
+/** How many pixels smaller to draw tiles to prevent bleeding from neighbors
  *  @type {Number}
  *  @default
  *  @memberof Settings */
@@ -248,3 +248,196 @@ let medalDisplayIconSize = 50;
  *  @default 0
  *  @memberof Settings */
 let medalsPreventUnlock;
+
+///////////////////////////////////////////////////////////////////////////////
+// Setters for global variables
+
+/** Set position of camera in world space
+ *  @param {Vector2} pos
+ *  @memberof Settings */
+function setCameraPos(pos) { cameraPos = pos; }
+
+/** Set scale of camera in world space
+ *  @param {Number} scale
+ *  @memberof Settings */
+function setCameraScale(scale) { cameraScale = scale; }
+
+/** Set max size of the canvas
+ *  @param {Vector2} size
+ *  @memberof Settings */
+function setCanvasMaxSize(size) { canvasMaxSize = size; }
+
+/** Set fixed size of the canvas
+ *  @param {Vector2} size
+ *  @memberof Settings */
+function setCanvasFixedSize(size) { canvasFixedSize = size; }
+
+/** Disables anti aliasing for pixel art if true
+ *  @param {Boolean} pixelated
+ *  @memberof Settings */
+function setCanvasPixelated(pixelated) { canvasPixelated = pixelated; }
+
+/** Set default font used for text rendering
+ *  @param {String} font
+ *  @memberof Settings */
+function setFontDefault(font) { fontDefault = font; }
+
+/** Set if webgl rendering is enabled
+ *  @param {Boolean} enable
+ *  @memberof Settings */
+function setGlEnable(enable) { glEnable = enable; }
+
+/** Set to not composite the WebGL canvas
+ *  @param {Boolean} overlay
+ *  @memberof Settings */
+function setGlOverlay(overlay) { glOverlay = overlay; }
+
+/** Set default size of tiles in pixels
+ *  @param {Vector2} size
+ *  @memberof Settings */
+function setTileSizeDefault(size) { tileSizeDefault = size; }
+
+/** Set to prevent tile bleeding from neighbors in pixels
+ *  @param {Number} scale
+ *  @memberof Settings */
+function setTileFixBleedScale(scale) { tileFixBleedScale = scale; }
+
+/** Set if collisions between objects are enabled
+ *  @param {Boolean} enable
+ *  @memberof Settings */
+function setEnablePhysicsSolver(enable) { enablePhysicsSolver = enable; }
+
+/** Set default object mass for collison calcuations
+ *  @param {Number} mass
+ *  @memberof Settings */
+function setObjectDefaultMass(mass) { objectDefaultMass = mass; }
+
+/** Set how much to slow velocity by each frame
+ *  @param {Number} damping
+ *  @memberof Settings */
+function setObjectDefaultDamping(damp) { objectDefaultDamping = damp; }
+
+/** Set how much to slow angular velocity each frame
+ *  @param {Number} damping
+ *  @memberof Settings */
+function setObjectDefaultAngleDamping(damp) { objectDefaultAngleDamping = damp; }
+
+/** Set how much to bounce when a collision occur
+ *  @param {Number} elasticity
+ *  @memberof Settings */
+function setObjectDefaultElasticity(elasticity) { objectDefaultElasticity = elasticity; }
+
+/** Set how much to slow when touching
+ *  @param {Number} friction
+ *  @memberof Settings */
+function setObjectDefaultFriction(friction) { objectDefaultFriction = friction; }
+
+/** Set max speed to avoid fast objects missing collisions
+ *  @param {Number} speed
+ *  @memberof Settings */
+function setObjectMaxSpeed(speed) { objectMaxSpeed = speed; }
+
+/** Set how much gravity to apply to objects along the Y axis
+ *  @param {Number} gravity
+ *  @memberof Settings */
+function setGravity(g) { gravity = g; }
+
+/** Set to scales emit rate of particles
+ *  @param {Number} scale
+ *  @memberof Settings */
+function setParticleEmitRateScale(scale) { particleEmitRateScale = scale; }
+
+/** Set if gamepads are enabled
+ *  @param {Boolean} enable
+ *  @memberof Settings */
+function setGamepadsEnable(enable) { gamepadsEnable = enable; }
+
+/** Set if the dpad input is also routed to the left analog stick
+ *  @param {Boolean} enable
+ *  @memberof Settings */
+function setGamepadDirectionEmulateStick(enable) { gamepadDirectionEmulateStick = enable; }
+
+/** Set if true the WASD keys are also routed to the direction keys
+ *  @param {Boolean} enable
+ *  @memberof Settings */
+function setInputWASDEmulateDirection(enable) { inputWASDEmulateDirection = enable; }
+
+/** Set if touch gamepad should appear on mobile devices
+ *  @param {Boolean} enable
+ *  @memberof Settings */
+function setTouchGamepadEnable(enable) { touchGamepadEnable = enable; }
+
+/** Set if touch gamepad should be analog stick or 8 way dpad
+ *  @param {Boolean} analog
+ *  @memberof Settings */
+function setTouchGamepadAnalog(analog) { touchGamepadAnalog = analog; }
+
+/** Set size of virutal gamepad for touch devices in pixels
+ *  @param {Number} size
+ *  @memberof Settings */
+function setTouchGamepadSize(size) { touchGamepadSize = size; }
+
+/** Set transparency of touch gamepad overlay
+ *  @param {Number} alpha
+ *  @memberof Settings */
+function setTouchGamepadAlpha(alpha) { touchGamepadAlpha = alpha; }
+
+/** Set to allow vibration hardware if it exists
+ *  @param {Boolean} enable
+ *  @memberof Settings */
+function setVibrateEnable(enable) { vibrateEnable = enable; }
+
+/** Set to disable all audio code
+ *  @param {Boolean} enable
+ *  @memberof Settings */
+function setSoundEnable(enable) { soundEnable = enable; }
+
+/** Set volume scale to apply to all sound, music and speech
+ *  @param {Number} volume
+ *  @memberof Settings */
+function setSoundVolume(volume) { soundVolume = volume; }
+
+/** Set default range where sound no longer plays
+ *  @param {Number} range
+ *  @memberof Settings */
+function setSoundDefaultRange(range) { soundDefaultRange = range; }
+
+/** Set default range percent to start tapering off sound
+ *  @param {Number} taper
+ *  @memberof Settings */
+function setSoundDefaultTaper(taper) { soundDefaultTaper = taper; }
+
+/** Set how long to show medals for in seconds
+ *  @param {Number} time
+ *  @memberof Settings */
+function setMedalDisplayTime(time) { medalDisplayTime = time; }
+
+/** Set how quickly to slide on/off medals in seconds
+ *  @param {Number} time
+ *  @memberof Settings */
+function setMedalDisplaySlideTime(time) { medalDisplaySlideTime = time; }
+
+/** Set size of medal display
+ *  @param {Vector2} size
+ *  @memberof Settings */
+function setMedalDisplaySize(size) { medalDisplaySize = size; }
+
+/** Set size of icon in medal display
+ *  @param {Number} size
+ *  @memberof Settings */
+function setMedalDisplayIconSize(size) { medalDisplayIconSize = size; }
+
+/** Set to stop medals from being unlockable
+ *  @param {Boolean} preventUnlock
+ *  @memberof Settings */
+function setMedalsPreventUnlock(preventUnlock) { medalsPreventUnlock = preventUnlock; }
+
+/** Set if watermark with FPS should be shown
+ *  @param {Boolean} show
+ *  @memberof Debug */
+function setShowWatermark(show) { showWatermark = show; }
+
+/** Set key code used to toggle debug mode, Esc by default
+ *  @param {Number} key
+ *  @memberof Debug */
+function setDebugKey(key) { debugKey = key; }

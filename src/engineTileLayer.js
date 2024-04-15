@@ -155,7 +155,7 @@ class TileLayerData
 }
 
 /**
- * Tile layer object - cached rendering system for tile layers
+ * Tile Layer - cached rendering system for tile layers
  * - Each Tile layer is rendered to an off screen canvas
  * - To allow dynamic modifications, layers are rendered using canvas 2d
  * - Some devices like mobile phones are limited to 4k texture resolution
@@ -171,13 +171,13 @@ class TileLayer extends EngineObject
 /** Create a tile layer object
     *  @param {Vector2} [position=Vector2()]       - World space position
     *  @param {Vector2} [size=tileCollisionSize]   - World space size
-    *  @param {Vector2} [tileSize=tileSizeDefault] - Size of tiles in source pixels
+    *  @param {TileInfo} [tileInfo]                - Tile info for layer
     *  @param {Vector2} [scale=Vector2(1,1)]       - How much to scale this layer when rendered
     *  @param {Number}  [renderOrder=0]            - Objects sorted by renderOrder before being rendered
     */
-constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1), renderOrder=0)
+constructor(pos, size=tileCollisionSize, tileInfo=tile(), scale=vec2(1), renderOrder=0)
     {
-        super(pos, size, -1, tileSize, 0, undefined, renderOrder);
+        super(pos, size, tileInfo, 0, undefined, renderOrder);
 
         /** @property {HTMLCanvasElement}        - The canvas used by this tile layer */
         this.canvas = document.createElement('canvas');
@@ -254,13 +254,13 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
         mainCanvas = this.canvas;
         mainContext = this.context;
         cameraPos = this.size.scale(.5);
-        cameraScale = this.tileSize.x;
+        cameraScale = this.tileInfo.size.x;
 
         if (clear)
         {
             // clear and set size
-            mainCanvas.width  = this.size.x * this.tileSize.x;
-            mainCanvas.height = this.size.y * this.tileSize.y;
+            mainCanvas.width  = this.size.x * this.tileInfo.size.x;
+            mainCanvas.height = this.size.y * this.tileInfo.size.y;
         }
 
         // begin a new render for the tile canvas
@@ -291,7 +291,8 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
         if (d.tile != undefined)
         {
             ASSERT(mainContext == this.context); // must call redrawStart() before drawing tiles
-            drawTile(pos, vec2(1), d.tile, this.tileSize, d.color, d.direction*PI/2, d.mirror);
+            const tileInfo = tile(d.tile, this.tileInfo.size, this.tileInfo.textureIndex);
+            drawTile(pos, vec2(1), tileInfo, d.color, d.direction*PI/2, d.mirror);
         }
     }
 
@@ -313,8 +314,8 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
     {
         const context = this.context;
         context.save();
-        pos = pos.subtract(this.pos).multiply(this.tileSize);
-        size = size.multiply(this.tileSize);
+        pos = pos.subtract(this.pos).multiply(this.tileInfo.size);
+        size = size.multiply(this.tileInfo.size);
         context.translate(pos.x, this.canvas.height - pos.y);
         context.rotate(angle);
         context.scale(mirror ? -size.x : size.x, size.y);
@@ -325,28 +326,27 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
     /** Draw a tile directly onto the layer canvas
      *  @param {Vector2} pos
      *  @param {Vector2} [size=Vector2(1,1)]
-     *  @param {Number}  [tileIndex=-1]
-     *  @param {Vector2} [tileSize=tileSizeDefault]
+     *  @param {TileInfo} [tileInfo]
      *  @param {Color}   [color=Color()]
      *  @param {Number}  [angle=0]
      *  @param {Boolean} [mirror=0] */
-    drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, color=new Color, angle, mirror)
+    drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle, mirror)
     {
         this.drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
-            if (tileIndex < 0)
+            if (tileInfo)
+            {
+                const textureInfo = textureInfos[tileInfo.textureIndex];
+                context.globalAlpha = color.a; // only alpha is supported
+                context.drawImage(textureInfo.image, 
+                    tileInfo.pos.x,  tileInfo.pos.y, 
+                    tileInfo.size.x, tileInfo.size.y, -.5, -.5, 1, 1);
+            }
+            else
             {
                 // untextured
                 context.fillStyle = color;
                 context.fillRect(-.5, -.5, 1, 1);
-            }
-            else
-            {
-                const cols = tileImage.width/tileSize.x;
-                context.globalAlpha = color.a; // only alpha, no color, is supported in this mode
-                context.drawImage(tileImage, 
-                    (tileIndex%cols)*tileSize.x, (tileIndex/cols|0)*tileSize.y, 
-                    tileSize.x, tileSize.y, -.5, -.5, 1, 1);
             }
         });
     }

@@ -208,7 +208,7 @@ function gameRender()
         
         // use darker color for icon
         const color2 = color.scale(.8, 1);
-        drawTile(drawPos, vec2(.5), data, vec2(64), color2);
+        drawTile(drawPos, vec2(.5), tile(data, 64), color2);
     }
 
     // draw a grey square at top to cover up incomming tiles
@@ -225,7 +225,7 @@ function gameRenderPost()
 
 ///////////////////////////////////////////////////////////////////////////////
 // Startup LittleJS Engine
-engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png');
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
 
 ///////////////////////////////////////////////////////////////////////////////
 // find and remove all runs of 3 or higher
@@ -289,7 +289,7 @@ function clearMatches()
             const color2 = color1.lerp(new Color, .5);
             new ParticleEmitter(
                 pos.add(vec2(.5)), 0, 1, .1, 100, PI,// pos, angle, emitSize, emitTime, emitRate, emiteCone
-                undefined, undefined,                // tileIndex, tileSize
+                0,                                   // tileInfo
                 color1, color2,                      // colorStartA, colorStartB
                 color1.scale(1,0), color2.scale(1,0),// colorEndA, colorEndB
                 .5, .3, .3, .05, .05, // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed

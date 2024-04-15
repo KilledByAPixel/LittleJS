@@ -29,9 +29,9 @@ const sound_killEnemy =    new Sound([,,783,,.03,.02,1,2,,,940,.03,,,,,.2,.6,,.0
 const persistentParticleDestroyCallback = (particle)=>
 {
     // copy particle to tile layer on death
-    ASSERT(particle.tileIndex < 0); // quick draw to tile layer uses canvas 2d so must be untextured
+    ASSERT(!particle.tileInfo); // quick draw to tile layer uses canvas 2d so must be untextured
     if (particle.groundObject)
-        tileLayer.drawTile(particle.pos, particle.size, particle.tileIndex, particle.tileSize, particle.color, particle.angle, particle.mirror);
+        tileLayer.drawTile(particle.pos, particle.size, particle.tileInfo, particle.color, particle.angle, particle.mirror);
 }
 
 function makeBlood(pos, amount) { makeDebris(pos, new Color(1,0,0), 50, .1, 0); }
@@ -100,23 +100,23 @@ function explosion(pos, radius=3)
     // smoke
     new ParticleEmitter(
         pos, 0, radius/2, .2, 50*radius, PI, // pos, angle, emitSize, emitTime, emitRate, emiteCone
-        0, undefined,        // tileIndex, tileSize
-        new Color(0,0,0), new Color(0,0,0), // colorStartA, colorStartB
+        0,                                   // tileInfo
+        new Color(0,0,0), new Color(0,0,0),  // colorStartA, colorStartB
         new Color(0,0,0,0), new Color(0,0,0,0), // colorEndA, colorEndB
-        1, .5, 2, .1, .05, // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
+        1, .5, 2, .1, .05,   // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
         .9, 1, -.3, PI, .1,  // damping, angleDamping, gravityScale, particleCone, fadeRate, 
-        .5, 0, 0, 0, 1e8              // randomness, collide, additive, randomColorLinear, renderOrder
+        .5, 0, 0, 0, 1e8     // randomness, collide, additive, randomColorLinear, renderOrder
     );
 
     // fire
     new ParticleEmitter(
-        pos, 0, radius/2, .1, 100*radius, PI, // pos, angle, emitSize, emitTime, emitRate, emiteCone
-        0, undefined,        // tileIndex, tileSize
+        pos, 0, radius/2, .1, 100*radius, PI,   // pos, angle, emitSize, emitTime, emitRate, emiteCone
+        0,                                      // tileInfo
         new Color(1,.5,.1), new Color(1,.1,.1), // colorStartA, colorStartB
         new Color(1,.5,.1,0), new Color(1,.1,.1,0), // colorEndA, colorEndB
         .5, .5, 2, .1, .05, // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
         .9, 1, 0, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate, 
-        .5, 0, 1, 0, 1e9              // randomness, collide, additive, randomColorLinear, renderOrder
+        .5, 0, 1, 0, 1e9    // randomness, collide, additive, randomColorLinear, renderOrder
     );
 }
 

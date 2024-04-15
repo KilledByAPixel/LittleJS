@@ -248,7 +248,7 @@ class RandomGenerator
 
 /** 
  * Create a 2d vector, can take another Vector2 to copy, 2 scalars, or 1 scalar
- * @param {Number} [x=0]
+ * @param {(Number|Vector2)} [x=0]
  * @param {Number} [y=0]
  * @return {Vector2}
  * @example

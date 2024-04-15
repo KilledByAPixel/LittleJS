@@ -409,7 +409,7 @@ Make sure you replace the first parameter, vec2(), with this.pos so the effect a
 
 ```javascript
 // create explosion effect
-new ParticleEmitter(this.pos, 0, 0, 0.1, 100, 3.14, -1, vec2(16, 16), new Color(1, 1, 1, 1), new Color(1, 1, 1, 1), new Color(1, 1, 1, 0), new Color(1, 1, 1, 0), 0.5, 0.1, 1, 0.1, 0.05, 1, 1, 0, 3.14, 0.1, 0.2, 0, 0, 1);
+new ParticleEmitter(this.pos, 0, 0, 0.1, 100, 3.14, 0, new Color(1, 1, 1, 1), new Color(1, 1, 1, 1), new Color(1, 1, 1, 0), new Color(1, 1, 1, 0), 0.5, 0.1, 1, 0.1, 0.05, 1, 1, 0, 3.14, 0.1, 0.2, 0, 0, 1);
 ```
 
 Now you should see this simple particle effect play wherever a brick breaks. You can continue tweaking the parameters to make your own effect or use the one I made which also uses this.color to change the particle’s color so it matches the brick.
@@ -420,7 +420,7 @@ const color = this.color;
 new ParticleEmitter(
     this.pos, 0,            // pos, angle
     this.size, .1, 200, PI, // emitSize, emitTime, emitRate, emiteCone
-    -1, vec2(16),           // tileIndex, tileSize
+    0,                      // tileInfo
     color, color,           // colorStartA, colorStartB
     color.scale(1,0), color.scale(1,0), // colorEndA, colorEndB
     .2, .5, 1, .1, .1,  // time, sizeStart, sizeEnd, speed, angleSpeed

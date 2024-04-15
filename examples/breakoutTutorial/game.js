@@ -114,7 +114,7 @@ class Brick extends EngineObject
         new ParticleEmitter(
             this.pos, 0,            // pos, angle
             this.size, .1, 200, PI, // emitSize, emitTime, emitRate, emiteCone
-            -1, vec2(16),           // tileIndex, tileSize
+            0,                      // tileInfo
             color, color,           // colorStartA, colorStartB
             color.scale(1,0), color.scale(1,0), // colorEndA, colorEndB
             .2, .5, 1, .1, .1,  // time, sizeStart, sizeEnd, speed, angleSpeed

@@ -13,7 +13,7 @@ class Character extends GameObject
 {
     constructor(pos)
     { 
-        super(pos, vec2(.6,.95), 32);
+        super(pos, vec2(.6,.95), tile());
 
         this.weapon = new Weapon(pos, this);
         this.lastPos = pos;
@@ -211,8 +211,9 @@ class Character extends GameObject
             this.mirror = moveInput.x < 0;
         
         // set tile to use
-        this.tileIndex = this.isDead() ? 3 : 
+        const tile = this.isDead() ? 3 : 
             this.climbingLadder || this.groundTimer.active() ? 3 + 2*this.walkCyclePercent|0 : 4;
+        this.tileInfo.pos.x = tile * 16;
     }
        
     render()
@@ -226,7 +227,7 @@ class Character extends GameObject
             // make bottom flush
             bodyPos = bodyPos.add(vec2(0,(this.drawSize.y-this.size.y)/2));
         }
-        drawTile(bodyPos, this.drawSize, this.tileIndex, this.tileSize, this.color, this.angle, this.mirror);
+        drawTile(bodyPos, this.drawSize, this.tileInfo, this.color, this.angle, this.mirror);
     }
 
     damage(damage, damagingObject)

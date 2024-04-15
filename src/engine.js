@@ -30,7 +30,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.7.23';
+const engineVersion = '1.8.0';
 
 /** Frames per second to update objects
  *  @type {Number}
@@ -80,6 +80,9 @@ let paused = 0;
  *  @memberof Engine */
 function setPaused(_paused) { paused = _paused; }
 
+// Frame time tracking
+let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
+
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Start up LittleJS engine with your callback functions
@@ -88,52 +91,13 @@ function setPaused(_paused) { paused = _paused; }
  *  @param {Function} gameUpdatePost  - Called after physics and objects are updated, setup camera and prepare for render
  *  @param {Function} gameRender      - Called before objects are rendered, draw any background effects that appear behind objects
  *  @param {Function} gameRenderPost  - Called after objects are rendered, draw effects or hud that appear above all objects
- *  @param {String} [tileImageSource] - Tile image to use, everything starts when the image is finished loading
+ *  @param {String} [imageSources='tiles.png'] - Image to load
  *  @memberof Engine */
-function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, tileImageSource)
+function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=['tiles.png'])
 {
-    // init engine when tiles load or fail to load
-    tileImage.onerror = tileImage.onload = ()=>
-    {
-        // save tile image info
-        tileImageFixBleed = vec2(tileFixBleedScale).divide(tileImageSize = vec2(tileImage.width, tileImage.height));
-        debug && (tileImage.onload=()=>ASSERT(1)); // tile sheet can not reloaded
+    ASSERT(Array.isArray(imageSources)); // pass in images as array
 
-        // setup html
-        const styleBody = 
-            'margin:0;overflow:hidden;' + // fill the window
-            'background:#000;' +          // set background color
-            'touch-action:none;' +        // prevent mobile pinch to resize
-            'user-select:none;' +         // prevent mobile hold to select
-            '-webkit-user-select:none;' + // compatibility for ios
-            '-webkit-touch-callout:none'; // compatibility for ios
-        document.body.style = styleBody;
-        document.body.appendChild(mainCanvas = document.createElement('canvas'));
-        mainContext = mainCanvas.getContext('2d');
-
-        // init stuff and start engine
-        debugInit();
-        glEnable && glInit();
-
-        // create overlay canvas for hud to appear above gl canvas
-        document.body.appendChild(overlayCanvas = document.createElement('canvas'));
-        overlayContext = overlayCanvas.getContext('2d');
-
-        // set canvas style
-        const styleCanvas = 
-            'position:absolute;' +                               // position canvas              
-            'top:50%;left:50%;transform:translate(-50%,-50%);' + // center the canvas
-            (canvasPixelated?'image-rendering:pixelated':'');    // set pixelated rendering
-        (glCanvas||mainCanvas).style = mainCanvas.style = overlayCanvas.style = styleCanvas;
-        
-        gameInit();
-        engineUpdate();
-    };
-
-    // frame time tracking
-    let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
-
-    // main update loop
+    // internal update loop for engine
     function engineUpdate(frameTimeMS=0)
     {
         // update time keeping
@@ -164,9 +128,9 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         }
         else
         {
-             // clear canvas and set size to same as window
-             mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
-             mainCanvas.height = min(innerHeight, canvasMaxSize.y);
+            // clear canvas and set size to same as window
+            mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
+            mainCanvas.height = min(innerHeight, canvasMaxSize.y);
         }
         
         // clear overlay canvas and set size
@@ -248,8 +212,51 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         requestAnimationFrame(engineUpdate);
     }
 
-    // set tile image source to load the image and start the engine
-    tileImageSource ? tileImage.src = tileImageSource : tileImage.onload();
+    // setup html
+    const styleBody = 
+        'margin:0;overflow:hidden;' + // fill the window
+        'background:#000;' +          // set background color
+        'touch-action:none;' +        // prevent mobile pinch to resize
+        'user-select:none;' +         // prevent mobile hold to select
+        '-webkit-user-select:none;' + // compatibility for ios
+        '-webkit-touch-callout:none'; // compatibility for ios
+    document.body.style = styleBody;
+    document.body.appendChild(mainCanvas = document.createElement('canvas'));
+    mainContext = mainCanvas.getContext('2d');
+
+    // init stuff and start engine
+    debugInit();
+    glEnable && glInit();
+
+    // create overlay canvas for hud to appear above gl canvas
+    document.body.appendChild(overlayCanvas = document.createElement('canvas'));
+    overlayContext = overlayCanvas.getContext('2d');
+
+    // set canvas style
+    const styleCanvas = 
+        'position:absolute;' +                               // position
+        'top:50%;left:50%;transform:translate(-50%,-50%);' + // center
+        (canvasPixelated?'image-rendering:pixelated':'');    // pixelated rendering
+    (glCanvas||mainCanvas).style = mainCanvas.style = overlayCanvas.style = styleCanvas;
+    
+    // load all of the images
+    Promise.all(imageSources.map((src, textureIndex)=>
+        new Promise((resolve, reject)=> 
+        {
+            const image = new Image;
+            image.onerror = image.onload = ()=> 
+            {
+                textureInfos[textureIndex] = new TextureInfo(image);
+                resolve();
+            }
+            image.src = src;
+        })
+    )).then(()=> 
+    {
+        // start the engine
+        gameInit();
+        engineUpdate();
+    });
 }
 
 // Called automatically by engine to setup render system

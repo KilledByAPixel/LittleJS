@@ -31,7 +31,7 @@ function medalsInit(saveName)
 }
 
 /** 
- * Medal Object - Tracks an unlockable medal 
+ * Medal - Tracks an unlockable medal 
  * @example
  * // create a medal
  * const medal_example = new Medal(0, 'Example Medal', 'More info about the medal goes here.', '🎖️');
@@ -44,7 +44,7 @@ function medalsInit(saveName)
  */
 class Medal
 {
-    /** Create an medal object and adds it to the list of medals
+    /** Create a medal object and adds it to the list of medals
      *  @param {Number} id            - The unique identifier of the medal
      *  @param {String} name          - Name of the medal
      *  @param {String} [description] - Description of the medal

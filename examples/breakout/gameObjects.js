@@ -43,7 +43,7 @@ class Brick extends EngineObject
 {
     constructor(pos)
     {
-        super(pos, vec2(2,1), 1, vec2(32,16), 0, randColor());
+        super(pos, vec2(2,1), tile(1, vec2(32,16)), 0, randColor());
         ++brickCount;
         
         this.mass = 0; // make object have static physics
@@ -64,7 +64,7 @@ class Brick extends EngineObject
         new ParticleEmitter(
             this.pos, 0,                          // emitPos, emitAngle
             this.size, .1, 200, PI,               // emitSize, emitTime, emitRate, emiteCone
-            0, vec2(16),                          // tileIndex, tileSize
+            tile(0, 16),                          // tileIndex, tileSize
             color1, color2,                       // colorStartA, colorStartB
             color1.scale(1,0), color2.scale(1,0), // colorEndA, colorEndB
             .5, .3, 1, .02, .05,// time, sizeStart, sizeEnd, speed, angleSpeed
@@ -86,7 +86,7 @@ class Ball extends EngineObject
 {
     constructor(pos)
     {
-        super(pos, vec2(.5), 0);
+        super(pos, vec2(.5), tile(0));
 
         // make a bouncy ball
         this.setCollision();
@@ -98,7 +98,7 @@ class Ball extends EngineObject
         this.trailEffect = new ParticleEmitter(
             this.pos, 0,                          // emitPos, emitAngle
             this.size, 0, 80, PI,                 // emitSize, emitTime, emitRate, emiteCone
-            0, vec2(16),                          // tileIndex, tileSize
+            tile(0, 16),                          // tileIndex, tileSize
             color, color,                         // colorStartA, colorStartB
             color.scale(0), color.scale(0),       // colorEndA, colorEndB
             2, .4, 1, .001, .05,// time, sizeStart, sizeEnd, speed, angleSpeed

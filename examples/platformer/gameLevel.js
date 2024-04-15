@@ -143,9 +143,9 @@ function generateLevel()
 function makeTileLayers()
 {
     // create tile layers
-    tileLayer = new TileLayer(vec2(), levelSize);
+    tileLayer = new TileLayer(vec2(), levelSize, tile(0,16,1));
     tileLayer.renderOrder = -1e3;
-    tileBackgroundLayer = new TileLayer(vec2(), levelSize);
+    tileBackgroundLayer = new TileLayer(vec2(), levelSize, tile(0,16,1));
     tileBackgroundLayer.renderOrder = -2e3;
 
     const pos = vec2();
@@ -159,13 +159,13 @@ function makeTileLayers()
             let direction, mirror, tileIndex, color;
             if (tileType == tileType_solid)
             {
-                tileIndex = 5 + rand()**3*2|0;
+                tileIndex = 1 + rand()**3*2|0;
                 color = levelColor.mutate(.03);
                 direction = randInt(4);
                 mirror = randInt(2);
             }
             else if (tileType == tileType_ladder)
-                tileIndex = 7;
+                tileIndex = 3;
 
             const data = new TileLayerData(tileIndex, direction, mirror, color);
             tileLayer.setData(pos, data);
@@ -175,7 +175,7 @@ function makeTileLayers()
         tileType = getTileBackgroundData(pos);
         if (tileType)
         {
-            const data = new TileLayerData(5 + rand()**3*2|0, randInt(4), randInt(2), levelColor.mutate().scale(.4,1));
+            const data = new TileLayerData(1 + rand()**3*2|0, randInt(4), randInt(2), levelColor.mutate().scale(.4,1));
             tileBackgroundLayer.setData(pos, data);
         }
     }

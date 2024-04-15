@@ -1,8 +1,4 @@
 declare module "littlejs.esm" {
-    /**
-     * LittleJS Module Export
-     * - Export engine as a module with functions where necessary
-     */
     /** Set position of camera in world space
      *  @param {Vector2} pos
      *  @memberof Settings */
@@ -181,7 +177,7 @@ declare module "littlejs.esm" {
      *  @default Vector2(16,16)
      *  @memberof Settings */
     export let tileSizeDefault: Vector2;
-    /** Prevent tile bleeding from neighbors in pixels
+    /** How many pixels smaller to draw tiles to prevent bleeding from neighbors
      *  @type {Number}
      *  @default
      *  @memberof Settings */
@@ -844,7 +840,7 @@ declare module "littlejs.esm" {
     }
     /**
      * Create a 2d vector, can take another Vector2 to copy, 2 scalars, or 1 scalar
-     * @param {Number} [x=0]
+     * @param {(Number|Vector2)} [x=0]
      * @param {Number} [y=0]
      * @return {Vector2}
      * @example
@@ -854,7 +850,7 @@ declare module "littlejs.esm" {
      * b = vec2();         // set b to (0, 0)
      * @memberof Utilities
      */
-    export function vec2(x?: number, y?: number): Vector2;
+    export function vec2(x?: (number | Vector2), y?: number): Vector2;
     /**
      * Create a color object with RGBA values
      * @param {Number} [r=1] - red
@@ -905,23 +901,20 @@ declare module "littlejs.esm" {
      */
     export class EngineObject {
         /** Create an engine object and adds it to the list of objects
-         *  @param {Vector2} [position=Vector2()]        - World space position of the object
-         *  @param {Vector2} [size=Vector2(1,1)]         - World space size of the object
-         *  @param {Number}  [tileIndex=-1]              - Tile to use to render object (-1 is untextured)
-         *  @param {Vector2} [tileSize=tileSizeDefault]  - Size of tile in source pixels
-         *  @param {Number}  [angle=0]                   - Angle the object is rotated by
-         *  @param {Color}   [color=Color()]             - Color to apply to tile when rendered
-         *  @param {Number}  [renderOrder=0]             - Objects sorted by renderOrder before being rendered
+         *  @param {Vector2} [pos=Vector2()]            - World space position of the object
+         *  @param {Vector2} [size=Vector2(1,1)]        - World space size of the object
+         *  @param {TileInfo} [tileInfo]                - Tile info to render object (undefined is untextured)
+         *  @param {Number}  [angle=0]                  - Angle the object is rotated by
+         *  @param {Color}   [color=Color()]            - Color to apply to tile when rendered
+         *  @param {Number}  [renderOrder=0]            - Objects sorted by renderOrder before being rendered
          */
-        constructor(pos?: Vector2, size?: Vector2, tileIndex?: number, tileSize?: Vector2, angle?: number, color?: Color, renderOrder?: number);
+        constructor(pos?: Vector2, size?: Vector2, tileInfo?: TileInfo, angle?: number, color?: Color, renderOrder?: number);
         /** @property {Vector2} - World space position of the object */
         pos: Vector2;
         /** @property {Vector2} - World space width and height of the object */
         size: Vector2;
-        /** @property {Number}  - Tile to use to render object (-1 is untextured) */
-        tileIndex: number;
-        /** @property {Vector2} - Size of tile in source pixels */
-        tileSize: Vector2;
+        /** @property {TileInfo} - Tile info to render object (undefined is untextured) */
+        tileInfo: TileInfo;
         /** @property {Number}  - Angle to rotate the object */
         angle: number;
         /** @property {Color}   - Color to apply when rendered */
@@ -1001,10 +994,54 @@ declare module "littlejs.esm" {
          *  @return {String} */
         toString(): string;
     }
-    /** Tile sheet for batch rendering system
+    /** Array containing tile sheet for batch rendering system
      *  @type {CanvasImageSource}
      *  @memberof Draw */
-    export const tileImage: CanvasImageSource;
+    export let textureInfos: CanvasImageSource;
+    /**
+     * Create a tile info object
+     * - This can take vecs or floats for easier use and conversion
+     *  @param {(Number|Vector2)} [pos=Vector2()]         - Position of tile in pixels
+     *  @param {(Number|Vector2)} [size=tileSizeDefault]  - Size of tile in pixels
+     *  @param {Number} [textureIndex=0]                  - Texture index to use
+     *  @return {TileInfo}
+     *  @memberof Draw
+     */
+    export function tile(pos?: (number | Vector2), size?: (number | Vector2), textureIndex?: number): TileInfo;
+    /**
+     * Tile Info - Stores info about how to draw a tile
+     */
+    export class TileInfo {
+        /** Create a tile info object
+         *  @param {Vector2} [pos=Vector2()]         - Position of tile in pixels
+         *  @param {Vector2} [size=tileSizeDefault]  - Size of tile in pixels
+         *  @param {Number}  [textureIndex=0]        - Texture index to use
+         */
+        constructor(pos?: Vector2, size?: Vector2, textureIndex?: number);
+        /** @property {Vector2} - Position of tile in pixels */
+        pos: Vector2;
+        /** @property {Vector2} - Size of tile in pixels */
+        size: Vector2;
+        /** @property {Number} - Texture index to use */
+        textureIndex: number;
+        /** Returns an offset copy of this tile, useful for animation
+        *  @param {Vector2} offset - Offset to apply in pixels
+        *  @return {TileInfo}
+        */
+        offset(offset: Vector2): TileInfo;
+    }
+    /** Texture Info - Stores info about each texture */
+    export class TextureInfo {
+        constructor(image: any);
+        /** @property {CanvasImageSource} - image source */
+        image: any;
+        /** @property {Vector2} - size of the image */
+        size: Vector2;
+        /** @property {WebGLTexture} - webgl texture */
+        glTexture: WebGLTexture;
+        /** @property {Vector2} - size to adjust tile to fix bleeding */
+        fixBleedSize: Vector2;
+    }
     /**
      * LittleJS Drawing System
      * - Hybrid system with both Canvas2D and WebGL available
@@ -1059,7 +1096,7 @@ declare module "littlejs.esm" {
     /** Draw textured tile centered in world space, with color applied if using WebGL
      *  @param {Vector2} pos                            - Center of the tile in world space
      *  @param {Vector2} [size=Vector2(1,1)]            - Size of the tile in world space
-     *  @param {Number}  [tileIndex=-1]                 - Tile index to use, negative is untextured
+     *  @param {TileInfo} [tileInfo]                   - Tile info to use, untextured if undefined
      *  @param {Vector2} [tileSize=tileSizeDefault]     - Tile size in source pixels
      *  @param {Color}   [color=Color()]                - Color to modulate with
      *  @param {Number}  [angle=0]                      - Angle to rotate by
@@ -1068,7 +1105,7 @@ declare module "littlejs.esm" {
      *  @param {Boolean} [useWebGL=glEnable]            - Use accelerated WebGL rendering
      *  @param {Boolean} [screenSpace=0]                - If true the pos and size are in screen space
      *  @memberof Draw */
-    export function drawTile(pos: Vector2, size?: Vector2, tileIndex?: number, tileSize?: Vector2, color?: Color, angle?: number, mirror?: boolean, additiveColor?: Color, useWebGL?: boolean, screenSpace?: boolean): void;
+    export function drawTile(pos: Vector2, size?: Vector2, tileInfo?: TileInfo, color?: Color, angle?: number, mirror?: boolean, additiveColor?: Color, useWebGL?: boolean, screenSpace?: boolean): void;
     /** Draw colored rect centered on pos
      *  @param {Vector2} pos
      *  @param {Vector2} [size=Vector2(1,1)]
@@ -1146,14 +1183,12 @@ declare module "littlejs.esm" {
          *  @param {HTMLImageElement} [image] - Image for the font, if undefined default font is used
          *  @param {Vector2} [tileSize=vec2(8)] - Size of the font source tiles
          *  @param {Vector2} [paddingSize=vec2(0,1)] - How much extra space to add between characters
-         *  @param {Number}  [startTileIndex=0] - Tile index in image where font starts
          *  @param {CanvasRenderingContext2D} [context=overlayContext] - context to draw to
          */
-        constructor(image?: HTMLImageElement, tileSize?: Vector2, paddingSize?: Vector2, startTileIndex?: number, context?: CanvasRenderingContext2D);
+        constructor(image?: HTMLImageElement, tileSize?: Vector2, paddingSize?: Vector2, context?: CanvasRenderingContext2D);
         image: any;
         tileSize: Vector2;
         paddingSize: Vector2;
-        startTileIndex: number;
         context: CanvasRenderingContext2D;
         /** Draw text in world space using the image font
          *  @param {String}  text
@@ -1520,7 +1555,7 @@ declare module "littlejs.esm" {
         clear(): void;
     }
     /**
-     * Tile layer object - cached rendering system for tile layers
+     * Tile Layer - cached rendering system for tile layers
      * - Each Tile layer is rendered to an off screen canvas
      * - To allow dynamic modifications, layers are rendered using canvas 2d
      * - Some devices like mobile phones are limited to 4k texture resolution
@@ -1535,11 +1570,11 @@ declare module "littlejs.esm" {
         /** Create a tile layer object
             *  @param {Vector2} [position=Vector2()]       - World space position
             *  @param {Vector2} [size=tileCollisionSize]   - World space size
-            *  @param {Vector2} [tileSize=tileSizeDefault] - Size of tiles in source pixels
+            *  @param {TileInfo} [tileInfo]                - Tile info for layer
             *  @param {Vector2} [scale=Vector2(1,1)]       - How much to scale this layer when rendered
             *  @param {Number}  [renderOrder=0]            - Objects sorted by renderOrder before being rendered
             */
-        constructor(pos: any, size?: Vector2, tileSize?: Vector2, scale?: Vector2, renderOrder?: number);
+        constructor(pos: any, size?: Vector2, tileInfo?: TileInfo, scale?: Vector2, renderOrder?: number);
         /** @property {HTMLCanvasElement}        - The canvas used by this tile layer */
         canvas: HTMLCanvasElement;
         /** @property {CanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
@@ -1581,12 +1616,11 @@ declare module "littlejs.esm" {
         /** Draw a tile directly onto the layer canvas
          *  @param {Vector2} pos
          *  @param {Vector2} [size=Vector2(1,1)]
-         *  @param {Number}  [tileIndex=-1]
-         *  @param {Vector2} [tileSize=tileSizeDefault]
+         *  @param {TileInfo} [tileInfo]
          *  @param {Color}   [color=Color()]
          *  @param {Number}  [angle=0]
          *  @param {Boolean} [mirror=0] */
-        drawTile(pos: Vector2, size?: Vector2, tileIndex?: number, tileSize?: Vector2, color?: Color, angle?: number, mirror?: boolean): void;
+        drawTile(pos: Vector2, size?: Vector2, tileInfo?: TileInfo, color?: Color, angle?: number, mirror?: boolean): void;
         /** Draw a rectangle directly onto the layer canvas
          *  @param {Vector2} pos
          *  @param {Vector2} [size=Vector2(1,1)]
@@ -1606,7 +1640,7 @@ declare module "littlejs.esm" {
      * let particleEmiter = new ParticleEmitter
      * (
      *     pos, 0, 1, 0, 500, PI,  // pos, angle, emitSize, emitTime, emitRate, emiteCone
-     *     0, vec2(16),                            // tileIndex, tileSize
+     *     tile(0, 16),            // tileInfo
      *     new Color(1,1,1),   new Color(0,0,0),   // colorStartA, colorStartB
      *     new Color(1,1,1,0), new Color(0,0,0,0), // colorEndA, colorEndB
      *     2, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
@@ -1622,8 +1656,7 @@ declare module "littlejs.esm" {
          *  @param {Number}  [emitTime=0]       - How long to stay alive (0 is forever)
          *  @param {Number}  [emitRate=100]     - How many particles per second to spawn, does not emit if 0
          *  @param {Number}  [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
-         *  @param {Number}  [tileIndex=-1]     - Index into tile sheet, if <0 no texture is applied
-         *  @param {Vector2} [tileSize=tileSizeDefault] - Tile size for particles
+         *  @param {TileInfo} [tileInfo]         - Tile info to render particles (undefined is untextured)
          *  @param {Color}   [colorStartA=Color()] - Color at start of life 1, randomized between start colors
          *  @param {Color}   [colorStartB=Color()] - Color at start of life 2, randomized between start colors
          *  @param {Color}   [colorEndA=Color(1,1,1,0)] - Color at end of life 1, randomized between end colors
@@ -1645,7 +1678,7 @@ declare module "littlejs.esm" {
          *  @param {Number}  [renderOrder=0]        - Render order for particles (additive is above other stuff by default)
          *  @param {Boolean}  [localSpace=0]        - Should it be in local space of emitter (world space is default)
          */
-        constructor(pos: any, angle?: number, emitSize?: number, emitTime?: number, emitRate?: number, emitConeAngle?: number, tileIndex?: number, tileSize?: Vector2, colorStartA?: Color, colorStartB?: Color, colorEndA?: Color, colorEndB?: Color, particleTime?: number, sizeStart?: number, sizeEnd?: number, speed?: number, angleSpeed?: number, damping?: number, angleDamping?: number, gravityScale?: number, particleConeAngle?: number, fadeRate?: number, randomness?: number, collideTiles?: boolean, additive?: boolean, randomColorLinear?: boolean, renderOrder?: number, localSpace?: boolean);
+        constructor(pos: any, angle?: number, emitSize?: number, emitTime?: number, emitRate?: number, emitConeAngle?: number, tileInfo?: TileInfo, colorStartA?: Color, colorStartB?: Color, colorEndA?: Color, colorEndB?: Color, particleTime?: number, sizeStart?: number, sizeEnd?: number, speed?: number, angleSpeed?: number, damping?: number, angleDamping?: number, gravityScale?: number, particleConeAngle?: number, fadeRate?: number, randomness?: number, collideTiles?: boolean, additive?: boolean, randomColorLinear?: boolean, renderOrder?: number, localSpace?: boolean);
         /** @property {Number} - World space size of the emitter (float for circle diameter, vec2 for rect) */
         emitSize: number;
         /** @property {Number} - How long to stay alive (0 is forever) */
@@ -1701,11 +1734,10 @@ declare module "littlejs.esm" {
         /**
          * Create a particle with the given settings
          * @param {Vector2} position                   - World space position of the particle
-         * @param {Number}  [tileIndex=-1]             - Tile to use to render, untextured if -1
-         * @param {Vector2} [tileSize=tileSizeDefault] - Size of tile in source pixels
+         * @param {TileInfo} [tileInfo]                - Tile info to render particles (undefined is untextured)
          * @param {Number}  [angle=0]                  - Angle to rotate the particle
          */
-        constructor(pos: any, tileIndex?: number, tileSize?: Vector2, angle?: number);
+        constructor(pos: any, tileInfo?: TileInfo, angle?: number);
     }
     /**
      * LittleJS Medal System
@@ -1736,7 +1768,7 @@ declare module "littlejs.esm" {
      *  @memberof Medals */
     export function newgroundsInit(app_id: number, cipher?: string, cryptoJS?: any): void;
     /**
-     * Medal Object - Tracks an unlockable medal
+     * Medal - Tracks an unlockable medal
      * @example
      * // create a medal
      * const medal_example = new Medal(0, 'Example Medal', 'More info about the medal goes here.', '🎖️');
@@ -1748,7 +1780,7 @@ declare module "littlejs.esm" {
      * medal_example.unlock();
      */
     export class Medal {
-        /** Create an medal object and adds it to the list of medals
+        /** Create a medal object and adds it to the list of medals
          *  @param {Number} id            - The unique identifier of the medal
          *  @param {String} name          - Name of the medal
          *  @param {String} [description] - Description of the medal
@@ -1844,11 +1876,11 @@ declare module "littlejs.esm" {
      *  @param {Boolean} [additive=0]
      *  @memberof WebGL */
     export function glSetBlendMode(additive?: boolean): void;
-    /** Set the WebGl texture, not normally necessary unless multiple tile sheets are used
+    /** Set the WebGl texture, called automatically if using multiple textures
      *  - This may also flush the gl buffer resulting in more draw calls and worse performance
-     *  @param {WebGLTexture} [texture=glTileTexture]
+     *  @param {WebGLTexture} texture
      *  @memberof WebGL */
-    export function glSetTexture(texture?: WebGLTexture): void;
+    export function glSetTexture(texture: WebGLTexture): void;
     /** Compile WebGL shader of the given type, will throw errors if in debug mode
      *  @param {String} source
      *  @param          type
@@ -1941,9 +1973,9 @@ declare module "littlejs.esm" {
      *  @param {Function} gameUpdatePost  - Called after physics and objects are updated, setup camera and prepare for render
      *  @param {Function} gameRender      - Called before objects are rendered, draw any background effects that appear behind objects
      *  @param {Function} gameRenderPost  - Called after objects are rendered, draw effects or hud that appear above all objects
-     *  @param {String} [tileImageSource] - Tile image to use, everything starts when the image is finished loading
+     *  @param {String} [imageSources='tiles.png'] - Image to load
      *  @memberof Engine */
-    export function engineInit(gameInit: Function, gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, tileImageSource?: string): void;
+    export function engineInit(gameInit: Function, gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, imageSources?: string): void;
     /** Update each engine object, remove destroyed objects, and update time
      *  @memberof Engine */
     export function engineObjectsUpdate(): void;

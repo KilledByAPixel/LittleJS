@@ -21,28 +21,33 @@ let particleEmitter;
 function gameInit()
 {
     // create tile collision and visible tile layer
-    initTileCollision(vec2(32, 16));
+    initTileCollision(vec2(32,16));
     const pos = vec2();
     const tileLayer = new TileLayer(pos, tileCollisionSize);
 
     // get level data from the tiles image
-    const imageLevelDataRow = 1;
-    mainContext.drawImage(tileImage, 0, 0);
+    const tileImage = textureInfos[0].image;
+    mainContext.drawImage(tileImage,0,0);
+    const imageData = mainContext.getImageData(0,0,tileImage.width,tileImage.height).data;
     for (pos.x = tileCollisionSize.x; pos.x--;)
     for (pos.y = tileCollisionSize.y; pos.y--;)
     {
-        const imageData = mainContext.getImageData(pos.x, 16*(imageLevelDataRow+1)-pos.y-1, 1, 1).data;
-        if (imageData[0])
-        {
-            const tileIndex = 1;
-            const direction = randInt(4)
-            const mirror = randInt(2);
-            const color = randColor();
-            const data = new TileLayerData(tileIndex, direction, mirror, color);
-            tileLayer.setData(pos, data);
-            setTileCollisionData(pos, 1);
-        }
+        // check if this pixel is set
+        const i = pos.x + tileImage.width*(15 + tileCollisionSize.y - pos.y);
+        if (!imageData[4*i])
+            continue;
+        
+        // set tile data
+        const tileIndex = 1;
+        const direction = randInt(4)
+        const mirror = randInt(2);
+        const color = randColor();
+        const data = new TileLayerData(tileIndex, direction, mirror, color);
+        tileLayer.setData(pos, data);
+        setTileCollisionData(pos, 1);
     }
+
+    // draw tile layer with new data
     tileLayer.redraw();
 
     // setup camera
@@ -56,7 +61,7 @@ function gameInit()
     particleEmitter = new ParticleEmitter(
         vec2(16,15), 0,                         // emitPos, emitAngle
         1, 0, 500, PI,                          // emitSize, emitTime, emitRate, emiteCone
-        0, vec2(16),                            // tileIndex, tileSize
+        tile(0, 16),                            // tileIndex, tileSize
         new Color(1,1,1),   new Color(0,0,0),   // colorStartA, colorStartB
         new Color(1,1,1,0), new Color(0,0,0,0), // colorEndA, colorEndB
         2, .2, .2, .1, .05,   // time, sizeStart, sizeEnd, speed, angleSpeed
@@ -65,6 +70,7 @@ function gameInit()
     );
     particleEmitter.elasticity = .3; // bounce when it collides
     particleEmitter.trailScale = 2;  // stretch in direction of motion
+    
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -103,7 +109,7 @@ function gameRender()
     drawRect(vec2(16,8), vec2(20,14), hsl(0,0,.6), 0, 0);
     
     // draw the logo as a tile
-    drawTile(vec2(21,5), vec2(4.5), 2);
+    drawTile(vec2(21,5), vec2(4.5), tile(2));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -114,7 +120,7 @@ function gameRenderPost()
         vec2(mainCanvasSize.x/2, 70), 80,   // position, size
         hsl(0,0,1), 6, hsl(0,0,0));         // color, outline size and color
 }
-
+//glEnable = 0; // disable webgl for this project
 ///////////////////////////////////////////////////////////////////////////////
 // Startup LittleJS Engine
-engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png');
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);

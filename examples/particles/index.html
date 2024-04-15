@@ -10,7 +10,7 @@ button { margin:1px; }
 </style>
 </head><body>
 
-<script src=../../build/littlejs.js?1714></script>
+<script src=../../build/littlejs.js?1715></script>
 <script>
 
 'use strict';
@@ -31,8 +31,7 @@ addSetting('emitTime',         '', 0, 1e9, .1, 'How long to stay alive (0 is for
 addSetting('emitRate',         '', 0, 1e9, 1,  'How many particles per second to spawn, does not emit if 0');
 addSetting('emitConeAngle',    '', 0, 1e9, .01,'Local angle to apply velocity to particles from emitter');
 addSetting('tileIndex',        '', -1, 1e9, 1, 'Tile to use to render object (-1 is untextured)');
-addSetting('tileSizeX',        '', 0, 1e9, 1, 'X Size of texture tile in source pixelss');
-addSetting('tileSizeY',        '', 0, 1e9, 1, 'Y Size of texture tile in source pixelss');
+addSetting('tileSize',         '', 0, 1e9, 1,  'Size of texture tile in source pixelss');
 addSetting('colorStartA',      'color',0,0,0, 'Color at start of life 1');
 addSetting('colorStartA_alpha', 'alpha', 0,    1,   .01, 'Alpha at start of life 1');
 addSetting('colorStartB',      'color',0,0,0, 'Color at start of life 2');
@@ -61,6 +60,7 @@ function makeEmitter()
     if (particleSystem)
         particleSystem.destroy();
     particleSystem = new ParticleEmitter(cameraPos);
+    particleSystem.tileInfo = tile();
     particleSystem.emitConeAngle =
     particleSystem.particleConeAngle = 3.14;
 }
@@ -102,10 +102,8 @@ function gameInit()
                 else if (name == 'colorEndB_alpha')
                     defaultValue = particleSystem.colorEndB.a;
             }
-            else if (name == 'tileSizeX')
-                defaultValue = particleSystem.tileSize.x;
-            else if (name == 'tileSizeY')
-                defaultValue = particleSystem.tileSize.y;
+            else if (name == 'tileSize')
+                defaultValue = particleSystem.tileInfo.size.x;
             else if (type == 'checkbox')
                 defaultValue = particleSystem[name];
             else
@@ -200,6 +198,7 @@ function gameInit()
     }
 
     updateParticles();
+    particleSystemCode.value = getCode();
 }
 
 function updateParticles(shouldUpdateInput)
@@ -228,14 +227,14 @@ function updateParticles(shouldUpdateInput)
             else if (name == 'colorEndB_alpha')
                 particleSystem.colorEndB.a   = clamp(inputFloat);
         }
-        else if (name == 'tileSizeX')
+        else if (name == 'tileIndex')
         {
-            particleSystem.tileSize = vec2(parseInt(input.value), particleSystem.tileSize.y);
+            const tileIndex = parseInt(input.value);
+            particleSystem.tileIndex = tileIndex
+            particleSystem.tileInfo = tile(tileIndex, particleSystem.tileInfo.size);
         }
-        else if (name == 'tileSizeY')
-        {
-            particleSystem.tileSize = vec2(particleSystem.tileSize.x, parseInt(input.value));
-        }
+        else if (name == 'tileSize')
+            particleSystem.tileInfo.size = vec2(parseInt(input.value));
         else if (type == 'checkbox')
             particleSystem[name] = input.checked ? 1 : 0;
         else if (name == 'emitRate')
@@ -275,10 +274,8 @@ function updateSetting(setting, save=1)
         else if (name == 'colorEndB_alpha')
             input.value = particleSystem.colorEndB.a;
     }
-    else if (name == 'tileSizeX')
-        input.value = particleSystem.tileSize.x;
-    else if (name == 'tileSizeY')
-        input.value = particleSystem.tileSize.y;
+    else if (name == 'tileSize')
+        input.value = particleSystem.tileInfo.size.x;
     else if (type == 'checkbox')
         input.checked = particleSystem[name];
     else
@@ -315,11 +312,11 @@ function getCode()
         const name = setting.name;
         const type = setting.type;
         let value;
-        if (name == 'tileSizeX' || type == 'alpha')
+        if (name == 'tileSize' || type == 'alpha')
             continue;
 
-        if (name == 'tileSizeY')
-            value = `vec2(${particleSystem.tileSize.x}, ${particleSystem.tileSize.y})`;
+        if (name == 'tileIndex')
+            value = `tile(${particleSystem.tileIndex}, ${particleSystem.tileInfo.size.x})`;
         else if (type == 'color')
         {
             const c = particleSystem[name];
@@ -394,6 +391,6 @@ function gameRenderPost()
 
 ///////////////////////////////////////////////////////////////////////////////
 // Startup LittleJS Engine
-engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png');
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
 
 </script>

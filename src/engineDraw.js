@@ -47,13 +47,92 @@ let overlayContext;
  *  @memberof Draw */
 let mainCanvasSize = vec2();
 
-/** Tile sheet for batch rendering system
+/** Array containing tile sheet for batch rendering system
  *  @type {CanvasImageSource}
  *  @memberof Draw */
-const tileImage = new Image;
+let textureInfos = [];
 
 // Engine internal variables not exposed to documentation
-let tileImageSize, tileImageFixBleed, drawCount;
+let drawCount;
+
+///////////////////////////////////////////////////////////////////////////////
+
+/** 
+ * Create a tile info object
+ * - This can take vecs or floats for easier use and conversion
+ *  @param {(Number|Vector2)} [pos=Vector2()]         - Position of tile in pixels
+ *  @param {(Number|Vector2)} [size=tileSizeDefault]  - Size of tile in pixels
+ *  @param {Number} [textureIndex=0]                  - Texture index to use
+ *  @return {TileInfo}
+ *  @memberof Draw
+ */
+function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0)
+{
+    // if size is a number, make it a vector
+    if (size.x == undefined)
+    {
+        ASSERT(size > 0);
+        size = vec2(size);
+    }
+
+    // if pos is a number, use it as a tile index
+    if (pos.x == undefined)
+    {
+        const textureInfo = textureInfos[textureIndex];
+        const cols = textureInfo.size.x / size.x |0;
+        pos = vec2((pos%cols)*size.x, (pos/cols|0)*size.y);
+    }
+
+    // return a tile info object
+    return new TileInfo(pos, size, textureIndex); 
+}
+
+/** 
+ * Tile Info - Stores info about how to draw a tile
+ */
+class TileInfo
+{
+    /** Create a tile info object
+     *  @param {Vector2} [pos=Vector2()]         - Position of tile in pixels
+     *  @param {Vector2} [size=tileSizeDefault]  - Size of tile in pixels
+     *  @param {Number}  [textureIndex=0]        - Texture index to use
+     */
+    constructor(pos=vec2(), size=tileSizeDefault, textureIndex=0)
+    {
+        /** @property {Vector2} - Position of tile in pixels */
+        this.pos = pos;
+        /** @property {Vector2} - Size of tile in pixels */
+        this.size = size;
+        /** @property {Number} - Texture index to use */
+        this.textureIndex = textureIndex;
+    }
+
+    /** Returns an offset copy of this tile, useful for animation
+    *  @param {Vector2} offset - Offset to apply in pixels
+    *  @return {TileInfo}
+    */
+    offset(offset)
+    { return new TileInfo(this.pos.add(offset), this.size, this.textureIndex); }
+}
+
+/** Texture Info - Stores info about each texture */
+class TextureInfo
+{
+    // create a TextureInfo, called automatically by the engine
+    constructor(image)
+    {
+        /** @property {CanvasImageSource} - image source */
+        this.image = image;
+        /** @property {Vector2} - size of the image */
+        this.size = vec2(image.width, image.height);
+        /** @property {WebGLTexture} - webgl texture */
+        this.glTexture = glEnable && glCreateTexture(image);
+        /** @property {Vector2} - size to adjust tile to fix bleeding */
+        this.fixBleedSize = vec2(tileFixBleedScale).divide(this.size);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 /** Convert from screen to world space coordinates
  *  @param {Vector2} screenPos
@@ -84,7 +163,7 @@ function worldToScreen(worldPos)
 /** Draw textured tile centered in world space, with color applied if using WebGL
  *  @param {Vector2} pos                            - Center of the tile in world space
  *  @param {Vector2} [size=Vector2(1,1)]            - Size of the tile in world space
- *  @param {Number}  [tileIndex=-1]                 - Tile index to use, negative is untextured
+ *  @param {TileInfo} [tileInfo]                   - Tile info to use, untextured if undefined
  *  @param {Vector2} [tileSize=tileSizeDefault]     - Tile size in source pixels
  *  @param {Color}   [color=Color()]                - Color to modulate with
  *  @param {Number}  [angle=0]                      - Angle to rotate by
@@ -93,9 +172,12 @@ function worldToScreen(worldPos)
  *  @param {Boolean} [useWebGL=glEnable]            - Use accelerated WebGL rendering
  *  @param {Boolean} [screenSpace=0]                - If true the pos and size are in screen space
  *  @memberof Draw */
-function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, color=new Color,
+function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     angle=0, mirror, additiveColor=new Color(0,0,0,0), useWebGL=glEnable, screenSpace)
 {
+    ASSERT(typeof tileInfo !== 'number' || !tileInfo); // prevent old style calls
+    // to fix old calls, replace with tile(tileIndex, tileSize)
+
     showWatermark && ++drawCount;
     
     if (glEnable && useWebGL)
@@ -106,23 +188,27 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, col
             pos = screenToWorld(pos);
             size = size.scale(1/cameraScale);
         }
-        if (tileIndex < 0 || !tileImage.width)
-        {
-            // if negative tile index or image not found, force untextured
-            glDraw(pos.x, pos.y, size.x, size.y, angle, 0, 0, 0, 0, 0, color.rgbaInt()); 
-        }
-        else
+        
+        if (tileInfo)
         {
             // calculate uvs and render
-            const cols = tileImageSize.x / tileSize.x |0;
-            const uvSizeX = tileSize.x / tileImageSize.x;
-            const uvSizeY = tileSize.y / tileImageSize.y;
-            const uvX = (tileIndex%cols)*uvSizeX, uvY = (tileIndex/cols|0)*uvSizeY;
-            
+            const textureInfo = textureInfos[tileInfo.textureIndex];
+            const uvSizeX = tileInfo.size.x / textureInfo.size.x;
+            const uvSizeY = tileInfo.size.y / textureInfo.size.y;
+            const uvX = tileInfo.pos.x / textureInfo.size.x;
+            const uvY = tileInfo.pos.y / textureInfo.size.y;
+            const tileImageFixBleed = textureInfo.fixBleedSize;
+
+            glSetTexture(textureInfo.glTexture);
             glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
                 uvX + tileImageFixBleed.x, uvY + tileImageFixBleed.y, 
                 uvX - tileImageFixBleed.x + uvSizeX, uvY - tileImageFixBleed.y + uvSizeY, 
                 color.rgbaInt(), additiveColor.rgbaInt()); 
+        }
+        else
+        {
+            // if no tile info, force untextured
+            glDraw(pos.x, pos.y, size.x, size.y, angle, 0, 0, 0, 0, 0, color.rgbaInt()); 
         }
     }
     else
@@ -130,22 +216,22 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, col
         // normal canvas 2D rendering method (slower)
         drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
-            if (tileIndex < 0)
+            if (tileInfo)
             {
-                // if negative tile index, force untextured
-                context.fillStyle = color;
-                context.fillRect(-.5, -.5, 1, 1);
+                // calculate uvs and render
+                const sX = tileInfo.pos.x + tileFixBleedScale;
+                const sY = tileInfo.pos.y + tileFixBleedScale;
+                const sWidth  = tileInfo.size.x - 2*tileFixBleedScale;
+                const sHeight = tileInfo.size.y - 2*tileFixBleedScale;
+                context.globalAlpha = color.a; // only alpha is supported
+                const textureInfo = textureInfos[tileInfo.textureIndex];
+                context.drawImage(textureInfo.image, sX, sY, sWidth, sHeight, -.5, -.5, 1, 1);
             }
             else
             {
-                // calculate uvs and render
-                const cols = tileImageSize.x / tileSize.x |0;
-                const sX = (tileIndex%cols)*tileSize.x   + tileFixBleedScale;
-                const sY = (tileIndex/cols|0)*tileSize.y + tileFixBleedScale;
-                const sWidth  = tileSize.x - 2*tileFixBleedScale;
-                const sHeight = tileSize.y - 2*tileFixBleedScale;
-                context.globalAlpha = color.a; // only alpha is supported
-                context.drawImage(tileImage, sX, sY, sWidth, sHeight, -.5, -.5, 1, 1);
+                // if no tile info, force untextured
+                context.fillStyle = color;
+                context.fillRect(-.5, -.5, 1, 1);
             }
         }, undefined, screenSpace);
     }
@@ -160,7 +246,7 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, col
  *  @param {Boolean} [screenSpace=0]
  *  @memberof Draw */
 function drawRect(pos, size, color, angle, useWebGL, screenSpace)
-{ drawTile(pos, size, -1, tileSizeDefault, color, angle, 0, undefined, useWebGL, screenSpace); }
+{ drawTile(pos, size, undefined, color, angle, 0, undefined, useWebGL, screenSpace); }
 
 /** Draw colored polygon using passed in points
  *  @param {Array}   points - Array of Vector2 points
@@ -305,10 +391,9 @@ class FontImage
      *  @param {HTMLImageElement} [image] - Image for the font, if undefined default font is used
      *  @param {Vector2} [tileSize=vec2(8)] - Size of the font source tiles
      *  @param {Vector2} [paddingSize=vec2(0,1)] - How much extra space to add between characters
-     *  @param {Number}  [startTileIndex=0] - Tile index in image where font starts
      *  @param {CanvasRenderingContext2D} [context=overlayContext] - context to draw to
      */
-    constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1), startTileIndex=0, context=overlayContext)
+    constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1), context=overlayContext)
     {
         // load default font image
         if (!engineFontImage)
@@ -317,7 +402,6 @@ class FontImage
         this.image = image || engineFontImage;
         this.tileSize = tileSize;
         this.paddingSize = paddingSize;
-        this.startTileIndex = startTileIndex;
         this.context = context;
     }
 
@@ -358,7 +442,7 @@ class FontImage
                     charCode = 127; // unknown character
 
                 // get the character source location and draw it
-                const tile = this.startTileIndex + charCode - 32;
+                const tile = charCode - 32;
                 const x = tile % cols;
                 const y = tile / cols |0;
                 const drawPos = pos.add(vec2(j,i).multiply(drawSize));

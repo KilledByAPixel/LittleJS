@@ -660,7 +660,7 @@ class RandomGenerator
 
 /** 
  * Create a 2d vector, can take another Vector2 to copy, 2 scalars, or 1 scalar
- * @param {Number} [x=0]
+ * @param {(Number|Vector2)} [x=0]
  * @param {Number} [y=0]
  * @return {Vector2}
  * @example
@@ -1144,7 +1144,7 @@ let glOverlay = 1;
  *  @memberof Settings */
 let tileSizeDefault = vec2(16);
 
-/** Prevent tile bleeding from neighbors in pixels
+/** How many pixels smaller to draw tiles to prevent bleeding from neighbors
  *  @type {Number}
  *  @default
  *  @memberof Settings */
@@ -1319,6 +1319,199 @@ let medalDisplayIconSize = 50;
  *  @default 0
  *  @memberof Settings */
 let medalsPreventUnlock;
+
+///////////////////////////////////////////////////////////////////////////////
+// Setters for global variables
+
+/** Set position of camera in world space
+ *  @param {Vector2} pos
+ *  @memberof Settings */
+function setCameraPos(pos) { cameraPos = pos; }
+
+/** Set scale of camera in world space
+ *  @param {Number} scale
+ *  @memberof Settings */
+function setCameraScale(scale) { cameraScale = scale; }
+
+/** Set max size of the canvas
+ *  @param {Vector2} size
+ *  @memberof Settings */
+function setCanvasMaxSize(size) { canvasMaxSize = size; }
+
+/** Set fixed size of the canvas
+ *  @param {Vector2} size
+ *  @memberof Settings */
+function setCanvasFixedSize(size) { canvasFixedSize = size; }
+
+/** Disables anti aliasing for pixel art if true
+ *  @param {Boolean} pixelated
+ *  @memberof Settings */
+function setCanvasPixelated(pixelated) { canvasPixelated = pixelated; }
+
+/** Set default font used for text rendering
+ *  @param {String} font
+ *  @memberof Settings */
+function setFontDefault(font) { fontDefault = font; }
+
+/** Set if webgl rendering is enabled
+ *  @param {Boolean} enable
+ *  @memberof Settings */
+function setGlEnable(enable) { glEnable = enable; }
+
+/** Set to not composite the WebGL canvas
+ *  @param {Boolean} overlay
+ *  @memberof Settings */
+function setGlOverlay(overlay) { glOverlay = overlay; }
+
+/** Set default size of tiles in pixels
+ *  @param {Vector2} size
+ *  @memberof Settings */
+function setTileSizeDefault(size) { tileSizeDefault = size; }
+
+/** Set to prevent tile bleeding from neighbors in pixels
+ *  @param {Number} scale
+ *  @memberof Settings */
+function setTileFixBleedScale(scale) { tileFixBleedScale = scale; }
+
+/** Set if collisions between objects are enabled
+ *  @param {Boolean} enable
+ *  @memberof Settings */
+function setEnablePhysicsSolver(enable) { enablePhysicsSolver = enable; }
+
+/** Set default object mass for collison calcuations
+ *  @param {Number} mass
+ *  @memberof Settings */
+function setObjectDefaultMass(mass) { objectDefaultMass = mass; }
+
+/** Set how much to slow velocity by each frame
+ *  @param {Number} damping
+ *  @memberof Settings */
+function setObjectDefaultDamping(damp) { objectDefaultDamping = damp; }
+
+/** Set how much to slow angular velocity each frame
+ *  @param {Number} damping
+ *  @memberof Settings */
+function setObjectDefaultAngleDamping(damp) { objectDefaultAngleDamping = damp; }
+
+/** Set how much to bounce when a collision occur
+ *  @param {Number} elasticity
+ *  @memberof Settings */
+function setObjectDefaultElasticity(elasticity) { objectDefaultElasticity = elasticity; }
+
+/** Set how much to slow when touching
+ *  @param {Number} friction
+ *  @memberof Settings */
+function setObjectDefaultFriction(friction) { objectDefaultFriction = friction; }
+
+/** Set max speed to avoid fast objects missing collisions
+ *  @param {Number} speed
+ *  @memberof Settings */
+function setObjectMaxSpeed(speed) { objectMaxSpeed = speed; }
+
+/** Set how much gravity to apply to objects along the Y axis
+ *  @param {Number} gravity
+ *  @memberof Settings */
+function setGravity(g) { gravity = g; }
+
+/** Set to scales emit rate of particles
+ *  @param {Number} scale
+ *  @memberof Settings */
+function setParticleEmitRateScale(scale) { particleEmitRateScale = scale; }
+
+/** Set if gamepads are enabled
+ *  @param {Boolean} enable
+ *  @memberof Settings */
+function setGamepadsEnable(enable) { gamepadsEnable = enable; }
+
+/** Set if the dpad input is also routed to the left analog stick
+ *  @param {Boolean} enable
+ *  @memberof Settings */
+function setGamepadDirectionEmulateStick(enable) { gamepadDirectionEmulateStick = enable; }
+
+/** Set if true the WASD keys are also routed to the direction keys
+ *  @param {Boolean} enable
+ *  @memberof Settings */
+function setInputWASDEmulateDirection(enable) { inputWASDEmulateDirection = enable; }
+
+/** Set if touch gamepad should appear on mobile devices
+ *  @param {Boolean} enable
+ *  @memberof Settings */
+function setTouchGamepadEnable(enable) { touchGamepadEnable = enable; }
+
+/** Set if touch gamepad should be analog stick or 8 way dpad
+ *  @param {Boolean} analog
+ *  @memberof Settings */
+function setTouchGamepadAnalog(analog) { touchGamepadAnalog = analog; }
+
+/** Set size of virutal gamepad for touch devices in pixels
+ *  @param {Number} size
+ *  @memberof Settings */
+function setTouchGamepadSize(size) { touchGamepadSize = size; }
+
+/** Set transparency of touch gamepad overlay
+ *  @param {Number} alpha
+ *  @memberof Settings */
+function setTouchGamepadAlpha(alpha) { touchGamepadAlpha = alpha; }
+
+/** Set to allow vibration hardware if it exists
+ *  @param {Boolean} enable
+ *  @memberof Settings */
+function setVibrateEnable(enable) { vibrateEnable = enable; }
+
+/** Set to disable all audio code
+ *  @param {Boolean} enable
+ *  @memberof Settings */
+function setSoundEnable(enable) { soundEnable = enable; }
+
+/** Set volume scale to apply to all sound, music and speech
+ *  @param {Number} volume
+ *  @memberof Settings */
+function setSoundVolume(volume) { soundVolume = volume; }
+
+/** Set default range where sound no longer plays
+ *  @param {Number} range
+ *  @memberof Settings */
+function setSoundDefaultRange(range) { soundDefaultRange = range; }
+
+/** Set default range percent to start tapering off sound
+ *  @param {Number} taper
+ *  @memberof Settings */
+function setSoundDefaultTaper(taper) { soundDefaultTaper = taper; }
+
+/** Set how long to show medals for in seconds
+ *  @param {Number} time
+ *  @memberof Settings */
+function setMedalDisplayTime(time) { medalDisplayTime = time; }
+
+/** Set how quickly to slide on/off medals in seconds
+ *  @param {Number} time
+ *  @memberof Settings */
+function setMedalDisplaySlideTime(time) { medalDisplaySlideTime = time; }
+
+/** Set size of medal display
+ *  @param {Vector2} size
+ *  @memberof Settings */
+function setMedalDisplaySize(size) { medalDisplaySize = size; }
+
+/** Set size of icon in medal display
+ *  @param {Number} size
+ *  @memberof Settings */
+function setMedalDisplayIconSize(size) { medalDisplayIconSize = size; }
+
+/** Set to stop medals from being unlockable
+ *  @param {Boolean} preventUnlock
+ *  @memberof Settings */
+function setMedalsPreventUnlock(preventUnlock) { medalsPreventUnlock = preventUnlock; }
+
+/** Set if watermark with FPS should be shown
+ *  @param {Boolean} show
+ *  @memberof Debug */
+function setShowWatermark(show) { showWatermark = show; }
+
+/** Set key code used to toggle debug mode, Esc by default
+ *  @param {Number} key
+ *  @memberof Debug */
+function setDebugKey(key) { debugKey = key; }
 /** 
  * LittleJS Object System
  */
@@ -1353,18 +1546,19 @@ let medalsPreventUnlock;
 class EngineObject
 {
     /** Create an engine object and adds it to the list of objects
-     *  @param {Vector2} [position=Vector2()]        - World space position of the object
-     *  @param {Vector2} [size=Vector2(1,1)]         - World space size of the object
-     *  @param {Number}  [tileIndex=-1]              - Tile to use to render object (-1 is untextured)
-     *  @param {Vector2} [tileSize=tileSizeDefault]  - Size of tile in source pixels
-     *  @param {Number}  [angle=0]                   - Angle the object is rotated by
-     *  @param {Color}   [color=Color()]             - Color to apply to tile when rendered
-     *  @param {Number}  [renderOrder=0]             - Objects sorted by renderOrder before being rendered
+     *  @param {Vector2} [pos=Vector2()]            - World space position of the object
+     *  @param {Vector2} [size=Vector2(1,1)]        - World space size of the object
+     *  @param {TileInfo} [tileInfo]                - Tile info to render object (undefined is untextured)
+     *  @param {Number}  [angle=0]                  - Angle the object is rotated by
+     *  @param {Color}   [color=Color()]            - Color to apply to tile when rendered
+     *  @param {Number}  [renderOrder=0]            - Objects sorted by renderOrder before being rendered
      */
-    constructor(pos=vec2(), size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, angle=0, color, renderOrder=0)
+    constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color, renderOrder=0)
     {
         // set passed in params
         ASSERT(isVector2(pos) && isVector2(size)); // ensure pos and size are vec2s
+        ASSERT(typeof tileInfo !== 'number' || !tileInfo); // prevent old style calls
+        // to fix old calls, replace with tile(tileIndex, tileSize)
 
         /** @property {Vector2} - World space position of the object */
         this.pos = pos.copy();
@@ -1372,10 +1566,8 @@ class EngineObject
         this.size = size;
         /** @property {Vector2} - Size of object used for drawing, uses size if not set */
         this.drawSize;
-        /** @property {Number}  - Tile to use to render object (-1 is untextured) */
-        this.tileIndex = tileIndex;
-        /** @property {Vector2} - Size of tile in source pixels */
-        this.tileSize = tileSize;
+        /** @property {TileInfo} - Tile info to render object (undefined is untextured) */
+        this.tileInfo = tileInfo;
         /** @property {Number}  - Angle to rotate the object */
         this.angle = angle;
         /** @property {Color}   - Color to apply when rendered */
@@ -1591,7 +1783,7 @@ class EngineObject
     render()
     {
         // default object render
-        drawTile(this.pos, this.drawSize || this.size, this.tileIndex, this.tileSize, this.color, this.angle, this.mirror, this.additiveColor);
+        drawTile(this.pos, this.drawSize || this.size, this.tileInfo, this.color, this.angle, this.mirror, this.additiveColor);
     }
     
     /** Destroy this object, destroy it's children, detach it's parent, and mark it for removal */
@@ -1746,13 +1938,92 @@ let overlayContext;
  *  @memberof Draw */
 let mainCanvasSize = vec2();
 
-/** Tile sheet for batch rendering system
+/** Array containing tile sheet for batch rendering system
  *  @type {CanvasImageSource}
  *  @memberof Draw */
-const tileImage = new Image;
+let textureInfos = [];
 
 // Engine internal variables not exposed to documentation
-let tileImageSize, tileImageFixBleed, drawCount;
+let drawCount;
+
+///////////////////////////////////////////////////////////////////////////////
+
+/** 
+ * Create a tile info object
+ * - This can take vecs or floats for easier use and conversion
+ *  @param {(Number|Vector2)} [pos=Vector2()]         - Position of tile in pixels
+ *  @param {(Number|Vector2)} [size=tileSizeDefault]  - Size of tile in pixels
+ *  @param {Number} [textureIndex=0]                  - Texture index to use
+ *  @return {TileInfo}
+ *  @memberof Draw
+ */
+function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0)
+{
+    // if size is a number, make it a vector
+    if (size.x == undefined)
+    {
+        ASSERT(size > 0);
+        size = vec2(size);
+    }
+
+    // if pos is a number, use it as a tile index
+    if (pos.x == undefined)
+    {
+        const textureInfo = textureInfos[textureIndex];
+        const cols = textureInfo.size.x / size.x |0;
+        pos = vec2((pos%cols)*size.x, (pos/cols|0)*size.y);
+    }
+
+    // return a tile info object
+    return new TileInfo(pos, size, textureIndex); 
+}
+
+/** 
+ * Tile Info - Stores info about how to draw a tile
+ */
+class TileInfo
+{
+    /** Create a tile info object
+     *  @param {Vector2} [pos=Vector2()]         - Position of tile in pixels
+     *  @param {Vector2} [size=tileSizeDefault]  - Size of tile in pixels
+     *  @param {Number}  [textureIndex=0]        - Texture index to use
+     */
+    constructor(pos=vec2(), size=tileSizeDefault, textureIndex=0)
+    {
+        /** @property {Vector2} - Position of tile in pixels */
+        this.pos = pos;
+        /** @property {Vector2} - Size of tile in pixels */
+        this.size = size;
+        /** @property {Number} - Texture index to use */
+        this.textureIndex = textureIndex;
+    }
+
+    /** Returns an offset copy of this tile, useful for animation
+    *  @param {Vector2} offset - Offset to apply in pixels
+    *  @return {TileInfo}
+    */
+    offset(offset)
+    { return new TileInfo(this.pos.add(offset), this.size, this.textureIndex); }
+}
+
+/** Texture Info - Stores info about each texture */
+class TextureInfo
+{
+    // create a TextureInfo, called automatically by the engine
+    constructor(image)
+    {
+        /** @property {CanvasImageSource} - image source */
+        this.image = image;
+        /** @property {Vector2} - size of the image */
+        this.size = vec2(image.width, image.height);
+        /** @property {WebGLTexture} - webgl texture */
+        this.glTexture = glEnable && glCreateTexture(image);
+        /** @property {Vector2} - size to adjust tile to fix bleeding */
+        this.fixBleedSize = vec2(tileFixBleedScale).divide(this.size);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 /** Convert from screen to world space coordinates
  *  @param {Vector2} screenPos
@@ -1783,7 +2054,7 @@ function worldToScreen(worldPos)
 /** Draw textured tile centered in world space, with color applied if using WebGL
  *  @param {Vector2} pos                            - Center of the tile in world space
  *  @param {Vector2} [size=Vector2(1,1)]            - Size of the tile in world space
- *  @param {Number}  [tileIndex=-1]                 - Tile index to use, negative is untextured
+ *  @param {TileInfo} [tileInfo]                   - Tile info to use, untextured if undefined
  *  @param {Vector2} [tileSize=tileSizeDefault]     - Tile size in source pixels
  *  @param {Color}   [color=Color()]                - Color to modulate with
  *  @param {Number}  [angle=0]                      - Angle to rotate by
@@ -1792,9 +2063,12 @@ function worldToScreen(worldPos)
  *  @param {Boolean} [useWebGL=glEnable]            - Use accelerated WebGL rendering
  *  @param {Boolean} [screenSpace=0]                - If true the pos and size are in screen space
  *  @memberof Draw */
-function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, color=new Color,
+function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     angle=0, mirror, additiveColor=new Color(0,0,0,0), useWebGL=glEnable, screenSpace)
 {
+    ASSERT(typeof tileInfo !== 'number' || !tileInfo); // prevent old style calls
+    // to fix old calls, replace with tile(tileIndex, tileSize)
+
     showWatermark && ++drawCount;
     
     if (glEnable && useWebGL)
@@ -1805,23 +2079,27 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, col
             pos = screenToWorld(pos);
             size = size.scale(1/cameraScale);
         }
-        if (tileIndex < 0 || !tileImage.width)
-        {
-            // if negative tile index or image not found, force untextured
-            glDraw(pos.x, pos.y, size.x, size.y, angle, 0, 0, 0, 0, 0, color.rgbaInt()); 
-        }
-        else
+        
+        if (tileInfo)
         {
             // calculate uvs and render
-            const cols = tileImageSize.x / tileSize.x |0;
-            const uvSizeX = tileSize.x / tileImageSize.x;
-            const uvSizeY = tileSize.y / tileImageSize.y;
-            const uvX = (tileIndex%cols)*uvSizeX, uvY = (tileIndex/cols|0)*uvSizeY;
-            
+            const textureInfo = textureInfos[tileInfo.textureIndex];
+            const uvSizeX = tileInfo.size.x / textureInfo.size.x;
+            const uvSizeY = tileInfo.size.y / textureInfo.size.y;
+            const uvX = tileInfo.pos.x / textureInfo.size.x;
+            const uvY = tileInfo.pos.y / textureInfo.size.y;
+            const tileImageFixBleed = textureInfo.fixBleedSize;
+
+            glSetTexture(textureInfo.glTexture);
             glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
                 uvX + tileImageFixBleed.x, uvY + tileImageFixBleed.y, 
                 uvX - tileImageFixBleed.x + uvSizeX, uvY - tileImageFixBleed.y + uvSizeY, 
                 color.rgbaInt(), additiveColor.rgbaInt()); 
+        }
+        else
+        {
+            // if no tile info, force untextured
+            glDraw(pos.x, pos.y, size.x, size.y, angle, 0, 0, 0, 0, 0, color.rgbaInt()); 
         }
     }
     else
@@ -1829,22 +2107,22 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, col
         // normal canvas 2D rendering method (slower)
         drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
-            if (tileIndex < 0)
+            if (tileInfo)
             {
-                // if negative tile index, force untextured
-                context.fillStyle = color;
-                context.fillRect(-.5, -.5, 1, 1);
+                // calculate uvs and render
+                const sX = tileInfo.pos.x + tileFixBleedScale;
+                const sY = tileInfo.pos.y + tileFixBleedScale;
+                const sWidth  = tileInfo.size.x - 2*tileFixBleedScale;
+                const sHeight = tileInfo.size.y - 2*tileFixBleedScale;
+                context.globalAlpha = color.a; // only alpha is supported
+                const textureInfo = textureInfos[tileInfo.textureIndex];
+                context.drawImage(textureInfo.image, sX, sY, sWidth, sHeight, -.5, -.5, 1, 1);
             }
             else
             {
-                // calculate uvs and render
-                const cols = tileImageSize.x / tileSize.x |0;
-                const sX = (tileIndex%cols)*tileSize.x   + tileFixBleedScale;
-                const sY = (tileIndex/cols|0)*tileSize.y + tileFixBleedScale;
-                const sWidth  = tileSize.x - 2*tileFixBleedScale;
-                const sHeight = tileSize.y - 2*tileFixBleedScale;
-                context.globalAlpha = color.a; // only alpha is supported
-                context.drawImage(tileImage, sX, sY, sWidth, sHeight, -.5, -.5, 1, 1);
+                // if no tile info, force untextured
+                context.fillStyle = color;
+                context.fillRect(-.5, -.5, 1, 1);
             }
         }, undefined, screenSpace);
     }
@@ -1859,7 +2137,7 @@ function drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, col
  *  @param {Boolean} [screenSpace=0]
  *  @memberof Draw */
 function drawRect(pos, size, color, angle, useWebGL, screenSpace)
-{ drawTile(pos, size, -1, tileSizeDefault, color, angle, 0, undefined, useWebGL, screenSpace); }
+{ drawTile(pos, size, undefined, color, angle, 0, undefined, useWebGL, screenSpace); }
 
 /** Draw colored polygon using passed in points
  *  @param {Array}   points - Array of Vector2 points
@@ -2004,10 +2282,9 @@ class FontImage
      *  @param {HTMLImageElement} [image] - Image for the font, if undefined default font is used
      *  @param {Vector2} [tileSize=vec2(8)] - Size of the font source tiles
      *  @param {Vector2} [paddingSize=vec2(0,1)] - How much extra space to add between characters
-     *  @param {Number}  [startTileIndex=0] - Tile index in image where font starts
      *  @param {CanvasRenderingContext2D} [context=overlayContext] - context to draw to
      */
-    constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1), startTileIndex=0, context=overlayContext)
+    constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1), context=overlayContext)
     {
         // load default font image
         if (!engineFontImage)
@@ -2016,7 +2293,6 @@ class FontImage
         this.image = image || engineFontImage;
         this.tileSize = tileSize;
         this.paddingSize = paddingSize;
-        this.startTileIndex = startTileIndex;
         this.context = context;
     }
 
@@ -2057,7 +2333,7 @@ class FontImage
                     charCode = 127; // unknown character
 
                 // get the character source location and draw it
-                const tile = this.startTileIndex + charCode - 32;
+                const tile = charCode - 32;
                 const x = tile % cols;
                 const y = tile / cols |0;
                 const drawPos = pos.add(vec2(j,i).multiply(drawSize));
@@ -2090,7 +2366,6 @@ function toggleFullscreen()
     else if (document.body.requestFullscreen)
             document.body.requestFullscreen();
 }
-
 /** 
  * LittleJS Input System
  * - Tracks keyboard down, pressed, and released
@@ -3248,7 +3523,7 @@ class TileLayerData
 }
 
 /**
- * Tile layer object - cached rendering system for tile layers
+ * Tile Layer - cached rendering system for tile layers
  * - Each Tile layer is rendered to an off screen canvas
  * - To allow dynamic modifications, layers are rendered using canvas 2d
  * - Some devices like mobile phones are limited to 4k texture resolution
@@ -3264,13 +3539,13 @@ class TileLayer extends EngineObject
 /** Create a tile layer object
     *  @param {Vector2} [position=Vector2()]       - World space position
     *  @param {Vector2} [size=tileCollisionSize]   - World space size
-    *  @param {Vector2} [tileSize=tileSizeDefault] - Size of tiles in source pixels
+    *  @param {TileInfo} [tileInfo]                - Tile info for layer
     *  @param {Vector2} [scale=Vector2(1,1)]       - How much to scale this layer when rendered
     *  @param {Number}  [renderOrder=0]            - Objects sorted by renderOrder before being rendered
     */
-constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1), renderOrder=0)
+constructor(pos, size=tileCollisionSize, tileInfo=tile(), scale=vec2(1), renderOrder=0)
     {
-        super(pos, size, -1, tileSize, 0, undefined, renderOrder);
+        super(pos, size, tileInfo, 0, undefined, renderOrder);
 
         /** @property {HTMLCanvasElement}        - The canvas used by this tile layer */
         this.canvas = document.createElement('canvas');
@@ -3347,13 +3622,13 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
         mainCanvas = this.canvas;
         mainContext = this.context;
         cameraPos = this.size.scale(.5);
-        cameraScale = this.tileSize.x;
+        cameraScale = this.tileInfo.size.x;
 
         if (clear)
         {
             // clear and set size
-            mainCanvas.width  = this.size.x * this.tileSize.x;
-            mainCanvas.height = this.size.y * this.tileSize.y;
+            mainCanvas.width  = this.size.x * this.tileInfo.size.x;
+            mainCanvas.height = this.size.y * this.tileInfo.size.y;
         }
 
         // begin a new render for the tile canvas
@@ -3384,7 +3659,8 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
         if (d.tile != undefined)
         {
             ASSERT(mainContext == this.context); // must call redrawStart() before drawing tiles
-            drawTile(pos, vec2(1), d.tile, this.tileSize, d.color, d.direction*PI/2, d.mirror);
+            const tileInfo = tile(d.tile, this.tileInfo.size, this.tileInfo.textureIndex);
+            drawTile(pos, vec2(1), tileInfo, d.color, d.direction*PI/2, d.mirror);
         }
     }
 
@@ -3406,8 +3682,8 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
     {
         const context = this.context;
         context.save();
-        pos = pos.subtract(this.pos).multiply(this.tileSize);
-        size = size.multiply(this.tileSize);
+        pos = pos.subtract(this.pos).multiply(this.tileInfo.size);
+        size = size.multiply(this.tileInfo.size);
         context.translate(pos.x, this.canvas.height - pos.y);
         context.rotate(angle);
         context.scale(mirror ? -size.x : size.x, size.y);
@@ -3418,28 +3694,27 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
     /** Draw a tile directly onto the layer canvas
      *  @param {Vector2} pos
      *  @param {Vector2} [size=Vector2(1,1)]
-     *  @param {Number}  [tileIndex=-1]
-     *  @param {Vector2} [tileSize=tileSizeDefault]
+     *  @param {TileInfo} [tileInfo]
      *  @param {Color}   [color=Color()]
      *  @param {Number}  [angle=0]
      *  @param {Boolean} [mirror=0] */
-    drawTile(pos, size=vec2(1), tileIndex=-1, tileSize=tileSizeDefault, color=new Color, angle, mirror)
+    drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle, mirror)
     {
         this.drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
-            if (tileIndex < 0)
+            if (tileInfo)
+            {
+                const textureInfo = textureInfos[tileInfo.textureIndex];
+                context.globalAlpha = color.a; // only alpha is supported
+                context.drawImage(textureInfo.image, 
+                    tileInfo.pos.x,  tileInfo.pos.y, 
+                    tileInfo.size.x, tileInfo.size.y, -.5, -.5, 1, 1);
+            }
+            else
             {
                 // untextured
                 context.fillStyle = color;
                 context.fillRect(-.5, -.5, 1, 1);
-            }
-            else
-            {
-                const cols = tileImage.width/tileSize.x;
-                context.globalAlpha = color.a; // only alpha, no color, is supported in this mode
-                context.drawImage(tileImage, 
-                    (tileIndex%cols)*tileSize.x, (tileIndex/cols|0)*tileSize.y, 
-                    tileSize.x, tileSize.y, -.5, -.5, 1, 1);
             }
         });
     }
@@ -3467,7 +3742,7 @@ constructor(pos, size=tileCollisionSize, tileSize=tileSizeDefault, scale=vec2(1)
  * let particleEmiter = new ParticleEmitter
  * (
  *     pos, 0, 1, 0, 500, PI,  // pos, angle, emitSize, emitTime, emitRate, emiteCone
- *     0, vec2(16),                            // tileIndex, tileSize
+ *     tile(0, 16),            // tileInfo
  *     new Color(1,1,1),   new Color(0,0,0),   // colorStartA, colorStartB
  *     new Color(1,1,1,0), new Color(0,0,0,0), // colorEndA, colorEndB
  *     2, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
@@ -3484,8 +3759,7 @@ class ParticleEmitter extends EngineObject
      *  @param {Number}  [emitTime=0]       - How long to stay alive (0 is forever)
      *  @param {Number}  [emitRate=100]     - How many particles per second to spawn, does not emit if 0
      *  @param {Number}  [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
-     *  @param {Number}  [tileIndex=-1]     - Index into tile sheet, if <0 no texture is applied
-     *  @param {Vector2} [tileSize=tileSizeDefault] - Tile size for particles
+     *  @param {TileInfo} [tileInfo]         - Tile info to render particles (undefined is untextured)
      *  @param {Color}   [colorStartA=Color()] - Color at start of life 1, randomized between start colors
      *  @param {Color}   [colorStartB=Color()] - Color at start of life 2, randomized between start colors
      *  @param {Color}   [colorEndA=Color(1,1,1,0)] - Color at end of life 1, randomized between end colors
@@ -3515,8 +3789,7 @@ class ParticleEmitter extends EngineObject
         emitTime = 0,
         emitRate = 100,
         emitConeAngle = PI,
-        tileIndex = -1,
-        tileSize = tileSizeDefault,
+        tileInfo,
         colorStartA = new Color,
         colorStartB = new Color,
         colorEndA = new Color(1,1,1,0),
@@ -3539,7 +3812,7 @@ class ParticleEmitter extends EngineObject
         localSpace
     )
     {
-        super(pos, vec2(), tileIndex, tileSize, angle, undefined, renderOrder);
+        super(pos, vec2(), tileInfo, angle, undefined, renderOrder);
 
         // emitter settings
         /** @property {Number} - World space size of the emitter (float for circle diameter, vec2 for rect) */
@@ -3638,7 +3911,7 @@ class ParticleEmitter extends EngineObject
             angle += this.angle;
         }
             
-        const particle = new Particle(pos, this.tileIndex, this.tileSize, angle);
+        const particle = new Particle(pos, this.tileInfo, this.tileSize, angle);
 
         // randomness scales each paremeter by a percentage
         const randomness = this.randomness;
@@ -3698,12 +3971,11 @@ class Particle extends EngineObject
     /**
      * Create a particle with the given settings
      * @param {Vector2} position                   - World space position of the particle
-     * @param {Number}  [tileIndex=-1]             - Tile to use to render, untextured if -1
-     * @param {Vector2} [tileSize=tileSizeDefault] - Size of tile in source pixels
+     * @param {TileInfo} [tileInfo]                - Tile info to render particles (undefined is untextured)
      * @param {Number}  [angle=0]                  - Angle to rotate the particle
      */
-    constructor(pos, tileIndex, tileSize, angle)
-    { super(pos, vec2(), tileIndex, tileSize, angle); }
+    constructor(pos, tileInfo, angle)
+    { super(pos, vec2(), tileInfo, angle); }
 
     /** Render the particle, automatically called each frame, sorted by renderOrder */
     render()
@@ -3737,14 +4009,17 @@ class Particle extends EngineObject
             if (this.localSpaceEmitter)
                 velocity = velocity.rotate(-this.localSpaceEmitter.angle);
             const speed = velocity.length();
-            const direction = velocity.scale(1/speed);
-            const trailLength = speed * this.trailScale;
-            size.y = max(size.x, trailLength);
-            angle = direction.angle();
-            drawTile(pos.add(direction.multiply(vec2(0,-trailLength/2))), size, this.tileIndex, this.tileSize, color, angle, this.mirror);
+            if (speed)
+            {
+                const direction = velocity.scale(1/speed);
+                const trailLength = speed * this.trailScale;
+                size.y = max(size.x, trailLength);
+                angle = direction.angle();
+                drawTile(pos.add(direction.multiply(vec2(0,-trailLength/2))), size, this.tileInfo, color, angle, this.mirror);
+            }
         }
         else
-            drawTile(pos, size, this.tileIndex, this.tileSize, color, angle, this.mirror);
+            drawTile(pos, size, this.tileInfo, color, angle, this.mirror);
         this.additive && setBlendMode();
         debugParticles && debugRect(pos, size, '#f005', 0, angle);
 
@@ -3791,7 +4066,7 @@ function medalsInit(saveName)
 }
 
 /** 
- * Medal Object - Tracks an unlockable medal 
+ * Medal - Tracks an unlockable medal 
  * @example
  * // create a medal
  * const medal_example = new Medal(0, 'Example Medal', 'More info about the medal goes here.', '🎖️');
@@ -3804,7 +4079,7 @@ function medalsInit(saveName)
  */
 class Medal
 {
-    /** Create an medal object and adds it to the list of medals
+    /** Create a medal object and adds it to the list of medals
      *  @param {Number} id            - The unique identifier of the medal
      *  @param {String} name          - Name of the medal
      *  @param {String} [description] - Description of the medal
@@ -4070,11 +4345,6 @@ let glCanvas;
  *  @memberof WebGL */
 let glContext;
 
-/** Main tile sheet texture automatically loaded by engine
- *  @type {WebGLTexture}
- *  @memberof WebGL */
-let glTileTexture;
-
 // WebGL internal variables not exposed to documentation
 let glActiveTexture, glShader, glArrayBuffer, glPositionData, glColorData, glBatchCount, glBatchAdditive, glAdditive;
 
@@ -4083,10 +4353,9 @@ let glActiveTexture, glShader, glArrayBuffer, glPositionData, glColorData, glBat
 // Initalize WebGL, called automatically by the engine
 function glInit()
 {
-    // create the canvas and tile texture
+    // create the canvas and textures
     glCanvas = document.createElement('canvas');
-    glContext = glCanvas.getContext('webgl', {antialias: false});
-    glTileTexture = glCreateTexture(tileImage);
+    glContext = glCanvas.getContext('webgl', {antialias: !canvasPixelated});
 
     // some browsers are much faster without copying the gl buffer so we just overlay it instead
     glOverlay && document.body.appendChild(glCanvas);
@@ -4129,7 +4398,7 @@ function glPreRender()
     // set up the shader
     glContext.useProgram(glShader);
     glContext.activeTexture(gl_TEXTURE0);
-    glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = glTileTexture);
+    glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = textureInfos[0].glTexture);
     glContext.bindBuffer(gl_ARRAY_BUFFER, glArrayBuffer);
     glContext.bufferData(gl_ARRAY_BUFFER, gl_VERTEX_BUFFER_SIZE, gl_DYNAMIC_DRAW);
     glSetBlendMode();
@@ -4164,22 +4433,23 @@ function glPreRender()
 /** Set the WebGl blend mode, normally you should call setBlendMode instead
  *  @param {Boolean} [additive=0]
  *  @memberof WebGL */
-function glSetBlendMode(additive)
+function glSetBlendMode(additive=0)
 {
     // setup blending
     glAdditive = additive;
 }
 
-/** Set the WebGl texture, not normally necessary unless multiple tile sheets are used
+/** Set the WebGl texture, called automatically if using multiple textures
  *  - This may also flush the gl buffer resulting in more draw calls and worse performance
- *  @param {WebGLTexture} [texture=glTileTexture]
+ *  @param {WebGLTexture} texture
  *  @memberof WebGL */
-function glSetTexture(texture=glTileTexture)
+function glSetTexture(texture)
 {
     // must flush cache with the old texture to set a new one
-    if (texture != glActiveTexture)
-        glFlush();
+    if (texture == glActiveTexture)
+        return;
 
+    glFlush();
     glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = texture);
 }
 
@@ -4509,7 +4779,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.7.23';
+const engineVersion = '1.8.0';
 
 /** Frames per second to update objects
  *  @type {Number}
@@ -4559,6 +4829,9 @@ let paused = 0;
  *  @memberof Engine */
 function setPaused(_paused) { paused = _paused; }
 
+// Frame time tracking
+let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
+
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Start up LittleJS engine with your callback functions
@@ -4567,52 +4840,13 @@ function setPaused(_paused) { paused = _paused; }
  *  @param {Function} gameUpdatePost  - Called after physics and objects are updated, setup camera and prepare for render
  *  @param {Function} gameRender      - Called before objects are rendered, draw any background effects that appear behind objects
  *  @param {Function} gameRenderPost  - Called after objects are rendered, draw effects or hud that appear above all objects
- *  @param {String} [tileImageSource] - Tile image to use, everything starts when the image is finished loading
+ *  @param {String} [imageSources='tiles.png'] - Image to load
  *  @memberof Engine */
-function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, tileImageSource)
+function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=['tiles.png'])
 {
-    // init engine when tiles load or fail to load
-    tileImage.onerror = tileImage.onload = ()=>
-    {
-        // save tile image info
-        tileImageFixBleed = vec2(tileFixBleedScale).divide(tileImageSize = vec2(tileImage.width, tileImage.height));
-        debug && (tileImage.onload=()=>ASSERT(1)); // tile sheet can not reloaded
+    ASSERT(Array.isArray(imageSources)); // pass in images as array
 
-        // setup html
-        const styleBody = 
-            'margin:0;overflow:hidden;' + // fill the window
-            'background:#000;' +          // set background color
-            'touch-action:none;' +        // prevent mobile pinch to resize
-            'user-select:none;' +         // prevent mobile hold to select
-            '-webkit-user-select:none;' + // compatibility for ios
-            '-webkit-touch-callout:none'; // compatibility for ios
-        document.body.style = styleBody;
-        document.body.appendChild(mainCanvas = document.createElement('canvas'));
-        mainContext = mainCanvas.getContext('2d');
-
-        // init stuff and start engine
-        debugInit();
-        glEnable && glInit();
-
-        // create overlay canvas for hud to appear above gl canvas
-        document.body.appendChild(overlayCanvas = document.createElement('canvas'));
-        overlayContext = overlayCanvas.getContext('2d');
-
-        // set canvas style
-        const styleCanvas = 
-            'position:absolute;' +                               // position canvas              
-            'top:50%;left:50%;transform:translate(-50%,-50%);' + // center the canvas
-            (canvasPixelated?'image-rendering:pixelated':'');    // set pixelated rendering
-        (glCanvas||mainCanvas).style = mainCanvas.style = overlayCanvas.style = styleCanvas;
-        
-        gameInit();
-        engineUpdate();
-    };
-
-    // frame time tracking
-    let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
-
-    // main update loop
+    // internal update loop for engine
     function engineUpdate(frameTimeMS=0)
     {
         // update time keeping
@@ -4643,9 +4877,9 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         }
         else
         {
-             // clear canvas and set size to same as window
-             mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
-             mainCanvas.height = min(innerHeight, canvasMaxSize.y);
+            // clear canvas and set size to same as window
+            mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
+            mainCanvas.height = min(innerHeight, canvasMaxSize.y);
         }
         
         // clear overlay canvas and set size
@@ -4727,8 +4961,51 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         requestAnimationFrame(engineUpdate);
     }
 
-    // set tile image source to load the image and start the engine
-    tileImageSource ? tileImage.src = tileImageSource : tileImage.onload();
+    // setup html
+    const styleBody = 
+        'margin:0;overflow:hidden;' + // fill the window
+        'background:#000;' +          // set background color
+        'touch-action:none;' +        // prevent mobile pinch to resize
+        'user-select:none;' +         // prevent mobile hold to select
+        '-webkit-user-select:none;' + // compatibility for ios
+        '-webkit-touch-callout:none'; // compatibility for ios
+    document.body.style = styleBody;
+    document.body.appendChild(mainCanvas = document.createElement('canvas'));
+    mainContext = mainCanvas.getContext('2d');
+
+    // init stuff and start engine
+    debugInit();
+    glEnable && glInit();
+
+    // create overlay canvas for hud to appear above gl canvas
+    document.body.appendChild(overlayCanvas = document.createElement('canvas'));
+    overlayContext = overlayCanvas.getContext('2d');
+
+    // set canvas style
+    const styleCanvas = 
+        'position:absolute;' +                               // position
+        'top:50%;left:50%;transform:translate(-50%,-50%);' + // center
+        (canvasPixelated?'image-rendering:pixelated':'');    // pixelated rendering
+    (glCanvas||mainCanvas).style = mainCanvas.style = overlayCanvas.style = styleCanvas;
+    
+    // load all of the images
+    Promise.all(imageSources.map((src, textureIndex)=>
+        new Promise((resolve, reject)=> 
+        {
+            const image = new Image;
+            image.onerror = image.onload = ()=> 
+            {
+                textureInfos[textureIndex] = new TextureInfo(image);
+                resolve();
+            }
+            image.src = src;
+        })
+    )).then(()=> 
+    {
+        // start the engine
+        gameInit();
+        engineUpdate();
+    });
 }
 
 // Called automatically by engine to setup render system

@@ -24,23 +24,28 @@ function gameInit()
     const tileLayer = new TileLayer(pos, tileCollisionSize);
 
     // get level data from the tiles image
-    const imageLevelDataRow = 1;
-    mainContext.drawImage(tileImage, 0, 0);
+    const tileImage = textureInfos[0].image;
+    mainContext.drawImage(tileImage,0,0);
+    const imageData = mainContext.getImageData(0,0,tileImage.width,tileImage.height).data;
     for (pos.x = tileCollisionSize.x; pos.x--;)
     for (pos.y = tileCollisionSize.y; pos.y--;)
     {
-        const imageData = mainContext.getImageData(pos.x, 16*(imageLevelDataRow+1)-pos.y-1, 1, 1).data;
-        if (imageData[0])
-        {
-            const tileIndex = 1;
-            const direction = randInt(4)
-            const mirror = randInt(2);
-            const color = randColor();
-            const data = new TileLayerData(tileIndex, direction, mirror, color);
-            tileLayer.setData(pos, data);
-            setTileCollisionData(pos, 1);
-        }
+        // check if this pixel is set
+        const i = pos.x + tileImage.width*(15 + tileCollisionSize.y - pos.y);
+        if (!imageData[4*i])
+            continue;
+        
+        // set tile data
+        const tileIndex = 1;
+        const direction = randInt(4)
+        const mirror = randInt(2);
+        const color = randColor();
+        const data = new TileLayerData(tileIndex, direction, mirror, color);
+        tileLayer.setData(pos, data);
+        setTileCollisionData(pos, 1);
     }
+
+    // draw tile layer with new data
     tileLayer.redraw();
 
     // move camera to center of collision
@@ -53,7 +58,7 @@ function gameInit()
     particleEmitter = new ParticleEmitter(
         vec2(16), 0,                            // emitPos, emitAngle
         1, 0, 500, PI,                          // emitSize, emitTime, emitRate, emiteCone
-        0, vec2(16),                            // tileIndex, tileSize
+        tile(0, 16),                            // tileIndex, tileSize
         new Color(1,1,1),   new Color(0,0,0),   // colorStartA, colorStartB
         new Color(1,1,1,0), new Color(0,0,0,0), // colorEndA, colorEndB
         2, .2, .2, .1, .05,   // time, sizeStart, sizeEnd, speed, angleSpeed
@@ -106,4 +111,4 @@ function gameRenderPost()
 
 ///////////////////////////////////////////////////////////////////////////////
 // Startup LittleJS Engine
-engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, 'tiles.png');
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);

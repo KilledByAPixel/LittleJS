@@ -21,11 +21,6 @@ let glCanvas;
  *  @memberof WebGL */
 let glContext;
 
-/** Main tile sheet texture automatically loaded by engine
- *  @type {WebGLTexture}
- *  @memberof WebGL */
-let glTileTexture;
-
 // WebGL internal variables not exposed to documentation
 let glActiveTexture, glShader, glArrayBuffer, glPositionData, glColorData, glBatchCount, glBatchAdditive, glAdditive;
 
@@ -34,10 +29,9 @@ let glActiveTexture, glShader, glArrayBuffer, glPositionData, glColorData, glBat
 // Initalize WebGL, called automatically by the engine
 function glInit()
 {
-    // create the canvas and tile texture
+    // create the canvas and textures
     glCanvas = document.createElement('canvas');
-    glContext = glCanvas.getContext('webgl', {antialias: false});
-    glTileTexture = glCreateTexture(tileImage);
+    glContext = glCanvas.getContext('webgl', {antialias: !canvasPixelated});
 
     // some browsers are much faster without copying the gl buffer so we just overlay it instead
     glOverlay && document.body.appendChild(glCanvas);
@@ -80,7 +74,7 @@ function glPreRender()
     // set up the shader
     glContext.useProgram(glShader);
     glContext.activeTexture(gl_TEXTURE0);
-    glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = glTileTexture);
+    glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = textureInfos[0].glTexture);
     glContext.bindBuffer(gl_ARRAY_BUFFER, glArrayBuffer);
     glContext.bufferData(gl_ARRAY_BUFFER, gl_VERTEX_BUFFER_SIZE, gl_DYNAMIC_DRAW);
     glSetBlendMode();
@@ -115,22 +109,23 @@ function glPreRender()
 /** Set the WebGl blend mode, normally you should call setBlendMode instead
  *  @param {Boolean} [additive=0]
  *  @memberof WebGL */
-function glSetBlendMode(additive)
+function glSetBlendMode(additive=0)
 {
     // setup blending
     glAdditive = additive;
 }
 
-/** Set the WebGl texture, not normally necessary unless multiple tile sheets are used
+/** Set the WebGl texture, called automatically if using multiple textures
  *  - This may also flush the gl buffer resulting in more draw calls and worse performance
- *  @param {WebGLTexture} [texture=glTileTexture]
+ *  @param {WebGLTexture} texture
  *  @memberof WebGL */
-function glSetTexture(texture=glTileTexture)
+function glSetTexture(texture)
 {
     // must flush cache with the old texture to set a new one
-    if (texture != glActiveTexture)
-        glFlush();
+    if (texture == glActiveTexture)
+        return;
 
+    glFlush();
     glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = texture);
 }
 

@@ -13,7 +13,7 @@
  * let particleEmiter = new ParticleEmitter
  * (
  *     pos, 0, 1, 0, 500, PI,  // pos, angle, emitSize, emitTime, emitRate, emiteCone
- *     0, vec2(16),                            // tileIndex, tileSize
+ *     tile(0, 16),            // tileInfo
  *     new Color(1,1,1),   new Color(0,0,0),   // colorStartA, colorStartB
  *     new Color(1,1,1,0), new Color(0,0,0,0), // colorEndA, colorEndB
  *     2, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
@@ -30,8 +30,7 @@ class ParticleEmitter extends EngineObject
      *  @param {Number}  [emitTime=0]       - How long to stay alive (0 is forever)
      *  @param {Number}  [emitRate=100]     - How many particles per second to spawn, does not emit if 0
      *  @param {Number}  [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
-     *  @param {Number}  [tileIndex=-1]     - Index into tile sheet, if <0 no texture is applied
-     *  @param {Vector2} [tileSize=tileSizeDefault] - Tile size for particles
+     *  @param {TileInfo} [tileInfo]         - Tile info to render particles (undefined is untextured)
      *  @param {Color}   [colorStartA=Color()] - Color at start of life 1, randomized between start colors
      *  @param {Color}   [colorStartB=Color()] - Color at start of life 2, randomized between start colors
      *  @param {Color}   [colorEndA=Color(1,1,1,0)] - Color at end of life 1, randomized between end colors
@@ -61,8 +60,7 @@ class ParticleEmitter extends EngineObject
         emitTime = 0,
         emitRate = 100,
         emitConeAngle = PI,
-        tileIndex = -1,
-        tileSize = tileSizeDefault,
+        tileInfo,
         colorStartA = new Color,
         colorStartB = new Color,
         colorEndA = new Color(1,1,1,0),
@@ -85,7 +83,7 @@ class ParticleEmitter extends EngineObject
         localSpace
     )
     {
-        super(pos, vec2(), tileIndex, tileSize, angle, undefined, renderOrder);
+        super(pos, vec2(), tileInfo, angle, undefined, renderOrder);
 
         // emitter settings
         /** @property {Number} - World space size of the emitter (float for circle diameter, vec2 for rect) */
@@ -184,7 +182,7 @@ class ParticleEmitter extends EngineObject
             angle += this.angle;
         }
             
-        const particle = new Particle(pos, this.tileIndex, this.tileSize, angle);
+        const particle = new Particle(pos, this.tileInfo, this.tileSize, angle);
 
         // randomness scales each paremeter by a percentage
         const randomness = this.randomness;
@@ -244,12 +242,11 @@ class Particle extends EngineObject
     /**
      * Create a particle with the given settings
      * @param {Vector2} position                   - World space position of the particle
-     * @param {Number}  [tileIndex=-1]             - Tile to use to render, untextured if -1
-     * @param {Vector2} [tileSize=tileSizeDefault] - Size of tile in source pixels
+     * @param {TileInfo} [tileInfo]                - Tile info to render particles (undefined is untextured)
      * @param {Number}  [angle=0]                  - Angle to rotate the particle
      */
-    constructor(pos, tileIndex, tileSize, angle)
-    { super(pos, vec2(), tileIndex, tileSize, angle); }
+    constructor(pos, tileInfo, angle)
+    { super(pos, vec2(), tileInfo, angle); }
 
     /** Render the particle, automatically called each frame, sorted by renderOrder */
     render()
@@ -283,14 +280,17 @@ class Particle extends EngineObject
             if (this.localSpaceEmitter)
                 velocity = velocity.rotate(-this.localSpaceEmitter.angle);
             const speed = velocity.length();
-            const direction = velocity.scale(1/speed);
-            const trailLength = speed * this.trailScale;
-            size.y = max(size.x, trailLength);
-            angle = direction.angle();
-            drawTile(pos.add(direction.multiply(vec2(0,-trailLength/2))), size, this.tileIndex, this.tileSize, color, angle, this.mirror);
+            if (speed)
+            {
+                const direction = velocity.scale(1/speed);
+                const trailLength = speed * this.trailScale;
+                size.y = max(size.x, trailLength);
+                angle = direction.angle();
+                drawTile(pos.add(direction.multiply(vec2(0,-trailLength/2))), size, this.tileInfo, color, angle, this.mirror);
+            }
         }
         else
-            drawTile(pos, size, this.tileIndex, this.tileSize, color, angle, this.mirror);
+            drawTile(pos, size, this.tileInfo, color, angle, this.mirror);
         this.additive && setBlendMode();
         debugParticles && debugRect(pos, size, '#f005', 0, angle);
 

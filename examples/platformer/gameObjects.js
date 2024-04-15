@@ -10,9 +10,9 @@
 
 class GameObject extends EngineObject 
 {
-    constructor(pos, size, tileIndex, tileSize, angle)
+    constructor(pos, size, tileInfo, angle)
     {
-        super(pos, size, tileIndex, tileSize, angle);
+        super(pos, size, tileInfo, angle);
         this.health = 0;
         this.isGameObject = 1;
         this.damageTimer = new Timer;
@@ -66,7 +66,7 @@ class Crate extends GameObject
 {
     constructor(pos) 
     { 
-        super(pos, vec2(1), 2, vec2(16), (randInt(4))*PI/2);
+        super(pos, vec2(1), tile(2), (randInt(4))*PI/2);
 
         this.color = (new Color).setHSLA(rand(),1,.8);
         this.health = 5;
@@ -92,7 +92,7 @@ class Enemy extends GameObject
 {
     constructor(pos) 
     { 
-        super(pos, vec2(.9,.9), 8, vec2(16));
+        super(pos, vec2(.9,.9), tile(5));
 
         this.drawSize = vec2(1);
         this.color = (new Color).setHSLA(rand(), 1, .7);
@@ -140,7 +140,7 @@ class Enemy extends GameObject
         // make bottom flush
         let bodyPos = this.pos;
         bodyPos = bodyPos.add(vec2(0,(this.drawSize.y-this.size.y)/2));
-        drawTile(bodyPos, this.drawSize, this.tileIndex, this.tileSize, this.color, this.angle, this.mirror, this.additiveColor);
+        drawTile(bodyPos, this.drawSize, this.tileInfo, this.color, this.angle, this.mirror, this.additiveColor);
     }
 }
 
@@ -150,7 +150,7 @@ class Grenade extends GameObject
 {
     constructor(pos) 
     {
-        super(pos, vec2(.2), 3, vec2(8));
+        super(pos, vec2(.2), tile(3,8));
 
         this.beepTimer = new Timer(1);
         this.elasticity   = .3;
@@ -178,12 +178,12 @@ class Grenade extends GameObject
        
     render()
     {
-        drawTile(this.pos, vec2(.5), this.tileIndex, this.tileSize, this.color, this.angle);
+        drawTile(this.pos, vec2(.5), this.tileInfo, this.color, this.angle);
 
         // draw additive flash when damaged
         setBlendMode(1);
         const flash = Math.cos(this.getAliveTime()*2*PI);
-        drawTile(this.pos, vec2(2), 0, vec2(16), new Color(1,0,0,.2-.2*flash));
+        drawTile(this.pos, vec2(2), tile(0, 16), new Color(1,0,0,.2-.2*flash));
         setBlendMode(0);
     }
 }
@@ -194,7 +194,7 @@ class Weapon extends EngineObject
 {
     constructor(pos, parent) 
     { 
-        super(pos, vec2(.6), 2, vec2(8));
+        super(pos, vec2(.6), tile(2,8));
 
         // weapon settings
         this.fireRate     = 8;
@@ -211,7 +211,7 @@ class Weapon extends EngineObject
         // shell effect
         this.addChild(this.shellEmitter = new ParticleEmitter(
             vec2(), 0, 0, 0, 0, .1,  // pos, angle, emitSize, emitTime, emitRate, emiteCone
-            undefined, undefined, // tileIndex, tileSize
+            0,                       // tileInfo
             new Color(1,.8,.5), new Color(.9,.7,.5), // colorStartA, colorStartB
             new Color(1,.8,.5), new Color(.9,.7,.5), // colorEndA, colorEndB
             3, .1, .1, .15, .1, // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
@@ -322,7 +322,7 @@ class Bullet extends EngineObject
         // spark effects
         const emitter = new ParticleEmitter(
             this.pos, 0, 0, .1, 100, .5, // pos, angle, emitSize, emitTime, emitRate, emiteCone
-            undefined, undefined,     // tileIndex, tileSize
+            0,                           // tileInfo
             new Color(1,1,0), new Color(1,0,0), // colorStartA, colorStartB
             new Color(1,1,0), new Color(1,0,0), // colorEndA, colorEndB
             .2, .2, 0, .1, .1, // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
