@@ -119,7 +119,7 @@ function gameRenderPost()
         vec2(mainCanvasSize.x/2, 70), 80,   // position, size
         hsl(0,0,1), 6, hsl(0,0,0));         // color, outline size and color
 }
-//glEnable = 0; // disable webgl for this project
+
 ///////////////////////////////////////////////////////////////////////////////
 // Startup LittleJS Engine
 engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
