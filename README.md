@@ -33,12 +33,12 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 
 ### 🔊 Audio
 
-- Positional sound effects with wave or [ZzFX](https://killedbyapixel.github.io/ZzFX/) sound effect generator
+- Positional sound effects with wave or [ZzFX](https://killedbyapixel.github.io/ZzFX/)
 - Music with mp3, ogg, wave, or [ZzFXM](https://keithclark.github.io/ZzFXM/)
 
 ### 🎮 Input
 
-- Comprehensive input processing system for keyboard, mouse, gamepad, and touch
+- Comprehensive system for keyboard, mouse, gamepad, and touch
 - On screen touch gamepad designed for mobile devices
 
 ### 💥 Physics
@@ -50,8 +50,8 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 
 - Compatible with all modern web bowsers and on mobile devices
 - Support for TypeScript and Modules with example projects for both
-- Ideal for size coding competitions like [js13kGames](https://js13kgames.com/), [a special example project builds to a 7KB zip file](https://killedbyapixel.github.io/LittleJS/examples/js13k)
-- Builds to a Windows executable with [Electron](https://www.electronjs.org/) for distribution on PC platforms like Steam
+- Ideal for size coding competitions like [js13kGames](https://js13kgames.com/), [starter project builds to a 7KB zip](https://killedbyapixel.github.io/LittleJS/examples/js13k)
+- Builds to an executable with [Electron](https://www.electronjs.org/) for distribution on Windows, macOS, and Linux
 - Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used for anything you want forever
 
 ### 🛠️ And more...
@@ -74,55 +74,25 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 
 ## How to use LittleJS
 
-To use LittleJS download the latest package from GitHub or call ```npm install littlejsengine```. This package contains the engine and several small examples.
+To use LittleJS download the latest package from GitHub or call ```npm install littlejsengine```.
 
-[You can use the empty example template as a starting point.](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/empty/game.js) This file contains just the minimal setup to start the engine. You can also download and include [littlejs.js](https://github.com/KilledByAPixel/LittleJS/blob/main/build/littlejs.js) or [littlejs.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/build/littlejs.min.js).
+[The Breakout Tutorial](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial) demonstrates how to make a simple game from scratch. [The tutorial is also available on YouTube.](https://youtu.be/tSwDx-NWTXE?si=bkjMa8-7AN2Wg5MO)
 
-If your game loads any files like images you will need to run a local web server. Some editors can do this automatically like [Visual Studio Code](https://code.visualstudio.com/) with the [Live Server plugin](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer). You can also use [http-server](https://www.npmjs.com/package/http-server) via npm.
-
-[The Breakout Tutorial](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial) is provided to demonstrate how to make a simple game from scratch. [The tutorial is also available on YouTube.](https://youtu.be/tSwDx-NWTXE?si=bkjMa8-7AN2Wg5MO)
-
-[There is also a GitNation talk that explains how LittleJS works and some tips on how to use it.](https://youtu.be/_dXKU0WgAj8?si=ZDXLYAFDWp54hrGT)
+[This GitNation talk explains how LittleJS works with some tips on how to use it.](https://youtu.be/_dXKU0WgAj8?si=ZDXLYAFDWp54hrGT)
 
 ## Builds
 
-To easily include LittleJS in your game, you can use one of the 3 pre-built js files. These are also built automatically by the build scripts.
+To easily include LittleJS in your game, you can use one of the pre-built js files.
 
 - [littlejs.js](https://github.com/KilledByAPixel/LittleJS/blob/main/build/littlejs.js) - The full game engine with debug mode available
 - [littlejs.release.js](https://github.com/KilledByAPixel/LittleJS/blob/main/build/littlejs.release.js) - The engine optimized for release builds
 - [littlejs.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/build/littlejs.min.js) - The engine in release mode and minified
-
-LittleJS can also be imported as a module. There are two module flavors that are automatically built.
-
 - [littlejs.esm.js](https://github.com/KilledByAPixel/LittleJS/blob/main/build/littlejs.esm.js) - The engine exported as a module with debug mode available
 - [littlejs.esm.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/build/littlejs.esm.min.js) - The engine exported as a minified module in release mode
 
 To rebuild the engine you must first run ```npm install``` to setup the necessary npm dependencies. Then call ```npm run build``` to build the engine.
 
-The starter example project also includes a node js file [build.js](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/starter/build.js) that compresses everything into a tiny zip file using Google Closure, UglifyJS, and ECT Zip.
-
-## Engine Source Code
-
-This engine is made with simplicity in mind using clean easy to read code.
-There are only a few core files used by the entire engine.
-
-- [engine.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engine.js) - Top level engine init, update, and render
-- [engineSettings.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineSettings.js) - Global engine settings
-- [engineObject.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineObject.js) - Base object class and physics
-- [engineDraw.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineDraw.js) - Code for canvas drawing and text
-- [engineAudio.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineAudio.js) - Spacial sound effects, and zzfx sound generator
-- [engineInput.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineInput.js) - Input for keyboard, mouse, touch, and gamepad
-- [engineUtilities.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineUtilities.js) - Vector2, Color, and Timer clases and math functions
-
-Optional Components, these components are built to synergize with the rest of the engine but are not required.
-
-- [engineTileLayer.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineTileLayer.js) - Tile layer rendering and collision
-- [engineParticles.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineParticles.js) - Particle system with fast rendering and collision
-- [engineWebGL.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineWebGL.js) - Super fast rendering with WebGL and post processing
-- [engineMedals.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineMedals.js) - Achievement tracker with Newgrounds integration
-- [engineDebug.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineDebug.js) - Debug rendering system and information overlay
-- [engineExport.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineExport.js) - Included when exporting engine as a module
-- [engineBuild.js](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineBuild.js) - Node script used to build the engine
+The starter example project includes a node js file [build.js](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/starter/build.js) that compresses everything into a tiny zip file using Google Closure, UglifyJS, and ECT Zip.
 
 ## LittleJS Setup
 
@@ -165,7 +135,7 @@ engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
 
 ## LittleJS Objects
 
-Though not required, LittleJS is intended to be used as an object oriented system by extending the base class [EngineObject](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineObject.js) with your own. This lightweight class provides many useful features including physics, collision, parent/child system, and sorted rendering. Engine objects are automatically added to the global list of objects where they will be updated and rendered until destroyed. 
+LittleJS can be used as an object oriented system by extending the base class [EngineObject](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineObject.js) with your own. This lightweight class provides many useful features including physics, collision, parent/child system, and sorted rendering. These objects are added to the global list of objects where they will automatically be updated and rendered until destroyed. 
 
 Here is a template you can use to make objects that behave however you want. See the examples for a complete demonstration.
 
@@ -205,7 +175,7 @@ Debug builds of LittleJS have a special menu that can be opened by pressing the 
 
 ## Games Made With LittleJS
 
-Here are a few of the amazing games people are making with LittleJS.
+Here are a few of the amazing games people are making with LittleJS...
 
 - [Space Huggers](https://www.newgrounds.com/portal/view/819609) - Run and gun platformer with procedural levels
 - [Undergrowth](https://undergrowth.squidband.uk/) - An interactive music videogame for the band Squid
@@ -217,7 +187,6 @@ Here are a few of the amazing games people are making with LittleJS.
 - [Necrotic Commander](https://js13kgames.com/entries/necrotic-commander) - Tower defense game by [Daniel Jeffery](https://github.com/d-jeffery/NecroticCommander)
 - [Boxing up Bamboo](https://patrickgh3.itch.io/boxing-up-bamboo) - A challenging puzzle game by [Patrick Traynor](https://cwpat.me/about)
 - [Samurai Sam](https://dev.js13kgames.com/2023/games/samurai-sam) - A Fruit Ninja inspired game by [John Edvard](https://reitgames.com)
-- Send me your games!
 
 ![LittleJS Logo](examples/favicon.png)
 
