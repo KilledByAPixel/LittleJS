@@ -28,8 +28,8 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 
 - Super fast sprite and tile map rendering engine with WebGL
 - Update and render over 10,000 objects at a solid 60fps
-- Robust particle effect system and [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
 - Apply [Shadertoy](https://www.shadertoy.com) compatible shaders for post processinge effects
+- Robust particle effect system and [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
 
 ### 🔊 Audio
 
@@ -66,9 +66,9 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 ## Demos
 
 ### [Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter/) - Clean example with only a few things to get you started
+### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/) - Breakout game with post processing effect
 ### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Match 3 puzzle game with HD rendering and high score tracking
 ### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter with procedural generation and destruction
-### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/) - Breakout game with post processing effect
 ### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress/) - Max sprite/object test and music system demo
 ### [Particle System Designer](https://killedbyapixel.github.io/LittleJS/examples/particles/) - Particle system editor and visualizer
 
@@ -96,7 +96,7 @@ The starter example project includes a node js file [build.js](https://github.co
 
 ## LittleJS Setup
 
-To start LittleJS, you must create 5 functions and pass them to engineInit. A canvas will automatically be created and added to the document. 
+To start LittleJS, you need to create these 5 functions and pass them to engineInit.
 
 ```javascript
 function gameInit()
