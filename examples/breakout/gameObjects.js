@@ -62,20 +62,22 @@ class Brick extends EngineObject
         const color1 = this.color;
         const color2 = color1.lerp(new Color, .5);
         new ParticleEmitter(
-            this.pos, 0,                          // emitPos, emitAngle
+            this.pos, 0,                          // pos, angle
             this.size, .1, 200, PI,               // emitSize, emitTime, emitRate, emiteCone
             tile(0, 16),                          // tileIndex, tileSize
             color1, color2,                       // colorStartA, colorStartB
             color1.scale(1,0), color2.scale(1,0), // colorEndA, colorEndB
-            .5, .3, 1, .02, .05,// time, sizeStart, sizeEnd, speed, angleSpeed
-            .99, .95, .4, PI,   // damping, angleDamping, gravityScale, cone
-            .1, .8, 0, 1        // fadeRate, randomness, collide, additive
+            .3, .8, .3, .05, .05,// time, sizeStart, sizeEnd, speed, angleSpeed
+            .99, .95, .4, PI,    // damp, angleDamp, gravity, cone
+            .1, .8, 0, 1         // fade, randomness, collide, additive
         );
 
         // set ball trail color
         if (o.trailEffect)
-            o.trailEffect.colorStartA = 
-            o.trailEffect.colorStartB = this.color.scale(.8);
+        {
+            o.trailEffect.colorStartA = this.color; 
+            o.trailEffect.colorStartB = this.color.lerp(new Color, .5);
+        }
         
         return 1;
     }
@@ -90,20 +92,20 @@ class Ball extends EngineObject
 
         // make a bouncy ball
         this.setCollision();
-        this.velocity = vec2(randSign(), -1).scale(.1);
+        this.velocity = vec2(0, -.1);
         this.elasticity = 1;
         
         // attach a trail effect
         const color = hsl(0,0,.2);
         this.trailEffect = new ParticleEmitter(
-            this.pos, 0,                          // emitPos, emitAngle
+            this.pos, 0,                          // pos, angle
             this.size, 0, 80, PI,                 // emitSize, emitTime, emitRate, emiteCone
             tile(0, 16),                          // tileIndex, tileSize
             color, color,                         // colorStartA, colorStartB
             color.scale(0), color.scale(0),       // colorEndA, colorEndB
             2, .4, 1, .001, .05,// time, sizeStart, sizeEnd, speed, angleSpeed
-            .99, .95, 0, PI,    // damping, angleDamping, gravityScale, cone
-            .1, .5, 0, 1        // fadeRate, randomness, collide, additive
+            .99, .95, 0, PI,    // damp, angleDamp, gravity, cone
+            .1, .5, 0, 1        // fade, randomness, collide, additive
         );
         this.addChild(this.trailEffect);
     }

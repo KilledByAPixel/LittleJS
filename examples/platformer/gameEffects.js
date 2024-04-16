@@ -40,12 +40,12 @@ function makeDebris(pos, color = new Color, amount = 100, size=.2, elasticity = 
     const color2 = color.lerp(new Color, .5);
     const emitter = new ParticleEmitter(
         pos, 0, 1, .1, 100, PI, // pos, angle, emitSize, emitTime, emitRate, emiteCone
-        0,                     // tileInfo
-        color, color2,         // colorStartA, colorStartB
-        color, color2,         // colorEndA, colorEndB
-        3, size,size, .1, .05, // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
-        1, .95, .4, PI, 0,     // damping, angleDamping, gravityScale, particleCone, fadeRate, 
-        .5, 1                  // randomness, collide, additive, randomColorLinear, renderOrder
+        0,                      // tileInfo
+        color, color2,          // colorStartA, colorStartB
+        color, color2,          // colorEndA, colorEndB
+        3, size,size, .1, .05,  // time, sizeStart, sizeEnd, speed, angleSpeed
+        1, .95, .4, PI, 0,      // damp, angleDamp, gravity, particleCone, fade
+        .5, 1                   // randomness, collide, additive, colorLinear, renderOrder
     );
     emitter.elasticity = elasticity;
     emitter.particleDestroyCallback = persistentParticleDestroyCallback;
@@ -99,24 +99,26 @@ function explosion(pos, radius=3)
 
     // smoke
     new ParticleEmitter(
-        pos, 0, radius/2, .2, 50*radius, PI, // pos, angle, emitSize, emitTime, emitRate, emiteCone
-        0,                                   // tileInfo
-        new Color(0,0,0), new Color(0,0,0),  // colorStartA, colorStartB
+        pos, 0,                                 // pos, angle
+        radius/2, .2, 50*radius, PI,            // emitSize, emitTime, emitRate, emiteCone
+        0,                                      // tileInfo
+        new Color(0,0,0), new Color(0,0,0),     // colorStartA, colorStartB
         new Color(0,0,0,0), new Color(0,0,0,0), // colorEndA, colorEndB
-        1, .5, 2, .1, .05,   // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
-        .9, 1, -.3, PI, .1,  // damping, angleDamping, gravityScale, particleCone, fadeRate, 
-        .5, 0, 0, 0, 1e8     // randomness, collide, additive, randomColorLinear, renderOrder
+        1, .5, 2, .2, .05,   // time, sizeStart, sizeEnd, speed, angleSpeed
+        .9, 1, -.3, PI, .1,  // damp, angleDamp, gravity, particleCone, fade
+        .5, 0, 0, 0, 1e8     // randomness, collide, additive, colorLinear, renderOrder
     );
 
     // fire
     new ParticleEmitter(
-        pos, 0, radius/2, .1, 100*radius, PI,   // pos, angle, emitSize, emitTime, emitRate, emiteCone
+        pos, 0,                                 // pos, angle
+        radius/2, .1, 100*radius, PI,           // emitSize, emitTime, emitRate, emiteCone
         0,                                      // tileInfo
         new Color(1,.5,.1), new Color(1,.1,.1), // colorStartA, colorStartB
         new Color(1,.5,.1,0), new Color(1,.1,.1,0), // colorEndA, colorEndB
-        .5, .5, 2, .1, .05, // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
-        .9, 1, 0, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate, 
-        .5, 0, 1, 0, 1e9    // randomness, collide, additive, randomColorLinear, renderOrder
+        .7, .8, .2, .2, .05,  // time, sizeStart, sizeEnd, speed, angleSpeed
+        .9, 1, -.2, PI, .05,  // damp, angleDamp, gravity, particleCone, fade
+        .5, 0, 1, 0, 1e9      // randomness, collide, additive, colorLinear, renderOrder
     );
 }
 

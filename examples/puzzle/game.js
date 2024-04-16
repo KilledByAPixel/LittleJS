@@ -61,7 +61,7 @@ function gameInit()
     // setup game
     cameraPos = levelSize.scale(.5).add(cameraOffset);
     cameraScale = 900/levelSize.y;
-    gravity = -.005;
+    gravity = -.004;
     fallTimer = new Timer;
     comboCount = score = 0;
 }
@@ -288,13 +288,14 @@ function clearMatches()
             const color1 = tileColors[data];
             const color2 = color1.lerp(new Color, .5);
             new ParticleEmitter(
-                pos.add(vec2(.5)), 0, 1, .1, 100, PI,// pos, angle, emitSize, emitTime, emitRate, emiteCone
-                0,                                   // tileInfo
+                pos.add(vec2(.5)), 0,  // pos, angle
+                .5, .1, 200, PI,       // emitSize, emitTime, emitRate, emiteCone
+                0,                     // tileInfo
                 color1, color2,                      // colorStartA, colorStartB
                 color1.scale(1,0), color2.scale(1,0),// colorEndA, colorEndB
-                .5, .3, .3, .05, .05, // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
-                .99, 1, 1, PI, .05,   // damping, angleDamping, gravityScale, particleCone, fadeRate, 
-                .5, 0, 1              // randomness, collide, additive, randomColorLinear, renderOrder
+                .5, .3, .2, .05, .05, // particleTime, sizeStart, sizeEnd, speed, angleSpeed
+                .99, 1, 1, PI, .05,   // damp, angleDamp, gravityScale, particleCone, fadeRate
+                .5, 0, 1              // randomness, collide, additive, colorLinear, renderOrder
             );
         }
     }

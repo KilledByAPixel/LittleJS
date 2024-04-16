@@ -66,7 +66,7 @@ let drawCount;
  * @param {Number} [textureIndex=0]                  - Texture index to use
  * @return {TileInfo}
  * @example
- * tile(2)                       // a tile at index 2 using the default tile size (16)
+ * tile(2)                       // a tile at index 2 using the default tile size of 16
  * tile(5, 8)                    // a tile at index 5 using a tile size of 8
  * tile(1, 16, 3)                // a tile at index 1 of size 16 on texture 3
  * tile(vec2(4,8), vec2(30,10))  // a tile at pixel location (4,8) with a size of (30,10)

@@ -81,7 +81,7 @@ class Crate extends GameObject
             return;
 
         sound_destroyObject.play(this.pos);
-        makeDebris(this.pos, this.color);
+        makeDebris(this.pos, this.color, 200);
         this.destroy();
     }
 }
@@ -214,9 +214,9 @@ class Weapon extends EngineObject
             0,                       // tileInfo
             new Color(1,.8,.5), new Color(.9,.7,.5), // colorStartA, colorStartB
             new Color(1,.8,.5), new Color(.9,.7,.5), // colorEndA, colorEndB
-            3, .1, .1, .15, .1, // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
-            1, .95, 1, 0, 0,    // damping, angleDamping, gravityScale, particleCone, fadeRate, 
-            .1, 1              // randomness, collide, additive, randomColorLinear, renderOrder
+            3, .1, .1, .15, .1, // time, sizeStart, sizeEnd, speed, angleSpeed
+            1, .95, 1, 0, 0,    // damp, angleDamp, gravity, particleCone, fade
+            .1, 1               // randomness, collide, additive, colorLinear, renderOrder
         ), vec2(.1,0), -.8);
         this.shellEmitter.elasticity = .5;
         this.shellEmitter.particleDestroyCallback = persistentParticleDestroyCallback;
@@ -325,9 +325,9 @@ class Bullet extends EngineObject
             0,                           // tileInfo
             new Color(1,1,0), new Color(1,0,0), // colorStartA, colorStartB
             new Color(1,1,0), new Color(1,0,0), // colorEndA, colorEndB
-            .2, .2, 0, .1, .1, // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
-            1, 1, .5, PI, .1,  // damping, angleDamping, gravityScale, particleCone, fadeRate, 
-            .5, 1, 1           // randomness, collide, additive, randomColorLinear, renderOrder
+            .2, .2, 0, .1, .1, // time, sizeStart, sizeEnd, speed, angleSpeed
+            1, 1, .5, PI, .1,  // damp, angleDamp, gravityScale, particleCone, fade, 
+            .5, 1, 1           // randomness, collide, additive, colorLinear, renderOrder
         );
         emitter.trailScale = 1;
         emitter.elasticity = .3;

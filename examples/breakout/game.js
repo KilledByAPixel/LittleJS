@@ -60,7 +60,7 @@ function gameRender()
 {
     // draw a the background
     drawRect(cameraPos, levelSize.scale(2), new Color(.5,.5,.5));
-    drawRect(cameraPos, levelSize, new Color(.05,.05,.05));
+    drawRect(cameraPos, levelSize, new Color(.02,.02,.02));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -68,7 +68,7 @@ function gameRenderPost()
 {
     // use built in image font for text
     const font = new FontImage;
-    font.drawText('Score: ' + score, cameraPos.add(vec2(0,9.6)), .1, 1);
+    font.drawText('Score: ' + score, cameraPos.add(vec2(0,9.6)), .15, 1);
     if (!brickCount)
         font.drawText('You Win!', cameraPos.add(vec2(0,-5)), .2, 1);
     else if (!ball)
@@ -93,34 +93,37 @@ function initPostProcess()
     }
     void mainImage(out vec4 c, vec2 p)
     {
+        // put uv in texture pixel space
         p /= iResolution.xy;
 
         // apply fuzz as horizontal offset
-        const float fuzz = .001;
+        const float fuzz = .0005;
         const float fuzzScale = 800.;
-        p.x += fuzz*(noise(vec2(p.y*fuzzScale, iTime*9.))*2.-1.);
+        const float fuzzSpeed = 9.;
+        p.x += fuzz*(noise(vec2(p.y*fuzzScale, iTime*fuzzSpeed))*2.-1.);
 
         // init output color
         c = texture(iChannel0, p);
 
         // chromatic aberration
-        const float chromatic = .003;
-        c.r = texture(iChannel0, p - vec2(chromatic, 0)).r;
-        c.b = texture(iChannel0, p + vec2(chromatic, 0)).b;
+        const float chromatic = .002;
+        c.r = texture(iChannel0, p - vec2(chromatic,0)).r;
+        c.b = texture(iChannel0, p + vec2(chromatic,0)).b;
 
         // tv static noise
         const float staticNoise = .1;
-        c += staticNoise * hash(vec2(p + mod(iTime, 1e3)));
+        c += staticNoise * hash(p + mod(iTime, 1e3));
 
         // scan lines
-        const float scanlineScale = 800.;
+        const float scanlineScale = 1e3;
         const float scanlineAlpha = .1;
         c *= 1. + scanlineAlpha*sin(p.y*scanlineScale);
 
-        // black vignette around the outside
+        // black vignette around edges
         const float vignette = 2.;
-        float dx = 2.*p.x - 1., dy = 2.*p.y - 1.;
-        c *= 1.-pow((dx*dx + dy*dy)/vignette, 6.);
+        const float vignettePow = 6.;
+        float dx = 2.*p.x-1., dy = 2.*p.y-1.;
+        c *= 1.-pow((dx*dx + dy*dy)/vignette, vignettePow);
     }`;
 
     const includeOverlay = true;
