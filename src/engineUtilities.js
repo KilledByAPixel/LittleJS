@@ -205,10 +205,10 @@ function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear)
  * - Can be used to create a deterministic random number sequence
  * @example
  * let r = new RandomGenerator(123); // random number generator with seed 123
- * let a = r.rand();                 // random value between 0 and 1
- * let b = r.randInt(10);            // random integer between 0 and 9
+ * let a = r.float();                // random value between 0 and 1
+ * let b = r.int(10);                // random integer between 0 and 9
  * r.seed = 123;                     // reset the seed
- * let c = r.rand();                 // the same value as a
+ * let c = r.float();                // the same value as a
  */
 class RandomGenerator
 {
@@ -237,11 +237,11 @@ class RandomGenerator
     *  @param {Number} valueA
     *  @param {Number} [valueB=0]
     *  @return {Number} */
-    int(valueA, valueB=0) { return Math.floor(this.rand(valueA, valueB)); }
+    int(valueA, valueB=0) { return Math.floor(this.float(valueA, valueB)); }
 
     /** Randomly returns either -1 or 1 deterministically
     *  @return {Number} */
-    sign() { return this.randInt(2) * 2 - 1; }
+    sign() { return this.int(2) * 2 - 1; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
