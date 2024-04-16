@@ -22,7 +22,7 @@ The code is very clean and well documented with some fun examples to get you sta
 
 ## About LittleJS
 
-LittleJS is a small but powerful game engine with many features and no depenencies.
+LittleJS is a small but powerful game engine with many features and no dependencies.
 
 ### ✨ Graphics
 
