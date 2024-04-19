@@ -579,10 +579,10 @@ declare module "littlejs.esm" {
      * - Can be used to create a deterministic random number sequence
      * @example
      * let r = new RandomGenerator(123); // random number generator with seed 123
-     * let a = r.rand();                 // random value between 0 and 1
-     * let b = r.randInt(10);            // random integer between 0 and 9
+     * let a = r.float();                // random value between 0 and 1
+     * let b = r.int(10);                // random integer between 0 and 9
      * r.seed = 123;                     // reset the seed
-     * let c = r.rand();                 // the same value as a
+     * let c = r.float();                // the same value as a
      */
     export class RandomGenerator {
         /** Create a random number generator with the seed passed in
@@ -1007,7 +1007,7 @@ declare module "littlejs.esm" {
      * @param {Number} [textureIndex=0]                  - Texture index to use
      * @return {TileInfo}
      * @example
-     * tile(2)                       // a tile at index 2 using the default tile size (16)
+     * tile(2)                       // a tile at index 2 using the default tile size of 16
      * tile(5, 8)                    // a tile at index 5 using a tile size of 8
      * tile(1, 16, 3)                // a tile at index 1 of size 16 on texture 3
      * tile(vec2(4,8), vec2(30,10))  // a tile at pixel location (4,8) with a size of (30,10)
