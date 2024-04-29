@@ -33,7 +33,8 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 
 ### 🔊 Audio
 
-- Positional sound effects with wave or [ZzFX](https://killedbyapixel.github.io/ZzFX/)
+- Positional sound effects with wave files or ZzFX
+- Use [ZzFX](https://killedbyapixel.github.io/ZzFX/) sound effect generator to play sounds without asset files
 - Music with mp3, ogg, wave, or [ZzFXM](https://keithclark.github.io/ZzFXM/)
 
 ### 🎮 Input
@@ -66,7 +67,7 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 ## Demos
 
 ### [Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter/) - Clean example with only a few things to get you started
-### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/) - Breakout game with post processing effect
+### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/) - Block breaking game with post processing effect
 ### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Match 3 puzzle game with HD rendering and high score tracking
 ### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter with procedural generation and destruction
 ### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress/) - Max sprite/object test and music system demo
