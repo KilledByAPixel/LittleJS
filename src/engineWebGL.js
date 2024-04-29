@@ -42,21 +42,20 @@ function glInit()
         '#version 300 es\n' +         // specify GLSL ES version
         'precision highp float;'+     // use highp for better accuracy
         'uniform mat4 m;'+            // transform matrix
-        'in vec2 p,t;'+               // position, uv
-        'in vec4 c,a;'+               // color, additiveColor
+        'in vec4 p,c,a;'+             // position, uv, color, additiveColor
         'out vec4 v,d,e;'+            // return uv, color, additiveColor
         'void main(){'+               // shader entry point
-        'gl_Position=m*vec4(p,1,1);'+ // transform position
-        'v=vec4(t,p);d=c;e=a;'+       // pass stuff to fragment shader
+        'gl_Position=m*vec4(p.xy,1,1);'+ // transform position
+        'v=p;d=c;e=a;'+               // pass stuff to fragment shader
         '}'                           // end of shader
         ,
         '#version 300 es\n' +         // specify GLSL ES version
         'precision highp float;'+     // use highp for better accuracy
-        'in vec4 v,d,e;'+             // uv, color, additiveColor
+        'in vec4 v,d,e;'+             // position, uv, color, additiveColor
         'uniform sampler2D s;'+       // texture
         'out vec4 c;'+                // out color
         'void main(){'+               // shader entry point
-        'c=texture(s,v.xy)*d+e;'+     // modulate texture by color plus additive
+        'c=texture(s,v.zw)*d+e;'+     // modulate texture by color plus additive
         '}'                           // end of shader
     );
 
@@ -92,8 +91,7 @@ function glPreRender()
         glContext.vertexAttribPointer(location, size, type, normalize, gl_VERTEX_BYTE_STRIDE, offset);
         offset += size*typeSize;
     }
-    initVertexAttribArray('p', gl_FLOAT, 4, 2);            // position
-    initVertexAttribArray('t', gl_FLOAT, 4, 2);            // texture coords
+    initVertexAttribArray('p', gl_FLOAT, 4, 4);            // position & texture coords
     initVertexAttribArray('c', gl_UNSIGNED_BYTE, 1, 4, 1); // color
     initVertexAttribArray('a', gl_UNSIGNED_BYTE, 1, 4, 1); // additiveColor
 
