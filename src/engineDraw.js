@@ -197,7 +197,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
 
     showWatermark && ++drawCount;
     const textureInfo = tileInfo && tileInfo.getTextureInfo();
-    if (glEnable && useWebGL)
+    if (useWebGL)
     {
         if (screenSpace)
         {
@@ -330,8 +330,8 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainCont
  *  @memberof Draw */
 function setBlendMode(additive, useWebGL=glEnable)
 {
-    if (glEnable && useWebGL)
-        glSetBlendMode(additive);
+    if (useWebGL)
+        glAdditive = additive;
     else
         mainContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';
 }

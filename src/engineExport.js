@@ -220,7 +220,6 @@ export {
 	// WebGL
 	glCanvas,
 	glContext,
-	glSetBlendMode,
 	glSetTexture,
 	glCompileShader,
 	glCreateProgram,

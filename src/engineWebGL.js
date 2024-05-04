@@ -80,7 +80,7 @@ function glPreRender()
     glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = textureInfos[0].glTexture);
     glContext.bindBuffer(gl_ARRAY_BUFFER, glArrayBuffer);
     glContext.bufferData(gl_ARRAY_BUFFER, gl_VERTEX_BUFFER_SIZE, gl_DYNAMIC_DRAW);
-    glSetBlendMode();
+    glAdditive = 0;
     
     // set vertex attributes
     let offset = 0;
@@ -98,23 +98,16 @@ function glPreRender()
     // build the transform matrix
     const sx = 2 * cameraScale / mainCanvas.width;
     const sy = 2 * cameraScale / mainCanvas.height;
+    const cx = -1 - sx*cameraPos.x;
+    const cy = -1 - sy*cameraPos.y;
     glContext.uniformMatrix4fv(glContext.getUniformLocation(glShader, 'm'), 0,
         new Float32Array([
-            sx, 0, 0, 0,
-            0, sy, 0, 0,
-            1, 1, -1, 1,
-            -1-sx*cameraPos.x, -1-sy*cameraPos.y, 0, 0
+            sx,  0,  0,  0,
+             0, sy,  0,  0,
+             1,  1, -1,  1,
+            cx, cy,  0,  0
         ])
     );
-}
-
-/** Set the WebGl blend mode, normally you should call setBlendMode instead
- *  @param {Boolean} [additive=0]
- *  @memberof WebGL */
-function glSetBlendMode(additive=0)
-{
-    // setup blending
-    glAdditive = additive;
 }
 
 /** Set the WebGl texture, called automatically if using multiple textures
@@ -352,8 +345,11 @@ function glRenderPostProcess()
         glFlush(); // clear out the buffer
         mainContext.drawImage(glCanvas, 0, 0); // copy to the main canvas
     }
-    else // set viewport
+    else
+    {
+        // set the viewport
         glContext.viewport(0, 0, glCanvas.width = mainCanvas.width, glCanvas.height = mainCanvas.height);
+    }
 
     if (glPostIncludeOverlay)
     {
