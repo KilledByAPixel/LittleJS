@@ -237,7 +237,7 @@ this.color = new Color(0,0,0,0); // make object invisible
 
 ## Debug Display
 
-This is a good time to try opening up the debug info by pressing ~. This feature will allow for a selection of debug overlays while also showing all game objects with more info displayed for the object closest to the mouse. It can be really useful when trying to diagnose bugs and understand what is going on.
+This is a good time to try opening up the debug info by pressing escape. This feature will allow for a selection of debug overlays while also showing all game objects with more info displayed for the object closest to the mouse. It can be really useful when trying to diagnose bugs and understand what is going on.
 
 ![LittleJS Screenshot](images/7.png)
 
