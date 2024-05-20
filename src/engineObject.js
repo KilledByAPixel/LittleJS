@@ -44,6 +44,7 @@ class EngineObject
         // set passed in params
         ASSERT(isVector2(pos) && isVector2(size)); // ensure pos and size are vec2s
         ASSERT(typeof tileInfo !== 'number' || !tileInfo); // prevent old style calls
+        ASSERT(!(renderOrder instanceof Color)); // prevent old style calls
         // to fix old calls, replace with tile(tileIndex, tileSize)
 
         /** @property {Vector2} - World space position of the object */
