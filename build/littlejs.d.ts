@@ -1,4 +1,356 @@
 declare module "littlejs.esm" {
+    /**
+     * LittleJS - The Tiny JavaScript Game Engine That Can!
+     * MIT License - Copyright 2021 Frank Force
+     *
+     * Engine Features
+     * - Object oriented system with base class engine object
+     * - Base class object handles update, physics, collision, rendering, etc
+     * - Engine helper classes and functions like Vector2, Color, and Timer
+     * - Super fast rendering system for tile sheets
+     * - Sound effects audio with zzfx and music with zzfxm
+     * - Input processing system with gamepad and touchscreen support
+     * - Tile layer rendering and collision system
+     * - Particle effect system
+     * - Medal system tracks and displays achievements
+     * - Debug tools and debug rendering system
+     * - Post processing effects
+     * - Call engineInit() to start it up!
+     * @namespace Engine
+     */
+    /** Name of engine
+     *  @type {String}
+     *  @default
+     *  @memberof Engine */
+    export const engineName: string;
+    /** Version of engine
+     *  @type {String}
+     *  @default
+     *  @memberof Engine */
+    export const engineVersion: string;
+    /** Frames per second to update objects
+     *  @type {Number}
+     *  @default
+     *  @memberof Engine */
+    export const frameRate: number;
+    /** How many seconds each frame lasts, engine uses a fixed time step
+     *  @type {Number}
+     *  @default 1/60
+     *  @memberof Engine */
+    export const timeDelta: number;
+    /** Array containing all engine objects
+     *  @type {Array}
+     *  @memberof Engine */
+    export let engineObjects: any[];
+    /** Current update frame, used to calculate time
+     *  @type {Number}
+     *  @memberof Engine */
+    export let frame: number;
+    /** Current engine time since start in seconds, derived from frame
+     *  @type {Number}
+     *  @memberof Engine */
+    export let time: number;
+    /** Actual clock time since start in seconds (not affected by pause or frame rate clamping)
+     *  @type {Number}
+     *  @memberof Engine */
+    export let timeReal: number;
+    /** Is the game paused? Causes time and objects to not be updated
+     *  @type {Boolean}
+     *  @default 0
+     *  @memberof Engine */
+    export let paused: boolean;
+    /** Set if game is paused
+     *  @param {Boolean} paused
+     *  @memberof Engine */
+    export function setPaused(_paused: any): void;
+    /** Start up LittleJS engine with your callback functions
+     *  @param {Function} gameInit        - Called once after the engine starts up, setup the game
+     *  @param {Function} gameUpdate      - Called every frame at 60 frames per second, handle input and update the game state
+     *  @param {Function} gameUpdatePost  - Called after physics and objects are updated, setup camera and prepare for render
+     *  @param {Function} gameRender      - Called before objects are rendered, draw any background effects that appear behind objects
+     *  @param {Function} gameRenderPost  - Called after objects are rendered, draw effects or hud that appear above all objects
+     *  @param {String} [imageSources='tiles.png'] - Image to load
+     *  @memberof Engine */
+    export function engineInit(gameInit: Function, gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, imageSources?: string): void;
+    /** Update each engine object, remove destroyed objects, and update time
+     *  @memberof Engine */
+    export function engineObjectsUpdate(): void;
+    /** Destroy and remove all objects
+     *  @memberof Engine */
+    export function engineObjectsDestroy(): void;
+    /** Triggers a callback for each object within a given area
+     *  @param {Vector2} [pos]                 - Center of test area
+     *  @param {Number} [size]                 - Radius of circle if float, rectangle size if Vector2
+     *  @param {Function} [callbackFunction]   - Calls this function on every object that passes the test
+     *  @param {Array} [objects=engineObjects] - List of objects to check
+     *  @memberof Engine */
+    export function engineObjectsCallback(pos?: Vector2, size?: number, callbackFunction?: Function, objects?: any[]): void;
+    /**
+     * LittleJS Debug System
+     * - Press Esc to show debug overlay with mouse pick
+     * - Number keys toggle debug functions
+     * - +/- apply time scale
+     * - Debug primitive rendering
+     * - Save a 2d canvas as a png image
+     * @namespace Debug
+     */
+    /** True if debug is enabled
+     *  @type {Boolean}
+     *  @default
+     *  @memberof Debug */
+    export const debug: boolean;
+    /** True if watermark with FPS should be shown, false in release builds
+     *  @type {Boolean}
+     *  @default
+     *  @memberof Debug */
+    export let showWatermark: boolean;
+    /** Asserts if the experssion is false, does not do anything in release builds
+     *  @param {Boolean} assertion
+     *  @param {Object}  output
+     *  @memberof Debug */
+    export function ASSERT(...assert: any[]): void;
+    /** Draw a debug rectangle in world space
+     *  @param {Vector2} pos
+     *  @param {Vector2} [size=Vector2()]
+     *  @param {String}  [color='#fff']
+     *  @param {Number}  [time=0]
+     *  @param {Number}  [angle=0]
+     *  @param {Boolean} [fill=false]
+     *  @memberof Debug */
+    export function debugRect(pos: Vector2, size?: Vector2, color?: string, time?: number, angle?: number, fill?: boolean): void;
+    /** Draw a debug circle in world space
+     *  @param {Vector2} pos
+     *  @param {Number}  [radius=0]
+     *  @param {String}  [color='#fff']
+     *  @param {Number}  [time=0]
+     *  @param {Boolean} [fill=false]
+     *  @memberof Debug */
+    export function debugCircle(pos: Vector2, radius?: number, color?: string, time?: number, fill?: boolean): void;
+    /** Draw a debug point in world space
+     *  @param {Vector2} pos
+     *  @param {String}  [color='#fff']
+     *  @param {Number}  [time=0]
+     *  @param {Number}  [angle=0]
+     *  @memberof Debug */
+    export function debugPoint(pos: Vector2, color?: string, time?: number, angle?: number): void;
+    /** Draw a debug line in world space
+     *  @param {Vector2} posA
+     *  @param {Vector2} posB
+     *  @param {String}  [color='#fff']
+     *  @param {Number}  [thickness=.1]
+     *  @param {Number}  [time=0]
+     *  @memberof Debug */
+    export function debugLine(posA: Vector2, posB: Vector2, color?: string, thickness?: number, time?: number): void;
+    /** Draw a debug axis aligned bounding box in world space
+     *  @param {Vector2} posA
+     *  @param {Vector2} sizeA
+     *  @param {Vector2} posB
+     *  @param {Vector2} sizeB
+     *  @param {String}  [color='#fff']
+     *  @memberof Debug */
+    export function debugAABB(pA: any, sA: any, pB: any, sB: any, color?: string): void;
+    /** Draw a debug axis aligned bounding box in world space
+     *  @param {String}  text
+     *  @param {Vector2} pos
+     *  @param {Number}  [size=1]
+     *  @param {String}  [color='#fff']
+     *  @param {Number}  [time=0]
+     *  @param {Number}  [angle=0]
+     *  @param {String}  [font='monospace']
+     *  @memberof Debug */
+    export function debugText(text: string, pos: Vector2, size?: number, color?: string, time?: number, angle?: number, font?: string): void;
+    /** Clear all debug primitives in the list
+     *  @memberof Debug */
+    export function debugClear(): void;
+    /** Save a canvas to disk
+     *  @param {HTMLCanvasElement} canvas
+     *  @param {String}            [filename]
+     *  @param {String}            [type='image/png']
+     *  @memberof Debug */
+    export function debugSaveCanvas(canvas: HTMLCanvasElement, filename?: string, type?: string): void;
+    /**
+     * LittleJS Engine Settings
+     * - All settings for the engine are here
+     * @namespace Settings
+     */
+    /** Position of camera in world space
+     *  @type {Vector2}
+     *  @default Vector2()
+     *  @memberof Settings */
+    export let cameraPos: Vector2;
+    /** Scale of camera in world space
+     *  @type {Number}
+     *  @default
+     *  @memberof Settings */
+    export let cameraScale: number;
+    /** The max size of the canvas, centered if window is larger
+     *  @type {Vector2}
+     *  @default Vector2(1920,1200)
+     *  @memberof Settings */
+    export let canvasMaxSize: Vector2;
+    /** Fixed size of the canvas, if enabled canvas size never changes
+     * - you may also need to set mainCanvasSize if using screen space coords in startup
+     *  @type {Vector2}
+     *  @default Vector2()
+     *  @memberof Settings */
+    export let canvasFixedSize: Vector2;
+    /** Disables filtering for crisper pixel art if true
+     *  @type {Boolean}
+     *  @default
+     *  @memberof Settings */
+    export let canvasPixelated: boolean;
+    /** Default font used for text rendering
+     *  @type {String}
+     *  @default
+     *  @memberof Settings */
+    export let fontDefault: string;
+    /** Default size of tiles in pixels
+     *  @type {Vector2}
+     *  @default Vector2(16,16)
+     *  @memberof Settings */
+    export let tileSizeDefault: Vector2;
+    /** How many pixels smaller to draw tiles to prevent bleeding from neighbors
+     *  @type {Number}
+     *  @default
+     *  @memberof Settings */
+    export let tileFixBleedScale: number;
+    /** Enable physics solver for collisions between objects
+     *  @type {Boolean}
+     *  @default
+     *  @memberof Settings */
+    export let enablePhysicsSolver: boolean;
+    /** Default object mass for collison calcuations (how heavy objects are)
+     *  @type {Number}
+     *  @default
+     *  @memberof Settings */
+    export let objectDefaultMass: number;
+    /** How much to slow velocity by each frame (0-1)
+     *  @type {Number}
+     *  @default
+     *  @memberof Settings */
+    export let objectDefaultDamping: number;
+    /** How much to slow angular velocity each frame (0-1)
+     *  @type {Number}
+     *  @default
+     *  @memberof Settings */
+    export let objectDefaultAngleDamping: number;
+    /** How much to bounce when a collision occurs (0-1)
+     *  @type {Number}
+     *  @default 0
+     *  @memberof Settings */
+    export let objectDefaultElasticity: number;
+    /** How much to slow when touching (0-1)
+     *  @type {Number}
+     *  @default
+     *  @memberof Settings */
+    export let objectDefaultFriction: number;
+    /** Clamp max speed to avoid fast objects missing collisions
+     *  @type {Number}
+     *  @default
+     *  @memberof Settings */
+    export let objectMaxSpeed: number;
+    /** How much gravity to apply to objects along the Y axis, negative is down
+     *  @type {Number}
+     *  @default 0
+     *  @memberof Settings */
+    export let gravity: number;
+    /** Scales emit rate of particles, useful for low graphics mode (0 disables particle emitters)
+     *  @type {Number}
+     *  @default
+     *  @memberof Settings */
+    export let particleEmitRateScale: number;
+    /** Enable webgl rendering, webgl can be disabled and removed from build (with some features disabled)
+     *  @type {Boolean}
+     *  @default
+     *  @memberof Settings */
+    export let glEnable: boolean;
+    /** Fixes slow rendering in some browsers by not compositing the WebGL canvas
+     *  @type {Boolean}
+     *  @default
+     *  @memberof Settings */
+    export let glOverlay: boolean;
+    /** Should gamepads be allowed
+     *  @type {Boolean}
+     *  @default
+     *  @memberof Settings */
+    export let gamepadsEnable: boolean;
+    /** If true, the dpad input is also routed to the left analog stick (for better accessability)
+     *  @type {Boolean}
+     *  @default
+     *  @memberof Settings */
+    export let gamepadDirectionEmulateStick: boolean;
+    /** If true the WASD keys are also routed to the direction keys (for better accessability)
+     *  @type {Boolean}
+     *  @default
+     *  @memberof Settings */
+    export let inputWASDEmulateDirection: boolean;
+    /** True if touch gamepad should appear on mobile devices
+     *  - Supports left analog stick, 4 face buttons and start button (button 9)
+     *  - Must be set by end of gameInit to be activated
+     *  @type {Boolean}
+     *  @default 0
+     *  @memberof Settings */
+    export let touchGamepadEnable: boolean;
+    /** True if touch gamepad should be analog stick or false to use if 8 way dpad
+     *  @type {Boolean}
+     *  @default
+     *  @memberof Settings */
+    export let touchGamepadAnalog: boolean;
+    /** Size of virutal gamepad for touch devices in pixels
+     *  @type {Number}
+     *  @default
+     *  @memberof Settings */
+    export let touchGamepadSize: number;
+    /** Transparency of touch gamepad overlay
+     *  @type {Number}
+     *  @default
+     *  @memberof Settings */
+    export let touchGamepadAlpha: number;
+    /** Allow vibration hardware if it exists
+     *  @type {Boolean}
+     *  @default
+     *  @memberof Settings */
+    export let vibrateEnable: boolean;
+    /** All audio code can be disabled and removed from build
+     *  @type {Boolean}
+     *  @default
+     *  @memberof Settings */
+    export let soundEnable: boolean;
+    /** Volume scale to apply to all sound, music and speech
+     *  @type {Number}
+     *  @default
+     *  @memberof Settings */
+    export let soundVolume: number;
+    /** Default range where sound no longer plays
+     *  @type {Number}
+     *  @default
+     *  @memberof Settings */
+    export let soundDefaultRange: number;
+    /** Default range percent to start tapering off sound (0-1)
+     *  @type {Number}
+     *  @default
+     *  @memberof Settings */
+    export let soundDefaultTaper: number;
+    /** How long to show medals for in seconds
+     *  @type {Number}
+     *  @default
+     *  @memberof Settings */
+    export let medalDisplayTime: number;
+    /** How quickly to slide on/off medals in seconds
+     *  @type {Number}
+     *  @default
+     *  @memberof Settings */
+    export let medalDisplaySlideTime: number;
+    /** Size of medal display
+     *  @type {Vector2}
+     *  @default Vector2(640,80)
+     *  @memberof Settings */
+    export let medalDisplaySize: Vector2;
+    /** Size of icon in medal display
+     *  @type {Number}
+     *  @default
+     *  @memberof Settings */
+    export let medalDisplayIconSize: number;
     /** Set position of camera in world space
      *  @param {Vector2} pos
      *  @memberof Settings */
@@ -151,272 +503,6 @@ declare module "littlejs.esm" {
      *  @param {Number} key
      *  @memberof Debug */
     export function setDebugKey(key: number): void;
-    /** The max size of the canvas, centered if window is larger
-     *  @type {Vector2}
-     *  @default Vector2(1920,1200)
-     *  @memberof Settings */
-    export let canvasMaxSize: Vector2;
-    /** Fixed size of the canvas, if enabled canvas size never changes
-     * - you may also need to set mainCanvasSize if using screen space coords in startup
-     *  @type {Vector2}
-     *  @default Vector2()
-     *  @memberof Settings */
-    export let canvasFixedSize: Vector2;
-    /** Disables filtering for crisper pixel art if true
-     *  @type {Boolean}
-     *  @default
-     *  @memberof Settings */
-    export let canvasPixelated: boolean;
-    /** Default font used for text rendering
-     *  @type {String}
-     *  @default
-     *  @memberof Settings */
-    export let fontDefault: string;
-    /** Default size of tiles in pixels
-     *  @type {Vector2}
-     *  @default Vector2(16,16)
-     *  @memberof Settings */
-    export let tileSizeDefault: Vector2;
-    /** How many pixels smaller to draw tiles to prevent bleeding from neighbors
-     *  @type {Number}
-     *  @default
-     *  @memberof Settings */
-    export let tileFixBleedScale: number;
-    /** Enable physics solver for collisions between objects
-     *  @type {Boolean}
-     *  @default
-     *  @memberof Settings */
-    export let enablePhysicsSolver: boolean;
-    /** Default object mass for collison calcuations (how heavy objects are)
-     *  @type {Number}
-     *  @default
-     *  @memberof Settings */
-    export let objectDefaultMass: number;
-    /** How much to slow velocity by each frame (0-1)
-     *  @type {Number}
-     *  @default
-     *  @memberof Settings */
-    export let objectDefaultDamping: number;
-    /** How much to slow angular velocity each frame (0-1)
-     *  @type {Number}
-     *  @default
-     *  @memberof Settings */
-    export let objectDefaultAngleDamping: number;
-    /** How much to bounce when a collision occurs (0-1)
-     *  @type {Number}
-     *  @default 0
-     *  @memberof Settings */
-    export let objectDefaultElasticity: number;
-    /** How much to slow when touching (0-1)
-     *  @type {Number}
-     *  @default
-     *  @memberof Settings */
-    export let objectDefaultFriction: number;
-    /** Clamp max speed to avoid fast objects missing collisions
-     *  @type {Number}
-     *  @default
-     *  @memberof Settings */
-    export let objectMaxSpeed: number;
-    /** How much gravity to apply to objects along the Y axis, negative is down
-     *  @type {Number}
-     *  @default 0
-     *  @memberof Settings */
-    export let gravity: number;
-    /** Scales emit rate of particles, useful for low graphics mode (0 disables particle emitters)
-     *  @type {Number}
-     *  @default
-     *  @memberof Settings */
-    export let particleEmitRateScale: number;
-    /**
-     * LittleJS Engine Settings
-     * - All settings for the engine are here
-     * @namespace Settings
-     */
-    /** Position of camera in world space
-     *  @type {Vector2}
-     *  @default Vector2()
-     *  @memberof Settings */
-    export let cameraPos: Vector2;
-    /** Scale of camera in world space
-     *  @type {Number}
-     *  @default
-     *  @memberof Settings */
-    export let cameraScale: number;
-    /** Enable webgl rendering, webgl can be disabled and removed from build (with some features disabled)
-     *  @type {Boolean}
-     *  @default
-     *  @memberof Settings */
-    export let glEnable: boolean;
-    /** Fixes slow rendering in some browsers by not compositing the WebGL canvas
-     *  @type {Boolean}
-     *  @default
-     *  @memberof Settings */
-    export let glOverlay: boolean;
-    /** Should gamepads be allowed
-     *  @type {Boolean}
-     *  @default
-     *  @memberof Settings */
-    export let gamepadsEnable: boolean;
-    /** If true, the dpad input is also routed to the left analog stick (for better accessability)
-     *  @type {Boolean}
-     *  @default
-     *  @memberof Settings */
-    export let gamepadDirectionEmulateStick: boolean;
-    /** If true the WASD keys are also routed to the direction keys (for better accessability)
-     *  @type {Boolean}
-     *  @default
-     *  @memberof Settings */
-    export let inputWASDEmulateDirection: boolean;
-    /** True if touch gamepad should appear on mobile devices
-     *  - Supports left analog stick, 4 face buttons and start button (button 9)
-     *  - Must be set by end of gameInit to be activated
-     *  @type {Boolean}
-     *  @default 0
-     *  @memberof Settings */
-    export let touchGamepadEnable: boolean;
-    /** True if touch gamepad should be analog stick or false to use if 8 way dpad
-     *  @type {Boolean}
-     *  @default
-     *  @memberof Settings */
-    export let touchGamepadAnalog: boolean;
-    /** Size of virutal gamepad for touch devices in pixels
-     *  @type {Number}
-     *  @default
-     *  @memberof Settings */
-    export let touchGamepadSize: number;
-    /** Transparency of touch gamepad overlay
-     *  @type {Number}
-     *  @default
-     *  @memberof Settings */
-    export let touchGamepadAlpha: number;
-    /** Allow vibration hardware if it exists
-     *  @type {Boolean}
-     *  @default
-     *  @memberof Settings */
-    export let vibrateEnable: boolean;
-    /** All audio code can be disabled and removed from build
-     *  @type {Boolean}
-     *  @default
-     *  @memberof Settings */
-    export let soundEnable: boolean;
-    /** Volume scale to apply to all sound, music and speech
-     *  @type {Number}
-     *  @default
-     *  @memberof Settings */
-    export let soundVolume: number;
-    /** Default range where sound no longer plays
-     *  @type {Number}
-     *  @default
-     *  @memberof Settings */
-    export let soundDefaultRange: number;
-    /** Default range percent to start tapering off sound (0-1)
-     *  @type {Number}
-     *  @default
-     *  @memberof Settings */
-    export let soundDefaultTaper: number;
-    /** How long to show medals for in seconds
-     *  @type {Number}
-     *  @default
-     *  @memberof Settings */
-    export let medalDisplayTime: number;
-    /** How quickly to slide on/off medals in seconds
-     *  @type {Number}
-     *  @default
-     *  @memberof Settings */
-    export let medalDisplaySlideTime: number;
-    /** Size of medal display
-     *  @type {Vector2}
-     *  @default Vector2(640,80)
-     *  @memberof Settings */
-    export let medalDisplaySize: Vector2;
-    /** Size of icon in medal display
-     *  @type {Number}
-     *  @default
-     *  @memberof Settings */
-    export let medalDisplayIconSize: number;
-    /**
-     * LittleJS Debug System
-     * - Press Esc to show debug overlay with mouse pick
-     * - Number keys toggle debug functions
-     * - +/- apply time scale
-     * - Debug primitive rendering
-     * - Save a 2d canvas as a png image
-     * @namespace Debug
-     */
-    /** True if debug is enabled
-     *  @type {Boolean}
-     *  @default
-     *  @memberof Debug */
-    export const debug: boolean;
-    /** True if watermark with FPS should be shown, false in release builds
-     *  @type {Boolean}
-     *  @default
-     *  @memberof Debug */
-    export let showWatermark: boolean;
-    /** Asserts if the experssion is false, does not do anything in release builds
-     *  @param {Boolean} assertion
-     *  @param {Object}  output
-     *  @memberof Debug */
-    export function ASSERT(...assert: any[]): void;
-    /** Draw a debug rectangle in world space
-     *  @param {Vector2} pos
-     *  @param {Vector2} [size=Vector2()]
-     *  @param {String}  [color='#fff']
-     *  @param {Number}  [time=0]
-     *  @param {Number}  [angle=0]
-     *  @param {Boolean} [fill=false]
-     *  @memberof Debug */
-    export function debugRect(pos: Vector2, size?: Vector2, color?: string, time?: number, angle?: number, fill?: boolean): void;
-    /** Draw a debug circle in world space
-     *  @param {Vector2} pos
-     *  @param {Number}  [radius=0]
-     *  @param {String}  [color='#fff']
-     *  @param {Number}  [time=0]
-     *  @param {Boolean} [fill=false]
-     *  @memberof Debug */
-    export function debugCircle(pos: Vector2, radius?: number, color?: string, time?: number, fill?: boolean): void;
-    /** Draw a debug point in world space
-     *  @param {Vector2} pos
-     *  @param {String}  [color='#fff']
-     *  @param {Number}  [time=0]
-     *  @param {Number}  [angle=0]
-     *  @memberof Debug */
-    export function debugPoint(pos: Vector2, color?: string, time?: number, angle?: number): void;
-    /** Draw a debug line in world space
-     *  @param {Vector2} posA
-     *  @param {Vector2} posB
-     *  @param {String}  [color='#fff']
-     *  @param {Number}  [thickness=.1]
-     *  @param {Number}  [time=0]
-     *  @memberof Debug */
-    export function debugLine(posA: Vector2, posB: Vector2, color?: string, thickness?: number, time?: number): void;
-    /** Draw a debug axis aligned bounding box in world space
-     *  @param {Vector2} posA
-     *  @param {Vector2} sizeA
-     *  @param {Vector2} posB
-     *  @param {Vector2} sizeB
-     *  @param {String}  [color='#fff']
-     *  @memberof Debug */
-    export function debugAABB(pA: any, sA: any, pB: any, sB: any, color?: string): void;
-    /** Draw a debug axis aligned bounding box in world space
-     *  @param {String}  text
-     *  @param {Vector2} pos
-     *  @param {Number}  [size=1]
-     *  @param {String}  [color='#fff']
-     *  @param {Number}  [time=0]
-     *  @param {Number}  [angle=0]
-     *  @param {String}  [font='monospace']
-     *  @memberof Debug */
-    export function debugText(text: string, pos: Vector2, size?: number, color?: string, time?: number, angle?: number, font?: string): void;
-    /** Clear all debug primitives in the list
-     *  @memberof Debug */
-    export function debugClear(): void;
-    /** Save a canvas to disk
-     *  @param {HTMLCanvasElement} canvas
-     *  @param {String}            [filename]
-     *  @param {String}            [type='image/png']
-     *  @memberof Debug */
-    export function debugSaveCanvas(canvas: HTMLCanvasElement, filename?: string, type?: string): void;
     /**
      * LittleJS Utility Classes and Functions
      * - General purpose math library
@@ -871,129 +957,6 @@ declare module "littlejs.esm" {
      * @memberof Utilities
      */
     export function hsl(h?: number, s?: number, l?: number, a?: number): Color;
-    /**
-     * LittleJS Object System
-     */
-    /**
-     * LittleJS Object Base Object Class
-     * - Top level object class used by the engine
-     * - Automatically adds self to object list
-     * - Will be updated and rendered each frame
-     * - Renders as a sprite from a tilesheet by default
-     * - Can have color and addtive color applied
-     * - 2D Physics and collision system
-     * - Sorted by renderOrder
-     * - Objects can have children attached
-     * - Parents are updated before children, and set child transform
-     * - Call destroy() to get rid of objects
-     *
-     * The physics system used by objects is simple and fast with some caveats...
-     * - Collision uses the axis aligned size, the object's rotation angle is only for rendering
-     * - Objects are guaranteed to not intersect tile collision from physics
-     * - If an object starts or is moved inside tile collision, it will not collide with that tile
-     * - Collision for objects can be set to be solid to block other objects
-     * - Objects may get pushed into overlapping other solid objects, if so they will push away
-     * - Solid objects are more performance intensive and should be used sparingly
-     * @example
-     * // create an engine object, normally you would first extend the class with your own
-     * const pos = vec2(2,3);
-     * const object = new EngineObject(pos);
-     */
-    export class EngineObject {
-        /** Create an engine object and adds it to the list of objects
-         *  @param {Vector2} [pos=Vector2()]            - World space position of the object
-         *  @param {Vector2} [size=Vector2(1,1)]        - World space size of the object
-         *  @param {TileInfo} [tileInfo]                - Tile info to render object (undefined is untextured)
-         *  @param {Number}  [angle=0]                  - Angle the object is rotated by
-         *  @param {Color}   [color=Color()]            - Color to apply to tile when rendered
-         *  @param {Number}  [renderOrder=0]            - Objects sorted by renderOrder before being rendered
-         */
-        constructor(pos?: Vector2, size?: Vector2, tileInfo?: TileInfo, angle?: number, color?: Color, renderOrder?: number);
-        /** @property {Vector2} - World space position of the object */
-        pos: Vector2;
-        /** @property {Vector2} - World space width and height of the object */
-        size: Vector2;
-        /** @property {TileInfo} - Tile info to render object (undefined is untextured) */
-        tileInfo: TileInfo;
-        /** @property {Number}  - Angle to rotate the object */
-        angle: number;
-        /** @property {Color}   - Color to apply when rendered */
-        color: Color;
-        /** @property {Number} [mass=objectDefaultMass]                 - How heavy the object is, static if 0 */
-        mass: number;
-        /** @property {Number} [damping=objectDefaultDamping]           - How much to slow down velocity each frame (0-1) */
-        damping: number;
-        /** @property {Number} [angleDamping=objectDefaultAngleDamping] - How much to slow down rotation each frame (0-1) */
-        angleDamping: number;
-        /** @property {Number} [elasticity=objectDefaultElasticity]     - How bouncy the object is when colliding (0-1) */
-        elasticity: number;
-        /** @property {Number} [friction=objectDefaultFriction]         - How much friction to apply when sliding (0-1) */
-        friction: number;
-        /** @property {Number} [gravityScale=1]                         - How much to scale gravity by for this object */
-        gravityScale: number;
-        /** @property {Number} [renderOrder=0]                          - Objects are sorted by render order */
-        renderOrder: number;
-        /** @property {Vector2} [velocity=Vector2()]                    - Velocity of the object */
-        velocity: Vector2;
-        /** @property {Number} [angleVelocity=0]                        - Angular velocity of the object */
-        angleVelocity: number;
-        spawnTime: number;
-        children: any[];
-        collideTiles: number;
-        /** Update the object transform and physics, called automatically by engine once each frame */
-        update(): void;
-        groundObject: any;
-        /** Render the object, draws a tile by default, automatically called each frame, sorted by renderOrder */
-        render(): void;
-        /** Destroy this object, destroy it's children, detach it's parent, and mark it for removal */
-        destroy(): void;
-        destroyed: number;
-        /** Called to check if a tile collision should be resolved
-         *  @param {Number}  tileData - the value of the tile at the position
-         *  @param {Vector2} pos      - tile where the collision occured
-         *  @return {Boolean}         - true if the collision should be resolved */
-        collideWithTile(tileData: number, pos: Vector2): boolean;
-        /** Called to check if a tile raycast hit
-         *  @param {Number}  tileData - the value of the tile at the position
-         *  @param {Vector2} pos      - tile where the raycast is
-         *  @return {Boolean}         - true if the raycast should hit */
-        collideWithTileRaycast(tileData: number, pos: Vector2): boolean;
-        /** Called to check if a object collision should be resolved
-         *  @param {EngineObject} object - the object to test against
-         *  @return {Boolean}            - true if the collision should be resolved
-         */
-        collideWithObject(object: EngineObject): boolean;
-        /** How long since the object was created
-         *  @return {Number} */
-        getAliveTime(): number;
-        /** Apply acceleration to this object (adjust velocity, not affected by mass)
-         *  @param {Vector2} acceleration */
-        applyAcceleration(acceleration: Vector2): void;
-        /** Apply force to this object (adjust velocity, affected by mass)
-         *  @param {Vector2} force */
-        applyForce(force: Vector2): void;
-        /** Get the direction of the mirror
-         *  @return {Number} -1 if this.mirror is true, or 1 if not mirrored */
-        getMirrorSign(): number;
-        /** Attaches a child to this with a given local transform
-         *  @param {EngineObject} child
-         *  @param {Vector2}      [localPos=Vector2()]
-         *  @param {Number}       [localAngle=0] */
-        addChild(child: EngineObject, localPos?: Vector2, localAngle?: number): void;
-        /** Removes a child from this one
-         *  @param {EngineObject} child */
-        removeChild(child: EngineObject): void;
-        /** Set how this object collides
-         *  @param {Boolean} [collideSolidObjects=1] - Does it collide with solid objects
-         *  @param {Boolean} [isSolid=1]             - Does it collide with and block other objects (expensive in large numbers)
-         *  @param {Boolean} [collideTiles=1]        - Does it collide with the tile collision */
-        setCollision(collideSolidObjects?: boolean, isSolid?: boolean, collideTiles?: boolean): void;
-        collideSolidObjects: boolean;
-        isSolid: boolean;
-        /** Returns string containg info about this object for debugging
-         *  @return {String} */
-        toString(): string;
-    }
     /** Array containing texture info for batch rendering system
      *  @type {Array}
      *  @memberof Draw */
@@ -1114,8 +1077,9 @@ declare module "littlejs.esm" {
      *  @param {Color}   [additiveColor=Color(0,0,0,0)] - Additive color to be applied
      *  @param {Boolean} [useWebGL=glEnable]            - Use accelerated WebGL rendering
      *  @param {Boolean} [screenSpace=0]                - If true the pos and size are in screen space
+     *  @param {CanvasRenderingContext2D} [context]     - Canvas 2D context to draw to
      *  @memberof Draw */
-    export function drawTile(pos: Vector2, size?: Vector2, tileInfo?: TileInfo, color?: Color, angle?: number, mirror?: boolean, additiveColor?: Color, useWebGL?: boolean, screenSpace?: boolean): void;
+    export function drawTile(pos: Vector2, size?: Vector2, tileInfo?: TileInfo, color?: Color, angle?: number, mirror?: boolean, additiveColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
     /** Draw colored rect centered on pos
      *  @param {Vector2} pos
      *  @param {Vector2} [size=Vector2(1,1)]
@@ -1123,8 +1087,9 @@ declare module "littlejs.esm" {
      *  @param {Number}  [angle=0]
      *  @param {Boolean} [useWebGL=glEnable]
      *  @param {Boolean} [screenSpace=0]
+     *  @param {CanvasRenderingContext2D} [context]
      *  @memberof Draw */
-    export function drawRect(pos: Vector2, size?: Vector2, color?: Color, angle?: number, useWebGL?: boolean, screenSpace?: boolean): void;
+    export function drawRect(pos: Vector2, size?: Vector2, color?: Color, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
     /** Draw colored line between two points
      *  @param {Vector2} posA
      *  @param {Vector2} posB
@@ -1132,23 +1097,25 @@ declare module "littlejs.esm" {
      *  @param {Color}   [color=Color()]
      *  @param {Boolean} [useWebGL=glEnable]
      *  @param {Boolean} [screenSpace=0]
+     *  @param {CanvasRenderingContext2D} [context]
      *  @memberof Draw */
-    export function drawLine(posA: Vector2, posB: Vector2, thickness?: number, color?: Color, useWebGL?: boolean, screenSpace?: boolean): void;
+    export function drawLine(posA: Vector2, posB: Vector2, thickness?: number, color?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
     /** Draw directly to a 2d canvas context in world space
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
      *  @param {Number}   angle
      *  @param {Boolean}  mirror
      *  @param {Function} drawFunction
-     *  @param {CanvasRenderingContext2D} [context=mainContext]
      *  @param {Boolean} [screenSpace=0]
+     *  @param {CanvasRenderingContext2D} [context=mainContext]
      *  @memberof Draw */
-    export function drawCanvas2D(pos: Vector2, size: Vector2, angle: number, mirror: boolean, drawFunction: Function, context?: CanvasRenderingContext2D, screenSpace?: boolean): void;
+    export function drawCanvas2D(pos: Vector2, size: Vector2, angle: number, mirror: boolean, drawFunction: Function, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
     /** Enable normal or additive blend mode
      *  @param {Boolean} [additive=0]
      *  @param {Boolean} [useWebGL=glEnable]
+     *  @param {CanvasRenderingContext2D} [context=mainContext]
      *  @memberof Draw */
-    export function setBlendMode(additive?: boolean, useWebGL?: boolean): void;
+    export function setBlendMode(additive?: boolean, useWebGL?: boolean, context?: CanvasRenderingContext2D): void;
     /** Draw text on overlay canvas in screen space
      *  Automatically splits new lines into rows
      *  @param {String}  text
@@ -1222,6 +1189,52 @@ declare module "littlejs.esm" {
     /** Toggle fullsceen mode
      *  @memberof Draw */
     export function toggleFullscreen(): void;
+    /**
+     * LittleJS WebGL Interface
+     * - All webgl used by the engine is wrapped up here
+     * - For normal stuff you won't need to see or call anything in this file
+     * - For advanced stuff there are helper functions to create shaders, textures, etc
+     * - Can be disabled with glEnable to revert to 2D canvas rendering
+     * - Batches sprite rendering on GPU for incredibly fast performance
+     * - Sprite transform math is done in the shader where possible
+     * - Supports shadertoy style post processing shaders
+     * @namespace WebGL
+     */
+    /** The WebGL canvas which appears above the main canvas and below the overlay canvas
+     *  @type {HTMLCanvasElement}
+     *  @memberof WebGL */
+    export let glCanvas: HTMLCanvasElement;
+    /** 2d context for glCanvas
+     *  @type {WebGLRenderingContext}
+     *  @memberof WebGL */
+    export let glContext: WebGLRenderingContext;
+    /** Set the WebGl texture, called automatically if using multiple textures
+     *  - This may also flush the gl buffer resulting in more draw calls and worse performance
+     *  @param {WebGLTexture} texture
+     *  @memberof WebGL */
+    export function glSetTexture(texture: WebGLTexture): void;
+    /** Compile WebGL shader of the given type, will throw errors if in debug mode
+     *  @param {String} source
+     *  @param          type
+     *  @return {WebGLShader}
+     *  @memberof WebGL */
+    export function glCompileShader(source: string, type: any): WebGLShader;
+    /** Create WebGL program with given shaders
+     *  @param {WebGLShader} vsSource
+     *  @param {WebGLShader} fsSource
+     *  @return {WebGLProgram}
+     *  @memberof WebGL */
+    export function glCreateProgram(vsSource: WebGLShader, fsSource: WebGLShader): WebGLProgram;
+    /** Create WebGL texture from an image and set the texture settings
+     *  @param {Image} image
+     *  @return {WebGLTexture}
+     *  @memberof WebGL */
+    export function glCreateTexture(image: new (width?: number, height?: number) => HTMLImageElement): WebGLTexture;
+    /** Set up a post processing shader
+     *  @param {String} shaderCode
+     *  @param {Boolean} includeOverlay
+     *  @memberof WebGL */
+    export function glInitPostProcess(shaderCode: string, includeOverlay: boolean): void;
     /**
      * LittleJS Input System
      * - Tracks keyboard down, pressed, and released
@@ -1489,6 +1502,129 @@ declare module "littlejs.esm" {
      *  @return {AudioBufferSourceNode} - The audio node of the sound played
      *  @memberof Audio */
     export function zzfx(...zzfxSound: any[]): AudioBufferSourceNode;
+    /**
+     * LittleJS Object System
+     */
+    /**
+     * LittleJS Object Base Object Class
+     * - Top level object class used by the engine
+     * - Automatically adds self to object list
+     * - Will be updated and rendered each frame
+     * - Renders as a sprite from a tilesheet by default
+     * - Can have color and addtive color applied
+     * - 2D Physics and collision system
+     * - Sorted by renderOrder
+     * - Objects can have children attached
+     * - Parents are updated before children, and set child transform
+     * - Call destroy() to get rid of objects
+     *
+     * The physics system used by objects is simple and fast with some caveats...
+     * - Collision uses the axis aligned size, the object's rotation angle is only for rendering
+     * - Objects are guaranteed to not intersect tile collision from physics
+     * - If an object starts or is moved inside tile collision, it will not collide with that tile
+     * - Collision for objects can be set to be solid to block other objects
+     * - Objects may get pushed into overlapping other solid objects, if so they will push away
+     * - Solid objects are more performance intensive and should be used sparingly
+     * @example
+     * // create an engine object, normally you would first extend the class with your own
+     * const pos = vec2(2,3);
+     * const object = new EngineObject(pos);
+     */
+    export class EngineObject {
+        /** Create an engine object and adds it to the list of objects
+         *  @param {Vector2} [pos=Vector2()]            - World space position of the object
+         *  @param {Vector2} [size=Vector2(1,1)]        - World space size of the object
+         *  @param {TileInfo} [tileInfo]                - Tile info to render object (undefined is untextured)
+         *  @param {Number}  [angle=0]                  - Angle the object is rotated by
+         *  @param {Color}   [color=Color()]            - Color to apply to tile when rendered
+         *  @param {Number}  [renderOrder=0]            - Objects sorted by renderOrder before being rendered
+         */
+        constructor(pos?: Vector2, size?: Vector2, tileInfo?: TileInfo, angle?: number, color?: Color, renderOrder?: number);
+        /** @property {Vector2} - World space position of the object */
+        pos: Vector2;
+        /** @property {Vector2} - World space width and height of the object */
+        size: Vector2;
+        /** @property {TileInfo} - Tile info to render object (undefined is untextured) */
+        tileInfo: TileInfo;
+        /** @property {Number}  - Angle to rotate the object */
+        angle: number;
+        /** @property {Color}   - Color to apply when rendered */
+        color: Color;
+        /** @property {Number} [mass=objectDefaultMass]                 - How heavy the object is, static if 0 */
+        mass: number;
+        /** @property {Number} [damping=objectDefaultDamping]           - How much to slow down velocity each frame (0-1) */
+        damping: number;
+        /** @property {Number} [angleDamping=objectDefaultAngleDamping] - How much to slow down rotation each frame (0-1) */
+        angleDamping: number;
+        /** @property {Number} [elasticity=objectDefaultElasticity]     - How bouncy the object is when colliding (0-1) */
+        elasticity: number;
+        /** @property {Number} [friction=objectDefaultFriction]         - How much friction to apply when sliding (0-1) */
+        friction: number;
+        /** @property {Number} [gravityScale=1]                         - How much to scale gravity by for this object */
+        gravityScale: number;
+        /** @property {Number} [renderOrder=0]                          - Objects are sorted by render order */
+        renderOrder: number;
+        /** @property {Vector2} [velocity=Vector2()]                    - Velocity of the object */
+        velocity: Vector2;
+        /** @property {Number} [angleVelocity=0]                        - Angular velocity of the object */
+        angleVelocity: number;
+        spawnTime: number;
+        children: any[];
+        collideTiles: number;
+        /** Update the object transform and physics, called automatically by engine once each frame */
+        update(): void;
+        groundObject: any;
+        /** Render the object, draws a tile by default, automatically called each frame, sorted by renderOrder */
+        render(): void;
+        /** Destroy this object, destroy it's children, detach it's parent, and mark it for removal */
+        destroy(): void;
+        destroyed: number;
+        /** Called to check if a tile collision should be resolved
+         *  @param {Number}  tileData - the value of the tile at the position
+         *  @param {Vector2} pos      - tile where the collision occured
+         *  @return {Boolean}         - true if the collision should be resolved */
+        collideWithTile(tileData: number, pos: Vector2): boolean;
+        /** Called to check if a tile raycast hit
+         *  @param {Number}  tileData - the value of the tile at the position
+         *  @param {Vector2} pos      - tile where the raycast is
+         *  @return {Boolean}         - true if the raycast should hit */
+        collideWithTileRaycast(tileData: number, pos: Vector2): boolean;
+        /** Called to check if a object collision should be resolved
+         *  @param {EngineObject} object - the object to test against
+         *  @return {Boolean}            - true if the collision should be resolved
+         */
+        collideWithObject(object: EngineObject): boolean;
+        /** How long since the object was created
+         *  @return {Number} */
+        getAliveTime(): number;
+        /** Apply acceleration to this object (adjust velocity, not affected by mass)
+         *  @param {Vector2} acceleration */
+        applyAcceleration(acceleration: Vector2): void;
+        /** Apply force to this object (adjust velocity, affected by mass)
+         *  @param {Vector2} force */
+        applyForce(force: Vector2): void;
+        /** Get the direction of the mirror
+         *  @return {Number} -1 if this.mirror is true, or 1 if not mirrored */
+        getMirrorSign(): number;
+        /** Attaches a child to this with a given local transform
+         *  @param {EngineObject} child
+         *  @param {Vector2}      [localPos=Vector2()]
+         *  @param {Number}       [localAngle=0] */
+        addChild(child: EngineObject, localPos?: Vector2, localAngle?: number): void;
+        /** Removes a child from this one
+         *  @param {EngineObject} child */
+        removeChild(child: EngineObject): void;
+        /** Set how this object collides
+         *  @param {Boolean} [collideSolidObjects=1] - Does it collide with solid objects
+         *  @param {Boolean} [isSolid=1]             - Does it collide with and block other objects (expensive in large numbers)
+         *  @param {Boolean} [collideTiles=1]        - Does it collide with the tile collision */
+        setCollision(collideSolidObjects?: boolean, isSolid?: boolean, collideTiles?: boolean): void;
+        collideSolidObjects: boolean;
+        isSolid: boolean;
+        /** Returns string containg info about this object for debugging
+         *  @return {String} */
+        toString(): string;
+    }
     /**
      * LittleJS Tile Layer System
      * - Caches arrays of tiles to off screen canvas for fast rendering
@@ -1864,140 +2000,4 @@ declare module "littlejs.esm" {
          */
         call(component: string, parameters?: any, async?: boolean): any;
     }
-    /**
-     * LittleJS WebGL Interface
-     * - All webgl used by the engine is wrapped up here
-     * - For normal stuff you won't need to see or call anything in this file
-     * - For advanced stuff there are helper functions to create shaders, textures, etc
-     * - Can be disabled with glEnable to revert to 2D canvas rendering
-     * - Batches sprite rendering on GPU for incredibly fast performance
-     * - Sprite transform math is done in the shader where possible
-     * - Supports shadertoy style post processing shaders
-     * @namespace WebGL
-     */
-    /** The WebGL canvas which appears above the main canvas and below the overlay canvas
-     *  @type {HTMLCanvasElement}
-     *  @memberof WebGL */
-    export let glCanvas: HTMLCanvasElement;
-    /** 2d context for glCanvas
-     *  @type {WebGLRenderingContext}
-     *  @memberof WebGL */
-    export let glContext: WebGLRenderingContext;
-    /** Set the WebGl blend mode, normally you should call setBlendMode instead
-     *  @param {Boolean} [additive=0]
-     *  @memberof WebGL */
-    export function glSetBlendMode(additive?: boolean): void;
-    /** Set the WebGl texture, called automatically if using multiple textures
-     *  - This may also flush the gl buffer resulting in more draw calls and worse performance
-     *  @param {WebGLTexture} texture
-     *  @memberof WebGL */
-    export function glSetTexture(texture: WebGLTexture): void;
-    /** Compile WebGL shader of the given type, will throw errors if in debug mode
-     *  @param {String} source
-     *  @param          type
-     *  @return {WebGLShader}
-     *  @memberof WebGL */
-    export function glCompileShader(source: string, type: any): WebGLShader;
-    /** Create WebGL program with given shaders
-     *  @param {WebGLShader} vsSource
-     *  @param {WebGLShader} fsSource
-     *  @return {WebGLProgram}
-     *  @memberof WebGL */
-    export function glCreateProgram(vsSource: WebGLShader, fsSource: WebGLShader): WebGLProgram;
-    /** Create WebGL texture from an image and set the texture settings
-     *  @param {Image} image
-     *  @return {WebGLTexture}
-     *  @memberof WebGL */
-    export function glCreateTexture(image: new (width?: number, height?: number) => HTMLImageElement): WebGLTexture;
-    /** Set up a post processing shader
-     *  @param {String} shaderCode
-     *  @param {Boolean} includeOverlay
-     *  @memberof WebGL */
-    export function glInitPostProcess(shaderCode: string, includeOverlay: boolean): void;
-    /**
-     * LittleJS - The Tiny JavaScript Game Engine That Can!
-     * MIT License - Copyright 2021 Frank Force
-     *
-     * Engine Features
-     * - Object oriented system with base class engine object
-     * - Base class object handles update, physics, collision, rendering, etc
-     * - Engine helper classes and functions like Vector2, Color, and Timer
-     * - Super fast rendering system for tile sheets
-     * - Sound effects audio with zzfx and music with zzfxm
-     * - Input processing system with gamepad and touchscreen support
-     * - Tile layer rendering and collision system
-     * - Particle effect system
-     * - Medal system tracks and displays achievements
-     * - Debug tools and debug rendering system
-     * - Post processing effects
-     * - Call engineInit() to start it up!
-     * @namespace Engine
-     */
-    /** Name of engine
-     *  @type {String}
-     *  @default
-     *  @memberof Engine */
-    export const engineName: string;
-    /** Version of engine
-     *  @type {String}
-     *  @default
-     *  @memberof Engine */
-    export const engineVersion: string;
-    /** Frames per second to update objects
-     *  @type {Number}
-     *  @default
-     *  @memberof Engine */
-    export const frameRate: number;
-    /** How many seconds each frame lasts, engine uses a fixed time step
-     *  @type {Number}
-     *  @default 1/60
-     *  @memberof Engine */
-    export const timeDelta: number;
-    /** Array containing all engine objects
-     *  @type {Array}
-     *  @memberof Engine */
-    export let engineObjects: any[];
-    /** Current update frame, used to calculate time
-     *  @type {Number}
-     *  @memberof Engine */
-    export let frame: number;
-    /** Current engine time since start in seconds, derived from frame
-     *  @type {Number}
-     *  @memberof Engine */
-    export let time: number;
-    /** Actual clock time since start in seconds (not affected by pause or frame rate clamping)
-     *  @type {Number}
-     *  @memberof Engine */
-    export let timeReal: number;
-    /** Is the game paused? Causes time and objects to not be updated
-     *  @type {Boolean}
-     *  @default 0
-     *  @memberof Engine */
-    export let paused: boolean;
-    /** Set if game is paused
-     *  @param {Boolean} paused
-     *  @memberof Engine */
-    export function setPaused(_paused: any): void;
-    /** Start up LittleJS engine with your callback functions
-     *  @param {Function} gameInit        - Called once after the engine starts up, setup the game
-     *  @param {Function} gameUpdate      - Called every frame at 60 frames per second, handle input and update the game state
-     *  @param {Function} gameUpdatePost  - Called after physics and objects are updated, setup camera and prepare for render
-     *  @param {Function} gameRender      - Called before objects are rendered, draw any background effects that appear behind objects
-     *  @param {Function} gameRenderPost  - Called after objects are rendered, draw effects or hud that appear above all objects
-     *  @param {String} [imageSources='tiles.png'] - Image to load
-     *  @memberof Engine */
-    export function engineInit(gameInit: Function, gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, imageSources?: string): void;
-    /** Update each engine object, remove destroyed objects, and update time
-     *  @memberof Engine */
-    export function engineObjectsUpdate(): void;
-    /** Destroy and remove all objects
-     *  @memberof Engine */
-    export function engineObjectsDestroy(): void;
-    /** Triggers a callback for each object within a given area
-     *  @param {Vector2} [pos]                 - Center of test area
-     *  @param {Number} [size]                 - Radius of circle if float, rectangle size if Vector2
-     *  @param {Function} [callbackFunction]   - Calls this function on every object that passes the test
-     *  @param {Array} [objects=engineObjects] - List of objects to check
-     *  @memberof Engine */
-    export function engineObjectsCallback(pos?: Vector2, size?: number, callbackFunction?: Function, objects?: any[]): void;
 }

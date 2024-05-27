@@ -1558,6 +1558,7 @@ class EngineObject
         // set passed in params
         ASSERT(isVector2(pos) && isVector2(size)); // ensure pos and size are vec2s
         ASSERT(typeof tileInfo !== 'number' || !tileInfo); // prevent old style calls
+        ASSERT(!(renderOrder instanceof Color)); // prevent old style calls
         // to fix old calls, replace with tile(tileIndex, tileSize)
 
         /** @property {Vector2} - World space position of the object */
@@ -2079,16 +2080,18 @@ function worldToScreen(worldPos)
  *  @param {Color}   [additiveColor=Color(0,0,0,0)] - Additive color to be applied
  *  @param {Boolean} [useWebGL=glEnable]            - Use accelerated WebGL rendering
  *  @param {Boolean} [screenSpace=0]                - If true the pos and size are in screen space
+ *  @param {CanvasRenderingContext2D} [context]     - Canvas 2D context to draw to
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
-    angle=0, mirror, additiveColor=new Color(0,0,0,0), useWebGL=glEnable, screenSpace)
+    angle=0, mirror, additiveColor=new Color(0,0,0,0), useWebGL=glEnable, screenSpace, context)
 {
+    ASSERT(!context || !glEnable); // context only supported in canvas 2D mode
     ASSERT(typeof tileInfo !== 'number' || !tileInfo); // prevent old style calls
     // to fix old calls, replace with tile(tileIndex, tileSize)
 
     showWatermark && ++drawCount;
     const textureInfo = tileInfo && tileInfo.getTextureInfo();
-    if (glEnable && useWebGL)
+    if (useWebGL)
     {
         if (screenSpace)
         {
@@ -2139,7 +2142,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
                 context.fillStyle = color;
                 context.fillRect(-.5, -.5, 1, 1);
             }
-        }, undefined, screenSpace);
+        }, screenSpace, context);
     }
 }
 
@@ -2150,28 +2153,36 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
  *  @param {Number}  [angle=0]
  *  @param {Boolean} [useWebGL=glEnable]
  *  @param {Boolean} [screenSpace=0]
+ *  @param {CanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawRect(pos, size, color, angle, useWebGL, screenSpace)
-{ drawTile(pos, size, undefined, color, angle, 0, undefined, useWebGL, screenSpace); }
+function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
+{ 
+    drawTile(pos, size, undefined, color, angle, 0, undefined, useWebGL, screenSpace, context); 
+}
 
 /** Draw colored polygon using passed in points
  *  @param {Array}   points - Array of Vector2 points
  *  @param {Color}   [color=Color()]
  *  @param {Boolean} [useWebGL=glEnable]
  *  @param {Boolean} [screenSpace=0]
+ *  @param {CanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawPoly(points, color=new Color, useWebGL=glEnable, screenSpace)
+function drawPoly(points, color=new Color, useWebGL=glEnable, screenSpace, context)
 {
+    ASSERT(!context || !glEnable); // context only supported in canvas 2D mode
+
     if (useWebGL)
         glDrawPoints(screenSpace ? points.map(screenToWorld) : points, color.rgbaInt());
     else
     {
         // draw using canvas
-        mainContext.fillStyle = color;
-        mainContext.beginPath();
+        if (!context)
+            context = mainContext;
+        context.fillStyle = color;
+        context.beginPath();
         for (const point of screenSpace ? points : points.map(worldToScreen))
-            mainContext.lineTo(point.x, point.y);
-        mainContext.fill();
+            context.lineTo(point.x, point.y);
+        context.fill();
     }
 }
 
@@ -2182,12 +2193,13 @@ function drawPoly(points, color=new Color, useWebGL=glEnable, screenSpace)
  *  @param {Color}   [color=Color()]
  *  @param {Boolean} [useWebGL=glEnable]
  *  @param {Boolean} [screenSpace=0]
+ *  @param {CanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace)
+function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace, context)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);
-    drawRect(posA.add(halfDelta), size, color, halfDelta.angle(), useWebGL, screenSpace);
+    drawRect(posA.add(halfDelta), size, color, halfDelta.angle(), useWebGL, screenSpace, context);
 }
 
 /** Draw directly to a 2d canvas context in world space
@@ -2196,10 +2208,10 @@ function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace)
  *  @param {Number}   angle
  *  @param {Boolean}  mirror
  *  @param {Function} drawFunction
- *  @param {CanvasRenderingContext2D} [context=mainContext]
  *  @param {Boolean} [screenSpace=0]
+ *  @param {CanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
-function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainContext, screenSpace)
+function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, context=mainContext)
 {
     if (!screenSpace)
     {
@@ -2218,13 +2230,19 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainCont
 /** Enable normal or additive blend mode
  *  @param {Boolean} [additive=0]
  *  @param {Boolean} [useWebGL=glEnable]
+ *  @param {CanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
-function setBlendMode(additive, useWebGL=glEnable)
+function setBlendMode(additive, useWebGL=glEnable, context)
 {
-    if (glEnable && useWebGL)
-        glSetBlendMode(additive);
+    ASSERT(!context || !glEnable); // context only supported in canvas 2D mode
+    if (useWebGL)
+        glAdditive = additive;
     else
-        mainContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';
+    {
+        if (!context)
+            context = mainContext;
+        context.globalCompositeOperation = additive ? 'lighter' : 'source-over';
+    }
 }
 
 /** Draw text on overlay canvas in world space
@@ -4382,21 +4400,20 @@ function glInit()
         '#version 300 es\n' +         // specify GLSL ES version
         'precision highp float;'+     // use highp for better accuracy
         'uniform mat4 m;'+            // transform matrix
-        'in vec2 p,t;'+               // position, uv
-        'in vec4 c,a;'+               // color, additiveColor
+        'in vec4 p,c,a;'+             // position, uv, color, additiveColor
         'out vec4 v,d,e;'+            // return uv, color, additiveColor
         'void main(){'+               // shader entry point
-        'gl_Position=m*vec4(p,1,1);'+ // transform position
-        'v=vec4(t,p);d=c;e=a;'+       // pass stuff to fragment shader
+        'gl_Position=m*vec4(p.xy,1,1);'+ // transform position
+        'v=p;d=c;e=a;'+               // pass stuff to fragment shader
         '}'                           // end of shader
         ,
         '#version 300 es\n' +         // specify GLSL ES version
         'precision highp float;'+     // use highp for better accuracy
-        'in vec4 v,d,e;'+             // uv, color, additiveColor
+        'in vec4 v,d,e;'+             // position, uv, color, additiveColor
         'uniform sampler2D s;'+       // texture
         'out vec4 c;'+                // out color
         'void main(){'+               // shader entry point
-        'c=texture(s,v.xy)*d+e;'+     // modulate texture by color plus additive
+        'c=texture(s,v.zw)*d+e;'+     // modulate texture by color plus additive
         '}'                           // end of shader
     );
 
@@ -4421,7 +4438,7 @@ function glPreRender()
     glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = textureInfos[0].glTexture);
     glContext.bindBuffer(gl_ARRAY_BUFFER, glArrayBuffer);
     glContext.bufferData(gl_ARRAY_BUFFER, gl_VERTEX_BUFFER_SIZE, gl_DYNAMIC_DRAW);
-    glSetBlendMode();
+    glAdditive = 0;
     
     // set vertex attributes
     let offset = 0;
@@ -4432,31 +4449,23 @@ function glPreRender()
         glContext.vertexAttribPointer(location, size, type, normalize, gl_VERTEX_BYTE_STRIDE, offset);
         offset += size*typeSize;
     }
-    initVertexAttribArray('p', gl_FLOAT, 4, 2);            // position
-    initVertexAttribArray('t', gl_FLOAT, 4, 2);            // texture coords
+    initVertexAttribArray('p', gl_FLOAT, 4, 4);            // position & texture coords
     initVertexAttribArray('c', gl_UNSIGNED_BYTE, 1, 4, 1); // color
     initVertexAttribArray('a', gl_UNSIGNED_BYTE, 1, 4, 1); // additiveColor
 
     // build the transform matrix
     const sx = 2 * cameraScale / mainCanvas.width;
     const sy = 2 * cameraScale / mainCanvas.height;
+    const cx = -1 - sx*cameraPos.x;
+    const cy = -1 - sy*cameraPos.y;
     glContext.uniformMatrix4fv(glContext.getUniformLocation(glShader, 'm'), 0,
         new Float32Array([
-            sx, 0, 0, 0,
-            0, sy, 0, 0,
-            1, 1, -1, 1,
-            -1-sx*cameraPos.x, -1-sy*cameraPos.y, 0, 0
+            sx,  0,  0,  0,
+             0, sy,  0,  0,
+             1,  1, -1,  1,
+            cx, cy,  0,  0
         ])
     );
-}
-
-/** Set the WebGl blend mode, normally you should call setBlendMode instead
- *  @param {Boolean} [additive=0]
- *  @memberof WebGL */
-function glSetBlendMode(additive=0)
-{
-    // setup blending
-    glAdditive = additive;
 }
 
 /** Set the WebGl texture, called automatically if using multiple textures
@@ -4694,8 +4703,11 @@ function glRenderPostProcess()
         glFlush(); // clear out the buffer
         mainContext.drawImage(glCanvas, 0, 0); // copy to the main canvas
     }
-    else // set viewport
+    else
+    {
+        // set the viewport
         glContext.viewport(0, 0, glCanvas.width = mainCanvas.width, glCanvas.height = mainCanvas.height);
+    }
 
     if (glPostIncludeOverlay)
     {
@@ -4799,7 +4811,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.8.1';
+const engineVersion = '1.8.2';
 
 /** Frames per second to update objects
  *  @type {Number}

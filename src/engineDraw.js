@@ -188,10 +188,12 @@ function worldToScreen(worldPos)
  *  @param {Color}   [additiveColor=Color(0,0,0,0)] - Additive color to be applied
  *  @param {Boolean} [useWebGL=glEnable]            - Use accelerated WebGL rendering
  *  @param {Boolean} [screenSpace=0]                - If true the pos and size are in screen space
+ *  @param {CanvasRenderingContext2D} [context]     - Canvas 2D context to draw to
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
-    angle=0, mirror, additiveColor=new Color(0,0,0,0), useWebGL=glEnable, screenSpace)
+    angle=0, mirror, additiveColor=new Color(0,0,0,0), useWebGL=glEnable, screenSpace, context)
 {
+    ASSERT(!context || !glEnable); // context only supported in canvas 2D mode
     ASSERT(typeof tileInfo !== 'number' || !tileInfo); // prevent old style calls
     // to fix old calls, replace with tile(tileIndex, tileSize)
 
@@ -248,7 +250,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
                 context.fillStyle = color;
                 context.fillRect(-.5, -.5, 1, 1);
             }
-        }, undefined, screenSpace);
+        }, screenSpace, context);
     }
 }
 
@@ -259,28 +261,36 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
  *  @param {Number}  [angle=0]
  *  @param {Boolean} [useWebGL=glEnable]
  *  @param {Boolean} [screenSpace=0]
+ *  @param {CanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawRect(pos, size, color, angle, useWebGL, screenSpace)
-{ drawTile(pos, size, undefined, color, angle, 0, undefined, useWebGL, screenSpace); }
+function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
+{ 
+    drawTile(pos, size, undefined, color, angle, 0, undefined, useWebGL, screenSpace, context); 
+}
 
 /** Draw colored polygon using passed in points
  *  @param {Array}   points - Array of Vector2 points
  *  @param {Color}   [color=Color()]
  *  @param {Boolean} [useWebGL=glEnable]
  *  @param {Boolean} [screenSpace=0]
+ *  @param {CanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawPoly(points, color=new Color, useWebGL=glEnable, screenSpace)
+function drawPoly(points, color=new Color, useWebGL=glEnable, screenSpace, context)
 {
+    ASSERT(!context || !glEnable); // context only supported in canvas 2D mode
+
     if (useWebGL)
         glDrawPoints(screenSpace ? points.map(screenToWorld) : points, color.rgbaInt());
     else
     {
         // draw using canvas
-        mainContext.fillStyle = color;
-        mainContext.beginPath();
+        if (!context)
+            context = mainContext;
+        context.fillStyle = color;
+        context.beginPath();
         for (const point of screenSpace ? points : points.map(worldToScreen))
-            mainContext.lineTo(point.x, point.y);
-        mainContext.fill();
+            context.lineTo(point.x, point.y);
+        context.fill();
     }
 }
 
@@ -291,12 +301,13 @@ function drawPoly(points, color=new Color, useWebGL=glEnable, screenSpace)
  *  @param {Color}   [color=Color()]
  *  @param {Boolean} [useWebGL=glEnable]
  *  @param {Boolean} [screenSpace=0]
+ *  @param {CanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace)
+function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace, context)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);
-    drawRect(posA.add(halfDelta), size, color, halfDelta.angle(), useWebGL, screenSpace);
+    drawRect(posA.add(halfDelta), size, color, halfDelta.angle(), useWebGL, screenSpace, context);
 }
 
 /** Draw directly to a 2d canvas context in world space
@@ -305,10 +316,10 @@ function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace)
  *  @param {Number}   angle
  *  @param {Boolean}  mirror
  *  @param {Function} drawFunction
- *  @param {CanvasRenderingContext2D} [context=mainContext]
  *  @param {Boolean} [screenSpace=0]
+ *  @param {CanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
-function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainContext, screenSpace)
+function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, context=mainContext)
 {
     if (!screenSpace)
     {
@@ -327,13 +338,19 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, context = mainCont
 /** Enable normal or additive blend mode
  *  @param {Boolean} [additive=0]
  *  @param {Boolean} [useWebGL=glEnable]
+ *  @param {CanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
-function setBlendMode(additive, useWebGL=glEnable)
+function setBlendMode(additive, useWebGL=glEnable, context)
 {
+    ASSERT(!context || !glEnable); // context only supported in canvas 2D mode
     if (useWebGL)
         glAdditive = additive;
     else
-        mainContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';
+    {
+        if (!context)
+            context = mainContext;
+        context.globalCompositeOperation = additive ? 'lighter' : 'source-over';
+    }
 }
 
 /** Draw text on overlay canvas in world space

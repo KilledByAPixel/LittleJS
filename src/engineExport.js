@@ -1,10 +1,79 @@
 /** 
  * LittleJS Module Export
- * - Export engine as a module with functions where necessary
+ * - Export engine as a module
  */
 
 export {
-	// Setters for global variables
+
+	// Engine
+	engineName,
+	engineVersion,
+	frameRate,
+	timeDelta,
+	engineObjects,
+	frame,
+	time,
+	timeReal,
+	paused,
+	setPaused,
+	engineInit,
+	engineObjectsUpdate,
+	engineObjectsDestroy,
+	engineObjectsCallback,
+	
+	// Globals
+	debug,
+	showWatermark,
+
+	// Debug
+	ASSERT,
+	debugRect,
+	debugCircle,
+	debugPoint,
+	debugLine,
+	debugAABB,
+	debugText,
+	debugClear,
+	debugSaveCanvas,
+
+	// Settings
+	cameraPos,
+	cameraScale,
+	canvasMaxSize,
+	canvasFixedSize,
+	canvasPixelated,
+	fontDefault,
+	tileSizeDefault,
+	tileFixBleedScale,
+	enablePhysicsSolver,
+	objectDefaultMass,
+	objectDefaultDamping,
+	objectDefaultAngleDamping,
+	objectDefaultElasticity,
+	objectDefaultFriction,
+	objectMaxSpeed,
+	gravity,
+	particleEmitRateScale,
+	glEnable,
+	glOverlay,
+	gamepadsEnable,
+	gamepadDirectionEmulateStick,
+	inputWASDEmulateDirection,
+	touchGamepadEnable,
+	touchGamepadAnalog,
+	touchGamepadSize,
+	touchGamepadAlpha,
+	vibrateEnable,
+	soundEnable,
+	soundVolume,
+	soundDefaultRange,
+	soundDefaultTaper,
+	medalDisplayTime,
+	medalDisplaySlideTime,
+	medalDisplaySize,
+	medalDisplayIconSize,
+
+	// Setters for globals
 	setCameraPos,
 	setCameraScale,
 	setCanvasMaxSize,
@@ -44,58 +113,6 @@ export {
 	setShowWatermark,
 	setDebugKey,
 
-	// Settings
-	canvasMaxSize,
-	canvasFixedSize,
-	canvasPixelated,
-	fontDefault,
-	tileSizeDefault,
-	tileFixBleedScale,
-	enablePhysicsSolver,
-	objectDefaultMass,
-	objectDefaultDamping,
-	objectDefaultAngleDamping,
-	objectDefaultElasticity,
-	objectDefaultFriction,
-	objectMaxSpeed,
-	gravity,
-	particleEmitRateScale,
-	cameraPos,
-	cameraScale,
-	glEnable,
-	glOverlay,
-	gamepadsEnable,
-	gamepadDirectionEmulateStick,
-	inputWASDEmulateDirection,
-	touchGamepadEnable,
-	touchGamepadAnalog,
-	touchGamepadSize,
-	touchGamepadAlpha,
-	vibrateEnable,
-	soundEnable,
-	soundVolume,
-	soundDefaultRange,
-	soundDefaultTaper,
-	medalDisplayTime,
-	medalDisplaySlideTime,
-	medalDisplaySize,
-	medalDisplayIconSize,
-	
-	// Globals
-	debug,
-	showWatermark,
-
-	// Debug
-	ASSERT,
-	debugRect,
-	debugCircle,
-	debugPoint,
-	debugLine,
-	debugAABB,
-	debugText,
-	debugClear,
-	debugSaveCanvas,
-
 	// Utilities
 	PI,
 	abs,
@@ -133,9 +150,6 @@ export {
 	rgb,
 	hsl,
 
-	// Base
-	EngineObject,
-
 	// Draw
 	textureInfos,
 	tile,
@@ -159,6 +173,15 @@ export {
 	FontImage,
 	isFullscreen,
 	toggleFullscreen,
+
+	// WebGL
+	glCanvas,
+	glContext,
+	glSetTexture,
+	glCompileShader,
+	glCreateProgram,
+	glCreateTexture,
+	glInitPostProcess,
 
 	// Input
 	keyIsDown,
@@ -194,6 +217,9 @@ export {
 	playSamples,
 	zzfx,
 
+	// Base Object
+	EngineObject,
+
 	// Tiles
 	tileCollision,
 	tileCollisionSize,
@@ -216,29 +242,4 @@ export {
 	newgroundsInit,
 	Medal,
 	Newgrounds,
-
-	// WebGL
-	glCanvas,
-	glContext,
-	glSetTexture,
-	glCompileShader,
-	glCreateProgram,
-	glCreateTexture,
-	glInitPostProcess,
-
-	// Engine
-	engineName,
-	engineVersion,
-	frameRate,
-	timeDelta,
-	engineObjects,
-	frame,
-	time,
-	timeReal,
-	paused,
-	setPaused,
-	engineInit,
-	engineObjectsUpdate,
-	engineObjectsDestroy,
-	engineObjectsCallback,
 };
