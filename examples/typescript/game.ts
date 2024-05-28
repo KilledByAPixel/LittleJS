@@ -8,7 +8,7 @@
 
 // import module
 import * as LittleJS from '../../build/littlejs.esm.js';
-const {Vector2, Color, Timer, vec2} = LittleJS;
+const {Vector2, Color, Timer, vec2, tile} = LittleJS;
 
 // sound effects
 const sound_click = new LittleJS.Sound([1,.5]);
