@@ -1708,7 +1708,7 @@ function worldToScreen(worldPos)
 function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     angle=0, mirror, additiveColor=new Color(0,0,0,0), useWebGL=glEnable, screenSpace, context)
 {
-    ASSERT(!context || !glEnable); // context only supported in canvas 2D mode
+    ASSERT(!context || !useWebGL); // context only supported in canvas 2D mode
     ASSERT(typeof tileInfo !== 'number' || !tileInfo); // prevent old style calls
     // to fix old calls, replace with tile(tileIndex, tileSize)
 
@@ -1792,7 +1792,7 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
  *  @memberof Draw */
 function drawPoly(points, color=new Color, useWebGL=glEnable, screenSpace, context)
 {
-    ASSERT(!context || !glEnable); // context only supported in canvas 2D mode
+    ASSERT(!context || !useWebGL); // context only supported in canvas 2D mode
 
     if (useWebGL)
         glDrawPoints(screenSpace ? points.map(screenToWorld) : points, color.rgbaInt());
@@ -1857,7 +1857,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, conte
  *  @memberof Draw */
 function setBlendMode(additive, useWebGL=glEnable, context)
 {
-    ASSERT(!context || !glEnable); // context only supported in canvas 2D mode
+    ASSERT(!context || !useWebGL); // context only supported in canvas 2D mode
     if (useWebGL)
         glAdditive = additive;
     else
