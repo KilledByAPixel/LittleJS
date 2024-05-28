@@ -45,7 +45,8 @@ class Sound
         if (zzfxSound)
         {
             // generate zzfx sound now for fast playback
-            this.randomness = zzfxSound[1] || (zzfxSound[1] = 0);
+            this.randomness = zzfxSound[1];
+            zzfxSound[1] = 0; // generate without randomness
             this.sampleChannels = [zzfxG(...zzfxSound)];
             this.sampleRate = zzfxR;
         }
