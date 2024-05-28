@@ -69,9 +69,9 @@ declare module "littlejs.esm" {
      *  @param {Function} gameUpdatePost  - Called after physics and objects are updated, setup camera and prepare for render
      *  @param {Function} gameRender      - Called before objects are rendered, draw any background effects that appear behind objects
      *  @param {Function} gameRenderPost  - Called after objects are rendered, draw effects or hud that appear above all objects
-     *  @param {String} [imageSources='tiles.png'] - Image to load
+     *  @param {Array} [imageSources=['tiles.png']] - Image to load
      *  @memberof Engine */
-    export function engineInit(gameInit: Function, gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, imageSources?: string): void;
+    export function engineInit(gameInit: Function, gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, imageSources?: any[]): void;
     /** Update each engine object, remove destroyed objects, and update time
      *  @memberof Engine */
     export function engineObjectsUpdate(): void;

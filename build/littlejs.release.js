@@ -2517,7 +2517,8 @@ class Sound
         if (zzfxSound)
         {
             // generate zzfx sound now for fast playback
-            this.randomness = zzfxSound[1] || (zzfxSound[1] = 0);
+            this.randomness = zzfxSound[1];
+            zzfxSound[1] = 0; // generate without randomness
             this.sampleChannels = [zzfxG(...zzfxSound)];
             this.sampleRate = zzfxR;
         }
@@ -4434,7 +4435,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.8.2';
+const engineVersion = '1.8.3';
 
 /** Frames per second to update objects
  *  @type {Number}
@@ -4495,7 +4496,7 @@ let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
  *  @param {Function} gameUpdatePost  - Called after physics and objects are updated, setup camera and prepare for render
  *  @param {Function} gameRender      - Called before objects are rendered, draw any background effects that appear behind objects
  *  @param {Function} gameRenderPost  - Called after objects are rendered, draw effects or hud that appear above all objects
- *  @param {String} [imageSources='tiles.png'] - Image to load
+ *  @param {Array} [imageSources=['tiles.png']] - Image to load
  *  @memberof Engine */
 function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=['tiles.png'])
 {
