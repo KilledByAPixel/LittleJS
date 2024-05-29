@@ -39,12 +39,12 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 
 ### 🎮 Input
 
-- Comprehensive system for keyboard, mouse, gamepad, and touch
+- Comprehensive input handling for keyboard, mouse, gamepad, and touch
 - On screen touch gamepad designed for mobile devices
 
 ### 💥 Physics
 
-- 2D physics engine with collision handling for axis aligned boxes
+- Robust 2D physics engine with collision handling for axis aligned boxes
 - Very fast collision and raycasting for tile maps
 
 ### 🚀 Flexibility
@@ -69,7 +69,7 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 These examples are for both learning and using as starter projects to create your own games.
 
 ### [Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter/) - Clean example with only a few things to get you started
-### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/) - Block breaking game with post processing effect
+### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/) - Block breaking game with post-processing effects
 ### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Match 3 puzzle game with HD rendering and high score tracking
 ### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter with procedural generation and destruction
 ### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress/) - Max sprite/object test and music system demo
@@ -77,7 +77,7 @@ These examples are for both learning and using as starter projects to create you
 
 ## How to use LittleJS
 
-To use LittleJS download the latest package from GitHub or call ```npm install littlejsengine```.
+To get started download the latest LittleJS package from GitHub or install via npm: ```npm install littlejsengine```.
 
 [The Breakout Tutorial](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial) demonstrates how to make a simple game from scratch. [The tutorial is also available on YouTube.](https://youtu.be/tSwDx-NWTXE?si=bkjMa8-7AN2Wg5MO)
 
