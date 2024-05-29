@@ -8,8 +8,8 @@
 
 ## 🚂 All aboard!
 
-LittleJS is a lightweight open source HTML5 game engine designed for modern web development.
-It's small footprint is packed with a comprehensive feature set, including hybrid rendering, physics, particles, sound effects, music, input handling, and debug tools.
+LittleJS is a lightweight open source HTML5 game engine for modern web development.
+It's small footprint is packed with a comprehensive feature set including hybrid rendering, physics, particles, sound effects, music, and input handling.
 The code is very clean and well documented with some fun examples to get you started. Choo-Choo! 🚂
 
 <div align="center">
@@ -28,7 +28,7 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 
 - Super fast sprite and tile map rendering engine with WebGL
 - Update and render over 10,000 objects at a solid 60fps
-- Apply [Shadertoy](https://www.shadertoy.com) compatible shaders for post processinge effects
+- Apply [Shadertoy](https://www.shadertoy.com) compatible shaders for post-processing effects
 - Robust particle effect system and [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
 
 ### 🔊 Audio
@@ -47,9 +47,9 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 - 2D physics engine with collision handling for axis aligned boxes
 - Very fast collision and raycasting for tile maps
 
-### 🚀 Flexability
+### 🚀 Flexibility
 
-- Compatible with all modern web bowsers and on mobile devices
+- Compatible with all modern web browsers and on mobile devices
 - Support for TypeScript and Modules with example projects for both
 - Ideal for size coding competitions like [js13kGames](https://js13kgames.com/), [starter project builds to a 7KB zip](https://killedbyapixel.github.io/LittleJS/examples/js13k)
 - Builds to an executable with [Electron](https://www.electronjs.org/) for distribution on Windows, macOS, and Linux
@@ -66,7 +66,7 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 
 ## Demos
 
-These example projects are provied both for learning and for using as starter projects to create your own games.
+These examples are for both learning and using as starter projects to create your own games.
 
 ### [Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter/) - Clean example with only a few things to get you started
 ### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/) - Block breaking game with post processing effect
@@ -82,6 +82,8 @@ To use LittleJS download the latest package from GitHub or call ```npm install l
 [The Breakout Tutorial](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial) demonstrates how to make a simple game from scratch. [The tutorial is also available on YouTube.](https://youtu.be/tSwDx-NWTXE?si=bkjMa8-7AN2Wg5MO)
 
 [This GitNation talk explains how LittleJS works with some tips on how to use it.](https://youtu.be/_dXKU0WgAj8?si=ZDXLYAFDWp54hrGT)
+
+Join our vibrant community on [Discord](https://discord.gg/zb7hcGkyZe) to get help, share your projects, and collaborate with others.
 
 ## Builds
 
