@@ -66,6 +66,8 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 
 ## Demos
 
+These example projects are provied both for learning and for using as starter projects to create your own games.
+
 ### [Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter/) - Clean example with only a few things to get you started
 ### [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/) - Block breaking game with post processing effect
 ### [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Match 3 puzzle game with HD rendering and high score tracking
