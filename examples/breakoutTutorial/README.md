@@ -9,6 +9,8 @@ You can get the [LittleJS code using GitHub](https://github.com/KilledByAPixel/L
 
 In this tutorial we will make a breakout style game with a player controllable paddle, a ball that bounces, and bricks that break when hit. This is a great introduction to LittleJS and takes only around 30 minutes to complete.
 
+[The tutorial is also available on YouTube!](https://youtu.be/tSwDx-NWTXE?si=bkjMa8-7AN2Wg5MO)
+
 ## [You can play the result of this tutorial here.](https://killedbyapixel.github.io/LittleJS/examples/breakoutTutorial/)
 
 ![LittleJS Screenshot](images/9.png)
