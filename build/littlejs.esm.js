@@ -2894,7 +2894,7 @@ class Sound
         if (zzfxSound)
         {
             // generate zzfx sound now for fast playback
-            this.randomness = zzfxSound[1];
+            this.randomness = zzfxSound[1] || 0;
             zzfxSound[1] = 0; // generate without randomness
             this.sampleChannels = [zzfxG(...zzfxSound)];
             this.sampleRate = zzfxR;
@@ -4812,7 +4812,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.8.3';
+const engineVersion = '1.8.4';
 
 /** Frames per second to update objects
  *  @type {Number}

@@ -134,7 +134,7 @@ class Ball extends EngineObject
         this.velocity = this.velocity.normalize(speed);
 
         // scale bounce sound pitch by speed
-        sound_bounce.play(this.pos, 1, speed);
+        sound_bounce.play(this.pos, 1, speed*2);
 
         if (o == paddle)
         {
