@@ -93,6 +93,7 @@ function htmlBuildStep(filename)
     buffer += '<head>';
     buffer += `<title>${PROGRAM_TITLE}</title>`;
     buffer += '</head>';
+    buffer += '<body>';
     buffer += '<script>';
     buffer += fs.readFileSync(filename) + '\n';
     buffer += '</script>';
