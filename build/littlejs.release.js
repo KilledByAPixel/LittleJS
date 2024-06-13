@@ -4435,7 +4435,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.8.4';
+const engineVersion = '1.8.5';
 
 /** Frames per second to update objects
  *  @type {Number}
