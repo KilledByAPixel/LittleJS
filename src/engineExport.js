@@ -208,6 +208,7 @@ export {
 
 	// Audio
 	Sound,
+	SoundWave,
 	Music,
 	playAudioFile,
 	speak,

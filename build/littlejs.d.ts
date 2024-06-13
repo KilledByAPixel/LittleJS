@@ -1415,6 +1415,26 @@ declare module "littlejs.esm" {
         isLoading(): boolean;
     }
     /**
+     * Sound Wave Object - Stores a wave sound for later use and can be played positionally
+     * - this can be used to play wave, mp3, and ogg files
+     * @example
+     * // create a sound
+     * const sound_example = new SoundWave('sound.mp3');
+     *
+     * // play the sound
+     * sound_example.play();
+     */
+    export class SoundWave extends Sound {
+        /** Create a sound object and cache the wave file for later use
+         *  @param {String} filename - Filename of audio file to load
+         *  @param {Number} [randomness=0] - How much to randomize frequency each time sound plays
+         *  @param {Number} [range=soundDefaultRange] - World space max range of sound, will not play if camera is farther away
+         *  @param {Number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering off
+         */
+        constructor(filename: string, randomness?: number, range?: number, taper?: number);
+        randomness: number;
+    }
+    /**
      * Music Object - Stores a zzfx music track for later use
      *
      * <a href=https://keithclark.github.io/ZzFXM/>Create music with the ZzFXM tracker.</a>
