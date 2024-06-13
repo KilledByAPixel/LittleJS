@@ -442,7 +442,7 @@ class Vector2
     arrayCheck(arraySize) { return this.x >= 0 && this.y >= 0 && this.x < arraySize.x && this.y < arraySize.y; }
 
     /** Returns this vector expressed as a string
-     * @param {float} digits - precision to display
+     * @param {Number} digits - precision to display
      * @return {String} */
     toString(digits=3) 
     { if (debug) { return `(${(this.x<0?'':' ') + this.x.toFixed(digits)},${(this.y<0?'':' ') + this.y.toFixed(digits)} )`; }}
@@ -2685,7 +2685,7 @@ class Music extends Sound
      *  @param {Boolean} [loop=1] - True if the music should loop
      *  @return {AudioBufferSourceNode} - The audio source node
      */
-    play(volume, loop = 1)
+    playMusic(volume, loop = 1)
     { return super.play(0, volume, 1, 1, loop); }
 }
 
@@ -3332,10 +3332,10 @@ constructor(pos, size=tileCollisionSize, tileInfo=tile(), scale=vec2(1), renderO
     /** Draw directly to the 2D canvas in world space (bipass webgl)
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
-     *  @param {Number}   [angle=0]
-     *  @param {Boolean}  [mirror=0]
+     *  @param {Number}   angle
+     *  @param {Boolean}  mirror
      *  @param {Function} drawFunction */
-    drawCanvas2D(pos, size, angle=0, mirror, drawFunction)
+    drawCanvas2D(pos, size, angle, mirror, drawFunction)
     {
         const context = this.context;
         context.save();
@@ -3349,12 +3349,12 @@ constructor(pos, size=tileCollisionSize, tileInfo=tile(), scale=vec2(1), renderO
     }
 
     /** Draw a tile directly onto the layer canvas
-     *  @param {Vector2} pos
-     *  @param {Vector2} [size=Vector2(1,1)]
+     *  @param {Vector2}  pos
+     *  @param {Vector2}  [size=Vector2(1,1)]
      *  @param {TileInfo} [tileInfo]
-     *  @param {Color}   [color=Color()]
-     *  @param {Number}  [angle=0]
-     *  @param {Boolean} [mirror=0] */
+     *  @param {Color}    [color=Color()]
+     *  @param {Number}   [angle=0]
+     *  @param {Boolean}  [mirror=0] */
     drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle, mirror)
     {
         this.drawCanvas2D(pos, size, angle, mirror, (context)=>
@@ -3517,7 +3517,7 @@ class ParticleEmitter extends EngineObject
         this.fadeRate          = fadeRate;
         /** @property {Number} - Apply extra randomness percent */
         this.randomness        = randomness;
-        /** @property {Number} - Do particles collide against tiles */
+        /** @property {Boolean} - Do particles collide against tiles */
         this.collideTiles      = collideTiles;
         /** @property {Number} - Should particles use addtive blend */
         this.additive          = additive;
@@ -4143,7 +4143,7 @@ function glCreateProgram(vsSource, fsSource)
     return program;
 }
 
-/** Create WebGL texture from an image and set the texture settings
+/** Create WebGL texture from an image and init the texture settings
  *  @param {Image} image
  *  @return {WebGLTexture}
  *  @memberof WebGL */
@@ -4152,7 +4152,8 @@ function glCreateTexture(image)
     // build the texture
     const texture = glContext.createTexture();
     glContext.bindTexture(gl_TEXTURE_2D, texture);
-    image && image.width && glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
+    if (image)
+        glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
         
     // use point filtering for pixelated rendering
     const filter = canvasPixelated ? gl_NEAREST : gl_LINEAR;
@@ -4435,7 +4436,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.8.5';
+const engineVersion = '1.8.6';
 
 /** Frames per second to update objects
  *  @type {Number}

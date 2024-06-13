@@ -795,9 +795,9 @@ declare module "littlejs.esm" {
          * @return {Boolean} */
         arrayCheck(arraySize: Vector2): boolean;
         /** Returns this vector expressed as a string
-         * @param {float} digits - precision to display
+         * @param {Number} digits - precision to display
          * @return {String} */
-        toString(digits?: float): string;
+        toString(digits?: number): string;
     }
     /**
      * Color object (red, green, blue, alpha) with some helpful functions
@@ -1225,7 +1225,7 @@ declare module "littlejs.esm" {
      *  @return {WebGLProgram}
      *  @memberof WebGL */
     export function glCreateProgram(vsSource: WebGLShader, fsSource: WebGLShader): WebGLProgram;
-    /** Create WebGL texture from an image and set the texture settings
+    /** Create WebGL texture from an image and init the texture settings
      *  @param {Image} image
      *  @return {WebGLTexture}
      *  @memberof WebGL */
@@ -1475,7 +1475,7 @@ declare module "littlejs.esm" {
          *  @param {Boolean} [loop=1] - True if the music should loop
          *  @return {AudioBufferSourceNode} - The audio source node
          */
-        play(volume?: number, loop?: boolean): AudioBufferSourceNode;
+        playMusic(volume?: number, loop?: boolean): AudioBufferSourceNode;
     }
     /** Play an mp3, ogg, or wav audio from a local file or url
      *  @param {String}  url - Location of sound file to play
@@ -1775,17 +1775,17 @@ declare module "littlejs.esm" {
         /** Draw directly to the 2D canvas in world space (bipass webgl)
          *  @param {Vector2}  pos
          *  @param {Vector2}  size
-         *  @param {Number}   [angle=0]
-         *  @param {Boolean}  [mirror=0]
+         *  @param {Number}   angle
+         *  @param {Boolean}  mirror
          *  @param {Function} drawFunction */
-        drawCanvas2D(pos: Vector2, size: Vector2, angle?: number, mirror?: boolean, drawFunction: Function): void;
+        drawCanvas2D(pos: Vector2, size: Vector2, angle: number, mirror: boolean, drawFunction: Function): void;
         /** Draw a tile directly onto the layer canvas
-         *  @param {Vector2} pos
-         *  @param {Vector2} [size=Vector2(1,1)]
+         *  @param {Vector2}  pos
+         *  @param {Vector2}  [size=Vector2(1,1)]
          *  @param {TileInfo} [tileInfo]
-         *  @param {Color}   [color=Color()]
-         *  @param {Number}  [angle=0]
-         *  @param {Boolean} [mirror=0] */
+         *  @param {Color}    [color=Color()]
+         *  @param {Number}   [angle=0]
+         *  @param {Boolean}  [mirror=0] */
         drawTile(pos: Vector2, size?: Vector2, tileInfo?: TileInfo, color?: Color, angle?: number, mirror?: boolean): void;
         /** Draw a rectangle directly onto the layer canvas
          *  @param {Vector2} pos
@@ -1879,7 +1879,7 @@ declare module "littlejs.esm" {
         fadeRate: number;
         /** @property {Number} - Apply extra randomness percent */
         randomness: number;
-        /** @property {Number} - Do particles collide against tiles */
+        /** @property {Boolean} - Do particles collide against tiles */
         collideTiles: boolean;
         /** @property {Number} - Should particles use addtive blend */
         additive: boolean;
