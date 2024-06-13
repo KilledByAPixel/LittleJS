@@ -130,7 +130,7 @@ class ParticleEmitter extends EngineObject
         this.fadeRate          = fadeRate;
         /** @property {Number} - Apply extra randomness percent */
         this.randomness        = randomness;
-        /** @property {Number} - Do particles collide against tiles */
+        /** @property {Boolean} - Do particles collide against tiles */
         this.collideTiles      = collideTiles;
         /** @property {Number} - Should particles use addtive blend */
         this.additive          = additive;
