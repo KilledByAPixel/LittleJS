@@ -81,13 +81,6 @@ function glPreRender()
     glContext.bindBuffer(gl_ARRAY_BUFFER, glArrayBuffer);
     glContext.bufferData(gl_ARRAY_BUFFER, gl_VERTEX_BUFFER_SIZE, gl_DYNAMIC_DRAW);
     glAdditive = 0;
-        
-    // use point filtering for pixelated rendering
-    const filter = canvasPixelated ? gl_NEAREST : gl_LINEAR;
-    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, filter);
-    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, filter);
-    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_S, gl_CLAMP_TO_EDGE);
-    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_T, gl_CLAMP_TO_EDGE);
     
     // set vertex attributes
     let offset = 0;
@@ -168,7 +161,7 @@ function glCreateProgram(vsSource, fsSource)
     return program;
 }
 
-/** Create WebGL texture from an image and set the texture settings
+/** Create WebGL texture from an image and init the texture settings
  *  @param {Image} image
  *  @return {WebGLTexture}
  *  @memberof WebGL */
@@ -177,8 +170,15 @@ function glCreateTexture(image)
     // build the texture
     const texture = glContext.createTexture();
     glContext.bindTexture(gl_TEXTURE_2D, texture);
-    if (image && image.width)
+    if (image)
         glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
+        
+    // use point filtering for pixelated rendering
+    const filter = canvasPixelated ? gl_NEAREST : gl_LINEAR;
+    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, filter);
+    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, filter);
+    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_S, gl_CLAMP_TO_EDGE);
+    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_T, gl_CLAMP_TO_EDGE);
     return texture;
 }
 
