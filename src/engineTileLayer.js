@@ -307,10 +307,10 @@ constructor(pos, size=tileCollisionSize, tileInfo=tile(), scale=vec2(1), renderO
     /** Draw directly to the 2D canvas in world space (bipass webgl)
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
-     *  @param {Number}   [angle=0]
-     *  @param {Boolean}  [mirror=0]
+     *  @param {Number}   angle
+     *  @param {Boolean}  mirror
      *  @param {Function} drawFunction */
-    drawCanvas2D(pos, size, angle=0, mirror, drawFunction)
+    drawCanvas2D(pos, size, angle, mirror, drawFunction)
     {
         const context = this.context;
         context.save();
@@ -324,12 +324,12 @@ constructor(pos, size=tileCollisionSize, tileInfo=tile(), scale=vec2(1), renderO
     }
 
     /** Draw a tile directly onto the layer canvas
-     *  @param {Vector2} pos
-     *  @param {Vector2} [size=Vector2(1,1)]
+     *  @param {Vector2}  pos
+     *  @param {Vector2}  [size=Vector2(1,1)]
      *  @param {TileInfo} [tileInfo]
-     *  @param {Color}   [color=Color()]
-     *  @param {Number}  [angle=0]
-     *  @param {Boolean} [mirror=0] */
+     *  @param {Color}    [color=Color()]
+     *  @param {Number}   [angle=0]
+     *  @param {Boolean}  [mirror=0] */
     drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle, mirror)
     {
         this.drawCanvas2D(pos, size, angle, mirror, (context)=>
