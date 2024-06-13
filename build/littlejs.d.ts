@@ -1590,7 +1590,7 @@ declare module "littlejs.esm" {
         angleVelocity: number;
         spawnTime: number;
         children: any[];
-        collideTiles: number;
+        collideTiles: boolean;
         /** Update the object transform and physics, called automatically by engine once each frame */
         update(): void;
         groundObject: any;
@@ -1879,8 +1879,6 @@ declare module "littlejs.esm" {
         fadeRate: number;
         /** @property {Number} - Apply extra randomness percent */
         randomness: number;
-        /** @property {Boolean} - Do particles collide against tiles */
-        collideTiles: boolean;
         /** @property {Number} - Should particles use addtive blend */
         additive: boolean;
         /** @property {Boolean} - Should it be in local space of emitter */

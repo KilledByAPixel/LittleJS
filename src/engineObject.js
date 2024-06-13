@@ -85,7 +85,7 @@ class EngineObject
         // init other internal object stuff
         this.spawnTime = time;
         this.children = [];
-        this.collideTiles = 1;
+        this.collideTiles = false;
 
         // add to list of objects
         engineObjects.push(this);
