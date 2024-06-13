@@ -407,7 +407,7 @@ class Vector2
     arrayCheck(arraySize) { return this.x >= 0 && this.y >= 0 && this.x < arraySize.x && this.y < arraySize.y; }
 
     /** Returns this vector expressed as a string
-     * @param {float} digits - precision to display
+     * @param {Number} digits - precision to display
      * @return {String} */
     toString(digits=3) 
     { if (debug) { return `(${(this.x<0?'':' ') + this.x.toFixed(digits)},${(this.y<0?'':' ') + this.y.toFixed(digits)} )`; }}
