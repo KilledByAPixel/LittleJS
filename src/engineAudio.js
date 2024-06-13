@@ -213,7 +213,7 @@ class Music extends Sound
      *  @param {Boolean} [loop=1] - True if the music should loop
      *  @return {AudioBufferSourceNode} - The audio source node
      */
-    play(volume, loop = 1)
+    playMusic(volume, loop = 1)
     { return super.play(0, volume, 1, 1, loop); }
 }
 
