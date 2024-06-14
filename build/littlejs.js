@@ -2547,23 +2547,33 @@ function inputUpdatePost()
 ///////////////////////////////////////////////////////////////////////////////
 // Keyboard event handlers
 
-onkeydown = (e)=>
 {
-    if (debug && e.target != document.body) return;
-    e.repeat || (inputData[isUsingGamepad = 0][remapKey(e.which)] = 3);
-    preventDefaultInput && e.preventDefault();
-}
+    onkeydown = (e)=>
+    {
+        if (debug && e.target != document.body) return;
+        if (!e.repeat)
+        {
+            inputData[isUsingGamepad = 0][e.which] = 3;
+            if (inputWASDEmulateDirection)
+                inputData[0][remapKey(e.which)] = 3;
+        }
+        preventDefaultInput && e.preventDefault();
+    }
 
-onkeyup = (e)=>
-{
-    if (debug && e.target != document.body) return;
-    inputData[0][remapKey(e.which)] = 4;
-}
+    onkeyup = (e)=>
+    {
+        if (debug && e.target != document.body) return;
+        inputData[0][e.which] = 4;
+        if (inputWASDEmulateDirection)
+            inputData[0][remapKey(e.which)] = 4;
+    }
 
-function remapKey(c)
-{ 
-    return inputWASDEmulateDirection ? 
-        c==87?38 : c==83?40 : c==65?37 : c==68?39 : c : c; 
+    // handle remapping wasd keys to directions
+    function remapKey(c)
+    { 
+        return inputWASDEmulateDirection ? 
+            c==87?38 : c==83?40 : c==65?37 : c==68?39 : c : c; 
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
