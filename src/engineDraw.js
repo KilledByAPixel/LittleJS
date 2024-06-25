@@ -598,7 +598,7 @@ function drawEngineLogo(context=mainContext, alpha=1)
     for(let i=0; i<s.length; ++i)
         w2 += x.measureText(s[i]).width;
     for (let j=2; j--;)
-    for (let i=0, X=75-w2; i<s.length; ++i)
+    for (let i=0, X=41-w2/2; i<s.length; ++i)
     {
         x.fillStyle = color(i,2);
         const w = x.measureText(s[i]).width;
