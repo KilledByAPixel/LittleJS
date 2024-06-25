@@ -593,9 +593,10 @@ function drawEngineLogo(context=mainContext, alpha=1)
     const s = 'LittleJS';
     x.lineWidth = 1+p*3
     x.fillStyle = color();
-    rect(11,53,61,12*p,color());
+    //rect(11,53,61,12*p,color());
+    const w2=x.measureText(s).width;
     for (let j=2; j--;)
-    for (let i=0, X=7; i<s.length; ++i)
+    for (let i=0, X=75-w2; i<s.length; ++i)
     {
         x.fillStyle = color(i,2);
         const w = x.measureText(s[i]).width;
