@@ -1008,11 +1008,10 @@ class Color
      * @return {Number} */
     rgbaInt()  
     {
-        const toByte = (c)=> clamp(c)*255|0;
-        const r = toByte(this.r);
-        const g = toByte(this.g)<<8;
-        const b = toByte(this.b)<<16;
-        const a = toByte(this.a)<<24;
+        const r = clamp(this.r)*255|0;
+        const g = clamp(this.g)*255<<8;
+        const b = clamp(this.b)*255<<16;
+        const a = clamp(this.a)*255<<24;
         return r + g + b + a;
     }
 }
@@ -1119,6 +1118,12 @@ let canvasPixelated = 1;
  *  @default
  *  @memberof Settings */
 let fontDefault = 'arial';
+
+/** Enable to show the LittleJS splash screen be shown on startup
+ *  @type {Boolean}
+ *  @default
+ *  @memberof Settings */
+let showSplashScreen = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 // WebGL settings
@@ -1352,6 +1357,11 @@ function setCanvasPixelated(pixelated) { canvasPixelated = pixelated; }
  *  @param {String} font
  *  @memberof Settings */
 function setFontDefault(font) { fontDefault = font; }
+
+/** Set if the LittleJS splash screen be shown on startup
+ *  @param {Boolean} show
+ *  @memberof Settings */
+function setShowSplashScreen(show) { showSplashScreen = show; }
 
 /** Set if webgl rendering is enabled
  *  @param {Boolean} enable
@@ -1944,7 +1954,7 @@ let mainCanvasSize = vec2();
  *  @memberof Draw */
 let textureInfos = [];
 
-// Engine internal variables not exposed to documentation
+// Keep track of how many draw calls there were each frame for debugging
 let drawCount;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2398,6 +2408,183 @@ function toggleFullscreen()
     }
     else if (document.body.requestFullscreen)
             document.body.requestFullscreen();
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Splash screen and logo
+
+/** Draw the LittleJS splash screen
+    *  @param {Number}  [backgroundHue=.7]
+    *  @param {Number}  [backgroundSat=.1]
+    *  @memberof Draw
+    */
+function drawEngineSplashScreen(backgroundHue=.7, backgroundSat=.1)
+{
+    const p = time / 3;
+    if (p<0 || p>1)
+        return;
+
+    // background
+    const x = overlayContext;
+    const w = mainCanvasSize.x, h = mainCanvasSize.y;
+    const p3 = percent(p, 1, .8);
+    const p4 = percent(p, 0, .5);
+    const g = x.createRadialGradient(w/2,h/2,0,w/2,h/2,Math.hypot(w,h)*.7);
+    g.addColorStop(0,hsl(backgroundHue,backgroundSat,lerp(p4,0,.5*p3),p3));
+    g.addColorStop(1,hsl(0,0,0,p3));
+    x.fillStyle = g;
+    x.fillRect(0,0,w,h);
+
+    // logo - fade in and out
+    drawEngineLogo(x, wave(1,1,p));
+}
+
+/** Draw the LittleJS logo
+    *  @param {CanvasRenderingContext2D}  [context = mainContext]
+    *  @param {Number}                    [alpha=.1]
+    *  @memberof Draw
+    */
+function drawEngineLogo(context=mainContext, alpha=1)
+{
+    const x = context;
+    const rect = (X, Y, W, H, C)=>
+    {
+        x.beginPath();
+        x.rect(X,Y,W,C?H*p:H);
+        x.fillStyle = C;
+        C ? x.fill() : x.stroke();
+    };
+    const line = (X, Y, Z, W)=>
+    {
+        x.beginPath();
+        x.lineTo(X,Y);
+        x.lineTo(Z,W);
+        x.stroke();
+    };
+    const circle = (X, Y, R, A=0, B=2*PI, C, F)=>
+    {
+        const D = (A+B)/2, E = p*(B-A)/2;
+        x.beginPath();
+        F && x.lineTo(X,Y);
+        x.arc(X,Y,R,D-E,D+E);
+        x.fillStyle = C;
+        C ? x.fill() : x.stroke();
+    };
+    const color = (c=0, l=0) => hsl([.98,.3,.57,.14][c%4]-10,.8,[0,.3,.5,.8,.9][l]);
+    const w = mainCanvasSize.x, h = mainCanvasSize.y;
+    const p = percent(alpha, .1, .5);
+    if (p <= 0)
+        return;
+
+    // setup
+    x.save();
+    x.translate(w/2,h/2);
+    x.scale(6,6);
+    x.translate(-40,-34);
+    x.lineJoin = x.lineCap = 'round';
+    x.textAlign = 'center';
+    x.textBaseline = 'top';
+    x.font = '900 16px arial';
+
+    // draw effect
+    const p2 = percent(alpha,.1,1);
+    x.setLineDash([99*p2,99]);
+
+    // text
+    const s = 'LittleJS';
+    x.lineWidth = 1+p*3
+    x.fillStyle = color();
+    rect(11,53,61,12*p,color());
+    for (let j=2; j--;)
+    for (let i=0, X=7; i<s.length; ++i)
+    {
+        x.fillStyle = color(i,2);
+        const w = x.measureText(s[i]).width;
+        x[j?'strokeText':'fillText'](s[i],X+w/2,55.5,30*p);
+        X += w;
+    }
+    x.lineWidth = 1+p;
+
+    // cab top
+    rect(7,9,18,8,color(2,2));
+    rect(7,9,18,4,color(2,3));
+    rect(25,9,8,8,color(2,1));
+    rect(7,9,18,8);
+    rect(25,9,8,8);
+
+    // cab
+    rect(25,17,7,22,color());
+    rect(11,17,14,22,color(1,1));
+    rect(11,17,14,17,color(1,2));
+    rect(11,17,14,9,color(1,3));
+    rect(15,22,6,9,color(2,2));
+    circle(15,23,5,0,PI/2,color(2,4),1);
+    rect(11,17,14,23);
+    rect(15,22,6,9);
+
+    // little stack
+    rect(37,14,9,6,color(3,2));
+    rect(37,14,4,6,color(3,3));
+    rect(37,14,9,6);
+
+    // big stack
+    rect(50,10,10,10,color(0,1));
+    rect(50,10,6,10,color(0,2));
+    rect(50,10,3,10,color(0,3));
+    rect(50,10,10,10);
+    circle(55,2,11,.5,PI-.5,color(3,3));
+    circle(55,2,11,.5,PI/2,color(3,2),1);
+    circle(55,2,11,.5,PI-.5);
+    rect(45,0,20,7,color(0,2));
+    rect(45,0,20,3,color(0,3));
+    rect(45,0,20,7);
+
+    //engine
+    for (let i=5; i--;)
+    {
+        circle(60-i*6,30,10,0,2*PI,color(i+2,3));
+        circle(60-i*6,30,10,-.5,PI+.5,color(i+2,2));
+        circle(60-i*6,30,10,.5,PI-.5,color(i+2,1));
+    }
+
+    // engine outline
+    circle(36,30,10,PI/2,PI*3/2);
+    circle(47,30,10,PI/2,PI*3/2);
+    circle(60,30,10);
+    line(36,20,60,20);
+
+    // engine front light
+    circle(60,30,4,0,2*PI,color(3,3));
+    circle(60,30,4,0,PI,color(3,2));
+    circle(60,30,4);
+
+    // front brush
+    for (let i=6; i--;)
+    {
+        x.beginPath();
+        x.lineTo(53,54);
+        x.lineTo(53,40);
+        x.lineTo(53+(1+i*2.9)*p,40);
+        x.lineTo(53+(4+i*3.5)*p,54);
+        x.fillStyle = color(0,i%2+2);
+        x.fill() || i%2 && x.stroke();
+    }
+
+    // wheels
+    rect(5,40,9,6,color());
+    rect(15,40,38,14,color());
+    for (let i=3; i--;)
+    for (let j=2; j--;)
+    {
+        circle(15*i+15,47,j?7:1,0,2*PI,color(i,3));
+        x.stroke();
+        circle(15*i+15,47,j?7:1,0,PI,color(i,2));
+        x.stroke();
+    }
+    line(4,54,77,54); // bottom
+    line(6,40,68,40); // center
+    x.restore();
 }
 /** 
  * LittleJS Input System
@@ -4392,7 +4579,7 @@ let glCanvas;
 let glContext;
 
 // WebGL internal variables not exposed to documentation
-let glActiveTexture, glShader, glArrayBuffer, glPositionData, glColorData, glBatchCount, glBatchAdditive, glAdditive;
+let glActiveTexture, glShader, glArrayBuffer, glVertexData, glPositionData, glColorData, glBatchCount, glBatchAdditive, glAdditive;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -4429,10 +4616,10 @@ function glInit()
     );
 
     // init buffers
-    const vertexData = new ArrayBuffer(gl_VERTEX_BUFFER_SIZE);
+    glVertexData = new ArrayBuffer(gl_VERTEX_BUFFER_SIZE);
+    glPositionData = new Float32Array(glVertexData);
+    glColorData = new Uint32Array(glVertexData);
     glArrayBuffer = glContext.createBuffer();
-    glPositionData = new Float32Array(vertexData);
-    glColorData = new Uint32Array(vertexData);
     glBatchCount = 0;
 }
 
@@ -4460,7 +4647,7 @@ function glPreRender()
         glContext.vertexAttribPointer(location, size, type, normalize, gl_VERTEX_BYTE_STRIDE, offset);
         offset += size*typeSize;
     }
-    initVertexAttribArray('p', gl_FLOAT, 4, 4);            // position & texture coords
+    initVertexAttribArray('p', gl_FLOAT, 4, 4);            // position & texture
     initVertexAttribArray('c', gl_UNSIGNED_BYTE, 1, 4, 1); // color
     initVertexAttribArray('a', gl_UNSIGNED_BYTE, 1, 4, 1); // additiveColor
 
@@ -4548,6 +4735,7 @@ function glCreateTexture(image)
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, filter);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_S, gl_CLAMP_TO_EDGE);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_T, gl_CLAMP_TO_EDGE);
+
     return texture;
 }
 
@@ -4562,8 +4750,7 @@ function glFlush()
     glContext.enable(gl_BLEND);
 
     // draw all the sprites in the batch and reset the buffer
-    glContext.bufferSubData(gl_ARRAY_BUFFER, 0, 
-        glPositionData.subarray(0, glBatchCount * gl_INDICIES_PER_VERT));
+    glContext.bufferSubData(gl_ARRAY_BUFFER, 0, glVertexData);
     glContext.drawArrays(gl_TRIANGLE_STRIP, 0, glBatchCount);
     glBatchCount = 0;
     glBatchAdditive = glAdditive;
@@ -4618,11 +4805,11 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdd
     // setup 2 triangle strip quad
     for(let i = vertCount, offset = glBatchCount * gl_INDICIES_PER_VERT; i--;)
     {
-        let j = clamp(i-1, 0, 3)*4;  // degenerate tri at ends
-        glPositionData[offset++] = positionData[j++];
-        glPositionData[offset++] = positionData[j++];
-        glPositionData[offset++] = positionData[j++];
-        glPositionData[offset++] = positionData[j++];
+        const j = clamp(i-1, 0, 3)*4;  // degenerate tri at ends
+        glPositionData[offset++] = positionData[j+0];
+        glPositionData[offset++] = positionData[j+1];
+        glPositionData[offset++] = positionData[j+2];
+        glPositionData[offset++] = positionData[j+3];
         glColorData[offset++] = rgba; 
         glColorData[offset++] = rgbaAdditive;
     }
@@ -4823,7 +5010,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.8.6';
+const engineVersion = '1.8.7';
 
 /** Frames per second to update objects
  *  @type {Number}
@@ -5002,6 +5189,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             drawCount = 0;
         }
 
+        showSplashScreen && drawEngineSplashScreen();
+
         requestAnimationFrame(engineUpdate);
     }
 
@@ -5027,14 +5216,13 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
     // set canvas style
     const styleCanvas = 
-        'position:absolute;' +                               // position
-        'top:50%;left:50%;transform:translate(-50%,-50%);' + // center
-        (canvasPixelated?'image-rendering:pixelated':'');    // pixelated rendering
+        'position:absolute;' +                             // position
+        'top:50%;left:50%;transform:translate(-50%,-50%)'; // center
     (glCanvas||mainCanvas).style = mainCanvas.style = overlayCanvas.style = styleCanvas;
     
     // load all of the images
     Promise.all(imageSources.map((src, textureIndex)=>
-        new Promise((resolve, reject)=> 
+        new Promise(resolve => 
         {
             const image = new Image;
             image.onerror = image.onload = ()=> 

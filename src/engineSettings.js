@@ -49,6 +49,12 @@ let canvasPixelated = 1;
  *  @memberof Settings */
 let fontDefault = 'arial';
 
+/** Enable to show the LittleJS splash screen be shown on startup
+ *  @type {Boolean}
+ *  @default
+ *  @memberof Settings */
+let showSplashScreen = 0;
+
 ///////////////////////////////////////////////////////////////////////////////
 // WebGL settings
 
@@ -281,6 +287,11 @@ function setCanvasPixelated(pixelated) { canvasPixelated = pixelated; }
  *  @param {String} font
  *  @memberof Settings */
 function setFontDefault(font) { fontDefault = font; }
+
+/** Set if the LittleJS splash screen be shown on startup
+ *  @param {Boolean} show
+ *  @memberof Settings */
+function setShowSplashScreen(show) { showSplashScreen = show; }
 
 /** Set if webgl rendering is enabled
  *  @param {Boolean} enable

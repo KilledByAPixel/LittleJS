@@ -43,6 +43,7 @@ export {
 	canvasFixedSize,
 	canvasPixelated,
 	fontDefault,
+	showSplashScreen,
 	tileSizeDefault,
 	tileFixBleedScale,
 	enablePhysicsSolver,
@@ -80,6 +81,7 @@ export {
 	setCanvasFixedSize,
 	setCanvasPixelated,
 	setFontDefault,
+	setShowSplashScreen,
 	setGlEnable,
 	setGlOverlay,
 	setTileSizeDefault,
@@ -173,6 +175,8 @@ export {
 	FontImage,
 	isFullscreen,
 	toggleFullscreen,
+	drawEngineSplashScreen,
+	drawEngineLogo,
 
 	// WebGL
 	glCanvas,

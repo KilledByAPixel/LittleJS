@@ -30,7 +30,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.8.6';
+const engineVersion = '1.8.7';
 
 /** Frames per second to update objects
  *  @type {Number}
@@ -209,6 +209,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             drawCount = 0;
         }
 
+        showSplashScreen && drawEngineSplashScreen();
+
         requestAnimationFrame(engineUpdate);
     }
 
@@ -234,14 +236,13 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
     // set canvas style
     const styleCanvas = 
-        'position:absolute;' +                               // position
-        'top:50%;left:50%;transform:translate(-50%,-50%);' + // center
-        (canvasPixelated?'image-rendering:pixelated':'');    // pixelated rendering
+        'position:absolute;' +                             // position
+        'top:50%;left:50%;transform:translate(-50%,-50%)'; // center
     (glCanvas||mainCanvas).style = mainCanvas.style = overlayCanvas.style = styleCanvas;
     
     // load all of the images
     Promise.all(imageSources.map((src, textureIndex)=>
-        new Promise((resolve, reject)=> 
+        new Promise(resolve => 
         {
             const image = new Image;
             image.onerror = image.onload = ()=> 

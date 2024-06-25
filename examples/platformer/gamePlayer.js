@@ -107,9 +107,9 @@ class Character extends GameObject
         if (this.weapon) // update weapon trigger
             this.weapon.triggerIsDown = this.holdingShoot && !this.dodgeTimer.active();
 
-        // update ladder
         if (this.climbingLadder)
         {
+            // update ladder
             this.gravityScale = this.climbingWall = this.groundObject = 0;
             this.jumpTimer.unset();
             this.groundTimer.unset();

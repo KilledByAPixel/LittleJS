@@ -204,6 +204,11 @@ declare module "littlejs.esm" {
      *  @default
      *  @memberof Settings */
     export let fontDefault: string;
+    /** Enable to show the LittleJS splash screen be shown on startup
+     *  @type {Boolean}
+     *  @default
+     *  @memberof Settings */
+    export let showSplashScreen: boolean;
     /** Default size of tiles in pixels
      *  @type {Vector2}
      *  @default Vector2(16,16)
@@ -375,6 +380,10 @@ declare module "littlejs.esm" {
      *  @param {String} font
      *  @memberof Settings */
     export function setFontDefault(font: string): void;
+    /** Set if the LittleJS splash screen be shown on startup
+     *  @param {Boolean} show
+     *  @memberof Settings */
+    export function setShowSplashScreen(show: boolean): void;
     /** Set if webgl rendering is enabled
      *  @param {Boolean} enable
      *  @memberof Settings */
@@ -1189,6 +1198,18 @@ declare module "littlejs.esm" {
     /** Toggle fullsceen mode
      *  @memberof Draw */
     export function toggleFullscreen(): void;
+    /** Draw the LittleJS splash screen
+        *  @param {Number}  [backgroundHue=.7]
+        *  @param {Number}  [backgroundSat=.1]
+        *  @memberof Draw
+        */
+    export function drawEngineSplashScreen(backgroundHue?: number, backgroundSat?: number): void;
+    /** Draw the LittleJS logo
+        *  @param {CanvasRenderingContext2D}  [context = mainContext]
+        *  @param {Number}                    [alpha=.1]
+        *  @memberof Draw
+        */
+    export function drawEngineLogo(context?: CanvasRenderingContext2D, alpha?: number): void;
     /**
      * LittleJS WebGL Interface
      * - All webgl used by the engine is wrapped up here

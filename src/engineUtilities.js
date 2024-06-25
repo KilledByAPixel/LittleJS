@@ -596,11 +596,10 @@ class Color
      * @return {Number} */
     rgbaInt()  
     {
-        const toByte = (c)=> clamp(c)*255|0;
-        const r = toByte(this.r);
-        const g = toByte(this.g)<<8;
-        const b = toByte(this.b)<<16;
-        const a = toByte(this.a)<<24;
+        const r = clamp(this.r)*255|0;
+        const g = clamp(this.g)*255<<8;
+        const b = clamp(this.b)*255<<16;
+        const a = clamp(this.a)*255<<24;
         return r + g + b + a;
     }
 }

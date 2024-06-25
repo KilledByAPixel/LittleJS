@@ -6,7 +6,7 @@
 </head><body>
 
 <!-- LittleJS Engine -->
-<script src=../../build/littlejs.min.js?183></script>
+<script src=../../build/littlejs.min.js?187></script>
 <script>
 
 /*
@@ -36,6 +36,8 @@ class TestObject extends EngineObject
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
+    canvasFixedSize = vec2(800, 600); // 720p
+
     // create tile collision
     initTileCollision(vec2(80,50));
     for (let x = tileCollisionSize.x; x--;)

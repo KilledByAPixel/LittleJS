@@ -7,6 +7,9 @@
 
 'use strict';
 
+// show the LittleJS splash screen
+showSplashScreen = 1;
+
 // sound effects
 const sound_click = new Sound([1,.5]);
 

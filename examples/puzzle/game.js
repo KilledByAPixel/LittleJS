@@ -8,6 +8,9 @@
 
 'use strict';
 
+// show the LittleJS splash screen
+showSplashScreen = 1;
+
 canvasPixelated = 0; // do not use pixelated rendering
 
 const fallTime = .2;

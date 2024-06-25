@@ -23,7 +23,7 @@ let glCanvas;
 let glContext;
 
 // WebGL internal variables not exposed to documentation
-let glActiveTexture, glShader, glArrayBuffer, glPositionData, glColorData, glBatchCount, glBatchAdditive, glAdditive;
+let glActiveTexture, glShader, glArrayBuffer, glVertexData, glPositionData, glColorData, glBatchCount, glBatchAdditive, glAdditive;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -60,10 +60,10 @@ function glInit()
     );
 
     // init buffers
-    const vertexData = new ArrayBuffer(gl_VERTEX_BUFFER_SIZE);
+    glVertexData = new ArrayBuffer(gl_VERTEX_BUFFER_SIZE);
+    glPositionData = new Float32Array(glVertexData);
+    glColorData = new Uint32Array(glVertexData);
     glArrayBuffer = glContext.createBuffer();
-    glPositionData = new Float32Array(vertexData);
-    glColorData = new Uint32Array(vertexData);
     glBatchCount = 0;
 }
 
@@ -91,7 +91,7 @@ function glPreRender()
         glContext.vertexAttribPointer(location, size, type, normalize, gl_VERTEX_BYTE_STRIDE, offset);
         offset += size*typeSize;
     }
-    initVertexAttribArray('p', gl_FLOAT, 4, 4);            // position & texture coords
+    initVertexAttribArray('p', gl_FLOAT, 4, 4);            // position & texture
     initVertexAttribArray('c', gl_UNSIGNED_BYTE, 1, 4, 1); // color
     initVertexAttribArray('a', gl_UNSIGNED_BYTE, 1, 4, 1); // additiveColor
 
@@ -179,6 +179,7 @@ function glCreateTexture(image)
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, filter);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_S, gl_CLAMP_TO_EDGE);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_T, gl_CLAMP_TO_EDGE);
+
     return texture;
 }
 
@@ -193,8 +194,7 @@ function glFlush()
     glContext.enable(gl_BLEND);
 
     // draw all the sprites in the batch and reset the buffer
-    glContext.bufferSubData(gl_ARRAY_BUFFER, 0, 
-        glPositionData.subarray(0, glBatchCount * gl_INDICIES_PER_VERT));
+    glContext.bufferSubData(gl_ARRAY_BUFFER, 0, glVertexData);
     glContext.drawArrays(gl_TRIANGLE_STRIP, 0, glBatchCount);
     glBatchCount = 0;
     glBatchAdditive = glAdditive;
@@ -249,11 +249,11 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdd
     // setup 2 triangle strip quad
     for(let i = vertCount, offset = glBatchCount * gl_INDICIES_PER_VERT; i--;)
     {
-        let j = clamp(i-1, 0, 3)*4;  // degenerate tri at ends
-        glPositionData[offset++] = positionData[j++];
-        glPositionData[offset++] = positionData[j++];
-        glPositionData[offset++] = positionData[j++];
-        glPositionData[offset++] = positionData[j++];
+        const j = clamp(i-1, 0, 3)*4;  // degenerate tri at ends
+        glPositionData[offset++] = positionData[j+0];
+        glPositionData[offset++] = positionData[j+1];
+        glPositionData[offset++] = positionData[j+2];
+        glPositionData[offset++] = positionData[j+3];
         glColorData[offset++] = rgba; 
         glColorData[offset++] = rgbaAdditive;
     }
