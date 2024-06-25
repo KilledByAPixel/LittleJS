@@ -594,13 +594,15 @@ function drawEngineLogo(context=mainContext, alpha=1)
     x.lineWidth = 1+p*3
     x.fillStyle = color();
     //rect(11,53,61,12*p,color());
-    const w2=x.measureText(s).width;
+    let w2 = 0;
+    for(let i=0; i<s.length; ++i)
+        w2 += x.measureText(s[i]).width;
     for (let j=2; j--;)
     for (let i=0, X=75-w2; i<s.length; ++i)
     {
         x.fillStyle = color(i,2);
         const w = x.measureText(s[i]).width;
-        x[j?'strokeText':'fillText'](s[i],X+w/2,55.5,30*p);
+        x[j?'strokeText':'fillText'](s[i],X+w/2,55.5,17*p);
         X += w;
     }
     x.lineWidth = 1+p;
