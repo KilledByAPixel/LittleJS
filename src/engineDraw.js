@@ -519,7 +519,7 @@ function toggleFullscreen()
     */
 function drawEngineSplashScreen(backgroundHue=.7, backgroundSat=.1)
 {
-    const p = time / 3;
+    const p = time / 2;
     // fix pixels on edge somehow getting through
     mainCanvas.style.opacity = glCanvas.style.opacity = min(1,p);
     if (p<0 || p>1)
