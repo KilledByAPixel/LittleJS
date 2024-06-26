@@ -402,10 +402,10 @@ function drawEngineSplashScreen()
         x.setLineDash([99*p2,99]);
 
         // cab top
-        rect(7,9,18,8,color(2,2));
+        rect(7,17,18,-8,color(2,2));
         rect(7,9,18,4,color(2,3));
         rect(25,9,8,8,color(2,1));
-        rect(7,9,18,8);
+        rect(25,9,-18,8);
         rect(25,9,8,8);
 
         // cab
@@ -413,10 +413,10 @@ function drawEngineSplashScreen()
         rect(11,17,14,22,color(1,1));
         rect(11,17,14,17,color(1,2));
         rect(11,17,14,9,color(1,3));
-        rect(15,22,6,9,color(2,2));
+        rect(15,31,6,-9,color(2,2));
         circle(15,23,5,0,PI/2,color(2,4),1);
-        rect(11,17,14,23);
-        rect(15,22,6,9);
+        rect(25,17,-14,23);
+        rect(21,22,-6,9);
 
         // little stack
         rect(37,14,9,6,color(3,2));
@@ -424,18 +424,18 @@ function drawEngineSplashScreen()
         rect(37,14,9,6);
 
         // big stack
-        rect(50,10,10,10,color(0,1));
-        rect(50,10,6,10,color(0,2));
-        rect(50,10,3,10,color(0,3));
+        rect(50,20,10,-10,color(0,1));
+        rect(50,20,6,-10,color(0,2));
+        rect(50,20,3,-10,color(0,3));
         rect(50,10,10,10);
         circle(55,2,11,.5,PI-.5,color(3,3));
         circle(55,2,11,.5,PI/2,color(3,2),1);
         circle(55,2,11,.5,PI-.5);
-        rect(45,0,20,7,color(0,2));
+        rect(45,7,20,-7,color(0,2));
         rect(45,0,20,3,color(0,3));
         rect(45,0,20,7);
 
-        //engine
+        // engine
         for (let i=5; i--;)
         {
             circle(60-i*6,30,10,0,2*PI,color(i+2,3));
@@ -450,9 +450,9 @@ function drawEngineSplashScreen()
         line(36,20,60,20);
 
         // engine front light
-        circle(60,30,4,0,2*PI,color(3,3));
-        circle(60,30,4,0,PI,color(3,2));
-        circle(60,30,4);
+        circle(60,30,4,PI,3*PI,color(3,2)); 
+        circle(60,30,4,PI,2*PI,color(3,3));
+        circle(60,30,4,PI,3*PI);
 
         // front brush
         for (let i=6; i--;)
@@ -472,13 +472,13 @@ function drawEngineSplashScreen()
         for (let i=3; i--;)
         for (let j=2; j--;)
         {
-            circle(15*i+15,47,j?7:1,0,2*PI,color(i,3));
+            circle(15*i+15,47,j?7:1,PI,3*PI,color(i,3));
             x.stroke();
             circle(15*i+15,47,j?7:1,0,PI,color(i,2));
             x.stroke();
         }
-        line(4,54,77,54); // bottom
-        line(6,40,68,40); // center
+        line(6,40,68,40) // center
+        line(77,54,4,54) // bottom
 
         // text
         const s = 'LittleJS';
