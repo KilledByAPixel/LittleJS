@@ -353,6 +353,7 @@ function engineObjectsCallback(pos, size, callbackFunction, objects=engineObject
 function drawEngineSplashScreen(t)
 {
     // background
+    const grayscale = 0;
     const x = mainContext;
     const w = mainCanvas.width = innerWidth;
     const h = mainCanvas.height = innerHeight;
@@ -390,7 +391,7 @@ function drawEngineSplashScreen(t)
         C ? x.fill() : x.stroke();
     };
     const color = (c=0, l=0) =>
-        hsl([.98,.3,.57,.14][c%4]-10,.8,[0,.3,.5,.8,.9][l]);
+        hsl([.98,.3,.57,.14][c%4]-10,grayscale?0:.8,[0,.3,.5,.8,.9][l]);
     const alpha = wave(1,1,t);
     const p = percent(alpha, .1, .5);
 
@@ -444,8 +445,8 @@ function drawEngineSplashScreen(t)
     for (let i=5; i--;)
     {
         circle(60-i*6,30,10,0,2*PI,color(i+2,3));
-        circle(60-i*6,30,10,-.5,PI+.5,color(i+2,2));
-        circle(60-i*6,30,10,.5,PI-.5,color(i+2,1));
+        circle(60-i*6,30,10.1,-.5,PI+.5,color(i+2,2));
+        circle(60-i*6,30,10.2,.5,PI-.5,color(i+2,1));
     }
 
     // engine outline
@@ -497,7 +498,7 @@ function drawEngineSplashScreen(t)
     for (let j=2; j--;)
     for (let i=0, X=41-w2/2; i<s.length; ++i)
     {
-        x.fillStyle = color(i,2);
+        x.fillStyle = color(i,grayscale?3:2);
         const w = x.measureText(s[i]).width;
         x[j?'strokeText':'fillText'](s[i],X+w/2,55.5,17*p);
         X += w;
