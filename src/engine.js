@@ -410,7 +410,7 @@ function drawEngineSplashScreen()
 
         // cab
         rect(25,17,7,22,color());
-        rect(11,17,14,22,color(1,1));
+        rect(11,40,14,-23,color(1,1));
         rect(11,17,14,17,color(1,2));
         rect(11,17,14,9,color(1,3));
         rect(15,31,6,-9,color(2,2));
