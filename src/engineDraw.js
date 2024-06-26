@@ -520,6 +520,8 @@ function toggleFullscreen()
 function drawEngineSplashScreen(backgroundHue=.7, backgroundSat=.1)
 {
     const p = time / 3;
+    // fix pixels on edge somehow getting through
+    mainCanvas.style.opacity = glCanvas.style.opacity = min(1,p);
     if (p<0 || p>1)
         return;
 
@@ -578,7 +580,7 @@ function drawEngineLogo(context=mainContext, alpha=1)
     // setup
     x.save();
     x.translate(w/2,h/2);
-    x.scale(6,6);
+    x.scale(5,5);
     x.translate(-40,-34);
     x.lineJoin = x.lineCap = 'round';
     x.textAlign = 'center';
