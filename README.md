@@ -1,10 +1,16 @@
 # ![LittleJS Logo](examples/favicon.png) LittleJS - The Tiny JavaScript Game Engine That Can
 
+<div align="center">
+    
+![LittleJS Screenshot](examples/logo.png)
+
 [![NPM Package][npm]][npm-url]
 [![Build Size][build-size]][build-size-url]
 [![NPM Downloads][npm-downloads]][npmtrends-url]
 [![DeepScan][deepscan]][deepscan-url]
 [![Discord][discord]][discord-url]
+
+</div>
 
 ## 🚂 All aboard!
 
