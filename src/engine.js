@@ -209,8 +209,6 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             drawCount = 0;
         }
 
-        showSplashScreen && drawEngineSplashScreen();
-
         requestAnimationFrame(engineUpdate);
     }
 
@@ -240,8 +238,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         'top:50%;left:50%;transform:translate(-50%,-50%)'; // center
     (glCanvas||mainCanvas).style = mainCanvas.style = overlayCanvas.style = styleCanvas;
     
-    // load all of the images
-    Promise.all(imageSources.map((src, textureIndex)=>
+    // create promises for loading images
+    const promises = imageSources.map((src, textureIndex)=>
         new Promise(resolve => 
         {
             const image = new Image;
@@ -252,7 +250,24 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             }
             image.src = src;
         })
-    )).then(()=> 
+    )
+
+    // draw splash screen
+    showSplashScreen && promises.push(new Promise(resolve => 
+    {
+        let t = 0;
+        console.log(`LittleJS Engine v${engineVersion}`);
+        updateSplash();
+        function updateSplash()
+        {
+            clearInput();
+            drawEngineSplashScreen(t+=.01);
+            t>1 ? resolve() : setTimeout(updateSplash,16);
+        }
+    }));
+
+    // load all of the images
+    Promise.all(promises).then(()=> 
     {
         // start the engine
         gameInit();
@@ -335,17 +350,12 @@ function engineObjectsCallback(pos, size, callbackFunction, objects=engineObject
 ///////////////////////////////////////////////////////////////////////////////
 // LittleJS splash screen and logo
 
-function drawEngineSplashScreen()
+function drawEngineSplashScreen(p)
 {
-    const p = time / 2;
-    // fix pixels on edge somehow getting through
-    mainCanvas.style.opacity = glCanvas.style.opacity = min(1,p);
-    if (p<0 || p>1)
-        return;
-
     // background
-    const x = overlayContext;
-    const w = mainCanvasSize.x, h = mainCanvasSize.y;
+    const x = mainContext;
+    const w = mainCanvas.width = innerWidth;
+    const h = mainCanvas.height = innerHeight;
     const p3 = percent(p, 1, .8);
     const p4 = percent(p, 0, .5);
     const g = x.createRadialGradient(w/2,h/2,0,w/2,h/2,Math.hypot(w,h)*.7);
@@ -357,7 +367,7 @@ function drawEngineSplashScreen()
     // logo - fade in and out
     drawEngineLogo(x, wave(1,1,p));
 
-    function drawEngineLogo(context=mainContext, alpha=1)
+    function drawEngineLogo(context, alpha)
     {
         const x = context;
         const rect = (X, Y, W, H, C)=>
@@ -383,11 +393,9 @@ function drawEngineSplashScreen()
             x.fillStyle = C;
             C ? x.fill() : x.stroke();
         };
-        const color = (c=0, l=0) => hsl([.98,.3,.57,.14][c%4]-10,.8,[0,.3,.5,.8,.9][l]);
-        const w = mainCanvasSize.x, h = mainCanvasSize.y;
+        const color = (c=0, l=0) =>
+            hsl([.98,.3,.57,.14][c%4]-10,.8,[0,.3,.5,.8,.9][l]);
         const p = percent(alpha, .1, .5);
-        if (p <= 0)
-            return;
 
         // setup
         x.save();
@@ -398,7 +406,7 @@ function drawEngineSplashScreen()
         x.lineJoin = x.lineCap = 'round';
         x.lineWidth = 1+p;
 
-        // draw effect
+        // drawing effect
         const p2 = percent(alpha,.1,1);
         x.setLineDash([99*p2,99]);
 
@@ -482,13 +490,11 @@ function drawEngineSplashScreen()
         line(77,54,4,54) // bottom
 
         // text
-        const s = 'LittleJS';
+        const s = engineName;
         x.font = '900 16px arial';
         x.textAlign = 'center';
         x.textBaseline = 'top';
         x.lineWidth = 1+p*3
-        x.fillStyle = color();
-        //rect(11,53,61,12*p,color());
         let w2 = 0;
         for (let i=0; i<s.length; ++i)
             w2 += x.measureText(s[i]).width;
