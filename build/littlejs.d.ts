@@ -1198,18 +1198,6 @@ declare module "littlejs.esm" {
     /** Toggle fullsceen mode
      *  @memberof Draw */
     export function toggleFullscreen(): void;
-    /** Draw the LittleJS splash screen
-        *  @param {Number}  [backgroundHue=.7]
-        *  @param {Number}  [backgroundSat=.1]
-        *  @memberof Draw
-        */
-    export function drawEngineSplashScreen(backgroundHue?: number, backgroundSat?: number): void;
-    /** Draw the LittleJS logo
-        *  @param {CanvasRenderingContext2D}  [context = mainContext]
-        *  @param {Number}                    [alpha=.1]
-        *  @memberof Draw
-        */
-    export function drawEngineLogo(context?: CanvasRenderingContext2D, alpha?: number): void;
     /**
      * LittleJS WebGL Interface
      * - All webgl used by the engine is wrapped up here
