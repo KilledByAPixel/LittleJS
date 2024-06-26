@@ -216,7 +216,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
     // setup html
     const styleBody = 
-        'margin:0;overflow:hidden;' +  // fill the window
+        'margin:0px;overflow:hidden;' +// fill the window
         'background:#000;' +           // set background color
         'touch-action:none;' +         // prevent mobile pinch to resize
         'user-select:none;' +          // prevent mobile hold to select
