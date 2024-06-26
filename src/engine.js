@@ -392,8 +392,9 @@ function drawEngineSplashScreen()
         // setup
         x.save();
         x.translate(w/2,h/2);
-        x.scale(5,5);
-        x.translate(-40,-34);
+        const size = min(6, min(w,h)/99); // fit to screen
+        x.scale(size,size);
+        x.translate(-40,-35);
         x.lineJoin = x.lineCap = 'round';
         x.lineWidth = 1+p;
 
