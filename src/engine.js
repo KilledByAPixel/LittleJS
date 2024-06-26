@@ -215,15 +215,13 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     }
 
     // setup html
-    const styleBody = 
-        'margin:0px;overflow:hidden;' +// fill the window
-        'background:#000;' +           // set background color
-        'touch-action:none;' +         // prevent mobile pinch to resize
-        'user-select:none;' +          // prevent mobile hold to select
-        '-webkit-user-select:none;' +  // compatibility for ios
-        '-webkit-touch-callout:none;'+ // compatibility for ios
-        'display:flex;height:100vh;' + // setup flex
-        'justify-content:center;align-items:center'; // center flex
+     const styleBody = 
+        'margin:0;overflow:hidden;' + // fill the window
+        'background:#000;' +          // set background color
+        'touch-action:none;' +        // prevent mobile pinch to resize
+        'user-select:none;' +         // prevent mobile hold to select
+        '-webkit-user-select:none;' + // compatibility for ios
+        '-webkit-touch-callout:none'; // compatibility for ios
     document.body.style = styleBody;
     document.body.appendChild(mainCanvas = document.createElement('canvas'));
     mainContext = mainCanvas.getContext('2d');
@@ -237,7 +235,9 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     overlayContext = overlayCanvas.getContext('2d');
 
     // set canvas style
-    const styleCanvas = 'position:absolute';
+    const styleCanvas = 
+        'position:absolute;' +                             // position
+        'top:50%;left:50%;transform:translate(-50%,-50%)'; // center
     (glCanvas||mainCanvas).style = mainCanvas.style = overlayCanvas.style = styleCanvas;
     
     // load all of the images
