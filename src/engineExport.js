@@ -175,8 +175,6 @@ export {
 	FontImage,
 	isFullscreen,
 	toggleFullscreen,
-	drawEngineSplashScreen,
-	drawEngineLogo,
 
 	// WebGL
 	glCanvas,

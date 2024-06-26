@@ -331,3 +331,175 @@ function engineObjectsCallback(pos, size, callbackFunction, objects=engineObject
             pos.distanceSquared(o.pos) < sizeSquared && callbackFunction(o);
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// LittleJS splash screen and logo
+
+function drawEngineSplashScreen()
+{
+    const p = time / 2;
+    // fix pixels on edge somehow getting through
+    mainCanvas.style.opacity = glCanvas.style.opacity = min(1,p);
+    if (p<0 || p>1)
+        return;
+
+    // background
+    const x = overlayContext;
+    const w = mainCanvasSize.x, h = mainCanvasSize.y;
+    const p3 = percent(p, 1, .8);
+    const p4 = percent(p, 0, .5);
+    const g = x.createRadialGradient(w/2,h/2,0,w/2,h/2,Math.hypot(w,h)*.7);
+    g.addColorStop(0,hsl(0,0,lerp(p4,0,p3/2),p3));
+    g.addColorStop(1,hsl(0,0,0,p3));
+    x.fillStyle = g;
+    x.fillRect(0,0,w,h);
+
+    // logo - fade in and out
+    drawEngineLogo(x, wave(1,1,p));
+
+    function drawEngineLogo(context=mainContext, alpha=1)
+    {
+        const x = context;
+        const rect = (X, Y, W, H, C)=>
+        {
+            x.beginPath();
+            x.rect(X,Y,W,C?H*p:H);
+            x.fillStyle = C;
+            C ? x.fill() : x.stroke();
+        };
+        const line = (X, Y, Z, W)=>
+        {
+            x.beginPath();
+            x.lineTo(X,Y);
+            x.lineTo(Z,W);
+            x.stroke();
+        };
+        const circle = (X, Y, R, A=0, B=2*PI, C, F)=>
+        {
+            const D = (A+B)/2, E = p*(B-A)/2;
+            x.beginPath();
+            F && x.lineTo(X,Y);
+            x.arc(X,Y,R,D-E,D+E);
+            x.fillStyle = C;
+            C ? x.fill() : x.stroke();
+        };
+        const color = (c=0, l=0) => hsl([.98,.3,.57,.14][c%4]-10,.8,[0,.3,.5,.8,.9][l]);
+        const w = mainCanvasSize.x, h = mainCanvasSize.y;
+        const p = percent(alpha, .1, .5);
+        if (p <= 0)
+            return;
+
+        // setup
+        x.save();
+        x.translate(w/2,h/2);
+        x.scale(5,5);
+        x.translate(-40,-34);
+        x.lineJoin = x.lineCap = 'round';
+        x.lineWidth = 1+p;
+
+        // draw effect
+        const p2 = percent(alpha,.1,1);
+        x.setLineDash([99*p2,99]);
+
+        // cab top
+        rect(7,9,18,8,color(2,2));
+        rect(7,9,18,4,color(2,3));
+        rect(25,9,8,8,color(2,1));
+        rect(7,9,18,8);
+        rect(25,9,8,8);
+
+        // cab
+        rect(25,17,7,22,color());
+        rect(11,17,14,22,color(1,1));
+        rect(11,17,14,17,color(1,2));
+        rect(11,17,14,9,color(1,3));
+        rect(15,22,6,9,color(2,2));
+        circle(15,23,5,0,PI/2,color(2,4),1);
+        rect(11,17,14,23);
+        rect(15,22,6,9);
+
+        // little stack
+        rect(37,14,9,6,color(3,2));
+        rect(37,14,4,6,color(3,3));
+        rect(37,14,9,6);
+
+        // big stack
+        rect(50,10,10,10,color(0,1));
+        rect(50,10,6,10,color(0,2));
+        rect(50,10,3,10,color(0,3));
+        rect(50,10,10,10);
+        circle(55,2,11,.5,PI-.5,color(3,3));
+        circle(55,2,11,.5,PI/2,color(3,2),1);
+        circle(55,2,11,.5,PI-.5);
+        rect(45,0,20,7,color(0,2));
+        rect(45,0,20,3,color(0,3));
+        rect(45,0,20,7);
+
+        //engine
+        for (let i=5; i--;)
+        {
+            circle(60-i*6,30,10,0,2*PI,color(i+2,3));
+            circle(60-i*6,30,10,-.5,PI+.5,color(i+2,2));
+            circle(60-i*6,30,10,.5,PI-.5,color(i+2,1));
+        }
+
+        // engine outline
+        circle(36,30,10,PI/2,PI*3/2);
+        circle(47,30,10,PI/2,PI*3/2);
+        circle(60,30,10);
+        line(36,20,60,20);
+
+        // engine front light
+        circle(60,30,4,0,2*PI,color(3,3));
+        circle(60,30,4,0,PI,color(3,2));
+        circle(60,30,4);
+
+        // front brush
+        for (let i=6; i--;)
+        {
+            x.beginPath();
+            x.lineTo(53,54);
+            x.lineTo(53,40);
+            x.lineTo(53+(1+i*2.9)*p,40);
+            x.lineTo(53+(4+i*3.5)*p,54);
+            x.fillStyle = color(0,i%2+2);
+            x.fill() || i%2 && x.stroke();
+        }
+
+        // wheels
+        rect(5,40,9,6,color());
+        rect(15,54,38,-14,color())
+        for (let i=3; i--;)
+        for (let j=2; j--;)
+        {
+            circle(15*i+15,47,j?7:1,0,2*PI,color(i,3));
+            x.stroke();
+            circle(15*i+15,47,j?7:1,0,PI,color(i,2));
+            x.stroke();
+        }
+        line(4,54,77,54); // bottom
+        line(6,40,68,40); // center
+
+        // text
+        const s = 'LittleJS';
+        x.font = '900 16px arial';
+        x.textAlign = 'center';
+        x.textBaseline = 'top';
+        x.lineWidth = 1+p*3
+        x.fillStyle = color();
+        //rect(11,53,61,12*p,color());
+        let w2 = 0;
+        for (let i=0; i<s.length; ++i)
+            w2 += x.measureText(s[i]).width;
+        for (let j=2; j--;)
+        for (let i=0, X=41-w2/2; i<s.length; ++i)
+        {
+            x.fillStyle = color(i,2);
+            const w = x.measureText(s[i]).width;
+            x[j?'strokeText':'fillText'](s[i],X+w/2,55.5,17*p);
+            X += w;
+        }
+
+        x.restore();
+    }
+}
