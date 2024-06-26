@@ -676,7 +676,7 @@ function drawEngineLogo(context=mainContext, alpha=1)
 
     // wheels
     rect(5,40,9,6,color());
-    rect(15,40,38,14,color());
+    rect(15,54,38,-14,color())
     for (let i=3; i--;)
     for (let j=2; j--;)
     {
