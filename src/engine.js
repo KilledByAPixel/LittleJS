@@ -444,9 +444,10 @@ function drawEngineSplashScreen(t)
     // engine
     for (let i=5; i--;)
     {
-        circle(60-i*6,30,10,0,2*PI,color(i+2,3));
-        circle(60-i*6,30,10.1,-.5,PI+.5,color(i+2,2));
-        circle(60-i*6,30,10.2,.5,PI-.5,color(i+2,1));
+        // stagger radius to fix slight seam
+        circle(60-i*6,30, 9.9,0,2*PI,color(i+2,3));
+        circle(60-i*6,30,10.0,-.5,PI+.5,color(i+2,2));
+        circle(60-i*6,30,10.1,.5,PI-.5,color(i+2,1));
     }
 
     // engine outline
