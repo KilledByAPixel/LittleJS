@@ -14,7 +14,7 @@
 
 ## 🚂 All aboard!
 
-LittleJS is a lightweight open source HTML5 game engine for modern web development.
+LittleJS is a fast lightweight open source HTML5 game engine for modern web development.
 It's small footprint is packed with a comprehensive feature set including hybrid rendering, physics, particles, sound effects, music, and input handling.
 The code is very clean and well documented with some fun examples to get you started. Choo-Choo! 🚂
 
@@ -37,7 +37,7 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 ### ✨ Graphics
 
 - Super fast sprite and tile map rendering engine with WebGL
-- Update and render over 10,000 objects at a solid 60fps
+- Update and render over 50,000 sprites at a solid 60fps
 - Apply [Shadertoy](https://www.shadertoy.com) compatible shaders for post-processing effects
 - Robust particle effect system and [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
 
