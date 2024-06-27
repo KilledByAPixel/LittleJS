@@ -1,4 +1,4 @@
-# ![LittleJS Logo](examples/favicon.png) LittleJS - The Tiny JavaScript Game Engine That Can
+# ![LittleJS Logo](examples/favicon.png) LittleJS - The Tiny Fast JavaScript Game Engine
 
 <div align="center">
     
