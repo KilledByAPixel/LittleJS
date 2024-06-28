@@ -352,21 +352,23 @@ function engineObjectsCallback(pos, size, callbackFunction, objects=engineObject
 
 function drawEngineSplashScreen(t)
 {
-    // background
-    const grayscale = 0;
     const x = mainContext;
     const w = mainCanvas.width = innerWidth;
     const h = mainCanvas.height = innerHeight;
-    const p3 = percent(t, 1, .8);
-    const p4 = percent(t, 0, .5);
-    const g = x.createRadialGradient(w/2,h/2,0,w/2,h/2,Math.hypot(w,h)*.7);
-    g.addColorStop(0,hsl(0,0,lerp(p4,0,p3/2),p3));
-    g.addColorStop(1,hsl(0,0,0,p3));
-    x.save();
-    x.fillStyle = g;
-    x.fillRect(0,0,w,h);
+    {
+        // background
+        const p3 = percent(t, 1, .8);
+        const p4 = percent(t, 0, .5);
+        const g = x.createRadialGradient(w/2,h/2,0,w/2,h/2,Math.hypot(w,h)*.7);
+        g.addColorStop(0,hsl(0,0,lerp(p4,0,p3/2),p3));
+        g.addColorStop(1,hsl(0,0,0,p3));
+        x.save();
+        x.fillStyle = g;
+        x.fillRect(0,0,w,h);
+    }
 
-    // logo - fade in and out
+    // draw LittleJS logo...
+
     const rect = (X, Y, W, H, C)=>
     {
         x.beginPath();
@@ -391,7 +393,7 @@ function drawEngineSplashScreen(t)
         C ? x.fill() : x.stroke();
     };
     const color = (c=0, l=0) =>
-        hsl([.98,.3,.57,.14][c%4]-10,grayscale?0:.8,[0,.3,.5,.8,.9][l]);
+        hsl([.98,.3,.57,.14][c%4]-10,.8,[0,.3,.5,.8,.9][l]);
     const alpha = wave(1,1,t);
     const p = percent(alpha, .1, .5);
 
@@ -434,9 +436,9 @@ function drawEngineSplashScreen(t)
     rect(50,20,6,-10,color(0,2));
     rect(50,20,3,-10,color(0,3));
     rect(50,10,10,10);
-    circle(55,2,11,.5,PI-.5,color(3,3));
-    circle(55,2,11,.5,PI/2,color(3,2),1);
-    circle(55,2,11,.5,PI-.5);
+    circle(55,2,11.4,.5,PI-.5,color(3,3));
+    circle(55,2,11.4,.5,PI/2,color(3,2),1);
+    circle(55,2,11.4,.5,PI-.5);
     rect(45,7,20,-7,color(0,2));
     rect(45,0,20,3,color(0,3));
     rect(45,0,20,7);
@@ -474,8 +476,9 @@ function drawEngineSplashScreen(t)
     }
 
     // wheels
-    rect(5,40,9,6,color());
-    rect(15,54,38,-14,color())
+    rect(6,40,5,5);
+    rect(6,40,5,5,color());
+    rect(15,54,38,-14,color());
     for (let i=3; i--;)
     for (let j=2; j--;)
     {
@@ -484,26 +487,26 @@ function drawEngineSplashScreen(t)
         circle(15*i+15,47,j?7:1,0,PI,color(i,2));
         x.stroke();
     }
-    line(6,40,68,40) // center
-    line(77,54,4,54) // bottom
+    line(6,40,68,40); // center
+    line(77,54,4,54); // bottom
 
-    // text
+    // draw engine name
     const s = engineName;
     x.font = '900 16px arial';
     x.textAlign = 'center';
     x.textBaseline = 'top';
-    x.lineWidth = 1+p*3
+    x.lineWidth = 1+p*3;
     let w2 = 0;
     for (let i=0; i<s.length; ++i)
         w2 += x.measureText(s[i]).width;
     for (let j=2; j--;)
     for (let i=0, X=41-w2/2; i<s.length; ++i)
     {
-        x.fillStyle = color(i,grayscale?3:2);
+        x.fillStyle = color(i,2);
         const w = x.measureText(s[i]).width;
         x[j?'strokeText':'fillText'](s[i],X+w/2,55.5,17*p);
         X += w;
     }
-
+    
     x.restore();
 }
