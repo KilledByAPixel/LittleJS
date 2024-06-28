@@ -111,7 +111,7 @@ function gameRender()
     drawRect(vec2(16,8), vec2(20,14), hsl(0,0,.6), 0, 0);
     
     // draw the logo as a tile
-    drawTile(vec2(21,5), vec2(4.5), tile(2));
+    drawTile(vec2(21,5), vec2(4.5), tile(3,128));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
