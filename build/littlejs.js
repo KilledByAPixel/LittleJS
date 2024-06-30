@@ -3196,7 +3196,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0, sampleRate
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// ZzFXMicro - Zuper Zmall Zound Zynth - v1.2.0 by Frank Force
+// ZzFXMicro - Zuper Zmall Zound Zynth - v1.3.0 by Frank Force
 
 /** Generate and play a ZzFX sound
  *  
@@ -3232,6 +3232,7 @@ const zzfxR = 44100;
  *  @param {Number}  [sustainVolume=1] - Volume level for sustain (percent)
  *  @param {Number}  [decay=0] - Decay time, how long to reach sustain after attack (seconds)
  *  @param {Number}  [tremolo=0] - Trembling effect, rate controlled by repeat time (precent)
+ *  @param {Number}  [filter=0] - Filter cutoff frequency, positive for HPF, negative for LPF (Hz)
  *  @return {Array} - Array of audio samples
  *  @memberof Audio
  */
@@ -3241,78 +3242,91 @@ function zzfxG
     volume = 1, randomness = .05, frequency = 220, attack = 0, sustain = 0,
     release = .1, shape = 0, shapeCurve = 1, slide = 0, deltaSlide = 0,
     pitchJump = 0, pitchJumpTime = 0, repeatTime = 0, noise = 0, modulation = 0,
-    bitCrush = 0, delay = 0, sustainVolume = 1, decay = 0, tremolo = 0
+    bitCrush = 0, delay = 0, sustainVolume = 1, decay = 0, tremolo = 0, filter = 0
 )
 {
-    // locals
-    let PI2 = PI*2, startSlide = slide *= 500 * PI2 / zzfxR / zzfxR, b=[],
-        startFrequency = frequency *= (1 + randomness*rand(-1,1)) * PI2 / zzfxR,
-        t=0, tm=0, i=0, j=1, r=0, c=0, s=0, f, length
+    // init parameters
+    let PI2 = PI*2, sampleRate = zzfxR,
+        startSlide = slide *= 500 * PI2 / sampleRate / sampleRate,
+        startFrequency = frequency *= 
+            rand(1 + randomness, 1-randomness) * PI2 / sampleRate,
+        b = [], t = 0, tm = 0, i = 0, j = 1, r = 0, c = 0, s = 0, f, length,
+
+        // biquad LP/HP filter
+        quality = 2, w = PI2 * abs(filter) * 2 / sampleRate,
+        cos = Math.cos(w), alpha = Math.sin(w) / 2 / quality,
+        a0 = 1 + alpha, a1 = -2*cos / a0, a2 = (1 - alpha) / a0,
+        b0 = (1 + sign(filter) * cos) / 2 / a0, 
+        b1 = -(sign(filter) + cos) / a0, b2 = b0,
+        x2 = 0, x1 = 0, y2 = 0, y1 = 0;
 
     // scale by sample rate
-    attack = attack * zzfxR + 9; // minimum attack to prevent pop
-    decay *= zzfxR;
-    sustain *= zzfxR;
-    release *= zzfxR;
-    delay *= zzfxR;
-    deltaSlide *= 500 * PI2 / zzfxR**3;
-    modulation *= PI2 / zzfxR;
-    pitchJump *= PI2 / zzfxR;
-    pitchJumpTime *= zzfxR;
-    repeatTime = repeatTime * zzfxR | 0;
+    attack = attack * sampleRate + 9; // minimum attack to prevent pop
+    decay *= sampleRate;
+    sustain *= sampleRate;
+    release *= sampleRate;
+    delay *= sampleRate;
+    deltaSlide *= 500 * PI2 / sampleRate**3;
+    modulation *= PI2 / sampleRate;
+    pitchJump *= PI2 / sampleRate;
+    pitchJumpTime *= sampleRate;
+    repeatTime = repeatTime * sampleRate | 0;
+    volume *= soundVolume;
 
     // generate waveform
-    for (length = attack + decay + sustain + release + delay | 0;
-        i < length; b[i++] = s)
+    for(length = attack + decay + sustain + release + delay | 0;
+        i < length; b[i++] = s * volume)               // sample
     {
-        if (!(++c%(bitCrush*100|0)))                      // bit crush
+        if (!(++c%(bitCrush*100|0)))                   // bit crush
         {
-            s = shape? shape>1? shape>2? shape>3?         // wave shape
-                Math.sin((t%PI2)**3) :                    // 4 noise
-                max(min(Math.tan(t),1),-1):               // 3 tan
-                1-(2*t/PI2%2+2)%2:                        // 2 saw
-                1-4*abs(Math.round(t/PI2)-t/PI2):         // 1 triangle
-                Math.sin(t);                              // 0 sin
-                
+            s = shape? shape>1? shape>2? shape>3?      // wave shape
+                Math.sin(t*t) :                        // 4 noise
+                clamp(Math.tan(t),1,-1):               // 3 tan
+                1-(2*t/PI2%2+2)%2:                     // 2 saw
+                1-4*abs(Math.round(t/PI2)-t/PI2):      // 1 triangle
+                Math.sin(t);                           // 0 sin
+
             s = (repeatTime ?
                     1 - tremolo + tremolo*Math.sin(PI2*i/repeatTime) // tremolo
                     : 1) *
-                sign(s)*(abs(s)**shapeCurve) *            // curve 0=square, 2=pointy
-                volume * soundVolume * (                  // envelope
-                i < attack ? i/attack :                   // attack
-                i < attack + decay ?                      // decay
-                1-((i-attack)/decay)*(1-sustainVolume) :  // decay falloff
-                i < attack  + decay + sustain ?           // sustain
-                sustainVolume :                           // sustain volume
-                i < length - delay ?                      // release
-                (length - i - delay)/release *            // release falloff
-                sustainVolume :                           // release volume
-                0);                                       // post release
- 
-            s = delay ? s/2 + (delay > i ? 0 :            // delay
-                (i<length-delay? 1 : (length-i)/delay) *  // release delay 
-                b[i-delay|0]/2) : s;                      // sample delay
+                sign(s)*(abs(s)**shapeCurve) *           // curve
+                (i < attack ? i/attack :                 // attack
+                i < attack + decay ?                     // decay
+                1-((i-attack)/decay)*(1-sustainVolume) : // decay falloff
+                i < attack  + decay + sustain ?          // sustain
+                sustainVolume :                          // sustain volume
+                i < length - delay ?                     // release
+                (length - i - delay)/release *           // release falloff
+                sustainVolume :                          // release volume
+                0);                                      // post release
+
+            s = delay ? s/2 + (delay > i ? 0 :           // delay
+                (i<length-delay? 1 : (length-i)/delay) * // release delay 
+                b[i-delay|0]/2/volume) : s;              // sample delay
+
+            if (filter)                                   // apply filter
+                s = y1 = b2*x2 + b1*(x2=x1) + b0*(x1=s) - a2*y2 - a1*(y2=y1);
         }
 
-        f = (frequency += slide += deltaSlide) *          // frequency
-            Math.cos(modulation*tm++);                    // modulation
-        t += f - f*noise*(1 - (Math.sin(i)+1)*1e9%2);     // noise
+        f = (frequency += slide += deltaSlide) *// frequency
+            Math.cos(modulation*tm++);          // modulation
+        t += f + f*noise*Math.sin(i**5);        // noise
 
-        if (j && ++j > pitchJumpTime)    // pitch jump
-        {
-            frequency += pitchJump;      // apply pitch jump
-            startFrequency += pitchJump; // also apply to start
-            j = 0;                       // reset pitch jump time
-        }
+        if (j && ++j > pitchJumpTime)           // pitch jump
+        { 
+            frequency += pitchJump;             // apply pitch jump
+            startFrequency += pitchJump;        // also apply to start
+            j = 0;                              // stop pitch jump time
+        } 
 
-        if (repeatTime && !(++r % repeatTime)) // repeat
-        {
-            frequency = startFrequency;  // reset frequency
-            slide = startSlide;          // reset slide
-            j ||= 1;                     // reset pitch jump time
+        if (repeatTime && !(++r % repeatTime))  // repeat
+        { 
+            frequency = startFrequency;         // reset frequency
+            slide = startSlide;                 // reset slide
+            j = j || 1;                         // reset pitch jump time
         }
     }
-    
+
     return b;
 }
 
@@ -4833,7 +4847,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.8.8';
+const engineVersion = '1.8.9';
 
 /** Frames per second to update objects
  *  @type {Number}
@@ -5155,21 +5169,23 @@ function engineObjectsCallback(pos, size, callbackFunction, objects=engineObject
 
 function drawEngineSplashScreen(t)
 {
-    // background
-    const grayscale = 0;
     const x = mainContext;
     const w = mainCanvas.width = innerWidth;
     const h = mainCanvas.height = innerHeight;
-    const p3 = percent(t, 1, .8);
-    const p4 = percent(t, 0, .5);
-    const g = x.createRadialGradient(w/2,h/2,0,w/2,h/2,Math.hypot(w,h)*.7);
-    g.addColorStop(0,hsl(0,0,lerp(p4,0,p3/2),p3));
-    g.addColorStop(1,hsl(0,0,0,p3));
-    x.save();
-    x.fillStyle = g;
-    x.fillRect(0,0,w,h);
+    {
+        // background
+        const p3 = percent(t, 1, .8);
+        const p4 = percent(t, 0, .5);
+        const g = x.createRadialGradient(w/2,h/2,0,w/2,h/2,Math.hypot(w,h)*.7);
+        g.addColorStop(0,hsl(0,0,lerp(p4,0,p3/2),p3));
+        g.addColorStop(1,hsl(0,0,0,p3));
+        x.save();
+        x.fillStyle = g;
+        x.fillRect(0,0,w,h);
+    }
 
-    // logo - fade in and out
+    // draw LittleJS logo...
+
     const rect = (X, Y, W, H, C)=>
     {
         x.beginPath();
@@ -5194,7 +5210,7 @@ function drawEngineSplashScreen(t)
         C ? x.fill() : x.stroke();
     };
     const color = (c=0, l=0) =>
-        hsl([.98,.3,.57,.14][c%4]-10,grayscale?0:.8,[0,.3,.5,.8,.9][l]);
+        hsl([.98,.3,.57,.14][c%4]-10,.8,[0,.3,.5,.8,.9][l]);
     const alpha = wave(1,1,t);
     const p = percent(alpha, .1, .5);
 
@@ -5237,9 +5253,9 @@ function drawEngineSplashScreen(t)
     rect(50,20,6,-10,color(0,2));
     rect(50,20,3,-10,color(0,3));
     rect(50,10,10,10);
-    circle(55,2,11,.5,PI-.5,color(3,3));
-    circle(55,2,11,.5,PI/2,color(3,2),1);
-    circle(55,2,11,.5,PI-.5);
+    circle(55,2,11.4,.5,PI-.5,color(3,3));
+    circle(55,2,11.4,.5,PI/2,color(3,2),1);
+    circle(55,2,11.4,.5,PI-.5);
     rect(45,7,20,-7,color(0,2));
     rect(45,0,20,3,color(0,3));
     rect(45,0,20,7);
@@ -5277,8 +5293,9 @@ function drawEngineSplashScreen(t)
     }
 
     // wheels
-    rect(5,40,9,6,color());
-    rect(15,54,38,-14,color())
+    rect(6,40,5,5);
+    rect(6,40,5,5,color());
+    rect(15,54,38,-14,color());
     for (let i=3; i--;)
     for (let j=2; j--;)
     {
@@ -5287,26 +5304,26 @@ function drawEngineSplashScreen(t)
         circle(15*i+15,47,j?7:1,0,PI,color(i,2));
         x.stroke();
     }
-    line(6,40,68,40) // center
-    line(77,54,4,54) // bottom
+    line(6,40,68,40); // center
+    line(77,54,4,54); // bottom
 
-    // text
+    // draw engine name
     const s = engineName;
     x.font = '900 16px arial';
     x.textAlign = 'center';
     x.textBaseline = 'top';
-    x.lineWidth = 1+p*3
+    x.lineWidth = 1+p*3;
     let w2 = 0;
     for (let i=0; i<s.length; ++i)
         w2 += x.measureText(s[i]).width;
     for (let j=2; j--;)
     for (let i=0, X=41-w2/2; i<s.length; ++i)
     {
-        x.fillStyle = color(i,grayscale?3:2);
+        x.fillStyle = color(i,2);
         const w = x.measureText(s[i]).width;
         x[j?'strokeText':'fillText'](s[i],X+w/2,55.5,17*p);
         X += w;
     }
-
+    
     x.restore();
 }

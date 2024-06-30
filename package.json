@@ -1,6 +1,6 @@
 {
   "name": "littlejsengine",
-  "version": "1.8.8",
+  "version": "1.8.9",
   "description": "LittleJS - Tiny and Fast HTML5 Game Engine",
   "main": "build/littlejs.esm.js",
   "types": "build/littlejs.esm.js",
