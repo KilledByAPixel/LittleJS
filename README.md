@@ -74,6 +74,16 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 - Bitmap font rendering and includes a built in engine font
 - Medal system tracks and displays achievements with Newgrounds integration
 
+## How to use LittleJS
+
+To get started download the latest LittleJS package from GitHub or install via npm: ```npm install littlejsengine```.
+
+[The Breakout Tutorial](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial) demonstrates how to make a simple game from scratch. [The tutorial is also available on YouTube.](https://youtu.be/tSwDx-NWTXE?si=bkjMa8-7AN2Wg5MO)
+
+[Watch this GitNation talk to learn mor about LittleJS with some tips on how to use it.](https://youtu.be/_dXKU0WgAj8?si=ZDXLYAFDWp54hrGT)
+
+Join our vibrant community on [Discord](https://discord.gg/zb7hcGkyZe) to get help, share your projects, and collaborate with others!
+
 ## Demos
 
 These examples are for both learning and using as starter projects to create your own games.
@@ -84,16 +94,6 @@ These examples are for both learning and using as starter projects to create you
 ### [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter with procedural generation and destruction
 ### [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress/) - Max sprite/object test and music system demo
 ### [Particle System Designer](https://killedbyapixel.github.io/LittleJS/examples/particles/) - Particle system editor and visualizer
-
-## How to use LittleJS
-
-To get started download the latest LittleJS package from GitHub or install via npm: ```npm install littlejsengine```.
-
-[The Breakout Tutorial](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial) demonstrates how to make a simple game from scratch. [The tutorial is also available on YouTube.](https://youtu.be/tSwDx-NWTXE?si=bkjMa8-7AN2Wg5MO)
-
-[This GitNation talk explains how LittleJS works with some tips on how to use it.](https://youtu.be/_dXKU0WgAj8?si=ZDXLYAFDWp54hrGT)
-
-Join our vibrant community on [Discord](https://discord.gg/zb7hcGkyZe) to get help, share your projects, and collaborate with others.
 
 ## Builds
 
