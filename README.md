@@ -76,11 +76,11 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 
 ## How to use LittleJS
 
-To get started download the latest LittleJS package from GitHub or install via npm: ```npm install littlejsengine```.
+To get started download the latest LittleJS package from GitHub or install via npm: ```npm install littlejsengine```
 
-[The Breakout Tutorial](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial) demonstrates how to make a simple game from scratch. [The tutorial is also available on YouTube.](https://youtu.be/tSwDx-NWTXE?si=bkjMa8-7AN2Wg5MO)
+Learn how to make a simple game from scratch with [The Breakout Tutorial.](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial)
 
-[Watch this GitNation talk to learn mor about LittleJS with some tips on how to use it.](https://youtu.be/_dXKU0WgAj8?si=ZDXLYAFDWp54hrGT)
+[Watch this GitNation talk](https://youtu.be/_dXKU0WgAj8?si=ZDXLYAFDWp54hrGT) to hear more about LittleJS works and get some tips on how to use it.
 
 Join our vibrant community on [Discord](https://discord.gg/zb7hcGkyZe) to get help, share your projects, and collaborate with others!
 
@@ -190,7 +190,7 @@ Debug builds of LittleJS have a special menu that can be opened by pressing the 
 
 ## Games Made With LittleJS
 
-Here are a few of the amazing games people are making with LittleJS...
+Here are a few of the amazing games people made using LittleJS...
 
 - [Space Huggers](https://www.newgrounds.com/portal/view/819609) - Run and gun platformer with procedural levels
 - [Undergrowth](https://undergrowth.squidband.uk/) - An interactive music videogame for the band Squid
