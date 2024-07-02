@@ -1825,13 +1825,13 @@ declare module "littlejs.esm" {
      */
     export class ParticleEmitter extends EngineObject {
         /** Create a particle system with the given settings
-         *  @param {Vector2} position           - World space position of the emitter
-         *  @param {Number}  [angle=0]          - Angle to emit the particles
-         *  @param {Number}  [emitSize=0]       - World space size of the emitter (float for circle diameter, vec2 for rect)
-         *  @param {Number}  [emitTime=0]       - How long to stay alive (0 is forever)
-         *  @param {Number}  [emitRate=100]     - How many particles per second to spawn, does not emit if 0
+         *  @param {Vector2} position - World space position of the emitter
+         *  @param {Number}  [angle=0] - Angle to emit the particles
+         *  @param {Number|Vector2}  [emitSize=0] - World space size of the emitter (float for circle diameter, vec2 for rect)
+         *  @param {Number}  [emitTime=0] - How long to stay alive (0 is forever)
+         *  @param {Number}  [emitRate=100] - How many particles per second to spawn, does not emit if 0
          *  @param {Number}  [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
-         *  @param {TileInfo} [tileInfo]         - Tile info to render particles (undefined is untextured)
+         *  @param {TileInfo} [tileInfo] - Tile info to render particles (undefined is untextured)
          *  @param {Color}   [colorStartA=Color()] - Color at start of life 1, randomized between start colors
          *  @param {Color}   [colorStartB=Color()] - Color at start of life 2, randomized between start colors
          *  @param {Color}   [colorEndA=Color(1,1,1,0)] - Color at end of life 1, randomized between end colors
@@ -1853,9 +1853,9 @@ declare module "littlejs.esm" {
          *  @param {Number}  [renderOrder=0]        - Render order for particles (additive is above other stuff by default)
          *  @param {Boolean}  [localSpace=0]        - Should it be in local space of emitter (world space is default)
          */
-        constructor(pos: any, angle?: number, emitSize?: number, emitTime?: number, emitRate?: number, emitConeAngle?: number, tileInfo?: TileInfo, colorStartA?: Color, colorStartB?: Color, colorEndA?: Color, colorEndB?: Color, particleTime?: number, sizeStart?: number, sizeEnd?: number, speed?: number, angleSpeed?: number, damping?: number, angleDamping?: number, gravityScale?: number, particleConeAngle?: number, fadeRate?: number, randomness?: number, collideTiles?: boolean, additive?: boolean, randomColorLinear?: boolean, renderOrder?: number, localSpace?: boolean);
-        /** @property {Number} - World space size of the emitter (float for circle diameter, vec2 for rect) */
-        emitSize: number;
+        constructor(pos: any, angle?: number, emitSize?: number | Vector2, emitTime?: number, emitRate?: number, emitConeAngle?: number, tileInfo?: TileInfo, colorStartA?: Color, colorStartB?: Color, colorEndA?: Color, colorEndB?: Color, particleTime?: number, sizeStart?: number, sizeEnd?: number, speed?: number, angleSpeed?: number, damping?: number, angleDamping?: number, gravityScale?: number, particleConeAngle?: number, fadeRate?: number, randomness?: number, collideTiles?: boolean, additive?: boolean, randomColorLinear?: boolean, renderOrder?: number, localSpace?: boolean);
+        /** @property {Number|Vector2} - World space size of the emitter (float for circle diameter, vec2 for rect) */
+        emitSize: number | Vector2;
         /** @property {Number} - How long to stay alive (0 is forever) */
         emitTime: number;
         /** @property {Number} - How many particles per second to spawn, does not emit if 0 */

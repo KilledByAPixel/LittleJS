@@ -3445,13 +3445,13 @@ constructor(pos, size=tileCollisionSize, tileInfo=tile(), scale=vec2(1), renderO
 class ParticleEmitter extends EngineObject
 {
     /** Create a particle system with the given settings
-     *  @param {Vector2} position           - World space position of the emitter
-     *  @param {Number}  [angle=0]          - Angle to emit the particles
-     *  @param {Number}  [emitSize=0]       - World space size of the emitter (float for circle diameter, vec2 for rect)
-     *  @param {Number}  [emitTime=0]       - How long to stay alive (0 is forever)
-     *  @param {Number}  [emitRate=100]     - How many particles per second to spawn, does not emit if 0
+     *  @param {Vector2} position - World space position of the emitter
+     *  @param {Number}  [angle=0] - Angle to emit the particles
+     *  @param {Number|Vector2}  [emitSize=0] - World space size of the emitter (float for circle diameter, vec2 for rect)
+     *  @param {Number}  [emitTime=0] - How long to stay alive (0 is forever)
+     *  @param {Number}  [emitRate=100] - How many particles per second to spawn, does not emit if 0
      *  @param {Number}  [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
-     *  @param {TileInfo} [tileInfo]         - Tile info to render particles (undefined is untextured)
+     *  @param {TileInfo} [tileInfo] - Tile info to render particles (undefined is untextured)
      *  @param {Color}   [colorStartA=Color()] - Color at start of life 1, randomized between start colors
      *  @param {Color}   [colorStartB=Color()] - Color at start of life 2, randomized between start colors
      *  @param {Color}   [colorEndA=Color(1,1,1,0)] - Color at end of life 1, randomized between end colors
@@ -3507,7 +3507,7 @@ class ParticleEmitter extends EngineObject
         super(pos, vec2(), tileInfo, angle, undefined, renderOrder);
 
         // emitter settings
-        /** @property {Number} - World space size of the emitter (float for circle diameter, vec2 for rect) */
+        /** @property {Number|Vector2} - World space size of the emitter (float for circle diameter, vec2 for rect) */
         this.emitSize = emitSize
         /** @property {Number} - How long to stay alive (0 is forever) */
         this.emitTime = emitTime;
