@@ -327,7 +327,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0, sampleRate
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// ZzFXMicro - Zuper Zmall Zound Zynth - v1.3.0 by Frank Force
+// ZzFXMicro - Zuper Zmall Zound Zynth - v1.3.1 by Frank Force
 
 /** Generate and play a ZzFX sound
  *  
@@ -411,7 +411,7 @@ function zzfxG
         if (!(++c%(bitCrush*100|0)))                   // bit crush
         {
             s = shape? shape>1? shape>2? shape>3?      // wave shape
-                Math.sin(t*t) :                        // 4 noise
+                Math.sin(t**3) :                       // 4 noise
                 clamp(Math.tan(t),1,-1):               // 3 tan
                 1-(2*t/PI2%2+2)%2:                     // 2 saw
                 1-4*abs(Math.round(t/PI2)-t/PI2):      // 1 triangle
