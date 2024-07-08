@@ -261,8 +261,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         function updateSplash()
         {
             clearInput();
-            drawEngineSplashScreen(t+=.01);
-            t>1 ? resolve() : setTimeout(updateSplash,16);
+            drawEngineSplashScreen(t += .01);
+            t>1 ? resolve() : setTimeout(updateSplash, 16);
         }
     }));
 
@@ -352,9 +352,10 @@ function engineObjectsCallback(pos, size, callbackFunction, objects=engineObject
 
 function drawEngineSplashScreen(t)
 {
-    const x = mainContext;
-    const w = mainCanvas.width = innerWidth;
-    const h = mainCanvas.height = innerHeight;
+    const x = overlayContext;
+    const w = overlayCanvas.width = innerWidth;
+    const h = overlayCanvas.height = innerHeight;
+
     {
         // background
         const p3 = percent(t, 1, .8);
@@ -368,7 +369,6 @@ function drawEngineSplashScreen(t)
     }
 
     // draw LittleJS logo...
-
     const rect = (X, Y, W, H, C)=>
     {
         x.beginPath();
@@ -403,7 +403,7 @@ function drawEngineSplashScreen(t)
     x.scale(size,size);
     x.translate(-40,-35);
     x.lineJoin = x.lineCap = 'round';
-    x.lineWidth = 1+p;
+    x.lineWidth = .1 + p*1.9;
 
     // drawing effect
     const p2 = percent(alpha,.1,1);
@@ -428,7 +428,7 @@ function drawEngineSplashScreen(t)
 
     // little stack
     rect(37,14,9,6,color(3,2));
-    rect(37,14,4,6,color(3,3));
+    rect(37,14,4.5,6,color(3,3));
     rect(37,14,9,6);
 
     // big stack
@@ -495,7 +495,7 @@ function drawEngineSplashScreen(t)
     x.font = '900 16px arial';
     x.textAlign = 'center';
     x.textBaseline = 'top';
-    x.lineWidth = 1+p*3;
+    x.lineWidth = .1+p*3.9;
     let w2 = 0;
     for (let i=0; i<s.length; ++i)
         w2 += x.measureText(s[i]).width;
