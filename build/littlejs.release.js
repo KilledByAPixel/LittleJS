@@ -1209,7 +1209,7 @@ class EngineObject
         /** @property {Color}   - Additive color to apply when rendered */
         this.additiveColor;
 
-        // set object defaults
+        // physical properties
         /** @property {Number} [mass=objectDefaultMass]                 - How heavy the object is, static if 0 */
         this.mass         = objectDefaultMass;
         /** @property {Number} [damping=objectDefaultDamping]           - How much to slow down velocity each frame (0-1) */
@@ -1220,19 +1220,34 @@ class EngineObject
         this.elasticity   = objectDefaultElasticity;
         /** @property {Number} [friction=objectDefaultFriction]         - How much friction to apply when sliding (0-1) */
         this.friction     = objectDefaultFriction;
-        /** @property {Number} [gravityScale=1]                         - How much to scale gravity by for this object */
+        /** @property {Number} [gravityScale=1]         - How much to scale gravity by for this object */
         this.gravityScale = 1;
-        /** @property {Number} [renderOrder=0]                          - Objects are sorted by render order */
+        /** @property {Number} [renderOrder=0]          - Objects are sorted by render order */
         this.renderOrder = renderOrder;
-        /** @property {Vector2} [velocity=Vector2()]                    - Velocity of the object */
+        /** @property {Vector2} [velocity=Vector2()]    - Velocity of the object */
         this.velocity = vec2();
-        /** @property {Number} [angleVelocity=0]                        - Angular velocity of the object */
+        /** @property {Number} [angleVelocity=0]        - Angular velocity of the object */
         this.angleVelocity = 0;
-
-        // init other internal object stuff
+        /** @property {Number} [spawnTime=0]            - Track when object was created  */
         this.spawnTime = time;
+        /** @property {Array} [children=[]]              - List of children of this object */
         this.children = [];
-        this.collideTiles = false;
+
+        // parent child system
+        /** @property {EngineObject} [parent=0]         - Parent of object if in local space  */
+        this.parent = 0;
+        /** @property {Vector2} [localPos=Vector2()]    - Local position if child */
+        this.localPos = vec2();
+        /** @property {Number} [localAngle=0]           - Local angle if child  */
+        this.localAngle = 0;
+
+        // collision flags
+        /** @property {Boolean} [collideTiles=0]        - Object collides with the tile collision */
+        this.collideTiles = 0;
+        /** @property {Boolean} [collideSolidObjects=0] - Object collides with solid objects */
+        this.collideSolidObjects = 0;
+        /** @property {Boolean} [isSolid=0]             - Object collides with and blocks other objects */
+        this.isSolid = 0;
 
         // add to list of objects
         engineObjects.push(this);

@@ -1589,17 +1589,30 @@ declare module "littlejs.esm" {
         elasticity: number;
         /** @property {Number} [friction=objectDefaultFriction]         - How much friction to apply when sliding (0-1) */
         friction: number;
-        /** @property {Number} [gravityScale=1]                         - How much to scale gravity by for this object */
+        /** @property {Number} [gravityScale=1]         - How much to scale gravity by for this object */
         gravityScale: number;
-        /** @property {Number} [renderOrder=0]                          - Objects are sorted by render order */
+        /** @property {Number} [renderOrder=0]          - Objects are sorted by render order */
         renderOrder: number;
-        /** @property {Vector2} [velocity=Vector2()]                    - Velocity of the object */
+        /** @property {Vector2} [velocity=Vector2()]    - Velocity of the object */
         velocity: Vector2;
-        /** @property {Number} [angleVelocity=0]                        - Angular velocity of the object */
+        /** @property {Number} [angleVelocity=0]        - Angular velocity of the object */
         angleVelocity: number;
+        /** @property {Number} [spawnTime=0]            - Track when object was created  */
         spawnTime: number;
+        /** @property {Array} [children=[]]              - List of children of this object */
         children: any[];
-        collideTiles: boolean;
+        /** @property {EngineObject} [parent=0]         - Parent of object if in local space  */
+        parent: number;
+        /** @property {Vector2} [localPos=Vector2()]    - Local position if child */
+        localPos: Vector2;
+        /** @property {Number} [localAngle=0]           - Local angle if child  */
+        localAngle: number;
+        /** @property {Boolean} [collideTiles=0]        - Object collides with the tile collision */
+        collideTiles: number;
+        /** @property {Boolean} [collideSolidObjects=0] - Object collides with solid objects */
+        collideSolidObjects: number;
+        /** @property {Boolean} [isSolid=0]             - Object collides with and blocks other objects */
+        isSolid: number;
         /** Update the object transform and physics, called automatically by engine once each frame */
         update(): void;
         groundObject: any;
@@ -1648,8 +1661,6 @@ declare module "littlejs.esm" {
          *  @param {Boolean} [isSolid=1]             - Does it collide with and block other objects (expensive in large numbers)
          *  @param {Boolean} [collideTiles=1]        - Does it collide with the tile collision */
         setCollision(collideSolidObjects?: boolean, isSolid?: boolean, collideTiles?: boolean): void;
-        collideSolidObjects: boolean;
-        isSolid: boolean;
         /** Returns string containg info about this object for debugging
          *  @return {String} */
         toString(): string;
@@ -1888,6 +1899,8 @@ declare module "littlejs.esm" {
         fadeRate: number;
         /** @property {Number} - Apply extra randomness percent */
         randomness: number;
+        /** @property {Boolean} - Do particles collide against tiles */
+        collideTiles: boolean;
         /** @property {Number} - Should particles use addtive blend */
         additive: boolean;
         /** @property {Boolean} - Should it be in local space of emitter */
