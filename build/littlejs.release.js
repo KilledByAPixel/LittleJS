@@ -1209,7 +1209,7 @@ class EngineObject
         /** @property {Color}   - Additive color to apply when rendered */
         this.additiveColor;
 
-        // set object defaults
+        // physical properties
         /** @property {Number} [mass=objectDefaultMass]                 - How heavy the object is, static if 0 */
         this.mass         = objectDefaultMass;
         /** @property {Number} [damping=objectDefaultDamping]           - How much to slow down velocity each frame (0-1) */
@@ -1220,19 +1220,34 @@ class EngineObject
         this.elasticity   = objectDefaultElasticity;
         /** @property {Number} [friction=objectDefaultFriction]         - How much friction to apply when sliding (0-1) */
         this.friction     = objectDefaultFriction;
-        /** @property {Number} [gravityScale=1]                         - How much to scale gravity by for this object */
+        /** @property {Number} [gravityScale=1]         - How much to scale gravity by for this object */
         this.gravityScale = 1;
-        /** @property {Number} [renderOrder=0]                          - Objects are sorted by render order */
+        /** @property {Number} [renderOrder=0]          - Objects are sorted by render order */
         this.renderOrder = renderOrder;
-        /** @property {Vector2} [velocity=Vector2()]                    - Velocity of the object */
+        /** @property {Vector2} [velocity=Vector2()]    - Velocity of the object */
         this.velocity = vec2();
-        /** @property {Number} [angleVelocity=0]                        - Angular velocity of the object */
+        /** @property {Number} [angleVelocity=0]        - Angular velocity of the object */
         this.angleVelocity = 0;
-
-        // init other internal object stuff
+        /** @property {Number} [spawnTime=0]            - Track when object was created  */
         this.spawnTime = time;
+        /** @property {Array} [children=[]]              - List of children of this object */
         this.children = [];
-        this.collideTiles = false;
+
+        // parent child system
+        /** @property {EngineObject} [parent=0]         - Parent of object if in local space  */
+        this.parent = 0;
+        /** @property {Vector2} [localPos=Vector2()]    - Local position if child */
+        this.localPos = vec2();
+        /** @property {Number} [localAngle=0]           - Local angle if child  */
+        this.localAngle = 0;
+
+        // collision flags
+        /** @property {Boolean} [collideTiles=0]        - Object collides with the tile collision */
+        this.collideTiles = 0;
+        /** @property {Boolean} [collideSolidObjects=0] - Object collides with solid objects */
+        this.collideSolidObjects = 0;
+        /** @property {Boolean} [isSolid=0]             - Object collides with and blocks other objects */
+        this.isSolid = 0;
 
         // add to list of objects
         engineObjects.push(this);
@@ -2819,7 +2834,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0, sampleRate
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// ZzFXMicro - Zuper Zmall Zound Zynth - v1.3.0 by Frank Force
+// ZzFXMicro - Zuper Zmall Zound Zynth - v1.3.1 by Frank Force
 
 /** Generate and play a ZzFX sound
  *  
@@ -2903,7 +2918,7 @@ function zzfxG
         if (!(++c%(bitCrush*100|0)))                   // bit crush
         {
             s = shape? shape>1? shape>2? shape>3?      // wave shape
-                Math.sin(t*t) :                        // 4 noise
+                Math.sin(t**3) :                       // 4 noise
                 clamp(Math.tan(t),1,-1):               // 3 tan
                 1-(2*t/PI2%2+2)%2:                     // 2 saw
                 1-4*abs(Math.round(t/PI2)-t/PI2):      // 1 triangle
@@ -4707,8 +4722,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         function updateSplash()
         {
             clearInput();
-            drawEngineSplashScreen(t+=.01);
-            t>1 ? resolve() : setTimeout(updateSplash,16);
+            drawEngineSplashScreen(t += .01);
+            t>1 ? resolve() : setTimeout(updateSplash, 16);
         }
     }));
 
@@ -4798,9 +4813,10 @@ function engineObjectsCallback(pos, size, callbackFunction, objects=engineObject
 
 function drawEngineSplashScreen(t)
 {
-    const x = mainContext;
-    const w = mainCanvas.width = innerWidth;
-    const h = mainCanvas.height = innerHeight;
+    const x = overlayContext;
+    const w = overlayCanvas.width = innerWidth;
+    const h = overlayCanvas.height = innerHeight;
+
     {
         // background
         const p3 = percent(t, 1, .8);
@@ -4814,7 +4830,6 @@ function drawEngineSplashScreen(t)
     }
 
     // draw LittleJS logo...
-
     const rect = (X, Y, W, H, C)=>
     {
         x.beginPath();
@@ -4849,7 +4864,7 @@ function drawEngineSplashScreen(t)
     x.scale(size,size);
     x.translate(-40,-35);
     x.lineJoin = x.lineCap = 'round';
-    x.lineWidth = 1+p;
+    x.lineWidth = .1 + p*1.9;
 
     // drawing effect
     const p2 = percent(alpha,.1,1);
@@ -4874,7 +4889,7 @@ function drawEngineSplashScreen(t)
 
     // little stack
     rect(37,14,9,6,color(3,2));
-    rect(37,14,4,6,color(3,3));
+    rect(37,14,4.5,6,color(3,3));
     rect(37,14,9,6);
 
     // big stack
@@ -4941,7 +4956,7 @@ function drawEngineSplashScreen(t)
     x.font = '900 16px arial';
     x.textAlign = 'center';
     x.textBaseline = 'top';
-    x.lineWidth = 1+p*3;
+    x.lineWidth = .1+p*3.9;
     let w2 = 0;
     for (let i=0; i<s.length; ++i)
         w2 += x.measureText(s[i]).width;
