@@ -4029,7 +4029,7 @@ class Newgrounds
         return xmlHttp.responseText && JSON.parse(xmlHttp.responseText);
     }
 }
-/** 
+/**
  * LittleJS WebGL Interface
  * - All webgl used by the engine is wrapped up here
  * - For normal stuff you won't need to see or call anything in this file
@@ -4048,13 +4048,13 @@ class Newgrounds
  *  @memberof WebGL */
 let glCanvas;
 
-/** 2d context for glCanvas 
+/** 2d context for glCanvas
  *  @type {WebGLRenderingContext}
  *  @memberof WebGL */
 let glContext;
 
 // WebGL internal variables not exposed to documentation
-let glActiveTexture, glShader, glArrayBuffer, glVertexData, glPositionData, glColorData, glBatchCount, glBatchAdditive, glAdditive;
+let glActiveTexture, glShader, glVao, glArrayBuffer, glInstanceData, glPositionData, glColorData, glInstanceCount, glBatchAdditive, glAdditive;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -4073,11 +4073,17 @@ function glInit()
         '#version 300 es\n' +         // specify GLSL ES version
         'precision highp float;'+     // use highp for better accuracy
         'uniform mat4 m;'+            // transform matrix
-        'in vec4 p,c,a;'+             // position, uv, color, additiveColor
+        'in vec2 g;'+                 // geometry
+        'in vec4 p,u,c,a;'+           // position, uv, rotation, color, additiveColor
+        'in float r;'+                // rotation
         'out vec4 v,d,e;'+            // return uv, color, additiveColor
         'void main(){'+               // shader entry point
-        'gl_Position=m*vec4(p.xy,1,1);'+ // transform position
-        'v=p;d=c;e=a;'+               // pass stuff to fragment shader
+        'float cos_r = cos(r);'+
+        'float sin_r = sin(r);'+
+        'vec2 rotated = vec2(g.x * cos_r - g.y * sin_r, g.x * sin_r + g.y * cos_r);'+ // apply rotation
+        'gl_Position=m*vec4(p.x + rotated.x * p.z, p.y + rotated.y * p.w, 1, 1);'+ // transform position
+        'v=vec4(u.x+g.x*u.z,u.y+g.y*u.w,0,0);'+ // pass uv
+        'd=c;e=a;'+                   // pass stuff to fragment shader
         '}'                           // end of shader
         ,
         '#version 300 es\n' +         // specify GLSL ES version
@@ -4086,16 +4092,40 @@ function glInit()
         'uniform sampler2D s;'+       // texture
         'out vec4 c;'+                // out color
         'void main(){'+               // shader entry point
-        'c=texture(s,v.zw)*d+e;'+     // modulate texture by color plus additive
+        'c=texture(s,v.xy)*d+e;'+     // modulate texture by color plus additive
         '}'                           // end of shader
     );
 
+    // setup instanced rendering
+    glVao = glContext.createVertexArray();
+    glContext.bindVertexArray(glVao);
+
+    // Create a static vec2 quad = 2 triangles
+    const geometry = new Float32Array([
+      // Triangle 1
+      0, 0,  // Top-left
+      1, 0,  // Top-right
+      0, 1,  // Bottom-left
+      // Triangle 2
+      1, 0,  // Top-right
+      1, 1,  // Bottom-right
+      0, 1,  // Bottom-left
+    ]);
+
+    const geometryBuffer = glContext.createBuffer();
+    glContext.bindBuffer(gl_ARRAY_BUFFER, geometryBuffer);
+    glContext.bufferData(gl_ARRAY_BUFFER, geometry, gl_STATIC_DRAW);
+
+    const geometryLocation = glContext.getAttribLocation(glShader, 'g');
+    glContext.enableVertexAttribArray(geometryLocation);
+    glContext.vertexAttribPointer(geometryLocation, 2, gl_FLOAT, false, 0, 0);
+
     // init buffers
-    glVertexData = new ArrayBuffer(gl_VERTEX_BUFFER_SIZE);
-    glPositionData = new Float32Array(glVertexData);
-    glColorData = new Uint32Array(glVertexData);
+    glInstanceData = new ArrayBuffer(gl_INSTANCE_BUFFER_SIZE);
+    glPositionData = new Float32Array(glInstanceData);
+    glColorData = new Uint32Array(glInstanceData);
     glArrayBuffer = glContext.createBuffer();
-    glBatchCount = 0;
+    glInstanceCount = 0;
 }
 
 // Setup render each frame, called automatically by engine
@@ -4110,19 +4140,22 @@ function glPreRender()
     glContext.activeTexture(gl_TEXTURE0);
     glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = textureInfos[0].glTexture);
     glContext.bindBuffer(gl_ARRAY_BUFFER, glArrayBuffer);
-    glContext.bufferData(gl_ARRAY_BUFFER, gl_VERTEX_BUFFER_SIZE, gl_DYNAMIC_DRAW);
+    glContext.bufferData(gl_ARRAY_BUFFER, gl_INSTANCE_BUFFER_SIZE, gl_DYNAMIC_DRAW);
     glAdditive = 0;
-    
+
     // set vertex attributes
     let offset = 0;
     const initVertexAttribArray = (name, type, typeSize, size, normalize=0)=>
     {
         const location = glContext.getAttribLocation(glShader, name);
         glContext.enableVertexAttribArray(location);
-        glContext.vertexAttribPointer(location, size, type, normalize, gl_VERTEX_BYTE_STRIDE, offset);
+        glContext.vertexAttribPointer(location, size, type, normalize, gl_INSTANCE_BYTE_STRIDE, offset);
+        glContext.vertexAttribDivisor(location, 1);
         offset += size*typeSize;
     }
-    initVertexAttribArray('p', gl_FLOAT, 4, 4);            // position & texture
+    initVertexAttribArray('p', gl_FLOAT, 4, 4);            // position
+    initVertexAttribArray('u', gl_FLOAT, 4, 4);            // texture
+    initVertexAttribArray('r', gl_FLOAT, 4, 1);            // rotation
     initVertexAttribArray('c', gl_UNSIGNED_BYTE, 1, 4, 1); // color
     initVertexAttribArray('a', gl_UNSIGNED_BYTE, 1, 4, 1); // additiveColor
 
@@ -4203,7 +4236,7 @@ function glCreateTexture(image)
     glContext.bindTexture(gl_TEXTURE_2D, texture);
     if (image)
         glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
-        
+
     // use point filtering for pixelated rendering
     const filter = canvasPixelated ? gl_NEAREST : gl_LINEAR;
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, filter);
@@ -4218,16 +4251,17 @@ function glCreateTexture(image)
  *  @memberof WebGL */
 function glFlush()
 {
-    if (!glBatchCount) return;
+    if (!glInstanceCount) return;
 
     const destBlend = glBatchAdditive ? gl_ONE : gl_ONE_MINUS_SRC_ALPHA;
     glContext.blendFuncSeparate(gl_SRC_ALPHA, destBlend, gl_ONE, destBlend);
     glContext.enable(gl_BLEND);
 
     // draw all the sprites in the batch and reset the buffer
-    glContext.bufferSubData(gl_ARRAY_BUFFER, 0, glVertexData);
-    glContext.drawArrays(gl_TRIANGLE_STRIP, 0, glBatchCount);
-    glBatchCount = 0;
+    glContext.bufferSubData(gl_ARRAY_BUFFER, 0, glInstanceData);
+    glContext.bindVertexArray(glVao);
+    glContext.drawArraysInstanced(gl_TRIANGLES, 0, 6, glInstanceCount);
+    glInstanceCount = 0;
     glBatchAdditive = glAdditive;
 }
 
@@ -4237,10 +4271,10 @@ function glFlush()
  *  @memberof WebGL */
 function glCopyToContext(context, forceDraw)
 {
-    if (!glBatchCount && !forceDraw) return;
-    
+    if (!glInstanceCount && !forceDraw) return;
+
     glFlush();
-    
+
     // do not draw in overlay mode because the canvas is visible
     if (!glOverlay || forceDraw)
         context.drawImage(glCanvas, 0, 0);
@@ -4262,33 +4296,22 @@ function glCopyToContext(context, forceDraw)
 function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdditive=0)
 {
     // flush if there is not enough room or if different blend mode
-    const vertCount = 6;
-    if (glBatchCount >= gl_MAX_BATCH-vertCount || glBatchAdditive != glAdditive)
+    if (glInstanceCount + 1 >= gl_MAX_INSTANCES || glBatchAdditive != glAdditive)
         glFlush();
 
-    // prepare to create the verts from size and angle
-    const c = Math.cos(angle)/2, s = Math.sin(angle)/2;
-    const cx = c*sizeX, cy = c*sizeY, sx = s*sizeX, sy = s*sizeY;
-    const positionData = 
-    [
-        x-cx+sy, y+cy+sx, uv0X, uv0Y,
-        x-cx-sy, y-cy+sx, uv0X, uv1Y,
-        x+cx+sy, y+cy-sx, uv1X, uv0Y,
-        x+cx-sy, y-cy-sx, uv1X, uv1Y,
-    ];
-
-    // setup 2 triangle strip quad
-    for(let i = vertCount, offset = glBatchCount * gl_INDICIES_PER_VERT; i--;)
-    {
-        const j = clamp(i-1, 0, 3)*4;  // degenerate tri at ends
-        glPositionData[offset++] = positionData[j+0];
-        glPositionData[offset++] = positionData[j+1];
-        glPositionData[offset++] = positionData[j+2];
-        glPositionData[offset++] = positionData[j+3];
-        glColorData[offset++] = rgba; 
-        glColorData[offset++] = rgbaAdditive;
-    }
-    glBatchCount += vertCount;
+    let offset = glInstanceCount * gl_INDICIES_PER_INSTANCE;
+    glPositionData[offset++] = x;
+    glPositionData[offset++] = y;
+    glPositionData[offset++] = sizeX;
+    glPositionData[offset++] = sizeY;
+    glPositionData[offset++] = uv0X;
+    glPositionData[offset++] = uv0Y;
+    glPositionData[offset++] = uv1X;
+    glPositionData[offset++] = uv1Y;
+    glPositionData[offset++] = angle;
+    glColorData[offset++] = rgba;
+    glColorData[offset++] = rgbaAdditive;
+    glInstanceCount++;
 }
 
 /** Add a convex polygon to the gl draw list
@@ -4297,25 +4320,7 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdd
  *  @memberof WebGL */
 function glDrawPoints(points, rgba)
 {
-    // flush if there is not enough room or if different blend mode
-    const vertCount = points.length + 2;
-    if (glBatchCount >= gl_MAX_BATCH-vertCount || glBatchAdditive != glAdditive)
-        glFlush();
-  
-    // setup triangle strip from list of points
-    for(let i = vertCount, offset = glBatchCount * gl_INDICIES_PER_VERT; i--;)
-    {
-        const j = clamp(i-1, 0, vertCount-3);  // degenerate tri at ends
-        const h = j>>1;
-        const point = points[j%2? h : vertCount-3-h];
-        glPositionData[offset++] = point.x;
-        glPositionData[offset++] = point.y;
-        glPositionData[offset++] = 0; // uvx
-        glPositionData[offset++] = 0; // uvy
-        glColorData[offset++] = 0;    // nothing to tint
-        glColorData[offset++] = rgba; // apply rgba via additive
-    }
-    glBatchCount += vertCount;
+  throw new Error('glDrawPoints not implemented');
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4370,7 +4375,7 @@ function glRenderPostProcess()
 {
     if (!glPostShader)
         return;
-    
+
     // prepare to render post process shader
     if (glEnable)
     {
@@ -4420,8 +4425,9 @@ function glRenderPostProcess()
 
 ///////////////////////////////////////////////////////////////////////////////
 // store gl constants as integers so their name doesn't use space in minifed
-const 
+const
 gl_ONE = 1,
+gl_TRIANGLES = 4,
 gl_TRIANGLE_STRIP = 5,
 gl_SRC_ALPHA = 770,
 gl_ONE_MINUS_SRC_ALPHA = 771,
@@ -4442,17 +4448,17 @@ gl_TEXTURE0 = 33984,
 gl_ARRAY_BUFFER = 34962,
 gl_STATIC_DRAW = 35044,
 gl_DYNAMIC_DRAW = 35048,
-gl_FRAGMENT_SHADER = 35632, 
+gl_FRAGMENT_SHADER = 35632,
 gl_VERTEX_SHADER = 35633,
 gl_COMPILE_STATUS = 35713,
 gl_LINK_STATUS = 35714,
 gl_UNPACK_FLIP_Y_WEBGL = 37440,
 
 // constants for batch rendering
-gl_INDICIES_PER_VERT = 6,
-gl_MAX_BATCH = 1e5,
-gl_VERTEX_BYTE_STRIDE = (4 * 2) * 2 + (4) * 2, // vec2 * 2 + (char * 4) * 2
-gl_VERTEX_BUFFER_SIZE = gl_MAX_BATCH * gl_VERTEX_BYTE_STRIDE;
+gl_INDICIES_PER_INSTANCE = 11,
+gl_MAX_INSTANCES = 1e5,
+gl_INSTANCE_BYTE_STRIDE = gl_INDICIES_PER_INSTANCE * 4, // 4 * 11
+gl_INSTANCE_BUFFER_SIZE = gl_MAX_INSTANCES * gl_INSTANCE_BYTE_STRIDE;
 /** 
  * LittleJS - The Tiny JavaScript Game Engine That Can!
  * MIT License - Copyright 2021 Frank Force
