@@ -23,7 +23,7 @@ let sprites, timeMS, fpsDisplay, statsDisplay, spriteColor, spriteAdditiveColor;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-class TestObject extends EngineObject 
+class TestObject extends EngineObject
 {
     constructor(pos)
     {
@@ -76,12 +76,12 @@ function gameUpdate()
         for (let i=100;i--;)
             sprites.push({
                 pos:mousePos.add(randInCircle(2)),
-                angle:rand(), 
+                angle:rand(),
                 velocity:randInCircle(.2),
-                color:spriteColor = spriteColor.mutate(), 
-                additiveColor:spriteAdditiveColor.mutate()
+                color:(spriteColor = spriteColor.mutate()).rgbaInt(),
+                additiveColor:spriteAdditiveColor.mutate().rgbaInt()
             });
-    
+
     // mouse wheel = zoom
     cameraScale = clamp(cameraScale*(1-mouseWheel/10), 1, 1e3);
 }
@@ -101,10 +101,10 @@ function gameRender()
 
     const spriteCount = sprites.length
     const objectCount = engineObjects.length;
-    statsDisplay.innerText = 
+    statsDisplay.innerText =
         spriteCount + objectCount ?
-            spriteCount + ' Sprites\n' 
-            + objectCount + ' Objects\n' 
+            spriteCount + ' Sprites\n'
+            + objectCount + ' Objects\n'
             + fpsDisplay.toFixed(1) + ' FPS'
         : 'LittleJS Stress Test\nLeft Click = Add Particles\nRight Click = Add Objects';
 
@@ -116,9 +116,10 @@ function gameRender()
 
         // apply gravity
         sprite.velocity.y += gravity;
-        
+
         // apply velocity
-        sprite.pos = sprite.pos.add(sprite.velocity);
+        sprite.pos.x += sprite.velocity.x;
+        sprite.pos.y += sprite.velocity.y;
 
         // bounce
         if (sprite.pos.y < 0)
@@ -132,8 +133,8 @@ function gameRender()
         sprite.angle += .01*sign(sprite.velocity.x);
 
         // draw the sprite
-        glDraw(sprite.pos.x, sprite.pos.y, 1, 1, sprite.angle, 0, 0, 1, 1, 
-            sprite.color.rgbaInt(), sprite.additiveColor.rgbaInt());
+        glDraw(sprite.pos.x, sprite.pos.y, 1, 1, sprite.angle, 0, 0, 1, 1,
+            sprite.color, sprite.additiveColor);
     }
 }
 
