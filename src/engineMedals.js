@@ -107,8 +107,7 @@ class Medal
     }
 
     /** Render the icon for a medal
-     *  @param {Number} x - Screen space X position
-     *  @param {Number} y - Screen space Y position
+     *  @param {Vector2} pos - Screen space position
      *  @param {Number} [size=medalDisplayIconSize] - Screen space size
      */
     renderIcon(pos, size=medalDisplayIconSize)
