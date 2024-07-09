@@ -6,7 +6,7 @@
 </head><body>
 
 <!-- LittleJS Engine -->
-<script src=../../build/littlejs.min.js?188></script>
+<script src=../../build/littlejs.min.js?1810></script>
 <script>
 
 /*
@@ -36,16 +36,15 @@ class TestObject extends EngineObject
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
-    canvasFixedSize = vec2(800, 600); // 720p
-
     // create tile collision
-    initTileCollision(vec2(80,50));
+    initTileCollision(vec2(50,38));
     for (let x = tileCollisionSize.x; x--;)
         setTileCollisionData(vec2(x,0), 1), setTileCollisionData(vec2(x,tileCollisionSize.y-1), 1);
     for (let y = tileCollisionSize.y; y--;)
         setTileCollisionData(vec2(0,y), 1), setTileCollisionData(vec2(tileCollisionSize.x-1,y), 1);
 
     // set things up
+    canvasFixedSize = vec2(800, 600); // 720p
     cameraScale = 16;
     cameraPos = tileCollisionSize.scale(.5);
     mainCanvas.style.background = '#555';
@@ -73,14 +72,18 @@ function gameUpdate()
 
     // mouse hold = add objects
     if (mouseIsDown(0))
+    {
+        spriteColor = spriteColor.mutate();
+        spriteAdditiveColor = spriteAdditiveColor.mutate();
         for (let i=100;i--;)
             sprites.push({
                 pos:mousePos.add(randInCircle(2)),
                 angle:rand(),
                 velocity:randInCircle(.2),
-                color:(spriteColor = spriteColor.mutate()).rgbaInt(),
-                additiveColor:spriteAdditiveColor.mutate().rgbaInt()
+                color:spriteColor.rgbaInt(),
+                additiveColor:spriteAdditiveColor.rgbaInt()
             });
+    }
 
     // mouse wheel = zoom
     cameraScale = clamp(cameraScale*(1-mouseWheel/10), 1, 1e3);
@@ -114,12 +117,9 @@ function gameRender()
         // keep sprites above 0
         sprite.pos.y = max(sprite.pos.y, 0);
 
-        // apply gravity
-        sprite.velocity.y += gravity;
-
-        // apply velocity
+        // apply velocity and gravity
         sprite.pos.x += sprite.velocity.x;
-        sprite.pos.y += sprite.velocity.y;
+        sprite.pos.y += sprite.velocity.y += gravity;
 
         // bounce
         if (sprite.pos.y < 0)

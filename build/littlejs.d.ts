@@ -1224,10 +1224,10 @@ declare module "littlejs.esm" {
     export function glSetTexture(texture: WebGLTexture): void;
     /** Compile WebGL shader of the given type, will throw errors if in debug mode
      *  @param {String} source
-     *  @param          type
+     *  @param {Number} type
      *  @return {WebGLShader}
      *  @memberof WebGL */
-    export function glCompileShader(source: string, type: any): WebGLShader;
+    export function glCompileShader(source: string, type: number): WebGLShader;
     /** Create WebGL program with given shaders
      *  @param {WebGLShader} vsSource
      *  @param {WebGLShader} fsSource

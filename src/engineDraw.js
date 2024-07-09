@@ -271,27 +271,16 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
 /** Draw colored polygon using passed in points
  *  @param {Array}   points - Array of Vector2 points
  *  @param {Color}   [color=Color()]
- *  @param {Boolean} [useWebGL=glEnable]
  *  @param {Boolean} [screenSpace=0]
- *  @param {CanvasRenderingContext2D} [context]
+ *  @param {CanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
-function drawPoly(points, color=new Color, useWebGL=glEnable, screenSpace, context)
+function drawPoly(points, color=new Color, screenSpace, context=mainContext)
 {
-    ASSERT(!context || !useWebGL); // context only supported in canvas 2D mode
-
-    if (useWebGL)
-        glDrawPoints(screenSpace ? points.map(screenToWorld) : points, color.rgbaInt());
-    else
-    {
-        // draw using canvas
-        if (!context)
-            context = mainContext;
-        context.fillStyle = color;
-        context.beginPath();
-        for (const point of screenSpace ? points : points.map(worldToScreen))
-            context.lineTo(point.x, point.y);
-        context.fill();
-    }
+    context.fillStyle = color;
+    context.beginPath();
+    for (const point of screenSpace ? points : points.map(worldToScreen))
+        context.lineTo(point.x, point.y);
+    context.fill();
 }
 
 /** Draw colored line between two points
