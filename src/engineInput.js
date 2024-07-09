@@ -11,27 +11,27 @@
 
 /** Returns true if device key is down
  *  @param {Number} key
- *  @param {Number} [device=0]
+ *  @param {Number} [device]
  *  @return {Boolean}
  *  @memberof Input */
 function keyIsDown(key, device=0)
-{ return inputData[device] && inputData[device][key] & 1; }
+{ return inputData[device] && !!(inputData[device][key] & 1); }
 
 /** Returns true if device key was pressed this frame
  *  @param {Number} key
- *  @param {Number} [device=0]
+ *  @param {Number} [device]
  *  @return {Boolean}
  *  @memberof Input */
 function keyWasPressed(key, device=0)
-{ return inputData[device] && inputData[device][key] & 2 ? 1 : 0; }
+{ return inputData[device] && !!(inputData[device][key] & 2); }
 
 /** Returns true if device key was released this frame
  *  @param {Number} key
- *  @param {Number} [device=0]
+ *  @param {Number} [device]
  *  @return {Boolean}
  *  @memberof Input */
 function keyWasReleased(key, device=0)
-{ return inputData[device] && inputData[device][key] & 4 ? 1 : 0; }
+{ return inputData[device] && !!(inputData[device][key] & 4); }
 
 /** Clears all input
  *  @memberof Input */
@@ -76,16 +76,16 @@ let mouseWheel = 0;
 /** Returns true if user is using gamepad (has more recently pressed a gamepad button)
  *  @type {Boolean}
  *  @memberof Input */
-let isUsingGamepad = 0;
+let isUsingGamepad = false;
 
 /** Prevents input continuing to the default browser handling (false by default)
  *  @type {Boolean}
  *  @memberof Input */
-let preventDefaultInput = 0;
+let preventDefaultInput = false;
 
 /** Returns true if gamepad button is down
  *  @param {Number} button
- *  @param {Number} [gamepad=0]
+ *  @param {Number} [gamepad]
  *  @return {Boolean}
  *  @memberof Input */
 function gamepadIsDown(button, gamepad=0)
@@ -93,7 +93,7 @@ function gamepadIsDown(button, gamepad=0)
 
 /** Returns true if gamepad button was pressed
  *  @param {Number} button
- *  @param {Number} [gamepad=0]
+ *  @param {Number} [gamepad]
  *  @return {Boolean}
  *  @memberof Input */
 function gamepadWasPressed(button, gamepad=0)
@@ -101,7 +101,7 @@ function gamepadWasPressed(button, gamepad=0)
 
 /** Returns true if gamepad button was released
  *  @param {Number} button
- *  @param {Number} [gamepad=0]
+ *  @param {Number} [gamepad]
  *  @return {Boolean}
  *  @memberof Input */
 function gamepadWasReleased(button, gamepad=0)
@@ -109,7 +109,7 @@ function gamepadWasReleased(button, gamepad=0)
 
 /** Returns gamepad stick value
  *  @param {Number} stick
- *  @param {Number} [gamepad=0]
+ *  @param {Number} [gamepad]
  *  @return {Vector2}
  *  @memberof Input */
 function gamepadStick(stick,  gamepad=0)
@@ -152,9 +152,10 @@ function inputUpdatePost()
         if (debug && e.target != document.body) return;
         if (!e.repeat)
         {
-            inputData[isUsingGamepad = 0][e.which] = 3;
+            isUsingGamepad = false;
+            inputData[0][e.keyCode] = 3;
             if (inputWASDEmulateDirection)
-                inputData[0][remapKey(e.which)] = 3;
+                inputData[0][remapKey(e.keyCode)] = 3;
         }
         preventDefaultInput && e.preventDefault();
     }
@@ -162,9 +163,9 @@ function inputUpdatePost()
     onkeyup = (e)=>
     {
         if (debug && e.target != document.body) return;
-        inputData[0][e.which] = 4;
+        inputData[0][e.keyCode] = 4;
         if (inputWASDEmulateDirection)
-            inputData[0][remapKey(e.which)] = 4;
+            inputData[0][remapKey(e.keyCode)] = 4;
     }
 
     // handle remapping wasd keys to directions
@@ -178,10 +179,10 @@ function inputUpdatePost()
 ///////////////////////////////////////////////////////////////////////////////
 // Mouse event handlers
 
-onmousedown = (e)=> {inputData[isUsingGamepad = 0][e.button] = 3; onmousemove(e); e.button && e.preventDefault();}
+onmousedown = (e)=> {isUsingGamepad = false; inputData[0][e.button] = 3; window.onmousemove(e); e.button && e.preventDefault();}
 onmouseup   = (e)=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
 onmousemove = (e)=> mousePosScreen = mouseToScreen(e);
-onwheel = (e)=> e.ctrlKey || (mouseWheel = sign(e.deltaY));
+onwheel     = (e)=> e.ctrlKey || (mouseWheel = sign(e.deltaY));
 oncontextmenu = (e)=> false; // prevent right click menu
 
 // convert a mouse or touch event position to screen space
@@ -219,7 +220,7 @@ function gamepadsUpdate()
             for (let i=10; i--;)
             {
                 const j = i == 3 ? 2 : i == 2 ? 3 : i; // fix button locations
-                data[j] = touchGamepadButtons[i] ? 1 + 2*!gamepadIsDown(j,0) : 4*gamepadIsDown(j,0);
+                data[j] = touchGamepadButtons[i] ? gamepadIsDown(j,0) ? 1 : 3 : gamepadIsDown(j,0) ? 4 : 0;
             }
         }
     }
@@ -251,15 +252,17 @@ function gamepadsUpdate()
             for (let j = gamepad.buttons.length; j--;)
             {
                 const button = gamepad.buttons[j];
-                data[j] = button.pressed ? 1 + 2*!gamepadIsDown(j,i) : 4*gamepadIsDown(j,i);
-                isUsingGamepad |= !i && button.pressed;
+                data[j] = button.pressed ? gamepadIsDown(j,i) ? 1 : 3 : gamepadIsDown(j,i) ? 4 : 0;
+                isUsingGamepad ||= !i && button.pressed;
                 touchGamepadEnable && touchGamepadTimer.unset(); // disable touch gamepad if using real gamepad
             }
 
             if (gamepadDirectionEmulateStick)
             {
                 // copy dpad to left analog stick when pressed
-                const dpad = vec2(gamepadIsDown(15,i) - gamepadIsDown(14,i), gamepadIsDown(12,i) - gamepadIsDown(13,i));
+                const dpad = vec2(
+                (gamepadIsDown(15,i)?1:0) - (gamepadIsDown(14,i)?1:0), 
+                (gamepadIsDown(12,i)?1:0) - (gamepadIsDown(13,i)?1:0));
                 if (dpad.lengthSquared())
                     sticks[0] = dpad.clampLength();
             }
@@ -270,9 +273,9 @@ function gamepadsUpdate()
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Pulse the vibration hardware if it exists
- *  @param {Number} [pattern=100] - a single value in miliseconds or vibration interval array
+ *  @param {Number} [pattern] - a single value in miliseconds or vibration interval array
  *  @memberof Input */
-function vibrate(pattern)
+function vibrate(pattern=100)
 { vibrateEnable && navigator && navigator.vibrate && navigator.vibrate(pattern); }
 
 /** Cancel any ongoing vibration
@@ -290,29 +293,30 @@ const isTouchDevice = window.ontouchstart !== undefined;
 if (isTouchDevice)
 {
     // override mouse events
-    let wasTouching, mouseDown = onmousedown, mouseUp = onmouseup;
+    let wasTouching;
     onmousedown = onmouseup = ()=> 0;
 
     // handle all touch events the same way
     ontouchstart = ontouchmove = ontouchend = (e)=>
     {
-        e.button = 0; // all touches are left click
-
         // fix stalled audio on mobile
         if (soundEnable)
             audioContext ? audioContext.resume() : zzfx(0);
 
         // check if touching and pass to mouse events
         const touching = e.touches.length;
+        const button = 0; // all touches are left mouse button
         if (touching)
         {
             // set event pos and pass it along
-            e.x = e.touches[0].clientX;
-            e.y = e.touches[0].clientY;
-            wasTouching ? onmousemove(e) : mouseDown(e);
+            const p = vec2(e.touches[0].clientX, e.touches[0].clientY);
+
+            isUsingGamepad = false;
+            wasTouching ? mousePosScreen = mouseToScreen(p) : 
+                inputData[0][button] = 3;
         }
         else if (wasTouching)
-            mouseUp(e);
+            inputData[0][button] & 2 | 4;
 
         // set was touching
         wasTouching = touching;
@@ -393,8 +397,8 @@ function createTouchGamepad()
         }
 
         // call default touch handler and set to using gamepad
-        touchHandler(e);
-        isUsingGamepad = 1;
+        touchHandler.bind(window)(e);
+        isUsingGamepad = true;
         
         // must return true so the document will get focus
         return true;
@@ -408,7 +412,7 @@ function touchGamepadRender()
         return;
     
     // fade off when not touching or paused
-    const alpha = percent(touchGamepadTimer, 4, 3);
+    const alpha = percent(touchGamepadTimer.get(), 4, 3);
     if (!alpha || paused)
         return;
 

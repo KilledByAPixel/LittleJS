@@ -77,7 +77,7 @@ class Crate extends GameObject
 
     kill()
     {
-        if (this.isDestroyed)
+        if (this.destroyed)
             return;
 
         sound_destroyObject.play(this.pos);
@@ -98,7 +98,7 @@ class Enemy extends GameObject
         this.color = (new Color).setHSLA(rand(), 1, .7);
         this.health = 5;
         this.bounceTime = new Timer(rand(1e3));
-        this.setCollision(1,0);
+        this.setCollision(true, false);
     }
 
     update()
@@ -122,7 +122,7 @@ class Enemy extends GameObject
 
     kill()
     {
-        if (this.isDestroyed)
+        if (this.destroyed)
             return;
 
         ++score;
@@ -157,7 +157,7 @@ class Grenade extends GameObject
         this.friction     = .9;
         this.angleDamping = .96;
         this.renderOrder  = 1e8;
-        this.setCollision(1,0);
+        this.setCollision(true,false);
     }
 
     update()
@@ -181,10 +181,10 @@ class Grenade extends GameObject
         drawTile(this.pos, vec2(.5), this.tileInfo, this.color, this.angle);
 
         // draw additive flash when damaged
-        setBlendMode(1);
+        setBlendMode(true);
         const flash = Math.cos(this.getAliveTime()*2*PI);
         drawTile(this.pos, vec2(2), tile(0, 16), new Color(1,0,0,.2-.2*flash));
-        setBlendMode(0);
+        setBlendMode(false);
     }
 }
 
@@ -197,10 +197,10 @@ class Weapon extends EngineObject
         super(pos, vec2(.6), tile(2,8));
 
         // weapon settings
-        this.fireRate     = 8;
-        this.bulletSpeed  = .5;
-        this.bulletSpread = .1;
-        this.damage       = 1;
+        this.fireRate      = 8;
+        this.bulletSpeed   = .5;
+        this.bulletSpread  = .1;
+        this.damage        = 1;
 
         // prepare to fire
         this.renderOrder = parent.renderOrder + 1;

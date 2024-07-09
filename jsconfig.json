@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "checkJs": true,
+    "target": "ES6"
+  },
+  "exclude": [
+    "build/**/*",
+    "src/engineRelease.js",
+    "src/engineExport.js"
+  ]
+}

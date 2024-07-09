@@ -14,13 +14,13 @@
  *  @type {Boolean}
  *  @default
  *  @memberof Debug */
-const debug = 1;
+const debug = true;
 
 /** True if asserts are enaled
  *  @type {Boolean}
  *  @default
  *  @memberof Debug */
-const enableAsserts = 1;
+const enableAsserts = true;
 
 /** Size to render debug points by default
  *  @type {Number}
@@ -32,34 +32,33 @@ const debugPointSize = .5;
  *  @type {Boolean}
  *  @default
  *  @memberof Debug */
-let showWatermark = 1;
+let showWatermark = true;
 
 /** Key code used to toggle debug mode, Esc by default
- *  @type {Boolean}
+ *  @type {Number}
  *  @default
  *  @memberof Debug */
 let debugKey = 27;
 
 // Engine internal variables not exposed to documentation
-let debugPrimitives = [], debugOverlay = 0, debugPhysics = 0, debugRaycast = 0,
-debugParticles = 0, debugGamepads = 0, debugMedals = 0, debugTakeScreenshot, downloadLink;
+let debugPrimitives = [], debugOverlay = false, debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugMedals = false, debugTakeScreenshot, downloadLink;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Debug helper functions
 
 /** Asserts if the experssion is false, does not do anything in release builds
- *  @param {Boolean} assertion
- *  @param {Object}  output
+ *  @param {Boolean} assert
+ *  @param {Object} output
  *  @memberof Debug */
-function ASSERT(...assert) { enableAsserts && console.assert(...assert); }
+function ASSERT(assert, output) { enableAsserts && console.assert(assert, output); }
 
 /** Draw a debug rectangle in world space
  *  @param {Vector2} pos
  *  @param {Vector2} [size=Vector2()]
- *  @param {String}  [color='#fff']
- *  @param {Number}  [time=0]
- *  @param {Number}  [angle=0]
- *  @param {Boolean} [fill=false]
+ *  @param {String}  [color]
+ *  @param {Number}  [time]
+ *  @param {Number}  [angle]
+ *  @param {Boolean} [fill]
  *  @memberof Debug */
 function debugRect(pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)
 {
@@ -69,10 +68,10 @@ function debugRect(pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)
 
 /** Draw a debug circle in world space
  *  @param {Vector2} pos
- *  @param {Number}  [radius=0]
- *  @param {String}  [color='#fff']
- *  @param {Number}  [time=0]
- *  @param {Boolean} [fill=false]
+ *  @param {Number}  [radius]
+ *  @param {String}  [color]
+ *  @param {Number}  [time]
+ *  @param {Boolean} [fill]
  *  @memberof Debug */
 function debugCircle(pos, radius=0, color='#fff', time=0, fill=false)
 {
@@ -82,32 +81,32 @@ function debugCircle(pos, radius=0, color='#fff', time=0, fill=false)
 
 /** Draw a debug point in world space
  *  @param {Vector2} pos
- *  @param {String}  [color='#fff']
- *  @param {Number}  [time=0]
- *  @param {Number}  [angle=0]
+ *  @param {String}  [color]
+ *  @param {Number}  [time]
+ *  @param {Number}  [angle]
  *  @memberof Debug */
-function debugPoint(pos, color, time, angle) {debugRect(pos, 0, color, time, angle);}
+function debugPoint(pos, color, time, angle) {debugRect(pos, undefined, color, time, angle);}
 
 /** Draw a debug line in world space
  *  @param {Vector2} posA
  *  @param {Vector2} posB
- *  @param {String}  [color='#fff']
- *  @param {Number}  [thickness=.1]
- *  @param {Number}  [time=0]
+ *  @param {String}  [color]
+ *  @param {Number}  [thickness]
+ *  @param {Number}  [time]
  *  @memberof Debug */
 function debugLine(posA, posB, color, thickness=.1, time)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);
-    debugRect(posA.add(halfDelta), size, color, time, halfDelta.angle(), 1);
+    debugRect(posA.add(halfDelta), size, color, time, halfDelta.angle(), true);
 }
 
 /** Draw a debug axis aligned bounding box in world space
- *  @param {Vector2} posA
- *  @param {Vector2} sizeA
- *  @param {Vector2} posB
- *  @param {Vector2} sizeB
- *  @param {String}  [color='#fff']
+ *  @param {Vector2} pA - position A
+ *  @param {Vector2} sA - size A
+ *  @param {Vector2} pB - position B
+ *  @param {Vector2} sB - size B
+ *  @param {String}  [color]
  *  @memberof Debug */
 function debugAABB(pA, sA, pB, sB, color)
 {
@@ -119,11 +118,11 @@ function debugAABB(pA, sA, pB, sB, color)
 /** Draw a debug axis aligned bounding box in world space
  *  @param {String}  text
  *  @param {Vector2} pos
- *  @param {Number}  [size=1]
- *  @param {String}  [color='#fff']
- *  @param {Number}  [time=0]
- *  @param {Number}  [angle=0]
- *  @param {String}  [font='monospace']
+ *  @param {Number}  [size]
+ *  @param {String}  [color]
+ *  @param {Number}  [time]
+ *  @param {Number}  [angle]
+ *  @param {String}  [font]
  *  @memberof Debug */
 function debugText(text, pos, size=1, color='#fff', time=0, angle=0, font='monospace')
 {
@@ -138,7 +137,7 @@ function debugClear() { debugPrimitives = []; }
 /** Save a canvas to disk 
  *  @param {HTMLCanvasElement} canvas
  *  @param {String}            [filename]
- *  @param {String}            [type='image/png']
+ *  @param {String}            [type]
  *  @memberof Debug */
 function debugSaveCanvas(canvas, filename=engineName, type='image/png')
 { debugSaveDataURL(canvas.toDataURL(type), filename); }
@@ -146,7 +145,7 @@ function debugSaveCanvas(canvas, filename=engineName, type='image/png')
 /** Save a text file to disk 
  *  @param {String}     text
  *  @param {String}     [filename]
- *  @param {String}     [type='text/plain']
+ *  @param {String}     [type]
  *  @memberof Debug */
 function debugSaveText(text, filename=engineName, type='text/plain')
 { debugSaveDataURL(URL.createObjectURL(new Blob([text], {'type':type})), filename); }
@@ -184,9 +183,9 @@ function debugUpdate()
         if (keyWasPressed(48)) // 0
             showWatermark = !showWatermark;
         if (keyWasPressed(49)) // 1
-            debugPhysics = !debugPhysics, debugParticles = 0;
+            debugPhysics = !debugPhysics, debugParticles = false;
         if (keyWasPressed(50)) // 2
-            debugParticles = !debugParticles, debugPhysics = 0;
+            debugParticles = !debugParticles, debugPhysics = false;
         if (keyWasPressed(51)) // 3
             debugGamepads = !debugGamepads;
         if (keyWasPressed(52)) // 4
@@ -207,7 +206,7 @@ function debugRender()
     if (debugTakeScreenshot)
     {
         // composite canvas
-        glCopyToContext(mainContext, 1);
+        glCopyToContext(mainContext, true);
         mainContext.drawImage(overlayCanvas, 0, 0);
         overlayCanvas.width |= 0;
 
@@ -236,7 +235,7 @@ function debugRender()
                 {
                     const drawPos = centerPos.add(vec2(j*stickScale*2, i*stickScale*3));
                     const stickPos = drawPos.add(sticks[j].scale(stickScale));
-                    debugCircle(drawPos, stickScale, '#fff7',0,1);
+                    debugCircle(drawPos, stickScale, '#fff7',0,true);
                     debugLine(drawPos, stickPos, '#f00');
                     debugPoint(stickPos, '#f00');
                 }
@@ -244,8 +243,8 @@ function debugRender()
                 {
                     const drawPos = centerPos.add(vec2(j*buttonScale*2, i*stickScale*3-stickScale-buttonScale));
                     const pressed = gamepad.buttons[j].pressed;
-                    debugCircle(drawPos, buttonScale, pressed ? '#f00' : '#fff7', 0, 1);
-                    debugText(j, drawPos, .2);
+                    debugCircle(drawPos, buttonScale, pressed ? '#f00' : '#fff7', 0, true);
+                    debugText(''+j, drawPos, .2);
                 }
             }
         }
@@ -274,25 +273,25 @@ function debugRender()
 
             // show object info
             const size = vec2(max(o.size.x, .2), max(o.size.y, .2));
-            const color1 = new Color(!!o.collideTiles, !!o.collideSolidObjects, !!o.isSolid, o.parent?.2:.5);
+            const color1 = new Color(o.collideTiles?1:0, o.collideSolidObjects?1:0, o.isSolid?1:0, o.parent?.2:.5);
             const color2 = o.parent ? new Color(1,1,1,.5) : new Color(0,0,0,.8);
-            drawRect(o.pos, size, color1, o.angle, 0);
-            drawRect(o.pos, size.scale(.8), color2, o.angle, 0);
-            o.parent && drawLine(o.pos, o.parent.pos, .1, new Color(0,0,1,.5), 0);
+            drawRect(o.pos, size, color1, o.angle, false);
+            drawRect(o.pos, size.scale(.8), color2, o.angle, false);
+            o.parent && drawLine(o.pos, o.parent.pos, .1, new Color(0,0,1,.5), false);
         }
         
         if (bestObject)
         {
             const raycastHitPos = tileCollisionRaycast(bestObject.pos, mousePos);
             raycastHitPos && drawRect(raycastHitPos.floor().add(vec2(.5)), vec2(1), new Color(0,1,1,.3));
-            drawRect(mousePos.floor().add(vec2(.5)), vec2(1), new Color(0,0,1,.5), 0, 0);
-            drawLine(mousePos, bestObject.pos, .1, raycastHitPos ? new Color(1,0,0,.5) : new Color(0,1,0,.5), 0);
+            drawRect(mousePos.floor().add(vec2(.5)), vec2(1), new Color(0,0,1,.5), 0, false);
+            drawLine(mousePos, bestObject.pos, .1, raycastHitPos ? new Color(1,0,0,.5) : new Color(0,1,0,.5), false);
 
             const debugText = 'mouse pos = ' + mousePos + 
                 '\nmouse collision = ' + getTileCollisionData(mousePos) + 
                 '\n\n--- object info ---\n' +
                 bestObject.toString();
-            drawTextScreen(debugText, mousePosScreen, 24, new Color, .05, 0, 0, 'monospace');
+            drawTextScreen(debugText, mousePosScreen, 24, new Color, .05, undefined, 'center', 'monospace');
         }
 
         glCopyToContext(mainContext = saveContext);
@@ -381,7 +380,7 @@ function debugRender()
             let keysPressed = '';
             for(const i in inputData[0])
             {
-                if (i && keyIsDown(i, 0))
+                if (i && keyIsDown(parseInt(i), 0))
                     keysPressed += i + ' ' ;
             }
             keysPressed && overlayContext.fillText('Keys Down: ' + keysPressed, x, y += h);
@@ -390,7 +389,7 @@ function debugRender()
             if (inputData[1])
             for(const i in inputData[1])
             {
-                if (i && keyIsDown(i, 1))
+                if (i && keyIsDown(parseInt(i), 1))
                     buttonsPressed += i + ' ' ;
             }
             buttonsPressed && overlayContext.fillText('Gamepad: ' + buttonsPressed, x, y += h);

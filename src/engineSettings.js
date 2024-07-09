@@ -41,7 +41,7 @@ let canvasFixedSize = vec2();
  *  @type {Boolean}
  *  @default
  *  @memberof Settings */
-let canvasPixelated = 1;
+let canvasPixelated = true;
 
 /** Default font used for text rendering
  *  @type {String}
@@ -53,7 +53,7 @@ let fontDefault = 'arial';
  *  @type {Boolean}
  *  @default
  *  @memberof Settings */
-let showSplashScreen = 0;
+let showSplashScreen = false;
 
 ///////////////////////////////////////////////////////////////////////////////
 // WebGL settings
@@ -62,13 +62,13 @@ let showSplashScreen = 0;
  *  @type {Boolean}
  *  @default
  *  @memberof Settings */
-let glEnable = 1;
+let glEnable = true;
 
 /** Fixes slow rendering in some browsers by not compositing the WebGL canvas
  *  @type {Boolean}
  *  @default
  *  @memberof Settings */
-let glOverlay = 1;
+let glOverlay = true;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Tile sheet settings
@@ -92,7 +92,7 @@ let tileFixBleedScale = .3;
  *  @type {Boolean}
  *  @default
  *  @memberof Settings */
-let enablePhysicsSolver = 1;
+let enablePhysicsSolver = true;
 
 /** Default object mass for collison calcuations (how heavy objects are)
  *  @type {Number}
@@ -114,7 +114,7 @@ let objectDefaultAngleDamping = 1;
 
 /** How much to bounce when a collision occurs (0-1)
  *  @type {Number}
- *  @default 0
+ *  @default
  *  @memberof Settings */
 let objectDefaultElasticity = 0;
 
@@ -132,7 +132,7 @@ let objectMaxSpeed = 1;
 
 /** How much gravity to apply to objects along the Y axis, negative is down
  *  @type {Number}
- *  @default 0
+ *  @default
  *  @memberof Settings */
 let gravity = 0;
 
@@ -149,33 +149,33 @@ let particleEmitRateScale = 1;
  *  @type {Boolean}
  *  @default
  *  @memberof Settings */
-let gamepadsEnable = 1;
+let gamepadsEnable = true;
 
 /** If true, the dpad input is also routed to the left analog stick (for better accessability)
  *  @type {Boolean}
  *  @default
  *  @memberof Settings */
-let gamepadDirectionEmulateStick = 1;
+let gamepadDirectionEmulateStick = true;
 
 /** If true the WASD keys are also routed to the direction keys (for better accessability)
  *  @type {Boolean}
  *  @default
  *  @memberof Settings */
-let inputWASDEmulateDirection = 1;
+let inputWASDEmulateDirection = true;
 
 /** True if touch gamepad should appear on mobile devices
  *  - Supports left analog stick, 4 face buttons and start button (button 9)
  *  - Must be set by end of gameInit to be activated
  *  @type {Boolean}
- *  @default 0
+ *  @default
  *  @memberof Settings */
-let touchGamepadEnable = 0;
+let touchGamepadEnable = false;
 
 /** True if touch gamepad should be analog stick or false to use if 8 way dpad
  *  @type {Boolean}
  *  @default
  *  @memberof Settings */
-let touchGamepadAnalog = 1;
+let touchGamepadAnalog = true;
 
 /** Size of virutal gamepad for touch devices in pixels
  *  @type {Number}
@@ -193,7 +193,7 @@ let touchGamepadAlpha = .3;
  *  @type {Boolean}
  *  @default
  *  @memberof Settings */
-let vibrateEnable = 1;
+let vibrateEnable = true;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Audio settings
@@ -202,7 +202,7 @@ let vibrateEnable = 1;
  *  @type {Boolean}
  *  @default
  *  @memberof Settings */
-let soundEnable = 1;
+let soundEnable = true;
 
 /** Volume scale to apply to all sound, music and speech
  *  @type {Number}
@@ -251,9 +251,9 @@ let medalDisplayIconSize = 50;
 
 /** Set to stop medals from being unlockable (like if cheats are enabled)
  *  @type {Boolean}
- *  @default 0
+ *  @default
  *  @memberof Settings */
-let medalsPreventUnlock;
+let medalsPreventUnlock = false;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Setters for global variables
@@ -324,12 +324,12 @@ function setEnablePhysicsSolver(enable) { enablePhysicsSolver = enable; }
 function setObjectDefaultMass(mass) { objectDefaultMass = mass; }
 
 /** Set how much to slow velocity by each frame
- *  @param {Number} damping
+ *  @param {Number} damp
  *  @memberof Settings */
 function setObjectDefaultDamping(damp) { objectDefaultDamping = damp; }
 
 /** Set how much to slow angular velocity each frame
- *  @param {Number} damping
+ *  @param {Number} damp
  *  @memberof Settings */
 function setObjectDefaultAngleDamping(damp) { objectDefaultAngleDamping = damp; }
 
@@ -349,9 +349,9 @@ function setObjectDefaultFriction(friction) { objectDefaultFriction = friction; 
 function setObjectMaxSpeed(speed) { objectMaxSpeed = speed; }
 
 /** Set how much gravity to apply to objects along the Y axis
- *  @param {Number} gravity
+ *  @param {Number} newGravity
  *  @memberof Settings */
-function setGravity(g) { gravity = g; }
+function setGravity(newGravity) { gravity = newGravity; }
 
 /** Set to scales emit rate of particles
  *  @param {Number} scale

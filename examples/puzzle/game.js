@@ -9,9 +9,10 @@
 'use strict';
 
 // show the LittleJS splash screen
-showSplashScreen = 1;
+setShowSplashScreen(true);
 
-canvasPixelated = 0; // do not use pixelated rendering
+// do not use pixelated rendering
+setCanvasPixelated(false);
 
 const fallTime = .2;
 const cameraOffset = vec2(0,-.5);

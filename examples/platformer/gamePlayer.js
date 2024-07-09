@@ -29,8 +29,7 @@ class Character extends GameObject
         this.renderOrder = 10;
         this.walkCyclePercent = 0;
         this.health = 1;
-        this.moveInput = 0;
-        this.setCollision(1,0);
+        this.setCollision(true,false);
     }
     
     update() 

@@ -32,27 +32,25 @@
 class EngineObject
 {
     /** Create an engine object and adds it to the list of objects
-     *  @param {Vector2} [pos=Vector2()]            - World space position of the object
-     *  @param {Vector2} [size=Vector2(1,1)]        - World space size of the object
-     *  @param {TileInfo} [tileInfo]                - Tile info to render object (undefined is untextured)
-     *  @param {Number}  [angle=0]                  - Angle the object is rotated by
-     *  @param {Color}   [color=Color()]            - Color to apply to tile when rendered
-     *  @param {Number}  [renderOrder=0]            - Objects sorted by renderOrder before being rendered
+     *  @param {Vector2} [pos=Vector2()]     - World space position of the object
+     *  @param {Vector2} [size=Vector2(1,1)] - World space size of the object
+     *  @param {TileInfo} [tileInfo]         - Tile info to render object (undefined is untextured)
+     *  @param {Number}  [angle]             - Angle the object is rotated by
+     *  @param {Color}   [color=Color()]     - Color to apply to tile when rendered
+     *  @param {Number}  [renderOrder]       - Objects sorted by renderOrder before being rendered
      */
     constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color, renderOrder=0)
     {
         // set passed in params
         ASSERT(isVector2(pos) && isVector2(size)); // ensure pos and size are vec2s
         ASSERT(typeof tileInfo !== 'number' || !tileInfo); // prevent old style calls
-        ASSERT(!(renderOrder instanceof Color)); // prevent old style calls
-        // to fix old calls, replace with tile(tileIndex, tileSize)
 
         /** @property {Vector2} - World space position of the object */
         this.pos = pos.copy();
         /** @property {Vector2} - World space width and height of the object */
         this.size = size;
         /** @property {Vector2} - Size of object used for drawing, uses size if not set */
-        this.drawSize;
+        this.drawSize = undefined;
         /** @property {TileInfo} - Tile info to render object (undefined is untextured) */
         this.tileInfo = tileInfo;
         /** @property {Number}  - Angle to rotate the object */
@@ -60,7 +58,9 @@ class EngineObject
         /** @property {Color}   - Color to apply when rendered */
         this.color = color;
         /** @property {Color}   - Additive color to apply when rendered */
-        this.additiveColor;
+        this.additiveColor = undefined;
+        /** @property {Boolean} - Should it flip along y axis when rendered */
+        this.mirror = false;
 
         // physical properties
         /** @property {Number} [mass=objectDefaultMass]                 - How heavy the object is, static if 0 */
@@ -79,28 +79,28 @@ class EngineObject
         this.renderOrder = renderOrder;
         /** @property {Vector2} [velocity=Vector2()]    - Velocity of the object */
         this.velocity = vec2();
-        /** @property {Number} [angleVelocity=0]        - Angular velocity of the object */
+        /** @property {Number} [angleVelocity]          - Angular velocity of the object */
         this.angleVelocity = 0;
-        /** @property {Number} [spawnTime=0]            - Track when object was created  */
+        /** @property {Number} [spawnTime]              - Track when object was created  */
         this.spawnTime = time;
-        /** @property {Array} [children=[]]              - List of children of this object */
+        /** @property {Array} [children=[]]             - List of children of this object */
         this.children = [];
 
         // parent child system
-        /** @property {EngineObject} [parent=0]         - Parent of object if in local space  */
-        this.parent = 0;
+        /** @property {EngineObject} [parent=undefined] - Parent of object if in local space  */
+        this.parent = undefined;
         /** @property {Vector2} [localPos=Vector2()]    - Local position if child */
         this.localPos = vec2();
-        /** @property {Number} [localAngle=0]           - Local angle if child  */
+        /** @property {Number} [localAngle]             - Local angle if child  */
         this.localAngle = 0;
 
         // collision flags
-        /** @property {Boolean} [collideTiles=0]        - Object collides with the tile collision */
-        this.collideTiles = 0;
-        /** @property {Boolean} [collideSolidObjects=0] - Object collides with solid objects */
-        this.collideSolidObjects = 0;
-        /** @property {Boolean} [isSolid=0]             - Object collides with and blocks other objects */
-        this.isSolid = 0;
+        /** @property {Boolean} [collideTiles]        - Object collides with the tile collision */
+        this.collideTiles = false;
+        /** @property {Boolean} [collideSolidObjects] - Object collides with solid objects */
+        this.collideSolidObjects = false;
+        /** @property {Boolean} [isSolid]             - Object collides with and blocks other objects */
+        this.isSolid = false;
 
         // add to list of objects
         engineObjects.push(this);
@@ -317,7 +317,7 @@ class EngineObject
      *  @param {EngineObject} object - the object to test against
      *  @return {Boolean}            - true if the collision should be resolved
      */
-    collideWithObject(object)         { return 1; }
+    collideWithObject(object)         { return true; }
 
     /** How long since the object was created
      *  @return {Number} */
@@ -338,7 +338,7 @@ class EngineObject
     /** Attaches a child to this with a given local transform
      *  @param {EngineObject} child
      *  @param {Vector2}      [localPos=Vector2()]
-     *  @param {Number}       [localAngle=0] */
+     *  @param {Number}       [localAngle] */
     addChild(child, localPos=vec2(), localAngle=0)
     {
         ASSERT(!child.parent && !this.children.includes(child));
@@ -358,10 +358,10 @@ class EngineObject
     }
 
     /** Set how this object collides
-     *  @param {Boolean} [collideSolidObjects=1] - Does it collide with solid objects
-     *  @param {Boolean} [isSolid=1]             - Does it collide with and block other objects (expensive in large numbers)
-     *  @param {Boolean} [collideTiles=1]        - Does it collide with the tile collision */
-    setCollision(collideSolidObjects=1, isSolid=1, collideTiles=1)
+     *  @param {Boolean} [collideSolidObjects] - Does it collide with solid objects
+     *  @param {Boolean} [isSolid]             - Does it collide with and block other objects (expensive in large numbers)
+     *  @param {Boolean} [collideTiles]        - Does it collide with the tile collision */
+    setCollision(collideSolidObjects=true, isSolid=true, collideTiles=true)
     {
         ASSERT(collideSolidObjects || !isSolid); // solid objects must be set to collide
 

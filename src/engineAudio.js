@@ -54,13 +54,13 @@ class Sound
 
     /** Play the sound
      *  @param {Vector2} [pos] - World space position to play the sound, sound is not attenuated if null
-     *  @param {Number}  [volume=1] - How much to scale volume by (in addition to range fade)
-     *  @param {Number}  [pitch=1] - How much to scale pitch by (also adjusted by this.randomness)
-     *  @param {Number}  [randomnessScale=1] - How much to scale randomness
-     *  @param {Boolean} [loop=0] - Should the sound loop
+     *  @param {Number}  [volume] - How much to scale volume by (in addition to range fade)
+     *  @param {Number}  [pitch] - How much to scale pitch by (also adjusted by this.randomness)
+     *  @param {Number}  [randomnessScale] - How much to scale randomness
+     *  @param {Boolean} [loop] - Should the sound loop
      *  @return {AudioBufferSourceNode} - The audio source node
      */
-    play(pos, volume=1, pitch=1, randomnessScale=1, loop=0)
+    play(pos, volume=1, pitch=1, randomnessScale=1, loop=false)
     {
         if (!soundEnable || !this.sampleChannels) return;
 
@@ -93,7 +93,7 @@ class Sound
     {
         if (this.source)
             this.source.stop();
-        this.source = 0;
+        this.source = undefined;
     }
 
     /** Play the sound as a note with a semitone offset
@@ -110,12 +110,7 @@ class Sound
      */
     getDuration() 
     { return this.sampleChannels && this.sampleChannels[0].length / this.sampleRate; }
-
-    /** Check if the last instance of this sound is playing
-     *  @return {Boolean} - True if the sound is playing
-     */
-    isPlaying() { return this.source && !this.source.ended; }
-
+    
     /** Check if sound is loading, for sounds fetched from a url
      *  @return {Boolean} - True if sound is loading and not ready to play
      */
@@ -136,13 +131,13 @@ class SoundWave extends Sound
 {
     /** Create a sound object and cache the wave file for later use
      *  @param {String} filename - Filename of audio file to load
-     *  @param {Number} [randomness=0] - How much to randomize frequency each time sound plays
+     *  @param {Number} [randomness] - How much to randomize frequency each time sound plays
      *  @param {Number} [range=soundDefaultRange] - World space max range of sound, will not play if camera is farther away
      *  @param {Number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering off
      */
     constructor(filename, randomness=0, range, taper)
     {
-        super(0, range, taper);
+        super(undefined, range, taper);
         this.randomness = randomness;
 
         if (!soundEnable) return;
@@ -196,11 +191,11 @@ let soundDecoderContext; // audio context used only to decode audio files
 class Music extends Sound
 {
     /** Create a music object and cache the zzfx music samples for later use
-     *  @param {Array} zzfxMusic - Array of zzfx music parameters
+     *  @param {[Array, Array, Array, Number]} zzfxMusic - Array of zzfx music parameters
      */
     constructor(zzfxMusic)
     {
-        super();
+        super(undefined);
 
         if (!soundEnable) return;
         this.randomness = 0;
@@ -213,17 +208,17 @@ class Music extends Sound
      *  @param {Boolean} [loop=1] - True if the music should loop
      *  @return {AudioBufferSourceNode} - The audio source node
      */
-    playMusic(volume, loop = 1)
-    { return super.play(0, volume, 1, 1, loop); }
+    playMusic(volume, loop = false)
+    { return super.play(undefined, volume, 1, 1, loop); }
 }
 
 /** Play an mp3, ogg, or wav audio from a local file or url
  *  @param {String}  url - Location of sound file to play
- *  @param {Number}  [volume=1] - How much to scale volume by
- *  @param {Boolean} [loop=1] - True if the music should loop
+ *  @param {Number}  [volume] - How much to scale volume by
+ *  @param {Boolean} [loop] - True if the music should loop
  *  @return {HTMLAudioElement} - The audio element for this sound
  *  @memberof Audio */
-function playAudioFile(url, volume=1, loop=1)
+function playAudioFile(url, volume=1, loop=false)
 {
     if (!soundEnable) return;
 
@@ -237,9 +232,9 @@ function playAudioFile(url, volume=1, loop=1)
 /** Speak text with passed in settings
  *  @param {String} text - The text to speak
  *  @param {String} [language] - The language/accent to use (examples: en, it, ru, ja, zh)
- *  @param {Number} [volume=1] - How much to scale volume by
- *  @param {Number} [rate=1] - How quickly to speak
- *  @param {Number} [pitch=1] - How much to change the pitch by
+ *  @param {Number} [volume] - How much to scale volume by
+ *  @param {Number} [rate] - How quickly to speak
+ *  @param {Number} [pitch] - How much to change the pitch by
  *  @return {SpeechSynthesisUtterance} - The utterance that was spoken
  *  @memberof Audio */
 function speak(text, language='', volume=1, rate=1, pitch=1)
@@ -266,7 +261,7 @@ function speakStop() {speechSynthesis && speechSynthesis.cancel();}
 
 /** Get frequency of a note on a musical scale
  *  @param {Number} semitoneOffset - How many semitones away from the root note
- *  @param {Number} [rootNoteFrequency=220] - Frequency at semitone offset 0
+ *  @param {Number} [rootFrequency=220] - Frequency at semitone offset 0
  *  @return {Number} - The frequency of the note
  *  @memberof Audio */
 function getNoteFrequency(semitoneOffset, rootFrequency=220)
@@ -280,14 +275,14 @@ let audioContext;
 
 /** Play cached audio samples with given settings
  *  @param {Array}   sampleChannels - Array of arrays of samples to play (for stereo playback)
- *  @param {Number}  [volume=1] - How much to scale volume by
- *  @param {Number}  [rate=1] - The playback rate to use
- *  @param {Number}  [pan=0] - How much to apply stereo panning
- *  @param {Boolean} [loop=0] - True if the sound should loop when it reaches the end
+ *  @param {Number}  [volume] - How much to scale volume by
+ *  @param {Number}  [rate] - The playback rate to use
+ *  @param {Number}  [pan] - How much to apply stereo panning
+ *  @param {Boolean} [loop] - True if the sound should loop when it reaches the end
  *  @param {Number}  [sampleRate=44100] - Sample rate for the sound
  *  @return {AudioBufferSourceNode} - The audio node of the sound played
  *  @memberof Audio */
-function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=0, sampleRate=zzfxR) 
+function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=zzfxR) 
 {
     if (!soundEnable) return;
 
@@ -343,27 +338,27 @@ function zzfx(...zzfxSound) { return playSamples([zzfxG(...zzfxSound)]); }
 const zzfxR = 44100; 
 
 /** Generate samples for a ZzFX sound
- *  @param {Number}  [volume=1] - Volume scale (percent)
- *  @param {Number}  [randomness=.05] - How much to randomize frequency (percent Hz)
- *  @param {Number}  [frequency=220] - Frequency of sound (Hz)
- *  @param {Number}  [attack=0] - Attack time, how fast sound starts (seconds)
- *  @param {Number}  [sustain=0] - Sustain time, how long sound holds (seconds)
- *  @param {Number}  [release=.1] - Release time, how fast sound fades out (seconds)
- *  @param {Number}  [shape=0] - Shape of the sound wave
- *  @param {Number}  [shapeCurve=1] - Squarenes of wave (0=square, 1=normal, 2=pointy)
- *  @param {Number}  [slide=0] - How much to slide frequency (kHz/s)
- *  @param {Number}  [deltaSlide=0] - How much to change slide (kHz/s/s)
- *  @param {Number}  [pitchJump=0] - Frequency of pitch jump (Hz)
- *  @param {Number}  [pitchJumpTime=0] - Time of pitch jump (seconds)
- *  @param {Number}  [repeatTime=0] - Resets some parameters periodically (seconds)
- *  @param {Number}  [noise=0] - How much random noise to add (percent)
- *  @param {Number}  [modulation=0] - Frequency of modulation wave, negative flips phase (Hz)
- *  @param {Number}  [bitCrush=0] - Resamples at a lower frequency in (samples*100)
- *  @param {Number}  [delay=0] - Overlap sound with itself for reverb and flanger effects (seconds)
- *  @param {Number}  [sustainVolume=1] - Volume level for sustain (percent)
- *  @param {Number}  [decay=0] - Decay time, how long to reach sustain after attack (seconds)
- *  @param {Number}  [tremolo=0] - Trembling effect, rate controlled by repeat time (precent)
- *  @param {Number}  [filter=0] - Filter cutoff frequency, positive for HPF, negative for LPF (Hz)
+ *  @param {Number}  [volume] - Volume scale (percent)
+ *  @param {Number}  [randomness] - How much to randomize frequency (percent Hz)
+ *  @param {Number}  [frequency] - Frequency of sound (Hz)
+ *  @param {Number}  [attack] - Attack time, how fast sound starts (seconds)
+ *  @param {Number}  [sustain] - Sustain time, how long sound holds (seconds)
+ *  @param {Number}  [release] - Release time, how fast sound fades out (seconds)
+ *  @param {Number}  [shape] - Shape of the sound wave
+ *  @param {Number}  [shapeCurve] - Squarenes of wave (0=square, 1=normal, 2=pointy)
+ *  @param {Number}  [slide] - How much to slide frequency (kHz/s)
+ *  @param {Number}  [deltaSlide] - How much to change slide (kHz/s/s)
+ *  @param {Number}  [pitchJump] - Frequency of pitch jump (Hz)
+ *  @param {Number}  [pitchJumpTime] - Time of pitch jump (seconds)
+ *  @param {Number}  [repeatTime] - Resets some parameters periodically (seconds)
+ *  @param {Number}  [noise] - How much random noise to add (percent)
+ *  @param {Number}  [modulation] - Frequency of modulation wave, negative flips phase (Hz)
+ *  @param {Number}  [bitCrush] - Resamples at a lower frequency in (samples*100)
+ *  @param {Number}  [delay] - Overlap sound with itself for reverb and flanger effects (seconds)
+ *  @param {Number}  [sustainVolume] - Volume level for sustain (percent)
+ *  @param {Number}  [decay] - Decay time, how long to reach sustain after attack (seconds)
+ *  @param {Number}  [tremolo] - Trembling effect, rate controlled by repeat time (precent)
+ *  @param {Number}  [filter] - Filter cutoff frequency, positive for HPF, negative for LPF (Hz)
  *  @return {Array} - Array of audio samples
  *  @memberof Audio
  */
@@ -468,7 +463,7 @@ function zzfxG
  *  @param {Array} instruments - Array of ZzFX sound paramaters
  *  @param {Array} patterns - Array of pattern data
  *  @param {Array} sequence - Array of pattern indexes
- *  @param {Number} [BPM=125] - Playback speed of the song in BPM
+ *  @param {Number} [BPM] - Playback speed of the song in BPM
  *  @return {Array} - Left and right channel sample data
  *  @memberof Audio */
 function zzfxM(instruments, patterns, sequence, BPM = 125) 
@@ -481,7 +476,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
   let notFirstBeat;
   let stop;
   let instrument;
-  let attenuation;
+  let attenuation = 0;
   let outSampleOffset;
   let isSequenceEnd;
   let sampleOffset = 0;
@@ -491,7 +486,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
   let rightChannelBuffer = [];
   let channelIndex = 0;
   let panning = 0;
-  let hasMore = 1;
+  let hasMore = true;
   let sampleCache = {};
   let beatLength = zzfxR / BPM * 60 >> 2;
 
@@ -499,7 +494,8 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
   for (; hasMore; channelIndex++) {
 
     // reset current values
-    sampleBuffer = [hasMore = notFirstBeat = outSampleOffset = 0];
+    notFirstBeat = hasMore = false;
+    sampleBuffer = [outSampleOffset = 0];
 
     // for each pattern in sequence
     sequence.forEach((patternIndex, sequenceIndex) => {
@@ -510,7 +506,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
       hasMore ||= !!patterns[patternIndex][channelIndex];
 
       // get next offset, use the length of first channel
-      nextSampleOffset = outSampleOffset + (patterns[patternIndex][0].length - 2 - !notFirstBeat) * beatLength;
+      nextSampleOffset = outSampleOffset + (patterns[patternIndex][0].length - 2 - (notFirstBeat?0:1)) * beatLength;
       // for each beat in pattern, plus one extra if end of sequence
       isSequenceEnd = sequenceIndex == sequence.length - 1;
       for (i = 2, k = outSampleOffset; i < patternChannel.length + isSequenceEnd; notFirstBeat = ++i) {
@@ -526,7 +522,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
         for (j = 0; j < beatLength && notFirstBeat;
 
             // fade off attenuation at end of beat if stopping note, prevents clicking
-            j++ > beatLength - 99 && stop ? attenuation += (attenuation < 1) / 99 : 0
+            j++ > beatLength - 99 && stop && attenuation < 1? attenuation += 1 / 99 : 0
         ) {
           // copy sample to stereo buffers with panning
           sample = (1 - attenuation) * sampleBuffer[sampleOffset++] / 2 || 0;

@@ -61,9 +61,9 @@ let drawCount;
  * Create a tile info object
  * - This can take vecs or floats for easier use and conversion
  * - If an index is passed in, the tile size and index will determine the position
- * @param {(Number|Vector2)} [pos=Vector2()]         - Top left corner of tile in pixels or index
- * @param {(Number|Vector2)} [size=tileSizeDefault]  - Size of tile in pixels
- * @param {Number} [textureIndex=0]                  - Texture index to use
+ * @param {(Number|Vector2)} [pos=Vector2()]        - Top left corner of tile in pixels or index
+ * @param {(Number|Vector2)} [size=tileSizeDefault] - Size of tile in pixels
+ * @param {Number} [textureIndex]                   - Texture index to use
  * @return {TileInfo}
  * @example
  * tile(2)                       // a tile at index 2 using the default tile size of 16
@@ -75,14 +75,14 @@ let drawCount;
 function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0)
 {
     // if size is a number, make it a vector
-    if (size.x == undefined)
+    if (typeof size === 'number')
     {
         ASSERT(size > 0);
         size = vec2(size);
     }
 
     // if pos is a number, use it as a tile index
-    if (pos.x == undefined)
+    if (typeof pos === 'number')
     {
         const textureInfo = textureInfos[textureIndex];
         if (textureInfo)
@@ -106,7 +106,7 @@ class TileInfo
     /** Create a tile info object
      *  @param {Vector2} [pos=Vector2()]        - Top left corner of tile in pixels
      *  @param {Vector2} [size=tileSizeDefault] - Size of tile in pixels
-     *  @param {Number}  [textureIndex=0]       - Texture index to use
+     *  @param {Number}  [textureIndex]         - Texture index to use
      */
     constructor(pos=vec2(), size=tileSizeDefault, textureIndex=0)
     {
@@ -135,10 +135,13 @@ class TileInfo
 /** Texture Info - Stores info about each texture */
 class TextureInfo
 {
-    // create a TextureInfo, called automatically by the engine
+    /**
+     * Create a TextureInfo, called automatically by the engine
+     * @param {HTMLImageElement} image
+     */
     constructor(image)
     {
-        /** @property {CanvasImageSource} - image source */
+        /** @property {HTMLImageElement} - image source */
         this.image = image;
         /** @property {Vector2} - size of the image */
         this.size = vec2(image.width, image.height);
@@ -181,13 +184,12 @@ function worldToScreen(worldPos)
  *  @param {Vector2} pos                            - Center of the tile in world space
  *  @param {Vector2} [size=Vector2(1,1)]            - Size of the tile in world space
  *  @param {TileInfo}[tileInfo]                     - Tile info to use, untextured if undefined
- *  @param {Vector2} [tileSize=tileSizeDefault]     - Tile size in source pixels
  *  @param {Color}   [color=Color()]                - Color to modulate with
- *  @param {Number}  [angle=0]                      - Angle to rotate by
- *  @param {Boolean} [mirror=0]                     - If true image is flipped along the Y axis
+ *  @param {Number}  [angle]                        - Angle to rotate by
+ *  @param {Boolean} [mirror]                       - If true image is flipped along the Y axis
  *  @param {Color}   [additiveColor=Color(0,0,0,0)] - Additive color to be applied
  *  @param {Boolean} [useWebGL=glEnable]            - Use accelerated WebGL rendering
- *  @param {Boolean} [screenSpace=0]                - If true the pos and size are in screen space
+ *  @param {Boolean} [screenSpace]                  - If true the pos and size are in screen space
  *  @param {CanvasRenderingContext2D} [context]     - Canvas 2D context to draw to
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
@@ -258,25 +260,25 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
  *  @param {Vector2} pos
  *  @param {Vector2} [size=Vector2(1,1)]
  *  @param {Color}   [color=Color()]
- *  @param {Number}  [angle=0]
+ *  @param {Number}  [angle]
  *  @param {Boolean} [useWebGL=glEnable]
- *  @param {Boolean} [screenSpace=0]
+ *  @param {Boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
 { 
-    drawTile(pos, size, undefined, color, angle, 0, undefined, useWebGL, screenSpace, context); 
+    drawTile(pos, size, undefined, color, angle, false, undefined, useWebGL, screenSpace, context); 
 }
 
 /** Draw colored polygon using passed in points
  *  @param {Array}   points - Array of Vector2 points
  *  @param {Color}   [color=Color()]
- *  @param {Boolean} [screenSpace=0]
+ *  @param {Boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
 function drawPoly(points, color=new Color, screenSpace, context=mainContext)
 {
-    context.fillStyle = color;
+    context.fillStyle = color.toString();
     context.beginPath();
     for (const point of screenSpace ? points : points.map(worldToScreen))
         context.lineTo(point.x, point.y);
@@ -286,10 +288,10 @@ function drawPoly(points, color=new Color, screenSpace, context=mainContext)
 /** Draw colored line between two points
  *  @param {Vector2} posA
  *  @param {Vector2} posB
- *  @param {Number}  [thickness=.1]
+ *  @param {Number}  [thickness]
  *  @param {Color}   [color=Color()]
  *  @param {Boolean} [useWebGL=glEnable]
- *  @param {Boolean} [screenSpace=0]
+ *  @param {Boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace, context)
@@ -305,7 +307,7 @@ function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace, contex
  *  @param {Number}   angle
  *  @param {Boolean}  mirror
  *  @param {Function} drawFunction
- *  @param {Boolean} [screenSpace=0]
+ *  @param {Boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
 function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, context=mainContext)
@@ -325,7 +327,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, conte
 }
 
 /** Enable normal or additive blend mode
- *  @param {Boolean} [additive=0]
+ *  @param {Boolean} [additive]
  *  @param {Boolean} [useWebGL=glEnable]
  *  @param {CanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
@@ -346,11 +348,11 @@ function setBlendMode(additive, useWebGL=glEnable, context)
  *  Automatically splits new lines into rows
  *  @param {String}  text
  *  @param {Vector2} pos
- *  @param {Number}  [size=1]
+ *  @param {Number}  [size]
  *  @param {Color}   [color=Color()]
- *  @param {Number}  [lineWidth=0]
+ *  @param {Number}  [lineWidth]
  *  @param {Color}   [lineColor=Color(0,0,0)]
- *  @param {String}  [textAlign='center']
+ *  @param {CanvasTextAlign}  [textAlign='center']
  *  @param {String}  [font=fontDefault]
  *  @param {CanvasRenderingContext2D} [context=overlayContext]
  *  @memberof Draw */
@@ -363,19 +365,19 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
  *  Automatically splits new lines into rows
  *  @param {String}  text
  *  @param {Vector2} pos
- *  @param {Number}  [size=1]
+ *  @param {Number}  [size]
  *  @param {Color}   [color=Color()]
- *  @param {Number}  [lineWidth=0]
+ *  @param {Number}  [lineWidth]
  *  @param {Color}   [lineColor=Color(0,0,0)]
- *  @param {String}  [textAlign='center']
+ *  @param {CanvasTextAlign}  [textAlign]
  *  @param {String}  [font=fontDefault]
  *  @param {CanvasRenderingContext2D} [context=overlayContext]
  *  @memberof Draw */
 function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, context=overlayContext)
 {
-    context.fillStyle = color;
+    context.fillStyle = color.toString();
     context.lineWidth = lineWidth;
-    context.strokeStyle = lineColor;
+    context.strokeStyle = lineColor.toString();
     context.textAlign = textAlign;
     context.font = size + 'px '+ font;
     context.textBaseline = 'middle';
@@ -410,8 +412,8 @@ class FontImage
 {
     /** Create an image font
      *  @param {HTMLImageElement} [image] - Image for the font, if undefined default font is used
-     *  @param {Vector2} [tileSize=vec2(8)] - Size of the font source tiles
-     *  @param {Vector2} [paddingSize=vec2(0,1)] - How much extra space to add between characters
+     *  @param {Vector2} [tileSize=Vector2(8)] - Size of the font source tiles
+     *  @param {Vector2} [paddingSize=Vector2(0,1)] - How much extra space to add between characters
      *  @param {CanvasRenderingContext2D} [context=overlayContext] - context to draw to
      */
     constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1), context=overlayContext)
@@ -440,7 +442,7 @@ class FontImage
     /** Draw text in screen space using the image font
      *  @param {String}  text
      *  @param {Vector2} pos
-     *  @param {Number}  [scale=4]
+     *  @param {Number}  [scale]
      *  @param {Boolean} [center]
      */
     drawTextScreen(text, pos, scale=4, center)
@@ -458,7 +460,7 @@ class FontImage
             for(let j=line.length; j--;)
             {
                 // draw each character
-                let charCode = line[j].charCodeAt();
+                let charCode = line[j].charCodeAt(0);
                 if (charCode < 32 || charCode > 127)
                     charCode = 127; // unknown character
 
@@ -482,7 +484,7 @@ class FontImage
 /** Returns true if fullscreen mode is active
  *  @return {Boolean}
  *  @memberof Draw */
-function isFullscreen() { return document.fullscreenElement; }
+function isFullscreen() { return !!document.fullscreenElement; }
 
 /** Toggle fullsceen mode
  *  @memberof Draw */

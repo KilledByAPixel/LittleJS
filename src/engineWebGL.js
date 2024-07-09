@@ -18,12 +18,12 @@
 let glCanvas;
 
 /** 2d context for glCanvas
- *  @type {WebGLRenderingContext}
+ *  @type {WebGL2RenderingContext}
  *  @memberof WebGL */
 let glContext;
 
 // WebGL internal variables not exposed to documentation
-let glActiveTexture, glShader, glArrayBuffer, glInstanceData, glPositionData, glColorData, glInstanceCount, glBatchAdditive, glAdditive, glGeometryArray, glGeometryBuffer;
+let glActiveTexture, glShader, glArrayBuffer, glInstanceData, glPositionData, glColorData, glInstanceCount, glBatchAdditive, glAdditive, glGeometryBuffer;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -70,9 +70,9 @@ function glInit()
     glPositionData = new Float32Array(glInstanceData);
     glColorData = new Uint32Array(glInstanceData);
     glArrayBuffer = glContext.createBuffer();
-    glGeometryArray = new Float32Array([0,0,1,0,0,1,1,1]); // triangle strip square
-    glGeometryBuffer = glContext.createBuffer();
-    glInstanceCount = 0;
+    glContext.bindBuffer(gl_ARRAY_BUFFER, glGeometryBuffer = glContext.createBuffer());
+    const geometry = new Float32Array([glInstanceCount = 0,0,1,0,0,1,1,1]); // triangle strip square
+    glContext.bufferData(gl_ARRAY_BUFFER, geometry, gl_STATIC_DRAW);
 }
 
 // Setup render each frame, called automatically by engine
@@ -89,7 +89,7 @@ function glPreRender()
 
     // set vertex attributes
     let offset = glAdditive = glBatchAdditive = 0;
-    const initVertexAttribArray = (name, type, typeSize, size, normalize=0)=>
+    const initVertexAttribArray = (name, type, typeSize, size, normalize=false)=>
     {
         const location = glContext.getAttribLocation(glShader, name);
         const stride = typeSize && gl_INSTANCE_BYTE_STRIDE;
@@ -99,23 +99,21 @@ function glPreRender()
         glContext.vertexAttribDivisor(location, divisor);
         offset += size*typeSize;
     }
-    glContext.bindBuffer(gl_ARRAY_BUFFER, glGeometryBuffer);
-    glContext.bufferData(gl_ARRAY_BUFFER, glGeometryArray, gl_STATIC_DRAW);
     initVertexAttribArray('g', gl_FLOAT, 0, 2);
     glContext.bindBuffer(gl_ARRAY_BUFFER, glArrayBuffer);
     glContext.bufferData(gl_ARRAY_BUFFER, gl_INSTANCE_BUFFER_SIZE, gl_DYNAMIC_DRAW);
-    initVertexAttribArray('p', gl_FLOAT, 4, 4);            // position & size
-    initVertexAttribArray('u', gl_FLOAT, 4, 4);            // texture coords
-    initVertexAttribArray('c', gl_UNSIGNED_BYTE, 1, 4, 1); // color
-    initVertexAttribArray('a', gl_UNSIGNED_BYTE, 1, 4, 1); // additiveColor
-    initVertexAttribArray('r', gl_FLOAT, 4, 1);            // rotation
+    initVertexAttribArray('p', gl_FLOAT, 4, 4); // position & size
+    initVertexAttribArray('u', gl_FLOAT, 4, 4); // texture coords
+    initVertexAttribArray('c', gl_UNSIGNED_BYTE, 1, 4, true); // color
+    initVertexAttribArray('a', gl_UNSIGNED_BYTE, 1, 4, true); // additiveColor
+    initVertexAttribArray('r', gl_FLOAT, 4, 1); // rotation
 
     // build the transform matrix
     const sx = 2 * cameraScale / mainCanvas.width;
     const sy = 2 * cameraScale / mainCanvas.height;
     const cx = -1 - sx*cameraPos.x;
     const cy = -1 - sy*cameraPos.y;
-    glContext.uniformMatrix4fv(glContext.getUniformLocation(glShader, 'm'), 0,
+    glContext.uniformMatrix4fv(glContext.getUniformLocation(glShader, 'm'), false,
         new Float32Array([
             sx,  0, 0, 0,
              0, sy, 0, 0,
@@ -158,8 +156,8 @@ function glCompileShader(source, type)
 }
 
 /** Create WebGL program with given shaders
- *  @param {WebGLShader} vsSource
- *  @param {WebGLShader} fsSource
+ *  @param {String} vsSource
+ *  @param {String} fsSource
  *  @return {WebGLProgram}
  *  @memberof WebGL */
 function glCreateProgram(vsSource, fsSource)
@@ -177,7 +175,7 @@ function glCreateProgram(vsSource, fsSource)
 }
 
 /** Create WebGL texture from an image and init the texture settings
- *  @param {Image} image
+ *  @param {HTMLImageElement} image
  *  @return {WebGLTexture}
  *  @memberof WebGL */
 function glCreateTexture(image)
@@ -267,13 +265,13 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdd
 ///////////////////////////////////////////////////////////////////////////////
 // post processing - can be enabled to pass other canvases through a final shader
 
-let glPostShader, glPostArrayBuffer, glPostTexture, glPostIncludeOverlay;
+let glPostShader, glPostTexture, glPostIncludeOverlay;
 
 /** Set up a post processing shader
  *  @param {String} shaderCode
  *  @param {Boolean} includeOverlay
  *  @memberof WebGL */
-function glInitPostProcess(shaderCode, includeOverlay)
+function glInitPostProcess(shaderCode, includeOverlay=false)
 {
     ASSERT(!glPostShader); // can only have 1 post effects shader
 
@@ -303,8 +301,7 @@ function glInitPostProcess(shaderCode, includeOverlay)
     );
 
     // create buffer and texture
-    glPostArrayBuffer = glContext.createBuffer();
-    glPostTexture = glCreateTexture();
+    glPostTexture = glCreateTexture(undefined);
     glPostIncludeOverlay = includeOverlay;
 
     // hide the original 2d canvas
@@ -341,7 +338,6 @@ function glRenderPostProcess()
     // setup shader program to draw one triangle
     glContext.useProgram(glPostShader);
     glContext.bindBuffer(gl_ARRAY_BUFFER, glGeometryBuffer);
-    glContext.bufferData(gl_ARRAY_BUFFER, glGeometryArray, gl_STATIC_DRAW);
     glContext.pixelStorei(gl_UNPACK_FLIP_Y_WEBGL, 1);
     glContext.disable(gl_BLEND);
 
@@ -354,7 +350,7 @@ function glRenderPostProcess()
     const vertexByteStride = 8;
     const pLocation = glContext.getAttribLocation(glPostShader, 'p');
     glContext.enableVertexAttribArray(pLocation);
-    glContext.vertexAttribPointer(pLocation, 2, gl_FLOAT, 0, vertexByteStride, 0);
+    glContext.vertexAttribPointer(pLocation, 2, gl_FLOAT, false, vertexByteStride, 0);
 
     // set uniforms and draw
     const uniformLocation = (name)=>glContext.getUniformLocation(glPostShader, name);
@@ -397,5 +393,5 @@ gl_UNPACK_FLIP_Y_WEBGL = 37440,
 // constants for batch rendering
 gl_INDICIES_PER_INSTANCE = 11,
 gl_MAX_INSTANCES = 1e5,
-gl_INSTANCE_BYTE_STRIDE = gl_INDICIES_PER_INSTANCE * 4, // 4 * 11
+gl_INSTANCE_BYTE_STRIDE = gl_INDICIES_PER_INSTANCE * 4, // 11 * 4
 gl_INSTANCE_BUFFER_SIZE = gl_MAX_INSTANCES * gl_INSTANCE_BYTE_STRIDE;

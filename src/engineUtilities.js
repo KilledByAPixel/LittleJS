@@ -44,15 +44,15 @@ function sign(value) { return Math.sign(value); }
 
 /** Returns first parm modulo the second param, but adjusted so negative numbers work as expected
  *  @param {Number} dividend
- *  @param {Number} [divisor=1]
+ *  @param {Number} [divisor]
  *  @return {Number}
  *  @memberof Utilities */
 function mod(dividend, divisor=1) { return ((dividend % divisor) + divisor) % divisor; }
 
 /** Clamps the value beween max and min
  *  @param {Number} value
- *  @param {Number} [min=0]
- *  @param {Number} [max=1]
+ *  @param {Number} [min]
+ *  @param {Number} [max]
  *  @return {Number}
  *  @memberof Utilities */
 function clamp(value, min=0, max=1) { return value < min ? min : value > max ? max : value; }
@@ -77,7 +77,7 @@ function lerp(percent, valueA, valueB) { return valueA + clamp(percent) * (value
 /** Returns signed wrapped distance between the two values passed in
  *  @param {Number} valueA
  *  @param {Number} valueB
- *  @param {Number} [wrapSize=1]
+ *  @param {Number} [wrapSize]
  *  @returns {Number}
  *  @memberof Utilities */
 function distanceWrap(valueA, valueB, wrapSize=1)
@@ -87,7 +87,7 @@ function distanceWrap(valueA, valueB, wrapSize=1)
  *  @param {Number} percent
  *  @param {Number} valueA
  *  @param {Number} valueB
- *  @param {Number} [wrapSize=1]
+ *  @param {Number} [wrapSize]
  *  @returns {Number}
  *  @memberof Utilities */
 function lerpWrap(percent, valueA, valueB, wrapSize=1)
@@ -98,7 +98,7 @@ function lerpWrap(percent, valueA, valueB, wrapSize=1)
  *  @param {Number} angleB
  *  @returns {Number}
  *  @memberof Utilities */
-function distanceAngle(angleA, angleB) { distanceWrap(angleA, angleB, 2*PI); }
+function distanceAngle(angleA, angleB) { return distanceWrap(angleA, angleB, 2*PI); }
 
 /** Linearly interpolates between the angles passed in with wrappping
  *  @param {Number} percent
@@ -134,10 +134,10 @@ function isOverlapping(pointA, sizeA, pointB, sizeB)
 }
 
 /** Returns an oscillating wave between 0 and amplitude with frequency of 1 Hz by default
- *  @param {Number} [frequency=1] - Frequency of the wave in Hz
- *  @param {Number} [amplitude=1] - Amplitude (max height) of the wave
- *  @param {Number} [t=time]      - Value to use for time of the wave
- *  @return {Number}              - Value waving between 0 and amplitude
+ *  @param {Number} [frequency] - Frequency of the wave in Hz
+ *  @param {Number} [amplitude] - Amplitude (max height) of the wave
+ *  @param {Number} [t=time]    - Value to use for time of the wave
+ *  @return {Number}            - Value waving between 0 and amplitude
  *  @memberof Utilities */
 function wave(frequency=1, amplitude=1, t=time)
 { return amplitude/2 * (1 - Math.cos(t*frequency*2*PI)); }
@@ -154,15 +154,15 @@ function formatTime(t) { return (t/60|0) + ':' + (t%60<10?'0':'') + (t%60|0); }
  *  @namespace Random */
 
 /** Returns a random value between the two values passed in
- *  @param {Number} [valueA=1]
- *  @param {Number} [valueB=0]
+ *  @param {Number} [valueA]
+ *  @param {Number} [valueB]
  *  @return {Number}
  *  @memberof Random */
 function rand(valueA=1, valueB=0) { return valueB + Math.random() * (valueA-valueB); }
 
 /** Returns a floored random value the two values passed in
  *  @param {Number} valueA
- *  @param {Number} [valueB=0]
+ *  @param {Number} [valueB]
  *  @return {Number}
  *  @memberof Random */
 function randInt(valueA, valueB=0) { return Math.floor(rand(valueA,valueB)); }
@@ -173,14 +173,14 @@ function randInt(valueA, valueB=0) { return Math.floor(rand(valueA,valueB)); }
 function randSign() { return randInt(2) * 2 - 1; }
 
 /** Returns a random Vector2 with the passed in length
- *  @param {Number} [length=1]
+ *  @param {Number} [length]
  *  @return {Vector2}
  *  @memberof Random */
 function randVector(length=1) { return new Vector2().setAngle(rand(2*PI), length); }
 
 /** Returns a random Vector2 within a circular shape
- *  @param {Number} [radius=1]
- *  @param {Number} [minRadius=0]
+ *  @param {Number} [radius]
+ *  @param {Number} [minRadius]
  *  @return {Vector2}
  *  @memberof Random */
 function randInCircle(radius=1, minRadius=0)
@@ -189,7 +189,7 @@ function randInCircle(radius=1, minRadius=0)
 /** Returns a random color between the two passed in colors, combine components if linear
  *  @param {Color}   [colorA=Color()]
  *  @param {Color}   [colorB=Color(0,0,0,1)]
- *  @param {Boolean} [linear]
+ *  @param {Boolean} [linear=false]
  *  @return {Color}
  *  @memberof Random */
 function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear)
@@ -221,8 +221,8 @@ class RandomGenerator
     }
 
     /** Returns a seeded random value between the two values passed in
-    *  @param {Number} [valueA=1]
-    *  @param {Number} [valueB=0]
+    *  @param {Number} [valueA]
+    *  @param {Number} [valueB]
     *  @return {Number} */
     float(valueA=1, valueB=0)
     {
@@ -235,7 +235,7 @@ class RandomGenerator
 
     /** Returns a floored seeded random value the two values passed in
     *  @param {Number} valueA
-    *  @param {Number} [valueB=0]
+    *  @param {Number} [valueB]
     *  @return {Number} */
     int(valueA, valueB=0) { return Math.floor(this.float(valueA, valueB)); }
 
@@ -259,15 +259,15 @@ class RandomGenerator
  * @memberof Utilities
  */
 function vec2(x=0, y)
-{ return x.x == undefined ? new Vector2(x, y == undefined? x : y) : new Vector2(x.x, x.y); }
+{ return typeof x === 'number'? new Vector2(x, y == undefined? x : y) : new Vector2(x.x, x.y); }
 
 /** 
  * Check if object is a valid Vector2
- * @param {Vector2} v
+ * @param {any} v
  * @return {Boolean}
  * @memberof Utilities
  */
-function isVector2(v) { return !isNaN(v.x) && !isNaN(v.y); }
+function isVector2(v) { return typeof v === 'object' && typeof v.x === 'number' && typeof v.y === 'number'; }
 
 /** 
  * 2D Vector object with vector math library
@@ -281,8 +281,8 @@ function isVector2(v) { return !isNaN(v.x) && !isNaN(v.y); }
 class Vector2
 {
     /** Create a 2D vector with the x and y passed in, can also be created with vec2()
-     *  @param {Number} [x=0] - X axis location
-     *  @param {Number} [y=0] - Y axis location */
+     *  @param {Number} [x] - X axis location
+     *  @param {Number} [y] - Y axis location */
     constructor(x=0, y=0)
     {
         /** @property {Number} - X axis location */
@@ -339,12 +339,12 @@ class Vector2
     distanceSquared(v) { return (this.x - v.x)**2 + (this.y - v.y)**2; }
 
     /** Returns a new vector in same direction as this one with the length passed in
-     * @param {Number} [length=1]
+     * @param {Number} [length]
      * @return {Vector2} */
     normalize(length=1) { const l = this.length(); return l ? this.scale(length/l) : new Vector2(0, length); }
 
     /** Returns a new vector clamped to length passed in
-     * @param {Number} [length=1]
+     * @param {Number} [length]
      * @return {Vector2} */
     clampLength(length=1) { const l = this.length(); return l > length ? this.scale(length/l) : this; }
 
@@ -363,8 +363,8 @@ class Vector2
     angle() { return Math.atan2(this.x, this.y); }
 
     /** Sets this vector with angle and length passed in
-     * @param {Number} [angle=0]
-     * @param {Number} [length=1]
+     * @param {Number} [angle]
+     * @param {Number} [length]
      * @return {Vector2} */
     setAngle(angle=0, length=1) 
     { this.x = length*Math.sin(angle); this.y = length*Math.cos(angle); return this; }
@@ -449,10 +449,10 @@ function hsl(h, s, l, a) { return new Color().setHSLA(h, s, l, a); }
 class Color
 {
     /** Create a color with the rgba components passed in, white by default
-     *  @param {Number} [r=1] - red
-     *  @param {Number} [g=1] - green
-     *  @param {Number} [b=1] - blue
-     *  @param {Number} [a=1] - alpha*/
+     *  @param {Number} [r] - red
+     *  @param {Number} [g] - green
+     *  @param {Number} [b] - blue
+     *  @param {Number} [a] - alpha*/
     constructor(r=1, g=1, b=1, a=1)
     {
         /** @property {Number} - Red */
@@ -507,10 +507,10 @@ class Color
     lerp(c, percent) { return this.add(c.subtract(this).scale(clamp(percent))); }
 
     /** Sets this color given a hue, saturation, lightness, and alpha
-     * @param {Number} [h=0] - hue
-     * @param {Number} [s=0] - saturation
-     * @param {Number} [l=1] - lightness
-     * @param {Number} [a=1] - alpha
+     * @param {Number} [h] - hue
+     * @param {Number} [s] - saturation
+     * @param {Number} [l] - lightness
+     * @param {Number} [a] - alpha
      * @return {Color} */
     setHSLA(h=0, s=0, l=1, a=1)
     {
@@ -556,8 +556,8 @@ class Color
     }
 
     /** Returns a new color that has each component randomly adjusted
-     * @param {Number} [amount=.05]
-     * @param {Number} [alphaAmount=0]
+     * @param {Number} [amount]
+     * @param {Number} [alphaAmount]
      * @return {Color} */
     mutate(amount=.05, alphaAmount=0) 
     {
@@ -571,9 +571,9 @@ class Color
     }
 
     /** Returns this color expressed as a hex color code
-     * @param {Boolean} [useAlpha=1] - if alpha should be included in result
+     * @param {Boolean} [useAlpha] - if alpha should be included in result
      * @return {String} */
-    toString(useAlpha = 1)      
+    toString(useAlpha = true)      
     { 
         const toHex = (c)=> ((c=c*255|0)<16 ? '0' : '') + c.toString(16);
         return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b) + (useAlpha ? toHex(this.a) : '');
@@ -622,7 +622,7 @@ class Timer
     constructor(timeLeft) { this.time = timeLeft == undefined ? undefined : time + timeLeft; this.setTime = timeLeft; }
 
     /** Set the timer with seconds passed in
-     *  @param {Number} [timeLeft=0] - How much time left before the timer is elapsed in seconds */
+     *  @param {Number} [timeLeft] - How much time left before the timer is elapsed in seconds */
     set(timeLeft=0) { this.time = time + timeLeft; this.setTime = timeLeft; }
 
     /** Unset the timer */

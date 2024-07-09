@@ -35,7 +35,7 @@ function initTileCollision(size)
 
 /** Set tile collision data
  *  @param {Vector2} pos
- *  @param {Number}  [data=0]
+ *  @param {Number}  [data]
  *  @memberof TileCollision */
 function setTileCollisionData(pos, data=0)
 {
@@ -68,7 +68,7 @@ function tileCollisionTest(pos, size=vec2(), object)
     {
         const tileData = tileCollision[y*tileCollisionSize.x+x];
         if (tileData && (!object || object.collideWithTile(tileData, vec2(x, y))))
-            return 1;
+            return true;
     }
 }
 
@@ -134,11 +134,11 @@ function tileCollisionRaycast(posStart, posEnd, object)
 class TileLayerData
 {
     /** Create a tile layer data object, one for each tile in a TileLayer
-     *  @param {Number}  [tile]          - The tile to use, untextured if undefined
-     *  @param {Number}  [direction=0]   - Integer direction of tile, in 90 degree increments
-     *  @param {Boolean} [mirror=0]      - If the tile should be mirrored along the x axis
-     *  @param {Color}   [color=Color()] - Color of the tile */
-    constructor(tile, direction=0, mirror=0, color=new Color())
+     *  @param {Number}  [tile]      - The tile to use, untextured if undefined
+     *  @param {Number}  [direction] - Integer direction of tile, in 90 degree increments
+     *  @param {Boolean} [mirror]    - If the tile should be mirrored along the x axis
+     *  @param {Color}   [color]     - Color of the tile */
+    constructor(tile, direction=0, mirror=false, color=new Color())
     {
         /** @property {Number}  - The tile to use, untextured if undefined */
         this.tile      = tile;
@@ -151,7 +151,7 @@ class TileLayerData
     }
 
     /** Set this tile to clear, it will not be rendered */
-    clear() { this.tile = this.direction = this.mirror = 0; color = new Color; }
+    clear() { this.tile = this.direction = 0; this.mirror = false; this.color = new Color; }
 }
 
 /**
@@ -168,25 +168,25 @@ class TileLayerData
  */
 class TileLayer extends EngineObject
 {
-/** Create a tile layer object
-    *  @param {Vector2} [position=Vector2()]       - World space position
-    *  @param {Vector2} [size=tileCollisionSize]   - World space size
-    *  @param {TileInfo} [tileInfo]                - Tile info for layer
-    *  @param {Vector2} [scale=Vector2(1,1)]       - How much to scale this layer when rendered
-    *  @param {Number}  [renderOrder=0]            - Objects sorted by renderOrder before being rendered
+    /** Create a tile layer object
+    *  @param {Vector2}  [position=Vector2()]     - World space position
+    *  @param {Vector2}  [size=tileCollisionSize] - World space size
+    *  @param {TileInfo} [tileInfo]               - Tile info for layer
+    *  @param {Vector2}  [scale=Vector2(1,1)]     - How much to scale this layer when rendered
+    *  @param {Number}   [renderOrder]            - Objects sorted by renderOrder before being rendered
     */
-constructor(pos, size=tileCollisionSize, tileInfo=tile(), scale=vec2(1), renderOrder=0)
+    constructor(position, size=tileCollisionSize, tileInfo=tile(), scale=vec2(1), renderOrder=0)
     {
-        super(pos, size, tileInfo, 0, undefined, renderOrder);
+        super(position, size, tileInfo, 0, undefined, renderOrder);
 
-        /** @property {HTMLCanvasElement}        - The canvas used by this tile layer */
+        /** @property {HTMLCanvasElement} - The canvas used by this tile layer */
         this.canvas = document.createElement('canvas');
         /** @property {CanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
         this.context = this.canvas.getContext('2d');
-        /** @property {Vector2}                  - How much to scale this layer when rendered */
+        /** @property {Vector2} - How much to scale this layer when rendered */
         this.scale = scale;
-        /** @property {Boolean} [isOverlay=0]    - If true this layer will render to overlay canvas and appear above all objects */
-        this.isOverlay;
+        /** @property {Boolean} - If true this layer will render to overlay canvas and appear above all objects */
+        this.isOverlay = false;
 
         // init tile data
         this.data = [];
@@ -195,9 +195,9 @@ constructor(pos, size=tileCollisionSize, tileInfo=tile(), scale=vec2(1), renderO
     }
     
     /** Set data at a given position in the array 
-     *  @param {Vector2}       position   - Local position in array
+     *  @param {Vector2}       layerPos   - Local position in array
      *  @param {TileLayerData} data       - Data to set
-     *  @param {Boolean}       [redraw=0] - Force the tile to redraw if true */
+     *  @param {Boolean}       [redraw=false] - Force the tile to redraw if true */
     setData(layerPos, data, redraw)
     {
         if (layerPos.arrayCheck(this.size))
@@ -238,16 +238,17 @@ constructor(pos, size=tileCollisionSize, tileInfo=tile(), scale=vec2(1), renderO
     */
     redraw()
     {
-        this.redrawStart(1);
+        this.redrawStart(true);
         this.drawAllTileData();
         this.redrawEnd();
     }
 
     /** Call to start the redraw process
-     *  @param {Boolean} [clear=0] - Should it clear the canvas before drawing */
-    redrawStart(clear = 0)
+     *  @param {Boolean} [clear=false] - Should it clear the canvas before drawing */
+    redrawStart(clear = false)
     {
         // save current render settings
+        /** @type {[HTMLCanvasElement, CanvasRenderingContext2D, Vector2, Vector2, number]} */
         this.savedRenderSettings = [mainCanvas, mainContext, mainCanvasSize, cameraPos, cameraScale];
 
         // hack: use normal rendering system to render the tiles
@@ -271,7 +272,7 @@ constructor(pos, size=tileCollisionSize, tileInfo=tile(), scale=vec2(1), renderO
     redrawEnd()
     {
         ASSERT(mainContext == this.context); // must call redrawStart() before drawing tiles
-        glEnable && glCopyToContext(mainContext, 1);
+        glEnable && glCopyToContext(mainContext, true);
         //debugSaveCanvas(this.canvas);
 
         // set stuff back to normal
@@ -284,7 +285,7 @@ constructor(pos, size=tileCollisionSize, tileInfo=tile(), scale=vec2(1), renderO
     {
         // first clear out where the tile was
         const pos = layerPos.floor().add(this.pos).add(vec2(.5));
-        this.drawCanvas2D(pos, vec2(1), 0, 0, (context)=>context.clearRect(-.5, -.5, 1, 1));
+        this.drawCanvas2D(pos, vec2(1), 0, false, (context)=>context.clearRect(-.5, -.5, 1, 1));
 
         // draw the tile if not undefined
         const d = this.getData(layerPos);
@@ -358,5 +359,5 @@ constructor(pos, size=tileCollisionSize, tileInfo=tile(), scale=vec2(1), renderO
      *  @param {Color}   [color=Color()]
      *  @param {Number}  [angle=0] */
     drawRect(pos, size, color, angle) 
-    { this.drawTile(pos, size, -1, 0, color, angle); }
+    { this.drawTile(pos, size, undefined, color, angle); }
 }

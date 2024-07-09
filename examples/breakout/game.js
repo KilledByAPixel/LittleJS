@@ -9,7 +9,7 @@
 'use strict';
 
 // show the LittleJS splash screen
-showSplashScreen = 1;
+setShowSplashScreen(true);
 
 let levelSize, ball, paddle, score, brickCount;
 
@@ -71,11 +71,11 @@ function gameRenderPost()
 {
     // use built in image font for text
     const font = new FontImage;
-    font.drawText('Score: ' + score, cameraPos.add(vec2(0,9.6)), .15, 1);
+    font.drawText('Score: ' + score, cameraPos.add(vec2(0,9.6)), .15, true);
     if (!brickCount)
-        font.drawText('You Win!', cameraPos.add(vec2(0,-5)), .2, 1);
+        font.drawText('You Win!', cameraPos.add(vec2(0,-5)), .2, true);
     else if (!ball)
-        font.drawText('Click to Play', cameraPos.add(vec2(0,-5)), .2, 1);
+        font.drawText('Click to Play', cameraPos.add(vec2(0,-5)), .2, true);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

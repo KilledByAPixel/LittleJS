@@ -9,7 +9,7 @@
 'use strict';
 
 // show the LittleJS splash screen
-showSplashScreen = 1;
+setShowSplashScreen(true);
 
 let score, deaths;
 
@@ -17,7 +17,7 @@ let score, deaths;
 function gameInit()
 {
     // enable touch gamepad on touch devices
-    touchGamepadEnable = 1;
+    touchGamepadEnable = true;
 
     // setup game
     score = deaths = 0;

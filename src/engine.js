@@ -30,7 +30,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.8.10';
+const engineVersion = '1.8.11';
 
 /** Frames per second to update objects
  *  @type {Number}
@@ -71,14 +71,14 @@ let timeReal = 0;
 
 /** Is the game paused? Causes time and objects to not be updated
  *  @type {Boolean}
- *  @default 0
+ *  @default false
  *  @memberof Engine */
-let paused = 0;
+let paused = false;
 
 /** Set if game is paused
- *  @param {Boolean} paused
+ *  @param {Boolean} isPaused
  *  @memberof Engine */
-function setPaused(_paused) { paused = _paused; }
+function setPaused(isPaused) { paused = isPaused; }
 
 // Frame time tracking
 let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
@@ -110,7 +110,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         if (debug) // +/- to speed/slow time
             frameTimeDeltaMS *= debugSpeedUp ? 5 : debugSpeedDown ? .2 : 1;
         timeReal += frameTimeDeltaMS / 1e3;
-        frameTimeBufferMS += !paused * frameTimeDeltaMS;
+        frameTimeBufferMS += paused ? 0 : frameTimeDeltaMS;
         if (!debugSpeedUp)
             frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp incase of slow framerate
 
@@ -220,7 +220,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         'user-select:none;' +         // prevent mobile hold to select
         '-webkit-user-select:none;' + // compatibility for ios
         '-webkit-touch-callout:none'; // compatibility for ios
-    document.body.style = styleBody;
+    document.body.style.cssText = styleBody;
     document.body.appendChild(mainCanvas = document.createElement('canvas'));
     mainContext = mainCanvas.getContext('2d');
 
@@ -236,7 +236,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     const styleCanvas = 
         'position:absolute;' +                             // position
         'top:50%;left:50%;transform:translate(-50%,-50%)'; // center
-    (glCanvas||mainCanvas).style = mainCanvas.style = overlayCanvas.style = styleCanvas;
+    (glCanvas||mainCanvas).style.cssText = mainCanvas.style.cssText = overlayCanvas.style.cssText = styleCanvas;
     
     // create promises for loading images
     const promises = imageSources.map((src, textureIndex)=>
@@ -323,7 +323,7 @@ function engineObjectsDestroy()
 
 /** Triggers a callback for each object within a given area
  *  @param {Vector2} [pos]                 - Center of test area
- *  @param {Number} [size]                 - Radius of circle if float, rectangle size if Vector2
+ *  @param {Number|Vector2} [size]         - Radius of circle if float, rectangle size if Vector2
  *  @param {Function} [callbackFunction]   - Calls this function on every object that passes the test
  *  @param {Array} [objects=engineObjects] - List of objects to check
  *  @memberof Engine */
@@ -334,7 +334,7 @@ function engineObjectsCallback(pos, size, callbackFunction, objects=engineObject
         for (const o of objects)
             callbackFunction(o);
     }
-    else if (size.x != undefined)  // bounding box test
+    else if (typeof size === 'object')  // bounding box test
     {
         for (const o of objects)
             isOverlapping(pos, size, o.pos, o.size) && callbackFunction(o);
@@ -361,8 +361,8 @@ function drawEngineSplashScreen(t)
         const p3 = percent(t, 1, .8);
         const p4 = percent(t, 0, .5);
         const g = x.createRadialGradient(w/2,h/2,0,w/2,h/2,Math.hypot(w,h)*.7);
-        g.addColorStop(0,hsl(0,0,lerp(p4,0,p3/2),p3));
-        g.addColorStop(1,hsl(0,0,0,p3));
+        g.addColorStop(0,hsl(0,0,lerp(p4,0,p3/2),p3).toString());
+        g.addColorStop(1,hsl(0,0,0,p3).toString());
         x.save();
         x.fillStyle = g;
         x.fillRect(0,0,w,h);
@@ -393,7 +393,7 @@ function drawEngineSplashScreen(t)
         C ? x.fill() : x.stroke();
     };
     const color = (c=0, l=0) =>
-        hsl([.98,.3,.57,.14][c%4]-10,.8,[0,.3,.5,.8,.9][l]);
+        hsl([.98,.3,.57,.14][c%4]-10,.8,[0,.3,.5,.8,.9][l]).toString();
     const alpha = wave(1,1,t);
     const p = percent(alpha, .1, .5);
 
@@ -472,7 +472,8 @@ function drawEngineSplashScreen(t)
         x.lineTo(53+(1+i*2.9)*p,40);
         x.lineTo(53+(4+i*3.5)*p,54);
         x.fillStyle = color(0,i%2+2);
-        x.fill() || i%2 && x.stroke();
+        x.fill();
+        i%2 && x.stroke();
     }
 
     // wheels

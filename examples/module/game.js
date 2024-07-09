@@ -11,7 +11,7 @@ import * as LittleJS from '../../build/littlejs.esm.js';
 const {Vector2, Color, Timer, vec2, tile} = LittleJS;
 
 // show the LittleJS splash screen
-LittleJS.setShowSplashScreen(1);
+LittleJS.setShowSplashScreen(true);
 
 // sound effects
 const sound_click = new LittleJS.Sound([1,.5]);

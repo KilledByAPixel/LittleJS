@@ -237,8 +237,7 @@ function drawSky()
 function drawStars()
 {
     // draw stars and planets
-    const random = new RandomGenerator;
-    random.seed = skySeed;
+    const random = new RandomGenerator(skySeed);
     const largeStarCount = 9;
     for (let i = 1e3; i--;)
     {
@@ -263,7 +262,11 @@ function drawStars()
         if (size < 9)
             mainContext.fillRect(screenPos.x, screenPos.y, size, size);
         else
-            mainContext.beginPath(mainContext.fill(mainContext.arc(screenPos.x, screenPos.y, size, 0, 9)));
+        {
+            mainContext.arc(screenPos.x, screenPos.y, size, 0, 9);
+            mainContext.fill();
+            mainContext.beginPath();
+        }
     }
 }
 

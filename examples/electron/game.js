@@ -17,7 +17,7 @@ medalsInit('Hello World');
 let particleEmiter;
 
 // show the LittleJS splash screen
-showSplashScreen = 1;
+setShowSplashScreen(true);
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()

@@ -48,7 +48,7 @@ class Medal
      *  @param {Number} id            - The unique identifier of the medal
      *  @param {String} name          - Name of the medal
      *  @param {String} [description] - Description of the medal
-     *  @param {String} [icon='🏆']  - Icon for the medal
+     *  @param {String} [icon]        - Icon for the medal
      *  @param {String} [src]         - Image location for the medal
      */
     constructor(id, name, description='', icon='🏆', src)
@@ -78,7 +78,7 @@ class Medal
     }
 
     /** Render a medal
-     *  @param {Number} [hidePercent=0] - How much to slide the medal off screen
+     *  @param {Number} [hidePercent] - How much to slide the medal off screen
      */
     render(hidePercent=0)
     {
@@ -90,19 +90,20 @@ class Medal
         // draw containing rect and clip to that region
         context.save();
         context.beginPath();
-        context.fillStyle = new Color(.9,.9,.9);
-        context.strokeStyle = new Color(0,0,0);
+        context.fillStyle = rgb(.9,.9,.9).toString();
+        context.strokeStyle = rgb(0,0,0).toString();
         context.lineWidth = 3;
-        context.fill(context.rect(x, y, width, medalDisplaySize.y));
+        context.rect(x, y, width, medalDisplaySize.y);
+        context.fill();
         context.stroke();
         context.clip();
 
         // draw the icon and text
         this.renderIcon(vec2(x+15+medalDisplayIconSize/2, y+medalDisplaySize.y/2));
         const pos = vec2(x+medalDisplayIconSize+30, y+28);
-        drawTextScreen(this.name, pos, 38, new Color(0,0,0), 0, 0, 'left');
+        drawTextScreen(this.name, pos, 38, new Color(0,0,0), 0, undefined, 'left');
         pos.y += 32;
-        drawTextScreen(this.description, pos, 24, new Color(0,0,0), 0, 0, 'left');
+        drawTextScreen(this.description, pos, 24, new Color(0,0,0), 0, undefined, 'left');
         context.restore();
     }
 
@@ -135,7 +136,10 @@ function medalsRender()
     if (!medalsDisplayTimeLast)
         medalsDisplayTimeLast = timeReal;
     else if (time > medalDisplayTime)
-        medalsDisplayQueue.shift(medalsDisplayTimeLast = 0);
+    {
+        medalsDisplayTimeLast = 0;
+        medalsDisplayQueue.shift();
+    }
     else
     {
         // slide on/off medals
@@ -175,7 +179,7 @@ class Newgrounds
      *  @param {Object} [cryptoJS] - An instance of CryptoJS, if there is a cipher */
     constructor(app_id, cipher, cryptoJS)
     {
-        ASSERT(!newgrounds && app_id); // can only be one newgrounds object
+        ASSERT(!newgrounds && app_id>0); // can only be one newgrounds object
         ASSERT(!cipher || cryptoJS);   // must provide cryptojs if there is a cipher
 
         this.app_id = app_id;
@@ -219,39 +223,39 @@ class Newgrounds
         debugMedals && console.log(this.scoreboards);
 
         const keepAliveMS = 5 * 60 * 1e3;
-        setInterval(()=>this.call('Gateway.ping', 0, 1), keepAliveMS);
+        setInterval(()=>this.call('Gateway.ping', 0, true), keepAliveMS);
     }
 
     /** Send message to unlock a medal by id
      * @param {Number} id - The medal id */
-    unlockMedal(id) { return this.call('Medal.unlock', {'id':id}, 1); }
+    unlockMedal(id) { return this.call('Medal.unlock', {'id':id}, true); }
 
     /** Send message to post score
      * @param {Number} id    - The scoreboard id
      * @param {Number} value - The score value */
-    postScore(id, value) { return this.call('ScoreBoard.postScore', {'id':id, 'value':value}, 1); }
+    postScore(id, value) { return this.call('ScoreBoard.postScore', {'id':id, 'value':value}, true); }
 
     /** Get scores from a scoreboard
-     * @param {Number} id         - The scoreboard id
-     * @param {String} [user=0]   - A user's id or name
-     * @param {Number} [social=0] - If true, only social scores will be loaded
-     * @param {Number} [skip=0]   - Number of scores to skip before start
-     * @param {Number} [limit=10] - Number of scores to include in the list
-     * @return {Object}           - The response JSON object
+     * @param {Number} id       - The scoreboard id
+     * @param {String} [user]   - A user's id or name
+     * @param {Number} [social] - If true, only social scores will be loaded
+     * @param {Number} [skip]   - Number of scores to skip before start
+     * @param {Number} [limit]  - Number of scores to include in the list
+     * @return {Object}         - The response JSON object
      */
-    getScores(id, user=0, social=0, skip=0, limit=10)
+    getScores(id, user, social=0, skip=0, limit=10)
     { return this.call('ScoreBoard.getScores', {'id':id, 'user':user, 'social':social, 'skip':skip, 'limit':limit}); }
 
     /** Send message to log a view */
-    logView() { return this.call('App.logView', {'host':this.host}, 1); }
+    logView() { return this.call('App.logView', {'host':this.host}, true); }
 
     /** Send a message to call a component of the Newgrounds API
      * @param {String}  component      - Name of the component
      * @param {Object}  [parameters=0] - Parameters to use for call
-     * @param {Boolean} [async=0]      - If true, don't wait for response before continuing (avoid stall)
+     * @param {Boolean} [async=false]  - If true, don't wait for response before continuing (avoid stall)
      * @return {Object}                - The response JSON object
      */
-    call(component, parameters=0, async=0)
+    call(component, parameters=0, async=false)
     {
         const call = {'component':component, 'parameters':parameters};
         if (this.cipher)
