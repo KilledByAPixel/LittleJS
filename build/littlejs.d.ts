@@ -1246,7 +1246,7 @@ declare module "littlejs.esm" {
      *  @param {String} shaderCode
      *  @param {Boolean} includeOverlay
      *  @memberof WebGL */
-    export function glInitPostProcess(shaderCode: string, includeOverlay?: boolean): void;
+    export function glInitPostProcess(shaderCode: string, includeOverlay: boolean): void;
     /**
      * LittleJS Input System
      * - Tracks keyboard down, pressed, and released

@@ -4075,7 +4075,7 @@ let glCanvas;
 let glContext;
 
 // WebGL internal variables not exposed to documentation
-let glActiveTexture, glShader, glArrayBuffer, glInstanceData, glPositionData, glColorData, glInstanceCount, glBatchAdditive, glAdditive, glGeometryBuffer;
+let glActiveTexture, glShader, glArrayBuffer, glInstanceData, glPositionData, glColorData, glInstanceCount, glBatchAdditive, glAdditive, glGeometryArray, glGeometryBuffer;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -4122,9 +4122,9 @@ function glInit()
     glPositionData = new Float32Array(glInstanceData);
     glColorData = new Uint32Array(glInstanceData);
     glArrayBuffer = glContext.createBuffer();
-    glContext.bindBuffer(gl_ARRAY_BUFFER, glGeometryBuffer = glContext.createBuffer());
-    const geometry = new Float32Array([glInstanceCount = 0,0,1,0,0,1,1,1]); // triangle strip square
-    glContext.bufferData(gl_ARRAY_BUFFER, geometry, gl_STATIC_DRAW);
+    glGeometryArray = new Float32Array([0,0,1,0,0,1,1,1]); // triangle strip square
+    glGeometryBuffer = glContext.createBuffer();
+    glInstanceCount = 0;
 }
 
 // Setup render each frame, called automatically by engine
@@ -4151,6 +4151,8 @@ function glPreRender()
         glContext.vertexAttribDivisor(location, divisor);
         offset += size*typeSize;
     }
+    glContext.bindBuffer(gl_ARRAY_BUFFER, glGeometryBuffer);
+    glContext.bufferData(gl_ARRAY_BUFFER, glGeometryArray, gl_STATIC_DRAW);
     initVertexAttribArray('g', gl_FLOAT, 0, 2);
     glContext.bindBuffer(gl_ARRAY_BUFFER, glArrayBuffer);
     glContext.bufferData(gl_ARRAY_BUFFER, gl_INSTANCE_BUFFER_SIZE, gl_DYNAMIC_DRAW);
@@ -4317,13 +4319,13 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdd
 ///////////////////////////////////////////////////////////////////////////////
 // post processing - can be enabled to pass other canvases through a final shader
 
-let glPostShader, glPostTexture, glPostIncludeOverlay;
+let glPostShader, glPostArrayBuffer, glPostTexture, glPostIncludeOverlay;
 
 /** Set up a post processing shader
  *  @param {String} shaderCode
  *  @param {Boolean} includeOverlay
  *  @memberof WebGL */
-function glInitPostProcess(shaderCode, includeOverlay=false)
+function glInitPostProcess(shaderCode, includeOverlay)
 {
     ASSERT(!glPostShader); // can only have 1 post effects shader
 
@@ -4353,6 +4355,7 @@ function glInitPostProcess(shaderCode, includeOverlay=false)
     );
 
     // create buffer and texture
+    glPostArrayBuffer = glContext.createBuffer();
     glPostTexture = glCreateTexture(undefined);
     glPostIncludeOverlay = includeOverlay;
 
@@ -4445,7 +4448,7 @@ gl_UNPACK_FLIP_Y_WEBGL = 37440,
 // constants for batch rendering
 gl_INDICIES_PER_INSTANCE = 11,
 gl_MAX_INSTANCES = 1e5,
-gl_INSTANCE_BYTE_STRIDE = gl_INDICIES_PER_INSTANCE * 4, // 11 * 4
+gl_INSTANCE_BYTE_STRIDE = gl_INDICIES_PER_INSTANCE * 4, // 4 * 11
 gl_INSTANCE_BUFFER_SIZE = gl_MAX_INSTANCES * gl_INSTANCE_BYTE_STRIDE;
 /** 
  * LittleJS - The Tiny JavaScript Game Engine That Can!
