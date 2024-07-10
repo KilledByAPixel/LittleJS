@@ -39,10 +39,10 @@ const debugPointSize = .5;
 let showWatermark = true;
 
 /** Key code used to toggle debug mode, Esc by default
- *  @type {Number}
+ *  @type {String}
  *  @default
  *  @memberof Debug */
-let debugKey = 27;
+let debugKey = 'Escape';
 
 /** True if the debug overlay is active, always false in release builds
  *  @type {Boolean}
@@ -190,22 +190,18 @@ function debugUpdate()
         debugOverlay = !debugOverlay;
     if (debugOverlay)
     {
-        if (keyWasPressed(48)) // 0
+        if (keyWasPressed('Digit0'))
             showWatermark = !showWatermark;
-        if (keyWasPressed(49)) // 1
+        if (keyWasPressed('Digit1'))
             debugPhysics = !debugPhysics, debugParticles = false;
-        if (keyWasPressed(50)) // 2
+        if (keyWasPressed('Digit2'))
             debugParticles = !debugParticles, debugPhysics = false;
-        if (keyWasPressed(51)) // 3
+        if (keyWasPressed('Digit3'))
             debugGamepads = !debugGamepads;
-        if (keyWasPressed(52)) // 4
+        if (keyWasPressed('Digit4'))
             debugRaycast = !debugRaycast;
-        if (keyWasPressed(53)) // 5
+        if (keyWasPressed('Digit5'))
             debugTakeScreenshot = 1;
-        //if (keyWasPressed(54)) // 6
-        //if (keyWasPressed(55)) // 7
-        //if (keyWasPressed(56)) // 8
-        //if (keyWasPressed(57)) // 9
     }
 }
 
@@ -390,7 +386,7 @@ function debugRender()
             let keysPressed = '';
             for(const i in inputData[0])
             {
-                if (i && keyIsDown(parseInt(i), 0))
+                if (keyIsDown(i, 0))
                     keysPressed += i + ' ' ;
             }
             keysPressed && overlayContext.fillText('Keys Down: ' + keysPressed, x, y += h);
@@ -399,7 +395,7 @@ function debugRender()
             if (inputData[1])
             for(const i in inputData[1])
             {
-                if (i && keyIsDown(parseInt(i), 1))
+                if (keyIsDown(i, 1))
                     buttonsPressed += i + ' ' ;
             }
             buttonsPressed && overlayContext.fillText('Gamepad: ' + buttonsPressed, x, y += h);
@@ -1524,7 +1520,7 @@ function setMedalsPreventUnlock(preventUnlock) { medalsPreventUnlock = preventUn
 function setShowWatermark(show) { showWatermark = show; }
 
 /** Set key code used to toggle debug mode, Esc by default
- *  @param {Number} key
+ *  @param {String} key
  *  @memberof Debug */
 function setDebugKey(key) { debugKey = key; }
 /** 
@@ -2432,28 +2428,37 @@ function toggleFullscreen()
 
 
 /** Returns true if device key is down
- *  @param {Number} key
+ *  @param {String|Number} key
  *  @param {Number} [device]
  *  @return {Boolean}
  *  @memberof Input */
 function keyIsDown(key, device=0)
-{ return inputData[device] && !!(inputData[device][key] & 1); }
+{ 
+    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'Use code string for keyboard!');
+    return inputData[device] && !!(inputData[device][key] & 1); 
+}
 
 /** Returns true if device key was pressed this frame
- *  @param {Number} key
+ *  @param {String|Number} key
  *  @param {Number} [device]
  *  @return {Boolean}
  *  @memberof Input */
 function keyWasPressed(key, device=0)
-{ return inputData[device] && !!(inputData[device][key] & 2); }
+{ 
+    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'Use code string for keyboard!');
+    return inputData[device] && !!(inputData[device][key] & 2); 
+}
 
 /** Returns true if device key was released this frame
- *  @param {Number} key
+ *  @param {String|Number} key
  *  @param {Number} [device]
  *  @return {Boolean}
  *  @memberof Input */
 function keyWasReleased(key, device=0)
-{ return inputData[device] && !!(inputData[device][key] & 4); }
+{ 
+    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'Use code string for keyboard!');
+    return inputData[device] && !!(inputData[device][key] & 4);
+}
 
 /** Clears all input
  *  @memberof Input */
@@ -2575,9 +2580,9 @@ function inputUpdatePost()
         if (!e.repeat)
         {
             isUsingGamepad = false;
-            inputData[0][e.keyCode] = 3;
+            inputData[0][e.code] = 3;
             if (inputWASDEmulateDirection)
-                inputData[0][remapKey(e.keyCode)] = 3;
+                inputData[0][remapKey(e.code)] = 3;
         }
         preventDefaultInput && e.preventDefault();
     }
@@ -2585,16 +2590,19 @@ function inputUpdatePost()
     onkeyup = (e)=>
     {
         if (debug && e.target != document.body) return;
-        inputData[0][e.keyCode] = 4;
+        inputData[0][e.code] = 4;
         if (inputWASDEmulateDirection)
-            inputData[0][remapKey(e.keyCode)] = 4;
+            inputData[0][remapKey(e.code)] = 4;
     }
 
     // handle remapping wasd keys to directions
     function remapKey(c)
-    { 
+    {
         return inputWASDEmulateDirection ? 
-            c==87?38 : c==83?40 : c==65?37 : c==68?39 : c : c; 
+            c == 'KeyW' ? 'ArrowUp' : 
+            c == 'KeyS' ? 'ArrowDown' : 
+            c == 'KeyA' ? 'ArrowLeft' : 
+            c == 'KeyD' ? 'ArrowRight' : c : c;
     }
 }
 
@@ -4868,7 +4876,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.8.11';
+const engineVersion = '1.8.12';
 
 /** Frames per second to update objects
  *  @type {Number}
@@ -4943,8 +4951,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         frameTimeLastMS = frameTimeMS;
         if (debug || showWatermark)
             averageFPS = lerp(.05, averageFPS, 1e3/(frameTimeDeltaMS||1));
-        const debugSpeedUp   = debug && keyIsDown(107); // +
-        const debugSpeedDown = debug && keyIsDown(109); // -
+        const debugSpeedUp   = debug && keyIsDown('Equal'); // +
+        const debugSpeedDown = debug && keyIsDown('Minus'); // -
         if (debug) // +/- to speed/slow time
             frameTimeDeltaMS *= debugSpeedUp ? 5 : debugSpeedDown ? .2 : 1;
         timeReal += frameTimeDeltaMS / 1e3;

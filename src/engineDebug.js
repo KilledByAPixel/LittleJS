@@ -35,10 +35,10 @@ const debugPointSize = .5;
 let showWatermark = true;
 
 /** Key code used to toggle debug mode, Esc by default
- *  @type {Number}
+ *  @type {String}
  *  @default
  *  @memberof Debug */
-let debugKey = 27;
+let debugKey = 'Escape';
 
 /** True if the debug overlay is active, always false in release builds
  *  @type {Boolean}
@@ -186,22 +186,18 @@ function debugUpdate()
         debugOverlay = !debugOverlay;
     if (debugOverlay)
     {
-        if (keyWasPressed(48)) // 0
+        if (keyWasPressed('Digit0'))
             showWatermark = !showWatermark;
-        if (keyWasPressed(49)) // 1
+        if (keyWasPressed('Digit1'))
             debugPhysics = !debugPhysics, debugParticles = false;
-        if (keyWasPressed(50)) // 2
+        if (keyWasPressed('Digit2'))
             debugParticles = !debugParticles, debugPhysics = false;
-        if (keyWasPressed(51)) // 3
+        if (keyWasPressed('Digit3'))
             debugGamepads = !debugGamepads;
-        if (keyWasPressed(52)) // 4
+        if (keyWasPressed('Digit4'))
             debugRaycast = !debugRaycast;
-        if (keyWasPressed(53)) // 5
+        if (keyWasPressed('Digit5'))
             debugTakeScreenshot = 1;
-        //if (keyWasPressed(54)) // 6
-        //if (keyWasPressed(55)) // 7
-        //if (keyWasPressed(56)) // 8
-        //if (keyWasPressed(57)) // 9
     }
 }
 
@@ -386,7 +382,7 @@ function debugRender()
             let keysPressed = '';
             for(const i in inputData[0])
             {
-                if (i && keyIsDown(parseInt(i), 0))
+                if (keyIsDown(i, 0))
                     keysPressed += i + ' ' ;
             }
             keysPressed && overlayContext.fillText('Keys Down: ' + keysPressed, x, y += h);
@@ -395,7 +391,7 @@ function debugRender()
             if (inputData[1])
             for(const i in inputData[1])
             {
-                if (i && keyIsDown(parseInt(i), 1))
+                if (keyIsDown(i, 1))
                     buttonsPressed += i + ' ' ;
             }
             buttonsPressed && overlayContext.fillText('Gamepad: ' + buttonsPressed, x, y += h);

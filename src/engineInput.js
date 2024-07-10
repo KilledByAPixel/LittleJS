@@ -10,28 +10,37 @@
 'use strict';
 
 /** Returns true if device key is down
- *  @param {Number} key
+ *  @param {String|Number} key
  *  @param {Number} [device]
  *  @return {Boolean}
  *  @memberof Input */
 function keyIsDown(key, device=0)
-{ return inputData[device] && !!(inputData[device][key] & 1); }
+{ 
+    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'Use code string for keyboard!');
+    return inputData[device] && !!(inputData[device][key] & 1); 
+}
 
 /** Returns true if device key was pressed this frame
- *  @param {Number} key
+ *  @param {String|Number} key
  *  @param {Number} [device]
  *  @return {Boolean}
  *  @memberof Input */
 function keyWasPressed(key, device=0)
-{ return inputData[device] && !!(inputData[device][key] & 2); }
+{ 
+    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'Use code string for keyboard!');
+    return inputData[device] && !!(inputData[device][key] & 2); 
+}
 
 /** Returns true if device key was released this frame
- *  @param {Number} key
+ *  @param {String|Number} key
  *  @param {Number} [device]
  *  @return {Boolean}
  *  @memberof Input */
 function keyWasReleased(key, device=0)
-{ return inputData[device] && !!(inputData[device][key] & 4); }
+{ 
+    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'Use code string for keyboard!');
+    return inputData[device] && !!(inputData[device][key] & 4);
+}
 
 /** Clears all input
  *  @memberof Input */
@@ -153,9 +162,9 @@ function inputUpdatePost()
         if (!e.repeat)
         {
             isUsingGamepad = false;
-            inputData[0][e.keyCode] = 3;
+            inputData[0][e.code] = 3;
             if (inputWASDEmulateDirection)
-                inputData[0][remapKey(e.keyCode)] = 3;
+                inputData[0][remapKey(e.code)] = 3;
         }
         preventDefaultInput && e.preventDefault();
     }
@@ -163,16 +172,19 @@ function inputUpdatePost()
     onkeyup = (e)=>
     {
         if (debug && e.target != document.body) return;
-        inputData[0][e.keyCode] = 4;
+        inputData[0][e.code] = 4;
         if (inputWASDEmulateDirection)
-            inputData[0][remapKey(e.keyCode)] = 4;
+            inputData[0][remapKey(e.code)] = 4;
     }
 
     // handle remapping wasd keys to directions
     function remapKey(c)
-    { 
+    {
         return inputWASDEmulateDirection ? 
-            c==87?38 : c==83?40 : c==65?37 : c==68?39 : c : c; 
+            c == 'KeyW' ? 'ArrowUp' : 
+            c == 'KeyS' ? 'ArrowDown' : 
+            c == 'KeyA' ? 'ArrowLeft' : 
+            c == 'KeyD' ? 'ArrowRight' : c : c;
     }
 }
 

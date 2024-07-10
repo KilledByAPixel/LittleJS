@@ -297,14 +297,14 @@ class Player extends Character
     update() 
     {
         // player controls
-        this.holdingJump   = keyIsDown(38) || gamepadIsDown(0);
-        this.holdingShoot  = !isUsingGamepad && mouseIsDown(0) || keyIsDown(90) || gamepadIsDown(2);
-        this.pressingThrow = mouseIsDown(1) || keyIsDown(67) || gamepadIsDown(1);
-        this.pressedDodge  = mouseIsDown(2) || keyIsDown(88) || gamepadIsDown(3);
+        this.holdingJump   = keyIsDown('ArrowUp') || gamepadIsDown(0);
+        this.holdingShoot  = !isUsingGamepad && mouseIsDown(0) || keyIsDown('KeyZ') || gamepadIsDown(2);
+        this.pressingThrow = mouseIsDown(1) || keyIsDown('KeyC') || gamepadIsDown(1);
+        this.pressedDodge  = mouseIsDown(2) || keyIsDown('KeyX') || gamepadIsDown(3);
 
         // movement control
         this.moveInput = isUsingGamepad ? gamepadStick(0) : 
-            vec2(keyIsDown(39) - keyIsDown(37), keyIsDown(38) - keyIsDown(40));
+            vec2(keyIsDown('ArrowRight') - keyIsDown('ArrowLeft'), keyIsDown('ArrowUp') - keyIsDown('ArrowDown'));
 
         super.update();
     }

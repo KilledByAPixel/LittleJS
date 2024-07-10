@@ -44,19 +44,19 @@ function gameUpdate()
     cameraScale = clamp(cameraScale*(1-mouseWheel/10), 1, 1e3);
     
     // T = drop test crate
-    if (keyWasPressed(84))
+    if (keyWasPressed('KeyT'))
         new Crate(mousePos);
     
     // E = drop enemy
-    if (keyWasPressed(69))
+    if (keyWasPressed('KeyE'))
         new Enemy(mousePos);
 
     // X = make explosion
-    if (keyWasPressed(88))
+    if (keyWasPressed('KeyX'))
         explosion(mousePos);
 
     // M = move player to mouse
-    if (keyWasPressed(77))
+    if (keyWasPressed('KeyM'))
         player.pos = mousePos;
 }
 

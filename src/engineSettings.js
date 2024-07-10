@@ -449,6 +449,6 @@ function setMedalsPreventUnlock(preventUnlock) { medalsPreventUnlock = preventUn
 function setShowWatermark(show) { showWatermark = show; }
 
 /** Set key code used to toggle debug mode, Esc by default
- *  @param {Number} key
+ *  @param {String} key
  *  @memberof Debug */
 function setDebugKey(key) { debugKey = key; }

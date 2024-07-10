@@ -514,9 +514,9 @@ declare module "littlejs.esm" {
      *  @memberof Debug */
     export function setShowWatermark(show: boolean): void;
     /** Set key code used to toggle debug mode, Esc by default
-     *  @param {Number} key
+     *  @param {String} key
      *  @memberof Debug */
-    export function setDebugKey(key: number): void;
+    export function setDebugKey(key: string): void;
     /**
      * LittleJS Utility Classes and Functions
      * - General purpose math library
@@ -1261,23 +1261,23 @@ declare module "littlejs.esm" {
      * @namespace Input
      */
     /** Returns true if device key is down
-     *  @param {Number} key
+     *  @param {String|Number} key
      *  @param {Number} [device]
      *  @return {Boolean}
      *  @memberof Input */
-    export function keyIsDown(key: number, device?: number): boolean;
+    export function keyIsDown(key: string | number, device?: number): boolean;
     /** Returns true if device key was pressed this frame
-     *  @param {Number} key
+     *  @param {String|Number} key
      *  @param {Number} [device]
      *  @return {Boolean}
      *  @memberof Input */
-    export function keyWasPressed(key: number, device?: number): boolean;
+    export function keyWasPressed(key: string | number, device?: number): boolean;
     /** Returns true if device key was released this frame
-     *  @param {Number} key
+     *  @param {String|Number} key
      *  @param {Number} [device]
      *  @return {Boolean}
      *  @memberof Input */
-    export function keyWasReleased(key: number, device?: number): boolean;
+    export function keyWasReleased(key: string | number, device?: number): boolean;
     /** Clears all input
      *  @memberof Input */
     export function clearInput(): void;
@@ -1290,23 +1290,23 @@ declare module "littlejs.esm" {
      * @namespace Input
      */
     /** Returns true if device key is down
-     *  @param {Number} key
+     *  @param {String|Number} key
      *  @param {Number} [device]
      *  @return {Boolean}
      *  @memberof Input */
-    export function mouseIsDown(key: number, device?: number): boolean;
+    export function mouseIsDown(key: string | number, device?: number): boolean;
     /** Returns true if device key was pressed this frame
-     *  @param {Number} key
+     *  @param {String|Number} key
      *  @param {Number} [device]
      *  @return {Boolean}
      *  @memberof Input */
-    export function mouseWasPressed(key: number, device?: number): boolean;
+    export function mouseWasPressed(key: string | number, device?: number): boolean;
     /** Returns true if device key was released this frame
-     *  @param {Number} key
+     *  @param {String|Number} key
      *  @param {Number} [device]
      *  @return {Boolean}
      *  @memberof Input */
-    export function mouseWasReleased(key: number, device?: number): boolean;
+    export function mouseWasReleased(key: string | number, device?: number): boolean;
     /** Mouse pos in world space
      *  @type {Vector2}
      *  @memberof Input */

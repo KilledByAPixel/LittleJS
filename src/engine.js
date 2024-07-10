@@ -30,7 +30,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.8.11';
+const engineVersion = '1.8.12';
 
 /** Frames per second to update objects
  *  @type {Number}
@@ -105,8 +105,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         frameTimeLastMS = frameTimeMS;
         if (debug || showWatermark)
             averageFPS = lerp(.05, averageFPS, 1e3/(frameTimeDeltaMS||1));
-        const debugSpeedUp   = debug && keyIsDown(107); // +
-        const debugSpeedDown = debug && keyIsDown(109); // -
+        const debugSpeedUp   = debug && keyIsDown('Equal'); // +
+        const debugSpeedDown = debug && keyIsDown('Minus'); // -
         if (debug) // +/- to speed/slow time
             frameTimeDeltaMS *= debugSpeedUp ? 5 : debugSpeedDown ? .2 : 1;
         timeReal += frameTimeDeltaMS / 1e3;
