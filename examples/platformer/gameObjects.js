@@ -1,9 +1,9 @@
 /*
     LittleJS Platformer Example - Objects
     - Base GameObject class for objects with health
-    - Crate object collides with player, can be destroyed.
-    - Weapon is held by player and fires bullets with some settings.
-    - Bullet is the projectile launched by a weapon.
+    - Crate object collides with player, can be destroyed
+    - Weapon is held and fires bullets with some settings
+    - Bullet is the projectile launched by a weapon
 */
 
 'use strict';
