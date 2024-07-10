@@ -659,8 +659,8 @@ class RandomGenerator
 
 /** 
  * Create a 2d vector, can take another Vector2 to copy, 2 scalars, or 1 scalar
- * @param {(Number|Vector2)} [x=0]
- * @param {Number} [y=0]
+ * @param {(Number|Vector2)} [x]
+ * @param {Number} [y]
  * @return {Vector2}
  * @example
  * let a = vec2(0, 1); // vector with coordinates (0, 1)
@@ -2668,20 +2668,23 @@ function gamepadsUpdate()
             for (let j = gamepad.buttons.length; j--;)
             {
                 const button = gamepad.buttons[j];
-                data[j] = button.pressed ? gamepadIsDown(j,i) ? 1 : 3 : gamepadIsDown(j,i) ? 4 : 0;
+                const wasDown = gamepadIsDown(j,i);
+                data[j] = button.pressed ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
                 isUsingGamepad ||= !i && button.pressed;
-                touchGamepadEnable && touchGamepadTimer.unset(); // disable touch gamepad if using real gamepad
             }
 
             if (gamepadDirectionEmulateStick)
             {
                 // copy dpad to left analog stick when pressed
                 const dpad = vec2(
-                (gamepadIsDown(15,i)?1:0) - (gamepadIsDown(14,i)?1:0), 
-                (gamepadIsDown(12,i)?1:0) - (gamepadIsDown(13,i)?1:0));
+                    (gamepadIsDown(15,i)&&1) - (gamepadIsDown(14,i)&&1), 
+                    (gamepadIsDown(12,i)&&1) - (gamepadIsDown(13,i)&&1));
                 if (dpad.lengthSquared())
                     sticks[0] = dpad.clampLength();
             }
+
+            // disable touch gamepad if using real gamepad
+            touchGamepadEnable && isUsingGamepad && touchGamepadTimer.unset(); 
         }
     }
 }
@@ -2726,13 +2729,11 @@ if (isTouchDevice)
         {
             // set event pos and pass it along
             const p = vec2(e.touches[0].clientX, e.touches[0].clientY);
-
-            isUsingGamepad = false;
-            wasTouching ? mousePosScreen = mouseToScreen(p) : 
-                inputData[0][button] = 3;
+            mousePosScreen = mouseToScreen(p);
+            wasTouching ? isUsingGamepad = false : inputData[0][button] = 3;
         }
         else if (wasTouching)
-            inputData[0][button] & 2 | 4;
+            inputData[0][button] = inputData[0][button] & 2 | 4;
 
         // set was touching
         wasTouching = touching;
@@ -4451,7 +4452,7 @@ let glCanvas;
 let glContext;
 
 // WebGL internal variables not exposed to documentation
-let glActiveTexture, glShader, glArrayBuffer, glInstanceData, glPositionData, glColorData, glInstanceCount, glBatchAdditive, glAdditive, glGeometryArray, glGeometryBuffer;
+let glShader, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glInstanceCount, glAdditive, glBatchAdditive;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -4494,13 +4495,16 @@ function glInit()
     );
 
     // init buffers
-    glInstanceData = new ArrayBuffer(gl_INSTANCE_BUFFER_SIZE);
+    const glInstanceData = new ArrayBuffer(gl_INSTANCE_BUFFER_SIZE);
     glPositionData = new Float32Array(glInstanceData);
     glColorData = new Uint32Array(glInstanceData);
     glArrayBuffer = glContext.createBuffer();
-    glGeometryArray = new Float32Array([0,0,1,0,0,1,1,1]); // triangle strip square
     glGeometryBuffer = glContext.createBuffer();
-    glInstanceCount = 0;
+
+    // create the geometry buffer, triangle strip square
+    const geometry = new Float32Array([glInstanceCount = 0,0,1,0,0,1,1,1]);
+    glContext.bindBuffer(gl_ARRAY_BUFFER, glGeometryBuffer);
+    glContext.bufferData(gl_ARRAY_BUFFER, geometry, gl_STATIC_DRAW);
 }
 
 // Setup render each frame, called automatically by engine
@@ -4517,19 +4521,18 @@ function glPreRender()
 
     // set vertex attributes
     let offset = glAdditive = glBatchAdditive = 0;
-    const initVertexAttribArray = (name, type, typeSize, size, normalize=false)=>
+    let initVertexAttribArray = (name, type, typeSize, size, normalize=false)=>
     {
         const location = glContext.getAttribLocation(glShader, name);
         const stride = typeSize && gl_INSTANCE_BYTE_STRIDE;
-        const divisor = typeSize ? 1 : 0;
+        const divisor = typeSize && 1;
         glContext.enableVertexAttribArray(location);
         glContext.vertexAttribPointer(location, size, type, normalize, stride, offset);
         glContext.vertexAttribDivisor(location, divisor);
         offset += size*typeSize;
     }
     glContext.bindBuffer(gl_ARRAY_BUFFER, glGeometryBuffer);
-    glContext.bufferData(gl_ARRAY_BUFFER, glGeometryArray, gl_STATIC_DRAW);
-    initVertexAttribArray('g', gl_FLOAT, 0, 2);
+    initVertexAttribArray('g', gl_FLOAT, 0, 2); // geometry
     glContext.bindBuffer(gl_ARRAY_BUFFER, glArrayBuffer);
     glContext.bufferData(gl_ARRAY_BUFFER, gl_INSTANCE_BUFFER_SIZE, gl_DYNAMIC_DRAW);
     initVertexAttribArray('p', gl_FLOAT, 4, 4); // position & size
@@ -4539,16 +4542,14 @@ function glPreRender()
     initVertexAttribArray('r', gl_FLOAT, 4, 1); // rotation
 
     // build the transform matrix
-    const sx = 2 * cameraScale / mainCanvas.width;
-    const sy = 2 * cameraScale / mainCanvas.height;
-    const cx = -1 - sx*cameraPos.x;
-    const cy = -1 - sy*cameraPos.y;
+    const s = vec2(2*cameraScale).divide(mainCanvasSize);
+    const p = vec2(-1).subtract(cameraPos.multiply(s));
     glContext.uniformMatrix4fv(glContext.getUniformLocation(glShader, 'm'), false,
         new Float32Array([
-            sx,  0, 0, 0,
-             0, sy, 0, 0,
-             1,  1, 1, 1,
-            cx, cy, 0, 0
+            s.x, 0,   0,   0,
+            0,   s.y, 0,   0,
+            1,   1,   1,   1,
+            p.x, p.y, 0,   0
         ])
     );
 }
@@ -4637,7 +4638,7 @@ function glFlush()
     glContext.enable(gl_BLEND);
 
     // draw all the sprites in the batch and reset the buffer
-    glContext.bufferSubData(gl_ARRAY_BUFFER, 0, glInstanceData);
+    glContext.bufferSubData(gl_ARRAY_BUFFER, 0, glPositionData);
     glContext.drawArraysInstanced(gl_TRIANGLE_STRIP, 0, 4, glInstanceCount);
     glInstanceCount = 0;
     glBatchAdditive = glAdditive;
@@ -4714,14 +4715,14 @@ function glInitPostProcess(shaderCode, includeOverlay)
         'precision highp float;'+        // use highp for better accuracy
         'in vec2 p;'+                    // position
         'void main(){'+                  // shader entry point
-        'gl_Position=vec4(p+p-1.,1,1);'+      // set position
+        'gl_Position=vec4(p+p-1.,1,1);'+ // set position
         '}'                              // end of shader
         ,
         '#version 300 es\n' +            // specify GLSL ES version
         'precision highp float;'+        // use highp for better accuracy
         'uniform sampler2D iChannel0;'+  // input texture
         'uniform vec3 iResolution;'+     // size of output texture
-        'uniform float iTime;'+          // time passed
+        'uniform float iTime;'+          // time
         'out vec4 c;'+                   // out color
         '\n' + shaderCode + '\n'+        // insert custom shader code
         'void main(){'+                  // shader entry point
@@ -4824,7 +4825,7 @@ gl_UNPACK_FLIP_Y_WEBGL = 37440,
 // constants for batch rendering
 gl_INDICIES_PER_INSTANCE = 11,
 gl_MAX_INSTANCES = 1e5,
-gl_INSTANCE_BYTE_STRIDE = gl_INDICIES_PER_INSTANCE * 4, // 4 * 11
+gl_INSTANCE_BYTE_STRIDE = gl_INDICIES_PER_INSTANCE * 4, // 11 * 4
 gl_INSTANCE_BUFFER_SIZE = gl_MAX_INSTANCES * gl_INSTANCE_BYTE_STRIDE;
 /** 
  * LittleJS - The Tiny JavaScript Game Engine That Can!

@@ -248,8 +248,8 @@ class RandomGenerator
 
 /** 
  * Create a 2d vector, can take another Vector2 to copy, 2 scalars, or 1 scalar
- * @param {(Number|Vector2)} [x=0]
- * @param {Number} [y=0]
+ * @param {(Number|Vector2)} [x]
+ * @param {Number} [y]
  * @return {Vector2}
  * @example
  * let a = vec2(0, 1); // vector with coordinates (0, 1)

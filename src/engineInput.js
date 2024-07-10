@@ -252,20 +252,23 @@ function gamepadsUpdate()
             for (let j = gamepad.buttons.length; j--;)
             {
                 const button = gamepad.buttons[j];
-                data[j] = button.pressed ? gamepadIsDown(j,i) ? 1 : 3 : gamepadIsDown(j,i) ? 4 : 0;
+                const wasDown = gamepadIsDown(j,i);
+                data[j] = button.pressed ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
                 isUsingGamepad ||= !i && button.pressed;
-                touchGamepadEnable && touchGamepadTimer.unset(); // disable touch gamepad if using real gamepad
             }
 
             if (gamepadDirectionEmulateStick)
             {
                 // copy dpad to left analog stick when pressed
                 const dpad = vec2(
-                (gamepadIsDown(15,i)?1:0) - (gamepadIsDown(14,i)?1:0), 
-                (gamepadIsDown(12,i)?1:0) - (gamepadIsDown(13,i)?1:0));
+                    (gamepadIsDown(15,i)&&1) - (gamepadIsDown(14,i)&&1), 
+                    (gamepadIsDown(12,i)&&1) - (gamepadIsDown(13,i)&&1));
                 if (dpad.lengthSquared())
                     sticks[0] = dpad.clampLength();
             }
+
+            // disable touch gamepad if using real gamepad
+            touchGamepadEnable && isUsingGamepad && touchGamepadTimer.unset(); 
         }
     }
 }
@@ -310,13 +313,11 @@ if (isTouchDevice)
         {
             // set event pos and pass it along
             const p = vec2(e.touches[0].clientX, e.touches[0].clientY);
-
-            isUsingGamepad = false;
-            wasTouching ? mousePosScreen = mouseToScreen(p) : 
-                inputData[0][button] = 3;
+            mousePosScreen = mouseToScreen(p);
+            wasTouching ? isUsingGamepad = false : inputData[0][button] = 3;
         }
         else if (wasTouching)
-            inputData[0][button] & 2 | 4;
+            inputData[0][button] = inputData[0][button] & 2 | 4;
 
         // set was touching
         wasTouching = touching;
