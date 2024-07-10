@@ -4,8 +4,7 @@
     "target": "ES6"
   },
   "exclude": [
-    "build/**/*",
-    "src/engineRelease.js",
-    "src/engineExport.js"
+    "engineRelease.js",
+    "engineExport.js"
   ]
 }
