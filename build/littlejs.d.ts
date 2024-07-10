@@ -1411,6 +1411,10 @@ declare module "littlejs.esm" {
         source: AudioBufferSourceNode;
         /** Stop the last instance of this sound that was played */
         stop(): void;
+        /** Get source of most recent instance of this sound that was played
+         *  @return {AudioBufferSourceNode}
+         */
+        getSource(): AudioBufferSourceNode;
         /** Play the sound as a note with a semitone offset
          *  @param {Number}  semitoneOffset - How many semitones to offset pitch
          *  @param {Vector2} [pos] - World space position to play the sound, sound is not attenuated if null

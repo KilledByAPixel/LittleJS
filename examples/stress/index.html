@@ -19,7 +19,7 @@
 'use strict';
 
 // keep our own list of simple sprites and track fps
-let sprites, timeMS, fpsDisplay, statsDisplay, spriteColor, spriteAdditiveColor, playedMusic;
+let sprites, timeMS, fpsDisplay, statsDisplay, spriteColor, spriteAdditiveColor;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -60,11 +60,8 @@ function gameInit()
 ///////////////////////////////////////////////////////////////////////////////
 function gameUpdate()
 {
-    if (!playedMusic && mouseWasPressed(0))
-    {
+    if (mouseWasPressed(0) && !music.getSource())
         music.play();
-        playedMusic = 1;
-    }
 
     // mouse click = change color
     if (mouseWasPressed(0) || mouseIsDown(2))

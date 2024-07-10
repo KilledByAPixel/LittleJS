@@ -2610,6 +2610,11 @@ class Sound
             this.source.stop();
         this.source = undefined;
     }
+    
+    /** Get source of most recent instance of this sound that was played
+     *  @return {AudioBufferSourceNode}
+     */
+    getSource() { return this.source; }
 
     /** Play the sound as a note with a semitone offset
      *  @param {Number}  semitoneOffset - How many semitones to offset pitch
