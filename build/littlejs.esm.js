@@ -602,10 +602,10 @@ function randInCircle(radius=1, minRadius=0)
 /** Returns a random color between the two passed in colors, combine components if linear
  *  @param {Color}   [colorA=Color()]
  *  @param {Color}   [colorB=Color(0,0,0,1)]
- *  @param {Boolean} [linear=false]
+ *  @param {Boolean} [linear]
  *  @return {Color}
  *  @memberof Random */
-function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear)
+function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear=false)
 {
     return linear ? colorA.lerp(colorB, rand()) : 
         new Color(rand(colorA.r,colorB.r), rand(colorA.g,colorB.g), rand(colorA.b,colorB.b), rand(colorA.a,colorB.a));
@@ -2950,10 +2950,10 @@ class Sound
      *  @param {Number}  [volume] - How much to scale volume by (in addition to range fade)
      *  @param {Number}  [pitch] - How much to scale pitch by (also adjusted by this.randomness)
      *  @param {Number}  [randomnessScale] - How much to scale randomness
-     *  @param {Boolean} [loop=false] - Should the sound loop
+     *  @param {Boolean} [loop] - Should the sound loop
      *  @return {AudioBufferSourceNode} - The audio source node
      */
-    play(pos, volume=1, pitch=1, randomnessScale=1, loop)
+    play(pos, volume=1, pitch=1, randomnessScale=1, loop=false)
     {
         if (!soundEnable || !this.sampleChannels) return;
 
@@ -3171,11 +3171,11 @@ let audioContext;
  *  @param {Number}  [volume] - How much to scale volume by
  *  @param {Number}  [rate] - The playback rate to use
  *  @param {Number}  [pan] - How much to apply stereo panning
- *  @param {Boolean} [loop=false] - True if the sound should loop when it reaches the end
+ *  @param {Boolean} [loop] - True if the sound should loop when it reaches the end
  *  @param {Number}  [sampleRate=44100] - Sample rate for the sound
  *  @return {AudioBufferSourceNode} - The audio node of the sound played
  *  @memberof Audio */
-function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop, sampleRate=zzfxR) 
+function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=zzfxR) 
 {
     if (!soundEnable) return;
 
@@ -3590,11 +3590,11 @@ function tileCollisionRaycast(posStart, posEnd, object)
 class TileLayerData
 {
     /** Create a tile layer data object, one for each tile in a TileLayer
-     *  @param {Number}  [tile]         - The tile to use, untextured if undefined
-     *  @param {Number}  [direction]    - Integer direction of tile, in 90 degree increments
-     *  @param {Boolean} [mirror=false] - If the tile should be mirrored along the x axis
-     *  @param {Color}   [color]        - Color of the tile */
-    constructor(tile, direction=0, mirror, color=new Color())
+     *  @param {Number}  [tile]      - The tile to use, untextured if undefined
+     *  @param {Number}  [direction] - Integer direction of tile, in 90 degree increments
+     *  @param {Boolean} [mirror]    - If the tile should be mirrored along the x axis
+     *  @param {Color}   [color]     - Color of the tile */
+    constructor(tile, direction=0, mirror=false, color=new Color())
     {
         /** @property {Number}  - The tile to use, untextured if undefined */
         this.tile      = tile;
@@ -3651,10 +3651,10 @@ class TileLayer extends EngineObject
     }
     
     /** Set data at a given position in the array 
-     *  @param {Vector2}       layerPos       - Local position in array
-     *  @param {TileLayerData} data           - Data to set
-     *  @param {Boolean}       [redraw=false] - Force the tile to redraw if true */
-    setData(layerPos, data, redraw)
+     *  @param {Vector2}       layerPos - Local position in array
+     *  @param {TileLayerData} data     - Data to set
+     *  @param {Boolean}       [redraw] - Force the tile to redraw if true */
+    setData(layerPos, data, redraw=false)
     {
         if (layerPos.arrayCheck(this.size))
         {
@@ -3700,8 +3700,8 @@ class TileLayer extends EngineObject
     }
 
     /** Call to start the redraw process
-     *  @param {Boolean} [clear=false] - Should it clear the canvas before drawing */
-    redrawStart(clear)
+     *  @param {Boolean} [clear] - Should it clear the canvas before drawing */
+    redrawStart(clear=false)
     {
         // save current render settings
         /** @type {[HTMLCanvasElement, CanvasRenderingContext2D, Vector2, Vector2, number]} */
@@ -4401,12 +4401,12 @@ class Newgrounds
     logView() { return this.call('App.logView', {'host':this.host}, true); }
 
     /** Send a message to call a component of the Newgrounds API
-     * @param {String}  component     - Name of the component
-     * @param {Object}  [parameters]  - Parameters to use for call
-     * @param {Boolean} [async=false] - If true, don't wait for response before continuing (avoid stall)
-     * @return {Object}               - The response JSON object
+     * @param {String}  component    - Name of the component
+     * @param {Object}  [parameters] - Parameters to use for call
+     * @param {Boolean} [async]      - If true, don't wait for response before continuing
+     * @return {Object}              - The response JSON object
      */
-    call(component, parameters, async)
+    call(component, parameters, async=false)
     {
         const call = {'component':component, 'parameters':parameters};
         if (this.cipher)
@@ -4663,9 +4663,9 @@ function glFlush()
 
 /** Draw any sprites still in the buffer, copy to main canvas and clear
  *  @param {CanvasRenderingContext2D} context
- *  @param {Boolean} [forceDraw=false]
+ *  @param {Boolean} [forceDraw]
  *  @memberof WebGL */
-function glCopyToContext(context, forceDraw)
+function glCopyToContext(context, forceDraw=false)
 {
     if (!glInstanceCount && !forceDraw) return;
 

@@ -189,10 +189,10 @@ function randInCircle(radius=1, minRadius=0)
 /** Returns a random color between the two passed in colors, combine components if linear
  *  @param {Color}   [colorA=Color()]
  *  @param {Color}   [colorB=Color(0,0,0,1)]
- *  @param {Boolean} [linear=false]
+ *  @param {Boolean} [linear]
  *  @return {Color}
  *  @memberof Random */
-function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear)
+function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear=false)
 {
     return linear ? colorA.lerp(colorB, rand()) : 
         new Color(rand(colorA.r,colorB.r), rand(colorA.g,colorB.g), rand(colorA.b,colorB.b), rand(colorA.a,colorB.a));

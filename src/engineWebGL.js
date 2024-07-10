@@ -220,9 +220,9 @@ function glFlush()
 
 /** Draw any sprites still in the buffer, copy to main canvas and clear
  *  @param {CanvasRenderingContext2D} context
- *  @param {Boolean} [forceDraw=false]
+ *  @param {Boolean} [forceDraw]
  *  @memberof WebGL */
-function glCopyToContext(context, forceDraw)
+function glCopyToContext(context, forceDraw=false)
 {
     if (!glInstanceCount && !forceDraw) return;
 

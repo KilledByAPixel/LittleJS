@@ -134,11 +134,11 @@ function tileCollisionRaycast(posStart, posEnd, object)
 class TileLayerData
 {
     /** Create a tile layer data object, one for each tile in a TileLayer
-     *  @param {Number}  [tile]         - The tile to use, untextured if undefined
-     *  @param {Number}  [direction]    - Integer direction of tile, in 90 degree increments
-     *  @param {Boolean} [mirror=false] - If the tile should be mirrored along the x axis
-     *  @param {Color}   [color]        - Color of the tile */
-    constructor(tile, direction=0, mirror, color=new Color())
+     *  @param {Number}  [tile]      - The tile to use, untextured if undefined
+     *  @param {Number}  [direction] - Integer direction of tile, in 90 degree increments
+     *  @param {Boolean} [mirror]    - If the tile should be mirrored along the x axis
+     *  @param {Color}   [color]     - Color of the tile */
+    constructor(tile, direction=0, mirror=false, color=new Color())
     {
         /** @property {Number}  - The tile to use, untextured if undefined */
         this.tile      = tile;
@@ -195,10 +195,10 @@ class TileLayer extends EngineObject
     }
     
     /** Set data at a given position in the array 
-     *  @param {Vector2}       layerPos       - Local position in array
-     *  @param {TileLayerData} data           - Data to set
-     *  @param {Boolean}       [redraw=false] - Force the tile to redraw if true */
-    setData(layerPos, data, redraw)
+     *  @param {Vector2}       layerPos - Local position in array
+     *  @param {TileLayerData} data     - Data to set
+     *  @param {Boolean}       [redraw] - Force the tile to redraw if true */
+    setData(layerPos, data, redraw=false)
     {
         if (layerPos.arrayCheck(this.size))
         {
@@ -244,8 +244,8 @@ class TileLayer extends EngineObject
     }
 
     /** Call to start the redraw process
-     *  @param {Boolean} [clear=false] - Should it clear the canvas before drawing */
-    redrawStart(clear)
+     *  @param {Boolean} [clear] - Should it clear the canvas before drawing */
+    redrawStart(clear=false)
     {
         // save current render settings
         /** @type {[HTMLCanvasElement, CanvasRenderingContext2D, Vector2, Vector2, number]} */
