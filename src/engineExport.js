@@ -23,6 +23,7 @@ export {
 	
 	// Globals
 	debug,
+	debugOverlay,
 	showWatermark,
 
 	// Debug

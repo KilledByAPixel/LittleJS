@@ -44,8 +44,14 @@ let showWatermark = true;
  *  @memberof Debug */
 let debugKey = 27;
 
+/** True if the debug overlay is active, always false in release builds
+ *  @type {Boolean}
+ *  @default
+ *  @memberof Debug */
+let debugOverlay = false;
+
 // Engine internal variables not exposed to documentation
-let debugPrimitives = [], debugOverlay = false, debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugMedals = false, debugTakeScreenshot, downloadLink;
+let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugMedals = false, debugTakeScreenshot, downloadLink;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Debug helper functions
@@ -1555,12 +1561,12 @@ function setDebugKey(key) { debugKey = key; }
 class EngineObject
 {
     /** Create an engine object and adds it to the list of objects
-     *  @param {Vector2} [pos=Vector2()]     - World space position of the object
-     *  @param {Vector2} [size=Vector2(1,1)] - World space size of the object
-     *  @param {TileInfo} [tileInfo]         - Tile info to render object (undefined is untextured)
-     *  @param {Number}  [angle]             - Angle the object is rotated by
-     *  @param {Color}   [color=Color()]     - Color to apply to tile when rendered
-     *  @param {Number}  [renderOrder]       - Objects sorted by renderOrder before being rendered
+     *  @param {Vector2}  [pos=Vector2()]     - World space position of the object
+     *  @param {Vector2}  [size=Vector2(1,1)] - World space size of the object
+     *  @param {TileInfo} [tileInfo]          - Tile info to render object (undefined is untextured)
+     *  @param {Number}   [angle]             - Angle the object is rotated by
+     *  @param {Color}    [color=Color()]     - Color to apply to tile when rendered
+     *  @param {Number}   [renderOrder]       - Objects sorted by renderOrder before being rendered
      */
     constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color, renderOrder=0)
     {
@@ -1596,33 +1602,33 @@ class EngineObject
         this.elasticity   = objectDefaultElasticity;
         /** @property {Number} [friction=objectDefaultFriction]         - How much friction to apply when sliding (0-1) */
         this.friction     = objectDefaultFriction;
-        /** @property {Number} [gravityScale=1]         - How much to scale gravity by for this object */
+        /** @property {Number}  - How much to scale gravity by for this object */
         this.gravityScale = 1;
-        /** @property {Number} [renderOrder=0]          - Objects are sorted by render order */
+        /** @property {Number}  - Objects are sorted by render order */
         this.renderOrder = renderOrder;
-        /** @property {Vector2} [velocity=Vector2()]    - Velocity of the object */
+        /** @property {Vector2} - Velocity of the object */
         this.velocity = vec2();
-        /** @property {Number} [angleVelocity]          - Angular velocity of the object */
+        /** @property {Number}  - Angular velocity of the object */
         this.angleVelocity = 0;
-        /** @property {Number} [spawnTime]              - Track when object was created  */
+        /** @property {Number}  - Track when object was created  */
         this.spawnTime = time;
-        /** @property {Array} [children=[]]             - List of children of this object */
+        /** @property {Array}   - List of children of this object */
         this.children = [];
 
         // parent child system
-        /** @property {EngineObject} [parent=undefined] - Parent of object if in local space  */
+        /** @property {EngineObject} - Parent of object if in local space  */
         this.parent = undefined;
-        /** @property {Vector2} [localPos=Vector2()]    - Local position if child */
+        /** @property {Vector2}      - Local position if child */
         this.localPos = vec2();
-        /** @property {Number} [localAngle]             - Local angle if child  */
+        /** @property {Number}       - Local angle if child  */
         this.localAngle = 0;
 
         // collision flags
-        /** @property {Boolean} [collideTiles]        - Object collides with the tile collision */
+        /** @property {Boolean} - Object collides with the tile collision */
         this.collideTiles = false;
-        /** @property {Boolean} [collideSolidObjects] - Object collides with solid objects */
+        /** @property {Boolean} - Object collides with solid objects */
         this.collideSolidObjects = false;
-        /** @property {Boolean} [isSolid]             - Object collides with and blocks other objects */
+        /** @property {Boolean} - Object collides with and blocks other objects */
         this.isSolid = false;
 
         // add to list of objects
@@ -4387,12 +4393,12 @@ class Newgrounds
     logView() { return this.call('App.logView', {'host':this.host}, true); }
 
     /** Send a message to call a component of the Newgrounds API
-     * @param {String}  component      - Name of the component
-     * @param {Object}  [parameters=0] - Parameters to use for call
-     * @param {Boolean} [async=false]  - If true, don't wait for response before continuing (avoid stall)
-     * @return {Object}                - The response JSON object
+     * @param {String}  component    - Name of the component
+     * @param {Object}  [parameters] - Parameters to use for call
+     * @param {Boolean} [async]      - If true, don't wait for response before continuing (avoid stall)
+     * @return {Object}              - The response JSON object
      */
-    call(component, parameters=0, async=false)
+    call(component, parameters, async=false)
     {
         const call = {'component':component, 'parameters':parameters};
         if (this.cipher)
@@ -4468,20 +4474,20 @@ function glInit()
 
     // setup vertex and fragment shaders
     glShader = glCreateProgram(
-        '#version 300 es\n' +         // specify GLSL ES version
-        'precision highp float;'+     // use highp for better accuracy
-        'uniform mat4 m;'+            // transform matrix
-        'in vec2 g;'+                 // geometry
-        'in vec4 p,u,c,a;'+           // position/size, uvs, color, additiveColor
-        'in float r;'+                // rotation
-        'out vec2 v;'+                // return uv, color, additiveColor
-        'out vec4 d,e;'+              // return uv, color, additiveColor
-        'void main(){'+               // shader entry point
-        'vec2 s=(g-.5)*p.zw;'+        // get size offset
+        '#version 300 es\n' +     // specify GLSL ES version
+        'precision highp float;'+ // use highp for better accuracy
+        'uniform mat4 m;'+        // transform matrix
+        'in vec2 g;'+             // geometry
+        'in vec4 p,u,c,a;'+       // position/size, uvs, color, additiveColor
+        'in float r;'+            // rotation
+        'out vec2 v;'+            // return uv, color, additiveColor
+        'out vec4 d,e;'+          // return uv, color, additiveColor
+        'void main(){'+           // shader entry point
+        'vec2 s=(g-.5)*p.zw;'+    // get size offset
         'gl_Position=m*vec4(p.xy+s*cos(r)-vec2(-s.y,s)*sin(r),1,1);'+ // transform position
-        'v=g.xy*u.zy+(1.-g)*u.xw;'+   // pass uv to fragment shader
-        'd=c;e=a;'+                   // pass colors to fragment shader
-        '}'                           // end of shader
+        'v=mix(u.xw,u.zy,g);'+    // pass uv to fragment shader
+        'd=c;e=a;'+               // pass colors to fragment shader
+        '}'                       // end of shader
         ,
         '#version 300 es\n' +     // specify GLSL ES version
         'precision highp float;'+ // use highp for better accuracy

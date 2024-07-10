@@ -40,8 +40,14 @@ let showWatermark = true;
  *  @memberof Debug */
 let debugKey = 27;
 
+/** True if the debug overlay is active, always false in release builds
+ *  @type {Boolean}
+ *  @default
+ *  @memberof Debug */
+let debugOverlay = false;
+
 // Engine internal variables not exposed to documentation
-let debugPrimitives = [], debugOverlay = false, debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugMedals = false, debugTakeScreenshot, downloadLink;
+let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugMedals = false, debugTakeScreenshot, downloadLink;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Debug helper functions

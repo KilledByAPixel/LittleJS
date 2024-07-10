@@ -99,6 +99,11 @@ declare module "littlejs.esm" {
      *  @default
      *  @memberof Debug */
     export const debug: boolean;
+    /** True if the debug overlay is active, always false in release builds
+     *  @type {Boolean}
+     *  @default
+     *  @memberof Debug */
+    export let debugOverlay: boolean;
     /** True if watermark with FPS should be shown, false in release builds
      *  @type {Boolean}
      *  @default
@@ -1560,12 +1565,12 @@ declare module "littlejs.esm" {
      */
     export class EngineObject {
         /** Create an engine object and adds it to the list of objects
-         *  @param {Vector2} [pos=Vector2()]     - World space position of the object
-         *  @param {Vector2} [size=Vector2(1,1)] - World space size of the object
-         *  @param {TileInfo} [tileInfo]         - Tile info to render object (undefined is untextured)
-         *  @param {Number}  [angle]             - Angle the object is rotated by
-         *  @param {Color}   [color=Color()]     - Color to apply to tile when rendered
-         *  @param {Number}  [renderOrder]       - Objects sorted by renderOrder before being rendered
+         *  @param {Vector2}  [pos=Vector2()]     - World space position of the object
+         *  @param {Vector2}  [size=Vector2(1,1)] - World space size of the object
+         *  @param {TileInfo} [tileInfo]          - Tile info to render object (undefined is untextured)
+         *  @param {Number}   [angle]             - Angle the object is rotated by
+         *  @param {Color}    [color=Color()]     - Color to apply to tile when rendered
+         *  @param {Number}   [renderOrder]       - Objects sorted by renderOrder before being rendered
          */
         constructor(pos?: Vector2, size?: Vector2, tileInfo?: TileInfo, angle?: number, color?: Color, renderOrder?: number);
         /** @property {Vector2} - World space position of the object */
@@ -1594,29 +1599,29 @@ declare module "littlejs.esm" {
         elasticity: number;
         /** @property {Number} [friction=objectDefaultFriction]         - How much friction to apply when sliding (0-1) */
         friction: number;
-        /** @property {Number} [gravityScale=1]         - How much to scale gravity by for this object */
+        /** @property {Number}  - How much to scale gravity by for this object */
         gravityScale: number;
-        /** @property {Number} [renderOrder=0]          - Objects are sorted by render order */
+        /** @property {Number}  - Objects are sorted by render order */
         renderOrder: number;
-        /** @property {Vector2} [velocity=Vector2()]    - Velocity of the object */
+        /** @property {Vector2} - Velocity of the object */
         velocity: Vector2;
-        /** @property {Number} [angleVelocity]          - Angular velocity of the object */
+        /** @property {Number}  - Angular velocity of the object */
         angleVelocity: number;
-        /** @property {Number} [spawnTime]              - Track when object was created  */
+        /** @property {Number}  - Track when object was created  */
         spawnTime: number;
-        /** @property {Array} [children=[]]             - List of children of this object */
+        /** @property {Array}   - List of children of this object */
         children: any[];
-        /** @property {EngineObject} [parent=undefined] - Parent of object if in local space  */
+        /** @property {EngineObject} - Parent of object if in local space  */
         parent: any;
-        /** @property {Vector2} [localPos=Vector2()]    - Local position if child */
+        /** @property {Vector2}      - Local position if child */
         localPos: Vector2;
-        /** @property {Number} [localAngle]             - Local angle if child  */
+        /** @property {Number}       - Local angle if child  */
         localAngle: number;
-        /** @property {Boolean} [collideTiles]        - Object collides with the tile collision */
+        /** @property {Boolean} - Object collides with the tile collision */
         collideTiles: boolean;
-        /** @property {Boolean} [collideSolidObjects] - Object collides with solid objects */
+        /** @property {Boolean} - Object collides with solid objects */
         collideSolidObjects: boolean;
-        /** @property {Boolean} [isSolid]             - Object collides with and blocks other objects */
+        /** @property {Boolean} - Object collides with and blocks other objects */
         isSolid: boolean;
         /** Update the object transform and physics, called automatically by engine once each frame */
         update(): void;
@@ -2073,10 +2078,10 @@ declare module "littlejs.esm" {
         /** Send message to log a view */
         logView(): any;
         /** Send a message to call a component of the Newgrounds API
-         * @param {String}  component      - Name of the component
-         * @param {Object}  [parameters=0] - Parameters to use for call
-         * @param {Boolean} [async=false]  - If true, don't wait for response before continuing (avoid stall)
-         * @return {Object}                - The response JSON object
+         * @param {String}  component    - Name of the component
+         * @param {Object}  [parameters] - Parameters to use for call
+         * @param {Boolean} [async]      - If true, don't wait for response before continuing (avoid stall)
+         * @return {Object}              - The response JSON object
          */
         call(component: string, parameters?: any, async?: boolean): any;
     }
