@@ -53,7 +53,7 @@ function gameInit()
 
     // display stats using a div so when using glOverlay it still appears on top
     document.body.appendChild(statsDisplay = document.createElement('div'));
-    statsDisplay.style = 'position:absolute;width:100%;top:50%;left:50%;transform:translate(-50%,-50%);font-size:6em;text-align:center;font-family:arial;user-select:none';
+    statsDisplay.style = 'position:absolute;width:100%;font-size:6em;text-align:center;font-family:arial;user-select:none';
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -110,9 +110,9 @@ function gameRender()
     statsDisplay.innerText =
         spriteCount + objectCount ?
             spriteCount + ' Sprites\n'
-            + objectCount + ' Objects\n'
+            + (objectCount ? objectCount + ' Objects\n' : '')
             + fpsDisplay.toFixed(1) + ' FPS'
-        : 'LittleJS Stress Test\nLeft Click = Add Particles\nRight Click = Add Objects';
+        : 'LittleJS Stress Test\nLeft Click = Add Sprites\nRight Click = Add Objects';
 
     const size = vec2(.5);
     for (const sprite of sprites)
