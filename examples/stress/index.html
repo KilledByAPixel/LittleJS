@@ -82,7 +82,7 @@ function gameUpdate()
         for (let i=100;i--;)
             sprites.push({
                 pos:mousePos.add(randInCircle(2)),
-                angle:rand(),
+                angle:rand(2*PI),
                 velocity:randInCircle(.2),
                 color:spriteColor.rgbaInt(),
                 additiveColor:spriteAdditiveColor.rgbaInt()
