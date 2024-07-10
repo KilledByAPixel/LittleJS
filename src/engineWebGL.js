@@ -39,20 +39,20 @@ function glInit()
 
     // setup vertex and fragment shaders
     glShader = glCreateProgram(
-        '#version 300 es\n' +         // specify GLSL ES version
-        'precision highp float;'+     // use highp for better accuracy
-        'uniform mat4 m;'+            // transform matrix
-        'in vec2 g;'+                 // geometry
-        'in vec4 p,u,c,a;'+           // position/size, uvs, color, additiveColor
-        'in float r;'+                // rotation
-        'out vec2 v;'+                // return uv, color, additiveColor
-        'out vec4 d,e;'+              // return uv, color, additiveColor
-        'void main(){'+               // shader entry point
-        'vec2 s=(g-.5)*p.zw;'+        // get size offset
+        '#version 300 es\n' +     // specify GLSL ES version
+        'precision highp float;'+ // use highp for better accuracy
+        'uniform mat4 m;'+        // transform matrix
+        'in vec2 g;'+             // geometry
+        'in vec4 p,u,c,a;'+       // position/size, uvs, color, additiveColor
+        'in float r;'+            // rotation
+        'out vec2 v;'+            // return uv, color, additiveColor
+        'out vec4 d,e;'+          // return uv, color, additiveColor
+        'void main(){'+           // shader entry point
+        'vec2 s=(g-.5)*p.zw;'+    // get size offset
         'gl_Position=m*vec4(p.xy+s*cos(r)-vec2(-s.y,s)*sin(r),1,1);'+ // transform position
-        'v=g.xy*u.zy+(1.-g)*u.xw;'+   // pass uv to fragment shader
-        'd=c;e=a;'+                   // pass colors to fragment shader
-        '}'                           // end of shader
+        'v=mix(u.xw,u.zy,g);'+    // pass uv to fragment shader
+        'd=c;e=a;'+               // pass colors to fragment shader
+        '}'                       // end of shader
         ,
         '#version 300 es\n' +     // specify GLSL ES version
         'precision highp float;'+ // use highp for better accuracy
