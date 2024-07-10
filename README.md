@@ -37,7 +37,7 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 ### ✨ Graphics
 
 - Super fast sprite and tile map rendering engine with WebGL
-- Update and render well over 10,000 sprites at a solid 60fps
+- Update and render 100,000+ sprites at a solid 60fps
 - Apply [Shadertoy](https://www.shadertoy.com) compatible shaders for post-processing effects
 - Robust particle effect system and [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
 
