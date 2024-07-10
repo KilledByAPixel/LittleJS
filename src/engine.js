@@ -447,16 +447,16 @@ function drawEngineSplashScreen(t)
     for (let i=5; i--;)
     {
         // stagger radius to fix slight seam
-        circle(59-i*6,30, 9.9,0,2*PI,color(i+2,3));
-        circle(59-i*6,30,10.0,-.5,PI+.5,color(i+2,2));
-        circle(59-i*6,30,10.1,.5,PI-.5,color(i+2,1));
+        circle(60-i*6,30, 9.9,0,2*PI,color(i+2,3));
+        circle(60-i*6,30,10.0,-.5,PI+.5,color(i+2,2));
+        circle(60-i*6,30,10.1,.5,PI-.5,color(i+2,1));
     }
 
     // engine outline
-    circle(35,30,10,PI/2,PI*3/2);
-    circle(46,30,10,PI/2,PI*3/2);
-    circle(59,30,10);
-    line(35,20,60,20);
+    circle(36,30,10,PI/2,PI*3/2);
+    circle(47,30,10,PI/2,PI*3/2);
+    circle(60,30,10);
+    line(36,20,60,20);
 
     // engine front light
     circle(60,30,4,PI,3*PI,color(3,2)); 
