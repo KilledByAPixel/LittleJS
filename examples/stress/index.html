@@ -37,15 +37,16 @@ class TestObject extends EngineObject
 function gameInit()
 {
     // create tile collision
-    initTileCollision(vec2(50,38));
+    const w = 94;
+    initTileCollision(vec2(w,w*.5625|0));
     for (let x = tileCollisionSize.x; x--;)
         setTileCollisionData(vec2(x,0), 1), setTileCollisionData(vec2(x,tileCollisionSize.y-1), 1);
     for (let y = tileCollisionSize.y; y--;)
         setTileCollisionData(vec2(0,y), 1), setTileCollisionData(vec2(tileCollisionSize.x-1,y), 1);
 
     // set things up
-    canvasFixedSize = vec2(800, 600); // 720p
-    cameraScale = 16;
+    canvasFixedSize = vec2(1920, 1080); // 1080p
+    cameraScale = 20;
     cameraPos = tileCollisionSize.scale(.5);
     mainCanvas.style.background = '#555';
     sprites = [];
@@ -53,7 +54,7 @@ function gameInit()
 
     // display stats using a div so when using glOverlay it still appears on top
     document.body.appendChild(statsDisplay = document.createElement('div'));
-    statsDisplay.style = 'position:absolute;width:100%;font-size:6em;text-align:center;font-family:arial;user-select:none';
+    statsDisplay.style = 'position:absolute;width:100%;font-size:3em;text-align:center;font-family:arial;user-select:none;';
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -105,14 +106,20 @@ function gameRender()
     fpsDisplay = lerp(.05, fpsDisplay||0, 1e3/(frameTimeMS - timeMS||1));
     timeMS = frameTimeMS;
 
+    // show stats 
     const spriteCount = sprites.length
     const objectCount = engineObjects.length;
     statsDisplay.innerText =
         spriteCount + objectCount ?
-            spriteCount + ' Sprites\n'
-            + (objectCount ? objectCount + ' Objects\n' : '')
+            spriteCount + ' Sprites / '
+            + (objectCount ? objectCount + ' Objects / ' : '')
             + fpsDisplay.toFixed(1) + ' FPS'
         : 'LittleJS Stress Test\nLeft Click = Add Sprites\nRight Click = Add Objects';
+
+    // position stats
+    const canvasRect = mainCanvas.getBoundingClientRect();
+    statsDisplay.style.top = canvasRect.top+'px';
+    statsDisplay.style.fontSize = canvasRect.width*.04+'px';
 
     const size = vec2(.5);
     for (const sprite of sprites)
@@ -126,7 +133,7 @@ function gameRender()
 
         // bounce
         if (sprite.pos.y < 0)
-            sprite.velocity.y = rand(.3,.6);
+            sprite.velocity.y = rand(.3,.8);
         if (sprite.pos.x < 0)
             sprite.pos.x = 0, sprite.velocity.x *= -1;
         if (sprite.pos.x > tileCollisionSize.x)
