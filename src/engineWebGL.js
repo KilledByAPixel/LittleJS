@@ -212,6 +212,8 @@ function glFlush()
     // draw all the sprites in the batch and reset the buffer
     glContext.bufferSubData(gl_ARRAY_BUFFER, 0, glPositionData);
     glContext.drawArraysInstanced(gl_TRIANGLE_STRIP, 0, 4, glInstanceCount);
+    if (showWatermark)
+        drawCount += glInstanceCount;
     glInstanceCount = 0;
     glBatchAdditive = glAdditive;
 }
@@ -396,6 +398,6 @@ gl_UNPACK_FLIP_Y_WEBGL = 37440,
 
 // constants for batch rendering
 gl_INDICIES_PER_INSTANCE = 11,
-gl_MAX_INSTANCES = 1e5,
+gl_MAX_INSTANCES = 1e4,
 gl_INSTANCE_BYTE_STRIDE = gl_INDICIES_PER_INSTANCE * 4, // 11 * 4
 gl_INSTANCE_BUFFER_SIZE = gl_MAX_INSTANCES * gl_INSTANCE_BYTE_STRIDE;

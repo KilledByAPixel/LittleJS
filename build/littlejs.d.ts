@@ -1404,7 +1404,7 @@ declare module "littlejs.esm" {
          *  @param {Number}  [volume] - How much to scale volume by (in addition to range fade)
          *  @param {Number}  [pitch] - How much to scale pitch by (also adjusted by this.randomness)
          *  @param {Number}  [randomnessScale] - How much to scale randomness
-         *  @param {Boolean} [loop] - Should the sound loop
+         *  @param {Boolean} [loop=false] - Should the sound loop
          *  @return {AudioBufferSourceNode} - The audio source node
          */
         play(pos?: Vector2, volume?: number, pitch?: number, randomnessScale?: number, loop?: boolean): AudioBufferSourceNode;
@@ -1523,7 +1523,7 @@ declare module "littlejs.esm" {
      *  @param {Number}  [volume] - How much to scale volume by
      *  @param {Number}  [rate] - The playback rate to use
      *  @param {Number}  [pan] - How much to apply stereo panning
-     *  @param {Boolean} [loop] - True if the sound should loop when it reaches the end
+     *  @param {Boolean} [loop=false] - True if the sound should loop when it reaches the end
      *  @param {Number}  [sampleRate=44100] - Sample rate for the sound
      *  @return {AudioBufferSourceNode} - The audio node of the sound played
      *  @memberof Audio */
@@ -1734,10 +1734,10 @@ declare module "littlejs.esm" {
      */
     export class TileLayerData {
         /** Create a tile layer data object, one for each tile in a TileLayer
-         *  @param {Number}  [tile]      - The tile to use, untextured if undefined
-         *  @param {Number}  [direction] - Integer direction of tile, in 90 degree increments
-         *  @param {Boolean} [mirror]    - If the tile should be mirrored along the x axis
-         *  @param {Color}   [color]     - Color of the tile */
+         *  @param {Number}  [tile]         - The tile to use, untextured if undefined
+         *  @param {Number}  [direction]    - Integer direction of tile, in 90 degree increments
+         *  @param {Boolean} [mirror=false] - If the tile should be mirrored along the x axis
+         *  @param {Color}   [color]        - Color of the tile */
         constructor(tile?: number, direction?: number, mirror?: boolean, color?: Color);
         /** @property {Number}  - The tile to use, untextured if undefined */
         tile: number;
@@ -1781,8 +1781,8 @@ declare module "littlejs.esm" {
         isOverlay: boolean;
         data: TileLayerData[];
         /** Set data at a given position in the array
-         *  @param {Vector2}       layerPos   - Local position in array
-         *  @param {TileLayerData} data       - Data to set
+         *  @param {Vector2}       layerPos       - Local position in array
+         *  @param {TileLayerData} data           - Data to set
          *  @param {Boolean}       [redraw=false] - Force the tile to redraw if true */
         setData(layerPos: Vector2, data: TileLayerData, redraw?: boolean): void;
         /** Get data at a given position in the array
@@ -2078,10 +2078,10 @@ declare module "littlejs.esm" {
         /** Send message to log a view */
         logView(): any;
         /** Send a message to call a component of the Newgrounds API
-         * @param {String}  component    - Name of the component
-         * @param {Object}  [parameters] - Parameters to use for call
-         * @param {Boolean} [async]      - If true, don't wait for response before continuing (avoid stall)
-         * @return {Object}              - The response JSON object
+         * @param {String}  component     - Name of the component
+         * @param {Object}  [parameters]  - Parameters to use for call
+         * @param {Boolean} [async=false] - If true, don't wait for response before continuing (avoid stall)
+         * @return {Object}               - The response JSON object
          */
         call(component: string, parameters?: any, async?: boolean): any;
     }

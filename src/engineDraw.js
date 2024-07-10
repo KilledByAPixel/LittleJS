@@ -199,7 +199,6 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     ASSERT(typeof tileInfo !== 'number' || !tileInfo); // prevent old style calls
     // to fix old calls, replace with tile(tileIndex, tileSize)
 
-    showWatermark && ++drawCount;
     const textureInfo = tileInfo && tileInfo.getTextureInfo();
     if (useWebGL)
     {
@@ -233,6 +232,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     else
     {
         // normal canvas 2D rendering method (slower)
+        showWatermark && ++drawCount;
         drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
             if (textureInfo)

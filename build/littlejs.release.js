@@ -1739,7 +1739,6 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     ASSERT(typeof tileInfo !== 'number' || !tileInfo); // prevent old style calls
     // to fix old calls, replace with tile(tileIndex, tileSize)
 
-    showWatermark && ++drawCount;
     const textureInfo = tileInfo && tileInfo.getTextureInfo();
     if (useWebGL)
     {
@@ -1773,6 +1772,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     else
     {
         // normal canvas 2D rendering method (slower)
+        showWatermark && ++drawCount;
         drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
             if (textureInfo)
@@ -2560,10 +2560,10 @@ class Sound
      *  @param {Number}  [volume] - How much to scale volume by (in addition to range fade)
      *  @param {Number}  [pitch] - How much to scale pitch by (also adjusted by this.randomness)
      *  @param {Number}  [randomnessScale] - How much to scale randomness
-     *  @param {Boolean} [loop] - Should the sound loop
+     *  @param {Boolean} [loop=false] - Should the sound loop
      *  @return {AudioBufferSourceNode} - The audio source node
      */
-    play(pos, volume=1, pitch=1, randomnessScale=1, loop=false)
+    play(pos, volume=1, pitch=1, randomnessScale=1, loop)
     {
         if (!soundEnable || !this.sampleChannels) return;
 
@@ -2781,11 +2781,11 @@ let audioContext;
  *  @param {Number}  [volume] - How much to scale volume by
  *  @param {Number}  [rate] - The playback rate to use
  *  @param {Number}  [pan] - How much to apply stereo panning
- *  @param {Boolean} [loop] - True if the sound should loop when it reaches the end
+ *  @param {Boolean} [loop=false] - True if the sound should loop when it reaches the end
  *  @param {Number}  [sampleRate=44100] - Sample rate for the sound
  *  @return {AudioBufferSourceNode} - The audio node of the sound played
  *  @memberof Audio */
-function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=zzfxR) 
+function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop, sampleRate=zzfxR) 
 {
     if (!soundEnable) return;
 
@@ -3200,11 +3200,11 @@ function tileCollisionRaycast(posStart, posEnd, object)
 class TileLayerData
 {
     /** Create a tile layer data object, one for each tile in a TileLayer
-     *  @param {Number}  [tile]      - The tile to use, untextured if undefined
-     *  @param {Number}  [direction] - Integer direction of tile, in 90 degree increments
-     *  @param {Boolean} [mirror]    - If the tile should be mirrored along the x axis
-     *  @param {Color}   [color]     - Color of the tile */
-    constructor(tile, direction=0, mirror=false, color=new Color())
+     *  @param {Number}  [tile]         - The tile to use, untextured if undefined
+     *  @param {Number}  [direction]    - Integer direction of tile, in 90 degree increments
+     *  @param {Boolean} [mirror=false] - If the tile should be mirrored along the x axis
+     *  @param {Color}   [color]        - Color of the tile */
+    constructor(tile, direction=0, mirror, color=new Color())
     {
         /** @property {Number}  - The tile to use, untextured if undefined */
         this.tile      = tile;
@@ -3261,8 +3261,8 @@ class TileLayer extends EngineObject
     }
     
     /** Set data at a given position in the array 
-     *  @param {Vector2}       layerPos   - Local position in array
-     *  @param {TileLayerData} data       - Data to set
+     *  @param {Vector2}       layerPos       - Local position in array
+     *  @param {TileLayerData} data           - Data to set
      *  @param {Boolean}       [redraw=false] - Force the tile to redraw if true */
     setData(layerPos, data, redraw)
     {
@@ -3311,7 +3311,7 @@ class TileLayer extends EngineObject
 
     /** Call to start the redraw process
      *  @param {Boolean} [clear=false] - Should it clear the canvas before drawing */
-    redrawStart(clear = false)
+    redrawStart(clear)
     {
         // save current render settings
         /** @type {[HTMLCanvasElement, CanvasRenderingContext2D, Vector2, Vector2, number]} */
@@ -4011,12 +4011,12 @@ class Newgrounds
     logView() { return this.call('App.logView', {'host':this.host}, true); }
 
     /** Send a message to call a component of the Newgrounds API
-     * @param {String}  component    - Name of the component
-     * @param {Object}  [parameters] - Parameters to use for call
-     * @param {Boolean} [async]      - If true, don't wait for response before continuing (avoid stall)
-     * @return {Object}              - The response JSON object
+     * @param {String}  component     - Name of the component
+     * @param {Object}  [parameters]  - Parameters to use for call
+     * @param {Boolean} [async=false] - If true, don't wait for response before continuing (avoid stall)
+     * @return {Object}               - The response JSON object
      */
-    call(component, parameters, async=false)
+    call(component, parameters, async)
     {
         const call = {'component':component, 'parameters':parameters};
         if (this.cipher)
@@ -4126,7 +4126,7 @@ function glInit()
     glGeometryBuffer = glContext.createBuffer();
 
     // create the geometry buffer, triangle strip square
-    const geometry = new Float32Array([glInstanceCount = 0,0,1,0,0,1,1,1]);
+    const geometry = new Float32Array([glInstanceCount=0,0,1,0,0,1,1,1]);
     glContext.bindBuffer(gl_ARRAY_BUFFER, glGeometryBuffer);
     glContext.bufferData(gl_ARRAY_BUFFER, geometry, gl_STATIC_DRAW);
 }
@@ -4145,11 +4145,12 @@ function glPreRender()
 
     // set vertex attributes
     let offset = glAdditive = glBatchAdditive = 0;
-    let initVertexAttribArray = (name, type, typeSize, size, normalize=false)=>
+    let initVertexAttribArray = (name, type, typeSize, size)=>
     {
         const location = glContext.getAttribLocation(glShader, name);
-        const stride = typeSize && gl_INSTANCE_BYTE_STRIDE;
-        const divisor = typeSize && 1;
+        const stride = typeSize && gl_INSTANCE_BYTE_STRIDE; // only if not geometry
+        const divisor = typeSize && 1; // only if not geometry
+        const normalize = typeSize==1; // only if color
         glContext.enableVertexAttribArray(location);
         glContext.vertexAttribPointer(location, size, type, normalize, stride, offset);
         glContext.vertexAttribDivisor(location, divisor);
@@ -4161,8 +4162,8 @@ function glPreRender()
     glContext.bufferData(gl_ARRAY_BUFFER, gl_INSTANCE_BUFFER_SIZE, gl_DYNAMIC_DRAW);
     initVertexAttribArray('p', gl_FLOAT, 4, 4); // position & size
     initVertexAttribArray('u', gl_FLOAT, 4, 4); // texture coords
-    initVertexAttribArray('c', gl_UNSIGNED_BYTE, 1, 4, true); // color
-    initVertexAttribArray('a', gl_UNSIGNED_BYTE, 1, 4, true); // additiveColor
+    initVertexAttribArray('c', gl_UNSIGNED_BYTE, 1, 4); // color
+    initVertexAttribArray('a', gl_UNSIGNED_BYTE, 1, 4); // additiveColor
     initVertexAttribArray('r', gl_FLOAT, 4, 1); // rotation
 
     // build the transform matrix
@@ -4264,13 +4265,15 @@ function glFlush()
     // draw all the sprites in the batch and reset the buffer
     glContext.bufferSubData(gl_ARRAY_BUFFER, 0, glPositionData);
     glContext.drawArraysInstanced(gl_TRIANGLE_STRIP, 0, 4, glInstanceCount);
+    if (showWatermark)
+        drawCount += glInstanceCount;
     glInstanceCount = 0;
     glBatchAdditive = glAdditive;
 }
 
 /** Draw any sprites still in the buffer, copy to main canvas and clear
  *  @param {CanvasRenderingContext2D} context
- *  @param {Boolean} [forceDraw=0]
+ *  @param {Boolean} [forceDraw=false]
  *  @memberof WebGL */
 function glCopyToContext(context, forceDraw)
 {
@@ -4448,7 +4451,7 @@ gl_UNPACK_FLIP_Y_WEBGL = 37440,
 
 // constants for batch rendering
 gl_INDICIES_PER_INSTANCE = 11,
-gl_MAX_INSTANCES = 1e5,
+gl_MAX_INSTANCES = 1e4,
 gl_INSTANCE_BYTE_STRIDE = gl_INDICIES_PER_INSTANCE * 4, // 11 * 4
 gl_INSTANCE_BUFFER_SIZE = gl_MAX_INSTANCES * gl_INSTANCE_BYTE_STRIDE;
 /** 

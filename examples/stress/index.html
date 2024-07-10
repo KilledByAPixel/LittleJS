@@ -49,7 +49,7 @@ function gameInit()
     cameraPos = tileCollisionSize.scale(.5);
     mainCanvas.style.background = '#555';
     sprites = [];
-    gravity = -.01;
+    gravity = -.005;
 
     // display stats using a div so when using glOverlay it still appears on top
     document.body.appendChild(statsDisplay = document.createElement('div'));
@@ -126,14 +126,14 @@ function gameRender()
 
         // bounce
         if (sprite.pos.y < 0)
-            sprite.velocity.y = rand(1,.5);
+            sprite.velocity.y = rand(.3,.6);
         if (sprite.pos.x < 0)
             sprite.pos.x = 0, sprite.velocity.x *= -1;
         if (sprite.pos.x > tileCollisionSize.x)
             sprite.pos.x = tileCollisionSize.x, sprite.velocity.x *= -1;
 
         // rotate sprite
-        sprite.angle += .01*sign(sprite.velocity.x);
+        sprite.angle += .02*sign(sprite.velocity.x);
 
         // draw the sprite
         glDraw(sprite.pos.x, sprite.pos.y, 1, 1, sprite.angle, 0, 0, 1, 1,
