@@ -73,7 +73,7 @@ function glInit()
     glGeometryBuffer = glContext.createBuffer();
 
     // create the geometry buffer, triangle strip square
-    const geometry = new Float32Array([glInstanceCount = 0,0,1,0,0,1,1,1]);
+    const geometry = new Float32Array([glInstanceCount=0,0,1,0,0,1,1,1]);
     glContext.bindBuffer(gl_ARRAY_BUFFER, glGeometryBuffer);
     glContext.bufferData(gl_ARRAY_BUFFER, geometry, gl_STATIC_DRAW);
 }
@@ -92,11 +92,12 @@ function glPreRender()
 
     // set vertex attributes
     let offset = glAdditive = glBatchAdditive = 0;
-    let initVertexAttribArray = (name, type, typeSize, size, normalize=false)=>
+    let initVertexAttribArray = (name, type, typeSize, size)=>
     {
         const location = glContext.getAttribLocation(glShader, name);
-        const stride = typeSize && gl_INSTANCE_BYTE_STRIDE;
-        const divisor = typeSize && 1;
+        const stride = typeSize && gl_INSTANCE_BYTE_STRIDE; // only if not geometry
+        const divisor = typeSize && 1; // only if not geometry
+        const normalize = typeSize==1; // only if color
         glContext.enableVertexAttribArray(location);
         glContext.vertexAttribPointer(location, size, type, normalize, stride, offset);
         glContext.vertexAttribDivisor(location, divisor);
@@ -108,8 +109,8 @@ function glPreRender()
     glContext.bufferData(gl_ARRAY_BUFFER, gl_INSTANCE_BUFFER_SIZE, gl_DYNAMIC_DRAW);
     initVertexAttribArray('p', gl_FLOAT, 4, 4); // position & size
     initVertexAttribArray('u', gl_FLOAT, 4, 4); // texture coords
-    initVertexAttribArray('c', gl_UNSIGNED_BYTE, 1, 4, true); // color
-    initVertexAttribArray('a', gl_UNSIGNED_BYTE, 1, 4, true); // additiveColor
+    initVertexAttribArray('c', gl_UNSIGNED_BYTE, 1, 4); // color
+    initVertexAttribArray('a', gl_UNSIGNED_BYTE, 1, 4); // additiveColor
     initVertexAttribArray('r', gl_FLOAT, 4, 1); // rotation
 
     // build the transform matrix
@@ -217,7 +218,7 @@ function glFlush()
 
 /** Draw any sprites still in the buffer, copy to main canvas and clear
  *  @param {CanvasRenderingContext2D} context
- *  @param {Boolean} [forceDraw=0]
+ *  @param {Boolean} [forceDraw=false]
  *  @memberof WebGL */
 function glCopyToContext(context, forceDraw)
 {

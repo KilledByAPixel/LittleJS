@@ -250,12 +250,12 @@ class Newgrounds
     logView() { return this.call('App.logView', {'host':this.host}, true); }
 
     /** Send a message to call a component of the Newgrounds API
-     * @param {String}  component    - Name of the component
-     * @param {Object}  [parameters] - Parameters to use for call
-     * @param {Boolean} [async]      - If true, don't wait for response before continuing (avoid stall)
-     * @return {Object}              - The response JSON object
+     * @param {String}  component     - Name of the component
+     * @param {Object}  [parameters]  - Parameters to use for call
+     * @param {Boolean} [async=false] - If true, don't wait for response before continuing (avoid stall)
+     * @return {Object}               - The response JSON object
      */
-    call(component, parameters, async=false)
+    call(component, parameters, async)
     {
         const call = {'component':component, 'parameters':parameters};
         if (this.cipher)

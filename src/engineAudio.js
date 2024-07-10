@@ -57,10 +57,10 @@ class Sound
      *  @param {Number}  [volume] - How much to scale volume by (in addition to range fade)
      *  @param {Number}  [pitch] - How much to scale pitch by (also adjusted by this.randomness)
      *  @param {Number}  [randomnessScale] - How much to scale randomness
-     *  @param {Boolean} [loop] - Should the sound loop
+     *  @param {Boolean} [loop=false] - Should the sound loop
      *  @return {AudioBufferSourceNode} - The audio source node
      */
-    play(pos, volume=1, pitch=1, randomnessScale=1, loop=false)
+    play(pos, volume=1, pitch=1, randomnessScale=1, loop)
     {
         if (!soundEnable || !this.sampleChannels) return;
 
@@ -278,11 +278,11 @@ let audioContext;
  *  @param {Number}  [volume] - How much to scale volume by
  *  @param {Number}  [rate] - The playback rate to use
  *  @param {Number}  [pan] - How much to apply stereo panning
- *  @param {Boolean} [loop] - True if the sound should loop when it reaches the end
+ *  @param {Boolean} [loop=false] - True if the sound should loop when it reaches the end
  *  @param {Number}  [sampleRate=44100] - Sample rate for the sound
  *  @return {AudioBufferSourceNode} - The audio node of the sound played
  *  @memberof Audio */
-function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=zzfxR) 
+function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop, sampleRate=zzfxR) 
 {
     if (!soundEnable) return;
 
