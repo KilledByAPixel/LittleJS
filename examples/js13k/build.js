@@ -26,7 +26,7 @@ const fs = require('node:fs');
 const child_process = require('node:child_process');
 
 // rebuild engine
-child_process.execSync(`npm run build`, { stdio: 'inherit' });
+//child_process.execSync(`npm run build`, { stdio: 'inherit' });
 
 // remove old files and setup build folder
 fs.rmSync(BUILD_FOLDER, { recursive: true, force: true });
