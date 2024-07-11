@@ -276,7 +276,7 @@ let glPostShader, glPostArrayBuffer, glPostTexture, glPostIncludeOverlay;
  *  @param {String} shaderCode
  *  @param {Boolean} includeOverlay
  *  @memberof WebGL */
-function glInitPostProcess(shaderCode, includeOverlay)
+function glInitPostProcess(shaderCode, includeOverlay=false)
 {
     ASSERT(!glPostShader, 'can only have 1 post effects shader');
 
@@ -312,6 +312,8 @@ function glInitPostProcess(shaderCode, includeOverlay)
 
     // hide the original 2d canvas
     mainCanvas.style.visibility = 'hidden';
+    if (glPostIncludeOverlay)
+        overlayCanvas.style.visibility = 'hidden';
 }
 
 // Render the post processing shader, called automatically by the engine
@@ -332,14 +334,8 @@ function glRenderPostProcess()
         glContext.viewport(0, 0, glCanvas.width = mainCanvas.width, glCanvas.height = mainCanvas.height);
     }
 
-    if (glPostIncludeOverlay)
-    {
-        // copy overlay canvas so it will be included in post processing
-        mainContext.drawImage(overlayCanvas, 0, 0);
-
-        // clear overlay canvas
-        overlayCanvas.width = mainCanvas.width;
-    }
+    // copy overlay canvas so it will be included in post processing
+    glPostIncludeOverlay && mainContext.drawImage(overlayCanvas, 0, 0);
 
     // setup shader program to draw one triangle
     glContext.useProgram(glPostShader);
