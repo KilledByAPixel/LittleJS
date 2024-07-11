@@ -11,9 +11,43 @@ var MIN_FONT_SIZE = 10;
 var localStorage = window.localStorage;
 
 function getTheme() {
-    var body = document.body;
+    var theme = localStorage.getItem(themeLocalStorageKey);
 
-    return body.getAttribute('data-theme');
+    if (theme) return theme;
+
+    theme = document.body.getAttribute('data-theme');
+
+    switch (theme) {
+        case 'dark':
+        case 'light':
+            return theme;
+        case 'fallback-dark':
+            if (
+                // eslint-disable-next-line no-undef
+                window.matchMedia('(prefers-color-scheme)').matches &&
+                // eslint-disable-next-line no-undef
+                window.matchMedia('(prefers-color-scheme: light)').matches
+            ) {
+                return 'light';
+            }
+
+            return 'dark';
+
+        case 'fallback-light':
+            if (
+                // eslint-disable-next-line no-undef
+                window.matchMedia('(prefers-color-scheme)').matches &&
+                // eslint-disable-next-line no-undef
+                window.matchMedia('(prefers-color-scheme: dark)').matches
+            ) {
+                return 'dark';
+            }
+
+            return 'light';
+
+        default:
+            return 'dark';
+    }
 }
 
 function localUpdateTheme(theme) {
@@ -47,17 +81,7 @@ function toggleTheme() {
 (function () {
     var theme = getTheme();
 
-    var themeStoredInLocalStorage = localStorage.getItem(themeLocalStorageKey);
-
-    if (themeStoredInLocalStorage) {
-        if (theme === themeStoredInLocalStorage) {
-            return;
-        }
-
-        updateTheme(themeStoredInLocalStorage);
-    } else {
-        localStorage.setItem(themeLocalStorageKey, theme);
-    }
+    updateTheme(theme);
 })();
 
 /**
@@ -152,8 +176,11 @@ function bringElementIntoView(element, updateHistory = true) {
      */
     // eslint-disable-next-line no-undef
     if (tocbotInstance) {
-        // eslint-disable-next-line no-undef
-        setTimeout(() => tocbotInstance.updateTocListActiveElement(element), 60)
+        setTimeout(
+            // eslint-disable-next-line no-undef
+            () => tocbotInstance.updateTocListActiveElement(element),
+            60
+        );
     }
     var navbar = document.querySelector('.navbar-container');
     var body = document.querySelector('.main-content');
@@ -252,7 +279,6 @@ function addAnchor() {
  * @param {string} value
  */
 function copy(value) {
-    console.log(value);
     const el = document.createElement('textarea');
 
     el.value = value;
@@ -460,8 +486,9 @@ function fontSizeTooltip() {
 
     return `
   <div class="font-size-tooltip">
-    <button aria-label="decrease-font-size" class="icon-button ${fontSize >= MAX_FONT_SIZE ? 'disabled' : ''
-        }" onclick="decrementFont(event)">
+    <button aria-label="decrease-font-size" class="icon-button ${
+        fontSize >= MAX_FONT_SIZE ? 'disabled' : ''
+    }" onclick="decrementFont(event)">
       <svg>
         <use xlink:href="#minus-icon"></use>
       </svg>
@@ -469,8 +496,9 @@ function fontSizeTooltip() {
     <div class="font-size-text" id="b77a68a492f343baabea06fad81f651e">
       ${fontSize}
     </div>
-    <button aria-label="increase-font-size" class="icon-button ${fontSize <= MIN_FONT_SIZE ? 'disabled' : ''
-        }" onclick="incrementFont(event)">
+    <button aria-label="increase-font-size" class="icon-button ${
+        fontSize <= MIN_FONT_SIZE ? 'disabled' : ''
+    }" onclick="incrementFont(event)">
       <svg>
         <use xlink:href="#add-icon"></use>
       </svg>
@@ -490,31 +518,31 @@ function initTooltip() {
     // eslint-disable-next-line no-undef
     tippy('.theme-toggle', {
         content: 'Toggle Theme',
-        delay: 500
+        delay: 500,
     });
 
     // eslint-disable-next-line no-undef
     tippy('.search-button', {
         content: 'Search',
-        delay: 500
+        delay: 500,
     });
 
     // eslint-disable-next-line no-undef
     tippy('.font-size', {
         content: 'Change font size',
-        delay: 500
+        delay: 500,
     });
 
     // eslint-disable-next-line no-undef
     tippy('.codepen-button', {
         content: 'Open code in CodePen',
-        placement: 'left'
+        placement: 'left',
     });
 
     // eslint-disable-next-line no-undef
     tippy('.copy-code', {
         content: 'Copy this code',
-        placement: 'left'
+        placement: 'left',
     });
 
     // eslint-disable-next-line no-undef
@@ -523,7 +551,7 @@ function initTooltip() {
         trigger: 'click',
         interactive: true,
         allowHTML: true,
-        placement: 'left'
+        placement: 'left',
     });
 }
 
@@ -604,6 +632,29 @@ function addHrefToSidebarTitle() {
     });
 }
 
+function highlightActiveLinkInSidebar() {
+    const list = document.location.href.split('/');
+    const targetURL = list[list.length - 1];
+    let element = document.querySelector(`.sidebar a[href*='${targetURL}']`);
+
+    if (!element) {
+        try {
+            element = document.querySelector(
+                `.sidebar a[href*='${targetURL.split('#')[0]}']`
+            );
+        } catch (e) {
+            console.error(e);
+
+            return;
+        }
+    }
+
+    if (!element) return;
+
+    element.parentElement.classList.add('active');
+    element.scrollIntoView();
+}
+
 function onDomContentLoaded() {
     var themeButton = document.querySelectorAll('.theme-toggle');
 
@@ -624,13 +675,13 @@ function onDomContentLoaded() {
             // we are able to cross-check the correctness of
             // result.
             obj.el.parentNode.setAttribute('data-lang', 'code');
-        }
+        },
     });
     // eslint-disable-next-line no-undef
     hljs.highlightAll();
     // eslint-disable-next-line no-undef
     hljs.initLineNumbersOnLoad({
-        singleLine: true
+        singleLine: true,
     });
 
     // Highlight complete
@@ -648,6 +699,7 @@ function onDomContentLoaded() {
     initTooltip();
     fixTable();
     addHrefToSidebarTitle();
+    highlightActiveLinkInSidebar();
 }
 
 // eslint-disable-next-line no-undef
@@ -663,13 +715,12 @@ window.addEventListener('hashchange', (event) => {
 });
 
 // eslint-disable-next-line no-undef
-window.addEventListener('storage', event => {
+window.addEventListener('storage', (event) => {
     if (event.newValue === 'undefined') return;
 
     initTooltip();
 
-    if (event.key === themeLocalStorageKey)
-        localUpdateTheme(event.newValue);
+    if (event.key === themeLocalStorageKey) localUpdateTheme(event.newValue);
     if (event.key === fontSizeLocalStorageKey)
         localUpdateFontSize(event.newValue);
 });
