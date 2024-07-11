@@ -278,7 +278,7 @@ let glPostShader, glPostArrayBuffer, glPostTexture, glPostIncludeOverlay;
  *  @memberof WebGL */
 function glInitPostProcess(shaderCode, includeOverlay)
 {
-    ASSERT(!glPostShader); // can only have 1 post effects shader
+    ASSERT(!glPostShader, 'can only have 1 post effects shader');
 
     if (!shaderCode) // default shader pass through
         shaderCode = 'void mainImage(out vec4 c,vec2 p){c=texture(iChannel0,p/iResolution.xy);}';

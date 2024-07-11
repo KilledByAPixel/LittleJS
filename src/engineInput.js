@@ -16,7 +16,7 @@
  *  @memberof Input */
 function keyIsDown(key, device=0)
 { 
-    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'Use code string for keyboard!');
+    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return inputData[device] && !!(inputData[device][key] & 1); 
 }
 
@@ -27,7 +27,7 @@ function keyIsDown(key, device=0)
  *  @memberof Input */
 function keyWasPressed(key, device=0)
 { 
-    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'Use code string for keyboard!');
+    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return inputData[device] && !!(inputData[device][key] & 2); 
 }
 
@@ -38,7 +38,7 @@ function keyWasPressed(key, device=0)
  *  @memberof Input */
 function keyWasReleased(key, device=0)
 { 
-    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'Use code string for keyboard!');
+    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return inputData[device] && !!(inputData[device][key] & 4);
 }
 

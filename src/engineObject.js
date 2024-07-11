@@ -42,8 +42,8 @@ class EngineObject
     constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color, renderOrder=0)
     {
         // set passed in params
-        ASSERT(isVector2(pos) && isVector2(size)); // ensure pos and size are vec2s
-        ASSERT(typeof tileInfo !== 'number' || !tileInfo); // prevent old style calls
+        ASSERT(isVector2(pos) && isVector2(size), 'ensure pos and size are vec2s');
+        ASSERT(typeof tileInfo !== 'number' || !tileInfo, 'old style tile setup');
 
         /** @property {Vector2} - World space position of the object */
         this.pos = pos.copy();
@@ -363,7 +363,7 @@ class EngineObject
      *  @param {Boolean} [collideTiles]        - Does it collide with the tile collision */
     setCollision(collideSolidObjects=true, isSolid=true, collideTiles=true)
     {
-        ASSERT(collideSolidObjects || !isSolid); // solid objects must be set to collide
+        ASSERT(collideSolidObjects || !isSolid, 'solid objects must be set to collide');
 
         this.collideSolidObjects = collideSolidObjects;
         this.isSolid = isSolid;

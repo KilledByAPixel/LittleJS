@@ -71,7 +71,7 @@ class Medal
             return;
 
         // save the medal
-        ASSERT(medalsSaveName); // save name must be set
+        ASSERT(medalsSaveName, 'save name must be set');
         localStorage[this.storageKey()] = this.unlocked = 1;
         medalsDisplayQueue.push(this);
         newgrounds && newgrounds.unlockMedal(this.id);
@@ -179,8 +179,8 @@ class Newgrounds
      *  @param {Object} [cryptoJS] - An instance of CryptoJS, if there is a cipher */
     constructor(app_id, cipher, cryptoJS)
     {
-        ASSERT(!newgrounds && app_id>0); // can only be one newgrounds object
-        ASSERT(!cipher || cryptoJS);   // must provide cryptojs if there is a cipher
+        ASSERT(!newgrounds && app_id>0, 'there can only be one newgrounds object');
+        ASSERT(!cipher || cryptoJS, 'must provide cryptojs if there is a cipher');
 
         this.app_id = app_id;
         this.cipher = cipher;

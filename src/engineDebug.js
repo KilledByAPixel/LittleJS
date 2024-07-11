@@ -68,7 +68,7 @@ function ASSERT(assert, output) { enableAsserts && console.assert(assert, output
  *  @memberof Debug */
 function debugRect(pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)
 {
-    ASSERT(typeof color == 'string'); // pass in regular html strings as colors
+    ASSERT(typeof color == 'string', 'pass in css color strings'); 
     debugPrimitives.push({pos, size:vec2(size), color, time:new Timer(time), angle, fill});
 }
 
@@ -81,7 +81,7 @@ function debugRect(pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)
  *  @memberof Debug */
 function debugCircle(pos, radius=0, color='#fff', time=0, fill=false)
 {
-    ASSERT(typeof color == 'string'); // pass in regular html strings as colors
+    ASSERT(typeof color == 'string', 'pass in css color strings');
     debugPrimitives.push({pos, size:radius, color, time:new Timer(time), angle:0, fill});
 }
 
@@ -132,7 +132,7 @@ function debugAABB(pA, sA, pB, sB, color)
  *  @memberof Debug */
 function debugText(text, pos, size=1, color='#fff', time=0, angle=0, font='monospace')
 {
-    ASSERT(typeof color == 'string'); // pass in regular html strings as colors
+    ASSERT(typeof color == 'string', 'pass in css color strings');
     debugPrimitives.push({text, pos, size, color, time:new Timer(time), angle, font});
 }
 

@@ -219,7 +219,7 @@ class TileLayer extends EngineObject
     // Render the tile layer, called automatically by the engine
     render()
     {
-        ASSERT(mainContext != this.context); // must call redrawEnd() after drawing tiles
+        ASSERT(mainContext != this.context, 'must call redrawEnd() after drawing tiles');
 
         // flush and copy gl canvas because tile canvas does not use webgl
         glEnable && !glOverlay && !this.isOverlay && glCopyToContext(mainContext);
@@ -271,7 +271,7 @@ class TileLayer extends EngineObject
     /** Call to end the redraw process */
     redrawEnd()
     {
-        ASSERT(mainContext == this.context); // must call redrawStart() before drawing tiles
+        ASSERT(mainContext == this.context, 'must call redrawStart() before drawing tiles');
         glEnable && glCopyToContext(mainContext, true);
         //debugSaveCanvas(this.canvas);
 
@@ -291,7 +291,7 @@ class TileLayer extends EngineObject
         const d = this.getData(layerPos);
         if (d.tile != undefined)
         {
-            ASSERT(mainContext == this.context); // must call redrawStart() before drawing tiles
+            ASSERT(mainContext == this.context, 'must call redrawStart() before drawing tiles');
             const tileInfo = tile(d.tile, this.tileInfo.size, this.tileInfo.textureIndex);
             drawTile(pos, vec2(1), tileInfo, d.color, d.direction*PI/2, d.mirror);
         }

@@ -95,7 +95,7 @@ let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
  *  @memberof Engine */
 function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=['tiles.png'])
 {
-    ASSERT(Array.isArray(imageSources)); // pass in images as array
+    ASSERT(Array.isArray(imageSources), 'pass in images as array');
 
     // internal update loop for engine
     function engineUpdate(frameTimeMS=0)
@@ -233,8 +233,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     overlayContext = overlayCanvas.getContext('2d');
 
     // set canvas style
-    const styleCanvas = 
-        'position:absolute;' +                             // position
+    const styleCanvas = 'position:absolute;' +             // position
         'top:50%;left:50%;transform:translate(-50%,-50%)'; // center
     (glCanvas||mainCanvas).style.cssText = mainCanvas.style.cssText = overlayCanvas.style.cssText = styleCanvas;
     
@@ -256,12 +255,12 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     showSplashScreen && promises.push(new Promise(resolve => 
     {
         let t = 0;
-        console.log(`LittleJS Engine v${engineVersion}`);
+        console.log(`${engineName} Engine v${engineVersion}`);
         updateSplash();
         function updateSplash()
         {
             clearInput();
-            drawEngineSplashScreen(t += .01);
+            drawEngineSplashScreen(t+=.01);
             t>1 ? resolve() : setTimeout(updateSplash, 16);
         }
     }));

@@ -29,7 +29,7 @@ const sound_killEnemy =    new Sound([,,783,,.03,.02,1,2,,,940,.03,,,,,.2,.6,,.0
 const persistentParticleDestroyCallback = (particle)=>
 {
     // copy particle to tile layer on death
-    ASSERT(!particle.tileInfo); // quick draw to tile layer uses canvas 2d so must be untextured
+    ASSERT(!particle.tileInfo, 'quick draw to tile layer uses canvas 2d so must be untextured');
     if (particle.groundObject)
         tileLayer.drawTile(particle.pos, particle.size, particle.tileInfo, particle.color, particle.angle, particle.mirror);
 }
