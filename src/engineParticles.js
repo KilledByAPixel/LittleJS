@@ -31,10 +31,10 @@ class ParticleEmitter extends EngineObject
      *  @param {Number} [emitRate] - How many particles per second to spawn, does not emit if 0
      *  @param {Number} [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
      *  @param {TileInfo} [tileInfo] - Tile info to render particles (undefined is untextured)
-     *  @param {Color} [colorStartA=Color()] - Color at start of life 1, randomized between start colors
-     *  @param {Color} [colorStartB=Color()] - Color at start of life 2, randomized between start colors
-     *  @param {Color} [colorEndA=Color(1,1,1,0)] - Color at end of life 1, randomized between end colors
-     *  @param {Color} [colorEndB=Color(1,1,1,0)] - Color at end of life 2, randomized between end colors
+     *  @param {Color} [colorStartA=(1,1,1,1)] - Color at start of life 1, randomized between start colors
+     *  @param {Color} [colorStartB=(1,1,1,1)] - Color at start of life 2, randomized between start colors
+     *  @param {Color} [colorEndA=(1,1,1,0)] - Color at end of life 1, randomized between end colors
+     *  @param {Color} [colorEndB=(1,1,1,0)] - Color at end of life 2, randomized between end colors
      *  @param {Number} [particleTime]      - How long particles live
      *  @param {Number} [sizeStart]         - How big are particles at start
      *  @param {Number} [sizeEnd]           - How big are particles at end

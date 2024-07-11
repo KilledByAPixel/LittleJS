@@ -121,11 +121,11 @@ function smoothStep(percent) { return percent * percent * (3 - 2 * percent); }
 function nearestPowerOfTwo(value) { return 2**Math.ceil(Math.log2(value)); }
 
 /** Returns true if two axis aligned bounding boxes are overlapping 
- *  @param {Vector2} pointA  - Center of box A
- *  @param {Vector2} sizeA   - Size of box A
- *  @param {Vector2} pointB  - Center of box B
- *  @param {Vector2} sizeB   - Size of box B
- *  @return {Boolean}        - True if overlapping
+ *  @param {Vector2} pointA - Center of box A
+ *  @param {Vector2} sizeA  - Size of box A
+ *  @param {Vector2} pointB - Center of box B
+ *  @param {Vector2} sizeB  - Size of box B
+ *  @return {Boolean}       - True if overlapping
  *  @memberof Utilities */
 function isOverlapping(pointA, sizeA, pointB, sizeB)
 { 

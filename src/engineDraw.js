@@ -61,7 +61,7 @@ let drawCount;
  * Create a tile info object
  * - This can take vecs or floats for easier use and conversion
  * - If an index is passed in, the tile size and index will determine the position
- * @param {(Number|Vector2)} [pos=Vector2()]        - Top left corner of tile in pixels or index
+ * @param {(Number|Vector2)} [pos=(0,0)]            - Top left corner of tile in pixels or index
  * @param {(Number|Vector2)} [size=tileSizeDefault] - Size of tile in pixels
  * @param {Number} [textureIndex]                   - Texture index to use
  * @return {TileInfo}
@@ -104,7 +104,7 @@ function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0)
 class TileInfo
 {
     /** Create a tile info object
-     *  @param {Vector2} [pos=Vector2()]        - Top left corner of tile in pixels
+     *  @param {Vector2} [pos=(0,0)]            - Top left corner of tile in pixels
      *  @param {Vector2} [size=tileSizeDefault] - Size of tile in pixels
      *  @param {Number}  [textureIndex]         - Texture index to use
      */
@@ -181,16 +181,16 @@ function worldToScreen(worldPos)
 }
 
 /** Draw textured tile centered in world space, with color applied if using WebGL
- *  @param {Vector2} pos                            - Center of the tile in world space
- *  @param {Vector2} [size=Vector2(1,1)]            - Size of the tile in world space
- *  @param {TileInfo}[tileInfo]                     - Tile info to use, untextured if undefined
- *  @param {Color}   [color=Color()]                - Color to modulate with
- *  @param {Number}  [angle]                        - Angle to rotate by
- *  @param {Boolean} [mirror]                       - If true image is flipped along the Y axis
- *  @param {Color}   [additiveColor=Color(0,0,0,0)] - Additive color to be applied
- *  @param {Boolean} [useWebGL=glEnable]            - Use accelerated WebGL rendering
- *  @param {Boolean} [screenSpace]                  - If true the pos and size are in screen space
- *  @param {CanvasRenderingContext2D} [context]     - Canvas 2D context to draw to
+ *  @param {Vector2} pos                        - Center of the tile in world space
+ *  @param {Vector2} [size=(1,1)]               - Size of the tile in world space
+ *  @param {TileInfo}[tileInfo]                 - Tile info to use, untextured if undefined
+ *  @param {Color}   [color=(1,1,1,1)]          - Color to modulate with
+ *  @param {Number}  [angle]                    - Angle to rotate by
+ *  @param {Boolean} [mirror]                   - If true image is flipped along the Y axis
+ *  @param {Color}   [additiveColor=(0,0,0,0)]  - Additive color to be applied
+ *  @param {Boolean} [useWebGL=glEnable]        - Use accelerated WebGL rendering
+ *  @param {Boolean} [screenSpace]              - If true the pos and size are in screen space
+ *  @param {CanvasRenderingContext2D} [context] - Canvas 2D context to draw to
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     angle=0, mirror, additiveColor=new Color(0,0,0,0), useWebGL=glEnable, screenSpace, context)
@@ -258,8 +258,8 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
 
 /** Draw colored rect centered on pos
  *  @param {Vector2} pos
- *  @param {Vector2} [size=Vector2(1,1)]
- *  @param {Color}   [color=Color()]
+ *  @param {Vector2} [size=(1,1)]
+ *  @param {Color}   [color=(1,1,1,1)]
  *  @param {Number}  [angle]
  *  @param {Boolean} [useWebGL=glEnable]
  *  @param {Boolean} [screenSpace]
@@ -272,7 +272,7 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
 
 /** Draw colored polygon using passed in points
  *  @param {Array}   points - Array of Vector2 points
- *  @param {Color}   [color=Color()]
+ *  @param {Color}   [color=(1,1,1,1)]
  *  @param {Boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
@@ -289,7 +289,7 @@ function drawPoly(points, color=new Color, screenSpace, context=mainContext)
  *  @param {Vector2} posA
  *  @param {Vector2} posB
  *  @param {Number}  [thickness]
- *  @param {Color}   [color=Color()]
+ *  @param {Color}   [color=(1,1,1,1)]
  *  @param {Boolean} [useWebGL=glEnable]
  *  @param {Boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D} [context]
@@ -349,9 +349,9 @@ function setBlendMode(additive, useWebGL=glEnable, context)
  *  @param {String}  text
  *  @param {Vector2} pos
  *  @param {Number}  [size]
- *  @param {Color}   [color=Color()]
+ *  @param {Color}   [color=(1,1,1,1)]
  *  @param {Number}  [lineWidth]
- *  @param {Color}   [lineColor=Color(0,0,0)]
+ *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {CanvasTextAlign}  [textAlign='center']
  *  @param {String}  [font=fontDefault]
  *  @param {CanvasRenderingContext2D} [context=overlayContext]
@@ -366,9 +366,9 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
  *  @param {String}  text
  *  @param {Vector2} pos
  *  @param {Number}  [size]
- *  @param {Color}   [color=Color()]
+ *  @param {Color}   [color=(1,1,1,1)]
  *  @param {Number}  [lineWidth]
- *  @param {Color}   [lineColor=Color(0,0,0)]
+ *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {CanvasTextAlign}  [textAlign]
  *  @param {String}  [font=fontDefault]
  *  @param {CanvasRenderingContext2D} [context=overlayContext]
@@ -411,9 +411,9 @@ let engineFontImage;
 class FontImage
 {
     /** Create an image font
-     *  @param {HTMLImageElement} [image] - Image for the font, if undefined default font is used
-     *  @param {Vector2} [tileSize=Vector2(8)] - Size of the font source tiles
-     *  @param {Vector2} [paddingSize=Vector2(0,1)] - How much extra space to add between characters
+     *  @param {HTMLImageElement} [image]    - Image for the font, if undefined default font is used
+     *  @param {Vector2} [tileSize=(8,8)]    - Size of the font source tiles
+     *  @param {Vector2} [paddingSize=(0,1)] - How much extra space to add between characters
      *  @param {CanvasRenderingContext2D} [context=overlayContext] - context to draw to
      */
     constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1), context=overlayContext)

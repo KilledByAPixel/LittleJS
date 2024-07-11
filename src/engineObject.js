@@ -32,12 +32,12 @@
 class EngineObject
 {
     /** Create an engine object and adds it to the list of objects
-     *  @param {Vector2}  [pos=Vector2()]     - World space position of the object
-     *  @param {Vector2}  [size=Vector2(1,1)] - World space size of the object
-     *  @param {TileInfo} [tileInfo]          - Tile info to render object (undefined is untextured)
-     *  @param {Number}   [angle]             - Angle the object is rotated by
-     *  @param {Color}    [color=Color()]     - Color to apply to tile when rendered
-     *  @param {Number}   [renderOrder]       - Objects sorted by renderOrder before being rendered
+     *  @param {Vector2}  [pos=(0,0)]       - World space position of the object
+     *  @param {Vector2}  [size=(1,1)]      - World space size of the object
+     *  @param {TileInfo} [tileInfo]        - Tile info to render object (undefined is untextured)
+     *  @param {Number}   [angle]           - Angle the object is rotated by
+     *  @param {Color}    [color=(1,1,1,1)] - Color to apply to tile when rendered
+     *  @param {Number}   [renderOrder]     - Objects sorted by renderOrder before being rendered
      */
     constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color, renderOrder=0)
     {
@@ -337,7 +337,7 @@ class EngineObject
 
     /** Attaches a child to this with a given local transform
      *  @param {EngineObject} child
-     *  @param {Vector2}      [localPos=Vector2()]
+     *  @param {Vector2}      [localPos=(0,0)]
      *  @param {Number}       [localAngle] */
     addChild(child, localPos=vec2(), localAngle=0)
     {

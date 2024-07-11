@@ -53,7 +53,7 @@ function getTileCollisionData(pos)
 
 /** Check if collision with another object should occur
  *  @param {Vector2}      pos
- *  @param {Vector2}      [size=Vector2(1,1)]
+ *  @param {Vector2}      [size=(1,1)]
  *  @param {EngineObject} [object]
  *  @return {Boolean}
  *  @memberof TileCollision */
@@ -169,11 +169,11 @@ class TileLayerData
 class TileLayer extends EngineObject
 {
     /** Create a tile layer object
-    *  @param {Vector2}  [position=Vector2()]     - World space position
+    *  @param {Vector2}  [position=(0,0)]     - World space position
     *  @param {Vector2}  [size=tileCollisionSize] - World space size
-    *  @param {TileInfo} [tileInfo]               - Tile info for layer
-    *  @param {Vector2}  [scale=Vector2(1,1)]     - How much to scale this layer when rendered
-    *  @param {Number}   [renderOrder]            - Objects sorted by renderOrder before being rendered
+    *  @param {TileInfo} [tileInfo]    - Tile info for layer
+    *  @param {Vector2}  [scale=(1,1)] - How much to scale this layer when rendered
+    *  @param {Number}   [renderOrder] - Objects are sorted by renderOrder
     */
     constructor(position, size=tileCollisionSize, tileInfo=tile(), scale=vec2(1), renderOrder=0)
     {
@@ -326,9 +326,9 @@ class TileLayer extends EngineObject
 
     /** Draw a tile directly onto the layer canvas
      *  @param {Vector2}  pos
-     *  @param {Vector2}  [size=Vector2(1,1)]
+     *  @param {Vector2}  [size=(1,1)]
      *  @param {TileInfo} [tileInfo]
-     *  @param {Color}    [color=Color()]
+     *  @param {Color}    [color=(1,1,1,1)]
      *  @param {Number}   [angle=0]
      *  @param {Boolean}  [mirror=0] */
     drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle, mirror)
@@ -355,8 +355,8 @@ class TileLayer extends EngineObject
 
     /** Draw a rectangle directly onto the layer canvas
      *  @param {Vector2} pos
-     *  @param {Vector2} [size=Vector2(1,1)]
-     *  @param {Color}   [color=Color()]
+     *  @param {Vector2} [size=(1,1)]
+     *  @param {Color}   [color=(1,1,1,1)]
      *  @param {Number}  [angle=0] */
     drawRect(pos, size, color, angle) 
     { this.drawTile(pos, size, undefined, color, angle); }
