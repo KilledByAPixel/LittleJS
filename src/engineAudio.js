@@ -481,7 +481,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
   let notFirstBeat;
   let stop;
   let instrument;
-  let attenuation = 0;
+  let attenuation;
   let outSampleOffset;
   let isSequenceEnd;
   let sampleOffset = 0;
@@ -491,7 +491,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
   let rightChannelBuffer = [];
   let channelIndex = 0;
   let panning = 0;
-  let hasMore = true;
+  let hasMore = 1;
   let sampleCache = {};
   let beatLength = zzfxR / BPM * 60 >> 2;
 
@@ -499,8 +499,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
   for (; hasMore; channelIndex++) {
 
     // reset current values
-    notFirstBeat = hasMore = false;
-    sampleBuffer = [outSampleOffset = 0];
+    sampleBuffer = [hasMore = notFirstBeat = outSampleOffset = 0];
 
     // for each pattern in sequence
     sequence.forEach((patternIndex, sequenceIndex) => {
@@ -508,7 +507,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
       patternChannel = patterns[patternIndex][channelIndex] || [0, 0, 0];
 
       // check if there are more channels
-      hasMore ||= !!patterns[patternIndex][channelIndex];
+      hasMore |= patterns[patternIndex][channelIndex]&&1;
 
       // get next offset, use the length of first channel
       nextSampleOffset = outSampleOffset + (patterns[patternIndex][0].length - 2 - (notFirstBeat?0:1)) * beatLength;
