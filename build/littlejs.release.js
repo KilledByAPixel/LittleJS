@@ -1189,8 +1189,8 @@ class EngineObject
     constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color, renderOrder=0)
     {
         // set passed in params
-        ASSERT(isVector2(pos) && isVector2(size)); // ensure pos and size are vec2s
-        ASSERT(typeof tileInfo !== 'number' || !tileInfo); // prevent old style calls
+        ASSERT(isVector2(pos) && isVector2(size), 'ensure pos and size are vec2s');
+        ASSERT(typeof tileInfo !== 'number' || !tileInfo, 'old style tile setup');
 
         /** @property {Vector2} - World space position of the object */
         this.pos = pos.copy();
@@ -1510,7 +1510,7 @@ class EngineObject
      *  @param {Boolean} [collideTiles]        - Does it collide with the tile collision */
     setCollision(collideSolidObjects=true, isSolid=true, collideTiles=true)
     {
-        ASSERT(collideSolidObjects || !isSolid); // solid objects must be set to collide
+        ASSERT(collideSolidObjects || !isSolid, 'solid objects must be set to collide');
 
         this.collideSolidObjects = collideSolidObjects;
         this.isSolid = isSolid;
@@ -1735,9 +1735,9 @@ function worldToScreen(worldPos)
 function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     angle=0, mirror, additiveColor=new Color(0,0,0,0), useWebGL=glEnable, screenSpace, context)
 {
-    ASSERT(!context || !useWebGL); // context only supported in canvas 2D mode
-    ASSERT(typeof tileInfo !== 'number' || !tileInfo); // prevent old style calls
-    // to fix old calls, replace with tile(tileIndex, tileSize)
+    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode'); 
+    ASSERT(typeof tileInfo !== 'number' || !tileInfo, 
+        'this is an old style calls, to fix replace it with tile(tileIndex, tileSize)');
 
     const textureInfo = tileInfo && tileInfo.getTextureInfo();
     if (useWebGL)
@@ -1873,7 +1873,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, conte
  *  @memberof Draw */
 function setBlendMode(additive, useWebGL=glEnable, context)
 {
-    ASSERT(!context || !useWebGL); // context only supported in canvas 2D mode
+    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
     if (useWebGL)
         glAdditive = additive;
     else
@@ -2056,7 +2056,7 @@ function toggleFullscreen()
  *  @memberof Input */
 function keyIsDown(key, device=0)
 { 
-    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'Use code string for keyboard!');
+    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return inputData[device] && !!(inputData[device][key] & 1); 
 }
 
@@ -2067,7 +2067,7 @@ function keyIsDown(key, device=0)
  *  @memberof Input */
 function keyWasPressed(key, device=0)
 { 
-    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'Use code string for keyboard!');
+    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return inputData[device] && !!(inputData[device][key] & 2); 
 }
 
@@ -2078,7 +2078,7 @@ function keyWasPressed(key, device=0)
  *  @memberof Input */
 function keyWasReleased(key, device=0)
 { 
-    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'Use code string for keyboard!');
+    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return inputData[device] && !!(inputData[device][key] & 4);
 }
 
@@ -2996,7 +2996,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
   let notFirstBeat;
   let stop;
   let instrument;
-  let attenuation = 0;
+  let attenuation;
   let outSampleOffset;
   let isSequenceEnd;
   let sampleOffset = 0;
@@ -3006,7 +3006,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
   let rightChannelBuffer = [];
   let channelIndex = 0;
   let panning = 0;
-  let hasMore = true;
+  let hasMore = 1;
   let sampleCache = {};
   let beatLength = zzfxR / BPM * 60 >> 2;
 
@@ -3014,8 +3014,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
   for (; hasMore; channelIndex++) {
 
     // reset current values
-    notFirstBeat = hasMore = false;
-    sampleBuffer = [outSampleOffset = 0];
+    sampleBuffer = [hasMore = notFirstBeat = outSampleOffset = 0];
 
     // for each pattern in sequence
     sequence.forEach((patternIndex, sequenceIndex) => {
@@ -3023,7 +3022,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
       patternChannel = patterns[patternIndex][channelIndex] || [0, 0, 0];
 
       // check if there are more channels
-      hasMore ||= !!patterns[patternIndex][channelIndex];
+      hasMore |= patterns[patternIndex][channelIndex]&&1;
 
       // get next offset, use the length of first channel
       nextSampleOffset = outSampleOffset + (patterns[patternIndex][0].length - 2 - (notFirstBeat?0:1)) * beatLength;
@@ -3302,7 +3301,7 @@ class TileLayer extends EngineObject
     // Render the tile layer, called automatically by the engine
     render()
     {
-        ASSERT(mainContext != this.context); // must call redrawEnd() after drawing tiles
+        ASSERT(mainContext != this.context, 'must call redrawEnd() after drawing tiles');
 
         // flush and copy gl canvas because tile canvas does not use webgl
         glEnable && !glOverlay && !this.isOverlay && glCopyToContext(mainContext);
@@ -3354,7 +3353,7 @@ class TileLayer extends EngineObject
     /** Call to end the redraw process */
     redrawEnd()
     {
-        ASSERT(mainContext == this.context); // must call redrawStart() before drawing tiles
+        ASSERT(mainContext == this.context, 'must call redrawStart() before drawing tiles');
         glEnable && glCopyToContext(mainContext, true);
         //debugSaveCanvas(this.canvas);
 
@@ -3374,7 +3373,7 @@ class TileLayer extends EngineObject
         const d = this.getData(layerPos);
         if (d.tile != undefined)
         {
-            ASSERT(mainContext == this.context); // must call redrawStart() before drawing tiles
+            ASSERT(mainContext == this.context, 'must call redrawStart() before drawing tiles');
             const tileInfo = tile(d.tile, this.tileInfo.size, this.tileInfo.textureIndex);
             drawTile(pos, vec2(1), tileInfo, d.color, d.direction*PI/2, d.mirror);
         }
@@ -3849,7 +3848,7 @@ class Medal
             return;
 
         // save the medal
-        ASSERT(medalsSaveName); // save name must be set
+        ASSERT(medalsSaveName, 'save name must be set');
         localStorage[this.storageKey()] = this.unlocked = 1;
         medalsDisplayQueue.push(this);
         newgrounds && newgrounds.unlockMedal(this.id);
@@ -3957,8 +3956,8 @@ class Newgrounds
      *  @param {Object} [cryptoJS] - An instance of CryptoJS, if there is a cipher */
     constructor(app_id, cipher, cryptoJS)
     {
-        ASSERT(!newgrounds && app_id>0); // can only be one newgrounds object
-        ASSERT(!cipher || cryptoJS);   // must provide cryptojs if there is a cipher
+        ASSERT(!newgrounds && app_id>0, 'there can only be one newgrounds object');
+        ASSERT(!cipher || cryptoJS, 'must provide cryptojs if there is a cipher');
 
         this.app_id = app_id;
         this.cipher = cipher;
@@ -4348,7 +4347,7 @@ let glPostShader, glPostArrayBuffer, glPostTexture, glPostIncludeOverlay;
  *  @memberof WebGL */
 function glInitPostProcess(shaderCode, includeOverlay)
 {
-    ASSERT(!glPostShader); // can only have 1 post effects shader
+    ASSERT(!glPostShader, 'can only have 1 post effects shader');
 
     if (!shaderCode) // default shader pass through
         shaderCode = 'void mainImage(out vec4 c,vec2 p){c=texture(iChannel0,p/iResolution.xy);}';
@@ -4503,7 +4502,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.8.12';
+const engineVersion = '1.9.0';
 
 /** Frames per second to update objects
  *  @type {Number}
@@ -4568,7 +4567,7 @@ let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
  *  @memberof Engine */
 function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=['tiles.png'])
 {
-    ASSERT(Array.isArray(imageSources)); // pass in images as array
+    ASSERT(Array.isArray(imageSources), 'pass in images as array');
 
     // internal update loop for engine
     function engineUpdate(frameTimeMS=0)
@@ -4706,8 +4705,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     overlayContext = overlayCanvas.getContext('2d');
 
     // set canvas style
-    const styleCanvas = 
-        'position:absolute;' +                             // position
+    const styleCanvas = 'position:absolute;' +             // position
         'top:50%;left:50%;transform:translate(-50%,-50%)'; // center
     (glCanvas||mainCanvas).style.cssText = mainCanvas.style.cssText = overlayCanvas.style.cssText = styleCanvas;
     
@@ -4729,12 +4727,12 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     showSplashScreen && promises.push(new Promise(resolve => 
     {
         let t = 0;
-        console.log(`LittleJS Engine v${engineVersion}`);
+        console.log(`${engineName} Engine v${engineVersion}`);
         updateSplash();
         function updateSplash()
         {
             clearInput();
-            drawEngineSplashScreen(t += .01);
+            drawEngineSplashScreen(t+=.01);
             t>1 ? resolve() : setTimeout(updateSplash, 16);
         }
     }));
