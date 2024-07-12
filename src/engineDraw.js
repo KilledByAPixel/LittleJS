@@ -189,7 +189,7 @@ function worldToScreen(worldPos)
  *  @param {Boolean} [mirror]                   - If true image is flipped along the Y axis
  *  @param {Color}   [additiveColor=(0,0,0,0)]  - Additive color to be applied
  *  @param {Boolean} [useWebGL=glEnable]        - Use accelerated WebGL rendering
- *  @param {Boolean} [screenSpace]              - If true the pos and size are in screen space
+ *  @param {Boolean} [screenSpace=false]        - If true the pos and size are in screen space
  *  @param {CanvasRenderingContext2D} [context] - Canvas 2D context to draw to
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
@@ -262,7 +262,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
  *  @param {Color}   [color=(1,1,1,1)]
  *  @param {Number}  [angle]
  *  @param {Boolean} [useWebGL=glEnable]
- *  @param {Boolean} [screenSpace]
+ *  @param {Boolean} [screenSpace=false]
  *  @param {CanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
@@ -273,7 +273,7 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
 /** Draw colored polygon using passed in points
  *  @param {Array}   points - Array of Vector2 points
  *  @param {Color}   [color=(1,1,1,1)]
- *  @param {Boolean} [screenSpace]
+ *  @param {Boolean} [screenSpace=false]
  *  @param {CanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
 function drawPoly(points, color=new Color, screenSpace, context=mainContext)
@@ -291,7 +291,7 @@ function drawPoly(points, color=new Color, screenSpace, context=mainContext)
  *  @param {Number}  [thickness]
  *  @param {Color}   [color=(1,1,1,1)]
  *  @param {Boolean} [useWebGL=glEnable]
- *  @param {Boolean} [screenSpace]
+ *  @param {Boolean} [screenSpace=false]
  *  @param {CanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace, context)
@@ -307,7 +307,7 @@ function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace, contex
  *  @param {Number}   angle
  *  @param {Boolean}  mirror
  *  @param {Function} drawFunction
- *  @param {Boolean} [screenSpace]
+ *  @param {Boolean} [screenSpace=false]
  *  @param {CanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
 function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, context=mainContext)
