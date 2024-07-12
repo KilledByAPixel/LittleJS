@@ -54,7 +54,7 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 
 ### 💥 Physics
 
-- Robust 2D physics engine with collision handling for axis aligned boxes
+- Robust arcade physics system with collision handling
 - Very fast collision and raycasting for tile maps
 
 ### 🚀 Flexibility
