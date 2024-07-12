@@ -234,16 +234,18 @@ class TileLayer extends EngineObject
     }
 
     /** Draw all the tile data to an offscreen canvas 
-     *  - This may be slow in some browsers
-    */
+     *  - This may be slow in some browsers but only needs to be done once */
     redraw()
     {
         this.redrawStart(true);
-        this.drawAllTileData();
+        for (let x = this.size.x; x--;)
+        for (let y = this.size.y; y--;)
+            this.drawTileData(vec2(x,y), false);
         this.redrawEnd();
     }
 
     /** Call to start the redraw process
+     *  - This can be used to manually update small parts of the level
      *  @param {Boolean} [clear] - Should it clear the canvas before drawing */
     redrawStart(clear=false)
     {
@@ -251,17 +253,19 @@ class TileLayer extends EngineObject
         /** @type {[HTMLCanvasElement, CanvasRenderingContext2D, Vector2, Vector2, number]} */
         this.savedRenderSettings = [mainCanvas, mainContext, mainCanvasSize, cameraPos, cameraScale];
 
-        // hack: use normal rendering system to render the tiles
+        // use webgl rendering system to render the tiles if enabled
+        // this works by temporally taking control of the rendering system
         mainCanvas = this.canvas;
         mainContext = this.context;
+        mainCanvasSize = this.size.multiply(this.tileInfo.size);
         cameraPos = this.size.scale(.5);
         cameraScale = this.tileInfo.size.x;
 
         if (clear)
         {
             // clear and set size
-            mainCanvas.width  = this.size.x * this.tileInfo.size.x;
-            mainCanvas.height = this.size.y * this.tileInfo.size.y;
+            mainCanvas.width  = mainCanvasSize.x;
+            mainCanvas.height = mainCanvasSize.y;
         }
 
         // begin a new render for the tile canvas
@@ -279,30 +283,31 @@ class TileLayer extends EngineObject
         [mainCanvas, mainContext, mainCanvasSize, cameraPos, cameraScale] = this.savedRenderSettings;
     }
 
-    /** Draw the tile at a given position
-     *  @param {Vector2} layerPos */
-    drawTileData(layerPos)
+    /** Draw the tile at a given position in the tile grid
+     *  This can be used to clear out tiles when they are destroyed
+     *  Tiles can also be redrawn if isinde a redrawStart/End block
+     *  @param {Vector2} layerPos 
+     *  @param {Boolean} [clear] - should the old tile be cleared out
+     */
+    drawTileData(layerPos, clear=true)
     {
-        // first clear out where the tile was
-        const pos = layerPos.floor().add(this.pos).add(vec2(.5));
-        this.drawCanvas2D(pos, vec2(1), 0, false, (context)=>context.clearRect(-.5, -.5, 1, 1));
+        // clear out where the tile was, for full opaque tiles this can be skipped
+        const s = this.tileInfo.size;
+        if (clear)
+        {
+            const pos = layerPos.multiply(s);
+            this.context.clearRect(pos.x, this.canvas.height-pos.y, s.x, -s.y);
+        }
 
         // draw the tile if not undefined
         const d = this.getData(layerPos);
         if (d.tile != undefined)
         {
+            const pos = this.pos.add(layerPos).add(vec2(.5));
             ASSERT(mainContext == this.context, 'must call redrawStart() before drawing tiles');
-            const tileInfo = tile(d.tile, this.tileInfo.size, this.tileInfo.textureIndex);
+            const tileInfo = tile(d.tile, s, this.tileInfo.textureIndex);
             drawTile(pos, vec2(1), tileInfo, d.color, d.direction*PI/2, d.mirror);
         }
-    }
-
-    /** Draw all the tiles in this layer */
-    drawAllTileData()
-    {
-        for (let x = this.size.x; x--;)
-        for (let y = this.size.y; y--;)
-             this.drawTileData(vec2(x,y));
     }
 
     /** Draw directly to the 2D canvas in world space (bipass webgl)
@@ -324,7 +329,7 @@ class TileLayer extends EngineObject
         context.restore();
     }
 
-    /** Draw a tile directly onto the layer canvas
+    /** Draw a tile directly onto the layer canvas in world space
      *  @param {Vector2}  pos
      *  @param {Vector2}  [size=(1,1)]
      *  @param {TileInfo} [tileInfo]
@@ -353,7 +358,7 @@ class TileLayer extends EngineObject
         });
     }
 
-    /** Draw a rectangle directly onto the layer canvas
+    /** Draw a rectangle directly onto the layer canvas in world space
      *  @param {Vector2} pos
      *  @param {Vector2} [size=(1,1)]
      *  @param {Color}   [color=(1,1,1,1)]
