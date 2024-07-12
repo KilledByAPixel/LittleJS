@@ -191,10 +191,10 @@ function inputUpdatePost()
 ///////////////////////////////////////////////////////////////////////////////
 // Mouse event handlers
 
-onmousedown = (e)=> {isUsingGamepad = false; inputData[0][e.button] = 3; window.onmousemove(e); e.button && e.preventDefault();}
+onmousedown = (e)=> {isUsingGamepad = false; inputData[0][e.button] = 3; mousePosScreen = mouseToScreen(e); e.button && e.preventDefault();}
 onmouseup   = (e)=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
 onmousemove = (e)=> mousePosScreen = mouseToScreen(e);
-onwheel     = (e)=> e.ctrlKey || (mouseWheel = sign(e.deltaY));
+onwheel     = (e)=> mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY);
 oncontextmenu = (e)=> false; // prevent right click menu
 
 // convert a mouse or touch event position to screen space
@@ -288,7 +288,7 @@ function gamepadsUpdate()
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Pulse the vibration hardware if it exists
- *  @param {Number} [pattern] - a single value in miliseconds or vibration interval array
+ *  @param {Number|Array} [pattern] - single value in ms or vibration interval array
  *  @memberof Input */
 function vibrate(pattern=100)
 { vibrateEnable && navigator && navigator.vibrate && navigator.vibrate(pattern); }
