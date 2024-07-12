@@ -248,6 +248,8 @@ function glCopyToContext(context, forceDraw=false)
  *  @memberof WebGL */
 function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdditive=0)
 {
+    ASSERT(typeof rgba == 'number' && typeof rgbaAdditive == 'number', 'invalid color');
+
     // flush if there is not enough room or if different blend mode
     if (glInstanceCount >= gl_MAX_INSTANCES-1 || glBatchAdditive != glAdditive)
         glFlush();
