@@ -121,13 +121,13 @@ function smoothStep(percent) { return percent * percent * (3 - 2 * percent); }
 function nearestPowerOfTwo(value) { return 2**Math.ceil(Math.log2(value)); }
 
 /** Returns true if two axis aligned bounding boxes are overlapping 
- *  @param {Vector2} pointA - Center of box A
- *  @param {Vector2} sizeA  - Size of box A
- *  @param {Vector2} pointB - Center of box B
- *  @param {Vector2} sizeB  - Size of box B
- *  @return {Boolean}       - True if overlapping
+ *  @param {Vector2} pointA         - Center of box A
+ *  @param {Vector2} sizeA          - Size of box A
+ *  @param {Vector2} pointB         - Center of box B
+ *  @param {Vector2} [sizeB=(0,0)]  - Size of box B, a point if undefined
+ *  @return {Boolean}               - True if overlapping
  *  @memberof Utilities */
-function isOverlapping(pointA, sizeA, pointB, sizeB)
+function isOverlapping(pointA, sizeA, pointB, sizeB=vec2())
 { 
     return abs(pointA.x - pointB.x)*2 < sizeA.x + sizeB.x 
         && abs(pointA.y - pointB.y)*2 < sizeA.y + sizeB.y;
@@ -187,8 +187,8 @@ function randInCircle(radius=1, minRadius=0)
 { return radius > 0 ? randVector(radius * rand(minRadius / radius, 1)**.5) : new Vector2; }
 
 /** Returns a random color between the two passed in colors, combine components if linear
- *  @param {Color}   [colorA=Color()]
- *  @param {Color}   [colorB=Color(0,0,0,1)]
+ *  @param {Color}   [colorA=(1,1,1,1)]
+ *  @param {Color}   [colorB=(0,0,0,1)]
  *  @param {Boolean} [linear]
  *  @return {Color}
  *  @memberof Random */
