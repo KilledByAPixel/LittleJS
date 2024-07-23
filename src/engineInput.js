@@ -314,9 +314,9 @@ if (isTouchDevice)
     // handle all touch events the same way
     ontouchstart = ontouchmove = ontouchend = (e)=>
     {
-        // fix stalled audio on mobile
-        if (soundEnable)
-            audioContext ? audioContext.resume() : zzfx(0);
+        // fix stalled audio requiring user interaction
+        if (soundEnable && audioContext && audioContext.state != 'running')
+            zzfx(0);
 
         // check if touching and pass to mouse events
         const touching = e.touches.length;
