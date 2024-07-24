@@ -270,7 +270,7 @@ class Bullet extends EngineObject
         this.gravityScale = 0;
         this.renderOrder = 100;
         this.drawSize = vec2(.2,.5);
-        this.range = 20;
+        this.range = 5;
         this.setCollision(1,0);
     }
 
@@ -288,7 +288,18 @@ class Bullet extends EngineObject
         this.angle = this.velocity.angle();
         this.range -= this.velocity.length();
         if (this.range < 0)
-            this.kill();
+        {
+            const emitter = new ParticleEmitter(
+                this.pos, 0, .2, .1, 50, PI, tile(0),  // pos, angle, emit info, tileInfo
+                new Color(1,1,.1), new Color(1,1,1),    // colorStartA, colorStartB
+                new Color(1,1,.1,0), new Color(1,1,1,0),// colorEndA, colorEndB
+                .1, .5, .1, .05, 0, // particleTime, sizeStart, sizeEnd, speed, angleSpeed
+                1, 1, .5, PI, .1,   // damping, angleDamping, gravityScale, cone, fadeRate, 
+                .5, 0, 1            // randomness, collide, additive, randomColorLinear
+            );
+
+            this.destroy();
+        }
     }
     
     collideWithObject(o)

@@ -31,7 +31,7 @@ const persistentParticleDestroyCallback = (particle)=>
     // copy particle to tile layer on death
     ASSERT(!particle.tileInfo, 'quick draw to tile layer uses canvas 2d so must be untextured');
     if (particle.groundObject)
-        tileLayer.drawTile(particle.pos, particle.size, particle.tileInfo, particle.color, particle.angle, particle.mirror);
+        tileLayers[foregroundLayerIndex].drawTile(particle.pos, particle.size, particle.tileInfo, particle.color, particle.angle, particle.mirror);
 }
 
 function makeBlood(pos, amount) { makeDebris(pos, new Color(1,0,0), 50, .1, 0); }
@@ -132,85 +132,32 @@ function destroyTile(pos, makeSound = 1, cleanNeighbors = 1)
     // destroy tile
     const tileType = getTileCollisionData(pos);
 
-    if (!tileType) return 1;                  // empty
+    if (!tileType || tileType == tileType_solid)
+        return 1;
 
+    const tileLayer = tileLayers[foregroundLayerIndex];
     const centerPos = pos.add(vec2(.5));
     const layerData = tileLayer.getData(pos);
-    if (layerData)
+    if (!layerData)
+        return;
+
+    makeDebris(centerPos, layerData.color.mutate());
+    makeSound && sound_destroyObject.play(centerPos);
+
+     // set and clear tile
+    tileLayer.setData(pos, new TileLayerData, 1);
+    setTileCollisionData(pos, tileType_empty);
+    setTileData(pos, foregroundLayerIndex, 0);
+
+    // cleanup neighbors
+    if (cleanNeighbors)
     {
-        makeDebris(centerPos, layerData.color.mutate());
-        makeSound && sound_destroyObject.play(centerPos);
-
-        setTileCollisionData(pos, tileType_empty);
-        tileLayer.setData(pos, new TileLayerData, 1); // set and clear tile
-
-        // cleanup neighbors
-        if (cleanNeighbors)
-        {
-            for (let i=-1;i<=1;++i)
-            for (let j=-1;j<=1;++j)
-                decorateTile(pos.add(vec2(i,j)));
-        }
+        for (let i=-1;i<=1;++i)
+        for (let j=-1;j<=1;++j)
+            decorateTile(pos.add(vec2(i,j)));
     }
 
     return 1;
-}
-
-function decorateBackgroundTile(pos)
-{
-    if (!tileBackgroundLayer)
-        return;
-
-    const tileData = getTileBackgroundData(pos);
-    if (tileData <= 0)
-        return;
-
-    // make round corners
-    for (let i=4;i--;)
-    {
-        // check corner neighbors
-        const neighborTileDataA = getTileBackgroundData(pos.add(vec2().setAngle(i*PI/2)));
-        const neighborTileDataB = getTileBackgroundData(pos.add(vec2().setAngle((i+1)%4*PI/2)));
-        if (neighborTileDataA > 0 || neighborTileDataB > 0)
-            continue;
-
-        const directionVector = vec2().setAngle(i*PI/2+PI/4, 10).floor();
-        const drawPos = pos.add(vec2(.5))          // center
-            .scale(16).add(directionVector).floor(); // direction offset
-
-        // clear rect without any scaling to prevent blur from filtering
-        const s = 2;
-        tileBackgroundLayer.context.clearRect(
-            drawPos.x - s/2, tileBackgroundLayer.canvas.height - drawPos.y - s/2, s, s);
-    }
-}
-
-function decorateTile(pos)
-{
-    ASSERT((pos.x|0) == pos.x && (pos.y|0)== pos.y);
-    const tileData = getTileCollisionData(pos);
-    if (tileData <= 0)
-    {
-        tileData || tileLayer.setData(pos, new TileLayerData, 1); // force it to clear if it is empty
-        return;
-    }
-
-    for (let i=4;i--;)
-    {
-        // outline towards neighbors of differing type
-        const neighborTileData = getTileCollisionData(pos.add(vec2().setAngle(i*PI/2)));
-        if (neighborTileData == tileData)
-            continue;
-
-        // make pixel perfect outlines
-        const size = i&1 ? vec2(2, 16) : vec2(16, 2);
-        tileLayer.context.fillStyle = levelGroundColor.mutate(.1);
-        const drawPos = pos.scale(16)
-            .add(vec2(i==1?14:0,(i==0?14:0)))
-            .subtract((i&1? vec2(0,8-size.y/2) : vec2(8-size.x/2,0)));
-        tileLayer.context.fillRect(
-            drawPos.x, tileLayer.canvas.height - drawPos.y, size.x, -size.y);
-    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -247,8 +194,8 @@ function drawStars()
         if (i < largeStarCount)
         {
             // large planets and suns
-            size = random.float()**3*99 + 9;
-            speed = random.float(5);
+            size = random.float(9,60);
+            speed = random.float(2,4);
             color = (new Color).setHSLA(random.float(), random.float(), random.float(1,.5)).add(skyColor.scale(.5)).clamp();
         }
         
@@ -281,7 +228,7 @@ function initParallaxLayers()
     for (let i=3; i--;)
     {
         // setup the layer
-        const parallaxSize = vec2(600,300), startGroundLevel = rand(99,120)+i*30;
+        const parallaxSize = vec2(600,300), startGroundLevel = 99+i*30;
         const tileParallaxLayer = tileParallaxLayers[i] = new TileLayer(vec2(), parallaxSize);
         tileParallaxLayer.renderOrder = -3e3+i;
         tileParallaxLayer.canvas.width = parallaxSize.x;

@@ -8,207 +8,121 @@
 
 'use strict';
 
-const tileType_ladder  = -1;
-const tileType_empty   = 0;
-const tileType_solid   = 1;
+const tileType_ladder      = -1;
+const tileType_empty       = 0;
+const tileType_solid       = 1;
+const tileType_breakable   = 2;
 
-let player, playerStartPos, tileLayer, tileBackgroundLayer, gameTimer = new Timer;
-let levelSize, levelColor, levelGroundColor, warmup;
+let player, playerStartPos, gameTimer=new Timer;
+let levelSize, levelColor, levelBackgroundColor, levelOutlineColor, warmup;
+let tileLayers, foregroundLayerIndex;
 
-let tileBackground;
-const setTileBackgroundData = (pos, data=0)=>
-    pos.arrayCheck(tileCollisionSize) && (tileBackground[(pos.y|0)*tileCollisionSize.x+pos.x|0] = data);
-const getTileBackgroundData = (pos)=>
-    pos.arrayCheck(tileCollisionSize) ? tileBackground[(pos.y|0)*tileCollisionSize.x+pos.x|0] : 0;
+let tileData;
+const setTileData = (pos, layer, data)=>
+    pos.arrayCheck(tileCollisionSize) && (tileData[layer][(pos.y|0)*tileCollisionSize.x+pos.x|0] = data);
+const getTileData = (pos, layer)=>
+    pos.arrayCheck(tileCollisionSize) ? tileData[layer][(pos.y|0)*tileCollisionSize.x+pos.x|0]: 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 // level generation
 
-function buildTerrain(size)
+function loadLevel()
 {
-    tileBackground = [];
-    initTileCollision(size);
-    let startGroundLevel = 40;
-    let groundLevel = startGroundLevel;
-    let groundSlope = rand(-1,1);
-    let backgroundDelta = 0, backgroundDeltaSlope = 0;
-    for (let x=0; x < size.x; x++)
-    {
-        // pull slope towards start ground level
-        groundLevel += groundSlope = rand() < .05 ? rand(-1,1) :
-            groundSlope + (startGroundLevel - groundLevel)/1e3;
-        
-        // small jump
-        if (rand() < .04)
-            groundLevel += rand(9,-9);
-
-        if (rand() < .03)
-        {
-            // big jump
-            const jumpDelta = rand(19,-19);
-            startGroundLevel = clamp(startGroundLevel + jumpDelta, 20, 80);
-            groundLevel += jumpDelta;
-            groundSlope = rand(-1,1);
-        }
-
-        backgroundDelta += backgroundDeltaSlope;
-        if (rand() < .1)
-            backgroundDelta = rand(3, -1);
-        if (rand() < .1)
-            backgroundDelta = 0;
-        if (rand() < .1)
-            backgroundDeltaSlope = rand(-1,1);
-        backgroundDelta = clamp(backgroundDelta, -1, 3)
-
-        groundLevel = clamp(groundLevel, 20, levelSize.y-20);
-        for (let y=0; y < size.y; y++)
-        {
-            const pos = vec2(x,y);
-
-            let frontTile = tileType_empty;
-            if (y < groundLevel)
-                 frontTile = tileType_solid;
-
-            let backTile = tileType_empty;
-            if (y < groundLevel + backgroundDelta)
-                 backTile = tileType_solid;
-            
-            setTileCollisionData(pos, frontTile);
-            setTileBackgroundData(pos, backTile);
-        }
-    }
-
-    // add random holes
-    for (let i=levelSize.x; i--;)
-    {
-        const pos = vec2(rand(levelSize.x), rand(levelSize.y/2, 9));
-        const height = randInt(19,1);
-        const offset = vec2();
-        for (offset.x = randInt(19,1); --offset.x;)
-        for (offset.y = height; --offset.y;)
-            setTileCollisionData(pos.add(offset), tileType_empty);
-    }
-
-    // add ladders
-    for (let ladderCount = 40; ladderCount--;)
-    {
-        // pick random pos
-        const pos = vec2(randInt(levelSize.x), randInt(levelSize.y))
-
-        // find good place to put ladders
-        let state = 0, ladderTop;
-        for (; pos.y > 9; --pos.y)
-        {
-            const data = getTileCollisionData(pos);
-            if (state == 0 ||  state == 2)
-                data || state++;   // found empty, go to next state
-            else if (state == 1)
-            {
-                data && state++;   // found solid, go to next state
-                ladderTop = pos.y;
-            }
-            else if (state == 3 && data)
-            {
-                // found solid again, build ladder
-                for (; ++pos.y <= ladderTop;)
-                    setTileCollisionData(pos, tileType_ladder);
-                break;
-            }
-        }
-    }
-
-    // spawn crates
-    for (let crateCount=100; crateCount--;)
-        new Crate(vec2((randInt(levelSize.x))+.5, randInt(levelSize.y)));
-
-    // spawn enemies
-    for (let enemyCount=10; enemyCount--;)
-        new Enemy(vec2(rand(levelSize.x), rand(levelSize.y)));
-}
-
-function generateLevel()
-{
-    // clear old level
+    // load level data from an exported Tiled js file
+    const dataName = Object.keys(TileMaps)[0];
+    const tileMapData = TileMaps[dataName];
+    levelSize = vec2(tileMapData.width, tileMapData.height);
+    initTileCollision(levelSize);
     engineObjectsDestroy();
 
-    // randomize ground level hills
-    buildTerrain(levelSize);
-
-    // find starting poing for player
-    playerStartPos = vec2(rand(levelSize.x), levelSize.y);
-    const raycastHit = tileCollisionRaycast(playerStartPos, vec2(playerStartPos.x, 0));
-    playerStartPos = raycastHit.add(vec2(0,1));
-}
-
-function makeTileLayers()
-{
-    // create tile layers
-    tileLayer = new TileLayer(vec2(), levelSize, tile(0,16,1));
-    tileLayer.renderOrder = -1e3;
-    tileBackgroundLayer = new TileLayer(vec2(), levelSize, tile(0,16,1));
-    tileBackgroundLayer.renderOrder = -2e3;
-
-    const pos = vec2();
-    for (pos.x = levelSize.x; pos.x--;)
-    for (pos.y = levelSize.y; pos.y--;)
+    // set all level data tiles
+    tileData = [];
+    tileLayers = [];
+    playerStartPos = vec2(1, levelSize.y);
+    const layerCount = tileMapData.layers.length;
+    foregroundLayerIndex = layerCount-1;
+    for (let layer=layerCount; layer--;)
     {
-        // foreground tiles
-        let tileType = getTileCollisionData(pos);
-        if (tileType)
+        const layerData = tileMapData.layers[layer].data;
+        const tileLayer = new TileLayer(vec2(), levelSize, tile(0,16,1));
+        tileLayer.renderOrder = -1e3+layer;
+        tileLayers[layer] = tileLayer;
+        tileData[layer] = [];
+
+        for (let x=levelSize.x; x--;) 
+        for (let y=levelSize.y; y--;)
         {
-            let direction, mirror, tileIndex, color;
-            if (tileType == tileType_solid)
+            const pos = vec2(x,levelSize.y-1-y);
+            const tile = layerData[y*levelSize.x+x];
+
+            if (tile > 16)
             {
-                tileIndex = 1 + rand()**3*2|0;
-                color = levelColor.mutate(.03);
-                direction = randInt(4);
-                mirror = randInt(2);
+                // create object instead of tile
+                const objectPos = pos.add(vec2(.5));
+                if (tile == 17)
+                    playerStartPos = objectPos;
+                if (tile == 18)
+                    new Crate(objectPos);
+                if (tile == 19)
+                    new Enemy(objectPos);
+                setTileData(pos, layer, 0);
+                continue;
             }
-            else if (tileType == tileType_ladder)
-                tileIndex = 3;
 
-            const data = new TileLayerData(tileIndex, direction, mirror, color);
-            tileLayer.setData(pos, data);
-        }
-        
-        // background tiles
-        tileType = getTileBackgroundData(pos);
-        if (tileType)
-        {
-            const data = new TileLayerData(1 + rand()**3*2|0, randInt(4), randInt(2), levelColor.mutate().scale(.4,1));
-            tileBackgroundLayer.setData(pos, data);
-        }
-    }
-    tileLayer.redraw();
-    tileBackgroundLayer.redraw();
+            // set the tile data
+            setTileData(pos, layer, tile);
 
-    if (!glEnable)
-    {
-        // get rid of background if webgl is not enabled
-        tileBackgroundLayer.destroy();
-        tileBackgroundLayer = 0;
+            // get tile type for special tiles
+            let tileType = tileType_empty;
+            if (tile > 0)
+                tileType = tileType_breakable;
+            if (tile == 4)
+                tileType = tileType_ladder;
+            if (tile == 5)
+                tileType = tileType_solid;
+            if (tileType)
+            {
+                // set collision for solid tiles
+                if (layer == foregroundLayerIndex)
+                    setTileCollisionData(pos, tileType);
+
+                // randomize tile appearance
+                let direction, mirror, color;
+                if (tileType == tileType_breakable)
+                {
+                    direction = randInt(4);
+                    mirror = randInt(2);
+                    color = layer ? levelColor : levelBackgroundColor;
+                    color = color.mutate(.03);
+                }
+
+                // set tile layer data
+                const data = new TileLayerData(tile-1, direction, mirror, color);
+                tileLayer.setData(pos, data);
+            }
+        }
+        tileLayer.redraw();
     }
 }
 
 function buildLevel()
 {
-    levelSize = vec2(128);
+    // create the level
     levelColor = randColor(new Color(.2,.2,.2), new Color(.8,.8,.8));
-    levelGroundColor = levelColor.mutate().add(new Color(.4,.4,.4)).clamp();
+    levelBackgroundColor = levelColor.mutate().scale(.4,1);
+    levelOutlineColor = levelColor.mutate().add(new Color(.4,.4,.4)).clamp();
 
-    generateLevel();
+    loadLevel();
     initSky();
     initParallaxLayers();
     
-    // apply decoration to level tiles
-    makeTileLayers();
+    // apply decoration to all level tiles
     const pos = vec2();
+    const layerCount = tileLayers.length;
+    for (let layer=layerCount; layer--;)
     for (pos.x=levelSize.x; pos.x--;)
-    for (pos.y=levelSize.y; pos.y-->1;)
-    {
-        decorateBackgroundTile(pos);
-        decorateTile(pos);
-    }
+    for (pos.y=levelSize.y; pos.y--;)
+        decorateTile(pos, layer);
 
     // warm up level
     warmup = 1;
@@ -218,4 +132,61 @@ function buildLevel()
 
     // spawn player
     player = new Player(cameraPos = playerStartPos);
+}
+
+function decorateTile(pos, layer=1)
+{
+    const tileLayer = tileLayers[layer];
+
+    ASSERT((pos.x|0) == pos.x && (pos.y|0)== pos.y);
+
+    if (layer == foregroundLayerIndex)
+    {
+        const tileType = getTileCollisionData(pos);
+        if (tileType <= 0)
+        {
+            // force it to clear if it is empty
+            tileType || tileLayer.setData(pos, new TileLayerData, 1);
+            return;
+        }
+        if (tileType == tileType_breakable)
+        for (let i=4;i--;)
+        {
+            // outline towards neighbors of differing type
+            const neighborTileType = getTileCollisionData(pos.add(vec2().setAngle(i*PI/2)));
+            if (neighborTileType == tileType)
+                continue;
+
+            // make pixel perfect outlines
+            const size = i&1 ? vec2(2, 16) : vec2(16, 2);
+            tileLayer.context.fillStyle = levelOutlineColor.mutate(.1);
+            const drawPos = pos.scale(16)
+                .add(vec2(i==1?14:0,(i==0?14:0)))
+                .subtract((i&1? vec2(0,8-size.y/2) : vec2(8-size.x/2,0)));
+
+            tileLayer.context.fillRect(
+                drawPos.x, tileLayer.canvas.height - drawPos.y, size.x, -size.y);
+        }
+    }
+    else
+    {
+        // make round corners
+        for (let i=4;i--;)
+        {
+            // check corner neighbors
+            const neighborTileDataA = getTileData(pos.add(vec2().setAngle(i*PI/2)), layer);
+            const neighborTileDataB = getTileData(pos.add(vec2().setAngle((i+1)%4*PI/2)), layer);
+            if (neighborTileDataA > 0 || neighborTileDataB > 0)
+                continue;
+
+            const directionVector = vec2().setAngle(i*PI/2+PI/4, 10).floor();
+            const drawPos = pos.add(vec2(.5))            // center
+                .scale(16).add(directionVector).floor(); // direction offset
+
+            // clear rect without any scaling to prevent blur from filtering
+            const s = 2;
+            tileLayer.context.clearRect(
+                drawPos.x - s/2, tileLayer.canvas.height - drawPos.y - s/2, s, s);
+        }
+    }
 }
