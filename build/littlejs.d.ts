@@ -619,13 +619,13 @@ declare module "littlejs.esm" {
      *  @memberof Utilities */
     export function nearestPowerOfTwo(value: number): number;
     /** Returns true if two axis aligned bounding boxes are overlapping
-     *  @param {Vector2} pointA - Center of box A
-     *  @param {Vector2} sizeA  - Size of box A
-     *  @param {Vector2} pointB - Center of box B
-     *  @param {Vector2} sizeB  - Size of box B
-     *  @return {Boolean}       - True if overlapping
+     *  @param {Vector2} pointA         - Center of box A
+     *  @param {Vector2} sizeA          - Size of box A
+     *  @param {Vector2} pointB         - Center of box B
+     *  @param {Vector2} [sizeB=(0,0)]  - Size of box B, a point if undefined
+     *  @return {Boolean}               - True if overlapping
      *  @memberof Utilities */
-    export function isOverlapping(pointA: Vector2, sizeA: Vector2, pointB: Vector2, sizeB: Vector2): boolean;
+    export function isOverlapping(pointA: Vector2, sizeA: Vector2, pointB: Vector2, sizeB?: Vector2): boolean;
     /** Returns an oscillating wave between 0 and amplitude with frequency of 1 Hz by default
      *  @param {Number} [frequency] - Frequency of the wave in Hz
      *  @param {Number} [amplitude] - Amplitude (max height) of the wave
@@ -668,8 +668,8 @@ declare module "littlejs.esm" {
      *  @memberof Random */
     export function randVector(length?: number): Vector2;
     /** Returns a random color between the two passed in colors, combine components if linear
-     *  @param {Color}   [colorA=Color()]
-     *  @param {Color}   [colorB=Color(0,0,0,1)]
+     *  @param {Color}   [colorA=(1,1,1,1)]
+     *  @param {Color}   [colorB=(0,0,0,1)]
      *  @param {Boolean} [linear]
      *  @return {Color}
      *  @memberof Random */
@@ -952,7 +952,7 @@ declare module "littlejs.esm" {
      */
     export function vec2(x?: (number | Vector2), y?: number): Vector2;
     /**
-     * Create a color object with RGBA values
+     * Create a color object with RGBA values, white by default
      * @param {Number} [r=1] - red
      * @param {Number} [g=1] - green
      * @param {Number} [b=1] - blue
@@ -962,7 +962,7 @@ declare module "littlejs.esm" {
      */
     export function rgb(r?: number, g?: number, b?: number, a?: number): Color;
     /**
-     * Create a color object with HSLA values
+     * Create a color object with HSLA values, white by default
      * @param {Number} [h=0] - hue
      * @param {Number} [s=0] - saturation
      * @param {Number} [l=1] - lightness
@@ -1520,8 +1520,9 @@ declare module "littlejs.esm" {
      *  @memberof Audio */
     export function getNoteFrequency(semitoneOffset: number, rootFrequency?: number): number;
     /** Audio context used by the engine
+     *  @type {AudioContext}
      *  @memberof Audio */
-    export let audioContext: any;
+    export let audioContext: AudioContext;
     /** Play cached audio samples with given settings
      *  @param {Array}   sampleChannels - Array of arrays of samples to play (for stereo playback)
      *  @param {Number}  [volume] - How much to scale volume by
