@@ -21,7 +21,7 @@ const sound_dodge =        new Sound([.4,.2,150,.05,,.05,,,-1,,,,,4,,,,,.02]);
 const sound_walk =         new Sound([.3,.1,50,.005,,.01,4,,,,,,,,10,,,.5]);
 const sound_explosion =    new Sound([2,.2,72,.01,.01,.2,4,,,,,,,1,,.5,.1,.5,.02]);
 const sound_grenade =      new Sound([.5,.01,300,,,.02,3,.22,,,-9,.2,,,,,,.5]);
-const sound_killEnemy =    new Sound([,,783,,.03,.02,1,2,,,940,.03,,,,,.2,.6,,.06]);
+const sound_score =        new Sound([,,783,,.03,.02,1,2,,,940,.03,,,,,.2,.6,,.06]);
 
 ///////////////////////////////////////////////////////////////////////////////
 // special effects
@@ -190,13 +190,13 @@ function drawStars()
     {
         let size = random.float(6, 1);
         let speed = random.float() < .9 ? random.float(5) : random.float(99,9);
-        let color = (new Color).setHSLA(random.float(.2,-.3), random.float()**9, random.float(1,.5), random.float(.9,.3));
+        let color = hsl(random.float(.2,-.3), random.float()**9, random.float(1,.5), random.float(.9,.3));
         if (i < largeStarCount)
         {
             // large planets and suns
             size = random.float(9,60);
             speed = random.float(2,4);
-            color = (new Color).setHSLA(random.float(), random.float(), random.float(1,.5)).add(skyColor.scale(.5)).clamp();
+            color = hsl(random.float(), random.float(), random.float(1,.5)).add(skyColor.scale(.5)).clamp();
         }
         
         const extraSpace = 200;

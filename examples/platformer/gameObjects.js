@@ -15,6 +15,7 @@ class GameObject extends EngineObject
         super(pos, size, tileInfo, angle);
         this.health = 0;
         this.isGameObject = 1;
+        this.collidesWithBullets = 1;
         this.damageTimer = new Timer;
     }
 
@@ -68,7 +69,7 @@ class Crate extends GameObject
     { 
         super(pos, vec2(1), tile(2), (randInt(4))*PI/2);
 
-        this.color = (new Color).setHSLA(rand(),1,.8);
+        this.color = hsl(rand(),1,.8);
         this.health = 5;
 
         // make it a solid object for collision
@@ -88,6 +89,40 @@ class Crate extends GameObject
 
 ///////////////////////////////////////////////////////////////////////////////
 
+class Coin extends GameObject 
+{
+    constructor(pos) 
+    { 
+        super(pos, vec2(1), tile(6));
+        this.color = hsl(.15,1,.5);
+        this.collidesWithBullets = 0;
+    }
+
+    render()
+    {
+        const t = time+this.pos.x/4+this.pos.y/4;
+        drawTile(this.pos, vec2(.2, .6), 0, this.color); // edge of coin
+        drawTile(this.pos, vec2(.5+.5*Math.sin(t*2*PI), 1), this.tileInfo, this.color);
+    }
+
+    update(o)
+    {
+        if (!player)
+                return;
+
+        // check if player in range
+        const d = this.pos.distanceSquared(player.pos);
+        if (d > .5)
+            return; 
+            
+        ++score;
+        sound_score.play(this.pos);
+        this.destroy();
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 class Enemy extends GameObject 
 {
     constructor(pos) 
@@ -95,7 +130,7 @@ class Enemy extends GameObject
         super(pos, vec2(.9,.9), tile(5));
 
         this.drawSize = vec2(1);
-        this.color = (new Color).setHSLA(rand(), 1, .7);
+        this.color = hsl(rand(), 1, .7);
         this.health = 5;
         this.bounceTime = new Timer(rand(1e3));
         this.setCollision(true, false);
@@ -126,7 +161,7 @@ class Enemy extends GameObject
             return;
 
         ++score;
-        sound_killEnemy.play(this.pos);
+        sound_score.play(this.pos);
         makeDebris(this.pos, this.color, 300);
         this.destroy();
     }
@@ -279,7 +314,7 @@ class Bullet extends EngineObject
         // check if hit someone
         engineObjectsCallback(this.pos, this.size, (o)=>
         {
-            if (o.isGameObject)
+            if (o.collidesWithBullets)
                 this.collideWithObject(o)
         });
             

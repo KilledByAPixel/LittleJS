@@ -55,7 +55,7 @@ function loadLevel()
             const pos = vec2(x,levelSize.y-1-y);
             const tile = layerData[y*levelSize.x+x];
 
-            if (tile > 16)
+            if (tile >= 17 && tile <= 20)
             {
                 // create object instead of tile
                 const objectPos = pos.add(vec2(.5));
@@ -65,6 +65,8 @@ function loadLevel()
                     new Crate(objectPos);
                 if (tile == 19)
                     new Enemy(objectPos);
+                if (tile == 20)
+                    new Coin(objectPos);
                 setTileData(pos, layer, 0);
                 continue;
             }
