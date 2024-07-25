@@ -185,20 +185,11 @@ function drawStars()
 {
     // draw stars and planets
     const random = new RandomGenerator(skySeed);
-    const largeStarCount = 9;
     for (let i = 1e3; i--;)
     {
-        let size = random.float(6, 1);
-        let speed = random.float() < .9 ? random.float(5) : random.float(99,9);
-        let color = hsl(random.float(.2,-.3), random.float()**9, random.float(1,.5), random.float(.9,.3));
-        if (i < largeStarCount)
-        {
-            // large planets and suns
-            size = random.float(9,20);
-            speed = random.float(2,4);
-            color = hsl(random.float(), random.float(), random.float(1,.5)).add(skyColor.scale(.5)).clamp();
-        }
-        
+        const size = random.float(1, 6);
+        const speed = random.float() < .9 ? random.float(5) : random.float(9,99);
+        const color = hsl(random.float(-.3,.2), random.float()**9, random.float(.5,1), random.float(.3,.9));
         const extraSpace = 200;
         const w = mainCanvas.width+2*extraSpace, h = mainCanvas.height+2*extraSpace;
         const screenPos = vec2(
@@ -206,14 +197,7 @@ function drawStars()
             (random.float(h)+time*speed*random.float())%h-extraSpace);
 
         mainContext.fillStyle = color;
-        if (size < 9)
-            mainContext.fillRect(screenPos.x, screenPos.y, size, size);
-        else
-        {
-            mainContext.arc(screenPos.x, screenPos.y, size, 0, 9);
-            mainContext.fill();
-            mainContext.beginPath();
-        }
+        mainContext.fillRect(screenPos.x, screenPos.y, size, size);
     }
 }
 
