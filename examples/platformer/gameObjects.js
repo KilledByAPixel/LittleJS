@@ -265,7 +265,6 @@ class Weapon extends EngineObject
         if (this.recoilTimer.active())
             this.localAngle = lerp(this.recoilTimer.getPercent(), 0, this.localAngle);
 
-
         this.mirror = this.parent.mirror;
         this.fireTimeBuffer += timeDelta;
         if (this.triggerIsDown)

@@ -21,7 +21,8 @@ class Player extends Character
 
         // movement control
         this.moveInput = isUsingGamepad ? gamepadStick(0) : 
-            vec2(keyIsDown('ArrowRight') - keyIsDown('ArrowLeft'), keyIsDown('ArrowUp') - keyIsDown('ArrowDown'));
+            vec2(keyIsDown('ArrowRight') - keyIsDown('ArrowLeft'), 
+            keyIsDown('ArrowUp') - keyIsDown('ArrowDown'));
 
         super.update();
     }

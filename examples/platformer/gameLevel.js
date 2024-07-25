@@ -159,7 +159,6 @@ function decorateTile(pos, layer=1)
             const drawPos = pos.scale(16)
                 .add(vec2(i==1?14:0,(i==0?14:0)))
                 .subtract((i&1? vec2(0,8-size.y/2) : vec2(8-size.x/2,0)));
-
             tileLayer.context.fillRect(
                 drawPos.x, tileLayer.canvas.height - drawPos.y, size.x, -size.y);
         }
