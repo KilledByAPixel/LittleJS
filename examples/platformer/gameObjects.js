@@ -101,7 +101,7 @@ class Coin extends GameObject
     render()
     {
         const t = time+this.pos.x/4+this.pos.y/4;
-        drawTile(this.pos, vec2(.2, .6), 0, this.color); // edge of coin
+        drawTile(this.pos, vec2(.1, .6), 0, this.color); // edge of coin
         drawTile(this.pos, vec2(.5+.5*Math.sin(t*2*PI), 1), this.tileInfo, this.color);
     }
 
