@@ -15,7 +15,6 @@ class GameObject extends EngineObject
         super(pos, size, tileInfo, angle);
         this.health = 0;
         this.isGameObject = 1;
-        this.collidesWithBullets = 1;
         this.damageTimer = new Timer;
     }
 
@@ -89,17 +88,17 @@ class Crate extends GameObject
 
 ///////////////////////////////////////////////////////////////////////////////
 
-class Coin extends GameObject 
+class Coin extends EngineObject 
 {
     constructor(pos) 
     { 
         super(pos, vec2(1), tile(6));
         this.color = hsl(.15,1,.5);
-        this.collidesWithBullets = 0;
     }
 
     render()
     {
+        // make it appear to spin
         const t = time+this.pos.x/4+this.pos.y/4;
         drawTile(this.pos, vec2(.1, .6), 0, this.color); // edge of coin
         drawTile(this.pos, vec2(.5+.5*Math.sin(t*2*PI), 1), this.tileInfo, this.color);
@@ -114,7 +113,8 @@ class Coin extends GameObject
         const d = this.pos.distanceSquared(player.pos);
         if (d > .5)
             return; 
-            
+        
+        // award points and destroy
         ++score;
         sound_score.play(this.pos);
         this.destroy();
@@ -314,7 +314,7 @@ class Bullet extends EngineObject
         // check if hit someone
         engineObjectsCallback(this.pos, this.size, (o)=>
         {
-            if (o.collidesWithBullets)
+            if (o.isGameObject)
                 this.collideWithObject(o)
         });
             

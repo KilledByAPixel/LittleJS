@@ -58,8 +58,6 @@ function explosion(pos, radius=3)
 {
     ASSERT(radius > 0);
 
-    const damage = radius*2;
-
     // destroy level
     for (let x = -radius; x < radius; ++x)
     {
@@ -80,6 +78,7 @@ function explosion(pos, radius=3)
     // kill/push objects
     engineObjectsCallback(pos, radius*3, (o)=> 
     {
+        const damage = radius*2;
         const d = o.pos.distance(pos);
         if (o.isGameObject)
         {
@@ -141,6 +140,7 @@ function destroyTile(pos, makeSound = 1, cleanNeighbors = 1)
     if (!layerData)
         return;
 
+    // create effects
     makeDebris(centerPos, layerData.color.mutate());
     makeSound && sound_destroyObject.play(centerPos);
 
@@ -194,7 +194,7 @@ function drawStars()
         if (i < largeStarCount)
         {
             // large planets and suns
-            size = random.float(9,60);
+            size = random.float(9,20);
             speed = random.float(2,4);
             color = hsl(random.float(), random.float(), random.float(1,.5)).add(skyColor.scale(.5)).clamp();
         }
@@ -252,6 +252,7 @@ function updateParallaxLayers()
 {
     tileParallaxLayers.forEach((tileParallaxLayer, i)=>
     {
+        // position layer depending on camera position
         const distance = 4+i;
         const parallax = vec2(150,30).scale((i*i+1));
         const cameraDeltaFromCenter = cameraPos.subtract(levelSize.scale(.5)).divide(levelSize.scale(-.5).divide(parallax));

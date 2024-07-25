@@ -11,7 +11,7 @@
 
 class Player extends Character
 {
-    update() 
+    update()
     {
         // player controls
         this.holdingJump   = keyIsDown('ArrowUp') || gamepadIsDown(0);

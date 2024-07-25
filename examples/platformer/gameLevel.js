@@ -13,18 +13,42 @@ const tileType_empty       = 0;
 const tileType_solid       = 1;
 const tileType_breakable   = 2;
 
-let player, playerStartPos, gameTimer=new Timer;
+let player, playerStartPos, tileData, tileLayers, foregroundLayerIndex;
 let levelSize, levelColor, levelBackgroundColor, levelOutlineColor, warmup;
-let tileLayers, foregroundLayerIndex;
 
-let tileData;
 const setTileData = (pos, layer, data)=>
     pos.arrayCheck(tileCollisionSize) && (tileData[layer][(pos.y|0)*tileCollisionSize.x+pos.x|0] = data);
 const getTileData = (pos, layer)=>
     pos.arrayCheck(tileCollisionSize) ? tileData[layer][(pos.y|0)*tileCollisionSize.x+pos.x|0]: 0;
 
-///////////////////////////////////////////////////////////////////////////////
-// level generation
+function buildLevel()
+{
+    // create the level
+    levelColor = randColor(new Color(.2,.2,.2), new Color(.8,.8,.8));
+    levelBackgroundColor = levelColor.mutate().scale(.4,1);
+    levelOutlineColor = levelColor.mutate().add(new Color(.4,.4,.4)).clamp();
+
+    loadLevel();
+    initSky();
+    initParallaxLayers();
+    
+    // apply decoration to all level tiles
+    const pos = vec2();
+    const layerCount = tileLayers.length;
+    for (let layer=layerCount; layer--;)
+    for (pos.x=levelSize.x; pos.x--;)
+    for (pos.y=levelSize.y; pos.y--;)
+        decorateTile(pos, layer);
+
+    // warm up level
+    warmup = 1;
+    for (let i = 500; i--;)
+        engineObjectsUpdate();
+    warmup = 0;
+
+    // spawn player
+    player = new Player(cameraPos = playerStartPos);
+}
 
 function loadLevel()
 {
@@ -107,40 +131,10 @@ function loadLevel()
     }
 }
 
-function buildLevel()
-{
-    // create the level
-    levelColor = randColor(new Color(.2,.2,.2), new Color(.8,.8,.8));
-    levelBackgroundColor = levelColor.mutate().scale(.4,1);
-    levelOutlineColor = levelColor.mutate().add(new Color(.4,.4,.4)).clamp();
-
-    loadLevel();
-    initSky();
-    initParallaxLayers();
-    
-    // apply decoration to all level tiles
-    const pos = vec2();
-    const layerCount = tileLayers.length;
-    for (let layer=layerCount; layer--;)
-    for (pos.x=levelSize.x; pos.x--;)
-    for (pos.y=levelSize.y; pos.y--;)
-        decorateTile(pos, layer);
-
-    // warm up level
-    warmup = 1;
-    for (let i = 500; i--;)
-        engineObjectsUpdate();
-    warmup = 0;
-
-    // spawn player
-    player = new Player(cameraPos = playerStartPos);
-}
-
 function decorateTile(pos, layer=1)
 {
-    const tileLayer = tileLayers[layer];
-
     ASSERT((pos.x|0) == pos.x && (pos.y|0)== pos.y);
+    const tileLayer = tileLayers[layer];
 
     if (layer == foregroundLayerIndex)
     {
