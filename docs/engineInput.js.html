@@ -193,10 +193,10 @@ function inputUpdatePost()
 ///////////////////////////////////////////////////////////////////////////////
 // Mouse event handlers
 
-onmousedown = (e)=> {isUsingGamepad = false; inputData[0][e.button] = 3; window.onmousemove(e); e.button &amp;&amp; e.preventDefault();}
+onmousedown = (e)=> {isUsingGamepad = false; inputData[0][e.button] = 3; mousePosScreen = mouseToScreen(e); e.button &amp;&amp; e.preventDefault();}
 onmouseup   = (e)=> inputData[0][e.button] = inputData[0][e.button] &amp; 2 | 4;
 onmousemove = (e)=> mousePosScreen = mouseToScreen(e);
-onwheel     = (e)=> e.ctrlKey || (mouseWheel = sign(e.deltaY));
+onwheel     = (e)=> mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY);
 oncontextmenu = (e)=> false; // prevent right click menu
 
 // convert a mouse or touch event position to screen space
@@ -290,7 +290,7 @@ function gamepadsUpdate()
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Pulse the vibration hardware if it exists
- *  @param {Number} [pattern] - a single value in miliseconds or vibration interval array
+ *  @param {Number|Array} [pattern] - single value in ms or vibration interval array
  *  @memberof Input */
 function vibrate(pattern=100)
 { vibrateEnable &amp;&amp; navigator &amp;&amp; navigator.vibrate &amp;&amp; navigator.vibrate(pattern); }
@@ -316,9 +316,9 @@ if (isTouchDevice)
     // handle all touch events the same way
     ontouchstart = ontouchmove = ontouchend = (e)=>
     {
-        // fix stalled audio on mobile
-        if (soundEnable)
-            audioContext ? audioContext.resume() : zzfx(0);
+        // fix stalled audio requiring user interaction
+        if (soundEnable &amp;&amp; audioContext &amp;&amp; audioContext.state != 'running')
+            zzfx(0);
 
         // check if touching and pass to mouse events
         const touching = e.touches.length;
@@ -464,7 +464,7 @@ function touchGamepadRender()
     const rightCenter = vec2(mainCanvasSize.x-touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
     for (let i=4; i--;)
     {
-        const pos = rightCenter.add(vec2().setAngle(i*PI/2, touchGamepadSize/2));
+        const pos = rightCenter.add(vec2().setDirection(i, touchGamepadSize/2));
         overlayContext.fillStyle = touchGamepadButtons[i] ? '#fff' : '#000';
         overlayContext.beginPath();
         overlayContext.arc(pos.x, pos.y, touchGamepadSize/4, 0,9);

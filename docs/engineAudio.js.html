@@ -148,22 +148,19 @@ class SoundWave extends Sound
         this.randomness = randomness;
 
         if (!soundEnable) return;
-        if (!soundDecoderContext)
-            soundDecoderContext = new AudioContext;
 
         fetch(filename)
         .then(response => response.arrayBuffer())
-        .then(arrayBuffer => soundDecoderContext.decodeAudioData(arrayBuffer))
+        .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
         .then(audioBuffer => 
         {
             this.sampleChannels = [];
             for (let i = audioBuffer.numberOfChannels; i--;)
-                this.sampleChannels[i] = audioBuffer.getChannelData(i);
+                this.sampleChannels[i] = Array.from(audioBuffer.getChannelData(i));
             this.sampleRate = audioBuffer.sampleRate;
         });
     }
 }
-let soundDecoderContext; // audio context used only to decode audio files
 
 /**
  * Music Object - Stores a zzfx music track for later use
@@ -277,8 +274,9 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Audio context used by the engine
+ *  @type {AudioContext}
  *  @memberof Audio */
-let audioContext;
+let audioContext = new AudioContext;
 
 /** Play cached audio samples with given settings
  *  @param {Array}   sampleChannels - Array of arrays of samples to play (for stereo playback)
@@ -292,10 +290,6 @@ let audioContext;
 function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=zzfxR) 
 {
     if (!soundEnable) return;
-
-    // create audio context if needed
-    if (!audioContext)
-        audioContext = new AudioContext;
 
     // prevent sounds from building up if they can't be played
     if (audioContext.state != 'running')
