@@ -11,7 +11,7 @@
 'use strict';
 
 const ENGINE_NAME = 'littlejs';
-const BUILD_FOLDER = 'build';
+const BUILD_FOLDER = 'dist';
 const SOURCE_FOLDER = 'src';
 const engineSourceFiles =
 [
@@ -158,7 +158,14 @@ function typeScriptBuildStep(filename)
 {
     try
     {
-        child_process.execSync(`npx tsc ${filename} --declaration --allowJs --emitDeclarationOnly --outFile ${BUILD_FOLDER}/${ENGINE_NAME}.d.ts`);
+        const tsFilename = `${BUILD_FOLDER}/${ENGINE_NAME}.d.ts`
+        child_process.execSync(`npx tsc ${filename} --declaration --allowJs --emitDeclarationOnly --outFile ${tsFilename}`);
+
+        // Remove declare module part
+        //let fileContent = fs.readFileSync(tsFilename, 'utf8');
+        //const r = new RegExp(`declare module "${ENGINE_NAME}\.esm" \{([\\s\\S]*?)\}`);
+        //fs.writeFileSync(tsFilename, fileContent.replace(r, '$1'));
+
     }
     catch (e) { handleError(e, 'Failed to run TypeScript build step!'); }
 };

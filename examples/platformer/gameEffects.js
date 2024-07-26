@@ -34,10 +34,10 @@ const persistentParticleDestroyCallback = (particle)=>
         tileLayers[foregroundLayerIndex].drawTile(particle.pos, particle.size, particle.tileInfo, particle.color, particle.angle, particle.mirror);
 }
 
-function makeBlood(pos, amount) { makeDebris(pos, new Color(1,0,0), 50, .1, 0); }
-function makeDebris(pos, color = new Color, amount = 100, size=.2, elasticity = .3)
+function makeBlood(pos, amount) { makeDebris(pos, hsl(0,1,.5), 50, .1, 0); }
+function makeDebris(pos, color = hsl(), amount = 100, size=.2, elasticity = .3)
 {
-    const color2 = color.lerp(new Color, .5);
+    const color2 = color.lerp(hsl(), .5);
     const emitter = new ParticleEmitter(
         pos, 0, 1, .1, 100, PI, // pos, angle, emitSize, emitTime, emitRate, emiteCone
         0,                      // tileInfo
@@ -98,11 +98,11 @@ function explosion(pos, radius=3)
 
     // smoke
     new ParticleEmitter(
-        pos, 0,                                 // pos, angle
-        radius/2, .2, 50*radius, PI,            // emitSize, emitTime, emitRate, emiteCone
-        0,                                      // tileInfo
-        new Color(0,0,0), new Color(0,0,0),     // colorStartA, colorStartB
-        new Color(0,0,0,0), new Color(0,0,0,0), // colorEndA, colorEndB
+        pos, 0,                     // pos, angle
+        radius/2, .2, 50*radius, PI,// emitSize, emitTime, emitRate, emiteCone
+        0,                          // tileInfo
+        hsl(0,0,0), hsl(0,0,0),     // colorStartA, colorStartB
+        hsl(0,0,0,0), hsl(0,0,0,0), // colorEndA, colorEndB
         1, .5, 2, .2, .05,   // time, sizeStart, sizeEnd, speed, angleSpeed
         .9, 1, -.3, PI, .1,  // damp, angleDamp, gravity, particleCone, fade
         .5, 0, 0, 0, 1e8     // randomness, collide, additive, colorLinear, renderOrder
@@ -110,11 +110,11 @@ function explosion(pos, radius=3)
 
     // fire
     new ParticleEmitter(
-        pos, 0,                                 // pos, angle
-        radius/2, .1, 100*radius, PI,           // emitSize, emitTime, emitRate, emiteCone
-        0,                                      // tileInfo
-        new Color(1,.5,.1), new Color(1,.1,.1), // colorStartA, colorStartB
-        new Color(1,.5,.1,0), new Color(1,.1,.1,0), // colorEndA, colorEndB
+        pos, 0,                         // pos, angle
+        radius/2, .1, 100*radius, PI,   // emitSize, emitTime, emitRate, emiteCone
+        0,                              // tileInfo
+        rgb(1,.5,.1), rgb(1,.1,.1),     // colorStartA, colorStartB
+        rgb(1,.5,.1,0), rgb(1,.1,.1,0), // colorEndA, colorEndB
         .7, .8, .2, .2, .05,  // time, sizeStart, sizeEnd, speed, angleSpeed
         .9, 1, -.2, PI, .05,  // damp, angleDamp, gravity, particleCone, fade
         .5, 0, 1, 0, 1e9      // randomness, collide, additive, colorLinear, renderOrder
@@ -168,8 +168,8 @@ let skySeed, skyColor, horizonColor;
 function initSky()
 {
     skySeed = rand(1e9);
-    skyColor = randColor(new Color(.5,.5,.5), new Color(.9,.9,.9));
-    horizonColor = skyColor.subtract(new Color(.05,.05,.05)).mutate(.3).clamp();
+    skyColor = randColor(hsl(0,0,.5), hsl(0,0,.9));
+    horizonColor = skyColor.subtract(hsl(0,0,.05)).mutate(.3).clamp();
 }
 
 function drawSky()
@@ -222,7 +222,7 @@ function initParallaxLayers()
         const gradient = tileParallaxLayer.context.fillStyle = 
             tileParallaxLayer.context.createLinearGradient(0,0,0,tileParallaxLayer.canvas.height = parallaxSize.y);
         gradient.addColorStop(0,layerColor);
-        gradient.addColorStop(1,layerColor.subtract(new Color(1,1,1,0)).mutate(.1).clamp());
+        gradient.addColorStop(1,layerColor.subtract(hsl(0,0,1,0)).mutate(.1).clamp());
 
         // draw mountains ranges
         let groundLevel = startGroundLevel, groundSlope = rand(-1,1);

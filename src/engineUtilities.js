@@ -524,8 +524,8 @@ function isColor(c) { return c instanceof Color; }
  * let a = new Color;              // white
  * let b = new Color(1, 0, 0);     // red
  * let c = new Color(0, 0, 0, 0);  // transparent black
- * let d = RGB(0, 0, 1);           // blue using rgb color
- * let e = HSL(.3, 1, .5);         // green using hsl color
+ * let d = rgb(0, 0, 1);           // blue using rgb color
+ * let e = hsl(.3, 1, .5);         // green using hsl color
  */
 class Color
 {

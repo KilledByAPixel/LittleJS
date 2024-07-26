@@ -10,7 +10,7 @@ const PROGRAM_NAME = 'game';
 const BUILD_FOLDER = 'build';
 const sourceFiles =
 [
-    '../../build/littlejs.release.js',
+    '../../dist/littlejs.release.js',
     'game.js',
     // add your game's files here
 ];

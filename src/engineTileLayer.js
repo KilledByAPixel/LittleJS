@@ -138,7 +138,7 @@ class TileLayerData
      *  @param {Number}  [direction] - Integer direction of tile, in 90 degree increments
      *  @param {Boolean} [mirror]    - If the tile should be mirrored along the x axis
      *  @param {Color}   [color]     - Color of the tile */
-    constructor(tile, direction=0, mirror=false, color=new Color())
+    constructor(tile, direction=0, mirror=false, color=new Color)
     {
         /** @property {Number}  - The tile to use, untextured if undefined */
         this.tile      = tile;

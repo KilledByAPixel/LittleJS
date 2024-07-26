@@ -58,10 +58,8 @@ let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParti
  *  @memberof Debug */
 function ASSERT(assert, output) 
 {
-    if (!enableAsserts)
-        return;
-
-    output ? console.assert(assert, output) : console.assert(assert);
+    if (enableAsserts)
+        output ? console.assert(assert, output) : console.assert(assert);
 }
 
 /** Draw a debug rectangle in world space

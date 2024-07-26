@@ -823,8 +823,8 @@ declare module "littlejs.esm" {
      * let a = new Color;              // white
      * let b = new Color(1, 0, 0);     // red
      * let c = new Color(0, 0, 0, 0);  // transparent black
-     * let d = RGB(0, 0, 1);           // blue using rgb color
-     * let e = HSL(.3, 1, .5);         // green using hsl color
+     * let d = rgb(0, 0, 1);           // blue using rgb color
+     * let e = hsl(.3, 1, .5);         // green using hsl color
      */
     export class Color {
         /** Create a color with the rgba components passed in, white by default
@@ -1847,12 +1847,12 @@ declare module "littlejs.esm" {
      * @example
      * // create a particle emitter
      * let pos = vec2(2,3);
-     * let particleEmiter = new ParticleEmitter
+     * let particleEmitter = new ParticleEmitter
      * (
-     *     pos, 0, 1, 0, 500, PI,  // pos, angle, emitSize, emitTime, emitRate, emiteCone
-     *     tile(0, 16),            // tileInfo
-     *     new Color(1,1,1),   new Color(0,0,0),   // colorStartA, colorStartB
-     *     new Color(1,1,1,0), new Color(0,0,0,0), // colorEndA, colorEndB
+     *     pos, 0, 1, 0, 500, PI,      // pos, angle, emitSize, emitTime, emitRate, emiteCone
+     *     tile(0, 16),                // tileInfo
+     *     rgb(1,1,1),   rgb(0,0,0),   // colorStartA, colorStartB
+     *     rgb(1,1,1,0), rgb(0,0,0,0), // colorEndA, colorEndB
      *     2, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
      *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate,
      *     .5, 1                // randomness, collide, additive, randomColorLinear, renderOrder

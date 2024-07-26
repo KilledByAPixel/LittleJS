@@ -24,9 +24,9 @@ const getTileData = (pos, layer)=>
 function buildLevel()
 {
     // create the level
-    levelColor = randColor(new Color(.2,.2,.2), new Color(.8,.8,.8));
+    levelColor = randColor(hsl(0,0,.2), hsl(0,0,.8));
     levelBackgroundColor = levelColor.mutate().scale(.4,1);
-    levelOutlineColor = levelColor.mutate().add(new Color(.4,.4,.4)).clamp();
+    levelOutlineColor = levelColor.mutate().add(hsl(0,0,.4)).clamp();
 
     loadLevel();
     initSky();
