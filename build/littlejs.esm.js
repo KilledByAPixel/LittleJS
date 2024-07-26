@@ -58,9 +58,15 @@ let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParti
 
 /** Asserts if the experssion is false, does not do anything in release builds
  *  @param {Boolean} assert
- *  @param {Object} output
+ *  @param {Object} [output]
  *  @memberof Debug */
-function ASSERT(assert, output) { enableAsserts && console.assert(assert, output); }
+function ASSERT(assert, output) 
+{
+    if (!enableAsserts)
+        return;
+
+    output ? console.assert(assert, output) : console.assert(assert);
+}
 
 /** Draw a debug rectangle in world space
  *  @param {Vector2} pos
@@ -841,6 +847,16 @@ class Vector2
     { 
         const c = Math.cos(angle), s = Math.sin(angle); 
         return new Vector2(this.x*c - this.y*s, this.x*s + this.y*c);
+    }
+
+    /** Set the integer direction of this vector, corrosponding to multiples of 90 degree rotation (0-3)
+     * @param {Number} [direction]
+     * @param {Number} [length] */
+    setDirection(direction, length=1)
+    {
+        ASSERT(direction==0 || direction==1 || direction==2 || direction==3);
+        return vec2(direction%2 ? direction-1 ? -length : length : 0, 
+            direction%2 ? 0 : direction ? -length : length);
     }
 
     /** Returns the integer direction of this vector, corrosponding to multiples of 90 degree rotation (0-3)
@@ -2971,7 +2987,7 @@ function touchGamepadRender()
     const rightCenter = vec2(mainCanvasSize.x-touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
     for (let i=4; i--;)
     {
-        const pos = rightCenter.add(vec2().setAngle(i*PI/2, touchGamepadSize/2));
+        const pos = rightCenter.add(vec2().setDirection(i, touchGamepadSize/2));
         overlayContext.fillStyle = touchGamepadButtons[i] ? '#fff' : '#000';
         overlayContext.beginPath();
         overlayContext.arc(pos.x, pos.y, touchGamepadSize/4, 0,9);

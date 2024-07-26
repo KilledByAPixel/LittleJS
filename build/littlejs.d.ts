@@ -111,9 +111,9 @@ declare module "littlejs.esm" {
     export let showWatermark: boolean;
     /** Asserts if the experssion is false, does not do anything in release builds
      *  @param {Boolean} assert
-     *  @param {Object} output
+     *  @param {Object} [output]
      *  @memberof Debug */
-    export function ASSERT(assert: boolean, output: any): void;
+    export function ASSERT(assert: boolean, output?: any): void;
     /** Draw a debug rectangle in world space
      *  @param {Vector2} pos
      *  @param {Vector2} [size=Vector2()]
@@ -787,6 +787,10 @@ declare module "littlejs.esm" {
          * @param {Number} angle
          * @return {Vector2} */
         rotate(angle: number): Vector2;
+        /** Set the integer direction of this vector, corrosponding to multiples of 90 degree rotation (0-3)
+         * @param {Number} [direction]
+         * @param {Number} [length] */
+        setDirection(direction?: number, length?: number): Vector2;
         /** Returns the integer direction of this vector, corrosponding to multiples of 90 degree rotation (0-3)
          * @return {Number} */
         direction(): number;

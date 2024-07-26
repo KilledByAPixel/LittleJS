@@ -149,7 +149,7 @@ function decorateTile(pos, layer=1)
         for (let i=4;i--;)
         {
             // outline towards neighbors of differing type
-            const neighborTileType = getTileCollisionData(pos.add(vec2().setAngle(i*PI/2)));
+            const neighborTileType = getTileCollisionData(pos.add(vec2().setDirection(i)));
             if (neighborTileType == tileType)
                 continue;
 
@@ -169,7 +169,7 @@ function decorateTile(pos, layer=1)
         for (let i=4;i--;)
         {
             // check corner neighbors
-            const neighborTileDataA = getTileData(pos.add(vec2().setAngle(i*PI/2)), layer);
+            const neighborTileDataA = getTileData(pos.add(vec2().setDirection(i)), layer);
             const neighborTileDataB = getTileData(pos.add(vec2().setAngle((i+1)%4*PI/2)), layer);
             if (neighborTileDataA > 0 || neighborTileDataB > 0)
                 continue;

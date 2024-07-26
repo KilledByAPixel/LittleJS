@@ -430,6 +430,16 @@ class Vector2
         return new Vector2(this.x*c - this.y*s, this.x*s + this.y*c);
     }
 
+    /** Set the integer direction of this vector, corrosponding to multiples of 90 degree rotation (0-3)
+     * @param {Number} [direction]
+     * @param {Number} [length] */
+    setDirection(direction, length=1)
+    {
+        ASSERT(direction==0 || direction==1 || direction==2 || direction==3);
+        return vec2(direction%2 ? direction-1 ? -length : length : 0, 
+            direction%2 ? 0 : direction ? -length : length);
+    }
+
     /** Returns the integer direction of this vector, corrosponding to multiples of 90 degree rotation (0-3)
      * @return {Number} */
     direction()
