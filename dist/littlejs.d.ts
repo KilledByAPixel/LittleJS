@@ -111,9 +111,9 @@ declare module "littlejs.esm" {
     export let showWatermark: boolean;
     /** Asserts if the experssion is false, does not do anything in release builds
      *  @param {Boolean} assert
-     *  @param {Object} output
+     *  @param {Object} [output]
      *  @memberof Debug */
-    export function ASSERT(assert: boolean, output: any): void;
+    export function ASSERT(assert: boolean, output?: any): void;
     /** Draw a debug rectangle in world space
      *  @param {Vector2} pos
      *  @param {Vector2} [size=Vector2()]
@@ -619,13 +619,13 @@ declare module "littlejs.esm" {
      *  @memberof Utilities */
     export function nearestPowerOfTwo(value: number): number;
     /** Returns true if two axis aligned bounding boxes are overlapping
-     *  @param {Vector2} pointA - Center of box A
-     *  @param {Vector2} sizeA  - Size of box A
-     *  @param {Vector2} pointB - Center of box B
-     *  @param {Vector2} sizeB  - Size of box B
-     *  @return {Boolean}       - True if overlapping
+     *  @param {Vector2} pointA         - Center of box A
+     *  @param {Vector2} sizeA          - Size of box A
+     *  @param {Vector2} pointB         - Center of box B
+     *  @param {Vector2} [sizeB=(0,0)]  - Size of box B, a point if undefined
+     *  @return {Boolean}               - True if overlapping
      *  @memberof Utilities */
-    export function isOverlapping(pointA: Vector2, sizeA: Vector2, pointB: Vector2, sizeB: Vector2): boolean;
+    export function isOverlapping(pointA: Vector2, sizeA: Vector2, pointB: Vector2, sizeB?: Vector2): boolean;
     /** Returns an oscillating wave between 0 and amplitude with frequency of 1 Hz by default
      *  @param {Number} [frequency] - Frequency of the wave in Hz
      *  @param {Number} [amplitude] - Amplitude (max height) of the wave
@@ -668,8 +668,8 @@ declare module "littlejs.esm" {
      *  @memberof Random */
     export function randVector(length?: number): Vector2;
     /** Returns a random color between the two passed in colors, combine components if linear
-     *  @param {Color}   [colorA=Color()]
-     *  @param {Color}   [colorB=Color(0,0,0,1)]
+     *  @param {Color}   [colorA=(1,1,1,1)]
+     *  @param {Color}   [colorB=(0,0,0,1)]
      *  @param {Boolean} [linear]
      *  @return {Color}
      *  @memberof Random */
@@ -787,6 +787,10 @@ declare module "littlejs.esm" {
          * @param {Number} angle
          * @return {Vector2} */
         rotate(angle: number): Vector2;
+        /** Set the integer direction of this vector, corrosponding to multiples of 90 degree rotation (0-3)
+         * @param {Number} [direction]
+         * @param {Number} [length] */
+        setDirection(direction?: number, length?: number): Vector2;
         /** Returns the integer direction of this vector, corrosponding to multiples of 90 degree rotation (0-3)
          * @return {Number} */
         direction(): number;
@@ -819,8 +823,8 @@ declare module "littlejs.esm" {
      * let a = new Color;              // white
      * let b = new Color(1, 0, 0);     // red
      * let c = new Color(0, 0, 0, 0);  // transparent black
-     * let d = RGB(0, 0, 1);           // blue using rgb color
-     * let e = HSL(.3, 1, .5);         // green using hsl color
+     * let d = rgb(0, 0, 1);           // blue using rgb color
+     * let e = hsl(.3, 1, .5);         // green using hsl color
      */
     export class Color {
         /** Create a color with the rgba components passed in, white by default
@@ -952,7 +956,7 @@ declare module "littlejs.esm" {
      */
     export function vec2(x?: (number | Vector2), y?: number): Vector2;
     /**
-     * Create a color object with RGBA values
+     * Create a color object with RGBA values, white by default
      * @param {Number} [r=1] - red
      * @param {Number} [g=1] - green
      * @param {Number} [b=1] - blue
@@ -962,7 +966,7 @@ declare module "littlejs.esm" {
      */
     export function rgb(r?: number, g?: number, b?: number, a?: number): Color;
     /**
-     * Create a color object with HSLA values
+     * Create a color object with HSLA values, white by default
      * @param {Number} [h=0] - hue
      * @param {Number} [s=0] - saturation
      * @param {Number} [l=1] - lightness
@@ -1520,8 +1524,9 @@ declare module "littlejs.esm" {
      *  @memberof Audio */
     export function getNoteFrequency(semitoneOffset: number, rootFrequency?: number): number;
     /** Audio context used by the engine
+     *  @type {AudioContext}
      *  @memberof Audio */
-    export let audioContext: any;
+    export let audioContext: AudioContext;
     /** Play cached audio samples with given settings
      *  @param {Array}   sampleChannels - Array of arrays of samples to play (for stereo playback)
      *  @param {Number}  [volume] - How much to scale volume by
@@ -1842,12 +1847,12 @@ declare module "littlejs.esm" {
      * @example
      * // create a particle emitter
      * let pos = vec2(2,3);
-     * let particleEmiter = new ParticleEmitter
+     * let particleEmitter = new ParticleEmitter
      * (
-     *     pos, 0, 1, 0, 500, PI,  // pos, angle, emitSize, emitTime, emitRate, emiteCone
-     *     tile(0, 16),            // tileInfo
-     *     new Color(1,1,1),   new Color(0,0,0),   // colorStartA, colorStartB
-     *     new Color(1,1,1,0), new Color(0,0,0,0), // colorEndA, colorEndB
+     *     pos, 0, 1, 0, 500, PI,      // pos, angle, emitSize, emitTime, emitRate, emiteCone
+     *     tile(0, 16),                // tileInfo
+     *     rgb(1,1,1),   rgb(0,0,0),   // colorStartA, colorStartB
+     *     rgb(1,1,1,0), rgb(0,0,0,0), // colorEndA, colorEndB
      *     2, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
      *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate,
      *     .5, 1                // randomness, collide, additive, randomColorLinear, renderOrder

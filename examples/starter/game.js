@@ -62,11 +62,11 @@ function gameInit()
 
     // create particle emitter
     particleEmitter = new ParticleEmitter(
-        vec2(16,9), 0,                          // emitPos, emitAngle
-        1, 0, 500, PI,                          // emitSize, emitTime, emitRate, emiteCone
-        tile(0, 16),                            // tileIndex, tileSize
-        new Color(1,1,1),   new Color(0,0,0),   // colorStartA, colorStartB
-        new Color(1,1,1,0), new Color(0,0,0,0), // colorEndA, colorEndB
+        vec2(16,9), 0,              // emitPos, emitAngle
+        1, 0, 500, PI,              // emitSize, emitTime, emitRate, emiteCone
+        tile(0, 16),                // tileIndex, tileSize
+        hsl(1,1,1),   hsl(0,0,0),   // colorStartA, colorStartB
+        hsl(0,0,0,0), hsl(0,0,0,0), // colorEndA, colorEndB
         2, .2, .2, .1, .05,   // time, sizeStart, sizeEnd, speed, angleSpeed
         .99, 1, 1, PI,        // damping, angleDamping, gravityScale, cone
         .05, .5, 1, 1         // fadeRate, randomness, collide, additive
@@ -84,7 +84,7 @@ function gameUpdate()
         sound_click.play(mousePos);
 
         // change particle color and set to fade out
-        particleEmitter.colorStartA = new Color;
+        particleEmitter.colorStartA = hsl();
         particleEmitter.colorStartB = randColor();
         particleEmitter.colorEndA = particleEmitter.colorStartA.scale(1,0);
         particleEmitter.colorEndB = particleEmitter.colorStartB.scale(1,0);

@@ -16,7 +16,7 @@ setCanvasPixelated(false);
 
 const fallTime = .2;
 const cameraOffset = vec2(0,-.5);
-const backgroundColor = new Color(.2,.2,.2);
+const backgroundColor = hsl(0,0,.2);
 const minMatchCount = 3;
 const highScoreKey = 'puzzleBestScore';
 
@@ -31,13 +31,13 @@ let level, levelSize, levelFall, fallTimer, dragStartPos, comboCount, score, bes
 // tiles
 const tileColors = 
 [
-    new Color(1,0,0),
-    new Color(1,1,1),
-    new Color(1,1,0),
-    new Color(0,1,0),
-    new Color(0,.6,1),
-    new Color(.6,0,1),
-    new Color(.5,.5,.5),
+    rgb(1,0,0),
+    rgb(1,1,1),
+    rgb(1,1,0),
+    rgb(0,1,0),
+    rgb(0,.6,1),
+    rgb(.6,0,1),
+    rgb(.5,.5,.5),
 ];
 const tileTypeCount = tileColors.length;
 
@@ -186,7 +186,7 @@ function gameUpdatePost()
 function gameRender()
 {
     // draw a black square for the background
-    drawRect(cameraPos.subtract(cameraOffset), levelSize, new Color(0,0,0));
+    drawRect(cameraPos.subtract(cameraOffset), levelSize, hsl(0,0,0));
 
     // draw the blocks
     const pos = vec2();
@@ -223,8 +223,8 @@ function gameRender()
 function gameRenderPost()
 {
     // draw text on top of everything
-    drawText('Score: ' + score,    cameraPos.add(vec2(-3,-3.1)), .9, new Color, .1);
-    drawText('Best: ' + bestScore, cameraPos.add(vec2( 3,-3.1)), .9, new Color, .1);
+    drawText('Score: ' + score,    cameraPos.add(vec2(-3,-3.1)), .9, hsl(), .1);
+    drawText('Best: ' + bestScore, cameraPos.add(vec2( 3,-3.1)), .9, hsl(), .1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -290,7 +290,7 @@ function clearMatches()
 
             // spawn particles
             const color1 = tileColors[data];
-            const color2 = color1.lerp(new Color, .5);
+            const color2 = color1.lerp(hsl(), .5);
             new ParticleEmitter(
                 pos.add(vec2(.5)), 0,  // pos, angle
                 .5, .1, 200, PI,       // emitSize, emitTime, emitRate, emiteCone

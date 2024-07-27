@@ -25,7 +25,6 @@ function gameInit()
     objectDefaultDamping = .99;
     objectDefaultAngleDamping = .99;
     cameraScale = 4*16;
-    gameTimer.set();
     buildLevel();
 }
 

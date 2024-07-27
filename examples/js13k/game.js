@@ -1,6 +1,7 @@
 /*
     LittleJS JS13K Starter Game
     - For size limited projects
+    - Includes all core engine features
     - Builds to 7kb zip file
 */
 
@@ -19,7 +20,7 @@ let particleEmitter;
 function gameInit()
 {
     // create tile collision and visible tile layer
-    initTileCollision(vec2(32, 16));
+    initTileCollision(vec2(32,16));
     const pos = vec2();
     const tileLayer = new TileLayer(pos, tileCollisionSize);
 
@@ -48,19 +49,19 @@ function gameInit()
     // draw tile layer with new data
     tileLayer.redraw();
 
-    // move camera to center of collision
-    cameraPos = tileCollisionSize.scale(.5);
+    // setup camera
+    cameraPos = vec2(16,8);
 
     // enable gravity
     gravity = -.01;
 
     // create particle emitter
     particleEmitter = new ParticleEmitter(
-        vec2(16), 0,                            // emitPos, emitAngle
-        1, 0, 500, PI,                          // emitSize, emitTime, emitRate, emiteCone
-        tile(0, 16),                            // tileIndex, tileSize
+        vec2(16,9), 0,              // emitPos, emitAngle
+        1, 0, 500, PI,              // emitSize, emitTime, emitRate, emiteCone
+        tile(0, 16),                // tileIndex, tileSize
         new Color(1,1,1),   new Color(0,0,0),   // colorStartA, colorStartB
-        new Color(1,1,1,0), new Color(0,0,0,0), // colorEndA, colorEndB
+        new Color(0,0,0,0), new Color(0,0,0,0), // colorEndA, colorEndB
         2, .2, .2, .1, .05,   // time, sizeStart, sizeEnd, speed, angleSpeed
         .99, 1, 1, PI,        // damping, angleDamping, gravityScale, cone
         .05, .5, 1, 1         // fadeRate, randomness, collide, additive
@@ -99,14 +100,14 @@ function gameUpdatePost()
 function gameRender()
 {
     // draw a grey square in the background without using webgl
-    drawRect(cameraPos, tileCollisionSize.add(vec2(5)), new Color(.2,.2,.2), 0, 0);
+    drawRect(vec2(16,8), vec2(20,14), new Color(.6,.6,.6), 0, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameRenderPost()
 {
     // draw to overlay canvas for hud rendering
-    drawTextScreen('LittleJS JS13K Project', vec2(mainCanvasSize.x/2, 80), 80);
+    drawTextScreen('LittleJS JS13K Demo', vec2(mainCanvasSize.x/2, 70), 80);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

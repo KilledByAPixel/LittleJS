@@ -21,7 +21,7 @@ const sound_dodge =        new Sound([.4,.2,150,.05,,.05,,,-1,,,,,4,,,,,.02]);
 const sound_walk =         new Sound([.3,.1,50,.005,,.01,4,,,,,,,,10,,,.5]);
 const sound_explosion =    new Sound([2,.2,72,.01,.01,.2,4,,,,,,,1,,.5,.1,.5,.02]);
 const sound_grenade =      new Sound([.5,.01,300,,,.02,3,.22,,,-9,.2,,,,,,.5]);
-const sound_killEnemy =    new Sound([,,783,,.03,.02,1,2,,,940,.03,,,,,.2,.6,,.06]);
+const sound_score =        new Sound([,,783,,.03,.02,1,2,,,940,.03,,,,,.2,.6,,.06]);
 
 ///////////////////////////////////////////////////////////////////////////////
 // special effects
@@ -31,13 +31,13 @@ const persistentParticleDestroyCallback = (particle)=>
     // copy particle to tile layer on death
     ASSERT(!particle.tileInfo, 'quick draw to tile layer uses canvas 2d so must be untextured');
     if (particle.groundObject)
-        tileLayer.drawTile(particle.pos, particle.size, particle.tileInfo, particle.color, particle.angle, particle.mirror);
+        tileLayers[foregroundLayerIndex].drawTile(particle.pos, particle.size, particle.tileInfo, particle.color, particle.angle, particle.mirror);
 }
 
-function makeBlood(pos, amount) { makeDebris(pos, new Color(1,0,0), 50, .1, 0); }
-function makeDebris(pos, color = new Color, amount = 100, size=.2, elasticity = .3)
+function makeBlood(pos, amount) { makeDebris(pos, hsl(0,1,.5), 50, .1, 0); }
+function makeDebris(pos, color = hsl(), amount = 100, size=.2, elasticity = .3)
 {
-    const color2 = color.lerp(new Color, .5);
+    const color2 = color.lerp(hsl(), .5);
     const emitter = new ParticleEmitter(
         pos, 0, 1, .1, 100, PI, // pos, angle, emitSize, emitTime, emitRate, emiteCone
         0,                      // tileInfo
@@ -57,8 +57,6 @@ function makeDebris(pos, color = new Color, amount = 100, size=.2, elasticity = 
 function explosion(pos, radius=3)
 {
     ASSERT(radius > 0);
-
-    const damage = radius*2;
 
     // destroy level
     for (let x = -radius; x < radius; ++x)
@@ -80,6 +78,7 @@ function explosion(pos, radius=3)
     // kill/push objects
     engineObjectsCallback(pos, radius*3, (o)=> 
     {
+        const damage = radius*2;
         const d = o.pos.distance(pos);
         if (o.isGameObject)
         {
@@ -99,11 +98,11 @@ function explosion(pos, radius=3)
 
     // smoke
     new ParticleEmitter(
-        pos, 0,                                 // pos, angle
-        radius/2, .2, 50*radius, PI,            // emitSize, emitTime, emitRate, emiteCone
-        0,                                      // tileInfo
-        new Color(0,0,0), new Color(0,0,0),     // colorStartA, colorStartB
-        new Color(0,0,0,0), new Color(0,0,0,0), // colorEndA, colorEndB
+        pos, 0,                     // pos, angle
+        radius/2, .2, 50*radius, PI,// emitSize, emitTime, emitRate, emiteCone
+        0,                          // tileInfo
+        hsl(0,0,0), hsl(0,0,0),     // colorStartA, colorStartB
+        hsl(0,0,0,0), hsl(0,0,0,0), // colorEndA, colorEndB
         1, .5, 2, .2, .05,   // time, sizeStart, sizeEnd, speed, angleSpeed
         .9, 1, -.3, PI, .1,  // damp, angleDamp, gravity, particleCone, fade
         .5, 0, 0, 0, 1e8     // randomness, collide, additive, colorLinear, renderOrder
@@ -111,11 +110,11 @@ function explosion(pos, radius=3)
 
     // fire
     new ParticleEmitter(
-        pos, 0,                                 // pos, angle
-        radius/2, .1, 100*radius, PI,           // emitSize, emitTime, emitRate, emiteCone
-        0,                                      // tileInfo
-        new Color(1,.5,.1), new Color(1,.1,.1), // colorStartA, colorStartB
-        new Color(1,.5,.1,0), new Color(1,.1,.1,0), // colorEndA, colorEndB
+        pos, 0,                         // pos, angle
+        radius/2, .1, 100*radius, PI,   // emitSize, emitTime, emitRate, emiteCone
+        0,                              // tileInfo
+        rgb(1,.5,.1), rgb(1,.1,.1),     // colorStartA, colorStartB
+        rgb(1,.5,.1,0), rgb(1,.1,.1,0), // colorEndA, colorEndB
         .7, .8, .2, .2, .05,  // time, sizeStart, sizeEnd, speed, angleSpeed
         .9, 1, -.2, PI, .05,  // damp, angleDamp, gravity, particleCone, fade
         .5, 0, 1, 0, 1e9      // randomness, collide, additive, colorLinear, renderOrder
@@ -132,85 +131,33 @@ function destroyTile(pos, makeSound = 1, cleanNeighbors = 1)
     // destroy tile
     const tileType = getTileCollisionData(pos);
 
-    if (!tileType) return 1;                  // empty
+    if (!tileType || tileType == tileType_solid)
+        return 1;
 
+    const tileLayer = tileLayers[foregroundLayerIndex];
     const centerPos = pos.add(vec2(.5));
     const layerData = tileLayer.getData(pos);
-    if (layerData)
+    if (!layerData)
+        return;
+
+    // create effects
+    makeDebris(centerPos, layerData.color.mutate());
+    makeSound && sound_destroyObject.play(centerPos);
+
+     // set and clear tile
+    tileLayer.setData(pos, new TileLayerData, 1);
+    setTileCollisionData(pos, tileType_empty);
+    setTileData(pos, foregroundLayerIndex, 0);
+
+    // cleanup neighbors
+    if (cleanNeighbors)
     {
-        makeDebris(centerPos, layerData.color.mutate());
-        makeSound && sound_destroyObject.play(centerPos);
-
-        setTileCollisionData(pos, tileType_empty);
-        tileLayer.setData(pos, new TileLayerData, 1); // set and clear tile
-
-        // cleanup neighbors
-        if (cleanNeighbors)
-        {
-            for (let i=-1;i<=1;++i)
-            for (let j=-1;j<=1;++j)
-                decorateTile(pos.add(vec2(i,j)));
-        }
+        for (let i=-1;i<=1;++i)
+        for (let j=-1;j<=1;++j)
+            decorateTile(pos.add(vec2(i,j)));
     }
 
     return 1;
-}
-
-function decorateBackgroundTile(pos)
-{
-    if (!tileBackgroundLayer)
-        return;
-
-    const tileData = getTileBackgroundData(pos);
-    if (tileData <= 0)
-        return;
-
-    // make round corners
-    for (let i=4;i--;)
-    {
-        // check corner neighbors
-        const neighborTileDataA = getTileBackgroundData(pos.add(vec2().setAngle(i*PI/2)));
-        const neighborTileDataB = getTileBackgroundData(pos.add(vec2().setAngle((i+1)%4*PI/2)));
-        if (neighborTileDataA > 0 || neighborTileDataB > 0)
-            continue;
-
-        const directionVector = vec2().setAngle(i*PI/2+PI/4, 10).floor();
-        const drawPos = pos.add(vec2(.5))          // center
-            .scale(16).add(directionVector).floor(); // direction offset
-
-        // clear rect without any scaling to prevent blur from filtering
-        const s = 2;
-        tileBackgroundLayer.context.clearRect(
-            drawPos.x - s/2, tileBackgroundLayer.canvas.height - drawPos.y - s/2, s, s);
-    }
-}
-
-function decorateTile(pos)
-{
-    ASSERT((pos.x|0) == pos.x && (pos.y|0)== pos.y);
-    const tileData = getTileCollisionData(pos);
-    if (tileData <= 0)
-    {
-        tileData || tileLayer.setData(pos, new TileLayerData, 1); // force it to clear if it is empty
-        return;
-    }
-
-    for (let i=4;i--;)
-    {
-        // outline towards neighbors of differing type
-        const neighborTileData = getTileCollisionData(pos.add(vec2().setAngle(i*PI/2)));
-        if (neighborTileData == tileData)
-            continue;
-
-        // make pixel perfect outlines
-        const size = i&1 ? vec2(2, 16) : vec2(16, 2);
-        tileLayer.context.fillStyle = levelGroundColor.mutate(.1);
-        const drawPos = pos.scale(16)
-            .add(vec2(i==1?14:0,(i==0?14:0)))
-            .subtract((i&1? vec2(0,8-size.y/2) : vec2(8-size.x/2,0)));
-        tileLayer.context.fillRect(
-            drawPos.x, tileLayer.canvas.height - drawPos.y, size.x, -size.y);
-    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -221,8 +168,8 @@ let skySeed, skyColor, horizonColor;
 function initSky()
 {
     skySeed = rand(1e9);
-    skyColor = randColor(new Color(.5,.5,.5), new Color(.9,.9,.9));
-    horizonColor = skyColor.subtract(new Color(.05,.05,.05)).mutate(.3).clamp();
+    skyColor = randColor(hsl(0,0,.5), hsl(0,0,.9));
+    horizonColor = skyColor.subtract(hsl(0,0,.05)).mutate(.3).clamp();
 }
 
 function drawSky()
@@ -238,20 +185,11 @@ function drawStars()
 {
     // draw stars and planets
     const random = new RandomGenerator(skySeed);
-    const largeStarCount = 9;
     for (let i = 1e3; i--;)
     {
-        let size = random.float(6, 1);
-        let speed = random.float() < .9 ? random.float(5) : random.float(99,9);
-        let color = (new Color).setHSLA(random.float(.2,-.3), random.float()**9, random.float(1,.5), random.float(.9,.3));
-        if (i < largeStarCount)
-        {
-            // large planets and suns
-            size = random.float()**3*99 + 9;
-            speed = random.float(5);
-            color = (new Color).setHSLA(random.float(), random.float(), random.float(1,.5)).add(skyColor.scale(.5)).clamp();
-        }
-        
+        const size = random.float(1, 6);
+        const speed = random.float() < .9 ? random.float(5) : random.float(9,99);
+        const color = hsl(random.float(-.3,.2), random.float()**9, random.float(.5,1), random.float(.3,.9));
         const extraSpace = 200;
         const w = mainCanvas.width+2*extraSpace, h = mainCanvas.height+2*extraSpace;
         const screenPos = vec2(
@@ -259,14 +197,7 @@ function drawStars()
             (random.float(h)+time*speed*random.float())%h-extraSpace);
 
         mainContext.fillStyle = color;
-        if (size < 9)
-            mainContext.fillRect(screenPos.x, screenPos.y, size, size);
-        else
-        {
-            mainContext.arc(screenPos.x, screenPos.y, size, 0, 9);
-            mainContext.fill();
-            mainContext.beginPath();
-        }
+        mainContext.fillRect(screenPos.x, screenPos.y, size, size);
     }
 }
 
@@ -281,7 +212,7 @@ function initParallaxLayers()
     for (let i=3; i--;)
     {
         // setup the layer
-        const parallaxSize = vec2(600,300), startGroundLevel = rand(99,120)+i*30;
+        const parallaxSize = vec2(600,300), startGroundLevel = 99+i*30;
         const tileParallaxLayer = tileParallaxLayers[i] = new TileLayer(vec2(), parallaxSize);
         tileParallaxLayer.renderOrder = -3e3+i;
         tileParallaxLayer.canvas.width = parallaxSize.x;
@@ -291,7 +222,7 @@ function initParallaxLayers()
         const gradient = tileParallaxLayer.context.fillStyle = 
             tileParallaxLayer.context.createLinearGradient(0,0,0,tileParallaxLayer.canvas.height = parallaxSize.y);
         gradient.addColorStop(0,layerColor);
-        gradient.addColorStop(1,layerColor.subtract(new Color(1,1,1,0)).mutate(.1).clamp());
+        gradient.addColorStop(1,layerColor.subtract(hsl(0,0,1,0)).mutate(.1).clamp());
 
         // draw mountains ranges
         let groundLevel = startGroundLevel, groundSlope = rand(-1,1);
@@ -305,6 +236,7 @@ function updateParallaxLayers()
 {
     tileParallaxLayers.forEach((tileParallaxLayer, i)=>
     {
+        // position layer depending on camera position
         const distance = 4+i;
         const parallax = vec2(150,30).scale((i*i+1));
         const cameraDeltaFromCenter = cameraPos.subtract(levelSize.scale(.5)).divide(levelSize.scale(-.5).divide(parallax));

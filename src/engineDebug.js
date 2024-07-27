@@ -54,9 +54,13 @@ let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParti
 
 /** Asserts if the experssion is false, does not do anything in release builds
  *  @param {Boolean} assert
- *  @param {Object} output
+ *  @param {Object} [output]
  *  @memberof Debug */
-function ASSERT(assert, output) { enableAsserts && console.assert(assert, output); }
+function ASSERT(assert, output) 
+{
+    if (enableAsserts)
+        output ? console.assert(assert, output) : console.assert(assert);
+}
 
 /** Draw a debug rectangle in world space
  *  @param {Vector2} pos

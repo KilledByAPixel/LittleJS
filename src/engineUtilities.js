@@ -259,7 +259,11 @@ class RandomGenerator
  * @memberof Utilities
  */
 function vec2(x=0, y)
-{ return typeof x === 'number'? new Vector2(x, y == undefined? x : y) : new Vector2(x.x, x.y); }
+{
+    return typeof x === 'number' ? 
+        new Vector2(x, y == undefined? x : y) : 
+        new Vector2(x.x, x.y);
+}
 
 /** 
  * Check if object is a valid Vector2
@@ -267,7 +271,7 @@ function vec2(x=0, y)
  * @return {Boolean}
  * @memberof Utilities
  */
-function isVector2(v) { return typeof v === 'object' && typeof v.x === 'number' && typeof v.y === 'number'; }
+function isVector2(v) { return v instanceof Vector2; }
 
 /** 
  * 2D Vector object with vector math library
@@ -298,27 +302,47 @@ class Vector2
     /** Returns a copy of this vector plus the vector passed in
      *  @param {Vector2} v - other vector
      *  @return {Vector2} */
-    add(v) { ASSERT(isVector2(v)); return new Vector2(this.x + v.x, this.y + v.y); }
+    add(v)
+    {
+        ASSERT(isVector2(v));
+        return new Vector2(this.x + v.x, this.y + v.y);
+    }
 
     /** Returns a copy of this vector minus the vector passed in
      *  @param {Vector2} v - other vector
      *  @return {Vector2} */
-    subtract(v) { ASSERT(isVector2(v)); return new Vector2(this.x - v.x, this.y - v.y); }
+    subtract(v)
+    {
+        ASSERT(isVector2(v));
+        return new Vector2(this.x - v.x, this.y - v.y);
+    }
 
     /** Returns a copy of this vector times the vector passed in
      *  @param {Vector2} v - other vector
      *  @return {Vector2} */
-    multiply(v) { ASSERT(isVector2(v)); return new Vector2(this.x * v.x, this.y * v.y); }
+    multiply(v)
+    {
+        ASSERT(isVector2(v));
+        return new Vector2(this.x * v.x, this.y * v.y);
+    }
 
     /** Returns a copy of this vector divided by the vector passed in
      *  @param {Vector2} v - other vector
      *  @return {Vector2} */
-    divide(v) { ASSERT(isVector2(v)); return new Vector2(this.x / v.x, this.y / v.y); }
+    divide(v)
+    {
+        ASSERT(isVector2(v));
+        return new Vector2(this.x / v.x, this.y / v.y);
+    }
 
     /** Returns a copy of this vector scaled by the vector passed in
      *  @param {Number} s - scale
      *  @return {Vector2} */
-    scale(s) { ASSERT(!isVector2(s)); return new Vector2(this.x * s, this.y * s); }
+    scale(s)
+    {
+        ASSERT(!isVector2(s));
+        return new Vector2(this.x * s, this.y * s);
+    }
 
     /** Returns the length of this vector
      * @return {Number} */
@@ -331,32 +355,56 @@ class Vector2
     /** Returns the distance from this vector to vector passed in
      * @param {Vector2} v - other vector
      * @return {Number} */
-    distance(v) { return this.distanceSquared(v)**.5; }
+    distance(v)
+    {
+        ASSERT(isVector2(v));
+        return this.distanceSquared(v)**.5;
+    }
 
     /** Returns the distance squared from this vector to vector passed in
      * @param {Vector2} v - other vector
      * @return {Number} */
-    distanceSquared(v) { return (this.x - v.x)**2 + (this.y - v.y)**2; }
+    distanceSquared(v)
+    {
+        ASSERT(isVector2(v));
+        return (this.x - v.x)**2 + (this.y - v.y)**2;
+    }
 
     /** Returns a new vector in same direction as this one with the length passed in
      * @param {Number} [length]
      * @return {Vector2} */
-    normalize(length=1) { const l = this.length(); return l ? this.scale(length/l) : new Vector2(0, length); }
+    normalize(length=1)
+    {
+        const l = this.length();
+        return l ? this.scale(length/l) : new Vector2(0, length);
+    }
 
     /** Returns a new vector clamped to length passed in
      * @param {Number} [length]
      * @return {Vector2} */
-    clampLength(length=1) { const l = this.length(); return l > length ? this.scale(length/l) : this; }
+    clampLength(length=1)
+    {
+        const l = this.length();
+        return l > length ? this.scale(length/l) : this;
+    }
 
     /** Returns the dot product of this and the vector passed in
      * @param {Vector2} v - other vector
      * @return {Number} */
-    dot(v) { ASSERT(isVector2(v)); return this.x*v.x + this.y*v.y; }
+    dot(v)
+    {
+        ASSERT(isVector2(v));
+        return this.x*v.x + this.y*v.y;
+    }
 
     /** Returns the cross product of this and the vector passed in
      * @param {Vector2} v - other vector
      * @return {Number} */
-    cross(v) { ASSERT(isVector2(v)); return this.x*v.y - this.y*v.x; }
+    cross(v)
+    {
+        ASSERT(isVector2(v));
+        return this.x*v.y - this.y*v.x;
+    }
 
     /** Returns the angle of this vector, up is angle 0
      * @return {Number} */
@@ -367,7 +415,11 @@ class Vector2
      * @param {Number} [length]
      * @return {Vector2} */
     setAngle(angle=0, length=1) 
-    { this.x = length*Math.sin(angle); this.y = length*Math.cos(angle); return this; }
+    {
+        this.x = length*Math.sin(angle);
+        this.y = length*Math.cos(angle);
+        return this;
+    }
 
     /** Returns copy of this vector rotated by the angle passed in
      * @param {Number} angle
@@ -378,9 +430,20 @@ class Vector2
         return new Vector2(this.x*c - this.y*s, this.x*s + this.y*c);
     }
 
+    /** Set the integer direction of this vector, corrosponding to multiples of 90 degree rotation (0-3)
+     * @param {Number} [direction]
+     * @param {Number} [length] */
+    setDirection(direction, length=1)
+    {
+        ASSERT(direction==0 || direction==1 || direction==2 || direction==3);
+        return vec2(direction%2 ? direction-1 ? -length : length : 0, 
+            direction%2 ? 0 : direction ? -length : length);
+    }
+
     /** Returns the integer direction of this vector, corrosponding to multiples of 90 degree rotation (0-3)
      * @return {Number} */
-    direction() { return abs(this.x) > abs(this.y) ? this.x < 0 ? 3 : 1 : this.y < 0 ? 2 : 0; }
+    direction()
+    { return abs(this.x) > abs(this.y) ? this.x < 0 ? 3 : 1 : this.y < 0 ? 2 : 0; }
 
     /** Returns a copy of this vector that has been inverted
      * @return {Vector2} */
@@ -399,24 +462,34 @@ class Vector2
      * @param {Number}  percent
      * @return {Vector2} */
     lerp(v, percent)
-    { ASSERT(isVector2(v)); return this.add(v.subtract(this).scale(clamp(percent))); }
+    {
+        ASSERT(isVector2(v));
+        return this.add(v.subtract(this).scale(clamp(percent)));
+    }
 
     /** Returns true if this vector is within the bounds of an array size passed in
      * @param {Vector2} arraySize
      * @return {Boolean} */
-    arrayCheck(arraySize) { return this.x >= 0 && this.y >= 0 && this.x < arraySize.x && this.y < arraySize.y; }
+    arrayCheck(arraySize)
+    {
+        ASSERT(isVector2(arraySize));
+        return this.x >= 0 && this.y >= 0 && this.x < arraySize.x && this.y < arraySize.y;
+    }
 
     /** Returns this vector expressed as a string
      * @param {Number} digits - precision to display
      * @return {String} */
     toString(digits=3) 
-    { if (debug) { return `(${(this.x<0?'':' ') + this.x.toFixed(digits)},${(this.y<0?'':' ') + this.y.toFixed(digits)} )`; }}
+    {
+        if (debug)
+            return `(${(this.x<0?'':' ') + this.x.toFixed(digits)},${(this.y<0?'':' ') + this.y.toFixed(digits)} )`;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 /** 
- * Create a color object with RGBA values
+ * Create a color object with RGBA values, white by default
  * @param {Number} [r=1] - red
  * @param {Number} [g=1] - green
  * @param {Number} [b=1] - blue
@@ -427,7 +500,7 @@ class Vector2
 function rgb(r, g, b, a) { return new Color(r, g, b, a); }
 
 /** 
- * Create a color object with HSLA values
+ * Create a color object with HSLA values, white by default
  * @param {Number} [h=0] - hue
  * @param {Number} [s=0] - saturation
  * @param {Number} [l=1] - lightness
@@ -438,13 +511,21 @@ function rgb(r, g, b, a) { return new Color(r, g, b, a); }
 function hsl(h, s, l, a) { return new Color().setHSLA(h, s, l, a); }
 
 /** 
+ * Check if object is a valid Color
+ * @param {any} c
+ * @return {Boolean}
+ * @memberof Utilities
+ */
+function isColor(c) { return c instanceof Color; }
+
+/** 
  * Color object (red, green, blue, alpha) with some helpful functions
  * @example
  * let a = new Color;              // white
  * let b = new Color(1, 0, 0);     // red
  * let c = new Color(0, 0, 0, 0);  // transparent black
- * let d = RGB(0, 0, 1);           // blue using rgb color
- * let e = HSL(.3, 1, .5);         // green using hsl color
+ * let d = rgb(0, 0, 1);           // blue using rgb color
+ * let e = hsl(.3, 1, .5);         // green using hsl color
  */
 class Color
 {
@@ -472,22 +553,38 @@ class Color
     /** Returns a copy of this color plus the color passed in
      * @param {Color} c - other color
      * @return {Color} */
-    add(c) { return new Color(this.r+c.r, this.g+c.g, this.b+c.b, this.a+c.a); }
+    add(c)
+    {
+        ASSERT(isColor(c));
+        return new Color(this.r+c.r, this.g+c.g, this.b+c.b, this.a+c.a);
+    }
 
     /** Returns a copy of this color minus the color passed in
      * @param {Color} c - other color
      * @return {Color} */
-    subtract(c) { return new Color(this.r-c.r, this.g-c.g, this.b-c.b, this.a-c.a); }
+    subtract(c)
+    {
+        ASSERT(isColor(c));
+        return new Color(this.r-c.r, this.g-c.g, this.b-c.b, this.a-c.a);
+    }
 
     /** Returns a copy of this color times the color passed in
      * @param {Color} c - other color
      * @return {Color} */
-    multiply(c) { return new Color(this.r*c.r, this.g*c.g, this.b*c.b, this.a*c.a); }
+    multiply(c)
+    {
+        ASSERT(isColor(c));
+        return new Color(this.r*c.r, this.g*c.g, this.b*c.b, this.a*c.a);
+    }
 
     /** Returns a copy of this color divided by the color passed in
      * @param {Color} c - other color
      * @return {Color} */
-    divide(c) { return new Color(this.r/c.r, this.g/c.g, this.b/c.b, this.a/c.a); }
+    divide(c)
+    {
+        ASSERT(isColor(c));
+        return new Color(this.r/c.r, this.g/c.g, this.b/c.b, this.a/c.a);
+    }
 
     /** Returns a copy of this color scaled by the value passed in, alpha can be scaled separately
      * @param {Number} scale
@@ -504,7 +601,11 @@ class Color
      * @param {Color}  c - other color
      * @param {Number} percent
      * @return {Color} */
-    lerp(c, percent) { return this.add(c.subtract(this).scale(clamp(percent))); }
+    lerp(c, percent)
+    {
+        ASSERT(isColor(c));
+        return this.add(c.subtract(this).scale(clamp(percent)));
+    }
 
     /** Sets this color given a hue, saturation, lightness, and alpha
      * @param {Number} [h] - hue

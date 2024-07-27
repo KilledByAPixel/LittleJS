@@ -27,7 +27,7 @@ class Character extends GameObject
         this.deadTimer          = new Timer;
         this.grendeThrowTimer   = new Timer;
         this.drawSize = vec2(1);
-        this.color = (new Color).setHSLA(rand(),1,.7);
+        this.color = hsl(rand(),1,.7);
         this.renderOrder = 10;
         this.walkCyclePercent = 0;
         this.health = 1;

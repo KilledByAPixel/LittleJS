@@ -58,9 +58,13 @@ let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParti
 
 /** Asserts if the experssion is false, does not do anything in release builds
  *  @param {Boolean} assert
- *  @param {Object} output
+ *  @param {Object} [output]
  *  @memberof Debug */
-function ASSERT(assert, output) { enableAsserts && console.assert(assert, output); }
+function ASSERT(assert, output) 
+{
+    if (enableAsserts)
+        output ? console.assert(assert, output) : console.assert(assert);
+}
 
 /** Draw a debug rectangle in world space
  *  @param {Vector2} pos
@@ -534,13 +538,13 @@ function smoothStep(percent) { return percent * percent * (3 - 2 * percent); }
 function nearestPowerOfTwo(value) { return 2**Math.ceil(Math.log2(value)); }
 
 /** Returns true if two axis aligned bounding boxes are overlapping 
- *  @param {Vector2} pointA - Center of box A
- *  @param {Vector2} sizeA  - Size of box A
- *  @param {Vector2} pointB - Center of box B
- *  @param {Vector2} sizeB  - Size of box B
- *  @return {Boolean}       - True if overlapping
+ *  @param {Vector2} pointA         - Center of box A
+ *  @param {Vector2} sizeA          - Size of box A
+ *  @param {Vector2} pointB         - Center of box B
+ *  @param {Vector2} [sizeB=(0,0)]  - Size of box B, a point if undefined
+ *  @return {Boolean}               - True if overlapping
  *  @memberof Utilities */
-function isOverlapping(pointA, sizeA, pointB, sizeB)
+function isOverlapping(pointA, sizeA, pointB, sizeB=vec2())
 { 
     return abs(pointA.x - pointB.x)*2 < sizeA.x + sizeB.x 
         && abs(pointA.y - pointB.y)*2 < sizeA.y + sizeB.y;
@@ -600,8 +604,8 @@ function randInCircle(radius=1, minRadius=0)
 { return radius > 0 ? randVector(radius * rand(minRadius / radius, 1)**.5) : new Vector2; }
 
 /** Returns a random color between the two passed in colors, combine components if linear
- *  @param {Color}   [colorA=Color()]
- *  @param {Color}   [colorB=Color(0,0,0,1)]
+ *  @param {Color}   [colorA=(1,1,1,1)]
+ *  @param {Color}   [colorB=(0,0,0,1)]
  *  @param {Boolean} [linear]
  *  @return {Color}
  *  @memberof Random */
@@ -672,7 +676,11 @@ class RandomGenerator
  * @memberof Utilities
  */
 function vec2(x=0, y)
-{ return typeof x === 'number'? new Vector2(x, y == undefined? x : y) : new Vector2(x.x, x.y); }
+{
+    return typeof x === 'number' ? 
+        new Vector2(x, y == undefined? x : y) : 
+        new Vector2(x.x, x.y);
+}
 
 /** 
  * Check if object is a valid Vector2
@@ -680,7 +688,7 @@ function vec2(x=0, y)
  * @return {Boolean}
  * @memberof Utilities
  */
-function isVector2(v) { return typeof v === 'object' && typeof v.x === 'number' && typeof v.y === 'number'; }
+function isVector2(v) { return v instanceof Vector2; }
 
 /** 
  * 2D Vector object with vector math library
@@ -711,27 +719,47 @@ class Vector2
     /** Returns a copy of this vector plus the vector passed in
      *  @param {Vector2} v - other vector
      *  @return {Vector2} */
-    add(v) { ASSERT(isVector2(v)); return new Vector2(this.x + v.x, this.y + v.y); }
+    add(v)
+    {
+        ASSERT(isVector2(v));
+        return new Vector2(this.x + v.x, this.y + v.y);
+    }
 
     /** Returns a copy of this vector minus the vector passed in
      *  @param {Vector2} v - other vector
      *  @return {Vector2} */
-    subtract(v) { ASSERT(isVector2(v)); return new Vector2(this.x - v.x, this.y - v.y); }
+    subtract(v)
+    {
+        ASSERT(isVector2(v));
+        return new Vector2(this.x - v.x, this.y - v.y);
+    }
 
     /** Returns a copy of this vector times the vector passed in
      *  @param {Vector2} v - other vector
      *  @return {Vector2} */
-    multiply(v) { ASSERT(isVector2(v)); return new Vector2(this.x * v.x, this.y * v.y); }
+    multiply(v)
+    {
+        ASSERT(isVector2(v));
+        return new Vector2(this.x * v.x, this.y * v.y);
+    }
 
     /** Returns a copy of this vector divided by the vector passed in
      *  @param {Vector2} v - other vector
      *  @return {Vector2} */
-    divide(v) { ASSERT(isVector2(v)); return new Vector2(this.x / v.x, this.y / v.y); }
+    divide(v)
+    {
+        ASSERT(isVector2(v));
+        return new Vector2(this.x / v.x, this.y / v.y);
+    }
 
     /** Returns a copy of this vector scaled by the vector passed in
      *  @param {Number} s - scale
      *  @return {Vector2} */
-    scale(s) { ASSERT(!isVector2(s)); return new Vector2(this.x * s, this.y * s); }
+    scale(s)
+    {
+        ASSERT(!isVector2(s));
+        return new Vector2(this.x * s, this.y * s);
+    }
 
     /** Returns the length of this vector
      * @return {Number} */
@@ -744,32 +772,56 @@ class Vector2
     /** Returns the distance from this vector to vector passed in
      * @param {Vector2} v - other vector
      * @return {Number} */
-    distance(v) { return this.distanceSquared(v)**.5; }
+    distance(v)
+    {
+        ASSERT(isVector2(v));
+        return this.distanceSquared(v)**.5;
+    }
 
     /** Returns the distance squared from this vector to vector passed in
      * @param {Vector2} v - other vector
      * @return {Number} */
-    distanceSquared(v) { return (this.x - v.x)**2 + (this.y - v.y)**2; }
+    distanceSquared(v)
+    {
+        ASSERT(isVector2(v));
+        return (this.x - v.x)**2 + (this.y - v.y)**2;
+    }
 
     /** Returns a new vector in same direction as this one with the length passed in
      * @param {Number} [length]
      * @return {Vector2} */
-    normalize(length=1) { const l = this.length(); return l ? this.scale(length/l) : new Vector2(0, length); }
+    normalize(length=1)
+    {
+        const l = this.length();
+        return l ? this.scale(length/l) : new Vector2(0, length);
+    }
 
     /** Returns a new vector clamped to length passed in
      * @param {Number} [length]
      * @return {Vector2} */
-    clampLength(length=1) { const l = this.length(); return l > length ? this.scale(length/l) : this; }
+    clampLength(length=1)
+    {
+        const l = this.length();
+        return l > length ? this.scale(length/l) : this;
+    }
 
     /** Returns the dot product of this and the vector passed in
      * @param {Vector2} v - other vector
      * @return {Number} */
-    dot(v) { ASSERT(isVector2(v)); return this.x*v.x + this.y*v.y; }
+    dot(v)
+    {
+        ASSERT(isVector2(v));
+        return this.x*v.x + this.y*v.y;
+    }
 
     /** Returns the cross product of this and the vector passed in
      * @param {Vector2} v - other vector
      * @return {Number} */
-    cross(v) { ASSERT(isVector2(v)); return this.x*v.y - this.y*v.x; }
+    cross(v)
+    {
+        ASSERT(isVector2(v));
+        return this.x*v.y - this.y*v.x;
+    }
 
     /** Returns the angle of this vector, up is angle 0
      * @return {Number} */
@@ -780,7 +832,11 @@ class Vector2
      * @param {Number} [length]
      * @return {Vector2} */
     setAngle(angle=0, length=1) 
-    { this.x = length*Math.sin(angle); this.y = length*Math.cos(angle); return this; }
+    {
+        this.x = length*Math.sin(angle);
+        this.y = length*Math.cos(angle);
+        return this;
+    }
 
     /** Returns copy of this vector rotated by the angle passed in
      * @param {Number} angle
@@ -791,9 +847,20 @@ class Vector2
         return new Vector2(this.x*c - this.y*s, this.x*s + this.y*c);
     }
 
+    /** Set the integer direction of this vector, corrosponding to multiples of 90 degree rotation (0-3)
+     * @param {Number} [direction]
+     * @param {Number} [length] */
+    setDirection(direction, length=1)
+    {
+        ASSERT(direction==0 || direction==1 || direction==2 || direction==3);
+        return vec2(direction%2 ? direction-1 ? -length : length : 0, 
+            direction%2 ? 0 : direction ? -length : length);
+    }
+
     /** Returns the integer direction of this vector, corrosponding to multiples of 90 degree rotation (0-3)
      * @return {Number} */
-    direction() { return abs(this.x) > abs(this.y) ? this.x < 0 ? 3 : 1 : this.y < 0 ? 2 : 0; }
+    direction()
+    { return abs(this.x) > abs(this.y) ? this.x < 0 ? 3 : 1 : this.y < 0 ? 2 : 0; }
 
     /** Returns a copy of this vector that has been inverted
      * @return {Vector2} */
@@ -812,24 +879,34 @@ class Vector2
      * @param {Number}  percent
      * @return {Vector2} */
     lerp(v, percent)
-    { ASSERT(isVector2(v)); return this.add(v.subtract(this).scale(clamp(percent))); }
+    {
+        ASSERT(isVector2(v));
+        return this.add(v.subtract(this).scale(clamp(percent)));
+    }
 
     /** Returns true if this vector is within the bounds of an array size passed in
      * @param {Vector2} arraySize
      * @return {Boolean} */
-    arrayCheck(arraySize) { return this.x >= 0 && this.y >= 0 && this.x < arraySize.x && this.y < arraySize.y; }
+    arrayCheck(arraySize)
+    {
+        ASSERT(isVector2(arraySize));
+        return this.x >= 0 && this.y >= 0 && this.x < arraySize.x && this.y < arraySize.y;
+    }
 
     /** Returns this vector expressed as a string
      * @param {Number} digits - precision to display
      * @return {String} */
     toString(digits=3) 
-    { if (debug) { return `(${(this.x<0?'':' ') + this.x.toFixed(digits)},${(this.y<0?'':' ') + this.y.toFixed(digits)} )`; }}
+    {
+        if (debug)
+            return `(${(this.x<0?'':' ') + this.x.toFixed(digits)},${(this.y<0?'':' ') + this.y.toFixed(digits)} )`;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 /** 
- * Create a color object with RGBA values
+ * Create a color object with RGBA values, white by default
  * @param {Number} [r=1] - red
  * @param {Number} [g=1] - green
  * @param {Number} [b=1] - blue
@@ -840,7 +917,7 @@ class Vector2
 function rgb(r, g, b, a) { return new Color(r, g, b, a); }
 
 /** 
- * Create a color object with HSLA values
+ * Create a color object with HSLA values, white by default
  * @param {Number} [h=0] - hue
  * @param {Number} [s=0] - saturation
  * @param {Number} [l=1] - lightness
@@ -851,13 +928,21 @@ function rgb(r, g, b, a) { return new Color(r, g, b, a); }
 function hsl(h, s, l, a) { return new Color().setHSLA(h, s, l, a); }
 
 /** 
+ * Check if object is a valid Color
+ * @param {any} c
+ * @return {Boolean}
+ * @memberof Utilities
+ */
+function isColor(c) { return c instanceof Color; }
+
+/** 
  * Color object (red, green, blue, alpha) with some helpful functions
  * @example
  * let a = new Color;              // white
  * let b = new Color(1, 0, 0);     // red
  * let c = new Color(0, 0, 0, 0);  // transparent black
- * let d = RGB(0, 0, 1);           // blue using rgb color
- * let e = HSL(.3, 1, .5);         // green using hsl color
+ * let d = rgb(0, 0, 1);           // blue using rgb color
+ * let e = hsl(.3, 1, .5);         // green using hsl color
  */
 class Color
 {
@@ -885,22 +970,38 @@ class Color
     /** Returns a copy of this color plus the color passed in
      * @param {Color} c - other color
      * @return {Color} */
-    add(c) { return new Color(this.r+c.r, this.g+c.g, this.b+c.b, this.a+c.a); }
+    add(c)
+    {
+        ASSERT(isColor(c));
+        return new Color(this.r+c.r, this.g+c.g, this.b+c.b, this.a+c.a);
+    }
 
     /** Returns a copy of this color minus the color passed in
      * @param {Color} c - other color
      * @return {Color} */
-    subtract(c) { return new Color(this.r-c.r, this.g-c.g, this.b-c.b, this.a-c.a); }
+    subtract(c)
+    {
+        ASSERT(isColor(c));
+        return new Color(this.r-c.r, this.g-c.g, this.b-c.b, this.a-c.a);
+    }
 
     /** Returns a copy of this color times the color passed in
      * @param {Color} c - other color
      * @return {Color} */
-    multiply(c) { return new Color(this.r*c.r, this.g*c.g, this.b*c.b, this.a*c.a); }
+    multiply(c)
+    {
+        ASSERT(isColor(c));
+        return new Color(this.r*c.r, this.g*c.g, this.b*c.b, this.a*c.a);
+    }
 
     /** Returns a copy of this color divided by the color passed in
      * @param {Color} c - other color
      * @return {Color} */
-    divide(c) { return new Color(this.r/c.r, this.g/c.g, this.b/c.b, this.a/c.a); }
+    divide(c)
+    {
+        ASSERT(isColor(c));
+        return new Color(this.r/c.r, this.g/c.g, this.b/c.b, this.a/c.a);
+    }
 
     /** Returns a copy of this color scaled by the value passed in, alpha can be scaled separately
      * @param {Number} scale
@@ -917,7 +1018,11 @@ class Color
      * @param {Color}  c - other color
      * @param {Number} percent
      * @return {Color} */
-    lerp(c, percent) { return this.add(c.subtract(this).scale(clamp(percent))); }
+    lerp(c, percent)
+    {
+        ASSERT(isColor(c));
+        return this.add(c.subtract(this).scale(clamp(percent)));
+    }
 
     /** Sets this color given a hue, saturation, lightness, and alpha
      * @param {Number} [h] - hue
@@ -2732,9 +2837,9 @@ if (isTouchDevice)
     // handle all touch events the same way
     ontouchstart = ontouchmove = ontouchend = (e)=>
     {
-        // fix stalled audio on mobile
-        if (soundEnable)
-            audioContext ? audioContext.resume() : zzfx(0);
+        // fix stalled audio requiring user interaction
+        if (soundEnable && audioContext && audioContext.state != 'running')
+            zzfx(0);
 
         // check if touching and pass to mouse events
         const touching = e.touches.length;
@@ -2880,7 +2985,7 @@ function touchGamepadRender()
     const rightCenter = vec2(mainCanvasSize.x-touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
     for (let i=4; i--;)
     {
-        const pos = rightCenter.add(vec2().setAngle(i*PI/2, touchGamepadSize/2));
+        const pos = rightCenter.add(vec2().setDirection(i, touchGamepadSize/2));
         overlayContext.fillStyle = touchGamepadButtons[i] ? '#fff' : '#000';
         overlayContext.beginPath();
         overlayContext.arc(pos.x, pos.y, touchGamepadSize/4, 0,9);
@@ -3039,22 +3144,19 @@ class SoundWave extends Sound
         this.randomness = randomness;
 
         if (!soundEnable) return;
-        if (!soundDecoderContext)
-            soundDecoderContext = new AudioContext;
 
         fetch(filename)
         .then(response => response.arrayBuffer())
-        .then(arrayBuffer => soundDecoderContext.decodeAudioData(arrayBuffer))
+        .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
         .then(audioBuffer => 
         {
             this.sampleChannels = [];
             for (let i = audioBuffer.numberOfChannels; i--;)
-                this.sampleChannels[i] = audioBuffer.getChannelData(i);
+                this.sampleChannels[i] = Array.from(audioBuffer.getChannelData(i));
             this.sampleRate = audioBuffer.sampleRate;
         });
     }
 }
-let soundDecoderContext; // audio context used only to decode audio files
 
 /**
  * Music Object - Stores a zzfx music track for later use
@@ -3168,8 +3270,9 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Audio context used by the engine
+ *  @type {AudioContext}
  *  @memberof Audio */
-let audioContext;
+let audioContext = new AudioContext;
 
 /** Play cached audio samples with given settings
  *  @param {Array}   sampleChannels - Array of arrays of samples to play (for stereo playback)
@@ -3183,10 +3286,6 @@ let audioContext;
 function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=zzfxR) 
 {
     if (!soundEnable) return;
-
-    // create audio context if needed
-    if (!audioContext)
-        audioContext = new AudioContext;
 
     // prevent sounds from building up if they can't be played
     if (audioContext.state != 'running')
@@ -3598,7 +3697,7 @@ class TileLayerData
      *  @param {Number}  [direction] - Integer direction of tile, in 90 degree increments
      *  @param {Boolean} [mirror]    - If the tile should be mirrored along the x axis
      *  @param {Color}   [color]     - Color of the tile */
-    constructor(tile, direction=0, mirror=false, color=new Color())
+    constructor(tile, direction=0, mirror=false, color=new Color)
     {
         /** @property {Number}  - The tile to use, untextured if undefined */
         this.tile      = tile;
@@ -3838,12 +3937,12 @@ class TileLayer extends EngineObject
  * @example
  * // create a particle emitter
  * let pos = vec2(2,3);
- * let particleEmiter = new ParticleEmitter
+ * let particleEmitter = new ParticleEmitter
  * (
- *     pos, 0, 1, 0, 500, PI,  // pos, angle, emitSize, emitTime, emitRate, emiteCone
- *     tile(0, 16),            // tileInfo
- *     new Color(1,1,1),   new Color(0,0,0),   // colorStartA, colorStartB
- *     new Color(1,1,1,0), new Color(0,0,0,0), // colorEndA, colorEndB
+ *     pos, 0, 1, 0, 500, PI,      // pos, angle, emitSize, emitTime, emitRate, emiteCone
+ *     tile(0, 16),                // tileInfo
+ *     rgb(1,1,1),   rgb(0,0,0),   // colorStartA, colorStartB
+ *     rgb(1,1,1,0), rgb(0,0,0,0), // colorEndA, colorEndB
  *     2, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
  *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate, 
  *     .5, 1                // randomness, collide, additive, randomColorLinear, renderOrder
@@ -4250,8 +4349,8 @@ class Medal
         // draw containing rect and clip to that region
         context.save();
         context.beginPath();
-        context.fillStyle = rgb(.9,.9,.9).toString();
-        context.strokeStyle = rgb(0,0,0).toString();
+        context.fillStyle = new Color(.9,.9,.9).toString();
+        context.strokeStyle = new Color(0,0,0).toString();
         context.lineWidth = 3;
         context.rect(x, y, width, medalDisplaySize.y);
         context.fill();
@@ -4703,7 +4802,7 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdd
     ASSERT(typeof rgba == 'number' && typeof rgbaAdditive == 'number', 'invalid color');
 
     // flush if there is not enough room or if different blend mode
-    if (glInstanceCount >= gl_MAX_INSTANCES-1 || glBatchAdditive != glAdditive)
+    if (glInstanceCount >= gl_MAX_INSTANCES || glBatchAdditive != glAdditive)
         glFlush();
 
     let offset = glInstanceCount * gl_INDICIES_PER_INSTANCE;
@@ -4883,7 +4982,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.9.1';
+const engineVersion = '1.9.2';
 
 /** Frames per second to update objects
  *  @type {Number}
@@ -5363,3 +5462,253 @@ function drawEngineSplashScreen(t)
     
     x.restore();
 }
+
+/** 
+ * LittleJS Module Export
+ * - Export engine as a module
+ */
+
+export {
+
+	// Engine
+	engineName,
+	engineVersion,
+	frameRate,
+	timeDelta,
+	engineObjects,
+	frame,
+	time,
+	timeReal,
+	paused,
+	setPaused,
+	engineInit,
+	engineObjectsUpdate,
+	engineObjectsDestroy,
+	engineObjectsCallback,
+	
+	// Globals
+	debug,
+	debugOverlay,
+	showWatermark,
+
+	// Debug
+	ASSERT,
+	debugRect,
+	debugCircle,
+	debugPoint,
+	debugLine,
+	debugAABB,
+	debugText,
+	debugClear,
+	debugSaveCanvas,
+
+	// Settings
+	cameraPos,
+	cameraScale,
+	canvasMaxSize,
+	canvasFixedSize,
+	canvasPixelated,
+	fontDefault,
+	showSplashScreen,
+	tileSizeDefault,
+	tileFixBleedScale,
+	enablePhysicsSolver,
+	objectDefaultMass,
+	objectDefaultDamping,
+	objectDefaultAngleDamping,
+	objectDefaultElasticity,
+	objectDefaultFriction,
+	objectMaxSpeed,
+	gravity,
+	particleEmitRateScale,
+	glEnable,
+	glOverlay,
+	gamepadsEnable,
+	gamepadDirectionEmulateStick,
+	inputWASDEmulateDirection,
+	touchGamepadEnable,
+	touchGamepadAnalog,
+	touchGamepadSize,
+	touchGamepadAlpha,
+	vibrateEnable,
+	soundEnable,
+	soundVolume,
+	soundDefaultRange,
+	soundDefaultTaper,
+	medalDisplayTime,
+	medalDisplaySlideTime,
+	medalDisplaySize,
+	medalDisplayIconSize,
+
+	// Setters for globals
+	setCameraPos,
+	setCameraScale,
+	setCanvasMaxSize,
+	setCanvasFixedSize,
+	setCanvasPixelated,
+	setFontDefault,
+	setShowSplashScreen,
+	setGlEnable,
+	setGlOverlay,
+	setTileSizeDefault,
+	setTileFixBleedScale,
+	setEnablePhysicsSolver,
+	setObjectDefaultMass,
+	setObjectDefaultDamping,
+	setObjectDefaultAngleDamping,
+	setObjectDefaultElasticity,
+	setObjectDefaultFriction,
+	setObjectMaxSpeed,
+	setGravity,
+	setParticleEmitRateScale,
+	setGamepadsEnable,
+	setGamepadDirectionEmulateStick,
+	setInputWASDEmulateDirection,
+	setTouchGamepadEnable,
+	setTouchGamepadAnalog,
+	setTouchGamepadSize,
+	setTouchGamepadAlpha,
+	setVibrateEnable,
+	setSoundEnable,
+	setSoundVolume,
+	setSoundDefaultRange,
+	setSoundDefaultTaper,
+	setMedalDisplayTime,
+	setMedalDisplaySlideTime,
+	setMedalDisplaySize,
+	setMedalDisplayIconSize,
+	setMedalsPreventUnlock,
+	setShowWatermark,
+	setDebugKey,
+
+	// Utilities
+	PI,
+	abs,
+	min,
+	max,
+	sign,
+	mod,
+	clamp,
+	percent,
+	distanceWrap,
+	lerpWrap,
+	distanceAngle,
+	lerpAngle,
+	lerp,
+	smoothStep,
+	nearestPowerOfTwo,
+	isOverlapping,
+	wave,
+	formatTime,
+
+	// Random
+	rand,
+	randInt,
+	randSign,
+	randInCircle,
+	randVector,
+	randColor,
+
+	// Utility Classes
+	RandomGenerator,
+	Vector2,
+	Color,
+	Timer,
+	vec2,
+	rgb,
+	hsl,
+
+	// Draw
+	textureInfos,
+	tile,
+	TileInfo,
+	TextureInfo,
+	mainCanvas,
+	mainContext,
+	overlayCanvas,
+	overlayContext,
+	mainCanvasSize,
+	screenToWorld,
+	worldToScreen,
+	drawTile,
+	drawRect,
+	drawLine,
+	drawCanvas2D,
+	setBlendMode,
+	drawTextScreen,
+	drawText,
+	engineFontImage,
+	FontImage,
+	isFullscreen,
+	toggleFullscreen,
+
+	// WebGL
+	glCanvas,
+	glContext,
+	glSetTexture,
+	glCompileShader,
+	glCreateProgram,
+	glCreateTexture,
+	glInitPostProcess,
+
+	// Input
+	keyIsDown,
+	keyWasPressed,
+	keyWasReleased,
+	clearInput,
+	mouseIsDown,
+	mouseWasPressed,
+	mouseWasReleased,
+	mousePos,
+	mousePosScreen,
+	mouseWheel,
+	isUsingGamepad,
+	preventDefaultInput,
+	gamepadIsDown,
+	gamepadWasPressed,
+	gamepadWasReleased,
+	gamepadStick,
+	mouseToScreen,
+	gamepadsUpdate,
+	vibrate,
+	vibrateStop,
+	isTouchDevice,
+
+	// Audio
+	Sound,
+	SoundWave,
+	Music,
+	playAudioFile,
+	speak,
+	speakStop,
+	getNoteFrequency,
+	audioContext,
+	playSamples,
+	zzfx,
+
+	// Base Object
+	EngineObject,
+
+	// Tiles
+	tileCollision,
+	tileCollisionSize,
+	initTileCollision,
+	setTileCollisionData,
+	getTileCollisionData,
+	tileCollisionTest,
+	tileCollisionRaycast,
+	TileLayerData,
+	TileLayer,
+
+	// Particles
+	ParticleEmitter,
+	Particle,
+
+	// Medals
+	medals,
+	medalsPreventUnlock,
+	medalsInit,
+	newgroundsInit,
+	Medal,
+	Newgrounds,
+};

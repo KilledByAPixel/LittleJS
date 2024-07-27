@@ -250,8 +250,10 @@ function glCopyToContext(context, forceDraw=false)
  *  @memberof WebGL */
 function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdditive=0)
 {
+    ASSERT(typeof rgba == 'number' &amp;&amp; typeof rgbaAdditive == 'number', 'invalid color');
+
     // flush if there is not enough room or if different blend mode
-    if (glInstanceCount >= gl_MAX_INSTANCES-1 || glBatchAdditive != glAdditive)
+    if (glInstanceCount >= gl_MAX_INSTANCES || glBatchAdditive != glAdditive)
         glFlush();
 
     let offset = glInstanceCount * gl_INDICIES_PER_INSTANCE;
@@ -278,7 +280,7 @@ let glPostShader, glPostArrayBuffer, glPostTexture, glPostIncludeOverlay;
  *  @param {String} shaderCode
  *  @param {Boolean} includeOverlay
  *  @memberof WebGL */
-function glInitPostProcess(shaderCode, includeOverlay)
+function glInitPostProcess(shaderCode, includeOverlay=false)
 {
     ASSERT(!glPostShader, 'can only have 1 post effects shader');
 
@@ -314,6 +316,8 @@ function glInitPostProcess(shaderCode, includeOverlay)
 
     // hide the original 2d canvas
     mainCanvas.style.visibility = 'hidden';
+    if (glPostIncludeOverlay)
+        overlayCanvas.style.visibility = 'hidden';
 }
 
 // Render the post processing shader, called automatically by the engine
@@ -334,14 +338,8 @@ function glRenderPostProcess()
         glContext.viewport(0, 0, glCanvas.width = mainCanvas.width, glCanvas.height = mainCanvas.height);
     }
 
-    if (glPostIncludeOverlay)
-    {
-        // copy overlay canvas so it will be included in post processing
-        mainContext.drawImage(overlayCanvas, 0, 0);
-
-        // clear overlay canvas
-        overlayCanvas.width = mainCanvas.width;
-    }
+    // copy overlay canvas so it will be included in post processing
+    glPostIncludeOverlay &amp;&amp; mainContext.drawImage(overlayCanvas, 0, 0);
 
     // setup shader program to draw one triangle
     glContext.useProgram(glPostShader);

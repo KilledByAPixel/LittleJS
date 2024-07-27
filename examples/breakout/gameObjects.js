@@ -13,7 +13,7 @@ class Wall extends EngineObject
         
         this.mass = 0; // make object have static physics
         this.setCollision(); // make object collide
-        this.color = new Color(0,0,0,0); // make object invisible
+        this.color = hsl(0,0,0,0); // make object invisible
     }
 }
 
@@ -60,7 +60,7 @@ class Brick extends EngineObject
 
         // make explosion effect
         const color1 = this.color;
-        const color2 = color1.lerp(new Color, .5);
+        const color2 = color1.lerp(hsl(), .5);
         new ParticleEmitter(
             this.pos, 0,                          // pos, angle
             this.size, .1, 200, PI,               // emitSize, emitTime, emitRate, emiteCone
@@ -76,7 +76,7 @@ class Brick extends EngineObject
         if (o.trailEffect)
         {
             o.trailEffect.colorStartA = this.color; 
-            o.trailEffect.colorStartB = this.color.lerp(new Color, .5);
+            o.trailEffect.colorStartB = this.color.lerp(hsl(), .5);
         }
         
         return 1;
