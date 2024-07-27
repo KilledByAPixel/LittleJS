@@ -1,4 +1,4 @@
-## occlusion culling
+## culling
 increases rendering performance simply by not rendering game objects that are outside the view.
 
 ## when use and when not using this method
