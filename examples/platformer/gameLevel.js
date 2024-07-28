@@ -46,7 +46,7 @@ function buildLevel()
     warmup = 0;
 
     // spawn player
-    player = new Player(cameraPos = playerStartPos);
+    player = new Player(playerStartPos);
 }
 
 function loadLevel()

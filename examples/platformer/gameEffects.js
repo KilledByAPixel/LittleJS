@@ -172,7 +172,7 @@ class Sky extends EngineObject
         this.renderOrder = -1e4;
         this.seed = randInt(1e9);
         this.skyColor = randColor(hsl(0,0,.5), hsl(0,0,.9));
-        this.horizonColor = this.skyColor.subtract(hsl(0,0,.05)).mutate(.3).clamp();
+        this.horizonColor = this.skyColor.subtract(hsl(0,0,.05,0)).mutate(.3);
     }
 
     render()
@@ -221,17 +221,18 @@ class ParallaxLayer extends EngineObject
         this.canvas.height = size.y;
 
         // create a gradient
-        const layerColor = levelColor.mutate(.2).lerp(sky.skyColor,.95-index*.15);
-        const gradient = this.context.createLinearGradient(0,0,0,size.y);
+        const o = 60-20*index
+        const gradient = this.context.createLinearGradient(0,size.y/2-o+20,0,size.y/2+o);
+        const layerColor = levelColor.mutate(.1).lerp(sky.skyColor,1-index*.15);
         gradient.addColorStop(0,layerColor);
-        gradient.addColorStop(1,hsl(0,0,0).mutate(.2));
+        gradient.addColorStop(1,layerColor.mutate(.5).scale(.1,1));
         this.context.fillStyle = gradient;
 
         // draw procedural mountains ranges
         let groundLevel = size.y/2, groundSlope = rand(-1,1);
         for (let i=size.x; i--;)
-            this.context.fillRect(i, groundLevel += groundSlope = rand() < .2 ? rand(1,-1) :
-                groundSlope + (size.y/2 - groundLevel)/500, 1, size.y);
+            this.context.fillRect(i, groundLevel += groundSlope = rand() < .3 ? rand(1,-1) :
+                groundSlope + (size.y/2 - groundLevel)/300, 1, size.y);
     }
 
     render()
@@ -245,7 +246,7 @@ class ParallaxLayer extends EngineObject
         const pos = mainCanvasSize.scale(.5)         // center screen
            .add(vec2(-scale.x/2,-scale.y/2))         // center layer 
            .add(cameraDeltaFromCenter.scale(-.5))    // apply parallax
-           .add(vec2(0,(this.index*.2-.5)*this.size.y)); // separate layers
+           .add(vec2(0,(this.index*.1)*this.size.y)); // separate layers
         
         // draw the parallax layer onto the main canvas
         mainContext.drawImage(this.canvas, pos.x, pos.y, scale.x, scale.y);
