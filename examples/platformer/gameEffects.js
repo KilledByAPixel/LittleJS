@@ -34,12 +34,12 @@ const persistentParticleDestroyCallback = (particle)=>
         tileLayers[foregroundLayerIndex].drawTile(particle.pos, particle.size, particle.tileInfo, particle.color, particle.angle, particle.mirror);
 }
 
-function makeBlood(pos, amount) { makeDebris(pos, hsl(0,1,.5), 50, .1, 0); }
-function makeDebris(pos, color = hsl(), amount = 100, size=.2, elasticity = .3)
+function makeBlood(pos, amount) { makeDebris(pos, hsl(0,1,.5), amount, .1, 0); }
+function makeDebris(pos, color = hsl(), amount = 50, size=.2, elasticity = .3)
 {
     const color2 = color.lerp(hsl(), .5);
     const emitter = new ParticleEmitter(
-        pos, 0, 1, .1, 100, PI, // pos, angle, emitSize, emitTime, emitRate, emiteCone
+        pos, 0, 1, .1, amount/.1, PI, // pos, angle, emitSize, emitTime, emitRate, emiteCone
         0,                      // tileInfo
         color, color2,          // colorStartA, colorStartB
         color, color2,          // colorEndA, colorEndB
@@ -163,87 +163,106 @@ function destroyTile(pos, makeSound = 1, cleanNeighbors = 1)
 ///////////////////////////////////////////////////////////////////////////////
 // sky with background gradient, stars, and planets
 
-let skySeed, skyColor, horizonColor;
-
-function initSky()
+class Sky extends EngineObject
 {
-    skySeed = rand(1e9);
-    skyColor = randColor(hsl(0,0,.5), hsl(0,0,.9));
-    horizonColor = skyColor.subtract(hsl(0,0,.05)).mutate(.3).clamp();
-}
-
-function drawSky()
-{
-    // fill background with a gradient
-    const gradient = mainContext.fillStyle = mainContext.createLinearGradient(0, 0, 0, mainCanvas.height);
-    gradient.addColorStop(0, skyColor);
-    gradient.addColorStop(1, horizonColor);
-    mainContext.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
-}
-
-function drawStars()
-{
-    // draw stars and planets
-    const random = new RandomGenerator(skySeed);
-    for (let i = 1e3; i--;)
+    constructor() 
     {
-        const size = random.float(1, 6);
-        const speed = random.float() < .9 ? random.float(5) : random.float(9,99);
-        const color = hsl(random.float(-.3,.2), random.float()**9, random.float(.5,1), random.float(.3,.9));
-        const extraSpace = 200;
-        const w = mainCanvas.width+2*extraSpace, h = mainCanvas.height+2*extraSpace;
-        const screenPos = vec2(
-            (random.float(w)+time*speed)%w-extraSpace,
-            (random.float(h)+time*speed*random.float())%h-extraSpace);
+        super();
 
-        mainContext.fillStyle = color;
-        mainContext.fillRect(screenPos.x, screenPos.y, size, size);
+        this.renderOrder = -1e4;
+        this.seed = randInt(1e9);
+        this.skyColor = randColor(hsl(0,0,.5), hsl(0,0,.9));
+        this.horizonColor = this.skyColor.subtract(hsl(0,0,.05)).mutate(.3).clamp();
+    }
+
+    render()
+    {
+        // fill background with a gradient
+        const gradient = mainContext.createLinearGradient(0, 0, 0, mainCanvas.height);
+        gradient.addColorStop(0, this.skyColor);
+        gradient.addColorStop(1, this.horizonColor);
+        mainContext.fillStyle = gradient;
+        mainContext.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
+        
+        // draw stars
+        const random = new RandomGenerator(this.seed);
+        for (let i=1e3; i--;)
+        {
+            const size = random.float(1, 6);
+            const speed = random.float() < .9 ? random.float(5) : random.float(9,99);
+            const color = hsl(random.float(-.3,.2), random.float()**9, random.float(.5,1), random.float(.3,.9));
+            const extraSpace = 50;
+            const w = mainCanvas.width+2*extraSpace, h = mainCanvas.height+2*extraSpace;
+            const screenPos = vec2(
+                (random.float(w)+time*speed)%w-extraSpace,
+                (random.float(h)+time*speed*random.float())%h-extraSpace);
+            mainContext.fillStyle = color;
+            mainContext.fillRect(screenPos.x, screenPos.y, size, size);
+        }
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // parallax background mountain ranges
 
-let tileParallaxLayers;
-
-function initParallaxLayers()
+class ParallaxLayer extends EngineObject
 {
-    tileParallaxLayers = [];
-    for (let i=3; i--;)
+    constructor(index) 
     {
-        // setup the layer
-        const parallaxSize = vec2(600,300), startGroundLevel = 99+i*30;
-        const tileParallaxLayer = tileParallaxLayers[i] = new TileLayer(vec2(), parallaxSize);
-        tileParallaxLayer.renderOrder = -3e3+i;
-        tileParallaxLayer.canvas.width = parallaxSize.x;
+        super();
+
+        const size = vec2(1024,512);
+        this.size = size;
+        this.index = index;
+        this.renderOrder = -3e3 + index;
+        this.canvas = document.createElement('canvas');
+        this.context = this.canvas.getContext('2d');
+        this.canvas.width = size.x;
+        this.canvas.height = size.y;
 
         // create a gradient
-        const layerColor = levelColor.mutate(.2).lerp(skyColor,.95-i*.15);
-        const gradient = tileParallaxLayer.context.fillStyle = 
-            tileParallaxLayer.context.createLinearGradient(0,0,0,tileParallaxLayer.canvas.height = parallaxSize.y);
+        const layerColor = levelColor.mutate(.2).lerp(sky.skyColor,.95-index*.15);
+        const gradient = this.context.createLinearGradient(0,0,0,size.y);
         gradient.addColorStop(0,layerColor);
-        gradient.addColorStop(1,layerColor.subtract(hsl(0,0,1,0)).mutate(.1).clamp());
+        gradient.addColorStop(1,hsl(0,0,0).mutate(.2));
+        this.context.fillStyle = gradient;
 
-        // draw mountains ranges
-        let groundLevel = startGroundLevel, groundSlope = rand(-1,1);
-        for (let x=parallaxSize.x;x--;)
-            tileParallaxLayer.context.fillRect(x,groundLevel += groundSlope = rand() < .05 ? rand(1, -1) :
-                groundSlope + (startGroundLevel - groundLevel)/2e3, 1, parallaxSize.y)
+        // draw procedural mountains ranges
+        let groundLevel = size.y/2, groundSlope = rand(-1,1);
+        for (let i=size.x; i--;)
+            this.context.fillRect(i, groundLevel += groundSlope = rand() < .2 ? rand(1,-1) :
+                groundSlope + (size.y/2 - groundLevel)/500, 1, size.y);
+    }
+
+    render()
+    {
+        // position layer based on camera distance from center of level
+        const parallax = vec2(1e3,-100).scale(this.index**2);
+        const cameraDeltaFromCenter = cameraPos
+            .subtract(levelSize.scale(.5))
+            .divide(levelSize.divide(parallax));
+        const scale = this.size.scale(2+2*this.index);
+        const pos = mainCanvasSize.scale(.5)         // center screen
+           .add(vec2(-scale.x/2,-scale.y/2))         // center layer 
+           .add(cameraDeltaFromCenter.scale(-.5))    // apply parallax
+           .add(vec2(0,(this.index*.2-.5)*this.size.y)); // separate layers
+        
+        // draw the parallax layer onto the main canvas
+        mainContext.drawImage(this.canvas, pos.x, pos.y, scale.x, scale.y);
     }
 }
 
-function updateParallaxLayers()
+///////////////////////////////////////////////////////////////////////////////
+// background decoration
+
+let sky;
+
+function initBackground()
 {
-    tileParallaxLayers.forEach((tileParallaxLayer, i)=>
-    {
-        // position layer depending on camera position
-        const distance = 4+i;
-        const parallax = vec2(150,30).scale((i*i+1));
-        const cameraDeltaFromCenter = cameraPos.subtract(levelSize.scale(.5)).divide(levelSize.scale(-.5).divide(parallax));
-        tileParallaxLayer.scale = vec2(distance/cameraScale);
-        tileParallaxLayer.pos = cameraPos
-            .subtract(tileParallaxLayer.size.multiply(tileParallaxLayer.scale).scale(.5))
-            .add(cameraDeltaFromCenter.scale(1/cameraScale))
-            .subtract(vec2(0,150/cameraScale))
-    });
+    // create sky object with gradient and stars
+    sky = new Sky;
+
+    // create parallax layers
+    for (let i=3; i--;)
+        new ParallaxLayer(i);
 }

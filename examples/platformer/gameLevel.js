@@ -29,8 +29,7 @@ function buildLevel()
     levelOutlineColor = levelColor.mutate().add(hsl(0,0,.4)).clamp();
 
     loadLevel();
-    initSky();
-    initParallaxLayers();
+    initBackground();
     
     // apply decoration to all level tiles
     const pos = vec2();

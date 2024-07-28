@@ -81,7 +81,7 @@ class Crate extends GameObject
             return;
 
         sound_destroyObject.play(this.pos);
-        makeDebris(this.pos, this.color, 200);
+        makeDebris(this.pos, this.color, 30);
         this.destroy();
     }
 }
@@ -162,7 +162,7 @@ class Enemy extends GameObject
 
         ++score;
         sound_score.play(this.pos);
-        makeDebris(this.pos, this.color, 300);
+        makeDebris(this.pos, this.color);
         this.destroy();
     }
        
