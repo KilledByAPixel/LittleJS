@@ -245,7 +245,7 @@ class Character extends GameObject
         if (this.isDead())
             return;
 
-        makeBlood(this.pos, 300);
+        makeBlood(this.pos, 100);
         sound_die.play(this.pos);
 
         this.health = 0;

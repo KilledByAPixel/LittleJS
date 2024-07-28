@@ -64,16 +64,11 @@ function gameUpdatePost()
 {
     // move camera to player
     cameraPos = cameraPos.lerp(player.pos, clamp(player.getAliveTime()/2));
-
-    // update parallax background relative to camera
-    updateParallaxLayers();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameRender()
 {
-    drawSky();
-    drawStars();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
