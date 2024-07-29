@@ -458,7 +458,7 @@ function drawEngineSplashScreen(t)
 
     // engine outline
     circle(36,30,10,PI/2,PI*3/2);
-    circle(47,30,10,PI/2,PI*3/2);
+    circle(48,30,10,PI/2,PI*3/2);
     circle(60,30,10);
     line(36,20,60,20);
 
