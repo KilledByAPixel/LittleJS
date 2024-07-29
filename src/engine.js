@@ -437,9 +437,9 @@ function drawEngineSplashScreen(t)
 
     // big stack
     rect(50,20,10,-10,color(0,1));
-    rect(50,20,6,-10,color(0,2));
-    rect(50,20,3,-10,color(0,3));
-    rect(50,10,10,10);
+    rect(50,20,6.5,-10,color(0,2));
+    rect(50,20,3.5,-10,color(0,3));
+    rect(50,20,10,-10);
     circle(55,2,11.4,.5,PI-.5,color(3,3));
     circle(55,2,11.4,.5,PI/2,color(3,2),1);
     circle(55,2,11.4,.5,PI-.5);
