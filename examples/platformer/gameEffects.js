@@ -181,16 +181,18 @@ class Sky extends EngineObject
         const gradient = mainContext.createLinearGradient(0, 0, 0, mainCanvas.height);
         gradient.addColorStop(0, this.skyColor);
         gradient.addColorStop(1, this.horizonColor);
+        mainContext.save();
         mainContext.fillStyle = gradient;
         mainContext.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
+        mainContext.globalCompositeOperation = 'lighter';
         
         // draw stars
         const random = new RandomGenerator(this.seed);
         for (let i=1e3; i--;)
         {
-            const size = random.float(1, 6);
+            const size = random.float(.5,2)**2;
             const speed = random.float() < .9 ? random.float(5) : random.float(9,99);
-            const color = hsl(random.float(-.3,.2), random.float()**9, random.float(.5,1), random.float(.3,.9));
+            const color = hsl(random.float(-.3,.2), random.float(), random.float());
             const extraSpace = 50;
             const w = mainCanvas.width+2*extraSpace, h = mainCanvas.height+2*extraSpace;
             const screenPos = vec2(
@@ -199,6 +201,7 @@ class Sky extends EngineObject
             mainContext.fillStyle = color;
             mainContext.fillRect(screenPos.x, screenPos.y, size, size);
         }
+        mainContext.restore();
     }
 }
 
@@ -221,8 +224,9 @@ class ParallaxLayer extends EngineObject
         this.canvas.height = size.y;
 
         // create a gradient
-        const o = 60-20*index
-        const gradient = this.context.createLinearGradient(0,size.y/2-o+20,0,size.y/2+o);
+        const o1 = 40-20*index;
+        const o2 = 100-30*index;
+        const gradient = this.context.createLinearGradient(0,size.y/2-o1,0,size.y/2+o2);
         const layerColor = levelColor.mutate(.1).lerp(sky.skyColor,1-index*.15);
         gradient.addColorStop(0,layerColor);
         gradient.addColorStop(1,layerColor.mutate(.5).scale(.1,1));
