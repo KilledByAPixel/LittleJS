@@ -26,6 +26,7 @@ function gameInit()
     objectDefaultAngleDamping = .99;
     cameraScale = 4*16;
     buildLevel();
+    cameraPos = getCameraTarget();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -60,10 +61,18 @@ function gameUpdate()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+function getCameraTarget()
+{
+    // camera is above player
+    const offset = 3*percent(mainCanvasSize.y, 300, 600);
+    return player.pos.add(vec2(0, offset));
+}
+
+///////////////////////////////////////////////////////////////////////////////
 function gameUpdatePost()
 {
-    // move camera to player
-    cameraPos = cameraPos.lerp(player.pos, clamp(player.getAliveTime()/2));
+    // update camera
+    cameraPos = cameraPos.lerp(getCameraTarget(), clamp(player.getAliveTime()/2));
 }
 
 ///////////////////////////////////////////////////////////////////////////////

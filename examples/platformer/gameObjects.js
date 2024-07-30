@@ -147,7 +147,7 @@ class Enemy extends GameObject
         if (this.groundObject && rand() < .01 && this.pos.distance(player.pos) < 20)
         {
             this.velocity = vec2(rand(.1,-.1), rand(.4,.2));
-            sound_jump.play(this.pos);
+            sound_jump.play(this.pos, .4, 2);
         }
 
         // damage player if touching
