@@ -1,6 +1,6 @@
 # LittleJS Engine Quick Reference Sheet
 
-##  This simple reference sheet contains all LittleJS essentials.
+##  This cheat sheet contains all LittleJS essentials.
 - [LittleJS on GitHub](https://github.com/KilledByAPixel/LittleJS) - Official LittleJS website with more info
 - [LittleJS Documentation](https://killedbyapixel.github.io/LittleJS/docs) - LittleJS documentation browser
 - [Particle Deigner](https://killedbyapixel.github.io/LittleJS/examples/particles) - Editor for LittleJS Particle Systems
