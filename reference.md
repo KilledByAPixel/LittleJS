@@ -1,14 +1,17 @@
 # LittleJS Engine Quick Reference Sheet
 
-##  This simple reference sheet contains all LittleJS engine essentials.
-- [LittleJS Engine on GitHub](https://github.com/KilledByAPixel/LittleJS) - Official LittleJS website with more info
+##  This simple reference sheet contains all LittleJS essentials.
+- [LittleJS on GitHub](https://github.com/KilledByAPixel/LittleJS) - Official LittleJS website with more info
 - [LittleJS Documentation](https://killedbyapixel.github.io/LittleJS/docs) - LittleJS documentation browser
 - [Particle Deigner](https://killedbyapixel.github.io/LittleJS/examples/particles) - Editor for LittleJS Particle Systems
 - [Sound Effect Designer](https://killedbyapixel.github.io/ZzFX) - Tool for creating ZzFX sound effects
 - [Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter) - Simple LittleJS demo  to start with
 
-```javascript
+## LittleJS Setup
 
+To start LittleJS, you need to create a few functions and pass them to engineInit.
+
+```javascript
 // Start up LittleJS engine with your callback functions
 engineInit(init, update, updatePost, render, renderPost, imageSources=['tiles.png'])
 
@@ -17,7 +20,6 @@ engineObjectsDestroy()
 
 // Trigger a callback for each object within a given area
 engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
-
 ```
 
 ## LittleJS Utilities Classes and Functions
