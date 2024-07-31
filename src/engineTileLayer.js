@@ -53,12 +53,12 @@ function getTileCollisionData(pos)
 
 /** Check if collision with another object should occur
  *  @param {Vector2}      pos
- *  @param {EngineObject} object
+ *  @param {Vector2}      [size=(0,0)]
+ *  @param {EngineObject} [object]
  *  @return {Boolean}
  *  @memberof TileCollision */
-function tileCollisionTest(pos, object)
+function tileCollisionTest(pos, size=vec2(), object)
 {
-    const size = object.size;
     const minX = max(pos.x - size.x/2|0, 0);
     const minY = max(pos.y - size.y/2|0, 0);
     const maxX = min(pos.x + size.x/2, tileCollisionSize.x);
