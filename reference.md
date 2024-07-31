@@ -314,7 +314,7 @@ tileFixBleedScale = .3     // How much smaller to draw tiles to prevent bleeding
 
 ## LittleJS Particle System
 - Simple kinematic particle system with many parameters
-- Particle Effect Designer - https://killedbyapixel.github.io/LittleJS/examples/particles
+- [Particle Effect Designer](https://killedbyapixel.github.io/LittleJS/examples/particles) - Editor for creating LittleJS Particle Systems
 
 ```javascript
 ParticleEmitter(position, angle, ...settings) // Create a particle system
