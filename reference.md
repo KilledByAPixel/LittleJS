@@ -1,10 +1,11 @@
 # LittleJS Engine Quick Reference Sheet
 
 ##  This simple reference sheet contains all LittleJS engine essentials.
-- [LittleJS Engine on GitHub](https://github.com/KilledByAPixel/LittleJS)
-- [Particle Deigner](https://killedbyapixel.github.io/LittleJS/examples/particles)
-- [Sound Effect Designer](https://killedbyapixel.github.io/ZzFX)
-- [Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter)
+- [LittleJS Engine on GitHub](https://github.com/KilledByAPixel/LittleJS) - Official LittleJS website with more info
+- [LittleJS Documentation](https://killedbyapixel.github.io/LittleJS/docs) - LittleJS documentation browser
+- [Particle Deigner](https://killedbyapixel.github.io/LittleJS/examples/particles) - Editor for LittleJS Particle Systems
+- [Sound Effect Designer](https://killedbyapixel.github.io/ZzFX) - Tool for creating ZzFX sound effects
+- [Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter) - Simple LittleJS demo  to start with
 
 ```javascript
 
@@ -21,10 +22,10 @@ engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
 
 ## LittleJS Utilities Classes and Functions
 - General purpose math library
-- Vector2 - fast, simple, easy 2D vector class
-- Color - holds a rgba color with some math functions
-- Timer - tracks time automatically
-- RandomGenerator - seeded random number generator
+- Vector2 - Fast, simple, easy 2D vector class
+- Color - Holds a rgba color with some math functions
+- Timer - Tracks time automatically
+- RandomGenerator - Seeded random number generator
 
 ```javascript
 
@@ -127,8 +128,7 @@ Timer.valueOf()        // Get how long since elapsed, 0 if not set
 - Hybrid system with both Canvas2D and WebGL available
 - Super fast tile sheet rendering with WebGL
 - Can apply rotation, mirror, color and additive color
-- Font rendering system with built in engine font
-- Many useful utility functions
+- Text and font rendering system with built in engine font
 
 ```javascript
 TileInfo(pos=(0,0), size, textureIndex=0) // Create a tile info object
@@ -193,6 +193,7 @@ soundDefaultTaper = .7  // Default range percent to taper off sound (0-1)
 - Tracks keyboard down, pressed, and released
 - Tracks mouse buttons, position, and wheel
 - Tracks multiple analog gamepads
+- Routes touch input to mouse
 - Virtual gamepad for touch devices
 
 ```javascript
@@ -283,7 +284,7 @@ gravity = 0                   // How much gravity to apply to objects
 - Interfaces with EngineObject for collision
 - Collision layer is separate from visible layers
 - It is recommended to have a visible layer that matches the collision
-- Tile layers can be drawn to using their context with canvas2d
+- Tile layers can be drawn to using their context with Canvas2d
 - Drawn directly to the main canvas without using WebGL
 
 ```javascript
