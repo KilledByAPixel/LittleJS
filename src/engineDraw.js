@@ -180,6 +180,11 @@ function worldToScreen(worldPos)
     );
 }
 
+/** Get the camera's visible area in world space
+ *  @return {Vector2}
+ *  @memberof Draw */
+function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
+
 /** Draw textured tile centered in world space, with color applied if using WebGL
  *  @param {Vector2} pos                        - Center of the tile in world space
  *  @param {Vector2} [size=(1,1)]               - Size of the tile in world space
