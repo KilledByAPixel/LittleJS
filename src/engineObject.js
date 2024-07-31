@@ -245,15 +245,15 @@ class EngineObject
         if (this.collideTiles)
         {
             // check collision against tiles
-            if (tileCollisionTest(this.pos, this.size, this))
+            if (tileCollisionTest(this.pos, this))
             {
                 // if already was stuck in collision, don't do anything
                 // this should not happen unless something starts in collision
-                if (!tileCollisionTest(oldPos, this.size, this))
+                if (!tileCollisionTest(oldPos, this))
                 {
                     // test which side we bounced off (or both if a corner)
-                    const isBlockedY = tileCollisionTest(vec2(oldPos.x, this.pos.y), this.size, this);
-                    const isBlockedX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
+                    const isBlockedY = tileCollisionTest(vec2(oldPos.x, this.pos.y), this);
+                    const isBlockedX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this);
                     if (isBlockedY || !isBlockedX)
                     {
                         // set if landed on ground
