@@ -1,10 +1,10 @@
 # LittleJS Engine Quick Reference Sheet
 
-This simple reference sheet contains all LittleJS engine essentials.
-- (LittleJS Engine on GitHub)[https://github.com/KilledByAPixel/LittleJS]
-- (Particle Deigner)[https://killedbyapixel.github.io/LittleJS/examples/particles/]
-- (Sound Effect Designer)[https://killedbyapixel.github.io/ZzFX/]
-- (Starter Project)[https://killedbyapixel.github.io/LittleJS/examples/starter/]
+##  This simple reference sheet contains all LittleJS engine essentials.
+- [LittleJS Engine on GitHub](https://github.com/KilledByAPixel/LittleJS)
+- [Particle Deigner](https://killedbyapixel.github.io/LittleJS/examples/particles)
+- [Sound Effect Designer](https://killedbyapixel.github.io/ZzFX)
+- [Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter)
 
 ```javascript
 
@@ -17,14 +17,16 @@ engineObjectsDestroy()
 // Trigger a callback for each object within a given area
 engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
 
-//------------------------------------------------------------------
+```
 
-// LittleJS Utilities Classes and Functions
-// - General purpose math library
-// - Vector2 - fast, simple, easy 2D vector class
-// - Color - holds a rgba color with some math functions
-// - Timer - tracks time automatically
-// - RandomGenerator - seeded random number generator
+## LittleJS Utilities Classes and Functions
+- General purpose math library
+- Vector2 - fast, simple, easy 2D vector class
+- Color - holds a rgba color with some math functions
+- Timer - tracks time automatically
+- RandomGenerator - seeded random number generator
+
+```javascript
 
 // Helper functions
 tile(pos=(0,0), size, textureIndex=0)         // Create a tile info object
@@ -119,17 +121,16 @@ Timer.get()            // Get how long since elapsed, 0 if not set
 Timer.getPercent()     // Get percent elapsed, 0 if not set
 Timer.toString()       // Get this timer expressed as a string
 Timer.valueOf()        // Get how long since elapsed, 0 if not set
+```
 
-//------------------------------------------------------------------
+## LittleJS Drawing System
+- Hybrid system with both Canvas2D and WebGL available
+- Super fast tile sheet rendering with WebGL
+- Can apply rotation, mirror, color and additive color
+- Font rendering system with built in engine font
+- Many useful utility functions
 
-// LittleJS Drawing System
-// - Hybrid system with both Canvas2D and WebGL available
-// - Super fast tile sheet rendering with WebGL
-// - Can apply rotation, mirror, color and additive color
-// - Font rendering system with built in engine font
-// - Many useful utility functions
-
-
+```javascript
 TileInfo(pos=(0,0), size, textureIndex=0) // Create a tile info object
 
 // Drawing functions
@@ -164,16 +165,16 @@ canvasPixelated = true        // Disable filtering for crisper pixel art?
 showSplashScreen = false      // Show the LittleJS splash screen on startup?
 glEnable = true               // Enable fast WebGL rendering?
 glOverlay = true              // Prevent compositing the WebGL canvas?
+```
 
-//------------------------------------------------------------------
+## LittleJS Audio System
+- Caches sounds and music for fast playback
+- Can attenuate and apply stereo panning to sounds
+- Ability to play mp3, ogg, and wave file
+- [ZzFX Sound Effect Generator](https://killedbyapixel.github.io/ZzFX)
+- [ZzFXM Music System](https://keithclark.github.io/ZzFXM)
 
-// LittleJS Audio System
-// - Caches sounds and music for fast playback
-// - Can attenuate and apply stereo panning to sounds
-// - Ability to play mp3, ogg, and wave file
-// - ZzFX Sound Effect Generator - https://killedbyapixel.github.io/ZzFX
-// - ZzFXM Music System - https://keithclark.github.io/ZzFXM
-
+```javascript
 Sound(zzfxSound)                                        // Create a zzfx sound
 SoundWave(filename, randomness=0)                       // Load a wave, mp3, and ogg
 Sound.play(pos, volume=1, pitch=1, randomness=1, loop)  // Play a sound
@@ -186,15 +187,15 @@ soundEnable = true      // Should sound be enabled?
 soundVolume = .5        // Volume scale to apply to all sound
 soundDefaultRange = 40  // Default range where sound no longer plays
 soundDefaultTaper = .7  // Default range percent to taper off sound (0-1)
+```
 
-//------------------------------------------------------------------
+## LittleJS Input System
+- Tracks keyboard down, pressed, and released
+- Tracks mouse buttons, position, and wheel
+- Tracks multiple analog gamepads
+- Virtual gamepad for touch devices
 
-// LittleJS Input System
-// - Tracks keyboard down, pressed, and released
-// - Tracks mouse buttons, position, and wheel
-// - Tracks multiple analog gamepads
-// - Virtual gamepad for touch devices
-
+```javascript
 // Keyboard
 keyIsDown(key)                        // Is key down?
 keyWasPressed(key)                    // Was key pressed this frame?
@@ -234,21 +235,21 @@ touchGamepadEnable = false            // Should touch gamepad appear on mobile d
 touchGamepadAnalog = true             // Should touch gamepad be analog or 8 way dpad?
 touchGamepadSize = 99                 // Size of virtual gamepad for touch devices
 touchGamepadAlpha = .3                // Transparency of touch gamepad overlay
+```
 
-//------------------------------------------------------------------
+## LittleJS Object System
+- Top level object class used by the engine
+- Automatically adds self to object list
+- Will be updated and rendered each frame
+- Renders as a sprite from a tile sheet by default
+- Can have color and addtive color applied
+- 2D Physics and collision system
+- Sorted by renderOrder before drawing
+- Objects can have children in local space
+- Parents are updated before children
+- Call destroy() to get rid of objects
 
-// LittleJS Object System
-// - Top level object class used by the engine
-// - Automatically adds self to object list
-// - Will be updated and rendered each frame
-// - Renders as a sprite from a tile sheet by default
-// - Can have color and addtive color applied
-// - 2D Physics and collision system
-// - Sorted by renderOrder
-// - Objects can have children attached
-// - Parents are updated before children, and set child transform
-// - Call destroy() to get rid of objects
-
+```javascript
 // Create an engine object and adds it to the list of objects
 EngineObject(pos=(0,0), size=(1,1), tileInfo, angle=0, color, renderOrder=0)
 EngineObject.update()                              // Update object, called automatically
@@ -274,18 +275,18 @@ objectDefaultElasticity = 0   // How much to bounce when a collision occurs (0-1
 objectDefaultFriction = .8    // How much to slow when touching (0-1)
 objectMaxSpeed = 1            // Clamp max speed to avoid fast objects missing collisions
 gravity = 0                   // How much gravity to apply to objects
+```
 
-//------------------------------------------------------------------
+## LittleJS Tile Layer System
+- Caches arrays of tiles to off screen canvas for fast rendering
+- Unlimited numbers of layers, allocates canvases as needed
+- Interfaces with EngineObject for collision
+- Collision layer is separate from visible layers
+- It is recommended to have a visible layer that matches the collision
+- Tile layers can be drawn to using their context with canvas2d
+- Drawn directly to the main canvas without using WebGL
 
-// LittleJS Tile Layer System
-// - Caches arrays of tiles to off screen canvas for fast rendering
-// - Unlimited numbers of layers, allocates canvases as needed
-// - Interfaces with EngineObject for collision
-// - Collision layer is separate from visible layers
-// - It is recommended to have a visible layer that matches the collision
-// - Tile layers can be drawn to using their context with canvas2d
-// - Drawn directly to the main canvas without using WebGL
-
+```javascript
 tileCollisionSize                              // Size of the tile collision layer
 initTileCollision(size)                        // Clear and initialize tile collision
 setTileCollisionData(pos, data=0)              // Set tile collision data at pos
@@ -308,28 +309,28 @@ TileLayerData.clear()      // Clear this tile data
 // Tile sheet settings
 tileSizeDefault = (16,16)  // Default size of tiles in pixels
 tileFixBleedScale = .3     // How much smaller to draw tiles to prevent bleeding
+```
 
-//------------------------------------------------------------------
+## LittleJS Particle System
+- Simple kinematic particle system with many parameters
+- Particle Effect Designer - https://killedbyapixel.github.io/LittleJS/examples/particles
 
-// LittleJS Particle System
-// - Simple particle system with many settings
-// - Effect Designer - https://killedbyapixel.github.io/LittleJS/examples/particles
-
+```javascript
 ParticleEmitter(position, angle, ...settings) // Create a particle system
 ParticleEmitter.emitParticle()                // Spawn one particle
 
 // Particle Settings
 particleEmitRateScale = 1 // Scales particles emit rate
+```
 
-//------------------------------------------------------------------
+## LittleJS Debugging System
+- Press Escape key to toggle debug overlay
+- Number keys toggle debug functions
+- +/- keys apply time scale to update
+- Debug primitive rendering system
+- Debug functions are only active in debug builds
 
-// LittleJS Debugging System
-// - Press Esc to show debug overlay
-// - Number keys toggle debug functions
-// - +/- applies time scale to update
-// - Debug primitive rendering system
-// - Debug functions are only active in debug builds
-
+```javascript
 ASSERT(assert, output) // Asserts if the expression is false
 debugRect(pos, size, color='#fff', time=0, angle=0, fill)   // Draw debug rectangle
 debugCircle(pos, radius, color='#fff', time=0, fill)        // Draw debug circle
@@ -351,6 +352,6 @@ enableAsserts        // True if asserts are enabled
 showWatermark        // True if watermark with FPS should be show
 ```
 
-(LittleJS Engine)[https://github.com/KilledByAPixel/LittleJS] Copyright 2021 Frank Force
+[LittleJS Engine](https://github.com/KilledByAPixel/LittleJS) Copyright 2021 Frank Force
 
 ![LittleJS Logo](examples/favicon.png)
