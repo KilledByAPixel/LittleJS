@@ -31,11 +31,13 @@ engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
 
 ```javascript
 
-// Helper functions
-tile(pos=(0,0), size, textureIndex=0)         // Create a tile info object
+// Object Constructors
 vec2(x=0, y=x)                                // Create a 2D vector with Vector or floats
 rgb(r=1, g=1, b=1, a=1)                       // Create a color object with RGBA values
 hsl(h=0, s=0, l=1, a=1)                       // Create a color object with HSLA values
+tile(pos=(0,0), size, textureIndex=0)         // Create a tile info object
+
+// Helper functions 
 abs(value)                                    // Get absoulte value
 min(valueA, valueB)                           // Get lowest of values
 max(valueA, valueB)                           // Get highest of values
@@ -62,7 +64,7 @@ randVector(length=1)                 // Random Vector2 with the passed in length
 randInCircle(radius=1, minRadius=0)  // Random Vector2 within a circle
 randColor(colorA, colorB, linear)    // Random color between values
 
-// 2D Vector Math
+// 2D vector math
 Vector2(x=0, y=0)                         // Create a 2D vector
 Vector2.copy()                            // Copy this vector    
 Vector2.add(v)                            // Add a vector
@@ -90,7 +92,7 @@ Vector2.setDirection(direction, length=1) // Set integer direction (0-3) and len
 Vector2.direction()                       // Get integer direction (0-3)
 Vector2.toString(digits=3)                // Get string representation
 
-// RGBA Color Object
+// RGBA color object
 Color(r=1, g=1, b=1, a=1)                 // Create an RGBA color
 Color.copy()                              // Copy this color
 Color.add(c)                              // Add a color
@@ -113,7 +115,7 @@ RandomGenerator.float(valueA=1, valueB=0) // Random float between values
 RandomGenerator.int(valueA, valueB=0)     // Random integer between values
 RandomGenerator.sign()                    // Randomly either -1 or 1
 
-// Time Tracking System
+// Time tracking system
 Timer(timeLeft)        // Create a timer object
 Timer.set(timeLeft=0)  // Set the timer with seconds passed in
 Timer.unset()          // Unset the timer
@@ -133,8 +135,6 @@ Timer.valueOf()        // Get how long since elapsed, 0 if not set
 - Text and font rendering system with built in engine font
 
 ```javascript
-TileInfo(pos=(0,0), size, textureIndex=0) // Create a tile info object
-
 // Drawing functions
 drawTile(pos, size=(1,1), tileInfo, color, angle=0, mirror, additiveColor)
 drawRect(pos, size=(1,1), color=(1,1,1,1), angle=0)
@@ -146,6 +146,9 @@ drawTextScreen(text, pos, size=1, color=(1,1,1,1), lineWidth, lineColor)
 setBlendMode(additive)
 toggleFullscreen()
 isFullscreen()
+
+// Tile Info Object
+TileInfo(pos=(0,0), size, textureIndex=0) // Create a tile info object
 
 // Font Image Object draws text using characters in an image
 FontImage(image, tileSize=(8,8), paddingSize=(0,1)) // Create an image font
@@ -177,6 +180,7 @@ glOverlay = true              // Prevent compositing the WebGL canvas?
 - [ZzFXM Music System](https://keithclark.github.io/ZzFXM)
 
 ```javascript
+// Sound Object
 Sound(zzfxSound)                                        // Create a zzfx sound
 SoundWave(filename, randomness=0)                       // Load a wave, mp3, and ogg
 Sound.play(pos, volume=1, pitch=1, randomness=1, loop)  // Play a sound
@@ -185,6 +189,10 @@ Sound.stop()                                            // Stop the last instanc
 Sound.getSource()                                       // Get source of most recent instance
 Sound.getDuration()                                     // Get length of sound in seconds
 Sound.isLoading()                                       // Check if sound is loading
+
+// ZzFXM - A tiny music system
+Music(..zzfxMusic)                                      // Create a zzfx music object
+Music.playMusic(volume, loop=false)                     // Play the music
 
 // Audio functions
 playAudioFile(filename, volume=1, loop=false)           // Play an audio file or url
@@ -260,7 +268,7 @@ touchGamepadAlpha = .3                // Transparency of touch gamepad overlay
 - Call destroy() to get rid of objects
 
 ```javascript
-// Create an engine object and adds it to the list of objects
+// Engine Object
 EngineObject(pos=(0,0), size=(1,1), tileInfo, angle=0, color, renderOrder=0)
 EngineObject.update()                              // Update object, called automatically
 EngineObject.render()                              // Render object, called automatically
@@ -297,6 +305,7 @@ gravity = 0                   // How much gravity to apply to objects
 - Drawn directly to the main canvas without using WebGL
 
 ```javascript
+// Tile Collision System
 tileCollisionSize                              // Size of the tile collision layer
 initTileCollision(size)                        // Clear and initialize tile collision
 setTileCollisionData(pos, data=0)              // Set tile collision data at pos
@@ -304,6 +313,7 @@ getTileCollisionData(pos)                      // Get tile collision data at pos
 tileCollisionTest(pos, size=(0,0), object)     // Check if collision should occur
 tileCollisionRaycast(posStart, posEnd, object) // Return the center of tile if hit
 
+// Tile Layer Object
 TileLayer(position, size, tileInfo, scale)     // Create a tile layer object
 TileLayer.setData(layerPos, data, redraw)      // Set data at position
 TileLayer.getData(layerPos)                    // Get data at position
@@ -313,6 +323,7 @@ TileLayer.drawRect(pos, size, color, angle)    // Draw a rectangle to 2D canvas
 TileLayer.drawTile(pos, size=(1,1), tileInfo, color, angle, mirror) // Draw tile
 TileLayer.drawCanvas2D(pos, size, angle, mirror, drawFunction)      // Draw to 2D canvas
 
+// Tile Layer Data Object
 TileLayerData(tile, direction=0, mirror=false, color=(1,1,1,1)) // Create tile data object
 TileLayerData.clear()      // Clear this tile data
 
@@ -326,6 +337,7 @@ tileFixBleedScale = .3     // How much smaller to draw tiles to prevent bleeding
 - [Particle Effect Designer](https://killedbyapixel.github.io/LittleJS/examples/particles) - Editor for creating LittleJS Particle Systems
 
 ```javascript
+// Particle Emitter Object
 ParticleEmitter(position, angle, ...settings) // Create a particle system
 ParticleEmitter.emitParticle()                // Spawn one particle
 
