@@ -180,6 +180,13 @@ glOverlay = true              // Prevent compositing the WebGL canvas?
 Sound(zzfxSound)                                        // Create a zzfx sound
 SoundWave(filename, randomness=0)                       // Load a wave, mp3, and ogg
 Sound.play(pos, volume=1, pitch=1, randomness=1, loop)  // Play a sound
+Sound.playNote(semitoneOffset, pos, volume=1)           // Play as note with a semitone offset
+Sound.stop()                                            // Stop the last instance that was played
+Sound.getSource()                                       // Get source of most recent instance
+Sound.getDuration()                                     // Get length of sound in seconds
+Sound.isLoading()                                       // Check if sound is loading
+
+// Audio functions
 playAudioFile(filename, volume=1, loop=false)           // Play an audio file or url
 speak(text, language='', volume=1, rate=1, pitch=1)     // Speak text line
 speakStop()                                             // Stop all queued speech
