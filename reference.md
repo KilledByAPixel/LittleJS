@@ -149,6 +149,17 @@ isFullscreen()
 
 // Tile Info Object
 TileInfo(pos=(0,0), size, textureIndex=0) // Create a tile info object
+TileInfo.pos              // Top left corner of tile in pixels
+TileInfo.size             // Size of tile in pixels
+TileInfo.textureIndex     // Texture index to use
+TileInfo.offset(offset)   // Offset this tile by a certain amount in pixels
+TileInfo.getTextureInfo() // Returns texture info for this tile
+
+// Texture Info Object
+TextureInfo(image)       // Created automatically for each image
+TextureInfo.image        // Image source
+TextureInfo.size         // Size of the image
+TextureInfo.glTexture    // WebGL texture
 
 // Font Image Object draws text using characters in an image
 FontImage(image, tileSize=(8,8), paddingSize=(0,1)) // Create an image font
@@ -283,6 +294,25 @@ EngineObject.getMirrorSign()                       // Get mirror direction (1 or
 EngineObject.addChild(child, localPos, localAngle) // Attach a child
 EngineObject.removeChild(child)                    // Remove a child
 EngineObject.setCollision(solids, isSolid, tiles)  // Set collision
+
+// Engine Object Members
+EngineObject.pos           //  World space position
+EngineObject.size          // World space width and height
+EngineObject.drawSize      // Size of object used for drawing if set
+EngineObject.tileInfo      // Tile info to render object
+EngineObject.angle         // Rotation angle for rendering
+EngineObject.color         // Color to apply when rendered
+EngineObject.additiveColor // Additive color to apply when rendered
+EngineObject.mirror        // Should it flip along y axis when rendered
+EngineObject.mass          // Weight of object, static if 0
+EngineObject.damping       // How much to slow velocity each frame (0-1)
+EngineObject.angleDamping  // How much to slow rotation each frame (0-1)
+EngineObject.elasticity    // How bouncy is it when colliding (0-1)
+EngineObject.friction      // How much friction when sliding (0-1)
+EngineObject.gravityScale  // How much to scale gravity by
+EngineObject.renderOrder   // Objects are sorted by render order
+EngineObject.velocity      // Velocity of the object
+EngineObject.angleVelocity // Angular velocity of the object
 
 // Object settings
 enablePhysicsSolver = true    // Enable collisions between objects?
