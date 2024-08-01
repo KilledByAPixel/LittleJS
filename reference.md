@@ -296,7 +296,7 @@ EngineObject.removeChild(child)                    // Remove a child
 EngineObject.setCollision(solids, isSolid, tiles)  // Set collision
 
 // Engine Object Members
-EngineObject.pos           //  World space position
+EngineObject.pos           // World space position
 EngineObject.size          // World space width and height
 EngineObject.drawSize      // Size of object used for drawing if set
 EngineObject.tileInfo      // Tile info to render object
