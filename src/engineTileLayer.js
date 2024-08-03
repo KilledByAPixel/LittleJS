@@ -53,7 +53,7 @@ function getTileCollisionData(pos)
 
 /** Check if collision with another object should occur
  *  @param {Vector2}      pos
- *  @param {Vector2}      [size=(1,1)]
+ *  @param {Vector2}      [size=(0,0)]
  *  @param {EngineObject} [object]
  *  @return {Boolean}
  *  @memberof TileCollision */
