@@ -1,5 +1,5 @@
 /** 
- * LittleJS - The Tiny JavaScript Game Engine That Can!
+ * LittleJS - The Tiny Fast JavaScript Game Engine
  * MIT License - Copyright 2021 Frank Force
  * 
  * Engine Features
@@ -32,7 +32,7 @@ const engineName = 'LittleJS';
  *  @memberof Engine */
 const engineVersion = '1.9.2';
 
-/** Frames per second to update objects
+/** Frames per second to update
  *  @type {Number}
  *  @default
  *  @memberof Engine */
@@ -49,7 +49,7 @@ const timeDelta = 1/frameRate;
  *  @memberof Engine */
 let engineObjects = [];
 
-/** Array containing only objects that are set to collide with other objects this frame (for optimization)
+/** Array with only objects set to collide with other objects this frame (for optimization)
  *  @type {Array}
  *  @memberof Engine */
 let engineObjectsCollide = [];
@@ -59,7 +59,7 @@ let engineObjectsCollide = [];
  *  @memberof Engine */
 let frame = 0;
 
-/** Current engine time since start in seconds, derived from frame
+/** Current engine time since start in seconds
  *  @type {Number}
  *  @memberof Engine */
 let time = 0;
@@ -85,12 +85,12 @@ let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** Start up LittleJS engine with your callback functions
- *  @param {Function} gameInit        - Called once after the engine starts up, setup the game
- *  @param {Function} gameUpdate      - Called every frame at 60 frames per second, handle input and update the game state
- *  @param {Function} gameUpdatePost  - Called after physics and objects are updated, setup camera and prepare for render
- *  @param {Function} gameRender      - Called before objects are rendered, draw any background effects that appear behind objects
- *  @param {Function} gameRenderPost  - Called after objects are rendered, draw effects or hud that appear above all objects
+/** Startup LittleJS engine with your callback functions
+ *  @param {Function} gameInit       - Called once after the engine starts up, setup the game
+ *  @param {Function} gameUpdate     - Called every frame at 60 frames per second, handle input and update the game state
+ *  @param {Function} gameUpdatePost - Called after physics and objects are updated, setup camera and prepare for render
+ *  @param {Function} gameRender     - Called before objects are rendered, draw any background effects that appear behind objects
+ *  @param {Function} gameRenderPost - Called after objects are rendered, draw effects or hud that appear above all objects
  *  @param {Array} [imageSources=['tiles.png']] - Image to load
  *  @memberof Engine */
 function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=['tiles.png'])

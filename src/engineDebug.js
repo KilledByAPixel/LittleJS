@@ -52,7 +52,7 @@ let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParti
 ///////////////////////////////////////////////////////////////////////////////
 // Debug helper functions
 
-/** Asserts if the experssion is false, does not do anything in release builds
+/** Asserts if the expression is false, does not do anything in release builds
  *  @param {Boolean} assert
  *  @param {Object} [output]
  *  @memberof Debug */

@@ -357,7 +357,7 @@ function createTouchGamepad()
     touchGamepadStick = vec2();
 
     const touchHandler = ontouchstart;
-    ontouchstart = ontouchmove = ontouchend = (e)=> 
+    ontouchstart = ontouchmove = ontouchend = (e)=>
     {
         // clear touch gamepad input
         touchGamepadStick = vec2();
