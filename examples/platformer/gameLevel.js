@@ -8,12 +8,12 @@
 
 'use strict';
 
-const tileType_ladder      = -1;
-const tileType_empty       = 0;
-const tileType_solid       = 1;
-const tileType_breakable   = 2;
+const tileType_ladder    = -1;
+const tileType_empty     = 0;
+const tileType_solid     = 1;
+const tileType_breakable = 2;
 
-let player, playerStartPos, tileData, tileLayers, foregroundLayerIndex;
+let player, playerStartPos, tileData, tileLayers, foregroundLayerIndex, sky;
 let levelSize, levelColor, levelBackgroundColor, levelOutlineColor, warmup;
 
 const setTileData = (pos, layer, data)=>
@@ -27,9 +27,14 @@ function buildLevel()
     levelColor = randColor(hsl(0,0,.2), hsl(0,0,.8));
     levelBackgroundColor = levelColor.mutate().scale(.4,1);
     levelOutlineColor = levelColor.mutate().add(hsl(0,0,.4)).clamp();
-
     loadLevel();
-    initBackground();
+
+    // create sky object with gradient and stars
+    sky = new Sky;
+
+    // create parallax layers
+    for (let i=3; i--;)
+        new ParallaxLayer(i);
     
     // apply decoration to all level tiles
     const pos = vec2();

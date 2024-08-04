@@ -7,7 +7,7 @@
  }
  if(typeof module === 'object' && module && module.exports) {
   module.exports = data;
- }})("gameTileData",
+ }})("gameLevelData",
 { "compressionlevel":-1,
  "height":64,
  "infinite":false,
@@ -172,7 +172,7 @@
  "tilesets":[
         {
          "firstgid":1,
-         "source":"data\/gameTileData.tsx"
+         "source":"data\/gameLevelData.tsx"
         }],
  "tilewidth":16,
  "type":"map",

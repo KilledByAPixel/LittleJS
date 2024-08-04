@@ -210,15 +210,17 @@ class Character extends GameObject
         // update mirror
         if (moveInput.x && !this.dodgeTimer.active())
             this.mirror = moveInput.x < 0;
-        
-        // set tile to use
-        const tile = this.isDead() ? 3 : 
-            this.climbingLadder || this.groundTimer.active() ? 3 + 2*this.walkCyclePercent|0 : 4;
-        this.tileInfo.pos.x = tile * 16;
     }
        
     render()
     {
+        // update animation
+        const animationFrame = this.isDead() ? 0 :
+            this.climbingLadder || this.groundTimer.active() ?
+            2*this.walkCyclePercent|0 : 1;
+        const playerTile = spriteAtlas['player'];
+        this.tileInfo.pos.x = playerTile.pos.x + playerTile.size.x*animationFrame;
+
         let bodyPos = this.pos;
         if (!this.isDead())
         {

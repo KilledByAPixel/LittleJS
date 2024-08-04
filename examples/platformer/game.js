@@ -11,11 +11,26 @@
 // show the LittleJS splash screen
 setShowSplashScreen(true);
 
-let score, deaths;
+let spriteAtlas, score, deaths;
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
+    // create a table of all sprites
+    spriteAtlas =
+    {
+        // large tiles
+        'circle': tile(0),
+        'crate':  tile(2),
+        'player': tile(3),
+        'enemy':  tile(5),
+        'coin':   tile(6),
+
+        // small t
+        'gun':    tile(2,8),
+        'grenade':tile(3,8),
+    };
+
     // enable touch gamepad on touch devices
     touchGamepadEnable = true;
 
