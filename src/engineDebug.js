@@ -260,6 +260,10 @@ function debugRender()
     {
         const saveContext = mainContext;
         mainContext = overlayContext;
+        
+        // draw red rectangle around screen
+        const cameraSize = getCameraSize();
+        debugRect(cameraPos, cameraSize.subtract(vec2(.1)), '#f008');
 
         // mouse pick
         let bestDistance = Infinity, bestObject;
