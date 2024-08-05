@@ -276,6 +276,11 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
  *  @memberof Audio */
 let audioContext = new AudioContext;
 
+/** Keep track if audio was suspended when last sound was played
+ *  @type {Boolean}
+ *  @memberof Audio */
+let audioSuspended = false;
+
 /** Play cached audio samples with given settings
  *  @param {Array}   sampleChannels - Array of arrays of samples to play (for stereo playback)
  *  @param {Number}  [volume] - How much to scale volume by
@@ -290,11 +295,15 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
     if (!soundEnable) return;
 
     // prevent sounds from building up if they can't be played
-    if (audioContext.state != 'running')
+    const audioWasSuspended = audioSuspended;
+    if (audioSuspended = audioContext.state != 'running')
     {
         // fix stalled audio
         audioContext.resume();
-        return;
+
+        // prevent suspended sounds from building up
+        if (audioWasSuspended)
+            return;
     }
 
     // create buffer and source
