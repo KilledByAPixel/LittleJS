@@ -8,7 +8,7 @@
 
 // import module
 import * as LittleJS from '../../dist/littlejs.esm.js';
-const {Vector2, Color, Timer, tile, vec2, hsl, rgb} = LittleJS;
+const {tile, vec2, hsl} = LittleJS;
 
 // show the LittleJS splash screen
 LittleJS.setShowSplashScreen(true);

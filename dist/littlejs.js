@@ -264,6 +264,10 @@ function debugRender()
     {
         const saveContext = mainContext;
         mainContext = overlayContext;
+        
+        // draw red rectangle around screen
+        const cameraSize = getCameraSize();
+        debugRect(cameraPos, cameraSize.subtract(vec2(.1)), '#f008');
 
         // mouse pick
         let bestDistance = Infinity, bestObject;
@@ -2292,21 +2296,6 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
 function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
 { 
     drawTile(pos, size, undefined, color, angle, false, undefined, useWebGL, screenSpace, context); 
-}
-
-/** Draw colored polygon using passed in points
- *  @param {Array}   points - Array of Vector2 points
- *  @param {Color}   [color=(1,1,1,1)]
- *  @param {Boolean} [screenSpace=false]
- *  @param {CanvasRenderingContext2D} [context=mainContext]
- *  @memberof Draw */
-function drawPoly(points, color=new Color, screenSpace, context=mainContext)
-{
-    context.fillStyle = color.toString();
-    context.beginPath();
-    for (const point of screenSpace ? points : points.map(worldToScreen))
-        context.lineTo(point.x, point.y);
-    context.fill();
 }
 
 /** Draw colored line between two points
