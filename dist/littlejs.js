@@ -4139,16 +4139,17 @@ class ParticleEmitter extends EngineObject
         
         // build particle
         const particle = new Particle(pos, this.tileInfo, angle, colorStart, colorEnd, particleTime, sizeStart, sizeEnd, this.fadeRate, this.additive,  this.trailScale, this.localSpace && this, this.particleDestroyCallback);
-        particle.velocity     = vec2().setAngle(velocityAngle, speed);
-        particle.fadeRate     = this.fadeRate;
-        particle.damping      = this.damping;
-        particle.angleDamping = this.angleDamping;
-        particle.elasticity   = this.elasticity;
-        particle.friction     = this.friction;
-        particle.gravityScale = this.gravityScale;
-        particle.collideTiles = this.collideTiles;
-        particle.renderOrder  = this.renderOrder;
-        particle.mirror       = !!randInt(2);
+        particle.velocity      = vec2().setAngle(velocityAngle, speed);
+        particle.angleVelocity = angleSpeed;
+        particle.fadeRate      = this.fadeRate;
+        particle.damping       = this.damping;
+        particle.angleDamping  = this.angleDamping;
+        particle.elasticity    = this.elasticity;
+        particle.friction      = this.friction;
+        particle.gravityScale  = this.gravityScale;
+        particle.collideTiles  = this.collideTiles;
+        particle.renderOrder   = this.renderOrder;
+        particle.mirror        = !!randInt(2);
 
         // call particle create callaback
         this.particleCreateCallback && this.particleCreateCallback(particle);
@@ -4831,7 +4832,7 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdd
 ///////////////////////////////////////////////////////////////////////////////
 // post processing - can be enabled to pass other canvases through a final shader
 
-let glPostShader, glPostArrayBuffer, glPostTexture, glPostIncludeOverlay;
+let glPostShader, glPostTexture, glPostIncludeOverlay;
 
 /** Set up a post processing shader
  *  @param {String} shaderCode
@@ -4867,7 +4868,6 @@ function glInitPostProcess(shaderCode, includeOverlay=false)
     );
 
     // create buffer and texture
-    glPostArrayBuffer = glContext.createBuffer();
     glPostTexture = glCreateTexture(undefined);
     glPostIncludeOverlay = includeOverlay;
 
