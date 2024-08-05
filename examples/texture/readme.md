@@ -1,6 +1,6 @@
 ## Textures
 
-texture is an image but on GPU. in this eample we learn how to load textures and draw them.
+texture is an image but on GPU. in this example we learn how to load textures and draw them.
 
 ### load texture
 to load texture we can add our image's path and name to textures list in `engineInit` function.
