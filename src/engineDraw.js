@@ -271,21 +271,6 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
     drawTile(pos, size, undefined, color, angle, false, undefined, useWebGL, screenSpace, context); 
 }
 
-/** Draw colored polygon using passed in points
- *  @param {Array}   points - Array of Vector2 points
- *  @param {Color}   [color=(1,1,1,1)]
- *  @param {Boolean} [screenSpace=false]
- *  @param {CanvasRenderingContext2D} [context=mainContext]
- *  @memberof Draw */
-function drawPoly(points, color=new Color, screenSpace, context=mainContext)
-{
-    context.fillStyle = color.toString();
-    context.beginPath();
-    for (const point of screenSpace ? points : points.map(worldToScreen))
-        context.lineTo(point.x, point.y);
-    context.fill();
-}
-
 /** Draw colored line between two points
  *  @param {Vector2} posA
  *  @param {Vector2} posB
