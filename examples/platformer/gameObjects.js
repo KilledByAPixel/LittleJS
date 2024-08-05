@@ -323,7 +323,7 @@ class Bullet extends EngineObject
         this.range -= this.velocity.length();
         if (this.range < 0)
         {
-            const emitter = new ParticleEmitter(
+            new ParticleEmitter(
                 this.pos, 0, .2, .1, 50, PI, spriteAtlas.circle, // pos, emit info, tileInfo
                 rgb(1,1,.1), rgb(1,1,1),    // colorStartA, colorStartB
                 rgb(1,1,.1,0), rgb(1,1,1,0),// colorEndA, colorEndB
