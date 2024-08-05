@@ -85,13 +85,9 @@ function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0)
     if (typeof pos === 'number')
     {
         const textureInfo = textureInfos[textureIndex];
-        if (textureInfo)
-        {
-            const cols = textureInfo.size.x / size.x |0;
-            pos = vec2((pos%cols)*size.x, (pos/cols|0)*size.y);
-        }
-        else
-            pos = vec2();
+        ASSERT(textureInfo, 'Texture not loaded');
+        const cols = textureInfo.size.x / size.x |0;
+        pos = vec2((pos%cols)*size.x, (pos/cols|0)*size.y);
     }
 
     // return a tile info object

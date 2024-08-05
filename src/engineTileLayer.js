@@ -1,7 +1,7 @@
 /** 
  * LittleJS Tile Layer System
  * - Caches arrays of tiles to off screen canvas for fast rendering
- * - Unlimted numbers of layers, allocates canvases as needed
+ * - Unlimited numbers of layers, allocates canvases as needed
  * - Interfaces with EngineObject for collision
  * - Collision layer is separate from visible layers
  * - It is recommended to have a visible layer that matches the collision

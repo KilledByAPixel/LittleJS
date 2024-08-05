@@ -256,18 +256,3 @@ class ParallaxLayer extends EngineObject
         mainContext.drawImage(this.canvas, pos.x, pos.y, scale.x, scale.y);
     }
 }
-
-///////////////////////////////////////////////////////////////////////////////
-// background decoration
-
-let sky;
-
-function initBackground()
-{
-    // create sky object with gradient and stars
-    sky = new Sky;
-
-    // create parallax layers
-    for (let i=3; i--;)
-        new ParallaxLayer(i);
-}

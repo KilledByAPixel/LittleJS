@@ -12,7 +12,7 @@
 'use strict';
 
 /** 
- * Sound Object - Stores a zzfx sound for later use and can be played positionally
+ * Sound Object - Stores a sound for later use and can be played positionally
  * 
  * <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
  * @example
@@ -27,7 +27,7 @@ class Sound
     /** Create a sound object and cache the zzfx samples for later use
      *  @param {Array}  zzfxSound - Array of zzfx parameters, ex. [.5,.5]
      *  @param {Number} [range=soundDefaultRange] - World space max range of sound, will not play if camera is farther away
-     *  @param {Number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering off
+     *  @param {Number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
      */
     constructor(zzfxSound, range=soundDefaultRange, taper=soundDefaultTaper)
     {
@@ -207,24 +207,24 @@ class Music extends Sound
 
     /** Play the music
      *  @param {Number}  [volume=1] - How much to scale volume by
-     *  @param {Boolean} [loop=1] - True if the music should loop
+     *  @param {Boolean} [loop] - True if the music should loop
      *  @return {AudioBufferSourceNode} - The audio source node
      */
-    playMusic(volume, loop = false)
+    playMusic(volume, loop=false)
     { return super.play(undefined, volume, 1, 1, loop); }
 }
 
 /** Play an mp3, ogg, or wav audio from a local file or url
- *  @param {String}  url - Location of sound file to play
+ *  @param {String}  filename - Location of sound file to play
  *  @param {Number}  [volume] - How much to scale volume by
  *  @param {Boolean} [loop] - True if the music should loop
  *  @return {HTMLAudioElement} - The audio element for this sound
  *  @memberof Audio */
-function playAudioFile(url, volume=1, loop=false)
+function playAudioFile(filename, volume=1, loop=false)
 {
     if (!soundEnable) return;
 
-    const audio = new Audio(url);
+    const audio = new Audio(filename);
     audio.volume = soundVolume * volume;
     audio.loop = loop;
     audio.play();

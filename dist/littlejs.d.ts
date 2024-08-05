@@ -1,6 +1,6 @@
 declare module "littlejs.esm" {
     /**
-     * LittleJS - The Tiny JavaScript Game Engine That Can!
+     * LittleJS - The Tiny Fast JavaScript Game Engine
      * MIT License - Copyright 2021 Frank Force
      *
      * Engine Features
@@ -28,7 +28,7 @@ declare module "littlejs.esm" {
      *  @default
      *  @memberof Engine */
     export const engineVersion: string;
-    /** Frames per second to update objects
+    /** Frames per second to update
      *  @type {Number}
      *  @default
      *  @memberof Engine */
@@ -46,7 +46,7 @@ declare module "littlejs.esm" {
      *  @type {Number}
      *  @memberof Engine */
     export let frame: number;
-    /** Current engine time since start in seconds, derived from frame
+    /** Current engine time since start in seconds
      *  @type {Number}
      *  @memberof Engine */
     export let time: number;
@@ -63,12 +63,12 @@ declare module "littlejs.esm" {
      *  @param {Boolean} isPaused
      *  @memberof Engine */
     export function setPaused(isPaused: boolean): void;
-    /** Start up LittleJS engine with your callback functions
-     *  @param {Function} gameInit        - Called once after the engine starts up, setup the game
-     *  @param {Function} gameUpdate      - Called every frame at 60 frames per second, handle input and update the game state
-     *  @param {Function} gameUpdatePost  - Called after physics and objects are updated, setup camera and prepare for render
-     *  @param {Function} gameRender      - Called before objects are rendered, draw any background effects that appear behind objects
-     *  @param {Function} gameRenderPost  - Called after objects are rendered, draw effects or hud that appear above all objects
+    /** Startup LittleJS engine with your callback functions
+     *  @param {Function} gameInit       - Called once after the engine starts up, setup the game
+     *  @param {Function} gameUpdate     - Called every frame at 60 frames per second, handle input and update the game state
+     *  @param {Function} gameUpdatePost - Called after physics and objects are updated, setup camera and prepare for render
+     *  @param {Function} gameRender     - Called before objects are rendered, draw any background effects that appear behind objects
+     *  @param {Function} gameRenderPost - Called after objects are rendered, draw effects or hud that appear above all objects
      *  @param {Array} [imageSources=['tiles.png']] - Image to load
      *  @memberof Engine */
     export function engineInit(gameInit: Function, gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, imageSources?: any[]): void;
@@ -109,7 +109,7 @@ declare module "littlejs.esm" {
      *  @default
      *  @memberof Debug */
     export let showWatermark: boolean;
-    /** Asserts if the experssion is false, does not do anything in release builds
+    /** Asserts if the expression is false, does not do anything in release builds
      *  @param {Boolean} assert
      *  @param {Object} [output]
      *  @memberof Debug */
@@ -229,7 +229,7 @@ declare module "littlejs.esm" {
      *  @default
      *  @memberof Settings */
     export let enablePhysicsSolver: boolean;
-    /** Default object mass for collison calcuations (how heavy objects are)
+    /** Default object mass for collision calcuations (how heavy objects are)
      *  @type {Number}
      *  @default
      *  @memberof Settings */
@@ -306,7 +306,7 @@ declare module "littlejs.esm" {
      *  @default
      *  @memberof Settings */
     export let touchGamepadAnalog: boolean;
-    /** Size of virutal gamepad for touch devices in pixels
+    /** Size of virtual gamepad for touch devices in pixels
      *  @type {Number}
      *  @default
      *  @memberof Settings */
@@ -548,7 +548,7 @@ declare module "littlejs.esm" {
      *  @return {Number}
      *  @memberof Utilities */
     export function max(valueA: number, valueB: number): number;
-    /** Returns the sign of value passed in (also returns 1 if 0)
+    /** Returns the sign of value passed in
      *  @param {Number} value
      *  @return {Number}
      *  @memberof Utilities */
@@ -580,7 +580,7 @@ declare module "littlejs.esm" {
      *  @returns {Number}
      *  @memberof Utilities */
     export function distanceWrap(valueA: number, valueB: number, wrapSize?: number): number;
-    /** Linearly interpolates between values passed in with wrappping
+    /** Linearly interpolates between values passed in with wrapping
      *  @param {Number} percent
      *  @param {Number} valueA
      *  @param {Number} valueB
@@ -594,7 +594,7 @@ declare module "littlejs.esm" {
      *  @returns {Number}
      *  @memberof Utilities */
     export function distanceAngle(angleA: number, angleB: number): number;
-    /** Linearly interpolates between the angles passed in with wrappping
+    /** Linearly interpolates between the angles passed in with wrapping
      *  @param {Number} percent
      *  @param {Number} angleA
      *  @param {Number} angleB
@@ -1378,7 +1378,7 @@ declare module "littlejs.esm" {
      * @namespace Audio
      */
     /**
-     * Sound Object - Stores a zzfx sound for later use and can be played positionally
+     * Sound Object - Stores a sound for later use and can be played positionally
      *
      * <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
      * @example
@@ -1392,7 +1392,7 @@ declare module "littlejs.esm" {
         /** Create a sound object and cache the zzfx samples for later use
          *  @param {Array}  zzfxSound - Array of zzfx parameters, ex. [.5,.5]
          *  @param {Number} [range=soundDefaultRange] - World space max range of sound, will not play if camera is farther away
-         *  @param {Number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering off
+         *  @param {Number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
          */
         constructor(zzfxSound: any[], range?: number, taper?: number);
         /** @property {Number} - World space max range of sound, will not play if camera is farther away */
@@ -1493,18 +1493,18 @@ declare module "littlejs.esm" {
         sampleChannels: any[];
         /** Play the music
          *  @param {Number}  [volume=1] - How much to scale volume by
-         *  @param {Boolean} [loop=1] - True if the music should loop
+         *  @param {Boolean} [loop] - True if the music should loop
          *  @return {AudioBufferSourceNode} - The audio source node
          */
         playMusic(volume?: number, loop?: boolean): AudioBufferSourceNode;
     }
     /** Play an mp3, ogg, or wav audio from a local file or url
-     *  @param {String}  url - Location of sound file to play
+     *  @param {String}  filename - Location of sound file to play
      *  @param {Number}  [volume] - How much to scale volume by
      *  @param {Boolean} [loop] - True if the music should loop
      *  @return {HTMLAudioElement} - The audio element for this sound
      *  @memberof Audio */
-    export function playAudioFile(url: string, volume?: number, loop?: boolean): HTMLAudioElement;
+    export function playAudioFile(filename: string, volume?: number, loop?: boolean): HTMLAudioElement;
     /** Speak text with passed in settings
      *  @param {String} text - The text to speak
      *  @param {String} [language] - The language/accent to use (examples: en, it, ru, ja, zh)
@@ -1553,7 +1553,7 @@ declare module "littlejs.esm" {
      * - Automatically adds self to object list
      * - Will be updated and rendered each frame
      * - Renders as a sprite from a tilesheet by default
-     * - Can have color and addtive color applied
+     * - Can have color and additive color applied
      * - 2D Physics and collision system
      * - Sorted by renderOrder
      * - Objects can have children attached
@@ -1687,7 +1687,7 @@ declare module "littlejs.esm" {
     /**
      * LittleJS Tile Layer System
      * - Caches arrays of tiles to off screen canvas for fast rendering
-     * - Unlimted numbers of layers, allocates canvases as needed
+     * - Unlimited numbers of layers, allocates canvases as needed
      * - Interfaces with EngineObject for collision
      * - Collision layer is separate from visible layers
      * - It is recommended to have a visible layer that matches the collision
@@ -1719,7 +1719,7 @@ declare module "littlejs.esm" {
     export function getTileCollisionData(pos: Vector2): number;
     /** Check if collision with another object should occur
      *  @param {Vector2}      pos
-     *  @param {Vector2}      [size=(1,1)]
+     *  @param {Vector2}      [size=(0,0)]
      *  @param {EngineObject} [object]
      *  @return {Boolean}
      *  @memberof TileCollision */

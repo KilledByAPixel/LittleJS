@@ -83,7 +83,7 @@ let tileSizeDefault = vec2(16);
  *  @type {Number}
  *  @default
  *  @memberof Settings */
-let tileFixBleedScale = .3;
+let tileFixBleedScale = .1;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Object settings
@@ -94,7 +94,7 @@ let tileFixBleedScale = .3;
  *  @memberof Settings */
 let enablePhysicsSolver = true;
 
-/** Default object mass for collison calcuations (how heavy objects are)
+/** Default object mass for collision calcuations (how heavy objects are)
  *  @type {Number}
  *  @default
  *  @memberof Settings */
@@ -177,7 +177,7 @@ let touchGamepadEnable = false;
  *  @memberof Settings */
 let touchGamepadAnalog = true;
 
-/** Size of virutal gamepad for touch devices in pixels
+/** Size of virtual gamepad for touch devices in pixels
  *  @type {Number}
  *  @default
  *  @memberof Settings */

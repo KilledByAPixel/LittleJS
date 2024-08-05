@@ -193,8 +193,6 @@ function glCreateTexture(image)
     const filter = canvasPixelated ? gl_NEAREST : gl_LINEAR;
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, filter);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, filter);
-    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_S, gl_CLAMP_TO_EDGE);
-    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_T, gl_CLAMP_TO_EDGE);
 
     return texture;
 }
@@ -380,10 +378,7 @@ gl_NEAREST = 9728,
 gl_LINEAR = 9729,
 gl_TEXTURE_MAG_FILTER = 10240,
 gl_TEXTURE_MIN_FILTER = 10241,
-gl_TEXTURE_WRAP_S = 10242,
-gl_TEXTURE_WRAP_T = 10243,
 gl_COLOR_BUFFER_BIT = 16384,
-gl_CLAMP_TO_EDGE = 33071,
 gl_TEXTURE0 = 33984,
 gl_ARRAY_BUFFER = 34962,
 gl_STATIC_DRAW = 35044,

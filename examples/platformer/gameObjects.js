@@ -66,7 +66,7 @@ class Crate extends GameObject
 {
     constructor(pos) 
     { 
-        super(pos, vec2(1), tile(2), (randInt(4))*PI/2);
+        super(pos, vec2(1), spriteAtlas['crate'], (randInt(4))*PI/2);
 
         this.color = hsl(rand(),1,.8);
         this.health = 5;
@@ -92,7 +92,7 @@ class Coin extends EngineObject
 {
     constructor(pos) 
     { 
-        super(pos, vec2(1), tile(6));
+        super(pos, vec2(1), spriteAtlas['coin']);
         this.color = hsl(.15,1,.5);
     }
 
@@ -127,7 +127,7 @@ class Enemy extends GameObject
 {
     constructor(pos) 
     { 
-        super(pos, vec2(.9,.9), tile(5));
+        super(pos, vec2(.9,.9), spriteAtlas['enemy']);
 
         this.drawSize = vec2(1);
         this.color = hsl(rand(), 1, .7);
@@ -185,7 +185,7 @@ class Grenade extends GameObject
 {
     constructor(pos) 
     {
-        super(pos, vec2(.2), tile(3,8));
+        super(pos, vec2(.2), spriteAtlas['grenade']);
 
         this.beepTimer = new Timer(1);
         this.elasticity   = .3;
@@ -218,7 +218,7 @@ class Grenade extends GameObject
         // draw additive flash exploding
         setBlendMode(true);
         const flash = Math.cos(this.getAliveTime()*2*PI);
-        drawTile(this.pos, vec2(2), tile(0, 16), hsl(0,1,.5,.2-.2*flash));
+        drawTile(this.pos, vec2(2), spriteAtlas['circle'], hsl(0,1,.5,.2-.2*flash));
         setBlendMode(false);
     }
 }
@@ -229,7 +229,7 @@ class Weapon extends EngineObject
 {
     constructor(pos, parent) 
     { 
-        super(pos, vec2(.6), tile(2,8));
+        super(pos, vec2(.6), spriteAtlas['gun']);
 
         // weapon settings
         this.fireRate      = 8;
@@ -263,7 +263,7 @@ class Weapon extends EngineObject
 
         // update recoil
         if (this.recoilTimer.active())
-            this.localAngle = lerp(this.recoilTimer.getPercent(), 0, this.localAngle);
+            this.localAngle = lerp(this.recoilTimer.getPercent(), this.localAngle, 0);
 
         this.mirror = this.parent.mirror;
         this.fireTimeBuffer += timeDelta;
@@ -274,8 +274,8 @@ class Weapon extends EngineObject
             {
                 // create bullet
                 sound_shoot.play(this.pos);
-                this.localAngle = -rand(.2,.15);
-                this.recoilTimer.set(.4);
+                this.localAngle = -rand(.2,.25);
+                this.recoilTimer.set(.1);
                 const direction = vec2(this.bulletSpeed*this.getMirrorSign(), 0);
                 const velocity = direction.rotate(rand(-1,1)*this.bulletSpread);
                 new Bullet(this.pos, this.parent, velocity, this.damage);
@@ -324,7 +324,7 @@ class Bullet extends EngineObject
         if (this.range < 0)
         {
             const emitter = new ParticleEmitter(
-                this.pos, 0, .2, .1, 50, PI, tile(0),  // pos, angle, emit info, tileInfo
+                this.pos, 0, .2, .1, 50, PI, spriteAtlas['circle'], // pos, emit info, tileInfo
                 rgb(1,1,.1), rgb(1,1,1),    // colorStartA, colorStartB
                 rgb(1,1,.1,0), rgb(1,1,1,0),// colorEndA, colorEndB
                 .1, .5, .1, .05, 0, // particleTime, sizeStart, sizeEnd, speed, angleSpeed
