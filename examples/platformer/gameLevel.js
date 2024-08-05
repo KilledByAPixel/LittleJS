@@ -63,6 +63,19 @@ function loadLevel()
     initTileCollision(levelSize);
     engineObjectsDestroy();
 
+    // create table for tiles in the level tilemap
+    const tileLookup =
+    {
+        circle: 1,
+        ground: 2,
+        ladder: 4,
+        metal:  5,
+        player: 17,
+        crate:  18,
+        enemy:  19,
+        coin:   20,
+    }
+
     // set all level data tiles
     tileData = [];
     tileLayers = [];
@@ -83,17 +96,17 @@ function loadLevel()
             const pos = vec2(x,levelSize.y-1-y);
             const tile = layerData[y*levelSize.x+x];
 
-            if (tile >= 17 && tile <= 20)
+            if (tile >= tileLookup.player)
             {
                 // create object instead of tile
                 const objectPos = pos.add(vec2(.5));
-                if (tile == 17)
+                if (tile == tileLookup.player)
                     playerStartPos = objectPos;
-                if (tile == 18)
+                if (tile == tileLookup.crate)
                     new Crate(objectPos);
-                if (tile == 19)
+                if (tile == tileLookup.enemy)
                     new Enemy(objectPos);
-                if (tile == 20)
+                if (tile == tileLookup.coin)
                     new Coin(objectPos);
                 setTileData(pos, layer, 0);
                 continue;
@@ -106,9 +119,9 @@ function loadLevel()
             let tileType = tileType_empty;
             if (tile > 0)
                 tileType = tileType_breakable;
-            if (tile == 4)
+            if (tile == tileLookup.ladder)
                 tileType = tileType_ladder;
-            if (tile == 5)
+            if (tile == tileLookup.metal)
                 tileType = tileType_solid;
             if (tileType)
             {

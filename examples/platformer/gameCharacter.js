@@ -218,7 +218,7 @@ class Character extends GameObject
         const animationFrame = this.isDead() ? 0 :
             this.climbingLadder || this.groundTimer.active() ?
             2*this.walkCyclePercent|0 : 1;
-        const playerTile = spriteAtlas['player'];
+        const playerTile = spriteAtlas.player;
         this.tileInfo.pos.x = playerTile.pos.x + playerTile.size.x*animationFrame;
 
         let bodyPos = this.pos;

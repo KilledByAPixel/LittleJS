@@ -20,27 +20,29 @@ function gameInit()
     spriteAtlas =
     {
         // large tiles
-        'circle': tile(0),
-        'crate':  tile(2),
-        'player': tile(3),
-        'enemy':  tile(5),
-        'coin':   tile(6),
+        circle:  tile(0),
+        crate:   tile(2),
+        player:  tile(3),
+        enemy:   tile(5),
+        coin:    tile(6),
 
-        // small t
-        'gun':    tile(2,8),
-        'grenade':tile(3,8),
+        // small tiles
+        gun:     tile(2,8),
+        grenade: tile(3,8),
     };
 
     // enable touch gamepad on touch devices
     touchGamepadEnable = true;
 
-    // setup game
+    // setup level
+    buildLevel();
+
+    // init game
     score = deaths = 0;
     gravity = -.01;
     objectDefaultDamping = .99;
     objectDefaultAngleDamping = .99;
     cameraScale = 4*16;
-    buildLevel();
     cameraPos = getCameraTarget();
 }
 
