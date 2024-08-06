@@ -108,7 +108,6 @@ function loadLevel()
                     new Enemy(objectPos);
                 if (tile == tileLookup.coin)
                     new Coin(objectPos);
-                setTileData(pos, layer, 0);
                 continue;
             }
 
