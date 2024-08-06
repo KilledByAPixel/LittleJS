@@ -112,7 +112,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         timeReal += frameTimeDeltaMS / 1e3;
         frameTimeBufferMS += paused ? 0 : frameTimeDeltaMS;
         if (!debugSpeedUp)
-            frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp incase of slow framerate
+            frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp in case of slow framerate
         updateCanvas();
 
         if (paused)
