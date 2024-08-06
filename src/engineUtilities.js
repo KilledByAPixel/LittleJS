@@ -630,7 +630,7 @@ class Color
 
     /** Returns this color expressed in hsla format
      * @return {Array} */
-    getHSLA()
+    HSLA()
     {
         const r = clamp(this.r);
         const g = clamp(this.g);
