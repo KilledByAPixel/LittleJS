@@ -178,7 +178,7 @@ class SoundWave extends Sound
  *                 1, 0, 9, 1    // channel notes
  *             ], 
  *             [                 // channel 1
- *                 0, 1,         // instrument 1, right speaker
+ *                 0, 1,         // instrument 0, right speaker
  *                 0, 12, 17, -1 // channel notes
  *             ]
  *         ],
