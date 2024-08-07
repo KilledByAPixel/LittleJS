@@ -240,7 +240,7 @@ function gamepadsUpdate()
             sticks[0] = vec2();
             if (touchGamepadAnalog)
                 sticks[0] = applyDeadZones(touchGamepadStick);
-            else (touchGamepadStick.lengthSquared() > .3)
+            else if (touchGamepadStick.lengthSquared() > .3)
             {
                 // convert to 8 way dpad
                 sticks[0].x = Math.round(touchGamepadStick.x);
