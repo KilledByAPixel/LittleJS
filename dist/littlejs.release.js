@@ -665,7 +665,7 @@ class Color
 
     /** Returns this color expressed in hsla format
      * @return {Array} */
-    getHSLA()
+    HSLA()
     {
         const r = clamp(this.r);
         const g = clamp(this.g);
@@ -2338,9 +2338,21 @@ function mouseToScreen(mousePos)
 ///////////////////////////////////////////////////////////////////////////////
 // Gamepad input
 
+// gamepad internal variables
 const stickData = [];
+
+// gamepads are updated by engine every frame automatically
 function gamepadsUpdate()
 {
+    const applyDeadZones = (v)=>
+    {
+        const min=.3, max=.8;
+        const deadZone = (v)=> 
+            v >  min ?  percent( v, min, max) : 
+            v < -min ? -percent(-v, min, max) : 0;
+        return vec2(deadZone(v.x), deadZone(-v.y)).clampLength();
+    }
+
     // update touch gamepad if enabled
     if (touchGamepadEnable && isTouchDevice)
     {
@@ -2352,7 +2364,16 @@ function gamepadsUpdate()
         {
             // read virtual analog stick
             const sticks = stickData[0] || (stickData[0] = []);
-            sticks[0] = vec2(touchGamepadStick.x, -touchGamepadStick.y); // flip vertical
+            sticks[0] = vec2();
+            if (touchGamepadAnalog)
+                sticks[0] = applyDeadZones(touchGamepadStick);
+            else if (touchGamepadStick.lengthSquared() > .3)
+            {
+                // convert to 8 way dpad
+                sticks[0].x = Math.round(touchGamepadStick.x);
+                sticks[0].y = -Math.round(touchGamepadStick.y);
+                sticks[0] = sticks[0].clampLength();
+            }
 
             // read virtual gamepad buttons
             const data = inputData[1] || (inputData[1] = []);
@@ -2383,14 +2404,9 @@ function gamepadsUpdate()
 
         if (gamepad)
         {
-            // read clamp dead zone of analog sticks
-            const deadZone = .3, deadZoneMax = .8, applyDeadZone = (v)=> 
-                v >  deadZone ?  percent( v, deadZone, deadZoneMax) : 
-                v < -deadZone ? -percent(-v, deadZone, deadZoneMax) : 0;
-
             // read analog sticks
             for (let j = 0; j < gamepad.axes.length-1; j+=2)
-                sticks[j>>1] = vec2(applyDeadZone(gamepad.axes[j]), applyDeadZone(-gamepad.axes[j+1])).clampLength();
+                sticks[j>>1] = applyDeadZones(vec2(gamepad.axes[j],gamepad.axes[j+1]));
             
             // read buttons
             for (let j = gamepad.buttons.length; j--;)
@@ -2519,14 +2535,7 @@ function createTouchGamepad()
             if (touchPos.distance(stickCenter) < touchGamepadSize)
             {
                 // virtual analog stick
-                if (touchGamepadAnalog)
-                    touchGamepadStick = touchPos.subtract(stickCenter).scale(2/touchGamepadSize).clampLength();
-                else
-                {
-                    // 8 way dpad
-                    const angle = touchPos.subtract(stickCenter).angle();
-                    touchGamepadStick.setAngle((angle * 4 / PI + 8.5 | 0) * PI / 4);
-                }
+                touchGamepadStick = touchPos.subtract(stickCenter).scale(2/touchGamepadSize).clampLength();
             }
             else if (touchPos.distance(buttonCenter) < touchGamepadSize)
             {
@@ -2785,7 +2794,7 @@ class SoundWave extends Sound
  *                 1, 0, 9, 1    // channel notes
  *             ], 
  *             [                 // channel 1
- *                 0, 1,         // instrument 1, right speaker
+ *                 0, 1,         // instrument 0, right speaker
  *                 0, 12, 17, -1 // channel notes
  *             ]
  *         ],
@@ -4595,7 +4604,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.9.3';
+const engineVersion = '1.9.4';
 
 /** Frames per second to update
  *  @type {Number}
@@ -4677,7 +4686,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         timeReal += frameTimeDeltaMS / 1e3;
         frameTimeBufferMS += paused ? 0 : frameTimeDeltaMS;
         if (!debugSpeedUp)
-            frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp incase of slow framerate
+            frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp in case of slow framerate
         updateCanvas();
 
         if (paused)

@@ -882,7 +882,7 @@ declare module "littlejs.esm" {
         setHSLA(h?: number, s?: number, l?: number, a?: number): Color;
         /** Returns this color expressed in hsla format
          * @return {Array} */
-        getHSLA(): any[];
+        HSLA(): any[];
         /** Returns a new color that has each component randomly adjusted
          * @param {Number} [amount]
          * @param {Number} [alphaAmount]
@@ -1473,7 +1473,7 @@ declare module "littlejs.esm" {
      *                 1, 0, 9, 1    // channel notes
      *             ],
      *             [                 // channel 1
-     *                 0, 1,         // instrument 1, right speaker
+     *                 0, 1,         // instrument 0, right speaker
      *                 0, 12, 17, -1 // channel notes
      *             ]
      *         ],
