@@ -1755,12 +1755,22 @@ class TileInfo
         this.textureIndex = textureIndex;
     }
 
-    /** Returns an offset copy of this tile, useful for animation
+    /** Returns a copy of this tile offset by a vector
     *  @param {Vector2} offset - Offset to apply in pixels
     *  @return {TileInfo}
     */
     offset(offset)
     { return new TileInfo(this.pos.add(offset), this.size, this.textureIndex); }
+
+    /** Returns a copy of this tile offset by a number of animation frames
+    *  @param {Number} frame - Offset to apply in animation frames
+    *  @return {TileInfo}
+    */
+    frame(frame)
+    {
+        ASSERT(typeof frame == 'number');
+        return this.offset(vec2(frame*this.size.x, 0));
+    }
 
     /** Returns the texture info for this tile
     *  @return {TextureInfo}

@@ -1011,11 +1011,16 @@ declare module "littlejs.esm" {
         size: Vector2;
         /** @property {Number} - Texture index to use */
         textureIndex: number;
-        /** Returns an offset copy of this tile, useful for animation
+        /** Returns a copy of this tile offset by a vector
         *  @param {Vector2} offset - Offset to apply in pixels
         *  @return {TileInfo}
         */
         offset(offset: Vector2): TileInfo;
+        /** Returns a copy of this tile offset by a number of animation frames
+        *  @param {Number} frame - Offset to apply in animation frames
+        *  @return {TileInfo}
+        */
+        frame(frame: number): TileInfo;
         /** Returns the texture info for this tile
         *  @return {TextureInfo}
         */
