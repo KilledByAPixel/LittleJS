@@ -54,7 +54,7 @@ let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParti
 ///////////////////////////////////////////////////////////////////////////////
 // Debug helper functions
 
-/** Asserts if the experssion is false, does not do anything in release builds
+/** Asserts if the expression is false, does not do anything in release builds
  *  @param {Boolean} assert
  *  @param {Object} [output]
  *  @memberof Debug */
@@ -262,6 +262,10 @@ function debugRender()
     {
         const saveContext = mainContext;
         mainContext = overlayContext;
+        
+        // draw red rectangle around screen
+        const cameraSize = getCameraSize();
+        debugRect(cameraPos, cameraSize.subtract(vec2(.1)), '#f008');
 
         // mouse pick
         let bestDistance = Infinity, bestObject;

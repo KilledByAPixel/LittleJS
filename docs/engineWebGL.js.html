@@ -195,8 +195,6 @@ function glCreateTexture(image)
     const filter = canvasPixelated ? gl_NEAREST : gl_LINEAR;
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, filter);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, filter);
-    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_S, gl_CLAMP_TO_EDGE);
-    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_WRAP_T, gl_CLAMP_TO_EDGE);
 
     return texture;
 }
@@ -274,7 +272,7 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdd
 ///////////////////////////////////////////////////////////////////////////////
 // post processing - can be enabled to pass other canvases through a final shader
 
-let glPostShader, glPostArrayBuffer, glPostTexture, glPostIncludeOverlay;
+let glPostShader, glPostTexture, glPostIncludeOverlay;
 
 /** Set up a post processing shader
  *  @param {String} shaderCode
@@ -310,7 +308,6 @@ function glInitPostProcess(shaderCode, includeOverlay=false)
     );
 
     // create buffer and texture
-    glPostArrayBuffer = glContext.createBuffer();
     glPostTexture = glCreateTexture(undefined);
     glPostIncludeOverlay = includeOverlay;
 
@@ -382,10 +379,7 @@ gl_NEAREST = 9728,
 gl_LINEAR = 9729,
 gl_TEXTURE_MAG_FILTER = 10240,
 gl_TEXTURE_MIN_FILTER = 10241,
-gl_TEXTURE_WRAP_S = 10242,
-gl_TEXTURE_WRAP_T = 10243,
 gl_COLOR_BUFFER_BIT = 16384,
-gl_CLAMP_TO_EDGE = 33071,
 gl_TEXTURE0 = 33984,
 gl_ARRAY_BUFFER = 34962,
 gl_STATIC_DRAW = 35044,

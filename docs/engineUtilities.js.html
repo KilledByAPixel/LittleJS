@@ -38,7 +38,7 @@ function min(valueA, valueB) { return Math.min(valueA, valueB); }
  *  @memberof Utilities */
 function max(valueA, valueB) { return Math.max(valueA, valueB); }
 
-/** Returns the sign of value passed in (also returns 1 if 0)
+/** Returns the sign of value passed in
  *  @param {Number} value
  *  @return {Number}
  *  @memberof Utilities */
@@ -85,7 +85,7 @@ function lerp(percent, valueA, valueB) { return valueA + clamp(percent) * (value
 function distanceWrap(valueA, valueB, wrapSize=1)
 { const d = (valueA - valueB) % wrapSize; return d*2 % wrapSize - d; }
 
-/** Linearly interpolates between values passed in with wrappping
+/** Linearly interpolates between values passed in with wrapping
  *  @param {Number} percent
  *  @param {Number} valueA
  *  @param {Number} valueB
@@ -102,7 +102,7 @@ function lerpWrap(percent, valueA, valueB, wrapSize=1)
  *  @memberof Utilities */
 function distanceAngle(angleA, angleB) { return distanceWrap(angleA, angleB, 2*PI); }
 
-/** Linearly interpolates between the angles passed in with wrappping
+/** Linearly interpolates between the angles passed in with wrapping
  *  @param {Number} percent
  *  @param {Number} angleA
  *  @param {Number} angleB
@@ -632,7 +632,7 @@ class Color
 
     /** Returns this color expressed in hsla format
      * @return {Array} */
-    getHSLA()
+    HSLA()
     {
         const r = clamp(this.r);
         const g = clamp(this.g);

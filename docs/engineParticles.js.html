@@ -204,16 +204,17 @@ class ParticleEmitter extends EngineObject
         
         // build particle
         const particle = new Particle(pos, this.tileInfo, angle, colorStart, colorEnd, particleTime, sizeStart, sizeEnd, this.fadeRate, this.additive,  this.trailScale, this.localSpace &amp;&amp; this, this.particleDestroyCallback);
-        particle.velocity     = vec2().setAngle(velocityAngle, speed);
-        particle.fadeRate     = this.fadeRate;
-        particle.damping      = this.damping;
-        particle.angleDamping = this.angleDamping;
-        particle.elasticity   = this.elasticity;
-        particle.friction     = this.friction;
-        particle.gravityScale = this.gravityScale;
-        particle.collideTiles = this.collideTiles;
-        particle.renderOrder  = this.renderOrder;
-        particle.mirror       = !!randInt(2);
+        particle.velocity      = vec2().setAngle(velocityAngle, speed);
+        particle.angleVelocity = angleSpeed;
+        particle.fadeRate      = this.fadeRate;
+        particle.damping       = this.damping;
+        particle.angleDamping  = this.angleDamping;
+        particle.elasticity    = this.elasticity;
+        particle.friction      = this.friction;
+        particle.gravityScale  = this.gravityScale;
+        particle.collideTiles  = this.collideTiles;
+        particle.renderOrder   = this.renderOrder;
+        particle.mirror        = !!randInt(2);
 
         // call particle create callaback
         this.particleCreateCallback &amp;&amp; this.particleCreateCallback(particle);

@@ -14,7 +14,7 @@
 'use strict';
 
 /** 
- * Sound Object - Stores a zzfx sound for later use and can be played positionally
+ * Sound Object - Stores a sound for later use and can be played positionally
  * 
  * &lt;a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.&lt;/a>
  * @example
@@ -29,7 +29,7 @@ class Sound
     /** Create a sound object and cache the zzfx samples for later use
      *  @param {Array}  zzfxSound - Array of zzfx parameters, ex. [.5,.5]
      *  @param {Number} [range=soundDefaultRange] - World space max range of sound, will not play if camera is farther away
-     *  @param {Number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering off
+     *  @param {Number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
      */
     constructor(zzfxSound, range=soundDefaultRange, taper=soundDefaultTaper)
     {
@@ -180,7 +180,7 @@ class SoundWave extends Sound
  *                 1, 0, 9, 1    // channel notes
  *             ], 
  *             [                 // channel 1
- *                 0, 1,         // instrument 1, right speaker
+ *                 0, 1,         // instrument 0, right speaker
  *                 0, 12, 17, -1 // channel notes
  *             ]
  *         ],
@@ -209,24 +209,24 @@ class Music extends Sound
 
     /** Play the music
      *  @param {Number}  [volume=1] - How much to scale volume by
-     *  @param {Boolean} [loop=1] - True if the music should loop
+     *  @param {Boolean} [loop] - True if the music should loop
      *  @return {AudioBufferSourceNode} - The audio source node
      */
-    playMusic(volume, loop = false)
+    playMusic(volume, loop=false)
     { return super.play(undefined, volume, 1, 1, loop); }
 }
 
 /** Play an mp3, ogg, or wav audio from a local file or url
- *  @param {String}  url - Location of sound file to play
+ *  @param {String}  filename - Location of sound file to play
  *  @param {Number}  [volume] - How much to scale volume by
  *  @param {Boolean} [loop] - True if the music should loop
  *  @return {HTMLAudioElement} - The audio element for this sound
  *  @memberof Audio */
-function playAudioFile(url, volume=1, loop=false)
+function playAudioFile(filename, volume=1, loop=false)
 {
     if (!soundEnable) return;
 
-    const audio = new Audio(url);
+    const audio = new Audio(filename);
     audio.volume = soundVolume * volume;
     audio.loop = loop;
     audio.play();
@@ -278,6 +278,11 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
  *  @memberof Audio */
 let audioContext = new AudioContext;
 
+/** Keep track if audio was suspended when last sound was played
+ *  @type {Boolean}
+ *  @memberof Audio */
+let audioSuspended = false;
+
 /** Play cached audio samples with given settings
  *  @param {Array}   sampleChannels - Array of arrays of samples to play (for stereo playback)
  *  @param {Number}  [volume] - How much to scale volume by
@@ -292,11 +297,15 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
     if (!soundEnable) return;
 
     // prevent sounds from building up if they can't be played
-    if (audioContext.state != 'running')
+    const audioWasSuspended = audioSuspended;
+    if (audioSuspended = audioContext.state != 'running')
     {
         // fix stalled audio
         audioContext.resume();
-        return;
+
+        // prevent suspended sounds from building up
+        if (audioWasSuspended)
+            return;
     }
 
     // create buffer and source
