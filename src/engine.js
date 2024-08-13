@@ -436,16 +436,16 @@ function drawEngineSplashScreen(t)
     rect(37,14,9,6);
 
     // big stack
-    rect(50,20,10,-10,color(0,1));
-    rect(50,20,6.5,-10,color(0,2));
-    rect(50,20,3.5,-10,color(0,3));
-    rect(50,20,10,-10);
-    circle(55,2,11.4,.5,PI-.5,color(3,3));
-    circle(55,2,11.4,.5,PI/2,color(3,2),1);
-    circle(55,2,11.4,.5,PI-.5);
-    rect(45,7,20,-7,color(0,2));
-    rect(45,0,20,3,color(0,3));
-    rect(45,0,20,7);
+    rect(50,20,10,-8,color(0,1))
+    rect(50,20,6.5,-8,color(0,2))
+    rect(50,20,3.5,-8,color(0,3))
+    rect(50,20,10,-8)
+    circle(55,2,11.4,.5,PI-.5,color(3,3))
+    circle(55,2,11.4,.5,PI/2,color(3,2),1)
+    circle(55,2,11.4,.5,PI-.5)
+    rect(45,7,20,-7,color(0,2))
+    rect(45,-1,20,4,color(0,3))
+    rect(45,-1,20,8)
 
     // engine
     for (let i=5; i--;)
