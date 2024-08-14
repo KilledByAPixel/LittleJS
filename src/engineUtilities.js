@@ -121,16 +121,57 @@ function smoothStep(percent) { return percent * percent * (3 - 2 * percent); }
 function nearestPowerOfTwo(value) { return 2**Math.ceil(Math.log2(value)); }
 
 /** Returns true if two axis aligned bounding boxes are overlapping 
- *  @param {Vector2} pointA         - Center of box A
- *  @param {Vector2} sizeA          - Size of box A
- *  @param {Vector2} pointB         - Center of box B
- *  @param {Vector2} [sizeB=(0,0)]  - Size of box B, a point if undefined
- *  @return {Boolean}               - True if overlapping
+ *  @param {Vector2} posA          - Center of box A
+ *  @param {Vector2} sizeA         - Size of box A
+ *  @param {Vector2} posB          - Center of box B
+ *  @param {Vector2} [sizeB=(0,0)] - Size of box B, a point if undefined
+ *  @return {Boolean}              - True if overlapping
  *  @memberof Utilities */
-function isOverlapping(pointA, sizeA, pointB, sizeB=vec2())
+function isOverlapping(posA, sizeA, posB, sizeB=vec2())
 { 
-    return abs(pointA.x - pointB.x)*2 < sizeA.x + sizeB.x 
-        && abs(pointA.y - pointB.y)*2 < sizeA.y + sizeB.y;
+    return abs(posA.x - posB.x)*2 < sizeA.x + sizeB.x 
+        && abs(posA.y - posB.y)*2 < sizeA.y + sizeB.y;
+}
+
+/** Returns true if a line segment is intersecting an axis aligned box
+ *  @param {Vector2} start - Start of raycast
+ *  @param {Vector2} end   - End of raycast
+ *  @param {Vector2} pos   - Center of box
+ *  @param {Vector2} size  - Size of box
+ *  @return {Boolean}      - True if intersecting
+ *  @memberof Utilities */
+function isIntersecting(start, end, pos, size)
+{
+    // Liang-Barsky algorithm
+    const boxMin = pos.subtract(size.scale(.5));
+    const boxMax = boxMin.add(size);
+    const delta = end.subtract(start);
+    const a = start.subtract(boxMin);
+    const b = start.subtract(boxMax);
+    const p = [-delta.x, delta.x, -delta.y, delta.y];
+    const q = [a.x, -b.x, a.y, -b.y];
+    let tMin = 0, tMax = 1;
+    for (let i = 4; i--;)
+    {
+        if (p[i])
+        {
+            const t = q[i] / p[i];
+            if (p[i] < 0)
+            {
+                if (t > tMax) return false;
+                tMin = max(t, tMin);
+            }
+            else
+            {
+                if (t < tMin) return false;
+                tMax = min(t, tMax);
+            }
+        }
+        else if (q[i] < 0)
+            return false;
+    }
+
+    return true;
 }
 
 /** Returns an oscillating wave between 0 and amplitude with frequency of 1 Hz by default
