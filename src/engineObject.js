@@ -101,6 +101,8 @@ class EngineObject
         this.collideSolidObjects = false;
         /** @property {Boolean} - Object collides with and blocks other objects */
         this.isSolid = false;
+        /** @property {Boolean} - Object collides with raycasts */
+        this.collideRaycast = false;
 
         // add to list of objects
         engineObjects.push(this);
@@ -358,16 +360,18 @@ class EngineObject
     }
 
     /** Set how this object collides
-     *  @param {Boolean} [collideSolidObjects] - Does it collide with solid objects
-     *  @param {Boolean} [isSolid]             - Does it collide with and block other objects (expensive in large numbers)
-     *  @param {Boolean} [collideTiles]        - Does it collide with the tile collision */
-    setCollision(collideSolidObjects=true, isSolid=true, collideTiles=true)
+     *  @param {Boolean} [collideSolidObjects] - Does it collide with solid objects?
+     *  @param {Boolean} [isSolid]             - Does it collide with and block other objects? (expensive in large numbers)
+     *  @param {Boolean} [collideTiles]        - Does it collide with the tile collision?
+     *  @param {Boolean} [collideRaycast]      - Does it collide with raycasts? */
+    setCollision(collideSolidObjects=true, isSolid=true, collideTiles=true, collideRaycast=true)
     {
         ASSERT(collideSolidObjects || !isSolid, 'solid objects must be set to collide');
 
         this.collideSolidObjects = collideSolidObjects;
         this.isSolid = isSolid;
         this.collideTiles = collideTiles;
+        this.collideRaycast = collideRaycast;
     }
 
     /** Returns string containg info about this object for debugging

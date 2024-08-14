@@ -351,6 +351,28 @@ function engineObjectsCallback(pos, size, callbackFunction, objects=engineObject
     }
 }
 
+/** Return a list of objects intersecting a ray
+ *  @param {Vector2} start
+ *  @param {Vector2} end
+ *  @param {Array} [objects=engineObjects] - List of objects to check
+ *  @return {Array} - List of objects hit
+ *  @memberof Engine */
+function engineObjectsRaycast(start, end, objects=engineObjects)
+{
+    const hitObjects = [];
+    for (const o of objects)
+    {
+        if (o.collideRaycast && isIntersecting(start, end, o.pos, o.size))
+        {
+            debugRaycast && debugRect(o.pos, o.size, '#f00');
+            hitObjects.push(o);
+        }
+    }
+
+    debugRaycast && debugLine(start, end, hitObjects.length ? '#f00' : '#00f', .02);
+    return hitObjects;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // LittleJS splash screen and logo
 
