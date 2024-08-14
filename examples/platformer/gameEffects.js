@@ -130,14 +130,13 @@ function destroyTile(pos, makeSound = 1, cleanNeighbors = 1)
 
     // destroy tile
     const tileType = getTileCollisionData(pos);
-
-    if (!tileType || tileType == tileType_solid)
+    if (!tileType)
         return 1;
 
     const tileLayer = tileLayers[foregroundLayerIndex];
     const centerPos = pos.add(vec2(.5));
     const layerData = tileLayer.getData(pos);
-    if (!layerData)
+    if (!layerData || tileType == tileType_solid)
         return;
 
     // create effects
