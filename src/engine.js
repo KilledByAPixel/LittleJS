@@ -97,6 +97,19 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 {
     ASSERT(Array.isArray(imageSources), 'pass in images as array');
 
+    // Called automatically by engine to setup render system
+    function enginePreRender()
+    {
+        // save canvas size
+        mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
+
+        // disable smoothing for pixel art
+        mainContext.imageSmoothingEnabled = !canvasPixelated;
+
+        // setup gl rendering if enabled
+        glEnable && glPreRender();
+    }
+
     // internal update loop for engine
     function engineUpdate(frameTimeMS=0)
     {
@@ -279,19 +292,6 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     });
 }
 
-// Called automatically by engine to setup render system
-function enginePreRender()
-{
-    // save canvas size
-    mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
-
-    // disable smoothing for pixel art
-    mainContext.imageSmoothingEnabled = !canvasPixelated;
-
-    // setup gl rendering if enabled
-    glEnable && glPreRender();
-}
-
 /** Update each engine object, remove destroyed objects, and update time
  *  @memberof Engine */
 function engineObjectsUpdate()
@@ -326,7 +326,7 @@ function engineObjectsDestroy()
 }
 
 /** Triggers a callback for each object within a given area
- *  @param {Vector2} [pos]                 - Center of test area
+ *  @param {Vector2} [pos]                 - Center of test area, or undefined for all objects
  *  @param {Number|Vector2} [size]         - Radius of circle if float, rectangle size if Vector2
  *  @param {Function} [callbackFunction]   - Calls this function on every object that passes the test
  *  @param {Array} [objects=engineObjects] - List of objects to check
@@ -338,7 +338,7 @@ function engineObjectsCallback(pos, size, callbackFunction, objects=engineObject
         for (const o of objects)
             callbackFunction(o);
     }
-    else if (typeof size === 'object')  // bounding box test
+    else if (size instanceof Vector2)  // bounding box test
     {
         for (const o of objects)
             isOverlapping(pos, size, o.pos, o.size) && callbackFunction(o);

@@ -97,7 +97,7 @@ function tileCollisionRaycast(posStart, posEnd, object)
     {
         // check for tile collision
         const tileData = getTileCollisionData(pos);
-        if (tileData && (!object || object.collideWithTile(tileData, pos)))
+        if (tileData && (!object || object.collideWithTileRaycast(tileData, pos)))
         {
             debugRaycast && debugLine(posStart, posEnd, '#f00', .02);
             debugRaycast && debugPoint(pos.add(vec2(.5)), '#ff0');
@@ -268,8 +268,11 @@ class TileLayer extends EngineObject
             mainCanvas.height = mainCanvasSize.y;
         }
 
-        // begin a new render for the tile canvas
-        enginePreRender();
+        // disable smoothing for pixel art
+        this.context.imageSmoothingEnabled = !canvasPixelated;
+
+        // setup gl rendering if enabled
+        glEnable && glPreRender();
     }
 
     /** Call to end the redraw process */
