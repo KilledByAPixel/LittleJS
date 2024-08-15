@@ -353,7 +353,7 @@ function debugRender()
             overlayContext.restore();
         });
 
-        // remove expired pritives
+        // remove expired primitives
         debugPrimitives = debugPrimitives.filter(r=>r.time<0);
     }
 

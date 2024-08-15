@@ -267,7 +267,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             }
             image.src = src;
         })
-    )
+    );
 
     // draw splash screen
     showSplashScreen && promises.push(new Promise(resolve => 

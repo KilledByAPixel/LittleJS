@@ -13,13 +13,7 @@ To start LittleJS, you need to create a few functions and pass them to engineIni
 
 ```javascript
 // Start up LittleJS engine with your callback functions
-engineInit(init, update, updatePost, render, renderPost, imageSources=['tiles.png'])
-
-// Destroy and remove all objects
-engineObjectsDestroy()
-
-// Trigger a callback for each object within a given area
-engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
+engineInit(init, update, updatePost, render, renderPost, imageSources=['tiles.png']);
 ```
 
 ## LittleJS Utilities Classes and Functions
@@ -53,6 +47,7 @@ lerpAngle(percent, angleA, angleB)            // Linearly interpolates with wrap
 smoothStep(percent)                           // Applies smoothstep function
 nearestPowerOfTwo(value)                      // Returns the nearest power of two
 isOverlapping(pointA, sizeA, pointB, sizeB)   // Checks if bounding boxes overlap
+isIntersecting(start, end, pos, size)         // Checks if ray intersects box
 wave(frequency=1, amplitude=1, t=time)        // Returns oscillating wave
 formatTime(t)                                 // Formats seconds for display 
 
@@ -103,7 +98,7 @@ Color.scale(scale, alphaScale=scale)      // Scale by a float
 Color.clamp()                             // Clamp this color
 Color.lerp(c, percent)                    // Interpolate between colors
 Color.setHSLA(h=0, s=0, l=1, a=1)         // Set the color from HSLA values
-Color.getHSLA()                           // Get the color in HSLA format
+Color.HSLA()                              // Get the color in HSLA format
 Color.mutate(amount=.05, alphaAmount=0)   // Randomly diverge from this color
 Color.setHex(hex)                         // Set this color from a hex code
 Color.rgbaInt()                           // Get this color as 32 bit RGBA value
@@ -138,7 +133,6 @@ Timer.valueOf()        // Get how long since elapsed, 0 if not set
 // Drawing functions
 drawTile(pos, size=(1,1), tileInfo, color, angle=0, mirror, additiveColor)
 drawRect(pos, size=(1,1), color=(1,1,1,1), angle=0)
-drawPoly(points, color=(1,1,1,1))
 drawLine(posA, posB, thickness=.1, color=(1,1,1,1))
 drawCanvas2D(pos, size, angle, mirror, drawFunction)
 drawText(text, pos, size=1, color=(1,1,1,1), lineWidth, lineColor)
@@ -153,6 +147,7 @@ TileInfo.pos              // Top left corner of tile in pixels
 TileInfo.size             // Size of tile in pixels
 TileInfo.textureIndex     // Texture index to use
 TileInfo.offset(offset)   // Offset this tile by a certain amount in pixels
+TileInfo.frame(frame)     // Offset this tile by a number of animation frames
 TileInfo.getTextureInfo() // Returns texture info for this tile
 
 // Texture Info Object
@@ -314,7 +309,7 @@ EngineObject.renderOrder   // Objects are sorted by render order
 EngineObject.velocity      // Velocity of the object
 EngineObject.angleVelocity // Angular velocity of the object
 
-// Object settings
+// Engine Object settings
 enablePhysicsSolver = true    // Enable collisions between objects?
 objectDefaultMass = 1         // Default object mass for collisions
 objectDefaultDamping = 1      // How much to slow velocity by each frame (0-1)
@@ -323,6 +318,11 @@ objectDefaultElasticity = 0   // How much to bounce when a collision occurs (0-1
 objectDefaultFriction = .8    // How much to slow when touching (0-1)
 objectMaxSpeed = 1            // Clamp max speed to avoid fast objects missing collisions
 gravity = 0                   // How much gravity to apply to objects
+
+// Engine Object functions
+engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects) // Trigger callback
+engineObjectsRaycast(start, end, objects=engineObjects)                   // Raycast test           
+engineObjectsDestroy()                                                    // Clear out objects
 ```
 
 ## LittleJS Tile Layer System
