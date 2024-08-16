@@ -161,10 +161,10 @@ function typeScriptBuildStep(filename)
         const tsFilename = `${BUILD_FOLDER}/${ENGINE_NAME}.d.ts`
         child_process.execSync(`npx tsc ${filename} --declaration --allowJs --emitDeclarationOnly --outFile ${tsFilename}`);
 
-        // Remove declare module part
-        //let fileContent = fs.readFileSync(tsFilename, 'utf8');
-        //const r = new RegExp(`declare module "${ENGINE_NAME}\.esm" \{([\\s\\S]*?)\}`);
-        //fs.writeFileSync(tsFilename, fileContent.replace(r, '$1'));
+        // Make declare module part use the package name "littlejsengine"
+        let fileContent = fs.readFileSync(tsFilename, 'utf8');
+        fileContent = fileContent.replace(`${ENGINE_NAME}\.esm`, 'littlejsengine')
+        fs.writeFileSync(tsFilename, fileContent);
 
     }
     catch (e) { handleError(e, 'Failed to run TypeScript build step!'); }
