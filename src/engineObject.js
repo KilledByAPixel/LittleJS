@@ -307,13 +307,7 @@ class EngineObject
      *  @param {Number}  tileData - the value of the tile at the position
      *  @param {Vector2} pos      - tile where the collision occured
      *  @return {Boolean}         - true if the collision should be resolved */
-    collideWithTile(tileData, pos)        { return tileData > 0; }
-    
-    /** Called to check if a tile raycast hit
-     *  @param {Number}  tileData - the value of the tile at the position
-     *  @param {Vector2} pos      - tile where the raycast is
-     *  @return {Boolean}         - true if the raycast should hit */
-    collideWithTileRaycast(tileData, pos) { return tileData > 0; }
+    collideWithTile(tileData, pos)    { return tileData > 0; }
 
     /** Called to check if a object collision should be resolved
      *  @param {EngineObject} object - the object to test against

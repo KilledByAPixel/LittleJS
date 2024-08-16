@@ -72,7 +72,7 @@ function tileCollisionTest(pos, size=vec2(), object)
     }
 }
 
-/** Return the center of tile if any that is hit (does not return the exact intersection)
+/** Return the center of first tile hit (does not return the exact intersection)
  *  @param {Vector2}      posStart
  *  @param {Vector2}      posEnd
  *  @param {EngineObject} [object]
@@ -97,7 +97,7 @@ function tileCollisionRaycast(posStart, posEnd, object)
     {
         // check for tile collision
         const tileData = getTileCollisionData(pos);
-        if (tileData && (!object || object.collideWithTileRaycast(tileData, pos)))
+        if (tileData && (!object || object.collideWithTile(tileData, pos)))
         {
             debugRaycast && debugLine(posStart, posEnd, '#f00', .02);
             debugRaycast && debugPoint(pos.add(vec2(.5)), '#ff0');
