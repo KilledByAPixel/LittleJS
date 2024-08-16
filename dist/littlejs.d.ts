@@ -1,4 +1,4 @@
-declare module "littlejs.esm" {
+declare module "littlejsengine" {
     /**
      * LittleJS - The Tiny Fast JavaScript Game Engine
      * MIT License - Copyright 2021 Frank Force
@@ -79,7 +79,7 @@ declare module "littlejs.esm" {
      *  @memberof Engine */
     export function engineObjectsDestroy(): void;
     /** Triggers a callback for each object within a given area
-     *  @param {Vector2} [pos]                 - Center of test area
+     *  @param {Vector2} [pos]                 - Center of test area, or undefined for all objects
      *  @param {Number|Vector2} [size]         - Radius of circle if float, rectangle size if Vector2
      *  @param {Function} [callbackFunction]   - Calls this function on every object that passes the test
      *  @param {Array} [objects=engineObjects] - List of objects to check
@@ -619,13 +619,13 @@ declare module "littlejs.esm" {
      *  @memberof Utilities */
     export function nearestPowerOfTwo(value: number): number;
     /** Returns true if two axis aligned bounding boxes are overlapping
-     *  @param {Vector2} pointA         - Center of box A
-     *  @param {Vector2} sizeA          - Size of box A
-     *  @param {Vector2} pointB         - Center of box B
-     *  @param {Vector2} [sizeB=(0,0)]  - Size of box B, a point if undefined
-     *  @return {Boolean}               - True if overlapping
+     *  @param {Vector2} posA          - Center of box A
+     *  @param {Vector2} sizeA         - Size of box A
+     *  @param {Vector2} posB          - Center of box B
+     *  @param {Vector2} [sizeB=(0,0)] - Size of box B, a point if undefined
+     *  @return {Boolean}              - True if overlapping
      *  @memberof Utilities */
-    export function isOverlapping(pointA: Vector2, sizeA: Vector2, pointB: Vector2, sizeB?: Vector2): boolean;
+    export function isOverlapping(posA: Vector2, sizeA: Vector2, posB: Vector2, sizeB?: Vector2): boolean;
     /** Returns an oscillating wave between 0 and amplitude with frequency of 1 Hz by default
      *  @param {Number} [frequency] - Frequency of the wave in Hz
      *  @param {Number} [amplitude] - Amplitude (max height) of the wave
@@ -1637,6 +1637,8 @@ declare module "littlejs.esm" {
         collideSolidObjects: boolean;
         /** @property {Boolean} - Object collides with and blocks other objects */
         isSolid: boolean;
+        /** @property {Boolean} - Object collides with raycasts */
+        collideRaycast: boolean;
         /** Update the object transform and physics, called automatically by engine once each frame */
         update(): void;
         groundObject: any;
@@ -1650,11 +1652,6 @@ declare module "littlejs.esm" {
          *  @param {Vector2} pos      - tile where the collision occured
          *  @return {Boolean}         - true if the collision should be resolved */
         collideWithTile(tileData: number, pos: Vector2): boolean;
-        /** Called to check if a tile raycast hit
-         *  @param {Number}  tileData - the value of the tile at the position
-         *  @param {Vector2} pos      - tile where the raycast is
-         *  @return {Boolean}         - true if the raycast should hit */
-        collideWithTileRaycast(tileData: number, pos: Vector2): boolean;
         /** Called to check if a object collision should be resolved
          *  @param {EngineObject} object - the object to test against
          *  @return {Boolean}            - true if the collision should be resolved
@@ -1681,10 +1678,11 @@ declare module "littlejs.esm" {
          *  @param {EngineObject} child */
         removeChild(child: EngineObject): void;
         /** Set how this object collides
-         *  @param {Boolean} [collideSolidObjects] - Does it collide with solid objects
-         *  @param {Boolean} [isSolid]             - Does it collide with and block other objects (expensive in large numbers)
-         *  @param {Boolean} [collideTiles]        - Does it collide with the tile collision */
-        setCollision(collideSolidObjects?: boolean, isSolid?: boolean, collideTiles?: boolean): void;
+         *  @param {Boolean} [collideSolidObjects] - Does it collide with solid objects?
+         *  @param {Boolean} [isSolid]             - Does it collide with and block other objects? (expensive in large numbers)
+         *  @param {Boolean} [collideTiles]        - Does it collide with the tile collision?
+         *  @param {Boolean} [collideRaycast]      - Does it collide with raycasts? */
+        setCollision(collideSolidObjects?: boolean, isSolid?: boolean, collideTiles?: boolean, collideRaycast?: boolean): void;
         /** Returns string containg info about this object for debugging
          *  @return {String} */
         toString(): string;
@@ -1729,7 +1727,7 @@ declare module "littlejs.esm" {
      *  @return {Boolean}
      *  @memberof TileCollision */
     export function tileCollisionTest(pos: Vector2, size?: Vector2, object?: EngineObject): boolean;
-    /** Return the center of tile if any that is hit (does not return the exact intersection)
+    /** Return the center of first tile hit (does not return the exact intersection)
      *  @param {Vector2}      posStart
      *  @param {Vector2}      posEnd
      *  @param {EngineObject} [object]

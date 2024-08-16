@@ -280,7 +280,6 @@ EngineObject.update()                              // Update object, called auto
 EngineObject.render()                              // Render object, called automatically
 EngineObject.destroy()                             // Destroy this object and children
 EngineObject.collideWithTile(tileData, pos)        // Tile collision resolve check
-EngineObject.collideWithTileRaycast(tileData, pos) // Check if raycast hit
 EngineObject.collideWithObject(object)             // Object collision resolve check
 EngineObject.getAliveTime(object)                  // How long since object was created
 EngineObject.applyAcceleration(acceleration)       // Apply acceleration
@@ -320,9 +319,10 @@ objectMaxSpeed = 1            // Clamp max speed to avoid fast objects missing c
 gravity = 0                   // How much gravity to apply to objects
 
 // Engine Object functions
-engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects) // Trigger callback
-engineObjectsRaycast(start, end, objects=engineObjects)                   // Raycast test           
-engineObjectsDestroy()                                                    // Clear out objects
+engineObjectsCollect(pos, size, objects=engineObjects)k
+engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
+engineObjectsRaycast(start, end, objects=engineObjects)
+engineObjectsDestroy()
 ```
 
 ## LittleJS Tile Layer System
