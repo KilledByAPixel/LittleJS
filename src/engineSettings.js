@@ -55,6 +55,12 @@ let fontDefault = 'arial';
  *  @memberof Settings */
 let showSplashScreen = false;
 
+/** Disables all rendering, audio, and input for servers
+ *  @type {Boolean}
+ *  @default
+ *  @memberof Settings */
+let headlessMode = false;
+
 ///////////////////////////////////////////////////////////////////////////////
 // WebGL settings
 
@@ -292,6 +298,11 @@ function setFontDefault(font) { fontDefault = font; }
  *  @param {Boolean} show
  *  @memberof Settings */
 function setShowSplashScreen(show) { showSplashScreen = show; }
+
+/** Set to disalbe rendering, audio, and input for servers
+ *  @param {Boolean} headless
+ *  @memberof Settings */
+function setHeadlessMode(headless) { headlessMode = headless; }
 
 /** Set if webgl rendering is enabled
  *  @param {Boolean} enable

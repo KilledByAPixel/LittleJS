@@ -107,7 +107,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         mainContext.imageSmoothingEnabled = !canvasPixelated;
 
         // setup gl rendering if enabled
-        glEnable && glPreRender();
+        glPreRender();
     }
 
     // internal update loop for engine
@@ -126,6 +126,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         frameTimeBufferMS += paused ? 0 : frameTimeDeltaMS;
         if (!debugSpeedUp)
             frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp in case of slow framerate
+
         updateCanvas();
 
         if (paused)
@@ -167,34 +168,37 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             // add the time smoothing back in
             frameTimeBufferMS += deltaSmooth;
         }
-        
-        // render sort then render while removing destroyed objects
-        enginePreRender();
-        gameRender();
-        engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
-        for (const o of engineObjects)
-            o.destroyed || o.render();
-        gameRenderPost();
-        glRenderPostProcess();
-        medalsRender();
-        touchGamepadRender();
-        debugRender();
-        glEnable && glCopyToContext(mainContext);
 
-        if (showWatermark)
+        if (!headlessMode)
         {
-            // update fps
-            overlayContext.textAlign = 'right';
-            overlayContext.textBaseline = 'top';
-            overlayContext.font = '1em monospace';
-            overlayContext.fillStyle = '#000';
-            const text = engineName + ' ' + 'v' + engineVersion + ' / ' 
-                + drawCount + ' / ' + engineObjects.length + ' / ' + averageFPS.toFixed(1)
-                + (glEnable ? ' GL' : ' 2D') ;
-            overlayContext.fillText(text, mainCanvas.width-3, 3);
-            overlayContext.fillStyle = '#fff';
-            overlayContext.fillText(text, mainCanvas.width-2, 2);
-            drawCount = 0;
+            // render sort then render while removing destroyed objects
+            enginePreRender();
+            gameRender();
+            engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
+            for (const o of engineObjects)
+                o.destroyed || o.render();
+            gameRenderPost();
+            glRenderPostProcess();
+            medalsRender();
+            touchGamepadRender();
+            debugRender();
+            glCopyToContext(mainContext);
+
+            if (showWatermark)
+            {
+                // update fps
+                overlayContext.textAlign = 'right';
+                overlayContext.textBaseline = 'top';
+                overlayContext.font = '1em monospace';
+                overlayContext.fillStyle = '#000';
+                const text = engineName + ' ' + 'v' + engineVersion + ' / ' 
+                    + drawCount + ' / ' + engineObjects.length + ' / ' + averageFPS.toFixed(1)
+                    + (glEnable ? ' GL' : ' 2D') ;
+                overlayContext.fillText(text, mainCanvas.width-3, 3);
+                overlayContext.fillStyle = '#fff';
+                overlayContext.fillText(text, mainCanvas.width-2, 2);
+                drawCount = 0;
+            }
         }
 
         requestAnimationFrame(engineUpdate);
@@ -202,6 +206,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
     function updateCanvas()
     {
+        if (headlessMode) return;
+        
         if (canvasFixedSize.x)
         {
             // clear canvas and set fixed size
@@ -229,8 +235,20 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
     }
 
+    function startEngine()
+    {
+        gameInit();
+        engineUpdate();
+    }
+
+    if (headlessMode)
+    {
+        startEngine();
+        return;
+    }
+
     // setup html
-     const styleBody = 
+    const styleBody = 
         'margin:0;overflow:hidden;' + // fill the window
         'background:#000;' +          // set background color
         'touch-action:none;' +        // prevent mobile pinch to resize
@@ -243,7 +261,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
     // init stuff and start engine
     debugInit();
-    glEnable && glInit();
+    glInit();
 
     // create overlay canvas for hud to appear above gl canvas
     document.body.appendChild(overlayCanvas = document.createElement('canvas'));
@@ -284,12 +302,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     }));
 
     // load all of the images
-    Promise.all(promises).then(()=> 
-    {
-        // start the engine
-        gameInit();
-        engineUpdate();
-    });
+    Promise.all(promises).then(startEngine);
 }
 
 /** Update each engine object, remove destroyed objects, and update time

@@ -30,6 +30,8 @@ let glShader, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, 
 // Initalize WebGL, called automatically by the engine
 function glInit()
 {
+    if (!glEnable || headlessMode) return;
+
     // create the canvas and textures
     glCanvas = document.createElement('canvas');
     glContext = glCanvas.getContext('webgl2');
@@ -81,6 +83,8 @@ function glInit()
 // Setup render each frame, called automatically by engine
 function glPreRender()
 {
+    if (!glEnable || headlessMode) return;
+
     // clear and set to same size as main canvas
     glContext.viewport(0, 0, glCanvas.width=mainCanvas.width, glCanvas.height=mainCanvas.height);
     glContext.clear(gl_COLOR_BUFFER_BIT);
@@ -133,7 +137,7 @@ function glPreRender()
 function glSetTexture(texture)
 {
     // must flush cache with the old texture to set a new one
-    if (texture == glActiveTexture)
+    if (headlessMode || texture == glActiveTexture)
         return;
 
     glFlush();
@@ -193,7 +197,6 @@ function glCreateTexture(image)
     const filter = canvasPixelated ? gl_NEAREST : gl_LINEAR;
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, filter);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, filter);
-
     return texture;
 }
 
@@ -222,7 +225,7 @@ function glFlush()
  *  @memberof WebGL */
 function glCopyToContext(context, forceDraw=false)
 {
-    if (!glInstanceCount && !forceDraw) return;
+    if (!glEnable || !glInstanceCount && !forceDraw) return;
 
     glFlush();
 
@@ -279,7 +282,7 @@ let glPostShader, glPostTexture, glPostIncludeOverlay;
 function glInitPostProcess(shaderCode, includeOverlay=false)
 {
     ASSERT(!glPostShader, 'can only have 1 post effects shader');
-
+    if (headlessMode) return;
     if (!shaderCode) // default shader pass through
         shaderCode = 'void mainImage(out vec4 c,vec2 p){c=texture(iChannel0,p/iResolution.xy);}';
 
@@ -318,8 +321,7 @@ function glInitPostProcess(shaderCode, includeOverlay=false)
 // Render the post processing shader, called automatically by the engine
 function glRenderPostProcess()
 {
-    if (!glPostShader)
-        return;
+    if (!glPostShader || headlessMode) return;
     
     // prepare to render post process shader
     if (glEnable)

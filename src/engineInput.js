@@ -133,6 +133,8 @@ let inputData = [[]];
 
 function inputUpdate()
 {
+    if (headlessMode) return;
+
     // clear input when lost focus (prevent stuck keys)
     isTouchDevice || document.hasFocus() || clearInput();
 
@@ -145,6 +147,8 @@ function inputUpdate()
 
 function inputUpdatePost()
 {
+    if (headlessMode) return;
+
     // clear input to prepare for next frame
     for (const deviceInputData of inputData)
     for (const i in deviceInputData)
@@ -155,6 +159,7 @@ function inputUpdatePost()
 ///////////////////////////////////////////////////////////////////////////////
 // Keyboard event handlers
 
+if (!headlessMode)
 {
     onkeydown = (e)=>
     {
@@ -191,16 +196,19 @@ function inputUpdatePost()
 ///////////////////////////////////////////////////////////////////////////////
 // Mouse event handlers
 
-onmousedown = (e)=> {isUsingGamepad = false; inputData[0][e.button] = 3; mousePosScreen = mouseToScreen(e); e.button && e.preventDefault();}
-onmouseup   = (e)=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
-onmousemove = (e)=> mousePosScreen = mouseToScreen(e);
-onwheel     = (e)=> mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY);
-oncontextmenu = (e)=> false; // prevent right click menu
+if (!headlessMode)
+{
+    onmousedown = (e)=> {isUsingGamepad = false; inputData[0][e.button] = 3; mousePosScreen = mouseToScreen(e); e.button && e.preventDefault();}
+    onmouseup   = (e)=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
+    onmousemove = (e)=> mousePosScreen = mouseToScreen(e);
+    onwheel     = (e)=> mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY);
+    oncontextmenu = (e)=> false; // prevent right click menu
+}
 
 // convert a mouse or touch event position to screen space
 function mouseToScreen(mousePos)
 {
-    if (!mainCanvas)
+    if (!mainCanvas || headlessMode)
         return vec2(); // fix bug that can occur if user clicks before page loads
 
     const rect = mainCanvas.getBoundingClientRect();
@@ -312,7 +320,7 @@ function gamepadsUpdate()
  *  @param {Number|Array} [pattern] - single value in ms or vibration interval array
  *  @memberof Input */
 function vibrate(pattern=100)
-{ vibrateEnable && navigator && navigator.vibrate && navigator.vibrate(pattern); }
+{ vibrateEnable && !headlessMode && navigator && navigator.vibrate && navigator.vibrate(pattern); }
 
 /** Cancel any ongoing vibration
  *  @memberof Input */
@@ -323,7 +331,7 @@ function vibrateStop() { vibrate(0); }
 
 /** True if a touch device has been detected
  *  @memberof Input */
-const isTouchDevice = window.ontouchstart !== undefined;
+const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
 
 // try to enable touch mouse
 if (isTouchDevice)

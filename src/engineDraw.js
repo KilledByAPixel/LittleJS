@@ -74,6 +74,9 @@ let drawCount;
  */
 function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0)
 {
+    if (headlessMode)
+        return new TileInfo;
+
     // if size is a number, make it a vector
     if (typeof size === 'number')
     {
