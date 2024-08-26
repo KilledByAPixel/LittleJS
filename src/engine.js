@@ -260,6 +260,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     mainContext = mainCanvas.getContext('2d');
 
     // init stuff and start engine
+    inputInit();
     debugInit();
     glInit();
 

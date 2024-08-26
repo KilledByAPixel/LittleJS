@@ -157,10 +157,12 @@ function inputUpdatePost()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Keyboard event handlers
+// Input event handlers
 
-if (!headlessMode)
+function inputInit()
 {
+    if (headlessMode) return;
+
     onkeydown = (e)=>
     {
         if (debug && e.target != document.body) return;
@@ -191,18 +193,22 @@ if (!headlessMode)
             c == 'KeyA' ? 'ArrowLeft' : 
             c == 'KeyD' ? 'ArrowRight' : c : c;
     }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Mouse event handlers
-
-if (!headlessMode)
-{
-    onmousedown = (e)=> {isUsingGamepad = false; inputData[0][e.button] = 3; mousePosScreen = mouseToScreen(e); e.button && e.preventDefault();}
-    onmouseup   = (e)=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
-    onmousemove = (e)=> mousePosScreen = mouseToScreen(e);
-    onwheel     = (e)=> mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY);
+    
+    // mouse event handlers
+    onmousedown   = (e)=>
+    {
+        isUsingGamepad = false; 
+        inputData[0][e.button] = 3; 
+        mousePosScreen = mouseToScreen(e); 
+        e.button && e.preventDefault();
+    }
+    onmouseup     = (e)=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
+    onmousemove   = (e)=> mousePosScreen = mouseToScreen(e);
+    onwheel       = (e)=> mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY);
     oncontextmenu = (e)=> false; // prevent right click menu
+
+    // init touch input
+    isTouchDevice && touchInputInit();
 }
 
 // convert a mouse or touch event position to screen space
@@ -334,7 +340,7 @@ function vibrateStop() { vibrate(0); }
 const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
 
 // try to enable touch mouse
-if (isTouchDevice)
+function touchInputInit()
 {
     // override mouse events
     let wasTouching;

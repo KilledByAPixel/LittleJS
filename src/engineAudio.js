@@ -146,6 +146,8 @@ class SoundWave extends Sound
         this.randomness = randomness;
 
         if (!soundEnable || headlessMode) return;
+        if (!audioContext)
+            audioContext = new AudioContext; // create audio context
 
         fetch(filename)
         .then(response => response.arrayBuffer())
@@ -274,7 +276,7 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
 /** Audio context used by the engine
  *  @type {AudioContext}
  *  @memberof Audio */
-let audioContext = new AudioContext;
+let audioContext;
 
 /** Keep track if audio was suspended when last sound was played
  *  @type {Boolean}
@@ -293,6 +295,8 @@ let audioSuspended = false;
 function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=zzfxR) 
 {
     if (!soundEnable || headlessMode) return;
+    if (!audioContext)
+        audioContext = new AudioContext; // create audio context
 
     // prevent sounds from building up if they can't be played
     const audioWasSuspended = audioSuspended;
