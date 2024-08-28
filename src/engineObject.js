@@ -108,17 +108,29 @@ class EngineObject
         engineObjects.push(this);
     }
     
-    /** Update the object transform and physics, called automatically by engine once each frame */
-    update()
+    /** Update the object transform, called automatically by engine even when paused */
+    updateTransforms()
     {
         const parent = this.parent;
         if (parent)
         {
             // copy parent pos/angle
-            this.pos = this.localPos.multiply(vec2(parent.getMirrorSign(),1)).rotate(-parent.angle).add(parent.pos);
-            this.angle = parent.getMirrorSign()*this.localAngle + parent.angle;
-            return;
+            const mirror = parent.getMirrorSign();
+            this.pos = this.localPos.multiply(vec2(mirror,1)).rotate(-parent.angle).add(parent.pos);
+            this.angle = mirror*this.localAngle + parent.angle;
         }
+
+        // update children
+        for (const child of this.children)
+            child.updateTransforms();
+    }
+
+    /** Update the object physics, called automatically by engine once each frame */
+    update()
+    {
+        // child objects do not have physics
+        if (this.parent)
+            return;
 
         // limit max speed to prevent missing collisions
         this.velocity.x = clamp(this.velocity.x, -objectMaxSpeed, objectMaxSpeed);
@@ -134,8 +146,7 @@ class EngineObject
         // physics sanity checks
         ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
         ASSERT(this.damping >= 0 && this.damping <= 1);
-
-        if (!enablePhysicsSolver || !this.mass) // do not update collision for fixed objects
+        if (!enablePhysicsSolver || !this.mass) // dont do collision for fixed objects
             return;
 
         const wasMovingDown = this.velocity.y < 0;

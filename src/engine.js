@@ -131,7 +131,9 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
         if (paused)
         {
-            // do post update even when paused
+            // update object transforms even when paused
+            for (const o of engineObjects)
+                o.parent || o.updateTransforms();
             inputUpdate();
             debugUpdate();
             gameUpdatePost();
@@ -324,7 +326,14 @@ function engineObjectsUpdate()
         }
     }
     for (const o of engineObjects)
-        o.parent || updateObject(o);
+    {
+        // update top level objects
+        if (!o.parent)
+        {
+            updateObject(o);
+            o.updateTransforms();
+        }
+    }
 
     // remove destroyed objects
     engineObjects = engineObjects.filter(o=>!o.destroyed);
