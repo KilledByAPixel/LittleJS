@@ -110,9 +110,9 @@ class TileInfo
     constructor(pos=vec2(), size=tileSizeDefault, textureIndex=0)
     {
         /** @property {Vector2} - Top left corner of tile in pixels */
-        this.pos = pos;
+        this.pos = pos.copy();
         /** @property {Vector2} - Size of tile in pixels */
-        this.size = size;
+        this.size = size.copy();
         /** @property {Number} - Texture index to use */
         this.textureIndex = textureIndex;
     }
