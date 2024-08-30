@@ -233,20 +233,21 @@ class ParticleEmitter extends EngineObject
 class Particle extends EngineObject
 {
     /**
-     * Create a particle with the given shis.colorStart = undefined;ettings
-     * @param {Vector2}  position     - World space position of the particle
-     * @param {TileInfo} [tileInfo]   - Tile info to render particles
-     * @param {Number}   [angle]      - Angle to rotate the particle
-     * @param {Color}    [colorStart] - Color at start of life
-     * @param {Color}    [colorEnd]   - Color at end of life
-     * @param {Number}   [lifeTime]   - How long to live for
-     * @param {Number}   [sizeStart]  - Angle to rotate the particle
-     * @param {Number}   [sizeEnd]    - Angle to rotate the particle
-     * @param {Number}   [fadeRate]   - Angle to rotate the particle
-     * @param {Boolean}  [additive]   - Angle to rotate the particle
-     * @param {Number}   [trailScale] - If a trail, how long to make it
+     * Create a particle with the passed in settings
+     * Typically this is created automatically by a ParticleEmitter
+     * @param {Vector2}  position   - World space position of the particle
+     * @param {TileInfo} tileInfo   - Tile info to render particles
+     * @param {Number}   angle      - Angle to rotate the particle
+     * @param {Color}    colorStart - Color at start of life
+     * @param {Color}    colorEnd   - Color at end of life
+     * @param {Number}   lifeTime   - How long to live for
+     * @param {Number}   sizeStart  - Size at start of life
+     * @param {Number}   sizeEnd    - Size at end of life
+     * @param {Number}   fadeRate   - How quick to fade in/out
+     * @param {Boolean}  additive   - Does it use additive blend mode
+     * @param {Number}   trailScale - If a trail, how long to make it
      * @param {ParticleEmitter} [localSpaceEmitter] - Parent emitter if local space
-     * @param {Function}  [destroyCallback] - Called when particle dies
+     * @param {Function} [destroyCallback] - Callback when particle dies
      */
     constructor(position, tileInfo, angle, colorStart, colorEnd, lifeTime, sizeStart, sizeEnd, fadeRate, additive, trailScale, localSpaceEmitter, destroyCallback
     )
