@@ -282,7 +282,7 @@ class RandomGenerator
 
     /** Randomly returns either -1 or 1 deterministically
     *  @return {Number} */
-    sign() { return this.int(2) * 2 - 1; }
+    sign() { return this.float() > .5 ? 1 : -1; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -776,11 +776,11 @@ class Timer
 
     /** Returns true if set and has not elapsed
      * @return {Boolean} */
-    active() { return time <= this.time; }
+    active() { return time < this.time; }
 
     /** Returns true if set and elapsed
      * @return {Boolean} */
-    elapsed() { return time > this.time; }
+    elapsed() { return time >= this.time; }
 
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {Number} */
