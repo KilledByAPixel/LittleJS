@@ -95,6 +95,7 @@ function htmlBuildStep(filename)
 
     // create html file
     let buffer = '';
+    buffer += '<body>';
     buffer += '<script>';
     buffer += fs.readFileSync(filename);
     buffer += '</script>';
