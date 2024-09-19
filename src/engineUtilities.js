@@ -64,7 +64,7 @@ function clamp(value, min=0, max=1) { return value < min ? min : value > max ? m
  *  @return {Number}
  *  @memberof Utilities */
 function percent(value, valueA, valueB)
-{ return valueB-valueA ? clamp((value-valueA) / (valueB-valueA)) : 0; }
+{ return (valueB-=valueA) ? clamp((value-valueA)/valueB) : 0; }
 
 /** Linearly interpolates between values passed in using percent
  *  @param {Number} percent
@@ -271,7 +271,7 @@ class RandomGenerator
         this.seed ^= this.seed << 13; 
         this.seed ^= this.seed >>> 17; 
         this.seed ^= this.seed << 5;
-        return valueB + (valueA - valueB) * abs(this.seed % 1e9) / 1e9;
+        return valueB + (valueA - valueB) * abs(this.seed % 1e8) / 1e8;
     }
 
     /** Returns a floored seeded random value the two values passed in
@@ -330,6 +330,7 @@ class Vector2
      *  @param {Number} [y] - Y axis location */
     constructor(x=0, y=0)
     {
+        ASSERT(typeof x === 'number' && typeof y === 'number');
         /** @property {Number} - X axis location */
         this.x = x;
         /** @property {Number} - Y axis location */
@@ -656,12 +657,14 @@ class Color
      * @return {Color} */
     setHSLA(h=0, s=0, l=1, a=1)
     {
+        h = mod(h,1);
+        s = clamp(s);
+        l = clamp(l);
         const q = l < .5 ? l*(1+s) : l+s-l*s, p = 2*l-q,
             f = (p, q, t)=>
-                (t = ((t%1)+1)%1) < 1/6 ? p+(q-p)*6*t :
-                t < 1/2 ? q :
-                t < 2/3 ? p+(q-p)*(2/3-t)*6 : p;
-                
+                (t = mod(t,1))*6 < 1 ? p+(q-p)*6*t :
+                t*2 < 1 ? q :
+                t*3 < 2 ? p+(q-p)*(4-t*6) : p;
         this.r = f(p, q, h + 1/3);
         this.g = f(p, q, h);
         this.b = f(p, q, h - 1/3);
