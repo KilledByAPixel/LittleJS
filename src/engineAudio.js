@@ -409,7 +409,6 @@ function zzfxG
     pitchJump *= PI2 / sampleRate;
     pitchJumpTime *= sampleRate;
     repeatTime = repeatTime * sampleRate | 0;
-    volume *= soundVolume;
 
     // generate waveform
     for(length = attack + decay + sustain + release + delay | 0;
