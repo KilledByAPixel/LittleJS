@@ -145,7 +145,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             let deltaSmooth = 0;
             if (frameTimeBufferMS < 0 && frameTimeBufferMS > -9)
             {
-                // force an update each frame if time is close enough (not just a fast refresh rate)
+                // force at least one update each frame since it is waiting for refresh
                 deltaSmooth = frameTimeBufferMS;
                 frameTimeBufferMS = 0;
             }

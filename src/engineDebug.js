@@ -177,8 +177,7 @@ function debugSaveDataURL(dataURL, filename)
 function debugInit()
 {
     // create link for saving screenshots
-    document.body.appendChild(downloadLink = document.createElement('a'));
-    downloadLink.style.display = 'none';
+    downloadLink = document.createElement('a');
 }
 
 function debugUpdate()
