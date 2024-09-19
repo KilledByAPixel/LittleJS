@@ -214,7 +214,7 @@ let soundEnable = true;
  *  @type {Number}
  *  @default
  *  @memberof Settings */
-let soundVolume = .5;
+let soundVolume = .3;
 
 /** Default range where sound no longer plays
  *  @type {Number}
