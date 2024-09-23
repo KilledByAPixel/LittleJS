@@ -122,7 +122,7 @@ function gamepadWasReleased(button, gamepad=0)
  *  @return {Vector2}
  *  @memberof Input */
 function gamepadStick(stick,  gamepad=0)
-{ return stickData[gamepad] ? stickData[gamepad][stick] || vec2() : vec2(); }
+{ return gamepadStickData[gamepad] ? gamepadStickData[gamepad][stick] || vec2() : vec2(); }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Input update called by engine
@@ -208,7 +208,8 @@ function inputInit()
     oncontextmenu = (e)=> false; // prevent right click menu
 
     // init touch input
-    isTouchDevice && touchInputInit();
+    if (isTouchDevice)
+        touchInputInit();
 }
 
 // convert a mouse or touch event position to screen space
@@ -226,7 +227,7 @@ function mouseToScreen(mousePos)
 // Gamepad input
 
 // gamepad internal variables
-const stickData = [];
+const gamepadStickData = [];
 
 // gamepads are updated by engine every frame automatically
 function gamepadsUpdate()
@@ -243,14 +244,11 @@ function gamepadsUpdate()
     // update touch gamepad if enabled
     if (touchGamepadEnable && isTouchDevice)
     {
-        // create the touch gamepad if it doesn't exist
-        if (!touchGamepadButtons)
-            createTouchGamepad();
-
+        ASSERT(touchGamepadButtons, 'set touchGamepadEnable before calling init!');
         if (touchGamepadTimer.isSet())
         {
             // read virtual analog stick
-            const sticks = stickData[0] || (stickData[0] = []);
+            const sticks = gamepadStickData[0] || (gamepadStickData[0] = []);
             sticks[0] = vec2();
             if (touchGamepadAnalog)
                 sticks[0] = applyDeadZones(touchGamepadStick);
@@ -287,7 +285,7 @@ function gamepadsUpdate()
         // get or create gamepad data
         const gamepad = gamepads[i];
         const data = inputData[i+1] || (inputData[i+1] = []);
-        const sticks = stickData[i] || (stickData[i] = []);
+        const sticks = gamepadStickData[i] || (gamepadStickData[i] = []);
 
         if (gamepad)
         {
@@ -333,26 +331,37 @@ function vibrate(pattern=100)
 function vibrateStop() { vibrate(0); }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Touch input
+// Touch input & virtual on screen gamepad
 
 /** True if a touch device has been detected
  *  @memberof Input */
 const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
 
+// touch gamepad internal variables
+let touchGamepadTimer = new Timer, touchGamepadButtons, touchGamepadStick;
+
 // try to enable touch mouse
 function touchInputInit()
 {
+    // add non passive touch event listeners
+    let handleTouch = handleTouchDefault;
+    if (touchGamepadEnable)
+    {
+        // touch input internal variables
+        handleTouch = handleTouchGamepad;
+        touchGamepadButtons = [];
+        touchGamepadStick = vec2();
+    }
+    document.addEventListener('touchstart', (e) => handleTouch(e), { passive: false });
+    document.addEventListener('touchmove',  (e) => handleTouch(e), { passive: false });
+    document.addEventListener('touchend',   (e) => handleTouch(e), { passive: false });
+
     // override mouse events
-    let wasTouching;
     onmousedown = onmouseup = ()=> 0;
 
-    // add non passive touch event listeners
-    document.addEventListener('touchstart', (e) => handleTouch(e), { passive: false });
-    document.addEventListener('touchmove', (e) => handleTouch(e), { passive: false });
-    document.addEventListener('touchend', (e) => handleTouch(e), { passive: false });
-
     // handle all touch events the same way
-    function handleTouch(e)
+    let wasTouching;
+    function handleTouchDefault(e)
     {
         // fix stalled audio requiring user interaction
         if (soundEnable && audioContext && audioContext.state != 'running')
@@ -381,27 +390,14 @@ function touchInputInit()
         // must return true so the document will get focus
         return true;
     }
-}
 
-///////////////////////////////////////////////////////////////////////////////
-// touch gamepad, virtual on screen gamepad emulator for touch devices
-
-// touch input internal variables
-let touchGamepadTimer = new Timer, touchGamepadButtons, touchGamepadStick;
-
-// create the touch gamepad, called automatically by the engine
-function createTouchGamepad()
-{
-    // touch input internal variables
-    touchGamepadButtons = [];
-    touchGamepadStick = vec2();
-
-    const touchHandler = ontouchstart;
-    ontouchstart = ontouchmove = ontouchend = (e)=>
+    // special handling for virtual gamepad mode
+    function handleTouchGamepad(e)
     {
         // clear touch gamepad input
         touchGamepadStick = vec2();
         touchGamepadButtons = [];
+        isUsingGamepad = true;
             
         const touching = e.touches.length;
         if (touching)
@@ -442,9 +438,8 @@ function createTouchGamepad()
             }
         }
 
-        // call default touch handler and set to using gamepad
-        touchHandler.bind(window)(e);
-        isUsingGamepad = true;
+        // call default touch handler so normal touch events still work
+        handleTouchDefault(e);
         
         // must return true so the document will get focus
         return true;
