@@ -383,6 +383,8 @@ function zzfxG
     bitCrush = 0, delay = 0, sustainVolume = 1, decay = 0, tremolo = 0, filter = 0
 )
 {
+    // LJS Note: ZZFX modded so randomness is handled by Sound class
+
     // init parameters
     let PI2 = PI*2, sampleRate = zzfxR,
         startSlide = slide *= 500 * PI2 / sampleRate / sampleRate,
