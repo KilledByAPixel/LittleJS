@@ -86,9 +86,9 @@ Learn how to make a simple game from scratch with [The Breakout Tutorial.](https
 
 Join our vibrant community on [Discord](https://discord.gg/zb7hcGkyZe) to get help, share your projects, and collaborate with others!
 
-## Demos
+## Examples
 
-These examples are for both learning and using as starter projects to create your own games.
+These demos are for both learning and using as starter projects to create your own games.
 
 - [Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter/) - Clean example with only a few things to get you started
 - [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/) - Block breaking game with post-processing effects
