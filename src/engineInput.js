@@ -346,8 +346,13 @@ function touchInputInit()
     let wasTouching;
     onmousedown = onmouseup = ()=> 0;
 
+    // add non passive touch event listeners
+    document.addEventListener('touchstart', (e) => handleTouch(e), { passive: false });
+    document.addEventListener('touchmove', (e) => handleTouch(e), { passive: false });
+    document.addEventListener('touchend', (e) => handleTouch(e), { passive: false });
+
     // handle all touch events the same way
-    ontouchstart = ontouchmove = ontouchend = (e)=>
+    function handleTouch(e)
     {
         // fix stalled audio requiring user interaction
         if (soundEnable && audioContext && audioContext.state != 'running')
