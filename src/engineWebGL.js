@@ -44,11 +44,11 @@ function glInit()
         '#version 300 es\n' +     // specify GLSL ES version
         'precision highp float;'+ // use highp for better accuracy
         'uniform mat4 m;'+        // transform matrix
-        'in vec2 g;'+             // geometry
-        'in vec4 p,u,c,a;'+       // position/size, uvs, color, additiveColor
-        'in float r;'+            // rotation
-        'out vec2 v;'+            // return uv, color, additiveColor
-        'out vec4 d,e;'+          // return uv, color, additiveColor
+        'in vec2 g;'+             // in: geometry
+        'in vec4 p,u,c,a;'+       // in: position/size, uvs, color, additiveColor
+        'in float r;'+            // in: rotation
+        'out vec2 v;'+            // out: uv
+        'out vec4 d,e;'+          // out: color, additiveColor
         'void main(){'+           // shader entry point
         'vec2 s=(g-.5)*p.zw;'+    // get size offset
         'gl_Position=m*vec4(p.xy+s*cos(r)-vec2(-s.y,s)*sin(r),1,1);'+ // transform position
@@ -58,10 +58,10 @@ function glInit()
         ,
         '#version 300 es\n' +     // specify GLSL ES version
         'precision highp float;'+ // use highp for better accuracy
-        'in vec2 v;'+             // uv
-        'in vec4 d,e;'+           // color, additiveColor
         'uniform sampler2D s;'+   // texture
-        'out vec4 c;'+            // out color
+        'in vec2 v;'+             // in: uv
+        'in vec4 d,e;'+           // in: color, additiveColor
+        'out vec4 c;'+            // out: color
         'void main(){'+           // shader entry point
         'c=texture(s,v)*d+e;'+    // modulate texture by color plus additive
         '}'                       // end of shader
@@ -87,7 +87,7 @@ function glPreRender()
 
     // clear and set to same size as main canvas
     glContext.viewport(0, 0, glCanvas.width=mainCanvas.width, glCanvas.height=mainCanvas.height);
-    glContext.clear(gl_COLOR_BUFFER_BIT);
+    //glContext.clear(gl_COLOR_BUFFER_BIT); // auto cleared when size is set
 
     // set up the shader
     glContext.useProgram(glShader);
@@ -121,12 +121,12 @@ function glPreRender()
     const s = vec2(2*cameraScale).divide(mainCanvasSize);
     const p = vec2(-1).subtract(cameraPos.multiply(s));
     glContext.uniformMatrix4fv(glContext.getUniformLocation(glShader, 'm'), false,
-        new Float32Array([
+        [
             s.x, 0,   0,   0,
             0,   s.y, 0,   0,
             1,   1,   1,   1,
             p.x, p.y, 0,   0
-        ])
+        ]
     );
 }
 
