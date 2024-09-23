@@ -45,8 +45,8 @@ class Sound
         if (zzfxSound)
         {
             // generate zzfx sound now for fast playback
-            this.randomness = zzfxSound[1] || 0;
-            zzfxSound[1] = 0; // generate without randomness
+            const defaultRandomness = .05;
+            this.randomness = zzfxSound[1] || defaultRandomness;
             this.sampleChannels = [zzfxG(...zzfxSound)];
             this.sampleRate = zzfxR;
         }
@@ -342,7 +342,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
  *  @param {Array} zzfxSound - Array of ZzFX parameters, ex. [.5,.5]
  *  @return {AudioBufferSourceNode} - The audio node of the sound played
  *  @memberof Audio */
-function zzfx(...zzfxSound) { return playSamples([zzfxG(...zzfxSound)]); }
+function zzfx(...zzfxSound) { return new Sound(zzfxSound).play(); }
 
 /** Sample rate used for all ZzFX sounds
  *  @default 44100
@@ -351,7 +351,7 @@ const zzfxR = 44100;
 
 /** Generate samples for a ZzFX sound
  *  @param {Number}  [volume] - Volume scale (percent)
- *  @param {Number}  [randomness] - How much to randomize frequency (percent Hz)
+ *  @param {Number}  [randomness] - Unused in this fuction, handled by Sound class
  *  @param {Number}  [frequency] - Frequency of sound (Hz)
  *  @param {Number}  [attack] - Attack time, how fast sound starts (seconds)
  *  @param {Number}  [sustain] - Sustain time, how long sound holds (seconds)
@@ -377,7 +377,7 @@ const zzfxR = 44100;
 function zzfxG
 (
     // parameters
-    volume = 1, randomness = .05, frequency = 220, attack = 0, sustain = 0,
+    volume = 1, randomness = 0, frequency = 220, attack = 0, sustain = 0,
     release = .1, shape = 0, shapeCurve = 1, slide = 0, deltaSlide = 0,
     pitchJump = 0, pitchJumpTime = 0, repeatTime = 0, noise = 0, modulation = 0,
     bitCrush = 0, delay = 0, sustainVolume = 1, decay = 0, tremolo = 0, filter = 0
@@ -386,8 +386,7 @@ function zzfxG
     // init parameters
     let PI2 = PI*2, sampleRate = zzfxR,
         startSlide = slide *= 500 * PI2 / sampleRate / sampleRate,
-        startFrequency = frequency *= 
-            rand(1 + randomness, 1-randomness) * PI2 / sampleRate,
+        startFrequency = frequency *= PI2 / sampleRate,
         b = [], t = 0, tm = 0, i = 0, j = 1, r = 0, c = 0, s = 0, f, length,
 
         // biquad LP/HP filter
