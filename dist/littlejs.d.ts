@@ -214,6 +214,11 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let showSplashScreen: boolean;
+    /** Disables all rendering, audio, and input for servers
+     *  @type {Boolean}
+     *  @default
+     *  @memberof Settings */
+    export let headlessMode: boolean;
     /** Default size of tiles in pixels
      *  @type {Vector2}
      *  @default Vector2(16,16)
@@ -389,6 +394,10 @@ declare module "littlejsengine" {
      *  @param {Boolean} show
      *  @memberof Settings */
     export function setShowSplashScreen(show: boolean): void;
+    /** Set to disalbe rendering, audio, and input for servers
+     *  @param {Boolean} headless
+     *  @memberof Settings */
+    export function setHeadlessMode(headless: boolean): void;
     /** Set if webgl rendering is enabled
      *  @param {Boolean} enable
      *  @memberof Settings */
@@ -888,7 +897,7 @@ declare module "littlejsengine" {
          * @param {Number} [alphaAmount]
          * @return {Color} */
         mutate(amount?: number, alphaAmount?: number): Color;
-        /** Returns this color expressed as a hex color code
+        /** Returns this color expressed as a rgb color code
          * @param {Boolean} [useAlpha] - if alpha should be included in result
          * @return {String} */
         toString(useAlpha?: boolean): string;
@@ -1103,9 +1112,9 @@ declare module "littlejsengine" {
      *  @param {Color}   [additiveColor=(0,0,0,0)]  - Additive color to be applied
      *  @param {Boolean} [useWebGL=glEnable]        - Use accelerated WebGL rendering
      *  @param {Boolean} [screenSpace=false]        - If true the pos and size are in screen space
-     *  @param {CanvasRenderingContext2D} [context] - Canvas 2D context to draw to
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
      *  @memberof Draw */
-    export function drawTile(pos: Vector2, size?: Vector2, tileInfo?: TileInfo, color?: Color, angle?: number, mirror?: boolean, additiveColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
+    export function drawTile(pos: Vector2, size?: Vector2, tileInfo?: TileInfo, color?: Color, angle?: number, mirror?: boolean, additiveColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw colored rect centered on pos
      *  @param {Vector2} pos
      *  @param {Vector2} [size=(1,1)]
@@ -1113,9 +1122,9 @@ declare module "littlejsengine" {
      *  @param {Number}  [angle]
      *  @param {Boolean} [useWebGL=glEnable]
      *  @param {Boolean} [screenSpace=false]
-     *  @param {CanvasRenderingContext2D} [context]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
-    export function drawRect(pos: Vector2, size?: Vector2, color?: Color, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
+    export function drawRect(pos: Vector2, size?: Vector2, color?: Color, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw colored line between two points
      *  @param {Vector2} posA
      *  @param {Vector2} posB
@@ -1123,9 +1132,9 @@ declare module "littlejsengine" {
      *  @param {Color}   [color=(1,1,1,1)]
      *  @param {Boolean} [useWebGL=glEnable]
      *  @param {Boolean} [screenSpace=false]
-     *  @param {CanvasRenderingContext2D} [context]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
-    export function drawLine(posA: Vector2, posB: Vector2, thickness?: number, color?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
+    export function drawLine(posA: Vector2, posB: Vector2, thickness?: number, color?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw directly to a 2d canvas context in world space
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
@@ -1133,15 +1142,15 @@ declare module "littlejsengine" {
      *  @param {Boolean}  mirror
      *  @param {Function} drawFunction
      *  @param {Boolean} [screenSpace=false]
-     *  @param {CanvasRenderingContext2D} [context=mainContext]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
      *  @memberof Draw */
-    export function drawCanvas2D(pos: Vector2, size: Vector2, angle: number, mirror: boolean, drawFunction: Function, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
+    export function drawCanvas2D(pos: Vector2, size: Vector2, angle: number, mirror: boolean, drawFunction: Function, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Enable normal or additive blend mode
      *  @param {Boolean} [additive]
      *  @param {Boolean} [useWebGL=glEnable]
-     *  @param {CanvasRenderingContext2D} [context=mainContext]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
      *  @memberof Draw */
-    export function setBlendMode(additive?: boolean, useWebGL?: boolean, context?: CanvasRenderingContext2D): void;
+    export function setBlendMode(additive?: boolean, useWebGL?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw text on overlay canvas in screen space
      *  Automatically splits new lines into rows
      *  @param {String}  text
@@ -1152,9 +1161,9 @@ declare module "littlejsengine" {
      *  @param {Color}   [lineColor=(0,0,0,1)]
      *  @param {CanvasTextAlign}  [textAlign]
      *  @param {String}  [font=fontDefault]
-     *  @param {CanvasRenderingContext2D} [context=overlayContext]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
      *  @memberof Draw */
-    export function drawTextScreen(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, context?: CanvasRenderingContext2D): void;
+    export function drawTextScreen(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw text on overlay canvas in world space
      *  Automatically splits new lines into rows
      *  @param {String}  text
@@ -1165,9 +1174,9 @@ declare module "littlejsengine" {
      *  @param {Color}   [lineColor=(0,0,0,1)]
      *  @param {CanvasTextAlign}  [textAlign='center']
      *  @param {String}  [font=fontDefault]
-     *  @param {CanvasRenderingContext2D} [context=overlayContext]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
      *  @memberof Draw */
-    export function drawText(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, context?: CanvasRenderingContext2D): void;
+    export function drawText(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     export let engineFontImage: any;
     /**
      * Font Image Object - Draw text on a 2D canvas by using characters in an image
@@ -1186,13 +1195,13 @@ declare module "littlejsengine" {
          *  @param {HTMLImageElement} [image]    - Image for the font, if undefined default font is used
          *  @param {Vector2} [tileSize=(8,8)]    - Size of the font source tiles
          *  @param {Vector2} [paddingSize=(0,1)] - How much extra space to add between characters
-         *  @param {CanvasRenderingContext2D} [context=overlayContext] - context to draw to
+         *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext] - context to draw to
          */
-        constructor(image?: HTMLImageElement, tileSize?: Vector2, paddingSize?: Vector2, context?: CanvasRenderingContext2D);
+        constructor(image?: HTMLImageElement, tileSize?: Vector2, paddingSize?: Vector2, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D);
         image: any;
         tileSize: Vector2;
         paddingSize: Vector2;
-        context: CanvasRenderingContext2D;
+        context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
         /** Draw text in world space using the image font
          *  @param {String}  text
          *  @param {Vector2} pos
@@ -1639,7 +1648,9 @@ declare module "littlejsengine" {
         isSolid: boolean;
         /** @property {Boolean} - Object collides with raycasts */
         collideRaycast: boolean;
-        /** Update the object transform and physics, called automatically by engine once each frame */
+        /** Update the object transform, called automatically by engine even when paused */
+        updateTransforms(): void;
+        /** Update the object physics, called automatically by engine once each frame */
         update(): void;
         groundObject: any;
         /** Render the object, draws a tile by default, automatically called each frame, sorted by renderOrder */
@@ -1785,22 +1796,13 @@ declare module "littlejsengine" {
         constructor(position?: Vector2, size?: Vector2, tileInfo?: TileInfo, scale?: Vector2, renderOrder?: number);
         /** @property {HTMLCanvasElement} - The canvas used by this tile layer */
         canvas: HTMLCanvasElement;
-        /** @property {CanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
+        /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
         context: CanvasRenderingContext2D;
         /** @property {Vector2} - How much to scale this layer when rendered */
         scale: Vector2;
         /** @property {Boolean} - If true this layer will render to overlay canvas and appear above all objects */
         isOverlay: boolean;
         data: TileLayerData[];
-        /** Set data at a given position in the array
-         *  @param {Vector2}       layerPos - Local position in array
-         *  @param {TileLayerData} data     - Data to set
-         *  @param {Boolean}       [redraw] - Force the tile to redraw if true */
-        setData(layerPos: Vector2, data: TileLayerData, redraw?: boolean): void;
-        /** Get data at a given position in the array
-         *  @param {Vector2} layerPos - Local position in array
-         *  @return {TileLayerData} */
-        getData(layerPos: Vector2): TileLayerData;
         /** Draw all the tile data to an offscreen canvas
          *  - This may be slow in some browsers but only needs to be done once */
         redraw(): void;
@@ -1808,8 +1810,6 @@ declare module "littlejsengine" {
          *  - This can be used to manually update small parts of the level
          *  @param {Boolean} [clear] - Should it clear the canvas before drawing */
         redrawStart(clear?: boolean): void;
-        /** @type {[HTMLCanvasElement, CanvasRenderingContext2D, Vector2, Vector2, number]} */
-        savedRenderSettings: [HTMLCanvasElement, CanvasRenderingContext2D, Vector2, Vector2, number];
         /** Call to end the redraw process */
         redrawEnd(): void;
         /** Draw the tile at a given position in the tile grid
@@ -1826,6 +1826,17 @@ declare module "littlejsengine" {
          *  @param {Boolean}  mirror
          *  @param {Function} drawFunction */
         drawCanvas2D(pos: Vector2, size: Vector2, angle: number, mirror: boolean, drawFunction: Function): void;
+        /** Set data at a given position in the array
+         *  @param {Vector2}       layerPos - Local position in array
+         *  @param {TileLayerData} data     - Data to set
+         *  @param {Boolean}       [redraw] - Force the tile to redraw if true */
+        setData(layerPos: Vector2, data: TileLayerData, redraw?: boolean): void;
+        /** Get data at a given position in the array
+         *  @param {Vector2} layerPos - Local position in array
+         *  @return {TileLayerData} */
+        getData(layerPos: Vector2): TileLayerData;
+        /** @type {[HTMLCanvasElement, CanvasRenderingContext2D, Vector2, Vector2, number]} */
+        savedRenderSettings: [HTMLCanvasElement, CanvasRenderingContext2D, Vector2, Vector2, number];
         /** Draw a tile directly onto the layer canvas in world space
          *  @param {Vector2}  pos
          *  @param {Vector2}  [size=(1,1)]
@@ -1948,22 +1959,23 @@ declare module "littlejsengine" {
      */
     export class Particle extends EngineObject {
         /**
-         * Create a particle with the given shis.colorStart = undefined;ettings
-         * @param {Vector2}  position     - World space position of the particle
-         * @param {TileInfo} [tileInfo]   - Tile info to render particles
-         * @param {Number}   [angle]      - Angle to rotate the particle
-         * @param {Color}    [colorStart] - Color at start of life
-         * @param {Color}    [colorEnd]   - Color at end of life
-         * @param {Number}   [lifeTime]   - How long to live for
-         * @param {Number}   [sizeStart]  - Angle to rotate the particle
-         * @param {Number}   [sizeEnd]    - Angle to rotate the particle
-         * @param {Number}   [fadeRate]   - Angle to rotate the particle
-         * @param {Boolean}  [additive]   - Angle to rotate the particle
-         * @param {Number}   [trailScale] - If a trail, how long to make it
+         * Create a particle with the passed in settings
+         * Typically this is created automatically by a ParticleEmitter
+         * @param {Vector2}  position   - World space position of the particle
+         * @param {TileInfo} tileInfo   - Tile info to render particles
+         * @param {Number}   angle      - Angle to rotate the particle
+         * @param {Color}    colorStart - Color at start of life
+         * @param {Color}    colorEnd   - Color at end of life
+         * @param {Number}   lifeTime   - How long to live for
+         * @param {Number}   sizeStart  - Size at start of life
+         * @param {Number}   sizeEnd    - Size at end of life
+         * @param {Number}   fadeRate   - How quick to fade in/out
+         * @param {Boolean}  additive   - Does it use additive blend mode
+         * @param {Number}   trailScale - If a trail, how long to make it
          * @param {ParticleEmitter} [localSpaceEmitter] - Parent emitter if local space
-         * @param {Function}  [destroyCallback] - Called when particle dies
+         * @param {Function} [destroyCallback] - Callback when particle dies
          */
-        constructor(position: Vector2, tileInfo?: TileInfo, angle?: number, colorStart?: Color, colorEnd?: Color, lifeTime?: number, sizeStart?: number, sizeEnd?: number, fadeRate?: number, additive?: boolean, trailScale?: number, localSpaceEmitter?: ParticleEmitter, destroyCallback?: Function);
+        constructor(position: Vector2, tileInfo: TileInfo, angle: number, colorStart: Color, colorEnd: Color, lifeTime: number, sizeStart: number, sizeEnd: number, fadeRate: number, additive: boolean, trailScale: number, localSpaceEmitter?: ParticleEmitter, destroyCallback?: Function);
         /** @property {Color} - Color at start of life */
         colorStart: Color;
         /** @property {Color} - Calculated change in color */

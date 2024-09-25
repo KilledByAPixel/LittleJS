@@ -99,7 +99,7 @@ function clamp(value, min=0, max=1) { return value < min ? min : value > max ? m
  *  @return {Number}
  *  @memberof Utilities */
 function percent(value, valueA, valueB)
-{ return valueB-valueA ? clamp((value-valueA) / (valueB-valueA)) : 0; }
+{ return (valueB-=valueA) ? clamp((value-valueA)/valueB) : 0; }
 
 /** Linearly interpolates between values passed in using percent
  *  @param {Number} percent
@@ -306,7 +306,7 @@ class RandomGenerator
         this.seed ^= this.seed << 13; 
         this.seed ^= this.seed >>> 17; 
         this.seed ^= this.seed << 5;
-        return valueB + (valueA - valueB) * abs(this.seed % 1e9) / 1e9;
+        return valueB + (valueA - valueB) * abs(this.seed % 1e8) / 1e8;
     }
 
     /** Returns a floored seeded random value the two values passed in
@@ -317,7 +317,7 @@ class RandomGenerator
 
     /** Randomly returns either -1 or 1 deterministically
     *  @return {Number} */
-    sign() { return this.int(2) * 2 - 1; }
+    sign() { return this.float() > .5 ? 1 : -1; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -365,6 +365,7 @@ class Vector2
      *  @param {Number} [y] - Y axis location */
     constructor(x=0, y=0)
     {
+        ASSERT(typeof x === 'number' && typeof y === 'number');
         /** @property {Number} - X axis location */
         this.x = x;
         /** @property {Number} - Y axis location */
@@ -691,12 +692,14 @@ class Color
      * @return {Color} */
     setHSLA(h=0, s=0, l=1, a=1)
     {
+        h = mod(h,1);
+        s = clamp(s);
+        l = clamp(l);
         const q = l < .5 ? l*(1+s) : l+s-l*s, p = 2*l-q,
             f = (p, q, t)=>
-                (t = ((t%1)+1)%1) < 1/6 ? p+(q-p)*6*t :
-                t < 1/2 ? q :
-                t < 2/3 ? p+(q-p)*(2/3-t)*6 : p;
-                
+                (t = mod(t,1))*6 < 1 ? p+(q-p)*6*t :
+                t*2 < 1 ? q :
+                t*3 < 2 ? p+(q-p)*(4-t*6) : p;
         this.r = f(p, q, h + 1/3);
         this.g = f(p, q, h);
         this.b = f(p, q, h - 1/3);
@@ -747,13 +750,12 @@ class Color
         ).clamp();
     }
 
-    /** Returns this color expressed as a hex color code
+    /** Returns this color expressed as a rgb color code
      * @param {Boolean} [useAlpha] - if alpha should be included in result
      * @return {String} */
-    toString(useAlpha = true)      
-    { 
-        const toHex = (c)=> ((c=c*255|0)<16 ? '0' : '') + c.toString(16);
-        return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b) + (useAlpha ? toHex(this.a) : '');
+    toString(useAlpha = true)
+    {
+        return `rgb(${this.r*255},${this.g*255},${this.b*255},${useAlpha ? this.a : 0})`;
     }
 
     /** Set this color from a hex code
@@ -811,11 +813,11 @@ class Timer
 
     /** Returns true if set and has not elapsed
      * @return {Boolean} */
-    active() { return time <= this.time; }
+    active() { return time < this.time; }
 
     /** Returns true if set and elapsed
      * @return {Boolean} */
-    elapsed() { return time > this.time; }
+    elapsed() { return time >= this.time; }
 
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {Number} */
@@ -890,6 +892,12 @@ let fontDefault = 'arial';
  *  @memberof Settings */
 let showSplashScreen = false;
 
+/** Disables all rendering, audio, and input for servers
+ *  @type {Boolean}
+ *  @default
+ *  @memberof Settings */
+let headlessMode = false;
+
 ///////////////////////////////////////////////////////////////////////////////
 // WebGL settings
 
@@ -918,7 +926,7 @@ let tileSizeDefault = vec2(16);
  *  @type {Number}
  *  @default
  *  @memberof Settings */
-let tileFixBleedScale = .1;
+let tileFixBleedScale = .5;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Object settings
@@ -1043,7 +1051,7 @@ let soundEnable = true;
  *  @type {Number}
  *  @default
  *  @memberof Settings */
-let soundVolume = .5;
+let soundVolume = .3;
 
 /** Default range where sound no longer plays
  *  @type {Number}
@@ -1127,6 +1135,11 @@ function setFontDefault(font) { fontDefault = font; }
  *  @param {Boolean} show
  *  @memberof Settings */
 function setShowSplashScreen(show) { showSplashScreen = show; }
+
+/** Set to disalbe rendering, audio, and input for servers
+ *  @param {Boolean} headless
+ *  @memberof Settings */
+function setHeadlessMode(headless) { headlessMode = headless; }
 
 /** Set if webgl rendering is enabled
  *  @param {Boolean} enable
@@ -1397,17 +1410,29 @@ class EngineObject
         engineObjects.push(this);
     }
     
-    /** Update the object transform and physics, called automatically by engine once each frame */
-    update()
+    /** Update the object transform, called automatically by engine even when paused */
+    updateTransforms()
     {
         const parent = this.parent;
         if (parent)
         {
             // copy parent pos/angle
-            this.pos = this.localPos.multiply(vec2(parent.getMirrorSign(),1)).rotate(-parent.angle).add(parent.pos);
-            this.angle = parent.getMirrorSign()*this.localAngle + parent.angle;
-            return;
+            const mirror = parent.getMirrorSign();
+            this.pos = this.localPos.multiply(vec2(mirror,1)).rotate(-parent.angle).add(parent.pos);
+            this.angle = mirror*this.localAngle + parent.angle;
         }
+
+        // update children
+        for (const child of this.children)
+            child.updateTransforms();
+    }
+
+    /** Update the object physics, called automatically by engine once each frame */
+    update()
+    {
+        // child objects do not have physics
+        if (this.parent)
+            return;
 
         // limit max speed to prevent missing collisions
         this.velocity.x = clamp(this.velocity.x, -objectMaxSpeed, objectMaxSpeed);
@@ -1423,8 +1448,7 @@ class EngineObject
         // physics sanity checks
         ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
         ASSERT(this.damping >= 0 && this.damping <= 1);
-
-        if (!enablePhysicsSolver || !this.mass) // do not update collision for fixed objects
+        if (!enablePhysicsSolver || !this.mass) // dont do collision for fixed objects
             return;
 
         const wasMovingDown = this.velocity.y < 0;
@@ -1754,6 +1778,9 @@ let drawCount;
  */
 function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0)
 {
+    if (headlessMode)
+        return new TileInfo;
+
     // if size is a number, make it a vector
     if (typeof size === 'number')
     {
@@ -1787,9 +1814,9 @@ class TileInfo
     constructor(pos=vec2(), size=tileSizeDefault, textureIndex=0)
     {
         /** @property {Vector2} - Top left corner of tile in pixels */
-        this.pos = pos;
+        this.pos = pos.copy();
         /** @property {Vector2} - Size of tile in pixels */
-        this.size = size;
+        this.size = size.copy();
         /** @property {Number} - Texture index to use */
         this.textureIndex = textureIndex;
     }
@@ -1881,7 +1908,7 @@ function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
  *  @param {Color}   [additiveColor=(0,0,0,0)]  - Additive color to be applied
  *  @param {Boolean} [useWebGL=glEnable]        - Use accelerated WebGL rendering
  *  @param {Boolean} [screenSpace=false]        - If true the pos and size are in screen space
- *  @param {CanvasRenderingContext2D} [context] - Canvas 2D context to draw to
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     angle=0, mirror, additiveColor=new Color(0,0,0,0), useWebGL=glEnable, screenSpace, context)
@@ -1954,7 +1981,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
  *  @param {Number}  [angle]
  *  @param {Boolean} [useWebGL=glEnable]
  *  @param {Boolean} [screenSpace=false]
- *  @param {CanvasRenderingContext2D} [context]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
 { 
@@ -1968,7 +1995,7 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
  *  @param {Color}   [color=(1,1,1,1)]
  *  @param {Boolean} [useWebGL=glEnable]
  *  @param {Boolean} [screenSpace=false]
- *  @param {CanvasRenderingContext2D} [context]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace, context)
 {
@@ -1984,7 +2011,7 @@ function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace, contex
  *  @param {Boolean}  mirror
  *  @param {Function} drawFunction
  *  @param {Boolean} [screenSpace=false]
- *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
 function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, context=mainContext)
 {
@@ -2005,7 +2032,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, conte
 /** Enable normal or additive blend mode
  *  @param {Boolean} [additive]
  *  @param {Boolean} [useWebGL=glEnable]
- *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
 function setBlendMode(additive, useWebGL=glEnable, context)
 {
@@ -2030,7 +2057,7 @@ function setBlendMode(additive, useWebGL=glEnable, context)
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {CanvasTextAlign}  [textAlign='center']
  *  @param {String}  [font=fontDefault]
- *  @param {CanvasRenderingContext2D} [context=overlayContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
  *  @memberof Draw */
 function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, context)
 {
@@ -2047,7 +2074,7 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {CanvasTextAlign}  [textAlign]
  *  @param {String}  [font=fontDefault]
- *  @param {CanvasRenderingContext2D} [context=overlayContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
  *  @memberof Draw */
 function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, context=overlayContext)
 {
@@ -2090,7 +2117,7 @@ class FontImage
      *  @param {HTMLImageElement} [image]    - Image for the font, if undefined default font is used
      *  @param {Vector2} [tileSize=(8,8)]    - Size of the font source tiles
      *  @param {Vector2} [paddingSize=(0,1)] - How much extra space to add between characters
-     *  @param {CanvasRenderingContext2D} [context=overlayContext] - context to draw to
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext] - context to draw to
      */
     constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1), context=overlayContext)
     {
@@ -2298,7 +2325,7 @@ function gamepadWasReleased(button, gamepad=0)
  *  @return {Vector2}
  *  @memberof Input */
 function gamepadStick(stick,  gamepad=0)
-{ return stickData[gamepad] ? stickData[gamepad][stick] || vec2() : vec2(); }
+{ return gamepadStickData[gamepad] ? gamepadStickData[gamepad][stick] || vec2() : vec2(); }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Input update called by engine
@@ -2309,6 +2336,8 @@ let inputData = [[]];
 
 function inputUpdate()
 {
+    if (headlessMode) return;
+
     // clear input when lost focus (prevent stuck keys)
     isTouchDevice || document.hasFocus() || clearInput();
 
@@ -2321,6 +2350,8 @@ function inputUpdate()
 
 function inputUpdatePost()
 {
+    if (headlessMode) return;
+
     // clear input to prepare for next frame
     for (const deviceInputData of inputData)
     for (const i in deviceInputData)
@@ -2329,9 +2360,12 @@ function inputUpdatePost()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Keyboard event handlers
+// Input event handlers
 
+function inputInit()
 {
+    if (headlessMode) return;
+
     onkeydown = (e)=>
     {
         if (debug && e.target != document.body) return;
@@ -2362,21 +2396,29 @@ function inputUpdatePost()
             c == 'KeyA' ? 'ArrowLeft' : 
             c == 'KeyD' ? 'ArrowRight' : c : c;
     }
+    
+    // mouse event handlers
+    onmousedown   = (e)=>
+    {
+        isUsingGamepad = false; 
+        inputData[0][e.button] = 3; 
+        mousePosScreen = mouseToScreen(e); 
+        e.button && e.preventDefault();
+    }
+    onmouseup     = (e)=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
+    onmousemove   = (e)=> mousePosScreen = mouseToScreen(e);
+    onwheel       = (e)=> mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY);
+    oncontextmenu = (e)=> false; // prevent right click menu
+
+    // init touch input
+    if (isTouchDevice)
+        touchInputInit();
 }
-
-///////////////////////////////////////////////////////////////////////////////
-// Mouse event handlers
-
-onmousedown = (e)=> {isUsingGamepad = false; inputData[0][e.button] = 3; mousePosScreen = mouseToScreen(e); e.button && e.preventDefault();}
-onmouseup   = (e)=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
-onmousemove = (e)=> mousePosScreen = mouseToScreen(e);
-onwheel     = (e)=> mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY);
-oncontextmenu = (e)=> false; // prevent right click menu
 
 // convert a mouse or touch event position to screen space
 function mouseToScreen(mousePos)
 {
-    if (!mainCanvas)
+    if (!mainCanvas || headlessMode)
         return vec2(); // fix bug that can occur if user clicks before page loads
 
     const rect = mainCanvas.getBoundingClientRect();
@@ -2388,7 +2430,7 @@ function mouseToScreen(mousePos)
 // Gamepad input
 
 // gamepad internal variables
-const stickData = [];
+const gamepadStickData = [];
 
 // gamepads are updated by engine every frame automatically
 function gamepadsUpdate()
@@ -2405,14 +2447,11 @@ function gamepadsUpdate()
     // update touch gamepad if enabled
     if (touchGamepadEnable && isTouchDevice)
     {
-        // create the touch gamepad if it doesn't exist
-        if (!touchGamepadButtons)
-            createTouchGamepad();
-
+        ASSERT(touchGamepadButtons, 'set touchGamepadEnable before calling init!');
         if (touchGamepadTimer.isSet())
         {
             // read virtual analog stick
-            const sticks = stickData[0] || (stickData[0] = []);
+            const sticks = gamepadStickData[0] || (gamepadStickData[0] = []);
             sticks[0] = vec2();
             if (touchGamepadAnalog)
                 sticks[0] = applyDeadZones(touchGamepadStick);
@@ -2429,7 +2468,8 @@ function gamepadsUpdate()
             for (let i=10; i--;)
             {
                 const j = i == 3 ? 2 : i == 2 ? 3 : i; // fix button locations
-                data[j] = touchGamepadButtons[i] ? gamepadIsDown(j,0) ? 1 : 3 : gamepadIsDown(j,0) ? 4 : 0;
+                const wasDown = gamepadIsDown(j,0);
+                data[j] = touchGamepadButtons[i] ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
             }
         }
     }
@@ -2449,7 +2489,7 @@ function gamepadsUpdate()
         // get or create gamepad data
         const gamepad = gamepads[i];
         const data = inputData[i+1] || (inputData[i+1] = []);
-        const sticks = stickData[i] || (stickData[i] = []);
+        const sticks = gamepadStickData[i] || (gamepadStickData[i] = []);
 
         if (gamepad)
         {
@@ -2488,28 +2528,44 @@ function gamepadsUpdate()
  *  @param {Number|Array} [pattern] - single value in ms or vibration interval array
  *  @memberof Input */
 function vibrate(pattern=100)
-{ vibrateEnable && navigator && navigator.vibrate && navigator.vibrate(pattern); }
+{ vibrateEnable && !headlessMode && navigator && navigator.vibrate && navigator.vibrate(pattern); }
 
 /** Cancel any ongoing vibration
  *  @memberof Input */
 function vibrateStop() { vibrate(0); }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Touch input
+// Touch input & virtual on screen gamepad
 
 /** True if a touch device has been detected
  *  @memberof Input */
-const isTouchDevice = window.ontouchstart !== undefined;
+const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
+
+// touch gamepad internal variables
+let touchGamepadTimer = new Timer, touchGamepadButtons, touchGamepadStick;
 
 // try to enable touch mouse
-if (isTouchDevice)
+function touchInputInit()
 {
+    // add non passive touch event listeners
+    let handleTouch = handleTouchDefault;
+    if (touchGamepadEnable)
+    {
+        // touch input internal variables
+        handleTouch = handleTouchGamepad;
+        touchGamepadButtons = [];
+        touchGamepadStick = vec2();
+    }
+    document.addEventListener('touchstart', (e) => handleTouch(e), { passive: false });
+    document.addEventListener('touchmove',  (e) => handleTouch(e), { passive: false });
+    document.addEventListener('touchend',   (e) => handleTouch(e), { passive: false });
+
     // override mouse events
-    let wasTouching;
     onmousedown = onmouseup = ()=> 0;
 
     // handle all touch events the same way
-    ontouchstart = ontouchmove = ontouchend = (e)=>
+    let wasTouching;
+    function handleTouchDefault(e)
     {
         // fix stalled audio requiring user interaction
         if (soundEnable && audioContext && audioContext.state != 'running')
@@ -2538,27 +2594,14 @@ if (isTouchDevice)
         // must return true so the document will get focus
         return true;
     }
-}
 
-///////////////////////////////////////////////////////////////////////////////
-// touch gamepad, virtual on screen gamepad emulator for touch devices
-
-// touch input internal variables
-let touchGamepadTimer = new Timer, touchGamepadButtons, touchGamepadStick;
-
-// create the touch gamepad, called automatically by the engine
-function createTouchGamepad()
-{
-    // touch input internal variables
-    touchGamepadButtons = [];
-    touchGamepadStick = vec2();
-
-    const touchHandler = ontouchstart;
-    ontouchstart = ontouchmove = ontouchend = (e)=>
+    // special handling for virtual gamepad mode
+    function handleTouchGamepad(e)
     {
         // clear touch gamepad input
         touchGamepadStick = vec2();
         touchGamepadButtons = [];
+        isUsingGamepad = true;
             
         const touching = e.touches.length;
         if (touching)
@@ -2599,9 +2642,8 @@ function createTouchGamepad()
             }
         }
 
-        // call default touch handler and set to using gamepad
-        touchHandler.bind(window)(e);
-        isUsingGamepad = true;
+        // call default touch handler so normal touch events still work
+        handleTouchDefault(e);
         
         // must return true so the document will get focus
         return true;
@@ -2620,32 +2662,33 @@ function touchGamepadRender()
         return;
 
     // setup the canvas
-    overlayContext.save();
-    overlayContext.globalAlpha = alpha*touchGamepadAlpha;
-    overlayContext.strokeStyle = '#fff';
-    overlayContext.lineWidth = 3;
+    const context = overlayContext;
+    context.save();
+    context.globalAlpha = alpha*touchGamepadAlpha;
+    context.strokeStyle = '#fff';
+    context.lineWidth = 3;
 
     // draw left analog stick
-    overlayContext.fillStyle = touchGamepadStick.lengthSquared() > 0 ? '#fff' : '#000';
-    overlayContext.beginPath();
+    context.fillStyle = touchGamepadStick.lengthSquared() > 0 ? '#fff' : '#000';
+    context.beginPath();
 
     const leftCenter = vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
     if (touchGamepadAnalog) // draw circle shaped gamepad
     {
-        overlayContext.arc(leftCenter.x, leftCenter.y, touchGamepadSize/2, 0, 9);
-        overlayContext.fill();
-        overlayContext.stroke();
+        context.arc(leftCenter.x, leftCenter.y, touchGamepadSize/2, 0, 9);
+        context.fill();
+        context.stroke();
     }
     else // draw cross shaped gamepad
     {
         for(let i=10; i--;)
         {
             const angle = i*PI/4;
-            overlayContext.arc(leftCenter.x, leftCenter.y,touchGamepadSize*.6, angle + PI/8, angle + PI/8);
-            i%2 && overlayContext.arc(leftCenter.x, leftCenter.y, touchGamepadSize*.33, angle, angle);
-            i==1 && overlayContext.fill();
+            context.arc(leftCenter.x, leftCenter.y,touchGamepadSize*.6, angle + PI/8, angle + PI/8);
+            i%2 && context.arc(leftCenter.x, leftCenter.y, touchGamepadSize*.33, angle, angle);
+            i==1 && context.fill();
         }
-        overlayContext.stroke();
+        context.stroke();
     }
     
     // draw right face buttons
@@ -2653,15 +2696,15 @@ function touchGamepadRender()
     for (let i=4; i--;)
     {
         const pos = rightCenter.add(vec2().setDirection(i, touchGamepadSize/2));
-        overlayContext.fillStyle = touchGamepadButtons[i] ? '#fff' : '#000';
-        overlayContext.beginPath();
-        overlayContext.arc(pos.x, pos.y, touchGamepadSize/4, 0,9);
-        overlayContext.fill();
-        overlayContext.stroke();
+        context.fillStyle = touchGamepadButtons[i] ? '#fff' : '#000';
+        context.beginPath();
+        context.arc(pos.x, pos.y, touchGamepadSize/4, 0,9);
+        context.fill();
+        context.stroke();
     }
 
     // set canvas back to normal
-    overlayContext.restore();
+    context.restore();
 }
 /** 
  * LittleJS Audio System
@@ -2696,7 +2739,7 @@ class Sound
      */
     constructor(zzfxSound, range=soundDefaultRange, taper=soundDefaultTaper)
     {
-        if (!soundEnable) return;
+        if (!soundEnable || headlessMode) return;
 
         /** @property {Number} - World space max range of sound, will not play if camera is farther away */
         this.range = range;
@@ -2710,8 +2753,8 @@ class Sound
         if (zzfxSound)
         {
             // generate zzfx sound now for fast playback
-            this.randomness = zzfxSound[1] || 0;
-            zzfxSound[1] = 0; // generate without randomness
+            const defaultRandomness = .05;
+            this.randomness = zzfxSound[1] || defaultRandomness;
             this.sampleChannels = [zzfxG(...zzfxSound)];
             this.sampleRate = zzfxR;
         }
@@ -2727,7 +2770,7 @@ class Sound
      */
     play(pos, volume=1, pitch=1, randomnessScale=1, loop=false)
     {
-        if (!soundEnable || !this.sampleChannels) return;
+        if (!soundEnable || !this.sampleChannels || headlessMode) return;
 
         let pan;
         if (pos)
@@ -2810,7 +2853,9 @@ class SoundWave extends Sound
         super(undefined, range, taper);
         this.randomness = randomness;
 
-        if (!soundEnable) return;
+        if (!soundEnable || headlessMode) return;
+        if (!audioContext)
+            audioContext = new AudioContext; // create audio context
 
         fetch(filename)
         .then(response => response.arrayBuffer())
@@ -2864,7 +2909,7 @@ class Music extends Sound
     {
         super(undefined);
 
-        if (!soundEnable) return;
+        if (!soundEnable || headlessMode) return;
         this.randomness = 0;
         this.sampleChannels = zzfxM(...zzfxMusic);
         this.sampleRate = zzfxR;
@@ -2887,7 +2932,7 @@ class Music extends Sound
  *  @memberof Audio */
 function playAudioFile(filename, volume=1, loop=false)
 {
-    if (!soundEnable) return;
+    if (!soundEnable || headlessMode) return;
 
     const audio = new Audio(filename);
     audio.volume = soundVolume * volume;
@@ -2906,7 +2951,7 @@ function playAudioFile(filename, volume=1, loop=false)
  *  @memberof Audio */
 function speak(text, language='', volume=1, rate=1, pitch=1)
 {
-    if (!soundEnable || !speechSynthesis) return;
+    if (!soundEnable || !speechSynthesis || headlessMode) return;
 
     // common languages (not supported by all browsers)
     // en - english,  it - italian, fr - french,  de - german, es - spanish
@@ -2939,7 +2984,7 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
 /** Audio context used by the engine
  *  @type {AudioContext}
  *  @memberof Audio */
-let audioContext = new AudioContext;
+let audioContext;
 
 /** Keep track if audio was suspended when last sound was played
  *  @type {Boolean}
@@ -2957,7 +3002,9 @@ let audioSuspended = false;
  *  @memberof Audio */
 function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=zzfxR) 
 {
-    if (!soundEnable) return;
+    if (!soundEnable || headlessMode) return;
+    if (!audioContext)
+        audioContext = new AudioContext; // create audio context
 
     // prevent sounds from building up if they can't be played
     const audioWasSuspended = audioSuspended;
@@ -3003,7 +3050,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
  *  @param {Array} zzfxSound - Array of ZzFX parameters, ex. [.5,.5]
  *  @return {AudioBufferSourceNode} - The audio node of the sound played
  *  @memberof Audio */
-function zzfx(...zzfxSound) { return playSamples([zzfxG(...zzfxSound)]); }
+function zzfx(...zzfxSound) { return new Sound(zzfxSound).play(); }
 
 /** Sample rate used for all ZzFX sounds
  *  @default 44100
@@ -3012,7 +3059,7 @@ const zzfxR = 44100;
 
 /** Generate samples for a ZzFX sound
  *  @param {Number}  [volume] - Volume scale (percent)
- *  @param {Number}  [randomness] - How much to randomize frequency (percent Hz)
+ *  @param {Number}  [randomness] - Unused in this fuction, handled by Sound class
  *  @param {Number}  [frequency] - Frequency of sound (Hz)
  *  @param {Number}  [attack] - Attack time, how fast sound starts (seconds)
  *  @param {Number}  [sustain] - Sustain time, how long sound holds (seconds)
@@ -3038,17 +3085,18 @@ const zzfxR = 44100;
 function zzfxG
 (
     // parameters
-    volume = 1, randomness = .05, frequency = 220, attack = 0, sustain = 0,
+    volume = 1, randomness = 0, frequency = 220, attack = 0, sustain = 0,
     release = .1, shape = 0, shapeCurve = 1, slide = 0, deltaSlide = 0,
     pitchJump = 0, pitchJumpTime = 0, repeatTime = 0, noise = 0, modulation = 0,
     bitCrush = 0, delay = 0, sustainVolume = 1, decay = 0, tremolo = 0, filter = 0
 )
 {
+    // LJS Note: ZZFX modded so randomness is handled by Sound class
+
     // init parameters
     let PI2 = PI*2, sampleRate = zzfxR,
         startSlide = slide *= 500 * PI2 / sampleRate / sampleRate,
-        startFrequency = frequency *= 
-            rand(1 + randomness, 1-randomness) * PI2 / sampleRate,
+        startFrequency = frequency *= PI2 / sampleRate,
         b = [], t = 0, tm = 0, i = 0, j = 1, r = 0, c = 0, s = 0, f, length,
 
         // biquad LP/HP filter
@@ -3070,7 +3118,6 @@ function zzfxG
     pitchJump *= PI2 / sampleRate;
     pitchJumpTime *= sampleRate;
     repeatTime = repeatTime * sampleRate | 0;
-    volume *= soundVolume;
 
     // generate waveform
     for(length = attack + decay + sustain + release + delay | 0;
@@ -3416,7 +3463,7 @@ class TileLayer extends EngineObject
 
         /** @property {HTMLCanvasElement} - The canvas used by this tile layer */
         this.canvas = document.createElement('canvas');
-        /** @property {CanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
+        /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
         this.context = this.canvas.getContext('2d');
         /** @property {Vector2} - How much to scale this layer when rendered */
         this.scale = scale;
@@ -3427,6 +3474,17 @@ class TileLayer extends EngineObject
         this.data = [];
         for (let j = this.size.area(); j--;)
             this.data.push(new TileLayerData);
+
+        if (headlessMode)
+        {
+            // disable rendering
+            this.redraw       = () => {};
+            this.render       = () => {};
+            this.redrawStart  = () => {};
+            this.redrawEnd    = () => {};
+            this.drawTileData = () => {};
+            this.drawCanvas2D = () => {};
+        }
     }
     
     /** Set data at a given position in the array 
@@ -3457,7 +3515,7 @@ class TileLayer extends EngineObject
         ASSERT(mainContext != this.context, 'must call redrawEnd() after drawing tiles');
 
         // flush and copy gl canvas because tile canvas does not use webgl
-        glEnable && !glOverlay && !this.isOverlay && glCopyToContext(mainContext);
+        !glOverlay && !this.isOverlay && glCopyToContext(mainContext);
         
         // draw the entire cached level onto the canvas
         const pos = worldToScreen(this.pos.add(vec2(0,this.size.y*this.scale.y)));
@@ -3507,14 +3565,14 @@ class TileLayer extends EngineObject
         this.context.imageSmoothingEnabled = !canvasPixelated;
 
         // setup gl rendering if enabled
-        glEnable && glPreRender();
+        glPreRender();
     }
 
     /** Call to end the redraw process */
     redrawEnd()
     {
         ASSERT(mainContext == this.context, 'must call redrawStart() before drawing tiles');
-        glEnable && glCopyToContext(mainContext, true);
+        glCopyToContext(mainContext, true);
         //debugSaveCanvas(this.canvas);
 
         // set stuff back to normal
@@ -3839,20 +3897,21 @@ class ParticleEmitter extends EngineObject
 class Particle extends EngineObject
 {
     /**
-     * Create a particle with the given shis.colorStart = undefined;ettings
-     * @param {Vector2}  position     - World space position of the particle
-     * @param {TileInfo} [tileInfo]   - Tile info to render particles
-     * @param {Number}   [angle]      - Angle to rotate the particle
-     * @param {Color}    [colorStart] - Color at start of life
-     * @param {Color}    [colorEnd]   - Color at end of life
-     * @param {Number}   [lifeTime]   - How long to live for
-     * @param {Number}   [sizeStart]  - Angle to rotate the particle
-     * @param {Number}   [sizeEnd]    - Angle to rotate the particle
-     * @param {Number}   [fadeRate]   - Angle to rotate the particle
-     * @param {Boolean}  [additive]   - Angle to rotate the particle
-     * @param {Number}   [trailScale] - If a trail, how long to make it
+     * Create a particle with the passed in settings
+     * Typically this is created automatically by a ParticleEmitter
+     * @param {Vector2}  position   - World space position of the particle
+     * @param {TileInfo} tileInfo   - Tile info to render particles
+     * @param {Number}   angle      - Angle to rotate the particle
+     * @param {Color}    colorStart - Color at start of life
+     * @param {Color}    colorEnd   - Color at end of life
+     * @param {Number}   lifeTime   - How long to live for
+     * @param {Number}   sizeStart  - Size at start of life
+     * @param {Number}   sizeEnd    - Size at end of life
+     * @param {Number}   fadeRate   - How quick to fade in/out
+     * @param {Boolean}  additive   - Does it use additive blend mode
+     * @param {Number}   trailScale - If a trail, how long to make it
      * @param {ParticleEmitter} [localSpaceEmitter] - Parent emitter if local space
-     * @param {Function}  [destroyCallback] - Called when particle dies
+     * @param {Function} [destroyCallback] - Callback when particle dies
      */
     constructor(position, tileInfo, angle, colorStart, colorEnd, lifeTime, sizeStart, sizeEnd, fadeRate, additive, trailScale, localSpaceEmitter, destroyCallback
     )
@@ -4261,6 +4320,8 @@ let glShader, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, 
 // Initalize WebGL, called automatically by the engine
 function glInit()
 {
+    if (!glEnable || headlessMode) return;
+
     // create the canvas and textures
     glCanvas = document.createElement('canvas');
     glContext = glCanvas.getContext('webgl2');
@@ -4273,11 +4334,11 @@ function glInit()
         '#version 300 es\n' +     // specify GLSL ES version
         'precision highp float;'+ // use highp for better accuracy
         'uniform mat4 m;'+        // transform matrix
-        'in vec2 g;'+             // geometry
-        'in vec4 p,u,c,a;'+       // position/size, uvs, color, additiveColor
-        'in float r;'+            // rotation
-        'out vec2 v;'+            // return uv, color, additiveColor
-        'out vec4 d,e;'+          // return uv, color, additiveColor
+        'in vec2 g;'+             // in: geometry
+        'in vec4 p,u,c,a;'+       // in: position/size, uvs, color, additiveColor
+        'in float r;'+            // in: rotation
+        'out vec2 v;'+            // out: uv
+        'out vec4 d,e;'+          // out: color, additiveColor
         'void main(){'+           // shader entry point
         'vec2 s=(g-.5)*p.zw;'+    // get size offset
         'gl_Position=m*vec4(p.xy+s*cos(r)-vec2(-s.y,s)*sin(r),1,1);'+ // transform position
@@ -4287,10 +4348,10 @@ function glInit()
         ,
         '#version 300 es\n' +     // specify GLSL ES version
         'precision highp float;'+ // use highp for better accuracy
-        'in vec2 v;'+             // uv
-        'in vec4 d,e;'+           // color, additiveColor
         'uniform sampler2D s;'+   // texture
-        'out vec4 c;'+            // out color
+        'in vec2 v;'+             // in: uv
+        'in vec4 d,e;'+           // in: color, additiveColor
+        'out vec4 c;'+            // out: color
         'void main(){'+           // shader entry point
         'c=texture(s,v)*d+e;'+    // modulate texture by color plus additive
         '}'                       // end of shader
@@ -4312,9 +4373,11 @@ function glInit()
 // Setup render each frame, called automatically by engine
 function glPreRender()
 {
+    if (!glEnable || headlessMode) return;
+
     // clear and set to same size as main canvas
     glContext.viewport(0, 0, glCanvas.width=mainCanvas.width, glCanvas.height=mainCanvas.height);
-    glContext.clear(gl_COLOR_BUFFER_BIT);
+    //glContext.clear(gl_COLOR_BUFFER_BIT); // auto cleared when size is set
 
     // set up the shader
     glContext.useProgram(glShader);
@@ -4348,12 +4411,12 @@ function glPreRender()
     const s = vec2(2*cameraScale).divide(mainCanvasSize);
     const p = vec2(-1).subtract(cameraPos.multiply(s));
     glContext.uniformMatrix4fv(glContext.getUniformLocation(glShader, 'm'), false,
-        new Float32Array([
+        [
             s.x, 0,   0,   0,
             0,   s.y, 0,   0,
             1,   1,   1,   1,
             p.x, p.y, 0,   0
-        ])
+        ]
     );
 }
 
@@ -4364,7 +4427,7 @@ function glPreRender()
 function glSetTexture(texture)
 {
     // must flush cache with the old texture to set a new one
-    if (texture == glActiveTexture)
+    if (headlessMode || texture == glActiveTexture)
         return;
 
     glFlush();
@@ -4424,7 +4487,6 @@ function glCreateTexture(image)
     const filter = canvasPixelated ? gl_NEAREST : gl_LINEAR;
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, filter);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, filter);
-
     return texture;
 }
 
@@ -4448,12 +4510,12 @@ function glFlush()
 }
 
 /** Draw any sprites still in the buffer, copy to main canvas and clear
- *  @param {CanvasRenderingContext2D} context
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
  *  @param {Boolean} [forceDraw]
  *  @memberof WebGL */
 function glCopyToContext(context, forceDraw=false)
 {
-    if (!glInstanceCount && !forceDraw) return;
+    if (!glEnable || !glInstanceCount && !forceDraw) return;
 
     glFlush();
 
@@ -4510,7 +4572,7 @@ let glPostShader, glPostTexture, glPostIncludeOverlay;
 function glInitPostProcess(shaderCode, includeOverlay=false)
 {
     ASSERT(!glPostShader, 'can only have 1 post effects shader');
-
+    if (headlessMode) return;
     if (!shaderCode) // default shader pass through
         shaderCode = 'void mainImage(out vec4 c,vec2 p){c=texture(iChannel0,p/iResolution.xy);}';
 
@@ -4549,8 +4611,7 @@ function glInitPostProcess(shaderCode, includeOverlay=false)
 // Render the post processing shader, called automatically by the engine
 function glRenderPostProcess()
 {
-    if (!glPostShader)
-        return;
+    if (!glPostShader || headlessMode) return;
     
     // prepare to render post process shader
     if (glEnable)
@@ -4656,7 +4717,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.9.5';
+const engineVersion = '1.9.6';
 
 /** Frames per second to update
  *  @type {Number}
@@ -4733,7 +4794,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         mainContext.imageSmoothingEnabled = !canvasPixelated;
 
         // setup gl rendering if enabled
-        glEnable && glPreRender();
+        glPreRender();
     }
 
     // internal update loop for engine
@@ -4752,11 +4813,14 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         frameTimeBufferMS += paused ? 0 : frameTimeDeltaMS;
         if (!debugSpeedUp)
             frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp in case of slow framerate
+
         updateCanvas();
 
         if (paused)
         {
-            // do post update even when paused
+            // update object transforms even when paused
+            for (const o of engineObjects)
+                o.parent || o.updateTransforms();
             inputUpdate();
             debugUpdate();
             gameUpdatePost();
@@ -4768,7 +4832,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             let deltaSmooth = 0;
             if (frameTimeBufferMS < 0 && frameTimeBufferMS > -9)
             {
-                // force an update each frame if time is close enough (not just a fast refresh rate)
+                // force at least one update each frame since it is waiting for refresh
                 deltaSmooth = frameTimeBufferMS;
                 frameTimeBufferMS = 0;
             }
@@ -4793,34 +4857,37 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             // add the time smoothing back in
             frameTimeBufferMS += deltaSmooth;
         }
-        
-        // render sort then render while removing destroyed objects
-        enginePreRender();
-        gameRender();
-        engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
-        for (const o of engineObjects)
-            o.destroyed || o.render();
-        gameRenderPost();
-        glRenderPostProcess();
-        medalsRender();
-        touchGamepadRender();
-        debugRender();
-        glEnable && glCopyToContext(mainContext);
 
-        if (showWatermark)
+        if (!headlessMode)
         {
-            // update fps
-            overlayContext.textAlign = 'right';
-            overlayContext.textBaseline = 'top';
-            overlayContext.font = '1em monospace';
-            overlayContext.fillStyle = '#000';
-            const text = engineName + ' ' + 'v' + engineVersion + ' / ' 
-                + drawCount + ' / ' + engineObjects.length + ' / ' + averageFPS.toFixed(1)
-                + (glEnable ? ' GL' : ' 2D') ;
-            overlayContext.fillText(text, mainCanvas.width-3, 3);
-            overlayContext.fillStyle = '#fff';
-            overlayContext.fillText(text, mainCanvas.width-2, 2);
-            drawCount = 0;
+            // render sort then render while removing destroyed objects
+            enginePreRender();
+            gameRender();
+            engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
+            for (const o of engineObjects)
+                o.destroyed || o.render();
+            gameRenderPost();
+            glRenderPostProcess();
+            medalsRender();
+            touchGamepadRender();
+            debugRender();
+            glCopyToContext(mainContext);
+
+            if (showWatermark)
+            {
+                // update fps
+                overlayContext.textAlign = 'right';
+                overlayContext.textBaseline = 'top';
+                overlayContext.font = '1em monospace';
+                overlayContext.fillStyle = '#000';
+                const text = engineName + ' ' + 'v' + engineVersion + ' / ' 
+                    + drawCount + ' / ' + engineObjects.length + ' / ' + averageFPS.toFixed(1)
+                    + (glEnable ? ' GL' : ' 2D') ;
+                overlayContext.fillText(text, mainCanvas.width-3, 3);
+                overlayContext.fillStyle = '#fff';
+                overlayContext.fillText(text, mainCanvas.width-2, 2);
+                drawCount = 0;
+            }
         }
 
         requestAnimationFrame(engineUpdate);
@@ -4828,6 +4895,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
     function updateCanvas()
     {
+        if (headlessMode) return;
+        
         if (canvasFixedSize.x)
         {
             // clear canvas and set fixed size
@@ -4855,8 +4924,20 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
     }
 
+    function startEngine()
+    {
+        gameInit();
+        engineUpdate();
+    }
+
+    if (headlessMode)
+    {
+        startEngine();
+        return;
+    }
+
     // setup html
-     const styleBody = 
+    const styleBody = 
         'margin:0;overflow:hidden;' + // fill the window
         'background:#000;' +          // set background color
         'touch-action:none;' +        // prevent mobile pinch to resize
@@ -4868,8 +4949,9 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     mainContext = mainCanvas.getContext('2d');
 
     // init stuff and start engine
+    inputInit();
     debugInit();
-    glEnable && glInit();
+    glInit();
 
     // create overlay canvas for hud to appear above gl canvas
     document.body.appendChild(overlayCanvas = document.createElement('canvas'));
@@ -4910,12 +4992,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     }));
 
     // load all of the images
-    Promise.all(promises).then(()=> 
-    {
-        // start the engine
-        gameInit();
-        engineUpdate();
-    });
+    Promise.all(promises).then(startEngine);
 }
 
 /** Update each engine object, remove destroyed objects, and update time
@@ -4936,7 +5013,14 @@ function engineObjectsUpdate()
         }
     }
     for (const o of engineObjects)
-        o.parent || updateObject(o);
+    {
+        // update top level objects
+        if (!o.parent)
+        {
+            updateObject(o);
+            o.updateTransforms();
+        }
+    }
 
     // remove destroyed objects
     engineObjects = engineObjects.filter(o=>!o.destroyed);
