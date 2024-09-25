@@ -204,7 +204,7 @@ function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
  *  @param {Color}   [additiveColor=(0,0,0,0)]  - Additive color to be applied
  *  @param {Boolean} [useWebGL=glEnable]        - Use accelerated WebGL rendering
  *  @param {Boolean} [screenSpace=false]        - If true the pos and size are in screen space
- *  @param {CanvasRenderingContext2D} [context] - Canvas 2D context to draw to
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     angle=0, mirror, additiveColor=new Color(0,0,0,0), useWebGL=glEnable, screenSpace, context)
@@ -277,7 +277,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
  *  @param {Number}  [angle]
  *  @param {Boolean} [useWebGL=glEnable]
  *  @param {Boolean} [screenSpace=false]
- *  @param {CanvasRenderingContext2D} [context]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
 { 
@@ -291,7 +291,7 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
  *  @param {Color}   [color=(1,1,1,1)]
  *  @param {Boolean} [useWebGL=glEnable]
  *  @param {Boolean} [screenSpace=false]
- *  @param {CanvasRenderingContext2D} [context]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace, context)
 {
@@ -307,7 +307,7 @@ function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace, contex
  *  @param {Boolean}  mirror
  *  @param {Function} drawFunction
  *  @param {Boolean} [screenSpace=false]
- *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
 function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, context=mainContext)
 {
@@ -328,7 +328,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, conte
 /** Enable normal or additive blend mode
  *  @param {Boolean} [additive]
  *  @param {Boolean} [useWebGL=glEnable]
- *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
 function setBlendMode(additive, useWebGL=glEnable, context)
 {
@@ -353,7 +353,7 @@ function setBlendMode(additive, useWebGL=glEnable, context)
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {CanvasTextAlign}  [textAlign='center']
  *  @param {String}  [font=fontDefault]
- *  @param {CanvasRenderingContext2D} [context=overlayContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
  *  @memberof Draw */
 function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, context)
 {
@@ -370,7 +370,7 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {CanvasTextAlign}  [textAlign]
  *  @param {String}  [font=fontDefault]
- *  @param {CanvasRenderingContext2D} [context=overlayContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
  *  @memberof Draw */
 function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, context=overlayContext)
 {
@@ -413,7 +413,7 @@ class FontImage
      *  @param {HTMLImageElement} [image]    - Image for the font, if undefined default font is used
      *  @param {Vector2} [tileSize=(8,8)]    - Size of the font source tiles
      *  @param {Vector2} [paddingSize=(0,1)] - How much extra space to add between characters
-     *  @param {CanvasRenderingContext2D} [context=overlayContext] - context to draw to
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext] - context to draw to
      */
     constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1), context=overlayContext)
     {

@@ -181,7 +181,7 @@ class TileLayer extends EngineObject
 
         /** @property {HTMLCanvasElement} - The canvas used by this tile layer */
         this.canvas = document.createElement('canvas');
-        /** @property {CanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
+        /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
         this.context = this.canvas.getContext('2d');
         /** @property {Vector2} - How much to scale this layer when rendered */
         this.scale = scale;
