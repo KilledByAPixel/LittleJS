@@ -265,7 +265,8 @@ function gamepadsUpdate()
             for (let i=10; i--;)
             {
                 const j = i == 3 ? 2 : i == 2 ? 3 : i; // fix button locations
-                data[j] = touchGamepadButtons[i] ? gamepadIsDown(j,0) ? 1 : 3 : gamepadIsDown(j,0) ? 4 : 0;
+                const wasDown = gamepadIsDown(j,0);
+                data[j] = touchGamepadButtons[i] ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
             }
         }
     }
@@ -458,32 +459,33 @@ function touchGamepadRender()
         return;
 
     // setup the canvas
-    overlayContext.save();
-    overlayContext.globalAlpha = alpha*touchGamepadAlpha;
-    overlayContext.strokeStyle = '#fff';
-    overlayContext.lineWidth = 3;
+    const context = overlayContext;
+    context.save();
+    context.globalAlpha = alpha*touchGamepadAlpha;
+    context.strokeStyle = '#fff';
+    context.lineWidth = 3;
 
     // draw left analog stick
-    overlayContext.fillStyle = touchGamepadStick.lengthSquared() > 0 ? '#fff' : '#000';
-    overlayContext.beginPath();
+    context.fillStyle = touchGamepadStick.lengthSquared() > 0 ? '#fff' : '#000';
+    context.beginPath();
 
     const leftCenter = vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
     if (touchGamepadAnalog) // draw circle shaped gamepad
     {
-        overlayContext.arc(leftCenter.x, leftCenter.y, touchGamepadSize/2, 0, 9);
-        overlayContext.fill();
-        overlayContext.stroke();
+        context.arc(leftCenter.x, leftCenter.y, touchGamepadSize/2, 0, 9);
+        context.fill();
+        context.stroke();
     }
     else // draw cross shaped gamepad
     {
         for(let i=10; i--;)
         {
             const angle = i*PI/4;
-            overlayContext.arc(leftCenter.x, leftCenter.y,touchGamepadSize*.6, angle + PI/8, angle + PI/8);
-            i%2 && overlayContext.arc(leftCenter.x, leftCenter.y, touchGamepadSize*.33, angle, angle);
-            i==1 && overlayContext.fill();
+            context.arc(leftCenter.x, leftCenter.y,touchGamepadSize*.6, angle + PI/8, angle + PI/8);
+            i%2 && context.arc(leftCenter.x, leftCenter.y, touchGamepadSize*.33, angle, angle);
+            i==1 && context.fill();
         }
-        overlayContext.stroke();
+        context.stroke();
     }
     
     // draw right face buttons
@@ -491,13 +493,13 @@ function touchGamepadRender()
     for (let i=4; i--;)
     {
         const pos = rightCenter.add(vec2().setDirection(i, touchGamepadSize/2));
-        overlayContext.fillStyle = touchGamepadButtons[i] ? '#fff' : '#000';
-        overlayContext.beginPath();
-        overlayContext.arc(pos.x, pos.y, touchGamepadSize/4, 0,9);
-        overlayContext.fill();
-        overlayContext.stroke();
+        context.fillStyle = touchGamepadButtons[i] ? '#fff' : '#000';
+        context.beginPath();
+        context.arc(pos.x, pos.y, touchGamepadSize/4, 0,9);
+        context.fill();
+        context.stroke();
     }
 
     // set canvas back to normal
-    overlayContext.restore();
+    context.restore();
 }
