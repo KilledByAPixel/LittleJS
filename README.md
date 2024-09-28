@@ -194,16 +194,20 @@ Debug builds of LittleJS have a special menu that can be opened by pressing the 
 
 Here are a few of the amazing games people made using LittleJS...
 
-- [Space Huggers](https://www.newgrounds.com/portal/view/819609) - Run and gun platformer with procedural levels
-- [Undergrowth](https://undergrowth.squidband.uk/) - An interactive music videogame for the band Squid
-- [Space Huggers - JS13K Edition](https://github.com/KilledByAPixel/SpaceHuggers) - Original js13k game with source code
-- [Isletopia](https://store.steampowered.com/app/1861260/Isletopia) - Relaxing strategy game of greenifying barren islands
+- [Space Huggers](https://github.com/KilledByAPixel/SpaceHuggers) - Original js13k game with source code by [KilledByAPixel](https://frankforce.com/)
+- [Undergrowth](https://undergrowth.squidband.uk/) - An interactive music videogame for the band Squid by [KilledByAPixel](https://frankforce.com/)
+- [Isletopia](https://store.steampowered.com/app/1861260/Isletopia) - Relaxing strategy game of greenifying barren islands by [Gamex Studio](https://x.com/gamesgamex)
 - [Dead Again](https://js13kgames.com/entries/dead-again) - Top down survial horror by [sanojian & repsej](https://github.com/sanojian/js13k_2022)
 - [Hel's Trial](https://js13kgames.com/entries/hels-trial) - Turn based RPG by [Sebastian Dorn](https://github.com/sebadorn/js13k-2022-death)
 - [Bit Butcher](https://js13kgames.com/entries/bit-butcher) - Survival crafting game by [Deathray Games](https://github.com/deathraygames/bit-butcher)
 - [Necrotic Commander](https://js13kgames.com/entries/necrotic-commander) - Tower defense game by [Daniel Jeffery](https://github.com/d-jeffery/NecroticCommander)
-- [Boxing up Bamboo](https://patrickgh3.itch.io/boxing-up-bamboo) - A challenging puzzle game by [Patrick Traynor](https://cwpat.me/about)
-- [Samurai Sam](https://dev.js13kgames.com/2023/games/samurai-sam) - A Fruit Ninja inspired game by [John Edvard](https://reitgames.com)
+- [Boxing up Bamboo](https://patrickgh3.itch.io/boxing-up-bamboo) - Challenging puzzle game by [Patrick Traynor](https://cwpat.me/about)
+- [Samurai Sam](https://dev.js13kgames.com/2023/games/samurai-sam) - Fruit Ninja inspired rhythm game by [John Edvard](https://reitgames.com)
+- [brrr!](https://snowfrog.itch.io/brrr) - Base defense and shooting game by [Snowfrog](https://www.snowfrog.dev/)
+- [Wands of Triskaidekai](https://js13kgames.com/2024/games/wands-of-triskaidekai) - Platformer with experimental gameplay by [gregwoodsfrontier](https://github.com/gregwoodsfrontier)
+- [Data Warrior: 13kb limit](https://js13kgames.com/2024/games/data-warrior-13kb-limit) - Vampire Survivors-like game by [rndD](https://github.com/rndD)
+- [The Way of the Dodo](https://js13kgames.com/2024/games/the-way-of-the-dodo) - Single button platformer by [repsej](https://github.com/repsej)
+- [Wendol Village](https://js13kgames.com/2024/games/wendol-village) - Warcraft-like RTS game by [sanojian](https://github.com/sanojian)
 
 ![LittleJS Logo](examples/favicon.png)
 
