@@ -715,14 +715,15 @@ class Color
         ).clamp();
     }
 
-    /** Returns this color expressed as a rgb color code
+    /** Returns this color expressed as a hex color code
      * @param {Boolean} [useAlpha] - if alpha should be included in result
      * @return {String} */
-    toString(useAlpha = true)
-    {
-        return `rgb(${this.r*255},${this.g*255},${this.b*255},${useAlpha ? this.a : 0})`;
+    toString(useAlpha = true)      
+    { 
+        const toHex = (c)=> ((c=c*255|0)<16 ? '0' : '') + c.toString(16);
+        return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b) + (useAlpha ? toHex(this.a) : '');
     }
-
+    
     /** Set this color from a hex code
      * @param {String} hex - html hex code
      * @return {Color} */
