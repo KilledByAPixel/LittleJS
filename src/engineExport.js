@@ -178,6 +178,7 @@ export {
 	FontImage,
 	isFullscreen,
 	toggleFullscreen,
+	getCameraSize,
 
 	// WebGL
 	glCanvas,
