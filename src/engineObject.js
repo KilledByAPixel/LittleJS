@@ -85,6 +85,8 @@ class EngineObject
         this.spawnTime = time;
         /** @property {Array}   - List of children of this object */
         this.children = [];
+        /** @property {Boolean}  - Limit object speed using linear or circular math */
+        this.clampSpeedLinear = true;
 
         // parent child system
         /** @property {EngineObject} - Parent of object if in local space  */
@@ -133,8 +135,21 @@ class EngineObject
             return;
 
         // limit max speed to prevent missing collisions
-        this.velocity.x = clamp(this.velocity.x, -objectMaxSpeed, objectMaxSpeed);
-        this.velocity.y = clamp(this.velocity.y, -objectMaxSpeed, objectMaxSpeed);
+        if (this.clampSpeedLinear)
+        {
+            this.velocity.x = clamp(this.velocity.x, -objectMaxSpeed, objectMaxSpeed);
+            this.velocity.y = clamp(this.velocity.y, -objectMaxSpeed, objectMaxSpeed);
+        }
+        else
+        {
+            const length2 = this.velocity.lengthSquared();
+            if (length2 > objectMaxSpeed*objectMaxSpeed)
+            {
+                const s = objectMaxSpeed / length2**.5;
+                this.velocity.x *= s;
+                this.velocity.y *= s;
+            }
+        }
 
         // apply physics
         const oldPos = this.pos.copy();

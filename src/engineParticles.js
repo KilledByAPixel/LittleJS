@@ -274,6 +274,9 @@ class Particle extends EngineObject
         this.localSpaceEmitter = localSpaceEmitter;
         /** @property {Function} - Called when particle dies */
         this.destroyCallback = destroyCallback;
+
+        // particles use circular clamped speed
+        this.clampSpeedLinear = false;
     }
 
     /** Render the particle, automatically called each frame, sorted by renderOrder */
