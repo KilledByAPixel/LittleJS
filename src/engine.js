@@ -30,7 +30,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.9.6';
+const engineVersion = '1.9.7';
 
 /** Frames per second to update
  *  @type {Number}
@@ -263,6 +263,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
     // init stuff and start engine
     inputInit();
+    audioInit();
     debugInit();
     glInit();
 

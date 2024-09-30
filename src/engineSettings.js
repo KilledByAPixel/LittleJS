@@ -417,7 +417,12 @@ function setSoundEnable(enable) { soundEnable = enable; }
 /** Set volume scale to apply to all sound, music and speech
  *  @param {Number} volume
  *  @memberof Settings */
-function setSoundVolume(volume) { soundVolume = volume; }
+function setSoundVolume(volume)
+{
+    soundVolume = volume;
+    if (soundEnable && !headlessMode && audioGainNode)
+        audioGainNode.gain.value = volume; // update gain immediatly
+}
 
 /** Set default range where sound no longer plays
  *  @param {Number} range
