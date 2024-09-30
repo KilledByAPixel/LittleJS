@@ -897,7 +897,7 @@ declare module "littlejsengine" {
          * @param {Number} [alphaAmount]
          * @return {Color} */
         mutate(amount?: number, alphaAmount?: number): Color;
-        /** Returns this color expressed as a rgb color code
+        /** Returns this color expressed as a hex color code
          * @param {Boolean} [useAlpha] - if alpha should be included in result
          * @return {String} */
         toString(useAlpha?: boolean): string;
@@ -1224,6 +1224,10 @@ declare module "littlejsengine" {
     /** Toggle fullsceen mode
      *  @memberof Draw */
     export function toggleFullscreen(): void;
+    /** Get the camera's visible area in world space
+     *  @return {Vector2}
+     *  @memberof Draw */
+    export function getCameraSize(): Vector2;
     /**
      * LittleJS WebGL Interface
      * - All webgl used by the engine is wrapped up here
@@ -1382,16 +1386,6 @@ declare module "littlejsengine" {
      *  @memberof Input */
     export const isTouchDevice: boolean;
     /**
-     * LittleJS Audio System
-     * - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a> - ZzFX Sound Effect Generator
-     * - <a href=https://keithclark.github.io/ZzFXM/>ZzFXM Music</a> - ZzFXM Music System
-     * - Caches sounds and music for fast playback
-     * - Can attenuate and apply stereo panning to sounds
-     * - Ability to play mp3, ogg, and wave files
-     * - Speech synthesis functions
-     * @namespace Audio
-     */
-    /**
      * Sound Object - Stores a sound for later use and can be played positionally
      *
      * <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
@@ -1465,9 +1459,9 @@ declare module "littlejsengine" {
          *  @param {Number} [randomness] - How much to randomize frequency each time sound plays
          *  @param {Number} [range=soundDefaultRange] - World space max range of sound, will not play if camera is farther away
          *  @param {Number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering off
+         *  @param {Function} [onloadCallback] - callback function to call when sound is loaded
          */
-        constructor(filename: string, randomness?: number, range?: number, taper?: number);
-        randomness: number;
+        constructor(filename: string, randomness?: number, range?: number, taper?: number, onloadCallback?: Function);
     }
     /**
      * Music Object - Stores a zzfx music track for later use
@@ -1516,9 +1510,9 @@ declare module "littlejsengine" {
      *  @param {String}  filename - Location of sound file to play
      *  @param {Number}  [volume] - How much to scale volume by
      *  @param {Boolean} [loop] - True if the music should loop
-     *  @return {HTMLAudioElement} - The audio element for this sound
+     *  @return {SoundWave} - The sound object for this file
      *  @memberof Audio */
-    export function playAudioFile(filename: string, volume?: number, loop?: boolean): HTMLAudioElement;
+    export function playAudioFile(filename: string, volume?: number, loop?: boolean): SoundWave;
     /** Speak text with passed in settings
      *  @param {String} text - The text to speak
      *  @param {String} [language] - The language/accent to use (examples: en, it, ru, ja, zh)
@@ -1537,6 +1531,16 @@ declare module "littlejsengine" {
      *  @return {Number} - The frequency of the note
      *  @memberof Audio */
     export function getNoteFrequency(semitoneOffset: number, rootFrequency?: number): number;
+    /**
+     * LittleJS Audio System
+     * - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a> - ZzFX Sound Effect Generator
+     * - <a href=https://keithclark.github.io/ZzFXM/>ZzFXM Music</a> - ZzFXM Music System
+     * - Caches sounds and music for fast playback
+     * - Can attenuate and apply stereo panning to sounds
+     * - Ability to play mp3, ogg, and wave files
+     * - Speech synthesis functions
+     * @namespace Audio
+     */
     /** Audio context used by the engine
      *  @type {AudioContext}
      *  @memberof Audio */
@@ -1634,6 +1638,8 @@ declare module "littlejsengine" {
         spawnTime: number;
         /** @property {Array}   - List of children of this object */
         children: any[];
+        /** @property {Boolean}  - Limit object speed using linear or circular math */
+        clampSpeedLinear: boolean;
         /** @property {EngineObject} - Parent of object if in local space  */
         parent: any;
         /** @property {Vector2}      - Local position if child */

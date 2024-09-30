@@ -1135,14 +1135,15 @@ class Color
         ).clamp();
     }
 
-    /** Returns this color expressed as a rgb color code
+    /** Returns this color expressed as a hex color code
      * @param {Boolean} [useAlpha] - if alpha should be included in result
      * @return {String} */
-    toString(useAlpha = true)
-    {
-        return `rgb(${this.r*255},${this.g*255},${this.b*255},${useAlpha ? this.a : 0})`;
+    toString(useAlpha = true)      
+    { 
+        const toHex = (c)=> ((c=c*255|0)<16 ? '0' : '') + c.toString(16);
+        return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b) + (useAlpha ? toHex(this.a) : '');
     }
-
+    
     /** Set this color from a hex code
      * @param {String} hex - html hex code
      * @return {Color} */
@@ -1639,7 +1640,12 @@ function setSoundEnable(enable) { soundEnable = enable; }
 /** Set volume scale to apply to all sound, music and speech
  *  @param {Number} volume
  *  @memberof Settings */
-function setSoundVolume(volume) { soundVolume = volume; }
+function setSoundVolume(volume)
+{
+    soundVolume = volume;
+    if (soundEnable && !headlessMode && audioGainNode)
+        audioGainNode.gain.value = volume; // update gain immediatly
+}
 
 /** Set default range where sound no longer plays
  *  @param {Number} range
@@ -1772,6 +1778,8 @@ class EngineObject
         this.spawnTime = time;
         /** @property {Array}   - List of children of this object */
         this.children = [];
+        /** @property {Boolean}  - Limit object speed using linear or circular math */
+        this.clampSpeedLinear = true;
 
         // parent child system
         /** @property {EngineObject} - Parent of object if in local space  */
@@ -1820,8 +1828,21 @@ class EngineObject
             return;
 
         // limit max speed to prevent missing collisions
-        this.velocity.x = clamp(this.velocity.x, -objectMaxSpeed, objectMaxSpeed);
-        this.velocity.y = clamp(this.velocity.y, -objectMaxSpeed, objectMaxSpeed);
+        if (this.clampSpeedLinear)
+        {
+            this.velocity.x = clamp(this.velocity.x, -objectMaxSpeed, objectMaxSpeed);
+            this.velocity.y = clamp(this.velocity.y, -objectMaxSpeed, objectMaxSpeed);
+        }
+        else
+        {
+            const length2 = this.velocity.lengthSquared();
+            if (length2 > objectMaxSpeed*objectMaxSpeed)
+            {
+                const s = objectMaxSpeed / length2**.5;
+                this.velocity.x *= s;
+                this.velocity.y *= s;
+            }
+        }
 
         // apply physics
         const oldPos = this.pos.copy();
@@ -3104,6 +3125,32 @@ function touchGamepadRender()
 
 
 
+/** Audio context used by the engine
+ *  @type {AudioContext}
+ *  @memberof Audio */
+let audioContext;
+
+/** Master gain node for all audio to pass through
+ *  @type {GainNode}
+ *  @memberof Audio */
+let audioGainNode;
+
+function audioInit()
+{
+    if (!soundEnable || headlessMode) return;
+    
+    // create audio context
+    audioContext = new AudioContext;
+
+    // create and connect gain node
+    // (createGain is more widely spported then GainNode construtor)
+    audioGainNode = audioContext.createGain();
+    audioGainNode.connect(audioContext.destination);
+    setSoundVolume(soundVolume); // update gain volume
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 /** 
  * Sound Object - Stores a sound for later use and can be played positionally
  * 
@@ -3155,7 +3202,8 @@ class Sound
      */
     play(pos, volume=1, pitch=1, randomnessScale=1, loop=false)
     {
-        if (!soundEnable || !this.sampleChannels || headlessMode) return;
+        if (!soundEnable || headlessMode) return;
+        if (!this.sampleChannels) return;
 
         let pan;
         if (pos)
@@ -3232,16 +3280,14 @@ class SoundWave extends Sound
      *  @param {Number} [randomness] - How much to randomize frequency each time sound plays
      *  @param {Number} [range=soundDefaultRange] - World space max range of sound, will not play if camera is farther away
      *  @param {Number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering off
+     *  @param {Function} [onloadCallback] - callback function to call when sound is loaded
      */
-    constructor(filename, randomness=0, range, taper)
+    constructor(filename, randomness=0, range, taper, onloadCallback)
     {
         super(undefined, range, taper);
-        this.randomness = randomness;
-
         if (!soundEnable || headlessMode) return;
-        if (!audioContext)
-            audioContext = new AudioContext; // create audio context
 
+        this.randomness = randomness;
         fetch(filename)
         .then(response => response.arrayBuffer())
         .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
@@ -3251,8 +3297,21 @@ class SoundWave extends Sound
             for (let i = audioBuffer.numberOfChannels; i--;)
                 this.sampleChannels[i] = Array.from(audioBuffer.getChannelData(i));
             this.sampleRate = audioBuffer.sampleRate;
-        });
+        }).then(() => onloadCallback && onloadCallback(this));
     }
+}
+
+/** Play an mp3, ogg, or wav audio from a local file or url
+ *  @param {String}  filename - Location of sound file to play
+ *  @param {Number}  [volume] - How much to scale volume by
+ *  @param {Boolean} [loop] - True if the music should loop
+ *  @return {SoundWave} - The sound object for this file
+ *  @memberof Audio */
+function playAudioFile(filename, volume=1, loop=false)
+{
+    if (!soundEnable || headlessMode) return;
+
+    return new SoundWave(filename,0,0,0, s=>s.play(undefined, volume, 1, 1, loop));
 }
 
 /**
@@ -3309,23 +3368,6 @@ class Music extends Sound
     { return super.play(undefined, volume, 1, 1, loop); }
 }
 
-/** Play an mp3, ogg, or wav audio from a local file or url
- *  @param {String}  filename - Location of sound file to play
- *  @param {Number}  [volume] - How much to scale volume by
- *  @param {Boolean} [loop] - True if the music should loop
- *  @return {HTMLAudioElement} - The audio element for this sound
- *  @memberof Audio */
-function playAudioFile(filename, volume=1, loop=false)
-{
-    if (!soundEnable || headlessMode) return;
-
-    const audio = new Audio(filename);
-    audio.volume = soundVolume * volume;
-    audio.loop = loop;
-    audio.play();
-    return audio;
-}
-
 /** Speak text with passed in settings
  *  @param {String} text - The text to speak
  *  @param {String} [language] - The language/accent to use (examples: en, it, ru, ja, zh)
@@ -3336,7 +3378,8 @@ function playAudioFile(filename, volume=1, loop=false)
  *  @memberof Audio */
 function speak(text, language='', volume=1, rate=1, pitch=1)
 {
-    if (!soundEnable || !speechSynthesis || headlessMode) return;
+    if (!soundEnable || headlessMode) return;
+    if (!speechSynthesis) return;
 
     // common languages (not supported by all browsers)
     // en - english,  it - italian, fr - french,  de - german, es - spanish
@@ -3366,14 +3409,8 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** Audio context used by the engine
- *  @type {AudioContext}
- *  @memberof Audio */
-let audioContext;
-
-/** Keep track if audio was suspended when last sound was played
- *  @type {Boolean}
- *  @memberof Audio */
+// internal tracking if audio was suspended when last sound was played
+// allows first suspended sound to play when audio is resumed
 let audioSuspended = false;
 
 /** Play cached audio samples with given settings
@@ -3388,8 +3425,6 @@ let audioSuspended = false;
 function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=zzfxR) 
 {
     if (!soundEnable || headlessMode) return;
-    if (!audioContext)
-        audioContext = new AudioContext; // create audio context
 
     // prevent sounds from building up if they can't be played
     const audioWasSuspended = audioSuspended;
@@ -3413,10 +3448,13 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
     source.playbackRate.value = rate;
     source.loop = loop;
 
-    // create and connect gain node (createGain is more widely spported then GainNode construtor)
+    // set master gain volume
+    setSoundVolume(soundVolume);
+
+    // create and connect gain node
     const gainNode = audioContext.createGain();
-    gainNode.gain.value = soundVolume*volume;
-    gainNode.connect(audioContext.destination);
+    gainNode.gain.value = volume;
+    gainNode.connect(audioGainNode);
 
     // connect source to stereo panner and gain
     source.connect(new StereoPannerNode(audioContext, {'pan':clamp(pan, -1, 1)})).connect(gainNode);
@@ -4323,6 +4361,9 @@ class Particle extends EngineObject
         this.localSpaceEmitter = localSpaceEmitter;
         /** @property {Function} - Called when particle dies */
         this.destroyCallback = destroyCallback;
+
+        // particles use circular clamped speed
+        this.clampSpeedLinear = false;
     }
 
     /** Render the particle, automatically called each frame, sorted by renderOrder */
@@ -5102,7 +5143,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.9.6';
+const engineVersion = '1.9.7';
 
 /** Frames per second to update
  *  @type {Number}
@@ -5335,6 +5376,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
     // init stuff and start engine
     inputInit();
+    audioInit();
     debugInit();
     glInit();
 
@@ -5824,6 +5866,7 @@ export {
 	FontImage,
 	isFullscreen,
 	toggleFullscreen,
+	getCameraSize,
 
 	// WebGL
 	glCanvas,
