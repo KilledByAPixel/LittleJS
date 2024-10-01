@@ -76,6 +76,20 @@ function debugRect(pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)
     debugPrimitives.push({pos, size:vec2(size), color, time:new Timer(time), angle, fill});
 }
 
+/** Draw a debug poly in world space
+ *  @param {Vector2} pos
+ *  @param {Array}   points
+ *  @param {String}  [color]
+ *  @param {Number}  [time]
+ *  @param {Number}  [angle]
+ *  @param {Boolean} [fill]
+ *  @memberof Debug */
+function debugPoly(pos, points, color='#fff', time=0, angle=0, fill=false)
+{
+    ASSERT(typeof color == 'string', 'pass in css color strings'); 
+    debugPrimitives.push({pos, points, color, time:new Timer(time), angle, fill});
+}
+
 /** Draw a debug circle in world space
  *  @param {Vector2} pos
  *  @param {Number}  [radius]
@@ -235,7 +249,7 @@ function debugRender()
                 const stickScale = 1;
                 const buttonScale = .2;
                 const centerPos = cameraPos;
-                const sticks = stickData[i];
+                const sticks = gamepadStickData[i];
                 for (let j = sticks.length; j--;)
                 {
                     const drawPos = centerPos.add(vec2(j*stickScale*2, i*stickScale*3));
@@ -327,7 +341,20 @@ function debugRender()
                 overlayContext.textBaseline = 'middle';
                 overlayContext.fillText(p.text, 0, 0);
             }
-            else if (p.size == 0 || p.size.x === 0 && p.size.y === 0 )
+            else if (p.points != undefined)
+            {
+                // poly
+                overlayContext.beginPath();
+                for (const point of p.points)
+                {
+                    const p2 = point.scale(cameraScale).floor();
+                    overlayContext.lineTo(p2.x, -p2.y);
+                }
+                overlayContext.closePath();
+                p.fill && overlayContext.fill();
+                overlayContext.stroke();
+            }
+            else if (p.size == 0 || p.size.x === 0 && p.size.y === 0)
             {
                 // point
                 overlayContext.fillRect(-pointSize/2, -1, pointSize, 3);
@@ -336,7 +363,8 @@ function debugRender()
             else if (p.size.x != undefined)
             {
                 // rect
-                const w = p.size.x*cameraScale|0, h = p.size.y*cameraScale|0;
+                const s = p.size.scale(cameraScale).floor();
+                const w = s.x, h = s.y;
                 p.fill && overlayContext.fillRect(-w/2|0, -h/2|0, w, h);
                 overlayContext.strokeRect(-w/2|0, -h/2|0, w, h);
             }
