@@ -337,6 +337,10 @@ class Vector2
         this.y = y;
     }
 
+    /** Sets values of this vector and returns self
+     *  @return {Vector2} */
+    set(x=0, y=0) { this.x = x; this.y = y; return this; }
+
     /** Returns a new vector that is a copy of this
      *  @return {Vector2} */
     copy() { return new Vector2(this.x, this.y); }
