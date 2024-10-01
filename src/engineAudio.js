@@ -112,7 +112,17 @@ class Sound
 
         // play the sound
         const playbackRate = pitch + pitch * this.randomness*randomnessScale*rand(-1,1);
-        return this.source = playSamples(this.sampleChannels, volume, playbackRate, pan, loop, this.sampleRate);
+        this.gainNode = audioContext.createGain();
+        return this.source = playSamples(this.sampleChannels, volume, playbackRate, pan, loop, this.sampleRate, this.gainNode);
+    }
+
+    /** Set the sound volume
+     *  @param {Number}  [volume] - How much to scale volume by
+     */
+    setVolume(volume=1)
+    {
+        if (this.gainNode)
+            this.gainNode.gain.value = volume;
     }
 
     /** Stop the last instance of this sound that was played */
@@ -300,15 +310,16 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
 let audioSuspended = false;
 
 /** Play cached audio samples with given settings
- *  @param {Array}   sampleChannels - Array of arrays of samples to play (for stereo playback)
- *  @param {Number}  [volume] - How much to scale volume by
- *  @param {Number}  [rate] - The playback rate to use
- *  @param {Number}  [pan] - How much to apply stereo panning
- *  @param {Boolean} [loop] - True if the sound should loop when it reaches the end
- *  @param {Number}  [sampleRate=44100] - Sample rate for the sound
+ *  @param {Array}    sampleChannels - Array of arrays of samples to play (for stereo playback)
+ *  @param {Number}   [volume] - How much to scale volume by
+ *  @param {Number}   [rate] - The playback rate to use
+ *  @param {Number}   [pan] - How much to apply stereo panning
+ *  @param {Boolean}  [loop] - True if the sound should loop when it reaches the end
+ *  @param {Number}   [sampleRate=44100] - Sample rate for the sound
+ *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing
  *  @return {AudioBufferSourceNode} - The audio node of the sound played
  *  @memberof Audio */
-function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=zzfxR) 
+function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=zzfxR, gainNode) 
 {
     if (!soundEnable || headlessMode) return;
 
@@ -334,11 +345,8 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
     source.playbackRate.value = rate;
     source.loop = loop;
 
-    // set master gain volume
-    setSoundVolume(soundVolume);
-
     // create and connect gain node
-    const gainNode = audioContext.createGain();
+    gainNode = gainNode || audioContext.createGain();
     gainNode.gain.value = volume;
     gainNode.connect(audioGainNode);
 
