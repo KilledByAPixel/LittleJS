@@ -84,6 +84,22 @@ function setPaused(isPaused) { paused = isPaused; }
 let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
+// plugin hooks
+
+const pluginUpdateList = [], pluginRenderList = [];
+
+/** Add a new update function for a plugin
+ *  @param {Function} updateFunction
+ *  @memberof Engine */
+function addPluginUpdate(updateFunction) { pluginUpdateList.push(updateFunction); }
+
+/** Add a new render function for a plugin
+ *  @param {Function} renderFunction
+ *  @memberof Engine */
+function addPluginRender(renderFunction) { pluginRenderList.push(renderFunction); }
+
+///////////////////////////////////////////////////////////////////////////////
+// Main engine functions
 
 /** Startup LittleJS engine with your callback functions
  *  @param {Function} gameInit       - Called once after the engine starts up, setup the game
@@ -159,6 +175,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
                 // update game and objects
                 inputUpdate();
                 gameUpdate();
+                pluginUpdateList.forEach(f=>f());
                 engineObjectsUpdate();
 
                 // do post update
@@ -180,8 +197,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             for (const o of engineObjects)
                 o.destroyed || o.render();
             gameRenderPost();
-            glRenderPostProcess();
-            medalsRender();
+            pluginRenderList.forEach(f=>f());
             touchGamepadRender();
             debugRender();
             glCopyToContext(mainContext);
@@ -471,21 +487,23 @@ function drawEngineSplashScreen(t)
     x.setLineDash([99*p2,99]);
 
     // cab top
-    rect(7,17,18,-8,color(2,2));
-    rect(7,9,18,4,color(2,3));
-    rect(25,9,8,8,color(2,1));
-    rect(25,9,-18,8);
-    rect(25,9,8,8);
+    rect(7,16,18,-8,color(2,2));
+    rect(7,8,18,4,color(2,3));
+    rect(25,8,8,8,color(2,1));
+    rect(25,8,-18,8);
+    rect(25,8,8,8);
 
     // cab
-    rect(25,17,7,22,color());
-    rect(11,40,14,-23,color(1,1));
-    rect(11,17,14,17,color(1,2));
-    rect(11,17,14,9,color(1,3));
-    rect(15,31,6,-9,color(2,2));
-    circle(15,23,5,0,PI/2,color(2,4),1);
-    rect(25,17,-14,23);
-    rect(21,22,-6,9);
+    rect(25,16,7,23,color());
+    rect(11,39,14,-23,color(1,1));
+    rect(11,16,14,18,color(1,2));
+    rect(11,16,14,8,color(1,3));
+    rect(25,16,-14,24);
+
+    // cab window
+    rect(15,29,6,-9,color(2,2));
+    circle(15,21,5,0,PI/2,color(2,4),1);
+    rect(21,21,-6,9);
 
     // little stack
     rect(37,14,9,6,color(3,2));
@@ -493,16 +511,16 @@ function drawEngineSplashScreen(t)
     rect(37,14,9,6);
 
     // big stack
-    rect(50,20,10,-8,color(0,1))
-    rect(50,20,6.5,-8,color(0,2))
-    rect(50,20,3.5,-8,color(0,3))
-    rect(50,20,10,-8)
-    circle(55,2,11.4,.5,PI-.5,color(3,3))
-    circle(55,2,11.4,.5,PI/2,color(3,2),1)
-    circle(55,2,11.4,.5,PI-.5)
-    rect(45,7,20,-7,color(0,2))
-    rect(45,-1,20,4,color(0,3))
-    rect(45,-1,20,8)
+    rect(50,20,10,-8,color(0,1));
+    rect(50,20,6.5,-8,color(0,2));
+    rect(50,20,3.5,-8,color(0,3));
+    rect(50,20,10,-8);
+    circle(55,2,11.4,.5,PI-.5,color(3,3));
+    circle(55,2,11.4,.5,PI/2,color(3,2),1);
+    circle(55,2,11.4,.5,PI-.5);
+    rect(45,7,20,-7,color(0,2));
+    rect(45,-1,20,4,color(0,3));
+    rect(45,-1,20,8);
 
     // engine
     for (let i=5; i--;)

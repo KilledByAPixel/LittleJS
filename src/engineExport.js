@@ -29,13 +29,16 @@ export {
 	// Debug
 	ASSERT,
 	debugRect,
+	debugPoly,
 	debugCircle,
 	debugPoint,
 	debugLine,
-	debugAABB,
+	debugOverlap,
 	debugText,
 	debugClear,
 	debugSaveCanvas,
+	debugSaveText,
+	debugSaveDataURL,
 
 	// Settings
 	cameraPos,
@@ -187,7 +190,6 @@ export {
 	glCompileShader,
 	glCreateProgram,
 	glCreateTexture,
-	glInitPostProcess,
 
 	// Input
 	keyIsDown,
@@ -246,7 +248,5 @@ export {
 	medals,
 	medalsPreventUnlock,
 	medalsInit,
-	newgroundsInit,
 	Medal,
-	Newgrounds,
 };

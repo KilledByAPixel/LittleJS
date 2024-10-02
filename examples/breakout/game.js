@@ -38,7 +38,7 @@ function gameInit()
     new Wall(vec2(levelSize.x+.5,levelSize.y/2), vec2(1,100)) // left
     new Wall(vec2(levelSize.x/2,levelSize.y+.5), vec2(100,1)) // right
 
-    initPostProcess(); // set up a post processing shader
+    setupPostProcess(); // set up a post processing shader
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -80,7 +80,7 @@ function gameRenderPost()
 
 ///////////////////////////////////////////////////////////////////////////////
 // an example shader that can be used to apply a post processing effect
-function initPostProcess()
+function setupPostProcess()
 {
     const televisionShader = `
     // Simple TV Shader Code
@@ -130,7 +130,7 @@ function initPostProcess()
     }`;
 
     const includeOverlay = true;
-    glInitPostProcess(televisionShader, includeOverlay);
+    initPostProcess(televisionShader, includeOverlay);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

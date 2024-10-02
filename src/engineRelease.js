@@ -22,10 +22,13 @@ function debugInit       (){}
 function debugUpdate     (){}
 function debugRender     (){}
 function debugRect       (){}
+function debugPoly       (){}
 function debugCircle     (){}
 function debugPoint      (){}
 function debugLine       (){}
-function debugAABB       (){}
+function debugOverlap    (){}
 function debugText       (){}
 function debugClear      (){}
 function debugSaveCanvas (){}
+function debugSaveText   (){}
+function debugSaveDataURL(){}

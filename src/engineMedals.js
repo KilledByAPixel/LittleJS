@@ -9,9 +9,9 @@
 'use strict';
 
 /** List of all medals
- *  @type {Array}
+ *  @type {Object}
  *  @memberof Medals */
-const medals = [];
+const medals = {};
 
 // Engine internal variables not exposed to documentation
 let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimeLast;
@@ -27,8 +27,45 @@ function medalsInit(saveName)
 {
     // check if medals are unlocked
     medalsSaveName = saveName;
-    debugMedals || medals.forEach(medal=> medal.unlocked = (localStorage[medal.storageKey()] | 0));
+    if (!debugMedals)
+        medalsForEach(medal=> medal.unlocked = (localStorage[medal.storageKey()] | 0));
+
+    // engine automatically renders medals
+    addPluginRender(medalsRender);
+    function medalsRender()
+    {
+        if (!medalsDisplayQueue.length)
+            return;
+        
+        // update first medal in queue
+        const medal = medalsDisplayQueue[0];
+        const time = timeReal - medalsDisplayTimeLast;
+        if (!medalsDisplayTimeLast)
+            medalsDisplayTimeLast = timeReal;
+        else if (time > medalDisplayTime)
+        {
+            medalsDisplayTimeLast = 0;
+            medalsDisplayQueue.shift();
+        }
+        else
+        {
+            // slide on/off medals
+            const slideOffTime = medalDisplayTime - medalDisplaySlideTime;
+            const hidePercent = 
+                time < medalDisplaySlideTime ? 1 - time / medalDisplaySlideTime :
+                time > slideOffTime ? (time - slideOffTime) / medalDisplaySlideTime : 0;
+            medal.render(hidePercent);
+        }
+    }
 }
+
+/** Calls a function for each medal
+ *  @param {Function} callback
+ *  @memberof Medals */
+function medalsForEach(callback)
+{ Object.values(medals).forEach(medal=>callback(medal)); }
+
+///////////////////////////////////////////////////////////////////////////////
 
 /** 
  * Medal - Tracks an unlockable medal 
@@ -121,31 +158,4 @@ class Medal
  
     // Get local storage key used by the medal
     storageKey() { return medalsSaveName + '_' + this.id; }
-}
-
-// engine automatically renders medals
-function medalsRender()
-{
-    if (!medalsDisplayQueue.length)
-        return;
-    
-    // update first medal in queue
-    const medal = medalsDisplayQueue[0];
-    const time = timeReal - medalsDisplayTimeLast;
-    if (!medalsDisplayTimeLast)
-        medalsDisplayTimeLast = timeReal;
-    else if (time > medalDisplayTime)
-    {
-        medalsDisplayTimeLast = 0;
-        medalsDisplayQueue.shift();
-    }
-    else
-    {
-        // slide on/off medals
-        const slideOffTime = medalDisplayTime - medalDisplaySlideTime;
-        const hidePercent = 
-            time < medalDisplaySlideTime ? 1 - time / medalDisplaySlideTime :
-            time > slideOffTime ? (time - slideOffTime) / medalDisplaySlideTime : 0;
-        medal.render(hidePercent);
-    }
 }

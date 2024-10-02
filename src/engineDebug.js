@@ -99,7 +99,7 @@ function debugPoly(pos, points, color='#fff', time=0, angle=0, fill=false)
  *  @memberof Debug */
 function debugCircle(pos, radius=0, color='#fff', time=0, fill=false)
 {
-    ASSERT(typeof color == 'string', 'pass in css color strings');
+    ASSERT(typeof color == 'string', 'pass in css color strings'); 
     debugPrimitives.push({pos, size:radius, color, time:new Timer(time), angle:0, fill});
 }
 
@@ -109,7 +109,11 @@ function debugCircle(pos, radius=0, color='#fff', time=0, fill=false)
  *  @param {Number}  [time]
  *  @param {Number}  [angle]
  *  @memberof Debug */
-function debugPoint(pos, color, time, angle) {debugRect(pos, undefined, color, time, angle);}
+function debugPoint(pos, color, time, angle)
+{
+    ASSERT(typeof color == 'string', 'pass in css color strings'); 
+    debugRect(pos, undefined, color, time, angle);
+}
 
 /** Draw a debug line in world space
  *  @param {Vector2} posA
@@ -120,19 +124,20 @@ function debugPoint(pos, color, time, angle) {debugRect(pos, undefined, color, t
  *  @memberof Debug */
 function debugLine(posA, posB, color, thickness=.1, time)
 {
+    ASSERT(typeof color == 'string', 'pass in css color strings'); 
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);
     debugRect(posA.add(halfDelta), size, color, time, halfDelta.angle(), true);
 }
 
-/** Draw a debug axis aligned bounding box in world space
+/** Draw a debug combined axis aligned bounding box in world space
  *  @param {Vector2} pA - position A
  *  @param {Vector2} sA - size A
  *  @param {Vector2} pB - position B
  *  @param {Vector2} sB - size B
  *  @param {String}  [color]
  *  @memberof Debug */
-function debugAABB(pA, sA, pB, sB, color)
+function debugOverlap(pA, sA, pB, sB, color)
 {
     const minPos = vec2(min(pA.x - sA.x/2, pB.x - sB.x/2), min(pA.y - sA.y/2, pB.y - sB.y/2));
     const maxPos = vec2(max(pA.x + sA.x/2, pB.x + sB.x/2), max(pA.y + sA.y/2, pB.y + sB.y/2));
@@ -150,7 +155,7 @@ function debugAABB(pA, sA, pB, sB, color)
  *  @memberof Debug */
 function debugText(text, pos, size=1, color='#fff', time=0, angle=0, font='monospace')
 {
-    ASSERT(typeof color == 'string', 'pass in css color strings');
+    ASSERT(typeof color == 'string', 'pass in css color strings'); 
     debugPrimitives.push({text, pos, size, color, time:new Timer(time), angle, font});
 }
 
@@ -269,6 +274,7 @@ function debugRender()
         }
     }
 
+    let debugObject;
     if (debugOverlay)
     {
         const saveContext = mainContext;
@@ -279,11 +285,13 @@ function debugRender()
         debugRect(cameraPos, cameraSize.subtract(vec2(.1)), '#f008');
 
         // mouse pick
-        let bestDistance = Infinity, bestObject;
+        let bestDistance = Infinity;
         for (const o of engineObjects)
         {
             if (o.canvas || o.destroyed)
                 continue;
+
+            o.renderDebugInfo();
             if (!o.size.x || !o.size.y)
                 continue;
 
@@ -291,33 +299,15 @@ function debugRender()
             if (distance < bestDistance)
             {
                 bestDistance = distance;
-                bestObject = o;
+                debugObject = o;
             }
-
-            // show object info
-            const size = vec2(max(o.size.x, .2), max(o.size.y, .2));
-            const color1 = new Color(o.collideTiles?1:0, o.collideSolidObjects?1:0, o.isSolid?1:0, o.parent?.2:.5);
-            const color2 = o.parent ? new Color(1,1,1,.5) : new Color(0,0,0,.8);
-            drawRect(o.pos, size, color1, o.angle, false);
-            drawRect(o.pos, size.scale(.8), color2, o.angle, false);
-            o.parent && drawLine(o.pos, o.parent.pos, .1, new Color(0,0,1,.5), false);
-        }
-        
-        if (bestObject)
-        {
-            const raycastHitPos = tileCollisionRaycast(bestObject.pos, mousePos);
-            raycastHitPos && drawRect(raycastHitPos.floor().add(vec2(.5)), vec2(1), new Color(0,1,1,.3));
-            drawRect(mousePos.floor().add(vec2(.5)), vec2(1), new Color(0,0,1,.5), 0, false);
-            drawLine(mousePos, bestObject.pos, .1, raycastHitPos ? new Color(1,0,0,.5) : new Color(0,1,0,.5), false);
-
-            const debugText = 'mouse pos = ' + mousePos + 
-                '\nmouse collision = ' + getTileCollisionData(mousePos) + 
-                '\n\n--- object info ---\n' +
-                bestObject.toString();
-            drawTextScreen(debugText, mousePosScreen, 24, new Color, .05, undefined, 'center', 'monospace');
         }
 
-        glCopyToContext(mainContext = saveContext);
+        if (tileCollisionSize.x > 0 && tileCollisionSize.y > 0)
+            drawRect(mousePos.floor().add(vec2(.5)), vec2(1), rgb(0,0,1,.5), 0, false);
+        mainContext = saveContext;
+
+        //glCopyToContext(mainContext = saveContext);
     }
 
     {
@@ -382,6 +372,22 @@ function debugRender()
 
         // remove expired primitives
         debugPrimitives = debugPrimitives.filter(r=>r.time<0);
+    }
+    
+    if (debugObject)
+    {
+        const saveContext = mainContext;
+        mainContext = overlayContext;
+        const raycastHitPos = tileCollisionRaycast(debugObject.pos, mousePos);
+        raycastHitPos && drawRect(raycastHitPos.floor().add(vec2(.5)), vec2(1), rgb(0,1,1,.3));
+        drawLine(mousePos, debugObject.pos, .1, raycastHitPos ? rgb(1,0,0,.5) : rgb(0,1,0,.5), false);
+
+        const debugText = 'mouse pos = ' + mousePos + 
+            '\nmouse collision = ' + getTileCollisionData(mousePos) + 
+            '\n\n--- object info ---\n' +
+            debugObject.toString();
+        drawTextScreen(debugText, mousePosScreen, 24, rgb(), .05, undefined, 'center', 'monospace');
+        mainContext = saveContext;
     }
 
     {

@@ -205,7 +205,7 @@ class EngineObject
                     if (o.mass) // push away if not fixed
                         o.velocity = o.velocity.subtract(velocity);
                         
-                    debugOverlay && debugPhysics && debugAABB(this.pos, this.size, o.pos, o.size, '#f00');
+                    debugOverlay && debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f00');
                     continue;
                 }
 
@@ -267,7 +267,7 @@ class EngineObject
                     else // bounce if other object is fixed
                         this.velocity.x *= -elasticity;
                 }
-                debugOverlay && debugPhysics && debugAABB(this.pos, this.size, o.pos, o.size, '#f0f');
+                debugOverlay && debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f0f');
             }
         }
         if (this.collideTiles)
@@ -413,5 +413,17 @@ class EngineObject
                 text += '\ncolor = ' + this.color;
             return text;
         }
+    }
+
+    /** Render debug info for this object  */
+    renderDebugInfo()
+    {
+        // show object info for debugging
+        const size = vec2(max(this.size.x, .2), max(this.size.y, .2));
+        const color1 = rgb(this.collideTiles?1:0, this.collideSolidObjects?1:0, this.isSolid?1:0, this.parent?.2:.5);
+        const color2 = this.parent ? rgb(1,1,1,.5) : rgb(0,0,0,.8);
+        drawRect(this.pos, size, color1, this.angle, false);
+        drawRect(this.pos, size.scale(.8), color2, this.angle, false);
+        this.parent && drawLine(this.pos, this.parent.pos, .1, rgb(0,0,1,.5), false);
     }
 }
