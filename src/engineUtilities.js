@@ -754,6 +754,64 @@ class Color
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// default colors
+
+/** Color - White
+ *  @type {Color}
+ *  @memberof Utilities */
+const WHITE = rgb();
+
+/** Color - Black
+ *  @type {Color}
+ *  @memberof Utilities */
+const BLACK = rgb(0,0,0);
+
+/** Color - Gray
+ *  @type {Color}
+ *  @memberof Utilities */
+const GRAY = rgb(.5,.5,.5);
+
+/** Color - Red
+ *  @type {Color}
+ *  @memberof Utilities */
+const RED = rgb(1,0,0);
+
+/** Color - Orange
+ *  @type {Color}
+ *  @memberof Utilities */
+const ORANGE = rgb(1,.5,0);
+
+/** Color - Yellow
+ *  @type {Color}
+ *  @memberof Utilities */
+const YELLOW = rgb(1,1,0);
+
+/** Color - Green
+ *  @type {Color}
+ *  @memberof Utilities */
+const GREEN = rgb(0,1,0);
+
+/** Color - Cyan
+ *  @type {Color}
+ *  @memberof Utilities */
+const CYAN = rgb(0,1,1);
+
+/** Color - Blue
+ *  @type {Color}
+ *  @memberof Utilities */
+const BLUE = rgb(0,0,1);
+
+/** Color - Purple
+ *  @type {Color}
+ *  @memberof Utilities */
+const PURPLE = rgb(.5,0,1);
+
+/** Color - Magenta
+ *  @type {Color}
+ *  @memberof Utilities */
+const MAGENTA = rgb(1,0,1);
+
+///////////////////////////////////////////////////////////////////////////////
 
 /**
  * Timer object tracks how long has passed since it was set
