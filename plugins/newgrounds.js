@@ -1,18 +1,23 @@
 /** 
  * LittleJS Newgrounds API
+ * - NewgroundsMedal extends Medal with Newgrounds API functionality
+ * - Call newgroundsInit to enable Newgrounds functionality
+ * - Uses CryptoJS for encryption if optional cipher is provided
+ * - Keeps connection alive and logs views
+ * - Functions to interact with scoreboards
+ * - Functions to unlock medals
  */
 
 'use strict';
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/** Newgrounds medal auto unlocks in newgronds API */
 class NewgroundsMedal extends Medal
 {
     /** Create a medal object and adds it to the list of medals */
     constructor(id, name, description, icon, src)
-    {
-        super(id, name, description, icon, src);
-    }
+    { super(id, name, description, icon, src); }
 
     /** Unlocks a medal if not already unlocked */
     unlock()
@@ -83,8 +88,8 @@ class Newgrounds
                 medal.difficulty =  newgroundsMedal['difficulty'];
                 medal.value =       newgroundsMedal['value'];
 
-                if (medal.value)
-                    medal.description = medal.description + ' (' + medal.value + ')';
+                if (medal.value) // add value to description
+                    medal.description = medal.description + ` (${ medal.value })`;
             }
         }
     
@@ -93,6 +98,7 @@ class Newgrounds
         this.scoreboards = scoreboardResult ? scoreboardResult.result.data.scoreboards : [];
         debugMedals && console.log(this.scoreboards);
 
+        // keep the session alive with a ping every 5 minutes
         const keepAliveMS = 5 * 60 * 1e3;
         setInterval(()=>this.call('Gateway.ping', 0, true), keepAliveMS);
     }
