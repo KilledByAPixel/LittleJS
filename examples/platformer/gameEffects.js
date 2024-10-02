@@ -58,6 +58,8 @@ function explosion(pos, radius=3)
 {
     ASSERT(radius > 0);
 
+    sound_explosion.play(pos);
+
     // destroy level
     for (let x = -radius; x < radius; ++x)
     {
@@ -93,8 +95,6 @@ function explosion(pos, radius=3)
         if (o.isDead && o.isDead())
             o.angleVelocity += randSign()*rand(p*radius/4,.3);
     });
-
-    sound_explosion.play(pos);
 
     // smoke
     new ParticleEmitter(
