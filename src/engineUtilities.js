@@ -301,7 +301,7 @@ class RandomGenerator
  */
 function vec2(x=0, y)
 {
-    return typeof x === 'number' ? 
+    return typeof x == 'number' ? 
         new Vector2(x, y == undefined? x : y) : 
         new Vector2(x.x, x.y);
 }
@@ -330,7 +330,7 @@ class Vector2
      *  @param {Number} [y] - Y axis location */
     constructor(x=0, y=0)
     {
-        ASSERT(typeof x === 'number' && typeof y === 'number');
+        ASSERT(typeof x == 'number' && typeof y == 'number');
         /** @property {Number} - X axis location */
         this.x = x;
         /** @property {Number} - Y axis location */
@@ -338,8 +338,10 @@ class Vector2
     }
 
     /** Sets values of this vector and returns self
+     *  @param {Number} [x] - X axis location
+     *  @param {Number} [y] - Y axis location
      *  @return {Vector2} */
-    set(x=0, y=0) { this.x = x; this.y = y; return this; }
+    set(x=0, y=0) { this.x=x; this.y=y; return this; }
 
     /** Returns a new vector that is a copy of this
      *  @return {Vector2} */
@@ -591,6 +593,15 @@ class Color
         /** @property {Number} - Alpha */
         this.a = a;
     }
+
+    /** Sets values of this color and returns self
+     *  @param {Number} [r] - red
+     *  @param {Number} [g] - green
+     *  @param {Number} [b] - blue
+     *  @param {Number} [a] - alpha
+     *  @return {Color} */
+    set(r=1, g=1, b=1, a=1)
+    { this.r=r; this.g=g; this.b=b; this.a=a; return this; }
 
     /** Returns a new color that is a copy of this
      * @return {Color} */
