@@ -87,7 +87,7 @@ function glPreRender()
 
     // clear and set to same size as main canvas
     glContext.viewport(0, 0, glCanvas.width=mainCanvas.width, glCanvas.height=mainCanvas.height);
-    //glContext.clear(gl_COLOR_BUFFER_BIT); // auto cleared when size is set
+    glContext.clear(gl_COLOR_BUFFER_BIT);
 
     // set up the shader
     glContext.useProgram(glShader);
