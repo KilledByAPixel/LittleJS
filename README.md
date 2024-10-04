@@ -56,6 +56,7 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 
 - Robust arcade physics system with collision handling
 - Very fast collision and raycasting for tile maps
+- Full Box2d support using [super fast wasm build of box2d.js](https://github.com/kripken/box2d.js/)
 
 ### 🚀 Flexibility
 
