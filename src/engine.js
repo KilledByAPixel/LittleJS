@@ -30,7 +30,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.9.8';
+const engineVersion = '1.9.9';
 
 /** Frames per second to update
  *  @type {Number}
@@ -89,14 +89,14 @@ let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
 const pluginUpdateList = [], pluginRenderList = [];
 
 /** Add a new update function for a plugin
- *  @param {Function} updateFunction
+ *  @param {Function} [updateFunction]
+ *  @param {Function} [renderFunction]
  *  @memberof Engine */
-function addPluginUpdate(updateFunction) { pluginUpdateList.push(updateFunction); }
-
-/** Add a new render function for a plugin
- *  @param {Function} renderFunction
- *  @memberof Engine */
-function addPluginRender(renderFunction) { pluginRenderList.push(renderFunction); }
+function engineAddPlugin(updateFunction, renderFunction)
+{
+    updateFunction && pluginUpdateList.push(updateFunction);
+    renderFunction && pluginRenderList.push(renderFunction);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Main engine functions
@@ -269,10 +269,11 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     const styleBody = 
         'margin:0;overflow:hidden;' + // fill the window
         'background:#000;' +          // set background color
-        'touch-action:none;' +        // prevent mobile pinch to resize
-        'user-select:none;' +         // prevent mobile hold to select
+        'user-select:none;' +         // prevent hold to select
         '-webkit-user-select:none;' + // compatibility for ios
-        '-webkit-touch-callout:none'; // compatibility for ios
+        (!touchInputEnable ? '' :     // no touch css setttings
+        'touch-action:none;' +        // prevent mobile pinch to resize
+        '-webkit-touch-callout:none');// compatibility for ios
     document.body.style.cssText = styleBody;
     document.body.appendChild(mainCanvas = document.createElement('canvas'));
     mainContext = mainCanvas.getContext('2d');

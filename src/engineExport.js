@@ -20,6 +20,7 @@ export {
 	engineObjectsUpdate,
 	engineObjectsDestroy,
 	engineObjectsCallback,
+	engineAddPlugin,
 	
 	// Globals
 	debug,
@@ -101,6 +102,7 @@ export {
 	setObjectMaxSpeed,
 	setGravity,
 	setParticleEmitRateScale,
+	setTouchInputEnable,
 	setGamepadsEnable,
 	setGamepadDirectionEmulateStick,
 	setInputWASDEmulateDirection,

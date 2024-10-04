@@ -799,15 +799,16 @@ function box2dEngineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameR
         box2dWorld.SetDebugDraw(box2dDebugDraw);
 
         // hook up box2d plugin to update and render
-        addPluginUpdate(function()
+        engineAddPlugin(box2dUpdate, box2dRender);
+        function box2dUpdate()
         {
             box2dWorld.Step(timeDelta, box2dStepIterations, box2dStepIterations);
-        });
-        addPluginRender(function()
+        }
+        function box2dRender()
         {
             if (box2dDebug || debugPhysics && debugOverlay)
                 box2dWorld.DrawDebugData();
-        });
+        }
 
         // start littlejs
         engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources);
