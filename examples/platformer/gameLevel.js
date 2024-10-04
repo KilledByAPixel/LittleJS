@@ -3,7 +3,6 @@
     - Procedurally generates level geometry
     - Picks colors for the level and background
     - Creates ladders and spawns enemies and crates
-
 */
 
 'use strict';
