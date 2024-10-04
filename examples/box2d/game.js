@@ -54,9 +54,9 @@ function gameUpdate()
             mouseJoint = 0;
         }
     }
-    if (mouseWasPressed(1))
+    if (mouseWasPressed(1) || keyWasPressed('KeyZ'))
         spawnRandomObject(mousePos);
-    if (mouseWasPressed(2))
+    if (mouseWasPressed(2) || keyWasPressed('KeyX'))
         explosion(mousePos);
     if (mouseJoint)
         mouseJoint.SetTarget(mousePos.getBox2d());
@@ -113,14 +113,13 @@ function gameRenderPost()
     // draw to overlay canvas for hud rendering
     const pos = vec2(mainCanvasSize.x/2, 50);
     drawText('LittleJS Box2D Demo', 80, 80);
-    drawText(sceneName, 60, 90);
+    drawText(sceneName, 60, 100);
     if (scene == 0)
     {
         drawText('Mouse Left = Grab');
-        drawText('Mouse Middle = Spawn');
-        drawText('Mouse Right = Explode');
-        drawText('Mouse Middle = Spawn');
-        drawText('Arrows = Next Scene');
+        drawText('Mouse Middle or Z = Spawn');
+        drawText('Mouse Right or X = Explode');
+        drawText('Arrows Up/Down = Change Scene');
     }
     if (scene == 3)
     {
