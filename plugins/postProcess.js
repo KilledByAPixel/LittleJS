@@ -55,8 +55,7 @@ function initPostProcess(shaderCode, includeOverlay=false)
         overlayCanvas.style.visibility = 'hidden';
 
     // Render the post processing shader, called automatically by the engine
-    addPluginRender(glRenderPostProcess);
-    function glRenderPostProcess()
+    addPluginRender(function()
     {
         if (headlessMode) return;
         
@@ -98,5 +97,5 @@ function initPostProcess(shaderCode, includeOverlay=false)
         glContext.uniform1f(uniformLocation('iTime'), time);
         glContext.uniform3f(uniformLocation('iResolution'), mainCanvas.width, mainCanvas.height, 1);
         glContext.drawArrays(gl_TRIANGLE_STRIP, 0, 4);
-    }
+    });
 }
