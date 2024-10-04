@@ -85,6 +85,11 @@ declare module "littlejsengine" {
      *  @param {Array} [objects=engineObjects] - List of objects to check
      *  @memberof Engine */
     export function engineObjectsCallback(pos?: Vector2, size?: number | Vector2, callbackFunction?: Function, objects?: any[]): void;
+    /** Add a new update function for a plugin
+     *  @param {Function} [updateFunction]
+     *  @param {Function} [renderFunction]
+     *  @memberof Engine */
+    export function engineAddPlugin(updateFunction?: Function, renderFunction?: Function): void;
     /**
      * LittleJS Debug System
      * - Press Esc to show debug overlay with mouse pick
@@ -470,6 +475,10 @@ declare module "littlejsengine" {
      *  @param {Number} scale
      *  @memberof Settings */
     export function setParticleEmitRateScale(scale: number): void;
+    /** Set if touch input is allowed
+     *  @param {Boolean} enable
+     *  @memberof Settings */
+    export function setTouchInputEnable(enable: boolean): void;
     /** Set if gamepads are enabled
      *  @param {Boolean} enable
      *  @memberof Settings */
@@ -1306,6 +1315,7 @@ declare module "littlejsengine" {
      * - Tracks keyboard down, pressed, and released
      * - Tracks mouse buttons, position, and wheel
      * - Tracks multiple analog gamepads
+     * - Touch input is handled as mouse input
      * - Virtual gamepad for touch devices
      * @namespace Input
      */
@@ -1335,6 +1345,7 @@ declare module "littlejsengine" {
      * - Tracks keyboard down, pressed, and released
      * - Tracks mouse buttons, position, and wheel
      * - Tracks multiple analog gamepads
+     * - Touch input is handled as mouse input
      * - Virtual gamepad for touch devices
      * @namespace Input
      */

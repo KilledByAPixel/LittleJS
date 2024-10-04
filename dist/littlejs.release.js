@@ -1083,6 +1083,13 @@ let gamepadDirectionEmulateStick = true;
  *  @memberof Settings */
 let inputWASDEmulateDirection = true;
 
+/** True if touch input is enabled for mobile devices
+ *  - Touch events will be routed to mouse events
+ *  @type {Boolean}
+ *  @default
+ *  @memberof Settings */
+let touchInputEnable = true;
+
 /** True if touch gamepad should appear on mobile devices
  *  - Supports left analog stick, 4 face buttons and start button (button 9)
  *  - Must be set by end of gameInit to be activated
@@ -1297,6 +1304,11 @@ function setGamepadDirectionEmulateStick(enable) { gamepadDirectionEmulateStick 
  *  @param {Boolean} enable
  *  @memberof Settings */
 function setInputWASDEmulateDirection(enable) { inputWASDEmulateDirection = enable; }
+
+/** Set if touch input is allowed
+ *  @param {Boolean} enable
+ *  @memberof Settings */
+function setTouchInputEnable(enable) { touchInputEnable = enable; }
 
 /** Set if touch gamepad should appear on mobile devices
  *  @param {Boolean} enable
@@ -1818,13 +1830,16 @@ class EngineObject
     /** Render debug info for this object  */
     renderDebugInfo()
     {
-        // show object info for debugging
-        const size = vec2(max(this.size.x, .2), max(this.size.y, .2));
-        const color1 = rgb(this.collideTiles?1:0, this.collideSolidObjects?1:0, this.isSolid?1:0, this.parent?.2:.5);
-        const color2 = this.parent ? rgb(1,1,1,.5) : rgb(0,0,0,.8);
-        drawRect(this.pos, size, color1, this.angle, false);
-        drawRect(this.pos, size.scale(.8), color2, this.angle, false);
-        this.parent && drawLine(this.pos, this.parent.pos, .1, rgb(0,0,1,.5), false);
+        if (debug)
+        {
+            // show object info for debugging
+            const size = vec2(max(this.size.x, .2), max(this.size.y, .2));
+            const color1 = rgb(this.collideTiles?1:0, this.collideSolidObjects?1:0, this.isSolid?1:0, this.parent?.2:.5);
+            const color2 = this.parent ? rgb(1,1,1,.5) : rgb(0,0,0,.8);
+            drawRect(this.pos, size, color1, this.angle, false);
+            drawRect(this.pos, size.scale(.8), color2, this.angle, false);
+            this.parent && drawLine(this.pos, this.parent.pos, .1, rgb(0,0,1,.5), false);
+        }
     }
 }
 /** 
@@ -2331,6 +2346,7 @@ function toggleFullscreen()
  * - Tracks keyboard down, pressed, and released
  * - Tracks mouse buttons, position, and wheel
  * - Tracks multiple analog gamepads
+ * - Touch input is handled as mouse input
  * - Virtual gamepad for touch devices
  * @namespace Input
  */
@@ -2464,7 +2480,8 @@ function inputUpdate()
     if (headlessMode) return;
 
     // clear input when lost focus (prevent stuck keys)
-    isTouchDevice || document.hasFocus() || clearInput();
+    if(!(touchInputEnable && isTouchDevice) && !document.hasFocus())
+        clearInput();
 
     // update mouse world space position
     mousePos = screenToWorld(mousePosScreen);
@@ -2536,7 +2553,7 @@ function inputInit()
     oncontextmenu = (e)=> false; // prevent right click menu
 
     // init touch input
-    if (isTouchDevice)
+    if (isTouchDevice && touchInputEnable && !headlessMode)
         touchInputInit();
 }
 
@@ -2664,12 +2681,12 @@ function vibrateStop() { vibrate(0); }
 
 /** True if a touch device has been detected
  *  @memberof Input */
-const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
+const isTouchDevice = window.ontouchstart !== undefined;
 
 // touch gamepad internal variables
 let touchGamepadTimer = new Timer, touchGamepadButtons, touchGamepadStick;
 
-// try to enable touch mouse
+// enable touch input mouse passthrough
 function touchInputInit()
 {
     // add non passive touch event listeners
@@ -2778,6 +2795,7 @@ function touchInputInit()
 // render the touch gamepad, called automatically by the engine
 function touchGamepadRender()
 {
+    if (!touchInputEnable || !isTouchDevice || headlessMode) return;
     if (!touchGamepadEnable || !touchGamepadTimer.isSet())
         return;
     
@@ -4182,7 +4200,8 @@ function medalsInit(saveName)
         medalsForEach(medal=> medal.unlocked = (localStorage[medal.storageKey()] | 0));
 
     // engine automatically renders medals
-    addPluginRender(function()
+    engineAddPlugin(undefined, medalsRender);
+    function medalsRender()
     {
         if (!medalsDisplayQueue.length)
             return;
@@ -4206,7 +4225,7 @@ function medalsInit(saveName)
                 time > slideOffTime ? (time - slideOffTime) / medalDisplaySlideTime : 0;
             medal.render(hidePercent);
         }
-    });
+    }
 }
 
 /** Calls a function for each medal
@@ -4645,7 +4664,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.9.8';
+const engineVersion = '1.9.9';
 
 /** Frames per second to update
  *  @type {Number}
@@ -4704,14 +4723,14 @@ let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
 const pluginUpdateList = [], pluginRenderList = [];
 
 /** Add a new update function for a plugin
- *  @param {Function} updateFunction
+ *  @param {Function} [updateFunction]
+ *  @param {Function} [renderFunction]
  *  @memberof Engine */
-function addPluginUpdate(updateFunction) { pluginUpdateList.push(updateFunction); }
-
-/** Add a new render function for a plugin
- *  @param {Function} renderFunction
- *  @memberof Engine */
-function addPluginRender(renderFunction) { pluginRenderList.push(renderFunction); }
+function engineAddPlugin(updateFunction, renderFunction)
+{
+    updateFunction && pluginUpdateList.push(updateFunction);
+    renderFunction && pluginRenderList.push(renderFunction);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Main engine functions
@@ -4884,10 +4903,11 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     const styleBody = 
         'margin:0;overflow:hidden;' + // fill the window
         'background:#000;' +          // set background color
-        'touch-action:none;' +        // prevent mobile pinch to resize
-        'user-select:none;' +         // prevent mobile hold to select
+        'user-select:none;' +         // prevent hold to select
         '-webkit-user-select:none;' + // compatibility for ios
-        '-webkit-touch-callout:none'; // compatibility for ios
+        (!touchInputEnable ? '' :     // no touch css setttings
+        'touch-action:none;' +        // prevent mobile pinch to resize
+        '-webkit-touch-callout:none');// compatibility for ios
     document.body.style.cssText = styleBody;
     document.body.appendChild(mainCanvas = document.createElement('canvas'));
     mainContext = mainCanvas.getContext('2d');
