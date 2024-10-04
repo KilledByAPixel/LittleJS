@@ -113,7 +113,7 @@ function gameRenderPost()
     // draw to overlay canvas for hud rendering
     const pos = vec2(mainCanvasSize.x/2, 50);
     drawText('LittleJS Box2D Demo', 80, 80);
-    drawText(sceneName, 60, 110);
+    drawText(sceneName, 60, 90);
     if (scene == 0)
     {
         drawText('Mouse Left = Grab');
@@ -128,7 +128,7 @@ function gameRenderPost()
         drawText('Left = Reverse');
     }
 
-    function drawText(text, size=50, gap=60)
+    function drawText(text, size=40, gap=50)
     { drawTextScreen(text, pos, size, WHITE, 6); pos.y += gap; }
 }
 
