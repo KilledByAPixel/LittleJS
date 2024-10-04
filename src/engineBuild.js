@@ -137,7 +137,7 @@ function closureCompilerStep(filename)
     fs.copyFileSync(filename, filenameTemp);
     try
     {
-        child_process.execSync(`npx google-closure-compiler --js=${filenameTemp} --js_output_file=${filename} --language_out=ECMASCRIPT_2021 --warning_level=VERBOSE --jscomp_off=*`);
+        child_process.execSync(`npx google-closure-compiler --js=${filenameTemp} --js_output_file=${filename} --warning_level=VERBOSE --jscomp_off=*`);
         fs.rmSync(filenameTemp);
     }
     catch (e) { handleError(e, 'Failed to run Closure Compiler step!'); }
