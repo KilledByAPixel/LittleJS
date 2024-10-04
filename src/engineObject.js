@@ -328,6 +328,22 @@ class EngineObject
         for (const child of this.children)
             child.destroy(child.parent = 0);
     }
+
+    /** Convert from local space to world space
+     *  @param {Vector2} pos - local space point */
+    localToWorld(pos) { return this.pos.add(pos.rotate(-this.angle)); }
+
+    /** Convert from world space to local space
+     *  @param {Vector2} pos - world space point */
+    worldToLocal(pos) { return pos.subtract(this.pos).rotate(this.angle); }
+
+    /** Convert from local space to world space for a vector (rotation only)
+     *  @param {Vector2} vec - local space vector */
+    localToWorldVector(vec) { return vec.rotate(this.angle); }
+
+    /** Convert from world space to local space for a vector (rotation only)
+     *  @param {Vector2} vec - world space vector */
+    worldToLocalVector(vec) { return vec.rotate(-this.angle); }
     
     /** Called to check if a tile collision should be resolved
      *  @param {Number}  tileData - the value of the tile at the position
