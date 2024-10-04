@@ -638,6 +638,13 @@ function box2dCastObject(object)
     ASSERT(false, 'Unknown object type');
 }
 
+function box2dWarmup(frames=100)
+{
+    // run the sim for a few frames to let objects settle
+    for(let i=frames; i--;)
+        box2dWorld.Step(timeDelta, box2dStepIterations, box2dStepIterations);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Box2D Drawing
 
@@ -794,9 +801,7 @@ function box2dEngineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameR
         // hook up box2d plugin to update and render
         addPluginUpdate(function()
         {
-            const velocityIterations = box2dStepIterations;
-            const positionIterations = box2dStepIterations;
-            box2dWorld.Step(timeDelta, velocityIterations, positionIterations);
+            box2dWorld.Step(timeDelta, box2dStepIterations, box2dStepIterations);
         });
         addPluginRender(function()
         {
