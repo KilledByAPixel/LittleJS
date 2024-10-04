@@ -129,7 +129,7 @@ function gameRenderPost()
     }
 
     function drawText(text, size=40, gap=50)
-    { drawTextScreen(text, pos, size, WHITE, 6); pos.y += gap; }
+    { drawTextScreen(text, pos, size, WHITE, size*.1); pos.y += gap; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
