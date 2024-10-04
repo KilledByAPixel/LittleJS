@@ -3,6 +3,7 @@
  * - Tracks keyboard down, pressed, and released
  * - Tracks mouse buttons, position, and wheel
  * - Tracks multiple analog gamepads
+ * - Touch input is handled as mouse input
  * - Virtual gamepad for touch devices
  * @namespace Input
  */
@@ -136,7 +137,8 @@ function inputUpdate()
     if (headlessMode) return;
 
     // clear input when lost focus (prevent stuck keys)
-    isTouchDevice || document.hasFocus() || clearInput();
+    if(!(touchInputEnable && isTouchDevice) && !document.hasFocus())
+        clearInput();
 
     // update mouse world space position
     mousePos = screenToWorld(mousePosScreen);
@@ -208,7 +210,7 @@ function inputInit()
     oncontextmenu = (e)=> false; // prevent right click menu
 
     // init touch input
-    if (isTouchDevice)
+    if (isTouchDevice && touchInputEnable && !headlessMode)
         touchInputInit();
 }
 
@@ -336,12 +338,12 @@ function vibrateStop() { vibrate(0); }
 
 /** True if a touch device has been detected
  *  @memberof Input */
-const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
+const isTouchDevice = window.ontouchstart !== undefined;
 
 // touch gamepad internal variables
 let touchGamepadTimer = new Timer, touchGamepadButtons, touchGamepadStick;
 
-// try to enable touch mouse
+// enable touch input mouse passthrough
 function touchInputInit()
 {
     // add non passive touch event listeners
@@ -450,6 +452,7 @@ function touchInputInit()
 // render the touch gamepad, called automatically by the engine
 function touchGamepadRender()
 {
+    if (!touchInputEnable || !isTouchDevice || headlessMode) return;
     if (!touchGamepadEnable || !touchGamepadTimer.isSet())
         return;
     
