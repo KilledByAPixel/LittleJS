@@ -44,10 +44,10 @@ function loadScene(_scene)
     if (scene == 2)
     {
         sceneName = 'Dominoes';
-        spawnDominoes(vec2(11,11), 12);
-        spawnDominoes(vec2(2,0), 16, vec2(1,3));
+        spawnDominoes(vec2(11,11), 11);
+        spawnDominoes(vec2(2,0), 13, vec2(1,3));
         spawnCircle(vec2(10,20), 2, randColor());
-        spawnCircle(vec2(31,12), 2, randColor());
+        spawnCircle(vec2(31.7,12), 2, randColor());
         spawnBox(vec2(16,11), vec2(32,1), randColor(), box2dBodyTypeStatic, false);
         spawnBox(vec2(24,6.5), vec2(32,1), randColor(), box2dBodyTypeStatic, false, -.15);
     }
@@ -262,7 +262,7 @@ function loadScene(_scene)
     function spawnDominoes(pos, count, size=vec2(.5,2))
     {
         for (let i=count; i--;)
-            spawnBox(pos.add(vec2(i*size.y*.8,size.y/2)), size, randColor());
+            spawnBox(pos.add(vec2(i*size.y*.9,size.y/2)), size, randColor());
     }
     function spawnCar(pos)
     {
