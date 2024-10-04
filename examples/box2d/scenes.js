@@ -54,7 +54,7 @@ function loadScene(_scene)
     if (scene == 3)
     {
         sceneName = 'Car';
-        spawnCar(vec2(10,5));
+        spawnCar(vec2(10,2));
         spawnBox(vec2(20,0), vec2(10,2), randColor(), box2dBodyTypeStatic, false, -.2);
         spawnPyramid(vec2(32,0), 6);
     }
