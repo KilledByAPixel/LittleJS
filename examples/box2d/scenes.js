@@ -373,7 +373,7 @@ function spawnRandomObject(pos, scale=1, type=box2dBodyTypeDynamic, angle=0)
 const sound_click = new Sound([,.1]);
 const sound_explosion = new Sound([,.2,72,.01,.01,.2,4,,,,,,,1,,.5,.1,.5,.02]);
 
-function explosion(pos, radius=3, strength=500)
+function explosion(pos, radius=3, strength=300)
 {
     sound_explosion.play(pos);
     const objects = box2dCircleCastAll(pos, (radius*2));
