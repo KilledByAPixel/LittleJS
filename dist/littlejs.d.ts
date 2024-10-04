@@ -123,6 +123,15 @@ declare module "littlejsengine" {
      *  @param {Boolean} [fill]
      *  @memberof Debug */
     export function debugRect(pos: Vector2, size?: Vector2, color?: string, time?: number, angle?: number, fill?: boolean): void;
+    /** Draw a debug poly in world space
+     *  @param {Vector2} pos
+     *  @param {Array}   points
+     *  @param {String}  [color]
+     *  @param {Number}  [time]
+     *  @param {Number}  [angle]
+     *  @param {Boolean} [fill]
+     *  @memberof Debug */
+    export function debugPoly(pos: Vector2, points: any[], color?: string, time?: number, angle?: number, fill?: boolean): void;
     /** Draw a debug circle in world space
      *  @param {Vector2} pos
      *  @param {Number}  [radius]
@@ -146,14 +155,14 @@ declare module "littlejsengine" {
      *  @param {Number}  [time]
      *  @memberof Debug */
     export function debugLine(posA: Vector2, posB: Vector2, color?: string, thickness?: number, time?: number): void;
-    /** Draw a debug axis aligned bounding box in world space
+    /** Draw a debug combined axis aligned bounding box in world space
      *  @param {Vector2} pA - position A
      *  @param {Vector2} sA - size A
      *  @param {Vector2} pB - position B
      *  @param {Vector2} sB - size B
      *  @param {String}  [color]
      *  @memberof Debug */
-    export function debugAABB(pA: Vector2, sA: Vector2, pB: Vector2, sB: Vector2, color?: string): void;
+    export function debugOverlap(pA: Vector2, sA: Vector2, pB: Vector2, sB: Vector2, color?: string): void;
     /** Draw a debug axis aligned bounding box in world space
      *  @param {String}  text
      *  @param {Vector2} pos
@@ -173,6 +182,17 @@ declare module "littlejsengine" {
      *  @param {String}            [type]
      *  @memberof Debug */
     export function debugSaveCanvas(canvas: HTMLCanvasElement, filename?: string, type?: string): void;
+    /** Save a text file to disk
+     *  @param {String}     text
+     *  @param {String}     [filename]
+     *  @param {String}     [type]
+     *  @memberof Debug */
+    export function debugSaveText(text: string, filename?: string, type?: string): void;
+    /** Save a data url to disk
+     *  @param {String}     dataURL
+     *  @param {String}     filename
+     *  @memberof Debug */
+    export function debugSaveDataURL(dataURL: string, filename: string): void;
     /**
      * LittleJS Engine Settings
      * - All settings for the engine are here
@@ -190,7 +210,7 @@ declare module "littlejsengine" {
     export let cameraScale: number;
     /** The max size of the canvas, centered if window is larger
      *  @type {Vector2}
-     *  @default Vector2(1920,1200)
+     *  @default Vector2(1920,1080)
      *  @memberof Settings */
     export let canvasMaxSize: Vector2;
     /** Fixed size of the canvas, if enabled canvas size never changes
@@ -731,6 +751,11 @@ declare module "littlejsengine" {
         x: number;
         /** @property {Number} - Y axis location */
         y: number;
+        /** Sets values of this vector and returns self
+         *  @param {Number} [x] - X axis location
+         *  @param {Number} [y] - Y axis location
+         *  @return {Vector2} */
+        set(x?: number, y?: number): Vector2;
         /** Returns a new vector that is a copy of this
          *  @return {Vector2} */
         copy(): Vector2;
@@ -850,6 +875,13 @@ declare module "littlejsengine" {
         b: number;
         /** @property {Number} - Alpha */
         a: number;
+        /** Sets values of this color and returns self
+         *  @param {Number} [r] - red
+         *  @param {Number} [g] - green
+         *  @param {Number} [b] - blue
+         *  @param {Number} [a] - alpha
+         *  @return {Color} */
+        set(r?: number, g?: number, b?: number, a?: number): Color;
         /** Returns a new color that is a copy of this
          * @return {Color} */
         copy(): Color;
@@ -1269,11 +1301,6 @@ declare module "littlejsengine" {
      *  @return {WebGLTexture}
      *  @memberof WebGL */
     export function glCreateTexture(image: HTMLImageElement): WebGLTexture;
-    /** Set up a post processing shader
-     *  @param {String} shaderCode
-     *  @param {Boolean} includeOverlay
-     *  @memberof WebGL */
-    export function glInitPostProcess(shaderCode: string, includeOverlay?: boolean): void;
     /**
      * LittleJS Input System
      * - Tracks keyboard down, pressed, and released
@@ -1420,7 +1447,12 @@ declare module "littlejsengine" {
          *  @return {AudioBufferSourceNode} - The audio source node
          */
         play(pos?: Vector2, volume?: number, pitch?: number, randomnessScale?: number, loop?: boolean): AudioBufferSourceNode;
+        gainNode: GainNode;
         source: AudioBufferSourceNode;
+        /** Set the sound volume
+         *  @param {Number}  [volume] - How much to scale volume by
+         */
+        setVolume(volume?: number): void;
         /** Stop the last instance of this sound that was played */
         stop(): void;
         /** Get source of most recent instance of this sound that was played
@@ -1546,15 +1578,16 @@ declare module "littlejsengine" {
      *  @memberof Audio */
     export let audioContext: AudioContext;
     /** Play cached audio samples with given settings
-     *  @param {Array}   sampleChannels - Array of arrays of samples to play (for stereo playback)
-     *  @param {Number}  [volume] - How much to scale volume by
-     *  @param {Number}  [rate] - The playback rate to use
-     *  @param {Number}  [pan] - How much to apply stereo panning
-     *  @param {Boolean} [loop] - True if the sound should loop when it reaches the end
-     *  @param {Number}  [sampleRate=44100] - Sample rate for the sound
+     *  @param {Array}    sampleChannels - Array of arrays of samples to play (for stereo playback)
+     *  @param {Number}   [volume] - How much to scale volume by
+     *  @param {Number}   [rate] - The playback rate to use
+     *  @param {Number}   [pan] - How much to apply stereo panning
+     *  @param {Boolean}  [loop] - True if the sound should loop when it reaches the end
+     *  @param {Number}   [sampleRate=44100] - Sample rate for the sound
+     *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing
      *  @return {AudioBufferSourceNode} - The audio node of the sound played
      *  @memberof Audio */
-    export function playSamples(sampleChannels: any[], volume?: number, rate?: number, pan?: number, loop?: boolean, sampleRate?: number): AudioBufferSourceNode;
+    export function playSamples(sampleChannels: any[], volume?: number, rate?: number, pan?: number, loop?: boolean, sampleRate?: number, gainNode?: GainNode): AudioBufferSourceNode;
     /** Generate and play a ZzFX sound
      *
      *  <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
@@ -1664,6 +1697,18 @@ declare module "littlejsengine" {
         /** Destroy this object, destroy it's children, detach it's parent, and mark it for removal */
         destroy(): void;
         destroyed: number;
+        /** Convert from local space to world space
+         *  @param {Vector2} pos - local space point */
+        localToWorld(pos: Vector2): Vector2;
+        /** Convert from world space to local space
+         *  @param {Vector2} pos - world space point */
+        worldToLocal(pos: Vector2): Vector2;
+        /** Convert from local space to world space for a vector (rotation only)
+         *  @param {Vector2} vec - local space vector */
+        localToWorldVector(vec: Vector2): Vector2;
+        /** Convert from world space to local space for a vector (rotation only)
+         *  @param {Vector2} vec - world space vector */
+        worldToLocalVector(vec: Vector2): Vector2;
         /** Called to check if a tile collision should be resolved
          *  @param {Number}  tileData - the value of the tile at the position
          *  @param {Vector2} pos      - tile where the collision occured
@@ -1703,6 +1748,8 @@ declare module "littlejsengine" {
         /** Returns string containg info about this object for debugging
          *  @return {String} */
         toString(): string;
+        /** Render debug info for this object  */
+        renderDebugInfo(): void;
     }
     /**
      * LittleJS Tile Layer System
@@ -2011,9 +2058,9 @@ declare module "littlejsengine" {
      * @namespace Medals
      */
     /** List of all medals
-     *  @type {Array}
+     *  @type {Object}
      *  @memberof Medals */
-    export const medals: any[];
+    export const medals: any;
     /** Set to stop medals from being unlockable (like if cheats are enabled)
      *  @type {Boolean}
      *  @default
@@ -2025,12 +2072,6 @@ declare module "littlejsengine" {
      *  @param {String} saveName
      *  @memberof Medals */
     export function medalsInit(saveName: string): void;
-    /** This can used to enable Newgrounds functionality
-     *  @param {Number} app_id   - The newgrounds App ID
-     *  @param {String} [cipher] - The encryption Key (AES-128/Base64)
-     *  @param {Object} [cryptoJS] - An instance of CryptoJS, if there is a cipher
-     *  @memberof Medals */
-    export function newgroundsInit(app_id: number, cipher?: string, cryptoJS?: any): void;
     /**
      * Medal - Tracks an unlockable medal
      * @example
@@ -2070,51 +2111,5 @@ declare module "littlejsengine" {
          */
         renderIcon(pos: Vector2, size?: number): void;
         storageKey(): string;
-    }
-    /**
-     * Newgrounds API wrapper object
-     * @example
-     * // create a newgrounds object, replace the app id with your own
-     * const app_id = '53123:1ZuSTQ9l';
-     * newgrounds = new Newgrounds(app_id);
-     */
-    export class Newgrounds {
-        /** Create a newgrounds object
-         *  @param {Number} app_id   - The newgrounds App ID
-         *  @param {String} [cipher] - The encryption Key (AES-128/Base64)
-         *  @param {Object} [cryptoJS] - An instance of CryptoJS, if there is a cipher */
-        constructor(app_id: number, cipher?: string, cryptoJS?: any);
-        app_id: number;
-        cipher: string;
-        cryptoJS: any;
-        host: string;
-        session_id: string;
-        medals: any;
-        scoreboards: any;
-        /** Send message to unlock a medal by id
-         * @param {Number} id - The medal id */
-        unlockMedal(id: number): any;
-        /** Send message to post score
-         * @param {Number} id    - The scoreboard id
-         * @param {Number} value - The score value */
-        postScore(id: number, value: number): any;
-        /** Get scores from a scoreboard
-         * @param {Number} id       - The scoreboard id
-         * @param {String} [user]   - A user's id or name
-         * @param {Number} [social] - If true, only social scores will be loaded
-         * @param {Number} [skip]   - Number of scores to skip before start
-         * @param {Number} [limit]  - Number of scores to include in the list
-         * @return {Object}         - The response JSON object
-         */
-        getScores(id: number, user?: string, social?: number, skip?: number, limit?: number): any;
-        /** Send message to log a view */
-        logView(): any;
-        /** Send a message to call a component of the Newgrounds API
-         * @param {String}  component    - Name of the component
-         * @param {Object}  [parameters] - Parameters to use for call
-         * @param {Boolean} [async]      - If true, don't wait for response before continuing
-         * @return {Object}              - The response JSON object
-         */
-        call(component: string, parameters?: any, async?: boolean): any;
     }
 }
