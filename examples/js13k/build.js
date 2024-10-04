@@ -42,6 +42,7 @@ Build
     `${BUILD_FOLDER}/index.js`,
     sourceFiles,
     [closureCompilerStep, uglifyBuildStep, roadrollerBuildStep, htmlBuildStep, zipBuildStep]
+   //[closureCompilerSimpleStep, htmlBuildStep] // for build debugging
 );
 
 console.log(``);
@@ -73,7 +74,17 @@ function closureCompilerStep(filename)
 
     const filenameTemp = filename + '.tmp';
     fs.copyFileSync(filename, filenameTemp);
-    child_process.execSync(`npx google-closure-compiler --js=${filenameTemp} --js_output_file=${filename} --compilation_level=ADVANCED --language_out=ECMASCRIPT_2021 --warning_level=VERBOSE --jscomp_off=* --assume_function_wrapper`, {stdio: 'inherit'});
+    child_process.execSync(`npx google-closure-compiler --js=${filenameTemp} --js_output_file=${filename} --compilation_level=ADVANCED --warning_level=VERBOSE --jscomp_off=* --assume_function_wrapper`, {stdio: 'inherit'});
+    fs.rmSync(filenameTemp);
+};
+
+function closureCompilerSimpleStep(filename)
+{
+    console.log(`Running closure compiler in simple mode...`);
+
+    const filenameTemp = filename + '.tmp';
+    fs.copyFileSync(filename, filenameTemp);
+    child_process.execSync(`npx google-closure-compiler --js=${filenameTemp} --js_output_file=${filename} --compilation_level=SIMPLE --warning_level=VERBOSE --jscomp_off=* --assume_function_wrapper`, {stdio: 'inherit'});
     fs.rmSync(filenameTemp);
 };
 
@@ -87,6 +98,13 @@ function roadrollerBuildStep(filename)
 {
     console.log(`Running roadroller...`);
     child_process.execSync(`npx roadroller ${filename} -o ${filename}`, {stdio: 'inherit'});
+};
+
+function roadrollerExtremeBuildStep(filename)
+{
+    // this takes over a minute to run but might be a little smaller
+    console.log(`Running roadroller extreme...`);
+    child_process.execSync(`npx roadroller ${filename} -o ${filename} --optimize 2`, {stdio: 'inherit'});
 };
 
 function htmlBuildStep(filename)

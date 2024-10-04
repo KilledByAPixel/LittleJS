@@ -68,7 +68,7 @@ function closureCompilerStep(filename)
 
     const filenameTemp = filename + '.tmp';
     fs.copyFileSync(filename, filenameTemp);
-    child_process.execSync(`npx google-closure-compiler --js=${filenameTemp} --js_output_file=${filename} --compilation_level=ADVANCED --language_out=ECMASCRIPT_2021 --warning_level=VERBOSE --jscomp_off=* --assume_function_wrapper`, {stdio: 'inherit'});
+    child_process.execSync(`npx google-closure-compiler --js=${filenameTemp} --js_output_file=${filename} --compilation_level=ADVANCED --warning_level=VERBOSE --jscomp_off=* --assume_function_wrapper`, {stdio: 'inherit'});
     fs.rmSync(filenameTemp);
 };
 
