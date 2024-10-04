@@ -26,9 +26,9 @@ let cameraScale = 32;
 
 /** The max size of the canvas, centered if window is larger
  *  @type {Vector2}
- *  @default Vector2(1920,1200)
+ *  @default Vector2(1920,1080)
  *  @memberof Settings */
-let canvasMaxSize = vec2(1920, 1200);
+let canvasMaxSize = vec2(1920, 1080);
 
 /** Fixed size of the canvas, if enabled canvas size never changes
  * - you may also need to set mainCanvasSize if using screen space coords in startup
