@@ -77,7 +77,7 @@ function loadScene(_scene)
     }
     if (scene == 5)
     {
-        sceneName = 'Raycast';
+        sceneName = 'Raycasts';
         spawnRandomEdges();
         for (let i=100;i--;)
             spawnRandomObject(vec2(rand(1,39), rand(20)), 2, box2dBodyTypeStatic, rand(PI*2));
