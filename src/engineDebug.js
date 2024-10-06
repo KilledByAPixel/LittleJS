@@ -322,7 +322,7 @@ function debugRender()
             const pos = worldToScreen(p.pos);
             overlayContext.translate(pos.x|0, pos.y|0);
             overlayContext.rotate(p.angle);
-            overlayContext.scale(1, -1);
+            overlayContext.scale(1, p.text ? 1 : -1);
             overlayContext.fillStyle = overlayContext.strokeStyle = p.color;
 
             if (p.text != undefined)
