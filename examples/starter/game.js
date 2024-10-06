@@ -63,7 +63,7 @@ function gameInit()
     // create particle emitter
     particleEmitter = new ParticleEmitter(
         vec2(16,9), 0,              // emitPos, emitAngle
-        1, 0, 500, PI,              // emitSize, emitTime, emitRate, emiteCone
+        0, 0, 500, PI,              // emitSize, emitTime, emitRate, emiteCone
         tile(0, 16),                // tileIndex, tileSize
         hsl(1,1,1),   hsl(0,0,0),   // colorStartA, colorStartB
         hsl(0,0,0,0), hsl(0,0,0,0), // colorEndA, colorEndB
