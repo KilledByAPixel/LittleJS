@@ -210,6 +210,7 @@ Here are a few of the amazing games people made using LittleJS...
 - [Data Warrior: 13kb limit](https://js13kgames.com/2024/games/data-warrior-13kb-limit) - Vampire Survivors-like game by [rndD](https://github.com/rndD)
 - [The Way of the Dodo](https://js13kgames.com/2024/games/the-way-of-the-dodo) - Single button platformer by [repsej](https://github.com/repsej)
 - [Wendol Village](https://js13kgames.com/2024/games/wendol-village) - Warcraft-like RTS game by [sanojian](https://github.com/sanojian)
+- [Unblock](https://js13kgames.com/games/unblock) - Retro style space shooter by [Isaac Benitez](https://github.com/isacben)
 
 ![LittleJS Logo](examples/favicon.png)
 
