@@ -73,6 +73,7 @@ class Sound
             // generate zzfx sound now for fast playback
             const defaultRandomness = .05;
             this.randomness = zzfxSound[1] || defaultRandomness;
+            zzfxSound[1] = 0; // generate without randomness
             this.sampleChannels = [zzfxG(...zzfxSound)];
             this.sampleRate = zzfxR;
         }
@@ -305,10 +306,6 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// internal tracking if audio was suspended when last sound was played
-// allows first suspended sound to play when audio is resumed
-let audioSuspended = false;
-
 /** Play cached audio samples with given settings
  *  @param {Array}    sampleChannels - Array of arrays of samples to play (for stereo playback)
  *  @param {Number}   [volume] - How much to scale volume by
@@ -324,20 +321,21 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
     if (!soundEnable || headlessMode) return;
 
     // prevent sounds from building up if they can't be played
-    const audioWasSuspended = audioSuspended;
-    if (audioSuspended = audioContext.state != 'running')
+    if (audioContext.state != 'running')
     {
         // fix stalled audio
-        audioContext.resume();
+        audioContext.resume().then(()=>
+            playSamples(sampleChannels, volume, rate, pan, loop, sampleRate, gainNode));
 
         // prevent suspended sounds from building up
-        if (audioWasSuspended)
-            return;
+        return;
     }
 
     // create buffer and source
-    const buffer = audioContext.createBuffer(sampleChannels.length, sampleChannels[0].length, sampleRate), 
-        source = audioContext.createBufferSource();
+    const channelCount = sampleChannels.length;
+    const sampleLength = sampleChannels[0].length;
+    const buffer = audioContext.createBuffer(channelCount, sampleLength, sampleRate);
+    const source = audioContext.createBufferSource();
 
     // copy samples to buffer and setup source
     sampleChannels.forEach((c,i)=> buffer.getChannelData(i).set(c));
@@ -351,7 +349,8 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
     gainNode.connect(audioGainNode);
 
     // connect source to stereo panner and gain
-    source.connect(new StereoPannerNode(audioContext, {'pan':clamp(pan, -1, 1)})).connect(gainNode);
+    const pannerNode = new StereoPannerNode(audioContext, {'pan':clamp(pan, -1, 1)});
+    source.connect(pannerNode).connect(gainNode);
 
     // play and return sound
     source.start();
@@ -367,7 +366,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
  *  @param {Array} zzfxSound - Array of ZzFX parameters, ex. [.5,.5]
  *  @return {AudioBufferSourceNode} - The audio node of the sound played
  *  @memberof Audio */
-function zzfx(...zzfxSound) { return new Sound(zzfxSound).play(); }
+function zzfx(...zzfxSound) { return playSamples([zzfxG(...zzfxSound)]); }
 
 /** Sample rate used for all ZzFX sounds
  *  @default 44100
@@ -376,7 +375,7 @@ const zzfxR = 44100;
 
 /** Generate samples for a ZzFX sound
  *  @param {Number}  [volume] - Volume scale (percent)
- *  @param {Number}  [randomness] - Unused in this fuction, handled by Sound class
+ *  @param {Number}  [randomness] - How much to randomize frequency (percent Hz)
  *  @param {Number}  [frequency] - Frequency of sound (Hz)
  *  @param {Number}  [attack] - Attack time, how fast sound starts (seconds)
  *  @param {Number}  [sustain] - Sustain time, how long sound holds (seconds)
@@ -402,7 +401,7 @@ const zzfxR = 44100;
 function zzfxG
 (
     // parameters
-    volume = 1, randomness = 0, frequency = 220, attack = 0, sustain = 0,
+    volume = 1, randomness = .05, frequency = 220, attack = 0, sustain = 0,
     release = .1, shape = 0, shapeCurve = 1, slide = 0, deltaSlide = 0,
     pitchJump = 0, pitchJumpTime = 0, repeatTime = 0, noise = 0, modulation = 0,
     bitCrush = 0, delay = 0, sustainVolume = 1, decay = 0, tremolo = 0, filter = 0
@@ -413,7 +412,8 @@ function zzfxG
     // init parameters
     let PI2 = PI*2, sampleRate = zzfxR,
         startSlide = slide *= 500 * PI2 / sampleRate / sampleRate,
-        startFrequency = frequency *= PI2 / sampleRate,
+        startFrequency = frequency *= 
+            rand(1 + randomness, 1-randomness) * PI2 / sampleRate,
         b = [], t = 0, tm = 0, i = 0, j = 1, r = 0, c = 0, s = 0, f, length,
 
         // biquad LP/HP filter
