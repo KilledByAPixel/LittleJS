@@ -190,8 +190,23 @@ function debugSaveDataURL(dataURL, filename)
     downloadLink.click();
 }
 
+/** Show error as full page of red text
+ *  @memberof Debug */
+function debugShowErrors()
+{
+    onunhandledrejection = (event)=>showError(event.reason);
+    onerror = (event, source, lineno, colno)=>
+        showError(`${event}\n${source}\nLn ${lineno}, Col ${colno}`);
+
+    const showError = (message)=>
+    {
+        document.body.style.backgroundColor = '#111';
+        document.body.innerHTML = `<pre style=color:#f00;font-size:50px>` + message;
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-// Engine debug function (called automatically)
+// Engine debug functions (called automatically)
 
 function debugInit()
 {
