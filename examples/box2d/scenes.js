@@ -5,6 +5,7 @@
 
 'use strict';
 
+//box2dDebug = 1; // enable box2d debug draw  
 function loadScene(_scene)
 {
     scene = _scene;
@@ -224,6 +225,117 @@ function loadScene(_scene)
         const mobile = spawnMobile(pos, 12, 2, 5);
         box2dCreateRevoluteJoint(groundObject, mobile, pos);
     }
+    if (scene == 9)
+    {
+        sceneName = 'Cloth';
+
+        class ClothObjectNode extends Box2dObject
+        {
+            constructor(pos,diameter)
+            {
+                super(pos, vec2(.4), tile(0),0, BLACK);
+                this.addCircle(diameter);
+                this.setFilterData(1,1);
+                this.joints = [];
+            }
+
+            makeJoint(other)
+            {
+                if (!other)
+                    return;
+                    
+                box2dCreateRopeJoint(this, other);
+            }
+
+        }
+        class ClothObject extends Box2dObject
+        {
+            constructor(pos, size, sizeCount)
+            {
+                super(pos, vec2(), 0, 0, BLACK, box2dBodyTypeStatic);
+                const nodeSize = sizeCount.subtract(vec2(1));
+                const spacing = size.divide(nodeSize);
+                const minNodeSpace = min(spacing.x,spacing.y);
+                this.gravityScale = 0;
+                this.sizeCount = sizeCount.copy();
+                this.lineWidth = .2;
+                this.nodes = [];
+                for (let y=sizeCount.y; y--;)
+                for (let x=sizeCount.y;  x--;)
+                {
+                    const p = pos.add(vec2(x-nodeSize.x/2,y-nodeSize.y/2).multiply(spacing));
+                    const o = new ClothObjectNode(p, minNodeSpace);
+                    this.nodes.push(o);
+                }
+                for (let y=sizeCount.y; y--;)
+                for (let x=sizeCount.x; x--;)
+                {
+                    // attach neighbors
+                    const o = this.getNode(x, y);
+                    const tryAddJoint = (ox,oy) =>
+                    { o.makeJoint(this.getNode(x+ox, y+oy)); }
+                    tryAddJoint(1,0);
+                    tryAddJoint(0,1);
+                    tryAddJoint(1,1);
+                    tryAddJoint(1,-1);
+                    y || box2dCreatePinJoint(this, o);
+                }
+
+            }
+            getNode(x, y) 
+            {
+                if (vec2(x,y).arrayCheck(this.sizeCount))
+                    return this.nodes[y*this.sizeCount.x+x];
+            }
+            render()
+            {
+                // draw background fill
+                const fillBackground = (context)=>
+                {
+                    for (let y=this.sizeCount.y; y--;)
+                    for (let x=this.sizeCount.x; x--;)
+                    {
+                        const o = this.getNode(x, y);
+                        const n1 = this.getNode(x+1, y);
+                        const n2 = this.getNode(x, y+1);
+                        const n3 = this.getNode(x+1, y+1);
+                        if (!o || !n1 || !n2|| !n3) continue;
+
+                        const color = o.color.copy();
+                        color.a = .5;
+                        context.fillStyle = color.toString();
+                        context.beginPath();
+                        context.lineTo(o.pos.x, o.pos.y);
+                        context.lineTo(n1.pos.x, n1.pos.y);
+                        context.lineTo(n3.pos.x, n3.pos.y);
+                        context.lineTo(n2.pos.x, n2.pos.y);
+                        context.fill();
+                    }
+                }
+
+                if (this.fillBackground)
+                    drawCanvas2D(vec2(), vec2(1), 0, 0, fillBackground, 0, mainContext);
+
+                // draw connection lines
+                for (let y=this.sizeCount.y; y--;)
+                for (let x=this.sizeCount.x; x--;)
+                {
+                    const o = this.getNode(x, y);
+                    if (!o) continue;
+                    const drawConnection = (ox, oy)=>
+                    {
+                        const n = this.getNode(x+ox, y+oy);
+                        n && drawLine(p, n.pos, this.lineWidth, o.color);
+                    }
+                    const p = o.pos;
+                    drawConnection(1,0);
+                    drawConnection(0,1);
+                }
+            }
+        }
+        
+        new ClothObject(vec2(20, 9), vec2(15), vec2(20));
+    }
     
     // helper functions
     function spawnRandomEdges()
@@ -316,7 +428,7 @@ function loadScene(_scene)
             o.addBox(vec2(w, h/4), vec2(0, -h/2));
 
             // spawn smaller mobiles attached to each side
-            for(let i=2; i--;)
+            for (let i=2; i--;)
             {
                 const a = anchor.add(vec2( w/2*(i?1:-1), -h));
                 const o2 = spawnMobile(a, w/2, h, depth);
