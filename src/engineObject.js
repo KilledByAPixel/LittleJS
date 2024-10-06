@@ -153,9 +153,9 @@ class EngineObject
 
         // apply physics
         const oldPos = this.pos.copy();
-        this.velocity.y += gravity * this.gravityScale;
         this.pos.x += this.velocity.x *= this.damping;
-        this.pos.y += this.velocity.y *= this.damping;
+        this.pos.y += this.velocity.y = this.damping * this.velocity.y 
+            + gravity * this.gravityScale;
         this.angle += this.angleVelocity *= this.angleDamping;
 
         // physics sanity checks
@@ -284,19 +284,22 @@ class EngineObject
                     const isBlockedX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
                     if (isBlockedY || !isBlockedX)
                     {
-                        // set if landed on ground
-                        this.groundObject = wasMovingDown;
-
                         // bounce velocity
                         this.velocity.y *= -this.elasticity;
 
-                        // adjust next velocity to settle on ground
-                        const o = (oldPos.y - this.size.y/2|0) - (oldPos.y - this.size.y/2);
-                        if (o < 0 && o > this.damping * this.velocity.y + gravity * this.gravityScale) 
-                            this.velocity.y = this.damping ? (o - gravity * this.gravityScale) / this.damping : 0;
-
-                        // move to previous position
-                        this.pos.y = oldPos.y;
+                        // set if landed on ground
+                        if (this.groundObject = wasMovingDown)
+                        {
+                            // adjust position to slightly above nearest tile boundary
+                            // this prevents gap between object and ground
+                            const epsilon = .0001;
+                            this.pos.y = (oldPos.y-this.size.y/2|0)+this.size.y/2+epsilon;
+                        }
+                        else
+                        {
+                            // move to previous position
+                            this.pos.y = oldPos.y;
+                        }
                     }
                     if (isBlockedX)
                     {
