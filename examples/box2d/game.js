@@ -21,7 +21,7 @@ let scene = 0;
 let sceneName;
 let groundObject;
 let mouseJoint;
-let carWheelJoint;
+let car;
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
@@ -61,6 +61,8 @@ function gameUpdate()
     if (mouseJoint)
         mouseJoint.SetTarget(mousePos.getBox2d());
 
+    if (keyWasPressed('KeyR'))
+        loadScene(scene); // reset scene
     if (keyWasPressed('ArrowUp') || keyWasPressed('ArrowDown'))
     {
         // change scene
@@ -69,13 +71,11 @@ function gameUpdate()
         loadScene(scene);
     }
 
-    if (carWheelJoint)
+    if (car)
     {
         // update car control
-        const control = keyIsDown('ArrowLeft') - keyIsDown('ArrowRight');
-        let s = carWheelJoint.GetMotorSpeed();
-        s = control ? clamp(s + control, -40, 40) : s * .8;
-        carWheelJoint.SetMotorSpeed(s);
+        const input = keyIsDown('ArrowLeft') - keyIsDown('ArrowRight');
+        car.applyMotorInput(input);
     }
 }
 
