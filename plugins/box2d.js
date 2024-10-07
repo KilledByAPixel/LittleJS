@@ -43,8 +43,9 @@ class Box2dObject extends EngineObject
 
     destroy()
     {
-        // destroy physics body and fixtures
-        box2dWorld.DestroyBody(this.body);
+        // destroy physics body, fixtures, and joints
+        this.body && box2dWorld.DestroyBody(this.body);
+        this.body = 0;
         super.destroy();
     }
 
@@ -174,6 +175,10 @@ class Box2dObject extends EngineObject
         return fixtures;
     }
 
+    ///////////////////////////////////////////////////////////////////////////////
+    // lists of fixtures and joints
+
+    hasFixtures() { return !box2dIsNull(this.body.GetFixtureList()); }
     getFixtureList()
     {
         const fixtures = [];
@@ -185,6 +190,18 @@ class Box2dObject extends EngineObject
         return fixtures;
     }
 
+    hasJoints() { return !box2dIsNull(this.body.GetJointList()); }
+    getJointList()
+    {
+        const joints = [];
+        for (let joint=this.body.GetJointList(); !box2dIsNull(joint); )
+        {
+            joints.push(joint);
+            joint = joint.get_next();
+        }
+        return joints;
+    }
+
     ///////////////////////////////////////////////////////////////////////////////
     // physics get functions
 
@@ -192,7 +209,7 @@ class Box2dObject extends EngineObject
     getLinearVelocity()  { return vec2(this.body.GetLinearVelocity()); }
     getAngularVelocity() { return this.body.GetAngularVelocity(); }
     getMass()            { return this.body.GetMass(); }
-    getInertia()         { return this.body.GetInertia(); }
+    getMomentOfInertia() { return this.body.GetInertia(); }
     getIsAwake()         { return this.body.IsAwake(); }
     getBodyType()        { return this.body.GetType(); }
     getIsStatic()        { return this.getBodyType() == box2dBodyTypeStatic; }
@@ -220,6 +237,23 @@ class Box2dObject extends EngineObject
     setBodyType(type)          { this.body.SetType(type); }
     setSleepingAllowed(isAllowed=true) { this.body.SetSleepingAllowed(isAllowed); }
     setFixedRotation(isFixed=true)     { this.body.SetFixedRotation(isFixed); }
+    setCenterOfMass(center)      { this.setMassData(center) }
+    setMass(mass)                { this.setMassData(undefined, mass) }
+    setExtraMomentOfInertia(I)   { this.setMassData(undefined, undefined, I) }
+    resetMassData()              { this.body.ResetMassData(); }
+    setMassData(localCenter, mass, extraMomentOfInertia=0)
+    {
+        ASSERT(mass >= 0 && extraMomentOfInertia >=0, 'Invalid mass');
+        localCenter ||= vec2(this.body.GetLocalCenter());
+        mass ||= this.getMass();
+        const e = .01; // ensure a positive moment of inertia
+        const I = e + extraMomentOfInertia + mass*localCenter.lengthSquared();
+        const data = new box2d.b2MassData();
+        data.set_center(localCenter.getBox2d());
+        data.set_mass(mass);
+        data.set_I(extraMomentOfInertia ? I : 0);
+        this.body.SetMassData(data);
+    }
     setFilterData(categoryBits=0, ignoreCategoryBits=0, groupIndex=0)
     {
         this.getFixtureList().forEach(fixture=>
@@ -234,17 +268,17 @@ class Box2dObject extends EngineObject
     { this.getFixtureList().forEach(f=>f.SetSensor(isSensor)); }
 
     ///////////////////////////////////////////////////////////////////////////////
-    // physics kinematics
+    // physics force and torque functions
 
     applyForce(force, pos)
     {
-        pos = pos || this.getCenterOfMass();
+        pos ||= this.getCenterOfMass();
         this.setAwake();
         this.body.ApplyForce(force.getBox2d(), pos.getBox2d());
     }
     applyAcceleration(acceleration, pos)
     { 
-        pos = pos || this.getCenterOfMass();
+        pos ||= this.getCenterOfMass();
         this.setAwake();
         this.body.ApplyLinearImpulse(acceleration.getBox2d(), pos.getBox2d());
     }
@@ -432,7 +466,7 @@ function box2dCreateMouseJoint(object, fixedObject, worldPos)
     jointDef.set_bodyA(fixedObject.body);
     jointDef.set_bodyB(object.body);
     jointDef.set_target(worldPos.getBox2d());
-    jointDef.set_maxForce(1e3 * object.getMass());
+    jointDef.set_maxForce(2e3 * object.getMass());
     return box2dCastObject(box2dWorld.CreateJoint(jointDef));
 }
 
@@ -443,8 +477,8 @@ function box2dCreatePinJoint(objectA, objectB, collide=false)
 
 function box2dCreateDistanceJoint(objectA, objectB, anchorA, anchorB, collide=false)
 {
-    anchorA = anchorA || vec2(objectA.body.GetPosition());
-    anchorB = anchorB || vec2(objectB.body.GetPosition());
+    anchorA ||= vec2(objectA.body.GetPosition());
+    anchorB ||= vec2(objectB.body.GetPosition());
     const localAnchorA = objectA.worldToLocal(anchorA);
     const localAnchorB = objectB.worldToLocal(anchorB);
     const jointDef = new box2d.b2DistanceJointDef();
@@ -459,7 +493,7 @@ function box2dCreateDistanceJoint(objectA, objectB, anchorA, anchorB, collide=fa
 
 function box2dCreateRevoluteJoint(objectA, objectB, anchor, collide=false)
 {
-    anchor = anchor || vec2(objectB.body.GetPosition());
+    anchor ||= vec2(objectB.body.GetPosition());
     const localAnchorA = objectA.worldToLocal(anchor);
     const localAnchorB = objectB.worldToLocal(anchor);
     const jointDef = new box2d.b2RevoluteJointDef();
@@ -474,7 +508,7 @@ function box2dCreateRevoluteJoint(objectA, objectB, anchor, collide=false)
 
 function box2dCreatePrismaticJoint(objectA, objectB, anchor, worldAxis=vec2(0,1), collide=false)
 {
-    anchor = anchor || vec2(objectB.body.GetPosition());
+    anchor ||= vec2(objectB.body.GetPosition());
     const localAnchorA = objectA.worldToLocal(anchor);
     const localAnchorB = objectB.worldToLocal(anchor);
     const localAxisA = objectB.worldToLocalVector(worldAxis);
@@ -491,7 +525,7 @@ function box2dCreatePrismaticJoint(objectA, objectB, anchor, worldAxis=vec2(0,1)
 
 function box2dCreateWheelJoint(objectA, objectB, anchor, worldAxis=vec2(0,1), collide=false)
 {
-    anchor = anchor || vec2(objectB.body.GetPosition());
+    anchor ||= vec2(objectB.body.GetPosition());
     const localAnchorA = objectA.worldToLocal(anchor);
     const localAnchorB = objectB.worldToLocal(anchor);
     const localAxisA = objectB.worldToLocalVector(worldAxis);
@@ -507,7 +541,7 @@ function box2dCreateWheelJoint(objectA, objectB, anchor, worldAxis=vec2(0,1), co
 
 function box2dCreateWeldJoint(objectA, objectB, anchor, collide=false)
 {
-    anchor = anchor || vec2(objectB.body.GetPosition());
+    anchor ||= vec2(objectB.body.GetPosition());
     const localAnchorA = objectA.worldToLocal(anchor);
     const localAnchorB = objectB.worldToLocal(anchor);
     const jointDef = new box2d.b2WeldJointDef();
@@ -522,7 +556,7 @@ function box2dCreateWeldJoint(objectA, objectB, anchor, collide=false)
 
 function box2dCreateFrictionJoint(objectA, objectB, anchor, collide=false)
 {
-    anchor = anchor || vec2(objectB.body.GetPosition());
+    anchor ||= vec2(objectB.body.GetPosition());
     const localAnchorA = objectA.worldToLocal(anchor);
     const localAnchorB = objectB.worldToLocal(anchor);
     const jointDef = new box2d.b2FrictionJointDef();
@@ -536,8 +570,8 @@ function box2dCreateFrictionJoint(objectA, objectB, anchor, collide=false)
 
 function box2dCreateRopeJoint(objectA, objectB, anchorA, anchorB, extraLength=0, collide=false)
 {
-    anchorA = anchorA || vec2(objectA.body.GetPosition());
-    anchorB = anchorB || vec2(objectB.body.GetPosition());
+    anchorA ||= vec2(objectA.body.GetPosition());
+    anchorB ||= vec2(objectB.body.GetPosition());
     const localAnchorA = objectA.worldToLocal(anchorA);
     const localAnchorB = objectB.worldToLocal(anchorB);
     const jointDef = new box2d.b2RopeJointDef();
@@ -552,8 +586,8 @@ function box2dCreateRopeJoint(objectA, objectB, anchorA, anchorB, extraLength=0,
 
 function box2dCreatePulleyJoint(objectA, objectB, groundAnchorA, groundAnchorB, anchorA, anchorB, ratio=1, collide=false)
 {
-    anchorA = anchorA || vec2(objectA.body.GetPosition());
-    anchorB = anchorB || vec2(objectB.body.GetPosition());
+    anchorA ||= vec2(objectA.body.GetPosition());
+    anchorB ||= vec2(objectB.body.GetPosition());
     const localAnchorA = objectA.worldToLocal(anchorA);
     const localAnchorB = objectB.worldToLocal(anchorB);
     const jointDef = new box2d.b2PulleyJointDef();
