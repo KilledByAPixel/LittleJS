@@ -1,6 +1,18 @@
 /*
     LittleJS Box2D Example - Secenes
     - Each scene demonstrates a feature of Box2D
+    - Feel free to use tis code in your own projects
+    - 0  = Shapes: box, circle, poly, and edge
+    - 1  = Pyramid stack
+    - 2  = Dominoes chain reaction
+    - 3  = Car with controls
+    - 4  = Rope with box attached
+    - 5  = Raycasts in all directions
+    - 6  = Joints demo with every joint type
+    - 7  = Contacts begin and end callbacks
+    - 8  = Mobile object with multiple bodies
+    - 9  = Cloth object grid using rope joints
+    - 10 = Softbody object grid using weld joints
 */
 
 'use strict';

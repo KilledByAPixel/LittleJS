@@ -1,5 +1,7 @@
 /*
     Little JS Box2d Demo Objects
+    - Object functions that use Box2D features
+    - Feel free to copy and paste these into your own project
 */
 
 'use strict';
