@@ -209,7 +209,7 @@ class Box2dObject extends EngineObject
     getLinearVelocity()  { return vec2(this.body.GetLinearVelocity()); }
     getAngularVelocity() { return this.body.GetAngularVelocity(); }
     getMass()            { return this.body.GetMass(); }
-    getMomentOfInertia() { return this.body.GetInertia(); }
+    getInertia()         { return this.body.GetInertia(); }
     getIsAwake()         { return this.body.IsAwake(); }
     getBodyType()        { return this.body.GetType(); }
     getIsStatic()        { return this.getBodyType() == box2dBodyTypeStatic; }
@@ -239,19 +239,15 @@ class Box2dObject extends EngineObject
     setFixedRotation(isFixed=true)     { this.body.SetFixedRotation(isFixed); }
     setCenterOfMass(center)      { this.setMassData(center) }
     setMass(mass)                { this.setMassData(undefined, mass) }
-    setExtraMomentOfInertia(I)   { this.setMassData(undefined, undefined, I) }
+    setMomentOfInertia(I)        { this.setMassData(undefined, undefined, I) }
     resetMassData()              { this.body.ResetMassData(); }
-    setMassData(localCenter, mass, extraMomentOfInertia=0)
+    setMassData(localCenter, mass, momentOfInertia)
     {
-        ASSERT(mass >= 0 && extraMomentOfInertia >=0, 'Invalid mass');
-        localCenter ||= vec2(this.body.GetLocalCenter());
-        mass ||= this.getMass();
-        const e = .01; // ensure a positive moment of inertia
-        const I = e + extraMomentOfInertia + mass*localCenter.lengthSquared();
         const data = new box2d.b2MassData();
-        data.set_center(localCenter.getBox2d());
-        data.set_mass(mass);
-        data.set_I(extraMomentOfInertia ? I : 0);
+        this.body.GetMassData(data);
+        localCenter && data.set_center(localCenter.getBox2d());
+        mass && data.set_mass(mass);
+        momentOfInertia && data.set_I(momentOfInertia);
         this.body.SetMassData(data);
     }
     setFilterData(categoryBits=0, ignoreCategoryBits=0, groupIndex=0)
