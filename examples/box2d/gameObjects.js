@@ -244,33 +244,101 @@ class MotorJointObject extends Box2dObject
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// soft body sim using grid of weld joints
+class SoftBodyObject extends Box2dObject
+{
+    constructor(pos, scale, sizeCount, color)
+    {
+        super(pos, vec2());
+        const nodeSize = sizeCount.subtract(vec2(1));
+        const spacing = scale.divide(nodeSize);
+        const objectDiameter = min(spacing.x, spacing.y);
+        this.sizeCount = sizeCount.copy();
+
+        // create nodes
+        this.nodes = [];
+        for (let y=sizeCount.y; y--;)
+        for (let x=sizeCount.y; x--;)
+        {
+            const mass = .1;
+            const center = vec2(x-nodeSize.x/2, y-nodeSize.y/2);
+            const p = pos.add(center.multiply(spacing));
+            const o = new Box2dObject(p, vec2(objectDiameter*1.1), tile(0), 0, color);
+            o.addCircle(objectDiameter);
+            o.setMass(mass);
+            o.setAngularDamping(10);
+            o.joints = [];
+            this.nodes.push(o);
+        }
+        // attach joints
+        for (let y=sizeCount.y; y--;)
+        for (let x=sizeCount.x; x--;)
+        {
+            const o = this.getNode(x, y);
+            const tryAddJoint = (xo, yo) =>
+            {
+                const o2 = this.getNode(x+xo, y+yo);
+                const joint = o2 ? box2dCreateWeldJoint(o, o2) : 0;
+                o.joints.push(joint);
+            }
+
+            // attach horizontal and vertical joints first
+            tryAddJoint(1, 0);
+            tryAddJoint(0, 1);
+        }
+    }
+    render()
+    {
+        // fill inside background with a poly around the perimeter
+        const poly = [];
+        const sx = this.sizeCount.x;
+        const sy = this.sizeCount.y;
+        for (let x = 0; x < sx; ++x) poly.push(this.getNode(x, 0).pos);
+        for (let y = 0; y < sy.y; ++y) poly.push(this.getNode(sx-1, y).pos);
+        for (let x = sx; x--;) poly.push(this.getNode(x, sy-1).pos);
+        for (let y = sy; y--;) poly.push(this.getNode(0, y).pos);
+        box2dDrawPoly(vec2(), 0, poly, BLACK)
+    }
+    getNode(x, y) 
+    {
+        if (vec2(x,y).arrayCheck(this.sizeCount))
+            return this.nodes[y*this.sizeCount.x+x];
+    }
+    destroy()
+    {
+        this.nodes.forEach(o=>o && o.destroy());
+        super.destroy();
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 // cloth sim using grid of rope joints
 class ClothObject extends Box2dObject
 {
-    constructor(pos, scale, sizeCount, maxJointStress=10)
+    constructor(pos, scale, sizeCount, color, maxJointStress=10)
     {
-        super(pos, vec2(), 0, 0, BLACK, box2dBodyTypeStatic);
+        super(pos, vec2(), 0, 0, color, box2dBodyTypeStatic);
         const nodeSize = sizeCount.subtract(vec2(1));
         const spacing = scale.divide(nodeSize);
         const objectDiameter = min(spacing.x, spacing.y);
         this.sizeCount = sizeCount.copy();
         this.maxJointStress = maxJointStress;
         this.lineWidth = .1;
-        this.nodes = [];
 
         // create nodes
+        this.nodes = [];
         for (let y=sizeCount.y; y--;)
         for (let x=sizeCount.y; x--;)
         {
             const mass = .5;
-            const area = PI*(objectDiameter/2)**2;
-            const density = mass / area;
             const center = vec2(x-nodeSize.x/2, y-nodeSize.y/2);
             const p = pos.add(center.multiply(spacing));
-            const o = new Box2dObject(p, vec2(.4), tile(0), 0, this.color);
-            o.addCircle(objectDiameter, undefined, density);
+            const o = new Box2dObject(p, vec2(.4), tile(0), 0, color);
+            o.addCircle(objectDiameter);
             o.setFilterData(2, 2);
             o.setLinearDamping(1);
+            o.setMass(mass);
             o.joints = [];
             this.nodes.push(o);
         }
@@ -322,7 +390,7 @@ class ClothObject extends Box2dObject
 
             // check node joints
             const joints = o.joints;
-            for(let i=joints.length; i--;)
+            for (let i=joints.length; i--;)
             {
                 const j = joints[i];
                 if (!j) continue;
@@ -354,7 +422,7 @@ class ClothObject extends Box2dObject
         for (const o of this.nodes)
         {
             if (!o) continue;
-            for(const joint of o.joints)
+            for (const joint of o.joints)
             {
                 if (!joint) continue;
                 const oA = joint.GetBodyA().object;

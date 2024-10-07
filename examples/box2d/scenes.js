@@ -5,7 +5,6 @@
 
 'use strict';
 
-//box2dDebug = 1; // enable box2d debug draw  
 function loadScene(_scene)
 {
     scene = _scene;
@@ -171,6 +170,13 @@ function loadScene(_scene)
     if (scene == 9)
     {
         sceneName = 'Cloth';
-        new ClothObject(vec2(20, 9), vec2(15), vec2(24));
+        new ClothObject(vec2(20, 9), vec2(15), vec2(24), randColor());
+    }
+    if (scene == 10)
+    {
+        sceneName = 'Softbody';
+
+        for(let i=3;i--;)
+            new SoftBodyObject(vec2(20, 3+i*7), vec2(6-i), vec2(9-i), randColor());
     }
 }

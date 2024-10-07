@@ -16,7 +16,7 @@ setShowSplashScreen(true);
 //box2dDebug = 1; // enable box2d debug draw
 
 // game variables
-const maxScenes = 10;
+const maxScenes = 11;
 let scene = 0;
 let sceneName;
 let groundObject;
