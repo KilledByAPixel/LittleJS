@@ -22,6 +22,7 @@ let sceneName;
 let groundObject;
 let mouseJoint;
 let car;
+let repeatSpawnTimer = new Timer;
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
@@ -54,8 +55,18 @@ function gameUpdate()
             mouseJoint = 0;
         }
     }
-    if (mouseWasPressed(1) || keyWasPressed('KeyZ'))
-        spawnRandomObject(mousePos);
+    if (mouseIsDown(1) || mouseIsDown('KeyZ'))
+    {
+        const isSet = repeatSpawnTimer.isSet();
+        if (!isSet || repeatSpawnTimer.elapsed())
+        {
+            // spawn continuously after a delay
+            isSet || repeatSpawnTimer.set(.5);
+            spawnRandomObject(mousePos);
+        }
+    }
+    else
+        repeatSpawnTimer.unset();
     if (mouseWasPressed(2) || keyWasPressed('KeyX'))
         explosion(mousePos);
     if (mouseJoint)
@@ -110,6 +121,14 @@ function gameRender()
 ///////////////////////////////////////////////////////////////////////////////
 function gameRenderPost()
 {
+    if (mouseJoint)
+    {
+        // draw mouse joint
+        const ab = vec2(mouseJoint.GetAnchorB());
+        drawTile(ab, vec2(.3), tile(0), BLACK);
+        drawLine(mousePos, ab, .1, BLACK);
+    }
+
     // draw to overlay canvas for hud rendering
     const pos = vec2(mainCanvasSize.x/2, 50);
     drawText('LittleJS Box2D Demo', 80, 80);
