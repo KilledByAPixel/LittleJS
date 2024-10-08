@@ -2560,7 +2560,7 @@ function inputInit()
     oncontextmenu = (e)=> false; // prevent right click menu
 
     // init touch input
-    if (isTouchDevice && touchInputEnable && !headlessMode)
+    if (isTouchDevice && touchInputEnable)
         touchInputInit();
 }
 
