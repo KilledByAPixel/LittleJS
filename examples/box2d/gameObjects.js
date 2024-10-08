@@ -429,7 +429,7 @@ class ClothObject extends Box2dObject
                 if (!joint) continue;
                 const oA = joint.GetBodyA().object;
                 const oB = joint.GetBodyB().object;
-                drawLine(oA.pos, oB.pos, this.lineWidth, o.color);
+                drawLine(oA.pos, oB.pos, this.lineWidth, BLACK);
             }
         }
     }
