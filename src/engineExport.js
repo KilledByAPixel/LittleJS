@@ -188,10 +188,13 @@ export {
 	// WebGL
 	glCanvas,
 	glContext,
-	glSetTexture,
 	glCompileShader,
+	glCopyToContext,
 	glCreateProgram,
 	glCreateTexture,
+	glDraw,
+	glFlush,
+	glSetTexture,
 
 	// Input
 	keyIsDown,
