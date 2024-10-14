@@ -1288,17 +1288,17 @@ declare module "littlejsengine" {
      *  @type {WebGL2RenderingContext}
      *  @memberof WebGL */
     export let glContext: WebGL2RenderingContext;
-    /** Set the WebGl texture, called automatically if using multiple textures
-     *  - This may also flush the gl buffer resulting in more draw calls and worse performance
-     *  @param {WebGLTexture} texture
-     *  @memberof WebGL */
-    export function glSetTexture(texture: WebGLTexture): void;
     /** Compile WebGL shader of the given type, will throw errors if in debug mode
      *  @param {String} source
      *  @param {Number} type
      *  @return {WebGLShader}
      *  @memberof WebGL */
     export function glCompileShader(source: string, type: number): WebGLShader;
+    /** Draw any sprites still in the buffer, copy to main canvas and clear
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
+     *  @param {Boolean} [forceDraw]
+     *  @memberof WebGL */
+    export function glCopyToContext(context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, forceDraw?: boolean): void;
     /** Create WebGL program with given shaders
      *  @param {String} vsSource
      *  @param {String} fsSource
@@ -1310,6 +1310,28 @@ declare module "littlejsengine" {
      *  @return {WebGLTexture}
      *  @memberof WebGL */
     export function glCreateTexture(image: HTMLImageElement): WebGLTexture;
+    /** Add a sprite to the gl draw list, used by all gl draw functions
+     *  @param {Number} x
+     *  @param {Number} y
+     *  @param {Number} sizeX
+     *  @param {Number} sizeY
+     *  @param {Number} angle
+     *  @param {Number} uv0X
+     *  @param {Number} uv0Y
+     *  @param {Number} uv1X
+     *  @param {Number} uv1Y
+     *  @param {Number} rgba
+     *  @param {Number} [rgbaAdditive=0]
+     *  @memberof WebGL */
+    export function glDraw(x: number, y: number, sizeX: number, sizeY: number, angle: number, uv0X: number, uv0Y: number, uv1X: number, uv1Y: number, rgba: number, rgbaAdditive?: number): void;
+    /** Draw all sprites and clear out the buffer, called automatically by the system whenever necessary
+     *  @memberof WebGL */
+    export function glFlush(): void;
+    /** Set the WebGl texture, called automatically if using multiple textures
+     *  - This may also flush the gl buffer resulting in more draw calls and worse performance
+     *  @param {WebGLTexture} texture
+     *  @memberof WebGL */
+    export function glSetTexture(texture: WebGLTexture): void;
     /**
      * LittleJS Input System
      * - Tracks keyboard down, pressed, and released
