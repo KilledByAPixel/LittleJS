@@ -92,8 +92,6 @@ function explosion(pos, radius=3)
         const p = percent(d, 2*radius, radius);
         const force = o.pos.subtract(pos).normalize(p*radius*.2);
         o.applyForce(force);
-        if (o.isDead && o.isDead())
-            o.angleVelocity += randSign()*rand(p*radius/4,.3);
     });
 
     // smoke

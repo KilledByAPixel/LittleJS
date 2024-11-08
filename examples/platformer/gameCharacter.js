@@ -41,6 +41,7 @@ class Character extends GameObject
         if (this.isDead())
             return super.update();
 
+        // get move input
         const moveInput = this.moveInput.copy();
         
         // jump
