@@ -85,6 +85,13 @@ declare module "littlejsengine" {
      *  @param {Array} [objects=engineObjects] - List of objects to check
      *  @memberof Engine */
     export function engineObjectsCallback(pos?: Vector2, size?: number | Vector2, callbackFunction?: Function, objects?: any[]): void;
+    /** Return a list of objects intersecting a ray
+     *  @param {Vector2} start
+     *  @param {Vector2} end
+     *  @param {Array} [objects=engineObjects] - List of objects to check
+     *  @return {Array} - List of objects hit
+     *  @memberof Engine */
+    export function engineObjectsRaycast(start: Vector2, end: Vector2, objects?: any[]): any[];
     /** Add a new update function for a plugin
      *  @param {Function} [updateFunction]
      *  @param {Function} [renderFunction]
@@ -664,6 +671,14 @@ declare module "littlejsengine" {
      *  @return {Boolean}              - True if overlapping
      *  @memberof Utilities */
     export function isOverlapping(posA: Vector2, sizeA: Vector2, posB: Vector2, sizeB?: Vector2): boolean;
+    /** Returns true if a line segment is intersecting an axis aligned box
+     *  @param {Vector2} start - Start of raycast
+     *  @param {Vector2} end   - End of raycast
+     *  @param {Vector2} pos   - Center of box
+     *  @param {Vector2} size  - Size of box
+     *  @return {Boolean}      - True if intersecting
+     *  @memberof Utilities */
+    export function isIntersecting(start: Vector2, end: Vector2, pos: Vector2, size: Vector2): boolean;
     /** Returns an oscillating wave between 0 and amplitude with frequency of 1 Hz by default
      *  @param {Number} [frequency] - Frequency of the wave in Hz
      *  @param {Number} [amplitude] - Amplitude (max height) of the wave
@@ -1025,6 +1040,57 @@ declare module "littlejsengine" {
      * @memberof Utilities
      */
     export function hsl(h?: number, s?: number, l?: number, a?: number): Color;
+    /**
+     * Check if object is a valid Color
+     * @param {any} c
+     * @return {Boolean}
+     * @memberof Utilities
+     */
+    export function isColor(c: any): boolean;
+    /** Color - White
+     *  @type {Color}
+     *  @memberof Utilities */
+    export const WHITE: Color;
+    /** Color - Black
+     *  @type {Color}
+     *  @memberof Utilities */
+    export const BLACK: Color;
+    /** Color - Gray
+     *  @type {Color}
+     *  @memberof Utilities */
+    export const GRAY: Color;
+    /** Color - Red
+     *  @type {Color}
+     *  @memberof Utilities */
+    export const RED: Color;
+    /** Color - Orange
+     *  @type {Color}
+     *  @memberof Utilities */
+    export const ORANGE: Color;
+    /** Color - Yellow
+     *  @type {Color}
+     *  @memberof Utilities */
+    export const YELLOW: Color;
+    /** Color - Green
+     *  @type {Color}
+     *  @memberof Utilities */
+    export const GREEN: Color;
+    /** Color - Cyan
+     *  @type {Color}
+     *  @memberof Utilities */
+    export const CYAN: Color;
+    /** Color - Blue
+     *  @type {Color}
+     *  @memberof Utilities */
+    export const BLUE: Color;
+    /** Color - Purple
+     *  @type {Color}
+     *  @memberof Utilities */
+    export const PURPLE: Color;
+    /** Color - Magenta
+     *  @type {Color}
+     *  @memberof Utilities */
+    export const MAGENTA: Color;
     /** Array containing texture info for batch rendering system
      *  @type {Array}
      *  @memberof Draw */

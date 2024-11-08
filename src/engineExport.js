@@ -141,6 +141,7 @@ export {
 	smoothStep,
 	nearestPowerOfTwo,
 	isOverlapping,
+	isIntersecting,
 	wave,
 	formatTime,
 
@@ -160,6 +161,20 @@ export {
 	vec2,
 	rgb,
 	hsl,
+	isColor,
+
+	// Default Colors
+	WHITE,
+	BLACK,
+	GRAY,
+	RED,
+	ORANGE,
+	YELLOW,
+	GREEN,
+	CYAN,
+	BLUE,
+	PURPLE,
+	MAGENTA,
 
 	// Draw
 	textureInfos,
