@@ -66,7 +66,7 @@ class Crate extends GameObject
 {
     constructor(pos) 
     { 
-        super(pos, vec2(1), spriteAtlas.crate, (randInt(4))*PI/2);
+        super(pos, vec2(.999), spriteAtlas.crate, (randInt(4))*PI/2);
 
         this.color = hsl(rand(),1,.8);
         this.health = 5;
