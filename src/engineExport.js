@@ -1,4 +1,4 @@
-/** 
+/**
  * LittleJS Module Export
  * - Export engine as a module
  */
@@ -20,8 +20,9 @@ export {
 	engineObjectsUpdate,
 	engineObjectsDestroy,
 	engineObjectsCallback,
+	engineObjectsRaycast,
 	engineAddPlugin,
-	
+
 	// Globals
 	debug,
 	debugOverlay,
