@@ -79,6 +79,10 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 
 To get started download the latest LittleJS package from GitHub or install via npm: ```npm install littlejsengine```
 
+*You will need to run a local web server to run LittleJS games!*
+
+This is because web browsers just have protection from loading local files. Don't panic, it's easy to fix! If you are using [Visual Studio Code](https://code.visualstudio.com/) there is a [Live Server plugin](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer) that will handle this for you automatically. Another option is to setup a simple local web server like [http-server](https://www.npmjs.com/package/http-server) via npm.
+
 Learn how to make a simple game from scratch with [The Breakout Tutorial.](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial)
 
 [LittleJS Engine Quick Reference Sheet](https://github.com/KilledByAPixel/LittleJS/blob/main/reference.md) - This cheat sheet can help you get started.
