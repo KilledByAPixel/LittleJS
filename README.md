@@ -9,6 +9,7 @@
 [![NPM Downloads][npm-downloads]][npmtrends-url]
 [![DeepScan][deepscan]][deepscan-url]
 [![Discord][discord]][discord-url]
+[![Gurubase](https://img.shields.io/badge/Gurubase-Ask%20LittleJS%20Guru-006BFF)](https://gurubase.io/g/littlejs)
 
 </div>
 
