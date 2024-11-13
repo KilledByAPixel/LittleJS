@@ -153,4 +153,4 @@ function gameRenderPost()
 ///////////////////////////////////////////////////////////////////////////////
 // Startup LittleJS Engine with Box2D
 
-box2dEngineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
+box2dEngineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);

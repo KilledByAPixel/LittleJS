@@ -109,7 +109,7 @@ function engineAddPlugin(updateFunction, renderFunction)
  *  @param {Function} gameRenderPost - Called after objects are rendered, draw effects or hud that appear above all objects
  *  @param {Array} [imageSources=['tiles.png']] - Image to load
  *  @memberof Engine */
-function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=['tiles.png'])
+function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[])
 {
     ASSERT(Array.isArray(imageSources), 'pass in images as array');
 
@@ -308,19 +308,32 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         })
     );
 
-    // draw splash screen
-    showSplashScreen && promises.push(new Promise(resolve => 
+    if (!imageSources.length)
     {
-        let t = 0;
-        console.log(`${engineName} Engine v${engineVersion}`);
-        updateSplash();
-        function updateSplash()
+        // no images to load
+        promises.push(new Promise(resolve => 
         {
-            clearInput();
-            drawEngineSplashScreen(t+=.01);
-            t>1 ? resolve() : setTimeout(updateSplash, 16);
-        }
-    }));
+            textureInfos[0] = new TextureInfo(new Image);
+            resolve();
+        }));
+    }
+
+    if (showSplashScreen)
+    {
+        // draw splash screen
+        promises.push(new Promise(resolve => 
+        {
+            let t = 0;
+            console.log(`${engineName} Engine v${engineVersion}`);
+            updateSplash();
+            function updateSplash()
+            {
+                clearInput();
+                drawEngineSplashScreen(t+=.01);
+                t>1 ? resolve() : setTimeout(updateSplash, 16);
+            }
+        }));
+    }
 
     // load all of the images
     Promise.all(promises).then(startEngine);
