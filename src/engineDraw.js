@@ -284,6 +284,74 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
     drawTile(pos, size, undefined, color, angle, false, undefined, useWebGL, screenSpace, context); 
 }
 
+/** Draw colored polygon using passed in points
+ *  @param {Array}   points - Array of Vector2 points
+ *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Number}  [lineWidth=0]
+ *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {Boolean} [screenSpace=false]
+ *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @memberof Draw */
+function drawPoly(points, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
+{
+    context.fillStyle = color.toString();
+    context.beginPath();
+    for (const point of screenSpace ? points : points.map(worldToScreen))
+        context.lineTo(point.x, point.y);
+    context.closePath();
+    context.fill();
+    if (lineWidth)
+    {
+        context.strokeStyle = lineColor.toString();
+        context.lineWidth = screenSpace ? lineWidth : lineWidth*cameraScale;
+        context.stroke();
+    }
+}
+
+/** Draw colored ellipse using passed in point
+ *  @param {Vector2} pos
+ *  @param {Number}  [width=1]
+ *  @param {Number}  [height=1]
+ *  @param {Number}  [angle=0]
+ *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Number}  [lineWidth=0]
+ *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {Boolean} [screenSpace=false]
+ *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @memberof Draw */
+function drawEllipse(pos, width=1, height=1, angle=0, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
+{
+    if (!screenSpace)
+    {
+        pos = worldToScreen(pos);
+        width *= cameraScale;
+        height *= cameraScale;
+        lineWidth *= cameraScale;
+    }
+    context.fillStyle = color.toString();
+    context.beginPath();
+    context.ellipse(pos.x, pos.y, width, height, angle, 0, 9);
+    context.fill();
+    if (lineWidth)
+    {
+        context.strokeStyle = lineColor.toString();
+        context.lineWidth = lineWidth;
+        context.stroke();
+    }
+}
+
+/** Draw colored circle using passed in point
+ *  @param {Vector2} pos
+ *  @param {Number}  [radius=1]
+ *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Number}  [lineWidth=0]
+ *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {Boolean} [screenSpace=false]
+ *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @memberof Draw */
+function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
+{ drawEllipse(pos, radius, radius, 0, color, lineWidth, lineColor, screenSpace, context); }
+
 /** Draw colored line between two points
  *  @param {Vector2} posA
  *  @param {Vector2} posB
