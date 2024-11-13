@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "checkJs": true,
+  },
+  "include": [
+    "./**/*.js",      // include game files
+    "../../src/*.js", // include littlejs engine files
+  ],
+  "exclude": [
+    "../../src/littlejs/engineRelease.js",
+    "../../src/littlejs/engineExport.js"
+  ]
+}
