@@ -43,7 +43,7 @@ function gameInit()
         // set tile data
         const tileIndex = 1;
         const direction = randInt(4)
-        const mirror = randInt(2);
+        const mirror = !randInt(2);
         const color = randColor();
         const data = new TileLayerData(tileIndex, direction, mirror, color);
         tileLayer.setData(pos, data);
@@ -69,7 +69,7 @@ function gameInit()
         hsl(0,0,0,0), hsl(0,0,0,0), // colorEndA, colorEndB
         2, .2, .2, .1, .05,   // time, sizeStart, sizeEnd, speed, angleSpeed
         .99, 1, 1, PI,        // damping, angleDamping, gravityScale, cone
-        .05, .5, 1, 1         // fadeRate, randomness, collide, additive
+        .05, .5, false, false         // fadeRate, randomness, collide, additive
     );
     particleEmitter.elasticity = .3; // bounce when it collides
     particleEmitter.trailScale = 2;  // stretch in direction of motion
@@ -108,7 +108,7 @@ function gameUpdatePost()
 function gameRender()
 {
     // draw a grey square in the background without using webgl
-    drawRect(vec2(16,8), vec2(20,14), hsl(0,0,.6), 0, 0);
+    drawRect(vec2(16,8), vec2(20,14), hsl(0,0,.6), 0, false);
     
     // draw the logo as a tile
     drawTile(vec2(21,5), vec2(4.5), tile(3,128));
