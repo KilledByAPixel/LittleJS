@@ -14,79 +14,9 @@ setShowSplashScreen(true);
 // sound effects
 const sound_click = new Sound([1,.5]);
 
-// html menu system
-let menu;
-const getMenuVisible =()=> menu.style.visibility != 'hidden';
-const setMenuVisible =(visible)=> menu.style.visibility = visible ? '' : 'hidden';
-
-function createUI()
-{
-    // top level div for the whole page
-    const uiDiv = document.createElement('div');
-    document.body.appendChild(uiDiv);
-    uiDiv.style.position = 'absolute';
-    uiDiv.style.zIndex = '1';
-    uiDiv.style.width = '100%';
-    uiDiv.style.height = '100%'
-    uiDiv.style.display = 'flex';
-    uiDiv.style.alignItems = 'center';
-    uiDiv.style.justifyContent = 'center';
-
-    // a smaller menu div
-    menu = document.createElement('div');
-    menu.style.gap = '20px';
-    menu.style.padding = '30px';
-    menu.style.display = 'flex';
-    menu.style.alignItems = 'center';
-    menu.style.flexDirection = 'column';
-    menu.style.border = '3px solid black';
-    menu.style.backgroundColor = WHITE.toString();
-    setMenuVisible(false);
-    uiDiv.appendChild(menu);
-    const createMenuElement = (type, html, title) =>
-    {
-        const element = document.createElement(type);
-        element.innerHTML = html;
-        element.title = title;
-        return menu.appendChild(element);
-    }
-    {
-        // heading
-        const text = createMenuElement('div', '<i>Test Menu</i>');
-        text.style.fontSize = '30px';
-    }
-    {
-        // text
-        createMenuElement('div', 'This is an example menu using html elements.');
-    }
-    {
-        // input
-        const input = createMenuElement('input','','Input help text');
-        input.value = 'Test Input';
-        input.onchange = () => alert('New text: ' + input.value);
-    }
-    {
-        // slider
-        const input = createMenuElement('input','','Slider help text');
-        input.type = 'range';
-        input.onchange = () => alert('New slider value: ' + input.value);
-    }
-    {
-        // button
-        const button = createMenuElement('button','Test Button','Button help text');
-        button.onclick = () => alert('Button was clicked!');
-    }
-    {
-        // exit button
-        const button = createMenuElement('button','Exit Menu');
-        button.onclick = () => setMenuVisible(false);
-    }
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
-    createUI();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
