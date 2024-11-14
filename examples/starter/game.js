@@ -69,7 +69,7 @@ function gameInit()
         hsl(0,0,0,0), hsl(0,0,0,0), // colorEndA, colorEndB
         2, .2, .2, .1, .05,   // time, sizeStart, sizeEnd, speed, angleSpeed
         .99, 1, 1, PI,        // damping, angleDamping, gravityScale, cone
-        .05, .5, false, false         // fadeRate, randomness, collide, additive
+        .05, .5, true, true         // fadeRate, randomness, collide, additive
     );
     particleEmitter.elasticity = .3; // bounce when it collides
     particleEmitter.trailScale = 2;  // stretch in direction of motion
