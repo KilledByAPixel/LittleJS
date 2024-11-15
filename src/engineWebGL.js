@@ -191,7 +191,7 @@ function glCreateTexture(image)
     // build the texture
     const texture = glContext.createTexture();
     glContext.bindTexture(gl_TEXTURE_2D, texture);
-    if (image)
+    if (image && image.width)
         glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
 
     // use point filtering for pixelated rendering
