@@ -49,11 +49,6 @@ function initPostProcess(shaderCode, includeOverlay=false)
     glPostTexture = glCreateTexture(undefined);
     glPostIncludeOverlay = includeOverlay;
 
-    // hide the original 2d canvas
-    mainCanvas.style.visibility = 'hidden';
-    if (glPostIncludeOverlay)
-        overlayCanvas.style.visibility = 'hidden';
-
     // Render the post processing shader, called automatically by the engine
     engineAddPlugin(undefined, postProcessRender);
     function postProcessRender()
@@ -72,8 +67,12 @@ function initPostProcess(shaderCode, includeOverlay=false)
             glContext.viewport(0, 0, glCanvas.width = mainCanvas.width, glCanvas.height = mainCanvas.height);
         }
 
-        // copy overlay canvas so it will be included in post processing
-        glPostIncludeOverlay && mainContext.drawImage(overlayCanvas, 0, 0);
+        if (glPostIncludeOverlay)
+        {
+            // copy overlay canvas so it will be included in post processing
+            mainContext.drawImage(overlayCanvas, 0, 0);
+            overlayCanvas.width |= 0;
+        }
 
         // setup shader program to draw one triangle
         glContext.useProgram(glPostShader);
