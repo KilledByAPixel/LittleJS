@@ -735,7 +735,7 @@ class Color
      * @return {String} */
     toString(useAlpha = true)      
     { 
-        const toHex = (c)=> ((c=c*255|0)<16 ? '0' : '') + c.toString(16);
+        const toHex = (c)=> ((c=clamp(c)*255|0)<16 ? '0' : '') + c.toString(16);
         return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b) + (useAlpha ? toHex(this.a) : '');
     }
     
