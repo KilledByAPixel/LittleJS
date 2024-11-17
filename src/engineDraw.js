@@ -156,8 +156,6 @@ class TextureInfo
         this.size = vec2(image.width, image.height);
         /** @property {WebGLTexture} - webgl texture */
         this.glTexture = glEnable && glCreateTexture(image);
-        /** @property {Vector2} - size to adjust tile to fix bleeding */
-        this.fixBleedSize = vec2(tileFixBleedScale).divide(this.size);
     }
 }
 
@@ -226,11 +224,12 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
         if (textureInfo)
         {
             // calculate uvs and render
-            const x = tileInfo.pos.x / textureInfo.size.x;
-            const y = tileInfo.pos.y / textureInfo.size.y;
-            const w = tileInfo.size.x / textureInfo.size.x;
-            const h = tileInfo.size.y / textureInfo.size.y;
-            const tileImageFixBleed = textureInfo.fixBleedSize;
+            const sizeInverse = vec2(1).divide(textureInfo.size);
+            const x = tileInfo.pos.x * sizeInverse.x;
+            const y = tileInfo.pos.y * sizeInverse.y;
+            const w = tileInfo.size.x * sizeInverse.x;
+            const h = tileInfo.size.y * sizeInverse.y;
+            const tileImageFixBleed = sizeInverse.scale(tileFixBleedScale);
             glSetTexture(textureInfo.glTexture);
             glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
                 x + tileImageFixBleed.x,     y + tileImageFixBleed.y, 
@@ -422,10 +421,11 @@ function setBlendMode(additive, useWebGL=glEnable, context)
  *  @param {CanvasTextAlign}  [textAlign='center']
  *  @param {String}  [font=fontDefault]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
+ *  @param {Number}  [maxWidth]
  *  @memberof Draw */
-function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, context)
+function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, context, maxWidth)
 {
-    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, context);
+    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, context, maxWidth);
 }
 
 /** Draw text on overlay canvas in screen space
@@ -439,8 +439,9 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
  *  @param {CanvasTextAlign}  [textAlign]
  *  @param {String}  [font=fontDefault]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
+ *  @param {Number}  [maxWidth]
  *  @memberof Draw */
-function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, context=overlayContext)
+function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, context=overlayContext, maxWidth=undefined)
 {
     context.fillStyle = color.toString();
     context.lineWidth = lineWidth;
@@ -453,8 +454,8 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
     pos = pos.copy();
     (text+'').split('\n').forEach(line=>
     {
-        lineWidth && context.strokeText(line, pos.x, pos.y);
-        context.fillText(line, pos.x, pos.y);
+        lineWidth && context.strokeText(line, pos.x, pos.y, maxWidth);
+        context.fillText(line, pos.x, pos.y, maxWidth);
         pos.y += size;
     });
 }
