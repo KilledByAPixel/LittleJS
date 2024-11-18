@@ -89,7 +89,7 @@ let tileSizeDefault = vec2(16);
  *  @type {Number}
  *  @default
  *  @memberof Settings */
-let tileFixBleedScale = .5;
+let tileFixBleedScale = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Object settings
