@@ -151,6 +151,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             for (const o of engineObjects)
                 o.parent || o.updateTransforms();
             inputUpdate();
+            pluginUpdateList.forEach(f=>f());
             debugUpdate();
             gameUpdatePost();
             inputUpdatePost();
