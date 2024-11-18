@@ -58,12 +58,13 @@ let drawCount;
 ///////////////////////////////////////////////////////////////////////////////
 
 /** 
- * Create a tile info object
+ * Create a tile info object using a grid based system
  * - This can take vecs or floats for easier use and conversion
  * - If an index is passed in, the tile size and index will determine the position
- * @param {(Number|Vector2)} [pos=(0,0)]            - Top left corner of tile in pixels or index
+ * @param {(Number|Vector2)} [pos=0]                - Index of tile in sheet
  * @param {(Number|Vector2)} [size=tileSizeDefault] - Size of tile in pixels
  * @param {Number} [textureIndex]                   - Texture index to use
+ * @param {Number} [padding]                        - How many pixels padding around tiles
  * @return {TileInfo}
  * @example
  * tile(2)                       // a tile at index 2 using the default tile size of 16
@@ -72,7 +73,7 @@ let drawCount;
  * tile(vec2(4,8), vec2(30,10))  // a tile at pixel location (4,8) with a size of (30,10)
  * @memberof Draw
  */
-function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0)
+function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0)
 {
     if (headlessMode)
         return new TileInfo;
@@ -84,17 +85,17 @@ function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0)
         size = vec2(size);
     }
 
-    // if pos is a number, use it as a tile index
+    // use pos as a tile index
+    const textureInfo = textureInfos[textureIndex];
+    ASSERT(textureInfo, 'Texture not loaded');
+    const sizePadded = size.add(vec2(padding*2));
+    const cols = textureInfo.size.x / sizePadded.x |0;
     if (typeof pos === 'number')
-    {
-        const textureInfo = textureInfos[textureIndex];
-        ASSERT(textureInfo, 'Texture not loaded');
-        const cols = textureInfo.size.x / size.x |0;
-        pos = vec2((pos%cols)*size.x, (pos/cols|0)*size.y);
-    }
+        pos = vec2(pos%cols, pos/cols|0);
+    pos = vec2(pos.x*sizePadded.x+padding, pos.y*sizePadded.y+padding);
 
     // return a tile info object
-    return new TileInfo(pos, size, textureIndex); 
+    return new TileInfo(pos, size, textureIndex, padding); 
 }
 
 /** 
@@ -106,8 +107,9 @@ class TileInfo
      *  @param {Vector2} [pos=(0,0)]            - Top left corner of tile in pixels
      *  @param {Vector2} [size=tileSizeDefault] - Size of tile in pixels
      *  @param {Number}  [textureIndex]         - Texture index to use
+     *  @param {Number}  [padding]              - How many pixels padding around tiles
      */
-    constructor(pos=vec2(), size=tileSizeDefault, textureIndex=0)
+    constructor(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0)
     {
         /** @property {Vector2} - Top left corner of tile in pixels */
         this.pos = pos.copy();
@@ -115,6 +117,8 @@ class TileInfo
         this.size = size.copy();
         /** @property {Number} - Texture index to use */
         this.textureIndex = textureIndex;
+        /** @property {Number} - How many pixels padding around tiles */
+        this.padding = padding;
     }
 
     /** Returns a copy of this tile offset by a vector
@@ -131,7 +135,7 @@ class TileInfo
     frame(frame)
     {
         ASSERT(typeof frame == 'number');
-        return this.offset(vec2(frame*this.size.x, 0));
+        return this.offset(vec2(frame*(this.size.x+this.padding*2), 0));
     }
 
     /** Returns the texture info for this tile
@@ -563,6 +567,6 @@ function toggleFullscreen()
         if (document.exitFullscreen)
             document.exitFullscreen();
     }
-    else if (document.body.requestFullscreen)
-            document.body.requestFullscreen();
+    else if (engineRoot.requestFullscreen)
+        engineRoot.requestFullscreen();
 }

@@ -34,10 +34,10 @@ function glInit()
 
     // create the canvas and textures
     glCanvas = document.createElement('canvas');
-    glContext = glCanvas.getContext('webgl2');
+    glContext = glCanvas.getContext('webgl2', {antialias:!canvasPixelated});
 
     // some browsers are much faster without copying the gl buffer so we just overlay it instead
-    glOverlay && document.body.appendChild(glCanvas);
+    glOverlay && engineRoot.appendChild(glCanvas);
 
     // setup vertex and fragment shaders
     glShader = glCreateProgram(

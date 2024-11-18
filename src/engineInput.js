@@ -167,7 +167,7 @@ function inputInit()
 
     onkeydown = (e)=>
     {
-        if (debug && e.target != document.body) return;
+        if (debug && e.target != engineRoot) return;
         if (!e.repeat)
         {
             isUsingGamepad = false;
@@ -180,7 +180,7 @@ function inputInit()
 
     onkeyup = (e)=>
     {
-        if (debug && e.target != document.body) return;
+        if (debug && e.target != engineRoot) return;
         inputData[0][e.code] = 4;
         if (inputWASDEmulateDirection)
             inputData[0][remapKey(e.code)] = 4;

@@ -30,7 +30,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.9.11';
+const engineVersion = '1.10.0';
 
 /** Frames per second to update
  *  @type {Number}
@@ -75,6 +75,12 @@ let timeReal = 0;
  *  @memberof Engine */
 let paused = false;
 
+/** The root element that engine is attached to
+ *  @type {HTMLElement}
+ *  @default document.body
+ *  @memberof Engine */
+let engineRoot;
+
 /** Set if game is paused
  *  @param {Boolean} isPaused
  *  @memberof Engine */
@@ -108,8 +114,9 @@ function engineAddPlugin(updateFunction, renderFunction)
  *  @param {Function} gameRender     - Called before objects are rendered, draw any background effects that appear behind objects
  *  @param {Function} gameRenderPost - Called after objects are rendered, draw effects or hud that appear above all objects
  *  @param {Array} [imageSources=['tiles.png']] - Image to load
+ *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default
  *  @memberof Engine */
-function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[])
+function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
 {
     ASSERT(Array.isArray(imageSources), 'pass in images as array');
 
@@ -269,14 +276,20 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     // setup html
     const styleBody = 
         'margin:0;overflow:hidden;' + // fill the window
+        'width:100vw;height:100vh;' + // fill the window
+        'display:flex;' +             // use flexbox
+        'align-items:center;' +       // horizontal center
+        (canvasPixelated ? 'image-rendering:pixelated;' : '') + // pixel art
+        'justify-content:center;' +   // vertical center
         'background:#000;' +          // set background color
         'user-select:none;' +         // prevent hold to select
         '-webkit-user-select:none;' + // compatibility for ios
         (!touchInputEnable ? '' :     // no touch css setttings
         'touch-action:none;' +        // prevent mobile pinch to resize
         '-webkit-touch-callout:none');// compatibility for ios
-    document.body.style.cssText = styleBody;
-    document.body.appendChild(mainCanvas = document.createElement('canvas'));
+    engineRoot = rootElement;
+    engineRoot.style.cssText = styleBody;
+    engineRoot.appendChild(mainCanvas = document.createElement('canvas'));
     mainContext = mainCanvas.getContext('2d');
 
     // init stuff and start engine
@@ -286,13 +299,14 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     glInit();
 
     // create overlay canvas for hud to appear above gl canvas
-    document.body.appendChild(overlayCanvas = document.createElement('canvas'));
+    engineRoot.appendChild(overlayCanvas = document.createElement('canvas'));
     overlayContext = overlayCanvas.getContext('2d');
 
     // set canvas style
-    const styleCanvas = 'position:absolute;' +             // position
-        'top:50%;left:50%;transform:translate(-50%,-50%)'; // center
-    (glCanvas||mainCanvas).style.cssText = mainCanvas.style.cssText = overlayCanvas.style.cssText = styleCanvas;
+    const styleCanvas = 'position:absolute'; // allow canvases to overlap
+    mainCanvas.style.cssText = overlayCanvas.style.cssText = styleCanvas;
+    if (glCanvas)
+        glCanvas.style.cssText = styleCanvas;
     updateCanvas();
     
     // create promises for loading images
