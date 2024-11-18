@@ -204,6 +204,7 @@ function debugShowErrors()
 
     const showError = (message)=>
     {
+        // replace entire page with error message
         document.body.style.backgroundColor = '#111';
         document.body.innerHTML = `<pre style=color:#f00;font-size:50px>` + message;
     }
@@ -1205,7 +1206,7 @@ class Color
      * @return {String} */
     toString(useAlpha = true)      
     { 
-        const toHex = (c)=> ((c=c*255|0)<16 ? '0' : '') + c.toString(16);
+        const toHex = (c)=> ((c=clamp(c)*255|0)<16 ? '0' : '') + c.toString(16);
         return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b) + (useAlpha ? toHex(this.a) : '');
     }
     
@@ -1435,7 +1436,7 @@ let tileSizeDefault = vec2(16);
  *  @type {Number}
  *  @default
  *  @memberof Settings */
-let tileFixBleedScale = .5;
+let tileFixBleedScale = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Object settings
@@ -2337,12 +2338,13 @@ let drawCount;
 ///////////////////////////////////////////////////////////////////////////////
 
 /** 
- * Create a tile info object
+ * Create a tile info object using a grid based system
  * - This can take vecs or floats for easier use and conversion
  * - If an index is passed in, the tile size and index will determine the position
- * @param {(Number|Vector2)} [pos=(0,0)]            - Top left corner of tile in pixels or index
+ * @param {(Number|Vector2)} [pos=0]                - Index of tile in sheet
  * @param {(Number|Vector2)} [size=tileSizeDefault] - Size of tile in pixels
  * @param {Number} [textureIndex]                   - Texture index to use
+ * @param {Number} [padding]                        - How many pixels padding around tiles
  * @return {TileInfo}
  * @example
  * tile(2)                       // a tile at index 2 using the default tile size of 16
@@ -2351,7 +2353,7 @@ let drawCount;
  * tile(vec2(4,8), vec2(30,10))  // a tile at pixel location (4,8) with a size of (30,10)
  * @memberof Draw
  */
-function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0)
+function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0)
 {
     if (headlessMode)
         return new TileInfo;
@@ -2363,17 +2365,17 @@ function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0)
         size = vec2(size);
     }
 
-    // if pos is a number, use it as a tile index
+    // use pos as a tile index
+    const textureInfo = textureInfos[textureIndex];
+    ASSERT(textureInfo, 'Texture not loaded');
+    const sizePadded = size.add(vec2(padding*2));
+    const cols = textureInfo.size.x / sizePadded.x |0;
     if (typeof pos === 'number')
-    {
-        const textureInfo = textureInfos[textureIndex];
-        ASSERT(textureInfo, 'Texture not loaded');
-        const cols = textureInfo.size.x / size.x |0;
-        pos = vec2((pos%cols)*size.x, (pos/cols|0)*size.y);
-    }
+        pos = vec2(pos%cols, pos/cols|0);
+    pos = vec2(pos.x*sizePadded.x+padding, pos.y*sizePadded.y+padding);
 
     // return a tile info object
-    return new TileInfo(pos, size, textureIndex); 
+    return new TileInfo(pos, size, textureIndex, padding); 
 }
 
 /** 
@@ -2385,8 +2387,9 @@ class TileInfo
      *  @param {Vector2} [pos=(0,0)]            - Top left corner of tile in pixels
      *  @param {Vector2} [size=tileSizeDefault] - Size of tile in pixels
      *  @param {Number}  [textureIndex]         - Texture index to use
+     *  @param {Number}  [padding]              - How many pixels padding around tiles
      */
-    constructor(pos=vec2(), size=tileSizeDefault, textureIndex=0)
+    constructor(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0)
     {
         /** @property {Vector2} - Top left corner of tile in pixels */
         this.pos = pos.copy();
@@ -2394,6 +2397,8 @@ class TileInfo
         this.size = size.copy();
         /** @property {Number} - Texture index to use */
         this.textureIndex = textureIndex;
+        /** @property {Number} - How many pixels padding around tiles */
+        this.padding = padding;
     }
 
     /** Returns a copy of this tile offset by a vector
@@ -2410,7 +2415,7 @@ class TileInfo
     frame(frame)
     {
         ASSERT(typeof frame == 'number');
-        return this.offset(vec2(frame*this.size.x, 0));
+        return this.offset(vec2(frame*(this.size.x+this.padding*2), 0));
     }
 
     /** Returns the texture info for this tile
@@ -2435,8 +2440,6 @@ class TextureInfo
         this.size = vec2(image.width, image.height);
         /** @property {WebGLTexture} - webgl texture */
         this.glTexture = glEnable && glCreateTexture(image);
-        /** @property {Vector2} - size to adjust tile to fix bleeding */
-        this.fixBleedSize = vec2(tileFixBleedScale).divide(this.size);
     }
 }
 
@@ -2505,11 +2508,12 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
         if (textureInfo)
         {
             // calculate uvs and render
-            const x = tileInfo.pos.x / textureInfo.size.x;
-            const y = tileInfo.pos.y / textureInfo.size.y;
-            const w = tileInfo.size.x / textureInfo.size.x;
-            const h = tileInfo.size.y / textureInfo.size.y;
-            const tileImageFixBleed = textureInfo.fixBleedSize;
+            const sizeInverse = vec2(1).divide(textureInfo.size);
+            const x = tileInfo.pos.x * sizeInverse.x;
+            const y = tileInfo.pos.y * sizeInverse.y;
+            const w = tileInfo.size.x * sizeInverse.x;
+            const h = tileInfo.size.y * sizeInverse.y;
+            const tileImageFixBleed = sizeInverse.scale(tileFixBleedScale);
             glSetTexture(textureInfo.glTexture);
             glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
                 x + tileImageFixBleed.x,     y + tileImageFixBleed.y, 
@@ -2562,6 +2566,74 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
 { 
     drawTile(pos, size, undefined, color, angle, false, undefined, useWebGL, screenSpace, context); 
 }
+
+/** Draw colored polygon using passed in points
+ *  @param {Array}   points - Array of Vector2 points
+ *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Number}  [lineWidth=0]
+ *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {Boolean} [screenSpace=false]
+ *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @memberof Draw */
+function drawPoly(points, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
+{
+    context.fillStyle = color.toString();
+    context.beginPath();
+    for (const point of screenSpace ? points : points.map(worldToScreen))
+        context.lineTo(point.x, point.y);
+    context.closePath();
+    context.fill();
+    if (lineWidth)
+    {
+        context.strokeStyle = lineColor.toString();
+        context.lineWidth = screenSpace ? lineWidth : lineWidth*cameraScale;
+        context.stroke();
+    }
+}
+
+/** Draw colored ellipse using passed in point
+ *  @param {Vector2} pos
+ *  @param {Number}  [width=1]
+ *  @param {Number}  [height=1]
+ *  @param {Number}  [angle=0]
+ *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Number}  [lineWidth=0]
+ *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {Boolean} [screenSpace=false]
+ *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @memberof Draw */
+function drawEllipse(pos, width=1, height=1, angle=0, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
+{
+    if (!screenSpace)
+    {
+        pos = worldToScreen(pos);
+        width *= cameraScale;
+        height *= cameraScale;
+        lineWidth *= cameraScale;
+    }
+    context.fillStyle = color.toString();
+    context.beginPath();
+    context.ellipse(pos.x, pos.y, width, height, angle, 0, 9);
+    context.fill();
+    if (lineWidth)
+    {
+        context.strokeStyle = lineColor.toString();
+        context.lineWidth = lineWidth;
+        context.stroke();
+    }
+}
+
+/** Draw colored circle using passed in point
+ *  @param {Vector2} pos
+ *  @param {Number}  [radius=1]
+ *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Number}  [lineWidth=0]
+ *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {Boolean} [screenSpace=false]
+ *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @memberof Draw */
+function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
+{ drawEllipse(pos, radius, radius, 0, color, lineWidth, lineColor, screenSpace, context); }
 
 /** Draw colored line between two points
  *  @param {Vector2} posA
@@ -2633,10 +2705,11 @@ function setBlendMode(additive, useWebGL=glEnable, context)
  *  @param {CanvasTextAlign}  [textAlign='center']
  *  @param {String}  [font=fontDefault]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
+ *  @param {Number}  [maxWidth]
  *  @memberof Draw */
-function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, context)
+function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, context, maxWidth)
 {
-    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, context);
+    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, context, maxWidth);
 }
 
 /** Draw text on overlay canvas in screen space
@@ -2650,8 +2723,9 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
  *  @param {CanvasTextAlign}  [textAlign]
  *  @param {String}  [font=fontDefault]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
+ *  @param {Number}  [maxWidth]
  *  @memberof Draw */
-function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, context=overlayContext)
+function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, context=overlayContext, maxWidth=undefined)
 {
     context.fillStyle = color.toString();
     context.lineWidth = lineWidth;
@@ -2664,8 +2738,8 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
     pos = pos.copy();
     (text+'').split('\n').forEach(line=>
     {
-        lineWidth && context.strokeText(line, pos.x, pos.y);
-        context.fillText(line, pos.x, pos.y);
+        lineWidth && context.strokeText(line, pos.x, pos.y, maxWidth);
+        context.fillText(line, pos.x, pos.y, maxWidth);
         pos.y += size;
     });
 }
@@ -2773,8 +2847,8 @@ function toggleFullscreen()
         if (document.exitFullscreen)
             document.exitFullscreen();
     }
-    else if (document.body.requestFullscreen)
-            document.body.requestFullscreen();
+    else if (engineRoot.requestFullscreen)
+        engineRoot.requestFullscreen();
 }
 /** 
  * LittleJS Input System
@@ -2945,7 +3019,7 @@ function inputInit()
 
     onkeydown = (e)=>
     {
-        if (debug && e.target != document.body) return;
+        if (debug && e.target != engineRoot) return;
         if (!e.repeat)
         {
             isUsingGamepad = false;
@@ -2958,7 +3032,7 @@ function inputInit()
 
     onkeyup = (e)=>
     {
-        if (debug && e.target != document.body) return;
+        if (debug && e.target != engineRoot) return;
         inputData[0][e.code] = 4;
         if (inputWASDEmulateDirection)
             inputData[0][remapKey(e.code)] = 4;
@@ -4803,10 +4877,10 @@ function glInit()
 
     // create the canvas and textures
     glCanvas = document.createElement('canvas');
-    glContext = glCanvas.getContext('webgl2');
+    glContext = glCanvas.getContext('webgl2', {antialias:!canvasPixelated});
 
     // some browsers are much faster without copying the gl buffer so we just overlay it instead
-    glOverlay && document.body.appendChild(glCanvas);
+    glOverlay && engineRoot.appendChild(glCanvas);
 
     // setup vertex and fragment shaders
     glShader = glCreateProgram(
@@ -4861,7 +4935,8 @@ function glPreRender()
     // set up the shader
     glContext.useProgram(glShader);
     glContext.activeTexture(gl_TEXTURE0);
-    glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = textureInfos[0].glTexture);
+    if (textureInfos[0])
+        glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = textureInfos[0].glTexture);
 
     // set vertex attributes
     let offset = glAdditive = glBatchAdditive = 0;
@@ -4959,7 +5034,7 @@ function glCreateTexture(image)
     // build the texture
     const texture = glContext.createTexture();
     glContext.bindTexture(gl_TEXTURE_2D, texture);
-    if (image)
+    if (image && image.width)
         glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
 
     // use point filtering for pixelated rendering
@@ -5103,7 +5178,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.9.11';
+const engineVersion = '1.10.0';
 
 /** Frames per second to update
  *  @type {Number}
@@ -5148,6 +5223,12 @@ let timeReal = 0;
  *  @memberof Engine */
 let paused = false;
 
+/** The root element that engine is attached to
+ *  @type {HTMLElement}
+ *  @default document.body
+ *  @memberof Engine */
+let engineRoot;
+
 /** Set if game is paused
  *  @param {Boolean} isPaused
  *  @memberof Engine */
@@ -5181,8 +5262,9 @@ function engineAddPlugin(updateFunction, renderFunction)
  *  @param {Function} gameRender     - Called before objects are rendered, draw any background effects that appear behind objects
  *  @param {Function} gameRenderPost - Called after objects are rendered, draw effects or hud that appear above all objects
  *  @param {Array} [imageSources=['tiles.png']] - Image to load
+ *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default
  *  @memberof Engine */
-function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=['tiles.png'])
+function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
 {
     ASSERT(Array.isArray(imageSources), 'pass in images as array');
 
@@ -5224,6 +5306,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             for (const o of engineObjects)
                 o.parent || o.updateTransforms();
             inputUpdate();
+            pluginUpdateList.forEach(f=>f());
             debugUpdate();
             gameUpdatePost();
             inputUpdatePost();
@@ -5341,14 +5424,20 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     // setup html
     const styleBody = 
         'margin:0;overflow:hidden;' + // fill the window
+        'width:100vw;height:100vh;' + // fill the window
+        'display:flex;' +             // use flexbox
+        'align-items:center;' +       // horizontal center
+        (canvasPixelated ? 'image-rendering:pixelated;' : '') + // pixel art
+        'justify-content:center;' +   // vertical center
         'background:#000;' +          // set background color
         'user-select:none;' +         // prevent hold to select
         '-webkit-user-select:none;' + // compatibility for ios
         (!touchInputEnable ? '' :     // no touch css setttings
         'touch-action:none;' +        // prevent mobile pinch to resize
         '-webkit-touch-callout:none');// compatibility for ios
-    document.body.style.cssText = styleBody;
-    document.body.appendChild(mainCanvas = document.createElement('canvas'));
+    engineRoot = rootElement;
+    engineRoot.style.cssText = styleBody;
+    engineRoot.appendChild(mainCanvas = document.createElement('canvas'));
     mainContext = mainCanvas.getContext('2d');
 
     // init stuff and start engine
@@ -5358,13 +5447,14 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     glInit();
 
     // create overlay canvas for hud to appear above gl canvas
-    document.body.appendChild(overlayCanvas = document.createElement('canvas'));
+    engineRoot.appendChild(overlayCanvas = document.createElement('canvas'));
     overlayContext = overlayCanvas.getContext('2d');
 
     // set canvas style
-    const styleCanvas = 'position:absolute;' +             // position
-        'top:50%;left:50%;transform:translate(-50%,-50%)'; // center
-    (glCanvas||mainCanvas).style.cssText = mainCanvas.style.cssText = overlayCanvas.style.cssText = styleCanvas;
+    const styleCanvas = 'position:absolute'; // allow canvases to overlap
+    mainCanvas.style.cssText = overlayCanvas.style.cssText = styleCanvas;
+    if (glCanvas)
+        glCanvas.style.cssText = styleCanvas;
     updateCanvas();
     
     // create promises for loading images
@@ -5381,19 +5471,32 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         })
     );
 
-    // draw splash screen
-    showSplashScreen && promises.push(new Promise(resolve => 
+    if (!imageSources.length)
     {
-        let t = 0;
-        console.log(`${engineName} Engine v${engineVersion}`);
-        updateSplash();
-        function updateSplash()
+        // no images to load
+        promises.push(new Promise(resolve => 
         {
-            clearInput();
-            drawEngineSplashScreen(t+=.01);
-            t>1 ? resolve() : setTimeout(updateSplash, 16);
-        }
-    }));
+            textureInfos[0] = new TextureInfo(new Image);
+            resolve();
+        }));
+    }
+
+    if (showSplashScreen)
+    {
+        // draw splash screen
+        promises.push(new Promise(resolve => 
+        {
+            let t = 0;
+            console.log(`${engineName} Engine v${engineVersion}`);
+            updateSplash();
+            function updateSplash()
+            {
+                clearInput();
+                drawEngineSplashScreen(t+=.01);
+                t>1 ? resolve() : setTimeout(updateSplash, 16);
+            }
+        }));
+    }
 
     // load all of the images
     Promise.all(promises).then(startEngine);

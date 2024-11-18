@@ -70,8 +70,9 @@ declare module "littlejsengine" {
      *  @param {Function} gameRender     - Called before objects are rendered, draw any background effects that appear behind objects
      *  @param {Function} gameRenderPost - Called after objects are rendered, draw effects or hud that appear above all objects
      *  @param {Array} [imageSources=['tiles.png']] - Image to load
+     *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default
      *  @memberof Engine */
-    export function engineInit(gameInit: Function, gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, imageSources?: any[]): void;
+    export function engineInit(gameInit: Function, gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, imageSources?: any[], rootElement?: HTMLElement): void;
     /** Update each engine object, remove destroyed objects, and update time
      *  @memberof Engine */
     export function engineObjectsUpdate(): void;
@@ -1096,12 +1097,13 @@ declare module "littlejsengine" {
      *  @memberof Draw */
     export let textureInfos: any[];
     /**
-     * Create a tile info object
+     * Create a tile info object using a grid based system
      * - This can take vecs or floats for easier use and conversion
      * - If an index is passed in, the tile size and index will determine the position
-     * @param {(Number|Vector2)} [pos=(0,0)]            - Top left corner of tile in pixels or index
+     * @param {(Number|Vector2)} [pos=0]                - Index of tile in sheet
      * @param {(Number|Vector2)} [size=tileSizeDefault] - Size of tile in pixels
      * @param {Number} [textureIndex]                   - Texture index to use
+     * @param {Number} [padding]                        - How many pixels padding around tiles
      * @return {TileInfo}
      * @example
      * tile(2)                       // a tile at index 2 using the default tile size of 16
@@ -1110,7 +1112,7 @@ declare module "littlejsengine" {
      * tile(vec2(4,8), vec2(30,10))  // a tile at pixel location (4,8) with a size of (30,10)
      * @memberof Draw
      */
-    export function tile(pos?: (number | Vector2), size?: (number | Vector2), textureIndex?: number): TileInfo;
+    export function tile(pos?: (number | Vector2), size?: (number | Vector2), textureIndex?: number, padding?: number): TileInfo;
     /**
      * Tile Info - Stores info about how to draw a tile
      */
@@ -1119,14 +1121,17 @@ declare module "littlejsengine" {
          *  @param {Vector2} [pos=(0,0)]            - Top left corner of tile in pixels
          *  @param {Vector2} [size=tileSizeDefault] - Size of tile in pixels
          *  @param {Number}  [textureIndex]         - Texture index to use
+         *  @param {Number}  [padding]              - How many pixels padding around tiles
          */
-        constructor(pos?: Vector2, size?: Vector2, textureIndex?: number);
+        constructor(pos?: Vector2, size?: Vector2, textureIndex?: number, padding?: number);
         /** @property {Vector2} - Top left corner of tile in pixels */
         pos: Vector2;
         /** @property {Vector2} - Size of tile in pixels */
         size: Vector2;
         /** @property {Number} - Texture index to use */
         textureIndex: number;
+        /** @property {Number} - How many pixels padding around tiles */
+        padding: number;
         /** Returns a copy of this tile offset by a vector
         *  @param {Vector2} offset - Offset to apply in pixels
         *  @return {TileInfo}
@@ -1155,8 +1160,6 @@ declare module "littlejsengine" {
         size: Vector2;
         /** @property {WebGLTexture} - webgl texture */
         glTexture: WebGLTexture;
-        /** @property {Vector2} - size to adjust tile to fix bleeding */
-        fixBleedSize: Vector2;
     }
     /**
      * LittleJS Drawing System
@@ -1269,8 +1272,9 @@ declare module "littlejsengine" {
      *  @param {CanvasTextAlign}  [textAlign]
      *  @param {String}  [font=fontDefault]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
+     *  @param {Number}  [maxWidth]
      *  @memberof Draw */
-    export function drawTextScreen(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    export function drawTextScreen(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, maxWidth?: number): void;
     /** Draw text on overlay canvas in world space
      *  Automatically splits new lines into rows
      *  @param {String}  text
@@ -1282,8 +1286,9 @@ declare module "littlejsengine" {
      *  @param {CanvasTextAlign}  [textAlign='center']
      *  @param {String}  [font=fontDefault]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
+     *  @param {Number}  [maxWidth]
      *  @memberof Draw */
-    export function drawText(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    export function drawText(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, maxWidth?: number): void;
     export let engineFontImage: any;
     /**
      * Font Image Object - Draw text on a 2D canvas by using characters in an image
