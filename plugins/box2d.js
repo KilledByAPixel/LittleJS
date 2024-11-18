@@ -875,7 +875,8 @@ function box2dEngineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameR
         engineAddPlugin(box2dUpdate, box2dRender);
         function box2dUpdate()
         {
-            box2dWorld.Step(timeDelta, box2dStepIterations, box2dStepIterations);
+            if (!paused)
+                box2dWorld.Step(timeDelta, box2dStepIterations, box2dStepIterations);
         }
         function box2dRender()
         {
