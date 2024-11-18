@@ -200,6 +200,7 @@ function debugShowErrors()
 
     const showError = (message)=>
     {
+        // replace entire page with error message
         document.body.style.backgroundColor = '#111';
         document.body.innerHTML = `<pre style=color:#f00;font-size:50px>` + message;
     }
