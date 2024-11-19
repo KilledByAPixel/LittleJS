@@ -2238,7 +2238,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, conte
     context.save();
     context.translate(pos.x+.5, pos.y+.5);
     context.rotate(angle);
-    context.scale(mirror ? -size.x : size.x, -size.y);
+    context.scale(mirror ? -size.x : size.x, size.y);
     drawFunction(context);
     context.restore();
 }
@@ -4745,7 +4745,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.10.0';
+const engineVersion = '1.10.1';
 
 /** Frames per second to update
  *  @type {Number}

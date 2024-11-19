@@ -128,7 +128,6 @@ function debugPoint(pos, color, time, angle)
  *  @memberof Debug */
 function debugLine(posA, posB, color, thickness=.1, time)
 {
-    ASSERT(typeof color == 'string', 'pass in css color strings'); 
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);
     debugRect(posA.add(halfDelta), size, color, time, halfDelta.angle(), true);
@@ -2671,7 +2670,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, conte
     context.save();
     context.translate(pos.x+.5, pos.y+.5);
     context.rotate(angle);
-    context.scale(mirror ? -size.x : size.x, -size.y);
+    context.scale(mirror ? -size.x : size.x, size.y);
     drawFunction(context);
     context.restore();
 }
@@ -5178,7 +5177,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.10.0';
+const engineVersion = '1.10.1';
 
 /** Frames per second to update
  *  @type {Number}
