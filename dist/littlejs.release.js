@@ -3251,17 +3251,6 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
 {
     if (!soundEnable || headlessMode) return;
 
-    // prevent sounds from building up if they can't be played
-    if (audioContext.state != 'running')
-    {
-        // fix stalled audio
-        audioContext.resume().then(()=>
-            playSamples(sampleChannels, volume, rate, pan, loop, sampleRate, gainNode));
-
-        // prevent suspended sounds from building up
-        return;
-    }
-
     // create buffer and source
     const channelCount = sampleChannels.length;
     const sampleLength = sampleChannels[0].length;
@@ -3283,8 +3272,16 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
     const pannerNode = new StereoPannerNode(audioContext, {'pan':clamp(pan, -1, 1)});
     source.connect(pannerNode).connect(gainNode);
 
-    // play and return sound
-    source.start();
+    // play the sound
+    if (audioContext.state != 'running')
+    {
+        // fix stalled audio and play
+        audioContext.resume().then(()=>source.start());
+    }
+    else
+        source.start();
+
+    // return sound
     return source;
 }
 
