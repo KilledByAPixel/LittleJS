@@ -337,7 +337,7 @@ function debugRender()
             const pos = worldToScreen(p.pos);
             overlayContext.translate(pos.x|0, pos.y|0);
             overlayContext.rotate(p.angle);
-            overlayContext.scale(1, p.text ? 1 : -1);
+            overlayContext.scale(1, 1);
             overlayContext.fillStyle = overlayContext.strokeStyle = p.color;
 
             if (p.text != undefined)
@@ -354,7 +354,7 @@ function debugRender()
                 for (const point of p.points)
                 {
                     const p2 = point.scale(cameraScale).floor();
-                    overlayContext.lineTo(p2.x, p2.y);
+                    overlayContext.lineTo(p2.x, -p2.y);
                 }
                 overlayContext.closePath();
                 p.fill && overlayContext.fill();
