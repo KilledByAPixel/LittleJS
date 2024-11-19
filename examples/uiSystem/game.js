@@ -39,9 +39,9 @@ function createUI()
     // example large text
     const textTitle = new UIText(vec2(0,-200), vec2(500, 90), 'Test Title');
     uiMenu.addChild(textTitle);
-    textTitle.textColor = YELLOW;
+    textTitle.textColor = RED;
     textTitle.lineWidth = 4;
-    textTitle.lineColor = RED;
+    textTitle.lineColor = BLUE;
 
     // example multiline text
     const textTest = new UIText(vec2(-60,-120), vec2(300, 50), 'Test Text\nSecond text line.')
