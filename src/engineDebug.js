@@ -124,7 +124,6 @@ function debugPoint(pos, color, time, angle)
  *  @memberof Debug */
 function debugLine(posA, posB, color, thickness=.1, time)
 {
-    ASSERT(typeof color == 'string', 'pass in css color strings'); 
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);
     debugRect(posA.add(halfDelta), size, color, time, halfDelta.angle(), true);
