@@ -752,7 +752,7 @@ function box2dDrawFixture(fixture, pos, angle, fillColor, outlineColor, lineWidt
 
 function box2dDrawCircle(pos, radius, color=WHITE, outlineColor, lineWidth=.1, context)
 {
-    drawCanvas2D(pos, vec2(1), 0, 0, context=>
+    drawCanvas2D(pos, vec2(1,-1), 0, 0, context=>
     {
         context.beginPath();
         context.arc(0, 0, radius, 0, 9);
@@ -762,7 +762,7 @@ function box2dDrawCircle(pos, radius, color=WHITE, outlineColor, lineWidth=.1, c
 
 function box2dDrawPoly(pos, angle, points, color=WHITE, outlineColor, lineWidth=.1, context)
 {
-    drawCanvas2D(pos, vec2(1), angle, 0, context=>
+    drawCanvas2D(pos, vec2(1,-1), angle, 0, context=>
     {
         context.beginPath();
         points.forEach(p=>context.lineTo(p.x, p.y));
@@ -773,7 +773,7 @@ function box2dDrawPoly(pos, angle, points, color=WHITE, outlineColor, lineWidth=
 
 function box2dDrawLine(pos, angle, posA, posB, color=WHITE, lineWidth=.1, context)
 {
-    drawCanvas2D(pos, vec2(1), angle, 0, context=>
+    drawCanvas2D(pos, vec2(1,-1), angle, 0, context=>
     {
         context.beginPath();
         context.lineTo(posA.x, posA.y);
