@@ -274,7 +274,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     }
 
     // setup html
-    const styleBody = 
+    const styleRoot = 
         'margin:0;overflow:hidden;' + // fill the window
         'width:100vw;height:100vh;' + // fill the window
         'display:flex;' +             // use flexbox
@@ -288,7 +288,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         'touch-action:none;' +        // prevent mobile pinch to resize
         '-webkit-touch-callout:none');// compatibility for ios
     engineRoot = rootElement;
-    engineRoot.style.cssText = styleBody;
+    engineRoot.style.cssText = styleRoot;
     engineRoot.appendChild(mainCanvas = document.createElement('canvas'));
     mainContext = mainCanvas.getContext('2d');
 
