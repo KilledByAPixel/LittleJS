@@ -53,10 +53,10 @@ function buildLevel()
     player = new Player(playerStartPos);
 }
 
-function loadLevel()
+function loadLevel(level=0)
 {
     // load level data from an exported Tiled js file
-    const dataName = Object.keys(TileMaps)[0];
+    const dataName = Object.keys(TileMaps)[level];
     const tileMapData = TileMaps[dataName];
     levelSize = vec2(tileMapData.width, tileMapData.height);
     initTileCollision(levelSize);
