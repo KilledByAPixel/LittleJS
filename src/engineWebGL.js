@@ -193,6 +193,12 @@ function glCreateTexture(image)
     glContext.bindTexture(gl_TEXTURE_2D, texture);
     if (image && image.width)
         glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
+    else
+    {
+        // create a white texture
+        const whitePixel = new Uint8Array([255, 255, 255, 255]);
+        glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, 1, 1, 0, gl_RGBA, gl_UNSIGNED_BYTE, whitePixel);
+    }
 
     // use point filtering for pixelated rendering
     const filter = canvasPixelated ? gl_NEAREST : gl_LINEAR;
