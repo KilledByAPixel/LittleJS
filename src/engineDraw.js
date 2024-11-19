@@ -250,6 +250,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     {
         // normal canvas 2D rendering method (slower)
         showWatermark && ++drawCount;
+        size = vec2(size.x, -size.y); // fix upside down sprites
         drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
             if (textureInfo)
@@ -391,7 +392,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, conte
     context.save();
     context.translate(pos.x+.5, pos.y+.5);
     context.rotate(angle);
-    context.scale(mirror ? -size.x : size.x, size.y);
+    context.scale(mirror ? -size.x : size.x, -size.y);
     drawFunction(context);
     context.restore();
 }

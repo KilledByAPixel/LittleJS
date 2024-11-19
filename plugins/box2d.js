@@ -765,7 +765,7 @@ function box2dDrawPoly(pos, angle, points, color=WHITE, outlineColor, lineWidth=
     drawCanvas2D(pos, vec2(1), angle, 0, context=>
     {
         context.beginPath();
-        points.forEach(p=>context.lineTo(p.x, -p.y));
+        points.forEach(p=>context.lineTo(p.x, p.y));
         context.closePath();
         box2dDrawFillStroke(context, color, outlineColor, lineWidth);
     }, 0, context);
@@ -776,8 +776,8 @@ function box2dDrawLine(pos, angle, posA, posB, color=WHITE, lineWidth=.1, contex
     drawCanvas2D(pos, vec2(1), angle, 0, context=>
     {
         context.beginPath();
-        context.lineTo(posA.x, -posA.y);
-        context.lineTo(posB.x, -posB.y);
+        context.lineTo(posA.x, posA.y);
+        context.lineTo(posB.x, posB.y);
         box2dDrawFillStroke(context, 0, color, lineWidth);
     }, 0, context);
 }
