@@ -17,6 +17,8 @@ const sound_click = new Sound([1,.5]);
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
+    // show menu for demo
+    setMenuVisible(true);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -44,10 +46,10 @@ function gameRender()
 {
     // test game rendering
     drawRect(vec2(), vec2(1e3), hsl(0,0,.2));
-    for(let i = 0; i < 100; ++i)
+    for(let i=0; i<1e3; ++i)
     {
         const pos = vec2(30*Math.sin(i+time/9),20*Math.sin(i*i+time/9));
-        drawRect(pos, vec2(2), hsl(i/9,1,.4));
+        drawTile(pos, vec2(2), tile(3,128), hsl(i/9,1,.4), time+i, !(i%2), hsl(i/9,1,.1,0));
     }
 }
 
@@ -62,4 +64,4 @@ function gameRenderPost()
 
 ///////////////////////////////////////////////////////////////////////////////
 // Startup LittleJS Engine
-engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);
