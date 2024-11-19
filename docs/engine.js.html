@@ -32,7 +32,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.9.8';
+const engineVersion = '1.10.1';
 
 /** Frames per second to update
  *  @type {Number}
@@ -77,6 +77,12 @@ let timeReal = 0;
  *  @memberof Engine */
 let paused = false;
 
+/** The root element that engine is attached to
+ *  @type {HTMLElement}
+ *  @default document.body
+ *  @memberof Engine */
+let engineRoot;
+
 /** Set if game is paused
  *  @param {Boolean} isPaused
  *  @memberof Engine */
@@ -91,14 +97,14 @@ let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
 const pluginUpdateList = [], pluginRenderList = [];
 
 /** Add a new update function for a plugin
- *  @param {Function} updateFunction
+ *  @param {Function} [updateFunction]
+ *  @param {Function} [renderFunction]
  *  @memberof Engine */
-function addPluginUpdate(updateFunction) { pluginUpdateList.push(updateFunction); }
-
-/** Add a new render function for a plugin
- *  @param {Function} renderFunction
- *  @memberof Engine */
-function addPluginRender(renderFunction) { pluginRenderList.push(renderFunction); }
+function engineAddPlugin(updateFunction, renderFunction)
+{
+    updateFunction &amp;&amp; pluginUpdateList.push(updateFunction);
+    renderFunction &amp;&amp; pluginRenderList.push(renderFunction);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Main engine functions
@@ -110,8 +116,9 @@ function addPluginRender(renderFunction) { pluginRenderList.push(renderFunction)
  *  @param {Function} gameRender     - Called before objects are rendered, draw any background effects that appear behind objects
  *  @param {Function} gameRenderPost - Called after objects are rendered, draw effects or hud that appear above all objects
  *  @param {Array} [imageSources=['tiles.png']] - Image to load
+ *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default
  *  @memberof Engine */
-function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=['tiles.png'])
+function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
 {
     ASSERT(Array.isArray(imageSources), 'pass in images as array');
 
@@ -153,6 +160,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             for (const o of engineObjects)
                 o.parent || o.updateTransforms();
             inputUpdate();
+            pluginUpdateList.forEach(f=>f());
             debugUpdate();
             gameUpdatePost();
             inputUpdatePost();
@@ -270,13 +278,20 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     // setup html
     const styleBody = 
         'margin:0;overflow:hidden;' + // fill the window
+        'width:100vw;height:100vh;' + // fill the window
+        'display:flex;' +             // use flexbox
+        'align-items:center;' +       // horizontal center
+        (canvasPixelated ? 'image-rendering:pixelated;' : '') + // pixel art
+        'justify-content:center;' +   // vertical center
         'background:#000;' +          // set background color
-        'touch-action:none;' +        // prevent mobile pinch to resize
-        'user-select:none;' +         // prevent mobile hold to select
+        'user-select:none;' +         // prevent hold to select
         '-webkit-user-select:none;' + // compatibility for ios
-        '-webkit-touch-callout:none'; // compatibility for ios
-    document.body.style.cssText = styleBody;
-    document.body.appendChild(mainCanvas = document.createElement('canvas'));
+        (!touchInputEnable ? '' :     // no touch css setttings
+        'touch-action:none;' +        // prevent mobile pinch to resize
+        '-webkit-touch-callout:none');// compatibility for ios
+    engineRoot = rootElement;
+    engineRoot.style.cssText = styleBody;
+    engineRoot.appendChild(mainCanvas = document.createElement('canvas'));
     mainContext = mainCanvas.getContext('2d');
 
     // init stuff and start engine
@@ -286,13 +301,14 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     glInit();
 
     // create overlay canvas for hud to appear above gl canvas
-    document.body.appendChild(overlayCanvas = document.createElement('canvas'));
+    engineRoot.appendChild(overlayCanvas = document.createElement('canvas'));
     overlayContext = overlayCanvas.getContext('2d');
 
     // set canvas style
-    const styleCanvas = 'position:absolute;' +             // position
-        'top:50%;left:50%;transform:translate(-50%,-50%)'; // center
-    (glCanvas||mainCanvas).style.cssText = mainCanvas.style.cssText = overlayCanvas.style.cssText = styleCanvas;
+    const styleCanvas = 'position:absolute'; // allow canvases to overlap
+    mainCanvas.style.cssText = overlayCanvas.style.cssText = styleCanvas;
+    if (glCanvas)
+        glCanvas.style.cssText = styleCanvas;
     updateCanvas();
     
     // create promises for loading images
@@ -309,19 +325,32 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         })
     );
 
-    // draw splash screen
-    showSplashScreen &amp;&amp; promises.push(new Promise(resolve => 
+    if (!imageSources.length)
     {
-        let t = 0;
-        console.log(`${engineName} Engine v${engineVersion}`);
-        updateSplash();
-        function updateSplash()
+        // no images to load
+        promises.push(new Promise(resolve => 
         {
-            clearInput();
-            drawEngineSplashScreen(t+=.01);
-            t>1 ? resolve() : setTimeout(updateSplash, 16);
-        }
-    }));
+            textureInfos[0] = new TextureInfo(new Image);
+            resolve();
+        }));
+    }
+
+    if (showSplashScreen)
+    {
+        // draw splash screen
+        promises.push(new Promise(resolve => 
+        {
+            let t = 0;
+            console.log(`${engineName} Engine v${engineVersion}`);
+            updateSplash();
+            function updateSplash()
+            {
+                clearInput();
+                drawEngineSplashScreen(t+=.01);
+                t>1 ? resolve() : setTimeout(updateSplash, 16);
+            }
+        }));
+    }
 
     // load all of the images
     Promise.all(promises).then(startEngine);

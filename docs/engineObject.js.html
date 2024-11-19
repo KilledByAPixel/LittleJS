@@ -155,9 +155,9 @@ class EngineObject
 
         // apply physics
         const oldPos = this.pos.copy();
-        this.velocity.y += gravity * this.gravityScale;
         this.pos.x += this.velocity.x *= this.damping;
-        this.pos.y += this.velocity.y *= this.damping;
+        this.pos.y += this.velocity.y = this.damping * this.velocity.y 
+            + gravity * this.gravityScale;
         this.angle += this.angleVelocity *= this.angleDamping;
 
         // physics sanity checks
@@ -286,19 +286,22 @@ class EngineObject
                     const isBlockedX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
                     if (isBlockedY || !isBlockedX)
                     {
-                        // set if landed on ground
-                        this.groundObject = wasMovingDown;
-
                         // bounce velocity
                         this.velocity.y *= -this.elasticity;
 
-                        // adjust next velocity to settle on ground
-                        const o = (oldPos.y - this.size.y/2|0) - (oldPos.y - this.size.y/2);
-                        if (o &lt; 0 &amp;&amp; o > this.damping * this.velocity.y + gravity * this.gravityScale) 
-                            this.velocity.y = this.damping ? (o - gravity * this.gravityScale) / this.damping : 0;
-
-                        // move to previous position
-                        this.pos.y = oldPos.y;
+                        // set if landed on ground
+                        if (this.groundObject = wasMovingDown)
+                        {
+                            // adjust position to slightly above nearest tile boundary
+                            // this prevents gap between object and ground
+                            const epsilon = .0001;
+                            this.pos.y = (oldPos.y-this.size.y/2|0)+this.size.y/2+epsilon;
+                        }
+                        else
+                        {
+                            // move to previous position
+                            this.pos.y = oldPos.y;
+                        }
                     }
                     if (isBlockedX)
                     {
@@ -436,12 +439,15 @@ class EngineObject
     /** Render debug info for this object  */
     renderDebugInfo()
     {
-        // show object info for debugging
-        const size = vec2(max(this.size.x, .2), max(this.size.y, .2));
-        const color1 = rgb(this.collideTiles?1:0, this.collideSolidObjects?1:0, this.isSolid?1:0, this.parent?.2:.5);
-        const color2 = this.parent ? rgb(1,1,1,.5) : rgb(0,0,0,.8);
-        drawRect(this.pos, size, color1, this.angle, false);
-        drawRect(this.pos, size.scale(.8), color2, this.angle, false);
-        this.parent &amp;&amp; drawLine(this.pos, this.parent.pos, .1, rgb(0,0,1,.5), false);
+        if (debug)
+        {
+            // show object info for debugging
+            const size = vec2(max(this.size.x, .2), max(this.size.y, .2));
+            const color1 = rgb(this.collideTiles?1:0, this.collideSolidObjects?1:0, this.isSolid?1:0, this.parent?.2:.5);
+            const color2 = this.parent ? rgb(1,1,1,.5) : rgb(0,0,0,.8);
+            drawRect(this.pos, size, color1, this.angle, false);
+            drawRect(this.pos, size.scale(.8), color2, this.angle, false);
+            this.parent &amp;&amp; drawLine(this.pos, this.parent.pos, .1, rgb(0,0,1,.5), false);
+        }
     }
 }</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Color.html">Color</a></div><div class="sidebar-section-children"><a href="EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="FontImage.html">FontImage</a></div><div class="sidebar-section-children"><a href="Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Music.html">Music</a></div><div class="sidebar-section-children"><a href="Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="SoundWave.html">SoundWave</a></div><div class="sidebar-section-children"><a href="TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Vector2.html">Vector2</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileCollision.html">TileCollision</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>

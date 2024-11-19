@@ -5,6 +5,7 @@
  * - Tracks keyboard down, pressed, and released
  * - Tracks mouse buttons, position, and wheel
  * - Tracks multiple analog gamepads
+ * - Touch input is handled as mouse input
  * - Virtual gamepad for touch devices
  * @namespace Input
  */
@@ -138,7 +139,8 @@ function inputUpdate()
     if (headlessMode) return;
 
     // clear input when lost focus (prevent stuck keys)
-    isTouchDevice || document.hasFocus() || clearInput();
+    if(!(touchInputEnable &amp;&amp; isTouchDevice) &amp;&amp; !document.hasFocus())
+        clearInput();
 
     // update mouse world space position
     mousePos = screenToWorld(mousePosScreen);
@@ -167,7 +169,7 @@ function inputInit()
 
     onkeydown = (e)=>
     {
-        if (debug &amp;&amp; e.target != document.body) return;
+        if (debug &amp;&amp; e.target != engineRoot) return;
         if (!e.repeat)
         {
             isUsingGamepad = false;
@@ -180,7 +182,7 @@ function inputInit()
 
     onkeyup = (e)=>
     {
-        if (debug &amp;&amp; e.target != document.body) return;
+        if (debug &amp;&amp; e.target != engineRoot) return;
         inputData[0][e.code] = 4;
         if (inputWASDEmulateDirection)
             inputData[0][remapKey(e.code)] = 4;
@@ -199,6 +201,10 @@ function inputInit()
     // mouse event handlers
     onmousedown   = (e)=>
     {
+        // fix stalled audio requiring user interaction
+        if (soundEnable &amp;&amp; !headlessMode &amp;&amp; audioContext &amp;&amp; audioContext.state != 'running')
+            audioContext.resume();
+        
         isUsingGamepad = false; 
         inputData[0][e.button] = 3; 
         mousePosScreen = mouseToScreen(e); 
@@ -210,7 +216,7 @@ function inputInit()
     oncontextmenu = (e)=> false; // prevent right click menu
 
     // init touch input
-    if (isTouchDevice)
+    if (isTouchDevice &amp;&amp; touchInputEnable)
         touchInputInit();
 }
 
@@ -338,12 +344,12 @@ function vibrateStop() { vibrate(0); }
 
 /** True if a touch device has been detected
  *  @memberof Input */
-const isTouchDevice = !headlessMode &amp;&amp; window.ontouchstart !== undefined;
+const isTouchDevice = window.ontouchstart !== undefined;
 
 // touch gamepad internal variables
 let touchGamepadTimer = new Timer, touchGamepadButtons, touchGamepadStick;
 
-// try to enable touch mouse
+// enable touch input mouse passthrough
 function touchInputInit()
 {
     // add non passive touch event listeners
@@ -367,8 +373,8 @@ function touchInputInit()
     function handleTouchDefault(e)
     {
         // fix stalled audio requiring user interaction
-        if (soundEnable &amp;&amp; audioContext &amp;&amp; audioContext.state != 'running')
-            zzfx(0);
+        if (soundEnable &amp;&amp; !headlessMode &amp;&amp; audioContext &amp;&amp; audioContext.state != 'running')
+            audioContext.resume();
 
         // check if touching and pass to mouse events
         const touching = e.touches.length;
@@ -452,6 +458,7 @@ function touchInputInit()
 // render the touch gamepad, called automatically by the engine
 function touchGamepadRender()
 {
+    if (!touchInputEnable || !isTouchDevice || headlessMode) return;
     if (!touchGamepadEnable || !touchGamepadTimer.isSet())
         return;
     

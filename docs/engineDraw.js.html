@@ -60,12 +60,13 @@ let drawCount;
 ///////////////////////////////////////////////////////////////////////////////
 
 /** 
- * Create a tile info object
+ * Create a tile info object using a grid based system
  * - This can take vecs or floats for easier use and conversion
  * - If an index is passed in, the tile size and index will determine the position
- * @param {(Number|Vector2)} [pos=(0,0)]            - Top left corner of tile in pixels or index
+ * @param {(Number|Vector2)} [pos=0]                - Index of tile in sheet
  * @param {(Number|Vector2)} [size=tileSizeDefault] - Size of tile in pixels
  * @param {Number} [textureIndex]                   - Texture index to use
+ * @param {Number} [padding]                        - How many pixels padding around tiles
  * @return {TileInfo}
  * @example
  * tile(2)                       // a tile at index 2 using the default tile size of 16
@@ -74,7 +75,7 @@ let drawCount;
  * tile(vec2(4,8), vec2(30,10))  // a tile at pixel location (4,8) with a size of (30,10)
  * @memberof Draw
  */
-function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0)
+function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0)
 {
     if (headlessMode)
         return new TileInfo;
@@ -86,17 +87,17 @@ function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0)
         size = vec2(size);
     }
 
-    // if pos is a number, use it as a tile index
+    // use pos as a tile index
+    const textureInfo = textureInfos[textureIndex];
+    ASSERT(textureInfo, 'Texture not loaded');
+    const sizePadded = size.add(vec2(padding*2));
+    const cols = textureInfo.size.x / sizePadded.x |0;
     if (typeof pos === 'number')
-    {
-        const textureInfo = textureInfos[textureIndex];
-        ASSERT(textureInfo, 'Texture not loaded');
-        const cols = textureInfo.size.x / size.x |0;
-        pos = vec2((pos%cols)*size.x, (pos/cols|0)*size.y);
-    }
+        pos = vec2(pos%cols, pos/cols|0);
+    pos = vec2(pos.x*sizePadded.x+padding, pos.y*sizePadded.y+padding);
 
     // return a tile info object
-    return new TileInfo(pos, size, textureIndex); 
+    return new TileInfo(pos, size, textureIndex, padding); 
 }
 
 /** 
@@ -108,8 +109,9 @@ class TileInfo
      *  @param {Vector2} [pos=(0,0)]            - Top left corner of tile in pixels
      *  @param {Vector2} [size=tileSizeDefault] - Size of tile in pixels
      *  @param {Number}  [textureIndex]         - Texture index to use
+     *  @param {Number}  [padding]              - How many pixels padding around tiles
      */
-    constructor(pos=vec2(), size=tileSizeDefault, textureIndex=0)
+    constructor(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0)
     {
         /** @property {Vector2} - Top left corner of tile in pixels */
         this.pos = pos.copy();
@@ -117,6 +119,8 @@ class TileInfo
         this.size = size.copy();
         /** @property {Number} - Texture index to use */
         this.textureIndex = textureIndex;
+        /** @property {Number} - How many pixels padding around tiles */
+        this.padding = padding;
     }
 
     /** Returns a copy of this tile offset by a vector
@@ -133,7 +137,7 @@ class TileInfo
     frame(frame)
     {
         ASSERT(typeof frame == 'number');
-        return this.offset(vec2(frame*this.size.x, 0));
+        return this.offset(vec2(frame*(this.size.x+this.padding*2), 0));
     }
 
     /** Returns the texture info for this tile
@@ -158,8 +162,6 @@ class TextureInfo
         this.size = vec2(image.width, image.height);
         /** @property {WebGLTexture} - webgl texture */
         this.glTexture = glEnable &amp;&amp; glCreateTexture(image);
-        /** @property {Vector2} - size to adjust tile to fix bleeding */
-        this.fixBleedSize = vec2(tileFixBleedScale).divide(this.size);
     }
 }
 
@@ -228,11 +230,12 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
         if (textureInfo)
         {
             // calculate uvs and render
-            const x = tileInfo.pos.x / textureInfo.size.x;
-            const y = tileInfo.pos.y / textureInfo.size.y;
-            const w = tileInfo.size.x / textureInfo.size.x;
-            const h = tileInfo.size.y / textureInfo.size.y;
-            const tileImageFixBleed = textureInfo.fixBleedSize;
+            const sizeInverse = vec2(1).divide(textureInfo.size);
+            const x = tileInfo.pos.x * sizeInverse.x;
+            const y = tileInfo.pos.y * sizeInverse.y;
+            const w = tileInfo.size.x * sizeInverse.x;
+            const h = tileInfo.size.y * sizeInverse.y;
+            const tileImageFixBleed = sizeInverse.scale(tileFixBleedScale);
             glSetTexture(textureInfo.glTexture);
             glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
                 x + tileImageFixBleed.x,     y + tileImageFixBleed.y, 
@@ -286,6 +289,74 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
     drawTile(pos, size, undefined, color, angle, false, undefined, useWebGL, screenSpace, context); 
 }
 
+/** Draw colored polygon using passed in points
+ *  @param {Array}   points - Array of Vector2 points
+ *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Number}  [lineWidth=0]
+ *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {Boolean} [screenSpace=false]
+ *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @memberof Draw */
+function drawPoly(points, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
+{
+    context.fillStyle = color.toString();
+    context.beginPath();
+    for (const point of screenSpace ? points : points.map(worldToScreen))
+        context.lineTo(point.x, point.y);
+    context.closePath();
+    context.fill();
+    if (lineWidth)
+    {
+        context.strokeStyle = lineColor.toString();
+        context.lineWidth = screenSpace ? lineWidth : lineWidth*cameraScale;
+        context.stroke();
+    }
+}
+
+/** Draw colored ellipse using passed in point
+ *  @param {Vector2} pos
+ *  @param {Number}  [width=1]
+ *  @param {Number}  [height=1]
+ *  @param {Number}  [angle=0]
+ *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Number}  [lineWidth=0]
+ *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {Boolean} [screenSpace=false]
+ *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @memberof Draw */
+function drawEllipse(pos, width=1, height=1, angle=0, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
+{
+    if (!screenSpace)
+    {
+        pos = worldToScreen(pos);
+        width *= cameraScale;
+        height *= cameraScale;
+        lineWidth *= cameraScale;
+    }
+    context.fillStyle = color.toString();
+    context.beginPath();
+    context.ellipse(pos.x, pos.y, width, height, angle, 0, 9);
+    context.fill();
+    if (lineWidth)
+    {
+        context.strokeStyle = lineColor.toString();
+        context.lineWidth = lineWidth;
+        context.stroke();
+    }
+}
+
+/** Draw colored circle using passed in point
+ *  @param {Vector2} pos
+ *  @param {Number}  [radius=1]
+ *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Number}  [lineWidth=0]
+ *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {Boolean} [screenSpace=false]
+ *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @memberof Draw */
+function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
+{ drawEllipse(pos, radius, radius, 0, color, lineWidth, lineColor, screenSpace, context); }
+
 /** Draw colored line between two points
  *  @param {Vector2} posA
  *  @param {Vector2} posB
@@ -322,7 +393,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, conte
     context.save();
     context.translate(pos.x+.5, pos.y+.5);
     context.rotate(angle);
-    context.scale(mirror ? -size.x : size.x, -size.y);
+    context.scale(mirror ? -size.x : size.x, size.y);
     drawFunction(context);
     context.restore();
 }
@@ -356,10 +427,11 @@ function setBlendMode(additive, useWebGL=glEnable, context)
  *  @param {CanvasTextAlign}  [textAlign='center']
  *  @param {String}  [font=fontDefault]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
+ *  @param {Number}  [maxWidth]
  *  @memberof Draw */
-function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, context)
+function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, context, maxWidth)
 {
-    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, context);
+    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, context, maxWidth);
 }
 
 /** Draw text on overlay canvas in screen space
@@ -373,8 +445,9 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
  *  @param {CanvasTextAlign}  [textAlign]
  *  @param {String}  [font=fontDefault]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
+ *  @param {Number}  [maxWidth]
  *  @memberof Draw */
-function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, context=overlayContext)
+function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, context=overlayContext, maxWidth=undefined)
 {
     context.fillStyle = color.toString();
     context.lineWidth = lineWidth;
@@ -387,8 +460,8 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
     pos = pos.copy();
     (text+'').split('\n').forEach(line=>
     {
-        lineWidth &amp;&amp; context.strokeText(line, pos.x, pos.y);
-        context.fillText(line, pos.x, pos.y);
+        lineWidth &amp;&amp; context.strokeText(line, pos.x, pos.y, maxWidth);
+        context.fillText(line, pos.x, pos.y, maxWidth);
         pos.y += size;
     });
 }
@@ -496,6 +569,6 @@ function toggleFullscreen()
         if (document.exitFullscreen)
             document.exitFullscreen();
     }
-    else if (document.body.requestFullscreen)
-            document.body.requestFullscreen();
+    else if (engineRoot.requestFullscreen)
+        engineRoot.requestFullscreen();
 }</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Color.html">Color</a></div><div class="sidebar-section-children"><a href="EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="FontImage.html">FontImage</a></div><div class="sidebar-section-children"><a href="Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Music.html">Music</a></div><div class="sidebar-section-children"><a href="Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="SoundWave.html">SoundWave</a></div><div class="sidebar-section-children"><a href="TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Vector2.html">Vector2</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileCollision.html">TileCollision</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>

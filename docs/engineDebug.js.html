@@ -126,7 +126,6 @@ function debugPoint(pos, color, time, angle)
  *  @memberof Debug */
 function debugLine(posA, posB, color, thickness=.1, time)
 {
-    ASSERT(typeof color == 'string', 'pass in css color strings'); 
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);
     debugRect(posA.add(halfDelta), size, color, time, halfDelta.angle(), true);
@@ -192,8 +191,24 @@ function debugSaveDataURL(dataURL, filename)
     downloadLink.click();
 }
 
+/** Show error as full page of red text
+ *  @memberof Debug */
+function debugShowErrors()
+{
+    onunhandledrejection = (event)=>showError(event.reason);
+    onerror = (event, source, lineno, colno)=>
+        showError(`${event}\n${source}\nLn ${lineno}, Col ${colno}`);
+
+    const showError = (message)=>
+    {
+        // replace entire page with error message
+        document.body.style.backgroundColor = '#111';
+        document.body.innerHTML = `&lt;pre style=color:#f00;font-size:50px>` + message;
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
-// Engine debug function (called automatically)
+// Engine debug functions (called automatically)
 
 function debugInit()
 {
@@ -324,7 +339,7 @@ function debugRender()
             const pos = worldToScreen(p.pos);
             overlayContext.translate(pos.x|0, pos.y|0);
             overlayContext.rotate(p.angle);
-            overlayContext.scale(1, -1);
+            overlayContext.scale(1, p.text ? 1 : -1);
             overlayContext.fillStyle = overlayContext.strokeStyle = p.color;
 
             if (p.text != undefined)
