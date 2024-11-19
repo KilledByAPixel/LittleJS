@@ -341,7 +341,7 @@ function debugRender()
             const pos = worldToScreen(p.pos);
             overlayContext.translate(pos.x|0, pos.y|0);
             overlayContext.rotate(p.angle);
-            overlayContext.scale(1, p.text ? 1 : -1);
+            overlayContext.scale(1, 1);
             overlayContext.fillStyle = overlayContext.strokeStyle = p.color;
 
             if (p.text != undefined)
@@ -358,7 +358,7 @@ function debugRender()
                 for (const point of p.points)
                 {
                     const p2 = point.scale(cameraScale).floor();
-                    overlayContext.lineTo(p2.x, p2.y);
+                    overlayContext.lineTo(p2.x, -p2.y);
                 }
                 overlayContext.closePath();
                 p.fill && overlayContext.fill();
@@ -5424,7 +5424,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     }
 
     // setup html
-    const styleBody = 
+    const styleRoot = 
         'margin:0;overflow:hidden;' + // fill the window
         'width:100vw;height:100vh;' + // fill the window
         'display:flex;' +             // use flexbox
@@ -5438,7 +5438,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         'touch-action:none;' +        // prevent mobile pinch to resize
         '-webkit-touch-callout:none');// compatibility for ios
     engineRoot = rootElement;
-    engineRoot.style.cssText = styleBody;
+    engineRoot.style.cssText = styleRoot;
     engineRoot.appendChild(mainCanvas = document.createElement('canvas'));
     mainContext = mainCanvas.getContext('2d');
 
