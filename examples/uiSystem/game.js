@@ -1,8 +1,7 @@
 /*
-    Little JS Starter Project
-    - A simple starter project for LittleJS
-    - Demos all the main engine features
-    - Builds to a zip file
+    Little JS UI System Example
+    - Shows how to use the LittleJS UI plugin
+    - Modal windows, buttons, text, checkboxes, and more
 */
 
 'use strict';
@@ -13,12 +12,10 @@ setShowSplashScreen(true);
 // sound effects
 const sound_click = new Sound([1,0]);
 
-// html menu system
-//let menu;
+// UI system
+let uiRoot, uiMenu;
 const getMenuVisible =()=> uiMenu.visible;
 const setMenuVisible =(visible)=> uiMenu.visible = visible;
-
-let uiRoot, uiMenu;
 
 function createUI()
 {
