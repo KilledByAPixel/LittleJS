@@ -382,7 +382,7 @@ function touchInputInit()
             // set event pos and pass it along
             const p = vec2(e.touches[0].clientX, e.touches[0].clientY);
             mousePosScreen = mouseToScreen(p);
-            wasTouching ? isUsingGamepad = false : inputData[0][button] = 3;
+            wasTouching ? isUsingGamepad = touchGamepadEnable : inputData[0][button] = 3;
         }
         else if (wasTouching)
             inputData[0][button] = inputData[0][button] & 2 | 4;
