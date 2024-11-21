@@ -59,6 +59,11 @@ declare module "littlejsengine" {
      *  @default false
      *  @memberof Engine */
     export let paused: boolean;
+    /** The root element that engine is attached to
+     *  @type {HTMLElement}
+     *  @default document.body
+     *  @memberof Engine */
+    export let engineRoot: HTMLElement;
     /** Set if game is paused
      *  @param {Boolean} isPaused
      *  @memberof Engine */
@@ -69,7 +74,7 @@ declare module "littlejsengine" {
      *  @param {Function} gameUpdatePost - Called after physics and objects are updated, setup camera and prepare for render
      *  @param {Function} gameRender     - Called before objects are rendered, draw any background effects that appear behind objects
      *  @param {Function} gameRenderPost - Called after objects are rendered, draw effects or hud that appear above all objects
-     *  @param {Array} [imageSources=['tiles.png']] - Image to load
+     *  @param {Array} [imageSources=[]] - Image to load
      *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default
      *  @memberof Engine */
     export function engineInit(gameInit: Function, gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, imageSources?: any[], rootElement?: HTMLElement): void;
@@ -1245,6 +1250,37 @@ declare module "littlejsengine" {
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function drawLine(posA: Vector2, posB: Vector2, thickness?: number, color?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    /** Draw colored polygon using passed in points
+     *  @param {Array}   points - Array of Vector2 points
+     *  @param {Color}   [color=(1,1,1,1)]
+     *  @param {Number}  [lineWidth=0]
+     *  @param {Color}   [lineColor=(0,0,0,1)]
+     *  @param {Boolean} [screenSpace=false]
+     *  @param {CanvasRenderingContext2D} [context=mainContext]
+     *  @memberof Draw */
+    export function drawPoly(points: any[], color?: Color, lineWidth?: number, lineColor?: Color, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
+    /** Draw colored ellipse using passed in point
+     *  @param {Vector2} pos
+     *  @param {Number}  [width=1]
+     *  @param {Number}  [height=1]
+     *  @param {Number}  [angle=0]
+     *  @param {Color}   [color=(1,1,1,1)]
+     *  @param {Number}  [lineWidth=0]
+     *  @param {Color}   [lineColor=(0,0,0,1)]
+     *  @param {Boolean} [screenSpace=false]
+     *  @param {CanvasRenderingContext2D} [context=mainContext]
+     *  @memberof Draw */
+    export function drawEllipse(pos: Vector2, width?: number, height?: number, angle?: number, color?: Color, lineWidth?: number, lineColor?: Color, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
+    /** Draw colored circle using passed in point
+     *  @param {Vector2} pos
+     *  @param {Number}  [radius=1]
+     *  @param {Color}   [color=(1,1,1,1)]
+     *  @param {Number}  [lineWidth=0]
+     *  @param {Color}   [lineColor=(0,0,0,1)]
+     *  @param {Boolean} [screenSpace=false]
+     *  @param {CanvasRenderingContext2D} [context=mainContext]
+     *  @memberof Draw */
+    export function drawCircle(pos: Vector2, radius?: number, color?: Color, lineWidth?: number, lineColor?: Color, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
     /** Draw directly to a 2d canvas context in world space
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
@@ -1403,6 +1439,15 @@ declare module "littlejsengine" {
      *  @param {WebGLTexture} texture
      *  @memberof WebGL */
     export function glSetTexture(texture: WebGLTexture): void;
+    export let glShader: any;
+    export let glActiveTexture: any;
+    export let glArrayBuffer: any;
+    export let glGeometryBuffer: any;
+    export let glPositionData: any;
+    export let glColorData: any;
+    export let glInstanceCount: any;
+    export let glAdditive: any;
+    export let glBatchAdditive: any;
     /**
      * LittleJS Input System
      * - Tracks keyboard down, pressed, and released
