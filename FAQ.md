@@ -125,13 +125,17 @@ The tile function is a very useful function that takes a tile index and size and
 
 You can set the object's tileInfo to a new sprite, or just call drawTile directly with any sprite.
 
-```this.tileInfo = tile(3, 32);```
+```javascript 
+this.tileInfo = tile(3, 32);
+```
 
 ### How do I handle animations in LittleJS?
 
 You can use the TileInfo.frame function passing in the number of animation frames to offset the sprite. It sounds kind of weird at first but imagine your sprites are all aligned on a grid with frames of animations being next to eachother. Thos allows easily indexing into those animations from the base sprite location. For example to animate the player sprite you might do something like this...
 
-```this.tileInfo = spriteAtlas.player.frame(animationFrame);```
+```javascript 
+this.tileInfo = spriteAtlas.player.frame(animationFrame);
+```
 
 ### What file formats are supported for images and sounds?
 
@@ -140,10 +144,38 @@ You can use the TileInfo.frame function passing in the number of animation frame
 ## Gameplay and Programming
 
 ### How do I add keyboard or mouse input to my game?
+
+LittleJS provides input handling for both keyboard and mouse:
+
+```javascript
+if (keyIsDown(37)) { // Left arrow key
+   obj.x -= 5;
+}
+if (mouseIsDown(0)) { // Left mouse button
+   console.log('Mouse clicked at:', mousePos);
+}
+```
+
 ### How do I create and update game objects?
-### What is the correct way to handle collisions in LittleJS?
+
+Use the GameObject class:
+
+```javascript
+const obj = new GameObject({ x: 100, y: 100 });
+obj.update = function() {
+   this.x += 1; // Move right
+};
+```
+
 ### Can I use physics with LittleJS?
+
+Yes! LittleJS comes with a robust game physics system included and also a plugin using Box2D.
+
 ### How do I add particle effects to my game?
+
+You can create a particle system in code using the ParticleEmitter object.
+
+There is a particle system designer that is useful for experimenting with particle designs.
 
 ---
 
