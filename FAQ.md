@@ -91,8 +91,8 @@ This is likely because the game was loaded directly without first setting up a l
 
 ### Do I need a local server to run LittleJS games, and how do I set one up?
 
-Yes, because web browsers just have protection from loading local files.
-So any JavaScript projects that load images must be opened from a local web server.
+Yes, this is a necessary step because web browsers just have protection from loading local files which includes images.
+So any JavaScript projects that load images like games must be opened from a local web server.
 Don't panic though, it's easy to fix! 
 
 If you are using [Visual Studio Code](https://code.visualstudio.com/) there is a [Live Preview Extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.live-server) that will handle this for you automatically.
@@ -109,15 +109,36 @@ LittleJS has been tested and is fully supported in all modern web browsers inclu
 
 ### How do I load and add images to my game?
 
+First you need to load an image file. For LittleJS this is typically done on startup via a parameter to engineInt that is a list of images to load. The engine will ensure that the images are all loaded before starting. Each source image can be up to 4096x4096 in size so most games only need one texture, though its possible to load as many as you need.
 
-### What is `tileImage` and how do tile indexes work?
+```engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);```
+
+LittleJS works best when your tile sheet is broken up into grids of tiles because the rendering system can be batched up. To draw a tile from a source image you can call drawTile and pass in TileInfo object. Another common approach is to create an EngineObject and set it's tileInfo, it will automatically be rendered.
+
+```drawTile(vec2(21,5), vec2(4.5), tile(3,128));```
+
+### What is the tile function and how do tile indexes work?
+
+The tile function is a very useful function that takes a tile index and size and returns a TileInfo object which can be passed to functions like drawTile. It works by accepting using the tileIndex multiplied by the tileSize to get the coordinates for the TileInfo. It's also possible to pass in padding for sheets that are set up for it.
+
 ### Can I add and switch between multiple sprites for a game object?
+
+You can set the object's tileInfo to a new sprite, or just call drawTile directly with any sprite.
+
+```this.tileInfo = tile(3, 32);```
+
 ### How do I handle animations in LittleJS?
+
+You can use the TileInfo.frame function passing in the number of animation frames to offset the sprite. It sounds kind of weird at first but imagine your sprites are all aligned on a grid with frames of animations being next to eachother. Thos allows easily indexing into those animations from the base sprite location. For example to animate the player sprite you might do something like this...
+
+```this.tileInfo = spriteAtlas.player.frame(animationFrame);```
+
 ### What file formats are supported for images and sounds?
 
 ---
 
 ## Gameplay and Programming
+
 ### How do I add keyboard or mouse input to my game?
 ### How do I create and update game objects?
 ### What is the correct way to handle collisions in LittleJS?
