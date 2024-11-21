@@ -128,4 +128,4 @@ function gameRenderPost()
 
 ///////////////////////////////////////////////////////////////////////////////
 // Startup LittleJS Engine
-LittleJS.engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
+LittleJS.engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);
