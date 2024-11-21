@@ -11,7 +11,8 @@ If you don’t find an answer here, feel free to ask the community or check the 
 
 LittleJS is a lightweight and fast JavaScript game engine designed for simplicity and super fast sprite rendering.
 It focuses on 2D games and provides essential features like game objects, particle effects, and physics out of the box.
-Unlike larger engines, LittleJS has a small footprint and avoids unnecessary complexity, making it perfect for quick prototyping or smaller projects. 
+Unlike larger engines, LittleJS has a small footprint and avoids unnecessary complexity, making it perfect for quick prototyping or smaller projects.
+However it is also very fast and extendable making it a great choice even for larger games!
 
 ### How do I set up a basic LittleJS project?
 
@@ -87,21 +88,17 @@ engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['t
 If you are seeing a blank screen, first try opening the dev tools console (F12 in most browsers).
 This will show you any errors that occur and allows stepping through code to help debug.
 A common issue is the image data failing to load with a message like "The image element contains cross-origin data, and may not be loaded."
-This is likely because the game was loaded directly without first setting up a local web server.
+This is probably because the game was loaded directly without using a web server.
 
 ### Do I need a local server to run LittleJS games, and how do I set one up?
 
 Yes, this is a necessary step because web browsers just have protection from loading local files which includes images.
 So any JavaScript projects that load images like games must be opened from a local web server.
-Don't panic though, it's easy to fix! 
+Don't panic though, it's very easy to fix! 
 
 If you are using [Visual Studio Code](https://code.visualstudio.com/) there is a [Live Preview Extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.live-server) that will handle this for you automatically.
 
 Another option is to setup a simple local web server like [http-server](https://www.npmjs.com/package/http-server) via npm.
-
-### What browsers are supported by LittleJS?
-
-LittleJS has been tested and is fully supported in all modern web browsers including Chrome, Firefox, Safari, Opera, and Edge.
 
 ---
 
@@ -111,11 +108,15 @@ LittleJS has been tested and is fully supported in all modern web browsers inclu
 
 First you need to load an image file. For LittleJS this is typically done on startup via a parameter to engineInt that is a list of images to load. The engine will ensure that the images are all loaded before starting. Each source image can be up to 4096x4096 in size so most games only need one texture, though its possible to load as many as you need.
 
-```engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);```
+```javascript
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);
+```
 
 LittleJS works best when your tile sheet is broken up into grids of tiles because the rendering system can be batched up. To draw a tile from a source image you can call drawTile and pass in TileInfo object. Another common approach is to create an EngineObject and set it's tileInfo, it will automatically be rendered.
 
-```drawTile(vec2(21,5), vec2(4.5), tile(3,128));```
+```javascript
+drawTile(vec2(21,5), vec2(4.5), tile(3,128));
+```
 
 ### What is the tile function and how do tile indexes work?
 
@@ -137,55 +138,86 @@ You can use the TileInfo.frame function passing in the number of animation frame
 this.tileInfo = spriteAtlas.player.frame(animationFrame);
 ```
 
-### What file formats are supported for images and sounds?
-
 ---
 
 ## Gameplay and Programming
 
 ### How do I add keyboard or mouse input to my game?
 
-LittleJS provides input handling for both keyboard and mouse:
+LittleJS provides input handling functions for keyboard, mouse, and gamepads. Touch input is also routed to the mouse. There are functions for isDown, wasPressed, and wasReleased.
 
 ```javascript
-if (keyIsDown(37)) { // Left arrow key
+if (keyIsDown(37)) // Left arrow key
    obj.x -= 5;
-}
-if (mouseIsDown(0)) { // Left mouse button
+if (mouseWasReleased(0)) // Left mouse button
    console.log('Mouse clicked at:', mousePos);
-}
+if (gamepadWasPressed(0)) // Gamepad button 0
+   console.log('Gamepad pressed, stick is:', gamepadStick(0));
 ```
 
 ### How do I create and update game objects?
 
-Use the GameObject class:
+You can create custom objects for your game by extending the EngineObject class. They will automatically be updated and rendered by the engine
 
 ```javascript
-const obj = new GameObject({ x: 100, y: 100 });
-obj.update = function() {
-   this.x += 1; // Move right
-};
+class MyObject extends EngineObject 
+{
+    constructor(pos, size, tileInfo)
+    {
+        super(pos, size, tileInfo);
+        // setup object
+    }
+
+    update()
+    {
+        // update object physics and position
+        super.update(); 
+    }
+
+    render()
+    {
+        // draw object as a sprite
+        super.render();
+    }
+}
+
+// spawn one of those objects
+const object = new MyObject(spawnPos, size, tile);
 ```
 
 ### Can I use physics with LittleJS?
 
-Yes! LittleJS comes with a robust game physics system included and also a plugin using Box2D.
+Yes! LittleJS comes with a robust game physics system included and [also a plugin using Box2D.](https://killedbyapixel.github.io/LittleJS/examples/box2d/)
 
 ### How do I add particle effects to my game?
 
-You can create a particle system in code using the ParticleEmitter object.
+[There is a particle system designer that is useful for experimenting with particle designs.](https://killedbyapixel.github.io/LittleJS/examples/particles/)
 
-There is a particle system designer that is useful for experimenting with particle designs.
+You can  create a particle system in code using the ParticleEmitter object.
+
+```javascript
+// fire particle system
+new ParticleEmitter(
+    pos, 0,                         // pos, angle
+    1, .1, 100, PI,                 // emitSize, emitTime, emitRate, emiteCone
+    0,                              // tileInfo
+    rgb(1,.5,.1), rgb(1,.1,.1),     // colorStartA, colorStartB
+    rgb(1,.5,.1,0), rgb(1,.1,.1,0), // colorEndA, colorEndB
+    .7, .8, .2, .2, .05,  // time, sizeStart, sizeEnd, speed, angleSpeed
+    .9, 1, -.2, PI, .05,  // damp, angleDamp, gravity, particleCone, fade
+    .5, 0, 1, 0, 1e9      // randomness, collide, additive, colorLinear, renderOrder
+);
+```
 
 ---
 
 ## Debugging and Development
 
 ### How do I debug my game in LittleJS?
-### What are some common reasons for errors or crashes in LittleJS?
-### How do I optimize performance for larger games?
-### How do I organize my code as my game gets bigger?
-### Can I use modules with LittleJS?
+
+Press the Esc key to show the the debug menu. From here there are several options that can be accesed via the number keys.
+
+You can also press + or - to speed up or slow down time to help with debugging!
 
 ---
 
