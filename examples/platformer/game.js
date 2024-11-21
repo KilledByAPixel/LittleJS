@@ -13,6 +13,9 @@ setShowSplashScreen(true);
 
 let spriteAtlas, score, deaths;
 
+// enable touch gamepad on touch devices
+touchGamepadEnable = true;
+
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
@@ -30,10 +33,6 @@ function gameInit()
         gun:     tile(2,8),
         grenade: tile(3,8),
     };
-
-    // enable touch gamepad on touch devices
-    touchGamepadEnable = true;
-
     // setup level
     buildLevel();
 
