@@ -1,6 +1,6 @@
 # LittleJS FAQ
 
-Welcome to the LittleJS FAQ, this is a work in progress!
+Welcome to the LittleJS FAQ!
 This document addresses common questions and issues to help developers get started and troubleshoot their projects.
 If you don’t find an answer here, feel free to ask the community or check the documentation.
 
@@ -9,23 +9,107 @@ If you don’t find an answer here, feel free to ask the community or check the 
 ## Getting Started
 ### What is LittleJS, and how is it different from other JavaScript game engines?
 
-LittleJS is a lightweight and fast JavaScript game engine designed for simplicity and performance.
+LittleJS is a lightweight and fast JavaScript game engine designed for simplicity and super fast sprite rendering.
 It focuses on 2D games and provides essential features like game objects, particle effects, and physics out of the box.
 Unlike larger engines, LittleJS has a small footprint and avoids unnecessary complexity, making it perfect for quick prototyping or smaller projects. 
 
 ### How do I set up a basic LittleJS project?
 
+Download the LittleJS repository via GitHub or npm.
+Include one of the LittleJS builds from the dist folder.
+Several examples are included for you to build on.
+The most basic example is just an empty project.
+
+[Empty Example HTML file:](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/empty/index.html)
+```html
+<!DOCTYPE html><head>
+<title>LittleJS Hello World Demo</title>
+<meta charset=utf-8>
+</head><body>
+
+<script src=../../dist/littlejs.js></script>
+<script src=game.js></script>
+```
+
+[Empty Example JavaScript file:](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/empty/game.js)
+```javascript
+/*
+    Little JS Hello World Demo
+    - Just prints "Hello World!"
+    - A good starting point for new projects
+*/
+
+'use strict';
+
+///////////////////////////////////////////////////////////////////////////////
+function gameInit()
+{
+    // called once after the engine starts up
+    // setup the game
+}
+
+///////////////////////////////////////////////////////////////////////////////
+function gameUpdate()
+{
+    // called every frame at 60 frames per second
+    // handle input and update the game state
+}
+
+///////////////////////////////////////////////////////////////////////////////
+function gameUpdatePost()
+{
+    // called after physics and objects are updated
+    // setup camera and prepare for render
+}
+
+///////////////////////////////////////////////////////////////////////////////
+function gameRender()
+{
+    // called before objects are rendered
+    // draw any background effects that appear behind objects
+}
+
+///////////////////////////////////////////////////////////////////////////////
+function gameRenderPost()
+{
+    // called after objects are rendered
+    // draw effects or hud that appear above all objects
+    drawTextScreen('Hello World!', mainCanvasSize.scale(.5), 80);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Startup LittleJS Engine
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);
+```
+
 ### Why do I see a blank screen when I run my game?
+
+If you are seeing a blank screen, first try opening the dev tools console (F12 in most browsers).
+This will show you any errors that occur and allows stepping through code to help debug.
+A common issue is the image data failing to load with a message like "The image element contains cross-origin data, and may not be loaded."
+This is likely because the game was loaded directly without first setting up a local web server.
 
 ### Do I need a local server to run LittleJS games, and how do I set one up?
 
+Yes, because web browsers just have protection from loading local files.
+So any JavaScript projects that load images must be opened from a local web server.
+Don't panic though, it's easy to fix! 
+
+If you are using [Visual Studio Code](https://code.visualstudio.com/) there is a [Live Preview Extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.live-server) that will handle this for you automatically.
+
+Another option is to setup a simple local web server like [http-server](https://www.npmjs.com/package/http-server) via npm.
+
 ### What browsers are supported by LittleJS?
 
+LittleJS has been tested and is fully supported in all modern web browsers including Chrome, Firefox, Safari, Opera, and Edge.
 
 ---
 
 ## Graphics and Assets
+
 ### How do I load and add images to my game?
+
+
 ### What is `tileImage` and how do tile indexes work?
 ### Can I add and switch between multiple sprites for a game object?
 ### How do I handle animations in LittleJS?
