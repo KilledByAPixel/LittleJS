@@ -102,6 +102,7 @@ These demos are for both learning and using as starter projects to create your o
 - [Box2D Demo](https://killedbyapixel.github.io/LittleJS/examples/box2d/) - Box2D plugin demonstration and testbed
 - [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress/) - Max sprite/object test and music system demo
 - [Particle System Designer](https://killedbyapixel.github.io/LittleJS/examples/particles/) - Particle system editor and visualizer
+- [All Examples](https://killedbyapixel.github.io/LittleJS/examples/) - Links to all the example projects on one page
 
 ## Builds
 
