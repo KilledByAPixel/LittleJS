@@ -288,6 +288,22 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
     drawTile(pos, size, undefined, color, angle, false, undefined, useWebGL, screenSpace, context); 
 }
 
+/** Draw colored line between two points
+ *  @param {Vector2} posA
+ *  @param {Vector2} posB
+ *  @param {Number}  [thickness]
+ *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Boolean} [useWebGL=glEnable]
+ *  @param {Boolean} [screenSpace=false]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
+ *  @memberof Draw */
+function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace, context)
+{
+    const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
+    const size = vec2(thickness, halfDelta.length()*2);
+    drawRect(posA.add(halfDelta), size, color, halfDelta.angle(), useWebGL, screenSpace, context);
+}
+
 /** Draw colored polygon using passed in points
  *  @param {Array}   points - Array of Vector2 points
  *  @param {Color}   [color=(1,1,1,1)]
@@ -355,22 +371,6 @@ function drawEllipse(pos, width=1, height=1, angle=0, color=new Color, lineWidth
  *  @memberof Draw */
 function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
 { drawEllipse(pos, radius, radius, 0, color, lineWidth, lineColor, screenSpace, context); }
-
-/** Draw colored line between two points
- *  @param {Vector2} posA
- *  @param {Vector2} posB
- *  @param {Number}  [thickness]
- *  @param {Color}   [color=(1,1,1,1)]
- *  @param {Boolean} [useWebGL=glEnable]
- *  @param {Boolean} [screenSpace=false]
- *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
- *  @memberof Draw */
-function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace, context)
-{
-    const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
-    const size = vec2(thickness, halfDelta.length()*2);
-    drawRect(posA.add(halfDelta), size, color, halfDelta.angle(), useWebGL, screenSpace, context);
-}
 
 /** Draw directly to a 2d canvas context in world space
  *  @param {Vector2}  pos
