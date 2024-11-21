@@ -113,7 +113,7 @@ function engineAddPlugin(updateFunction, renderFunction)
  *  @param {Function} gameUpdatePost - Called after physics and objects are updated, setup camera and prepare for render
  *  @param {Function} gameRender     - Called before objects are rendered, draw any background effects that appear behind objects
  *  @param {Function} gameRenderPost - Called after objects are rendered, draw effects or hud that appear above all objects
- *  @param {Array} [imageSources=['tiles.png']] - Image to load
+ *  @param {Array} [imageSources=[]] - Image to load
  *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default
  *  @memberof Engine */
 function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
