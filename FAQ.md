@@ -188,7 +188,7 @@ if (!isOverlapping(this.pos, this.size, cameraPos, renderWindowSize))
 
 ### How do I add keyboard or mouse input to my game?
 
-LittleJS provides input handling functions for keyboard, mouse, and gamepads. Touch input is also routed to the mouse. There are functions for isDown, wasPressed, and wasReleased.
+LittleJS provides input handling functions for keyboard, mouse, and gamepads. Touch input is also routed to the mouse. There are functions for isDown, wasPressed, and wasReleased. Input can only be checked during the update and should not be called from render functions.
 
 ```javascript
 if (keyIsDown(37)) // Left arrow key
@@ -201,7 +201,8 @@ if (gamepadWasPressed(0)) // Gamepad button 0
 
 ### How do I create and update game objects?
 
-You can create custom objects for your game by extending the EngineObject class. They will automatically be updated and rendered by the engine
+You can create custom objects for your game by extending the EngineObject class. 
+They will automatically be updated and rendered by the engine.
 
 ```javascript
 class MyObject extends EngineObject 
