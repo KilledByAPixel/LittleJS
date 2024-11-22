@@ -148,6 +148,11 @@ The camera is easy to control using cameraPosition and cameraScale, which indica
 The default cameraScale is 32 while the default cameraPosition is just the origin.
 It is also possible to draw using screenSpace pixel coordinates by passing in true as the screenSpace parameter to most drawing functions.
 
+```javascript
+setCameraPos(vec2(22,5)); // move camera to world position (20,5)
+setCameraScale(20);  // zoom camera to 20 pixels per world unit
+```
+
 ### How do I play sounds in LittleJS?
 
 Sounds can either be generated on startup using ZzFX or loaded from a wave or mp3 file.
