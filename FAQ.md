@@ -150,6 +150,14 @@ const sound_jump = new SoundWave('jump.mp3'); // load an mp3 sound
 sound_click.play(pos, volume, pitch); // play a sound
 ```
 
+### If I load several images, how do I control which is used?
+
+There is just an optional parameter you can pass to the tile function or to TileInfo called textureIndex. It defaults to 0 so if you only have one texture, you may not have noticed it. If you set to another number will select another texture in list. Something to keep in mind for large games is that changing the target texture will require WebGL to flush the render batch which can cause slowdown if it is done many times per frame.
+
+```javascript
+function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0)
+```
+
 ---
 
 ## Gameplay and Programming
