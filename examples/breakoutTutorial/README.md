@@ -53,6 +53,8 @@ for(let y=0; y<=levelSize.y; y+=1)
 ## Move the Camera
 
 Let’s move the camera to the center of our level by setting the cameraPos variable to half the level size.
+You can also change the camera zoom by using camaraScale which controls the number of pixels for each world space unit.
+For this example the camera will just remain stationary, but in other types of games it is very useful!
 
 ```javascript
 setCameraPos(levelSize.scale(.5)); // center camera in level
