@@ -145,6 +145,7 @@ this.tileInfo = spriteAtlas.player.frame(animationFrame);
 
 LittleJS uses a world space rendering system, so objects can move independently of the camera.
 The camera is easy to control using cameraPosition and cameraScale, which indicate the world space position and how many pixels is equivalent to one world unit.
+The default cameraScale is 32 while the default cameraPosition is just the origin.
 It is also possible to draw using screenSpace pixel coordinates by passing in true as the screenSpace parameter to most drawing functions.
 
 ### How do I play sounds in LittleJS?
