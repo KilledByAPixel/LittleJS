@@ -9,10 +9,10 @@ If you don’t find an answer here, feel free to ask the community or check the 
 ## Getting Started
 ### What is LittleJS, and how is it different from other JavaScript game engines?
 
-LittleJS is a lightweight and fast JavaScript game engine designed for simplicity and super fast sprite rendering.
-It focuses on 2D games and provides essential features like game objects, particle effects, and physics out of the box.
-Unlike larger engines, LittleJS has a small footprint and avoids unnecessary complexity, making it perfect for quick prototyping or smaller projects.
-However it is also very fast and extendable making it a great choice even for larger games!
+LittleJS is a lightweight, high-performance JavaScript game engine designed for simplicity and speed.
+It offers a hybrid rendering system that combines the advantages of WebGL and 2D Canvas.
+Unlike larger, feature-heavy engines, LittleJS focuses on 2D games and provididing a comprehensive set of simple, easy to use features.
+LittleJS is perfect for developers who want a minimal yet powerful engine to bring their 2D game ideas to life without the complexity of larger frameworks.
 
 ### How do I set up a basic LittleJS project?
 
@@ -88,7 +88,7 @@ engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['t
 If you are seeing a blank screen, first try opening the dev tools console (F12 in most browsers).
 This will show you any errors that occur and allows stepping through code to help debug.
 A common issue is the image data failing to load with a message like "The image element contains cross-origin data, and may not be loaded."
-This is probably because the game was loaded directly without using a web server.
+This is probably because the game was loaded directly without using a web server!
 
 ### Do I need a local server to run LittleJS games, and how do I set one up?
 
@@ -221,7 +221,7 @@ class MyObject extends EngineObject
 }
 
 // spawn one of those objects
-const object = new MyObject(spawnPos, size, tile);
+const object = new MyObject(pos, size, tileInfo);
 ```
 
 ### Can I use physics with LittleJS?
