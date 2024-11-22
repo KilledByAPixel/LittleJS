@@ -132,11 +132,20 @@ this.tileInfo = tile(3, 32);
 
 ### How do I handle animations in LittleJS?
 
-You can use the TileInfo.frame function passing in the number of animation frames to offset the sprite. It sounds kind of weird at first but imagine your sprites are all aligned on a grid with frames of animations being next to eachother. Thos allows easily indexing into those animations from the base sprite location. For example to animate the player sprite you might do something like this...
+You can use the TileInfo.frame function passing in the number of animation frames to offset the sprite.
+It sounds kind of weird at first but imagine your sprites are all aligned on a grid with frames of animations being next to eachother.
+This allows easily indexing into those animations from the base sprite location.
+For example to animate the player sprite you might do something like this...
 
 ```javascript 
 this.tileInfo = spriteAtlas.player.frame(animationFrame);
 ```
+
+### How do I control the camera in LittleJS?
+
+LittleJS uses a world space rendering system, so objects can move independently of the camera.
+The camera is easy to control using cameraPosition and cameraScale, which indicate the world space position and how many pixels is equivalent to one world unit.
+It is also possible to draw using screenSpace pixel coordinates by passing in true as the screenSpace parameter to most drawing functions.
 
 ### How do I play sounds in LittleJS?
 
