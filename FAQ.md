@@ -239,7 +239,7 @@ The platformer example includes a character object class that can be used as a s
 
 [There is a particle system designer that is useful for experimenting with particle designs.](https://killedbyapixel.github.io/LittleJS/examples/particles/)
 
-You can  create a particle system in code using the ParticleEmitter object.
+You can create a particle system in code using the ParticleEmitter object.
 
 ```javascript
 // fire particle system
@@ -263,7 +263,7 @@ new ParticleEmitter(
 
 Press the Esc key to show the the debug menu. From here there are several options that can be accesed via the number keys.
 
-You can also press + or - to speed up or slow down time to help with debugging!
+You can also press + or - to adjust game speed to help with debugging, or just for fun!
 
 ---
 
