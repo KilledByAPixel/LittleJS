@@ -158,6 +158,15 @@ There is just an optional parameter you can pass to the tile function or to Tile
 function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0)
 ```
 
+### How can I check if an object is on screen?
+
+You can use the isOverlapping function to check the object against the camera. For culling you maybe want to enlarge the object size slightly to account for attached objects or rotation, I usually do this.size.scale(2).
+
+```javascript
+if (!isOverlapping(this.pos, this.size, cameraPos, renderWindowSize))
+    return;
+```
+
 ---
 
 ## Gameplay and Programming
