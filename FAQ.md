@@ -102,7 +102,7 @@ Another option is to setup a simple local web server like [http-server](https://
 
 ---
 
-## Graphics and Assets
+## Graphics and Sound
 
 ### How do I load and add images to my game?
 
@@ -136,6 +136,18 @@ You can use the TileInfo.frame function passing in the number of animation frame
 
 ```javascript 
 this.tileInfo = spriteAtlas.player.frame(animationFrame);
+```
+
+### How do I play sounds in LittleJS?
+
+Sounds can either be generated on startup using ZzFX or loaded from a wave or mp3 file.
+[ZzFX sounds can be created using the sound designer app.](https://killedbyapixel.github.io/ZzFX/)
+Once loaded sounds can be played by calling Sound.play with some paratermers to control how it is played.
+
+```javascript
+const sound_click = new Sound([1,.5]); // create a ZzFX sound
+const sound_jump = new SoundWave('jump.mp3'); // load an mp3 sound
+sound_click.play(pos, volume, pitch); // play a sound
 ```
 
 ---
@@ -188,6 +200,7 @@ const object = new MyObject(spawnPos, size, tile);
 ### Can I use physics with LittleJS?
 
 Yes! LittleJS comes with a robust game physics system included and [also a plugin using Box2D.](https://killedbyapixel.github.io/LittleJS/examples/box2d/)
+The platformer example includes a character object class that can be used as a starting point for advanced platforming physics.
 
 ### How do I add particle effects to my game?
 
@@ -221,27 +234,9 @@ You can also press + or - to speed up or slow down time to help with debugging!
 
 ---
 
-## Advanced Features
-### Does LittleJS support tilemaps, and how can I implement them?
-### Can I use custom shaders or WebGL features with LittleJS?
-### How do I add audio to my game?
-### Is it possible to export LittleJS games to mobile or desktop?
-### Can I integrate external libraries or tools with LittleJS?
-
----
-
-## Community and Resources
-### Where can I find documentation or tutorials for LittleJS?
-### How do I share my game with the LittleJS community?
-### Are there any open-source LittleJS projects I can learn from?
-### How can I contribute to LittleJS development or documentation?
-### Who do I contact if I find a bug or have a feature request?
-
----
-
 ## Contribute to the FAQ
 If you have additional questions or think something should be added to this FAQ, please open an issue or pull request on the [LittleJS GitHub repository](https://github.com/FrankForce/LittleJS).
 
 ---
 
-Happy coding with LittleJS! 🎮
+Happy coding with LittleJS! 🎮🚂💨
