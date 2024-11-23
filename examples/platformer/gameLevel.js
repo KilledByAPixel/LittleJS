@@ -29,14 +29,6 @@ function buildLevel()
     // create parallax layers
     for (let i=3; i--;)
         new ParallaxLayer(i);
-    
-    // apply decoration to all level tiles
-    const pos = vec2();
-    const layerCount = tileLayers.length;
-    for (let layer=layerCount; layer--;)
-    for (pos.x=levelSize.x; pos.x--;)
-    for (pos.y=levelSize.y; pos.y--;)
-        decorateTile(pos, layer);
 
     // spawn player
     player = new Player(playerStartPos);
@@ -128,6 +120,13 @@ function loadLevel(level=0)
         }
         tileLayer.redraw();
     }
+    
+    // apply decoration to all level tiles
+    const pos = vec2();
+    for (let layer=layerCount; layer--;)
+    for (pos.x=levelSize.x; pos.x--;)
+    for (pos.y=levelSize.y; pos.y--;)
+        decorateTile(pos, layer);
 }
 
 function decorateTile(pos, layer=1)
