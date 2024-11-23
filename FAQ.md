@@ -11,7 +11,7 @@ If you don’t find an answer here, feel free to ask the community or check the 
 
 LittleJS is a lightweight, high-performance JavaScript game engine designed for simplicity and speed.
 It offers a hybrid rendering system that combines the advantages of WebGL and 2D Canvas.
-Unlike larger, feature-heavy engines, LittleJS focuses on 2D games and provididing a comprehensive set of simple, easy to use features.
+Unlike larger, feature-heavy engines, LittleJS focuses on 2D games and providing a comprehensive set of simple, easy to use features.
 LittleJS is perfect for developers who want a minimal yet powerful engine to bring their 2D game ideas to life without the complexity of larger frameworks.
 
 ### How do I set up a basic LittleJS project?
@@ -106,7 +106,7 @@ Another option is to setup a simple local web server like [http-server](https://
 
 ### How do I load and add images to my game?
 
-First you need to load an image file. For LittleJS this is typically done on startup via a parameter to engineInt that is a list of images to load. The engine will ensure that the images are all loaded before starting. Each source image can be up to 4096x4096 in size so most games only need one texture, though its possible to load as many as you need.
+First you need to load an image file. For LittleJS this is typically done on startup via a parameter to engineInt that is a list of images to load. The engine will ensure that the images are all loaded before starting. Each source image can be up to 4096x4096 in size so most games only need one texture, though it's possible to load as many as you need.
 
 ```javascript
 engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);
@@ -146,7 +146,7 @@ this.tileInfo = spriteAtlas.player.frame(animationFrame);
 LittleJS uses a world space rendering system, so objects can move independently of the camera.
 The camera is easy to control using cameraPosition and cameraScale, which indicate the world space position and how many pixels is equivalent to one world unit.
 The default cameraScale is 32 while the default cameraPosition is just the origin.
-It is also possible to draw using screenSpace pixel coordinates by passing in true as the screenSpace parameter to most drawing functions.
+It is also possible to draw using screen space pixel coordinates by passing in true as the screenSpace parameter to most drawing functions.
 
 ```javascript
 setCameraPos(vec2(22,5)); // move camera to world position (20,5)
@@ -157,7 +157,7 @@ setCameraScale(20);  // zoom camera to 20 pixels per world unit
 
 Sounds can either be generated on startup using ZzFX or loaded from a wave or mp3 file.
 [ZzFX sounds can be created using the sound designer app.](https://killedbyapixel.github.io/ZzFX/)
-Once loaded sounds can be played by calling Sound.play with some paratermers to control how it is played.
+Once loaded sounds can be played by calling Sound.play with some parameters to control how it is played.
 
 ```javascript
 const sound_click = new Sound([1,.5]); // create a ZzFX sound
@@ -261,7 +261,7 @@ new ParticleEmitter(
 
 ### How do I debug my game in LittleJS?
 
-Press the Esc key to show the the debug menu. From here there are several options that can be accesed via the number keys.
+Press the Esc key to show the debug menu. From here there are several options that can be accessed via the number keys.
 
 You can also press + or - to adjust game speed to help with debugging, or just for fun!
 
