@@ -144,7 +144,6 @@ function destroyTile(pos, makeSound = 1, cleanNeighbors = 1)
      // set and clear tile
     tileLayer.setData(pos, new TileLayerData, 1);
     setTileCollisionData(pos, tileType_empty);
-    setTileData(pos, foregroundLayerIndex, 0);
 
     // cleanup neighbors
     if (cleanNeighbors)

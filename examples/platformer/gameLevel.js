@@ -12,13 +12,8 @@ const tileType_empty     = 0;
 const tileType_solid     = 1;
 const tileType_breakable = 2;
 
-let player, playerStartPos, tileData, tileLayers, foregroundLayerIndex, sky;
+let player, playerStartPos, tileLayers, foregroundLayerIndex, sky;
 let levelSize, levelColor, levelBackgroundColor, levelOutlineColor, warmup;
-
-const setTileData = (pos, layer, data)=>
-    pos.arrayCheck(tileCollisionSize) && (tileData[layer][(pos.y|0)*tileCollisionSize.x+pos.x|0] = data);
-const getTileData = (pos, layer)=>
-    pos.arrayCheck(tileCollisionSize) ? tileData[layer][(pos.y|0)*tileCollisionSize.x+pos.x|0]: 0;
 
 function buildLevel()
 {
@@ -76,7 +71,6 @@ function loadLevel(level=0)
     }
 
     // set all level data tiles
-    tileData = [];
     tileLayers = [];
     playerStartPos = vec2(1, levelSize.y);
     const layerCount = tileMapData.layers.length;
@@ -87,7 +81,6 @@ function loadLevel(level=0)
         const tileLayer = new TileLayer(vec2(), levelSize, tile(0,16,1));
         tileLayer.renderOrder = -1e3+layer;
         tileLayers[layer] = tileLayer;
-        tileData[layer] = [];
 
         for (let x=levelSize.x; x--;) 
         for (let y=levelSize.y; y--;)
@@ -109,10 +102,7 @@ function loadLevel(level=0)
                     new Coin(objectPos);
                 continue;
             }
-
-            // set the tile data
-            setTileData(pos, layer, tile);
-
+            
             // get tile type for special tiles
             let tileType = tileType_empty;
             if (tile > 0)
@@ -181,11 +171,11 @@ function decorateTile(pos, layer=1)
     else
     {
         // make round corners
-        for (let i=4;i--;)
+        for (let i=4; i--;)
         {
             // check corner neighbors
-            const neighborTileDataA = getTileData(pos.add(vec2().setDirection(i)), layer);
-            const neighborTileDataB = getTileData(pos.add(vec2().setAngle((i+1)%4*PI/2)), layer);
+            const neighborTileDataA = tileLayer.getData(pos.add(vec2().setDirection(i))).tile;
+            const neighborTileDataB = tileLayer.getData(pos.add(vec2().setDirection((i+1)%4))).tile;
             if (neighborTileDataA > 0 || neighborTileDataB > 0)
                 continue;
 
