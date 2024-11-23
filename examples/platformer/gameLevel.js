@@ -17,6 +17,9 @@ let levelSize, levelColor, levelBackgroundColor, levelOutlineColor;
 
 function buildLevel()
 {
+    // destroy all objects
+    engineObjectsDestroy();
+
     // create the level
     levelColor = randColor(hsl(0,0,.2), hsl(0,0,.8));
     levelBackgroundColor = levelColor.mutate().scale(.4,1);
@@ -37,11 +40,9 @@ function buildLevel()
 function loadLevel(level=0)
 {
     // load level data from an exported Tiled js file
-    const dataName = Object.keys(TileMaps)[level];
-    const tileMapData = TileMaps[dataName];
+    const tileMapData = TileMaps['gameLevelData'];
     levelSize = vec2(tileMapData.width, tileMapData.height);
     initTileCollision(levelSize);
-    engineObjectsDestroy();
 
     // create table for tiles in the level tilemap
     const tileLookup =
