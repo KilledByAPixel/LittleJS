@@ -70,6 +70,7 @@ function tileCollisionTest(pos, size=vec2(), object)
         if (tileData && (!object || object.collideWithTile(tileData, vec2(x, y))))
             return true;
     }
+    return false;
 }
 
 /** Return the center of first tile hit (does not return the exact intersection)
@@ -93,7 +94,7 @@ function tileCollisionRaycast(posStart, posEnd, object)
     let xi = unit.x * (delta.x < 0 ? posStart.x - pos.x : pos.x - posStart.x + 1);
     let yi = unit.y * (delta.y < 0 ? posStart.y - pos.y : pos.y - posStart.y + 1);
 
-    while (1)
+    while (true)
     {
         // check for tile collision
         const tileData = getTileCollisionData(pos);
