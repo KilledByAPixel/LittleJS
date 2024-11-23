@@ -15,6 +15,9 @@
 setShowSplashScreen(true);
 //box2dDebug = 1; // enable box2d debug draw
 
+// fix texture bleeding by shrinking tile slightly
+tileFixBleedScale = .05;
+
 // game variables
 const maxScenes = 11;
 let scene = 0;
