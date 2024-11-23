@@ -129,13 +129,13 @@ function destroyTile(pos, makeSound = 1, cleanNeighbors = 1)
     // destroy tile
     const tileType = getTileCollisionData(pos);
     if (!tileType)
-        return 1;
+        return true;
 
     const tileLayer = tileLayers[foregroundLayerIndex];
     const centerPos = pos.add(vec2(.5));
     const layerData = tileLayer.getData(pos);
     if (!layerData || tileType == tileType_solid)
-        return;
+        return false;
 
     // create effects
     makeDebris(centerPos, layerData.color.mutate());
@@ -153,7 +153,7 @@ function destroyTile(pos, makeSound = 1, cleanNeighbors = 1)
             decorateTile(pos.add(vec2(i,j)));
     }
 
-    return 1;
+    return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

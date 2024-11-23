@@ -31,6 +31,7 @@ class Character extends GameObject
         this.renderOrder = 10;
         this.walkCyclePercent = 0;
         this.health = 1;
+        this.climbingLadder = false;
         this.setCollision(true,false);
     }
     
@@ -102,9 +103,9 @@ class Character extends GameObject
             touchingLadder ||= collisionData == tileType_ladder;
         }
         if (!touchingLadder)
-            this.climbingLadder = 0;
+            this.climbingLadder = false;
         else if (moveInput.y)
-            this.climbingLadder = 1;
+            this.climbingLadder = true;
 
         if (this.weapon) // update weapon trigger
             this.weapon.triggerIsDown = this.holdingShoot && !this.dodgeTimer.active();
@@ -236,10 +237,10 @@ class Character extends GameObject
     damage(damage, damagingObject)
     {
         if (this.isDead() || this.getAliveTime() < 1 || this.dodgeTimer.active())
-            return;
+            return 0;
 
         makeBlood(damagingObject ? damagingObject.pos : this.pos);
-        super.damage(damage, damagingObject);
+        return super.damage(damage, damagingObject);
     }
 
     kill(damagingObject)                  
@@ -251,31 +252,31 @@ class Character extends GameObject
         sound_die.play(this.pos);
 
         this.health = 0;
-        if (this.weapon)
-            this.weapon.destroy();
         this.deadTimer.set();
         this.size = this.size.scale(.5);
         const fallDirection = damagingObject ? sign(damagingObject.velocity.x) : randSign();
         this.angleVelocity = fallDirection*rand(.22,.14);
         this.angleDamping = .9;
         this.renderOrder = -1;  // move to back layer
+        if (this.weapon)
+            this.weapon.destroy();
     }
     
     collideWithTile(data, pos)
     {
         if (!data)
-            return;
+            return false;
 
         if (data == tileType_ladder)
         {
             // handle ladder collisions
             if (pos.y + 1 > this.lastPos.y - this.size.y/2)
-                return;
+                return false;
 
             if (getTileCollisionData(pos.add(vec2(0,1)))      // above
                 && !getTileCollisionData(pos.add(vec2(1,0)))  // left
                 && !getTileCollisionData(pos.add(vec2(1,0)))) // right
-                return; // dont collide if something above it and nothing to left or right
+                return false; // dont collide if something above it and nothing to left or right
 
             // allow standing on top of ladders
             return !this.climbingLadder;
@@ -287,9 +288,9 @@ class Character extends GameObject
         {
             // break blocks above
             this.velocity.y = 0;
-            return;
+            return false;
         }
 
-        return 1;
+        return true;
     }
 }

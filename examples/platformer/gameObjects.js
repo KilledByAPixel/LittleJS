@@ -23,13 +23,10 @@ class GameObject extends EngineObject
         super.update();
 
         // flash white when damaged
+        let brightness = 0;
         if (!this.isDead() && this.damageTimer.isSet())
-        {
-            const a = .5*percent(this.damageTimer, .15, 0);
-            this.additiveColor = hsl(0,0,a,0);
-        }
-        else
-            this.additiveColor = hsl(0,0,0,0);
+            brightness = .5*percent(this.damageTimer, .15, 0);
+        this.additiveColor = hsl(0,0,brightness,0);
 
         // kill if below level
         if (!this.isDead() && this.pos.y < -9)
@@ -104,10 +101,10 @@ class Coin extends EngineObject
         drawTile(this.pos, vec2(.5+.5*Math.sin(t*2*PI), 1), this.tileInfo, this.color);
     }
 
-    update(o)
+    update()
     {
         if (!player)
-                return;
+            return;
 
         // check if player in range
         const d = this.pos.distanceSquared(player.pos);
@@ -145,9 +142,7 @@ class Enemy extends GameObject
 
         // jump around randomly
         if (this.groundObject && rand() < .01 && this.pos.distance(player.pos) < 20)
-        {
             this.velocity = vec2(rand(.1,-.1), rand(.4,.2));
-        }
 
         // damage player if touching
         if (isOverlapping(this.pos, this.size, player.pos, player.size))
@@ -344,17 +339,17 @@ class Bullet extends EngineObject
         }
     
         this.kill();
-        return 1; 
+        return true; 
     }
 
     collideWithTile(data, pos)
     {
         if (data <= 0)
-            return 0;
+            return false;
             
         destroyTile(pos);
         this.kill();
-        return 1; 
+        return true; 
     }
 
     kill()
