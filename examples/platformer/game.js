@@ -16,6 +16,9 @@ let spriteAtlas, score, deaths;
 // enable touch gamepad on touch devices
 touchGamepadEnable = true;
 
+// fix texture bleeding by shrinking tile slightly
+tileFixBleedScale = .05;
+
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
