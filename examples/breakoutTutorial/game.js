@@ -54,7 +54,7 @@ class Ball extends EngineObject
     {
         // prevent colliding with paddle if moving upwards
         if (o == paddle && this.velocity.y > 0)
-            return 0;
+            return false;
 
         // speed up
         const speed = min(1.04*this.velocity.length(), .5);
@@ -73,10 +73,10 @@ class Ball extends EngineObject
             this.velocity.y = max(-this.velocity.y, .2);
             
             // prevent default collision code
-            return 0;
+            return false;
         }
 
-        return 1; // allow object to collide
+        return true; // allow object to collide
     }
 }
 
@@ -114,15 +114,15 @@ class Brick extends EngineObject
         new ParticleEmitter(
             this.pos, 0,            // pos, angle
             this.size, .1, 200, PI, // emitSize, emitTime, emitRate, emiteCone
-            0,                      // tileInfo
+            undefined,              // tileInfo
             color, color,                       // colorStartA, colorStartB
             color.scale(1,0), color.scale(1,0), // colorEndA, colorEndB
             .2, .5, 1, .1, .1,  // time, sizeStart, sizeEnd, speed, angleSpeed
             .99, .95, .4, PI,   // damp, angleDamp, gravity, cone
-            .1, .5, 0, 1        // fade, randomness, collide, additive
+            .1, .5, false, true // fade, randomness, collide, additive
         );
 
-        return 1; // allow object to collide
+        return true; // allow object to collide
     }
 }
 
