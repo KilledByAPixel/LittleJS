@@ -309,7 +309,7 @@ collideWithObject(o)
 But wait! This will cause the ball to careen through the bricks without bouncing. Maybe fun for a special powerup, but not our goal here. This function should return a Boolean value to indicate if the collision needs to be resolved, if it returns false then the ball will not bounce. So the answer is to just add another line of code to the collideWithObject function that returns a truthy value indicating that the collision should occur.
 
 ```javascript
-return 1; // allow object to collide
+return true; // allow object to collide
 ```
 
 ![LittleJS Screenshot](images/8.png)
@@ -358,7 +358,7 @@ To play the sound we will override collideWithObject for the Ball class. Also re
 collideWithObject(o)              
 {
     sound_bounce.play(); // play bounce sound
-    return 1; // allow object to collide
+    return true; // allow object to collide
 }
 ```
 Let’s also make a brick break sound. You can use the ZzFX sound designer again to create your own sound, for this one try the Hit preset.
@@ -424,12 +424,12 @@ const color = this.color;
 new ParticleEmitter(
     this.pos, 0,            // pos, angle
     this.size, .1, 200, PI, // emitSize, emitTime, emitRate, emiteCone
-    0,                      // tileInfo
+    undefined,              // tileInfo
     color, color,           // colorStartA, colorStartB
     color.scale(1,0), color.scale(1,0), // colorEndA, colorEndB
     .2, .5, 1, .1, .1,  // time, sizeStart, sizeEnd, speed, angleSpeed
     .99, .95, .4, PI,   // damping, angleDamping, gravityScale, cone
-    .1, .5, 0, 1        // fadeRate, randomness, collide, additive
+    .1, .5, false, true // fadeRate, randomness, collide, additive
 );
 ```
 
@@ -448,7 +448,7 @@ collideWithObject(o)
 {
     // prevent colliding with paddle if moving upwards
     if (o == paddle && this.velocity.y > 0)
-        return 0;
+        return false;
 
     sound_bounce.play(); // play bounce sound
 
@@ -462,10 +462,10 @@ collideWithObject(o)
         this.velocity.y = max(-this.velocity.y, .2);
         
         // prevent default collision code
-        return 0;
+        return false;
     }
 
-    return 1; // allow object to collide
+    return true; // allow object to collide
 }
 ```
 
