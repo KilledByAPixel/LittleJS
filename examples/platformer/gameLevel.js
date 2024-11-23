@@ -13,7 +13,7 @@ const tileType_solid     = 1;
 const tileType_breakable = 2;
 
 let player, playerStartPos, tileLayers, foregroundLayerIndex, sky;
-let levelSize, levelColor, levelBackgroundColor, levelOutlineColor, warmup;
+let levelSize, levelColor, levelBackgroundColor, levelOutlineColor;
 
 function buildLevel()
 {
@@ -37,12 +37,6 @@ function buildLevel()
     for (pos.x=levelSize.x; pos.x--;)
     for (pos.y=levelSize.y; pos.y--;)
         decorateTile(pos, layer);
-
-    // warm up level
-    warmup = 1;
-    for (let i = 500; i--;)
-        engineObjectsUpdate();
-    warmup = 0;
 
     // spawn player
     player = new Player(playerStartPos);

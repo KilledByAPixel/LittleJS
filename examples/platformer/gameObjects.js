@@ -33,7 +33,7 @@ class GameObject extends EngineObject
 
         // kill if below level
         if (!this.isDead() && this.pos.y < -9)
-            warmup ? this.destroy() : this.kill();
+            this.kill();
     }
 
     damage(damage, damagingObject)
