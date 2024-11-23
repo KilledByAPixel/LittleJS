@@ -307,6 +307,7 @@ class EngineObject
                         this.pos.x = oldPos.x;
                         this.velocity.x *= -this.elasticity;
                     }
+                    debugOverlay && debugPhysics && debugRect(this.pos, this.size, '#f00');
                 }
             }
         }
