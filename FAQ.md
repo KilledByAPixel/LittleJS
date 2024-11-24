@@ -130,6 +130,12 @@ You can set the object's tileInfo to a new sprite, or just call drawTile directl
 this.tileInfo = tile(3, 32);
 ```
 
+### There are thin lines around my sprites sometimes, how can I fix that?
+
+That is called tile bleeding, it happens when pixels from one tile blend into another neighboring tile. There are two approaches supported by LittleJs to fix the problem:
+- Use tileFixBleedScale which shrinks tiles by a number of pixels. A very small value of around .1 or less can often fix the problem without noticeable issues.
+- Create the sprite sheet with extra space around each tile. This can be done by adding a 1 pixel layer of padding around each sprite.
+
 ### How do I handle animations in LittleJS?
 
 You can use the TileInfo.frame function passing in the number of animation frames to offset the sprite.
