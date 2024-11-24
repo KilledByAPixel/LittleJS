@@ -36,6 +36,7 @@ function gameInit()
         gun:     tile(2,8),
         grenade: tile(3,8),
     };
+
     // setup level
     buildLevel();
 
@@ -77,6 +78,14 @@ function gameUpdate()
     // M = move player to mouse
     if (keyWasPressed('KeyM'))
         player.pos = mousePos;
+
+    // R = restart level
+    if (keyWasPressed('KeyR'))
+    {
+        // setup level
+        buildLevel();
+        cameraPos = getCameraTarget();
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
