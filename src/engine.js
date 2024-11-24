@@ -74,13 +74,6 @@ let timeReal = 0;
  *  @default false
  *  @memberof Engine */
 let paused = false;
-
-/** The root element that engine is attached to
- *  @type {HTMLElement}
- *  @default document.body
- *  @memberof Engine */
-let engineRoot;
-
 /** Set if game is paused
  *  @param {Boolean} isPaused
  *  @memberof Engine */
@@ -287,9 +280,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         (!touchInputEnable ? '' :     // no touch css setttings
         'touch-action:none;' +        // prevent mobile pinch to resize
         '-webkit-touch-callout:none');// compatibility for ios
-    engineRoot = rootElement;
-    engineRoot.style.cssText = styleRoot;
-    engineRoot.appendChild(mainCanvas = document.createElement('canvas'));
+    rootElement.style.cssText = styleRoot;
+    rootElement.appendChild(mainCanvas = document.createElement('canvas'));
     mainContext = mainCanvas.getContext('2d');
 
     // init stuff and start engine
@@ -299,7 +291,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     glInit();
 
     // create overlay canvas for hud to appear above gl canvas
-    engineRoot.appendChild(overlayCanvas = document.createElement('canvas'));
+    rootElement.appendChild(overlayCanvas = document.createElement('canvas'));
     overlayContext = overlayCanvas.getContext('2d');
 
     // set canvas style

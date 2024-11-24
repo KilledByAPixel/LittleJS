@@ -42,7 +42,8 @@ function glInit()
     glContext = glCanvas.getContext('webgl2', {antialias:glAntialias});
 
     // some browsers are much faster without copying the gl buffer so we just overlay it instead
-    glOverlay && engineRoot.appendChild(glCanvas);
+    const rootElement = mainCanvas.parentElement;
+    glOverlay && rootElement.appendChild(glCanvas);
 
     // setup vertex and fragment shaders
     glShader = glCreateProgram(

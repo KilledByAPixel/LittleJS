@@ -563,11 +563,12 @@ function isFullscreen() { return !!document.fullscreenElement; }
  *  @memberof Draw */
 function toggleFullscreen()
 {
+    const rootElement = mainCanvas.parentElement;
     if (isFullscreen())
     {
         if (document.exitFullscreen)
             document.exitFullscreen();
     }
-    else if (engineRoot.requestFullscreen)
-        engineRoot.requestFullscreen();
+    else if (rootElement.requestFullscreen)
+        rootElement.requestFullscreen();
 }
