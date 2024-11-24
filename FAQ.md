@@ -236,6 +236,16 @@ class MyObject extends EngineObject
 const object = new MyObject(pos, size, tileInfo);
 ```
 
+### How can I load a 2D level map?
+
+There are two parts that work together to make 2D level maps in LittleJS.
+The tileCollision system is an array of values that correspond to each tile in the map.
+The built in physics system can resolve collisions against this tile map very quickly.
+For the visual side of things, there is a class called TileLayer which can be used in conjunction with tileCollision.
+The TileLayer system works by pre-rendering the entire level to a texture so it can be drawn extremely fast each frame.
+It is also possible to have multiple TileLayers for foreground and background layers.
+[The platformer example shows a basic example of how to load data that was exported from an external editor.](https://killedbyapixel.github.io/LittleJS/examples/platformer/)
+
 ### Can I use physics with LittleJS?
 
 Yes! LittleJS comes with a robust game physics system included and [also a plugin using Box2D.](https://killedbyapixel.github.io/LittleJS/examples/box2d/)
