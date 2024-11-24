@@ -207,8 +207,9 @@ if (gamepadWasPressed(0)) // Gamepad button 0
 
 ### How do I create and update game objects?
 
-You can create custom objects for your game by extending the EngineObject class. 
-They will automatically be updated and rendered by the engine.
+LittleJS can be used as an object oriented system by extending the base class [EngineObject](https://github.com/KilledByAPixel/LittleJS/blob/main/src/engineObject.js) with your own. This lightweight class provides many useful features including physics, collision, parent/child system, and sorted rendering. These objects are added to the global list of objects where they will automatically be updated and rendered until destroyed.
+
+Here is a template you can use to make objects that behave however you want. See the examples for a complete demonstration.
 
 ```javascript
 class MyObject extends EngineObject 
