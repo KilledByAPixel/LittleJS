@@ -59,11 +59,6 @@ declare module "littlejsengine" {
      *  @default false
      *  @memberof Engine */
     export let paused: boolean;
-    /** The root element that engine is attached to
-     *  @type {HTMLElement}
-     *  @default document.body
-     *  @memberof Engine */
-    export let engineRoot: HTMLElement;
     /** Set if game is paused
      *  @param {Boolean} isPaused
      *  @memberof Engine */
@@ -1439,6 +1434,14 @@ declare module "littlejsengine" {
      *  @param {WebGLTexture} texture
      *  @memberof WebGL */
     export function glSetTexture(texture: WebGLTexture): void;
+    /** Set antialiasing for webgl canvas
+     *  @param {Boolean} [antialias]
+     *  @memberof WebGL */
+    export function glSetAntialias(antialias?: boolean): void;
+    /** Shoule webgl be setup with antialiasing, must be set before calling engineInit
+     *  @type {Boolean}
+     *  @memberof WebGL */
+    export let glAntialias: boolean;
     export let glShader: any;
     export let glActiveTexture: any;
     export let glArrayBuffer: any;

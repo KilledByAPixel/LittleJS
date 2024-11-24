@@ -521,6 +521,7 @@ class Vector2
      * @param {Number} [length] */
     setDirection(direction, length=1)
     {
+        direction = mod(direction, 4);
         ASSERT(direction==0 || direction==1 || direction==2 || direction==3);
         return vec2(direction%2 ? direction-1 ? -length : length : 0, 
             direction%2 ? 0 : direction ? -length : length);
@@ -1703,6 +1704,7 @@ class EngineObject
                         this.pos.x = oldPos.x;
                         this.velocity.x *= -this.elasticity;
                     }
+                    debugOverlay && debugPhysics && debugRect(this.pos, this.size, '#f00');
                 }
             }
         }
@@ -2410,13 +2412,14 @@ function isFullscreen() { return !!document.fullscreenElement; }
  *  @memberof Draw */
 function toggleFullscreen()
 {
+    const rootElement = mainCanvas.parentElement;
     if (isFullscreen())
     {
         if (document.exitFullscreen)
             document.exitFullscreen();
     }
-    else if (engineRoot.requestFullscreen)
-        engineRoot.requestFullscreen();
+    else if (rootElement.requestFullscreen)
+        rootElement.requestFullscreen();
 }
 /** 
  * LittleJS Input System
@@ -2587,7 +2590,6 @@ function inputInit()
 
     onkeydown = (e)=>
     {
-        if (debug && e.target != engineRoot) return;
         if (!e.repeat)
         {
             isUsingGamepad = false;
@@ -2600,7 +2602,6 @@ function inputInit()
 
     onkeyup = (e)=>
     {
-        if (debug && e.target != engineRoot) return;
         inputData[0][e.code] = 4;
         if (inputWASDEmulateDirection)
             inputData[0][remapKey(e.code)] = 4;
@@ -3598,6 +3599,7 @@ function tileCollisionTest(pos, size=vec2(), object)
         if (tileData && (!object || object.collideWithTile(tileData, vec2(x, y))))
             return true;
     }
+    return false;
 }
 
 /** Return the center of first tile hit (does not return the exact intersection)
@@ -3621,7 +3623,7 @@ function tileCollisionRaycast(posStart, posEnd, object)
     let xi = unit.x * (delta.x < 0 ? posStart.x - pos.x : pos.x - posStart.x + 1);
     let yi = unit.y * (delta.y < 0 ? posStart.y - pos.y : pos.y - posStart.y + 1);
 
-    while (1)
+    while (true)
     {
         // check for tile collision
         const tileData = getTileCollisionData(pos);
@@ -4430,6 +4432,11 @@ let glCanvas;
  *  @memberof WebGL */
 let glContext;
 
+/** Shoule webgl be setup with antialiasing, must be set before calling engineInit
+ *  @type {Boolean}
+ *  @memberof WebGL */
+let glAntialias = true;
+
 // WebGL internal variables not exposed to documentation
 let glShader, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glInstanceCount, glAdditive, glBatchAdditive;
 
@@ -4442,10 +4449,11 @@ function glInit()
 
     // create the canvas and textures
     glCanvas = document.createElement('canvas');
-    glContext = glCanvas.getContext('webgl2', {antialias:!canvasPixelated});
+    glContext = glCanvas.getContext('webgl2', {antialias:glAntialias});
 
     // some browsers are much faster without copying the gl buffer so we just overlay it instead
-    glOverlay && engineRoot.appendChild(glCanvas);
+    const rootElement = mainCanvas.parentElement;
+    glOverlay && rootElement.appendChild(glCanvas);
 
     // setup vertex and fragment shaders
     glShader = glCreateProgram(
@@ -4649,6 +4657,15 @@ function glCopyToContext(context, forceDraw=false)
         context.drawImage(glCanvas, 0, 0);
 }
 
+/** Set antialiasing for webgl canvas
+ *  @param {Boolean} [antialias]
+ *  @memberof WebGL */
+function glSetAntialias(antialias=true)
+{
+    ASSERT(!glCanvas, 'must be called before engineInit');
+    glAntialias = antialias;
+}
+
 /** Add a sprite to the gl draw list, used by all gl draw functions
  *  @param {Number} x
  *  @param {Number} y
@@ -4749,7 +4766,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.10.3';
+const engineVersion = '1.10.4';
 
 /** Frames per second to update
  *  @type {Number}
@@ -4793,13 +4810,6 @@ let timeReal = 0;
  *  @default false
  *  @memberof Engine */
 let paused = false;
-
-/** The root element that engine is attached to
- *  @type {HTMLElement}
- *  @default document.body
- *  @memberof Engine */
-let engineRoot;
-
 /** Set if game is paused
  *  @param {Boolean} isPaused
  *  @memberof Engine */
@@ -5006,9 +5016,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         (!touchInputEnable ? '' :     // no touch css setttings
         'touch-action:none;' +        // prevent mobile pinch to resize
         '-webkit-touch-callout:none');// compatibility for ios
-    engineRoot = rootElement;
-    engineRoot.style.cssText = styleRoot;
-    engineRoot.appendChild(mainCanvas = document.createElement('canvas'));
+    rootElement.style.cssText = styleRoot;
+    rootElement.appendChild(mainCanvas = document.createElement('canvas'));
     mainContext = mainCanvas.getContext('2d');
 
     // init stuff and start engine
@@ -5018,7 +5027,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     glInit();
 
     // create overlay canvas for hud to appear above gl canvas
-    engineRoot.appendChild(overlayCanvas = document.createElement('canvas'));
+    rootElement.appendChild(overlayCanvas = document.createElement('canvas'));
     overlayContext = overlayCanvas.getContext('2d');
 
     // set canvas style
