@@ -22,6 +22,11 @@ let glCanvas;
  *  @memberof WebGL */
 let glContext;
 
+/** Shoule webgl be setup with antialiasing, must be set before calling engineInit
+ *  @type {Boolean}
+ *  @memberof WebGL */
+let glAntialias = true;
+
 // WebGL internal variables not exposed to documentation
 let glShader, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glInstanceCount, glAdditive, glBatchAdditive;
 
@@ -34,7 +39,7 @@ function glInit()
 
     // create the canvas and textures
     glCanvas = document.createElement('canvas');
-    glContext = glCanvas.getContext('webgl2', {antialias:!canvasPixelated});
+    glContext = glCanvas.getContext('webgl2', {antialias:glAntialias});
 
     // some browsers are much faster without copying the gl buffer so we just overlay it instead
     glOverlay && engineRoot.appendChild(glCanvas);
@@ -239,6 +244,15 @@ function glCopyToContext(context, forceDraw=false)
     // do not draw in overlay mode because the canvas is visible
     if (!glOverlay || forceDraw)
         context.drawImage(glCanvas, 0, 0);
+}
+
+/** Set antialiasing for webgl canvas
+ *  @param {Boolean} [antialias]
+ *  @memberof WebGL */
+function glSetAntialias(antialias=true)
+{
+    ASSERT(!glCanvas, 'must be called before engineInit');
+    glAntialias = antialias;
 }
 
 /** Add a sprite to the gl draw list, used by all gl draw functions

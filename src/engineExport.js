@@ -215,6 +215,8 @@ export {
 	glDraw,
 	glFlush,
 	glSetTexture,
+	glSetAntialias,
+	glAntialias,
 	glShader, 
 	glActiveTexture, 
 	glArrayBuffer, 
