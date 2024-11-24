@@ -35,6 +35,7 @@ function buildLevel()
 
     // spawn player
     player = new Player(playerStartPos);
+    cameraPos = getCameraTarget();
 }
 
 function loadLevel(level=0)

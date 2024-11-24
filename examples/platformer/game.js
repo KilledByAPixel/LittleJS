@@ -22,6 +22,12 @@ tileFixBleedScale = .1;
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
+    // engine settings
+    gravity = -.01;
+    objectDefaultDamping = .99;
+    objectDefaultAngleDamping = .99;
+    cameraScale = 4*16;
+
     // create a table of all sprites
     spriteAtlas =
     {
@@ -42,11 +48,6 @@ function gameInit()
 
     // init game
     score = deaths = 0;
-    gravity = -.01;
-    objectDefaultDamping = .99;
-    objectDefaultAngleDamping = .99;
-    cameraScale = 4*16;
-    cameraPos = getCameraTarget();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -81,11 +82,7 @@ function gameUpdate()
 
     // R = restart level
     if (keyWasPressed('KeyR'))
-    {
-        // setup level
         buildLevel();
-        cameraPos = getCameraTarget();
-    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
