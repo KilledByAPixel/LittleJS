@@ -153,15 +153,18 @@ class EngineObject
 
         // apply physics
         const oldPos = this.pos.copy();
-        this.pos.x += this.velocity.x *= this.damping;
-        this.pos.y += this.velocity.y = this.damping * this.velocity.y 
-            + gravity * this.gravityScale;
+        this.velocity.x *= this.damping;
+        this.velocity.y *= this.damping;
+        if (this.mass) // dont apply gravity to static objects
+            this.velocity.y += gravity * this.gravityScale;
+        this.pos.x += this.velocity.x;
+        this.pos.y += this.velocity.y;
         this.angle += this.angleVelocity *= this.angleDamping;
 
         // physics sanity checks
         ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
         ASSERT(this.damping >= 0 && this.damping <= 1);
-        if (!enablePhysicsSolver || !this.mass) // dont do collision for fixed objects
+        if (!enablePhysicsSolver || !this.mass) // dont do collision for static objects
             return;
 
         const wasMovingDown = this.velocity.y < 0;
