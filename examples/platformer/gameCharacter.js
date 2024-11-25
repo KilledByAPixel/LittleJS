@@ -178,7 +178,7 @@ class Character extends GameObject
         
         // apply movement acceleration and clamp
         const maxCharacterSpeed = .2;
-        this.velocity.x = clamp(this.velocity.x + moveInput.x * .042, -maxCharacterSpeed, maxCharacterSpeed);
+        this.velocity.x = clamp(this.velocity.x + moveInput.x * .04, -maxCharacterSpeed, maxCharacterSpeed);
 
         // track last pos for ladder collision code
         this.lastPos = this.pos.copy();
