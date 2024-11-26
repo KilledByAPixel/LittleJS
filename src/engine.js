@@ -101,7 +101,7 @@ function engineAddPlugin(updateFunction, renderFunction)
 // Main engine functions
 
 /** Startup LittleJS engine with your callback functions
- *  @param {Function} gameInit       - Called once after the engine starts up, setup the game
+ *  @param {Function|function():Promise} gameInit       - Called once after the engine starts up, setup the game
  *  @param {Function} gameUpdate     - Called every frame at 60 frames per second, handle input and update the game state
  *  @param {Function} gameUpdatePost - Called after physics and objects are updated, setup camera and prepare for render
  *  @param {Function} gameRender     - Called before objects are rendered, draw any background effects that appear behind objects
@@ -256,8 +256,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
     function startEngine()
     {
-        gameInit();
-        engineUpdate();
+        new Promise((resolve) => resolve(gameInit())).then(engineUpdate);
     }
 
     if (headlessMode)
