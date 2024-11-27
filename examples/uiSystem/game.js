@@ -30,26 +30,26 @@ function createUI()
     // setup example menu
     uiMenu = new UIObject(vec2(0,450));
     uiRoot.addChild(uiMenu);
-    const uiBackground = new UIObject(vec2(0,0), vec2(450,550));
+    const uiBackground = new UIObject(vec2(0,0), vec2(450,580));
     uiMenu.addChild(uiBackground);
 
     // example large text
-    const textTitle = new UIText(vec2(0,-200), vec2(500, 90), 'Test Title');
+    const textTitle = new UIText(vec2(0,-220), vec2(500, 90), 'Test Title');
     uiMenu.addChild(textTitle);
     textTitle.textColor = RED;
     textTitle.lineWidth = 4;
     textTitle.lineColor = BLUE;
 
     // example multiline text
-    const textTest = new UIText(vec2(-60,-120), vec2(300, 50), 'Test Text\nSecond text line.')
+    const textTest = new UIText(vec2(-60,-140), vec2(300, 50), 'Test Text\nSecond text line.')
     uiMenu.addChild(textTest);
 
     // example tile image
-    const tileTest = new UITile(vec2(150,-110), vec2(110), tile(3,128))
+    const tileTest = new UITile(vec2(150,-130), vec2(110), tile(3,128))
     uiMenu.addChild(tileTest);
 
     // example checkbox
-    const checkbox = new UICheckbox(vec2(-160,0), vec2(50));
+    const checkbox = new UICheckbox(vec2(-140,-20), vec2(40));
     uiMenu.addChild(checkbox);
     checkbox.onClick = ()=>
     {
@@ -59,11 +59,20 @@ function createUI()
     }
 
     // text attached to checkbox
-    const checkboxText = new UIText(vec2(200,0), vec2(300, 50), 'Test Checkbox');
+    const checkboxText = new UIText(vec2(170,0), vec2(300, 40), 'Test Checkbox');
     checkbox.addChild(checkboxText);
 
+    // example scrollbar
+    const scrollbar = new UIScrollbar(vec2(0,60), vec2(350, 50));
+    uiMenu.addChild(scrollbar);
+    scrollbar.onClick = ()=>
+    {
+        console.log('New scrollbar value:', scrollbar.value);
+        sound_click.play(0,.3,4);
+    }
+
     // example button
-    const button1 = new UIButton(vec2(0,90), vec2(350, 70), 'Test Button', RED, 6, CYAN);
+    const button1 = new UIButton(vec2(0,140), vec2(350, 50), 'Test Button');
     uiMenu.addChild(button1);
     button1.onClick = ()=>
     {
@@ -72,7 +81,7 @@ function createUI()
     }
 
     // exit button
-    const button2 = new UIButton(vec2(0,190), vec2(350, 70), 'Exit Menu', RED, 6, CYAN);
+    const button2 = new UIButton(vec2(0,220), vec2(350, 50), 'Exit Menu');
     uiMenu.addChild(button2);
     button2.onClick = ()=>
     {

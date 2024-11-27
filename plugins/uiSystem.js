@@ -131,19 +131,24 @@ class UIObject
     {
         // track mouse input
         const mouseWasOver = this.mouseIsOver;
-        this.mouseIsOver = isOverlapping(this.pos, this.size, mousePosScreen);
-        if (this.mouseIsOver && !mouseWasOver)
-            this.onEnter();
-        if (!this.mouseIsOver && mouseWasOver)
-            this.onLeave();
+        const mouseDown = mouseIsDown(0);
+        if (!mouseDown)
+        {
+            this.mouseIsOver = isOverlapping(this.pos, this.size, mousePosScreen);
+            if (this.mouseIsOver && !mouseWasOver)
+                this.onEnter();
+            if (!this.mouseIsOver && mouseWasOver)
+                this.onLeave();
+        }
         if (mouseWasPressed(0) && this.mouseIsOver)
         {
             this.mouseIsHeld = true;
             this.onPress();
         }
-        else if (this.mouseIsHeld && !mouseIsDown(0))
+        else if (this.mouseIsHeld && !mouseDown)
         {
             this.mouseIsHeld = false;
+            this.onRelease();
             if (this.mouseIsOver)
                 this.onClick();
         }
@@ -155,10 +160,11 @@ class UIObject
     }
 
     // callback functions
-    onEnter() {}
-    onLeave() {}
-    onPress() {}
-    onClick() {}
+    onEnter()   {}
+    onLeave()   {}
+    onPress()   {}
+    onRelease() {}
+    onClick()   {}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -239,5 +245,45 @@ class UICheckbox extends UIObject
             drawUILine(this.pos.add(this.size.multiply(vec2(-.5,-.5))), this.pos.add(this.size.multiply(vec2(.5,.5))), this.lineWidth, this.lineColor);
             drawUILine(this.pos.add(this.size.multiply(vec2(-.5,.5))), this.pos.add(this.size.multiply(vec2(.5,-.5))), this.lineWidth, this.lineColor);
         }
+    }
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+class UIScrollbar extends UIObject
+{
+    constructor(pos, size, value=.5)
+    {
+        super(pos, size);
+        this.value = value;
+        this.color = uiDefaultButtonColor;
+        this.handleColor = WHITE;
+    }
+    update()
+    {
+        super.update();
+        if (this.mouseIsHeld)
+        {
+            const handleSize = vec2(this.size.y);
+            const handleWidth = this.size.x - handleSize.x;
+            const p1 = this.pos.x - handleWidth/2;
+            const p2 = this.pos.x + handleWidth/2;
+            this.value = percent(mousePosScreen.x, p1, p2);
+        }
+    }
+    render()
+    {
+        const lineColor = this.mouseIsHeld ? this.color : this.lineColor;
+        const color = this.mouseIsOver? this.hoverColor : this.color;
+        drawUIRect(this.pos, this.size, color, this.lineWidth, lineColor);
+    
+        const handleSize = vec2(this.size.y);
+        const handleWidth = this.size.x - handleSize.x;
+        const p1 = this.pos.x - handleWidth/2;
+        const p2 = this.pos.x + handleWidth/2;
+        const handlePos = vec2(lerp(this.value, p1, p2), this.pos.y);
+        const barColor = this.mouseIsHeld ? this.color : this.handleColor;
+        drawUIRect(handlePos, handleSize, barColor, this.lineWidth, this.lineColor);
     }
 }
