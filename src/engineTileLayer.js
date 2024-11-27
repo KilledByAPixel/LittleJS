@@ -318,8 +318,8 @@ class TileLayer extends EngineObject
         const d = this.getData(layerPos);
         if (d.tile != undefined)
         {
-            const pos = this.pos.add(layerPos).add(vec2(.5));
             ASSERT(mainContext == this.context, 'must call redrawStart() before drawing tiles');
+            const pos = layerPos.add(vec2(.5));
             const tileInfo = tile(d.tile, s, this.tileInfo.textureIndex);
             drawTile(pos, vec2(1), tileInfo, d.color, d.direction*PI/2, d.mirror);
         }
