@@ -82,9 +82,9 @@ function drawUILine(posA, posB, thickness=uiDefaultLineWidth, color=uiDefaultLin
     uiContext.stroke();
 }
 
-function drawUITile(pos, size, tileInfo, color=uiDefaultColor, angle=0, mirror=false, additiveColor=BLACK)
+function drawUITile(pos, size, tileInfo, color=uiDefaultColor, angle=0, mirror=false)
 {
-    drawTile(pos, size, tileInfo, color, angle, mirror, additiveColor, false, true, uiContext);
+    drawTile(pos, size, tileInfo, color, angle, mirror, BLACK, false, true, uiContext);
 }
 
 function drawUIText(text, pos, size, color=uiDefaultColor, lineWidth=uiDefaultLineWidth, lineColor=uiDefaultLineColor, align='center', font=uiDefaultFont)
@@ -190,7 +190,7 @@ class UIText extends UIObject
 
 class UITile extends UIObject
 {
-    constructor(pos, size, tileInfo, color=WHITE, angle=0, mirror=false, additiveColor=BLACK)
+    constructor(pos, size, tileInfo, color=WHITE, angle=0, mirror=false)
     {
         super(pos, size);
 
@@ -198,11 +198,10 @@ class UITile extends UIObject
         this.color = color;
         this.angle = angle;
         this.mirror = mirror;
-        this.additiveColor = additiveColor;
     }
     render()
     {
-        drawUITile(this.pos, this.size, this.tileInfo, this.color, this.angle, this.mirror, this.additiveColor);
+        drawUITile(this.pos, this.size, this.tileInfo, this.color, this.angle, this.mirror);
     }
 }
 
@@ -247,7 +246,6 @@ class UICheckbox extends UIObject
         }
     }
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////
 
