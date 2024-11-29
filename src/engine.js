@@ -93,6 +93,8 @@ const pluginUpdateList = [], pluginRenderList = [];
  *  @memberof Engine */
 function engineAddPlugin(updateFunction, renderFunction)
 {
+    ASSERT(!pluginUpdateList.includes(updateFunction));
+    ASSERT(!pluginRenderList.includes(renderFunction));
     updateFunction && pluginUpdateList.push(updateFunction);
     renderFunction && pluginRenderList.push(renderFunction);
 }
