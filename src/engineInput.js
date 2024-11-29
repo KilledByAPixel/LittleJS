@@ -210,6 +210,7 @@ function inputInit()
     onmousemove   = (e)=> mousePosScreen = mouseToScreen(e);
     onwheel       = (e)=> mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY);
     oncontextmenu = (e)=> false; // prevent right click menu
+    onfocus       = (e) => clearInput(); // reset input when focus is regained
 
     // init touch input
     if (isTouchDevice && touchInputEnable)
