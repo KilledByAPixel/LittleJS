@@ -50,6 +50,8 @@ function initUISystem(context=overlayContext)
         {
             if (!o.visible)
                 return;
+            if (o.parent)
+                o.pos = o.localPos.add(o.parent.pos);
             o.render();
             for(const c of o.children)
                 renderObject(c)
@@ -96,7 +98,7 @@ function drawUIText(text, pos, size, color=uiDefaultColor, lineWidth=uiDefaultLi
 
 class UIObject
 {
-    constructor(localPos, size=vec2())
+    constructor(localPos=vec2(), size=vec2())
     {
         this.localPos = localPos.copy();
         this.pos = localPos.copy();
@@ -149,8 +151,6 @@ class UIObject
         {
             this.mouseIsHeld = false;
             this.onRelease();
-            if (this.mouseIsOver)
-                this.onClick();
         }
     }
     render()
@@ -164,14 +164,14 @@ class UIObject
     onLeave()   {}
     onPress()   {}
     onRelease() {}
-    onClick()   {}
+    onChange()  {}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 class UIText extends UIObject
 {
-    constructor(pos, size, text, align='center', font=fontDefault)
+    constructor(pos, size, text='', align='center', font=fontDefault)
     {
         super(pos, size);
 
@@ -220,8 +220,9 @@ class UIButton extends UIObject
         const lineColor = this.mouseIsHeld ? this.color : this.lineColor;
         const color = this.mouseIsOver? this.hoverColor : this.color;
         drawUIRect(this.pos, this.size, color, this.lineWidth, lineColor);
-        drawTextScreen(this.text, this.pos, this.size.y*.8, 
-            this.textColor, undefined, undefined, this.align, this.font, uiContext);
+        const textSize = vec2(this.size.x, this.size.y*.8);
+        drawUIText(this.text, this.pos, textSize, 
+            this.textColor, 0, undefined, this.align, this.font);
     }
 }
 
@@ -234,7 +235,11 @@ class UICheckbox extends UIObject
         super(pos, size);
         this.checked = checked;
     }
-    onClick() { this.checked = !this.checked; }
+    onPress()
+    {
+        this.checked = !this.checked;
+        this.onChange();
+    }
     render()
     {
         drawUIRect(this.pos, this.size, this.color, this.lineWidth, this.lineColor);
@@ -251,10 +256,11 @@ class UICheckbox extends UIObject
 
 class UIScrollbar extends UIObject
 {
-    constructor(pos, size, value=.5)
+    constructor(pos, size, value=.5, text='')
     {
         super(pos, size);
         this.value = value;
+        this.text = text;
         this.color = uiDefaultButtonColor;
         this.handleColor = WHITE;
     }
@@ -267,7 +273,9 @@ class UIScrollbar extends UIObject
             const handleWidth = this.size.x - handleSize.x;
             const p1 = this.pos.x - handleWidth/2;
             const p2 = this.pos.x + handleWidth/2;
+            const oldValue = this.value;
             this.value = percent(mousePosScreen.x, p1, p2);
+            this.value == oldValue || this.onChange();
         }
     }
     render()
@@ -283,5 +291,9 @@ class UIScrollbar extends UIObject
         const handlePos = vec2(lerp(this.value, p1, p2), this.pos.y);
         const barColor = this.mouseIsHeld ? this.color : this.handleColor;
         drawUIRect(handlePos, handleSize, barColor, this.lineWidth, this.lineColor);
+
+        const textSize = vec2(this.size.x, this.size.y*.8);
+        drawUIText(this.text, this.pos, textSize, 
+            this.textColor, 0, undefined, this.align, this.font);
     }
 }

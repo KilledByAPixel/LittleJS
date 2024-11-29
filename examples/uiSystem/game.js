@@ -10,7 +10,7 @@
 setShowSplashScreen(true);
 
 // sound effects
-const sound_click = new Sound([1,0]);
+const sound_ui = new Sound([1,0]);
 
 // UI system
 let uiRoot, uiMenu;
@@ -20,7 +20,7 @@ const setMenuVisible =(visible)=> uiMenu.visible = visible;
 function createUI()
 {
     // setup root to attach all ui elements to
-    uiRoot = new UIObject(vec2(mainCanvasSize.x/2,0));
+    uiRoot = new UIObject();
     const uiInfo = new UIText(vec2(0,50), vec2(1e3, 70), 
         'LittleJS UI System Example\nM = Toggle menu');
     uiInfo.textColor = WHITE;
@@ -51,11 +51,11 @@ function createUI()
     // example checkbox
     const checkbox = new UICheckbox(vec2(-140,-20), vec2(40));
     uiMenu.addChild(checkbox);
-    checkbox.onClick = ()=>
+    checkbox.onPress = ()=>
     {
         checkbox.checked = !checkbox.checked;
         console.log('Checkbox clicked');
-        sound_click.play(0,.5,checkbox.checked?4:1);
+        sound_ui.play(0,.5,checkbox.checked?4:1);
     }
 
     // text attached to checkbox
@@ -65,28 +65,26 @@ function createUI()
     // example scrollbar
     const scrollbar = new UIScrollbar(vec2(0,60), vec2(350, 50));
     uiMenu.addChild(scrollbar);
-    scrollbar.onClick = ()=>
-    {
-        console.log('New scrollbar value:', scrollbar.value);
-        sound_click.play(0,.3,4);
-    }
+    scrollbar.onChange  = ()=> console.log('New scrollbar value:', scrollbar.value);
+    scrollbar.onPress   = ()=> sound_ui.play(0,.3,2);
+    scrollbar.onRelease = ()=> sound_ui.play(0,.3,4);
 
     // example button
     const button1 = new UIButton(vec2(0,140), vec2(350, 50), 'Test Button');
     uiMenu.addChild(button1);
-    button1.onClick = ()=>
+    button1.onPress = ()=>
     {
         console.log('Button 1 clicked');
-        sound_click.play();
+        sound_ui.play();
     }
 
     // exit button
     const button2 = new UIButton(vec2(0,220), vec2(350, 50), 'Exit Menu');
     uiMenu.addChild(button2);
-    button2.onClick = ()=>
+    button2.onPress = ()=>
     {
         console.log('Button 2 clicked');
-        sound_click.play(0,.5,2);
+        sound_ui.play(0,.5,2);
         setMenuVisible(false);
     }
 }
