@@ -1,7 +1,7 @@
 /**
  * LittleJS Post Processing Plugin
  * - Supports shadertoy style post processing shaders
- * - call glInitPostProcess
+ * - call initPostProcess to set it up
  */
 
 'use strict';
@@ -99,10 +99,3 @@ function initPostProcess(shaderCode, includeOverlay=false)
         glContext.drawArrays(gl_TRIANGLE_STRIP, 0, 4);
     }
 }
-
-export {
-	initPostProcess,
-    glPostShader, 
-    glPostTexture, 
-    glPostIncludeOverlay
-};
