@@ -14,7 +14,7 @@
 /** Audio context used by the engine
  *  @type {AudioContext}
  *  @memberof Audio */
-let audioContext;
+let audioContext = new AudioContext;
 
 /** Master gain node for all audio to pass through
  *  @type {GainNode}
@@ -25,14 +25,10 @@ function audioInit()
 {
     if (!soundEnable || headlessMode) return;
     
-    // create audio context
-    audioContext = new AudioContext;
-
-    // create and connect gain node
     // (createGain is more widely spported then GainNode construtor)
     audioGainNode = audioContext.createGain();
     audioGainNode.connect(audioContext.destination);
-    setSoundVolume(soundVolume); // update gain volume
+    audioGainNode.gain.value = soundVolume; // set starting value
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -67,12 +63,15 @@ class Sound
 
         /** @property {Number} - How much to randomize frequency each time sound plays */
         this.randomness = 0;
+        
+        /** @property {GainNode} - Gain node for this sound */
+        this.gainNode = audioContext.createGain();
 
         if (zzfxSound)
         {
             // generate zzfx sound now for fast playback
             const defaultRandomness = .05;
-            this.randomness = zzfxSound[1] || defaultRandomness;
+            this.randomness = zzfxSound[1] != undefined ? zzfxSound[1] : defaultRandomness;
             zzfxSound[1] = 0; // generate without randomness
             this.sampleChannels = [zzfxG(...zzfxSound)];
             this.sampleRate = zzfxR;
@@ -113,18 +112,13 @@ class Sound
 
         // play the sound
         const playbackRate = pitch + pitch * this.randomness*randomnessScale*rand(-1,1);
-        this.gainNode = audioContext.createGain();
         return this.source = playSamples(this.sampleChannels, volume, playbackRate, pan, loop, this.sampleRate, this.gainNode);
     }
 
     /** Set the sound volume
      *  @param {Number}  [volume] - How much to scale volume by
      */
-    setVolume(volume=1)
-    {
-        if (this.gainNode)
-            this.gainNode.gain.value = volume;
-    }
+    setVolume(volume=1) { this.gainNode.gain.value = volume; }
 
     /** Stop the last instance of this sound that was played */
     stop()
