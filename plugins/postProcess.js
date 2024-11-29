@@ -99,3 +99,10 @@ function initPostProcess(shaderCode, includeOverlay=false)
         glContext.drawArrays(gl_TRIANGLE_STRIP, 0, 4);
     }
 }
+
+export {
+	initPostProcess,
+    glPostShader, 
+    glPostTexture, 
+    glPostIncludeOverlay
+};
