@@ -64,15 +64,15 @@ declare module "littlejsengine" {
      *  @memberof Engine */
     export function setPaused(isPaused: boolean): void;
     /** Startup LittleJS engine with your callback functions
-     *  @param {Function} gameInit       - Called once after the engine starts up, setup the game
-     *  @param {Function} gameUpdate     - Called every frame at 60 frames per second, handle input and update the game state
-     *  @param {Function} gameUpdatePost - Called after physics and objects are updated, setup camera and prepare for render
-     *  @param {Function} gameRender     - Called before objects are rendered, draw any background effects that appear behind objects
-     *  @param {Function} gameRenderPost - Called after objects are rendered, draw effects or hud that appear above all objects
-     *  @param {Array} [imageSources=[]] - Image to load
+     *  @param {Function|function():Promise} gameInit - Called once after the engine starts up
+     *  @param {Function} gameUpdate - Called every frame before objects are updated
+     *  @param {Function} gameUpdatePost - Called after physics and objects are updated, even when paused
+     *  @param {Function} gameRender - Called before objects are rendered, for drawing the background
+     *  @param {Function} gameRenderPost - Called after objects are rendered, useful for drawing UI
+     *  @param {Array} [imageSources=[]] - List of images to load
      *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default
      *  @memberof Engine */
-    export function engineInit(gameInit: Function, gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, imageSources?: any[], rootElement?: HTMLElement): void;
+    export function engineInit(gameInit: Function | (() => Promise<any>), gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, imageSources?: any[], rootElement?: HTMLElement): void;
     /** Update each engine object, remove destroyed objects, and update time
      *  @memberof Engine */
     export function engineObjectsUpdate(): void;
@@ -1588,6 +1588,8 @@ declare module "littlejsengine" {
         taper: number;
         /** @property {Number} - How much to randomize frequency each time sound plays */
         randomness: any;
+        /** @property {GainNode} - Gain node for this sound */
+        gainNode: GainNode;
         sampleChannels: any[][];
         sampleRate: number;
         /** Play the sound
@@ -1599,7 +1601,6 @@ declare module "littlejsengine" {
          *  @return {AudioBufferSourceNode} - The audio source node
          */
         play(pos?: Vector2, volume?: number, pitch?: number, randomnessScale?: number, loop?: boolean): AudioBufferSourceNode;
-        gainNode: GainNode;
         source: AudioBufferSourceNode;
         /** Set the sound volume
          *  @param {Number}  [volume] - How much to scale volume by

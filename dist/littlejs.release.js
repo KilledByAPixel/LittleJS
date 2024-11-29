@@ -1550,15 +1550,18 @@ class EngineObject
 
         // apply physics
         const oldPos = this.pos.copy();
-        this.pos.x += this.velocity.x *= this.damping;
-        this.pos.y += this.velocity.y = this.damping * this.velocity.y 
-            + gravity * this.gravityScale;
+        this.velocity.x *= this.damping;
+        this.velocity.y *= this.damping;
+        if (this.mass) // dont apply gravity to static objects
+            this.velocity.y += gravity * this.gravityScale;
+        this.pos.x += this.velocity.x;
+        this.pos.y += this.velocity.y;
         this.angle += this.angleVelocity *= this.angleDamping;
 
         // physics sanity checks
         ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
         ASSERT(this.damping >= 0 && this.damping <= 1);
-        if (!enablePhysicsSolver || !this.mass) // dont do collision for fixed objects
+        if (!enablePhysicsSolver || !this.mass) // dont do collision for static objects
             return;
 
         const wasMovingDown = this.velocity.y < 0;
@@ -2633,6 +2636,7 @@ function inputInit()
     onmousemove   = (e)=> mousePosScreen = mouseToScreen(e);
     onwheel       = (e)=> mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY);
     oncontextmenu = (e)=> false; // prevent right click menu
+    onfocus       = (e) => clearInput(); // reset input when focus is regained
 
     // init touch input
     if (isTouchDevice && touchInputEnable)
@@ -2947,7 +2951,7 @@ function touchGamepadRender()
 /** Audio context used by the engine
  *  @type {AudioContext}
  *  @memberof Audio */
-let audioContext;
+let audioContext = new AudioContext;
 
 /** Master gain node for all audio to pass through
  *  @type {GainNode}
@@ -2958,14 +2962,10 @@ function audioInit()
 {
     if (!soundEnable || headlessMode) return;
     
-    // create audio context
-    audioContext = new AudioContext;
-
-    // create and connect gain node
     // (createGain is more widely spported then GainNode construtor)
     audioGainNode = audioContext.createGain();
     audioGainNode.connect(audioContext.destination);
-    setSoundVolume(soundVolume); // update gain volume
+    audioGainNode.gain.value = soundVolume; // set starting value
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3000,12 +3000,15 @@ class Sound
 
         /** @property {Number} - How much to randomize frequency each time sound plays */
         this.randomness = 0;
+        
+        /** @property {GainNode} - Gain node for this sound */
+        this.gainNode = audioContext.createGain();
 
         if (zzfxSound)
         {
             // generate zzfx sound now for fast playback
             const defaultRandomness = .05;
-            this.randomness = zzfxSound[1] || defaultRandomness;
+            this.randomness = zzfxSound[1] != undefined ? zzfxSound[1] : defaultRandomness;
             zzfxSound[1] = 0; // generate without randomness
             this.sampleChannels = [zzfxG(...zzfxSound)];
             this.sampleRate = zzfxR;
@@ -3046,18 +3049,13 @@ class Sound
 
         // play the sound
         const playbackRate = pitch + pitch * this.randomness*randomnessScale*rand(-1,1);
-        this.gainNode = audioContext.createGain();
         return this.source = playSamples(this.sampleChannels, volume, playbackRate, pan, loop, this.sampleRate, this.gainNode);
     }
 
     /** Set the sound volume
      *  @param {Number}  [volume] - How much to scale volume by
      */
-    setVolume(volume=1)
-    {
-        if (this.gainNode)
-            this.gainNode.gain.value = volume;
-    }
+    setVolume(volume=1) { this.gainNode.gain.value = volume; }
 
     /** Stop the last instance of this sound that was played */
     stop()
@@ -3847,8 +3845,8 @@ class TileLayer extends EngineObject
         const d = this.getData(layerPos);
         if (d.tile != undefined)
         {
-            const pos = this.pos.add(layerPos).add(vec2(.5));
             ASSERT(mainContext == this.context, 'must call redrawStart() before drawing tiles');
+            const pos = layerPos.add(vec2(.5));
             const tileInfo = tile(d.tile, s, this.tileInfo.textureIndex);
             drawTile(pos, vec2(1), tileInfo, d.color, d.direction*PI/2, d.mirror);
         }
@@ -4766,7 +4764,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.10.4';
+const engineVersion = '1.10.5';
 
 /** Frames per second to update
  *  @type {Number}
@@ -4829,6 +4827,8 @@ const pluginUpdateList = [], pluginRenderList = [];
  *  @memberof Engine */
 function engineAddPlugin(updateFunction, renderFunction)
 {
+    ASSERT(!pluginUpdateList.includes(updateFunction));
+    ASSERT(!pluginRenderList.includes(renderFunction));
     updateFunction && pluginUpdateList.push(updateFunction);
     renderFunction && pluginRenderList.push(renderFunction);
 }
@@ -4837,12 +4837,12 @@ function engineAddPlugin(updateFunction, renderFunction)
 // Main engine functions
 
 /** Startup LittleJS engine with your callback functions
- *  @param {Function} gameInit       - Called once after the engine starts up, setup the game
- *  @param {Function} gameUpdate     - Called every frame at 60 frames per second, handle input and update the game state
- *  @param {Function} gameUpdatePost - Called after physics and objects are updated, setup camera and prepare for render
- *  @param {Function} gameRender     - Called before objects are rendered, draw any background effects that appear behind objects
- *  @param {Function} gameRenderPost - Called after objects are rendered, draw effects or hud that appear above all objects
- *  @param {Array} [imageSources=[]] - Image to load
+ *  @param {Function|function():Promise} gameInit - Called once after the engine starts up
+ *  @param {Function} gameUpdate - Called every frame before objects are updated
+ *  @param {Function} gameUpdatePost - Called after physics and objects are updated, even when paused
+ *  @param {Function} gameRender - Called before objects are rendered, for drawing the background
+ *  @param {Function} gameRenderPost - Called after objects are rendered, useful for drawing UI
+ *  @param {Array} [imageSources=[]] - List of images to load
  *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default
  *  @memberof Engine */
 function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
@@ -4992,8 +4992,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
     function startEngine()
     {
-        gameInit();
-        engineUpdate();
+        new Promise((resolve) => resolve(gameInit())).then(engineUpdate);
     }
 
     if (headlessMode)
@@ -5347,3 +5346,4 @@ function drawEngineSplashScreen(t)
     
     x.restore();
 }
+
