@@ -45,7 +45,7 @@ function keyWasReleased(key, device=0)
 
 /** Clears all input
  *  @memberof Input */
-function clearInput() { inputData = [[]]; }
+function clearInput() { inputData = [[]]; touchGamepadButtons = []; }
 
 /** Returns true if mouse button is down
  *  @function
@@ -409,10 +409,13 @@ function touchInputInit()
         if (touching)
         {
             touchGamepadTimer.set();
-            if (paused)
+            if (paused && !wasTouching)
             {
                 // touch anywhere to press start when paused
                 touchGamepadButtons[9] = 1;
+
+                // call default touch handler so normal touch events still work
+                handleTouchDefault(e);
                 return;
             }
         }
@@ -437,7 +440,7 @@ function touchInputInit()
                 const button = touchPos.subtract(buttonCenter).direction();
                 touchGamepadButtons[button] = 1;
             }
-            else if (touchPos.distance(startCenter) < touchGamepadSize)
+            else if (touchPos.distance(startCenter) < touchGamepadSize && !wasTouching)
             {
                 // virtual start button in center
                 touchGamepadButtons[9] = 1;
