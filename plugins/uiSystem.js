@@ -40,7 +40,7 @@ function initUISystem(context=overlayContext)
                 o.pos = o.localPos.add(o.parent.pos);
             o.update();
             for(const c of o.children)
-                updateObject(c)
+                updateObject(c);
         }
         uiObjects.forEach(o=> o.parent || updateObject(o));
     }
@@ -54,7 +54,7 @@ function initUISystem(context=overlayContext)
                 o.pos = o.localPos.add(o.parent.pos);
             o.render();
             for(const c of o.children)
-                renderObject(c)
+                renderObject(c);
         }
         uiObjects.forEach(o=> o.parent || renderObject(o));
     }
@@ -134,9 +134,11 @@ class UIObject
         // track mouse input
         const mouseWasOver = this.mouseIsOver;
         const mouseDown = mouseIsDown(0);
-        if (!mouseDown)
+        if (!mouseDown || isTouchDevice)
         {
             this.mouseIsOver = isOverlapping(this.pos, this.size, mousePosScreen);
+            if (!mouseDown && isTouchDevice)
+                this.mouseIsOver = false;
             if (this.mouseIsOver && !mouseWasOver)
                 this.onEnter();
             if (!this.mouseIsOver && mouseWasOver)
@@ -146,6 +148,8 @@ class UIObject
         {
             this.mouseIsHeld = true;
             this.onPress();
+            if (isTouchDevice)
+                this.mouseIsOver = false;
         }
         else if (this.mouseIsHeld && !mouseDown)
         {
