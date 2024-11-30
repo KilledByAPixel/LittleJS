@@ -72,6 +72,7 @@ function tileCollisionTest(pos, size=vec2(), object)
         if (tileData &amp;&amp; (!object || object.collideWithTile(tileData, vec2(x, y))))
             return true;
     }
+    return false;
 }
 
 /** Return the center of first tile hit (does not return the exact intersection)
@@ -95,7 +96,7 @@ function tileCollisionRaycast(posStart, posEnd, object)
     let xi = unit.x * (delta.x &lt; 0 ? posStart.x - pos.x : pos.x - posStart.x + 1);
     let yi = unit.y * (delta.y &lt; 0 ? posStart.y - pos.y : pos.y - posStart.y + 1);
 
-    while (1)
+    while (true)
     {
         // check for tile collision
         const tileData = getTileCollisionData(pos);
@@ -319,8 +320,8 @@ class TileLayer extends EngineObject
         const d = this.getData(layerPos);
         if (d.tile != undefined)
         {
-            const pos = this.pos.add(layerPos).add(vec2(.5));
             ASSERT(mainContext == this.context, 'must call redrawStart() before drawing tiles');
+            const pos = layerPos.add(vec2(.5));
             const tileInfo = tile(d.tile, s, this.tileInfo.textureIndex);
             drawTile(pos, vec2(1), tileInfo, d.color, d.direction*PI/2, d.mirror);
         }

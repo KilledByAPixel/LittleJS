@@ -32,7 +32,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.10.1';
+const engineVersion = '1.10.6';
 
 /** Frames per second to update
  *  @type {Number}
@@ -76,13 +76,6 @@ let timeReal = 0;
  *  @default false
  *  @memberof Engine */
 let paused = false;
-
-/** The root element that engine is attached to
- *  @type {HTMLElement}
- *  @default document.body
- *  @memberof Engine */
-let engineRoot;
-
 /** Set if game is paused
  *  @param {Boolean} isPaused
  *  @memberof Engine */
@@ -102,6 +95,8 @@ const pluginUpdateList = [], pluginRenderList = [];
  *  @memberof Engine */
 function engineAddPlugin(updateFunction, renderFunction)
 {
+    ASSERT(!pluginUpdateList.includes(updateFunction));
+    ASSERT(!pluginRenderList.includes(renderFunction));
     updateFunction &amp;&amp; pluginUpdateList.push(updateFunction);
     renderFunction &amp;&amp; pluginRenderList.push(renderFunction);
 }
@@ -110,12 +105,12 @@ function engineAddPlugin(updateFunction, renderFunction)
 // Main engine functions
 
 /** Startup LittleJS engine with your callback functions
- *  @param {Function} gameInit       - Called once after the engine starts up, setup the game
- *  @param {Function} gameUpdate     - Called every frame at 60 frames per second, handle input and update the game state
- *  @param {Function} gameUpdatePost - Called after physics and objects are updated, setup camera and prepare for render
- *  @param {Function} gameRender     - Called before objects are rendered, draw any background effects that appear behind objects
- *  @param {Function} gameRenderPost - Called after objects are rendered, draw effects or hud that appear above all objects
- *  @param {Array} [imageSources=['tiles.png']] - Image to load
+ *  @param {Function|function():Promise} gameInit - Called once after the engine starts up
+ *  @param {Function} gameUpdate - Called every frame before objects are updated
+ *  @param {Function} gameUpdatePost - Called after physics and objects are updated, even when paused
+ *  @param {Function} gameRender - Called before objects are rendered, for drawing the background
+ *  @param {Function} gameRenderPost - Called after objects are rendered, useful for drawing UI
+ *  @param {Array} [imageSources=[]] - List of images to load
  *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default
  *  @memberof Engine */
 function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
@@ -265,8 +260,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
     function startEngine()
     {
-        gameInit();
-        engineUpdate();
+        new Promise((resolve) => resolve(gameInit())).then(engineUpdate);
     }
 
     if (headlessMode)
@@ -276,7 +270,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     }
 
     // setup html
-    const styleBody = 
+    const styleRoot = 
         'margin:0;overflow:hidden;' + // fill the window
         'width:100vw;height:100vh;' + // fill the window
         'display:flex;' +             // use flexbox
@@ -289,9 +283,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         (!touchInputEnable ? '' :     // no touch css setttings
         'touch-action:none;' +        // prevent mobile pinch to resize
         '-webkit-touch-callout:none');// compatibility for ios
-    engineRoot = rootElement;
-    engineRoot.style.cssText = styleBody;
-    engineRoot.appendChild(mainCanvas = document.createElement('canvas'));
+    rootElement.style.cssText = styleRoot;
+    rootElement.appendChild(mainCanvas = document.createElement('canvas'));
     mainContext = mainCanvas.getContext('2d');
 
     // init stuff and start engine
@@ -301,7 +294,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     glInit();
 
     // create overlay canvas for hud to appear above gl canvas
-    engineRoot.appendChild(overlayCanvas = document.createElement('canvas'));
+    rootElement.appendChild(overlayCanvas = document.createElement('canvas'));
     overlayContext = overlayCanvas.getContext('2d');
 
     // set canvas style
@@ -620,4 +613,5 @@ function drawEngineSplashScreen(t)
     }
     
     x.restore();
-}</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Color.html">Color</a></div><div class="sidebar-section-children"><a href="EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="FontImage.html">FontImage</a></div><div class="sidebar-section-children"><a href="Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Music.html">Music</a></div><div class="sidebar-section-children"><a href="Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="SoundWave.html">SoundWave</a></div><div class="sidebar-section-children"><a href="TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Vector2.html">Vector2</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileCollision.html">TileCollision</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>
+}
+</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Color.html">Color</a></div><div class="sidebar-section-children"><a href="EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="FontImage.html">FontImage</a></div><div class="sidebar-section-children"><a href="Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Music.html">Music</a></div><div class="sidebar-section-children"><a href="Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="SoundWave.html">SoundWave</a></div><div class="sidebar-section-children"><a href="TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Vector2.html">Vector2</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileCollision.html">TileCollision</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>

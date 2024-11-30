@@ -252,6 +252,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     {
         // normal canvas 2D rendering method (slower)
         showWatermark &amp;&amp; ++drawCount;
+        size = vec2(size.x, -size.y); // fix upside down sprites
         drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
             if (textureInfo)
@@ -287,6 +288,22 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
 function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
 { 
     drawTile(pos, size, undefined, color, angle, false, undefined, useWebGL, screenSpace, context); 
+}
+
+/** Draw colored line between two points
+ *  @param {Vector2} posA
+ *  @param {Vector2} posB
+ *  @param {Number}  [thickness]
+ *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Boolean} [useWebGL=glEnable]
+ *  @param {Boolean} [screenSpace=false]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
+ *  @memberof Draw */
+function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace, context)
+{
+    const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
+    const size = vec2(thickness, halfDelta.length()*2);
+    drawRect(posA.add(halfDelta), size, color, halfDelta.angle(), useWebGL, screenSpace, context);
 }
 
 /** Draw colored polygon using passed in points
@@ -357,22 +374,6 @@ function drawEllipse(pos, width=1, height=1, angle=0, color=new Color, lineWidth
 function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
 { drawEllipse(pos, radius, radius, 0, color, lineWidth, lineColor, screenSpace, context); }
 
-/** Draw colored line between two points
- *  @param {Vector2} posA
- *  @param {Vector2} posB
- *  @param {Number}  [thickness]
- *  @param {Color}   [color=(1,1,1,1)]
- *  @param {Boolean} [useWebGL=glEnable]
- *  @param {Boolean} [screenSpace=false]
- *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
- *  @memberof Draw */
-function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace, context)
-{
-    const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
-    const size = vec2(thickness, halfDelta.length()*2);
-    drawRect(posA.add(halfDelta), size, color, halfDelta.angle(), useWebGL, screenSpace, context);
-}
-
 /** Draw directly to a 2d canvas context in world space
  *  @param {Vector2}  pos
  *  @param {Vector2}  size
@@ -393,7 +394,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, conte
     context.save();
     context.translate(pos.x+.5, pos.y+.5);
     context.rotate(angle);
-    context.scale(mirror ? -size.x : size.x, size.y);
+    context.scale(mirror ? -size.x : size.x, -size.y);
     drawFunction(context);
     context.restore();
 }
@@ -564,11 +565,12 @@ function isFullscreen() { return !!document.fullscreenElement; }
  *  @memberof Draw */
 function toggleFullscreen()
 {
+    const rootElement = mainCanvas.parentElement;
     if (isFullscreen())
     {
         if (document.exitFullscreen)
             document.exitFullscreen();
     }
-    else if (engineRoot.requestFullscreen)
-        engineRoot.requestFullscreen();
+    else if (rootElement.requestFullscreen)
+        rootElement.requestFullscreen();
 }</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Color.html">Color</a></div><div class="sidebar-section-children"><a href="EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="FontImage.html">FontImage</a></div><div class="sidebar-section-children"><a href="Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Music.html">Music</a></div><div class="sidebar-section-children"><a href="Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="SoundWave.html">SoundWave</a></div><div class="sidebar-section-children"><a href="TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Vector2.html">Vector2</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileCollision.html">TileCollision</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>

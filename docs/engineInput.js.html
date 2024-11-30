@@ -47,7 +47,7 @@ function keyWasReleased(key, device=0)
 
 /** Clears all input
  *  @memberof Input */
-function clearInput() { inputData = [[]]; }
+function clearInput() { inputData = [[]]; touchGamepadButtons = []; }
 
 /** Returns true if mouse button is down
  *  @function
@@ -169,7 +169,6 @@ function inputInit()
 
     onkeydown = (e)=>
     {
-        if (debug &amp;&amp; e.target != engineRoot) return;
         if (!e.repeat)
         {
             isUsingGamepad = false;
@@ -182,7 +181,6 @@ function inputInit()
 
     onkeyup = (e)=>
     {
-        if (debug &amp;&amp; e.target != engineRoot) return;
         inputData[0][e.code] = 4;
         if (inputWASDEmulateDirection)
             inputData[0][remapKey(e.code)] = 4;
@@ -214,6 +212,7 @@ function inputInit()
     onmousemove   = (e)=> mousePosScreen = mouseToScreen(e);
     onwheel       = (e)=> mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY);
     oncontextmenu = (e)=> false; // prevent right click menu
+    onblur        = (e) => clearInput(); // reset input when focus is lost
 
     // init touch input
     if (isTouchDevice &amp;&amp; touchInputEnable)
@@ -384,7 +383,7 @@ function touchInputInit()
             // set event pos and pass it along
             const p = vec2(e.touches[0].clientX, e.touches[0].clientY);
             mousePosScreen = mouseToScreen(p);
-            wasTouching ? isUsingGamepad = false : inputData[0][button] = 3;
+            wasTouching ? isUsingGamepad = touchGamepadEnable : inputData[0][button] = 3;
         }
         else if (wasTouching)
             inputData[0][button] = inputData[0][button] &amp; 2 | 4;
@@ -412,10 +411,13 @@ function touchInputInit()
         if (touching)
         {
             touchGamepadTimer.set();
-            if (paused)
+            if (paused &amp;&amp; !wasTouching)
             {
                 // touch anywhere to press start when paused
                 touchGamepadButtons[9] = 1;
+
+                // call default touch handler so normal touch events still work
+                handleTouchDefault(e);
                 return;
             }
         }
@@ -440,7 +442,7 @@ function touchInputInit()
                 const button = touchPos.subtract(buttonCenter).direction();
                 touchGamepadButtons[button] = 1;
             }
-            else if (touchPos.distance(startCenter) &lt; touchGamepadSize)
+            else if (touchPos.distance(startCenter) &lt; touchGamepadSize &amp;&amp; !wasTouching)
             {
                 // virtual start button in center
                 touchGamepadButtons[9] = 1;

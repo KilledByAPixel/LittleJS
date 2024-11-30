@@ -485,6 +485,7 @@ class Vector2
      * @param {Number} [length] */
     setDirection(direction, length=1)
     {
+        direction = mod(direction, 4);
         ASSERT(direction==0 || direction==1 || direction==2 || direction==3);
         return vec2(direction%2 ? direction-1 ? -length : length : 0, 
             direction%2 ? 0 : direction ? -length : length);
