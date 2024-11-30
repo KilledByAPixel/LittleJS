@@ -7,6 +7,9 @@
 
 'use strict';
 
+// fix texture bleeding by shrinking tile slightly
+tileFixBleedScale = .5;
+
 // sound effects
 const sound_click = new Sound([1,.5]);
 

@@ -10,6 +10,9 @@
 // show the LittleJS splash screen
 setShowSplashScreen(true);
 
+// fix texture bleeding by shrinking tile slightly
+tileFixBleedScale = .5;
+
 // sound effects
 const sound_click = new Sound([1,.5]);
 

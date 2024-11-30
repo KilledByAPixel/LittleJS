@@ -11,6 +11,9 @@
 // show the LittleJS splash screen
 setShowSplashScreen(true);
 
+// fix texture bleeding by shrinking tile slightly
+tileFixBleedScale = .5;
+
 let levelSize, ball, paddle, score, brickCount;
 
 // sound effects

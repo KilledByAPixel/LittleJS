@@ -13,6 +13,9 @@ const {tile, vec2, hsl} = LittleJS;
 // show the LittleJS splash screen
 LittleJS.setShowSplashScreen(true);
 
+// fix texture bleeding by shrinking tile slightly
+LittleJS.setTileFixBleedScale(.5);
+
 // sound effects
 const sound_click = new LittleJS.Sound([1,.5]);
 
