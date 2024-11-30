@@ -2246,14 +2246,19 @@ declare module "littlejsengine" {
          *  @param {String} [src]         - Image location for the medal
          */
         constructor(id: number, name: string, description?: string, icon?: string, src?: string);
+        /** @property {Number} - The unique identifier of the medal */
         id: number;
+        /** @property {String} - Name of the medal */
         name: string;
+        /** @property {String} - Description of the medal */
         description: string;
+        /** @property {String} - Icon for the medal */
         icon: string;
+        /** @property {Boolean} - Is the medal unlocked? */
+        unlocked: boolean;
         image: HTMLImageElement;
         /** Unlocks a medal if not already unlocked */
         unlock(): void;
-        unlocked: number;
         /** Render a medal
          *  @param {Number} [hidePercent] - How much to slide the medal off screen
          */

@@ -2903,7 +2903,7 @@ function keyWasReleased(key, device=0)
 
 /** Clears all input
  *  @memberof Input */
-function clearInput() { inputData = [[]]; }
+function clearInput() { inputData = [[]]; touchGamepadButtons = []; }
 
 /** Returns true if mouse button is down
  *  @function
@@ -3267,10 +3267,13 @@ function touchInputInit()
         if (touching)
         {
             touchGamepadTimer.set();
-            if (paused)
+            if (paused && !wasTouching)
             {
                 // touch anywhere to press start when paused
                 touchGamepadButtons[9] = 1;
+
+                // call default touch handler so normal touch events still work
+                handleTouchDefault(e);
                 return;
             }
         }
@@ -3295,7 +3298,7 @@ function touchInputInit()
                 const button = touchPos.subtract(buttonCenter).direction();
                 touchGamepadButtons[button] = 1;
             }
-            else if (touchPos.distance(startCenter) < touchGamepadSize)
+            else if (touchPos.distance(startCenter) < touchGamepadSize && !wasTouching)
             {
                 // virtual start button in center
                 touchGamepadButtons[9] = 1;
@@ -4707,7 +4710,7 @@ function medalsInit(saveName)
     // check if medals are unlocked
     medalsSaveName = saveName;
     if (!debugMedals)
-        medalsForEach(medal=> medal.unlocked = (localStorage[medal.storageKey()] | 0));
+        medalsForEach(medal=> medal.unlocked = !!localStorage[medal.storageKey()]);
 
     // engine automatically renders medals
     engineAddPlugin(undefined, medalsRender);
@@ -4770,14 +4773,28 @@ class Medal
     constructor(id, name, description='', icon='🏆', src)
     {
         ASSERT(id >= 0 && !medals[id]);
-
-        // save attributes and add to list of medals
-        medals[this.id = id] = this;
+        
+        /** @property {Number} - The unique identifier of the medal */
+        this.id = id;
+        
+        /** @property {String} - Name of the medal */
         this.name = name;
+        
+        /** @property {String} - Description of the medal */
         this.description = description;
+        
+        /** @property {String} - Icon for the medal */
         this.icon = icon;
+        
+        /** @property {Boolean} - Is the medal unlocked? */
+        this.unlocked = false;
+
+        // load the source image if provided
         if (src)
             (this.image = new Image).src = src;
+
+        // add this to list of medals
+        medals[id] = this;
     }
 
     /** Unlocks a medal if not already unlocked */
@@ -4788,7 +4805,7 @@ class Medal
 
         // save the medal
         ASSERT(medalsSaveName, 'save name must be set');
-        localStorage[this.storageKey()] = this.unlocked = 1;
+        localStorage[this.storageKey()] = this.unlocked = true;
         medalsDisplayQueue.push(this);
     }
 
@@ -5196,7 +5213,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.10.5';
+const engineVersion = '1.10.6';
 
 /** Frames per second to update
  *  @type {Number}
