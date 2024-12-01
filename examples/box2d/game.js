@@ -15,13 +15,11 @@
 setShowSplashScreen(true);
 //box2dDebug = 1; // enable box2d debug draw
 
-// fix texture bleeding by shrinking tile slightly
-tileFixBleedScale = .5;
-
 // game variables
 const maxScenes = 11;
 let scene = 0;
 let sceneName;
+let spriteAtlas;
 let groundObject;
 let mouseJoint;
 let car;
@@ -30,6 +28,19 @@ let repeatSpawnTimer = new Timer;
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
+    // create a table of all sprites
+    const gameTile = (i)=>  tile(i, 16, 0, 1);
+    spriteAtlas =
+    {
+        circle:         gameTile(0),
+        dot:            gameTile(1),
+        circleOutline:  gameTile(2),
+        squareOutline:  gameTile(3),
+        wheel:          gameTile(4),
+        gear:           gameTile(5),
+        squareOutline2: gameTile(6),
+    };
+
     loadScene(scene);
 }
 
@@ -128,7 +139,7 @@ function gameRenderPost()
     {
         // draw mouse joint
         const ab = vec2(mouseJoint.GetAnchorB());
-        drawTile(ab, vec2(.3), tile(0), BLACK);
+        drawTile(ab, vec2(.3), spriteAtlas.circle, BLACK);
         drawLine(mousePos, ab, .1, BLACK);
     }
 

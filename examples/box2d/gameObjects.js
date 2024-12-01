@@ -12,7 +12,8 @@
 function spawnBox(pos, size=1, color=WHITE, type=box2dBodyTypeDynamic, applyTexture=true, angle=0)
 {
     size = typeof size == 'number' ? vec2(size) : size; // square
-    const o = new Box2dObject(pos, size, applyTexture && tile(3), angle, color, type);
+    const o = new Box2dObject(pos, size, applyTexture && spriteAtlas.squareOutline, angle, color, type);
+    o.drawSize = size.scale(1.02); // slightly enarge to cover gaps
     o.addBox(size);
     return o;
 }
@@ -20,7 +21,7 @@ function spawnBox(pos, size=1, color=WHITE, type=box2dBodyTypeDynamic, applyText
 function spawnCircle(pos, diameter=1, color=WHITE, type=box2dBodyTypeDynamic, applyTexture=true, angle=0)
 {
     const size = vec2(diameter);
-    const o = new Box2dObject(pos, size, applyTexture && tile(2), angle, color, type);
+    const o = new Box2dObject(pos, size, applyTexture && spriteAtlas.circleOutline, angle, color, type);
     o.addCircle(diameter);
     return o;
 }
@@ -115,7 +116,7 @@ class CarObject extends Box2dObject
             const damping     = .7;
             const frequencyHz = 4;
             const maxTorque   = 50;
-            const sprite      = tile(4);
+            const sprite      = spriteAtlas.wheel;
 
             // create wheels
             this.wheels = [];
@@ -208,7 +209,7 @@ class PulleyJointObjects extends Box2dObject
 {
     constructor(pos, size, color, connectionPos)
     {
-        super(pos, size, tile(3), 0, color);
+        super(pos, size, spriteAtlas.squareOutline, 0, color);
         this.addBox(size);
         this.connectionPos = connectionPos;
     }
@@ -228,7 +229,7 @@ class MotorJointObject extends Box2dObject
 {
     constructor(pos, size, color, otherObject)
     {
-        super(pos, size, tile(4), 0, color);
+        super(pos, size, spriteAtlas.wheel, 0, color);
         this.addCircle(size.x);
         this.connectionPos = pos;
         const joint = box2dCreateMotorJoint(otherObject, this);
@@ -265,7 +266,7 @@ class SoftBodyObject extends Box2dObject
             const mass = .1;
             const center = vec2(x-nodeSize.x/2, y-nodeSize.y/2);
             const p = pos.add(center.multiply(spacing));
-            const o = new Box2dObject(p, vec2(objectDiameter*1.1), tile(0), 0, color);
+            const o = new Box2dObject(p, vec2(objectDiameter*1.1), spriteAtlas.circle, 0, color);
             o.addCircle(objectDiameter);
             o.setMass(mass);
             o.setAngularDamping(10);
@@ -336,7 +337,7 @@ class ClothObject extends Box2dObject
             const mass = .5;
             const center = vec2(x-nodeSize.x/2, y-nodeSize.y/2);
             const p = pos.add(center.multiply(spacing));
-            const o = new Box2dObject(p, vec2(.4), tile(0), 0, color);
+            const o = new Box2dObject(p, vec2(.4), spriteAtlas.circle, 0, color);
             o.addCircle(objectDiameter);
             o.setFilterData(2, 2);
             o.setLinearDamping(1);
@@ -463,7 +464,7 @@ function explosion(pos, radius=3, strength=300)
     new ParticleEmitter(
         pos, 0,                     // pos, angle
         radius/2, .2, 50*radius, PI,// emitSize, emitTime, emitRate, emiteCone
-        tile(1),                    // tileInfo
+        spriteAtlas.dot,            // tileInfo
         hsl(0,0,0),   hsl(0,0,0),   // colorStartA, colorStartB
         hsl(0,0,0,0), hsl(0,0,0,0), // colorEndA, colorEndB
         1, 1, 2, .1, .1,    // time, sizeStart, sizeEnd, speed, angleSpeed
@@ -475,7 +476,7 @@ function explosion(pos, radius=3, strength=300)
     new ParticleEmitter(
         pos, 0,                         // pos, angle
         radius, .1, 100*radius, PI,     // emitSize, emitTime, emitRate, emiteCone
-        tile(1),                        // tileInfo
+        spriteAtlas.dot,                // tileInfo
         hsl(0,1,.5),   hsl(.15,1,.5),   // colorStartA, colorStartB
         hsl(0,1,.5,0), hsl(.1, 1,.5,0), // colorEndA, colorEndB
         .7, 1, .5, .1, .1, // time, sizeStart, sizeEnd, speed, angleSpeed

@@ -132,7 +132,7 @@ function loadScene(_scene)
             const o1 = spawnCircle(vec2(23.5,3), 3, randColor());
             const j1 = box2dCreateRevoluteJoint(groundObject, o1, o1.pos);
             const o2 = spawnCircle(vec2(28,3), 6, randColor());
-            o1.tileInfo = o2.tileInfo = tile(5);
+            o1.tileInfo = o2.tileInfo = spriteAtlas.gear;
             const j2 = box2dCreateRevoluteJoint(groundObject, o2, o2.pos);
             box2dCreateGearJoint(o1, o2, j1, j2, 2);
         }
@@ -144,21 +144,21 @@ function loadScene(_scene)
         }
         {
             // distance joint
-            const o1 = new Box2dObject(vec2(30,11), vec2(4), tile(2), 0, randColor(), box2dBodyTypeStatic);
+            const o1 = new Box2dObject(vec2(30,11), vec2(4), spriteAtlas.circleOutline, 0, randColor(), box2dBodyTypeStatic);
             o1.renderOrder = -2;
             const o2 = spawnCircle(vec2(30,8), 2, randColor());
             box2dCreateDistanceJoint(o1, o2);
         }
         {
             // motor joint
-            const o = new Box2dObject(vec2(10,8), vec2(4), tile(2), 0, randColor(), box2dBodyTypeStatic);
+            const o = new Box2dObject(vec2(10,8), vec2(4), spriteAtlas.circleOutline, 0, randColor(), box2dBodyTypeStatic);
             o.renderOrder = -2;
             new MotorJointObject(vec2(10,8), vec2(2), randColor(), o);
         }
         {
             // friction joint
             const o = spawnBox(vec2(10,15), 3, randColor());
-            o.tileInfo = tile(6);
+            o.tileInfo = spriteAtlas.squareOutline2;
             const joint = box2dCreateFrictionJoint(groundObject, o);
             joint.SetMaxForce(200);
             joint.SetMaxTorque(200);
