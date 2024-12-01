@@ -15,6 +15,9 @@ button { margin:1px; }
 
 'use strict';
 
+// fix texture bleeding by shrinking tiles slightly
+tileFixBleedScale = .5;
+
 let particleEditor = 0, particleSystem, particleSystemDiv, particleSystemCode;
 let inputExpand;
 let restartTimer = new Timer();
