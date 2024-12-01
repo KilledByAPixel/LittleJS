@@ -15,7 +15,7 @@ class Character extends GameObject
 {
     constructor(pos)
     { 
-        super(pos, vec2(.6,.95), tile());
+        super(pos, vec2(.6,.95));
 
         this.weapon = new Weapon(pos, this);
         this.lastPos = pos;
@@ -226,7 +226,7 @@ class Character extends GameObject
         if (!this.isDead())
         {
             // bounce pos with walk cycle
-            bodyPos = bodyPos.add(vec2(0,.05*Math.sin(this.walkCyclePercent*PI)));
+            bodyPos = bodyPos.add(vec2(0,.01+.05*Math.sin(this.walkCyclePercent*PI)));
 
             // make bottom flush
             bodyPos = bodyPos.add(vec2(0,(this.drawSize.y-this.size.y)/2));

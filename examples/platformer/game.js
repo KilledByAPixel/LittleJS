@@ -16,9 +16,6 @@ let spriteAtlas, score, deaths;
 // enable touch gamepad on touch devices
 touchGamepadEnable = true;
 
-// fix texture bleeding by shrinking tile slightly
-tileFixBleedScale = .2;
-
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
@@ -29,18 +26,19 @@ function gameInit()
     cameraScale = 4*16;
 
     // create a table of all sprites
+    const gameTile = (i, size=16)=>  tile(i, size, 0, 1);
     spriteAtlas =
     {
         // large tiles
-        circle:  tile(0),
-        crate:   tile(2),
-        player:  tile(3),
-        enemy:   tile(5),
-        coin:    tile(6),
+        circle:  gameTile(0),
+        crate:   gameTile(1),
+        player:  gameTile(2),
+        enemy:   gameTile(4),
+        coin:    gameTile(5),
 
         // small tiles
-        gun:     tile(2,8),
-        grenade: tile(3,8),
+        gun:     gameTile(vec2(0,2),8),
+        grenade: gameTile(vec2(1,2),8),
     };
 
     // setup level
