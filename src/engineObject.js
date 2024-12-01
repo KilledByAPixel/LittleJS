@@ -39,7 +39,7 @@ class EngineObject
      *  @param {Color}    [color=(1,1,1,1)] - Color to apply to tile when rendered
      *  @param {Number}   [renderOrder]     - Objects sorted by renderOrder before being rendered
      */
-    constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color, renderOrder=0)
+    constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color=new Color, renderOrder=0)
     {
         // set passed in params
         ASSERT(isVector2(pos) && isVector2(size), 'ensure pos and size are vec2s');
