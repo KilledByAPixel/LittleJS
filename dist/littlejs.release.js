@@ -239,7 +239,8 @@ function formatTime(t) { return (t/60|0) + ':' + (t%60<10?'0':'') + (t%60|0); }
  *  @memberof Random */
 function rand(valueA=1, valueB=0) { return valueB + Math.random() * (valueA-valueB); }
 
-/** Returns a floored random value the two values passed in
+/** Returns a floored random value between the two values passed in
+ *  The upper bound is exclusive. (If 2 is passed in, result will be 0 or 1)
  *  @param {Number} valueA
  *  @param {Number} [valueB]
  *  @return {Number}
@@ -1436,7 +1437,7 @@ class EngineObject
      *  @param {Color}    [color=(1,1,1,1)] - Color to apply to tile when rendered
      *  @param {Number}   [renderOrder]     - Objects sorted by renderOrder before being rendered
      */
-    constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color, renderOrder=0)
+    constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color=new Color, renderOrder=0)
     {
         // set passed in params
         ASSERT(isVector2(pos) && isVector2(size), 'ensure pos and size are vec2s');
@@ -1922,7 +1923,7 @@ let drawCount;
  * tile(2)                       // a tile at index 2 using the default tile size of 16
  * tile(5, 8)                    // a tile at index 5 using a tile size of 8
  * tile(1, 16, 3)                // a tile at index 1 of size 16 on texture 3
- * tile(vec2(4,8), vec2(30,10))  // a tile at pixel location (4,8) with a size of (30,10)
+ * tile(vec2(4,8), vec2(30,10))  // a tile at index (4,8) with a size of (30,10)
  * @memberof Draw
  */
 function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0)

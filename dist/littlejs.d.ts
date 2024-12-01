@@ -700,7 +700,8 @@ declare module "littlejsengine" {
      *  @return {Number}
      *  @memberof Random */
     export function rand(valueA?: number, valueB?: number): number;
-    /** Returns a floored random value the two values passed in
+    /** Returns a floored random value between the two values passed in
+     *  The upper bound is exclusive. (If 2 is passed in, result will be 0 or 1)
      *  @param {Number} valueA
      *  @param {Number} [valueB]
      *  @return {Number}
@@ -1109,7 +1110,7 @@ declare module "littlejsengine" {
      * tile(2)                       // a tile at index 2 using the default tile size of 16
      * tile(5, 8)                    // a tile at index 5 using a tile size of 8
      * tile(1, 16, 3)                // a tile at index 1 of size 16 on texture 3
-     * tile(vec2(4,8), vec2(30,10))  // a tile at pixel location (4,8) with a size of (30,10)
+     * tile(vec2(4,8), vec2(30,10))  // a tile at index (4,8) with a size of (30,10)
      * @memberof Draw
      */
     export function tile(pos?: (number | Vector2), size?: (number | Vector2), textureIndex?: number, padding?: number): TileInfo;
