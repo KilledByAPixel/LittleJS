@@ -14,9 +14,9 @@
 
 ## 🚂 All aboard!
 
-LittleJS is a fast lightweight open source HTML5 game engine for modern web development.
-Its small footprint is packed with a comprehensive feature set including hybrid rendering, physics, particles, sound effects, music, and input handling.
-The code is very clean and well documented with some fun examples to get you started. Choo-Choo!
+LittleJS is a fast, lightweight, and fully open source HTML5 game engine designed for simplicity and performance.
+Its small footprint is packed with a comprehensive feature set including hybrid rendering, physics, particles, sound, and input handling.
+The code is clean and well documented with some fun examples to get you started right away. Choo-Choo!
 
 ### 🚀 Join the First Ever LittleJS Game Jam
 
@@ -43,7 +43,7 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 
 ### 🔊 Audio
 
-- Positional sound effects with wave files or ZzFX
+- Positional sound effects with wave files, mp3s, or ZzFX
 - Use [ZzFX](https://killedbyapixel.github.io/ZzFX/) sound effect generator to play sounds without asset files
 - Music with mp3, ogg, wave, or [ZzFXM](https://keithclark.github.io/ZzFXM/)
 
@@ -124,8 +124,10 @@ Here are a few of the amazing games people made using LittleJS...
 
 - [Space Huggers](https://github.com/KilledByAPixel/SpaceHuggers) - Original js13k game with source code by [KilledByAPixel](https://frankforce.com/)
 - [Undergrowth](https://undergrowth.squidband.uk/) - An interactive music videogame for the band Squid by [KilledByAPixel](https://frankforce.com/)
-- [Isletopia](https://store.steampowered.com/app/1861260/Isletopia) - Relaxing strategy game of greenifying barren islands by [Gamex Studio](https://x.com/gamesgamex)
+- [The Way of the Dodo](https://js13kgames.com/2024/games/the-way-of-the-dodo) - Single button platformer by [repsej](https://github.com/repsej)
+- [Wendol Village](https://js13kgames.com/2024/games/wendol-village) - Warcraft-like RTS game by [sanojian](https://github.com/sanojian)
 - [Dead Again](https://js13kgames.com/entries/dead-again) - Top down survial horror by [sanojian & repsej](https://github.com/sanojian/js13k_2022)
+- [Isletopia](https://store.steampowered.com/app/1861260/Isletopia) - Relaxing strategy game of greenifying barren islands by [Gamex Studio](https://x.com/gamesgamex)
 - [Hel's Trial](https://js13kgames.com/entries/hels-trial) - Turn based RPG by [Sebastian Dorn](https://github.com/sebadorn/js13k-2022-death)
 - [Bit Butcher](https://js13kgames.com/entries/bit-butcher) - Survival crafting game by [Deathray Games](https://github.com/deathraygames/bit-butcher)
 - [Necrotic Commander](https://js13kgames.com/entries/necrotic-commander) - Tower defense game by [Daniel Jeffery](https://github.com/d-jeffery/NecroticCommander)
@@ -134,8 +136,6 @@ Here are a few of the amazing games people made using LittleJS...
 - [brrr!](https://snowfrog.itch.io/brrr) - Base defense and shooting game by [Snowfrog](https://www.snowfrog.dev/)
 - [Wands of Triskaidekai](https://js13kgames.com/2024/games/wands-of-triskaidekai) - Platformer with experimental gameplay by [gregwoodsfrontier](https://github.com/gregwoodsfrontier)
 - [Data Warrior: 13kb limit](https://js13kgames.com/2024/games/data-warrior-13kb-limit) - Vampire Survivors-like game by [rndD](https://github.com/rndD)
-- [The Way of the Dodo](https://js13kgames.com/2024/games/the-way-of-the-dodo) - Single button platformer by [repsej](https://github.com/repsej)
-- [Wendol Village](https://js13kgames.com/2024/games/wendol-village) - Warcraft-like RTS game by [sanojian](https://github.com/sanojian)
 - [Unblock](https://js13kgames.com/games/unblock) - Retro style space shooter by [Isaac Benitez](https://github.com/isacben)
 
 ![LittleJS Logo](examples/favicon.png)
