@@ -147,6 +147,14 @@ For example to animate the player sprite you might do something like this...
 this.tileInfo = spriteAtlas.player.frame(animationFrame);
 ```
 
+### A thin row of pixels from neighboring tiles are bleeding in the sides of some sprites.
+
+Pixel bleeding can occur when rendering tiles from a spritesheet due to sub-pixel inaccuracies or texture sampling issues. There are two effective ways to resolve this:
+
+1. Use tileFixBleedScale, which works by shrinking all tiles slightly. Start by setting tileFixBleedScale to .5, this should eliminate the issue.
+
+2. Add padding to the spritesheet by modifying it so each tile has 1 pixel of padding around it. Use the padding setting in the tile function to account for the padding when creating your tiles.
+
 ### How do I control the camera in LittleJS?
 
 LittleJS uses a world space rendering system, so objects can move independently of the camera.
