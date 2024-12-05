@@ -147,7 +147,7 @@ For example to animate the player sprite you might do something like this...
 this.tileInfo = spriteAtlas.player.frame(animationFrame);
 ```
 
-### A thin row of pixels from neighboring tiles are bleeding in the sides of some sprites.
+### How can I fix thin rows of pixels bleeding in the sides of some sprites from neighboring tiles?
 
 Pixel bleeding can occur when rendering tiles from a spritesheet due to sub-pixel inaccuracies or texture sampling issues. There are two effective ways to resolve this:
 
