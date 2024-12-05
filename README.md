@@ -30,7 +30,7 @@ The code is clean and well documented with some fun examples to get you started 
 
 ![LittleJS Screenshot](examples/screenshot.jpg)
 
-## About LittleJS
+## About LittleJS Engine
 
 LittleJS is a small but powerful game engine with many features and no dependencies.
 
