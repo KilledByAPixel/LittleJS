@@ -369,18 +369,24 @@ class Vector2
      *  @param {Number} [y] - Y axis location */
     constructor(x=0, y=0)
     {
-        ASSERT(typeof x == 'number' && typeof y == 'number');
         /** @property {Number} - X axis location */
         this.x = x;
         /** @property {Number} - Y axis location */
         this.y = y;
+        ASSERT(this.isValid());
     }
 
     /** Sets values of this vector and returns self
      *  @param {Number} [x] - X axis location
      *  @param {Number} [y] - Y axis location
      *  @return {Vector2} */
-    set(x=0, y=0) { this.x=x; this.y=y; return this; }
+    set(x=0, y=0)
+    {
+        this.x = x;
+        this.y = y;
+        ASSERT(this.isValid());
+        return this;
+    }
 
     /** Returns a new vector that is a copy of this
      *  @return {Vector2} */
@@ -572,6 +578,14 @@ class Vector2
         if (debug)
             return `(${(this.x<0?'':' ') + this.x.toFixed(digits)},${(this.y<0?'':' ') + this.y.toFixed(digits)} )`;
     }
+
+    /** Checks if this is a valid vector
+     * @return {Boolean} */
+    isValid()
+    {
+        return typeof this.x == 'number' && !isNaN(this.x)
+            && typeof this.y == 'number' && !isNaN(this.y);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -632,6 +646,7 @@ class Color
         this.b = b;
         /** @property {Number} - Alpha */
         this.a = a;
+        ASSERT(this.isValid());
     }
 
     /** Sets values of this color and returns self
@@ -641,7 +656,14 @@ class Color
      *  @param {Number} [a] - alpha
      *  @return {Color} */
     set(r=1, g=1, b=1, a=1)
-    { this.r=r; this.g=g; this.b=b; this.a=a; return this; }
+    {
+        this.r = r;
+        this.g = g;
+        this.b = b;
+        this.a = a;
+        ASSERT(this.isValid());
+        return this;
+    }
 
     /** Returns a new color that is a copy of this
      * @return {Color} */
@@ -724,6 +746,7 @@ class Color
         this.g = f(p, q, h);
         this.b = f(p, q, h - 1/3);
         this.a = a;
+        ASSERT(this.isValid());
         return this;
     }
 
@@ -751,7 +774,6 @@ class Color
             else if (b == max)
                 h =  (r - g) / d + 4;
         }
-
         return [h / 6, s, l, a];
     }
 
@@ -784,11 +806,27 @@ class Color
      * @return {Color} */
     setHex(hex)
     {
-        const fromHex = (c)=> clamp(parseInt(hex.slice(c,c+2),16)/255);
-        this.r = fromHex(1);
-        this.g = fromHex(3),
-        this.b = fromHex(5);
-        this.a = hex.length > 7 ? fromHex(7) : 1;
+        ASSERT(typeof hex == 'string' && hex[0] == '#');
+        ASSERT([4,5,7,9].includes(hex.length), 'Invalid hex');
+
+        if (hex.length < 6)
+        {
+            const fromHex = (c)=> clamp(parseInt(hex[c],16)/15);
+            this.r = fromHex(1);
+            this.g = fromHex(2),
+            this.b = fromHex(3);
+            this.a = hex.length == 5 ? fromHex(4) : 1;
+        }
+        else
+        {
+            const fromHex = (c)=> clamp(parseInt(hex.slice(c,c+2),16)/255);
+            this.r = fromHex(1);
+            this.g = fromHex(3),
+            this.b = fromHex(5);
+            this.a = hex.length == 9 ? fromHex(7) : 1;
+        }
+
+        ASSERT(this.isValid());
         return this;
     }
     
@@ -801,6 +839,16 @@ class Color
         const b = clamp(this.b)*255<<16;
         const a = clamp(this.a)*255<<24;
         return r + g + b + a;
+    }
+
+    /** Checks if this is a valid color
+     * @return {Boolean} */
+    isValid()
+    {
+        return typeof this.r == 'number' && !isNaN(this.r)
+            && typeof this.g == 'number' && !isNaN(this.g)
+            && typeof this.b == 'number' && !isNaN(this.b)
+            && typeof this.a == 'number' && !isNaN(this.a);
     }
 }
 
@@ -3543,18 +3591,18 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
 
 
 
-/** The tile collision layer array, use setTileCollisionData and getTileCollisionData to access
+/** The tile collision layer grid, use setTileCollisionData and getTileCollisionData to access
  *  @type {Array} 
  *  @memberof TileCollision */
 let tileCollision = [];
 
-/** Size of the tile collision layer
+/** Size of the tile collision layer 2d grid
  *  @type {Vector2} 
  *  @memberof TileCollision */
 let tileCollisionSize = vec2();
 
 /** Clear and initialize tile collision
- *  @param {Vector2} size
+ *  @param {Vector2} size - width and height of tile collision 2d grid
  *  @memberof TileCollision */
 function initTileCollision(size)
 {
@@ -3564,7 +3612,7 @@ function initTileCollision(size)
         tileCollision[i] = 0;
 }
 
-/** Set tile collision data
+/** Set tile collision data for a given cell in the grid
  *  @param {Vector2} pos
  *  @param {Number}  [data]
  *  @memberof TileCollision */
@@ -3573,7 +3621,7 @@ function setTileCollisionData(pos, data=0)
     pos.arrayCheck(tileCollisionSize) && (tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] = data);
 }
 
-/** Get tile collision data
+/** Get tile collision data for a given cell in the grid
  *  @param {Vector2} pos
  *  @return {Number}
  *  @memberof TileCollision */
@@ -3604,7 +3652,8 @@ function tileCollisionTest(pos, size=vec2(), object)
     return false;
 }
 
-/** Return the center of first tile hit (does not return the exact intersection)
+/** Return the center of first tile hit, undefined if nothing was hit.
+ *  This does not return the exact intersection, but the center of the tile hit.
  *  @param {Vector2}      posStart
  *  @param {Vector2}      posEnd
  *  @param {EngineObject} [object]
@@ -4782,7 +4831,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.10.6';
+const engineVersion = '1.10.7';
 
 /** Frames per second to update
  *  @type {Number}

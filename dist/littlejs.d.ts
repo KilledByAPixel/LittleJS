@@ -876,6 +876,9 @@ declare module "littlejsengine" {
          * @param {Number} digits - precision to display
          * @return {String} */
         toString(digits?: number): string;
+        /** Checks if this is a valid vector
+         * @return {Boolean} */
+        isValid(): boolean;
     }
     /**
      * Color object (red, green, blue, alpha) with some helpful functions
@@ -966,6 +969,9 @@ declare module "littlejsengine" {
         /** Returns this color expressed as 32 bit RGBA value
          * @return {Number} */
         rgbaInt(): number;
+        /** Checks if this is a valid color
+         * @return {Boolean} */
+        isValid(): boolean;
     }
     /**
      * Timer object tracks how long has passed since it was set
@@ -1916,24 +1922,24 @@ declare module "littlejsengine" {
      * - Drawn directly to the main canvas without using WebGL
      * @namespace TileCollision
      */
-    /** The tile collision layer array, use setTileCollisionData and getTileCollisionData to access
+    /** The tile collision layer grid, use setTileCollisionData and getTileCollisionData to access
      *  @type {Array}
      *  @memberof TileCollision */
     export let tileCollision: any[];
-    /** Size of the tile collision layer
+    /** Size of the tile collision layer 2d grid
      *  @type {Vector2}
      *  @memberof TileCollision */
     export let tileCollisionSize: Vector2;
     /** Clear and initialize tile collision
-     *  @param {Vector2} size
+     *  @param {Vector2} size - width and height of tile collision 2d grid
      *  @memberof TileCollision */
     export function initTileCollision(size: Vector2): void;
-    /** Set tile collision data
+    /** Set tile collision data for a given cell in the grid
      *  @param {Vector2} pos
      *  @param {Number}  [data]
      *  @memberof TileCollision */
     export function setTileCollisionData(pos: Vector2, data?: number): void;
-    /** Get tile collision data
+    /** Get tile collision data for a given cell in the grid
      *  @param {Vector2} pos
      *  @return {Number}
      *  @memberof TileCollision */
@@ -1945,7 +1951,8 @@ declare module "littlejsengine" {
      *  @return {Boolean}
      *  @memberof TileCollision */
     export function tileCollisionTest(pos: Vector2, size?: Vector2, object?: EngineObject): boolean;
-    /** Return the center of first tile hit (does not return the exact intersection)
+    /** Return the center of first tile hit, undefined if nothing was hit.
+     *  This does not return the exact intersection, but the center of the tile hit.
      *  @param {Vector2}      posStart
      *  @param {Vector2}      posEnd
      *  @param {EngineObject} [object]
