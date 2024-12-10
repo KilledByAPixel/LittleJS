@@ -275,6 +275,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         'align-items:center;' +       // horizontal center
         'justify-content:center;' +   // vertical center
         'background:#000;' +          // set background color
+        (canvasPixelated ? 'image-rendering:pixelated;' : '') + // pixel art
         'user-select:none;' +         // prevent hold to select
         '-webkit-user-select:none;' + // compatibility for ios
         (!touchInputEnable ? '' :     // no touch css setttings
