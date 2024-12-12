@@ -232,11 +232,16 @@ declare module "littlejsengine" {
      *  @default Vector2()
      *  @memberof Settings */
     export let canvasFixedSize: Vector2;
-    /** Disables filtering for crisper pixel art if true
+    /** Use nearest neighbor scaling algorithm for canvas for more pixelated look
      *  @type {Boolean}
      *  @default
      *  @memberof Settings */
     export let canvasPixelated: boolean;
+    /** Disables texture filtering for crisper pixel art
+     *  @type {Boolean}
+     *  @default
+     *  @memberof Settings */
+    export let tilesPixelated: boolean;
     /** Default font used for text rendering
      *  @type {String}
      *  @default
@@ -415,10 +420,14 @@ declare module "littlejsengine" {
      *  @param {Vector2} size
      *  @memberof Settings */
     export function setCanvasFixedSize(size: Vector2): void;
-    /** Disables anti aliasing for pixel art if true
+    /** Use nearest neighbor scaling algorithm for canvas for more pixelated look
      *  @param {Boolean} pixelated
      *  @memberof Settings */
     export function setCanvasPixelated(pixelated: boolean): void;
+    /** Disables texture filtering for crisper pixel art
+     *  @param {Boolean} pixelated
+     *  @memberof Settings */
+    export function setTilesPixelated(pixelated: boolean): void;
     /** Set default font used for text rendering
      *  @param {String} font
      *  @memberof Settings */
@@ -1595,8 +1604,6 @@ declare module "littlejsengine" {
         taper: number;
         /** @property {Number} - How much to randomize frequency each time sound plays */
         randomness: any;
-        /** @property {GainNode} - Gain node for this sound */
-        gainNode: GainNode;
         sampleChannels: any[][];
         sampleRate: number;
         /** Play the sound
@@ -1608,8 +1615,9 @@ declare module "littlejsengine" {
          *  @return {AudioBufferSourceNode} - The audio source node
          */
         play(pos?: Vector2, volume?: number, pitch?: number, randomnessScale?: number, loop?: boolean): AudioBufferSourceNode;
+        gainNode: GainNode;
         source: AudioBufferSourceNode;
-        /** Set the sound volume
+        /** Set the sound volume of the most recently played instance of this sound
          *  @param {Number}  [volume] - How much to scale volume by
          */
         setVolume(volume?: number): void;

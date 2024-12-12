@@ -13,6 +13,7 @@ setShowSplashScreen(true);
 
 // do not use pixelated rendering
 setCanvasPixelated(false);
+setTilesPixelated(false);
 
 const fallTime = .2;
 const cameraOffset = vec2(0,-.5);

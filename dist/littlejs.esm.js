@@ -1433,11 +1433,17 @@ let canvasMaxSize = vec2(1920, 1080);
  *  @memberof Settings */
 let canvasFixedSize = vec2();
 
-/** Disables filtering for crisper pixel art if true
+/** Use nearest neighbor scaling algorithm for canvas for more pixelated look
  *  @type {Boolean}
  *  @default
  *  @memberof Settings */
 let canvasPixelated = true;
+
+/** Disables texture filtering for crisper pixel art
+ *  @type {Boolean}
+ *  @default
+ *  @memberof Settings */
+let tilesPixelated = true;
 
 /** Default font used for text rendering
  *  @type {String}
@@ -1687,10 +1693,15 @@ function setCanvasMaxSize(size) { canvasMaxSize = size; }
  *  @memberof Settings */
 function setCanvasFixedSize(size) { canvasFixedSize = size; }
 
-/** Disables anti aliasing for pixel art if true
+/** Use nearest neighbor scaling algorithm for canvas for more pixelated look
  *  @param {Boolean} pixelated
  *  @memberof Settings */
 function setCanvasPixelated(pixelated) { canvasPixelated = pixelated; }
+
+/** Disables texture filtering for crisper pixel art
+ *  @param {Boolean} pixelated
+ *  @memberof Settings */
+function setTilesPixelated(pixelated) { tilesPixelated = pixelated; }
 
 /** Set default font used for text rendering
  *  @param {String} font
@@ -2855,7 +2866,7 @@ class FontImage
     {
         const context = this.context;
         context.save();
-        context.imageSmoothingEnabled = !canvasPixelated;
+        context.imageSmoothingEnabled = !tilesPixelated;
 
         const size = this.tileSize;
         const drawSize = size.add(this.paddingSize).scale(scale);
@@ -3484,9 +3495,6 @@ class Sound
 
         /** @property {Number} - How much to randomize frequency each time sound plays */
         this.randomness = 0;
-        
-        /** @property {GainNode} - Gain node for this sound */
-        this.gainNode = audioContext.createGain();
 
         if (zzfxSound)
         {
@@ -3533,13 +3541,19 @@ class Sound
 
         // play the sound
         const playbackRate = pitch + pitch * this.randomness*randomnessScale*rand(-1,1);
-        return this.source = playSamples(this.sampleChannels, volume, playbackRate, pan, loop, this.sampleRate, this.gainNode);
+        this.gainNode = audioContext.createGain();
+        this.source = playSamples(this.sampleChannels, volume, playbackRate, pan, loop, this.sampleRate, this.gainNode);
+        return this.source;
     }
 
-    /** Set the sound volume
+    /** Set the sound volume of the most recently played instance of this sound
      *  @param {Number}  [volume] - How much to scale volume by
      */
-    setVolume(volume=1) { this.gainNode.gain.value = volume; }
+    setVolume(volume=1)
+    {
+        if (this.gainNode)
+            this.gainNode.gain.value = volume;
+    }
 
     /** Stop the last instance of this sound that was played */
     stop()
@@ -4293,7 +4307,7 @@ class TileLayer extends EngineObject
         }
 
         // disable smoothing for pixel art
-        this.context.imageSmoothingEnabled = !canvasPixelated;
+        this.context.imageSmoothingEnabled = !tilesPixelated;
 
         // setup gl rendering if enabled
         glPreRender();
@@ -5114,7 +5128,7 @@ function glCreateTexture(image)
     }
 
     // use point filtering for pixelated rendering
-    const filter = canvasPixelated ? gl_NEAREST : gl_LINEAR;
+    const filter = tilesPixelated ? gl_NEAREST : gl_LINEAR;
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, filter);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, filter);
     return texture;
@@ -5263,7 +5277,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.10.7';
+const engineVersion = '1.10.8';
 
 /** Frames per second to update
  *  @type {Number}
@@ -5355,7 +5369,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
 
         // disable smoothing for pixel art
-        mainContext.imageSmoothingEnabled = !canvasPixelated;
+        mainContext.imageSmoothingEnabled = !tilesPixelated;
 
         // setup gl rendering if enabled
         glPreRender();
@@ -5508,6 +5522,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         'align-items:center;' +       // horizontal center
         'justify-content:center;' +   // vertical center
         'background:#000;' +          // set background color
+        (canvasPixelated ? 'image-rendering:pixelated;' : '') + // pixel art
         'user-select:none;' +         // prevent hold to select
         '-webkit-user-select:none;' + // compatibility for ios
         (!touchInputEnable ? '' :     // no touch css setttings
@@ -5896,6 +5911,7 @@ export {
 	canvasMaxSize,
 	canvasFixedSize,
 	canvasPixelated,
+	tilesPixelated,
 	fontDefault,
 	showSplashScreen,
 	headlessMode,
@@ -5935,6 +5951,7 @@ export {
 	setCanvasMaxSize,
 	setCanvasFixedSize,
 	setCanvasPixelated,
+	setTilesPixelated,
 	setFontDefault,
 	setShowSplashScreen,
 	setHeadlessMode,
