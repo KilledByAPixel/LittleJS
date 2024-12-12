@@ -32,7 +32,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.10.6';
+const engineVersion = '1.10.8';
 
 /** Frames per second to update
  *  @type {Number}
@@ -124,7 +124,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
 
         // disable smoothing for pixel art
-        mainContext.imageSmoothingEnabled = !canvasPixelated;
+        mainContext.imageSmoothingEnabled = !tilesPixelated;
 
         // setup gl rendering if enabled
         glPreRender();
@@ -277,6 +277,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         'align-items:center;' +       // horizontal center
         'justify-content:center;' +   // vertical center
         'background:#000;' +          // set background color
+        (canvasPixelated ? 'image-rendering:pixelated;' : '') + // pixel art
         'user-select:none;' +         // prevent hold to select
         '-webkit-user-select:none;' + // compatibility for ios
         (!touchInputEnable ? '' :     // no touch css setttings

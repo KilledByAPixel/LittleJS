@@ -14,18 +14,18 @@
 
 'use strict';
 
-/** The tile collision layer array, use setTileCollisionData and getTileCollisionData to access
+/** The tile collision layer grid, use setTileCollisionData and getTileCollisionData to access
  *  @type {Array} 
  *  @memberof TileCollision */
 let tileCollision = [];
 
-/** Size of the tile collision layer
+/** Size of the tile collision layer 2d grid
  *  @type {Vector2} 
  *  @memberof TileCollision */
 let tileCollisionSize = vec2();
 
 /** Clear and initialize tile collision
- *  @param {Vector2} size
+ *  @param {Vector2} size - width and height of tile collision 2d grid
  *  @memberof TileCollision */
 function initTileCollision(size)
 {
@@ -35,7 +35,7 @@ function initTileCollision(size)
         tileCollision[i] = 0;
 }
 
-/** Set tile collision data
+/** Set tile collision data for a given cell in the grid
  *  @param {Vector2} pos
  *  @param {Number}  [data]
  *  @memberof TileCollision */
@@ -44,7 +44,7 @@ function setTileCollisionData(pos, data=0)
     pos.arrayCheck(tileCollisionSize) &amp;&amp; (tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] = data);
 }
 
-/** Get tile collision data
+/** Get tile collision data for a given cell in the grid
  *  @param {Vector2} pos
  *  @return {Number}
  *  @memberof TileCollision */
@@ -75,7 +75,8 @@ function tileCollisionTest(pos, size=vec2(), object)
     return false;
 }
 
-/** Return the center of first tile hit (does not return the exact intersection)
+/** Return the center of first tile hit, undefined if nothing was hit.
+ *  This does not return the exact intersection, but the center of the tile hit.
  *  @param {Vector2}      posStart
  *  @param {Vector2}      posEnd
  *  @param {EngineObject} [object]
@@ -283,7 +284,7 @@ class TileLayer extends EngineObject
         }
 
         // disable smoothing for pixel art
-        this.context.imageSmoothingEnabled = !canvasPixelated;
+        this.context.imageSmoothingEnabled = !tilesPixelated;
 
         // setup gl rendering if enabled
         glPreRender();

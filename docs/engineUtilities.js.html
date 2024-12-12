@@ -333,18 +333,24 @@ class Vector2
      *  @param {Number} [y] - Y axis location */
     constructor(x=0, y=0)
     {
-        ASSERT(typeof x == 'number' &amp;&amp; typeof y == 'number');
         /** @property {Number} - X axis location */
         this.x = x;
         /** @property {Number} - Y axis location */
         this.y = y;
+        ASSERT(this.isValid());
     }
 
     /** Sets values of this vector and returns self
      *  @param {Number} [x] - X axis location
      *  @param {Number} [y] - Y axis location
      *  @return {Vector2} */
-    set(x=0, y=0) { this.x=x; this.y=y; return this; }
+    set(x=0, y=0)
+    {
+        this.x = x;
+        this.y = y;
+        ASSERT(this.isValid());
+        return this;
+    }
 
     /** Returns a new vector that is a copy of this
      *  @return {Vector2} */
@@ -536,6 +542,14 @@ class Vector2
         if (debug)
             return `(${(this.x&lt;0?'':' ') + this.x.toFixed(digits)},${(this.y&lt;0?'':' ') + this.y.toFixed(digits)} )`;
     }
+
+    /** Checks if this is a valid vector
+     * @return {Boolean} */
+    isValid()
+    {
+        return typeof this.x == 'number' &amp;&amp; !isNaN(this.x)
+            &amp;&amp; typeof this.y == 'number' &amp;&amp; !isNaN(this.y);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -596,6 +610,7 @@ class Color
         this.b = b;
         /** @property {Number} - Alpha */
         this.a = a;
+        ASSERT(this.isValid());
     }
 
     /** Sets values of this color and returns self
@@ -605,7 +620,14 @@ class Color
      *  @param {Number} [a] - alpha
      *  @return {Color} */
     set(r=1, g=1, b=1, a=1)
-    { this.r=r; this.g=g; this.b=b; this.a=a; return this; }
+    {
+        this.r = r;
+        this.g = g;
+        this.b = b;
+        this.a = a;
+        ASSERT(this.isValid());
+        return this;
+    }
 
     /** Returns a new color that is a copy of this
      * @return {Color} */
@@ -688,6 +710,7 @@ class Color
         this.g = f(p, q, h);
         this.b = f(p, q, h - 1/3);
         this.a = a;
+        ASSERT(this.isValid());
         return this;
     }
 
@@ -715,7 +738,6 @@ class Color
             else if (b == max)
                 h =  (r - g) / d + 4;
         }
-
         return [h / 6, s, l, a];
     }
 
@@ -748,11 +770,27 @@ class Color
      * @return {Color} */
     setHex(hex)
     {
-        const fromHex = (c)=> clamp(parseInt(hex.slice(c,c+2),16)/255);
-        this.r = fromHex(1);
-        this.g = fromHex(3),
-        this.b = fromHex(5);
-        this.a = hex.length > 7 ? fromHex(7) : 1;
+        ASSERT(typeof hex == 'string' &amp;&amp; hex[0] == '#');
+        ASSERT([4,5,7,9].includes(hex.length), 'Invalid hex');
+
+        if (hex.length &lt; 6)
+        {
+            const fromHex = (c)=> clamp(parseInt(hex[c],16)/15);
+            this.r = fromHex(1);
+            this.g = fromHex(2),
+            this.b = fromHex(3);
+            this.a = hex.length == 5 ? fromHex(4) : 1;
+        }
+        else
+        {
+            const fromHex = (c)=> clamp(parseInt(hex.slice(c,c+2),16)/255);
+            this.r = fromHex(1);
+            this.g = fromHex(3),
+            this.b = fromHex(5);
+            this.a = hex.length == 9 ? fromHex(7) : 1;
+        }
+
+        ASSERT(this.isValid());
         return this;
     }
     
@@ -765,6 +803,16 @@ class Color
         const b = clamp(this.b)*255&lt;&lt;16;
         const a = clamp(this.a)*255&lt;&lt;24;
         return r + g + b + a;
+    }
+
+    /** Checks if this is a valid color
+     * @return {Boolean} */
+    isValid()
+    {
+        return typeof this.r == 'number' &amp;&amp; !isNaN(this.r)
+            &amp;&amp; typeof this.g == 'number' &amp;&amp; !isNaN(this.g)
+            &amp;&amp; typeof this.b == 'number' &amp;&amp; !isNaN(this.b)
+            &amp;&amp; typeof this.a == 'number' &amp;&amp; !isNaN(this.a);
     }
 }
 

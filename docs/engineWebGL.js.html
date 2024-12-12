@@ -209,7 +209,7 @@ function glCreateTexture(image)
     }
 
     // use point filtering for pixelated rendering
-    const filter = canvasPixelated ? gl_NEAREST : gl_LINEAR;
+    const filter = tilesPixelated ? gl_NEAREST : gl_LINEAR;
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, filter);
     glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, filter);
     return texture;
