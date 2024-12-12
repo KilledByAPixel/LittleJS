@@ -63,9 +63,6 @@ class Sound
 
         /** @property {Number} - How much to randomize frequency each time sound plays */
         this.randomness = 0;
-        
-        /** @property {GainNode} - Gain node for this sound */
-        this.gainNode = audioContext.createGain();
 
         if (zzfxSound)
         {
@@ -112,13 +109,19 @@ class Sound
 
         // play the sound
         const playbackRate = pitch + pitch * this.randomness*randomnessScale*rand(-1,1);
-        return this.source = playSamples(this.sampleChannels, volume, playbackRate, pan, loop, this.sampleRate, this.gainNode);
+        this.gainNode = audioContext.createGain();
+        this.source = playSamples(this.sampleChannels, volume, playbackRate, pan, loop, this.sampleRate, this.gainNode);
+        return this.source;
     }
 
-    /** Set the sound volume
+    /** Set the sound volume of the most recently played instance of this sound
      *  @param {Number}  [volume] - How much to scale volume by
      */
-    setVolume(volume=1) { this.gainNode.gain.value = volume; }
+    setVolume(volume=1)
+    {
+        if (this.gainNode)
+            this.gainNode.gain.value = volume;
+    }
 
     /** Stop the last instance of this sound that was played */
     stop()
