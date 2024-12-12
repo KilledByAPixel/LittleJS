@@ -30,7 +30,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.10.7';
+const engineVersion = '1.10.8';
 
 /** Frames per second to update
  *  @type {Number}
@@ -122,7 +122,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
 
         // disable smoothing for pixel art
-        mainContext.imageSmoothingEnabled = !canvasPixelated;
+        mainContext.imageSmoothingEnabled = !tilesPixelated;
 
         // setup gl rendering if enabled
         glPreRender();

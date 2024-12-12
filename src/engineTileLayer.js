@@ -282,7 +282,7 @@ class TileLayer extends EngineObject
         }
 
         // disable smoothing for pixel art
-        this.context.imageSmoothingEnabled = !canvasPixelated;
+        this.context.imageSmoothingEnabled = !tilesPixelated;
 
         // setup gl rendering if enabled
         glPreRender();

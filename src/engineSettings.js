@@ -37,11 +37,17 @@ let canvasMaxSize = vec2(1920, 1080);
  *  @memberof Settings */
 let canvasFixedSize = vec2();
 
-/** Disables filtering for crisper pixel art if true
+/** Use nearest neighbor scaling algorithm for canvas for more pixelated look
  *  @type {Boolean}
  *  @default
  *  @memberof Settings */
 let canvasPixelated = true;
+
+/** Disables texture filtering for crisper pixel art
+ *  @type {Boolean}
+ *  @default
+ *  @memberof Settings */
+let tilesPixelated = true;
 
 /** Default font used for text rendering
  *  @type {String}
@@ -291,10 +297,15 @@ function setCanvasMaxSize(size) { canvasMaxSize = size; }
  *  @memberof Settings */
 function setCanvasFixedSize(size) { canvasFixedSize = size; }
 
-/** Disables anti aliasing for pixel art if true
+/** Use nearest neighbor scaling algorithm for canvas for more pixelated look
  *  @param {Boolean} pixelated
  *  @memberof Settings */
 function setCanvasPixelated(pixelated) { canvasPixelated = pixelated; }
+
+/** Disables texture filtering for crisper pixel art
+ *  @param {Boolean} pixelated
+ *  @memberof Settings */
+function setTilesPixelated(pixelated) { tilesPixelated = pixelated; }
 
 /** Set default font used for text rendering
  *  @param {String} font
