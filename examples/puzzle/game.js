@@ -224,8 +224,8 @@ function gameRender()
 function gameRenderPost()
 {
     // draw text on top of everything
-    drawText('Score: ' + score,    cameraPos.add(vec2(-3,-3.1)), .9, hsl(), .1);
-    drawText('Best: ' + bestScore, cameraPos.add(vec2( 3,-3.1)), .9, hsl(), .1);
+    drawTextOverlay('Score: ' + score,    cameraPos.add(vec2(-3,-3.1)), .9, hsl(), .1);
+    drawTextOverlay('Best: ' + bestScore, cameraPos.add(vec2( 3,-3.1)), .9, hsl(), .1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

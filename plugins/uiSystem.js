@@ -91,7 +91,7 @@ function drawUITile(pos, size, tileInfo, color=uiDefaultColor, angle=0, mirror=f
 
 function drawUIText(text, pos, size, color=uiDefaultColor, lineWidth=uiDefaultLineWidth, lineColor=uiDefaultLineColor, align='center', font=uiDefaultFont)
 {
-    drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, uiContext, size.x);
+    drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, size.x, uiContext);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

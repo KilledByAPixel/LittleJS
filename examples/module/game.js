@@ -126,7 +126,7 @@ function gameRender()
 function gameRenderPost()
 {
     // draw to overlay canvas for hud rendering
-    LittleJS.drawTextScreen('LittleJS with Modules', vec2(LittleJS.mainCanvasSize.x/2, 80), 80);
+    LittleJS.drawTextOverlay('LittleJS with Modules', vec2(LittleJS.mainCanvasSize.x/2, 80), 80);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

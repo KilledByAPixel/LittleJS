@@ -121,7 +121,7 @@ function gameRender()
 function gameRenderPost()
 {
     // draw to overlay canvas for hud rendering
-    drawTextScreen('LittleJS Engine Demo', 
+    drawTextScreen('LittleJS Demo', 
         vec2(mainCanvasSize.x/2, 70), 80,   // position, size
         hsl(0,0,1), 6, hsl(0,0,0));         // color, outline size and color
 }
