@@ -2327,6 +2327,24 @@ function setBlendMode(additive, useWebGL=glEnable, context)
     }
 }
 
+/** Draw text on main canvas in world space
+ *  Automatically splits new lines into rows
+ *  @param {String}  text
+ *  @param {Vector2} pos
+ *  @param {Number}  [size]
+ *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Number}  [lineWidth]
+ *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {CanvasTextAlign}  [textAlign='center']
+ *  @param {String}  [font=fontDefault]
+ *  @param {Number}  [maxWidth]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
+ *  @memberof Draw */
+function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, maxWidth, context=mainContext)
+{
+    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, maxWidth, context);
+}
+
 /** Draw text on overlay canvas in world space
  *  Automatically splits new lines into rows
  *  @param {String}  text
@@ -2337,12 +2355,11 @@ function setBlendMode(additive, useWebGL=glEnable, context)
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {CanvasTextAlign}  [textAlign='center']
  *  @param {String}  [font=fontDefault]
- *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
  *  @param {Number}  [maxWidth]
  *  @memberof Draw */
-function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, context, maxWidth)
+function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, maxWidth)
 {
-    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, context, maxWidth);
+    drawText(text, pos, size, color, lineWidth, lineColor, textAlign, font, maxWidth, overlayContext);
 }
 
 /** Draw text on overlay canvas in screen space
@@ -2355,10 +2372,10 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {CanvasTextAlign}  [textAlign]
  *  @param {String}  [font=fontDefault]
- *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
  *  @param {Number}  [maxWidth]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
  *  @memberof Draw */
-function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, context=overlayContext, maxWidth=undefined)
+function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, maxWidth=undefined, context=overlayContext)
 {
     context.fillStyle = color.toString();
     context.lineWidth = lineWidth;
@@ -4845,7 +4862,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.10.8';
+const engineVersion = '1.11.0';
 
 /** Frames per second to update
  *  @type {Number}

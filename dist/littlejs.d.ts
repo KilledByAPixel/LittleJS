@@ -1308,7 +1308,7 @@ declare module "littlejsengine" {
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
      *  @memberof Draw */
     export function setBlendMode(additive?: boolean, useWebGL?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
-    /** Draw text on overlay canvas in screen space
+    /** Draw text on main canvas in world space
      *  Automatically splits new lines into rows
      *  @param {String}  text
      *  @param {Vector2} pos
@@ -1316,12 +1316,12 @@ declare module "littlejsengine" {
      *  @param {Color}   [color=(1,1,1,1)]
      *  @param {Number}  [lineWidth]
      *  @param {Color}   [lineColor=(0,0,0,1)]
-     *  @param {CanvasTextAlign}  [textAlign]
+     *  @param {CanvasTextAlign}  [textAlign='center']
      *  @param {String}  [font=fontDefault]
-     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
      *  @param {Number}  [maxWidth]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
      *  @memberof Draw */
-    export function drawTextScreen(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, maxWidth?: number): void;
+    export function drawText(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, maxWidth?: number, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw text on overlay canvas in world space
      *  Automatically splits new lines into rows
      *  @param {String}  text
@@ -1332,10 +1332,23 @@ declare module "littlejsengine" {
      *  @param {Color}   [lineColor=(0,0,0,1)]
      *  @param {CanvasTextAlign}  [textAlign='center']
      *  @param {String}  [font=fontDefault]
-     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
      *  @param {Number}  [maxWidth]
      *  @memberof Draw */
-    export function drawText(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, maxWidth?: number): void;
+    export function drawTextOverlay(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, maxWidth?: number): void;
+    /** Draw text on overlay canvas in screen space
+     *  Automatically splits new lines into rows
+     *  @param {String}  text
+     *  @param {Vector2} pos
+     *  @param {Number}  [size]
+     *  @param {Color}   [color=(1,1,1,1)]
+     *  @param {Number}  [lineWidth]
+     *  @param {Color}   [lineColor=(0,0,0,1)]
+     *  @param {CanvasTextAlign}  [textAlign]
+     *  @param {String}  [font=fontDefault]
+     *  @param {Number}  [maxWidth]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
+     *  @memberof Draw */
+    export function drawTextScreen(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, maxWidth?: number, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     export let engineFontImage: any;
     /**
      * Font Image Object - Draw text on a 2D canvas by using characters in an image
