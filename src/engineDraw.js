@@ -539,7 +539,6 @@ class FontImage
     {
         const context = this.context;
         context.save();
-        context.imageSmoothingEnabled = !tilesPixelated;
 
         const size = this.tileSize;
         const drawSize = size.add(this.paddingSize).scale(scale);
