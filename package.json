@@ -4,6 +4,11 @@
   "description": "LittleJS - Tiny and Fast HTML5 Game Engine",
   "main": "dist/littlejs.esm.js",
   "types": "dist/littlejs.d.ts",
+  "exports": {
+    "types": "./dist/littlejs.d.ts",
+    "production": "./dist/littlejs.esm.min.js",
+    "default": "./dist/littlejs.esm.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/KilledByAPixel/LittleJS.git"
