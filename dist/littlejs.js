@@ -2883,7 +2883,6 @@ class FontImage
     {
         const context = this.context;
         context.save();
-        context.imageSmoothingEnabled = !tilesPixelated;
 
         const size = this.tileSize;
         const drawSize = size.add(this.paddingSize).scale(scale);
@@ -5294,7 +5293,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.0';
+const engineVersion = '1.11.1';
 
 /** Frames per second to update
  *  @type {Number}
@@ -5386,7 +5385,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
 
         // disable smoothing for pixel art
-        mainContext.imageSmoothingEnabled = !tilesPixelated;
+        overlayContext.imageSmoothingEnabled = 
+            mainContext.imageSmoothingEnabled = !tilesPixelated;
 
         // setup gl rendering if enabled
         glPreRender();
