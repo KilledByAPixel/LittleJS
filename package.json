@@ -2,7 +2,7 @@
   "name": "littlejsengine",
   "version": "1.11.1",
   "description": "LittleJS - Tiny and Fast HTML5 Game Engine",
-  "main": "dist/littlejs.esm.min.js",
+  "main": "dist/littlejs.esm.js",
   "types": "dist/littlejs.d.ts",
   "exports": {
     "types": "./dist/littlejs.d.ts",
