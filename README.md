@@ -20,7 +20,7 @@ The code is clean and well documented with some fun examples to get you started 
 
 ### 🚀 Join the First Ever LittleJS Game Jam
 
-*The LittleJS Game Jam will take place From Nov 11 to Dec 12! Unleash your creativity and develop amazing games using the LittleJS game engine. 🕹️🎮 [Sign up today and get more info about the jam on itch.io!](https://itch.io/jam/littlejs-game-jam)*
+*The LittleJS Game Jam has concluded and voting is currently underway! Stop by to check out some of the amazing games people made using the LittleJS game engine. 🕹️🎮 [Sign up today and get more info about the jam on itch.io!](https://itch.io/jam/littlejs-game-jam)*
 
 <div align="center">
 
