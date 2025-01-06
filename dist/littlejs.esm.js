@@ -5293,7 +5293,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.1';
+const engineVersion = '1.11.2';
 
 /** Frames per second to update
  *  @type {Number}
