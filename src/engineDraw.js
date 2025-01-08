@@ -493,7 +493,7 @@ let engineFontImage;
  * - You can also use fonts from the main tile sheet
  * @example
  * // use built in font
- * const font = new ImageFont;
+ * const font = new FontImage;
  * 
  * // draw text
  * font.drawTextScreen("LittleJS\nHello World!", vec2(200, 50));
