@@ -568,7 +568,7 @@ class FontImage
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Fullscreen mode
+// Display functions
 
 /** Returns true if fullscreen mode is active
  *  @return {Boolean}
@@ -587,4 +587,13 @@ function toggleFullscreen()
     }
     else if (rootElement.requestFullscreen)
         rootElement.requestFullscreen();
+}
+
+/** Set the cursor style
+ *  @param {String}  cursorStyle - CSS cursor style (auto, none, crosshair, etc)
+ *  @memberof Draw */
+function setCursor(cursorStyle = 'auto')
+{
+    const rootElement = mainCanvas.parentElement;
+    rootElement.style.cursor = cursorStyle;
 }

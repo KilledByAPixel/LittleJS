@@ -205,6 +205,7 @@ export {
 	FontImage,
 	isFullscreen,
 	toggleFullscreen,
+	setCursor,
 	getCameraSize,
 
 	// WebGL
