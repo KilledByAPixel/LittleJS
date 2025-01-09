@@ -131,13 +131,6 @@ Here are a few of the amazing games people made using LittleJS...
 - [Watch the Pups](https://ma5a.itch.io/watch-the-pups) - The aim of the game is to take care of some puppies. by [masa](https://ma5a.itch.io/)
 - [LittleJS Game Jam Results](https://itch.io/jam/littlejs-game-jam/results) - All the games from the first LittleJS Game Jam!
 
-### 🚀 Join the First Ever LittleJS Game Jam
-
-*The LittleJS Game Jam has concluded and voting is currently underway! Stop by to check out some of the amazing games people made using the LittleJS game engine. 🕹️🎮 [Sign up today and get more info about the jam on itch.io!](https://itch.io/jam/littlejs-game-jam)*
-
-
-
-
 ![LittleJS Logo](examples/favicon.png)
 
 [npm]: https://img.shields.io/npm/v/littlejsengine
