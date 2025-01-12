@@ -120,7 +120,7 @@ Here are a few of the amazing games people made using LittleJS...
 
 - [Space Huggers](https://github.com/KilledByAPixel/SpaceHuggers) - Original js13k game with source code. by [KilledByAPixel](https://frankforce.com/)
 - [Undergrowth](https://undergrowth.squidband.uk/) - An interactive music videogame for the band Squid. by [KilledByAPixel](https://frankforce.com/)
-- [The Way of the Dodo](https://js13kgames.com/2024/games/the-way-of-the-dodo) - Single button platformer. by [repsej](https://github.com/repsej)
+- [The Way of the Dodo](https://js13kgames.com/2024/games/the-way-of-the-dodo) - Single button platformer. JS13k 5th place winner! by [repsej](https://github.com/repsej)
 - [204Snake!](https://t.co/afavYYprLz) - A unique puzzle game that puts a snake on a 2048 board. LittleJS Jam 1st place winner! by [Sodoj](https://sodoj.itch.io/) and [Shai-P](https://shai-p.itch.io/)
 - [GATOR](https://t.co/HfrIdoavJz) - Retro platformer shooter game where you rescue animals. LittleJS Jam 2nd place winner! by [eoinmcg](https://eoinmcg.itch.io/)
 - [A Hedgehog's search](https://t.co/RuwaxZvwTh) - Adventure game about a hedgehog trying to find its friends. LittleJS Jam 3rd place winner! by [willsm1111](https://willsm1111.itch.io/)
