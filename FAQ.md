@@ -100,6 +100,10 @@ If you are using [Visual Studio Code](https://code.visualstudio.com/) there is a
 
 Another option is to setup a simple local web server like [http-server](https://www.npmjs.com/package/http-server) via npm.
 
+### Can I use LittleJS with build tools like Vite?
+
+Yes, many people have set up projects using Vite and other build tools. [An example you can look at to get started is Michael Haynie shared their project for LittleJS Jam using Vite and several other tools!](https://github.com/michael-dean-haynie/littlejs-game-jam-2024)
+
 ---
 
 ## Graphics and Sound
