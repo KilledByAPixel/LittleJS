@@ -1111,7 +1111,7 @@ declare module "littlejsengine" {
     /** Array containing texture info for batch rendering system
      *  @type {Array}
      *  @memberof Draw */
-    export let textureInfos: any[];
+    export let textureInfos: TextureInfo[];
     /**
      * Create a tile info object using a grid based system
      * - This can take vecs or floats for easier use and conversion
