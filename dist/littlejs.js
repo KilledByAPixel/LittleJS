@@ -2837,7 +2837,7 @@ let engineFontImage;
  * - You can also use fonts from the main tile sheet
  * @example
  * // use built in font
- * const font = new ImageFont;
+ * const font = new FontImage;
  * 
  * // draw text
  * font.drawTextScreen("LittleJS\nHello World!", vec2(200, 50));
@@ -2912,7 +2912,7 @@ class FontImage
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Fullscreen mode
+// Display functions
 
 /** Returns true if fullscreen mode is active
  *  @return {Boolean}
@@ -2931,6 +2931,15 @@ function toggleFullscreen()
     }
     else if (rootElement.requestFullscreen)
         rootElement.requestFullscreen();
+}
+
+/** Set the cursor style
+ *  @param {String}  cursorStyle - CSS cursor style (auto, none, crosshair, etc)
+ *  @memberof Draw */
+function setCursor(cursorStyle = 'auto')
+{
+    const rootElement = mainCanvas.parentElement;
+    rootElement.style.cursor = cursorStyle;
 }
 /** 
  * LittleJS Input System
@@ -3275,7 +3284,7 @@ function vibrateStop() { vibrate(0); }
 
 /** True if a touch device has been detected
  *  @memberof Input */
-const isTouchDevice = window.ontouchstart !== undefined;
+const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
 
 // touch gamepad internal variables
 let touchGamepadTimer = new Timer, touchGamepadButtons, touchGamepadStick;

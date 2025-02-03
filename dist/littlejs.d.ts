@@ -1357,7 +1357,7 @@ declare module "littlejsengine" {
      * - You can also use fonts from the main tile sheet
      * @example
      * // use built in font
-     * const font = new ImageFont;
+     * const font = new FontImage;
      *
      * // draw text
      * font.drawTextScreen("LittleJS\nHello World!", vec2(200, 50));
@@ -1396,6 +1396,10 @@ declare module "littlejsengine" {
     /** Toggle fullsceen mode
      *  @memberof Draw */
     export function toggleFullscreen(): void;
+    /** Set the cursor style
+     *  @param {String}  cursorStyle - CSS cursor style (auto, none, crosshair, etc)
+     *  @memberof Draw */
+    export function setCursor(cursorStyle?: string): void;
     /** Get the camera's visible area in world space
      *  @return {Vector2}
      *  @memberof Draw */
