@@ -1,6 +1,6 @@
 /*
     LittleJS Platformer Example - Effects
-    - Plays different particle effects which can be persistant
+    - Plays different particle effects which can be persistent
     - Destroys terrain and makes explosions
     - Outlines tiles based on neighbor types
     - Generates parallax background layers
@@ -39,7 +39,7 @@ function makeDebris(pos, color = hsl(), amount = 50, size=.2, elasticity = .3)
 {
     const color2 = color.lerp(hsl(), .5);
     const emitter = new ParticleEmitter(
-        pos, 0, 1, .1, amount/.1, PI, // pos, angle, emitSize, emitTime, emitRate, emiteCone
+        pos, 0, 1, .1, amount/.1, PI, // pos, angle, emitSize, emitTime, emitRate, emitCone
         0,                      // tileInfo
         color, color2,          // colorStartA, colorStartB
         color, color2,          // colorEndA, colorEndB
@@ -97,7 +97,7 @@ function explosion(pos, radius=3)
     // smoke
     new ParticleEmitter(
         pos, 0,                     // pos, angle
-        radius/2, .2, 50*radius, PI,// emitSize, emitTime, emitRate, emiteCone
+        radius/2, .2, 50*radius, PI,// emitSize, emitTime, emitRate, emitCone
         0,                          // tileInfo
         hsl(0,0,0), hsl(0,0,0),     // colorStartA, colorStartB
         hsl(0,0,0,0), hsl(0,0,0,0), // colorEndA, colorEndB
@@ -109,7 +109,7 @@ function explosion(pos, radius=3)
     // fire
     new ParticleEmitter(
         pos, 0,                         // pos, angle
-        radius/2, .1, 100*radius, PI,   // emitSize, emitTime, emitRate, emiteCone
+        radius/2, .1, 100*radius, PI,   // emitSize, emitTime, emitRate, emitCone
         0,                              // tileInfo
         rgb(1,.5,.1), rgb(1,.1,.1),     // colorStartA, colorStartB
         rgb(1,.5,.1,0), rgb(1,.1,.1,0), // colorEndA, colorEndB

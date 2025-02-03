@@ -71,7 +71,7 @@ function gameInit()
     // create particle emitter
     particleEmitter = new LittleJS.ParticleEmitter(
         vec2(16,9), 0,              // emitPos, emitAngle
-        1, 0, 500, Math.PI,         // emitSize, emitTime, emitRate, emiteCone
+        1, 0, 500, Math.PI,         // emitSize, emitTime, emitRate, emitCone
         tile(0, 16),                // tileIndex, tileSize
         hsl(1,1,1),   hsl(0,0,0),   // colorStartA, colorStartB
         hsl(0,0,0,0), hsl(0,0,0,0), // colorEndA, colorEndB

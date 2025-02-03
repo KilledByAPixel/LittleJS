@@ -575,7 +575,7 @@ class FontImage
  *  @memberof Draw */
 function isFullscreen() { return !!document.fullscreenElement; }
 
-/** Toggle fullsceen mode
+/** Toggle fullscreen mode
  *  @memberof Draw */
 function toggleFullscreen()
 {

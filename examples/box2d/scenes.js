@@ -1,5 +1,5 @@
 /*
-    LittleJS Box2D Example - Secenes
+    LittleJS Box2D Example - Scenes
     - Each scene demonstrates a feature of Box2D
     - Feel free to use tis code in your own projects
     - 0  = Shapes: box, circle, poly, and edge
@@ -122,7 +122,7 @@ function loadScene(_scene)
             const oaB = oB.localToWorld(vec2(0,oB.size.y/2));
             box2dCreatePulleyJoint(oA, oB, aA.pos, aB.pos, oaA, oaB);
 
-            // a line to make it look like conneting rope
+            // a line to make it look like connecting rope
             const line = new EngineObject(vec2(20,15), vec2(10,.2), 0, 0, BLACK);
             line.gravityScale = 0;
             line.renderOrder = -1;

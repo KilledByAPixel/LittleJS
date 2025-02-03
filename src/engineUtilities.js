@@ -16,7 +16,7 @@
  *  @memberof Utilities */
 const PI = Math.PI;
 
-/** Returns absoulte value of value passed in
+/** Returns absolute value of value passed in
  *  @param {Number} value
  *  @return {Number}
  *  @memberof Utilities */
@@ -49,7 +49,7 @@ function sign(value) { return Math.sign(value); }
  *  @memberof Utilities */
 function mod(dividend, divisor=1) { return ((dividend % divisor) + divisor) % divisor; }
 
-/** Clamps the value beween max and min
+/** Clamps the value between max and min
  *  @param {Number} value
  *  @param {Number} [min]
  *  @param {Number} [max]
@@ -485,7 +485,7 @@ class Vector2
         return new Vector2(this.x*c - this.y*s, this.x*s + this.y*c);
     }
 
-    /** Set the integer direction of this vector, corrosponding to multiples of 90 degree rotation (0-3)
+    /** Set the integer direction of this vector, corresponding to multiples of 90 degree rotation (0-3)
      * @param {Number} [direction]
      * @param {Number} [length] */
     setDirection(direction, length=1)
@@ -496,7 +496,7 @@ class Vector2
             direction%2 ? 0 : direction ? -length : length);
     }
 
-    /** Returns the integer direction of this vector, corrosponding to multiples of 90 degree rotation (0-3)
+    /** Returns the integer direction of this vector, corresponding to multiples of 90 degree rotation (0-3)
      * @return {Number} */
     direction()
     { return abs(this.x) > abs(this.y) ? this.x < 0 ? 3 : 1 : this.y < 0 ? 2 : 0; }
@@ -881,7 +881,7 @@ const MAGENTA = rgb(1,0,1);
  * a.set(3);             // sets the timer to 3 seconds
  *
  * let b = new Timer(1); // creates a timer with 1 second left
- * b.unset();            // unsets the timer
+ * b.unset();            // unset the timer
  */
 class Timer
 {

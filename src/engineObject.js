@@ -155,7 +155,7 @@ class EngineObject
         const oldPos = this.pos.copy();
         this.velocity.x *= this.damping;
         this.velocity.y *= this.damping;
-        if (this.mass) // dont apply gravity to static objects
+        if (this.mass) // don't apply gravity to static objects
             this.velocity.y += gravity * this.gravityScale;
         this.pos.x += this.velocity.x;
         this.pos.y += this.velocity.y;
@@ -164,7 +164,7 @@ class EngineObject
         // physics sanity checks
         ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
         ASSERT(this.damping >= 0 && this.damping <= 1);
-        if (!enablePhysicsSolver || !this.mass) // dont do collision for static objects
+        if (!enablePhysicsSolver || !this.mass) // don't do collision for static objects
             return;
 
         const wasMovingDown = this.velocity.y < 0;
@@ -183,7 +183,7 @@ class EngineObject
             const epsilon = .001; // necessary to push slightly outside of the collision
             for (const o of engineObjectsCollide)
             {
-                // non solid objects don't collide with eachother
+                // non solid objects don't collide with each other
                 if (!this.isSolid && !o.isSolid || o.destroyed || o.parent || o == this)
                     continue;
 
@@ -243,7 +243,7 @@ class EngineObject
                         const elastic1 = o.velocity.y * (o.mass - this.mass) / (this.mass + o.mass)
                             + this.velocity.y * 2 * this.mass / (this.mass + o.mass);
 
-                        // lerp betwen elastic or inelastic based on elasticity
+                        // lerp between elastic or inelastic based on elasticity
                         this.velocity.y = lerp(elasticity, inelastic, elastic0);
                         o.velocity.y = lerp(elasticity, inelastic, elastic1);
                     }
@@ -263,7 +263,7 @@ class EngineObject
                         const elastic1 = o.velocity.x * (o.mass - this.mass) / (this.mass + o.mass)
                             + this.velocity.x * 2 * this.mass / (this.mass + o.mass);
 
-                        // lerp betwen elastic or inelastic based on elasticity
+                        // lerp between elastic or inelastic based on elasticity
                         this.velocity.x = lerp(elasticity, inelastic, elastic0);
                         o.velocity.x = lerp(elasticity, inelastic, elastic1);
                     }
@@ -329,7 +329,7 @@ class EngineObject
         if (this.destroyed)
             return;
         
-        // disconnect from parent and destroy chidren
+        // disconnect from parent and destroy children
         this.destroyed = 1;
         this.parent && this.parent.removeChild(this);
         for (const child of this.children)
@@ -354,7 +354,7 @@ class EngineObject
     
     /** Called to check if a tile collision should be resolved
      *  @param {Number}  tileData - the value of the tile at the position
-     *  @param {Vector2} pos      - tile where the collision occured
+     *  @param {Vector2} pos      - tile where the collision occurred
      *  @return {Boolean}         - true if the collision should be resolved */
     collideWithTile(tileData, pos)    { return tileData > 0; }
 
@@ -417,7 +417,7 @@ class EngineObject
         this.collideRaycast = collideRaycast;
     }
 
-    /** Returns string containg info about this object for debugging
+    /** Returns string containing info about this object for debugging
      *  @return {String} */
     toString()
     {

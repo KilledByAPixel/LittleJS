@@ -12,7 +12,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** Newgrounds medal auto unlocks in newgronds API */
+/** Newgrounds medal auto unlocks in newgrounds API */
 class NewgroundsMedal extends Medal
 {
     /** Create a medal object and adds it to the list of medals */

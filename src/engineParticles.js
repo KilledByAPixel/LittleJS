@@ -12,7 +12,7 @@
  * let pos = vec2(2,3);
  * let particleEmitter = new ParticleEmitter
  * (
- *     pos, 0, 1, 0, 500, PI,      // pos, angle, emitSize, emitTime, emitRate, emiteCone
+ *     pos, 0, 1, 0, 500, PI,      // pos, angle, emitSize, emitTime, emitRate, emitCone
  *     tile(0, 16),                // tileInfo
  *     rgb(1,1,1),   rgb(0,0,0),   // colorStartA, colorStartB
  *     rgb(1,1,1,0), rgb(0,0,0,0), // colorEndA, colorEndB
@@ -47,7 +47,7 @@ class ParticleEmitter extends EngineObject
      *  @param {Number} [fadeRate]          - How quick to fade particles at start/end in percent of life
      *  @param {Number} [randomness]    - Apply extra randomness percent
      *  @param {Boolean} [collideTiles] - Do particles collide against tiles
-     *  @param {Boolean} [additive]     - Should particles use addtive blend
+     *  @param {Boolean} [additive]     - Should particles use additive blend
      *  @param {Boolean} [randomColorLinear] - Should color be randomized linearly or across each component
      *  @param {Number} [renderOrder] - Render order for particles (additive is above other stuff by default)
      *  @param {Boolean}  [localSpace] - Should it be in local space of emitter (world space is default)
@@ -132,11 +132,11 @@ class ParticleEmitter extends EngineObject
         this.randomness        = randomness;
         /** @property {Boolean} - Do particles collide against tiles */
         this.collideTiles      = collideTiles;
-        /** @property {Boolean} - Should particles use addtive blend */
+        /** @property {Boolean} - Should particles use additive blend */
         this.additive          = additive;
         /** @property {Boolean} - Should it be in local space of emitter */
         this.localSpace        = localSpace;
-        /** @property {Number} - If non zero the partile is drawn as a trail, stretched in the drection of velocity */
+        /** @property {Number} - If non zero the particle is drawn as a trail, stretched in the direction of velocity */
         this.trailScale        = 0;
         /** @property {Function}   - Callback when particle is destroyed */
         this.particleDestroyCallback = undefined;
@@ -185,7 +185,7 @@ class ParticleEmitter extends EngineObject
             angle += this.angle;
         }
 
-        // randomness scales each paremeter by a percentage
+        // randomness scales each parameter by a percentage
         const randomness = this.randomness;
         const randomizeScale = (v)=> v + v*rand(randomness, -randomness);
 
@@ -214,7 +214,7 @@ class ParticleEmitter extends EngineObject
         particle.renderOrder   = this.renderOrder;
         particle.mirror        = !!randInt(2);
 
-        // call particle create callaback
+        // call particle create callback
         this.particleCreateCallback && this.particleCreateCallback(particle);
 
         // return the newly created particle

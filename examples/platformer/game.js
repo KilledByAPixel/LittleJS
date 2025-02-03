@@ -1,8 +1,8 @@
 /*
     Little JS Platforming Game
     - A basic platforming starter project
-    - Platforming phyics and controls
-    - Includes destructibe terrain
+    - Platforming physics and controls
+    - Includes destructible terrain
     - Control with keyboard, mouse, touch, or gamepad
 */
 

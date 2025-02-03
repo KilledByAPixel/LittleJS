@@ -22,7 +22,7 @@ let glCanvas;
  *  @memberof WebGL */
 let glContext;
 
-/** Shoule webgl be setup with antialiasing, must be set before calling engineInit
+/** Should webgl be setup with anti-aliasing? must be set before calling engineInit
  *  @type {Boolean}
  *  @memberof WebGL */
 let glAntialias = true;
@@ -32,7 +32,7 @@ let glShader, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, 
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// Initalize WebGL, called automatically by the engine
+// Initialize WebGL, called automatically by the engine
 function glInit()
 {
     if (!glEnable || headlessMode) return;
@@ -247,7 +247,7 @@ function glCopyToContext(context, forceDraw=false)
         context.drawImage(glCanvas, 0, 0);
 }
 
-/** Set antialiasing for webgl canvas
+/** Set anti-aliasing for webgl canvas
  *  @param {Boolean} [antialias]
  *  @memberof WebGL */
 function glSetAntialias(antialias=true)
@@ -277,7 +277,7 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdd
     if (glInstanceCount >= gl_MAX_INSTANCES || glBatchAdditive != glAdditive)
         glFlush();
 
-    let offset = glInstanceCount * gl_INDICIES_PER_INSTANCE;
+    let offset = glInstanceCount * gl_INDICES_PER_INSTANCE;
     glPositionData[offset++] = x;
     glPositionData[offset++] = y;
     glPositionData[offset++] = sizeX;
@@ -320,7 +320,7 @@ gl_LINK_STATUS = 35714,
 gl_UNPACK_FLIP_Y_WEBGL = 37440,
 
 // constants for batch rendering
-gl_INDICIES_PER_INSTANCE = 11,
+gl_INDICES_PER_INSTANCE = 11,
 gl_MAX_INSTANCES = 1e4,
-gl_INSTANCE_BYTE_STRIDE = gl_INDICIES_PER_INSTANCE * 4, // 11 * 4
+gl_INSTANCE_BYTE_STRIDE = gl_INDICES_PER_INSTANCE * 4, // 11 * 4
 gl_INSTANCE_BUFFER_SIZE = gl_MAX_INSTANCES * gl_INSTANCE_BYTE_STRIDE;

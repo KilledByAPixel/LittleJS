@@ -16,7 +16,7 @@
  *  @memberof Debug */
 const debug = true;
 
-/** True if asserts are enaled
+/** True if asserts are enabled
  *  @type {Boolean}
  *  @default
  *  @memberof Debug */

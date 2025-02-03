@@ -301,7 +301,7 @@ class TileLayer extends EngineObject
 
     /** Draw the tile at a given position in the tile grid
      *  This can be used to clear out tiles when they are destroyed
-     *  Tiles can also be redrawn if isinde a redrawStart/End block
+     *  Tiles can also be redrawn if inside a redrawStart/End block
      *  @param {Vector2} layerPos 
      *  @param {Boolean} [clear] - should the old tile be cleared out
      */
@@ -326,7 +326,7 @@ class TileLayer extends EngineObject
         }
     }
 
-    /** Draw directly to the 2D canvas in world space (bipass webgl)
+    /** Draw directly to the 2D canvas in world space (bypass webgl)
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
      *  @param {Number}   angle

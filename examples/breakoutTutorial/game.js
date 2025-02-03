@@ -113,7 +113,7 @@ class Brick extends EngineObject
         const color = this.color;
         new ParticleEmitter(
             this.pos, 0,            // pos, angle
-            this.size, .1, 200, PI, // emitSize, emitTime, emitRate, emiteCone
+            this.size, .1, 200, PI, // emitSize, emitTime, emitRate, emitCone
             undefined,              // tileInfo
             color, color,                       // colorStartA, colorStartB
             color.scale(1,0), color.scale(1,0), // colorEndA, colorEndB

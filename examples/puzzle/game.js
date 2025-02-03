@@ -216,7 +216,7 @@ function gameRender()
         drawTile(drawPos, vec2(.5), tile(data, 64), color2);
     }
 
-    // draw a grey square at top to cover up incomming tiles
+    // draw a grey square at top to cover up incoming tiles
     drawRect(cameraPos.subtract(cameraOffset).add(vec2(0,levelSize.y)), levelSize, backgroundColor);
 }
 
@@ -294,7 +294,7 @@ function clearMatches()
             const color2 = color1.lerp(hsl(), .5);
             new ParticleEmitter(
                 pos.add(vec2(.5)), 0,  // pos, angle
-                .5, .1, 200, PI,       // emitSize, emitTime, emitRate, emiteCone
+                .5, .1, 200, PI,       // emitSize, emitTime, emitRate, emitCone
                 0,                     // tileInfo
                 color1, color2,                      // colorStartA, colorStartB
                 color1.scale(1,0), color2.scale(1,0),// colorEndA, colorEndB

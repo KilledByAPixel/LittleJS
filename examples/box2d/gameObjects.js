@@ -13,7 +13,7 @@ function spawnBox(pos, size=1, color=WHITE, type=box2dBodyTypeDynamic, applyText
 {
     size = typeof size == 'number' ? vec2(size) : size; // square
     const o = new Box2dObject(pos, size, applyTexture && spriteAtlas.squareOutline, angle, color, type);
-    o.drawSize = size.scale(1.02); // slightly enarge to cover gaps
+    o.drawSize = size.scale(1.02); // slightly enlarge to cover gaps
     o.addBox(size);
     return o;
 }
@@ -405,7 +405,7 @@ class ClothObject extends Box2dObject
                 const stress = vec2(j.GetReactionForce(1)).length();
                 if (stress > this.maxJointStress || d2 > maxLength2*4)
                 {
-                    // remove stessed joint
+                    // remove stressed joint
                     box2dDestroyJoint(j);
                     joints[i] = 0;
                 }
@@ -463,7 +463,7 @@ function explosion(pos, radius=3, strength=300)
     // smoke
     new ParticleEmitter(
         pos, 0,                     // pos, angle
-        radius/2, .2, 50*radius, PI,// emitSize, emitTime, emitRate, emiteCone
+        radius/2, .2, 50*radius, PI,// emitSize, emitTime, emitRate, emitCone
         spriteAtlas.dot,            // tileInfo
         hsl(0,0,0),   hsl(0,0,0),   // colorStartA, colorStartB
         hsl(0,0,0,0), hsl(0,0,0,0), // colorEndA, colorEndB
@@ -475,7 +475,7 @@ function explosion(pos, radius=3, strength=300)
     // fire
     new ParticleEmitter(
         pos, 0,                         // pos, angle
-        radius, .1, 100*radius, PI,     // emitSize, emitTime, emitRate, emiteCone
+        radius, .1, 100*radius, PI,     // emitSize, emitTime, emitRate, emitCone
         spriteAtlas.dot,                // tileInfo
         hsl(0,1,.5),   hsl(.15,1,.5),   // colorStartA, colorStartB
         hsl(0,1,.5,0), hsl(.1, 1,.5,0), // colorEndA, colorEndB

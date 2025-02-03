@@ -25,7 +25,7 @@ class Character extends GameObject
         this.dodgeTimer         = new Timer;
         this.dodgeRechargeTimer = new Timer;
         this.deadTimer          = new Timer;
-        this.grendeThrowTimer   = new Timer;
+        this.grenadeThrowTimer   = new Timer;
         this.drawSize = vec2(1);
         this.color = hsl(rand(),1,.7);
         this.renderOrder = 10;
@@ -82,14 +82,14 @@ class Character extends GameObject
                 if (!this.groundObject && this.getAliveTime() > .2)
                     this.velocity.y += .2;
             }
-            if (this.pressingThrow && !this.wasPressingThrow && !this.grendeThrowTimer.active())
+            if (this.pressingThrow && !this.wasPressingThrow && !this.grenadeThrowTimer.active())
             {
-                // throw greande
+                // throw grenade
                 const grenade = new Grenade(this.pos);
                 grenade.velocity = this.velocity.add(vec2(this.getMirrorSign(),rand(.8,.7)).normalize(.2+rand(.02)));
                 grenade.angleVelocity = this.getMirrorSign() * rand(.8,.5);
                 sound_jump.play(this.pos);
-                this.grendeThrowTimer.set(1);
+                this.grenadeThrowTimer.set(1);
             }
             this.wasPressingThrow = this.pressingThrow;
         }
@@ -276,7 +276,7 @@ class Character extends GameObject
             if (getTileCollisionData(pos.add(vec2(0,1)))      // above
                 && !getTileCollisionData(pos.add(vec2(1,0)))  // left
                 && !getTileCollisionData(pos.add(vec2(1,0)))) // right
-                return false; // dont collide if something above it and nothing to left or right
+                return false; // don't collide if something above it and nothing to left or right
 
             // allow standing on top of ladders
             return !this.climbingLadder;

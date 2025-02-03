@@ -63,7 +63,7 @@ class Brick extends EngineObject
         const color2 = color1.lerp(hsl(), .5);
         new ParticleEmitter(
             this.pos, 0,                          // pos, angle
-            this.size, .1, 200, PI,               // emitSize, emitTime, emitRate, emiteCone
+            this.size, .1, 200, PI,               // emitSize, emitTime, emitRate, emitCone
             tile(0, 16),                          // tileIndex, tileSize
             color1, color2,                       // colorStartA, colorStartB
             color1.scale(1,0), color2.scale(1,0), // colorEndA, colorEndB
@@ -99,7 +99,7 @@ class Ball extends EngineObject
         const color = hsl(0,0,.2);
         this.trailEffect = new ParticleEmitter(
             this.pos, 0,                          // pos, angle
-            this.size, 0, 80, PI,                 // emitSize, emitTime, emitRate, emiteCone
+            this.size, 0, 80, PI,                 // emitSize, emitTime, emitRate, emitCone
             tile(0, 16),                          // tileIndex, tileSize
             color, color,                         // colorStartA, colorStartB
             color.scale(0), color.scale(0),       // colorEndA, colorEndB
