@@ -69,7 +69,7 @@ class Box2dObject extends EngineObject
     {
         const isAsleep = !this.getIsAwake();
         const isStatic = this.getIsStatic();
-        const color = rgb(isAsleep,isAsleep,isStatic,.5);
+        const color = rgb(isAsleep?1:0 ,isAsleep?1:0, isStatic?1:0, .5);
         this.box2dDrawFixtures(color);
     }
 
@@ -353,7 +353,7 @@ function box2dBoxCastAll(pos, size)
 
     let queryObjects = [];
     box2dWorld.QueryAABB(queryCallback, aabb);
-    debugRaycast && debugRect(pos, size, raycstResult ? '#f00' : '#00f', .02);
+    debugRaycast && debugRect(pos, size, queryObjects.length ? '#f00' : '#00f', .02);
     return queryObjects;
 }
 
@@ -374,7 +374,7 @@ function box2dBoxCast(pos, size)
 
     let queryObject;
     box2dWorld.QueryAABB(queryCallback, aabb);
-    debugRaycast && debugRect(pos, size, raycstResult ? '#f00' : '#00f', .02);
+    debugRaycast && debugRect(pos, size, queryObject ? '#f00' : '#00f', .02);
     return queryObject;
 }
 
@@ -416,7 +416,7 @@ function box2dPointCast(pos, dynamicOnly=true)
             return true; // continue getting results
         if (!fixture.TestPoint(pos.getBox2d()))
             return true; // continue getting results
-        queryResult = fixture.GetBody().object;
+        queryObject = fixture.GetBody().object;
         return false; // stop getting results
     };
 
@@ -424,10 +424,10 @@ function box2dPointCast(pos, dynamicOnly=true)
     aabb.set_lowerBound(pos.getBox2d());
     aabb.set_upperBound(pos.getBox2d());
 
-    let queryResult;
-    debugRaycast && debugRect(pos, vec2(), queryResult ? '#f00' : '#00f', .02);
+    let queryObject;
+    debugRaycast && debugRect(pos, vec2(), queryObject ? '#f00' : '#00f', .02);
     box2dWorld.QueryAABB(queryCallback, aabb);
-    return queryResult;
+    return queryObject;
 }
 
 // box aabb cast and return all the fixtures
@@ -437,8 +437,8 @@ function box2dBoxCastAllFixtures(pos, size)
     queryCallback.ReportFixture = function(fixturePointer)
     {
         const fixture = box2d.wrapPointer(fixturePointer, box2d.b2Fixture);
-        if (!queryObjects.includes(fixture))
-            queryObjects.push(fixture); // add if not already in list
+        if (!queryFixtures.includes(fixture))
+            queryFixtures.push(fixture); // add if not already in list
         return true; // continue getting results
     };
 
@@ -448,7 +448,7 @@ function box2dBoxCastAllFixtures(pos, size)
 
     let queryFixtures = [];
     box2dWorld.QueryAABB(queryCallback, aabb);
-    debugRaycast && debugRect(pos, size, raycstResult ? '#f00' : '#00f', .02);
+    debugRaycast && debugRect(pos, size, queryFixtures.length ? '#f00' : '#00f', .02);
     return queryFixtures;
 }
 
