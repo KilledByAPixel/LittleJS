@@ -62,7 +62,7 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 
 - Compatible with all modern web browsers and on mobile devices
 - Support for TypeScript and Modules with example projects for both
-- Ideal for size coding competitions like [js13kGames](https://js13kgames.com/), [starter project builds to a 7KB zip](https://killedbyapixel.github.io/LittleJS/examples/js13k)
+- Ideal for size coding competitions like [js13kGames](https://js13kgames.com/), [starter project builds to a 7KB zip](https://github.com/KilledByAPixel/LittleJS/tree/js13k)
 - Builds to an executable with [Electron](https://www.electronjs.org/) for distribution on Windows, macOS, and Linux
 - Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used for anything you want forever
 
