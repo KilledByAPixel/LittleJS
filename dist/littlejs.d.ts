@@ -272,7 +272,7 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let enablePhysicsSolver: boolean;
-    /** Default object mass for collision calcuations (how heavy objects are)
+    /** Default object mass for collision calculations (how heavy objects are)
      *  @type {Number}
      *  @default
      *  @memberof Settings */
@@ -436,7 +436,7 @@ declare module "littlejsengine" {
      *  @param {Boolean} show
      *  @memberof Settings */
     export function setShowSplashScreen(show: boolean): void;
-    /** Set to disalbe rendering, audio, and input for servers
+    /** Set to disable rendering, audio, and input for servers
      *  @param {Boolean} headless
      *  @memberof Settings */
     export function setHeadlessMode(headless: boolean): void;
@@ -460,7 +460,7 @@ declare module "littlejsengine" {
      *  @param {Boolean} enable
      *  @memberof Settings */
     export function setEnablePhysicsSolver(enable: boolean): void;
-    /** Set default object mass for collison calcuations
+    /** Set default object mass for collision calculations
      *  @param {Number} mass
      *  @memberof Settings */
     export function setObjectDefaultMass(mass: number): void;
@@ -516,7 +516,7 @@ declare module "littlejsengine" {
      *  @param {Boolean} analog
      *  @memberof Settings */
     export function setTouchGamepadAnalog(analog: boolean): void;
-    /** Set size of virutal gamepad for touch devices in pixels
+    /** Set size of virtual gamepad for touch devices in pixels
      *  @param {Number} size
      *  @memberof Settings */
     export function setTouchGamepadSize(size: number): void;
@@ -586,7 +586,7 @@ declare module "littlejsengine" {
      *  @default Math.PI
      *  @memberof Utilities */
     export const PI: number;
-    /** Returns absoulte value of value passed in
+    /** Returns absolute value of value passed in
      *  @param {Number} value
      *  @return {Number}
      *  @memberof Utilities */
@@ -614,7 +614,7 @@ declare module "littlejsengine" {
      *  @return {Number}
      *  @memberof Utilities */
     export function mod(dividend: number, divisor?: number): number;
-    /** Clamps the value beween max and min
+    /** Clamps the value between max and min
      *  @param {Number} value
      *  @param {Number} [min]
      *  @param {Number} [max]
@@ -856,11 +856,11 @@ declare module "littlejsengine" {
          * @param {Number} angle
          * @return {Vector2} */
         rotate(angle: number): Vector2;
-        /** Set the integer direction of this vector, corrosponding to multiples of 90 degree rotation (0-3)
+        /** Set the integer direction of this vector, corresponding to multiples of 90 degree rotation (0-3)
          * @param {Number} [direction]
          * @param {Number} [length] */
         setDirection(direction?: number, length?: number): Vector2;
-        /** Returns the integer direction of this vector, corrosponding to multiples of 90 degree rotation (0-3)
+        /** Returns the integer direction of this vector, corresponding to multiples of 90 degree rotation (0-3)
          * @return {Number} */
         direction(): number;
         /** Returns a copy of this vector that has been inverted
@@ -989,7 +989,7 @@ declare module "littlejsengine" {
      * a.set(3);             // sets the timer to 3 seconds
      *
      * let b = new Timer(1); // creates a timer with 1 second left
-     * b.unset();            // unsets the timer
+     * b.unset();            // unset the timer
      */
     export class Timer {
         /** Create a timer object set time passed in
@@ -1393,7 +1393,7 @@ declare module "littlejsengine" {
      *  @return {Boolean}
      *  @memberof Draw */
     export function isFullscreen(): boolean;
-    /** Toggle fullsceen mode
+    /** Toggle fullscreen mode
      *  @memberof Draw */
     export function toggleFullscreen(): void;
     /** Set the cursor style
@@ -1467,11 +1467,11 @@ declare module "littlejsengine" {
      *  @param {WebGLTexture} texture
      *  @memberof WebGL */
     export function glSetTexture(texture: WebGLTexture): void;
-    /** Set antialiasing for webgl canvas
+    /** Set anti-aliasing for webgl canvas
      *  @param {Boolean} [antialias]
      *  @memberof WebGL */
     export function glSetAntialias(antialias?: boolean): void;
-    /** Shoule webgl be setup with antialiasing, must be set before calling engineInit
+    /** Should webgl be setup with anti-aliasing? must be set before calling engineInit
      *  @type {Boolean}
      *  @memberof WebGL */
     export let glAntialias: boolean;
@@ -1896,7 +1896,7 @@ declare module "littlejsengine" {
         worldToLocalVector(vec: Vector2): Vector2;
         /** Called to check if a tile collision should be resolved
          *  @param {Number}  tileData - the value of the tile at the position
-         *  @param {Vector2} pos      - tile where the collision occured
+         *  @param {Vector2} pos      - tile where the collision occurred
          *  @return {Boolean}         - true if the collision should be resolved */
         collideWithTile(tileData: number, pos: Vector2): boolean;
         /** Called to check if a object collision should be resolved
@@ -1930,7 +1930,7 @@ declare module "littlejsengine" {
          *  @param {Boolean} [collideTiles]        - Does it collide with the tile collision?
          *  @param {Boolean} [collideRaycast]      - Does it collide with raycasts? */
         setCollision(collideSolidObjects?: boolean, isSolid?: boolean, collideTiles?: boolean, collideRaycast?: boolean): void;
-        /** Returns string containg info about this object for debugging
+        /** Returns string containing info about this object for debugging
          *  @return {String} */
         toString(): string;
         /** Render debug info for this object  */
@@ -2053,12 +2053,12 @@ declare module "littlejsengine" {
         redrawEnd(): void;
         /** Draw the tile at a given position in the tile grid
          *  This can be used to clear out tiles when they are destroyed
-         *  Tiles can also be redrawn if isinde a redrawStart/End block
+         *  Tiles can also be redrawn if inside a redrawStart/End block
          *  @param {Vector2} layerPos
          *  @param {Boolean} [clear] - should the old tile be cleared out
          */
         drawTileData(layerPos: Vector2, clear?: boolean): void;
-        /** Draw directly to the 2D canvas in world space (bipass webgl)
+        /** Draw directly to the 2D canvas in world space (bypass webgl)
          *  @param {Vector2}  pos
          *  @param {Vector2}  size
          *  @param {Number}   angle
@@ -2102,7 +2102,7 @@ declare module "littlejsengine" {
      * let pos = vec2(2,3);
      * let particleEmitter = new ParticleEmitter
      * (
-     *     pos, 0, 1, 0, 500, PI,      // pos, angle, emitSize, emitTime, emitRate, emiteCone
+     *     pos, 0, 1, 0, 500, PI,      // pos, angle, emitSize, emitTime, emitRate, emitCone
      *     tile(0, 16),                // tileInfo
      *     rgb(1,1,1),   rgb(0,0,0),   // colorStartA, colorStartB
      *     rgb(1,1,1,0), rgb(0,0,0,0), // colorEndA, colorEndB
@@ -2136,7 +2136,7 @@ declare module "littlejsengine" {
          *  @param {Number} [fadeRate]          - How quick to fade particles at start/end in percent of life
          *  @param {Number} [randomness]    - Apply extra randomness percent
          *  @param {Boolean} [collideTiles] - Do particles collide against tiles
-         *  @param {Boolean} [additive]     - Should particles use addtive blend
+         *  @param {Boolean} [additive]     - Should particles use additive blend
          *  @param {Boolean} [randomColorLinear] - Should color be randomized linearly or across each component
          *  @param {Number} [renderOrder] - Render order for particles (additive is above other stuff by default)
          *  @param {Boolean}  [localSpace] - Should it be in local space of emitter (world space is default)
@@ -2176,11 +2176,11 @@ declare module "littlejsengine" {
         fadeRate: number;
         /** @property {Number} - Apply extra randomness percent */
         randomness: number;
-        /** @property {Boolean} - Should particles use addtive blend */
+        /** @property {Boolean} - Should particles use additive blend */
         additive: boolean;
         /** @property {Boolean} - Should it be in local space of emitter */
         localSpace: boolean;
-        /** @property {Number} - If non zero the partile is drawn as a trail, stretched in the drection of velocity */
+        /** @property {Number} - If non zero the particle is drawn as a trail, stretched in the direction of velocity */
         trailScale: number;
         /** @property {Function}   - Callback when particle is destroyed */
         particleDestroyCallback: any;
