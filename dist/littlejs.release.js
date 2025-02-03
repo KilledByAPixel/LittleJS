@@ -1960,7 +1960,7 @@ let overlayContext;
 let mainCanvasSize = vec2();
 
 /** Array containing texture info for batch rendering system
- *  @type {Array}
+ *  @type {Array<TextureInfo>}
  *  @memberof Draw */
 let textureInfos = [];
 

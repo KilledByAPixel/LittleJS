@@ -1109,9 +1109,9 @@ declare module "littlejsengine" {
      *  @memberof Utilities */
     export const MAGENTA: Color;
     /** Array containing texture info for batch rendering system
-     *  @type {Array}
+     *  @type {Array<TextureInfo>}
      *  @memberof Draw */
-    export let textureInfos: any[];
+    export let textureInfos: Array<TextureInfo>;
     /**
      * Create a tile info object using a grid based system
      * - This can take vecs or floats for easier use and conversion
