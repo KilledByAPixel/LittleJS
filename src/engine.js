@@ -308,6 +308,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         new Promise(resolve => 
         {
             const image = new Image;
+            image.crossOrigin = 'anonymous';
             image.onerror = image.onload = ()=> 
             {
                 textureInfos[textureIndex] = new TextureInfo(image);
