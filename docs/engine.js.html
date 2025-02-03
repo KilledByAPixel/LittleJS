@@ -32,7 +32,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.0';
+const engineVersion = '1.11.3';
 
 /** Frames per second to update
  *  @type {Number}
@@ -124,7 +124,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
 
         // disable smoothing for pixel art
-        mainContext.imageSmoothingEnabled = !tilesPixelated;
+        overlayContext.imageSmoothingEnabled = 
+            mainContext.imageSmoothingEnabled = !tilesPixelated;
 
         // setup gl rendering if enabled
         glPreRender();
@@ -280,7 +281,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         (canvasPixelated ? 'image-rendering:pixelated;' : '') + // pixel art
         'user-select:none;' +         // prevent hold to select
         '-webkit-user-select:none;' + // compatibility for ios
-        (!touchInputEnable ? '' :     // no touch css setttings
+        (!touchInputEnable ? '' :     // no touch css settings
         'touch-action:none;' +        // prevent mobile pinch to resize
         '-webkit-touch-callout:none');// compatibility for ios
     rootElement.style.cssText = styleRoot;
@@ -309,6 +310,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         new Promise(resolve => 
         {
             const image = new Image;
+            image.crossOrigin = 'anonymous';
             image.onerror = image.onload = ()=> 
             {
                 textureInfos[textureIndex] = new TextureInfo(image);
@@ -353,7 +355,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
  *  @memberof Engine */
 function engineObjectsUpdate()
 {
-    // get list of solid objects for physics optimzation
+    // get list of solid objects for physics optimization
     engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);
 
     // recursive object update
