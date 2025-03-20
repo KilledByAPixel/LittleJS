@@ -113,6 +113,7 @@ function engineAddPlugin(updateFunction, renderFunction)
  *  @memberof Engine */
 function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
 {
+    ASSERT(!mainContext, 'engine already initialized');
     ASSERT(Array.isArray(imageSources), 'pass in images as array');
 
     // Called automatically by engine to setup render system

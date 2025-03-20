@@ -397,24 +397,6 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, conte
     context.restore();
 }
 
-/** Enable normal or additive blend mode
- *  @param {Boolean} [additive]
- *  @param {Boolean} [useWebGL=glEnable]
- *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
- *  @memberof Draw */
-function setBlendMode(additive, useWebGL=glEnable, context)
-{
-    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
-    if (useWebGL)
-        glAdditive = additive;
-    else
-    {
-        if (!context)
-            context = mainContext;
-        context.globalCompositeOperation = additive ? 'lighter' : 'source-over';
-    }
-}
-
 /** Draw text on main canvas in world space
  *  Automatically splits new lines into rows
  *  @param {String}  text
@@ -480,6 +462,38 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
         context.fillText(line, pos.x, pos.y, maxWidth);
         pos.y += size;
     });
+}
+
+/** Enable normal or additive blend mode
+ *  @param {Boolean} [additive]
+ *  @param {Boolean} [useWebGL=glEnable]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
+ *  @memberof Draw */
+function setBlendMode(additive, useWebGL=glEnable, context)
+{
+    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+    if (useWebGL)
+        glAdditive = additive;
+    else
+    {
+        if (!context)
+            context = mainContext;
+        context.globalCompositeOperation = additive ? 'lighter' : 'source-over';
+    }
+}
+
+/** Combines all LittleJS canvases onto the main canvas and clears them
+ *  This is necessary for things like saving a screenshot
+ *  @memberof Draw */
+function combineCanvases()
+{
+    // combine canvases
+    glCopyToContext(mainContext, true);
+    mainContext.drawImage(overlayCanvas, 0, 0);
+
+    // clear canvases
+    glClearCanvas();
+    overlayCanvas.width |= 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
