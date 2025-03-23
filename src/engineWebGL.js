@@ -289,7 +289,7 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdd
     if (glInstanceCount >= gl_MAX_INSTANCES || glBatchAdditive != glAdditive)
         glFlush();
 
-    let offset = glInstanceCount * gl_INDICES_PER_INSTANCE;
+    let offset = glInstanceCount++ * gl_INDICES_PER_INSTANCE;
     glPositionData[offset++] = x;
     glPositionData[offset++] = y;
     glPositionData[offset++] = sizeX;
@@ -301,5 +301,4 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdd
     glColorData[offset++] = rgba;
     glColorData[offset++] = rgbaAdditive;
     glPositionData[offset++] = angle;
-    glInstanceCount++;
 }
