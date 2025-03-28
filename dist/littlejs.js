@@ -248,12 +248,8 @@ function debugRender()
 
     if (debugTakeScreenshot)
     {
-        // composite canvas
-        glCopyToContext(mainContext, true);
-        mainContext.drawImage(overlayCanvas, 0, 0);
-        overlayCanvas.width |= 0;
-
-        // remove alpha and save
+        // combine canvases, remove alpha and save
+        combineCanvases();
         const w = mainCanvas.width, h = mainCanvas.height;
         overlayContext.fillRect(0,0,w,h);
         overlayContext.drawImage(mainCanvas, 0, 0);
@@ -2433,9 +2429,11 @@ function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0)
     const textureInfo = textureInfos[textureIndex];
     ASSERT(!!textureInfo, 'Texture not loaded');
     const sizePadded = size.add(vec2(padding*2));
-    const cols = textureInfo.size.x / sizePadded.x |0;
     if (typeof pos === 'number')
-        pos = vec2(pos%cols, pos/cols|0);
+    {
+        const cols = textureInfo.size.x / sizePadded.x |0;
+        pos = cols>0 ? vec2(pos%cols, pos/cols|0) : vec2();
+    }
     pos = vec2(pos.x*sizePadded.x+padding, pos.y*sizePadded.y+padding);
 
     // return a tile info object
@@ -2741,24 +2739,6 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, conte
     context.restore();
 }
 
-/** Enable normal or additive blend mode
- *  @param {Boolean} [additive]
- *  @param {Boolean} [useWebGL=glEnable]
- *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
- *  @memberof Draw */
-function setBlendMode(additive, useWebGL=glEnable, context)
-{
-    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
-    if (useWebGL)
-        glAdditive = additive;
-    else
-    {
-        if (!context)
-            context = mainContext;
-        context.globalCompositeOperation = additive ? 'lighter' : 'source-over';
-    }
-}
-
 /** Draw text on main canvas in world space
  *  Automatically splits new lines into rows
  *  @param {String}  text
@@ -2824,6 +2804,38 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
         context.fillText(line, pos.x, pos.y, maxWidth);
         pos.y += size;
     });
+}
+
+/** Enable normal or additive blend mode
+ *  @param {Boolean} [additive]
+ *  @param {Boolean} [useWebGL=glEnable]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
+ *  @memberof Draw */
+function setBlendMode(additive, useWebGL=glEnable, context)
+{
+    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+    if (useWebGL)
+        glAdditive = additive;
+    else
+    {
+        if (!context)
+            context = mainContext;
+        context.globalCompositeOperation = additive ? 'lighter' : 'source-over';
+    }
+}
+
+/** Combines all LittleJS canvases onto the main canvas and clears them
+ *  This is necessary for things like saving a screenshot
+ *  @memberof Draw */
+function combineCanvases()
+{
+    // combine canvases
+    glCopyToContext(mainContext, true);
+    mainContext.drawImage(overlayCanvas, 0, 0);
+
+    // clear canvases
+    glClearCanvas();
+    overlayCanvas.width |= 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4976,6 +4988,12 @@ let glAntialias = true;
 // WebGL internal variables not exposed to documentation
 let glShader, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glInstanceCount, glAdditive, glBatchAdditive;
 
+// WebGL internal constants 
+const gl_MAX_INSTANCES = 1e4;
+const gl_INDICES_PER_INSTANCE = 11;
+const gl_INSTANCE_BYTE_STRIDE = gl_INDICES_PER_INSTANCE * 4;
+const gl_INSTANCE_BUFFER_SIZE = gl_MAX_INSTANCES * gl_INSTANCE_BYTE_STRIDE;
+
 ///////////////////////////////////////////////////////////////////////////////
 
 // Initialize WebGL, called automatically by the engine
@@ -5028,8 +5046,8 @@ function glInit()
 
     // create the geometry buffer, triangle strip square
     const geometry = new Float32Array([glInstanceCount=0,0,1,0,0,1,1,1]);
-    glContext.bindBuffer(gl_ARRAY_BUFFER, glGeometryBuffer);
-    glContext.bufferData(gl_ARRAY_BUFFER, geometry, gl_STATIC_DRAW);
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
+    glContext.bufferData(glContext.ARRAY_BUFFER, geometry, glContext.STATIC_DRAW);
 }
 
 // Setup render each frame, called automatically by engine
@@ -5037,15 +5055,12 @@ function glPreRender()
 {
     if (!glEnable || headlessMode) return;
 
-    // clear and set to same size as main canvas
-    glContext.viewport(0, 0, glCanvas.width=mainCanvas.width, glCanvas.height=mainCanvas.height);
-    glContext.clear(gl_COLOR_BUFFER_BIT);
-
-    // set up the shader
+    // set up the shader and canvas
+    glClearCanvas();
     glContext.useProgram(glShader);
-    glContext.activeTexture(gl_TEXTURE0);
+    glContext.activeTexture(glContext.TEXTURE0);
     if (textureInfos[0])
-        glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = textureInfos[0].glTexture);
+        glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture = textureInfos[0].glTexture);
 
     // set vertex attributes
     let offset = glAdditive = glBatchAdditive = 0;
@@ -5060,15 +5075,15 @@ function glPreRender()
         glContext.vertexAttribDivisor(location, divisor);
         offset += size*typeSize;
     }
-    glContext.bindBuffer(gl_ARRAY_BUFFER, glGeometryBuffer);
-    initVertexAttribArray('g', gl_FLOAT, 0, 2); // geometry
-    glContext.bindBuffer(gl_ARRAY_BUFFER, glArrayBuffer);
-    glContext.bufferData(gl_ARRAY_BUFFER, gl_INSTANCE_BUFFER_SIZE, gl_DYNAMIC_DRAW);
-    initVertexAttribArray('p', gl_FLOAT, 4, 4); // position & size
-    initVertexAttribArray('u', gl_FLOAT, 4, 4); // texture coords
-    initVertexAttribArray('c', gl_UNSIGNED_BYTE, 1, 4); // color
-    initVertexAttribArray('a', gl_UNSIGNED_BYTE, 1, 4); // additiveColor
-    initVertexAttribArray('r', gl_FLOAT, 4, 1); // rotation
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
+    initVertexAttribArray('g', glContext.FLOAT, 0, 2); // geometry
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
+    glContext.bufferData(glContext.ARRAY_BUFFER, gl_INSTANCE_BUFFER_SIZE, glContext.DYNAMIC_DRAW);
+    initVertexAttribArray('p', glContext.FLOAT, 4, 4); // position & size
+    initVertexAttribArray('u', glContext.FLOAT, 4, 4); // texture coords
+    initVertexAttribArray('c', glContext.UNSIGNED_BYTE, 1, 4); // color
+    initVertexAttribArray('a', glContext.UNSIGNED_BYTE, 1, 4); // additiveColor
+    initVertexAttribArray('r', glContext.FLOAT, 4, 1); // rotation
 
     // build the transform matrix
     const s = vec2(2*cameraScale).divide(mainCanvasSize);
@@ -5083,6 +5098,15 @@ function glPreRender()
     );
 }
 
+/** Clear the canvas and setup the viewport
+ *  @memberof WebGL */
+function glClearCanvas()
+{
+    // clear and set to same size as main canvas
+    glContext.viewport(0, 0, glCanvas.width=mainCanvas.width, glCanvas.height=mainCanvas.height);
+    glContext.clear(glContext.COLOR_BUFFER_BIT);
+}
+
 /** Set the WebGl texture, called automatically if using multiple textures
  *  - This may also flush the gl buffer resulting in more draw calls and worse performance
  *  @param {WebGLTexture} texture
@@ -5094,7 +5118,7 @@ function glSetTexture(texture)
         return;
 
     glFlush();
-    glContext.bindTexture(gl_TEXTURE_2D, glActiveTexture = texture);
+    glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture = texture);
 }
 
 /** Compile WebGL shader of the given type, will throw errors if in debug mode
@@ -5110,7 +5134,7 @@ function glCompileShader(source, type)
     glContext.compileShader(shader);
 
     // check for errors
-    if (debug && !glContext.getShaderParameter(shader, gl_COMPILE_STATUS))
+    if (debug && !glContext.getShaderParameter(shader, glContext.COMPILE_STATUS))
         throw glContext.getShaderInfoLog(shader);
     return shader;
 }
@@ -5124,12 +5148,12 @@ function glCreateProgram(vsSource, fsSource)
 {
     // build the program
     const program = glContext.createProgram();
-    glContext.attachShader(program, glCompileShader(vsSource, gl_VERTEX_SHADER));
-    glContext.attachShader(program, glCompileShader(fsSource, gl_FRAGMENT_SHADER));
+    glContext.attachShader(program, glCompileShader(vsSource, glContext.VERTEX_SHADER));
+    glContext.attachShader(program, glCompileShader(fsSource, glContext.FRAGMENT_SHADER));
     glContext.linkProgram(program);
 
     // check for errors
-    if (debug && !glContext.getProgramParameter(program, gl_LINK_STATUS))
+    if (debug && !glContext.getProgramParameter(program, glContext.LINK_STATUS))
         throw glContext.getProgramInfoLog(program);
     return program;
 }
@@ -5142,20 +5166,20 @@ function glCreateTexture(image)
 {
     // build the texture
     const texture = glContext.createTexture();
-    glContext.bindTexture(gl_TEXTURE_2D, texture);
+    glContext.bindTexture(glContext.TEXTURE_2D, texture);
     if (image && image.width)
-        glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, image);
+        glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
     else
     {
         // create a white texture
         const whitePixel = new Uint8Array([255, 255, 255, 255]);
-        glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, 1, 1, 0, gl_RGBA, gl_UNSIGNED_BYTE, whitePixel);
+        glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 1, 1, 0, glContext.RGBA, glContext.UNSIGNED_BYTE, whitePixel);
     }
 
     // use point filtering for pixelated rendering
-    const filter = tilesPixelated ? gl_NEAREST : gl_LINEAR;
-    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MIN_FILTER, filter);
-    glContext.texParameteri(gl_TEXTURE_2D, gl_TEXTURE_MAG_FILTER, filter);
+    const filter = tilesPixelated ? glContext.NEAREST : glContext.LINEAR;
+    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, filter);
+    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, filter);
     return texture;
 }
 
@@ -5165,20 +5189,20 @@ function glFlush()
 {
     if (!glInstanceCount) return;
 
-    const destBlend = glBatchAdditive ? gl_ONE : gl_ONE_MINUS_SRC_ALPHA;
-    glContext.blendFuncSeparate(gl_SRC_ALPHA, destBlend, gl_ONE, destBlend);
-    glContext.enable(gl_BLEND);
+    const destBlend = glBatchAdditive ? glContext.ONE : glContext.ONE_MINUS_SRC_ALPHA;
+    glContext.blendFuncSeparate(glContext.SRC_ALPHA, destBlend, glContext.ONE, destBlend);
+    glContext.enable(glContext.BLEND);
 
     // draw all the sprites in the batch and reset the buffer
-    glContext.bufferSubData(gl_ARRAY_BUFFER, 0, glPositionData);
-    glContext.drawArraysInstanced(gl_TRIANGLE_STRIP, 0, 4, glInstanceCount);
+    glContext.bufferSubData(glContext.ARRAY_BUFFER, 0, glPositionData);
+    glContext.drawArraysInstanced(glContext.TRIANGLE_STRIP, 0, 4, glInstanceCount);
     if (showWatermark)
         drawCount += glInstanceCount;
     glInstanceCount = 0;
     glBatchAdditive = glAdditive;
 }
 
-/** Draw any sprites still in the buffer, copy to main canvas and clear
+/** Draw any sprites still in the buffer and copy to main canvas
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
  *  @param {Boolean} [forceDraw]
  *  @memberof WebGL */
@@ -5223,7 +5247,7 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdd
     if (glInstanceCount >= gl_MAX_INSTANCES || glBatchAdditive != glAdditive)
         glFlush();
 
-    let offset = glInstanceCount * gl_INDICES_PER_INSTANCE;
+    let offset = glInstanceCount++ * gl_INDICES_PER_INSTANCE;
     glPositionData[offset++] = x;
     glPositionData[offset++] = y;
     glPositionData[offset++] = sizeX;
@@ -5235,41 +5259,7 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdd
     glColorData[offset++] = rgba;
     glColorData[offset++] = rgbaAdditive;
     glPositionData[offset++] = angle;
-    glInstanceCount++;
 }
-
-///////////////////////////////////////////////////////////////////////////////
-// store gl constants as integers so their name doesn't use space in minifed
-const
-gl_ONE = 1,
-gl_TRIANGLE_STRIP = 5,
-gl_SRC_ALPHA = 770,
-gl_ONE_MINUS_SRC_ALPHA = 771,
-gl_BLEND = 3042,
-gl_TEXTURE_2D = 3553,
-gl_UNSIGNED_BYTE = 5121,
-gl_FLOAT = 5126,
-gl_RGBA = 6408,
-gl_NEAREST = 9728,
-gl_LINEAR = 9729,
-gl_TEXTURE_MAG_FILTER = 10240,
-gl_TEXTURE_MIN_FILTER = 10241,
-gl_COLOR_BUFFER_BIT = 16384,
-gl_TEXTURE0 = 33984,
-gl_ARRAY_BUFFER = 34962,
-gl_STATIC_DRAW = 35044,
-gl_DYNAMIC_DRAW = 35048,
-gl_FRAGMENT_SHADER = 35632,
-gl_VERTEX_SHADER = 35633,
-gl_COMPILE_STATUS = 35713,
-gl_LINK_STATUS = 35714,
-gl_UNPACK_FLIP_Y_WEBGL = 37440,
-
-// constants for batch rendering
-gl_INDICES_PER_INSTANCE = 11,
-gl_MAX_INSTANCES = 1e4,
-gl_INSTANCE_BYTE_STRIDE = gl_INDICES_PER_INSTANCE * 4, // 11 * 4
-gl_INSTANCE_BUFFER_SIZE = gl_MAX_INSTANCES * gl_INSTANCE_BYTE_STRIDE;
 /** 
  * LittleJS - The Tiny Fast JavaScript Game Engine
  * MIT License - Copyright 2021 Frank Force
@@ -5302,7 +5292,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.3';
+const engineVersion = '1.11.4';
 
 /** Frames per second to update
  *  @type {Number}
@@ -5385,6 +5375,7 @@ function engineAddPlugin(updateFunction, renderFunction)
  *  @memberof Engine */
 function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
 {
+    ASSERT(!mainContext, 'engine already initialized');
     ASSERT(Array.isArray(imageSources), 'pass in images as array');
 
     // Called automatically by engine to setup render system

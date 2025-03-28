@@ -1302,12 +1302,6 @@ declare module "littlejsengine" {
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
      *  @memberof Draw */
     export function drawCanvas2D(pos: Vector2, size: Vector2, angle: number, mirror: boolean, drawFunction: Function, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
-    /** Enable normal or additive blend mode
-     *  @param {Boolean} [additive]
-     *  @param {Boolean} [useWebGL=glEnable]
-     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
-     *  @memberof Draw */
-    export function setBlendMode(additive?: boolean, useWebGL?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw text on main canvas in world space
      *  Automatically splits new lines into rows
      *  @param {String}  text
@@ -1349,6 +1343,16 @@ declare module "littlejsengine" {
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
      *  @memberof Draw */
     export function drawTextScreen(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, maxWidth?: number, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    /** Enable normal or additive blend mode
+     *  @param {Boolean} [additive]
+     *  @param {Boolean} [useWebGL=glEnable]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
+     *  @memberof Draw */
+    export function setBlendMode(additive?: boolean, useWebGL?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    /** Combines all LittleJS canvases onto the main canvas and clears them
+     *  This is necessary for things like saving a screenshot
+     *  @memberof Draw */
+    export function combineCanvases(): void;
     export let engineFontImage: any;
     /**
      * Font Image Object - Draw text on a 2D canvas by using characters in an image
@@ -1429,7 +1433,7 @@ declare module "littlejsengine" {
      *  @return {WebGLShader}
      *  @memberof WebGL */
     export function glCompileShader(source: string, type: number): WebGLShader;
-    /** Draw any sprites still in the buffer, copy to main canvas and clear
+    /** Draw any sprites still in the buffer and copy to main canvas
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
      *  @param {Boolean} [forceDraw]
      *  @memberof WebGL */
@@ -1471,6 +1475,9 @@ declare module "littlejsengine" {
      *  @param {Boolean} [antialias]
      *  @memberof WebGL */
     export function glSetAntialias(antialias?: boolean): void;
+    /** Clear the canvas and setup the viewport
+     *  @memberof WebGL */
+    export function glClearCanvas(): void;
     /** Should webgl be setup with anti-aliasing? must be set before calling engineInit
      *  @type {Boolean}
      *  @memberof WebGL */
