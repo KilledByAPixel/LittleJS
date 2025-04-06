@@ -76,26 +76,26 @@ function initPostProcess(shaderCode, includeOverlay=false)
 
         // setup shader program to draw one triangle
         glContext.useProgram(glPostShader);
-        glContext.bindBuffer(gl_ARRAY_BUFFER, glGeometryBuffer);
-        glContext.pixelStorei(gl_UNPACK_FLIP_Y_WEBGL, 1);
-        glContext.disable(gl_BLEND);
+        glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
+        glContext.pixelStorei(glContext.UNPACK_FLIP_Y_WEBGL, 1);
+        glContext.disable(glContext.BLEND);
 
         // set textures, pass in the 2d canvas and gl canvas in separate texture channels
-        glContext.activeTexture(gl_TEXTURE0);
-        glContext.bindTexture(gl_TEXTURE_2D, glPostTexture);
-        glContext.texImage2D(gl_TEXTURE_2D, 0, gl_RGBA, gl_RGBA, gl_UNSIGNED_BYTE, mainCanvas);
+        glContext.activeTexture(glContext.TEXTURE0);
+        glContext.bindTexture(glContext.TEXTURE_2D, glPostTexture);
+        glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, mainCanvas);
 
         // set vertex position attribute
         const vertexByteStride = 8;
         const pLocation = glContext.getAttribLocation(glPostShader, 'p');
         glContext.enableVertexAttribArray(pLocation);
-        glContext.vertexAttribPointer(pLocation, 2, gl_FLOAT, false, vertexByteStride, 0);
+        glContext.vertexAttribPointer(pLocation, 2, glContext.FLOAT, false, vertexByteStride, 0);
 
         // set uniforms and draw
         const uniformLocation = (name)=>glContext.getUniformLocation(glPostShader, name);
         glContext.uniform1i(uniformLocation('iChannel0'), 0);
         glContext.uniform1f(uniformLocation('iTime'), time);
         glContext.uniform3f(uniformLocation('iResolution'), mainCanvas.width, mainCanvas.height, 1);
-        glContext.drawArrays(gl_TRIANGLE_STRIP, 0, 4);
+        glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, 4);
     }
 }
