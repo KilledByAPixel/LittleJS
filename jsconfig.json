@@ -5,6 +5,7 @@
     "./src/*.js",
     "./plugins/*.js",
     "./examples/**/*.js",
+    "./shortExamples/**/*.js",
   ],
   "exclude": [
   ]
