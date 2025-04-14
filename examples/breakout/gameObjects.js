@@ -5,27 +5,31 @@
 'use strict';
 
 ///////////////////////////////////////////////////////////////////////////////
-class Wall extends EngineObject
+class PhysicsObject extends EngineObject
 {
-    constructor(pos, size)
+    constructor(pos, size, tileInfo, angle, color)
     {
-        super(pos, size);
-        
-        this.mass = 0; // make object have static physics
+        super(pos, size, tileInfo, angle, color);
         this.setCollision(); // make object collide
-        this.color = hsl(0,0,0,0); // make object invisible
+        this.mass = 0; // make object have static physics
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-class Paddle extends EngineObject
+class Wall extends PhysicsObject
+{
+    constructor(pos, size)
+    {
+        super(pos, size, 0, 0, new Color(0,0,0,0));
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+class Paddle extends PhysicsObject
 {
     constructor(pos)
     {
         super(pos, vec2(5,.5));
-        
-        this.mass = 0; // make object have static physics
-        this.setCollision(); // make object collide
     }
 
     update()
@@ -39,15 +43,12 @@ class Paddle extends EngineObject
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-class Brick extends EngineObject 
+class Brick extends PhysicsObject 
 {
     constructor(pos)
     {
         super(pos, vec2(2,1), tile(1, vec2(32,16)), 0, randColor());
         ++brickCount;
-        
-        this.mass = 0; // make object have static physics
-        this.setCollision(); // make object collide
     }
 
     collideWithObject(o)              
@@ -84,16 +85,16 @@ class Brick extends EngineObject
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-class Ball extends EngineObject 
+class Ball extends PhysicsObject 
 {
     constructor(pos)
     {
         super(pos, vec2(.5), tile(0));
 
         // make a bouncy ball
-        this.setCollision();
         this.velocity = vec2(0, -.1);
         this.elasticity = 1;
+        this.mass = 1;
         
         // attach a trail effect
         const color = hsl(0,0,.2);
@@ -127,24 +128,22 @@ class Ball extends EngineObject
     {
         // prevent colliding with paddle if moving upwards
         if (o == paddle && this.velocity.y > 0)
-            return 0;
-
-        // speed up
-        const speed = min(1.04*this.velocity.length(), .5);
-        this.velocity = this.velocity.normalize(speed);
-
-        // scale bounce sound pitch by speed
-        sound_bounce.play(this.pos, 1, speed*2);
+            return false;
 
         if (o == paddle)
         {
             // put english on the ball when it collides with paddle
             this.velocity = this.velocity.rotate(.2 * (this.pos.x - o.pos.x));
             this.velocity.y = max(-this.velocity.y, .2);
-            return 0;
+
+            // speed up
+            const speed = min(1.04*this.velocity.length(), .5);
+            this.velocity = this.velocity.normalize(speed);
+            sound_bounce.play(this.pos, 1, speed*2);
+            
+            return false; // prevent default collision code
         }
         
-        // prevent default collision with paddle
-        return 1;
+        return true;
     }
 }

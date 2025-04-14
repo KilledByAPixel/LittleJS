@@ -24,7 +24,7 @@ function gameInit()
     canvasFixedSize = vec2(1280, 720); // 720p
     levelSize = vec2(38, 20);
     cameraPos = levelSize.scale(.5);
-    paddle = new Paddle(vec2(levelSize.x/2-12,1));
+    paddle = new Paddle(vec2(levelSize.x/2-12, 1));
     score = brickCount = 0;
 
     // spawn bricks
