@@ -116,6 +116,18 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     ASSERT(!mainContext, 'engine already initialized');
     ASSERT(Array.isArray(imageSources), 'pass in images as array');
 
+    // allow passing in empty functions
+    if (!gameInit)
+        gameInit = ()=>{};
+    if (!gameUpdate)
+        gameUpdate = ()=>{};
+    if (!gameUpdatePost)
+        gameUpdatePost = ()=>{};
+    if (!gameRender)
+        gameRender = ()=>{};
+    if (!gameRenderPost)
+        gameRenderPost = ()=>{};
+
     // Called automatically by engine to setup render system
     function enginePreRender()
     {
