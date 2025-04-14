@@ -1,4 +1,5 @@
-// LittleJS - MIT License - Copyright 2021 Frank Force
+// LittleJS Engine - MIT License - Copyright 2021 Frank Force
+// https://github.com/KilledByAPixel/LittleJS
 
 'use strict';
 
@@ -3873,6 +3874,10 @@ class TileLayer extends EngineObject
         
         // draw the entire cached level onto the canvas
         const pos = worldToScreen(this.pos.add(vec2(0,this.size.y*this.scale.y)));
+        
+        // fix canvas jitter in some browsers if position is not an integer
+        pos.x |= 0; pos.y |= 0;
+
         (this.isOverlay ? overlayContext : mainContext).drawImage
         (
             this.canvas, pos.x, pos.y,
@@ -4301,7 +4306,7 @@ class Particle extends EngineObject
     render()
     {
         // modulate size and color
-        const p = min((time - this.spawnTime) / this.lifeTime, 1);
+        const p = this.lifeTime > 0 ? min((time - this.spawnTime) / this.lifeTime, 1) : 1;
         const radius = this.sizeStart + p * this.sizeEndDelta;
         const size = vec2(radius);
         const fadeRate = this.fadeRate/2;
@@ -4864,7 +4869,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.4';
+const engineVersion = '1.11.5';
 
 /** Frames per second to update
  *  @type {Number}
@@ -4949,6 +4954,18 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 {
     ASSERT(!mainContext, 'engine already initialized');
     ASSERT(Array.isArray(imageSources), 'pass in images as array');
+
+    // allow passing in empty functions
+    if (!gameInit)
+        gameInit = ()=>{};
+    if (!gameUpdate)
+        gameUpdate = ()=>{};
+    if (!gameUpdatePost)
+        gameUpdatePost = ()=>{};
+    if (!gameRender)
+        gameRender = ()=>{};
+    if (!gameRenderPost)
+        gameRenderPost = ()=>{};
 
     // Called automatically by engine to setup render system
     function enginePreRender()
