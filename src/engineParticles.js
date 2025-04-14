@@ -283,7 +283,7 @@ class Particle extends EngineObject
     render()
     {
         // modulate size and color
-        const p = min((time - this.spawnTime) / this.lifeTime, 1);
+        const p = this.lifeTime > 0 ? min((time - this.spawnTime) / this.lifeTime, 1) : 1;
         const radius = this.sizeStart + p * this.sizeEndDelta;
         const size = vec2(radius);
         const fadeRate = this.fadeRate/2;
