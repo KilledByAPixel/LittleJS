@@ -458,7 +458,10 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
     context.lineJoin = 'round';
 
     pos = pos.copy();
-    (text+'').split('\n').forEach(line=>
+
+    const lines = (text+'').split('\n');
+    pos.y -= (lines.length-1) * size/2; // center text vertically
+    lines.forEach(line=>
     {
         lineWidth && context.strokeText(line, pos.x, pos.y, maxWidth);
         context.fillText(line, pos.x, pos.y, maxWidth);
