@@ -482,7 +482,7 @@ class Vector2
     rotate(angle)
     { 
         const c = Math.cos(angle), s = Math.sin(angle); 
-        return new Vector2(this.x*c - this.y*s, this.x*s + this.y*c);
+        return new Vector2(this.x*c + this.y*s, this.x*s + this.y*c);
     }
 
     /** Set the integer direction of this vector, corresponding to multiples of 90 degree rotation (0-3)

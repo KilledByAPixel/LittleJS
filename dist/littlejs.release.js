@@ -521,7 +521,7 @@ class Vector2
     rotate(angle)
     { 
         const c = Math.cos(angle), s = Math.sin(angle); 
-        return new Vector2(this.x*c - this.y*s, this.x*s + this.y*c);
+        return new Vector2(this.x*c + this.y*s, this.x*s + this.y*c);
     }
 
     /** Set the integer direction of this vector, corresponding to multiples of 90 degree rotation (0-3)
@@ -953,7 +953,7 @@ class Timer
 
     /** Get percentage elapsed based on time it was set to, returns 0 if not set
      * @return {Number} */
-    getPercent() { return this.isSet()? percent(this.time - time, this.setTime, 0) : 0; }
+    getPercent() { return this.isSet()? 1-percent(this.time - time, 0, this.setTime) : 0; }
     
     /** Returns this timer expressed as a string
      * @return {String} */
@@ -1796,19 +1796,19 @@ class EngineObject
 
     /** Convert from local space to world space
      *  @param {Vector2} pos - local space point */
-    localToWorld(pos) { return this.pos.add(pos.rotate(-this.angle)); }
+    localToWorld(pos) { return this.pos.add(pos.rotate(this.angle)); }
 
     /** Convert from world space to local space
      *  @param {Vector2} pos - world space point */
-    worldToLocal(pos) { return pos.subtract(this.pos).rotate(this.angle); }
+    worldToLocal(pos) { return pos.subtract(this.pos).rotate(-this.angle); }
 
     /** Convert from local space to world space for a vector (rotation only)
      *  @param {Vector2} vec - local space vector */
-    localToWorldVector(vec) { return vec.rotate(this.angle); }
+    localToWorldVector(vec) { return vec.rotate(-this.angle); }
 
     /** Convert from world space to local space for a vector (rotation only)
      *  @param {Vector2} vec - world space vector */
-    worldToLocalVector(vec) { return vec.rotate(-this.angle); }
+    worldToLocalVector(vec) { return vec.rotate(this.angle); }
     
     /** Called to check if a tile collision should be resolved
      *  @param {Number}  tileData - the value of the tile at the position
@@ -2371,7 +2371,10 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
     context.lineJoin = 'round';
 
     pos = pos.copy();
-    (text+'').split('\n').forEach(line=>
+
+    const lines = (text+'').split('\n');
+    pos.y -= (lines.length-1) * size/2; // center text vertically
+    lines.forEach(line=>
     {
         lineWidth && context.strokeText(line, pos.x, pos.y, maxWidth);
         context.fillText(line, pos.x, pos.y, maxWidth);
@@ -4869,7 +4872,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.5';
+const engineVersion = '1.11.6';
 
 /** Frames per second to update
  *  @type {Number}
