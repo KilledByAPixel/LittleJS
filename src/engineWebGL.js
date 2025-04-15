@@ -30,6 +30,12 @@ let glAntialias = true;
 // WebGL internal variables not exposed to documentation
 let glShader, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glInstanceCount, glAdditive, glBatchAdditive;
 
+// WebGL internal constants 
+const gl_MAX_INSTANCES = 1e4;
+const gl_INDICES_PER_INSTANCE = 11;
+const gl_INSTANCE_BYTE_STRIDE = gl_INDICES_PER_INSTANCE * 4;
+const gl_INSTANCE_BUFFER_SIZE = gl_MAX_INSTANCES * gl_INSTANCE_BYTE_STRIDE;
+
 ///////////////////////////////////////////////////////////////////////////////
 
 // Initialize WebGL, called automatically by the engine
@@ -91,11 +97,8 @@ function glPreRender()
 {
     if (!glEnable || headlessMode) return;
 
-    // clear and set to same size as main canvas
-    glContext.viewport(0, 0, glCanvas.width=mainCanvas.width, glCanvas.height=mainCanvas.height);
-    glContext.clear(gl_COLOR_BUFFER_BIT);
-
-    // set up the shader
+    // set up the shader and canvas
+    glClearCanvas();
     glContext.useProgram(glShader);
     glContext.activeTexture(gl_TEXTURE0);
     if (textureInfos[0])
@@ -143,7 +146,7 @@ function glClearCanvas()
 {
     // clear and set to same size as main canvas
     glContext.viewport(0, 0, glCanvas.width=mainCanvas.width, glCanvas.height=mainCanvas.height);
-    glContext.clear(glContext.COLOR_BUFFER_BIT);
+    glContext.clear(gl_COLOR_BUFFER_BIT);
 }
 
 /** Set the WebGl texture, called automatically if using multiple textures
@@ -286,7 +289,7 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdd
     if (glInstanceCount >= gl_MAX_INSTANCES || glBatchAdditive != glAdditive)
         glFlush();
 
-    let offset = glInstanceCount * gl_INDICIES_PER_INSTANCE;
+    let offset = glInstanceCount++ * gl_INDICES_PER_INSTANCE;
     glPositionData[offset++] = x;
     glPositionData[offset++] = y;
     glPositionData[offset++] = sizeX;
@@ -298,7 +301,6 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdd
     glColorData[offset++] = rgba;
     glColorData[offset++] = rgbaAdditive;
     glPositionData[offset++] = angle;
-    glInstanceCount++;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -326,10 +328,4 @@ gl_FRAGMENT_SHADER = 35632,
 gl_VERTEX_SHADER = 35633,
 gl_COMPILE_STATUS = 35713,
 gl_LINK_STATUS = 35714,
-gl_UNPACK_FLIP_Y_WEBGL = 37440,
-
-// constants for batch rendering
-gl_INDICIES_PER_INSTANCE = 11,
-gl_MAX_INSTANCES = 1e4,
-gl_INSTANCE_BYTE_STRIDE = gl_INDICIES_PER_INSTANCE * 4, // 11 * 4
-gl_INSTANCE_BUFFER_SIZE = gl_MAX_INSTANCES * gl_INSTANCE_BYTE_STRIDE;
+gl_UNPACK_FLIP_Y_WEBGL = 37440;
