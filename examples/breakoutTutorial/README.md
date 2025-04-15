@@ -455,7 +455,7 @@ collideWithObject(o)
     if (o == paddle)
     {
         // control bounce angle when ball collides with paddle
-        const deltaX = this.pos.x - o.pos.x;
+        const deltaX = o.pos.x - this.pos.x;
         this.velocity = this.velocity.rotate(.3 * deltaX);
         
         // make sure ball is moving upwards with a minimum speed

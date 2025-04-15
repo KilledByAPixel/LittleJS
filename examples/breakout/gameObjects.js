@@ -133,7 +133,7 @@ class Ball extends PhysicsObject
         if (o == paddle)
         {
             // put english on the ball when it collides with paddle
-            this.velocity = this.velocity.rotate(.2 * (this.pos.x - o.pos.x));
+            this.velocity = this.velocity.rotate(.2 * (o.pos.x - this.pos.x));
             this.velocity.y = max(-this.velocity.y, .2);
 
             // speed up
