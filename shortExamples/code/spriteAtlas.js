@@ -9,8 +9,8 @@ function gameInit()
         circle:    gameTile(0),
         crate:     gameTile(1),
         icon:      gameTile(2),
-        circleBig: gameTile(vec2(0,1),128),
-        iconBig:   gameTile(vec2(1,1),128),
+        circleBig: gameTile(2, 128),
+        iconBig:   gameTile(3, 128),
     };
 }
 

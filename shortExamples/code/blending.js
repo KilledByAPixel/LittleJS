@@ -1,6 +1,6 @@
 function gameRender()
 {
-    const circleTile = tile(vec2(0,1), 128);
+    const circleTile = tile(2, 128);
 
     // additive blend
     setBlendMode(1);

@@ -34,7 +34,7 @@ function gameUpdate()
     {
         // create particle emitter
         const hue = rand();
-        let particleEmitter = new ParticleEmitter(
+        const particleEmitter = new ParticleEmitter(
             mousePos, 0,                // emitPos, emitAngle
             0, 0.1, 500, PI,            // emitSize, emitTime, emitRate, emitCone
             tile(0, 16),                // tileIndex, tileSize
