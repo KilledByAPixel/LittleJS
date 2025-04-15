@@ -106,7 +106,7 @@ let tileFixBleedScale = 0;
  *  @memberof Settings */
 let enablePhysicsSolver = true;
 
-/** Default object mass for collision calcuations (how heavy objects are)
+/** Default object mass for collision calculations (how heavy objects are)
  *  @type {Number}
  *  @default
  *  @memberof Settings */
@@ -317,7 +317,7 @@ function setFontDefault(font) { fontDefault = font; }
  *  @memberof Settings */
 function setShowSplashScreen(show) { showSplashScreen = show; }
 
-/** Set to disalbe rendering, audio, and input for servers
+/** Set to disable rendering, audio, and input for servers
  *  @param {Boolean} headless
  *  @memberof Settings */
 function setHeadlessMode(headless) { headlessMode = headless; }
@@ -347,7 +347,7 @@ function setTileFixBleedScale(scale) { tileFixBleedScale = scale; }
  *  @memberof Settings */
 function setEnablePhysicsSolver(enable) { enablePhysicsSolver = enable; }
 
-/** Set default object mass for collison calcuations
+/** Set default object mass for collision calculations
  *  @param {Number} mass
  *  @memberof Settings */
 function setObjectDefaultMass(mass) { objectDefaultMass = mass; }
@@ -417,7 +417,7 @@ function setTouchGamepadEnable(enable) { touchGamepadEnable = enable; }
  *  @memberof Settings */
 function setTouchGamepadAnalog(analog) { touchGamepadAnalog = analog; }
 
-/** Set size of virutal gamepad for touch devices in pixels
+/** Set size of virtual gamepad for touch devices in pixels
  *  @param {Number} size
  *  @memberof Settings */
 function setTouchGamepadSize(size) { touchGamepadSize = size; }
@@ -444,7 +444,7 @@ function setSoundVolume(volume)
 {
     soundVolume = volume;
     if (soundEnable && !headlessMode && audioGainNode)
-        audioGainNode.gain.value = volume; // update gain immediatly
+        audioGainNode.gain.value = volume; // update gain immediately
 }
 
 /** Set default range where sound no longer plays

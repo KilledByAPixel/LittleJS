@@ -25,7 +25,7 @@ function audioInit()
 {
     if (!soundEnable || headlessMode) return;
     
-    // (createGain is more widely spported then GainNode construtor)
+    // (createGain is more widely supported then GainNode constructor)
     audioGainNode = audioContext.createGain();
     audioGainNode.connect(audioContext.destination);
     audioGainNode.gain.value = soundVolume; // set starting value
@@ -375,7 +375,7 @@ const zzfxR = 44100;
  *  @param {Number}  [sustain] - Sustain time, how long sound holds (seconds)
  *  @param {Number}  [release] - Release time, how fast sound fades out (seconds)
  *  @param {Number}  [shape] - Shape of the sound wave
- *  @param {Number}  [shapeCurve] - Squarenes of wave (0=square, 1=normal, 2=pointy)
+ *  @param {Number}  [shapeCurve] - Squareness of wave (0=square, 1=normal, 2=pointy)
  *  @param {Number}  [slide] - How much to slide frequency (kHz/s)
  *  @param {Number}  [deltaSlide] - How much to change slide (kHz/s/s)
  *  @param {Number}  [pitchJump] - Frequency of pitch jump (Hz)
@@ -387,7 +387,7 @@ const zzfxR = 44100;
  *  @param {Number}  [delay] - Overlap sound with itself for reverb and flanger effects (seconds)
  *  @param {Number}  [sustainVolume] - Volume level for sustain (percent)
  *  @param {Number}  [decay] - Decay time, how long to reach sustain after attack (seconds)
- *  @param {Number}  [tremolo] - Trembling effect, rate controlled by repeat time (precent)
+ *  @param {Number}  [tremolo] - Trembling effect, rate controlled by repeat time (percent)
  *  @param {Number}  [filter] - Filter cutoff frequency, positive for HPF, negative for LPF (Hz)
  *  @return {Array} - Array of audio samples
  *  @memberof Audio
@@ -491,7 +491,7 @@ function zzfxG
 // ZzFX Music Renderer v2.0.3 by Keith Clark and Frank Force
 
 /** Generate samples for a ZzFM song with given parameters
- *  @param {Array} instruments - Array of ZzFX sound paramaters
+ *  @param {Array} instruments - Array of ZzFX sound parameters
  *  @param {Array} patterns - Array of pattern data
  *  @param {Array} sequence - Array of pattern indexes
  *  @param {Number} [BPM] - Playback speed of the song in BPM

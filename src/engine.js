@@ -30,7 +30,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.2';
+const engineVersion = '1.11.6';
 
 /** Frames per second to update
  *  @type {Number}
@@ -113,6 +113,7 @@ function engineAddPlugin(updateFunction, renderFunction)
  *  @memberof Engine */
 function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
 {
+    ASSERT(!mainContext, 'engine already initialized');
     ASSERT(Array.isArray(imageSources), 'pass in images as array');
 
     // Called automatically by engine to setup render system
@@ -308,6 +309,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         new Promise(resolve => 
         {
             const image = new Image;
+            image.crossOrigin = 'anonymous';
             image.onerror = image.onload = ()=> 
             {
                 textureInfos[textureIndex] = new TextureInfo(image);
@@ -352,7 +354,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
  *  @memberof Engine */
 function engineObjectsUpdate()
 {
-    // get list of solid objects for physics optimzation
+    // get list of solid objects for physics optimization
     engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);
 
     // recursive object update

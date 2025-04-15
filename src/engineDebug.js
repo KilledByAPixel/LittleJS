@@ -16,7 +16,7 @@
  *  @memberof Debug */
 const debug = true;
 
-/** True if asserts are enaled
+/** True if asserts are enabled
  *  @type {Boolean}
  *  @default
  *  @memberof Debug */
@@ -200,6 +200,7 @@ function debugShowErrors()
     const showError = (message)=>
     {
         // replace entire page with error message
+        document.body.style.display = '';
         document.body.style.backgroundColor = '#111';
         document.body.innerHTML = `<pre style=color:#f00;font-size:50px>` + message;
     }
@@ -244,12 +245,8 @@ function debugRender()
 
     if (debugTakeScreenshot)
     {
-        // composite canvas
-        glCopyToContext(mainContext, true);
-        mainContext.drawImage(overlayCanvas, 0, 0);
-        overlayCanvas.width |= 0;
-
-        // remove alpha and save
+        // combine canvases, remove alpha and save
+        combineCanvases();
         const w = mainCanvas.width, h = mainCanvas.height;
         overlayContext.fillRect(0,0,w,h);
         overlayContext.drawImage(mainCanvas, 0, 0);

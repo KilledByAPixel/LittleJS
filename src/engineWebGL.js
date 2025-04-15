@@ -22,7 +22,7 @@ let glCanvas;
  *  @memberof WebGL */
 let glContext;
 
-/** Shoule webgl be setup with antialiasing, must be set before calling engineInit
+/** Should webgl be setup with anti-aliasing? must be set before calling engineInit
  *  @type {Boolean}
  *  @memberof WebGL */
 let glAntialias = true;
@@ -32,7 +32,7 @@ let glShader, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, 
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// Initalize WebGL, called automatically by the engine
+// Initialize WebGL, called automatically by the engine
 function glInit()
 {
     if (!glEnable || headlessMode) return;
@@ -137,6 +137,15 @@ function glPreRender()
     );
 }
 
+/** Clear the canvas and setup the viewport
+ *  @memberof WebGL */
+function glClearCanvas()
+{
+    // clear and set to same size as main canvas
+    glContext.viewport(0, 0, glCanvas.width=mainCanvas.width, glCanvas.height=mainCanvas.height);
+    glContext.clear(glContext.COLOR_BUFFER_BIT);
+}
+
 /** Set the WebGl texture, called automatically if using multiple textures
  *  - This may also flush the gl buffer resulting in more draw calls and worse performance
  *  @param {WebGLTexture} texture
@@ -232,7 +241,7 @@ function glFlush()
     glBatchAdditive = glAdditive;
 }
 
-/** Draw any sprites still in the buffer, copy to main canvas and clear
+/** Draw any sprites still in the buffer and copy to main canvas
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
  *  @param {Boolean} [forceDraw]
  *  @memberof WebGL */
@@ -247,7 +256,7 @@ function glCopyToContext(context, forceDraw=false)
         context.drawImage(glCanvas, 0, 0);
 }
 
-/** Set antialiasing for webgl canvas
+/** Set anti-aliasing for webgl canvas
  *  @param {Boolean} [antialias]
  *  @memberof WebGL */
 function glSetAntialias(antialias=true)
