@@ -12,13 +12,16 @@
 <script src=../src/engineParticles.js?1105></script>
 <script src=../src/engineMedals.js?1105></script>
 <script src=../src/engineWebGL.js?1105></script>
-<script src=../src/engine.js?1105></script>\
+<script src=../src/engine.js?1105></script>
 <script>
 
 'use strict';
 
 // use fixed size canvas for examples
 canvasFixedSize = vec2(960, 540);
+
+// fix bleeding from neighboring pixels
+tileFixBleedScale = .5;
 
 // allow improved scaling
 canvasPixelated = false;

@@ -114,6 +114,7 @@ const exampleList =
     new ExampleInfo('Play Sound', 'playSound.js', 'How to play sounds with zzfx'),
     new ExampleInfo('System Font', 'systemFont.js', 'Demo of the included system font'),
     new ExampleInfo('Sprite Atlas', 'spriteAtlas.js', 'How to set up a simple sprite atlas'),
+    new ExampleInfo('Animation', 'animation.js', 'How to animate sprites'),
     new ExampleInfo('Tile Layer', 'tileLayer.js', 'How to use a tile layer for collision and rendering'),
     new ExampleInfo('Pong Game', 'pong.js', 'A simple pong game using LittleJS physics'),
     
@@ -226,7 +227,7 @@ function setCode(code)
             return; // stop if script error
         
         // start LittleJS engine
-        iframeContent.engineInit(iframeContent.gameInit, iframeContent.gameUpdate, iframeContent.gameUpdatePost, iframeContent.gameRender, iframeContent.gameRenderPost, ['tiles.png']);
+        iframeContent.engineInit(iframeContent.gameInit, iframeContent.gameUpdate, iframeContent.gameUpdatePost, iframeContent.gameRender, iframeContent.gameRenderPost, ['tiles.png?1']);
     }
     iframeExample.src = 'base.html';
 }

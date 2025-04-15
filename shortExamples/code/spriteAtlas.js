@@ -9,7 +9,8 @@ function gameInit()
         circle:    gameTile(0),
         crate:     gameTile(1),
         icon:      gameTile(2),
-        largeIcon: gameTile(vec2(1,1),128),
+        circleBig: gameTile(vec2(0,1),128),
+        iconBig:   gameTile(vec2(1,1),128),
     };
 }
 
@@ -18,10 +19,16 @@ function gameRender()
     drawRect(vec2(0,0), vec2(100), GRAY); // draw background
 
     // draw a sprite from the atlas
-    let pos = vec2(0,0);             // world position to draw
-    let angle = 0;                   // world space angle to draw the tile
-    let size = vec2(15);              // world size of the tile
-    let mirror = 0;                  // should tile be mirrored?
-    let color = hsl(0,0,1);          // color to multiply the tile by
-    drawTile(pos, size, spriteAtlas.largeIcon, color, angle, mirror);
+    let pos = vec2(Math.sin(time)*5,-3);// world position to draw
+    let angle = 0;                      // world space angle to draw the tile
+    let size = vec2(9);                 // world size of the tile
+    let mirror = 0;                     // should tile be mirrored?
+    let color = hsl(0,0,1);             // color to multiply the tile by
+    let additiveColor = hsl(0,0,0,0);   // color to add to
+    drawTile(pos, size, spriteAtlas.iconBig, color, angle, mirror, additiveColor);
+
+    // draw more sprites from the atlas
+    drawTile(vec2(-7,4), vec2(5), spriteAtlas.crate);
+    drawTile(vec2( 0,4), vec2(5), spriteAtlas.circle);
+    drawTile(vec2( 7,4), vec2(5), spriteAtlas.circleBig);
 }

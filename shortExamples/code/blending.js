@@ -1,12 +1,16 @@
 function gameRender()
 {
+    const circleTile = tile(vec2(0,1), 128);
+
     // additive blend
     setBlendMode(1);
-    drawTile(vec2(1, 3), vec2(6), tile(0), rgb(1,0,0));
-    drawTile(vec2(-1,3), vec2(6), tile(0), rgb(0,0,1));
+    drawTile(vec2(-4,-2), vec2(7), circleTile, rgb(1,0,0));
+    drawTile(vec2(-6, 2), vec2(7), circleTile, rgb(0,1,0));
+    drawTile(vec2(-8,-2), vec2(7), circleTile, rgb(0,0,1));
 
     // alpha blend
     setBlendMode(0);
-    drawTile(vec2(1, -3), vec2(6), tile(0), rgb(1,0,0,.5));
-    drawTile(vec2(-1,-3), vec2(6), tile(0), rgb(0,0,1,.5));
+    drawTile(vec2(4,-2), vec2(7), circleTile, rgb(1,0,0,.5));
+    drawTile(vec2(6, 2), vec2(7), circleTile, rgb(0,1,0,.5));
+    drawTile(vec2(8,-2), vec2(7), circleTile, rgb(0,0,1,.5));
 }
