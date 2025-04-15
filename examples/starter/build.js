@@ -6,7 +6,6 @@
 
 'use strict';
 
-const PROGRAM_TITLE = 'Little JS Starter Project';
 const PROGRAM_NAME = 'game';
 const BUILD_FOLDER = 'build';
 const sourceFiles =
@@ -42,10 +41,11 @@ Build
 (
     `${BUILD_FOLDER}/index.js`,
     sourceFiles,
-    [closureCompilerStep, uglifyBuildStep, htmlBuildStep, zipBuildStep]
+    [closureCompilerStep, uglifyBuildStep, roadrollerBuildStep, htmlBuildStep, zipBuildStep]
+   //[closureCompilerSimpleStep, htmlBuildStep] // for build debugging
 );
 
-console.log('');
+console.log(``);
 console.log(`Build Completed in ${((Date.now() - startTime)/1e3).toFixed(2)} seconds!`);
 console.log(`Size of ${PROGRAM_NAME}.zip: ${fs.statSync(`${PROGRAM_NAME}.zip`).size} bytes`);
 
@@ -78,10 +78,33 @@ function closureCompilerStep(filename)
     fs.rmSync(filenameTemp);
 };
 
+function closureCompilerSimpleStep(filename)
+{
+    console.log(`Running closure compiler in simple mode...`);
+
+    const filenameTemp = filename + '.tmp';
+    fs.copyFileSync(filename, filenameTemp);
+    child_process.execSync(`npx google-closure-compiler --js=${filenameTemp} --js_output_file=${filename} --compilation_level=SIMPLE --warning_level=VERBOSE --jscomp_off=* --assume_function_wrapper`, {stdio: 'inherit'});
+    fs.rmSync(filenameTemp);
+};
+
 function uglifyBuildStep(filename)
 {
     console.log(`Running uglify...`);
     child_process.execSync(`npx uglifyjs ${filename} -c -m -o ${filename}`, {stdio: 'inherit'});
+};
+
+function roadrollerBuildStep(filename)
+{
+    console.log(`Running roadroller...`);
+    child_process.execSync(`npx roadroller ${filename} -o ${filename}`, {stdio: 'inherit'});
+};
+
+function roadrollerExtremeBuildStep(filename)
+{
+    // this takes over a minute to run but might be a little smaller
+    console.log(`Running roadroller extreme...`);
+    child_process.execSync(`npx roadroller ${filename} -o ${filename} --optimize 2`, {stdio: 'inherit'});
 };
 
 function htmlBuildStep(filename)
@@ -89,13 +112,10 @@ function htmlBuildStep(filename)
     console.log(`Building html...`);
 
     // create html file
-    let buffer = '<!DOCTYPE html>';
-    buffer += '<head>';
-    buffer += `<title>${PROGRAM_TITLE}</title>`;
-    buffer += '</head>';
+    let buffer = '';
     buffer += '<body>';
     buffer += '<script>';
-    buffer += fs.readFileSync(filename) + '\n';
+    buffer += fs.readFileSync(filename);
     buffer += '</script>';
 
     // output html file
@@ -105,7 +125,6 @@ function htmlBuildStep(filename)
 function zipBuildStep(filename)
 {
     console.log(`Zipping...`);
-    
     const ect = '../../../node_modules/ect-bin/vendor/win32/ect.exe';
     const args = ['-9', '-strip', '-zip', `../${PROGRAM_NAME}.zip`, 'index.html', ...dataFiles];
     child_process.spawnSync(ect, args, {stdio: 'inherit', cwd: BUILD_FOLDER});

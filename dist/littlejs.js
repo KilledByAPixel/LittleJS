@@ -1,4 +1,5 @@
-// LittleJS - MIT License - Copyright 2021 Frank Force
+// LittleJS Engine - MIT License - Copyright 2021 Frank Force
+// https://github.com/KilledByAPixel/LittleJS
 
 'use strict';
 
@@ -20,7 +21,7 @@
  *  @memberof Debug */
 const debug = true;
 
-/** True if asserts are enaled
+/** True if asserts are enabled
  *  @type {Boolean}
  *  @default
  *  @memberof Debug */
@@ -204,6 +205,7 @@ function debugShowErrors()
     const showError = (message)=>
     {
         // replace entire page with error message
+        document.body.style.display = '';
         document.body.style.backgroundColor = '#111';
         document.body.innerHTML = `<pre style=color:#f00;font-size:50px>` + message;
     }
@@ -248,12 +250,8 @@ function debugRender()
 
     if (debugTakeScreenshot)
     {
-        // composite canvas
-        glCopyToContext(mainContext, true);
-        mainContext.drawImage(overlayCanvas, 0, 0);
-        overlayCanvas.width |= 0;
-
-        // remove alpha and save
+        // combine canvases, remove alpha and save
+        combineCanvases();
         const w = mainCanvas.width, h = mainCanvas.height;
         overlayContext.fillRect(0,0,w,h);
         overlayContext.drawImage(mainCanvas, 0, 0);
@@ -486,7 +484,7 @@ function debugRender()
  *  @memberof Utilities */
 const PI = Math.PI;
 
-/** Returns absoulte value of value passed in
+/** Returns absolute value of value passed in
  *  @param {Number} value
  *  @return {Number}
  *  @memberof Utilities */
@@ -519,7 +517,7 @@ function sign(value) { return Math.sign(value); }
  *  @memberof Utilities */
 function mod(dividend, divisor=1) { return ((dividend % divisor) + divisor) % divisor; }
 
-/** Clamps the value beween max and min
+/** Clamps the value between max and min
  *  @param {Number} value
  *  @param {Number} [min]
  *  @param {Number} [max]
@@ -952,10 +950,10 @@ class Vector2
     rotate(angle)
     { 
         const c = Math.cos(angle), s = Math.sin(angle); 
-        return new Vector2(this.x*c - this.y*s, this.x*s + this.y*c);
+        return new Vector2(this.x*c + this.y*s, this.x*s + this.y*c);
     }
 
-    /** Set the integer direction of this vector, corrosponding to multiples of 90 degree rotation (0-3)
+    /** Set the integer direction of this vector, corresponding to multiples of 90 degree rotation (0-3)
      * @param {Number} [direction]
      * @param {Number} [length] */
     setDirection(direction, length=1)
@@ -966,7 +964,7 @@ class Vector2
             direction%2 ? 0 : direction ? -length : length);
     }
 
-    /** Returns the integer direction of this vector, corrosponding to multiples of 90 degree rotation (0-3)
+    /** Returns the integer direction of this vector, corresponding to multiples of 90 degree rotation (0-3)
      * @return {Number} */
     direction()
     { return abs(this.x) > abs(this.y) ? this.x < 0 ? 3 : 1 : this.y < 0 ? 2 : 0; }
@@ -1351,7 +1349,7 @@ const MAGENTA = rgb(1,0,1);
  * a.set(3);             // sets the timer to 3 seconds
  *
  * let b = new Timer(1); // creates a timer with 1 second left
- * b.unset();            // unsets the timer
+ * b.unset();            // unset the timer
  */
 class Timer
 {
@@ -1384,7 +1382,7 @@ class Timer
 
     /** Get percentage elapsed based on time it was set to, returns 0 if not set
      * @return {Number} */
-    getPercent() { return this.isSet()? percent(this.time - time, this.setTime, 0) : 0; }
+    getPercent() { return this.isSet()? 1-percent(this.time - time, 0, this.setTime) : 0; }
     
     /** Returns this timer expressed as a string
      * @return {String} */
@@ -1502,7 +1500,7 @@ let tileFixBleedScale = 0;
  *  @memberof Settings */
 let enablePhysicsSolver = true;
 
-/** Default object mass for collision calcuations (how heavy objects are)
+/** Default object mass for collision calculations (how heavy objects are)
  *  @type {Number}
  *  @default
  *  @memberof Settings */
@@ -1713,7 +1711,7 @@ function setFontDefault(font) { fontDefault = font; }
  *  @memberof Settings */
 function setShowSplashScreen(show) { showSplashScreen = show; }
 
-/** Set to disalbe rendering, audio, and input for servers
+/** Set to disable rendering, audio, and input for servers
  *  @param {Boolean} headless
  *  @memberof Settings */
 function setHeadlessMode(headless) { headlessMode = headless; }
@@ -1743,7 +1741,7 @@ function setTileFixBleedScale(scale) { tileFixBleedScale = scale; }
  *  @memberof Settings */
 function setEnablePhysicsSolver(enable) { enablePhysicsSolver = enable; }
 
-/** Set default object mass for collison calcuations
+/** Set default object mass for collision calculations
  *  @param {Number} mass
  *  @memberof Settings */
 function setObjectDefaultMass(mass) { objectDefaultMass = mass; }
@@ -1813,7 +1811,7 @@ function setTouchGamepadEnable(enable) { touchGamepadEnable = enable; }
  *  @memberof Settings */
 function setTouchGamepadAnalog(analog) { touchGamepadAnalog = analog; }
 
-/** Set size of virutal gamepad for touch devices in pixels
+/** Set size of virtual gamepad for touch devices in pixels
  *  @param {Number} size
  *  @memberof Settings */
 function setTouchGamepadSize(size) { touchGamepadSize = size; }
@@ -1840,7 +1838,7 @@ function setSoundVolume(volume)
 {
     soundVolume = volume;
     if (soundEnable && !headlessMode && audioGainNode)
-        audioGainNode.gain.value = volume; // update gain immediatly
+        audioGainNode.gain.value = volume; // update gain immediately
 }
 
 /** Set default range where sound no longer plays
@@ -2044,7 +2042,7 @@ class EngineObject
         const oldPos = this.pos.copy();
         this.velocity.x *= this.damping;
         this.velocity.y *= this.damping;
-        if (this.mass) // dont apply gravity to static objects
+        if (this.mass) // don't apply gravity to static objects
             this.velocity.y += gravity * this.gravityScale;
         this.pos.x += this.velocity.x;
         this.pos.y += this.velocity.y;
@@ -2053,7 +2051,7 @@ class EngineObject
         // physics sanity checks
         ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
         ASSERT(this.damping >= 0 && this.damping <= 1);
-        if (!enablePhysicsSolver || !this.mass) // dont do collision for static objects
+        if (!enablePhysicsSolver || !this.mass) // don't do collision for static objects
             return;
 
         const wasMovingDown = this.velocity.y < 0;
@@ -2072,7 +2070,7 @@ class EngineObject
             const epsilon = .001; // necessary to push slightly outside of the collision
             for (const o of engineObjectsCollide)
             {
-                // non solid objects don't collide with eachother
+                // non solid objects don't collide with each other
                 if (!this.isSolid && !o.isSolid || o.destroyed || o.parent || o == this)
                     continue;
 
@@ -2132,7 +2130,7 @@ class EngineObject
                         const elastic1 = o.velocity.y * (o.mass - this.mass) / (this.mass + o.mass)
                             + this.velocity.y * 2 * this.mass / (this.mass + o.mass);
 
-                        // lerp betwen elastic or inelastic based on elasticity
+                        // lerp between elastic or inelastic based on elasticity
                         this.velocity.y = lerp(elasticity, inelastic, elastic0);
                         o.velocity.y = lerp(elasticity, inelastic, elastic1);
                     }
@@ -2152,7 +2150,7 @@ class EngineObject
                         const elastic1 = o.velocity.x * (o.mass - this.mass) / (this.mass + o.mass)
                             + this.velocity.x * 2 * this.mass / (this.mass + o.mass);
 
-                        // lerp betwen elastic or inelastic based on elasticity
+                        // lerp between elastic or inelastic based on elasticity
                         this.velocity.x = lerp(elasticity, inelastic, elastic0);
                         o.velocity.x = lerp(elasticity, inelastic, elastic1);
                     }
@@ -2218,7 +2216,7 @@ class EngineObject
         if (this.destroyed)
             return;
         
-        // disconnect from parent and destroy chidren
+        // disconnect from parent and destroy children
         this.destroyed = 1;
         this.parent && this.parent.removeChild(this);
         for (const child of this.children)
@@ -2227,23 +2225,23 @@ class EngineObject
 
     /** Convert from local space to world space
      *  @param {Vector2} pos - local space point */
-    localToWorld(pos) { return this.pos.add(pos.rotate(-this.angle)); }
+    localToWorld(pos) { return this.pos.add(pos.rotate(this.angle)); }
 
     /** Convert from world space to local space
      *  @param {Vector2} pos - world space point */
-    worldToLocal(pos) { return pos.subtract(this.pos).rotate(this.angle); }
+    worldToLocal(pos) { return pos.subtract(this.pos).rotate(-this.angle); }
 
     /** Convert from local space to world space for a vector (rotation only)
      *  @param {Vector2} vec - local space vector */
-    localToWorldVector(vec) { return vec.rotate(this.angle); }
+    localToWorldVector(vec) { return vec.rotate(-this.angle); }
 
     /** Convert from world space to local space for a vector (rotation only)
      *  @param {Vector2} vec - world space vector */
-    worldToLocalVector(vec) { return vec.rotate(-this.angle); }
+    worldToLocalVector(vec) { return vec.rotate(this.angle); }
     
     /** Called to check if a tile collision should be resolved
      *  @param {Number}  tileData - the value of the tile at the position
-     *  @param {Vector2} pos      - tile where the collision occured
+     *  @param {Vector2} pos      - tile where the collision occurred
      *  @return {Boolean}         - true if the collision should be resolved */
     collideWithTile(tileData, pos)    { return tileData > 0; }
 
@@ -2306,7 +2304,7 @@ class EngineObject
         this.collideRaycast = collideRaycast;
     }
 
-    /** Returns string containg info about this object for debugging
+    /** Returns string containing info about this object for debugging
      *  @return {String} */
     toString()
     {
@@ -2392,7 +2390,7 @@ let overlayContext;
 let mainCanvasSize = vec2();
 
 /** Array containing texture info for batch rendering system
- *  @type {Array}
+ *  @type {Array<TextureInfo>}
  *  @memberof Draw */
 let textureInfos = [];
 
@@ -2431,11 +2429,13 @@ function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0)
 
     // use pos as a tile index
     const textureInfo = textureInfos[textureIndex];
-    ASSERT(textureInfo, 'Texture not loaded');
+    ASSERT(!!textureInfo, 'Texture not loaded');
     const sizePadded = size.add(vec2(padding*2));
-    const cols = textureInfo.size.x / sizePadded.x |0;
     if (typeof pos === 'number')
-        pos = vec2(pos%cols, pos/cols|0);
+    {
+        const cols = textureInfo.size.x / sizePadded.x |0;
+        pos = cols>0 ? vec2(pos%cols, pos/cols|0) : vec2();
+    }
     pos = vec2(pos.x*sizePadded.x+padding, pos.y*sizePadded.y+padding);
 
     // return a tile info object
@@ -2741,24 +2741,6 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, conte
     context.restore();
 }
 
-/** Enable normal or additive blend mode
- *  @param {Boolean} [additive]
- *  @param {Boolean} [useWebGL=glEnable]
- *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
- *  @memberof Draw */
-function setBlendMode(additive, useWebGL=glEnable, context)
-{
-    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
-    if (useWebGL)
-        glAdditive = additive;
-    else
-    {
-        if (!context)
-            context = mainContext;
-        context.globalCompositeOperation = additive ? 'lighter' : 'source-over';
-    }
-}
-
 /** Draw text on main canvas in world space
  *  Automatically splits new lines into rows
  *  @param {String}  text
@@ -2818,12 +2800,47 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
     context.lineJoin = 'round';
 
     pos = pos.copy();
-    (text+'').split('\n').forEach(line=>
+
+    const lines = (text+'').split('\n');
+    pos.y -= (lines.length-1) * size/2; // center text vertically
+    lines.forEach(line=>
     {
         lineWidth && context.strokeText(line, pos.x, pos.y, maxWidth);
         context.fillText(line, pos.x, pos.y, maxWidth);
         pos.y += size;
     });
+}
+
+/** Enable normal or additive blend mode
+ *  @param {Boolean} [additive]
+ *  @param {Boolean} [useWebGL=glEnable]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
+ *  @memberof Draw */
+function setBlendMode(additive, useWebGL=glEnable, context)
+{
+    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+    if (useWebGL)
+        glAdditive = additive;
+    else
+    {
+        if (!context)
+            context = mainContext;
+        context.globalCompositeOperation = additive ? 'lighter' : 'source-over';
+    }
+}
+
+/** Combines all LittleJS canvases onto the main canvas and clears them
+ *  This is necessary for things like saving a screenshot
+ *  @memberof Draw */
+function combineCanvases()
+{
+    // combine canvases
+    glCopyToContext(mainContext, true);
+    mainContext.drawImage(overlayCanvas, 0, 0);
+
+    // clear canvases
+    glClearCanvas();
+    overlayCanvas.width |= 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2919,7 +2936,7 @@ class FontImage
  *  @memberof Draw */
 function isFullscreen() { return !!document.fullscreenElement; }
 
-/** Toggle fullsceen mode
+/** Toggle fullscreen mode
  *  @memberof Draw */
 function toggleFullscreen()
 {
@@ -3482,7 +3499,7 @@ function audioInit()
 {
     if (!soundEnable || headlessMode) return;
     
-    // (createGain is more widely spported then GainNode construtor)
+    // (createGain is more widely supported then GainNode constructor)
     audioGainNode = audioContext.createGain();
     audioGainNode.connect(audioContext.destination);
     audioGainNode.gain.value = soundVolume; // set starting value
@@ -3832,7 +3849,7 @@ const zzfxR = 44100;
  *  @param {Number}  [sustain] - Sustain time, how long sound holds (seconds)
  *  @param {Number}  [release] - Release time, how fast sound fades out (seconds)
  *  @param {Number}  [shape] - Shape of the sound wave
- *  @param {Number}  [shapeCurve] - Squarenes of wave (0=square, 1=normal, 2=pointy)
+ *  @param {Number}  [shapeCurve] - Squareness of wave (0=square, 1=normal, 2=pointy)
  *  @param {Number}  [slide] - How much to slide frequency (kHz/s)
  *  @param {Number}  [deltaSlide] - How much to change slide (kHz/s/s)
  *  @param {Number}  [pitchJump] - Frequency of pitch jump (Hz)
@@ -3844,7 +3861,7 @@ const zzfxR = 44100;
  *  @param {Number}  [delay] - Overlap sound with itself for reverb and flanger effects (seconds)
  *  @param {Number}  [sustainVolume] - Volume level for sustain (percent)
  *  @param {Number}  [decay] - Decay time, how long to reach sustain after attack (seconds)
- *  @param {Number}  [tremolo] - Trembling effect, rate controlled by repeat time (precent)
+ *  @param {Number}  [tremolo] - Trembling effect, rate controlled by repeat time (percent)
  *  @param {Number}  [filter] - Filter cutoff frequency, positive for HPF, negative for LPF (Hz)
  *  @return {Array} - Array of audio samples
  *  @memberof Audio
@@ -3948,7 +3965,7 @@ function zzfxG
 // ZzFX Music Renderer v2.0.3 by Keith Clark and Frank Force
 
 /** Generate samples for a ZzFM song with given parameters
- *  @param {Array} instruments - Array of ZzFX sound paramaters
+ *  @param {Array} instruments - Array of ZzFX sound parameters
  *  @param {Array} patterns - Array of pattern data
  *  @param {Array} sequence - Array of pattern indexes
  *  @param {Number} [BPM] - Playback speed of the song in BPM
@@ -4289,6 +4306,10 @@ class TileLayer extends EngineObject
         
         // draw the entire cached level onto the canvas
         const pos = worldToScreen(this.pos.add(vec2(0,this.size.y*this.scale.y)));
+        
+        // fix canvas jitter in some browsers if position is not an integer
+        pos.x |= 0; pos.y |= 0;
+
         (this.isOverlay ? overlayContext : mainContext).drawImage
         (
             this.canvas, pos.x, pos.y,
@@ -4351,7 +4372,7 @@ class TileLayer extends EngineObject
 
     /** Draw the tile at a given position in the tile grid
      *  This can be used to clear out tiles when they are destroyed
-     *  Tiles can also be redrawn if isinde a redrawStart/End block
+     *  Tiles can also be redrawn if inside a redrawStart/End block
      *  @param {Vector2} layerPos 
      *  @param {Boolean} [clear] - should the old tile be cleared out
      */
@@ -4376,7 +4397,7 @@ class TileLayer extends EngineObject
         }
     }
 
-    /** Draw directly to the 2D canvas in world space (bipass webgl)
+    /** Draw directly to the 2D canvas in world space (bypass webgl)
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
      *  @param {Number}   angle
@@ -4446,7 +4467,7 @@ class TileLayer extends EngineObject
  * let pos = vec2(2,3);
  * let particleEmitter = new ParticleEmitter
  * (
- *     pos, 0, 1, 0, 500, PI,      // pos, angle, emitSize, emitTime, emitRate, emiteCone
+ *     pos, 0, 1, 0, 500, PI,      // pos, angle, emitSize, emitTime, emitRate, emitCone
  *     tile(0, 16),                // tileInfo
  *     rgb(1,1,1),   rgb(0,0,0),   // colorStartA, colorStartB
  *     rgb(1,1,1,0), rgb(0,0,0,0), // colorEndA, colorEndB
@@ -4481,7 +4502,7 @@ class ParticleEmitter extends EngineObject
      *  @param {Number} [fadeRate]          - How quick to fade particles at start/end in percent of life
      *  @param {Number} [randomness]    - Apply extra randomness percent
      *  @param {Boolean} [collideTiles] - Do particles collide against tiles
-     *  @param {Boolean} [additive]     - Should particles use addtive blend
+     *  @param {Boolean} [additive]     - Should particles use additive blend
      *  @param {Boolean} [randomColorLinear] - Should color be randomized linearly or across each component
      *  @param {Number} [renderOrder] - Render order for particles (additive is above other stuff by default)
      *  @param {Boolean}  [localSpace] - Should it be in local space of emitter (world space is default)
@@ -4566,11 +4587,11 @@ class ParticleEmitter extends EngineObject
         this.randomness        = randomness;
         /** @property {Boolean} - Do particles collide against tiles */
         this.collideTiles      = collideTiles;
-        /** @property {Boolean} - Should particles use addtive blend */
+        /** @property {Boolean} - Should particles use additive blend */
         this.additive          = additive;
         /** @property {Boolean} - Should it be in local space of emitter */
         this.localSpace        = localSpace;
-        /** @property {Number} - If non zero the partile is drawn as a trail, stretched in the drection of velocity */
+        /** @property {Number} - If non zero the particle is drawn as a trail, stretched in the direction of velocity */
         this.trailScale        = 0;
         /** @property {Function}   - Callback when particle is destroyed */
         this.particleDestroyCallback = undefined;
@@ -4619,7 +4640,7 @@ class ParticleEmitter extends EngineObject
             angle += this.angle;
         }
 
-        // randomness scales each paremeter by a percentage
+        // randomness scales each parameter by a percentage
         const randomness = this.randomness;
         const randomizeScale = (v)=> v + v*rand(randomness, -randomness);
 
@@ -4648,7 +4669,7 @@ class ParticleEmitter extends EngineObject
         particle.renderOrder   = this.renderOrder;
         particle.mirror        = !!randInt(2);
 
-        // call particle create callaback
+        // call particle create callback
         this.particleCreateCallback && this.particleCreateCallback(particle);
 
         // return the newly created particle
@@ -4717,7 +4738,7 @@ class Particle extends EngineObject
     render()
     {
         // modulate size and color
-        const p = min((time - this.spawnTime) / this.lifeTime, 1);
+        const p = this.lifeTime > 0 ? min((time - this.spawnTime) / this.lifeTime, 1) : 1;
         const radius = this.sizeStart + p * this.sizeEndDelta;
         const size = vec2(radius);
         const fadeRate = this.fadeRate/2;
@@ -4968,7 +4989,7 @@ let glCanvas;
  *  @memberof WebGL */
 let glContext;
 
-/** Shoule webgl be setup with antialiasing, must be set before calling engineInit
+/** Should webgl be setup with anti-aliasing? must be set before calling engineInit
  *  @type {Boolean}
  *  @memberof WebGL */
 let glAntialias = true;
@@ -4976,9 +4997,15 @@ let glAntialias = true;
 // WebGL internal variables not exposed to documentation
 let glShader, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glInstanceCount, glAdditive, glBatchAdditive;
 
+// WebGL internal constants 
+const gl_MAX_INSTANCES = 1e4;
+const gl_INDICES_PER_INSTANCE = 11;
+const gl_INSTANCE_BYTE_STRIDE = gl_INDICES_PER_INSTANCE * 4;
+const gl_INSTANCE_BUFFER_SIZE = gl_MAX_INSTANCES * gl_INSTANCE_BYTE_STRIDE;
+
 ///////////////////////////////////////////////////////////////////////////////
 
-// Initalize WebGL, called automatically by the engine
+// Initialize WebGL, called automatically by the engine
 function glInit()
 {
     if (!glEnable || headlessMode) return;
@@ -5037,11 +5064,8 @@ function glPreRender()
 {
     if (!glEnable || headlessMode) return;
 
-    // clear and set to same size as main canvas
-    glContext.viewport(0, 0, glCanvas.width=mainCanvas.width, glCanvas.height=mainCanvas.height);
-    glContext.clear(gl_COLOR_BUFFER_BIT);
-
-    // set up the shader
+    // set up the shader and canvas
+    glClearCanvas();
     glContext.useProgram(glShader);
     glContext.activeTexture(gl_TEXTURE0);
     if (textureInfos[0])
@@ -5081,6 +5105,15 @@ function glPreRender()
             p.x, p.y, 0,   0
         ]
     );
+}
+
+/** Clear the canvas and setup the viewport
+ *  @memberof WebGL */
+function glClearCanvas()
+{
+    // clear and set to same size as main canvas
+    glContext.viewport(0, 0, glCanvas.width=mainCanvas.width, glCanvas.height=mainCanvas.height);
+    glContext.clear(gl_COLOR_BUFFER_BIT);
 }
 
 /** Set the WebGl texture, called automatically if using multiple textures
@@ -5178,7 +5211,7 @@ function glFlush()
     glBatchAdditive = glAdditive;
 }
 
-/** Draw any sprites still in the buffer, copy to main canvas and clear
+/** Draw any sprites still in the buffer and copy to main canvas
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
  *  @param {Boolean} [forceDraw]
  *  @memberof WebGL */
@@ -5193,7 +5226,7 @@ function glCopyToContext(context, forceDraw=false)
         context.drawImage(glCanvas, 0, 0);
 }
 
-/** Set antialiasing for webgl canvas
+/** Set anti-aliasing for webgl canvas
  *  @param {Boolean} [antialias]
  *  @memberof WebGL */
 function glSetAntialias(antialias=true)
@@ -5223,7 +5256,7 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdd
     if (glInstanceCount >= gl_MAX_INSTANCES || glBatchAdditive != glAdditive)
         glFlush();
 
-    let offset = glInstanceCount * gl_INDICIES_PER_INSTANCE;
+    let offset = glInstanceCount++ * gl_INDICES_PER_INSTANCE;
     glPositionData[offset++] = x;
     glPositionData[offset++] = y;
     glPositionData[offset++] = sizeX;
@@ -5235,7 +5268,6 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdd
     glColorData[offset++] = rgba;
     glColorData[offset++] = rgbaAdditive;
     glPositionData[offset++] = angle;
-    glInstanceCount++;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -5263,13 +5295,7 @@ gl_FRAGMENT_SHADER = 35632,
 gl_VERTEX_SHADER = 35633,
 gl_COMPILE_STATUS = 35713,
 gl_LINK_STATUS = 35714,
-gl_UNPACK_FLIP_Y_WEBGL = 37440,
-
-// constants for batch rendering
-gl_INDICIES_PER_INSTANCE = 11,
-gl_MAX_INSTANCES = 1e4,
-gl_INSTANCE_BYTE_STRIDE = gl_INDICIES_PER_INSTANCE * 4, // 11 * 4
-gl_INSTANCE_BUFFER_SIZE = gl_MAX_INSTANCES * gl_INSTANCE_BYTE_STRIDE;
+gl_UNPACK_FLIP_Y_WEBGL = 37440;
 /** 
  * LittleJS - The Tiny Fast JavaScript Game Engine
  * MIT License - Copyright 2021 Frank Force
@@ -5302,7 +5328,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.2';
+const engineVersion = '1.11.6';
 
 /** Frames per second to update
  *  @type {Number}
@@ -5385,6 +5411,7 @@ function engineAddPlugin(updateFunction, renderFunction)
  *  @memberof Engine */
 function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
 {
+    ASSERT(!mainContext, 'engine already initialized');
     ASSERT(Array.isArray(imageSources), 'pass in images as array');
 
     // Called automatically by engine to setup render system
@@ -5551,7 +5578,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         (canvasPixelated ? 'image-rendering:pixelated;' : '') + // pixel art
         'user-select:none;' +         // prevent hold to select
         '-webkit-user-select:none;' + // compatibility for ios
-        (!touchInputEnable ? '' :     // no touch css setttings
+        (!touchInputEnable ? '' :     // no touch css settings
         'touch-action:none;' +        // prevent mobile pinch to resize
         '-webkit-touch-callout:none');// compatibility for ios
     rootElement.style.cssText = styleRoot;
@@ -5580,6 +5607,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         new Promise(resolve => 
         {
             const image = new Image;
+            image.crossOrigin = 'anonymous';
             image.onerror = image.onload = ()=> 
             {
                 textureInfos[textureIndex] = new TextureInfo(image);
@@ -5624,7 +5652,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
  *  @memberof Engine */
 function engineObjectsUpdate()
 {
-    // get list of solid objects for physics optimzation
+    // get list of solid objects for physics optimization
     engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);
 
     // recursive object update
