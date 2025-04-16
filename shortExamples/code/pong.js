@@ -20,9 +20,9 @@ function gameInit()
 
     // create objects
     paddle = new PhysicsObject(vec2(0,1), vec2(6,1)); // create player's paddle
-    new PhysicsObject(vec2(-.5,levelSize.y/2),            vec2(1,100)) // top wall
-    new PhysicsObject(vec2(levelSize.x+.5,levelSize.y/2), vec2(1,100)) // left wall
-    new PhysicsObject(vec2(levelSize.x/2,levelSize.y+.5), vec2(100,1)) // right wall
+    new PhysicsObject(vec2(-.5,levelSize.y/2),            vec2(1,100)); // left wall
+    new PhysicsObject(vec2(levelSize.x+.5,levelSize.y/2), vec2(1,100)); // right wall
+    new PhysicsObject(vec2(levelSize.x/2,levelSize.y+.5), vec2(100,1)); // top wall
 }
 
 function gameUpdate()
