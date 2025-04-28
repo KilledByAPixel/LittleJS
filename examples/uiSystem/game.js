@@ -17,11 +17,15 @@ let uiRoot, uiMenu;
 const getMenuVisible =()=> uiMenu.visible;
 const setMenuVisible =(visible)=> uiMenu.visible = visible;
 
+// use a fixed size canvas
+canvasFixedSize = vec2(1920, 1080); // 1080p
+canvasPixelated = false;
+
 function createUI()
 {
     // setup root to attach all ui elements to
     uiRoot = new UIObject();
-    const uiInfo = new UIText(vec2(0,50), vec2(1e3, 70), 
+    const uiInfo = new UIText(vec2(0,90), vec2(1e3, 70), 
         'LittleJS UI System Example\nM = Toggle menu');
     uiInfo.textColor = WHITE;
     uiInfo.lineWidth = 8;
@@ -31,6 +35,7 @@ function createUI()
     uiMenu = new UIObject(vec2(0,450));
     uiRoot.addChild(uiMenu);
     const uiBackground = new UIObject(vec2(0,0), vec2(450,580));
+    uiBackground.lineWidth = 8;
     uiMenu.addChild(uiBackground);
 
     // example large text
