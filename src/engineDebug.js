@@ -162,6 +162,10 @@ function debugText(text, pos, size=1, color='#fff', time=0, angle=0, font='monos
  *  @memberof Debug */
 function debugClear() { debugPrimitives = []; }
 
+/** Trigger debug system to take a screenshot
+ *  @memberof Debug */
+function debugScreenshot() { debugTakeScreenshot = 1; }
+
 /** Save a canvas to disk 
  *  @param {HTMLCanvasElement} canvas
  *  @param {String}            [filename]
@@ -235,7 +239,7 @@ function debugUpdate()
         if (keyWasPressed('Digit4'))
             debugRaycast = !debugRaycast;
         if (keyWasPressed('Digit5'))
-            debugTakeScreenshot = 1;
+            debugScreenshot();
     }
 }
 

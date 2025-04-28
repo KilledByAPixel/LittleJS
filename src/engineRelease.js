@@ -29,6 +29,7 @@ function debugLine       (){}
 function debugOverlap    (){}
 function debugText       (){}
 function debugClear      (){}
+function debugScreenshot (){}
 function debugSaveCanvas (){}
 function debugSaveText   (){}
 function debugSaveDataURL(){}

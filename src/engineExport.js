@@ -38,6 +38,7 @@ export {
 	debugOverlap,
 	debugText,
 	debugClear,
+	debugScreenshot,
 	debugSaveCanvas,
 	debugSaveText,
 	debugSaveDataURL,
