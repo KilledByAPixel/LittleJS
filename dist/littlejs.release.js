@@ -34,6 +34,7 @@ function debugLine       (){}
 function debugOverlap    (){}
 function debugText       (){}
 function debugClear      (){}
+function debugScreenshot (){}
 function debugSaveCanvas (){}
 function debugSaveText   (){}
 function debugSaveDataURL(){}
@@ -3876,10 +3877,10 @@ class TileLayer extends EngineObject
         !glOverlay && !this.isOverlay && glCopyToContext(mainContext);
         
         // draw the entire cached level onto the canvas
-        const pos = worldToScreen(this.pos.add(vec2(0,this.size.y*this.scale.y)));
+        let pos = worldToScreen(this.pos.add(vec2(0,this.size.y*this.scale.y)));
         
         // fix canvas jitter in some browsers if position is not an integer
-        pos.x |= 0; pos.y |= 0;
+        pos = pos.floor();
 
         (this.isOverlay ? overlayContext : mainContext).drawImage
         (

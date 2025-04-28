@@ -189,6 +189,9 @@ declare module "littlejsengine" {
     /** Clear all debug primitives in the list
      *  @memberof Debug */
     export function debugClear(): void;
+    /** Trigger debug system to take a screenshot
+     *  @memberof Debug */
+    export function debugScreenshot(): void;
     /** Save a canvas to disk
      *  @param {HTMLCanvasElement} canvas
      *  @param {String}            [filename]

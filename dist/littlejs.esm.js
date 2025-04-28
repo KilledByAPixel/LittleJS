@@ -167,6 +167,10 @@ function debugText(text, pos, size=1, color='#fff', time=0, angle=0, font='monos
  *  @memberof Debug */
 function debugClear() { debugPrimitives = []; }
 
+/** Trigger debug system to take a screenshot
+ *  @memberof Debug */
+function debugScreenshot() { debugTakeScreenshot = 1; }
+
 /** Save a canvas to disk 
  *  @param {HTMLCanvasElement} canvas
  *  @param {String}            [filename]
@@ -240,7 +244,7 @@ function debugUpdate()
         if (keyWasPressed('Digit4'))
             debugRaycast = !debugRaycast;
         if (keyWasPressed('Digit5'))
-            debugTakeScreenshot = 1;
+            debugScreenshot();
     }
 }
 
@@ -4305,10 +4309,10 @@ class TileLayer extends EngineObject
         !glOverlay && !this.isOverlay && glCopyToContext(mainContext);
         
         // draw the entire cached level onto the canvas
-        const pos = worldToScreen(this.pos.add(vec2(0,this.size.y*this.scale.y)));
+        let pos = worldToScreen(this.pos.add(vec2(0,this.size.y*this.scale.y)));
         
         // fix canvas jitter in some browsers if position is not an integer
-        pos.x |= 0; pos.y |= 0;
+        pos = pos.floor();
 
         (this.isOverlay ? overlayContext : mainContext).drawImage
         (
@@ -5940,6 +5944,7 @@ export {
 	debugOverlap,
 	debugText,
 	debugClear,
+	debugScreenshot,
 	debugSaveCanvas,
 	debugSaveText,
 	debugSaveDataURL,
