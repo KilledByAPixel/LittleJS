@@ -21,9 +21,10 @@ const sound_bounce = new Sound([,,1e3,,.03,.02,1,2,,,940,.03,,,,,.2,.6,,.06]);
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
-    canvasFixedSize = vec2(1280, 720); // 720p
+    canvasFixedSize = vec2(1920, 1080); // 1080p
     levelSize = vec2(38, 20);
     cameraPos = levelSize.scale(.5);
+    cameraScale = 48;
     paddle = new Paddle(vec2(levelSize.x/2-12, 1));
     score = brickCount = 0;
 
@@ -71,7 +72,7 @@ function gameRenderPost()
 {
     // use built in image font for text
     const font = new FontImage;
-    font.drawText('Score: ' + score, cameraPos.add(vec2(0,9.6)), .15, true);
+    font.drawText('Score: ' + score, cameraPos.add(vec2(0,9.7)), .15, true);
     if (!brickCount)
         font.drawText('You Win!', cameraPos.add(vec2(0,-5)), .2, true);
     else if (!ball)
