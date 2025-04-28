@@ -1,34 +1,302 @@
-<head>
-<title>LittleJS Examples</title>
+<!DOCTYPE html><head>
+<title>LittleJS Example Browser</title>
+<link rel=icon type=image/png href=favicon.png>
+<meta charset=utf-8>
 <style>
-iframe {width:480px; height:270px;}
+html, body
+{
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+#container1
+{
+    height: 100%;
+    display: flex;
+}
+#container2
+{
+    display: flex;
+    flex-direction: column;
+}
+#iframeContainer
+{
+    border: 2px solid;
+    background: #000;
+}
+iframe
+{
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+#selectExample
+{
+    flex-grow: 1;
+}
+#textareaCode
+{
+    flex-grow: 1;
+    padding: 5px;
+    resize: none;
+    color: #fff;
+    background: #000;
+}
+#textareaError
+{
+    flex-grow: .3;
+    padding: 5px;
+    resize: none;
+    display: none;
+    color:#f22;
+    background: #111;
+}
+#container3
+{
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+#titleInfo
+{
+    margin: 5px;
+    text-align: center;
+    font-size: 50px;
+}
+#exampleLink
+{
+    margin: 0px;
+    text-align: center;
+    font-size: 30px;
+}
+#exampleInfo
+{
+    margin: 0px;
+    text-align: center;
+    font-size: 22px;
+}
+select
+{
+    color:#fff;
+    background-color: #111;
+    width:100%;
+}
 </style>
-<link rel=icon type=image/png href=../favicon.png>
-<body>
-<h1>All LittleJS Engine Examples</h1>
-<img src=screenshot.jpg width=480>
-<h2>Main Demos</h2>
-<p>
-<a href="starter">Starter</a> - Clean example with only a few things to get you started<br>
-<a href="stress">Stress</a> - Max sprite/object test and music system demo<br>
-<a href="platformer">Platformer</a> - Platformer/shooter with level data from Tiled Editor<br>
-<a href="breakout">Breakout</a> - Block breaking game with post-processing effects<br>
-<a href="breakoutTutorial">Breakout Tutorial</a> - Tutorial Breakout example<br>
-<a href="puzzle">Puzzle</a> - Match 3 puzzle game with HD rendering and high score tracking<br>
-<a href="particles">Particle Designer</a> - Particle system editor and visualizer<br>
-<a href="empty">Empty</a> - A blank hello world project for LittleJS<br>
-<a href="module">LittleJS with Modules</a> - Loads LittleJS as a module<br>
-</p>
-<h2>Plugin Demos</h2>
-<p>
-<a href="box2d">Box2D</a> - Box2D plugin demonstration and testbed<br>
-<a href="uiSystem">UI System</a> - A simple hierarchical UI system using LittleJS rendering<br>
-<a href="htmlMenu">HTML UI Menu</a> - Example using html to create an overlay menu<br>
-</p>
-<h2>Live Demos</h2>
-<p>
-<iframe id=iframe src="breakout"></iframe>
-<iframe id=iframe src="platformer"></iframe>
-<iframe id=iframe src="puzzle"></iframe>
-</p>
+</head><body>
+<div id=container1>
+<div id=container3>
+<p id=titleInfo>LittleJS Example Browser</p>
+<a id=exampleLink target="_blank">Example LINK</a>
+<p id=exampleInfo>Example Info</p>
+<textarea id=textareaCode oninput=codeInput() spellcheck=false></textarea>
+<textarea id=textareaError readonly spellcheck=false></textarea>
+<div><input type=checkbox id=checkboxLiveEdit checked>Live Edit
+<button id=buttonScreenshot>Screenshot</button>
+</div> 
+</div>
+<div id=container2>
+<div id=iframeContainer></div>
+<select id=selectExample autofocus onchange=setExample() size=2></select>
+</div>
+</div>
+<script>
+'use strict';
+
+class ExampleInfo
+{
+    constructor(name, filename, description, fullExample=false)
+    {
+        if (filename && !fullExample)
+            filename = 'shorts/' + filename; // short examples folder
+        this.name = name;
+        this.filename = filename;
+        this.description = description;
+        this.fullExample = fullExample;
+    }
+}
+
+const exampleList = 
+[
+    new ExampleInfo('--- SHORT EXAMPLES ---'),
+    new ExampleInfo('Hello World', 'helloWorld.js', 'Simplest example'),
+    new ExampleInfo('Shapes', 'shapes.js', 'How to draw geometric shapes'),
+    new ExampleInfo('Colors', 'colors.js', 'How to use the color object'),
+    new ExampleInfo('Blending', 'blending.js', 'Shows different blending modes'),
+    new ExampleInfo('Timers', 'timers.js', 'How to use the timer object'),
+    new ExampleInfo('Texture', 'texture.js', 'How to display a full texture'),
+    new ExampleInfo('Particles', 'particles.js', 'How to use the particle system'),
+    new ExampleInfo('Play Sound', 'playSound.js', 'How to play sounds with zzfx'),
+    new ExampleInfo('System Font', 'systemFont.js', 'Demo of the included system font'),
+    new ExampleInfo('Sprite Atlas', 'spriteAtlas.js', 'How to set up a simple sprite atlas'),
+    new ExampleInfo('Animation', 'animation.js', 'How to animate sprites'),
+    new ExampleInfo('Clock', 'clock.js', 'A simple clock showing the time'),
+    new ExampleInfo('Tile Layer', 'tileLayer.js', 'How to use the tile layer object'),
+    new ExampleInfo('Platformer Game', 'platformer.js', 'A platformer jumping game'),
+    new ExampleInfo('Top Down Game', 'topDown.js', 'A top down adventure game'),
+    new ExampleInfo('Pong Game', 'pong.js', 'A simple pong game'),
+
+    new ExampleInfo('--- FULL EXAMPLES ---'),
+    new ExampleInfo('Starter', 'starter', 'Clean starter project', true),
+    new ExampleInfo('Starter with Modules', 'module', 'Loading LittleJS as a module', true),
+    new ExampleInfo('Breakout', 'breakout', 'Block breaking game with post-processing effects', true),
+    new ExampleInfo('BreakoutTutorial', 'breakoutTutorial', 'Tutorial Breakout example', true),
+    new ExampleInfo('Platforming Game', 'platformer', 'Platformer/shooter with level data loading', true),
+    new ExampleInfo('Puzzle Game', 'puzzle', 'Match 3 puzzle game with HD rendering', true),
+    new ExampleInfo('Stress Test', 'stress', 'Max sprite/object test and music system demo', true),
+    new ExampleInfo('Box2D Plugin', 'box2d', 'Demo of the Box2D physics plugin', true),
+    new ExampleInfo('HTML Menus', 'htmlMenu', 'Shows how to combine HTML with LittleJS', true),
+    new ExampleInfo('UI System Plugin', 'uiSystem', 'Example of how to use LittleJS UI plugin', true),
+    // Add more examples here!
+];
+
+///////////////////////////////////////////////////////////////////////////////
+
+let iframeExample, inputTimeout;
+
+// load the examples into the list
+for (const example of exampleList)
+{
+    const text = example.name + (example.description?' - ' + example.description : '');
+    const o = new Option(text);
+    o.disabled = !example.filename;
+    selectExample.add(o);
+}
+
+// select first option
+selectExample.selectedIndex = 1;
+setExample();
+
+onresize = () =>
+{
+    // resize iframe to fit half the window
+    const aspect = 1920 / 1080;
+    let w = innerWidth / 2 | 0;
+    let h = w / aspect | 0;
+    iframeContainer.style.width = w + 'px';
+    iframeContainer.style.height = h + 'px';
+}
+onresize();
+
+///////////////////////////////////////////////////////////////////////////////
+
+function setExample()
+{
+    const example = exampleList[selectExample.selectedIndex];
+    exampleInfo.innerText = example.name + (example.description ? ' - ' + example.description : '');
+    const filename = 'examples/' + example.filename;
+    exampleLink.href = 'https://github.com/KilledByAPixel/LittleJS/tree/main/' + filename;
+    exampleLink.innerText = filename;
+    loadFile(example.filename, example.fullExample);
+}
+
+function codeInput()
+{
+    if (!checkboxLiveEdit.checked)
+        return;
+
+    // debounce input
+    clearTimeout(inputTimeout);
+    inputTimeout = setTimeout(() => setCode(textareaCode.value), 500);
+}
+
+function loadFile(filename, fullExample)
+{
+    textareaCode.disabled = fullExample;
+    if (fullExample)
+    {
+        if (iframeExample)
+            iframeContainer.removeChild(iframeExample);
+
+        setErrorMessage('');
+        iframeExample = document.createElement('iframe');
+        iframeContainer.appendChild(iframeExample);
+        iframeExample.onload = () =>
+        {
+            const iframeContent = iframeExample.contentWindow;
+            const iframeDocument = iframeContent.document;
+            //textareaCode.value = iframeDocument.body.innerHTML;
+            textareaCode.value = 'Editor code view not available for large examples.\n';
+        }
+        iframeExample.src = filename;
+        return;
+    }
+
+    fetch(filename)
+        .then(response => {
+            if (!response.ok)
+                throw new Error('Could not load file: '+ filename);
+            return response.text();
+        })
+        .then(text => setCode(textareaCode.value = text, fullExample))
+        .catch(error => setErrorMessage(error.message));
+}
+
+function setCode(code, largeExample)
+{
+    clearTimeout(inputTimeout);
+    if (iframeExample)
+        iframeContainer.removeChild(iframeExample);
+
+    setErrorMessage('');
+    iframeExample = document.createElement('iframe');
+    iframeContainer.appendChild(iframeExample);
+    iframeExample.onload = () =>
+    {
+        const iframeContent = iframeExample.contentWindow;
+        const iframeDocument = iframeContent.document;
+
+        // create error event listeners
+        iframeContent.onerror = (message, source, lineno, colno, error) =>
+        {
+            let text = message;
+            if (lineno)  
+                text += ` (Line:${lineno}, Column:${colno})`
+            if (error && error.stack)
+                text += `\n\n` + error.stack;
+            setErrorMessage(text);
+        }
+        iframeContent.onunhandledrejection = (event) => 
+        {
+            let text = event.reason;
+            if (event.reason.stack)
+                text += `\n\n` + event.reason.stack;
+            setErrorMessage(text);
+        };
+        const originalAssert = iframeContent.console.assert;
+        iframeContent.console.assert = function (condition, output)
+        {
+            if (!condition)
+                setErrorMessage('Assertion failed: ' + (output || ''));
+            originalAssert.apply(this, arguments);
+        };
+
+        // create a script element that overrides the default functions
+        const overrideScript = iframeDocument.createElement('script');
+        iframeDocument.body.appendChild(overrideScript);
+        overrideScript.text = code;
+        
+        if (textareaError.style.display == 'block')
+            return; // stop if script error
+        
+        // start LittleJS engine
+        iframeContent.engineInit(iframeContent.gameInit, iframeContent.gameUpdate, iframeContent.gameUpdatePost, iframeContent.gameRender, iframeContent.gameRenderPost, ['tiles.png?1']);
+
+        buttonScreenshot.onclick = () =>
+        {
+            if (iframeContent.debugScreenshot)
+                iframeContent.debugScreenshot();
+        }
+    }
+    iframeExample.src = 'shorts/base.html';
+}
+
+function setErrorMessage(message)
+{
+    textareaError.value = message
+    textareaError.style.display = message ? 'block' : 'none';
+}
+
+</script>
 </body>
+</html>
