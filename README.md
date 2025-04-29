@@ -63,7 +63,6 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 - Compatible with all modern web browsers and on mobile devices
 - Support for TypeScript and Modules with example projects for both
 - Ideal for size coding competitions like [js13kGames](https://js13kgames.com/), [starter project builds to a 7KB zip](https://github.com/KilledByAPixel/LittleJS/tree/js13k)
-- Builds to an executable with [Electron](https://www.electronjs.org/) for distribution on Windows, macOS, and Linux
 - Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used for anything you want forever
 
 ### 🛠️ And more...
@@ -79,9 +78,7 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 
 To get started download the latest LittleJS package from GitHub or install via npm: ```npm install littlejsengine```
 
-*You will need to run a local web server to run LittleJS games!*
-
-This is because web browsers just have protection from loading local files. You may see a console error like "The image element contains cross-origin data." Don't panic, it's easy to fix! If you are using [Visual Studio Code](https://code.visualstudio.com/) there is a [Live Preview Extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.live-server) that will handle this for you automatically. Another option is to setup a simple local web server like [http-server](https://www.npmjs.com/package/http-server) via npm.
+*You need to run a local web server to run LittleJS games during development!* You may see a console error like "The image element contains cross-origin data." Don't panic, it's easy to fix! If you are using [Visual Studio Code](https://code.visualstudio.com/) there is a [Live Preview Extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.live-server) that will handle this for you automatically. Another option is to setup a simple local web server like [http-server](https://www.npmjs.com/package/http-server) via npm.
 
 - Learn how to make a simple game from scratch with [The Breakout Tutorial.](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial)
 - [Make a ski game with LittleJS](https://eoinmcgrath.com/little-ski/tutorial.html) - Check out this tutorial by eoinmcg that shows how to make a pixel art style game.
@@ -101,7 +98,7 @@ These demos are for both learning and using as starter projects to create your o
 - [Box2D Demo](https://killedbyapixel.github.io/LittleJS/examples/box2d/) - Box2D plugin demonstration and testbed
 - [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress/) - Max sprite/object test and music system demo
 - [Particle System Designer](https://killedbyapixel.github.io/LittleJS/examples/particles/) - Particle system editor and visualizer
-- [Example Browser](https://killedbyapixel.github.io/LittleJS/examples/) - Live example browsers with all examples
+- [Example Browser](https://killedbyapixel.github.io/LittleJS/examples/) - Live example browser with all examples
 
 ## Builds
 
@@ -116,8 +113,6 @@ To easily include LittleJS in your game, you can use one of the pre-built js fil
 To rebuild the engine you must first run ```npm install``` to setup the necessary npm dependencies. Then call ```npm run build``` to build the engine.
 
 The starter example project includes a node js file [build.js](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/starter/build.js) that compresses everything into a tiny zip file using Google Closure, UglifyJS, and ECT Zip.
-
-Debug builds of LittleJS have a special menu that can be opened by pressing the Esc key.
 
 ## Games Made With LittleJS
 
