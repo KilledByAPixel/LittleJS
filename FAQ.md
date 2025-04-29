@@ -1,8 +1,38 @@
-# LittleJS FAQ
+# LittleJS Frequently Asked Questions
 
 Welcome to the LittleJS FAQ!
 This document addresses common questions and issues to help developers get started and troubleshoot their projects.
 If you don’t find an answer here, feel free to ask the community or check the documentation.
+
+Getting Started
+- [What is LittleJS, and how is it different from other JavaScript game engines?](#what-is-littlejs-and-how-is-it-different-from-other-javascript-game-engines)
+- [How do I set up a basic LittleJS project?](#how-do-i-set-up-a-basic-littlejs-project)
+- [Why do I see a blank screen when I run my game?](#why-do-i-see-a-blank-screen-when-i-run-my-game)
+- [Do I need a local server to run LittleJS games, and how do I set one up?](#do-i-need-a-local-server-to-run-littlejs-games-and-how-do-i-set-one-up)
+- [How does the camera and world coordinate systems work?](#how-does-the-camera-and-world-coordinate-systems-work)
+- [Can I use LittleJS with build tools like Vite?](#can-i-use-littlejs-with-build-tools-like-vite)
+
+Graphics and Sound
+- [How do I load and add images to my game?](#how-do-i-load-and-add-images-to-my-game)
+- [What is the tile function and how do tile indexes work?](#what-is-the-tile-function-and-how-do-tile-indexes-work)
+- [Can I add and switch between multiple sprites for a game object?](#can-i-add-and-switch-between-multiple-sprites-for-a-game-object)
+- [There are thin lines around my sprites sometimes, how can I fix that?](#there-are-thin-lines-around-my-sprites-sometimes-how-can-i-fix-that)
+- [How do I handle animations in LittleJS?](#how-do-i-handle-animations-in-littlejs)
+- [How can I fix thin rows of pixels bleeding in the sides of some sprites from neighboring tiles?](#how-can-i-fix-thin-rows-of-pixels-bleeding-in-the-sides-of-some-sprites-from-neighboring-tiles)
+- [How do I control the camera in LittleJS?](#how-do-i-control-the-camera-in-littlejs)
+- [How do I play sounds in LittleJS?](#how-do-i-play-sounds-in-littlejs)
+- [If I load several images, how do I control which is used?](#if-i-load-several-images-how-do-i-control-which-is-used)
+- [How can I check if an object is on screen?](#how-can-i-check-if-an-object-is-on-screen)
+
+Gameplay and Programming
+- [How do I add keyboard or mouse input to my game?](#how-do-i-add-keyboard-or-mouse-input-to-my-game)
+- [How do I create and update game objects?](#how-do-i-create-and-update-game-objects)
+- [How can I load a 2D level map?](#how-can-i-load-a-2d-level-map)
+- [Can I use physics with LittleJS?](#can-i-use-physics-with-littlejs)
+- [How do I add particle effects to my game?](#how-do-i-add-particle-effects-to-my-game)
+
+Debugging and Development
+- [How do I debug my game in LittleJS?](#how-do-i-debug-my-game-in-littlejs)
 
 ---
 
@@ -297,6 +327,7 @@ new ParticleEmitter(
 
 ### How do I debug my game in LittleJS?
 
+In addition to your browser's built in developer mode, LitlteJS has it's own debug view.
 Press the Esc key to show the debug menu. From here there are several options that can be accessed via the number keys.
 
 You can also press + or - to adjust game speed to help with debugging, or just for fun!
