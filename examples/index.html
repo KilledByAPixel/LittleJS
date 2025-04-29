@@ -138,9 +138,8 @@ const exampleList =
 
     new ExampleInfo('--- FULL EXAMPLES ---'),
     new ExampleInfo('Starter', 'starter', 'Clean starter project', true),
-    new ExampleInfo('Starter with Modules', 'module', 'Loading LittleJS as a module', true),
-    new ExampleInfo('Breakout', 'breakout', 'Block breaking game with post-processing effects', true),
-    new ExampleInfo('BreakoutTutorial', 'breakoutTutorial', 'Tutorial Breakout example', true),
+    new ExampleInfo('Breakout Tutorial', 'breakoutTutorial', 'Tutorial Breakout example', true),
+    new ExampleInfo('Breakout Game', 'breakout', 'Block breaking game with post-processing effects', true),
     new ExampleInfo('Platforming Game', 'platformer', 'Platformer/shooter with level data loading', true),
     new ExampleInfo('Puzzle Game', 'puzzle', 'Match 3 puzzle game with HD rendering', true),
     new ExampleInfo('Stress Test', 'stress', 'Max sprite/object test and music system demo', true),
@@ -208,7 +207,7 @@ function loadFile(filename, fullExample)
         if (iframeExample)
             iframeContainer.removeChild(iframeExample);
 
-        setErrorMessage('');
+        setErrorMessage();
         iframeExample = document.createElement('iframe');
         iframeContainer.appendChild(iframeExample);
         iframeExample.onload = () =>
@@ -238,7 +237,7 @@ function setCode(code, largeExample)
     if (iframeExample)
         iframeContainer.removeChild(iframeExample);
 
-    setErrorMessage('');
+    setErrorMessage();
     iframeExample = document.createElement('iframe');
     iframeContainer.appendChild(iframeExample);
     iframeExample.onload = () =>
@@ -291,7 +290,7 @@ function setCode(code, largeExample)
     iframeExample.src = 'shorts/base.html';
 }
 
-function setErrorMessage(message)
+function setErrorMessage(message='')
 {
     textareaError.value = message
     textareaError.style.display = message ? 'block' : 'none';
