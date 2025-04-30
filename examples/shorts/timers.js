@@ -9,13 +9,17 @@ class TimerButton extends EngineObject
 
     update()
     {
+        // start or stop the timer when clicked
         if (mouseWasPressed(0) && isOverlapping(this.pos, this.size, mousePos))
             this.timer.isSet() ? this.timer.unset() : this.timer.set(this.time);
     }
 
     render()
     {
+        // get color based on timer state
         this.color = this.timer.isSet() ? this.timer.active() ? BLUE : RED : GRAY;
+
+        // draw the button and timer text
         drawRect(this.pos, this.size, this.color);
         if (this.timer.isSet())
         {
@@ -30,6 +34,7 @@ class TimerButton extends EngineObject
 
 function gameInit()
 {
+    // create some timer buttons
     new TimerButton(vec2(-7, 0), 3);
     new TimerButton(vec2( 0, 0), 1);
     new TimerButton(vec2( 7, 0), 0);

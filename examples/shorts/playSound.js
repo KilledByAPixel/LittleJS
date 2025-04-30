@@ -9,12 +9,14 @@ class SoundButton extends EngineObject
 
     update()
     {
+        // play sound when clicked
         if (mouseWasPressed(0) && isOverlapping(this.pos, this.size, mousePos))
             this.sound.play(this.pos);
     }
 
     render()
     {
+        // draw the button and icon
         drawRect(this.pos, this.size, hsl(0,0,.8));
         drawTextOverlay(this.icon, this.pos, 3);
     }
@@ -22,6 +24,7 @@ class SoundButton extends EngineObject
 
 function gameInit()
 {
+    // create a grid of buttons with different sounds
     new SoundButton(vec2(-6, 5),'💰', new Sound([,,1675,,.06,.24,1,1.82,,,837,.06]));
     new SoundButton(vec2( 0, 5),'🥊', new Sound([,,925,.04,.3,.6,1,.3,,6.27,-184,.09,.17]));
     new SoundButton(vec2( 6, 5),'✨', new Sound([,,539,0,.04,.29,1,1.92,,,567,.02,.02,,,,.04]));
