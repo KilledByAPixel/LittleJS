@@ -19,6 +19,7 @@ export {
 	engineInit,
 	engineObjectsUpdate,
 	engineObjectsDestroy,
+	engineObjectsCollect,
 	engineObjectsCallback,
 	engineObjectsRaycast,
 	engineAddPlugin,
