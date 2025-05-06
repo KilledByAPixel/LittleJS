@@ -36,7 +36,7 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 
 ### ✨ Graphics
 
-- Super fast sprite and tile map rendering engine with WebGL
+- Super fast sprite and tile map rendering engine with WebGL2
 - Update and render 100,000+ sprites at a solid 60fps
 - Apply [Shadertoy](https://www.shadertoy.com) compatible shaders for post-processing effects
 - Robust particle effect system and [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
@@ -70,11 +70,10 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 - Node.js build system
 - 2D vector math library
 - Debug primitive rendering system
-- Particle effects system and design tool
-- Bitmap font rendering and includes a built in engine font
-- Medal system tracks and displays achievements with Newgrounds integration
+- Bitmap font rendering and built in engine font
+- Medal tracking system with [Newgrounds](https://www.newgrounds.com/) support
 
-## How to use LittleJS
+## How To Use LittleJS
 
 To get started download the latest LittleJS package from GitHub or install via npm: ```npm install littlejsengine```
 
@@ -116,7 +115,7 @@ The starter example project includes a node js file [build.js](https://github.co
 
 ## Games Made With LittleJS
 
-Here are a few of the amazing games people made using LittleJS...
+Here are a few of the many amazing games created with LittleJS...
 
 - [Space Huggers](https://www.newgrounds.com/portal/view/819609) - Rogulike platformer shoot-em-up game with procedural levels. by [KilledByAPixel](https://frankforce.com/)
 - [Undergrowth](https://undergrowth.squidband.uk/) - An interactive music videogame for the band Squid. by [KilledByAPixel](https://frankforce.com/)
