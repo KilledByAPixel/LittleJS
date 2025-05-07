@@ -79,12 +79,13 @@ To get started download the latest LittleJS package from GitHub or install via n
 
 *You need to run a local web server to run LittleJS games during development!* You may see a console error like "The image element contains cross-origin data." Don't panic, it's easy to fix! If you are using [Visual Studio Code](https://code.visualstudio.com/) there is a [Live Preview Extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.live-server) that will handle this for you automatically. Another option is to setup a simple local web server like [http-server](https://www.npmjs.com/package/http-server) via npm.
 
+
+- [Watch this GitNation talk](https://youtu.be/_dXKU0WgAj8?si=ZDXLYAFDWp54hrGT) to hear more about LittleJS works and get some tips on how to use it.
 - Learn how to make a simple game from scratch with [The Breakout Tutorial.](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial)
 - [Make a ski game with LittleJS](https://eoinmcgrath.com/little-ski/tutorial.html) - Check out this tutorial by eoinmcg that shows how to make a pixel art style game.
 - [LittleJS Engine Quick Reference Sheet](https://github.com/KilledByAPixel/LittleJS/blob/main/reference.md) - This cheat sheet can help you get started.
-- [Watch this GitNation talk](https://youtu.be/_dXKU0WgAj8?si=ZDXLYAFDWp54hrGT) to hear more about LittleJS works and get some tips on how to use it.
+- [Check out The Little JS FAQ for more help getting started](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md).
 - Join our vibrant community on [Discord](https://discord.gg/zb7hcGkyZe) to get help, share your projects, and collaborate with others!
-- [Check out The Little JS FAQ for more help getting started](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md), and let us know if there's anything you'd like to see added.
 
 ## Examples
 
