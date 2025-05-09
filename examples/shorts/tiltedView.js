@@ -19,10 +19,7 @@ class Player extends GameObject
     update()
     {
         // apply movement controls
-        let moveInput = vec2();
-        moveInput.x = keyIsDown('ArrowRight') - keyIsDown('ArrowLeft');
-        moveInput.y = keyIsDown('ArrowUp')    - keyIsDown('ArrowDown');
-        moveInput = moveInput.clampLength(1).scale(.2); // clamp and scale
+        const moveInput = keyDirection().clampLength(1).scale(.2); // clamp and scale input
         this.velocity = this.velocity.add(moveInput); // apply movement
 
         super.update(); // call parent update function

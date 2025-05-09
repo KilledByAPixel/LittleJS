@@ -19,9 +19,9 @@ class Player extends PhysicsObject
     update()
     {
         // apply movement controls
-        const moveInput = keyIsDown('ArrowRight') - keyIsDown('ArrowLeft');
-        this.velocity.x += moveInput * (this.groundObject ? .1: .01);
-        if (this.groundObject && keyIsDown('ArrowUp'))
+        const moveInput = keyDirection();
+        this.velocity.x += moveInput.x * (this.groundObject ? .1: .01);
+        if (this.groundObject && moveInput.y > 0)
             this.velocity.y = .9; // jump
 
         super.update(); // call parent update function

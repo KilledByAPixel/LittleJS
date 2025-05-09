@@ -35,7 +35,6 @@ class TimerButton extends EngineObject
 function gameInit()
 {
     // create some timer buttons
-    new TimerButton(vec2(-7, 0), 3);
-    new TimerButton(vec2( 0, 0), 1);
-    new TimerButton(vec2( 7, 0), 0);
+    new TimerButton(vec2(-5, 0), 3);
+    new TimerButton(vec2( 5, 0), 0);
 }
