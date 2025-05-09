@@ -88,20 +88,19 @@ function gameUpdate()
 
     if (keyWasPressed('KeyR'))
         loadScene(scene); // reset scene
-
-    // apply directional input controls
-    const inputDirection = keyDirection();
-    if (inputDirection.y)
+    if (keyWasPressed('ArrowUp') || keyWasPressed('ArrowDown'))
     {
         // change scene
-        scene += inputDirection.y;
+        scene += keyWasPressed('ArrowUp') ? 1 : -1;
         scene = mod(scene, maxScenes);
         loadScene(scene);
     }
+
     if (car)
     {
         // update car control
-        car.applyMotorInput(inputDirection.x);
+        const input = keyDirection();
+        car.applyMotorInput(-input.x);
     }
 }
 
