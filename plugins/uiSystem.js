@@ -246,7 +246,8 @@ class UICheckbox extends UIObject
     }
     render()
     {
-        drawUIRect(this.pos, this.size, this.color, this.lineWidth, this.lineColor);
+        const color = this.mouseIsOver? this.hoverColor : this.color;
+        drawUIRect(this.pos, this.size, color, this.lineWidth, this.lineColor);
         if (this.checked)
         {
             // draw an X if checked
