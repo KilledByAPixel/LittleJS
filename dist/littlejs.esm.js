@@ -3007,6 +3007,15 @@ function keyWasReleased(key, device=0)
     return inputData[device] && !!(inputData[device][key] & 4);
 }
 
+/** Returns input vector from arrow keys or WASD if enabled
+ *  @return {Vector2}
+ *  @memberof Input */
+function keyDirection(up='ArrowUp', down='ArrowDown', left='ArrowLeft', right='ArrowRight')
+{
+    const k = (key)=> keyIsDown(key) ? 1 : 0;
+    return vec2(k(right) - k(left), k(up) - k(down));
+}
+
 /** Clears all input
  *  @memberof Input */
 function clearInput() { inputData = [[]]; touchGamepadButtons = []; }
@@ -3090,9 +3099,9 @@ function gamepadStick(stick,  gamepad=0)
 { return gamepadStickData[gamepad] ? gamepadStickData[gamepad][stick] || vec2() : vec2(); }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Input update called by engine
+// Input system functions called automatically by engine
 
-// store input as a bit field for each key: 1 = isDown, 2 = wasPressed, 4 = wasReleased
+// input is stored as a bit field for each key: 1 = isDown, 2 = wasPressed, 4 = wasReleased
 // mouse and keyboard are stored together in device 0, gamepads are in devices > 0
 let inputData = [[]];
 
@@ -3121,9 +3130,6 @@ function inputUpdatePost()
         deviceInputData[i] &= 1;
     mouseWheel = 0;
 }
-
-///////////////////////////////////////////////////////////////////////////////
-// Input event handlers
 
 function inputInit()
 {
@@ -3167,11 +3173,11 @@ function inputInit()
         
         isUsingGamepad = false; 
         inputData[0][e.button] = 3; 
-        mousePosScreen = mouseToScreen(e); 
+        mousePosScreen = mouseEventToScreen(e); 
         e.button && e.preventDefault();
     }
     onmouseup     = (e)=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
-    onmousemove   = (e)=> mousePosScreen = mouseToScreen(e);
+    onmousemove   = (e)=> mousePosScreen = mouseEventToScreen(e);
     onwheel       = (e)=> mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY);
     oncontextmenu = (e)=> false; // prevent right click menu
     onblur        = (e) => clearInput(); // reset input when focus is lost
@@ -3182,14 +3188,12 @@ function inputInit()
 }
 
 // convert a mouse or touch event position to screen space
-function mouseToScreen(mousePos)
+function mouseEventToScreen(mousePos)
 {
-    if (!mainCanvas || headlessMode)
-        return vec2(); // fix bug that can occur if user clicks before page loads
-
     const rect = mainCanvas.getBoundingClientRect();
-    return vec2(mainCanvas.width, mainCanvas.height).multiply(
-        vec2(percent(mousePos.x, rect.left, rect.right), percent(mousePos.y, rect.top, rect.bottom)));
+    const px = percent(mousePos.x, rect.left, rect.right);
+    const py = percent(mousePos.y, rect.top, rect.bottom);
+    return vec2(px*mainCanvas.width, py*mainCanvas.height);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3344,7 +3348,7 @@ function touchInputInit()
         {
             // set event pos and pass it along
             const p = vec2(e.touches[0].clientX, e.touches[0].clientY);
-            mousePosScreen = mouseToScreen(p);
+            mousePosScreen = mouseEventToScreen(p);
             wasTouching ? isUsingGamepad = touchGamepadEnable : inputData[0][button] = 3;
         }
         else if (wasTouching)
@@ -3392,7 +3396,7 @@ function touchInputInit()
         // check each touch point
         for (const touch of e.touches)
         {
-            const touchPos = mouseToScreen(vec2(touch.clientX, touch.clientY));
+            const touchPos = mouseEventToScreen(vec2(touch.clientX, touch.clientY));
             if (touchPos.distance(stickCenter) < touchGamepadSize)
             {
                 // virtual analog stick
@@ -5305,7 +5309,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.6';
+const engineVersion = '1.11.7';
 
 /** Frames per second to update
  *  @type {Number}
@@ -5925,6 +5929,7 @@ export {
 	engineInit,
 	engineObjectsUpdate,
 	engineObjectsDestroy,
+	engineObjectsCollect,
 	engineObjectsCallback,
 	engineObjectsRaycast,
 	engineAddPlugin,
@@ -6143,6 +6148,7 @@ export {
 	keyIsDown,
 	keyWasPressed,
 	keyWasReleased,
+	keyDirection,
 	clearInput,
 	mouseIsDown,
 	mouseWasPressed,

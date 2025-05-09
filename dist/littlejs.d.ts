@@ -79,6 +79,13 @@ declare module "littlejsengine" {
     /** Destroy and remove all objects
      *  @memberof Engine */
     export function engineObjectsDestroy(): void;
+    /** Collects all object within a given area
+     *  @param {Vector2} [pos]                 - Center of test area, or undefined for all objects
+     *  @param {Number|Vector2} [size]         - Radius of circle if float, rectangle size if Vector2
+     *  @param {Array} [objects=engineObjects] - List of objects to check
+     *  @return {Array}                        - List of collected objects
+     *  @memberof Engine */
+    export function engineObjectsCollect(pos?: Vector2, size?: number | Vector2, objects?: any[]): any[];
     /** Triggers a callback for each object within a given area
      *  @param {Vector2} [pos]                 - Center of test area, or undefined for all objects
      *  @param {Number|Vector2} [size]         - Radius of circle if float, rectangle size if Vector2
@@ -1521,6 +1528,10 @@ declare module "littlejsengine" {
      *  @return {Boolean}
      *  @memberof Input */
     export function keyWasReleased(key: string | number, device?: number): boolean;
+    /** Returns input vector from arrow keys or WASD if enabled
+     *  @return {Vector2}
+     *  @memberof Input */
+    export function keyDirection(up?: string, down?: string, left?: string, right?: string): Vector2;
     /** Clears all input
      *  @memberof Input */
     export function clearInput(): void;
@@ -1595,7 +1606,6 @@ declare module "littlejsengine" {
      *  @return {Vector2}
      *  @memberof Input */
     export function gamepadStick(stick: number, gamepad?: number): Vector2;
-    export function mouseToScreen(mousePos: any): Vector2;
     export function gamepadsUpdate(): void;
     /** Pulse the vibration hardware if it exists
      *  @param {Number|Array} [pattern] - single value in ms or vibration interval array
