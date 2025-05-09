@@ -23,7 +23,7 @@ class Player extends PhysicsObject
         let moveInput = vec2();
         moveInput.x = keyIsDown('ArrowRight') - keyIsDown('ArrowLeft');
         moveInput.y = keyIsDown('ArrowUp')    - keyIsDown('ArrowDown');
-        moveInput = moveInput.clampLength(1).scale(.2); // make circular and scale
+        moveInput = moveInput.clampLength(1).scale(.2); // clamp and scale
         this.velocity = this.velocity.add(moveInput); // apply movement
 
         super.update(); // call parent update function
