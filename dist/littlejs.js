@@ -2562,6 +2562,8 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode'); 
     ASSERT(typeof tileInfo !== 'number' || !tileInfo, 
         'this is an old style calls, to fix replace it with tile(tileIndex, tileSize)');
+    ASSERT(isVector2(pos) && isVector2(size));
+    ASSERT(isColor(color) && isColor(additiveColor));
 
     const textureInfo = tileInfo && tileInfo.getTextureInfo();
     if (useWebGL)
@@ -2615,7 +2617,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
             else
             {
                 // if no tile info, force untextured
-                context.fillStyle = color;
+                context.fillStyle = color.toString();
                 context.fillRect(-.5, -.5, 1, 1);
             }
         }, screenSpace, context);
@@ -2662,6 +2664,7 @@ function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace, contex
  *  @memberof Draw */
 function drawPoly(points, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
 {
+    ASSERT(isColor(color) && isColor(lineColor));
     context.fillStyle = color.toString();
     context.beginPath();
     for (const point of screenSpace ? points : points.map(worldToScreen))
@@ -2689,6 +2692,7 @@ function drawPoly(points, color=new Color, lineWidth=0, lineColor=new Color(0,0,
  *  @memberof Draw */
 function drawEllipse(pos, width=1, height=1, angle=0, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
 {
+    ASSERT(isColor(color) && isColor(lineColor));
     if (!screenSpace)
     {
         pos = worldToScreen(pos);
