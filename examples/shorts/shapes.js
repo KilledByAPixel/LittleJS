@@ -13,9 +13,9 @@ function gameRender()
     }
 
     // circles and ellipses
-    drawCircle(vec2(0,5), 1, 0,  hsl(.15,1,.5));
+    drawCircle(vec2(0,5), 1, hsl(.15,1,.5));
     drawEllipse(vec2(-5,5), 2, 1, 0, hsl(0,1,.5));
-    drawEllipse(vec2(5,5), 1, .5, 0, hsl(.55,1,.5));
+    drawEllipse(vec2(5,5), .5, 2, .5, hsl(.55,1,.5));
 
     // rects and lines
     drawRect(vec2(0,-5), vec2(13,2), hsl(.6,1,.5));
