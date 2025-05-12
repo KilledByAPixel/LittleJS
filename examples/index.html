@@ -267,7 +267,7 @@ function setCode(code, largeExample)
         iframeContent.console.assert = function (condition, output)
         {
             if (!condition)
-                setErrorMessage('Assertion failed: ' + (output || ''));
+                setErrorMessage('Assertion failed!\n' + (output || '') + '\n' + (new Error).stack);
             originalAssert.apply(this, arguments);
         };
 
