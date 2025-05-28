@@ -252,7 +252,6 @@ export {
 	gamepadWasPressed,
 	gamepadWasReleased,
 	gamepadStick,
-	mouseToScreen,
 	gamepadsUpdate,
 	vibrate,
 	vibrateStop,
