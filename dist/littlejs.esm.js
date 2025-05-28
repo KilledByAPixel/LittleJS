@@ -5313,7 +5313,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.7';
+const engineVersion = '1.11.8';
 
 /** Frames per second to update
  *  @type {Number}
@@ -6166,7 +6166,6 @@ export {
 	gamepadWasPressed,
 	gamepadWasReleased,
 	gamepadStick,
-	mouseToScreen,
 	gamepadsUpdate,
 	vibrate,
 	vibrateStop,
