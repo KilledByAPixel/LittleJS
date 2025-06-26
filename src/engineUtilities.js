@@ -486,7 +486,7 @@ class Vector2
     }
 
     /** Set the integer direction of this vector, corresponding to multiples of 90 degree rotation (0-3)
-     * @param {Number} [direction]
+     * @param {Number} direction
      * @param {Number} [length] */
     setDirection(direction, length=1)
     {

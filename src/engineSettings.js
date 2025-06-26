@@ -17,7 +17,7 @@ let cameraPos = vec2();
 
 /** Scale of camera in world space
  *  @type {Number}
- *  @default
+ *  @default 32
  *  @memberof Settings */
 let cameraScale = 32;
 
@@ -39,31 +39,31 @@ let canvasFixedSize = vec2();
 
 /** Use nearest neighbor scaling algorithm for canvas for more pixelated look
  *  @type {Boolean}
- *  @default
+ *  @default true
  *  @memberof Settings */
 let canvasPixelated = true;
 
 /** Disables texture filtering for crisper pixel art
  *  @type {Boolean}
- *  @default
+ *  @default true
  *  @memberof Settings */
 let tilesPixelated = true;
 
 /** Default font used for text rendering
  *  @type {String}
- *  @default
+ *  @default 'arial'
  *  @memberof Settings */
 let fontDefault = 'arial';
 
 /** Enable to show the LittleJS splash screen be shown on startup
  *  @type {Boolean}
- *  @default
+ *  @default false
  *  @memberof Settings */
 let showSplashScreen = false;
 
 /** Disables all rendering, audio, and input for servers
  *  @type {Boolean}
- *  @default
+ *  @default false
  *  @memberof Settings */
 let headlessMode = false;
 
@@ -72,13 +72,13 @@ let headlessMode = false;
 
 /** Enable webgl rendering, webgl can be disabled and removed from build (with some features disabled)
  *  @type {Boolean}
- *  @default
+ *  @default true
  *  @memberof Settings */
 let glEnable = true;
 
 /** Fixes slow rendering in some browsers by not compositing the WebGL canvas
  *  @type {Boolean}
- *  @default
+ *  @default true
  *  @memberof Settings */
 let glOverlay = true;
 
@@ -93,7 +93,7 @@ let tileSizeDefault = vec2(16);
 
 /** How many pixels smaller to draw tiles to prevent bleeding from neighbors
  *  @type {Number}
- *  @default
+ *  @default 0
  *  @memberof Settings */
 let tileFixBleedScale = 0;
 
@@ -102,55 +102,55 @@ let tileFixBleedScale = 0;
 
 /** Enable physics solver for collisions between objects
  *  @type {Boolean}
- *  @default
+ *  @default true
  *  @memberof Settings */
 let enablePhysicsSolver = true;
 
 /** Default object mass for collision calculations (how heavy objects are)
  *  @type {Number}
- *  @default
+ *  @default 1
  *  @memberof Settings */
 let objectDefaultMass = 1;
 
 /** How much to slow velocity by each frame (0-1)
  *  @type {Number}
- *  @default
+ *  @default 1
  *  @memberof Settings */
 let objectDefaultDamping = 1;
 
 /** How much to slow angular velocity each frame (0-1)
  *  @type {Number}
- *  @default
+ *  @default 1
  *  @memberof Settings */
 let objectDefaultAngleDamping = 1;
 
 /** How much to bounce when a collision occurs (0-1)
  *  @type {Number}
- *  @default
+ *  @default 0
  *  @memberof Settings */
 let objectDefaultElasticity = 0;
 
 /** How much to slow when touching (0-1)
  *  @type {Number}
- *  @default
+ *  @default 0.8
  *  @memberof Settings */
 let objectDefaultFriction = .8;
 
 /** Clamp max speed to avoid fast objects missing collisions
  *  @type {Number}
- *  @default
+ *  @default 1
  *  @memberof Settings */
 let objectMaxSpeed = 1;
 
 /** How much gravity to apply to objects along the Y axis, negative is down
  *  @type {Number}
- *  @default
+ *  @default 0
  *  @memberof Settings */
 let gravity = 0;
 
 /** Scales emit rate of particles, useful for low graphics mode (0 disables particle emitters)
  *  @type {Number}
- *  @default
+ *  @default 1
  *  @memberof Settings */
 let particleEmitRateScale = 1;
 
@@ -159,19 +159,19 @@ let particleEmitRateScale = 1;
 
 /** Should gamepads be allowed
  *  @type {Boolean}
- *  @default
+ *  @default true
  *  @memberof Settings */
 let gamepadsEnable = true;
 
 /** If true, the dpad input is also routed to the left analog stick (for better accessability)
  *  @type {Boolean}
- *  @default
+ *  @default true
  *  @memberof Settings */
 let gamepadDirectionEmulateStick = true;
 
 /** If true the WASD keys are also routed to the direction keys (for better accessability)
  *  @type {Boolean}
- *  @default
+ *  @default true
  *  @memberof Settings */
 let inputWASDEmulateDirection = true;
 
