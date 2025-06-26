@@ -147,13 +147,13 @@ Yes, many people have set up projects using Vite and other build tools. [An exam
 
 ### How do I load and add images to my game?
 
-First you need to load an image file. For LittleJS this is typically done on startup via a parameter to engineInt that is a list of images to load. The engine will ensure that the images are all loaded before starting. Each source image can be up to 4096x4096 in size so most games only need one texture, though it's possible to load as many as you need.
+First you need to load an image file. For LittleJS this is typically done on startup via a parameter to engineInit that is a list of images to load. The engine will ensure that the images are all loaded before starting. Each source image can be up to 4096x4096 in size so most games only need one texture, though it's possible to load as many as you need.
 
 ```javascript
 engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);
 ```
 
-LittleJS works best when your tile sheet is broken up into grids of tiles because the rendering system can be batched up. To draw a tile from a source image you can call drawTile and pass in TileInfo object. Another common approach is to create an EngineObject and set it's tileInfo, it will automatically be rendered.
+LittleJS works best when your tile sheet is broken up into grids of tiles because the rendering system can be batched up. To draw a tile from a source image you can call drawTile and pass in TileInfo object. Another common approach is to create an EngineObject and set its tileInfo, it will automatically be rendered.
 
 ```javascript
 drawTile(vec2(21,5), vec2(4.5), tile(3,128));
@@ -161,7 +161,7 @@ drawTile(vec2(21,5), vec2(4.5), tile(3,128));
 
 ### What is the tile function and how do tile indexes work?
 
-The tile function is a very useful function that takes a tile index and size and returns a TileInfo object which can be passed to functions like drawTile. It works by accepting using the tileIndex multiplied by the tileSize to get the coordinates for the TileInfo. It's also possible to pass in padding for sheets that are set up for it.
+The tile function is a very useful function that takes a tile index and size and returns a TileInfo object which can be passed to functions like drawTile. It works by using the tileIndex multiplied by the tileSize to get the coordinates for the TileInfo. It's also possible to pass in padding for sheets that are set up for it.
 
 ### Can I add and switch between multiple sprites for a game object?
 
@@ -173,7 +173,7 @@ this.tileInfo = tile(3, 32);
 
 ### There are thin lines around my sprites sometimes, how can I fix that?
 
-That is called tile bleeding, it happens when pixels from one tile blend into another neighboring tile. There are two approaches supported by LittleJs to fix the problem:
+That is called tile bleeding, it happens when pixels from one tile blend into another neighboring tile. There are two approaches supported by LittleJS to fix the problem:
 - Use tileFixBleedScale which shrinks tiles by a number of pixels. A very small value of around .1 or less can often fix the problem without noticeable issues.
 - Create the sprite sheet with extra space around each tile. This can be done by adding a 1 pixel layer of padding around each sprite.
 
@@ -327,7 +327,7 @@ new ParticleEmitter(
 
 ### How do I debug my game in LittleJS?
 
-In addition to your browser's built in developer mode, LitlteJS has it's own debug view.
+In addition to your browser's built in developer mode, LittleJS has its own debug view.
 Press the Esc key to show the debug menu. From here there are several options that can be accessed via the number keys.
 
 You can also press + or - to adjust game speed to help with debugging, or just for fun!
@@ -335,7 +335,7 @@ You can also press + or - to adjust game speed to help with debugging, or just f
 ---
 
 ## Contribute to the FAQ
-If you have additional questions or think something should be added to this FAQ, please open an issue or pull request on the [LittleJS GitHub repository](https://github.com/FrankForce/LittleJS).
+If you have additional questions or think something should be added to this FAQ, please open an issue or pull request on the [LittleJS GitHub repository](https://github.com/KilledByAPixel/LittleJS).
 
 ---
 
