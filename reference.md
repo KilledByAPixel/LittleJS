@@ -1,11 +1,11 @@
 # LittleJS Engine Quick Reference Sheet
 
-##  This cheat sheet contains all LittleJS essentials.
+## This cheat sheet contains all LittleJS essentials.
 - [LittleJS on GitHub](https://github.com/KilledByAPixel/LittleJS) - Official LittleJS website with more info
 - [LittleJS Documentation](https://killedbyapixel.github.io/LittleJS/docs) - LittleJS documentation browser
 - [Particle System Designer](https://killedbyapixel.github.io/LittleJS/examples/particles) - Editor for LittleJS Particle Systems
 - [Sound Effect Designer](https://killedbyapixel.github.io/ZzFX) - Tool for creating ZzFX sound effects
-- [Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter) - Simple LittleJS demo  to start with
+- [Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter) - Simple LittleJS demo to start with
 
 ## LittleJS Setup
 
@@ -32,7 +32,7 @@ hsl(h=0, s=0, l=1, a=1)                       // Create a color object with HSLA
 tile(pos=(0,0), size, textureIndex=0)         // Create a tile info object
 
 // Helper functions 
-abs(value)                                    // Get absoulte value
+abs(value)                                    // Get absolute value
 min(valueA, valueB)                           // Get lowest of values
 max(valueA, valueB)                           // Get highest of values
 sign(value)                                   // Get the sign of value
