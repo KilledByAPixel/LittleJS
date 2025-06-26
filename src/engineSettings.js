@@ -178,7 +178,7 @@ let inputWASDEmulateDirection = true;
 /** True if touch input is enabled for mobile devices
  *  - Touch events will be routed to mouse events
  *  @type {Boolean}
- *  @default
+ *  @default true
  *  @memberof Settings */
 let touchInputEnable = true;
 
@@ -186,31 +186,31 @@ let touchInputEnable = true;
  *  - Supports left analog stick, 4 face buttons and start button (button 9)
  *  - Must be set by end of gameInit to be activated
  *  @type {Boolean}
- *  @default
+ *  @default false
  *  @memberof Settings */
 let touchGamepadEnable = false;
 
 /** True if touch gamepad should be analog stick or false to use if 8 way dpad
  *  @type {Boolean}
- *  @default
+ *  @default true
  *  @memberof Settings */
 let touchGamepadAnalog = true;
 
 /** Size of virtual gamepad for touch devices in pixels
  *  @type {Number}
- *  @default
+ *  @default 99
  *  @memberof Settings */
 let touchGamepadSize = 99;
 
 /** Transparency of touch gamepad overlay
  *  @type {Number}
- *  @default
+ *  @default 0.3
  *  @memberof Settings */
 let touchGamepadAlpha = .3;
 
 /** Allow vibration hardware if it exists
  *  @type {Boolean}
- *  @default
+ *  @default true
  *  @memberof Settings */
 let vibrateEnable = true;
 
@@ -219,25 +219,25 @@ let vibrateEnable = true;
 
 /** All audio code can be disabled and removed from build
  *  @type {Boolean}
- *  @default
+ *  @default true
  *  @memberof Settings */
 let soundEnable = true;
 
 /** Volume scale to apply to all sound, music and speech
  *  @type {Number}
- *  @default
+ *  @default 0.3
  *  @memberof Settings */
 let soundVolume = .3;
 
 /** Default range where sound no longer plays
  *  @type {Number}
- *  @default
+ *  @default 40
  *  @memberof Settings */
 let soundDefaultRange = 40;
 
 /** Default range percent to start tapering off sound (0-1)
  *  @type {Number}
- *  @default
+ *  @default 0.7
  *  @memberof Settings */
 let soundDefaultTaper = .7;
 
@@ -246,13 +246,13 @@ let soundDefaultTaper = .7;
 
 /** How long to show medals for in seconds
  *  @type {Number}
- *  @default
+ *  @default 5
  *  @memberof Settings */
 let medalDisplayTime = 5;
 
 /** How quickly to slide on/off medals in seconds
  *  @type {Number}
- *  @default
+ *  @default 0.5
  *  @memberof Settings */
 let medalDisplaySlideTime = .5;
 
@@ -264,13 +264,13 @@ let medalDisplaySize = vec2(640, 80);
 
 /** Size of icon in medal display
  *  @type {Number}
- *  @default
+ *  @default 50
  *  @memberof Settings */
 let medalDisplayIconSize = 50;
 
 /** Set to stop medals from being unlockable (like if cheats are enabled)
  *  @type {Boolean}
- *  @default
+ *  @default false
  *  @memberof Settings */
 let medalsPreventUnlock = false;
 
