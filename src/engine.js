@@ -109,7 +109,7 @@ function engineAddPlugin(updateFunction, renderFunction)
  *  @param {Function} gameRender - Called before objects are rendered, for drawing the background
  *  @param {Function} gameRenderPost - Called after objects are rendered, useful for drawing UI
  *  @param {Array} [imageSources=[]] - List of images to load
- *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default
+ *  @param {HTMLElement} [rootElement=document.body] - Root element to attach to, the document body by default
  *  @memberof Engine */
 function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
 {

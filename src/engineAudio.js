@@ -77,10 +77,10 @@ class Sound
 
     /** Play the sound
      *  @param {Vector2} [pos] - World space position to play the sound, sound is not attenuated if null
-     *  @param {Number}  [volume] - How much to scale volume by (in addition to range fade)
-     *  @param {Number}  [pitch] - How much to scale pitch by (also adjusted by this.randomness)
-     *  @param {Number}  [randomnessScale] - How much to scale randomness
-     *  @param {Boolean} [loop] - Should the sound loop
+     *  @param {Number}  [volume=1] - How much to scale volume by (in addition to range fade)
+     *  @param {Number}  [pitch=1] - How much to scale pitch by (also adjusted by this.randomness)
+     *  @param {Number}  [randomnessScale=1] - How much to scale randomness
+     *  @param {Boolean} [loop=false] - Should the sound loop
      *  @return {AudioBufferSourceNode} - The audio source node
      */
     play(pos, volume=1, pitch=1, randomnessScale=1, loop=false)
