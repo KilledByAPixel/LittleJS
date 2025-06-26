@@ -35,9 +35,9 @@ class EngineObject
      *  @param {Vector2}  [pos=Vector2()]   - World space position of the object
      *  @param {Vector2}  [size=(1,1)]      - World space size of the object
      *  @param {TileInfo} [tileInfo]        - Tile info to render object (undefined is untextured)
-     *  @param {Number}   [angle=0]         - Angle the object is rotated by
+     *  @param {Number}   [angle]           - Angle the object is rotated by
      *  @param {Color}    [color=(1,1,1,1)] - Color to apply to tile when rendered
-     *  @param {Number}   [renderOrder=0]   - Objects sorted by renderOrder before being rendered
+     *  @param {Number}   [renderOrder]     - Objects sorted by renderOrder before being rendered
      */
     constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color=new Color, renderOrder=0)
     {
@@ -382,8 +382,8 @@ class EngineObject
 
     /** Attaches a child to this with a given local transform
      *  @param {EngineObject} child
-     *  @param {Vector2}      [localPos=Vector2()]
-     *  @param {Number}       [localAngle=0] */
+     *  @param {Vector2}      [localPos=(0,0)]
+     *  @param {Number}       [localAngle] */
     addChild(child, localPos=vec2(), localAngle=0)
     {
         ASSERT(!child.parent && !this.children.includes(child));
@@ -403,10 +403,10 @@ class EngineObject
     }
 
     /** Set how this object collides
-     *  @param {Boolean} [collideSolidObjects=true] - Does it collide with solid objects?
-     *  @param {Boolean} [isSolid=true]             - Does it collide with and block other objects? (expensive in large numbers)
-     *  @param {Boolean} [collideTiles=true]        - Does it collide with the tile collision?
-     *  @param {Boolean} [collideRaycast=true]      - Does it collide with raycasts? */
+     *  @param {Boolean} [collideSolidObjects] - Does it collide with solid objects?
+     *  @param {Boolean} [isSolid]             - Does it collide with and block other objects? (expensive in large numbers)
+     *  @param {Boolean} [collideTiles]        - Does it collide with the tile collision?
+     *  @param {Boolean} [collideRaycast]      - Does it collide with raycasts? */
     setCollision(collideSolidObjects=true, isSolid=true, collideTiles=true, collideRaycast=true)
     {
         ASSERT(collideSolidObjects || !isSolid, 'solid objects must be set to collide');

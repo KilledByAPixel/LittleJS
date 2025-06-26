@@ -12,7 +12,7 @@
 
 /** Returns true if device key is down
  *  @param {String|Number} key
- *  @param {Number} [device=0]
+ *  @param {Number} [device]
  *  @return {Boolean}
  *  @memberof Input */
 function keyIsDown(key, device=0)
@@ -23,7 +23,7 @@ function keyIsDown(key, device=0)
 
 /** Returns true if device key was pressed this frame
  *  @param {String|Number} key
- *  @param {Number} [device=0]
+ *  @param {Number} [device]
  *  @return {Boolean}
  *  @memberof Input */
 function keyWasPressed(key, device=0)
@@ -34,7 +34,7 @@ function keyWasPressed(key, device=0)
 
 /** Returns true if device key was released this frame
  *  @param {String|Number} key
- *  @param {Number} [device=0]
+ *  @param {Number} [device]
  *  @return {Boolean}
  *  @memberof Input */
 function keyWasReleased(key, device=0)

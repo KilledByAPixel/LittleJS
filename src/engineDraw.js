@@ -63,8 +63,8 @@ let drawCount;
  * - If an index is passed in, the tile size and index will determine the position
  * @param {(Number|Vector2)} [pos=Vector2()]           - Index of tile in sheet
  * @param {(Number|Vector2)} [size=tileSizeDefault]     - Size of tile in pixels
- * @param {Number} [textureIndex=0]                     - Texture index to use
- * @param {Number} [padding=0]                          - How many pixels padding around tiles
+ * @param {Number} [textureIndex]                       - Texture index to use
+ * @param {Number} [padding]                            - How many pixels padding around tiles
  * @return {TileInfo}
  * @example
  * tile(2)                       // a tile at index 2 using the default tile size of 16
@@ -108,8 +108,8 @@ class TileInfo
     /** Create a tile info object
      *  @param {Vector2} [pos=Vector2()]        - Top left corner of tile in pixels
      *  @param {Vector2} [size=tileSizeDefault] - Size of tile in pixels
-     *  @param {Number}  [textureIndex=0]       - Texture index to use
-     *  @param {Number}  [padding=0]            - How many pixels padding around tiles
+     *  @param {Number}  [textureIndex]         - Texture index to use
+     *  @param {Number}  [padding]              - How many pixels padding around tiles
      */
     constructor(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0)
     {
@@ -203,7 +203,7 @@ function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
  *  @param {Vector2} [size=(1,1)]               - Size of the tile in world space
  *  @param {TileInfo}[tileInfo]                 - Tile info to use, untextured if undefined
  *  @param {Color}   [color=(1,1,1,1)]          - Color to modulate with
- *  @param {Number}  [angle=0]                  - Angle to rotate by
+ *  @param {Number}  [angle]                    - Angle to rotate by
  *  @param {Boolean} [mirror]                   - If true image is flipped along the Y axis
  *  @param {Color}   [additiveColor=(0,0,0,0)]  - Additive color to be applied
  *  @param {Boolean} [useWebGL=glEnable]        - Use accelerated WebGL rendering
@@ -295,7 +295,7 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
 /** Draw colored line between two points
  *  @param {Vector2} posA
  *  @param {Vector2} posB
- *  @param {Number}  [thickness=0.1]
+ *  @param {Number}  [thickness]
  *  @param {Color}   [color=(1,1,1,1)]
  *  @param {Boolean} [useWebGL=glEnable]
  *  @param {Boolean} [screenSpace=false]
