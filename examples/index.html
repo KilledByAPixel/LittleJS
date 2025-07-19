@@ -164,7 +164,8 @@ for (const example of exampleList)
 }
 
 // select first option
-selectExample.selectedIndex = 1;
+selectExample.selectedIndex = location.hash.split`#`[1] | 0
+
 setExample();
 
 onresize = () =>
@@ -182,12 +183,17 @@ onresize();
 
 function setExample()
 {
-    const example = exampleList[selectExample.selectedIndex];
+    if (selectExample.selectedIndex < 1 || selectExample.selectedIndex >= exampleList.length)
+        selectExample.selectedIndex = 1;  // reset to default
+    let example = exampleList[selectExample.selectedIndex];
+    if (!example.filename)
+        example = exampleList[selectExample.selectedIndex = 1]; // reset to default
     exampleInfo.innerText = example.name + (example.description ? ' - ' + example.description : '');
     const filename = 'examples/' + example.filename;
     exampleLink.href = 'https://github.com/KilledByAPixel/LittleJS/tree/main/' + filename;
     exampleLink.innerText = filename;
     loadFile(example.filename, example.fullExample);
+    location.hash = selectExample.selectedIndex;
 }
 
 function codeInput()
