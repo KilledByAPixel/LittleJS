@@ -312,7 +312,7 @@ class RandomGenerator
         this.seed ^= this.seed << 13; 
         this.seed ^= this.seed >>> 17; 
         this.seed ^= this.seed << 5;
-        return valueB + (valueA - valueB) * abs(this.seed % 1e8) / 1e8;
+        return valueB + (valueA - valueB) * ((this.seed >>> 0) / 2**32);
     }
 
     /** Returns a floored seeded random value the two values passed in
@@ -501,11 +501,11 @@ class Vector2
         return this.x*v.y - this.y*v.x;
     }
 
-    /** Returns the angle of this vector, up is angle 0
+    /** Returns the clockwise angle of this vector, up is angle 0
      * @return {Number} */
     angle() { return Math.atan2(this.x, this.y); }
 
-    /** Sets this vector with angle and length passed in
+    /** Sets this vector with clockwise angle and length passed in
      * @param {Number} [angle]
      * @param {Number} [length]
      * @return {Vector2} */
@@ -516,13 +516,13 @@ class Vector2
         return this;
     }
 
-    /** Returns copy of this vector rotated by the angle passed in
+    /** Returns copy of this vector rotated by the clockwise angle passed in
      * @param {Number} angle
      * @return {Vector2} */
     rotate(angle)
     { 
-        const c = Math.cos(angle), s = Math.sin(angle); 
-        return new Vector2(this.x*c + this.y*s, this.x*s + this.y*c);
+        const c = Math.cos(-angle), s = Math.sin(-angle); 
+        return new Vector2(this.x*c - this.y*s, this.x*s + this.y*c);
     }
 
     /** Set the integer direction of this vector, corresponding to multiples of 90 degree rotation (0-3)
@@ -857,57 +857,57 @@ class Color
 ///////////////////////////////////////////////////////////////////////////////
 // default colors
 
-/** Color - White
+/** Color - White #ffffff
  *  @type {Color}
  *  @memberof Utilities */
-const WHITE = rgb();
+const WHITE = rgb(); 
 
-/** Color - Black
+/** Color - Black #000000
  *  @type {Color}
  *  @memberof Utilities */
 const BLACK = rgb(0,0,0);
 
-/** Color - Gray
+/** Color - Gray #808080
  *  @type {Color}
  *  @memberof Utilities */
 const GRAY = rgb(.5,.5,.5);
 
-/** Color - Red
+/** Color - Red #ff0000
  *  @type {Color}
  *  @memberof Utilities */
 const RED = rgb(1,0,0);
 
-/** Color - Orange
+/** Color - Orange #ff8000
  *  @type {Color}
  *  @memberof Utilities */
 const ORANGE = rgb(1,.5,0);
 
-/** Color - Yellow
+/** Color - Yellow #ffff00
  *  @type {Color}
  *  @memberof Utilities */
 const YELLOW = rgb(1,1,0);
 
-/** Color - Green
+/** Color - Green #00ff00
  *  @type {Color}
  *  @memberof Utilities */
 const GREEN = rgb(0,1,0);
 
-/** Color - Cyan
+/** Color - Cyan #00ffff
  *  @type {Color}
  *  @memberof Utilities */
 const CYAN = rgb(0,1,1);
 
-/** Color - Blue
+/** Color - Blue #0000ff
  *  @type {Color}
  *  @memberof Utilities */
 const BLUE = rgb(0,0,1);
 
-/** Color - Purple
+/** Color - Purple #8000ff
  *  @type {Color}
  *  @memberof Utilities */
 const PURPLE = rgb(.5,0,1);
 
-/** Color - Magenta
+/** Color - Magenta #ff00ff
  *  @type {Color}
  *  @memberof Utilities */
 const MAGENTA = rgb(1,0,1);
@@ -1577,7 +1577,7 @@ class EngineObject
         {
             // copy parent pos/angle
             const mirror = parent.getMirrorSign();
-            this.pos = this.localPos.multiply(vec2(mirror,1)).rotate(-parent.angle).add(parent.pos);
+            this.pos = this.localPos.multiply(vec2(mirror,1)).rotate(parent.angle).add(parent.pos);
             this.angle = mirror*this.localAngle + parent.angle;
         }
 
@@ -1805,11 +1805,11 @@ class EngineObject
 
     /** Convert from local space to world space for a vector (rotation only)
      *  @param {Vector2} vec - local space vector */
-    localToWorldVector(vec) { return vec.rotate(-this.angle); }
+    localToWorldVector(vec) { return vec.rotate(this.angle); }
 
     /** Convert from world space to local space for a vector (rotation only)
      *  @param {Vector2} vec - world space vector */
-    worldToLocalVector(vec) { return vec.rotate(this.angle); }
+    worldToLocalVector(vec) { return vec.rotate(-this.angle); }
     
     /** Called to check if a tile collision should be resolved
      *  @param {Number}  tileData - the value of the tile at the position
@@ -4881,7 +4881,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.8';
+const engineVersion = '1.11.9';
 
 /** Frames per second to update
  *  @type {Number}

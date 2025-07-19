@@ -854,15 +854,15 @@ declare module "littlejsengine" {
          * @param {Vector2} v - other vector
          * @return {Number} */
         cross(v: Vector2): number;
-        /** Returns the angle of this vector, up is angle 0
+        /** Returns the clockwise angle of this vector, up is angle 0
          * @return {Number} */
         angle(): number;
-        /** Sets this vector with angle and length passed in
+        /** Sets this vector with clockwise angle and length passed in
          * @param {Number} [angle]
          * @param {Number} [length]
          * @return {Vector2} */
         setAngle(angle?: number, length?: number): Vector2;
-        /** Returns copy of this vector rotated by the angle passed in
+        /** Returns copy of this vector rotated by the clockwise angle passed in
          * @param {Number} angle
          * @return {Vector2} */
         rotate(angle: number): Vector2;
@@ -1074,47 +1074,47 @@ declare module "littlejsengine" {
      * @memberof Utilities
      */
     export function isColor(c: any): boolean;
-    /** Color - White
+    /** Color - White #ffffff
      *  @type {Color}
      *  @memberof Utilities */
     export const WHITE: Color;
-    /** Color - Black
+    /** Color - Black #000000
      *  @type {Color}
      *  @memberof Utilities */
     export const BLACK: Color;
-    /** Color - Gray
+    /** Color - Gray #808080
      *  @type {Color}
      *  @memberof Utilities */
     export const GRAY: Color;
-    /** Color - Red
+    /** Color - Red #ff0000
      *  @type {Color}
      *  @memberof Utilities */
     export const RED: Color;
-    /** Color - Orange
+    /** Color - Orange #ff8000
      *  @type {Color}
      *  @memberof Utilities */
     export const ORANGE: Color;
-    /** Color - Yellow
+    /** Color - Yellow #ffff00
      *  @type {Color}
      *  @memberof Utilities */
     export const YELLOW: Color;
-    /** Color - Green
+    /** Color - Green #00ff00
      *  @type {Color}
      *  @memberof Utilities */
     export const GREEN: Color;
-    /** Color - Cyan
+    /** Color - Cyan #00ffff
      *  @type {Color}
      *  @memberof Utilities */
     export const CYAN: Color;
-    /** Color - Blue
+    /** Color - Blue #0000ff
      *  @type {Color}
      *  @memberof Utilities */
     export const BLUE: Color;
-    /** Color - Purple
+    /** Color - Purple #8000ff
      *  @type {Color}
      *  @memberof Utilities */
     export const PURPLE: Color;
-    /** Color - Magenta
+    /** Color - Magenta #ff00ff
      *  @type {Color}
      *  @memberof Utilities */
     export const MAGENTA: Color;
