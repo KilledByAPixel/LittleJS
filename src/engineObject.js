@@ -118,7 +118,7 @@ class EngineObject
         {
             // copy parent pos/angle
             const mirror = parent.getMirrorSign();
-            this.pos = this.localPos.multiply(vec2(mirror,1)).rotate(-parent.angle).add(parent.pos);
+            this.pos = this.localPos.multiply(vec2(mirror,1)).rotate(parent.angle).add(parent.pos);
             this.angle = mirror*this.localAngle + parent.angle;
         }
 
@@ -346,11 +346,11 @@ class EngineObject
 
     /** Convert from local space to world space for a vector (rotation only)
      *  @param {Vector2} vec - local space vector */
-    localToWorldVector(vec) { return vec.rotate(-this.angle); }
+    localToWorldVector(vec) { return vec.rotate(this.angle); }
 
     /** Convert from world space to local space for a vector (rotation only)
      *  @param {Vector2} vec - world space vector */
-    worldToLocalVector(vec) { return vec.rotate(this.angle); }
+    worldToLocalVector(vec) { return vec.rotate(-this.angle); }
     
     /** Called to check if a tile collision should be resolved
      *  @param {Number}  tileData - the value of the tile at the position

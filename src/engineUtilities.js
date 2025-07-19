@@ -461,11 +461,11 @@ class Vector2
         return this.x*v.y - this.y*v.x;
     }
 
-    /** Returns the angle of this vector, up is angle 0
+    /** Returns the clockwise angle of this vector, up is angle 0
      * @return {Number} */
     angle() { return Math.atan2(this.x, this.y); }
 
-    /** Sets this vector with angle and length passed in
+    /** Sets this vector with clockwise angle and length passed in
      * @param {Number} [angle]
      * @param {Number} [length]
      * @return {Vector2} */
@@ -476,13 +476,13 @@ class Vector2
         return this;
     }
 
-    /** Returns copy of this vector rotated by the angle passed in
+    /** Returns copy of this vector rotated by the clockwise angle passed in
      * @param {Number} angle
      * @return {Vector2} */
     rotate(angle)
     { 
-        const c = Math.cos(angle), s = Math.sin(angle); 
-        return new Vector2(this.x*c + this.y*s, this.x*s + this.y*c);
+        const c = Math.cos(-angle), s = Math.sin(-angle); 
+        return new Vector2(this.x*c - this.y*s, this.x*s + this.y*c);
     }
 
     /** Set the integer direction of this vector, corresponding to multiples of 90 degree rotation (0-3)
