@@ -272,7 +272,7 @@ class RandomGenerator
         this.seed ^= this.seed << 13; 
         this.seed ^= this.seed >>> 17; 
         this.seed ^= this.seed << 5;
-        return valueB + (valueA - valueB) * abs(this.seed % 1e8) / 1e8;
+        return valueB + (valueA - valueB) * ((this.seed >>> 0) / 2**32);
     }
 
     /** Returns a floored seeded random value the two values passed in
@@ -817,57 +817,57 @@ class Color
 ///////////////////////////////////////////////////////////////////////////////
 // default colors
 
-/** Color - White
+/** Color - White #ffffff
  *  @type {Color}
  *  @memberof Utilities */
-const WHITE = rgb();
+const WHITE = rgb(); 
 
-/** Color - Black
+/** Color - Black #000000
  *  @type {Color}
  *  @memberof Utilities */
 const BLACK = rgb(0,0,0);
 
-/** Color - Gray
+/** Color - Gray #808080
  *  @type {Color}
  *  @memberof Utilities */
 const GRAY = rgb(.5,.5,.5);
 
-/** Color - Red
+/** Color - Red #ff0000
  *  @type {Color}
  *  @memberof Utilities */
 const RED = rgb(1,0,0);
 
-/** Color - Orange
+/** Color - Orange #ff8000
  *  @type {Color}
  *  @memberof Utilities */
 const ORANGE = rgb(1,.5,0);
 
-/** Color - Yellow
+/** Color - Yellow #ffff00
  *  @type {Color}
  *  @memberof Utilities */
 const YELLOW = rgb(1,1,0);
 
-/** Color - Green
+/** Color - Green #00ff00
  *  @type {Color}
  *  @memberof Utilities */
 const GREEN = rgb(0,1,0);
 
-/** Color - Cyan
+/** Color - Cyan #00ffff
  *  @type {Color}
  *  @memberof Utilities */
 const CYAN = rgb(0,1,1);
 
-/** Color - Blue
+/** Color - Blue #0000ff
  *  @type {Color}
  *  @memberof Utilities */
 const BLUE = rgb(0,0,1);
 
-/** Color - Purple
+/** Color - Purple #8000ff
  *  @type {Color}
  *  @memberof Utilities */
 const PURPLE = rgb(.5,0,1);
 
-/** Color - Magenta
+/** Color - Magenta #ff00ff
  *  @type {Color}
  *  @memberof Utilities */
 const MAGENTA = rgb(1,0,1);
