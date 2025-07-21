@@ -245,6 +245,7 @@ export {
 	mouseWasReleased,
 	mousePos,
 	mousePosScreen,
+	getMousePos,
 	mouseWheel,
 	isUsingGamepad,
 	preventDefaultInput,

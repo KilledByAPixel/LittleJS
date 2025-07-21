@@ -2628,6 +2628,12 @@ let mousePosScreen = vec2();
  *  @memberof Input */
 let mouseWheel = 0;
 
+/**Returns the Mouse Position
+ * @return {Vector2}
+ * @memberof Input
+ */
+function getMousePos(){ return mousePos;}
+
 /** Returns true if user is using gamepad (has more recently pressed a gamepad button)
  *  @type {Boolean}
  *  @memberof Input */
@@ -2758,6 +2764,8 @@ function inputInit()
     if (isTouchDevice && touchInputEnable)
         touchInputInit();
 }
+
+
 
 // convert a mouse or touch event position to screen space
 function mouseEventToScreen(mousePos)

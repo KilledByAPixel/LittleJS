@@ -1570,6 +1570,11 @@ declare module "littlejsengine" {
      *  @type {Vector2}
      *  @memberof Input */
     export let mousePosScreen: Vector2;
+    /**Returns the Mouse Position
+     * @return {Vector2}
+     * @memberof Input
+     */
+    export function getMousePos(): Vector2;
     /** Mouse wheel delta this frame
      *  @type {Number}
      *  @memberof Input */
