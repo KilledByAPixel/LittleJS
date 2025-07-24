@@ -118,7 +118,7 @@ class EngineObject
         {
             // copy parent pos/angle
             const mirror = parent.getMirrorSign();
-            this.pos = this.localPos.multiply(vec2(mirror,1)).rotate(-parent.angle).add(parent.pos);
+            this.pos = this.localPos.multiply(vec2(mirror,1)).rotate(parent.angle).add(parent.pos);
             this.angle = mirror*this.localAngle + parent.angle;
         }
 
