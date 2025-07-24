@@ -740,7 +740,7 @@ class RandomGenerator
         this.seed ^= this.seed << 13; 
         this.seed ^= this.seed >>> 17; 
         this.seed ^= this.seed << 5;
-        return valueB + (valueA - valueB) * abs(this.seed % 1e8) / 1e8;
+        return valueB + (valueA - valueB) * ((this.seed >>> 0) / 2**32);
     }
 
     /** Returns a floored seeded random value the two values passed in
@@ -949,8 +949,8 @@ class Vector2
      * @return {Vector2} */
     rotate(angle)
     { 
-        const c = Math.cos(angle), s = Math.sin(angle); 
-        return new Vector2(this.x*c + this.y*s, this.x*s + this.y*c);
+        const c = Math.cos(-angle), s = Math.sin(-angle); 
+        return new Vector2(this.x*c - this.y*s, this.x*s + this.y*c);
     }
 
     /** Set the integer direction of this vector, corresponding to multiples of 90 degree rotation (0-3)
@@ -2005,7 +2005,7 @@ class EngineObject
         {
             // copy parent pos/angle
             const mirror = parent.getMirrorSign();
-            this.pos = this.localPos.multiply(vec2(mirror,1)).rotate(-parent.angle).add(parent.pos);
+            this.pos = this.localPos.multiply(vec2(mirror,1)).rotate(parent.angle).add(parent.pos);
             this.angle = mirror*this.localAngle + parent.angle;
         }
 
@@ -5328,7 +5328,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.6';
+const engineVersion = '1.11.7a';
 
 /** Frames per second to update
  *  @type {Number}
