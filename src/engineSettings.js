@@ -38,6 +38,8 @@ let canvasMaxSize = vec2(1920, 1080);
 let canvasFixedSize = vec2();
 
 /** Use nearest neighbor scaling algorithm for canvas for more pixelated look
+ *  - Must be set before startup to take effect
+ *  - If enabled sets css image-rendering:pixelated
  *  @type {Boolean}
  *  @default
  *  @memberof Settings */
