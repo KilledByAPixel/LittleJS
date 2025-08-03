@@ -62,7 +62,7 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 
 - Compatible with all modern web browsers and on mobile devices
 - Support for TypeScript and Modules with example projects for both
-- Ideal for size coding competitions like [js13kGames](https://js13kgames.com/), [starter project builds to a 7KB zip](https://github.com/KilledByAPixel/LittleJS/tree/js13k)
+- Ideal for size coding competitions like [Js13kGames](https://js13kgames.com/)
 - Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used for anything you want forever
 
 ### 🛠️ And more...
@@ -79,13 +79,13 @@ To get started download the latest LittleJS package from GitHub or install via n
 
 *You need to run a local web server to run LittleJS games during development!* You may see a console error like "The image element contains cross-origin data." Don't panic, it's easy to fix! If you are using [Visual Studio Code](https://code.visualstudio.com/) there is a [Live Preview Extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.live-server) that will handle this for you automatically. Another option is to setup a simple local web server like [http-server](https://www.npmjs.com/package/http-server) via npm.
 
-
 - [Watch this GitNation talk](https://youtu.be/_dXKU0WgAj8?si=ZDXLYAFDWp54hrGT) to hear more about LittleJS works and get some tips on how to use it.
 - Learn how to make a simple game from scratch with [The Breakout Tutorial.](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial)
 - [Make a ski game with LittleJS](https://eoinmcgrath.com/little-ski/tutorial.html) - Check out this tutorial by eoinmcg that shows how to make a pixel art style game.
 - [LittleJS Engine Quick Reference Sheet](https://github.com/KilledByAPixel/LittleJS/blob/main/reference.md) - This cheat sheet can help you get started.
 - [Check out The Little JS FAQ for more help getting started](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md).
 - Join our vibrant community on [Discord](https://discord.gg/zb7hcGkyZe) to get help, share your projects, and collaborate with others!
+- For Js13k there is a [separate branch that builds to a 7KB zip](https://github.com/KilledByAPixel/LittleJS/tree/js13k)
 
 ## Examples
 
