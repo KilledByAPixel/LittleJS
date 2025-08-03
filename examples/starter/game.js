@@ -13,9 +13,6 @@ setShowSplashScreen(true);
 // fix texture bleeding by shrinking tile slightly
 tileFixBleedScale = .5;
 
-// allow improved canvas scaling for smoother graphics
-canvasPixelated = false;
-
 // sound effects
 const sound_click = new Sound([1,.5]);
 
@@ -61,7 +58,7 @@ function gameInit()
 
     // setup camera
     cameraPos = vec2(16,8);
-    cameraScale = 48;
+    cameraScale = 32;
 
     // enable gravity
     gravity = -.01;
