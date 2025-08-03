@@ -13,6 +13,9 @@ setShowSplashScreen(true);
 // fix texture bleeding by shrinking tile slightly
 tileFixBleedScale = .5;
 
+// allow improved canvas scaling for smoother graphics
+canvasPixelated = false;
+
 // sound effects
 const sound_click = new Sound([1,.5]);
 
@@ -94,6 +97,13 @@ function gameUpdate()
 
         // unlock medals
         medal_example.unlock();
+    }
+
+    if (mouseWheel)
+    {
+        // zoom in and out with mouse wheel
+        cameraScale -= sign(mouseWheel)*cameraScale/5;
+        cameraScale = clamp(cameraScale, 10, 300);
     }
 
     // move particles to mouse location if on screen
