@@ -28,7 +28,7 @@ let glPostIncludeOverlay;
 /** Set up a post processing shader
  *  @param {string} shaderCode
  *  @param {boolean} [includeOverlay]
- *  @memberof WebGL */
+ *  @memberof PostProcessPlugin */
 function initPostProcess(shaderCode, includeOverlay=false)
 {
     ASSERT(!glPostShader, 'can only have 1 post effects shader');
