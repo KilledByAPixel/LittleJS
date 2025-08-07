@@ -23,7 +23,7 @@ let glCanvas;
 let glContext;
 
 /** Should webgl be setup with anti-aliasing? must be set before calling engineInit
- *  @type {Boolean}
+ *  @type {boolean}
  *  @memberof WebGL */
 let glAntialias = true;
 
@@ -246,7 +246,7 @@ function glFlush()
 
 /** Draw any sprites still in the buffer and copy to main canvas
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
- *  @param {Boolean} [forceDraw]
+ *  @param {boolean} [forceDraw]
  *  @memberof WebGL */
 function glCopyToContext(context, forceDraw=false)
 {
@@ -260,7 +260,7 @@ function glCopyToContext(context, forceDraw=false)
 }
 
 /** Set anti-aliasing for webgl canvas
- *  @param {Boolean} [antialias]
+ *  @param {boolean} [antialias]
  *  @memberof WebGL */
 function glSetAntialias(antialias=true)
 {

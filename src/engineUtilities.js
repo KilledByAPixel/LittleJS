@@ -11,112 +11,112 @@
 'use strict';
 
 /** A shortcut to get Math.PI
- *  @type {Number}
+ *  @type {number}
  *  @default Math.PI
  *  @memberof Utilities */
 const PI = Math.PI;
 
 /** Returns absolute value of value passed in
- *  @param {Number} value
- *  @return {Number}
+ *  @param {number} value
+ *  @return {number}
  *  @memberof Utilities */
 function abs(value) { return Math.abs(value); }
 
 /** Returns lowest of two values passed in
- *  @param {Number} valueA
- *  @param {Number} valueB
- *  @return {Number}
+ *  @param {number} valueA
+ *  @param {number} valueB
+ *  @return {number}
  *  @memberof Utilities */
 function min(valueA, valueB) { return Math.min(valueA, valueB); }
 
 /** Returns highest of two values passed in
- *  @param {Number} valueA
- *  @param {Number} valueB
- *  @return {Number}
+ *  @param {number} valueA
+ *  @param {number} valueB
+ *  @return {number}
  *  @memberof Utilities */
 function max(valueA, valueB) { return Math.max(valueA, valueB); }
 
 /** Returns the sign of value passed in
- *  @param {Number} value
- *  @return {Number}
+ *  @param {number} value
+ *  @return {number}
  *  @memberof Utilities */
 function sign(value) { return Math.sign(value); }
 
 /** Returns first parm modulo the second param, but adjusted so negative numbers work as expected
- *  @param {Number} dividend
- *  @param {Number} [divisor]
- *  @return {Number}
+ *  @param {number} dividend
+ *  @param {number} [divisor]
+ *  @return {number}
  *  @memberof Utilities */
 function mod(dividend, divisor=1) { return ((dividend % divisor) + divisor) % divisor; }
 
 /** Clamps the value between max and min
- *  @param {Number} value
- *  @param {Number} [min]
- *  @param {Number} [max]
- *  @return {Number}
+ *  @param {number} value
+ *  @param {number} [min]
+ *  @param {number} [max]
+ *  @return {number}
  *  @memberof Utilities */
 function clamp(value, min=0, max=1) { return value < min ? min : value > max ? max : value; }
 
 /** Returns what percentage the value is between valueA and valueB
- *  @param {Number} value
- *  @param {Number} valueA
- *  @param {Number} valueB
- *  @return {Number}
+ *  @param {number} value
+ *  @param {number} valueA
+ *  @param {number} valueB
+ *  @return {number}
  *  @memberof Utilities */
 function percent(value, valueA, valueB)
 { return (valueB-=valueA) ? clamp((value-valueA)/valueB) : 0; }
 
 /** Linearly interpolates between values passed in using percent
- *  @param {Number} percent
- *  @param {Number} valueA
- *  @param {Number} valueB
- *  @return {Number}
+ *  @param {number} percent
+ *  @param {number} valueA
+ *  @param {number} valueB
+ *  @return {number}
  *  @memberof Utilities */
 function lerp(percent, valueA, valueB) { return valueA + clamp(percent) * (valueB-valueA); }
 
 /** Returns signed wrapped distance between the two values passed in
- *  @param {Number} valueA
- *  @param {Number} valueB
- *  @param {Number} [wrapSize]
- *  @returns {Number}
+ *  @param {number} valueA
+ *  @param {number} valueB
+ *  @param {number} [wrapSize]
+ *  @returns {number}
  *  @memberof Utilities */
 function distanceWrap(valueA, valueB, wrapSize=1)
 { const d = (valueA - valueB) % wrapSize; return d*2 % wrapSize - d; }
 
 /** Linearly interpolates between values passed in with wrapping
- *  @param {Number} percent
- *  @param {Number} valueA
- *  @param {Number} valueB
- *  @param {Number} [wrapSize]
- *  @returns {Number}
+ *  @param {number} percent
+ *  @param {number} valueA
+ *  @param {number} valueB
+ *  @param {number} [wrapSize]
+ *  @returns {number}
  *  @memberof Utilities */
 function lerpWrap(percent, valueA, valueB, wrapSize=1)
 { return valueB + clamp(percent) * distanceWrap(valueA, valueB, wrapSize); }
 
 /** Returns signed wrapped distance between the two angles passed in
- *  @param {Number} angleA
- *  @param {Number} angleB
- *  @returns {Number}
+ *  @param {number} angleA
+ *  @param {number} angleB
+ *  @returns {number}
  *  @memberof Utilities */
 function distanceAngle(angleA, angleB) { return distanceWrap(angleA, angleB, 2*PI); }
 
 /** Linearly interpolates between the angles passed in with wrapping
- *  @param {Number} percent
- *  @param {Number} angleA
- *  @param {Number} angleB
- *  @returns {Number}
+ *  @param {number} percent
+ *  @param {number} angleA
+ *  @param {number} angleB
+ *  @returns {number}
  *  @memberof Utilities */
 function lerpAngle(percent, angleA, angleB) { return lerpWrap(percent, angleA, angleB, 2*PI); }
 
 /** Applies smoothstep function to the percentage value
- *  @param {Number} percent
- *  @return {Number}
+ *  @param {number} percent
+ *  @return {number}
  *  @memberof Utilities */
 function smoothStep(percent) { return percent * percent * (3 - 2 * percent); }
 
 /** Returns the nearest power of two not less then the value
- *  @param {Number} value
- *  @return {Number}
+ *  @param {number} value
+ *  @return {number}
  *  @memberof Utilities */
 function nearestPowerOfTwo(value) { return 2**Math.ceil(Math.log2(value)); }
 
@@ -125,7 +125,7 @@ function nearestPowerOfTwo(value) { return 2**Math.ceil(Math.log2(value)); }
  *  @param {Vector2} sizeA         - Size of box A
  *  @param {Vector2} posB          - Center of box B
  *  @param {Vector2} [sizeB=(0,0)] - Size of box B, a point if undefined
- *  @return {Boolean}              - True if overlapping
+ *  @return {boolean}              - True if overlapping
  *  @memberof Utilities */
 function isOverlapping(posA, sizeA, posB, sizeB=vec2())
 { 
@@ -138,7 +138,7 @@ function isOverlapping(posA, sizeA, posB, sizeB=vec2())
  *  @param {Vector2} end   - End of raycast
  *  @param {Vector2} pos   - Center of box
  *  @param {Vector2} size  - Size of box
- *  @return {Boolean}      - True if intersecting
+ *  @return {boolean}      - True if intersecting
  *  @memberof Utilities */
 function isIntersecting(start, end, pos, size)
 {
@@ -175,17 +175,17 @@ function isIntersecting(start, end, pos, size)
 }
 
 /** Returns an oscillating wave between 0 and amplitude with frequency of 1 Hz by default
- *  @param {Number} [frequency] - Frequency of the wave in Hz
- *  @param {Number} [amplitude] - Amplitude (max height) of the wave
- *  @param {Number} [t=time]    - Value to use for time of the wave
- *  @return {Number}            - Value waving between 0 and amplitude
+ *  @param {number} [frequency] - Frequency of the wave in Hz
+ *  @param {number} [amplitude] - Amplitude (max height) of the wave
+ *  @param {number} [t=time]    - Value to use for time of the wave
+ *  @return {number}            - Value waving between 0 and amplitude
  *  @memberof Utilities */
 function wave(frequency=1, amplitude=1, t=time)
 { return amplitude/2 * (1 - Math.cos(t*frequency*2*PI)); }
 
 /** Formats seconds to mm:ss style for display purposes 
- *  @param {Number} t - time in seconds
- *  @return {String}
+ *  @param {number} t - time in seconds
+ *  @return {string}
  *  @memberof Utilities */
 function formatTime(t) { return (t/60|0) + ':' + (t%60<10?'0':'') + (t%60|0); }
 
@@ -195,34 +195,34 @@ function formatTime(t) { return (t/60|0) + ':' + (t%60<10?'0':'') + (t%60|0); }
  *  @namespace Random */
 
 /** Returns a random value between the two values passed in
- *  @param {Number} [valueA]
- *  @param {Number} [valueB]
- *  @return {Number}
+ *  @param {number} [valueA]
+ *  @param {number} [valueB]
+ *  @return {number}
  *  @memberof Random */
 function rand(valueA=1, valueB=0) { return valueB + Math.random() * (valueA-valueB); }
 
 /** Returns a floored random value between the two values passed in
  *  The upper bound is exclusive. (If 2 is passed in, result will be 0 or 1)
- *  @param {Number} valueA
- *  @param {Number} [valueB]
- *  @return {Number}
+ *  @param {number} valueA
+ *  @param {number} [valueB]
+ *  @return {number}
  *  @memberof Random */
 function randInt(valueA, valueB=0) { return Math.floor(rand(valueA,valueB)); }
 
 /** Randomly returns either -1 or 1
- *  @return {Number}
+ *  @return {number}
  *  @memberof Random */
 function randSign() { return randInt(2) * 2 - 1; }
 
 /** Returns a random Vector2 with the passed in length
- *  @param {Number} [length]
+ *  @param {number} [length]
  *  @return {Vector2}
  *  @memberof Random */
 function randVector(length=1) { return new Vector2().setAngle(rand(2*PI), length); }
 
 /** Returns a random Vector2 within a circular shape
- *  @param {Number} [radius]
- *  @param {Number} [minRadius]
+ *  @param {number} [radius]
+ *  @param {number} [minRadius]
  *  @return {Vector2}
  *  @memberof Random */
 function randInCircle(radius=1, minRadius=0)
@@ -231,7 +231,7 @@ function randInCircle(radius=1, minRadius=0)
 /** Returns a random color between the two passed in colors, combine components if linear
  *  @param {Color}   [colorA=(1,1,1,1)]
  *  @param {Color}   [colorB=(0,0,0,1)]
- *  @param {Boolean} [linear]
+ *  @param {boolean} [linear]
  *  @return {Color}
  *  @memberof Random */
 function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear=false)
@@ -255,17 +255,17 @@ function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear=false)
 class RandomGenerator
 {
     /** Create a random number generator with the seed passed in
-     *  @param {Number} seed - Starting seed */
+     *  @param {number} seed - Starting seed */
     constructor(seed)
     {
-        /** @property {Number} - random seed */
+        /** @property {number} - random seed */
         this.seed = seed;
     }
 
     /** Returns a seeded random value between the two values passed in
-    *  @param {Number} [valueA]
-    *  @param {Number} [valueB]
-    *  @return {Number} */
+    *  @param {number} [valueA]
+    *  @param {number} [valueB]
+    *  @return {number} */
     float(valueA=1, valueB=0)
     {
         // xorshift algorithm
@@ -276,13 +276,13 @@ class RandomGenerator
     }
 
     /** Returns a floored seeded random value the two values passed in
-    *  @param {Number} valueA
-    *  @param {Number} [valueB]
-    *  @return {Number} */
+    *  @param {number} valueA
+    *  @param {number} [valueB]
+    *  @return {number} */
     int(valueA, valueB=0) { return Math.floor(this.float(valueA, valueB)); }
 
     /** Randomly returns either -1 or 1 deterministically
-    *  @return {Number} */
+    *  @return {number} */
     sign() { return this.float() > .5 ? 1 : -1; }
 }
 
@@ -290,8 +290,8 @@ class RandomGenerator
 
 /** 
  * Create a 2d vector, can take another Vector2 to copy, 2 scalars, or 1 scalar
- * @param {(Number|Vector2)} [x]
- * @param {Number} [y]
+ * @param {Vector2|number} [x]
+ * @param {number} [y]
  * @return {Vector2}
  * @example
  * let a = vec2(0, 1); // vector with coordinates (0, 1)
@@ -310,7 +310,7 @@ function vec2(x=0, y)
 /** 
  * Check if object is a valid Vector2
  * @param {any} v
- * @return {Boolean}
+ * @return {boolean}
  * @memberof Utilities
  */
 function isVector2(v) { return v instanceof Vector2; }
@@ -327,20 +327,20 @@ function isVector2(v) { return v instanceof Vector2; }
 class Vector2
 {
     /** Create a 2D vector with the x and y passed in, can also be created with vec2()
-     *  @param {Number} [x] - X axis location
-     *  @param {Number} [y] - Y axis location */
+     *  @param {number} [x] - X axis location
+     *  @param {number} [y] - Y axis location */
     constructor(x=0, y=0)
     {
-        /** @property {Number} - X axis location */
+        /** @property {number} - X axis location */
         this.x = x;
-        /** @property {Number} - Y axis location */
+        /** @property {number} - Y axis location */
         this.y = y;
         ASSERT(this.isValid());
     }
 
     /** Sets values of this vector and returns self
-     *  @param {Number} [x] - X axis location
-     *  @param {Number} [y] - Y axis location
+     *  @param {number} [x] - X axis location
+     *  @param {number} [y] - Y axis location
      *  @return {Vector2} */
     set(x=0, y=0)
     {
@@ -391,7 +391,7 @@ class Vector2
     }
 
     /** Returns a copy of this vector scaled by the vector passed in
-     *  @param {Number} s - scale
+     *  @param {number} s - scale
      *  @return {Vector2} */
     scale(s)
     {
@@ -400,16 +400,16 @@ class Vector2
     }
 
     /** Returns the length of this vector
-     * @return {Number} */
+     * @return {number} */
     length() { return this.lengthSquared()**.5; }
 
     /** Returns the length of this vector squared
-     * @return {Number} */
+     * @return {number} */
     lengthSquared() { return this.x**2 + this.y**2; }
 
     /** Returns the distance from this vector to vector passed in
      * @param {Vector2} v - other vector
-     * @return {Number} */
+     * @return {number} */
     distance(v)
     {
         ASSERT(isVector2(v));
@@ -418,7 +418,7 @@ class Vector2
 
     /** Returns the distance squared from this vector to vector passed in
      * @param {Vector2} v - other vector
-     * @return {Number} */
+     * @return {number} */
     distanceSquared(v)
     {
         ASSERT(isVector2(v));
@@ -426,7 +426,7 @@ class Vector2
     }
 
     /** Returns a new vector in same direction as this one with the length passed in
-     * @param {Number} [length]
+     * @param {number} [length]
      * @return {Vector2} */
     normalize(length=1)
     {
@@ -435,7 +435,7 @@ class Vector2
     }
 
     /** Returns a new vector clamped to length passed in
-     * @param {Number} [length]
+     * @param {number} [length]
      * @return {Vector2} */
     clampLength(length=1)
     {
@@ -445,7 +445,7 @@ class Vector2
 
     /** Returns the dot product of this and the vector passed in
      * @param {Vector2} v - other vector
-     * @return {Number} */
+     * @return {number} */
     dot(v)
     {
         ASSERT(isVector2(v));
@@ -454,7 +454,7 @@ class Vector2
 
     /** Returns the cross product of this and the vector passed in
      * @param {Vector2} v - other vector
-     * @return {Number} */
+     * @return {number} */
     cross(v)
     {
         ASSERT(isVector2(v));
@@ -462,12 +462,12 @@ class Vector2
     }
 
     /** Returns the clockwise angle of this vector, up is angle 0
-     * @return {Number} */
+     * @return {number} */
     angle() { return Math.atan2(this.x, this.y); }
 
     /** Sets this vector with clockwise angle and length passed in
-     * @param {Number} [angle]
-     * @param {Number} [length]
+     * @param {number} [angle]
+     * @param {number} [length]
      * @return {Vector2} */
     setAngle(angle=0, length=1) 
     {
@@ -477,7 +477,7 @@ class Vector2
     }
 
     /** Returns copy of this vector rotated by the clockwise angle passed in
-     * @param {Number} angle
+     * @param {number} angle
      * @return {Vector2} */
     rotate(angle)
     { 
@@ -486,8 +486,8 @@ class Vector2
     }
 
     /** Set the integer direction of this vector, corresponding to multiples of 90 degree rotation (0-3)
-     * @param {Number} [direction]
-     * @param {Number} [length] */
+     * @param {number} [direction]
+     * @param {number} [length] */
     setDirection(direction, length=1)
     {
         direction = mod(direction, 4);
@@ -497,7 +497,7 @@ class Vector2
     }
 
     /** Returns the integer direction of this vector, corresponding to multiples of 90 degree rotation (0-3)
-     * @return {Number} */
+     * @return {number} */
     direction()
     { return abs(this.x) > abs(this.y) ? this.x < 0 ? 3 : 1 : this.y < 0 ? 2 : 0; }
 
@@ -510,12 +510,12 @@ class Vector2
     floor() { return new Vector2(Math.floor(this.x), Math.floor(this.y)); }
 
     /** Returns the area this vector covers as a rectangle
-     * @return {Number} */
+     * @return {number} */
     area() { return abs(this.x * this.y); }
 
     /** Returns a new vector that is p percent between this and the vector passed in
      * @param {Vector2} v - other vector
-     * @param {Number}  percent
+     * @param {number}  percent
      * @return {Vector2} */
     lerp(v, percent)
     {
@@ -525,7 +525,7 @@ class Vector2
 
     /** Returns true if this vector is within the bounds of an array size passed in
      * @param {Vector2} arraySize
-     * @return {Boolean} */
+     * @return {boolean} */
     arrayCheck(arraySize)
     {
         ASSERT(isVector2(arraySize));
@@ -533,8 +533,8 @@ class Vector2
     }
 
     /** Returns this vector expressed as a string
-     * @param {Number} digits - precision to display
-     * @return {String} */
+     * @param {number} digits - precision to display
+     * @return {string} */
     toString(digits=3) 
     {
         if (debug)
@@ -542,7 +542,7 @@ class Vector2
     }
 
     /** Checks if this is a valid vector
-     * @return {Boolean} */
+     * @return {boolean} */
     isValid()
     {
         return typeof this.x == 'number' && !isNaN(this.x)
@@ -554,10 +554,10 @@ class Vector2
 
 /** 
  * Create a color object with RGBA values, white by default
- * @param {Number} [r=1] - red
- * @param {Number} [g=1] - green
- * @param {Number} [b=1] - blue
- * @param {Number} [a=1] - alpha
+ * @param {number} [r=1] - red
+ * @param {number} [g=1] - green
+ * @param {number} [b=1] - blue
+ * @param {number} [a=1] - alpha
  * @return {Color}
  * @memberof Utilities
  */
@@ -565,10 +565,10 @@ function rgb(r, g, b, a) { return new Color(r, g, b, a); }
 
 /** 
  * Create a color object with HSLA values, white by default
- * @param {Number} [h=0] - hue
- * @param {Number} [s=0] - saturation
- * @param {Number} [l=1] - lightness
- * @param {Number} [a=1] - alpha
+ * @param {number} [h=0] - hue
+ * @param {number} [s=0] - saturation
+ * @param {number} [l=1] - lightness
+ * @param {number} [a=1] - alpha
  * @return {Color}
  * @memberof Utilities
  */
@@ -577,7 +577,7 @@ function hsl(h, s, l, a) { return new Color().setHSLA(h, s, l, a); }
 /** 
  * Check if object is a valid Color
  * @param {any} c
- * @return {Boolean}
+ * @return {boolean}
  * @memberof Utilities
  */
 function isColor(c) { return c instanceof Color; }
@@ -594,28 +594,28 @@ function isColor(c) { return c instanceof Color; }
 class Color
 {
     /** Create a color with the rgba components passed in, white by default
-     *  @param {Number} [r] - red
-     *  @param {Number} [g] - green
-     *  @param {Number} [b] - blue
-     *  @param {Number} [a] - alpha*/
+     *  @param {number} [r] - red
+     *  @param {number} [g] - green
+     *  @param {number} [b] - blue
+     *  @param {number} [a] - alpha*/
     constructor(r=1, g=1, b=1, a=1)
     {
-        /** @property {Number} - Red */
+        /** @property {number} - Red */
         this.r = r;
-        /** @property {Number} - Green */
+        /** @property {number} - Green */
         this.g = g;
-        /** @property {Number} - Blue */
+        /** @property {number} - Blue */
         this.b = b;
-        /** @property {Number} - Alpha */
+        /** @property {number} - Alpha */
         this.a = a;
         ASSERT(this.isValid());
     }
 
     /** Sets values of this color and returns self
-     *  @param {Number} [r] - red
-     *  @param {Number} [g] - green
-     *  @param {Number} [b] - blue
-     *  @param {Number} [a] - alpha
+     *  @param {number} [r] - red
+     *  @param {number} [g] - green
+     *  @param {number} [b] - blue
+     *  @param {number} [a] - alpha
      *  @return {Color} */
     set(r=1, g=1, b=1, a=1)
     {
@@ -668,8 +668,8 @@ class Color
     }
 
     /** Returns a copy of this color scaled by the value passed in, alpha can be scaled separately
-     * @param {Number} scale
-     * @param {Number} [alphaScale=scale]
+     * @param {number} scale
+     * @param {number} [alphaScale=scale]
      * @return {Color} */
     scale(scale, alphaScale=scale) 
     { return new Color(this.r*scale, this.g*scale, this.b*scale, this.a*alphaScale); }
@@ -680,7 +680,7 @@ class Color
 
     /** Returns a new color that is p percent between this and the color passed in
      * @param {Color}  c - other color
-     * @param {Number} percent
+     * @param {number} percent
      * @return {Color} */
     lerp(c, percent)
     {
@@ -689,10 +689,10 @@ class Color
     }
 
     /** Sets this color given a hue, saturation, lightness, and alpha
-     * @param {Number} [h] - hue
-     * @param {Number} [s] - saturation
-     * @param {Number} [l] - lightness
-     * @param {Number} [a] - alpha
+     * @param {number} [h] - hue
+     * @param {number} [s] - saturation
+     * @param {number} [l] - lightness
+     * @param {number} [a] - alpha
      * @return {Color} */
     setHSLA(h=0, s=0, l=1, a=1)
     {
@@ -713,7 +713,7 @@ class Color
     }
 
     /** Returns this color expressed in hsla format
-     * @return {Array} */
+     * @return {Array<number>} */
     HSLA()
     {
         const r = clamp(this.r);
@@ -740,8 +740,8 @@ class Color
     }
 
     /** Returns a new color that has each component randomly adjusted
-     * @param {Number} [amount]
-     * @param {Number} [alphaAmount]
+     * @param {number} [amount]
+     * @param {number} [alphaAmount]
      * @return {Color} */
     mutate(amount=.05, alphaAmount=0) 
     {
@@ -755,8 +755,8 @@ class Color
     }
 
     /** Returns this color expressed as a hex color code
-     * @param {Boolean} [useAlpha] - if alpha should be included in result
-     * @return {String} */
+     * @param {boolean} [useAlpha] - if alpha should be included in result
+     * @return {string} */
     toString(useAlpha = true)      
     { 
         const toHex = (c)=> ((c=clamp(c)*255|0)<16 ? '0' : '') + c.toString(16);
@@ -764,7 +764,7 @@ class Color
     }
     
     /** Set this color from a hex code
-     * @param {String} hex - html hex code
+     * @param {string} hex - html hex code
      * @return {Color} */
     setHex(hex)
     {
@@ -793,7 +793,7 @@ class Color
     }
     
     /** Returns this color expressed as 32 bit RGBA value
-     * @return {Number} */
+     * @return {number} */
     rgbaInt()  
     {
         const r = clamp(this.r)*255|0;
@@ -804,7 +804,7 @@ class Color
     }
 
     /** Checks if this is a valid color
-     * @return {Boolean} */
+     * @return {boolean} */
     isValid()
     {
         return typeof this.r == 'number' && !isNaN(this.r)
@@ -886,41 +886,41 @@ const MAGENTA = rgb(1,0,1);
 class Timer
 {
     /** Create a timer object set time passed in
-     *  @param {Number} [timeLeft] - How much time left before the timer elapses in seconds */
+     *  @param {number} [timeLeft] - How much time left before the timer elapses in seconds */
     constructor(timeLeft) { this.time = timeLeft == undefined ? undefined : time + timeLeft; this.setTime = timeLeft; }
 
     /** Set the timer with seconds passed in
-     *  @param {Number} [timeLeft] - How much time left before the timer is elapsed in seconds */
+     *  @param {number} [timeLeft] - How much time left before the timer is elapsed in seconds */
     set(timeLeft=0) { this.time = time + timeLeft; this.setTime = timeLeft; }
 
     /** Unset the timer */
     unset() { this.time = undefined; }
 
     /** Returns true if set
-     * @return {Boolean} */
+     * @return {boolean} */
     isSet() { return this.time != undefined; }
 
     /** Returns true if set and has not elapsed
-     * @return {Boolean} */
+     * @return {boolean} */
     active() { return time < this.time; }
 
     /** Returns true if set and elapsed
-     * @return {Boolean} */
+     * @return {boolean} */
     elapsed() { return time >= this.time; }
 
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
-     * @return {Number} */
+     * @return {number} */
     get() { return this.isSet()? time - this.time : 0; }
 
     /** Get percentage elapsed based on time it was set to, returns 0 if not set
-     * @return {Number} */
+     * @return {number} */
     getPercent() { return this.isSet()? 1-percent(this.time - time, 0, this.setTime) : 0; }
     
     /** Returns this timer expressed as a string
-     * @return {String} */
+     * @return {string} */
     toString() { if (debug) { return this.isSet() ? Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ) : 'unset'; }}
     
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
-     * @return {Number} */
+     * @return {number} */
     valueOf()               { return this.get(); }
 }

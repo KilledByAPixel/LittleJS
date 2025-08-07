@@ -12,8 +12,8 @@
 let glPostShader, glPostTexture, glPostIncludeOverlay;
 
 /** Set up a post processing shader
- *  @param {String} shaderCode
- *  @param {Boolean} includeOverlay
+ *  @param {string} shaderCode
+ *  @param {boolean} [includeOverlay]
  *  @memberof WebGL */
 function initPostProcess(shaderCode, includeOverlay=false)
 {

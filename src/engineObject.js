@@ -35,9 +35,9 @@ class EngineObject
      *  @param {Vector2}  [pos=(0,0)]       - World space position of the object
      *  @param {Vector2}  [size=(1,1)]      - World space size of the object
      *  @param {TileInfo} [tileInfo]        - Tile info to render object (undefined is untextured)
-     *  @param {Number}   [angle]           - Angle the object is rotated by
+     *  @param {number}   [angle]           - Angle the object is rotated by
      *  @param {Color}    [color=(1,1,1,1)] - Color to apply to tile when rendered
-     *  @param {Number}   [renderOrder]     - Objects sorted by renderOrder before being rendered
+     *  @param {number}   [renderOrder]     - Objects sorted by renderOrder before being rendered
      */
     constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color=new Color, renderOrder=0)
     {
@@ -53,57 +53,59 @@ class EngineObject
         this.drawSize = undefined;
         /** @property {TileInfo} - Tile info to render object (undefined is untextured) */
         this.tileInfo = tileInfo;
-        /** @property {Number}  - Angle to rotate the object */
+        /** @property {number}  - Angle to rotate the object */
         this.angle = angle;
         /** @property {Color}   - Color to apply when rendered */
         this.color = color;
         /** @property {Color}   - Additive color to apply when rendered */
         this.additiveColor = undefined;
-        /** @property {Boolean} - Should it flip along y axis when rendered */
+        /** @property {boolean} - Should it flip along y axis when rendered */
         this.mirror = false;
 
         // physical properties
-        /** @property {Number} [mass=objectDefaultMass]                 - How heavy the object is, static if 0 */
+        /** @property {number} [mass=objectDefaultMass]                 - How heavy the object is, static if 0 */
         this.mass         = objectDefaultMass;
-        /** @property {Number} [damping=objectDefaultDamping]           - How much to slow down velocity each frame (0-1) */
+        /** @property {number} [damping=objectDefaultDamping]           - How much to slow down velocity each frame (0-1) */
         this.damping      = objectDefaultDamping;
-        /** @property {Number} [angleDamping=objectDefaultAngleDamping] - How much to slow down rotation each frame (0-1) */
+        /** @property {number} [angleDamping=objectDefaultAngleDamping] - How much to slow down rotation each frame (0-1) */
         this.angleDamping = objectDefaultAngleDamping;
-        /** @property {Number} [elasticity=objectDefaultElasticity]     - How bouncy the object is when colliding (0-1) */
+        /** @property {number} [elasticity=objectDefaultElasticity]     - How bouncy the object is when colliding (0-1) */
         this.elasticity   = objectDefaultElasticity;
-        /** @property {Number} [friction=objectDefaultFriction]         - How much friction to apply when sliding (0-1) */
+        /** @property {number} [friction=objectDefaultFriction]         - How much friction to apply when sliding (0-1) */
         this.friction     = objectDefaultFriction;
-        /** @property {Number}  - How much to scale gravity by for this object */
+        /** @property {number}  - How much to scale gravity by for this object */
         this.gravityScale = 1;
-        /** @property {Number}  - Objects are sorted by render order */
+        /** @property {number}  - Objects are sorted by render order */
         this.renderOrder = renderOrder;
         /** @property {Vector2} - Velocity of the object */
         this.velocity = vec2();
-        /** @property {Number}  - Angular velocity of the object */
+        /** @property {number}  - Angular velocity of the object */
         this.angleVelocity = 0;
-        /** @property {Number}  - Track when object was created  */
+        /** @property {number}  - Track when object was created  */
         this.spawnTime = time;
-        /** @property {Array}   - List of children of this object */
+        /** @property {Array<EngineObject>}   - List of children of this object */
         this.children = [];
-        /** @property {Boolean}  - Limit object speed using linear or circular math */
+        /** @property {boolean}  - Limit object speed using linear or circular math */
         this.clampSpeedLinear = true;
+        /** @property {EngineObject} - Object we are standing on, if any  */
+        this.groundObject = undefined;
 
         // parent child system
         /** @property {EngineObject} - Parent of object if in local space  */
         this.parent = undefined;
         /** @property {Vector2}      - Local position if child */
         this.localPos = vec2();
-        /** @property {Number}       - Local angle if child  */
+        /** @property {number}       - Local angle if child  */
         this.localAngle = 0;
 
         // collision flags
-        /** @property {Boolean} - Object collides with the tile collision */
+        /** @property {boolean} - Object collides with the tile collision */
         this.collideTiles = false;
-        /** @property {Boolean} - Object collides with solid objects */
+        /** @property {boolean} - Object collides with solid objects */
         this.collideSolidObjects = false;
-        /** @property {Boolean} - Object collides with and blocks other objects */
+        /** @property {boolean} - Object collides with and blocks other objects */
         this.isSolid = false;
-        /** @property {Boolean} - Object collides with raycasts */
+        /** @property {boolean} - Object collides with raycasts */
         this.collideRaycast = false;
 
         // add to list of objects
@@ -173,7 +175,7 @@ class EngineObject
             // apply friction in local space of ground object
             const groundSpeed = this.groundObject.velocity ? this.groundObject.velocity.x : 0;
             this.velocity.x = groundSpeed + (this.velocity.x - groundSpeed) * this.friction;
-            this.groundObject = 0;
+            this.groundObject = undefined;
             //debugOverlay && debugPhysics && debugPoint(this.pos.subtract(vec2(0,this.size.y/2)), '#0f0');
         }
 
@@ -290,18 +292,21 @@ class EngineObject
                         // bounce velocity
                         this.velocity.y *= -this.elasticity;
 
-                        // set if landed on ground
-                        if (this.groundObject = wasMovingDown)
+                        if (wasMovingDown)
                         {
                             // adjust position to slightly above nearest tile boundary
                             // this prevents gap between object and ground
                             const epsilon = .0001;
                             this.pos.y = (oldPos.y-this.size.y/2|0)+this.size.y/2+epsilon;
+
+                            // set ground object to self for tile collision
+                            this.groundObject = this;
                         }
                         else
                         {
                             // move to previous position
                             this.pos.y = oldPos.y;
+                            this.groundObject = undefined; 
                         }
                     }
                     if (isBlockedX)
@@ -353,19 +358,19 @@ class EngineObject
     worldToLocalVector(vec) { return vec.rotate(-this.angle); }
     
     /** Called to check if a tile collision should be resolved
-     *  @param {Number}  tileData - the value of the tile at the position
+     *  @param {number}  tileData - the value of the tile at the position
      *  @param {Vector2} pos      - tile where the collision occurred
-     *  @return {Boolean}         - true if the collision should be resolved */
+     *  @return {boolean}         - true if the collision should be resolved */
     collideWithTile(tileData, pos)    { return tileData > 0; }
 
     /** Called to check if a object collision should be resolved
      *  @param {EngineObject} object - the object to test against
-     *  @return {Boolean}            - true if the collision should be resolved
+     *  @return {boolean}            - true if the collision should be resolved
      */
     collideWithObject(object)         { return true; }
 
     /** How long since the object was created
-     *  @return {Number} */
+     *  @return {number} */
     getAliveTime()                    { return time - this.spawnTime; }
 
     /** Apply acceleration to this object (adjust velocity, not affected by mass)
@@ -377,13 +382,13 @@ class EngineObject
     applyForce(force)	              { this.applyAcceleration(force.scale(1/this.mass)); }
     
     /** Get the direction of the mirror
-     *  @return {Number} -1 if this.mirror is true, or 1 if not mirrored */
+     *  @return {number} -1 if this.mirror is true, or 1 if not mirrored */
     getMirrorSign() { return this.mirror ? -1 : 1; }
 
     /** Attaches a child to this with a given local transform
      *  @param {EngineObject} child
      *  @param {Vector2}      [localPos=(0,0)]
-     *  @param {Number}       [localAngle] */
+     *  @param {number}       [localAngle] */
     addChild(child, localPos=vec2(), localAngle=0)
     {
         ASSERT(!child.parent && !this.children.includes(child));
@@ -403,10 +408,10 @@ class EngineObject
     }
 
     /** Set how this object collides
-     *  @param {Boolean} [collideSolidObjects] - Does it collide with solid objects?
-     *  @param {Boolean} [isSolid]             - Does it collide with and block other objects? (expensive in large numbers)
-     *  @param {Boolean} [collideTiles]        - Does it collide with the tile collision?
-     *  @param {Boolean} [collideRaycast]      - Does it collide with raycasts? */
+     *  @param {boolean} [collideSolidObjects] - Does it collide with solid objects?
+     *  @param {boolean} [isSolid]             - Does it collide with and block other objects? (expensive in large numbers)
+     *  @param {boolean} [collideTiles]        - Does it collide with the tile collision?
+     *  @param {boolean} [collideRaycast]      - Does it collide with raycasts? */
     setCollision(collideSolidObjects=true, isSolid=true, collideTiles=true, collideRaycast=true)
     {
         ASSERT(collideSolidObjects || !isSolid, 'solid objects must be set to collide');
@@ -418,7 +423,7 @@ class EngineObject
     }
 
     /** Returns string containing info about this object for debugging
-     *  @return {String} */
+     *  @return {string} */
     toString()
     {
         if (debug)

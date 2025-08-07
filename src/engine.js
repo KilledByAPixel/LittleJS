@@ -21,61 +21,62 @@
 'use strict';
 
 /** Name of engine
- *  @type {String}
+ *  @type {string}
  *  @default
  *  @memberof Engine */
 const engineName = 'LittleJS';
 
 /** Version of engine
- *  @type {String}
+ *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.9';
+const engineVersion = '1.11.10';
 
 /** Frames per second to update
- *  @type {Number}
+ *  @type {number}
  *  @default
  *  @memberof Engine */
 const frameRate = 60;
 
 /** How many seconds each frame lasts, engine uses a fixed time step
- *  @type {Number}
+ *  @type {number}
  *  @default 1/60
  *  @memberof Engine */
 const timeDelta = 1/frameRate;
 
 /** Array containing all engine objects
- *  @type {Array}
+ *  @type {Array<EngineObject>}
  *  @memberof Engine */
 let engineObjects = [];
 
 /** Array with only objects set to collide with other objects this frame (for optimization)
- *  @type {Array}
+ *  @type {Array<EngineObject>}
  *  @memberof Engine */
 let engineObjectsCollide = [];
 
 /** Current update frame, used to calculate time
- *  @type {Number}
+ *  @type {number}
  *  @memberof Engine */
 let frame = 0;
 
 /** Current engine time since start in seconds
- *  @type {Number}
+ *  @type {number}
  *  @memberof Engine */
 let time = 0;
 
 /** Actual clock time since start in seconds (not affected by pause or frame rate clamping)
- *  @type {Number}
+ *  @type {number}
  *  @memberof Engine */
 let timeReal = 0;
 
 /** Is the game paused? Causes time and objects to not be updated
- *  @type {Boolean}
+ *  @type {boolean}
  *  @default false
  *  @memberof Engine */
 let paused = false;
+
 /** Set if game is paused
- *  @param {Boolean} isPaused
+ *  @param {boolean} isPaused
  *  @memberof Engine */
 function setPaused(isPaused) { paused = isPaused; }
 
@@ -108,7 +109,7 @@ function engineAddPlugin(updateFunction, renderFunction)
  *  @param {Function} gameUpdatePost - Called after physics and objects are updated, even when paused
  *  @param {Function} gameRender - Called before objects are rendered, for drawing the background
  *  @param {Function} gameRenderPost - Called after objects are rendered, useful for drawing UI
- *  @param {Array} [imageSources=[]] - List of images to load
+ *  @param {Array<string>} [imageSources=[]] - List of images to load
  *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default
  *  @memberof Engine */
 function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
@@ -404,9 +405,9 @@ function engineObjectsDestroy()
 
 /** Collects all object within a given area
  *  @param {Vector2} [pos]                 - Center of test area, or undefined for all objects
- *  @param {Number|Vector2} [size]         - Radius of circle if float, rectangle size if Vector2
- *  @param {Array} [objects=engineObjects] - List of objects to check
- *  @return {Array}                        - List of collected objects
+ *  @param {Vector2|number} [size]         - Radius of circle if float, rectangle size if Vector2
+ *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
+ *  @return {Array<EngineObject>}                        - List of collected objects
  *  @memberof Engine */
 function engineObjectsCollect(pos, size, objects=engineObjects)
 {
@@ -432,9 +433,9 @@ function engineObjectsCollect(pos, size, objects=engineObjects)
 
 /** Triggers a callback for each object within a given area
  *  @param {Vector2} [pos]                 - Center of test area, or undefined for all objects
- *  @param {Number|Vector2} [size]         - Radius of circle if float, rectangle size if Vector2
+ *  @param {Vector2|number} [size]         - Radius of circle if float, rectangle size if Vector2
  *  @param {Function} [callbackFunction]   - Calls this function on every object that passes the test
- *  @param {Array} [objects=engineObjects] - List of objects to check
+ *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
  *  @memberof Engine */
 function engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
 { engineObjectsCollect(pos, size, objects).forEach(o => callbackFunction(o)); }
@@ -442,8 +443,8 @@ function engineObjectsCallback(pos, size, callbackFunction, objects=engineObject
 /** Return a list of objects intersecting a ray
  *  @param {Vector2} start
  *  @param {Vector2} end
- *  @param {Array} [objects=engineObjects] - List of objects to check
- *  @return {Array} - List of objects hit
+ *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
+ *  @return {Array<EngineObject>} - List of objects hit
  *  @memberof Engine */
 function engineObjectsRaycast(start, end, objects=engineObjects)
 {

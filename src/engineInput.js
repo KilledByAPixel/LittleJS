@@ -11,9 +11,9 @@
 'use strict';
 
 /** Returns true if device key is down
- *  @param {String|Number} key
- *  @param {Number} [device]
- *  @return {Boolean}
+ *  @param {string|number} key
+ *  @param {number} [device]
+ *  @return {boolean}
  *  @memberof Input */
 function keyIsDown(key, device=0)
 { 
@@ -22,9 +22,9 @@ function keyIsDown(key, device=0)
 }
 
 /** Returns true if device key was pressed this frame
- *  @param {String|Number} key
- *  @param {Number} [device]
- *  @return {Boolean}
+ *  @param {string|number} key
+ *  @param {number} [device]
+ *  @return {boolean}
  *  @memberof Input */
 function keyWasPressed(key, device=0)
 { 
@@ -33,9 +33,9 @@ function keyWasPressed(key, device=0)
 }
 
 /** Returns true if device key was released this frame
- *  @param {String|Number} key
- *  @param {Number} [device]
- *  @return {Boolean}
+ *  @param {string|number} key
+ *  @param {number} [device]
+ *  @return {boolean}
  *  @memberof Input */
 function keyWasReleased(key, device=0)
 { 
@@ -58,22 +58,22 @@ function clearInput() { inputData = [[]]; touchGamepadButtons = []; }
 
 /** Returns true if mouse button is down
  *  @function
- *  @param {Number} button
- *  @return {Boolean}
+ *  @param {number} button
+ *  @return {boolean}
  *  @memberof Input */
 const mouseIsDown = keyIsDown;
 
 /** Returns true if mouse button was pressed
  *  @function
- *  @param {Number} button
- *  @return {Boolean}
+ *  @param {number} button
+ *  @return {boolean}
  *  @memberof Input */
 const mouseWasPressed = keyWasPressed;
 
 /** Returns true if mouse button was released
  *  @function
- *  @param {Number} button
- *  @return {Boolean}
+ *  @param {number} button
+ *  @return {boolean}
  *  @memberof Input */
 const mouseWasReleased = keyWasReleased;
 
@@ -88,47 +88,47 @@ let mousePos = vec2();
 let mousePosScreen = vec2();
 
 /** Mouse wheel delta this frame
- *  @type {Number}
+ *  @type {number}
  *  @memberof Input */
 let mouseWheel = 0;
 
 /** Returns true if user is using gamepad (has more recently pressed a gamepad button)
- *  @type {Boolean}
+ *  @type {boolean}
  *  @memberof Input */
 let isUsingGamepad = false;
 
 /** Prevents input continuing to the default browser handling (false by default)
- *  @type {Boolean}
+ *  @type {boolean}
  *  @memberof Input */
 let preventDefaultInput = false;
 
 /** Returns true if gamepad button is down
- *  @param {Number} button
- *  @param {Number} [gamepad]
- *  @return {Boolean}
+ *  @param {number} button
+ *  @param {number} [gamepad]
+ *  @return {boolean}
  *  @memberof Input */
 function gamepadIsDown(button, gamepad=0)
 { return keyIsDown(button, gamepad+1); }
 
 /** Returns true if gamepad button was pressed
- *  @param {Number} button
- *  @param {Number} [gamepad]
- *  @return {Boolean}
+ *  @param {number} button
+ *  @param {number} [gamepad]
+ *  @return {boolean}
  *  @memberof Input */
 function gamepadWasPressed(button, gamepad=0)
 { return keyWasPressed(button, gamepad+1); }
 
 /** Returns true if gamepad button was released
- *  @param {Number} button
- *  @param {Number} [gamepad]
- *  @return {Boolean}
+ *  @param {number} button
+ *  @param {number} [gamepad]
+ *  @return {boolean}
  *  @memberof Input */
 function gamepadWasReleased(button, gamepad=0)
 { return keyWasReleased(button, gamepad+1); }
 
 /** Returns gamepad stick value
- *  @param {Number} stick
- *  @param {Number} [gamepad]
+ *  @param {number} stick
+ *  @param {number} [gamepad]
  *  @return {Vector2}
  *  @memberof Input */
 function gamepadStick(stick,  gamepad=0)
@@ -331,7 +331,7 @@ function gamepadsUpdate()
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Pulse the vibration hardware if it exists
- *  @param {Number|Array} [pattern] - single value in ms or vibration interval array
+ *  @param {number|Array} [pattern] - single value in ms or vibration interval array
  *  @memberof Input */
 function vibrate(pattern=100)
 { vibrateEnable && !headlessMode && navigator && navigator.vibrate && navigator.vibrate(pattern); }

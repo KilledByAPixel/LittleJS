@@ -61,10 +61,10 @@ let drawCount;
  * Create a tile info object using a grid based system
  * - This can take vecs or floats for easier use and conversion
  * - If an index is passed in, the tile size and index will determine the position
- * @param {(Number|Vector2)} [pos=0]                - Index of tile in sheet
- * @param {(Number|Vector2)} [size=tileSizeDefault] - Size of tile in pixels
- * @param {Number} [textureIndex]                   - Texture index to use
- * @param {Number} [padding]                        - How many pixels padding around tiles
+ * @param {Vector2|number} [pos=0]                - Index of tile in sheet
+ * @param {Vector2|number} [size=tileSizeDefault] - Size of tile in pixels
+ * @param {number} [textureIndex]                   - Texture index to use
+ * @param {number} [padding]                        - How many pixels padding around tiles
  * @return {TileInfo}
  * @example
  * tile(2)                       // a tile at index 2 using the default tile size of 16
@@ -108,8 +108,8 @@ class TileInfo
     /** Create a tile info object
      *  @param {Vector2} [pos=(0,0)]            - Top left corner of tile in pixels
      *  @param {Vector2} [size=tileSizeDefault] - Size of tile in pixels
-     *  @param {Number}  [textureIndex]         - Texture index to use
-     *  @param {Number}  [padding]              - How many pixels padding around tiles
+     *  @param {number}  [textureIndex]         - Texture index to use
+     *  @param {number}  [padding]              - How many pixels padding around tiles
      */
     constructor(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0)
     {
@@ -117,9 +117,9 @@ class TileInfo
         this.pos = pos.copy();
         /** @property {Vector2} - Size of tile in pixels */
         this.size = size.copy();
-        /** @property {Number} - Texture index to use */
+        /** @property {number} - Texture index to use */
         this.textureIndex = textureIndex;
-        /** @property {Number} - How many pixels padding around tiles */
+        /** @property {number} - How many pixels padding around tiles */
         this.padding = padding;
     }
 
@@ -131,7 +131,7 @@ class TileInfo
     { return new TileInfo(this.pos.add(offset), this.size, this.textureIndex); }
 
     /** Returns a copy of this tile offset by a number of animation frames
-    *  @param {Number} frame - Offset to apply in animation frames
+    *  @param {number} frame - Offset to apply in animation frames
     *  @return {TileInfo}
     */
     frame(frame)
@@ -203,11 +203,11 @@ function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
  *  @param {Vector2} [size=(1,1)]               - Size of the tile in world space
  *  @param {TileInfo}[tileInfo]                 - Tile info to use, untextured if undefined
  *  @param {Color}   [color=(1,1,1,1)]          - Color to modulate with
- *  @param {Number}  [angle]                    - Angle to rotate by
- *  @param {Boolean} [mirror]                   - If true image is flipped along the Y axis
+ *  @param {number}  [angle]                    - Angle to rotate by
+ *  @param {boolean} [mirror]                   - If true image is flipped along the Y axis
  *  @param {Color}   [additiveColor=(0,0,0,0)]  - Additive color to be applied
- *  @param {Boolean} [useWebGL=glEnable]        - Use accelerated WebGL rendering
- *  @param {Boolean} [screenSpace=false]        - If true the pos and size are in screen space
+ *  @param {boolean} [useWebGL=glEnable]        - Use accelerated WebGL rendering
+ *  @param {boolean} [screenSpace=false]        - If true the pos and size are in screen space
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
@@ -282,9 +282,9 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
  *  @param {Vector2} pos
  *  @param {Vector2} [size=(1,1)]
  *  @param {Color}   [color=(1,1,1,1)]
- *  @param {Number}  [angle]
- *  @param {Boolean} [useWebGL=glEnable]
- *  @param {Boolean} [screenSpace=false]
+ *  @param {number}  [angle]
+ *  @param {boolean} [useWebGL=glEnable]
+ *  @param {boolean} [screenSpace=false]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
@@ -295,10 +295,10 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
 /** Draw colored line between two points
  *  @param {Vector2} posA
  *  @param {Vector2} posB
- *  @param {Number}  [thickness]
+ *  @param {number}  [thickness]
  *  @param {Color}   [color=(1,1,1,1)]
- *  @param {Boolean} [useWebGL=glEnable]
- *  @param {Boolean} [screenSpace=false]
+ *  @param {boolean} [useWebGL=glEnable]
+ *  @param {boolean} [screenSpace=false]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace, context)
@@ -309,11 +309,11 @@ function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace, contex
 }
 
 /** Draw colored polygon using passed in points
- *  @param {Array}   points - Array of Vector2 points
+ *  @param {Array<Vector2>}   points - Array of Vector2 points
  *  @param {Color}   [color=(1,1,1,1)]
- *  @param {Number}  [lineWidth=0]
+ *  @param {number}  [lineWidth=0]
  *  @param {Color}   [lineColor=(0,0,0,1)]
- *  @param {Boolean} [screenSpace=false]
+ *  @param {boolean} [screenSpace=false]
  *  @param {CanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
 function drawPoly(points, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
@@ -335,13 +335,13 @@ function drawPoly(points, color=new Color, lineWidth=0, lineColor=new Color(0,0,
 
 /** Draw colored ellipse using passed in point
  *  @param {Vector2} pos
- *  @param {Number}  [width=1]
- *  @param {Number}  [height=1]
- *  @param {Number}  [angle=0]
+ *  @param {number}  [width=1]
+ *  @param {number}  [height=1]
+ *  @param {number}  [angle=0]
  *  @param {Color}   [color=(1,1,1,1)]
- *  @param {Number}  [lineWidth=0]
+ *  @param {number}  [lineWidth=0]
  *  @param {Color}   [lineColor=(0,0,0,1)]
- *  @param {Boolean} [screenSpace=false]
+ *  @param {boolean} [screenSpace=false]
  *  @param {CanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
 function drawEllipse(pos, width=1, height=1, angle=0, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
@@ -368,11 +368,11 @@ function drawEllipse(pos, width=1, height=1, angle=0, color=new Color, lineWidth
 
 /** Draw colored circle using passed in point
  *  @param {Vector2} pos
- *  @param {Number}  [radius=1]
+ *  @param {number}  [radius=1]
  *  @param {Color}   [color=(1,1,1,1)]
- *  @param {Number}  [lineWidth=0]
+ *  @param {number}  [lineWidth=0]
  *  @param {Color}   [lineColor=(0,0,0,1)]
- *  @param {Boolean} [screenSpace=false]
+ *  @param {boolean} [screenSpace=false]
  *  @param {CanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
 function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
@@ -381,10 +381,10 @@ function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=new C
 /** Draw directly to a 2d canvas context in world space
  *  @param {Vector2}  pos
  *  @param {Vector2}  size
- *  @param {Number}   angle
- *  @param {Boolean}  mirror
+ *  @param {number}   angle
+ *  @param {boolean}  mirror
  *  @param {Function} drawFunction
- *  @param {Boolean} [screenSpace=false]
+ *  @param {boolean} [screenSpace=false]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
 function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, context=mainContext)
@@ -405,15 +405,15 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, conte
 
 /** Draw text on main canvas in world space
  *  Automatically splits new lines into rows
- *  @param {String}  text
+ *  @param {string}  text
  *  @param {Vector2} pos
- *  @param {Number}  [size]
+ *  @param {number}  [size]
  *  @param {Color}   [color=(1,1,1,1)]
- *  @param {Number}  [lineWidth]
+ *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {CanvasTextAlign}  [textAlign='center']
- *  @param {String}  [font=fontDefault]
- *  @param {Number}  [maxWidth]
+ *  @param {string}  [font=fontDefault]
+ *  @param {number}  [maxWidth]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
 function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, maxWidth, context=mainContext)
@@ -423,15 +423,15 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
 
 /** Draw text on overlay canvas in world space
  *  Automatically splits new lines into rows
- *  @param {String}  text
+ *  @param {string}  text
  *  @param {Vector2} pos
- *  @param {Number}  [size]
+ *  @param {number}  [size]
  *  @param {Color}   [color=(1,1,1,1)]
- *  @param {Number}  [lineWidth]
+ *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {CanvasTextAlign}  [textAlign='center']
- *  @param {String}  [font=fontDefault]
- *  @param {Number}  [maxWidth]
+ *  @param {string}  [font=fontDefault]
+ *  @param {number}  [maxWidth]
  *  @memberof Draw */
 function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, maxWidth)
 {
@@ -440,15 +440,15 @@ function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textA
 
 /** Draw text on overlay canvas in screen space
  *  Automatically splits new lines into rows
- *  @param {String}  text
+ *  @param {string}  text
  *  @param {Vector2} pos
- *  @param {Number}  [size]
+ *  @param {number}  [size]
  *  @param {Color}   [color=(1,1,1,1)]
- *  @param {Number}  [lineWidth]
+ *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {CanvasTextAlign}  [textAlign]
- *  @param {String}  [font=fontDefault]
- *  @param {Number}  [maxWidth]
+ *  @param {string}  [font=fontDefault]
+ *  @param {number}  [maxWidth]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
  *  @memberof Draw */
 function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, maxWidth=undefined, context=overlayContext)
@@ -474,8 +474,8 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
 }
 
 /** Enable normal or additive blend mode
- *  @param {Boolean} [additive]
- *  @param {Boolean} [useWebGL=glEnable]
+ *  @param {boolean} [additive]
+ *  @param {boolean} [useWebGL=glEnable]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
 function setBlendMode(additive, useWebGL=glEnable, context)
@@ -542,10 +542,10 @@ class FontImage
     }
 
     /** Draw text in world space using the image font
-     *  @param {String}  text
+     *  @param {string}  text
      *  @param {Vector2} pos
-     *  @param {Number}  [scale=.25]
-     *  @param {Boolean} [center]
+     *  @param {number}  [scale=.25]
+     *  @param {boolean} [center]
      */
     drawText(text, pos, scale=1, center)
     {
@@ -553,10 +553,10 @@ class FontImage
     }
 
     /** Draw text in screen space using the image font
-     *  @param {String}  text
+     *  @param {string}  text
      *  @param {Vector2} pos
-     *  @param {Number}  [scale]
-     *  @param {Boolean} [center]
+     *  @param {number}  [scale]
+     *  @param {boolean} [center]
      */
     drawTextScreen(text, pos, scale=4, center)
     {
@@ -594,7 +594,7 @@ class FontImage
 // Display functions
 
 /** Returns true if fullscreen mode is active
- *  @return {Boolean}
+ *  @return {boolean}
  *  @memberof Draw */
 function isFullscreen() { return !!document.fullscreenElement; }
 
@@ -613,7 +613,7 @@ function toggleFullscreen()
 }
 
 /** Set the cursor style
- *  @param {String}  cursorStyle - CSS cursor style (auto, none, crosshair, etc)
+ *  @param {string}  cursorStyle - CSS cursor style (auto, none, crosshair, etc)
  *  @memberof Draw */
 function setCursor(cursorStyle = 'auto')
 {

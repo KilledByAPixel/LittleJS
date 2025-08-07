@@ -46,11 +46,11 @@ class ParticleEmitter extends EngineObject
      *  @param {Number} [particleConeAngle] - Cone for start particle angle
      *  @param {Number} [fadeRate]          - How quick to fade particles at start/end in percent of life
      *  @param {Number} [randomness]    - Apply extra randomness percent
-     *  @param {Boolean} [collideTiles] - Do particles collide against tiles
-     *  @param {Boolean} [additive]     - Should particles use additive blend
-     *  @param {Boolean} [randomColorLinear] - Should color be randomized linearly or across each component
+     *  @param {boolean} [collideTiles] - Do particles collide against tiles
+     *  @param {boolean} [additive]     - Should particles use additive blend
+     *  @param {boolean} [randomColorLinear] - Should color be randomized linearly or across each component
      *  @param {Number} [renderOrder] - Render order for particles (additive is above other stuff by default)
-     *  @param {Boolean}  [localSpace] - Should it be in local space of emitter (world space is default)
+     *  @param {boolean}  [localSpace] - Should it be in local space of emitter (world space is default)
      */
     constructor
     ( 
@@ -104,7 +104,7 @@ class ParticleEmitter extends EngineObject
         this.colorEndA   = colorEndA;
         /** @property {Color} - Color at end of life 2, randomized between end colors */
         this.colorEndB   = colorEndB;
-        /** @property {Boolean} - Should color be randomized linearly or across each component */
+        /** @property {boolean} - Should color be randomized linearly or across each component */
         this.randomColorLinear = randomColorLinear;
 
         // particle settings
@@ -130,11 +130,11 @@ class ParticleEmitter extends EngineObject
         this.fadeRate          = fadeRate;
         /** @property {Number} - Apply extra randomness percent */
         this.randomness        = randomness;
-        /** @property {Boolean} - Do particles collide against tiles */
+        /** @property {boolean} - Do particles collide against tiles */
         this.collideTiles      = collideTiles;
-        /** @property {Boolean} - Should particles use additive blend */
+        /** @property {boolean} - Should particles use additive blend */
         this.additive          = additive;
-        /** @property {Boolean} - Should it be in local space of emitter */
+        /** @property {boolean} - Should it be in local space of emitter */
         this.localSpace        = localSpace;
         /** @property {Number} - If non zero the particle is drawn as a trail, stretched in the direction of velocity */
         this.trailScale        = 0;
@@ -244,7 +244,7 @@ class Particle extends EngineObject
      * @param {Number}   sizeStart  - Size at start of life
      * @param {Number}   sizeEnd    - Size at end of life
      * @param {Number}   fadeRate   - How quick to fade in/out
-     * @param {Boolean}  additive   - Does it use additive blend mode
+     * @param {boolean}  additive   - Does it use additive blend mode
      * @param {Number}   trailScale - If a trail, how long to make it
      * @param {ParticleEmitter} [localSpaceEmitter] - Parent emitter if local space
      * @param {Function} [destroyCallback] - Callback when particle dies
@@ -266,7 +266,7 @@ class Particle extends EngineObject
         this.sizeEndDelta = sizeEnd - sizeStart;
         /** @property {Number} - How quick to fade in/out */
         this.fadeRate = fadeRate;
-        /** @property {Boolean} - Is it additive */
+        /** @property {boolean} - Is it additive */
         this.additive = additive;
         /** @property {Number} - If a trail, how long to make it */
         this.trailScale = trailScale;

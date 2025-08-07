@@ -13,7 +13,7 @@
 'use strict';
 
 /** The tile collision layer grid, use setTileCollisionData and getTileCollisionData to access
- *  @type {Array} 
+ *  @type {Array<number>} 
  *  @memberof TileCollision */
 let tileCollision = [];
 
@@ -35,7 +35,7 @@ function initTileCollision(size)
 
 /** Set tile collision data for a given cell in the grid
  *  @param {Vector2} pos
- *  @param {Number}  [data]
+ *  @param {number}  [data]
  *  @memberof TileCollision */
 function setTileCollisionData(pos, data=0)
 {
@@ -44,7 +44,7 @@ function setTileCollisionData(pos, data=0)
 
 /** Get tile collision data for a given cell in the grid
  *  @param {Vector2} pos
- *  @return {Number}
+ *  @return {number}
  *  @memberof TileCollision */
 function getTileCollisionData(pos)
 {
@@ -55,7 +55,7 @@ function getTileCollisionData(pos)
  *  @param {Vector2}      pos
  *  @param {Vector2}      [size=(0,0)]
  *  @param {EngineObject} [object]
- *  @return {Boolean}
+ *  @return {boolean}
  *  @memberof TileCollision */
 function tileCollisionTest(pos, size=vec2(), object)
 {
@@ -136,17 +136,17 @@ function tileCollisionRaycast(posStart, posEnd, object)
 class TileLayerData
 {
     /** Create a tile layer data object, one for each tile in a TileLayer
-     *  @param {Number}  [tile]      - The tile to use, untextured if undefined
-     *  @param {Number}  [direction] - Integer direction of tile, in 90 degree increments
-     *  @param {Boolean} [mirror]    - If the tile should be mirrored along the x axis
+     *  @param {number}  [tile]      - The tile to use, untextured if undefined
+     *  @param {number}  [direction] - Integer direction of tile, in 90 degree increments
+     *  @param {boolean} [mirror]    - If the tile should be mirrored along the x axis
      *  @param {Color}   [color]     - Color of the tile */
     constructor(tile, direction=0, mirror=false, color=new Color)
     {
-        /** @property {Number}  - The tile to use, untextured if undefined */
+        /** @property {number}  - The tile to use, untextured if undefined */
         this.tile      = tile;
-        /** @property {Number}  - Integer direction of tile, in 90 degree increments */
+        /** @property {number}  - Integer direction of tile, in 90 degree increments */
         this.direction = direction;
-        /** @property {Boolean} - If the tile should be mirrored along the x axis */
+        /** @property {boolean} - If the tile should be mirrored along the x axis */
         this.mirror    = mirror;
         /** @property {Color}   - Color of the tile */
         this.color     = color;
@@ -175,7 +175,7 @@ class TileLayer extends EngineObject
     *  @param {Vector2}  [size=tileCollisionSize] - World space size
     *  @param {TileInfo} [tileInfo]    - Tile info for layer
     *  @param {Vector2}  [scale=(1,1)] - How much to scale this layer when rendered
-    *  @param {Number}   [renderOrder] - Objects are sorted by renderOrder
+    *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
     */
     constructor(position, size=tileCollisionSize, tileInfo=tile(), scale=vec2(1), renderOrder=0)
     {
@@ -187,7 +187,7 @@ class TileLayer extends EngineObject
         this.context = this.canvas.getContext('2d');
         /** @property {Vector2} - How much to scale this layer when rendered */
         this.scale = scale;
-        /** @property {Boolean} - If true this layer will render to overlay canvas and appear above all objects */
+        /** @property {boolean} - If true this layer will render to overlay canvas and appear above all objects */
         this.isOverlay = false;
 
         // init tile data
@@ -210,7 +210,7 @@ class TileLayer extends EngineObject
     /** Set data at a given position in the array 
      *  @param {Vector2}       layerPos - Local position in array
      *  @param {TileLayerData} data     - Data to set
-     *  @param {Boolean}       [redraw] - Force the tile to redraw if true */
+     *  @param {boolean}       [redraw] - Force the tile to redraw if true */
     setData(layerPos, data, redraw=false)
     {
         if (layerPos.arrayCheck(this.size))
@@ -263,7 +263,7 @@ class TileLayer extends EngineObject
 
     /** Call to start the redraw process
      *  - This can be used to manually update small parts of the level
-     *  @param {Boolean} [clear] - Should it clear the canvas before drawing */
+     *  @param {boolean} [clear] - Should it clear the canvas before drawing */
     redrawStart(clear=false)
     {
         // save current render settings
@@ -307,7 +307,7 @@ class TileLayer extends EngineObject
      *  This can be used to clear out tiles when they are destroyed
      *  Tiles can also be redrawn if inside a redrawStart/End block
      *  @param {Vector2} layerPos 
-     *  @param {Boolean} [clear] - should the old tile be cleared out
+     *  @param {boolean} [clear] - should the old tile be cleared out
      */
     drawTileData(layerPos, clear=true)
     {
@@ -333,8 +333,8 @@ class TileLayer extends EngineObject
     /** Draw directly to the 2D canvas in world space (bypass webgl)
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
-     *  @param {Number}   angle
-     *  @param {Boolean}  mirror
+     *  @param {number}   angle
+     *  @param {boolean}  mirror
      *  @param {Function} drawFunction */
     drawCanvas2D(pos, size, angle, mirror, drawFunction)
     {
@@ -354,8 +354,8 @@ class TileLayer extends EngineObject
      *  @param {Vector2}  [size=(1,1)]
      *  @param {TileInfo} [tileInfo]
      *  @param {Color}    [color=(1,1,1,1)]
-     *  @param {Number}   [angle=0]
-     *  @param {Boolean}  [mirror=0] */
+     *  @param {number}   [angle=0]
+     *  @param {boolean}  [mirror=0] */
     drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle, mirror)
     {
         this.drawCanvas2D(pos, size, angle, mirror, (context)=>
@@ -382,7 +382,7 @@ class TileLayer extends EngineObject
      *  @param {Vector2} pos
      *  @param {Vector2} [size=(1,1)]
      *  @param {Color}   [color=(1,1,1,1)]
-     *  @param {Number}  [angle=0] */
+     *  @param {number}  [angle=0] */
     drawRect(pos, size, color, angle) 
     { this.drawTile(pos, size, undefined, color, angle); }
 }

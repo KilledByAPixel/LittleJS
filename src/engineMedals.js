@@ -104,7 +104,7 @@ class Medal
         /** @property {String} - Icon for the medal */
         this.icon = icon;
         
-        /** @property {Boolean} - Is the medal unlocked? */
+        /** @property {boolean} - Is the medal unlocked? */
         this.unlocked = false;
 
         // load the source image if provided

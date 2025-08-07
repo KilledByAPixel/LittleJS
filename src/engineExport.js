@@ -3,8 +3,8 @@
  * - Export engine as a module
  */
 
-export {
-
+export
+{
 	// Engine
 	engineName,
 	engineVersion,

@@ -11,37 +11,37 @@
 'use strict';
 
 /** True if debug is enabled
- *  @type {Boolean}
+ *  @type {boolean}
  *  @default
  *  @memberof Debug */
 const debug = true;
 
 /** True if asserts are enabled
- *  @type {Boolean}
+ *  @type {boolean}
  *  @default
  *  @memberof Debug */
 const enableAsserts = true;
 
 /** Size to render debug points by default
- *  @type {Number}
+ *  @type {number}
  *  @default
  *  @memberof Debug */
 const debugPointSize = .5;
 
 /** True if watermark with FPS should be shown, false in release builds
- *  @type {Boolean}
+ *  @type {boolean}
  *  @default
  *  @memberof Debug */
 let showWatermark = true;
 
 /** Key code used to toggle debug mode, Esc by default
- *  @type {String}
+ *  @type {string}
  *  @default
  *  @memberof Debug */
 let debugKey = 'Escape';
 
 /** True if the debug overlay is active, always false in release builds
- *  @type {Boolean}
+ *  @type {boolean}
  *  @default
  *  @memberof Debug */
 let debugOverlay = false;
@@ -53,7 +53,7 @@ let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParti
 // Debug helper functions
 
 /** Asserts if the expression is false, does not do anything in release builds
- *  @param {Boolean} assert
+ *  @param {boolean} assert
  *  @param {Object} [output]
  *  @memberof Debug */
 function ASSERT(assert, output) 
@@ -65,10 +65,10 @@ function ASSERT(assert, output)
 /** Draw a debug rectangle in world space
  *  @param {Vector2} pos
  *  @param {Vector2} [size=Vector2()]
- *  @param {String}  [color]
- *  @param {Number}  [time]
- *  @param {Number}  [angle]
- *  @param {Boolean} [fill]
+ *  @param {string}  [color]
+ *  @param {number}  [time]
+ *  @param {number}  [angle]
+ *  @param {boolean} [fill]
  *  @memberof Debug */
 function debugRect(pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)
 {
@@ -78,11 +78,11 @@ function debugRect(pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)
 
 /** Draw a debug poly in world space
  *  @param {Vector2} pos
- *  @param {Array}   points
- *  @param {String}  [color]
- *  @param {Number}  [time]
- *  @param {Number}  [angle]
- *  @param {Boolean} [fill]
+ *  @param {Array<Vector2>} points
+ *  @param {string}  [color]
+ *  @param {number}  [time]
+ *  @param {number}  [angle]
+ *  @param {boolean} [fill]
  *  @memberof Debug */
 function debugPoly(pos, points, color='#fff', time=0, angle=0, fill=false)
 {
@@ -92,10 +92,10 @@ function debugPoly(pos, points, color='#fff', time=0, angle=0, fill=false)
 
 /** Draw a debug circle in world space
  *  @param {Vector2} pos
- *  @param {Number}  [radius]
- *  @param {String}  [color]
- *  @param {Number}  [time]
- *  @param {Boolean} [fill]
+ *  @param {number}  [radius]
+ *  @param {string}  [color]
+ *  @param {number}  [time]
+ *  @param {boolean} [fill]
  *  @memberof Debug */
 function debugCircle(pos, radius=0, color='#fff', time=0, fill=false)
 {
@@ -105,9 +105,9 @@ function debugCircle(pos, radius=0, color='#fff', time=0, fill=false)
 
 /** Draw a debug point in world space
  *  @param {Vector2} pos
- *  @param {String}  [color]
- *  @param {Number}  [time]
- *  @param {Number}  [angle]
+ *  @param {string}  [color]
+ *  @param {number}  [time]
+ *  @param {number}  [angle]
  *  @memberof Debug */
 function debugPoint(pos, color, time, angle)
 {
@@ -118,9 +118,9 @@ function debugPoint(pos, color, time, angle)
 /** Draw a debug line in world space
  *  @param {Vector2} posA
  *  @param {Vector2} posB
- *  @param {String}  [color]
- *  @param {Number}  [thickness]
- *  @param {Number}  [time]
+ *  @param {string}  [color]
+ *  @param {number}  [thickness]
+ *  @param {number}  [time]
  *  @memberof Debug */
 function debugLine(posA, posB, color, thickness=.1, time)
 {
@@ -134,7 +134,7 @@ function debugLine(posA, posB, color, thickness=.1, time)
  *  @param {Vector2} sA - size A
  *  @param {Vector2} pB - position B
  *  @param {Vector2} sB - size B
- *  @param {String}  [color]
+ *  @param {string}  [color]
  *  @memberof Debug */
 function debugOverlap(pA, sA, pB, sB, color)
 {
@@ -144,13 +144,13 @@ function debugOverlap(pA, sA, pB, sB, color)
 }
 
 /** Draw a debug axis aligned bounding box in world space
- *  @param {String}  text
+ *  @param {string}  text
  *  @param {Vector2} pos
- *  @param {Number}  [size]
- *  @param {String}  [color]
- *  @param {Number}  [time]
- *  @param {Number}  [angle]
- *  @param {String}  [font]
+ *  @param {number}  [size]
+ *  @param {string}  [color]
+ *  @param {number}  [time]
+ *  @param {number}  [angle]
+ *  @param {string}  [font]
  *  @memberof Debug */
 function debugText(text, pos, size=1, color='#fff', time=0, angle=0, font='monospace')
 {
@@ -168,23 +168,23 @@ function debugScreenshot() { debugTakeScreenshot = 1; }
 
 /** Save a canvas to disk 
  *  @param {HTMLCanvasElement} canvas
- *  @param {String}            [filename]
- *  @param {String}            [type]
+ *  @param {string}            [filename]
+ *  @param {string}            [type]
  *  @memberof Debug */
 function debugSaveCanvas(canvas, filename='screenshot', type='image/png')
 { debugSaveDataURL(canvas.toDataURL(type), filename); }
 
 /** Save a text file to disk 
- *  @param {String}     text
- *  @param {String}     [filename]
- *  @param {String}     [type]
+ *  @param {string}     text
+ *  @param {string}     [filename]
+ *  @param {string}     [type]
  *  @memberof Debug */
 function debugSaveText(text, filename='text', type='text/plain')
 { debugSaveDataURL(URL.createObjectURL(new Blob([text], {'type':type})), filename); }
 
 /** Save a data url to disk 
- *  @param {String}     dataURL
- *  @param {String}     filename
+ *  @param {string}     dataURL
+ *  @param {string}     filename
  *  @memberof Debug */
 function debugSaveDataURL(dataURL, filename)
 {
@@ -304,8 +304,11 @@ function debugRender()
         let bestDistance = Infinity;
         for (const o of engineObjects)
         {
-            if (o.canvas || o.destroyed)
+            if (o.destroyed)
                 continue;
+
+            if (o instanceof TileLayer)
+                continue; // prevent tile layers from being picked
 
             o.renderDebugInfo();
             if (!o.size.x || !o.size.y)
