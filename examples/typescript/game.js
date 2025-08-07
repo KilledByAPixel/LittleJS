@@ -49,7 +49,7 @@ function gameInit() {
     tileLayer.redraw();
     // move camera to center of collision
     LittleJS.setCameraPos(tileCollisionSize.scale(.5));
-    LittleJS.setCameraScale(48);
+    LittleJS.setCameraScale(32);
     // enable gravity
     LittleJS.setGravity(-.01);
     // create particle emitter
@@ -95,7 +95,7 @@ function gameRender() {
 ///////////////////////////////////////////////////////////////////////////////
 function gameRenderPost() {
     // draw to overlay canvas for hud rendering
-    LittleJS.drawTextOverlay('LittleJS with Modules', vec2(LittleJS.mainCanvasSize.x / 2, 80), 80);
+    LittleJS.drawTextScreen('LittleJS with TypeScript', vec2(LittleJS.mainCanvasSize.x / 2, 80), 80);
 }
 ///////////////////////////////////////////////////////////////////////////////
 // Startup LittleJS Engine
