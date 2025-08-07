@@ -278,6 +278,7 @@ class UIObject
 ///////////////////////////////////////////////////////////////////////////////
 /** 
  * UIText - A UI object that displays text
+ * @extends UIObject
  */
 class UIText extends UIObject
 {
@@ -309,6 +310,7 @@ class UIText extends UIObject
 ///////////////////////////////////////////////////////////////////////////////
 /** 
  * UITile - A UI object that displays a tile image
+ * @extends UIObject
  */
 class UITile extends UIObject
 {
@@ -341,6 +343,7 @@ class UITile extends UIObject
 ///////////////////////////////////////////////////////////////////////////////
 /** 
  * UIButton - A UI object that acts as a button
+ * @extends UIObject
  */
 class UIButton extends UIObject
 {
@@ -372,6 +375,7 @@ class UIButton extends UIObject
 ///////////////////////////////////////////////////////////////////////////////
 /** 
  * UICheckbox - A UI object that acts as a checkbox
+ * @extends UIObject
  */
 class UICheckbox extends UIObject
 {
@@ -408,6 +412,7 @@ class UICheckbox extends UIObject
 ///////////////////////////////////////////////////////////////////////////////
 /** 
  * UIScrollbar - A UI object that acts as a scrollbar
+ * @extends UIObject
  */
 class UIScrollbar extends UIObject
 {

@@ -9,29 +9,27 @@
  */
 
 'use strict';
- 
-/** Global Newgrounds object */
+
+/** Global Newgrounds object
+ *  @type {Newgrounds}
+ *  @memberof Medal */
 let newgrounds;
 
-/** This can used to enable Newgrounds functionality
- *  @param {number} app_id   - The newgrounds App ID
- *  @param {string} [cipher] - The encryption Key (AES-128/Base64)
- *  @param {Object} [cryptoJS] - An instance of CryptoJS, if there is a cipher
- *  @memberof Medals
- *  
- * @example
- * // create a newgrounds object, replace the app id with your own
- * const app_id = 'your_app_id_here';
- * newgrounds = new Newgrounds(app_id);
- */
-function newgroundsInit(app_id, cipher, cryptoJS)
-{ newgrounds = new Newgrounds(app_id, cipher, cryptoJS); }
-
 ///////////////////////////////////////////////////////////////////////////////
-/** Newgrounds medal auto unlocks in newgrounds API */
+/**
+ * Newgrounds medal auto unlocks in newgrounds API
+ * Particle Emitter - Spawns particles with the given settings
+ * @extends Medal
+ */
 class NewgroundsMedal extends Medal
 {
-    /** Create a medal object and adds it to the list of medals */
+    /** Create a newgrounds medal object and adds it to the list of medals
+     *  @param {Number} id            - The unique identifier of the medal
+     *  @param {String} name          - Name of the medal
+     *  @param {String} [description] - Description of the medal
+     *  @param {String} [icon]        - Icon for the medal
+     *  @param {String} [src]         - Image location for the medal
+     */
     constructor(id, name, description, icon, src)
     { super(id, name, description, icon, src); }
 
@@ -45,19 +43,25 @@ class NewgroundsMedal extends Medal
 
 ///////////////////////////////////////////////////////////////////////////////
 /** 
- * Newgrounds API wrapper object - use newgroundsInit to create it
+ * Newgrounds API object
  */
 class Newgrounds
 {
-    /** Create a newgrounds object
-     *  @param {string} app_id   - The newgrounds App ID
-     *  @param {string} [cipher] - The encryption Key (AES-128/Base64)
-     *  @param {Object} [cryptoJS] - An instance of CryptoJS, if there is a cipher */
+    /** Create the global newgrounds object
+     *  @param {string} app_id     - The newgrounds App ID
+     *  @param {string} [cipher]   - The encryption Key (AES-128/Base64)
+     *  @param {Object} [cryptoJS] - An instance of CryptoJS, if there is a cipher 
+     *  @example
+     *  // create the newgrounds object, replace the app id with your own
+     *  const app_id = 'your_app_id_here';
+     *  new Newgrounds(app_id);
+     */
     constructor(app_id, cipher, cryptoJS)
     {
         ASSERT(!newgrounds, 'there can only be one newgrounds object');
         ASSERT(!cipher || cryptoJS, 'must provide cryptojs if there is a cipher');
 
+        newgrounds = this; // set global newgrounds object
         this.app_id = app_id;
         this.cipher = cipher;
         this.cryptoJS = cryptoJS;

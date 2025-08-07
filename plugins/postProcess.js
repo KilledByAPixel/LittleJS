@@ -2,6 +2,7 @@
  * LittleJS Post Processing Plugin
  * - Supports shadertoy style post processing shaders
  * - call initPostProcess to set it up
+ * @namespace PostProcessPlugin
  */
 
 'use strict';
@@ -9,7 +10,20 @@
 ///////////////////////////////////////////////////////////////////////////////
 // post processing - can be enabled to pass other canvases through a final shader
 
-let glPostShader, glPostTexture, glPostIncludeOverlay;
+/** Shader for post processing
+ *  @type {WebGLProgram}
+ *  @memberof PostProcessPlugin */
+let glPostShader;
+
+/** Texture for post processing
+ *  @type {WebGLTexture}
+ *  @memberof PostProcessPlugin */
+let glPostTexture;
+
+/** Should overlay canvas be included in post processing
+ *  @type {boolean}
+ *  @memberof PostProcessPlugin */
+let glPostIncludeOverlay;
 
 /** Set up a post processing shader
  *  @param {string} shaderCode
