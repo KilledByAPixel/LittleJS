@@ -9,6 +9,7 @@
 const PROGRAM_TITLE = 'Little JS Starter Project';
 const PROGRAM_NAME = 'game';
 const BUILD_FOLDER = 'build';
+const USE_ROADROLLER = false; // enable for extra compression
 const sourceFiles =
 [
     '../../dist/littlejs.release.js',
@@ -42,7 +43,9 @@ Build
 (
     `${BUILD_FOLDER}/index.js`,
     sourceFiles,
-    [closureCompilerStep, uglifyBuildStep, htmlBuildStep, zipBuildStep]
+    USE_ROADROLLER ? 
+        [closureCompilerStep, uglifyBuildStep, roadrollerBuildStep, htmlBuildStep, zipBuildStep] :
+        [closureCompilerStep, uglifyBuildStep, htmlBuildStep, zipBuildStep]
 );
 
 console.log('');
@@ -72,6 +75,7 @@ function closureCompilerStep(filename)
 {
     console.log(`Running closure compiler...`);
 
+    // use closer compiler to minify the code
     const filenameTemp = filename + '.tmp';
     fs.copyFileSync(filename, filenameTemp);
     child_process.execSync(`npx google-closure-compiler --js=${filenameTemp} --js_output_file=${filename} --compilation_level=ADVANCED --warning_level=VERBOSE --jscomp_off=* --assume_function_wrapper`, {stdio: 'inherit'});
@@ -82,6 +86,12 @@ function uglifyBuildStep(filename)
 {
     console.log(`Running uglify...`);
     child_process.execSync(`npx uglifyjs ${filename} -c -m -o ${filename}`, {stdio: 'inherit'});
+};
+
+function roadrollerBuildStep(filename)
+{
+    console.log(`Running roadroller...`);
+    child_process.execSync(`npx roadroller ${filename} -o ${filename}`, {stdio: 'inherit'});
 };
 
 function htmlBuildStep(filename)
@@ -106,6 +116,7 @@ function zipBuildStep(filename)
 {
     console.log(`Zipping...`);
     
+    // zip the build folder using ect
     const ect = '../../../node_modules/ect-bin/vendor/win32/ect.exe';
     const args = ['-9', '-strip', '-zip', `../${PROGRAM_NAME}.zip`, 'index.html', ...dataFiles];
     child_process.spawnSync(ect, args, {stdio: 'inherit', cwd: BUILD_FOLDER});
