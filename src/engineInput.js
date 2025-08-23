@@ -97,10 +97,16 @@ let mouseWheel = 0;
  *  @memberof Input */
 let isUsingGamepad = false;
 
-/** Prevents input continuing to the default browser handling (false by default)
+/** Prevents input continuing to the default browser handling (true by default)
  *  @type {boolean}
  *  @memberof Input */
-let preventDefaultInput = false;
+let inputPreventDefault = true;
+
+/** Prevents input continuing to the default browser handling
+ *  This is useful to disable for html menus so the browser can handle input normally
+ *  @param {boolean} preventDefault
+ *  @memberof Input */
+function setInputPreventDefault(preventDefault) { inputPreventDefault = preventDefault; }
 
 /** Returns true if gamepad button is down
  *  @param {number} button
@@ -180,7 +186,7 @@ function inputInit()
             if (inputWASDEmulateDirection)
                 inputData[0][remapKey(e.code)] = 3;
         }
-        preventDefaultInput && e.preventDefault();
+        inputPreventDefault && e.preventDefault();
     }
 
     onkeyup = (e)=>
@@ -210,7 +216,7 @@ function inputInit()
         isUsingGamepad = false; 
         inputData[0][e.button] = 3; 
         mousePosScreen = mouseEventToScreen(e); 
-        e.button && e.preventDefault();
+        inputPreventDefault && e.button && e.preventDefault();
     }
     onmouseup     = (e)=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
     onmousemove   = (e)=> mousePosScreen = mouseEventToScreen(e);
@@ -394,7 +400,7 @@ function touchInputInit()
         wasTouching = touching;
 
         // prevent default handling like copy and magnifier lens
-        if (document.hasFocus()) // allow document to get focus
+        if (inputPreventDefault && document.hasFocus()) // allow document to get focus
             e.preventDefault();
         
         // must return true so the document will get focus
