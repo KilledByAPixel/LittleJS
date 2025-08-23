@@ -15,6 +15,16 @@ setShowSplashScreen(true);
 const sound_click = new Sound([1,.5]);
 
 ///////////////////////////////////////////////////////////////////////////////
+
+// html menu system
+const getMenuVisible = ()=> menu.style.visibility != 'hidden';
+function setMenuVisible(visible)
+{
+    menu.style.visibility = visible ? 'visible' : 'hidden';
+    setInputPreventDefault(!visible); // don't prevent default when menu is visible
+}
+
+///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
     // show menu for demo
@@ -38,7 +48,7 @@ function gameUpdatePost()
 
     // toggle menu visibility
     if (keyWasPressed('KeyM'))
-        setMenuVisible(!menuVisible);
+        setMenuVisible(true);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

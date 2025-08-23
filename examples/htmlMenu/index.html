@@ -24,6 +24,7 @@
     flex-direction: column;
     border: 3px solid black;
     background-color: white;
+    visibility: hidden;
 }
 </style>
 
@@ -40,16 +41,6 @@ This is an example menu using html elements.
 <button onclick="setMenuVisible(false)">Exit Menu</button>
 </div>
 </div>
-<script>
-
-// html menu system
-const getMenuVisible =()=> menu.style.visibility != 'hidden';
-const setMenuVisible =(visible)=> menu.style.visibility = visible ? '' : 'hidden';
-
-// hide menu at start
-setMenuVisible(false);
-
-</script>
 
 <!-- Add your game scripts here -->
 <script src=../../dist/littlejs.js?1117></script>
