@@ -265,6 +265,7 @@ declare module "littlejsengine" {
      *  @memberof Settings */
     export let showSplashScreen: boolean;
     /** Disables all rendering, audio, and input for servers
+     *  - Must be set before startup to take effect
      *  @type {boolean}
      *  @default
      *  @memberof Settings */
@@ -325,11 +326,13 @@ declare module "littlejsengine" {
      *  @memberof Settings */
     export let particleEmitRateScale: number;
     /** Enable webgl rendering, webgl can be disabled and removed from build (with some features disabled)
+     *  - Must be set before startup to take effect
      *  @type {boolean}
      *  @default
      *  @memberof Settings */
     export let glEnable: boolean;
     /** Fixes slow rendering in some browsers by not compositing the WebGL canvas
+     *  - Must be set before startup to take effect
      *  @type {boolean}
      *  @default
      *  @memberof Settings */
@@ -351,7 +354,7 @@ declare module "littlejsengine" {
     export let inputWASDEmulateDirection: boolean;
     /** True if touch gamepad should appear on mobile devices
      *  - Supports left analog stick, 4 face buttons and start button (button 9)
-     *  - Must be set by end of gameInit to be activated
+     *  - Must be set before startup to take effect
      *  @type {boolean}
      *  @default
      *  @memberof Settings */
@@ -1580,10 +1583,6 @@ declare module "littlejsengine" {
      *  @type {boolean}
      *  @memberof Input */
     export let isUsingGamepad: boolean;
-    /** Prevents input continuing to the default browser handling (false by default)
-     *  @type {boolean}
-     *  @memberof Input */
-    export let preventDefaultInput: boolean;
     /** Returns true if gamepad button is down
      *  @param {number} button
      *  @param {number} [gamepad]

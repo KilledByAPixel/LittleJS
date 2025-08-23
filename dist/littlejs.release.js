@@ -1030,6 +1030,7 @@ let fontDefault = 'arial';
 let showSplashScreen = false;
 
 /** Disables all rendering, audio, and input for servers
+ *  - Must be set before startup to take effect
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -1039,12 +1040,14 @@ let headlessMode = false;
 // WebGL settings
 
 /** Enable webgl rendering, webgl can be disabled and removed from build (with some features disabled)
+ *  - Must be set before startup to take effect
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
 let glEnable = true;
 
 /** Fixes slow rendering in some browsers by not compositing the WebGL canvas
+ *  - Must be set before startup to take effect
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -1145,6 +1148,7 @@ let inputWASDEmulateDirection = true;
 
 /** True if touch input is enabled for mobile devices
  *  - Touch events will be routed to mouse events
+ *  - Must be set before startup to take effect
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -1152,7 +1156,7 @@ let touchInputEnable = true;
 
 /** True if touch gamepad should appear on mobile devices
  *  - Supports left analog stick, 4 face buttons and start button (button 9)
- *  - Must be set by end of gameInit to be activated
+ *  - Must be set before startup to take effect
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -2640,10 +2644,16 @@ let mouseWheel = 0;
  *  @memberof Input */
 let isUsingGamepad = false;
 
-/** Prevents input continuing to the default browser handling (false by default)
+/** Prevents input continuing to the default browser handling (true by default)
  *  @type {boolean}
  *  @memberof Input */
-let preventDefaultInput = false;
+let inputPreventDefault = true;
+
+/** Prevents input continuing to the default browser handling
+ *  This is useful to disable for html menus so the browser can handle input normally
+ *  @param {boolean} preventDefault
+ *  @memberof Input */
+function setInputPreventDefault(preventDefault) { inputPreventDefault = preventDefault; }
 
 /** Returns true if gamepad button is down
  *  @param {number} button
@@ -2723,7 +2733,7 @@ function inputInit()
             if (inputWASDEmulateDirection)
                 inputData[0][remapKey(e.code)] = 3;
         }
-        preventDefaultInput && e.preventDefault();
+        inputPreventDefault && e.preventDefault();
     }
 
     onkeyup = (e)=>
@@ -2753,7 +2763,7 @@ function inputInit()
         isUsingGamepad = false; 
         inputData[0][e.button] = 3; 
         mousePosScreen = mouseEventToScreen(e); 
-        e.button && e.preventDefault();
+        inputPreventDefault && e.button && e.preventDefault();
     }
     onmouseup     = (e)=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
     onmousemove   = (e)=> mousePosScreen = mouseEventToScreen(e);
@@ -2937,7 +2947,7 @@ function touchInputInit()
         wasTouching = touching;
 
         // prevent default handling like copy and magnifier lens
-        if (document.hasFocus()) // allow document to get focus
+        if (inputPreventDefault && document.hasFocus()) // allow document to get focus
             e.preventDefault();
         
         // must return true so the document will get focus
@@ -4888,7 +4898,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.10';
+const engineVersion = '1.11.11';
 
 /** Frames per second to update
  *  @type {number}
