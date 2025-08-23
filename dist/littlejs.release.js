@@ -2733,7 +2733,6 @@ function inputInit()
             if (inputWASDEmulateDirection)
                 inputData[0][remapKey(e.code)] = 3;
         }
-        inputPreventDefault && e.preventDefault();
     }
 
     onkeyup = (e)=>
