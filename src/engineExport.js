@@ -82,7 +82,6 @@ export
 	medalDisplayTime,
 	medalDisplaySlideTime,
 	medalDisplaySize,
-	medalDisplayIconSize,
 
 	// Setters for globals
 	setCameraPos,
@@ -123,7 +122,6 @@ export
 	setMedalDisplayTime,
 	setMedalDisplaySlideTime,
 	setMedalDisplaySize,
-	setMedalDisplayIconSize,
 	setMedalsPreventUnlock,
 	setShowWatermark,
 	setDebugKey,

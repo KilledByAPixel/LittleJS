@@ -268,12 +268,6 @@ let medalDisplaySlideTime = .5;
  *  @memberof Settings */
 let medalDisplaySize = vec2(640, 80);
 
-/** Size of icon in medal display
- *  @type {number}
- *  @default
- *  @memberof Settings */
-let medalDisplayIconSize = 50;
-
 /** Set to stop medals from being unlockable (like if cheats are enabled)
  *  @type {boolean}
  *  @default
@@ -477,11 +471,6 @@ function setMedalDisplaySlideTime(time) { medalDisplaySlideTime = time; }
  *  @param {Vector2} size
  *  @memberof Settings */
 function setMedalDisplaySize(size) { medalDisplaySize = size; }
-
-/** Set size of icon in medal display
- *  @param {number} size
- *  @memberof Settings */
-function setMedalDisplayIconSize(size) { medalDisplayIconSize = size; }
 
 /** Set to stop medals from being unlockable
  *  @param {boolean} preventUnlock
