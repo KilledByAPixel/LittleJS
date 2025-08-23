@@ -64,6 +64,7 @@ let fontDefault = 'arial';
 let showSplashScreen = false;
 
 /** Disables all rendering, audio, and input for servers
+ *  - Must be set before startup to take effect
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -73,12 +74,14 @@ let headlessMode = false;
 // WebGL settings
 
 /** Enable webgl rendering, webgl can be disabled and removed from build (with some features disabled)
+ *  - Must be set before startup to take effect
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
 let glEnable = true;
 
 /** Fixes slow rendering in some browsers by not compositing the WebGL canvas
+ *  - Must be set before startup to take effect
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -179,6 +182,7 @@ let inputWASDEmulateDirection = true;
 
 /** True if touch input is enabled for mobile devices
  *  - Touch events will be routed to mouse events
+ *  - Must be set before startup to take effect
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -186,7 +190,7 @@ let touchInputEnable = true;
 
 /** True if touch gamepad should appear on mobile devices
  *  - Supports left analog stick, 4 face buttons and start button (button 9)
- *  - Must be set by end of gameInit to be activated
+ *  - Must be set before startup to take effect
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
