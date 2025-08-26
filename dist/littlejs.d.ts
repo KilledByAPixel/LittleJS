@@ -414,11 +414,6 @@ declare module "littlejsengine" {
      *  @default Vector2(640,80)
      *  @memberof Settings */
     export let medalDisplaySize: Vector2;
-    /** Size of icon in medal display
-     *  @type {number}
-     *  @default
-     *  @memberof Settings */
-    export let medalDisplayIconSize: number;
     /** Set position of camera in world space
      *  @param {Vector2} pos
      *  @memberof Settings */
@@ -571,10 +566,6 @@ declare module "littlejsengine" {
      *  @param {Vector2} size
      *  @memberof Settings */
     export function setMedalDisplaySize(size: Vector2): void;
-    /** Set size of icon in medal display
-     *  @param {number} size
-     *  @memberof Settings */
-    export function setMedalDisplayIconSize(size: number): void;
     /** Set to stop medals from being unlockable
      *  @param {boolean} preventUnlock
      *  @memberof Settings */
@@ -2320,9 +2311,9 @@ declare module "littlejsengine" {
         render(hidePercent?: number): void;
         /** Render the icon for a medal
          *  @param {Vector2} pos - Screen space position
-         *  @param {Number} [size=medalDisplayIconSize] - Screen space size
+         *  @param {Number} size - Screen space size
          */
-        renderIcon(pos: Vector2, size?: number): void;
+        renderIcon(pos: Vector2, size: number): void;
         storageKey(): string;
     }
 }

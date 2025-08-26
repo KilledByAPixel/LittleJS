@@ -1234,12 +1234,6 @@ let medalDisplaySlideTime = .5;
  *  @memberof Settings */
 let medalDisplaySize = vec2(640, 80);
 
-/** Size of icon in medal display
- *  @type {number}
- *  @default
- *  @memberof Settings */
-let medalDisplayIconSize = 50;
-
 /** Set to stop medals from being unlockable (like if cheats are enabled)
  *  @type {boolean}
  *  @default
@@ -1443,11 +1437,6 @@ function setMedalDisplaySlideTime(time) { medalDisplaySlideTime = time; }
  *  @param {Vector2} size
  *  @memberof Settings */
 function setMedalDisplaySize(size) { medalDisplaySize = size; }
-
-/** Set size of icon in medal display
- *  @param {number} size
- *  @memberof Settings */
-function setMedalDisplayIconSize(size) { medalDisplayIconSize = size; }
 
 /** Set to stop medals from being unlockable
  *  @param {boolean} preventUnlock
@@ -4522,8 +4511,9 @@ class Medal
     {
         const context = overlayContext;
         const width = min(medalDisplaySize.x, mainCanvas.width);
+        const height = medalDisplaySize.y;
         const x = overlayCanvas.width - width;
-        const y = -medalDisplaySize.y*hidePercent;
+        const y = -height*hidePercent;
 
         // draw containing rect and clip to that region
         context.save();
@@ -4531,25 +4521,34 @@ class Medal
         context.fillStyle = new Color(.9,.9,.9).toString();
         context.strokeStyle = new Color(0,0,0).toString();
         context.lineWidth = 3;
-        context.rect(x, y, width, medalDisplaySize.y);
+        context.rect(x, y, width, height);
         context.fill();
         context.stroke();
         context.clip();
 
-        // draw the icon and text
-        this.renderIcon(vec2(x+15+medalDisplayIconSize/2, y+medalDisplaySize.y/2));
-        const pos = vec2(x+medalDisplayIconSize+30, y+28);
-        drawTextScreen(this.name, pos, 38, new Color(0,0,0), 0, undefined, 'left');
-        pos.y += 32;
-        drawTextScreen(this.description, pos, 24, new Color(0,0,0), 0, undefined, 'left');
+        // draw the icon
+        const gap = vec2(.1, .05).scale(height);
+        const medalDisplayIconSize = height - 2*gap.x;
+        this.renderIcon(vec2(x + gap.x + medalDisplayIconSize/2, y + height/2), medalDisplayIconSize);
+
+        // draw the name
+        const nameSize = height*.5;
+        const descriptionSize = height*.3;
+        const pos = vec2(x + medalDisplayIconSize + 2*gap.x, y + gap.y*2 + nameSize/2);
+        const textWidth = width - medalDisplayIconSize - 3*gap.x;
+        drawTextScreen(this.name, pos, nameSize, new Color(0,0,0), 0, undefined, 'left', undefined, textWidth);
+
+        // draw the description
+        pos.y = y + height - gap.y*2 - descriptionSize/2;
+        drawTextScreen(this.description, pos, descriptionSize, new Color(0,0,0), 0, undefined, 'left', undefined, textWidth);
         context.restore();
     }
 
     /** Render the icon for a medal
      *  @param {Vector2} pos - Screen space position
-     *  @param {Number} [size=medalDisplayIconSize] - Screen space size
+     *  @param {Number} size - Screen space size
      */
-    renderIcon(pos, size=medalDisplayIconSize)
+    renderIcon(pos, size)
     {
         // draw the image or icon
         if (this.image)
@@ -4897,7 +4896,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.11';
+const engineVersion = '1.11.12';
 
 /** Frames per second to update
  *  @type {number}
