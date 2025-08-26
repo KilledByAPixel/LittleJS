@@ -1627,7 +1627,8 @@ class EngineObject
         if (this.groundObject)
         {
             // apply friction in local space of ground object
-            const groundSpeed = this.groundObject.velocity ? this.groundObject.velocity.x : 0;
+            const groundSpeed = this.groundObject != this && this.groundObject.velocity ? 
+                this.groundObject.velocity.x : 0;
             this.velocity.x = groundSpeed + (this.velocity.x - groundSpeed) * this.friction;
             this.groundObject = undefined;
             //debugOverlay && debugPhysics && debugPoint(this.pos.subtract(vec2(0,this.size.y/2)), '#0f0');
@@ -1754,6 +1755,7 @@ class EngineObject
                             this.pos.y = (oldPos.y-this.size.y/2|0)+this.size.y/2+epsilon;
 
                             // set ground object to self for tile collision
+                            // TODO: rework system so tile collision is its own object
                             this.groundObject = this;
                         }
                         else
@@ -4896,7 +4898,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.12';
+const engineVersion = '1.11.13';
 
 /** Frames per second to update
  *  @type {number}

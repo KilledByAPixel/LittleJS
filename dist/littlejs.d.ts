@@ -1871,7 +1871,7 @@ declare module "littlejsengine" {
         /** @property {boolean}  - Limit object speed using linear or circular math */
         clampSpeedLinear: boolean;
         /** @property {EngineObject} - Object we are standing on, if any  */
-        groundObject: EngineObject | this;
+        groundObject: any;
         /** @property {EngineObject} - Parent of object if in local space  */
         parent: any;
         /** @property {Vector2}      - Local position if child */
