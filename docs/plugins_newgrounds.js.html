@@ -168,7 +168,12 @@ class Newgrounds
         const xmlHttp = new XMLHttpRequest();
         const url = 'https://newgrounds.io/gateway_v3.php';
         xmlHttp.open('POST', url, !debugMedals &amp;&amp; async);
-        xmlHttp.send(formData);
+        try { xmlHttp.send(formData); }
+        catch(e)
+        {
+            debugMedals &amp;&amp; console.log('newgrounds call failed', e);
+            return;
+        }
         debugMedals &amp;&amp; console.log(xmlHttp.responseText);
         return xmlHttp.responseText &amp;&amp; JSON.parse(xmlHttp.responseText);
     }
