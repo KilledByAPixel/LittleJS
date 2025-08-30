@@ -26,7 +26,7 @@ const fs = require('node:fs');
 const child_process = require('node:child_process');
 
 // rebuild engine
-//child_process.execSync(`npm run build`, { stdio: 'inherit' });
+child_process.execSync(`npm run build`, { stdio: 'inherit' });
 
 // remove old files and setup build folder
 fs.rmSync(BUILD_FOLDER, { recursive: true, force: true });
@@ -75,6 +75,7 @@ function closureCompilerStep(filename)
     const filenameTemp = filename + '.tmp';
     fs.copyFileSync(filename, filenameTemp);
     child_process.execSync(`npx google-closure-compiler --js=${filenameTemp} --js_output_file=${filename} --compilation_level=ADVANCED --warning_level=VERBOSE --jscomp_off=* --assume_function_wrapper`, {stdio: 'inherit'});
+    fs.copyFileSync(filename, filename+'.closure.js'); // for debugging
     fs.rmSync(filenameTemp);
 };
 
@@ -85,6 +86,7 @@ function closureCompilerSimpleStep(filename)
     const filenameTemp = filename + '.tmp';
     fs.copyFileSync(filename, filenameTemp);
     child_process.execSync(`npx google-closure-compiler --js=${filenameTemp} --js_output_file=${filename} --compilation_level=SIMPLE --warning_level=VERBOSE --jscomp_off=* --assume_function_wrapper`, {stdio: 'inherit'});
+    fs.copyFileSync(filename, filename+'.closure.js'); // for debugging
     fs.rmSync(filenameTemp);
 };
 
@@ -92,6 +94,7 @@ function uglifyBuildStep(filename)
 {
     console.log(`Running uglify...`);
     child_process.execSync(`npx uglifyjs ${filename} -c -m -o ${filename}`, {stdio: 'inherit'});
+    fs.copyFileSync(filename, filename+'.uglify.js'); // for debugging
 };
 
 function roadrollerBuildStep(filename)

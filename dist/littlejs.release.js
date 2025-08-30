@@ -11,8 +11,8 @@
 
 
 
-let showWatermark = 0;
-let debugKey = '';
+const showWatermark = 0;
+const debugKey = '';
 const debug = 0;
 const debugOverlay = 0;
 const debugPhysics = 0;
@@ -37,6 +37,8 @@ function debugClear      (){}
 function debugSaveCanvas (){}
 function debugSaveText   (){}
 function debugSaveDataURL(){}
+function setShowWatermark(){}
+function setDebugKey     (){}
 /**
  * LittleJS Utility Classes and Functions
  * - General purpose math library
@@ -1446,16 +1448,6 @@ function setMedalDisplayIconSize(size) { medalDisplayIconSize = size; }
  *  @param {Boolean} preventUnlock
  *  @memberof Settings */
 function setMedalsPreventUnlock(preventUnlock) { medalsPreventUnlock = preventUnlock; }
-
-/** Set if watermark with FPS should be shown
- *  @param {Boolean} show
- *  @memberof Debug */
-function setShowWatermark(show) { showWatermark = show; }
-
-/** Set key code used to toggle debug mode, Esc by default
- *  @param {String} key
- *  @memberof Debug */
-function setDebugKey(key) { debugKey = key; }
 /** 
  * LittleJS Object System
  */

@@ -6,8 +6,8 @@
 
 'use strict';
 
-let showWatermark = 0;
-let debugKey = '';
+const showWatermark = 0;
+const debugKey = '';
 const debug = 0;
 const debugOverlay = 0;
 const debugPhysics = 0;
@@ -32,3 +32,5 @@ function debugClear      (){}
 function debugSaveCanvas (){}
 function debugSaveText   (){}
 function debugSaveDataURL(){}
+function setShowWatermark(){}
+function setDebugKey     (){}

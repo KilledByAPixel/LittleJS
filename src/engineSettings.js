@@ -481,13 +481,3 @@ function setMedalDisplayIconSize(size) { medalDisplayIconSize = size; }
  *  @param {Boolean} preventUnlock
  *  @memberof Settings */
 function setMedalsPreventUnlock(preventUnlock) { medalsPreventUnlock = preventUnlock; }
-
-/** Set if watermark with FPS should be shown
- *  @param {Boolean} show
- *  @memberof Debug */
-function setShowWatermark(show) { showWatermark = show; }
-
-/** Set key code used to toggle debug mode, Esc by default
- *  @param {String} key
- *  @memberof Debug */
-function setDebugKey(key) { debugKey = key; }
