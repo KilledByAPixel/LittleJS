@@ -34,3 +34,4 @@ function debugSaveText   (){}
 function debugSaveDataURL(){}
 function setShowWatermark(){}
 function setDebugKey     (){}
+function debugShowErrors (){}
