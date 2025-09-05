@@ -575,7 +575,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
             ] = sampleCache[[instrument, note]] || (
                 // add sample to cache
                 instrumentParameters = [...instruments[instrument]],
-                instrumentParameters[2] *= 2 ** ((note - 12) / 12),
+                instrumentParameters[2] = (instrumentParameters[2] || 220) * 2**(note / 12 - 1),
 
                 // allow negative values to stop notes
                 note > 0 ? zzfxG(...instrumentParameters) : []
