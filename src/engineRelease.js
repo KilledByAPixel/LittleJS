@@ -33,3 +33,4 @@ function debugScreenshot (){}
 function debugSaveCanvas (){}
 function debugSaveText   (){}
 function debugSaveDataURL(){}
+function debugShowErrors(){}

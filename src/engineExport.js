@@ -43,6 +43,7 @@ export
 	debugSaveCanvas,
 	debugSaveText,
 	debugSaveDataURL,
+	debugShowErrors,
 
 	// Settings
 	cameraPos,
