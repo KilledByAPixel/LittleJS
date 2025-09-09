@@ -10,9 +10,22 @@ const PROGRAM_NAME = 'game';
 const BUILD_FOLDER = 'build';
 const sourceFiles =
 [
-    '../../dist/littlejs.release.js',
+    // LittleJS engine files
+    `../../src/engineRelease.js`,
+    `../../src/engineUtilities.js`,
+    `../../src/engineSettings.js`,
+    `../../src/engineObject.js`,
+    `../../src/engineDraw.js`,
+    `../../src/engineInput.js`,
+    `../../src/engineAudio.js`,
+    `../../src/engineTileLayer.js`,
+    `../../src/engineParticles.js`,
+    `../../src/engineMedals.js`,
+    `../../src/engineWebGL.js`,
+    `../../src/engine.js`,
+
+    // game files
     'game.js',
-    // add your game's files here
 ];
 const dataFiles =
 [
@@ -24,9 +37,6 @@ console.log(`Building ${PROGRAM_NAME}...`);
 const startTime = Date.now();
 const fs = require('node:fs');
 const child_process = require('node:child_process');
-
-// rebuild engine
-child_process.execSync(`npm run build`, { stdio: 'inherit' });
 
 // remove old files and setup build folder
 fs.rmSync(BUILD_FOLDER, { recursive: true, force: true });
