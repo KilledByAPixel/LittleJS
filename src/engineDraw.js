@@ -162,6 +162,8 @@ class TextureInfo
         this.size = vec2(image.width, image.height);
         /** @property {WebGLTexture} - webgl texture */
         this.glTexture = glEnable && glCreateTexture(image);
+        /** @property {Vector2} - inverse of the size for rendering */
+        this.sizeInverse = vec2(1/image.width, 1/image.height);
     }
 }
 
@@ -205,13 +207,13 @@ function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
  *  @param {Color}   [color=(1,1,1,1)]          - Color to modulate with
  *  @param {Number}  [angle]                    - Angle to rotate by
  *  @param {Boolean} [mirror]                   - If true image is flipped along the Y axis
- *  @param {Color}   [additiveColor=(0,0,0,0)]  - Additive color to be applied
+ *  @param {Color}   [additiveColor]            - Additive color to be applied
  *  @param {Boolean} [useWebGL=glEnable]        - Use accelerated WebGL rendering
  *  @param {Boolean} [screenSpace=false]        - If true the pos and size are in screen space
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
-    angle=0, mirror, additiveColor=new Color(0,0,0,0), useWebGL=glEnable, screenSpace, context)
+    angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace, context)
 {
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode'); 
     ASSERT(typeof tileInfo !== 'number' || !tileInfo, 
@@ -226,21 +228,30 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
             pos = screenToWorld(pos);
             size = size.scale(1/cameraScale);
         }
-        
         if (textureInfo)
         {
             // calculate uvs and render
-            const sizeInverse = vec2(1).divide(textureInfo.size);
+            const sizeInverse = textureInfo.sizeInverse;
             const x = tileInfo.pos.x * sizeInverse.x;
             const y = tileInfo.pos.y * sizeInverse.y;
             const w = tileInfo.size.x * sizeInverse.x;
             const h = tileInfo.size.y * sizeInverse.y;
-            const tileImageFixBleed = sizeInverse.scale(tileFixBleedScale);
-            glSetTexture(textureInfo.glTexture);
-            glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
-                x + tileImageFixBleed.x,     y + tileImageFixBleed.y, 
-                x - tileImageFixBleed.x + w, y - tileImageFixBleed.y + h, 
-                color.rgbaInt(), additiveColor.rgbaInt()); 
+            if (tileFixBleedScale)
+            {
+                const tileImageFixBleed = sizeInverse.scale(tileFixBleedScale);
+                glSetTexture(textureInfo.glTexture);
+                glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
+                    x + tileImageFixBleed.x,     y + tileImageFixBleed.y, 
+                    x - tileImageFixBleed.x + w, y - tileImageFixBleed.y + h, 
+                    color.rgbaInt(), additiveColor && additiveColor.rgbaInt()); 
+            }
+            else
+            {
+                glSetTexture(textureInfo.glTexture);
+                glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
+                    x, y, x + w, y + h, 
+                    color.rgbaInt(), additiveColor && additiveColor.rgbaInt()); 
+            }
         }
         else
         {
@@ -450,16 +461,15 @@ function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textA
 function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, maxWidth=undefined, context=overlayContext)
 {
     context.fillStyle = color.toString();
-    context.lineWidth = lineWidth;
     context.strokeStyle = lineColor.toString();
+    context.lineWidth = lineWidth;
     context.textAlign = textAlign;
     context.font = size + 'px '+ font;
     context.textBaseline = 'middle';
     context.lineJoin = 'round';
 
-    pos = pos.copy();
-
     const lines = (text+'').split('\n');
+    pos = pos.copy();
     pos.y -= (lines.length-1) * size/2; // center text vertically
     lines.forEach(line=>
     {
