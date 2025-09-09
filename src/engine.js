@@ -272,7 +272,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     // setup html
     const styleRoot = 
         'margin:0;overflow:hidden;' + // fill the window
-        'width:100vw;height:100vh;' + // fill the window
+        'width:100vw;' +              // fill the window
         'display:flex;' +             // use flexbox
         'align-items:center;' +       // horizontal center
         'justify-content:center;' +   // vertical center
