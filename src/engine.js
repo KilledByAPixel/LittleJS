@@ -271,11 +271,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
     // setup html
     const styleRoot = 
-        'margin:0;overflow:hidden;' + // fill the window
-        'width:100vw;' +              // fill the window
-        'display:flex;' +             // use flexbox
-        'align-items:center;' +       // horizontal center
-        'justify-content:center;' +   // vertical center
+        'margin:0;' +                 // fill the window
         'background:#000;' +          // set background color
         (canvasPixelated ? 'image-rendering:pixelated;' : '') + // pixel art
         'user-select:none;' +         // prevent hold to select
@@ -298,7 +294,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     overlayContext = overlayCanvas.getContext('2d');
 
     // set canvas style
-    const styleCanvas = 'position:absolute'; // allow canvases to overlap
+    const styleCanvas = 'position:absolute;'+ // allow canvases to overlap
+        'top:50%;left:50%;transform:translate(-50%,-50%)'; // center on screen
     mainCanvas.style.cssText = overlayCanvas.style.cssText = styleCanvas;
     if (glCanvas)
         glCanvas.style.cssText = styleCanvas;
