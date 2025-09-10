@@ -210,19 +210,31 @@ function glCreateTexture(image)
     const texture = glContext.createTexture();
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
     if (image && image.width)
-        glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
+        glSetTextureData(texture, image);
     else
     {
         // create a white texture
         const whitePixel = new Uint8Array([255, 255, 255, 255]);
         glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 1, 1, 0, glContext.RGBA, glContext.UNSIGNED_BYTE, whitePixel);
     }
-
+    
     // use point filtering for pixelated rendering
     const filter = tilesPixelated ? glContext.NEAREST : glContext.LINEAR;
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, filter);
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, filter);
     return texture;
+}
+
+/** Set WebGL texture data from an image
+ *  @param {WebGLTexture} texture
+ *  @param {HTMLImageElement} image
+ *  @memberof WebGL */
+function glSetTextureData(texture, image)
+{
+    // build the texture
+    ASSERT(!!image && image.width > 0, 'Invalid image data.');
+    glContext.bindTexture(glContext.TEXTURE_2D, texture);
+    glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
 }
 
 /** Draw all sprites and clear out the buffer, called automatically by the system whenever necessary
@@ -278,10 +290,10 @@ function glSetAntialias(antialias=true)
  *  @param {Number} uv0Y
  *  @param {Number} uv1X
  *  @param {Number} uv1Y
- *  @param {Number} rgba
- *  @param {Number} [rgbaAdditive=0]
+ *  @param {Number} [rgba=-1] - white is -1
+ *  @param {Number} [rgbaAdditive=0] - black is 0
  *  @memberof WebGL */
-function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdditive=0)
+function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba=-1, rgbaAdditive=0)
 {
     ASSERT(typeof rgba == 'number' && typeof rgbaAdditive == 'number', 'invalid color');
 
