@@ -30,7 +30,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.13';
+const engineVersion = '1.11.14';
 
 /** Frames per second to update
  *  @type {number}
@@ -284,11 +284,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
     // setup html
     const styleRoot = 
-        'margin:0;overflow:hidden;' + // fill the window
-        'width:100vw;height:100vh;' + // fill the window
-        'display:flex;' +             // use flexbox
-        'align-items:center;' +       // horizontal center
-        'justify-content:center;' +   // vertical center
+        'margin:0;' +                 // fill the window
         'background:#000;' +          // set background color
         (canvasPixelated ? 'image-rendering:pixelated;' : '') + // pixel art
         'user-select:none;' +         // prevent hold to select
@@ -311,7 +307,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     overlayContext = overlayCanvas.getContext('2d');
 
     // set canvas style
-    const styleCanvas = 'position:absolute'; // allow canvases to overlap
+    const styleCanvas = 'position:absolute;'+ // allow canvases to overlap
+        'top:50%;left:50%;transform:translate(-50%,-50%)'; // center on screen
     mainCanvas.style.cssText = overlayCanvas.style.cssText = styleCanvas;
     if (glCanvas)
         glCanvas.style.cssText = styleCanvas;
@@ -322,12 +319,12 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         new Promise(resolve => 
         {
             const image = new Image;
-            image.crossOrigin = 'anonymous';
             image.onerror = image.onload = ()=> 
             {
                 textureInfos[textureIndex] = new TextureInfo(image);
                 resolve();
             }
+            image.crossOrigin = 'anonymous';
             image.src = src;
         })
     );
