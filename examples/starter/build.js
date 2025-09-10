@@ -102,6 +102,7 @@ function htmlBuildStep(filename)
     let buffer = '<!DOCTYPE html>';
     buffer += '<head>';
     buffer += `<title>${PROGRAM_TITLE}</title>`;
+    buffer += '<meta charset=utf-8>';
     buffer += '</head>';
     buffer += '<body>';
     buffer += '<script>';
