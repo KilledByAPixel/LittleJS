@@ -217,6 +217,7 @@ export
 	glCopyToContext,
 	glCreateProgram,
 	glCreateTexture,
+	glSetTextureData,
 	glDraw,
 	glFlush,
 	glSetTexture,
