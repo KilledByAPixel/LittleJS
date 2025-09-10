@@ -38,6 +38,7 @@ function debugScreenshot (){}
 function debugSaveCanvas (){}
 function debugSaveText   (){}
 function debugSaveDataURL(){}
+function debugShowErrors(){}
 /**
  * LittleJS Utility Classes and Functions
  * - General purpose math library
@@ -2076,6 +2077,8 @@ class TextureInfo
         this.image = image;
         /** @property {Vector2} - size of the image */
         this.size = vec2(image.width, image.height);
+        /** @property {Vector2} - inverse of the size, cached for rendering */
+        this.sizeInverse = vec2(1/image.width, 1/image.height);
         /** @property {WebGLTexture} - webgl texture */
         this.glTexture = glEnable && glCreateTexture(image);
     }
@@ -2121,19 +2124,19 @@ function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
  *  @param {Color}   [color=(1,1,1,1)]          - Color to modulate with
  *  @param {number}  [angle]                    - Angle to rotate by
  *  @param {boolean} [mirror]                   - If true image is flipped along the Y axis
- *  @param {Color}   [additiveColor=(0,0,0,0)]  - Additive color to be applied
+ *  @param {Color}   [additiveColor]            - Additive color to be applied if any
  *  @param {boolean} [useWebGL=glEnable]        - Use accelerated WebGL rendering
  *  @param {boolean} [screenSpace=false]        - If true the pos and size are in screen space
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
-    angle=0, mirror, additiveColor=new Color(0,0,0,0), useWebGL=glEnable, screenSpace, context)
+    angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace, context)
 {
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode'); 
     ASSERT(typeof tileInfo !== 'number' || !tileInfo, 
         'this is an old style calls, to fix replace it with tile(tileIndex, tileSize)');
     ASSERT(isVector2(pos) && isVector2(size));
-    ASSERT(isColor(color) && isColor(additiveColor));
+    ASSERT(isColor(color) && (!additiveColor || isColor(additiveColor)));
 
     const textureInfo = tileInfo && tileInfo.getTextureInfo();
     if (useWebGL)
@@ -2144,21 +2147,30 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
             pos = screenToWorld(pos);
             size = size.scale(1/cameraScale);
         }
-        
         if (textureInfo)
         {
             // calculate uvs and render
-            const sizeInverse = vec2(1).divide(textureInfo.size);
+            const sizeInverse = textureInfo.sizeInverse;
             const x = tileInfo.pos.x * sizeInverse.x;
             const y = tileInfo.pos.y * sizeInverse.y;
             const w = tileInfo.size.x * sizeInverse.x;
             const h = tileInfo.size.y * sizeInverse.y;
-            const tileImageFixBleed = sizeInverse.scale(tileFixBleedScale);
-            glSetTexture(textureInfo.glTexture);
-            glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
-                x + tileImageFixBleed.x,     y + tileImageFixBleed.y, 
-                x - tileImageFixBleed.x + w, y - tileImageFixBleed.y + h, 
-                color.rgbaInt(), additiveColor.rgbaInt()); 
+            if (tileFixBleedScale)
+            {
+                const tileImageFixBleed = sizeInverse.scale(tileFixBleedScale);
+                glSetTexture(textureInfo.glTexture);
+                glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
+                    x + tileImageFixBleed.x,     y + tileImageFixBleed.y, 
+                    x - tileImageFixBleed.x + w, y - tileImageFixBleed.y + h, 
+                    color.rgbaInt(), additiveColor && additiveColor.rgbaInt()); 
+            }
+            else
+            {
+                glSetTexture(textureInfo.glTexture);
+                glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
+                    x, y, x + w, y + h, 
+                    color.rgbaInt(), additiveColor && additiveColor.rgbaInt()); 
+            }
         }
         else
         {
@@ -2370,16 +2382,15 @@ function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textA
 function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, maxWidth=undefined, context=overlayContext)
 {
     context.fillStyle = color.toString();
-    context.lineWidth = lineWidth;
     context.strokeStyle = lineColor.toString();
+    context.lineWidth = lineWidth;
     context.textAlign = textAlign;
     context.font = size + 'px '+ font;
     context.textBaseline = 'middle';
     context.lineJoin = 'round';
 
-    pos = pos.copy();
-
     const lines = (text+'').split('\n');
+    pos = pos.copy();
     pos.y -= (lines.length-1) * size/2; // center text vertically
     lines.forEach(line=>
     {
@@ -3636,7 +3647,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
             ] = sampleCache[[instrument, note]] || (
                 // add sample to cache
                 instrumentParameters = [...instruments[instrument]],
-                instrumentParameters[2] *= 2 ** ((note - 12) / 12),
+                instrumentParameters[2] = (instrumentParameters[2] || 220) * 2**(note / 12 - 1),
 
                 // allow negative values to stop notes
                 note > 0 ? zzfxG(...instrumentParameters) : []
@@ -4774,19 +4785,31 @@ function glCreateTexture(image)
     const texture = glContext.createTexture();
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
     if (image && image.width)
-        glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
+        glSetTextureData(texture, image);
     else
     {
         // create a white texture
         const whitePixel = new Uint8Array([255, 255, 255, 255]);
         glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 1, 1, 0, glContext.RGBA, glContext.UNSIGNED_BYTE, whitePixel);
     }
-
+    
     // use point filtering for pixelated rendering
     const filter = tilesPixelated ? glContext.NEAREST : glContext.LINEAR;
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, filter);
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, filter);
     return texture;
+}
+
+/** Set WebGL texture data from an image
+ *  @param {WebGLTexture} texture
+ *  @param {HTMLImageElement} image
+ *  @memberof WebGL */
+function glSetTextureData(texture, image)
+{
+    // build the texture
+    ASSERT(!!image && image.width > 0, 'Invalid image data.');
+    glContext.bindTexture(glContext.TEXTURE_2D, texture);
+    glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
 }
 
 /** Draw all sprites and clear out the buffer, called automatically by the system whenever necessary
@@ -4842,10 +4865,10 @@ function glSetAntialias(antialias=true)
  *  @param {Number} uv0Y
  *  @param {Number} uv1X
  *  @param {Number} uv1Y
- *  @param {Number} rgba
- *  @param {Number} [rgbaAdditive=0]
+ *  @param {Number} [rgba=-1] - white is -1
+ *  @param {Number} [rgbaAdditive=0] - black is 0
  *  @memberof WebGL */
-function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdditive=0)
+function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba=-1, rgbaAdditive=0)
 {
     ASSERT(typeof rgba == 'number' && typeof rgbaAdditive == 'number', 'invalid color');
 
@@ -4898,7 +4921,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.13';
+const engineVersion = '1.11.14';
 
 /** Frames per second to update
  *  @type {number}
@@ -5152,11 +5175,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
 
     // setup html
     const styleRoot = 
-        'margin:0;overflow:hidden;' + // fill the window
-        'width:100vw;height:100vh;' + // fill the window
-        'display:flex;' +             // use flexbox
-        'align-items:center;' +       // horizontal center
-        'justify-content:center;' +   // vertical center
+        'margin:0;' +                 // fill the window
         'background:#000;' +          // set background color
         (canvasPixelated ? 'image-rendering:pixelated;' : '') + // pixel art
         'user-select:none;' +         // prevent hold to select
@@ -5179,7 +5198,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     overlayContext = overlayCanvas.getContext('2d');
 
     // set canvas style
-    const styleCanvas = 'position:absolute'; // allow canvases to overlap
+    const styleCanvas = 'position:absolute;'+ // allow canvases to overlap
+        'top:50%;left:50%;transform:translate(-50%,-50%)'; // center on screen
     mainCanvas.style.cssText = overlayCanvas.style.cssText = styleCanvas;
     if (glCanvas)
         glCanvas.style.cssText = styleCanvas;
@@ -5190,12 +5210,12 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         new Promise(resolve => 
         {
             const image = new Image;
-            image.crossOrigin = 'anonymous';
             image.onerror = image.onload = ()=> 
             {
                 textureInfos[textureIndex] = new TextureInfo(image);
                 resolve();
             }
+            image.crossOrigin = 'anonymous';
             image.src = src;
         })
     );

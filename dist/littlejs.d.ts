@@ -216,6 +216,9 @@ declare module "littlejsengine" {
      *  @param {string}     filename
      *  @memberof Debug */
     export function debugSaveDataURL(dataURL: string, filename: string): void;
+    /** Show error as full page of red text
+     *  @memberof Debug */
+    export function debugShowErrors(): void;
     /**
      * LittleJS Engine Settings
      * - All settings for the engine are here
@@ -1180,6 +1183,8 @@ declare module "littlejsengine" {
         image: HTMLImageElement;
         /** @property {Vector2} - size of the image */
         size: Vector2;
+        /** @property {Vector2} - inverse of the size, cached for rendering */
+        sizeInverse: Vector2;
         /** @property {WebGLTexture} - webgl texture */
         glTexture: WebGLTexture;
     }
@@ -1241,7 +1246,7 @@ declare module "littlejsengine" {
      *  @param {Color}   [color=(1,1,1,1)]          - Color to modulate with
      *  @param {number}  [angle]                    - Angle to rotate by
      *  @param {boolean} [mirror]                   - If true image is flipped along the Y axis
-     *  @param {Color}   [additiveColor=(0,0,0,0)]  - Additive color to be applied
+     *  @param {Color}   [additiveColor]            - Additive color to be applied if any
      *  @param {boolean} [useWebGL=glEnable]        - Use accelerated WebGL rendering
      *  @param {boolean} [screenSpace=false]        - If true the pos and size are in screen space
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
@@ -1455,6 +1460,11 @@ declare module "littlejsengine" {
      *  @return {WebGLTexture}
      *  @memberof WebGL */
     export function glCreateTexture(image: HTMLImageElement): WebGLTexture;
+    /** Set WebGL texture data from an image
+     *  @param {WebGLTexture} texture
+     *  @param {HTMLImageElement} image
+     *  @memberof WebGL */
+    export function glSetTextureData(texture: WebGLTexture, image: HTMLImageElement): void;
     /** Add a sprite to the gl draw list, used by all gl draw functions
      *  @param {Number} x
      *  @param {Number} y
@@ -1465,10 +1475,10 @@ declare module "littlejsengine" {
      *  @param {Number} uv0Y
      *  @param {Number} uv1X
      *  @param {Number} uv1Y
-     *  @param {Number} rgba
-     *  @param {Number} [rgbaAdditive=0]
+     *  @param {Number} [rgba=-1] - white is -1
+     *  @param {Number} [rgbaAdditive=0] - black is 0
      *  @memberof WebGL */
-    export function glDraw(x: number, y: number, sizeX: number, sizeY: number, angle: number, uv0X: number, uv0Y: number, uv1X: number, uv1Y: number, rgba: number, rgbaAdditive?: number): void;
+    export function glDraw(x: number, y: number, sizeX: number, sizeY: number, angle: number, uv0X: number, uv0Y: number, uv1X: number, uv1Y: number, rgba?: number, rgbaAdditive?: number): void;
     /** Draw all sprites and clear out the buffer, called automatically by the system whenever necessary
      *  @memberof WebGL */
     export function glFlush(): void;
