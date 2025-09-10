@@ -197,17 +197,17 @@ function debugSaveDataURL(dataURL, filename)
  *  @memberof Debug */
 function debugShowErrors()
 {
-    onunhandledrejection = (event)=>showError(event.reason);
-    onerror = (event, source, lineno, colno)=>
-        showError(`${event}\n${source}\nLn ${lineno}, Col ${colno}`);
-
     const showError = (message)=>
     {
         // replace entire page with error message
         document.body.style.display = '';
         document.body.style.backgroundColor = '#111';
-        document.body.innerHTML = `<pre style=color:#f00;font-size:50px>` + message;
+        document.body.innerHTML = `<pre style=color:#f00;font-size:50px;white-space:pre-wrap>` + message;
     }
+    onunhandledrejection = (event)=>
+        showError(event.reason.stack || event.reason);
+    onerror = (message, source, lineno, colno)=>
+        showError(`${message}\n${source}\nLn ${lineno}, Col ${colno}`);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
