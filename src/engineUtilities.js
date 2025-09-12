@@ -299,10 +299,7 @@ class RandomGenerator
  * b = vec2();         // set b to (0, 0)
  * @memberof Utilities
  */
-function vec2(x=0, y)
-{
-    return new Vector2(x, y == undefined? x : y);
-}
+function vec2(x=0, y) { return new Vector2(x, y == undefined? x : y); }
 
 /** 
  * Check if object is a valid Vector2
