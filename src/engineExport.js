@@ -237,6 +237,7 @@ export {
 	keyIsDown,
 	keyWasPressed,
 	keyWasReleased,
+	keyDirection,
 	clearInput,
 	mouseIsDown,
 	mouseWasPressed,

@@ -43,6 +43,15 @@ function keyWasReleased(key, device=0)
     return inputData[device] && !!(inputData[device][key] & 4);
 }
 
+/** Returns input vector from arrow keys or WASD if enabled
+ *  @return {Vector2}
+ *  @memberof Input */
+function keyDirection(up='ArrowUp', down='ArrowDown', left='ArrowLeft', right='ArrowRight')
+{
+    const k = (key)=> keyIsDown(key) ? 1 : 0;
+    return vec2(k(right) - k(left), k(up) - k(down));
+}
+
 /** Clears all input
  *  @memberof Input */
 function clearInput() { inputData = [[]]; touchGamepadButtons = []; }
