@@ -116,8 +116,7 @@ function htmlBuildStep(filename)
 function zipBuildStep(filename)
 {
     console.log(`Zipping...`);
-    
-    // zip the build folder using ect
-    const args = ['-9', '-strip', '-zip', `../${PROGRAM_NAME}.zip`, 'index.html', ...dataFiles];
-    child_process.spawnSync('ect', args, {stdio: 'inherit', cwd: BUILD_FOLDER});
+    const sources = ['index.html', 'index.js', ...dataFiles];
+    const sourceList = sources.join(' ');
+    child_process.execSync(`npx bestzip ../${PROGRAM_NAME}.zip ${sourceList}`, {cwd:BUILD_FOLDER, stdio: 'inherit'});
 };
