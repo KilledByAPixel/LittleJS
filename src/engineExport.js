@@ -44,6 +44,9 @@ export
 	debugSaveText,
 	debugSaveDataURL,
 	debugShowErrors,
+	debugVideoCaptureIsActive,
+	debugVideoCaptureStart,
+	debugVideoCaptureStop,
 
 	// Settings
 	cameraPos,

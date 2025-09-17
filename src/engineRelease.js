@@ -34,3 +34,7 @@ function debugSaveCanvas (){}
 function debugSaveText   (){}
 function debugSaveDataURL(){}
 function debugShowErrors(){}
+function debugVideoCaptureIsActive(){ return false; }
+function debugVideoCaptureStart (){}
+function debugVideoCaptureStop  (){}
+function debugVideoCaptureUpdate(){}
