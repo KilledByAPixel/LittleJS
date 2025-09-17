@@ -116,7 +116,7 @@ function htmlBuildStep(filename)
 function zipBuildStep(filename)
 {
     console.log(`Zipping...`);
-    const sources = ['index.html', 'index.js', ...dataFiles];
+    const sources = ['index.html', ...dataFiles];
     const sourceList = sources.join(' ');
     child_process.execSync(`npx bestzip ../${PROGRAM_NAME}.zip ${sourceList}`, {cwd:BUILD_FOLDER, stdio: 'inherit'});
 };
