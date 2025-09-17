@@ -166,7 +166,12 @@ class ParticleEmitter extends EngineObject
         else
             this.destroy();
 
-        debugParticles && debugRect(this.pos, vec2(this.emitSize), '#0f0', 0, this.angle);
+        if (debugParticles)
+        {
+            // show emitter bounds
+            const emitSize = typeof this.emitSize === 'number' ? vec2(this.emitSize) : this.emitSize;
+            debugRect(this.pos, emitSize, '#0f0', 0, this.angle);
+        }
     }
 
     /** Spawn one particle
