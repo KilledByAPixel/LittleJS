@@ -35,3 +35,7 @@ function debugSaveDataURL(){}
 function setShowWatermark(){}
 function setDebugKey     (){}
 function debugShowErrors (){}
+function debugVideoCaptureIsActive(){ return false; }
+function debugVideoCaptureStart (){}
+function debugVideoCaptureStop  (){}
+function debugVideoCaptureUpdate(){}
