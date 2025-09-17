@@ -352,7 +352,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// ZzFXMicro - Zuper Zmall Zound Zynth - v1.3.1 by Frank Force
+// ZzFXMicro - Zuper Zmall Zound Zynth - v1.3.2 by Frank Force
 
 /** Generate and play a ZzFX sound
  *  
@@ -394,21 +394,45 @@ const zzfxR = 44100;
  */
 function zzfxG
 (
-    // parameters
-    volume = 1, randomness = .05, frequency = 220, attack = 0, sustain = 0,
-    release = .1, shape = 0, shapeCurve = 1, slide = 0, deltaSlide = 0,
-    pitchJump = 0, pitchJumpTime = 0, repeatTime = 0, noise = 0, modulation = 0,
-    bitCrush = 0, delay = 0, sustainVolume = 1, decay = 0, tremolo = 0, filter = 0
+    volume = 1, 
+    randomness = .05,
+    frequency = 220,
+    attack = 0,
+    sustain = 0,
+    release = .1,
+    shape = 0,
+    shapeCurve = 1,
+    slide = 0, 
+    deltaSlide = 0, 
+    pitchJump = 0, 
+    pitchJumpTime = 0, 
+    repeatTime = 0, 
+    noise = 0,
+    modulation = 0,
+    bitCrush = 0,
+    delay = 0,
+    sustainVolume = 1,
+    decay = 0,
+    tremolo = 0,
+    filter = 0
 )
 {
-    // LJS Note: ZZFX modded so randomness is handled by Sound class
-
     // init parameters
-    let PI2 = PI*2, sampleRate = zzfxR,
+    let sampleRate = zzfxR,
+        PI2 = PI*2, 
         startSlide = slide *= 500 * PI2 / sampleRate / sampleRate,
         startFrequency = frequency *= 
-            rand(1 + randomness, 1-randomness) * PI2 / sampleRate,
-        b = [], t = 0, tm = 0, i = 0, j = 1, r = 0, c = 0, s = 0, f, length,
+            (1 + rand(randomness,-randomness)) * PI2 / sampleRate,
+        modOffset = 0, // modulation offset  
+        repeat = 0,    // repeat offset
+        crush = 0,     // bit crush offset
+        jump = 1,      // pitch jump timer
+        length,        // sample length
+        b = [],        // sample buffer
+        t = 0,         // sample time
+        i = 0,         // sample index 
+        s = 0,         // sample value
+        f,             // wave frequency
 
         // biquad LP/HP filter
         quality = 2, w = PI2 * abs(filter) * 2 / sampleRate,
@@ -418,35 +442,37 @@ function zzfxG
         b1 = -(sign(filter) + cos) / a0, b2 = b0,
         x2 = 0, x1 = 0, y2 = 0, y1 = 0;
 
-    // scale by sample rate
-    attack = attack * sampleRate + 9; // minimum attack to prevent pop
-    decay *= sampleRate;
-    sustain *= sampleRate;
-    release *= sampleRate;
-    delay *= sampleRate;
-    deltaSlide *= 500 * PI2 / sampleRate**3;
-    modulation *= PI2 / sampleRate;
-    pitchJump *= PI2 / sampleRate;
-    pitchJumpTime *= sampleRate;
-    repeatTime = repeatTime * sampleRate | 0;
+        // scale by sample rate
+        const minAttack = 9; // prevent pop if attack is 0
+        attack = attack * sampleRate || minAttack;
+        decay *= sampleRate;
+        sustain *= sampleRate;
+        release *= sampleRate;
+        delay *= sampleRate;
+        deltaSlide *= 500 * PI2 / sampleRate**3;
+        modulation *= PI2 / sampleRate;
+        pitchJump *= PI2 / sampleRate;
+        pitchJumpTime *= sampleRate;
+        repeatTime = repeatTime * sampleRate | 0;
 
     // generate waveform
     for(length = attack + decay + sustain + release + delay | 0;
-        i < length; b[i++] = s * volume)               // sample
+        i < length; b[i++] = s * volume)                   // sample
     {
-        if (!(++c%(bitCrush*100|0)))                   // bit crush
+        if (!(++crush%(bitCrush*100|0)))                   // bit crush
         {
-            s = shape? shape>1? shape>2? shape>3?      // wave shape
-                Math.sin(t**3) :                       // 4 noise
-                clamp(Math.tan(t),1,-1):               // 3 tan
-                1-(2*t/PI2%2+2)%2:                     // 2 saw
-                1-4*abs(Math.round(t/PI2)-t/PI2):      // 1 triangle
-                Math.sin(t);                           // 0 sin
+            s = shape? shape>1? shape>2? shape>3? shape>4? // wave shape
+                (t/PI2%1 < shapeCurve/2? 1 : -1) :         // 5 square duty
+                Math.sin(t**3) :                           // 4 noise
+                Math.max(Math.min(Math.tan(t),1),-1):      // 3 tan
+                1-(2*t/PI2%2+2)%2:                         // 2 saw
+                1-4*abs(Math.round(t/PI2)-t/PI2):          // 1 triangle
+                Math.sin(t);                               // 0 sin
 
             s = (repeatTime ?
                     1 - tremolo + tremolo*Math.sin(PI2*i/repeatTime) // tremolo
                     : 1) *
-                sign(s)*(abs(s)**shapeCurve) *           // curve
+                (shape>4?s:sign(s)*abs(s)**shapeCurve) * // shape curve
                 (i < attack ? i/attack :                 // attack
                 i < attack + decay ?                     // decay
                 1-((i-attack)/decay)*(1-sustainVolume) : // decay falloff
@@ -461,30 +487,30 @@ function zzfxG
                 (i<length-delay? 1 : (length-i)/delay) * // release delay 
                 b[i-delay|0]/2/volume) : s;              // sample delay
 
-            if (filter)                                   // apply filter
+            if (filter)                                  // apply filter
                 s = y1 = b2*x2 + b1*(x2=x1) + b0*(x1=s) - a2*y2 - a1*(y2=y1);
         }
 
         f = (frequency += slide += deltaSlide) *// frequency
-            Math.cos(modulation*tm++);          // modulation
+            Math.cos(modulation*modOffset++);   // modulation
         t += f + f*noise*Math.sin(i**5);        // noise
 
-        if (j && ++j > pitchJumpTime)           // pitch jump
+        if (jump && ++jump > pitchJumpTime)     // pitch jump
         { 
             frequency += pitchJump;             // apply pitch jump
             startFrequency += pitchJump;        // also apply to start
-            j = 0;                              // stop pitch jump time
+            jump = 0;                           // stop pitch jump time
         } 
 
-        if (repeatTime && !(++r % repeatTime))  // repeat
+        if (repeatTime && !(++repeat % repeatTime)) // repeat
         { 
-            frequency = startFrequency;         // reset frequency
-            slide = startSlide;                 // reset slide
-            j = j || 1;                         // reset pitch jump time
+            frequency = startFrequency;   // reset frequency
+            slide = startSlide;           // reset slide
+            jump ||= 1;                   // reset pitch jump time
         }
     }
 
-    return b;
+    return b; // return sample buffer
 }
 
 ///////////////////////////////////////////////////////////////////////////////
