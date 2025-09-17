@@ -289,23 +289,17 @@ class RandomGenerator
 ///////////////////////////////////////////////////////////////////////////////
 
 /** 
- * Create a 2d vector, can take another Vector2 to copy, 2 scalars, or 1 scalar
- * @param {Vector2|number} [x]
- * @param {number} [y]
+ * Create a 2d vector, can take 1 or 2 scalar values
+ * @param {number} [x]
+ * @param {number} [y] - if y is undefined, x is used for both
  * @return {Vector2}
  * @example
  * let a = vec2(0, 1); // vector with coordinates (0, 1)
- * let b = vec2(a);    // copy a into b
  * a = vec2(5);        // set a to (5, 5)
  * b = vec2();         // set b to (0, 0)
  * @memberof Utilities
  */
-function vec2(x=0, y)
-{
-    return typeof x == 'number' ? 
-        new Vector2(x, y == undefined? x : y) : 
-        new Vector2(x.x, x.y);
-}
+function vec2(x=0, y) { return new Vector2(x, y == undefined? x : y); }
 
 /** 
  * Check if object is a valid Vector2
