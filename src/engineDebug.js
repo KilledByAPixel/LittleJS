@@ -72,8 +72,10 @@ function ASSERT(assert, output)
  *  @memberof Debug */
 function debugRect(pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)
 {
+    if (typeof size == 'number')
+        size = vec2(size); // allow passing in floats
     ASSERT(typeof color == 'string', 'pass in css color strings'); 
-    debugPrimitives.push({pos, size:vec2(size), color, time:new Timer(time), angle, fill});
+    debugPrimitives.push({pos, size, color, time:new Timer(time), angle, fill});
 }
 
 /** Draw a debug poly in world space
