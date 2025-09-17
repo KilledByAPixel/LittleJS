@@ -91,7 +91,7 @@ function distanceWrap(valueA, valueB, wrapSize=1)
  *  @returns {number}
  *  @memberof Utilities */
 function lerpWrap(percent, valueA, valueB, wrapSize=1)
-{ return valueB + clamp(percent) * distanceWrap(valueA, valueB, wrapSize); }
+{ return valueA + clamp(percent) * distanceWrap(valueB, valueA, wrapSize); }
 
 /** Returns signed wrapped distance between the two angles passed in
  *  @param {number} angleA

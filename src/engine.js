@@ -154,11 +154,13 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         const debugSpeedUp   = debug && keyIsDown('Equal'); // +
         const debugSpeedDown = debug && keyIsDown('Minus'); // -
         if (debug) // +/- to speed/slow time
-            frameTimeDeltaMS *= debugSpeedUp ? 5 : debugSpeedDown ? .2 : 1;
+            frameTimeDeltaMS *= debugSpeedUp ? 10 : debugSpeedDown ? .1 : 1;
         timeReal += frameTimeDeltaMS / 1e3;
         frameTimeBufferMS += paused ? 0 : frameTimeDeltaMS;
         if (!debugSpeedUp)
-            frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp in case of slow framerate
+            frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp min framerate
+        if (debug && debugVideoCaptureIsActive())
+            frameTimeBufferMS = 0; // disable time smoothing when capturing video
 
         updateCanvas();
 
@@ -237,6 +239,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             }
         }
 
+        debugVideoCaptureUpdate();
         requestAnimationFrame(engineUpdate);
     }
 
