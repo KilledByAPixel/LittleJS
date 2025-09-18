@@ -353,7 +353,7 @@ class UIButton extends UIObject
      *  @param {string}  [text]
      *  @param {Color}   [color=uiDefaultButtonColor]
      */
-    constructor(pos, size, text, color=uiDefaultButtonColor)
+    constructor(pos, size, text='', color=uiDefaultButtonColor)
     {
         super(pos, size);
 
