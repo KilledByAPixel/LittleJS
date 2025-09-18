@@ -482,7 +482,7 @@ function debugRender()
 // video capture - records video and audio at 60 fps using MediaRecorder API
 
 // internal variables used to capture video
-let debugVideoCapture, debugVideoCaptureTrack, debugVideoCaptureIcon;
+let debugVideoCapture, debugVideoCaptureTrack, debugVideoCaptureIcon, debugVideoCaptureTimer;
 
 /** Check if video capture is active
  *  @memberof Debug */
@@ -525,12 +525,12 @@ function debugVideoCaptureStart()
     // start recording
     console.log('Video capture started.');
     debugVideoCapture.start();
+    debugVideoCaptureTimer = new Timer(0);
 
     if (!debugVideoCaptureIcon)
     {
         // create recording icon to show it is capturing video
         debugVideoCaptureIcon = document.createElement('div');
-        debugVideoCaptureIcon.textContent = '● Recording';
         debugVideoCaptureIcon.style.position = 'absolute';
         debugVideoCaptureIcon.style.padding = '9px';
         debugVideoCaptureIcon.style.color = '#f00';
@@ -538,6 +538,7 @@ function debugVideoCaptureStart()
         document.body.appendChild(debugVideoCaptureIcon);
     }
     // show recording icon
+    debugVideoCaptureIcon.textContent = '';
     debugVideoCaptureIcon.style.display = '';
 }
 
@@ -549,7 +550,7 @@ function debugVideoCaptureStop()
         return; // not recording
 
     // stop recording
-    console.log('Video capture ended.');
+    console.log(`Video capture ended. ${debugVideoCaptureTimer.get().toFixed(2)} seconds recorded.`);
     debugVideoCapture.stop();
     debugVideoCapture = 0;
     debugVideoCaptureIcon.style.display = 'none';
@@ -564,4 +565,5 @@ function debugVideoCaptureUpdate()
     // save the video frame
     combineCanvases();
     debugVideoCaptureTrack.requestFrame();
+    debugVideoCaptureIcon.textContent = '● REC ' + formatTime(debugVideoCaptureTimer);
 }
