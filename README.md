@@ -25,3 +25,13 @@ Features...
 - Includes fully automated Node.js build system.
 
 ## [Live Demo of Starter Project](https://killedbyapixel.github.io/LittleJS/examples)
+
+Examples...
+
+Many amazing JS13K games have been made using LittleJS. We managed to crack the top 10 several times!
+
+- [L1ttL3 Paws](https://github.com/KilledByAPixel/JS13K2025) - Cat glider with procedural art and levels. by Frank Force
+- [The Way of the Dodo](https://js13kgames.com/2024/games/the-way-of-the-dodo) - Single button flapping platformer. by repsej
+- [Space Huggers](https://js13kgames.com/2021/games/space-huggers) - Rogulike platformer shoot-em-up game with procedural levels. by KilledByAPixel
+- [Wendol Village](https://js13kgames.com/games/dead-again) - Warcraft inspired RTS game. by sanojian
+- [Dead Again](https://js13kgames.com/games/dead-again) - Top down survial horror. by sanojian & repsej
