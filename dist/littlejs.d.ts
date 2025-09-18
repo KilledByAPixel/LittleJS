@@ -219,6 +219,15 @@ declare module "littlejsengine" {
     /** Show error as full page of red text
      *  @memberof Debug */
     export function debugShowErrors(): void;
+    /** Check if video capture is active
+     *  @memberof Debug */
+    export function debugVideoCaptureIsActive(): boolean;
+    /** Start capturing video
+     *  @memberof Debug */
+    export function debugVideoCaptureStart(): void;
+    /** Stop capturing video and save to disk
+     *  @memberof Debug */
+    export function debugVideoCaptureStop(): void;
     /**
      * LittleJS Engine Settings
      * - All settings for the engine are here
@@ -1034,18 +1043,17 @@ declare module "littlejsengine" {
         valueOf(): number;
     }
     /**
-     * Create a 2d vector, can take another Vector2 to copy, 2 scalars, or 1 scalar
-     * @param {Vector2|number} [x]
-     * @param {number} [y]
+     * Create a 2d vector, can take 1 or 2 scalar values
+     * @param {number} [x]
+     * @param {number} [y] - if y is undefined, x is used for both
      * @return {Vector2}
      * @example
      * let a = vec2(0, 1); // vector with coordinates (0, 1)
-     * let b = vec2(a);    // copy a into b
      * a = vec2(5);        // set a to (5, 5)
      * b = vec2();         // set b to (0, 0)
      * @memberof Utilities
      */
-    export function vec2(x?: Vector2 | number, y?: number): Vector2;
+    export function vec2(x?: number, y?: number): Vector2;
     /**
      * Create a color object with RGBA values, white by default
      * @param {number} [r=1] - red
@@ -1584,6 +1592,15 @@ declare module "littlejsengine" {
      *  @type {boolean}
      *  @memberof Input */
     export let isUsingGamepad: boolean;
+    /** Prevents input continuing to the default browser handling (true by default)
+     *  @type {boolean}
+     *  @memberof Input */
+    export let inputPreventDefault: boolean;
+    /** Prevents input continuing to the default browser handling
+     *  This is useful to disable for html menus so the browser can handle input normally
+     *  @param {boolean} preventDefault
+     *  @memberof Input */
+    export function setInputPreventDefault(preventDefault: boolean): void;
     /** Returns true if gamepad button is down
      *  @param {number} button
      *  @param {number} [gamepad]
@@ -1702,49 +1719,6 @@ declare module "littlejsengine" {
          */
         constructor(filename: string, randomness?: number, range?: number, taper?: number, onloadCallback?: Function);
     }
-    /**
-     * Music Object - Stores a zzfx music track for later use
-     *
-     * <a href=https://keithclark.github.io/ZzFXM/>Create music with the ZzFXM tracker.</a>
-     * @example
-     * // create some music
-     * const music_example = new Music(
-     * [
-     *     [                         // instruments
-     *       [,0,400]                // simple note
-     *     ],
-     *     [                         // patterns
-     *         [                     // pattern 1
-     *             [                 // channel 0
-     *                 0, -1,        // instrument 0, left speaker
-     *                 1, 0, 9, 1    // channel notes
-     *             ],
-     *             [                 // channel 1
-     *                 0, 1,         // instrument 0, right speaker
-     *                 0, 12, 17, -1 // channel notes
-     *             ]
-     *         ],
-     *     ],
-     *     [0, 0, 0, 0], // sequence, play pattern 0 four times
-     *     90            // BPM
-     * ]);
-     *
-     * // play the music
-     * music_example.play();
-     */
-    export class Music extends Sound {
-        /** Create a music object and cache the zzfx music samples for later use
-         *  @param {[Array, Array, Array, number]} zzfxMusic - Array of zzfx music parameters
-         */
-        constructor(zzfxMusic: [any[], any[], any[], number]);
-        sampleChannels: any[];
-        /** Play the music
-         *  @param {number}  [volume=1] - How much to scale volume by
-         *  @param {boolean} [loop] - True if the music should loop
-         *  @return {AudioBufferSourceNode} - The audio source node
-         */
-        playMusic(volume?: number, loop?: boolean): AudioBufferSourceNode;
-    }
     /** Play an mp3, ogg, or wav audio from a local file or url
      *  @param {string}  filename - Location of sound file to play
      *  @param {number}  [volume] - How much to scale volume by
@@ -1770,20 +1744,6 @@ declare module "littlejsengine" {
      *  @return {number} - The frequency of the note
      *  @memberof Audio */
     export function getNoteFrequency(semitoneOffset: number, rootFrequency?: number): number;
-    /**
-     * LittleJS Audio System
-     * - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a> - ZzFX Sound Effect Generator
-     * - <a href=https://keithclark.github.io/ZzFXM/>ZzFXM Music</a> - ZzFXM Music System
-     * - Caches sounds and music for fast playback
-     * - Can attenuate and apply stereo panning to sounds
-     * - Ability to play mp3, ogg, and wave files
-     * - Speech synthesis functions
-     * @namespace Audio
-     */
-    /** Audio context used by the engine
-     *  @type {AudioContext}
-     *  @memberof Audio */
-    export let audioContext: AudioContext;
     /** Play cached audio samples with given settings
      *  @param {Array}    sampleChannels - Array of arrays of samples to play (for stereo playback)
      *  @param {number}   [volume] - How much to scale volume by
@@ -1802,6 +1762,50 @@ declare module "littlejsengine" {
      *  @return {AudioBufferSourceNode} - The audio node of the sound played
      *  @memberof Audio */
     export function zzfx(...zzfxSound: any[]): AudioBufferSourceNode;
+    /** Generate samples for a ZzFX sound
+     *  @param {number}  [volume] - Volume scale (percent)
+     *  @param {number}  [randomness] - How much to randomize frequency (percent Hz)
+     *  @param {number}  [frequency] - Frequency of sound (Hz)
+     *  @param {number}  [attack] - Attack time, how fast sound starts (seconds)
+     *  @param {number}  [sustain] - Sustain time, how long sound holds (seconds)
+     *  @param {number}  [release] - Release time, how fast sound fades out (seconds)
+     *  @param {number}  [shape] - Shape of the sound wave
+     *  @param {number}  [shapeCurve] - Squareness of wave (0=square, 1=normal, 2=pointy)
+     *  @param {number}  [slide] - How much to slide frequency (kHz/s)
+     *  @param {number}  [deltaSlide] - How much to change slide (kHz/s/s)
+     *  @param {number}  [pitchJump] - Frequency of pitch jump (Hz)
+     *  @param {number}  [pitchJumpTime] - Time of pitch jump (seconds)
+     *  @param {number}  [repeatTime] - Resets some parameters periodically (seconds)
+     *  @param {number}  [noise] - How much random noise to add (percent)
+     *  @param {number}  [modulation] - Frequency of modulation wave, negative flips phase (Hz)
+     *  @param {number}  [bitCrush] - Resamples at a lower frequency in (samples*100)
+     *  @param {number}  [delay] - Overlap sound with itself for reverb and flanger effects (seconds)
+     *  @param {number}  [sustainVolume] - Volume level for sustain (percent)
+     *  @param {number}  [decay] - Decay time, how long to reach sustain after attack (seconds)
+     *  @param {number}  [tremolo] - Trembling effect, rate controlled by repeat time (percent)
+     *  @param {number}  [filter] - Filter cutoff frequency, positive for HPF, negative for LPF (Hz)
+     *  @return {Array} - Array of audio samples
+     *  @memberof Audio
+     */
+    export function zzfxG(volume?: number, randomness?: number, frequency?: number, attack?: number, sustain?: number, release?: number, shape?: number, shapeCurve?: number, slide?: number, deltaSlide?: number, pitchJump?: number, pitchJumpTime?: number, repeatTime?: number, noise?: number, modulation?: number, bitCrush?: number, delay?: number, sustainVolume?: number, decay?: number, tremolo?: number, filter?: number): any[];
+    /** Sample rate used for all ZzFX sounds
+     *  @default 44100
+     *  @memberof Audio */
+    export const zzfxR: 44100;
+    /**
+     * LittleJS Audio System
+     * - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a> - ZzFX Sound Effect Generator
+     * - <a href=https://keithclark.github.io/ZzFXM/>ZzFXM Music</a> - ZzFXM Music System
+     * - Caches sounds and music for fast playback
+     * - Can attenuate and apply stereo panning to sounds
+     * - Ability to play mp3, ogg, and wave files
+     * - Speech synthesis functions
+     * @namespace Audio
+     */
+    /** Audio context used by the engine
+     *  @type {AudioContext}
+     *  @memberof Audio */
+    export let audioContext: AudioContext;
     /**
      * LittleJS Object System
      */
