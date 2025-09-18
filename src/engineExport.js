@@ -263,14 +263,15 @@ export
 	// Audio
 	Sound,
 	SoundWave,
-	Music,
 	playAudioFile,
 	speak,
 	speakStop,
 	getNoteFrequency,
-	audioContext,
 	playSamples,
 	zzfx,
+	zzfxG,
+	zzfxR,
+	audioContext,
 
 	// Base Object
 	EngineObject,

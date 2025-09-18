@@ -443,8 +443,8 @@ function setSoundEnable(enable) { soundEnable = enable; }
 function setSoundVolume(volume)
 {
     soundVolume = volume;
-    if (soundEnable && !headlessMode && audioGainNode)
-        audioGainNode.gain.value = volume; // update gain immediately
+    if (soundEnable && !headlessMode && audioMasterGain)
+        audioMasterGain.gain.value = volume; // update gain immediately
 }
 
 /** Set default range where sound no longer plays

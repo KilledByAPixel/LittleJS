@@ -515,7 +515,7 @@ function debugVideoCaptureStart()
 
     // connect to audio gain node
     const audioStreamDestination = audioContext.createMediaStreamDestination();
-    audioGainNode.connect(audioStreamDestination);
+    audioMasterGain.connect(audioStreamDestination);
     for (const track of audioStreamDestination.stream.getAudioTracks())
         stream.addTrack(track); // add audio track to videos track
 
