@@ -18,17 +18,17 @@ The code is clean and well documented with some fun examples to get you started 
 This special branch of LittleJS engine designed speficially for size coding compititons like JS13k!
 This was done to allow the main line LittleJS engine to continue evoling while also being able to continue minigfing this version.
 
-Features...
+## 🚀 Features
 
 - The starter project builds to a 7kb zip file and includes all of the primary engine features.
 - Individual features like WebGL can be disabled to save even more space.
 - Includes fully automated Node.js build system.
 
-## [Live Demo of Starter Project](https://killedbyapixel.github.io/LittleJS/examples)
+## 💥 [Live Demo of Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter)
 
-Examples...
+## 🎮 Examples
 
-Many amazing JS13K games have been made using LittleJS. We managed to crack the top 10 several times!
+Many amazing JS13K games have been made using LittleJS incuding a few in the top 10...
 
 - [L1ttL3 Paws](https://github.com/KilledByAPixel/JS13K2025) - Cat glider with procedural art and levels. by Frank Force
 - [The Way of the Dodo](https://js13kgames.com/2024/games/the-way-of-the-dodo) - Single button flapping platformer. by repsej
