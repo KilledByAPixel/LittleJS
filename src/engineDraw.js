@@ -238,18 +238,18 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
             const y = tileInfo.pos.y * sizeInverse.y;
             const w = tileInfo.size.x * sizeInverse.x;
             const h = tileInfo.size.y * sizeInverse.y;
+            glSetTexture(textureInfo.glTexture);
             if (tileFixBleedScale)
             {
-                const tileImageFixBleed = sizeInverse.scale(tileFixBleedScale);
-                glSetTexture(textureInfo.glTexture);
+                const tileImageFixBleedX = sizeInverse.x*tileFixBleedScale;
+                const tileImageFixBleedY = sizeInverse.y*tileFixBleedScale;
                 glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
-                    x + tileImageFixBleed.x,     y + tileImageFixBleed.y, 
-                    x - tileImageFixBleed.x + w, y - tileImageFixBleed.y + h, 
+                    x + tileImageFixBleedX,     y + tileImageFixBleedY, 
+                    x - tileImageFixBleedX + w, y - tileImageFixBleedY + h, 
                     color.rgbaInt(), additiveColor && additiveColor.rgbaInt()); 
             }
             else
             {
-                glSetTexture(textureInfo.glTexture);
                 glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
                     x, y, x + w, y + h, 
                     color.rgbaInt(), additiveColor && additiveColor.rgbaInt()); 
