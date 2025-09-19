@@ -81,11 +81,11 @@ function spawnRope(startPos, count, angle=PI, color=WHITE, size=vec2(.3,1))
         const o = spawnBox(pos, size, color, box2dBodyTypeDynamic, false, angle);
         o.setFilterData(2, 2);
         const anchorPos = pos.add(vec2(0,-size.y/2).rotate(-angle));
-        box2dCreateRevoluteJoint(lastObject, o, anchorPos);
+        new Box2dRevoluteJoint(lastObject, o, anchorPos);
         lastObject = o;
     }
     const endPos = lastObject.localToWorld(vec2(0,-size.y/2));
-    box2dCreateRopeJoint(groundObject, lastObject, startPos, endPos);
+    new Box2dRopeJoint(groundObject, lastObject, startPos, endPos);
     return lastObject;
 }
 
@@ -125,13 +125,13 @@ class CarObject extends Box2dObject
                 const wheel = new Box2dObject(pos, vec2(diameter), sprite);
                 wheel.addCircle(diameter, vec2(), density, friction, restitution);
                 this.wheels.push(wheel);
-                const joint = box2dCreateWheelJoint(this, wheel);
-                joint.SetSpringDampingRatio(damping);
-                joint.SetSpringFrequencyHz(frequencyHz);
+                const joint = new Box2dWheelJoint(this, wheel);
+                joint.setSpringDampingRatio(damping);
+                joint.setSpringFrequencyHz(frequencyHz);
                 if (isMotor)
                 {
-                    joint.SetMaxMotorTorque(maxTorque);
-                    joint.EnableMotor(true);
+                    joint.setMaxMotorTorque(maxTorque);
+                    joint.enableMotor(true);
                     this.wheelMotorJoint = joint;
                 }
             }
@@ -144,9 +144,9 @@ class CarObject extends Box2dObject
     {
         const maxSpeed = 40;
         const brakeAmount = .8;
-        let s = this.wheelMotorJoint.GetMotorSpeed();
+        let s = this.wheelMotorJoint.getMotorSpeed();
         s = input ? clamp(s + input, -maxSpeed, maxSpeed) : s * brakeAmount;
-        this.wheelMotorJoint.SetMotorSpeed(s);
+        this.wheelMotorJoint.setMotorSpeed(s);
     }
     destroy()
     {
@@ -190,7 +190,7 @@ class MobileObject extends Box2dObject
                 // spawn smaller mobiles attached to each side
                 const a = anchor.add(vec2( w/(i?2:-2), -h));
                 const o = new MobileObject(a, w/2, h, depth);
-                box2dCreateRevoluteJoint(this, o, a);
+                new Box2dRevoluteJoint(this, o, a);
                 this.childMobiles.push(o);
             }
         }
@@ -232,9 +232,9 @@ class MotorJointObject extends Box2dObject
         super(pos, size, spriteAtlas.wheel, 0, color);
         this.addCircle(size.x);
         this.connectionPos = pos;
-        const joint = box2dCreateMotorJoint(otherObject, this);
-        joint.SetMaxForce(500);
-        joint.SetMaxTorque(500);
+        const joint = new Box2dMotorJoint(otherObject, this);
+        joint.setMaxForce(500);
+        joint.setMaxTorque(500);
     }
     render()
     {
@@ -281,7 +281,7 @@ class SoftBodyObject extends Box2dObject
             const tryAddJoint = (xo, yo) =>
             {
                 const o2 = this.getNode(x+xo, y+yo);
-                const joint = o2 ? box2dCreateWeldJoint(o, o2) : 0;
+                const joint = o2 ? new Box2dWeldJoint(o, o2) : 0;
                 o.joints.push(joint);
             }
 
@@ -300,7 +300,7 @@ class SoftBodyObject extends Box2dObject
         for (let y = 0; y < sy.y; ++y) poly.push(this.getNode(sx-1, y).pos);
         for (let x = sx; x--;) poly.push(this.getNode(x, sy-1).pos);
         for (let y = sy; y--;) poly.push(this.getNode(0, y).pos);
-        box2dDrawPoly(vec2(), 0, poly, BLACK)
+        box2d.drawPoly(vec2(), 0, poly, BLACK)
     }
     getNode(x, y) 
     {
@@ -357,7 +357,7 @@ class ClothObject extends Box2dObject
             const tryAddJoint = (xo, yo) =>
             {
                 const o2 = this.getNode(x2+xo, y+yo);
-                const joint = o2 ? box2dCreateRopeJoint(o, o2) : 0;
+                const joint = o2 ? new Box2dRopeJoint(o, o2) : 0;
                 o.joints.push(joint);
             }
 
@@ -374,7 +374,7 @@ class ClothObject extends Box2dObject
                 tryAddJoint( d, 1);
 
                 // attach pin joint to top row
-                y || box2dCreatePinJoint(this, this.getNode(x, y));
+                y || new Box2dPinJoint(this.getNode(x, y), this);
             }
         }
     }
@@ -398,15 +398,15 @@ class ClothObject extends Box2dObject
                 const j = joints[i];
                 if (!j) continue;
 
-                const oA = j.GetBodyA().object;
-                const oB = j.GetBodyB().object;
+                const oA = j.getObjectA();
+                const oB = j.getObjectB();
                 const d2 = oA.pos.distanceSquared(oB.pos);
-                const maxLength2 = j.GetMaxLength()**2;
-                const stress = vec2(j.GetReactionForce(1)).length();
+                const maxLength2 = j.getMaxLength()**2;
+                const stress = j.getReactionForce(1).length();
                 if (stress > this.maxJointStress || d2 > maxLength2*4)
                 {
                     // remove stressed joint
-                    box2dDestroyJoint(j);
+                    j.destroy();
                     joints[i] = 0;
                 }
             }
@@ -428,8 +428,8 @@ class ClothObject extends Box2dObject
             for (const joint of o.joints)
             {
                 if (!joint) continue;
-                const oA = joint.GetBodyA().object;
-                const oB = joint.GetBodyB().object;
+                const oA = joint.getObjectA();
+                const oB = joint.getObjectB();
                 drawLine(oA.pos, oB.pos, this.lineWidth, BLACK);
             }
         }
@@ -450,7 +450,7 @@ const sound_explosion = new Sound([.5,.2,72,.01,.01,.2,4,,,,,,,1,,.5,.1,.5,.02])
 function explosion(pos, radius=3, strength=300)
 {
     sound_explosion.play(pos);
-    const objects = box2dCircleCastAll(pos, (radius*2));
+    const objects = box2d.circleCastAll(pos, (radius*2));
     const newColor = randColor();
     for (const o of objects)
     {

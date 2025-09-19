@@ -84,7 +84,7 @@ function loadScene(_scene)
         const o = spawnBox(endPos, 3, randColor());
         o.setAngularDamping(.5);
         o.setFilterData(2, 2);
-        box2dCreateRevoluteJoint(endObject, o);
+        new Box2dRevoluteJoint(endObject, o);
         spawnPyramid(vec2(20,0), 7);
     }
     if (scene == 5)
@@ -100,9 +100,9 @@ function loadScene(_scene)
         {
             // prismatic joint
             const o1 = spawnBox(vec2(20,8), vec2(3,2), randColor());
-            box2dCreatePrismaticJoint(groundObject, o1, o1.pos, vec2(1,0), true);
+            new Box2dPrismaticJoint(groundObject, o1, o1.pos, vec2(1,0), true);
             const o2 = spawnBox(vec2(20,15), vec2(2,3), randColor());
-            box2dCreatePrismaticJoint(groundObject, o2, o2.pos, vec2(0,1), true);
+            new Box2dPrismaticJoint(groundObject, o2, o2.pos, vec2(0,1), true);
 
             // lines to make it look line a track
             const l1 = new EngineObject(vec2(20, 8), vec2(39,.5), 0, 0, GRAY);
@@ -120,7 +120,7 @@ function loadScene(_scene)
             const aB = spawnCircle(anchorB, 2, randColor(), box2dBodyTypeStatic);
             const oaA = oA.localToWorld(vec2(0,oA.size.y/2));
             const oaB = oB.localToWorld(vec2(0,oB.size.y/2));
-            box2dCreatePulleyJoint(oA, oB, aA.pos, aB.pos, oaA, oaB);
+            new Box2dPulleyJoint(oA, oB, aA.pos, aB.pos, oaA, oaB);
 
             // a line to make it look like connecting rope
             const line = new EngineObject(vec2(20,15), vec2(10,.2), 0, 0, BLACK);
@@ -130,24 +130,24 @@ function loadScene(_scene)
         {
             // gear joint
             const o1 = spawnCircle(vec2(23.5,3), 3, randColor());
-            const j1 = box2dCreateRevoluteJoint(groundObject, o1, o1.pos);
+            const j1 = new Box2dRevoluteJoint(groundObject, o1, o1.pos);
             const o2 = spawnCircle(vec2(28,3), 6, randColor());
             o1.tileInfo = o2.tileInfo = spriteAtlas.gear;
-            const j2 = box2dCreateRevoluteJoint(groundObject, o2, o2.pos);
-            box2dCreateGearJoint(o1, o2, j1, j2, 2);
+            const j2 = new Box2dRevoluteJoint(groundObject, o2, o2.pos);
+            new Box2dGearJoint(o1, o2, j1, j2, 2);
         }
         {
             // weld joint
             const o1 = spawnBox(vec2(15,2),   4, randColor());
             const o2 = spawnBox(vec2(17,2), 2, randColor());
-            box2dCreateWeldJoint(o1, o2);
+            new Box2dWeldJoint(o1, o2);
         }
         {
             // distance joint
             const o1 = new Box2dObject(vec2(30,11), vec2(4), spriteAtlas.circleOutline, 0, randColor(), box2dBodyTypeStatic);
             o1.renderOrder = -2;
             const o2 = spawnCircle(vec2(30,8), 2, randColor());
-            box2dCreateDistanceJoint(o1, o2);
+            new Box2dDistanceJoint(o1, o2);
         }
         {
             // motor joint
@@ -159,9 +159,9 @@ function loadScene(_scene)
             // friction joint
             const o = spawnBox(vec2(10,15), 3, randColor());
             o.tileInfo = spriteAtlas.squareOutline2;
-            const joint = box2dCreateFrictionJoint(groundObject, o);
-            joint.SetMaxForce(200);
-            joint.SetMaxTorque(200);
+            const joint = new Box2dFrictionJoint(groundObject, o);
+            joint.setMaxForce(200);
+            joint.setMaxTorque(200);
         }
     }
     if (scene == 7)
@@ -177,7 +177,7 @@ function loadScene(_scene)
         sceneName = 'Mobile';
         const pos = vec2(20, 16);
         const mobile = new MobileObject(pos, 12, 2, 5);
-        box2dCreateRevoluteJoint(groundObject, mobile, pos);
+        new Box2dRevoluteJoint(groundObject, mobile, pos);
     }
     if (scene == 9)
     {

@@ -55,9 +55,9 @@ function gameUpdate()
     {
         // grab object
         sound_click.play(mousePos);
-        const object = box2dPointCast(mousePos);
+        const object = box2d.pointCast(mousePos);
         if (object)
-            mouseJoint = box2dCreateMouseJoint(object, groundObject, mousePos);
+            mouseJoint = new Box2dTargetJoint(object, groundObject, mousePos);
     }
     if (mouseWasReleased(0))
     {
@@ -65,7 +65,7 @@ function gameUpdate()
         sound_click.play(mousePos, 1, .5);
         if (mouseJoint)
         {
-            box2dDestroyJoint(mouseJoint);
+            mouseJoint.destroy();
             mouseJoint = 0;
         }
     }
@@ -84,7 +84,7 @@ function gameUpdate()
     if (mouseWasPressed(2) || keyWasPressed('KeyX'))
         explosion(mousePos);
     if (mouseJoint)
-        mouseJoint.SetTarget(mousePos.getBox2d());
+        mouseJoint.setTarget(mousePos);
 
     if (keyWasPressed('KeyR'))
         loadScene(scene); // reset scene
@@ -95,10 +95,9 @@ function gameUpdate()
         scene = mod(scene, maxScenes);
         loadScene(scene);
     }
-
     if (car)
     {
-        // update car control
+        // update car controls
         const input = keyDirection();
         car.applyMotorInput(-input.x);
     }
@@ -125,7 +124,7 @@ function gameRender()
         {
             const start = mousePos;
             const end = mousePos.add(vec2(distance,0).rotate(i/count*PI*2));
-            const result = box2dRaycast(start, end);
+            const result = box2d.raycast(start, end);
             const color = result ? hsl(0,1,.5,.5) : hsl(.5,1,.5,.5);
             drawLine(start, result ? result.point : end, .1, color);
         }
@@ -138,7 +137,7 @@ function gameRenderPost()
     if (mouseJoint)
     {
         // draw mouse joint
-        const ab = vec2(mouseJoint.GetAnchorB());
+        const ab = mouseJoint.getAnchorB();
         drawTile(ab, vec2(.3), spriteAtlas.circle, BLACK);
         drawLine(mousePos, ab, .1, BLACK);
     }
