@@ -131,7 +131,7 @@ function setupPostProcess()
     }`;
 
     const includeOverlay = true;
-    initPostProcess(televisionShader, includeOverlay);
+    new PostProcessPlugin(televisionShader, includeOverlay);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

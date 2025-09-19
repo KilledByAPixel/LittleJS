@@ -1,6 +1,6 @@
 /**
  * LittleJS ZzFXM Plugin
- * @namespace ZzFXMPlugin
+ * @namespace Plugins
  */
 
 'use strict';
@@ -68,7 +68,7 @@ class ZzFXMusic extends Sound
  *  @param {Array} sequence - Array of pattern indexes
  *  @param {number} [BPM] - Playback speed of the song in BPM
  *  @return {Array} - Left and right channel sample data
- *  @memberof ZzFXMPlugin */
+ *  @memberof Plugins */
 function zzfxM(instruments, patterns, sequence, BPM = 125) 
 {
   let i, j, k;

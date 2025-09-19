@@ -1,23 +1,23 @@
 /**
- * LittleJS Box2D Plugin
+ * LittleJS Box2D Physics Plugin
  * - Box2dObject extends EngineObject with Box2D physics
  * - Uses box2d.js super fast web assembly port of Box2D
  * - More info: https://github.com/kripken/box2d.js
+ * - Fully wraps everything in Box2d
  * - Functions to create polygon, circle, and edge shapes
  * - Raycasting and querying
  * - Joint creation
  * - Contact begin and end callbacks
  * - Debug physics drawing
- * - Call box2dEngineInit to start
- * @namespace Box2dPlugin
+ * - Call box2dEngineInit to start instead of normal engineInit
+ * - You allso will need to include the box2d wasm.js file
+ * @namespace Plugins
  */
 
 'use strict';
  
-/** Use nearest neighbor scaling algorithm for canvas for more pixelated look
- *  - Must be set before startup to take effect
- *  - If enabled sets css image-rendering:pixelated
- *  @type {Box2dWrapper}
+/** Global Box2d Plugin object
+ *  @type {Box2dPlugin}
  *  @memberof Box2dPlugin */
 let box2d;
 
@@ -342,6 +342,23 @@ class Box2dObject extends EngineObject
     {
         this.setAwake();
         this.ApplyAngularImpulse(acceleration);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Box2D Raycast Result
+ * - Results from a box2d raycast queries
+ */
+class Box2dRaycastResult
+{
+    constructor(fixture, point, normal, fraction)
+    {
+        this.object   = fixture.GetBody().object;
+        this.fixture  = fixture;
+        this.point    = point;
+        this.normal   = normal;
+        this.fraction = fraction;
     }
 }
 
@@ -784,27 +801,10 @@ class Box2dMotorJoint extends Box2dJoint
 
 ///////////////////////////////////////////////////////////////////////////////
 /** 
- * Box2D Raycast Result
- * - Results from a box2d raycast queries
- */
-class Box2dRaycastResult
-{
-    constructor(fixture, point, normal, fraction)
-    {
-        this.object   = fixture.GetBody().object;
-        this.fixture  = fixture;
-        this.point    = point;
-        this.normal   = normal;
-        this.fraction = fraction;
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-/** 
  * Box2D Global Object
  * - Wraps Box2d world and provides global functions
  */
-class Box2dWrapper
+class Box2dPlugin
 {
     constructor(instance, stepIterations=3)
     {
@@ -1146,7 +1146,7 @@ function box2dEngineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameR
     Box2D().then(box2dInstance=>
     {
         // create box2d object
-        new Box2dWrapper(box2dInstance);
+        new Box2dPlugin(box2dInstance);
         setupDebugDraw();
 
         // start littlejs

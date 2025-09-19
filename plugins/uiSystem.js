@@ -1,166 +1,146 @@
 /**
  * LittleJS User Interface Plugin
+ * - cann new UISystemPlugin() to set it up
  * - Nested Menus
  * - Text
  * - Buttons
  * - Checkboxes
  * - Images
- * @namespace UISystemPlugin
+ * @namespace Plugins
  */
 
 'use strict';
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// ui defaults
+/** Global UI system plugin object
+ *  @type {UISystemPlugin}
+ *  @memberof Plugins */
+let uiSystem;
 
-/** Default fill color for UI elements
- *  @type {Color}
- *  @memberof UISystemPlugin */
-let uiDefaultColor       = WHITE;
-
-/** Default outline color for UI elements
- *  @type {Color}
- *  @memberof UISystemPlugin */
-let uiDefaultLineColor   = BLACK;
-
-/** Default text color for UI elements
- *  @type {Color}
- *  @memberof UISystemPlugin */
-let uiDefaultTextColor   = BLACK;
-
-/** Default button color for UI elements
- *  @type {Color}
- *  @memberof UISystemPlugin */
-let uiDefaultButtonColor = hsl(0,0,.5);
-
-/** Default hover color for UI elements
- *  @type {Color}
- *  @memberof UISystemPlugin */
-let uiDefaultHoverColor  = hsl(0,0,.7);
-
-/** Default line width for UI elements
- *  @type {number}
- *  @memberof UISystemPlugin */
-let uiDefaultLineWidth = 4;
-
-/** Default font for UI elements
- *  @type {string}
- *  @memberof UISystemPlugin */
-let uiDefaultFont = 'arial';
-
-/** List of all UI elements
- *  @type {Array<UIObject>}
- *  @memberof UISystemPlugin */
-let uiObjects = [];
-
-/** Context to render UI elements to
- *  @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D}
- *  @memberof UISystemPlugin */
-let uiContext;
-
-/** Set up the UI system, typically called in gameInit
- *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
- *  @memberof UISystemPlugin */
-function initUISystem(context=overlayContext)
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * UI System Global Object
+ */
+class UISystemPlugin
 {
-    uiContext = context;
-    engineAddPlugin(uiUpdate, uiRender);
-
-    // setup recursive update and render
-    function uiUpdate()
+    constructor(context=overlayContext)
     {
-        function updateObject(o)
+        ASSERT(!uiSystem, 'UI system already initialized');
+        uiSystem = this;
+
+        /** @property {Color} - Default fill color for UI elements */
+        this.defaultColor = WHITE;
+        /** @property {Color} - Default outline color for UI elements */
+        this.defaultLineColor = BLACK;
+        /** @property {Color} - Default text color for UI elements */
+        this.defaultTextColor = BLACK;
+        /** @property {Color} - Default button color for UI elements */
+        this.defaultButtonColor = hsl(0,0,.5);
+        /** @property {Color} - Default hover color for UI elements */
+        this.defaultHoverColor = hsl(0,0,.7);
+        /** @property {number} - Default line width for UI elements */
+        this.defaultLineWidth = 4;
+        /** @property {string} - Default font for UI elements */
+        this.defaultFont = 'arial';
+        /** @property {Array<UIObject>} - List of all UI elements */
+        this.uiObjects = [];
+        /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - Context to render UI elements to */
+        this.uiContext = context;
+            
+        engineAddPlugin(uiUpdate, uiRender);
+
+        // setup recursive update and render
+        function uiUpdate()
         {
-            if (!o.visible)
-                return;
-            if (o.parent)
-                o.pos = o.localPos.add(o.parent.pos);
-            o.update();
-            for(const c of o.children)
-                updateObject(c);
+            function updateObject(o)
+            {
+                if (!o.visible)
+                    return;
+                if (o.parent)
+                    o.pos = o.localPos.add(o.parent.pos);
+                o.update();
+                for(const c of o.children)
+                    updateObject(c);
+            }
+            uiSystem.uiObjects.forEach(o=> o.parent || updateObject(o));
         }
-        uiObjects.forEach(o=> o.parent || updateObject(o));
-    }
-    function uiRender()
-    {
-        function renderObject(o)
+        function uiRender()
         {
-            if (!o.visible)
-                return;
-            if (o.parent)
-                o.pos = o.localPos.add(o.parent.pos);
-            o.render();
-            for(const c of o.children)
-                renderObject(c);
+            function renderObject(o)
+            {
+                if (!o.visible)
+                    return;
+                if (o.parent)
+                    o.pos = o.localPos.add(o.parent.pos);
+                o.render();
+                for(const c of o.children)
+                    renderObject(c);
+            }
+            uiSystem.uiObjects.forEach(o=> o.parent || renderObject(o));
         }
-        uiObjects.forEach(o=> o.parent || renderObject(o));
     }
-}
 
-/** Draw a rectangle to the UI context
- *  @param {Vector2} pos
- *  @param {Vector2} size
- *  @param {Color}   [color=uiDefaultColor]
- *  @param {number}  [lineWidth=uiDefaultLineWidth]
- *  @param {Color}   [lineColor=uiDefaultLineColor]
- *  @memberof UISystemPlugin */
-function drawUIRect(pos, size, color=uiDefaultColor, lineWidth=uiDefaultLineWidth, lineColor=uiDefaultLineColor)
-{
-    uiContext.fillStyle = color.toString();
-    uiContext.beginPath();
-    uiContext.rect(pos.x-size.x/2, pos.y-size.y/2, size.x, size.y);
-    uiContext.fill();
-    if (lineWidth)
+    /** Draw a rectangle to the UI context
+    *  @param {Vector2} pos
+    *  @param {Vector2} size
+    *  @param {Color}   [color=uiSystem.defaultColor]
+    *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
+    *  @param {Color}   [lineColor=uiSystem.defaultLineColor] */
+    drawRect(pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor)
     {
-        uiContext.strokeStyle = lineColor.toString();
-        uiContext.lineWidth = lineWidth;
-        uiContext.stroke();
+        uiSystem.uiContext.fillStyle = color.toString();
+        uiSystem.uiContext.beginPath();
+        uiSystem.uiContext.rect(pos.x-size.x/2, pos.y-size.y/2, size.x, size.y);
+        uiSystem.uiContext.fill();
+        if (lineWidth)
+        {
+            uiSystem.uiContext.strokeStyle = lineColor.toString();
+            uiSystem.uiContext.lineWidth = lineWidth;
+            uiSystem.uiContext.stroke();
+        }
     }
-}
 
-/** Draw a line to the UI context
- *  @param {Vector2} posA
- *  @param {Vector2} posB
- *  @param {number}  [lineWidth=uiDefaultLineWidth]
- *  @param {Color}   [lineColor=uiDefaultLineColor]
- *  @memberof UISystemPlugin */
-function drawUILine(posA, posB, lineWidth=uiDefaultLineWidth, lineColor=uiDefaultLineColor)
-{
-    uiContext.strokeStyle = lineColor.toString();
-    uiContext.lineWidth = lineWidth;
-    uiContext.beginPath();
-    uiContext.lineTo(posA.x, posA.y);
-    uiContext.lineTo(posB.x, posB.y);
-    uiContext.stroke();
-}
+    /** Draw a line to the UI context
+    *  @param {Vector2} posA
+    *  @param {Vector2} posB
+    *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
+    *  @param {Color}   [lineColor=uiSystem.defaultLineColor] */
+    drawLine(posA, posB, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor)
+    {
+        uiSystem.uiContext.strokeStyle = lineColor.toString();
+        uiSystem.uiContext.lineWidth = lineWidth;
+        uiSystem.uiContext.beginPath();
+        uiSystem.uiContext.lineTo(posA.x, posA.y);
+        uiSystem.uiContext.lineTo(posB.x, posB.y);
+        uiSystem.uiContext.stroke();
+    }
 
-/** Draw a tile to the UI context
- *  @param {Vector2}  pos
- *  @param {Vector2}  size
- *  @param {TileInfo} tileInfo
- *  @param {Color}    [color=uiDefaultColor]
- *  @param {number}   [angle]
- *  @param {boolean}  [mirror]
- *  @memberof UISystemPlugin */
-function drawUITile(pos, size, tileInfo, color=uiDefaultColor, angle=0, mirror=false)
-{
-    drawTile(pos, size, tileInfo, color, angle, mirror, BLACK, false, true, uiContext);
-}
+    /** Draw a tile to the UI context
+    *  @param {Vector2}  pos
+    *  @param {Vector2}  size
+    *  @param {TileInfo} tileInfo
+    *  @param {Color}    [color=uiSystem.defaultColor]
+    *  @param {number}   [angle]
+    *  @param {boolean}  [mirror] */
+    drawTile(pos, size, tileInfo, color=uiSystem.defaultColor, angle=0, mirror=false)
+    {
+        drawTile(pos, size, tileInfo, color, angle, mirror, BLACK, false, true, uiSystem.uiContext);
+    }
 
-/** Draw text to the UI context
- *  @param {string}  text
- *  @param {Vector2} pos
- *  @param {Vector2} size
- *  @param {Color}   [color=uiDefaultColor]
- *  @param {number}  [lineWidth=uiDefaultLineWidth]
- *  @param {Color}   [lineColor=uiDefaultLineColor]
- *  @param {string}  [align]
- *  @param {string}  [font=uiDefaultFont]
- *  @memberof UISystemPlugin */
-function drawUIText(text, pos, size, color=uiDefaultColor, lineWidth=uiDefaultLineWidth, lineColor=uiDefaultLineColor, align='center', font=uiDefaultFont)
-{
-    drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, size.x, uiContext);
+    /** Draw text to the UI context
+    *  @param {string}  text
+    *  @param {Vector2} pos
+    *  @param {Vector2} size
+    *  @param {Color}   [color=uiSystem.defaultColor]
+    *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
+    *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
+    *  @param {string}  [align]
+    *  @param {string}  [font=uiSystem.defaultFont] */
+    drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont)
+    {
+        drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, size.x, uiSystem.uiContext);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -182,24 +162,24 @@ class UIObject
         /** @property {Vector2} - Screen space size of the object */
         this.size       = size.copy();
         /** @property {Color} */
-        this.color      = uiDefaultColor;
+        this.color      = uiSystem.defaultColor;
         /** @property {Color} */
-        this.lineColor  = uiDefaultLineColor;
+        this.lineColor  = uiSystem.defaultLineColor;
         /** @property {Color} */
-        this.textColor  = uiDefaultTextColor;
+        this.textColor  = uiSystem.defaultTextColor;
         /** @property {Color} */
-        this.hoverColor = uiDefaultHoverColor;
+        this.hoverColor = uiSystem.defaultHoverColor;
         /** @property {number} */
-        this.lineWidth  = uiDefaultLineWidth;
+        this.lineWidth  = uiSystem.defaultLineWidth;
         /** @property {string} */
-        this.font       = uiDefaultFont;
+        this.font       = uiSystem.defaultFont;
         /** @property {boolean} */
         this.visible    = true;
         /** @property {Array<UIObject>} */
         this.children   = [];
         /** @property {UIObject} */
         this.parent     = undefined;
-        uiObjects.push(this);
+        uiSystem.uiObjects.push(this);
     }
 
     /** Add a child UIObject to this object
@@ -256,7 +236,7 @@ class UIObject
     render()
     {
         if (this.size.x && this.size.y)
-            drawUIRect(this.pos, this.size, this.color, this.lineWidth, this.lineColor);
+            uiSystem.drawRect(this.pos, this.size, this.color, this.lineWidth, this.lineColor);
     }
 
     /** Called when the mouse enters the object */
@@ -287,9 +267,9 @@ class UIText extends UIObject
      *  @param {Vector2} [size]
      *  @param {string}  [text]
      *  @param {string}  [align]
-     *  @param {string}  [font=uiDefaultFont]
+     *  @param {string}  [font=uiSystem.defaultFont]
      */
-    constructor(pos, size, text='', align='center', font=uiDefaultFont)
+    constructor(pos, size, text='', align='center', font=uiSystem.defaultFont)
     {
         super(pos, size);
 
@@ -303,7 +283,7 @@ class UIText extends UIObject
     }
     render()
     {
-        drawUIText(this.text, this.pos, this.size, this.textColor, this.lineWidth, this.lineColor, this.align, this.font);
+        uiSystem.drawText(this.text, this.pos, this.size, this.textColor, this.lineWidth, this.lineColor, this.align, this.font);
     }
 }
 
@@ -336,7 +316,7 @@ class UITile extends UIObject
     }
     render()
     {
-        drawUITile(this.pos, this.size, this.tileInfo, this.color, this.angle, this.mirror);
+        uiSystem.drawTile(this.pos, this.size, this.tileInfo, this.color, this.angle, this.mirror);
     }
 }
 
@@ -351,9 +331,9 @@ class UIButton extends UIObject
      *  @param {Vector2} [pos]
      *  @param {Vector2} [size]
      *  @param {string}  [text]
-     *  @param {Color}   [color=uiDefaultButtonColor]
+     *  @param {Color}   [color=uiSystem.defaultButtonColor]
      */
-    constructor(pos, size, text='', color=uiDefaultButtonColor)
+    constructor(pos, size, text='', color=uiSystem.defaultButtonColor)
     {
         super(pos, size);
 
@@ -365,9 +345,9 @@ class UIButton extends UIObject
     {
         const lineColor = this.mouseIsHeld ? this.color : this.lineColor;
         const color = this.mouseIsOver? this.hoverColor : this.color;
-        drawUIRect(this.pos, this.size, color, this.lineWidth, lineColor);
+        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor);
         const textSize = vec2(this.size.x, this.size.y*.8);
-        drawUIText(this.text, this.pos, textSize, 
+        uiSystem.drawText(this.text, this.pos, textSize, 
             this.textColor, 0, undefined, this.align, this.font);
     }
 }
@@ -399,12 +379,12 @@ class UICheckbox extends UIObject
     render()
     {
         const color = this.mouseIsOver? this.hoverColor : this.color;
-        drawUIRect(this.pos, this.size, color, this.lineWidth, this.lineColor);
+        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, this.lineColor);
         if (this.checked)
         {
             // draw an X if checked
-            drawUILine(this.pos.add(this.size.multiply(vec2(-.5,-.5))), this.pos.add(this.size.multiply(vec2(.5,.5))), this.lineWidth, this.lineColor);
-            drawUILine(this.pos.add(this.size.multiply(vec2(-.5,.5))), this.pos.add(this.size.multiply(vec2(.5,-.5))), this.lineWidth, this.lineColor);
+            uiSystem.drawLine(this.pos.add(this.size.multiply(vec2(-.5,-.5))), this.pos.add(this.size.multiply(vec2(.5,.5))), this.lineWidth, this.lineColor);
+            uiSystem.drawLine(this.pos.add(this.size.multiply(vec2(-.5,.5))), this.pos.add(this.size.multiply(vec2(.5,-.5))), this.lineWidth, this.lineColor);
         }
     }
 }
@@ -421,10 +401,10 @@ class UIScrollbar extends UIObject
      *  @param {Vector2} [size]
      *  @param {number}  [value]
      *  @param {string}  [text]
-     *  @param {Color}   [color=uiDefaultButtonColor]
+     *  @param {Color}   [color=uiSystem.defaultButtonColor]
      *  @param {Color}   [handleColor=WHITE]
      */
-    constructor(pos, size, value=.5, text='', color=uiDefaultButtonColor, handleColor=WHITE)
+    constructor(pos, size, value=.5, text='', color=uiSystem.defaultButtonColor, handleColor=WHITE)
     {
         super(pos, size);
 
@@ -453,7 +433,7 @@ class UIScrollbar extends UIObject
     {
         const lineColor = this.mouseIsHeld ? this.color : this.lineColor;
         const color = this.mouseIsOver? this.hoverColor : this.color;
-        drawUIRect(this.pos, this.size, color, this.lineWidth, lineColor);
+        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor);
     
         const handleSize = vec2(this.size.y);
         const handleWidth = this.size.x - handleSize.x;
@@ -461,10 +441,10 @@ class UIScrollbar extends UIObject
         const p2 = this.pos.x + handleWidth/2;
         const handlePos = vec2(lerp(this.value, p1, p2), this.pos.y);
         const barColor = this.mouseIsHeld ? this.color : this.handleColor;
-        drawUIRect(handlePos, handleSize, barColor, this.lineWidth, this.lineColor);
+        uiSystem.drawRect(handlePos, handleSize, barColor, this.lineWidth, this.lineColor);
 
         const textSize = vec2(this.size.x, this.size.y*.8);
-        drawUIText(this.text, this.pos, textSize, 
+        uiSystem.drawText(this.text, this.pos, textSize, 
             this.textColor, 0, undefined, this.align, this.font);
     }
 }

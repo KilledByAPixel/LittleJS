@@ -1,7 +1,8 @@
 /**
  * LittleJS Module Export
- * - Export engine as a module
  */
+
+'use strict';
 
 export
 {

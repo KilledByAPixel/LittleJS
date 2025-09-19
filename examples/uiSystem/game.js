@@ -97,7 +97,7 @@ function createUI()
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
-    initUISystem();
+    new UISystemPlugin;
     createUI();
 }
 

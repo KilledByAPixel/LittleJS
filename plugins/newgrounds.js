@@ -6,19 +6,19 @@
  * - Keeps connection alive and logs views
  * - Functions to interact with scoreboards
  * - Functions to unlock medals
+ * @namespace Plugins
  */
 
 'use strict';
 
 /** Global Newgrounds object
- *  @type {Newgrounds}
+ *  @type {NewgroundsPlugin}
  *  @memberof Medal */
 let newgrounds;
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * Newgrounds medal auto unlocks in newgrounds API
- * Particle Emitter - Spawns particles with the given settings
  * @extends Medal
  */
 class NewgroundsMedal extends Medal
@@ -45,7 +45,7 @@ class NewgroundsMedal extends Medal
 /** 
  * Newgrounds API object
  */
-class Newgrounds
+class NewgroundsPlugin
 {
     /** Create the global newgrounds object
      *  @param {string} app_id     - The newgrounds App ID
@@ -102,8 +102,8 @@ class Newgrounds
         this.scoreboards = scoreboardResult ? scoreboardResult.result.data.scoreboards : [];
         debugMedals && console.log(this.scoreboards);
 
-        // keep the session alive with a ping every 5 minutes
-        const keepAliveMS = 5 * 60 * 1e3;
+        // keep the session alive with a ping every minute
+        const keepAliveMS = 60 * 1e3;
         setInterval(()=>this.call('Gateway.ping', 0, true), keepAliveMS);
     }
 

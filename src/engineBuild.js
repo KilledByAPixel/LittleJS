@@ -13,6 +13,7 @@
 const ENGINE_NAME = 'littlejs';
 const BUILD_FOLDER = 'dist';
 const SOURCE_FOLDER = 'src';
+const PLUGIN_FOLDER = 'plugins';
 const engineSourceFiles =
 [
     `${SOURCE_FOLDER}/engineUtilities.js`,
@@ -26,6 +27,15 @@ const engineSourceFiles =
     `${SOURCE_FOLDER}/engineMedals.js`,
     `${SOURCE_FOLDER}/engineWebGL.js`,
     `${SOURCE_FOLDER}/engine.js`,
+];
+const enginePluginFiles =
+[
+    `${PLUGIN_FOLDER}/newgrounds.js`,
+    `${PLUGIN_FOLDER}/postProcess.js`,
+    `${PLUGIN_FOLDER}/zzfxm.js`,
+    `${PLUGIN_FOLDER}/uiSystem.js`,
+    `${PLUGIN_FOLDER}/box2d.js`,
+    `${PLUGIN_FOLDER}/pluginExport.js`,
 ];
 const asciiArt =`
       ~~~~°°°°ooo°oOo°ooOooOooOo.
@@ -79,7 +89,11 @@ Build
 (
     'Build Engine -- ESM',
     `${BUILD_FOLDER}/${ENGINE_NAME}.esm.js`,
-    [`${BUILD_FOLDER}/${ENGINE_NAME}.js`, `${SOURCE_FOLDER}/engineExport.js`],
+    [
+        `${BUILD_FOLDER}/${ENGINE_NAME}.js`, 
+        `${SOURCE_FOLDER}/engineExport.js`, 
+        ...enginePluginFiles
+    ],
     [typeScriptBuildStep]
 );
 
@@ -87,8 +101,12 @@ Build
 (
     'Build Engine -- ESM minified release',
     `${BUILD_FOLDER}/${ENGINE_NAME}.esm.min.js`,
-    [`${BUILD_FOLDER}/${ENGINE_NAME}.min.js`, `${SOURCE_FOLDER}/engineExport.js`],
-    [uglifyBuildStep]
+    [
+        `${BUILD_FOLDER}/${ENGINE_NAME}.release.js`, 
+        `${SOURCE_FOLDER}/engineExport.js`, 
+        ...enginePluginFiles
+    ],
+    [closureCompilerStep, uglifyBuildStep]
 );
 
 console.log(`Engine built in ${((Date.now() - startTime)/1e3).toFixed(2)} seconds!`);
