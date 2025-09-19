@@ -243,8 +243,7 @@ function debugUpdate()
         if (keyWasPressed('Digit5'))
             debugScreenshot();
         if (keyWasPressed('Digit6'))
-            debugVideoCaptureIsActive() ? 
-                debugVideoCaptureStop() : debugVideoCaptureStart();
+            debugVideoCaptureIsActive() ? debugVideoCaptureStop() : debugVideoCaptureStart();
     }
 }
 
