@@ -12,7 +12,7 @@ const tileType_empty     = 0;
 const tileType_solid     = 1;
 const tileType_breakable = 2;
 
-let player, playerStartPos, tileLayers, foregroundLayerIndex, sky;
+let player, playerStartPos, tileLayers, foregroundTileLayer, sky;
 let levelSize, levelColor, levelBackgroundColor, levelOutlineColor;
 
 function buildLevel()
@@ -43,7 +43,6 @@ function loadLevel(level=0)
     // load level data from an exported Tiled js file
     const tileMapData = TileMaps['gameLevelData'];
     levelSize = vec2(tileMapData.width, tileMapData.height);
-    initTileCollision(levelSize);
 
     // create table for tiles in the level tilemap
     const tileLookup =
@@ -62,11 +61,18 @@ function loadLevel(level=0)
     tileLayers = [];
     playerStartPos = vec2(1, levelSize.y);
     const layerCount = tileMapData.layers.length;
-    foregroundLayerIndex = layerCount-1;
     for (let layer=layerCount; layer--;)
     {
         const layerData = tileMapData.layers[layer].data;
-        const tileLayer = new TileLayer(vec2(), levelSize, tile(0,16,1));
+        let tileLayer;
+        if (layer < layerCount-1)
+            tileLayer = new TileLayer(vec2(), levelSize, tile(0,16,1));
+        else
+        {
+            // only foreground layer has collision
+            tileLayer = new TileCollisionLayer(vec2(), levelSize, tile(0,16,1));
+            foregroundTileLayer = tileLayer;
+        }
         tileLayer.renderOrder = -1e3+layer;
         tileLayers[layer] = tileLayer;
 
@@ -102,8 +108,8 @@ function loadLevel(level=0)
             if (tileType)
             {
                 // set collision for solid tiles
-                if (layer == foregroundLayerIndex)
-                    setTileCollisionData(pos, tileType);
+                if (tileLayer == foregroundTileLayer)
+                    tileLayer.setCollisionData(pos, tileType);
 
                 // randomize tile appearance
                 let direction, mirror, color;
@@ -136,9 +142,9 @@ function decorateTile(pos, layer=1)
     ASSERT((pos.x|0) == pos.x && (pos.y|0)== pos.y);
     const tileLayer = tileLayers[layer];
 
-    if (layer == foregroundLayerIndex)
+    if (tileLayer == foregroundTileLayer)
     {
-        const tileType = getTileCollisionData(pos);
+        const tileType = tileLayer.getCollisionData(pos);
         if (tileType <= 0)
         {
             // force it to clear if it is empty
@@ -149,7 +155,7 @@ function decorateTile(pos, layer=1)
         for (let i=4;i--;)
         {
             // outline towards neighbors of differing type
-            const neighborTileType = getTileCollisionData(pos.add(vec2().setDirection(i)));
+            const neighborTileType = tileLayer.getCollisionData(pos.add(vec2().setDirection(i)));
             if (neighborTileType == tileType)
                 continue;
 

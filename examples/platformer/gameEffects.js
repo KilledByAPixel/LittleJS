@@ -31,7 +31,7 @@ const persistentParticleDestroyCallback = (particle)=>
     // copy particle to tile layer on death
     ASSERT(!particle.tileInfo, 'quick draw to tile layer uses canvas 2d so must be untextured');
     if (particle.groundObject)
-        tileLayers[foregroundLayerIndex].drawTile(particle.pos, particle.size, particle.tileInfo, particle.color, particle.angle, particle.mirror);
+        foregroundTileLayer.drawTile(particle.pos, particle.size, particle.tileInfo, particle.color, particle.angle, particle.mirror);
 }
 
 function makeBlood(pos, amount) { makeDebris(pos, hsl(0,1,.5), amount, .1, 0); }
@@ -127,13 +127,12 @@ function destroyTile(pos, makeSound = 1, cleanNeighbors = 1)
     pos = pos.floor();
 
     // destroy tile
-    const tileType = getTileCollisionData(pos);
+    const tileType = foregroundTileLayer.getCollisionData(pos);
     if (!tileType)
         return true;
 
-    const tileLayer = tileLayers[foregroundLayerIndex];
     const centerPos = pos.add(vec2(.5));
-    const layerData = tileLayer.getData(pos);
+    const layerData = foregroundTileLayer.getData(pos);
     if (!layerData || tileType == tileType_solid)
         return false;
 
@@ -142,8 +141,8 @@ function destroyTile(pos, makeSound = 1, cleanNeighbors = 1)
     makeSound && sound_destroyObject.play(centerPos);
 
      // set and clear tile
-    tileLayer.setData(pos, new TileLayerData, 1);
-    setTileCollisionData(pos, tileType_empty);
+    foregroundTileLayer.setData(pos, new TileLayerData, 1);
+    foregroundTileLayer.setCollisionData(pos, tileType_empty);
 
     // cleanup neighbors
     if (cleanNeighbors)

@@ -7,8 +7,6 @@
 
 'use strict';
 
-// show the LittleJS splash screen
-setShowSplashScreen(true);
 
 // fix texture bleeding by shrinking tile slightly
 tileFixBleedScale = .5;
@@ -27,19 +25,18 @@ let particleEmitter;
 function gameInit()
 {
     // create tile collision and visible tile layer
-    initTileCollision(vec2(32,16));
     const pos = vec2();
-    const tileLayer = new TileLayer(pos, tileCollisionSize);
+    const tileLayer = new TileCollisionLayer(pos, vec2(32,16));
 
     // get level data from the tiles image
     const tileImage = textureInfos[0].image;
     mainContext.drawImage(tileImage,0,0);
     const imageData = mainContext.getImageData(0,0,tileImage.width,tileImage.height).data;
-    for (pos.x = tileCollisionSize.x; pos.x--;)
-    for (pos.y = tileCollisionSize.y; pos.y--;)
+    for (pos.x = tileLayer.size.x; pos.x--;)
+    for (pos.y = tileLayer.size.y; pos.y--;)
     {
         // check if this pixel is set
-        const i = pos.x + tileImage.width*(15 + tileCollisionSize.y - pos.y);
+        const i = pos.x + tileImage.width*(15 + tileLayer.size.y - pos.y);
         if (!imageData[4*i])
             continue;
         
@@ -50,7 +47,7 @@ function gameInit()
         const color = randColor();
         const data = new TileLayerData(tileIndex, direction, mirror, color);
         tileLayer.setData(pos, data);
-        setTileCollisionData(pos, 1);
+        tileLayer.setCollisionData(pos, 1);
     }
 
     // draw tile layer with new data

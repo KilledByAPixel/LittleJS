@@ -4,13 +4,12 @@ function gameInit()
     gravity = -.01; // enable gravity
 
     // create tile collision and visible tile layer
-    initTileCollision(vec2(32));
     const pos = vec2();
-    const tileLayer = new TileLayer(pos, tileCollisionSize);
+    const tileLayer = new TileCollisionLayer(pos, vec2(32));
 
     // init the tile layer
-    for (pos.x = tileCollisionSize.x; pos.x--;)
-    for (pos.y = tileCollisionSize.y; pos.y--;)
+    for (pos.x = tileLayer.size.x; pos.x--;)
+    for (pos.y = tileLayer.size.y; pos.y--;)
     {
         // check if tile should be solid
         if (rand() < .7)
@@ -23,7 +22,7 @@ function gameInit()
         const color = randColor(WHITE, hsl(0,0,.2));
         const data = new TileLayerData(tileIndex, direction, mirror, color);
         tileLayer.setData(pos, data);
-        setTileCollisionData(pos, 1);
+        tileLayer.setCollisionData(pos, 1);
     }
     tileLayer.redraw(); // redraw tile layer with new data
 }
