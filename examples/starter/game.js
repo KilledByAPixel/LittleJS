@@ -9,7 +9,7 @@
 
 
 // fix texture bleeding by shrinking tile slightly
-tileFixBleedScale = .5;
+setTileFixBleedScale(.5);
 
 // sound effects
 const sound_click = new Sound([1,.5]);
@@ -54,11 +54,11 @@ function gameInit()
     tileLayer.redraw();
 
     // setup camera
-    cameraPos = vec2(16,8);
-    cameraScale = 32;
+    setCameraPos(vec2(16,8));
+    setCameraScale(32);
 
     // enable gravity
-    gravity = vec2(0,-.01);
+    setGravity(vec2(0,-.01));
 
     // create particle emitter
     particleEmitter = new ParticleEmitter(
