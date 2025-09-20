@@ -1,5 +1,6 @@
 # node files
 node_modules
+package-lock.json
 
 # example builds
 examples/starter/build
