@@ -158,7 +158,10 @@ class EngineObject
         this.velocity.x *= this.damping;
         this.velocity.y *= this.damping;
         if (this.mass) // don't apply gravity to static objects
-            this.velocity.y += gravity * this.gravityScale;
+        {
+            this.velocity.x += gravity.x * this.gravityScale;
+            this.velocity.y += gravity.y * this.gravityScale;
+        }
         this.pos.x += this.velocity.x;
         this.pos.y += this.velocity.y;
         this.angle += this.angleVelocity *= this.angleDamping;
@@ -217,7 +220,7 @@ class EngineObject
 
                 // check for collision
                 const sizeBoth = this.size.add(o.size);
-                const smallStepUp = (oldPos.y - o.pos.y)*2 > sizeBoth.y + gravity; // prefer to push up if small delta
+                const smallStepUp = (oldPos.y - o.pos.y)*2 > sizeBoth.y + gravity.y; // prefer to push up if small delta
                 const isBlockedX = abs(oldPos.y - o.pos.y)*2 < sizeBoth.y;
                 const isBlockedY = abs(oldPos.x - o.pos.x)*2 < sizeBoth.x;
                 const elasticity = max(this.elasticity, o.elasticity);

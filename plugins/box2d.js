@@ -1427,7 +1427,7 @@ class Box2dPlugin
      *  @param {number} [frames] */
     step(frames=1)
     {
-        box2d.world.SetGravity(box2d.vec2dTo(vec2(0,gravity)));
+        box2d.world.SetGravity(box2d.vec2dTo(gravity));
         for (let i=frames; i--;)
             box2d.world.Step(timeDelta, this.velocityIterations, this.positionIterations);
     }
