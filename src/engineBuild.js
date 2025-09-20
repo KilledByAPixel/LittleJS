@@ -113,7 +113,7 @@ Build
         `${SOURCE_FOLDER}/engineExport.js`, 
         `${PLUGIN_FOLDER}/pluginExport.js`
     ],
-    [closureCompilerStep, uglifyBuildStep]
+    [uglifyBuildStep]
 );
 
 console.log(`Engine built in ${((Date.now() - startTime)/1e3).toFixed(2)} seconds!`);
