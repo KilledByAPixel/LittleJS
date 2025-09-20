@@ -32,7 +32,7 @@ class Player extends PhysicsObject
 function gameInit()
 {
     // setup level
-    gravity = -.05;
+    gravity.y = -.05;
     new Player(vec2(0,4));
 
     // create random objects

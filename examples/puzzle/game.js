@@ -63,7 +63,7 @@ function gameInit()
     // setup game
     cameraPos = levelSize.scale(.5).add(cameraOffset);
     cameraScale = 900/levelSize.y;
-    gravity = -.004;
+    gravity = vec2(0,-.004);
     fallTimer = new Timer;
     comboCount = score = 0;
 }

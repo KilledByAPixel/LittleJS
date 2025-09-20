@@ -385,7 +385,7 @@ class TileCollisionLayer extends TileLayer
     /** Set tile collision data for a given cell in the grid
     *  @param {Vector2} pos
     *  @param {number}  [data] */
-    setCollisionData(pos, data=0)
+    setCollisionData(pos, data=1)
     {
         const i = (pos.y|0)*this.size.x + pos.x|0;
         pos.arrayCheck(this.size) && (this.collisionData[i] = data);

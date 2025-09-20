@@ -1,6 +1,6 @@
 function gameInit()
 {
-    gravity = -.01; // set default gravity
+    gravity.y = -.01; // set default gravity
 
     // fire
     new ParticleEmitter(

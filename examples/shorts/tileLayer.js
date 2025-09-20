@@ -1,7 +1,7 @@
 function gameInit()
 {
     cameraPos = vec2(16); // setup camera
-    gravity = -.01; // enable gravity
+    gravity.y = -.01; // enable gravity
 
     // create tile collision and visible tile layer
     const pos = vec2();
@@ -22,7 +22,7 @@ function gameInit()
         const color = randColor(WHITE, hsl(0,0,.2));
         const data = new TileLayerData(tileIndex, direction, mirror, color);
         tileLayer.setData(pos, data);
-        tileLayer.setCollisionData(pos, 1);
+        tileLayer.setCollisionData(pos);
     }
     tileLayer.redraw(); // redraw tile layer with new data
 }

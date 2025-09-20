@@ -53,7 +53,7 @@ function gameInit()
         const color = LittleJS.randColor();
         const data = new LittleJS.TileLayerData(tileIndex, direction, mirror, color);
         tileLayer.setData(pos, data);
-        tileLayer.setCollisionData(pos, 1);
+        tileLayer.setCollisionData(pos);
     }
 
     // draw tile layer with new data
@@ -64,7 +64,7 @@ function gameInit()
     LittleJS.setCameraScale(32);
 
     // enable gravity
-    LittleJS.setGravity(-.01);
+    LittleJS.setGravity(vec2(0,-.01));
 
     // create particle emitter
     particleEmitter = new LittleJS.ParticleEmitter(

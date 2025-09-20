@@ -172,7 +172,7 @@ class Character extends GameObject
                 
                 // slight extra gravity when moving down
                 if (this.velocity.y < 0)
-                    this.velocity.y += gravity*.2;
+                    this.velocity.y += gravity.y*.2;
             }
         }
         

@@ -17,7 +17,7 @@ touchGamepadEnable = true;
 function gameInit()
 {
     // engine settings
-    gravity = -.01;
+    gravity = vec2(0,-.01);
     objectDefaultDamping = .99;
     objectDefaultAngleDamping = .99;
     cameraScale = 4*16;

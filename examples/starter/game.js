@@ -47,7 +47,7 @@ function gameInit()
         const color = randColor();
         const data = new TileLayerData(tileIndex, direction, mirror, color);
         tileLayer.setData(pos, data);
-        tileLayer.setCollisionData(pos, 1);
+        tileLayer.setCollisionData(pos);
     }
 
     // draw tile layer with new data
@@ -58,7 +58,7 @@ function gameInit()
     cameraScale = 32;
 
     // enable gravity
-    gravity = -.01;
+    gravity = vec2(0,-.01);
 
     // create particle emitter
     particleEmitter = new ParticleEmitter(

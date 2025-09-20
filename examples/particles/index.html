@@ -74,7 +74,7 @@ function makeEmitter()
 function gameInit()
 {
     makeEmitter();
-    LittleJS.setGravity(-.01);
+    LittleJS.setGravity(vec2(0,-.01));
     LittleJS.setCameraScale(64);
 
     const div = particleSystemDiv = document.createElement('div');

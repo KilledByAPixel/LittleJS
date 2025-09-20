@@ -23,7 +23,7 @@ function loadScene(_scene)
 
     // setup
     cameraPos = vec2(20,10);
-    setGravity(-20);
+    setGravity(vec2(0,-20));
 
     // destroy old scene
     engineObjectsDestroy();
