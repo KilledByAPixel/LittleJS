@@ -279,15 +279,13 @@ export
 	EngineObject,
 
 	// Tiles
-	tileCollision,
-	tileCollisionSize,
-	initTileCollision,
-	setTileCollisionData,
+	tileCollisionLayers,
 	getTileCollisionData,
 	tileCollisionTest,
 	tileCollisionRaycast,
 	TileLayerData,
 	TileLayer,
+	TileCollisionLayer,
 
 	// Particles
 	ParticleEmitter,

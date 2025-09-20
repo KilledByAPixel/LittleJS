@@ -173,9 +173,9 @@ class EngineObject
         if (this.groundObject)
         {
             // apply friction in local space of ground object
-            const groundSpeed = this.groundObject != this && this.groundObject.velocity ? 
-                this.groundObject.velocity.x : 0;
-            this.velocity.x = groundSpeed + (this.velocity.x - groundSpeed) * this.friction;
+            const friction = max(this.friction, this.groundObject.friction);
+            const groundSpeed = this.groundObject.velocity ? this.groundObject.velocity.x : 0;
+            this.velocity.x = groundSpeed + (this.velocity.x - groundSpeed) * friction;
             this.groundObject = undefined;
             //debugOverlay && debugPhysics && debugPoint(this.pos.subtract(vec2(0,this.size.y/2)), '#0f0');
         }
@@ -279,19 +279,21 @@ class EngineObject
         if (this.collideTiles)
         {
             // check collision against tiles
-            if (tileCollisionTest(this.pos, this.size, this))
+            const hitLayer = tileCollisionTest(this.pos, this.size, this)
+            if (hitLayer)
             {
                 // if already was stuck in collision, don't do anything
                 // this should not happen unless something starts in collision
                 if (!tileCollisionTest(oldPos, this.size, this))
                 {
                     // test which side we bounced off (or both if a corner)
-                    const isBlockedY = tileCollisionTest(vec2(oldPos.x, this.pos.y), this.size, this);
-                    const isBlockedX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
-                    if (isBlockedY || !isBlockedX)
+                    const blockedLayerY = tileCollisionTest(vec2(oldPos.x, this.pos.y), this.size, this);
+                    const blockedLayerX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
+                    if (blockedLayerY || !blockedLayerX)
                     {
                         // bounce velocity
-                        this.velocity.y *= -this.elasticity;
+                        const elasticity = max(this.elasticity, hitLayer.elasticity);
+                        this.velocity.y *= -elasticity;
 
                         if (wasMovingDown)
                         {
@@ -300,9 +302,8 @@ class EngineObject
                             const epsilon = .0001;
                             this.pos.y = (oldPos.y-this.size.y/2|0)+this.size.y/2+epsilon;
 
-                            // set ground object to self for tile collision
-                            // TODO: rework system so tile collision is its own object
-                            this.groundObject = this;
+                            // set ground object for tile collision
+                            this.groundObject = hitLayer;
                         }
                         else
                         {
@@ -311,7 +312,7 @@ class EngineObject
                             this.groundObject = undefined; 
                         }
                     }
-                    if (isBlockedX)
+                    if (blockedLayerX)
                     {
                         // move to previous position and bounce
                         this.pos.x = oldPos.x;

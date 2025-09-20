@@ -329,11 +329,9 @@ function debugRender()
             }
         }
 
-        if (tileCollisionSize.x > 0 && tileCollisionSize.y > 0)
+        if (tileCollisionLayers.length) // show floored tile pick if there is tile collision
             drawRect(mousePos.floor().add(vec2(.5)), vec2(1), rgb(0,0,1,.5), 0, false);
         mainContext = saveContext;
-
-        //glCopyToContext(mainContext = saveContext);
     }
 
     {
