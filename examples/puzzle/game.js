@@ -8,9 +8,6 @@
 
 'use strict';
 
-// show the LittleJS splash screen
-setShowSplashScreen(true);
-
 // do not use pixelated rendering
 setCanvasPixelated(false);
 setTilesPixelated(false);

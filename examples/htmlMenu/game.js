@@ -1,15 +1,12 @@
 /*
     Little JS HTML Menu Example Project
     - Setup a simple html menu system
-    - Menu can be toggled
+    - Menu can be opened and closed
     - Pauses game when menu is visible
     - Shows several input types
 */
 
 'use strict';
-
-// show the LittleJS splash screen
-setShowSplashScreen(true);
 
 // sound effects
 const sound_click = new Sound([1,.5]);
@@ -46,7 +43,7 @@ function gameUpdatePost()
     const menuVisible = getMenuVisible();
     paused = menuVisible;
 
-    // toggle menu visibility
+    // open menu visibility
     if (keyWasPressed('KeyM'))
         setMenuVisible(true);
 }
@@ -67,7 +64,7 @@ function gameRender()
 function gameRenderPost()
 {
     // draw to overlay canvas for hud rendering
-    drawTextScreen('LittleJS HTML Menu Example\nM = Toggle menu', 
+    drawTextScreen('LittleJS HTML Menu Example\nM = Open menu', 
         vec2(mainCanvasSize.x/2, 70), 60,   // position, size
         hsl(0,0,1), 6, hsl(0,0,0));         // color, outline size and color
 }

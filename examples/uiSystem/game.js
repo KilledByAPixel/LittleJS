@@ -6,9 +6,6 @@
 
 'use strict';
 
-// show the LittleJS splash screen
-setShowSplashScreen(true);
-
 // sound effects
 const sound_ui = new Sound([1,0]);
 
@@ -124,9 +121,6 @@ function gameUpdatePost()
 ///////////////////////////////////////////////////////////////////////////////
 function gameRender()
 {
-    // test game rendering
-    drawRect(vec2(), vec2(1e3), hsl(0,0,.2));
-
     // test game rendering
     drawRect(vec2(), vec2(1e3), hsl(0,0,.2));
     for(let i=0; i<1e3; ++i)

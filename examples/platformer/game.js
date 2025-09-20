@@ -8,9 +8,6 @@
 
 'use strict';
 
-// show the LittleJS splash screen
-setShowSplashScreen(true);
-
 let spriteAtlas, score, deaths;
 
 // enable touch gamepad on touch devices

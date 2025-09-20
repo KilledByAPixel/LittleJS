@@ -11,8 +11,6 @@
 
 'use strict';
 
-// show the LittleJS splash screen
-setShowSplashScreen(true);
 //box2dDebug = 1; // enable box2d debug draw
 
 // game variables

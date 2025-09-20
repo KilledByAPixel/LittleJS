@@ -8,9 +8,6 @@
 
 'use strict';
 
-// show the LittleJS splash screen
-setShowSplashScreen(true);
-
 let levelSize, ball, paddle, score, brickCount;
 
 // sound effects
