@@ -7,22 +7,26 @@
 
 'use strict';
 
+// import LittleJS module
+import * as LJS from '../../dist/littlejs.esm.js';
+const {vec2, rgb} = LJS;
+
 ///////////////////////////////////////////////////////////////////////////////
 
 // globals
 const levelSize = vec2(38, 20); // size of play area
 let score = 0; // start score at 0
 let ball; // keep track of ball object
-let paddle; // keep track of player's paddle
+let paddle; // keep track of player paddle
 
 // sound effects
-const sound_bounce = new Sound([,,1e3,,.03,.02,1,2,,,940,.03,,,,,.2,.6,,.06], 0);
-const sound_break = new Sound([,,90,,.01,.03,4,,,,,,,9,50,.2,,.2,.01], 0);
-const sound_start = new Sound([,0,500,,.04,.3,1,2,,,570,.02,.02,,,,.04]);
+const sound_bounce = new LJS.Sound([,,1e3,,.03,.02,1,2,,,940,.03,,,,,.2,.6,,.06], 0);
+const sound_break  = new LJS.Sound([,,90,,.01,.03,4,,,,,,,9,50,.2,,.2,.01], 0);
+const sound_start  = new LJS.Sound([,0,500,,.04,.3,1,2,,,570,.02,.02,,,,.04]);
 
 ///////////////////////////////////////////////////////////////////////////////
 
-class Paddle extends EngineObject
+class Paddle extends LJS.EngineObject
 {
     constructor()
     {
@@ -33,14 +37,14 @@ class Paddle extends EngineObject
 
     update()
     {
-        this.pos.x = mousePos.x; // move paddle to mouse
+        this.pos.x = LJS.mousePos.x; // move paddle to mouse
         
         // clamp paddle to level size
-        this.pos.x = clamp(this.pos.x, this.size.x/2, levelSize.x - this.size.x/2);
+        this.pos.x = LJS.clamp(this.pos.x, this.size.x/2, levelSize.x - this.size.x/2);
     }
 }
 
-class Ball extends EngineObject 
+class Ball extends LJS.EngineObject 
 {
     constructor(pos)
     {
@@ -57,7 +61,7 @@ class Ball extends EngineObject
             return false;
 
         // speed up
-        const speed = min(1.04*this.velocity.length(), .5);
+        const speed = LJS.min(1.04*this.velocity.length(), .5);
         this.velocity = this.velocity.normalize(speed);
 
         // play bounce sound with pitch scaled by speed
@@ -70,7 +74,7 @@ class Ball extends EngineObject
             this.velocity = this.velocity.rotate(.3 * deltaX);
             
             // make sure ball is moving upwards with a minimum speed
-            this.velocity.y = max(-this.velocity.y, .2);
+            this.velocity.y = LJS.max(-this.velocity.y, .2);
             
             // prevent default collision code
             return false;
@@ -80,7 +84,7 @@ class Ball extends EngineObject
     }
 }
 
-class Wall extends EngineObject
+class Wall extends LJS.EngineObject
 {
     constructor(pos, size)
     {
@@ -88,11 +92,11 @@ class Wall extends EngineObject
 
         this.setCollision(); // make object collide
         this.mass = 0; // make object have static physics
-        this.color = new Color(0,0,0,0); // make object invisible
+        this.color = rgb(0,0,0,0); // make object invisible
     }
 }
 
-class Brick extends EngineObject
+class Brick extends LJS.EngineObject
 {
     constructor(pos, size)
     {
@@ -100,7 +104,7 @@ class Brick extends EngineObject
 
         this.setCollision(); // make object collide
         this.mass = 0; // make object have static physics
-        this.color = randColor(); // give brick a random color
+        this.color = LJS.randColor(); // give brick a random color
     }
 
     collideWithObject(o)              
@@ -111,14 +115,14 @@ class Brick extends EngineObject
 
         // create explosion effect
         const color = this.color;
-        new ParticleEmitter(
-            this.pos, 0,            // pos, angle
-            this.size, .1, 200, PI, // emitSize, emitTime, emitRate, emitCone
-            undefined,              // tileInfo
+        new LJS.ParticleEmitter(
+            this.pos, 0,             // pos, angle
+            this.size, .1, 200, 3.14,// emitSize, emitTime, emitRate, emitCone
+            undefined,               // tileInfo
             color, color,                       // colorStartA, colorStartB
             color.scale(1,0), color.scale(1,0), // colorEndA, colorEndB
             .2, .5, 1, .1, .1,  // time, sizeStart, sizeEnd, speed, angleSpeed
-            .99, .95, .4, PI,   // damp, angleDamp, gravity, cone
+            .99, .95, .4, 3.14, // damp, angleDamp, gravity, cone
             .1, .5, false, true // fade, randomness, collide, additive
         );
 
@@ -129,15 +133,17 @@ class Brick extends EngineObject
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
+    // setup camera and canvas
+    LJS.setCameraPos(levelSize.scale(.5));   // center camera in level
+    LJS.setCanvasFixedSize(vec2(1280, 720)); // use a 720p fixed size canvas
+    
     // create bricks
     for(let x=2;  x<=levelSize.x-2; x+=2)
     for(let y=12; y<=levelSize.y-2; y+=1)
         new Brick(vec2(x,y), vec2(2,1)); // create a brick
 
-    cameraPos = levelSize.scale(.5); // center camera in level
-    canvasFixedSize = vec2(1280, 720); // use a 720p fixed size canvas
-
-    paddle = new Paddle; // create player's paddle
+    // create player paddle
+    paddle = new Paddle;
 
     // create walls
     new Wall(vec2(-.5,levelSize.y/2),            vec2(1,100)) // top
@@ -154,9 +160,10 @@ function gameUpdate()
         ball.destroy();
         ball = 0;
     }
-    if (!ball && mouseWasPressed(0)) // if there is no ball and left mouse is pressed
+    if (!ball && LJS.mouseWasPressed(0))
     {
-        ball = new Ball(cameraPos); // create a ball
+        // spawn new ball if there is no ball and left mouse pressed
+        ball = new Ball(LJS.cameraPos); // create a ball
         sound_start.play(); // play start sound
     }
 }
@@ -169,16 +176,16 @@ function gameUpdatePost()
 ///////////////////////////////////////////////////////////////////////////////
 function gameRender()
 {
-    drawRect(cameraPos, vec2(100), new Color(.5,.5,.5)); // draw background
-    drawRect(cameraPos, levelSize, new Color(.1,.1,.1)); // draw level boundary
+    LJS.drawRect(LJS.cameraPos, vec2(100), rgb(.5,.5,.5)); // draw background
+    LJS.drawRect(LJS.cameraPos, levelSize, rgb(.1,.1,.1)); // draw level boundary
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameRenderPost()
 {
-    drawTextScreen("Score " + score, vec2(mainCanvasSize.x/2, 70), 50); // show score
+    LJS.drawTextScreen("Score " + score, vec2(LJS.mainCanvasSize.x/2, 70), 50); // show score
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Startup LittleJS Engine
-engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
+LJS.engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);

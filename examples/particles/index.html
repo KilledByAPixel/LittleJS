@@ -9,20 +9,20 @@ input { width:99px; }
 button { margin:1px; }
 </style>
 </head><body>
-
 <script type=module>
 
-// import module
-import * as LittleJS from '../../dist/littlejs.esm.js';
+// import LittleJS module
+import * as LJS from '../../dist/littlejs.esm.js';
+const {vec2} = LJS;
 
 'use strict';
 
 // fix texture bleeding by shrinking tiles slightly
-LittleJS.setTileFixBleedScale(.5);
+LJS.setTileFixBleedScale(.5);
 
 let particleEditor = 0, particleSystem, particleSystemDiv, particleSystemCode;
 let inputExpand;
-let restartTimer = new LittleJS.Timer();
+let restartTimer = new LJS.Timer();
 const storagePrefix = 'particles_';
 
 const particleSettings = [];
@@ -64,8 +64,8 @@ function makeEmitter()
 {
     if (particleSystem)
         particleSystem.destroy();
-    particleSystem = new LittleJS.ParticleEmitter(LittleJS.cameraPos);
-    particleSystem.tileInfo = LittleJS.tile();
+    particleSystem = new LJS.ParticleEmitter(LJS.cameraPos);
+    particleSystem.tileInfo = LJS.tile();
     particleSystem.emitConeAngle =
     particleSystem.particleConeAngle = 3.14;
 }
@@ -74,8 +74,8 @@ function makeEmitter()
 function gameInit()
 {
     makeEmitter();
-    LittleJS.setGravity(vec2(0,-.01));
-    LittleJS.setCameraScale(64);
+    LJS.setGravity(vec2(0,-.01));
+    LJS.setCameraScale(64);
 
     const div = particleSystemDiv = document.createElement('div');
     div.innerHTML = '<big><b>LittleJS Particle Tool';
@@ -166,7 +166,7 @@ function gameInit()
                 return;
             makeEmitter();
             updateInputs();
-            LittleJS.setCameraScale(50);
+            LJS.setCameraScale(50);
         }
     }
     {
@@ -216,7 +216,7 @@ function updateParticles(shouldUpdateInput)
         const inputFloat = parseFloat(input.value) || 0;
         if (type == 'color')
         {
-            const color = new LittleJS.Color().setHex(input.value);
+            const color = new LJS.Color().setHex(input.value);
             particleSystem[name].r = color.r;
             particleSystem[name].g = color.g;
             particleSystem[name].b = color.b;
@@ -224,28 +224,28 @@ function updateParticles(shouldUpdateInput)
         else if (type == 'alpha')
         {
             if (name == 'colorStartA_alpha')
-                particleSystem.colorStartA.a = LittleJS.clamp(inputFloat);
+                particleSystem.colorStartA.a = LJS.clamp(inputFloat);
             else if (name == 'colorStartB_alpha')
-                particleSystem.colorStartB.a = LittleJS.clamp(inputFloat);
+                particleSystem.colorStartB.a = LJS.clamp(inputFloat);
             else if (name == 'colorEndA_alpha')
-                particleSystem.colorEndA.a   = LittleJS.clamp(inputFloat);
+                particleSystem.colorEndA.a   = LJS.clamp(inputFloat);
             else if (name == 'colorEndB_alpha')
-                particleSystem.colorEndB.a   = LittleJS.clamp(inputFloat);
+                particleSystem.colorEndB.a   = LJS.clamp(inputFloat);
         }
         else if (name == 'tileIndex')
         {
             const tileIndex = parseInt(input.value);
             particleSystem.tileIndex = tileIndex
-            particleSystem.tileInfo = LittleJS.tile(tileIndex, particleSystem.tileInfo.size);
+            particleSystem.tileInfo = LJS.tile(tileIndex, particleSystem.tileInfo.size);
         }
         else if (name == 'tileSize')
-            particleSystem.tileInfo.size = LittleJS.vec2(parseInt(input.value));
+            particleSystem.tileInfo.size = vec2(parseInt(input.value));
         else if (type == 'checkbox')
             particleSystem[name] = input.checked ? 1 : 0;
         else if (name == 'emitRate')
-            particleSystem[name] = LittleJS.min(inputFloat,1e4);
+            particleSystem[name] = LJS.min(inputFloat,1e4);
         else
-            particleSystem[name] = LittleJS.clamp(inputFloat, setting.min, setting.max);
+            particleSystem[name] = LJS.clamp(inputFloat, setting.min, setting.max);
     }
     shouldUpdateInput && updateInputs()
 }
@@ -369,14 +369,14 @@ function gameUpdate()
 
     if (document.activeElement == document.body)
     {
-        particleSystem.pos = LittleJS.mouseIsDown(0) ? LittleJS.mousePos : LittleJS.vec2();
-        if (LittleJS.mouseWheel)
+        particleSystem.pos = LJS.mouseIsDown(0) ? LJS.mousePos : vec2();
+        if (LJS.mouseWheel)
         {
             // zoom camera
-            let cameraScale = LittleJS.cameraScale;
-            cameraScale -= LittleJS.sign(LittleJS.mouseWheel)*cameraScale/5;
-            cameraScale = LittleJS.clamp(cameraScale, 10, 300);
-            LittleJS.setCameraScale(cameraScale);
+            let cameraScale = LJS.cameraScale;
+            cameraScale -= LJS.sign(LJS.mouseWheel)*cameraScale/5;
+            cameraScale = LJS.clamp(cameraScale, 10, 300);
+            LJS.setCameraScale(cameraScale);
         }
     }
 }
@@ -399,6 +399,6 @@ function gameRenderPost()
 
 ///////////////////////////////////////////////////////////////////////////////
 // Startup LittleJS Engine
-LittleJS.engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);
+LJS.engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);
 
 </script>

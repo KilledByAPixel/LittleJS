@@ -6,44 +6,49 @@
 
 'use strict';
 
+// import LittleJS module
+import * as LJS from '../../dist/littlejs.esm.js';
+import * as Game from './game.js';
+const {vec2, hsl} = LJS;
+
 ///////////////////////////////////////////////////////////////////////////////
 // spawn object functions
 
-function spawnBox(pos, size=1, color=WHITE, type=box2d.bodyTypeDynamic, applyTexture=true, angle=0)
+function spawnBox(pos, size=1, color=LJS.WHITE, type=LJS.box2d.bodyTypeDynamic, applyTexture=true, angle=0)
 {
     size = typeof size == 'number' ? vec2(size) : size; // square
-    const o = new Box2dObject(pos, size, applyTexture && spriteAtlas.squareOutline, angle, color, type);
+    const o = new LJS.Box2dObject(pos, size, applyTexture && Game.spriteAtlas.squareOutline, angle, color, type);
     o.drawSize = size.scale(1.02); // slightly enlarge to cover gaps
     o.addBox(size);
     return o;
 }
 
-function spawnCircle(pos, diameter=1, color=WHITE, type=box2d.bodyTypeDynamic, applyTexture=true, angle=0)
+function spawnCircle(pos, diameter=1, color=LJS.WHITE, type=LJS.box2d.bodyTypeDynamic, applyTexture=true, angle=0)
 {
     const size = vec2(diameter);
-    const o = new Box2dObject(pos, size, applyTexture && spriteAtlas.circleOutline, angle, color, type);
+    const o = new LJS.Box2dObject(pos, size, applyTexture && Game.spriteAtlas.circleOutline, angle, color, type);
     o.addCircle(diameter);
     return o;
 }
 
-function spawnRandomPoly(pos, diameter=1, color=WHITE, type=box2d.bodyTypeDynamic, angle=0)
+function spawnRandomPoly(pos, diameter=1, color=LJS.WHITE, type=LJS.box2d.bodyTypeDynamic, angle=0)
 {
-    const o = new Box2dObject(pos, vec2(), 0, angle, color, type);
+    const o = new LJS.Box2dObject(pos, vec2(), 0, angle, color, type);
     o.addRandomPoly(diameter);
     return o;
 }
 
-function spawnRandomObject(pos, scale=1, type=box2d.bodyTypeDynamic, angle=0)
+function spawnRandomObject(pos, scale=1, type=LJS.box2d.bodyTypeDynamic, angle=0)
 {
-    if (randInt(2))
+    if (LJS.randInt(2))
     {
-        const size = vec2(scale*rand(.5,1), scale*rand(.5,1));
-        return spawnBox(pos, size, randColor(), type, true, angle);
+        const size = vec2(scale*LJS.rand(.5,1), scale*LJS.rand(.5,1));
+        return spawnBox(pos, size, LJS.randColor(), type, true, angle);
     }
     else
     {
-        const diameter = scale*rand(.5,1);
-        return spawnCircle(pos, diameter, randColor(), type, true, angle);
+        const diameter = scale*LJS.rand(.5,1);
+        return spawnCircle(pos, diameter, LJS.randColor(), type, true, angle);
     }
 }
 
@@ -51,13 +56,13 @@ function spawnPyramid(pos, count)
 {
     for (let i=count+1;i--;)
     for (let j=i;j--;)
-        spawnBox(pos.add(vec2(j-i/2+.5,count-i+.5)), 1, randColor());
+        spawnBox(pos.add(vec2(j-i/2+.5,count-i+.5)), 1, LJS.randColor());
 }
 
 function spawnDominoes(pos, count, size=vec2(.5,2))
 {
     for (let i=count; i--;)
-        spawnBox(pos.add(vec2(i*size.y*.9,size.y/2)), size, randColor());
+        spawnBox(pos.add(vec2(i*size.y*.9,size.y/2)), size, LJS.randColor());
 }
 
 function spawnRandomEdges()
@@ -66,37 +71,37 @@ function spawnRandomEdges()
     const edgePoints = [];
     edgePoints.push(vec2(40,0));
     for (let i=40, y=0; i--;)
-        edgePoints.push(vec2(i, y=clamp(y+rand(-2,2),0,5)));
+        edgePoints.push(vec2(i, y=LJS.clamp(y+LJS.rand(-2,2),0,5)));
     edgePoints.push(vec2(0,0));
-    const o = new Box2dObject(vec2(), vec2(), 0, 0, BLACK, box2d.bodyTypeStatic);
+    const o = new LJS.Box2dObject(vec2(), vec2(), 0, 0, LJS.BLACK, LJS.box2d.bodyTypeStatic);
     o.addEdgeList(edgePoints);
 }
 
-function spawnRope(startPos, count, angle=PI, color=WHITE, size=vec2(.3,1))
+function spawnRope(startPos, count, angle=PI, color=LJS.WHITE, size=vec2(.3,1))
 {
-    let lastObject = groundObject;
+    let lastObject = Game.groundObject;
     for (let i=0; i<count; ++i)
     {
         const pos = startPos.add(size.multiply(vec2(0,i+.5)).rotate(-angle));
-        const o = spawnBox(pos, size, color, box2d.bodyTypeDynamic, false, angle);
+        const o = spawnBox(pos, size, color, LJS.box2d.bodyTypeDynamic, false, angle);
         o.setFilterData(2, 2);
         const anchorPos = pos.add(vec2(0,-size.y/2).rotate(-angle));
-        new Box2dRevoluteJoint(lastObject, o, anchorPos);
+        new LJS.Box2dRevoluteJoint(lastObject, o, anchorPos);
         lastObject = o;
     }
     const endPos = lastObject.localToWorld(vec2(0,-size.y/2));
-    new Box2dRopeJoint(groundObject, lastObject, startPos, endPos);
+    new LJS.Box2dRopeJoint(Game.groundObject, lastObject, startPos, endPos);
     return lastObject;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 // simple car vehicle using wheel joints
-class CarObject extends Box2dObject
+class CarObject extends LJS.Box2dObject
 {
     constructor(pos)
     {
-        super(pos, vec2(), 0, 0, randColor());
+        super(pos, vec2(), 0, 0, LJS.randColor());
         const carPoints = [
             vec2(-1.5,-.5),
             vec2(1.5, -.5),
@@ -116,16 +121,16 @@ class CarObject extends Box2dObject
             const damping     = .7;
             const frequencyHz = 4;
             const maxTorque   = 50;
-            const sprite      = spriteAtlas.wheel;
+            const sprite      = Game.spriteAtlas.wheel;
 
             // create wheels
             this.wheels = [];
             const makeWheel = (pos, isMotor) =>
             {
-                const wheel = new Box2dObject(pos, vec2(diameter), sprite);
+                const wheel = new LJS.Box2dObject(pos, vec2(diameter), sprite);
                 wheel.addCircle(diameter, vec2(), density, friction, restitution);
                 this.wheels.push(wheel);
-                const joint = new Box2dWheelJoint(this, wheel);
+                const joint = new LJS.Box2dWheelJoint(this, wheel);
                 joint.setSpringDampingRatio(damping);
                 joint.setSpringFrequencyHz(frequencyHz);
                 if (isMotor)
@@ -145,7 +150,7 @@ class CarObject extends Box2dObject
         const maxSpeed = 40;
         const brakeAmount = .8;
         let s = this.wheelMotorJoint.getMotorSpeed();
-        s = input ? clamp(s + input, -maxSpeed, maxSpeed) : s * brakeAmount;
+        s = input ? LJS.clamp(s + input, -maxSpeed, maxSpeed) : s * brakeAmount;
         this.wheelMotorJoint.setMotorSpeed(s);
     }
     destroy()
@@ -158,27 +163,27 @@ class CarObject extends Box2dObject
 ///////////////////////////////////////////////////////////////////////////////
 
 // changes objects color when touched
-class ContactTester extends Box2dObject
+class ContactTester extends LJS.Box2dObject
 {
     constructor(pos, size, color, contactColor, isCircle=true, isSensor=true)
     {
-        super(pos, size, 0, 0, color, box2d.bodyTypeStatic);
+        super(pos, size, 0, 0, color, LJS.box2d.bodyTypeStatic);
         isCircle ? this.addCircle(size.x) : this.addBox(size);
         this.setSensor(isSensor);
         this.contactColor = contactColor;
     }
     beginContact(other) { other.color = this.contactColor; }
-    endContact(other)   { other.color = WHITE; }
+    endContact(other)   { other.color = LJS.WHITE; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 // balanced recursive mobile object with revolve joints
-class MobileObject extends Box2dObject
+class MobileObject extends LJS.Box2dObject
 {
     constructor(anchor, w, h, depth)
     {
-        super(anchor, vec2(w, h), 0, 0, randColor());
+        super(anchor, vec2(w, h), 0, 0, LJS.randColor());
         this.addBox(vec2(h/4, h), vec2(0, -h/2));
         this.childMobiles = [];
         if (--depth)
@@ -190,7 +195,7 @@ class MobileObject extends Box2dObject
                 // spawn smaller mobiles attached to each side
                 const a = anchor.add(vec2( w/(i?2:-2), -h));
                 const o = new MobileObject(a, w/2, h, depth);
-                new Box2dRevoluteJoint(this, o, a);
+                new LJS.Box2dRevoluteJoint(this, o, a);
                 this.childMobiles.push(o);
             }
         }
@@ -205,11 +210,11 @@ class MobileObject extends Box2dObject
 ///////////////////////////////////////////////////////////////////////////////
 
 // pulley object renders a rope to connected point
-class PulleyJointObjects extends Box2dObject
+class PulleyJointObjects extends LJS.Box2dObject
 {
     constructor(pos, size, color, connectionPos)
     {
-        super(pos, size, spriteAtlas.squareOutline, 0, color);
+        super(pos, size, Game.spriteAtlas.squareOutline, 0, color);
         this.addBox(size);
         this.connectionPos = connectionPos;
     }
@@ -217,7 +222,7 @@ class PulleyJointObjects extends Box2dObject
     {
         // draw rope
         const topPos = this.localToWorld(vec2(0,this.size.y/2));
-        drawLine(topPos, this.connectionPos, .2, BLACK);
+        LJS.drawLine(topPos, this.connectionPos, .2, LJS.BLACK);
         super.render();
     }
 }
@@ -225,14 +230,14 @@ class PulleyJointObjects extends Box2dObject
 ///////////////////////////////////////////////////////////////////////////////
 
 // motor object renders a rope to connected point
-class MotorJointObject extends Box2dObject
+class MotorJointObject extends LJS.Box2dObject
 {
     constructor(pos, size, color, otherObject)
     {
-        super(pos, size, spriteAtlas.wheel, 0, color);
+        super(pos, size, Game.spriteAtlas.wheel, 0, color);
         this.addCircle(size.x);
         this.connectionPos = pos;
-        const joint = new Box2dMotorJoint(otherObject, this);
+        const joint = new LJS.Box2dMotorJoint(otherObject, this);
         joint.setMaxForce(500);
         joint.setMaxTorque(500);
     }
@@ -240,7 +245,7 @@ class MotorJointObject extends Box2dObject
     {
         // draw rope
         const width = 2/(1+this.pos.distance(this.connectionPos));
-        drawLine(this.pos, this.connectionPos, width, BLACK);
+        LJS.drawLine(this.pos, this.connectionPos, width, LJS.BLACK);
         super.render();
     }
 }
@@ -248,14 +253,14 @@ class MotorJointObject extends Box2dObject
 ///////////////////////////////////////////////////////////////////////////////
 
 // soft body sim using grid of weld joints
-class SoftBodyObject extends Box2dObject
+class SoftBodyObject extends LJS.Box2dObject
 {
     constructor(pos, scale, sizeCount, color)
     {
         super(pos, vec2());
         const nodeSize = sizeCount.subtract(vec2(1));
         const spacing = scale.divide(nodeSize);
-        const objectDiameter = min(spacing.x, spacing.y);
+        const objectDiameter = LJS.min(spacing.x, spacing.y);
         this.sizeCount = sizeCount.copy();
 
         // create nodes
@@ -266,7 +271,7 @@ class SoftBodyObject extends Box2dObject
             const mass = .1;
             const center = vec2(x-nodeSize.x/2, y-nodeSize.y/2);
             const p = pos.add(center.multiply(spacing));
-            const o = new Box2dObject(p, vec2(objectDiameter*1.1), spriteAtlas.circle, 0, color);
+            const o = new LJS.Box2dObject(p, vec2(objectDiameter*1.1), Game.spriteAtlas.circle, 0, color);
             o.addCircle(objectDiameter);
             o.setMass(mass);
             o.setAngularDamping(10);
@@ -281,7 +286,7 @@ class SoftBodyObject extends Box2dObject
             const tryAddJoint = (xo, yo) =>
             {
                 const o2 = this.getNode(x+xo, y+yo);
-                const joint = o2 ? new Box2dWeldJoint(o, o2) : 0;
+                const joint = o2 ? new LJS.Box2dWeldJoint(o, o2) : 0;
                 o.joints.push(joint);
             }
 
@@ -300,7 +305,7 @@ class SoftBodyObject extends Box2dObject
         for (let y = 0; y < sy.y; ++y) poly.push(this.getNode(sx-1, y).pos);
         for (let x = sx; x--;) poly.push(this.getNode(x, sy-1).pos);
         for (let y = sy; y--;) poly.push(this.getNode(0, y).pos);
-        box2d.drawPoly(vec2(), 0, poly, BLACK)
+        LJS.box2d.drawPoly(vec2(), 0, poly, LJS.BLACK)
     }
     getNode(x, y) 
     {
@@ -317,14 +322,14 @@ class SoftBodyObject extends Box2dObject
 ///////////////////////////////////////////////////////////////////////////////
 
 // cloth sim using grid of rope joints
-class ClothObject extends Box2dObject
+class ClothObject extends LJS.Box2dObject
 {
     constructor(pos, scale, sizeCount, color, maxJointStress=10)
     {
-        super(pos, vec2(), 0, 0, color, box2d.bodyTypeStatic);
+        super(pos, vec2(), 0, 0, color, LJS.box2d.bodyTypeStatic);
         const nodeSize = sizeCount.subtract(vec2(1));
         const spacing = scale.divide(nodeSize);
-        const objectDiameter = min(spacing.x, spacing.y);
+        const objectDiameter = LJS.min(spacing.x, spacing.y);
         this.sizeCount = sizeCount.copy();
         this.maxJointStress = maxJointStress;
         this.lineWidth = .1;
@@ -337,7 +342,7 @@ class ClothObject extends Box2dObject
             const mass = .5;
             const center = vec2(x-nodeSize.x/2, y-nodeSize.y/2);
             const p = pos.add(center.multiply(spacing));
-            const o = new Box2dObject(p, vec2(.4), spriteAtlas.circle, 0, color);
+            const o = new LJS.Box2dObject(p, vec2(.4), Game.spriteAtlas.circle, 0, color);
             o.addCircle(objectDiameter);
             o.setFilterData(2, 2);
             o.setLinearDamping(1);
@@ -357,7 +362,7 @@ class ClothObject extends Box2dObject
             const tryAddJoint = (xo, yo) =>
             {
                 const o2 = this.getNode(x2+xo, y+yo);
-                const joint = o2 ? new Box2dRopeJoint(o, o2) : 0;
+                const joint = o2 ? new LJS.Box2dRopeJoint(o, o2) : 0;
                 o.joints.push(joint);
             }
 
@@ -374,7 +379,7 @@ class ClothObject extends Box2dObject
                 tryAddJoint( d, 1);
 
                 // attach pin joint to top row
-                y || new Box2dPinJoint(this.getNode(x, y), this);
+                y || new LJS.Box2dPinJoint(this.getNode(x, y), this);
             }
         }
     }
@@ -430,7 +435,7 @@ class ClothObject extends Box2dObject
                 if (!joint) continue;
                 const oA = joint.getObjectA();
                 const oB = joint.getObjectB();
-                drawLine(oA.pos, oB.pos, this.lineWidth, BLACK);
+                LJS.drawLine(oA.pos, oB.pos, this.lineWidth, LJS.BLACK);
             }
         }
     }
@@ -444,43 +449,65 @@ class ClothObject extends Box2dObject
 ///////////////////////////////////////////////////////////////////////////////
 // Effects
 
-const sound_click = new Sound([.2,.1,,,,.01,,,,,,,,,,,,,,,-500]); // Loaded Sound 0
-const sound_explosion = new Sound([.5,.2,72,.01,.01,.2,4,,,,,,,1,,.5,.1,.5,.02]);
+const sound_explosion = new LJS.Sound([.5,.2,72,.01,.01,.2,4,,,,,,,1,,.5,.1,.5,.02]);
 
 function explosion(pos, radius=3, strength=300)
 {
     sound_explosion.play(pos);
-    const objects = box2d.circleCastAll(pos, (radius*2));
-    const newColor = randColor();
+    const objects = LJS.box2d.circleCastAll(pos, (radius*2));
+    const newColor = LJS.randColor();
     for (const o of objects)
     {
-        const p = percent(o.pos.distance(pos), 2*radius, radius);
+        const p = LJS.percent(o.pos.distance(pos), 2*radius, radius);
         const force = o.pos.subtract(pos).normalize(p*radius*strength);
         o.applyForce(force);
         o.color = newColor;
     }
 
     // smoke
-    new ParticleEmitter(
-        pos, 0,                     // pos, angle
-        radius/2, .2, 50*radius, PI,// emitSize, emitTime, emitRate, emitCone
-        spriteAtlas.dot,            // tileInfo
-        hsl(0,0,0),   hsl(0,0,0),   // colorStartA, colorStartB
-        hsl(0,0,0,0), hsl(0,0,0,0), // colorEndA, colorEndB
-        1, 1, 2, .1, .1,    // time, sizeStart, sizeEnd, speed, angleSpeed
-        .9, 1, -.5, PI, .1, // damp, angleDamp, gravity, particleCone, fade
-        1, 0, 0, 0, 1e8     // randomness, collide, additive, colorLinear, renderOrder
+    new LJS.ParticleEmitter(
+        pos, 0,                       // pos, angle
+        radius/2, .2, 50*radius, 3.14,// emitSize, emitTime, emitRate, emitCone
+        Game.spriteAtlas.dot,         // tileInfo
+        hsl(0,0,0),   hsl(0,0,0),     // colorStartA, colorStartB
+        hsl(0,0,0,0), hsl(0,0,0,0),   // colorEndA, colorEndB
+        1, 1, 2, .1, .1,      // time, sizeStart, sizeEnd, speed, angleSpeed
+        .9, 1, -.5, 3.14, .1, // damp, angleDamp, gravity, particleCone, fade
+        1, 0, 0, 0, 1e8       // randomness, collide, additive, colorLinear, renderOrder
     );
 
     // fire
-    new ParticleEmitter(
+    new LJS.ParticleEmitter(
         pos, 0,                         // pos, angle
-        radius, .1, 100*radius, PI,     // emitSize, emitTime, emitRate, emitCone
-        spriteAtlas.dot,                // tileInfo
+        radius, .1, 100*radius, 3.14,   // emitSize, emitTime, emitRate, emitCone
+        Game.spriteAtlas.dot,           // tileInfo
         hsl(0,1,.5),   hsl(.15,1,.5),   // colorStartA, colorStartB
         hsl(0,1,.5,0), hsl(.1, 1,.5,0), // colorEndA, colorEndB
-        .7, 1, .5, .1, .1, // time, sizeStart, sizeEnd, speed, angleSpeed
-        .9, 1, 0, PI, .05, // damp, angleDamp, gravity, particleCone, fade
-        1, 0, 1, 0, 1e9    // randomness, collide, additive, colorLinear, renderOrder
+        .7, 1, .5, .1, .1,   // time, sizeStart, sizeEnd, speed, angleSpeed
+        .9, 1, 0, 3.14, .05, // damp, angleDamp, gravity, particleCone, fade
+        1, 0, 1, 0, 1e9      // randomness, collide, additive, colorLinear, renderOrder
     );
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Exports
+
+export 
+{
+    spawnBox, 
+    spawnCircle, 
+    spawnRandomPoly, 
+    spawnRandomObject, 
+    spawnPyramid, 
+    spawnDominoes, 
+    spawnRandomEdges,
+    spawnRope,
+    explosion,
+    CarObject,
+    ContactTester,
+    MobileObject,
+    PulleyJointObjects,
+    MotorJointObject,
+    SoftBodyObject,
+    ClothObject,
 }

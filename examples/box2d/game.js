@@ -11,6 +11,13 @@
 
 'use strict';
 
+// import LittleJS module
+import * as LJS from '../../dist/littlejs.esm.js';
+import * as GameObjects from './gameObjects.js';
+import * as Scenes from './scenes.js';
+const {vec2, hsl} = LJS;
+
+///////////////////////////////////////////////////////////////////////////////
 //box2dDebug = 1; // enable box2d debug draw
 
 // game variables
@@ -21,13 +28,38 @@ let spriteAtlas;
 let groundObject;
 let mouseJoint;
 let car;
-let repeatSpawnTimer = new Timer;
+let repeatSpawnTimer = new LJS.Timer;
+const sound_click = new LJS.Sound([.2,.1,,,,.01,,,,,,,,,,,,,,,-500]);
+
+///////////////////////////////////////////////////////////////////////////////
+function setScene(_scene)
+{
+    scene = _scene;
+
+    // setup
+    LJS.setCameraPos(vec2(20,10));
+    LJS.setGravity(vec2(0,-20));
+
+    // destroy old scene
+    LJS.engineObjectsDestroy();
+    mouseJoint = 0;
+    car = 0;
+    
+    // create walls
+    groundObject = GameObjects.spawnBox(vec2(0,-4), vec2(1e3,8), hsl(0,0,.2), LJS.box2d.bodyTypeStatic);
+    GameObjects.spawnBox(vec2(-4, 0), vec2(8,1e3), LJS.BLACK, LJS.box2d.bodyTypeStatic);
+    GameObjects.spawnBox(vec2(44, 0), vec2(8,1e3), LJS.BLACK, LJS.box2d.bodyTypeStatic);
+    GameObjects.spawnBox(vec2(0,100), vec2(1e3,8), LJS.BLACK, LJS.box2d.bodyTypeStatic);
+
+    // load the scene
+    Scenes.loadScene(scene);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
     // create a table of all sprites
-    const gameTile = (i)=>  tile(i, 16, 0, 1);
+    const gameTile = (i)=> LJS.tile(i, 16, 0, 1);
     spriteAtlas =
     {
         circle:         gameTile(0),
@@ -39,64 +71,64 @@ function gameInit()
         squareOutline2: gameTile(6),
     };
 
-    loadScene(scene);
+    setScene(scene);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameUpdate()
 {
     // scale canvas to fit based on 1080p
-    cameraScale = mainCanvasSize.y * 48 / 1080;
+    LJS.setCameraScale(LJS.mainCanvasSize.y * 48 / 1080);
 
     // mouse controls
-    if (mouseWasPressed(0))
+    if (LJS.mouseWasPressed(0))
     {
         // grab object
-        sound_click.play(mousePos);
-        const object = box2d.pointCast(mousePos);
+        sound_click.play(LJS.mousePos);
+        const object = LJS.box2d.pointCast(LJS.mousePos);
         if (object)
-            mouseJoint = new Box2dTargetJoint(object, groundObject, mousePos);
+            mouseJoint = new LJS.Box2dTargetJoint(object, groundObject, LJS.mousePos);
     }
-    if (mouseWasReleased(0))
+    if (LJS.mouseWasReleased(0))
     {
         // release object
-        sound_click.play(mousePos, 1, .5);
+        sound_click.play(LJS.mousePos, 1, .5);
         if (mouseJoint)
         {
             mouseJoint.destroy();
             mouseJoint = 0;
         }
     }
-    if (mouseIsDown(1) || mouseIsDown('KeyZ'))
+    if (LJS.mouseIsDown(1) || LJS.mouseIsDown('KeyZ'))
     {
         const isSet = repeatSpawnTimer.isSet();
         if (!isSet || repeatSpawnTimer.elapsed())
         {
             // spawn continuously after a delay
             isSet || repeatSpawnTimer.set(.5);
-            spawnRandomObject(mousePos);
+            GameObjects.spawnRandomObject(LJS.mousePos);
         }
     }
     else
         repeatSpawnTimer.unset();
-    if (mouseWasPressed(2) || keyWasPressed('KeyX'))
-        explosion(mousePos);
+    if (LJS.mouseWasPressed(2) || LJS.keyWasPressed('KeyX'))
+        GameObjects.explosion(LJS.mousePos);
     if (mouseJoint)
-        mouseJoint.setTarget(mousePos);
+        mouseJoint.setTarget(LJS.mousePos);
 
-    if (keyWasPressed('KeyR'))
-        loadScene(scene); // reset scene
-    if (keyWasPressed('ArrowUp') || keyWasPressed('ArrowDown'))
+    if (LJS.keyWasPressed('KeyR'))
+        setScene(scene); // reset scene
+    if (LJS.keyWasPressed('ArrowUp') || LJS.keyWasPressed('ArrowDown'))
     {
         // change scene
-        scene += keyWasPressed('ArrowUp') ? 1 : -1;
-        scene = mod(scene, maxScenes);
-        loadScene(scene);
+        scene += LJS.keyWasPressed('ArrowUp') ? 1 : -1;
+        scene = LJS.mod(scene, maxScenes);
+        setScene(scene);
     }
     if (car)
     {
         // update car controls
-        const input = keyDirection();
+        const input = LJS.keyDirection();
         car.applyMotorInput(-input.x);
     }
 }
@@ -111,7 +143,7 @@ function gameUpdatePost()
 function gameRender()
 {
     // draw a grey square in the background without using webgl
-    drawRect(vec2(20,8), vec2(100), hsl(0,0,.8), 0, 0);
+    LJS.drawRect(vec2(20,8), vec2(100), hsl(0,0,.8), 0, 0);
 
     if (scene == 5)
     {
@@ -120,11 +152,11 @@ function gameRender()
         const distance = 10;
         for (let i=count;i--;)
         {
-            const start = mousePos;
-            const end = mousePos.add(vec2(distance,0).rotate(i/count*PI*2));
-            const result = box2d.raycast(start, end);
+            const start = LJS.mousePos;
+            const end = start.add(vec2(distance,0).rotate(i/count*LJS.PI*2));
+            const result = LJS.box2d.raycast(start, end);
             const color = result ? hsl(0,1,.5,.5) : hsl(.5,1,.5,.5);
-            drawLine(start, result ? result.point : end, .1, color);
+            LJS.drawLine(start, result ? result.point : end, .1, color);
         }
     }
 }
@@ -136,12 +168,12 @@ function gameRenderPost()
     {
         // draw mouse joint
         const ab = mouseJoint.getAnchorB();
-        drawTile(ab, vec2(.3), spriteAtlas.circle, BLACK);
-        drawLine(mousePos, ab, .1, BLACK);
+        LJS.drawTile(ab, vec2(.3), spriteAtlas.circle, LJS.BLACK);
+        LJS.drawLine(LJS.mousePos, ab, .1, LJS.BLACK);
     }
 
     // draw to overlay canvas for hud rendering
-    const pos = vec2(mainCanvasSize.x/2, 50);
+    const pos = vec2(LJS.mainCanvasSize.x/2, 50);
     drawText('LittleJS Box2D Demo', 80, 80);
     drawText(sceneName, 60, 100);
     if (scene == 0)
@@ -158,10 +190,24 @@ function gameRenderPost()
     }
 
     function drawText(text, size=40, gap=50)
-    { drawTextScreen(text, pos, size, WHITE, size*.1); pos.y += gap; }
+    { LJS.drawTextScreen(text, pos, size, LJS.WHITE, size*.1); pos.y += gap; }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Exports
+
+function setSceneName(name) { sceneName = name; }
+function setCarObject(carObject) { car = carObject; }
+
+export
+{
+    spriteAtlas,
+    groundObject,
+    setSceneName,
+    setCarObject
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Startup LittleJS Engine with Box2D
 
-box2dEngineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);
+LJS.box2dEngineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);

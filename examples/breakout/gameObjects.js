@@ -4,19 +4,12 @@
 
 'use strict';
 
-// import module
+// import LittleJS module
 import * as LJS from '../../dist/littlejs.esm.js';
 const {tile, vec2, hsl} = LJS;
 
-///////////////////////////////////////////////////////////////////////////////
-// track score and number of bricks left
-let score, brickCount, levelSize;
-function reset(_levelSize)
-{
-    levelSize = _levelSize;
-    score = brickCount = 0; 
-}
-export { score, brickCount, reset };
+// import game module
+import * as Game from './game.js';
 
 ///////////////////////////////////////////////////////////////////////////////
 // sound effects
@@ -58,7 +51,7 @@ export class Paddle extends PhysicsObject
         this.pos.x = LJS.isUsingGamepad ? this.pos.x + LJS.gamepadStick(0).x : LJS.mousePos.x;
 
         // keep paddle in bounds of level
-        this.pos.x = LJS.clamp(this.pos.x, this.size.x/2, levelSize.x - this.size.x/2);
+        this.pos.x = LJS.clamp(this.pos.x, this.size.x/2, Game.levelSize.x - this.size.x/2);
     }
 }
 
@@ -68,15 +61,14 @@ export class Brick extends PhysicsObject
     constructor(pos)
     {
         super(pos, vec2(2,1), tile(1, vec2(32,16)), 0, LJS.randColor());
-        ++brickCount;
+        Game.changeBrickCount(1);
     }
 
     collideWithObject(o)              
     {
         // destroy brick when hit with ball
         this.destroy();
-        ++score;
-        --brickCount;
+        Game.changeBrickCount(-1);
         sound_break.play(this.pos);
 
         // make explosion effect

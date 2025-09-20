@@ -6,6 +6,9 @@
 
 'use strict';
 
+// import LittleJS module
+import * as LJS from '../../dist/littlejs.esm.js';
+
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
@@ -39,9 +42,9 @@ function gameRenderPost()
 {
     // called after objects are rendered
     // draw effects or hud that appear above all objects
-    drawTextScreen('Hello World!', mainCanvasSize.scale(.5), 80);
+    LJS.drawTextScreen('Hello World!', LJS.mainCanvasSize.scale(.5), 80);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Startup LittleJS Engine
-engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);
+LJS.engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);

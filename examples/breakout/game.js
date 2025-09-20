@@ -8,20 +8,23 @@
 
 'use strict';
 
-// import module
+// import LittleJS module
 import * as LJS from '../../dist/littlejs.esm.js';
 import * as GameObjects from './gameObjects.js';
 const {vec2, hsl} = LJS;
 
-let ball, paddle;
-const levelSize = vec2(38, 20);
+///////////////////////////////////////////////////////////////////////////////
+// game objects
+let ball, score, brickCount, paddle;
+export const levelSize = vec2(38, 20);
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameReset()
 {
     // reset game objects
     LJS.engineObjectsDestroy();
-    GameObjects.reset(levelSize);
+    score = 0;
+    brickCount = 0;
 
     // spawn bricks
     const pos = vec2();
@@ -92,8 +95,8 @@ function gameRenderPost()
 {
     // use built in image font for text
     const font = new LJS.FontImage;
-    font.drawText('Score: ' + GameObjects.score, LJS.cameraPos.add(vec2(0,10)), .15, true);
-    if (!GameObjects.brickCount)
+    font.drawText('Score: ' + score, LJS.cameraPos.add(vec2(0,10)), .15, true);
+    if (!brickCount)
         font.drawText('You Win!', LJS.cameraPos.add(vec2(0,-5)), .2, true);
     else if (!ball)
         font.drawText('Click to Play', LJS.cameraPos.add(vec2(0,-5)), .2, true);
@@ -152,6 +155,18 @@ function setupPostProcess()
 
     const includeOverlay = true;
     new LJS.PostProcessPlugin(televisionShader, includeOverlay);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Exports
+
+export function changeBrickCount(delta)
+{
+    brickCount += delta;
+    
+    // increase score when brick is destroyed
+    if (delta < 0)
+        score -= delta;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -27,7 +27,6 @@
     visibility: hidden;
 }
 </style>
-
 </head><body>
 
 <!-- setup html menu system -->
@@ -35,13 +34,12 @@
 <div id="menu" class="menuDiv">
 <b style="font-size:50px">Test Menu</b>
 This is an example menu using html elements.
-<input value="Test Input" onchange="alert('New text: ' + this.value)">
-<input type="range" onchange="alert('New value: ' + this.value)">
-<button onclick="alert('Button was clicked!')">Test Button</button>
-<button onclick="setMenuVisible(false)">Exit Menu</button>
+<input id="input_test" value="Test Input">
+<input id="input_rangeTest" type="range">
+<button id="button_test">Test Button</button>
+<button id="button_exitMenu">Exit Menu</button>
 </div>
 </div>
 
 <!-- Add your game scripts here -->
-<script src=../../dist/littlejs.js?1120></script>
-<script src=game.js?1120></script>
+<script src=game.js type=module></script>

@@ -8,8 +8,12 @@
 
 'use strict';
 
+// import LittleJS module
+import * as LJS from '../../dist/littlejs.esm.js';
+const {vec2, hsl, tile} = LJS;
+
 // sound effects
-const sound_click = new Sound([1,.5]);
+const sound_click = new LJS.Sound([1,.5]);
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -18,12 +22,17 @@ const getMenuVisible = ()=> menu.style.visibility != 'hidden';
 function setMenuVisible(visible)
 {
     menu.style.visibility = visible ? 'visible' : 'hidden';
-    setInputPreventDefault(!visible); // don't prevent default when menu is visible
+    LJS.setInputPreventDefault(!visible); // don't prevent default when menu is visible
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
+    button_test.onclick = function() { alert('Button was clicked!'); }
+    button_exitMenu.onclick = function() { setMenuVisible(false); }
+    input_test.onchange = function() { alert('New text: ' + this.value); }
+    input_rangeTest.onchange = function() { alert('New value: ' + this.value); }
+
     // show menu for demo
     setMenuVisible(true);
 }
@@ -32,31 +41,31 @@ function gameInit()
 function gameUpdate()
 {
     // play sound when mouse is pressed
-    if (mouseWasPressed(0))
-        sound_click.play(mousePos);
+    if (LJS.mouseWasPressed(0))
+        sound_click.play(LJS.mousePos);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameUpdatePost()
 {
-    // pause game when menu is visible
-    const menuVisible = getMenuVisible();
-    paused = menuVisible;
-
     // open menu visibility
-    if (keyWasPressed('KeyM'))
+    if (LJS.keyWasPressed('KeyM'))
         setMenuVisible(true);
+
+    // pause game when menu is visible
+    LJS.setPaused(getMenuVisible());
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameRender()
 {
     // test game rendering
-    drawRect(vec2(), vec2(1e3), hsl(0,0,.2));
+    LJS.drawRect(vec2(), vec2(1e3), hsl(0,0,.2));
     for(let i=0; i<1e3; ++i)
     {
+        const time = LJS.time;
         const pos = vec2(30*Math.sin(i+time/9),20*Math.sin(i*i+time/9));
-        drawTile(pos, vec2(2), tile(3,128), hsl(i/9,1,.4), time+i, !(i%2), hsl(i/9,1,.1,0));
+        LJS.drawTile(pos, vec2(2), tile(3,128), hsl(i/9,1,.4), time+i, !(i%2), hsl(i/9,1,.1,0));
     }
 }
 
@@ -64,11 +73,11 @@ function gameRender()
 function gameRenderPost()
 {
     // draw to overlay canvas for hud rendering
-    drawTextScreen('LittleJS HTML Menu Example\nM = Open menu', 
-        vec2(mainCanvasSize.x/2, 70), 60,   // position, size
-        hsl(0,0,1), 6, hsl(0,0,0));         // color, outline size and color
+    LJS.drawTextScreen('LittleJS HTML Menu Example\nM = Open menu', 
+        vec2(LJS.mainCanvasSize.x/2, 70), 60, // position, size
+        hsl(0,0,1), 6, hsl(0,0,0));           // color, outline size and color
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Startup LittleJS Engine
-engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);
+LJS.engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);

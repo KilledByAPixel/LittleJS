@@ -1,33 +1,32 @@
 #!/usr/bin/env node
 
-/** 
- * LittleJS Build System
- */
-
-'use strict';
-
 const PROGRAM_NAME = 'game';
 const BUILD_FOLDER = 'build';
 const ROOT_FOLDER = 'examples/typescript';
-const sourceFiles =
-[
-    'game.js',
-    // add your game's scripts here
+
+// Define TypeScript source files
+const tsSourceFiles = [
+    'game.ts',
+    // add your TypeScript files here
 ];
+
+// Corresponding JS output files
+const jsSourceFiles = tsSourceFiles.map(file => file.replace('.ts', '.js'));
 
 console.log(`Building TypeScript for ${PROGRAM_NAME}...`);
 const startTime = Date.now();
 const fs = require('node:fs');
 const child_process = require('node:child_process');
 
-console.log(`Removing old build filder...`);
+console.log(`Removing old build folder...`);
 fs.rmSync(BUILD_FOLDER, { recursive: true, force: true });
 
 console.log(`Compiling TypeScript...`);
-child_process.execSync(`npx tsc --outDir "./${BUILD_FOLDER}"`, {stdio: 'inherit'});
-
-console.log(`Moving js files to root...`);
-for(const file of sourceFiles)
-    fs.copyFileSync(`${BUILD_FOLDER}/${ROOT_FOLDER}/${file}`, `${file}`);
-
+// Compile all TypeScript files at once
+const tsFiles = tsSourceFiles.join(' ');
+child_process.execSync(`npx tsc ${tsFiles} --outDir "./${BUILD_FOLDER}" --target es2020 --module es2020`, {stdio: 'inherit'});
 console.log(`TypeScript built in ${((Date.now() - startTime)/1e3).toFixed(2)} seconds!`);
+
+console.log(`Moving js files back to root...`);
+for(const file of jsSourceFiles)
+    fs.copyFileSync(`${BUILD_FOLDER}/${file}`, file);
