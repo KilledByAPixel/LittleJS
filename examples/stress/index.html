@@ -20,7 +20,7 @@
 'use strict';
 
 // keep our own list of simple sprites and track fps
-let sprites, timeMS, fpsDisplay, statsDisplay, spriteColor, spriteAdditiveColor;
+let sprites, tileLayer, timeMS, fpsDisplay, statsDisplay, spriteColor, spriteAdditiveColor;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -37,21 +37,18 @@ class TestObject extends EngineObject
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
-    // create tile collision
-    const w = 94;
-    initTileCollision(vec2(w,w*.5625|0));
-    for (let x = tileCollisionSize.x; x--;)
-        setTileCollisionData(vec2(x,0), 1), setTileCollisionData(vec2(x,tileCollisionSize.y-1), 1);
-    for (let y = tileCollisionSize.y; y--;)
-        setTileCollisionData(vec2(0,y), 1), setTileCollisionData(vec2(tileCollisionSize.x-1,y), 1);
+    // create tile collision ground for objects to collide with
+    tileLayer = new TileCollisionLayer(vec2(), vec2(99,55));
+    for (let x = tileLayer.size.x; x--;)
+        tileLayer.setCollisionData(vec2(x,0));
 
     // set things up
     canvasFixedSize = vec2(1920, 1080); // 1080p
     cameraScale = 20;
-    cameraPos = tileCollisionSize.scale(.5);
+    cameraPos = tileLayer.size.scale(.5);
     mainCanvas.style.background = '#555';
     sprites = [];
-    gravity = -.005;
+    gravity.y = -.005;
 
     // display stats using a div so when using glOverlay it still appears on top
     document.body.appendChild(statsDisplay = document.createElement('div'));
@@ -127,15 +124,15 @@ function gameRender()
 
         // apply velocity and gravity
         sprite.pos.x += sprite.velocity.x;
-        sprite.pos.y += sprite.velocity.y += gravity;
+        sprite.pos.y += sprite.velocity.y += gravity.y;
 
         // bounce
         if (sprite.pos.y < 0)
             sprite.velocity.y = rand(.3,.8);
         if (sprite.pos.x < 0)
             sprite.pos.x = 0, sprite.velocity.x *= -1;
-        if (sprite.pos.x > tileCollisionSize.x)
-            sprite.pos.x = tileCollisionSize.x, sprite.velocity.x *= -1;
+        if (sprite.pos.x > tileLayer.size.x)
+            sprite.pos.x = tileLayer.size.x, sprite.velocity.x *= -1;
 
         // rotate sprite
         sprite.angle += .02*sign(sprite.velocity.x);
