@@ -2153,18 +2153,18 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
             const y = tileInfo.pos.y * sizeInverse.y;
             const w = tileInfo.size.x * sizeInverse.x;
             const h = tileInfo.size.y * sizeInverse.y;
+            glSetTexture(textureInfo.glTexture);
             if (tileFixBleedScale)
             {
-                const tileImageFixBleed = sizeInverse.scale(tileFixBleedScale);
-                glSetTexture(textureInfo.glTexture);
+                const tileImageFixBleedX = sizeInverse.x*tileFixBleedScale;
+                const tileImageFixBleedY = sizeInverse.y*tileFixBleedScale;
                 glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
-                    x + tileImageFixBleed.x,     y + tileImageFixBleed.y, 
-                    x - tileImageFixBleed.x + w, y - tileImageFixBleed.y + h, 
+                    x + tileImageFixBleedX,     y + tileImageFixBleedY, 
+                    x - tileImageFixBleedX + w, y - tileImageFixBleedY + h, 
                     color.rgbaInt(), additiveColor && additiveColor.rgbaInt()); 
             }
             else
             {
-                glSetTexture(textureInfo.glTexture);
                 glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
                     x, y, x + w, y + h, 
                     color.rgbaInt(), additiveColor && additiveColor.rgbaInt()); 
@@ -2458,7 +2458,10 @@ class FontImage
     {
         // load default font image
         if (!engineFontImage)
-            (engineFontImage = new Image).src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAAYAQAAAAA9+x6JAAAAAnRSTlMAAHaTzTgAAAGiSURBVHjaZZABhxxBEIUf6ECLBdFY+Q0PMNgf0yCgsSAGZcT9sgIPtBWwIA5wgAPEoHUyJeeSlW+gjK+fegWwtROWpVQEyWh2npdpBmTUFVhb29RINgLIukoXr5LIAvYQ5ve+1FqWEMqNKTX3FAJHyQDRZvmKWubAACcv5z5Gtg2oyCWE+Yk/8JZQX1jTTCpKAFGIgza+dJCNBF2UskRlsgwitHbSV0QLgt9sTPtsRlvJjEr8C/FARWA2bJ/TtJ7lko34dNDn6usJUMzuErP89UUBJbWeozrwLLncXczd508deAjLWipLO4Q5XGPcJvPu92cNDaN0P5G1FL0nSOzddZOrJ6rNhbXGmeDvO3TF7DeJWl4bvaYQTNHCTeuqKZmbjHaSOFes+IX/+IhHrnAkXOAsfn24EM68XieIECoccD4KZLk/odiwzeo2rovYdhvb2HYFgyznJyDpYJdYOmfXgVdJTaUi4xA2uWYNYec9BLeqdl9EsoTw582mSFDX2DxVLbNt9U3YYoeatBad1c2Tj8t2akrjaIGJNywKB/7h75/gN3vCMSaadIUTAAAAAElFTkSuQmCC';
+        {
+            engineFontImage = new Image;
+            engineFontImage.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAAYAQAAAAA9+x6JAAAAAnRSTlMAAHaTzTgAAAGiSURBVHjaZZABhxxBEIUf6ECLBdFY+Q0PMNgf0yCgsSAGZcT9sgIPtBWwIA5wgAPEoHUyJeeSlW+gjK+fegWwtROWpVQEyWh2npdpBmTUFVhb29RINgLIukoXr5LIAvYQ5ve+1FqWEMqNKTX3FAJHyQDRZvmKWubAACcv5z5Gtg2oyCWE+Yk/8JZQX1jTTCpKAFGIgza+dJCNBF2UskRlsgwitHbSV0QLgt9sTPtsRlvJjEr8C/FARWA2bJ/TtJ7lko34dNDn6usJUMzuErP89UUBJbWeozrwLLncXczd508deAjLWipLO4Q5XGPcJvPu92cNDaN0P5G1FL0nSOzddZOrJ6rNhbXGmeDvO3TF7DeJWl4bvaYQTNHCTeuqKZmbjHaSOFes+IX/+IhHrnAkXOAsfn24EM68XieIECoccD4KZLk/odiwzeo2rovYdhvb2HYFgyznJyDpYJdYOmfXgVdJTaUi4xA2uWYNYec9BLeqdl9EsoTw582mSFDX2DxVLbNt9U3YYoeatBad1c2Tj8t2akrjaIGJNywKB/7h75/gN3vCMSaadIUTAAAAAElFTkSuQmCC';
+        }
 
         this.image = image || engineFontImage;
         this.tileSize = tileSize;
@@ -4795,7 +4798,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.16';
+const engineVersion = '1.11.17';
 
 /** Frames per second to update
  *  @type {number}
@@ -4883,16 +4886,11 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     ASSERT(Array.isArray(imageSources), 'pass in images as array');
 
     // allow passing in empty functions
-    if (!gameInit)
-        gameInit = ()=>{};
-    if (!gameUpdate)
-        gameUpdate = ()=>{};
-    if (!gameUpdatePost)
-        gameUpdatePost = ()=>{};
-    if (!gameRender)
-        gameRender = ()=>{};
-    if (!gameRenderPost)
-        gameRenderPost = ()=>{};
+    gameInit       ||= ()=>{};
+    gameUpdate     ||= ()=>{};
+    gameUpdatePost ||= ()=>{};
+    gameRender     ||= ()=>{};
+    gameRenderPost ||= ()=>{};
 
     // Called automatically by engine to setup render system
     function enginePreRender()

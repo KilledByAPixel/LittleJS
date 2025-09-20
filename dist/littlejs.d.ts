@@ -2330,4 +2330,1230 @@ declare module "littlejsengine" {
         renderIcon(pos: Vector2, size: number): void;
         storageKey(): string;
     }
+    /** Global Newgrounds object
+     *  @type {NewgroundsPlugin}
+     *  @memberof Medal */
+    export let newgrounds: NewgroundsPlugin;
+    /**
+     * Newgrounds API object
+     */
+    export class NewgroundsPlugin {
+        /** Create the global newgrounds object
+         *  @param {string} app_id     - The newgrounds App ID
+         *  @param {string} [cipher]   - The encryption Key (AES-128/Base64)
+         *  @param {Object} [cryptoJS] - An instance of CryptoJS, if there is a cipher
+         *  @example
+         *  // create the newgrounds object, replace the app id with your own
+         *  const app_id = 'your_app_id_here';
+         *  new NewgroundsPlugin(app_id);
+         */
+        constructor(app_id: string, cipher?: string, cryptoJS?: any);
+        app_id: string;
+        cipher: string;
+        cryptoJS: any;
+        host: string;
+        session_id: string;
+        medals: any;
+        scoreboards: any;
+        /** Send message to unlock a medal by id
+         * @param {number} id - The medal id */
+        unlockMedal(id: number): any;
+        /** Send message to post score
+         * @param {number} id    - The scoreboard id
+         * @param {number} value - The score value */
+        postScore(id: number, value: number): any;
+        /** Get scores from a scoreboard
+         * @param {number} id       - The scoreboard id
+         * @param {string} [user]   - A user's id or name
+         * @param {number} [social] - If true, only social scores will be loaded
+         * @param {number} [skip]   - Number of scores to skip before start
+         * @param {number} [limit]  - Number of scores to include in the list
+         * @return {Object}         - The response JSON object
+         */
+        getScores(id: number, user?: string, social?: number, skip?: number, limit?: number): any;
+        /** Send message to log a view */
+        logView(): any;
+        /** Send a message to call a component of the Newgrounds API
+         * @param {string}  component    - Name of the component
+         * @param {Object}  [parameters] - Parameters to use for call
+         * @param {boolean} [async]      - If true, don't wait for response before continuing
+         * @return {Object}              - The response JSON object
+         */
+        call(component: string, parameters?: any, async?: boolean): any;
+    }
+    /**
+     * Newgrounds medal auto unlocks in newgrounds API
+     * @extends Medal
+     */
+    export class NewgroundsMedal extends Medal {
+    }
+    /** Global Post Process plugin object
+     *  @type {PostProcessPlugin} */
+    export let postProcess: PostProcessPlugin;
+    /**
+     * UI System Global Object
+     */
+    export class PostProcessPlugin {
+        /** Create global post processing shader
+        *  @param {string} shaderCode
+        *  @param {boolean} [includeOverlay]
+         *  @example
+         *  // create the post process plugin object
+         *  new PostProcessPlugin(shaderCode);
+         */
+        constructor(shaderCode: string, includeOverlay?: boolean);
+        /** @property {WebGLProgram} - Shader for post processing */
+        shader: WebGLProgram;
+        /** @property {WebGLTexture} - Texture for post processing */
+        texture: WebGLTexture;
+        /** @property {boolean} - Should overlay canvas be included in post processing */
+        includeOverlay: boolean;
+    }
+    /**
+     * Music Object - Stores a zzfx music track for later use
+     *
+     * <a href=https://keithclark.github.io/ZzFXM/>Create music with the ZzFXM tracker.</a>
+     * @example
+     * // create some music
+     * const music_example = new Music(
+     * [
+     *     [                         // instruments
+     *       [,0,400]                // simple note
+     *     ],
+     *     [                         // patterns
+     *         [                     // pattern 1
+     *             [                 // channel 0
+     *                 0, -1,        // instrument 0, left speaker
+     *                 1, 0, 9, 1    // channel notes
+     *             ],
+     *             [                 // channel 1
+     *                 0, 1,         // instrument 0, right speaker
+     *                 0, 12, 17, -1 // channel notes
+     *             ]
+     *         ],
+     *     ],
+     *     [0, 0, 0, 0], // sequence, play pattern 0 four times
+     *     90            // BPM
+     * ]);
+     *
+     * // play the music
+     * music_example.play();
+     */
+    export class ZzFXMusic extends Sound {
+        /** Create a music object and cache the zzfx music samples for later use
+         *  @param {[Array, Array, Array, number]} zzfxMusic - Array of zzfx music parameters
+         */
+        constructor(zzfxMusic: [any[], any[], any[], number]);
+        sampleChannels: any[];
+        /** Play the music
+         *  @param {number}  [volume=1] - How much to scale volume by
+         *  @param {boolean} [loop] - True if the music should loop
+         *  @return {AudioBufferSourceNode} - The audio source node
+         */
+        playMusic(volume?: number, loop?: boolean): AudioBufferSourceNode;
+    }
+    /** Global UI system plugin object
+     *  @type {UISystemPlugin} */
+    export let uiSystem: UISystemPlugin;
+    /**
+     * UI System Global Object
+     */
+    export class UISystemPlugin {
+        /** Create the global UI system object
+         *  @param {CanvasRenderingContext2D} [context]
+         *  @example
+         *  // create the ui plugin object
+         *  new UISystemPlugin;
+         */
+        constructor(context?: CanvasRenderingContext2D);
+        /** @property {Color} - Default fill color for UI elements */
+        defaultColor: Color;
+        /** @property {Color} - Default outline color for UI elements */
+        defaultLineColor: Color;
+        /** @property {Color} - Default text color for UI elements */
+        defaultTextColor: Color;
+        /** @property {Color} - Default button color for UI elements */
+        defaultButtonColor: Color;
+        /** @property {Color} - Default hover color for UI elements */
+        defaultHoverColor: Color;
+        /** @property {number} - Default line width for UI elements */
+        defaultLineWidth: number;
+        /** @property {string} - Default font for UI elements */
+        defaultFont: string;
+        /** @property {Array<UIObject>} - List of all UI elements */
+        uiObjects: any[];
+        /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - Context to render UI elements to */
+        uiContext: CanvasRenderingContext2D;
+        /** Draw a rectangle to the UI context
+        *  @param {Vector2} pos
+        *  @param {Vector2} size
+        *  @param {Color}   [color=uiSystem.defaultColor]
+        *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
+        *  @param {Color}   [lineColor=uiSystem.defaultLineColor] */
+        drawRect(pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color): void;
+        /** Draw a line to the UI context
+        *  @param {Vector2} posA
+        *  @param {Vector2} posB
+        *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
+        *  @param {Color}   [lineColor=uiSystem.defaultLineColor] */
+        drawLine(posA: Vector2, posB: Vector2, lineWidth?: number, lineColor?: Color): void;
+        /** Draw a tile to the UI context
+        *  @param {Vector2}  pos
+        *  @param {Vector2}  size
+        *  @param {TileInfo} tileInfo
+        *  @param {Color}    [color=uiSystem.defaultColor]
+        *  @param {number}   [angle]
+        *  @param {boolean}  [mirror] */
+        drawTile(pos: Vector2, size: Vector2, tileInfo: TileInfo, color?: Color, angle?: number, mirror?: boolean): void;
+        /** Draw text to the UI context
+        *  @param {string}  text
+        *  @param {Vector2} pos
+        *  @param {Vector2} size
+        *  @param {Color}   [color=uiSystem.defaultColor]
+        *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
+        *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
+        *  @param {string}  [align]
+        *  @param {string}  [font=uiSystem.defaultFont] */
+        drawText(text: string, pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, align?: string, font?: string): void;
+    }
+    /**
+     * UI Object - Base level object for all UI elements
+     */
+    export class UIObject {
+        /** Create a UIObject
+         *  @param {Vector2}  [pos=(0,0)]
+         *  @param {Vector2}  [size=(1,1)]
+         */
+        constructor(pos?: Vector2, size?: Vector2);
+        /** @property {Vector2} - Local position of the object */
+        localPos: Vector2;
+        /** @property {Vector2} - Screen space position of the object */
+        pos: Vector2;
+        /** @property {Vector2} - Screen space size of the object */
+        size: Vector2;
+        /** @property {Color} */
+        color: Color;
+        /** @property {Color} */
+        lineColor: Color;
+        /** @property {Color} */
+        textColor: Color;
+        /** @property {Color} */
+        hoverColor: Color;
+        /** @property {number} */
+        lineWidth: number;
+        /** @property {string} */
+        font: string;
+        /** @property {boolean} */
+        visible: boolean;
+        /** @property {Array<UIObject>} */
+        children: any[];
+        /** @property {UIObject} */
+        parent: any;
+        /** Add a child UIObject to this object
+         *  @param {UIObject} child
+         */
+        addChild(child: UIObject): void;
+        /** Remove a child UIObject from this object
+         *  @param {UIObject} child
+         */
+        removeChild(child: UIObject): void;
+        /** Update the object, called automatically by plugin once each frame */
+        update(): void;
+        mouseIsOver: boolean;
+        mouseIsHeld: boolean;
+        /** Render the object, called automatically by plugin once each frame */
+        render(): void;
+        /** Called when the mouse enters the object */
+        onEnter(): void;
+        /** Called when the mouse leaves the object */
+        onLeave(): void;
+        /** Called when the mouse is pressed while over the object */
+        onPress(): void;
+        /** Called when the mouse is released while over the object */
+        onRelease(): void;
+        /** Called when the state of this object changes */
+        onChange(): void;
+    }
+    /**
+     * UIText - A UI object that displays text
+     * @extends UIObject
+     */
+    export class UIText extends UIObject {
+        /** Create a UIText object
+         *  @param {Vector2} [pos]
+         *  @param {Vector2} [size]
+         *  @param {string}  [text]
+         *  @param {string}  [align]
+         *  @param {string}  [font=uiSystem.defaultFont]
+         */
+        constructor(pos?: Vector2, size?: Vector2, text?: string, align?: string, font?: string);
+        /** @property {string} */
+        text: string;
+        /** @property {string} */
+        align: string;
+    }
+    /**
+     * UITile - A UI object that displays a tile image
+     * @extends UIObject
+     */
+    export class UITile extends UIObject {
+        /** Create a UITile object
+         *  @param {Vector2}  [pos]
+         *  @param {Vector2}  [size]
+         *  @param {TileInfo} [tileInfo]
+         *  @param {Color}    [color=WHITE]
+         *  @param {number}   [angle]
+         *  @param {boolean}  [mirror]
+         */
+        constructor(pos?: Vector2, size?: Vector2, tileInfo?: TileInfo, color?: Color, angle?: number, mirror?: boolean);
+        /** @property {TileInfo} - Tile image to use */
+        tileInfo: TileInfo;
+        /** @property {number} - Angle to rotate in radians */
+        angle: number;
+        /** @property {boolean} - Should it be mirrored? */
+        mirror: boolean;
+    }
+    /**
+     * UIButton - A UI object that acts as a button
+     * @extends UIObject
+     */
+    export class UIButton extends UIObject {
+        /** Create a UIButton object
+         *  @param {Vector2} [pos]
+         *  @param {Vector2} [size]
+         *  @param {string}  [text]
+         *  @param {Color}   [color=uiSystem.defaultButtonColor]
+         */
+        constructor(pos?: Vector2, size?: Vector2, text?: string, color?: Color);
+        /** @property {string} */
+        text: string;
+    }
+    /**
+     * UICheckbox - A UI object that acts as a checkbox
+     * @extends UIObject
+     */
+    export class UICheckbox extends UIObject {
+        /** Create a UICheckbox object
+         *  @param {Vector2} [pos]
+         *  @param {Vector2} [size]
+         *  @param {boolean} [checked]
+         */
+        constructor(pos?: Vector2, size?: Vector2, checked?: boolean);
+        /** @property {boolean} */
+        checked: boolean;
+    }
+    /**
+     * UIScrollbar - A UI object that acts as a scrollbar
+     * @extends UIObject
+     */
+    export class UIScrollbar extends UIObject {
+        /** Create a UIScrollbar object
+         *  @param {Vector2} [pos]
+         *  @param {Vector2} [size]
+         *  @param {number}  [value]
+         *  @param {string}  [text]
+         *  @param {Color}   [color=uiSystem.defaultButtonColor]
+         *  @param {Color}   [handleColor=WHITE]
+         */
+        constructor(pos?: Vector2, size?: Vector2, value?: number, text?: string, color?: Color, handleColor?: Color);
+        /** @property {number} */
+        value: number;
+        /** @property {string} */
+        text: string;
+        handleColor: Color;
+    }
+    /** Global Box2d Plugin object
+     *  @type {Box2dPlugin} */
+    export let box2d: Box2dPlugin;
+    /** Enable Box2D debug drawing
+     *  @type {boolean}
+     *  @default */
+    export let box2dDebug: boolean;
+    /** Box2d Init - Startup LittleJS engine with your callback functions
+     *  @param {Function|function():Promise} gameInit - Called once after the engine starts up
+     *  @param {Function} gameUpdate - Called every frame before objects are updated
+     *  @param {Function} gameUpdatePost - Called after physics and objects are updated, even when paused
+     *  @param {Function} gameRender - Called before objects are rendered, for drawing the background
+     *  @param {Function} gameRenderPost - Called after objects are rendered, useful for drawing UI
+     *  @param {Array<string>} [imageSources=[]] - List of images to load
+     *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default */
+    export function box2dEngineInit(gameInit: Function | (() => Promise<any>), gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, imageSources?: Array<string>, rootElement?: HTMLElement): void;
+    /**
+     * Box2D Global Object
+     * - Wraps Box2d world and provides global functions
+     */
+    export class Box2dPlugin {
+        /** Create the global UI system object
+         *  @param {Object} instance */
+        constructor(instance: any);
+        instance: any;
+        world: any;
+        /** @property {number} - Velocity iterations per update*/
+        velocityIterations: number;
+        /** @property {number} - Position iterations per update*/
+        positionIterations: number;
+        /** @property {number} - Static, zero mass, zero velocity, may be manually moved */
+        bodyTypeStatic: any;
+        /** @property {number} - Kinematic, zero mass, non-zero velocity set by user, moved by solver */
+        bodyTypeKinematic: any;
+        /** @property {number} - Dynamic, positive mass, non-zero velocity determined by forces, moved by solver */
+        bodyTypeDynamic: any;
+        /** Step the physics world simulation
+         *  @param {number} [frames] */
+        step(frames?: number): void;
+        /** raycast and return a list of all the results
+         *  @param {Vector2} start
+         *  @param {Vector2} end */
+        raycastAll(start: Vector2, end: Vector2): any[];
+        /** raycast and return the first result
+         *  @param {Vector2} start
+         *  @param {Vector2} end */
+        raycast(start: Vector2, end: Vector2): any;
+        /** box aabb cast and return all the objects
+         *  @param {Vector2} pos
+         *  @param {Vector2} size */
+        boxCastAll(pos: Vector2, size: Vector2): any[];
+        /** box aabb cast and return the first object
+         *  @param {Vector2} pos
+         *  @param {Vector2} size */
+        boxCast(pos: Vector2, size: Vector2): undefined;
+        /** circle cast and return all the objects
+         *  @param {Vector2} pos
+         *  @param {number} diameter */
+        circleCastAll(pos: Vector2, diameter: number): any[];
+        /** circle cast and return the first object
+         *  @param {Vector2} pos
+         *  @param {number} diameter */
+        circleCast(pos: Vector2, diameter: number): any;
+        /** point cast and return the first object
+         *  @param {Vector2} pos
+         *  @param {boolean} dynamicOnly */
+        pointCast(pos: Vector2, dynamicOnly?: boolean): undefined;
+        /** draws a fixture
+         *  @param {Object} fixture
+         *  @param {Vector2} pos
+         *  @param {number} angle
+         *  @param {Color} [color]
+         *  @param {Color} [outlineColor]
+         *  @param {number} [lineWidth]
+         *  @param {CanvasRenderingContext2D} [context] */
+        drawFixture(fixture: any, pos: Vector2, angle: number, color?: Color, outlineColor?: Color, lineWidth?: number, context?: CanvasRenderingContext2D): void;
+        /** draws a circle
+         *  @param {Vector2} pos
+         *  @param {number} radius
+         *  @param {Color} [color]
+         *  @param {Color} [outlineColor]
+         *  @param {number} [lineWidth]
+         *  @param {CanvasRenderingContext2D} [context] */
+        drawCircle(pos: Vector2, radius: number, color?: Color, outlineColor?: Color, lineWidth?: number, context?: CanvasRenderingContext2D): void;
+        /** draws a polygon
+         *  @param {Vector2} pos
+         *  @param {number} angle
+         *  @param {Array<Vector2>} points
+         *  @param {Color} [color]
+         *  @param {Color} [outlineColor]
+         *  @param {number} [lineWidth]
+         *  @param {CanvasRenderingContext2D} [context] */
+        drawPoly(pos: Vector2, angle: number, points: Array<Vector2>, color?: Color, outlineColor?: Color, lineWidth?: number, context?: CanvasRenderingContext2D): void;
+        /** draws a line
+         *  @param {Vector2} pos
+         *  @param {number} angle
+         *  @param {Vector2} posA
+         *  @param {Vector2} posB
+         *  @param {Color} [color]
+         *  @param {number} [lineWidth]
+         *  @param {CanvasRenderingContext2D} [context] */
+        drawLine(pos: Vector2, angle: number, posA: Vector2, posB: Vector2, color?: Color, lineWidth?: number, context?: CanvasRenderingContext2D): void;
+        /** performs a fill or stroke as a helper to the other draw functions
+         *  @param {Color} [color]
+         *  @param {Color} [outlineColor]
+         *  @param {number} [lineWidth]
+         *  @param {CanvasRenderingContext2D} [context] */
+        drawFillStroke(color?: Color, outlineColor?: Color, lineWidth?: number, context?: CanvasRenderingContext2D): void;
+        /** converts a box2d vec2 to a Vector2
+         *  @param {Object} v */
+        vec2From(v: any): Vector2;
+        /** converts a box2d vec2 pointer to a Vector2
+         *  @param {Object} v */
+        vec2FromPointer(v: any): Vector2;
+        /** converts a Vector2 to a box2 vec2
+         *  @param {Vector2} v */
+        vec2dTo(v: Vector2): any;
+        /** checks if a box2d object is null
+         *  @param {Object} o */
+        isNull(o: any): boolean;
+        /** casts a box2d object to its correct type
+         *  @param {Object} o */
+        castObjectType(o: any): any;
+    }
+    /**
+     * Box2D Object - extend with your own custom physics objects
+     * - A LittleJS object with Box2D physics
+     * - Each object has a Box2D body which can have multiple fixtures and joints
+     * - Provides interface for Box2D body and fixture functions
+     * @extends EngineObject
+     */
+    export class Box2dObject extends EngineObject {
+        /** Create a LittleJS object with Box2d physics
+         *  @param {Vector2}  [pos]
+         *  @param {Vector2}  [size]
+         *  @param {TileInfo} [tileInfo]
+         *  @param {number}   [angle]
+         *  @param {Color}    [color]
+         *  @param {number}   [bodyType]
+         *  @param {number}   [renderOrder] */
+        constructor(pos?: Vector2, size?: Vector2, tileInfo?: TileInfo, angle?: number, color?: Color, bodyType?: number, renderOrder?: number);
+        body: any;
+        outlineColor: Color;
+        /** Draws all this object's fixtures
+         *  @param {Color}  [color]
+         *  @param {Color}  [outlineColor]
+         *  @param {number} [lineWidth]
+         *  @param {CanvasRenderingContext2D} [context] */
+        drawFixtures(color?: Color, outlineColor?: Color, lineWidth?: number, context?: CanvasRenderingContext2D): void;
+        /** Called when a contact begins
+         *  @param {Box2dObject} otherObject */
+        beginContact(otherObject: Box2dObject): void;
+        /** Called when a contact ends
+         *  @param {Box2dObject} otherObject */
+        endContact(otherObject: Box2dObject): void;
+        /** Add a shape fixture to the body
+         *  @param {Object} shape
+         *  @param {number}  [density]
+         *  @param {number}  [friction]
+         *  @param {number}  [restitution]
+         *  @param {boolean} [isSensor] */
+        addShape(shape: any, density?: number, friction?: number, restitution?: number, isSensor?: boolean): any;
+        /** Add a box shape to the body
+         *  @param {Vector2} [size]
+         *  @param {Vector2} [offset]
+         *  @param {number}  [angle]
+         *  @param {number}  [density]
+         *  @param {number}  [friction]
+         *  @param {number}  [restitution]
+         *  @param {boolean} [isSensor] */
+        addBox(size?: Vector2, offset?: Vector2, angle?: number, density?: number, friction?: number, restitution?: number, isSensor?: boolean): any;
+        /** Add a polygon shape to the body
+         *  @param {Array<Vector2>} points
+         *  @param {number}  [density]
+         *  @param {number}  [friction]
+         *  @param {number}  [restitution]
+         *  @param {boolean} [isSensor] */
+        addPoly(points: Array<Vector2>, density?: number, friction?: number, restitution?: number, isSensor?: boolean): any;
+        /** Add a regular polygon shape to the body
+         *  @param {number}  [diameter]
+         *  @param {number}  [sides]
+         *  @param {number}  [density]
+         *  @param {number}  [friction]
+         *  @param {number}  [restitution]
+         *  @param {boolean} [isSensor] */
+        addRegularPoly(diameter?: number, sides?: number, density?: number, friction?: number, restitution?: number, isSensor?: boolean): any;
+        /** Add a random polygon shape to the body
+         *  @param {number}  [diameter]
+         *  @param {number}  [density]
+         *  @param {number}  [friction]
+         *  @param {number}  [restitution]
+         *  @param {boolean} [isSensor] */
+        addRandomPoly(diameter?: number, density?: number, friction?: number, restitution?: number, isSensor?: boolean): any;
+        /** Add a circle shape to the body
+         *  @param {number}  [diameter]
+         *  @param {Vector2} [offset]
+         *  @param {number}  [density]
+         *  @param {number}  [friction]
+         *  @param {number}  [restitution]
+         *  @param {boolean} [isSensor] */
+        addCircle(diameter?: number, offset?: Vector2, density?: number, friction?: number, restitution?: number, isSensor?: boolean): any;
+        /** Add an edge shape to the body
+         *  @param {Vector2} point1
+         *  @param {Vector2} point2
+         *  @param {number}  [density]
+         *  @param {number}  [friction]
+         *  @param {number}  [restitution]
+         *  @param {boolean} [isSensor] */
+        addEdge(point1: Vector2, point2: Vector2, density?: number, friction?: number, restitution?: number, isSensor?: boolean): any;
+        /** Add an edge loop to the body, an edge loop connects the end points
+         *  @param {Array<Vector2>} points
+         *  @param {number}  [density]
+         *  @param {number}  [friction]
+         *  @param {number}  [restitution]
+         *  @param {boolean} [isSensor] */
+        addEdgeLoop(points: Array<Vector2>, density?: number, friction?: number, restitution?: number, isSensor?: boolean): any[];
+        /** Add an edge list to the body
+         *  @param {Array<Vector2>} points
+         *  @param {number}  [density]
+         *  @param {number}  [friction]
+         *  @param {number}  [restitution]
+         *  @param {boolean} [isSensor] */
+        addEdgeList(points: Array<Vector2>, density?: number, friction?: number, restitution?: number, isSensor?: boolean): any[];
+        /** Gets the center of mass
+         *  @return {Vector2} */
+        getCenterOfMass(): Vector2;
+        /** Gets the linear velocity
+         *  @return {Vector2} */
+        getLinearVelocity(): Vector2;
+        /** Gets the angular velocity
+         *  @return {Vector2} */
+        getAngularVelocity(): Vector2;
+        /** Gets the mass
+         *  @return {number} */
+        getMass(): number;
+        /** Gets the rotational inertia
+         *  @return {number} */
+        getInertia(): number;
+        /** Check if this object is awake
+         *  @return {boolean} */
+        getIsAwake(): boolean;
+        /** Gets the physics body type
+         *  @return {number} */
+        getBodyType(): number;
+        /** Sets the position and angle
+         *  @param {Vector2} pos
+         *  @param {number} angle */
+        setTransform(pos: Vector2, angle: number): void;
+        /** Sets the position
+         *  @param {Vector2} pos */
+        setPosition(pos: Vector2): void;
+        /** Sets the angle
+         *  @param {number} angle */
+        setAngle(angle: number): void;
+        /** Sets the linear velocity
+         *  @param {Vector2} velocity */
+        setLinearVelocity(velocity: Vector2): void;
+        /** Sets the angular velocity
+         *  @param {number} angularVelocity */
+        setAngularVelocity(angularVelocity: number): void;
+        /** Sets the linear damping
+         *  @param {number} damping */
+        setLinearDamping(damping: number): void;
+        /** Sets the angular damping
+         *  @param {number} damping */
+        setAngularDamping(damping: number): void;
+        /** Sets the gravity scale
+         *  @param {number} [scale] */
+        setGravityScale(scale?: number): void;
+        /** Should this body be treated like a bullet for continuous collision detection?
+         *  @param {boolean} [isBullet] */
+        setBullet(isBullet?: boolean): void;
+        /** Set the sleep state of the body
+         *  @param {boolean} [isAwake] */
+        setAwake(isAwake?: boolean): void;
+        /** Set the physics body type
+         *  @param {number} type */
+        setBodyType(type: number): void;
+        /** Set whether the body is allowed to sleep
+         *  @param {boolean} [isAllowed] */
+        setSleepingAllowed(isAllowed?: boolean): void;
+        /** Set whether the body can rotate
+         *  @param {boolean} [isFixed] */
+        setFixedRotation(isFixed?: boolean): void;
+        /** Set the center of mass of the body
+         *  @param {Vector2} center */
+        setCenterOfMass(center: Vector2): void;
+        /** Set the mass of the body
+         *  @param {number} mass */
+        setMass(mass: number): void;
+        /** Set the moment of inertia of the body
+         *  @param {number} momentOfInertia */
+        setMomentOfInertia(momentOfInertia: number): void;
+        /** Reset the mass, center of mass, and moment */
+        resetMassData(): void;
+        /** Set the mass data of the body
+         *  @param {Vector2} [localCenter]
+         *  @param {number}  [mass]
+         *  @param {number}  [momentOfInertia] */
+        setMassData(localCenter?: Vector2, mass?: number, momentOfInertia?: number): void;
+        /** Set the collision filter data for this body
+         *  @param {number} [categoryBits]
+         *  @param {number} [ignoreCategoryBits]
+         *  @param {number} [groupIndex] */
+        setFilterData(categoryBits?: number, ignoreCategoryBits?: number, groupIndex?: number): void;
+        /** Set if this body is a sensor
+         *  @param {boolean} [isSensor] */
+        setSensor(isSensor?: boolean): void;
+        /** Apply force to this object
+         *  @param {Vector2} force
+         *  @param {Vector2} [pos] */
+        applyForce(force: Vector2, pos?: Vector2): void;
+        /** Apply acceleration to this object
+         *  @param {Vector2} acceleration
+         *  @param {Vector2} [pos] */
+        applyAcceleration(acceleration: Vector2, pos?: Vector2): void;
+        /** Apply torque to this object
+         *  @param {number} torque */
+        applyTorque(torque: number): void;
+        /** Apply angular acceleration to this object
+         *  @param {number} acceleration */
+        applyAngularAcceleration(acceleration: number): void;
+        /** Check if this object has any fixtures
+         *  @return {boolean} */
+        hasFixtures(): boolean;
+        /** Get list of fixtures for this object
+         *  @return {Array<Object>} */
+        getFixtureList(): Array<any>;
+        /** Check if this object has any joints
+         *  @return {boolean} */
+        hasJoints(): boolean;
+        /** Get list of joints for this object
+         *  @return {Array<Object>} */
+        getJointList(): Array<any>;
+    }
+    /**
+     * Box2D Raycast Result
+     * - Holds results from a box2d raycast queries
+     * - Automatically created by box2d raycast functions
+     */
+    export class Box2dRaycastResult {
+        /** Create a raycast result
+         *  @param {Object}  fixture
+         *  @param {Vector2} point
+         *  @param {Vector2} normal
+         *  @param {number}  fraction */
+        constructor(fixture: any, point: Vector2, normal: Vector2, fraction: number);
+        /** @property {Box2dObject} - The box2d object */
+        object: any;
+        /** @property {Object} - The fixture that was hit */
+        fixture: any;
+        /** @property {Vector2} - The hit point */
+        point: Vector2;
+        /** @property {Vector2} - The hit normal */
+        normal: Vector2;
+        /** @property {number} - Distance fraction at the point of intersection */
+        fraction: number;
+    }
+    /**
+     * Box2D Joint
+     * - Base class for Box2D joints
+     * - A joint is used to connect objects together
+     */
+    export class Box2dJoint {
+        /** Create a box2d joint, the base class is not intended to be used directly
+         *  @param {Object} jointDef */
+        constructor(jointDef: any);
+        box2dJoint: any;
+        /** Destroy this joint */
+        destroy(): void;
+        /** Get the first object attached to this joint
+         *  @return {Box2dObject} */
+        getObjectA(): Box2dObject;
+        /** Get the second object attached to this joint
+         *  @return {Box2dObject} */
+        getObjectB(): Box2dObject;
+        /** Get the first anchor for this joint in world coordinates
+         *  @return {Vector2} */
+        getAnchorA(): Vector2;
+        /** Get the second anchor for this joint in world coordinates
+         *  @return {Vector2} */
+        getAnchorB(): Vector2;
+        /** Get the reaction force on bodyB at the joint anchor given a time step
+         *  @param {number} time
+         *  @return {Vector2} */
+        getReactionForce(time: number): Vector2;
+        /** Get the reaction torque on bodyB in N*m given a time step
+         *  @param {number} time
+         *  @return {number} */
+        getReactionTorque(time: number): number;
+        /** Check if the connected bodies should collide
+         *  @return {boolean} */
+        getCollideConnected(): boolean;
+        /** Check if either connected body is active
+         *  @return {boolean} */
+        isActive(): boolean;
+    }
+    /**
+     * Box2D Target Joint, also known as a mouse joint
+     * - Used to make a point on a object track a specific world point target
+     * - This a soft constraint with a max force
+     * - This allows the constraint to stretch and without applying huge forces
+     * @extends Box2dJoint
+     */
+    export class Box2dTargetJoint extends Box2dJoint {
+        /** Create a target joint
+         *  @param {Box2dObject} object
+         *  @param {Box2dObject} fixedObject
+         *  @param {Vector2} worldPos */
+        constructor(object: Box2dObject, fixedObject: Box2dObject, worldPos: Vector2);
+        /** Set the target point in world coordinates
+         *  @param {Vector2} pos */
+        setTarget(pos: Vector2): void;
+        /** Get the target point in world coordinates
+         *  @return {Vector2} */
+        getTarget(): Vector2;
+        /** Sets the maximum force in Newtons
+         *  @param {number} force */
+        setMaxForce(force: number): void;
+        /** Gets the maximum force in Newtons
+         *  @return {number} */
+        getMaxForce(): number;
+        /** Sets the joint frequency in Hertz
+         *  @param {number} hz */
+        setFrequency(hz: number): void;
+        /** Gets the joint frequency in Hertz
+         *  @return {number} */
+        getFrequency(): number;
+    }
+    /**
+     * Box2D Distance Joint
+     * - Constrains two points on two objects to remain at a fixed distance
+     * - You can view this as a massless, rigid rod
+     * @extends Box2dJoint
+     */
+    export class Box2dDistanceJoint extends Box2dJoint {
+        /** Create a distance joint
+         *  @param {Box2dObject} objectA
+         *  @param {Box2dObject} objectB
+         *  @param {Vector2} anchorA
+         *  @param {Vector2} anchorB
+         *  @param {boolean} [collide] */
+        constructor(objectA: Box2dObject, objectB: Box2dObject, anchorA: Vector2, anchorB: Vector2, collide?: boolean);
+        /** Get the local anchor point relative to objectA's origin
+         *  @return {Vector2} */
+        getLocalAnchorA(): Vector2;
+        /** Get the local anchor point relative to objectB's origin
+         *  @return {Vector2} */
+        getLocalAnchorB(): Vector2;
+        /** Set the length of the joint
+         *  @param {number} length */
+        setLength(length: number): void;
+        /** Get the length of the joint
+         *  @return {number} */
+        getLength(): number;
+        /** Set the frequency in Hertz
+         *  @param {number} hz */
+        setFrequency(hz: number): void;
+        /** Get the frequency in Hertz
+         *  @return {number} */
+        getFrequency(): number;
+        /** Set the damping ratio
+         *  @param {number} ratio */
+        setDampingRatio(ratio: number): void;
+        /** Get the damping ratio
+         *  @return {number} */
+        getDampingRatio(): number;
+    }
+    /**
+     * Box2D Pin Joint
+     * - Pins two objects together at a point
+     * @extends Box2dDistanceJoint
+     */
+    export class Box2dPinJoint extends Box2dDistanceJoint {
+        /** Create a pin joint
+         *  @param {Box2dObject} objectA
+         *  @param {Box2dObject} objectB
+         *  @param {Vector2} [pos]
+         *  @param {boolean} [collide] */
+        constructor(objectA: Box2dObject, objectB: Box2dObject, pos?: Vector2, collide?: boolean);
+    }
+    /**
+     * Box2D Rope Joint
+     * - Enforces a maximum distance between two points on two objects
+     * @extends Box2dJoint
+     */
+    export class Box2dRopeJoint extends Box2dJoint {
+        /** Create a rope joint
+         *  @param {Box2dObject} objectA
+         *  @param {Box2dObject} objectB
+         *  @param {Vector2} anchorA
+         *  @param {Vector2} anchorB
+         *  @param {number} extraLength
+         *  @param {boolean} [collide] */
+        constructor(objectA: Box2dObject, objectB: Box2dObject, anchorA: Vector2, anchorB: Vector2, extraLength?: number, collide?: boolean);
+        /** Get the local anchor point relative to objectA's origin
+         *  @return {Vector2} */
+        getLocalAnchorA(): Vector2;
+        /** Get the local anchor point relative to objectB's origin
+         *  @return {Vector2} */
+        getLocalAnchorB(): Vector2;
+        /** Set the max length of the joint
+         *  @param {number} length */
+        setMaxLength(length: number): void;
+        /** Get the max length of the joint
+         *  @return {number} */
+        getMaxLength(): number;
+    }
+    /**
+     * Box2D Revolute Joint
+     * - Constrains two objects to share a point while they are free to rotate around the point
+     * - The relative rotation about the shared point is the joint angle
+     * - You can limit the relative rotation with a joint limit
+     * - You can use a motor to drive the relative rotation about the shared point
+     * - A maximum motor torque is provided so that infinite forces are not generated
+     * @extends Box2dJoint
+     */
+    export class Box2dRevoluteJoint extends Box2dJoint {
+        /** Create a revolute joint
+         *  @param {Box2dObject} objectA
+         *  @param {Box2dObject} objectB
+         *  @param {Vector2} anchor
+         *  @param {boolean} [collide] */
+        constructor(objectA: Box2dObject, objectB: Box2dObject, anchor: Vector2, collide?: boolean);
+        /** Get the local anchor point relative to objectA's origin
+         *  @return {Vector2} */
+        getLocalAnchorA(): Vector2;
+        /** Get the local anchor point relative to objectB's origin
+         *  @return {Vector2} */
+        getLocalAnchorB(): Vector2;
+        /** Get the reference angle, objectB angle minus objectA angle in the reference state
+         *  @return {number} */
+        getReferenceAngle(): number;
+        /** Get the current joint angle
+         *  @return {number} */
+        getJointAngle(): number;
+        /** Get the current joint angle speed in radians per second
+         *  @return {number} */
+        getJointSpeed(): number;
+        /** Is the joint limit enabled?
+         *  @return {boolean} */
+        isLimitEnabled(): boolean;
+        /** Enable/disable the joint limit
+         *  @param {boolean} [enable] */
+        enableLimit(enable?: boolean): any;
+        /** Get the lower joint limit
+         *  @return {number} */
+        getLowerLimit(): number;
+        /** Get the upper joint limit
+         *  @return {number} */
+        getUpperLimit(): number;
+        /** Set the joint limits
+         *  @param {number} min
+         *  @param {number} max */
+        setLimits(min: number, max: number): any;
+        /** Is the joint motor enabled?
+         *  @return {boolean} */
+        isMotorEnabled(): boolean;
+        /** Enable/disable the joint motor
+         *  @param {boolean} [enable] */
+        enableMotor(enable?: boolean): any;
+        /** Set the motor speed
+         *  @param {number} speed */
+        setMotorSpeed(speed: number): any;
+        /** Get the motor speed
+         *  @return {number} */
+        getMotorSpeed(): number;
+        /** Set the motor torque
+         *  @param {number} torque */
+        setMaxMotorTorque(torque: number): any;
+        /** Get the max motor torque
+         *  @return {number} */
+        getMaxMotorTorque(): number;
+        /** Get the motor torque given a time step
+         *  @param {number} time
+         *  @return {number} */
+        getMotorTorque(time: number): number;
+    }
+    /**
+     * Box2D Gear Joint
+     * - A gear joint is used to connect two joints together
+     * - Either joint can be a revolute or prismatic joint
+     * - You specify a gear ratio to bind the motions together
+     * @extends Box2dJoint
+     */
+    export class Box2dGearJoint extends Box2dJoint {
+        /** Create a gear joint
+         *  @param {Box2dObject} objectA
+         *  @param {Box2dObject} objectB
+         *  @param {Box2dJoint} joint1
+         *  @param {Box2dJoint} joint2
+         *  @param {ratio} [ratio] */
+        constructor(objectA: Box2dObject, objectB: Box2dObject, joint1: Box2dJoint, joint2: Box2dJoint, ratio?: ratio);
+        joint1: Box2dJoint;
+        joint2: Box2dJoint;
+        /** Get the first joint
+         *  @return {Box2dJoint} */
+        getJoint1(): Box2dJoint;
+        /** Get the second joint
+         *  @return {Box2dJoint} */
+        getJoint2(): Box2dJoint;
+        /** Set the gear ratio
+         *  @param {number} ratio */
+        setRatio(ratio: number): any;
+        /** Get the gear ratio
+         *  @return {number} */
+        getRatio(): number;
+    }
+    /**
+     * Box2D Prismatic Joint
+     * - Provides one degree of freedom: translation along an axis fixed in objectA
+     * - Relative rotation is prevented
+     * - You can use a joint limit to restrict the range of motion
+     * - You can use a joint motor to drive the motion or to model joint friction
+     * @extends Box2dJoint
+     */
+    export class Box2dPrismaticJoint extends Box2dJoint {
+        /** Create a prismatic joint
+         *  @param {Box2dObject} objectA
+         *  @param {Box2dObject} objectB
+         *  @param {Vector2} anchor
+         *  @param {Vector2} worldAxis
+         *  @param {boolean} [collide] */
+        constructor(objectA: Box2dObject, objectB: Box2dObject, anchor: Vector2, worldAxis?: Vector2, collide?: boolean);
+        /** Get the local anchor point relative to objectA's origin
+         *  @return {Vector2} */
+        getLocalAnchorA(): Vector2;
+        /** Get the local anchor point relative to objectB's origin
+         *  @return {Vector2} */
+        getLocalAnchorB(): Vector2;
+        /** Get the local joint axis relative to bodyA
+         *  @return {Vector2} */
+        getLocalAxisA(): Vector2;
+        /** Get the reference angle
+         *  @return {number} */
+        getReferenceAngle(): number;
+        /** Get the current joint translation
+         *  @return {number} */
+        getJointTranslation(): number;
+        /** Get the current joint translation speed
+         *  @return {number} */
+        getJointSpeed(): number;
+        /** Is the joint limit enabled?
+         *  @return {boolean} */
+        isLimitEnabled(): boolean;
+        /** Enable/disable the joint limit
+         *  @param {boolean} [enable] */
+        enableLimit(enable?: boolean): any;
+        /** Get the lower joint limit
+         *  @return {number} */
+        getLowerLimit(): number;
+        /** Get the upper joint limit
+         *  @return {number} */
+        getUpperLimit(): number;
+        /** Set the joint limits
+         *  @param {number} min
+         *  @param {number} max */
+        setLimits(min: number, max: number): any;
+        /** Is the motor enabled?
+         *  @return {boolean} */
+        isMotorEnabled(): boolean;
+        /** Enable/disable the joint motor
+         *  @param {boolean} [enable] */
+        enableMotor(enable?: boolean): any;
+        /** Set the motor speed
+         *  @param {number} speed */
+        setMotorSpeed(speed: number): any;
+        /** Get the motor speed
+         *  @return {number} */
+        getMotorSpeed(): number;
+        /** Set the maximum motor force
+         *  @param {number} force */
+        setMaxMotorForce(force: number): any;
+        /** Get the maximum motor force
+         *  @return {number} */
+        getMaxMotorForce(): number;
+        /** Get the motor force given a time step
+         *  @param {number} time
+         *  @return {number} */
+        getMotorForce(time: number): number;
+    }
+    /**
+     * Box2D Wheel Joint
+     * - Provides two degrees of freedom: translation along an axis fixed in objectA and rotation
+     * - You can use a joint limit to restrict the range of motion
+     * - You can use a joint motor to drive the motion or to model joint friction
+     * - This joint is designed for vehicle suspensions
+     * @extends Box2dJoint
+     */
+    export class Box2dWheelJoint extends Box2dJoint {
+        /** Create a wheel joint
+         *  @param {Box2dObject} objectA
+         *  @param {Box2dObject} objectB
+         *  @param {Vector2} anchor
+         *  @param {Vector2} worldAxis
+         *  @param {boolean} [collide] */
+        constructor(objectA: Box2dObject, objectB: Box2dObject, anchor: Vector2, worldAxis?: Vector2, collide?: boolean);
+        /** Get the local anchor point relative to objectA's origin
+         *  @return {Vector2} */
+        getLocalAnchorA(): Vector2;
+        /** Get the local anchor point relative to objectB's origin
+         *  @return {Vector2} */
+        getLocalAnchorB(): Vector2;
+        /** Get the local joint axis relative to bodyA
+         *  @return {Vector2} */
+        getLocalAxisA(): Vector2;
+        /** Get the current joint translation
+         *  @return {number} */
+        getJointTranslation(): number;
+        /** Get the current joint translation speed
+         *  @return {number} */
+        getJointSpeed(): number;
+        /** Is the joint motor enabled?
+         *  @return {boolean} */
+        isMotorEnabled(): boolean;
+        /** Enable/disable the joint motor
+         *  @param {boolean} [enable] */
+        enableMotor(enable?: boolean): any;
+        /** Set the motor speed
+         *  @param {number} speed */
+        setMotorSpeed(speed: number): any;
+        /** Get the motor speed
+         *  @return {number} */
+        getMotorSpeed(): number;
+        /** Set the maximum motor torque
+         *  @param {number} torque */
+        setMaxMotorTorque(torque: number): any;
+        /** Get the max motor torque
+         *  @return {number} */
+        getMaxMotorTorque(): number;
+        /** Get the motor torque for a time step
+         *  @return {number} */
+        getMotorTorque(time: any): number;
+        /** Set the spring frequency in Hertz
+         *  @param {number} hz */
+        setSpringFrequencyHz(hz: number): any;
+        /** Get the spring frequency in Hertz
+         *  @return {number} */
+        getSpringFrequencyHz(): number;
+        /** Set the spring damping ratio
+         *  @param {number} ratio */
+        setSpringDampingRatio(ratio: number): any;
+        /** Get the spring damping ratio
+         *  @return {number} */
+        getSpringDampingRatio(): number;
+    }
+    /**
+     * Box2D Weld Joint
+     * - Glues two objects together
+     * @extends Box2dJoint
+     */
+    export class Box2dWeldJoint extends Box2dJoint {
+        /** Create a weld joint
+         *  @param {Box2dObject} objectA
+         *  @param {Box2dObject} objectB
+         *  @param {Vector2} anchor
+         *  @param {boolean} [collide] */
+        constructor(objectA: Box2dObject, objectB: Box2dObject, anchor: Vector2, collide?: boolean);
+        /** Get the local anchor point relative to objectA's origin
+         *  @return {Vector2} */
+        getLocalAnchorA(): Vector2;
+        /** Get the local anchor point relative to objectB's origin
+         *  @return {Vector2} */
+        getLocalAnchorB(): Vector2;
+        /** Get the reference angle
+         *  @return {number} */
+        getReferenceAngle(): number;
+        /** Set the frequency in Hertz
+         *  @param {number} hz */
+        setFrequency(hz: number): any;
+        /** Get the frequency in Hertz
+         *  @return {number} */
+        getFrequency(): number;
+        /** Set the damping ratio
+         *  @param {number} ratio */
+        setSpringDampingRatio(ratio: number): any;
+        /** Get the damping ratio
+         *  @return {number} */
+        getSpringDampingRatio(): number;
+    }
+    /**
+     * Box2D Friction Joint
+     * - Used to apply top-down friction
+     * - Provides 2D translational friction and angular friction
+     * @extends Box2dJoint
+     */
+    export class Box2dFrictionJoint extends Box2dJoint {
+        /** Create a friction joint
+         *  @param {Box2dObject} objectA
+         *  @param {Box2dObject} objectB
+         *  @param {Vector2} anchor
+         *  @param {boolean} [collide] */
+        constructor(objectA: Box2dObject, objectB: Box2dObject, anchor: Vector2, collide?: boolean);
+        /** Get the local anchor point relative to objectA's origin
+         *  @return {Vector2} */
+        getLocalAnchorA(): Vector2;
+        /** Get the local anchor point relative to objectB's origin
+         *  @return {Vector2} */
+        getLocalAnchorB(): Vector2;
+        /** Set the maximum friction force
+         *  @param {number} force */
+        setMaxForce(force: number): void;
+        /** Get the maximum friction force
+         *  @return {number} */
+        getMaxForce(): number;
+        /** Set the maximum friction torque
+         *  @param {number} torque */
+        setMaxTorque(torque: number): void;
+        /** Get the maximum friction torque
+         *  @return {number} */
+        getMaxTorque(): number;
+    }
+    /**
+     * Box2D Pulley Joint
+     * - Connects to two objects and two fixed ground points
+     * - The pulley supports a ratio such that: length1 + ratio * length2 <= constant
+     * - The force transmitted is scaled by the ratio
+     * @extends Box2dJoint
+     */
+    export class Box2dPulleyJoint extends Box2dJoint {
+        /** Create a pulley joint
+         *  @param {Box2dObject} objectA
+         *  @param {Box2dObject} objectB
+         *  @param {Vector2} groundAnchorA
+         *  @param {Vector2} groundAnchorB
+         *  @param {Vector2} anchorA
+         *  @param {Vector2} anchorB
+         *  @param {number}  [ratio]
+         *  @param {boolean} [collide] */
+        constructor(objectA: Box2dObject, objectB: Box2dObject, groundAnchorA: Vector2, groundAnchorB: Vector2, anchorA: Vector2, anchorB: Vector2, ratio?: number, collide?: boolean);
+        /** Get the first ground anchor
+         *  @return {Vector2} */
+        getGroundAnchorA(): Vector2;
+        /** Get the second ground anchor
+         *  @return {Vector2} */
+        getGroundAnchorB(): Vector2;
+        /** Get the current length of the segment attached to objectA
+         *  @return {number} */
+        getLengthA(): number;
+        /** Get the current length of the segment attached to objectB
+         *  @return {number} */
+        getLengthB(): number;
+        /** Get the pulley ratio
+         *  @return {number} */
+        getRatio(): number;
+        /** Get the current length of the segment attached to objectA
+         *  @return {number} */
+        getCurrentLengthA(): number;
+        /** Get the current length of the segment attached to objectB
+         *  @return {number} */
+        getCurrentLengthB(): number;
+    }
+    /**
+     * Box2D Motor Joint
+     * - Controls the relative motion between two objects
+     * - Typical usage is to control the movement of a object with respect to the ground
+     * @extends Box2dJoint
+     */
+    export class Box2dMotorJoint extends Box2dJoint {
+        /** Create a motor joint
+         *  @param {Box2dObject} objectA
+         *  @param {Box2dObject} objectB */
+        constructor(objectA: Box2dObject, objectB: Box2dObject);
+        /** Set the target linear offset, in frame A, in meters.
+         *  @param {Vector2} offset */
+        setLinearOffset(offset: Vector2): void;
+        /** Get the target linear offset, in frame A, in meters.
+         *  @return {Vector2} */
+        getLinearOffset(): Vector2;
+        /** Set the target angular offset
+         *  @param {number} offset */
+        setAngularOffset(offset: number): void;
+        /** Get the target angular offset
+         *  @return {number} */
+        getAngularOffset(): number;
+        /** Set the maximum friction force
+         *  @param {number} force */
+        setMaxForce(force: number): void;
+        /** Get the maximum friction force
+         *  @return {number} */
+        getMaxForce(): number;
+        /** Set the maximum torque
+         *  @param {number} torque */
+        setMaxTorque(torque: number): void;
+        /** Get the maximum torque
+         *  @return {number} */
+        getMaxTorque(): number;
+        /** Set the position correction factor in the range [0,1]
+         *  @param {number} factor */
+        setCorrectionFactor(factor: number): void;
+        /** Get the position correction factor in the range [0,1]
+         *  @return {number} */
+        getCorrectionFactor(): number;
+    }
 }
