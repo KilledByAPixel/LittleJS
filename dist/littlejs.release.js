@@ -4798,7 +4798,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.17';
+const engineVersion = '1.11.18';
 
 /** Frames per second to update
  *  @type {number}
@@ -5390,5 +5390,2785 @@ function drawEngineSplashScreen(t)
     }
     
     x.restore();
+}
+
+/** 
+ * LittleJS Newgrounds API
+ * - NewgroundsMedal extends Medal with Newgrounds API functionality
+ * - Call new NewgroundsPlugin() to setup Newgrounds
+ * - Uses CryptoJS for encryption if optional cipher is provided
+ * - Keeps connection alive and logs views
+ * - Functions to interact with scoreboards
+ * - Functions to unlock medals
+ */
+
+
+
+/** Global Newgrounds object
+ *  @type {NewgroundsPlugin}
+ *  @memberof Medal */
+let newgrounds;
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * Newgrounds medal auto unlocks in newgrounds API
+ * @extends Medal
+ */
+class NewgroundsMedal extends Medal
+{
+    /** Create a newgrounds medal object and adds it to the list of medals
+     *  @param {Number} id            - The unique identifier of the medal
+     *  @param {String} name          - Name of the medal
+     *  @param {String} [description] - Description of the medal
+     *  @param {String} [icon]        - Icon for the medal
+     *  @param {String} [src]         - Image location for the medal
+     */
+    constructor(id, name, description, icon, src)
+    { super(id, name, description, icon, src); }
+
+    /** Unlocks a medal if not already unlocked */
+    unlock()
+    {
+        super.unlock();
+        newgrounds && newgrounds.unlockMedal(this.id);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Newgrounds API object
+ */
+class NewgroundsPlugin
+{
+    /** Create the global newgrounds object
+     *  @param {string} app_id     - The newgrounds App ID
+     *  @param {string} [cipher]   - The encryption Key (AES-128/Base64)
+     *  @param {Object} [cryptoJS] - An instance of CryptoJS, if there is a cipher 
+     *  @example
+     *  // create the newgrounds object, replace the app id with your own
+     *  const app_id = 'your_app_id_here';
+     *  new NewgroundsPlugin(app_id);
+     */
+    constructor(app_id, cipher, cryptoJS)
+    {
+        ASSERT(!newgrounds, 'there can only be one newgrounds object');
+        ASSERT(!cipher || cryptoJS, 'must provide cryptojs if there is a cipher');
+
+        newgrounds = this; // set global newgrounds object
+        this.app_id = app_id;
+        this.cipher = cipher;
+        this.cryptoJS = cryptoJS;
+        this.host = location ? location.hostname : '';
+
+        // get session id from url search params
+        const url = new URL(location.href);
+        this.session_id = url.searchParams.get('ngio_session_id');
+
+        if (!this.session_id)
+            return; // only use newgrounds when logged in
+
+        // get medals
+        const medalsResult = this.call('Medal.getList');
+        this.medals = medalsResult ? medalsResult.result.data['medals'] : [];
+        debugMedals && console.log(this.medals);
+        for (const newgroundsMedal of this.medals)
+        {
+            const medal = medals[newgroundsMedal['id']];
+            if (medal)
+            {
+                // copy newgrounds medal data
+                medal.image =       new Image;
+                medal.image.src =   newgroundsMedal['icon'];
+                medal.name =        newgroundsMedal['name'];
+                medal.description = newgroundsMedal['description'];
+                medal.unlocked =    newgroundsMedal['unlocked'];
+                medal.difficulty =  newgroundsMedal['difficulty'];
+                medal.value =       newgroundsMedal['value'];
+
+                if (medal.value) // add value to description
+                    medal.description = medal.description + ` (${ medal.value })`;
+            }
+        }
+    
+        // get scoreboards
+        const scoreboardResult = this.call('ScoreBoard.getBoards');
+        this.scoreboards = scoreboardResult ? scoreboardResult.result.data.scoreboards : [];
+        debugMedals && console.log(this.scoreboards);
+
+        // keep the session alive with a ping every minute
+        const keepAliveMS = 60 * 1e3;
+        setInterval(()=>this.call('Gateway.ping', 0, true), keepAliveMS);
+    }
+
+    /** Send message to unlock a medal by id
+     * @param {number} id - The medal id */
+    unlockMedal(id) { return this.call('Medal.unlock', {'id':id}, true); }
+
+    /** Send message to post score
+     * @param {number} id    - The scoreboard id
+     * @param {number} value - The score value */
+    postScore(id, value) { return this.call('ScoreBoard.postScore', {'id':id, 'value':value}, true); }
+
+    /** Get scores from a scoreboard
+     * @param {number} id       - The scoreboard id
+     * @param {string} [user]   - A user's id or name
+     * @param {number} [social] - If true, only social scores will be loaded
+     * @param {number} [skip]   - Number of scores to skip before start
+     * @param {number} [limit]  - Number of scores to include in the list
+     * @return {Object}         - The response JSON object
+     */
+    getScores(id, user, social=0, skip=0, limit=10)
+    { return this.call('ScoreBoard.getScores', {'id':id, 'user':user, 'social':social, 'skip':skip, 'limit':limit}); }
+
+    /** Send message to log a view */
+    logView() { return this.call('App.logView', {'host':this.host}, true); }
+
+    /** Send a message to call a component of the Newgrounds API
+     * @param {string}  component    - Name of the component
+     * @param {Object}  [parameters] - Parameters to use for call
+     * @param {boolean} [async]      - If true, don't wait for response before continuing
+     * @return {Object}              - The response JSON object
+     */
+    call(component, parameters, async=false)
+    {
+        const call = {'component':component, 'parameters':parameters};
+        if (this.cipher)
+        {
+            // encrypt using AES-128 Base64 with cryptoJS
+            const cryptoJS = this.cryptoJS;
+            const aesKey = cryptoJS['enc']['Base64']['parse'](this.cipher);
+            const iv = cryptoJS['lib']['WordArray']['random'](16);
+            const encrypted = cryptoJS['AES']['encrypt'](JSON.stringify(call), aesKey, {'iv':iv});
+            call['secure'] = cryptoJS['enc']['Base64']['stringify'](iv.concat(encrypted['ciphertext']));
+            call['parameters'] = 0;
+        }
+
+        // build the input object
+        const input =
+        {
+            'app_id':     this.app_id,
+            'session_id': this.session_id,
+            'call':       call
+        };
+
+        // build post data
+        const formData = new FormData();
+        formData.append('input', JSON.stringify(input));
+        
+        // send post data
+        const xmlHttp = new XMLHttpRequest();
+        const url = 'https://newgrounds.io/gateway_v3.php';
+        xmlHttp.open('POST', url, !debugMedals && async);
+        try { xmlHttp.send(formData); }
+        catch(e)
+        {
+            debugMedals && console.log('newgrounds call failed', e);
+            return;
+        }
+        debugMedals && console.log(xmlHttp.responseText);
+        return xmlHttp.responseText && JSON.parse(xmlHttp.responseText);
+    }
+}
+
+/**
+ * LittleJS Post Processing Plugin
+ * - Supports shadertoy style post processing shaders
+ * - call new new PostProcessPlugin() to setup post processing
+ * - can be enabled to pass other canvases through a final shader
+ */
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+/** Global Post Process plugin object
+ *  @type {PostProcessPlugin} */
+let postProcess;
+
+/////////////////////////////////////////////////////////////////////////
+/** 
+ * UI System Global Object
+ */
+class PostProcessPlugin
+{
+    /** Create global post processing shader
+    *  @param {string} shaderCode
+    *  @param {boolean} [includeOverlay]
+     *  @example
+     *  // create the post process plugin object
+     *  new PostProcessPlugin(shaderCode);
+     */
+    constructor(shaderCode, includeOverlay=false)
+    {
+        ASSERT(!postProcess, 'Post process already initialized');
+        postProcess = this;
+
+        if (headlessMode) return;
+        if (!shaderCode) // default shader pass through
+            shaderCode = 'void mainImage(out vec4 c,vec2 p){c=texture(iChannel0,p/iResolution.xy);}';
+
+        /** @property {WebGLProgram} - Shader for post processing */
+        this.shader = glCreateProgram(
+            '#version 300 es\n' +            // specify GLSL ES version
+            'precision highp float;'+        // use highp for better accuracy
+            'in vec2 p;'+                    // position
+            'void main(){'+                  // shader entry point
+            'gl_Position=vec4(p+p-1.,1,1);'+ // set position
+            '}'                              // end of shader
+            ,
+            '#version 300 es\n' +            // specify GLSL ES version
+            'precision highp float;'+        // use highp for better accuracy
+            'uniform sampler2D iChannel0;'+  // input texture
+            'uniform vec3 iResolution;'+     // size of output texture
+            'uniform float iTime;'+          // time
+            'out vec4 c;'+                   // out color
+            '\n' + shaderCode + '\n'+        // insert custom shader code
+            'void main(){'+                  // shader entry point
+            'mainImage(c,gl_FragCoord.xy);'+ // call post process function
+            'c.a=1.;'+                       // always use full alpha
+            '}'                              // end of shader
+        );
+
+        /** @property {WebGLTexture} - Texture for post processing */
+        this.texture = glCreateTexture();
+
+        /** @property {boolean} - Should overlay canvas be included in post processing */
+        this.includeOverlay = includeOverlay;
+
+        // Render the post processing shader, called automatically by the engine
+        engineAddPlugin(undefined, postProcessRender);
+        function postProcessRender()
+        {
+            if (headlessMode) return;
+            
+            // prepare to render post process shader
+            if (glEnable)
+            {
+                glFlush(); // clear out the buffer
+                mainContext.drawImage(glCanvas, 0, 0); // copy to the main canvas
+            }
+            else
+            {
+                // set the viewport
+                glContext.viewport(0, 0, glCanvas.width = mainCanvas.width, glCanvas.height = mainCanvas.height);
+            }
+
+            if (postProcess.includeOverlay)
+            {
+                // copy overlay canvas so it will be included in post processing
+                mainContext.drawImage(overlayCanvas, 0, 0);
+                overlayCanvas.width |= 0;
+            }
+
+            // setup shader program to draw one triangle
+            glContext.useProgram(postProcess.shader);
+            glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
+            glContext.pixelStorei(glContext.UNPACK_FLIP_Y_WEBGL, 1);
+            glContext.disable(glContext.BLEND);
+
+            // set textures, pass in the 2d canvas and gl canvas in separate texture channels
+            glContext.activeTexture(glContext.TEXTURE0);
+            glContext.bindTexture(glContext.TEXTURE_2D, postProcess.texture);
+            glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, mainCanvas);
+
+            // set vertex position attribute
+            const vertexByteStride = 8;
+            const pLocation = glContext.getAttribLocation(postProcess.shader, 'p');
+            glContext.enableVertexAttribArray(pLocation);
+            glContext.vertexAttribPointer(pLocation, 2, glContext.FLOAT, false, vertexByteStride, 0);
+
+            // set uniforms and draw
+            const uniformLocation = (name)=>glContext.getUniformLocation(postProcess.shader, name);
+            glContext.uniform1i(uniformLocation('iChannel0'), 0);
+            glContext.uniform1f(uniformLocation('iTime'), time);
+            glContext.uniform3f(uniformLocation('iResolution'), mainCanvas.width, mainCanvas.height, 1);
+            glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, 4);
+        }
+    }
+}
+
+/**
+ * LittleJS ZzFXM Plugin
+ */
+
+
+
+/**
+ * Music Object - Stores a zzfx music track for later use
+ * 
+ * <a href=https://keithclark.github.io/ZzFXM/>Create music with the ZzFXM tracker.</a>
+ * @example
+ * // create some music
+ * const music_example = new Music(
+ * [
+ *     [                         // instruments
+ *       [,0,400]                // simple note
+ *     ], 
+ *     [                         // patterns
+ *         [                     // pattern 1
+ *             [                 // channel 0
+ *                 0, -1,        // instrument 0, left speaker
+ *                 1, 0, 9, 1    // channel notes
+ *             ], 
+ *             [                 // channel 1
+ *                 0, 1,         // instrument 0, right speaker
+ *                 0, 12, 17, -1 // channel notes
+ *             ]
+ *         ],
+ *     ],
+ *     [0, 0, 0, 0], // sequence, play pattern 0 four times
+ *     90            // BPM
+ * ]);
+ * 
+ * // play the music
+ * music_example.play();
+ */
+class ZzFXMusic extends Sound
+{
+    /** Create a music object and cache the zzfx music samples for later use
+     *  @param {[Array, Array, Array, number]} zzfxMusic - Array of zzfx music parameters
+     */
+    constructor(zzfxMusic)
+    {
+        super(undefined);
+
+        if (!soundEnable || headlessMode) return;
+        this.randomness = 0;
+        this.sampleChannels = zzfxM(...zzfxMusic);
+        this.sampleRate = zzfxR;
+    }
+
+    /** Play the music
+     *  @param {number}  [volume=1] - How much to scale volume by
+     *  @param {boolean} [loop] - True if the music should loop
+     *  @return {AudioBufferSourceNode} - The audio source node
+     */
+    playMusic(volume, loop=false)
+    { return super.play(undefined, volume, 1, 1, loop); }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// ZzFX Music Renderer v2.0.3 by Keith Clark and Frank Force
+
+/** Generate samples for a ZzFM song with given parameters
+ *  @param {Array} instruments - Array of ZzFX sound parameters
+ *  @param {Array} patterns - Array of pattern data
+ *  @param {Array} sequence - Array of pattern indexes
+ *  @param {number} [BPM] - Playback speed of the song in BPM
+ *  @return {Array} - Left and right channel sample data */
+function zzfxM(instruments, patterns, sequence, BPM = 125) 
+{
+  let i, j, k;
+  let instrumentParameters;
+  let note;
+  let sample;
+  let patternChannel;
+  let notFirstBeat;
+  let stop;
+  let instrument;
+  let attenuation;
+  let outSampleOffset;
+  let isSequenceEnd;
+  let sampleOffset = 0;
+  let nextSampleOffset;
+  let sampleBuffer = [];
+  let leftChannelBuffer = [];
+  let rightChannelBuffer = [];
+  let channelIndex = 0;
+  let panning = 0;
+  let hasMore = 1;
+  let sampleCache = {};
+  let beatLength = zzfxR / BPM * 60 >> 2;
+
+  // for each channel in order until there are no more
+  for (; hasMore; channelIndex++) {
+
+    // reset current values
+    sampleBuffer = [hasMore = notFirstBeat = outSampleOffset = 0];
+
+    // for each pattern in sequence
+    sequence.forEach((patternIndex, sequenceIndex) => {
+      // get pattern for current channel, use empty 1 note pattern if none found
+      patternChannel = patterns[patternIndex][channelIndex] || [0, 0, 0];
+
+      // check if there are more channels
+      hasMore |= patterns[patternIndex][channelIndex]&&1;
+
+      // get next offset, use the length of first channel
+      nextSampleOffset = outSampleOffset + (patterns[patternIndex][0].length - 2 - (notFirstBeat?0:1)) * beatLength;
+      // for each beat in pattern, plus one extra if end of sequence
+      isSequenceEnd = sequenceIndex == sequence.length - 1;
+      for (i = 2, k = outSampleOffset; i < patternChannel.length + isSequenceEnd; notFirstBeat = ++i) {
+
+        // <channel-note>
+        note = patternChannel[i];
+
+        // stop if end, different instrument or new note
+        stop = i == patternChannel.length + isSequenceEnd - 1 && isSequenceEnd ||
+            instrument != (patternChannel[0] || 0) || note | 0;
+
+        // fill buffer with samples for previous beat, most cpu intensive part
+        for (j = 0; j < beatLength && notFirstBeat;
+
+            // fade off attenuation at end of beat if stopping note, prevents clicking
+            j++ > beatLength - 99 && stop && attenuation < 1? attenuation += 1 / 99 : 0
+        ) {
+          // copy sample to stereo buffers with panning
+          sample = (1 - attenuation) * sampleBuffer[sampleOffset++] / 2 || 0;
+          leftChannelBuffer[k] = (leftChannelBuffer[k] || 0) - sample * panning + sample;
+          rightChannelBuffer[k] = (rightChannelBuffer[k++] || 0) + sample * panning + sample;
+        }
+
+        // set up for next note
+        if (note) {
+          // set attenuation
+          attenuation = note % 1;
+          panning = patternChannel[1] || 0;
+          if (note |= 0) {
+            // get cached sample
+            sampleBuffer = sampleCache[
+              [
+                instrument = patternChannel[sampleOffset = 0] || 0,
+                note
+              ]
+            ] = sampleCache[[instrument, note]] || (
+                // add sample to cache
+                instrumentParameters = [...instruments[instrument]],
+                instrumentParameters[2] = (instrumentParameters[2] || 220) * 2**(note / 12 - 1),
+
+                // allow negative values to stop notes
+                note > 0 ? zzfxG(...instrumentParameters) : []
+            );
+          }
+        }
+      }
+
+      // update the sample offset
+      outSampleOffset = nextSampleOffset;
+    });
+  }
+
+  return [leftChannelBuffer, rightChannelBuffer];
+}
+
+/**
+ * LittleJS User Interface Plugin
+ * - call new UISystemPlugin() to setup the UI system
+ * - Nested Menus
+ * - Text
+ * - Buttons
+ * - Checkboxes
+ * - Images
+ */
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+/** Global UI system plugin object
+ *  @type {UISystemPlugin} */
+let uiSystem;
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * UI System Global Object
+ */
+class UISystemPlugin
+{
+    /** Create the global UI system object
+     *  @param {CanvasRenderingContext2D} [context]
+     *  @example
+     *  // create the ui plugin object
+     *  new UISystemPlugin;
+     */
+    constructor(context=overlayContext)
+    {
+        ASSERT(!uiSystem, 'UI system already initialized');
+        uiSystem = this;
+
+        /** @property {Color} - Default fill color for UI elements */
+        this.defaultColor = WHITE;
+        /** @property {Color} - Default outline color for UI elements */
+        this.defaultLineColor = BLACK;
+        /** @property {Color} - Default text color for UI elements */
+        this.defaultTextColor = BLACK;
+        /** @property {Color} - Default button color for UI elements */
+        this.defaultButtonColor = hsl(0,0,.5);
+        /** @property {Color} - Default hover color for UI elements */
+        this.defaultHoverColor = hsl(0,0,.7);
+        /** @property {number} - Default line width for UI elements */
+        this.defaultLineWidth = 4;
+        /** @property {string} - Default font for UI elements */
+        this.defaultFont = 'arial';
+        /** @property {Array<UIObject>} - List of all UI elements */
+        this.uiObjects = [];
+        /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - Context to render UI elements to */
+        this.uiContext = context;
+            
+        engineAddPlugin(uiUpdate, uiRender);
+
+        // setup recursive update and render
+        function uiUpdate()
+        {
+            function updateObject(o)
+            {
+                if (!o.visible)
+                    return;
+                if (o.parent)
+                    o.pos = o.localPos.add(o.parent.pos);
+                o.update();
+                for(const c of o.children)
+                    updateObject(c);
+            }
+            uiSystem.uiObjects.forEach(o=> o.parent || updateObject(o));
+        }
+        function uiRender()
+        {
+            function renderObject(o)
+            {
+                if (!o.visible)
+                    return;
+                if (o.parent)
+                    o.pos = o.localPos.add(o.parent.pos);
+                o.render();
+                for(const c of o.children)
+                    renderObject(c);
+            }
+            uiSystem.uiObjects.forEach(o=> o.parent || renderObject(o));
+        }
+    }
+
+    /** Draw a rectangle to the UI context
+    *  @param {Vector2} pos
+    *  @param {Vector2} size
+    *  @param {Color}   [color=uiSystem.defaultColor]
+    *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
+    *  @param {Color}   [lineColor=uiSystem.defaultLineColor] */
+    drawRect(pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor)
+    {
+        uiSystem.uiContext.fillStyle = color.toString();
+        uiSystem.uiContext.beginPath();
+        uiSystem.uiContext.rect(pos.x-size.x/2, pos.y-size.y/2, size.x, size.y);
+        uiSystem.uiContext.fill();
+        if (lineWidth)
+        {
+            uiSystem.uiContext.strokeStyle = lineColor.toString();
+            uiSystem.uiContext.lineWidth = lineWidth;
+            uiSystem.uiContext.stroke();
+        }
+    }
+
+    /** Draw a line to the UI context
+    *  @param {Vector2} posA
+    *  @param {Vector2} posB
+    *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
+    *  @param {Color}   [lineColor=uiSystem.defaultLineColor] */
+    drawLine(posA, posB, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor)
+    {
+        uiSystem.uiContext.strokeStyle = lineColor.toString();
+        uiSystem.uiContext.lineWidth = lineWidth;
+        uiSystem.uiContext.beginPath();
+        uiSystem.uiContext.lineTo(posA.x, posA.y);
+        uiSystem.uiContext.lineTo(posB.x, posB.y);
+        uiSystem.uiContext.stroke();
+    }
+
+    /** Draw a tile to the UI context
+    *  @param {Vector2}  pos
+    *  @param {Vector2}  size
+    *  @param {TileInfo} tileInfo
+    *  @param {Color}    [color=uiSystem.defaultColor]
+    *  @param {number}   [angle]
+    *  @param {boolean}  [mirror] */
+    drawTile(pos, size, tileInfo, color=uiSystem.defaultColor, angle=0, mirror=false)
+    {
+        drawTile(pos, size, tileInfo, color, angle, mirror, BLACK, false, true, uiSystem.uiContext);
+    }
+
+    /** Draw text to the UI context
+    *  @param {string}  text
+    *  @param {Vector2} pos
+    *  @param {Vector2} size
+    *  @param {Color}   [color=uiSystem.defaultColor]
+    *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
+    *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
+    *  @param {string}  [align]
+    *  @param {string}  [font=uiSystem.defaultFont] */
+    drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont)
+    {
+        drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, size.x, uiSystem.uiContext);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * UI Object - Base level object for all UI elements
+ */
+class UIObject
+{
+    /** Create a UIObject
+     *  @param {Vector2}  [pos=(0,0)]
+     *  @param {Vector2}  [size=(1,1)]
+     */
+    constructor(pos=vec2(), size=vec2())
+    {
+        /** @property {Vector2} - Local position of the object */
+        this.localPos   = pos.copy();
+        /** @property {Vector2} - Screen space position of the object */
+        this.pos        = pos.copy();
+        /** @property {Vector2} - Screen space size of the object */
+        this.size       = size.copy();
+        /** @property {Color} */
+        this.color      = uiSystem.defaultColor;
+        /** @property {Color} */
+        this.lineColor  = uiSystem.defaultLineColor;
+        /** @property {Color} */
+        this.textColor  = uiSystem.defaultTextColor;
+        /** @property {Color} */
+        this.hoverColor = uiSystem.defaultHoverColor;
+        /** @property {number} */
+        this.lineWidth  = uiSystem.defaultLineWidth;
+        /** @property {string} */
+        this.font       = uiSystem.defaultFont;
+        /** @property {boolean} */
+        this.visible    = true;
+        /** @property {Array<UIObject>} */
+        this.children   = [];
+        /** @property {UIObject} */
+        this.parent     = undefined;
+        uiSystem.uiObjects.push(this);
+    }
+
+    /** Add a child UIObject to this object
+     *  @param {UIObject} child
+     */
+    addChild(child)
+    {
+        ASSERT(!child.parent && !this.children.includes(child));
+        this.children.push(child);
+        child.parent = this;
+    }
+
+    /** Remove a child UIObject from this object
+     *  @param {UIObject} child
+     */
+    removeChild(child)
+    {
+        ASSERT(child.parent == this && this.children.includes(child));
+        this.children.splice(this.children.indexOf(child), 1);
+        child.parent = undefined;
+    }
+
+    /** Update the object, called automatically by plugin once each frame */
+    update()
+    {
+        // track mouse input
+        const mouseWasOver = this.mouseIsOver;
+        const mouseDown = mouseIsDown(0);
+        if (!mouseDown || isTouchDevice)
+        {
+            this.mouseIsOver = isOverlapping(this.pos, this.size, mousePosScreen);
+            if (!mouseDown && isTouchDevice)
+                this.mouseIsOver = false;
+            if (this.mouseIsOver && !mouseWasOver)
+                this.onEnter();
+            if (!this.mouseIsOver && mouseWasOver)
+                this.onLeave();
+        }
+        if (mouseWasPressed(0) && this.mouseIsOver)
+        {
+            this.mouseIsHeld = true;
+            this.onPress();
+            if (isTouchDevice)
+                this.mouseIsOver = false;
+        }
+        else if (this.mouseIsHeld && !mouseDown)
+        {
+            this.mouseIsHeld = false;
+            this.onRelease();
+        }
+    }
+
+    /** Render the object, called automatically by plugin once each frame */
+    render()
+    {
+        if (this.size.x && this.size.y)
+            uiSystem.drawRect(this.pos, this.size, this.color, this.lineWidth, this.lineColor);
+    }
+
+    /** Called when the mouse enters the object */
+    onEnter()   {}
+
+    /** Called when the mouse leaves the object */
+    onLeave()   {}
+
+    /** Called when the mouse is pressed while over the object */
+    onPress()   {}
+
+    /** Called when the mouse is released while over the object */
+    onRelease() {}
+
+    /** Called when the state of this object changes */
+    onChange()  {}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * UIText - A UI object that displays text
+ * @extends UIObject
+ */
+class UIText extends UIObject
+{
+    /** Create a UIText object
+     *  @param {Vector2} [pos]
+     *  @param {Vector2} [size]
+     *  @param {string}  [text]
+     *  @param {string}  [align]
+     *  @param {string}  [font=uiSystem.defaultFont]
+     */
+    constructor(pos, size, text='', align='center', font=uiSystem.defaultFont)
+    {
+        super(pos, size);
+
+        /** @property {string} */
+        this.text = text;
+        /** @property {string} */
+        this.align = align;
+
+        this.font = font; // set font
+        this.lineWidth = 0; // set text to not be outlined by default
+    }
+    render()
+    {
+        uiSystem.drawText(this.text, this.pos, this.size, this.textColor, this.lineWidth, this.lineColor, this.align, this.font);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * UITile - A UI object that displays a tile image
+ * @extends UIObject
+ */
+class UITile extends UIObject
+{
+    /** Create a UITile object
+     *  @param {Vector2}  [pos]
+     *  @param {Vector2}  [size]
+     *  @param {TileInfo} [tileInfo]
+     *  @param {Color}    [color=WHITE]
+     *  @param {number}   [angle]
+     *  @param {boolean}  [mirror]
+     */
+    constructor(pos, size, tileInfo, color=WHITE, angle=0, mirror=false)
+    {
+        super(pos, size);
+
+        /** @property {TileInfo} - Tile image to use */
+        this.tileInfo = tileInfo;
+        /** @property {number} - Angle to rotate in radians */
+        this.angle = angle;
+        /** @property {boolean} - Should it be mirrored? */
+        this.mirror = mirror;
+        this.color = color;
+    }
+    render()
+    {
+        uiSystem.drawTile(this.pos, this.size, this.tileInfo, this.color, this.angle, this.mirror);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * UIButton - A UI object that acts as a button
+ * @extends UIObject
+ */
+class UIButton extends UIObject
+{
+    /** Create a UIButton object
+     *  @param {Vector2} [pos]
+     *  @param {Vector2} [size]
+     *  @param {string}  [text]
+     *  @param {Color}   [color=uiSystem.defaultButtonColor]
+     */
+    constructor(pos, size, text='', color=uiSystem.defaultButtonColor)
+    {
+        super(pos, size);
+
+        /** @property {string} */
+        this.text = text;
+        this.color = color;
+    }
+    render()
+    {
+        const lineColor = this.mouseIsHeld ? this.color : this.lineColor;
+        const color = this.mouseIsOver? this.hoverColor : this.color;
+        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor);
+        const textSize = vec2(this.size.x, this.size.y*.8);
+        uiSystem.drawText(this.text, this.pos, textSize, 
+            this.textColor, 0, undefined, this.align, this.font);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * UICheckbox - A UI object that acts as a checkbox
+ * @extends UIObject
+ */
+class UICheckbox extends UIObject
+{
+    /** Create a UICheckbox object
+     *  @param {Vector2} [pos]
+     *  @param {Vector2} [size]
+     *  @param {boolean} [checked]
+     */
+    constructor(pos, size, checked=false)
+    {
+        super(pos, size);
+
+        /** @property {boolean} */
+        this.checked = checked;
+    }
+    onPress()
+    {
+        this.checked = !this.checked;
+        this.onChange();
+    }
+    render()
+    {
+        const color = this.mouseIsOver? this.hoverColor : this.color;
+        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, this.lineColor);
+        if (this.checked)
+        {
+            // draw an X if checked
+            uiSystem.drawLine(this.pos.add(this.size.multiply(vec2(-.5,-.5))), this.pos.add(this.size.multiply(vec2(.5,.5))), this.lineWidth, this.lineColor);
+            uiSystem.drawLine(this.pos.add(this.size.multiply(vec2(-.5,.5))), this.pos.add(this.size.multiply(vec2(.5,-.5))), this.lineWidth, this.lineColor);
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * UIScrollbar - A UI object that acts as a scrollbar
+ * @extends UIObject
+ */
+class UIScrollbar extends UIObject
+{
+    /** Create a UIScrollbar object
+     *  @param {Vector2} [pos]
+     *  @param {Vector2} [size]
+     *  @param {number}  [value]
+     *  @param {string}  [text]
+     *  @param {Color}   [color=uiSystem.defaultButtonColor]
+     *  @param {Color}   [handleColor=WHITE]
+     */
+    constructor(pos, size, value=.5, text='', color=uiSystem.defaultButtonColor, handleColor=WHITE)
+    {
+        super(pos, size);
+
+        /** @property {number} */
+        this.value = value;
+        /** @property {string} */
+        this.text = text;
+        this.color = color;
+        this.handleColor = handleColor;
+    }
+    update()
+    {
+        super.update();
+        if (this.mouseIsHeld)
+        {
+            const handleSize = vec2(this.size.y);
+            const handleWidth = this.size.x - handleSize.x;
+            const p1 = this.pos.x - handleWidth/2;
+            const p2 = this.pos.x + handleWidth/2;
+            const oldValue = this.value;
+            this.value = percent(mousePosScreen.x, p1, p2);
+            this.value == oldValue || this.onChange();
+        }
+    }
+    render()
+    {
+        const lineColor = this.mouseIsHeld ? this.color : this.lineColor;
+        const color = this.mouseIsOver? this.hoverColor : this.color;
+        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor);
+    
+        const handleSize = vec2(this.size.y);
+        const handleWidth = this.size.x - handleSize.x;
+        const p1 = this.pos.x - handleWidth/2;
+        const p2 = this.pos.x + handleWidth/2;
+        const handlePos = vec2(lerp(this.value, p1, p2), this.pos.y);
+        const barColor = this.mouseIsHeld ? this.color : this.handleColor;
+        uiSystem.drawRect(handlePos, handleSize, barColor, this.lineWidth, this.lineColor);
+
+        const textSize = vec2(this.size.x, this.size.y*.8);
+        uiSystem.drawText(this.text, this.pos, textSize, 
+            this.textColor, 0, undefined, this.align, this.font);
+    }
+}
+
+/**
+ * LittleJS Box2D Physics Plugin
+ * - Box2dObject extends EngineObject with Box2D physics
+ * - Call box2dEngineInit() to start instead of normal engineInit()
+ * - You will also need to include box2d.wasm.js
+ * - Uses box2d.js super fast web assembly port of Box2D
+ * - More info: https://github.com/kripken/box2d.js
+ * - Fully wraps everything in Box2d
+ * - Functions to create polygon, circle, and edge shapes
+ * - Raycasting and querying
+ * - Joint creation
+ * - Contact begin and end callbacks
+ * - Debug physics drawing
+ */
+
+
+ 
+/** Global Box2d Plugin object
+ *  @type {Box2dPlugin} */
+let box2d;
+
+/** Enable Box2D debug drawing
+ *  @type {boolean}
+ *  @default */
+let box2dDebug = false;
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Box2D Object - extend with your own custom physics objects
+ * - A LittleJS object with Box2D physics
+ * - Each object has a Box2D body which can have multiple fixtures and joints
+ * - Provides interface for Box2D body and fixture functions
+ * @extends EngineObject
+ */
+class Box2dObject extends EngineObject 
+{
+    /** Create a LittleJS object with Box2d physics
+     *  @param {Vector2}  [pos]
+     *  @param {Vector2}  [size]
+     *  @param {TileInfo} [tileInfo]
+     *  @param {number}   [angle]
+     *  @param {Color}    [color]
+     *  @param {number}   [bodyType]
+     *  @param {number}   [renderOrder] */
+    constructor(pos=vec2(), size, tileInfo, angle=0, color, bodyType=box2d.bodyTypeDynamic, renderOrder=0)
+    {
+        super(pos, size, tileInfo, angle, color, renderOrder);
+
+        // create physics body
+        const bodyDef = new box2d.instance.b2BodyDef();
+        bodyDef.set_type(bodyType);
+        bodyDef.set_position(box2d.vec2dTo(pos));
+        bodyDef.set_angle(-angle);
+        this.body = box2d.world.CreateBody(bodyDef);
+        this.body.object = this;
+        this.outlineColor = BLACK;
+    }
+
+    /** Destroy this object and it's physics body */
+    destroy()
+    {
+        // destroy physics body, fixtures, and joints
+        this.body && box2d.world.DestroyBody(this.body);
+        this.body = 0;
+        super.destroy();
+    }
+
+    /** Copy box2d update sim data */
+    update()
+    {
+        // use box2d physics update
+        this.pos = box2d.vec2From(this.body.GetPosition());
+        this.angle = -this.body.GetAngle();
+    }
+
+    /** Render the object, uses box2d drawing if no tile info exists */
+    render()
+    {
+        // use default render or draw fixtures
+        if (this.tileInfo)
+            super.render();
+        else
+            this.drawFixtures(this.color, this.outlineColor, this.lineWidth, mainContext);
+    }
+
+    /** Render debug info */
+    renderDebugInfo()
+    {
+        const isAsleep = !this.getIsAwake();
+        const isStatic = this.getBodyType() == box2d.bodyTypeStatic;
+        const color = rgb(isAsleep?1:0, isAsleep?1:0, isStatic?1:0, .5);
+        this.drawFixtures(color);
+    }
+
+    /** Draws all this object's fixtures 
+     *  @param {Color}  [color]
+     *  @param {Color}  [outlineColor]
+     *  @param {number} [lineWidth]
+     *  @param {CanvasRenderingContext2D} [context] */
+    drawFixtures(color=WHITE, outlineColor, lineWidth=.1, context)
+    {
+        this.getFixtureList().forEach(fixture=>
+            box2d.drawFixture(fixture, this.pos, this.angle, color, outlineColor, lineWidth, context));
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // physics contact callbacks
+
+    /** Called when a contact begins
+     *  @param {Box2dObject} otherObject */
+    beginContact(otherObject) {}
+
+    /** Called when a contact ends
+     *  @param {Box2dObject} otherObject */
+    endContact(otherObject) {}
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // physics fixtures and shapes
+
+    /** Add a shape fixture to the body
+     *  @param {Object} shape
+     *  @param {number}  [density]
+     *  @param {number}  [friction]
+     *  @param {number}  [restitution]
+     *  @param {boolean} [isSensor] */
+    addShape(shape, density=1, friction=.2, restitution=0, isSensor=false)
+    {
+        const fd = new box2d.instance.b2FixtureDef();
+        fd.set_shape(shape);
+        fd.set_density(density);
+        fd.set_friction(friction);
+        fd.set_restitution(restitution);
+        fd.set_isSensor(isSensor);
+        return this.body.CreateFixture(fd);
+    }
+
+    /** Add a box shape to the body
+     *  @param {Vector2} [size]
+     *  @param {Vector2} [offset]
+     *  @param {number}  [angle]
+     *  @param {number}  [density]
+     *  @param {number}  [friction]
+     *  @param {number}  [restitution]
+     *  @param {boolean} [isSensor] */
+    addBox(size=vec2(1), offset=vec2(), angle=0, density, friction, restitution, isSensor)
+    {
+        const shape = new box2d.instance.b2PolygonShape();
+        shape.SetAsBox(size.x/2, size.y/2, box2d.vec2dTo(offset), angle);
+        return this.addShape(shape, density, friction, restitution, isSensor);
+    }
+
+    /** Add a polygon shape to the body
+     *  @param {Array<Vector2>} points
+     *  @param {number}  [density]
+     *  @param {number}  [friction]
+     *  @param {number}  [restitution]
+     *  @param {boolean} [isSensor] */
+    addPoly(points, density, friction, restitution, isSensor)
+    {
+        function box2dCreatePolygonShape(points)
+        {
+            function box2dCreatePointList(points)
+            {
+                const buffer = box2d.instance._malloc(points.length * 8);
+                for (let i=0, offset=0; i<points.length; ++i)
+                {
+                    box2d.instance.HEAPF32[buffer + offset >> 2] = points[i].x;
+                    offset += 4;
+                    box2d.instance.HEAPF32[buffer + offset >> 2] = points[i].y;
+                    offset += 4;
+                }
+                return box2d.instance.wrapPointer(buffer, box2d.instance.b2Vec2);
+            }
+
+            ASSERT(3 <= points.length && points.length <= 8);
+            const shape = new box2d.instance.b2PolygonShape();
+            const box2dPoints = box2dCreatePointList(points);
+            shape.Set(box2dPoints, points.length);
+            return shape;
+        }
+
+        const shape = box2dCreatePolygonShape(points);
+        return this.addShape(shape, density, friction, restitution, isSensor);
+    }
+
+    /** Add a regular polygon shape to the body
+     *  @param {number}  [diameter]
+     *  @param {number}  [sides]
+     *  @param {number}  [density]
+     *  @param {number}  [friction]
+     *  @param {number}  [restitution]
+     *  @param {boolean} [isSensor] */
+    addRegularPoly(diameter=1, sides=8, density, friction, restitution, isSensor)
+    {
+        const points = [];
+        const radius = diameter/2;
+        for (let i=sides; i--;)
+            points.push(vec2(radius,0).rotate((i+.5)/sides*PI*2));
+        return this.addPoly(points, density, friction, restitution, isSensor);
+    }
+
+    /** Add a random polygon shape to the body
+     *  @param {number}  [diameter]
+     *  @param {number}  [density]
+     *  @param {number}  [friction]
+     *  @param {number}  [restitution]
+     *  @param {boolean} [isSensor] */
+    addRandomPoly(diameter=1, density, friction, restitution, isSensor)
+    {
+        const sides = randInt(3, 9);
+        const points = [];
+        const radius = diameter/2;
+        for (let i=sides; i--;)
+            points.push(vec2(rand(radius/2,radius*1.5),0).rotate(i/sides*PI*2));
+        return this.addPoly(points, density, friction, restitution, isSensor);
+    }
+
+    /** Add a circle shape to the body
+     *  @param {number}  [diameter]
+     *  @param {Vector2} [offset]
+     *  @param {number}  [density]
+     *  @param {number}  [friction]
+     *  @param {number}  [restitution]
+     *  @param {boolean} [isSensor] */
+    addCircle(diameter=1, offset=vec2(), density, friction, restitution, isSensor)
+    {
+        const shape = new box2d.instance.b2CircleShape();
+        shape.set_m_p(box2d.vec2dTo(offset));
+        shape.set_m_radius(diameter/2);
+        return this.addShape(shape, density, friction, restitution, isSensor);
+    }
+
+    /** Add an edge shape to the body
+     *  @param {Vector2} point1
+     *  @param {Vector2} point2
+     *  @param {number}  [density]
+     *  @param {number}  [friction]
+     *  @param {number}  [restitution]
+     *  @param {boolean} [isSensor] */
+    addEdge(point1, point2, density, friction, restitution, isSensor)
+    {
+        const shape = new box2d.instance.b2EdgeShape();
+        shape.Set(box2d.vec2dTo(point1), box2d.vec2dTo(point2));
+        return this.addShape(shape, density, friction, restitution, isSensor);
+    }
+
+    /** Add an edge loop to the body, an edge loop connects the end points
+     *  @param {Array<Vector2>} points
+     *  @param {number}  [density]
+     *  @param {number}  [friction]
+     *  @param {number}  [restitution]
+     *  @param {boolean} [isSensor] */
+    addEdgeLoop(points, density, friction, restitution, isSensor)
+    {
+        const fixtures = [];
+        const getPoint = i=> points[mod(i,points.length)];
+        for (let i=0; i<points.length; ++i)
+        {
+            const shape = new box2d.instance.b2EdgeShape();
+            shape.set_m_vertex0(box2d.vec2dTo(getPoint(i-1)));
+            shape.set_m_vertex1(box2d.vec2dTo(getPoint(i+0)));
+            shape.set_m_vertex2(box2d.vec2dTo(getPoint(i+1)));
+            shape.set_m_vertex3(box2d.vec2dTo(getPoint(i+2)));
+            const f = this.addShape(shape, density, friction, restitution, isSensor);
+            fixtures.push(f);
+        }
+        return fixtures;
+    }
+
+    /** Add an edge list to the body
+     *  @param {Array<Vector2>} points
+     *  @param {number}  [density]
+     *  @param {number}  [friction]
+     *  @param {number}  [restitution]
+     *  @param {boolean} [isSensor] */
+    addEdgeList(points, density, friction, restitution, isSensor)
+    {
+        const fixtures = [];
+        for (let i=0; i<points.length-1; ++i)
+        {
+            const shape = new box2d.instance.b2EdgeShape();
+            points[i-1] && shape.set_m_vertex0(box2d.vec2dTo(points[i-1]));
+            points[i+0] && shape.set_m_vertex1(box2d.vec2dTo(points[i+0]));
+            points[i+1] && shape.set_m_vertex2(box2d.vec2dTo(points[i+1]));
+            points[i+2] && shape.set_m_vertex3(box2d.vec2dTo(points[i+2]));
+            const f = this.addShape(shape, density, friction, restitution, isSensor);
+            fixtures.push(f);
+        }
+        return fixtures;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // physics get functions
+
+    /** Gets the center of mass
+     *  @return {Vector2} */
+    getCenterOfMass() { return box2d.vec2From(this.body.GetWorldCenter()); }
+
+    /** Gets the linear velocity
+     *  @return {Vector2} */
+    getLinearVelocity() { return box2d.vec2From(this.body.GetLinearVelocity()); }
+
+    /** Gets the angular velocity
+     *  @return {Vector2} */
+    getAngularVelocity() { return this.body.GetAngularVelocity(); }
+
+    /** Gets the mass
+     *  @return {number} */
+    getMass() { return this.body.GetMass(); }
+
+    /** Gets the rotational inertia
+     *  @return {number} */
+    getInertia() { return this.body.GetInertia(); }
+
+    /** Check if this object is awake
+     *  @return {boolean} */
+    getIsAwake() { return this.body.IsAwake(); }
+
+    /** Gets the physics body type
+     *  @return {number} */
+    getBodyType() { return this.body.GetType(); }
+    
+    ///////////////////////////////////////////////////////////////////////////////
+    // physics set functions
+
+    /** Sets the position and angle
+     *  @param {Vector2} pos
+     *  @param {number} angle */
+    setTransform(pos, angle)
+    {
+        this.pos = pos;
+        this.angle = angle;
+        this.body.SetTransform(box2d.vec2dTo(pos), angle);
+    }
+    
+    /** Sets the position
+     *  @param {Vector2} pos */
+    setPosition(pos) { this.setTransform(pos, this.body.GetAngle()); }
+
+    /** Sets the angle
+     *  @param {number} angle */
+    setAngle(angle) { this.setTransform(box2d.vec2From(this.body.GetPosition()), -angle); }
+
+    /** Sets the linear velocity
+     *  @param {Vector2} velocity */
+    setLinearVelocity(velocity) { this.body.SetLinearVelocity(box2d.vec2dTo(velocity)); }
+
+    /** Sets the angular velocity
+     *  @param {number} angularVelocity */
+    setAngularVelocity(angularVelocity) { this.body.SetAngularVelocity(angularVelocity); }
+
+    /** Sets the linear damping
+     *  @param {number} damping */
+    setLinearDamping(damping) { this.body.SetLinearDamping(damping); }
+
+    /** Sets the angular damping
+     *  @param {number} damping */
+    setAngularDamping(damping) { this.body.SetAngularDamping(damping); }
+
+    /** Sets the gravity scale
+     *  @param {number} [scale] */
+    setGravityScale(scale=1) { this.body.SetGravityScale(this.gravityScale = scale); }
+
+    /** Should this body be treated like a bullet for continuous collision detection?
+     *  @param {boolean} [isBullet] */
+    setBullet(isBullet=true) { this.body.SetBullet(isBullet); }
+
+    /** Set the sleep state of the body
+     *  @param {boolean} [isAwake] */
+    setAwake(isAwake=true) { this.body.SetAwake(isAwake); }
+    
+    /** Set the physics body type
+     *  @param {number} type */
+    setBodyType(type) { this.body.SetType(type); }
+
+    /** Set whether the body is allowed to sleep
+     *  @param {boolean} [isAllowed] */
+    setSleepingAllowed(isAllowed=true) { this.body.SetSleepingAllowed(isAllowed); }
+    
+    /** Set whether the body can rotate
+     *  @param {boolean} [isFixed] */
+    setFixedRotation(isFixed=true) { this.body.SetFixedRotation(isFixed); }
+
+    /** Set the center of mass of the body
+     *  @param {Vector2} center */
+    setCenterOfMass(center) { this.setMassData(center) }
+
+    /** Set the mass of the body
+     *  @param {number} mass */
+    setMass(mass) { this.setMassData(undefined, mass) }
+    
+    /** Set the moment of inertia of the body
+     *  @param {number} momentOfInertia */
+    setMomentOfInertia(momentOfInertia) { this.setMassData(undefined, undefined, momentOfInertia) }
+    
+    /** Reset the mass, center of mass, and moment */
+    resetMassData()  { this.body.ResetMassData(); }
+    
+    /** Set the mass data of the body
+     *  @param {Vector2} [localCenter]
+     *  @param {number}  [mass]
+     *  @param {number}  [momentOfInertia] */
+    setMassData(localCenter, mass, momentOfInertia)
+    {
+        const data = new box2d.instance.b2MassData();
+        this.body.GetMassData(data);
+        localCenter && data.set_center(box2d.vec2dTo(localCenter));
+        mass && data.set_mass(mass);
+        momentOfInertia && data.set_I(momentOfInertia);
+        this.body.SetMassData(data);
+    }
+
+    /** Set the collision filter data for this body
+     *  @param {number} [categoryBits]
+     *  @param {number} [ignoreCategoryBits]
+     *  @param {number} [groupIndex] */
+    setFilterData(categoryBits=0, ignoreCategoryBits=0, groupIndex=0)
+    {
+        this.getFixtureList().forEach(fixture=>
+        {
+            const filter = fixture.GetFilterData();
+            filter.set_categoryBits(categoryBits);
+            filter.set_maskBits(0xffff & ~ignoreCategoryBits);
+            filter.set_groupIndex(groupIndex);
+        });
+    }
+
+    /** Set if this body is a sensor
+     *  @param {boolean} [isSensor] */
+    setSensor(isSensor=true)
+    { this.getFixtureList().forEach(f=>f.SetSensor(isSensor)); }
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // physics force and torque functions
+
+    /** Apply force to this object
+     *  @param {Vector2} force
+     *  @param {Vector2} [pos] */
+    applyForce(force, pos)
+    {
+        pos ||= this.getCenterOfMass();
+        this.setAwake();
+        this.body.ApplyForce(box2d.vec2dTo(force), box2d.vec2dTo(pos));
+    }
+
+    /** Apply acceleration to this object
+     *  @param {Vector2} acceleration
+     *  @param {Vector2} [pos] */
+    applyAcceleration(acceleration, pos)
+    { 
+        pos ||= this.getCenterOfMass();
+        this.setAwake();
+        this.body.ApplyLinearImpulse(box2d.vec2dTo(acceleration), box2d.vec2dTo(pos));
+    }
+
+    /** Apply torque to this object
+     *  @param {number} torque */
+    applyTorque(torque)
+    {
+        this.setAwake();
+        this.body.ApplyTorque(torque);
+    }
+    
+    /** Apply angular acceleration to this object
+     *  @param {number} acceleration */
+    applyAngularAcceleration(acceleration)
+    {
+        this.setAwake();
+        this.body.ApplyAngularImpulse(acceleration);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // lists of fixtures and joints
+
+    /** Check if this object has any fixtures
+     *  @return {boolean} */
+    hasFixtures() { return !box2d.isNull(this.body.GetFixtureList()); }
+
+    /** Get list of fixtures for this object
+     *  @return {Array<Object>} */
+    getFixtureList()
+    {
+        const fixtures = [];
+        for (let fixture=this.body.GetFixtureList(); !box2d.isNull(fixture); )
+        {
+            fixtures.push(fixture);
+            fixture = fixture.GetNext();
+        }
+        return fixtures;
+    }
+
+    /** Check if this object has any joints
+     *  @return {boolean} */
+    hasJoints() { return !box2d.isNull(this.body.GetJointList()); }
+    
+    /** Get list of joints for this object
+     *  @return {Array<Object>} */
+    getJointList()
+    {
+        const joints = [];
+        for (let joint=this.body.GetJointList(); !box2d.isNull(joint); )
+        {
+            joints.push(joint);
+            joint = joint.get_next();
+        }
+        return joints;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Box2D Raycast Result
+ * - Holds results from a box2d raycast queries
+ * - Automatically created by box2d raycast functions
+ */
+class Box2dRaycastResult
+{
+    /** Create a raycast result
+     *  @param {Object}  fixture
+     *  @param {Vector2} point
+     *  @param {Vector2} normal
+     *  @param {number}  fraction */
+    constructor(fixture, point, normal, fraction)
+    {
+        /** @property {Box2dObject} - The box2d object */
+        this.object   = fixture.GetBody().object;
+        /** @property {Object} - The fixture that was hit */
+        this.fixture  = fixture;
+        /** @property {Vector2} - The hit point */
+        this.point    = point;
+        /** @property {Vector2} - The hit normal */
+        this.normal   = normal;
+        /** @property {number} - Distance fraction at the point of intersection */
+        this.fraction = fraction;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Box2D Joint
+ * - Base class for Box2D joints 
+ * - A joint is used to connect objects together
+ */
+class Box2dJoint
+{
+    /** Create a box2d joint, the base class is not intended to be used directly
+     *  @param {Object} jointDef */
+    constructor(jointDef)
+    {
+        this.box2dJoint = box2d.castObjectType(box2d.world.CreateJoint(jointDef));
+    }
+
+    /** Destroy this joint */
+    destroy() { box2d.world.DestroyJoint(this.box2dJoint); this.box2dJoint = 0; }
+
+    /** Get the first object attached to this joint
+     *  @return {Box2dObject} */
+    getObjectA() { return this.box2dJoint.GetBodyA().object; }
+    
+    /** Get the second object attached to this joint
+     *  @return {Box2dObject} */
+    getObjectB() { return this.box2dJoint.GetBodyB().object; }
+    
+    /** Get the first anchor for this joint in world coordinates
+     *  @return {Vector2} */
+    getAnchorA() { return box2d.vec2From(this.box2dJoint.GetAnchorA());}
+
+    /** Get the second anchor for this joint in world coordinates
+     *  @return {Vector2} */
+    getAnchorB() { return box2d.vec2From(this.box2dJoint.GetAnchorB());}
+    
+    /** Get the reaction force on bodyB at the joint anchor given a time step
+     *  @param {number} time
+     *  @return {Vector2} */
+    getReactionForce(time)  { return box2d.vec2From(this.box2dJoint.GetReactionForce(1/time));}
+
+    /** Get the reaction torque on bodyB in N*m given a time step
+     *  @param {number} time
+     *  @return {number} */
+    getReactionTorque(time) { return this.box2dJoint.GetReactionTorque(1/time);}
+    
+    /** Check if the connected bodies should collide
+     *  @return {boolean} */
+    getCollideConnected()   { return this.box2dJoint.getCollideConnected();}
+
+    /** Check if either connected body is active
+     *  @return {boolean} */
+    isActive() { return this.box2dJoint.IsActive();}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Box2D Target Joint, also known as a mouse joint
+ * - Used to make a point on a object track a specific world point target
+ * - This a soft constraint with a max force
+ * - This allows the constraint to stretch and without applying huge forces
+ * @extends Box2dJoint
+ */
+class Box2dTargetJoint extends Box2dJoint
+{
+    /** Create a target joint
+     *  @param {Box2dObject} object
+     *  @param {Box2dObject} fixedObject
+     *  @param {Vector2} worldPos */
+    constructor(object, fixedObject, worldPos)
+    {
+        object.setAwake();
+        const jointDef = new box2d.instance.b2MouseJointDef();
+        jointDef.set_bodyA(fixedObject.body);
+        jointDef.set_bodyB(object.body);
+        jointDef.set_target(box2d.vec2dTo(worldPos));
+        jointDef.set_maxForce(2e3 * object.getMass());
+        super(jointDef);
+    }
+
+    /** Set the target point in world coordinates
+     *  @param {Vector2} pos */
+    setTarget(pos) { this.box2dJoint.SetTarget(box2d.vec2dTo(pos)); }
+    
+    /** Get the target point in world coordinates
+     *  @return {Vector2} */
+    getTarget(){ return box2d.vec2From(this.box2dJoint.GetTarget()); }
+
+    /** Sets the maximum force in Newtons
+     *  @param {number} force */
+    setMaxForce(force) { this.box2dJoint.SetMaxForce(force); }
+    
+    /** Gets the maximum force in Newtons
+     *  @return {number} */
+    getMaxForce() { return this.box2dJoint.GetMaxForce(); }
+    
+    /** Sets the joint frequency in Hertz
+     *  @param {number} hz */
+    setFrequency(hz) { this.box2dJoint.SetFrequency(hz); }
+    
+    /** Gets the joint frequency in Hertz
+     *  @return {number} */
+    getFrequency() { return this.box2dJoint.GetFrequency(); }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Box2D Distance Joint
+ * - Constrains two points on two objects to remain at a fixed distance
+ * - You can view this as a massless, rigid rod
+ * @extends Box2dJoint
+ */
+class Box2dDistanceJoint extends Box2dJoint
+{
+    /** Create a distance joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB
+     *  @param {Vector2} anchorA
+     *  @param {Vector2} anchorB
+     *  @param {boolean} [collide] */
+    constructor(objectA, objectB, anchorA, anchorB, collide=false)
+    {
+        anchorA ||= box2d.vec2From(objectA.body.GetPosition());
+        anchorB ||= box2d.vec2From(objectB.body.GetPosition());
+        const localAnchorA = objectA.worldToLocal(anchorA);
+        const localAnchorB = objectB.worldToLocal(anchorB);
+        const jointDef = new box2d.instance.b2DistanceJointDef();
+        jointDef.set_bodyA(objectA.body);
+        jointDef.set_bodyB(objectB.body);
+        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
+        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_length(anchorA.distance(anchorB));
+        jointDef.set_collideConnected(collide);
+        super(jointDef);
+    }
+
+    /** Get the local anchor point relative to objectA's origin
+     *  @return {Vector2} */
+    getLocalAnchorA() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorA()); }
+
+    /** Get the local anchor point relative to objectB's origin
+     *  @return {Vector2} */
+    getLocalAnchorB() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
+    
+    /** Set the length of the joint
+     *  @param {number} length */
+    setLength(length) { this.box2dJoint.SetLength(length); }
+    
+    /** Get the length of the joint
+     *  @return {number} */
+    getLength() { return this.box2dJoint.GetLength(); }
+    
+    /** Set the frequency in Hertz
+     *  @param {number} hz */
+    setFrequency(hz) { this.box2dJoint.SetFrequency(hz); }
+    
+    /** Get the frequency in Hertz
+     *  @return {number} */
+    getFrequency() { return this.box2dJoint.GetFrequency(); }
+    
+    /** Set the damping ratio
+     *  @param {number} ratio */
+    setDampingRatio(ratio) { this.box2dJoint.SetDampingRatio(ratio); }
+    
+    /** Get the damping ratio
+     *  @return {number} */
+    getDampingRatio() { return this.box2dJoint.GetDampingRatio(); }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Box2D Pin Joint
+ * - Pins two objects together at a point
+ * @extends Box2dDistanceJoint
+ */
+class Box2dPinJoint extends Box2dDistanceJoint
+{
+    /** Create a pin joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB
+     *  @param {Vector2} [pos]
+     *  @param {boolean} [collide] */
+    constructor(objectA, objectB, pos=objectA.pos, collide=false)
+    {
+        super(objectA, objectB, undefined, pos, collide);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Box2D Rope Joint
+ * - Enforces a maximum distance between two points on two objects
+ * @extends Box2dJoint
+ */
+class Box2dRopeJoint extends Box2dJoint
+{
+    /** Create a rope joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB
+     *  @param {Vector2} anchorA
+     *  @param {Vector2} anchorB
+     *  @param {number} extraLength
+     *  @param {boolean} [collide] */
+    constructor(objectA, objectB, anchorA, anchorB, extraLength=0, collide=false)
+    {
+        anchorA ||= box2d.vec2From(objectA.body.GetPosition());
+        anchorB ||= box2d.vec2From(objectB.body.GetPosition());
+        const localAnchorA = objectA.worldToLocal(anchorA);
+        const localAnchorB = objectB.worldToLocal(anchorB);
+        const jointDef = new box2d.instance.b2RopeJointDef();
+        jointDef.set_bodyA(objectA.body);
+        jointDef.set_bodyB(objectB.body);
+        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
+        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_maxLength(anchorA.distance(anchorB)+extraLength);
+        jointDef.set_collideConnected(collide);
+        super(jointDef);
+    }
+
+    /** Get the local anchor point relative to objectA's origin
+     *  @return {Vector2} */
+    getLocalAnchorA() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorA()); }
+
+    /** Get the local anchor point relative to objectB's origin
+     *  @return {Vector2} */
+    getLocalAnchorB() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
+    
+    /** Set the max length of the joint
+     *  @param {number} length */
+    setMaxLength(length) { this.box2dJoint.SetMaxLength(length); }
+
+    /** Get the max length of the joint
+     *  @return {number} */
+    getMaxLength() { return this.box2dJoint.GetMaxLength(); }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Box2D Revolute Joint
+ * - Constrains two objects to share a point while they are free to rotate around the point
+ * - The relative rotation about the shared point is the joint angle
+ * - You can limit the relative rotation with a joint limit
+ * - You can use a motor to drive the relative rotation about the shared point
+ * - A maximum motor torque is provided so that infinite forces are not generated
+ * @extends Box2dJoint
+ */
+class Box2dRevoluteJoint extends Box2dJoint
+{
+    /** Create a revolute joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB
+     *  @param {Vector2} anchor
+     *  @param {boolean} [collide] */
+    constructor(objectA, objectB, anchor, collide=false)
+    {
+        anchor ||= box2d.vec2From(objectB.body.GetPosition());
+        const localAnchorA = objectA.worldToLocal(anchor);
+        const localAnchorB = objectB.worldToLocal(anchor);
+        const jointDef = new box2d.instance.b2RevoluteJointDef();
+        jointDef.set_bodyA(objectA.body);
+        jointDef.set_bodyB(objectB.body);
+        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
+        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_referenceAngle(objectA.body.GetAngle() - objectB.body.GetAngle());
+        jointDef.set_collideConnected(collide);
+        super(jointDef);
+    }
+
+    /** Get the local anchor point relative to objectA's origin
+     *  @return {Vector2} */
+    getLocalAnchorA() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorA()); }
+
+    /** Get the local anchor point relative to objectB's origin
+     *  @return {Vector2} */
+    getLocalAnchorB() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
+
+    /** Get the reference angle, objectB angle minus objectA angle in the reference state 
+     *  @return {number} */
+    getReferenceAngle() { return this.box2dJoint.GetReferenceAngle(); }
+
+    /** Get the current joint angle
+     *  @return {number} */
+    getJointAngle() { return this.box2dJoint.GetJointAngle(); }
+
+    /** Get the current joint angle speed in radians per second
+     *  @return {number} */
+    getJointSpeed() { return this.box2dJoint.GetJointSpeed(); }
+
+    /** Is the joint limit enabled?
+     *  @return {boolean} */
+    isLimitEnabled() { return this.box2dJoint.IsLimitEnabled(); }
+
+    /** Enable/disable the joint limit
+     *  @param {boolean} [enable] */
+    enableLimit(enable=true) { return this.box2dJoint.enableLimit(enable); }
+
+    /** Get the lower joint limit
+     *  @return {number} */
+    getLowerLimit() { return this.box2dJoint.GetLowerLimit(); }
+
+    /** Get the upper joint limit
+     *  @return {number} */
+    getUpperLimit() { return this.box2dJoint.GetUpperLimit(); }
+
+    /** Set the joint limits
+     *  @param {number} min
+     *  @param {number} max */
+    setLimits(min, max) { return this.box2dJoint.SetLimits(min, max); }
+
+    /** Is the joint motor enabled?
+     *  @return {boolean} */
+    isMotorEnabled() { return this.box2dJoint.IsMotorEnabled(); }
+
+    /** Enable/disable the joint motor
+     *  @param {boolean} [enable] */
+    enableMotor(enable=true) { return this.box2dJoint.EnableMotor(enable); }
+
+    /** Set the motor speed
+     *  @param {number} speed */
+    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(speed); }
+
+    /** Get the motor speed
+     *  @return {number} */
+    getMotorSpeed() { return this.box2dJoint.GetMotorSpeed(); }
+
+    /** Set the motor torque
+     *  @param {number} torque */
+    setMaxMotorTorque(torque) { return this.box2dJoint.SetMaxMotorTorque(torque); }
+
+    /** Get the max motor torque
+     *  @return {number} */
+    getMaxMotorTorque() { return this.box2dJoint.GetMaxMotorTorque(); }
+
+    /** Get the motor torque given a time step
+     *  @param {number} time 
+     *  @return {number} */
+    getMotorTorque(time) { return this.box2dJoint.GetMotorTorque(1/time); }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Box2D Gear Joint
+ * - A gear joint is used to connect two joints together
+ * - Either joint can be a revolute or prismatic joint
+ * - You specify a gear ratio to bind the motions together
+ * @extends Box2dJoint
+ */
+class Box2dGearJoint extends Box2dJoint
+{
+    /** Create a gear joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB
+     *  @param {Box2dJoint} joint1
+     *  @param {Box2dJoint} joint2
+     *  @param {ratio} [ratio] */
+    constructor(objectA, objectB, joint1, joint2, ratio=1)
+    {
+        const jointDef = new box2d.instance.b2GearJointDef();
+        jointDef.set_bodyA(objectA.body);
+        jointDef.set_bodyB(objectB.body);
+        jointDef.set_joint1(joint1.box2dJoint);
+        jointDef.set_joint2(joint2.box2dJoint);
+        jointDef.set_ratio(ratio);
+        super(jointDef);
+
+        this.joint1 = joint1;
+        this.joint2 = joint2;
+    }
+
+    /** Get the first joint
+     *  @return {Box2dJoint} */
+    getJoint1() { return this.joint1; }
+
+    /** Get the second joint
+     *  @return {Box2dJoint} */
+    getJoint2() { return this.joint2; }
+
+    /** Set the gear ratio
+     *  @param {number} ratio */
+    setRatio(ratio) { return this.box2dJoint.SetRatio(ratio); }
+
+    /** Get the gear ratio
+     *  @return {number} */
+    getRatio() { return this.box2dJoint.GetRatio(); }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Box2D Prismatic Joint
+ * - Provides one degree of freedom: translation along an axis fixed in objectA
+ * - Relative rotation is prevented
+ * - You can use a joint limit to restrict the range of motion
+ * - You can use a joint motor to drive the motion or to model joint friction
+ * @extends Box2dJoint
+ */
+class Box2dPrismaticJoint extends Box2dJoint
+{
+    /** Create a prismatic joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB
+     *  @param {Vector2} anchor
+     *  @param {Vector2} worldAxis
+     *  @param {boolean} [collide] */
+    constructor(objectA, objectB, anchor, worldAxis=vec2(0,1), collide=false)
+    {
+        anchor ||= box2d.vec2From(objectB.body.GetPosition());
+        const localAnchorA = objectA.worldToLocal(anchor);
+        const localAnchorB = objectB.worldToLocal(anchor);
+        const localAxisA = objectB.worldToLocalVector(worldAxis);
+        const jointDef = new box2d.instance.b2PrismaticJointDef();
+        jointDef.set_bodyA(objectA.body);
+        jointDef.set_bodyB(objectB.body);
+        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
+        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_localAxisA(box2d.vec2dTo(localAxisA));
+        jointDef.set_referenceAngle(objectA.body.GetAngle() - objectB.body.GetAngle());
+        jointDef.set_collideConnected(collide);
+        super(jointDef);
+    }
+
+    /** Get the local anchor point relative to objectA's origin
+     *  @return {Vector2} */
+    getLocalAnchorA() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorA()); }
+
+    /** Get the local anchor point relative to objectB's origin
+     *  @return {Vector2} */
+    getLocalAnchorB() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
+
+    /** Get the local joint axis relative to bodyA
+     *  @return {Vector2} */
+    getLocalAxisA() { return box2d.vec2From(this.box2dJoint.GetLocalAxisA()); }
+    
+    /** Get the reference angle
+     *  @return {number} */
+    getReferenceAngle() { return this.box2dJoint.GetReferenceAngle(); }
+
+    /** Get the current joint translation
+     *  @return {number} */
+    getJointTranslation() { return this.box2dJoint.GetJointTranslation(); }
+    
+    /** Get the current joint translation speed
+     *  @return {number} */
+    getJointSpeed() { return this.box2dJoint.GetJointSpeed(); }
+    
+    /** Is the joint limit enabled?
+     *  @return {boolean} */
+    isLimitEnabled() { return this.box2dJoint.IsLimitEnabled(); }
+    
+    /** Enable/disable the joint limit
+     *  @param {boolean} [enable] */
+    enableLimit(enable=true) { return this.box2dJoint.enableLimit(enable); }
+    
+    /** Get the lower joint limit
+     *  @return {number} */
+    getLowerLimit() { return this.box2dJoint.GetLowerLimit(); }
+    
+    /** Get the upper joint limit
+     *  @return {number} */
+    getUpperLimit() { return this.box2dJoint.GetUpperLimit(); }
+    
+    /** Set the joint limits
+     *  @param {number} min
+     *  @param {number} max */
+    setLimits(min, max) { return this.box2dJoint.SetLimits(min, max); }
+    
+    /** Is the motor enabled?
+     *  @return {boolean} */
+    isMotorEnabled() { return this.box2dJoint.IsMotorEnabled(); }
+    
+    /** Enable/disable the joint motor
+     *  @param {boolean} [enable] */
+    enableMotor(enable=true) { return this.box2dJoint.EnableMotor(enable); }
+    
+    /** Set the motor speed
+     *  @param {number} speed */
+    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(speed); }
+    
+    /** Get the motor speed
+     *  @return {number} */
+    getMotorSpeed() { return this.box2dJoint.GetMotorSpeed(); }
+    
+    /** Set the maximum motor force
+     *  @param {number} force */
+    setMaxMotorForce(force) { return this.box2dJoint.SetMaxMotorForce(force); }
+    
+    /** Get the maximum motor force
+     *  @return {number} */
+    getMaxMotorForce() { return this.box2dJoint.GetMaxMotorForce(); }
+    
+    /** Get the motor force given a time step
+     *  @param {number} time
+     *  @return {number} */
+    getMotorForce(time) { return this.box2dJoint.GetMotorForce(1/time); }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Box2D Wheel Joint
+ * - Provides two degrees of freedom: translation along an axis fixed in objectA and rotation
+ * - You can use a joint limit to restrict the range of motion
+ * - You can use a joint motor to drive the motion or to model joint friction
+ * - This joint is designed for vehicle suspensions
+ * @extends Box2dJoint
+ */
+class Box2dWheelJoint extends Box2dJoint
+{
+    /** Create a wheel joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB
+     *  @param {Vector2} anchor
+     *  @param {Vector2} worldAxis
+     *  @param {boolean} [collide] */
+    constructor(objectA, objectB, anchor, worldAxis=vec2(0,1), collide=false)
+    {
+        anchor ||= box2d.vec2From(objectB.body.GetPosition());
+        const localAnchorA = objectA.worldToLocal(anchor);
+        const localAnchorB = objectB.worldToLocal(anchor);
+        const localAxisA = objectB.worldToLocalVector(worldAxis);
+        const jointDef = new box2d.instance.b2WheelJointDef();
+        jointDef.set_bodyA(objectA.body);
+        jointDef.set_bodyB(objectB.body);
+        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
+        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_localAxisA(box2d.vec2dTo(localAxisA));
+        jointDef.set_collideConnected(collide);
+        super(jointDef);
+    }
+
+    /** Get the local anchor point relative to objectA's origin
+     *  @return {Vector2} */
+    getLocalAnchorA() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorA()); }
+
+    /** Get the local anchor point relative to objectB's origin
+     *  @return {Vector2} */
+    getLocalAnchorB() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
+
+    /** Get the local joint axis relative to bodyA
+     *  @return {Vector2} */
+    getLocalAxisA() { return box2d.vec2From(this.box2dJoint.GetLocalAxisA()); }
+
+    /** Get the current joint translation
+     *  @return {number} */
+    getJointTranslation() { return this.box2dJoint.GetJointTranslation(); }
+
+    /** Get the current joint translation speed
+     *  @return {number} */
+    getJointSpeed() { return this.box2dJoint.GetJointSpeed(); }
+
+    /** Is the joint motor enabled?
+     *  @return {boolean} */
+    isMotorEnabled() { return this.box2dJoint.IsMotorEnabled(); }
+
+    /** Enable/disable the joint motor
+     *  @param {boolean} [enable] */
+    enableMotor(enable=true) { return this.box2dJoint.EnableMotor(enable); }
+
+    /** Set the motor speed
+     *  @param {number} speed */
+    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(speed); }
+
+    /** Get the motor speed
+     *  @return {number} */
+    getMotorSpeed() { return this.box2dJoint.GetMotorSpeed(); }
+
+    /** Set the maximum motor torque
+     *  @param {number} torque */
+    setMaxMotorTorque(torque) { return this.box2dJoint.SetMaxMotorTorque(torque); }
+
+    /** Get the max motor torque
+     *  @return {number} */
+    getMaxMotorTorque() { return this.box2dJoint.GetMaxMotorTorque(); }
+
+    /** Get the motor torque for a time step
+     *  @return {number} */
+    getMotorTorque(time) { return this.box2dJoint.GetMotorTorque(1/time); }
+
+    /** Set the spring frequency in Hertz
+     *  @param {number} hz */
+    setSpringFrequencyHz(hz) { return this.box2dJoint.SetSpringFrequencyHz(hz); }
+
+    /** Get the spring frequency in Hertz
+     *  @return {number} */
+    getSpringFrequencyHz() { return this.box2dJoint.GetSpringFrequencyHz(); }
+
+    /** Set the spring damping ratio
+     *  @param {number} ratio */
+    setSpringDampingRatio(ratio) { return this.box2dJoint.SetSpringDampingRatio(ratio); }
+
+    /** Get the spring damping ratio
+     *  @return {number} */
+    getSpringDampingRatio() { return this.box2dJoint.GetSpringDampingRatio(); }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Box2D Weld Joint
+ * - Glues two objects together
+ * @extends Box2dJoint
+ */
+class Box2dWeldJoint extends Box2dJoint
+{
+    /** Create a weld joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB
+     *  @param {Vector2} anchor
+     *  @param {boolean} [collide] */
+    constructor(objectA, objectB, anchor, collide=false)
+    {
+        anchor ||= box2d.vec2From(objectB.body.GetPosition());
+        const localAnchorA = objectA.worldToLocal(anchor);
+        const localAnchorB = objectB.worldToLocal(anchor);
+        const jointDef = new box2d.instance.b2WeldJointDef();
+        jointDef.set_bodyA(objectA.body);
+        jointDef.set_bodyB(objectB.body);
+        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
+        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_referenceAngle(objectA.body.GetAngle() - objectB.body.GetAngle());
+        jointDef.set_collideConnected(collide);
+        super(jointDef);
+    }
+
+    /** Get the local anchor point relative to objectA's origin
+     *  @return {Vector2} */
+    getLocalAnchorA() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorA()); }
+
+    /** Get the local anchor point relative to objectB's origin
+     *  @return {Vector2} */
+    getLocalAnchorB() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
+
+    /** Get the reference angle
+     *  @return {number} */
+    getReferenceAngle() { return this.box2dJoint.GetReferenceAngle(); }
+
+    /** Set the frequency in Hertz
+     *  @param {number} hz */
+    setFrequency(hz) { return this.box2dJoint.SetFrequency(hz); }
+
+    /** Get the frequency in Hertz
+     *  @return {number} */
+    getFrequency() { return this.box2dJoint.GetFrequency(); }
+
+    /** Set the damping ratio
+     *  @param {number} ratio */
+    setSpringDampingRatio(ratio) { return this.box2dJoint.SetSpringDampingRatio(ratio); }
+
+    /** Get the damping ratio
+     *  @return {number} */
+    getSpringDampingRatio() { return this.box2dJoint.GetSpringDampingRatio(); }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Box2D Friction Joint
+ * - Used to apply top-down friction
+ * - Provides 2D translational friction and angular friction
+ * @extends Box2dJoint
+ */
+class Box2dFrictionJoint extends Box2dJoint
+{
+    /** Create a friction joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB
+     *  @param {Vector2} anchor
+     *  @param {boolean} [collide] */
+    constructor(objectA, objectB, anchor, collide=false)
+    {
+        anchor ||= box2d.vec2From(objectB.body.GetPosition());
+        const localAnchorA = objectA.worldToLocal(anchor);
+        const localAnchorB = objectB.worldToLocal(anchor);
+        const jointDef = new box2d.instance.b2FrictionJointDef();
+        jointDef.set_bodyA(objectA.body);
+        jointDef.set_bodyB(objectB.body);
+        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
+        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_collideConnected(collide);
+        super(jointDef);
+    }
+
+    /** Get the local anchor point relative to objectA's origin
+     *  @return {Vector2} */
+    getLocalAnchorA() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorA()); }
+
+    /** Get the local anchor point relative to objectB's origin
+     *  @return {Vector2} */
+    getLocalAnchorB() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
+
+    /** Set the maximum friction force
+     *  @param {number} force */
+    setMaxForce(force) { this.box2dJoint.SetMaxForce(force); }
+
+    /** Get the maximum friction force
+     *  @return {number} */
+    getMaxForce() { return this.box2dJoint.GetMaxForce(); }
+
+    /** Set the maximum friction torque
+     *  @param {number} torque */
+    setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(torque); }
+
+    /** Get the maximum friction torque
+     *  @return {number} */
+    getMaxTorque() { return this.box2dJoint.GetMaxTorque(); }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Box2D Pulley Joint
+ * - Connects to two objects and two fixed ground points
+ * - The pulley supports a ratio such that: length1 + ratio * length2 <= constant
+ * - The force transmitted is scaled by the ratio
+ * @extends Box2dJoint
+ */
+class Box2dPulleyJoint extends Box2dJoint
+{
+    /** Create a pulley joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB
+     *  @param {Vector2} groundAnchorA
+     *  @param {Vector2} groundAnchorB
+     *  @param {Vector2} anchorA
+     *  @param {Vector2} anchorB
+     *  @param {number}  [ratio]
+     *  @param {boolean} [collide] */
+    constructor(objectA, objectB, groundAnchorA, groundAnchorB, anchorA, anchorB, ratio=1, collide=false)
+    {
+        anchorA ||= box2d.vec2From(objectA.body.GetPosition());
+        anchorB ||= box2d.vec2From(objectB.body.GetPosition());
+        const localAnchorA = objectA.worldToLocal(anchorA);
+        const localAnchorB = objectB.worldToLocal(anchorB);
+        const jointDef = new box2d.instance.b2PulleyJointDef();
+        jointDef.set_bodyA(objectA.body);
+        jointDef.set_bodyB(objectB.body);
+        jointDef.set_groundAnchorA(box2d.vec2dTo(groundAnchorA));
+        jointDef.set_groundAnchorB(box2d.vec2dTo(groundAnchorB));
+        jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
+        jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
+        jointDef.set_ratio(ratio);
+        jointDef.set_lengthA(groundAnchorA.distance(anchorA));
+        jointDef.set_lengthB(groundAnchorB.distance(anchorB));
+        jointDef.set_collideConnected(collide);
+        super(jointDef);
+    }
+
+    /** Get the first ground anchor
+     *  @return {Vector2} */
+    getGroundAnchorA() { return box2d.vec2From(this.box2dJoint.GetGroundAnchorA()); }
+
+    /** Get the second ground anchor
+     *  @return {Vector2} */
+    getGroundAnchorB() { return box2d.vec2From(this.box2dJoint.GetGroundAnchorB()); }
+
+    /** Get the current length of the segment attached to objectA
+     *  @return {number} */
+    getLengthA() { return this.box2dJoint.GetLengthA(); }
+
+    /** Get the current length of the segment attached to objectB
+     *  @return {number} */
+    getLengthB(){ return this.box2dJoint.GetLengthB(); }
+
+    /** Get the pulley ratio
+     *  @return {number} */
+    getRatio() { return this.box2dJoint.GetRatio(); }
+
+    /** Get the current length of the segment attached to objectA
+     *  @return {number} */
+    getCurrentLengthA() { return this.box2dJoint.GetCurrentLengthA(); }
+
+    /** Get the current length of the segment attached to objectB
+     *  @return {number} */
+    getCurrentLengthB() { return this.box2dJoint.GetCurrentLengthB(); }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Box2D Motor Joint
+ * - Controls the relative motion between two objects
+ * - Typical usage is to control the movement of a object with respect to the ground
+ * @extends Box2dJoint
+ */
+class Box2dMotorJoint extends Box2dJoint
+{
+    /** Create a motor joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB */
+    constructor(objectA, objectB)
+    {
+        const linearOffset = objectA.worldToLocal(box2d.vec2From(objectB.body.GetPosition()));
+        const angularOffset = objectB.body.GetAngle() - objectA.body.GetAngle();
+        const jointDef = new box2d.instance.b2MotorJointDef();
+        jointDef.set_bodyA(objectA.body);
+        jointDef.set_bodyB(objectB.body);
+        jointDef.set_linearOffset(box2d.vec2dTo(linearOffset));
+        jointDef.set_angularOffset(angularOffset);
+        super(jointDef);
+    }
+
+    /** Set the target linear offset, in frame A, in meters.
+     *  @param {Vector2} offset */
+    setLinearOffset(offset) { this.box2dJoint.SetLinearOffset(box2d.vec2dTo(offset)); }
+
+    /** Get the target linear offset, in frame A, in meters.
+     *  @return {Vector2} */
+    getLinearOffset() { return box2d.vec2From(this.box2dJoint.GetLinearOffset()); }
+
+    /** Set the target angular offset
+     *  @param {number} offset */
+    setAngularOffset(offset) { this.box2dJoint.SetAngularOffset(offset); }
+
+    /** Get the target angular offset
+     *  @return {number} */
+    getAngularOffset() { return this.box2dJoint.GetAngularOffset(); }
+
+    /** Set the maximum friction force
+     *  @param {number} force */
+    setMaxForce(force) { this.box2dJoint.SetMaxForce(force); }
+
+    /** Get the maximum friction force
+     *  @return {number} */
+    getMaxForce() { return this.box2dJoint.GetMaxForce(); }
+
+    /** Set the maximum torque
+     *  @param {number} torque */
+    setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(torque); }
+
+    /** Get the maximum torque
+     *  @return {number} */
+    getMaxTorque() { return this.box2dJoint.GetMaxTorque(); }
+
+    /** Set the position correction factor in the range [0,1]
+     *  @param {number} factor */
+    setCorrectionFactor(factor) { this.box2dJoint.SetCorrectionFactor(factor); }
+
+    /** Get the position correction factor in the range [0,1]
+     *  @return {number} */
+    getCorrectionFactor() { return this.box2dJoint.GetCorrectionFactor(); }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Box2D Global Object
+ * - Wraps Box2d world and provides global functions
+ */
+class Box2dPlugin
+{
+    /** Create the global UI system object
+     *  @param {Object} instance */
+    constructor(instance)
+    {
+        ASSERT(!box2d, 'Box2D already initialized');
+        box2d = this;
+        this.instance = instance;
+        this.world = new box2d.instance.b2World();
+
+        /** @property {number} - Velocity iterations per update*/
+        this.velocityIterations = 8;
+        /** @property {number} - Position iterations per update*/
+        this.positionIterations = 3;
+        /** @property {number} - Static, zero mass, zero velocity, may be manually moved */
+        this.bodyTypeStatic = instance.b2_staticBody;
+        /** @property {number} - Kinematic, zero mass, non-zero velocity set by user, moved by solver */
+        this.bodyTypeKinematic = instance.b2_kinematicBody;
+        /** @property {number} - Dynamic, positive mass, non-zero velocity determined by forces, moved by solver */
+        this.bodyTypeDynamic = instance.b2_dynamicBody;
+
+        // setup contact listener
+        const listener = new box2d.instance.JSContactListener();
+        listener.BeginContact = function(contactPtr)
+        {
+            const contact  = box2d.instance.wrapPointer(contactPtr, box2d.instance.b2Contact);
+            const fixtureA = contact.GetFixtureA();
+            const fixtureB = contact.GetFixtureB();
+            const objectA  = fixtureA.GetBody().object;
+            const objectB  = fixtureB.GetBody().object;
+            objectA.beginContact(objectB);
+            objectB.beginContact(objectA);
+        }
+        listener.EndContact = function(contactPtr)
+        {
+            const contact  = box2d.instance.wrapPointer(contactPtr, box2d.instance.b2Contact);
+            const fixtureA = contact.GetFixtureA();
+            const fixtureB = contact.GetFixtureB();
+            const objectA  = fixtureA.GetBody().object;
+            const objectB  = fixtureB.GetBody().object;
+            objectA.endContact(objectB);
+            objectB.endContact(objectA);
+        };
+        listener.PreSolve  = function() {};
+        listener.PostSolve = function() {};
+        box2d.world.SetContactListener(listener);
+    }
+
+    /** Step the physics world simulation
+     *  @param {number} [frames] */
+    step(frames=1)
+    {
+        box2d.world.SetGravity(box2d.vec2dTo(vec2(0,gravity)));
+        for (let i=frames; i--;)
+            box2d.world.Step(timeDelta, this.velocityIterations, this.positionIterations);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // raycasting and querying
+
+    /** raycast and return a list of all the results
+     *  @param {Vector2} start 
+     *  @param {Vector2} end */
+    raycastAll(start, end)
+    {
+        const raycastCallback = new box2d.instance.JSRayCastCallback();
+        raycastCallback.ReportFixture = function(fixturePointer, point, normal, fraction)
+        {
+            const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
+            point  = box2d.vec2FromPointer(point);
+            normal = box2d.vec2FromPointer(normal);
+            raycastResults.push(new Box2dRaycastResult(fixture, point, normal, fraction));
+            return 1; // continue getting results
+        };
+
+        const raycastResults = [];
+        box2d.world.RayCast(raycastCallback, box2d.vec2dTo(start), box2d.vec2dTo(end));
+        debugRaycast && debugLine(start, end, raycastResults.length ? '#f00' : '#00f', .02);
+        return raycastResults;
+    }
+
+    /** raycast and return the first result
+     *  @param {Vector2} start 
+     *  @param {Vector2} end */
+    raycast(start, end)
+    {
+        const raycastResults = box2d.raycastAll(start, end);
+        if (!raycastResults.length)
+            return undefined;
+        return raycastResults.reduce((a,b)=>a.fraction < b.fraction ? a : b);
+    }
+
+    /** box aabb cast and return all the objects
+     *  @param {Vector2} pos 
+     *  @param {Vector2} size */
+    boxCastAll(pos, size)
+    {
+        const queryCallback = new box2d.instance.JSQueryCallback();
+        queryCallback.ReportFixture = function(fixturePointer)
+        {
+            const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
+            const o = fixture.GetBody().object;
+            if (!queryObjects.includes(o))
+                queryObjects.push(o); // add if not already in list
+            return true; // continue getting results
+        };
+
+        const aabb = new box2d.instance.b2AABB();
+        aabb.set_lowerBound(box2d.vec2dTo(pos.subtract(size.scale(.5))));
+        aabb.set_upperBound(box2d.vec2dTo(pos.add(size.scale(.5))));
+
+        let queryObjects = [];
+        box2d.world.QueryAABB(queryCallback, aabb);
+        debugRaycast && debugRect(pos, size, queryObjects.length ? '#f00' : '#00f', .02);
+        return queryObjects;
+    }
+
+    /** box aabb cast and return the first object
+     *  @param {Vector2} pos 
+     *  @param {Vector2} size */
+    boxCast(pos, size)
+    {
+        const queryCallback = new box2d.instance.JSQueryCallback();
+        queryCallback.ReportFixture = function(fixturePointer)
+        {
+            const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
+            queryObject = fixture.GetBody().object;
+            return false; // stop getting results
+        };
+
+        const aabb = new box2d.instance.b2AABB();
+        aabb.set_lowerBound(box2d.vec2dTo(pos.subtract(size.scale(.5))));
+        aabb.set_upperBound(box2d.vec2dTo(pos.add(size.scale(.5))));
+
+        let queryObject;
+        box2d.world.QueryAABB(queryCallback, aabb);
+        debugRaycast && debugRect(pos, size, queryObject ? '#f00' : '#00f', .02);
+        return queryObject;
+    }
+
+    /** circle cast and return all the objects
+     *  @param {Vector2} pos 
+     *  @param {number} diameter */
+    circleCastAll(pos, diameter)
+    {
+        const radius2 = (diameter/2)**2;
+        const results = box2d.boxCastAll(pos, vec2(diameter));
+        return results.filter(o=>o.pos.distanceSquared(pos) < radius2);
+    }
+
+    /** circle cast and return the first object
+     *  @param {Vector2} pos 
+     *  @param {number} diameter */
+    circleCast(pos, diameter)
+    {
+        const radius2 = (diameter/2)**2;
+        let results = box2d.boxCastAll(pos, vec2(diameter));
+
+        let bestResult, bestDistance2;
+        for (const result of results)
+        {
+            const distance2 = result.pos.distanceSquared(pos);
+            if (distance2 < radius2 && (!bestResult || distance2 < bestDistance2))
+            {
+                bestResult = result;
+                bestDistance2 = distance2;
+            }
+        }
+        return bestResult;
+    }
+
+    /** point cast and return the first object
+     *  @param {Vector2} pos 
+     *  @param {boolean} dynamicOnly */
+    pointCast(pos, dynamicOnly=true)
+    {
+        const queryCallback = new box2d.instance.JSQueryCallback();
+        queryCallback.ReportFixture = function(fixturePointer)
+        {
+            const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
+            if (dynamicOnly && fixture.GetBody().GetType() != box2d.instance.b2_dynamicBody)
+                return true; // continue getting results
+            if (!fixture.TestPoint(box2d.vec2dTo(pos)))
+                return true; // continue getting results
+            queryObject = fixture.GetBody().object;
+            return false; // stop getting results
+        };
+
+        const aabb = new box2d.instance.b2AABB();
+        aabb.set_lowerBound(box2d.vec2dTo(pos));
+        aabb.set_upperBound(box2d.vec2dTo(pos));
+
+        let queryObject;
+        debugRaycast && debugRect(pos, vec2(), queryObject ? '#f00' : '#00f', .02);
+        box2d.world.QueryAABB(queryCallback, aabb);
+        return queryObject;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // drawing
+
+    /** draws a fixture
+     *  @param {Object} fixture
+     *  @param {Vector2} pos
+     *  @param {number} angle
+     *  @param {Color} [color]
+     *  @param {Color} [outlineColor]
+     *  @param {number} [lineWidth]
+     *  @param {CanvasRenderingContext2D} [context] */
+    drawFixture(fixture, pos, angle, color=WHITE, outlineColor=BLACK, lineWidth=.1, context=mainContext)
+    {
+        const shape = box2d.castObjectType(fixture.GetShape());
+        switch (shape.GetType())
+        {
+            case box2d.instance.b2Shape.e_polygon:
+            {
+                let points = [];
+                for (let i=shape.GetVertexCount(); i--;)
+                    points.push(box2d.vec2From(shape.GetVertex(i)));
+                box2d.drawPoly(pos, angle, points, color, outlineColor, lineWidth, context);
+                break;
+            }
+            case box2d.instance.b2Shape.e_circle:
+            {
+                const radius = shape.get_m_radius();
+                box2d.drawCircle(pos, radius, color, outlineColor, lineWidth, context);
+                break;
+            }
+            case box2d.instance.b2Shape.e_edge:
+            {
+                const v1 = box2d.vec2From(shape.get_m_vertex1());
+                const v2 = box2d.vec2From(shape.get_m_vertex2());
+                box2d.drawLine(pos, angle, v1, v2, color, lineWidth, context);
+                break;
+            }
+        }
+    }
+
+    /** draws a circle
+     *  @param {Vector2} pos
+     *  @param {number} radius
+     *  @param {Color} [color]
+     *  @param {Color} [outlineColor]
+     *  @param {number} [lineWidth]
+     *  @param {CanvasRenderingContext2D} [context] */
+    drawCircle(pos, radius, color=WHITE, outlineColor=BLACK, lineWidth=.1, context=mainContext)
+    {
+        drawCanvas2D(pos, vec2(1), 0, 0, context=>
+        {
+            context.beginPath();
+            context.arc(0, 0, radius, 0, 9);
+            box2d.drawFillStroke(color, outlineColor, lineWidth, context);
+        }, 0, context);
+    }
+
+    /** draws a polygon
+     *  @param {Vector2} pos
+     *  @param {number} angle
+     *  @param {Array<Vector2>} points
+     *  @param {Color} [color]
+     *  @param {Color} [outlineColor]
+     *  @param {number} [lineWidth]
+     *  @param {CanvasRenderingContext2D} [context] */
+    drawPoly(pos, angle, points, color=WHITE, outlineColor=BLACK, lineWidth=.1, context=mainContext)
+    {
+        drawCanvas2D(pos, vec2(1), angle, 0, context=>
+        {
+            context.beginPath();
+            points.forEach(p=>context.lineTo(p.x, p.y));
+            context.closePath();
+            box2d.drawFillStroke(color, outlineColor, lineWidth, context);
+        }, 0, context);
+    }
+
+    /** draws a line
+     *  @param {Vector2} pos
+     *  @param {number} angle
+     *  @param {Vector2} posA
+     *  @param {Vector2} posB
+     *  @param {Color} [color]
+     *  @param {number} [lineWidth]
+     *  @param {CanvasRenderingContext2D} [context] */
+    drawLine(pos, angle, posA, posB, color=WHITE, lineWidth=.1, context=mainContext)
+    {
+        drawCanvas2D(pos, vec2(1), angle, 0, context=>
+        {
+            context.beginPath();
+            context.lineTo(posA.x, posA.y);
+            context.lineTo(posB.x, posB.y);
+            box2d.drawFillStroke(0, color, lineWidth, context);
+        }, 0, context);
+    }
+
+    /** performs a fill or stroke as a helper to the other draw functions
+     *  @param {Color} [color]
+     *  @param {Color} [outlineColor]
+     *  @param {number} [lineWidth]
+     *  @param {CanvasRenderingContext2D} [context] */
+    drawFillStroke(color=WHITE, outlineColor=BLACK, lineWidth=.1, context=mainContext)
+    {
+        if (color)
+        {
+            context.fillStyle = color.toString();
+            context.fill();
+        }
+        if (outlineColor && lineWidth)
+        {
+            context.lineWidth = lineWidth;
+            context.lineJoin = context.lineCap = 'round';
+            context.strokeStyle = outlineColor.toString();
+            context.stroke();
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // helper functions
+
+    /** converts a box2d vec2 to a Vector2
+     *  @param {Object} v */
+    vec2From(v)
+    {
+        ASSERT(v instanceof box2d.instance.b2Vec2);
+        return new Vector2(v.get_x(), v.get_y()); 
+    }
+
+    /** converts a box2d vec2 pointer to a Vector2
+     *  @param {Object} v */
+    vec2FromPointer(v)
+    {
+        return box2d.vec2From(box2d.instance.wrapPointer(v, box2d.instance.b2Vec2));
+    }
+
+    /** converts a Vector2 to a box2 vec2
+     *  @param {Vector2} v */
+    vec2dTo(v)
+    {
+        ASSERT(v instanceof Vector2);
+        return new box2d.instance.b2Vec2(v.x, v.y);
+    }
+
+    /** checks if a box2d object is null
+     *  @param {Object} o */
+    isNull(o) { return !box2d.instance.getPointer(o); }
+
+    /** casts a box2d object to its correct type
+     *  @param {Object} o */
+    castObjectType(o)
+    {
+        switch (o.GetType())
+        {
+            case box2d.instance.b2Shape.e_circle:
+                return box2d.instance.castObject(o, box2d.instance.b2CircleShape);
+            case box2d.instance.b2Shape.e_edge:
+                return box2d.instance.castObject(o, box2d.instance.b2EdgeShape);
+            case box2d.instance.b2Shape.e_polygon:
+                return box2d.instance.castObject(o, box2d.instance.b2PolygonShape);
+            case box2d.instance.b2Shape.e_chain:
+                return box2d.instance.castObject(o, box2d.instance.b2ChainShape);
+            case box2d.instance.e_revoluteJoint:
+                return box2d.instance.castObject(o, box2d.instance.b2RevoluteJoint);
+            case box2d.instance.e_prismaticJoint:
+                return box2d.instance.castObject(o, box2d.instance.b2PrismaticJoint);
+            case box2d.instance.e_distanceJoint:
+                return box2d.instance.castObject(o, box2d.instance.b2DistanceJoint);
+            case box2d.instance.e_pulleyJoint:
+                return box2d.instance.castObject(o, box2d.instance.b2PulleyJoint);
+            case box2d.instance.e_mouseJoint:
+                return box2d.instance.castObject(o, box2d.instance.b2MouseJoint);
+            case box2d.instance.e_gearJoint:
+                return box2d.instance.castObject(o, box2d.instance.b2GearJoint);
+            case box2d.instance.e_wheelJoint:
+                return box2d.instance.castObject(o, box2d.instance.b2WheelJoint);
+            case box2d.instance.e_weldJoint:
+                return box2d.instance.castObject(o, box2d.instance.b2WeldJoint);
+            case box2d.instance.e_frictionJoint:
+                return box2d.instance.castObject(o, box2d.instance.b2FrictionJoint);
+            case box2d.instance.e_ropeJoint:
+                return box2d.instance.castObject(o, box2d.instance.b2RopeJoint);
+            case box2d.instance.e_motorJoint:
+                return box2d.instance.castObject(o, box2d.instance.b2MotorJoint);
+        }
+        
+        ASSERT(false, 'Unknown box2d object type');
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** Box2d Init - Startup LittleJS engine with your callback functions
+ *  @param {Function|function():Promise} gameInit - Called once after the engine starts up
+ *  @param {Function} gameUpdate - Called every frame before objects are updated
+ *  @param {Function} gameUpdatePost - Called after physics and objects are updated, even when paused
+ *  @param {Function} gameRender - Called before objects are rendered, for drawing the background
+ *  @param {Function} gameRenderPost - Called after objects are rendered, useful for drawing UI
+ *  @param {Array<string>} [imageSources=[]] - List of images to load
+ *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default */
+function box2dEngineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources, rootElement)
+{
+    Box2D().then(box2dInstance=>
+    {
+        // create box2d object
+        new Box2dPlugin(box2dInstance);
+        setupDebugDraw();
+
+        // start littlejs
+        engineAddPlugin(box2dUpdate, box2dRender);
+        engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources, rootElement);
+    });
+
+    // hook up box2d plugin to update and render
+    function box2dUpdate()
+    {
+        if (!paused)
+            box2d.step();
+    }
+    function box2dRender()
+    {
+        if (box2dDebug || debugPhysics && debugOverlay)
+            box2d.world.DrawDebugData();
+    }
+    
+    // box2d debug drawing
+    function setupDebugDraw()
+    {
+        // setup debug draw
+        const debugDraw = new box2d.instance.JSDraw();
+        const box2dColor = (c)=> new Color(c.get_r(), c.get_g(), c.get_b());
+        const box2dColorPointer = (c)=>
+            box2dColor(box2d.instance.wrapPointer(c, box2d.instance.b2Color));
+        const getDebugColor = (color)=>box2dColorPointer(color).scale(1,.8);
+        const getPointsList = (vertices, vertexCount) =>
+        {
+            const points = [];
+            for (let i=vertexCount; i--;)
+                points.push(box2d.vec2FromPointer(vertices+i*8));
+            return points;
+        }
+        debugDraw.DrawSegment = function(point1, point2, color)
+        {
+            color = getDebugColor(color);
+            point1 = box2d.vec2FromPointer(point1);
+            point2 = box2d.vec2FromPointer(point2);
+            box2d.drawLine(vec2(), 0, point1, point2, color, undefined, overlayContext);
+        };
+        debugDraw.DrawPolygon = function(vertices, vertexCount, color)
+        {
+            color = getDebugColor(color);
+            const points = getPointsList(vertices, vertexCount);
+            box2d.drawPoly(vec2(), 0, points, undefined, color, undefined, overlayContext);
+        };
+        debugDraw.DrawSolidPolygon = function(vertices, vertexCount, color)
+        {
+            color = getDebugColor(color);
+            const points = getPointsList(vertices, vertexCount);
+            box2d.drawPoly(vec2(), 0, points, color, color, undefined, overlayContext);
+        };
+        debugDraw.DrawCircle = function(center, radius, color)
+        {
+            color = getDebugColor(color);
+            center = box2d.vec2FromPointer(center);
+            box2d.drawCircle(center, radius, undefined, color, undefined, overlayContext);
+        };
+        debugDraw.DrawSolidCircle = function(center, radius, axis, color)
+        {
+            color = getDebugColor(color);
+            center = box2d.vec2FromPointer(center);
+            axis = box2d.vec2FromPointer(axis).scale(radius);
+            box2d.drawCircle(center, radius, color, color, undefined, overlayContext);
+            box2d.drawLine(center, 0, vec2(), axis, color, undefined, overlayContext);
+        };
+        debugDraw.DrawTransform = function(transform)
+        {
+            transform = box2d.instance.wrapPointer(transform, box2d.instance.b2Transform);
+            const pos = vec2(transform.get_p());
+            const angle = -transform.get_q().GetAngle();
+            const p1 = vec2(1,0), c1 = rgb(.75,0,0,.8);
+            const p2 = vec2(0,1), c2 = rgb(0,.75,0,.8);
+            box2d.drawLine(pos, angle, vec2(), p1, c1, undefined, overlayContext);
+            box2d.drawLine(pos, angle, vec2(), p2, c2, undefined, overlayContext);
+        }
+            
+        debugDraw.AppendFlags(box2d.instance.b2Draw.e_shapeBit);
+        debugDraw.AppendFlags(box2d.instance.b2Draw.e_jointBit);
+        //debugDraw.AppendFlags(box2d.instance.b2Draw.e_aabbBit);
+        //debugDraw.AppendFlags(box2d.instance.b2Draw.e_pairBit);
+        //debugDraw.AppendFlags(box2d.instance.b2Draw.e_centerOfMassBit);
+        box2d.world.SetDebugDraw(debugDraw);
+    }
 }
 

@@ -5326,7 +5326,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.17';
+const engineVersion = '1.11.18';
 
 /** Frames per second to update
  *  @type {number}
@@ -5920,309 +5920,6 @@ function drawEngineSplashScreen(t)
     x.restore();
 }
 
-
-/**
- * LittleJS Module Export
- */
-
-'use strict';
-
-export
-{
-	// Engine
-	engineName,
-	engineVersion,
-	frameRate,
-	timeDelta,
-	engineObjects,
-	frame,
-	time,
-	timeReal,
-	paused,
-	setPaused,
-	engineInit,
-	engineObjectsUpdate,
-	engineObjectsDestroy,
-	engineObjectsCollect,
-	engineObjectsCallback,
-	engineObjectsRaycast,
-	engineAddPlugin,
-
-	// Globals
-	debug,
-	debugOverlay,
-	showWatermark,
-
-	// Debug
-	ASSERT,
-	debugRect,
-	debugPoly,
-	debugCircle,
-	debugPoint,
-	debugLine,
-	debugOverlap,
-	debugText,
-	debugClear,
-	debugScreenshot,
-	debugSaveCanvas,
-	debugSaveText,
-	debugSaveDataURL,
-	debugShowErrors,
-	debugVideoCaptureIsActive,
-	debugVideoCaptureStart,
-	debugVideoCaptureStop,
-
-	// Settings
-	cameraPos,
-	cameraScale,
-	canvasMaxSize,
-	canvasFixedSize,
-	canvasPixelated,
-	tilesPixelated,
-	fontDefault,
-	showSplashScreen,
-	headlessMode,
-	tileSizeDefault,
-	tileFixBleedScale,
-	enablePhysicsSolver,
-	objectDefaultMass,
-	objectDefaultDamping,
-	objectDefaultAngleDamping,
-	objectDefaultElasticity,
-	objectDefaultFriction,
-	objectMaxSpeed,
-	gravity,
-	particleEmitRateScale,
-	glEnable,
-	glOverlay,
-	gamepadsEnable,
-	gamepadDirectionEmulateStick,
-	inputWASDEmulateDirection,
-	touchGamepadEnable,
-	touchGamepadAnalog,
-	touchGamepadSize,
-	touchGamepadAlpha,
-	vibrateEnable,
-	soundEnable,
-	soundVolume,
-	soundDefaultRange,
-	soundDefaultTaper,
-	medalDisplayTime,
-	medalDisplaySlideTime,
-	medalDisplaySize,
-
-	// Setters for globals
-	setCameraPos,
-	setCameraScale,
-	setCanvasMaxSize,
-	setCanvasFixedSize,
-	setCanvasPixelated,
-	setTilesPixelated,
-	setFontDefault,
-	setShowSplashScreen,
-	setHeadlessMode,
-	setGlEnable,
-	setGlOverlay,
-	setTileSizeDefault,
-	setTileFixBleedScale,
-	setEnablePhysicsSolver,
-	setObjectDefaultMass,
-	setObjectDefaultDamping,
-	setObjectDefaultAngleDamping,
-	setObjectDefaultElasticity,
-	setObjectDefaultFriction,
-	setObjectMaxSpeed,
-	setGravity,
-	setParticleEmitRateScale,
-	setTouchInputEnable,
-	setGamepadsEnable,
-	setGamepadDirectionEmulateStick,
-	setInputWASDEmulateDirection,
-	setTouchGamepadEnable,
-	setTouchGamepadAnalog,
-	setTouchGamepadSize,
-	setTouchGamepadAlpha,
-	setVibrateEnable,
-	setSoundEnable,
-	setSoundVolume,
-	setSoundDefaultRange,
-	setSoundDefaultTaper,
-	setMedalDisplayTime,
-	setMedalDisplaySlideTime,
-	setMedalDisplaySize,
-	setMedalsPreventUnlock,
-	setShowWatermark,
-	setDebugKey,
-
-	// Utilities
-	PI,
-	abs,
-	min,
-	max,
-	sign,
-	mod,
-	clamp,
-	percent,
-	distanceWrap,
-	lerpWrap,
-	distanceAngle,
-	lerpAngle,
-	lerp,
-	smoothStep,
-	nearestPowerOfTwo,
-	isOverlapping,
-	isIntersecting,
-	wave,
-	formatTime,
-
-	// Random
-	rand,
-	randInt,
-	randSign,
-	randInCircle,
-	randVector,
-	randColor,
-
-	// Utility Classes
-	RandomGenerator,
-	Vector2,
-	Color,
-	Timer,
-	vec2,
-	rgb,
-	hsl,
-	isColor,
-
-	// Default Colors
-	WHITE,
-	BLACK,
-	GRAY,
-	RED,
-	ORANGE,
-	YELLOW,
-	GREEN,
-	CYAN,
-	BLUE,
-	PURPLE,
-	MAGENTA,
-
-	// Draw
-	textureInfos,
-	tile,
-	TileInfo,
-	TextureInfo,
-	mainCanvas,
-	mainContext,
-	overlayCanvas,
-	overlayContext,
-	mainCanvasSize,
-	screenToWorld,
-	worldToScreen,
-	drawTile,
-	drawRect,
-	drawLine,
-	drawPoly,
-	drawEllipse,
-	drawCircle,
-	drawCanvas2D,
-	drawText,
-	drawTextOverlay,
-	drawTextScreen,
-	setBlendMode,
-	combineCanvases,
-	engineFontImage,
-	FontImage,
-	isFullscreen,
-	toggleFullscreen,
-	setCursor,
-	getCameraSize,
-
-	// WebGL
-	glCanvas,
-	glContext,
-	glCompileShader,
-	glCopyToContext,
-	glCreateProgram,
-	glCreateTexture,
-	glSetTextureData,
-	glDraw,
-	glFlush,
-	glSetTexture,
-	glSetAntialias,
-	glClearCanvas,
-	glAntialias,
-	glShader, 
-	glActiveTexture, 
-	glArrayBuffer, 
-	glGeometryBuffer, 
-	glPositionData, 
-	glColorData, 
-	glInstanceCount, 
-	glAdditive, 
-	glBatchAdditive,
-
-	// Input
-	keyIsDown,
-	keyWasPressed,
-	keyWasReleased,
-	keyDirection,
-	clearInput,
-	mouseIsDown,
-	mouseWasPressed,
-	mouseWasReleased,
-	mousePos,
-	mousePosScreen,
-	mouseWheel,
-	isUsingGamepad,
-	inputPreventDefault,
-	setInputPreventDefault,
-	gamepadIsDown,
-	gamepadWasPressed,
-	gamepadWasReleased,
-	gamepadStick,
-	gamepadsUpdate,
-	vibrate,
-	vibrateStop,
-	isTouchDevice,
-
-	// Audio
-	Sound,
-	SoundWave,
-	playAudioFile,
-	speak,
-	speakStop,
-	getNoteFrequency,
-	playSamples,
-	zzfx,
-	zzfxG,
-	zzfxR,
-	audioContext,
-
-	// Base Object
-	EngineObject,
-
-	// Tiles
-	tileCollision,
-	tileCollisionSize,
-	initTileCollision,
-	setTileCollisionData,
-	getTileCollisionData,
-	tileCollisionTest,
-	tileCollisionRaycast,
-	TileLayerData,
-	TileLayer,
-
-	// Particles
-	ParticleEmitter,
-	Particle,
-
-	// Medals
-	medals,
-	medalsPreventUnlock,
-	medalsInit,
-	Medal,
-};
-
 /** 
  * LittleJS Newgrounds API
  * - NewgroundsMedal extends Medal with Newgrounds API functionality
@@ -6233,7 +5930,7 @@ export
  * - Functions to unlock medals
  */
 
-'use strict';
+
 
 /** Global Newgrounds object
  *  @type {NewgroundsPlugin}
@@ -6408,7 +6105,7 @@ class NewgroundsPlugin
  * - can be enabled to pass other canvases through a final shader
  */
 
-'use strict';
+
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -6522,7 +6219,7 @@ class PostProcessPlugin
  * LittleJS ZzFXM Plugin
  */
 
-'use strict';
+
 
 /**
  * Music Object - Stores a zzfx music track for later use
@@ -6692,7 +6389,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
  * - Images
  */
 
-'use strict';
+
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -7152,7 +6849,7 @@ class UIScrollbar extends UIObject
  * - Debug physics drawing
  */
 
-'use strict';
+
  
 /** Global Box2d Plugin object
  *  @type {Box2dPlugin} */
@@ -9002,6 +8699,309 @@ function box2dEngineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameR
         box2d.world.SetDebugDraw(debugDraw);
     }
 }
+
+
+/**
+ * LittleJS Module Export
+ */
+
+'use strict';
+
+export
+{
+	// Engine
+	engineName,
+	engineVersion,
+	frameRate,
+	timeDelta,
+	engineObjects,
+	frame,
+	time,
+	timeReal,
+	paused,
+	setPaused,
+	engineInit,
+	engineObjectsUpdate,
+	engineObjectsDestroy,
+	engineObjectsCollect,
+	engineObjectsCallback,
+	engineObjectsRaycast,
+	engineAddPlugin,
+
+	// Globals
+	debug,
+	debugOverlay,
+	showWatermark,
+
+	// Debug
+	ASSERT,
+	debugRect,
+	debugPoly,
+	debugCircle,
+	debugPoint,
+	debugLine,
+	debugOverlap,
+	debugText,
+	debugClear,
+	debugScreenshot,
+	debugSaveCanvas,
+	debugSaveText,
+	debugSaveDataURL,
+	debugShowErrors,
+	debugVideoCaptureIsActive,
+	debugVideoCaptureStart,
+	debugVideoCaptureStop,
+
+	// Settings
+	cameraPos,
+	cameraScale,
+	canvasMaxSize,
+	canvasFixedSize,
+	canvasPixelated,
+	tilesPixelated,
+	fontDefault,
+	showSplashScreen,
+	headlessMode,
+	tileSizeDefault,
+	tileFixBleedScale,
+	enablePhysicsSolver,
+	objectDefaultMass,
+	objectDefaultDamping,
+	objectDefaultAngleDamping,
+	objectDefaultElasticity,
+	objectDefaultFriction,
+	objectMaxSpeed,
+	gravity,
+	particleEmitRateScale,
+	glEnable,
+	glOverlay,
+	gamepadsEnable,
+	gamepadDirectionEmulateStick,
+	inputWASDEmulateDirection,
+	touchGamepadEnable,
+	touchGamepadAnalog,
+	touchGamepadSize,
+	touchGamepadAlpha,
+	vibrateEnable,
+	soundEnable,
+	soundVolume,
+	soundDefaultRange,
+	soundDefaultTaper,
+	medalDisplayTime,
+	medalDisplaySlideTime,
+	medalDisplaySize,
+
+	// Setters for globals
+	setCameraPos,
+	setCameraScale,
+	setCanvasMaxSize,
+	setCanvasFixedSize,
+	setCanvasPixelated,
+	setTilesPixelated,
+	setFontDefault,
+	setShowSplashScreen,
+	setHeadlessMode,
+	setGlEnable,
+	setGlOverlay,
+	setTileSizeDefault,
+	setTileFixBleedScale,
+	setEnablePhysicsSolver,
+	setObjectDefaultMass,
+	setObjectDefaultDamping,
+	setObjectDefaultAngleDamping,
+	setObjectDefaultElasticity,
+	setObjectDefaultFriction,
+	setObjectMaxSpeed,
+	setGravity,
+	setParticleEmitRateScale,
+	setTouchInputEnable,
+	setGamepadsEnable,
+	setGamepadDirectionEmulateStick,
+	setInputWASDEmulateDirection,
+	setTouchGamepadEnable,
+	setTouchGamepadAnalog,
+	setTouchGamepadSize,
+	setTouchGamepadAlpha,
+	setVibrateEnable,
+	setSoundEnable,
+	setSoundVolume,
+	setSoundDefaultRange,
+	setSoundDefaultTaper,
+	setMedalDisplayTime,
+	setMedalDisplaySlideTime,
+	setMedalDisplaySize,
+	setMedalsPreventUnlock,
+	setShowWatermark,
+	setDebugKey,
+
+	// Utilities
+	PI,
+	abs,
+	min,
+	max,
+	sign,
+	mod,
+	clamp,
+	percent,
+	distanceWrap,
+	lerpWrap,
+	distanceAngle,
+	lerpAngle,
+	lerp,
+	smoothStep,
+	nearestPowerOfTwo,
+	isOverlapping,
+	isIntersecting,
+	wave,
+	formatTime,
+
+	// Random
+	rand,
+	randInt,
+	randSign,
+	randInCircle,
+	randVector,
+	randColor,
+
+	// Utility Classes
+	RandomGenerator,
+	Vector2,
+	Color,
+	Timer,
+	vec2,
+	rgb,
+	hsl,
+	isColor,
+
+	// Default Colors
+	WHITE,
+	BLACK,
+	GRAY,
+	RED,
+	ORANGE,
+	YELLOW,
+	GREEN,
+	CYAN,
+	BLUE,
+	PURPLE,
+	MAGENTA,
+
+	// Draw
+	textureInfos,
+	tile,
+	TileInfo,
+	TextureInfo,
+	mainCanvas,
+	mainContext,
+	overlayCanvas,
+	overlayContext,
+	mainCanvasSize,
+	screenToWorld,
+	worldToScreen,
+	drawTile,
+	drawRect,
+	drawLine,
+	drawPoly,
+	drawEllipse,
+	drawCircle,
+	drawCanvas2D,
+	drawText,
+	drawTextOverlay,
+	drawTextScreen,
+	setBlendMode,
+	combineCanvases,
+	engineFontImage,
+	FontImage,
+	isFullscreen,
+	toggleFullscreen,
+	setCursor,
+	getCameraSize,
+
+	// WebGL
+	glCanvas,
+	glContext,
+	glCompileShader,
+	glCopyToContext,
+	glCreateProgram,
+	glCreateTexture,
+	glSetTextureData,
+	glDraw,
+	glFlush,
+	glSetTexture,
+	glSetAntialias,
+	glClearCanvas,
+	glAntialias,
+	glShader, 
+	glActiveTexture, 
+	glArrayBuffer, 
+	glGeometryBuffer, 
+	glPositionData, 
+	glColorData, 
+	glInstanceCount, 
+	glAdditive, 
+	glBatchAdditive,
+
+	// Input
+	keyIsDown,
+	keyWasPressed,
+	keyWasReleased,
+	keyDirection,
+	clearInput,
+	mouseIsDown,
+	mouseWasPressed,
+	mouseWasReleased,
+	mousePos,
+	mousePosScreen,
+	mouseWheel,
+	isUsingGamepad,
+	inputPreventDefault,
+	setInputPreventDefault,
+	gamepadIsDown,
+	gamepadWasPressed,
+	gamepadWasReleased,
+	gamepadStick,
+	gamepadsUpdate,
+	vibrate,
+	vibrateStop,
+	isTouchDevice,
+
+	// Audio
+	Sound,
+	SoundWave,
+	playAudioFile,
+	speak,
+	speakStop,
+	getNoteFrequency,
+	playSamples,
+	zzfx,
+	zzfxG,
+	zzfxR,
+	audioContext,
+
+	// Base Object
+	EngineObject,
+
+	// Tiles
+	tileCollision,
+	tileCollisionSize,
+	initTileCollision,
+	setTileCollisionData,
+	getTileCollisionData,
+	tileCollisionTest,
+	tileCollisionRaycast,
+	TileLayerData,
+	TileLayer,
+
+	// Particles
+	ParticleEmitter,
+	Particle,
+
+	// Medals
+	medals,
+	medalsPreventUnlock,
+	medalsInit,
+	Medal,
+};
 
 /**
  * LittleJS Module Plugins Export

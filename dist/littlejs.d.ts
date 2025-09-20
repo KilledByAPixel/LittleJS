@@ -2330,6 +2330,15 @@ declare module "littlejsengine" {
         renderIcon(pos: Vector2, size: number): void;
         storageKey(): string;
     }
+    /**
+     * LittleJS Newgrounds API
+     * - NewgroundsMedal extends Medal with Newgrounds API functionality
+     * - Call new NewgroundsPlugin() to setup Newgrounds
+     * - Uses CryptoJS for encryption if optional cipher is provided
+     * - Keeps connection alive and logs views
+     * - Functions to interact with scoreboards
+     * - Functions to unlock medals
+     */
     /** Global Newgrounds object
      *  @type {NewgroundsPlugin}
      *  @memberof Medal */
@@ -2387,6 +2396,12 @@ declare module "littlejsengine" {
      */
     export class NewgroundsMedal extends Medal {
     }
+    /**
+     * LittleJS Post Processing Plugin
+     * - Supports shadertoy style post processing shaders
+     * - call new new PostProcessPlugin() to setup post processing
+     * - can be enabled to pass other canvases through a final shader
+     */
     /** Global Post Process plugin object
      *  @type {PostProcessPlugin} */
     export let postProcess: PostProcessPlugin;
@@ -2409,6 +2424,9 @@ declare module "littlejsengine" {
         /** @property {boolean} - Should overlay canvas be included in post processing */
         includeOverlay: boolean;
     }
+    /**
+     * LittleJS ZzFXM Plugin
+     */
     /**
      * Music Object - Stores a zzfx music track for later use
      *
@@ -2452,6 +2470,15 @@ declare module "littlejsengine" {
          */
         playMusic(volume?: number, loop?: boolean): AudioBufferSourceNode;
     }
+    /**
+     * LittleJS User Interface Plugin
+     * - call new UISystemPlugin() to setup the UI system
+     * - Nested Menus
+     * - Text
+     * - Buttons
+     * - Checkboxes
+     * - Images
+     */
     /** Global UI system plugin object
      *  @type {UISystemPlugin} */
     export let uiSystem: UISystemPlugin;
@@ -2662,6 +2689,20 @@ declare module "littlejsengine" {
         text: string;
         handleColor: Color;
     }
+    /**
+     * LittleJS Box2D Physics Plugin
+     * - Box2dObject extends EngineObject with Box2D physics
+     * - Call box2dEngineInit() to start instead of normal engineInit()
+     * - You will also need to include box2d.wasm.js
+     * - Uses box2d.js super fast web assembly port of Box2D
+     * - More info: https://github.com/kripken/box2d.js
+     * - Fully wraps everything in Box2d
+     * - Functions to create polygon, circle, and edge shapes
+     * - Raycasting and querying
+     * - Joint creation
+     * - Contact begin and end callbacks
+     * - Debug physics drawing
+     */
     /** Global Box2d Plugin object
      *  @type {Box2dPlugin} */
     export let box2d: Box2dPlugin;

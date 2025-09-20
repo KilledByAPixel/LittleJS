@@ -35,7 +35,6 @@ const enginePluginFiles =
     `${PLUGIN_FOLDER}/zzfxm.js`,
     `${PLUGIN_FOLDER}/uiSystem.js`,
     `${PLUGIN_FOLDER}/box2d.js`,
-    `${PLUGIN_FOLDER}/pluginExport.js`,
 ];
 const asciiArt =`
       ~~~~°°°°ooo°oOo°ooOooOooOo.
@@ -65,7 +64,11 @@ Build
 (
     'Build Engine -- all',
     `${BUILD_FOLDER}/${ENGINE_NAME}.js`,
-    [`${SOURCE_FOLDER}/engineDebug.js`, ...engineSourceFiles],
+    [
+        `${SOURCE_FOLDER}/engineDebug.js`, 
+        ...engineSourceFiles, 
+        ...enginePluginFiles
+    ],
     [], true
 );
 
@@ -73,7 +76,11 @@ Build
 (
     'Build Engine -- release',
     `${BUILD_FOLDER}/${ENGINE_NAME}.release.js`,
-    [`${SOURCE_FOLDER}/engineRelease.js`, ...engineSourceFiles],
+    [
+        `${SOURCE_FOLDER}/engineRelease.js`, 
+        ...engineSourceFiles, 
+        ...enginePluginFiles
+    ],
     [], true
 );
 
@@ -92,7 +99,7 @@ Build
     [
         `${BUILD_FOLDER}/${ENGINE_NAME}.js`, 
         `${SOURCE_FOLDER}/engineExport.js`, 
-        ...enginePluginFiles
+        `${PLUGIN_FOLDER}/pluginExport.js`
     ],
     [typeScriptBuildStep]
 );
@@ -104,7 +111,7 @@ Build
     [
         `${BUILD_FOLDER}/${ENGINE_NAME}.release.js`, 
         `${SOURCE_FOLDER}/engineExport.js`, 
-        ...enginePluginFiles
+        `${PLUGIN_FOLDER}/pluginExport.js`
     ],
     [closureCompilerStep, uglifyBuildStep]
 );
