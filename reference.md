@@ -13,7 +13,7 @@ To start LittleJS, you need to create a few functions and pass them to engineIni
 
 ```javascript
 // Start up LittleJS engine with your callback functions
-engineInit(init, update, updatePost, render, renderPost, imageSources=['tiles.png']);
+engineInit(init, update, updatePost, render, renderPost, imageSources=[]);
 ```
 
 ## LittleJS Utilities Classes and Functions
@@ -29,7 +29,7 @@ engineInit(init, update, updatePost, render, renderPost, imageSources=['tiles.pn
 vec2(x=0, y=x)                                // Create a 2D vector with Vector or floats
 rgb(r=1, g=1, b=1, a=1)                       // Create a color object with RGBA values
 hsl(h=0, s=0, l=1, a=1)                       // Create a color object with HSLA values
-tile(pos=(0,0), size, textureIndex=0)         // Create a tile info object
+tile(pos, size=(16,16), texture=0, padding=0) // Create a tile info object
 
 // Helper functions 
 abs(value)                                    // Get absolute value
@@ -131,12 +131,12 @@ Timer.valueOf()        // Get how long since elapsed, 0 if not set
 
 ```javascript
 // Drawing functions
-drawTile(pos, size=(1,1), tileInfo, color, angle=0, mirror, additiveColor)
-drawRect(pos, size=(1,1), color=(1,1,1,1), angle=0)
-drawLine(posA, posB, thickness=.1, color=(1,1,1,1))
+drawTile(pos, size=(1,1), tileInfo, color=WHITE, angle=0, mirror, additiveColor)
+drawRect(pos, size=(1,1), color=WHITE, angle=0)
+drawLine(posA, posB, thickness=.1, color=WHITE)
 drawCanvas2D(pos, size, angle, mirror, drawFunction)
-drawText(text, pos, size=1, color=(1,1,1,1), lineWidth, lineColor)
-drawTextScreen(text, pos, size=1, color=(1,1,1,1), lineWidth, lineColor)
+drawText(text, pos, size=1, color=WHITE, lineWidth, lineColor)
+drawTextScreen(text, pos, size=1, color=WHITE, lineWidth, lineColor)
 setBlendMode(additive)
 toggleFullscreen()
 isFullscreen()
@@ -172,10 +172,15 @@ getCameraSize()          // Get the camera's visible area in world space
 canvasMaxSize = (1920, 1200)  // The max size of the canvas
 canvasFixedSize = (0, 0)      // Fixed size of the canvas
 fontDefault = 'arial'         // Default font used for text rendering
-canvasPixelated = true        // Disable filtering for crisper pixel art?
-showSplashScreen = false      // Show the LittleJS splash screen on startup?
-glEnable = true               // Enable fast WebGL rendering?
-glOverlay = true              // Prevent compositing the WebGL canvas?
+canvasPixelated = true        // Use nearest neighbor canvas scaling for more pixelated look
+tilesPixelated = true         // Disable filtering for crisper pixel art
+showSplashScreen = false      // Show the LittleJS splash screen on startup
+glEnable = true               // Enable fast WebGL rendering
+glOverlay = true              // Prevent compositing the WebGL canvas
+
+// Tile sheet settings
+tileSizeDefault = (16,16)  // Default size of tiles in pixels
+tileFixBleedScale = .3     // How much smaller to draw tiles to prevent bleeding
 ```
 
 ## LittleJS Audio System
@@ -224,7 +229,7 @@ soundDefaultTaper = .7  // Default range percent to taper off sound (0-1)
 keyIsDown(key)                        // Is key down?
 keyWasPressed(key)                    // Was key pressed this frame?
 keyWasReleased(key)                   // Was key released this frame?
-keyDirection()                        // Get input vector from arrow keys or wasd
+keyDirection(up, down, left, right)                        // Get input vector from arrow keys or wasd
 
 // Mouse / Touch
 mousePos                              // World space mouse position
@@ -276,7 +281,7 @@ touchGamepadAlpha = .3                // Transparency of touch gamepad overlay
 
 ```javascript
 // Engine Object
-EngineObject(pos=(0,0), size=(1,1), tileInfo, angle=0, color, renderOrder=0)
+EngineObject(pos, size=(1,1), tileInfo, angle=0, color, renderOrder=0)
 EngineObject.update()                              // Update object, called automatically
 EngineObject.render()                              // Render object, called automatically
 EngineObject.destroy()                             // Destroy this object and children
@@ -317,7 +322,7 @@ objectDefaultAngleDamping = 1 // How much to slow angular velocity each frame (0
 objectDefaultElasticity = 0   // How much to bounce when a collision occurs (0-1)
 objectDefaultFriction = .8    // How much to slow when touching (0-1)
 objectMaxSpeed = 1            // Clamp max speed to avoid fast objects missing collisions
-gravity = 0                   // How much gravity to apply to objects
+gravity = (0,0)               // How much gravity to apply to objects
 
 // Engine Object functions
 engineObjectsCollect(pos, size, objects=engineObjects)k
@@ -336,15 +341,8 @@ engineObjectsDestroy()
 - Drawn directly to the main canvas without using WebGL
 
 ```javascript
-// Tile Collision System
-tileCollisionSize                              // Size of the tile collision layer
-initTileCollision(size)                        // Clear and initialize tile collision
-setTileCollisionData(pos, data=0)              // Set tile collision data at pos
-getTileCollisionData(pos)                      // Get tile collision data at pos
-tileCollisionTest(pos, size=(0,0), object)     // Check if collision should occur
-tileCollisionRaycast(posStart, posEnd, object) // Return the center of tile if hit
 
-// Tile Layer Object
+// LittleJS Layer System
 TileLayer(position, size, tileInfo, scale)     // Create a tile layer object
 TileLayer.setData(layerPos, data, redraw)      // Set data at position
 TileLayer.getData(layerPos)                    // Get data at position
@@ -355,12 +353,16 @@ TileLayer.drawTile(pos, size=(1,1), tileInfo, color, angle, mirror) // Draw tile
 TileLayer.drawCanvas2D(pos, size, angle, mirror, drawFunction)      // Draw to 2D canvas
 
 // Tile Layer Data Object
-TileLayerData(tile, direction=0, mirror=false, color=(1,1,1,1)) // Create tile data object
+TileLayerData(tile, direction=0, mirror=false, color=WHITE) // Create tile data object
 TileLayerData.clear()      // Clear this tile data
 
-// Tile sheet settings
-tileSizeDefault = (16,16)  // Default size of tiles in pixels
-tileFixBleedScale = .3     // How much smaller to draw tiles to prevent bleeding
+// Tile Collision Layer
+TileCollisionLayer(position, size, tileInfo=tile()) // Create a tile collision layer object
+TileCollisionLayer.size                             // Size of the tile collision layer
+TileCollisionLayer.setCollisionData(pos, data=1)    // Set tile collision data at pos
+getTileCollisionData(pos)                           // Get tile collision data at pos
+tileCollisionTest(pos, size=(0,0), object)          // Check if collision should occur
+tileCollisionRaycast(posStart, posEnd, object)      // Return the center of tile if hit
 ```
 
 ## LittleJS Particle System
