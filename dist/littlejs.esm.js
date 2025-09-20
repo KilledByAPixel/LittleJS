@@ -334,11 +334,9 @@ function debugRender()
             }
         }
 
-        if (tileCollisionSize.x > 0 && tileCollisionSize.y > 0)
+        if (tileCollisionLayers.length) // show floored tile pick if there is tile collision
             drawRect(mousePos.floor().add(vec2(.5)), vec2(1), rgb(0,0,1,.5), 0, false);
         mainContext = saveContext;
-
-        //glCopyToContext(mainContext = saveContext);
     }
 
     {
@@ -2154,9 +2152,9 @@ class EngineObject
         if (this.groundObject)
         {
             // apply friction in local space of ground object
-            const groundSpeed = this.groundObject != this && this.groundObject.velocity ? 
-                this.groundObject.velocity.x : 0;
-            this.velocity.x = groundSpeed + (this.velocity.x - groundSpeed) * this.friction;
+            const friction = max(this.friction, this.groundObject.friction);
+            const groundSpeed = this.groundObject.velocity ? this.groundObject.velocity.x : 0;
+            this.velocity.x = groundSpeed + (this.velocity.x - groundSpeed) * friction;
             this.groundObject = undefined;
             //debugOverlay && debugPhysics && debugPoint(this.pos.subtract(vec2(0,this.size.y/2)), '#0f0');
         }
@@ -2260,19 +2258,21 @@ class EngineObject
         if (this.collideTiles)
         {
             // check collision against tiles
-            if (tileCollisionTest(this.pos, this.size, this))
+            const hitLayer = tileCollisionTest(this.pos, this.size, this)
+            if (hitLayer)
             {
                 // if already was stuck in collision, don't do anything
                 // this should not happen unless something starts in collision
                 if (!tileCollisionTest(oldPos, this.size, this))
                 {
                     // test which side we bounced off (or both if a corner)
-                    const isBlockedY = tileCollisionTest(vec2(oldPos.x, this.pos.y), this.size, this);
-                    const isBlockedX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
-                    if (isBlockedY || !isBlockedX)
+                    const blockedLayerY = tileCollisionTest(vec2(oldPos.x, this.pos.y), this.size, this);
+                    const blockedLayerX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
+                    if (blockedLayerY || !blockedLayerX)
                     {
                         // bounce velocity
-                        this.velocity.y *= -this.elasticity;
+                        const elasticity = max(this.elasticity, hitLayer.elasticity);
+                        this.velocity.y *= -elasticity;
 
                         if (wasMovingDown)
                         {
@@ -2281,9 +2281,8 @@ class EngineObject
                             const epsilon = .0001;
                             this.pos.y = (oldPos.y-this.size.y/2|0)+this.size.y/2+epsilon;
 
-                            // set ground object to self for tile collision
-                            // TODO: rework system so tile collision is its own object
-                            this.groundObject = this;
+                            // set ground object for tile collision
+                            this.groundObject = hitLayer;
                         }
                         else
                         {
@@ -2292,7 +2291,7 @@ class EngineObject
                             this.groundObject = undefined; 
                         }
                     }
-                    if (isBlockedX)
+                    if (blockedLayerX)
                     {
                         // move to previous position and bounce
                         this.pos.x = oldPos.x;
@@ -3392,7 +3391,9 @@ function gamepadsUpdate()
                 const button = gamepad.buttons[j];
                 const wasDown = gamepadIsDown(j,i);
                 data[j] = button.pressed ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
-                isUsingGamepad ||= !i && button.pressed;
+                if (!button.value || button.value > .9) // must be a full press
+                if (!i && button.pressed)
+                    isUsingGamepad = true;
             }
 
             if (gamepadDirectionEmulateStick)
@@ -4067,75 +4068,47 @@ function zzfxG
  * LittleJS Tile Layer System
  * - Caches arrays of tiles to off screen canvas for fast rendering
  * - Unlimited numbers of layers, allocates canvases as needed
- * - Interfaces with EngineObject for collision
- * - Collision layer is separate from visible layers
- * - It is recommended to have a visible layer that matches the collision
  * - Tile layers can be drawn to using their context with canvas2d
  * - Drawn directly to the main canvas without using WebGL
+ * - Tile layers can also have collision with EngineObjects
  * @namespace TileCollision
  */
 
 
 
-/** The tile collision layer grid, use setTileCollisionData and getTileCollisionData to access
- *  @type {Array<number>} 
- *  @memberof TileCollision */
-let tileCollision = [];
+///////////////////////////////////////////////////////////////////////////////
+// Tile Layer System
 
-/** Size of the tile collision layer 2d grid
- *  @type {Vector2} 
+/** Keep track of all tile layers with collision
+ *  @type {Array<TileCollisionLayer>} 
  *  @memberof TileCollision */
-let tileCollisionSize = vec2();
-
-/** Clear and initialize tile collision
- *  @param {Vector2} size - width and height of tile collision 2d grid
- *  @memberof TileCollision */
-function initTileCollision(size)
-{
-    tileCollisionSize = size;
-    tileCollision = [];
-    for (let i=tileCollision.length = tileCollisionSize.area(); i--;)
-        tileCollision[i] = 0;
-}
-
-/** Set tile collision data for a given cell in the grid
- *  @param {Vector2} pos
- *  @param {number}  [data]
- *  @memberof TileCollision */
-function setTileCollisionData(pos, data=0)
-{
-    pos.arrayCheck(tileCollisionSize) && (tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] = data);
-}
+let tileCollisionLayers = [];
 
 /** Get tile collision data for a given cell in the grid
- *  @param {Vector2} pos
- *  @return {number}
- *  @memberof TileCollision */
+*  @param {Vector2} pos
+*  @return {number}
+*  @memberof TileCollision */
 function getTileCollisionData(pos)
 {
-    return pos.arrayCheck(tileCollisionSize) ? tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] : 0;
+    // check all tile collision layers
+    for (const layer of tileCollisionLayers)
+        if (pos.arrayCheck(layer.size))
+            return layer.getCollisionData(pos);
+    return 0;
 }
 
-/** Check if collision with another object should occur
+/** Check if a tile layer collides with another object
  *  @param {Vector2}      pos
  *  @param {Vector2}      [size=(0,0)]
  *  @param {EngineObject} [object]
- *  @return {boolean}
+ *  @return {TileCollisionLayer}
  *  @memberof TileCollision */
 function tileCollisionTest(pos, size=vec2(), object)
 {
-    const minX = max(pos.x - size.x/2|0, 0);
-    const minY = max(pos.y - size.y/2|0, 0);
-    const maxX = min(pos.x + size.x/2, tileCollisionSize.x);
-    const maxY = min(pos.y + size.y/2, tileCollisionSize.y);
-    for (let y = minY; y < maxY; ++y)
-    for (let x = minX; x < maxX; ++x)
-    {
-        const tileData = tileCollision[y*tileCollisionSize.x+x];
-        if (tileData && (!object || object.collideWithTile(tileData, vec2(x, y))))
-            return true;
-    }
-    return false;
+    // check all tile collision layers
+    for (const layer of tileCollisionLayers)
+        if (layer.collisionTest(pos, size, object))
+            return layer;
 }
 
 /** Return the center of first tile hit, undefined if nothing was hit.
@@ -4147,49 +4120,17 @@ function tileCollisionTest(pos, size=vec2(), object)
  *  @memberof TileCollision */
 function tileCollisionRaycast(posStart, posEnd, object)
 {
-    // test if a ray collides with tiles from start to end
-    // todo: a way to get the exact hit point, it must still be inside the hit tile
-    const delta = posEnd.subtract(posStart);
-    const totalLength = delta.length();
-    const normalizedDelta = delta.normalize();
-    const unit = vec2(abs(1/normalizedDelta.x), abs(1/normalizedDelta.y));
-    const flooredPosStart = posStart.floor();
-
-    // setup iteration variables
-    let pos = flooredPosStart;
-    let xi = unit.x * (delta.x < 0 ? posStart.x - pos.x : pos.x - posStart.x + 1);
-    let yi = unit.y * (delta.y < 0 ? posStart.y - pos.y : pos.y - posStart.y + 1);
-
-    while (true)
+    // check all tile collision layers
+    for (const layer of tileCollisionLayers)
     {
-        // check for tile collision
-        const tileData = getTileCollisionData(pos);
-        if (tileData && (!object || object.collideWithTile(tileData, pos)))
-        {
-            debugRaycast && debugLine(posStart, posEnd, '#f00', .02);
-            debugRaycast && debugPoint(pos.add(vec2(.5)), '#ff0');
-            return pos.add(vec2(.5));
-        }
-
-        // check if past the end
-        if (xi > totalLength && yi > totalLength)
-            break;
-
-        // get coordinates of the next tile to check
-        if (xi > yi)
-            pos.y += sign(delta.y), yi += unit.y;
-        else
-            pos.x += sign(delta.x), xi += unit.x;
+        const hitPos = layer.collisionRaycast(posStart, posEnd, object)
+        if (hitPos)
+            return hitPos;
     }
-
-    debugRaycast && debugLine(posStart, posEnd, '#00f', .02);
 }
 
-///////////////////////////////////////////////////////////////////////////////
-// Tile Layer Rendering System
-
 /**
- * Tile layer data object stores info about how to render a tile
+ * Tile layer data object stores info about how to draw a tile
  * @example
  * // create tile layer data with tile index 0 and random orientation and color
  * const tileIndex = 0;
@@ -4221,28 +4162,27 @@ class TileLayerData
     clear() { this.tile = this.direction = 0; this.mirror = false; this.color = new Color; }
 }
 
+///////////////////////////////////////////////////////////////////////////////
 /**
  * Tile Layer - cached rendering system for tile layers
  * - Each Tile layer is rendered to an off screen canvas
  * - To allow dynamic modifications, layers are rendered using canvas 2d
  * - Some devices like mobile phones are limited to 4k texture resolution
- * - So with 16x16 tiles this limits layers to 256x256 on mobile devices
+ * - For with 16x16 tiles this limits layers to 256x256 on mobile devices
  * @extends EngineObject
  * @example
- * // create tile collision and visible tile layer
- * initTileCollision(vec2(200,100));
- * const tileLayer = new TileLayer();
+ * const tileLayer = new TileLayer(vec2(), vec2(200,100));
  */
 class TileLayer extends EngineObject
 {
     /** Create a tile layer object
-    *  @param {Vector2}  [position=(0,0)]     - World space position
-    *  @param {Vector2}  [size=tileCollisionSize] - World space size
-    *  @param {TileInfo} [tileInfo]    - Tile info for layer
-    *  @param {Vector2}  [scale=(1,1)] - How much to scale this layer when rendered
-    *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
+    *  @param {Vector2}  [position=(0,0)] - World space position
+    *  @param {Vector2}  [size=(1,1)]     - World space size
+    *  @param {TileInfo} [tileInfo]       - Tile info for layer
+    *  @param {Vector2}  [scale=(1,1)]    - How much to scale this layer when rendered
+    *  @param {number}   [renderOrder]    - Objects are sorted by renderOrder
     */
-    constructor(position, size=tileCollisionSize, tileInfo=tile(), scale=vec2(1), renderOrder=0)
+    constructor(position, size, tileInfo=tile(), scale=vec2(1), renderOrder=0)
     {
         super(position, size, tileInfo, 0, undefined, renderOrder);
 
@@ -4254,6 +4194,10 @@ class TileLayer extends EngineObject
         this.scale = scale;
         /** @property {boolean} - If true this layer will render to overlay canvas and appear above all objects */
         this.isOverlay = false;
+        // set no friction by default, applied friction is max of both objects
+        this.friction = 0;
+        // set no elasticity by default, applied elasticity is max of both objects
+        this.elasticity = 0;
 
         // init tile data
         this.data = [];
@@ -4450,6 +4394,146 @@ class TileLayer extends EngineObject
      *  @param {number}  [angle=0] */
     drawRect(pos, size, color, angle) 
     { this.drawTile(pos, size, undefined, color, angle); }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * Tile Collision Layer - a tile layer with collision
+ * - adds collision data and functions to TileLayer
+ * - there can be multiple tile collision layers
+ * - tile collison layers should not overlap each other
+ * @extends TileLayer
+ */
+class TileCollisionLayer extends TileLayer
+{
+    /** Create a tile layer object
+    *  @param {Vector2}  [position=(0,0)] - World space position
+    *  @param {Vector2}  [size=(0,0)]     - World space size
+    *  @param {TileInfo} [tileInfo]       - Tile info for layer
+    *  @param {number}   [renderOrder]    - Objects are sorted by renderOrder
+    */
+    constructor(position, size, tileInfo=tile(), renderOrder=0)
+    {
+        const scale = vec2(1); // collision layers are not scaled
+        super(position, size.floor(), tileInfo, scale, renderOrder);
+
+        /** @property {Array<number>} - The tile collision grid */
+        this.collisionData = [];
+        this.initCollision(this.size);
+
+        // keep track of all collision layers
+        tileCollisionLayers.push(this);
+    }
+
+    /** Destroy this collision layer */
+    destroy()
+    { 
+        if (this.destroyed)
+            return;
+
+        // remove from collision layers array and destroy
+        const index = tileCollisionLayers.indexOf(this);
+        ASSERT(index >= 0, 'tile collision layer not found in array');
+        tileCollisionLayers.splice(index, 1);
+        super.destroy();
+    }
+
+    /** Clear and initialize tile collision to new size
+    *  @param {Vector2} size - width and height of tile collision 2d grid */
+    initCollision(size)
+    {
+        this.size = size.floor();
+        this.collisionData = [];
+        this.collisionData.length = size.area();
+        this.collisionData.fill(0);
+    }
+
+    /** Set tile collision data for a given cell in the grid
+    *  @param {Vector2} pos
+    *  @param {number}  [data] */
+    setCollisionData(pos, data=0)
+    {
+        const i = (pos.y|0)*this.size.x + pos.x|0;
+        pos.arrayCheck(this.size) && (this.collisionData[i] = data);
+    }
+
+    /** Get tile collision data for a given cell in the grid
+    *  @param {Vector2} pos
+    *  @return {number} */
+    getCollisionData(pos)
+    {
+        const i = (pos.y|0)*this.size.x + pos.x|0;
+        return pos.arrayCheck(this.size) ? this.collisionData[i] : 0;
+    }
+
+    /** Check if collision with another object should occur
+    *  @param {Vector2}      pos
+    *  @param {Vector2}      [size=(0,0)]
+    *  @param {EngineObject} [object]
+    *  @return {boolean} */
+    collisionTest(pos, size=vec2(), object)
+    {
+        const minX = max(pos.x - size.x/2|0, 0);
+        const minY = max(pos.y - size.y/2|0, 0);
+        const maxX = min(pos.x + size.x/2, this.size.x);
+        const maxY = min(pos.y + size.y/2, this.size.y);
+        for (let y = minY; y < maxY; ++y)
+        for (let x = minX; x < maxX; ++x)
+        {
+            // check if the object should collide with this tile
+            const tileData = this.collisionData[y*this.size.x+x];
+            if (tileData && (!object || object.collideWithTile(tileData, vec2(x, y))))
+                return true;
+        }
+        return false;
+    }
+
+    /** Return the center of first tile hit, undefined if nothing was hit.
+    *  This does not return the exact intersection, but the center of the tile hit.
+    *  @param {Vector2}      posStart
+    *  @param {Vector2}      posEnd
+    *  @param {EngineObject} [object]
+    *  @return {Vector2} */
+    collisionRaycast(posStart, posEnd, object)
+    {
+        // test if a ray collides with tiles from start to end
+        // todo: a way to get the exact hit point, it must still be inside the hit tile
+        const delta = posEnd.subtract(posStart);
+        const totalLength = delta.length();
+        const normalizedDelta = delta.normalize();
+        const unit = vec2(abs(1/normalizedDelta.x), abs(1/normalizedDelta.y));
+        const flooredPosStart = posStart.floor();
+
+        // setup iteration variables
+        let pos = flooredPosStart;
+        let xi = unit.x * (delta.x < 0 ? posStart.x - pos.x : pos.x - posStart.x + 1);
+        let yi = unit.y * (delta.y < 0 ? posStart.y - pos.y : pos.y - posStart.y + 1);
+
+        // use line drawing algorithm to test for collisions
+        while (true)
+        {
+            // check for tile collision
+            const tileData = this.getCollisionData(pos);
+            if (tileData && (!object || object.collideWithTile(tileData, pos)))
+            {
+                debugRaycast && debugLine(posStart, posEnd, '#f00', .02);
+                debugRaycast && debugPoint(pos.add(vec2(.5)), '#ff0');
+                return pos.add(vec2(.5));
+            }
+
+            // check if past the end
+            if (xi > totalLength && yi > totalLength)
+                break;
+
+            // get coordinates of next tile to check
+            if (xi > yi)
+                pos.y += sign(delta.y), yi += unit.y;
+            else
+                pos.x += sign(delta.x), xi += unit.x;
+        }
+
+        debugRaycast && debugLine(posStart, posEnd, '#00f', .02);
+    }
 }
 /** 
  * LittleJS Particle System
@@ -5326,7 +5410,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.18';
+const engineVersion = '1.12.0';
 
 /** Frames per second to update
  *  @type {number}
@@ -8982,15 +9066,13 @@ export
 	EngineObject,
 
 	// Tiles
-	tileCollision,
-	tileCollisionSize,
-	initTileCollision,
-	setTileCollisionData,
+	tileCollisionLayers,
 	getTileCollisionData,
 	tileCollisionTest,
 	tileCollisionRaycast,
 	TileLayerData,
 	TileLayer,
+	TileCollisionLayer,
 
 	// Particles
 	ParticleEmitter,

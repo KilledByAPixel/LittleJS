@@ -1885,7 +1885,7 @@ declare module "littlejsengine" {
         /** @property {boolean}  - Limit object speed using linear or circular math */
         clampSpeedLinear: boolean;
         /** @property {EngineObject} - Object we are standing on, if any  */
-        groundObject: any;
+        groundObject: EngineObject | TileCollisionLayer;
         /** @property {EngineObject} - Parent of object if in local space  */
         parent: any;
         /** @property {Vector2}      - Local position if child */
@@ -1967,42 +1967,27 @@ declare module "littlejsengine" {
      * LittleJS Tile Layer System
      * - Caches arrays of tiles to off screen canvas for fast rendering
      * - Unlimited numbers of layers, allocates canvases as needed
-     * - Interfaces with EngineObject for collision
-     * - Collision layer is separate from visible layers
-     * - It is recommended to have a visible layer that matches the collision
      * - Tile layers can be drawn to using their context with canvas2d
      * - Drawn directly to the main canvas without using WebGL
+     * - Tile layers can also have collision with EngineObjects
      * @namespace TileCollision
      */
-    /** The tile collision layer grid, use setTileCollisionData and getTileCollisionData to access
-     *  @type {Array<number>}
+    /** Keep track of all tile layers with collision
+     *  @type {Array<TileCollisionLayer>}
      *  @memberof TileCollision */
-    export let tileCollision: Array<number>;
-    /** Size of the tile collision layer 2d grid
-     *  @type {Vector2}
-     *  @memberof TileCollision */
-    export let tileCollisionSize: Vector2;
-    /** Clear and initialize tile collision
-     *  @param {Vector2} size - width and height of tile collision 2d grid
-     *  @memberof TileCollision */
-    export function initTileCollision(size: Vector2): void;
-    /** Set tile collision data for a given cell in the grid
-     *  @param {Vector2} pos
-     *  @param {number}  [data]
-     *  @memberof TileCollision */
-    export function setTileCollisionData(pos: Vector2, data?: number): void;
+    export let tileCollisionLayers: Array<TileCollisionLayer>;
     /** Get tile collision data for a given cell in the grid
-     *  @param {Vector2} pos
-     *  @return {number}
-     *  @memberof TileCollision */
+    *  @param {Vector2} pos
+    *  @return {number}
+    *  @memberof TileCollision */
     export function getTileCollisionData(pos: Vector2): number;
-    /** Check if collision with another object should occur
+    /** Check if a tile layer collides with another object
      *  @param {Vector2}      pos
      *  @param {Vector2}      [size=(0,0)]
      *  @param {EngineObject} [object]
-     *  @return {boolean}
+     *  @return {TileCollisionLayer}
      *  @memberof TileCollision */
-    export function tileCollisionTest(pos: Vector2, size?: Vector2, object?: EngineObject): boolean;
+    export function tileCollisionTest(pos: Vector2, size?: Vector2, object?: EngineObject): TileCollisionLayer;
     /** Return the center of first tile hit, undefined if nothing was hit.
      *  This does not return the exact intersection, but the center of the tile hit.
      *  @param {Vector2}      posStart
@@ -2012,7 +1997,7 @@ declare module "littlejsengine" {
      *  @memberof TileCollision */
     export function tileCollisionRaycast(posStart: Vector2, posEnd: Vector2, object?: EngineObject): Vector2;
     /**
-     * Tile layer data object stores info about how to render a tile
+     * Tile layer data object stores info about how to draw a tile
      * @example
      * // create tile layer data with tile index 0 and random orientation and color
      * const tileIndex = 0;
@@ -2044,20 +2029,18 @@ declare module "littlejsengine" {
      * - Each Tile layer is rendered to an off screen canvas
      * - To allow dynamic modifications, layers are rendered using canvas 2d
      * - Some devices like mobile phones are limited to 4k texture resolution
-     * - So with 16x16 tiles this limits layers to 256x256 on mobile devices
+     * - For with 16x16 tiles this limits layers to 256x256 on mobile devices
      * @extends EngineObject
      * @example
-     * // create tile collision and visible tile layer
-     * initTileCollision(vec2(200,100));
-     * const tileLayer = new TileLayer();
+     * const tileLayer = new TileLayer(vec2(), vec2(200,100));
      */
     export class TileLayer extends EngineObject {
         /** Create a tile layer object
-        *  @param {Vector2}  [position=(0,0)]     - World space position
-        *  @param {Vector2}  [size=tileCollisionSize] - World space size
-        *  @param {TileInfo} [tileInfo]    - Tile info for layer
-        *  @param {Vector2}  [scale=(1,1)] - How much to scale this layer when rendered
-        *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
+        *  @param {Vector2}  [position=(0,0)] - World space position
+        *  @param {Vector2}  [size=(1,1)]     - World space size
+        *  @param {TileInfo} [tileInfo]       - Tile info for layer
+        *  @param {Vector2}  [scale=(1,1)]    - How much to scale this layer when rendered
+        *  @param {number}   [renderOrder]    - Objects are sorted by renderOrder
         */
         constructor(position?: Vector2, size?: Vector2, tileInfo?: TileInfo, scale?: Vector2, renderOrder?: number);
         /** @property {HTMLCanvasElement} - The canvas used by this tile layer */
@@ -2117,6 +2100,48 @@ declare module "littlejsengine" {
          *  @param {Color}   [color=(1,1,1,1)]
          *  @param {number}  [angle=0] */
         drawRect(pos: Vector2, size?: Vector2, color?: Color, angle?: number): void;
+    }
+    /**
+     * Tile Collision Layer - a tile layer with collision
+     * - adds collision data and functions to TileLayer
+     * - there can be multiple tile collision layers
+     * - tile collison layers should not overlap each other
+     * @extends TileLayer
+     */
+    export class TileCollisionLayer extends TileLayer {
+        /** Create a tile layer object
+        *  @param {Vector2}  [position=(0,0)] - World space position
+        *  @param {Vector2}  [size=(0,0)]     - World space size
+        *  @param {TileInfo} [tileInfo]       - Tile info for layer
+        *  @param {number}   [renderOrder]    - Objects are sorted by renderOrder
+        */
+        constructor(position?: Vector2, size?: Vector2, tileInfo?: TileInfo, renderOrder?: number);
+        /** @property {Array<number>} - The tile collision grid */
+        collisionData: any[];
+        /** Clear and initialize tile collision to new size
+        *  @param {Vector2} size - width and height of tile collision 2d grid */
+        initCollision(size: Vector2): void;
+        /** Set tile collision data for a given cell in the grid
+        *  @param {Vector2} pos
+        *  @param {number}  [data] */
+        setCollisionData(pos: Vector2, data?: number): void;
+        /** Get tile collision data for a given cell in the grid
+        *  @param {Vector2} pos
+        *  @return {number} */
+        getCollisionData(pos: Vector2): number;
+        /** Check if collision with another object should occur
+        *  @param {Vector2}      pos
+        *  @param {Vector2}      [size=(0,0)]
+        *  @param {EngineObject} [object]
+        *  @return {boolean} */
+        collisionTest(pos: Vector2, size?: Vector2, object?: EngineObject): boolean;
+        /** Return the center of first tile hit, undefined if nothing was hit.
+        *  This does not return the exact intersection, but the center of the tile hit.
+        *  @param {Vector2}      posStart
+        *  @param {Vector2}      posEnd
+        *  @param {EngineObject} [object]
+        *  @return {Vector2} */
+        collisionRaycast(posStart: Vector2, posEnd: Vector2, object?: EngineObject): Vector2;
     }
     /**
      * LittleJS Particle System
