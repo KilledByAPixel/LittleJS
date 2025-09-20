@@ -54,7 +54,7 @@ class NewgroundsPlugin
      *  @example
      *  // create the newgrounds object, replace the app id with your own
      *  const app_id = 'your_app_id_here';
-     *  new Newgrounds(app_id);
+     *  new NewgroundsPlugin(app_id);
      */
     constructor(app_id, cipher, cryptoJS)
     {
