@@ -1,6 +1,6 @@
 /**
  * LittleJS User Interface Plugin
- * - cann new UISystemPlugin() to set it up
+ * - call new UISystemPlugin() to set it up
  * - Nested Menus
  * - Text
  * - Buttons
@@ -24,6 +24,12 @@ let uiSystem;
  */
 class UISystemPlugin
 {
+    /** Create the global UI system object
+     *  @param {CanvasRenderingContext2D} [context]
+     *  @example
+     *  // create the ui plugin object
+     *  new UISystemPlugin;
+     */
     constructor(context=overlayContext)
     {
         ASSERT(!uiSystem, 'UI system already initialized');
