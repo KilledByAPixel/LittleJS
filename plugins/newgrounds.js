@@ -1,12 +1,11 @@
 /** 
  * LittleJS Newgrounds API
  * - NewgroundsMedal extends Medal with Newgrounds API functionality
- * - Call newgroundsInit to enable Newgrounds functionality
+ * - Call new NewgroundsPlugin() to setup Newgrounds
  * - Uses CryptoJS for encryption if optional cipher is provided
  * - Keeps connection alive and logs views
  * - Functions to interact with scoreboards
  * - Functions to unlock medals
- * @namespace Plugins
  */
 
 'use strict';

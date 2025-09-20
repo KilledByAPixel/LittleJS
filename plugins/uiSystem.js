@@ -1,12 +1,11 @@
 /**
  * LittleJS User Interface Plugin
- * - call new UISystemPlugin() to set it up
+ * - call new UISystemPlugin() to setup the UI system
  * - Nested Menus
  * - Text
  * - Buttons
  * - Checkboxes
  * - Images
- * @namespace Plugins
  */
 
 'use strict';
@@ -14,8 +13,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Global UI system plugin object
- *  @type {UISystemPlugin}
- *  @memberof Plugins */
+ *  @type {UISystemPlugin} */
 let uiSystem;
 
 ///////////////////////////////////////////////////////////////////////////////
