@@ -21,9 +21,13 @@ let postProcess;
  */
 class PostProcessPlugin
 {
-    /** Set up a post processing shader
+    /** Create global post processing shader
     *  @param {string} shaderCode
-    *  @param {boolean} [includeOverlay] */
+    *  @param {boolean} [includeOverlay]
+     *  @example
+     *  // create the post process plugin object
+     *  new PostProcessPlugin(shaderCode);
+     */
     constructor(shaderCode, includeOverlay=false)
     {
         ASSERT(!postProcess, 'Post process already initialized');
