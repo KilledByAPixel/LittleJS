@@ -1,6 +1,8 @@
 /**
  * LittleJS Box2D Physics Plugin
  * - Box2dObject extends EngineObject with Box2D physics
+ * - Call box2dEngineInit to start instead of normal engineInit
+ * - You will also need to include box2d.wasm.js
  * - Uses box2d.js super fast web assembly port of Box2D
  * - More info: https://github.com/kripken/box2d.js
  * - Fully wraps everything in Box2d
@@ -9,8 +11,6 @@
  * - Joint creation
  * - Contact begin and end callbacks
  * - Debug physics drawing
- * - Call box2dEngineInit to start instead of normal engineInit
- * - You allso will need to include the box2d wasm.js file
  * @namespace Plugins
  */
 
@@ -27,24 +27,6 @@ let box2d;
  *  @memberof Box2dPlugin */
 let box2dDebug = false;
 
-/** Static body type - zero mass, zero velocity, may be manually moved
- *  @type {number}
- *  @default
- *  @memberof Box2dPlugin */
-const box2dBodyTypeStatic = 0;
-
-/** Kinematic body type - zero mass, non-zero velocity set by user, moved by solver
- *  @type {number}
- *  @default
- *  @memberof Box2dPlugin */
-const box2dBodyTypeKinematic = 1;
-
-/** Dynamic body type - positive mass, non-zero velocity determined by forces, moved by solver
- *  @type {number}
- *  @default
- *  @memberof Box2dPlugin */
-const box2dBodyTypeDynamic = 2;
-
 ///////////////////////////////////////////////////////////////////////////////
 /** 
  * Box2D Object - extend with your own custom physics objects
@@ -55,7 +37,15 @@ const box2dBodyTypeDynamic = 2;
  */
 class Box2dObject extends EngineObject 
 {
-    constructor(pos=vec2(), size, tileInfo, angle=0, color, bodyType=box2dBodyTypeDynamic, renderOrder=0)
+    /** Create a LittleJS object with Box2d physics
+     *  @param {Vector2}  [pos]
+     *  @param {Vector2}  [size]
+     *  @param {TileInfo} [tileInfo]
+     *  @param {number}   [angle]
+     *  @param {Color}    [color]
+     *  @param {number}   [bodyType]
+     *  @param {number}   [renderOrder] */
+    constructor(pos=vec2(), size, tileInfo, angle=0, color, bodyType=box2d.bodyTypeDynamic, renderOrder=0)
     {
         super(pos, size, tileInfo, angle, color, renderOrder);
 
@@ -69,6 +59,7 @@ class Box2dObject extends EngineObject
         this.outlineColor = BLACK;
     }
 
+    /** Destroy this object and it's physics body */
     destroy()
     {
         // destroy physics body, fixtures, and joints
@@ -77,6 +68,7 @@ class Box2dObject extends EngineObject
         super.destroy();
     }
 
+    /** Copy box2d update sim data */
     update()
     {
         // use box2d physics update
@@ -84,39 +76,56 @@ class Box2dObject extends EngineObject
         this.angle = -this.body.GetAngle();
     }
 
+    /** Render the object, uses box2d drawing if no tile info exists */
     render()
     {
         // use default render or draw fixtures
         if (this.tileInfo)
             super.render();
         else
-            this.drawFixtures(this.color, this.outlineColor, this.lineWidth);
+            this.drawFixtures(this.color, this.outlineColor, this.lineWidth, mainContext);
     }
 
+    /** Render debug info */
     renderDebugInfo()
     {
         const isAsleep = !this.getIsAwake();
-        const isStatic = this.getIsStatic();
-        const color = rgb(isAsleep?1:0 ,isAsleep?1:0, isStatic?1:0, .5);
+        const isStatic = this.getBodyType() == box2d.bodyTypeStatic;
+        const color = rgb(isAsleep?1:0, isAsleep?1:0, isStatic?1:0, .5);
         this.drawFixtures(color);
     }
 
-    drawFixtures(fillColor=WHITE, outlineColor, lineWidth=.1)
+    /** Draws all this object's fixtures 
+     *  @param {Color}  [color]
+     *  @param {Color}  [outlineColor]
+     *  @param {number} [lineWidth]
+     *  @param {CanvasRenderingContext2D} [context] */
+    drawFixtures(color=WHITE, outlineColor, lineWidth=.1, context)
     {
         this.getFixtureList().forEach(fixture=>
-            box2d.drawFixture(fixture, this.pos, this.angle, fillColor, outlineColor, lineWidth));
+            box2d.drawFixture(fixture, this.pos, this.angle, color, outlineColor, lineWidth, context));
     }
 
     ///////////////////////////////////////////////////////////////////////////////
     // physics contact callbacks
 
-    beginContact(otherObject, contact) {}
-    endContact(otherObject, contact)   {}
+    /** Called when a contact begins
+     *  @param {Box2dObject} otherObject */
+    beginContact(otherObject) {}
+
+    /** Called when a contact ends
+     *  @param {Box2dObject} otherObject */
+    endContact(otherObject) {}
 
     ///////////////////////////////////////////////////////////////////////////////
     // physics fixtures and shapes
 
-    addFixture(fixtureDef) { return this.body.CreateFixture(fixtureDef); }
+    /** Add a shape fixture to the body
+     *  @param {Object} shape
+     *  @param {number}  [density]
+     *  @param {number}  [friction]
+     *  @param {number}  [restitution]
+     *  @param {boolean} [isSensor] */
     addShape(shape, density=1, friction=.2, restitution=0, isSensor=false)
     {
         const fd = new box2d.instance.b2FixtureDef();
@@ -125,9 +134,17 @@ class Box2dObject extends EngineObject
         fd.set_friction(friction);
         fd.set_restitution(restitution);
         fd.set_isSensor(isSensor);
-        return this.addFixture(fd);
+        return this.body.CreateFixture(fd);
     }
 
+    /** Add a box shape to the body
+     *  @param {Vector2} [size]
+     *  @param {Vector2} [offset]
+     *  @param {number}  [angle]
+     *  @param {number}  [density]
+     *  @param {number}  [friction]
+     *  @param {number}  [restitution]
+     *  @param {boolean} [isSensor] */
     addBox(size=vec2(1), offset=vec2(), angle=0, density, friction, restitution, isSensor)
     {
         const shape = new box2d.instance.b2PolygonShape();
@@ -135,12 +152,18 @@ class Box2dObject extends EngineObject
         return this.addShape(shape, density, friction, restitution, isSensor);
     }
 
+    /** Add a polygon shape to the body
+     *  @param {Array<Vector2>} points
+     *  @param {number}  [density]
+     *  @param {number}  [friction]
+     *  @param {number}  [restitution]
+     *  @param {boolean} [isSensor] */
     addPoly(points, density, friction, restitution, isSensor)
     {
         function box2dCreatePolygonShape(points)
         {
             function box2dCreatePointList(points)
-            {     
+            {
                 const buffer = box2d.instance._malloc(points.length * 8);
                 for (let i=0, offset=0; i<points.length; ++i)
                 {
@@ -148,12 +171,12 @@ class Box2dObject extends EngineObject
                     offset += 4;
                     box2d.instance.HEAPF32[buffer + offset >> 2] = points[i].y;
                     offset += 4;
-                }            
+                }
                 return box2d.instance.wrapPointer(buffer, box2d.instance.b2Vec2);
             }
 
             ASSERT(3 <= points.length && points.length <= 8);
-            const shape = new box2d.instance.b2PolygonShape();    
+            const shape = new box2d.instance.b2PolygonShape();
             const box2dPoints = box2dCreatePointList(points);
             shape.Set(box2dPoints, points.length);
             return shape;
@@ -163,6 +186,13 @@ class Box2dObject extends EngineObject
         return this.addShape(shape, density, friction, restitution, isSensor);
     }
 
+    /** Add a regular polygon shape to the body
+     *  @param {number}  [diameter]
+     *  @param {number}  [sides]
+     *  @param {number}  [density]
+     *  @param {number}  [friction]
+     *  @param {number}  [restitution]
+     *  @param {boolean} [isSensor] */
     addRegularPoly(diameter=1, sides=8, density, friction, restitution, isSensor)
     {
         const points = [];
@@ -172,6 +202,12 @@ class Box2dObject extends EngineObject
         return this.addPoly(points, density, friction, restitution, isSensor);
     }
 
+    /** Add a random polygon shape to the body
+     *  @param {number}  [diameter]
+     *  @param {number}  [density]
+     *  @param {number}  [friction]
+     *  @param {number}  [restitution]
+     *  @param {boolean} [isSensor] */
     addRandomPoly(diameter=1, density, friction, restitution, isSensor)
     {
         const sides = randInt(3, 9);
@@ -182,6 +218,13 @@ class Box2dObject extends EngineObject
         return this.addPoly(points, density, friction, restitution, isSensor);
     }
 
+    /** Add a circle shape to the body
+     *  @param {number}  [diameter]
+     *  @param {Vector2} [offset]
+     *  @param {number}  [density]
+     *  @param {number}  [friction]
+     *  @param {number}  [restitution]
+     *  @param {boolean} [isSensor] */
     addCircle(diameter=1, offset=vec2(), density, friction, restitution, isSensor)
     {
         const shape = new box2d.instance.b2CircleShape();
@@ -190,6 +233,13 @@ class Box2dObject extends EngineObject
         return this.addShape(shape, density, friction, restitution, isSensor);
     }
 
+    /** Add an edge shape to the body
+     *  @param {Vector2} point1
+     *  @param {Vector2} point2
+     *  @param {number}  [density]
+     *  @param {number}  [friction]
+     *  @param {number}  [restitution]
+     *  @param {boolean} [isSensor] */
     addEdge(point1, point2, density, friction, restitution, isSensor)
     {
         const shape = new box2d.instance.b2EdgeShape();
@@ -197,6 +247,12 @@ class Box2dObject extends EngineObject
         return this.addShape(shape, density, friction, restitution, isSensor);
     }
 
+    /** Add an edge loop to the body, an edge loop connects the end points
+     *  @param {Array<Vector2>} points
+     *  @param {number}  [density]
+     *  @param {number}  [friction]
+     *  @param {number}  [restitution]
+     *  @param {boolean} [isSensor] */
     addEdgeLoop(points, density, friction, restitution, isSensor)
     {
         const fixtures = [];
@@ -214,6 +270,12 @@ class Box2dObject extends EngineObject
         return fixtures;
     }
 
+    /** Add an edge list to the body
+     *  @param {Array<Vector2>} points
+     *  @param {number}  [density]
+     *  @param {number}  [friction]
+     *  @param {number}  [restitution]
+     *  @param {boolean} [isSensor] */
     addEdgeList(points, density, friction, restitution, isSensor)
     {
         const fixtures = [];
@@ -231,9 +293,194 @@ class Box2dObject extends EngineObject
     }
 
     ///////////////////////////////////////////////////////////////////////////////
+    // physics get functions
+
+    /** Gets the center of mass
+     *  @return {Vector2} */
+    getCenterOfMass() { return box2d.vec2From(this.body.GetWorldCenter()); }
+
+    /** Gets the linear velocity
+     *  @return {Vector2} */
+    getLinearVelocity() { return box2d.vec2From(this.body.GetLinearVelocity()); }
+
+    /** Gets the angular velocity
+     *  @return {Vector2} */
+    getAngularVelocity() { return this.body.GetAngularVelocity(); }
+
+    /** Gets the mass
+     *  @return {number} */
+    getMass() { return this.body.GetMass(); }
+
+    /** Gets the rotational inertia
+     *  @return {number} */
+    getInertia() { return this.body.GetInertia(); }
+
+    /** Check if this object is awake
+     *  @return {boolean} */
+    getIsAwake() { return this.body.IsAwake(); }
+
+    /** Gets the physics body type
+     *  @return {number} */
+    getBodyType() { return this.body.GetType(); }
+    
+    ///////////////////////////////////////////////////////////////////////////////
+    // physics set functions
+
+    /** Sets the position and angle
+     *  @param {Vector2} pos
+     *  @param {number} angle */
+    setTransform(pos, angle)
+    {
+        this.pos = pos;
+        this.angle = angle;
+        this.body.SetTransform(box2d.vec2dTo(pos), angle);
+    }
+    
+    /** Sets the position
+     *  @param {Vector2} pos */
+    setPosition(pos) { this.setTransform(pos, this.body.GetAngle()); }
+
+    /** Sets the angle
+     *  @param {number} angle */
+    setAngle(angle) { this.setTransform(box2d.vec2From(this.body.GetPosition()), -angle); }
+
+    /** Sets the linear velocity
+     *  @param {Vector2} velocity */
+    setLinearVelocity(velocity) { this.body.SetLinearVelocity(box2d.vec2dTo(velocity)); }
+
+    /** Sets the angular velocity
+     *  @param {number} angularVelocity */
+    setAngularVelocity(angularVelocity) { this.body.SetAngularVelocity(angularVelocity); }
+
+    /** Sets the linear damping
+     *  @param {number} damping */
+    setLinearDamping(damping) { this.body.SetLinearDamping(damping); }
+
+    /** Sets the angular damping
+     *  @param {number} damping */
+    setAngularDamping(damping) { this.body.SetAngularDamping(damping); }
+
+    /** Sets the gravity scale
+     *  @param {number} [scale] */
+    setGravityScale(scale=1) { this.body.SetGravityScale(this.gravityScale = scale); }
+
+    /** Should this body be treated like a bullet for continuous collision detection?
+     *  @param {boolean} [isBullet] */
+    setBullet(isBullet=true) { this.body.SetBullet(isBullet); }
+
+    /** Set the sleep state of the body
+     *  @param {boolean} [isAwake] */
+    setAwake(isAwake=true) { this.body.SetAwake(isAwake); }
+    
+    /** Set the physics body type
+     *  @param {number} type */
+    setBodyType(type) { this.body.SetType(type); }
+
+    /** Set whether the body is allowed to sleep
+     *  @param {boolean} [isAllowed] */
+    setSleepingAllowed(isAllowed=true) { this.body.SetSleepingAllowed(isAllowed); }
+    
+    /** Set whether the body can rotate
+     *  @param {boolean} [isFixed] */
+    setFixedRotation(isFixed=true) { this.body.SetFixedRotation(isFixed); }
+
+    /** Set the center of mass of the body
+     *  @param {Vector2} center */
+    setCenterOfMass(center) { this.setMassData(center) }
+
+    /** Set the mass of the body
+     *  @param {number} mass */
+    setMass(mass) { this.setMassData(undefined, mass) }
+    
+    /** Set the moment of inertia of the body
+     *  @param {number} momentOfInertia */
+    setMomentOfInertia(momentOfInertia) { this.setMassData(undefined, undefined, momentOfInertia) }
+    
+    /** Reset the mass, center of mass, and moment */
+    resetMassData()  { this.body.ResetMassData(); }
+    
+    /** Set the mass data of the body
+     *  @param {Vector2} [localCenter]
+     *  @param {number}  [mass]
+     *  @param {number}  [momentOfInertia] */
+    setMassData(localCenter, mass, momentOfInertia)
+    {
+        const data = new box2d.instance.b2MassData();
+        this.body.GetMassData(data);
+        localCenter && data.set_center(box2d.vec2dTo(localCenter));
+        mass && data.set_mass(mass);
+        momentOfInertia && data.set_I(momentOfInertia);
+        this.body.SetMassData(data);
+    }
+
+    /** Set the collision filter data for this body
+     *  @param {number} [categoryBits]
+     *  @param {number} [ignoreCategoryBits]
+     *  @param {number} [groupIndex] */
+    setFilterData(categoryBits=0, ignoreCategoryBits=0, groupIndex=0)
+    {
+        this.getFixtureList().forEach(fixture=>
+        {
+            const filter = fixture.GetFilterData();
+            filter.set_categoryBits(categoryBits);
+            filter.set_maskBits(0xffff & ~ignoreCategoryBits);
+            filter.set_groupIndex(groupIndex);
+        });
+    }
+
+    /** Set if this body is a sensor
+     *  @param {boolean} [isSensor] */
+    setSensor(isSensor=true)
+    { this.getFixtureList().forEach(f=>f.SetSensor(isSensor)); }
+
+    ///////////////////////////////////////////////////////////////////////////////
+    // physics force and torque functions
+
+    /** Apply force to this object
+     *  @param {Vector2} force
+     *  @param {Vector2} [pos] */
+    applyForce(force, pos)
+    {
+        pos ||= this.getCenterOfMass();
+        this.setAwake();
+        this.body.ApplyForce(box2d.vec2dTo(force), box2d.vec2dTo(pos));
+    }
+
+    /** Apply acceleration to this object
+     *  @param {Vector2} acceleration
+     *  @param {Vector2} [pos] */
+    applyAcceleration(acceleration, pos)
+    { 
+        pos ||= this.getCenterOfMass();
+        this.setAwake();
+        this.body.ApplyLinearImpulse(box2d.vec2dTo(acceleration), box2d.vec2dTo(pos));
+    }
+
+    /** Apply torque to this object
+     *  @param {number} torque */
+    applyTorque(torque)
+    {
+        this.setAwake();
+        this.body.ApplyTorque(torque);
+    }
+    
+    /** Apply angular acceleration to this object
+     *  @param {number} acceleration */
+    applyAngularAcceleration(acceleration)
+    {
+        this.setAwake();
+        this.body.ApplyAngularImpulse(acceleration);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
     // lists of fixtures and joints
 
+    /** Check if this object has any fixtures
+     *  @return {boolean} */
     hasFixtures() { return !box2d.isNull(this.body.GetFixtureList()); }
+
+    /** Get list of fixtures for this object
+     *  @return {Array<Object>} */
     getFixtureList()
     {
         const fixtures = [];
@@ -245,7 +492,12 @@ class Box2dObject extends EngineObject
         return fixtures;
     }
 
+    /** Check if this object has any joints
+     *  @return {boolean} */
     hasJoints() { return !box2d.isNull(this.body.GetJointList()); }
+    
+    /** Get list of joints for this object
+     *  @return {Array<Object>} */
     getJointList()
     {
         const joints = [];
@@ -256,108 +508,32 @@ class Box2dObject extends EngineObject
         }
         return joints;
     }
-
-    ///////////////////////////////////////////////////////////////////////////////
-    // physics get functions
-
-    getCenterOfMass()    { return box2d.vec2From(this.body.GetWorldCenter()); }
-    getLinearVelocity()  { return box2d.vec2From(this.body.GetLinearVelocity()); }
-    getAngularVelocity() { return this.body.GetAngularVelocity(); }
-    getMass()            { return this.body.GetMass(); }
-    getInertia()         { return this.body.GetInertia(); }
-    getIsAwake()         { return this.body.IsAwake(); }
-    getBodyType()        { return this.body.GetType(); }
-    getIsStatic()        { return this.getBodyType() == box2dBodyTypeStatic; }
-    getIsKinematic()     { return this.getBodyType() == box2dBodyTypeStatic; }
-    getIsDynamic()       { return this.getBodyType() == box2dBodyTypeDynamic; }
-    
-    ///////////////////////////////////////////////////////////////////////////////
-    // physics set functions
-
-    setTransform(position, angle)
-    {
-        this.pos = position;
-        this.angle = angle;
-        this.body.SetTransform(box2d.vec2dTo(position), angle);
-    }
-    setPosition(position) { this.setTransform(position, this.body.GetAngle()); }
-    setAngle(angle)       { this.setTransform(box2d.vec2From(this.body.GetPosition()), -angle); }
-    setLinearVelocity(velocity) { this.body.SetLinearVelocity(box2d.vec2dTo(velocity)); }
-    setAngularVelocity(angularVelocity) { this.body.SetAngularVelocity(angularVelocity); }
-    setLinearDamping(damping)  { this.body.SetLinearDamping(damping); }
-    setAngularDamping(damping) { this.body.SetAngularDamping(damping); }
-    setGravityScale(scale=1)   { this.body.SetGravityScale(this.gravityScale = scale); }
-    setBullet(isBullet=true)   { this.body.SetBullet(isBullet); }
-    setAwake(isAwake=true)     { this.body.SetAwake(isAwake); }
-    setBodyType(type)          { this.body.SetType(type); }
-    setSleepingAllowed(isAllowed=true) { this.body.SetSleepingAllowed(isAllowed); }
-    setFixedRotation(isFixed=true)     { this.body.SetFixedRotation(isFixed); }
-    setCenterOfMass(center)      { this.setMassData(center) }
-    setMass(mass)                { this.setMassData(undefined, mass) }
-    setMomentOfInertia(I)        { this.setMassData(undefined, undefined, I) }
-    resetMassData()              { this.body.ResetMassData(); }
-    setMassData(localCenter, mass, momentOfInertia)
-    {
-        const data = new box2d.instance.b2MassData();
-        this.body.GetMassData(data);
-        localCenter && data.set_center(box2d.vec2dTo(localCenter));
-        mass && data.set_mass(mass);
-        momentOfInertia && data.set_I(momentOfInertia);
-        this.body.SetMassData(data);
-    }
-    setFilterData(categoryBits=0, ignoreCategoryBits=0, groupIndex=0)
-    {
-        this.getFixtureList().forEach(fixture=>
-        {
-            const filter = fixture.GetFilterData();
-            filter.set_categoryBits(categoryBits);
-            filter.set_maskBits(0xffff & ~ignoreCategoryBits);
-            filter.set_groupIndex(groupIndex);
-        });
-    }
-    setSensor(isSensor=true)
-    { this.getFixtureList().forEach(f=>f.SetSensor(isSensor)); }
-
-    ///////////////////////////////////////////////////////////////////////////////
-    // physics force and torque functions
-
-    applyForce(force, pos)
-    {
-        pos ||= this.getCenterOfMass();
-        this.setAwake();
-        this.body.ApplyForce(box2d.vec2dTo(force), box2d.vec2dTo(pos));
-    }
-    applyAcceleration(acceleration, pos)
-    { 
-        pos ||= this.getCenterOfMass();
-        this.setAwake();
-        this.body.ApplyLinearImpulse(box2d.vec2dTo(acceleration), box2d.vec2dTo(pos));
-    }
-    applyTorque(torque)
-    {
-        this.setAwake();
-        this.body.ApplyTorque(torque);
-    }
-    applyAngularAcceleration(acceleration)
-    {
-        this.setAwake();
-        this.ApplyAngularImpulse(acceleration);
-    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 /** 
  * Box2D Raycast Result
- * - Results from a box2d raycast queries
+ * - Holds results from a box2d raycast queries
+ * - Automatically created by box2d raycast functions
  */
 class Box2dRaycastResult
 {
+    /** Create a raycast result
+     *  @param {Object}  fixture
+     *  @param {Vector2} point
+     *  @param {Vector2} normal
+     *  @param {number}  fraction */
     constructor(fixture, point, normal, fraction)
     {
+        /** @property {Box2dObject} - The box2d object */
         this.object   = fixture.GetBody().object;
+        /** @property {Object} - The fixture that was hit */
         this.fixture  = fixture;
+        /** @property {Vector2} - The hit point */
         this.point    = point;
+        /** @property {Vector2} - The hit normal */
         this.normal   = normal;
+        /** @property {number} - Distance fraction at the point of intersection */
         this.fraction = fraction;
     }
 }
@@ -366,37 +542,69 @@ class Box2dRaycastResult
 /** 
  * Box2D Joint
  * - Base class for Box2D joints 
- * - A jointis used to connect objects together
+ * - A joint is used to connect objects together
  */
 class Box2dJoint
 {
+    /** Create a box2d joint, the base class is not intended to be used directly
+     *  @param {Object} jointDef */
     constructor(jointDef)
     {
         this.box2dJoint = box2d.castObjectType(box2d.world.CreateJoint(jointDef));
     }
 
+    /** Destroy this joint */
     destroy() { box2d.world.DestroyJoint(this.box2dJoint); this.box2dJoint = 0; }
+
+    /** Get the first object attached to this joint
+     *  @return {Box2dObject} */
     getObjectA() { return this.box2dJoint.GetBodyA().object; }
+    
+    /** Get the second object attached to this joint
+     *  @return {Box2dObject} */
     getObjectB() { return this.box2dJoint.GetBodyB().object; }
+    
+    /** Get the first anchor for this joint in world coordinates
+     *  @return {Vector2} */
     getAnchorA() { return box2d.vec2From(this.box2dJoint.GetAnchorA());}
+
+    /** Get the second anchor for this joint in world coordinates
+     *  @return {Vector2} */
     getAnchorB() { return box2d.vec2From(this.box2dJoint.GetAnchorB());}
+    
+    /** Get the reaction force on bodyB at the joint anchor given a time step
+     *  @param {number} time
+     *  @return {Vector2} */
     getReactionForce(time)  { return box2d.vec2From(this.box2dJoint.GetReactionForce(1/time));}
+
+    /** Get the reaction torque on bodyB in N*m given a time step
+     *  @param {number} time
+     *  @return {number} */
     getReactionTorque(time) { return this.box2dJoint.GetReactionTorque(1/time);}
+    
+    /** Check if the connected bodies should collide
+     *  @return {boolean} */
     getCollideConnected()   { return this.box2dJoint.getCollideConnected();}
+
+    /** Check if either connected body is active
+     *  @return {boolean} */
     isActive() { return this.box2dJoint.IsActive();}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 /** 
- * Box2D Target Joint
+ * Box2D Target Joint, also known as a mouse joint
  * - Used to make a point on a object track a specific world point target
  * - This a soft constraint with a max force
  * - This allows the constraint to stretch and without applying huge forces
- * - Implements Box2d Mouse Joint
  * @extends Box2dJoint
  */
 class Box2dTargetJoint extends Box2dJoint
 {
+    /** Create a target joint
+     *  @param {Box2dObject} object
+     *  @param {Box2dObject} fixedObject
+     *  @param {Vector2} worldPos */
     constructor(object, fixedObject, worldPos)
     {
         object.setAwake();
@@ -408,12 +616,29 @@ class Box2dTargetJoint extends Box2dJoint
         super(jointDef);
     }
 
-    setTarget(pos)     { this.box2dJoint.SetTarget(box2d.vec2dTo(pos)); }
-    getTarget()        { return box2d.vec2From(this.box2dJoint.GetTarget()); }
+    /** Set the target point in world coordinates
+     *  @param {Vector2} pos */
+    setTarget(pos) { this.box2dJoint.SetTarget(box2d.vec2dTo(pos)); }
+    
+    /** Get the target point in world coordinates
+     *  @return {Vector2} */
+    getTarget(){ return box2d.vec2From(this.box2dJoint.GetTarget()); }
+
+    /** Sets the maximum force in Newtons
+     *  @param {number} force */
     setMaxForce(force) { this.box2dJoint.SetMaxForce(force); }
-    getMaxForce()      { return this.box2dJoint.GetMaxForce(); }
-    setFrequency(hz)   { this.box2dJoint.SetFrequency(hz); }
-    getFrequency()     { return this.box2dJoint.GetFrequency(); }
+    
+    /** Gets the maximum force in Newtons
+     *  @return {number} */
+    getMaxForce() { return this.box2dJoint.GetMaxForce(); }
+    
+    /** Sets the joint frequency in Hertz
+     *  @param {number} hz */
+    setFrequency(hz) { this.box2dJoint.SetFrequency(hz); }
+    
+    /** Gets the joint frequency in Hertz
+     *  @return {number} */
+    getFrequency() { return this.box2dJoint.GetFrequency(); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -425,6 +650,12 @@ class Box2dTargetJoint extends Box2dJoint
  */
 class Box2dDistanceJoint extends Box2dJoint
 {
+    /** Create a distance joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB
+     *  @param {Vector2} anchorA
+     *  @param {Vector2} anchorB
+     *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchorA, anchorB, collide=false)
     {
         anchorA ||= box2d.vec2From(objectA.body.GetPosition());
@@ -441,14 +672,37 @@ class Box2dDistanceJoint extends Box2dJoint
         super(jointDef);
     }
 
-    getLocalAnchorA()      { return box2d.vec2From(this.box2dJoint.GetLocalAnchorA()); }
-    getLocalAnchorB()      { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
-    setLength()            { this.box2dJoint.SetLength(length); }
-    getLength()            { return this.box2dJoint.GetLength(); }
-    setFrequency(hz)       { this.box2dJoint.SetFrequency(hz); }
-    getFrequency()         { return this.box2dJoint.GetFrequency(); }
+    /** Get the local anchor point relative to objectA's origin
+     *  @return {Vector2} */
+    getLocalAnchorA() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorA()); }
+
+    /** Get the local anchor point relative to objectB's origin
+     *  @return {Vector2} */
+    getLocalAnchorB() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
+    
+    /** Set the length of the joint
+     *  @param {number} length */
+    setLength(length) { this.box2dJoint.SetLength(length); }
+    
+    /** Get the length of the joint
+     *  @return {number} */
+    getLength() { return this.box2dJoint.GetLength(); }
+    
+    /** Set the frequency in Hertz
+     *  @param {number} hz */
+    setFrequency(hz) { this.box2dJoint.SetFrequency(hz); }
+    
+    /** Get the frequency in Hertz
+     *  @return {number} */
+    getFrequency() { return this.box2dJoint.GetFrequency(); }
+    
+    /** Set the damping ratio
+     *  @param {number} ratio */
     setDampingRatio(ratio) { this.box2dJoint.SetDampingRatio(ratio); }
-    getDampingRatio()      { return this.box2dJoint.GetDampingRatio(); }
+    
+    /** Get the damping ratio
+     *  @return {number} */
+    getDampingRatio() { return this.box2dJoint.GetDampingRatio(); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -459,6 +713,11 @@ class Box2dDistanceJoint extends Box2dJoint
  */
 class Box2dPinJoint extends Box2dDistanceJoint
 {
+    /** Create a pin joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB
+     *  @param {Vector2} [pos]
+     *  @param {boolean} [collide] */
     constructor(objectA, objectB, pos=objectA.pos, collide=false)
     {
         super(objectA, objectB, undefined, pos, collide);
@@ -473,6 +732,13 @@ class Box2dPinJoint extends Box2dDistanceJoint
  */
 class Box2dRopeJoint extends Box2dJoint
 {
+    /** Create a rope joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB
+     *  @param {Vector2} anchorA
+     *  @param {Vector2} anchorB
+     *  @param {number} extraLength
+     *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchorA, anchorB, extraLength=0, collide=false)
     {
         anchorA ||= box2d.vec2From(objectA.body.GetPosition());
@@ -489,10 +755,21 @@ class Box2dRopeJoint extends Box2dJoint
         super(jointDef);
     }
 
+    /** Get the local anchor point relative to objectA's origin
+     *  @return {Vector2} */
     getLocalAnchorA() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorA()); }
+
+    /** Get the local anchor point relative to objectB's origin
+     *  @return {Vector2} */
     getLocalAnchorB() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
-    setMaxLength()    { this.box2dJoint.SetMaxLength(length); }
-    getMaxLength()    { return this.box2dJoint.GetMaxLength(); }
+    
+    /** Set the max length of the joint
+     *  @param {number} length */
+    setMaxLength(length) { this.box2dJoint.SetMaxLength(length); }
+
+    /** Get the max length of the joint
+     *  @return {number} */
+    getMaxLength() { return this.box2dJoint.GetMaxLength(); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -507,6 +784,11 @@ class Box2dRopeJoint extends Box2dJoint
  */
 class Box2dRevoluteJoint extends Box2dJoint
 {
+    /** Create a revolute joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB
+     *  @param {Vector2} anchor
+     *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, collide=false)
     {
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
@@ -522,23 +804,75 @@ class Box2dRevoluteJoint extends Box2dJoint
         super(jointDef);
     }
 
-    getLocalAnchorA()         { return box2d.vec2From(this.box2dJoint.GetLocalAnchorA()); }
-    getLocalAnchorB()         { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
-    getReferenceAngle()       { return this.box2dJoint.GetReferenceAngle(); }
-    getJointAngle()           { return this.box2dJoint.GetJointAngle(); }
-    getJointSpeed()           { return this.box2dJoint.GetJointSpeed(); }
-    isLimitEnabled()          { return this.box2dJoint.IsLimitEnabled(); }
-    enableLimit(enable)       { return this.box2dJoint.enableLimit(enable); }
-    getLowerLimit()           { return this.box2dJoint.GetLowerLimit(); }
-    getUpperLimit()           { return this.box2dJoint.GetUpperLimit(); }
-    setLimits(min, max)       { return this.box2dJoint.SetLimits(min, max); }
-    isMotorEnabled()          { return this.box2dJoint.IsMotorEnabled(); }
-    enableMotor(enable)       { return this.box2dJoint.EnableMotor(enable); }
-    setMotorSpeed(speed)      { return this.box2dJoint.SetMotorSpeed(speed); }
-    getMotorSpeed()           { return this.box2dJoint.GetMotorSpeed(); }
+    /** Get the local anchor point relative to objectA's origin
+     *  @return {Vector2} */
+    getLocalAnchorA() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorA()); }
+
+    /** Get the local anchor point relative to objectB's origin
+     *  @return {Vector2} */
+    getLocalAnchorB() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
+
+    /** Get the reference angle, objectB angle minus objectA angle in the reference state 
+     *  @return {number} */
+    getReferenceAngle() { return this.box2dJoint.GetReferenceAngle(); }
+
+    /** Get the current joint angle
+     *  @return {number} */
+    getJointAngle() { return this.box2dJoint.GetJointAngle(); }
+
+    /** Get the current joint angle speed in radians per second
+     *  @return {number} */
+    getJointSpeed() { return this.box2dJoint.GetJointSpeed(); }
+
+    /** Is the joint limit enabled?
+     *  @return {boolean} */
+    isLimitEnabled() { return this.box2dJoint.IsLimitEnabled(); }
+
+    /** Enable/disable the joint limit
+     *  @param {boolean} [enable] */
+    enableLimit(enable=true) { return this.box2dJoint.enableLimit(enable); }
+
+    /** Get the lower joint limit
+     *  @return {number} */
+    getLowerLimit() { return this.box2dJoint.GetLowerLimit(); }
+
+    /** Get the upper joint limit
+     *  @return {number} */
+    getUpperLimit() { return this.box2dJoint.GetUpperLimit(); }
+
+    /** Set the joint limits
+     *  @param {number} min
+     *  @param {number} max */
+    setLimits(min, max) { return this.box2dJoint.SetLimits(min, max); }
+
+    /** Is the joint motor enabled?
+     *  @return {boolean} */
+    isMotorEnabled() { return this.box2dJoint.IsMotorEnabled(); }
+
+    /** Enable/disable the joint motor
+     *  @param {boolean} [enable] */
+    enableMotor(enable=true) { return this.box2dJoint.EnableMotor(enable); }
+
+    /** Set the motor speed
+     *  @param {number} speed */
+    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(speed); }
+
+    /** Get the motor speed
+     *  @return {number} */
+    getMotorSpeed() { return this.box2dJoint.GetMotorSpeed(); }
+
+    /** Set the motor torque
+     *  @param {number} torque */
     setMaxMotorTorque(torque) { return this.box2dJoint.SetMaxMotorTorque(torque); }
-    getMaxMotorTorque()       { return this.box2dJoint.GetMaxMotorTorque(); }
-    getMotorTorque(time)      { return this.box2dJoint.GetMotorTorque(1/time); }
+
+    /** Get the max motor torque
+     *  @return {number} */
+    getMaxMotorTorque() { return this.box2dJoint.GetMaxMotorTorque(); }
+
+    /** Get the motor torque given a time step
+     *  @param {number} time 
+     *  @return {number} */
+    getMotorTorque(time) { return this.box2dJoint.GetMotorTorque(1/time); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -551,6 +885,12 @@ class Box2dRevoluteJoint extends Box2dJoint
  */
 class Box2dGearJoint extends Box2dJoint
 {
+    /** Create a gear joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB
+     *  @param {Box2dJoint} joint1
+     *  @param {Box2dJoint} joint2
+     *  @param {ratio} [ratio] */
     constructor(objectA, objectB, joint1, joint2, ratio=1)
     {
         const jointDef = new box2d.instance.b2GearJointDef();
@@ -565,10 +905,21 @@ class Box2dGearJoint extends Box2dJoint
         this.joint2 = joint2;
     }
 
-    getJoint1()     { return this.joint1; }
-    getJoint2()     { return this.joint2; }
+    /** Get the first joint
+     *  @return {Box2dJoint} */
+    getJoint1() { return this.joint1; }
+
+    /** Get the second joint
+     *  @return {Box2dJoint} */
+    getJoint2() { return this.joint2; }
+
+    /** Set the gear ratio
+     *  @param {number} ratio */
     setRatio(ratio) { return this.box2dJoint.SetRatio(ratio); }
-    getRatio()      { return this.box2dJoint.GetRatio(); }
+
+    /** Get the gear ratio
+     *  @return {number} */
+    getRatio() { return this.box2dJoint.GetRatio(); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -582,6 +933,12 @@ class Box2dGearJoint extends Box2dJoint
  */
 class Box2dPrismaticJoint extends Box2dJoint
 {
+    /** Create a prismatic joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB
+     *  @param {Vector2} anchor
+     *  @param {Vector2} worldAxis
+     *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, worldAxis=vec2(0,1), collide=false)
     {
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
@@ -599,24 +956,79 @@ class Box2dPrismaticJoint extends Box2dJoint
         super(jointDef);
     }
 
-    getLocalAnchorA()       { return box2d.vec2From(this.box2dJoint.GetLocalAnchorA()); }
-    getLocalAnchorB()       { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
-    getLocalAxisA()         { return box2d.vec2From(this.box2dJoint.GetLocalAxisA()); }
-    getReferenceAngle()     { return this.box2dJoint.GetReferenceAngle(); }
-    getJointTranslation()   { return this.box2dJoint.GetJointTranslation(); }
-    getJointSpeed()         { return this.box2dJoint.GetJointSpeed(); }
-    isLimitEnabled()        { return this.box2dJoint.IsLimitEnabled(); }
-    enableLimit(enable)     { return this.box2dJoint.enableLimit(enable); }
-    getLowerLimit()         { return this.box2dJoint.GetLowerLimit(); }
-    getUpperLimit()         { return this.box2dJoint.GetUpperLimit(); }
-    setLimits(min, max)     { return this.box2dJoint.SetLimits(min, max); }
-    isMotorEnabled()        { return this.box2dJoint.IsMotorEnabled(); }
-    enableMotor(enable)     { return this.box2dJoint.EnableMotor(enable); }
-    setMotorSpeed(speed)    { return this.box2dJoint.SetMotorSpeed(speed); }
-    getMotorSpeed()         { return this.box2dJoint.GetMotorSpeed(); }
+    /** Get the local anchor point relative to objectA's origin
+     *  @return {Vector2} */
+    getLocalAnchorA() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorA()); }
+
+    /** Get the local anchor point relative to objectB's origin
+     *  @return {Vector2} */
+    getLocalAnchorB() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
+
+    /** Get the local joint axis relative to bodyA
+     *  @return {Vector2} */
+    getLocalAxisA() { return box2d.vec2From(this.box2dJoint.GetLocalAxisA()); }
+    
+    /** Get the reference angle
+     *  @return {number} */
+    getReferenceAngle() { return this.box2dJoint.GetReferenceAngle(); }
+
+    /** Get the current joint translation
+     *  @return {number} */
+    getJointTranslation() { return this.box2dJoint.GetJointTranslation(); }
+    
+    /** Get the current joint translation speed
+     *  @return {number} */
+    getJointSpeed() { return this.box2dJoint.GetJointSpeed(); }
+    
+    /** Is the joint limit enabled?
+     *  @return {boolean} */
+    isLimitEnabled() { return this.box2dJoint.IsLimitEnabled(); }
+    
+    /** Enable/disable the joint limit
+     *  @param {boolean} [enable] */
+    enableLimit(enable=true) { return this.box2dJoint.enableLimit(enable); }
+    
+    /** Get the lower joint limit
+     *  @return {number} */
+    getLowerLimit() { return this.box2dJoint.GetLowerLimit(); }
+    
+    /** Get the upper joint limit
+     *  @return {number} */
+    getUpperLimit() { return this.box2dJoint.GetUpperLimit(); }
+    
+    /** Set the joint limits
+     *  @param {number} min
+     *  @param {number} max */
+    setLimits(min, max) { return this.box2dJoint.SetLimits(min, max); }
+    
+    /** Is the motor enabled?
+     *  @return {boolean} */
+    isMotorEnabled() { return this.box2dJoint.IsMotorEnabled(); }
+    
+    /** Enable/disable the joint motor
+     *  @param {boolean} [enable] */
+    enableMotor(enable=true) { return this.box2dJoint.EnableMotor(enable); }
+    
+    /** Set the motor speed
+     *  @param {number} speed */
+    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(speed); }
+    
+    /** Get the motor speed
+     *  @return {number} */
+    getMotorSpeed() { return this.box2dJoint.GetMotorSpeed(); }
+    
+    /** Set the maximum motor force
+     *  @param {number} force */
     setMaxMotorForce(force) { return this.box2dJoint.SetMaxMotorForce(force); }
-    getMaxMotorForce()      { return this.box2dJoint.GetMaxMotorForce(); }
-    getMotorForce(time)     { return this.box2dJoint.GetMotorForce(1/time); }
+    
+    /** Get the maximum motor force
+     *  @return {number} */
+    getMaxMotorForce() { return this.box2dJoint.GetMaxMotorForce(); }
+    
+    /** Get the motor force given a time step
+     *  @param {number} time
+     *  @return {number} */
+    getMotorForce(time) { return this.box2dJoint.GetMotorForce(1/time); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -630,6 +1042,12 @@ class Box2dPrismaticJoint extends Box2dJoint
  */
 class Box2dWheelJoint extends Box2dJoint
 {
+    /** Create a wheel joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB
+     *  @param {Vector2} anchor
+     *  @param {Vector2} worldAxis
+     *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, worldAxis=vec2(0,1), collide=false)
     {
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
@@ -646,22 +1064,69 @@ class Box2dWheelJoint extends Box2dJoint
         super(jointDef);
     }
 
-    getLocalAnchorA()            { return box2d.vec2From(this.box2dJoint.GetLocalAnchorA()); }
-    getLocalAnchorB()            { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
-    getLocalAxisA()              { return box2d.vec2From(this.box2dJoint.GetLocalAxisA()); }
-    getJointTranslation()        { return this.box2dJoint.GetJointTranslation(); }
-    getJointSpeed()              { return this.box2dJoint.GetJointSpeed(); }
-    isMotorEnabled()             { return this.box2dJoint.IsMotorEnabled(); }
-    enableMotor(enable)          { return this.box2dJoint.EnableMotor(enable); }
-    setMotorSpeed(speed)         { return this.box2dJoint.SetMotorSpeed(speed); }
-    getMotorSpeed()              { return this.box2dJoint.GetMotorSpeed(); }
-    setMaxMotorTorque(torque)    { return this.box2dJoint.SetMaxMotorTorque(torque); }
-    getMaxMotorTorque()          { return this.box2dJoint.GetMaxMotorTorque(); }
-    getMotorTorque(time)         { return this.box2dJoint.GetMotorTorque(1/time); }
-    setSpringFrequencyHz(hz)     { return this.box2dJoint.SetSpringFrequencyHz(hz); }
-    getSpringFrequencyHz()       { return this.box2dJoint.GetSpringFrequencyHz(); }
+    /** Get the local anchor point relative to objectA's origin
+     *  @return {Vector2} */
+    getLocalAnchorA() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorA()); }
+
+    /** Get the local anchor point relative to objectB's origin
+     *  @return {Vector2} */
+    getLocalAnchorB() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
+
+    /** Get the local joint axis relative to bodyA
+     *  @return {Vector2} */
+    getLocalAxisA() { return box2d.vec2From(this.box2dJoint.GetLocalAxisA()); }
+
+    /** Get the current joint translation
+     *  @return {number} */
+    getJointTranslation() { return this.box2dJoint.GetJointTranslation(); }
+
+    /** Get the current joint translation speed
+     *  @return {number} */
+    getJointSpeed() { return this.box2dJoint.GetJointSpeed(); }
+
+    /** Is the joint motor enabled?
+     *  @return {boolean} */
+    isMotorEnabled() { return this.box2dJoint.IsMotorEnabled(); }
+
+    /** Enable/disable the joint motor
+     *  @param {boolean} [enable] */
+    enableMotor(enable=true) { return this.box2dJoint.EnableMotor(enable); }
+
+    /** Set the motor speed
+     *  @param {number} speed */
+    setMotorSpeed(speed) { return this.box2dJoint.SetMotorSpeed(speed); }
+
+    /** Get the motor speed
+     *  @return {number} */
+    getMotorSpeed() { return this.box2dJoint.GetMotorSpeed(); }
+
+    /** Set the maximum motor torque
+     *  @param {number} torque */
+    setMaxMotorTorque(torque) { return this.box2dJoint.SetMaxMotorTorque(torque); }
+
+    /** Get the max motor torque
+     *  @return {number} */
+    getMaxMotorTorque() { return this.box2dJoint.GetMaxMotorTorque(); }
+
+    /** Get the motor torque for a time step
+     *  @return {number} */
+    getMotorTorque(time) { return this.box2dJoint.GetMotorTorque(1/time); }
+
+    /** Set the spring frequency in Hertz
+     *  @param {number} hz */
+    setSpringFrequencyHz(hz) { return this.box2dJoint.SetSpringFrequencyHz(hz); }
+
+    /** Get the spring frequency in Hertz
+     *  @return {number} */
+    getSpringFrequencyHz() { return this.box2dJoint.GetSpringFrequencyHz(); }
+
+    /** Set the spring damping ratio
+     *  @param {number} ratio */
     setSpringDampingRatio(ratio) { return this.box2dJoint.SetSpringDampingRatio(ratio); }
-    getSpringDampingRatio()      { return this.box2dJoint.GetSpringDampingRatio(); }
+
+    /** Get the spring damping ratio
+     *  @return {number} */
+    getSpringDampingRatio() { return this.box2dJoint.GetSpringDampingRatio(); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -672,6 +1137,11 @@ class Box2dWheelJoint extends Box2dJoint
  */
 class Box2dWeldJoint extends Box2dJoint
 {
+    /** Create a weld joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB
+     *  @param {Vector2} anchor
+     *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, collide=false)
     {
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
@@ -687,13 +1157,33 @@ class Box2dWeldJoint extends Box2dJoint
         super(jointDef);
     }
 
-    getLocalAnchorA()            { return box2d.vec2From(this.box2dJoint.GetLocalAnchorA()); }
-    getLocalAnchorB()            { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
-    getReferenceAngle()          { return this.box2dJoint.GetReferenceAngle(); }
-    setFrequency(hz)             { return this.box2dJoint.SetFrequency(hz); }
-    getFrequency()               { return this.box2dJoint.GetFrequency(); }
+    /** Get the local anchor point relative to objectA's origin
+     *  @return {Vector2} */
+    getLocalAnchorA() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorA()); }
+
+    /** Get the local anchor point relative to objectB's origin
+     *  @return {Vector2} */
+    getLocalAnchorB() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
+
+    /** Get the reference angle
+     *  @return {number} */
+    getReferenceAngle() { return this.box2dJoint.GetReferenceAngle(); }
+
+    /** Set the frequency in Hertz
+     *  @param {number} hz */
+    setFrequency(hz) { return this.box2dJoint.SetFrequency(hz); }
+
+    /** Get the frequency in Hertz
+     *  @return {number} */
+    getFrequency() { return this.box2dJoint.GetFrequency(); }
+
+    /** Set the damping ratio
+     *  @param {number} ratio */
     setSpringDampingRatio(ratio) { return this.box2dJoint.SetSpringDampingRatio(ratio); }
-    getSpringDampingRatio()      { return this.box2dJoint.GetSpringDampingRatio(); }
+
+    /** Get the damping ratio
+     *  @return {number} */
+    getSpringDampingRatio() { return this.box2dJoint.GetSpringDampingRatio(); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -705,6 +1195,11 @@ class Box2dWeldJoint extends Box2dJoint
  */
 class Box2dFrictionJoint extends Box2dJoint
 {
+    /** Create a friction joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB
+     *  @param {Vector2} anchor
+     *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, collide=false)
     {
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
@@ -719,12 +1214,29 @@ class Box2dFrictionJoint extends Box2dJoint
         super(jointDef);
     }
 
-    getLocalAnchorA()    { return box2d.vec2From(this.box2dJoint.GetLocalAnchorA()); }
-    getLocalAnchorB()    { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
-    setMaxForce(force)   { this.box2dJoint.SetMaxForce(force); }
-    getMaxForce()        { return this.box2dJoint.GetMaxForce(); }
+    /** Get the local anchor point relative to objectA's origin
+     *  @return {Vector2} */
+    getLocalAnchorA() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorA()); }
+
+    /** Get the local anchor point relative to objectB's origin
+     *  @return {Vector2} */
+    getLocalAnchorB() { return box2d.vec2From(this.box2dJoint.GetLocalAnchorB()); }
+
+    /** Set the maximum friction force
+     *  @param {number} force */
+    setMaxForce(force) { this.box2dJoint.SetMaxForce(force); }
+
+    /** Get the maximum friction force
+     *  @return {number} */
+    getMaxForce() { return this.box2dJoint.GetMaxForce(); }
+
+    /** Set the maximum friction torque
+     *  @param {number} torque */
     setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(torque); }
-    getMaxTorque()       { return this.box2dJoint.GetMaxTorque(); }
+
+    /** Get the maximum friction torque
+     *  @return {number} */
+    getMaxTorque() { return this.box2dJoint.GetMaxTorque(); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -737,6 +1249,15 @@ class Box2dFrictionJoint extends Box2dJoint
  */
 class Box2dPulleyJoint extends Box2dJoint
 {
+    /** Create a pulley joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB
+     *  @param {Vector2} groundAnchorA
+     *  @param {Vector2} groundAnchorB
+     *  @param {Vector2} anchorA
+     *  @param {Vector2} anchorB
+     *  @param {number}  [ratio]
+     *  @param {boolean} [collide] */
     constructor(objectA, objectB, groundAnchorA, groundAnchorB, anchorA, anchorB, ratio=1, collide=false)
     {
         anchorA ||= box2d.vec2From(objectA.body.GetPosition());
@@ -757,12 +1278,32 @@ class Box2dPulleyJoint extends Box2dJoint
         super(jointDef);
     }
 
-    getGroundAnchorA()  { return box2d.vec2From(this.box2dJoint.GetGroundAnchorA()); }
-    getGroundAnchorB()  { return box2d.vec2From(this.box2dJoint.GetGroundAnchorB()); }
-    getLengthA()        { return this.box2dJoint.GetLengthA(); }
-    getLengthB()        { return this.box2dJoint.GetLengthB(); }
-    getRatio()          { return this.box2dJoint.GetRatio(); }
+    /** Get the first ground anchor
+     *  @return {Vector2} */
+    getGroundAnchorA() { return box2d.vec2From(this.box2dJoint.GetGroundAnchorA()); }
+
+    /** Get the second ground anchor
+     *  @return {Vector2} */
+    getGroundAnchorB() { return box2d.vec2From(this.box2dJoint.GetGroundAnchorB()); }
+
+    /** Get the current length of the segment attached to objectA
+     *  @return {number} */
+    getLengthA() { return this.box2dJoint.GetLengthA(); }
+
+    /** Get the current length of the segment attached to objectB
+     *  @return {number} */
+    getLengthB(){ return this.box2dJoint.GetLengthB(); }
+
+    /** Get the pulley ratio
+     *  @return {number} */
+    getRatio() { return this.box2dJoint.GetRatio(); }
+
+    /** Get the current length of the segment attached to objectA
+     *  @return {number} */
     getCurrentLengthA() { return this.box2dJoint.GetCurrentLengthA(); }
+
+    /** Get the current length of the segment attached to objectB
+     *  @return {number} */
     getCurrentLengthB() { return this.box2dJoint.GetCurrentLengthB(); }
 }
 
@@ -775,6 +1316,9 @@ class Box2dPulleyJoint extends Box2dJoint
  */
 class Box2dMotorJoint extends Box2dJoint
 {
+    /** Create a motor joint
+     *  @param {Box2dObject} objectA
+     *  @param {Box2dObject} objectB */
     constructor(objectA, objectB)
     {
         const linearOffset = objectA.worldToLocal(box2d.vec2From(objectB.body.GetPosition()));
@@ -787,16 +1331,45 @@ class Box2dMotorJoint extends Box2dJoint
         super(jointDef);
     }
 
-    setLinearOffset(offset)     { this.box2dJoint.SetLinearOffset(box2d.vec2dTo(offset)); }
-    getLinearOffset()           { return box2d.vec2From(this.box2dJoint.GetLinearOffset()); }
-    setAngularOffset(offset)    { this.box2dJoint.SetAngularOffset(offset); }
-    getAngularOffset()          { return box2d.vec2From(this.box2dJoint.GetAngularOffset()); }
-    setMaxForce(force)          { this.box2dJoint.SetMaxForce(force); }
-    getMaxForce()               { return box2d.vec2From(this.box2dJoint.GetMaxForce()); }
-    setMaxTorque(torque)        { this.box2dJoint.SetMaxTorque(torque); }
-    getMaxTorque()              { return box2d.vec2From(this.box2dJoint.GetMaxTorque()); }
+    /** Set the target linear offset, in frame A, in meters.
+     *  @param {Vector2} offset */
+    setLinearOffset(offset) { this.box2dJoint.SetLinearOffset(box2d.vec2dTo(offset)); }
+
+    /** Get the target linear offset, in frame A, in meters.
+     *  @return {Vector2} */
+    getLinearOffset() { return box2d.vec2From(this.box2dJoint.GetLinearOffset()); }
+
+    /** Set the target angular offset
+     *  @param {number} offset */
+    setAngularOffset(offset) { this.box2dJoint.SetAngularOffset(offset); }
+
+    /** Get the target angular offset
+     *  @return {number} */
+    getAngularOffset() { return this.box2dJoint.GetAngularOffset(); }
+
+    /** Set the maximum friction force
+     *  @param {number} force */
+    setMaxForce(force) { this.box2dJoint.SetMaxForce(force); }
+
+    /** Get the maximum friction force
+     *  @return {number} */
+    getMaxForce() { return this.box2dJoint.GetMaxForce(); }
+
+    /** Set the maximum torque
+     *  @param {number} torque */
+    setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(torque); }
+
+    /** Get the maximum torque
+     *  @return {number} */
+    getMaxTorque() { return this.box2dJoint.GetMaxTorque(); }
+
+    /** Set the position correction factor in the range [0,1]
+     *  @param {number} factor */
     setCorrectionFactor(factor) { this.box2dJoint.SetCorrectionFactor(factor); }
-    getCorrectionFactor()       { return box2d.vec2From(this.box2dJoint.GetCorrectionFactor()); }
+
+    /** Get the position correction factor in the range [0,1]
+     *  @return {number} */
+    getCorrectionFactor() { return this.box2dJoint.GetCorrectionFactor(); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -806,18 +1379,25 @@ class Box2dMotorJoint extends Box2dJoint
  */
 class Box2dPlugin
 {
-    constructor(instance, stepIterations=3)
+    /** Create the global UI system object
+     *  @param {Object} instance */
+    constructor(instance)
     {
         ASSERT(!box2d, 'Box2D already initialized');
-        ASSERT(box2dBodyTypeStatic == instance.b2_staticBody);
-        ASSERT(box2dBodyTypeKinematic == instance.b2_kinematicBody);
-        ASSERT(box2dBodyTypeDynamic == instance.b2_dynamicBody);
-
-        // setup box2d
         box2d = this;
         this.instance = instance;
         this.world = new box2d.instance.b2World();
-        this.stepIterations = stepIterations;
+
+        /** @property {number} - Velocity iterations per update*/
+        this.velocityIterations = 8;
+        /** @property {number} - Position iterations per update*/
+        this.positionIterations = 3;
+        /** @property {number} - Static, zero mass, zero velocity, may be manually moved */
+        this.bodyTypeStatic = instance.b2_staticBody;
+        /** @property {number} - Kinematic, zero mass, non-zero velocity set by user, moved by solver */
+        this.bodyTypeKinematic = instance.b2_kinematicBody;
+        /** @property {number} - Dynamic, positive mass, non-zero velocity determined by forces, moved by solver */
+        this.bodyTypeDynamic = instance.b2_dynamicBody;
 
         // setup contact listener
         const listener = new box2d.instance.JSContactListener();
@@ -828,8 +1408,8 @@ class Box2dPlugin
             const fixtureB = contact.GetFixtureB();
             const objectA  = fixtureA.GetBody().object;
             const objectB  = fixtureB.GetBody().object;
-            objectA.beginContact(objectB, contact);
-            objectB.beginContact(objectA, contact);
+            objectA.beginContact(objectB);
+            objectB.beginContact(objectA);
         }
         listener.EndContact = function(contactPtr)
         {
@@ -838,25 +1418,29 @@ class Box2dPlugin
             const fixtureB = contact.GetFixtureB();
             const objectA  = fixtureA.GetBody().object;
             const objectB  = fixtureB.GetBody().object;
-            objectA.endContact(objectB, contact);
-            objectB.endContact(objectA, contact);
+            objectA.endContact(objectB);
+            objectB.endContact(objectA);
         };
         listener.PreSolve  = function() {};
         listener.PostSolve = function() {};
         box2d.world.SetContactListener(listener);
     }
 
+    /** Step the physics world simulation
+     *  @param {number} [frames] */
     step(frames=1)
     {
         box2d.world.SetGravity(box2d.vec2dTo(vec2(0,gravity)));
         for (let i=frames; i--;)
-            box2d.world.Step(timeDelta, this.stepIterations, this.stepIterations);
+            box2d.world.Step(timeDelta, this.velocityIterations, this.positionIterations);
     }
 
     ///////////////////////////////////////////////////////////////////////////////
     // raycasting and querying
-        
-    // raycast and return a list of all the results
+
+    /** raycast and return a list of all the results
+     *  @param {Vector2} start 
+     *  @param {Vector2} end */
     raycastAll(start, end)
     {
         const raycastCallback = new box2d.instance.JSRayCastCallback();
@@ -875,7 +1459,9 @@ class Box2dPlugin
         return raycastResults;
     }
 
-    // raycast and return the first result
+    /** raycast and return the first result
+     *  @param {Vector2} start 
+     *  @param {Vector2} end */
     raycast(start, end)
     {
         const raycastResults = box2d.raycastAll(start, end);
@@ -884,7 +1470,9 @@ class Box2dPlugin
         return raycastResults.reduce((a,b)=>a.fraction < b.fraction ? a : b);
     }
 
-    // box aabb cast and return all the objects
+    /** box aabb cast and return all the objects
+     *  @param {Vector2} pos 
+     *  @param {Vector2} size */
     boxCastAll(pos, size)
     {
         const queryCallback = new box2d.instance.JSQueryCallback();
@@ -907,7 +1495,9 @@ class Box2dPlugin
         return queryObjects;
     }
 
-    // box aabb cast and return the first object
+    /** box aabb cast and return the first object
+     *  @param {Vector2} pos 
+     *  @param {Vector2} size */
     boxCast(pos, size)
     {
         const queryCallback = new box2d.instance.JSQueryCallback();
@@ -928,7 +1518,9 @@ class Box2dPlugin
         return queryObject;
     }
 
-    // circle cast and return all the objects
+    /** circle cast and return all the objects
+     *  @param {Vector2} pos 
+     *  @param {number} diameter */
     circleCastAll(pos, diameter)
     {
         const radius2 = (diameter/2)**2;
@@ -936,7 +1528,9 @@ class Box2dPlugin
         return results.filter(o=>o.pos.distanceSquared(pos) < radius2);
     }
 
-    // circle cast and return the first object
+    /** circle cast and return the first object
+     *  @param {Vector2} pos 
+     *  @param {number} diameter */
     circleCast(pos, diameter)
     {
         const radius2 = (diameter/2)**2;
@@ -955,7 +1549,9 @@ class Box2dPlugin
         return bestResult;
     }
 
-    // point cast and return the first object
+    /** point cast and return the first object
+     *  @param {Vector2} pos 
+     *  @param {boolean} dynamicOnly */
     pointCast(pos, dynamicOnly=true)
     {
         const queryCallback = new box2d.instance.JSQueryCallback();
@@ -983,7 +1579,15 @@ class Box2dPlugin
     ///////////////////////////////////////////////////////////////////////////////
     // drawing
 
-    drawFixture(fixture, pos, angle, fillColor, outlineColor, lineWidth)
+    /** draws a fixture
+     *  @param {Object} fixture
+     *  @param {Vector2} pos
+     *  @param {number} angle
+     *  @param {Color} [color]
+     *  @param {Color} [outlineColor]
+     *  @param {number} [lineWidth]
+     *  @param {CanvasRenderingContext2D} [context] */
+    drawFixture(fixture, pos, angle, color=WHITE, outlineColor=BLACK, lineWidth=.1, context=mainContext)
     {
         const shape = box2d.castObjectType(fixture.GetShape());
         switch (shape.GetType())
@@ -993,58 +1597,86 @@ class Box2dPlugin
                 let points = [];
                 for (let i=shape.GetVertexCount(); i--;)
                     points.push(box2d.vec2From(shape.GetVertex(i)));
-                this.drawPoly(pos, angle, points, fillColor, outlineColor, lineWidth);
+                box2d.drawPoly(pos, angle, points, color, outlineColor, lineWidth, context);
                 break;
             }
             case box2d.instance.b2Shape.e_circle:
             {
                 const radius = shape.get_m_radius();
-                this.drawCircle(pos, radius, fillColor, outlineColor, lineWidth);
+                box2d.drawCircle(pos, radius, color, outlineColor, lineWidth, context);
                 break;
             }
             case box2d.instance.b2Shape.e_edge:
             {
                 const v1 = box2d.vec2From(shape.get_m_vertex1());
                 const v2 = box2d.vec2From(shape.get_m_vertex2());
-                this.drawLine(pos, angle, v1, v2, fillColor, lineWidth);
+                box2d.drawLine(pos, angle, v1, v2, color, lineWidth, context);
                 break;
             }
         }
     }
 
-    drawCircle(pos, radius, color=WHITE, outlineColor, lineWidth=.1, context)
+    /** draws a circle
+     *  @param {Vector2} pos
+     *  @param {number} radius
+     *  @param {Color} [color]
+     *  @param {Color} [outlineColor]
+     *  @param {number} [lineWidth]
+     *  @param {CanvasRenderingContext2D} [context] */
+    drawCircle(pos, radius, color=WHITE, outlineColor=BLACK, lineWidth=.1, context=mainContext)
     {
         drawCanvas2D(pos, vec2(1), 0, 0, context=>
         {
             context.beginPath();
             context.arc(0, 0, radius, 0, 9);
-            box2d.drawFillStroke(context, color, outlineColor, lineWidth);
+            box2d.drawFillStroke(color, outlineColor, lineWidth, context);
         }, 0, context);
     }
 
-    drawPoly(pos, angle, points, color=WHITE, outlineColor, lineWidth=.1, context)
+    /** draws a polygon
+     *  @param {Vector2} pos
+     *  @param {number} angle
+     *  @param {Array<Vector2>} points
+     *  @param {Color} [color]
+     *  @param {Color} [outlineColor]
+     *  @param {number} [lineWidth]
+     *  @param {CanvasRenderingContext2D} [context] */
+    drawPoly(pos, angle, points, color=WHITE, outlineColor=BLACK, lineWidth=.1, context=mainContext)
     {
         drawCanvas2D(pos, vec2(1), angle, 0, context=>
         {
             context.beginPath();
             points.forEach(p=>context.lineTo(p.x, p.y));
             context.closePath();
-            box2d.drawFillStroke(context, color, outlineColor, lineWidth);
+            box2d.drawFillStroke(color, outlineColor, lineWidth, context);
         }, 0, context);
     }
 
-    drawLine(pos, angle, posA, posB, color=WHITE, lineWidth=.1, context)
+    /** draws a line
+     *  @param {Vector2} pos
+     *  @param {number} angle
+     *  @param {Vector2} posA
+     *  @param {Vector2} posB
+     *  @param {Color} [color]
+     *  @param {number} [lineWidth]
+     *  @param {CanvasRenderingContext2D} [context] */
+    drawLine(pos, angle, posA, posB, color=WHITE, lineWidth=.1, context=mainContext)
     {
         drawCanvas2D(pos, vec2(1), angle, 0, context=>
         {
             context.beginPath();
             context.lineTo(posA.x, posA.y);
             context.lineTo(posB.x, posB.y);
-            box2d.drawFillStroke(context, 0, color, lineWidth);
+            box2d.drawFillStroke(0, color, lineWidth, context);
         }, 0, context);
     }
 
-    drawFillStroke(context, color, outlineColor, lineWidth)
+    /** performs a fill or stroke as a helper to the other draw functions
+     *  @param {Color} [color]
+     *  @param {Color} [outlineColor]
+     *  @param {number} [lineWidth]
+     *  @param {CanvasRenderingContext2D} [context] */
+    drawFillStroke(color=WHITE, outlineColor=BLACK, lineWidth=.1, context=mainContext)
     {
         if (color)
         {
@@ -1063,71 +1695,72 @@ class Box2dPlugin
     ///////////////////////////////////////////////////////////////////////////////
     // helper functions
 
+    /** converts a box2d vec2 to a Vector2
+     *  @param {Object} v */
     vec2From(v)
     {
         ASSERT(v instanceof box2d.instance.b2Vec2);
         return new Vector2(v.get_x(), v.get_y()); 
     }
 
+    /** converts a box2d vec2 pointer to a Vector2
+     *  @param {Object} v */
     vec2FromPointer(v)
     {
         return box2d.vec2From(box2d.instance.wrapPointer(v, box2d.instance.b2Vec2));
     }
 
+    /** converts a Vector2 to a box2 vec2
+     *  @param {Vector2} v */
     vec2dTo(v)
     {
         ASSERT(v instanceof Vector2);
         return new box2d.instance.b2Vec2(v.x, v.y);
     }
 
-    isNull(object) { return !box2d.instance.getPointer(object); }
+    /** checks if a box2d object is null
+     *  @param {Object} o */
+    isNull(o) { return !box2d.instance.getPointer(o); }
 
-    castObjectType(object)
+    /** casts a box2d object to its correct type
+     *  @param {Object} o */
+    castObjectType(o)
     {
-        if (object instanceof box2d.instance.b2Shape)
+        switch (o.GetType())
         {
-            switch (object.GetType())
-            {
-                case box2d.instance.b2Shape.e_circle:
-                    return box2d.instance.castObject(object, box2d.instance.b2CircleShape);
-                case box2d.instance.b2Shape.e_edge:
-                    return box2d.instance.castObject(object, box2d.instance.b2EdgeShape);
-                case box2d.instance.b2Shape.e_polygon:
-                    return box2d.instance.castObject(object, box2d.instance.b2PolygonShape);
-                case box2d.instance.b2Shape.e_chain:
-                    return box2d.instance.castObject(object, box2d.instance.b2ChainShape);
-            }
-        }
-        else if (object instanceof box2d.instance.b2Joint)
-        {
-            switch (object.GetType())
-            {
-                case box2d.instance.e_revoluteJoint:
-                    return box2d.instance.castObject(object, box2d.instance.b2RevoluteJoint);
-                case box2d.instance.e_prismaticJoint:
-                    return box2d.instance.castObject(object, box2d.instance.b2PrismaticJoint);
-                case box2d.instance.e_distanceJoint:
-                    return box2d.instance.castObject(object, box2d.instance.b2DistanceJoint);
-                case box2d.instance.e_pulleyJoint:
-                    return box2d.instance.castObject(object, box2d.instance.b2PulleyJoint);
-                case box2d.instance.e_mouseJoint:
-                    return box2d.instance.castObject(object, box2d.instance.b2MouseJoint);
-                case box2d.instance.e_gearJoint:
-                    return box2d.instance.castObject(object, box2d.instance.b2GearJoint);
-                case box2d.instance.e_wheelJoint:
-                    return box2d.instance.castObject(object, box2d.instance.b2WheelJoint);
-                case box2d.instance.e_weldJoint:
-                    return box2d.instance.castObject(object, box2d.instance.b2WeldJoint);
-                case box2d.instance.e_frictionJoint:
-                    return box2d.instance.castObject(object, box2d.instance.b2FrictionJoint);
-                case box2d.instance.e_ropeJoint:
-                    return box2d.instance.castObject(object, box2d.instance.b2RopeJoint);
-                case box2d.instance.e_motorJoint:
-                    return box2d.instance.castObject(object, box2d.instance.b2MotorJoint);
-            }
+            case box2d.instance.b2Shape.e_circle:
+                return box2d.instance.castObject(o, box2d.instance.b2CircleShape);
+            case box2d.instance.b2Shape.e_edge:
+                return box2d.instance.castObject(o, box2d.instance.b2EdgeShape);
+            case box2d.instance.b2Shape.e_polygon:
+                return box2d.instance.castObject(o, box2d.instance.b2PolygonShape);
+            case box2d.instance.b2Shape.e_chain:
+                return box2d.instance.castObject(o, box2d.instance.b2ChainShape);
+            case box2d.instance.e_revoluteJoint:
+                return box2d.instance.castObject(o, box2d.instance.b2RevoluteJoint);
+            case box2d.instance.e_prismaticJoint:
+                return box2d.instance.castObject(o, box2d.instance.b2PrismaticJoint);
+            case box2d.instance.e_distanceJoint:
+                return box2d.instance.castObject(o, box2d.instance.b2DistanceJoint);
+            case box2d.instance.e_pulleyJoint:
+                return box2d.instance.castObject(o, box2d.instance.b2PulleyJoint);
+            case box2d.instance.e_mouseJoint:
+                return box2d.instance.castObject(o, box2d.instance.b2MouseJoint);
+            case box2d.instance.e_gearJoint:
+                return box2d.instance.castObject(o, box2d.instance.b2GearJoint);
+            case box2d.instance.e_wheelJoint:
+                return box2d.instance.castObject(o, box2d.instance.b2WheelJoint);
+            case box2d.instance.e_weldJoint:
+                return box2d.instance.castObject(o, box2d.instance.b2WeldJoint);
+            case box2d.instance.e_frictionJoint:
+                return box2d.instance.castObject(o, box2d.instance.b2FrictionJoint);
+            case box2d.instance.e_ropeJoint:
+                return box2d.instance.castObject(o, box2d.instance.b2RopeJoint);
+            case box2d.instance.e_motorJoint:
+                return box2d.instance.castObject(o, box2d.instance.b2MotorJoint);
         }
         
-        ASSERT(false, 'Unknown object type');
+        ASSERT(false, 'Unknown box2d object type');
     }
 }
 
@@ -1166,6 +1799,7 @@ function box2dEngineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameR
             box2d.world.DrawDebugData();
     }
     
+    // box2d debug drawing
     function setupDebugDraw()
     {
         // setup debug draw
@@ -1179,7 +1813,7 @@ function box2dEngineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameR
             const points = [];
             for (let i=vertexCount; i--;)
                 points.push(box2d.vec2FromPointer(vertices+i*8));
-            return points
+            return points;
         }
         debugDraw.DrawSegment = function(point1, point2, color)
         {
@@ -1219,7 +1853,7 @@ function box2dEngineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameR
             transform = box2d.instance.wrapPointer(transform, box2d.instance.b2Transform);
             const pos = vec2(transform.get_p());
             const angle = -transform.get_q().GetAngle();
-            const p1 = vec2(1,0), c1 = rgb(.75,0,0,.8)
+            const p1 = vec2(1,0), c1 = rgb(.75,0,0,.8);
             const p2 = vec2(0,1), c2 = rgb(0,.75,0,.8);
             box2d.drawLine(pos, angle, vec2(), p1, c1, undefined, overlayContext);
             box2d.drawLine(pos, angle, vec2(), p2, c2, undefined, overlayContext);

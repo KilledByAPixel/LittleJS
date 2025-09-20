@@ -15,9 +15,8 @@ export
     postProcess,
     PostProcessPlugin,
 
-	// ZzFXMusic
-	ZzFXMusic,
-    zzfxM,
+    // ZzFXMusic
+    ZzFXMusic,
 
     // UI System
     uiSystem,
@@ -33,9 +32,6 @@ export
     box2d,
     box2dDebug,
     box2dEngineInit,
-    box2dBodyTypeStatic,
-    box2dBodyTypeKinematic,
-    box2dBodyTypeDynamic,
     Box2dPlugin,
     Box2dObject,
     Box2dRaycastResult,

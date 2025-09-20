@@ -9,7 +9,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 // spawn object functions
 
-function spawnBox(pos, size=1, color=WHITE, type=box2dBodyTypeDynamic, applyTexture=true, angle=0)
+function spawnBox(pos, size=1, color=WHITE, type=box2d.bodyTypeDynamic, applyTexture=true, angle=0)
 {
     size = typeof size == 'number' ? vec2(size) : size; // square
     const o = new Box2dObject(pos, size, applyTexture && spriteAtlas.squareOutline, angle, color, type);
@@ -18,7 +18,7 @@ function spawnBox(pos, size=1, color=WHITE, type=box2dBodyTypeDynamic, applyText
     return o;
 }
 
-function spawnCircle(pos, diameter=1, color=WHITE, type=box2dBodyTypeDynamic, applyTexture=true, angle=0)
+function spawnCircle(pos, diameter=1, color=WHITE, type=box2d.bodyTypeDynamic, applyTexture=true, angle=0)
 {
     const size = vec2(diameter);
     const o = new Box2dObject(pos, size, applyTexture && spriteAtlas.circleOutline, angle, color, type);
@@ -26,14 +26,14 @@ function spawnCircle(pos, diameter=1, color=WHITE, type=box2dBodyTypeDynamic, ap
     return o;
 }
 
-function spawnRandomPoly(pos, diameter=1, color=WHITE, type=box2dBodyTypeDynamic, angle=0)
+function spawnRandomPoly(pos, diameter=1, color=WHITE, type=box2d.bodyTypeDynamic, angle=0)
 {
     const o = new Box2dObject(pos, vec2(), 0, angle, color, type);
     o.addRandomPoly(diameter);
     return o;
 }
 
-function spawnRandomObject(pos, scale=1, type=box2dBodyTypeDynamic, angle=0)
+function spawnRandomObject(pos, scale=1, type=box2d.bodyTypeDynamic, angle=0)
 {
     if (randInt(2))
     {
@@ -68,7 +68,7 @@ function spawnRandomEdges()
     for (let i=40, y=0; i--;)
         edgePoints.push(vec2(i, y=clamp(y+rand(-2,2),0,5)));
     edgePoints.push(vec2(0,0));
-    const o = new Box2dObject(vec2(), vec2(), 0, 0, BLACK, box2dBodyTypeStatic);
+    const o = new Box2dObject(vec2(), vec2(), 0, 0, BLACK, box2d.bodyTypeStatic);
     o.addEdgeList(edgePoints);
 }
 
@@ -78,7 +78,7 @@ function spawnRope(startPos, count, angle=PI, color=WHITE, size=vec2(.3,1))
     for (let i=0; i<count; ++i)
     {
         const pos = startPos.add(size.multiply(vec2(0,i+.5)).rotate(-angle));
-        const o = spawnBox(pos, size, color, box2dBodyTypeDynamic, false, angle);
+        const o = spawnBox(pos, size, color, box2d.bodyTypeDynamic, false, angle);
         o.setFilterData(2, 2);
         const anchorPos = pos.add(vec2(0,-size.y/2).rotate(-angle));
         new Box2dRevoluteJoint(lastObject, o, anchorPos);
@@ -162,7 +162,7 @@ class ContactTester extends Box2dObject
 {
     constructor(pos, size, color, contactColor, isCircle=true, isSensor=true)
     {
-        super(pos, size, 0, 0, color, box2dBodyTypeStatic);
+        super(pos, size, 0, 0, color, box2d.bodyTypeStatic);
         isCircle ? this.addCircle(size.x) : this.addBox(size);
         this.setSensor(isSensor);
         this.contactColor = contactColor;
@@ -321,7 +321,7 @@ class ClothObject extends Box2dObject
 {
     constructor(pos, scale, sizeCount, color, maxJointStress=10)
     {
-        super(pos, vec2(), 0, 0, color, box2dBodyTypeStatic);
+        super(pos, vec2(), 0, 0, color, box2d.bodyTypeStatic);
         const nodeSize = sizeCount.subtract(vec2(1));
         const spacing = scale.divide(nodeSize);
         const objectDiameter = min(spacing.x, spacing.y);

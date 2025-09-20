@@ -31,18 +31,18 @@ function loadScene(_scene)
     car = 0;
     
     // create walls
-    groundObject = spawnBox(vec2(0,-4), vec2(1e3,8), hsl(0,0,.2), box2dBodyTypeStatic);
-    spawnBox(vec2(-4, 0), vec2(8,1e3), BLACK, box2dBodyTypeStatic);
-    spawnBox(vec2(44, 0), vec2(8,1e3), BLACK, box2dBodyTypeStatic);
-    spawnBox(vec2(0,100), vec2(1e3,8), BLACK, box2dBodyTypeStatic);
+    groundObject = spawnBox(vec2(0,-4), vec2(1e3,8), hsl(0,0,.2), box2d.bodyTypeStatic);
+    spawnBox(vec2(-4, 0), vec2(8,1e3), BLACK, box2d.bodyTypeStatic);
+    spawnBox(vec2(44, 0), vec2(8,1e3), BLACK, box2d.bodyTypeStatic);
+    spawnBox(vec2(0,100), vec2(1e3,8), BLACK, box2d.bodyTypeStatic);
 
     if (scene == 0)
     {
         sceneName = 'Shapes';
         spawnRandomEdges();
-        spawnBox(vec2(11,8), 4,  randColor(), box2dBodyTypeStatic, false);
-        spawnCircle(vec2(20,8), 4,     randColor(), box2dBodyTypeStatic, false);
-        spawnRandomPoly(vec2(29,8), 4, randColor(), box2dBodyTypeStatic, false);
+        spawnBox(vec2(11,8), 4,  randColor(), box2d.bodyTypeStatic, false);
+        spawnCircle(vec2(20,8), 4,     randColor(), box2d.bodyTypeStatic, false);
+        spawnRandomPoly(vec2(29,8), 4, randColor(), box2d.bodyTypeStatic, false);
         for (let i=500;i--;)
             spawnRandomObject(vec2(rand(1,39), rand(10,50)));
     }
@@ -60,14 +60,14 @@ function loadScene(_scene)
         spawnDominoes(vec2(2,0), 13, vec2(1,3));
         spawnCircle(vec2(10,20), 2, randColor());
         spawnCircle(vec2(31.7,12), 2, randColor());
-        spawnBox(vec2(16,11), vec2(32,1), randColor(), box2dBodyTypeStatic, false);
-        spawnBox(vec2(24,6.5), vec2(32,1), randColor(), box2dBodyTypeStatic, false, -.15);
+        spawnBox(vec2(16,11), vec2(32,1), randColor(), box2d.bodyTypeStatic, false);
+        spawnBox(vec2(24,6.5), vec2(32,1), randColor(), box2d.bodyTypeStatic, false, -.15);
     }
     if (scene == 3)
     {
         sceneName = 'Car';
         car = new CarObject(vec2(10,2));
-        spawnBox(vec2(20,0), vec2(10,2), randColor(), box2dBodyTypeStatic, false, -.2);
+        spawnBox(vec2(20,0), vec2(10,2), randColor(), box2d.bodyTypeStatic, false, -.2);
         spawnPyramid(vec2(32,0), 6);
     }
     if (scene == 4)
@@ -92,7 +92,7 @@ function loadScene(_scene)
         sceneName = 'Raycasts';
         spawnRandomEdges();
         for (let i=100;i--;)
-            spawnRandomObject(vec2(rand(1,39), rand(20)), 2, box2dBodyTypeStatic, rand(PI*2));
+            spawnRandomObject(vec2(rand(1,39), rand(20)), 2, box2d.bodyTypeStatic, rand(PI*2));
     }
     if (scene == 6)
     {
@@ -116,8 +116,8 @@ function loadScene(_scene)
             const anchorB = vec2(26,15);
             const oA = new PulleyJointObjects(vec2(15,8), vec2(1,2), randColor(), anchorA);
             const oB = new PulleyJointObjects(vec2(25,8), vec2(1,2), randColor(), anchorB);
-            const aA = spawnCircle(anchorA, 2, randColor(), box2dBodyTypeStatic);
-            const aB = spawnCircle(anchorB, 2, randColor(), box2dBodyTypeStatic);
+            const aA = spawnCircle(anchorA, 2, randColor(), box2d.bodyTypeStatic);
+            const aB = spawnCircle(anchorB, 2, randColor(), box2d.bodyTypeStatic);
             const oaA = oA.localToWorld(vec2(0,oA.size.y/2));
             const oaB = oB.localToWorld(vec2(0,oB.size.y/2));
             new Box2dPulleyJoint(oA, oB, aA.pos, aB.pos, oaA, oaB);
@@ -144,14 +144,14 @@ function loadScene(_scene)
         }
         {
             // distance joint
-            const o1 = new Box2dObject(vec2(30,11), vec2(4), spriteAtlas.circleOutline, 0, randColor(), box2dBodyTypeStatic);
+            const o1 = new Box2dObject(vec2(30,11), vec2(4), spriteAtlas.circleOutline, 0, randColor(), box2d.bodyTypeStatic);
             o1.renderOrder = -2;
             const o2 = spawnCircle(vec2(30,8), 2, randColor());
             new Box2dDistanceJoint(o1, o2);
         }
         {
             // motor joint
-            const o = new Box2dObject(vec2(10,8), vec2(4), spriteAtlas.circleOutline, 0, randColor(), box2dBodyTypeStatic);
+            const o = new Box2dObject(vec2(10,8), vec2(4), spriteAtlas.circleOutline, 0, randColor(), box2d.bodyTypeStatic);
             o.renderOrder = -2;
             new MotorJointObject(vec2(10,8), vec2(2), randColor(), o);
         }
