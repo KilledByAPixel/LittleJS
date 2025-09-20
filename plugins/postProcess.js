@@ -1,9 +1,8 @@
 /**
  * LittleJS Post Processing Plugin
  * - Supports shadertoy style post processing shaders
- * - call new PostProcessPlugin() to set it up
+ * - call new new PostProcessPlugin() to setup post processing
  * - can be enabled to pass other canvases through a final shader
- * @namespace Plugins
  */
 
 'use strict';
@@ -11,8 +10,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Global Post Process plugin object
- *  @type {PostProcessPlugin}
- *  @memberof Plugins */
+ *  @type {PostProcessPlugin} */
 let postProcess;
 
 /////////////////////////////////////////////////////////////////////////

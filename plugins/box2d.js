@@ -1,7 +1,7 @@
 /**
  * LittleJS Box2D Physics Plugin
  * - Box2dObject extends EngineObject with Box2D physics
- * - Call box2dEngineInit to start instead of normal engineInit
+ * - Call box2dEngineInit() to start instead of normal engineInit()
  * - You will also need to include box2d.wasm.js
  * - Uses box2d.js super fast web assembly port of Box2D
  * - More info: https://github.com/kripken/box2d.js
@@ -11,20 +11,17 @@
  * - Joint creation
  * - Contact begin and end callbacks
  * - Debug physics drawing
- * @namespace Plugins
  */
 
 'use strict';
  
 /** Global Box2d Plugin object
- *  @type {Box2dPlugin}
- *  @memberof Box2dPlugin */
+ *  @type {Box2dPlugin} */
 let box2d;
 
 /** Enable Box2D debug drawing
  *  @type {boolean}
- *  @default
- *  @memberof Box2dPlugin */
+ *  @default */
 let box2dDebug = false;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1772,8 +1769,7 @@ class Box2dPlugin
  *  @param {Function} gameRender - Called before objects are rendered, for drawing the background
  *  @param {Function} gameRenderPost - Called after objects are rendered, useful for drawing UI
  *  @param {Array<string>} [imageSources=[]] - List of images to load
- *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default
- *  @memberof Box2dPlugin */
+ *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default */
 function box2dEngineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources, rootElement)
 {
     Box2D().then(box2dInstance=>
