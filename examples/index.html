@@ -163,9 +163,8 @@ for (const example of exampleList)
     selectExample.add(o);
 }
 
-// select first option
+// set the selected example from the URL hash
 selectExample.selectedIndex = location.hash.split`#`[1] | 0
-
 setExample();
 
 onresize = () =>
