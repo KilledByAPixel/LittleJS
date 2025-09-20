@@ -254,7 +254,7 @@ declare module "littlejsengine" {
      *  @default Vector2()
      *  @memberof Settings */
     export let canvasFixedSize: Vector2;
-    /** Use nearest neighbor scaling algorithm for canvas for more pixelated look
+    /** Use nearest neighbor canvas scaling for more pixelated look
      *  - Must be set before startup to take effect
      *  - If enabled sets css image-rendering:pixelated
      *  @type {boolean}
