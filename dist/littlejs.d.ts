@@ -327,11 +327,11 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let objectMaxSpeed: number;
-    /** How much gravity to apply to objects along the Y axis, negative is down
-     *  @type {number}
+    /** How much gravity to apply to objects, negative Y is down
+     *  @type {Vector2}
      *  @default
      *  @memberof Settings */
-    export let gravity: number;
+    export let gravity: Vector2;
     /** Scales emit rate of particles, useful for low graphics mode (0 disables particle emitters)
      *  @type {number}
      *  @default
@@ -506,10 +506,10 @@ declare module "littlejsengine" {
      *  @param {number} speed
      *  @memberof Settings */
     export function setObjectMaxSpeed(speed: number): void;
-    /** Set how much gravity to apply to objects along the Y axis
-     *  @param {number} newGravity
+    /** Set how much gravity to apply to objects
+     *  @param {Vector2} newGravity
      *  @memberof Settings */
-    export function setGravity(newGravity: number): void;
+    export function setGravity(newGravity: Vector2): void;
     /** Set to scales emit rate of particles
      *  @param {number} scale
      *  @memberof Settings */

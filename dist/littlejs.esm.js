@@ -1638,11 +1638,11 @@ let objectDefaultFriction = .8;
  *  @memberof Settings */
 let objectMaxSpeed = 1;
 
-/** How much gravity to apply to objects along the Y axis, negative is down
- *  @type {number}
+/** How much gravity to apply to objects, negative Y is down
+ *  @type {Vector2}
  *  @default
  *  @memberof Settings */
-let gravity = 0;
+let gravity = vec2();
 
 /** Scales emit rate of particles, useful for low graphics mode (0 disables particle emitters)
  *  @type {number}
@@ -1868,8 +1868,8 @@ function setObjectDefaultFriction(friction) { objectDefaultFriction = friction; 
  *  @memberof Settings */
 function setObjectMaxSpeed(speed) { objectMaxSpeed = speed; }
 
-/** Set how much gravity to apply to objects along the Y axis
- *  @param {number} newGravity
+/** Set how much gravity to apply to objects
+ *  @param {Vector2} newGravity
  *  @memberof Settings */
 function setGravity(newGravity) { gravity = newGravity; }
 
@@ -2137,7 +2137,10 @@ class EngineObject
         this.velocity.x *= this.damping;
         this.velocity.y *= this.damping;
         if (this.mass) // don't apply gravity to static objects
-            this.velocity.y += gravity * this.gravityScale;
+        {
+            this.velocity.x += gravity.x * this.gravityScale;
+            this.velocity.y += gravity.y * this.gravityScale;
+        }
         this.pos.x += this.velocity.x;
         this.pos.y += this.velocity.y;
         this.angle += this.angleVelocity *= this.angleDamping;
@@ -2196,7 +2199,7 @@ class EngineObject
 
                 // check for collision
                 const sizeBoth = this.size.add(o.size);
-                const smallStepUp = (oldPos.y - o.pos.y)*2 > sizeBoth.y + gravity; // prefer to push up if small delta
+                const smallStepUp = (oldPos.y - o.pos.y)*2 > sizeBoth.y + gravity.y; // prefer to push up if small delta
                 const isBlockedX = abs(oldPos.y - o.pos.y)*2 < sizeBoth.y;
                 const isBlockedY = abs(oldPos.x - o.pos.x)*2 < sizeBoth.x;
                 const elasticity = max(this.elasticity, o.elasticity);
@@ -4451,7 +4454,7 @@ class TileCollisionLayer extends TileLayer
     /** Set tile collision data for a given cell in the grid
     *  @param {Vector2} pos
     *  @param {number}  [data] */
-    setCollisionData(pos, data=0)
+    setCollisionData(pos, data=1)
     {
         const i = (pos.y|0)*this.size.x + pos.x|0;
         pos.arrayCheck(this.size) && (this.collisionData[i] = data);
@@ -5410,7 +5413,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.12.0';
+const engineVersion = '1.12.1';
 
 /** Frames per second to update
  *  @type {number}
@@ -8347,7 +8350,7 @@ class Box2dPlugin
      *  @param {number} [frames] */
     step(frames=1)
     {
-        box2d.world.SetGravity(box2d.vec2dTo(vec2(0,gravity)));
+        box2d.world.SetGravity(box2d.vec2dTo(gravity));
         for (let i=frames; i--;)
             box2d.world.Step(timeDelta, this.velocityIterations, this.positionIterations);
     }
