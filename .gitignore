@@ -5,9 +5,4 @@ package-lock.json
 # example builds
 examples/starter/build
 examples/starter/*.zip
-examples/js13k/build
-examples/js13k/*.zip
 examples/typescript/build
-examples/electron/build
-examples/electron/LittleJSGame-win32-x64
-examples/electron/package-lock.json
