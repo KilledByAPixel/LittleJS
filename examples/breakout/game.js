@@ -8,46 +8,69 @@
 
 'use strict';
 
-let levelSize, ball, paddle, score, brickCount;
+// import module
+import * as LJS from '../../dist/littlejs.esm.js';
+import * as GameObjects from './gameObjects.js';
+const {vec2, hsl} = LJS;
 
-// sound effects
-const sound_start  = new Sound([,0,500,,.04,.3,1,2,,,570,.02,.02,,,,.04]);
-const sound_break  = new Sound([,,90,,.01,.03,4,,,,,,,9,50,.2,,.2,.01]);
-const sound_bounce = new Sound([,,1e3,,.03,.02,1,2,,,940,.03,,,,,.2,.6,,.06]);
+let ball, paddle;
+const levelSize = vec2(38, 20);
 
 ///////////////////////////////////////////////////////////////////////////////
-function gameInit()
+function gameReset()
 {
-    canvasFixedSize = vec2(1920, 1080); // 1080p
-    levelSize = vec2(38, 20);
-    cameraPos = levelSize.scale(.5);
-    cameraScale = 48;
-    paddle = new Paddle(vec2(levelSize.x/2-12, 1));
-    score = brickCount = 0;
+    // reset game objects
+    LJS.engineObjectsDestroy();
+    GameObjects.reset(levelSize);
 
     // spawn bricks
     const pos = vec2();
     for (pos.x = 4; pos.x <= levelSize.x-4; pos.x += 2)
     for (pos.y = 12; pos.y <= levelSize.y-2; pos.y += 1)
-        new Brick(pos);
+        new GameObjects.Brick(pos);
 
     // create walls
-    new Wall(vec2(-.5,levelSize.y/2),            vec2(1,100)); // top
-    new Wall(vec2(levelSize.x+.5,levelSize.y/2), vec2(1,100)); // left
-    new Wall(vec2(levelSize.x/2,levelSize.y+.5), vec2(100,1)); // right
+    new GameObjects.Wall(vec2(-.5,levelSize.y/2),            vec2(1,100)); // top
+    new GameObjects.Wall(vec2(levelSize.x+.5,levelSize.y/2), vec2(1,100)); // left
+    new GameObjects.Wall(vec2(levelSize.x/2,levelSize.y+.5), vec2(100,1)); // right
 
-    setupPostProcess(); // set up a post processing shader
+    // spawn player paddle
+    paddle = new GameObjects.Paddle(vec2(levelSize.x/2-12, 1));
+
+    // reset ball
+    ball = 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+function gameInit()
+{
+    LJS.setCanvasFixedSize(vec2(1920, 1080)); // 1080p
+    LJS.setCameraPos(levelSize.scale(.5)); // center camera
+    LJS.setCameraScale(48);
+
+    // set up a post processing shader
+    setupPostProcess();
+
+    // start a new game
+    gameReset();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameUpdate()
 {
     // spawn ball
-    if (!ball && (mouseWasPressed(0) || gamepadWasPressed(0)))
+    if (!ball && (LJS.mouseWasPressed(0) || LJS.gamepadWasPressed(0)))
+        ball = new GameObjects.Ball(vec2(levelSize.x/2, levelSize.y/2));
+
+    if (ball && ball.pos.y < -1)
     {
-        ball = new Ball(vec2(levelSize.x/2, levelSize.y/2));
-        sound_start.play();
+        // destroy ball if it goes below the level
+        ball.destroy();
+        ball = 0;
     }
+
+    if (LJS.keyWasPressed('KeyR'))
+        gameReset();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -60,20 +83,20 @@ function gameUpdatePost()
 function gameRender()
 {
     // draw a the background
-    drawRect(cameraPos, levelSize.scale(2), hsl(0,0,.5));
-    drawRect(cameraPos, levelSize, hsl(0,0,.02));
+    LJS.drawRect(LJS.cameraPos, levelSize.scale(2), hsl(0,0,.5));
+    LJS.drawRect(LJS.cameraPos, levelSize, hsl(0,0,.02));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameRenderPost()
 {
     // use built in image font for text
-    const font = new FontImage;
-    font.drawText('Score: ' + score, cameraPos.add(vec2(0,9.7)), .15, true);
-    if (!brickCount)
-        font.drawText('You Win!', cameraPos.add(vec2(0,-5)), .2, true);
+    const font = new LJS.FontImage;
+    font.drawText('Score: ' + GameObjects.score, LJS.cameraPos.add(vec2(0,10)), .15, true);
+    if (!GameObjects.brickCount)
+        font.drawText('You Win!', LJS.cameraPos.add(vec2(0,-5)), .2, true);
     else if (!ball)
-        font.drawText('Click to Play', cameraPos.add(vec2(0,-5)), .2, true);
+        font.drawText('Click to Play', LJS.cameraPos.add(vec2(0,-5)), .2, true);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -128,9 +151,9 @@ function setupPostProcess()
     }`;
 
     const includeOverlay = true;
-    new PostProcessPlugin(televisionShader, includeOverlay);
+    new LJS.PostProcessPlugin(televisionShader, includeOverlay);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Startup LittleJS Engine
-engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);
+LJS.engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);
