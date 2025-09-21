@@ -30,7 +30,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.8a';
+const engineVersion = '1.11.8.2';
 
 /** Frames per second to update
  *  @type {Number}
@@ -111,7 +111,7 @@ function engineAddPlugin(updateFunction, renderFunction)
  *  @param {Array} [imageSources=[]] - List of images to load
  *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default
  *  @memberof Engine */
-function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
+async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
 {
     ASSERT(!mainContext, 'engine already initialized');
     ASSERT(Array.isArray(imageSources), 'pass in images as array');
@@ -261,16 +261,14 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
     }
 
-    function startEngine()
+    // wait for gameInit to load
+    async function startEngine()
     {
-        new Promise((resolve) => resolve(gameInit())).then(engineUpdate);
+        await gameInit();
+        engineUpdate();
     }
-
     if (headlessMode)
-    {
-        startEngine();
-        return;
-    }
+        return startEngine();
 
     // setup html
     const styleRoot = 
@@ -346,8 +344,9 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         }));
     }
 
-    // load all of the images
-    Promise.all(promises).then(startEngine);
+    // wait for all the promises to finish
+    await Promise.all(promises);
+    return startEngine();
 }
 
 /** Update each engine object, remove destroyed objects, and update time
