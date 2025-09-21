@@ -1568,8 +1568,8 @@ class Box2dPlugin
         aabb.set_upperBound(box2d.vec2dTo(pos));
 
         let queryObject;
-        debugRaycast && debugRect(pos, vec2(), queryObject ? '#f00' : '#00f', .02);
         box2d.world.QueryAABB(queryCallback, aabb);
+        debugRaycast && debugRect(pos, vec2(), queryObject ? '#f00' : '#00f', .02);
         return queryObject;
     }
 
