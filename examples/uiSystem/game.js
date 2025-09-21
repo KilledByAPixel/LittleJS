@@ -25,7 +25,7 @@ LJS.setCanvasPixelated(false);
 function createUI()
 {
     // setup root to attach all ui elements to
-    uiRoot = new LJS.UIObject();
+    uiRoot = new LJS.UIObject;
     const uiInfo = new LJS.UIText(vec2(0,90), vec2(1e3, 70), 
         'LittleJS UI System Example\nM = Toggle menu');
     uiInfo.textColor = LJS.WHITE;
