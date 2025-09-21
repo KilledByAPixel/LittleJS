@@ -314,7 +314,9 @@ function gamepadsUpdate()
                 const button = gamepad.buttons[j];
                 const wasDown = gamepadIsDown(j,i);
                 data[j] = button.pressed ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
-                isUsingGamepad ||= !i && button.pressed;
+                if (!button.value || button.value > .9) // must be a full press
+                if (!i && button.pressed)
+                    isUsingGamepad = true;
             }
 
             if (gamepadDirectionEmulateStick)
