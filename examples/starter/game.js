@@ -7,6 +7,8 @@
 
 'use strict';
 
+// show the LittleJS splash screen
+setShowSplashScreen(true);
 
 // fix texture bleeding by shrinking tile slightly
 setTileFixBleedScale(.5);
