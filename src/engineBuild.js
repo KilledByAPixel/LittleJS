@@ -117,7 +117,7 @@ function Build(message, outputFile, files=[], buildSteps=[], isPrimaryBuild)
 
         // remove first 'use strict' from each file
         if (isPrimaryBuild)
-            fileContent = fileContent.replace("'use strict';", '');
+            fileContent = fileContent.replace(/'use strict';\s*\n/g, '');
 
         // add it to the buffer
         buffer += fileContent;
