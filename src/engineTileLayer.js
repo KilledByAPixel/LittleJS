@@ -37,7 +37,7 @@ function initTileCollision(size)
  *  @param {Vector2} pos
  *  @param {Number}  [data]
  *  @memberof TileCollision */
-function setTileCollisionData(pos, data=0)
+function setTileCollisionData(pos, data=1)
 {
     pos.arrayCheck(tileCollisionSize) && (tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] = data);
 }
