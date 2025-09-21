@@ -160,13 +160,19 @@ function setupPostProcess()
 ///////////////////////////////////////////////////////////////////////////////
 // Exports
 
-export function changeBrickCount(delta)
+function changeBrickCount(delta)
 {
     brickCount += delta;
     
     // increase score when brick is destroyed
     if (delta < 0)
         score -= delta;
+}
+
+export
+{
+    paddle,
+    changeBrickCount
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -126,25 +126,24 @@ export class Ball extends PhysicsObject
 
     collideWithObject(o)              
     {
+        // only need special handling when colliding with paddle
+        if (o != Game.paddle)
+            return true;
+
         // prevent colliding with paddle if moving upwards
-        const isPaddle = o instanceof Paddle;
-        if (isPaddle && this.velocity.y > 0)
+        if (this.velocity.y > 0)
             return false;
 
-        if (isPaddle)
-        {
-            // put english on the ball when it collides with paddle
-            this.velocity = this.velocity.rotate(.2 * (o.pos.x - this.pos.x));
-            this.velocity.y = LJS.max(-this.velocity.y, .2);
+        // put english on the ball when it collides with paddle
+        this.velocity = this.velocity.rotate(.2 * (o.pos.x - this.pos.x));
+        this.velocity.y = LJS.max(-this.velocity.y, .2);
 
-            // speed up
-            const speed = LJS.min(1.04*this.velocity.length(), .5);
-            this.velocity = this.velocity.normalize(speed);
-            sound_bounce.play(this.pos, 1, speed*2);
-            
-            return false; // prevent default collision code
-        }
-        
-        return true;
+        // speed up
+        const speed = LJS.min(1.04*this.velocity.length(), .5);
+        this.velocity = this.velocity.normalize(speed);
+        sound_bounce.play(this.pos, 1, speed*2);
+
+        // prevent default collision code
+        return false;
     }
 }
