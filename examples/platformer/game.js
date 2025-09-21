@@ -8,14 +8,26 @@
 
 'use strict';
 
-let spriteAtlas, score, deaths;
+let spriteAtlas, score, deaths, gameLevelData;
 
 // enable touch gamepad on touch devices
 touchGamepadEnable = true;
 
 ///////////////////////////////////////////////////////////////////////////////
-function gameInit()
+async function gameInit()
 {
+    try
+    {
+        // load level data from external JSON file
+        const response = await fetch('gameLevelData.json');
+        gameLevelData = await response.json();
+        console.log('Level data loaded successfully');
+    } 
+    catch (error)
+    {
+        console.error('Failed to load level data!');
+    }
+
     // engine settings
     gravity = vec2(0,-.01);
     objectDefaultDamping = .99;

@@ -38,10 +38,21 @@ function buildLevel()
     cameraPos = getCameraTarget();
 }
 
-function loadLevel(level=0)
+function loadLevel()
 {
     // load level data from an exported Tiled js file
-    const tileMapData = TileMaps['gameLevelData'];
+    let tileMapData = gameLevelData;
+    if (!tileMapData)
+    {
+        // default level data if loading failed
+        tileMapData = {};
+        tileMapData.width = 100;
+        tileMapData.height = 20;
+        tileMapData.layers = [{data:[]}];
+        for(let i=100*20;i--;)
+            tileMapData.layers[0].data[i] = i>100 ? 2 : 0;
+    }
+
     levelSize = vec2(tileMapData.width, tileMapData.height);
 
     // create table for tiles in the level tilemap
@@ -141,6 +152,8 @@ function decorateTile(pos, layer=1)
 {
     ASSERT((pos.x|0) == pos.x && (pos.y|0)== pos.y);
     const tileLayer = tileLayers[layer];
+    if (!tileLayer)
+        return;
 
     if (tileLayer == foregroundTileLayer)
     {
