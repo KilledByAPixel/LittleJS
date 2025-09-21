@@ -150,9 +150,9 @@ function Build(message, outputFile, files=[], buildSteps=[], isPrimaryBuild)
         // get file content
         let fileContent = fs.readFileSync(file) + '\n';
 
-        // remove first 'use strict' from each file
+        // remove first 'use strict' and surrounding new lines
         if (isPrimaryBuild)
-            fileContent = fileContent.replace("'use strict';", '');
+            fileContent = fileContent.replace(/'use strict';\s*\n/g, '');
 
         // add it to the buffer
         buffer += fileContent;
