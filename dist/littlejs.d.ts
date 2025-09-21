@@ -72,7 +72,7 @@ declare module "littlejsengine" {
      *  @param {Array<string>} [imageSources=[]] - List of images to load
      *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default
      *  @memberof Engine */
-    export function engineInit(gameInit: Function | (() => Promise<any>), gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, imageSources?: Array<string>, rootElement?: HTMLElement): void;
+    export function engineInit(gameInit: Function | (() => Promise<any>), gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, imageSources?: Array<string>, rootElement?: HTMLElement): Promise<any>;
     /** Update each engine object, remove destroyed objects, and update time
      *  @memberof Engine */
     export function engineObjectsUpdate(): void;
@@ -719,6 +719,11 @@ declare module "littlejsengine" {
      *  @return {string}
      *  @memberof Utilities */
     export function formatTime(t: number): string;
+    /** Fetches a JSON file from a URL and returns the parsed JSON object. Must be used with await!
+     *  @param {string} url - URL of JSON file
+     *  @return {Promise<object>}
+     *  @memberof Utilities */
+    export function fetchJSON(url: string): Promise<object>;
     /** Random global functions
      *  @namespace Random */
     /** Returns a random value between the two values passed in
@@ -785,6 +790,11 @@ declare module "littlejsengine" {
         /** Randomly returns either -1 or 1 deterministically
         *  @return {number} */
         sign(): number;
+        /** Returns a seeded random value between the two values passed in with a random sign
+        *  @param {number} [valueA]
+        *  @param {number} [valueB]
+        *  @return {number} */
+        floatSign(valueA?: number, valueB?: number): number;
     }
     /**
      * 2D Vector object with vector math library
@@ -1549,33 +1559,24 @@ declare module "littlejsengine" {
     /** Clears all input
      *  @memberof Input */
     export function clearInput(): void;
-    /**
-     * LittleJS Input System
-     * - Tracks keyboard down, pressed, and released
-     * - Tracks mouse buttons, position, and wheel
-     * - Tracks multiple analog gamepads
-     * - Touch input is handled as mouse input
-     * - Virtual gamepad for touch devices
-     * @namespace Input
-     */
-    /** Returns true if device key is down
-     *  @param {string|number} key
-     *  @param {number} [device]
+    /** Returns true if mouse button is down
+     *  @function
+     *  @param {number} button
      *  @return {boolean}
      *  @memberof Input */
-    export function mouseIsDown(key: string | number, device?: number): boolean;
-    /** Returns true if device key was pressed this frame
-     *  @param {string|number} key
-     *  @param {number} [device]
+    export function mouseIsDown(button: number): boolean;
+    /** Returns true if mouse button was pressed
+     *  @function
+     *  @param {number} button
      *  @return {boolean}
      *  @memberof Input */
-    export function mouseWasPressed(key: string | number, device?: number): boolean;
-    /** Returns true if device key was released this frame
-     *  @param {string|number} key
-     *  @param {number} [device]
+    export function mouseWasPressed(button: number): boolean;
+    /** Returns true if mouse button was released
+     *  @function
+     *  @param {number} button
      *  @return {boolean}
      *  @memberof Input */
-    export function mouseWasReleased(key: string | number, device?: number): boolean;
+    export function mouseWasReleased(button: number): boolean;
     /** Mouse pos in world space
      *  @type {Vector2}
      *  @memberof Input */
@@ -2595,6 +2596,8 @@ declare module "littlejsengine" {
         lineWidth: number;
         /** @property {string} */
         font: string;
+        /** @property {number} - override for text height */
+        textHeight: any;
         /** @property {boolean} */
         visible: boolean;
         /** @property {Array<UIObject>} */
@@ -2717,36 +2720,35 @@ declare module "littlejsengine" {
     /**
      * LittleJS Box2D Physics Plugin
      * - Box2dObject extends EngineObject with Box2D physics
-     * - Call box2dEngineInit() to start instead of normal engineInit()
+     * - Call box2dInit() before engineInit() to enable
      * - You will also need to include box2d.wasm.js
-     * - Uses box2d.js super fast web assembly port of Box2D
+     * - Uses a super fast web assembly port of Box2D
      * - More info: https://github.com/kripken/box2d.js
-     * - Fully wraps everything in Box2d
      * - Functions to create polygon, circle, and edge shapes
-     * - Raycasting and querying
-     * - Joint creation
      * - Contact begin and end callbacks
+     * - Wraps b2Vec2 type to/from Vector2
+     * - Raycasting and querying
+     * - Every type of joint
      * - Debug physics drawing
+     * @namespace Box2D
      */
     /** Global Box2d Plugin object
-     *  @type {Box2dPlugin} */
+     *  @type {Box2dPlugin}
+     *  @memberof Box2D */
     export let box2d: Box2dPlugin;
     /** Enable Box2D debug drawing
      *  @type {boolean}
-     *  @default */
+     *  @default
+     *  @memberof Box2D */
     export let box2dDebug: boolean;
     /** Enable Box2D debug drawing
-     *  @param {boolean} enable */
+     *  @param {boolean} enable
+     *  @memberof Box2D */
     export function box2dSetDebug(enable: boolean): void;
-    /** Box2d Init - Startup LittleJS engine with your callback functions
-     *  @param {Function|function():Promise} gameInit - Called once after the engine starts up
-     *  @param {Function} gameUpdate - Called every frame before objects are updated
-     *  @param {Function} gameUpdatePost - Called after physics and objects are updated, even when paused
-     *  @param {Function} gameRender - Called before objects are rendered, for drawing the background
-     *  @param {Function} gameRenderPost - Called after objects are rendered, useful for drawing UI
-     *  @param {Array<string>} [imageSources=[]] - List of images to load
-     *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default */
-    export function box2dEngineInit(gameInit: Function | (() => Promise<any>), gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, imageSources?: Array<string>, rootElement?: HTMLElement): void;
+    /** Box2d Init - Call with await before starting LittleJS to init box2d
+     *  @return {Promise<Box2dPlugin>}
+     *  @memberof Box2D */
+    export function box2dInit(): Promise<Box2dPlugin>;
     /**
      * Box2D Global Object
      * - Wraps Box2d world and provides global functions

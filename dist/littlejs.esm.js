@@ -13,8 +13,6 @@
  * @namespace Debug
  */
 
-
-
 /** True if debug is enabled
  *  @type {boolean}
  *  @default
@@ -579,8 +577,6 @@ function debugVideoCaptureUpdate()
  * @namespace Utilities
  */
 
-
-
 /** A shortcut to get Math.PI
  *  @type {number}
  *  @default Math.PI
@@ -760,6 +756,16 @@ function wave(frequency=1, amplitude=1, t=time)
  *  @memberof Utilities */
 function formatTime(t) { return (t/60|0) + ':' + (t%60<10?'0':'') + (t%60|0); }
 
+/** Fetches a JSON file from a URL and returns the parsed JSON object. Must be used with await!
+ *  @param {string} url - URL of JSON file
+ *  @return {Promise<object>}
+ *  @memberof Utilities */
+async function fetchJSON(url)
+{
+    const response = await fetch(url);
+    return response.json();
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Random global functions
@@ -855,6 +861,12 @@ class RandomGenerator
     /** Randomly returns either -1 or 1 deterministically
     *  @return {number} */
     sign() { return this.float() > .5 ? 1 : -1; }
+
+    /** Returns a seeded random value between the two values passed in with a random sign
+    *  @param {number} [valueA]
+    *  @param {number} [valueB]
+    *  @return {number} */
+    floatSign(valueA=1, valueB=0) { return this.float(valueA, valueB) * this.sign(); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1495,8 +1507,6 @@ class Timer
  * @namespace Settings
  */
 
-
-
 ///////////////////////////////////////////////////////////////////////////////
 // Camera settings
 
@@ -1981,8 +1991,6 @@ function setDebugKey(key) { debugKey = key; }
  * LittleJS Object System
  */
 
-
-
 /** 
  * LittleJS Object Base Object Class
  * - Top level object class used by the engine
@@ -2464,8 +2472,6 @@ class EngineObject
  * The LittleJS rendering solution is intentionally simple, feel free to adjust it for your needs!
  * @namespace Draw
  */
-
-
 
 /** The primary 2D canvas visible to the user
  *  @type {HTMLCanvasElement}
@@ -3088,8 +3094,6 @@ function setCursor(cursorStyle = 'auto')
  * @namespace Input
  */
 
-
-
 /** Returns true if device key is down
  *  @param {string|number} key
  *  @param {number} [device]
@@ -3141,21 +3145,21 @@ function clearInput() { inputData = [[]]; touchGamepadButtons = []; }
  *  @param {number} button
  *  @return {boolean}
  *  @memberof Input */
-const mouseIsDown = keyIsDown;
+function mouseIsDown(button) { return keyIsDown(button); }
 
 /** Returns true if mouse button was pressed
  *  @function
  *  @param {number} button
  *  @return {boolean}
  *  @memberof Input */
-const mouseWasPressed = keyWasPressed;
+function mouseWasPressed(button) { return keyWasPressed(button); }
 
 /** Returns true if mouse button was released
  *  @function
  *  @param {number} button
  *  @return {boolean}
  *  @memberof Input */
-const mouseWasReleased = keyWasReleased;
+function mouseWasReleased(button) { return keyWasReleased(button); }
 
 /** Mouse pos in world space
  *  @type {Vector2}
@@ -3613,8 +3617,6 @@ function touchGamepadRender()
  * - Speech synthesis functions
  * @namespace Audio
  */
-
-
 
 /** Audio context used by the engine
  *  @type {AudioContext}
@@ -4076,8 +4078,6 @@ function zzfxG
  * - Tile layers can also have collision with EngineObjects
  * @namespace TileCollision
  */
-
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // Tile Layer System
@@ -4542,8 +4542,6 @@ class TileCollisionLayer extends TileLayer
  * LittleJS Particle System
  */
 
-
-
 /**
  * Particle Emitter - Spawns particles with the given settings
  * @extends EngineObject
@@ -4888,8 +4886,6 @@ class Particle extends EngineObject
  * @namespace Medals
  */
 
-
-
 /** List of all medals
  *  @type {Object}
  *  @memberof Medals */
@@ -5076,8 +5072,6 @@ class Medal
  * - Supports shadertoy style post processing shaders
  * @namespace WebGL
  */
-
-
 
 /** The WebGL canvas which appears above the main canvas and below the overlay canvas
  *  @type {HTMLCanvasElement}
@@ -5401,8 +5395,6 @@ function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba=-1, rgba
  * @namespace Engine
  */
 
-
-
 /** Name of engine
  *  @type {string}
  *  @default
@@ -5413,7 +5405,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.12.4';
+const engineVersion = '1.12.5';
 
 /** Frames per second to update
  *  @type {number}
@@ -5495,7 +5487,7 @@ function engineAddPlugin(updateFunction, renderFunction)
  *  @param {Array<string>} [imageSources=[]] - List of images to load
  *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default
  *  @memberof Engine */
-function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
+async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
 {
     ASSERT(!mainContext, 'engine already initialized');
     ASSERT(Array.isArray(imageSources), 'pass in images as array');
@@ -5652,16 +5644,14 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
     }
 
-    function startEngine()
+    // wait for gameInit to load
+    async function startEngine()
     {
-        new Promise((resolve) => resolve(gameInit())).then(engineUpdate);
+        await gameInit();
+        engineUpdate();
     }
-
     if (headlessMode)
-    {
-        startEngine();
-        return;
-    }
+        return startEngine();
 
     // setup html
     const styleRoot = 
@@ -5738,7 +5728,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     }
 
     // load all of the images
-    Promise.all(promises).then(startEngine);
+    return Promise.all(promises).then(startEngine);
 }
 
 /** Update each engine object, remove destroyed objects, and update time
@@ -6017,8 +6007,6 @@ function drawEngineSplashScreen(t)
  * - Functions to unlock medals
  */
 
-
-
 /** Global Newgrounds object
  *  @type {NewgroundsPlugin}
  *  @memberof Medal */
@@ -6192,8 +6180,6 @@ class NewgroundsPlugin
  * - can be enabled to pass other canvases through a final shader
  */
 
-
-
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Global Post Process plugin object
@@ -6305,8 +6291,6 @@ class PostProcessPlugin
 /**
  * LittleJS ZzFXM Plugin
  */
-
-
 
 /**
  * Music Object - Stores a zzfx music track for later use
@@ -6476,8 +6460,6 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
  * - Images
  */
 
-
-
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Global UI system plugin object
@@ -6645,6 +6627,8 @@ class UIObject
         this.lineWidth  = uiSystem.defaultLineWidth;
         /** @property {string} */
         this.font       = uiSystem.defaultFont;
+        /** @property {number} - override for text height */
+        this.textHeight   = undefined;
         /** @property {boolean} */
         this.visible    = true;
         /** @property {Array<UIObject>} */
@@ -6755,7 +6739,8 @@ class UIText extends UIObject
     }
     render()
     {
-        uiSystem.drawText(this.text, this.pos, this.size, this.textColor, this.lineWidth, this.lineColor, this.align, this.font);
+        const textSize = vec2(this.size.x, this.textHeight || this.size.y);
+        uiSystem.drawText(this.text, this.pos, textSize, this.textColor, this.lineWidth, this.lineColor, this.align, this.font);
     }
 }
 
@@ -6818,7 +6803,9 @@ class UIButton extends UIObject
         const lineColor = this.mouseIsHeld ? this.color : this.lineColor;
         const color = this.mouseIsOver? this.hoverColor : this.color;
         uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor);
-        const textSize = vec2(this.size.x, this.size.y*.8);
+        
+        const textScale = .8; // scale text to fit in button
+        const textSize = vec2(this.size.x, this.textHeight || this.size.y*textScale);
         uiSystem.drawText(this.text, this.pos, textSize, 
             this.textColor, 0, undefined, this.align, this.font);
     }
@@ -6915,7 +6902,8 @@ class UIScrollbar extends UIObject
         const barColor = this.mouseIsHeld ? this.color : this.handleColor;
         uiSystem.drawRect(handlePos, handleSize, barColor, this.lineWidth, this.lineColor);
 
-        const textSize = vec2(this.size.x, this.size.y*.8);
+        const textScale = .8; // scale text to fit in scrollbar
+        const textSize = vec2(this.size.x, this.textHeight || this.size.y*textScale);
         uiSystem.drawText(this.text, this.pos, textSize, 
             this.textColor, 0, undefined, this.align, this.font);
     }
@@ -6924,31 +6912,33 @@ class UIScrollbar extends UIObject
 /**
  * LittleJS Box2D Physics Plugin
  * - Box2dObject extends EngineObject with Box2D physics
- * - Call box2dEngineInit() to start instead of normal engineInit()
+ * - Call box2dInit() before engineInit() to enable
  * - You will also need to include box2d.wasm.js
- * - Uses box2d.js super fast web assembly port of Box2D
+ * - Uses a super fast web assembly port of Box2D
  * - More info: https://github.com/kripken/box2d.js
- * - Fully wraps everything in Box2d
  * - Functions to create polygon, circle, and edge shapes
- * - Raycasting and querying
- * - Joint creation
  * - Contact begin and end callbacks
+ * - Wraps b2Vec2 type to/from Vector2
+ * - Raycasting and querying
+ * - Every type of joint
  * - Debug physics drawing
+ * @namespace Box2D
  */
 
-
- 
 /** Global Box2d Plugin object
- *  @type {Box2dPlugin} */
+ *  @type {Box2dPlugin}
+ *  @memberof Box2D */
 let box2d;
 
 /** Enable Box2D debug drawing
  *  @type {boolean}
- *  @default */
+ *  @default
+ *  @memberof Box2D */
 let box2dDebug = false;
 
 /** Enable Box2D debug drawing
- *  @param {boolean} enable */
+ *  @param {boolean} enable
+ *  @memberof Box2D */
 function box2dSetDebug(enable) { box2dDebug = enable; }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -7050,7 +7040,7 @@ class Box2dObject extends EngineObject
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
      *  @param {boolean} [isSensor] */
-    addShape(shape, density=1, friction=.2, restitution=0, isSensor=false)
+    addShape(shape, density=1, friction=1, restitution=0, isSensor=false)
     {
         const fd = new box2d.instance.b2FixtureDef();
         fd.set_shape(shape);
@@ -8689,28 +8679,18 @@ class Box2dPlugin
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-/** Box2d Init - Startup LittleJS engine with your callback functions
- *  @param {Function|function():Promise} gameInit - Called once after the engine starts up
- *  @param {Function} gameUpdate - Called every frame before objects are updated
- *  @param {Function} gameUpdatePost - Called after physics and objects are updated, even when paused
- *  @param {Function} gameRender - Called before objects are rendered, for drawing the background
- *  @param {Function} gameRenderPost - Called after objects are rendered, useful for drawing UI
- *  @param {Array<string>} [imageSources=[]] - List of images to load
- *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default */
-function box2dEngineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources, rootElement)
+/** Box2d Init - Call with await before starting LittleJS to init box2d
+ *  @return {Promise<Box2dPlugin>}
+ *  @memberof Box2D */
+async function box2dInit()
 {
-    Box2D().then(box2dInstance=>
-    {
-        // create box2d object
-        new Box2dPlugin(box2dInstance);
-        setupDebugDraw();
+    // load box2d
+    new Box2dPlugin(await Box2D());
+    setupDebugDraw();
+    engineAddPlugin(box2dUpdate, box2dRender);
+    return box2d;
 
-        // start littlejs
-        engineAddPlugin(box2dUpdate, box2dRender);
-        engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources, rootElement);
-    });
-
-    // hook up box2d plugin to update and render
+    // add the box2d plugin to the engine
     function box2dUpdate()
     {
         if (!paused)
@@ -8943,6 +8923,7 @@ export
 	isIntersecting,
 	wave,
 	formatTime,
+	fetchJSON,
 
 	// Random
 	rand,
@@ -9122,7 +9103,7 @@ export
     box2d,
     box2dDebug,
     box2dSetDebug,
-    box2dEngineInit,
+    box2dInit,
     Box2dPlugin,
     Box2dObject,
     Box2dRaycastResult,
