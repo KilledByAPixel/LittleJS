@@ -101,7 +101,7 @@ export class CarObject extends LJS.Box2dObject
 {
     constructor(pos)
     {
-        super(pos, vec2(), 0, 0, LJS.randColor());
+        super(pos, vec2(), 0, 0, LJS.RED);
         const carPoints = [
             vec2(-1.5,-.5),
             vec2(1.5, -.5),
@@ -112,50 +112,49 @@ export class CarObject extends LJS.Box2dObject
         ];
         this.addPoly(carPoints);
 
+        // create wheels
+        const diameter    = 1;
+        const density     = 1;
+        const friction    = 1;
+        const restitution = 0;
+        const damping     = .7;
+        const frequency   = 4;
+        const maxTorque   = 35;
+        const sprite      = Game.spriteAtlas.wheel;
+        this.wheels = [];
+        const makeWheel = (pos, isMotor) =>
         {
-            // wheel settings
-            const diameter    = .8;
-            const density     = 1;
-            const friction    = 2;
-            const restitution = 0;
-            const damping     = .7;
-            const frequencyHz = 4;
-            const maxTorque   = 50;
-            const sprite      = Game.spriteAtlas.wheel;
-
-            // create wheels
-            this.wheels = [];
-            const makeWheel = (pos, isMotor) =>
+            const wheel = new LJS.Box2dObject(pos, vec2(diameter), sprite);
+            const joint = new LJS.Box2dWheelJoint(this, wheel);
+            joint.setSpringDampingRatio(damping);
+            joint.setSpringFrequencyHz(frequency);
+            if (isMotor)
             {
-                const wheel = new LJS.Box2dObject(pos, vec2(diameter), sprite);
-                wheel.addCircle(diameter, vec2(), density, friction, restitution);
-                this.wheels.push(wheel);
-                const joint = new LJS.Box2dWheelJoint(this, wheel);
-                joint.setSpringDampingRatio(damping);
-                joint.setSpringFrequencyHz(frequencyHz);
-                if (isMotor)
-                {
-                    joint.setMaxMotorTorque(maxTorque);
-                    joint.enableMotor(true);
-                    this.wheelMotorJoint = joint;
-                }
+                joint.enableMotor();
+                joint.setMaxMotorTorque(maxTorque);
+                this.wheelMotorJoint = joint;
             }
-
-            makeWheel(pos.add(vec2( 1, -.6)));
-            makeWheel(pos.add(vec2(-1, -.65)), true);
+            wheel.addCircle(diameter, vec2(), density, friction, restitution);
+            this.wheels.push(wheel);
         }
+
+        makeWheel(pos.add(vec2( 1, -.6)));
+        makeWheel(pos.add(vec2(-1, -.65)), true);
     }
-    applyMotorInput(input)
+    update()
     {
+        // car controls
         const maxSpeed = 40;
         const brakeAmount = .8;
+        const input = LJS.keyDirection().x;
         let s = this.wheelMotorJoint.getMotorSpeed();
-        s = input ? LJS.clamp(s + input, -maxSpeed, maxSpeed) : s * brakeAmount;
+        s = input ? LJS.clamp(s - input, -maxSpeed, maxSpeed) : s * brakeAmount;
         this.wheelMotorJoint.setMotorSpeed(s);
+        super.update();
     }
     destroy()
     {
-        this.wheels.forEach(o=>o && o.destroy());
+        this.wheels.forEach(o=>o.destroy());
         super.destroy();
     }
 }

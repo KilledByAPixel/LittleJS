@@ -23,11 +23,15 @@ import * as GameObjects from './gameObjects.js';
 import * as Game from './game.js';
 const {vec2} = LJS;
 
-export function loadScene(scene)
+export let scene, sceneName;
+
+export function loadScene(_scene)
 {
+    scene = _scene;
+
     if (scene == 0)
     {
-        Game.setSceneName('Shapes');
+        sceneName = 'Shapes';
         GameObjects.spawnRandomEdges();
         GameObjects.spawnBox(vec2(11,8), 4, LJS.randColor(), LJS.box2d.bodyTypeStatic, false);
         GameObjects.spawnCircle(vec2(20,8), 4, LJS.randColor(), LJS.box2d.bodyTypeStatic, false);
@@ -37,14 +41,14 @@ export function loadScene(scene)
     }
     if (scene == 1)
     {
-        Game.setSceneName('Pyramid');
+        sceneName = 'Pyramid';
         GameObjects.spawnPyramid(vec2(20,0), 15);
         GameObjects.spawnBox(vec2(10,2), 4, LJS.randColor());
         GameObjects.spawnCircle(vec2(30,2), 4, LJS.randColor());
     }
     if (scene == 2)
     {
-        Game.setSceneName('Dominoes');
+        sceneName = 'Dominoes';
         GameObjects.spawnDominoes(vec2(11,11), 11);
         GameObjects.spawnDominoes(vec2(2,0), 13, vec2(1,3));
         GameObjects.spawnCircle(vec2(10,20), 2, LJS.randColor());
@@ -54,14 +58,14 @@ export function loadScene(scene)
     }
     if (scene == 3)
     {
-        Game.setSceneName('Car');
-        Game.setCarObject(new GameObjects.CarObject(vec2(10,2)));
+        sceneName = 'Car';
+        new GameObjects.CarObject(vec2(10,2));
         GameObjects.spawnBox(vec2(20,0), vec2(10,2), LJS.randColor(), LJS.box2d.bodyTypeStatic, false, -.2);
         GameObjects.spawnPyramid(vec2(32,0), 6);
     }
     if (scene == 4)
     {
-        Game.setSceneName('Rope');
+        sceneName = 'Rope';
         const startPos = vec2(20, 14);
         const angle = LJS.PI/2;
         const color = LJS.randColor();
@@ -78,14 +82,14 @@ export function loadScene(scene)
     }
     if (scene == 5)
     {
-        Game.setSceneName('Raycasts');
+        sceneName = 'Raycasts';
         GameObjects.spawnRandomEdges();
         for (let i=100;i--;)
             GameObjects.spawnRandomObject(vec2(LJS.rand(1,39), LJS.rand(20)), 2, LJS.box2d.bodyTypeStatic, LJS.rand(LJS.PI*2));
     }
     if (scene == 6)
     {
-        Game.setSceneName('Joints');
+        sceneName = 'Joints';
         {
             // prismatic joint
             const o1 = GameObjects.spawnBox(vec2(20,8), vec2(3,2), LJS.randColor());
@@ -156,7 +160,7 @@ export function loadScene(scene)
     }
     if (scene == 7)
     {
-        Game.setSceneName('Contacts');
+        sceneName = 'Contacts';
         new GameObjects.ContactTester(vec2(15,8), vec2(5), LJS.RED, LJS.RED);
         new GameObjects.ContactTester(vec2(25,8), vec2(5), LJS.CYAN, LJS.CYAN, false, false);
         for (let i=200;i--;)
@@ -164,19 +168,19 @@ export function loadScene(scene)
     }
     if (scene == 8)
     {
-        Game.setSceneName('Mobile');
+        sceneName = 'Mobile';
         const pos = vec2(20, 16);
         const mobile = new GameObjects.MobileObject(pos, 12, 2, 5);
         new LJS.Box2dRevoluteJoint(Game.groundObject, mobile, pos);
     }
     if (scene == 9)
     {
-        Game.setSceneName('Cloth');
+        sceneName = 'Cloth'
         new GameObjects.ClothObject(vec2(20, 9), vec2(15), vec2(24), LJS.randColor());
     }
     if (scene == 10)
     {
-        Game.setSceneName('Softbodies');
+        sceneName = 'Softbodies';
         for(let i=3;i--;)
             new GameObjects.SoftBodyObject(vec2(20, 3+i*7), vec2(6-i), vec2(9-i), LJS.randColor());
     }
