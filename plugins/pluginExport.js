@@ -2,8 +2,6 @@
  * LittleJS Module Plugins Export
  */
 
-'use strict';
-
 export
 {
     // Newgrounds
