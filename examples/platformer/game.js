@@ -16,13 +16,16 @@ import * as GamePlayer from './gamePlayer.js';
 import * as GameLevel from './gameLevel.js';
 const {vec2} = LJS;
 
-// enable touch gamepad on touch devices
-LJS.setTouchGamepadEnable(true);
+// load the game level data
+export const gameLevelData = await LJS.fetchJSON('gameLevelData.json');
 
 // globals
-export let spriteAtlas, player, score, deaths, gameLevelData;
+export let spriteAtlas, player, score, deaths;
 export function addToScore(delta=1) { score += delta; }
 export function addToDeaths() { ++deaths; }
+
+// enable touch gamepad on touch devices
+LJS.setTouchGamepadEnable(true);
 
 ///////////////////////////////////////////////////////////////////////////////
 function loadLevel()
@@ -41,18 +44,6 @@ function loadLevel()
 ///////////////////////////////////////////////////////////////////////////////
 async function gameInit()
 {
-    try
-    {
-        // load level data from external JSON file
-        const response = await fetch('gameLevelData.json');
-        gameLevelData = await response.json();
-        console.log('Level data loaded successfully');
-    } 
-    catch (error)
-    {
-        console.error('Failed to load level data!');
-    }
-
     // engine settings
     LJS.setGravity(vec2(0,-.01));
     LJS.setObjectDefaultDamping(.99);
