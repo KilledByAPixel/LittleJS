@@ -2735,6 +2735,9 @@ declare module "littlejsengine" {
      *  @type {boolean}
      *  @default */
     export let box2dDebug: boolean;
+    /** Enable Box2D debug drawing
+     *  @param {boolean} enable */
+    export function box2dSetDebug(enable: boolean): void;
     /** Box2d Init - Startup LittleJS engine with your callback functions
      *  @param {Function|function():Promise} gameInit - Called once after the engine starts up
      *  @param {Function} gameUpdate - Called every frame before objects are updated

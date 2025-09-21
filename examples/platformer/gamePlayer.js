@@ -9,22 +9,27 @@
 
 'use strict';
 
-class Player extends Character
+// import LittleJS module
+import * as LJS from '../../dist/littlejs.esm.js';
+import * as GameCharacter from './gameCharacter.js';
+import * as Game from './game.js';
+
+export class Player extends GameCharacter.Character
 {
     update()
     {
         // movement control
-        this.moveInput     = isUsingGamepad ? gamepadStick(0) : keyDirection();
-        this.holdingJump   = keyIsDown('ArrowUp') || gamepadIsDown(0);
-        this.holdingShoot  = !isUsingGamepad && mouseIsDown(0) || keyIsDown('KeyZ') || gamepadIsDown(2);
-        this.pressingThrow = keyIsDown('KeyC') || mouseIsDown(1) || gamepadIsDown(1);
-        this.pressedDodge  = keyIsDown('KeyX') || mouseIsDown(2) || gamepadIsDown(3);
+        this.moveInput     = LJS.isUsingGamepad ? LJS.gamepadStick(0) : LJS.keyDirection();
+        this.holdingJump   = LJS.keyIsDown('ArrowUp') || LJS.gamepadIsDown(0);
+        this.holdingShoot  = !LJS.isUsingGamepad && LJS.mouseIsDown(0) || LJS.keyIsDown('KeyZ') || LJS.gamepadIsDown(2);
+        this.pressingThrow = LJS.keyIsDown('KeyC') || LJS.mouseIsDown(1) || LJS.gamepadIsDown(1);
+        this.pressedDodge  = LJS.keyIsDown('KeyX') || LJS.mouseIsDown(2) || LJS.gamepadIsDown(3);
         super.update();
     }
 
     kill()
     {
-        ++deaths;
+        Game.addToDeaths();
         super.kill();
     }
 }

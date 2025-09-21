@@ -29,6 +29,7 @@ export
     // Box2D Physics
     box2d,
     box2dDebug,
+    box2dSetDebug,
     box2dEngineInit,
     Box2dPlugin,
     Box2dObject,

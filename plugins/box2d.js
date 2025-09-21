@@ -24,6 +24,10 @@ let box2d;
  *  @default */
 let box2dDebug = false;
 
+/** Enable Box2D debug drawing
+ *  @param {boolean} enable */
+function box2dSetDebug(enable) { box2dDebug = enable; }
+
 ///////////////////////////////////////////////////////////////////////////////
 /** 
  * Box2D Object - extend with your own custom physics objects

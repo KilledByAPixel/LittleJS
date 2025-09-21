@@ -4887,7 +4887,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.12.3';
+const engineVersion = '1.12.4';
 
 /** Frames per second to update
  *  @type {number}
@@ -6420,6 +6420,10 @@ let box2d;
  *  @type {boolean}
  *  @default */
 let box2dDebug = false;
+
+/** Enable Box2D debug drawing
+ *  @param {boolean} enable */
+function box2dSetDebug(enable) { box2dDebug = enable; }
 
 ///////////////////////////////////////////////////////////////////////////////
 /** 
