@@ -36,6 +36,11 @@ const enginePluginFiles =
     `${PLUGIN_FOLDER}/uiSystem.js`,
     `${PLUGIN_FOLDER}/box2d.js`,
 ];
+const engineExtraFiles =
+[
+    `${PLUGIN_FOLDER}/box2d.wasm.js`,
+    `${PLUGIN_FOLDER}/box2d.wasm.wasm`,
+];
 const asciiArt =`
       ~~~~°°°°ooo°oOo°ooOooOooOo.
  __________   ________   ____'°oO.
@@ -57,6 +62,11 @@ try
     // Setup build folder
     fs.rmSync(BUILD_FOLDER, { recursive: true, force: true });
     fs.mkdirSync(BUILD_FOLDER);
+
+    // copy extra files to build folder
+    for (const file of engineExtraFiles)
+        fs.copyFileSync(file, `${BUILD_FOLDER}/${file.substring(file.lastIndexOf('/')+1)}`);
+
 }
 catch (e) { handleError(e, 'Failed to create build folder!'); }
 
