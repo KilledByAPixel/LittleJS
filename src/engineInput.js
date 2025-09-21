@@ -61,21 +61,21 @@ function clearInput() { inputData = [[]]; touchGamepadButtons = []; }
  *  @param {number} button
  *  @return {boolean}
  *  @memberof Input */
-const mouseIsDown = keyIsDown;
+function mouseIsDown(button) { return keyIsDown(button); }
 
 /** Returns true if mouse button was pressed
  *  @function
  *  @param {number} button
  *  @return {boolean}
  *  @memberof Input */
-const mouseWasPressed = keyWasPressed;
+function mouseWasPressed(button) { return keyWasPressed(button); }
 
 /** Returns true if mouse button was released
  *  @function
  *  @param {number} button
  *  @return {boolean}
  *  @memberof Input */
-const mouseWasReleased = keyWasReleased;
+function mouseWasReleased(button) { return keyWasReleased(button); }
 
 /** Mouse pos in world space
  *  @type {Vector2}
