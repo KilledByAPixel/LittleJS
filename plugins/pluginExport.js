@@ -30,7 +30,7 @@ export
     box2d,
     box2dDebug,
     box2dSetDebug,
-    box2dEngineInit,
+    box2dInit,
     Box2dPlugin,
     Box2dObject,
     Box2dRaycastResult,

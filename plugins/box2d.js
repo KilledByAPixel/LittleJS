@@ -1,31 +1,35 @@
 /**
  * LittleJS Box2D Physics Plugin
  * - Box2dObject extends EngineObject with Box2D physics
- * - Call box2dEngineInit() to start instead of normal engineInit()
+ * - Call box2dInit() before engineInit() to enable
  * - You will also need to include box2d.wasm.js
- * - Uses box2d.js super fast web assembly port of Box2D
+ * - Uses a super fast web assembly port of Box2D
  * - More info: https://github.com/kripken/box2d.js
- * - Fully wraps everything in Box2d
  * - Functions to create polygon, circle, and edge shapes
- * - Raycasting and querying
- * - Joint creation
  * - Contact begin and end callbacks
+ * - Wraps b2Vec2 type to/from Vector2
+ * - Raycasting and querying
+ * - Every type of joint
  * - Debug physics drawing
+ * @namespace Box2D
  */
 
 'use strict';
  
 /** Global Box2d Plugin object
- *  @type {Box2dPlugin} */
+ *  @type {Box2dPlugin}
+ *  @memberof Box2D */
 let box2d;
 
 /** Enable Box2D debug drawing
  *  @type {boolean}
- *  @default */
+ *  @default
+ *  @memberof Box2D */
 let box2dDebug = false;
 
 /** Enable Box2D debug drawing
- *  @param {boolean} enable */
+ *  @param {boolean} enable
+ *  @memberof Box2D */
 function box2dSetDebug(enable) { box2dDebug = enable; }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -127,7 +131,7 @@ class Box2dObject extends EngineObject
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
      *  @param {boolean} [isSensor] */
-    addShape(shape, density=1, friction=.2, restitution=0, isSensor=false)
+    addShape(shape, density=1, friction=1, restitution=0, isSensor=false)
     {
         const fd = new box2d.instance.b2FixtureDef();
         fd.set_shape(shape);
@@ -1766,28 +1770,18 @@ class Box2dPlugin
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-/** Box2d Init - Startup LittleJS engine with your callback functions
- *  @param {Function|function():Promise} gameInit - Called once after the engine starts up
- *  @param {Function} gameUpdate - Called every frame before objects are updated
- *  @param {Function} gameUpdatePost - Called after physics and objects are updated, even when paused
- *  @param {Function} gameRender - Called before objects are rendered, for drawing the background
- *  @param {Function} gameRenderPost - Called after objects are rendered, useful for drawing UI
- *  @param {Array<string>} [imageSources=[]] - List of images to load
- *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default */
-function box2dEngineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources, rootElement)
+/** Box2d Init - Call with await before starting LittleJS to init box2d
+ *  @return {Promise<Box2dPlugin>}
+ *  @memberof Box2D */
+async function box2dInit()
 {
-    Box2D().then(box2dInstance=>
-    {
-        // create box2d object
-        new Box2dPlugin(box2dInstance);
-        setupDebugDraw();
+    // load box2d
+    new Box2dPlugin(await Box2D());
+    setupDebugDraw();
+    engineAddPlugin(box2dUpdate, box2dRender);
+    return box2d;
 
-        // start littlejs
-        engineAddPlugin(box2dUpdate, box2dRender);
-        engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources, rootElement);
-    });
-
-    // hook up box2d plugin to update and render
+    // add the box2d plugin to the engine
     function box2dUpdate()
     {
         if (!paused)
