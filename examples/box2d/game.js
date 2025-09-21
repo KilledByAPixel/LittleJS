@@ -18,18 +18,17 @@ import * as Scenes from './scenes.js';
 const {vec2, hsl} = LJS;
 
 ///////////////////////////////////////////////////////////////////////////////
-//box2dDebug = 1; // enable box2d debug draw
-
 // game variables
+
+//LJS.box2dSetDebug(true); // enable box2d debug draw
+
 const maxScenes = 11;
-let scene = 0;
-let sceneName;
-let spriteAtlas;
-let groundObject;
-let mouseJoint;
-let car;
-let repeatSpawnTimer = new LJS.Timer;
+export let scene = 0, sceneName;
+export let spriteAtlas, groundObject, car, mouseJoint, repeatSpawnTimer = new LJS.Timer;
 const sound_click = new LJS.Sound([.2,.1,,,,.01,,,,,,,,,,,,,,,-500]);
+
+export function setSceneName(name) { sceneName = name; }
+export function setCarObject(carObject) { car = carObject; }
 
 ///////////////////////////////////////////////////////////////////////////////
 function setScene(_scene)
@@ -191,20 +190,6 @@ function gameRenderPost()
 
     function drawText(text, size=40, gap=50)
     { LJS.drawTextScreen(text, pos, size, LJS.WHITE, size*.1); pos.y += gap; }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Exports
-
-function setSceneName(name) { sceneName = name; }
-function setCarObject(carObject) { car = carObject; }
-
-export
-{
-    spriteAtlas,
-    groundObject,
-    setSceneName,
-    setCarObject
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -6,10 +6,8 @@
 
 // import LittleJS module
 import * as LJS from '../../dist/littlejs.esm.js';
-const {tile, vec2, hsl} = LJS;
-
-// import game module
 import * as Game from './game.js';
+const {tile, vec2, hsl} = LJS;
 
 ///////////////////////////////////////////////////////////////////////////////
 // sound effects

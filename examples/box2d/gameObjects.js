@@ -14,7 +14,7 @@ const {vec2, hsl} = LJS;
 ///////////////////////////////////////////////////////////////////////////////
 // spawn object functions
 
-function spawnBox(pos, size=1, color=LJS.WHITE, type=LJS.box2d.bodyTypeDynamic, applyTexture=true, angle=0)
+export function spawnBox(pos, size=1, color=LJS.WHITE, type=LJS.box2d.bodyTypeDynamic, applyTexture=true, angle=0)
 {
     size = typeof size == 'number' ? vec2(size) : size; // square
     const o = new LJS.Box2dObject(pos, size, applyTexture && Game.spriteAtlas.squareOutline, angle, color, type);
@@ -23,7 +23,7 @@ function spawnBox(pos, size=1, color=LJS.WHITE, type=LJS.box2d.bodyTypeDynamic, 
     return o;
 }
 
-function spawnCircle(pos, diameter=1, color=LJS.WHITE, type=LJS.box2d.bodyTypeDynamic, applyTexture=true, angle=0)
+export function spawnCircle(pos, diameter=1, color=LJS.WHITE, type=LJS.box2d.bodyTypeDynamic, applyTexture=true, angle=0)
 {
     const size = vec2(diameter);
     const o = new LJS.Box2dObject(pos, size, applyTexture && Game.spriteAtlas.circleOutline, angle, color, type);
@@ -31,14 +31,14 @@ function spawnCircle(pos, diameter=1, color=LJS.WHITE, type=LJS.box2d.bodyTypeDy
     return o;
 }
 
-function spawnRandomPoly(pos, diameter=1, color=LJS.WHITE, type=LJS.box2d.bodyTypeDynamic, angle=0)
+export function spawnRandomPoly(pos, diameter=1, color=LJS.WHITE, type=LJS.box2d.bodyTypeDynamic, angle=0)
 {
     const o = new LJS.Box2dObject(pos, vec2(), 0, angle, color, type);
     o.addRandomPoly(diameter);
     return o;
 }
 
-function spawnRandomObject(pos, scale=1, type=LJS.box2d.bodyTypeDynamic, angle=0)
+export function spawnRandomObject(pos, scale=1, type=LJS.box2d.bodyTypeDynamic, angle=0)
 {
     if (LJS.randInt(2))
     {
@@ -52,20 +52,20 @@ function spawnRandomObject(pos, scale=1, type=LJS.box2d.bodyTypeDynamic, angle=0
     }
 }
 
-function spawnPyramid(pos, count)
+export function spawnPyramid(pos, count)
 {
     for (let i=count+1;i--;)
     for (let j=i;j--;)
         spawnBox(pos.add(vec2(j-i/2+.5,count-i+.5)), 1, LJS.randColor());
 }
 
-function spawnDominoes(pos, count, size=vec2(.5,2))
+export function spawnDominoes(pos, count, size=vec2(.5,2))
 {
     for (let i=count; i--;)
         spawnBox(pos.add(vec2(i*size.y*.9,size.y/2)), size, LJS.randColor());
 }
 
-function spawnRandomEdges()
+export function spawnRandomEdges()
 {
     // edge list along bottom
     const edgePoints = [];
@@ -77,7 +77,7 @@ function spawnRandomEdges()
     o.addEdgeList(edgePoints);
 }
 
-function spawnRope(startPos, count, angle=PI, color=LJS.WHITE, size=vec2(.3,1))
+export function spawnRope(startPos, count, angle=PI, color=LJS.WHITE, size=vec2(.3,1))
 {
     let lastObject = Game.groundObject;
     for (let i=0; i<count; ++i)
@@ -97,7 +97,7 @@ function spawnRope(startPos, count, angle=PI, color=LJS.WHITE, size=vec2(.3,1))
 ///////////////////////////////////////////////////////////////////////////////
 
 // simple car vehicle using wheel joints
-class CarObject extends LJS.Box2dObject
+export class CarObject extends LJS.Box2dObject
 {
     constructor(pos)
     {
@@ -163,7 +163,7 @@ class CarObject extends LJS.Box2dObject
 ///////////////////////////////////////////////////////////////////////////////
 
 // changes objects color when touched
-class ContactTester extends LJS.Box2dObject
+export class ContactTester extends LJS.Box2dObject
 {
     constructor(pos, size, color, contactColor, isCircle=true, isSensor=true)
     {
@@ -179,7 +179,7 @@ class ContactTester extends LJS.Box2dObject
 ///////////////////////////////////////////////////////////////////////////////
 
 // balanced recursive mobile object with revolve joints
-class MobileObject extends LJS.Box2dObject
+export class MobileObject extends LJS.Box2dObject
 {
     constructor(anchor, w, h, depth)
     {
@@ -210,7 +210,7 @@ class MobileObject extends LJS.Box2dObject
 ///////////////////////////////////////////////////////////////////////////////
 
 // pulley object renders a rope to connected point
-class PulleyJointObjects extends LJS.Box2dObject
+export class PulleyJointObjects extends LJS.Box2dObject
 {
     constructor(pos, size, color, connectionPos)
     {
@@ -230,7 +230,7 @@ class PulleyJointObjects extends LJS.Box2dObject
 ///////////////////////////////////////////////////////////////////////////////
 
 // motor object renders a rope to connected point
-class MotorJointObject extends LJS.Box2dObject
+export class MotorJointObject extends LJS.Box2dObject
 {
     constructor(pos, size, color, otherObject)
     {
@@ -253,7 +253,7 @@ class MotorJointObject extends LJS.Box2dObject
 ///////////////////////////////////////////////////////////////////////////////
 
 // soft body sim using grid of weld joints
-class SoftBodyObject extends LJS.Box2dObject
+export class SoftBodyObject extends LJS.Box2dObject
 {
     constructor(pos, scale, sizeCount, color)
     {
@@ -322,7 +322,7 @@ class SoftBodyObject extends LJS.Box2dObject
 ///////////////////////////////////////////////////////////////////////////////
 
 // cloth sim using grid of rope joints
-class ClothObject extends LJS.Box2dObject
+export class ClothObject extends LJS.Box2dObject
 {
     constructor(pos, scale, sizeCount, color, maxJointStress=10)
     {
@@ -451,7 +451,7 @@ class ClothObject extends LJS.Box2dObject
 
 const sound_explosion = new LJS.Sound([.5,.2,72,.01,.01,.2,4,,,,,,,1,,.5,.1,.5,.02]);
 
-function explosion(pos, radius=3, strength=300)
+export function explosion(pos, radius=3, strength=300)
 {
     sound_explosion.play(pos);
     const objects = LJS.box2d.circleCastAll(pos, (radius*2));
@@ -487,27 +487,4 @@ function explosion(pos, radius=3, strength=300)
         .9, 1, 0, 3.14, .05, // damp, angleDamp, gravity, particleCone, fade
         1, 0, 1, 0, 1e9      // randomness, collide, additive, colorLinear, renderOrder
     );
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Exports
-
-export 
-{
-    spawnBox, 
-    spawnCircle, 
-    spawnRandomPoly, 
-    spawnRandomObject, 
-    spawnPyramid, 
-    spawnDominoes, 
-    spawnRandomEdges,
-    spawnRope,
-    explosion,
-    CarObject,
-    ContactTester,
-    MobileObject,
-    PulleyJointObjects,
-    MotorJointObject,
-    SoftBodyObject,
-    ClothObject,
 }

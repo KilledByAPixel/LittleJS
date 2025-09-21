@@ -15,8 +15,17 @@ const {vec2, hsl} = LJS;
 
 ///////////////////////////////////////////////////////////////////////////////
 // game objects
-let ball, score, brickCount, paddle;
+export let ball, score, brickCount, paddle;
 export const levelSize = vec2(38, 20);
+
+export function changeBrickCount(delta)
+{
+    brickCount += delta;
+    
+    // increase score when brick is destroyed
+    if (delta < 0)
+        score -= delta;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameReset()
@@ -155,24 +164,6 @@ function setupPostProcess()
 
     const includeOverlay = true;
     new LJS.PostProcessPlugin(televisionShader, includeOverlay);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Exports
-
-function changeBrickCount(delta)
-{
-    brickCount += delta;
-    
-    // increase score when brick is destroyed
-    if (delta < 0)
-        score -= delta;
-}
-
-export
-{
-    paddle,
-    changeBrickCount
 }
 
 ///////////////////////////////////////////////////////////////////////////////
