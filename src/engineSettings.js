@@ -142,11 +142,11 @@ let objectDefaultFriction = .8;
  *  @memberof Settings */
 let objectMaxSpeed = 1;
 
-/** How much gravity to apply to objects along the Y axis, negative is down
- *  @type {Number}
+/** How much gravity to apply to objects, negative Y is down
+ *  @type {Vector2}
  *  @default
  *  @memberof Settings */
-let gravity = 0;
+let gravity = vec2();
 
 /** Scales emit rate of particles, useful for low graphics mode (0 disables particle emitters)
  *  @type {Number}
@@ -377,8 +377,8 @@ function setObjectDefaultFriction(friction) { objectDefaultFriction = friction; 
  *  @memberof Settings */
 function setObjectMaxSpeed(speed) { objectMaxSpeed = speed; }
 
-/** Set how much gravity to apply to objects along the Y axis
- *  @param {Number} newGravity
+/** Set how much gravity to apply to objects
+ *  @param {Vector2} newGravity
  *  @memberof Settings */
 function setGravity(newGravity) { gravity = newGravity; }
 

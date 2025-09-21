@@ -56,7 +56,7 @@ function gameInit()
     cameraScale = 48;
 
     // enable gravity
-    gravity = -.01;
+    gravity.y = -.01;
 
     // create particle emitter
     particleEmitter = new ParticleEmitter(
