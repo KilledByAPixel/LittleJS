@@ -284,6 +284,12 @@ class RandomGenerator
     /** Randomly returns either -1 or 1 deterministically
     *  @return {number} */
     sign() { return this.float() > .5 ? 1 : -1; }
+
+    /** Returns a seeded random value between the two values passed in with a random sign
+    *  @param {number} [valueA]
+    *  @param {number} [valueB]
+    *  @return {number} */
+    floatSign(valueA=1, valueB=0) { return this.float(valueA, valueB) * this.sign(); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
