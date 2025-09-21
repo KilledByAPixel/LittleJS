@@ -189,6 +189,16 @@ function wave(frequency=1, amplitude=1, t=time)
  *  @memberof Utilities */
 function formatTime(t) { return (t/60|0) + ':' + (t%60<10?'0':'') + (t%60|0); }
 
+/** Fetches a JSON file from a URL and returns the parsed JSON object. Must be used with await!
+ *  @param {string} url - URL of JSON file
+ *  @return {Promise<object>}
+ *  @memberof Utilities */
+async function fetchJSON(url)
+{
+    const response = await fetch(url);
+    return response.json();
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Random global functions

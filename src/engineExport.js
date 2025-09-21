@@ -149,6 +149,7 @@ export
 	isIntersecting,
 	wave,
 	formatTime,
+	fetchJSON,
 
 	// Random
 	rand,
