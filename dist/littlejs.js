@@ -13,8 +13,6 @@
  * @namespace Debug
  */
 
-
-
 /** True if debug is enabled
  *  @type {Boolean}
  *  @default
@@ -90,8 +88,10 @@ function ASSERT(assert, output)
  *  @memberof Debug */
 function debugRect(pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)
 {
+    if (typeof size == 'number')
+        size = vec2(size); // allow passing in floats
     ASSERT(typeof color == 'string', 'pass in css color strings'); 
-    debugPrimitives.push({pos, size:vec2(size), color, time:new Timer(time), angle, fill});
+    debugPrimitives.push({pos, size, color, time:new Timer(time), angle, fill});
 }
 
 /** Draw a debug poly in world space
@@ -211,17 +211,17 @@ function debugSaveDataURL(dataURL, filename)
  *  @memberof Debug */
 function debugShowErrors()
 {
-    onunhandledrejection = (event)=>showError(event.reason);
-    onerror = (event, source, lineno, colno)=>
-        showError(`${event}\n${source}\nLn ${lineno}, Col ${colno}`);
-
     const showError = (message)=>
     {
         // replace entire page with error message
         document.body.style.display = '';
         document.body.style.backgroundColor = '#111';
-        document.body.innerHTML = `<pre style=color:#f00;font-size:50px>` + message;
+        document.body.innerHTML = `<pre style=color:#f00;font-size:50px;white-space:pre-wrap>` + message;
     }
+    onunhandledrejection = (event)=>
+        showError(event.reason.stack || event.reason);
+    onerror = (message, source, lineno, colno)=>
+        showError(`${message}\n${source}\nLn ${lineno}, Col ${colno}`);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -254,11 +254,17 @@ function debugUpdate()
             debugRaycast = !debugRaycast;
         if (keyWasPressed('Digit5'))
             debugTakeScreenshot = 1;
+        if (keyWasPressed('Digit6'))
+            debugVideoCaptureIsActive() ? 
+                debugVideoCaptureStop() : debugVideoCaptureStart();
     }
 }
 
 function debugRender()
 {
+    if (debugVideoCaptureIsActive())
+        return; // don't show debug info when capturing video
+
     glCopyToContext(mainContext);
 
     if (debugTakeScreenshot)
@@ -450,6 +456,7 @@ function debugRender()
             overlayContext.fillText('4: Debug Raycasts', x, y += h);
             overlayContext.fillStyle = '#fff';
             overlayContext.fillText('5: Save Screenshot', x, y += h);
+            overlayContext.fillText('6: Capture Video', x, y += h);
 
             let keysPressed = '';
             for(const i in inputData[0])
@@ -479,6 +486,94 @@ function debugRender()
         overlayContext.restore();
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// video capture - records video and audio at 60 fps using MediaRecorder API
+
+// internal variables used to capture video
+let debugVideoCapture, debugVideoCaptureTrack, debugVideoCaptureIcon;
+
+/** Check if video capture is active
+ *  @memberof Debug */
+function debugVideoCaptureIsActive() { return !!debugVideoCapture; }
+
+/** Start capturing video
+ *  @memberof Debug */
+function debugVideoCaptureStart()
+{
+    if (debugVideoCaptureIsActive())
+        return; // already recording
+
+    // captureStream passing in 0 to only capture when requestFrame() is called
+    const stream = mainCanvas.captureStream(0);
+    const chunks = [];
+    debugVideoCaptureTrack = stream.getVideoTracks()[0];
+    if (debugVideoCaptureTrack.applyConstraints)
+        debugVideoCaptureTrack.applyConstraints({frameRate:frameRate}); // force 60 fps
+    debugVideoCapture = new MediaRecorder(stream, {mimeType:'video/webm;codecs=vp8'});
+    debugVideoCapture.ondataavailable = (e)=> chunks.push(e.data);
+    debugVideoCapture.onstop = ()=>
+    {
+        const blob = new Blob(chunks, {type: 'video/webm'});
+        const url = URL.createObjectURL(blob);
+        downloadLink.download = 'capture.webm';
+        downloadLink.href = url;
+        downloadLink.click();
+        URL.revokeObjectURL(url);
+    };
+
+    if (audioGainNode)
+    {
+        // connect to audio master gain node
+        const audioStreamDestination = audioContext.createMediaStreamDestination();
+        audioGainNode.connect(audioStreamDestination);
+        for (const track of audioStreamDestination.stream.getAudioTracks())
+            stream.addTrack(track); // add audio tracks to capture stream
+    }
+
+    // start recording
+    console.log('Video capture started.');
+    debugVideoCapture.start();
+
+    if (!debugVideoCaptureIcon)
+    {
+        // create recording icon to show it is capturing video
+        debugVideoCaptureIcon = document.createElement('div');
+        debugVideoCaptureIcon.textContent = '● Recording';
+        debugVideoCaptureIcon.style.position = 'absolute';
+        debugVideoCaptureIcon.style.padding = '9px';
+        debugVideoCaptureIcon.style.color = '#f00';
+        debugVideoCaptureIcon.style.font = '50px monospace';
+        document.body.appendChild(debugVideoCaptureIcon);
+    }
+    // show recording icon
+    debugVideoCaptureIcon.style.display = '';
+}
+
+/** Stop capturing video and save to disk
+ *  @memberof Debug */
+function debugVideoCaptureStop()
+{
+    if (!debugVideoCaptureIsActive())
+        return; // not recording
+
+    // stop recording
+    console.log('Video capture ended.');
+    debugVideoCapture.stop();
+    debugVideoCapture = 0;
+    debugVideoCaptureIcon.style.display = 'none';
+}
+
+// update video capture, called automatically by engine
+function debugVideoCaptureUpdate()
+{
+    if (!debugVideoCaptureIsActive())
+        return; // not recording
+        
+    // save the video frame
+    combineCanvases();
+    debugVideoCaptureTrack.requestFrame();
+}
 /**
  * LittleJS Utility Classes and Functions
  * - General purpose math library
@@ -488,8 +583,6 @@ function debugRender()
  * - RandomGenerator - seeded random number generator
  * @namespace Utilities
  */
-
-
 
 /** A shortcut to get Math.PI
  *  @type {Number}
@@ -572,7 +665,7 @@ function distanceWrap(valueA, valueB, wrapSize=1)
  *  @returns {Number}
  *  @memberof Utilities */
 function lerpWrap(percent, valueA, valueB, wrapSize=1)
-{ return valueB + clamp(percent) * distanceWrap(valueA, valueB, wrapSize); }
+{ return valueA + clamp(percent) * distanceWrap(valueB, valueA, wrapSize); }
 
 /** Returns signed wrapped distance between the two angles passed in
  *  @param {Number} angleA
@@ -765,28 +858,28 @@ class RandomGenerator
     /** Randomly returns either -1 or 1 deterministically
     *  @return {Number} */
     sign() { return this.float() > .5 ? 1 : -1; }
+
+    /** Returns a seeded random value between the two values passed in with a random sign
+    *  @param {number} [valueA]
+    *  @param {number} [valueB]
+    *  @return {number} */
+    floatSign(valueA=1, valueB=0) { return this.float(valueA, valueB) * this.sign(); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 /** 
- * Create a 2d vector, can take another Vector2 to copy, 2 scalars, or 1 scalar
- * @param {(Number|Vector2)} [x]
+ * Create a 2d vector, can take 2 scalars, or 1 scalar
+ * @param {Number} [x]
  * @param {Number} [y]
  * @return {Vector2}
  * @example
  * let a = vec2(0, 1); // vector with coordinates (0, 1)
- * let b = vec2(a);    // copy a into b
  * a = vec2(5);        // set a to (5, 5)
  * b = vec2();         // set b to (0, 0)
  * @memberof Utilities
  */
-function vec2(x=0, y)
-{
-    return typeof x == 'number' ? 
-        new Vector2(x, y == undefined? x : y) : 
-        new Vector2(x.x, x.y);
-}
+function vec2(x=0, y) { return new Vector2(x, y == undefined? x : y); }
 
 /** 
  * Check if object is a valid Vector2
@@ -1411,8 +1504,6 @@ class Timer
  * @namespace Settings
  */
 
-
-
 ///////////////////////////////////////////////////////////////////////////////
 // Camera settings
 
@@ -1549,11 +1640,11 @@ let objectDefaultFriction = .8;
  *  @memberof Settings */
 let objectMaxSpeed = 1;
 
-/** How much gravity to apply to objects along the Y axis, negative is down
- *  @type {Number}
+/** How much gravity to apply to objects, negative Y is down
+ *  @type {Vector2}
  *  @default
  *  @memberof Settings */
-let gravity = 0;
+let gravity = vec2();
 
 /** Scales emit rate of particles, useful for low graphics mode (0 disables particle emitters)
  *  @type {Number}
@@ -1784,8 +1875,8 @@ function setObjectDefaultFriction(friction) { objectDefaultFriction = friction; 
  *  @memberof Settings */
 function setObjectMaxSpeed(speed) { objectMaxSpeed = speed; }
 
-/** Set how much gravity to apply to objects along the Y axis
- *  @param {Number} newGravity
+/** Set how much gravity to apply to objects
+ *  @param {Vector2} newGravity
  *  @memberof Settings */
 function setGravity(newGravity) { gravity = newGravity; }
 
@@ -1891,8 +1982,6 @@ function setMedalsPreventUnlock(preventUnlock) { medalsPreventUnlock = preventUn
 /** 
  * LittleJS Object System
  */
-
-
 
 /** 
  * LittleJS Object Base Object Class
@@ -2046,7 +2135,10 @@ class EngineObject
         this.velocity.x *= this.damping;
         this.velocity.y *= this.damping;
         if (this.mass) // don't apply gravity to static objects
-            this.velocity.y += gravity * this.gravityScale;
+        {
+            this.velocity.x += gravity.x * this.gravityScale;
+            this.velocity.y += gravity.y * this.gravityScale;
+        }
         this.pos.x += this.velocity.x;
         this.pos.y += this.velocity.y;
         this.angle += this.angleVelocity *= this.angleDamping;
@@ -2104,7 +2196,7 @@ class EngineObject
 
                 // check for collision
                 const sizeBoth = this.size.add(o.size);
-                const smallStepUp = (oldPos.y - o.pos.y)*2 > sizeBoth.y + gravity; // prefer to push up if small delta
+                const smallStepUp = (oldPos.y - o.pos.y)*2 > sizeBoth.y + gravity.y; // prefer to push up if small delta
                 const isBlockedX = abs(oldPos.y - o.pos.y)*2 < sizeBoth.y;
                 const isBlockedY = abs(oldPos.x - o.pos.x)*2 < sizeBoth.x;
                 const elasticity = max(this.elasticity, o.elasticity);
@@ -2365,8 +2457,6 @@ class EngineObject
  * @namespace Draw
  */
 
-
-
 /** The primary 2D canvas visible to the user
  *  @type {HTMLCanvasElement}
  *  @memberof Draw */
@@ -2507,6 +2597,8 @@ class TextureInfo
         this.size = vec2(image.width, image.height);
         /** @property {WebGLTexture} - webgl texture */
         this.glTexture = glEnable && glCreateTexture(image);
+        /** @property {Vector2} - inverse of the size for rendering */
+        this.sizeInverse = vec2(1/image.width, 1/image.height);
     }
 }
 
@@ -2550,13 +2642,13 @@ function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
  *  @param {Color}   [color=(1,1,1,1)]          - Color to modulate with
  *  @param {Number}  [angle]                    - Angle to rotate by
  *  @param {Boolean} [mirror]                   - If true image is flipped along the Y axis
- *  @param {Color}   [additiveColor=(0,0,0,0)]  - Additive color to be applied
+ *  @param {Color}   [additiveColor]            - Additive color to be applied
  *  @param {Boolean} [useWebGL=glEnable]        - Use accelerated WebGL rendering
  *  @param {Boolean} [screenSpace=false]        - If true the pos and size are in screen space
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
-    angle=0, mirror, additiveColor=new Color(0,0,0,0), useWebGL=glEnable, screenSpace, context)
+    angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace, context)
 {
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode'); 
     ASSERT(typeof tileInfo !== 'number' || !tileInfo, 
@@ -2571,21 +2663,30 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
             pos = screenToWorld(pos);
             size = size.scale(1/cameraScale);
         }
-        
         if (textureInfo)
         {
             // calculate uvs and render
-            const sizeInverse = vec2(1).divide(textureInfo.size);
+            const sizeInverse = textureInfo.sizeInverse;
             const x = tileInfo.pos.x * sizeInverse.x;
             const y = tileInfo.pos.y * sizeInverse.y;
             const w = tileInfo.size.x * sizeInverse.x;
             const h = tileInfo.size.y * sizeInverse.y;
-            const tileImageFixBleed = sizeInverse.scale(tileFixBleedScale);
-            glSetTexture(textureInfo.glTexture);
-            glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
-                x + tileImageFixBleed.x,     y + tileImageFixBleed.y, 
-                x - tileImageFixBleed.x + w, y - tileImageFixBleed.y + h, 
-                color.rgbaInt(), additiveColor.rgbaInt()); 
+            if (tileFixBleedScale)
+            {
+                const tileImageFixBleed = sizeInverse.scale(tileFixBleedScale);
+                glSetTexture(textureInfo.glTexture);
+                glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
+                    x + tileImageFixBleed.x,     y + tileImageFixBleed.y, 
+                    x - tileImageFixBleed.x + w, y - tileImageFixBleed.y + h, 
+                    color.rgbaInt(), additiveColor && additiveColor.rgbaInt()); 
+            }
+            else
+            {
+                glSetTexture(textureInfo.glTexture);
+                glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
+                    x, y, x + w, y + h, 
+                    color.rgbaInt(), additiveColor && additiveColor.rgbaInt()); 
+            }
         }
         else
         {
@@ -2795,16 +2896,15 @@ function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textA
 function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, maxWidth=undefined, context=overlayContext)
 {
     context.fillStyle = color.toString();
-    context.lineWidth = lineWidth;
     context.strokeStyle = lineColor.toString();
+    context.lineWidth = lineWidth;
     context.textAlign = textAlign;
     context.font = size + 'px '+ font;
     context.textBaseline = 'middle';
     context.lineJoin = 'round';
 
-    pos = pos.copy();
-
     const lines = (text+'').split('\n');
+    pos = pos.copy();
     pos.y -= (lines.length-1) * size/2; // center text vertically
     lines.forEach(line=>
     {
@@ -2874,7 +2974,10 @@ class FontImage
     {
         // load default font image
         if (!engineFontImage)
-            (engineFontImage = new Image).src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAAYAQAAAAA9+x6JAAAAAnRSTlMAAHaTzTgAAAGiSURBVHjaZZABhxxBEIUf6ECLBdFY+Q0PMNgf0yCgsSAGZcT9sgIPtBWwIA5wgAPEoHUyJeeSlW+gjK+fegWwtROWpVQEyWh2npdpBmTUFVhb29RINgLIukoXr5LIAvYQ5ve+1FqWEMqNKTX3FAJHyQDRZvmKWubAACcv5z5Gtg2oyCWE+Yk/8JZQX1jTTCpKAFGIgza+dJCNBF2UskRlsgwitHbSV0QLgt9sTPtsRlvJjEr8C/FARWA2bJ/TtJ7lko34dNDn6usJUMzuErP89UUBJbWeozrwLLncXczd508deAjLWipLO4Q5XGPcJvPu92cNDaN0P5G1FL0nSOzddZOrJ6rNhbXGmeDvO3TF7DeJWl4bvaYQTNHCTeuqKZmbjHaSOFes+IX/+IhHrnAkXOAsfn24EM68XieIECoccD4KZLk/odiwzeo2rovYdhvb2HYFgyznJyDpYJdYOmfXgVdJTaUi4xA2uWYNYec9BLeqdl9EsoTw582mSFDX2DxVLbNt9U3YYoeatBad1c2Tj8t2akrjaIGJNywKB/7h75/gN3vCMSaadIUTAAAAAElFTkSuQmCC';
+        {
+            engineFontImage = new Image
+            engineFontImage.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAAYAQAAAAA9+x6JAAAAAnRSTlMAAHaTzTgAAAGiSURBVHjaZZABhxxBEIUf6ECLBdFY+Q0PMNgf0yCgsSAGZcT9sgIPtBWwIA5wgAPEoHUyJeeSlW+gjK+fegWwtROWpVQEyWh2npdpBmTUFVhb29RINgLIukoXr5LIAvYQ5ve+1FqWEMqNKTX3FAJHyQDRZvmKWubAACcv5z5Gtg2oyCWE+Yk/8JZQX1jTTCpKAFGIgza+dJCNBF2UskRlsgwitHbSV0QLgt9sTPtsRlvJjEr8C/FARWA2bJ/TtJ7lko34dNDn6usJUMzuErP89UUBJbWeozrwLLncXczd508deAjLWipLO4Q5XGPcJvPu92cNDaN0P5G1FL0nSOzddZOrJ6rNhbXGmeDvO3TF7DeJWl4bvaYQTNHCTeuqKZmbjHaSOFes+IX/+IhHrnAkXOAsfn24EM68XieIECoccD4KZLk/odiwzeo2rovYdhvb2HYFgyznJyDpYJdYOmfXgVdJTaUi4xA2uWYNYec9BLeqdl9EsoTw582mSFDX2DxVLbNt9U3YYoeatBad1c2Tj8t2akrjaIGJNywKB/7h75/gN3vCMSaadIUTAAAAAElFTkSuQmCC';
+        }
 
         this.image = image || engineFontImage;
         this.tileSize = tileSize;
@@ -2971,8 +3074,6 @@ function setCursor(cursorStyle = 'auto')
  * @namespace Input
  */
 
-
-
 /** Returns true if device key is down
  *  @param {String|Number} key
  *  @param {Number} [device]
@@ -3004,6 +3105,15 @@ function keyWasReleased(key, device=0)
 { 
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return inputData[device] && !!(inputData[device][key] & 4);
+}
+
+/** Returns input vector from arrow keys or WASD if enabled
+ *  @return {Vector2}
+ *  @memberof Input */
+function keyDirection(up='ArrowUp', down='ArrowDown', left='ArrowLeft', right='ArrowRight')
+{
+    const k = (key)=> keyIsDown(key) ? 1 : 0;
+    return vec2(k(right) - k(left), k(up) - k(down));
 }
 
 /** Clears all input
@@ -3268,7 +3378,9 @@ function gamepadsUpdate()
                 const button = gamepad.buttons[j];
                 const wasDown = gamepadIsDown(j,i);
                 data[j] = button.pressed ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
-                isUsingGamepad ||= !i && button.pressed;
+                if (!button.value || button.value > .9) // must be a full press
+                if (!i && button.pressed)
+                    isUsingGamepad = true;
             }
 
             if (gamepadDirectionEmulateStick)
@@ -3485,8 +3597,6 @@ function touchGamepadRender()
  * - Speech synthesis functions
  * @namespace Audio
  */
-
-
 
 /** Audio context used by the engine
  *  @type {AudioContext}
@@ -4052,7 +4162,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
             ] = sampleCache[[instrument, note]] || (
                 // add sample to cache
                 instrumentParameters = [...instruments[instrument]],
-                instrumentParameters[2] *= 2 ** ((note - 12) / 12),
+                instrumentParameters[2] = (instrumentParameters[2] || 220) * 2**(note / 12 - 1),
 
                 // allow negative values to stop notes
                 note > 0 ? zzfxG(...instrumentParameters) : []
@@ -4080,8 +4190,6 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
  * @namespace TileCollision
  */
 
-
-
 /** The tile collision layer grid, use setTileCollisionData and getTileCollisionData to access
  *  @type {Array} 
  *  @memberof TileCollision */
@@ -4107,7 +4215,7 @@ function initTileCollision(size)
  *  @param {Vector2} pos
  *  @param {Number}  [data]
  *  @memberof TileCollision */
-function setTileCollisionData(pos, data=0)
+function setTileCollisionData(pos, data=1)
 {
     pos.arrayCheck(tileCollisionSize) && (tileCollision[(pos.y|0)*tileCollisionSize.x+pos.x|0] = data);
 }
@@ -4460,8 +4568,6 @@ class TileLayer extends EngineObject
  * LittleJS Particle System
  */
 
-
-
 /**
  * Particle Emitter - Spawns particles with the given settings
  * @extends EngineObject
@@ -4624,7 +4730,11 @@ class ParticleEmitter extends EngineObject
         else
             this.destroy();
 
-        debugParticles && debugRect(this.pos, vec2(this.emitSize), '#0f0', 0, this.angle);
+        if (debugParticles)
+        {
+            const emitSize = typeof this.emitSize === 'number' ? vec2(this.emitSize) : this.emitSize;
+            debugRect(this.pos, emitSize, '#0f0', 0, this.angle);
+        }
     }
 
     /** Spawn one particle
@@ -4800,8 +4910,6 @@ class Particle extends EngineObject
  * - Newgrounds integration
  * @namespace Medals
  */
-
-
 
 /** List of all medals
  *  @type {Object}
@@ -4979,8 +5087,6 @@ class Medal
  * - Supports shadertoy style post processing shaders
  * @namespace WebGL
  */
-
-
 
 /** The WebGL canvas which appears above the main canvas and below the overlay canvas
  *  @type {HTMLCanvasElement}
@@ -5248,10 +5354,10 @@ function glSetAntialias(antialias=true)
  *  @param {Number} uv0Y
  *  @param {Number} uv1X
  *  @param {Number} uv1Y
- *  @param {Number} rgba
- *  @param {Number} [rgbaAdditive=0]
+ *  @param {Number} [rgba=-1] - white is -1
+ *  @param {Number} [rgbaAdditive=0] - black is 0 
  *  @memberof WebGL */
-function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba, rgbaAdditive=0)
+function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba=-1, rgbaAdditive=0)
 {
     ASSERT(typeof rgba == 'number' && typeof rgbaAdditive == 'number', 'invalid color');
 
@@ -5319,8 +5425,6 @@ gl_UNPACK_FLIP_Y_WEBGL = 37440;
  * @namespace Engine
  */
 
-
-
 /** Name of engine
  *  @type {String}
  *  @default
@@ -5331,7 +5435,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.7a';
+const engineVersion = '1.11.8.2';
 
 /** Frames per second to update
  *  @type {Number}
@@ -5412,7 +5516,7 @@ function engineAddPlugin(updateFunction, renderFunction)
  *  @param {Array} [imageSources=[]] - List of images to load
  *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default
  *  @memberof Engine */
-function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
+async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
 {
     ASSERT(!mainContext, 'engine already initialized');
     ASSERT(Array.isArray(imageSources), 'pass in images as array');
@@ -5442,11 +5546,13 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         const debugSpeedUp   = debug && keyIsDown('Equal'); // +
         const debugSpeedDown = debug && keyIsDown('Minus'); // -
         if (debug) // +/- to speed/slow time
-            frameTimeDeltaMS *= debugSpeedUp ? 5 : debugSpeedDown ? .2 : 1;
+            frameTimeDeltaMS *= debugSpeedUp ? 10 : debugSpeedDown ? .1 : 1;
         timeReal += frameTimeDeltaMS / 1e3;
         frameTimeBufferMS += paused ? 0 : frameTimeDeltaMS;
         if (!debugSpeedUp)
-            frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp in case of slow framerate
+            frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp min framerate
+        if (debug && debugVideoCaptureIsActive())
+            frameTimeBufferMS = 0; // disable time smoothing when capturing video
 
         updateCanvas();
 
@@ -5525,6 +5631,7 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
             }
         }
 
+        debugVideoCaptureUpdate();
         requestAnimationFrame(engineUpdate);
     }
 
@@ -5559,24 +5666,18 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
     }
 
-    function startEngine()
+    // wait for gameInit to load
+    async function startEngine()
     {
-        new Promise((resolve) => resolve(gameInit())).then(engineUpdate);
+        await gameInit();
+        engineUpdate();
     }
-
     if (headlessMode)
-    {
-        startEngine();
-        return;
-    }
+        return startEngine();
 
     // setup html
     const styleRoot = 
-        'margin:0;overflow:hidden;' + // fill the window
-        'width:100vw;height:100vh;' + // fill the window
-        'display:flex;' +             // use flexbox
-        'align-items:center;' +       // horizontal center
-        'justify-content:center;' +   // vertical center
+        'margin:0;' +                 // fill the window
         'background:#000;' +          // set background color
         (canvasPixelated ? 'image-rendering:pixelated;' : '') + // pixel art
         'user-select:none;' +         // prevent hold to select
@@ -5599,7 +5700,8 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
     overlayContext = overlayCanvas.getContext('2d');
 
     // set canvas style
-    const styleCanvas = 'position:absolute'; // allow canvases to overlap
+    const styleCanvas = 'position:absolute;'+ // allow canvases to overlap
+        'top:50%;left:50%;transform:translate(-50%,-50%)'; // center on screen
     mainCanvas.style.cssText = overlayCanvas.style.cssText = styleCanvas;
     if (glCanvas)
         glCanvas.style.cssText = styleCanvas;
@@ -5647,8 +5749,9 @@ function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRender
         }));
     }
 
-    // load all of the images
-    Promise.all(promises).then(startEngine);
+    // wait for all the promises to finish
+    await Promise.all(promises);
+    return startEngine();
 }
 
 /** Update each engine object, remove destroyed objects, and update time

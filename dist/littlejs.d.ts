@@ -72,7 +72,7 @@ declare module "littlejsengine" {
      *  @param {Array} [imageSources=[]] - List of images to load
      *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default
      *  @memberof Engine */
-    export function engineInit(gameInit: Function | (() => Promise<any>), gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, imageSources?: any[], rootElement?: HTMLElement): void;
+    export function engineInit(gameInit: Function | (() => Promise<any>), gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, imageSources?: any[], rootElement?: HTMLElement): Promise<void>;
     /** Update each engine object, remove destroyed objects, and update time
      *  @memberof Engine */
     export function engineObjectsUpdate(): void;
@@ -206,6 +206,18 @@ declare module "littlejsengine" {
      *  @param {String}     filename
      *  @memberof Debug */
     export function debugSaveDataURL(dataURL: string, filename: string): void;
+    /** Show error as full page of red text
+     *  @memberof Debug */
+    export function debugShowErrors(): void;
+    /** Check if video capture is active
+     *  @memberof Debug */
+    export function debugVideoCaptureIsActive(): boolean;
+    /** Start capturing video
+     *  @memberof Debug */
+    export function debugVideoCaptureStart(): void;
+    /** Stop capturing video and save to disk
+     *  @memberof Debug */
+    export function debugVideoCaptureStop(): void;
     /**
      * LittleJS Engine Settings
      * - All settings for the engine are here
@@ -302,11 +314,11 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let objectMaxSpeed: number;
-    /** How much gravity to apply to objects along the Y axis, negative is down
-     *  @type {Number}
+    /** How much gravity to apply to objects, negative Y is down
+     *  @type {Vector2}
      *  @default
      *  @memberof Settings */
-    export let gravity: number;
+    export let gravity: Vector2;
     /** Scales emit rate of particles, useful for low graphics mode (0 disables particle emitters)
      *  @type {Number}
      *  @default
@@ -484,10 +496,10 @@ declare module "littlejsengine" {
      *  @param {Number} speed
      *  @memberof Settings */
     export function setObjectMaxSpeed(speed: number): void;
-    /** Set how much gravity to apply to objects along the Y axis
-     *  @param {Number} newGravity
+    /** Set how much gravity to apply to objects
+     *  @param {Vector2} newGravity
      *  @memberof Settings */
-    export function setGravity(newGravity: number): void;
+    export function setGravity(newGravity: Vector2): void;
     /** Set to scales emit rate of particles
      *  @param {Number} scale
      *  @memberof Settings */
@@ -767,6 +779,11 @@ declare module "littlejsengine" {
         /** Randomly returns either -1 or 1 deterministically
         *  @return {Number} */
         sign(): number;
+        /** Returns a seeded random value between the two values passed in with a random sign
+        *  @param {number} [valueA]
+        *  @param {number} [valueB]
+        *  @return {number} */
+        floatSign(valueA?: number, valueB?: number): number;
     }
     /**
      * 2D Vector object with vector math library
@@ -1025,18 +1042,17 @@ declare module "littlejsengine" {
         valueOf(): number;
     }
     /**
-     * Create a 2d vector, can take another Vector2 to copy, 2 scalars, or 1 scalar
-     * @param {(Number|Vector2)} [x]
+     * Create a 2d vector, can take 2 scalars, or 1 scalar
+     * @param {Number} [x]
      * @param {Number} [y]
      * @return {Vector2}
      * @example
      * let a = vec2(0, 1); // vector with coordinates (0, 1)
-     * let b = vec2(a);    // copy a into b
      * a = vec2(5);        // set a to (5, 5)
      * b = vec2();         // set b to (0, 0)
      * @memberof Utilities
      */
-    export function vec2(x?: (number | Vector2), y?: number): Vector2;
+    export function vec2(x?: number, y?: number): Vector2;
     /**
      * Create a color object with RGBA values, white by default
      * @param {Number} [r=1] - red
@@ -1176,6 +1192,8 @@ declare module "littlejsengine" {
         size: Vector2;
         /** @property {WebGLTexture} - webgl texture */
         glTexture: WebGLTexture;
+        /** @property {Vector2} - inverse of the size for rendering */
+        sizeInverse: Vector2;
     }
     /**
      * LittleJS Drawing System
@@ -1235,7 +1253,7 @@ declare module "littlejsengine" {
      *  @param {Color}   [color=(1,1,1,1)]          - Color to modulate with
      *  @param {Number}  [angle]                    - Angle to rotate by
      *  @param {Boolean} [mirror]                   - If true image is flipped along the Y axis
-     *  @param {Color}   [additiveColor=(0,0,0,0)]  - Additive color to be applied
+     *  @param {Color}   [additiveColor]            - Additive color to be applied
      *  @param {Boolean} [useWebGL=glEnable]        - Use accelerated WebGL rendering
      *  @param {Boolean} [screenSpace=false]        - If true the pos and size are in screen space
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
@@ -1459,10 +1477,10 @@ declare module "littlejsengine" {
      *  @param {Number} uv0Y
      *  @param {Number} uv1X
      *  @param {Number} uv1Y
-     *  @param {Number} rgba
-     *  @param {Number} [rgbaAdditive=0]
+     *  @param {Number} [rgba=-1] - white is -1
+     *  @param {Number} [rgbaAdditive=0] - black is 0
      *  @memberof WebGL */
-    export function glDraw(x: number, y: number, sizeX: number, sizeY: number, angle: number, uv0X: number, uv0Y: number, uv1X: number, uv1Y: number, rgba: number, rgbaAdditive?: number): void;
+    export function glDraw(x: number, y: number, sizeX: number, sizeY: number, angle: number, uv0X: number, uv0Y: number, uv1X: number, uv1Y: number, rgba?: number, rgbaAdditive?: number): void;
     /** Draw all sprites and clear out the buffer, called automatically by the system whenever necessary
      *  @memberof WebGL */
     export function glFlush(): void;
@@ -1518,6 +1536,10 @@ declare module "littlejsengine" {
      *  @return {Boolean}
      *  @memberof Input */
     export function keyWasReleased(key: string | number, device?: number): boolean;
+    /** Returns input vector from arrow keys or WASD if enabled
+     *  @return {Vector2}
+     *  @memberof Input */
+    export function keyDirection(up?: string, down?: string, left?: string, right?: string): Vector2;
     /** Clears all input
      *  @memberof Input */
     export function clearInput(): void;
