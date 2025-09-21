@@ -177,6 +177,8 @@ class UIObject
         this.lineWidth  = uiSystem.defaultLineWidth;
         /** @property {string} */
         this.font       = uiSystem.defaultFont;
+        /** @property {number} - override for text height */
+        this.textHeight   = undefined;
         /** @property {boolean} */
         this.visible    = true;
         /** @property {Array<UIObject>} */
@@ -287,7 +289,8 @@ class UIText extends UIObject
     }
     render()
     {
-        uiSystem.drawText(this.text, this.pos, this.size, this.textColor, this.lineWidth, this.lineColor, this.align, this.font);
+        const textSize = vec2(this.size.x, this.textHeight || this.size.y);
+        uiSystem.drawText(this.text, this.pos, textSize, this.textColor, this.lineWidth, this.lineColor, this.align, this.font);
     }
 }
 
@@ -350,7 +353,9 @@ class UIButton extends UIObject
         const lineColor = this.mouseIsHeld ? this.color : this.lineColor;
         const color = this.mouseIsOver? this.hoverColor : this.color;
         uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor);
-        const textSize = vec2(this.size.x, this.size.y*.8);
+        
+        const textScale = .8; // scale text to fit in button
+        const textSize = vec2(this.size.x, this.textHeight || this.size.y*textScale);
         uiSystem.drawText(this.text, this.pos, textSize, 
             this.textColor, 0, undefined, this.align, this.font);
     }
@@ -447,7 +452,8 @@ class UIScrollbar extends UIObject
         const barColor = this.mouseIsHeld ? this.color : this.handleColor;
         uiSystem.drawRect(handlePos, handleSize, barColor, this.lineWidth, this.lineColor);
 
-        const textSize = vec2(this.size.x, this.size.y*.8);
+        const textScale = .8; // scale text to fit in scrollbar
+        const textSize = vec2(this.size.x, this.textHeight || this.size.y*textScale);
         uiSystem.drawText(this.text, this.pos, textSize, 
             this.textColor, 0, undefined, this.align, this.font);
     }
