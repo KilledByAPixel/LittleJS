@@ -8,7 +8,13 @@
 
 'use strict';
 
-class GameObject extends EngineObject 
+// import LittleJS module
+import * as LJS from '../../dist/littlejs.esm.js';
+import * as GameEffects from './gameEffects.js';
+import * as Game from './game.js';
+const {vec2, hsl, rgb, Timer} = LJS;
+
+export class GameObject extends LJS.EngineObject 
 {
     constructor(pos, size, tileInfo, angle)
     {
@@ -25,7 +31,7 @@ class GameObject extends EngineObject
         // flash white when damaged
         let brightness = 0;
         if (!this.isDead() && this.damageTimer.isSet())
-            brightness = .5*percent(this.damageTimer, .15, 0);
+            brightness = .5*LJS.percent(this.damageTimer, .15, 0);
         this.additiveColor = hsl(0,0,brightness,0);
 
         // kill if below level
@@ -35,7 +41,7 @@ class GameObject extends EngineObject
 
     damage(damage, damagingObject)
     {
-        ASSERT(damage >= 0);
+        LJS.ASSERT(damage >= 0);
         if (this.isDead())
             return 0;
         
@@ -45,7 +51,7 @@ class GameObject extends EngineObject
             child.damageTimer && child.damageTimer.set();
 
         // apply damage and kill if necessary
-        const newHealth = max(this.health - damage, 0);
+        const newHealth = LJS.max(this.health - damage, 0);
         if (!newHealth)
             this.kill(damagingObject);
 
@@ -59,13 +65,13 @@ class GameObject extends EngineObject
 
 ///////////////////////////////////////////////////////////////////////////////
 
-class Crate extends GameObject 
+export class Crate extends GameObject 
 {
     constructor(pos) 
     { 
-        super(pos, vec2(.999), spriteAtlas.crate, (randInt(4))*PI/2);
+        super(pos, vec2(.999), Game.spriteAtlas.crate, (LJS.randInt(4))*LJS.PI/2);
 
-        this.color = hsl(rand(),1,.8);
+        this.color = hsl(LJS.rand(),1,.8);
         this.health = 5;
 
         // make it a solid object for collision
@@ -77,59 +83,59 @@ class Crate extends GameObject
         if (this.destroyed)
             return;
 
-        sound_destroyObject.play(this.pos);
-        makeDebris(this.pos, this.color, 30);
+        GameEffects.sound_destroyObject.play(this.pos);
+        GameEffects.makeDebris(this.pos, this.color, 30);
         this.destroy();
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-class Coin extends EngineObject 
+export class Coin extends LJS.EngineObject 
 {
     constructor(pos) 
     { 
-        super(pos, vec2(1), spriteAtlas.coin);
+        super(pos, vec2(1), Game.spriteAtlas.coin);
         this.color = hsl(.15,1,.5);
     }
 
     render()
     {
         // make it appear to spin
-        const t = time+this.pos.x/4+this.pos.y/4;
-        drawTile(this.pos, vec2(.1, .6), 0, this.color); // edge of coin
-        drawTile(this.pos, vec2(.5+.5*Math.sin(t*2*PI), 1), this.tileInfo, this.color);
+        const t = LJS.time+this.pos.x/4+this.pos.y/4;
+        LJS.drawTile(this.pos, vec2(.1, .6), 0, this.color); // edge of coin
+        LJS.drawTile(this.pos, vec2(.5+.5*Math.sin(t*2*LJS.PI), 1), this.tileInfo, this.color);
     }
 
     update()
     {
-        if (!player)
+        if (!Game.player)
             return;
 
         // check if player in range
-        const d = this.pos.distanceSquared(player.pos);
+        const d = this.pos.distanceSquared(Game.player.pos);
         if (d > .5)
             return; 
         
         // award points and destroy
-        ++score;
-        sound_score.play(this.pos);
+        Game.addToScore();
+        GameEffects.sound_score.play(this.pos);
         this.destroy();
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-class Enemy extends GameObject 
+export class Enemy extends GameObject 
 {
     constructor(pos) 
     { 
-        super(pos, vec2(.9,.9), spriteAtlas.enemy);
+        super(pos, vec2(.9,.9), Game.spriteAtlas.enemy);
 
         this.drawSize = vec2(1);
-        this.color = hsl(rand(), 1, .7);
+        this.color = hsl(LJS.rand(), 1, .7);
         this.health = 5;
-        this.bounceTime = new Timer(rand(1e3));
+        this.bounceTime = new Timer(LJS.rand(1e3));
         this.setCollision(true, false);
     }
 
@@ -137,16 +143,16 @@ class Enemy extends GameObject
     {
         super.update();
         
-        if (!player)
+        if (!Game.player)
             return;
 
         // jump around randomly
-        if (this.groundObject && rand() < .01 && this.pos.distance(player.pos) < 20)
-            this.velocity = vec2(rand(.1,-.1), rand(.4,.2));
+        if (this.groundObject && LJS.rand() < .01 && this.pos.distance(Game.player.pos) < 20)
+            this.velocity = vec2(LJS.rand(.1,-.1), LJS.rand(.4,.2));
 
         // damage player if touching
-        if (isOverlapping(this.pos, this.size, player.pos, player.size))
-            player.damage(1, this);
+        if (LJS.isOverlapping(this.pos, this.size, Game.player.pos, Game.player.size))
+            Game.player.damage(1, this);
     }
 
     kill()
@@ -154,9 +160,9 @@ class Enemy extends GameObject
         if (this.destroyed)
             return;
 
-        ++score;
-        sound_score.play(this.pos);
-        makeDebris(this.pos, this.color);
+        Game.addToScore();
+        GameEffects.sound_score.play(this.pos);
+        GameEffects.makeDebris(this.pos, this.color);
         this.destroy();
     }
        
@@ -169,17 +175,17 @@ class Enemy extends GameObject
         // make bottom flush
         let bodyPos = this.pos;
         bodyPos = bodyPos.add(vec2(0,(this.drawSize.y-this.size.y)/2));
-        drawTile(bodyPos, this.drawSize, this.tileInfo, this.color, this.angle, this.mirror, this.additiveColor);
+        LJS.drawTile(bodyPos, this.drawSize, this.tileInfo, this.color, this.angle, this.mirror, this.additiveColor);
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-class Grenade extends GameObject
+export class Grenade extends GameObject
 {
     constructor(pos) 
     {
-        super(pos, vec2(.2), spriteAtlas.grenade);
+        super(pos, vec2(.2), Game.spriteAtlas.grenade);
 
         this.beepTimer = new Timer(1);
         this.elasticity   = .3;
@@ -195,35 +201,35 @@ class Grenade extends GameObject
 
         if (this.getAliveTime() > 3)
         {
-            explosion(this.pos);
+            GameEffects.explosion(this.pos);
             this.destroy();
         }
         else if (this.beepTimer.elapsed())
         {
-            sound_grenade.play(this.pos)
+            GameEffects.sound_grenade.play(this.pos)
             this.beepTimer.set(1);
         }
     }
        
     render()
     {
-        drawTile(this.pos, vec2(.5), this.tileInfo, this.color, this.angle);
+        LJS.drawTile(this.pos, vec2(.5), this.tileInfo, this.color, this.angle);
 
         // draw additive flash exploding
-        setBlendMode(true);
-        const flash = Math.cos(this.getAliveTime()*2*PI);
-        drawTile(this.pos, vec2(2), spriteAtlas.circle, hsl(0,1,.5,.2-.2*flash));
-        setBlendMode(false);
+        LJS.setBlendMode(true);
+        const flash = Math.cos(this.getAliveTime()*2*LJS.PI);
+        LJS.drawTile(this.pos, vec2(2), Game.spriteAtlas.circle, hsl(0,1,.5,.2-.2*flash));
+        LJS.setBlendMode(false);
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-class Weapon extends EngineObject 
+export class Weapon extends LJS.EngineObject 
 {
     constructor(pos, parent) 
     { 
-        super(pos, vec2(.6), spriteAtlas.gun);
+        super(pos, vec2(.6), Game.spriteAtlas.gun);
 
         // weapon settings
         this.fireRate      = 8;
@@ -238,7 +244,7 @@ class Weapon extends EngineObject
         parent.addChild(this, vec2(.6,0));
 
         // shell effect
-        this.addChild(this.shellEmitter = new ParticleEmitter(
+        this.addChild(this.shellEmitter = new LJS.ParticleEmitter(
             vec2(), 0, 0, 0, 0, .1,  // pos, angle, emitSize, emitTime, emitRate, emitCone
             0,                       // tileInfo
             rgb(1,.8,.5), rgb(.9,.7,.5), // colorStartA, colorStartB
@@ -248,7 +254,7 @@ class Weapon extends EngineObject
             .1, 1               // randomness, collide, additive, colorLinear, renderOrder
         ), vec2(.1,0), -.8);
         this.shellEmitter.elasticity = .5;
-        this.shellEmitter.particleDestroyCallback = persistentParticleDestroyCallback;
+        this.shellEmitter.particleDestroyCallback = GameEffects.persistentParticleDestroyCallback;
     }
 
     update()
@@ -257,21 +263,21 @@ class Weapon extends EngineObject
 
         // update recoil
         if (this.recoilTimer.active())
-            this.localAngle = lerp(this.recoilTimer.getPercent(), this.localAngle, 0);
+            this.localAngle = LJS.lerp(this.recoilTimer.getPercent(), this.localAngle, 0);
 
         this.mirror = this.parent.mirror;
-        this.fireTimeBuffer += timeDelta;
+        this.fireTimeBuffer += LJS.timeDelta;
         if (this.triggerIsDown)
         {
             // try to fire
             for (; this.fireTimeBuffer > 0; this.fireTimeBuffer -= 1/this.fireRate)
             {
                 // create bullet
-                sound_shoot.play(this.pos);
-                this.localAngle = -rand(.2,.25);
+                GameEffects.sound_shoot.play(this.pos);
+                this.localAngle = -LJS.rand(.2,.25);
                 this.recoilTimer.set(.1);
                 const direction = vec2(this.bulletSpeed*this.getMirrorSign(), 0);
-                const velocity = direction.rotate(rand(-1,1)*this.bulletSpread);
+                const velocity = direction.rotate(LJS.rand(-1,1)*this.bulletSpread);
                 new Bullet(this.pos, this.parent, velocity, this.damage);
 
                 // spawn shell particle
@@ -279,13 +285,13 @@ class Weapon extends EngineObject
             }
         }
         else
-            this.fireTimeBuffer = min(this.fireTimeBuffer, 0);
+            this.fireTimeBuffer = LJS.min(this.fireTimeBuffer, 0);
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-class Bullet extends EngineObject 
+export class Bullet extends LJS.EngineObject 
 {
     constructor(pos, attacker, velocity, damage) 
     { 
@@ -305,7 +311,7 @@ class Bullet extends EngineObject
     update()
     {
         // check if hit someone
-        engineObjectsCallback(this.pos, this.size, (o)=>
+        LJS.engineObjectsCallback(this.pos, this.size, (o)=>
         {
             if (o.isGameObject)
                 this.collideWithObject(o)
@@ -317,12 +323,12 @@ class Bullet extends EngineObject
         this.range -= this.velocity.length();
         if (this.range < 0)
         {
-            new ParticleEmitter(
-                this.pos, 0, .2, .1, 50, PI, spriteAtlas.circle, // pos, emit info, tileInfo
-                rgb(1,1,.1), rgb(1,1,1),    // colorStartA, colorStartB
-                rgb(1,1,.1,0), rgb(1,1,1,0),// colorEndA, colorEndB
+            new LJS.ParticleEmitter(
+                this.pos, 0, .2, .1, 50, 3.14, Game.spriteAtlas.circle, // pos, emit info, tileInfo
+                rgb(1,1,.1), rgb(1,1,1),   // colorStartA, colorStartB
+                rgb(1,1,.1,0), rgb(1,1,1,0), // colorEndA, colorEndB
                 .1, .5, .1, .05, 0, // particleTime, sizeStart, sizeEnd, speed, angleSpeed
-                1, 1, .5, PI, .1,   // damping, angleDamping, gravityScale, cone, fadeRate, 
+                1, 1, .5, 3.14, .1, // damping, angleDamping, gravityScale, cone, fadeRate, 
                 .5, 0, 1            // randomness, collide, additive, randomColorLinear
             );
 
@@ -347,7 +353,7 @@ class Bullet extends EngineObject
         if (data <= 0)
             return false;
             
-        destroyTile(pos);
+        GameEffects.destroyTile(pos);
         this.kill();
         return true; 
     }
@@ -359,17 +365,17 @@ class Bullet extends EngineObject
         this.destroy();
 
         // spark effects
-        const emitter = new ParticleEmitter(
+        const emitter = new LJS.ParticleEmitter(
             this.pos, 0, 0, .1, 100, .5, // pos, angle, emitSize, emitTime, emitRate, emitCone
-            0,                      // tileInfo
+            0,                           // tileInfo
             rgb(1,1,0), rgb(1,0,0), // colorStartA, colorStartB
             rgb(1,1,0), rgb(1,0,0), // colorEndA, colorEndB
-            .2, .2, 0, .1, .1, // time, sizeStart, sizeEnd, speed, angleSpeed
-            1, 1, .5, PI, .1,  // damp, angleDamp, gravityScale, particleCone, fade, 
-            .5, 1, 1           // randomness, collide, additive, colorLinear, renderOrder
+            .2, .2, 0, .1, .1,  // time, sizeStart, sizeEnd, speed, angleSpeed
+            1, 1, .5, 3.14, .1, // damp, angleDamp, gravityScale, particleCone, fade, 
+            .5, 1, 1            // randomness, collide, additive, colorLinear, renderOrder
         );
         emitter.trailScale = 1;
         emitter.elasticity = .3;
-        emitter.angle = this.velocity.angle() + PI;
+        emitter.angle = this.velocity.angle() + LJS.PI;
     }
 }

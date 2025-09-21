@@ -11,13 +11,21 @@
 
 'use strict';
 
-class Character extends GameObject 
+// import LittleJS module
+import * as LJS from '../../dist/littlejs.esm.js';
+import * as GameObjects from './gameObjects.js';
+import * as GameEffects from './gameEffects.js';
+import * as GameLevel from './gameLevel.js';
+import * as Game from './game.js';
+const {vec2, hsl, Timer} = LJS;
+
+export class Character extends GameObjects.GameObject 
 {
     constructor(pos)
     { 
         super(pos, vec2(.6,.95));
 
-        this.weapon = new Weapon(pos, this);
+        this.weapon = new GameObjects.Weapon(pos, this);
         this.lastPos = pos;
         this.groundTimer        = new Timer;
         this.jumpTimer          = new Timer;
@@ -27,7 +35,7 @@ class Character extends GameObject
         this.deadTimer          = new Timer;
         this.grenadeThrowTimer   = new Timer;
         this.drawSize = vec2(1);
-        this.color = hsl(rand(),1,.7);
+        this.color = hsl(LJS.rand(),1,.7);
         this.renderOrder = 10;
         this.walkCyclePercent = 0;
         this.health = 1;
@@ -63,7 +71,7 @@ class Character extends GameObject
         if (this.dodgeTimer.active())
         {
             // update roll
-            this.angle = this.getMirrorSign()*2*PI*this.dodgeTimer.getPercent();
+            this.angle = this.getMirrorSign()*2*LJS.PI*this.dodgeTimer.getPercent();
             if (this.groundObject)
                 this.velocity.x += this.getMirrorSign()*.1;
         }
@@ -77,7 +85,7 @@ class Character extends GameObject
                 this.dodgeTimer.set(.4);
                 this.dodgeRechargeTimer.set(2);
                 this.jumpTimer.unset();
-                sound_dodge.play(this.pos);
+                GameEffects.sound_dodge.play(this.pos);
 
                 if (!this.groundObject && this.getAliveTime() > .2)
                     this.velocity.y += .2;
@@ -85,10 +93,11 @@ class Character extends GameObject
             if (this.pressingThrow && !this.wasPressingThrow && !this.grenadeThrowTimer.active())
             {
                 // throw grenade
-                const grenade = new Grenade(this.pos);
-                grenade.velocity = this.velocity.add(vec2(this.getMirrorSign(),rand(.8,.7)).normalize(.2+rand(.02)));
-                grenade.angleVelocity = this.getMirrorSign() * rand(.8,.5);
-                sound_jump.play(this.pos);
+                const grenade = new GameObjects.Grenade(this.pos);
+                const speed = vec2(this.getMirrorSign(),LJS.rand(.8,.7)).normalize(.2+LJS.rand(.02));
+                grenade.velocity = this.velocity.add(speed);
+                grenade.angleVelocity = this.getMirrorSign() * LJS.rand(.8,.5);
+                GameEffects.sound_jump.play(this.pos);
                 this.grenadeThrowTimer.set(1);
             }
             this.wasPressingThrow = this.pressingThrow;
@@ -99,8 +108,8 @@ class Character extends GameObject
         for (let y=2;y--;)
         {
             const testPos = this.pos.add(vec2(0, y + .1*moveInput.y - this.size.y/2));
-            const collisionData = getTileCollisionData(testPos);
-            touchingLadder ||= collisionData == tileType_ladder;
+            const collisionData = LJS.getTileCollisionData(testPos);
+            touchingLadder ||= collisionData == GameLevel.tileType_ladder;
         }
         if (!touchingLadder)
             this.climbingLadder = false;
@@ -120,11 +129,11 @@ class Character extends GameObject
 
             // pull towards ladder
             const delta = (this.pos.x|0)+.5 - this.pos.x;
-            this.velocity.x += .02*delta*abs(moveInput.x ? 0:moveInput.y);
+            this.velocity.x += .02*delta*LJS.abs(moveInput.x ? 0:moveInput.y);
             moveInput.x *= .2;
 
             // exit ladder if ground is below
-            this.climbingLadder = moveInput.y >= 0 || getTileCollisionData(this.pos.subtract(vec2(0,1))) <= 0;
+            this.climbingLadder = moveInput.y >= 0 || LJS.getTileCollisionData(this.pos.subtract(vec2(0,1))) <= 0;
         }
         else
         {
@@ -132,8 +141,7 @@ class Character extends GameObject
             if (this.groundObject || this.climbingWall)
             {
                 if (!this.groundTimer.isSet())
-                    sound_walk.play(this.pos); // land sound
-                    
+                    GameEffects.sound_walk.play(this.pos); // land sound
                 this.groundTimer.set(.1);
             }
 
@@ -150,7 +158,7 @@ class Character extends GameObject
                         this.velocity.y = .15;
                         this.jumpTimer.set(.2);
                     }
-                    sound_jump.play(this.pos);
+                    GameEffects.sound_jump.play(this.pos);
                 }
             }
 
@@ -165,20 +173,20 @@ class Character extends GameObject
             if (!this.groundObject)
             {
                 // air control
-                if (sign(moveInput.x) == sign(this.velocity.x))
+                if (LJS.sign(moveInput.x) == LJS.sign(this.velocity.x))
                     moveInput.x *= .1; // moving with velocity
                 else
                     moveInput.x *= .2; // moving against velocity (stopping)
                 
                 // slight extra gravity when moving down
                 if (this.velocity.y < 0)
-                    this.velocity.y += gravity.y*.2;
+                    this.velocity.y += LJS.gravity.y*.2;
             }
         }
         
         // apply movement acceleration and clamp
         const maxCharacterSpeed = .2;
-        this.velocity.x = clamp(this.velocity.x + moveInput.x * .04, -maxCharacterSpeed, maxCharacterSpeed);
+        this.velocity.x = LJS.clamp(this.velocity.x + moveInput.x * .04, -maxCharacterSpeed, maxCharacterSpeed);
 
         // track last pos for ladder collision code
         this.lastPos = this.pos.copy();
@@ -191,7 +199,7 @@ class Character extends GameObject
         if (this.climbingLadder || this.groundTimer.active() && !this.dodgeTimer.active())
         {
             this.walkCyclePercent += speed * .5;
-            this.walkCyclePercent = speed > .01 ? mod(this.walkCyclePercent) : 0;
+            this.walkCyclePercent = speed > .01 ? LJS.mod(this.walkCyclePercent) : 0;
         }
         else
             this.walkCyclePercent = 0;
@@ -203,7 +211,7 @@ class Character extends GameObject
             if (this.walkSoundTime > 1)
             {
                 this.walkSoundTime = this.walkSoundTime%1;
-                sound_walk.play(this.pos);
+                GameEffects.sound_walk.play(this.pos);
             }
         }
         else
@@ -220,18 +228,18 @@ class Character extends GameObject
         const animationFrame = this.isDead() ? 0 :
             this.climbingLadder || this.groundTimer.active() ?
             2*this.walkCyclePercent|0 : 1;
-        this.tileInfo = spriteAtlas.player.frame(animationFrame);
+        this.tileInfo = Game.spriteAtlas.player.frame(animationFrame);
 
         let bodyPos = this.pos;
         if (!this.isDead())
         {
             // bounce pos with walk cycle
-            bodyPos = bodyPos.add(vec2(0,.01+.05*Math.sin(this.walkCyclePercent*PI)));
+            bodyPos = bodyPos.add(vec2(0,.01+.05*Math.sin(this.walkCyclePercent*LJS.PI)));
 
             // make bottom flush
             bodyPos = bodyPos.add(vec2(0,(this.drawSize.y-this.size.y)/2));
         }
-        drawTile(bodyPos, this.drawSize, this.tileInfo, this.color, this.angle, this.mirror);
+        LJS.drawTile(bodyPos, this.drawSize, this.tileInfo, this.color, this.angle, this.mirror);
     }
 
     damage(damage, damagingObject)
@@ -239,7 +247,7 @@ class Character extends GameObject
         if (this.isDead() || this.getAliveTime() < 1 || this.dodgeTimer.active())
             return 0;
 
-        makeBlood(damagingObject ? damagingObject.pos : this.pos);
+        GameEffects.makeBlood(damagingObject ? damagingObject.pos : this.pos);
         return super.damage(damage, damagingObject);
     }
 
@@ -248,14 +256,14 @@ class Character extends GameObject
         if (this.isDead())
             return;
 
-        makeBlood(this.pos, 100);
-        sound_die.play(this.pos);
+        GameEffects.makeBlood(this.pos, 100);
+        GameEffects.sound_die.play(this.pos);
 
         this.health = 0;
         this.deadTimer.set();
         this.size = this.size.scale(.5);
-        const fallDirection = damagingObject ? sign(damagingObject.velocity.x) : randSign();
-        this.angleVelocity = fallDirection*rand(.22,.14);
+        const fallDirection = damagingObject ? LJS.sign(damagingObject.velocity.x) : LJS.randSign();
+        this.angleVelocity = fallDirection*LJS.rand(.22,.14);
         this.angleDamping = .9;
         this.renderOrder = -1;  // move to back layer
         if (this.weapon)
@@ -267,15 +275,15 @@ class Character extends GameObject
         if (!data)
             return false;
 
-        if (data == tileType_ladder)
+        if (data == GameLevel.tileType_ladder)
         {
             // handle ladder collisions
             if (pos.y + 1 > this.lastPos.y - this.size.y/2)
                 return false;
 
-            if (getTileCollisionData(pos.add(vec2(0,1)))      // above
-                && !getTileCollisionData(pos.add(vec2(1,0)))  // left
-                && !getTileCollisionData(pos.add(vec2(1,0)))) // right
+            if (LJS.getTileCollisionData(pos.add(vec2(0,1)))      // above
+                && !LJS.getTileCollisionData(pos.add(vec2(1,0)))  // left
+                && !LJS.getTileCollisionData(pos.add(vec2(1,0)))) // right
                 return false; // don't collide if something above it and nothing to left or right
 
             // allow standing on top of ladders
@@ -284,7 +292,7 @@ class Character extends GameObject
 
         const d = pos.y - this.pos.y;
         if (!this.climbingLadder && this.velocity.y > .1 && d > 0 && d < this.size.y/2)
-        if (destroyTile(pos))
+        if (GameEffects.destroyTile(pos))
         {
             // break blocks above
             this.velocity.y = 0;

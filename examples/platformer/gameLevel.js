@@ -7,41 +7,44 @@
 
 'use strict';
 
-const tileType_ladder    = -1;
-const tileType_empty     = 0;
-const tileType_solid     = 1;
-const tileType_breakable = 2;
+// import LittleJS module
+import * as LJS from '../../dist/littlejs.esm.js';
+import * as GameObjects from './gameObjects.js';
+import * as GameEffects from './gameEffects.js';
+import * as Game from './game.js';
+const {vec2, hsl, tile} = LJS;
 
-let player, playerStartPos, tileLayers, foregroundTileLayer, sky;
-let levelSize, levelColor, levelBackgroundColor, levelOutlineColor;
+export const tileType_ladder    = -1;
+export const tileType_empty     = 0;
+export const tileType_solid     = 1;
+export const tileType_breakable = 2;
 
-function buildLevel()
+export let playerStartPos, tileLayers, foregroundTileLayer, sky;
+export let levelSize, levelColor, levelBackgroundColor, levelOutlineColor;
+
+export function buildLevel()
 {
     // destroy all objects
-    engineObjectsDestroy();
+    LJS.engineObjectsDestroy();
 
     // create the level
-    levelColor = randColor(hsl(0,0,.2), hsl(0,0,.8));
+    levelColor = LJS.randColor(hsl(0,0,.2), hsl(0,0,.8));
     levelBackgroundColor = levelColor.mutate().scale(.4,1);
     levelOutlineColor = levelColor.mutate().add(hsl(0,0,.4)).clamp();
-    loadLevel();
+    buildLevelData();
 
     // create sky object with gradient and stars
-    sky = new Sky;
+    sky = new GameEffects.Sky;
 
     // create parallax layers
     for (let i=3; i--;)
-        new ParallaxLayer(i);
-
-    // spawn player
-    player = new Player(playerStartPos);
-    cameraPos = getCameraTarget();
+        new GameEffects.ParallaxLayer(i);
 }
 
-function loadLevel()
+function buildLevelData()
 {
     // load level data from an exported Tiled js file
-    let tileMapData = gameLevelData;
+    let tileMapData = Game.gameLevelData;
     if (!tileMapData)
     {
         // default level data if loading failed
@@ -77,11 +80,11 @@ function loadLevel()
         const layerData = tileMapData.layers[layer].data;
         let tileLayer;
         if (layer < layerCount-1)
-            tileLayer = new TileLayer(vec2(), levelSize, tile(0,16,1));
+            tileLayer = new LJS.TileLayer(vec2(), levelSize, tile(0,16,1));
         else
         {
             // only foreground layer has collision
-            tileLayer = new TileCollisionLayer(vec2(), levelSize, tile(0,16,1));
+            tileLayer = new LJS.TileCollisionLayer(vec2(), levelSize, tile(0,16,1));
             foregroundTileLayer = tileLayer;
         }
         tileLayer.renderOrder = -1e3+layer;
@@ -100,11 +103,11 @@ function loadLevel()
                 if (tile == tileLookup.player)
                     playerStartPos = objectPos;
                 if (tile == tileLookup.crate)
-                    new Crate(objectPos);
+                    new GameObjects.Crate(objectPos);
                 if (tile == tileLookup.enemy)
-                    new Enemy(objectPos);
+                    new GameObjects.Enemy(objectPos);
                 if (tile == tileLookup.coin)
-                    new Coin(objectPos);
+                    new GameObjects.Coin(objectPos);
                 continue;
             }
             
@@ -126,14 +129,14 @@ function loadLevel()
                 let direction, mirror, color;
                 if (tileType == tileType_breakable)
                 {
-                    direction = randInt(4);
-                    mirror = randInt(2);
+                    direction = LJS.randInt(4);
+                    mirror = LJS.randInt(2);
                     color = layer ? levelColor : levelBackgroundColor;
                     color = color.mutate(.03);
                 }
 
                 // set tile layer data
-                const data = new TileLayerData(tile-1, direction, mirror, color);
+                const data = new LJS.TileLayerData(tile-1, direction, mirror, color);
                 tileLayer.setData(pos, data);
             }
         }
@@ -148,9 +151,9 @@ function loadLevel()
         decorateTile(pos, layer);
 }
 
-function decorateTile(pos, layer=1)
+export function decorateTile(pos, layer=1)
 {
-    ASSERT((pos.x|0) == pos.x && (pos.y|0)== pos.y);
+    LJS.ASSERT((pos.x|0) == pos.x && (pos.y|0)== pos.y);
     const tileLayer = tileLayers[layer];
     if (!tileLayer)
         return;
@@ -161,7 +164,7 @@ function decorateTile(pos, layer=1)
         if (tileType <= 0)
         {
             // force it to clear if it is empty
-            tileType || tileLayer.setData(pos, new TileLayerData, 1);
+            tileType || tileLayer.setData(pos, new LJS.TileLayerData, 1);
             return;
         }
         if (tileType == tileType_breakable)
@@ -193,7 +196,7 @@ function decorateTile(pos, layer=1)
             if (neighborTileDataA > 0 || neighborTileDataB > 0)
                 continue;
 
-            const directionVector = vec2().setAngle(i*PI/2+PI/4, 10).floor();
+            const directionVector = vec2().setAngle((i+.5)*LJS.PI/2, 10).floor();
             const drawPos = pos.add(vec2(.5))            // center
                 .scale(16).add(directionVector).floor(); // direction offset
 
@@ -203,4 +206,11 @@ function decorateTile(pos, layer=1)
                 drawPos.x - s/2, tileLayer.canvas.height - drawPos.y - s/2, s, s);
         }
     }
+}
+
+export function getCameraTarget()
+{
+    // camera is above player
+    const offset = 100/LJS.cameraScale*LJS.percent(LJS.mainCanvasSize.y, 300, 600);
+    return Game.player.pos.add(vec2(0, offset));
 }
