@@ -275,12 +275,11 @@ function setCode(code, largeExample)
                 text += `\n\n` + event.reason.stack;
             setErrorMessage(text);
         };
-        const originalAssert = iframeContent.console.assert;
         iframeContent.console.assert = function (condition, output)
         {
+            // route asserts to our error handler
             if (!condition)
-                setErrorMessage('Assertion failed!\n' + (output || '') + '\n' + (new Error).stack);
-            originalAssert.apply(this, arguments);
+                throw 'Assertion failed!\n' + (output || '') + '\n' + (new Error).stack;
         };
 
         // create a script element that overrides the default functions
