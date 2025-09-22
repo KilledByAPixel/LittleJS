@@ -216,8 +216,6 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace, context)
 {
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode'); 
-    ASSERT(typeof tileInfo !== 'number' || !tileInfo, 
-        'this is an old style calls, to fix replace it with tile(tileIndex, tileSize)');
     ASSERT(isVector2(pos) && isVector2(size));
     ASSERT(isColor(color) && (!additiveColor || isColor(additiveColor)));
 
