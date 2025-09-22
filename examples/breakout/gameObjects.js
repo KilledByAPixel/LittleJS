@@ -31,7 +31,7 @@ export class Wall extends PhysicsObject
 {
     constructor(pos, size)
     {
-        super(pos, size, 0, 0, hsl(0,0,0));
+        super(pos, size, 0, 0, rgb(0,0,0,0));
     }
 }
 
