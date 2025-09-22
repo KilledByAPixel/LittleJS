@@ -210,7 +210,19 @@ function glCreateTexture(image)
     const texture = glContext.createTexture();
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
     if (image && image.width)
+    {
         glSetTextureData(texture, image);
+        
+        const isPowerOfTwo = (value)=> !(value & (value - 1));
+        if (!tilesPixelated && isPowerOfTwo(image.width) && isPowerOfTwo(image.height))
+        {
+            // use mipmap filtering
+            glContext.generateMipmap(glContext.TEXTURE_2D);
+            glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, glContext.LINEAR_MIPMAP_LINEAR);
+            glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, glContext.LINEAR);
+            return texture;
+        }
+    }
     else
     {
         // create a white texture
@@ -218,7 +230,7 @@ function glCreateTexture(image)
         glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 1, 1, 0, glContext.RGBA, glContext.UNSIGNED_BYTE, whitePixel);
     }
     
-    // use point filtering for pixelated rendering
+    // set texture filtering
     const filter = tilesPixelated ? glContext.NEAREST : glContext.LINEAR;
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, filter);
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, filter);
