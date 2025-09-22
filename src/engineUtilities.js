@@ -304,7 +304,7 @@ class RandomGenerator
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** 
+/**
  * Create a 2d vector, can take 1 or 2 scalar values
  * @param {number} [x]
  * @param {number} [y] - if y is undefined, x is used for both
@@ -315,7 +315,7 @@ class RandomGenerator
  * b = vec2();         // set b to (0, 0)
  * @memberof Utilities
  */
-function vec2(x=0, y) { return new Vector2(x, y == undefined? x : y); }
+function vec2(x=0, y) { return new Vector2(x, y === undefined ? x : y); }
 
 /** 
  * Check if object is a valid Vector2
@@ -897,7 +897,7 @@ class Timer
 {
     /** Create a timer object set time passed in
      *  @param {number} [timeLeft] - How much time left before the timer elapses in seconds */
-    constructor(timeLeft) { this.time = timeLeft == undefined ? undefined : time + timeLeft; this.setTime = timeLeft; }
+    constructor(timeLeft) { this.time = timeLeft === undefined ? undefined : time + timeLeft; this.setTime = timeLeft; }
 
     /** Set the timer with seconds passed in
      *  @param {number} [timeLeft] - How much time left before the timer is elapsed in seconds */
@@ -908,7 +908,7 @@ class Timer
 
     /** Returns true if set
      * @return {boolean} */
-    isSet() { return this.time != undefined; }
+    isSet() { return this.time !== undefined; }
 
     /** Returns true if set and has not elapsed
      * @return {boolean} */
