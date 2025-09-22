@@ -131,7 +131,7 @@ class Box2dObject extends EngineObject
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
      *  @param {boolean} [isSensor] */
-    addShape(shape, density=1, friction=1, restitution=0, isSensor=false)
+    addShape(shape, density=1, friction=.2, restitution=0, isSensor=false)
     {
         const fd = new box2d.instance.b2FixtureDef();
         fd.set_shape(shape);
