@@ -130,8 +130,8 @@ declare module "littlejsengine" {
      *  @memberof Debug */
     export let showWatermark: boolean;
     /** Asserts if the expression is false, does not do anything in release builds
-     *  @param {boolean} assert
-     *  @param {Object} [output]
+     *  @param {boolean} assert - expression to assert
+     *  @param {Object} [output] - error message output
      *  @memberof Debug */
     export function ASSERT(assert: boolean, output?: any): void;
     /** Draw a debug rectangle in world space
@@ -753,7 +753,7 @@ declare module "littlejsengine" {
      *  @param {number} [length]
      *  @return {Vector2}
      *  @memberof Random */
-    export function randVector(length?: number): Vector2;
+    export function randVec2(length?: number): Vector2;
     /** Returns a random color between the two passed in colors, combine components if linear
      *  @param {Color}   [colorA=(1,1,1,1)]
      *  @param {Color}   [colorB=(0,0,0,1)]
@@ -795,6 +795,14 @@ declare module "littlejsengine" {
         *  @param {number} [valueB]
         *  @return {number} */
         floatSign(valueA?: number, valueB?: number): number;
+        /** Returns a random angle between -PI and PI
+        *  @return {number} */
+        angle(): number;
+        /** Returns a seeded vec2 with size between the two values passed in
+        *  @param {number} valueA
+        *  @param {number} [valueB]
+        *  @return {Vector2} */
+        vec2(valueA?: number, valueB?: number): Vector2;
     }
     /**
      * 2D Vector object with vector math library
@@ -897,6 +905,10 @@ declare module "littlejsengine" {
         /** Returns a copy of this vector with each axis floored
          * @return {Vector2} */
         floor(): Vector2;
+        /** Returns new vec2 with modded values
+        *  @param {number} [divisor]
+        *  @return {Vector2} */
+        mod(divisor?: number): Vector2;
         /** Returns the area this vector covers as a rectangle
          * @return {number} */
         area(): number;
@@ -1913,7 +1925,7 @@ declare module "littlejsengine" {
         update(): void;
         /** Render the object, draws a tile by default, automatically called each frame, sorted by renderOrder */
         render(): void;
-        /** Destroy this object, destroy it's children, detach it's parent, and mark it for removal */
+        /** Destroy this object, destroy its children, detach it's parent, and mark it for removal */
         destroy(): void;
         destroyed: number;
         /** Convert from local space to world space

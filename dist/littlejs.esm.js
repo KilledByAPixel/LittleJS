@@ -56,13 +56,13 @@ let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParti
 // Debug helper functions
 
 /** Asserts if the expression is false, does not do anything in release builds
- *  @param {boolean} assert
- *  @param {Object} [output]
+ *  @param {boolean} assert - expression to assert
+ *  @param {Object} [output] - error message output
  *  @memberof Debug */
 function ASSERT(assert, output) 
 {
     if (enableAsserts)
-        output ? console.assert(assert, output) : console.assert(assert);
+        console.assert(assert, output);
 }
 
 /** Draw a debug rectangle in world space
@@ -432,8 +432,10 @@ function debugRender()
         if (debugOverlay)
         {
             overlayContext.fillText(engineName, x, y += h);
-            overlayContext.fillText('Objects: ' + engineObjects.length, x, y += h);
             overlayContext.fillText('Time: ' + formatTime(time), x, y += h);
+            overlayContext.fillText('FPS: ' + averageFPS.toFixed(1), x, y += h);
+            overlayContext.fillText('Objects: ' + engineObjects.length, x, y += h);
+            overlayContext.fillText('Draw Count: ' + drawCount, x, y += h);
             overlayContext.fillText('---------', x, y += h);
             overlayContext.fillStyle = '#f00';
             overlayContext.fillText('ESC: Debug Overlay', x, y += h);
@@ -795,7 +797,7 @@ function randSign() { return randInt(2) * 2 - 1; }
  *  @param {number} [length]
  *  @return {Vector2}
  *  @memberof Random */
-function randVector(length=1) { return new Vector2().setAngle(rand(2*PI), length); }
+function randVec2(length=1) { return new Vector2().setAngle(rand(2*PI), length); }
 
 /** Returns a random Vector2 within a circular shape
  *  @param {number} [radius]
@@ -803,7 +805,7 @@ function randVector(length=1) { return new Vector2().setAngle(rand(2*PI), length
  *  @return {Vector2}
  *  @memberof Random */
 function randInCircle(radius=1, minRadius=0)
-{ return radius > 0 ? randVector(radius * rand(minRadius / radius, 1)**.5) : new Vector2; }
+{ return radius > 0 ? randVec2(radius * rand(minRadius / radius, 1)**.5) : new Vector2; }
 
 /** Returns a random color between the two passed in colors, combine components if linear
  *  @param {Color}   [colorA=(1,1,1,1)]
@@ -835,6 +837,8 @@ class RandomGenerator
      *  @param {number} seed - Starting seed */
     constructor(seed)
     {
+        ASSERT(isFinite(seed), 'RandomGenerator seed must be a finite number');
+
         /** @property {number} - random seed */
         this.seed = seed;
     }
@@ -867,11 +871,22 @@ class RandomGenerator
     *  @param {number} [valueB]
     *  @return {number} */
     floatSign(valueA=1, valueB=0) { return this.float(valueA, valueB) * this.sign(); }
+
+    /** Returns a random angle between -PI and PI
+    *  @return {number} */
+    angle() { return this.float(-PI, PI); }
+
+    /** Returns a seeded vec2 with size between the two values passed in
+    *  @param {number} valueA
+    *  @param {number} [valueB]
+    *  @return {Vector2} */
+    vec2(valueA=1, valueB=0)
+    { return vec2(this.float(valueA, valueB), this.float(valueA, valueB)); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** 
+/**
  * Create a 2d vector, can take 1 or 2 scalar values
  * @param {number} [x]
  * @param {number} [y] - if y is undefined, x is used for both
@@ -882,7 +897,7 @@ class RandomGenerator
  * b = vec2();         // set b to (0, 0)
  * @memberof Utilities
  */
-function vec2(x=0, y) { return new Vector2(x, y == undefined? x : y); }
+function vec2(x=0, y) { return new Vector2(x, y === undefined ? x : y); }
 
 /** 
  * Check if object is a valid Vector2
@@ -1086,6 +1101,11 @@ class Vector2
      * @return {Vector2} */
     floor() { return new Vector2(Math.floor(this.x), Math.floor(this.y)); }
 
+    /** Returns new vec2 with modded values
+    *  @param {number} [divisor]
+    *  @return {Vector2} */
+    mod(divisor=1) { return new Vector2(mod(this.x, divisor), mod(this.y, divisor)); }
+
     /** Returns the area this vector covers as a rectangle
      * @return {number} */
     area() { return abs(this.x * this.y); }
@@ -1120,11 +1140,7 @@ class Vector2
 
     /** Checks if this is a valid vector
      * @return {boolean} */
-    isValid()
-    {
-        return typeof this.x == 'number' && !isNaN(this.x)
-            && typeof this.y == 'number' && !isNaN(this.y);
-    }
+    isValid() { return isFinite(this.x) && isFinite(this.y);}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1383,12 +1399,7 @@ class Color
     /** Checks if this is a valid color
      * @return {boolean} */
     isValid()
-    {
-        return typeof this.r == 'number' && !isNaN(this.r)
-            && typeof this.g == 'number' && !isNaN(this.g)
-            && typeof this.b == 'number' && !isNaN(this.b)
-            && typeof this.a == 'number' && !isNaN(this.a);
-    }
+    {  return isFinite(this.r) && isFinite(this.g) && isFinite(this.b) && isFinite(this.a); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1464,7 +1475,7 @@ class Timer
 {
     /** Create a timer object set time passed in
      *  @param {number} [timeLeft] - How much time left before the timer elapses in seconds */
-    constructor(timeLeft) { this.time = timeLeft == undefined ? undefined : time + timeLeft; this.setTime = timeLeft; }
+    constructor(timeLeft) { this.time = timeLeft === undefined ? undefined : time + timeLeft; this.setTime = timeLeft; }
 
     /** Set the timer with seconds passed in
      *  @param {number} [timeLeft] - How much time left before the timer is elapsed in seconds */
@@ -1475,7 +1486,7 @@ class Timer
 
     /** Returns true if set
      * @return {boolean} */
-    isSet() { return this.time != undefined; }
+    isSet() { return this.time !== undefined; }
 
     /** Returns true if set and has not elapsed
      * @return {boolean} */
@@ -2028,9 +2039,13 @@ class EngineObject
      */
     constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color=new Color, renderOrder=0)
     {
-        // set passed in params
-        ASSERT(isVector2(pos) && isVector2(size), 'ensure pos and size are vec2s');
-        ASSERT(typeof tileInfo !== 'number' || !tileInfo, 'old style tile setup');
+        // check passed in params
+        ASSERT(isVector2(pos) && pos.isValid(), 'pos should be a vec2');
+        ASSERT(isVector2(size) && size.isValid(), 'size should be a vec2');
+        ASSERT(!tileInfo || tileInfo instanceof TileInfo, 'tileInfo should be a TileInfo or 0');
+        ASSERT(typeof angle == 'number' && isFinite(angle), 'angle should be a number');
+        ASSERT(isColor(color) && color.isValid(), 'color should be a valid rgba color');
+        ASSERT(typeof renderOrder == 'number', 'renderOrder should be a number');
 
         /** @property {Vector2} - World space position of the object */
         this.pos = pos.copy();
@@ -2196,7 +2211,7 @@ class EngineObject
                     const deltaPos = oldPos.subtract(o.pos);
                     const length = deltaPos.length();
                     const pushAwayAccel = .001; // push away if already overlapping
-                    const velocity = length < .01 ? randVector(pushAwayAccel) : deltaPos.scale(pushAwayAccel/length);
+                    const velocity = length < .01 ? randVec2(pushAwayAccel) : deltaPos.scale(pushAwayAccel/length);
                     this.velocity = this.velocity.add(velocity);
                     if (o.mass) // push away if not fixed
                         o.velocity = o.velocity.subtract(velocity);
@@ -2321,7 +2336,7 @@ class EngineObject
         drawTile(this.pos, this.drawSize || this.size, this.tileInfo, this.color, this.angle, this.mirror, this.additiveColor);
     }
     
-    /** Destroy this object, destroy it's children, detach it's parent, and mark it for removal */
+    /** Destroy this object, destroy its children, detach it's parent, and mark it for removal */
     destroy()
     { 
         if (this.destroyed)
@@ -2331,7 +2346,10 @@ class EngineObject
         this.destroyed = 1;
         this.parent && this.parent.removeChild(this);
         for (const child of this.children)
-            child.destroy(child.parent = 0);
+        {
+            child.parent = 0;
+            child.destroy();
+        }
     }
 
     /** Convert from local space to world space
@@ -2667,8 +2685,6 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace, context)
 {
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode'); 
-    ASSERT(typeof tileInfo !== 'number' || !tileInfo, 
-        'this is an old style calls, to fix replace it with tile(tileIndex, tileSize)');
     ASSERT(isVector2(pos) && isVector2(size));
     ASSERT(isColor(color) && (!additiveColor || isColor(additiveColor)));
 
@@ -5332,7 +5348,7 @@ function glFlush()
     // draw all the sprites in the batch and reset the buffer
     glContext.bufferSubData(glContext.ARRAY_BUFFER, 0, glPositionData);
     glContext.drawArraysInstanced(glContext.TRIANGLE_STRIP, 0, 4, glInstanceCount);
-    if (showWatermark)
+    if (debug || showWatermark)
         drawCount += glInstanceCount;
     glInstanceCount = 0;
     glBatchAdditive = glAdditive;
@@ -5377,8 +5393,6 @@ function glSetAntialias(antialias=true)
  *  @memberof WebGL */
 function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba=-1, rgbaAdditive=0)
 {
-    ASSERT(typeof rgba == 'number' && typeof rgbaAdditive == 'number', 'invalid color');
-
     // flush if there is not enough room or if different blend mode
     if (glInstanceCount >= gl_MAX_INSTANCES || glBatchAdditive != glAdditive)
         glFlush();
@@ -5426,7 +5440,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.12.6';
+const engineVersion = '1.12.7';
 
 /** Frames per second to update
  *  @type {number}
@@ -5615,7 +5629,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
 
             if (showWatermark)
             {
-                // update fps
+                // update fps display
                 overlayContext.textAlign = 'right';
                 overlayContext.textBaseline = 'top';
                 overlayContext.font = '1em monospace';
@@ -5626,8 +5640,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                 overlayContext.fillText(text, mainCanvas.width-3, 3);
                 overlayContext.fillStyle = '#fff';
                 overlayContext.fillText(text, mainCanvas.width-2, 2);
-                drawCount = 0;
             }
+            if (debug || showWatermark)
+                drawCount = 0;
         }
 
         debugVideoCaptureUpdate();
@@ -7062,7 +7077,7 @@ class Box2dObject extends EngineObject
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
      *  @param {boolean} [isSensor] */
-    addShape(shape, density=1, friction=1, restitution=0, isSensor=false)
+    addShape(shape, density=1, friction=.2, restitution=0, isSensor=false)
     {
         const fd = new box2d.instance.b2FixtureDef();
         fd.set_shape(shape);
@@ -8952,7 +8967,7 @@ export
 	randInt,
 	randSign,
 	randInCircle,
-	randVector,
+	randVec2,
 	randColor,
 
 	// Utility Classes
