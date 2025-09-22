@@ -156,7 +156,7 @@ export
 	randInt,
 	randSign,
 	randInCircle,
-	randVector,
+	randVec2,
 	randColor,
 
 	// Utility Classes
