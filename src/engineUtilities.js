@@ -268,6 +268,8 @@ class RandomGenerator
      *  @param {number} seed - Starting seed */
     constructor(seed)
     {
+        ASSERT(isFinite(seed), 'RandomGenerator seed must be a finite number');
+
         /** @property {number} - random seed */
         this.seed = seed;
     }
