@@ -55,7 +55,7 @@ formatTime(t)                                 // Formats seconds for display
 rand(valueA=1, valueB=0)             // Random float between values
 randInt(valueA, valueB=0)            // Random integer between values
 randSign()                           // Randomly bool either -1 or 1
-randVector(length=1)                 // Random Vector2 with the passed in length
+randVec2(length=1)                   // Random Vector2 with the passed in length
 randInCircle(radius=1, minRadius=0)  // Random Vector2 within a circle
 randColor(colorA, colorB, linear)    // Random color between values
 
