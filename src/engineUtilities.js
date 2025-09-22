@@ -571,11 +571,7 @@ class Vector2
 
     /** Checks if this is a valid vector
      * @return {boolean} */
-    isValid()
-    {
-        return typeof this.x == 'number' && !isNaN(this.x)
-            && typeof this.y == 'number' && !isNaN(this.y);
-    }
+    isValid() { return isFinite(this.x) && isFinite(this.y);}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -834,12 +830,7 @@ class Color
     /** Checks if this is a valid color
      * @return {boolean} */
     isValid()
-    {
-        return typeof this.r == 'number' && !isNaN(this.r)
-            && typeof this.g == 'number' && !isNaN(this.g)
-            && typeof this.b == 'number' && !isNaN(this.b)
-            && typeof this.a == 'number' && !isNaN(this.a);
-    }
+    {  return isFinite(this.r) && isFinite(this.g) && isFinite(this.b) && isFinite(this.a); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
