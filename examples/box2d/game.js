@@ -118,7 +118,7 @@ function gameUpdate()
         GameObjects.explosion(LJS.mousePos);
 
     if (LJS.keyWasPressed('KeyR'))
-        setScene(scene); // reset scene
+        setScene(Scenes.scene); // reset scene
     if (LJS.keyWasPressed('ArrowUp') || LJS.keyWasPressed('ArrowDown'))
     {
         // change scene
