@@ -63,7 +63,7 @@ export function spawnPyramid(pos, count)
         spawnBox(pos.add(vec2(j-i/2+.5,count-i+.5)), 1, LJS.randColor());
 }
 
-export function spawnDominoes(pos, count, size=vec2(.5,2))
+export function spawnDominoes(pos, count, size=vec2(.5,3))
 {
     for (let i=count; i--;)
         spawnBox(pos.add(vec2(i*size.y*.9,size.y/2)), size, LJS.randColor());
@@ -105,7 +105,7 @@ export class CarObject extends LJS.Box2dObject
 {
     constructor(pos)
     {
-        super(pos, vec2(), 0, 0, LJS.RED);
+        super(pos, vec2(), 0, 0, LJS.randColor());
         const carPoints = [
             vec2(-1.5,-.5),
             vec2(1.5, -.5),
@@ -147,14 +147,14 @@ export class CarObject extends LJS.Box2dObject
     }
     update()
     {
+        super.update();
+
         // car controls
         const maxSpeed = 40;
-        const brakeAmount = .8;
         const input = LJS.keyDirection().x;
         let s = this.wheelMotorJoint.getMotorSpeed();
-        s = input ? LJS.clamp(s - input, -maxSpeed, maxSpeed) : s * brakeAmount;
+        s = input ? LJS.clamp(s - input, -maxSpeed, maxSpeed) : 0;
         this.wheelMotorJoint.setMotorSpeed(s);
-        super.update();
     }
     destroy()
     {
@@ -393,6 +393,8 @@ export class ClothObject extends LJS.Box2dObject
     }
     update()
     {
+        super.update();
+        
         for (let y=this.sizeCount.y; y--;)
         for (let x=this.sizeCount.x; x--;)
         {
@@ -425,7 +427,6 @@ export class ClothObject extends LJS.Box2dObject
                 this.nodes[y*this.sizeCount.x+x] = 0;
             }
         }
-        super.update();
     }
     render()
     {

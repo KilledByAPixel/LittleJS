@@ -14,7 +14,7 @@ class CarObject extends Box2dObject
     {
         super(pos, vec2(), 0, 0, RED);
 
-        // create a car with wheels
+        // create car with wheels
         this.addBox(vec2(7,2));
         const frequency = 4, maxTorque = 250;
         this.wheels = [];
@@ -26,24 +26,20 @@ class CarObject extends Box2dObject
             joint.setSpringFrequencyHz(frequency);
             joint.setMaxMotorTorque(maxTorque);
             joint.enableMotor(!i);
-            wheel.addCircle(2);
+            wheel.addCircle(2, vec2(), 1, 1);
             wheel.motorJoint = joint;
             this.wheels[i] = wheel;
         }
     }
     update()
     {
+        super.update();
+        
         // car controls - use arrow keys or A/D to drive
-        const maxSpeed = 40, brakeAmount = .9;
+        const maxSpeed = 40;
         const input = keyDirection().x;
         let s = this.wheels[0].motorJoint.getMotorSpeed();
-        s = input ? clamp(s - input, -maxSpeed, maxSpeed) : s * brakeAmount;
+        s = input ? clamp(s - input, -maxSpeed, maxSpeed) : 0;
         this.wheels[0].motorJoint.setMotorSpeed(s);
-        super.update();
-    }
-    destroy()
-    {
-        this.wheels.forEach(o=>o.destroy());
-        super.destroy();
     }
 }

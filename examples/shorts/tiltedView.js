@@ -18,12 +18,14 @@ class Player extends GameObject
 {
     update()
     {
+        super.update();
+
         // apply movement controls
         const moveInput = keyDirection().clampLength(1).scale(.2); // clamp and scale input
-        this.velocity = this.velocity.add(moveInput); // apply movement
+        this.velocity = this.velocity.add(moveInput);
 
-        super.update(); // call parent update function
-        cameraPos = this.pos.add(vec2(0,2)); // move camera with player
+        // move camera with player
+        cameraPos = this.pos.add(vec2(0,2));
     }
 }
 
@@ -35,10 +37,10 @@ function gameInit()
     new Player(vec2(), vec2(3), tile(5), 0, RED);
 
     // create background objects
-    for (let i = 1; i < 300; ++i)
+    for (let i=1; i<300; ++i)
         new EngineObject(randInCircle(90), vec2(rand(59),rand(59)), 0, 0, hsl(.4,.3,rand(.1,.2),.8), -1e5);
 
     // create world objects
-    for (let i = 1; i < 1e3; ++i)
+    for (let i=1; i<1e3; ++i)
         new GameObject(randInCircle(7+i,7), vec2(rand(1,2),rand(4,9)), 0, 0, hsl(.1,.5,rand(.2,.3)));
 }

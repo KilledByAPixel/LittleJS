@@ -19,12 +19,14 @@ class Player extends PhysicsObject
 
     update()
     {
+        super.update();
+
         // apply movement controls
         const moveInput = keyDirection().clampLength(1).scale(.2); // clamp and scale input
-        this.velocity = this.velocity.add(moveInput); // apply movement
+        this.velocity = this.velocity.add(moveInput);
 
-        super.update(); // call parent update function
-        cameraPos = this.pos; // move camera with player
+        // move camera with player
+        cameraPos = this.pos;
     }
 }
 
@@ -35,10 +37,10 @@ function gameInit()
     new Player();
 
     // create background objects
-    for (let i = 1; i < 300; ++i)
+    for (let i=300; i--;)
         new EngineObject(randInCircle(90), vec2(rand(59),rand(59)), 0, rand(), hsl(.4,.5,rand(.2)));
 
     // create foreground objects
-    for (let i = 1; i < 300; ++i)
+    for (let i=300; i--;)
         new PhysicsObject(randInCircle(7+i,7), vec2(rand(4,9),rand(4,9)), hsl(0,0,rand(.8,1)));
 }

@@ -49,12 +49,12 @@ export function loadScene(_scene)
     if (scene == 2)
     {
         sceneName = 'Dominoes';
-        GameObjects.spawnDominoes(vec2(11,11), 11);
-        GameObjects.spawnDominoes(vec2(2,0), 13, vec2(1,3));
-        GameObjects.spawnCircle(vec2(10,20), 2, LJS.randColor());
-        GameObjects.spawnCircle(vec2(31.7,12), 2, LJS.randColor());
-        GameObjects.spawnBox(vec2(16,11), vec2(32,1), LJS.randColor(), LJS.box2d.bodyTypeStatic, false);
-        GameObjects.spawnBox(vec2(24,6.5), vec2(32,1), LJS.randColor(), LJS.box2d.bodyTypeStatic, false, -.15);
+        GameObjects.spawnDominoes(vec2(11,13), 8);
+        GameObjects.spawnDominoes(vec2(3,0), 10, vec2(1,4));
+        GameObjects.spawnCircle(vec2(10.2,20), 1.5, LJS.randColor());
+        GameObjects.spawnCircle(vec2(31.9,15), 2.5, LJS.randColor());
+        GameObjects.spawnBox(vec2(16,13), vec2(32,1), LJS.randColor(), LJS.box2d.bodyTypeStatic, false);
+        GameObjects.spawnBox(vec2(24,8), vec2(34,1), LJS.randColor(), LJS.box2d.bodyTypeStatic, false, -.15);
     }
     if (scene == 3)
     {

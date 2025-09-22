@@ -18,14 +18,16 @@ class Player extends PhysicsObject
 
     update()
     {
+        super.update();
+
         // apply movement controls
         const moveInput = keyDirection();
         this.velocity.x += moveInput.x * (this.groundObject ? .1: .01);
         if (this.groundObject && moveInput.y > 0)
             this.velocity.y = .9; // jump
 
-        super.update(); // call parent update function
-        cameraPos = vec2(this.pos.x, 9); // move camera with player
+        // move camera with player
+        cameraPos = vec2(this.pos.x, 9); 
     }
 }
 
@@ -37,6 +39,6 @@ function gameInit()
 
     // create random objects
     new PhysicsObject(vec2(), vec2(1e3,4), GRAY); // ground
-    for (let i = 1; i < 500; ++i)
+    for (let i=1; i<500; ++i)
         new PhysicsObject(vec2(i*10+randInt(4), 0), vec2(2+randInt(20),4+randInt(8)), GREEN);
 }
