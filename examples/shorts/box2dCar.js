@@ -21,7 +21,7 @@ class CarObject extends Box2dObject
         for(let i=2; i--;)
         {
             const wheelPos = pos.add(vec2(i?2:-2, -1));
-            const wheel = new Box2dObject(wheelPos, vec2(2), tile(0));
+            const wheel = new Box2dObject(wheelPos, vec2(2), tile(7));
             const joint = new Box2dWheelJoint(this, wheel);
             joint.setSpringFrequencyHz(frequency);
             joint.setMaxMotorTorque(maxTorque);
