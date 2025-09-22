@@ -302,6 +302,17 @@ class RandomGenerator
     *  @param {number} [valueB]
     *  @return {number} */
     floatSign(valueA=1, valueB=0) { return this.float(valueA, valueB) * this.sign(); }
+
+    /** Returns a random angle between -PI and PI
+    *  @return {number} */
+    angle() { return this.float(-PI, PI); }
+
+    /** Returns a seeded vec2 with size between the two values passed in
+    *  @param {number} valueA
+    *  @param {number} [valueB]
+    *  @return {Vector2} */
+    vec2(valueA=1, valueB=0)
+    { return vec2(this.float(valueA, valueB), this.float(valueA, valueB)); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
