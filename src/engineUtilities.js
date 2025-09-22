@@ -532,6 +532,11 @@ class Vector2
      * @return {Vector2} */
     floor() { return new Vector2(Math.floor(this.x), Math.floor(this.y)); }
 
+    /** Returns new vec2 with modded values
+    *  @param {number} [divisor]
+    *  @return {Vector2} */
+    mod(divisor=1) { return new Vector2(mod(this.x, divisor), mod(this.y, divisor)); }
+
     /** Returns the area this vector covers as a rectangle
      * @return {number} */
     area() { return abs(this.x * this.y); }
