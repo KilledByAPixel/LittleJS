@@ -219,7 +219,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
 
             if (showWatermark)
             {
-                // update fps
+                // update fps display
                 overlayContext.textAlign = 'right';
                 overlayContext.textBaseline = 'top';
                 overlayContext.font = '1em monospace';
@@ -230,8 +230,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                 overlayContext.fillText(text, mainCanvas.width-3, 3);
                 overlayContext.fillStyle = '#fff';
                 overlayContext.fillText(text, mainCanvas.width-2, 2);
-                drawCount = 0;
             }
+            if (debug || showWatermark)
+                drawCount = 0;
         }
 
         debugVideoCaptureUpdate();

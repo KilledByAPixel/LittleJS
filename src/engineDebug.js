@@ -53,8 +53,8 @@ let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParti
 // Debug helper functions
 
 /** Asserts if the expression is false, does not do anything in release builds
- *  @param {boolean} assert
- *  @param {Object} [output] - description of what failed, defaults to generic message
+ *  @param {boolean} assert - expression to assert
+ *  @param {Object} [output] - error message output
  *  @memberof Debug */
 function ASSERT(assert, output) 
 {
@@ -429,8 +429,10 @@ function debugRender()
         if (debugOverlay)
         {
             overlayContext.fillText(engineName, x, y += h);
-            overlayContext.fillText('Objects: ' + engineObjects.length, x, y += h);
             overlayContext.fillText('Time: ' + formatTime(time), x, y += h);
+            overlayContext.fillText('FPS: ' + averageFPS.toFixed(1), x, y += h);
+            overlayContext.fillText('Objects: ' + engineObjects.length, x, y += h);
+            overlayContext.fillText('Draw Count: ' + drawCount, x, y += h);
             overlayContext.fillText('---------', x, y += h);
             overlayContext.fillStyle = '#f00';
             overlayContext.fillText('ESC: Debug Overlay', x, y += h);

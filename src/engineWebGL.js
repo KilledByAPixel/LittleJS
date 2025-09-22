@@ -262,7 +262,7 @@ function glFlush()
     // draw all the sprites in the batch and reset the buffer
     glContext.bufferSubData(glContext.ARRAY_BUFFER, 0, glPositionData);
     glContext.drawArraysInstanced(glContext.TRIANGLE_STRIP, 0, 4, glInstanceCount);
-    if (showWatermark)
+    if (debug || showWatermark)
         drawCount += glInstanceCount;
     glInstanceCount = 0;
     glBatchAdditive = glAdditive;
