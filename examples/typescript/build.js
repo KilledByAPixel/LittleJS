@@ -2,7 +2,6 @@
 
 const PROGRAM_NAME = 'game';
 const BUILD_FOLDER = 'build';
-const ROOT_FOLDER = 'examples/typescript';
 
 // Define TypeScript source files
 const tsSourceFiles = [
