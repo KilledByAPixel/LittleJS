@@ -104,7 +104,7 @@ function gameRenderPost()
 {
     // use built in image font for text
     const font = new LJS.FontImage;
-    font.drawText('Score: ' + score, LJS.cameraPos.add(vec2(0,10)), .15, true);
+    font.drawText('Score: ' + score, LJS.cameraPos.add(vec2(0,9.7)), .15, true);
     if (!brickCount)
         font.drawText('You Win!', LJS.cameraPos.add(vec2(0,-5)), .2, true);
     else if (!ball)
