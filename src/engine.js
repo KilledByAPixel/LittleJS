@@ -30,7 +30,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.12.5';
+const engineVersion = '1.12.6';
 
 /** Frames per second to update
  *  @type {number}
@@ -352,8 +352,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         }));
     }
 
-    // load all of the images
-    return Promise.all(promises).then(startEngine);
+    // wait for all the promises to finish
+    await Promise.all(promises);
+    return startEngine();
 }
 
 /** Update each engine object, remove destroyed objects, and update time

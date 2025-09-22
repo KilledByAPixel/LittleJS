@@ -3128,17 +3128,17 @@ class Sound
 {
     /** Create a sound object and cache the zzfx samples for later use
      *  @param {Array}  zzfxSound - Array of zzfx parameters, ex. [.5,.5]
-     *  @param {number} [range=soundDefaultRange] - World space max range of sound, will not play if camera is farther away
+     *  @param {number} [range=soundDefaultRange] - World space max range of sound
      *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
      */
     constructor(zzfxSound, range=soundDefaultRange, taper=soundDefaultTaper)
     {
         if (!soundEnable || headlessMode) return;
 
-        /** @property {number} - World space max range of sound, will not play if camera is farther away */
+        /** @property {number} - World space max range of sound */
         this.range = range;
 
-        /** @property {number} - At what percentage of range should it start tapering off */
+        /** @property {number} - At what percentage of range should it start tapering */
         this.taper = taper;
 
         /** @property {number} - How much to randomize frequency each time sound plays */
@@ -3254,8 +3254,8 @@ class SoundWave extends Sound
     /** Create a sound object and cache the wave file for later use
      *  @param {string} filename - Filename of audio file to load
      *  @param {number} [randomness] - How much to randomize frequency each time sound plays
-     *  @param {number} [range=soundDefaultRange] - World space max range of sound, will not play if camera is farther away
-     *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering off
+     *  @param {number} [range=soundDefaultRange] - World space max range of sound
+     *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
      *  @param {Function} [onloadCallback] - callback function to call when sound is loaded
      */
     constructor(filename, randomness=0, range, taper, onloadCallback)
@@ -3263,17 +3263,26 @@ class SoundWave extends Sound
         super(undefined, range, taper);
         if (!soundEnable || headlessMode) return;
 
+        /** @property {Function} - callback function to call when sound is loaded */
+        this.onloadCallback = onloadCallback;
         this.randomness = randomness;
-        fetch(filename)
-        .then(response => response.arrayBuffer())
-        .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
-        .then(audioBuffer => 
-        {
-            this.sampleChannels = [];
-            for (let i = audioBuffer.numberOfChannels; i--;)
-                this.sampleChannels[i] = Array.from(audioBuffer.getChannelData(i));
-            this.sampleRate = audioBuffer.sampleRate;
-        }).then(() => onloadCallback && onloadCallback(this));
+        this.loadSound(filename);
+    }
+
+    /** Loads a sound from a URL and decodes it into sample data. Must be used with await!
+    *  @param {string} filename
+    *  @return {Promise<void>} */
+    async loadSound(filename)
+    {
+        const response = await fetch(filename);
+        const arrayBuffer = await response.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        this.sampleChannels = [];
+        for (let i = audioBuffer.numberOfChannels; i--;)
+            this.sampleChannels[i] = Array.from(audioBuffer.getChannelData(i));
+        this.sampleRate = audioBuffer.sampleRate;
+        if (this.onloadCallback)
+            this.onloadCallback();
     }
 }
 
@@ -4745,7 +4754,19 @@ function glCreateTexture(image)
     const texture = glContext.createTexture();
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
     if (image && image.width)
+    {
         glSetTextureData(texture, image);
+        
+        const isPowerOfTwo = (value)=> !(value & (value - 1));
+        if (!tilesPixelated && isPowerOfTwo(image.width) && isPowerOfTwo(image.height))
+        {
+            // use mipmap filtering
+            glContext.generateMipmap(glContext.TEXTURE_2D);
+            glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, glContext.LINEAR_MIPMAP_LINEAR);
+            glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, glContext.LINEAR);
+            return texture;
+        }
+    }
     else
     {
         // create a white texture
@@ -4753,7 +4774,7 @@ function glCreateTexture(image)
         glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 1, 1, 0, glContext.RGBA, glContext.UNSIGNED_BYTE, whitePixel);
     }
     
-    // use point filtering for pixelated rendering
+    // set texture filtering
     const filter = tilesPixelated ? glContext.NEAREST : glContext.LINEAR;
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, filter);
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, filter);
@@ -4879,7 +4900,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.12.5';
+const engineVersion = '1.12.6';
 
 /** Frames per second to update
  *  @type {number}
@@ -5201,8 +5222,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         }));
     }
 
-    // load all of the images
-    return Promise.all(promises).then(startEngine);
+    // wait for all the promises to finish
+    await Promise.all(promises);
+    return startEngine();
 }
 
 /** Update each engine object, remove destroyed objects, and update time

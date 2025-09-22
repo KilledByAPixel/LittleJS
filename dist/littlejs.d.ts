@@ -72,7 +72,7 @@ declare module "littlejsengine" {
      *  @param {Array<string>} [imageSources=[]] - List of images to load
      *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default
      *  @memberof Engine */
-    export function engineInit(gameInit: Function | (() => Promise<any>), gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, imageSources?: Array<string>, rootElement?: HTMLElement): Promise<any>;
+    export function engineInit(gameInit: Function | (() => Promise<any>), gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, imageSources?: Array<string>, rootElement?: HTMLElement): Promise<void>;
     /** Update each engine object, remove destroyed objects, and update time
      *  @memberof Engine */
     export function engineObjectsUpdate(): void;
@@ -1651,13 +1651,13 @@ declare module "littlejsengine" {
     export class Sound {
         /** Create a sound object and cache the zzfx samples for later use
          *  @param {Array}  zzfxSound - Array of zzfx parameters, ex. [.5,.5]
-         *  @param {number} [range=soundDefaultRange] - World space max range of sound, will not play if camera is farther away
+         *  @param {number} [range=soundDefaultRange] - World space max range of sound
          *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
          */
         constructor(zzfxSound: any[], range?: number, taper?: number);
-        /** @property {number} - World space max range of sound, will not play if camera is farther away */
+        /** @property {number} - World space max range of sound */
         range: number;
-        /** @property {number} - At what percentage of range should it start tapering off */
+        /** @property {number} - At what percentage of range should it start tapering */
         taper: number;
         /** @property {number} - How much to randomize frequency each time sound plays */
         randomness: any;
@@ -1714,11 +1714,17 @@ declare module "littlejsengine" {
         /** Create a sound object and cache the wave file for later use
          *  @param {string} filename - Filename of audio file to load
          *  @param {number} [randomness] - How much to randomize frequency each time sound plays
-         *  @param {number} [range=soundDefaultRange] - World space max range of sound, will not play if camera is farther away
-         *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering off
+         *  @param {number} [range=soundDefaultRange] - World space max range of sound
+         *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
          *  @param {Function} [onloadCallback] - callback function to call when sound is loaded
          */
         constructor(filename: string, randomness?: number, range?: number, taper?: number, onloadCallback?: Function);
+        /** @property {Function} - callback function to call when sound is loaded */
+        onloadCallback: Function;
+        /** Loads a sound from a URL and decodes it into sample data. Must be used with await!
+        *  @param {string} filename
+        *  @return {Promise<void>} */
+        loadSound(filename: string): Promise<void>;
     }
     /** Play an mp3, ogg, or wav audio from a local file or url
      *  @param {string}  filename - Location of sound file to play
