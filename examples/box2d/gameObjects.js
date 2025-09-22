@@ -14,12 +14,16 @@ const {vec2, hsl} = LJS;
 ///////////////////////////////////////////////////////////////////////////////
 // spawn object functions
 
+const density = 1;
+const friction = .5;
+const restitution = .2;
+
 export function spawnBox(pos, size=1, color=LJS.WHITE, type=LJS.box2d.bodyTypeDynamic, applyTexture=true, angle=0)
 {
     size = typeof size == 'number' ? vec2(size) : size; // square
     const o = new LJS.Box2dObject(pos, size, applyTexture && Game.spriteAtlas.squareOutline, angle, color, type);
     o.drawSize = size.scale(1.02); // slightly enlarge to cover gaps
-    o.addBox(size);
+    o.addBox(size, vec2(), 0, density, friction, restitution);
     return o;
 }
 
@@ -27,14 +31,14 @@ export function spawnCircle(pos, diameter=1, color=LJS.WHITE, type=LJS.box2d.bod
 {
     const size = vec2(diameter);
     const o = new LJS.Box2dObject(pos, size, applyTexture && Game.spriteAtlas.circleOutline, angle, color, type);
-    o.addCircle(diameter);
+    o.addCircle(diameter, vec2(), density, friction, restitution);
     return o;
 }
 
 export function spawnRandomPoly(pos, diameter=1, color=LJS.WHITE, type=LJS.box2d.bodyTypeDynamic, angle=0)
 {
     const o = new LJS.Box2dObject(pos, vec2(), 0, angle, color, type);
-    o.addRandomPoly(diameter);
+    o.addRandomPoly(diameter, vec2(), 0, density, friction, restitution);
     return o;
 }
 
