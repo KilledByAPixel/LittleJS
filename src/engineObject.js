@@ -334,7 +334,7 @@ class EngineObject
         drawTile(this.pos, this.drawSize || this.size, this.tileInfo, this.color, this.angle, this.mirror, this.additiveColor);
     }
     
-    /** Destroy this object, destroy it's children, detach it's parent, and mark it for removal */
+    /** Destroy this object, destroy its children, detach it's parent, and mark it for removal */
     destroy()
     { 
         if (this.destroyed)
@@ -344,7 +344,10 @@ class EngineObject
         this.destroyed = 1;
         this.parent && this.parent.removeChild(this);
         for (const child of this.children)
-            child.destroy(child.parent = 0);
+        {
+            child.parent = 0;
+            child.destroy();
+        }
     }
 
     /** Convert from local space to world space
