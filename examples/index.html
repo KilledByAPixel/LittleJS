@@ -209,7 +209,7 @@ function codeInput()
     inputTimeout = setTimeout(() => setCode(textareaCode.value), 500);
 }
 
-function loadFile(filename, fullExample)
+async function loadFile(filename, fullExample)
 {
     textareaCode.disabled = fullExample;
     if (fullExample)
@@ -231,14 +231,18 @@ function loadFile(filename, fullExample)
         return;
     }
 
-    fetch(filename)
-        .then(response => {
-            if (!response.ok)
-                throw new Error('Could not load file: '+ filename);
-            return response.text();
-        })
-        .then(text => setCode(textareaCode.value = text, fullExample))
-        .catch(error => setErrorMessage(error.message));
+    try
+    {
+        const response = await fetch(filename);
+        if (!response.ok)
+            throw new Error('Could not load file: ' + filename);
+        const text = await response.text();
+        setCode(textareaCode.value = text, fullExample);
+    }
+    catch (error)
+    {
+        setErrorMessage(error.message);
+    }
 }
 
 function setCode(code, largeExample)
