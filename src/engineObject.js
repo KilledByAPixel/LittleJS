@@ -41,9 +41,13 @@ class EngineObject
      */
     constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color=new Color, renderOrder=0)
     {
-        // set passed in params
-        ASSERT(isVector2(pos) && isVector2(size), 'ensure pos and size are vec2s');
-        ASSERT(typeof tileInfo !== 'number' || !tileInfo, 'old style tile setup');
+        // check passed in params
+        ASSERT(isVector2(pos) && pos.isValid(), 'pos should be a vec2');
+        ASSERT(isVector2(size) && size.isValid(), 'size should be a vec2');
+        ASSERT(!tileInfo || tileInfo instanceof TileInfo, 'tileInfo should be a TileInfo or 0');
+        ASSERT(typeof angle == 'number' && isFinite(angle), 'angle should be a number');
+        ASSERT(isColor(color) && color.isValid(), 'color should be a valid rgba color');
+        ASSERT(typeof renderOrder == 'number', 'renderOrder should be a number');
 
         /** @property {Vector2} - World space position of the object */
         this.pos = pos.copy();
@@ -209,7 +213,7 @@ class EngineObject
                     const deltaPos = oldPos.subtract(o.pos);
                     const length = deltaPos.length();
                     const pushAwayAccel = .001; // push away if already overlapping
-                    const velocity = length < .01 ? randVector(pushAwayAccel) : deltaPos.scale(pushAwayAccel/length);
+                    const velocity = length < .01 ? randVec2(pushAwayAccel) : deltaPos.scale(pushAwayAccel/length);
                     this.velocity = this.velocity.add(velocity);
                     if (o.mass) // push away if not fixed
                         o.velocity = o.velocity.subtract(velocity);
