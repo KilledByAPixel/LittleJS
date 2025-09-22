@@ -27,8 +27,7 @@ function gameUpdate()
         if (mouseWasReleased(0))
         {
             // release object
-            mouseJoint.destroy();
-            mouseJoint = 0;
+            mouseJoint = mouseJoint.destroy();
         }
     }
     else if (mouseWasPressed(0))
