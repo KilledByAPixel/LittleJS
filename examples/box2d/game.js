@@ -17,6 +17,10 @@ import * as GameObjects from './gameObjects.js';
 import * as Scenes from './scenes.js';
 const {vec2, hsl} = LJS;
 
+// use HD textures
+LJS.setCanvasPixelated(false);
+LJS.setTilesPixelated(false);
+
 ///////////////////////////////////////////////////////////////////////////////
 // game variables
 
@@ -54,7 +58,7 @@ async function gameInit()
     //LJS.box2dSetDebug(true); // enable box2d debug draw
 
     // create a table of all sprites
-    const gameTile = (i)=> LJS.tile(i, 16, 0, 1);
+    const gameTile = (i)=> LJS.tile(i, 496, 0, 8);
     spriteAtlas =
     {
         circle:         gameTile(0),
