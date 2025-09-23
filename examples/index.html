@@ -220,7 +220,7 @@ async function loadFile(filename, fullExample)
         if (iframeExample)
             iframeContainer.removeChild(iframeExample);
 
-        setErrorMessage();
+        unsetErrorMessage();
         iframeExample = document.createElement('iframe');
         iframeContainer.appendChild(iframeExample);
         iframeExample.onload = () =>
@@ -254,7 +254,7 @@ function setCode(code, largeExample)
     if (iframeExample)
         iframeContainer.removeChild(iframeExample);
 
-    setErrorMessage();
+    unsetErrorMessage();
     iframeExample = document.createElement('iframe');
     iframeContainer.appendChild(iframeExample);
     iframeExample.onload = () =>
@@ -275,7 +275,7 @@ function setCode(code, largeExample)
         iframeContent.onunhandledrejection = (event) => 
         {
             let text = event.reason;
-            if (event.reason.stack)
+            if (event.reason && event.reason.stack)
                 text += `\n\n` + event.reason.stack;
             setErrorMessage(text);
         };
@@ -306,9 +306,20 @@ function setCode(code, largeExample)
     iframeExample.src = 'shorts/base.html';
 }
 
-function setErrorMessage(message='')
+function unsetErrorMessage()
 {
-    textareaError.value = message
+    textareaError.style.display = 'none';
+}
+
+function setErrorMessage(message)
+{
+    if (message === null)
+        message = 'null';
+    if (Number.isNaN(message))
+        message = 'NaN';
+    if (message === undefined)
+        message = 'undefined';
+    textareaError.value = message;
     textareaError.style.display = message ? 'block' : 'none';
 }
 
