@@ -3846,7 +3846,7 @@ class TileLayer extends EngineObject
         /** @property {boolean} - If true this layer will render to overlay canvas and appear above all objects */
         this.isOverlay = false;
         /** @property {WebGLTexture} - Texture if using webgl for this layer */
-        this.glTexture = useWebGL ? glCreateTexture() : undefined;
+        this.glTexture = useWebGL ? glCreateTexture(this.canvas) : undefined;
         // set no friction by default, applied friction is max of both objects
         this.friction = 0;
         // set no restitution by default, applied restitution is max of both objects
