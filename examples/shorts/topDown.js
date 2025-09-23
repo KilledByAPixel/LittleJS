@@ -1,19 +1,9 @@
-class PhysicsObject extends EngineObject
-{
-    constructor(pos, size, color)
-    {
-        super(pos, size, 0, 0, color);
-        this.setCollision(); // make object collide
-        this.mass = 0; // make object have static physics
-    }
-}
-
-class Player extends PhysicsObject
+class Player extends EngineObject
 {
     constructor(pos)
     {
-        super(pos, vec2(2), RED);
-        this.mass = 1; // make object have dynamic physics
+        super(pos, vec2(2), 0, 0, RED);
+        this.setCollision(); // make object collide
         this.renderOrder = 1; // render player on top of other objects
     }
 
@@ -22,7 +12,7 @@ class Player extends PhysicsObject
         super.update();
 
         // apply movement controls
-        const moveInput = keyDirection().clampLength(1).scale(.2); // clamp and scale input
+        const moveInput = keyDirection().clampLength(1).scale(.2);
         this.velocity = this.velocity.add(moveInput);
 
         // move camera with player
@@ -42,5 +32,9 @@ function gameInit()
 
     // create foreground objects
     for (let i=300; i--;)
-        new PhysicsObject(randInCircle(7+i,7), vec2(rand(4,9),rand(4,9)), hsl(0,0,rand(.8,1)));
+    {
+        const o = new EngineObject(randInCircle(7+i,7), vec2(rand(4,9),rand(4,9)), 0, 0, hsl(0,0,rand(.8,1)));
+        o.setCollision(); // make object collide
+        o.mass = 0; // make object have static physics
+    }
 }

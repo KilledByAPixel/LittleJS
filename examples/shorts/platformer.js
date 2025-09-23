@@ -1,19 +1,9 @@
-class PhysicsObject extends EngineObject
-{
-    constructor(pos, size, color)
-    {
-        super(pos, size, 0, 0, color);
-        this.setCollision(); // make object collide
-        this.mass = 0; // make object have static physics
-    }
-}
-
-class Player extends PhysicsObject
+class Player extends EngineObject
 {
     constructor(pos)
     {
-        super(pos, vec2(2,4), RED);
-        this.mass = 1; // make object have dynamic physics
+        super(pos, vec2(2,4), 0, 0, RED);
+        this.setCollision(); // make object collide
     }
 
     update()
@@ -38,7 +28,13 @@ function gameInit()
     new Player(vec2(0,4));
 
     // create random objects
-    new PhysicsObject(vec2(), vec2(1e3,4), GRAY); // ground
-    for (let i=1; i<500; ++i)
-        new PhysicsObject(vec2(i*10+randInt(4), 0), vec2(2+randInt(20),4+randInt(8)), GREEN);
+    for (let i=500; i--;)
+    {
+        const pos = i ? vec2(i*10+randInt(4), 0) : vec2();
+        const size = i ? vec2(2+randInt(20),4+randInt(8)) : vec2(1e3,4);
+        const color = i ? GREEN : GRAY;
+        const o = new EngineObject(pos, size, 0, 0, color);
+        o.setCollision(); // make object collide
+        o.mass = 0; // make object have static physics
+    }
 }

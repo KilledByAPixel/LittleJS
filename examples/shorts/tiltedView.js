@@ -21,14 +21,13 @@ class Player extends GameObject
         super.update();
 
         // apply movement controls
-        const moveInput = keyDirection().clampLength(1).scale(.2); // clamp and scale input
+        const moveInput = keyDirection().clampLength(1).scale(.2);
         this.velocity = this.velocity.add(moveInput);
 
         // move camera with player
         cameraPos = this.pos.add(vec2(0,2));
     }
 }
-
 
 function gameInit()
 {
