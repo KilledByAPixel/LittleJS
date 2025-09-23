@@ -245,7 +245,7 @@ export class ParallaxLayer extends LJS.EngineObject
     render()
     {
         // position layer based on camera distance from center of level
-        const parallax = vec2(1e3,-100).scale(this.index**2);
+        const parallax = vec2(1e3,-100).scale(.5 + this.index/2);
         const cameraDeltaFromCenter = LJS.cameraPos
             .subtract(GameLevel.levelSize.scale(.5))
             .divide(GameLevel.levelSize.divide(parallax));
