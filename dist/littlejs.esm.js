@@ -9240,7 +9240,7 @@ export
 	tileCollisionGetData,
 	tileCollisionTest,
 	tileCollisionRaycast,
-	loadTileLayers,
+	tileCollisionLoad,
 	TileLayerData,
 	TileLayer,
 	TileCollisionLayer,

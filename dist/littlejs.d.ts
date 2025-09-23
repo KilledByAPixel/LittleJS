@@ -2026,6 +2026,15 @@ declare module "littlejsengine" {
      *  @memberof TileCollision */
     export function tileCollisionRaycast(posStart: Vector2, posEnd: Vector2, object?: EngineObject, solidOnly?: boolean): Vector2;
     /**
+     * Load tile layers from exported data
+     *  @param {object}   tileMapData - Level data from exported data
+     *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture)
+     *  @param {number}   [renderOrder] - Render order of the top layer
+     *  @param {boolean}  [draw] - Should the layer be drawn automatically
+     *  @return {Array<TileCollisionLayer>}
+     *  @memberof TileCollision */
+    export function tileCollisionLoad(tileMapData: object, tileInfo?: TileInfo, renderOrder?: number, draw?: boolean): Array<TileCollisionLayer>;
+    /**
      * Tile layer data object stores info about how to draw a tile
      * @example
      * // create tile layer data with tile index 0 and random orientation and color
