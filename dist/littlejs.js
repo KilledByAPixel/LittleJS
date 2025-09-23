@@ -56,7 +56,7 @@ let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParti
 // Debug helper functions
 
 /** Asserts if the expression is false, does not do anything in release builds
- *  @param {boolean} assert - expression to assert
+ *  @param {boolean} assert 
  *  @param {Object} [output] - error message output
  *  @memberof Debug */
 function ASSERT(assert, output) 
@@ -907,6 +907,15 @@ function vec2(x=0, y) { return new Vector2(x, y === undefined ? x : y); }
  */
 function isVector2(v) { return v instanceof Vector2; }
 
+// vector2 asserts
+function ASSERT_VECTOR2_VALID(v) { ASSERT(isVector2(v) && v.isValid(), 'Vector2 is invalid: ' + v); }
+function ASSERT_NUMBER_VALID(n) { ASSERT(typeof n === 'number', 'Number is invalid: ' + n); }
+function ASSERT_VECTOR2_NORMAL(v)
+{
+    ASSERT_VECTOR2_VALID(v);
+    ASSERT(abs(v.lengthSquared()-1) < .01, 'Vector2 is not normal: ' + v); 
+}
+
 /** 
  * 2D Vector object with vector math library
  * - Functions do not change this so they can be chained together
@@ -927,7 +936,7 @@ class Vector2
         this.x = x;
         /** @property {number} - Y axis location */
         this.y = y;
-        ASSERT(this.isValid());
+        ASSERT_VECTOR2_VALID(this);
     }
 
     /** Sets values of this vector and returns self
@@ -938,7 +947,7 @@ class Vector2
     {
         this.x = x;
         this.y = y;
-        ASSERT(this.isValid());
+        ASSERT_VECTOR2_VALID(this);
         return this;
     }
 
@@ -951,7 +960,7 @@ class Vector2
      *  @return {Vector2} */
     add(v)
     {
-        ASSERT(isVector2(v));
+        ASSERT_VECTOR2_VALID(v);
         return new Vector2(this.x + v.x, this.y + v.y);
     }
 
@@ -960,7 +969,7 @@ class Vector2
      *  @return {Vector2} */
     subtract(v)
     {
-        ASSERT(isVector2(v));
+        ASSERT_VECTOR2_VALID(v);
         return new Vector2(this.x - v.x, this.y - v.y);
     }
 
@@ -969,7 +978,7 @@ class Vector2
      *  @return {Vector2} */
     multiply(v)
     {
-        ASSERT(isVector2(v));
+        ASSERT_VECTOR2_VALID(v);
         return new Vector2(this.x * v.x, this.y * v.y);
     }
 
@@ -978,7 +987,7 @@ class Vector2
      *  @return {Vector2} */
     divide(v)
     {
-        ASSERT(isVector2(v));
+        ASSERT_VECTOR2_VALID(v);
         return new Vector2(this.x / v.x, this.y / v.y);
     }
 
@@ -987,7 +996,7 @@ class Vector2
      *  @return {Vector2} */
     scale(s)
     {
-        ASSERT(!isVector2(s));
+        ASSERT_NUMBER_VALID(s);
         return new Vector2(this.x * s, this.y * s);
     }
 
@@ -1004,7 +1013,7 @@ class Vector2
      * @return {number} */
     distance(v)
     {
-        ASSERT(isVector2(v));
+        ASSERT_VECTOR2_VALID(v);
         return this.distanceSquared(v)**.5;
     }
 
@@ -1013,7 +1022,7 @@ class Vector2
      * @return {number} */
     distanceSquared(v)
     {
-        ASSERT(isVector2(v));
+        ASSERT_VECTOR2_VALID(v);
         return (this.x - v.x)**2 + (this.y - v.y)**2;
     }
 
@@ -1022,6 +1031,7 @@ class Vector2
      * @return {Vector2} */
     normalize(length=1)
     {
+        ASSERT_NUMBER_VALID(length);
         const l = this.length();
         return l ? this.scale(length/l) : new Vector2(0, length);
     }
@@ -1031,6 +1041,7 @@ class Vector2
      * @return {Vector2} */
     clampLength(length=1)
     {
+        ASSERT_NUMBER_VALID(length);
         const l = this.length();
         return l > length ? this.scale(length/l) : this;
     }
@@ -1040,7 +1051,7 @@ class Vector2
      * @return {number} */
     dot(v)
     {
-        ASSERT(isVector2(v));
+        ASSERT_VECTOR2_VALID(v);
         return this.x*v.x + this.y*v.y;
     }
 
@@ -1049,8 +1060,19 @@ class Vector2
      * @return {number} */
     cross(v)
     {
-        ASSERT(isVector2(v));
+        ASSERT_VECTOR2_VALID(v);
         return this.x*v.y - this.y*v.x;
+    }
+
+    /** Returns a copy this vector reflected by the surface normal
+     * @param {Vector2} normal - surface normal (should be normalized)
+     * @param {number} bounce - how much to bounce, 1 is perfect bounce, 0 is no bounce
+     * @return {Vector2} */
+    reflect(normal, bounce=1)
+    {
+        ASSERT_VECTOR2_NORMAL(normal);
+        ASSERT_NUMBER_VALID(bounce);
+        return this.subtract(normal.scale((1+bounce)*this.dot(normal)));
     }
 
     /** Returns the clockwise angle of this vector, up is angle 0
@@ -1063,6 +1085,8 @@ class Vector2
      * @return {Vector2} */
     setAngle(angle=0, length=1) 
     {
+        ASSERT_NUMBER_VALID(angle);
+        ASSERT_NUMBER_VALID(length);
         this.x = length*Math.sin(angle);
         this.y = length*Math.cos(angle);
         return this;
@@ -1073,6 +1097,7 @@ class Vector2
      * @return {Vector2} */
     rotate(angle)
     { 
+        ASSERT_NUMBER_VALID(angle);
         const c = Math.cos(-angle), s = Math.sin(-angle); 
         return new Vector2(this.x*c - this.y*s, this.x*s + this.y*c);
     }
@@ -1082,8 +1107,11 @@ class Vector2
      * @param {number} [length] */
     setDirection(direction, length=1)
     {
+        ASSERT_NUMBER_VALID(direction);
+        ASSERT_NUMBER_VALID(length);
         direction = mod(direction, 4);
-        ASSERT(direction==0 || direction==1 || direction==2 || direction==3);
+        ASSERT(direction==0 || direction==1 || direction==2 || direction==3,
+            'Vector2.setDirection() direction must be an integer between 0 and 3!');
         return vec2(direction%2 ? direction-1 ? -length : length : 0, 
             direction%2 ? 0 : direction ? -length : length);
     }
@@ -1104,7 +1132,11 @@ class Vector2
     /** Returns new vec2 with modded values
     *  @param {number} [divisor]
     *  @return {Vector2} */
-    mod(divisor=1) { return new Vector2(mod(this.x, divisor), mod(this.y, divisor)); }
+    mod(divisor=1)
+    {
+        ASSERT_NUMBER_VALID(divisor);
+        return new Vector2(mod(this.x, divisor), mod(this.y, divisor));
+    }
 
     /** Returns the area this vector covers as a rectangle
      * @return {number} */
@@ -1116,7 +1148,8 @@ class Vector2
      * @return {Vector2} */
     lerp(v, percent)
     {
-        ASSERT(isVector2(v));
+        ASSERT_VECTOR2_VALID(v);
+        ASSERT_NUMBER_VALID(percent);
         return this.add(v.subtract(this).scale(clamp(percent)));
     }
 
@@ -1125,7 +1158,7 @@ class Vector2
      * @return {boolean} */
     arrayCheck(arraySize)
     {
-        ASSERT(isVector2(arraySize));
+        ASSERT_VECTOR2_VALID(arraySize);
         return this.x >= 0 && this.y >= 0 && this.x < arraySize.x && this.y < arraySize.y;
     }
 
@@ -1134,8 +1167,14 @@ class Vector2
      * @return {string} */
     toString(digits=3) 
     {
+        ASSERT_NUMBER_VALID(digits);
         if (debug)
-            return `(${(this.x<0?'':' ') + this.x.toFixed(digits)},${(this.y<0?'':' ') + this.y.toFixed(digits)} )`;
+        {
+            if (this.isValid())
+                return `(${(this.x<0?'':' ') + this.x.toFixed(digits)},${(this.y<0?'':' ') + this.y.toFixed(digits)} )`;
+            else
+                return `(${this.x}, ${this.y})`;
+        }
     }
 
     /** Checks if this is a valid vector
@@ -1175,13 +1214,16 @@ function hsl(h, s, l, a) { return new Color().setHSLA(h, s, l, a); }
  */
 function isColor(c) { return c instanceof Color; }
 
+// color asserts
+function ASSERT_COLOR_VALID(c) { ASSERT(isColor(c) && c.isValid(), 'Color is invalid: ' + c); }
+
 /** 
  * Color object (red, green, blue, alpha) with some helpful functions
  * @example
  * let a = new Color;              // white
  * let b = new Color(1, 0, 0);     // red
  * let c = new Color(0, 0, 0, 0);  // transparent black
- * let d = rgb(0, 0, 1);           // blue using rgb color
+ * let d = rgb(0, 0, 1);         // blue using rgb color
  * let e = hsl(.3, 1, .5);         // green using hsl color
  */
 class Color
@@ -1201,7 +1243,7 @@ class Color
         this.b = b;
         /** @property {number} - Alpha */
         this.a = a;
-        ASSERT(this.isValid());
+        ASSERT_COLOR_VALID(this);
     }
 
     /** Sets values of this color and returns self
@@ -1216,7 +1258,7 @@ class Color
         this.g = g;
         this.b = b;
         this.a = a;
-        ASSERT(this.isValid());
+        ASSERT_COLOR_VALID(this);
         return this;
     }
 
@@ -1229,7 +1271,7 @@ class Color
      * @return {Color} */
     add(c)
     {
-        ASSERT(isColor(c));
+        ASSERT_COLOR_VALID(c);
         return new Color(this.r+c.r, this.g+c.g, this.b+c.b, this.a+c.a);
     }
 
@@ -1238,7 +1280,7 @@ class Color
      * @return {Color} */
     subtract(c)
     {
-        ASSERT(isColor(c));
+        ASSERT_COLOR_VALID(c);
         return new Color(this.r-c.r, this.g-c.g, this.b-c.b, this.a-c.a);
     }
 
@@ -1247,7 +1289,7 @@ class Color
      * @return {Color} */
     multiply(c)
     {
-        ASSERT(isColor(c));
+        ASSERT_COLOR_VALID(c);
         return new Color(this.r*c.r, this.g*c.g, this.b*c.b, this.a*c.a);
     }
 
@@ -1256,7 +1298,7 @@ class Color
      * @return {Color} */
     divide(c)
     {
-        ASSERT(isColor(c));
+        ASSERT_COLOR_VALID(c);
         return new Color(this.r/c.r, this.g/c.g, this.b/c.b, this.a/c.a);
     }
 
@@ -1265,7 +1307,11 @@ class Color
      * @param {number} [alphaScale=scale]
      * @return {Color} */
     scale(scale, alphaScale=scale) 
-    { return new Color(this.r*scale, this.g*scale, this.b*scale, this.a*alphaScale); }
+    {
+        ASSERT_NUMBER_VALID(scale);
+        ASSERT_NUMBER_VALID(alphaScale);
+        return new Color(this.r*scale, this.g*scale, this.b*scale, this.a*alphaScale);
+    }
 
     /** Returns a copy of this color clamped to the valid range between 0 and 1
      * @return {Color} */
@@ -1277,7 +1323,8 @@ class Color
      * @return {Color} */
     lerp(c, percent)
     {
-        ASSERT(isColor(c));
+        ASSERT_COLOR_VALID(c);
+        ASSERT_NUMBER_VALID(percent);
         return this.add(c.subtract(this).scale(clamp(percent)));
     }
 
@@ -1301,7 +1348,7 @@ class Color
         this.g = f(p, q, h);
         this.b = f(p, q, h - 1/3);
         this.a = a;
-        ASSERT(this.isValid());
+        ASSERT_COLOR_VALID(this);
         return this;
     }
 
@@ -1338,6 +1385,8 @@ class Color
      * @return {Color} */
     mutate(amount=.05, alphaAmount=0) 
     {
+        ASSERT_NUMBER_VALID(amount);
+        ASSERT_NUMBER_VALID(alphaAmount);
         return new Color
         (
             this.r + rand(amount, -amount),
@@ -1351,7 +1400,10 @@ class Color
      * @param {boolean} [useAlpha] - if alpha should be included in result
      * @return {string} */
     toString(useAlpha = true)      
-    { 
+    {
+        ASSERT(typeof useAlpha === 'boolean', 'Boolean is invalid:' + useAlpha);
+        if (debug && !this.isValid())
+            return `#000`;
         const toHex = (c)=> ((c=clamp(c)*255|0)<16 ? '0' : '') + c.toString(16);
         return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b) + (useAlpha ? toHex(this.a) : '');
     }
@@ -1361,7 +1413,7 @@ class Color
      * @return {Color} */
     setHex(hex)
     {
-        ASSERT(typeof hex == 'string' && hex[0] == '#');
+        ASSERT(typeof hex == 'string' && hex[0] == '#', 'Color hex code must be a string starting with #');
         ASSERT([4,5,7,9].includes(hex.length), 'Invalid hex');
 
         if (hex.length < 6)
@@ -1381,7 +1433,7 @@ class Color
             this.a = hex.length == 9 ? fromHex(7) : 1;
         }
 
-        ASSERT(this.isValid());
+        ASSERT_COLOR_VALID(this);
         return this;
     }
     
@@ -1399,7 +1451,7 @@ class Color
     /** Checks if this is a valid color
      * @return {boolean} */
     isValid()
-    {  return isFinite(this.r) && isFinite(this.g) && isFinite(this.b) && isFinite(this.a); }
+    { return isFinite(this.r) && isFinite(this.g) && isFinite(this.b) && isFinite(this.a); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1475,11 +1527,21 @@ class Timer
 {
     /** Create a timer object set time passed in
      *  @param {number} [timeLeft] - How much time left before the timer elapses in seconds */
-    constructor(timeLeft) { this.time = timeLeft === undefined ? undefined : time + timeLeft; this.setTime = timeLeft; }
+    constructor(timeLeft)
+    {
+        ASSERT(timeLeft === undefined || typeof timeLeft === 'number', 'Time is invalid: ' + timeLeft);
+        this.time = timeLeft === undefined ? undefined : time + timeLeft;
+        this.setTime = timeLeft;
+    }
 
     /** Set the timer with seconds passed in
      *  @param {number} [timeLeft] - How much time left before the timer is elapsed in seconds */
-    set(timeLeft=0) { this.time = time + timeLeft; this.setTime = timeLeft; }
+    set(timeLeft=0)
+    {
+        ASSERT(typeof timeLeft === 'number', 'Time is invalid: ' + timeLeft);
+        this.time = time + timeLeft;
+        this.setTime = timeLeft;
+    }
 
     /** Unset the timer */
     unset() { this.time = undefined; }
@@ -2055,49 +2117,49 @@ class EngineObject
         this.drawSize = undefined;
         /** @property {TileInfo} - Tile info to render object (undefined is untextured) */
         this.tileInfo = tileInfo;
-        /** @property {number}  - Angle to rotate the object */
+        /** @property {number} - Angle to rotate the object */
         this.angle = angle;
-        /** @property {Color}   - Color to apply when rendered */
+        /** @property {Color} - Color to apply when rendered */
         this.color = color;
-        /** @property {Color}   - Additive color to apply when rendered */
+        /** @property {Color} - Additive color to apply when rendered */
         this.additiveColor = undefined;
         /** @property {boolean} - Should it flip along y axis when rendered */
         this.mirror = false;
 
         // physical properties
-        /** @property {number} [mass=objectDefaultMass]                 - How heavy the object is, static if 0 */
+        /** @property {number} [mass=objectDefaultMass] - How heavy the object is, static if 0 */
         this.mass         = objectDefaultMass;
-        /** @property {number} [damping=objectDefaultDamping]           - How much to slow down velocity each frame (0-1) */
+        /** @property {number} [damping=objectDefaultDamping] - How much to slow down velocity each frame (0-1) */
         this.damping      = objectDefaultDamping;
         /** @property {number} [angleDamping=objectDefaultAngleDamping] - How much to slow down rotation each frame (0-1) */
         this.angleDamping = objectDefaultAngleDamping;
-        /** @property {number} [elasticity=objectDefaultElasticity]     - How bouncy the object is when colliding (0-1) */
+        /** @property {number} [elasticity=objectDefaultElasticity] - How bouncy the object is when colliding (0-1) */
         this.elasticity   = objectDefaultElasticity;
-        /** @property {number} [friction=objectDefaultFriction]         - How much friction to apply when sliding (0-1) */
+        /** @property {number} [friction=objectDefaultFriction] - How much friction to apply when sliding (0-1) */
         this.friction     = objectDefaultFriction;
-        /** @property {number}  - How much to scale gravity by for this object */
+        /** @property {number} - How much to scale gravity by for this object */
         this.gravityScale = 1;
-        /** @property {number}  - Objects are sorted by render order */
+        /** @property {number} - Objects are sorted by render order */
         this.renderOrder = renderOrder;
         /** @property {Vector2} - Velocity of the object */
         this.velocity = vec2();
-        /** @property {number}  - Angular velocity of the object */
+        /** @property {number} - Angular velocity of the object */
         this.angleVelocity = 0;
-        /** @property {number}  - Track when object was created  */
+        /** @property {number} - Track when object was created  */
         this.spawnTime = time;
-        /** @property {Array<EngineObject>}   - List of children of this object */
+        /** @property {Array<EngineObject>} - List of children of this object */
         this.children = [];
-        /** @property {boolean}  - Limit object speed using linear or circular math */
-        this.clampSpeedLinear = true;
+        /** @property {boolean} - Limit object speed along x and y axis */
+        this.clampSpeed = true;
         /** @property {EngineObject} - Object we are standing on, if any  */
         this.groundObject = undefined;
 
         // parent child system
         /** @property {EngineObject} - Parent of object if in local space  */
         this.parent = undefined;
-        /** @property {Vector2}      - Local position if child */
+        /** @property {Vector2} - Local position if child */
         this.localPos = vec2();
-        /** @property {number}       - Local angle if child  */
+        /** @property {number} - Local angle if child  */
         this.localAngle = 0;
 
         // collision flags
@@ -2138,29 +2200,20 @@ class EngineObject
         if (this.parent)
             return;
 
-        // limit max speed to prevent missing collisions
-        if (this.clampSpeedLinear)
+        if (this.clampSpeed)
         {
+            // limit max speed to prevent missing collisions
             this.velocity.x = clamp(this.velocity.x, -objectMaxSpeed, objectMaxSpeed);
             this.velocity.y = clamp(this.velocity.y, -objectMaxSpeed, objectMaxSpeed);
-        }
-        else
-        {
-            const length2 = this.velocity.lengthSquared();
-            if (length2 > objectMaxSpeed*objectMaxSpeed)
-            {
-                const s = objectMaxSpeed / length2**.5;
-                this.velocity.x *= s;
-                this.velocity.y *= s;
-            }
         }
 
         // apply physics
         const oldPos = this.pos.copy();
         this.velocity.x *= this.damping;
         this.velocity.y *= this.damping;
-        if (this.mass) // don't apply gravity to static objects
+        if (this.mass)
         {
+            // apply gravity only if it has mass
             this.velocity.x += gravity.x * this.gravityScale;
             this.velocity.y += gravity.y * this.gravityScale;
         }
@@ -2182,7 +2235,6 @@ class EngineObject
             const groundSpeed = this.groundObject.velocity ? this.groundObject.velocity.x : 0;
             this.velocity.x = groundSpeed + (this.velocity.x - groundSpeed) * friction;
             this.groundObject = undefined;
-            //debugOverlay && debugPhysics && debugPoint(this.pos.subtract(vec2(0,this.size.y/2)), '#0f0');
         }
 
         if (this.collideSolidObjects)
@@ -2372,25 +2424,25 @@ class EngineObject
      *  @param {number}  tileData - the value of the tile at the position
      *  @param {Vector2} pos      - tile where the collision occurred
      *  @return {boolean}         - true if the collision should be resolved */
-    collideWithTile(tileData, pos)    { return tileData > 0; }
+    collideWithTile(tileData, pos) { return tileData > 0; }
 
     /** Called to check if a object collision should be resolved
      *  @param {EngineObject} object - the object to test against
      *  @return {boolean}            - true if the collision should be resolved
      */
-    collideWithObject(object)         { return true; }
+    collideWithObject(object) { return true; }
 
     /** How long since the object was created
      *  @return {number} */
-    getAliveTime()                    { return time - this.spawnTime; }
+    getAliveTime() { return time - this.spawnTime; }
 
     /** Apply acceleration to this object (adjust velocity, not affected by mass)
      *  @param {Vector2} acceleration */
-    applyAcceleration(acceleration)   { if (this.mass) this.velocity = this.velocity.add(acceleration); }
+    applyAcceleration(acceleration) { if (this.mass) this.velocity = this.velocity.add(acceleration); }
 
     /** Apply force to this object (adjust velocity, affected by mass)
      *  @param {Vector2} force */
-    applyForce(force)	              { this.applyAcceleration(force.scale(1/this.mass)); }
+    applyForce(force) { this.applyAcceleration(force.scale(1/this.mass)); }
     
     /** Get the direction of the mirror
      *  @return {number} -1 if this.mirror is true, or 1 if not mirrored */
@@ -2469,6 +2521,7 @@ class EngineObject
         }
     }
 }
+
 /** 
  * LittleJS Drawing System
  * - Hybrid system with both Canvas2D and WebGL available
@@ -4101,7 +4154,7 @@ function zzfxG
  * - Tile layers can be drawn to using their context with canvas2d
  * - Drawn directly to the main canvas without using WebGL
  * - Tile layers can also have collision with EngineObjects
- * @namespace TileCollision
+ * @namespace TileLayer
  */
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4109,13 +4162,13 @@ function zzfxG
 
 /** Keep track of all tile layers with collision
  *  @type {Array<TileCollisionLayer>} 
- *  @memberof TileCollision */
+ *  @memberof TileLayer */
 let tileCollisionLayers = [];
 
 /** Get tile collision data for a given cell in the grid
 *  @param {Vector2} pos
 *  @return {number}
-*  @memberof TileCollision */
+*  @memberof TileLayer */
 function getTileCollisionData(pos)
 {
     // check all tile collision layers
@@ -4128,35 +4181,97 @@ function getTileCollisionData(pos)
 /** Check if a tile layer collides with another object
  *  @param {Vector2}      pos
  *  @param {Vector2}      [size=(0,0)]
- *  @param {EngineObject} [object]
+ *  @param {EngineObject} [object] - An object or undefined for generic test
+ *  @param {boolean}      [solidOnly] - Only check solid layers if true
  *  @return {TileCollisionLayer}
- *  @memberof TileCollision */
-function tileCollisionTest(pos, size=vec2(), object)
+ *  @memberof TileLayer */
+function tileCollisionTest(pos, size=vec2(), object, solidOnly=true)
 {
-    // check all tile collision layers
     for (const layer of tileCollisionLayers)
+    {
+        if (!solidOnly || layer.isSolid)
         if (layer.collisionTest(pos, size, object))
             return layer;
+    }
 }
 
 /** Return the center of first tile hit, undefined if nothing was hit.
  *  This does not return the exact intersection, but the center of the tile hit.
  *  @param {Vector2}      posStart
  *  @param {Vector2}      posEnd
- *  @param {EngineObject} [object]
+ *  @param {EngineObject} [object] - An object or undefined for generic test
+ *  @param {boolean}      [solidOnly=true] - Only check solid layers if true
  *  @return {Vector2}
- *  @memberof TileCollision */
-function tileCollisionRaycast(posStart, posEnd, object)
+ *  @memberof TileLayer */
+function tileCollisionRaycast(posStart, posEnd, object, solidOnly=true)
 {
-    // check all tile collision layers
     for (const layer of tileCollisionLayers)
     {
-        const hitPos = layer.collisionRaycast(posStart, posEnd, object)
-        if (hitPos)
-            return hitPos;
+        if (!solidOnly || layer.isSolid)
+        {
+            const hitPos = layer.collisionRaycast(posStart, posEnd, object)
+            if (hitPos)
+                return hitPos;
+        }
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Load tile layers from an exported data file
+ *  @param {object}   tileMapData - Level data from an exported data file
+ *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture)
+ *  @param {number}   [renderOrder] - Render order of the top layer
+ *  @param {boolean}  [draw] - Should the layer be drawn automatically
+ *  @return {Array<TileCollisionLayer>}
+ *  @memberof TileLayer */
+function loadTileLayers(tileMapData, tileInfo=tile(), renderOrder=0, draw=true)
+{
+    if (!tileMapData)
+    {
+        // default level data if loading failed
+        const s = 50;
+        tileMapData = {};
+        tileMapData.height = tileMapData.width = s;
+        tileMapData.layers = [{}];
+        tileMapData.layers[0].data = new Array(s*s).fill(0);
+    }
+
+    // validate the tile map data
+    ASSERT(tileMapData.width && tileMapData.height);
+    ASSERT(tileMapData.layers && tileMapData.layers.length);
+
+    // create tile layers and fill with data
+    const tileLayers = [];
+    const levelSize = vec2(tileMapData.width, tileMapData.height);
+    const layerCount = tileMapData.layers.length;
+    for (let i=layerCount; i--;)
+    {
+        const dataLayer = tileMapData.layers[i];
+        ASSERT(dataLayer.data && dataLayer.data.length);
+        ASSERT(levelSize.area() == dataLayer.data.length);
+
+        const layerRenderOrder = renderOrder - (layerCount - 1 - i);
+        const tileLayer = new TileCollisionLayer(vec2(), levelSize, tileInfo, layerRenderOrder);
+        tileLayers[i] = tileLayer;
+        for (let x=levelSize.x; x--;) 
+        for (let y=levelSize.y; y--;)
+        {
+            const pos = vec2(x, levelSize.y-1-y);
+            const data = dataLayer.data[x + y*levelSize.x];
+            if (data)
+            {
+                const layerData = new TileLayerData(data-1);
+                tileLayer.setData(pos, layerData);
+            }
+        }
+        if (draw)
+            tileLayer.redraw();
+    }
+    return tileLayers;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 /**
  * Tile layer data object stores info about how to draw a tile
  * @example
@@ -4206,7 +4321,7 @@ class TileLayer extends EngineObject
     /** Create a tile layer object
     *  @param {Vector2}  [position=(0,0)] - World space position
     *  @param {Vector2}  [size=(1,1)]     - World space size
-    *  @param {TileInfo} [tileInfo]       - Tile info for layer
+    *  @param {TileInfo} [tileInfo]       - Default tile info for layer (used for size and texture)
     *  @param {Vector2}  [scale=(1,1)]    - How much to scale this layer when rendered
     *  @param {number}   [renderOrder]    - Objects are sorted by renderOrder
     */
@@ -4356,7 +4471,7 @@ class TileLayer extends EngineObject
             this.context.clearRect(pos.x, this.canvas.height-pos.y, s.x, -s.y);
         }
 
-        // draw the tile if not undefined
+        // draw the tile if it has layer data
         const d = this.getData(layerPos);
         if (d.tile != undefined)
         {
@@ -4451,6 +4566,9 @@ class TileCollisionLayer extends TileLayer
 
         // keep track of all collision layers
         tileCollisionLayers.push(this);
+
+        // tile collision layers are solid by default
+        this.isSolid = true;
     }
 
     /** Destroy this collision layer */
@@ -4842,9 +4960,26 @@ class Particle extends EngineObject
         this.localSpaceEmitter = localSpaceEmitter;
         /** @property {Function} - Called when particle dies */
         this.destroyCallback = destroyCallback;
+        // particles do not clamp speed by default
+        this.clampSpeed = false;
+    }
 
-        // particles use circular clamped speed
-        this.clampSpeedLinear = false;
+    /** Update the object physics, called automatically by engine once each frame */
+    update()
+    {
+        super.update();
+
+        if (this.collideTiles || this.collideSolidObjects || this.isSolid)
+        {
+            // only apply max circular speed if particle can collide
+            const length2 = this.velocity.lengthSquared();
+            if (length2 > objectMaxSpeed*objectMaxSpeed)
+            {
+                const s = objectMaxSpeed / length2**.5;
+                this.velocity.x *= s;
+                this.velocity.y *= s;
+            }
+        }
     }
 
     /** Render the particle, automatically called each frame, sorted by renderOrder */
@@ -5440,7 +5575,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.12.7';
+const engineVersion = '1.12.8';
 
 /** Frames per second to update
  *  @type {number}
@@ -7022,7 +7157,7 @@ class Box2dObject extends EngineObject
     /** Copy box2d update sim data */
     update()
     {
-        // use box2d physics update
+        // use box2d physics update instead of normal engine update
         this.pos = box2d.vec2From(this.body.GetPosition());
         this.angle = -this.body.GetAngle();
     }

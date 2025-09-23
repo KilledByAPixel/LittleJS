@@ -130,7 +130,7 @@ declare module "littlejsengine" {
      *  @memberof Debug */
     export let showWatermark: boolean;
     /** Asserts if the expression is false, does not do anything in release builds
-     *  @param {boolean} assert - expression to assert
+     *  @param {boolean} assert
      *  @param {Object} [output] - error message output
      *  @memberof Debug */
     export function ASSERT(assert: boolean, output?: any): void;
@@ -880,6 +880,11 @@ declare module "littlejsengine" {
          * @param {Vector2} v - other vector
          * @return {number} */
         cross(v: Vector2): number;
+        /** Returns a copy this vector reflected by the surface normal
+         * @param {Vector2} normal - surface normal (should be normalized)
+         * @param {number} bounce - how much to bounce, 1 is perfect bounce, 0 is no bounce
+         * @return {Vector2} */
+        reflect(normal: Vector2, bounce?: number): Vector2;
         /** Returns the clockwise angle of this vector, up is angle 0
          * @return {number} */
         angle(): number;
@@ -935,7 +940,7 @@ declare module "littlejsengine" {
      * let a = new Color;              // white
      * let b = new Color(1, 0, 0);     // red
      * let c = new Color(0, 0, 0, 0);  // transparent black
-     * let d = rgb(0, 0, 1);           // blue using rgb color
+     * let d = rgb(0, 0, 1);         // blue using rgb color
      * let e = hsl(.3, 1, .5);         // green using hsl color
      */
     export class Color {
@@ -1871,45 +1876,45 @@ declare module "littlejsengine" {
         drawSize: any;
         /** @property {TileInfo} - Tile info to render object (undefined is untextured) */
         tileInfo: TileInfo;
-        /** @property {number}  - Angle to rotate the object */
+        /** @property {number} - Angle to rotate the object */
         angle: number;
-        /** @property {Color}   - Color to apply when rendered */
+        /** @property {Color} - Color to apply when rendered */
         color: Color;
-        /** @property {Color}   - Additive color to apply when rendered */
+        /** @property {Color} - Additive color to apply when rendered */
         additiveColor: any;
         /** @property {boolean} - Should it flip along y axis when rendered */
         mirror: boolean;
-        /** @property {number} [mass=objectDefaultMass]                 - How heavy the object is, static if 0 */
+        /** @property {number} [mass=objectDefaultMass] - How heavy the object is, static if 0 */
         mass: number;
-        /** @property {number} [damping=objectDefaultDamping]           - How much to slow down velocity each frame (0-1) */
+        /** @property {number} [damping=objectDefaultDamping] - How much to slow down velocity each frame (0-1) */
         damping: number;
         /** @property {number} [angleDamping=objectDefaultAngleDamping] - How much to slow down rotation each frame (0-1) */
         angleDamping: number;
-        /** @property {number} [elasticity=objectDefaultElasticity]     - How bouncy the object is when colliding (0-1) */
+        /** @property {number} [elasticity=objectDefaultElasticity] - How bouncy the object is when colliding (0-1) */
         elasticity: number;
-        /** @property {number} [friction=objectDefaultFriction]         - How much friction to apply when sliding (0-1) */
+        /** @property {number} [friction=objectDefaultFriction] - How much friction to apply when sliding (0-1) */
         friction: number;
-        /** @property {number}  - How much to scale gravity by for this object */
+        /** @property {number} - How much to scale gravity by for this object */
         gravityScale: number;
-        /** @property {number}  - Objects are sorted by render order */
+        /** @property {number} - Objects are sorted by render order */
         renderOrder: number;
         /** @property {Vector2} - Velocity of the object */
         velocity: Vector2;
-        /** @property {number}  - Angular velocity of the object */
+        /** @property {number} - Angular velocity of the object */
         angleVelocity: number;
-        /** @property {number}  - Track when object was created  */
+        /** @property {number} - Track when object was created  */
         spawnTime: number;
-        /** @property {Array<EngineObject>}   - List of children of this object */
+        /** @property {Array<EngineObject>} - List of children of this object */
         children: any[];
-        /** @property {boolean}  - Limit object speed using linear or circular math */
-        clampSpeedLinear: boolean;
+        /** @property {boolean} - Limit object speed along x and y axis */
+        clampSpeed: boolean;
         /** @property {EngineObject} - Object we are standing on, if any  */
         groundObject: EngineObject | TileCollisionLayer;
         /** @property {EngineObject} - Parent of object if in local space  */
         parent: any;
-        /** @property {Vector2}      - Local position if child */
+        /** @property {Vector2} - Local position if child */
         localPos: Vector2;
-        /** @property {number}       - Local angle if child  */
+        /** @property {number} - Local angle if child  */
         localAngle: number;
         /** @property {boolean} - Object collides with the tile collision */
         collideTiles: boolean;
@@ -1989,32 +1994,43 @@ declare module "littlejsengine" {
      * - Tile layers can be drawn to using their context with canvas2d
      * - Drawn directly to the main canvas without using WebGL
      * - Tile layers can also have collision with EngineObjects
-     * @namespace TileCollision
+     * @namespace TileLayer
      */
     /** Keep track of all tile layers with collision
      *  @type {Array<TileCollisionLayer>}
-     *  @memberof TileCollision */
+     *  @memberof TileLayer */
     export let tileCollisionLayers: Array<TileCollisionLayer>;
     /** Get tile collision data for a given cell in the grid
     *  @param {Vector2} pos
     *  @return {number}
-    *  @memberof TileCollision */
+    *  @memberof TileLayer */
     export function getTileCollisionData(pos: Vector2): number;
     /** Check if a tile layer collides with another object
      *  @param {Vector2}      pos
      *  @param {Vector2}      [size=(0,0)]
-     *  @param {EngineObject} [object]
+     *  @param {EngineObject} [object] - An object or undefined for generic test
+     *  @param {boolean}      [solidOnly] - Only check solid layers if true
      *  @return {TileCollisionLayer}
-     *  @memberof TileCollision */
-    export function tileCollisionTest(pos: Vector2, size?: Vector2, object?: EngineObject): TileCollisionLayer;
+     *  @memberof TileLayer */
+    export function tileCollisionTest(pos: Vector2, size?: Vector2, object?: EngineObject, solidOnly?: boolean): TileCollisionLayer;
     /** Return the center of first tile hit, undefined if nothing was hit.
      *  This does not return the exact intersection, but the center of the tile hit.
      *  @param {Vector2}      posStart
      *  @param {Vector2}      posEnd
-     *  @param {EngineObject} [object]
+     *  @param {EngineObject} [object] - An object or undefined for generic test
+     *  @param {boolean}      [solidOnly=true] - Only check solid layers if true
      *  @return {Vector2}
-     *  @memberof TileCollision */
-    export function tileCollisionRaycast(posStart: Vector2, posEnd: Vector2, object?: EngineObject): Vector2;
+     *  @memberof TileLayer */
+    export function tileCollisionRaycast(posStart: Vector2, posEnd: Vector2, object?: EngineObject, solidOnly?: boolean): Vector2;
+    /**
+     * Load tile layers from an exported data file
+     *  @param {object}   tileMapData - Level data from an exported data file
+     *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture)
+     *  @param {number}   [renderOrder] - Render order of the top layer
+     *  @param {boolean}  [draw] - Should the layer be drawn automatically
+     *  @return {Array<TileCollisionLayer>}
+     *  @memberof TileLayer */
+    export function loadTileLayers(tileMapData: object, tileInfo?: TileInfo, renderOrder?: number, draw?: boolean): Array<TileCollisionLayer>;
     /**
      * Tile layer data object stores info about how to draw a tile
      * @example
@@ -2057,7 +2073,7 @@ declare module "littlejsengine" {
         /** Create a tile layer object
         *  @param {Vector2}  [position=(0,0)] - World space position
         *  @param {Vector2}  [size=(1,1)]     - World space size
-        *  @param {TileInfo} [tileInfo]       - Tile info for layer
+        *  @param {TileInfo} [tileInfo]       - Default tile info for layer (used for size and texture)
         *  @param {Vector2}  [scale=(1,1)]    - How much to scale this layer when rendered
         *  @param {number}   [renderOrder]    - Objects are sorted by renderOrder
         */
