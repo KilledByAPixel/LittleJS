@@ -53,7 +53,7 @@ let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParti
 // Debug helper functions
 
 /** Asserts if the expression is false, does not do anything in release builds
- *  @param {boolean} assert - expression to assert
+ *  @param {boolean} assert 
  *  @param {Object} [output] - error message output
  *  @memberof Debug */
 function ASSERT(assert, output) 
