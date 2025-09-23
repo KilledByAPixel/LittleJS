@@ -192,8 +192,8 @@ class TileLayer extends EngineObject
         this.isOverlay = false;
         // set no friction by default, applied friction is max of both objects
         this.friction = 0;
-        // set no elasticity by default, applied elasticity is max of both objects
-        this.elasticity = 0;
+        // set no restitution by default, applied restitution is max of both objects
+        this.restitution = 0;
 
         // init tile data
         this.data = [];
@@ -500,7 +500,7 @@ class TileCollisionLayer extends TileLayer
         const delta = posEnd.subtract(posStart);
         const totalLength = delta.length();
         const normalizedDelta = delta.normalize();
-        const unit = vec2(abs(1/normalizedDelta.x), abs(1/normalizedDelta.y));
+        const unit = vec2(1/normalizedDelta.x, 1/normalizedDelta.y).abs();
         const flooredPosStart = posStart.floor();
 
         // setup iteration variables

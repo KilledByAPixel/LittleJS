@@ -43,7 +43,7 @@ function gameUpdate()
             .99, 1, 1, PI,              // damping, angleDamping, gravityScale, cone
             .05, .8, true, false        // fadeRate, randomness, collide, additive
         );
-        particleEmitter.elasticity = .5; // bounce when it collides
+        particleEmitter.restitution = .5; // bounce when it collides
         particleEmitter.trailScale = 2;  // stretch in direction of motion
     }
 }

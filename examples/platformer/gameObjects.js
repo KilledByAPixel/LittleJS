@@ -188,7 +188,7 @@ export class Grenade extends GameObject
         super(pos, vec2(.2), Game.spriteAtlas.grenade);
 
         this.beepTimer = new Timer(1);
-        this.elasticity   = .3;
+        this.restitution   = .3;
         this.friction     = .9;
         this.angleDamping = .96;
         this.renderOrder  = 1e8;
@@ -253,7 +253,7 @@ export class Weapon extends LJS.EngineObject
             1, .95, 1, 0, 0,    // damp, angleDamp, gravity, particleCone, fade
             .1, 1               // randomness, collide, additive, colorLinear, renderOrder
         ), vec2(.1,0), -.8);
-        this.shellEmitter.elasticity = .5;
+        this.shellEmitter.restitution = .5;
         this.shellEmitter.particleDestroyCallback = GameEffects.persistentParticleDestroyCallback;
     }
 
@@ -375,7 +375,7 @@ export class Bullet extends LJS.EngineObject
             .5, 1, 1            // randomness, collide, additive, colorLinear, renderOrder
         );
         emitter.trailScale = 1;
-        emitter.elasticity = .3;
+        emitter.restitution = .3;
         emitter.angle = this.velocity.angle() + LJS.PI;
     }
 }

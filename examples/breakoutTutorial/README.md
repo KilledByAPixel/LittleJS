@@ -189,10 +189,10 @@ Now the ball collides but unfortunately also pushes the paddle away, not quite w
 this.mass = 0; // make object have static physics
 ```
 
-Getting closer, the paddle is not pushed away but the ball doesn’t bounce either. To make it bounce, we need to set the ball’s elasticity which controls how much it will bounce.
+Getting closer, the paddle is not pushed away but the ball doesn’t bounce either. To make it bounce, we need to set the ball’s restitution which controls how much it will bounce.
 
 ```javascript
-this.elasticity = 1; // make object bounce
+this.restitution = 1; // make object bounce
 ```
 
 ![LittleJS Screenshot](images/5.png)

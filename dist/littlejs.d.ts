@@ -316,7 +316,7 @@ declare module "littlejsengine" {
      *  @type {number}
      *  @default
      *  @memberof Settings */
-    export let objectDefaultElasticity: number;
+    export let objectDefaultRestitution: number;
     /** How much to slow when touching (0-1)
      *  @type {number}
      *  @default
@@ -495,9 +495,9 @@ declare module "littlejsengine" {
      *  @memberof Settings */
     export function setObjectDefaultAngleDamping(damp: number): void;
     /** Set how much to bounce when a collision occur
-     *  @param {number} elasticity
+     *  @param {number} restitution
      *  @memberof Settings */
-    export function setObjectDefaultElasticity(elasticity: number): void;
+    export function setObjectDefaultRestitution(restitution: number): void;
     /** Set how much to slow when touching
      *  @param {number} friction
      *  @memberof Settings */
@@ -773,8 +773,8 @@ declare module "littlejsengine" {
      */
     export class RandomGenerator {
         /** Create a random number generator with the seed passed in
-         *  @param {number} seed - Starting seed */
-        constructor(seed: number);
+         *  @param {number} [seed] - Starting seed or engine default seed */
+        constructor(seed?: number);
         /** @property {number} - random seed */
         seed: number;
         /** Returns a seeded random value between the two values passed in
@@ -882,9 +882,9 @@ declare module "littlejsengine" {
         cross(v: Vector2): number;
         /** Returns a copy this vector reflected by the surface normal
          * @param {Vector2} normal - surface normal (should be normalized)
-         * @param {number} bounce - how much to bounce, 1 is perfect bounce, 0 is no bounce
+         * @param {number} restitution - how much to bounce, 1 is perfect bounce, 0 is no bounce
          * @return {Vector2} */
-        reflect(normal: Vector2, bounce?: number): Vector2;
+        reflect(normal: Vector2, restitution?: number): Vector2;
         /** Returns the clockwise angle of this vector, up is angle 0
          * @return {number} */
         angle(): number;
@@ -907,6 +907,9 @@ declare module "littlejsengine" {
         /** Returns a copy of this vector that has been inverted
          * @return {Vector2} */
         invert(): Vector2;
+        /** Returns a copy of this vector absolute values
+         * @return {Vector2} */
+        abs(): Vector2;
         /** Returns a copy of this vector with each axis floored
          * @return {Vector2} */
         floor(): Vector2;
@@ -1890,8 +1893,8 @@ declare module "littlejsengine" {
         damping: number;
         /** @property {number} [angleDamping=objectDefaultAngleDamping] - How much to slow down rotation each frame (0-1) */
         angleDamping: number;
-        /** @property {number} [elasticity=objectDefaultElasticity] - How bouncy the object is when colliding (0-1) */
-        elasticity: number;
+        /** @property {number} [restitution=objectDefaultRestitution] - How bouncy the object is when colliding (0-1) */
+        restitution: number;
         /** @property {number} [friction=objectDefaultFriction] - How much friction to apply when sliding (0-1) */
         friction: number;
         /** @property {number} - How much to scale gravity by for this object */

@@ -103,7 +103,7 @@ export class Ball extends PhysicsObject
 
         // make a bouncy ball
         this.velocity = vec2(0, -.1);
-        this.elasticity = 1;
+        this.restitution = 1;
         this.mass = 1;
         
         // attach a trail effect

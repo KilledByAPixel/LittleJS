@@ -307,7 +307,7 @@ EngineObject.mirror        // Should it flip along y axis when rendered
 EngineObject.mass          // Weight of object, static if 0
 EngineObject.damping       // How much to slow velocity each frame (0-1)
 EngineObject.angleDamping  // How much to slow rotation each frame (0-1)
-EngineObject.elasticity    // How bouncy is it when colliding (0-1)
+EngineObject.restitution   // How bouncy is it when colliding (0-1)
 EngineObject.friction      // How much friction when sliding (0-1)
 EngineObject.gravityScale  // How much to scale gravity by
 EngineObject.renderOrder   // Objects are sorted by render order
@@ -319,7 +319,7 @@ enablePhysicsSolver = true    // Enable collisions between objects?
 objectDefaultMass = 1         // Default object mass for collisions
 objectDefaultDamping = 1      // How much to slow velocity by each frame (0-1)
 objectDefaultAngleDamping = 1 // How much to slow angular velocity each frame (0-1)
-objectDefaultElasticity = 0   // How much to bounce when a collision occurs (0-1)
+objectDefaultRestitution = 0  // How much to bounce when a collision occurs (0-1)
 objectDefaultFriction = .8    // How much to slow when touching (0-1)
 objectMaxSpeed = 1            // Clamp max speed to avoid fast objects missing collisions
 gravity = (0,0)               // How much gravity to apply to objects

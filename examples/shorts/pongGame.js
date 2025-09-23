@@ -32,7 +32,7 @@ function gameUpdate()
         ball && ball.destroy(); // destroy old ball
         ball = new PhysicsObject(cameraPos); // create a ball
         ball.velocity = vec2(.2); // give ball some movement
-        ball.elasticity = 1; // make ball bounce
+        ball.restitution = 1; // make ball bounce
         ball.mass = 1; // make ball have dynamic physics
     }
 

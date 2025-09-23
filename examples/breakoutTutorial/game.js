@@ -52,7 +52,7 @@ class Ball extends LJS.EngineObject
 
         this.velocity = vec2(-.1, -.1); // give ball some movement
         this.setCollision(); // make object collide
-        this.elasticity = 1; // make object bounce
+        this.restitution = 1; // make object bounce
     }
     collideWithObject(o)              
     {

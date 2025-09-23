@@ -199,6 +199,14 @@ async function fetchJSON(url)
     return response.json();
 }
 
+/** 
+ * Check if object is a valid number, not NaN or undefined, but it may be infinite
+ * @param {any} n
+ * @return {boolean}
+ * @memberof Utilities
+ */
+function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
+
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Random global functions
@@ -265,11 +273,9 @@ function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear=false)
 class RandomGenerator
 {
     /** Create a random number generator with the seed passed in
-     *  @param {number} seed - Starting seed */
-    constructor(seed)
+     *  @param {number} [seed] - Starting seed or engine default seed */
+    constructor(seed = 123456789)
     {
-        ASSERT(isFinite(seed), 'RandomGenerator seed must be a finite number');
-
         /** @property {number} - random seed */
         this.seed = seed;
     }
@@ -340,7 +346,7 @@ function isVector2(v) { return v instanceof Vector2; }
 
 // vector2 asserts
 function ASSERT_VECTOR2_VALID(v) { ASSERT(isVector2(v) && v.isValid(), 'Vector2 is invalid: ' + v); }
-function ASSERT_NUMBER_VALID(n) { ASSERT(typeof n === 'number', 'Number is invalid: ' + n); }
+function ASSERT_NUMBER_VALID(n) { ASSERT(isNumber(n), 'Number is invalid: ' + n); }
 function ASSERT_VECTOR2_NORMAL(v)
 {
     ASSERT_VECTOR2_VALID(v);
@@ -367,7 +373,7 @@ class Vector2
         this.x = x;
         /** @property {number} - Y axis location */
         this.y = y;
-        ASSERT_VECTOR2_VALID(this);
+        ASSERT(this.isValid(), 'Constructed Vector2 is invalid: ' + this);
     }
 
     /** Sets values of this vector and returns self
@@ -497,13 +503,13 @@ class Vector2
 
     /** Returns a copy this vector reflected by the surface normal
      * @param {Vector2} normal - surface normal (should be normalized)
-     * @param {number} bounce - how much to bounce, 1 is perfect bounce, 0 is no bounce
+     * @param {number} restitution - how much to bounce, 1 is perfect bounce, 0 is no bounce
      * @return {Vector2} */
-    reflect(normal, bounce=1)
+    reflect(normal, restitution=1)
     {
         ASSERT_VECTOR2_NORMAL(normal);
-        ASSERT_NUMBER_VALID(bounce);
-        return this.subtract(normal.scale((1+bounce)*this.dot(normal)));
+        ASSERT_NUMBER_VALID(restitution);
+        return this.subtract(normal.scale((1+restitution)*this.dot(normal)));
     }
 
     /** Returns the clockwise angle of this vector, up is angle 0
@@ -555,6 +561,10 @@ class Vector2
     /** Returns a copy of this vector that has been inverted
      * @return {Vector2} */
     invert() { return new Vector2(this.y, -this.x); }
+
+    /** Returns a copy of this vector absolute values
+     * @return {Vector2} */
+    abs() { return new Vector2(abs(this.x), abs(this.y)); }
 
     /** Returns a copy of this vector with each axis floored
      * @return {Vector2} */
@@ -610,7 +620,7 @@ class Vector2
 
     /** Checks if this is a valid vector
      * @return {boolean} */
-    isValid() { return isFinite(this.x) && isFinite(this.y);}
+    isValid() { return isNumber(this.x) && isNumber(this.y); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -674,7 +684,7 @@ class Color
         this.b = b;
         /** @property {number} - Alpha */
         this.a = a;
-        ASSERT_COLOR_VALID(this);
+        ASSERT(this.isValid(), 'Constructed Color is invalid: ' + this);
     }
 
     /** Sets values of this color and returns self
@@ -882,7 +892,9 @@ class Color
     /** Checks if this is a valid color
      * @return {boolean} */
     isValid()
-    { return isFinite(this.r) && isFinite(this.g) && isFinite(this.b) && isFinite(this.a); }
+    { 
+        return isNumber(this.r) && isNumber(this.g) && isNumber(this.b) && isNumber(this.a);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -960,7 +972,7 @@ class Timer
      *  @param {number} [timeLeft] - How much time left before the timer elapses in seconds */
     constructor(timeLeft)
     {
-        ASSERT(timeLeft === undefined || typeof timeLeft === 'number', 'Time is invalid: ' + timeLeft);
+        ASSERT(timeLeft === undefined || isNumber(timeLeft), 'Time is invalid: ' + timeLeft);
         this.time = timeLeft === undefined ? undefined : time + timeLeft;
         this.setTime = timeLeft;
     }
@@ -969,7 +981,7 @@ class Timer
      *  @param {number} [timeLeft] - How much time left before the timer is elapsed in seconds */
     set(timeLeft=0)
     {
-        ASSERT(typeof timeLeft === 'number', 'Time is invalid: ' + timeLeft);
+        ASSERT(isNumber(timeLeft), 'Time is invalid: ' + timeLeft);
         this.time = time + timeLeft;
         this.setTime = timeLeft;
     }

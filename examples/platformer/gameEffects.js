@@ -40,7 +40,7 @@ export const persistentParticleDestroyCallback = (particle)=>
 }
 
 export function makeBlood(pos, amount) { makeDebris(pos, hsl(0,1,.5), amount, .1, 0); }
-export function makeDebris(pos, color = hsl(), amount = 50, size=.2, elasticity = .3)
+export function makeDebris(pos, color = hsl(), amount = 50, size=.2, restitution = .3)
 {
     const color2 = color.lerp(hsl(), .5);
     const emitter = new LJS.ParticleEmitter(
@@ -52,7 +52,7 @@ export function makeDebris(pos, color = hsl(), amount = 50, size=.2, elasticity 
         1, .95, .4, 3.14, 0,   // damp, angleDamp, gravity, particleCone, fade
         .5, 1                  // randomness, collide, additive, colorLinear, renderOrder
     );
-    emitter.elasticity = elasticity;
+    emitter.restitution = restitution;
     emitter.particleDestroyCallback = persistentParticleDestroyCallback;
     return emitter;
 }

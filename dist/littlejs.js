@@ -768,6 +768,14 @@ async function fetchJSON(url)
     return response.json();
 }
 
+/** 
+ * Check if object is a valid number, not NaN or undefined, but it may be infinite
+ * @param {any} n
+ * @return {boolean}
+ * @memberof Utilities
+ */
+function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
+
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Random global functions
@@ -834,11 +842,9 @@ function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear=false)
 class RandomGenerator
 {
     /** Create a random number generator with the seed passed in
-     *  @param {number} seed - Starting seed */
-    constructor(seed)
+     *  @param {number} [seed] - Starting seed or engine default seed */
+    constructor(seed = 123456789)
     {
-        ASSERT(isFinite(seed), 'RandomGenerator seed must be a finite number');
-
         /** @property {number} - random seed */
         this.seed = seed;
     }
@@ -909,7 +915,7 @@ function isVector2(v) { return v instanceof Vector2; }
 
 // vector2 asserts
 function ASSERT_VECTOR2_VALID(v) { ASSERT(isVector2(v) && v.isValid(), 'Vector2 is invalid: ' + v); }
-function ASSERT_NUMBER_VALID(n) { ASSERT(typeof n === 'number', 'Number is invalid: ' + n); }
+function ASSERT_NUMBER_VALID(n) { ASSERT(isNumber(n), 'Number is invalid: ' + n); }
 function ASSERT_VECTOR2_NORMAL(v)
 {
     ASSERT_VECTOR2_VALID(v);
@@ -936,7 +942,7 @@ class Vector2
         this.x = x;
         /** @property {number} - Y axis location */
         this.y = y;
-        ASSERT_VECTOR2_VALID(this);
+        ASSERT(this.isValid(), 'Constructed Vector2 is invalid: ' + this);
     }
 
     /** Sets values of this vector and returns self
@@ -1066,13 +1072,13 @@ class Vector2
 
     /** Returns a copy this vector reflected by the surface normal
      * @param {Vector2} normal - surface normal (should be normalized)
-     * @param {number} bounce - how much to bounce, 1 is perfect bounce, 0 is no bounce
+     * @param {number} restitution - how much to bounce, 1 is perfect bounce, 0 is no bounce
      * @return {Vector2} */
-    reflect(normal, bounce=1)
+    reflect(normal, restitution=1)
     {
         ASSERT_VECTOR2_NORMAL(normal);
-        ASSERT_NUMBER_VALID(bounce);
-        return this.subtract(normal.scale((1+bounce)*this.dot(normal)));
+        ASSERT_NUMBER_VALID(restitution);
+        return this.subtract(normal.scale((1+restitution)*this.dot(normal)));
     }
 
     /** Returns the clockwise angle of this vector, up is angle 0
@@ -1124,6 +1130,10 @@ class Vector2
     /** Returns a copy of this vector that has been inverted
      * @return {Vector2} */
     invert() { return new Vector2(this.y, -this.x); }
+
+    /** Returns a copy of this vector absolute values
+     * @return {Vector2} */
+    abs() { return new Vector2(abs(this.x), abs(this.y)); }
 
     /** Returns a copy of this vector with each axis floored
      * @return {Vector2} */
@@ -1179,7 +1189,7 @@ class Vector2
 
     /** Checks if this is a valid vector
      * @return {boolean} */
-    isValid() { return isFinite(this.x) && isFinite(this.y);}
+    isValid() { return isNumber(this.x) && isNumber(this.y); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1243,7 +1253,7 @@ class Color
         this.b = b;
         /** @property {number} - Alpha */
         this.a = a;
-        ASSERT_COLOR_VALID(this);
+        ASSERT(this.isValid(), 'Constructed Color is invalid: ' + this);
     }
 
     /** Sets values of this color and returns self
@@ -1451,7 +1461,9 @@ class Color
     /** Checks if this is a valid color
      * @return {boolean} */
     isValid()
-    { return isFinite(this.r) && isFinite(this.g) && isFinite(this.b) && isFinite(this.a); }
+    { 
+        return isNumber(this.r) && isNumber(this.g) && isNumber(this.b) && isNumber(this.a);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1529,7 +1541,7 @@ class Timer
      *  @param {number} [timeLeft] - How much time left before the timer elapses in seconds */
     constructor(timeLeft)
     {
-        ASSERT(timeLeft === undefined || typeof timeLeft === 'number', 'Time is invalid: ' + timeLeft);
+        ASSERT(timeLeft === undefined || isNumber(timeLeft), 'Time is invalid: ' + timeLeft);
         this.time = timeLeft === undefined ? undefined : time + timeLeft;
         this.setTime = timeLeft;
     }
@@ -1538,7 +1550,7 @@ class Timer
      *  @param {number} [timeLeft] - How much time left before the timer is elapsed in seconds */
     set(timeLeft=0)
     {
-        ASSERT(typeof timeLeft === 'number', 'Time is invalid: ' + timeLeft);
+        ASSERT(isNumber(timeLeft), 'Time is invalid: ' + timeLeft);
         this.time = time + timeLeft;
         this.setTime = timeLeft;
     }
@@ -1707,7 +1719,7 @@ let objectDefaultAngleDamping = 1;
  *  @type {number}
  *  @default
  *  @memberof Settings */
-let objectDefaultElasticity = 0;
+let objectDefaultRestitution = 0;
 
 /** How much to slow when touching (0-1)
  *  @type {number}
@@ -1937,9 +1949,9 @@ function setObjectDefaultDamping(damp) { objectDefaultDamping = damp; }
 function setObjectDefaultAngleDamping(damp) { objectDefaultAngleDamping = damp; }
 
 /** Set how much to bounce when a collision occur
- *  @param {number} elasticity
+ *  @param {number} restitution
  *  @memberof Settings */
-function setObjectDefaultElasticity(elasticity) { objectDefaultElasticity = elasticity; }
+function setObjectDefaultRestitution(restitution) { objectDefaultRestitution = restitution; }
 
 /** Set how much to slow when touching
  *  @param {number} friction
@@ -2128,15 +2140,15 @@ class EngineObject
 
         // physical properties
         /** @property {number} [mass=objectDefaultMass] - How heavy the object is, static if 0 */
-        this.mass         = objectDefaultMass;
+        this.mass = objectDefaultMass;
         /** @property {number} [damping=objectDefaultDamping] - How much to slow down velocity each frame (0-1) */
-        this.damping      = objectDefaultDamping;
+        this.damping = objectDefaultDamping;
         /** @property {number} [angleDamping=objectDefaultAngleDamping] - How much to slow down rotation each frame (0-1) */
         this.angleDamping = objectDefaultAngleDamping;
-        /** @property {number} [elasticity=objectDefaultElasticity] - How bouncy the object is when colliding (0-1) */
-        this.elasticity   = objectDefaultElasticity;
+        /** @property {number} [restitution=objectDefaultRestitution] - How bouncy the object is when colliding (0-1) */
+        this.restitution = objectDefaultRestitution;
         /** @property {number} [friction=objectDefaultFriction] - How much friction to apply when sliding (0-1) */
-        this.friction     = objectDefaultFriction;
+        this.friction  = objectDefaultFriction;
         /** @property {number} - How much to scale gravity by for this object */
         this.gravityScale = 1;
         /** @property {number} - Objects are sorted by render order */
@@ -2277,7 +2289,7 @@ class EngineObject
                 const smallStepUp = (oldPos.y - o.pos.y)*2 > sizeBoth.y + gravity.y; // prefer to push up if small delta
                 const isBlockedX = abs(oldPos.y - o.pos.y)*2 < sizeBoth.y;
                 const isBlockedY = abs(oldPos.x - o.pos.x)*2 < sizeBoth.x;
-                const elasticity = max(this.elasticity, o.elasticity);
+                const restitution = max(this.restitution, o.restitution);
                 
                 if (smallStepUp || isBlockedY || !isBlockedX) // resolve y collision
                 {
@@ -2290,7 +2302,7 @@ class EngineObject
                             this.groundObject = o;
 
                         // bounce if other object is fixed or grounded
-                        this.velocity.y *= -elasticity;
+                        this.velocity.y *= -restitution;
                     }
                     else if (o.mass)
                     {
@@ -2303,9 +2315,9 @@ class EngineObject
                         const elastic1 = o.velocity.y * (o.mass - this.mass) / (this.mass + o.mass)
                             + this.velocity.y * 2 * this.mass / (this.mass + o.mass);
 
-                        // lerp between elastic or inelastic based on elasticity
-                        this.velocity.y = lerp(elasticity, inelastic, elastic0);
-                        o.velocity.y = lerp(elasticity, inelastic, elastic1);
+                        // lerp between elastic or inelastic based on restitution
+                        this.velocity.y = lerp(restitution, inelastic, elastic0);
+                        o.velocity.y = lerp(restitution, inelastic, elastic1);
                     }
                 }
                 if (!smallStepUp && isBlockedX) // resolve x collision
@@ -2323,12 +2335,12 @@ class EngineObject
                         const elastic1 = o.velocity.x * (o.mass - this.mass) / (this.mass + o.mass)
                             + this.velocity.x * 2 * this.mass / (this.mass + o.mass);
 
-                        // lerp between elastic or inelastic based on elasticity
-                        this.velocity.x = lerp(elasticity, inelastic, elastic0);
-                        o.velocity.x = lerp(elasticity, inelastic, elastic1);
+                        // lerp between elastic or inelastic based on restitution
+                        this.velocity.x = lerp(restitution, inelastic, elastic0);
+                        o.velocity.x = lerp(restitution, inelastic, elastic1);
                     }
                     else // bounce if other object is fixed
-                        this.velocity.x *= -elasticity;
+                        this.velocity.x *= -restitution;
                 }
                 debugOverlay && debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f0f');
             }
@@ -2349,8 +2361,8 @@ class EngineObject
                     if (blockedLayerY || !blockedLayerX)
                     {
                         // bounce velocity
-                        const elasticity = max(this.elasticity, hitLayer.elasticity);
-                        this.velocity.y *= -elasticity;
+                        const restitution = max(this.restitution, hitLayer.restitution);
+                        this.velocity.y *= -restitution;
 
                         if (wasMovingDown)
                         {
@@ -2373,7 +2385,7 @@ class EngineObject
                     {
                         // move to previous position and bounce
                         this.pos.x = oldPos.x;
-                        this.velocity.x *= -this.elasticity;
+                        this.velocity.x *= -this.restitution;
                     }
                     debugOverlay && debugPhysics && debugRect(this.pos, this.size, '#f00');
                 }
@@ -4339,8 +4351,8 @@ class TileLayer extends EngineObject
         this.isOverlay = false;
         // set no friction by default, applied friction is max of both objects
         this.friction = 0;
-        // set no elasticity by default, applied elasticity is max of both objects
-        this.elasticity = 0;
+        // set no restitution by default, applied restitution is max of both objects
+        this.restitution = 0;
 
         // init tile data
         this.data = [];
@@ -4647,7 +4659,7 @@ class TileCollisionLayer extends TileLayer
         const delta = posEnd.subtract(posStart);
         const totalLength = delta.length();
         const normalizedDelta = delta.normalize();
-        const unit = vec2(abs(1/normalizedDelta.x), abs(1/normalizedDelta.y));
+        const unit = vec2(1/normalizedDelta.x, 1/normalizedDelta.y).abs();
         const flooredPosStart = posStart.floor();
 
         // setup iteration variables
@@ -4893,7 +4905,7 @@ class ParticleEmitter extends EngineObject
         particle.fadeRate      = this.fadeRate;
         particle.damping       = this.damping;
         particle.angleDamping  = this.angleDamping;
-        particle.elasticity    = this.elasticity;
+        particle.restitution    = this.restitution;
         particle.friction      = this.friction;
         particle.gravityScale  = this.gravityScale;
         particle.collideTiles  = this.collideTiles;
@@ -4969,7 +4981,7 @@ class Particle extends EngineObject
     {
         super.update();
 
-        if (this.collideTiles || this.collideSolidObjects || this.isSolid)
+        if (this.collideTiles || this.collideSolidObjects)
         {
             // only apply max circular speed if particle can collide
             const length2 = this.velocity.lengthSquared();
@@ -5575,7 +5587,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.12.8';
+const engineVersion = '1.12.9';
 
 /** Frames per second to update
  *  @type {number}
