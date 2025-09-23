@@ -153,8 +153,9 @@ function glClearCanvas()
 /** Set the WebGl texture, called automatically if using multiple textures
  *  - This may also flush the gl buffer resulting in more draw calls and worse performance
  *  @param {WebGLTexture} texture
+ *  @param {boolean} wrap - Should the texture wrap or clamp
  *  @memberof WebGL */
-function glSetTexture(texture)
+function glSetTexture(texture, wrap=false)
 {
     // must flush cache with the old texture to set a new one
     if (headlessMode || texture == glActiveTexture)
@@ -162,6 +163,11 @@ function glSetTexture(texture)
 
     glFlush();
     glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture = texture);
+
+    // set wrap mode
+    const wrapMode = wrap ? glContext.REPEAT : glContext.CLAMP_TO_EDGE;
+    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, wrapMode);
+    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, wrapMode);
 }
 
 /** Compile WebGL shader of the given type, will throw errors if in debug mode
