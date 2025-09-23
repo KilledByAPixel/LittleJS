@@ -31,7 +31,7 @@ export function buildLevel()
     levelColor = LJS.randColor(hsl(0,0,.2), hsl(0,0,.8));
     levelBackgroundColor = levelColor.mutate().scale(.4,1);
     levelOutlineColor = levelColor.mutate().add(hsl(0,0,.4)).clamp();
-    buildLevelData();
+    loadLevelData();
 
     // create sky object with gradient and stars
     sky = new GameEffects.Sky;
@@ -41,110 +41,90 @@ export function buildLevel()
         new GameEffects.ParallaxLayer(i);
 }
 
-function buildLevelData()
+function loadLevelData()
 {
-    // load level data from an exported Tiled js file
-    let tileMapData = Game.gameLevelData;
-    if (!tileMapData)
-    {
-        // default level data if loading failed
-        tileMapData = {};
-        tileMapData.width = 100;
-        tileMapData.height = 20;
-        tileMapData.layers = [{data:[]}];
-        for(let i=100*20;i--;)
-            tileMapData.layers[0].data[i] = i>100 ? 2 : 0;
-    }
-
-    levelSize = vec2(tileMapData.width, tileMapData.height);
+    // load the level data
+    const tileMapData = Game.gameLevelData;
+    tileLayers = LJS.loadTileLayers(tileMapData, tile(0,16,1), 0, false);
+    levelSize = tileLayers[0].size;
+    playerStartPos = vec2(0, levelSize.y); // default player start
 
     // create table for tiles in the level tilemap
     const tileLookup =
     {
-        circle: 1,
-        ground: 2,
-        ladder: 4,
-        metal:  5,
-        player: 17,
-        crate:  18,
-        enemy:  19,
-        coin:   20,
+        circle: 0,
+        ground: 1,
+        ladder: 3,
+        metal:  4,
+        player: 16,
+        crate:  17,
+        enemy:  18,
+        coin:   19,
     }
 
-    // set all level data tiles
-    tileLayers = [];
-    playerStartPos = vec2(1, levelSize.y);
-    const layerCount = tileMapData.layers.length;
-    for (let layer=layerCount; layer--;)
+    for (let i=tileLayers.length; i--;)
     {
-        const layerData = tileMapData.layers[layer].data;
-        let tileLayer;
-        if (layer < layerCount-1)
-            tileLayer = new LJS.TileLayer(vec2(), levelSize, tile(0,16,1));
-        else
-        {
-            // only foreground layer has collision
-            tileLayer = new LJS.TileCollisionLayer(vec2(), levelSize, tile(0,16,1));
+        const tileLayer = tileLayers[i];
+        const isForeground = i == tileLayers.length - 1;
+        if (isForeground)
             foregroundTileLayer = tileLayer;
-        }
-        tileLayer.renderOrder = -1e3+layer;
-        tileLayers[layer] = tileLayer;
+        else
+            tileLayer.isSolid = false;
 
         for (let x=levelSize.x; x--;) 
         for (let y=levelSize.y; y--;)
         {
             const pos = vec2(x,levelSize.y-1-y);
-            const tile = layerData[y*levelSize.x+x];
-
-            if (tile >= tileLookup.player)
+            const tileData = tileLayer.getData(pos).tile;
+            if (tileData >= tileLookup.player)
             {
                 // create object instead of tile
                 const objectPos = pos.add(vec2(.5));
-                if (tile == tileLookup.player)
+                if (tileData == tileLookup.player)
                     playerStartPos = objectPos;
-                if (tile == tileLookup.crate)
+                if (tileData == tileLookup.crate)
                     new GameObjects.Crate(objectPos);
-                if (tile == tileLookup.enemy)
+                if (tileData == tileLookup.enemy)
                     new GameObjects.Enemy(objectPos);
-                if (tile == tileLookup.coin)
+                if (tileData == tileLookup.coin)
                     new GameObjects.Coin(objectPos);
+
+                // replace with empty tile
+                tileLayer.setData(pos, new LJS.TileLayerData);
                 continue;
             }
-            
-            // get tile type for special tiles
-            let tileType = tileType_empty;
-            if (tile > 0)
-                tileType = tileType_breakable;
-            if (tile == tileLookup.ladder)
+
+            // get tile type
+            let tileType = tileData? tileType_breakable : tileType_empty;
+            if (tileData == tileLookup.ladder)
                 tileType = tileType_ladder;
-            if (tile == tileLookup.metal)
+            if (tileData == tileLookup.metal)
                 tileType = tileType_solid;
             if (tileType)
             {
                 // set collision for solid tiles
-                if (tileLayer == foregroundTileLayer)
+                if (tileLayer.isSolid)
                     tileLayer.setCollisionData(pos, tileType);
-
-                // randomize tile appearance
-                let direction, mirror, color;
                 if (tileType == tileType_breakable)
                 {
-                    direction = LJS.randInt(4);
-                    mirror = LJS.randInt(2);
-                    color = layer ? levelColor : levelBackgroundColor;
+                    // randomize tile appearance
+                    let direction = LJS.randInt(4);
+                    let mirror = LJS.randInt(2);
+                    let color = i ? levelColor : levelBackgroundColor;
                     color = color.mutate(.03);
-                }
 
-                // set tile layer data
-                const data = new LJS.TileLayerData(tile-1, direction, mirror, color);
-                tileLayer.setData(pos, data);
+                    // set tile layer data
+                    const data = new LJS.TileLayerData(tileData, direction, mirror, color);
+                    tileLayer.setData(pos, data);
+                }
             }
         }
         tileLayer.redraw();
     }
-    
+
     // apply decoration to all level tiles
     const pos = vec2();
+    const layerCount = tileMapData.layers.length;
     for (let layer=layerCount; layer--;)
     for (pos.x=levelSize.x; pos.x--;)
     for (pos.y=levelSize.y; pos.y--;)

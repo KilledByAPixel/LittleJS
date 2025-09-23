@@ -5,7 +5,7 @@
  * - Tile layers can be drawn to using their context with canvas2d
  * - Drawn directly to the main canvas without using WebGL
  * - Tile layers can also have collision with EngineObjects
- * @namespace TileCollision
+ * @namespace TileLayer
  */
 
 'use strict';
@@ -15,13 +15,13 @@
 
 /** Keep track of all tile layers with collision
  *  @type {Array<TileCollisionLayer>} 
- *  @memberof TileCollision */
+ *  @memberof TileLayer */
 let tileCollisionLayers = [];
 
 /** Get tile collision data for a given cell in the grid
 *  @param {Vector2} pos
 *  @return {number}
-*  @memberof TileCollision */
+*  @memberof TileLayer */
 function getTileCollisionData(pos)
 {
     // check all tile collision layers
@@ -34,35 +34,97 @@ function getTileCollisionData(pos)
 /** Check if a tile layer collides with another object
  *  @param {Vector2}      pos
  *  @param {Vector2}      [size=(0,0)]
- *  @param {EngineObject} [object]
+ *  @param {EngineObject} [object] - An object or undefined for generic test
+ *  @param {boolean}      [solidOnly] - Only check solid layers if true
  *  @return {TileCollisionLayer}
- *  @memberof TileCollision */
-function tileCollisionTest(pos, size=vec2(), object)
+ *  @memberof TileLayer */
+function tileCollisionTest(pos, size=vec2(), object, solidOnly=true)
 {
-    // check all tile collision layers
     for (const layer of tileCollisionLayers)
+    {
+        if (!solidOnly || layer.isSolid)
         if (layer.collisionTest(pos, size, object))
             return layer;
+    }
 }
 
 /** Return the center of first tile hit, undefined if nothing was hit.
  *  This does not return the exact intersection, but the center of the tile hit.
  *  @param {Vector2}      posStart
  *  @param {Vector2}      posEnd
- *  @param {EngineObject} [object]
+ *  @param {EngineObject} [object] - An object or undefined for generic test
+ *  @param {boolean}      [solidOnly=true] - Only check solid layers if true
  *  @return {Vector2}
- *  @memberof TileCollision */
-function tileCollisionRaycast(posStart, posEnd, object)
+ *  @memberof TileLayer */
+function tileCollisionRaycast(posStart, posEnd, object, solidOnly=true)
 {
-    // check all tile collision layers
     for (const layer of tileCollisionLayers)
     {
-        const hitPos = layer.collisionRaycast(posStart, posEnd, object)
-        if (hitPos)
-            return hitPos;
+        if (!solidOnly || layer.isSolid)
+        {
+            const hitPos = layer.collisionRaycast(posStart, posEnd, object)
+            if (hitPos)
+                return hitPos;
+        }
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Load tile layers from an exported data file
+ *  @param {object}   tileMapData - Level data from an exported data file
+ *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture)
+ *  @param {number}   [renderOrder] - Render order of the top layer
+ *  @param {boolean}  [draw] - Should the layer be drawn automatically
+ *  @return {Array<TileCollisionLayer>}
+ *  @memberof TileLayer */
+function loadTileLayers(tileMapData, tileInfo=tile(), renderOrder=0, draw=true)
+{
+    if (!tileMapData)
+    {
+        // default level data if loading failed
+        const s = 50;
+        tileMapData = {};
+        tileMapData.height = tileMapData.width = s;
+        tileMapData.layers = [{}];
+        tileMapData.layers[0].data = new Array(s*s).fill(0);
+    }
+
+    // validate the tile map data
+    ASSERT(tileMapData.width && tileMapData.height);
+    ASSERT(tileMapData.layers && tileMapData.layers.length);
+
+    // create tile layers and fill with data
+    const tileLayers = [];
+    const levelSize = vec2(tileMapData.width, tileMapData.height);
+    const layerCount = tileMapData.layers.length;
+    for (let i=layerCount; i--;)
+    {
+        const dataLayer = tileMapData.layers[i];
+        ASSERT(dataLayer.data && dataLayer.data.length);
+        ASSERT(levelSize.area() == dataLayer.data.length);
+
+        const layerRenderOrder = renderOrder - (layerCount - 1 - i);
+        const tileLayer = new TileCollisionLayer(vec2(), levelSize, tileInfo, layerRenderOrder);
+        tileLayers[i] = tileLayer;
+        for (let x=levelSize.x; x--;) 
+        for (let y=levelSize.y; y--;)
+        {
+            const pos = vec2(x, levelSize.y-1-y);
+            const data = dataLayer.data[x + y*levelSize.x];
+            if (data)
+            {
+                const layerData = new TileLayerData(data-1);
+                tileLayer.setData(pos, layerData);
+            }
+        }
+        if (draw)
+            tileLayer.redraw();
+    }
+    return tileLayers;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 /**
  * Tile layer data object stores info about how to draw a tile
  * @example
@@ -112,7 +174,7 @@ class TileLayer extends EngineObject
     /** Create a tile layer object
     *  @param {Vector2}  [position=(0,0)] - World space position
     *  @param {Vector2}  [size=(1,1)]     - World space size
-    *  @param {TileInfo} [tileInfo]       - Tile info for layer
+    *  @param {TileInfo} [tileInfo]       - Default tile info for layer (used for size and texture)
     *  @param {Vector2}  [scale=(1,1)]    - How much to scale this layer when rendered
     *  @param {number}   [renderOrder]    - Objects are sorted by renderOrder
     */
@@ -262,7 +324,7 @@ class TileLayer extends EngineObject
             this.context.clearRect(pos.x, this.canvas.height-pos.y, s.x, -s.y);
         }
 
-        // draw the tile if not undefined
+        // draw the tile if it has layer data
         const d = this.getData(layerPos);
         if (d.tile != undefined)
         {
@@ -357,6 +419,9 @@ class TileCollisionLayer extends TileLayer
 
         // keep track of all collision layers
         tileCollisionLayers.push(this);
+
+        // tile collision layers are solid by default
+        this.isSolid = true;
     }
 
     /** Destroy this collision layer */
