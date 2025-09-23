@@ -358,11 +358,12 @@ TileLayerData.clear()      // Clear this tile data
 
 // Tile Collision Layer
 TileCollisionLayer(position, size, tileInfo=tile()) // Create a tile collision layer object
-TileCollisionLayer.size                             // Size of the tile collision layer
 TileCollisionLayer.setCollisionData(pos, data=1)    // Set tile collision data at pos
-getTileCollisionData(pos)                           // Get tile collision data at pos
+tileCollisionGetData(pos)                           // Get tile collision data at pos
 tileCollisionTest(pos, size=(0,0), object)          // Check if collision should occur
 tileCollisionRaycast(posStart, posEnd, object)      // Return the center of tile if hit
+tileCollisionLoad(tileMapData, tileInfo)            // Load tile layers from exported data
+
 ```
 
 ## LittleJS Particle System

@@ -279,7 +279,7 @@ export
 
 	// Tiles
 	tileCollisionLayers,
-	getTileCollisionData,
+	tileCollisionGetData,
 	tileCollisionTest,
 	tileCollisionRaycast,
 	loadTileLayers,

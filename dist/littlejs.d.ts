@@ -1997,24 +1997,24 @@ declare module "littlejsengine" {
      * - Tile layers can be drawn to using their context with canvas2d
      * - Drawn directly to the main canvas without using WebGL
      * - Tile layers can also have collision with EngineObjects
-     * @namespace TileLayer
+     * @namespace TileCollision
      */
     /** Keep track of all tile layers with collision
      *  @type {Array<TileCollisionLayer>}
-     *  @memberof TileLayer */
+     *  @memberof TileCollision */
     export let tileCollisionLayers: Array<TileCollisionLayer>;
     /** Get tile collision data for a given cell in the grid
     *  @param {Vector2} pos
     *  @return {number}
-    *  @memberof TileLayer */
-    export function getTileCollisionData(pos: Vector2): number;
+    *  @memberof TileCollision */
+    export function tileCollisionGetData(pos: Vector2): number;
     /** Check if a tile layer collides with another object
      *  @param {Vector2}      pos
      *  @param {Vector2}      [size=(0,0)]
      *  @param {EngineObject} [object] - An object or undefined for generic test
      *  @param {boolean}      [solidOnly] - Only check solid layers if true
      *  @return {TileCollisionLayer}
-     *  @memberof TileLayer */
+     *  @memberof TileCollision */
     export function tileCollisionTest(pos: Vector2, size?: Vector2, object?: EngineObject, solidOnly?: boolean): TileCollisionLayer;
     /** Return the center of first tile hit, undefined if nothing was hit.
      *  This does not return the exact intersection, but the center of the tile hit.
@@ -2023,17 +2023,8 @@ declare module "littlejsengine" {
      *  @param {EngineObject} [object] - An object or undefined for generic test
      *  @param {boolean}      [solidOnly=true] - Only check solid layers if true
      *  @return {Vector2}
-     *  @memberof TileLayer */
+     *  @memberof TileCollision */
     export function tileCollisionRaycast(posStart: Vector2, posEnd: Vector2, object?: EngineObject, solidOnly?: boolean): Vector2;
-    /**
-     * Load tile layers from an exported data file
-     *  @param {object}   tileMapData - Level data from an exported data file
-     *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture)
-     *  @param {number}   [renderOrder] - Render order of the top layer
-     *  @param {boolean}  [draw] - Should the layer be drawn automatically
-     *  @return {Array<TileCollisionLayer>}
-     *  @memberof TileLayer */
-    export function loadTileLayers(tileMapData: object, tileInfo?: TileInfo, renderOrder?: number, draw?: boolean): Array<TileCollisionLayer>;
     /**
      * Tile layer data object stores info about how to draw a tile
      * @example

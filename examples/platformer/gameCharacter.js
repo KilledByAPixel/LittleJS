@@ -108,7 +108,7 @@ export class Character extends GameObjects.GameObject
         for (let y=2;y--;)
         {
             const testPos = this.pos.add(vec2(0, y + .1*moveInput.y - this.size.y/2));
-            const collisionData = LJS.getTileCollisionData(testPos);
+            const collisionData = LJS.tileCollisionGetData(testPos);
             touchingLadder ||= collisionData == GameLevel.tileType_ladder;
         }
         if (!touchingLadder)
@@ -133,7 +133,7 @@ export class Character extends GameObjects.GameObject
             moveInput.x *= .2;
 
             // exit ladder if ground is below
-            this.climbingLadder = moveInput.y >= 0 || LJS.getTileCollisionData(this.pos.subtract(vec2(0,1))) <= 0;
+            this.climbingLadder = moveInput.y >= 0 || LJS.tileCollisionGetData(this.pos.subtract(vec2(0,1))) <= 0;
         }
         else
         {
@@ -281,9 +281,9 @@ export class Character extends GameObjects.GameObject
             if (pos.y + 1 > this.lastPos.y - this.size.y/2)
                 return false;
 
-            if (LJS.getTileCollisionData(pos.add(vec2(0,1)))      // above
-                && !LJS.getTileCollisionData(pos.add(vec2(1,0)))  // left
-                && !LJS.getTileCollisionData(pos.add(vec2(1,0)))) // right
+            if (LJS.tileCollisionGetData(pos.add(vec2(0,1)))      // above
+                && !LJS.tileCollisionGetData(pos.add(vec2(1,0)))  // left
+                && !LJS.tileCollisionGetData(pos.add(vec2(1,0)))) // right
                 return false; // don't collide if something above it and nothing to left or right
 
             // allow standing on top of ladders

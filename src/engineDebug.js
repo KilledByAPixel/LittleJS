@@ -408,7 +408,7 @@ function debugRender()
         drawLine(mousePos, debugObject.pos, .1, raycastHitPos ? rgb(1,0,0,.5) : rgb(0,1,0,.5), false);
 
         const debugText = 'mouse pos = ' + mousePos + 
-            '\nmouse collision = ' + getTileCollisionData(mousePos) + 
+            '\nmouse collision = ' + tileCollisionGetData(mousePos) + 
             '\n\n--- object info ---\n' +
             debugObject.toString();
         drawTextScreen(debugText, mousePosScreen, 24, rgb(), .05, undefined, 'center', 'monospace');
