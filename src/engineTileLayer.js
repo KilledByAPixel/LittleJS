@@ -190,6 +190,8 @@ class TileLayer extends EngineObject
         this.scale = scale;
         /** @property {boolean} - If true this layer will render to overlay canvas and appear above all objects */
         this.isOverlay = false;
+        /** @property {WebGLTexture} - Texture if using webgl for this layer */
+        this.glTexture = undefined;
         // set no friction by default, applied friction is max of both objects
         this.friction = 0;
         // set no restitution by default, applied restitution is max of both objects
@@ -237,22 +239,30 @@ class TileLayer extends EngineObject
     // Render the tile layer, called automatically by the engine
     render()
     {
-        ASSERT(mainContext != this.context, 'must call redrawEnd() after drawing tiles');
-
-        // flush and copy gl canvas because tile canvas does not use webgl
-        !glOverlay && !this.isOverlay && glCopyToContext(mainContext);
-        
-        // draw the entire cached level onto the canvas
-        let pos = worldToScreen(this.pos.add(vec2(0,this.size.y*this.scale.y)));
-        
-        // fix canvas jitter in some browsers if position is not an integer
-        pos = pos.floor();
-
-        (this.isOverlay ? overlayContext : mainContext).drawImage
-        (
-            this.canvas, pos.x, pos.y,
-            cameraScale*this.size.x*this.scale.x, cameraScale*this.size.y*this.scale.y
-        );
+        ASSERT(mainContext != this.context, 'must call redrawEnd() after drawing tiles!');
+        if (this.glTexture)
+        {
+            // draw the tile layer using cached webgl texture
+            const pos = this.pos.add(this.size.multiply(this.scale).scale(.5)).floor();
+            glSetTexture(this.glTexture);
+            glDraw(pos.x, pos.y, this.size.x, this.size.y); 
+        }
+        else
+        {
+            if (!glOverlay && !this.isOverlay)
+            {
+                // flush and copy gl canvas because tile canvas does not use webgl
+                glCopyToContext(mainContext);
+            }
+            
+            // draw the entire cached level onto the canvas
+            const pos = worldToScreen(this.pos.add(vec2(0,this.size.y*this.scale.y))).floor();
+            (this.isOverlay ? overlayContext : mainContext).drawImage
+            (
+                this.canvas, pos.x, pos.y,
+                cameraScale*this.size.x*this.scale.x, cameraScale*this.size.y*this.scale.y
+            );
+        }
     }
 
     /** Draw all the tile data to an offscreen canvas 
@@ -390,6 +400,20 @@ class TileLayer extends EngineObject
      *  @param {number}  [angle=0] */
     drawRect(pos, size, color, angle) 
     { this.drawTile(pos, size, undefined, color, angle); }
+
+    /** Create or update the webgl texture for this layer
+     *  @param {boolean} [enable] - enable webgl rendering and update the texture */
+    useWebGL(enable = true)
+    {
+        if (enable)
+        {
+            if (!this.glTexture)
+                this.glTexture = glCreateTexture();
+            glSetTextureData(this.glTexture, this.canvas);
+        }
+        else
+            this.glTexture = undefined;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

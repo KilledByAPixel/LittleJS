@@ -1494,29 +1494,29 @@ declare module "littlejsengine" {
      *  @memberof WebGL */
     export function glCreateProgram(vsSource: string, fsSource: string): WebGLProgram;
     /** Create WebGL texture from an image and init the texture settings
-     *  @param {HTMLImageElement} image
+     *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas} [image]
      *  @return {WebGLTexture}
      *  @memberof WebGL */
-    export function glCreateTexture(image: HTMLImageElement): WebGLTexture;
+    export function glCreateTexture(image?: HTMLImageElement | HTMLCanvasElement | OffscreenCanvas): WebGLTexture;
     /** Set WebGL texture data from an image
      *  @param {WebGLTexture} texture
-     *  @param {HTMLImageElement} image
+     *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas} image
      *  @memberof WebGL */
-    export function glSetTextureData(texture: WebGLTexture, image: HTMLImageElement): void;
+    export function glSetTextureData(texture: WebGLTexture, image: HTMLImageElement | HTMLCanvasElement | OffscreenCanvas): void;
     /** Add a sprite to the gl draw list, used by all gl draw functions
      *  @param {Number} x
      *  @param {Number} y
      *  @param {Number} sizeX
      *  @param {Number} sizeY
-     *  @param {Number} angle
-     *  @param {Number} uv0X
-     *  @param {Number} uv0Y
-     *  @param {Number} uv1X
-     *  @param {Number} uv1Y
+     *  @param {Number} [angle]
+     *  @param {Number} [uv0X]
+     *  @param {Number} [uv0Y]
+     *  @param {Number} [uv1X]
+     *  @param {Number} [uv1Y]
      *  @param {Number} [rgba=-1] - white is -1
      *  @param {Number} [rgbaAdditive=0] - black is 0
      *  @memberof WebGL */
-    export function glDraw(x: number, y: number, sizeX: number, sizeY: number, angle: number, uv0X: number, uv0Y: number, uv1X: number, uv1Y: number, rgba?: number, rgbaAdditive?: number): void;
+    export function glDraw(x: number, y: number, sizeX: number, sizeY: number, angle?: number, uv0X?: number, uv0Y?: number, uv1X?: number, uv1Y?: number, rgba?: number, rgbaAdditive?: number): void;
     /** Draw all sprites and clear out the buffer, called automatically by the system whenever necessary
      *  @memberof WebGL */
     export function glFlush(): void;
@@ -2089,6 +2089,8 @@ declare module "littlejsengine" {
         scale: Vector2;
         /** @property {boolean} - If true this layer will render to overlay canvas and appear above all objects */
         isOverlay: boolean;
+        /** @property {WebGLTexture} - Texture if using webgl for this layer */
+        glTexture: WebGLTexture;
         data: TileLayerData[];
         /** Draw all the tile data to an offscreen canvas
          *  - This may be slow in some browsers but only needs to be done once */
@@ -2138,6 +2140,9 @@ declare module "littlejsengine" {
          *  @param {Color}   [color=(1,1,1,1)]
          *  @param {number}  [angle=0] */
         drawRect(pos: Vector2, size?: Vector2, color?: Color, angle?: number): void;
+        /** Create or update the webgl texture for this layer
+         *  @param {boolean} [enable] - enable webgl rendering and update the texture */
+        useWebGL(enable?: boolean): void;
     }
     /**
      * Tile Collision Layer - a tile layer with collision

@@ -82,6 +82,9 @@ export function explosion(pos, radius=3)
             GameLevel.decorateTile(pos.add(vec2(x,y)).floor());
     }
 
+    // update webgl texture
+    GameLevel.updateWebGL(GameLevel.foregroundTileLayer);
+
     // kill/push objects
     LJS.engineObjectsCallback(pos, radius*3, (o)=> 
     {
@@ -126,7 +129,7 @@ export function explosion(pos, radius=3)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-export function destroyTile(pos, makeSound = 1, cleanNeighbors = 1)
+export function destroyTile(pos, makeSound = 1, cleanup = 1)
 {
     // pos must be an int
     pos = pos.floor();
@@ -150,12 +153,13 @@ export function destroyTile(pos, makeSound = 1, cleanNeighbors = 1)
     layer.setData(pos, new LJS.TileLayerData, 1);
     layer.setCollisionData(pos, GameLevel.tileType_empty);
 
-    // cleanup neighbors
-    if (cleanNeighbors)
+    // cleanup neighbors and rebuild webgl
+    if (cleanup)
     {
         for (let i=-1;i<=1;++i)
         for (let j=-1;j<=1;++j)
             GameLevel.decorateTile(pos.add(vec2(i,j)));
+        GameLevel.updateWebGL(layer);
     }
 
     return true;

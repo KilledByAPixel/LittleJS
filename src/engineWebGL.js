@@ -201,7 +201,7 @@ function glCreateProgram(vsSource, fsSource)
 }
 
 /** Create WebGL texture from an image and init the texture settings
- *  @param {HTMLImageElement} image
+ *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas} [image]
  *  @return {WebGLTexture}
  *  @memberof WebGL */
 function glCreateTexture(image)
@@ -212,7 +212,6 @@ function glCreateTexture(image)
     if (image && image.width)
     {
         glSetTextureData(texture, image);
-        
         const isPowerOfTwo = (value)=> !(value & (value - 1));
         if (!tilesPixelated && isPowerOfTwo(image.width) && isPowerOfTwo(image.height))
         {
@@ -239,7 +238,7 @@ function glCreateTexture(image)
 
 /** Set WebGL texture data from an image
  *  @param {WebGLTexture} texture
- *  @param {HTMLImageElement} image
+ *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas} image
  *  @memberof WebGL */
 function glSetTextureData(texture, image)
 {
@@ -297,15 +296,15 @@ function glSetAntialias(antialias=true)
  *  @param {Number} y
  *  @param {Number} sizeX
  *  @param {Number} sizeY
- *  @param {Number} angle
- *  @param {Number} uv0X
- *  @param {Number} uv0Y
- *  @param {Number} uv1X
- *  @param {Number} uv1Y
+ *  @param {Number} [angle]
+ *  @param {Number} [uv0X]
+ *  @param {Number} [uv0Y]
+ *  @param {Number} [uv1X]
+ *  @param {Number} [uv1Y]
  *  @param {Number} [rgba=-1] - white is -1
  *  @param {Number} [rgbaAdditive=0] - black is 0
  *  @memberof WebGL */
-function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba=-1, rgbaAdditive=0)
+function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgba=-1, rgbaAdditive=0)
 {
     // flush if there is not enough room or if different blend mode
     if (glInstanceCount >= gl_MAX_INSTANCES || glBatchAdditive != glAdditive)

@@ -3821,6 +3821,8 @@ class TileLayer extends EngineObject
         this.scale = scale;
         /** @property {boolean} - If true this layer will render to overlay canvas and appear above all objects */
         this.isOverlay = false;
+        /** @property {WebGLTexture} - Texture if using webgl for this layer */
+        this.glTexture = undefined;
         // set no friction by default, applied friction is max of both objects
         this.friction = 0;
         // set no restitution by default, applied restitution is max of both objects
@@ -3868,22 +3870,30 @@ class TileLayer extends EngineObject
     // Render the tile layer, called automatically by the engine
     render()
     {
-        ASSERT(mainContext != this.context, 'must call redrawEnd() after drawing tiles');
-
-        // flush and copy gl canvas because tile canvas does not use webgl
-        !glOverlay && !this.isOverlay && glCopyToContext(mainContext);
-        
-        // draw the entire cached level onto the canvas
-        let pos = worldToScreen(this.pos.add(vec2(0,this.size.y*this.scale.y)));
-        
-        // fix canvas jitter in some browsers if position is not an integer
-        pos = pos.floor();
-
-        (this.isOverlay ? overlayContext : mainContext).drawImage
-        (
-            this.canvas, pos.x, pos.y,
-            cameraScale*this.size.x*this.scale.x, cameraScale*this.size.y*this.scale.y
-        );
+        ASSERT(mainContext != this.context, 'must call redrawEnd() after drawing tiles!');
+        if (this.glTexture)
+        {
+            // draw the tile layer using cached webgl texture
+            const pos = this.pos.add(this.size.multiply(this.scale).scale(.5)).floor();
+            glSetTexture(this.glTexture);
+            glDraw(pos.x, pos.y, this.size.x, this.size.y); 
+        }
+        else
+        {
+            if (!glOverlay && !this.isOverlay)
+            {
+                // flush and copy gl canvas because tile canvas does not use webgl
+                glCopyToContext(mainContext);
+            }
+            
+            // draw the entire cached level onto the canvas
+            const pos = worldToScreen(this.pos.add(vec2(0,this.size.y*this.scale.y))).floor();
+            (this.isOverlay ? overlayContext : mainContext).drawImage
+            (
+                this.canvas, pos.x, pos.y,
+                cameraScale*this.size.x*this.scale.x, cameraScale*this.size.y*this.scale.y
+            );
+        }
     }
 
     /** Draw all the tile data to an offscreen canvas 
@@ -4021,6 +4031,20 @@ class TileLayer extends EngineObject
      *  @param {number}  [angle=0] */
     drawRect(pos, size, color, angle) 
     { this.drawTile(pos, size, undefined, color, angle); }
+
+    /** Create or update the webgl texture for this layer
+     *  @param {boolean} [enable] - enable webgl rendering and update the texture */
+    useWebGL(enable = true)
+    {
+        if (enable)
+        {
+            if (!this.glTexture)
+                this.glTexture = glCreateTexture();
+            glSetTextureData(this.glTexture, this.canvas);
+        }
+        else
+            this.glTexture = undefined;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4906,7 +4930,7 @@ function glCreateProgram(vsSource, fsSource)
 }
 
 /** Create WebGL texture from an image and init the texture settings
- *  @param {HTMLImageElement} image
+ *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas} [image]
  *  @return {WebGLTexture}
  *  @memberof WebGL */
 function glCreateTexture(image)
@@ -4917,7 +4941,6 @@ function glCreateTexture(image)
     if (image && image.width)
     {
         glSetTextureData(texture, image);
-        
         const isPowerOfTwo = (value)=> !(value & (value - 1));
         if (!tilesPixelated && isPowerOfTwo(image.width) && isPowerOfTwo(image.height))
         {
@@ -4944,7 +4967,7 @@ function glCreateTexture(image)
 
 /** Set WebGL texture data from an image
  *  @param {WebGLTexture} texture
- *  @param {HTMLImageElement} image
+ *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas} image
  *  @memberof WebGL */
 function glSetTextureData(texture, image)
 {
@@ -5002,15 +5025,15 @@ function glSetAntialias(antialias=true)
  *  @param {Number} y
  *  @param {Number} sizeX
  *  @param {Number} sizeY
- *  @param {Number} angle
- *  @param {Number} uv0X
- *  @param {Number} uv0Y
- *  @param {Number} uv1X
- *  @param {Number} uv1Y
+ *  @param {Number} [angle]
+ *  @param {Number} [uv0X]
+ *  @param {Number} [uv0Y]
+ *  @param {Number} [uv1X]
+ *  @param {Number} [uv1Y]
  *  @param {Number} [rgba=-1] - white is -1
  *  @param {Number} [rgbaAdditive=0] - black is 0
  *  @memberof WebGL */
-function glDraw(x, y, sizeX, sizeY, angle, uv0X, uv0Y, uv1X, uv1Y, rgba=-1, rgbaAdditive=0)
+function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgba=-1, rgbaAdditive=0)
 {
     // flush if there is not enough room or if different blend mode
     if (glInstanceCount >= gl_MAX_INSTANCES || glBatchAdditive != glAdditive)
