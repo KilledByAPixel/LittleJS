@@ -279,9 +279,26 @@ class Particle extends EngineObject
         this.localSpaceEmitter = localSpaceEmitter;
         /** @property {Function} - Called when particle dies */
         this.destroyCallback = destroyCallback;
+        // particles do not clamp speed by default
+        this.clampSpeed = false;
+    }
 
-        // particles use circular clamped speed
-        this.clampSpeedLinear = false;
+    /** Update the object physics, called automatically by engine once each frame */
+    update()
+    {
+        super.update();
+
+        if (this.collideTiles || this.collideSolidObjects || this.isSolid)
+        {
+            // only apply max circular speed if particle can collide
+            const length2 = this.velocity.lengthSquared();
+            if (length2 > objectMaxSpeed*objectMaxSpeed)
+            {
+                const s = objectMaxSpeed / length2**.5;
+                this.velocity.x *= s;
+                this.velocity.y *= s;
+            }
+        }
     }
 
     /** Render the particle, automatically called each frame, sorted by renderOrder */
