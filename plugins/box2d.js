@@ -76,7 +76,7 @@ class Box2dObject extends EngineObject
     /** Copy box2d update sim data */
     update()
     {
-        // use box2d physics update
+        // use box2d physics update instead of normal engine update
         this.pos = box2d.vec2From(this.body.GetPosition());
         this.angle = -this.body.GetAngle();
     }
