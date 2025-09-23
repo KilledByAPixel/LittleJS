@@ -1523,8 +1523,9 @@ declare module "littlejsengine" {
     /** Set the WebGl texture, called automatically if using multiple textures
      *  - This may also flush the gl buffer resulting in more draw calls and worse performance
      *  @param {WebGLTexture} texture
+     *  @param {boolean} wrap - Should the texture wrap or clamp
      *  @memberof WebGL */
-    export function glSetTexture(texture: WebGLTexture): void;
+    export function glSetTexture(texture: WebGLTexture, wrap?: boolean): void;
     /** Set anti-aliasing for webgl canvas
      *  @param {boolean} [antialias]
      *  @memberof WebGL */
@@ -2030,10 +2031,11 @@ declare module "littlejsengine" {
      *  @param {object}   tileMapData - Level data from exported data
      *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture)
      *  @param {number}   [renderOrder] - Render order of the top layer
+     *  @param {number}   [collisionLayer] - Layer to use for collision if any
      *  @param {boolean}  [draw] - Should the layer be drawn automatically
      *  @return {Array<TileCollisionLayer>}
      *  @memberof TileCollision */
-    export function tileCollisionLoad(tileMapData: object, tileInfo?: TileInfo, renderOrder?: number, draw?: boolean): Array<TileCollisionLayer>;
+    export function tileCollisionLoad(tileMapData: object, tileInfo?: TileInfo, renderOrder?: number, collisionLayer?: number, draw?: boolean): Array<TileCollisionLayer>;
     /**
      * Tile layer data object stores info about how to draw a tile
      * @example
@@ -2074,13 +2076,14 @@ declare module "littlejsengine" {
      */
     export class TileLayer extends EngineObject {
         /** Create a tile layer object
-        *  @param {Vector2}  [position=(0,0)] - World space position
-        *  @param {Vector2}  [size=(1,1)]     - World space size
-        *  @param {TileInfo} [tileInfo]       - Default tile info for layer (used for size and texture)
-        *  @param {Vector2}  [scale=(1,1)]    - How much to scale this layer when rendered
-        *  @param {number}   [renderOrder]    - Objects are sorted by renderOrder
+        *  @param {Vector2}  [position=(0,0)]    - World space position
+        *  @param {Vector2}  [size=(1,1)]        - World space size
+        *  @param {TileInfo} [tileInfo]          - Default tile info for layer (used for size and texture)
+        *  @param {Vector2}  [scale=(1,1)]       - How much to scale this layer when rendered
+        *  @param {number}   [renderOrder]       - Objects are sorted by renderOrder
+        *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering
         */
-        constructor(position?: Vector2, size?: Vector2, tileInfo?: TileInfo, scale?: Vector2, renderOrder?: number);
+        constructor(position?: Vector2, size?: Vector2, tileInfo?: TileInfo, scale?: Vector2, renderOrder?: number, useWebGL?: boolean);
         /** @property {HTMLCanvasElement} - The canvas used by this tile layer */
         canvas: OffscreenCanvas;
         /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
@@ -2115,6 +2118,9 @@ declare module "littlejsengine" {
          *  @param {boolean}  mirror
          *  @param {Function} drawFunction */
         drawCanvas2D(pos: Vector2, size: Vector2, angle: number, mirror: boolean, drawFunction: Function): void;
+        /** Create or update the webgl texture for this layer
+         *  @param {boolean} [enable] - enable webgl rendering and update the texture */
+        useWebGL(enable?: boolean): void;
         /** Set data at a given position in the array
          *  @param {Vector2}       layerPos - Local position in array
          *  @param {TileLayerData} data     - Data to set
@@ -2138,9 +2144,6 @@ declare module "littlejsengine" {
          *  @param {Color}   [color=(1,1,1,1)]
          *  @param {number}  [angle=0] */
         drawRect(pos: Vector2, size?: Vector2, color?: Color, angle?: number): void;
-        /** Create or update the webgl texture for this layer
-         *  @param {boolean} [enable] - enable webgl rendering and update the texture */
-        useWebGL(enable?: boolean): void;
     }
     /**
      * Tile Collision Layer - a tile layer with collision
