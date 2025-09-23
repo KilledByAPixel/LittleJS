@@ -282,6 +282,7 @@ export
 	getTileCollisionData,
 	tileCollisionTest,
 	tileCollisionRaycast,
+	loadTileLayers,
 	TileLayerData,
 	TileLayer,
 	TileCollisionLayer,
