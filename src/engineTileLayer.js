@@ -75,10 +75,11 @@ function tileCollisionRaycast(posStart, posEnd, object, solidOnly=true)
  *  @param {object}   tileMapData - Level data from exported data
  *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture)
  *  @param {number}   [renderOrder] - Render order of the top layer
+ *  @param {number}   [collisionLayer] - Layer to use for collision if any
  *  @param {boolean}  [draw] - Should the layer be drawn automatically
  *  @return {Array<TileCollisionLayer>}
  *  @memberof TileCollision */
-function tileCollisionLoad(tileMapData, tileInfo=tile(), renderOrder=0, draw=true)
+function tileCollisionLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLayer, draw=true)
 {
     if (!tileMapData)
     {
@@ -98,15 +99,16 @@ function tileCollisionLoad(tileMapData, tileInfo=tile(), renderOrder=0, draw=tru
     const tileLayers = [];
     const levelSize = vec2(tileMapData.width, tileMapData.height);
     const layerCount = tileMapData.layers.length;
-    for (let i=layerCount; i--;)
+    for (let layerIndex=layerCount; layerIndex--;)
     {
-        const dataLayer = tileMapData.layers[i];
+        const dataLayer = tileMapData.layers[layerIndex];
         ASSERT(dataLayer.data && dataLayer.data.length);
         ASSERT(levelSize.area() == dataLayer.data.length);
 
-        const layerRenderOrder = renderOrder - (layerCount - 1 - i);
+        const layerRenderOrder = renderOrder - (layerCount - 1 - layerIndex);
         const tileLayer = new TileCollisionLayer(vec2(), levelSize, tileInfo, layerRenderOrder);
-        tileLayers[i] = tileLayer;
+        tileLayers[layerIndex] = tileLayer;
+
         for (let x=levelSize.x; x--;) 
         for (let y=levelSize.y; y--;)
         {
@@ -116,6 +118,10 @@ function tileCollisionLoad(tileMapData, tileInfo=tile(), renderOrder=0, draw=tru
             {
                 const layerData = new TileLayerData(data-1);
                 tileLayer.setData(pos, layerData);
+
+                // set collision for top layer
+                if (layerIndex === collisionLayer)
+                    tileLayer.setCollisionData(pos, 1);
             }
         }
         if (draw)
@@ -172,13 +178,14 @@ class TileLayerData
 class TileLayer extends EngineObject
 {
     /** Create a tile layer object
-    *  @param {Vector2}  [position=(0,0)] - World space position
-    *  @param {Vector2}  [size=(1,1)]     - World space size
-    *  @param {TileInfo} [tileInfo]       - Default tile info for layer (used for size and texture)
-    *  @param {Vector2}  [scale=(1,1)]    - How much to scale this layer when rendered
-    *  @param {number}   [renderOrder]    - Objects are sorted by renderOrder
+    *  @param {Vector2}  [position=(0,0)]    - World space position
+    *  @param {Vector2}  [size=(1,1)]        - World space size
+    *  @param {TileInfo} [tileInfo]          - Default tile info for layer (used for size and texture)
+    *  @param {Vector2}  [scale=(1,1)]       - How much to scale this layer when rendered
+    *  @param {number}   [renderOrder]       - Objects are sorted by renderOrder
+    *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering
     */
-    constructor(position, size, tileInfo=tile(), scale=vec2(1), renderOrder=0)
+    constructor(position, size, tileInfo=tile(), scale=vec2(1), renderOrder=0, useWebGL=glEnable)
     {
         super(position, size, tileInfo, 0, undefined, renderOrder);
 
@@ -192,7 +199,7 @@ class TileLayer extends EngineObject
         /** @property {boolean} - If true this layer will render to overlay canvas and appear above all objects */
         this.isOverlay = false;
         /** @property {WebGLTexture} - Texture if using webgl for this layer */
-        this.glTexture = undefined;
+        this.glTexture = useWebGL ? glCreateTexture() : undefined;
         // set no friction by default, applied friction is max of both objects
         this.friction = 0;
         // set no restitution by default, applied restitution is max of both objects
@@ -212,6 +219,7 @@ class TileLayer extends EngineObject
             this.redrawEnd    = () => {};
             this.drawTileData = () => {};
             this.drawCanvas2D = () => {};
+            this.useWebGL     = () => {};
         }
     }
     
@@ -245,7 +253,8 @@ class TileLayer extends EngineObject
         {
             // draw the tile layer using cached webgl texture
             const pos = this.pos.add(this.size.multiply(this.scale).scale(.5)).floor();
-            glSetTexture(this.glTexture);
+            const wrap = false;
+            glSetTexture(this.glTexture, wrap);
             glDraw(pos.x, pos.y, this.size.x, this.size.y); 
         }
         else
@@ -276,6 +285,8 @@ class TileLayer extends EngineObject
         for (let y = this.size.y; y--;)
             this.drawTileData(vec2(x,y), false);
         this.redrawEnd();
+        if (this.glTexture)
+            this.useWebGL(); // update webgl texture
     }
 
     /** Call to start the redraw process
@@ -402,7 +413,7 @@ class TileLayer extends EngineObject
 
     /** Create or update the webgl texture for this layer
      *  @param {boolean} [enable] - enable webgl rendering and update the texture */
-    useWebGL(enable = true)
+    useWebGL(enable=true)
     {
         if (enable)
         {
