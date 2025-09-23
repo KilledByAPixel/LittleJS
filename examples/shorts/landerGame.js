@@ -25,7 +25,7 @@ function gameInit()
     for (let i=0, y=0; i<20; ++i)
     {
         y = (y + rand(1,-1)*4) * .5;
-        const o = new EngineObject(vec2(i*2-20, y-54), vec2(2, 99), 0, 0, hsl(0,0,.3+i%.19));
+        const o = new EngineObject(vec2(i*2-20, y-54), vec2(2, 99), 0, 0, hsl(0,0,.5+i%.29));
         o.setCollision(); // make object collide
         o.mass = 0; // make object have static physics
     }

@@ -46,9 +46,10 @@ function loadLevelData()
 {
     // load the level data
     const tileMapData = Game.gameLevelData;
-    tileLayers = LJS.tileCollisionLoad(tileMapData, tile(0,16,1), 0, false);
+    tileLayers = LJS.tileCollisionLoad(tileMapData, tile(0,16,1));
     levelSize = tileLayers[0].size;
     playerStartPos = vec2(0, levelSize.y); // default player start
+    foregroundTileLayer = tileLayers[0];
 
     // create table for tiles in the level tilemap
     const tileLookup =
@@ -90,8 +91,9 @@ function loadLevelData()
                 if (tileData == tileLookup.coin)
                     new GameObjects.Coin(objectPos);
 
-                // replace with empty tile
+                // replace with empty tile and empty collision
                 tileLayer.setData(pos, new LJS.TileLayerData);
+                tileLayer.setCollisionData(pos, 0);
                 continue;
             }
 

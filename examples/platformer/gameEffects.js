@@ -149,7 +149,7 @@ export function destroyTile(pos, makeSound = 1, cleanup = 1)
     makeDebris(centerPos, layerData.color.mutate());
     makeSound && sound_destroyObject.play(centerPos);
 
-     // set and clear tile
+    // set and clear tile
     layer.setData(pos, new LJS.TileLayerData, 1);
     layer.setCollisionData(pos, GameLevel.tileType_empty);
 
