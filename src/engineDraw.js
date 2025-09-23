@@ -42,6 +42,16 @@ let overlayCanvas;
  *  @memberof Draw */
 let overlayContext;
 
+/** The default canvas to use for drawing, usually mainCanvas
+ *  @type {HTMLCanvasElement|OffscreenCanvas}
+ *  @memberof Draw */
+let drawCanvas;
+
+/** The default 2d context to use for drawing, usually mainContext
+ *  @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D}
+ *  @memberof Draw */
+let drawContext;
+
 /** The size of the main canvas (and other secondary canvases) 
  *  @type {Vector2}
  *  @memberof Draw */
@@ -323,9 +333,9 @@ function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace, contex
  *  @param {number}  [lineWidth=0]
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {boolean} [screenSpace=false]
- *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawPoly(points, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
+function drawPoly(points, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=drawContext)
 {
     ASSERT(isColor(color) && isColor(lineColor));
     context.fillStyle = color.toString();
@@ -351,9 +361,9 @@ function drawPoly(points, color=new Color, lineWidth=0, lineColor=new Color(0,0,
  *  @param {number}  [lineWidth=0]
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {boolean} [screenSpace=false]
- *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawEllipse(pos, width=1, height=1, angle=0, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
+function drawEllipse(pos, width=1, height=1, angle=0, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=drawContext)
 {
     ASSERT(isColor(color) && isColor(lineColor));
     if (!screenSpace)
@@ -382,9 +392,9 @@ function drawEllipse(pos, width=1, height=1, angle=0, color=new Color, lineWidth
  *  @param {number}  [lineWidth=0]
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {boolean} [screenSpace=false]
- *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
+function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=drawContext)
 { drawEllipse(pos, radius, radius, 0, color, lineWidth, lineColor, screenSpace, context); }
 
 /** Draw directly to a 2d canvas context in world space
@@ -394,9 +404,9 @@ function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=new C
  *  @param {boolean}  mirror
  *  @param {Function} drawFunction
  *  @param {boolean} [screenSpace=false]
- *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, context=mainContext)
+function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, context=drawContext)
 {
     if (!screenSpace)
     {
@@ -423,9 +433,9 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, conte
  *  @param {CanvasTextAlign}  [textAlign='center']
  *  @param {string}  [font=fontDefault]
  *  @param {number}  [maxWidth]
- *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, maxWidth, context=mainContext)
+function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, maxWidth, context=drawContext)
 {
     drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, maxWidth, context);
 }
@@ -484,7 +494,7 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
 /** Enable normal or additive blend mode
  *  @param {boolean} [additive]
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function setBlendMode(additive, useWebGL=glEnable, context)
 {
@@ -494,7 +504,7 @@ function setBlendMode(additive, useWebGL=glEnable, context)
     else
     {
         if (!context)
-            context = mainContext;
+            context = drawContext;
         context.globalCompositeOperation = additive ? 'lighter' : 'source-over';
     }
 }

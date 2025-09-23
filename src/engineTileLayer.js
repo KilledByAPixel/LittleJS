@@ -182,9 +182,10 @@ class TileLayer extends EngineObject
     {
         super(position, size, tileInfo, 0, undefined, renderOrder);
 
+        const canvasSize = size.multiply(tileInfo.size);
         /** @property {HTMLCanvasElement} - The canvas used by this tile layer */
-        this.canvas = document.createElement('canvas');
-        /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
+        this.canvas = new OffscreenCanvas(canvasSize.x, canvasSize.y);
+        /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
         this.context = this.canvas.getContext('2d');
         /** @property {Vector2} - How much to scale this layer when rendered */
         this.scale = scale;
@@ -239,7 +240,7 @@ class TileLayer extends EngineObject
     // Render the tile layer, called automatically by the engine
     render()
     {
-        ASSERT(mainContext != this.context, 'must call redrawEnd() after drawing tiles!');
+        ASSERT(drawContext != this.context, 'must call redrawEnd() after drawing tiles!');
         if (this.glTexture)
         {
             // draw the tile layer using cached webgl texture
@@ -257,7 +258,8 @@ class TileLayer extends EngineObject
             
             // draw the entire cached level onto the canvas
             const pos = worldToScreen(this.pos.add(vec2(0,this.size.y*this.scale.y))).floor();
-            (this.isOverlay ? overlayContext : mainContext).drawImage
+            const context = this.isOverlay ? overlayContext : mainContext;
+            context.drawImage
             (
                 this.canvas, pos.x, pos.y,
                 cameraScale*this.size.x*this.scale.x, cameraScale*this.size.y*this.scale.y
@@ -281,41 +283,38 @@ class TileLayer extends EngineObject
      *  @param {boolean} [clear] - Should it clear the canvas before drawing */
     redrawStart(clear=false)
     {
-        // save current render settings
-        /** @type {[HTMLCanvasElement, CanvasRenderingContext2D, Vector2, Vector2, number]} */
-        this.savedRenderSettings = [mainCanvas, mainContext, mainCanvasSize, cameraPos, cameraScale];
-
-        // use webgl rendering system to render the tiles if enabled
-        // this works by temporally taking control of the rendering system
-        mainCanvas = this.canvas;
-        mainContext = this.context;
-        mainCanvasSize = this.size.multiply(this.tileInfo.size);
-        cameraPos = this.size.scale(.5);
-        cameraScale = this.tileInfo.size.x;
+        // set the draw canvas and context to this layer
+        // use camera settings to match this layer's canvas
+        drawCanvas = this.canvas;
+        drawContext = this.context;
+        const cameraPos = this.size.scale(.5);
+        const cameraScale = this.tileInfo.size.x;
+        const canvasSize = this.size.multiply(this.tileInfo.size);
 
         if (clear)
         {
             // clear and set size
-            mainCanvas.width  = mainCanvasSize.x;
-            mainCanvas.height = mainCanvasSize.y;
+            drawCanvas.width  = canvasSize.x;
+            drawCanvas.height = canvasSize.y;
         }
 
         // disable smoothing for pixel art
         this.context.imageSmoothingEnabled = !tilesPixelated;
 
         // setup gl rendering if enabled
-        glPreRender();
+        glPreRender(cameraPos, cameraScale, canvasSize);
     }
 
     /** Call to end the redraw process */
     redrawEnd()
     {
-        ASSERT(mainContext == this.context, 'must call redrawStart() before drawing tiles');
-        glCopyToContext(mainContext, true);
+        ASSERT(drawContext == this.context, 'must call redrawStart() before drawing tiles');
+        glCopyToContext(drawContext, true);
         //debugSaveCanvas(this.canvas);
 
         // set stuff back to normal
-        [mainCanvas, mainContext, mainCanvasSize, cameraPos, cameraScale] = this.savedRenderSettings;
+        drawCanvas = mainCanvas;
+        drawContext = mainContext;
     }
 
     /** Draw the tile at a given position in the tile grid
@@ -338,7 +337,7 @@ class TileLayer extends EngineObject
         const d = this.getData(layerPos);
         if (d.tile != undefined)
         {
-            ASSERT(mainContext == this.context, 'must call redrawStart() before drawing tiles');
+            ASSERT(drawContext == this.context, 'must call redrawStart() before drawing tiles');
             const pos = layerPos.add(vec2(.5));
             const tileInfo = tile(d.tile, s, this.tileInfo.textureIndex, this.tileInfo.padding);
             drawTile(pos, vec2(1), tileInfo, d.color, d.direction*PI/2, d.mirror);

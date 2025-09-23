@@ -155,6 +155,12 @@ function lerpAngle(percent, angleA, angleB) { return lerpWrap(percent, angleA, a
  *  @memberof Utilities */
 function smoothStep(percent) { return percent * percent * (3 - 2 * percent); }
 
+/** Checks if the value passed in is a power of two
+ *  @param {number} value
+ *  @return {boolean}
+ *  @memberof Utilities */
+function isPowerOfTwo(value) { return !(value & (value - 1)); }
+
 /** Returns the nearest power of two not less then the value
  *  @param {number} value
  *  @return {number}
@@ -2048,6 +2054,16 @@ let overlayCanvas;
  *  @memberof Draw */
 let overlayContext;
 
+/** The default canvas to use for drawing, usually mainCanvas
+ *  @type {HTMLCanvasElement|OffscreenCanvas}
+ *  @memberof Draw */
+let drawCanvas;
+
+/** The default 2d context to use for drawing, usually mainContext
+ *  @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D}
+ *  @memberof Draw */
+let drawContext;
+
 /** The size of the main canvas (and other secondary canvases) 
  *  @type {Vector2}
  *  @memberof Draw */
@@ -2329,9 +2345,9 @@ function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace, contex
  *  @param {number}  [lineWidth=0]
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {boolean} [screenSpace=false]
- *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawPoly(points, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
+function drawPoly(points, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=drawContext)
 {
     ASSERT(isColor(color) && isColor(lineColor));
     context.fillStyle = color.toString();
@@ -2357,9 +2373,9 @@ function drawPoly(points, color=new Color, lineWidth=0, lineColor=new Color(0,0,
  *  @param {number}  [lineWidth=0]
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {boolean} [screenSpace=false]
- *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawEllipse(pos, width=1, height=1, angle=0, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
+function drawEllipse(pos, width=1, height=1, angle=0, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=drawContext)
 {
     ASSERT(isColor(color) && isColor(lineColor));
     if (!screenSpace)
@@ -2388,9 +2404,9 @@ function drawEllipse(pos, width=1, height=1, angle=0, color=new Color, lineWidth
  *  @param {number}  [lineWidth=0]
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {boolean} [screenSpace=false]
- *  @param {CanvasRenderingContext2D} [context=mainContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=mainContext)
+function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=drawContext)
 { drawEllipse(pos, radius, radius, 0, color, lineWidth, lineColor, screenSpace, context); }
 
 /** Draw directly to a 2d canvas context in world space
@@ -2400,9 +2416,9 @@ function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=new C
  *  @param {boolean}  mirror
  *  @param {Function} drawFunction
  *  @param {boolean} [screenSpace=false]
- *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, context=mainContext)
+function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, context=drawContext)
 {
     if (!screenSpace)
     {
@@ -2429,9 +2445,9 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, conte
  *  @param {CanvasTextAlign}  [textAlign='center']
  *  @param {string}  [font=fontDefault]
  *  @param {number}  [maxWidth]
- *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, maxWidth, context=mainContext)
+function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, maxWidth, context=drawContext)
 {
     drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, maxWidth, context);
 }
@@ -2490,7 +2506,7 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
 /** Enable normal or additive blend mode
  *  @param {boolean} [additive]
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function setBlendMode(additive, useWebGL=glEnable, context)
 {
@@ -2500,7 +2516,7 @@ function setBlendMode(additive, useWebGL=glEnable, context)
     else
     {
         if (!context)
-            context = mainContext;
+            context = drawContext;
         context.globalCompositeOperation = additive ? 'lighter' : 'source-over';
     }
 }
@@ -3813,9 +3829,10 @@ class TileLayer extends EngineObject
     {
         super(position, size, tileInfo, 0, undefined, renderOrder);
 
+        const canvasSize = size.multiply(tileInfo.size);
         /** @property {HTMLCanvasElement} - The canvas used by this tile layer */
-        this.canvas = document.createElement('canvas');
-        /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
+        this.canvas = new OffscreenCanvas(canvasSize.x, canvasSize.y);
+        /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
         this.context = this.canvas.getContext('2d');
         /** @property {Vector2} - How much to scale this layer when rendered */
         this.scale = scale;
@@ -3870,7 +3887,7 @@ class TileLayer extends EngineObject
     // Render the tile layer, called automatically by the engine
     render()
     {
-        ASSERT(mainContext != this.context, 'must call redrawEnd() after drawing tiles!');
+        ASSERT(drawContext != this.context, 'must call redrawEnd() after drawing tiles!');
         if (this.glTexture)
         {
             // draw the tile layer using cached webgl texture
@@ -3888,7 +3905,8 @@ class TileLayer extends EngineObject
             
             // draw the entire cached level onto the canvas
             const pos = worldToScreen(this.pos.add(vec2(0,this.size.y*this.scale.y))).floor();
-            (this.isOverlay ? overlayContext : mainContext).drawImage
+            const context = this.isOverlay ? overlayContext : mainContext;
+            context.drawImage
             (
                 this.canvas, pos.x, pos.y,
                 cameraScale*this.size.x*this.scale.x, cameraScale*this.size.y*this.scale.y
@@ -3912,41 +3930,38 @@ class TileLayer extends EngineObject
      *  @param {boolean} [clear] - Should it clear the canvas before drawing */
     redrawStart(clear=false)
     {
-        // save current render settings
-        /** @type {[HTMLCanvasElement, CanvasRenderingContext2D, Vector2, Vector2, number]} */
-        this.savedRenderSettings = [mainCanvas, mainContext, mainCanvasSize, cameraPos, cameraScale];
-
-        // use webgl rendering system to render the tiles if enabled
-        // this works by temporally taking control of the rendering system
-        mainCanvas = this.canvas;
-        mainContext = this.context;
-        mainCanvasSize = this.size.multiply(this.tileInfo.size);
-        cameraPos = this.size.scale(.5);
-        cameraScale = this.tileInfo.size.x;
+        // set the draw canvas and context to this layer
+        // use camera settings to match this layer's canvas
+        drawCanvas = this.canvas;
+        drawContext = this.context;
+        const cameraPos = this.size.scale(.5);
+        const cameraScale = this.tileInfo.size.x;
+        const canvasSize = this.size.multiply(this.tileInfo.size);
 
         if (clear)
         {
             // clear and set size
-            mainCanvas.width  = mainCanvasSize.x;
-            mainCanvas.height = mainCanvasSize.y;
+            drawCanvas.width  = canvasSize.x;
+            drawCanvas.height = canvasSize.y;
         }
 
         // disable smoothing for pixel art
         this.context.imageSmoothingEnabled = !tilesPixelated;
 
         // setup gl rendering if enabled
-        glPreRender();
+        glPreRender(cameraPos, cameraScale, canvasSize);
     }
 
     /** Call to end the redraw process */
     redrawEnd()
     {
-        ASSERT(mainContext == this.context, 'must call redrawStart() before drawing tiles');
-        glCopyToContext(mainContext, true);
+        ASSERT(drawContext == this.context, 'must call redrawStart() before drawing tiles');
+        glCopyToContext(drawContext, true);
         //debugSaveCanvas(this.canvas);
 
         // set stuff back to normal
-        [mainCanvas, mainContext, mainCanvasSize, cameraPos, cameraScale] = this.savedRenderSettings;
+        drawCanvas = mainCanvas;
+        drawContext = mainContext;
     }
 
     /** Draw the tile at a given position in the tile grid
@@ -3969,7 +3984,7 @@ class TileLayer extends EngineObject
         const d = this.getData(layerPos);
         if (d.tile != undefined)
         {
-            ASSERT(mainContext == this.context, 'must call redrawStart() before drawing tiles');
+            ASSERT(drawContext == this.context, 'must call redrawStart() before drawing tiles');
             const pos = layerPos.add(vec2(.5));
             const tileInfo = tile(d.tile, s, this.tileInfo.textureIndex, this.tileInfo.padding);
             drawTile(pos, vec2(1), tileInfo, d.color, d.direction*PI/2, d.mirror);
@@ -4821,8 +4836,9 @@ function glInit()
     glContext.bufferData(glContext.ARRAY_BUFFER, geometry, glContext.STATIC_DRAW);
 }
 
-// Setup render each frame, called automatically by engine
-function glPreRender()
+// Setup webgl render each frame, called automatically by engine
+// Also used by tile layer rendering when redrawing tiles
+function glPreRender(cameraPos, cameraScale, mainCanvasSize)
 {
     if (!glEnable || headlessMode) return;
 
@@ -4874,7 +4890,7 @@ function glPreRender()
 function glClearCanvas()
 {
     // clear and set to same size as main canvas
-    glContext.viewport(0, 0, glCanvas.width=mainCanvas.width, glCanvas.height=mainCanvas.height);
+    glContext.viewport(0, 0, glCanvas.width=drawCanvas.width, glCanvas.height=drawCanvas.height);
     glContext.clear(glContext.COLOR_BUFFER_BIT);
 }
 
@@ -4941,7 +4957,6 @@ function glCreateTexture(image)
     if (image && image.width)
     {
         glSetTextureData(texture, image);
-        const isPowerOfTwo = (value)=> !(value & (value - 1));
         if (!tilesPixelated && isPowerOfTwo(image.width) && isPowerOfTwo(image.height))
         {
             // use mipmap filtering
@@ -5187,7 +5202,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             mainContext.imageSmoothingEnabled = !tilesPixelated;
 
         // setup gl rendering if enabled
-        glPreRender();
+        glPreRender(cameraPos, cameraScale, mainCanvasSize);
     }
 
     // internal update loop for engine
@@ -5342,8 +5357,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         'touch-action:none;' +        // prevent mobile pinch to resize
         '-webkit-touch-callout:none');// compatibility for ios
     rootElement.style.cssText = styleRoot;
-    rootElement.appendChild(mainCanvas = document.createElement('canvas'));
-    mainContext = mainCanvas.getContext('2d');
+    drawCanvas = mainCanvas = document.createElement('canvas');
+    rootElement.appendChild(mainCanvas);
+    drawContext = mainContext = mainCanvas.getContext('2d');
 
     // init stuff and start engine
     inputInit();
@@ -5352,7 +5368,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     glInit();
 
     // create overlay canvas for hud to appear above gl canvas
-    rootElement.appendChild(overlayCanvas = document.createElement('canvas'));
+    overlayCanvas = document.createElement('canvas')
+    rootElement.appendChild(overlayCanvas);
     overlayContext = overlayCanvas.getContext('2d');
 
     // set canvas style
@@ -5930,7 +5947,7 @@ class PostProcessPlugin
             else
             {
                 // set the viewport
-                glContext.viewport(0, 0, glCanvas.width = mainCanvas.width, glCanvas.height = mainCanvas.height);
+                glContext.viewport(0, 0, glCanvas.width = drawCanvas.width, glCanvas.height = drawCanvas.height);
             }
 
             if (postProcess.includeOverlay)
@@ -8180,7 +8197,7 @@ class Box2dPlugin
      *  @param {Color} [outlineColor]
      *  @param {number} [lineWidth]
      *  @param {CanvasRenderingContext2D} [context] */
-    drawFixture(fixture, pos, angle, color=WHITE, outlineColor=BLACK, lineWidth=.1, context=mainContext)
+    drawFixture(fixture, pos, angle, color=WHITE, outlineColor=BLACK, lineWidth=.1, context=drawContext)
     {
         const shape = box2d.castObjectType(fixture.GetShape());
         switch (shape.GetType())
@@ -8216,7 +8233,7 @@ class Box2dPlugin
      *  @param {Color} [outlineColor]
      *  @param {number} [lineWidth]
      *  @param {CanvasRenderingContext2D} [context] */
-    drawCircle(pos, radius, color=WHITE, outlineColor=BLACK, lineWidth=.1, context=mainContext)
+    drawCircle(pos, radius, color=WHITE, outlineColor=BLACK, lineWidth=.1, context=drawContext)
     {
         drawCanvas2D(pos, vec2(1), 0, 0, context=>
         {
@@ -8234,7 +8251,7 @@ class Box2dPlugin
      *  @param {Color} [outlineColor]
      *  @param {number} [lineWidth]
      *  @param {CanvasRenderingContext2D} [context] */
-    drawPoly(pos, angle, points, color=WHITE, outlineColor=BLACK, lineWidth=.1, context=mainContext)
+    drawPoly(pos, angle, points, color=WHITE, outlineColor=BLACK, lineWidth=.1, context=drawContext)
     {
         drawCanvas2D(pos, vec2(1), angle, 0, context=>
         {
@@ -8253,7 +8270,7 @@ class Box2dPlugin
      *  @param {Color} [color]
      *  @param {number} [lineWidth]
      *  @param {CanvasRenderingContext2D} [context] */
-    drawLine(pos, angle, posA, posB, color=WHITE, lineWidth=.1, context=mainContext)
+    drawLine(pos, angle, posA, posB, color=WHITE, lineWidth=.1, context=drawContext)
     {
         drawCanvas2D(pos, vec2(1), angle, 0, context=>
         {
@@ -8269,7 +8286,7 @@ class Box2dPlugin
      *  @param {Color} [outlineColor]
      *  @param {number} [lineWidth]
      *  @param {CanvasRenderingContext2D} [context] */
-    drawFillStroke(color=WHITE, outlineColor=BLACK, lineWidth=.1, context=mainContext)
+    drawFillStroke(color=WHITE, outlineColor=BLACK, lineWidth=.1, context=drawContext)
     {
         if (color)
         {

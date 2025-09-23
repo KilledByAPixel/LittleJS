@@ -78,7 +78,7 @@ class PostProcessPlugin
             else
             {
                 // set the viewport
-                glContext.viewport(0, 0, glCanvas.width = mainCanvas.width, glCanvas.height = mainCanvas.height);
+                glContext.viewport(0, 0, glCanvas.width = drawCanvas.width, glCanvas.height = drawCanvas.height);
             }
 
             if (postProcess.includeOverlay)

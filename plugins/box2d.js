@@ -1592,7 +1592,7 @@ class Box2dPlugin
      *  @param {Color} [outlineColor]
      *  @param {number} [lineWidth]
      *  @param {CanvasRenderingContext2D} [context] */
-    drawFixture(fixture, pos, angle, color=WHITE, outlineColor=BLACK, lineWidth=.1, context=mainContext)
+    drawFixture(fixture, pos, angle, color=WHITE, outlineColor=BLACK, lineWidth=.1, context=drawContext)
     {
         const shape = box2d.castObjectType(fixture.GetShape());
         switch (shape.GetType())
@@ -1628,7 +1628,7 @@ class Box2dPlugin
      *  @param {Color} [outlineColor]
      *  @param {number} [lineWidth]
      *  @param {CanvasRenderingContext2D} [context] */
-    drawCircle(pos, radius, color=WHITE, outlineColor=BLACK, lineWidth=.1, context=mainContext)
+    drawCircle(pos, radius, color=WHITE, outlineColor=BLACK, lineWidth=.1, context=drawContext)
     {
         drawCanvas2D(pos, vec2(1), 0, 0, context=>
         {
@@ -1646,7 +1646,7 @@ class Box2dPlugin
      *  @param {Color} [outlineColor]
      *  @param {number} [lineWidth]
      *  @param {CanvasRenderingContext2D} [context] */
-    drawPoly(pos, angle, points, color=WHITE, outlineColor=BLACK, lineWidth=.1, context=mainContext)
+    drawPoly(pos, angle, points, color=WHITE, outlineColor=BLACK, lineWidth=.1, context=drawContext)
     {
         drawCanvas2D(pos, vec2(1), angle, 0, context=>
         {
@@ -1665,7 +1665,7 @@ class Box2dPlugin
      *  @param {Color} [color]
      *  @param {number} [lineWidth]
      *  @param {CanvasRenderingContext2D} [context] */
-    drawLine(pos, angle, posA, posB, color=WHITE, lineWidth=.1, context=mainContext)
+    drawLine(pos, angle, posA, posB, color=WHITE, lineWidth=.1, context=drawContext)
     {
         drawCanvas2D(pos, vec2(1), angle, 0, context=>
         {
@@ -1681,7 +1681,7 @@ class Box2dPlugin
      *  @param {Color} [outlineColor]
      *  @param {number} [lineWidth]
      *  @param {CanvasRenderingContext2D} [context] */
-    drawFillStroke(color=WHITE, outlineColor=BLACK, lineWidth=.1, context=mainContext)
+    drawFillStroke(color=WHITE, outlineColor=BLACK, lineWidth=.1, context=drawContext)
     {
         if (color)
         {

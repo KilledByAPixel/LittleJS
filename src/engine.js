@@ -135,7 +135,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             mainContext.imageSmoothingEnabled = !tilesPixelated;
 
         // setup gl rendering if enabled
-        glPreRender();
+        glPreRender(cameraPos, cameraScale, mainCanvasSize);
     }
 
     // internal update loop for engine
@@ -290,8 +290,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         'touch-action:none;' +        // prevent mobile pinch to resize
         '-webkit-touch-callout:none');// compatibility for ios
     rootElement.style.cssText = styleRoot;
-    rootElement.appendChild(mainCanvas = document.createElement('canvas'));
-    mainContext = mainCanvas.getContext('2d');
+    drawCanvas = mainCanvas = document.createElement('canvas');
+    rootElement.appendChild(mainCanvas);
+    drawContext = mainContext = mainCanvas.getContext('2d');
 
     // init stuff and start engine
     inputInit();
@@ -300,7 +301,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     glInit();
 
     // create overlay canvas for hud to appear above gl canvas
-    rootElement.appendChild(overlayCanvas = document.createElement('canvas'));
+    overlayCanvas = document.createElement('canvas')
+    rootElement.appendChild(overlayCanvas);
     overlayContext = overlayCanvas.getContext('2d');
 
     // set canvas style

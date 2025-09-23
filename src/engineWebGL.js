@@ -92,8 +92,9 @@ function glInit()
     glContext.bufferData(glContext.ARRAY_BUFFER, geometry, glContext.STATIC_DRAW);
 }
 
-// Setup render each frame, called automatically by engine
-function glPreRender()
+// Setup webgl render each frame, called automatically by engine
+// Also used by tile layer rendering when redrawing tiles
+function glPreRender(cameraPos, cameraScale, mainCanvasSize)
 {
     if (!glEnable || headlessMode) return;
 
@@ -145,7 +146,7 @@ function glPreRender()
 function glClearCanvas()
 {
     // clear and set to same size as main canvas
-    glContext.viewport(0, 0, glCanvas.width=mainCanvas.width, glCanvas.height=mainCanvas.height);
+    glContext.viewport(0, 0, glCanvas.width=drawCanvas.width, glCanvas.height=drawCanvas.height);
     glContext.clear(glContext.COLOR_BUFFER_BIT);
 }
 
@@ -212,7 +213,6 @@ function glCreateTexture(image)
     if (image && image.width)
     {
         glSetTextureData(texture, image);
-        const isPowerOfTwo = (value)=> !(value & (value - 1));
         if (!tilesPixelated && isPowerOfTwo(image.width) && isPowerOfTwo(image.height))
         {
             // use mipmap filtering

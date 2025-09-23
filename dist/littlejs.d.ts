@@ -1316,9 +1316,9 @@ declare module "littlejsengine" {
      *  @param {number}  [lineWidth=0]
      *  @param {Color}   [lineColor=(0,0,0,1)]
      *  @param {boolean} [screenSpace=false]
-     *  @param {CanvasRenderingContext2D} [context=mainContext]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      *  @memberof Draw */
-    export function drawPoly(points: Array<Vector2>, color?: Color, lineWidth?: number, lineColor?: Color, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
+    export function drawPoly(points: Array<Vector2>, color?: Color, lineWidth?: number, lineColor?: Color, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw colored ellipse using passed in point
      *  @param {Vector2} pos
      *  @param {number}  [width=1]
@@ -1328,9 +1328,9 @@ declare module "littlejsengine" {
      *  @param {number}  [lineWidth=0]
      *  @param {Color}   [lineColor=(0,0,0,1)]
      *  @param {boolean} [screenSpace=false]
-     *  @param {CanvasRenderingContext2D} [context=mainContext]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      *  @memberof Draw */
-    export function drawEllipse(pos: Vector2, width?: number, height?: number, angle?: number, color?: Color, lineWidth?: number, lineColor?: Color, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
+    export function drawEllipse(pos: Vector2, width?: number, height?: number, angle?: number, color?: Color, lineWidth?: number, lineColor?: Color, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw colored circle using passed in point
      *  @param {Vector2} pos
      *  @param {number}  [radius=1]
@@ -1338,9 +1338,9 @@ declare module "littlejsengine" {
      *  @param {number}  [lineWidth=0]
      *  @param {Color}   [lineColor=(0,0,0,1)]
      *  @param {boolean} [screenSpace=false]
-     *  @param {CanvasRenderingContext2D} [context=mainContext]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      *  @memberof Draw */
-    export function drawCircle(pos: Vector2, radius?: number, color?: Color, lineWidth?: number, lineColor?: Color, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
+    export function drawCircle(pos: Vector2, radius?: number, color?: Color, lineWidth?: number, lineColor?: Color, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw directly to a 2d canvas context in world space
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
@@ -1348,7 +1348,7 @@ declare module "littlejsengine" {
      *  @param {boolean}  mirror
      *  @param {Function} drawFunction
      *  @param {boolean} [screenSpace=false]
-     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      *  @memberof Draw */
     export function drawCanvas2D(pos: Vector2, size: Vector2, angle: number, mirror: boolean, drawFunction: Function, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw text on main canvas in world space
@@ -1362,7 +1362,7 @@ declare module "littlejsengine" {
      *  @param {CanvasTextAlign}  [textAlign='center']
      *  @param {string}  [font=fontDefault]
      *  @param {number}  [maxWidth]
-     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      *  @memberof Draw */
     export function drawText(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, maxWidth?: number, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw text on overlay canvas in world space
@@ -1395,7 +1395,7 @@ declare module "littlejsengine" {
     /** Enable normal or additive blend mode
      *  @param {boolean} [additive]
      *  @param {boolean} [useWebGL=glEnable]
-     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function setBlendMode(additive?: boolean, useWebGL?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Combines all LittleJS canvases onto the main canvas and clears them
@@ -2082,9 +2082,9 @@ declare module "littlejsengine" {
         */
         constructor(position?: Vector2, size?: Vector2, tileInfo?: TileInfo, scale?: Vector2, renderOrder?: number);
         /** @property {HTMLCanvasElement} - The canvas used by this tile layer */
-        canvas: HTMLCanvasElement;
-        /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
-        context: CanvasRenderingContext2D;
+        canvas: OffscreenCanvas;
+        /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
+        context: OffscreenCanvasRenderingContext2D;
         /** @property {Vector2} - How much to scale this layer when rendered */
         scale: Vector2;
         /** @property {boolean} - If true this layer will render to overlay canvas and appear above all objects */
@@ -2124,8 +2124,6 @@ declare module "littlejsengine" {
          *  @param {Vector2} layerPos - Local position in array
          *  @return {TileLayerData} */
         getData(layerPos: Vector2): TileLayerData;
-        /** @type {[HTMLCanvasElement, CanvasRenderingContext2D, Vector2, Vector2, number]} */
-        savedRenderSettings: [HTMLCanvasElement, CanvasRenderingContext2D, Vector2, Vector2, number];
         /** Draw a tile directly onto the layer canvas in world space
          *  @param {Vector2}  pos
          *  @param {Vector2}  [size=(1,1)]

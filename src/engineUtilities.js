@@ -114,6 +114,12 @@ function lerpAngle(percent, angleA, angleB) { return lerpWrap(percent, angleA, a
  *  @memberof Utilities */
 function smoothStep(percent) { return percent * percent * (3 - 2 * percent); }
 
+/** Checks if the value passed in is a power of two
+ *  @param {number} value
+ *  @return {boolean}
+ *  @memberof Utilities */
+function isPowerOfTwo(value) { return !(value & (value - 1)); }
+
 /** Returns the nearest power of two not less then the value
  *  @param {number} value
  *  @return {number}
