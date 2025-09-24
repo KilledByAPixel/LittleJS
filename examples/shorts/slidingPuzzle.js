@@ -1,5 +1,6 @@
 const gridWidth = 4;
 const pieceSize = vec2(5,4);
+const sound_click = new Sound([1,0,440]);
 let emptyGridPos = vec2();
 
 class PuzzlePiece extends EngineObject
@@ -20,7 +21,8 @@ class PuzzlePiece extends EngineObject
         {
             // swap with empty space when clicked on
             this.pos = emptyGridPos.multiply(pieceSize);
-            [emptyGridPos = this.gridPos] = [this.gridPos, emptyGridPos];
+            [emptyGridPos, this.gridPos] = [this.gridPos, emptyGridPos];
+            sound_click.play();
         }
     }
 
