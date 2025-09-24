@@ -1,15 +1,13 @@
 const gridWidth = 4;
 const pieceSize = vec2(5,4);
-const sound_click = new Sound([1,0,440]);
 let emptyGridPos = vec2();
 
 class PuzzlePiece extends EngineObject
 {
-    constructor(gridPos)
+    constructor(gridPos, size)
     {
-        const pos = gridPos.multiply(pieceSize);
         const color = rgb(x/(gridWidth-1), y/(gridWidth-1), 1);
-        super(pos, pieceSize, 0, 0, color);
+        super(gridPos.multiply(size), size, 0, 0, color);
         this.gridPos = gridPos;
         this.text = gridPos.x + gridWidth*gridPos.y;
     }
@@ -20,9 +18,8 @@ class PuzzlePiece extends EngineObject
         if (abs(this.gridPos.x-emptyGridPos.x) + abs(this.gridPos.y-emptyGridPos.y) == 1)
         {
             // swap with empty space when clicked on
-            this.pos = emptyGridPos.multiply(pieceSize);
+            this.pos = emptyGridPos.multiply(this.size);
             [emptyGridPos, this.gridPos] = [this.gridPos, emptyGridPos];
-            sound_click.play();
         }
     }
 
@@ -38,6 +35,7 @@ function gameInit()
     // create puzzle pieces
     for(x=gridWidth; x--;)
     for(y=gridWidth; y--;)
-        (x||y) && new PuzzlePiece(vec2(x,y));
+        (x||y) && new PuzzlePiece(vec2(x,y), pieceSize);
+
     cameraPos = vec2(gridWidth-1).multiply(pieceSize).scale(.5);
 }
