@@ -1165,13 +1165,6 @@ let headlessMode = false;
  *  @memberof Settings */
 let glEnable = true;
 
-/** Fixes slow rendering in some browsers by not compositing the WebGL canvas
- *  - Must be set before startup to take effect
- *  @type {boolean}
- *  @default
- *  @memberof Settings */
-let glOverlay = true;
-
 ///////////////////////////////////////////////////////////////////////////////
 // Tile sheet settings
 
@@ -1410,12 +1403,7 @@ function setHeadlessMode(headless) { headlessMode = headless; }
 /** Set if webgl rendering is enabled
  *  @param {boolean} enable
  *  @memberof Settings */
-function setGlEnable(enable) { glEnable = enable; }
-
-/** Set to not composite the WebGL canvas
- *  @param {boolean} overlay
- *  @memberof Settings */
-function setGlOverlay(overlay) { glOverlay = overlay; }
+function setGLEnable(enable) { glEnable = enable; }
 
 /** Set default size of tiles in pixels
  *  @param {Vector2} size
@@ -2566,7 +2554,7 @@ function setBlendMode(additive, useWebGL=glEnable, context)
 function combineCanvases()
 {
     // combine canvases
-    glCopyToContext(mainContext, true);
+    glCopyToContext(mainContext);
     mainContext.drawImage(overlayCanvas, 0, 0);
 
     // clear canvases
@@ -3882,8 +3870,6 @@ class TileLayer extends EngineObject
         this.context = this.canvas.getContext('2d');
         /** @property {Vector2} - How much to scale this layer when rendered */
         this.scale = scale;
-        /** @property {boolean} - If true this layer will render to overlay canvas and appear above all objects */
-        this.isOverlay = false;
         /** @property {WebGLTexture} - Texture if using webgl for this layer */
         this.glTexture = useWebGL ? glCreateTexture(this.canvas) : undefined;
         // set no friction by default, applied friction is max of both objects
@@ -3935,12 +3921,6 @@ class TileLayer extends EngineObject
     render()
     {
         ASSERT(drawContext != this.context, 'must call redrawEnd() after drawing tiles!');
-
-        if (!this.glTexture && !glOverlay && !this.isOverlay)
-        {
-            // flush and copy gl canvas because tile canvas is not using webgl
-            glCopyToContext(mainContext);
-        }
         
         // draw the tile layer as a single tile
         const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
@@ -3997,7 +3977,7 @@ class TileLayer extends EngineObject
     redrawEnd()
     {
         ASSERT(drawContext == this.context, 'must call redrawStart() before drawing tiles');
-        glCopyToContext(drawContext, true);
+        glCopyToContext(drawContext);
         //debugSaveCanvas(this.canvas);
 
         // set stuff back to normal
@@ -4839,9 +4819,9 @@ function glInit()
     glCanvas = document.createElement('canvas');
     glContext = glCanvas.getContext('webgl2', {antialias:glAntialias});
 
-    // some browsers are much faster without copying the gl buffer so we just overlay it instead
+    // create the webgl canvas
     const rootElement = mainCanvas.parentElement;
-    glOverlay && rootElement.appendChild(glCanvas);
+    rootElement.appendChild(glCanvas);
 
     // setup vertex and fragment shaders
     glShader = glCreateProgram(
@@ -5050,7 +5030,7 @@ function glSetTextureData(texture, image)
  *  @memberof WebGL */
 function glFlush()
 {
-    if (!glInstanceCount) return;
+    if (!glEnable || !glInstanceCount) return;
 
     const destBlend = glBatchAdditive ? glContext.ONE : glContext.ONE_MINUS_SRC_ALPHA;
     glContext.blendFuncSeparate(glContext.SRC_ALPHA, destBlend, glContext.ONE, destBlend);
@@ -5065,19 +5045,16 @@ function glFlush()
     glBatchAdditive = glAdditive;
 }
 
-/** Draw any sprites still in the buffer and copy to main canvas
+/** Flush any sprites still in the buffer and copy to main canvas
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
- *  @param {boolean} [forceDraw]
  *  @memberof WebGL */
-function glCopyToContext(context, forceDraw=false)
+function glCopyToContext(context)
 {
-    if (!glEnable || !glInstanceCount && !forceDraw) return;
+    if (!glEnable)
+        return;
 
     glFlush();
-
-    // do not draw in overlay mode because the canvas is visible
-    if (!glOverlay || forceDraw)
-        context.drawImage(glCanvas, 0, 0);
+    context.drawImage(glCanvas, 0, 0);
 }
 
 /** Set anti-aliasing for webgl canvas
@@ -5151,7 +5128,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.12.10';
+const engineVersion = '1.12.11';
 
 /** Frames per second to update
  *  @type {number}
@@ -5336,7 +5313,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             pluginRenderList.forEach(f=>f());
             touchGamepadRender();
             debugRender();
-            glCopyToContext(mainContext);
+            glFlush();
 
             if (showWatermark)
             {

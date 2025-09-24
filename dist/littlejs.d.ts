@@ -343,12 +343,6 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let glEnable: boolean;
-    /** Fixes slow rendering in some browsers by not compositing the WebGL canvas
-     *  - Must be set before startup to take effect
-     *  @type {boolean}
-     *  @default
-     *  @memberof Settings */
-    export let glOverlay: boolean;
     /** Should gamepads be allowed
      *  @type {boolean}
      *  @default
@@ -465,11 +459,7 @@ declare module "littlejsengine" {
     /** Set if webgl rendering is enabled
      *  @param {boolean} enable
      *  @memberof Settings */
-    export function setGlEnable(enable: boolean): void;
-    /** Set to not composite the WebGL canvas
-     *  @param {boolean} overlay
-     *  @memberof Settings */
-    export function setGlOverlay(overlay: boolean): void;
+    export function setGLEnable(enable: boolean): void;
     /** Set default size of tiles in pixels
      *  @param {Vector2} size
      *  @memberof Settings */
@@ -1501,11 +1491,10 @@ declare module "littlejsengine" {
      *  @return {WebGLShader}
      *  @memberof WebGL */
     export function glCompileShader(source: string, type: number): WebGLShader;
-    /** Draw any sprites still in the buffer and copy to main canvas
+    /** Flush any sprites still in the buffer and copy to main canvas
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
-     *  @param {boolean} [forceDraw]
      *  @memberof WebGL */
-    export function glCopyToContext(context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, forceDraw?: boolean): void;
+    export function glCopyToContext(context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Create WebGL program with given shaders
      *  @param {String} vsSource
      *  @param {String} fsSource
@@ -2109,8 +2098,6 @@ declare module "littlejsengine" {
         context: OffscreenCanvasRenderingContext2D;
         /** @property {Vector2} - How much to scale this layer when rendered */
         scale: Vector2;
-        /** @property {boolean} - If true this layer will render to overlay canvas and appear above all objects */
-        isOverlay: boolean;
         /** @property {WebGLTexture} - Texture if using webgl for this layer */
         glTexture: WebGLTexture;
         data: TileLayerData[];
