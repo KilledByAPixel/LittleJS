@@ -5,7 +5,7 @@ function gameInit()
 
     // create tile layer
     const pos = vec2();
-    const tileLayer = new TileCollisionLayer(pos, vec2(31));
+    const tileLayer = new TileCollisionLayer(pos, vec2(32));
     for (pos.x = tileLayer.size.x; pos.x--;)
     for (pos.y = tileLayer.size.y; pos.y--;)
     {
