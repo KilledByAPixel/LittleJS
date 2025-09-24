@@ -47,9 +47,9 @@ function glInit()
     glCanvas = document.createElement('canvas');
     glContext = glCanvas.getContext('webgl2', {antialias:glAntialias});
 
-    // some browsers are much faster without copying the gl buffer so we just overlay it instead
+    // create the webgl canvas
     const rootElement = mainCanvas.parentElement;
-    glOverlay && rootElement.appendChild(glCanvas);
+    rootElement.appendChild(glCanvas);
 
     // setup vertex and fragment shaders
     glShader = glCreateProgram(
@@ -258,7 +258,7 @@ function glSetTextureData(texture, image)
  *  @memberof WebGL */
 function glFlush()
 {
-    if (!glInstanceCount) return;
+    if (!glEnable || !glInstanceCount) return;
 
     const destBlend = glBatchAdditive ? glContext.ONE : glContext.ONE_MINUS_SRC_ALPHA;
     glContext.blendFuncSeparate(glContext.SRC_ALPHA, destBlend, glContext.ONE, destBlend);
@@ -273,19 +273,16 @@ function glFlush()
     glBatchAdditive = glAdditive;
 }
 
-/** Draw any sprites still in the buffer and copy to main canvas
+/** Flush any sprites still in the buffer and copy to main canvas
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
- *  @param {boolean} [forceDraw]
  *  @memberof WebGL */
-function glCopyToContext(context, forceDraw=false)
+function glCopyToContext(context)
 {
-    if (!glEnable || !glInstanceCount && !forceDraw) return;
+    if (!glEnable)
+        return;
 
     glFlush();
-
-    // do not draw in overlay mode because the canvas is visible
-    if (!glOverlay || forceDraw)
-        context.drawImage(glCanvas, 0, 0);
+    context.drawImage(glCanvas, 0, 0);
 }
 
 /** Set anti-aliasing for webgl canvas

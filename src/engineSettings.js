@@ -80,13 +80,6 @@ let headlessMode = false;
  *  @memberof Settings */
 let glEnable = true;
 
-/** Fixes slow rendering in some browsers by not compositing the WebGL canvas
- *  - Must be set before startup to take effect
- *  @type {boolean}
- *  @default
- *  @memberof Settings */
-let glOverlay = true;
-
 ///////////////////////////////////////////////////////////////////////////////
 // Tile sheet settings
 
@@ -325,12 +318,7 @@ function setHeadlessMode(headless) { headlessMode = headless; }
 /** Set if webgl rendering is enabled
  *  @param {boolean} enable
  *  @memberof Settings */
-function setGlEnable(enable) { glEnable = enable; }
-
-/** Set to not composite the WebGL canvas
- *  @param {boolean} overlay
- *  @memberof Settings */
-function setGlOverlay(overlay) { glOverlay = overlay; }
+function setGLEnable(enable) { glEnable = enable; }
 
 /** Set default size of tiles in pixels
  *  @param {Vector2} size

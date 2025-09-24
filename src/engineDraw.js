@@ -533,7 +533,7 @@ function setBlendMode(additive, useWebGL=glEnable, context)
 function combineCanvases()
 {
     // combine canvases
-    glCopyToContext(mainContext, true);
+    glCopyToContext(mainContext);
     mainContext.drawImage(overlayCanvas, 0, 0);
 
     // clear canvases

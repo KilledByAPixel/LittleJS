@@ -215,7 +215,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             pluginRenderList.forEach(f=>f());
             touchGamepadRender();
             debugRender();
-            glCopyToContext(mainContext);
+            glFlush();
 
             if (showWatermark)
             {

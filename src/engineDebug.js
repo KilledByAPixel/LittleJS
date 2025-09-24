@@ -265,8 +265,8 @@ function debugRender()
     if (debugVideoCaptureIsActive())
         return; // don't show debug info when capturing video
 
+    // flush any gl sprites before drawing debug info
     glFlush();
-    glCopyToContext(mainContext);
 
     if (debugTakeScreenshot)
     {

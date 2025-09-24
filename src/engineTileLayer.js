@@ -196,8 +196,6 @@ class TileLayer extends EngineObject
         this.context = this.canvas.getContext('2d');
         /** @property {Vector2} - How much to scale this layer when rendered */
         this.scale = scale;
-        /** @property {boolean} - If true this layer will render to overlay canvas and appear above all objects */
-        this.isOverlay = false;
         /** @property {WebGLTexture} - Texture if using webgl for this layer */
         this.glTexture = useWebGL ? glCreateTexture(this.canvas) : undefined;
         // set no friction by default, applied friction is max of both objects
@@ -249,12 +247,6 @@ class TileLayer extends EngineObject
     render()
     {
         ASSERT(drawContext != this.context, 'must call redrawEnd() after drawing tiles!');
-
-        if (!this.glTexture && !glOverlay && !this.isOverlay)
-        {
-            // flush and copy gl canvas because tile canvas is not using webgl
-            glCopyToContext(mainContext);
-        }
         
         // draw the tile layer as a single tile
         const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
@@ -311,7 +303,7 @@ class TileLayer extends EngineObject
     redrawEnd()
     {
         ASSERT(drawContext == this.context, 'must call redrawStart() before drawing tiles');
-        glCopyToContext(drawContext, true);
+        glCopyToContext(drawContext);
         //debugSaveCanvas(this.canvas);
 
         // set stuff back to normal
