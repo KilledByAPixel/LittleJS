@@ -787,6 +787,10 @@ declare module "littlejsengine" {
         *  @param {number} [valueB]
         *  @return {number} */
         int(valueA: number, valueB?: number): number;
+        /** Randomly returns true or false given the chance of true passed in
+        *  @param {number} [chance]
+        *  @return {boolean} */
+        bool(chance?: number): boolean;
         /** Randomly returns either -1 or 1 deterministically
         *  @return {number} */
         sign(): number;
@@ -2184,13 +2188,13 @@ declare module "littlejsengine" {
         *  @param {Vector2} size - width and height of tile collision 2d grid */
         initCollision(size: Vector2): void;
         /** Set tile collision data for a given cell in the grid
-        *  @param {Vector2} pos
+        *  @param {Vector2} gridPos
         *  @param {number}  [data] */
-        setCollisionData(pos: Vector2, data?: number): void;
+        setCollisionData(gridPos: Vector2, data?: number): void;
         /** Get tile collision data for a given cell in the grid
-        *  @param {Vector2} pos
+        *  @param {Vector2} gridPos
         *  @return {number} */
-        getCollisionData(pos: Vector2): number;
+        getCollisionData(gridPos: Vector2): number;
         /** Check if collision with another object should occur
         *  @param {Vector2}      pos
         *  @param {Vector2}      [size=(0,0)]

@@ -268,6 +268,7 @@ function debugRender()
     if (debugVideoCaptureIsActive())
         return; // don't show debug info when capturing video
 
+    glFlush();
     glCopyToContext(mainContext);
 
     if (debugTakeScreenshot)
@@ -345,8 +346,11 @@ function debugRender()
             }
         }
 
-        if (tileCollisionLayers.length) // show floored tile pick if there is tile collision
-            drawRect(mousePos.floor().add(vec2(.5)), vec2(1), rgb(0,0,1,.5), 0, false);
+        if (tileCollisionTest(mousePos))
+        {
+            // show floored tile pick for tile collision
+            drawRect(mousePos.floor().add(vec2(.5)), vec2(1), rgb(1,1,0,.5));
+        }
         mainContext = saveContext;
     }
 
@@ -421,7 +425,7 @@ function debugRender()
         mainContext = overlayContext;
         const raycastHitPos = tileCollisionRaycast(debugObject.pos, mousePos);
         raycastHitPos && drawRect(raycastHitPos.floor().add(vec2(.5)), vec2(1), rgb(0,1,1,.3));
-        drawLine(mousePos, debugObject.pos, .1, raycastHitPos ? rgb(1,0,0,.5) : rgb(0,1,0,.5), false);
+        drawLine(mousePos, debugObject.pos, .1, raycastHitPos ? rgb(1,0,0,.5) : rgb(0,1,0,.5));
 
         const debugText = 'mouse pos = ' + mousePos + 
             '\nmouse collision = ' + tileCollisionGetData(mousePos) + 
@@ -815,6 +819,12 @@ function rand(valueA=1, valueB=0) { return valueB + Math.random() * (valueA-valu
  *  @memberof Random */
 function randInt(valueA, valueB=0) { return Math.floor(rand(valueA,valueB)); }
 
+/** Randomly returns true or false given the chance of true passed in
+ *  @param {number} [chance]
+ *  @return {boolean}
+ *  @memberof Random */
+function randBool(chance=.5) { return rand() < chance; }
+
 /** Randomly returns either -1 or 1
  *  @return {number}
  *  @memberof Random */
@@ -886,6 +896,11 @@ class RandomGenerator
     *  @param {number} [valueB]
     *  @return {number} */
     int(valueA, valueB=0) { return Math.floor(this.float(valueA, valueB)); }
+
+    /** Randomly returns true or false given the chance of true passed in
+    *  @param {number} [chance]
+    *  @return {boolean} */
+    bool(chance=.5) { return this.float() < chance; }
 
     /** Randomly returns either -1 or 1 deterministically
     *  @return {number} */
@@ -4474,7 +4489,7 @@ class TileLayer extends EngineObject
         
         // draw the tile layer as a single tile
         const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
-        const pos = this.pos.add(this.size.multiply(this.scale).scale(.5)).floor();
+        const pos = this.pos.add(this.size.multiply(this.scale).scale(.5));
         const size = this.size.multiply(this.scale);
         const useWebgl = this.glTexture != undefined;
         drawTile(pos, size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebgl);
@@ -4689,21 +4704,21 @@ class TileCollisionLayer extends TileLayer
     }
 
     /** Set tile collision data for a given cell in the grid
-    *  @param {Vector2} pos
+    *  @param {Vector2} gridPos
     *  @param {number}  [data] */
-    setCollisionData(pos, data=1)
+    setCollisionData(gridPos, data=1)
     {
-        const i = (pos.y|0)*this.size.x + pos.x|0;
-        pos.arrayCheck(this.size) && (this.collisionData[i] = data);
+        const i = (gridPos.y|0)*this.size.x + gridPos.x|0;
+        gridPos.arrayCheck(this.size) && (this.collisionData[i] = data);
     }
 
     /** Get tile collision data for a given cell in the grid
-    *  @param {Vector2} pos
+    *  @param {Vector2} gridPos
     *  @return {number} */
-    getCollisionData(pos)
+    getCollisionData(gridPos)
     {
-        const i = (pos.y|0)*this.size.x + pos.x|0;
-        return pos.arrayCheck(this.size) ? this.collisionData[i] : 0;
+        const i = (gridPos.y|0)*this.size.x + gridPos.x|0;
+        return gridPos.arrayCheck(this.size) ? this.collisionData[i] : 0;
     }
 
     /** Check if collision with another object should occur
@@ -4713,6 +4728,10 @@ class TileCollisionLayer extends TileLayer
     *  @return {boolean} */
     collisionTest(pos, size=vec2(), object)
     {
+        // transform to local layer space
+        pos = pos.subtract(this.pos);
+
+        // check any tiles in the area for collision
         const minX = max(pos.x - size.x/2|0, 0);
         const minY = max(pos.y - size.y/2|0, 0);
         const maxX = min(pos.x + size.x/2, this.size.x);
@@ -4736,8 +4755,11 @@ class TileCollisionLayer extends TileLayer
     *  @return {Vector2} */
     collisionRaycast(posStart, posEnd, object)
     {
+        // transform to local layer space
+        posStart = posStart.subtract(this.pos);
+        posEnd = posEnd.subtract(this.pos);
+
         // test if a ray collides with tiles from start to end
-        // todo: a way to get the exact hit point, it must still be inside the hit tile
         const delta = posEnd.subtract(posStart);
         const totalLength = delta.length();
         const normalizedDelta = delta.normalize();
@@ -4992,7 +5014,7 @@ class ParticleEmitter extends EngineObject
         particle.gravityScale  = this.gravityScale;
         particle.collideTiles  = this.collideTiles;
         particle.renderOrder   = this.renderOrder;
-        particle.mirror        = !!randInt(2);
+        particle.mirror        = randBool();
 
         // call particle create callback
         this.particleCreateCallback && this.particleCreateCallback(particle);
