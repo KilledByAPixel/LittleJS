@@ -200,11 +200,11 @@ declare module "littlejsengine" {
      *  @memberof Debug */
     export function debugScreenshot(): void;
     /** Save a canvas to disk
-     *  @param {HTMLCanvasElement} canvas
-     *  @param {string}            [filename]
-     *  @param {string}            [type]
+     *  @param {HTMLCanvasElement|OffscreenCanvas} canvas
+     *  @param {string} [filename]
+     *  @param {string} [type]
      *  @memberof Debug */
-    export function debugSaveCanvas(canvas: HTMLCanvasElement, filename?: string, type?: string): void;
+    export function debugSaveCanvas(canvas: HTMLCanvasElement | OffscreenCanvas, filename?: string, type?: string): void;
     /** Save a text file to disk
      *  @param {string}     text
      *  @param {string}     [filename]

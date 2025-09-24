@@ -50,7 +50,7 @@ let debugKey = 'Escape';
 let debugOverlay = false;
 
 // Engine internal variables not exposed to documentation
-let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugMedals = false, debugTakeScreenshot, downloadLink;
+let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugMedals = false, debugTakeScreenshot, downloadLink, debugCanvas;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Debug helper functions
@@ -172,12 +172,25 @@ function debugClear() { debugPrimitives = []; }
 function debugScreenshot() { debugTakeScreenshot = 1; }
 
 /** Save a canvas to disk 
- *  @param {HTMLCanvasElement} canvas
- *  @param {string}            [filename]
- *  @param {string}            [type]
+ *  @param {HTMLCanvasElement|OffscreenCanvas} canvas
+ *  @param {string} [filename]
+ *  @param {string} [type]
  *  @memberof Debug */
 function debugSaveCanvas(canvas, filename='screenshot', type='image/png')
-{ debugSaveDataURL(canvas.toDataURL(type), filename); }
+{
+    if (canvas instanceof OffscreenCanvas)
+    {
+        // copy to temporary canvas and save
+        if (!debugCanvas)
+            debugCanvas = document.createElement('canvas');
+        debugCanvas.width = canvas.width;
+        debugCanvas.height = canvas.height;
+        debugCanvas.getContext('2d').drawImage(canvas, 0, 0);
+        debugSaveDataURL(debugCanvas.toDataURL(type), filename);
+    }
+    else
+        debugSaveDataURL(canvas.toDataURL(type), filename);
+}
 
 /** Save a text file to disk 
  *  @param {string}     text
