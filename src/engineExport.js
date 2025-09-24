@@ -171,7 +171,9 @@ export
 
 	// Default Colors
 	WHITE,
+	CLEAR_WHITE,
 	BLACK,
+	CLEAR_BLACK,
 	GRAY,
 	RED,
 	ORANGE,

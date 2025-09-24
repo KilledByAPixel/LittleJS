@@ -911,10 +911,20 @@ class Color
  *  @memberof Utilities */
 const WHITE = rgb(); 
 
+/** Color - Clear White #ffffff with 0 alpha
+ *  @type {Color}
+ *  @memberof Utilities */
+const CLEAR_WHITE = rgb(1,1,1,0);
+
 /** Color - Black #000000
  *  @type {Color}
  *  @memberof Utilities */
 const BLACK = rgb(0,0,0);
+
+/** Color - Clear Black #000000 with 0 alpha
+ *  @type {Color}
+ *  @memberof Utilities */
+const CLEAR_BLACK = rgb(0,0,0,0);
 
 /** Color - Gray #808080
  *  @type {Color}
