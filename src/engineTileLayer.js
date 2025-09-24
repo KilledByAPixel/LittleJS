@@ -258,7 +258,7 @@ class TileLayer extends EngineObject
         
         // draw the tile layer as a single tile
         const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
-        const pos = this.pos.add(this.size.multiply(this.scale).scale(.5)).floor();
+        const pos = this.pos.add(this.size.multiply(this.scale).scale(.5));
         const size = this.size.multiply(this.scale);
         const useWebgl = this.glTexture != undefined;
         drawTile(pos, size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebgl);
@@ -473,21 +473,21 @@ class TileCollisionLayer extends TileLayer
     }
 
     /** Set tile collision data for a given cell in the grid
-    *  @param {Vector2} pos
+    *  @param {Vector2} gridPos
     *  @param {number}  [data] */
-    setCollisionData(pos, data=1)
+    setCollisionData(gridPos, data=1)
     {
-        const i = (pos.y|0)*this.size.x + pos.x|0;
-        pos.arrayCheck(this.size) && (this.collisionData[i] = data);
+        const i = (gridPos.y|0)*this.size.x + gridPos.x|0;
+        gridPos.arrayCheck(this.size) && (this.collisionData[i] = data);
     }
 
     /** Get tile collision data for a given cell in the grid
-    *  @param {Vector2} pos
+    *  @param {Vector2} gridPos
     *  @return {number} */
-    getCollisionData(pos)
+    getCollisionData(gridPos)
     {
-        const i = (pos.y|0)*this.size.x + pos.x|0;
-        return pos.arrayCheck(this.size) ? this.collisionData[i] : 0;
+        const i = (gridPos.y|0)*this.size.x + gridPos.x|0;
+        return gridPos.arrayCheck(this.size) ? this.collisionData[i] : 0;
     }
 
     /** Check if collision with another object should occur
@@ -497,6 +497,10 @@ class TileCollisionLayer extends TileLayer
     *  @return {boolean} */
     collisionTest(pos, size=vec2(), object)
     {
+        // transform to local layer space
+        pos = pos.subtract(this.pos);
+
+        // check any tiles in the area for collision
         const minX = max(pos.x - size.x/2|0, 0);
         const minY = max(pos.y - size.y/2|0, 0);
         const maxX = min(pos.x + size.x/2, this.size.x);
@@ -520,8 +524,11 @@ class TileCollisionLayer extends TileLayer
     *  @return {Vector2} */
     collisionRaycast(posStart, posEnd, object)
     {
+        // transform to local layer space
+        posStart = posStart.subtract(this.pos);
+        posEnd = posEnd.subtract(this.pos);
+
         // test if a ray collides with tiles from start to end
-        // todo: a way to get the exact hit point, it must still be inside the hit tile
         const delta = posEnd.subtract(posStart);
         const totalLength = delta.length();
         const normalizedDelta = delta.normalize();
