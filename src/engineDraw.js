@@ -131,6 +131,8 @@ class TileInfo
         this.textureIndex = textureIndex;
         /** @property {number} - How many pixels padding around tiles */
         this.padding = padding;
+        /** @property {TextureInfo} - The texture info for this tile */
+        this.textureInfo = textureInfos[this.textureIndex];
     }
 
     /** Returns a copy of this tile offset by a vector
@@ -149,12 +151,6 @@ class TileInfo
         ASSERT(typeof frame == 'number');
         return this.offset(vec2(frame*(this.size.x+this.padding*2), 0));
     }
-
-    /** Returns the texture info for this tile
-    *  @return {TextureInfo}
-    */
-    getTextureInfo()
-    { return textureInfos[this.textureIndex]; }
 }
 
 /** Texture Info - Stores info about each texture */
@@ -162,9 +158,10 @@ class TextureInfo
 {
     /**
      * Create a TextureInfo, called automatically by the engine
-     * @param {HTMLImageElement} image
+     * @param {HTMLImageElement|OffscreenCanvas} image
+     * @param {WebGLTexture} [glTexture] - webgl texture, will be created if undefined
      */
-    constructor(image)
+    constructor(image, glTexture)
     {
         /** @property {HTMLImageElement} - image source */
         this.image = image;
@@ -173,7 +170,14 @@ class TextureInfo
         /** @property {Vector2} - inverse of the size, cached for rendering */
         this.sizeInverse = vec2(1/image.width, 1/image.height);
         /** @property {WebGLTexture} - webgl texture */
-        this.glTexture = glEnable && glCreateTexture(image);
+        this.glTexture = glTexture;
+    }
+
+    createWebGLTexture()
+    {
+        ASSERT(!this.glTexture);
+        if (glEnable)
+            this.glTexture = glCreateTexture(this.image);
     }
 }
 
@@ -229,7 +233,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     ASSERT(isVector2(pos) && isVector2(size));
     ASSERT(isColor(color) && (!additiveColor || isColor(additiveColor)));
 
-    const textureInfo = tileInfo && tileInfo.getTextureInfo();
+    const textureInfo = tileInfo && tileInfo.textureInfo;
     if (useWebGL)
     {
         if (screenSpace)

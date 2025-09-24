@@ -148,7 +148,7 @@ TileInfo.size             // Size of tile in pixels
 TileInfo.textureIndex     // Texture index to use
 TileInfo.offset(offset)   // Offset this tile by a certain amount in pixels
 TileInfo.frame(frame)     // Offset this tile by a number of animation frames
-TileInfo.getTextureInfo() // Returns texture info for this tile
+TileInfo.textureInfo      // The texture info for this tile
 
 // Texture Info Object
 TextureInfo(image)       // Created automatically for each image

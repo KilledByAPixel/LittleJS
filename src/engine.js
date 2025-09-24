@@ -320,7 +320,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             const image = new Image;
             image.onerror = image.onload = ()=> 
             {
-                textureInfos[textureIndex] = new TextureInfo(image);
+                const textureInfo = new TextureInfo(image);
+                textureInfo.createWebGLTexture();
+                textureInfos[textureIndex] = textureInfo;
                 resolve();
             }
             image.crossOrigin = 'anonymous';
@@ -333,7 +335,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         // no images to load
         promises.push(new Promise(resolve => 
         {
-            textureInfos[0] = new TextureInfo(new Image);
+            const textureInfo = new TextureInfo(new Image);
+            textureInfos[0] = textureInfo;
+            textureInfo.createWebGLTexture();
             resolve();
         }));
     }

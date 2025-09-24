@@ -952,10 +952,20 @@ class Color
  *  @memberof Utilities */
 const WHITE = rgb(); 
 
+/** Color - Clear White #ffffff with 0 alpha
+ *  @type {Color}
+ *  @memberof Utilities */
+const CLEAR_WHITE = rgb(1,1,1,0);
+
 /** Color - Black #000000
  *  @type {Color}
  *  @memberof Utilities */
 const BLACK = rgb(0,0,0);
+
+/** Color - Clear Black #000000 with 0 alpha
+ *  @type {Color}
+ *  @memberof Utilities */
+const CLEAR_BLACK = rgb(0,0,0,0);
 
 /** Color - Gray #808080
  *  @type {Color}
@@ -2143,6 +2153,8 @@ class TileInfo
         this.textureIndex = textureIndex;
         /** @property {number} - How many pixels padding around tiles */
         this.padding = padding;
+        /** @property {TextureInfo} - The texture info for this tile */
+        this.textureInfo = textureInfos[this.textureIndex];
     }
 
     /** Returns a copy of this tile offset by a vector
@@ -2161,12 +2173,6 @@ class TileInfo
         ASSERT(typeof frame == 'number');
         return this.offset(vec2(frame*(this.size.x+this.padding*2), 0));
     }
-
-    /** Returns the texture info for this tile
-    *  @return {TextureInfo}
-    */
-    getTextureInfo()
-    { return textureInfos[this.textureIndex]; }
 }
 
 /** Texture Info - Stores info about each texture */
@@ -2174,9 +2180,10 @@ class TextureInfo
 {
     /**
      * Create a TextureInfo, called automatically by the engine
-     * @param {HTMLImageElement} image
+     * @param {HTMLImageElement|OffscreenCanvas} image
+     * @param {WebGLTexture} [glTexture] - webgl texture, will be created if undefined
      */
-    constructor(image)
+    constructor(image, glTexture)
     {
         /** @property {HTMLImageElement} - image source */
         this.image = image;
@@ -2185,7 +2192,14 @@ class TextureInfo
         /** @property {Vector2} - inverse of the size, cached for rendering */
         this.sizeInverse = vec2(1/image.width, 1/image.height);
         /** @property {WebGLTexture} - webgl texture */
-        this.glTexture = glEnable && glCreateTexture(image);
+        this.glTexture = glTexture;
+    }
+
+    createWebGLTexture()
+    {
+        ASSERT(!this.glTexture);
+        if (glEnable)
+            this.glTexture = glCreateTexture(this.image);
     }
 }
 
@@ -2241,7 +2255,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     ASSERT(isVector2(pos) && isVector2(size));
     ASSERT(isColor(color) && (!additiveColor || isColor(additiveColor)));
 
-    const textureInfo = tileInfo && tileInfo.getTextureInfo();
+    const textureInfo = tileInfo && tileInfo.textureInfo;
     if (useWebGL)
     {
         if (screenSpace)
@@ -3896,31 +3910,23 @@ class TileLayer extends EngineObject
     render()
     {
         ASSERT(drawContext != this.context, 'must call redrawEnd() after drawing tiles!');
-        if (this.glTexture)
+
+        if (!this.glTexture && !glOverlay && !this.isOverlay)
         {
-            // draw the tile layer using cached webgl texture
-            const pos = this.pos.add(this.size.multiply(this.scale).scale(.5)).floor();
-            const wrap = false;
-            glSetTexture(this.glTexture, wrap);
-            glDraw(pos.x, pos.y, this.size.x, this.size.y); 
+            // flush and copy gl canvas because tile canvas is not using webgl
+            glCopyToContext(mainContext);
         }
-        else
-        {
-            if (!glOverlay && !this.isOverlay)
-            {
-                // flush and copy gl canvas because tile canvas does not use webgl
-                glCopyToContext(mainContext);
-            }
-            
-            // draw the entire cached level onto the canvas
-            const pos = worldToScreen(this.pos.add(vec2(0,this.size.y*this.scale.y))).floor();
-            const context = this.isOverlay ? overlayContext : mainContext;
-            context.drawImage
-            (
-                this.canvas, pos.x, pos.y,
-                cameraScale*this.size.x*this.scale.x, cameraScale*this.size.y*this.scale.y
-            );
-        }
+        
+        // creeate tile info for rendering
+        const textureSize = this.size.multiply(this.tileInfo.size);
+        const tileInfo = new TileInfo(vec2(), textureSize);
+        tileInfo.textureInfo = new TextureInfo(this.canvas, this.glTexture);
+
+        // draw the tile layer as a single tile
+        const pos = this.pos.add(this.size.multiply(this.scale).scale(.5)).floor();
+        const size = this.size.multiply(this.scale);
+        const useWebgl = this.glTexture != undefined;
+        drawTile(pos, size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebgl);
     }
 
     /** Draw all the tile data to an offscreen canvas 
@@ -4032,7 +4038,7 @@ class TileLayer extends EngineObject
     {
         this.drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
-            const textureInfo = tileInfo && tileInfo.getTextureInfo();
+            const textureInfo = tileInfo && tileInfo.textureInfo;
             if (textureInfo)
             {
                 context.globalAlpha = color.a; // only alpha is supported
@@ -4229,7 +4235,7 @@ class TileCollisionLayer extends TileLayer
  * (
  *     pos, 0, 1, 0, 500, PI,      // pos, angle, emitSize, emitTime, emitRate, emitCone
  *     tile(0, 16),                // tileInfo
- *     rgb(1,1,1),   rgb(0,0,0),   // colorStartA, colorStartB
+ *     rgb(1,1,1,1), rgb(0,0,0,1), // colorStartA, colorStartB
  *     rgb(1,1,1,0), rgb(0,0,0,0), // colorEndA, colorEndB
  *     2, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
  *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate, 
@@ -5404,7 +5410,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             const image = new Image;
             image.onerror = image.onload = ()=> 
             {
-                textureInfos[textureIndex] = new TextureInfo(image);
+                const textureInfo = new TextureInfo(image);
+                textureInfo.createWebGLTexture();
+                textureInfos[textureIndex] = textureInfo;
                 resolve();
             }
             image.crossOrigin = 'anonymous';
@@ -5417,7 +5425,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         // no images to load
         promises.push(new Promise(resolve => 
         {
-            textureInfos[0] = new TextureInfo(new Image);
+            const textureInfo = new TextureInfo(new Image);
+            textureInfos[0] = textureInfo;
+            textureInfo.createWebGLTexture();
             resolve();
         }));
     }

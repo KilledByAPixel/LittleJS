@@ -249,31 +249,23 @@ class TileLayer extends EngineObject
     render()
     {
         ASSERT(drawContext != this.context, 'must call redrawEnd() after drawing tiles!');
-        if (this.glTexture)
+
+        if (!this.glTexture && !glOverlay && !this.isOverlay)
         {
-            // draw the tile layer using cached webgl texture
-            const pos = this.pos.add(this.size.multiply(this.scale).scale(.5)).floor();
-            const wrap = false;
-            glSetTexture(this.glTexture, wrap);
-            glDraw(pos.x, pos.y, this.size.x, this.size.y); 
+            // flush and copy gl canvas because tile canvas is not using webgl
+            glCopyToContext(mainContext);
         }
-        else
-        {
-            if (!glOverlay && !this.isOverlay)
-            {
-                // flush and copy gl canvas because tile canvas does not use webgl
-                glCopyToContext(mainContext);
-            }
-            
-            // draw the entire cached level onto the canvas
-            const pos = worldToScreen(this.pos.add(vec2(0,this.size.y*this.scale.y))).floor();
-            const context = this.isOverlay ? overlayContext : mainContext;
-            context.drawImage
-            (
-                this.canvas, pos.x, pos.y,
-                cameraScale*this.size.x*this.scale.x, cameraScale*this.size.y*this.scale.y
-            );
-        }
+        
+        // creeate tile info for rendering
+        const textureSize = this.size.multiply(this.tileInfo.size);
+        const tileInfo = new TileInfo(vec2(), textureSize);
+        tileInfo.textureInfo = new TextureInfo(this.canvas, this.glTexture);
+
+        // draw the tile layer as a single tile
+        const pos = this.pos.add(this.size.multiply(this.scale).scale(.5)).floor();
+        const size = this.size.multiply(this.scale);
+        const useWebgl = this.glTexture != undefined;
+        drawTile(pos, size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebgl);
     }
 
     /** Draw all the tile data to an offscreen canvas 
@@ -385,7 +377,7 @@ class TileLayer extends EngineObject
     {
         this.drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
-            const textureInfo = tileInfo && tileInfo.getTextureInfo();
+            const textureInfo = tileInfo && tileInfo.textureInfo;
             if (textureInfo)
             {
                 context.globalAlpha = color.a; // only alpha is supported

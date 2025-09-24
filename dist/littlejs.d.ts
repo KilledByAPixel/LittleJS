@@ -1115,10 +1115,18 @@ declare module "littlejsengine" {
      *  @type {Color}
      *  @memberof Utilities */
     export const WHITE: Color;
+    /** Color - Clear White #ffffff with 0 alpha
+     *  @type {Color}
+     *  @memberof Utilities */
+    export const CLEAR_WHITE: Color;
     /** Color - Black #000000
      *  @type {Color}
      *  @memberof Utilities */
     export const BLACK: Color;
+    /** Color - Clear Black #000000 with 0 alpha
+     *  @type {Color}
+     *  @memberof Utilities */
+    export const CLEAR_BLACK: Color;
     /** Color - Gray #808080
      *  @type {Color}
      *  @memberof Utilities */
@@ -1195,6 +1203,8 @@ declare module "littlejsengine" {
         textureIndex: number;
         /** @property {number} - How many pixels padding around tiles */
         padding: number;
+        /** @property {TextureInfo} - The texture info for this tile */
+        textureInfo: TextureInfo;
         /** Returns a copy of this tile offset by a vector
         *  @param {Vector2} offset - Offset to apply in pixels
         *  @return {TileInfo}
@@ -1205,26 +1215,24 @@ declare module "littlejsengine" {
         *  @return {TileInfo}
         */
         frame(frame: number): TileInfo;
-        /** Returns the texture info for this tile
-        *  @return {TextureInfo}
-        */
-        getTextureInfo(): TextureInfo;
     }
     /** Texture Info - Stores info about each texture */
     export class TextureInfo {
         /**
          * Create a TextureInfo, called automatically by the engine
-         * @param {HTMLImageElement} image
+         * @param {HTMLImageElement|OffscreenCanvas} image
+         * @param {WebGLTexture} [glTexture] - webgl texture, will be created if undefined
          */
-        constructor(image: HTMLImageElement);
+        constructor(image: HTMLImageElement | OffscreenCanvas, glTexture?: WebGLTexture);
         /** @property {HTMLImageElement} - image source */
-        image: HTMLImageElement;
+        image: OffscreenCanvas | HTMLImageElement;
         /** @property {Vector2} - size of the image */
         size: Vector2;
         /** @property {Vector2} - inverse of the size, cached for rendering */
         sizeInverse: Vector2;
         /** @property {WebGLTexture} - webgl texture */
         glTexture: WebGLTexture;
+        createWebGLTexture(): void;
     }
     /**
      * LittleJS Drawing System
@@ -2200,7 +2208,7 @@ declare module "littlejsengine" {
      * (
      *     pos, 0, 1, 0, 500, PI,      // pos, angle, emitSize, emitTime, emitRate, emitCone
      *     tile(0, 16),                // tileInfo
-     *     rgb(1,1,1),   rgb(0,0,0),   // colorStartA, colorStartB
+     *     rgb(1,1,1,1), rgb(0,0,0,1), // colorStartA, colorStartB
      *     rgb(1,1,1,0), rgb(0,0,0,0), // colorEndA, colorEndB
      *     2, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
      *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate,
