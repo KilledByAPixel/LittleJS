@@ -1215,13 +1215,20 @@ declare module "littlejsengine" {
         *  @return {TileInfo}
         */
         frame(frame: number): TileInfo;
+        /**
+         * Set this tile to use a full image
+         * @param {HTMLImageElement|OffscreenCanvas} image
+         * @param {WebGLTexture} [glTexture] - webgl texture
+         * @return {TileInfo}
+         */
+        setFullImage(image: HTMLImageElement | OffscreenCanvas, glTexture?: WebGLTexture): TileInfo;
     }
     /** Texture Info - Stores info about each texture */
     export class TextureInfo {
         /**
          * Create a TextureInfo, called automatically by the engine
          * @param {HTMLImageElement|OffscreenCanvas} image
-         * @param {WebGLTexture} [glTexture] - webgl texture, will be created if undefined
+         * @param {WebGLTexture} [glTexture] - webgl texture
          */
         constructor(image: HTMLImageElement | OffscreenCanvas, glTexture?: WebGLTexture);
         /** @property {HTMLImageElement} - image source */

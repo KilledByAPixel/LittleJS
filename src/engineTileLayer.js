@@ -256,12 +256,8 @@ class TileLayer extends EngineObject
             glCopyToContext(mainContext);
         }
         
-        // creeate tile info for rendering
-        const textureSize = this.size.multiply(this.tileInfo.size);
-        const tileInfo = new TileInfo(vec2(), textureSize);
-        tileInfo.textureInfo = new TextureInfo(this.canvas, this.glTexture);
-
         // draw the tile layer as a single tile
+        const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
         const pos = this.pos.add(this.size.multiply(this.scale).scale(.5)).floor();
         const size = this.size.multiply(this.scale);
         const useWebgl = this.glTexture != undefined;

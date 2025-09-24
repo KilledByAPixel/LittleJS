@@ -151,6 +151,20 @@ class TileInfo
         ASSERT(typeof frame == 'number');
         return this.offset(vec2(frame*(this.size.x+this.padding*2), 0));
     }
+
+    /**
+     * Set this tile to use a full image
+     * @param {HTMLImageElement|OffscreenCanvas} image
+     * @param {WebGLTexture} [glTexture] - webgl texture
+     * @return {TileInfo}
+     */
+    setFullImage(image, glTexture)
+    {
+        this.pos = vec2();
+        this.size = vec2(image.width, image.height);
+        this.textureInfo = new TextureInfo(image, glTexture);
+        return this;
+    }
 }
 
 /** Texture Info - Stores info about each texture */
@@ -159,7 +173,7 @@ class TextureInfo
     /**
      * Create a TextureInfo, called automatically by the engine
      * @param {HTMLImageElement|OffscreenCanvas} image
-     * @param {WebGLTexture} [glTexture] - webgl texture, will be created if undefined
+     * @param {WebGLTexture} [glTexture] - webgl texture 
      */
     constructor(image, glTexture)
     {
