@@ -2020,16 +2020,16 @@ class EngineObject
     /** Render debug info for this object  */
     renderDebugInfo()
     {
-        if (debug)
-        {
-            // show object info for debugging
-            const size = vec2(max(this.size.x, .2), max(this.size.y, .2));
-            const color1 = rgb(this.collideTiles?1:0, this.collideSolidObjects?1:0, this.isSolid?1:0, this.parent?.2:.5);
-            const color2 = this.parent ? rgb(1,1,1,.5) : rgb(0,0,0,.8);
-            drawRect(this.pos, size, color1, this.angle, false);
-            drawRect(this.pos, size.scale(.8), color2, this.angle, false);
-            this.parent && drawLine(this.pos, this.parent.pos, .1, rgb(0,0,1,.5), false);
-        }
+        if (!debug)
+            return;
+        
+        // show object info for debugging
+        const size = vec2(max(this.size.x, .2), max(this.size.y, .2));
+        const color = rgb(this.collideTiles?1:0, this.collideSolidObjects?1:0, this.isSolid?1:0, .5);
+        drawRect(this.pos, size, color, this.angle);
+        if (this.parent)
+            drawRect(this.pos, size.scale(.8), rgb(1,1,1,.5), this.angle);
+        this.parent && drawLine(this.pos, this.parent.pos, .1, rgb(1,1,1,.5));
     }
 }
 
