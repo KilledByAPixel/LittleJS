@@ -25,16 +25,22 @@ function gameInit()
 {
     // setup level
     gravity.y = -.05;
-    new Player(vec2(0,4));
+    new Player(vec2(5,6));
 
-    // create random objects
-    for (let i=500; i--;)
+    // create tile layer
+    const pos = vec2();
+    const tileLayer = new TileCollisionLayer(pos, vec2(256));
+    for (pos.x = tileLayer.size.x; pos.x--;)
+    for (pos.y = tileLayer.size.y; pos.y--;)
     {
-        const pos = i ? vec2(i*10+randInt(4), 0) : vec2();
-        const size = i ? vec2(2+randInt(20),4+randInt(8)) : vec2(1e3,4);
-        const color = i ? GREEN : GRAY;
-        const o = new EngineObject(pos, size, 0, 0, color);
-        o.setCollision(); // make object collide
-        o.mass = 0; // make object have static physics
+        // check if tile should be solid
+        const levelHeight = pos.x<9 ? 2 : (pos.x/4|0)**3.1%7;
+        if (pos.y > levelHeight)
+            continue;
+        
+        // set tile data
+        tileLayer.setData(pos, new TileLayerData(1));
+        tileLayer.setCollisionData(pos);
     }
+    tileLayer.redraw(); // redraw tile layer with new data
 }
