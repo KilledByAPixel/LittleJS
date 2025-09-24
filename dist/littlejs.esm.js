@@ -4475,26 +4475,29 @@ class TileLayer extends EngineObject
      *  @param {boolean} [clear] - Should it clear the canvas before drawing */
     redrawStart(clear=false)
     {
+        // save current render settings
+        /** @type {[HTMLCanvasElement|OffscreenCanvas, CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number]} */
+        this.savedRenderSettings = [drawCanvas, drawContext, mainCanvasSize, cameraPos, cameraScale];
+
         // set the draw canvas and context to this layer
         // use camera settings to match this layer's canvas
         drawCanvas = this.canvas;
         drawContext = this.context;
-        const cameraPos = this.size.scale(.5);
-        const cameraScale = this.tileInfo.size.x;
-        const canvasSize = this.size.multiply(this.tileInfo.size);
-
+        cameraPos = this.size.scale(.5);
+        cameraScale = this.tileInfo.size.x;
+        mainCanvasSize = this.size.multiply(this.tileInfo.size);
         if (clear)
         {
             // clear and set size
-            drawCanvas.width  = canvasSize.x;
-            drawCanvas.height = canvasSize.y;
+            drawCanvas.width  = mainCanvasSize.x;
+            drawCanvas.height = mainCanvasSize.y;
         }
 
         // disable smoothing for pixel art
         this.context.imageSmoothingEnabled = !tilesPixelated;
 
         // setup gl rendering if enabled
-        glPreRender(cameraPos, cameraScale, canvasSize);
+        glPreRender();
     }
 
     /** Call to end the redraw process */
@@ -4505,8 +4508,7 @@ class TileLayer extends EngineObject
         //debugSaveCanvas(this.canvas);
 
         // set stuff back to normal
-        drawCanvas = mainCanvas;
-        drawContext = mainContext;
+        [drawCanvas, drawContext, mainCanvasSize, cameraPos, cameraScale] = this.savedRenderSettings;
     }
 
     /** Draw the tile at a given position in the tile grid
@@ -4596,7 +4598,7 @@ class TileLayer extends EngineObject
      *  @param {boolean} [enable] - enable webgl rendering and update the texture */
     useWebGL(enable=true)
     {
-        if (enable)
+        if (glEnable && enable)
         {
             if (!this.glTexture)
                 this.glTexture = glCreateTexture();
@@ -5383,7 +5385,7 @@ function glInit()
 
 // Setup webgl render each frame, called automatically by engine
 // Also used by tile layer rendering when redrawing tiles
-function glPreRender(cameraPos, cameraScale, mainCanvasSize)
+function glPreRender()
 {
     if (!glEnable || headlessMode) return;
 
@@ -5753,7 +5755,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             mainContext.imageSmoothingEnabled = !tilesPixelated;
 
         // setup gl rendering if enabled
-        glPreRender(cameraPos, cameraScale, mainCanvasSize);
+        glPreRender();
     }
 
     // internal update loop for engine

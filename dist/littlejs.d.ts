@@ -2138,6 +2138,8 @@ declare module "littlejsengine" {
          *  @param {Vector2} layerPos - Local position in array
          *  @return {TileLayerData} */
         getData(layerPos: Vector2): TileLayerData;
+        /** @type {[HTMLCanvasElement|OffscreenCanvas, CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number]} */
+        savedRenderSettings: [HTMLCanvasElement | OffscreenCanvas, CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, Vector2, Vector2, number];
         /** Draw a tile directly onto the layer canvas in world space
          *  @param {Vector2}  pos
          *  @param {Vector2}  [size=(1,1)]

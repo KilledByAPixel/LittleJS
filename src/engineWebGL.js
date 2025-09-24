@@ -94,7 +94,7 @@ function glInit()
 
 // Setup webgl render each frame, called automatically by engine
 // Also used by tile layer rendering when redrawing tiles
-function glPreRender(cameraPos, cameraScale, mainCanvasSize)
+function glPreRender()
 {
     if (!glEnable || headlessMode) return;
 

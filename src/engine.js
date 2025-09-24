@@ -135,7 +135,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             mainContext.imageSmoothingEnabled = !tilesPixelated;
 
         // setup gl rendering if enabled
-        glPreRender(cameraPos, cameraScale, mainCanvasSize);
+        glPreRender();
     }
 
     // internal update loop for engine
