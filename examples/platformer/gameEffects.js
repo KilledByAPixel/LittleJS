@@ -222,7 +222,7 @@ export class ParallaxLayer extends LJS.EngineObject
         super();
 
         const size = vec2(1024,512);
-        this.size = size;
+        this.drawSize = size;
         this.index = index;
         this.renderOrder = -3e3 + index;
         this.canvas = new OffscreenCanvas(size.x, size.y);
@@ -251,11 +251,11 @@ export class ParallaxLayer extends LJS.EngineObject
         const cameraDeltaFromCenter = LJS.cameraPos
             .subtract(GameLevel.levelSize.scale(.5))
             .divide(GameLevel.levelSize.divide(parallax));
-        const scale = this.size.scale(2+2*this.index);
+        const scale = this.drawSize.scale(2+2*this.index);
         const pos = LJS.mainCanvasSize.scale(.5)      // center screen
            .add(vec2(-scale.x/2,-scale.y/2))          // center layer 
            .add(cameraDeltaFromCenter.scale(-.5))     // apply parallax
-           .add(vec2(0,(this.index*.1)*this.size.y)); // separate layers
+           .add(vec2(0,(this.index*.1)*this.drawSize.y)); // separate layers
         
         // draw the parallax layer onto the main canvas
         LJS.mainContext.drawImage(this.canvas, pos.x, pos.y, scale.x, scale.y);
