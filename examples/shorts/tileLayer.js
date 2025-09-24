@@ -3,11 +3,9 @@ function gameInit()
     cameraPos = vec2(16); // setup camera
     gravity.y = -.01; // enable gravity
 
-    // create tile collision and visible tile layer
+    // create tile layer
     const pos = vec2();
-    const tileLayer = new TileCollisionLayer(pos, vec2(32));
-
-    // init the tile layer
+    const tileLayer = new TileCollisionLayer(pos, vec2(31));
     for (pos.x = tileLayer.size.x; pos.x--;)
     for (pos.y = tileLayer.size.y; pos.y--;)
     {
