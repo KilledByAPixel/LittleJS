@@ -16,11 +16,8 @@ import * as GamePlayer from './gamePlayer.js';
 import * as GameLevel from './gameLevel.js';
 const {vec2} = LJS;
 
-// load the game level data
-export const gameLevelData = await LJS.fetchJSON('gameLevelData.json');
-
 // globals
-export let spriteAtlas, player, score, deaths;
+export let gameLevelData, spriteAtlas, player, score, deaths;
 export function addToScore(delta=1) { score += delta; }
 export function addToDeaths() { ++deaths; }
 
@@ -44,6 +41,9 @@ function loadLevel()
 ///////////////////////////////////////////////////////////////////////////////
 async function gameInit()
 {
+    // load the game level data
+    gameLevelData = await LJS.fetchJSON('gameLevelData.json');
+
     // engine settings
     LJS.setGravity(vec2(0,-.01));
     LJS.setObjectDefaultDamping(.99);
