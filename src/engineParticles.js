@@ -217,7 +217,7 @@ class ParticleEmitter extends EngineObject
         particle.gravityScale  = this.gravityScale;
         particle.collideTiles  = this.collideTiles;
         particle.renderOrder   = this.renderOrder;
-        particle.mirror        = !!randInt(2);
+        particle.mirror        = randBool();
 
         // call particle create callback
         this.particleCreateCallback && this.particleCreateCallback(particle);

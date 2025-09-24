@@ -45,7 +45,7 @@ function gameInit()
         // set tile data
         const tileIndex = 1;
         const direction = randInt(4)
-        const mirror = !randInt(2);
+        const mirror = randBool();
         const color = randColor();
         const data = new TileLayerData(tileIndex, direction, mirror, color);
         tileLayer.setData(pos, data);
