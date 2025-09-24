@@ -4367,11 +4367,11 @@ class TileLayerData
 class TileLayer extends EngineObject
 {
     /** Create a tile layer object
-    *  @param {Vector2}  [position=(0,0)]    - World space position
-    *  @param {Vector2}  [size=(1,1)]        - World space size
-    *  @param {TileInfo} [tileInfo]          - Default tile info for layer (used for size and texture)
-    *  @param {Vector2}  [scale=(1,1)]       - How much to scale this layer when rendered
-    *  @param {number}   [renderOrder]       - Objects are sorted by renderOrder
+    *  @param {Vector2}  position      - World space position
+    *  @param {Vector2}  size          - World space size
+    *  @param {TileInfo} [tileInfo]    - Default tile info for layer (used for size and texture)
+    *  @param {Vector2}  [scale=(1,1)] - How much to scale this layer when rendered
+    *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
     *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering
     */
     constructor(position, size, tileInfo=tile(), scale=vec2(1), renderOrder=0, useWebGL=glEnable)
@@ -4620,15 +4620,16 @@ class TileLayer extends EngineObject
 class TileCollisionLayer extends TileLayer
 {
     /** Create a tile layer object
-    *  @param {Vector2}  [position=(0,0)] - World space position
-    *  @param {Vector2}  [size=(0,0)]     - World space size
-    *  @param {TileInfo} [tileInfo]       - Tile info for layer
-    *  @param {number}   [renderOrder]    - Objects are sorted by renderOrder
+    *  @param {Vector2}  position      - World space position
+    *  @param {Vector2}  size          - World space size
+    *  @param {TileInfo} [tileInfo]    - Tile info for layer
+    *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
+    *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering
     */
-    constructor(position, size, tileInfo=tile(), renderOrder=0)
+    constructor(position, size, tileInfo=tile(), renderOrder=0, useWebGL=glEnable)
     {
         const scale = vec2(1); // collision layers are not scaled
-        super(position, size.floor(), tileInfo, scale, renderOrder);
+        super(position, size.floor(), tileInfo, scale, renderOrder, useWebGL);
 
         /** @property {Array<number>} - The tile collision grid */
         this.collisionData = [];
