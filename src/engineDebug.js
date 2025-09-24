@@ -265,6 +265,7 @@ function debugRender()
     if (debugVideoCaptureIsActive())
         return; // don't show debug info when capturing video
 
+    glFlush();
     glCopyToContext(mainContext);
 
     if (debugTakeScreenshot)
@@ -342,8 +343,11 @@ function debugRender()
             }
         }
 
-        if (tileCollisionLayers.length) // show floored tile pick if there is tile collision
-            drawRect(mousePos.floor().add(vec2(.5)), vec2(1), rgb(0,0,1,.5), 0, false);
+        if (tileCollisionTest(mousePos))
+        {
+            // show floored tile pick for tile collision
+            drawRect(mousePos.floor().add(vec2(.5)), vec2(1), rgb(1,1,0,.5));
+        }
         mainContext = saveContext;
     }
 
@@ -418,7 +422,7 @@ function debugRender()
         mainContext = overlayContext;
         const raycastHitPos = tileCollisionRaycast(debugObject.pos, mousePos);
         raycastHitPos && drawRect(raycastHitPos.floor().add(vec2(.5)), vec2(1), rgb(0,1,1,.3));
-        drawLine(mousePos, debugObject.pos, .1, raycastHitPos ? rgb(1,0,0,.5) : rgb(0,1,0,.5), false);
+        drawLine(mousePos, debugObject.pos, .1, raycastHitPos ? rgb(1,0,0,.5) : rgb(0,1,0,.5));
 
         const debugText = 'mouse pos = ' + mousePos + 
             '\nmouse collision = ' + tileCollisionGetData(mousePos) + 
