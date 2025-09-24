@@ -225,10 +225,8 @@ export class ParallaxLayer extends LJS.EngineObject
         this.size = size;
         this.index = index;
         this.renderOrder = -3e3 + index;
-        this.canvas = document.createElement('canvas');
+        this.canvas = new OffscreenCanvas(size.x, size.y);
         this.context = this.canvas.getContext('2d');
-        this.canvas.width = size.x;
-        this.canvas.height = size.y;
 
         // create a gradient
         const o1 = 40-20*index;
