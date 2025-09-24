@@ -233,6 +233,12 @@ function rand(valueA=1, valueB=0) { return valueB + Math.random() * (valueA-valu
  *  @memberof Random */
 function randInt(valueA, valueB=0) { return Math.floor(rand(valueA,valueB)); }
 
+/** Randomly returns true or false given the chance of true passed in
+ *  @param {number} [chance]
+ *  @return {boolean}
+ *  @memberof Random */
+function randBool(chance=.5) { return rand() < chance; }
+
 /** Randomly returns either -1 or 1
  *  @return {number}
  *  @memberof Random */
@@ -304,6 +310,11 @@ class RandomGenerator
     *  @param {number} [valueB]
     *  @return {number} */
     int(valueA, valueB=0) { return Math.floor(this.float(valueA, valueB)); }
+
+    /** Randomly returns true or false given the chance of true passed in
+    *  @param {number} [chance]
+    *  @return {boolean} */
+    bool(chance=.5) { return this.float() < chance; }
 
     /** Randomly returns either -1 or 1 deterministically
     *  @return {number} */
