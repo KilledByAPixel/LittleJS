@@ -14,7 +14,7 @@ import * as GameEffects from './gameEffects.js';
 import * as Game from './game.js';
 const {vec2, hsl, tile} = LJS;
 
-export const useWebGLTileLayers  = true;
+export const useWebGLTileLayers = true;
 export const tileType_ladder    = -1;
 export const tileType_empty     = 0;
 export const tileType_solid     = 1;
@@ -203,6 +203,5 @@ export function getCameraTarget()
 
 export function updateWebGL(layer)
 {
-    if (useWebGLTileLayers)
-        layer.useWebGL();
+    layer.useWebGL(useWebGLTileLayers);
 }
