@@ -13,11 +13,13 @@ html, body
 {
     height: 100%;
     display: flex;
+    gap: 4px;
 }
 #container2
 {
     display: flex;
     flex-direction: column;
+    gap: 4px;
 }
 #iframeContainer
 {
@@ -41,6 +43,7 @@ iframe
     resize: none;
     color: #fff;
     background: #000;
+    font-size: 20px;
 }
 #textareaError
 {
@@ -57,24 +60,25 @@ iframe
     height: 100%;
     display: flex;
     flex-direction: column;
+    gap: 2px;
 }
 #titleInfo
 {
     margin: 5px;
     text-align: center;
-    font-size: 50px;
-}
-#exampleLink
-{
-    margin: 0px;
-    text-align: center;
-    font-size: 30px;
+    font-size: 40px;
 }
 #exampleInfo
 {
     margin: 0px;
     text-align: center;
-    font-size: 22px;
+    font-size: 20px;
+}
+#exampleLink
+{
+    margin: 0px;
+    text-align: center;
+    font-size: 20px;
 }
 select
 {
@@ -82,21 +86,42 @@ select
     background-color: #111;
     width:100%;
 }
+hr
+{
+    border: 1px solid #555;
+    margin:9px;
+}
 </style>
 </head><body>
 <div id=container1>
 <div id=container3>
 <p id=titleInfo>LittleJS Example Browser</p>
-<a id=exampleLink target="_blank">Example LINK</a>
-<p id=exampleInfo>Example Info</p>
+<p id=exampleInfo></p>
+<a id=exampleLink target='_blank'></a>
+<hr>
+<div>
+Theme:
+<select style=width:120px onchange=loadTheme() id=selectTheme></select>
+<select style=width:40px onchange=loadTheme() id=selectFontSize>
+    <option value=10px>XS</option>
+    <option value=13px>S</option>
+    <option value=16px selected>M</option>
+    <option value=20px>L</option>
+    <option value=24px>XL</option>
+</select>
+<input type=checkbox id=checkboxLiveEdit checked>Live Edit
+</div> 
 <textarea id=textareaCode oninput=codeInput() spellcheck=false></textarea>
 <textarea id=textareaError readonly spellcheck=false></textarea>
-<div><input type=checkbox id=checkboxLiveEdit checked>Live Edit
-<button id=buttonScreenshot>Screenshot</button>
-</div> 
+
 </div>
 <div id=container2>
 <div id=iframeContainer></div>
+<div>
+<input id=inputSearch placeholder='Search examples...' oninput=filterExamples() onkeydown='if(event.key=="Escape")filterExamples(1)'> 
+<button onclick=filterExamples(1)>Clear</button>
+<button id=buttonScreenshot>Screenshot</button>
+</div>
 <select id=selectExample autofocus onchange=setExample() size=2></select>
 </div>
 </div>
@@ -105,14 +130,14 @@ select
 
 class ExampleInfo
 {
-    constructor(name, filename, description, fullExample=false)
+    constructor(name, filename, description='', largeExample=false)
     {
-        if (filename && !fullExample)
+        if (filename && !largeExample)
             filename = 'shorts/' + filename; // short examples folder
         this.name = name;
         this.filename = filename;
         this.description = description;
-        this.fullExample = fullExample;
+        this.largeExample = largeExample;
     }
 }
 
@@ -133,8 +158,12 @@ const exampleList =
     new ExampleInfo('Clock', 'clock.js', 'Simple clock showing the time'),
     new ExampleInfo('Tile Layer', 'tileLayer.js', 'How to use the tile layer object'),
     new ExampleInfo('Piano', 'piano.js', 'A simple piano keyboard demo'),
-    //new ExampleInfo('--- MINI GAMES ---'),
     new ExampleInfo('Maze Generator', 'maze.js', 'Generates a random maze'),
+    new ExampleInfo('Box2d Demo', 'box2d.js', 'Demo of the Box2D physics plugin'),
+    new ExampleInfo('Box2d Car', 'box2dCar.js', 'Controllable vehicle using the Box2D physics plugin'),
+    new ExampleInfo('Post Processing', 'postProcess.js', 'Post processing plugin demo'),
+    new ExampleInfo('UI System Plugin', 'uiSystem.js', 'Simple example of LittleJS UI plugin'),
+    new ExampleInfo('--- MINI GAMES ---'),
     new ExampleInfo('Platformer Game', 'platformer.js', 'Platformer jumping game'),
     new ExampleInfo('Top Down Game', 'topDown.js', 'Top down adventure game'),
     new ExampleInfo('Tilted View', 'tiltedView.js', 'Pseudo 3D view with tilted camera'),
@@ -145,10 +174,6 @@ const exampleList =
     new ExampleInfo('Pong Game', 'pongGame.js', 'Simple pong style game'),
     new ExampleInfo('Sliding Puzzle', 'slidingPuzzle.js', 'Sliding tile puzzle game'),
     new ExampleInfo('Raycasting Game', 'raycasting.js', 'Pseudo 3D raycasting system'),
-    new ExampleInfo('Box2d Demo', 'box2d.js', 'Demo of the Box2D physics plugin'),
-    new ExampleInfo('Box2d Car', 'box2dCar.js', 'Controllable vehicle using the Box2D physics plugin'),
-    new ExampleInfo('Post Processing', 'postProcess.js', 'Post processing plugin demo'),
-    new ExampleInfo('UI System Plugin', 'uiSystem.js', 'Simple example of LittleJS UI plugin'),
     new ExampleInfo('--- FULL EXAMPLES ---'),
     new ExampleInfo('Starter', 'starter', 'Clean starter project', true),
     new ExampleInfo('Breakout Tutorial', 'breakoutTutorial', 'Tutorial Breakout example', true),
@@ -164,16 +189,10 @@ const exampleList =
 
 ///////////////////////////////////////////////////////////////////////////////
 
-let iframeExample, inputTimeout;
+let iframeExample, inputTimeout, codeMirror;
 
 // load the examples into the list
-for (const example of exampleList)
-{
-    const text = example.name + (example.description?' - ' + example.description : '');
-    const o = new Option(text);
-    o.disabled = !example.filename;
-    selectExample.add(o);
-}
+filterExamples();
 
 // set the selected example from the URL hash
 selectExample.selectedIndex = location.hash.split`#`[1] | 0
@@ -192,19 +211,62 @@ onresize();
 
 ///////////////////////////////////////////////////////////////////////////////
 
+function filterExamples(reset=0)
+{
+    if (reset)
+        inputSearch.value = '';
+    
+    // clear current options
+    selectExample.options.length = 0;
+    
+    // filter and add matching examples
+    const searchTerm = inputSearch.value.toLowerCase().trim();
+    for (let i = 0; i < exampleList.length; i++)
+    {
+        // check if search term matches name or description
+        const example = exampleList[i];
+        const text = example.name + (example.description ? ` - ${example.description}` : '');
+        if (example.name.toLowerCase().includes(searchTerm) || 
+            example.description.toLowerCase().includes(searchTerm))
+        {
+            const o = new Option(text);
+            o.disabled = !example.filename;
+            o.originalIndex = i;
+            selectExample.add(o);
+        }
+    }
+    
+    if (!selectExample.options.length)
+    {
+        // show a message if no matches
+        const o = new Option('No examples found matching "' + searchTerm + '"');
+        o.disabled = true;
+        selectExample.add(o);
+    }
+}
+
 function setExample()
 {
-    if (selectExample.selectedIndex < 1 || selectExample.selectedIndex >= exampleList.length)
-        selectExample.selectedIndex = 1;  // reset to default
-    let example = exampleList[selectExample.selectedIndex];
-    if (!example.filename)
-        example = exampleList[selectExample.selectedIndex = 1]; // reset to default
+    // get the original index if this is a filtered result
+    const selectedOption = selectExample.options[selectExample.selectedIndex];
+    let exampleIndex = selectedOption && selectedOption.originalIndex ? 
+        parseInt(selectedOption.originalIndex) : 
+        selectExample.selectedIndex;
+    
+    // make sure we have a valid example
+    if (exampleIndex < 0 || exampleIndex >= exampleList.length)
+        exampleIndex = 1;  // reset to default
+    if (!exampleList[exampleIndex].filename)
+        exampleIndex = 1;
+    
+    // load the example
+    const example = exampleList[exampleIndex];
     exampleInfo.innerText = example.name + (example.description ? ' - ' + example.description : '');
     const filename = 'examples/' + example.filename;
     exampleLink.href = 'https://github.com/KilledByAPixel/LittleJS/tree/main/' + filename;
     exampleLink.innerText = filename;
-    loadFile(example.filename, example.fullExample);
-    location.hash = selectExample.selectedIndex;
+    location.hash = exampleIndex;
+    loadFile(example.filename, example.largeExample);
 }
 
 function codeInput()
@@ -212,15 +274,20 @@ function codeInput()
     if (!checkboxLiveEdit.checked)
         return;
 
-    // debounce input
+    // debounce input - get content from code mirror if available, otherwise from textarea
     clearTimeout(inputTimeout);
-    inputTimeout = setTimeout(() => setCode(textareaCode.value), 500);
+    const code = codeMirror ? codeMirror.getValue() : textareaCode.value;
+    inputTimeout = setTimeout(() => setCode(code), 500);
 }
 
-async function loadFile(filename, fullExample)
+async function loadFile(filename, largeExample)
 {
-    textareaCode.disabled = fullExample;
-    if (fullExample)
+    if (codeMirror)
+        codeMirror.setOption('readOnly', largeExample);
+    else
+        textareaCode.disabled = largeExample;
+    
+    if (largeExample)
     {
         if (iframeExample)
             iframeContainer.removeChild(iframeExample);
@@ -230,10 +297,18 @@ async function loadFile(filename, fullExample)
         iframeContainer.appendChild(iframeExample);
         iframeExample.onload = () =>
         {
+            // show message in code view that full examples can't be edited
             const iframeContent = iframeExample.contentWindow;
             const iframeDocument = iframeContent.document;
-            //textareaCode.value = iframeDocument.body.innerHTML;
-            textareaCode.value = 'Editor code view not available for large examples.\n';
+            const message = 'Editor code view not available for large examples.\n';
+            if (codeMirror)
+            {
+                codeMirror.off('change', codeInput);
+                codeMirror.setOption('mode', 'text');
+                codeMirror.setValue(message);
+            }
+            else
+                textareaCode.value = message;
         }
         iframeExample.src = filename;
         return;
@@ -245,7 +320,17 @@ async function loadFile(filename, fullExample)
         if (!response.ok)
             throw new Error('Could not load file: ' + filename);
         const text = await response.text();
-        setCode(textareaCode.value = text, fullExample);
+        
+        // set the code in both code mirror and textarea
+        if (codeMirror)
+        {
+            codeMirror.on('change', codeInput);
+            codeMirror.setOption('mode', 'javascript');
+            codeMirror.setValue(text);
+        }
+        else
+            textareaCode.value = text;
+        setCode(text, largeExample);
     }
     catch (error)
     {
@@ -253,7 +338,7 @@ async function loadFile(filename, fullExample)
     }
 }
 
-function setCode(code, largeExample)
+function setCode(code)
 {
     clearTimeout(inputTimeout);
     if (iframeExample)
@@ -294,6 +379,7 @@ function setCode(code, largeExample)
         // create a script element that overrides the default functions
         const overrideScript = iframeDocument.createElement('script');
         iframeDocument.body.appendChild(overrideScript);
+        console.log(code);
         overrideScript.text = code;
         
         if (textareaError.style.display == 'block')
@@ -326,6 +412,78 @@ function setErrorMessage(message)
         message = 'undefined';
     textareaError.value = message;
     textareaError.style.display = message ? 'block' : 'none';
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// setup code mirror
+
+const defaultTheme = 'monokai';
+const themes = 
+[
+    '3024-night',
+    'abcdef',
+    'ambiance',
+    'blackboard',
+    'monokai',
+    'duotone-light',
+    'icecoder',
+    'lesser-dark',
+    'night',
+    'yonce'
+];
+for (const theme of themes)
+{
+    addCodeMirrorElement(`theme/${theme}.min.css`, 'link', 'stylesheet');
+    const o = new Option(theme);
+    o.selected = theme == defaultTheme;
+    selectTheme.add(o);
+}
+addCodeMirrorElement('codemirror.min.css', 'link', 'stylesheet');
+const codeMirrorScript = addCodeMirrorElement('codemirror.min.js', 'script');
+codeMirrorScript.onload = ()=>
+{
+    const jsScript = addCodeMirrorElement('mode/javascript/javascript.min.js', 'script');
+    jsScript.onload = ()=> initCodeMirror()
+}
+
+function initCodeMirror()
+{
+    const textareaCode = document.getElementById('textareaCode');
+    codeMirror = CodeMirror.fromTextArea(textareaCode, 
+    {
+        theme: defaultTheme,
+        indentUnit: 4,
+        lineNumbers: true,
+        lineWrapping: true
+    });
+    
+    // make code mirror extend to the full height
+    codeMirror.getWrapperElement().style.flexGrow = '1';
+    loadTheme();
+}
+
+function addCodeMirrorElement(filename, type, rel) 
+{
+    // add element for code mirror
+    const e = document.createElement(type);
+    e.rel = rel;
+    filename = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/' + filename;
+    if (type == 'link')
+        e.href = filename;
+    else
+        e.src = filename;
+    e.crossOrigin = 'anonymous';
+    document.head.appendChild(e);
+    return e;
+}
+
+function loadTheme()
+{
+    const size = selectFontSize.value;
+    if (codeMirror)
+        codeMirror.getWrapperElement().style.fontSize = size;
+    textareaCode.style.fontSize = size;
+    codeMirror.setOption('theme', selectTheme.value);
 }
 
 </script>
