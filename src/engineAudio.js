@@ -122,11 +122,20 @@ class Sound
             this.gainNode.gain.value = volume;
     }
 
-    /** Stop the last instance of this sound that was played */
-    stop()
+    /** Stop the last instance of this sound that was played
+     *  @param {number}  [fadeTime] - How long to fade out (seconds)
+     */
+    stop(fadeTime=0)
     {
-        if (this.source)
-            this.source.stop();
+        if (!this.source)
+            return;
+        
+        // ramp off gain
+        const startFade = audioContext.currentTime;
+        const endFade = startFade + fadeTime;
+        this.gainNode.gain.linearRampToValueAtTime(1, startFade);
+        this.gainNode.gain.linearRampToValueAtTime(0, endFade);
+        this.source.stop(endFade);
         this.source = undefined;
     }
     
