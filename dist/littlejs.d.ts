@@ -1707,8 +1707,10 @@ declare module "littlejsengine" {
          *  @param {number}  [volume] - How much to scale volume by
          */
         setVolume(volume?: number): void;
-        /** Stop the last instance of this sound that was played */
-        stop(): void;
+        /** Stop the last instance of this sound that was played
+         *  @param {number}  [fadeTime] - How long to fade out (seconds)
+         */
+        stop(fadeTime?: number): void;
         /** Get source of most recent instance of this sound that was played
          *  @return {AudioBufferSourceNode}
          */

@@ -2870,7 +2870,7 @@ function inputInit()
 
     onkeyup = (e)=>
     {
-        inputData[0][e.code] = 4;
+        inputData[0][e.code] = (inputData[0][e.code]&2) | 4;
         if (inputWASDEmulateDirection)
             inputData[0][remapKey(e.code)] = 4;
     }
@@ -2897,7 +2897,7 @@ function inputInit()
         mousePosScreen = mouseEventToScreen(e); 
         inputPreventDefault && e.button && e.preventDefault();
     }
-    onmouseup     = (e)=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
+    onmouseup     = (e)=> inputData[0][e.button] = (inputData[0][e.button]&2) | 4;
     onmousemove   = (e)=> mousePosScreen = mouseEventToScreen(e);
     onwheel       = (e)=> mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY);
     oncontextmenu = (e)=> false; // prevent right click menu
@@ -3325,11 +3325,20 @@ class Sound
             this.gainNode.gain.value = volume;
     }
 
-    /** Stop the last instance of this sound that was played */
-    stop()
+    /** Stop the last instance of this sound that was played
+     *  @param {number}  [fadeTime] - How long to fade out (seconds)
+     */
+    stop(fadeTime=0)
     {
-        if (this.source)
-            this.source.stop();
+        if (!this.source)
+            return;
+        
+        // ramp off gain
+        const startFade = audioContext.currentTime;
+        const endFade = startFade + fadeTime;
+        this.gainNode.gain.linearRampToValueAtTime(1, startFade);
+        this.gainNode.gain.linearRampToValueAtTime(0, endFade);
+        this.source.stop(endFade);
         this.source = undefined;
     }
     
@@ -5252,9 +5261,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         frameTimeBufferMS += paused ? 0 : frameTimeDeltaMS;
         if (!debugSpeedUp)
             frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp min framerate
-        if (debug && debugVideoCaptureIsActive())
-            frameTimeBufferMS = 0; // disable time smoothing when capturing video
-
+        if (debugVideoCaptureIsActive())
+            frameTimeBufferMS = 0; // no time smoothing when capturing video
         updateCanvas();
 
         if (paused)
@@ -5314,8 +5322,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             touchGamepadRender();
             debugRender();
             glFlush();
+            debugVideoCaptureUpdate();
 
-            if (showWatermark)
+            if (showWatermark && !debugVideoCaptureIsActive())
             {
                 // update fps display
                 overlayContext.textAlign = 'right';
@@ -5332,8 +5341,6 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             if (debug || showWatermark)
                 drawCount = 0;
         }
-
-        debugVideoCaptureUpdate();
         requestAnimationFrame(engineUpdate);
     }
 
