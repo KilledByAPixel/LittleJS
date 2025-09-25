@@ -190,7 +190,7 @@ function inputInit()
 
     onkeyup = (e)=>
     {
-        inputData[0][e.code] = 4;
+        inputData[0][e.code] = (inputData[0][e.code]&2) | 4;
         if (inputWASDEmulateDirection)
             inputData[0][remapKey(e.code)] = 4;
     }
@@ -217,7 +217,7 @@ function inputInit()
         mousePosScreen = mouseEventToScreen(e); 
         inputPreventDefault && e.button && e.preventDefault();
     }
-    onmouseup     = (e)=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
+    onmouseup     = (e)=> inputData[0][e.button] = (inputData[0][e.button]&2) | 4;
     onmousemove   = (e)=> mousePosScreen = mouseEventToScreen(e);
     onwheel       = (e)=> mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY);
     oncontextmenu = (e)=> false; // prevent right click menu
