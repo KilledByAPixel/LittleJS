@@ -33,8 +33,8 @@ class PuzzlePiece extends EngineObject
 function gameInit()
 {
     // create puzzle pieces
-    for(x=gridWidth; x--;)
-    for(y=gridWidth; y--;)
+    for(let x=gridWidth; x--;)
+    for(let y=gridWidth; y--;)
         (x||y) && new PuzzlePiece(vec2(x,y), pieceSize);
 
     cameraPos = vec2(gridWidth-1).multiply(pieceSize).scale(.5);
