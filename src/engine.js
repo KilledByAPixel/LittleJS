@@ -154,9 +154,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         frameTimeBufferMS += paused ? 0 : frameTimeDeltaMS;
         if (!debugSpeedUp)
             frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp min framerate
-        if (debug && debugVideoCaptureIsActive())
-            frameTimeBufferMS = 0; // disable time smoothing when capturing video
-
+        if (debugVideoCaptureIsActive())
+            frameTimeBufferMS = 0; // no time smoothing when capturing video
         updateCanvas();
 
         if (paused)
@@ -216,8 +215,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             touchGamepadRender();
             debugRender();
             glFlush();
+            debugVideoCaptureUpdate();
 
-            if (showWatermark)
+            if (showWatermark && !debugVideoCaptureIsActive())
             {
                 // update fps display
                 overlayContext.textAlign = 'right';
@@ -234,8 +234,6 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             if (debug || showWatermark)
                 drawCount = 0;
         }
-
-        debugVideoCaptureUpdate();
         requestAnimationFrame(engineUpdate);
     }
 

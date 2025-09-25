@@ -463,7 +463,7 @@ function debugRender()
             overlayContext.fillText('4: Debug Raycasts', x, y += h);
             overlayContext.fillStyle = '#fff';
             overlayContext.fillText('5: Save Screenshot', x, y += h);
-            overlayContext.fillText('6: Capture Video', x, y += h);
+            overlayContext.fillText('6: Toggle Video Capture', x, y += h);
 
             let keysPressed = '';
             for(const i in inputData[0])
