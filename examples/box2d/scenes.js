@@ -35,7 +35,7 @@ export function loadScene(_scene)
         GameObjects.spawnRandomEdges();
         GameObjects.spawnBox(vec2(11,8), 4, LJS.randColor(), LJS.box2d.bodyTypeStatic, false);
         GameObjects.spawnCircle(vec2(20,8), 4, LJS.randColor(), LJS.box2d.bodyTypeStatic, false);
-        GameObjects.spawnRandomPoly(vec2(29,8), 4, LJS.randColor(), LJS.box2d.bodyTypeStatic, false);
+        GameObjects.spawnRandomPoly(vec2(29,8), 4, LJS.randColor(), LJS.box2d.bodyTypeStatic);
         for (let i=500;i--;)
             GameObjects.spawnRandomObject(vec2(LJS.rand(1,39), LJS.rand(10,50)));
     }
