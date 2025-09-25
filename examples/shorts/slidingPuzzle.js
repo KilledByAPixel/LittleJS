@@ -1,4 +1,4 @@
-const gridWidth = 4;
+const gridSize = vec2(4,3);
 const pieceSize = vec2(5,4);
 let emptyGridPos = vec2();
 
@@ -6,10 +6,10 @@ class PuzzlePiece extends EngineObject
 {
     constructor(gridPos, size)
     {
-        const color = rgb(x/(gridWidth-1), y/(gridWidth-1), 1);
+        const color = rgb(gridPos.x/(gridSize.x-1), gridPos.y/(gridSize.y-1), 1);
         super(gridPos.multiply(size), size, 0, 0, color);
         this.gridPos = gridPos;
-        this.text = gridPos.x + gridWidth*gridPos.y;
+        this.text = gridPos.x + gridPos.y*gridSize.x;
     }
 
     update()
@@ -33,9 +33,10 @@ class PuzzlePiece extends EngineObject
 function gameInit()
 {
     // create puzzle pieces
-    for(let x=gridWidth; x--;)
-    for(let y=gridWidth; y--;)
+    for(let x=gridSize.x; x--;)
+    for(let y=gridSize.y; y--;)
         (x||y) && new PuzzlePiece(vec2(x,y), pieceSize);
 
-    cameraPos = vec2(gridWidth-1).multiply(pieceSize).scale(.5);
+    // center camera on grid
+    cameraPos = gridSize.subtract(vec2(1)).multiply(pieceSize).scale(.5);
 }
