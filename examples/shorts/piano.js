@@ -20,7 +20,7 @@ class PianoKey extends EngineObject
     release()
     {
         if (this.isDown)
-            pianoSound.stop(.1);
+            pianoSound.stop(.2);
         this.isDown = false;
     }
 }
