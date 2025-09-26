@@ -285,6 +285,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     // setup html
     const styleRoot = 
         'margin:0;' +                 // fill the window
+        'overflow:hidden;' +          // no scroll bars
         'background:#000;' +          // set background color
         (canvasPixelated ? 'image-rendering:pixelated;' : '') + // pixel art
         'user-select:none;' +         // prevent hold to select
