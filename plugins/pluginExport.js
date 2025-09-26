@@ -47,4 +47,10 @@ export
     Box2dFrictionJoint,
     Box2dPulleyJoint,
     Box2dMotorJoint,
+
+    // Drawing Utilities
+    drawNineSlice,
+    drawNineSliceScreen,
+    drawThreeSlice,
+    drawThreeSliceScreen,
 };

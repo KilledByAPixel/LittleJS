@@ -1,0 +1,122 @@
+/**
+ * LittleJS Drawing Utilities Plugin
+ * - Extra drawing functions for LittleJS
+ * - Nine slice and three slice drawing
+ * @namespace DrawUtilities
+ */
+
+'use strict';
+
+///////////////////////////////////////////////////////////////////////////////
+
+/** Draw a scalable nine-slice UI element to the overlay canvas in screen space
+ *  @param {Vector2} pos - Screen space position
+ *  @param {Vector2} size - Screen space size
+ *  @param {TileInfo} startTile - Starting tile for the nine-slice pattern
+ *  @param {number} [borderSize=1] - Width of the border sections
+ *  @param {number} [extraSpace=.01] - Extra spacing adjustment
+ *  @memberof DrawUtilities */
+function drawNineSliceScreen(pos, size, startTile, borderSize=32, extraSpace=1)
+{
+    drawNineSlice(pos, size, startTile, WHITE, borderSize, BLACK, extraSpace, false, true, overlayContext);
+}
+
+/** Draw a scalable nine-slice UI element in world space
+ *  @param {Vector2} pos - World space position
+ *  @param {Vector2} size - World space size
+ *  @param {TileInfo} startTile - Starting tile for the nine-slice pattern
+ *  @param {Color} [color] - Color to modulate with
+ *  @param {number} [borderSize=1] - Width of the border sections
+ *  @param {Color} [additiveColor] - Additive color
+ *  @param {number} [extraSpace=.01] - Extra spacing adjustment
+ *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
+ *  @param {boolean} [screenSpace] - Use screen space coordinates
+ *  @param {CanvasRenderingContext2D} [context] - Canvas context to use
+ *  @memberof DrawUtilities */
+function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.01, useWebGL=glEnable, screenSpace, context)
+{
+    // setup nine slice tiles
+    const centerTile = startTile.offset(startTile.size);
+    const centerSize = size.add(vec2(extraSpace-borderSize*2));
+    const cornerSize = vec2(borderSize);
+    const cornerOffset = size.scale(.5).subtract(cornerSize.scale(.5));
+    const flip = screenSpace ? -1 : 1;
+
+    // center
+    drawTile(pos, centerSize, centerTile, color, 0, false, additiveColor, useWebGL, screenSpace, context);
+    for(let i=4; i--;)
+    {
+        // sides
+        const horizontal = i%2;
+        const sidePos = cornerOffset.multiply(vec2(horizontal?i==1?1:-1:0, horizontal?0:i?-1:1));
+        const sideSize = vec2(horizontal ? borderSize : centerSize.x, horizontal ? centerSize.y : borderSize);
+        const sideTile = centerTile.offset(startTile.size.multiply(vec2(i==1?1:i==3?-1:0,i==0?-flip:i==2?flip:0)))
+        drawTile(pos.add(sidePos), sideSize, sideTile, color, 0, false, additiveColor, useWebGL, screenSpace, context);
+    }
+    for(let i=4; i--;)
+    {
+        // corners
+        const flipX = i>1;
+        const flipY = i && i<3;
+        const cornerPos = cornerOffset.multiply(vec2(flipX?-1:1, flipY?-1:1));
+        const cornerTile = centerTile.offset(startTile.size.multiply(vec2(flipX?-1:1,flipY?flip:-flip)));
+        drawTile(pos.add(cornerPos), cornerSize, cornerTile, color, 0, false, additiveColor, useWebGL, screenSpace, context);
+    }
+}
+
+/** Draw a scalable three-slice UI element to the overlay canvas in screen space
+ *  @param {Vector2} pos - Screen space position
+ *  @param {Vector2} size - Screen space size
+ *  @param {TileInfo} startTile - Starting tile for the three-slice pattern
+ *  @param {number} [borderSize=1] - Width of the border sections
+ *  @param {number} [extraSpace=.01] - Extra spacing adjustment
+ *  @memberof DrawUtilities */
+function drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=1)
+{
+    drawThreeSlice(pos, size, startTile, WHITE, borderSize, BLACK, extraSpace, false, true, overlayContext);
+}
+
+/** Draw a scalable three-slice UI element in world space
+ *  @param {Vector2} pos - World space position
+ *  @param {Vector2} size - World space size
+ *  @param {TileInfo} startTile - Starting tile for the three-slice pattern
+ *  @param {Color} [color] - Color to modulate with
+ *  @param {number} [borderSize=1] - Width of the border sections
+ *  @param {Color} [additiveColor] - Additive color
+ *  @param {number} [extraSpace=.01] - Extra spacing adjustment
+ *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
+ *  @param {boolean} [screenSpace] - Use screen space coordinates
+ *  @param {CanvasRenderingContext2D} [context] - Canvas context to use
+ *  @memberof DrawUtilities */
+function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.01, useWebGL=glEnable, screenSpace, context)
+{
+    // setup three slice tiles
+    const cornerTile = startTile.frame(0);
+    const sideTile   = startTile.frame(1);
+    const centerTile = startTile.frame(2);
+    const centerSize = size.add(vec2(extraSpace-borderSize*2));
+    const cornerSize = vec2(borderSize);
+    const cornerOffset = size.scale(.5).subtract(cornerSize.scale(.5));
+    const flip = screenSpace ? -1 : 1;
+
+    // center
+    drawTile(pos, centerSize, centerTile, color, 0, false, additiveColor, useWebGL, screenSpace, context);
+    for(let i=4; i--;)
+    {
+        // sides
+        const angle = i*PI/2;
+        const horizontal = i%2;
+        const sidePos = cornerOffset.multiply(vec2(horizontal?i==1?1:-1:0, horizontal?0:i?-flip:flip));
+        const sideSize = vec2(horizontal ? centerSize.y : centerSize.x, borderSize);
+        drawTile(pos.add(sidePos), sideSize, sideTile, color, angle, false, additiveColor, useWebGL, screenSpace, context);
+    }
+    for(let i=4; i--;)
+    {
+        // corners
+        const angle = i*PI/2;
+        const flipX = !i || i>2;
+        const flipY = i>1;
+        const cornerPos = cornerOffset.multiply(vec2(flipX?-1:1, flipY?-flip:flip));
+        drawTile(pos.add(cornerPos), cornerSize, cornerTile, color, angle, false, additiveColor, useWebGL, screenSpace, context);
+    }
+}
