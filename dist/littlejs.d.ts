@@ -59,10 +59,14 @@ declare module "littlejsengine" {
      *  @default false
      *  @memberof Engine */
     export let paused: boolean;
-    /** Set if game is paused
-     *  @param {boolean} isPaused
+    /** Get if game is paused
+     *  @return {boolean}
      *  @memberof Engine */
-    export function setPaused(isPaused: boolean): void;
+    export function getPaused(): boolean;
+    /** Set if game is paused
+     *  @param {boolean} [isPaused]
+     *  @memberof Engine */
+    export function setPaused(isPaused?: boolean): void;
     /** Startup LittleJS engine with your callback functions
      *  @param {Function|function():Promise} gameInit - Called once after the engine starts up
      *  @param {Function} gameUpdate - Called every frame before objects are updated
@@ -3681,4 +3685,52 @@ declare module "littlejsengine" {
          *  @return {number} */
         getCorrectionFactor(): number;
     }
+    /** Draw a scalable nine-slice UI element in world space
+     *  @param {Vector2} pos - World space position
+     *  @param {Vector2} size - World space size
+     *  @param {TileInfo} startTile - Starting tile for the nine-slice pattern
+     *  @param {Color} [color] - Color to modulate with
+     *  @param {number} [borderSize=1] - Width of the border sections
+     *  @param {Color} [additiveColor] - Additive color
+     *  @param {number} [extraSpace=.01] - Extra spacing adjustment
+     *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
+     *  @param {boolean} [screenSpace] - Use screen space coordinates
+     *  @param {CanvasRenderingContext2D} [context] - Canvas context to use
+     *  @memberof DrawUtilities */
+    export function drawNineSlice(pos: Vector2, size: Vector2, startTile: TileInfo, color?: Color, borderSize?: number, additiveColor?: Color, extraSpace?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
+    /**
+     * LittleJS Drawing Utilities Plugin
+     * - Extra drawing functions for LittleJS
+     * - Nine slice and three slice drawing
+     * @namespace DrawUtilities
+     */
+    /** Draw a scalable nine-slice UI element to the overlay canvas in screen space
+     *  @param {Vector2} pos - Screen space position
+     *  @param {Vector2} size - Screen space size
+     *  @param {TileInfo} startTile - Starting tile for the nine-slice pattern
+     *  @param {number} [borderSize=1] - Width of the border sections
+     *  @param {number} [extraSpace=.01] - Extra spacing adjustment
+     *  @memberof DrawUtilities */
+    export function drawNineSliceScreen(pos: Vector2, size: Vector2, startTile: TileInfo, borderSize?: number, extraSpace?: number): void;
+    /** Draw a scalable three-slice UI element in world space
+     *  @param {Vector2} pos - World space position
+     *  @param {Vector2} size - World space size
+     *  @param {TileInfo} startTile - Starting tile for the three-slice pattern
+     *  @param {Color} [color] - Color to modulate with
+     *  @param {number} [borderSize=1] - Width of the border sections
+     *  @param {Color} [additiveColor] - Additive color
+     *  @param {number} [extraSpace=.01] - Extra spacing adjustment
+     *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
+     *  @param {boolean} [screenSpace] - Use screen space coordinates
+     *  @param {CanvasRenderingContext2D} [context] - Canvas context to use
+     *  @memberof DrawUtilities */
+    export function drawThreeSlice(pos: Vector2, size: Vector2, startTile: TileInfo, color?: Color, borderSize?: number, additiveColor?: Color, extraSpace?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
+    /** Draw a scalable three-slice UI element to the overlay canvas in screen space
+     *  @param {Vector2} pos - Screen space position
+     *  @param {Vector2} size - Screen space size
+     *  @param {TileInfo} startTile - Starting tile for the three-slice pattern
+     *  @param {number} [borderSize=1] - Width of the border sections
+     *  @param {number} [extraSpace=.01] - Extra spacing adjustment
+     *  @memberof DrawUtilities */
+    export function drawThreeSliceScreen(pos: Vector2, size: Vector2, startTile: TileInfo, borderSize?: number, extraSpace?: number): void;
 }

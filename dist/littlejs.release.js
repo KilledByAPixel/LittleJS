@@ -4,6 +4,640 @@
 'use strict';
 
 /** 
+ * LittleJS - The Tiny Fast JavaScript Game Engine
+ * MIT License - Copyright 2021 Frank Force
+ * 
+ * Engine Features
+ * - Object oriented system with base class engine object
+ * - Base class object handles update, physics, collision, rendering, etc
+ * - Engine helper classes and functions like Vector2, Color, and Timer
+ * - Super fast rendering system for tile sheets
+ * - Sound effects audio with zzfx and music with zzfxm
+ * - Input processing system with gamepad and touchscreen support
+ * - Tile layer rendering and collision system
+ * - Particle effect system
+ * - Medal system tracks and displays achievements
+ * - Debug tools and debug rendering system
+ * - Post processing effects
+ * - Call engineInit() to start it up!
+ * @namespace Engine
+ */
+
+/** Name of engine
+ *  @type {string}
+ *  @default
+ *  @memberof Engine */
+const engineName = 'LittleJS';
+
+/** Version of engine
+ *  @type {string}
+ *  @default
+ *  @memberof Engine */
+const engineVersion = '1.12.12';
+
+/** Frames per second to update
+ *  @type {number}
+ *  @default
+ *  @memberof Engine */
+const frameRate = 60;
+
+/** How many seconds each frame lasts, engine uses a fixed time step
+ *  @type {number}
+ *  @default 1/60
+ *  @memberof Engine */
+const timeDelta = 1/frameRate;
+
+/** Array containing all engine objects
+ *  @type {Array<EngineObject>}
+ *  @memberof Engine */
+let engineObjects = [];
+
+/** Array with only objects set to collide with other objects this frame (for optimization)
+ *  @type {Array<EngineObject>}
+ *  @memberof Engine */
+let engineObjectsCollide = [];
+
+/** Current update frame, used to calculate time
+ *  @type {number}
+ *  @memberof Engine */
+let frame = 0;
+
+/** Current engine time since start in seconds
+ *  @type {number}
+ *  @memberof Engine */
+let time = 0;
+
+/** Actual clock time since start in seconds (not affected by pause or frame rate clamping)
+ *  @type {number}
+ *  @memberof Engine */
+let timeReal = 0;
+
+/** Is the game paused? Causes time and objects to not be updated
+ *  @type {boolean}
+ *  @default false
+ *  @memberof Engine */
+let paused = false;
+
+/** Get if game is paused
+ *  @return {boolean}
+ *  @memberof Engine */
+function getPaused() { return paused; }
+
+/** Set if game is paused
+ *  @param {boolean} [isPaused]
+ *  @memberof Engine */
+function setPaused(isPaused=true) { paused = isPaused; }
+
+// Frame time tracking
+let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
+
+///////////////////////////////////////////////////////////////////////////////
+// plugin hooks
+
+const pluginUpdateList = [], pluginRenderList = [];
+
+/** Add a new update function for a plugin
+ *  @param {Function} [updateFunction]
+ *  @param {Function} [renderFunction]
+ *  @memberof Engine */
+function engineAddPlugin(updateFunction, renderFunction)
+{
+    ASSERT(!pluginUpdateList.includes(updateFunction));
+    ASSERT(!pluginRenderList.includes(renderFunction));
+    updateFunction && pluginUpdateList.push(updateFunction);
+    renderFunction && pluginRenderList.push(renderFunction);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Main engine functions
+
+/** Startup LittleJS engine with your callback functions
+ *  @param {Function|function():Promise} gameInit - Called once after the engine starts up
+ *  @param {Function} gameUpdate - Called every frame before objects are updated
+ *  @param {Function} gameUpdatePost - Called after physics and objects are updated, even when paused
+ *  @param {Function} gameRender - Called before objects are rendered, for drawing the background
+ *  @param {Function} gameRenderPost - Called after objects are rendered, useful for drawing UI
+ *  @param {Array<string>} [imageSources=[]] - List of images to load
+ *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default
+ *  @memberof Engine */
+async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
+{
+    ASSERT(!mainContext, 'engine already initialized');
+    ASSERT(Array.isArray(imageSources), 'pass in images as array');
+
+    // allow passing in empty functions
+    gameInit       ||= ()=>{};
+    gameUpdate     ||= ()=>{};
+    gameUpdatePost ||= ()=>{};
+    gameRender     ||= ()=>{};
+    gameRenderPost ||= ()=>{};
+
+    // Called automatically by engine to setup render system
+    function enginePreRender()
+    {
+        // save canvas size
+        mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
+
+        // disable smoothing for pixel art
+        overlayContext.imageSmoothingEnabled = 
+            mainContext.imageSmoothingEnabled = !tilesPixelated;
+
+        // setup gl rendering if enabled
+        glPreRender();
+    }
+
+    // internal update loop for engine
+    function engineUpdate(frameTimeMS=0)
+    {
+        // update time keeping
+        let frameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
+        frameTimeLastMS = frameTimeMS;
+        if (debug || showWatermark)
+            averageFPS = lerp(.05, averageFPS, 1e3/(frameTimeDeltaMS||1));
+        const debugSpeedUp   = debug && keyIsDown('Equal'); // +
+        const debugSpeedDown = debug && keyIsDown('Minus'); // -
+        if (debug) // +/- to speed/slow time
+            frameTimeDeltaMS *= debugSpeedUp ? 10 : debugSpeedDown ? .1 : 1;
+        timeReal += frameTimeDeltaMS / 1e3;
+        frameTimeBufferMS += paused ? 0 : frameTimeDeltaMS;
+        if (!debugSpeedUp)
+            frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp min framerate
+        if (debugVideoCaptureIsActive())
+            frameTimeBufferMS = 0; // no time smoothing when capturing video
+        updateCanvas();
+
+        if (paused)
+        {
+            // update object transforms even when paused
+            for (const o of engineObjects)
+                o.parent || o.updateTransforms();
+            inputUpdate();
+            pluginUpdateList.forEach(f=>f());
+            debugUpdate();
+            gameUpdatePost();
+            inputUpdatePost();
+        }
+        else
+        {
+            // apply time delta smoothing, improves smoothness of framerate in some browsers
+            let deltaSmooth = 0;
+            if (frameTimeBufferMS < 0 && frameTimeBufferMS > -9)
+            {
+                // force at least one update each frame since it is waiting for refresh
+                deltaSmooth = frameTimeBufferMS;
+                frameTimeBufferMS = 0;
+            }
+            
+            // update multiple frames if necessary in case of slow framerate
+            for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / frameRate)
+            {
+                // increment frame and update time
+                time = frame++ / frameRate;
+
+                // update game and objects
+                inputUpdate();
+                gameUpdate();
+                pluginUpdateList.forEach(f=>f());
+                engineObjectsUpdate();
+
+                // do post update
+                debugUpdate();
+                gameUpdatePost();
+                inputUpdatePost();
+            }
+
+            // add the time smoothing back in
+            frameTimeBufferMS += deltaSmooth;
+        }
+
+        if (!headlessMode)
+        {
+            // render sort then render while removing destroyed objects
+            enginePreRender();
+            gameRender();
+            engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
+            for (const o of engineObjects)
+                o.destroyed || o.render();
+            gameRenderPost();
+            pluginRenderList.forEach(f=>f());
+            touchGamepadRender();
+            debugRender();
+            glFlush();
+            debugVideoCaptureUpdate();
+
+            if (showWatermark && !debugVideoCaptureIsActive())
+            {
+                // update fps display
+                overlayContext.textAlign = 'right';
+                overlayContext.textBaseline = 'top';
+                overlayContext.font = '1em monospace';
+                overlayContext.fillStyle = '#000';
+                const text = engineName + ' ' + 'v' + engineVersion + ' / ' 
+                    + drawCount + ' / ' + engineObjects.length + ' / ' + averageFPS.toFixed(1)
+                    + (glEnable ? ' GL' : ' 2D') ;
+                overlayContext.fillText(text, mainCanvas.width-3, 3);
+                overlayContext.fillStyle = '#fff';
+                overlayContext.fillText(text, mainCanvas.width-2, 2);
+            }
+            if (debug || showWatermark)
+                drawCount = 0;
+        }
+        requestAnimationFrame(engineUpdate);
+    }
+
+    function updateCanvas()
+    {
+        if (headlessMode) return;
+        
+        if (canvasFixedSize.x)
+        {
+            // clear canvas and set fixed size
+            mainCanvas.width  = canvasFixedSize.x;
+            mainCanvas.height = canvasFixedSize.y;
+            
+            // fit to window by adding space on top or bottom if necessary
+            const aspect = innerWidth / innerHeight;
+            const fixedAspect = mainCanvas.width / mainCanvas.height;
+            (glCanvas||mainCanvas).style.width = mainCanvas.style.width = overlayCanvas.style.width  = aspect < fixedAspect ? '100%' : '';
+            (glCanvas||mainCanvas).style.height = mainCanvas.style.height = overlayCanvas.style.height = aspect < fixedAspect ? '' : '100%';
+        }
+        else
+        {
+            // clear canvas and set size to same as window
+            mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
+            mainCanvas.height = min(innerHeight, canvasMaxSize.y);
+        }
+        
+        // clear overlay canvas and set size
+        overlayCanvas.width  = mainCanvas.width;
+        overlayCanvas.height = mainCanvas.height;
+
+        // save canvas size
+        mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
+    }
+
+    // wait for gameInit to load
+    async function startEngine()
+    {
+        await gameInit();
+        engineUpdate();
+    }
+    if (headlessMode)
+        return startEngine();
+
+    // setup html
+    const styleRoot = 
+        'margin:0;' +                 // fill the window
+        'overflow:hidden;' +          // no scroll bars
+        'background:#000;' +          // set background color
+        (canvasPixelated ? 'image-rendering:pixelated;' : '') + // pixel art
+        'user-select:none;' +         // prevent hold to select
+        '-webkit-user-select:none;' + // compatibility for ios
+        (!touchInputEnable ? '' :     // no touch css settings
+        'touch-action:none;' +        // prevent mobile pinch to resize
+        '-webkit-touch-callout:none');// compatibility for ios
+    rootElement.style.cssText = styleRoot;
+    drawCanvas = mainCanvas = document.createElement('canvas');
+    rootElement.appendChild(mainCanvas);
+    drawContext = mainContext = mainCanvas.getContext('2d');
+
+    // init stuff and start engine
+    inputInit();
+    audioInit();
+    debugInit();
+    glInit();
+
+    // create overlay canvas for hud to appear above gl canvas
+    overlayCanvas = document.createElement('canvas')
+    rootElement.appendChild(overlayCanvas);
+    overlayContext = overlayCanvas.getContext('2d');
+
+    // set canvas style
+    const styleCanvas = 'position:absolute;'+ // allow canvases to overlap
+        'top:50%;left:50%;transform:translate(-50%,-50%)'; // center on screen
+    mainCanvas.style.cssText = overlayCanvas.style.cssText = styleCanvas;
+    if (glCanvas)
+        glCanvas.style.cssText = styleCanvas;
+    updateCanvas();
+    
+    // create promises for loading images
+    const promises = imageSources.map((src, textureIndex)=>
+        new Promise(resolve => 
+        {
+            const image = new Image;
+            image.onerror = image.onload = ()=> 
+            {
+                const textureInfo = new TextureInfo(image);
+                textureInfo.createWebGLTexture();
+                textureInfos[textureIndex] = textureInfo;
+                resolve();
+            }
+            image.crossOrigin = 'anonymous';
+            image.src = src;
+        })
+    );
+
+    if (!imageSources.length)
+    {
+        // no images to load
+        promises.push(new Promise(resolve => 
+        {
+            const textureInfo = new TextureInfo(new Image);
+            textureInfos[0] = textureInfo;
+            textureInfo.createWebGLTexture();
+            resolve();
+        }));
+    }
+
+    if (showSplashScreen)
+    {
+        // draw splash screen
+        promises.push(new Promise(resolve => 
+        {
+            let t = 0;
+            console.log(`${engineName} Engine v${engineVersion}`);
+            updateSplash();
+            function updateSplash()
+            {
+                clearInput();
+                drawEngineSplashScreen(t+=.01);
+                t>1 ? resolve() : setTimeout(updateSplash, 16);
+            }
+        }));
+    }
+
+    // wait for all the promises to finish
+    await Promise.all(promises);
+    return startEngine();
+}
+
+/** Update each engine object, remove destroyed objects, and update time
+ *  @memberof Engine */
+function engineObjectsUpdate()
+{
+    // get list of solid objects for physics optimization
+    engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);
+
+    // recursive object update
+    function updateObject(o)
+    {
+        if (!o.destroyed)
+        {
+            o.update();
+            for (const child of o.children)
+                updateObject(child);
+        }
+    }
+    for (const o of engineObjects)
+    {
+        // update top level objects
+        if (!o.parent)
+        {
+            updateObject(o);
+            o.updateTransforms();
+        }
+    }
+
+    // remove destroyed objects
+    engineObjects = engineObjects.filter(o=>!o.destroyed);
+}
+
+/** Destroy and remove all objects
+ *  @memberof Engine */
+function engineObjectsDestroy()
+{
+    for (const o of engineObjects)
+        o.parent || o.destroy();
+    engineObjects = engineObjects.filter(o=>!o.destroyed);
+}
+
+/** Collects all object within a given area
+ *  @param {Vector2} [pos]                 - Center of test area, or undefined for all objects
+ *  @param {Vector2|number} [size]         - Radius of circle if float, rectangle size if Vector2
+ *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
+ *  @return {Array<EngineObject>}                        - List of collected objects
+ *  @memberof Engine */
+function engineObjectsCollect(pos, size, objects=engineObjects)
+{
+    const collectedObjects = [];
+    if (!pos) // all objects
+    {
+        for (const o of objects)
+            collectedObjects.push(o);
+    }
+    else if (size instanceof Vector2)  // bounding box test
+    {
+        for (const o of objects)
+            isOverlapping(pos, size, o.pos, o.size) && collectedObjects.push(o);
+    }
+    else  // circle test
+    {
+        const sizeSquared = size*size;
+        for (const o of objects)
+            pos.distanceSquared(o.pos) < sizeSquared && collectedObjects.push(o);
+    }
+    return collectedObjects;
+}
+
+/** Triggers a callback for each object within a given area
+ *  @param {Vector2} [pos]                 - Center of test area, or undefined for all objects
+ *  @param {Vector2|number} [size]         - Radius of circle if float, rectangle size if Vector2
+ *  @param {Function} [callbackFunction]   - Calls this function on every object that passes the test
+ *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
+ *  @memberof Engine */
+function engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
+{ engineObjectsCollect(pos, size, objects).forEach(o => callbackFunction(o)); }
+
+/** Return a list of objects intersecting a ray
+ *  @param {Vector2} start
+ *  @param {Vector2} end
+ *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
+ *  @return {Array<EngineObject>} - List of objects hit
+ *  @memberof Engine */
+function engineObjectsRaycast(start, end, objects=engineObjects)
+{
+    const hitObjects = [];
+    for (const o of objects)
+    {
+        if (o.collideRaycast && isIntersecting(start, end, o.pos, o.size))
+        {
+            debugRaycast && debugRect(o.pos, o.size, '#f00');
+            hitObjects.push(o);
+        }
+    }
+
+    debugRaycast && debugLine(start, end, hitObjects.length ? '#f00' : '#00f', .02);
+    return hitObjects;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// LittleJS splash screen and logo
+
+function drawEngineSplashScreen(t)
+{
+    const x = overlayContext;
+    const w = overlayCanvas.width = innerWidth;
+    const h = overlayCanvas.height = innerHeight;
+
+    {
+        // background
+        const p3 = percent(t, 1, .8);
+        const p4 = percent(t, 0, .5);
+        const g = x.createRadialGradient(w/2,h/2,0,w/2,h/2,Math.hypot(w,h)*.7);
+        g.addColorStop(0,hsl(0,0,lerp(p4,0,p3/2),p3).toString());
+        g.addColorStop(1,hsl(0,0,0,p3).toString());
+        x.save();
+        x.fillStyle = g;
+        x.fillRect(0,0,w,h);
+    }
+
+    // draw LittleJS logo...
+    const rect = (X, Y, W, H, C)=>
+    {
+        x.beginPath();
+        x.rect(X,Y,W,C?H*p:H);
+        x.fillStyle = C;
+        C ? x.fill() : x.stroke();
+    };
+    const line = (X, Y, Z, W)=>
+    {
+        x.beginPath();
+        x.lineTo(X,Y);
+        x.lineTo(Z,W);
+        x.stroke();
+    };
+    const circle = (X, Y, R, A=0, B=2*PI, C, F)=>
+    {
+        const D = (A+B)/2, E = p*(B-A)/2;
+        x.beginPath();
+        F && x.lineTo(X,Y);
+        x.arc(X,Y,R,D-E,D+E);
+        x.fillStyle = C;
+        C ? x.fill() : x.stroke();
+    };
+    const color = (c=0, l=0) =>
+        hsl([.98,.3,.57,.14][c%4]-10,.8,[0,.3,.5,.8,.9][l]).toString();
+    const alpha = wave(1,1,t);
+    const p = percent(alpha, .1, .5);
+
+    // setup
+    x.translate(w/2,h/2);
+    const size = min(6, min(w,h)/99); // fit to screen
+    x.scale(size,size);
+    x.translate(-40,-35);
+    x.lineJoin = x.lineCap = 'round';
+    x.lineWidth = .1 + p*1.9;
+
+    // drawing effect
+    const p2 = percent(alpha,.1,1);
+    x.setLineDash([99*p2,99]);
+
+    // cab top
+    rect(7,16,18,-8,color(2,2));
+    rect(7,8,18,4,color(2,3));
+    rect(25,8,8,8,color(2,1));
+    rect(25,8,-18,8);
+    rect(25,8,8,8);
+
+    // cab
+    rect(25,16,7,23,color());
+    rect(11,39,14,-23,color(1,1));
+    rect(11,16,14,18,color(1,2));
+    rect(11,16,14,8,color(1,3));
+    rect(25,16,-14,24);
+
+    // cab window
+    rect(15,29,6,-9,color(2,2));
+    circle(15,21,5,0,PI/2,color(2,4),1);
+    rect(21,21,-6,9);
+
+    // little stack
+    rect(37,14,9,6,color(3,2));
+    rect(37,14,4.5,6,color(3,3));
+    rect(37,14,9,6);
+
+    // big stack
+    rect(50,20,10,-8,color(0,1));
+    rect(50,20,6.5,-8,color(0,2));
+    rect(50,20,3.5,-8,color(0,3));
+    rect(50,20,10,-8);
+    circle(55,2,11.4,.5,PI-.5,color(3,3));
+    circle(55,2,11.4,.5,PI/2,color(3,2),1);
+    circle(55,2,11.4,.5,PI-.5);
+    rect(45,7,20,-7,color(0,2));
+    rect(45,-1,20,4,color(0,3));
+    rect(45,-1,20,8);
+
+    // engine
+    for (let i=5; i--;)
+    {
+        // stagger radius to fix slight seam
+        circle(60-i*6,30, 9.9,0,2*PI,color(i+2,3));
+        circle(60-i*6,30,10.0,-.5,PI+.5,color(i+2,2));
+        circle(60-i*6,30,10.1,.5,PI-.5,color(i+2,1));
+    }
+
+    // engine outline
+    circle(36,30,10,PI/2,PI*3/2);
+    circle(48,30,10,PI/2,PI*3/2);
+    circle(60,30,10);
+    line(36,20,60,20);
+
+    // engine front light
+    circle(60,30,4,PI,3*PI,color(3,2)); 
+    circle(60,30,4,PI,2*PI,color(3,3));
+    circle(60,30,4,PI,3*PI);
+
+    // front brush
+    for (let i=6; i--;)
+    {
+        x.beginPath();
+        x.lineTo(53,54);
+        x.lineTo(53,40);
+        x.lineTo(53+(1+i*2.9)*p,40);
+        x.lineTo(53+(4+i*3.5)*p,54);
+        x.fillStyle = color(0,i%2+2);
+        x.fill();
+        i%2 && x.stroke();
+    }
+
+    // wheels
+    rect(6,40,5,5);
+    rect(6,40,5,5,color());
+    rect(15,54,38,-14,color());
+    for (let i=3; i--;)
+    for (let j=2; j--;)
+    {
+        circle(15*i+15,47,j?7:1,PI,3*PI,color(i,3));
+        x.stroke();
+        circle(15*i+15,47,j?7:1,0,PI,color(i,2));
+        x.stroke();
+    }
+    line(6,40,68,40); // center
+    line(77,54,4,54); // bottom
+
+    // draw engine name
+    const s = engineName;
+    x.font = '900 16px arial';
+    x.textAlign = 'center';
+    x.textBaseline = 'top';
+    x.lineWidth = .1+p*3.9;
+    let w2 = 0;
+    for (let i=0; i<s.length; ++i)
+        w2 += x.measureText(s[i]).width;
+    for (let j=2; j--;)
+    for (let i=0, X=41-w2/2; i<s.length; ++i)
+    {
+        x.fillStyle = color(i,2);
+        const w = x.measureText(s[i]).width;
+        x[j?'strokeText':'fillText'](s[i],X+w/2,55.5,17*p);
+        X += w;
+    }
+    
+    x.restore();
+}
+
+/** 
  * LittleJS - Release Mode
  * - This file is used for release builds in place of engineDebug.js
  * - Debug functionality is disabled to reduce size and increase performance
@@ -1601,12 +2235,12 @@ class EngineObject
     constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color=new Color, renderOrder=0)
     {
         // check passed in params
-        ASSERT(isVector2(pos) && pos.isValid(), 'pos should be a vec2');
-        ASSERT(isVector2(size) && size.isValid(), 'size should be a vec2');
-        ASSERT(!tileInfo || tileInfo instanceof TileInfo, 'tileInfo should be a TileInfo or 0');
-        ASSERT(typeof angle == 'number' && isFinite(angle), 'angle should be a number');
-        ASSERT(isColor(color) && color.isValid(), 'color should be a valid rgba color');
-        ASSERT(typeof renderOrder == 'number', 'renderOrder should be a number');
+        ASSERT(isVector2(pos) && pos.isValid(), 'object pos should be a vec2');
+        ASSERT(isVector2(size) && size.isValid(), 'object size should be a vec2');
+        ASSERT(!tileInfo || tileInfo instanceof TileInfo, 'object tileInfo should be a TileInfo or 0');
+        ASSERT(typeof angle == 'number' && isFinite(angle), 'object angle should be a number');
+        ASSERT(isColor(color) && color.isValid(), 'object color should be a valid rgba color');
+        ASSERT(typeof renderOrder == 'number', 'object renderOrder should be a number');
 
         /** @property {Vector2} - World space position of the object */
         this.pos = pos.copy();
@@ -2265,8 +2899,10 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace, context)
 {
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode'); 
-    ASSERT(isVector2(pos) && isVector2(size));
-    ASSERT(isColor(color) && (!additiveColor || isColor(additiveColor)));
+    ASSERT(isVector2(pos) && pos.isValid(), 'drawTile pos should be a vec2');
+    ASSERT(isVector2(size) && size.isValid(), 'drawTile size should be a vec2');
+    ASSERT(isColor(color) && (!additiveColor || isColor(additiveColor)), 'drawTile color is invalid');
+    ASSERT(isNumber(angle), 'drawTile angle should be a number');
 
     const textureInfo = tileInfo && tileInfo.textureInfo;
     if (useWebGL)
@@ -2535,7 +3171,7 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function setBlendMode(additive, useWebGL=glEnable, context)
+function setBlendMode(additive=false, useWebGL=glEnable, context)
 {
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
     if (useWebGL)
@@ -5107,634 +5743,6 @@ function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgb
     glColorData[offset++] = rgbaAdditive;
     glPositionData[offset++] = angle;
 }
-/** 
- * LittleJS - The Tiny Fast JavaScript Game Engine
- * MIT License - Copyright 2021 Frank Force
- * 
- * Engine Features
- * - Object oriented system with base class engine object
- * - Base class object handles update, physics, collision, rendering, etc
- * - Engine helper classes and functions like Vector2, Color, and Timer
- * - Super fast rendering system for tile sheets
- * - Sound effects audio with zzfx and music with zzfxm
- * - Input processing system with gamepad and touchscreen support
- * - Tile layer rendering and collision system
- * - Particle effect system
- * - Medal system tracks and displays achievements
- * - Debug tools and debug rendering system
- * - Post processing effects
- * - Call engineInit() to start it up!
- * @namespace Engine
- */
-
-/** Name of engine
- *  @type {string}
- *  @default
- *  @memberof Engine */
-const engineName = 'LittleJS';
-
-/** Version of engine
- *  @type {string}
- *  @default
- *  @memberof Engine */
-const engineVersion = '1.12.11';
-
-/** Frames per second to update
- *  @type {number}
- *  @default
- *  @memberof Engine */
-const frameRate = 60;
-
-/** How many seconds each frame lasts, engine uses a fixed time step
- *  @type {number}
- *  @default 1/60
- *  @memberof Engine */
-const timeDelta = 1/frameRate;
-
-/** Array containing all engine objects
- *  @type {Array<EngineObject>}
- *  @memberof Engine */
-let engineObjects = [];
-
-/** Array with only objects set to collide with other objects this frame (for optimization)
- *  @type {Array<EngineObject>}
- *  @memberof Engine */
-let engineObjectsCollide = [];
-
-/** Current update frame, used to calculate time
- *  @type {number}
- *  @memberof Engine */
-let frame = 0;
-
-/** Current engine time since start in seconds
- *  @type {number}
- *  @memberof Engine */
-let time = 0;
-
-/** Actual clock time since start in seconds (not affected by pause or frame rate clamping)
- *  @type {number}
- *  @memberof Engine */
-let timeReal = 0;
-
-/** Is the game paused? Causes time and objects to not be updated
- *  @type {boolean}
- *  @default false
- *  @memberof Engine */
-let paused = false;
-
-/** Set if game is paused
- *  @param {boolean} isPaused
- *  @memberof Engine */
-function setPaused(isPaused) { paused = isPaused; }
-
-// Frame time tracking
-let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
-
-///////////////////////////////////////////////////////////////////////////////
-// plugin hooks
-
-const pluginUpdateList = [], pluginRenderList = [];
-
-/** Add a new update function for a plugin
- *  @param {Function} [updateFunction]
- *  @param {Function} [renderFunction]
- *  @memberof Engine */
-function engineAddPlugin(updateFunction, renderFunction)
-{
-    ASSERT(!pluginUpdateList.includes(updateFunction));
-    ASSERT(!pluginRenderList.includes(renderFunction));
-    updateFunction && pluginUpdateList.push(updateFunction);
-    renderFunction && pluginRenderList.push(renderFunction);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Main engine functions
-
-/** Startup LittleJS engine with your callback functions
- *  @param {Function|function():Promise} gameInit - Called once after the engine starts up
- *  @param {Function} gameUpdate - Called every frame before objects are updated
- *  @param {Function} gameUpdatePost - Called after physics and objects are updated, even when paused
- *  @param {Function} gameRender - Called before objects are rendered, for drawing the background
- *  @param {Function} gameRenderPost - Called after objects are rendered, useful for drawing UI
- *  @param {Array<string>} [imageSources=[]] - List of images to load
- *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default
- *  @memberof Engine */
-async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
-{
-    ASSERT(!mainContext, 'engine already initialized');
-    ASSERT(Array.isArray(imageSources), 'pass in images as array');
-
-    // allow passing in empty functions
-    gameInit       ||= ()=>{};
-    gameUpdate     ||= ()=>{};
-    gameUpdatePost ||= ()=>{};
-    gameRender     ||= ()=>{};
-    gameRenderPost ||= ()=>{};
-
-    // Called automatically by engine to setup render system
-    function enginePreRender()
-    {
-        // save canvas size
-        mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
-
-        // disable smoothing for pixel art
-        overlayContext.imageSmoothingEnabled = 
-            mainContext.imageSmoothingEnabled = !tilesPixelated;
-
-        // setup gl rendering if enabled
-        glPreRender();
-    }
-
-    // internal update loop for engine
-    function engineUpdate(frameTimeMS=0)
-    {
-        // update time keeping
-        let frameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
-        frameTimeLastMS = frameTimeMS;
-        if (debug || showWatermark)
-            averageFPS = lerp(.05, averageFPS, 1e3/(frameTimeDeltaMS||1));
-        const debugSpeedUp   = debug && keyIsDown('Equal'); // +
-        const debugSpeedDown = debug && keyIsDown('Minus'); // -
-        if (debug) // +/- to speed/slow time
-            frameTimeDeltaMS *= debugSpeedUp ? 10 : debugSpeedDown ? .1 : 1;
-        timeReal += frameTimeDeltaMS / 1e3;
-        frameTimeBufferMS += paused ? 0 : frameTimeDeltaMS;
-        if (!debugSpeedUp)
-            frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp min framerate
-        if (debugVideoCaptureIsActive())
-            frameTimeBufferMS = 0; // no time smoothing when capturing video
-        updateCanvas();
-
-        if (paused)
-        {
-            // update object transforms even when paused
-            for (const o of engineObjects)
-                o.parent || o.updateTransforms();
-            inputUpdate();
-            pluginUpdateList.forEach(f=>f());
-            debugUpdate();
-            gameUpdatePost();
-            inputUpdatePost();
-        }
-        else
-        {
-            // apply time delta smoothing, improves smoothness of framerate in some browsers
-            let deltaSmooth = 0;
-            if (frameTimeBufferMS < 0 && frameTimeBufferMS > -9)
-            {
-                // force at least one update each frame since it is waiting for refresh
-                deltaSmooth = frameTimeBufferMS;
-                frameTimeBufferMS = 0;
-            }
-            
-            // update multiple frames if necessary in case of slow framerate
-            for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / frameRate)
-            {
-                // increment frame and update time
-                time = frame++ / frameRate;
-
-                // update game and objects
-                inputUpdate();
-                gameUpdate();
-                pluginUpdateList.forEach(f=>f());
-                engineObjectsUpdate();
-
-                // do post update
-                debugUpdate();
-                gameUpdatePost();
-                inputUpdatePost();
-            }
-
-            // add the time smoothing back in
-            frameTimeBufferMS += deltaSmooth;
-        }
-
-        if (!headlessMode)
-        {
-            // render sort then render while removing destroyed objects
-            enginePreRender();
-            gameRender();
-            engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
-            for (const o of engineObjects)
-                o.destroyed || o.render();
-            gameRenderPost();
-            pluginRenderList.forEach(f=>f());
-            touchGamepadRender();
-            debugRender();
-            glFlush();
-            debugVideoCaptureUpdate();
-
-            if (showWatermark && !debugVideoCaptureIsActive())
-            {
-                // update fps display
-                overlayContext.textAlign = 'right';
-                overlayContext.textBaseline = 'top';
-                overlayContext.font = '1em monospace';
-                overlayContext.fillStyle = '#000';
-                const text = engineName + ' ' + 'v' + engineVersion + ' / ' 
-                    + drawCount + ' / ' + engineObjects.length + ' / ' + averageFPS.toFixed(1)
-                    + (glEnable ? ' GL' : ' 2D') ;
-                overlayContext.fillText(text, mainCanvas.width-3, 3);
-                overlayContext.fillStyle = '#fff';
-                overlayContext.fillText(text, mainCanvas.width-2, 2);
-            }
-            if (debug || showWatermark)
-                drawCount = 0;
-        }
-        requestAnimationFrame(engineUpdate);
-    }
-
-    function updateCanvas()
-    {
-        if (headlessMode) return;
-        
-        if (canvasFixedSize.x)
-        {
-            // clear canvas and set fixed size
-            mainCanvas.width  = canvasFixedSize.x;
-            mainCanvas.height = canvasFixedSize.y;
-            
-            // fit to window by adding space on top or bottom if necessary
-            const aspect = innerWidth / innerHeight;
-            const fixedAspect = mainCanvas.width / mainCanvas.height;
-            (glCanvas||mainCanvas).style.width = mainCanvas.style.width = overlayCanvas.style.width  = aspect < fixedAspect ? '100%' : '';
-            (glCanvas||mainCanvas).style.height = mainCanvas.style.height = overlayCanvas.style.height = aspect < fixedAspect ? '' : '100%';
-        }
-        else
-        {
-            // clear canvas and set size to same as window
-            mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
-            mainCanvas.height = min(innerHeight, canvasMaxSize.y);
-        }
-        
-        // clear overlay canvas and set size
-        overlayCanvas.width  = mainCanvas.width;
-        overlayCanvas.height = mainCanvas.height;
-
-        // save canvas size
-        mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
-    }
-
-    // wait for gameInit to load
-    async function startEngine()
-    {
-        await gameInit();
-        engineUpdate();
-    }
-    if (headlessMode)
-        return startEngine();
-
-    // setup html
-    const styleRoot = 
-        'margin:0;' +                 // fill the window
-        'background:#000;' +          // set background color
-        (canvasPixelated ? 'image-rendering:pixelated;' : '') + // pixel art
-        'user-select:none;' +         // prevent hold to select
-        '-webkit-user-select:none;' + // compatibility for ios
-        (!touchInputEnable ? '' :     // no touch css settings
-        'touch-action:none;' +        // prevent mobile pinch to resize
-        '-webkit-touch-callout:none');// compatibility for ios
-    rootElement.style.cssText = styleRoot;
-    drawCanvas = mainCanvas = document.createElement('canvas');
-    rootElement.appendChild(mainCanvas);
-    drawContext = mainContext = mainCanvas.getContext('2d');
-
-    // init stuff and start engine
-    inputInit();
-    audioInit();
-    debugInit();
-    glInit();
-
-    // create overlay canvas for hud to appear above gl canvas
-    overlayCanvas = document.createElement('canvas')
-    rootElement.appendChild(overlayCanvas);
-    overlayContext = overlayCanvas.getContext('2d');
-
-    // set canvas style
-    const styleCanvas = 'position:absolute;'+ // allow canvases to overlap
-        'top:50%;left:50%;transform:translate(-50%,-50%)'; // center on screen
-    mainCanvas.style.cssText = overlayCanvas.style.cssText = styleCanvas;
-    if (glCanvas)
-        glCanvas.style.cssText = styleCanvas;
-    updateCanvas();
-    
-    // create promises for loading images
-    const promises = imageSources.map((src, textureIndex)=>
-        new Promise(resolve => 
-        {
-            const image = new Image;
-            image.onerror = image.onload = ()=> 
-            {
-                const textureInfo = new TextureInfo(image);
-                textureInfo.createWebGLTexture();
-                textureInfos[textureIndex] = textureInfo;
-                resolve();
-            }
-            image.crossOrigin = 'anonymous';
-            image.src = src;
-        })
-    );
-
-    if (!imageSources.length)
-    {
-        // no images to load
-        promises.push(new Promise(resolve => 
-        {
-            const textureInfo = new TextureInfo(new Image);
-            textureInfos[0] = textureInfo;
-            textureInfo.createWebGLTexture();
-            resolve();
-        }));
-    }
-
-    if (showSplashScreen)
-    {
-        // draw splash screen
-        promises.push(new Promise(resolve => 
-        {
-            let t = 0;
-            console.log(`${engineName} Engine v${engineVersion}`);
-            updateSplash();
-            function updateSplash()
-            {
-                clearInput();
-                drawEngineSplashScreen(t+=.01);
-                t>1 ? resolve() : setTimeout(updateSplash, 16);
-            }
-        }));
-    }
-
-    // wait for all the promises to finish
-    await Promise.all(promises);
-    return startEngine();
-}
-
-/** Update each engine object, remove destroyed objects, and update time
- *  @memberof Engine */
-function engineObjectsUpdate()
-{
-    // get list of solid objects for physics optimization
-    engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);
-
-    // recursive object update
-    function updateObject(o)
-    {
-        if (!o.destroyed)
-        {
-            o.update();
-            for (const child of o.children)
-                updateObject(child);
-        }
-    }
-    for (const o of engineObjects)
-    {
-        // update top level objects
-        if (!o.parent)
-        {
-            updateObject(o);
-            o.updateTransforms();
-        }
-    }
-
-    // remove destroyed objects
-    engineObjects = engineObjects.filter(o=>!o.destroyed);
-}
-
-/** Destroy and remove all objects
- *  @memberof Engine */
-function engineObjectsDestroy()
-{
-    for (const o of engineObjects)
-        o.parent || o.destroy();
-    engineObjects = engineObjects.filter(o=>!o.destroyed);
-}
-
-/** Collects all object within a given area
- *  @param {Vector2} [pos]                 - Center of test area, or undefined for all objects
- *  @param {Vector2|number} [size]         - Radius of circle if float, rectangle size if Vector2
- *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
- *  @return {Array<EngineObject>}                        - List of collected objects
- *  @memberof Engine */
-function engineObjectsCollect(pos, size, objects=engineObjects)
-{
-    const collectedObjects = [];
-    if (!pos) // all objects
-    {
-        for (const o of objects)
-            collectedObjects.push(o);
-    }
-    else if (size instanceof Vector2)  // bounding box test
-    {
-        for (const o of objects)
-            isOverlapping(pos, size, o.pos, o.size) && collectedObjects.push(o);
-    }
-    else  // circle test
-    {
-        const sizeSquared = size*size;
-        for (const o of objects)
-            pos.distanceSquared(o.pos) < sizeSquared && collectedObjects.push(o);
-    }
-    return collectedObjects;
-}
-
-/** Triggers a callback for each object within a given area
- *  @param {Vector2} [pos]                 - Center of test area, or undefined for all objects
- *  @param {Vector2|number} [size]         - Radius of circle if float, rectangle size if Vector2
- *  @param {Function} [callbackFunction]   - Calls this function on every object that passes the test
- *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
- *  @memberof Engine */
-function engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
-{ engineObjectsCollect(pos, size, objects).forEach(o => callbackFunction(o)); }
-
-/** Return a list of objects intersecting a ray
- *  @param {Vector2} start
- *  @param {Vector2} end
- *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
- *  @return {Array<EngineObject>} - List of objects hit
- *  @memberof Engine */
-function engineObjectsRaycast(start, end, objects=engineObjects)
-{
-    const hitObjects = [];
-    for (const o of objects)
-    {
-        if (o.collideRaycast && isIntersecting(start, end, o.pos, o.size))
-        {
-            debugRaycast && debugRect(o.pos, o.size, '#f00');
-            hitObjects.push(o);
-        }
-    }
-
-    debugRaycast && debugLine(start, end, hitObjects.length ? '#f00' : '#00f', .02);
-    return hitObjects;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// LittleJS splash screen and logo
-
-function drawEngineSplashScreen(t)
-{
-    const x = overlayContext;
-    const w = overlayCanvas.width = innerWidth;
-    const h = overlayCanvas.height = innerHeight;
-
-    {
-        // background
-        const p3 = percent(t, 1, .8);
-        const p4 = percent(t, 0, .5);
-        const g = x.createRadialGradient(w/2,h/2,0,w/2,h/2,Math.hypot(w,h)*.7);
-        g.addColorStop(0,hsl(0,0,lerp(p4,0,p3/2),p3).toString());
-        g.addColorStop(1,hsl(0,0,0,p3).toString());
-        x.save();
-        x.fillStyle = g;
-        x.fillRect(0,0,w,h);
-    }
-
-    // draw LittleJS logo...
-    const rect = (X, Y, W, H, C)=>
-    {
-        x.beginPath();
-        x.rect(X,Y,W,C?H*p:H);
-        x.fillStyle = C;
-        C ? x.fill() : x.stroke();
-    };
-    const line = (X, Y, Z, W)=>
-    {
-        x.beginPath();
-        x.lineTo(X,Y);
-        x.lineTo(Z,W);
-        x.stroke();
-    };
-    const circle = (X, Y, R, A=0, B=2*PI, C, F)=>
-    {
-        const D = (A+B)/2, E = p*(B-A)/2;
-        x.beginPath();
-        F && x.lineTo(X,Y);
-        x.arc(X,Y,R,D-E,D+E);
-        x.fillStyle = C;
-        C ? x.fill() : x.stroke();
-    };
-    const color = (c=0, l=0) =>
-        hsl([.98,.3,.57,.14][c%4]-10,.8,[0,.3,.5,.8,.9][l]).toString();
-    const alpha = wave(1,1,t);
-    const p = percent(alpha, .1, .5);
-
-    // setup
-    x.translate(w/2,h/2);
-    const size = min(6, min(w,h)/99); // fit to screen
-    x.scale(size,size);
-    x.translate(-40,-35);
-    x.lineJoin = x.lineCap = 'round';
-    x.lineWidth = .1 + p*1.9;
-
-    // drawing effect
-    const p2 = percent(alpha,.1,1);
-    x.setLineDash([99*p2,99]);
-
-    // cab top
-    rect(7,16,18,-8,color(2,2));
-    rect(7,8,18,4,color(2,3));
-    rect(25,8,8,8,color(2,1));
-    rect(25,8,-18,8);
-    rect(25,8,8,8);
-
-    // cab
-    rect(25,16,7,23,color());
-    rect(11,39,14,-23,color(1,1));
-    rect(11,16,14,18,color(1,2));
-    rect(11,16,14,8,color(1,3));
-    rect(25,16,-14,24);
-
-    // cab window
-    rect(15,29,6,-9,color(2,2));
-    circle(15,21,5,0,PI/2,color(2,4),1);
-    rect(21,21,-6,9);
-
-    // little stack
-    rect(37,14,9,6,color(3,2));
-    rect(37,14,4.5,6,color(3,3));
-    rect(37,14,9,6);
-
-    // big stack
-    rect(50,20,10,-8,color(0,1));
-    rect(50,20,6.5,-8,color(0,2));
-    rect(50,20,3.5,-8,color(0,3));
-    rect(50,20,10,-8);
-    circle(55,2,11.4,.5,PI-.5,color(3,3));
-    circle(55,2,11.4,.5,PI/2,color(3,2),1);
-    circle(55,2,11.4,.5,PI-.5);
-    rect(45,7,20,-7,color(0,2));
-    rect(45,-1,20,4,color(0,3));
-    rect(45,-1,20,8);
-
-    // engine
-    for (let i=5; i--;)
-    {
-        // stagger radius to fix slight seam
-        circle(60-i*6,30, 9.9,0,2*PI,color(i+2,3));
-        circle(60-i*6,30,10.0,-.5,PI+.5,color(i+2,2));
-        circle(60-i*6,30,10.1,.5,PI-.5,color(i+2,1));
-    }
-
-    // engine outline
-    circle(36,30,10,PI/2,PI*3/2);
-    circle(48,30,10,PI/2,PI*3/2);
-    circle(60,30,10);
-    line(36,20,60,20);
-
-    // engine front light
-    circle(60,30,4,PI,3*PI,color(3,2)); 
-    circle(60,30,4,PI,2*PI,color(3,3));
-    circle(60,30,4,PI,3*PI);
-
-    // front brush
-    for (let i=6; i--;)
-    {
-        x.beginPath();
-        x.lineTo(53,54);
-        x.lineTo(53,40);
-        x.lineTo(53+(1+i*2.9)*p,40);
-        x.lineTo(53+(4+i*3.5)*p,54);
-        x.fillStyle = color(0,i%2+2);
-        x.fill();
-        i%2 && x.stroke();
-    }
-
-    // wheels
-    rect(6,40,5,5);
-    rect(6,40,5,5,color());
-    rect(15,54,38,-14,color());
-    for (let i=3; i--;)
-    for (let j=2; j--;)
-    {
-        circle(15*i+15,47,j?7:1,PI,3*PI,color(i,3));
-        x.stroke();
-        circle(15*i+15,47,j?7:1,0,PI,color(i,2));
-        x.stroke();
-    }
-    line(6,40,68,40); // center
-    line(77,54,4,54); // bottom
-
-    // draw engine name
-    const s = engineName;
-    x.font = '900 16px arial';
-    x.textAlign = 'center';
-    x.textBaseline = 'top';
-    x.lineWidth = .1+p*3.9;
-    let w2 = 0;
-    for (let i=0; i<s.length; ++i)
-        w2 += x.measureText(s[i]).width;
-    for (let j=2; j--;)
-    for (let i=0, X=41-w2/2; i<s.length; ++i)
-    {
-        x.fillStyle = color(i,2);
-        const w = x.measureText(s[i]).width;
-        x[j?'strokeText':'fillText'](s[i],X+w/2,55.5,17*p);
-        X += w;
-    }
-    
-    x.restore();
-}
-
 /** 
  * LittleJS Newgrounds API
  * - NewgroundsMedal extends Medal with Newgrounds API functionality
@@ -8509,3 +8517,123 @@ async function box2dInit()
     }
 }
 
+/**
+ * LittleJS Drawing Utilities Plugin
+ * - Extra drawing functions for LittleJS
+ * - Nine slice and three slice drawing
+ * @namespace DrawUtilities
+ */
+
+///////////////////////////////////////////////////////////////////////////////
+
+/** Draw a scalable nine-slice UI element to the overlay canvas in screen space
+ *  @param {Vector2} pos - Screen space position
+ *  @param {Vector2} size - Screen space size
+ *  @param {TileInfo} startTile - Starting tile for the nine-slice pattern
+ *  @param {number} [borderSize=1] - Width of the border sections
+ *  @param {number} [extraSpace=.01] - Extra spacing adjustment
+ *  @memberof DrawUtilities */
+function drawNineSliceScreen(pos, size, startTile, borderSize=32, extraSpace=1)
+{
+    drawNineSlice(pos, size, startTile, WHITE, borderSize, BLACK, extraSpace, false, true, overlayContext);
+}
+
+/** Draw a scalable nine-slice UI element in world space
+ *  @param {Vector2} pos - World space position
+ *  @param {Vector2} size - World space size
+ *  @param {TileInfo} startTile - Starting tile for the nine-slice pattern
+ *  @param {Color} [color] - Color to modulate with
+ *  @param {number} [borderSize=1] - Width of the border sections
+ *  @param {Color} [additiveColor] - Additive color
+ *  @param {number} [extraSpace=.01] - Extra spacing adjustment
+ *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
+ *  @param {boolean} [screenSpace] - Use screen space coordinates
+ *  @param {CanvasRenderingContext2D} [context] - Canvas context to use
+ *  @memberof DrawUtilities */
+function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.01, useWebGL=glEnable, screenSpace, context)
+{
+    // setup nine slice tiles
+    const centerTile = startTile.offset(startTile.size);
+    const centerSize = size.add(vec2(extraSpace-borderSize*2));
+    const cornerSize = vec2(borderSize);
+    const cornerOffset = size.scale(.5).subtract(cornerSize.scale(.5));
+    const flip = screenSpace ? -1 : 1;
+
+    // center
+    drawTile(pos, centerSize, centerTile, color, 0, false, additiveColor, useWebGL, screenSpace, context);
+    for(let i=4; i--;)
+    {
+        // sides
+        const horizontal = i%2;
+        const sidePos = cornerOffset.multiply(vec2(horizontal?i==1?1:-1:0, horizontal?0:i?-1:1));
+        const sideSize = vec2(horizontal ? borderSize : centerSize.x, horizontal ? centerSize.y : borderSize);
+        const sideTile = centerTile.offset(startTile.size.multiply(vec2(i==1?1:i==3?-1:0,i==0?-flip:i==2?flip:0)))
+        drawTile(pos.add(sidePos), sideSize, sideTile, color, 0, false, additiveColor, useWebGL, screenSpace, context);
+    }
+    for(let i=4; i--;)
+    {
+        // corners
+        const flipX = i>1;
+        const flipY = i && i<3;
+        const cornerPos = cornerOffset.multiply(vec2(flipX?-1:1, flipY?-1:1));
+        const cornerTile = centerTile.offset(startTile.size.multiply(vec2(flipX?-1:1,flipY?flip:-flip)));
+        drawTile(pos.add(cornerPos), cornerSize, cornerTile, color, 0, false, additiveColor, useWebGL, screenSpace, context);
+    }
+}
+
+/** Draw a scalable three-slice UI element to the overlay canvas in screen space
+ *  @param {Vector2} pos - Screen space position
+ *  @param {Vector2} size - Screen space size
+ *  @param {TileInfo} startTile - Starting tile for the three-slice pattern
+ *  @param {number} [borderSize=1] - Width of the border sections
+ *  @param {number} [extraSpace=.01] - Extra spacing adjustment
+ *  @memberof DrawUtilities */
+function drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=1)
+{
+    drawThreeSlice(pos, size, startTile, WHITE, borderSize, BLACK, extraSpace, false, true, overlayContext);
+}
+
+/** Draw a scalable three-slice UI element in world space
+ *  @param {Vector2} pos - World space position
+ *  @param {Vector2} size - World space size
+ *  @param {TileInfo} startTile - Starting tile for the three-slice pattern
+ *  @param {Color} [color] - Color to modulate with
+ *  @param {number} [borderSize=1] - Width of the border sections
+ *  @param {Color} [additiveColor] - Additive color
+ *  @param {number} [extraSpace=.01] - Extra spacing adjustment
+ *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
+ *  @param {boolean} [screenSpace] - Use screen space coordinates
+ *  @param {CanvasRenderingContext2D} [context] - Canvas context to use
+ *  @memberof DrawUtilities */
+function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.01, useWebGL=glEnable, screenSpace, context)
+{
+    // setup three slice tiles
+    const cornerTile = startTile.frame(0);
+    const sideTile   = startTile.frame(1);
+    const centerTile = startTile.frame(2);
+    const centerSize = size.add(vec2(extraSpace-borderSize*2));
+    const cornerSize = vec2(borderSize);
+    const cornerOffset = size.scale(.5).subtract(cornerSize.scale(.5));
+    const flip = screenSpace ? -1 : 1;
+
+    // center
+    drawTile(pos, centerSize, centerTile, color, 0, false, additiveColor, useWebGL, screenSpace, context);
+    for(let i=4; i--;)
+    {
+        // sides
+        const angle = i*PI/2;
+        const horizontal = i%2;
+        const sidePos = cornerOffset.multiply(vec2(horizontal?i==1?1:-1:0, horizontal?0:i?-flip:flip));
+        const sideSize = vec2(horizontal ? centerSize.y : centerSize.x, borderSize);
+        drawTile(pos.add(sidePos), sideSize, sideTile, color, angle, false, additiveColor, useWebGL, screenSpace, context);
+    }
+    for(let i=4; i--;)
+    {
+        // corners
+        const angle = i*PI/2;
+        const flipX = !i || i>2;
+        const flipY = i>1;
+        const cornerPos = cornerOffset.multiply(vec2(flipX?-1:1, flipY?-flip:flip));
+        drawTile(pos.add(cornerPos), cornerSize, cornerTile, color, angle, false, additiveColor, useWebGL, screenSpace, context);
+    }
+}
