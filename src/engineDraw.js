@@ -244,8 +244,10 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace, context)
 {
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode'); 
-    ASSERT(isVector2(pos) && isVector2(size));
-    ASSERT(isColor(color) && (!additiveColor || isColor(additiveColor)));
+    ASSERT(isVector2(pos) && pos.isValid(), 'drawTile pos should be a vec2');
+    ASSERT(isVector2(size) && size.isValid(), 'drawTile size should be a vec2');
+    ASSERT(isColor(color) && (!additiveColor || isColor(additiveColor)), 'drawTile color is invalid');
+    ASSERT(isNumber(angle), 'drawTile angle should be a number');
 
     const textureInfo = tileInfo && tileInfo.textureInfo;
     if (useWebGL)

@@ -42,12 +42,12 @@ class EngineObject
     constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color=new Color, renderOrder=0)
     {
         // check passed in params
-        ASSERT(isVector2(pos) && pos.isValid(), 'pos should be a vec2');
-        ASSERT(isVector2(size) && size.isValid(), 'size should be a vec2');
-        ASSERT(!tileInfo || tileInfo instanceof TileInfo, 'tileInfo should be a TileInfo or 0');
-        ASSERT(typeof angle == 'number' && isFinite(angle), 'angle should be a number');
-        ASSERT(isColor(color) && color.isValid(), 'color should be a valid rgba color');
-        ASSERT(typeof renderOrder == 'number', 'renderOrder should be a number');
+        ASSERT(isVector2(pos) && pos.isValid(), 'object pos should be a vec2');
+        ASSERT(isVector2(size) && size.isValid(), 'object size should be a vec2');
+        ASSERT(!tileInfo || tileInfo instanceof TileInfo, 'object tileInfo should be a TileInfo or 0');
+        ASSERT(typeof angle == 'number' && isFinite(angle), 'object angle should be a number');
+        ASSERT(isColor(color) && color.isValid(), 'object color should be a valid rgba color');
+        ASSERT(typeof renderOrder == 'number', 'object renderOrder should be a number');
 
         /** @property {Vector2} - World space position of the object */
         this.pos = pos.copy();
