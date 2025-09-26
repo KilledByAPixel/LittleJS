@@ -75,10 +75,15 @@ let timeReal = 0;
  *  @memberof Engine */
 let paused = false;
 
-/** Set if game is paused
- *  @param {boolean} isPaused
+/** Get if game is paused
+ *  @return {boolean}
  *  @memberof Engine */
-function setPaused(isPaused) { paused = isPaused; }
+function getPaused() { return paused; }
+
+/** Set if game is paused
+ *  @param {boolean} [isPaused]
+ *  @memberof Engine */
+function setPaused(isPaused=true) { paused = isPaused; }
 
 // Frame time tracking
 let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
