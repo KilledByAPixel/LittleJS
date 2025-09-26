@@ -79,6 +79,8 @@ iframe
     margin: 0px;
     text-align: center;
     font-size: 20px;
+    display: inline-block;
+    align-self: center;
 }
 select
 {
@@ -195,7 +197,11 @@ let iframeExample, inputTimeout, codeMirror;
 filterExamples();
 
 // set the selected example from the URL hash
-selectExample.selectedIndex = location.hash.split`#`[1] | 0
+const selectedExample = location.hash.split`#`[1] || '';
+let exampleIndex = exampleList.findIndex((example) => example.filename == selectedExample);
+if (exampleIndex < 0)
+    exampleIndex = 1;
+selectExample.selectedIndex = exampleIndex;
 setExample();
 
 onresize = () =>
@@ -265,7 +271,7 @@ function setExample()
     const filename = 'examples/' + example.filename;
     exampleLink.href = 'https://github.com/KilledByAPixel/LittleJS/tree/main/' + filename;
     exampleLink.innerText = filename;
-    location.hash = exampleIndex;
+    location.hash = example.filename;
     loadFile(example.filename, example.largeExample);
 }
 
@@ -295,21 +301,18 @@ async function loadFile(filename, largeExample)
         unsetErrorMessage();
         iframeExample = document.createElement('iframe');
         iframeContainer.appendChild(iframeExample);
-        iframeExample.onload = () =>
+        
+        // Show message in code view that full examples can't be edited
+        const message = 'Code view not available for large examples.';
+        if (codeMirror)
         {
-            // show message in code view that full examples can't be edited
-            const iframeContent = iframeExample.contentWindow;
-            const iframeDocument = iframeContent.document;
-            const message = 'Editor code view not available for large examples.\n';
-            if (codeMirror)
-            {
-                codeMirror.off('change', codeInput);
-                codeMirror.setOption('mode', 'text');
-                codeMirror.setValue(message);
-            }
-            else
-                textareaCode.value = message;
+            codeMirror.off('change', codeInput);
+            codeMirror.setOption('mode', 'text');
+            codeMirror.setValue(message);
         }
+        else
+            textareaCode.value = message;
+        clearTimeout(inputTimeout);
         iframeExample.src = filename;
         return;
     }
@@ -330,7 +333,8 @@ async function loadFile(filename, largeExample)
         }
         else
             textareaCode.value = text;
-        setCode(text, largeExample);
+        clearTimeout(inputTimeout);
+        setCode(text);
     }
     catch (error)
     {
@@ -379,7 +383,6 @@ function setCode(code)
         // create a script element that overrides the default functions
         const overrideScript = iframeDocument.createElement('script');
         iframeDocument.body.appendChild(overrideScript);
-        console.log(code);
         overrideScript.text = code;
         
         if (textareaError.style.display == 'block')
@@ -418,8 +421,10 @@ function setErrorMessage(message)
 // setup code mirror
 
 const defaultTheme = 'monokai';
+const defaultFontSize = '16px';
 const themes = 
 [
+    'littlejs',
     '3024-night',
     'abcdef',
     'ambiance',
@@ -431,30 +436,39 @@ const themes =
     'night',
     'yonce'
 ];
+
+// Load saved preferences from localStorage
+const savedTheme = localStorage.getItem('littleJS-theme') || defaultTheme;
+const savedFontSize = localStorage.getItem('littleJS-fontSize') || defaultFontSize;
+
 for (const theme of themes)
 {
-    addCodeMirrorElement(`theme/${theme}.min.css`, 'link', 'stylesheet');
+    if (theme != 'littlejs')
+        addCodeMirrorElement(`theme/${theme}.min.css`, 'link', 'stylesheet');
     const o = new Option(theme);
-    o.selected = theme == defaultTheme;
+    o.selected = theme == savedTheme;
     selectTheme.add(o);
 }
+
+// Set the saved font size
+selectFontSize.value = savedFontSize;
+textareaCode.style.fontSize = savedFontSize;
 addCodeMirrorElement('codemirror.min.css', 'link', 'stylesheet');
-const codeMirrorScript = addCodeMirrorElement('codemirror.min.js', 'script');
-codeMirrorScript.onload = ()=>
-{
-    const jsScript = addCodeMirrorElement('mode/javascript/javascript.min.js', 'script');
-    jsScript.onload = ()=> initCodeMirror()
-}
+addCodeMirrorElement('codemirror.min.js', 'script').onload = ()=>
+addCodeMirrorElement('addon/edit/matchbrackets.js', 'script').onload = ()=> 
+addCodeMirrorElement('mode/javascript/javascript.min.js', 'script').onload = ()=> 
+initCodeMirror();
 
 function initCodeMirror()
 {
     const textareaCode = document.getElementById('textareaCode');
     codeMirror = CodeMirror.fromTextArea(textareaCode, 
     {
-        theme: defaultTheme,
+        theme: savedTheme,
         indentUnit: 4,
         lineNumbers: true,
-        lineWrapping: true
+        lineWrapping: true,
+        matchBrackets: true,
     });
     
     // make code mirror extend to the full height
@@ -479,13 +493,44 @@ function addCodeMirrorElement(filename, type, rel)
 
 function loadTheme()
 {
+    const theme = selectTheme.value;
     const size = selectFontSize.value;
-    if (codeMirror)
-        codeMirror.getWrapperElement().style.fontSize = size;
+    
+    // Save preferences to localStorage
+    localStorage.setItem('littleJSExamples_theme', theme);
+    localStorage.setItem('littleJSExamples_fontSize', size);
+    
+    // Apply the theme and font size
     textareaCode.style.fontSize = size;
-    codeMirror.setOption('theme', selectTheme.value);
+    if (codeMirror)
+    {
+        codeMirror.getWrapperElement().style.fontSize = size;
+        codeMirror.setOption('theme', theme);
+    }
 }
 
 </script>
+<style>
+/*  LittleJS CodeMirror Theme */
+.cm-s-littlejs.CodeMirror { background: #000; color: #fff; }
+.cm-s-littlejs div.CodeMirror-selected { background: #068; }
+.cm-s-littlejs .CodeMirror-gutters {background: #111; border-right: 0px;}
+.cm-s-littlejs .CodeMirror-linenumber { color: #aaa; }
+.cm-s-littlejs .CodeMirror-cursor { border-left: 2px solid #fff; }
+.cm-s-littlejs .cm-keyword { color: #6e1; }
+.cm-s-littlejs .cm-def { color: #fab; }
+.cm-s-littlejs .cm-operator { color: #1be; }
+.cm-s-littlejs .cm-property,
+.cm-s-littlejs span.cm-variable { color: #ddd; font-style: italic; }
+.cm-s-littlejs span.cm-variable-2 { color: #ea1; font-style: italic; }
+.cm-s-littlejs span.cm-variable-3 { color: #aef; }
+.cm-s-littlejs .cm-builtin,
+.cm-s-littlejs .cm-number { color: #e15; }
+.cm-s-littlejs .cm-comment { color:#777; font-style:italic; }
+.cm-s-littlejs .cm-string { color:#fda; }
+.cm-s-littlejs .cm-string-2 { color:#ea1; } 
+.cm-s-littlejs .cm-error { border-bottom: 1px solid #f00; }
+.cm-s-littlejs .CodeMirror-matchingbracket { color:#f0f !important; }
+</style>
 </body>
 </html>
