@@ -330,7 +330,7 @@ function setCode(code)
             return; // stop if script error
         
         // start LittleJS engine
-        iframeContent.engineInit(iframeContent.gameInit, iframeContent.gameUpdate, iframeContent.gameUpdatePost, iframeContent.gameRender, iframeContent.gameRenderPost, ['tiles.png?11212']);
+        iframeContent.engineInit(iframeContent.gameInit, iframeContent.gameUpdate, iframeContent.gameUpdatePost, iframeContent.gameRender, iframeContent.gameRenderPost, ['tiles.png?'+Date.now()]);
 
         buttonScreenshot.onclick = () =>
         {
@@ -350,7 +350,7 @@ function setCode(code)
         }
         buttonPause.textContent = 'Pause';
     }
-    iframeExample.src = 'shorts/base.html?11212';
+    iframeExample.src = 'shorts/base.html?' + Date.now();
 }
 
 function unsetMessage(element)
