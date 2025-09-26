@@ -1,6 +1,7 @@
 <!DOCTYPE html><head>
 <title>LittleJS Example Browser</title>
 <link rel=icon type=image/png href=favicon.png>
+<link rel=stylesheet href=style.css>
 <meta charset=utf-8>
 </head><body>
 <div id=container1>
@@ -20,10 +21,10 @@ Theme:
     <option value=24px>XL</option>
 </select>
 <input type=checkbox id=checkboxLiveEdit checked>Live Edit
+<button id=buttonRefresh onclick="refreshCode()">Refresh</button>
 </div> 
 <textarea id=textareaCode oninput=codeInput() spellcheck=false></textarea>
 <textarea id=textareaError readonly spellcheck=false></textarea>
-
 </div>
 <div id=container2>
 <div id=iframeContainer></div>
@@ -69,10 +70,7 @@ const exampleList =
     new ExampleInfo('Tile Layer', 'tileLayer.js', 'How to use the tile layer object'),
     new ExampleInfo('Piano', 'piano.js', 'A simple piano keyboard demo'),
     new ExampleInfo('Maze Generator', 'maze.js', 'Generates a random maze'),
-    new ExampleInfo('Box2d Demo', 'box2d.js', 'Demo of the Box2D physics plugin'),
-    new ExampleInfo('Box2d Car', 'box2dCar.js', 'Controllable vehicle using the Box2D physics plugin'),
-    new ExampleInfo('Post Processing', 'postProcess.js', 'Post processing plugin demo'),
-    new ExampleInfo('UI System Plugin', 'uiSystem.js', 'Simple example of LittleJS UI plugin'),
+    new ExampleInfo('Starfield', 'starfield.js', 'A moving starfield effect'),
     new ExampleInfo('--- MINI GAMES ---'),
     new ExampleInfo('Platformer Game', 'platformer.js', 'Platformer jumping game'),
     new ExampleInfo('Top Down Game', 'topDown.js', 'Top down adventure game'),
@@ -84,6 +82,11 @@ const exampleList =
     new ExampleInfo('Pong Game', 'pongGame.js', 'Simple pong style game'),
     new ExampleInfo('Sliding Puzzle', 'slidingPuzzle.js', 'Sliding tile puzzle game'),
     new ExampleInfo('Raycasting Game', 'raycasting.js', 'Pseudo 3D raycasting system'),
+    new ExampleInfo('--- PLUGINS ---'),
+    new ExampleInfo('Box2d Demo', 'box2d.js', 'Demo of the Box2D physics plugin'),
+    new ExampleInfo('Box2d Car', 'box2dCar.js', 'Controllable vehicle using the Box2D physics plugin'),
+    new ExampleInfo('Post Processing', 'postProcess.js', 'Post processing plugin demo'),
+    new ExampleInfo('UI System Plugin', 'uiSystem.js', 'Simple example of LittleJS UI plugin'),
     new ExampleInfo('--- FULL EXAMPLES ---'),
     new ExampleInfo('Starter', 'starter', 'Clean starter project', true),
     new ExampleInfo('Breakout Tutorial', 'breakoutTutorial', 'Tutorial Breakout example', true),
@@ -120,6 +123,8 @@ onresize = () =>
     let h = w / aspect | 0;
     iframeContainer.style.width = w + 'px';
     iframeContainer.style.height = h + 'px';
+    // fix code mirror width
+    container3.style.width = w-30 + 'px';
 }
 onresize();
 
@@ -192,6 +197,13 @@ function codeInput()
     clearTimeout(inputTimeout);
     const code = codeMirror ? codeMirror.getValue() : textareaCode.value;
     inputTimeout = setTimeout(() => setCode(code), 500);
+}
+
+function refreshCode()
+{
+    // manually refresh/run the code regardless of live edit setting
+    const code = codeMirror ? codeMirror.getValue() : textareaCode.value;
+    setCode(code);
 }
 
 async function loadFile(filename, largeExample)
@@ -374,13 +386,12 @@ function initCodeMirror()
     {
         theme: savedTheme,
         indentUnit: 4,
+        mode: 'javascript',
         lineNumbers: true,
         lineWrapping: true,
         matchBrackets: true,
     });
-    
-    // make code mirror extend to the full height
-    codeMirror.getWrapperElement().style.flexGrow = '1';
+    codeMirror.on('change', codeInput);
     loadTheme();
 }
 
