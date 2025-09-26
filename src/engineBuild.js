@@ -26,7 +26,6 @@ const engineSourceFiles =
     `${SOURCE_FOLDER}/engineParticles.js`,
     `${SOURCE_FOLDER}/engineMedals.js`,
     `${SOURCE_FOLDER}/engineWebGL.js`,
-    `${SOURCE_FOLDER}/engine.js`,
 ];
 const enginePluginFiles =
 [
@@ -35,6 +34,7 @@ const enginePluginFiles =
     `${PLUGIN_FOLDER}/zzfxm.js`,
     `${PLUGIN_FOLDER}/uiSystem.js`,
     `${PLUGIN_FOLDER}/box2d.js`,
+    `${PLUGIN_FOLDER}/drawUtilities.js`,
 ];
 const engineExtraFiles =
 [
@@ -49,7 +49,7 @@ const asciiArt =`
   OOO  OOO     OO  OO     OO=OO-oo\\
 `;
 const license = '// LittleJS Engine - MIT License - Copyright 2021 Frank Force\n'+
-                '// https://github.com/KilledByAPixel/LittleJS\n';
+                '// https://github.com/KilledByAPixel/LittleJS\n\n';
 
 console.log(asciiArt);
 console.log('Choo Choo... Building LittleJS Engine!\n');
@@ -75,6 +75,7 @@ Build
     'Build Engine -- all',
     `${BUILD_FOLDER}/${ENGINE_NAME}.js`,
     [
+        `${SOURCE_FOLDER}/engine.js`,
         `${SOURCE_FOLDER}/engineDebug.js`, 
         ...engineSourceFiles, 
         ...enginePluginFiles
@@ -87,6 +88,7 @@ Build
     'Build Engine -- release',
     `${BUILD_FOLDER}/${ENGINE_NAME}.release.js`,
     [
+        `${SOURCE_FOLDER}/engine.js`,
         `${SOURCE_FOLDER}/engineRelease.js`, 
         ...engineSourceFiles, 
         ...enginePluginFiles
@@ -99,7 +101,7 @@ Build
     'Build Engine -- minified',
     `${BUILD_FOLDER}/${ENGINE_NAME}.min.js`,
     [`${BUILD_FOLDER}/${ENGINE_NAME}.release.js`],
-    [closureCompilerStep, uglifyBuildStep]
+    [closureCompilerStep, uglifyBuildStep, addLicenseStep]
 );
 
 Build
@@ -123,7 +125,7 @@ Build
         `${SOURCE_FOLDER}/engineExport.js`, 
         `${PLUGIN_FOLDER}/pluginExport.js`
     ],
-    [uglifyBuildStep]
+    [uglifyBuildStep, addLicenseStep]
 );
 
 console.log(`Engine built in ${((Date.now() - startTime)/1e3).toFixed(2)} seconds!`);
@@ -141,7 +143,7 @@ function Build(message, outputFile, files=[], buildSteps=[], isPrimaryBuild)
     if (isPrimaryBuild)
     {
         // add license and strict mode to top
-        buffer += license + '\n';
+        buffer += license;
         buffer += "'use strict';\n\n";
     }
 
@@ -187,6 +189,19 @@ function uglifyBuildStep(filename)
         child_process.execSync(`npx uglifyjs ${filename} -o ${filename}`);
     }
     catch (e) { handleError(e,'Failed to run Uglify minification step!'); }
+};
+
+// Add license to top of file
+function addLicenseStep(filename)
+{
+    try
+    {
+        // add license to top of minified file
+        let fileContent = fs.readFileSync(filename, 'utf8');
+        fileContent = license + fileContent;
+        fs.writeFileSync(filename, fileContent);
+    }
+    catch (e) { handleError(e, 'Failed to add license to minified file!'); }
 };
 
 // Build TypeScript definitions
