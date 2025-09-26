@@ -2,9 +2,8 @@ class Wall extends EngineObject
 {
     constructor(pos, size)
     {
-        super(pos, size, 0, 0, GRAY);
+        super(pos, size, 0, 0, hsl(.4,.5,.4));
         this.setCollision(); // make object collide
-        this.mass = 0; // make object have static physics
     }
     update()
     {
@@ -16,34 +15,38 @@ class Player extends EngineObject
 {
     constructor(pos)
     {
-        super(pos, vec2(1), 0, 0, YELLOW);
+        super(pos, vec2(1), tile(9), 0, YELLOW);
+        this.drawSize = vec2(2);
         this.setCollision(); // make object collide
     }
 
     update()
     {
         super.update();
-        
+
         // flappy movement controls
         if (mouseWasPressed(0) || keyWasPressed('Space'))
-            this.applyAcceleration(vec2(0,.2));
+            this.velocity = vec2(0,.2);
+        this.angle = -this.velocity.y*2;
     }
 
     collideWithObject(object)
     {
-        this.destroy(); // die if wall is hit
+        // reset game
+        engineObjectsDestroy();
+        gameInit();
     }
 }
 
 function gameInit()
 {
     // setup level
-    gravity.y = -.005;
-    new Player(vec2(-7,6));
+    gravity.y = -.01;
     for (let i=100; i--;)
     {
         const h=50, y=-h/2-6+rand(9), spacing=15, gap=5;
-        new Wall(vec2(9 + i*spacing,y+h + gap), vec2(3,h));
-        new Wall(vec2(9 + i*spacing,y), vec2(3,h));
+        new Wall(vec2(14 + i*spacing,y+h + gap), vec2(3,h));
+        new Wall(vec2(14 + i*spacing,y), vec2(3,h));
     }
+    new Player(vec2(-7,6));
 }
