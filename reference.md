@@ -176,7 +176,6 @@ canvasPixelated = true        // Use nearest neighbor canvas scaling for more pi
 tilesPixelated = true         // Disable filtering for crisper pixel art
 showSplashScreen = false      // Show the LittleJS splash screen on startup
 glEnable = true               // Enable fast WebGL rendering
-glOverlay = true              // Prevent compositing the WebGL canvas
 
 // Tile sheet settings
 tileSizeDefault = (16,16)  // Default size of tiles in pixels
