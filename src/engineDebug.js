@@ -434,18 +434,19 @@ function debugRender()
 
     {
         // draw debug overlay
+        const fontSize = 20;
         overlayContext.save();
         overlayContext.fillStyle = '#fff';
         overlayContext.textAlign = 'left';
         overlayContext.textBaseline = 'top';
-        overlayContext.font = '28px monospace';
+        overlayContext.font = fontSize + 'px monospace';
         overlayContext.shadowColor = '#000';
         overlayContext.shadowBlur = 9;
 
-        let x = 9, y = -20, h = 30;
+        let x = 9, y = 0, h = fontSize*1.2|0;
         if (debugOverlay)
         {
-            overlayContext.fillText(engineName, x, y += h);
+            overlayContext.fillText(engineName, x, y += h/2 );
             overlayContext.fillText('Time: ' + formatTime(time), x, y += h);
             overlayContext.fillText('FPS: ' + averageFPS.toFixed(1), x, y += h);
             overlayContext.fillText('Objects: ' + engineObjects.length, x, y += h);
