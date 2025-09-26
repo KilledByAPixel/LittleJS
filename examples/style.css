@@ -41,6 +41,7 @@ iframe
     background: #000;
     font-size: 20px;
 }
+#textareaConsole,
 #textareaError
 {
     flex-grow: .3;
@@ -49,6 +50,10 @@ iframe
     display: none;
     color:#f22;
     background: #111;
+}
+#textareaConsole
+{
+    color: #ff0;
 }
 #container3
 {

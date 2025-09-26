@@ -25,12 +25,14 @@ Theme:
 </div> 
 <textarea id=textareaCode oninput=codeInput() spellcheck=false></textarea>
 <textarea id=textareaError readonly spellcheck=false></textarea>
+<textarea id=textareaConsole readonly spellcheck=false></textarea>
 </div>
 <div id=container2>
 <div id=iframeContainer></div>
 <div>
 <input id=inputSearch placeholder='Search examples...' oninput=filterExamples() onkeydown='if(event.key=="Escape")filterExamples(1)'> 
 <button onclick=filterExamples(1)>Clear</button>
+<button id=buttonPause>Pause</button>
 <button id=buttonScreenshot>Screenshot</button>
 </div>
 <select id=selectExample autofocus onchange=setExample() size=2></select>
@@ -44,7 +46,7 @@ class ExampleInfo
     constructor(name, filename, description='', largeExample=false)
     {
         if (filename && !largeExample)
-            filename = 'shorts/' + filename; // short examples folder
+            filename = 'shorts/' + filename;
         this.name = name;
         this.filename = filename;
         this.description = description;
@@ -71,6 +73,7 @@ const exampleList =
     new ExampleInfo('Piano', 'piano.js', 'A simple piano keyboard demo'),
     new ExampleInfo('Maze Generator', 'maze.js', 'Generates a random maze'),
     new ExampleInfo('Starfield', 'starfield.js', 'A moving starfield effect'),
+    new ExampleInfo('Medals', 'medals.js', 'How to use the medal system'),
     new ExampleInfo('--- MINI GAMES ---'),
     new ExampleInfo('Platformer Game', 'platformer.js', 'Platformer jumping game'),
     new ExampleInfo('Top Down Game', 'topDown.js', 'Top down adventure game'),
@@ -87,6 +90,7 @@ const exampleList =
     new ExampleInfo('Box2d Car', 'box2dCar.js', 'Controllable vehicle using the Box2D physics plugin'),
     new ExampleInfo('Post Processing', 'postProcess.js', 'Post processing plugin demo'),
     new ExampleInfo('UI System Plugin', 'uiSystem.js', 'Simple example of LittleJS UI plugin'),
+    new ExampleInfo('Nine Slice', 'nineSlice.js', 'Demo of nine slice and three slice drawing'),
     new ExampleInfo('--- FULL EXAMPLES ---'),
     new ExampleInfo('Starter', 'starter', 'Clean starter project', true),
     new ExampleInfo('Breakout Tutorial', 'breakoutTutorial', 'Tutorial Breakout example', true),
@@ -97,7 +101,6 @@ const exampleList =
     new ExampleInfo('Box2D Plugin', 'box2d', 'Demo of the Box2D physics plugin', true),
     new ExampleInfo('HTML Menus', 'htmlMenu', 'Shows how to combine HTML with LittleJS', true),
     new ExampleInfo('UI System Plugin', 'uiSystem', 'How to use LittleJS UI plugin', true),
-    // Add more examples here!
 ];
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -269,6 +272,7 @@ function setCode(code)
         iframeContainer.removeChild(iframeExample);
 
     unsetErrorMessage();
+    unsetConsoleMessage();
     iframeExample = document.createElement('iframe');
     iframeContainer.appendChild(iframeExample);
     iframeExample.onload = () =>
@@ -293,11 +297,28 @@ function setCode(code)
                 text += `\n\n` + event.reason.stack;
             setErrorMessage(text);
         };
+
+        // intercept console methods
+        const originalConsole = iframeContent.console;
+        function interceptConsole(method)
+        {
+            const original = originalConsole[method];
+            iframeContent.console[method] = function(...args)
+            {
+                let message = args.join('\n');
+                setConsoleMessage(message);
+                original.apply(originalConsole, args);
+            };
+        }
+        ['log','info','warn','error','debug'].forEach(f=>interceptConsole(f));
+
+        // intercept asserts
+        const originalAssert = iframeContent.console.assert;
         iframeContent.console.assert = function (condition, output)
         {
-            // route asserts to our error handler
-            if (!condition)
-                throw 'Assertion failed!\n' + (output || '') + '\n' + (new Error).stack;
+           if (!condition)
+                setErrorMessage('Assertion failed!\n' + (output || '') + '\n' + (new Error).stack);
+            originalAssert.apply(this, arguments);
         };
 
         // create a script element that overrides the default functions
@@ -316,16 +337,29 @@ function setCode(code)
             if (iframeContent.debugScreenshot)
                 iframeContent.debugScreenshot();
         }
+
+        // pause/resume functionality
+        buttonPause.onclick = () =>
+        {
+            if (!iframeContent.getPaused || !iframeContent.setPaused)
+                return;
+            
+            const paused = !iframeContent.getPaused();
+            iframeContent.setPaused(paused);
+            buttonPause.textContent = paused ? 'Resume' : 'Pause';
+        }
+        buttonPause.textContent = 'Pause';
     }
     iframeExample.src = 'shorts/base.html';
 }
 
-function unsetErrorMessage()
+function unsetMessage(element)
 {
-    textareaError.style.display = 'none';
+    element.style.display = 'none';
+    element.value = '';
 }
 
-function setErrorMessage(message)
+function setMessage(message, element)
 {
     if (message === null)
         message = 'null';
@@ -333,9 +367,14 @@ function setErrorMessage(message)
         message = 'NaN';
     if (message === undefined)
         message = 'undefined';
-    textareaError.value = message;
-    textareaError.style.display = message ? 'block' : 'none';
+    element.value = message;
+    element.style.display = message ? 'block' : 'none';
 }
+
+function unsetErrorMessage() { unsetMessage(textareaError); }
+function setErrorMessage(message) { setMessage(message, textareaError); }
+function unsetConsoleMessage() { unsetMessage(textareaConsole); }
+function setConsoleMessage(message) { setMessage(message, textareaConsole); }
 
 ///////////////////////////////////////////////////////////////////////////////
 // setup code mirror
