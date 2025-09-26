@@ -10,6 +10,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Draw a scalable nine-slice UI element to the overlay canvas in screen space
+ *  This function can not apply color because it draws using the overlay 2d context
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - Starting tile for the nine-slice pattern
@@ -22,6 +23,7 @@ function drawNineSliceScreen(pos, size, startTile, borderSize=32, extraSpace=1)
 }
 
 /** Draw a scalable nine-slice UI element in world space
+ *  This function can apply color and additive color if webgl is enabled
  *  @param {Vector2} pos - World space position
  *  @param {Vector2} size - World space size
  *  @param {TileInfo} startTile - Starting tile for the nine-slice pattern
@@ -65,6 +67,7 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
 }
 
 /** Draw a scalable three-slice UI element to the overlay canvas in screen space
+ *  This function can not apply color because it draws using the overlay 2d context
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - Starting tile for the three-slice pattern
@@ -77,6 +80,7 @@ function drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=1)
 }
 
 /** Draw a scalable three-slice UI element in world space
+ *  This function can apply color and additive color if webgl is enabled
  *  @param {Vector2} pos - World space position
  *  @param {Vector2} size - World space size
  *  @param {TileInfo} startTile - Starting tile for the three-slice pattern
