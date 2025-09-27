@@ -252,6 +252,8 @@ export
 	mouseWasReleased,
 	mousePos,
 	mousePosScreen,
+	mouseDelta,
+	mouseDeltaScreen,
 	mouseWheel,
 	isUsingGamepad,
 	inputPreventDefault,
@@ -264,6 +266,9 @@ export
 	vibrate,
 	vibrateStop,
 	isTouchDevice,
+	pointerLockRequest,
+	pointerLockExit,
+	pointerLockIsActive,
 
 	// Audio
 	Sound,

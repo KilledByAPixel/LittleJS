@@ -101,6 +101,16 @@ let mousePos = vec2();
  *  @memberof Input */
 let mousePosScreen = vec2();
 
+/** Mouse movement delta in world space
+ *  @type {Vector2}
+ *  @memberof Input */
+let mouseDelta = vec2();
+
+/** Mouse movement delta in screen space
+ *  @type {Vector2}
+ *  @memberof Input */
+let mouseDeltaScreen = vec2();
+
 /** Mouse wheel delta this frame
  *  @type {number}
  *  @memberof Input */
@@ -171,6 +181,7 @@ function inputUpdate()
 
     // update mouse world space position
     mousePos = screenToWorld(mousePosScreen);
+    mouseDelta = mouseDeltaScreen.multiply(vec2(1,-1)).rotate(-cameraAngle);
 
     // update gamepads if enabled
     gamepadsUpdate();
@@ -185,13 +196,29 @@ function inputUpdatePost()
     for (const i in deviceInputData)
         deviceInputData[i] &= 1;
     mouseWheel = 0;
+    mouseDelta = vec2();
+    mouseDeltaScreen = vec2();
 }
 
 function inputInit()
 {
     if (headlessMode) return;
 
-    onkeydown = (e)=>
+    // add event listeners
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('keyup', onKeyUp);
+    document.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mouseup', onMouseUp);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('wheel', onMouseWheel);
+    document.addEventListener('contextmenu', onContextMenu);
+    document.addEventListener('blur', onBlur);
+
+    // init touch input
+    if (isTouchDevice && touchInputEnable)
+        touchInputInit();
+
+    function onKeyDown(e)
     {
         if (!e.repeat)
         {
@@ -201,45 +228,49 @@ function inputInit()
                 inputData[0][remapKey(e.code)] = 3;
         }
     }
-
-    onkeyup = (e)=>
+    function onKeyUp(e)
     {
         inputData[0][e.code] = (inputData[0][e.code]&2) | 4;
         if (inputWASDEmulateDirection)
             inputData[0][remapKey(e.code)] = 4;
     }
-
-    // handle remapping wasd keys to directions
     function remapKey(c)
     {
-        return inputWASDEmulateDirection ? 
-            c == 'KeyW' ? 'ArrowUp' : 
-            c == 'KeyS' ? 'ArrowDown' : 
-            c == 'KeyA' ? 'ArrowLeft' : 
+        // handle remapping wasd keys to directions
+        return inputWASDEmulateDirection ?
+            c == 'KeyW' ? 'ArrowUp' :
+            c == 'KeyS' ? 'ArrowDown' :
+            c == 'KeyA' ? 'ArrowLeft' :
             c == 'KeyD' ? 'ArrowRight' : c : c;
     }
-    
-    // mouse event handlers
-    onmousedown   = (e)=>
+    function onMouseDown(e)
     {
+        if (isTouchDevice && touchInputEnable)
+            return;
+
         // fix stalled audio requiring user interaction
         if (soundEnable && !headlessMode && audioContext && audioContext.state != 'running')
             audioContext.resume();
         
-        isUsingGamepad = false; 
-        inputData[0][e.button] = 3; 
-        mousePosScreen = mouseEventToScreen(e); 
+        isUsingGamepad = false;
+        inputData[0][e.button] = 3;
+        mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
         inputPreventDefault && e.button && e.preventDefault();
     }
-    onmouseup     = (e)=> inputData[0][e.button] = (inputData[0][e.button]&2) | 4;
-    onmousemove   = (e)=> mousePosScreen = mouseEventToScreen(e);
-    onwheel       = (e)=> mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY);
-    oncontextmenu = (e)=> false; // prevent right click menu
-    onblur        = (e) => inputClear(); // reset input when focus is lost
-
-    // init touch input
-    if (isTouchDevice && touchInputEnable)
-        touchInputInit();
+    function onMouseUp(e)
+    {
+        if (isTouchDevice && touchInputEnable)
+            return;
+        inputData[0][e.button] = (inputData[0][e.button]&2) | 4;
+    }
+    function onMouseMove(e)
+    {
+        mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
+        mouseDeltaScreen = mouseDeltaScreen.add(vec2(e.movementX, e.movementY));
+    }
+    function onMouseWheel(e) { mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY); }
+    function onContextMenu(e) { e.preventDefault(); } // prevent right click menu
+    function onBlur() { inputClear(); } // reset input when focus is lost
 }
 
 // convert a mouse or touch event position to screen space
@@ -387,9 +418,6 @@ function touchInputInit()
     document.addEventListener('touchmove',  (e) => handleTouch(e), { passive: false });
     document.addEventListener('touchend',   (e) => handleTouch(e), { passive: false });
 
-    // override mouse events
-    onmousedown = onmouseup = ()=> 0;
-
     // handle all touch events the same way
     let wasTouching;
     function handleTouchDefault(e)
@@ -404,9 +432,16 @@ function touchInputInit()
         if (touching)
         {
             // set event pos and pass it along
-            const p = vec2(e.touches[0].clientX, e.touches[0].clientY);
-            mousePosScreen = mouseEventToScreen(p);
-            wasTouching ? isUsingGamepad = touchGamepadEnable : inputData[0][button] = 3;
+            const pos = vec2(e.touches[0].clientX, e.touches[0].clientY);
+            const lastMousePosScreen = mousePosScreen;
+            mousePosScreen = mouseEventToScreen(pos);
+            if (wasTouching)
+            {
+                mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(lastMousePosScreen));
+                isUsingGamepad = touchGamepadEnable;
+            }
+            else
+                inputData[0][button] = 3;
         }
         else if (wasTouching)
             inputData[0][button] = inputData[0][button] & 2 | 4;
@@ -537,3 +572,23 @@ function touchGamepadRender()
     // set canvas back to normal
     context.restore();
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// Pointer Lock
+
+/** Request to lock the pointer, does not work on touch devices
+ *  @memberof Input */
+function pointerLockRequest()
+{
+    if (!isTouchDevice)
+        mainCanvas.requestPointerLock && mainCanvas.requestPointerLock();
+}
+
+/** Request to unlock the pointer
+ *  @memberof Input */
+function pointerLockExit() { document.exitPointerLock && document.exitPointerLock(); }
+
+/** Check if pointer is locked (true if locked)
+ *  @return {boolean}
+ *  @memberof Input */
+function pointerLockIsActive() { return document.pointerLockElement == mainCanvas }
