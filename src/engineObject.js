@@ -380,6 +380,10 @@ class EngineObject
      *  @param {Vector2} acceleration */
     applyAcceleration(acceleration) { if (this.mass) this.velocity = this.velocity.add(acceleration); }
 
+    /** Apply angular acceleration to this object 
+     *  @param {number} acceleration */
+    applyAngularAcceleration(acceleration) { if (this.mass) this.angleVelocity += acceleration; }
+
     /** Apply force to this object (adjust velocity, affected by mass)
      *  @param {Vector2} force */
     applyForce(force) { this.applyAcceleration(force.scale(1/this.mass)); }
