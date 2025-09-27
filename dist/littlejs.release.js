@@ -636,7 +636,6 @@ function drawEngineSplashScreen(t)
     
     x.restore();
 }
-
 /** 
  * LittleJS - Release Mode
  * - This file is used for release builds in place of engineDebug.js
@@ -2654,7 +2653,6 @@ class EngineObject
         this.parent && drawLine(this.pos, this.parent.pos, .1, rgb(1,1,1,.5));
     }
 }
-
 /** 
  * LittleJS Drawing System
  * - Hybrid system with both Canvas2D and WebGL available
@@ -4332,7 +4330,6 @@ function zzfxG
 
     return b; // return sample buffer
 }
-
 /** 
  * LittleJS Tile Layer System
  * - Caches arrays of tiles to off screen canvas for fast rendering
@@ -5932,7 +5929,6 @@ class NewgroundsPlugin
         return xmlHttp.responseText && JSON.parse(xmlHttp.responseText);
     }
 }
-
 /**
  * LittleJS Post Processing Plugin
  * - Supports shadertoy style post processing shaders
@@ -6047,7 +6043,6 @@ class PostProcessPlugin
         }
     }
 }
-
 /**
  * LittleJS ZzFXM Plugin
  */
@@ -6209,7 +6204,6 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
 
   return [leftChannelBuffer, rightChannelBuffer];
 }
-
 /**
  * LittleJS User Interface Plugin
  * - call new UISystemPlugin() to setup the UI system
@@ -8617,7 +8611,6 @@ async function box2dInit()
         box2d.world.SetDebugDraw(debugDraw);
     }
 }
-
 /**
  * LittleJS Drawing Utilities Plugin
  * - Extra drawing functions for LittleJS
