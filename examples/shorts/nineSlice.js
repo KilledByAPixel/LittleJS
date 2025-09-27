@@ -16,6 +16,6 @@ function gameRender()
     drawTextOverlay('Three Slice\nThick Border', vec2(-7,-4), 1, BLACK);
 
     // draw three slice in screen space with thick border
-    drawThreeSliceScreen(vec2(700,400), vec2(300,150), threeSliceTile);
+    drawThreeSliceScreen(vec2(700,400), vec2(400,150), threeSliceTile);
     drawTextScreen('Three Slice\nScreen Space', vec2(700,400), 30, BLACK);
 }
