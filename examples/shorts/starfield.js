@@ -1,6 +1,6 @@
 function gameRender()
 {
-    setBlendMode(1)
+    setBlendMode(1);
     for(let i=2e3; i--;)
     {
         // use math to generate random star positions
@@ -10,4 +10,5 @@ function gameRender()
         const color = hsl(0, 0, Math.sin(i)**4);
         drawRect(pos, size, color);
     }
+    setBlendMode(0);
 }
