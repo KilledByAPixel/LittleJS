@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.12.12';
+const engineVersion = '1.12.13';
 
 /** Frames per second to update
  *  @type {number}
@@ -1733,6 +1733,12 @@ class Timer
  *  @memberof Settings */
 let cameraPos = vec2();
 
+/** Rotation angle of camera in world space
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let cameraAngle = 0;
+
 /** Scale of camera in world space
  *  @type {number}
  *  @default
@@ -1992,6 +1998,11 @@ let medalsPreventUnlock = false;
  *  @param {Vector2} pos
  *  @memberof Settings */
 function setCameraPos(pos) { cameraPos = pos; }
+
+/** Set angle of camera in world space
+ *  @param {number} angle
+ *  @memberof Settings */
+function setCameraAngle(angle) { cameraAngle = angle; }
 
 /** Set scale of camera in world space
  *  @param {number} scale
@@ -2856,11 +2867,18 @@ class TextureInfo
  *  @memberof Draw */
 function screenToWorld(screenPos)
 {
-    return new Vector2
-    (
-        (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale + cameraPos.x,
-        (screenPos.y - mainCanvasSize.y/2 + .5) / -cameraScale + cameraPos.y
-    );
+    let cameraPosRelativeX = (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale;
+    let cameraPosRelativeY = (screenPos.y - mainCanvasSize.y/2 + .5) / -cameraScale;
+    if (cameraAngle) 
+    {
+        // apply camera rotation
+        const cos = Math.cos(cameraAngle), sin = Math.sin(cameraAngle);
+        const rotatedX = cameraPosRelativeX * cos - cameraPosRelativeY * sin;
+        const rotatedY = cameraPosRelativeX * sin + cameraPosRelativeY * cos;
+        cameraPosRelativeX = rotatedX;
+        cameraPosRelativeY = rotatedY;
+    }
+    return new Vector2(cameraPosRelativeX + cameraPos.x, cameraPosRelativeY + cameraPos.y);
 }
 
 /** Convert from world to screen space coordinates
@@ -2869,10 +2887,21 @@ function screenToWorld(screenPos)
  *  @memberof Draw */
 function worldToScreen(worldPos)
 {
+    let cameraPosRelativeX = worldPos.x - cameraPos.x;
+    let cameraPosRelativeY = worldPos.y - cameraPos.y;
+    if (cameraAngle)
+    {
+        // apply inverse camera rotation
+        const cos = Math.cos(-cameraAngle), sin = Math.sin(-cameraAngle);
+        const rotatedX = cameraPosRelativeX * cos - cameraPosRelativeY * sin;
+        const rotatedY = cameraPosRelativeX * sin + cameraPosRelativeY * cos;
+        cameraPosRelativeX = rotatedX;
+        cameraPosRelativeY = rotatedY;
+    }
     return new Vector2
     (
-        (worldPos.x - cameraPos.x) *  cameraScale + mainCanvasSize.x/2 - .5,
-        (worldPos.y - cameraPos.y) * -cameraScale + mainCanvasSize.y/2 - .5
+        cameraPosRelativeX *  cameraScale + mainCanvasSize.x/2 - .5,
+        cameraPosRelativeY * -cameraScale + mainCanvasSize.y/2 - .5
     );
 }
 
@@ -3089,6 +3118,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, conte
     }
     context.save();
     context.translate(pos.x+.5, pos.y+.5);
+    context.rotate(cameraAngle);
     context.rotate(angle);
     context.scale(mirror ? -size.x : size.x, -size.y);
     drawFunction(context);
@@ -3415,6 +3445,16 @@ let mousePos = vec2();
  *  @memberof Input */
 let mousePosScreen = vec2();
 
+/** Mouse movement delta in world space
+ *  @type {Vector2}
+ *  @memberof Input */
+let mouseDelta = vec2();
+
+/** Mouse movement delta in screen space
+ *  @type {Vector2}
+ *  @memberof Input */
+let mouseDeltaScreen = vec2();
+
 /** Mouse wheel delta this frame
  *  @type {number}
  *  @memberof Input */
@@ -3485,6 +3525,7 @@ function inputUpdate()
 
     // update mouse world space position
     mousePos = screenToWorld(mousePosScreen);
+    mouseDelta = mouseDeltaScreen.multiply(vec2(1,-1)).rotate(-cameraAngle);
 
     // update gamepads if enabled
     gamepadsUpdate();
@@ -3499,13 +3540,29 @@ function inputUpdatePost()
     for (const i in deviceInputData)
         deviceInputData[i] &= 1;
     mouseWheel = 0;
+    mouseDelta = vec2();
+    mouseDeltaScreen = vec2();
 }
 
 function inputInit()
 {
     if (headlessMode) return;
 
-    onkeydown = (e)=>
+    // add event listeners
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('keyup', onKeyUp);
+    document.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mouseup', onMouseUp);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('wheel', onMouseWheel);
+    document.addEventListener('contextmenu', onContextMenu);
+    document.addEventListener('blur', onBlur);
+
+    // init touch input
+    if (isTouchDevice && touchInputEnable)
+        touchInputInit();
+
+    function onKeyDown(e)
     {
         if (!e.repeat)
         {
@@ -3515,45 +3572,49 @@ function inputInit()
                 inputData[0][remapKey(e.code)] = 3;
         }
     }
-
-    onkeyup = (e)=>
+    function onKeyUp(e)
     {
         inputData[0][e.code] = (inputData[0][e.code]&2) | 4;
         if (inputWASDEmulateDirection)
             inputData[0][remapKey(e.code)] = 4;
     }
-
-    // handle remapping wasd keys to directions
     function remapKey(c)
     {
-        return inputWASDEmulateDirection ? 
-            c == 'KeyW' ? 'ArrowUp' : 
-            c == 'KeyS' ? 'ArrowDown' : 
-            c == 'KeyA' ? 'ArrowLeft' : 
+        // handle remapping wasd keys to directions
+        return inputWASDEmulateDirection ?
+            c == 'KeyW' ? 'ArrowUp' :
+            c == 'KeyS' ? 'ArrowDown' :
+            c == 'KeyA' ? 'ArrowLeft' :
             c == 'KeyD' ? 'ArrowRight' : c : c;
     }
-    
-    // mouse event handlers
-    onmousedown   = (e)=>
+    function onMouseDown(e)
     {
+        if (isTouchDevice && touchInputEnable)
+            return;
+
         // fix stalled audio requiring user interaction
         if (soundEnable && !headlessMode && audioContext && audioContext.state != 'running')
             audioContext.resume();
         
-        isUsingGamepad = false; 
-        inputData[0][e.button] = 3; 
-        mousePosScreen = mouseEventToScreen(e); 
+        isUsingGamepad = false;
+        inputData[0][e.button] = 3;
+        mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
         inputPreventDefault && e.button && e.preventDefault();
     }
-    onmouseup     = (e)=> inputData[0][e.button] = (inputData[0][e.button]&2) | 4;
-    onmousemove   = (e)=> mousePosScreen = mouseEventToScreen(e);
-    onwheel       = (e)=> mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY);
-    oncontextmenu = (e)=> false; // prevent right click menu
-    onblur        = (e) => inputClear(); // reset input when focus is lost
-
-    // init touch input
-    if (isTouchDevice && touchInputEnable)
-        touchInputInit();
+    function onMouseUp(e)
+    {
+        if (isTouchDevice && touchInputEnable)
+            return;
+        inputData[0][e.button] = (inputData[0][e.button]&2) | 4;
+    }
+    function onMouseMove(e)
+    {
+        mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
+        mouseDeltaScreen = mouseDeltaScreen.add(vec2(e.movementX, e.movementY));
+    }
+    function onMouseWheel(e) { mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY); }
+    function onContextMenu(e) { e.preventDefault(); } // prevent right click menu
+    function onBlur() { inputClear(); } // reset input when focus is lost
 }
 
 // convert a mouse or touch event position to screen space
@@ -3701,9 +3762,6 @@ function touchInputInit()
     document.addEventListener('touchmove',  (e) => handleTouch(e), { passive: false });
     document.addEventListener('touchend',   (e) => handleTouch(e), { passive: false });
 
-    // override mouse events
-    onmousedown = onmouseup = ()=> 0;
-
     // handle all touch events the same way
     let wasTouching;
     function handleTouchDefault(e)
@@ -3718,9 +3776,16 @@ function touchInputInit()
         if (touching)
         {
             // set event pos and pass it along
-            const p = vec2(e.touches[0].clientX, e.touches[0].clientY);
-            mousePosScreen = mouseEventToScreen(p);
-            wasTouching ? isUsingGamepad = touchGamepadEnable : inputData[0][button] = 3;
+            const pos = vec2(e.touches[0].clientX, e.touches[0].clientY);
+            const lastMousePosScreen = mousePosScreen;
+            mousePosScreen = mouseEventToScreen(pos);
+            if (wasTouching)
+            {
+                mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(lastMousePosScreen));
+                isUsingGamepad = touchGamepadEnable;
+            }
+            else
+                inputData[0][button] = 3;
         }
         else if (wasTouching)
             inputData[0][button] = inputData[0][button] & 2 | 4;
@@ -3851,6 +3916,26 @@ function touchGamepadRender()
     // set canvas back to normal
     context.restore();
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// Pointer Lock
+
+/** Request to lock the pointer, does not work on touch devices
+ *  @memberof Input */
+function pointerLockRequest()
+{
+    if (!isTouchDevice)
+        mainCanvas.requestPointerLock && mainCanvas.requestPointerLock();
+}
+
+/** Request to unlock the pointer
+ *  @memberof Input */
+function pointerLockExit() { document.exitPointerLock && document.exitPointerLock(); }
+
+/** Check if pointer is locked (true if locked)
+ *  @return {boolean}
+ *  @memberof Input */
+function pointerLockIsActive() { return document.pointerLockElement == mainCanvas }
 /** 
  * LittleJS Audio System
  * - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a> - ZzFX Sound Effect Generator
@@ -4582,7 +4667,7 @@ class TileLayer extends EngineObject
         const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
         const pos = this.pos.add(this.size.multiply(this.scale).scale(.5));
         const size = this.size.multiply(this.scale);
-        const useWebgl = this.glTexture != undefined;
+        const useWebgl = glEnable && this.glTexture != undefined;
         drawTile(pos, size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebgl);
     }
 
@@ -5555,18 +5640,20 @@ function glPreRender()
     initVertexAttribArray('c', glContext.UNSIGNED_BYTE, 1, 4); // color
     initVertexAttribArray('a', glContext.UNSIGNED_BYTE, 1, 4); // additiveColor
     initVertexAttribArray('r', glContext.FLOAT, 4, 1); // rotation
-
+    
     // build the transform matrix
     const s = vec2(2*cameraScale).divide(mainCanvasSize);
-    const p = vec2(-1).subtract(cameraPos.multiply(s));
+    const rotatedCam = cameraPos.rotate(cameraAngle);
+    const p = vec2(-1).subtract(rotatedCam.multiply(s));
+    const ca = Math.cos(-cameraAngle);
+    const sa = Math.sin(-cameraAngle);
     glContext.uniformMatrix4fv(glContext.getUniformLocation(glShader, 'm'), false,
-        [
-            s.x, 0,   0,   0,
-            0,   s.y, 0,   0,
-            1,   1,   1,   1,
-            p.x, p.y, 0,   0
-        ]
-    );
+    [
+        s.x  * ca,  s.y * sa, 0, 0,
+        -s.x * sa,  s.y * ca, 0, 0,
+        1,          1,        1, 0,
+        p.x,        p.y,      0, 1
+    ]);
 }
 
 /** Clear the canvas and setup the viewport

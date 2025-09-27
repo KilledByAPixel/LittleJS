@@ -242,6 +242,11 @@ declare module "littlejsengine" {
      *  @default Vector2()
      *  @memberof Settings */
     export let cameraPos: Vector2;
+    /** Rotation angle of camera in world space
+     *  @type {number}
+     *  @default
+     *  @memberof Settings */
+    export let cameraAngle: number;
     /** Scale of camera in world space
      *  @type {number}
      *  @default
@@ -428,6 +433,10 @@ declare module "littlejsengine" {
      *  @param {Vector2} pos
      *  @memberof Settings */
     export function setCameraPos(pos: Vector2): void;
+    /** Set angle of camera in world space
+     *  @param {number} angle
+     *  @memberof Settings */
+    export function setCameraAngle(angle: number): void;
     /** Set scale of camera in world space
      *  @param {number} scale
      *  @memberof Settings */
@@ -1626,6 +1635,14 @@ declare module "littlejsengine" {
      *  @type {Vector2}
      *  @memberof Input */
     export let mousePosScreen: Vector2;
+    /** Mouse movement delta in world space
+     *  @type {Vector2}
+     *  @memberof Input */
+    export let mouseDelta: Vector2;
+    /** Mouse movement delta in screen space
+     *  @type {Vector2}
+     *  @memberof Input */
+    export let mouseDeltaScreen: Vector2;
     /** Mouse wheel delta this frame
      *  @type {number}
      *  @memberof Input */
@@ -1678,6 +1695,16 @@ declare module "littlejsengine" {
     /** True if a touch device has been detected
      *  @memberof Input */
     export const isTouchDevice: boolean;
+    /** Request to lock the pointer, does not work on touch devices
+     *  @memberof Input */
+    export function pointerLockRequest(): void;
+    /** Request to unlock the pointer
+     *  @memberof Input */
+    export function pointerLockExit(): void;
+    /** Check if pointer is locked (true if locked)
+     *  @return {boolean}
+     *  @memberof Input */
+    export function pointerLockIsActive(): boolean;
     /**
      * Sound Object - Stores a sound for later use and can be played positionally
      *
