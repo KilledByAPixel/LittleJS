@@ -180,13 +180,13 @@ declare module "littlejsengine" {
      *  @memberof Debug */
     export function debugLine(posA: Vector2, posB: Vector2, color?: string, thickness?: number, time?: number): void;
     /** Draw a debug combined axis aligned bounding box in world space
-     *  @param {Vector2} pA - position A
-     *  @param {Vector2} sA - size A
-     *  @param {Vector2} pB - position B
-     *  @param {Vector2} sB - size B
+     *  @param {Vector2} posA
+     *  @param {Vector2} sizeA
+     *  @param {Vector2} posB
+     *  @param {Vector2} sizeB
      *  @param {string}  [color]
      *  @memberof Debug */
-    export function debugOverlap(pA: Vector2, sA: Vector2, pB: Vector2, sB: Vector2, color?: string): void;
+    export function debugOverlap(posA: Vector2, sizeA: Vector2, posB: Vector2, sizeB: Vector2, color?: string): void;
     /** Draw a debug axis aligned bounding box in world space
      *  @param {string}  text
      *  @param {Vector2} pos
@@ -1591,7 +1591,15 @@ declare module "littlejsengine" {
     export function keyDirection(up?: string, down?: string, left?: string, right?: string): Vector2;
     /** Clears all input
      *  @memberof Input */
-    export function clearInput(): void;
+    export function inputClear(): void;
+    /** Clears an input key state
+     *  @param {string|number} key
+     *  @param {number} [device]
+     *  @param {boolean} [clearDown=true]
+     *  @param {boolean} [clearPressed=true]
+     *  @param {boolean} [clearReleased=true]
+     *  @memberof Input */
+    export function inputClearKey(key: string | number, device?: number, clearDown?: boolean, clearPressed?: boolean, clearReleased?: boolean): void;
     /** Returns true if mouse button is down
      *  @function
      *  @param {number} button
@@ -2587,10 +2595,20 @@ declare module "littlejsengine" {
         defaultButtonColor: Color;
         /** @property {Color} - Default hover color for UI elements */
         defaultHoverColor: Color;
+        /** @property {Color} - Default color for disabled UI elements */
+        defaultDisabledColor: Color;
         /** @property {number} - Default line width for UI elements */
         defaultLineWidth: number;
+        /** @property {number} - Default rounded rect corner radius for UI elements */
+        defaultCornerRadius: number;
         /** @property {string} - Default font for UI elements */
         defaultFont: string;
+        /** @property {Sound} - Default sound when interactive UI element is pressed */
+        defaultSoundPress: any;
+        /** @property {Sound} - Default sound when interactive UI element is released */
+        defaultSoundRelease: any;
+        /** @property {Sound} - Default sound when interactive UI element is clicked */
+        defaultSoundClick: any;
         /** @property {Array<UIObject>} - List of all UI elements */
         uiObjects: any[];
         /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - Context to render UI elements to */
@@ -2600,8 +2618,9 @@ declare module "littlejsengine" {
         *  @param {Vector2} size
         *  @param {Color}   [color=uiSystem.defaultColor]
         *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
-        *  @param {Color}   [lineColor=uiSystem.defaultLineColor] */
-        drawRect(pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color): void;
+        *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
+        *  @param {number}  [lineWidth=uiSystem.defaultCornerRadius] */
+        drawRect(pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, cornerRadius?: number): void;
         /** Draw a line to the UI context
         *  @param {Vector2} posA
         *  @param {Vector2} posB
@@ -2642,26 +2661,40 @@ declare module "littlejsengine" {
         pos: Vector2;
         /** @property {Vector2} - Screen space size of the object */
         size: Vector2;
-        /** @property {Color} */
+        /** @property {Color} - color of the object */
         color: Color;
-        /** @property {Color} */
-        lineColor: Color;
-        /** @property {Color} */
+        /** @property {Color} - color for text */
         textColor: Color;
-        /** @property {Color} */
+        /** @property {Color} - color used when hovering over the object */
         hoverColor: Color;
-        /** @property {number} */
+        /** @property {Color} - color for line drawing */
+        lineColor: Color;
+        /** @property {number} - width for line drawing */
         lineWidth: number;
-        /** @property {string} */
+        /** @property {string} - font for this objecct */
         font: string;
         /** @property {number} - override for text height */
         textHeight: any;
-        /** @property {boolean} */
+        /** @property {boolean} - should this object be drawn */
         visible: boolean;
-        /** @property {Array<UIObject>} */
+        /** @property {Array<UIObject>} - a list of this object's children */
         children: any[];
-        /** @property {UIObject} */
+        /** @property {UIObject} - this object's parent, position is in parent space */
         parent: any;
+        /** @property {number} - Extra size added when checking if element is touched */
+        extraTouchSize: number;
+        /** @property {Sound} - Sound when interactive element is pressed */
+        soundPress: any;
+        /** @property {Sound} - Sound when interactive element is released */
+        soundRelease: any;
+        /** @property {Sound} - Sound when interactive element is clicked */
+        soundClick: any;
+        /** @property {boolean} - Is the mouse over this element */
+        mouseIsOver: boolean;
+        /** @property {boolean} - Is this element interactive */
+        interactive: boolean;
+        /** @property {boolean} - Is the mouse held on this element (was pressed while over and hasn't been released) */
+        mouseIsHeld: boolean;
         /** Add a child UIObject to this object
          *  @param {UIObject} child
          */
@@ -2672,10 +2705,10 @@ declare module "littlejsengine" {
         removeChild(child: UIObject): void;
         /** Update the object, called automatically by plugin once each frame */
         update(): void;
-        mouseIsOver: boolean;
-        mouseIsHeld: boolean;
         /** Render the object, called automatically by plugin once each frame */
         render(): void;
+        /** Special update for when object is invisible */
+        updateInvisible(): void;
         /** Called when the mouse enters the object */
         onEnter(): void;
         /** Called when the mouse leaves the object */
@@ -2684,6 +2717,8 @@ declare module "littlejsengine" {
         onPress(): void;
         /** Called when the mouse is released while over the object */
         onRelease(): void;
+        /** Called when user clicks on this object */
+        onClick(): void;
         /** Called when the state of this object changes */
         onChange(): void;
     }
@@ -2740,6 +2775,10 @@ declare module "littlejsengine" {
         constructor(pos?: Vector2, size?: Vector2, text?: string, color?: Color);
         /** @property {string} */
         text: string;
+        /** @property {Color} */
+        disabledColor: Color;
+        /** @property {boolean} */
+        disabled: boolean;
     }
     /**
      * UICheckbox - A UI object that acts as a checkbox
@@ -2773,6 +2812,7 @@ declare module "littlejsengine" {
         value: number;
         /** @property {string} */
         text: string;
+        /** @property {Color} */
         handleColor: Color;
     }
     /**
@@ -3686,6 +3726,7 @@ declare module "littlejsengine" {
         getCorrectionFactor(): number;
     }
     /** Draw a scalable nine-slice UI element in world space
+     *  This function can apply color and additive color if webgl is enabled
      *  @param {Vector2} pos - World space position
      *  @param {Vector2} size - World space size
      *  @param {TileInfo} startTile - Starting tile for the nine-slice pattern
@@ -3705,6 +3746,7 @@ declare module "littlejsengine" {
      * @namespace DrawUtilities
      */
     /** Draw a scalable nine-slice UI element to the overlay canvas in screen space
+     *  This function can not apply color because it draws using the overlay 2d context
      *  @param {Vector2} pos - Screen space position
      *  @param {Vector2} size - Screen space size
      *  @param {TileInfo} startTile - Starting tile for the nine-slice pattern
@@ -3713,6 +3755,7 @@ declare module "littlejsengine" {
      *  @memberof DrawUtilities */
     export function drawNineSliceScreen(pos: Vector2, size: Vector2, startTile: TileInfo, borderSize?: number, extraSpace?: number): void;
     /** Draw a scalable three-slice UI element in world space
+     *  This function can apply color and additive color if webgl is enabled
      *  @param {Vector2} pos - World space position
      *  @param {Vector2} size - World space size
      *  @param {TileInfo} startTile - Starting tile for the three-slice pattern
@@ -3726,6 +3769,7 @@ declare module "littlejsengine" {
      *  @memberof DrawUtilities */
     export function drawThreeSlice(pos: Vector2, size: Vector2, startTile: TileInfo, color?: Color, borderSize?: number, additiveColor?: Color, extraSpace?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
     /** Draw a scalable three-slice UI element to the overlay canvas in screen space
+     *  This function can not apply color because it draws using the overlay 2d context
      *  @param {Vector2} pos - Screen space position
      *  @param {Vector2} size - Screen space size
      *  @param {TileInfo} startTile - Starting tile for the three-slice pattern

@@ -359,7 +359,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             updateSplash();
             function updateSplash()
             {
-                clearInput();
+                inputClear();
                 drawEngineSplashScreen(t+=.01);
                 t>1 ? resolve() : setTimeout(updateSplash, 16);
             }
@@ -3370,7 +3370,21 @@ function keyDirection(up='ArrowUp', down='ArrowDown', left='ArrowLeft', right='A
 
 /** Clears all input
  *  @memberof Input */
-function clearInput() { inputData = [[]]; touchGamepadButtons = []; }
+function inputClear() { inputData = [[]]; touchGamepadButtons = []; }
+
+/** Clears an input key state
+ *  @param {string|number} key
+ *  @param {number} [device]
+ *  @param {boolean} [clearDown=true]
+ *  @param {boolean} [clearPressed=true]
+ *  @param {boolean} [clearReleased=true]
+ *  @memberof Input */
+function inputClearKey(key, device=0, clearDown=true, clearPressed=true, clearReleased=true)
+{
+    if (!inputData[device])
+        return;
+    inputData[device][key] &= ~((clearDown?1:0)|(clearPressed?2:0)|(clearReleased?4:0));
+}
 
 /** Returns true if mouse button is down
  *  @function
@@ -3469,7 +3483,7 @@ function inputUpdate()
 
     // clear input when lost focus (prevent stuck keys)
     if(!(touchInputEnable && isTouchDevice) && !document.hasFocus())
-        clearInput();
+        inputClear();
 
     // update mouse world space position
     mousePos = screenToWorld(mousePosScreen);
@@ -3537,7 +3551,7 @@ function inputInit()
     onmousemove   = (e)=> mousePosScreen = mouseEventToScreen(e);
     onwheel       = (e)=> mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY);
     oncontextmenu = (e)=> false; // prevent right click menu
-    onblur        = (e) => clearInput(); // reset input when focus is lost
+    onblur        = (e) => inputClear(); // reset input when focus is lost
 
     // init touch input
     if (isTouchDevice && touchInputEnable)
@@ -6239,10 +6253,20 @@ class UISystemPlugin
         this.defaultButtonColor = hsl(0,0,.5);
         /** @property {Color} - Default hover color for UI elements */
         this.defaultHoverColor = hsl(0,0,.7);
+        /** @property {Color} - Default color for disabled UI elements */
+        this.defaultDisabledColor = hsl(0,0,.2);
         /** @property {number} - Default line width for UI elements */
         this.defaultLineWidth = 4;
+        /** @property {number} - Default rounded rect corner radius for UI elements */
+        this.defaultCornerRadius = 0;
         /** @property {string} - Default font for UI elements */
         this.defaultFont = 'arial';
+        /** @property {Sound} - Default sound when interactive UI element is pressed */
+        this.defaultSoundPress = undefined;
+        /** @property {Sound} - Default sound when interactive UI element is released */
+        this.defaultSoundRelease = undefined;
+        /** @property {Sound} - Default sound when interactive UI element is clicked */
+        this.defaultSoundClick = undefined;
         /** @property {Array<UIObject>} - List of all UI elements */
         this.uiObjects = [];
         /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - Context to render UI elements to */
@@ -6250,18 +6274,30 @@ class UISystemPlugin
             
         engineAddPlugin(uiUpdate, uiRender);
 
+        function updateInvisible(o)
+        {
+            for(const c of o.children)
+                updateInvisible(c);
+            o.updateInvisible();
+        }
+
         // setup recursive update and render
         function uiUpdate()
         {
             function updateObject(o)
             {
-                if (!o.visible)
-                    return;
-                if (o.parent)
-                    o.pos = o.localPos.add(o.parent.pos);
-                o.update();
-                for(const c of o.children)
-                    updateObject(c);
+                if (o.visible)
+                {
+                    // set position in parent space
+                    if (o.parent)
+                        o.pos = o.localPos.add(o.parent.pos);
+                    // update in reverse order to detect mouse enter/leave
+                    for(let i=o.children.length; i--;)
+                        updateObject(o.children[i]);
+                    o.update();
+                }
+                else
+                    updateInvisible(o);
             }
             uiSystem.uiObjects.forEach(o=> o.parent || updateObject(o));
         }
@@ -6286,18 +6322,23 @@ class UISystemPlugin
     *  @param {Vector2} size
     *  @param {Color}   [color=uiSystem.defaultColor]
     *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
-    *  @param {Color}   [lineColor=uiSystem.defaultLineColor] */
-    drawRect(pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor)
+    *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
+    *  @param {number}  [lineWidth=uiSystem.defaultCornerRadius] */
+    drawRect(pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, cornerRadius=uiSystem.defaultCornerRadius)
     {
-        uiSystem.uiContext.fillStyle = color.toString();
-        uiSystem.uiContext.beginPath();
-        uiSystem.uiContext.rect(pos.x-size.x/2, pos.y-size.y/2, size.x, size.y);
-        uiSystem.uiContext.fill();
+        const context = uiSystem.uiContext;
+        context.fillStyle = color.toString();
+        context.beginPath();
+        if (cornerRadius && context['roundRect'])
+            context['roundRect'](pos.x-size.x/2, pos.y-size.y/2, size.x, size.y, cornerRadius);
+        else
+            context.rect(pos.x-size.x/2, pos.y-size.y/2, size.x, size.y);
+        context.fill();
         if (lineWidth)
         {
-            uiSystem.uiContext.strokeStyle = lineColor.toString();
-            uiSystem.uiContext.lineWidth = lineWidth;
-            uiSystem.uiContext.stroke();
+            context.strokeStyle = lineColor.toString();
+            context.lineWidth = lineWidth;
+            context.stroke();
         }
     }
 
@@ -6308,12 +6349,13 @@ class UISystemPlugin
     *  @param {Color}   [lineColor=uiSystem.defaultLineColor] */
     drawLine(posA, posB, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor)
     {
-        uiSystem.uiContext.strokeStyle = lineColor.toString();
-        uiSystem.uiContext.lineWidth = lineWidth;
-        uiSystem.uiContext.beginPath();
-        uiSystem.uiContext.lineTo(posA.x, posA.y);
-        uiSystem.uiContext.lineTo(posB.x, posB.y);
-        uiSystem.uiContext.stroke();
+        const context = uiSystem.uiContext;
+        context.strokeStyle = lineColor.toString();
+        context.lineWidth = lineWidth;
+        context.beginPath();
+        context.lineTo(posA.x, posA.y);
+        context.lineTo(posB.x, posB.y);
+        context.stroke();
     }
 
     /** Draw a tile to the UI context
@@ -6361,26 +6403,40 @@ class UIObject
         this.pos        = pos.copy();
         /** @property {Vector2} - Screen space size of the object */
         this.size       = size.copy();
-        /** @property {Color} */
+        /** @property {Color} - color of the object */
         this.color      = uiSystem.defaultColor;
-        /** @property {Color} */
-        this.lineColor  = uiSystem.defaultLineColor;
-        /** @property {Color} */
+        /** @property {Color} - color for text */
         this.textColor  = uiSystem.defaultTextColor;
-        /** @property {Color} */
+        /** @property {Color} - color used when hovering over the object */
         this.hoverColor = uiSystem.defaultHoverColor;
-        /** @property {number} */
+        /** @property {Color} - color for line drawing */
+        this.lineColor  = uiSystem.defaultLineColor;
+        /** @property {number} - width for line drawing */
         this.lineWidth  = uiSystem.defaultLineWidth;
-        /** @property {string} */
+        /** @property {string} - font for this objecct */
         this.font       = uiSystem.defaultFont;
         /** @property {number} - override for text height */
         this.textHeight   = undefined;
-        /** @property {boolean} */
+        /** @property {boolean} - should this object be drawn */
         this.visible    = true;
-        /** @property {Array<UIObject>} */
+        /** @property {Array<UIObject>} - a list of this object's children */
         this.children   = [];
-        /** @property {UIObject} */
+        /** @property {UIObject} - this object's parent, position is in parent space */
         this.parent     = undefined;
+        /** @property {number} - Extra size added when checking if element is touched */
+        this.extraTouchSize = 0;
+        /** @property {Sound} - Sound when interactive element is pressed */
+        this.soundPress = uiSystem.defaultSoundPress;
+        /** @property {Sound} - Sound when interactive element is released */
+        this.soundRelease = uiSystem.defaultSoundRelease;
+        /** @property {Sound} - Sound when interactive element is clicked */
+        this.soundClick = uiSystem.defaultSoundClick;
+        /** @property {boolean} - Is the mouse over this element */
+        this.mouseIsOver = false;
+        /** @property {boolean} - Is this element interactive */
+        this.interactive = false;
+        /** @property {boolean} - Is the mouse held on this element (was pressed while over and hasn't been released) */
+        this.mouseIsHeld = false;
         uiSystem.uiObjects.push(this);
     }
 
@@ -6407,55 +6463,93 @@ class UIObject
     /** Update the object, called automatically by plugin once each frame */
     update()
     {
-        // track mouse input
         const mouseWasOver = this.mouseIsOver;
+        const mousePress = mouseWasPressed(0);
         const mouseDown = mouseIsDown(0);
-        if (!mouseDown || isTouchDevice)
+        if (mousePress || !mouseDown || this.mouseIsHeld)
         {
-            this.mouseIsOver = isOverlapping(this.pos, this.size, mousePosScreen);
-            if (!mouseDown && isTouchDevice)
-                this.mouseIsOver = false;
-            if (this.mouseIsOver && !mouseWasOver)
-                this.onEnter();
-            if (!this.mouseIsOver && mouseWasOver)
-                this.onLeave();
+            const size = this.size.add(vec2(isTouchDevice && this.extraTouchSize || 0));
+            this.mouseIsOver = isOverlapping(this.pos, size, mousePosScreen);
         }
-        if (mouseWasPressed(0) && this.mouseIsOver)
+        if (this.mouseIsOver)
         {
-            this.mouseIsHeld = true;
-            this.onPress();
+            if (mousePress)
+                inputClearKey(0,0,0,1,0); // clear mouse was pressed state
+            if (!this.disabled)
+            {
+                if (mousePress)
+                {
+                    if (this.interactive)
+                    {
+                        this.onPress();
+                        if (this.soundPress)
+                            this.soundPress.play();
+                    }
+                    this.mouseIsHeld = true;
+                }
+                if (!mouseDown && this.mouseIsHeld && this.interactive)
+                {
+                    this.onClick();
+                    if (this.soundClick)
+                        this.soundClick.play();
+                }
+            }
+        }
+        if (!mouseDown)
+        {
+            if (this.mouseIsHeld && this.interactive)
+            {
+                this.onRelease();
+                if (this.soundRelease)
+                    this.soundRelease.play();
+            }
             if (isTouchDevice)
                 this.mouseIsOver = false;
-        }
-        else if (this.mouseIsHeld && !mouseDown)
-        {
             this.mouseIsHeld = false;
-            this.onRelease();
         }
+
+        if (this.mouseIsOver != mouseWasOver)
+            this.mouseIsOver ? this.onEnter() : this.onLeave();
     }
 
     /** Render the object, called automatically by plugin once each frame */
     render()
     {
         if (this.size.x && this.size.y)
-            uiSystem.drawRect(this.pos, this.size, this.color, this.lineWidth, this.lineColor);
+            uiSystem.drawRect(this.pos, this.size, this.color, this.lineWidth, this.lineColor, this.cornerRadius);
+    }
+
+    /** Special update for when object is invisible */
+    updateInvisible()
+    {
+        // reset input state when not visible
+        this.mouseIsOver = this.mouseIsHeld = false;
     }
 
     /** Called when the mouse enters the object */
-    onEnter()   {}
+    onEnter()   
+    {}
 
     /** Called when the mouse leaves the object */
-    onLeave()   {}
+    onLeave()   
+    {}
 
     /** Called when the mouse is pressed while over the object */
-    onPress()   {}
+    onPress()   
+    {}
 
     /** Called when the mouse is released while over the object */
-    onRelease() {}
+    onRelease() 
+    {}
+
+    /** Called when user clicks on this object */
+    onClick()   
+    {}
 
     /** Called when the state of this object changes */
-    onChange()  {}
-}
+    onChange()  
+    {}
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 /** 
@@ -6542,13 +6636,18 @@ class UIButton extends UIObject
 
         /** @property {string} */
         this.text = text;
+        /** @property {Color} */
+        this.disabledColor = uiSystem.defaultDisabledColor;
+        /** @property {boolean} */
+        this.disabled = false;
+        this.interactive = true;
         this.color = color;
     }
     render()
     {
-        const lineColor = this.mouseIsHeld ? this.color : this.lineColor;
-        const color = this.mouseIsOver? this.hoverColor : this.color;
-        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor);
+        const lineColor = this.mouseIsHeld && !this.disabled ? this.color : this.lineColor;
+        const color = this.disabled ? this.disabledColor : this.mouseIsOver ? this.hoverColor : this.color;
+        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor, this.cornerRadius);
         
         const textScale = .8; // scale text to fit in button
         const textSize = vec2(this.size.x, this.textHeight || this.size.y*textScale);
@@ -6575,8 +6674,9 @@ class UICheckbox extends UIObject
 
         /** @property {boolean} */
         this.checked = checked;
+        this.interactive = true;
     }
-    onPress()
+    onClick()
     {
         this.checked = !this.checked;
         this.onChange();
@@ -6584,7 +6684,7 @@ class UICheckbox extends UIObject
     render()
     {
         const color = this.mouseIsOver? this.hoverColor : this.color;
-        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, this.lineColor);
+        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, this.lineColor, this.cornerRadius);
         if (this.checked)
         {
             // draw an X if checked
@@ -6617,8 +6717,10 @@ class UIScrollbar extends UIObject
         this.value = value;
         /** @property {string} */
         this.text = text;
-        this.color = color;
+        /** @property {Color} */
         this.handleColor = handleColor;
+        this.color = color;
+        this.interactive = true;
     }
     update()
     {
@@ -6638,7 +6740,7 @@ class UIScrollbar extends UIObject
     {
         const lineColor = this.mouseIsHeld ? this.color : this.lineColor;
         const color = this.mouseIsOver? this.hoverColor : this.color;
-        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor);
+        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor, this.cornerRadius);
     
         const handleSize = vec2(this.size.y);
         const handleWidth = this.size.x - handleSize.x;
@@ -6646,7 +6748,7 @@ class UIScrollbar extends UIObject
         const p2 = this.pos.x + handleWidth/2;
         const handlePos = vec2(lerp(this.value, p1, p2), this.pos.y);
         const barColor = this.mouseIsHeld ? this.color : this.handleColor;
-        uiSystem.drawRect(handlePos, handleSize, barColor, this.lineWidth, this.lineColor);
+        uiSystem.drawRect(handlePos, handleSize, barColor, this.lineWidth, this.lineColor, this.cornerRadius);
 
         const textScale = .8; // scale text to fit in scrollbar
         const textSize = vec2(this.size.x, this.textHeight || this.size.y*textScale);
@@ -6654,7 +6756,6 @@ class UIScrollbar extends UIObject
             this.textColor, 0, undefined, this.align, this.font);
     }
 }
-
 /**
  * LittleJS Box2D Physics Plugin
  * - Box2dObject extends EngineObject with Box2D physics
@@ -8527,6 +8628,7 @@ async function box2dInit()
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Draw a scalable nine-slice UI element to the overlay canvas in screen space
+ *  This function can not apply color because it draws using the overlay 2d context
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - Starting tile for the nine-slice pattern
@@ -8539,6 +8641,7 @@ function drawNineSliceScreen(pos, size, startTile, borderSize=32, extraSpace=1)
 }
 
 /** Draw a scalable nine-slice UI element in world space
+ *  This function can apply color and additive color if webgl is enabled
  *  @param {Vector2} pos - World space position
  *  @param {Vector2} size - World space size
  *  @param {TileInfo} startTile - Starting tile for the nine-slice pattern
@@ -8582,6 +8685,7 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
 }
 
 /** Draw a scalable three-slice UI element to the overlay canvas in screen space
+ *  This function can not apply color because it draws using the overlay 2d context
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - Starting tile for the three-slice pattern
@@ -8594,6 +8698,7 @@ function drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=1)
 }
 
 /** Draw a scalable three-slice UI element in world space
+ *  This function can apply color and additive color if webgl is enabled
  *  @param {Vector2} pos - World space position
  *  @param {Vector2} size - World space size
  *  @param {TileInfo} startTile - Starting tile for the three-slice pattern
