@@ -103,6 +103,11 @@ button
     padding: 2px 8px;
     cursor: pointer;
 }
+.error-line
+{
+    background-color: rgba(255, 0, 0, 0.15) !important;
+    border-left: 3px solid #ff0000 !important;
+}
 
 /*  LittleJS CodeMirror Theme */
 .cm-s-littlejs.CodeMirror { background: #080808; color: #aef; }
@@ -122,4 +127,4 @@ button
 .cm-s-littlejs .cm-comment { color:#888; font-style:italic; }
 .cm-s-littlejs .cm-string,
 .cm-s-littlejs .cm-string-2 { color:#fda; } 
-.cm-s-littlejs .CodeMirror-matchingbracket { background-color: #fff !important; }
+.cm-s-littlejs .CodeMirror-matchingbracket { background-color: #381 !important; }

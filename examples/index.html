@@ -1,7 +1,7 @@
 <!DOCTYPE html><head>
 <title>LittleJS Example Browser</title>
 <link rel=icon type=image/png href=favicon.png>
-<link rel=stylesheet href=style.css?2>
+<link rel=stylesheet href=style.css?4>
 <meta charset=utf-8>
 </head><body>
 <div id=container1>
@@ -105,7 +105,8 @@ const exampleList =
 
 ///////////////////////////////////////////////////////////////////////////////
 
-let iframeExample, inputTimeout, codeMirror;
+// global variables
+let iframeExample, inputTimeout, codeMirror, consoleAutoScroll, errorLineMarker;
 
 // load the examples into the list
 filterExamples();
@@ -132,40 +133,7 @@ onresize = () =>
 onresize();
 
 ///////////////////////////////////////////////////////////////////////////////
-
-function filterExamples(reset=0)
-{
-    if (reset)
-        inputSearch.value = '';
-    
-    // clear current options
-    selectExample.options.length = 0;
-    
-    // filter and add matching examples
-    const searchTerm = inputSearch.value.toLowerCase().trim();
-    for (let i = 0; i < exampleList.length; i++)
-    {
-        // check if search term matches name or description
-        const example = exampleList[i];
-        const text = example.name + (example.description ? ` - ${example.description}` : '');
-        if (example.name.toLowerCase().includes(searchTerm) || 
-            example.description.toLowerCase().includes(searchTerm))
-        {
-            const o = new Option(text);
-            o.disabled = !example.filename;
-            o.originalIndex = i;
-            selectExample.add(o);
-        }
-    }
-    
-    if (!selectExample.options.length)
-    {
-        // show a message if no matches
-        const o = new Option('No examples found matching "' + searchTerm + '"');
-        o.disabled = true;
-        selectExample.add(o);
-    }
-}
+// setting examples
 
 function setExample()
 {
@@ -191,24 +159,6 @@ function setExample()
     loadFile(example.filename, example.largeExample);
 }
 
-function codeInput()
-{
-    if (!checkboxLiveEdit.checked)
-        return;
-
-    // debounce input - get content from code mirror if available, otherwise from textarea
-    clearTimeout(inputTimeout);
-    const code = codeMirror ? codeMirror.getValue() : textareaCode.value;
-    inputTimeout = setTimeout(() => setCode(code), 500);
-}
-
-function refreshCode()
-{
-    // manually refresh/run the code regardless of live edit setting
-    const code = codeMirror ? codeMirror.getValue() : textareaCode.value;
-    setCode(code);
-}
-
 async function loadFile(filename, largeExample)
 {
     if (codeMirror)
@@ -222,6 +172,7 @@ async function loadFile(filename, largeExample)
             iframeContainer.removeChild(iframeExample);
 
         unsetErrorMessage();
+        unsetConsoleMessage();
         iframeExample = document.createElement('iframe');
         iframeContainer.appendChild(iframeExample);
         
@@ -265,6 +216,61 @@ async function loadFile(filename, largeExample)
     }
 }
 
+function filterExamples(reset=0)
+{
+    if (reset)
+        inputSearch.value = '';
+    
+    // clear current options
+    selectExample.options.length = 0;
+    
+    // filter and add matching examples
+    const searchTerm = inputSearch.value.toLowerCase().trim();
+    for (let i = 0; i < exampleList.length; i++)
+    {
+        // check if search term matches name or description
+        const example = exampleList[i];
+        const text = example.name + (example.description ? ` - ${example.description}` : '');
+        if (example.name.toLowerCase().includes(searchTerm) || 
+            example.description.toLowerCase().includes(searchTerm))
+        {
+            const o = new Option(text);
+            o.disabled = !example.filename;
+            o.originalIndex = i;
+            selectExample.add(o);
+        }
+    }
+    
+    if (!selectExample.options.length)
+    {
+        // show a message if no matches
+        const o = new Option('No examples found matching "' + searchTerm + '"');
+        o.disabled = true;
+        selectExample.add(o);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// setting code
+
+function codeInput()
+{
+    if (!checkboxLiveEdit.checked)
+        return;
+
+    // debounce input - get content from code mirror if available, otherwise from textarea
+    clearTimeout(inputTimeout);
+    const code = codeMirror ? codeMirror.getValue() : textareaCode.value;
+    inputTimeout = setTimeout(() => setCode(code), 500);
+}
+
+function refreshCode()
+{
+    // manually refresh/run the code regardless of live edit setting
+    const code = codeMirror ? codeMirror.getValue() : textareaCode.value;
+    setCode(code);
+}
+
 function setCode(code)
 {
     clearTimeout(inputTimeout);
@@ -287,14 +293,21 @@ function setCode(code)
             if (lineno)  
                 text += ` (Line:${lineno}, Column:${colno})`
             if (error && error.stack)
-                text += `\n\n` + error.stack;
+                text += `\n` + error.stack;
             setErrorMessage(text);
+            setErrorLine(lineno);
         }
         iframeContent.onunhandledrejection = (event) => 
         {
             let text = event.reason;
             if (event.reason && event.reason.stack)
+            {
                 text += `\n\n` + event.reason.stack;
+                
+                // try to extract line number from stack trace
+                const lineMatch = event.reason.stack.match(/:(\d+):(\d+)/);
+                setErrorLine(parseInt(lineMatch[1]));
+            }
             setErrorMessage(text);
         };
 
@@ -305,7 +318,7 @@ function setCode(code)
             const original = originalConsole[method];
             iframeContent.console[method] = function(...args)
             {
-                let message = args.join('\n');
+                const message = args.map(m=>stringifyMessage(m)).join('\n');
                 setConsoleMessage(message);
                 original.apply(originalConsole, args);
             };
@@ -353,28 +366,82 @@ function setCode(code)
     iframeExample.src = 'shorts/base.html?' + Date.now();
 }
 
-function unsetMessage(element)
+///////////////////////////////////////////////////////////////////////////////
+// error and console messages
+
+function stringifyMessage(message)
 {
-    element.style.display = 'none';
+    // make sure message is a string
+    if (message === null)
+        return 'null';
+    if (Number.isNaN(message))
+        return 'NaN';
+    if (message === undefined)
+        return 'undefined';
+    return message;
+}
+
+function setMessage(message, element, clear=true)
+{
+    message = stringifyMessage(message);
+    if (clear || !element.value)
+        element.value = message;
+    else
+        element.value += '\n' + message;
+    element.style.display = message ? 'block' : 'none';
+    
+    if (element == textareaConsole)
+    {
+        const maxConsoleLines = 100;
+        const lines = element.value.split('\n');
+        if (lines.length > maxConsoleLines)
+        {
+            // limit max lines, prevents slowdown from too many lines
+            const excessLines = lines.length - maxConsoleLines;
+            element.value = lines.slice(excessLines).join('\n');
+        }
+        
+        // auto scroll to bottom only if user hasn't manually scrolled
+        if (consoleAutoScroll)
+            element.scrollTop = element.scrollHeight;
+    }
+}
+
+function unsetMessage(element) 
+{ 
+    element.style.display = 'none'; 
     element.value = '';
 }
 
-function setMessage(message, element)
+function clearErrorLine()
 {
-    if (message === null)
-        message = 'null';
-    if (Number.isNaN(message))
-        message = 'NaN';
-    if (message === undefined)
-        message = 'undefined';
-    element.value = message;
-    element.style.display = message ? 'block' : 'none';
+    if (!codeMirror || !errorLineMarker)
+        return;
+    codeMirror.getDoc().removeLineClass(errorLineMarker, 'background', 'error-line');
 }
 
-function unsetErrorMessage() { unsetMessage(textareaError); }
+function setErrorLine(lineNumber)
+{
+    if (!codeMirror || !(lineNumber > 0))
+        return;
+
+    clearErrorLine();
+    --lineNumber; // codeMirror uses 0-based line numbers
+    errorLineMarker = codeMirror.getDoc().addLineClass(lineNumber, 'background', 'error-line');
+    //codeMirror.scrollIntoView({line: lineNumber});
+}
+
 function setErrorMessage(message) { setMessage(message, textareaError); }
-function unsetConsoleMessage() { unsetMessage(textareaConsole); }
-function setConsoleMessage(message) { setMessage(message, textareaConsole); }
+function unsetErrorMessage() { unsetMessage(textareaError); clearErrorLine(); }
+function setConsoleMessage(message) { setMessage(message, textareaConsole, false); }
+function unsetConsoleMessage() { unsetMessage(textareaConsole); consoleAutoScroll = true; }
+function onScrollConsole()
+{
+    // only auto scroll console is it is scrolled to bottom
+    const tolerance = 5; // pixels of tolerance
+    consoleAutoScroll = Math.abs(textareaConsole.scrollTop - (textareaConsole.scrollHeight - textareaConsole.clientHeight)) < tolerance;
+}
+textareaConsole.addEventListener('scroll', onScrollConsole);
 
 ///////////////////////////////////////////////////////////////////////////////
 // setup code mirror
