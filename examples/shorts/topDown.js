@@ -4,7 +4,7 @@ class Player extends EngineObject
     {
         super(pos, vec2(2), tile(5), 0, RED);
         this.setCollision(); // make object collide
-        this.renderOrder = 1; // render player on top of other objects
+        this.renderOrder = 1; // render player on top
     }
 
     update()
