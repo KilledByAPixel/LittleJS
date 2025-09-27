@@ -252,7 +252,7 @@ class TileLayer extends EngineObject
         const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
         const pos = this.pos.add(this.size.multiply(this.scale).scale(.5));
         const size = this.size.multiply(this.scale);
-        const useWebgl = this.glTexture != undefined;
+        const useWebgl = glEnable && this.glTexture != undefined;
         drawTile(pos, size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebgl);
     }
 
