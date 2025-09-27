@@ -244,6 +244,15 @@ function glCreateTexture(image)
     return texture;
 }
 
+
+/** Deletes a WebGL texture
+ *  @param {WebGLTexture} [texture]
+ *  @memberof WebGL */
+function glDeleteTexture(texture)
+{
+    glContext.deleteTexture(texture);
+}
+
 /** Set WebGL texture data from an image
  *  @param {WebGLTexture} texture
  *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas} image
