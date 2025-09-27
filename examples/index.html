@@ -378,6 +378,8 @@ function stringifyMessage(message)
         return 'NaN';
     if (message === undefined)
         return 'undefined';
+    if (message === 0)
+        return '0';
     return message;
 }
 
