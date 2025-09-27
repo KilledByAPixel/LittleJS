@@ -44,7 +44,7 @@ class EngineObject
         // check passed in params
         ASSERT(isVector2(pos) && pos.isValid(), 'object pos should be a vec2');
         ASSERT(isVector2(size) && size.isValid(), 'object size should be a vec2');
-        ASSERT(!tileInfo || tileInfo instanceof TileInfo, 'object tileInfo should be a TileInfo or 0');
+        ASSERT(!tileInfo || tileInfo instanceof TileInfo, 'object tileInfo should be a TileInfo or undefined');
         ASSERT(typeof angle == 'number' && isFinite(angle), 'object angle should be a number');
         ASSERT(isColor(color) && color.isValid(), 'object color should be a valid rgba color');
         ASSERT(typeof renderOrder == 'number', 'object renderOrder should be a number');
