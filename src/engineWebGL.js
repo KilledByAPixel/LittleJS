@@ -127,18 +127,20 @@ function glPreRender()
     initVertexAttribArray('c', glContext.UNSIGNED_BYTE, 1, 4); // color
     initVertexAttribArray('a', glContext.UNSIGNED_BYTE, 1, 4); // additiveColor
     initVertexAttribArray('r', glContext.FLOAT, 4, 1); // rotation
-
+    
     // build the transform matrix
     const s = vec2(2*cameraScale).divide(mainCanvasSize);
-    const p = vec2(-1).subtract(cameraPos.multiply(s));
+    const rotatedCam = cameraPos.rotate(cameraAngle);
+    const p = vec2(-1).subtract(rotatedCam.multiply(s));
+    const ca = Math.cos(-cameraAngle);
+    const sa = Math.sin(-cameraAngle);
     glContext.uniformMatrix4fv(glContext.getUniformLocation(glShader, 'm'), false,
-        [
-            s.x, 0,   0,   0,
-            0,   s.y, 0,   0,
-            1,   1,   1,   1,
-            p.x, p.y, 0,   0
-        ]
-    );
+    [
+        s.x  * ca,  s.y * sa, 0, 0,
+        -s.x * sa,  s.y * ca, 0, 0,
+        1,          1,        1, 0,
+        p.x,        p.y,      0, 1
+    ]);
 }
 
 /** Clear the canvas and setup the viewport

@@ -50,6 +50,7 @@ export
 
 	// Settings
 	cameraPos,
+	cameraAngle,
 	cameraScale,
 	canvasMaxSize,
 	canvasFixedSize,
@@ -88,6 +89,7 @@ export
 
 	// Setters for globals
 	setCameraPos,
+	setCameraAngle,
 	setCameraScale,
 	setCanvasMaxSize,
 	setCanvasFixedSize,

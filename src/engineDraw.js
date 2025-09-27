@@ -203,11 +203,18 @@ class TextureInfo
  *  @memberof Draw */
 function screenToWorld(screenPos)
 {
-    return new Vector2
-    (
-        (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale + cameraPos.x,
-        (screenPos.y - mainCanvasSize.y/2 + .5) / -cameraScale + cameraPos.y
-    );
+    let cameraPosRelativeX = (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale;
+    let cameraPosRelativeY = (screenPos.y - mainCanvasSize.y/2 + .5) / -cameraScale;
+    if (cameraAngle) 
+    {
+        // apply camera rotation
+        const cos = Math.cos(cameraAngle), sin = Math.sin(cameraAngle);
+        const rotatedX = cameraPosRelativeX * cos - cameraPosRelativeY * sin;
+        const rotatedY = cameraPosRelativeX * sin + cameraPosRelativeY * cos;
+        cameraPosRelativeX = rotatedX;
+        cameraPosRelativeY = rotatedY;
+    }
+    return new Vector2(cameraPosRelativeX + cameraPos.x, cameraPosRelativeY + cameraPos.y);
 }
 
 /** Convert from world to screen space coordinates
@@ -216,10 +223,21 @@ function screenToWorld(screenPos)
  *  @memberof Draw */
 function worldToScreen(worldPos)
 {
+    let cameraPosRelativeX = worldPos.x - cameraPos.x;
+    let cameraPosRelativeY = worldPos.y - cameraPos.y;
+    if (cameraAngle)
+    {
+        // apply inverse camera rotation
+        const cos = Math.cos(-cameraAngle), sin = Math.sin(-cameraAngle);
+        const rotatedX = cameraPosRelativeX * cos - cameraPosRelativeY * sin;
+        const rotatedY = cameraPosRelativeX * sin + cameraPosRelativeY * cos;
+        cameraPosRelativeX = rotatedX;
+        cameraPosRelativeY = rotatedY;
+    }
     return new Vector2
     (
-        (worldPos.x - cameraPos.x) *  cameraScale + mainCanvasSize.x/2 - .5,
-        (worldPos.y - cameraPos.y) * -cameraScale + mainCanvasSize.y/2 - .5
+        cameraPosRelativeX *  cameraScale + mainCanvasSize.x/2 - .5,
+        cameraPosRelativeY * -cameraScale + mainCanvasSize.y/2 - .5
     );
 }
 
@@ -436,6 +454,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, conte
     }
     context.save();
     context.translate(pos.x+.5, pos.y+.5);
+    context.rotate(cameraAngle);
     context.rotate(angle);
     context.scale(mirror ? -size.x : size.x, -size.y);
     drawFunction(context);
