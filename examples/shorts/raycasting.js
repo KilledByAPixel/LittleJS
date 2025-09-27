@@ -3,7 +3,7 @@ const levelTest = (pos)=> ((pos.x|0)**2|(pos.y|0)**4)%3>1;
 
 function raycast(pos, angle)
 {
-    const maxDistance=40, delta=.05;
+    const maxDistance = 40, delta = .05;
     const rayDir = vec2(0,delta).rotate(angle);
     pos = pos.copy();
     for (let distance = 0; distance<maxDistance; distance+=delta)
@@ -18,19 +18,24 @@ function raycast(pos, angle)
 
 function gameUpdate()
 {
-    // rotate player with arrow keys
-    const moveInput = keyDirection();
-    playerAngle += moveInput.x * .1;
+    // update camera angle with mouse pointer lock
+    if (mouseWasPressed(0))
+        pointerLockRequest();
+    if (keyWasPressed('Escape'))
+        pointerLockExit()
+    if (pointerLockIsActive() || isTouchDevice)
+        playerAngle += mouseDelta.x * .003;
 
-    // move forward/backward, prevent walking through walls
-    const newPlayerPos = playerPos.add(vec2(0,moveInput.y*.1).rotate(playerAngle));
-    if (!levelTest(newPlayerPos))
-        playerPos = newPlayerPos;
+    // update player movement, prevent walking through walls
+    const velocity = keyDirection().scale(.1).rotate(playerAngle);
+    const newPos = playerPos.add(velocity);
+    if (!levelTest(newPos))
+        playerPos = newPos;
 }
 
 function gameRender()
 {
-    // draw floor and ceiling
+    // draw horizontal slizes to create floor and ceiling
     const h=9;
     for (let y=-h; y<h; y+=.1)
     {
@@ -45,4 +50,9 @@ function gameRender()
         const p = raycast(playerPos, playerAngle + x/w);
         drawRect(vec2(x,0), vec2(.11,.4/p), hsl(.6,.5,.7-p*.7));
     }
+
+    // draw instructions and pointer lock status
+    const instructions = pointerLockIsActive() ? 'Mouse Control Active - ESC To Exit' : 'Click To Enable Mouse Control';
+    if (!isTouchDevice)
+        drawTextScreen(instructions, vec2(mainCanvasSize.x/2, 50), 24, pointerLockIsActive() ? GREEN : WHITE);
 }
