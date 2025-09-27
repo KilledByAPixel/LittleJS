@@ -105,7 +105,7 @@ button
 }
 
 /*  LittleJS CodeMirror Theme */
-.cm-s-littlejs.CodeMirror { background: #080808; color: #fff; }
+.cm-s-littlejs.CodeMirror { background: #080808; color: #aef; }
 .cm-s-littlejs div.CodeMirror-selected { background: #068; }
 .cm-s-littlejs .CodeMirror-gutters {background: #222; border-right: 0px;}
 .cm-s-littlejs .CodeMirror-linenumber { color: #aaa; }
@@ -114,13 +114,12 @@ button
 .cm-s-littlejs .cm-def { color: #fab; }
 .cm-s-littlejs .cm-operator { color: #1be; }
 .cm-s-littlejs .cm-property,
-.cm-s-littlejs span.cm-variable { color: #ddd; font-style: italic; }
-.cm-s-littlejs span.cm-variable-2 { color: #ea1; font-style: italic; }
-.cm-s-littlejs span.cm-variable-3 { color: #aef; }
+.cm-s-littlejs span.cm-variable,
+.cm-s-littlejs span.cm-variable-2,
+.cm-s-littlejs span.cm-variable-3 { color: #ddd; }
 .cm-s-littlejs .cm-builtin,
 .cm-s-littlejs .cm-number { color: #e15; }
-.cm-s-littlejs .cm-comment { color:#777; font-style:italic; }
-.cm-s-littlejs .cm-string { color:#fda; }
-.cm-s-littlejs .cm-string-2 { color:#ea1; } 
-.cm-s-littlejs .cm-error { border-bottom: 1px solid #f00; }
+.cm-s-littlejs .cm-comment { color:#888; font-style:italic; }
+.cm-s-littlejs .cm-string,
+.cm-s-littlejs .cm-string-2 { color:#fda; } 
 .cm-s-littlejs .CodeMirror-matchingbracket { background-color: #fff !important; }
