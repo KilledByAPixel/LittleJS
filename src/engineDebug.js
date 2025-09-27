@@ -132,16 +132,22 @@ function debugLine(posA, posB, color, thickness=.1, time)
 }
 
 /** Draw a debug combined axis aligned bounding box in world space
- *  @param {Vector2} pA - position A
- *  @param {Vector2} sA - size A
- *  @param {Vector2} pB - position B
- *  @param {Vector2} sB - size B
+ *  @param {Vector2} posA
+ *  @param {Vector2} sizeA
+ *  @param {Vector2} posB
+ *  @param {Vector2} sizeB
  *  @param {string}  [color]
  *  @memberof Debug */
-function debugOverlap(pA, sA, pB, sB, color)
+function debugOverlap(posA, sizeA, posB, sizeB, color)
 {
-    const minPos = vec2(min(pA.x - sA.x/2, pB.x - sB.x/2), min(pA.y - sA.y/2, pB.y - sB.y/2));
-    const maxPos = vec2(max(pA.x + sA.x/2, pB.x + sB.x/2), max(pA.y + sA.y/2, pB.y + sB.y/2));
+    const minPos = vec2(
+        min(posA.x - sizeA.x/2, posB.x - sizeB.x/2), 
+        min(posA.y - sizeA.y/2, posB.y - sizeB.y/2)
+    );
+    const maxPos = vec2(
+        max(posA.x + sizeA.x/2, posB.x + sizeB.x/2), 
+        max(posA.y + sizeA.y/2, posB.y + sizeB.y/2)
+    );
     debugRect(minPos.lerp(maxPos,.5), maxPos.subtract(minPos), color);
 }
 
@@ -435,6 +441,7 @@ function debugRender()
     {
         // draw debug overlay
         const fontSize = 20;
+        const lineHeight = fontSize * 1.2 | 0;
         overlayContext.save();
         overlayContext.fillStyle = '#fff';
         overlayContext.textAlign = 'left';
@@ -443,7 +450,7 @@ function debugRender()
         overlayContext.shadowColor = '#000';
         overlayContext.shadowBlur = 9;
 
-        let x = 9, y = 0, h = fontSize*1.2|0;
+        let x = 9, y = 0, h = lineHeight;
         if (debugOverlay)
         {
             overlayContext.fillText(engineName, x, y += h/2 );
