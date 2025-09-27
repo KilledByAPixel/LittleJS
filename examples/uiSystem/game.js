@@ -10,9 +10,6 @@
 import * as LJS from '../../dist/littlejs.esm.js';
 const {vec2, hsl, tile} = LJS;
 
-// sound effects
-const sound_ui = new LJS.Sound([1,0]);
-
 // UI system
 let uiRoot, uiMenu;
 const getMenuVisible =()=> uiMenu.visible;
@@ -24,6 +21,9 @@ LJS.setCanvasPixelated(false);
 
 function createUI()
 {
+    LJS.uiSystem.defaultSoundPress = new LJS.Sound([1,0,220]);
+    LJS.uiSystem.defaultSoundClick = new LJS.Sound([1,0,440]);
+
     // setup root to attach all ui elements to
     uiRoot = new LJS.UIObject;
     const uiInfo = new LJS.UIText(vec2(0,90), vec2(1e3, 70), 
@@ -33,7 +33,7 @@ function createUI()
     uiRoot.addChild(uiInfo);
 
     // setup example menu
-    uiMenu = new LJS.UIObject(vec2(0,450));
+    uiMenu = new LJS.UIObject(vec2(0,500));
     uiRoot.addChild(uiMenu);
     const uiBackground = new LJS.UIObject(vec2(0,0), vec2(450,580));
     uiBackground.lineWidth = 8;
@@ -47,7 +47,7 @@ function createUI()
     textTitle.lineColor = LJS.BLUE;
 
     // example multiline text
-    const textTest = new LJS.UIText(vec2(-60,-140), vec2(300, 50), 'Test Text\nSecond text line.')
+    const textTest = new LJS.UIText(vec2(-60,-120), vec2(300, 50), 'Test Text\nSecond text line.')
     uiMenu.addChild(textTest);
 
     // example tile image
@@ -57,12 +57,7 @@ function createUI()
     // example checkbox
     const checkbox = new LJS.UICheckbox(vec2(-140,-20), vec2(40));
     uiMenu.addChild(checkbox);
-    checkbox.onPress = ()=>
-    {
-        checkbox.checked = !checkbox.checked;
-        console.log('Checkbox clicked');
-        sound_ui.play(0,.5,checkbox.checked?4:1);
-    }
+    checkbox.onChange = ()=> console.log('Checkbox clicked');
 
     // text attached to checkbox
     const checkboxText = new LJS.UIText(vec2(170,0), vec2(300, 40), 'Test Checkbox');
@@ -72,27 +67,16 @@ function createUI()
     const scrollbar = new LJS.UIScrollbar(vec2(0,60), vec2(350, 50));
     uiMenu.addChild(scrollbar);
     scrollbar.onChange  = ()=> console.log('New scrollbar value:', scrollbar.value);
-    scrollbar.onPress   = ()=> sound_ui.play(0,.3,2);
-    scrollbar.onRelease = ()=> sound_ui.play(0,.3,4);
 
     // example button
     const button1 = new LJS.UIButton(vec2(0,140), vec2(350, 50), 'Test Button');
     uiMenu.addChild(button1);
-    button1.onPress = ()=>
-    {
-        console.log('Button 1 clicked');
-        sound_ui.play();
-    }
+    button1.onClick = ()=> console.log('Button 1 clicked');
 
     // exit button
     const button2 = new LJS.UIButton(vec2(0,220), vec2(350, 50), 'Exit Menu');
     uiMenu.addChild(button2);
-    button2.onPress = ()=>
-    {
-        console.log('Button 2 clicked');
-        sound_ui.play(0,.5,2);
-        setMenuVisible(false);
-    }
+    button2.onClick = ()=> setMenuVisible(false);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
