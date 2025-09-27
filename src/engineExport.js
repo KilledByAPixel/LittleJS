@@ -223,6 +223,7 @@ export
 	glCopyToContext,
 	glCreateProgram,
 	glCreateTexture,
+	glDeleteTexture,
 	glSetTextureData,
 	glDraw,
 	glFlush,
@@ -293,6 +294,7 @@ export
 	tileCollisionRaycast,
 	tileCollisionLoad,
 	TileLayerData,
+	CanvasLayer,
 	TileLayer,
 	TileCollisionLayer,
 

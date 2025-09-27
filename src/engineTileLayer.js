@@ -166,16 +166,155 @@ class TileLayerData
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
+ * Canvas Layer - cached off screen rendering system
+ * - Contains an offscreen canvas that can be rendered to
+ * - Webgl rendering is optional, call useWebGL to enable
+ * @extends EngineObject
+ * @example
+ * const canvasLayer = new CanvasLayer(vec2(), vec2(200,100));
+ */
+class CanvasLayer extends EngineObject
+{
+    /** Create a canvas layer object
+     *  @param {Vector2}  [position] - World space position of the layer
+     *  @param {Vector2}  [size] - World space size of the layer
+     *  @param {number}   [angle] - Angle the layer is rotated by
+     *  @param {number}   [renderOrder] - Objects sorted by renderOrder
+     *  @param {Vector2}  [canvasSize] - Default size of canvas, can be changed later
+    */
+    constructor(position, size, angle=0, renderOrder=0, canvasSize=vec2(512))
+    {
+        super(position, size, undefined, angle, WHITE, renderOrder);
+
+        /** @property {HTMLCanvasElement} - The canvas used by this layer */
+        this.canvas = headlessMode ? undefined : new OffscreenCanvas(canvasSize.x, canvasSize.y);
+        /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this layer */
+        this.context = headlessMode ? undefined : this.canvas.getContext('2d');
+        /** @property {WebGLTexture} - Texture if using webgl for this layer, call useWebGL to enable */
+        this.glTexture = undefined;
+        this.gravityScale = 0; // disable gravity by default for canvas layers
+    }
+   
+    /** Destroy this canvas layer */
+    destroy()
+    {
+        if (this.destroyed)
+            return;
+
+        // free up the webgl texture
+        if (this.glTexture)
+            glDeleteTexture(this.glTexture);
+        super.destroy();
+    }
+
+    // Render the layer, called automatically by the engine
+    render()
+    {
+        this.draw(this.pos, this.size, this.angle, this.color, this.mirror, this.additiveColor);
+    }
+
+    /** Draw this canvas layer centered in world space, with color applied if using WebGL
+    *  @param {Vector2} pos - Center in world space
+    *  @param {Vector2} [size] - Size in world space
+    *  @param {Color}   [color] - Color to modulate with
+    *  @param {number}  [angle] - Angle to rotate by
+    *  @param {boolean} [mirror] - If true image is flipped along the Y axis
+    *  @param {Color}   [additiveColor] - Additive color to be applied if any
+    *  @param {boolean} [screenSpace] - If true the pos and size are in screen space
+    *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
+    *  @memberof Draw */
+    draw(pos, size, angle=0, color=WHITE, mirror=false, additiveColor, screenSpace=false, context)
+    {
+        // draw the canvas layer as a single tile that uses the whole texture
+        const useWebgl = glEnable && this.glTexture != undefined;
+        const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
+        drawTile(pos, size, tileInfo, color, angle, mirror, additiveColor, useWebgl, screenSpace, context);
+    }
+
+    /** Draw onto the layer canvas in world space (bypass webgl)
+     *  @param {Vector2}  pos
+     *  @param {Vector2}  size
+     *  @param {number}   angle
+     *  @param {boolean}  mirror
+     *  @param {Function} drawFunction */
+    drawCanvas2D(pos, size, angle, mirror, drawFunction)
+    {
+        const context = this.context;
+        context.save();
+        pos = pos.subtract(this.pos).multiply(this.tileInfo.size);
+        size = size.multiply(this.tileInfo.size);
+        context.translate(pos.x, this.canvas.height - pos.y);
+        context.rotate(angle);
+        context.scale(mirror ? -size.x : size.x, size.y);
+        drawFunction(context);
+        context.restore();
+    }
+
+    /** Draw a tile onto the layer canvas in world space
+     *  @param {Vector2}  pos
+     *  @param {Vector2}  [size=(1,1)]
+     *  @param {TileInfo} [tileInfo]
+     *  @param {Color}    [color=(1,1,1,1)]
+     *  @param {number}   [angle=0]
+     *  @param {boolean}  [mirror=0] */
+    drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle, mirror)
+    {
+        this.drawCanvas2D(pos, size, angle, mirror, (context)=>
+        {
+            const textureInfo = tileInfo && tileInfo.textureInfo;
+            if (textureInfo)
+            {
+                context.globalAlpha = color.a; // only alpha is supported
+                context.drawImage(textureInfo.image, 
+                    tileInfo.pos.x,  tileInfo.pos.y, 
+                    tileInfo.size.x, tileInfo.size.y, -.5, -.5, 1, 1);
+                context.globalAlpha = 1;
+            }
+            else
+            {
+                // untextured
+                context.fillStyle = color;
+                context.fillRect(-.5, -.5, 1, 1);
+            }
+        });
+    }
+
+    /** Draw a rectangle onto the layer canvas in world space
+     *  @param {Vector2} pos
+     *  @param {Vector2} [size=(1,1)]
+     *  @param {Color}   [color=(1,1,1,1)]
+     *  @param {number}  [angle=0] */
+    drawRect(pos, size, color, angle) 
+    { this.drawTile(pos, size, undefined, color, angle); }
+
+    /** Create or update the webgl texture for this layer
+     *  @param {boolean} [enable] - enable webgl rendering and update the texture */
+    useWebGL(enable=true)
+    {
+        if (glEnable && enable)
+        {
+            if (this.glTexture)
+                glSetTextureData(this.glTexture, this.canvas);
+            else
+                this.glTexture = glCreateTexture(this.canvas);
+        }
+        else
+            this.glTexture = undefined;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/**
  * Tile Layer - cached rendering system for tile layers
  * - Each Tile layer is rendered to an off screen canvas
  * - To allow dynamic modifications, layers are rendered using canvas 2d
  * - Some devices like mobile phones are limited to 4k texture resolution
  * - For with 16x16 tiles this limits layers to 256x256 on mobile devices
- * @extends EngineObject
+ * @extends CanvasLayer
  * @example
  * const tileLayer = new TileLayer(vec2(), vec2(200,100));
  */
-class TileLayer extends EngineObject
+class TileLayer extends CanvasLayer
 {
     /** Create a tile layer object
     *  @param {Vector2}  position      - World space position
@@ -187,15 +326,14 @@ class TileLayer extends EngineObject
     */
     constructor(position, size, tileInfo=tile(), scale=vec2(1), renderOrder=0, useWebGL=glEnable)
     {
-        super(position, size, tileInfo, 0, undefined, renderOrder);
+        super(position, size, 0, renderOrder, size);
+        this.tileInfo = tileInfo;
 
         const canvasSize = size.multiply(tileInfo.size);
         /** @property {HTMLCanvasElement} - The canvas used by this tile layer */
         this.canvas = new OffscreenCanvas(canvasSize.x, canvasSize.y);
         /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
         this.context = this.canvas.getContext('2d');
-        /** @property {Vector2} - How much to scale this layer when rendered */
-        this.scale = scale;
         /** @property {WebGLTexture} - Texture if using webgl for this layer */
         this.glTexture = useWebGL ? glCreateTexture(this.canvas) : undefined;
         // set no friction by default, applied friction is max of both objects
@@ -220,7 +358,7 @@ class TileLayer extends EngineObject
             this.useWebGL     = () => {};
         }
     }
-    
+
     /** Set data at a given position in the array 
      *  @param {Vector2}       layerPos - Local position in array
      *  @param {TileLayerData} data     - Data to set
@@ -240,9 +378,6 @@ class TileLayer extends EngineObject
     getData(layerPos)
     { return layerPos.arrayCheck(this.size) && this.data[(layerPos.y|0)*this.size.x+layerPos.x|0]; }
     
-    // Tile layers are not updated
-    update() {}
-
     // Render the tile layer, called automatically by the engine
     render()
     {
@@ -250,10 +385,9 @@ class TileLayer extends EngineObject
         
         // draw the tile layer as a single tile
         const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
-        const pos = this.pos.add(this.size.multiply(this.scale).scale(.5));
-        const size = this.size.multiply(this.scale);
+        const pos = this.pos.add(this.size.scale(.5));
         const useWebgl = glEnable && this.glTexture != undefined;
-        drawTile(pos, size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebgl);
+        drawTile(pos, this.size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebgl);
     }
 
     /** Draw all the tile data to an offscreen canvas 
@@ -336,76 +470,6 @@ class TileLayer extends EngineObject
             drawTile(pos, vec2(1), tileInfo, d.color, d.direction*PI/2, d.mirror);
         }
     }
-
-    /** Draw directly to the 2D canvas in world space (bypass webgl)
-     *  @param {Vector2}  pos
-     *  @param {Vector2}  size
-     *  @param {number}   angle
-     *  @param {boolean}  mirror
-     *  @param {Function} drawFunction */
-    drawCanvas2D(pos, size, angle, mirror, drawFunction)
-    {
-        const context = this.context;
-        context.save();
-        pos = pos.subtract(this.pos).multiply(this.tileInfo.size);
-        size = size.multiply(this.tileInfo.size);
-        context.translate(pos.x, this.canvas.height - pos.y);
-        context.rotate(angle);
-        context.scale(mirror ? -size.x : size.x, size.y);
-        drawFunction(context);
-        context.restore();
-    }
-
-    /** Draw a tile directly onto the layer canvas in world space
-     *  @param {Vector2}  pos
-     *  @param {Vector2}  [size=(1,1)]
-     *  @param {TileInfo} [tileInfo]
-     *  @param {Color}    [color=(1,1,1,1)]
-     *  @param {number}   [angle=0]
-     *  @param {boolean}  [mirror=0] */
-    drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle, mirror)
-    {
-        this.drawCanvas2D(pos, size, angle, mirror, (context)=>
-        {
-            const textureInfo = tileInfo && tileInfo.textureInfo;
-            if (textureInfo)
-            {
-                context.globalAlpha = color.a; // only alpha is supported
-                context.drawImage(textureInfo.image, 
-                    tileInfo.pos.x,  tileInfo.pos.y, 
-                    tileInfo.size.x, tileInfo.size.y, -.5, -.5, 1, 1);
-                context.globalAlpha = 1;
-            }
-            else
-            {
-                // untextured
-                context.fillStyle = color;
-                context.fillRect(-.5, -.5, 1, 1);
-            }
-        });
-    }
-
-    /** Draw a rectangle directly onto the layer canvas in world space
-     *  @param {Vector2} pos
-     *  @param {Vector2} [size=(1,1)]
-     *  @param {Color}   [color=(1,1,1,1)]
-     *  @param {number}  [angle=0] */
-    drawRect(pos, size, color, angle) 
-    { this.drawTile(pos, size, undefined, color, angle); }
-
-    /** Create or update the webgl texture for this layer
-     *  @param {boolean} [enable] - enable webgl rendering and update the texture */
-    useWebGL(enable=true)
-    {
-        if (glEnable && enable)
-        {
-            if (!this.glTexture)
-                this.glTexture = glCreateTexture();
-            glSetTextureData(this.glTexture, this.canvas);
-        }
-        else
-            this.glTexture = undefined;
-    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -441,9 +505,9 @@ class TileCollisionLayer extends TileLayer
         this.isSolid = true;
     }
 
-    /** Destroy this collision layer */
+    /** Destroy this tile layer */
     destroy()
-    { 
+    {
         if (this.destroyed)
             return;
 
