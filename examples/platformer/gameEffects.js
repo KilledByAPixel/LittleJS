@@ -184,16 +184,16 @@ export class Sky extends LJS.EngineObject
     {
         // fill background with a gradient
         const canvas = LJS.mainCanvas;
-        const context = LJS.mainContext;
-        const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
-        gradient.addColorStop(0, this.skyColor);
-        gradient.addColorStop(1, this.horizonColor);
-        context.save();
-        context.fillStyle = gradient;
-        context.fillRect(0, 0, canvas.width, canvas.height);
-        context.globalCompositeOperation = 'lighter';
+        const gradientDelta = 5;
+        for(let y=0; y<canvas.height; y+=gradientDelta)
+        {
+            // draw horizontal lines to create a gradient
+            const color = this.skyColor.lerp(this.horizonColor, y/canvas.height);
+            LJS.drawRect(vec2(0,y), vec2(canvas.width*2, gradientDelta*2), color, 0, undefined, true)
+        }
         
         // draw stars
+        LJS.setBlendMode(true);
         const random = new LJS.RandomGenerator(this.seed);
         for (let i=1e3; i--;)
         {
@@ -205,59 +205,67 @@ export class Sky extends LJS.EngineObject
             const screenPos = vec2(
                 (random.float(w)+LJS.time*speed)%w-extraSpace,
                 (random.float(h)+LJS.time*speed*random.float())%h-extraSpace);
-            context.fillStyle = color;
-            context.fillRect(screenPos.x, screenPos.y, size, size);
+            LJS.drawRect(screenPos, vec2(size), color, 0, undefined, true)
         }
-        context.restore();
+        LJS.setBlendMode(false);
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // parallax background mountain ranges
 
-export class ParallaxLayer extends LJS.EngineObject
+export class ParallaxLayer extends LJS.CanvasLayer
 {
-    constructor(index) 
+    constructor(depth) 
     {
-        super();
+        const renderOrder = depth - 3e3;
+        const canvasSize = vec2(512, 256);
+        super(vec2(), vec2(), 0, renderOrder, canvasSize);
+        this.canvasSize = canvasSize;
+        this.depth = depth;
 
-        const size = vec2(1024,512);
-        this.drawSize = size;
-        this.index = index;
-        this.renderOrder = -3e3 + index;
-        this.canvas = new OffscreenCanvas(size.x, size.y);
-        this.context = this.canvas.getContext('2d');
-
-        // create a gradient
-        const o1 = 40-20*index;
-        const o2 = 100-30*index;
-        const gradient = this.context.createLinearGradient(0,size.y/2-o1,0,size.y/2+o2);
-        const layerColor = GameLevel.levelColor.mutate(.1).lerp(GameLevel.sky.skyColor,1-index*.15);
+        // create a gradient for the mountains
+        const layerColor = GameLevel.levelColor.mutate(.2).lerp(GameLevel.sky.skyColor, .95 - depth*.15);
+        const gradient = this.context.createLinearGradient(0,0,0,canvasSize.y);
         gradient.addColorStop(0,layerColor);
-        gradient.addColorStop(1,layerColor.mutate(.5).scale(.1,1));
-        this.context.fillStyle = gradient;
+        gradient.addColorStop(1,layerColor.subtract(LJS.CLEAR_WHITE).mutate(.1).clamp());
+        this.context.fillStyle = gradient
 
-        // draw procedural mountains ranges
-        let groundLevel = size.y/2, groundSlope = LJS.rand(-1,1);
-        for (let i=size.x; i--;)
-            this.context.fillRect(i, groundLevel += groundSlope = LJS.rand() < .3 ? LJS.rand(1,-1) :
-                groundSlope + (size.y/2 - groundLevel)/300, 1, size.y);
+        // draw random mountains
+        const pointiness = .2;  // how pointy the mountains are
+        const levelness = .005; // how much the mountains level out
+        const slopeRange = 1;   // max slope of the mountains
+        const startGroundLevel = canvasSize.y/2;
+        let y = startGroundLevel, groundSlope = LJS.rand(-slopeRange, slopeRange);
+        for(let x=canvasSize.x; x--;)
+        {
+            // pull slope towards start ground level
+            y += groundSlope -= (y-startGroundLevel)*levelness;
+
+            // random change slope
+            if (LJS.rand() < pointiness)
+                groundSlope = LJS.rand(-slopeRange, slopeRange);
+
+            // draw 1 pixel wide vertical slice of mountain
+            this.context.fillRect(x, y, 1, canvasSize.y)
+        }
+        
+        // make webgl texture
+        this.useWebGL(LJS.glEnable);
     }
 
     render()
     {
-        // position layer based on camera distance from center of level
-        const parallax = vec2(1e3,-100).scale(this.index/2);
-        const cameraDeltaFromCenter = LJS.cameraPos
-            .subtract(GameLevel.levelSize.scale(.5))
-            .divide(GameLevel.levelSize.divide(parallax));
-        const scale = this.drawSize.scale(2+2*this.index);
-        const pos = LJS.mainCanvasSize.scale(.5)      // center screen
-           .add(vec2(-scale.x/2,-scale.y/2))          // center layer 
-           .add(cameraDeltaFromCenter.scale(-.5))     // apply parallax
-           .add(vec2(0,(this.index*.1)*this.drawSize.y)); // separate layers
-        
-        // draw the parallax layer onto the main canvas
-        LJS.mainContext.drawImage(this.canvas, pos.x, pos.y, scale.x, scale.y);
+        const depth = this.depth
+        const distance = 4 + depth;
+        const parallax = vec2(150, 30).scale(depth**2+1);
+        const levelCenter = GameLevel.levelSize.scale(.5);
+        const cameraDeltaFromCenter = LJS.cameraPos.subtract(levelCenter).divide(levelCenter.scale(-1).divide(parallax));
+        const scale = distance/LJS.cameraScale;
+        const positonOffset = vec2(0, 3-depth);
+        const cameraOffset = cameraDeltaFromCenter.scale(1/LJS.cameraScale);
+        this.pos = LJS.cameraPos.add(positonOffset).add(cameraOffset);
+        this.size = this.canvasSize.scale(scale);
+        super.render();
     }
 }
