@@ -6,6 +6,8 @@ function gameInit()
 {
     // load ui system plugin
     new UISystemPlugin;
+    uiSystem.defaultSoundPress = new Sound([1,0,220]);
+    uiSystem.defaultSoundClick = new Sound([1,0,440]);
 
     // setup example menu
     uiMenu = new UIObject(mainCanvasSize.scale(.5));
@@ -20,20 +22,15 @@ function gameInit()
     const button1 = new UIButton(vec2(70,40), vec2(100), 'Test');
     button1.textHeight = 40;
     uiMenu.addChild(button1);
-    button1.onPress = ()=> sound_ui.play();
+    button1.onClick = ()=> uiBackground.color = randColor();
 
     // example checkbox
     const checkbox = new UICheckbox(vec2(-70,40), vec2(50));
     uiMenu.addChild(checkbox);
-    checkbox.onChange = ()=> sound_ui.play(0,1,checkbox.checked?4:1);
 
     // exit button
     const button2 = new UIButton(vec2(0,140), vec2(300, 50), 'Exit Menu');
     button2.textHeight = 40;
     uiMenu.addChild(button2);
-    button2.onPress = ()=>
-    {
-        uiMenu.visible = false;
-        sound_ui.play(0,1,2);
-    }
+    button2.onClick = ()=> uiMenu.visible = false;
 }
