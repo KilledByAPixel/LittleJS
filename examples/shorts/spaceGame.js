@@ -1,6 +1,11 @@
 class Player extends EngineObject
 {
-    constructor(pos) { super(pos, vec2(1,2), tile(8)); }
+    constructor(pos)
+    {
+        super(pos, vec2(1,2), tile(8));
+        this.damping = .97;
+        this.angleDamping = .95;
+    }
 
     update()
     {
@@ -8,18 +13,19 @@ class Player extends EngineObject
 
         // space ship controls
         const moveInput = keyDirection();
-        this.angle += moveInput.x * .1;
-        this.applyAcceleration(vec2().setAngle(this.angle, moveInput.y*.005));
+        this.applyAngularAcceleration(moveInput.x * .005);
+        this.applyAcceleration(vec2().setAngle(this.angle, moveInput.y*.02));
         if (frame%9==0 && keyIsDown('Space'))
         {
             // shoot bullet
-            const pos = this.pos.add(vec2(0,1).rotate(this.angle));
-            const bullet = new EngineObject(pos, vec2(.4), 0, this.angle, YELLOW);
+            const pos = this.pos.add(vec2(0,1).rotate(cameraAngle));
+            const bullet = new EngineObject(pos, vec2(.2,.5), 0, this.angle, YELLOW);
             bullet.velocity = this.velocity.add(vec2(0,.5).rotate(this.angle));
         }
 
         // move camera with player
         cameraPos = this.pos;
+        cameraAngle = this.angle;
     }
 }
 
@@ -34,7 +40,7 @@ function gameRender()
     const size = 32;
     for (let i=1e3; i--;)
     {
-        const parallax = i%.13;
+        const parallax =0; i%.13;
         let pos = vec2(i**2.1, i**3.1);
         pos = pos.add(cameraPos.scale(parallax)).subtract(cameraPos).mod(size);
         pos = cameraPos.add(pos).subtract(vec2(size/2));
