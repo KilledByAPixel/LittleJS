@@ -1519,6 +1519,10 @@ declare module "littlejsengine" {
      *  @return {WebGLTexture}
      *  @memberof WebGL */
     export function glCreateTexture(image?: HTMLImageElement | HTMLCanvasElement | OffscreenCanvas): WebGLTexture;
+    /** Deletes a WebGL texture
+     *  @param {WebGLTexture} [texture]
+     *  @memberof WebGL */
+    export function glDeleteTexture(texture?: WebGLTexture): void;
     /** Set WebGL texture data from an image
      *  @param {WebGLTexture} texture
      *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas} image
@@ -2014,6 +2018,9 @@ declare module "littlejsengine" {
         /** Apply acceleration to this object (adjust velocity, not affected by mass)
          *  @param {Vector2} acceleration */
         applyAcceleration(acceleration: Vector2): void;
+        /** Apply angular acceleration to this object
+         *  @param {number} acceleration */
+        applyAngularAcceleration(acceleration: number): void;
         /** Apply force to this object (adjust velocity, affected by mass)
          *  @param {Vector2} force */
         applyForce(force: Vector2): void;
@@ -2114,16 +2121,75 @@ declare module "littlejsengine" {
         clear(): void;
     }
     /**
+     * Canvas Layer - cached off screen rendering system
+     * - Contains an offscreen canvas that can be rendered to
+     * - Webgl rendering is optional, call useWebGL to enable
+     * @extends EngineObject
+     * @example
+     * const canvasLayer = new CanvasLayer(vec2(), vec2(200,100));
+     */
+    export class CanvasLayer extends EngineObject {
+        /** Create a canvas layer object
+         *  @param {Vector2}  [position] - World space position of the layer
+         *  @param {Vector2}  [size] - World space size of the layer
+         *  @param {number}   [angle] - Angle the layer is rotated by
+         *  @param {number}   [renderOrder] - Objects sorted by renderOrder
+         *  @param {Vector2}  [canvasSize] - Default size of canvas, can be changed later
+        */
+        constructor(position?: Vector2, size?: Vector2, angle?: number, renderOrder?: number, canvasSize?: Vector2);
+        /** @property {HTMLCanvasElement} - The canvas used by this layer */
+        canvas: OffscreenCanvas;
+        /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this layer */
+        context: OffscreenCanvasRenderingContext2D;
+        /** @property {WebGLTexture} - Texture if using webgl for this layer, call useWebGL to enable */
+        glTexture: WebGLTexture;
+        /** Draw this canvas layer centered in world space, with color applied if using WebGL
+        *  @param {Vector2} pos - Center in world space
+        *  @param {Vector2} [size] - Size in world space
+        *  @param {Color}   [color] - Color to modulate with
+        *  @param {number}  [angle] - Angle to rotate by
+        *  @param {boolean} [mirror] - If true image is flipped along the Y axis
+        *  @param {Color}   [additiveColor] - Additive color to be applied if any
+        *  @param {boolean} [screenSpace] - If true the pos and size are in screen space
+        *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
+        *  @memberof Draw */
+        draw(pos: Vector2, size?: Vector2, angle?: number, color?: Color, mirror?: boolean, additiveColor?: Color, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+        /** Draw onto the layer canvas in world space (bypass webgl)
+         *  @param {Vector2}  pos
+         *  @param {Vector2}  size
+         *  @param {number}   angle
+         *  @param {boolean}  mirror
+         *  @param {Function} drawFunction */
+        drawCanvas2D(pos: Vector2, size: Vector2, angle: number, mirror: boolean, drawFunction: Function): void;
+        /** Draw a tile onto the layer canvas in world space
+         *  @param {Vector2}  pos
+         *  @param {Vector2}  [size=(1,1)]
+         *  @param {TileInfo} [tileInfo]
+         *  @param {Color}    [color=(1,1,1,1)]
+         *  @param {number}   [angle=0]
+         *  @param {boolean}  [mirror=0] */
+        drawTile(pos: Vector2, size?: Vector2, tileInfo?: TileInfo, color?: Color, angle?: number, mirror?: boolean): void;
+        /** Draw a rectangle onto the layer canvas in world space
+         *  @param {Vector2} pos
+         *  @param {Vector2} [size=(1,1)]
+         *  @param {Color}   [color=(1,1,1,1)]
+         *  @param {number}  [angle=0] */
+        drawRect(pos: Vector2, size?: Vector2, color?: Color, angle?: number): void;
+        /** Create or update the webgl texture for this layer
+         *  @param {boolean} [enable] - enable webgl rendering and update the texture */
+        useWebGL(enable?: boolean): void;
+    }
+    /**
      * Tile Layer - cached rendering system for tile layers
      * - Each Tile layer is rendered to an off screen canvas
      * - To allow dynamic modifications, layers are rendered using canvas 2d
      * - Some devices like mobile phones are limited to 4k texture resolution
      * - For with 16x16 tiles this limits layers to 256x256 on mobile devices
-     * @extends EngineObject
+     * @extends CanvasLayer
      * @example
      * const tileLayer = new TileLayer(vec2(), vec2(200,100));
      */
-    export class TileLayer extends EngineObject {
+    export class TileLayer extends CanvasLayer {
         /** Create a tile layer object
         *  @param {Vector2}  position      - World space position
         *  @param {Vector2}  size          - World space size
@@ -2133,14 +2199,6 @@ declare module "littlejsengine" {
         *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering
         */
         constructor(position: Vector2, size: Vector2, tileInfo?: TileInfo, scale?: Vector2, renderOrder?: number, useWebGL?: boolean);
-        /** @property {HTMLCanvasElement} - The canvas used by this tile layer */
-        canvas: OffscreenCanvas;
-        /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
-        context: OffscreenCanvasRenderingContext2D;
-        /** @property {Vector2} - How much to scale this layer when rendered */
-        scale: Vector2;
-        /** @property {WebGLTexture} - Texture if using webgl for this layer */
-        glTexture: WebGLTexture;
         data: TileLayerData[];
         /** Draw all the tile data to an offscreen canvas
          *  - This may be slow in some browsers but only needs to be done once */
@@ -2158,16 +2216,6 @@ declare module "littlejsengine" {
          *  @param {boolean} [clear] - should the old tile be cleared out
          */
         drawTileData(layerPos: Vector2, clear?: boolean): void;
-        /** Draw directly to the 2D canvas in world space (bypass webgl)
-         *  @param {Vector2}  pos
-         *  @param {Vector2}  size
-         *  @param {number}   angle
-         *  @param {boolean}  mirror
-         *  @param {Function} drawFunction */
-        drawCanvas2D(pos: Vector2, size: Vector2, angle: number, mirror: boolean, drawFunction: Function): void;
-        /** Create or update the webgl texture for this layer
-         *  @param {boolean} [enable] - enable webgl rendering and update the texture */
-        useWebGL(enable?: boolean): void;
         /** Set data at a given position in the array
          *  @param {Vector2}       layerPos - Local position in array
          *  @param {TileLayerData} data     - Data to set
@@ -2179,20 +2227,6 @@ declare module "littlejsengine" {
         getData(layerPos: Vector2): TileLayerData;
         /** @type {[HTMLCanvasElement|OffscreenCanvas, CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number]} */
         savedRenderSettings: [HTMLCanvasElement | OffscreenCanvas, CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, Vector2, Vector2, number];
-        /** Draw a tile directly onto the layer canvas in world space
-         *  @param {Vector2}  pos
-         *  @param {Vector2}  [size=(1,1)]
-         *  @param {TileInfo} [tileInfo]
-         *  @param {Color}    [color=(1,1,1,1)]
-         *  @param {number}   [angle=0]
-         *  @param {boolean}  [mirror=0] */
-        drawTile(pos: Vector2, size?: Vector2, tileInfo?: TileInfo, color?: Color, angle?: number, mirror?: boolean): void;
-        /** Draw a rectangle directly onto the layer canvas in world space
-         *  @param {Vector2} pos
-         *  @param {Vector2} [size=(1,1)]
-         *  @param {Color}   [color=(1,1,1,1)]
-         *  @param {number}  [angle=0] */
-        drawRect(pos: Vector2, size?: Vector2, color?: Color, angle?: number): void;
     }
     /**
      * Tile Collision Layer - a tile layer with collision
@@ -3177,9 +3211,6 @@ declare module "littlejsengine" {
         /** Apply torque to this object
          *  @param {number} torque */
         applyTorque(torque: number): void;
-        /** Apply angular acceleration to this object
-         *  @param {number} acceleration */
-        applyAngularAcceleration(acceleration: number): void;
         /** Check if this object has any fixtures
          *  @return {boolean} */
         hasFixtures(): boolean;
