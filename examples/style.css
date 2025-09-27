@@ -105,9 +105,9 @@ button
 }
 
 /*  LittleJS CodeMirror Theme */
-.cm-s-littlejs.CodeMirror { background: #000; color: #fff; }
+.cm-s-littlejs.CodeMirror { background: #080808; color: #fff; }
 .cm-s-littlejs div.CodeMirror-selected { background: #068; }
-.cm-s-littlejs .CodeMirror-gutters {background: #111; border-right: 0px;}
+.cm-s-littlejs .CodeMirror-gutters {background: #222; border-right: 0px;}
 .cm-s-littlejs .CodeMirror-linenumber { color: #aaa; }
 .cm-s-littlejs .CodeMirror-cursor { border-left: 2px solid #fff; }
 .cm-s-littlejs .cm-keyword { color: #6e1; }
