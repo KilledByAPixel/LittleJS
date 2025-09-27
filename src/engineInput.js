@@ -54,7 +54,21 @@ function keyDirection(up='ArrowUp', down='ArrowDown', left='ArrowLeft', right='A
 
 /** Clears all input
  *  @memberof Input */
-function clearInput() { inputData = [[]]; touchGamepadButtons = []; }
+function inputClear() { inputData = [[]]; touchGamepadButtons = []; }
+
+/** Clears an input key state
+ *  @param {string|number} key
+ *  @param {number} [device]
+ *  @param {boolean} [clearDown=true]
+ *  @param {boolean} [clearPressed=true]
+ *  @param {boolean} [clearReleased=true]
+ *  @memberof Input */
+function inputClearKey(key, device=0, clearDown=true, clearPressed=true, clearReleased=true)
+{
+    if (!inputData[device])
+        return;
+    inputData[device][key] &= ~((clearDown?1:0)|(clearPressed?2:0)|(clearReleased?4:0));
+}
 
 /** Returns true if mouse button is down
  *  @function
@@ -153,7 +167,7 @@ function inputUpdate()
 
     // clear input when lost focus (prevent stuck keys)
     if(!(touchInputEnable && isTouchDevice) && !document.hasFocus())
-        clearInput();
+        inputClear();
 
     // update mouse world space position
     mousePos = screenToWorld(mousePosScreen);
@@ -221,7 +235,7 @@ function inputInit()
     onmousemove   = (e)=> mousePosScreen = mouseEventToScreen(e);
     onwheel       = (e)=> mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY);
     oncontextmenu = (e)=> false; // prevent right click menu
-    onblur        = (e) => clearInput(); // reset input when focus is lost
+    onblur        = (e) => inputClear(); // reset input when focus is lost
 
     // init touch input
     if (isTouchDevice && touchInputEnable)

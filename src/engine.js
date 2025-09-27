@@ -356,7 +356,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             updateSplash();
             function updateSplash()
             {
-                clearInput();
+                inputClear();
                 drawEngineSplashScreen(t+=.01);
                 t>1 ? resolve() : setTimeout(updateSplash, 16);
             }
