@@ -130,10 +130,10 @@ function glPreRender()
     
     // build the transform matrix
     const s = vec2(2*cameraScale).divide(mainCanvasSize);
-    const rotatedCam = cameraPos.rotate(cameraAngle);
+    const rotatedCam = cameraPos.rotate(-cameraAngle);
     const p = vec2(-1).subtract(rotatedCam.multiply(s));
-    const ca = Math.cos(-cameraAngle);
-    const sa = Math.sin(-cameraAngle);
+    const ca = Math.cos(cameraAngle);
+    const sa = Math.sin(cameraAngle);
     glContext.uniformMatrix4fv(glContext.getUniformLocation(glShader, 'm'), false,
     [
         s.x  * ca,  s.y * sa, 0, 0,

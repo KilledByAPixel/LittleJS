@@ -208,7 +208,7 @@ function screenToWorld(screenPos)
     if (cameraAngle) 
     {
         // apply camera rotation
-        const cos = Math.cos(cameraAngle), sin = Math.sin(cameraAngle);
+        const cos = Math.cos(-cameraAngle), sin = Math.sin(-cameraAngle);
         const rotatedX = cameraPosRelativeX * cos - cameraPosRelativeY * sin;
         const rotatedY = cameraPosRelativeX * sin + cameraPosRelativeY * cos;
         cameraPosRelativeX = rotatedX;
@@ -228,7 +228,7 @@ function worldToScreen(worldPos)
     if (cameraAngle)
     {
         // apply inverse camera rotation
-        const cos = Math.cos(-cameraAngle), sin = Math.sin(-cameraAngle);
+        const cos = Math.cos(cameraAngle), sin = Math.sin(cameraAngle);
         const rotatedX = cameraPosRelativeX * cos - cameraPosRelativeY * sin;
         const rotatedY = cameraPosRelativeX * sin + cameraPosRelativeY * cos;
         cameraPosRelativeX = rotatedX;
@@ -454,7 +454,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, conte
     }
     context.save();
     context.translate(pos.x+.5, pos.y+.5);
-    context.rotate(cameraAngle);
+    context.rotate(-cameraAngle);
     context.rotate(angle);
     context.scale(mirror ? -size.x : size.x, -size.y);
     drawFunction(context);
