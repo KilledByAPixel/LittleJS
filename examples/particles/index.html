@@ -94,7 +94,7 @@ function gameInit()
             if (type == 'color')
             {
                 const color = particleSystem[name];
-                defaultValue = color.toString(0);
+                defaultValue = color.toString(false);
             }
             else if (type == 'alpha')
             {
@@ -266,7 +266,7 @@ function updateSetting(setting, save=1)
     if (type == 'color')
     {
         const color = particleSystem[name];
-        input.value = color.toString(0);
+        input.value = color.toString(false);
     }
     else if (type == 'alpha')
     {
@@ -369,6 +369,7 @@ function gameUpdate()
 
     if (document.activeElement == document.body)
     {
+        particleSystem.velocity = LJS.mouseDelta.scale(.3*LJS.timeDelta);
         particleSystem.pos = LJS.mouseIsDown(0) ? LJS.mousePos : vec2();
         if (LJS.mouseWheel)
         {
