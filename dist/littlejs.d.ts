@@ -262,6 +262,12 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let cameraScale: number;
+    /** Enable applying color to tiles when using canvas2d
+     *  - This is slower but should be the same as webgl rendering
+     *  @type {boolean}
+     *  @default
+     *  @memberof Settings */
+    export let canvasColorTiles: boolean;
     /** The max size of the canvas, centered if window is larger
      *  @type {Vector2}
      *  @default Vector2(1920,1080)
@@ -451,6 +457,13 @@ declare module "littlejsengine" {
      *  @param {number} scale
      *  @memberof Settings */
     export function setCameraScale(scale: number): void;
+    /** Set if tiles should be colorized when using canvas2d
+     *  This can be slower but results should look nearly identical to webgl rendering
+     *  It can be enabled/disabled at any time
+     *  Optimized for performance, and will use faster method if color is white or untextured
+     *  @param {boolean} colorTiles
+     *  @memberof Settings */
+    export function setCanvasColorTiles(colorTiles: boolean): void;
     /** Set max size of the canvas
      *  @param {Vector2} size
      *  @memberof Settings */
@@ -703,10 +716,11 @@ declare module "littlejsengine" {
      *  @memberof Utilities */
     export function nearestPowerOfTwo(value: number): number;
     /** Returns true if two axis aligned bounding boxes are overlapping
+     *  this can be used for simple collision detection between objects
      *  @param {Vector2} posA          - Center of box A
      *  @param {Vector2} sizeA         - Size of box A
      *  @param {Vector2} posB          - Center of box B
-     *  @param {Vector2} [sizeB=(0,0)] - Size of box B, a point if undefined
+     *  @param {Vector2} [sizeB=(0,0)] - Size of box B, uses a point if undefined
      *  @return {boolean}              - True if overlapping
      *  @memberof Utilities */
     export function isOverlapping(posA: Vector2, sizeA: Vector2, posB: Vector2, sizeB?: Vector2): boolean;
@@ -722,9 +736,10 @@ declare module "littlejsengine" {
      *  @param {number} [frequency] - Frequency of the wave in Hz
      *  @param {number} [amplitude] - Amplitude (max height) of the wave
      *  @param {number} [t=time]    - Value to use for time of the wave
+     *  @param {number} [offset]    - Value to use for time offset of the wave
      *  @return {number}            - Value waving between 0 and amplitude
      *  @memberof Utilities */
-    export function wave(frequency?: number, amplitude?: number, t?: number): number;
+    export function wave(frequency?: number, amplitude?: number, t?: number, offset?: number): number;
     /** Formats seconds to mm:ss style for display purposes
      *  @param {number} t - time in seconds
      *  @return {string}
@@ -1126,6 +1141,20 @@ declare module "littlejsengine" {
      * @memberof Utilities
      */
     export function isColor(c: any): boolean;
+    /**
+     * Check if object is a valid Vector2
+     * @param {any} v
+     * @return {boolean}
+     * @memberof Utilities
+     */
+    export function isVector2(v: any): boolean;
+    /**
+     * Check if object is a valid number, not NaN or undefined, but it may be infinite
+     * @param {any} n
+     * @return {boolean}
+     * @memberof Utilities
+     */
+    export function isNumber(n: any): boolean;
     /** Color - White #ffffff
      *  @type {Color}
      *  @memberof Utilities */
@@ -1186,10 +1215,10 @@ declare module "littlejsengine" {
      * Create a tile info object using a grid based system
      * - This can take vecs or floats for easier use and conversion
      * - If an index is passed in, the tile size and index will determine the position
-     * @param {Vector2|number} [pos=0]                - Index of tile in sheet
+     * @param {Vector2|number} [pos=0] - Index of tile in sheet
      * @param {Vector2|number} [size=tileSizeDefault] - Size of tile in pixels
-     * @param {number} [textureIndex]                   - Texture index to use
-     * @param {number} [padding]                        - How many pixels padding around tiles
+     * @param {number} [textureIndex] - Texture index to use
+     * @param {number} [padding] - How many pixels padding around tiles
      * @return {TileInfo}
      * @example
      * tile(2)                       // a tile at index 2 using the default tile size of 16
@@ -1424,10 +1453,9 @@ declare module "littlejsengine" {
     export function drawTextScreen(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, maxWidth?: number, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Enable normal or additive blend mode
      *  @param {boolean} [additive]
-     *  @param {boolean} [useWebGL=glEnable]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
-    export function setBlendMode(additive?: boolean, useWebGL?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    export function setBlendMode(additive?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Combines all LittleJS canvases onto the main canvas and clears them
      *  This is necessary for things like saving a screenshot
      *  @memberof Draw */
@@ -1490,12 +1518,13 @@ declare module "littlejsengine" {
     /**
      * LittleJS WebGL Interface
      * - All webgl used by the engine is wrapped up here
+     * - Will fall back to 2D canvas rendering if webgl is not supported
      * - For normal stuff you won't need to see or call anything in this file
      * - For advanced stuff there are helper functions to create shaders, textures, etc
      * - Can be disabled with glEnable to revert to 2D canvas rendering
      * - Batches sprite rendering on GPU for incredibly fast performance
      * - Sprite transform math is done in the shader where possible
-     * - Supports shadertoy style post processing shaders
+     * - Supports shadertoy style post processing shaders via plugin
      * @namespace WebGL
      */
     /** The WebGL canvas which appears above the main canvas and below the overlay canvas
@@ -3797,14 +3826,15 @@ declare module "littlejsengine" {
      *  @param {Vector2} size - World space size
      *  @param {TileInfo} startTile - Starting tile for the nine-slice pattern
      *  @param {Color} [color] - Color to modulate with
-     *  @param {number} [borderSize=1] - Width of the border sections
+     *  @param {number} [borderSize] - Width of the border sections
      *  @param {Color} [additiveColor] - Additive color
-     *  @param {number} [extraSpace=.01] - Extra spacing adjustment
+     *  @param {number} [extraSpace] - Extra spacing adjustment
+     *  @param {number} [angle] - Angle to rotate by
      *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
      *  @param {boolean} [screenSpace] - Use screen space coordinates
      *  @param {CanvasRenderingContext2D} [context] - Canvas context to use
      *  @memberof DrawUtilities */
-    export function drawNineSlice(pos: Vector2, size: Vector2, startTile: TileInfo, color?: Color, borderSize?: number, additiveColor?: Color, extraSpace?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
+    export function drawNineSlice(pos: Vector2, size: Vector2, startTile: TileInfo, color?: Color, borderSize?: number, additiveColor?: Color, extraSpace?: number, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
     /**
      * LittleJS Drawing Utilities Plugin
      * - Extra drawing functions for LittleJS
@@ -3816,31 +3846,34 @@ declare module "littlejsengine" {
      *  @param {Vector2} pos - Screen space position
      *  @param {Vector2} size - Screen space size
      *  @param {TileInfo} startTile - Starting tile for the nine-slice pattern
-     *  @param {number} [borderSize=1] - Width of the border sections
-     *  @param {number} [extraSpace=.01] - Extra spacing adjustment
+     *  @param {number} [borderSize] - Width of the border sections
+     *  @param {number} [extraSpace] - Extra spacing adjustment
+     *  @param {number} [angle] - Angle to rotate by
      *  @memberof DrawUtilities */
-    export function drawNineSliceScreen(pos: Vector2, size: Vector2, startTile: TileInfo, borderSize?: number, extraSpace?: number): void;
+    export function drawNineSliceScreen(pos: Vector2, size: Vector2, startTile: TileInfo, borderSize?: number, extraSpace?: number, angle?: number): void;
     /** Draw a scalable three-slice UI element in world space
      *  This function can apply color and additive color if webgl is enabled
      *  @param {Vector2} pos - World space position
      *  @param {Vector2} size - World space size
      *  @param {TileInfo} startTile - Starting tile for the three-slice pattern
      *  @param {Color} [color] - Color to modulate with
-     *  @param {number} [borderSize=1] - Width of the border sections
+     *  @param {number} [borderSize] - Width of the border sections
      *  @param {Color} [additiveColor] - Additive color
-     *  @param {number} [extraSpace=.01] - Extra spacing adjustment
+     *  @param {number} [extraSpace] - Extra spacing adjustment
+     *  @param {number} [angle] - Angle to rotate by
      *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
      *  @param {boolean} [screenSpace] - Use screen space coordinates
      *  @param {CanvasRenderingContext2D} [context] - Canvas context to use
      *  @memberof DrawUtilities */
-    export function drawThreeSlice(pos: Vector2, size: Vector2, startTile: TileInfo, color?: Color, borderSize?: number, additiveColor?: Color, extraSpace?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
+    export function drawThreeSlice(pos: Vector2, size: Vector2, startTile: TileInfo, color?: Color, borderSize?: number, additiveColor?: Color, extraSpace?: number, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
     /** Draw a scalable three-slice UI element to the overlay canvas in screen space
      *  This function can not apply color because it draws using the overlay 2d context
      *  @param {Vector2} pos - Screen space position
      *  @param {Vector2} size - Screen space size
      *  @param {TileInfo} startTile - Starting tile for the three-slice pattern
-     *  @param {number} [borderSize=1] - Width of the border sections
-     *  @param {number} [extraSpace=.01] - Extra spacing adjustment
+     *  @param {number} [borderSize] - Width of the border sections
+     *  @param {number} [extraSpace] - Extra spacing adjustment
+     *  @param {number} [angle] - Angle to rotate by
      *  @memberof DrawUtilities */
-    export function drawThreeSliceScreen(pos: Vector2, size: Vector2, startTile: TileInfo, borderSize?: number, extraSpace?: number): void;
+    export function drawThreeSliceScreen(pos: Vector2, size: Vector2, startTile: TileInfo, borderSize?: number, extraSpace?: number, angle?: number): void;
 }
