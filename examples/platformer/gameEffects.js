@@ -225,11 +225,15 @@ export class ParallaxLayer extends LJS.CanvasLayer
         this.depth = depth;
 
         // create a gradient for the mountains
-        const layerColor = GameLevel.levelColor.mutate(.2).lerp(GameLevel.sky.skyColor, .95 - depth*.15);
-        const gradient = this.context.createLinearGradient(0,0,0,canvasSize.y);
-        gradient.addColorStop(0,layerColor);
-        gradient.addColorStop(1,layerColor.subtract(LJS.CLEAR_WHITE).mutate(.1).clamp());
-        this.context.fillStyle = gradient
+        const topColor = GameLevel.levelColor.mutate(.2).lerp(GameLevel.sky.skyColor, .8 - depth*.15);
+        const bottomColor = GameLevel.levelColor.subtract(LJS.CLEAR_WHITE).mutate(.2);
+        for(let i = canvasSize.y; i--;)
+        {
+            // draw a 1 pixel gradient line on the left side of the canvas
+            const p = i/canvasSize.y;
+            this.context.fillStyle = topColor.lerp(bottomColor, p);
+            this.context.fillRect(0, i, 1, 1);
+        }
 
         // draw random mountains
         const pointiness = .2;  // how pointy the mountains are
@@ -247,9 +251,12 @@ export class ParallaxLayer extends LJS.CanvasLayer
                 groundSlope = LJS.rand(-slopeRange, slopeRange);
 
             // draw 1 pixel wide vertical slice of mountain
-            this.context.fillRect(x, y, 1, canvasSize.y)
+            this.context.drawImage(this.canvas, 0, 0, 1, canvasSize.y, x, y, 1, canvasSize.y - y);
         }
-        
+
+        // remove gradient sliver from left side
+        this.context.clearRect(0,0,1,canvasSize.y);
+    
         // make webgl texture
         this.useWebGL(LJS.glEnable);
     }
