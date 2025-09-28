@@ -68,13 +68,23 @@ declare module "littlejsengine" {
      *  @memberof Engine */
     export function setPaused(isPaused?: boolean): void;
     /** Startup LittleJS engine with your callback functions
-     *  @param {Function|function():Promise} gameInit - Called once after the engine starts up
-     *  @param {Function} gameUpdate - Called every frame before objects are updated
-     *  @param {Function} gameUpdatePost - Called after physics and objects are updated, even when paused
-     *  @param {Function} gameRender - Called before objects are rendered, for drawing the background
-     *  @param {Function} gameRenderPost - Called after objects are rendered, useful for drawing UI
-     *  @param {Array<string>} [imageSources=[]] - List of images to load
-     *  @param {HTMLElement} [rootElement] - Root element to attach to, the document body by default
+     *  @param {Function|function():Promise} gameInit - Called once after the engine starts up, can be async for loading
+     *  @param {Function} gameUpdate - Called every frame before objects are updated (60fps), use for game logic
+     *  @param {Function} gameUpdatePost - Called after physics and objects are updated, even when paused, use for UI updates
+     *  @param {Function} gameRender - Called before objects are rendered, use for drawing backgrounds/world elements
+     *  @param {Function} gameRenderPost - Called after objects are rendered, use for drawing UI/overlays
+     *  @param {Array<string>} [imageSources=[]] - List of image file paths to preload (e.g., ['player.png', 'tiles.png'])
+     *  @param {HTMLElement} [rootElement] - Root DOM element to attach canvas to, defaults to document.body
+     *  @example
+     *  // Basic engine startup
+     *  engineInit(
+     *    () => { console.log('Game initialized!'); },  // gameInit
+     *    () => { updatePlayer(); },                    // gameUpdate
+     *    () => { updateUI(); },                        // gameUpdatePost
+     *    () => { drawBackground(); },                  // gameRender
+     *    () => { drawHUD(); },                         // gameRenderPost
+     *    ['tiles.png', 'tilesLevel.png']               // images to load
+     *  );
      *  @memberof Engine */
     export function engineInit(gameInit: Function | (() => Promise<any>), gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, imageSources?: Array<string>, rootElement?: HTMLElement): Promise<void>;
     /** Update each engine object, remove destroyed objects, and update time
