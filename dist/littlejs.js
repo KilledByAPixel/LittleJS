@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.12.14';
+const engineVersion = '1.12.15';
 
 /** Frames per second to update
  *  @type {number}
@@ -690,12 +690,12 @@ let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParti
 
 /** Asserts if the expression is false, does not do anything in release builds
  *  @param {boolean} assert 
- *  @param {Object} [output] - error message output
+ *  @param {...Object} [output] - error message output
  *  @memberof Debug */
-function ASSERT(assert, output) 
+function ASSERT(assert, ...output) 
 {
     if (enableAsserts)
-        console.assert(assert, output);
+        console.assert(assert, ...output);
 }
 
 /** Draw a debug rectangle in world space
@@ -1249,19 +1249,17 @@ const PI = Math.PI;
  *  @memberof Utilities */
 function abs(value) { return Math.abs(value); }
 
-/** Returns lowest of two values passed in
- *  @param {number} valueA
- *  @param {number} valueB
+/** Returns lowest value passed in
+ *  @param {...number} values
  *  @return {number}
  *  @memberof Utilities */
-function min(valueA, valueB) { return Math.min(valueA, valueB); }
+function min(...values) { return Math.min(...values); }
 
-/** Returns highest of two values passed in
- *  @param {number} valueA
- *  @param {number} valueB
+/** Returns highest value passed in
+ *  @param {...number} values
  *  @return {number}
  *  @memberof Utilities */
-function max(valueA, valueB) { return Math.max(valueA, valueB); }
+function max(...values) { return Math.max(...values); }
 
 /** Returns the sign of value passed in
  *  @param {number} value
@@ -1438,7 +1436,7 @@ async function fetchJSON(url)
  * @return {boolean}
  * @memberof Utilities
  */
-function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
+function isNumber(n) { return typeof n == 'number' && !isNaN(n); }
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1589,12 +1587,12 @@ function vec2(x=0, y) { return new Vector2(x, y === undefined ? x : y); }
 function isVector2(v) { return v instanceof Vector2; }
 
 // vector2 asserts
-function ASSERT_VECTOR2_VALID(v) { ASSERT(isVector2(v) && v.isValid(), 'Vector2 is invalid: ' + v); }
-function ASSERT_NUMBER_VALID(n) { ASSERT(isNumber(n), 'Number is invalid: ' + n); }
+function ASSERT_VECTOR2_VALID(v) { ASSERT(isVector2(v) && v.isValid(), 'Vector2 is invalid.', v); }
+function ASSERT_NUMBER_VALID(n) { ASSERT(isNumber(n), 'Number is invalid.', n); }
 function ASSERT_VECTOR2_NORMAL(v)
 {
     ASSERT_VECTOR2_VALID(v);
-    ASSERT(abs(v.lengthSquared()-1) < .01, 'Vector2 is not normal: ' + v); 
+    ASSERT(abs(v.lengthSquared()-1) < .01, 'Vector2 is not normal.', v); 
 }
 
 /** 
@@ -1617,7 +1615,7 @@ class Vector2
         this.x = x;
         /** @property {number} - Y axis location */
         this.y = y;
-        ASSERT(this.isValid(), 'Constructed Vector2 is invalid: ' + this);
+        ASSERT(this.isValid(), 'Constructed Vector2 is invalid.', this);
     }
 
     /** Sets values of this vector and returns self
@@ -1628,7 +1626,6 @@ class Vector2
     {
         this.x = x;
         this.y = y;
-        ASSERT_VECTOR2_VALID(this);
         return this;
     }
 
@@ -1639,47 +1636,27 @@ class Vector2
     /** Returns a copy of this vector plus the vector passed in
      *  @param {Vector2} v - other vector
      *  @return {Vector2} */
-    add(v)
-    {
-        ASSERT_VECTOR2_VALID(v);
-        return new Vector2(this.x + v.x, this.y + v.y);
-    }
+    add(v) { return new Vector2(this.x + v.x, this.y + v.y);}
 
     /** Returns a copy of this vector minus the vector passed in
      *  @param {Vector2} v - other vector
      *  @return {Vector2} */
-    subtract(v)
-    {
-        ASSERT_VECTOR2_VALID(v);
-        return new Vector2(this.x - v.x, this.y - v.y);
-    }
+    subtract(v) { return new Vector2(this.x - v.x, this.y - v.y); }
 
     /** Returns a copy of this vector times the vector passed in
      *  @param {Vector2} v - other vector
      *  @return {Vector2} */
-    multiply(v)
-    {
-        ASSERT_VECTOR2_VALID(v);
-        return new Vector2(this.x * v.x, this.y * v.y);
-    }
+    multiply(v) { return new Vector2(this.x * v.x, this.y * v.y); }
 
     /** Returns a copy of this vector divided by the vector passed in
      *  @param {Vector2} v - other vector
      *  @return {Vector2} */
-    divide(v)
-    {
-        ASSERT_VECTOR2_VALID(v);
-        return new Vector2(this.x / v.x, this.y / v.y);
-    }
+    divide(v) { return new Vector2(this.x / v.x, this.y / v.y); }
 
     /** Returns a copy of this vector scaled by the vector passed in
      *  @param {number} s - scale
      *  @return {Vector2} */
-    scale(s)
-    {
-        ASSERT_NUMBER_VALID(s);
-        return new Vector2(this.x * s, this.y * s);
-    }
+    scale(s) { return new Vector2(this.x * s, this.y * s); }
 
     /** Returns the length of this vector
      * @return {number} */
@@ -1692,27 +1669,18 @@ class Vector2
     /** Returns the distance from this vector to vector passed in
      * @param {Vector2} v - other vector
      * @return {number} */
-    distance(v)
-    {
-        ASSERT_VECTOR2_VALID(v);
-        return this.distanceSquared(v)**.5;
-    }
+    distance(v) { return this.distanceSquared(v)**.5; }
 
     /** Returns the distance squared from this vector to vector passed in
      * @param {Vector2} v - other vector
      * @return {number} */
-    distanceSquared(v)
-    {
-        ASSERT_VECTOR2_VALID(v);
-        return (this.x - v.x)**2 + (this.y - v.y)**2;
-    }
+    distanceSquared(v) { return (this.x - v.x)**2 + (this.y - v.y)**2; }
 
     /** Returns a new vector in same direction as this one with the length passed in
      * @param {number} [length]
      * @return {Vector2} */
     normalize(length=1)
     {
-        ASSERT_NUMBER_VALID(length);
         const l = this.length();
         return l ? this.scale(length/l) : new Vector2(0, length);
     }
@@ -1722,7 +1690,6 @@ class Vector2
      * @return {Vector2} */
     clampLength(length=1)
     {
-        ASSERT_NUMBER_VALID(length);
         const l = this.length();
         return l > length ? this.scale(length/l) : this;
     }
@@ -1730,31 +1697,19 @@ class Vector2
     /** Returns the dot product of this and the vector passed in
      * @param {Vector2} v - other vector
      * @return {number} */
-    dot(v)
-    {
-        ASSERT_VECTOR2_VALID(v);
-        return this.x*v.x + this.y*v.y;
-    }
+    dot(v) { return this.x*v.x + this.y*v.y; }
 
     /** Returns the cross product of this and the vector passed in
      * @param {Vector2} v - other vector
      * @return {number} */
-    cross(v)
-    {
-        ASSERT_VECTOR2_VALID(v);
-        return this.x*v.y - this.y*v.x;
-    }
+    cross(v) { return this.x*v.y - this.y*v.x; }
 
     /** Returns a copy this vector reflected by the surface normal
      * @param {Vector2} normal - surface normal (should be normalized)
      * @param {number} restitution - how much to bounce, 1 is perfect bounce, 0 is no bounce
      * @return {Vector2} */
     reflect(normal, restitution=1)
-    {
-        ASSERT_VECTOR2_NORMAL(normal);
-        ASSERT_NUMBER_VALID(restitution);
-        return this.subtract(normal.scale((1+restitution)*this.dot(normal)));
-    }
+    { return this.subtract(normal.scale((1+restitution)*this.dot(normal))); }
 
     /** Returns the clockwise angle of this vector, up is angle 0
      * @return {number} */
@@ -1777,7 +1732,7 @@ class Vector2
      * @param {number} angle
      * @return {Vector2} */
     rotate(angle)
-    { 
+    {
         ASSERT_NUMBER_VALID(angle);
         const c = Math.cos(-angle), s = Math.sin(-angle); 
         return new Vector2(this.x*c - this.y*s, this.x*s + this.y*c);
@@ -1792,7 +1747,7 @@ class Vector2
         ASSERT_NUMBER_VALID(length);
         direction = mod(direction, 4);
         ASSERT(direction==0 || direction==1 || direction==2 || direction==3,
-            'Vector2.setDirection() direction must be an integer between 0 and 3!');
+            'Vector2.setDirection() direction must be an integer between 0 and 3.');
         return vec2(direction%2 ? direction-1 ? -length : length : 0, 
             direction%2 ? 0 : direction ? -length : length);
     }
@@ -1818,10 +1773,7 @@ class Vector2
     *  @param {number} [divisor]
     *  @return {Vector2} */
     mod(divisor=1)
-    {
-        ASSERT_NUMBER_VALID(divisor);
-        return new Vector2(mod(this.x, divisor), mod(this.y, divisor));
-    }
+    { return new Vector2(mod(this.x, divisor), mod(this.y, divisor)); }
 
     /** Returns the area this vector covers as a rectangle
      * @return {number} */
@@ -1835,17 +1787,15 @@ class Vector2
     {
         ASSERT_VECTOR2_VALID(v);
         ASSERT_NUMBER_VALID(percent);
-        return this.add(v.subtract(this).scale(clamp(percent)));
+        const p = clamp(percent);
+        return new Vector2(v.x*p + this.x*(1-p), v.y*p + this.y*(1-p));
     }
 
     /** Returns true if this vector is within the bounds of an array size passed in
      * @param {Vector2} arraySize
      * @return {boolean} */
     arrayCheck(arraySize)
-    {
-        ASSERT_VECTOR2_VALID(arraySize);
-        return this.x >= 0 && this.y >= 0 && this.x < arraySize.x && this.y < arraySize.y;
-    }
+    { return this.x >= 0 && this.y >= 0 && this.x < arraySize.x && this.y < arraySize.y; }
 
     /** Returns this vector expressed as a string
      * @param {number} digits - precision to display
@@ -1900,7 +1850,7 @@ function hsl(h, s, l, a) { return new Color().setHSLA(h, s, l, a); }
 function isColor(c) { return c instanceof Color; }
 
 // color asserts
-function ASSERT_COLOR_VALID(c) { ASSERT(isColor(c) && c.isValid(), 'Color is invalid: ' + c); }
+function ASSERT_COLOR_VALID(c) { ASSERT(isColor(c) && c.isValid(), 'Color is invalid.', c); }
 
 /** 
  * Color object (red, green, blue, alpha) with some helpful functions
@@ -1928,7 +1878,7 @@ class Color
         this.b = b;
         /** @property {number} - Alpha */
         this.a = a;
-        ASSERT(this.isValid(), 'Constructed Color is invalid: ' + this);
+        ASSERT(this.isValid(), 'Constructed Color is invalid.', this);
     }
 
     /** Sets values of this color and returns self
@@ -1943,7 +1893,6 @@ class Color
         this.g = g;
         this.b = b;
         this.a = a;
-        ASSERT_COLOR_VALID(this);
         return this;
     }
 
@@ -1954,49 +1903,29 @@ class Color
     /** Returns a copy of this color plus the color passed in
      * @param {Color} c - other color
      * @return {Color} */
-    add(c)
-    {
-        ASSERT_COLOR_VALID(c);
-        return new Color(this.r+c.r, this.g+c.g, this.b+c.b, this.a+c.a);
-    }
+    add(c) { return new Color(this.r+c.r, this.g+c.g, this.b+c.b, this.a+c.a); }
 
     /** Returns a copy of this color minus the color passed in
      * @param {Color} c - other color
      * @return {Color} */
-    subtract(c)
-    {
-        ASSERT_COLOR_VALID(c);
-        return new Color(this.r-c.r, this.g-c.g, this.b-c.b, this.a-c.a);
-    }
+    subtract(c) { return new Color(this.r-c.r, this.g-c.g, this.b-c.b, this.a-c.a); }
 
     /** Returns a copy of this color times the color passed in
      * @param {Color} c - other color
      * @return {Color} */
-    multiply(c)
-    {
-        ASSERT_COLOR_VALID(c);
-        return new Color(this.r*c.r, this.g*c.g, this.b*c.b, this.a*c.a);
-    }
+    multiply(c) { return new Color(this.r*c.r, this.g*c.g, this.b*c.b, this.a*c.a); }
 
     /** Returns a copy of this color divided by the color passed in
      * @param {Color} c - other color
      * @return {Color} */
-    divide(c)
-    {
-        ASSERT_COLOR_VALID(c);
-        return new Color(this.r/c.r, this.g/c.g, this.b/c.b, this.a/c.a);
-    }
+    divide(c) { return new Color(this.r/c.r, this.g/c.g, this.b/c.b, this.a/c.a); }
 
     /** Returns a copy of this color scaled by the value passed in, alpha can be scaled separately
      * @param {number} scale
      * @param {number} [alphaScale=scale]
      * @return {Color} */
     scale(scale, alphaScale=scale) 
-    {
-        ASSERT_NUMBER_VALID(scale);
-        ASSERT_NUMBER_VALID(alphaScale);
-        return new Color(this.r*scale, this.g*scale, this.b*scale, this.a*alphaScale);
-    }
+    { return new Color(this.r*scale, this.g*scale, this.b*scale, this.a*alphaScale); }
 
     /** Returns a copy of this color clamped to the valid range between 0 and 1
      * @return {Color} */
@@ -2010,7 +1939,12 @@ class Color
     {
         ASSERT_COLOR_VALID(c);
         ASSERT_NUMBER_VALID(percent);
-        return this.add(c.subtract(this).scale(clamp(percent)));
+        const p = clamp(percent);
+        return new Color(
+            c.r*p + this.r*(1-p), 
+            c.g*p + this.g*(1-p), 
+            c.b*p + this.b*(1-p), 
+            c.a*p + this.a*(1-p));
     }
 
     /** Sets this color given a hue, saturation, lightness, and alpha
@@ -2045,20 +1979,19 @@ class Color
         const g = clamp(this.g);
         const b = clamp(this.b);
         const a = clamp(this.a);
-        const max = Math.max(r, g, b);
-        const min = Math.min(r, g, b);
-        const l = (max + min) / 2;
-        
+        const maxC = max(r, g, b);
+        const minC = min(r, g, b);
+        const l = (maxC + minC) / 2;
         let h = 0, s = 0;
-        if (max != min)
+        if (maxC != minC)
         {
-            let d = max - min;
-            s = l > .5 ? d / (2 - max - min) : d / (max + min);
-            if (r == max)
+            let d = maxC - minC;
+            s = l > .5 ? d / (2 - maxC - minC) : d / (maxC + minC);
+            if (r == maxC)
                 h = (g - b) / d + (g < b ? 6 : 0);
-            else if (g == max)
+            else if (g == maxC)
                 h = (b - r) / d + 2;
-            else if (b == max)
+            else if (b == maxC)
                 h =  (r - g) / d + 4;
         }
         return [h / 6, s, l, a];
@@ -2086,7 +2019,7 @@ class Color
      * @return {string} */
     toString(useAlpha = true)      
     {
-        ASSERT(typeof useAlpha === 'boolean', 'Boolean is invalid:' + useAlpha);
+        ASSERT(typeof useAlpha == 'boolean', 'Use alpha boolean is invalid.', useAlpha);
         if (debug && !this.isValid())
             return `#000`;
         const toHex = (c)=> ((c=clamp(c)*255|0)<16 ? '0' : '') + c.toString(16);
@@ -2226,7 +2159,7 @@ class Timer
      *  @param {number} [timeLeft] - How much time left before the timer elapses in seconds */
     constructor(timeLeft)
     {
-        ASSERT(timeLeft === undefined || isNumber(timeLeft), 'Time is invalid: ' + timeLeft);
+        ASSERT(timeLeft === undefined || isNumber(timeLeft), 'Constructed Timer is invalid.', timeLeft);
         this.time = timeLeft === undefined ? undefined : time + timeLeft;
         this.setTime = timeLeft;
     }
@@ -2235,7 +2168,7 @@ class Timer
      *  @param {number} [timeLeft] - How much time left before the timer is elapsed in seconds */
     set(timeLeft=0)
     {
-        ASSERT(isNumber(timeLeft), 'Time is invalid: ' + timeLeft);
+        ASSERT(isNumber(timeLeft), 'Timer is invalid.', timeLeft);
         this.time = time + timeLeft;
         this.setTime = timeLeft;
     }
@@ -2269,7 +2202,7 @@ class Timer
     
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {number} */
-    valueOf()               { return this.get(); }
+    valueOf() { return this.get(); }
 }
 /**
  * LittleJS Engine Settings
@@ -3304,31 +3237,36 @@ let drawCount;
  * tile(vec2(4,8), vec2(30,10))  // a tile at index (4,8) with a size of (30,10)
  * @memberof Draw
  */
-function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0)
+function tile(pos=new Vector2, size=tileSizeDefault, textureIndex=0, padding=0)
 {
     if (headlessMode)
         return new TileInfo;
 
     // if size is a number, make it a vector
-    if (typeof size === 'number')
+    if (typeof size == 'number')
     {
         ASSERT(size > 0);
-        size = vec2(size);
+        size = new Vector2(size, size);
     }
 
-    // use pos as a tile index
+    // create tile info object
+    const tileInfo = new TileInfo(new Vector2, size, textureIndex, padding);
+
+    // use get the pos of the tile
     const textureInfo = textureInfos[textureIndex];
     ASSERT(!!textureInfo, 'Texture not loaded');
-    const sizePadded = size.add(vec2(padding*2));
-    if (typeof pos === 'number')
+    const sizePaddedX = size.x + padding*2;
+    const sizePaddedY = size.y + padding*2;
+    if (typeof pos == 'number')
     {
-        const cols = textureInfo.size.x / sizePadded.x |0;
-        pos = cols>0 ? vec2(pos%cols, pos/cols|0) : vec2();
+        const cols = textureInfo.size.x / sizePaddedX |0;
+        ASSERT(cols>0, 'Tile size is too big for texture');
+        const posX = pos % cols, posY = (pos / cols) |0;
+        tileInfo.pos.set(posX*sizePaddedX+padding, posY*sizePaddedY+padding);
     }
-    pos = vec2(pos.x*sizePadded.x+padding, pos.y*sizePadded.y+padding);
-
-    // return a tile info object
-    return new TileInfo(pos, size, textureIndex, padding); 
+    else
+        tileInfo.pos.set(pos.x*sizePaddedX+padding, pos.y*sizePaddedY+padding);
+    return tileInfo; 
 }
 
 /** 
@@ -3370,7 +3308,7 @@ class TileInfo
     frame(frame)
     {
         ASSERT(typeof frame == 'number');
-        return this.offset(vec2(frame*(this.size.x+this.padding*2), 0));
+        return this.offset(new Vector2(frame*(this.size.x+this.padding*2), 0));
     }
 
     /**
@@ -3381,8 +3319,8 @@ class TileInfo
      */
     setFullImage(image, glTexture)
     {
-        this.pos = vec2();
-        this.size = vec2(image.width, image.height);
+        this.pos = new Vector2;
+        this.size = new Vector2(image.width, image.height);
         this.textureInfo = new TextureInfo(image, glTexture);
         return this;
     }
@@ -3479,7 +3417,7 @@ function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
  *  @param {boolean} [screenSpace=false]        - If true the pos and size are in screen space
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
  *  @memberof Draw */
-function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
+function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
     angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace, context)
 {
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode'); 
@@ -3532,7 +3470,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     {
         // normal canvas 2D rendering method (slower)
         showWatermark && ++drawCount;
-        size = vec2(size.x, -size.y); // fix upside down sprites
+        size = new Vector2(size.x, -size.y); // fix upside down sprites
         drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
             if (textureInfo)
@@ -3660,12 +3598,12 @@ function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=new C
  *  @param {Vector2}  pos
  *  @param {Vector2}  size
  *  @param {number}   angle
- *  @param {boolean}  mirror
- *  @param {Function} drawFunction
+ *  @param {boolean}  [mirror]
+ *  @param {Function} [drawFunction]
  *  @param {boolean} [screenSpace=false]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, context=drawContext)
+function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpace=false, context=drawContext)
 {
     if (!screenSpace)
     {
@@ -3675,8 +3613,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, conte
     }
     context.save();
     context.translate(pos.x+.5, pos.y+.5);
-    context.rotate(-cameraAngle);
-    context.rotate(angle);
+    context.rotate(angle-cameraAngle);
     context.scale(mirror ? -size.x : size.x, -size.y);
     drawFunction(context);
     context.restore();
@@ -3741,13 +3678,13 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
     context.lineJoin = 'round';
 
     const lines = (text+'').split('\n');
-    pos = pos.copy();
-    pos.y -= (lines.length-1) * size/2; // center text vertically
+    let posY = pos.y;
+    posY -= (lines.length-1) * size/2; // center text vertically
     lines.forEach(line=>
     {
-        lineWidth && context.strokeText(line, pos.x, pos.y, maxWidth);
-        context.fillText(line, pos.x, pos.y, maxWidth);
-        pos.y += size;
+        lineWidth && context.strokeText(line, pos.x, posY, maxWidth);
+        context.fillText(line, pos.x, posY, maxWidth);
+        posY += size;
     });
 }
 
@@ -3918,7 +3855,8 @@ function setCursor(cursorStyle = 'auto')
  *  @memberof Input */
 function keyIsDown(key, device=0)
 { 
-    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
+    ASSERT(key !== undefined, 'key is undefined');
+    ASSERT(device > 0 || typeof key != 'number' || key < 3, 'use code string for keyboard');
     return inputData[device] && !!(inputData[device][key] & 1); 
 }
 
@@ -3929,7 +3867,8 @@ function keyIsDown(key, device=0)
  *  @memberof Input */
 function keyWasPressed(key, device=0)
 { 
-    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
+    ASSERT(key !== undefined, 'key is undefined');
+    ASSERT(device > 0 || typeof key != 'number' || key < 3, 'use code string for keyboard');
     return inputData[device] && !!(inputData[device][key] & 2); 
 }
 
@@ -3940,7 +3879,8 @@ function keyWasPressed(key, device=0)
  *  @memberof Input */
 function keyWasReleased(key, device=0)
 { 
-    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
+    ASSERT(key !== undefined, 'key is undefined');
+    ASSERT(device > 0 || typeof key != 'number' || key < 3, 'use code string for keyboard');
     return inputData[device] && !!(inputData[device][key] & 4);
 }
 
@@ -5044,7 +4984,7 @@ function tileCollisionRaycast(posStart, posEnd, object, solidOnly=true)
 ///////////////////////////////////////////////////////////////////////////////
 /** 
  * Load tile layers from exported data
- *  @param {object}   tileMapData - Level data from exported data
+ *  @param {Object}   tileMapData - Level data from exported data
  *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture)
  *  @param {number}   [renderOrder] - Render order of the top layer
  *  @param {number}   [collisionLayer] - Layer to use for collision if any
@@ -5523,22 +5463,25 @@ class TileCollisionLayer extends TileLayer
     *  @param {Vector2}      [size=(0,0)]
     *  @param {EngineObject} [object]
     *  @return {boolean} */
-    collisionTest(pos, size=vec2(), object)
+    collisionTest(pos, size=new Vector2, object)
     {
         // transform to local layer space
-        pos = pos.subtract(this.pos);
+        const posX = pos.x - this.pos.x;
+        const posY = pos.y - this.pos.y;
 
         // check any tiles in the area for collision
-        const minX = max(pos.x - size.x/2|0, 0);
-        const minY = max(pos.y - size.y/2|0, 0);
-        const maxX = min(pos.x + size.x/2, this.size.x);
-        const maxY = min(pos.y + size.y/2, this.size.y);
+        const minX = max(posX - size.x/2|0, 0);
+        const minY = max(posY - size.y/2|0, 0);
+        const maxX = min(posX + size.x/2, this.size.x);
+        const maxY = min(posY + size.y/2, this.size.y);
+        const hitPos = new Vector2;
         for (let y = minY; y < maxY; ++y)
         for (let x = minX; x < maxX; ++x)
         {
             // check if the object should collide with this tile
             const tileData = this.collisionData[y*this.size.x+x];
-            if (tileData && (!object || object.collideWithTile(tileData, vec2(x, y))))
+            if (tileData)
+            if (!object || object.collideWithTile(tileData, hitPos.set(x, y)))
                 return true;
         }
         return false;
@@ -5553,20 +5496,22 @@ class TileCollisionLayer extends TileLayer
     collisionRaycast(posStart, posEnd, object)
     {
         // transform to local layer space
-        posStart = posStart.subtract(this.pos);
-        posEnd = posEnd.subtract(this.pos);
+        const posStartX = posStart.x - this.pos.x;
+        const posStartY = posStart.y - this.pos.y;
+        const posEndX   = posEnd.x   - this.pos.x;
+        const posEndY   = posEnd.y   - this.pos.y;
 
         // test if a ray collides with tiles from start to end
-        const delta = posEnd.subtract(posStart);
-        const totalLength = delta.length();
-        const normalizedDelta = delta.normalize();
-        const unit = vec2(1/normalizedDelta.x, 1/normalizedDelta.y).abs();
-        const flooredPosStart = posStart.floor();
+        const deltaX = posEndX - posStartX;
+        const deltaY = posEndY - posStartY;
+        const totalLength = (deltaX**2 + deltaY**2)**.5;
+        const unitX = abs(totalLength/deltaX);
+        const unitY = abs(totalLength/deltaY);
 
         // setup iteration variables
-        let pos = flooredPosStart;
-        let xi = unit.x * (delta.x < 0 ? posStart.x - pos.x : pos.x - posStart.x + 1);
-        let yi = unit.y * (delta.y < 0 ? posStart.y - pos.y : pos.y - posStart.y + 1);
+        const pos = posStart.floor(), signDeltaX = sign(deltaX), signDeltaY = sign(deltaY);
+        let xi = unitX * (deltaX < 0 ? posStart.x - pos.x : pos.x - posStart.x + 1) || 0;
+        let yi = unitY * (deltaY < 0 ? posStart.y - pos.y : pos.y - posStart.y + 1) || 0;
 
         // use line drawing algorithm to test for collisions
         while (true)
@@ -5575,20 +5520,21 @@ class TileCollisionLayer extends TileLayer
             const tileData = this.getCollisionData(pos);
             if (tileData && (!object || object.collideWithTile(tileData, pos)))
             {
+                pos.x += .5; pos.y += .5;
                 debugRaycast && debugLine(posStart, posEnd, '#f00', .02);
-                debugRaycast && debugPoint(pos.add(vec2(.5)), '#ff0');
-                return pos.add(vec2(.5));
+                debugRaycast && debugPoint(pos, '#ff0');
+                return pos;
             }
 
             // check if past the end
-            if (xi > totalLength && yi > totalLength)
+            if (xi >= totalLength && yi >= totalLength)
                 break;
 
             // get coordinates of next tile to check
             if (xi > yi)
-                pos.y += sign(delta.y), yi += unit.y;
+                pos.y += signDeltaY, yi += unitY;
             else
-                pos.x += sign(delta.x), xi += unit.x;
+                pos.x += signDeltaX, xi += unitX;
         }
 
         debugRaycast && debugLine(posStart, posEnd, '#00f', .02);
@@ -5763,7 +5709,7 @@ class ParticleEmitter extends EngineObject
         if (debugParticles)
         {
             // show emitter bounds
-            const emitSize = typeof this.emitSize === 'number' ? vec2(this.emitSize) : this.emitSize;
+            const emitSize = typeof this.emitSize == 'number' ? vec2(this.emitSize) : this.emitSize;
             debugRect(this.pos, emitSize, '#0f0', 0, this.angle);
         }
     }
@@ -5773,9 +5719,9 @@ class ParticleEmitter extends EngineObject
     emitParticle()
     {
         // spawn a particle
-        let pos = typeof this.emitSize === 'number' ? // check if number was used
-            randInCircle(this.emitSize/2)              // circle emitter
-            : vec2(rand(-.5,.5), rand(-.5,.5))         // box emitter
+        let pos = typeof this.emitSize == 'number' ? // check if number was used
+            randInCircle(this.emitSize/2)            // circle emitter
+            : vec2(rand(-.5,.5), rand(-.5,.5))       // box emitter
                 .multiply(this.emitSize).rotate(this.angle)
         let angle = rand(this.particleConeAngle, -this.particleConeAngle);
         if (!this.localSpace)

@@ -135,9 +135,9 @@ declare module "littlejsengine" {
     export let showWatermark: boolean;
     /** Asserts if the expression is false, does not do anything in release builds
      *  @param {boolean} assert
-     *  @param {Object} [output] - error message output
+     *  @param {...Object} [output] - error message output
      *  @memberof Debug */
-    export function ASSERT(assert: boolean, output?: any): void;
+    export function ASSERT(assert: boolean, ...output?: any[]): void;
     /** Draw a debug rectangle in world space
      *  @param {Vector2} pos
      *  @param {Vector2} [size=Vector2()]
@@ -612,18 +612,16 @@ declare module "littlejsengine" {
      *  @return {number}
      *  @memberof Utilities */
     export function abs(value: number): number;
-    /** Returns lowest of two values passed in
-     *  @param {number} valueA
-     *  @param {number} valueB
+    /** Returns lowest value passed in
+     *  @param {...number} values
      *  @return {number}
      *  @memberof Utilities */
-    export function min(valueA: number, valueB: number): number;
-    /** Returns highest of two values passed in
-     *  @param {number} valueA
-     *  @param {number} valueB
+    export function min(...values: number[]): number;
+    /** Returns highest value passed in
+     *  @param {...number} values
      *  @return {number}
      *  @memberof Utilities */
-    export function max(valueA: number, valueB: number): number;
+    export function max(...values: number[]): number;
     /** Returns the sign of value passed in
      *  @param {number} value
      *  @return {number}
@@ -1367,12 +1365,12 @@ declare module "littlejsengine" {
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
      *  @param {number}   angle
-     *  @param {boolean}  mirror
-     *  @param {Function} drawFunction
+     *  @param {boolean}  [mirror]
+     *  @param {Function} [drawFunction]
      *  @param {boolean} [screenSpace=false]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      *  @memberof Draw */
-    export function drawCanvas2D(pos: Vector2, size: Vector2, angle: number, mirror: boolean, drawFunction: Function, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    export function drawCanvas2D(pos: Vector2, size: Vector2, angle?: number, mirror?: boolean, drawFunction?: Function, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw text on main canvas in world space
      *  Automatically splits new lines into rows
      *  @param {string}  text
@@ -2084,14 +2082,14 @@ declare module "littlejsengine" {
     export function tileCollisionRaycast(posStart: Vector2, posEnd: Vector2, object?: EngineObject, solidOnly?: boolean): Vector2;
     /**
      * Load tile layers from exported data
-     *  @param {object}   tileMapData - Level data from exported data
+     *  @param {Object}   tileMapData - Level data from exported data
      *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture)
      *  @param {number}   [renderOrder] - Render order of the top layer
      *  @param {number}   [collisionLayer] - Layer to use for collision if any
      *  @param {boolean}  [draw] - Should the layer be drawn automatically
      *  @return {Array<TileCollisionLayer>}
      *  @memberof TileCollision */
-    export function tileCollisionLoad(tileMapData: object, tileInfo?: TileInfo, renderOrder?: number, collisionLayer?: number, draw?: boolean): Array<TileCollisionLayer>;
+    export function tileCollisionLoad(tileMapData: any, tileInfo?: TileInfo, renderOrder?: number, collisionLayer?: number, draw?: boolean): Array<TileCollisionLayer>;
     /**
      * Tile layer data object stores info about how to draw a tile
      * @example
