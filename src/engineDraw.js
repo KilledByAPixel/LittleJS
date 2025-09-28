@@ -83,31 +83,36 @@ let drawCount;
  * tile(vec2(4,8), vec2(30,10))  // a tile at index (4,8) with a size of (30,10)
  * @memberof Draw
  */
-function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0)
+function tile(pos=new Vector2, size=tileSizeDefault, textureIndex=0, padding=0)
 {
     if (headlessMode)
         return new TileInfo;
 
     // if size is a number, make it a vector
-    if (typeof size === 'number')
+    if (typeof size == 'number')
     {
         ASSERT(size > 0);
-        size = vec2(size);
+        size = new Vector2(size, size);
     }
 
-    // use pos as a tile index
+    // create tile info object
+    const tileInfo = new TileInfo(new Vector2, size, textureIndex, padding);
+
+    // use get the pos of the tile
     const textureInfo = textureInfos[textureIndex];
     ASSERT(!!textureInfo, 'Texture not loaded');
-    const sizePadded = size.add(vec2(padding*2));
-    if (typeof pos === 'number')
+    const sizePaddedX = size.x + padding*2;
+    const sizePaddedY = size.y + padding*2;
+    if (typeof pos == 'number')
     {
-        const cols = textureInfo.size.x / sizePadded.x |0;
-        pos = cols>0 ? vec2(pos%cols, pos/cols|0) : vec2();
+        const cols = textureInfo.size.x / sizePaddedX |0;
+        ASSERT(cols>0, 'Tile size is too big for texture');
+        const posX = pos % cols, posY = (pos / cols) |0;
+        tileInfo.pos.set(posX*sizePaddedX+padding, posY*sizePaddedY+padding);
     }
-    pos = vec2(pos.x*sizePadded.x+padding, pos.y*sizePadded.y+padding);
-
-    // return a tile info object
-    return new TileInfo(pos, size, textureIndex, padding); 
+    else
+        tileInfo.pos.set(pos.x*sizePaddedX+padding, pos.y*sizePaddedY+padding);
+    return tileInfo; 
 }
 
 /** 
@@ -149,7 +154,7 @@ class TileInfo
     frame(frame)
     {
         ASSERT(typeof frame == 'number');
-        return this.offset(vec2(frame*(this.size.x+this.padding*2), 0));
+        return this.offset(new Vector2(frame*(this.size.x+this.padding*2), 0));
     }
 
     /**
@@ -160,8 +165,8 @@ class TileInfo
      */
     setFullImage(image, glTexture)
     {
-        this.pos = vec2();
-        this.size = vec2(image.width, image.height);
+        this.pos = new Vector2;
+        this.size = new Vector2(image.width, image.height);
         this.textureInfo = new TextureInfo(image, glTexture);
         return this;
     }
@@ -258,7 +263,7 @@ function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
  *  @param {boolean} [screenSpace=false]        - If true the pos and size are in screen space
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
  *  @memberof Draw */
-function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
+function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
     angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace, context)
 {
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode'); 
@@ -311,7 +316,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=new Color,
     {
         // normal canvas 2D rendering method (slower)
         showWatermark && ++drawCount;
-        size = vec2(size.x, -size.y); // fix upside down sprites
+        size = new Vector2(size.x, -size.y); // fix upside down sprites
         drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
             if (textureInfo)
@@ -439,12 +444,12 @@ function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=new C
  *  @param {Vector2}  pos
  *  @param {Vector2}  size
  *  @param {number}   angle
- *  @param {boolean}  mirror
- *  @param {Function} drawFunction
+ *  @param {boolean}  [mirror]
+ *  @param {Function} [drawFunction]
  *  @param {boolean} [screenSpace=false]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, context=drawContext)
+function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpace=false, context=drawContext)
 {
     if (!screenSpace)
     {
@@ -454,8 +459,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, conte
     }
     context.save();
     context.translate(pos.x+.5, pos.y+.5);
-    context.rotate(-cameraAngle);
-    context.rotate(angle);
+    context.rotate(angle-cameraAngle);
     context.scale(mirror ? -size.x : size.x, -size.y);
     drawFunction(context);
     context.restore();
@@ -520,13 +524,13 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
     context.lineJoin = 'round';
 
     const lines = (text+'').split('\n');
-    pos = pos.copy();
-    pos.y -= (lines.length-1) * size/2; // center text vertically
+    let posY = pos.y;
+    posY -= (lines.length-1) * size/2; // center text vertically
     lines.forEach(line=>
     {
-        lineWidth && context.strokeText(line, pos.x, pos.y, maxWidth);
-        context.fillText(line, pos.x, pos.y, maxWidth);
-        pos.y += size;
+        lineWidth && context.strokeText(line, pos.x, posY, maxWidth);
+        context.fillText(line, pos.x, posY, maxWidth);
+        posY += size;
     });
 }
 
