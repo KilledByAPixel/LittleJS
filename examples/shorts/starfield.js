@@ -2,7 +2,7 @@ function gameRender()
 {
     setBlendMode(1);
     // precreate variables to avoid overhead
-    let pos = vec2(), size = vec2(), color = WHITE;
+    const pos = vec2(), size = vec2(), color = WHITE;
     for(let i=2e3; i--;)
     {
         // use math to generate random star positions

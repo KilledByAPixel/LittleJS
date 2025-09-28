@@ -26,7 +26,7 @@ function gameInit()
     objectDefaultDamping = .7;
     new Player;
 
-    // create foreground objects
+    // create collision objects
     for (let i=300; i--;)
     {
         const o = new EngineObject(randInCircle(15+i,7), vec2(rand(4,9),rand(4,9)), 0, 0, hsl(0,0,rand(.8,1)));

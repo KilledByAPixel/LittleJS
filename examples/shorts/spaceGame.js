@@ -5,6 +5,7 @@ class Player extends EngineObject
         super(pos, vec2(1,2), tile(8), 0, CYAN);
         this.damping = .97;
         this.angleDamping = .95;
+        this.shootTimer = new Timer;
     }
 
     update()
@@ -15,12 +16,13 @@ class Player extends EngineObject
         const moveInput = keyDirection();
         this.applyAngularAcceleration(moveInput.x * .005);
         this.applyAcceleration(vec2().setAngle(this.angle, moveInput.y*.02));
-        if (frame%9==0 && keyIsDown('Space'))
+        if (!this.shootTimer.active() && (keyIsDown('Space') || mouseIsDown(0)))
         {
             // shoot bullet
             const pos = this.pos.add(vec2(0,1).rotate(cameraAngle));
             const bullet = new EngineObject(pos, vec2(.2,.5), 0, this.angle, YELLOW);
             bullet.velocity = this.velocity.add(vec2(0,.5).rotate(this.angle));
+            this.shootTimer.set(.1);
         }
 
         // move camera with player
@@ -40,7 +42,7 @@ function gameRender()
     const range = 32, halfRange = range/2;
 
     // precreate variables to avoid overhead
-    let pos = vec2(), size = vec2(), color = WHITE;
+    const pos = vec2(), size = vec2(), color = WHITE;
     for (let i=1e3; i--;)
     {
         // use math to generate random star positions

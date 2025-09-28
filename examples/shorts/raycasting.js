@@ -54,7 +54,7 @@ function gameRender()
     {
         // draw vertical slices to create the walls
         const w = 20;
-        let pos = vec2(), size = vec2(.11), color = WHITE;
+        const pos = vec2(), size = vec2(.11), color = WHITE;
         for (let x=-w; x<w; x+=.1)
         {
             const p = raycast(playerPos, playerAngle + x/w);

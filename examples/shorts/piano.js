@@ -23,6 +23,11 @@ class PianoKey extends EngineObject
             pianoSound.stop(.2);
         this.isDown = false;
     }
+    render()
+    {
+        const color = this.isDown ? RED : this.color;
+        drawRect(this.pos, this.drawSize, color);
+    }
 }
 
 function gameInit()
