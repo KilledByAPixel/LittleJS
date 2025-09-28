@@ -169,7 +169,7 @@ class ParticleEmitter extends EngineObject
         if (debugParticles)
         {
             // show emitter bounds
-            const emitSize = typeof this.emitSize === 'number' ? vec2(this.emitSize) : this.emitSize;
+            const emitSize = typeof this.emitSize == 'number' ? vec2(this.emitSize) : this.emitSize;
             debugRect(this.pos, emitSize, '#0f0', 0, this.angle);
         }
     }
@@ -179,9 +179,9 @@ class ParticleEmitter extends EngineObject
     emitParticle()
     {
         // spawn a particle
-        let pos = typeof this.emitSize === 'number' ? // check if number was used
-            randInCircle(this.emitSize/2)              // circle emitter
-            : vec2(rand(-.5,.5), rand(-.5,.5))         // box emitter
+        let pos = typeof this.emitSize == 'number' ? // check if number was used
+            randInCircle(this.emitSize/2)            // circle emitter
+            : vec2(rand(-.5,.5), rand(-.5,.5))       // box emitter
                 .multiply(this.emitSize).rotate(this.angle)
         let angle = rand(this.particleConeAngle, -this.particleConeAngle);
         if (!this.localSpace)

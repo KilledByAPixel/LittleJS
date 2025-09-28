@@ -72,7 +72,7 @@ function tileCollisionRaycast(posStart, posEnd, object, solidOnly=true)
 ///////////////////////////////////////////////////////////////////////////////
 /** 
  * Load tile layers from exported data
- *  @param {object}   tileMapData - Level data from exported data
+ *  @param {Object}   tileMapData - Level data from exported data
  *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture)
  *  @param {number}   [renderOrder] - Render order of the top layer
  *  @param {number}   [collisionLayer] - Layer to use for collision if any
@@ -551,22 +551,25 @@ class TileCollisionLayer extends TileLayer
     *  @param {Vector2}      [size=(0,0)]
     *  @param {EngineObject} [object]
     *  @return {boolean} */
-    collisionTest(pos, size=vec2(), object)
+    collisionTest(pos, size=new Vector2, object)
     {
         // transform to local layer space
-        pos = pos.subtract(this.pos);
+        const posX = pos.x - this.pos.x;
+        const posY = pos.y - this.pos.y;
 
         // check any tiles in the area for collision
-        const minX = max(pos.x - size.x/2|0, 0);
-        const minY = max(pos.y - size.y/2|0, 0);
-        const maxX = min(pos.x + size.x/2, this.size.x);
-        const maxY = min(pos.y + size.y/2, this.size.y);
+        const minX = max(posX - size.x/2|0, 0);
+        const minY = max(posY - size.y/2|0, 0);
+        const maxX = min(posX + size.x/2, this.size.x);
+        const maxY = min(posY + size.y/2, this.size.y);
+        const hitPos = new Vector2;
         for (let y = minY; y < maxY; ++y)
         for (let x = minX; x < maxX; ++x)
         {
             // check if the object should collide with this tile
             const tileData = this.collisionData[y*this.size.x+x];
-            if (tileData && (!object || object.collideWithTile(tileData, vec2(x, y))))
+            if (tileData)
+            if (!object || object.collideWithTile(tileData, hitPos.set(x, y)))
                 return true;
         }
         return false;
@@ -581,20 +584,22 @@ class TileCollisionLayer extends TileLayer
     collisionRaycast(posStart, posEnd, object)
     {
         // transform to local layer space
-        posStart = posStart.subtract(this.pos);
-        posEnd = posEnd.subtract(this.pos);
+        const posStartX = posStart.x - this.pos.x;
+        const posStartY = posStart.y - this.pos.y;
+        const posEndX   = posEnd.x   - this.pos.x;
+        const posEndY   = posEnd.y   - this.pos.y;
 
         // test if a ray collides with tiles from start to end
-        const delta = posEnd.subtract(posStart);
-        const totalLength = delta.length();
-        const normalizedDelta = delta.normalize();
-        const unit = vec2(1/normalizedDelta.x, 1/normalizedDelta.y).abs();
-        const flooredPosStart = posStart.floor();
+        const deltaX = posEndX - posStartX;
+        const deltaY = posEndY - posStartY;
+        const totalLength = (deltaX**2 + deltaY**2)**.5;
+        const unitX = abs(totalLength/deltaX);
+        const unitY = abs(totalLength/deltaY);
 
         // setup iteration variables
-        let pos = flooredPosStart;
-        let xi = unit.x * (delta.x < 0 ? posStart.x - pos.x : pos.x - posStart.x + 1);
-        let yi = unit.y * (delta.y < 0 ? posStart.y - pos.y : pos.y - posStart.y + 1);
+        const pos = posStart.floor(), signDeltaX = sign(deltaX), signDeltaY = sign(deltaY);
+        let xi = unitX * (deltaX < 0 ? posStart.x - pos.x : pos.x - posStart.x + 1) || 0;
+        let yi = unitY * (deltaY < 0 ? posStart.y - pos.y : pos.y - posStart.y + 1) || 0;
 
         // use line drawing algorithm to test for collisions
         while (true)
@@ -603,20 +608,21 @@ class TileCollisionLayer extends TileLayer
             const tileData = this.getCollisionData(pos);
             if (tileData && (!object || object.collideWithTile(tileData, pos)))
             {
+                pos.x += .5; pos.y += .5;
                 debugRaycast && debugLine(posStart, posEnd, '#f00', .02);
-                debugRaycast && debugPoint(pos.add(vec2(.5)), '#ff0');
-                return pos.add(vec2(.5));
+                debugRaycast && debugPoint(pos, '#ff0');
+                return pos;
             }
 
             // check if past the end
-            if (xi > totalLength && yi > totalLength)
+            if (xi >= totalLength && yi >= totalLength)
                 break;
 
             // get coordinates of next tile to check
             if (xi > yi)
-                pos.y += sign(delta.y), yi += unit.y;
+                pos.y += signDeltaY, yi += unitY;
             else
-                pos.x += sign(delta.x), xi += unit.x;
+                pos.x += signDeltaX, xi += unitX;
         }
 
         debugRaycast && debugLine(posStart, posEnd, '#00f', .02);
