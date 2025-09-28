@@ -14,8 +14,8 @@
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - Starting tile for the nine-slice pattern
- *  @param {number} [borderSize=1] - Width of the border sections
- *  @param {number} [extraSpace=.01] - Extra spacing adjustment
+ *  @param {number} [borderSize] - Width of the border sections
+ *  @param {number} [extraSpace] - Extra spacing adjustment
  *  @memberof DrawUtilities */
 function drawNineSliceScreen(pos, size, startTile, borderSize=32, extraSpace=1)
 {
@@ -28,9 +28,9 @@ function drawNineSliceScreen(pos, size, startTile, borderSize=32, extraSpace=1)
  *  @param {Vector2} size - World space size
  *  @param {TileInfo} startTile - Starting tile for the nine-slice pattern
  *  @param {Color} [color] - Color to modulate with
- *  @param {number} [borderSize=1] - Width of the border sections
+ *  @param {number} [borderSize] - Width of the border sections
  *  @param {Color} [additiveColor] - Additive color
- *  @param {number} [extraSpace=.01] - Extra spacing adjustment
+ *  @param {number} [extraSpace] - Extra spacing adjustment
  *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
  *  @param {boolean} [screenSpace] - Use screen space coordinates
  *  @param {CanvasRenderingContext2D} [context] - Canvas context to use
@@ -71,8 +71,8 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - Starting tile for the three-slice pattern
- *  @param {number} [borderSize=1] - Width of the border sections
- *  @param {number} [extraSpace=.01] - Extra spacing adjustment
+ *  @param {number} [borderSize] - Width of the border sections
+ *  @param {number} [extraSpace] - Extra spacing adjustment
  *  @memberof DrawUtilities */
 function drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=1)
 {
@@ -85,9 +85,9 @@ function drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=1)
  *  @param {Vector2} size - World space size
  *  @param {TileInfo} startTile - Starting tile for the three-slice pattern
  *  @param {Color} [color] - Color to modulate with
- *  @param {number} [borderSize=1] - Width of the border sections
+ *  @param {number} [borderSize] - Width of the border sections
  *  @param {Color} [additiveColor] - Additive color
- *  @param {number} [extraSpace=.01] - Extra spacing adjustment
+ *  @param {number} [extraSpace] - Extra spacing adjustment
  *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
  *  @param {boolean} [screenSpace] - Use screen space coordinates
  *  @param {CanvasRenderingContext2D} [context] - Canvas context to use
