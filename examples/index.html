@@ -433,7 +433,13 @@ function setErrorLine(lineNumber)
     //codeMirror.scrollIntoView({line: lineNumber});
 }
 
-function setErrorMessage(message) { setMessage(message, textareaError); }
+function setErrorMessage(message)
+{
+    // prevent overwriting an existing error message
+    const errorMessageIsVisible = textareaError.style.display == 'block';
+    if (!errorMessageIsVisible)
+        setMessage(message, textareaError);
+}
 function unsetErrorMessage() { unsetMessage(textareaError); clearErrorLine(); }
 function setConsoleMessage(message) { setMessage(message, textareaConsole, false); }
 function unsetConsoleMessage() { unsetMessage(textareaConsole); consoleAutoScroll = true; }
