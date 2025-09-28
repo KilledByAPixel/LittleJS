@@ -34,7 +34,7 @@ export function buildLevel()
     levelOutlineColor = levelColor.mutate().add(hsl(0,0,.4)).clamp();
     loadLevelData();
 
-    // create sky object with gradient and stars
+    // create sky object with gradient background and stars
     sky = new GameEffects.Sky;
 
     // create parallax layers
