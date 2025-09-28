@@ -6,3 +6,5 @@ package-lock.json
 examples/starter/build
 examples/starter/*.zip
 examples/typescript/build
+examples/electron/build
+examples/electron/*win32*
