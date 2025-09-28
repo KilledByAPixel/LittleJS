@@ -369,8 +369,16 @@ function gameUpdate()
 
     if (document.activeElement == document.body)
     {
-        particleSystem.velocity = LJS.mouseDelta.scale(.3*LJS.timeDelta);
-        particleSystem.pos = LJS.mouseIsDown(0) ? LJS.mousePos : vec2();
+        if (LJS.mouseIsDown(0))
+        {
+            particleSystem.pos = LJS.mousePos;
+            particleSystem.velocity = LJS.mouseDelta.scale(.3*LJS.timeDelta);
+        }
+        else
+        {
+            particleSystem.pos = vec2();
+            particleSystem.velocity = vec2();
+        }
         if (LJS.mouseWheel)
         {
             // zoom camera
