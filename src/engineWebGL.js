@@ -1,12 +1,13 @@
 /**
  * LittleJS WebGL Interface
  * - All webgl used by the engine is wrapped up here
+ * - Will fall back to 2D canvas rendering if webgl is not supported
  * - For normal stuff you won't need to see or call anything in this file
  * - For advanced stuff there are helper functions to create shaders, textures, etc
  * - Can be disabled with glEnable to revert to 2D canvas rendering
  * - Batches sprite rendering on GPU for incredibly fast performance
  * - Sprite transform math is done in the shader where possible
- * - Supports shadertoy style post processing shaders
+ * - Supports shadertoy style post processing shaders via plugin
  * @namespace WebGL
  */
 
@@ -46,6 +47,14 @@ function glInit()
     // create the canvas and textures
     glCanvas = document.createElement('canvas');
     glContext = glCanvas.getContext('webgl2', {antialias:glAntialias});
+
+    if (!glContext)
+    {
+        console.warn('WebGL2 not supported, falling back to 2D canvas rendering!');
+        glCanvas = glContext = undefined;
+        glEnable = false;
+        return;
+    }
 
     // create the webgl canvas
     const rootElement = mainCanvas.parentElement;
@@ -96,7 +105,7 @@ function glInit()
 // Also used by tile layer rendering when redrawing tiles
 function glPreRender()
 {
-    if (!glEnable || headlessMode) return;
+    if (!glEnable || !glContext) return;
 
     // set up the shader and canvas
     glClearCanvas();
@@ -147,6 +156,8 @@ function glPreRender()
  *  @memberof WebGL */
 function glClearCanvas()
 {
+    if (!glContext) return;
+    
     // clear and set to same size as main canvas
     glContext.viewport(0, 0, glCanvas.width=drawCanvas.width, glCanvas.height=drawCanvas.height);
     glContext.clear(glContext.COLOR_BUFFER_BIT);
@@ -160,7 +171,7 @@ function glClearCanvas()
 function glSetTexture(texture, wrap=false)
 {
     // must flush cache with the old texture to set a new one
-    if (headlessMode || texture == glActiveTexture)
+    if (!glContext || texture == glActiveTexture)
         return;
 
     glFlush();
@@ -179,6 +190,8 @@ function glSetTexture(texture, wrap=false)
  *  @memberof WebGL */
 function glCompileShader(source, type)
 {
+    if (!glContext) return;
+
     // build the shader
     const shader = glContext.createShader(type);
     glContext.shaderSource(shader, source);
@@ -197,6 +210,8 @@ function glCompileShader(source, type)
  *  @memberof WebGL */
 function glCreateProgram(vsSource, fsSource)
 {
+    if (!glContext) return;
+
     // build the program
     const program = glContext.createProgram();
     glContext.attachShader(program, glCompileShader(vsSource, glContext.VERTEX_SHADER));
@@ -215,6 +230,8 @@ function glCreateProgram(vsSource, fsSource)
  *  @memberof WebGL */
 function glCreateTexture(image)
 {
+    if (!glContext) return;
+
     // build the texture
     const texture = glContext.createTexture();
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
@@ -250,6 +267,7 @@ function glCreateTexture(image)
  *  @memberof WebGL */
 function glDeleteTexture(texture)
 {
+    if (!glContext) return;
     glContext.deleteTexture(texture);
 }
 
@@ -259,6 +277,8 @@ function glDeleteTexture(texture)
  *  @memberof WebGL */
 function glSetTextureData(texture, image)
 {
+    if (!glContext) return;
+
     // build the texture
     ASSERT(!!image && image.width > 0, 'Invalid image data.');
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
@@ -269,7 +289,7 @@ function glSetTextureData(texture, image)
  *  @memberof WebGL */
 function glFlush()
 {
-    if (!glEnable || !glInstanceCount) return;
+    if (!glEnable || !glContext || !glInstanceCount) return;
 
     const destBlend = glBatchAdditive ? glContext.ONE : glContext.ONE_MINUS_SRC_ALPHA;
     glContext.blendFuncSeparate(glContext.SRC_ALPHA, destBlend, glContext.ONE, destBlend);
@@ -289,7 +309,7 @@ function glFlush()
  *  @memberof WebGL */
 function glCopyToContext(context)
 {
-    if (!glEnable)
+    if (!glEnable || !glContext)
         return;
 
     glFlush();
