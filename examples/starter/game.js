@@ -104,7 +104,10 @@ function gameUpdate()
 
     // move particles to mouse location if on screen
     if (mousePosScreen.x)
+    {
         particleEmitter.pos = mousePos;
+        particleEmitter.velocity = mouseDelta.scale(.3*timeDelta);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -116,8 +119,8 @@ function gameUpdatePost()
 ///////////////////////////////////////////////////////////////////////////////
 function gameRender()
 {
-    // draw a grey square in the background without using webgl
-    drawRect(vec2(16,8), vec2(20,14), hsl(0,0,.6), 0, false);
+    // draw a grey square in the background
+    drawRect(vec2(16,8), vec2(20,14), hsl(0,0,.6));
     
     // draw the logo as a tile
     drawTile(vec2(21,5), vec2(4.5), tile(3,128));

@@ -1,3 +1,7 @@
+// use smoother textures
+setCanvasPixelated(false);
+setTilesPixelated(false);
+
 function gameRender()
 {
     const circleTile = tile(2, 128); // get the circle tile

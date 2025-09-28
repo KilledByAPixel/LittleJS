@@ -136,8 +136,8 @@ function gameUpdatePost()
 ///////////////////////////////////////////////////////////////////////////////
 function gameRender()
 {
-    // draw a grey square in the background without using webgl
-    LJS.drawRect(vec2(20,8), vec2(100), hsl(0,0,.8), 0, 0);
+    // draw a grey square in the background
+    LJS.drawRect(vec2(20,8), vec2(100), hsl(0,0,.8));
 
     if (Scenes.scene == 5)
     {
