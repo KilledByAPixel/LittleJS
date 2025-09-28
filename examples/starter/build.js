@@ -50,7 +50,6 @@ Build
 
 console.log('');
 console.log(`Build Completed in ${((Date.now() - startTime)/1e3).toFixed(2)} seconds!`);
-console.log(`Size of ${PROGRAM_NAME}.zip: ${fs.statSync(`${PROGRAM_NAME}.zip`).size} bytes`);
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -73,7 +72,7 @@ function Build(outputFile, files=[], buildSteps=[])
 
 function closureCompilerStep(filename)
 {
-    console.log(`Running closure compiler...`);
+    console.log('Running closure compiler...');
 
     // use closer compiler to minify the code
     const filenameTemp = filename + '.tmp';
@@ -84,22 +83,23 @@ function closureCompilerStep(filename)
 
 function uglifyBuildStep(filename)
 {
-    console.log(`Running uglify...`);
+    console.log('Running uglify...');
     child_process.execSync(`npx uglifyjs ${filename} -c -m -o ${filename}`, {stdio: 'inherit'});
 };
 
 function roadrollerBuildStep(filename)
 {
-    console.log(`Running roadroller...`);
+    console.log('Running roadroller...');
     child_process.execSync(`npx roadroller ${filename} -o ${filename}`, {stdio: 'inherit'});
 };
 
 function htmlBuildStep(filename)
 {
-    console.log(`Building html...`);
+    console.log('Building html...');
 
     // create html file
-    let buffer = '<!DOCTYPE html>';
+    let buffer = ''
+    buffer += '<!DOCTYPE html>';
     buffer += '<head>';
     buffer += `<title>${PROGRAM_TITLE}</title>`;
     buffer += '<meta charset=utf-8>';
@@ -115,8 +115,9 @@ function htmlBuildStep(filename)
 
 function zipBuildStep(filename)
 {
-    console.log(`Zipping...`);
+    console.log('Zipping...');
     const sources = ['index.html', ...dataFiles];
     const sourceList = sources.join(' ');
     child_process.execSync(`npx bestzip ../${PROGRAM_NAME}.zip ${sourceList}`, {cwd:BUILD_FOLDER, stdio: 'inherit'});
+    console.log(`Size of ${PROGRAM_NAME}.zip: ${fs.statSync(`${PROGRAM_NAME}.zip`).size} bytes`);
 };
