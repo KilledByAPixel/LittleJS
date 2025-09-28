@@ -30,6 +30,13 @@ let cameraScale = 32;
 ///////////////////////////////////////////////////////////////////////////////
 // Display settings
 
+/** Enable applying color to tiles when using canvas2d
+ *  - This is slower but should be the same as webgl rendering
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let canvasColorTiles = true;
+
 /** The max size of the canvas, centered if window is larger
  *  @type {Vector2}
  *  @default Vector2(1920,1080)
@@ -290,6 +297,14 @@ function setCameraAngle(angle) { cameraAngle = angle; }
  *  @param {number} scale
  *  @memberof Settings */
 function setCameraScale(scale) { cameraScale = scale; }
+
+/** Set if tiles should be colorized when using canvas2d
+ *  This can be slower but results should look nearly identical to webgl rendering
+ *  It can be enabled/disabled at any time
+ *  Optimized for performance, and will use faster method if color is white or untextured
+ *  @param {boolean} colorTiles
+ *  @memberof Settings */
+function setCanvasColorTiles(colorTiles) { canvasColorTiles = colorTiles; }
 
 /** Set max size of the canvas
  *  @param {Vector2} size

@@ -52,6 +52,16 @@ let drawCanvas;
  *  @memberof Draw */
 let drawContext;
 
+/** Offscreen canvas that can be used for image processing
+ *  @type {OffscreenCanvas}
+ *  @memberof Draw */
+let workCanvas;
+
+/** Offscreen canvas that can be used for image processing
+ *  @type {OffscreenCanvasRenderingContext2D}
+ *  @memberof Draw */
+let workContext;
+
 /** The size of the main canvas (and other secondary canvases) 
  *  @type {Vector2}
  *  @memberof Draw */
@@ -71,10 +81,10 @@ let drawCount;
  * Create a tile info object using a grid based system
  * - This can take vecs or floats for easier use and conversion
  * - If an index is passed in, the tile size and index will determine the position
- * @param {Vector2|number} [pos=0]                - Index of tile in sheet
+ * @param {Vector2|number} [pos=0] - Index of tile in sheet
  * @param {Vector2|number} [size=tileSizeDefault] - Size of tile in pixels
- * @param {number} [textureIndex]                   - Texture index to use
- * @param {number} [padding]                        - How many pixels padding around tiles
+ * @param {number} [textureIndex] - Texture index to use
+ * @param {number} [padding] - How many pixels padding around tiles
  * @return {TileInfo}
  * @example
  * tile(2)                       // a tile at index 2 using the default tile size of 16
@@ -201,55 +211,7 @@ class TextureInfo
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
-/** Convert from screen to world space coordinates
- *  @param {Vector2} screenPos
- *  @return {Vector2}
- *  @memberof Draw */
-function screenToWorld(screenPos)
-{
-    let cameraPosRelativeX = (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale;
-    let cameraPosRelativeY = (screenPos.y - mainCanvasSize.y/2 + .5) / -cameraScale;
-    if (cameraAngle) 
-    {
-        // apply camera rotation
-        const cos = Math.cos(-cameraAngle), sin = Math.sin(-cameraAngle);
-        const rotatedX = cameraPosRelativeX * cos - cameraPosRelativeY * sin;
-        const rotatedY = cameraPosRelativeX * sin + cameraPosRelativeY * cos;
-        cameraPosRelativeX = rotatedX;
-        cameraPosRelativeY = rotatedY;
-    }
-    return new Vector2(cameraPosRelativeX + cameraPos.x, cameraPosRelativeY + cameraPos.y);
-}
-
-/** Convert from world to screen space coordinates
- *  @param {Vector2} worldPos
- *  @return {Vector2}
- *  @memberof Draw */
-function worldToScreen(worldPos)
-{
-    let cameraPosRelativeX = worldPos.x - cameraPos.x;
-    let cameraPosRelativeY = worldPos.y - cameraPos.y;
-    if (cameraAngle)
-    {
-        // apply inverse camera rotation
-        const cos = Math.cos(cameraAngle), sin = Math.sin(cameraAngle);
-        const rotatedX = cameraPosRelativeX * cos - cameraPosRelativeY * sin;
-        const rotatedY = cameraPosRelativeX * sin + cameraPosRelativeY * cos;
-        cameraPosRelativeX = rotatedX;
-        cameraPosRelativeY = rotatedY;
-    }
-    return new Vector2
-    (
-        cameraPosRelativeX *  cameraScale + mainCanvasSize.x/2 - .5,
-        cameraPosRelativeY * -cameraScale + mainCanvasSize.y/2 - .5
-    );
-}
-
-/** Get the camera's visible area in world space
- *  @return {Vector2}
- *  @memberof Draw */
-function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
+// Drawing functions
 
 /** Draw textured tile centered in world space, with color applied if using WebGL
  *  @param {Vector2} pos                        - Center of the tile in world space
@@ -271,6 +233,9 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
     ASSERT(isVector2(size) && size.isValid(), 'drawTile size should be a vec2');
     ASSERT(isColor(color) && (!additiveColor || isColor(additiveColor)), 'drawTile color is invalid');
     ASSERT(isNumber(angle), 'drawTile angle should be a number');
+
+    if (color.a <= 0 && (!additiveColor || additiveColor.a <= 0) || !size.x || !size.y)
+        return; // completely invisible, skip render
 
     const textureInfo = tileInfo && tileInfo.textureInfo;
     if (useWebGL)
@@ -322,18 +287,15 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
             if (textureInfo)
             {
                 // calculate uvs and render
-                const x = tileInfo.pos.x + tileFixBleedScale;
-                const y = tileInfo.pos.y + tileFixBleedScale;
-                const w = tileInfo.size.x - 2*tileFixBleedScale;
-                const h = tileInfo.size.y - 2*tileFixBleedScale;
-                context.globalAlpha = color.a; // only alpha is supported
-                context.drawImage(textureInfo.image, x, y, w, h, -.5, -.5, 1, 1);
-                context.globalAlpha = 1; // set back to full alpha
+                const x = tileInfo.pos.x,  y = tileInfo.pos.y;
+                const w = tileInfo.size.x, h = tileInfo.size.y;
+                drawImageColor(context, textureInfo.image, x, y, w, h, -.5, -.5, 1, 1, color, additiveColor);
             }
             else
             {
-                // if no tile info, force untextured
-                context.fillStyle = color.toString();
+                // if no tile info, use untextured rect
+                const c = additiveColor ? color.add(additiveColor) : color;
+                context.fillStyle = c.toString();
                 context.fillRect(-.5, -.5, 1, 1);
             }
         }, screenSpace, context);
@@ -465,6 +427,9 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
     context.restore();
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Text Drawing Functions
+
 /** Draw text on main canvas in world space
  *  Automatically splits new lines into rows
  *  @param {string}  text
@@ -534,22 +499,67 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
     });
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Drawing utilities
+
+/** Convert from screen to world space coordinates
+ *  @param {Vector2} screenPos
+ *  @return {Vector2}
+ *  @memberof Draw */
+function screenToWorld(screenPos)
+{
+    let cameraPosRelativeX = (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale;
+    let cameraPosRelativeY = (screenPos.y - mainCanvasSize.y/2 + .5) / -cameraScale;
+    if (cameraAngle) 
+    {
+        // apply camera rotation
+        const cos = Math.cos(-cameraAngle), sin = Math.sin(-cameraAngle);
+        const rotatedX = cameraPosRelativeX * cos - cameraPosRelativeY * sin;
+        const rotatedY = cameraPosRelativeX * sin + cameraPosRelativeY * cos;
+        cameraPosRelativeX = rotatedX;
+        cameraPosRelativeY = rotatedY;
+    }
+    return new Vector2(cameraPosRelativeX + cameraPos.x, cameraPosRelativeY + cameraPos.y);
+}
+
+/** Convert from world to screen space coordinates
+ *  @param {Vector2} worldPos
+ *  @return {Vector2}
+ *  @memberof Draw */
+function worldToScreen(worldPos)
+{
+    let cameraPosRelativeX = worldPos.x - cameraPos.x;
+    let cameraPosRelativeY = worldPos.y - cameraPos.y;
+    if (cameraAngle)
+    {
+        // apply inverse camera rotation
+        const cos = Math.cos(cameraAngle), sin = Math.sin(cameraAngle);
+        const rotatedX = cameraPosRelativeX * cos - cameraPosRelativeY * sin;
+        const rotatedY = cameraPosRelativeX * sin + cameraPosRelativeY * cos;
+        cameraPosRelativeX = rotatedX;
+        cameraPosRelativeY = rotatedY;
+    }
+    return new Vector2
+    (
+        cameraPosRelativeX *  cameraScale + mainCanvasSize.x/2 - .5,
+        cameraPosRelativeY * -cameraScale + mainCanvasSize.y/2 - .5
+    );
+}
+
+/** Get the camera's visible area in world space
+ *  @return {Vector2}
+ *  @memberof Draw */
+function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
+
 /** Enable normal or additive blend mode
  *  @param {boolean} [additive]
- *  @param {boolean} [useWebGL=glEnable]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function setBlendMode(additive=false, useWebGL=glEnable, context)
+function setBlendMode(additive=false, context)
 {
-    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
-    if (useWebGL)
-        glAdditive = additive;
-    else
-    {
-        if (!context)
-            context = drawContext;
-        context.globalCompositeOperation = additive ? 'lighter' : 'source-over';
-    }
+    glAdditive = additive;
+    context ||= drawContext;
+    context.globalCompositeOperation = additive ? 'lighter' : 'source-over';
 }
 
 /** Combines all LittleJS canvases onto the main canvas and clears them
@@ -564,6 +574,102 @@ function combineCanvases()
     // clear canvases
     glClearCanvas();
     overlayCanvas.width |= 0;
+}
+
+/** Helper function to draw an image with color and additive color applied
+ *  This is slower then normal drawImage when color is applied
+    *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
+    *  @param {HTMLImageElement|OffscreenCanvas} image
+    *  @param {number} sx
+    *  @param {number} sy
+    *  @param {number} sWidth
+    *  @param {number} sHeight
+    *  @param {number} dx
+    *  @param {number} dy
+    *  @param {number} dWidth
+    *  @param {number} dHeight
+    *  @param {Color} color
+    *  @param {Color} [additiveColor]
+ *  @memberof Draw */
+function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight, color, additiveColor)
+{
+    function isWhite(c) { return c.r >= 1 && c.g >= 1 && c.b >= 1; }
+    function isBlack(c) { return c.r <= 0 && c.g <= 0 && c.b <= 0 && c.a <= 0; }
+    const sx2 = tileFixBleedScale;
+    const sy2 = tileFixBleedScale;
+    const sWidth2  = sWidth  - 2*tileFixBleedScale;
+    const sHeight2 = sHeight - 2*tileFixBleedScale;
+    if (!canvasColorTiles || (additiveColor ? isWhite(color.add(additiveColor)) && additiveColor.a <= 0 : isWhite(color)))
+    {
+        // white texture with no additive alpha, no need to tint
+        context.globalAlpha = color.a;
+        context.drawImage(image, sx+sx2, sy+sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight); 
+        context.globalAlpha = 1;
+    }
+    else
+    {
+        // copy to offscreen canvas
+        workCanvas.width = sWidth;
+        workCanvas.height = sHeight;
+        workContext.drawImage(image, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
+
+        // tint image using offscreen work context
+        const imageData = workContext.getImageData(0, 0, sWidth, sHeight);
+        const data = imageData.data;
+        if (additiveColor && !isBlack(additiveColor))
+        {
+            // slower path with additive color
+            const colorMultiply = [color.r, color.g, color.b, color.a];
+            const colorAdd = [additiveColor.r * 255, additiveColor.g * 255, additiveColor.b * 255, additiveColor.a * 255];
+            for (let i = 0; i < data.length; ++i)
+                data[i] = data[i] * colorMultiply[i&3] + colorAdd[i&3] |0;
+            workContext.putImageData(imageData, 0, 0);
+            context.drawImage(workCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight); 
+        }
+        else
+        {
+            // faster path with no additive color
+            for (let i = 0; i < data.length; i+=4)
+            {
+                data[i  ] *= color.r;
+                data[i+1] *= color.g;
+                data[i+2] *= color.b;
+            }
+            workContext.putImageData(imageData, 0, 0);
+            context.globalAlpha = color.a;
+            context.drawImage(workCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight); 
+            context.globalAlpha = 1;
+        }
+    }
+}
+
+
+/** Returns true if fullscreen mode is active
+ *  @return {boolean}
+ *  @memberof Draw */
+function isFullscreen() { return !!document.fullscreenElement; }
+
+/** Toggle fullscreen mode
+ *  @memberof Draw */
+function toggleFullscreen()
+{
+    const rootElement = mainCanvas.parentElement;
+    if (isFullscreen())
+    {
+        if (document.exitFullscreen)
+            document.exitFullscreen();
+    }
+    else if (rootElement.requestFullscreen)
+        rootElement.requestFullscreen();
+}
+
+/** Set the cursor style
+ *  @param {string}  cursorStyle - CSS cursor style (auto, none, crosshair, etc)
+ *  @memberof Draw */
+function setCursor(cursorStyle = 'auto')
+{
+    const rootElement = mainCanvas.parentElement;
+    rootElement.style.cursor = cursorStyle;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -652,35 +758,4 @@ class FontImage
 
         context.restore();
     }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Display functions
-
-/** Returns true if fullscreen mode is active
- *  @return {boolean}
- *  @memberof Draw */
-function isFullscreen() { return !!document.fullscreenElement; }
-
-/** Toggle fullscreen mode
- *  @memberof Draw */
-function toggleFullscreen()
-{
-    const rootElement = mainCanvas.parentElement;
-    if (isFullscreen())
-    {
-        if (document.exitFullscreen)
-            document.exitFullscreen();
-    }
-    else if (rootElement.requestFullscreen)
-        rootElement.requestFullscreen();
-}
-
-/** Set the cursor style
- *  @param {string}  cursorStyle - CSS cursor style (auto, none, crosshair, etc)
- *  @memberof Draw */
-function setCursor(cursorStyle = 'auto')
-{
-    const rootElement = mainCanvas.parentElement;
-    rootElement.style.cursor = cursorStyle;
 }

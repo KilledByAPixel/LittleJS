@@ -326,6 +326,10 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     if (glCanvas)
         glCanvas.style.cssText = styleCanvas;
     updateCanvas();
+
+    // create offscreen canvas for image processing
+    workCanvas = new OffscreenCanvas(256, 256);
+    workContext = workCanvas.getContext('2d', { willReadFrequently: true });
     
     // create promises for loading images
     const promises = imageSources.map((src, textureIndex)=>
