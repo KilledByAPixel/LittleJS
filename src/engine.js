@@ -150,7 +150,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         let frameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
         frameTimeLastMS = frameTimeMS;
         if (debug || showWatermark)
-            averageFPS = lerp(.05, averageFPS, 1e3/(frameTimeDeltaMS||1));
+            averageFPS = lerp(averageFPS, 1e3/(frameTimeDeltaMS||1), .05);
         const debugSpeedUp   = debug && keyIsDown('Equal'); // +
         const debugSpeedDown = debug && keyIsDown('Minus'); // -
         if (debug) // +/- to speed/slow time
@@ -481,7 +481,7 @@ function drawEngineSplashScreen(t)
         const p3 = percent(t, 1, .8);
         const p4 = percent(t, 0, .5);
         const g = x.createRadialGradient(w/2,h/2,0,w/2,h/2,Math.hypot(w,h)*.7);
-        g.addColorStop(0,hsl(0,0,lerp(p4,0,p3/2),p3).toString());
+        g.addColorStop(0,hsl(0,0,lerp(0,p3/2,p4),p3).toString());
         g.addColorStop(1,hsl(0,0,0,p3).toString());
         x.save();
         x.fillStyle = g;

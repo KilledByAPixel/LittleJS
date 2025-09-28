@@ -244,8 +244,8 @@ class EngineObject
                             + this.velocity.y * 2 * this.mass / (this.mass + o.mass);
 
                         // lerp between elastic or inelastic based on restitution
-                        this.velocity.y = lerp(restitution, inelastic, elastic0);
-                        o.velocity.y = lerp(restitution, inelastic, elastic1);
+                        this.velocity.y = lerp(inelastic, elastic0, restitution);
+                        o.velocity.y = lerp(inelastic, elastic1, restitution);
                     }
                 }
                 if (!smallStepUp && isBlockedX) // resolve x collision
@@ -264,8 +264,8 @@ class EngineObject
                             + this.velocity.x * 2 * this.mass / (this.mass + o.mass);
 
                         // lerp between elastic or inelastic based on restitution
-                        this.velocity.x = lerp(restitution, inelastic, elastic0);
-                        o.velocity.x = lerp(restitution, inelastic, elastic1);
+                        this.velocity.x = lerp(inelastic, elastic0, restitution);
+                        o.velocity.x = lerp(inelastic, elastic1, restitution);
                     }
                     else // bounce if other object is fixed
                         this.velocity.x *= -restitution;

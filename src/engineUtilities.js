@@ -65,12 +65,17 @@ function percent(value, valueA, valueB)
 { return (valueB-=valueA) ? clamp((value-valueA)/valueB) : 0; }
 
 /** Linearly interpolates between values passed in using percent
- *  @param {number} percent
  *  @param {number} valueA
  *  @param {number} valueB
+ *  @param {number} percent
  *  @return {number}
  *  @memberof Utilities */
-function lerp(percent, valueA, valueB) { return valueA + clamp(percent) * (valueB-valueA); }
+function lerp(valueA, valueB, percent)
+{
+    if (valueA >= 0 && valueA <= 1 && ((valueB < 0 || valueB > 1) && (percent < 0 || percent > 1)))
+        console.warn('lerp() parameter order changed! use lerp(start, end, p)');
+    return valueA + clamp(percent) * (valueB-valueA);
+ }
 
 /** Returns signed wrapped distance between the two values passed in
  *  @param {number} valueA
@@ -82,14 +87,18 @@ function distanceWrap(valueA, valueB, wrapSize=1)
 { const d = (valueA - valueB) % wrapSize; return d*2 % wrapSize - d; }
 
 /** Linearly interpolates between values passed in with wrapping
- *  @param {number} percent
  *  @param {number} valueA
  *  @param {number} valueB
+ *  @param {number} percent
  *  @param {number} [wrapSize]
  *  @returns {number}
  *  @memberof Utilities */
-function lerpWrap(percent, valueA, valueB, wrapSize=1)
-{ return valueA + clamp(percent) * distanceWrap(valueB, valueA, wrapSize); }
+function lerpWrap(valueA, valueB, percent, wrapSize=1)
+{
+    if (valueA >= 0 && valueA <= 1 && ((valueB < 0 || valueB > 1) && (percent < 0 || percent > 1)))
+        console.warn('lerpWrap() parameter order changed! use lerpWrap(start, end, p)');
+    return valueA + clamp(percent) * distanceWrap(valueB, valueA, wrapSize);
+}
 
 /** Returns signed wrapped distance between the two angles passed in
  *  @param {number} angleA
@@ -99,12 +108,12 @@ function lerpWrap(percent, valueA, valueB, wrapSize=1)
 function distanceAngle(angleA, angleB) { return distanceWrap(angleA, angleB, 2*PI); }
 
 /** Linearly interpolates between the angles passed in with wrapping
- *  @param {number} percent
  *  @param {number} angleA
  *  @param {number} angleB
+ *  @param {number} percent
  *  @returns {number}
  *  @memberof Utilities */
-function lerpAngle(percent, angleA, angleB) { return lerpWrap(percent, angleA, angleB, 2*PI); }
+function lerpAngle(angleA, angleB, percent) { return lerpWrap(angleA, angleB, percent, 2*PI); }
 
 /** Applies smoothstep function to the percentage value
  *  @param {number} percent

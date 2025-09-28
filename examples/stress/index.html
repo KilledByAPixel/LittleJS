@@ -102,7 +102,7 @@ function gameRender()
 {
     // track fps and update stats
     const frameTimeMS = Date.now();
-    fpsDisplay = LJS.lerp(.05, fpsDisplay||0, 1e3/(frameTimeMS - timeMS||1));
+    fpsDisplay = LJS.lerp(fpsDisplay||0, 1e3/(frameTimeMS - timeMS||1), .05);
     timeMS = frameTimeMS;
 
     // show stats 

@@ -263,7 +263,7 @@ export class Weapon extends LJS.EngineObject
 
         // update recoil
         if (this.recoilTimer.active())
-            this.localAngle = LJS.lerp(this.recoilTimer.getPercent(), this.localAngle, 0);
+            this.localAngle = LJS.lerp(this.localAngle, 0, this.recoilTimer.getPercent());
 
         this.mirror = this.parent.mirror;
         this.fireTimeBuffer += LJS.timeDelta;

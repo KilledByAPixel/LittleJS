@@ -39,11 +39,11 @@ sign(value)                                   // Get the sign of value
 mod(dividend, divisor=1)                      // Get remainder of division
 clamp(value, min=0, max=1)                    // Clamps between values
 percent(value, valueA, valueB)                // Get percentage between values
-lerp(percent, valueA, valueB)                 // Linearly interpolates between values
+lerp(valueA, valueB, percent)                 // Linearly interpolates between values
 distanceWrap(valueA, valueB, wrapSize=1)      // Signed wrapped distance between values
-lerpWrap(percent, valueA, valueB, wrapSize=1) // Linearly interpolates with wrapping
+lerpWrap(valueA, valueB, percent, wrapSize=1) // Linearly interpolates with wrapping
 distanceAngle(angleA, angleB)                 // Signed wrapped distance between angles
-lerpAngle(percent, angleA, angleB)            // Linearly interpolates with wrapping
+lerpAngle(angleA, angleB, percent)            // Linearly interpolates with wrapping
 smoothStep(percent)                           // Applies smoothstep function
 nearestPowerOfTwo(value)                      // Returns the nearest power of two
 isOverlapping(pointA, sizeA, pointB, sizeB)   // Checks if bounding boxes overlap

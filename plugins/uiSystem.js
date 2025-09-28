@@ -536,7 +536,7 @@ class UIScrollbar extends UIObject
         const handleWidth = this.size.x - handleSize.x;
         const p1 = this.pos.x - handleWidth/2;
         const p2 = this.pos.x + handleWidth/2;
-        const handlePos = vec2(lerp(this.value, p1, p2), this.pos.y);
+        const handlePos = vec2(lerp(p1, p2, this.value), this.pos.y);
         const barColor = this.mouseIsHeld ? this.color : this.handleColor;
         uiSystem.drawRect(handlePos, handleSize, barColor, this.lineWidth, this.lineColor, this.cornerRadius);
 
