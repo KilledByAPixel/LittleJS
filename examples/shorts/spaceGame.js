@@ -2,7 +2,7 @@ class Player extends EngineObject
 {
     constructor(pos)
     {
-        super(pos, vec2(1,2), tile(8));
+        super(pos, vec2(1,2), tile(8), 0, CYAN);
         this.damping = .97;
         this.angleDamping = .95;
     }
@@ -37,13 +37,18 @@ function gameInit()
 function gameRender()
 {
     // draw wrapped starfield with parallax
-    const size = 32;
+    const range = 32, halfRange = range/2;
+
+    // precreate variables to avoid overhead
+    let pos = vec2(), size = vec2(), color = WHITE;
     for (let i=1e3; i--;)
     {
-        const parallax =0; i%.13;
-        let pos = vec2(i**2.1, i**3.1);
-        pos = pos.add(cameraPos.scale(parallax)).subtract(cameraPos).mod(size);
-        pos = cameraPos.add(pos).subtract(vec2(size/2));
-        drawRect(pos, vec2(i%.07+.03), rgb(1,1,1,.1+i%.9));
+        // use math to generate random star positions
+        const parallax = i%.13-1;
+        pos.x = mod(i**2.1 + cameraPos.x*parallax, range) + cameraPos.x - halfRange;
+        pos.y = mod(i**3.1 + cameraPos.y*parallax, range) + cameraPos.y - halfRange;
+        size.x = size.y = i%.07+.03;
+        color.a = .1+i%.9;
+        drawRect(pos, size, color);
     }
 }
