@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.12.15';
+const engineVersion = '1.13.1';
 
 /** Frames per second to update
  *  @type {number}
@@ -153,7 +153,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         let frameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
         frameTimeLastMS = frameTimeMS;
         if (debug || showWatermark)
-            averageFPS = lerp(.05, averageFPS, 1e3/(frameTimeDeltaMS||1));
+            averageFPS = lerp(averageFPS, 1e3/(frameTimeDeltaMS||1), .05);
         const debugSpeedUp   = debug && keyIsDown('Equal'); // +
         const debugSpeedDown = debug && keyIsDown('Minus'); // -
         if (debug) // +/- to speed/slow time
@@ -484,7 +484,7 @@ function drawEngineSplashScreen(t)
         const p3 = percent(t, 1, .8);
         const p4 = percent(t, 0, .5);
         const g = x.createRadialGradient(w/2,h/2,0,w/2,h/2,Math.hypot(w,h)*.7);
-        g.addColorStop(0,hsl(0,0,lerp(p4,0,p3/2),p3).toString());
+        g.addColorStop(0,hsl(0,0,lerp(0,p3/2,p4),p3).toString());
         g.addColorStop(1,hsl(0,0,0,p3).toString());
         x.save();
         x.fillStyle = g;
@@ -739,12 +739,17 @@ function percent(value, valueA, valueB)
 { return (valueB-=valueA) ? clamp((value-valueA)/valueB) : 0; }
 
 /** Linearly interpolates between values passed in using percent
- *  @param {number} percent
  *  @param {number} valueA
  *  @param {number} valueB
+ *  @param {number} percent
  *  @return {number}
  *  @memberof Utilities */
-function lerp(percent, valueA, valueB) { return valueA + clamp(percent) * (valueB-valueA); }
+function lerp(valueA, valueB, percent)
+{
+    if (valueA >= 0 && valueA <= 1 && ((valueB < 0 || valueB > 1) && (percent < 0 || percent > 1)))
+        console.warn('lerp() parameter order changed! use lerp(start, end, p)');
+    return valueA + clamp(percent) * (valueB-valueA);
+ }
 
 /** Returns signed wrapped distance between the two values passed in
  *  @param {number} valueA
@@ -756,14 +761,18 @@ function distanceWrap(valueA, valueB, wrapSize=1)
 { const d = (valueA - valueB) % wrapSize; return d*2 % wrapSize - d; }
 
 /** Linearly interpolates between values passed in with wrapping
- *  @param {number} percent
  *  @param {number} valueA
  *  @param {number} valueB
+ *  @param {number} percent
  *  @param {number} [wrapSize]
  *  @returns {number}
  *  @memberof Utilities */
-function lerpWrap(percent, valueA, valueB, wrapSize=1)
-{ return valueA + clamp(percent) * distanceWrap(valueB, valueA, wrapSize); }
+function lerpWrap(valueA, valueB, percent, wrapSize=1)
+{
+    if (valueA >= 0 && valueA <= 1 && ((valueB < 0 || valueB > 1) && (percent < 0 || percent > 1)))
+        console.warn('lerpWrap() parameter order changed! use lerpWrap(start, end, p)');
+    return valueA + clamp(percent) * distanceWrap(valueB, valueA, wrapSize);
+}
 
 /** Returns signed wrapped distance between the two angles passed in
  *  @param {number} angleA
@@ -773,12 +782,12 @@ function lerpWrap(percent, valueA, valueB, wrapSize=1)
 function distanceAngle(angleA, angleB) { return distanceWrap(angleA, angleB, 2*PI); }
 
 /** Linearly interpolates between the angles passed in with wrapping
- *  @param {number} percent
  *  @param {number} angleA
  *  @param {number} angleB
+ *  @param {number} percent
  *  @returns {number}
  *  @memberof Utilities */
-function lerpAngle(percent, angleA, angleB) { return lerpWrap(percent, angleA, angleB, 2*PI); }
+function lerpAngle(angleA, angleB, percent) { return lerpWrap(angleA, angleB, percent, 2*PI); }
 
 /** Applies smoothstep function to the percentage value
  *  @param {number} percent
@@ -2380,8 +2389,8 @@ class EngineObject
                             + this.velocity.y * 2 * this.mass / (this.mass + o.mass);
 
                         // lerp between elastic or inelastic based on restitution
-                        this.velocity.y = lerp(restitution, inelastic, elastic0);
-                        o.velocity.y = lerp(restitution, inelastic, elastic1);
+                        this.velocity.y = lerp(inelastic, elastic0, restitution);
+                        o.velocity.y = lerp(inelastic, elastic1, restitution);
                     }
                 }
                 if (!smallStepUp && isBlockedX) // resolve x collision
@@ -2400,8 +2409,8 @@ class EngineObject
                             + this.velocity.x * 2 * this.mass / (this.mass + o.mass);
 
                         // lerp between elastic or inelastic based on restitution
-                        this.velocity.x = lerp(restitution, inelastic, elastic0);
-                        o.velocity.x = lerp(restitution, inelastic, elastic1);
+                        this.velocity.x = lerp(inelastic, elastic0, restitution);
+                        o.velocity.x = lerp(inelastic, elastic1, restitution);
                     }
                     else // bounce if other object is fixed
                         this.velocity.x *= -restitution;
@@ -6850,7 +6859,7 @@ class UIScrollbar extends UIObject
         const handleWidth = this.size.x - handleSize.x;
         const p1 = this.pos.x - handleWidth/2;
         const p2 = this.pos.x + handleWidth/2;
-        const handlePos = vec2(lerp(this.value, p1, p2), this.pos.y);
+        const handlePos = vec2(lerp(p1, p2, this.value), this.pos.y);
         const barColor = this.mouseIsHeld ? this.color : this.handleColor;
         uiSystem.drawRect(handlePos, handleSize, barColor, this.lineWidth, this.lineColor, this.cornerRadius);
 

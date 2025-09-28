@@ -655,13 +655,13 @@ declare module "littlejsengine" {
      *  @memberof Utilities */
     export function distanceWrap(valueA: number, valueB: number, wrapSize?: number): number;
     /** Linearly interpolates between values passed in with wrapping
-     *  @param {number} percent
      *  @param {number} valueA
      *  @param {number} valueB
+     *  @param {number} percent
      *  @param {number} [wrapSize]
      *  @returns {number}
      *  @memberof Utilities */
-    export function lerpWrap(percent: number, valueA: number, valueB: number, wrapSize?: number): number;
+    export function lerpWrap(valueA: number, valueB: number, percent: number, wrapSize?: number): number;
     /** Returns signed wrapped distance between the two angles passed in
      *  @param {number} angleA
      *  @param {number} angleB
@@ -669,19 +669,19 @@ declare module "littlejsengine" {
      *  @memberof Utilities */
     export function distanceAngle(angleA: number, angleB: number): number;
     /** Linearly interpolates between the angles passed in with wrapping
-     *  @param {number} percent
      *  @param {number} angleA
      *  @param {number} angleB
+     *  @param {number} percent
      *  @returns {number}
      *  @memberof Utilities */
-    export function lerpAngle(percent: number, angleA: number, angleB: number): number;
+    export function lerpAngle(angleA: number, angleB: number, percent: number): number;
     /** Linearly interpolates between values passed in using percent
-     *  @param {number} percent
      *  @param {number} valueA
      *  @param {number} valueB
+     *  @param {number} percent
      *  @return {number}
      *  @memberof Utilities */
-    export function lerp(percent: number, valueA: number, valueB: number): number;
+    export function lerp(valueA: number, valueB: number, percent: number): number;
     /** Applies smoothstep function to the percentage value
      *  @param {number} percent
      *  @return {number}
