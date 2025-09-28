@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="en" style="font-size:16px"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="./static/favicon.png"><title>Source: src/engineTileLayer.js</title><!--[if lt IE 9]>
       <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]--><script src="scripts/third-party/hljs.js" defer="defer"></script><script src="scripts/third-party/hljs-line-num.js" defer="defer"></script><script src="scripts/third-party/popper.js" defer="defer"></script><script src="scripts/third-party/tippy.js" defer="defer"></script><script src="scripts/third-party/tocbot.min.js"></script><script>var baseURL="/",locationPathname="";baseURL=(locationPathname=document.location.pathname).substr(0,locationPathname.lastIndexOf("/")+1)</script><link rel="stylesheet" href="styles/clean-jsdoc-theme.min.css"><style>.prettyprint code{font-family:monospace}</style><svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><defs><symbol id="copy-icon" viewbox="0 0 488.3 488.3"><g><path d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z"/><path d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z"/></g></symbol><symbol id="search-icon" viewBox="0 0 512 512"><g><g><path d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z"/></g></g><g><g><path d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z"/></g></g></symbol><symbol id="font-size-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11.246 15H4.754l-2 5H.6L7 4h2l6.4 16h-2.154l-2-5zm-.8-2L8 6.885 5.554 13h4.892zM21 12.535V12h2v8h-2v-.535a4 4 0 1 1 0-6.93zM19 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="add-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></symbol><symbol id="minus-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 11h14v2H5z"/></symbol><symbol id="dark-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z"/></symbol><symbol id="light-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/></symbol><symbol id="reset-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.537 19.567A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10c0 2.136-.67 4.116-1.81 5.74L17 12h3a8 8 0 1 0-2.46 5.772l.997 1.795z"/></symbol><symbol id="down-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"></path></symbol><symbol id="codepen-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M16.5 13.202L13 15.535v3.596L19.197 15 16.5 13.202zM14.697 12L12 10.202 9.303 12 12 13.798 14.697 12zM20 10.869L18.303 12 20 13.131V10.87zM19.197 9L13 4.869v3.596l3.5 2.333L19.197 9zM7.5 10.798L11 8.465V4.869L4.803 9 7.5 10.798zM4.803 15L11 19.131v-3.596l-3.5-2.333L4.803 15zM4 13.131L5.697 12 4 10.869v2.262zM2 9a1 1 0 0 1 .445-.832l9-6a1 1 0 0 1 1.11 0l9 6A1 1 0 0 1 22 9v6a1 1 0 0 1-.445.832l-9 6a1 1 0 0 1-1.11 0l-9-6A1 1 0 0 1 2 15V9z"/></symbol><symbol id="close-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z"/></symbol><symbol id="menu-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/></symbol></defs></svg></head><body data-theme="dark"><div class="sidebar-container"><div class="sidebar" id="sidebar"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="sidebar-items-container"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Color.html">Color</a></div><div class="sidebar-section-children"><a href="EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="FontImage.html">FontImage</a></div><div class="sidebar-section-children"><a href="Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="SoundWave.html">SoundWave</a></div><div class="sidebar-section-children"><a href="TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UIScrollbar.html">UIScrollbar</a></div><div class="sidebar-section-children"><a href="UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileCollision.html">TileCollision</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-global"><div>Global</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="global.html#box2d">box2d</a></div><div class="sidebar-section-children"><a href="global.html#box2dDebug">box2dDebug</a></div><div class="sidebar-section-children"><a href="global.html#box2dEngineInit">box2dEngineInit</a></div><div class="sidebar-section-children"><a href="global.html#postProcess">postProcess</a></div><div class="sidebar-section-children"><a href="global.html#uiSystem">uiSystem</a></div><div class="sidebar-section-children"><a href="global.html#zzfxM">zzfxM</a></div></div></div></div></div><div class="navbar-container" id="VuAckcnZhf"><nav class="navbar"><div class="navbar-left-items"></div><div class="navbar-right-items"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div><nav></nav></nav></div><div class="toc-container"><div class="toc-content"><span class="bold">On this page</span><div id="eed4d2a0bfd64539bb9df78095dec881"></div></div></div><div class="body-wrapper"><div class="main-content"><div class="main-wrapper"><section id="source-page" class="source-page"><header><h1 id="title" class="has-anchor">src_engineTileLayer.js</h1></header><article><pre class="prettyprint source lang-js"><code>/** 
+    <![endif]--><script src="scripts/third-party/hljs.js" defer="defer"></script><script src="scripts/third-party/hljs-line-num.js" defer="defer"></script><script src="scripts/third-party/popper.js" defer="defer"></script><script src="scripts/third-party/tippy.js" defer="defer"></script><script src="scripts/third-party/tocbot.min.js"></script><script>var baseURL="/",locationPathname="";baseURL=(locationPathname=document.location.pathname).substr(0,locationPathname.lastIndexOf("/")+1)</script><link rel="stylesheet" href="styles/clean-jsdoc-theme.min.css"><style>.prettyprint code{font-family:monospace}</style><svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><defs><symbol id="copy-icon" viewbox="0 0 488.3 488.3"><g><path d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z"/><path d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z"/></g></symbol><symbol id="search-icon" viewBox="0 0 512 512"><g><g><path d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z"/></g></g><g><g><path d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z"/></g></g></symbol><symbol id="font-size-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11.246 15H4.754l-2 5H.6L7 4h2l6.4 16h-2.154l-2-5zm-.8-2L8 6.885 5.554 13h4.892zM21 12.535V12h2v8h-2v-.535a4 4 0 1 1 0-6.93zM19 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="add-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></symbol><symbol id="minus-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 11h14v2H5z"/></symbol><symbol id="dark-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z"/></symbol><symbol id="light-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/></symbol><symbol id="reset-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.537 19.567A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10c0 2.136-.67 4.116-1.81 5.74L17 12h3a8 8 0 1 0-2.46 5.772l.997 1.795z"/></symbol><symbol id="down-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"></path></symbol><symbol id="codepen-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M16.5 13.202L13 15.535v3.596L19.197 15 16.5 13.202zM14.697 12L12 10.202 9.303 12 12 13.798 14.697 12zM20 10.869L18.303 12 20 13.131V10.87zM19.197 9L13 4.869v3.596l3.5 2.333L19.197 9zM7.5 10.798L11 8.465V4.869L4.803 9 7.5 10.798zM4.803 15L11 19.131v-3.596l-3.5-2.333L4.803 15zM4 13.131L5.697 12 4 10.869v2.262zM2 9a1 1 0 0 1 .445-.832l9-6a1 1 0 0 1 1.11 0l9 6A1 1 0 0 1 22 9v6a1 1 0 0 1-.445.832l-9 6a1 1 0 0 1-1.11 0l-9-6A1 1 0 0 1 2 15V9z"/></symbol><symbol id="close-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z"/></symbol><symbol id="menu-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/></symbol></defs></svg></head><body data-theme="dark"><div class="sidebar-container"><div class="sidebar" id="sidebar"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="sidebar-items-container"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="Color.html">Color</a></div><div class="sidebar-section-children"><a href="EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="FontImage.html">FontImage</a></div><div class="sidebar-section-children"><a href="Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="SoundWave.html">SoundWave</a></div><div class="sidebar-section-children"><a href="TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UIScrollbar.html">UIScrollbar</a></div><div class="sidebar-section-children"><a href="UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileCollision.html">TileCollision</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-global"><div>Global</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="global.html#postProcess">postProcess</a></div><div class="sidebar-section-children"><a href="global.html#uiSystem">uiSystem</a></div><div class="sidebar-section-children"><a href="global.html#zzfxM">zzfxM</a></div></div></div></div></div><div class="navbar-container" id="VuAckcnZhf"><nav class="navbar"><div class="navbar-left-items"></div><div class="navbar-right-items"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div><nav></nav></nav></div><div class="toc-container"><div class="toc-content"><span class="bold">On this page</span><div id="eed4d2a0bfd64539bb9df78095dec881"></div></div></div><div class="body-wrapper"><div class="main-content"><div class="main-wrapper"><section id="source-page" class="source-page"><header><h1 id="title" class="has-anchor">src_engineTileLayer.js</h1></header><article><pre class="prettyprint source lang-js"><code>/** 
  * LittleJS Tile Layer System
  * - Caches arrays of tiles to off screen canvas for fast rendering
  * - Unlimited numbers of layers, allocates canvases as needed
@@ -24,7 +24,7 @@ let tileCollisionLayers = [];
 *  @param {Vector2} pos
 *  @return {number}
 *  @memberof TileCollision */
-function getTileCollisionData(pos)
+function tileCollisionGetData(pos)
 {
     // check all tile collision layers
     for (const layer of tileCollisionLayers)
@@ -36,35 +36,103 @@ function getTileCollisionData(pos)
 /** Check if a tile layer collides with another object
  *  @param {Vector2}      pos
  *  @param {Vector2}      [size=(0,0)]
- *  @param {EngineObject} [object]
+ *  @param {EngineObject} [object] - An object or undefined for generic test
+ *  @param {boolean}      [solidOnly] - Only check solid layers if true
  *  @return {TileCollisionLayer}
  *  @memberof TileCollision */
-function tileCollisionTest(pos, size=vec2(), object)
+function tileCollisionTest(pos, size=vec2(), object, solidOnly=true)
 {
-    // check all tile collision layers
     for (const layer of tileCollisionLayers)
+    {
+        if (!solidOnly || layer.isSolid)
         if (layer.collisionTest(pos, size, object))
             return layer;
+    }
 }
 
 /** Return the center of first tile hit, undefined if nothing was hit.
  *  This does not return the exact intersection, but the center of the tile hit.
  *  @param {Vector2}      posStart
  *  @param {Vector2}      posEnd
- *  @param {EngineObject} [object]
+ *  @param {EngineObject} [object] - An object or undefined for generic test
+ *  @param {boolean}      [solidOnly=true] - Only check solid layers if true
  *  @return {Vector2}
  *  @memberof TileCollision */
-function tileCollisionRaycast(posStart, posEnd, object)
+function tileCollisionRaycast(posStart, posEnd, object, solidOnly=true)
 {
-    // check all tile collision layers
     for (const layer of tileCollisionLayers)
     {
-        const hitPos = layer.collisionRaycast(posStart, posEnd, object)
-        if (hitPos)
-            return hitPos;
+        if (!solidOnly || layer.isSolid)
+        {
+            const hitPos = layer.collisionRaycast(posStart, posEnd, object)
+            if (hitPos)
+                return hitPos;
+        }
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Load tile layers from exported data
+ *  @param {Object}   tileMapData - Level data from exported data
+ *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture)
+ *  @param {number}   [renderOrder] - Render order of the top layer
+ *  @param {number}   [collisionLayer] - Layer to use for collision if any
+ *  @param {boolean}  [draw] - Should the layer be drawn automatically
+ *  @return {Array&lt;TileCollisionLayer>}
+ *  @memberof TileCollision */
+function tileCollisionLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLayer, draw=true)
+{
+    if (!tileMapData)
+    {
+        // default level data if loading failed
+        const s = 50;
+        tileMapData = {};
+        tileMapData.height = tileMapData.width = s;
+        tileMapData.layers = [{}];
+        tileMapData.layers[0].data = new Array(s*s).fill(0);
+    }
+
+    // validate the tile map data
+    ASSERT(tileMapData.width &amp;&amp; tileMapData.height);
+    ASSERT(tileMapData.layers &amp;&amp; tileMapData.layers.length);
+
+    // create tile layers and fill with data
+    const tileLayers = [];
+    const levelSize = vec2(tileMapData.width, tileMapData.height);
+    const layerCount = tileMapData.layers.length;
+    for (let layerIndex=layerCount; layerIndex--;)
+    {
+        const dataLayer = tileMapData.layers[layerIndex];
+        ASSERT(dataLayer.data &amp;&amp; dataLayer.data.length);
+        ASSERT(levelSize.area() == dataLayer.data.length);
+
+        const layerRenderOrder = renderOrder - (layerCount - 1 - layerIndex);
+        const tileLayer = new TileCollisionLayer(vec2(), levelSize, tileInfo, layerRenderOrder);
+        tileLayers[layerIndex] = tileLayer;
+
+        for (let x=levelSize.x; x--;) 
+        for (let y=levelSize.y; y--;)
+        {
+            const pos = vec2(x, levelSize.y-1-y);
+            const data = dataLayer.data[x + y*levelSize.x];
+            if (data)
+            {
+                const layerData = new TileLayerData(data-1);
+                tileLayer.setData(pos, layerData);
+
+                // set collision for top layer
+                if (layerIndex === collisionLayer)
+                    tileLayer.setCollisionData(pos, 1);
+            }
+        }
+        if (draw)
+            tileLayer.redraw();
+    }
+    return tileLayers;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 /**
  * Tile layer data object stores info about how to draw a tile
  * @example
@@ -100,40 +168,180 @@ class TileLayerData
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
+ * Canvas Layer - cached off screen rendering system
+ * - Contains an offscreen canvas that can be rendered to
+ * - Webgl rendering is optional, call useWebGL to enable
+ * @extends EngineObject
+ * @example
+ * const canvasLayer = new CanvasLayer(vec2(), vec2(200,100));
+ */
+class CanvasLayer extends EngineObject
+{
+    /** Create a canvas layer object
+     *  @param {Vector2}  [position] - World space position of the layer
+     *  @param {Vector2}  [size] - World space size of the layer
+     *  @param {number}   [angle] - Angle the layer is rotated by
+     *  @param {number}   [renderOrder] - Objects sorted by renderOrder
+     *  @param {Vector2}  [canvasSize] - Default size of canvas, can be changed later
+    */
+    constructor(position, size, angle=0, renderOrder=0, canvasSize=vec2(512))
+    {
+        super(position, size, undefined, angle, WHITE, renderOrder);
+
+        /** @property {HTMLCanvasElement} - The canvas used by this layer */
+        this.canvas = headlessMode ? undefined : new OffscreenCanvas(canvasSize.x, canvasSize.y);
+        /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this layer */
+        this.context = headlessMode ? undefined : this.canvas.getContext('2d');
+        /** @property {WebGLTexture} - Texture if using webgl for this layer, call useWebGL to enable */
+        this.glTexture = undefined;
+        this.gravityScale = 0; // disable gravity by default for canvas layers
+    }
+   
+    /** Destroy this canvas layer */
+    destroy()
+    {
+        if (this.destroyed)
+            return;
+
+        // free up the webgl texture
+        if (this.glTexture)
+            glDeleteTexture(this.glTexture);
+        super.destroy();
+    }
+
+    // Render the layer, called automatically by the engine
+    render()
+    {
+        this.draw(this.pos, this.size, this.angle, this.color, this.mirror, this.additiveColor);
+    }
+
+    /** Draw this canvas layer centered in world space, with color applied if using WebGL
+    *  @param {Vector2} pos - Center in world space
+    *  @param {Vector2} [size] - Size in world space
+    *  @param {Color}   [color] - Color to modulate with
+    *  @param {number}  [angle] - Angle to rotate by
+    *  @param {boolean} [mirror] - If true image is flipped along the Y axis
+    *  @param {Color}   [additiveColor] - Additive color to be applied if any
+    *  @param {boolean} [screenSpace] - If true the pos and size are in screen space
+    *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
+    *  @memberof Draw */
+    draw(pos, size, angle=0, color=WHITE, mirror=false, additiveColor, screenSpace=false, context)
+    {
+        // draw the canvas layer as a single tile that uses the whole texture
+        const useWebgl = glEnable &amp;&amp; this.glTexture != undefined;
+        const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
+        drawTile(pos, size, tileInfo, color, angle, mirror, additiveColor, useWebgl, screenSpace, context);
+    }
+
+    /** Draw onto the layer canvas in world space (bypass webgl)
+     *  @param {Vector2}  pos
+     *  @param {Vector2}  size
+     *  @param {number}   angle
+     *  @param {boolean}  mirror
+     *  @param {Function} drawFunction */
+    drawCanvas2D(pos, size, angle, mirror, drawFunction)
+    {
+        const context = this.context;
+        context.save();
+        pos = pos.subtract(this.pos).multiply(this.tileInfo.size);
+        size = size.multiply(this.tileInfo.size);
+        context.translate(pos.x, this.canvas.height - pos.y);
+        context.rotate(angle);
+        context.scale(mirror ? -size.x : size.x, size.y);
+        drawFunction(context);
+        context.restore();
+    }
+
+    /** Draw a tile onto the layer canvas in world space
+     *  @param {Vector2}  pos
+     *  @param {Vector2}  [size=(1,1)]
+     *  @param {TileInfo} [tileInfo]
+     *  @param {Color}    [color=(1,1,1,1)]
+     *  @param {number}   [angle=0]
+     *  @param {boolean}  [mirror=0] */
+    drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle, mirror)
+    {
+        this.drawCanvas2D(pos, size, angle, mirror, (context)=>
+        {
+            const textureInfo = tileInfo &amp;&amp; tileInfo.textureInfo;
+            if (textureInfo)
+            {
+                context.globalAlpha = color.a; // only alpha is supported
+                context.drawImage(textureInfo.image, 
+                    tileInfo.pos.x,  tileInfo.pos.y, 
+                    tileInfo.size.x, tileInfo.size.y, -.5, -.5, 1, 1);
+                context.globalAlpha = 1;
+            }
+            else
+            {
+                // untextured
+                context.fillStyle = color;
+                context.fillRect(-.5, -.5, 1, 1);
+            }
+        });
+    }
+
+    /** Draw a rectangle onto the layer canvas in world space
+     *  @param {Vector2} pos
+     *  @param {Vector2} [size=(1,1)]
+     *  @param {Color}   [color=(1,1,1,1)]
+     *  @param {number}  [angle=0] */
+    drawRect(pos, size, color, angle) 
+    { this.drawTile(pos, size, undefined, color, angle); }
+
+    /** Create or update the webgl texture for this layer
+     *  @param {boolean} [enable] - enable webgl rendering and update the texture */
+    useWebGL(enable=true)
+    {
+        if (glEnable &amp;&amp; enable)
+        {
+            if (this.glTexture)
+                glSetTextureData(this.glTexture, this.canvas);
+            else
+                this.glTexture = glCreateTexture(this.canvas);
+        }
+        else
+            this.glTexture = undefined;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/**
  * Tile Layer - cached rendering system for tile layers
  * - Each Tile layer is rendered to an off screen canvas
  * - To allow dynamic modifications, layers are rendered using canvas 2d
  * - Some devices like mobile phones are limited to 4k texture resolution
  * - For with 16x16 tiles this limits layers to 256x256 on mobile devices
- * @extends EngineObject
+ * @extends CanvasLayer
  * @example
  * const tileLayer = new TileLayer(vec2(), vec2(200,100));
  */
-class TileLayer extends EngineObject
+class TileLayer extends CanvasLayer
 {
     /** Create a tile layer object
-    *  @param {Vector2}  [position=(0,0)] - World space position
-    *  @param {Vector2}  [size=(1,1)]     - World space size
-    *  @param {TileInfo} [tileInfo]       - Tile info for layer
-    *  @param {Vector2}  [scale=(1,1)]    - How much to scale this layer when rendered
-    *  @param {number}   [renderOrder]    - Objects are sorted by renderOrder
+    *  @param {Vector2}  position      - World space position
+    *  @param {Vector2}  size          - World space size
+    *  @param {TileInfo} [tileInfo]    - Default tile info for layer (used for size and texture)
+    *  @param {Vector2}  [scale=(1,1)] - How much to scale this layer when rendered
+    *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
+    *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering
     */
-    constructor(position, size, tileInfo=tile(), scale=vec2(1), renderOrder=0)
+    constructor(position, size, tileInfo=tile(), scale=vec2(1), renderOrder=0, useWebGL=glEnable)
     {
-        super(position, size, tileInfo, 0, undefined, renderOrder);
+        super(position, size, 0, renderOrder, size);
+        this.tileInfo = tileInfo;
 
+        const canvasSize = size.multiply(tileInfo.size);
         /** @property {HTMLCanvasElement} - The canvas used by this tile layer */
-        this.canvas = document.createElement('canvas');
-        /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
+        this.canvas = new OffscreenCanvas(canvasSize.x, canvasSize.y);
+        /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
         this.context = this.canvas.getContext('2d');
-        /** @property {Vector2} - How much to scale this layer when rendered */
-        this.scale = scale;
-        /** @property {boolean} - If true this layer will render to overlay canvas and appear above all objects */
-        this.isOverlay = false;
+        /** @property {WebGLTexture} - Texture if using webgl for this layer */
+        this.glTexture = useWebGL ? glCreateTexture(this.canvas) : undefined;
         // set no friction by default, applied friction is max of both objects
         this.friction = 0;
-        // set no elasticity by default, applied elasticity is max of both objects
-        this.elasticity = 0;
+        // set no restitution by default, applied restitution is max of both objects
+        this.restitution = 0;
 
         // init tile data
         this.data = [];
@@ -149,9 +357,10 @@ class TileLayer extends EngineObject
             this.redrawEnd    = () => {};
             this.drawTileData = () => {};
             this.drawCanvas2D = () => {};
+            this.useWebGL     = () => {};
         }
     }
-    
+
     /** Set data at a given position in the array 
      *  @param {Vector2}       layerPos - Local position in array
      *  @param {TileLayerData} data     - Data to set
@@ -171,28 +380,16 @@ class TileLayer extends EngineObject
     getData(layerPos)
     { return layerPos.arrayCheck(this.size) &amp;&amp; this.data[(layerPos.y|0)*this.size.x+layerPos.x|0]; }
     
-    // Tile layers are not updated
-    update() {}
-
     // Render the tile layer, called automatically by the engine
     render()
     {
-        ASSERT(mainContext != this.context, 'must call redrawEnd() after drawing tiles');
-
-        // flush and copy gl canvas because tile canvas does not use webgl
-        !glOverlay &amp;&amp; !this.isOverlay &amp;&amp; glCopyToContext(mainContext);
+        ASSERT(drawContext != this.context, 'must call redrawEnd() after drawing tiles!');
         
-        // draw the entire cached level onto the canvas
-        let pos = worldToScreen(this.pos.add(vec2(0,this.size.y*this.scale.y)));
-        
-        // fix canvas jitter in some browsers if position is not an integer
-        pos = pos.floor();
-
-        (this.isOverlay ? overlayContext : mainContext).drawImage
-        (
-            this.canvas, pos.x, pos.y,
-            cameraScale*this.size.x*this.scale.x, cameraScale*this.size.y*this.scale.y
-        );
+        // draw the tile layer as a single tile
+        const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
+        const pos = this.pos.add(this.size.scale(.5));
+        const useWebgl = glEnable &amp;&amp; this.glTexture != undefined;
+        drawTile(pos, this.size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebgl);
     }
 
     /** Draw all the tile data to an offscreen canvas 
@@ -204,6 +401,8 @@ class TileLayer extends EngineObject
         for (let y = this.size.y; y--;)
             this.drawTileData(vec2(x,y), false);
         this.redrawEnd();
+        if (this.glTexture)
+            this.useWebGL(); // update webgl texture
     }
 
     /** Call to start the redraw process
@@ -212,22 +411,21 @@ class TileLayer extends EngineObject
     redrawStart(clear=false)
     {
         // save current render settings
-        /** @type {[HTMLCanvasElement, CanvasRenderingContext2D, Vector2, Vector2, number]} */
-        this.savedRenderSettings = [mainCanvas, mainContext, mainCanvasSize, cameraPos, cameraScale];
+        /** @type {[HTMLCanvasElement|OffscreenCanvas, CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number]} */
+        this.savedRenderSettings = [drawCanvas, drawContext, mainCanvasSize, cameraPos, cameraScale];
 
-        // use webgl rendering system to render the tiles if enabled
-        // this works by temporally taking control of the rendering system
-        mainCanvas = this.canvas;
-        mainContext = this.context;
-        mainCanvasSize = this.size.multiply(this.tileInfo.size);
+        // set the draw canvas and context to this layer
+        // use camera settings to match this layer's canvas
+        drawCanvas = this.canvas;
+        drawContext = this.context;
         cameraPos = this.size.scale(.5);
         cameraScale = this.tileInfo.size.x;
-
+        mainCanvasSize = this.size.multiply(this.tileInfo.size);
         if (clear)
         {
             // clear and set size
-            mainCanvas.width  = mainCanvasSize.x;
-            mainCanvas.height = mainCanvasSize.y;
+            drawCanvas.width  = mainCanvasSize.x;
+            drawCanvas.height = mainCanvasSize.y;
         }
 
         // disable smoothing for pixel art
@@ -240,12 +438,12 @@ class TileLayer extends EngineObject
     /** Call to end the redraw process */
     redrawEnd()
     {
-        ASSERT(mainContext == this.context, 'must call redrawStart() before drawing tiles');
-        glCopyToContext(mainContext, true);
+        ASSERT(drawContext == this.context, 'must call redrawStart() before drawing tiles');
+        glCopyToContext(drawContext);
         //debugSaveCanvas(this.canvas);
 
         // set stuff back to normal
-        [mainCanvas, mainContext, mainCanvasSize, cameraPos, cameraScale] = this.savedRenderSettings;
+        [drawCanvas, drawContext, mainCanvasSize, cameraPos, cameraScale] = this.savedRenderSettings;
     }
 
     /** Draw the tile at a given position in the tile grid
@@ -264,72 +462,16 @@ class TileLayer extends EngineObject
             this.context.clearRect(pos.x, this.canvas.height-pos.y, s.x, -s.y);
         }
 
-        // draw the tile if not undefined
+        // draw the tile if it has layer data
         const d = this.getData(layerPos);
         if (d.tile != undefined)
         {
-            ASSERT(mainContext == this.context, 'must call redrawStart() before drawing tiles');
+            ASSERT(drawContext == this.context, 'must call redrawStart() before drawing tiles');
             const pos = layerPos.add(vec2(.5));
             const tileInfo = tile(d.tile, s, this.tileInfo.textureIndex, this.tileInfo.padding);
             drawTile(pos, vec2(1), tileInfo, d.color, d.direction*PI/2, d.mirror);
         }
     }
-
-    /** Draw directly to the 2D canvas in world space (bypass webgl)
-     *  @param {Vector2}  pos
-     *  @param {Vector2}  size
-     *  @param {number}   angle
-     *  @param {boolean}  mirror
-     *  @param {Function} drawFunction */
-    drawCanvas2D(pos, size, angle, mirror, drawFunction)
-    {
-        const context = this.context;
-        context.save();
-        pos = pos.subtract(this.pos).multiply(this.tileInfo.size);
-        size = size.multiply(this.tileInfo.size);
-        context.translate(pos.x, this.canvas.height - pos.y);
-        context.rotate(angle);
-        context.scale(mirror ? -size.x : size.x, size.y);
-        drawFunction(context);
-        context.restore();
-    }
-
-    /** Draw a tile directly onto the layer canvas in world space
-     *  @param {Vector2}  pos
-     *  @param {Vector2}  [size=(1,1)]
-     *  @param {TileInfo} [tileInfo]
-     *  @param {Color}    [color=(1,1,1,1)]
-     *  @param {number}   [angle=0]
-     *  @param {boolean}  [mirror=0] */
-    drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle, mirror)
-    {
-        this.drawCanvas2D(pos, size, angle, mirror, (context)=>
-        {
-            const textureInfo = tileInfo &amp;&amp; tileInfo.getTextureInfo();
-            if (textureInfo)
-            {
-                context.globalAlpha = color.a; // only alpha is supported
-                context.drawImage(textureInfo.image, 
-                    tileInfo.pos.x,  tileInfo.pos.y, 
-                    tileInfo.size.x, tileInfo.size.y, -.5, -.5, 1, 1);
-                context.globalAlpha = 1;
-            }
-            else
-            {
-                // untextured
-                context.fillStyle = color;
-                context.fillRect(-.5, -.5, 1, 1);
-            }
-        });
-    }
-
-    /** Draw a rectangle directly onto the layer canvas in world space
-     *  @param {Vector2} pos
-     *  @param {Vector2} [size=(1,1)]
-     *  @param {Color}   [color=(1,1,1,1)]
-     *  @param {number}  [angle=0] */
-    drawRect(pos, size, color, angle) 
-    { this.drawTile(pos, size, undefined, color, angle); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -343,15 +485,16 @@ class TileLayer extends EngineObject
 class TileCollisionLayer extends TileLayer
 {
     /** Create a tile layer object
-    *  @param {Vector2}  [position=(0,0)] - World space position
-    *  @param {Vector2}  [size=(0,0)]     - World space size
-    *  @param {TileInfo} [tileInfo]       - Tile info for layer
-    *  @param {number}   [renderOrder]    - Objects are sorted by renderOrder
+    *  @param {Vector2}  position      - World space position
+    *  @param {Vector2}  size          - World space size
+    *  @param {TileInfo} [tileInfo]    - Tile info for layer
+    *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
+    *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering
     */
-    constructor(position, size, tileInfo=tile(), renderOrder=0)
+    constructor(position, size, tileInfo=tile(), renderOrder=0, useWebGL=glEnable)
     {
         const scale = vec2(1); // collision layers are not scaled
-        super(position, size.floor(), tileInfo, scale, renderOrder);
+        super(position, size.floor(), tileInfo, scale, renderOrder, useWebGL);
 
         /** @property {Array&lt;number>} - The tile collision grid */
         this.collisionData = [];
@@ -359,11 +502,14 @@ class TileCollisionLayer extends TileLayer
 
         // keep track of all collision layers
         tileCollisionLayers.push(this);
+
+        // tile collision layers are solid by default
+        this.isSolid = true;
     }
 
-    /** Destroy this collision layer */
+    /** Destroy this tile layer */
     destroy()
-    { 
+    {
         if (this.destroyed)
             return;
 
@@ -385,21 +531,21 @@ class TileCollisionLayer extends TileLayer
     }
 
     /** Set tile collision data for a given cell in the grid
-    *  @param {Vector2} pos
+    *  @param {Vector2} gridPos
     *  @param {number}  [data] */
-    setCollisionData(pos, data=1)
+    setCollisionData(gridPos, data=1)
     {
-        const i = (pos.y|0)*this.size.x + pos.x|0;
-        pos.arrayCheck(this.size) &amp;&amp; (this.collisionData[i] = data);
+        const i = (gridPos.y|0)*this.size.x + gridPos.x|0;
+        gridPos.arrayCheck(this.size) &amp;&amp; (this.collisionData[i] = data);
     }
 
     /** Get tile collision data for a given cell in the grid
-    *  @param {Vector2} pos
+    *  @param {Vector2} gridPos
     *  @return {number} */
-    getCollisionData(pos)
+    getCollisionData(gridPos)
     {
-        const i = (pos.y|0)*this.size.x + pos.x|0;
-        return pos.arrayCheck(this.size) ? this.collisionData[i] : 0;
+        const i = (gridPos.y|0)*this.size.x + gridPos.x|0;
+        return gridPos.arrayCheck(this.size) ? this.collisionData[i] : 0;
     }
 
     /** Check if collision with another object should occur
@@ -407,18 +553,25 @@ class TileCollisionLayer extends TileLayer
     *  @param {Vector2}      [size=(0,0)]
     *  @param {EngineObject} [object]
     *  @return {boolean} */
-    collisionTest(pos, size=vec2(), object)
+    collisionTest(pos, size=new Vector2, object)
     {
-        const minX = max(pos.x - size.x/2|0, 0);
-        const minY = max(pos.y - size.y/2|0, 0);
-        const maxX = min(pos.x + size.x/2, this.size.x);
-        const maxY = min(pos.y + size.y/2, this.size.y);
+        // transform to local layer space
+        const posX = pos.x - this.pos.x;
+        const posY = pos.y - this.pos.y;
+
+        // check any tiles in the area for collision
+        const minX = max(posX - size.x/2|0, 0);
+        const minY = max(posY - size.y/2|0, 0);
+        const maxX = min(posX + size.x/2, this.size.x);
+        const maxY = min(posY + size.y/2, this.size.y);
+        const hitPos = new Vector2;
         for (let y = minY; y &lt; maxY; ++y)
         for (let x = minX; x &lt; maxX; ++x)
         {
             // check if the object should collide with this tile
             const tileData = this.collisionData[y*this.size.x+x];
-            if (tileData &amp;&amp; (!object || object.collideWithTile(tileData, vec2(x, y))))
+            if (tileData)
+            if (!object || object.collideWithTile(tileData, hitPos.set(x, y)))
                 return true;
         }
         return false;
@@ -432,18 +585,23 @@ class TileCollisionLayer extends TileLayer
     *  @return {Vector2} */
     collisionRaycast(posStart, posEnd, object)
     {
+        // transform to local layer space
+        const posStartX = posStart.x - this.pos.x;
+        const posStartY = posStart.y - this.pos.y;
+        const posEndX   = posEnd.x   - this.pos.x;
+        const posEndY   = posEnd.y   - this.pos.y;
+
         // test if a ray collides with tiles from start to end
-        // todo: a way to get the exact hit point, it must still be inside the hit tile
-        const delta = posEnd.subtract(posStart);
-        const totalLength = delta.length();
-        const normalizedDelta = delta.normalize();
-        const unit = vec2(abs(1/normalizedDelta.x), abs(1/normalizedDelta.y));
-        const flooredPosStart = posStart.floor();
+        const deltaX = posEndX - posStartX;
+        const deltaY = posEndY - posStartY;
+        const totalLength = (deltaX**2 + deltaY**2)**.5;
+        const unitX = abs(totalLength/deltaX);
+        const unitY = abs(totalLength/deltaY);
 
         // setup iteration variables
-        let pos = flooredPosStart;
-        let xi = unit.x * (delta.x &lt; 0 ? posStart.x - pos.x : pos.x - posStart.x + 1);
-        let yi = unit.y * (delta.y &lt; 0 ? posStart.y - pos.y : pos.y - posStart.y + 1);
+        const pos = posStart.floor(), signDeltaX = sign(deltaX), signDeltaY = sign(deltaY);
+        let xi = unitX * (deltaX &lt; 0 ? posStart.x - pos.x : pos.x - posStart.x + 1) || 0;
+        let yi = unitY * (deltaY &lt; 0 ? posStart.y - pos.y : pos.y - posStart.y + 1) || 0;
 
         // use line drawing algorithm to test for collisions
         while (true)
@@ -452,22 +610,23 @@ class TileCollisionLayer extends TileLayer
             const tileData = this.getCollisionData(pos);
             if (tileData &amp;&amp; (!object || object.collideWithTile(tileData, pos)))
             {
+                pos.x += .5; pos.y += .5;
                 debugRaycast &amp;&amp; debugLine(posStart, posEnd, '#f00', .02);
-                debugRaycast &amp;&amp; debugPoint(pos.add(vec2(.5)), '#ff0');
-                return pos.add(vec2(.5));
+                debugRaycast &amp;&amp; debugPoint(pos, '#ff0');
+                return pos;
             }
 
             // check if past the end
-            if (xi > totalLength &amp;&amp; yi > totalLength)
+            if (xi >= totalLength &amp;&amp; yi >= totalLength)
                 break;
 
             // get coordinates of next tile to check
             if (xi > yi)
-                pos.y += sign(delta.y), yi += unit.y;
+                pos.y += signDeltaY, yi += unitY;
             else
-                pos.x += sign(delta.x), xi += unit.x;
+                pos.x += signDeltaX, xi += unitX;
         }
 
         debugRaycast &amp;&amp; debugLine(posStart, posEnd, '#00f', .02);
     }
-}</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Color.html">Color</a></div><div class="sidebar-section-children"><a href="EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="FontImage.html">FontImage</a></div><div class="sidebar-section-children"><a href="Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="SoundWave.html">SoundWave</a></div><div class="sidebar-section-children"><a href="TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UIScrollbar.html">UIScrollbar</a></div><div class="sidebar-section-children"><a href="UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileCollision.html">TileCollision</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-global"><div>Global</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="global.html#box2d">box2d</a></div><div class="sidebar-section-children"><a href="global.html#box2dDebug">box2dDebug</a></div><div class="sidebar-section-children"><a href="global.html#box2dEngineInit">box2dEngineInit</a></div><div class="sidebar-section-children"><a href="global.html#postProcess">postProcess</a></div><div class="sidebar-section-children"><a href="global.html#uiSystem">uiSystem</a></div><div class="sidebar-section-children"><a href="global.html#zzfxM">zzfxM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>
+}</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="Color.html">Color</a></div><div class="sidebar-section-children"><a href="EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="FontImage.html">FontImage</a></div><div class="sidebar-section-children"><a href="Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="SoundWave.html">SoundWave</a></div><div class="sidebar-section-children"><a href="TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UIScrollbar.html">UIScrollbar</a></div><div class="sidebar-section-children"><a href="UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileCollision.html">TileCollision</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-global"><div>Global</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="global.html#postProcess">postProcess</a></div><div class="sidebar-section-children"><a href="global.html#uiSystem">uiSystem</a></div><div class="sidebar-section-children"><a href="global.html#zzfxM">zzfxM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>
