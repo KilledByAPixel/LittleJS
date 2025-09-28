@@ -171,6 +171,8 @@ export
 	rgb,
 	hsl,
 	isColor,
+	isVector2,
+	isNumber,
 
 	// Default Colors
 	WHITE,
