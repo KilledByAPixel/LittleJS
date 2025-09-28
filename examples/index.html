@@ -380,6 +380,8 @@ function stringifyMessage(message)
         return 'undefined';
     if (message === 0)
         return '0';
+    if (message === false)
+        return 'false';
     return message;
 }
 
