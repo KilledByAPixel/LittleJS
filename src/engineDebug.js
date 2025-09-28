@@ -54,12 +54,12 @@ let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParti
 
 /** Asserts if the expression is false, does not do anything in release builds
  *  @param {boolean} assert 
- *  @param {Object} [output] - error message output
+ *  @param {...Object} [output] - error message output
  *  @memberof Debug */
-function ASSERT(assert, output) 
+function ASSERT(assert, ...output) 
 {
     if (enableAsserts)
-        console.assert(assert, output);
+        console.assert(assert, ...output);
 }
 
 /** Draw a debug rectangle in world space
