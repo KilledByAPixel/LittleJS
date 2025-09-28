@@ -594,4 +594,4 @@ function pointerLockExit() { document.exitPointerLock && document.exitPointerLoc
 /** Check if pointer is locked (true if locked)
  *  @return {boolean}
  *  @memberof Input */
-function pointerLockIsActive() { return document.pointerLockElement == mainCanvas }
+function pointerLockIsActive() { return document.pointerLockElement == mainCanvas; }
