@@ -123,10 +123,10 @@ declare module "littlejsengine" {
      *  @memberof Debug */
     export let showWatermark: boolean;
     /** Asserts if the expression is false, does not do anything in release builds
-     *  @param {Boolean} assert
-     *  @param {Object} [output]
+     *  @param {boolean} assert
+     *  @param {...Object} [output] - error message output
      *  @memberof Debug */
-    export function ASSERT(assert: boolean, output?: any): void;
+    export function ASSERT(assert: boolean, ...output?: any[]): void;
     /** Draw a debug rectangle in world space
      *  @param {Vector2} pos
      *  @param {Vector2} [size=Vector2()]
@@ -303,7 +303,7 @@ declare module "littlejsengine" {
      *  @type {Number}
      *  @default
      *  @memberof Settings */
-    export let objectDefaultElasticity: number;
+    export let objectDefaultRestitution: number;
     /** How much to slow when touching (0-1)
      *  @type {Number}
      *  @default
@@ -485,9 +485,9 @@ declare module "littlejsengine" {
      *  @memberof Settings */
     export function setObjectDefaultAngleDamping(damp: number): void;
     /** Set how much to bounce when a collision occur
-     *  @param {Number} elasticity
+     *  @param {Number} restitution
      *  @memberof Settings */
-    export function setObjectDefaultElasticity(elasticity: number): void;
+    export function setObjectDefaultRestitution(restitution: number): void;
     /** Set how much to slow when touching
      *  @param {Number} friction
      *  @memberof Settings */
@@ -594,103 +594,102 @@ declare module "littlejsengine" {
      * @namespace Utilities
      */
     /** A shortcut to get Math.PI
-     *  @type {Number}
+     *  @type {number}
      *  @default Math.PI
      *  @memberof Utilities */
     export const PI: number;
     /** Returns absolute value of value passed in
-     *  @param {Number} value
-     *  @return {Number}
+     *  @param {number} value
+     *  @return {number}
      *  @memberof Utilities */
     export function abs(value: number): number;
-    /** Returns lowest of two values passed in
-     *  @param {Number} valueA
-     *  @param {Number} valueB
-     *  @return {Number}
+    /** Returns lowest value passed in
+     *  @param {...number} values
+     *  @return {number}
      *  @memberof Utilities */
-    export function min(valueA: number, valueB: number): number;
-    /** Returns highest of two values passed in
-     *  @param {Number} valueA
-     *  @param {Number} valueB
-     *  @return {Number}
+    export function min(...values: number[]): number;
+    /** Returns highest value passed in
+     *  @param {...number} values
+     *  @return {number}
      *  @memberof Utilities */
-    export function max(valueA: number, valueB: number): number;
+    export function max(...values: number[]): number;
     /** Returns the sign of value passed in
-     *  @param {Number} value
-     *  @return {Number}
+     *  @param {number} value
+     *  @return {number}
      *  @memberof Utilities */
     export function sign(value: number): number;
     /** Returns first parm modulo the second param, but adjusted so negative numbers work as expected
-     *  @param {Number} dividend
-     *  @param {Number} [divisor]
-     *  @return {Number}
+     *  @param {number} dividend
+     *  @param {number} [divisor]
+     *  @return {number}
      *  @memberof Utilities */
     export function mod(dividend: number, divisor?: number): number;
     /** Clamps the value between max and min
-     *  @param {Number} value
-     *  @param {Number} [min]
-     *  @param {Number} [max]
-     *  @return {Number}
+     *  @param {number} value
+     *  @param {number} [min]
+     *  @param {number} [max]
+     *  @return {number}
      *  @memberof Utilities */
     export function clamp(value: number, min?: number, max?: number): number;
     /** Returns what percentage the value is between valueA and valueB
-     *  @param {Number} value
-     *  @param {Number} valueA
-     *  @param {Number} valueB
-     *  @return {Number}
+     *  @param {number} value
+     *  @param {number} valueA
+     *  @param {number} valueB
+     *  @return {number}
      *  @memberof Utilities */
     export function percent(value: number, valueA: number, valueB: number): number;
     /** Returns signed wrapped distance between the two values passed in
-     *  @param {Number} valueA
-     *  @param {Number} valueB
-     *  @param {Number} [wrapSize]
-     *  @returns {Number}
+     *  @param {number} valueA
+     *  @param {number} valueB
+     *  @param {number} [wrapSize]
+     *  @returns {number}
      *  @memberof Utilities */
     export function distanceWrap(valueA: number, valueB: number, wrapSize?: number): number;
     /** Linearly interpolates between values passed in with wrapping
-     *  @param {Number} percent
-     *  @param {Number} valueA
-     *  @param {Number} valueB
-     *  @param {Number} [wrapSize]
-     *  @returns {Number}
+     *  @param {number} valueA
+     *  @param {number} valueB
+     *  @param {number} percent
+     *  @param {number} [wrapSize]
+     *  @returns {number}
      *  @memberof Utilities */
-    export function lerpWrap(percent: number, valueA: number, valueB: number, wrapSize?: number): number;
+    export function lerpWrap(valueA: number, valueB: number, percent: number, wrapSize?: number): number;
     /** Returns signed wrapped distance between the two angles passed in
-     *  @param {Number} angleA
-     *  @param {Number} angleB
-     *  @returns {Number}
+     *  @param {number} angleA
+     *  @param {number} angleB
+     *  @returns {number}
      *  @memberof Utilities */
     export function distanceAngle(angleA: number, angleB: number): number;
     /** Linearly interpolates between the angles passed in with wrapping
-     *  @param {Number} percent
-     *  @param {Number} angleA
-     *  @param {Number} angleB
-     *  @returns {Number}
+     *  @param {number} angleA
+     *  @param {number} angleB
+     *  @param {number} percent
+     *  @returns {number}
      *  @memberof Utilities */
-    export function lerpAngle(percent: number, angleA: number, angleB: number): number;
+    export function lerpAngle(angleA: number, angleB: number, percent: number): number;
     /** Linearly interpolates between values passed in using percent
-     *  @param {Number} percent
-     *  @param {Number} valueA
-     *  @param {Number} valueB
-     *  @return {Number}
+     *  @param {number} valueA
+     *  @param {number} valueB
+     *  @param {number} percent
+     *  @return {number}
      *  @memberof Utilities */
-    export function lerp(percent: number, valueA: number, valueB: number): number;
+    export function lerp(valueA: number, valueB: number, percent: number): number;
     /** Applies smoothstep function to the percentage value
-     *  @param {Number} percent
-     *  @return {Number}
+     *  @param {number} percent
+     *  @return {number}
      *  @memberof Utilities */
     export function smoothStep(percent: number): number;
     /** Returns the nearest power of two not less then the value
-     *  @param {Number} value
-     *  @return {Number}
+     *  @param {number} value
+     *  @return {number}
      *  @memberof Utilities */
     export function nearestPowerOfTwo(value: number): number;
     /** Returns true if two axis aligned bounding boxes are overlapping
+     *  this can be used for simple collision detection between objects
      *  @param {Vector2} posA          - Center of box A
      *  @param {Vector2} sizeA         - Size of box A
      *  @param {Vector2} posB          - Center of box B
-     *  @param {Vector2} [sizeB=(0,0)] - Size of box B, a point if undefined
-     *  @return {Boolean}              - True if overlapping
+     *  @param {Vector2} [sizeB=(0,0)] - Size of box B, uses a point if undefined
+     *  @return {boolean}              - True if overlapping
      *  @memberof Utilities */
     export function isOverlapping(posA: Vector2, sizeA: Vector2, posB: Vector2, sizeB?: Vector2): boolean;
     /** Returns true if a line segment is intersecting an axis aligned box
@@ -698,55 +697,60 @@ declare module "littlejsengine" {
      *  @param {Vector2} end   - End of raycast
      *  @param {Vector2} pos   - Center of box
      *  @param {Vector2} size  - Size of box
-     *  @return {Boolean}      - True if intersecting
+     *  @return {boolean}      - True if intersecting
      *  @memberof Utilities */
     export function isIntersecting(start: Vector2, end: Vector2, pos: Vector2, size: Vector2): boolean;
     /** Returns an oscillating wave between 0 and amplitude with frequency of 1 Hz by default
-     *  @param {Number} [frequency] - Frequency of the wave in Hz
-     *  @param {Number} [amplitude] - Amplitude (max height) of the wave
-     *  @param {Number} [t=time]    - Value to use for time of the wave
-     *  @return {Number}            - Value waving between 0 and amplitude
+     *  @param {number} [frequency] - Frequency of the wave in Hz
+     *  @param {number} [amplitude] - Amplitude (max height) of the wave
+     *  @param {number} [t=time]    - Value to use for time of the wave
+     *  @return {number}            - Value waving between 0 and amplitude
      *  @memberof Utilities */
     export function wave(frequency?: number, amplitude?: number, t?: number): number;
     /** Formats seconds to mm:ss style for display purposes
-     *  @param {Number} t - time in seconds
-     *  @return {String}
+     *  @param {number} t - time in seconds
+     *  @return {string}
      *  @memberof Utilities */
     export function formatTime(t: number): string;
+    /** Fetches a JSON file from a URL and returns the parsed JSON object. Must be used with await!
+     *  @param {string} url - URL of JSON file
+     *  @return {Promise<object>}
+     *  @memberof Utilities */
+    export function fetchJSON(url: string): Promise<object>;
     /** Random global functions
      *  @namespace Random */
     /** Returns a random value between the two values passed in
-     *  @param {Number} [valueA]
-     *  @param {Number} [valueB]
-     *  @return {Number}
+     *  @param {number} [valueA]
+     *  @param {number} [valueB]
+     *  @return {number}
      *  @memberof Random */
     export function rand(valueA?: number, valueB?: number): number;
     /** Returns a floored random value between the two values passed in
      *  The upper bound is exclusive. (If 2 is passed in, result will be 0 or 1)
-     *  @param {Number} valueA
-     *  @param {Number} [valueB]
-     *  @return {Number}
+     *  @param {number} valueA
+     *  @param {number} [valueB]
+     *  @return {number}
      *  @memberof Random */
     export function randInt(valueA: number, valueB?: number): number;
     /** Randomly returns either -1 or 1
-     *  @return {Number}
+     *  @return {number}
      *  @memberof Random */
     export function randSign(): number;
     /** Returns a random Vector2 within a circular shape
-     *  @param {Number} [radius]
-     *  @param {Number} [minRadius]
+     *  @param {number} [radius]
+     *  @param {number} [minRadius]
      *  @return {Vector2}
      *  @memberof Random */
     export function randInCircle(radius?: number, minRadius?: number): Vector2;
     /** Returns a random Vector2 with the passed in length
-     *  @param {Number} [length]
+     *  @param {number} [length]
      *  @return {Vector2}
      *  @memberof Random */
-    export function randVector(length?: number): Vector2;
+    export function randVec2(length?: number): Vector2;
     /** Returns a random color between the two passed in colors, combine components if linear
      *  @param {Color}   [colorA=(1,1,1,1)]
      *  @param {Color}   [colorB=(0,0,0,1)]
-     *  @param {Boolean} [linear]
+     *  @param {boolean} [linear]
      *  @return {Color}
      *  @memberof Random */
     export function randColor(colorA?: Color, colorB?: Color, linear?: boolean): Color;
@@ -762,28 +766,40 @@ declare module "littlejsengine" {
      */
     export class RandomGenerator {
         /** Create a random number generator with the seed passed in
-         *  @param {Number} seed - Starting seed */
-        constructor(seed: number);
-        /** @property {Number} - random seed */
+         *  @param {number} [seed] - Starting seed or engine default seed */
+        constructor(seed?: number);
+        /** @property {number} - random seed */
         seed: number;
         /** Returns a seeded random value between the two values passed in
-        *  @param {Number} [valueA]
-        *  @param {Number} [valueB]
-        *  @return {Number} */
+        *  @param {number} [valueA]
+        *  @param {number} [valueB]
+        *  @return {number} */
         float(valueA?: number, valueB?: number): number;
         /** Returns a floored seeded random value the two values passed in
-        *  @param {Number} valueA
-        *  @param {Number} [valueB]
-        *  @return {Number} */
+        *  @param {number} valueA
+        *  @param {number} [valueB]
+        *  @return {number} */
         int(valueA: number, valueB?: number): number;
+        /** Randomly returns true or false given the chance of true passed in
+        *  @param {number} [chance]
+        *  @return {boolean} */
+        bool(chance?: number): boolean;
         /** Randomly returns either -1 or 1 deterministically
-        *  @return {Number} */
+        *  @return {number} */
         sign(): number;
         /** Returns a seeded random value between the two values passed in with a random sign
         *  @param {number} [valueA]
         *  @param {number} [valueB]
         *  @return {number} */
         floatSign(valueA?: number, valueB?: number): number;
+        /** Returns a random angle between -PI and PI
+        *  @return {number} */
+        angle(): number;
+        /** Returns a seeded vec2 with size between the two values passed in
+        *  @param {number} valueA
+        *  @param {number} [valueB]
+        *  @return {Vector2} */
+        vec2(valueA?: number, valueB?: number): Vector2;
     }
     /**
      * 2D Vector object with vector math library
@@ -796,16 +812,16 @@ declare module "littlejsengine" {
      */
     export class Vector2 {
         /** Create a 2D vector with the x and y passed in, can also be created with vec2()
-         *  @param {Number} [x] - X axis location
-         *  @param {Number} [y] - Y axis location */
+         *  @param {number} [x] - X axis location
+         *  @param {number} [y] - Y axis location */
         constructor(x?: number, y?: number);
-        /** @property {Number} - X axis location */
+        /** @property {number} - X axis location */
         x: number;
-        /** @property {Number} - Y axis location */
+        /** @property {number} - Y axis location */
         y: number;
         /** Sets values of this vector and returns self
-         *  @param {Number} [x] - X axis location
-         *  @param {Number} [y] - Y axis location
+         *  @param {number} [x] - X axis location
+         *  @param {number} [y] - Y axis location
          *  @return {Vector2} */
         set(x?: number, y?: number): Vector2;
         /** Returns a new vector that is a copy of this
@@ -828,82 +844,94 @@ declare module "littlejsengine" {
          *  @return {Vector2} */
         divide(v: Vector2): Vector2;
         /** Returns a copy of this vector scaled by the vector passed in
-         *  @param {Number} s - scale
+         *  @param {number} s - scale
          *  @return {Vector2} */
         scale(s: number): Vector2;
         /** Returns the length of this vector
-         * @return {Number} */
+         * @return {number} */
         length(): number;
         /** Returns the length of this vector squared
-         * @return {Number} */
+         * @return {number} */
         lengthSquared(): number;
         /** Returns the distance from this vector to vector passed in
          * @param {Vector2} v - other vector
-         * @return {Number} */
+         * @return {number} */
         distance(v: Vector2): number;
         /** Returns the distance squared from this vector to vector passed in
          * @param {Vector2} v - other vector
-         * @return {Number} */
+         * @return {number} */
         distanceSquared(v: Vector2): number;
         /** Returns a new vector in same direction as this one with the length passed in
-         * @param {Number} [length]
+         * @param {number} [length]
          * @return {Vector2} */
         normalize(length?: number): Vector2;
         /** Returns a new vector clamped to length passed in
-         * @param {Number} [length]
+         * @param {number} [length]
          * @return {Vector2} */
         clampLength(length?: number): Vector2;
         /** Returns the dot product of this and the vector passed in
          * @param {Vector2} v - other vector
-         * @return {Number} */
+         * @return {number} */
         dot(v: Vector2): number;
         /** Returns the cross product of this and the vector passed in
          * @param {Vector2} v - other vector
-         * @return {Number} */
+         * @return {number} */
         cross(v: Vector2): number;
-        /** Returns the angle of this vector, up is angle 0
-         * @return {Number} */
+        /** Returns a copy this vector reflected by the surface normal
+         * @param {Vector2} normal - surface normal (should be normalized)
+         * @param {number} restitution - how much to bounce, 1 is perfect bounce, 0 is no bounce
+         * @return {Vector2} */
+        reflect(normal: Vector2, restitution?: number): Vector2;
+        /** Returns the clockwise angle of this vector, up is angle 0
+         * @return {number} */
         angle(): number;
-        /** Sets this vector with angle and length passed in
-         * @param {Number} [angle]
-         * @param {Number} [length]
+        /** Sets this vector with clockwise angle and length passed in
+         * @param {number} [angle]
+         * @param {number} [length]
          * @return {Vector2} */
         setAngle(angle?: number, length?: number): Vector2;
-        /** Returns copy of this vector rotated by the angle passed in
-         * @param {Number} angle
+        /** Returns copy of this vector rotated by the clockwise angle passed in
+         * @param {number} angle
          * @return {Vector2} */
         rotate(angle: number): Vector2;
         /** Set the integer direction of this vector, corresponding to multiples of 90 degree rotation (0-3)
-         * @param {Number} [direction]
-         * @param {Number} [length] */
+         * @param {number} [direction]
+         * @param {number} [length] */
         setDirection(direction?: number, length?: number): Vector2;
         /** Returns the integer direction of this vector, corresponding to multiples of 90 degree rotation (0-3)
-         * @return {Number} */
+         * @return {number} */
         direction(): number;
         /** Returns a copy of this vector that has been inverted
          * @return {Vector2} */
         invert(): Vector2;
+        /** Returns a copy of this vector absolute values
+         * @return {Vector2} */
+        abs(): Vector2;
         /** Returns a copy of this vector with each axis floored
          * @return {Vector2} */
         floor(): Vector2;
+        /** Returns new vec2 with modded values
+        *  @param {number} [divisor]
+        *  @return {Vector2} */
+        mod(divisor?: number): Vector2;
         /** Returns the area this vector covers as a rectangle
-         * @return {Number} */
+         * @return {number} */
         area(): number;
         /** Returns a new vector that is p percent between this and the vector passed in
          * @param {Vector2} v - other vector
-         * @param {Number}  percent
+         * @param {number}  percent
          * @return {Vector2} */
         lerp(v: Vector2, percent: number): Vector2;
         /** Returns true if this vector is within the bounds of an array size passed in
          * @param {Vector2} arraySize
-         * @return {Boolean} */
+         * @return {boolean} */
         arrayCheck(arraySize: Vector2): boolean;
         /** Returns this vector expressed as a string
-         * @param {Number} digits - precision to display
-         * @return {String} */
+         * @param {number} digits - precision to display
+         * @return {string} */
         toString(digits?: number): string;
         /** Checks if this is a valid vector
-         * @return {Boolean} */
+         * @return {boolean} */
         isValid(): boolean;
     }
     /**
@@ -912,29 +940,29 @@ declare module "littlejsengine" {
      * let a = new Color;              // white
      * let b = new Color(1, 0, 0);     // red
      * let c = new Color(0, 0, 0, 0);  // transparent black
-     * let d = rgb(0, 0, 1);           // blue using rgb color
+     * let d = rgb(0, 0, 1);         // blue using rgb color
      * let e = hsl(.3, 1, .5);         // green using hsl color
      */
     export class Color {
         /** Create a color with the rgba components passed in, white by default
-         *  @param {Number} [r] - red
-         *  @param {Number} [g] - green
-         *  @param {Number} [b] - blue
-         *  @param {Number} [a] - alpha*/
+         *  @param {number} [r] - red
+         *  @param {number} [g] - green
+         *  @param {number} [b] - blue
+         *  @param {number} [a] - alpha*/
         constructor(r?: number, g?: number, b?: number, a?: number);
-        /** @property {Number} - Red */
+        /** @property {number} - Red */
         r: number;
-        /** @property {Number} - Green */
+        /** @property {number} - Green */
         g: number;
-        /** @property {Number} - Blue */
+        /** @property {number} - Blue */
         b: number;
-        /** @property {Number} - Alpha */
+        /** @property {number} - Alpha */
         a: number;
         /** Sets values of this color and returns self
-         *  @param {Number} [r] - red
-         *  @param {Number} [g] - green
-         *  @param {Number} [b] - blue
-         *  @param {Number} [a] - alpha
+         *  @param {number} [r] - red
+         *  @param {number} [g] - green
+         *  @param {number} [b] - blue
+         *  @param {number} [a] - alpha
          *  @return {Color} */
         set(r?: number, g?: number, b?: number, a?: number): Color;
         /** Returns a new color that is a copy of this
@@ -957,8 +985,8 @@ declare module "littlejsengine" {
          * @return {Color} */
         divide(c: Color): Color;
         /** Returns a copy of this color scaled by the value passed in, alpha can be scaled separately
-         * @param {Number} scale
-         * @param {Number} [alphaScale=scale]
+         * @param {number} scale
+         * @param {number} [alphaScale=scale]
          * @return {Color} */
         scale(scale: number, alphaScale?: number): Color;
         /** Returns a copy of this color clamped to the valid range between 0 and 1
@@ -966,37 +994,37 @@ declare module "littlejsengine" {
         clamp(): Color;
         /** Returns a new color that is p percent between this and the color passed in
          * @param {Color}  c - other color
-         * @param {Number} percent
+         * @param {number} percent
          * @return {Color} */
         lerp(c: Color, percent: number): Color;
         /** Sets this color given a hue, saturation, lightness, and alpha
-         * @param {Number} [h] - hue
-         * @param {Number} [s] - saturation
-         * @param {Number} [l] - lightness
-         * @param {Number} [a] - alpha
+         * @param {number} [h] - hue
+         * @param {number} [s] - saturation
+         * @param {number} [l] - lightness
+         * @param {number} [a] - alpha
          * @return {Color} */
         setHSLA(h?: number, s?: number, l?: number, a?: number): Color;
         /** Returns this color expressed in hsla format
-         * @return {Array} */
-        HSLA(): any[];
+         * @return {Array<number>} */
+        HSLA(): Array<number>;
         /** Returns a new color that has each component randomly adjusted
-         * @param {Number} [amount]
-         * @param {Number} [alphaAmount]
+         * @param {number} [amount]
+         * @param {number} [alphaAmount]
          * @return {Color} */
         mutate(amount?: number, alphaAmount?: number): Color;
         /** Returns this color expressed as a hex color code
-         * @param {Boolean} [useAlpha] - if alpha should be included in result
-         * @return {String} */
+         * @param {boolean} [useAlpha] - if alpha should be included in result
+         * @return {string} */
         toString(useAlpha?: boolean): string;
         /** Set this color from a hex code
-         * @param {String} hex - html hex code
+         * @param {string} hex - html hex code
          * @return {Color} */
         setHex(hex: string): Color;
         /** Returns this color expressed as 32 bit RGBA value
-         * @return {Number} */
+         * @return {number} */
         rgbaInt(): number;
         /** Checks if this is a valid color
-         * @return {Boolean} */
+         * @return {boolean} */
         isValid(): boolean;
     }
     /**
@@ -1010,41 +1038,41 @@ declare module "littlejsengine" {
      */
     export class Timer {
         /** Create a timer object set time passed in
-         *  @param {Number} [timeLeft] - How much time left before the timer elapses in seconds */
+         *  @param {number} [timeLeft] - How much time left before the timer elapses in seconds */
         constructor(timeLeft?: number);
         time: number;
         setTime: number;
         /** Set the timer with seconds passed in
-         *  @param {Number} [timeLeft] - How much time left before the timer is elapsed in seconds */
+         *  @param {number} [timeLeft] - How much time left before the timer is elapsed in seconds */
         set(timeLeft?: number): void;
         /** Unset the timer */
         unset(): void;
         /** Returns true if set
-         * @return {Boolean} */
+         * @return {boolean} */
         isSet(): boolean;
         /** Returns true if set and has not elapsed
-         * @return {Boolean} */
+         * @return {boolean} */
         active(): boolean;
         /** Returns true if set and elapsed
-         * @return {Boolean} */
+         * @return {boolean} */
         elapsed(): boolean;
         /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
-         * @return {Number} */
+         * @return {number} */
         get(): number;
         /** Get percentage elapsed based on time it was set to, returns 0 if not set
-         * @return {Number} */
+         * @return {number} */
         getPercent(): number;
         /** Returns this timer expressed as a string
-         * @return {String} */
+         * @return {string} */
         toString(): string;
         /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
-         * @return {Number} */
+         * @return {number} */
         valueOf(): number;
     }
     /**
-     * Create a 2d vector, can take 2 scalars, or 1 scalar
-     * @param {Number} [x]
-     * @param {Number} [y]
+     * Create a 2d vector, can take 1 or 2 scalar values
+     * @param {number} [x]
+     * @param {number} [y] - if y is undefined, x is used for both
      * @return {Vector2}
      * @example
      * let a = vec2(0, 1); // vector with coordinates (0, 1)
@@ -1055,20 +1083,20 @@ declare module "littlejsengine" {
     export function vec2(x?: number, y?: number): Vector2;
     /**
      * Create a color object with RGBA values, white by default
-     * @param {Number} [r=1] - red
-     * @param {Number} [g=1] - green
-     * @param {Number} [b=1] - blue
-     * @param {Number} [a=1] - alpha
+     * @param {number} [r=1] - red
+     * @param {number} [g=1] - green
+     * @param {number} [b=1] - blue
+     * @param {number} [a=1] - alpha
      * @return {Color}
      * @memberof Utilities
      */
     export function rgb(r?: number, g?: number, b?: number, a?: number): Color;
     /**
      * Create a color object with HSLA values, white by default
-     * @param {Number} [h=0] - hue
-     * @param {Number} [s=0] - saturation
-     * @param {Number} [l=1] - lightness
-     * @param {Number} [a=1] - alpha
+     * @param {number} [h=0] - hue
+     * @param {number} [s=0] - saturation
+     * @param {number} [l=1] - lightness
+     * @param {number} [a=1] - alpha
      * @return {Color}
      * @memberof Utilities
      */
@@ -1076,18 +1104,40 @@ declare module "littlejsengine" {
     /**
      * Check if object is a valid Color
      * @param {any} c
-     * @return {Boolean}
+     * @return {boolean}
      * @memberof Utilities
      */
     export function isColor(c: any): boolean;
+    /**
+     * Check if object is a valid Vector2
+     * @param {any} v
+     * @return {boolean}
+     * @memberof Utilities
+     */
+    export function isVector2(v: any): boolean;
+    /**
+     * Check if object is a valid number, not NaN or undefined, but it may be infinite
+     * @param {any} n
+     * @return {boolean}
+     * @memberof Utilities
+     */
+    export function isNumber(n: any): boolean;
     /** Color - White
      *  @type {Color}
      *  @memberof Utilities */
     export const WHITE: Color;
+    /** Color - Clear White #ffffff with 0 alpha
+     *  @type {Color}
+     *  @memberof Utilities */
+    export const CLEAR_WHITE: Color;
     /** Color - Black
      *  @type {Color}
      *  @memberof Utilities */
     export const BLACK: Color;
+    /** Color - Clear Black #000000 with 0 alpha
+     *  @type {Color}
+     *  @memberof Utilities */
+    export const CLEAR_BLACK: Color;
     /** Color - Gray
      *  @type {Color}
      *  @memberof Utilities */
@@ -1869,8 +1919,8 @@ declare module "littlejsengine" {
         damping: number;
         /** @property {Number} [angleDamping=objectDefaultAngleDamping] - How much to slow down rotation each frame (0-1) */
         angleDamping: number;
-        /** @property {Number} [elasticity=objectDefaultElasticity]     - How bouncy the object is when colliding (0-1) */
-        elasticity: number;
+        /** @property {Number} [restitution=objectDefaultRestitution]     - How bouncy the object is when colliding (0-1) */
+        restitution: number;
         /** @property {Number} [friction=objectDefaultFriction]         - How much friction to apply when sliding (0-1) */
         friction: number;
         /** @property {Number}  - How much to scale gravity by for this object */

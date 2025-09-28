@@ -54,121 +54,135 @@ function debugVideoCaptureUpdate(){}
  */
 
 /** A shortcut to get Math.PI
- *  @type {Number}
+ *  @type {number}
  *  @default Math.PI
  *  @memberof Utilities */
 const PI = Math.PI;
 
 /** Returns absolute value of value passed in
- *  @param {Number} value
- *  @return {Number}
+ *  @param {number} value
+ *  @return {number}
  *  @memberof Utilities */
 function abs(value) { return Math.abs(value); }
 
-/** Returns lowest of two values passed in
- *  @param {Number} valueA
- *  @param {Number} valueB
- *  @return {Number}
+/** Returns lowest value passed in
+ *  @param {...number} values
+ *  @return {number}
  *  @memberof Utilities */
-function min(valueA, valueB) { return Math.min(valueA, valueB); }
+function min(...values) { return Math.min(...values); }
 
-/** Returns highest of two values passed in
- *  @param {Number} valueA
- *  @param {Number} valueB
- *  @return {Number}
+/** Returns highest value passed in
+ *  @param {...number} values
+ *  @return {number}
  *  @memberof Utilities */
-function max(valueA, valueB) { return Math.max(valueA, valueB); }
+function max(...values) { return Math.max(...values); }
 
 /** Returns the sign of value passed in
- *  @param {Number} value
- *  @return {Number}
+ *  @param {number} value
+ *  @return {number}
  *  @memberof Utilities */
 function sign(value) { return Math.sign(value); }
 
 /** Returns first parm modulo the second param, but adjusted so negative numbers work as expected
- *  @param {Number} dividend
- *  @param {Number} [divisor]
- *  @return {Number}
+ *  @param {number} dividend
+ *  @param {number} [divisor]
+ *  @return {number}
  *  @memberof Utilities */
 function mod(dividend, divisor=1) { return ((dividend % divisor) + divisor) % divisor; }
 
 /** Clamps the value between max and min
- *  @param {Number} value
- *  @param {Number} [min]
- *  @param {Number} [max]
- *  @return {Number}
+ *  @param {number} value
+ *  @param {number} [min]
+ *  @param {number} [max]
+ *  @return {number}
  *  @memberof Utilities */
 function clamp(value, min=0, max=1) { return value < min ? min : value > max ? max : value; }
 
 /** Returns what percentage the value is between valueA and valueB
- *  @param {Number} value
- *  @param {Number} valueA
- *  @param {Number} valueB
- *  @return {Number}
+ *  @param {number} value
+ *  @param {number} valueA
+ *  @param {number} valueB
+ *  @return {number}
  *  @memberof Utilities */
 function percent(value, valueA, valueB)
 { return (valueB-=valueA) ? clamp((value-valueA)/valueB) : 0; }
 
 /** Linearly interpolates between values passed in using percent
- *  @param {Number} percent
- *  @param {Number} valueA
- *  @param {Number} valueB
- *  @return {Number}
+ *  @param {number} valueA
+ *  @param {number} valueB
+ *  @param {number} percent
+ *  @return {number}
  *  @memberof Utilities */
-function lerp(percent, valueA, valueB) { return valueA + clamp(percent) * (valueB-valueA); }
+function lerp(valueA, valueB, percent)
+{
+    if (valueA >= 0 && valueA <= 1 && ((valueB < 0 || valueB > 1) && (percent < 0 || percent > 1)))
+        console.warn('lerp() parameter order changed! use lerp(start, end, p)');
+    return valueA + clamp(percent) * (valueB-valueA);
+ }
 
 /** Returns signed wrapped distance between the two values passed in
- *  @param {Number} valueA
- *  @param {Number} valueB
- *  @param {Number} [wrapSize]
- *  @returns {Number}
+ *  @param {number} valueA
+ *  @param {number} valueB
+ *  @param {number} [wrapSize]
+ *  @returns {number}
  *  @memberof Utilities */
 function distanceWrap(valueA, valueB, wrapSize=1)
 { const d = (valueA - valueB) % wrapSize; return d*2 % wrapSize - d; }
 
 /** Linearly interpolates between values passed in with wrapping
- *  @param {Number} percent
- *  @param {Number} valueA
- *  @param {Number} valueB
- *  @param {Number} [wrapSize]
- *  @returns {Number}
+ *  @param {number} valueA
+ *  @param {number} valueB
+ *  @param {number} percent
+ *  @param {number} [wrapSize]
+ *  @returns {number}
  *  @memberof Utilities */
-function lerpWrap(percent, valueA, valueB, wrapSize=1)
-{ return valueA + clamp(percent) * distanceWrap(valueB, valueA, wrapSize); }
+function lerpWrap(valueA, valueB, percent, wrapSize=1)
+{
+    if (valueA >= 0 && valueA <= 1 && ((valueB < 0 || valueB > 1) && (percent < 0 || percent > 1)))
+        console.warn('lerpWrap() parameter order changed! use lerpWrap(start, end, p)');
+    return valueA + clamp(percent) * distanceWrap(valueB, valueA, wrapSize);
+}
 
 /** Returns signed wrapped distance between the two angles passed in
- *  @param {Number} angleA
- *  @param {Number} angleB
- *  @returns {Number}
+ *  @param {number} angleA
+ *  @param {number} angleB
+ *  @returns {number}
  *  @memberof Utilities */
 function distanceAngle(angleA, angleB) { return distanceWrap(angleA, angleB, 2*PI); }
 
 /** Linearly interpolates between the angles passed in with wrapping
- *  @param {Number} percent
- *  @param {Number} angleA
- *  @param {Number} angleB
- *  @returns {Number}
+ *  @param {number} angleA
+ *  @param {number} angleB
+ *  @param {number} percent
+ *  @returns {number}
  *  @memberof Utilities */
-function lerpAngle(percent, angleA, angleB) { return lerpWrap(percent, angleA, angleB, 2*PI); }
+function lerpAngle(angleA, angleB, percent) { return lerpWrap(angleA, angleB, percent, 2*PI); }
 
 /** Applies smoothstep function to the percentage value
- *  @param {Number} percent
- *  @return {Number}
+ *  @param {number} percent
+ *  @return {number}
  *  @memberof Utilities */
 function smoothStep(percent) { return percent * percent * (3 - 2 * percent); }
 
+/** Checks if the value passed in is a power of two
+ *  @param {number} value
+ *  @return {boolean}
+ *  @memberof Utilities */
+function isPowerOfTwo(value) { return !(value & (value - 1)); }
+
 /** Returns the nearest power of two not less then the value
- *  @param {Number} value
- *  @return {Number}
+ *  @param {number} value
+ *  @return {number}
  *  @memberof Utilities */
 function nearestPowerOfTwo(value) { return 2**Math.ceil(Math.log2(value)); }
 
-/** Returns true if two axis aligned bounding boxes are overlapping 
+/** Returns true if two axis aligned bounding boxes are overlapping
+ *  this can be used for simple collision detection between objects
  *  @param {Vector2} posA          - Center of box A
  *  @param {Vector2} sizeA         - Size of box A
  *  @param {Vector2} posB          - Center of box B
- *  @param {Vector2} [sizeB=(0,0)] - Size of box B, a point if undefined
- *  @return {Boolean}              - True if overlapping
+ *  @param {Vector2} [sizeB=(0,0)] - Size of box B, uses a point if undefined
+ *  @return {boolean}              - True if overlapping
  *  @memberof Utilities */
 function isOverlapping(posA, sizeA, posB, sizeB=vec2())
 { 
@@ -181,7 +195,7 @@ function isOverlapping(posA, sizeA, posB, sizeB=vec2())
  *  @param {Vector2} end   - End of raycast
  *  @param {Vector2} pos   - Center of box
  *  @param {Vector2} size  - Size of box
- *  @return {Boolean}      - True if intersecting
+ *  @return {boolean}      - True if intersecting
  *  @memberof Utilities */
 function isIntersecting(start, end, pos, size)
 {
@@ -218,19 +232,37 @@ function isIntersecting(start, end, pos, size)
 }
 
 /** Returns an oscillating wave between 0 and amplitude with frequency of 1 Hz by default
- *  @param {Number} [frequency] - Frequency of the wave in Hz
- *  @param {Number} [amplitude] - Amplitude (max height) of the wave
- *  @param {Number} [t=time]    - Value to use for time of the wave
- *  @return {Number}            - Value waving between 0 and amplitude
+ *  @param {number} [frequency] - Frequency of the wave in Hz
+ *  @param {number} [amplitude] - Amplitude (max height) of the wave
+ *  @param {number} [t=time]    - Value to use for time of the wave
+ *  @return {number}            - Value waving between 0 and amplitude
  *  @memberof Utilities */
 function wave(frequency=1, amplitude=1, t=time)
 { return amplitude/2 * (1 - Math.cos(t*frequency*2*PI)); }
 
 /** Formats seconds to mm:ss style for display purposes 
- *  @param {Number} t - time in seconds
- *  @return {String}
+ *  @param {number} t - time in seconds
+ *  @return {string}
  *  @memberof Utilities */
 function formatTime(t) { return (t/60|0) + ':' + (t%60<10?'0':'') + (t%60|0); }
+
+/** Fetches a JSON file from a URL and returns the parsed JSON object. Must be used with await!
+ *  @param {string} url - URL of JSON file
+ *  @return {Promise<object>}
+ *  @memberof Utilities */
+async function fetchJSON(url)
+{
+    const response = await fetch(url);
+    return response.json();
+}
+
+/** 
+ * Check if object is a valid number, not NaN or undefined, but it may be infinite
+ * @param {any} n
+ * @return {boolean}
+ * @memberof Utilities
+ */
+function isNumber(n) { return typeof n == 'number' && !isNaN(n); }
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -238,43 +270,49 @@ function formatTime(t) { return (t/60|0) + ':' + (t%60<10?'0':'') + (t%60|0); }
  *  @namespace Random */
 
 /** Returns a random value between the two values passed in
- *  @param {Number} [valueA]
- *  @param {Number} [valueB]
- *  @return {Number}
+ *  @param {number} [valueA]
+ *  @param {number} [valueB]
+ *  @return {number}
  *  @memberof Random */
 function rand(valueA=1, valueB=0) { return valueB + Math.random() * (valueA-valueB); }
 
 /** Returns a floored random value between the two values passed in
  *  The upper bound is exclusive. (If 2 is passed in, result will be 0 or 1)
- *  @param {Number} valueA
- *  @param {Number} [valueB]
- *  @return {Number}
+ *  @param {number} valueA
+ *  @param {number} [valueB]
+ *  @return {number}
  *  @memberof Random */
 function randInt(valueA, valueB=0) { return Math.floor(rand(valueA,valueB)); }
 
+/** Randomly returns true or false given the chance of true passed in
+ *  @param {number} [chance]
+ *  @return {boolean}
+ *  @memberof Random */
+function randBool(chance=.5) { return rand() < chance; }
+
 /** Randomly returns either -1 or 1
- *  @return {Number}
+ *  @return {number}
  *  @memberof Random */
 function randSign() { return randInt(2) * 2 - 1; }
 
 /** Returns a random Vector2 with the passed in length
- *  @param {Number} [length]
+ *  @param {number} [length]
  *  @return {Vector2}
  *  @memberof Random */
-function randVector(length=1) { return new Vector2().setAngle(rand(2*PI), length); }
+function randVec2(length=1) { return new Vector2().setAngle(rand(2*PI), length); }
 
 /** Returns a random Vector2 within a circular shape
- *  @param {Number} [radius]
- *  @param {Number} [minRadius]
+ *  @param {number} [radius]
+ *  @param {number} [minRadius]
  *  @return {Vector2}
  *  @memberof Random */
 function randInCircle(radius=1, minRadius=0)
-{ return radius > 0 ? randVector(radius * rand(minRadius / radius, 1)**.5) : new Vector2; }
+{ return radius > 0 ? randVec2(radius * rand(minRadius / radius, 1)**.5) : new Vector2; }
 
 /** Returns a random color between the two passed in colors, combine components if linear
  *  @param {Color}   [colorA=(1,1,1,1)]
  *  @param {Color}   [colorB=(0,0,0,1)]
- *  @param {Boolean} [linear]
+ *  @param {boolean} [linear]
  *  @return {Color}
  *  @memberof Random */
 function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear=false)
@@ -298,17 +336,17 @@ function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear=false)
 class RandomGenerator
 {
     /** Create a random number generator with the seed passed in
-     *  @param {Number} seed - Starting seed */
-    constructor(seed)
+     *  @param {number} [seed] - Starting seed or engine default seed */
+    constructor(seed = 123456789)
     {
-        /** @property {Number} - random seed */
+        /** @property {number} - random seed */
         this.seed = seed;
     }
 
     /** Returns a seeded random value between the two values passed in
-    *  @param {Number} [valueA]
-    *  @param {Number} [valueB]
-    *  @return {Number} */
+    *  @param {number} [valueA]
+    *  @param {number} [valueB]
+    *  @return {number} */
     float(valueA=1, valueB=0)
     {
         // xorshift algorithm
@@ -319,13 +357,18 @@ class RandomGenerator
     }
 
     /** Returns a floored seeded random value the two values passed in
-    *  @param {Number} valueA
-    *  @param {Number} [valueB]
-    *  @return {Number} */
+    *  @param {number} valueA
+    *  @param {number} [valueB]
+    *  @return {number} */
     int(valueA, valueB=0) { return Math.floor(this.float(valueA, valueB)); }
 
+    /** Randomly returns true or false given the chance of true passed in
+    *  @param {number} [chance]
+    *  @return {boolean} */
+    bool(chance=.5) { return this.float() < chance; }
+
     /** Randomly returns either -1 or 1 deterministically
-    *  @return {Number} */
+    *  @return {number} */
     sign() { return this.float() > .5 ? 1 : -1; }
 
     /** Returns a seeded random value between the two values passed in with a random sign
@@ -333,14 +376,25 @@ class RandomGenerator
     *  @param {number} [valueB]
     *  @return {number} */
     floatSign(valueA=1, valueB=0) { return this.float(valueA, valueB) * this.sign(); }
+
+    /** Returns a random angle between -PI and PI
+    *  @return {number} */
+    angle() { return this.float(-PI, PI); }
+
+    /** Returns a seeded vec2 with size between the two values passed in
+    *  @param {number} valueA
+    *  @param {number} [valueB]
+    *  @return {Vector2} */
+    vec2(valueA=1, valueB=0)
+    { return vec2(this.float(valueA, valueB), this.float(valueA, valueB)); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** 
- * Create a 2d vector, can take 2 scalars, or 1 scalar
- * @param {Number} [x]
- * @param {Number} [y]
+/**
+ * Create a 2d vector, can take 1 or 2 scalar values
+ * @param {number} [x]
+ * @param {number} [y] - if y is undefined, x is used for both
  * @return {Vector2}
  * @example
  * let a = vec2(0, 1); // vector with coordinates (0, 1)
@@ -348,15 +402,24 @@ class RandomGenerator
  * b = vec2();         // set b to (0, 0)
  * @memberof Utilities
  */
-function vec2(x=0, y) { return new Vector2(x, y == undefined? x : y); }
+function vec2(x=0, y) { return new Vector2(x, y === undefined ? x : y); }
 
 /** 
  * Check if object is a valid Vector2
  * @param {any} v
- * @return {Boolean}
+ * @return {boolean}
  * @memberof Utilities
  */
 function isVector2(v) { return v instanceof Vector2; }
+
+// vector2 asserts
+function ASSERT_VECTOR2_VALID(v) { ASSERT(isVector2(v) && v.isValid(), 'Vector2 is invalid.', v); }
+function ASSERT_NUMBER_VALID(n) { ASSERT(isNumber(n), 'Number is invalid.', n); }
+function ASSERT_VECTOR2_NORMAL(v)
+{
+    ASSERT_VECTOR2_VALID(v);
+    ASSERT(abs(v.lengthSquared()-1) < .01, 'Vector2 is not normal.', v); 
+}
 
 /** 
  * 2D Vector object with vector math library
@@ -370,26 +433,25 @@ function isVector2(v) { return v instanceof Vector2; }
 class Vector2
 {
     /** Create a 2D vector with the x and y passed in, can also be created with vec2()
-     *  @param {Number} [x] - X axis location
-     *  @param {Number} [y] - Y axis location */
+     *  @param {number} [x] - X axis location
+     *  @param {number} [y] - Y axis location */
     constructor(x=0, y=0)
     {
-        /** @property {Number} - X axis location */
+        /** @property {number} - X axis location */
         this.x = x;
-        /** @property {Number} - Y axis location */
+        /** @property {number} - Y axis location */
         this.y = y;
-        ASSERT(this.isValid());
+        ASSERT(this.isValid(), 'Constructed Vector2 is invalid.', this);
     }
 
     /** Sets values of this vector and returns self
-     *  @param {Number} [x] - X axis location
-     *  @param {Number} [y] - Y axis location
+     *  @param {number} [x] - X axis location
+     *  @param {number} [y] - Y axis location
      *  @return {Vector2} */
     set(x=0, y=0)
     {
         this.x = x;
         this.y = y;
-        ASSERT(this.isValid());
         return this;
     }
 
@@ -400,76 +462,48 @@ class Vector2
     /** Returns a copy of this vector plus the vector passed in
      *  @param {Vector2} v - other vector
      *  @return {Vector2} */
-    add(v)
-    {
-        ASSERT(isVector2(v));
-        return new Vector2(this.x + v.x, this.y + v.y);
-    }
+    add(v) { return new Vector2(this.x + v.x, this.y + v.y);}
 
     /** Returns a copy of this vector minus the vector passed in
      *  @param {Vector2} v - other vector
      *  @return {Vector2} */
-    subtract(v)
-    {
-        ASSERT(isVector2(v));
-        return new Vector2(this.x - v.x, this.y - v.y);
-    }
+    subtract(v) { return new Vector2(this.x - v.x, this.y - v.y); }
 
     /** Returns a copy of this vector times the vector passed in
      *  @param {Vector2} v - other vector
      *  @return {Vector2} */
-    multiply(v)
-    {
-        ASSERT(isVector2(v));
-        return new Vector2(this.x * v.x, this.y * v.y);
-    }
+    multiply(v) { return new Vector2(this.x * v.x, this.y * v.y); }
 
     /** Returns a copy of this vector divided by the vector passed in
      *  @param {Vector2} v - other vector
      *  @return {Vector2} */
-    divide(v)
-    {
-        ASSERT(isVector2(v));
-        return new Vector2(this.x / v.x, this.y / v.y);
-    }
+    divide(v) { return new Vector2(this.x / v.x, this.y / v.y); }
 
     /** Returns a copy of this vector scaled by the vector passed in
-     *  @param {Number} s - scale
+     *  @param {number} s - scale
      *  @return {Vector2} */
-    scale(s)
-    {
-        ASSERT(!isVector2(s));
-        return new Vector2(this.x * s, this.y * s);
-    }
+    scale(s) { return new Vector2(this.x * s, this.y * s); }
 
     /** Returns the length of this vector
-     * @return {Number} */
+     * @return {number} */
     length() { return this.lengthSquared()**.5; }
 
     /** Returns the length of this vector squared
-     * @return {Number} */
+     * @return {number} */
     lengthSquared() { return this.x**2 + this.y**2; }
 
     /** Returns the distance from this vector to vector passed in
      * @param {Vector2} v - other vector
-     * @return {Number} */
-    distance(v)
-    {
-        ASSERT(isVector2(v));
-        return this.distanceSquared(v)**.5;
-    }
+     * @return {number} */
+    distance(v) { return this.distanceSquared(v)**.5; }
 
     /** Returns the distance squared from this vector to vector passed in
      * @param {Vector2} v - other vector
-     * @return {Number} */
-    distanceSquared(v)
-    {
-        ASSERT(isVector2(v));
-        return (this.x - v.x)**2 + (this.y - v.y)**2;
-    }
+     * @return {number} */
+    distanceSquared(v) { return (this.x - v.x)**2 + (this.y - v.y)**2; }
 
     /** Returns a new vector in same direction as this one with the length passed in
-     * @param {Number} [length]
+     * @param {number} [length]
      * @return {Vector2} */
     normalize(length=1)
     {
@@ -478,7 +512,7 @@ class Vector2
     }
 
     /** Returns a new vector clamped to length passed in
-     * @param {Number} [length]
+     * @param {number} [length]
      * @return {Vector2} */
     clampLength(length=1)
     {
@@ -488,59 +522,64 @@ class Vector2
 
     /** Returns the dot product of this and the vector passed in
      * @param {Vector2} v - other vector
-     * @return {Number} */
-    dot(v)
-    {
-        ASSERT(isVector2(v));
-        return this.x*v.x + this.y*v.y;
-    }
+     * @return {number} */
+    dot(v) { return this.x*v.x + this.y*v.y; }
 
     /** Returns the cross product of this and the vector passed in
      * @param {Vector2} v - other vector
-     * @return {Number} */
-    cross(v)
-    {
-        ASSERT(isVector2(v));
-        return this.x*v.y - this.y*v.x;
-    }
+     * @return {number} */
+    cross(v) { return this.x*v.y - this.y*v.x; }
 
-    /** Returns the angle of this vector, up is angle 0
-     * @return {Number} */
+    /** Returns a copy this vector reflected by the surface normal
+     * @param {Vector2} normal - surface normal (should be normalized)
+     * @param {number} restitution - how much to bounce, 1 is perfect bounce, 0 is no bounce
+     * @return {Vector2} */
+    reflect(normal, restitution=1)
+    { return this.subtract(normal.scale((1+restitution)*this.dot(normal))); }
+
+    /** Returns the clockwise angle of this vector, up is angle 0
+     * @return {number} */
     angle() { return Math.atan2(this.x, this.y); }
 
-    /** Sets this vector with angle and length passed in
-     * @param {Number} [angle]
-     * @param {Number} [length]
+    /** Sets this vector with clockwise angle and length passed in
+     * @param {number} [angle]
+     * @param {number} [length]
      * @return {Vector2} */
     setAngle(angle=0, length=1) 
     {
+        ASSERT_NUMBER_VALID(angle);
+        ASSERT_NUMBER_VALID(length);
         this.x = length*Math.sin(angle);
         this.y = length*Math.cos(angle);
         return this;
     }
 
-    /** Returns copy of this vector rotated by the angle passed in
-     * @param {Number} angle
+    /** Returns copy of this vector rotated by the clockwise angle passed in
+     * @param {number} angle
      * @return {Vector2} */
     rotate(angle)
-    { 
+    {
+        ASSERT_NUMBER_VALID(angle);
         const c = Math.cos(-angle), s = Math.sin(-angle); 
         return new Vector2(this.x*c - this.y*s, this.x*s + this.y*c);
     }
 
     /** Set the integer direction of this vector, corresponding to multiples of 90 degree rotation (0-3)
-     * @param {Number} [direction]
-     * @param {Number} [length] */
+     * @param {number} [direction]
+     * @param {number} [length] */
     setDirection(direction, length=1)
     {
+        ASSERT_NUMBER_VALID(direction);
+        ASSERT_NUMBER_VALID(length);
         direction = mod(direction, 4);
-        ASSERT(direction==0 || direction==1 || direction==2 || direction==3);
+        ASSERT(direction==0 || direction==1 || direction==2 || direction==3,
+            'Vector2.setDirection() direction must be an integer between 0 and 3.');
         return vec2(direction%2 ? direction-1 ? -length : length : 0, 
             direction%2 ? 0 : direction ? -length : length);
     }
 
     /** Returns the integer direction of this vector, corresponding to multiples of 90 degree rotation (0-3)
-     * @return {Number} */
+     * @return {number} */
     direction()
     { return abs(this.x) > abs(this.y) ? this.x < 0 ? 3 : 1 : this.y < 0 ? 2 : 0; }
 
@@ -548,59 +587,70 @@ class Vector2
      * @return {Vector2} */
     invert() { return new Vector2(this.y, -this.x); }
 
+    /** Returns a copy of this vector absolute values
+     * @return {Vector2} */
+    abs() { return new Vector2(abs(this.x), abs(this.y)); }
+
     /** Returns a copy of this vector with each axis floored
      * @return {Vector2} */
     floor() { return new Vector2(Math.floor(this.x), Math.floor(this.y)); }
 
+    /** Returns new vec2 with modded values
+    *  @param {number} [divisor]
+    *  @return {Vector2} */
+    mod(divisor=1)
+    { return new Vector2(mod(this.x, divisor), mod(this.y, divisor)); }
+
     /** Returns the area this vector covers as a rectangle
-     * @return {Number} */
+     * @return {number} */
     area() { return abs(this.x * this.y); }
 
     /** Returns a new vector that is p percent between this and the vector passed in
      * @param {Vector2} v - other vector
-     * @param {Number}  percent
+     * @param {number}  percent
      * @return {Vector2} */
     lerp(v, percent)
     {
-        ASSERT(isVector2(v));
-        return this.add(v.subtract(this).scale(clamp(percent)));
+        ASSERT_VECTOR2_VALID(v);
+        ASSERT_NUMBER_VALID(percent);
+        const p = clamp(percent);
+        return new Vector2(v.x*p + this.x*(1-p), v.y*p + this.y*(1-p));
     }
 
     /** Returns true if this vector is within the bounds of an array size passed in
      * @param {Vector2} arraySize
-     * @return {Boolean} */
+     * @return {boolean} */
     arrayCheck(arraySize)
-    {
-        ASSERT(isVector2(arraySize));
-        return this.x >= 0 && this.y >= 0 && this.x < arraySize.x && this.y < arraySize.y;
-    }
+    { return this.x >= 0 && this.y >= 0 && this.x < arraySize.x && this.y < arraySize.y; }
 
     /** Returns this vector expressed as a string
-     * @param {Number} digits - precision to display
-     * @return {String} */
+     * @param {number} digits - precision to display
+     * @return {string} */
     toString(digits=3) 
     {
+        ASSERT_NUMBER_VALID(digits);
         if (debug)
-            return `(${(this.x<0?'':' ') + this.x.toFixed(digits)},${(this.y<0?'':' ') + this.y.toFixed(digits)} )`;
+        {
+            if (this.isValid())
+                return `(${(this.x<0?'':' ') + this.x.toFixed(digits)},${(this.y<0?'':' ') + this.y.toFixed(digits)} )`;
+            else
+                return `(${this.x}, ${this.y})`;
+        }
     }
 
     /** Checks if this is a valid vector
-     * @return {Boolean} */
-    isValid()
-    {
-        return typeof this.x == 'number' && !isNaN(this.x)
-            && typeof this.y == 'number' && !isNaN(this.y);
-    }
+     * @return {boolean} */
+    isValid() { return isNumber(this.x) && isNumber(this.y); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 /** 
  * Create a color object with RGBA values, white by default
- * @param {Number} [r=1] - red
- * @param {Number} [g=1] - green
- * @param {Number} [b=1] - blue
- * @param {Number} [a=1] - alpha
+ * @param {number} [r=1] - red
+ * @param {number} [g=1] - green
+ * @param {number} [b=1] - blue
+ * @param {number} [a=1] - alpha
  * @return {Color}
  * @memberof Utilities
  */
@@ -608,10 +658,10 @@ function rgb(r, g, b, a) { return new Color(r, g, b, a); }
 
 /** 
  * Create a color object with HSLA values, white by default
- * @param {Number} [h=0] - hue
- * @param {Number} [s=0] - saturation
- * @param {Number} [l=1] - lightness
- * @param {Number} [a=1] - alpha
+ * @param {number} [h=0] - hue
+ * @param {number} [s=0] - saturation
+ * @param {number} [l=1] - lightness
+ * @param {number} [a=1] - alpha
  * @return {Color}
  * @memberof Utilities
  */
@@ -620,10 +670,13 @@ function hsl(h, s, l, a) { return new Color().setHSLA(h, s, l, a); }
 /** 
  * Check if object is a valid Color
  * @param {any} c
- * @return {Boolean}
+ * @return {boolean}
  * @memberof Utilities
  */
 function isColor(c) { return c instanceof Color; }
+
+// color asserts
+function ASSERT_COLOR_VALID(c) { ASSERT(isColor(c) && c.isValid(), 'Color is invalid.', c); }
 
 /** 
  * Color object (red, green, blue, alpha) with some helpful functions
@@ -631,34 +684,34 @@ function isColor(c) { return c instanceof Color; }
  * let a = new Color;              // white
  * let b = new Color(1, 0, 0);     // red
  * let c = new Color(0, 0, 0, 0);  // transparent black
- * let d = rgb(0, 0, 1);           // blue using rgb color
+ * let d = rgb(0, 0, 1);         // blue using rgb color
  * let e = hsl(.3, 1, .5);         // green using hsl color
  */
 class Color
 {
     /** Create a color with the rgba components passed in, white by default
-     *  @param {Number} [r] - red
-     *  @param {Number} [g] - green
-     *  @param {Number} [b] - blue
-     *  @param {Number} [a] - alpha*/
+     *  @param {number} [r] - red
+     *  @param {number} [g] - green
+     *  @param {number} [b] - blue
+     *  @param {number} [a] - alpha*/
     constructor(r=1, g=1, b=1, a=1)
     {
-        /** @property {Number} - Red */
+        /** @property {number} - Red */
         this.r = r;
-        /** @property {Number} - Green */
+        /** @property {number} - Green */
         this.g = g;
-        /** @property {Number} - Blue */
+        /** @property {number} - Blue */
         this.b = b;
-        /** @property {Number} - Alpha */
+        /** @property {number} - Alpha */
         this.a = a;
-        ASSERT(this.isValid());
+        ASSERT(this.isValid(), 'Constructed Color is invalid.', this);
     }
 
     /** Sets values of this color and returns self
-     *  @param {Number} [r] - red
-     *  @param {Number} [g] - green
-     *  @param {Number} [b] - blue
-     *  @param {Number} [a] - alpha
+     *  @param {number} [r] - red
+     *  @param {number} [g] - green
+     *  @param {number} [b] - blue
+     *  @param {number} [a] - alpha
      *  @return {Color} */
     set(r=1, g=1, b=1, a=1)
     {
@@ -666,7 +719,6 @@ class Color
         this.g = g;
         this.b = b;
         this.a = a;
-        ASSERT(this.isValid());
         return this;
     }
 
@@ -677,42 +729,26 @@ class Color
     /** Returns a copy of this color plus the color passed in
      * @param {Color} c - other color
      * @return {Color} */
-    add(c)
-    {
-        ASSERT(isColor(c));
-        return new Color(this.r+c.r, this.g+c.g, this.b+c.b, this.a+c.a);
-    }
+    add(c) { return new Color(this.r+c.r, this.g+c.g, this.b+c.b, this.a+c.a); }
 
     /** Returns a copy of this color minus the color passed in
      * @param {Color} c - other color
      * @return {Color} */
-    subtract(c)
-    {
-        ASSERT(isColor(c));
-        return new Color(this.r-c.r, this.g-c.g, this.b-c.b, this.a-c.a);
-    }
+    subtract(c) { return new Color(this.r-c.r, this.g-c.g, this.b-c.b, this.a-c.a); }
 
     /** Returns a copy of this color times the color passed in
      * @param {Color} c - other color
      * @return {Color} */
-    multiply(c)
-    {
-        ASSERT(isColor(c));
-        return new Color(this.r*c.r, this.g*c.g, this.b*c.b, this.a*c.a);
-    }
+    multiply(c) { return new Color(this.r*c.r, this.g*c.g, this.b*c.b, this.a*c.a); }
 
     /** Returns a copy of this color divided by the color passed in
      * @param {Color} c - other color
      * @return {Color} */
-    divide(c)
-    {
-        ASSERT(isColor(c));
-        return new Color(this.r/c.r, this.g/c.g, this.b/c.b, this.a/c.a);
-    }
+    divide(c) { return new Color(this.r/c.r, this.g/c.g, this.b/c.b, this.a/c.a); }
 
     /** Returns a copy of this color scaled by the value passed in, alpha can be scaled separately
-     * @param {Number} scale
-     * @param {Number} [alphaScale=scale]
+     * @param {number} scale
+     * @param {number} [alphaScale=scale]
      * @return {Color} */
     scale(scale, alphaScale=scale) 
     { return new Color(this.r*scale, this.g*scale, this.b*scale, this.a*alphaScale); }
@@ -723,19 +759,25 @@ class Color
 
     /** Returns a new color that is p percent between this and the color passed in
      * @param {Color}  c - other color
-     * @param {Number} percent
+     * @param {number} percent
      * @return {Color} */
     lerp(c, percent)
     {
-        ASSERT(isColor(c));
-        return this.add(c.subtract(this).scale(clamp(percent)));
+        ASSERT_COLOR_VALID(c);
+        ASSERT_NUMBER_VALID(percent);
+        const p = clamp(percent);
+        return new Color(
+            c.r*p + this.r*(1-p), 
+            c.g*p + this.g*(1-p), 
+            c.b*p + this.b*(1-p), 
+            c.a*p + this.a*(1-p));
     }
 
     /** Sets this color given a hue, saturation, lightness, and alpha
-     * @param {Number} [h] - hue
-     * @param {Number} [s] - saturation
-     * @param {Number} [l] - lightness
-     * @param {Number} [a] - alpha
+     * @param {number} [h] - hue
+     * @param {number} [s] - saturation
+     * @param {number} [l] - lightness
+     * @param {number} [a] - alpha
      * @return {Color} */
     setHSLA(h=0, s=0, l=1, a=1)
     {
@@ -751,43 +793,44 @@ class Color
         this.g = f(p, q, h);
         this.b = f(p, q, h - 1/3);
         this.a = a;
-        ASSERT(this.isValid());
+        ASSERT_COLOR_VALID(this);
         return this;
     }
 
     /** Returns this color expressed in hsla format
-     * @return {Array} */
+     * @return {Array<number>} */
     HSLA()
     {
         const r = clamp(this.r);
         const g = clamp(this.g);
         const b = clamp(this.b);
         const a = clamp(this.a);
-        const max = Math.max(r, g, b);
-        const min = Math.min(r, g, b);
-        const l = (max + min) / 2;
-        
+        const maxC = max(r, g, b);
+        const minC = min(r, g, b);
+        const l = (maxC + minC) / 2;
         let h = 0, s = 0;
-        if (max != min)
+        if (maxC != minC)
         {
-            let d = max - min;
-            s = l > .5 ? d / (2 - max - min) : d / (max + min);
-            if (r == max)
+            let d = maxC - minC;
+            s = l > .5 ? d / (2 - maxC - minC) : d / (maxC + minC);
+            if (r == maxC)
                 h = (g - b) / d + (g < b ? 6 : 0);
-            else if (g == max)
+            else if (g == maxC)
                 h = (b - r) / d + 2;
-            else if (b == max)
+            else if (b == maxC)
                 h =  (r - g) / d + 4;
         }
         return [h / 6, s, l, a];
     }
 
     /** Returns a new color that has each component randomly adjusted
-     * @param {Number} [amount]
-     * @param {Number} [alphaAmount]
+     * @param {number} [amount]
+     * @param {number} [alphaAmount]
      * @return {Color} */
     mutate(amount=.05, alphaAmount=0) 
     {
+        ASSERT_NUMBER_VALID(amount);
+        ASSERT_NUMBER_VALID(alphaAmount);
         return new Color
         (
             this.r + rand(amount, -amount),
@@ -798,20 +841,23 @@ class Color
     }
 
     /** Returns this color expressed as a hex color code
-     * @param {Boolean} [useAlpha] - if alpha should be included in result
-     * @return {String} */
+     * @param {boolean} [useAlpha] - if alpha should be included in result
+     * @return {string} */
     toString(useAlpha = true)      
-    { 
+    {
+        ASSERT(typeof useAlpha == 'boolean', 'Use alpha boolean is invalid.', useAlpha);
+        if (debug && !this.isValid())
+            return `#000`;
         const toHex = (c)=> ((c=clamp(c)*255|0)<16 ? '0' : '') + c.toString(16);
         return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b) + (useAlpha ? toHex(this.a) : '');
     }
     
     /** Set this color from a hex code
-     * @param {String} hex - html hex code
+     * @param {string} hex - html hex code
      * @return {Color} */
     setHex(hex)
     {
-        ASSERT(typeof hex == 'string' && hex[0] == '#');
+        ASSERT(typeof hex == 'string' && hex[0] == '#', 'Color hex code must be a string starting with #');
         ASSERT([4,5,7,9].includes(hex.length), 'Invalid hex');
 
         if (hex.length < 6)
@@ -831,12 +877,12 @@ class Color
             this.a = hex.length == 9 ? fromHex(7) : 1;
         }
 
-        ASSERT(this.isValid());
+        ASSERT_COLOR_VALID(this);
         return this;
     }
     
     /** Returns this color expressed as 32 bit RGBA value
-     * @return {Number} */
+     * @return {number} */
     rgbaInt()  
     {
         const r = clamp(this.r)*255|0;
@@ -847,13 +893,10 @@ class Color
     }
 
     /** Checks if this is a valid color
-     * @return {Boolean} */
+     * @return {boolean} */
     isValid()
-    {
-        return typeof this.r == 'number' && !isNaN(this.r)
-            && typeof this.g == 'number' && !isNaN(this.g)
-            && typeof this.b == 'number' && !isNaN(this.b)
-            && typeof this.a == 'number' && !isNaN(this.a);
+    { 
+        return isNumber(this.r) && isNumber(this.g) && isNumber(this.b) && isNumber(this.a);
     }
 }
 
@@ -865,10 +908,20 @@ class Color
  *  @memberof Utilities */
 const WHITE = rgb();
 
+/** Color - Clear White #ffffff with 0 alpha
+ *  @type {Color}
+ *  @memberof Utilities */
+const CLEAR_WHITE = rgb(1,1,1,0);
+
 /** Color - Black
  *  @type {Color}
  *  @memberof Utilities */
 const BLACK = rgb(0,0,0);
+
+/** Color - Clear Black #000000 with 0 alpha
+ *  @type {Color}
+ *  @memberof Utilities */
+const CLEAR_BLACK = rgb(0,0,0,0);
 
 /** Color - Gray
  *  @type {Color}
@@ -929,43 +982,53 @@ const MAGENTA = rgb(1,0,1);
 class Timer
 {
     /** Create a timer object set time passed in
-     *  @param {Number} [timeLeft] - How much time left before the timer elapses in seconds */
-    constructor(timeLeft) { this.time = timeLeft == undefined ? undefined : time + timeLeft; this.setTime = timeLeft; }
+     *  @param {number} [timeLeft] - How much time left before the timer elapses in seconds */
+    constructor(timeLeft)
+    {
+        ASSERT(timeLeft === undefined || isNumber(timeLeft), 'Constructed Timer is invalid.', timeLeft);
+        this.time = timeLeft === undefined ? undefined : time + timeLeft;
+        this.setTime = timeLeft;
+    }
 
     /** Set the timer with seconds passed in
-     *  @param {Number} [timeLeft] - How much time left before the timer is elapsed in seconds */
-    set(timeLeft=0) { this.time = time + timeLeft; this.setTime = timeLeft; }
+     *  @param {number} [timeLeft] - How much time left before the timer is elapsed in seconds */
+    set(timeLeft=0)
+    {
+        ASSERT(isNumber(timeLeft), 'Timer is invalid.', timeLeft);
+        this.time = time + timeLeft;
+        this.setTime = timeLeft;
+    }
 
     /** Unset the timer */
     unset() { this.time = undefined; }
 
     /** Returns true if set
-     * @return {Boolean} */
-    isSet() { return this.time != undefined; }
+     * @return {boolean} */
+    isSet() { return this.time !== undefined; }
 
     /** Returns true if set and has not elapsed
-     * @return {Boolean} */
+     * @return {boolean} */
     active() { return time < this.time; }
 
     /** Returns true if set and elapsed
-     * @return {Boolean} */
+     * @return {boolean} */
     elapsed() { return time >= this.time; }
 
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
-     * @return {Number} */
+     * @return {number} */
     get() { return this.isSet()? time - this.time : 0; }
 
     /** Get percentage elapsed based on time it was set to, returns 0 if not set
-     * @return {Number} */
+     * @return {number} */
     getPercent() { return this.isSet()? 1-percent(this.time - time, 0, this.setTime) : 0; }
     
     /** Returns this timer expressed as a string
-     * @return {String} */
+     * @return {string} */
     toString() { if (debug) { return this.isSet() ? Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ) : 'unset'; }}
     
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
-     * @return {Number} */
-    valueOf()               { return this.get(); }
+     * @return {number} */
+    valueOf() { return this.get(); }
 }
 /**
  * LittleJS Engine Settings
@@ -1095,7 +1158,7 @@ let objectDefaultAngleDamping = 1;
  *  @type {Number}
  *  @default
  *  @memberof Settings */
-let objectDefaultElasticity = 0;
+let objectDefaultRestitution = 0;
 
 /** How much to slow when touching (0-1)
  *  @type {Number}
@@ -1330,9 +1393,9 @@ function setObjectDefaultDamping(damp) { objectDefaultDamping = damp; }
 function setObjectDefaultAngleDamping(damp) { objectDefaultAngleDamping = damp; }
 
 /** Set how much to bounce when a collision occur
- *  @param {Number} elasticity
+ *  @param {Number} restitution
  *  @memberof Settings */
-function setObjectDefaultElasticity(elasticity) { objectDefaultElasticity = elasticity; }
+function setObjectDefaultRestitution(restitution) { objectDefaultRestitution = restitution; }
 
 /** Set how much to slow when touching
  *  @param {Number} friction
@@ -1517,8 +1580,8 @@ class EngineObject
         this.damping      = objectDefaultDamping;
         /** @property {Number} [angleDamping=objectDefaultAngleDamping] - How much to slow down rotation each frame (0-1) */
         this.angleDamping = objectDefaultAngleDamping;
-        /** @property {Number} [elasticity=objectDefaultElasticity]     - How bouncy the object is when colliding (0-1) */
-        this.elasticity   = objectDefaultElasticity;
+        /** @property {Number} [restitution=objectDefaultRestitution]     - How bouncy the object is when colliding (0-1) */
+        this.restitution   = objectDefaultRestitution;
         /** @property {Number} [friction=objectDefaultFriction]         - How much friction to apply when sliding (0-1) */
         this.friction     = objectDefaultFriction;
         /** @property {Number}  - How much to scale gravity by for this object */
@@ -1654,7 +1717,7 @@ class EngineObject
                     const deltaPos = oldPos.subtract(o.pos);
                     const length = deltaPos.length();
                     const pushAwayAccel = .001; // push away if already overlapping
-                    const velocity = length < .01 ? randVector(pushAwayAccel) : deltaPos.scale(pushAwayAccel/length);
+                    const velocity = length < .01 ? randVec2(pushAwayAccel) : deltaPos.scale(pushAwayAccel/length);
                     this.velocity = this.velocity.add(velocity);
                     if (o.mass) // push away if not fixed
                         o.velocity = o.velocity.subtract(velocity);
@@ -1668,7 +1731,7 @@ class EngineObject
                 const smallStepUp = (oldPos.y - o.pos.y)*2 > sizeBoth.y + gravity.y; // prefer to push up if small delta
                 const isBlockedX = abs(oldPos.y - o.pos.y)*2 < sizeBoth.y;
                 const isBlockedY = abs(oldPos.x - o.pos.x)*2 < sizeBoth.x;
-                const elasticity = max(this.elasticity, o.elasticity);
+                const restitution = max(this.restitution, o.restitution);
                 
                 if (smallStepUp || isBlockedY || !isBlockedX) // resolve y collision
                 {
@@ -1681,7 +1744,7 @@ class EngineObject
                             this.groundObject = o;
 
                         // bounce if other object is fixed or grounded
-                        this.velocity.y *= -elasticity;
+                        this.velocity.y *= -restitution;
                     }
                     else if (o.mass)
                     {
@@ -1694,9 +1757,9 @@ class EngineObject
                         const elastic1 = o.velocity.y * (o.mass - this.mass) / (this.mass + o.mass)
                             + this.velocity.y * 2 * this.mass / (this.mass + o.mass);
 
-                        // lerp between elastic or inelastic based on elasticity
-                        this.velocity.y = lerp(elasticity, inelastic, elastic0);
-                        o.velocity.y = lerp(elasticity, inelastic, elastic1);
+                        // lerp between elastic or inelastic based on restitution
+                        this.velocity.y = lerp(inelastic, elastic0, restitution);
+                        o.velocity.y = lerp(inelastic, elastic1, restitution);
                     }
                 }
                 if (!smallStepUp && isBlockedX) // resolve x collision
@@ -1714,12 +1777,12 @@ class EngineObject
                         const elastic1 = o.velocity.x * (o.mass - this.mass) / (this.mass + o.mass)
                             + this.velocity.x * 2 * this.mass / (this.mass + o.mass);
 
-                        // lerp between elastic or inelastic based on elasticity
-                        this.velocity.x = lerp(elasticity, inelastic, elastic0);
-                        o.velocity.x = lerp(elasticity, inelastic, elastic1);
+                        // lerp between elastic or inelastic based on restitution
+                        this.velocity.x = lerp(inelastic, elastic0, restitution);
+                        o.velocity.x = lerp(inelastic, elastic1, restitution);
                     }
                     else // bounce if other object is fixed
-                        this.velocity.x *= -elasticity;
+                        this.velocity.x *= -restitution;
                 }
                 debugOverlay && debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f0f');
             }
@@ -1739,7 +1802,7 @@ class EngineObject
                     if (isBlockedY || !isBlockedX)
                     {
                         // bounce velocity
-                        this.velocity.y *= -this.elasticity;
+                        this.velocity.y *= -this.restitution;
 
                         // set if landed on ground
                         if (this.groundObject = wasMovingDown)
@@ -1759,7 +1822,7 @@ class EngineObject
                     {
                         // move to previous position and bounce
                         this.pos.x = oldPos.x;
-                        this.velocity.x *= -this.elasticity;
+                        this.velocity.x *= -this.restitution;
                     }
                     debugOverlay && debugPhysics && debugRect(this.pos, this.size, '#f00');
                 }
@@ -2550,6 +2613,7 @@ function setCursor(cursorStyle = 'auto')
  *  @memberof Input */
 function keyIsDown(key, device=0)
 { 
+    ASSERT(key !== undefined, 'key is undefined');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return inputData[device] && !!(inputData[device][key] & 1); 
 }
@@ -2561,6 +2625,7 @@ function keyIsDown(key, device=0)
  *  @memberof Input */
 function keyWasPressed(key, device=0)
 { 
+    ASSERT(key !== undefined, 'key is undefined');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return inputData[device] && !!(inputData[device][key] & 2); 
 }
@@ -2572,6 +2637,7 @@ function keyWasPressed(key, device=0)
  *  @memberof Input */
 function keyWasReleased(key, device=0)
 { 
+    ASSERT(key !== undefined, 'key is undefined');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return inputData[device] && !!(inputData[device][key] & 4);
 }
@@ -2721,7 +2787,7 @@ function inputInit()
 
     onkeyup = (e)=>
     {
-        inputData[0][e.code] = 4;
+        inputData[0][e.code] = (inputData[0][e.code]&2) | 4;
         if (inputWASDEmulateDirection)
             inputData[0][remapKey(e.code)] = 4;
     }
@@ -4244,7 +4310,7 @@ class ParticleEmitter extends EngineObject
         particle.fadeRate      = this.fadeRate;
         particle.damping       = this.damping;
         particle.angleDamping  = this.angleDamping;
-        particle.elasticity    = this.elasticity;
+        particle.restitution    = this.restitution;
         particle.friction      = this.friction;
         particle.gravityScale  = this.gravityScale;
         particle.collideTiles  = this.collideTiles;
@@ -5011,7 +5077,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         let frameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
         frameTimeLastMS = frameTimeMS;
         if (debug || showWatermark)
-            averageFPS = lerp(.05, averageFPS, 1e3/(frameTimeDeltaMS||1));
+            averageFPS = lerp(averageFPS, 1e3/(frameTimeDeltaMS||1), .05);
         const debugSpeedUp   = debug && keyIsDown('Equal'); // +
         const debugSpeedDown = debug && keyIsDown('Minus'); // -
         if (debug) // +/- to speed/slow time
@@ -5336,7 +5402,7 @@ function drawEngineSplashScreen(t)
         const p3 = percent(t, 1, .8);
         const p4 = percent(t, 0, .5);
         const g = x.createRadialGradient(w/2,h/2,0,w/2,h/2,Math.hypot(w,h)*.7);
-        g.addColorStop(0,hsl(0,0,lerp(p4,0,p3/2),p3).toString());
+        g.addColorStop(0,hsl(0,0,lerp(0,p3/2,p4),p3).toString());
         g.addColorStop(1,hsl(0,0,0,p3).toString());
         x.save();
         x.fillStyle = g;
