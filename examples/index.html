@@ -21,7 +21,7 @@ Theme:
     <option value=24px>XL</option>
 </select>
 <input type=checkbox id=checkboxLiveEdit checked>Live Edit
-<button id=buttonRefresh onclick="refreshCode()">Refresh</button>
+<button id=buttonRefresh onclick=refreshCode()>Refresh</button>
 </div> 
 <textarea id=textareaCode oninput=codeInput() spellcheck=false></textarea>
 <textarea id=textareaError readonly spellcheck=false></textarea>
@@ -34,6 +34,7 @@ Theme:
 <button onclick=filterExamples(1)>Clear</button>
 <button id=buttonPause>Pause</button>
 <button id=buttonScreenshot>Screenshot</button>
+<button id=buttonFullscreen>Fullscreen</button>
 </div>
 <select id=selectExample autofocus onchange=setExample() size=2></select>
 </div>
@@ -106,7 +107,7 @@ const exampleList =
 ///////////////////////////////////////////////////////////////////////////////
 
 // global variables
-let iframeExample, inputTimeout, codeMirror, consoleAutoScroll, errorLineMarker;
+let iframeExample, inputTimeout, codeMirror, consoleAutoScroll, errorLineMarker, codeIsJS;
 
 // load the examples into the list
 filterExamples();
@@ -166,28 +167,28 @@ async function loadFile(filename, largeExample)
     else
         textareaCode.disabled = largeExample;
     
+    // disable buttons in large example mode
+    buttonPause.disabled = largeExample;
+    buttonRefresh.disabled = largeExample;
+    buttonScreenshot.disabled = largeExample;
+    buttonFullscreen.disabled = largeExample;
+    
     if (largeExample)
     {
-        if (iframeExample)
-            iframeContainer.removeChild(iframeExample);
 
-        unsetErrorMessage();
-        unsetConsoleMessage();
-        iframeExample = document.createElement('iframe');
-        iframeContainer.appendChild(iframeExample);
-        
         // Show message in code view that full examples can't be edited
-        const message = 'Code view not available for large examples.';
+        const text = 'Code view not available for large examples.';
+        setCode(text, filename);
+        codeIsJS = false;
         if (codeMirror)
         {
             codeMirror.off('change', codeInput);
             codeMirror.setOption('mode', 'text');
-            codeMirror.setValue(message);
+            codeMirror.setValue(text);
         }
         else
-            textareaCode.value = message;
+            textareaCode.value = text;
         clearTimeout(inputTimeout);
-        iframeExample.src = filename;
         return;
     }
 
@@ -199,6 +200,7 @@ async function loadFile(filename, largeExample)
         const text = await response.text();
         
         // set the code in both code mirror and textarea
+        codeIsJS = true;
         if (codeMirror)
         {
             codeMirror.on('change', codeInput);
@@ -271,8 +273,9 @@ function refreshCode()
     setCode(code);
 }
 
-function setCode(code)
+function setCode(code, textFilename)
 {
+    const largeExample = !!textFilename;
     clearTimeout(inputTimeout);
     if (iframeExample)
         iframeContainer.removeChild(iframeExample);
@@ -281,8 +284,11 @@ function setCode(code)
     unsetConsoleMessage();
     iframeExample = document.createElement('iframe');
     iframeContainer.appendChild(iframeExample);
-    iframeExample.onload = () =>
+    iframeExample.onload = ()=>
     {
+        if (largeExample)
+            return;
+
         const iframeContent = iframeExample.contentWindow;
         const iframeDocument = iframeContent.document;
 
@@ -334,17 +340,6 @@ function setCode(code)
             originalAssert.apply(this, arguments);
         };
 
-        // create a script element that overrides the default functions
-        const overrideScript = iframeDocument.createElement('script');
-        iframeDocument.body.appendChild(overrideScript);
-        overrideScript.text = code;
-        
-        if (textareaError.style.display == 'block')
-            return; // stop if script error
-        
-        // start LittleJS engine
-        iframeContent.engineInit(iframeContent.gameInit, iframeContent.gameUpdate, iframeContent.gameUpdatePost, iframeContent.gameRender, iframeContent.gameRenderPost, ['tiles.png?'+Date.now()]);
-
         buttonScreenshot.onclick = () =>
         {
             if (iframeContent.debugScreenshot)
@@ -362,8 +357,22 @@ function setCode(code)
             buttonPause.textContent = paused ? 'Resume' : 'Pause';
         }
         buttonPause.textContent = 'Pause';
+
+        // fullscreen functionality
+        buttonFullscreen.onclick = ()=> iframeContent.toggleFullscreen();
+
+        // create a script element that overrides the default functions
+        const overrideScript = iframeDocument.createElement('script');
+        iframeDocument.body.appendChild(overrideScript);
+        overrideScript.text = code;
+        
+        if (textareaError.style.display == 'block')
+            return; // stop if script error
+        
+        // start LittleJS engine
+        iframeContent.engineInit(iframeContent.gameInit, iframeContent.gameUpdate, iframeContent.gameUpdatePost, iframeContent.gameRender, iframeContent.gameRenderPost, ['tiles.png?'+Date.now()]);
     }
-    iframeExample.src = 'shorts/base.html?' + Date.now();
+    iframeExample.src = textFilename || 'shorts/base.html?' + Date.now();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -502,7 +511,7 @@ function initCodeMirror()
     {
         theme: savedTheme,
         indentUnit: 4,
-        mode: 'javascript',
+        mode: codeIsJS ? 'javascript' : 'text',
         lineNumbers: true,
         lineWrapping: true,
         matchBrackets: true,

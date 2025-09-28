@@ -103,6 +103,12 @@ button
     padding: 2px 8px;
     cursor: pointer;
 }
+button:disabled
+{
+    color: #aaa;
+    background-color: #666;
+    border-color: #666;
+}
 .error-line
 {
     background-color: rgba(255, 0, 0, 0.15) !important;
