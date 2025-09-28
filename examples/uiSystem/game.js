@@ -110,7 +110,7 @@ function gameRender()
 {
     // test game rendering
     LJS.drawRect(vec2(), vec2(1e3), hsl(0,0,.2));
-    for(let i=0; i<1e3; ++i)
+    for (let i=0; i<1e3; ++i)
     {
         const pos = vec2(30*Math.sin(i+LJS.time/9),20*Math.sin(i*i+LJS.time/9));
         LJS.drawTile(pos, vec2(2), tile(3,128), hsl(i/9,1,.4), LJS.time+i, !(i%2), hsl(i/9,1,.1,0));

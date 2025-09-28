@@ -15,7 +15,7 @@ function gameRender()
     drawRect(vec2( 8, 0), vec2(3), hsl(0,0,1));
 
     // color lerpping
-    for(let i=5; i--;)
+    for (let i=5; i--;)
     {
         const color1 = RED;
         const color2 = YELLOW;

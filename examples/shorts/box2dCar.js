@@ -18,7 +18,7 @@ class CarObject extends Box2dObject
         this.addBox(vec2(7,2));
         const frequency = 4, maxTorque = 250;
         this.wheels = [];
-        for(let i=2; i--;)
+        for (let i=2; i--;)
         {
             const wheelPos = pos.add(vec2(i?2:-2, -1));
             const wheel = new Box2dObject(wheelPos, vec2(2), tile(7));

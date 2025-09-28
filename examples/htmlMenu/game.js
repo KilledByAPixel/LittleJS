@@ -61,7 +61,7 @@ function gameRender()
 {
     // test game rendering
     LJS.drawRect(vec2(), vec2(1e3), hsl(0,0,.2));
-    for(let i=0; i<1e3; ++i)
+    for (let i=0; i<1e3; ++i)
     {
         const time = LJS.time;
         const pos = vec2(30*Math.sin(i+time/9),20*Math.sin(i*i+time/9));

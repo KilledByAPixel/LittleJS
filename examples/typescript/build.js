@@ -27,5 +27,5 @@ child_process.execSync(`npx tsc ${tsFiles} --outDir "./${BUILD_FOLDER}" --target
 console.log(`TypeScript built in ${((Date.now() - startTime)/1e3).toFixed(2)} seconds!`);
 
 console.log(`Moving js files back to root...`);
-for(const file of jsSourceFiles)
+for (const file of jsSourceFiles)
     fs.copyFileSync(`${BUILD_FOLDER}/${file}`, file);

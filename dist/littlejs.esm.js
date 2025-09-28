@@ -1124,7 +1124,7 @@ function debugRender()
             overlayContext.fillText('6: Toggle Video Capture', x, y += h);
 
             let keysPressed = '';
-            for(const i in inputData[0])
+            for (const i in inputData[0])
             {
                 if (keyIsDown(i, 0))
                     keysPressed += i + ' ' ;
@@ -1133,7 +1133,7 @@ function debugRender()
 
             let buttonsPressed = '';
             if (inputData[1])
-            for(const i in inputData[1])
+            for (const i in inputData[1])
             {
                 if (keyIsDown(i, 1))
                     buttonsPressed += i + ' ' ;
@@ -3936,7 +3936,7 @@ class FontImage
         (text+'').split('\n').forEach((line, i)=>
         {
             const centerOffset = center ? line.length * size.x * scale / 2 |0 : 0;
-            for(let j=line.length; j--;)
+            for (let j=line.length; j--;)
             {
                 // draw each character
                 let charCode = line[j].charCodeAt(0);
@@ -4506,7 +4506,7 @@ function touchGamepadRender()
     }
     else // draw cross shaped gamepad
     {
-        for(let i=10; i--;)
+        for (let i=10; i--;)
         {
             const angle = i*PI/4;
             context.arc(leftCenter.x, leftCenter.y,touchGamepadSize*.6, angle + PI/8, angle + PI/8);
@@ -4974,7 +4974,7 @@ function zzfxG
         repeatTime = repeatTime * sampleRate | 0;
 
     // generate waveform
-    for(length = attack + decay + sustain + release + delay | 0;
+    for (length = attack + decay + sustain + release + delay | 0;
         i < length; b[i++] = s * volume)                   // sample
     {
         if (!(++crush%(bitCrush*100|0)))                   // bit crush
@@ -7085,7 +7085,7 @@ class UISystemPlugin
 
         function updateInvisible(o)
         {
-            for(const c of o.children)
+            for (const c of o.children)
                 updateInvisible(c);
             o.updateInvisible();
         }
@@ -7101,7 +7101,7 @@ class UISystemPlugin
                     if (o.parent)
                         o.pos = o.localPos.add(o.parent.pos);
                     // update in reverse order to detect mouse enter/leave
-                    for(let i=o.children.length; i--;)
+                    for (let i=o.children.length; i--;)
                         updateObject(o.children[i]);
                     o.update();
                 }
@@ -7119,7 +7119,7 @@ class UISystemPlugin
                 if (o.parent)
                     o.pos = o.localPos.add(o.parent.pos);
                 o.render();
-                for(const c of o.children)
+                for (const c of o.children)
                     renderObject(c);
             }
             uiSystem.uiObjects.forEach(o=> o.parent || renderObject(o));
@@ -9475,7 +9475,7 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
 
     // center
     drawTile(pos, centerSize, centerTile, color, angle, false, additiveColor, useWebGL, screenSpace, context);
-    for(let i=4; i--;)
+    for (let i=4; i--;)
     {
         // sides
         const horizontal = i%2;
@@ -9484,7 +9484,7 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
         const sideTile = centerTile.offset(startTile.size.multiply(vec2(i==1?1:i==3?-1:0,i==0?-flip:i==2?flip:0)))
         drawTile(pos.add(sidePos.rotate(rotateAngle)), sideSize, sideTile, color, angle, false, additiveColor, useWebGL, screenSpace, context);
     }
-    for(let i=4; i--;)
+    for (let i=4; i--;)
     {
         // corners
         const flipX = i>1;
@@ -9537,7 +9537,7 @@ function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor
 
     // center
     drawTile(pos, centerSize, centerTile, color, angle, false, additiveColor, useWebGL, screenSpace, context);
-    for(let i=4; i--;)
+    for (let i=4; i--;)
     {
         // sides
         const a = angle + i*PI/2;
@@ -9546,7 +9546,7 @@ function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor
         const sideSize = vec2(horizontal ? centerSize.y : centerSize.x, borderSize);
         drawTile(pos.add(sidePos.rotate(rotateAngle)), sideSize, sideTile, color, a, false, additiveColor, useWebGL, screenSpace, context);
     }
-    for(let i=4; i--;)
+    for (let i=4; i--;)
     {
         // corners
         const a = angle + i*PI/2;

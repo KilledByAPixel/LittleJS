@@ -21,8 +21,8 @@ The first step is to make a 2D grid of brick objects in gameInit. As a placehold
 
 ```javascript
 // create bricks
-for(let x=0; x<=20; x++)
-for(let y=0; y<=20; y++)
+for (let x=0; x<=20; x++)
+for (let y=0; y<=20; y++)
 {
     const brick = new EngineObject(vec2(x,y)); // create a brick
     brick.color = randColor(); // give brick a random color
@@ -42,8 +42,8 @@ Let’s make the bricks more rectangular by passing vec2(2,1) to the size parame
 ```javascript
 // create bricks
 const levelSize = vec2(20, 20);
-for(let x=0; x<=levelSize.x; x+=2)
-for(let y=0; y<=levelSize.y; y+=1)
+for (let x=0; x<=levelSize.x; x+=2)
+for (let y=0; y<=levelSize.y; y+=1)
 {
     const brick = new EngineObject(vec2(x,y), vec2(2,1)); // create a brick
     brick.color = randColor(); // give brick a random color
@@ -98,8 +98,8 @@ Now we can see the boundaries of our level and tweak the size to fill the canvas
 We can also adjust the for loop where the bricks are created to make them only fill the top middle part of the level.
 
 ```javascript
-for(let x=2;  x<=levelSize.x-2; x+=2)
-for(let y=12; y<=levelSize.y-2; y+=1)
+for (let x=2;  x<=levelSize.x-2; x+=2)
+for (let y=12; y<=levelSize.y-2; y+=1)
 {
     const brick = new EngineObject(vec2(x,y), vec2(2,1)); // create a brick
     brick.color = randColor(); // give brick a random color

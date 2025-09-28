@@ -474,7 +474,7 @@ function debugRender()
             overlayContext.fillText('6: Toggle Video Capture', x, y += h);
 
             let keysPressed = '';
-            for(const i in inputData[0])
+            for (const i in inputData[0])
             {
                 if (keyIsDown(i, 0))
                     keysPressed += i + ' ' ;
@@ -483,7 +483,7 @@ function debugRender()
 
             let buttonsPressed = '';
             if (inputData[1])
-            for(const i in inputData[1])
+            for (const i in inputData[1])
             {
                 if (keyIsDown(i, 1))
                     buttonsPressed += i + ' ' ;

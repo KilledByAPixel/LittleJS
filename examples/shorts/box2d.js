@@ -10,7 +10,7 @@ async function gameInit()
     groundObject.addBox(vec2(100,2));
 
     // add some random objects
-    for(let i=50; i--;)
+    for (let i=50; i--;)
     {
         const o = new Box2dObject(randInCircle(5), vec2(), 0, 0, randColor());
         randInt(2) ? o.addCircle(rand(1,2)) : o.addRandomPoly(rand(1,2));

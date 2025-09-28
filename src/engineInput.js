@@ -550,7 +550,7 @@ function touchGamepadRender()
     }
     else // draw cross shaped gamepad
     {
-        for(let i=10; i--;)
+        for (let i=10; i--;)
         {
             const angle = i*PI/4;
             context.arc(leftCenter.x, leftCenter.y,touchGamepadSize*.6, angle + PI/8, angle + PI/8);

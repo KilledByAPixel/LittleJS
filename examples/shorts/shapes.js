@@ -1,10 +1,10 @@
 function gameRender()
 {
     // polygon shapes
-    for(let j=3; j<7; ++j)
+    for (let j=3; j<7; ++j)
     {
         let points = [];
-        for(let i=0; i<j; ++i)
+        for (let i=0; i<j; ++i)
         {
             let angle = i * Math.PI * 2 / j;
             points.push(vec2(j*4-18,0).add(vec2(Math.sin(angle), Math.cos(angle))));

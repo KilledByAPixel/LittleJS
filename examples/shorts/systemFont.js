@@ -6,7 +6,7 @@ function gameRender()
 
     // show every character in the system font
     let s = '';
-    for(let i=32; i<128; ++i)
+    for (let i=32; i<128; ++i)
     {
         if (i%32 == 0)
             s += '\n';

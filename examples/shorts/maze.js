@@ -2,7 +2,7 @@ function generateMaze(size)
 {
     const maze = [], w = size.x, h = size.y;
     maze[1 + w] = 1; // start point
-    for(let k=w*h*9|0; k--;)
+    for (let k=w*h*9|0; k--;)
     {
         // get a random position on odd coordinates
         const jx = randInt(w/2-(w%2?0:2)|0)*2 + 1;

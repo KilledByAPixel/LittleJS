@@ -423,7 +423,7 @@ function zzfxG
         repeatTime = repeatTime * sampleRate | 0;
 
     // generate waveform
-    for(length = attack + decay + sustain + release + delay | 0;
+    for (length = attack + decay + sustain + release + delay | 0;
         i < length; b[i++] = s * volume)                   // sample
     {
         if (!(++crush%(bitCrush*100|0)))                   // bit crush

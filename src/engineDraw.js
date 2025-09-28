@@ -739,7 +739,7 @@ class FontImage
         (text+'').split('\n').forEach((line, i)=>
         {
             const centerOffset = center ? line.length * size.x * scale / 2 |0 : 0;
-            for(let j=line.length; j--;)
+            for (let j=line.length; j--;)
             {
                 // draw each character
                 let charCode = line[j].charCodeAt(0);

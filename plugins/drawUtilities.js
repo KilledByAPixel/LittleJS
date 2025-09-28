@@ -49,7 +49,7 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
 
     // center
     drawTile(pos, centerSize, centerTile, color, angle, false, additiveColor, useWebGL, screenSpace, context);
-    for(let i=4; i--;)
+    for (let i=4; i--;)
     {
         // sides
         const horizontal = i%2;
@@ -58,7 +58,7 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
         const sideTile = centerTile.offset(startTile.size.multiply(vec2(i==1?1:i==3?-1:0,i==0?-flip:i==2?flip:0)))
         drawTile(pos.add(sidePos.rotate(rotateAngle)), sideSize, sideTile, color, angle, false, additiveColor, useWebGL, screenSpace, context);
     }
-    for(let i=4; i--;)
+    for (let i=4; i--;)
     {
         // corners
         const flipX = i>1;
@@ -111,7 +111,7 @@ function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor
 
     // center
     drawTile(pos, centerSize, centerTile, color, angle, false, additiveColor, useWebGL, screenSpace, context);
-    for(let i=4; i--;)
+    for (let i=4; i--;)
     {
         // sides
         const a = angle + i*PI/2;
@@ -120,7 +120,7 @@ function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor
         const sideSize = vec2(horizontal ? centerSize.y : centerSize.x, borderSize);
         drawTile(pos.add(sidePos.rotate(rotateAngle)), sideSize, sideTile, color, a, false, additiveColor, useWebGL, screenSpace, context);
     }
-    for(let i=4; i--;)
+    for (let i=4; i--;)
     {
         // corners
         const a = angle + i*PI/2;

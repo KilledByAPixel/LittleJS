@@ -33,9 +33,9 @@ class PianoKey extends EngineObject
 function gameInit()
 {
     // create piano keyboard
-    for(let i=15; i--;)
+    for (let i=15; i--;)
         keys.unshift(new PianoKey(vec2(i-7,0), vec2(1,4), [0,2,4,5,7,9,11][i%7]+(i/7|0)*12, 1));
-    for(let i=10; i--;)
+    for (let i=10; i--;)
         keys.unshift(new PianoKey(vec2([1,2,4,5,6][i%5]+(i/5|0)*7-7.5,0), vec2(1,2), [1,3,6,8,10][i%5]+(i/5|0)*12));
 }
 

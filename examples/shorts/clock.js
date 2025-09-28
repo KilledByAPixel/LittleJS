@@ -1,7 +1,7 @@
 function gameRender()
 {
     // draw background
-    for(let i=12; i--;)
+    for (let i=12; i--;)
     {
         const a = i/6*PI;
         const pos = vec2(0,7).rotate(a);

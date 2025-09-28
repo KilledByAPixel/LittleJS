@@ -66,7 +66,7 @@ class UISystemPlugin
 
         function updateInvisible(o)
         {
-            for(const c of o.children)
+            for (const c of o.children)
                 updateInvisible(c);
             o.updateInvisible();
         }
@@ -82,7 +82,7 @@ class UISystemPlugin
                     if (o.parent)
                         o.pos = o.localPos.add(o.parent.pos);
                     // update in reverse order to detect mouse enter/leave
-                    for(let i=o.children.length; i--;)
+                    for (let i=o.children.length; i--;)
                         updateObject(o.children[i]);
                     o.update();
                 }
@@ -100,7 +100,7 @@ class UISystemPlugin
                 if (o.parent)
                     o.pos = o.localPos.add(o.parent.pos);
                 o.render();
-                for(const c of o.children)
+                for (const c of o.children)
                     renderObject(c);
             }
             uiSystem.uiObjects.forEach(o=> o.parent || renderObject(o));

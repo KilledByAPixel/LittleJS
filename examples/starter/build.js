@@ -36,7 +36,7 @@ fs.rmSync(`${PROGRAM_NAME}.zip`, { force: true });
 fs.mkdirSync(BUILD_FOLDER);
 
 // copy data files
-for(const file of dataFiles)
+for (const file of dataFiles)
     fs.copyFileSync(file, `${BUILD_FOLDER}/${file}`);
 
 Build

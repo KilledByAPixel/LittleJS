@@ -185,7 +185,7 @@ export class Sky extends LJS.EngineObject
         // fill background with a gradient
         const canvas = LJS.mainCanvas;
         const gradientDelta = 5;
-        for(let y=0; y<canvas.height; y+=gradientDelta)
+        for (let y=0; y<canvas.height; y+=gradientDelta)
         {
             // draw horizontal lines to create a gradient
             const color = this.skyColor.lerp(this.horizonColor, y/canvas.height);
@@ -227,7 +227,7 @@ export class ParallaxLayer extends LJS.CanvasLayer
         // create a gradient for the mountains
         const topColor = GameLevel.levelColor.mutate(.2).lerp(GameLevel.sky.skyColor, .8 - depth*.15);
         const bottomColor = GameLevel.levelColor.subtract(LJS.CLEAR_WHITE).mutate(.2);
-        for(let i = canvasSize.y; i--;)
+        for (let i = canvasSize.y; i--;)
         {
             // draw a 1 pixel gradient line on the left side of the canvas
             const p = i/canvasSize.y;
@@ -241,7 +241,7 @@ export class ParallaxLayer extends LJS.CanvasLayer
         const slopeRange = 1;   // max slope of the mountains
         const startGroundLevel = canvasSize.y/2;
         let y = startGroundLevel, groundSlope = LJS.rand(-slopeRange, slopeRange);
-        for(let x=canvasSize.x; x--;)
+        for (let x=canvasSize.x; x--;)
         {
             // pull slope towards start ground level
             y += groundSlope -= (y-startGroundLevel)*levelness;

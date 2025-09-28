@@ -138,8 +138,8 @@ function gameInit()
     LJS.setCanvasFixedSize(vec2(1280, 720)); // use a 720p fixed size canvas
     
     // create bricks
-    for(let x=2;  x<=levelSize.x-2; x+=2)
-    for(let y=12; y<=levelSize.y-2; y+=1)
+    for (let x=2;  x<=levelSize.x-2; x+=2)
+    for (let y=12; y<=levelSize.y-2; y+=1)
         new Brick(vec2(x,y), vec2(2,1)); // create a brick
 
     // create player paddle
