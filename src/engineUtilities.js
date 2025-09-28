@@ -22,19 +22,17 @@ const PI = Math.PI;
  *  @memberof Utilities */
 function abs(value) { return Math.abs(value); }
 
-/** Returns lowest of two values passed in
- *  @param {number} valueA
- *  @param {number} valueB
+/** Returns lowest value passed in
+ *  @param {...number} values
  *  @return {number}
  *  @memberof Utilities */
-function min(valueA, valueB) { return Math.min(valueA, valueB); }
+function min(...values) { return Math.min(...values); }
 
-/** Returns highest of two values passed in
- *  @param {number} valueA
- *  @param {number} valueB
+/** Returns highest value passed in
+ *  @param {...number} values
  *  @return {number}
  *  @memberof Utilities */
-function max(valueA, valueB) { return Math.max(valueA, valueB); }
+function max(...values) { return Math.max(...values); }
 
 /** Returns the sign of value passed in
  *  @param {number} value
@@ -211,7 +209,7 @@ async function fetchJSON(url)
  * @return {boolean}
  * @memberof Utilities
  */
-function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
+function isNumber(n) { return typeof n == 'number' && !isNaN(n); }
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -362,12 +360,12 @@ function vec2(x=0, y) { return new Vector2(x, y === undefined ? x : y); }
 function isVector2(v) { return v instanceof Vector2; }
 
 // vector2 asserts
-function ASSERT_VECTOR2_VALID(v) { ASSERT(isVector2(v) && v.isValid(), 'Vector2 is invalid: ' + v); }
-function ASSERT_NUMBER_VALID(n) { ASSERT(isNumber(n), 'Number is invalid: ' + n); }
+function ASSERT_VECTOR2_VALID(v) { ASSERT(isVector2(v) && v.isValid(), 'Vector2 is invalid.', v); }
+function ASSERT_NUMBER_VALID(n) { ASSERT(isNumber(n), 'Number is invalid.', n); }
 function ASSERT_VECTOR2_NORMAL(v)
 {
     ASSERT_VECTOR2_VALID(v);
-    ASSERT(abs(v.lengthSquared()-1) < .01, 'Vector2 is not normal: ' + v); 
+    ASSERT(abs(v.lengthSquared()-1) < .01, 'Vector2 is not normal.', v); 
 }
 
 /** 
@@ -390,7 +388,7 @@ class Vector2
         this.x = x;
         /** @property {number} - Y axis location */
         this.y = y;
-        ASSERT(this.isValid(), 'Constructed Vector2 is invalid: ' + this);
+        ASSERT(this.isValid(), 'Constructed Vector2 is invalid.', this);
     }
 
     /** Sets values of this vector and returns self
@@ -401,7 +399,6 @@ class Vector2
     {
         this.x = x;
         this.y = y;
-        ASSERT_VECTOR2_VALID(this);
         return this;
     }
 
@@ -412,47 +409,27 @@ class Vector2
     /** Returns a copy of this vector plus the vector passed in
      *  @param {Vector2} v - other vector
      *  @return {Vector2} */
-    add(v)
-    {
-        ASSERT_VECTOR2_VALID(v);
-        return new Vector2(this.x + v.x, this.y + v.y);
-    }
+    add(v) { return new Vector2(this.x + v.x, this.y + v.y);}
 
     /** Returns a copy of this vector minus the vector passed in
      *  @param {Vector2} v - other vector
      *  @return {Vector2} */
-    subtract(v)
-    {
-        ASSERT_VECTOR2_VALID(v);
-        return new Vector2(this.x - v.x, this.y - v.y);
-    }
+    subtract(v) { return new Vector2(this.x - v.x, this.y - v.y); }
 
     /** Returns a copy of this vector times the vector passed in
      *  @param {Vector2} v - other vector
      *  @return {Vector2} */
-    multiply(v)
-    {
-        ASSERT_VECTOR2_VALID(v);
-        return new Vector2(this.x * v.x, this.y * v.y);
-    }
+    multiply(v) { return new Vector2(this.x * v.x, this.y * v.y); }
 
     /** Returns a copy of this vector divided by the vector passed in
      *  @param {Vector2} v - other vector
      *  @return {Vector2} */
-    divide(v)
-    {
-        ASSERT_VECTOR2_VALID(v);
-        return new Vector2(this.x / v.x, this.y / v.y);
-    }
+    divide(v) { return new Vector2(this.x / v.x, this.y / v.y); }
 
     /** Returns a copy of this vector scaled by the vector passed in
      *  @param {number} s - scale
      *  @return {Vector2} */
-    scale(s)
-    {
-        ASSERT_NUMBER_VALID(s);
-        return new Vector2(this.x * s, this.y * s);
-    }
+    scale(s) { return new Vector2(this.x * s, this.y * s); }
 
     /** Returns the length of this vector
      * @return {number} */
@@ -465,27 +442,18 @@ class Vector2
     /** Returns the distance from this vector to vector passed in
      * @param {Vector2} v - other vector
      * @return {number} */
-    distance(v)
-    {
-        ASSERT_VECTOR2_VALID(v);
-        return this.distanceSquared(v)**.5;
-    }
+    distance(v) { return this.distanceSquared(v)**.5; }
 
     /** Returns the distance squared from this vector to vector passed in
      * @param {Vector2} v - other vector
      * @return {number} */
-    distanceSquared(v)
-    {
-        ASSERT_VECTOR2_VALID(v);
-        return (this.x - v.x)**2 + (this.y - v.y)**2;
-    }
+    distanceSquared(v) { return (this.x - v.x)**2 + (this.y - v.y)**2; }
 
     /** Returns a new vector in same direction as this one with the length passed in
      * @param {number} [length]
      * @return {Vector2} */
     normalize(length=1)
     {
-        ASSERT_NUMBER_VALID(length);
         const l = this.length();
         return l ? this.scale(length/l) : new Vector2(0, length);
     }
@@ -495,7 +463,6 @@ class Vector2
      * @return {Vector2} */
     clampLength(length=1)
     {
-        ASSERT_NUMBER_VALID(length);
         const l = this.length();
         return l > length ? this.scale(length/l) : this;
     }
@@ -503,31 +470,19 @@ class Vector2
     /** Returns the dot product of this and the vector passed in
      * @param {Vector2} v - other vector
      * @return {number} */
-    dot(v)
-    {
-        ASSERT_VECTOR2_VALID(v);
-        return this.x*v.x + this.y*v.y;
-    }
+    dot(v) { return this.x*v.x + this.y*v.y; }
 
     /** Returns the cross product of this and the vector passed in
      * @param {Vector2} v - other vector
      * @return {number} */
-    cross(v)
-    {
-        ASSERT_VECTOR2_VALID(v);
-        return this.x*v.y - this.y*v.x;
-    }
+    cross(v) { return this.x*v.y - this.y*v.x; }
 
     /** Returns a copy this vector reflected by the surface normal
      * @param {Vector2} normal - surface normal (should be normalized)
      * @param {number} restitution - how much to bounce, 1 is perfect bounce, 0 is no bounce
      * @return {Vector2} */
     reflect(normal, restitution=1)
-    {
-        ASSERT_VECTOR2_NORMAL(normal);
-        ASSERT_NUMBER_VALID(restitution);
-        return this.subtract(normal.scale((1+restitution)*this.dot(normal)));
-    }
+    { return this.subtract(normal.scale((1+restitution)*this.dot(normal))); }
 
     /** Returns the clockwise angle of this vector, up is angle 0
      * @return {number} */
@@ -550,7 +505,7 @@ class Vector2
      * @param {number} angle
      * @return {Vector2} */
     rotate(angle)
-    { 
+    {
         ASSERT_NUMBER_VALID(angle);
         const c = Math.cos(-angle), s = Math.sin(-angle); 
         return new Vector2(this.x*c - this.y*s, this.x*s + this.y*c);
@@ -565,7 +520,7 @@ class Vector2
         ASSERT_NUMBER_VALID(length);
         direction = mod(direction, 4);
         ASSERT(direction==0 || direction==1 || direction==2 || direction==3,
-            'Vector2.setDirection() direction must be an integer between 0 and 3!');
+            'Vector2.setDirection() direction must be an integer between 0 and 3.');
         return vec2(direction%2 ? direction-1 ? -length : length : 0, 
             direction%2 ? 0 : direction ? -length : length);
     }
@@ -591,10 +546,7 @@ class Vector2
     *  @param {number} [divisor]
     *  @return {Vector2} */
     mod(divisor=1)
-    {
-        ASSERT_NUMBER_VALID(divisor);
-        return new Vector2(mod(this.x, divisor), mod(this.y, divisor));
-    }
+    { return new Vector2(mod(this.x, divisor), mod(this.y, divisor)); }
 
     /** Returns the area this vector covers as a rectangle
      * @return {number} */
@@ -608,17 +560,15 @@ class Vector2
     {
         ASSERT_VECTOR2_VALID(v);
         ASSERT_NUMBER_VALID(percent);
-        return this.add(v.subtract(this).scale(clamp(percent)));
+        const p = clamp(percent);
+        return new Vector2(v.x*p + this.x*(1-p), v.y*p + this.y*(1-p));
     }
 
     /** Returns true if this vector is within the bounds of an array size passed in
      * @param {Vector2} arraySize
      * @return {boolean} */
     arrayCheck(arraySize)
-    {
-        ASSERT_VECTOR2_VALID(arraySize);
-        return this.x >= 0 && this.y >= 0 && this.x < arraySize.x && this.y < arraySize.y;
-    }
+    { return this.x >= 0 && this.y >= 0 && this.x < arraySize.x && this.y < arraySize.y; }
 
     /** Returns this vector expressed as a string
      * @param {number} digits - precision to display
@@ -673,7 +623,7 @@ function hsl(h, s, l, a) { return new Color().setHSLA(h, s, l, a); }
 function isColor(c) { return c instanceof Color; }
 
 // color asserts
-function ASSERT_COLOR_VALID(c) { ASSERT(isColor(c) && c.isValid(), 'Color is invalid: ' + c); }
+function ASSERT_COLOR_VALID(c) { ASSERT(isColor(c) && c.isValid(), 'Color is invalid.', c); }
 
 /** 
  * Color object (red, green, blue, alpha) with some helpful functions
@@ -701,7 +651,7 @@ class Color
         this.b = b;
         /** @property {number} - Alpha */
         this.a = a;
-        ASSERT(this.isValid(), 'Constructed Color is invalid: ' + this);
+        ASSERT(this.isValid(), 'Constructed Color is invalid.', this);
     }
 
     /** Sets values of this color and returns self
@@ -716,7 +666,6 @@ class Color
         this.g = g;
         this.b = b;
         this.a = a;
-        ASSERT_COLOR_VALID(this);
         return this;
     }
 
@@ -727,49 +676,29 @@ class Color
     /** Returns a copy of this color plus the color passed in
      * @param {Color} c - other color
      * @return {Color} */
-    add(c)
-    {
-        ASSERT_COLOR_VALID(c);
-        return new Color(this.r+c.r, this.g+c.g, this.b+c.b, this.a+c.a);
-    }
+    add(c) { return new Color(this.r+c.r, this.g+c.g, this.b+c.b, this.a+c.a); }
 
     /** Returns a copy of this color minus the color passed in
      * @param {Color} c - other color
      * @return {Color} */
-    subtract(c)
-    {
-        ASSERT_COLOR_VALID(c);
-        return new Color(this.r-c.r, this.g-c.g, this.b-c.b, this.a-c.a);
-    }
+    subtract(c) { return new Color(this.r-c.r, this.g-c.g, this.b-c.b, this.a-c.a); }
 
     /** Returns a copy of this color times the color passed in
      * @param {Color} c - other color
      * @return {Color} */
-    multiply(c)
-    {
-        ASSERT_COLOR_VALID(c);
-        return new Color(this.r*c.r, this.g*c.g, this.b*c.b, this.a*c.a);
-    }
+    multiply(c) { return new Color(this.r*c.r, this.g*c.g, this.b*c.b, this.a*c.a); }
 
     /** Returns a copy of this color divided by the color passed in
      * @param {Color} c - other color
      * @return {Color} */
-    divide(c)
-    {
-        ASSERT_COLOR_VALID(c);
-        return new Color(this.r/c.r, this.g/c.g, this.b/c.b, this.a/c.a);
-    }
+    divide(c) { return new Color(this.r/c.r, this.g/c.g, this.b/c.b, this.a/c.a); }
 
     /** Returns a copy of this color scaled by the value passed in, alpha can be scaled separately
      * @param {number} scale
      * @param {number} [alphaScale=scale]
      * @return {Color} */
     scale(scale, alphaScale=scale) 
-    {
-        ASSERT_NUMBER_VALID(scale);
-        ASSERT_NUMBER_VALID(alphaScale);
-        return new Color(this.r*scale, this.g*scale, this.b*scale, this.a*alphaScale);
-    }
+    { return new Color(this.r*scale, this.g*scale, this.b*scale, this.a*alphaScale); }
 
     /** Returns a copy of this color clamped to the valid range between 0 and 1
      * @return {Color} */
@@ -783,7 +712,12 @@ class Color
     {
         ASSERT_COLOR_VALID(c);
         ASSERT_NUMBER_VALID(percent);
-        return this.add(c.subtract(this).scale(clamp(percent)));
+        const p = clamp(percent);
+        return new Color(
+            c.r*p + this.r*(1-p), 
+            c.g*p + this.g*(1-p), 
+            c.b*p + this.b*(1-p), 
+            c.a*p + this.a*(1-p));
     }
 
     /** Sets this color given a hue, saturation, lightness, and alpha
@@ -818,20 +752,19 @@ class Color
         const g = clamp(this.g);
         const b = clamp(this.b);
         const a = clamp(this.a);
-        const max = Math.max(r, g, b);
-        const min = Math.min(r, g, b);
-        const l = (max + min) / 2;
-        
+        const maxC = max(r, g, b);
+        const minC = min(r, g, b);
+        const l = (maxC + minC) / 2;
         let h = 0, s = 0;
-        if (max != min)
+        if (maxC != minC)
         {
-            let d = max - min;
-            s = l > .5 ? d / (2 - max - min) : d / (max + min);
-            if (r == max)
+            let d = maxC - minC;
+            s = l > .5 ? d / (2 - maxC - minC) : d / (maxC + minC);
+            if (r == maxC)
                 h = (g - b) / d + (g < b ? 6 : 0);
-            else if (g == max)
+            else if (g == maxC)
                 h = (b - r) / d + 2;
-            else if (b == max)
+            else if (b == maxC)
                 h =  (r - g) / d + 4;
         }
         return [h / 6, s, l, a];
@@ -859,7 +792,7 @@ class Color
      * @return {string} */
     toString(useAlpha = true)      
     {
-        ASSERT(typeof useAlpha === 'boolean', 'Boolean is invalid:' + useAlpha);
+        ASSERT(typeof useAlpha == 'boolean', 'Use alpha boolean is invalid.', useAlpha);
         if (debug && !this.isValid())
             return `#000`;
         const toHex = (c)=> ((c=clamp(c)*255|0)<16 ? '0' : '') + c.toString(16);
@@ -999,7 +932,7 @@ class Timer
      *  @param {number} [timeLeft] - How much time left before the timer elapses in seconds */
     constructor(timeLeft)
     {
-        ASSERT(timeLeft === undefined || isNumber(timeLeft), 'Time is invalid: ' + timeLeft);
+        ASSERT(timeLeft === undefined || isNumber(timeLeft), 'Constructed Timer is invalid.', timeLeft);
         this.time = timeLeft === undefined ? undefined : time + timeLeft;
         this.setTime = timeLeft;
     }
@@ -1008,7 +941,7 @@ class Timer
      *  @param {number} [timeLeft] - How much time left before the timer is elapsed in seconds */
     set(timeLeft=0)
     {
-        ASSERT(isNumber(timeLeft), 'Time is invalid: ' + timeLeft);
+        ASSERT(isNumber(timeLeft), 'Timer is invalid.', timeLeft);
         this.time = time + timeLeft;
         this.setTime = timeLeft;
     }
@@ -1042,5 +975,5 @@ class Timer
     
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {number} */
-    valueOf()               { return this.get(); }
+    valueOf() { return this.get(); }
 }
