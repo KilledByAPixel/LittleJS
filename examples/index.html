@@ -1,7 +1,7 @@
 <!DOCTYPE html><head>
 <title>LittleJS Example Browser</title>
 <link rel=icon type=image/png href=favicon.png>
-<link rel=stylesheet href=style.css?4>
+<link rel=stylesheet href=style.css?5>
 <meta charset=utf-8>
 </head><body>
 <div id=container1>
@@ -21,7 +21,7 @@ Theme:
     <option value=24px>XL</option>
 </select>
 <input type=checkbox id=checkboxLiveEdit checked>Live Edit
-<button id=buttonRefresh onclick=refreshCode()>Refresh</button>
+<input type=checkbox id=checkboxJumpToError>Jump to Errors
 </div> 
 <textarea id=textareaCode oninput=codeInput() spellcheck=false></textarea>
 <textarea id=textareaError readonly spellcheck=false></textarea>
@@ -31,10 +31,11 @@ Theme:
 <div id=iframeContainer></div>
 <div>
 <input id=inputSearch placeholder='Search examples...' oninput=filterExamples() onkeydown='if(event.key=="Escape")filterExamples(1)'> 
-<button onclick=filterExamples(1)>Clear</button>
+<button id=buttonRefresh onclick=refreshCode()>Refresh</button>
 <button id=buttonPause>Pause</button>
 <button id=buttonScreenshot>Screenshot</button>
 <button id=buttonFullscreen>Fullscreen</button>
+<input type=checkbox id=checkboxWebGL checked>WebGL
 </div>
 <select id=selectExample autofocus onchange=setExample() size=2></select>
 </div>
@@ -172,6 +173,7 @@ async function loadFile(filename, largeExample)
     buttonRefresh.disabled = largeExample;
     buttonScreenshot.disabled = largeExample;
     buttonFullscreen.disabled = largeExample;
+    checkboxWebGL.disabled = largeExample;
     
     if (largeExample)
     {
@@ -292,7 +294,13 @@ function setCode(code, textFilename)
         const iframeContent = iframeExample.contentWindow;
         const iframeDocument = iframeContent.document;
 
-        // create error event listeners
+        // intercept errors
+        function getErrorLine(stack)
+        {
+            // try to extract line number from stack trace, look for <anonymous> or injectedScript to find the user code
+            const anonymousMatch = stack.match(/(<anonymous>|injectedScript):(\d+)/);
+            return anonymousMatch ? parseInt(anonymousMatch[2]) : -1;            
+        }
         iframeContent.onerror = (message, source, lineno, colno, error) =>
         {
             let text = message;
@@ -306,18 +314,32 @@ function setCode(code, textFilename)
         iframeContent.onunhandledrejection = (event) => 
         {
             let text = event.reason;
+            setErrorMessage(text);
             if (event.reason && event.reason.stack)
             {
-                text += `\n\n` + event.reason.stack;
-                
-                // try to extract line number from stack trace
-                const lineMatch = event.reason.stack.match(/:(\d+):(\d+)/);
-                setErrorLine(parseInt(lineMatch[1]));
+                text = event.reason.stack;
+                const errorLine = getErrorLine(event.reason.stack);
+                if (errorLine >= 0)
+                    setErrorLine(errorLine);
             }
-            setErrorMessage(text);
         };
 
-        // intercept console methods
+        // intercept asserts
+        const originalAssert = iframeContent.console.assert;
+        iframeContent.console.assert = function (condition, output)
+        {
+           if (!condition)
+           {
+                const stack = (new Error).stack;
+                const errorLine = getErrorLine(stack);
+                if (errorLine >= 0)
+                    setErrorLine(errorLine);
+                setErrorMessage('Assertion failed!\n' + (output || '') + '\n' + stack);
+           }
+            originalAssert.apply(this, arguments);
+        };
+
+        // intercept console prints
         const originalConsole = iframeContent.console;
         function interceptConsole(method)
         {
@@ -331,35 +353,33 @@ function setCode(code, textFilename)
         }
         ['log','info','warn','error','debug'].forEach(f=>interceptConsole(f));
 
-        // intercept asserts
-        const originalAssert = iframeContent.console.assert;
-        iframeContent.console.assert = function (condition, output)
         {
-           if (!condition)
-                setErrorMessage('Assertion failed!\n' + (output || '') + '\n' + (new Error).stack);
-            originalAssert.apply(this, arguments);
-        };
+            // setup buttons
+            buttonScreenshot.onclick = () =>
+            {
+                if (iframeContent.debugScreenshot)
+                    iframeContent.debugScreenshot();
+            }
 
-        buttonScreenshot.onclick = () =>
-        {
-            if (iframeContent.debugScreenshot)
-                iframeContent.debugScreenshot();
+            // pause/resume functionality
+            buttonPause.onclick = () =>
+            {
+                if (!iframeContent.getPaused || !iframeContent.setPaused)
+                    return;
+                
+                const paused = !iframeContent.getPaused();
+                iframeContent.setPaused(paused);
+                buttonPause.textContent = paused ? 'Resume' : 'Pause';
+            }
+            buttonPause.textContent = 'Pause';
+
+            // fullscreen functionality
+            buttonFullscreen.onclick = ()=> iframeContent.toggleFullscreen();
         }
 
-        // pause/resume functionality
-        buttonPause.onclick = () =>
-        {
-            if (!iframeContent.getPaused || !iframeContent.setPaused)
-                return;
-            
-            const paused = !iframeContent.getPaused();
-            iframeContent.setPaused(paused);
-            buttonPause.textContent = paused ? 'Resume' : 'Pause';
-        }
-        buttonPause.textContent = 'Pause';
-
-        // fullscreen functionality
-        buttonFullscreen.onclick = ()=> iframeContent.toggleFullscreen();
+        // set WebGL based on checkbox
+        iframeContent.setGLEnable(checkboxWebGL.checked);
+        checkboxWebGL.onchange = ()=> iframeContent.setGLEnable(checkboxWebGL.checked);
 
         // create a script element that overrides the default functions
         const overrideScript = iframeDocument.createElement('script');
@@ -435,13 +455,44 @@ function clearErrorLine()
 
 function setErrorLine(lineNumber)
 {
-    if (!codeMirror || !(lineNumber > 0))
+    if (!lineNumber || lineNumber <= 0)
         return;
 
-    clearErrorLine();
-    --lineNumber; // codeMirror uses 0-based line numbers
-    errorLineMarker = codeMirror.getDoc().addLineClass(lineNumber, 'background', 'error-line');
-    //codeMirror.scrollIntoView({line: lineNumber});
+    if (codeMirror)
+    {
+        clearErrorLine();
+        --lineNumber; // codeMirror uses 0-based line numbers
+        errorLineMarker = codeMirror.getDoc().addLineClass(lineNumber, 'background', 'error-line');
+        if (checkboxJumpToError.checked)
+        {
+            codeMirror.scrollIntoView({line: lineNumber, ch: 0});
+            codeMirror.focus();
+        }
+    }
+    else if (textareaCode && checkboxJumpToError.checked)
+    {
+        // for textarea, calculate character position and set cursor
+        const lines = textareaCode.value.split('\n');
+        let charPos = 0;
+        for (let i = 0; i < lineNumber - 1 && i < lines.length; i++)
+        {
+            charPos += lines[i].length + 1; // +1 for newline character
+        }
+        textareaCode.setSelectionRange(charPos, charPos);
+        if (checkboxJumpToError.checked)
+        {
+            const line = textareaCode.value.split('\n');
+            lineNumber = Math.min(Math.max(0, lineNumber-1), lines.length-1);
+
+            // select error line in textarea
+            let start = 0;
+            for (let i = 0; i < lineNumber; i++) 
+                start += lines[i].length + 1;
+            textareaCode.selectionStart = start;
+            textareaCode.selectionEnd = start + lines[lineNumber].length;
+            textareaCode.focus();
+        }
+    }
 }
 
 function setErrorMessage(message)
@@ -498,8 +549,8 @@ for (const theme of themes)
 // Set the saved font size
 selectFontSize.value = savedFontSize;
 textareaCode.style.fontSize = savedFontSize;
-addCodeMirrorElement('codemirror.min.css', 'link', 'stylesheet');
 addCodeMirrorElement('codemirror.min.js', 'script').onload = ()=>
+addCodeMirrorElement('codemirror.min.css', 'link', 'stylesheet').onload = ()=>
 addCodeMirrorElement('addon/edit/matchbrackets.js', 'script').onload = ()=> 
 addCodeMirrorElement('mode/javascript/javascript.min.js', 'script').onload = ()=> 
 initCodeMirror();
@@ -525,7 +576,7 @@ function addCodeMirrorElement(filename, type, rel)
     // add element for code mirror
     const e = document.createElement(type);
     e.rel = rel;
-    filename = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/' + filename;
+    filename = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/' + filename;
     if (type == 'link')
         e.href = filename;
     else

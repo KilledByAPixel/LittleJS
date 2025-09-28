@@ -111,8 +111,7 @@ button:disabled
 }
 .error-line
 {
-    background-color: rgba(255, 0, 0, 0.15) !important;
-    border-left: 3px solid #ff0000 !important;
+    background-color: #f004 !important;
 }
 
 /*  LittleJS CodeMirror Theme */
