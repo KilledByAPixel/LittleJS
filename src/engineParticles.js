@@ -211,7 +211,7 @@ class ParticleEmitter extends EngineObject
         particle.fadeRate      = this.fadeRate;
         particle.damping       = this.damping;
         particle.angleDamping  = this.angleDamping;
-        particle.elasticity    = this.elasticity;
+        particle.restitution    = this.restitution;
         particle.friction      = this.friction;
         particle.gravityScale  = this.gravityScale;
         particle.collideTiles  = this.collideTiles;

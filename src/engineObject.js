@@ -69,8 +69,8 @@ class EngineObject
         this.damping      = objectDefaultDamping;
         /** @property {Number} [angleDamping=objectDefaultAngleDamping] - How much to slow down rotation each frame (0-1) */
         this.angleDamping = objectDefaultAngleDamping;
-        /** @property {Number} [elasticity=objectDefaultElasticity]     - How bouncy the object is when colliding (0-1) */
-        this.elasticity   = objectDefaultElasticity;
+        /** @property {Number} [restitution=objectDefaultRestitution]     - How bouncy the object is when colliding (0-1) */
+        this.restitution   = objectDefaultRestitution;
         /** @property {Number} [friction=objectDefaultFriction]         - How much friction to apply when sliding (0-1) */
         this.friction     = objectDefaultFriction;
         /** @property {Number}  - How much to scale gravity by for this object */
@@ -220,7 +220,7 @@ class EngineObject
                 const smallStepUp = (oldPos.y - o.pos.y)*2 > sizeBoth.y + gravity.y; // prefer to push up if small delta
                 const isBlockedX = abs(oldPos.y - o.pos.y)*2 < sizeBoth.y;
                 const isBlockedY = abs(oldPos.x - o.pos.x)*2 < sizeBoth.x;
-                const elasticity = max(this.elasticity, o.elasticity);
+                const restitution = max(this.restitution, o.restitution);
                 
                 if (smallStepUp || isBlockedY || !isBlockedX) // resolve y collision
                 {
@@ -233,7 +233,7 @@ class EngineObject
                             this.groundObject = o;
 
                         // bounce if other object is fixed or grounded
-                        this.velocity.y *= -elasticity;
+                        this.velocity.y *= -restitution;
                     }
                     else if (o.mass)
                     {
@@ -246,9 +246,9 @@ class EngineObject
                         const elastic1 = o.velocity.y * (o.mass - this.mass) / (this.mass + o.mass)
                             + this.velocity.y * 2 * this.mass / (this.mass + o.mass);
 
-                        // lerp between elastic or inelastic based on elasticity
-                        this.velocity.y = lerp(elasticity, inelastic, elastic0);
-                        o.velocity.y = lerp(elasticity, inelastic, elastic1);
+                        // lerp between elastic or inelastic based on restitution
+                        this.velocity.y = lerp(inelastic, elastic0, restitution);
+                        o.velocity.y = lerp(inelastic, elastic1, restitution);
                     }
                 }
                 if (!smallStepUp && isBlockedX) // resolve x collision
@@ -266,12 +266,12 @@ class EngineObject
                         const elastic1 = o.velocity.x * (o.mass - this.mass) / (this.mass + o.mass)
                             + this.velocity.x * 2 * this.mass / (this.mass + o.mass);
 
-                        // lerp between elastic or inelastic based on elasticity
-                        this.velocity.x = lerp(elasticity, inelastic, elastic0);
-                        o.velocity.x = lerp(elasticity, inelastic, elastic1);
+                        // lerp between elastic or inelastic based on restitution
+                        this.velocity.x = lerp(inelastic, elastic0, restitution);
+                        o.velocity.x = lerp(inelastic, elastic1, restitution);
                     }
                     else // bounce if other object is fixed
-                        this.velocity.x *= -elasticity;
+                        this.velocity.x *= -restitution;
                 }
                 debugOverlay && debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f0f');
             }
@@ -291,7 +291,7 @@ class EngineObject
                     if (isBlockedY || !isBlockedX)
                     {
                         // bounce velocity
-                        this.velocity.y *= -this.elasticity;
+                        this.velocity.y *= -this.restitution;
 
                         // set if landed on ground
                         if (this.groundObject = wasMovingDown)
@@ -311,7 +311,7 @@ class EngineObject
                     {
                         // move to previous position and bounce
                         this.pos.x = oldPos.x;
-                        this.velocity.x *= -this.elasticity;
+                        this.velocity.x *= -this.restitution;
                     }
                     debugOverlay && debugPhysics && debugRect(this.pos, this.size, '#f00');
                 }

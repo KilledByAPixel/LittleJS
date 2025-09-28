@@ -188,7 +188,7 @@ function inputInit()
 
     onkeyup = (e)=>
     {
-        inputData[0][e.code] = 4;
+        inputData[0][e.code] = (inputData[0][e.code]&2) | 4;
         if (inputWASDEmulateDirection)
             inputData[0][remapKey(e.code)] = 4;
     }

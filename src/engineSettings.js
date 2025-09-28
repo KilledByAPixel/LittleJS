@@ -128,7 +128,7 @@ let objectDefaultAngleDamping = 1;
  *  @type {Number}
  *  @default
  *  @memberof Settings */
-let objectDefaultElasticity = 0;
+let objectDefaultRestitution = 0;
 
 /** How much to slow when touching (0-1)
  *  @type {Number}
@@ -363,9 +363,9 @@ function setObjectDefaultDamping(damp) { objectDefaultDamping = damp; }
 function setObjectDefaultAngleDamping(damp) { objectDefaultAngleDamping = damp; }
 
 /** Set how much to bounce when a collision occur
- *  @param {Number} elasticity
+ *  @param {Number} restitution
  *  @memberof Settings */
-function setObjectDefaultElasticity(elasticity) { objectDefaultElasticity = elasticity; }
+function setObjectDefaultRestitution(restitution) { objectDefaultRestitution = restitution; }
 
 /** Set how much to slow when touching
  *  @param {Number} friction
