@@ -262,7 +262,7 @@ export class ParallaxLayer extends LJS.CanvasLayer
         const levelCenter = GameLevel.levelSize.scale(.5);
         const cameraDeltaFromCenter = LJS.cameraPos.subtract(levelCenter).divide(levelCenter.scale(-1).divide(parallax));
         const scale = distance/LJS.cameraScale;
-        const positonOffset = vec2(0, 3-depth);
+        const positonOffset = vec2(0, 2-depth);
         const cameraOffset = cameraDeltaFromCenter.scale(1/LJS.cameraScale);
         this.pos = LJS.cameraPos.add(positonOffset).add(cameraOffset);
         this.size = this.canvasSize.scale(scale);
