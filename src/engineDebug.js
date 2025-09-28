@@ -66,13 +66,13 @@ function setDebugKey(key) { debugKey = key; }
 // Debug helper functions
 
 /** Asserts if the expression is false, does not do anything in release builds
- *  @param {Boolean} assert
- *  @param {Object} [output]
+ *  @param {boolean} assert 
+ *  @param {...Object} [output] - error message output
  *  @memberof Debug */
-function ASSERT(assert, output) 
+function ASSERT(assert, ...output) 
 {
     if (enableAsserts)
-        output ? console.assert(assert, output) : console.assert(assert);
+        console.assert(assert, ...output);
 }
 
 /** Draw a debug rectangle in world space

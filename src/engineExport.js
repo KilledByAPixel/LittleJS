@@ -150,13 +150,14 @@ export {
 	isIntersecting,
 	wave,
 	formatTime,
+	fetchJSON,
 
 	// Random
 	rand,
 	randInt,
 	randSign,
 	randInCircle,
-	randVector,
+	randVec2,
 	randColor,
 
 	// Utility Classes
@@ -168,10 +169,14 @@ export {
 	rgb,
 	hsl,
 	isColor,
+	isVector2,
+	isNumber,
 
 	// Default Colors
 	WHITE,
+	CLEAR_WHITE,
 	BLACK,
+	CLEAR_BLACK,
 	GRAY,
 	RED,
 	ORANGE,

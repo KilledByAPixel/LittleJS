@@ -206,7 +206,7 @@ class EngineObject
                     const deltaPos = oldPos.subtract(o.pos);
                     const length = deltaPos.length();
                     const pushAwayAccel = .001; // push away if already overlapping
-                    const velocity = length < .01 ? randVector(pushAwayAccel) : deltaPos.scale(pushAwayAccel/length);
+                    const velocity = length < .01 ? randVec2(pushAwayAccel) : deltaPos.scale(pushAwayAccel/length);
                     this.velocity = this.velocity.add(velocity);
                     if (o.mass) // push away if not fixed
                         o.velocity = o.velocity.subtract(velocity);
