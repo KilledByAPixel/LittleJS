@@ -344,7 +344,12 @@ function setHeadlessMode(headless) { headlessMode = headless; }
 /** Set if webgl rendering is enabled
  *  @param {boolean} enable
  *  @memberof Settings */
-function setGLEnable(enable) { glEnable = enable; }
+function setGLEnable(enable)
+{
+    glEnable = enable;
+    if (glCanvas) // hide glCanvas if webgl is disabled
+        glCanvas.style.visibility = enable ? 'visible' : 'hidden';
+}
 
 /** Set default size of tiles in pixels
  *  @param {Vector2} size
