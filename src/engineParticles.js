@@ -209,10 +209,17 @@ class ParticleEmitter extends EngineObject
         const particle = new Particle(pos, this.tileInfo, angle, colorStart, colorEnd, particleTime, sizeStart, sizeEnd, this.fadeRate, this.additive,  this.trailScale, this.localSpace && this, this.particleDestroyCallback);
         particle.velocity      = vec2().setAngle(velocityAngle, speed);
         particle.angleVelocity = angleSpeed;
+        if (!this.localSpace)
+        {
+            // apply emitter velocity to particle
+            particle.velocity.x += this.velocity.x;
+            particle.velocity.y += this.velocity.y;
+            particle.angleVelocity += this.angleVelocity;
+        }
         particle.fadeRate      = this.fadeRate;
         particle.damping       = this.damping;
         particle.angleDamping  = this.angleDamping;
-        particle.restitution    = this.restitution;
+        particle.restitution   = this.restitution;
         particle.friction      = this.friction;
         particle.gravityScale  = this.gravityScale;
         particle.collideTiles  = this.collideTiles;
