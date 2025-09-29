@@ -142,7 +142,7 @@ class Medal
         context.save();
         context.beginPath();
         context.fillStyle = new Color(.9,.9,.9).toString();
-        context.strokeStyle = new Color(0,0,0).toString();
+        context.strokeStyle = BLACK.toString();
         context.lineWidth = 3;
         context.rect(x, y, width, height);
         context.fill();
@@ -159,11 +159,11 @@ class Medal
         const descriptionSize = height*.3;
         const pos = vec2(x + medalDisplayIconSize + 2*gap.x, y + gap.y*2 + nameSize/2);
         const textWidth = width - medalDisplayIconSize - 3*gap.x;
-        drawTextScreen(this.name, pos, nameSize, new Color(0,0,0), 0, undefined, 'left', undefined, textWidth);
+        drawTextScreen(this.name, pos, nameSize, BLACK, 0, undefined, 'left', undefined, textWidth);
 
         // draw the description
         pos.y = y + height - gap.y*2 - descriptionSize/2;
-        drawTextScreen(this.description, pos, descriptionSize, new Color(0,0,0), 0, undefined, 'left', undefined, textWidth);
+        drawTextScreen(this.description, pos, descriptionSize, BLACK, 0, undefined, 'left', undefined, textWidth);
         context.restore();
     }
 
@@ -177,7 +177,7 @@ class Medal
         if (this.image)
             overlayContext.drawImage(this.image, pos.x-size/2, pos.y-size/2, size, size);
         else
-            drawTextScreen(this.icon, pos, size*.7, new Color(0,0,0));
+            drawTextScreen(this.icon, pos, size*.7, BLACK);
     }
  
     // Get local storage key used by the medal
