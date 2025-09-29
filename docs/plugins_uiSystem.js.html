@@ -68,7 +68,7 @@ class UISystemPlugin
 
         function updateInvisible(o)
         {
-            for(const c of o.children)
+            for (const c of o.children)
                 updateInvisible(c);
             o.updateInvisible();
         }
@@ -84,7 +84,7 @@ class UISystemPlugin
                     if (o.parent)
                         o.pos = o.localPos.add(o.parent.pos);
                     // update in reverse order to detect mouse enter/leave
-                    for(let i=o.children.length; i--;)
+                    for (let i=o.children.length; i--;)
                         updateObject(o.children[i]);
                     o.update();
                 }
@@ -102,7 +102,7 @@ class UISystemPlugin
                 if (o.parent)
                     o.pos = o.localPos.add(o.parent.pos);
                 o.render();
-                for(const c of o.children)
+                for (const c of o.children)
                     renderObject(c);
             }
             uiSystem.uiObjects.forEach(o=> o.parent || renderObject(o));
@@ -159,7 +159,7 @@ class UISystemPlugin
     *  @param {boolean}  [mirror] */
     drawTile(pos, size, tileInfo, color=uiSystem.defaultColor, angle=0, mirror=false)
     {
-        drawTile(pos, size, tileInfo, color, angle, mirror, BLACK, false, true, uiSystem.uiContext);
+        drawTile(pos, size, tileInfo, color, angle, mirror, CLEAR_BLACK, false, true, uiSystem.uiContext);
     }
 
     /** Draw text to the UI context

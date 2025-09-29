@@ -54,6 +54,16 @@ let drawCanvas;
  *  @memberof Draw */
 let drawContext;
 
+/** Offscreen canvas that can be used for image processing
+ *  @type {OffscreenCanvas}
+ *  @memberof Draw */
+let workCanvas;
+
+/** Offscreen canvas that can be used for image processing
+ *  @type {OffscreenCanvasRenderingContext2D}
+ *  @memberof Draw */
+let workContext;
+
 /** The size of the main canvas (and other secondary canvases) 
  *  @type {Vector2}
  *  @memberof Draw */
@@ -73,10 +83,10 @@ let drawCount;
  * Create a tile info object using a grid based system
  * - This can take vecs or floats for easier use and conversion
  * - If an index is passed in, the tile size and index will determine the position
- * @param {Vector2|number} [pos=0]                - Index of tile in sheet
+ * @param {Vector2|number} [pos=0] - Index of tile in sheet
  * @param {Vector2|number} [size=tileSizeDefault] - Size of tile in pixels
- * @param {number} [textureIndex]                   - Texture index to use
- * @param {number} [padding]                        - How many pixels padding around tiles
+ * @param {number} [textureIndex] - Texture index to use
+ * @param {number} [padding] - How many pixels padding around tiles
  * @return {TileInfo}
  * @example
  * tile(2)                       // a tile at index 2 using the default tile size of 16
@@ -203,55 +213,7 @@ class TextureInfo
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
-/** Convert from screen to world space coordinates
- *  @param {Vector2} screenPos
- *  @return {Vector2}
- *  @memberof Draw */
-function screenToWorld(screenPos)
-{
-    let cameraPosRelativeX = (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale;
-    let cameraPosRelativeY = (screenPos.y - mainCanvasSize.y/2 + .5) / -cameraScale;
-    if (cameraAngle) 
-    {
-        // apply camera rotation
-        const cos = Math.cos(-cameraAngle), sin = Math.sin(-cameraAngle);
-        const rotatedX = cameraPosRelativeX * cos - cameraPosRelativeY * sin;
-        const rotatedY = cameraPosRelativeX * sin + cameraPosRelativeY * cos;
-        cameraPosRelativeX = rotatedX;
-        cameraPosRelativeY = rotatedY;
-    }
-    return new Vector2(cameraPosRelativeX + cameraPos.x, cameraPosRelativeY + cameraPos.y);
-}
-
-/** Convert from world to screen space coordinates
- *  @param {Vector2} worldPos
- *  @return {Vector2}
- *  @memberof Draw */
-function worldToScreen(worldPos)
-{
-    let cameraPosRelativeX = worldPos.x - cameraPos.x;
-    let cameraPosRelativeY = worldPos.y - cameraPos.y;
-    if (cameraAngle)
-    {
-        // apply inverse camera rotation
-        const cos = Math.cos(cameraAngle), sin = Math.sin(cameraAngle);
-        const rotatedX = cameraPosRelativeX * cos - cameraPosRelativeY * sin;
-        const rotatedY = cameraPosRelativeX * sin + cameraPosRelativeY * cos;
-        cameraPosRelativeX = rotatedX;
-        cameraPosRelativeY = rotatedY;
-    }
-    return new Vector2
-    (
-        cameraPosRelativeX *  cameraScale + mainCanvasSize.x/2 - .5,
-        cameraPosRelativeY * -cameraScale + mainCanvasSize.y/2 - .5
-    );
-}
-
-/** Get the camera's visible area in world space
- *  @return {Vector2}
- *  @memberof Draw */
-function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
+// Drawing functions
 
 /** Draw textured tile centered in world space, with color applied if using WebGL
  *  @param {Vector2} pos                        - Center of the tile in world space
@@ -273,6 +235,9 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
     ASSERT(isVector2(size) &amp;&amp; size.isValid(), 'drawTile size should be a vec2');
     ASSERT(isColor(color) &amp;&amp; (!additiveColor || isColor(additiveColor)), 'drawTile color is invalid');
     ASSERT(isNumber(angle), 'drawTile angle should be a number');
+
+    if (color.a &lt;= 0 &amp;&amp; (!additiveColor || additiveColor.a &lt;= 0) || !size.x || !size.y)
+        return; // completely invisible, skip render
 
     const textureInfo = tileInfo &amp;&amp; tileInfo.textureInfo;
     if (useWebGL)
@@ -324,18 +289,15 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
             if (textureInfo)
             {
                 // calculate uvs and render
-                const x = tileInfo.pos.x + tileFixBleedScale;
-                const y = tileInfo.pos.y + tileFixBleedScale;
-                const w = tileInfo.size.x - 2*tileFixBleedScale;
-                const h = tileInfo.size.y - 2*tileFixBleedScale;
-                context.globalAlpha = color.a; // only alpha is supported
-                context.drawImage(textureInfo.image, x, y, w, h, -.5, -.5, 1, 1);
-                context.globalAlpha = 1; // set back to full alpha
+                const x = tileInfo.pos.x,  y = tileInfo.pos.y;
+                const w = tileInfo.size.x, h = tileInfo.size.y;
+                drawImageColor(context, textureInfo.image, x, y, w, h, -.5, -.5, 1, 1, color, additiveColor);
             }
             else
             {
-                // if no tile info, force untextured
-                context.fillStyle = color.toString();
+                // if no tile info, use untextured rect
+                const c = additiveColor ? color.add(additiveColor) : color;
+                context.fillStyle = c.toString();
                 context.fillRect(-.5, -.5, 1, 1);
             }
         }, screenSpace, context);
@@ -348,7 +310,7 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
  *  @param {Color}   [color=(1,1,1,1)]
  *  @param {number}  [angle]
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace=false]
+ *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
@@ -361,73 +323,90 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
  *  @param {Vector2} posB
  *  @param {number}  [thickness]
  *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Vector2} [pos=(0,0)] - Offset to apply
+ *  @param {number}  [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace=false]
+ *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace, context)
+function drawLine(posA, posB, thickness=.1, color, pos=vec2(), angle=0, useWebGL, screenSpace, context)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);
-    drawRect(posA.add(halfDelta), size, color, halfDelta.angle(), useWebGL, screenSpace, context);
+    pos = pos.add(posA.add(halfDelta));
+    angle += halfDelta.angle();
+    drawRect(pos, size, color, angle, useWebGL, screenSpace, context);
 }
 
 /** Draw colored polygon using passed in points
- *  @param {Array&lt;Vector2>}   points - Array of Vector2 points
+ *  @param {Array&lt;Vector2>} points - Array of Vector2 points
  *  @param {Color}   [color=(1,1,1,1)]
- *  @param {number}  [lineWidth=0]
+ *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=(0,0,0,1)]
- *  @param {boolean} [screenSpace=false]
+ *  @param {Vector2} [pos=(0,0)] - Offset to apply
+ *  @param {number}  [angle] - Angle to rotate by
+ *  @param {boolean} [useWebGL] - Webgl not supported
+ *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawPoly(points, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=drawContext)
+function drawPoly(points, color=new Color, lineWidth=0, lineColor=BLACK, pos=vec2(), angle=0, useWebGL=false, screenSpace=false, context=drawContext)
 {
-    ASSERT(isColor(color) &amp;&amp; isColor(lineColor));
-    context.fillStyle = color.toString();
-    context.beginPath();
-    for (const point of screenSpace ? points : points.map(worldToScreen))
-        context.lineTo(point.x, point.y);
-    context.closePath();
-    context.fill();
-    if (lineWidth)
+    ASSERT(isVector2(pos) &amp;&amp; pos.isValid(), 'drawPoly pos should be a vec2');
+    ASSERT(Array.isArray(points), 'drawPoly points should be an array');
+    ASSERT(isColor(color) &amp;&amp; isColor(lineColor), 'drawPoly color is invalid');
+    ASSERT(isNumber(lineWidth), 'drawPoly lineWidth should be a number');
+    ASSERT(isNumber(angle), 'drawPoly angle should be a number');
+    ASSERT(!useWebGL, 'drawPoly webgl not supported');
+    drawCanvas2D(pos, vec2(1), angle, false, context=>
     {
-        context.strokeStyle = lineColor.toString();
-        context.lineWidth = screenSpace ? lineWidth : lineWidth*cameraScale;
-        context.stroke();
-    }
+        context.beginPath();
+        for (const point of points)
+            context.lineTo(point.x, point.y);
+        context.closePath();
+        context.fillStyle = color.toString();
+        context.fill();
+        if (lineWidth)
+        {
+            context.strokeStyle = lineColor.toString();
+            context.lineWidth = lineWidth;
+            context.stroke();
+        }
+    }, screenSpace, context);
 }
 
 /** Draw colored ellipse using passed in point
  *  @param {Vector2} pos
- *  @param {number}  [width=1]
- *  @param {number}  [height=1]
- *  @param {number}  [angle=0]
+ *  @param {Vector2} [size=(1,1)]
  *  @param {Color}   [color=(1,1,1,1)]
- *  @param {number}  [lineWidth=0]
+ *  @param {number}  [angle]
+ *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=(0,0,0,1)]
- *  @param {boolean} [screenSpace=false]
+ *  @param {boolean} [useWebGL] - Webgl not supported
+ *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawEllipse(pos, width=1, height=1, angle=0, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=drawContext)
+function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, lineColor=BLACK, useWebGL=false, screenSpace=false, context=drawContext)
 {
-    ASSERT(isColor(color) &amp;&amp; isColor(lineColor));
-    if (!screenSpace)
+    ASSERT(isVector2(pos) &amp;&amp; pos.isValid(), 'drawEllipse pos should be a vec2');
+    ASSERT(isVector2(size) &amp;&amp; size.isValid(), 'drawEllipse size should be a vec2');
+    ASSERT(isColor(color) &amp;&amp; isColor(lineColor), 'drawEllipse color is invalid');
+    ASSERT(isNumber(angle), 'drawEllipse angle should be a number');
+    ASSERT(isNumber(lineWidth), 'drawEllipse lineWidth should be a number');
+    ASSERT(lineWidth>=0 &amp;&amp; lineWidth &lt; size.x &amp;&amp; lineWidth &lt; size.y, 'drawEllipse invalid lineWidth');
+    ASSERT(!useWebGL, 'drawEllipse webgl not supported');
+    drawCanvas2D(pos, vec2(1), angle, false, context=>
     {
-        pos = worldToScreen(pos);
-        width *= cameraScale;
-        height *= cameraScale;
-        lineWidth *= cameraScale;
-    }
-    context.fillStyle = color.toString();
-    context.beginPath();
-    context.ellipse(pos.x, pos.y, width, height, angle, 0, 9);
-    context.fill();
-    if (lineWidth)
-    {
-        context.strokeStyle = lineColor.toString();
-        context.lineWidth = lineWidth;
-        context.stroke();
-    }
+        context.beginPath();
+        context.ellipse(0, 0, size.y, size.x, 0, 0, 9);
+        context.fillStyle = color.toString();
+        context.fill();
+        if (lineWidth)
+        {
+            context.strokeStyle = lineColor.toString();
+            context.lineWidth = lineWidth;
+            context.stroke();   
+        }
+    }, screenSpace, context);
 }
 
 /** Draw colored circle using passed in point
@@ -436,11 +415,12 @@ function drawEllipse(pos, width=1, height=1, angle=0, color=new Color, lineWidth
  *  @param {Color}   [color=(1,1,1,1)]
  *  @param {number}  [lineWidth=0]
  *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {boolean} [useWebGL] - Webgl not supported
  *  @param {boolean} [screenSpace=false]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=drawContext)
-{ drawEllipse(pos, radius, radius, 0, color, lineWidth, lineColor, screenSpace, context); }
+function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=BLACK, useWebGL=false, screenSpace, context=drawContext)
+{ drawEllipse(pos, vec2(radius), color, 0, lineWidth, lineColor, useWebGL, screenSpace, context); }
 
 /** Draw directly to a 2d canvas context in world space
  *  @param {Vector2}  pos
@@ -466,6 +446,9 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
     drawFunction(context);
     context.restore();
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// Text Drawing Functions
 
 /** Draw text on main canvas in world space
  *  Automatically splits new lines into rows
@@ -515,7 +498,7 @@ function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textA
  *  @param {number}  [maxWidth]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
  *  @memberof Draw */
-function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, maxWidth=undefined, context=overlayContext)
+function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, maxWidth=undefined, context=overlayContext)
 {
     context.fillStyle = color.toString();
     context.strokeStyle = lineColor.toString();
@@ -536,22 +519,67 @@ function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineCol
     });
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Drawing utilities
+
+/** Convert from screen to world space coordinates
+ *  @param {Vector2} screenPos
+ *  @return {Vector2}
+ *  @memberof Draw */
+function screenToWorld(screenPos)
+{
+    let cameraPosRelativeX = (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale;
+    let cameraPosRelativeY = (screenPos.y - mainCanvasSize.y/2 + .5) / -cameraScale;
+    if (cameraAngle) 
+    {
+        // apply camera rotation
+        const cos = Math.cos(-cameraAngle), sin = Math.sin(-cameraAngle);
+        const rotatedX = cameraPosRelativeX * cos - cameraPosRelativeY * sin;
+        const rotatedY = cameraPosRelativeX * sin + cameraPosRelativeY * cos;
+        cameraPosRelativeX = rotatedX;
+        cameraPosRelativeY = rotatedY;
+    }
+    return new Vector2(cameraPosRelativeX + cameraPos.x, cameraPosRelativeY + cameraPos.y);
+}
+
+/** Convert from world to screen space coordinates
+ *  @param {Vector2} worldPos
+ *  @return {Vector2}
+ *  @memberof Draw */
+function worldToScreen(worldPos)
+{
+    let cameraPosRelativeX = worldPos.x - cameraPos.x;
+    let cameraPosRelativeY = worldPos.y - cameraPos.y;
+    if (cameraAngle)
+    {
+        // apply inverse camera rotation
+        const cos = Math.cos(cameraAngle), sin = Math.sin(cameraAngle);
+        const rotatedX = cameraPosRelativeX * cos - cameraPosRelativeY * sin;
+        const rotatedY = cameraPosRelativeX * sin + cameraPosRelativeY * cos;
+        cameraPosRelativeX = rotatedX;
+        cameraPosRelativeY = rotatedY;
+    }
+    return new Vector2
+    (
+        cameraPosRelativeX *  cameraScale + mainCanvasSize.x/2 - .5,
+        cameraPosRelativeY * -cameraScale + mainCanvasSize.y/2 - .5
+    );
+}
+
+/** Get the camera's visible area in world space
+ *  @return {Vector2}
+ *  @memberof Draw */
+function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
+
 /** Enable normal or additive blend mode
  *  @param {boolean} [additive]
- *  @param {boolean} [useWebGL=glEnable]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function setBlendMode(additive=false, useWebGL=glEnable, context)
+function setBlendMode(additive=false, context)
 {
-    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
-    if (useWebGL)
-        glAdditive = additive;
-    else
-    {
-        if (!context)
-            context = drawContext;
-        context.globalCompositeOperation = additive ? 'lighter' : 'source-over';
-    }
+    glAdditive = additive;
+    context ||= drawContext;
+    context.globalCompositeOperation = additive ? 'lighter' : 'source-over';
 }
 
 /** Combines all LittleJS canvases onto the main canvas and clears them
@@ -566,6 +594,102 @@ function combineCanvases()
     // clear canvases
     glClearCanvas();
     overlayCanvas.width |= 0;
+}
+
+/** Helper function to draw an image with color and additive color applied
+ *  This is slower then normal drawImage when color is applied
+    *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
+    *  @param {HTMLImageElement|OffscreenCanvas} image
+    *  @param {number} sx
+    *  @param {number} sy
+    *  @param {number} sWidth
+    *  @param {number} sHeight
+    *  @param {number} dx
+    *  @param {number} dy
+    *  @param {number} dWidth
+    *  @param {number} dHeight
+    *  @param {Color} color
+    *  @param {Color} [additiveColor]
+ *  @memberof Draw */
+function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight, color, additiveColor)
+{
+    function isWhite(c) { return c.r >= 1 &amp;&amp; c.g >= 1 &amp;&amp; c.b >= 1; }
+    function isBlack(c) { return c.r &lt;= 0 &amp;&amp; c.g &lt;= 0 &amp;&amp; c.b &lt;= 0 &amp;&amp; c.a &lt;= 0; }
+    const sx2 = tileFixBleedScale;
+    const sy2 = tileFixBleedScale;
+    const sWidth2  = sWidth  - 2*tileFixBleedScale;
+    const sHeight2 = sHeight - 2*tileFixBleedScale;
+    if (!canvasColorTiles || (additiveColor ? isWhite(color.add(additiveColor)) &amp;&amp; additiveColor.a &lt;= 0 : isWhite(color)))
+    {
+        // white texture with no additive alpha, no need to tint
+        context.globalAlpha = color.a;
+        context.drawImage(image, sx+sx2, sy+sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight); 
+        context.globalAlpha = 1;
+    }
+    else
+    {
+        // copy to offscreen canvas
+        workCanvas.width = sWidth;
+        workCanvas.height = sHeight;
+        workContext.drawImage(image, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
+
+        // tint image using offscreen work context
+        const imageData = workContext.getImageData(0, 0, sWidth, sHeight);
+        const data = imageData.data;
+        if (additiveColor &amp;&amp; !isBlack(additiveColor))
+        {
+            // slower path with additive color
+            const colorMultiply = [color.r, color.g, color.b, color.a];
+            const colorAdd = [additiveColor.r * 255, additiveColor.g * 255, additiveColor.b * 255, additiveColor.a * 255];
+            for (let i = 0; i &lt; data.length; ++i)
+                data[i] = data[i] * colorMultiply[i&amp;3] + colorAdd[i&amp;3] |0;
+            workContext.putImageData(imageData, 0, 0);
+            context.drawImage(workCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight); 
+        }
+        else
+        {
+            // faster path with no additive color
+            for (let i = 0; i &lt; data.length; i+=4)
+            {
+                data[i  ] *= color.r;
+                data[i+1] *= color.g;
+                data[i+2] *= color.b;
+            }
+            workContext.putImageData(imageData, 0, 0);
+            context.globalAlpha = color.a;
+            context.drawImage(workCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight); 
+            context.globalAlpha = 1;
+        }
+    }
+}
+
+
+/** Returns true if fullscreen mode is active
+ *  @return {boolean}
+ *  @memberof Draw */
+function isFullscreen() { return !!document.fullscreenElement; }
+
+/** Toggle fullscreen mode
+ *  @memberof Draw */
+function toggleFullscreen()
+{
+    const rootElement = mainCanvas.parentElement;
+    if (isFullscreen())
+    {
+        if (document.exitFullscreen)
+            document.exitFullscreen();
+    }
+    else if (rootElement.requestFullscreen)
+        rootElement.requestFullscreen();
+}
+
+/** Set the cursor style
+ *  @param {string}  cursorStyle - CSS cursor style (auto, none, crosshair, etc)
+ *  @memberof Draw */
+function setCursor(cursorStyle = 'auto')
+{
+    const rootElement = mainCanvas.parentElement;
+    rootElement.style.cursor = cursorStyle;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -635,7 +759,7 @@ class FontImage
         (text+'').split('\n').forEach((line, i)=>
         {
             const centerOffset = center ? line.length * size.x * scale / 2 |0 : 0;
-            for(let j=line.length; j--;)
+            for (let j=line.length; j--;)
             {
                 // draw each character
                 let charCode = line[j].charCodeAt(0);
@@ -654,35 +778,4 @@ class FontImage
 
         context.restore();
     }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Display functions
-
-/** Returns true if fullscreen mode is active
- *  @return {boolean}
- *  @memberof Draw */
-function isFullscreen() { return !!document.fullscreenElement; }
-
-/** Toggle fullscreen mode
- *  @memberof Draw */
-function toggleFullscreen()
-{
-    const rootElement = mainCanvas.parentElement;
-    if (isFullscreen())
-    {
-        if (document.exitFullscreen)
-            document.exitFullscreen();
-    }
-    else if (rootElement.requestFullscreen)
-        rootElement.requestFullscreen();
-}
-
-/** Set the cursor style
- *  @param {string}  cursorStyle - CSS cursor style (auto, none, crosshair, etc)
- *  @memberof Draw */
-function setCursor(cursorStyle = 'auto')
-{
-    const rootElement = mainCanvas.parentElement;
-    rootElement.style.cursor = cursorStyle;
 }</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="Color.html">Color</a></div><div class="sidebar-section-children"><a href="EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="FontImage.html">FontImage</a></div><div class="sidebar-section-children"><a href="Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="SoundWave.html">SoundWave</a></div><div class="sidebar-section-children"><a href="TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UIScrollbar.html">UIScrollbar</a></div><div class="sidebar-section-children"><a href="UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileCollision.html">TileCollision</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-global"><div>Global</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="global.html#postProcess">postProcess</a></div><div class="sidebar-section-children"><a href="global.html#uiSystem">uiSystem</a></div><div class="sidebar-section-children"><a href="global.html#zzfxM">zzfxM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>

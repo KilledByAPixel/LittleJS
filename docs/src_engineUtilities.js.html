@@ -135,11 +135,12 @@ function isPowerOfTwo(value) { return !(value &amp; (value - 1)); }
  *  @memberof Utilities */
 function nearestPowerOfTwo(value) { return 2**Math.ceil(Math.log2(value)); }
 
-/** Returns true if two axis aligned bounding boxes are overlapping 
+/** Returns true if two axis aligned bounding boxes are overlapping
+ *  this can be used for simple collision detection between objects
  *  @param {Vector2} posA          - Center of box A
  *  @param {Vector2} sizeA         - Size of box A
  *  @param {Vector2} posB          - Center of box B
- *  @param {Vector2} [sizeB=(0,0)] - Size of box B, a point if undefined
+ *  @param {Vector2} [sizeB=(0,0)] - Size of box B, uses a point if undefined
  *  @return {boolean}              - True if overlapping
  *  @memberof Utilities */
 function isOverlapping(posA, sizeA, posB, sizeB=vec2())
@@ -193,10 +194,11 @@ function isIntersecting(start, end, pos, size)
  *  @param {number} [frequency] - Frequency of the wave in Hz
  *  @param {number} [amplitude] - Amplitude (max height) of the wave
  *  @param {number} [t=time]    - Value to use for time of the wave
+ *  @param {number} [offset]    - Value to use for time offset of the wave
  *  @return {number}            - Value waving between 0 and amplitude
  *  @memberof Utilities */
-function wave(frequency=1, amplitude=1, t=time)
-{ return amplitude/2 * (1 - Math.cos(t*frequency*2*PI)); }
+function wave(frequency=1, amplitude=1, t=time, offset=0)
+{ return amplitude/2 * (1 - Math.cos(offset + t*frequency*2*PI)); }
 
 /** Formats seconds to mm:ss style for display purposes 
  *  @param {number} t - time in seconds
@@ -853,9 +855,7 @@ class Color
     /** Checks if this is a valid color
      * @return {boolean} */
     isValid()
-    { 
-        return isNumber(this.r) &amp;&amp; isNumber(this.g) &amp;&amp; isNumber(this.b) &amp;&amp; isNumber(this.a);
-    }
+    { return isNumber(this.r) &amp;&amp; isNumber(this.g) &amp;&amp; isNumber(this.b) &amp;&amp; isNumber(this.a); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

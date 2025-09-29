@@ -34,6 +34,13 @@ class PostProcessPlugin
         postProcess = this;
 
         if (headlessMode) return;
+
+        if (!glEnable)
+        {
+            console.warn('PostProcessPlugin: WebGL not enabled!');
+            return;
+        }
+
         if (!shaderCode) // default shader pass through
             shaderCode = 'void mainImage(out vec4 c,vec2 p){c=texture(iChannel0,p/iResolution.xy);}';
 
