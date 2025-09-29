@@ -279,13 +279,19 @@ declare module "littlejsengine" {
      *  @default Vector2()
      *  @memberof Settings */
     export let canvasFixedSize: Vector2;
-    /** Use nearest neighbor canvas scaling for more pixelated look
-     *  - Must be set before startup to take effect
+    /** Use nearest canvas scaling for more pixelated look
      *  - If enabled sets css image-rendering:pixelated
      *  @type {boolean}
      *  @default
      *  @memberof Settings */
     export let canvasPixelated: boolean;
+    /** Use nearest canvas scaling for more pixelated look
+     *  - If enabled sets css image-rendering:pixelated
+     *  - This defaults to false because text looks better with smoothing
+     *  @type {boolean}
+     *  @default
+     *  @memberof Settings */
+    export let overlayCanvasPixelated: boolean;
     /** Disables texture filtering for crisper pixel art
      *  @type {boolean}
      *  @default
@@ -472,10 +478,17 @@ declare module "littlejsengine" {
      *  @param {Vector2} size
      *  @memberof Settings */
     export function setCanvasFixedSize(size: Vector2): void;
-    /** Use nearest neighbor scaling algorithm for canvas for more pixelated look
+    /** Use nearest scaling algorithm for canvas for more pixelated look
+     *  - If enabled sets css image-rendering:pixelated
      *  @param {boolean} pixelated
      *  @memberof Settings */
     export function setCanvasPixelated(pixelated: boolean): void;
+    /** Use nearest scaling algorithm for canvas for more pixelated look
+     *  - If enabled sets css image-rendering:pixelated
+     *  - This defaults to false because text looks better with smoothing
+     *  @param {boolean} pixelated
+     *  @memberof Settings */
+    export function setOverlayCanvasPixelated(pixelated: boolean): void;
     /** Disables texture filtering for crisper pixel art
      *  @param {boolean} pixelated
      *  @memberof Settings */

@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.13.3';
+const engineVersion = '1.13.4';
 
 /** Frames per second to update
  *  @type {number}
@@ -300,7 +300,6 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         'margin:0;' +                 // fill the window
         'overflow:hidden;' +          // no scroll bars
         'background:#000;' +          // set background color
-        (canvasPixelated ? 'image-rendering:pixelated;' : '') + // pixel art
         'user-select:none;' +         // prevent hold to select
         '-webkit-user-select:none;' + // compatibility for ios
         (!touchInputEnable ? '' :     // no touch css settings
@@ -328,6 +327,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     mainCanvas.style.cssText = overlayCanvas.style.cssText = styleCanvas;
     if (glCanvas)
         glCanvas.style.cssText = styleCanvas;
+    setCanvasPixelated(canvasPixelated);
+    setOverlayCanvasPixelated(overlayCanvasPixelated);
     updateCanvas();
 
     // create offscreen canvas for image processing
@@ -2277,13 +2278,20 @@ let canvasMaxSize = vec2(1920, 1080);
  *  @memberof Settings */
 let canvasFixedSize = vec2();
 
-/** Use nearest neighbor canvas scaling for more pixelated look
- *  - Must be set before startup to take effect
+/** Use nearest canvas scaling for more pixelated look
  *  - If enabled sets css image-rendering:pixelated
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
 let canvasPixelated = true;
+
+/** Use nearest canvas scaling for more pixelated look
+ *  - If enabled sets css image-rendering:pixelated
+ *  - This defaults to false because text looks better with smoothing
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let overlayCanvasPixelated = false;
 
 /** Disables texture filtering for crisper pixel art
  *  @type {boolean}
@@ -2543,10 +2551,30 @@ function setCanvasMaxSize(size) { canvasMaxSize = size; }
  *  @memberof Settings */
 function setCanvasFixedSize(size) { canvasFixedSize = size; }
 
-/** Use nearest neighbor scaling algorithm for canvas for more pixelated look
+/** Use nearest scaling algorithm for canvas for more pixelated look
+ *  - If enabled sets css image-rendering:pixelated
  *  @param {boolean} pixelated
  *  @memberof Settings */
-function setCanvasPixelated(pixelated) { canvasPixelated = pixelated; }
+function setCanvasPixelated(pixelated)
+{
+    canvasPixelated = pixelated;
+    if (mainCanvas)
+        mainCanvas.style.imageRendering = pixelated ? 'pixelated' : '';
+    if (glCanvas)
+        glCanvas.style.imageRendering = pixelated ? 'pixelated' : '';
+}
+
+/** Use nearest scaling algorithm for canvas for more pixelated look
+ *  - If enabled sets css image-rendering:pixelated
+ *  - This defaults to false because text looks better with smoothing
+ *  @param {boolean} pixelated
+ *  @memberof Settings */
+function setOverlayCanvasPixelated(pixelated)
+{ 
+    overlayCanvasPixelated = pixelated; 
+    if (overlayCanvas)
+        overlayCanvas.style.imageRendering = pixelated ? 'pixelated' : '';
+}
 
 /** Disables texture filtering for crisper pixel art
  *  @param {boolean} pixelated
@@ -2940,7 +2968,7 @@ class EngineObject
                     if (o.mass) // push away if not fixed
                         o.velocity = o.velocity.subtract(velocity);
                         
-                    debugOverlay && debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f00');
+                    debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f00');
                     continue;
                 }
 
@@ -3002,7 +3030,7 @@ class EngineObject
                     else // bounce if other object is fixed
                         this.velocity.x *= -restitution;
                 }
-                debugOverlay && debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f0f');
+                debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f0f');
             }
         }
         if (this.collideTiles)
@@ -3047,7 +3075,7 @@ class EngineObject
                         this.pos.x = oldPos.x;
                         this.velocity.x *= -this.restitution;
                     }
-                    debugOverlay && debugPhysics && debugRect(this.pos, this.size, '#f00');
+                    debugPhysics && debugRect(this.pos, this.size, '#f00');
                 }
             }
         }
