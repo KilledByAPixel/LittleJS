@@ -73,6 +73,7 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 - Screenshot and video capture tools
 - Node.js build system
 - Bitmap font rendering and built in engine font
+- Optimized for AI-assisted development
 - Medal tracking system with [Newgrounds](https://www.newgrounds.com/) support
 
 ## How To Use LittleJS
