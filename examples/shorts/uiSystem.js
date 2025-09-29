@@ -8,6 +8,7 @@ function gameInit()
     new UISystemPlugin;
     uiSystem.defaultSoundPress = new Sound([1,0,220]);
     uiSystem.defaultSoundClick = new Sound([1,0,440]);
+    uiSystem.defaultCornerRadius = 8;
 
     // setup example menu
     uiMenu = new UIObject(mainCanvasSize.scale(.5));

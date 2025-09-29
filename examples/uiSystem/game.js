@@ -23,6 +23,7 @@ function createUI()
 {
     LJS.uiSystem.defaultSoundPress = new LJS.Sound([1,0,220]);
     LJS.uiSystem.defaultSoundClick = new LJS.Sound([1,0,440]);
+    LJS.uiSystem.defaultCornerRadius = 8;
 
     // setup root to attach all ui elements to
     uiRoot = new LJS.UIObject;
