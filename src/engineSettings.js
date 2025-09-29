@@ -195,7 +195,6 @@ let inputWASDEmulateDirection = true;
 
 /** True if touch input is enabled for mobile devices
  *  - Touch events will be routed to mouse events
- *  - Must be set before startup to take effect
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -203,7 +202,6 @@ let touchInputEnable = true;
 
 /** True if touch gamepad should appear on mobile devices
  *  - Supports left analog stick, 4 face buttons and start button (button 9)
- *  - Must be set before startup to take effect
  *  @type {boolean}
  *  @default
  *  @memberof Settings */

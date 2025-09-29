@@ -299,9 +299,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         'background:#000;' +          // set background color
         'user-select:none;' +         // prevent hold to select
         '-webkit-user-select:none;' + // compatibility for ios
-        (!touchInputEnable ? '' :     // no touch css settings
         'touch-action:none;' +        // prevent mobile pinch to resize
-        '-webkit-touch-callout:none');// compatibility for ios
+        '-webkit-touch-callout:none';// compatibility for ios
     rootElement.style.cssText = styleRoot;
     drawCanvas = mainCanvas = document.createElement('canvas');
     rootElement.appendChild(mainCanvas);

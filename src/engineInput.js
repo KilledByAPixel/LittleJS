@@ -306,30 +306,29 @@ function gamepadsUpdate()
     // update touch gamepad if enabled
     if (touchGamepadEnable && isTouchDevice)
     {
-        ASSERT(touchGamepadButtons, 'set touchGamepadEnable before calling init!');
-        if (touchGamepadTimer.isSet())
-        {
-            // read virtual analog stick
-            const sticks = gamepadStickData[0] || (gamepadStickData[0] = []);
-            sticks[0] = vec2();
-            if (touchGamepadAnalog)
-                sticks[0] = applyDeadZones(touchGamepadStick);
-            else if (touchGamepadStick.lengthSquared() > .3)
-            {
-                // convert to 8 way dpad
-                sticks[0].x = Math.round(touchGamepadStick.x);
-                sticks[0].y = -Math.round(touchGamepadStick.y);
-                sticks[0] = sticks[0].clampLength();
-            }
+        if (!touchGamepadTimer.isSet())
+            return;
 
-            // read virtual gamepad buttons
-            const data = inputData[1] || (inputData[1] = []);
-            for (let i=10; i--;)
-            {
-                const j = i == 3 ? 2 : i == 2 ? 3 : i; // fix button locations
-                const wasDown = gamepadIsDown(j,0);
-                data[j] = touchGamepadButtons[i] ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
-            }
+        // read virtual analog stick
+        const sticks = gamepadStickData[0] || (gamepadStickData[0] = []);
+        sticks[0] = vec2();
+        if (touchGamepadAnalog)
+            sticks[0] = applyDeadZones(touchGamepadStick);
+        else if (touchGamepadStick.lengthSquared() > .3)
+        {
+            // convert to 8 way dpad
+            sticks[0].x = Math.round(touchGamepadStick.x);
+            sticks[0].y = -Math.round(touchGamepadStick.y);
+            sticks[0] = sticks[0].clampLength();
+        }
+
+        // read virtual gamepad buttons
+        const data = inputData[1] || (inputData[1] = []);
+        for (let i=10; i--;)
+        {
+            const j = i == 3 ? 2 : i == 2 ? 3 : i; // fix button locations
+            const wasDown = gamepadIsDown(j,0);
+            data[j] = touchGamepadButtons[i] ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
         }
     }
 
@@ -403,20 +402,13 @@ function vibrateStop() { vibrate(0); }
 const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
 
 // touch gamepad internal variables
-let touchGamepadTimer = new Timer, touchGamepadButtons, touchGamepadStick;
+let touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadStick = vec2();
 
 // enable touch input mouse passthrough
 function touchInputInit()
 {
     // add non passive touch event listeners
     let handleTouch = handleTouchDefault;
-    if (touchGamepadEnable)
-    {
-        // touch input internal variables
-        handleTouch = handleTouchGamepad;
-        touchGamepadButtons = [];
-        touchGamepadStick = vec2();
-    }
     document.addEventListener('touchstart', (e) => handleTouch(e), { passive: false });
     document.addEventListener('touchmove',  (e) => handleTouch(e), { passive: false });
     document.addEventListener('touchend',   (e) => handleTouch(e), { passive: false });
@@ -425,6 +417,13 @@ function touchInputInit()
     let wasTouching;
     function handleTouchDefault(e)
     {
+        if (!touchInputEnable)
+            return;
+
+        // route touch to gamepad
+        if (touchGamepadEnable)
+            handleTouchGamepad(e);
+
         // fix stalled audio requiring user interaction
         if (soundEnable && !headlessMode && audioContext && audioContext.state != 'running')
             audioContext.resume();
@@ -476,9 +475,6 @@ function touchInputInit()
             {
                 // touch anywhere to press start when paused
                 touchGamepadButtons[9] = 1;
-
-                // call default touch handler so normal touch events still work
-                handleTouchDefault(e);
                 return;
             }
         }
@@ -509,12 +505,6 @@ function touchInputInit()
                 touchGamepadButtons[9] = 1;
             }
         }
-
-        // call default touch handler so normal touch events still work
-        handleTouchDefault(e);
-        
-        // must return true so the document will get focus
-        return true;
     }
 }
 
