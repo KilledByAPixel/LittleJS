@@ -24,8 +24,8 @@ The first step is to make a 2D grid of brick objects in gameInit. As a placehold
 for (let x=0; x<=20; x++)
 for (let y=0; y<=20; y++)
 {
-    const brick = new EngineObject(vec2(x,y)); // create a brick
-    brick.color = randColor(); // give brick a random color
+    const brick = new LJS.EngineObject(vec2(x,y)); // create a brick
+    brick.color = LJS.randColor(); // give brick a random color
 }
 ```
 
@@ -45,8 +45,8 @@ const levelSize = vec2(20, 20);
 for (let x=0; x<=levelSize.x; x+=2)
 for (let y=0; y<=levelSize.y; y+=1)
 {
-    const brick = new EngineObject(vec2(x,y), vec2(2,1)); // create a brick
-    brick.color = randColor(); // give brick a random color
+    const brick = new LJS.EngineObject(vec2(x,y), vec2(2,1)); // create a brick
+    brick.color = LJS.randColor(); // give brick a random color
 }
 ```
 
@@ -57,13 +57,13 @@ You can also change the camera zoom by using camaraScale which controls the numb
 For this example the camera will just remain stationary, but in other types of games it is very useful!
 
 ```javascript
-setCameraPos(levelSize.scale(.5)); // center camera in level
+LJS.setCameraPos(levelSize.scale(.5)); // center camera in level
 ```
 
 We’ll also start with a blank slate by commenting out the default “Hello World!” text in gameRenderPost.
 
 ```javascript
-// drawTextScreen('Hello World!', mainCanvasSize.scale(.5), 80);
+// LJS.drawTextScreen('Hello World!', LJS.mainCanvasSize.scale(.5), 80);
 ```
 
 ![LittleJS Screenshot](images/2.png)
@@ -77,14 +77,14 @@ For this example we will use a fixed size canvas. This will let the drawing canv
 To enable it we will set canvasFixedSize in gameInit to use 720p resolution.
 
 ```javascript
-setCanvasFixedSize(vec2(1280, 720)); // use a 720p fixed size canvas
+LJS.setCanvasFixedSize(vec2(1280, 720)); // use a 720p fixed size canvas
 ```
 
 Before we tweak the level size, let’s add this bit of code to gameRender to show the size of the level. This will cause some rects to be drawn each frame before the engine objects. To create color objects we pass in RGB values between 0 and 1.
 
 ```javascript
-drawRect(cameraPos, vec2(100), new Color(.5,.5,.5)); // draw background
-drawRect(cameraPos, levelSize, new Color(.1,.1,.1)); // draw level boundary
+LJS.drawRect(LJS.cameraPos, vec2(100), rgb(.5,.5,.5)); // draw background
+LJS.drawRect(LJS.cameraPos, levelSize, rgb(.1,.1,.1)); // draw level boundary
 ```
 
 We also need to make levelSize a global by moving it to the top so it can be accessed from other functions.
@@ -101,8 +101,8 @@ We can also adjust the for loop where the bricks are created to make them only f
 for (let x=2;  x<=levelSize.x-2; x+=2)
 for (let y=12; y<=levelSize.y-2; y+=1)
 {
-    const brick = new EngineObject(vec2(x,y), vec2(2,1)); // create a brick
-    brick.color = randColor(); // give brick a random color
+    const brick = new LJS.EngineObject(vec2(x,y), vec2(2,1)); // create a brick
+    brick.color = LJS.randColor(); // give brick a random color
 }
 ```
 
@@ -115,11 +115,11 @@ Now that looks almost like a breakout game!
 For the player’s paddle, let’s create a new class of object that extends the built in EngineObject. This will allow us to control movement with the mouse. In this Paddle class we will just add some new code to the update function which is automatically called each frame by the engine.
 
 ```javascript
-class Paddle extends EngineObject
+class Paddle extends LJS.EngineObject
 {
     update()
     {
-        this.pos.x = mousePos.x; // move paddle to mouse
+        this.pos.x = LJS.mousePos.x; // move paddle to mouse
     }
 }
 ```
@@ -149,7 +149,7 @@ You can also add this code to the paddle update that will keep the paddle from f
 
 ```javascript
 // clamp paddle to level size
-this.pos.x = clamp(this.pos.x, this.size.x/2, levelSize.x - this.size.x/2);
+this.pos.x = LJS.clamp(this.pos.x, this.size.x/2, levelSize.x - this.size.x/2);
 ```
 
 ## Create the Ball
@@ -158,7 +158,7 @@ The final missing piece is of course that ball that moves around and bounces off
 We can create a Ball class the same way we created the paddle. In this case we will also apply some velocity to ball so it starts moving right away.
 
 ```javascript
-class Ball extends EngineObject 
+class Ball extends LJS.EngineObject 
 {
     constructor(pos)
     {
@@ -172,7 +172,10 @@ class Ball extends EngineObject
 Then we just need to create the ball in gameInit, passing in the camera position for it’s location.
 
 ```javascript
-new Ball(cameraPos); // create a ball
+{
+    // create a ball
+    ball = new Ball(LJS.cameraPos);
+}
 ```
 
 ## Make the Ball Collide
@@ -210,7 +213,7 @@ super(pos, vec2(.5)); // set object position and size
 Next, let’s make the ball bounce when it hits the top or sides of the screen. To do this, we will make a Wall object class that works similar to the paddle but without an update function.
 
 ```javascript
-class Wall extends EngineObject
+class Wall extends LJS.EngineObject
 {
     constructor(pos, size)
     {
@@ -236,7 +239,7 @@ new Wall(vec2(levelSize.x/2,levelSize.y+.5), vec2(100,1)) // top
 Now we have white walls around the outside that block the ball. These walls should be invisible so we will set their color to be transparent by adding another line to the Wall constructor.
 
 ```javascript
-this.color = new Color(0,0,0,0); // make object invisible
+this.color = rgb(0,0,0,0); // make object invisible
 ```
 
 ## Debug Display
@@ -268,7 +271,7 @@ if (!ball || ball.pos.y < -1)
         ball.destroy();
 
     // create a ball
-    ball = new Ball(cameraPos);
+    ball = new Ball(LJS.cameraPos);
 }
 ```
 
@@ -279,7 +282,7 @@ Don’t forget to destroy the old ball before creating the new one! Though it do
 Still, the ball doesn’t collide with the bricks much less breaks them and it wouldn’t be breakout without that. So we need to make the brick collide with the ball, just like the walls, so let’s start with Brick class that is the same as Wall.
 
 ```javascript
-class Brick extends EngineObject
+class Brick extends LJS.EngineObject
 {
     constructor(pos, size)
     {
@@ -333,7 +336,7 @@ Then increment it in the Brick.collideWithObject function.
 And change that drawTextScreen code we had commented out in gameRenderPost to display the score. We can adjust the position and size of the text to fit at the top of the screen.
 
 ```javascript
-drawTextScreen("Score " + score, vec2(mainCanvasSize.x/2, 70), 50); // show score
+LJS.drawTextScreen("Score " + score, vec2(LJS.mainCanvasSize.x/2, 70), 50); // show score
 ```
 
 ![LittleJS Screenshot](images/9.png)
@@ -347,7 +350,7 @@ We will start with the ball bounce sound. [You can use the official ZzFX sound d
 To make a sound effect with this system we will create a global object for each sound.
 
 ```javascript
-const sound_bounce = new Sound([,,1e3,,.03,.02,1,2,,,940,.03,,,,,.2,.6,,.06], 0);
+const sound_bounce = new LJS.Sound([,,1e3,,.03,.02,1,2,,,940,.03,,,,,.2,.6,,.06], 0);
 ```
 
 You can use the sound I chose or copy the code for your own sound from ZzFX. There is a checkbox for LittleJS style sounds to make exporting a little easier.
@@ -366,7 +369,7 @@ Let’s also make a brick break sound. You can use the ZzFX sound designer again
 Create a global object for this sound the same way we did for the bounce sound. You can replace it with your own generated sound or use mine.
 
 ```javascript
-const sound_break = new Sound([,,90,,.01,.03,4,,,,,,,9,50,.2,,.2,.01], 0);
+const sound_break = new LJS.Sound([,,90,,.01,.03,4,,,,,,,9,50,.2,,.2,.01], 0);
 ```
 
 Then in the Brick’s collideWithObject function just add some code to play that sound.
@@ -384,7 +387,7 @@ Let’s improve the gameplay by letting the player click to start, instead of cr
 We can also add a special sound that plays on startup. Try making an interesting start from the ZzFX sound designer, maybe using the Powerup preset.
 
 ```javascript
-const sound_start = new Sound([,0,500,,.04,.3,1,2,,,570,.02,.02,,,,.04]);
+const sound_start = new LJS.Sound([,0,500,,.04,.3,1,2,,,570,.02,.02,,,,.04]);
 ```
 
 We can modify the gameUpdate to wait for player input from the mouse and play the sound when the ball is created.
@@ -396,9 +399,9 @@ if (ball && ball.pos.y < -1) // if ball is below level
     ball.destroy();
     ball = 0;
 }
-if (!ball && mouseWasPressed(0)) // if there is no ball and left mouse is pressed
+if (!ball && LJS.mouseWasPressed(0)) // if there is no ball and left mouse is pressed
 {
-    ball = new Ball(cameraPos); // create the ball
+    ball = new Ball(LJS.cameraPos); // create the ball
     sound_start.play(); // play start sound
 }
 ```
@@ -413,7 +416,7 @@ Make sure you replace the first parameter, vec2(), with this.pos so the effect a
 
 ```javascript
 // create explosion effect
-new ParticleEmitter(this.pos, 0, 0, 0.1, 100, 3.14, 0, new Color(1, 1, 1, 1), new Color(1, 1, 1, 1), new Color(1, 1, 1, 0), new Color(1, 1, 1, 0), 0.5, 0.1, 1, 0.1, 0.05, 1, 1, 0, 3.14, 0.1, 0.2, 0, 0, 1);
+new LJS.ParticleEmitter(this.pos, 0, 0, 0.1, 100, 3.14, 0, rgb(1, 1, 1, 1), rgb(1, 1, 1, 1), rgb(1, 1, 1, 0), rgb(1, 1, 1, 0), 0.5, 0.1, 1, 0.1, 0.05, 1, 1, 0, 3.14, 0.1, 0.2, 0, 0, 1);
 ```
 
 Now you should see this simple particle effect play wherever a brick breaks. You can continue tweaking the parameters to make your own effect or use the one I made which also uses this.color to change the particle’s color so it matches the brick.
@@ -421,15 +424,15 @@ Now you should see this simple particle effect play wherever a brick breaks. You
 ```javascript
 // create explosion effect
 const color = this.color;
-new ParticleEmitter(
-    this.pos, 0,            // pos, angle
-    this.size, .1, 200, PI, // emitSize, emitTime, emitRate, emiteCone
-    undefined,              // tileInfo
-    color, color,           // colorStartA, colorStartB
+new LJS.ParticleEmitter(
+    this.pos, 0,             // pos, angle
+    this.size, .1, 200, 3.14,// emitSize, emitTime, emitRate, emitCone
+    undefined,               // tileInfo
+    color, color,                       // colorStartA, colorStartB
     color.scale(1,0), color.scale(1,0), // colorEndA, colorEndB
     .2, .5, 1, .1, .1,  // time, sizeStart, sizeEnd, speed, angleSpeed
-    .99, .95, .4, PI,   // damping, angleDamping, gravityScale, cone
-    .1, .5, false, true // fadeRate, randomness, collide, additive
+    .99, .95, .4, 3.14, // damp, angleDamp, gravity, cone
+    .1, .5, false, true // fade, randomness, collide, additive
 );
 ```
 
@@ -459,7 +462,7 @@ collideWithObject(o)
         this.velocity = this.velocity.rotate(.3 * deltaX);
         
         // make sure ball is moving upwards with a minimum speed
-        this.velocity.y = max(-this.velocity.y, .2);
+        this.velocity.y = LJS.max(-this.velocity.y, .2);
         
         // prevent default collision code
         return false;

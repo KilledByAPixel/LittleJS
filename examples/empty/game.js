@@ -8,6 +8,7 @@
 
 // import LittleJS module
 import * as LJS from '../../dist/littlejs.esm.js';
+const {vec2, rgb} = LJS;
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
