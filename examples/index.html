@@ -113,8 +113,9 @@ let iframeExample, inputTimeout, codeMirror, consoleAutoScroll, errorLineMarker,
 // load the examples into the list
 filterExamples();
 
-// set the selected example from the URL hash
-const selectedExample = location.hash.split`#`[1] || '';
+// set the selected example from the URL parameters
+const urlParams = new URLSearchParams(window.location.search);
+const selectedExample = urlParams.get('example') || '';
 let exampleIndex = exampleList.findIndex((example) => example.filename == selectedExample);
 if (exampleIndex < 0)
     exampleIndex = 1;
@@ -157,7 +158,12 @@ function setExample()
     const filename = 'examples/' + example.filename;
     exampleLink.href = 'https://github.com/KilledByAPixel/LittleJS/tree/main/' + filename;
     exampleLink.innerText = filename;
-    location.hash = example.filename;
+    
+    // update URL parameter
+    const url = new URL(window.location);
+    url.searchParams.set('example', example.filename);
+    window.history.replaceState({}, '', url);
+    
     loadFile(example.filename, example.largeExample);
 }
 
@@ -537,7 +543,7 @@ const themes =
 const savePrefix = 'LittleJSExamples_';
 const savedTheme = localStorage.getItem(savePrefix+'theme') || defaultTheme;
 const savedFontSize = localStorage.getItem(savePrefix+'fontSize') || defaultFontSize;
-console.log(savedTheme)
+
 for (const theme of themes)
 {
     if (theme != 'littlejs')
