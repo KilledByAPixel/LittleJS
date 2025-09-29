@@ -122,38 +122,43 @@ function setupPostProcess()
         p=fract(p*.3197);
         return fract(1.+sin(51.*p.x+73.*p.y)*13753.3);
     }
-    float noise(vec2 p)
-    {
-        vec2 i=floor(p),f=fract(p),u=f*f*(3.-2.*f);
-        return mix(mix(hash(i),hash(i+vec2(1,0)),u.x),mix(hash(i+vec2(0,1)),hash(i+1.),u.x),u.y);
-    }
+
     void mainImage(out vec4 c, vec2 p)
     {
-        // put uv in texture pixel space
+        // setup the shader
+        vec2 uv = p;
         p /= iResolution.xy;
-
-        // apply fuzz as horizontal offset
-        const float fuzz = .0005;
-        const float fuzzScale = 800.;
-        const float fuzzSpeed = 9.;
-        p.x += fuzz*(noise(vec2(p.y*fuzzScale, iTime*fuzzSpeed))*2.-1.);
-
-        // init output color
         c = texture(iChannel0, p);
 
-        // chromatic aberration
-        const float chromatic = .002;
-        c.r = texture(iChannel0, p - vec2(chromatic,0)).r;
-        c.b = texture(iChannel0, p + vec2(chromatic,0)).b;
-
-        // tv static noise
-        const float staticNoise = .1;
-        c += staticNoise * hash(p + mod(iTime, 1e3));
+        // static noise
+        const float staticAlpha = .1;
+        const float staticScale = .002;
+        c += staticAlpha * hash(floor(p/staticScale) + mod(iTime*500., 1e3));
 
         // scan lines
-        const float scanlineScale = 1e3;
-        const float scanlineAlpha = .1;
-        c *= 1. + scanlineAlpha*sin(p.y*scanlineScale);
+        const float scanlineScale = 2.;
+        const float scanlineAlpha = .3;
+        c *= 1. - scanlineAlpha*cos(p.y*2.*iResolution.y/scanlineScale);
+
+        {
+            // bloom effect
+            const float blurSize = .002;
+            const float bloomIntensity = .2;
+
+            // 5-tap Gaussian blur
+            vec4 bloom = vec4(0);
+            bloom += texture(iChannel0, p + vec2(-2.*blurSize, 0)) * .12;
+            bloom += texture(iChannel0, p + vec2(   -blurSize, 0)) * .24;
+            bloom += texture(iChannel0, p)                         * .28;
+            bloom += texture(iChannel0, p + vec2(    blurSize, 0)) * .24;
+            bloom += texture(iChannel0, p + vec2( 2.*blurSize, 0)) * .12;
+            bloom += texture(iChannel0, p + vec2(0, -2.*blurSize)) * .12;
+            bloom += texture(iChannel0, p + vec2(0,    -blurSize)) * .24;
+            bloom += texture(iChannel0, p)                         * .28;
+            bloom += texture(iChannel0, p + vec2(0,     blurSize)) * .24;
+            bloom += texture(iChannel0, p + vec2(0,  2.*blurSize)) * .12;
+            c += bloom * bloomIntensity;
+        }
 
         // black vignette around edges
         const float vignette = 2.;
