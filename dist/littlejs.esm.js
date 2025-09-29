@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.13.2';
+const engineVersion = '1.13.3';
 
 /** Frames per second to update
  *  @type {number}
@@ -3505,7 +3505,7 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
  *  @param {Color}   [color=(1,1,1,1)]
  *  @param {number}  [angle]
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace=false]
+ *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
@@ -3518,73 +3518,90 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
  *  @param {Vector2} posB
  *  @param {number}  [thickness]
  *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Vector2} [pos=(0,0)] - Offset to apply
+ *  @param {number}  [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace=false]
+ *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace, context)
+function drawLine(posA, posB, thickness=.1, color, pos=vec2(), angle=0, useWebGL, screenSpace, context)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);
-    drawRect(posA.add(halfDelta), size, color, halfDelta.angle(), useWebGL, screenSpace, context);
+    pos = pos.add(posA.add(halfDelta));
+    angle += halfDelta.angle();
+    drawRect(pos, size, color, angle, useWebGL, screenSpace, context);
 }
 
 /** Draw colored polygon using passed in points
- *  @param {Array<Vector2>}   points - Array of Vector2 points
+ *  @param {Array<Vector2>} points - Array of Vector2 points
  *  @param {Color}   [color=(1,1,1,1)]
- *  @param {number}  [lineWidth=0]
+ *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=(0,0,0,1)]
- *  @param {boolean} [screenSpace=false]
+ *  @param {Vector2} [pos=(0,0)] - Offset to apply
+ *  @param {number}  [angle] - Angle to rotate by
+ *  @param {boolean} [useWebGL] - Webgl not supported
+ *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawPoly(points, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=drawContext)
+function drawPoly(points, color=new Color, lineWidth=0, lineColor=BLACK, pos=vec2(), angle=0, useWebGL=false, screenSpace=false, context=drawContext)
 {
-    ASSERT(isColor(color) && isColor(lineColor));
-    context.fillStyle = color.toString();
-    context.beginPath();
-    for (const point of screenSpace ? points : points.map(worldToScreen))
-        context.lineTo(point.x, point.y);
-    context.closePath();
-    context.fill();
-    if (lineWidth)
+    ASSERT(isVector2(pos) && pos.isValid(), 'drawPoly pos should be a vec2');
+    ASSERT(Array.isArray(points), 'drawPoly points should be an array');
+    ASSERT(isColor(color) && isColor(lineColor), 'drawPoly color is invalid');
+    ASSERT(isNumber(lineWidth), 'drawPoly lineWidth should be a number');
+    ASSERT(isNumber(angle), 'drawPoly angle should be a number');
+    ASSERT(!useWebGL, 'drawPoly webgl not supported');
+    drawCanvas2D(pos, vec2(1), angle, false, context=>
     {
-        context.strokeStyle = lineColor.toString();
-        context.lineWidth = screenSpace ? lineWidth : lineWidth*cameraScale;
-        context.stroke();
-    }
+        context.beginPath();
+        for (const point of points)
+            context.lineTo(point.x, point.y);
+        context.closePath();
+        context.fillStyle = color.toString();
+        context.fill();
+        if (lineWidth)
+        {
+            context.strokeStyle = lineColor.toString();
+            context.lineWidth = lineWidth;
+            context.stroke();
+        }
+    }, screenSpace, context);
 }
 
 /** Draw colored ellipse using passed in point
  *  @param {Vector2} pos
- *  @param {number}  [width=1]
- *  @param {number}  [height=1]
- *  @param {number}  [angle=0]
+ *  @param {Vector2} [size=(1,1)]
  *  @param {Color}   [color=(1,1,1,1)]
- *  @param {number}  [lineWidth=0]
+ *  @param {number}  [angle]
+ *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=(0,0,0,1)]
- *  @param {boolean} [screenSpace=false]
+ *  @param {boolean} [useWebGL] - Webgl not supported
+ *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawEllipse(pos, width=1, height=1, angle=0, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=drawContext)
+function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, lineColor=BLACK, useWebGL=false, screenSpace=false, context=drawContext)
 {
-    ASSERT(isColor(color) && isColor(lineColor));
-    if (!screenSpace)
+    ASSERT(isVector2(pos) && pos.isValid(), 'drawEllipse pos should be a vec2');
+    ASSERT(isVector2(size) && size.isValid(), 'drawEllipse size should be a vec2');
+    ASSERT(isColor(color) && isColor(lineColor), 'drawEllipse color is invalid');
+    ASSERT(isNumber(angle), 'drawEllipse angle should be a number');
+    ASSERT(isNumber(lineWidth), 'drawEllipse lineWidth should be a number');
+    ASSERT(lineWidth>=0 && lineWidth < size.x && lineWidth < size.y, 'drawEllipse invalid lineWidth');
+    ASSERT(!useWebGL, 'drawEllipse webgl not supported');
+    drawCanvas2D(pos, vec2(1), angle, false, context=>
     {
-        pos = worldToScreen(pos);
-        width *= cameraScale;
-        height *= cameraScale;
-        lineWidth *= cameraScale;
-    }
-    context.fillStyle = color.toString();
-    context.beginPath();
-    context.ellipse(pos.x, pos.y, width, height, angle, 0, 9);
-    context.fill();
-    if (lineWidth)
-    {
-        context.strokeStyle = lineColor.toString();
-        context.lineWidth = lineWidth;
-        context.stroke();
-    }
+        context.beginPath();
+        context.ellipse(0, 0, size.y, size.x, 0, 0, 9);
+        context.fillStyle = color.toString();
+        context.fill();
+        if (lineWidth)
+        {
+            context.strokeStyle = lineColor.toString();
+            context.lineWidth = lineWidth;
+            context.stroke();   
+        }
+    }, screenSpace, context);
 }
 
 /** Draw colored circle using passed in point
@@ -3593,11 +3610,12 @@ function drawEllipse(pos, width=1, height=1, angle=0, color=new Color, lineWidth
  *  @param {Color}   [color=(1,1,1,1)]
  *  @param {number}  [lineWidth=0]
  *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {boolean} [useWebGL] - Webgl not supported
  *  @param {boolean} [screenSpace=false]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=drawContext)
-{ drawEllipse(pos, radius, radius, 0, color, lineWidth, lineColor, screenSpace, context); }
+function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=BLACK, useWebGL=false, screenSpace, context=drawContext)
+{ drawEllipse(pos, vec2(radius), color, 0, lineWidth, lineColor, useWebGL, screenSpace, context); }
 
 /** Draw directly to a 2d canvas context in world space
  *  @param {Vector2}  pos
@@ -3675,7 +3693,7 @@ function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textA
  *  @param {number}  [maxWidth]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
  *  @memberof Draw */
-function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, maxWidth=undefined, context=overlayContext)
+function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, maxWidth=undefined, context=overlayContext)
 {
     context.fillStyle = color.toString();
     context.strokeStyle = lineColor.toString();
@@ -6164,7 +6182,7 @@ class Medal
         context.save();
         context.beginPath();
         context.fillStyle = new Color(.9,.9,.9).toString();
-        context.strokeStyle = new Color(0,0,0).toString();
+        context.strokeStyle = BLACK.toString();
         context.lineWidth = 3;
         context.rect(x, y, width, height);
         context.fill();
@@ -6181,11 +6199,11 @@ class Medal
         const descriptionSize = height*.3;
         const pos = vec2(x + medalDisplayIconSize + 2*gap.x, y + gap.y*2 + nameSize/2);
         const textWidth = width - medalDisplayIconSize - 3*gap.x;
-        drawTextScreen(this.name, pos, nameSize, new Color(0,0,0), 0, undefined, 'left', undefined, textWidth);
+        drawTextScreen(this.name, pos, nameSize, BLACK, 0, undefined, 'left', undefined, textWidth);
 
         // draw the description
         pos.y = y + height - gap.y*2 - descriptionSize/2;
-        drawTextScreen(this.description, pos, descriptionSize, new Color(0,0,0), 0, undefined, 'left', undefined, textWidth);
+        drawTextScreen(this.description, pos, descriptionSize, BLACK, 0, undefined, 'left', undefined, textWidth);
         context.restore();
     }
 
@@ -6199,7 +6217,7 @@ class Medal
         if (this.image)
             overlayContext.drawImage(this.image, pos.x-size/2, pos.y-size/2, size, size);
         else
-            drawTextScreen(this.icon, pos, size*.7, new Color(0,0,0));
+            drawTextScreen(this.icon, pos, size*.7, BLACK);
     }
  
     // Get local storage key used by the medal
@@ -7176,7 +7194,7 @@ class UISystemPlugin
     *  @param {boolean}  [mirror] */
     drawTile(pos, size, tileInfo, color=uiSystem.defaultColor, angle=0, mirror=false)
     {
-        drawTile(pos, size, tileInfo, color, angle, mirror, BLACK, false, true, uiSystem.uiContext);
+        drawTile(pos, size, tileInfo, color, angle, mirror, CLEAR_BLACK, false, true, uiSystem.uiContext);
     }
 
     /** Draw text to the UI context
@@ -7626,7 +7644,7 @@ class Box2dObject extends EngineObject
         bodyDef.set_angle(-angle);
         this.body = box2d.world.CreateBody(bodyDef);
         this.body.object = this;
-        this.outlineColor = BLACK;
+        this.lineColor = BLACK;
     }
 
     /** Destroy this object and it's physics body */
@@ -7653,7 +7671,7 @@ class Box2dObject extends EngineObject
         if (this.tileInfo)
             super.render();
         else
-            this.drawFixtures(this.color, this.outlineColor, this.lineWidth, mainContext);
+            this.drawFixtures(this.color, this.lineColor, this.lineWidth, mainContext);
     }
 
     /** Render debug info */
@@ -7667,13 +7685,13 @@ class Box2dObject extends EngineObject
 
     /** Draws all this object's fixtures 
      *  @param {Color}  [color]
-     *  @param {Color}  [outlineColor]
+     *  @param {Color}  [lineColor]
      *  @param {number} [lineWidth]
      *  @param {CanvasRenderingContext2D} [context] */
-    drawFixtures(color=WHITE, outlineColor, lineWidth=.1, context)
+    drawFixtures(color=WHITE, lineColor, lineWidth=.1, context)
     {
         this.getFixtureList().forEach(fixture=>
-            box2d.drawFixture(fixture, this.pos, this.angle, color, outlineColor, lineWidth, context));
+            box2d.drawFixture(fixture, this.pos, this.angle, color, lineColor, lineWidth, context));
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -9154,10 +9172,10 @@ class Box2dPlugin
      *  @param {Vector2} pos
      *  @param {number} angle
      *  @param {Color} [color]
-     *  @param {Color} [outlineColor]
+     *  @param {Color} [lineColor]
      *  @param {number} [lineWidth]
      *  @param {CanvasRenderingContext2D} [context] */
-    drawFixture(fixture, pos, angle, color=WHITE, outlineColor=BLACK, lineWidth=.1, context=drawContext)
+    drawFixture(fixture, pos, angle, color=WHITE, lineColor=BLACK, lineWidth=.1, context=drawContext)
     {
         const shape = box2d.castObjectType(fixture.GetShape());
         switch (shape.GetType())
@@ -9167,98 +9185,22 @@ class Box2dPlugin
                 let points = [];
                 for (let i=shape.GetVertexCount(); i--;)
                     points.push(box2d.vec2From(shape.GetVertex(i)));
-                box2d.drawPoly(pos, angle, points, color, outlineColor, lineWidth, context);
+                drawPoly(points, color, lineWidth, lineColor, pos, angle, false, false, context);
                 break;
             }
             case box2d.instance.b2Shape.e_circle:
             {
                 const radius = shape.get_m_radius();
-                box2d.drawCircle(pos, radius, color, outlineColor, lineWidth, context);
+                drawCircle(pos, radius, color, lineWidth, lineColor, false, false, context);
                 break;
             }
             case box2d.instance.b2Shape.e_edge:
             {
                 const v1 = box2d.vec2From(shape.get_m_vertex1());
                 const v2 = box2d.vec2From(shape.get_m_vertex2());
-                box2d.drawLine(pos, angle, v1, v2, color, lineWidth, context);
+                drawLine(v1, v2, lineWidth, lineColor, pos, angle, false, false, context);
                 break;
             }
-        }
-    }
-
-    /** draws a circle
-     *  @param {Vector2} pos
-     *  @param {number} radius
-     *  @param {Color} [color]
-     *  @param {Color} [outlineColor]
-     *  @param {number} [lineWidth]
-     *  @param {CanvasRenderingContext2D} [context] */
-    drawCircle(pos, radius, color=WHITE, outlineColor=BLACK, lineWidth=.1, context=drawContext)
-    {
-        drawCanvas2D(pos, vec2(1), 0, 0, context=>
-        {
-            context.beginPath();
-            context.arc(0, 0, radius, 0, 9);
-            box2d.drawFillStroke(color, outlineColor, lineWidth, context);
-        }, 0, context);
-    }
-
-    /** draws a polygon
-     *  @param {Vector2} pos
-     *  @param {number} angle
-     *  @param {Array<Vector2>} points
-     *  @param {Color} [color]
-     *  @param {Color} [outlineColor]
-     *  @param {number} [lineWidth]
-     *  @param {CanvasRenderingContext2D} [context] */
-    drawPoly(pos, angle, points, color=WHITE, outlineColor=BLACK, lineWidth=.1, context=drawContext)
-    {
-        drawCanvas2D(pos, vec2(1), angle, 0, context=>
-        {
-            context.beginPath();
-            points.forEach(p=>context.lineTo(p.x, p.y));
-            context.closePath();
-            box2d.drawFillStroke(color, outlineColor, lineWidth, context);
-        }, 0, context);
-    }
-
-    /** draws a line
-     *  @param {Vector2} pos
-     *  @param {number} angle
-     *  @param {Vector2} posA
-     *  @param {Vector2} posB
-     *  @param {Color} [color]
-     *  @param {number} [lineWidth]
-     *  @param {CanvasRenderingContext2D} [context] */
-    drawLine(pos, angle, posA, posB, color=WHITE, lineWidth=.1, context=drawContext)
-    {
-        drawCanvas2D(pos, vec2(1), angle, 0, context=>
-        {
-            context.beginPath();
-            context.lineTo(posA.x, posA.y);
-            context.lineTo(posB.x, posB.y);
-            box2d.drawFillStroke(0, color, lineWidth, context);
-        }, 0, context);
-    }
-
-    /** performs a fill or stroke as a helper to the other draw functions
-     *  @param {Color} [color]
-     *  @param {Color} [outlineColor]
-     *  @param {number} [lineWidth]
-     *  @param {CanvasRenderingContext2D} [context] */
-    drawFillStroke(color=WHITE, outlineColor=BLACK, lineWidth=.1, context=drawContext)
-    {
-        if (color)
-        {
-            context.fillStyle = color.toString();
-            context.fill();
-        }
-        if (outlineColor && lineWidth)
-        {
-            context.lineWidth = lineWidth;
-            context.lineJoin = context.lineCap = 'round';
-            context.strokeStyle = outlineColor.toString();
-            context.stroke();
         }
     }
 
@@ -9362,6 +9304,7 @@ async function box2dInit()
     function setupDebugDraw()
     {
         // setup debug draw
+        const debugLineWidth = .1;
         const debugDraw = new box2d.instance.JSDraw();
         const box2dColor = (c)=> new Color(c.get_r(), c.get_g(), c.get_b());
         const box2dColorPointer = (c)=>
@@ -9379,33 +9322,33 @@ async function box2dInit()
             color = getDebugColor(color);
             point1 = box2d.vec2FromPointer(point1);
             point2 = box2d.vec2FromPointer(point2);
-            box2d.drawLine(vec2(), 0, point1, point2, color, undefined, overlayContext);
+            drawLine(point1, point2, debugLineWidth, color, vec2(), 0, false, false, overlayContext);
         };
         debugDraw.DrawPolygon = function(vertices, vertexCount, color)
         {
             color = getDebugColor(color);
             const points = getPointsList(vertices, vertexCount);
-            box2d.drawPoly(vec2(), 0, points, undefined, color, undefined, overlayContext);
+            drawPoly(points, CLEAR_WHITE, debugLineWidth, color, vec2(), 0, false, false, overlayContext);
         };
         debugDraw.DrawSolidPolygon = function(vertices, vertexCount, color)
         {
             color = getDebugColor(color);
             const points = getPointsList(vertices, vertexCount);
-            box2d.drawPoly(vec2(), 0, points, color, color, undefined, overlayContext);
+            drawPoly(points, color, 0, color, vec2(), 0, false, false, overlayContext);
         };
         debugDraw.DrawCircle = function(center, radius, color)
         {
             color = getDebugColor(color);
             center = box2d.vec2FromPointer(center);
-            box2d.drawCircle(center, radius, undefined, color, undefined, overlayContext);
+            drawCircle(center, radius, CLEAR_WHITE, debugLineWidth, color, false, false, overlayContext);
         };
         debugDraw.DrawSolidCircle = function(center, radius, axis, color)
         {
             color = getDebugColor(color);
             center = box2d.vec2FromPointer(center);
             axis = box2d.vec2FromPointer(axis).scale(radius);
-            box2d.drawCircle(center, radius, color, color, undefined, overlayContext);
-            box2d.drawLine(center, 0, vec2(), axis, color, undefined, overlayContext);
+            drawCircle(center, radius, color, debugLineWidth, color, false, false, overlayContext);
+            drawLine(vec2(), axis, debugLineWidth, color, center, 0, false, false, overlayContext);
         };
         debugDraw.DrawTransform = function(transform)
         {
@@ -9414,8 +9357,8 @@ async function box2dInit()
             const angle = -transform.get_q().GetAngle();
             const p1 = vec2(1,0), c1 = rgb(.75,0,0,.8);
             const p2 = vec2(0,1), c2 = rgb(0,.75,0,.8);
-            box2d.drawLine(pos, angle, vec2(), p1, c1, undefined, overlayContext);
-            box2d.drawLine(pos, angle, vec2(), p2, c2, undefined, overlayContext);
+            drawLine(vec2(), p1, debugLineWidth, c1, pos, angle, false, false, overlayContext);
+            drawLine(vec2(), p2, debugLineWidth, c2, pos, angle, false, false, overlayContext);
         }
             
         debugDraw.AppendFlags(box2d.instance.b2Draw.e_shapeBit);

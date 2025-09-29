@@ -1355,7 +1355,7 @@ declare module "littlejsengine" {
      *  @param {Color}   [color=(1,1,1,1)]
      *  @param {number}  [angle]
      *  @param {boolean} [useWebGL=glEnable]
-     *  @param {boolean} [screenSpace=false]
+     *  @param {boolean} [screenSpace]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function drawRect(pos: Vector2, size?: Vector2, color?: Color, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
@@ -1364,42 +1364,48 @@ declare module "littlejsengine" {
      *  @param {Vector2} posB
      *  @param {number}  [thickness]
      *  @param {Color}   [color=(1,1,1,1)]
+     *  @param {Vector2} [pos=(0,0)] - Offset to apply
+     *  @param {number}  [angle] - Angle to rotate by
      *  @param {boolean} [useWebGL=glEnable]
-     *  @param {boolean} [screenSpace=false]
+     *  @param {boolean} [screenSpace]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
-    export function drawLine(posA: Vector2, posB: Vector2, thickness?: number, color?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    export function drawLine(posA: Vector2, posB: Vector2, thickness?: number, color?: Color, pos?: Vector2, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw colored polygon using passed in points
-     *  @param {Array<Vector2>}   points - Array of Vector2 points
+     *  @param {Array<Vector2>} points - Array of Vector2 points
      *  @param {Color}   [color=(1,1,1,1)]
-     *  @param {number}  [lineWidth=0]
+     *  @param {number}  [lineWidth]
      *  @param {Color}   [lineColor=(0,0,0,1)]
-     *  @param {boolean} [screenSpace=false]
+     *  @param {Vector2} [pos=(0,0)] - Offset to apply
+     *  @param {number}  [angle] - Angle to rotate by
+     *  @param {boolean} [useWebGL] - Webgl not supported
+     *  @param {boolean} [screenSpace]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      *  @memberof Draw */
-    export function drawPoly(points: Array<Vector2>, color?: Color, lineWidth?: number, lineColor?: Color, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    export function drawPoly(points: Array<Vector2>, color?: Color, lineWidth?: number, lineColor?: Color, pos?: Vector2, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw colored ellipse using passed in point
      *  @param {Vector2} pos
-     *  @param {number}  [width=1]
-     *  @param {number}  [height=1]
-     *  @param {number}  [angle=0]
+     *  @param {Vector2} [size=(1,1)]
      *  @param {Color}   [color=(1,1,1,1)]
-     *  @param {number}  [lineWidth=0]
+     *  @param {number}  [angle]
+     *  @param {number}  [lineWidth]
      *  @param {Color}   [lineColor=(0,0,0,1)]
-     *  @param {boolean} [screenSpace=false]
+     *  @param {boolean} [useWebGL] - Webgl not supported
+     *  @param {boolean} [screenSpace]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      *  @memberof Draw */
-    export function drawEllipse(pos: Vector2, width?: number, height?: number, angle?: number, color?: Color, lineWidth?: number, lineColor?: Color, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    export function drawEllipse(pos: Vector2, size?: Vector2, color?: Color, angle?: number, lineWidth?: number, lineColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw colored circle using passed in point
      *  @param {Vector2} pos
      *  @param {number}  [radius=1]
      *  @param {Color}   [color=(1,1,1,1)]
      *  @param {number}  [lineWidth=0]
      *  @param {Color}   [lineColor=(0,0,0,1)]
+     *  @param {boolean} [useWebGL] - Webgl not supported
      *  @param {boolean} [screenSpace=false]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      *  @memberof Draw */
-    export function drawCircle(pos: Vector2, radius?: number, color?: Color, lineWidth?: number, lineColor?: Color, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    export function drawCircle(pos: Vector2, radius?: number, color?: Color, lineWidth?: number, lineColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw directly to a 2d canvas context in world space
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
@@ -3001,42 +3007,10 @@ declare module "littlejsengine" {
          *  @param {Vector2} pos
          *  @param {number} angle
          *  @param {Color} [color]
-         *  @param {Color} [outlineColor]
+         *  @param {Color} [lineColor]
          *  @param {number} [lineWidth]
          *  @param {CanvasRenderingContext2D} [context] */
-        drawFixture(fixture: any, pos: Vector2, angle: number, color?: Color, outlineColor?: Color, lineWidth?: number, context?: CanvasRenderingContext2D): void;
-        /** draws a circle
-         *  @param {Vector2} pos
-         *  @param {number} radius
-         *  @param {Color} [color]
-         *  @param {Color} [outlineColor]
-         *  @param {number} [lineWidth]
-         *  @param {CanvasRenderingContext2D} [context] */
-        drawCircle(pos: Vector2, radius: number, color?: Color, outlineColor?: Color, lineWidth?: number, context?: CanvasRenderingContext2D): void;
-        /** draws a polygon
-         *  @param {Vector2} pos
-         *  @param {number} angle
-         *  @param {Array<Vector2>} points
-         *  @param {Color} [color]
-         *  @param {Color} [outlineColor]
-         *  @param {number} [lineWidth]
-         *  @param {CanvasRenderingContext2D} [context] */
-        drawPoly(pos: Vector2, angle: number, points: Array<Vector2>, color?: Color, outlineColor?: Color, lineWidth?: number, context?: CanvasRenderingContext2D): void;
-        /** draws a line
-         *  @param {Vector2} pos
-         *  @param {number} angle
-         *  @param {Vector2} posA
-         *  @param {Vector2} posB
-         *  @param {Color} [color]
-         *  @param {number} [lineWidth]
-         *  @param {CanvasRenderingContext2D} [context] */
-        drawLine(pos: Vector2, angle: number, posA: Vector2, posB: Vector2, color?: Color, lineWidth?: number, context?: CanvasRenderingContext2D): void;
-        /** performs a fill or stroke as a helper to the other draw functions
-         *  @param {Color} [color]
-         *  @param {Color} [outlineColor]
-         *  @param {number} [lineWidth]
-         *  @param {CanvasRenderingContext2D} [context] */
-        drawFillStroke(color?: Color, outlineColor?: Color, lineWidth?: number, context?: CanvasRenderingContext2D): void;
+        drawFixture(fixture: any, pos: Vector2, angle: number, color?: Color, lineColor?: Color, lineWidth?: number, context?: CanvasRenderingContext2D): void;
         /** converts a box2d vec2 to a Vector2
          *  @param {Object} v */
         vec2From(v: any): Vector2;
@@ -3071,13 +3045,13 @@ declare module "littlejsengine" {
          *  @param {number}   [renderOrder] */
         constructor(pos?: Vector2, size?: Vector2, tileInfo?: TileInfo, angle?: number, color?: Color, bodyType?: number, renderOrder?: number);
         body: any;
-        outlineColor: Color;
+        lineColor: Color;
         /** Draws all this object's fixtures
          *  @param {Color}  [color]
-         *  @param {Color}  [outlineColor]
+         *  @param {Color}  [lineColor]
          *  @param {number} [lineWidth]
          *  @param {CanvasRenderingContext2D} [context] */
-        drawFixtures(color?: Color, outlineColor?: Color, lineWidth?: number, context?: CanvasRenderingContext2D): void;
+        drawFixtures(color?: Color, lineColor?: Color, lineWidth?: number, context?: CanvasRenderingContext2D): void;
         /** Called when a contact begins
          *  @param {Box2dObject} otherObject */
         beginContact(otherObject: Box2dObject): void;
