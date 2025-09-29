@@ -1694,7 +1694,9 @@ class Box2dPlugin
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-/** Box2d Init - Call with await before starting LittleJS to init box2d
+/** Box2d Init - Call with await to init box2d
+ *  @example
+ *  await box2dInit();
  *  @return {Promise<Box2dPlugin>}
  *  @memberof Box2D */
 async function box2dInit()

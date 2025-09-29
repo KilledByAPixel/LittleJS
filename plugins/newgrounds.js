@@ -119,7 +119,7 @@ class NewgroundsPlugin
      * @param {number} id       - The scoreboard id
      * @param {string} [user]   - A user's id or name
      * @param {number} [social] - If true, only social scores will be loaded
-     * @param {number} [skip]   - Number of scores to skip before start
+     * @param {number} [skip]   - Number of scores to skip over
      * @param {number} [limit]  - Number of scores to include in the list
      * @return {Object}         - The response JSON object
      */
