@@ -3,14 +3,15 @@
 <link rel=icon type=image/png href=favicon.png>
 <link rel=stylesheet href=style.css?6>
 <meta charset=utf-8>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head><body>
 <div id=container1>
 <div id=container3>
 <p id=titleInfo>LittleJS Example Browser</p>
 <p id=exampleInfo></p>
 <a id=exampleLink target='_blank'></a>
+<div id=divCodeOptions>
 <hr>
-<div>
 Theme:
 <select style=width:120px onchange=loadTheme() id=selectTheme></select>
 <select style=width:40px onchange=loadTheme() id=selectFontSize>
@@ -20,28 +21,36 @@ Theme:
     <option value=20px>L</option>
     <option value=24px>XL</option>
 </select>
-<input type=checkbox id=checkboxLiveEdit checked>Live Edit
-<input type=checkbox id=checkboxJumpToError>Jump to Error
-</div> 
+<span class=nowrap><input type=checkbox id=checkboxLiveEdit checked>Live Edit</span>
+<span class=nowrap><input type=checkbox id=checkboxJumpToError>Jump to Error</span>
+</div>
+<div id=divTextareas>
 <textarea id=textareaCode oninput=codeInput() spellcheck=false></textarea>
 <textarea id=textareaError readonly spellcheck=false></textarea>
 <textarea id=textareaConsole readonly spellcheck=false></textarea>
 </div>
+</div>
 <div id=container2>
+<div style=display:flex;justify-content:center>
 <div id=iframeContainer></div>
+</div>
 <div>
 <input id=inputSearch placeholder='Search examples...' oninput=filterExamples() onkeydown='if(event.key=="Escape")filterExamples(1)'> 
 <button id=buttonRestart onclick=restartCode()>Restart</button>
 <button id=buttonPause>Pause</button>
-<button id=buttonScreenshot>Screenshot</button>
 <button id=buttonFullscreen>Fullscreen</button>
-<input type=checkbox id=checkboxWebGL checked>WebGL
+<span id=container4>
+<button id=buttonScreenshot>Screenshot</button>
+<span class=nowrap><input type=checkbox id=checkboxWebGL checked>WebGL</span>
+</span>
 </div>
 <select id=selectExample autofocus onchange=setExample() size=2></select>
 </div>
 </div>
 <script>
 'use strict';
+
+const useCodeMiror = true;
 
 class ExampleInfo
 {
@@ -122,18 +131,62 @@ if (exampleIndex < 0)
 selectExample.selectedIndex = exampleIndex;
 setExample();
 
-onresize = () =>
+function resizeWindow()
 {
-    // resize iframe to fit half the window
-    const aspect = 1920 / 1080;
-    let w = innerWidth / 2 | 0;
-    let h = w / aspect | 0;
-    iframeContainer.style.width = w + 'px';
-    iframeContainer.style.height = h + 'px';
-    // fix code mirror width
-    container3.style.width = w-30 + 'px';
+    const windowAspect = innerWidth / innerHeight;
+    const verticalLayout = windowAspect < 1.4;
+    if (verticalLayout)
+    {
+        // vertical layout for thin screens
+        if (container2.parentNode != container3)
+            container3.insertBefore(container2, divCodeOptions);
+
+        // hide full controls
+        container4.style.display = 'none';
+
+        // resize iframe to the window
+        setFrameSize(innerWidth);
+
+        // fix code mirror sizing glitch
+        codeMirror && codeMirror.setSize(innerWidth-35, null);
+    }
+    else
+    {
+        // horizontal layout for wide screens
+        if (container2.parentNode != container1)
+            container1.appendChild(container2);
+        
+        // show full controls
+        container4.style.display = '';
+        
+        // resize iframe to fit half the window
+        setFrameSize(innerWidth/2);
+
+        // fix code mirror sizing glitch
+        codeMirror && codeMirror.setSize(innerWidth/2 - 25, null);
+    }
+
+    function setFrameSize(w)
+    {
+        const aspect = 16 / 9; // HD aspect ratio
+        w = w | 0;
+        const h = w / aspect | 0;
+        iframeContainer.style.width = w + 'px';
+        iframeContainer.style.height = h + 'px';
+        
+        // fix code mirror after layout changes
+        if (codeMirror)
+        {
+            // fix glitch with code mirror sizing
+            setTimeout(()=>codeMirror.refresh(), 500);
+        }
+    }
+    console.log(1)
 }
-onresize();
+
+// apply responsive layout
+addEventListener('resize', resizeWindow);
+resizeWindow();
 
 ///////////////////////////////////////////////////////////////////////////////
 // setting examples
@@ -556,29 +609,30 @@ for (const theme of themes)
 // Set the saved font size
 selectFontSize.value = savedFontSize;
 textareaCode.style.fontSize = savedFontSize;
-addCodeMirrorElement('codemirror.min.js', 'script').onload = ()=>
-addCodeMirrorElement('codemirror.min.css', 'link', 'stylesheet').onload = ()=>
-addCodeMirrorElement('addon/edit/matchbrackets.js', 'script').onload = ()=> 
-addCodeMirrorElement('mode/javascript/javascript.min.js', 'script').onload = ()=> 
-initCodeMirror();
-
-function initCodeMirror()
+if (useCodeMiror)
 {
-    if (codeMirror)
-        return; // prevent duplicate initialization
-
-    const textareaCode = document.getElementById('textareaCode');
-    codeMirror = CodeMirror.fromTextArea(textareaCode, 
+    addCodeMirrorElement('codemirror.min.js', 'script').onload = ()=>
+    addCodeMirrorElement('codemirror.min.css', 'link', 'stylesheet').onload = ()=>
+    addCodeMirrorElement('addon/edit/matchbrackets.js', 'script').onload = ()=>
+    addCodeMirrorElement('mode/javascript/javascript.min.js', 'script').onload = ()=>
     {
-        theme: savedTheme,
-        indentUnit: 4,
-        mode: codeIsJS ? 'javascript' : 'text',
-        lineNumbers: true,
-        lineWrapping: true,
-        matchBrackets: true,
-    });
-    codeMirror.on('change', codeInput);
-    loadTheme();
+        if (codeMirror)
+            return; // prevent duplicate initialization
+
+        const textareaCode = document.getElementById('textareaCode');
+        codeMirror = CodeMirror.fromTextArea(textareaCode, 
+        {
+            theme: savedTheme,
+            indentUnit: 4,
+            mode: codeIsJS ? 'javascript' : 'text',
+            lineNumbers: true,
+            lineWrapping: true,
+            matchBrackets: true,
+        });
+        codeMirror.on('change', codeInput);
+        loadTheme();
+        resizeWindow(); // fix cursor positioning issue on startup
+    }
 }
 
 function addCodeMirrorElement(filename, type, rel) 

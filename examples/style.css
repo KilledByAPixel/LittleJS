@@ -31,21 +31,25 @@ iframe
 {
     flex-grow: 1;
 }
+#divTextareas
+{
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 300px;
+}
 .CodeMirror,
 #textareaCode
 {
     flex-grow: 1;
-    padding: 5px;
     resize: none;
     color: #fff;
     background: #000;
-    font-size: 20px;
 }
 #textareaConsole,
 #textareaError
 {
     flex-grow: .3;
-    padding: 5px;
     resize: none;
     display: none;
     color:#f22;
@@ -116,6 +120,10 @@ input[type='checkbox']:disabled
 .error-line
 {
     background-color: #f004 !important;
+}
+.nowrap
+{
+    white-space:nowrap;
 }
 
 /*  LittleJS CodeMirror Theme */
