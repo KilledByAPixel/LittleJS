@@ -75,7 +75,19 @@ function lerp(valueA, valueB, percent)
     if (valueA >= 0 && valueA <= 1 && ((valueB < 0 || valueB > 1) && (percent < 0 || percent > 1)))
         console.warn('lerp() parameter order changed! use lerp(start, end, p)');
     return valueA + clamp(percent) * (valueB-valueA);
- }
+}
+
+/** Gets percent between percentA and percentB and linearly interpolates between lerpA and lerpB
+ *  A shortcut for lerp(lerpA, lerpB, percent(value, percentA, percentB))
+ *  @param {number} value
+ *  @param {number} percentA
+ *  @param {number} percentB
+ *  @param {number} lerpA
+ *  @param {number} lerpB
+ *  @return {number}
+ *  @memberof Utilities */
+function percentLerp(value, percentA, percentB, lerpA, lerpB)
+{ return lerp(lerpA, lerpB, percent(value, percentA, percentB)); }
 
 /** Returns signed wrapped distance between the two values passed in
  *  @param {number} valueA
