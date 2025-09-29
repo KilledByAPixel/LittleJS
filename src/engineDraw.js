@@ -234,9 +234,6 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
     ASSERT(isColor(color) && (!additiveColor || isColor(additiveColor)), 'drawTile color is invalid');
     ASSERT(isNumber(angle), 'drawTile angle should be a number');
 
-    if (color.a <= 0 && (!additiveColor || additiveColor.a <= 0) || !size.x || !size.y)
-        return; // completely invisible, skip render
-
     const textureInfo = tileInfo && tileInfo.textureInfo;
     if (useWebGL)
     {
