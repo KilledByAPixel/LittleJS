@@ -208,7 +208,7 @@ class EngineObject
                     if (o.mass) // push away if not fixed
                         o.velocity = o.velocity.subtract(velocity);
                         
-                    debugOverlay && debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f00');
+                    debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f00');
                     continue;
                 }
 
@@ -270,7 +270,7 @@ class EngineObject
                     else // bounce if other object is fixed
                         this.velocity.x *= -restitution;
                 }
-                debugOverlay && debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f0f');
+                debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f0f');
             }
         }
         if (this.collideTiles)
@@ -315,7 +315,7 @@ class EngineObject
                         this.pos.x = oldPos.x;
                         this.velocity.x *= -this.restitution;
                     }
-                    debugOverlay && debugPhysics && debugRect(this.pos, this.size, '#f00');
+                    debugPhysics && debugRect(this.pos, this.size, '#f00');
                 }
             }
         }
