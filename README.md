@@ -36,27 +36,28 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 
 ### ✨ Graphics
 
-- Super fast sprite and tile map rendering engine with WebGL2
-- Update and render 100,000+ sprites at a solid 60fps
-- Apply [Shadertoy](https://www.shadertoy.com) compatible shaders for post-processing effects
+- Super fast WebGL2 + Canvas2D hybrid rendering
+- 100,000+ sprites at solid 60fps
+- Apply [Shadertoy](https://www.shadertoy.com) style shaders for post-processing effects
 - Robust particle effect system and [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
 
 ### 🔊 Audio
 
-- Positional sound effects with wave files, mp3s, or ZzFX
+- Positional sound effects with distance falloff
 - Use [ZzFX](https://killedbyapixel.github.io/ZzFX/) sound effect generator to play sounds without asset files
-- Music with mp3, ogg, wave, or [ZzFXM](https://keithclark.github.io/ZzFXM/)
+- Music and sound with mp3, ogg, wave, or [ZzFXM](https://keithclark.github.io/ZzFXM/)
 
 ### 🎮 Input
 
 - Comprehensive input handling for keyboard, mouse, gamepad, and touch
+- Automatic touch mouse emulation
 - On screen touch gamepad designed for mobile devices
 
 ### 💥 Physics
 
 - Robust arcade physics system with collision handling
-- Very fast collision and raycasting for tile maps
-- Full Box2d support using [super fast wasm build of box2d.js](https://github.com/kripken/box2d.js/)
+- Box2d fully integrated for more realistic physics
+- Tilemap collision with raycasting
 
 ### 🚀 Flexibility
 
@@ -65,12 +66,12 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 - Ideal for size coding competitions like [Js13kGames](https://js13kgames.com/)
 - Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used for anything you want forever
 
-### 🛠️ And more...
+### 🛠️ Developer Tools
 
-- Node.js build system
-- 2D vector math library
+- Live example browser with code editor
 - Debug primitive rendering system
-- Built in video/audio capture tool
+- Screenshot and video capture tools
+- Node.js build system
 - Bitmap font rendering and built in engine font
 - Medal tracking system with [Newgrounds](https://www.newgrounds.com/) support
 
@@ -120,8 +121,9 @@ The starter example project includes a node js file [build.js](https://github.co
 Here are a few of the many amazing games created with LittleJS...
 
 - [Space Huggers](https://www.newgrounds.com/portal/view/819609) - Rogulike platformer shoot-em-up game with procedural levels. by [KilledByAPixel](https://frankforce.com/)
-- [Undergrowth](https://undergrowth.squidband.uk/) - An interactive music videogame for the band Squid. by [KilledByAPixel](https://frankforce.com/)
+- [L1ttl3 Paws](https://github.com/KilledByAPixel/JS13K2025) - Cat glider with procedural art and levels for JS13K! by [KilledByAPixel](https://frankforce.com/)
 - [The Way of the Dodo](https://js13kgames.com/2024/games/the-way-of-the-dodo) - Single button platformer. JS13k 5th place winner! by [repsej](https://github.com/repsej)
+- [Undergrowth](https://undergrowth.squidband.uk/) - An interactive music videogame for the band Squid. by [KilledByAPixel](https://frankforce.com/)
 - [204Snake!](https://www.newgrounds.com/portal/view/960100) - A puzzle game that combines 2048 with snake. LittleJS Jam 1st place winner! by [Sodoj](https://sodoj.itch.io/) and [Shai-P](https://shai-p.itch.io/)
 - [GATOR](https://www.newgrounds.com/portal/view/960757) - Retro platformer shooter game where you rescue animals. LittleJS Jam 2nd place winner! by [eoinmcg](https://eoinmcg.itch.io/)
 - [A Hedgehog's search](https://willsm1111.itch.io/a-hedgehogs-search) - Adventure game staring a hedgehog. LittleJS Jam 3rd place winner! by [willsm1111](https://willsm1111.itch.io/)
