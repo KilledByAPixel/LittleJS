@@ -379,12 +379,12 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let gamepadsEnable: boolean;
-    /** If true, the dpad input is also routed to the left analog stick (for better accessability)
+    /** If true, the dpad input is also routed to the left analog stick (for better accessibility)
      *  @type {boolean}
      *  @default
      *  @memberof Settings */
     export let gamepadDirectionEmulateStick: boolean;
-    /** If true the WASD keys are also routed to the direction keys (for better accessability)
+    /** If true the WASD keys are also routed to the direction keys (for better accessibility)
      *  @type {boolean}
      *  @default
      *  @memberof Settings */
@@ -533,7 +533,7 @@ declare module "littlejsengine" {
      *  @param {number} damp
      *  @memberof Settings */
     export function setObjectDefaultAngleDamping(damp: number): void;
-    /** Set how much to bounce when a collision occur
+    /** Set how much to bounce when a collision occurs
      *  @param {number} restitution
      *  @memberof Settings */
     export function setObjectDefaultRestitution(restitution: number): void;

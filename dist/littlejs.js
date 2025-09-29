@@ -1317,7 +1317,19 @@ function lerp(valueA, valueB, percent)
     if (valueA >= 0 && valueA <= 1 && ((valueB < 0 || valueB > 1) && (percent < 0 || percent > 1)))
         console.warn('lerp() parameter order changed! use lerp(start, end, p)');
     return valueA + clamp(percent) * (valueB-valueA);
- }
+}
+
+/** Gets percent between percentA and percentB and linearly interpolates between lerpA and lerpB
+ *  A shortcut for lerp(lerpA, lerpB, percent(value, percentA, percentB))
+ *  @param {number} value
+ *  @param {number} percentA
+ *  @param {number} percentB
+ *  @param {number} lerpA
+ *  @param {number} lerpB
+ *  @return {number}
+ *  @memberof Utilities */
+function percentLerp(value, percentA, percentB, lerpA, lerpB)
+{ return lerp(lerpA, lerpB, percent(value, percentA, percentB)); }
 
 /** Returns signed wrapped distance between the two values passed in
  *  @param {number} valueA
@@ -2409,13 +2421,13 @@ let particleEmitRateScale = 1;
  *  @memberof Settings */
 let gamepadsEnable = true;
 
-/** If true, the dpad input is also routed to the left analog stick (for better accessability)
+/** If true, the dpad input is also routed to the left analog stick (for better accessibility)
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
 let gamepadDirectionEmulateStick = true;
 
-/** If true the WASD keys are also routed to the direction keys (for better accessability)
+/** If true the WASD keys are also routed to the direction keys (for better accessibility)
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -2636,7 +2648,7 @@ function setObjectDefaultDamping(damp) { objectDefaultDamping = damp; }
  *  @memberof Settings */
 function setObjectDefaultAngleDamping(damp) { objectDefaultAngleDamping = damp; }
 
-/** Set how much to bounce when a collision occur
+/** Set how much to bounce when a collision occurs
  *  @param {number} restitution
  *  @memberof Settings */
 function setObjectDefaultRestitution(restitution) { objectDefaultRestitution = restitution; }
@@ -3458,9 +3470,6 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
     ASSERT(isVector2(size) && size.isValid(), 'drawTile size should be a vec2');
     ASSERT(isColor(color) && (!additiveColor || isColor(additiveColor)), 'drawTile color is invalid');
     ASSERT(isNumber(angle), 'drawTile angle should be a number');
-
-    if (color.a <= 0 && (!additiveColor || additiveColor.a <= 0) || !size.x || !size.y)
-        return; // completely invisible, skip render
 
     const textureInfo = tileInfo && tileInfo.textureInfo;
     if (useWebGL)
