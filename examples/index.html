@@ -44,6 +44,7 @@ Theme:
 <span class=nowrap><input type=checkbox id=checkboxWebGL checked>WebGL</span>
 </span>
 </div>
+<span id=selectExampleText class=nowrap>Select an example...</span>
 <select id=selectExample onchange=setExample() size=2></select>
 </div>
 </div>
@@ -133,6 +134,11 @@ setExample();
 
 function resizeWindow()
 {
+    // show example text on touch devices
+    const isTouchDevice = window.ontouchstart !== undefined;
+    if (!isTouchDevice)
+        selectExampleText.style.display = 'none';
+
     const windowAspect = innerWidth / innerHeight;
     const verticalLayout = windowAspect < 1.4;
     if (verticalLayout)
