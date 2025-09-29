@@ -308,7 +308,7 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
  *  @param {Color}   [color=(1,1,1,1)]
  *  @param {number}  [angle]
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace=false]
+ *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
@@ -321,73 +321,90 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
  *  @param {Vector2} posB
  *  @param {number}  [thickness]
  *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Vector2} [pos=(0,0)] - Offset to apply
+ *  @param {number}  [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable]
- *  @param {boolean} [screenSpace=false]
+ *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawLine(posA, posB, thickness=.1, color, useWebGL, screenSpace, context)
+function drawLine(posA, posB, thickness=.1, color, pos=vec2(), angle=0, useWebGL, screenSpace, context)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(thickness, halfDelta.length()*2);
-    drawRect(posA.add(halfDelta), size, color, halfDelta.angle(), useWebGL, screenSpace, context);
+    pos = pos.add(posA.add(halfDelta));
+    angle += halfDelta.angle();
+    drawRect(pos, size, color, angle, useWebGL, screenSpace, context);
 }
 
 /** Draw colored polygon using passed in points
- *  @param {Array<Vector2>}   points - Array of Vector2 points
+ *  @param {Array<Vector2>} points - Array of Vector2 points
  *  @param {Color}   [color=(1,1,1,1)]
- *  @param {number}  [lineWidth=0]
+ *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=(0,0,0,1)]
- *  @param {boolean} [screenSpace=false]
+ *  @param {Vector2} [pos=(0,0)] - Offset to apply
+ *  @param {number}  [angle] - Angle to rotate by
+ *  @param {boolean} [useWebGL] - Webgl not supported
+ *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawPoly(points, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=drawContext)
+function drawPoly(points, color=new Color, lineWidth=0, lineColor=BLACK, pos=vec2(), angle=0, useWebGL=false, screenSpace=false, context=drawContext)
 {
-    ASSERT(isColor(color) && isColor(lineColor));
-    context.fillStyle = color.toString();
-    context.beginPath();
-    for (const point of screenSpace ? points : points.map(worldToScreen))
-        context.lineTo(point.x, point.y);
-    context.closePath();
-    context.fill();
-    if (lineWidth)
+    ASSERT(isVector2(pos) && pos.isValid(), 'drawPoly pos should be a vec2');
+    ASSERT(Array.isArray(points), 'drawPoly points should be an array');
+    ASSERT(isColor(color) && isColor(lineColor), 'drawPoly color is invalid');
+    ASSERT(isNumber(lineWidth), 'drawPoly lineWidth should be a number');
+    ASSERT(isNumber(angle), 'drawPoly angle should be a number');
+    ASSERT(!useWebGL, 'drawPoly webgl not supported');
+    drawCanvas2D(pos, vec2(1), angle, false, context=>
     {
-        context.strokeStyle = lineColor.toString();
-        context.lineWidth = screenSpace ? lineWidth : lineWidth*cameraScale;
-        context.stroke();
-    }
+        context.beginPath();
+        for (const point of points)
+            context.lineTo(point.x, point.y);
+        context.closePath();
+        context.fillStyle = color.toString();
+        context.fill();
+        if (lineWidth)
+        {
+            context.strokeStyle = lineColor.toString();
+            context.lineWidth = lineWidth;
+            context.stroke();
+        }
+    }, screenSpace, context);
 }
 
 /** Draw colored ellipse using passed in point
  *  @param {Vector2} pos
- *  @param {number}  [width=1]
- *  @param {number}  [height=1]
- *  @param {number}  [angle=0]
+ *  @param {Vector2} [size=(1,1)]
  *  @param {Color}   [color=(1,1,1,1)]
- *  @param {number}  [lineWidth=0]
+ *  @param {number}  [angle]
+ *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=(0,0,0,1)]
- *  @param {boolean} [screenSpace=false]
+ *  @param {boolean} [useWebGL] - Webgl not supported
+ *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawEllipse(pos, width=1, height=1, angle=0, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=drawContext)
+function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, lineColor=BLACK, useWebGL=false, screenSpace=false, context=drawContext)
 {
-    ASSERT(isColor(color) && isColor(lineColor));
-    if (!screenSpace)
+    ASSERT(isVector2(pos) && pos.isValid(), 'drawEllipse pos should be a vec2');
+    ASSERT(isVector2(size) && size.isValid(), 'drawEllipse size should be a vec2');
+    ASSERT(isColor(color) && isColor(lineColor), 'drawEllipse color is invalid');
+    ASSERT(isNumber(angle), 'drawEllipse angle should be a number');
+    ASSERT(isNumber(lineWidth), 'drawEllipse lineWidth should be a number');
+    ASSERT(lineWidth>=0 && lineWidth < size.x && lineWidth < size.y, 'drawEllipse invalid lineWidth');
+    ASSERT(!useWebGL, 'drawEllipse webgl not supported');
+    drawCanvas2D(pos, vec2(1), angle, false, context=>
     {
-        pos = worldToScreen(pos);
-        width *= cameraScale;
-        height *= cameraScale;
-        lineWidth *= cameraScale;
-    }
-    context.fillStyle = color.toString();
-    context.beginPath();
-    context.ellipse(pos.x, pos.y, width, height, angle, 0, 9);
-    context.fill();
-    if (lineWidth)
-    {
-        context.strokeStyle = lineColor.toString();
-        context.lineWidth = lineWidth;
-        context.stroke();
-    }
+        context.beginPath();
+        context.ellipse(0, 0, size.y, size.x, 0, 0, 9);
+        context.fillStyle = color.toString();
+        context.fill();
+        if (lineWidth)
+        {
+            context.strokeStyle = lineColor.toString();
+            context.lineWidth = lineWidth;
+            context.stroke();   
+        }
+    }, screenSpace, context);
 }
 
 /** Draw colored circle using passed in point
@@ -396,11 +413,12 @@ function drawEllipse(pos, width=1, height=1, angle=0, color=new Color, lineWidth
  *  @param {Color}   [color=(1,1,1,1)]
  *  @param {number}  [lineWidth=0]
  *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {boolean} [useWebGL] - Webgl not supported
  *  @param {boolean} [screenSpace=false]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), screenSpace, context=drawContext)
-{ drawEllipse(pos, radius, radius, 0, color, lineWidth, lineColor, screenSpace, context); }
+function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=BLACK, useWebGL=false, screenSpace, context=drawContext)
+{ drawEllipse(pos, vec2(radius), color, 0, lineWidth, lineColor, useWebGL, screenSpace, context); }
 
 /** Draw directly to a 2d canvas context in world space
  *  @param {Vector2}  pos
@@ -478,7 +496,7 @@ function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textA
  *  @param {number}  [maxWidth]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
  *  @memberof Draw */
-function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=new Color(0,0,0), textAlign='center', font=fontDefault, maxWidth=undefined, context=overlayContext)
+function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, maxWidth=undefined, context=overlayContext)
 {
     context.fillStyle = color.toString();
     context.strokeStyle = lineColor.toString();

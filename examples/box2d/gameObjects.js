@@ -308,7 +308,7 @@ export class SoftBodyObject extends LJS.Box2dObject
         for (let y = 0; y < sy.y; ++y) poly.push(this.getNode(sx-1, y).pos);
         for (let x = sx; x--;) poly.push(this.getNode(x, sy-1).pos);
         for (let y = sy; y--;) poly.push(this.getNode(0, y).pos);
-        LJS.box2d.drawPoly(vec2(), 0, poly, LJS.BLACK)
+        LJS.drawPoly(poly, LJS.BLACK)
     }
     getNode(x, y) 
     {
