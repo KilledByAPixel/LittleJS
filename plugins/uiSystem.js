@@ -157,7 +157,7 @@ class UISystemPlugin
     *  @param {boolean}  [mirror] */
     drawTile(pos, size, tileInfo, color=uiSystem.defaultColor, angle=0, mirror=false)
     {
-        drawTile(pos, size, tileInfo, color, angle, mirror, BLACK, false, true, uiSystem.uiContext);
+        drawTile(pos, size, tileInfo, color, angle, mirror, CLEAR_BLACK, false, true, uiSystem.uiContext);
     }
 
     /** Draw text to the UI context
