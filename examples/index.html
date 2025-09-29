@@ -557,6 +557,9 @@ initCodeMirror();
 
 function initCodeMirror()
 {
+    if (codeMirror)
+        return; // prevent duplicate initialization
+
     const textareaCode = document.getElementById('textareaCode');
     codeMirror = CodeMirror.fromTextArea(textareaCode, 
     {
