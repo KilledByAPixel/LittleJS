@@ -10,7 +10,7 @@ function gameRender()
     // rgb and hsl color
     drawRect(vec2(-8, 0), vec2(3), new Color(1,0,0));
     drawRect(vec2(-4, 0), vec2(3), rgb(0,1,1));
-    drawRect(vec2(-0, 0), vec2(3), hsl(0,1,.5));
+    drawRect(vec2(-0, 0), vec2(3), hsl(0,1,.5, .5));
     drawRect(vec2( 4, 0), vec2(3), hsl(.6,.5,.5));
     drawRect(vec2( 8, 0), vec2(3), hsl(0,0,1));
 
