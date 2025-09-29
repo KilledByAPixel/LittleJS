@@ -181,13 +181,13 @@ let particleEmitRateScale = 1;
  *  @memberof Settings */
 let gamepadsEnable = true;
 
-/** If true, the dpad input is also routed to the left analog stick (for better accessability)
+/** If true, the dpad input is also routed to the left analog stick (for better accessibility)
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
 let gamepadDirectionEmulateStick = true;
 
-/** If true the WASD keys are also routed to the direction keys (for better accessability)
+/** If true the WASD keys are also routed to the direction keys (for better accessibility)
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -408,7 +408,7 @@ function setObjectDefaultDamping(damp) { objectDefaultDamping = damp; }
  *  @memberof Settings */
 function setObjectDefaultAngleDamping(damp) { objectDefaultAngleDamping = damp; }
 
-/** Set how much to bounce when a collision occur
+/** Set how much to bounce when a collision occurs
  *  @param {number} restitution
  *  @memberof Settings */
 function setObjectDefaultRestitution(restitution) { objectDefaultRestitution = restitution; }
