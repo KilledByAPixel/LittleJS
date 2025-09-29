@@ -50,13 +50,20 @@ let canvasMaxSize = vec2(1920, 1080);
  *  @memberof Settings */
 let canvasFixedSize = vec2();
 
-/** Use nearest neighbor canvas scaling for more pixelated look
- *  - Must be set before startup to take effect
+/** Use nearest canvas scaling for more pixelated look
  *  - If enabled sets css image-rendering:pixelated
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
 let canvasPixelated = true;
+
+/** Use nearest canvas scaling for more pixelated look
+ *  - If enabled sets css image-rendering:pixelated
+ *  - This defaults to false because text looks better with smoothing
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let overlayCanvasPixelated = false;
 
 /** Disables texture filtering for crisper pixel art
  *  @type {boolean}
@@ -316,10 +323,30 @@ function setCanvasMaxSize(size) { canvasMaxSize = size; }
  *  @memberof Settings */
 function setCanvasFixedSize(size) { canvasFixedSize = size; }
 
-/** Use nearest neighbor scaling algorithm for canvas for more pixelated look
+/** Use nearest scaling algorithm for canvas for more pixelated look
+ *  - If enabled sets css image-rendering:pixelated
  *  @param {boolean} pixelated
  *  @memberof Settings */
-function setCanvasPixelated(pixelated) { canvasPixelated = pixelated; }
+function setCanvasPixelated(pixelated)
+{
+    canvasPixelated = pixelated;
+    if (mainCanvas)
+        mainCanvas.style.imageRendering = pixelated ? 'pixelated' : '';
+    if (glCanvas)
+        glCanvas.style.imageRendering = pixelated ? 'pixelated' : '';
+}
+
+/** Use nearest scaling algorithm for canvas for more pixelated look
+ *  - If enabled sets css image-rendering:pixelated
+ *  - This defaults to false because text looks better with smoothing
+ *  @param {boolean} pixelated
+ *  @memberof Settings */
+function setOverlayCanvasPixelated(pixelated)
+{ 
+    overlayCanvasPixelated = pixelated; 
+    if (overlayCanvas)
+        overlayCanvas.style.imageRendering = pixelated ? 'pixelated' : '';
+}
 
 /** Disables texture filtering for crisper pixel art
  *  @param {boolean} pixelated
