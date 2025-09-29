@@ -30,6 +30,7 @@ iframe
 #selectExample
 {
     flex-grow: 1;
+    min-height: 150px;
 }
 #divTextareas
 {
