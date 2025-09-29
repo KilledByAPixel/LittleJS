@@ -109,6 +109,10 @@ button:disabled
     background-color: #666;
     border-color: #666;
 }
+input[type='checkbox']:disabled
+{
+    opacity: 0.5;
+}
 .error-line
 {
     background-color: #f004 !important;
