@@ -31,7 +31,7 @@ Theme:
 </div>
 </div>
 <div id=container2>
-<div style=display:flex;justify-content:center>
+<div style='display:flex;justify-content:center'>
 <div id=iframeContainer></div>
 </div>
 <div>
@@ -145,7 +145,7 @@ function resizeWindow()
         container4.style.display = 'none';
 
         // resize iframe to the window
-        setFrameSize(innerWidth);
+        setFrameSize(innerWidth-35);
 
         // fix code mirror sizing glitch
         codeMirror && codeMirror.setSize(innerWidth-35, null);
@@ -173,6 +173,13 @@ function resizeWindow()
         const h = w / aspect | 0;
         iframeContainer.style.width = w + 'px';
         iframeContainer.style.height = h + 'px';
+        
+        if (iframeExample)
+        {
+            // ensure iframe fills container tightly
+            iframeExample.style.width = w + 'px';
+            iframeExample.style.height = h + 'px';
+        }
         
         // fix code mirror after layout changes
         if (codeMirror)
