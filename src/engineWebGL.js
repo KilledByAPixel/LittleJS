@@ -31,7 +31,7 @@ let glAntialias = true;
 // WebGL internal variables not exposed to documentation
 let glShader, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glInstanceCount, glAdditive, glBatchAdditive;
 
-// WebGL internal constants 
+// WebGL internal constants
 const gl_MAX_INSTANCES = 1e4;
 const gl_INDICES_PER_INSTANCE = 11;
 const gl_INSTANCE_BYTE_STRIDE = gl_INDICES_PER_INSTANCE * 4;
@@ -136,7 +136,7 @@ function glPreRender()
     initVertexAttribArray('c', glContext.UNSIGNED_BYTE, 1, 4); // color
     initVertexAttribArray('a', glContext.UNSIGNED_BYTE, 1, 4); // additiveColor
     initVertexAttribArray('r', glContext.FLOAT, 4, 1); // rotation
-    
+
     // build the transform matrix
     const s = vec2(2*cameraScale).divide(mainCanvasSize);
     const rotatedCam = cameraPos.rotate(-cameraAngle);
@@ -157,7 +157,7 @@ function glPreRender()
 function glClearCanvas()
 {
     if (!glContext) return;
-    
+
     // clear and set to same size as main canvas
     glContext.viewport(0, 0, glCanvas.width=drawCanvas.width, glCanvas.height=drawCanvas.height);
     glContext.clear(glContext.COLOR_BUFFER_BIT);
@@ -253,7 +253,7 @@ function glCreateTexture(image)
         const whitePixel = new Uint8Array([255, 255, 255, 255]);
         glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 1, 1, 0, glContext.RGBA, glContext.UNSIGNED_BYTE, whitePixel);
     }
-    
+
     // set texture filtering
     const filter = tilesPixelated ? glContext.NEAREST : glContext.LINEAR;
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, filter);

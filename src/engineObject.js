@@ -1,10 +1,10 @@
-/** 
+/**
  * LittleJS Object System
  */
 
 'use strict';
 
-/** 
+/**
  * LittleJS Object Base Object Class
  * - Top level object class used by the engine
  * - Automatically adds self to object list
@@ -27,7 +27,7 @@
  * @example
  * // create an engine object, normally you would first extend the class with your own
  * const pos = vec2(2,3);
- * const object = new EngineObject(pos); 
+ * const object = new EngineObject(pos);
  */
 class EngineObject
 {
@@ -115,7 +115,7 @@ class EngineObject
         // add to list of objects
         engineObjects.push(this);
     }
-    
+
     /** Update the object transform, called automatically by engine even when paused */
     updateTransforms()
     {
@@ -207,7 +207,7 @@ class EngineObject
                     this.velocity = this.velocity.add(velocity);
                     if (o.mass) // push away if not fixed
                         o.velocity = o.velocity.subtract(velocity);
-                        
+
                     debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f00');
                     continue;
                 }
@@ -218,7 +218,7 @@ class EngineObject
                 const isBlockedX = abs(oldPos.y - o.pos.y)*2 < sizeBoth.y;
                 const isBlockedY = abs(oldPos.x - o.pos.x)*2 < sizeBoth.x;
                 const restitution = max(this.restitution, o.restitution);
-                
+
                 if (smallStepUp || isBlockedY || !isBlockedX) // resolve y collision
                 {
                     // push outside object collision
@@ -306,7 +306,7 @@ class EngineObject
                         {
                             // move to previous position
                             this.pos.y = oldPos.y;
-                            this.groundObject = undefined; 
+                            this.groundObject = undefined;
                         }
                     }
                     if (blockedLayerX)
@@ -320,20 +320,20 @@ class EngineObject
             }
         }
     }
-       
+
     /** Render the object, draws a tile by default, automatically called each frame, sorted by renderOrder */
     render()
     {
         // default object render
         drawTile(this.pos, this.drawSize || this.size, this.tileInfo, this.color, this.angle, this.mirror, this.additiveColor);
     }
-    
+
     /** Destroy this object, destroy its children, detach it's parent, and mark it for removal */
     destroy()
-    { 
+    {
         if (this.destroyed)
             return;
-        
+
         // disconnect from parent and destroy children
         this.destroyed = 1;
         this.parent && this.parent.removeChild(this);
@@ -359,7 +359,7 @@ class EngineObject
     /** Convert from world space to local space for a vector (rotation only)
      *  @param {Vector2} vec - world space vector */
     worldToLocalVector(vec) { return vec.rotate(-this.angle); }
-    
+
     /** Called to check if a tile collision should be resolved
      *  @param {number}  tileData - the value of the tile at the position
      *  @param {Vector2} pos      - tile where the collision occurred
@@ -380,14 +380,14 @@ class EngineObject
      *  @param {Vector2} acceleration */
     applyAcceleration(acceleration) { if (this.mass) this.velocity = this.velocity.add(acceleration); }
 
-    /** Apply angular acceleration to this object 
+    /** Apply angular acceleration to this object
      *  @param {number} acceleration */
     applyAngularAcceleration(acceleration) { if (this.mass) this.angleVelocity += acceleration; }
 
     /** Apply force to this object (adjust velocity, affected by mass)
      *  @param {Vector2} force */
     applyForce(force) { this.applyAcceleration(force.scale(1/this.mass)); }
-    
+
     /** Get the direction of the mirror
      *  @return {number} -1 if this.mirror is true, or 1 if not mirrored */
     getMirrorSign() { return this.mirror ? -1 : 1; }
@@ -455,7 +455,7 @@ class EngineObject
     {
         if (!debug)
             return;
-        
+
         // show object info for debugging
         const size = vec2(max(this.size.x, .2), max(this.size.y, .2));
         const color = rgb(this.collideTiles?1:0, this.collideSolidObjects?1:0, this.isSolid?1:0, .5);

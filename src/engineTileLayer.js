@@ -1,4 +1,4 @@
-/** 
+/**
  * LittleJS Tile Layer System
  * - Caches arrays of tiles to off screen canvas for fast rendering
  * - Unlimited numbers of layers, allocates canvases as needed
@@ -14,7 +14,7 @@
 // Tile Layer System
 
 /** Keep track of all tile layers with collision
- *  @type {Array<TileCollisionLayer>} 
+ *  @type {Array<TileCollisionLayer>}
  *  @memberof TileCollision */
 let tileCollisionLayers = [];
 
@@ -70,7 +70,7 @@ function tileCollisionRaycast(posStart, posEnd, object, solidOnly=true)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-/** 
+/**
  * Load tile layers from exported data
  *  @param {Object}   tileMapData - Level data from exported data
  *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture)
@@ -109,7 +109,7 @@ function tileCollisionLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisio
         const tileLayer = new TileCollisionLayer(vec2(), levelSize, tileInfo, layerRenderOrder);
         tileLayers[layerIndex] = tileLayer;
 
-        for (let x=levelSize.x; x--;) 
+        for (let x=levelSize.x; x--;)
         for (let y=levelSize.y; y--;)
         {
             const pos = vec2(x, levelSize.y-1-y);
@@ -194,7 +194,7 @@ class CanvasLayer extends EngineObject
         this.glTexture = undefined;
         this.gravityScale = 0; // disable gravity by default for canvas layers
     }
-   
+
     /** Destroy this canvas layer */
     destroy()
     {
@@ -265,8 +265,8 @@ class CanvasLayer extends EngineObject
             if (textureInfo)
             {
                 context.globalAlpha = color.a; // only alpha is supported
-                context.drawImage(textureInfo.image, 
-                    tileInfo.pos.x,  tileInfo.pos.y, 
+                context.drawImage(textureInfo.image,
+                    tileInfo.pos.x,  tileInfo.pos.y,
                     tileInfo.size.x, tileInfo.size.y, -.5, -.5, 1, 1);
                 context.globalAlpha = 1;
             }
@@ -284,7 +284,7 @@ class CanvasLayer extends EngineObject
      *  @param {Vector2} [size=(1,1)]
      *  @param {Color}   [color=(1,1,1,1)]
      *  @param {number}  [angle=0] */
-    drawRect(pos, size, color, angle) 
+    drawRect(pos, size, color, angle)
     { this.drawTile(pos, size, undefined, color, angle); }
 
     /** Create or update the webgl texture for this layer
@@ -359,7 +359,7 @@ class TileLayer extends CanvasLayer
         }
     }
 
-    /** Set data at a given position in the array 
+    /** Set data at a given position in the array
      *  @param {Vector2}       layerPos - Local position in array
      *  @param {TileLayerData} data     - Data to set
      *  @param {boolean}       [redraw] - Force the tile to redraw if true */
@@ -371,18 +371,18 @@ class TileLayer extends CanvasLayer
             redraw && this.drawTileData(layerPos);
         }
     }
-    
-    /** Get data at a given position in the array 
+
+    /** Get data at a given position in the array
      *  @param {Vector2} layerPos - Local position in array
      *  @return {TileLayerData} */
     getData(layerPos)
     { return layerPos.arrayCheck(this.size) && this.data[(layerPos.y|0)*this.size.x+layerPos.x|0]; }
-    
+
     // Render the tile layer, called automatically by the engine
     render()
     {
         ASSERT(drawContext !== this.context, 'must call redrawEnd() after drawing tiles!');
-        
+
         // draw the tile layer as a single tile
         const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
         const pos = this.pos.add(this.size.scale(.5));
@@ -390,7 +390,7 @@ class TileLayer extends CanvasLayer
         drawTile(pos, this.size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebgl);
     }
 
-    /** Draw all the tile data to an offscreen canvas 
+    /** Draw all the tile data to an offscreen canvas
      *  - This may be slow in some browsers but only needs to be done once */
     redraw()
     {
@@ -447,7 +447,7 @@ class TileLayer extends CanvasLayer
     /** Draw the tile at a given position in the tile grid
      *  This can be used to clear out tiles when they are destroyed
      *  Tiles can also be redrawn if inside a redrawStart/End block
-     *  @param {Vector2} layerPos 
+     *  @param {Vector2} layerPos
      *  @param {boolean} [clear] - should the old tile be cleared out
      */
     drawTileData(layerPos, clear=true)

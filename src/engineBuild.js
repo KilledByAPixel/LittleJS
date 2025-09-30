@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-/** 
+/**
  * LittleJS Build System
  * - Combine input files
  * - Run custom build steps
@@ -76,8 +76,8 @@ Build
     `${BUILD_FOLDER}/${ENGINE_NAME}.js`,
     [
         `${SOURCE_FOLDER}/engine.js`,
-        `${SOURCE_FOLDER}/engineDebug.js`, 
-        ...engineSourceFiles, 
+        `${SOURCE_FOLDER}/engineDebug.js`,
+        ...engineSourceFiles,
         ...enginePluginFiles
     ],
     [], true
@@ -89,8 +89,8 @@ Build
     `${BUILD_FOLDER}/${ENGINE_NAME}.release.js`,
     [
         `${SOURCE_FOLDER}/engine.js`,
-        `${SOURCE_FOLDER}/engineRelease.js`, 
-        ...engineSourceFiles, 
+        `${SOURCE_FOLDER}/engineRelease.js`,
+        ...engineSourceFiles,
         ...enginePluginFiles
     ],
     [], true
@@ -109,8 +109,8 @@ Build
     'Build Engine -- ESM',
     `${BUILD_FOLDER}/${ENGINE_NAME}.esm.js`,
     [
-        `${BUILD_FOLDER}/${ENGINE_NAME}.js`, 
-        `${SOURCE_FOLDER}/engineExport.js`, 
+        `${BUILD_FOLDER}/${ENGINE_NAME}.js`,
+        `${SOURCE_FOLDER}/engineExport.js`,
         `${PLUGIN_FOLDER}/pluginExport.js`
     ],
     [typeScriptBuildStep]
@@ -121,8 +121,8 @@ Build
     'Build Engine -- ESM minified release',
     `${BUILD_FOLDER}/${ENGINE_NAME}.esm.min.js`,
     [
-        `${BUILD_FOLDER}/${ENGINE_NAME}.release.js`, 
-        `${SOURCE_FOLDER}/engineExport.js`, 
+        `${BUILD_FOLDER}/${ENGINE_NAME}.release.js`,
+        `${SOURCE_FOLDER}/engineExport.js`,
         `${PLUGIN_FOLDER}/pluginExport.js`
     ],
     [uglifyBuildStep, addLicenseStep]

@@ -1,4 +1,4 @@
-/** 
+/**
  * LittleJS Particle System
  */
 
@@ -17,7 +17,7 @@
  *     rgb(1,1,1,1), rgb(0,0,0,1), // colorStartA, colorStartB
  *     rgb(1,1,1,0), rgb(0,0,0,0), // colorEndA, colorEndB
  *     2, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
- *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate, 
+ *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate,
  *     .5, 1                // randomness, collide, additive, randomColorLinear, renderOrder
  * );
  */
@@ -53,7 +53,7 @@ class ParticleEmitter extends EngineObject
      *  @param {boolean}  [localSpace] - Should it be in local space of emitter (world space is default)
      */
     constructor
-    ( 
+    (
         position,
         angle,
         emitSize = 0,
@@ -75,7 +75,7 @@ class ParticleEmitter extends EngineObject
         gravityScale = 0,
         particleConeAngle = PI,
         fadeRate = .1,
-        randomness = .2, 
+        randomness = .2,
         collideTiles = false,
         additive = false,
         randomColorLinear = true,
@@ -145,7 +145,7 @@ class ParticleEmitter extends EngineObject
         /** @property {Number} - Track particle emit time */
         this.emitTimeBuffer    = 0;
     }
-    
+
     /** Update the emitter to spawn particles, called automatically by engine once each frame */
     update()
     {
@@ -204,7 +204,7 @@ class ParticleEmitter extends EngineObject
         const colorStart    = randColor(this.colorStartA, this.colorStartB, this.randomColorLinear);
         const colorEnd      = randColor(this.colorEndA,   this.colorEndB, this.randomColorLinear);
         const velocityAngle = this.localSpace ? coneAngle : this.angle + coneAngle;
-        
+
         // build particle
         const particle = new Particle(pos, this.tileInfo, angle, colorStart, colorEnd, particleTime, sizeStart, sizeEnd, this.fadeRate, this.additive,  this.trailScale, this.localSpace && this, this.particleDestroyCallback);
         particle.velocity      = vec2().setAngle(velocityAngle, speed);
@@ -263,9 +263,9 @@ class Particle extends EngineObject
      */
     constructor(position, tileInfo, angle, colorStart, colorEnd, lifeTime, sizeStart, sizeEnd, fadeRate, additive, trailScale, localSpaceEmitter, destroyCallback
     )
-    { 
-        super(position, vec2(), tileInfo, angle); 
-    
+    {
+        super(position, vec2(), tileInfo, angle);
+
         /** @property {Color} - Color at start of life */
         this.colorStart = colorStart;
         /** @property {Color} - Calculated change in color */
@@ -320,7 +320,7 @@ class Particle extends EngineObject
             this.colorStart.r + p * this.colorEndDelta.r,
             this.colorStart.g + p * this.colorEndDelta.g,
             this.colorStart.b + p * this.colorEndDelta.b,
-            (this.colorStart.a + p * this.colorEndDelta.a) * 
+            (this.colorStart.a + p * this.colorEndDelta.a) *
              (p < fadeRate ? p/fadeRate : p > 1-fadeRate ? (1-p)/fadeRate : 1)); // fade alpha
 
         // draw the particle
@@ -330,7 +330,7 @@ class Particle extends EngineObject
         if (this.localSpaceEmitter)
         {
             // in local space of emitter
-            pos = this.localSpaceEmitter.pos.add(pos.rotate(-this.localSpaceEmitter.angle)); 
+            pos = this.localSpaceEmitter.pos.add(pos.rotate(-this.localSpaceEmitter.angle));
             angle += this.localSpaceEmitter.angle;
         }
         if (this.trailScale)

@@ -1,4 +1,4 @@
-/** 
+/**
  * LittleJS - Release Mode
  * - This file is used for release builds in place of engineDebug.js
  * - Debug functionality is disabled to reduce size and increase performance

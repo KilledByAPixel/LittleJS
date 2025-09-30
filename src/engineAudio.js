@@ -1,4 +1,4 @@
-/** 
+/**
  * LittleJS Audio System
  * - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a> - ZzFX Sound Effect Generator
  * - <a href=https://keithclark.github.io/ZzFXM/>ZzFXM Music</a> - ZzFXM Music System
@@ -24,7 +24,7 @@ let audioMasterGain;
 function audioInit()
 {
     if (!soundEnable || headlessMode) return;
-    
+
     audioMasterGain = audioContext.createGain();
     audioMasterGain.connect(audioContext.destination);
     audioMasterGain.gain.value = soundVolume; // set starting value
@@ -32,14 +32,14 @@ function audioInit()
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** 
+/**
  * Sound Object - Stores a sound for later use and can be played positionally
- * 
+ *
  * <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
  * @example
  * // create a sound
  * const sound_example = new Sound([.5,.5]);
- * 
+ *
  * // play the sound
  * sound_example.play();
  */
@@ -129,7 +129,7 @@ class Sound
     {
         if (!this.source)
             return;
-        
+
         // ramp off gain
         const startFade = audioContext.currentTime;
         const endFade = startFade + fadeTime;
@@ -138,7 +138,7 @@ class Sound
         this.source.stop(endFade);
         this.source = undefined;
     }
-    
+
     /** Get source of most recent instance of this sound that was played
      *  @return {AudioBufferSourceNode}
      */
@@ -156,9 +156,9 @@ class Sound
     /** Get how long this sound is in seconds
      *  @return {number} - How long the sound is in seconds (undefined if loading)
      */
-    getDuration() 
+    getDuration()
     { return this.sampleChannels && this.sampleChannels[0].length / this.sampleRate; }
-    
+
     /** Check if sound is loading, for sounds fetched from a url
      *  @return {boolean} - True if sound is loading and not ready to play
      */
@@ -167,13 +167,13 @@ class Sound
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** 
+/**
  * Sound Wave Object - Stores a wave sound for later use and can be played positionally
  * - this can be used to play wave, mp3, and ogg files
  * @example
  * // create a sound
  * const sound_example = new SoundWave('sound.mp3');
- * 
+ *
  * // play the sound
  * sound_example.play();
  */
@@ -280,7 +280,7 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
  *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing
  *  @return {AudioBufferSourceNode} - The audio node of the sound played
  *  @memberof Audio */
-function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=zzfxR, gainNode) 
+function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=zzfxR, gainNode)
 {
     if (!soundEnable || headlessMode) return;
 
@@ -322,7 +322,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
 // ZzFXMicro - Zuper Zmall Zound Zynth - v1.3.2 by Frank Force
 
 /** Generate and play a ZzFX sound
- *  
+ *
  *  <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
  *  @param {Array} zzfxSound - Array of ZzFX parameters, ex. [.5,.5]
  *  @return {AudioBufferSourceNode} - The audio node of the sound played
@@ -332,7 +332,7 @@ function zzfx(...zzfxSound) { return playSamples([zzfxG(...zzfxSound)]); }
 /** Sample rate used for all ZzFX sounds
  *  @default 44100
  *  @memberof Audio */
-const zzfxR = 44100; 
+const zzfxR = 44100;
 
 /** Generate samples for a ZzFX sound
  *  @param {number}  [volume] - Volume scale (percent)
@@ -361,7 +361,7 @@ const zzfxR = 44100;
  */
 function zzfxG
 (
-    volume = 1, 
+    volume = 1,
     randomness = .05,
     frequency = 220,
     attack = 0,
@@ -369,11 +369,11 @@ function zzfxG
     release = .1,
     shape = 0,
     shapeCurve = 1,
-    slide = 0, 
-    deltaSlide = 0, 
-    pitchJump = 0, 
-    pitchJumpTime = 0, 
-    repeatTime = 0, 
+    slide = 0,
+    deltaSlide = 0,
+    pitchJump = 0,
+    pitchJumpTime = 0,
+    repeatTime = 0,
     noise = 0,
     modulation = 0,
     bitCrush = 0,
@@ -386,18 +386,18 @@ function zzfxG
 {
     // init parameters
     let sampleRate = zzfxR,
-        PI2 = PI*2, 
+        PI2 = PI*2,
         startSlide = slide *= 500 * PI2 / sampleRate / sampleRate,
-        startFrequency = frequency *= 
+        startFrequency = frequency *=
             (1 + rand(randomness,-randomness)) * PI2 / sampleRate,
-        modOffset = 0, // modulation offset  
+        modOffset = 0, // modulation offset
         repeat = 0,    // repeat offset
         crush = 0,     // bit crush offset
         jump = 1,      // pitch jump timer
         length,        // sample length
         b = [],        // sample buffer
         t = 0,         // sample time
-        i = 0,         // sample index 
+        i = 0,         // sample index
         s = 0,         // sample value
         f,             // wave frequency
 
@@ -405,7 +405,7 @@ function zzfxG
         quality = 2, w = PI2 * abs(filter) * 2 / sampleRate,
         cos = Math.cos(w), alpha = Math.sin(w) / 2 / quality,
         a0 = 1 + alpha, a1 = -2*cos / a0, a2 = (1 - alpha) / a0,
-        b0 = (1 + sign(filter) * cos) / 2 / a0, 
+        b0 = (1 + sign(filter) * cos) / 2 / a0,
         b1 = -(sign(filter) + cos) / a0, b2 = b0,
         x2 = 0, x1 = 0, y2 = 0, y1 = 0;
 
@@ -451,7 +451,7 @@ function zzfxG
                 0);                                      // post release
 
             s = delay ? s/2 + (delay > i ? 0 :           // delay
-                (i<length-delay? 1 : (length-i)/delay) * // release delay 
+                (i<length-delay? 1 : (length-i)/delay) * // release delay
                 b[i-delay|0]/2/volume) : s;              // sample delay
 
             if (filter)                                  // apply filter
@@ -463,14 +463,14 @@ function zzfxG
         t += f + f*noise*Math.sin(i**5);        // noise
 
         if (jump && ++jump > pitchJumpTime)     // pitch jump
-        { 
+        {
             frequency += pitchJump;             // apply pitch jump
             startFrequency += pitchJump;        // also apply to start
             jump = 0;                           // stop pitch jump time
-        } 
+        }
 
         if (repeatTime && !(++repeat % repeatTime)) // repeat
-        { 
+        {
             frequency = startFrequency;   // reset frequency
             slide = startSlide;           // reset slide
             jump ||= 1;                   // reset pitch jump time

@@ -1,4 +1,4 @@
-/** 
+/**
  * LittleJS Debug System
  * - Press Esc to show debug overlay with mouse pick
  * - Number keys toggle debug functions
@@ -53,10 +53,10 @@ let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParti
 // Debug helper functions
 
 /** Asserts if the expression is false, does not do anything in release builds
- *  @param {boolean} assert 
+ *  @param {boolean} assert
  *  @param {...Object} [output] - error message output
  *  @memberof Debug */
-function ASSERT(assert, ...output) 
+function ASSERT(assert, ...output)
 {
     if (enableAsserts)
         console.assert(assert, ...output);
@@ -74,7 +74,7 @@ function debugRect(pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)
 {
     if (typeof size === 'number')
         size = vec2(size); // allow passing in floats
-    ASSERT(typeof color === 'string', 'pass in css color strings'); 
+    ASSERT(typeof color === 'string', 'pass in css color strings');
     debugPrimitives.push({pos, size, color, time:new Timer(time), angle, fill});
 }
 
@@ -88,7 +88,7 @@ function debugRect(pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)
  *  @memberof Debug */
 function debugPoly(pos, points, color='#fff', time=0, angle=0, fill=false)
 {
-    ASSERT(typeof color === 'string', 'pass in css color strings'); 
+    ASSERT(typeof color === 'string', 'pass in css color strings');
     debugPrimitives.push({pos, points, color, time:new Timer(time), angle, fill});
 }
 
@@ -101,7 +101,7 @@ function debugPoly(pos, points, color='#fff', time=0, angle=0, fill=false)
  *  @memberof Debug */
 function debugCircle(pos, radius=0, color='#fff', time=0, fill=false)
 {
-    ASSERT(typeof color === 'string', 'pass in css color strings'); 
+    ASSERT(typeof color === 'string', 'pass in css color strings');
     debugPrimitives.push({pos, size:radius, color, time:new Timer(time), angle:0, fill});
 }
 
@@ -113,7 +113,7 @@ function debugCircle(pos, radius=0, color='#fff', time=0, fill=false)
  *  @memberof Debug */
 function debugPoint(pos, color, time, angle)
 {
-    ASSERT(typeof color === 'string', 'pass in css color strings'); 
+    ASSERT(typeof color === 'string', 'pass in css color strings');
     debugRect(pos, undefined, color, time, angle);
 }
 
@@ -141,11 +141,11 @@ function debugLine(posA, posB, color, thickness=.1, time)
 function debugOverlap(posA, sizeA, posB, sizeB, color)
 {
     const minPos = vec2(
-        min(posA.x - sizeA.x/2, posB.x - sizeB.x/2), 
+        min(posA.x - sizeA.x/2, posB.x - sizeB.x/2),
         min(posA.y - sizeA.y/2, posB.y - sizeB.y/2)
     );
     const maxPos = vec2(
-        max(posA.x + sizeA.x/2, posB.x + sizeB.x/2), 
+        max(posA.x + sizeA.x/2, posB.x + sizeB.x/2),
         max(posA.y + sizeA.y/2, posB.y + sizeB.y/2)
     );
     debugRect(minPos.lerp(maxPos,.5), maxPos.subtract(minPos), color);
@@ -162,7 +162,7 @@ function debugOverlap(posA, sizeA, posB, sizeB, color)
  *  @memberof Debug */
 function debugText(text, pos, size=1, color='#fff', time=0, angle=0, font='monospace')
 {
-    ASSERT(typeof color === 'string', 'pass in css color strings'); 
+    ASSERT(typeof color === 'string', 'pass in css color strings');
     debugPrimitives.push({text, pos, size, color, time:new Timer(time), angle, font});
 }
 
@@ -174,7 +174,7 @@ function debugClear() { debugPrimitives = []; }
  *  @memberof Debug */
 function debugScreenshot() { debugTakeScreenshot = 1; }
 
-/** Save a canvas to disk 
+/** Save a canvas to disk
  *  @param {HTMLCanvasElement|OffscreenCanvas} canvas
  *  @param {string} [filename]
  *  @param {string} [type]
@@ -195,7 +195,7 @@ function debugSaveCanvas(canvas, filename='screenshot', type='image/png')
         debugSaveDataURL(canvas.toDataURL(type), filename);
 }
 
-/** Save a text file to disk 
+/** Save a text file to disk
  *  @param {string}     text
  *  @param {string}     [filename]
  *  @param {string}     [type]
@@ -203,7 +203,7 @@ function debugSaveCanvas(canvas, filename='screenshot', type='image/png')
 function debugSaveText(text, filename='text', type='text/plain')
 { debugSaveDataURL(URL.createObjectURL(new Blob([text], {'type':type})), filename); }
 
-/** Save a data url to disk 
+/** Save a data url to disk
  *  @param {string}     dataURL
  *  @param {string}     filename
  *  @memberof Debug */
@@ -322,7 +322,7 @@ function debugRender()
     {
         const saveContext = mainContext;
         mainContext = overlayContext;
-        
+
         // draw red rectangle around screen
         const cameraSize = getCameraSize();
         debugRect(cameraPos, cameraSize.subtract(vec2(.1)), '#f008');
@@ -414,14 +414,14 @@ function debugRender()
                 p.fill && overlayContext.fill();
                 overlayContext.stroke();
             }
-            
+
             overlayContext.restore();
         });
 
         // remove expired primitives
         debugPrimitives = debugPrimitives.filter(r=>r.time<0);
     }
-    
+
     if (debugObject)
     {
         const saveContext = mainContext;
@@ -430,8 +430,8 @@ function debugRender()
         raycastHitPos && drawRect(raycastHitPos.floor().add(vec2(.5)), vec2(1), rgb(0,1,1,.3));
         drawLine(mousePos, debugObject.pos, .1, raycastHitPos ? rgb(1,0,0,.5) : rgb(0,1,0,.5));
 
-        const debugText = 'mouse pos = ' + mousePos + 
-            '\nmouse collision = ' + tileCollisionGetData(mousePos) + 
+        const debugText = 'mouse pos = ' + mousePos +
+            '\nmouse collision = ' + tileCollisionGetData(mousePos) +
             '\n\n--- object info ---\n' +
             debugObject.toString();
         drawTextScreen(debugText, mousePosScreen, 24, rgb(), .05, undefined, 'center', 'monospace');
@@ -497,7 +497,7 @@ function debugRender()
             overlayContext.fillText(debugRaycast ? 'Debug Raycasts' : '', x, y += h);
             overlayContext.fillText(debugGamepads ? 'Debug Gamepads' : '', x, y += h);
         }
-    
+
         overlayContext.restore();
     }
 }
@@ -585,7 +585,7 @@ function debugVideoCaptureUpdate()
 {
     if (!debugVideoCaptureIsActive())
         return; // not recording
-        
+
     // save the video frame
     combineCanvases();
     debugVideoCaptureTrack.requestFrame();

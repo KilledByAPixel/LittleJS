@@ -338,8 +338,8 @@ function setCanvasPixelated(pixelated)
  *  @param {boolean} pixelated
  *  @memberof Settings */
 function setOverlayCanvasPixelated(pixelated)
-{ 
-    overlayCanvasPixelated = pixelated; 
+{
+    overlayCanvasPixelated = pixelated;
     if (overlayCanvas)
         overlayCanvas.style.imageRendering = pixelated ? 'pixelated' : '';
 }

@@ -154,8 +154,8 @@ function nearestPowerOfTwo(value) { return 2**Math.ceil(Math.log2(value)); }
  *  @return {boolean}              - True if overlapping
  *  @memberof Utilities */
 function isOverlapping(posA, sizeA, posB, sizeB=vec2())
-{ 
-    return abs(posA.x - posB.x)*2 < sizeA.x + sizeB.x 
+{
+    return abs(posA.x - posB.x)*2 < sizeA.x + sizeB.x
         && abs(posA.y - posB.y)*2 < sizeA.y + sizeB.y;
 }
 
@@ -210,7 +210,7 @@ function isIntersecting(start, end, pos, size)
 function wave(frequency=1, amplitude=1, t=time, offset=0)
 { return amplitude/2 * (1 - Math.cos(offset + t*frequency*2*PI)); }
 
-/** Formats seconds to mm:ss style for display purposes 
+/** Formats seconds to mm:ss style for display purposes
  *  @param {number} t - time in seconds
  *  @return {string}
  *  @memberof Utilities */
@@ -226,7 +226,7 @@ async function fetchJSON(url)
     return response.json();
 }
 
-/** 
+/**
  * Check if object is a valid number, not NaN or undefined, but it may be infinite
  * @param {any} n
  * @return {boolean}
@@ -287,13 +287,13 @@ function randInCircle(radius=1, minRadius=0)
  *  @memberof Random */
 function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear=false)
 {
-    return linear ? colorA.lerp(colorB, rand()) : 
+    return linear ? colorA.lerp(colorB, rand()) :
         new Color(rand(colorA.r,colorB.r), rand(colorA.g,colorB.g), rand(colorA.b,colorB.b), rand(colorA.a,colorB.a));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** 
+/**
  * Seeded random number generator
  * - Can be used to create a deterministic random number sequence
  * @example
@@ -320,8 +320,8 @@ class RandomGenerator
     float(valueA=1, valueB=0)
     {
         // xorshift algorithm
-        this.seed ^= this.seed << 13; 
-        this.seed ^= this.seed >>> 17; 
+        this.seed ^= this.seed << 13;
+        this.seed ^= this.seed >>> 17;
         this.seed ^= this.seed << 5;
         return valueB + (valueA - valueB) * ((this.seed >>> 0) / 2**32);
     }
@@ -374,7 +374,7 @@ class RandomGenerator
  */
 function vec2(x=0, y) { return new Vector2(x, y === undefined ? x : y); }
 
-/** 
+/**
  * Check if object is a valid Vector2
  * @param {any} v
  * @return {boolean}
@@ -388,10 +388,10 @@ function ASSERT_NUMBER_VALID(n) { ASSERT(isNumber(n), 'Number is invalid.', n); 
 function ASSERT_VECTOR2_NORMAL(v)
 {
     ASSERT_VECTOR2_VALID(v);
-    ASSERT(abs(v.lengthSquared()-1) < .01, 'Vector2 is not normal.', v); 
+    ASSERT(abs(v.lengthSquared()-1) < .01, 'Vector2 is not normal.', v);
 }
 
-/** 
+/**
  * 2D Vector object with vector math library
  * - Functions do not change this so they can be chained together
  * @example
@@ -515,7 +515,7 @@ class Vector2
      * @param {number} [angle]
      * @param {number} [length]
      * @return {Vector2} */
-    setAngle(angle=0, length=1) 
+    setAngle(angle=0, length=1)
     {
         ASSERT_NUMBER_VALID(angle);
         ASSERT_NUMBER_VALID(length);
@@ -530,7 +530,7 @@ class Vector2
     rotate(angle)
     {
         ASSERT_NUMBER_VALID(angle);
-        const c = Math.cos(-angle), s = Math.sin(-angle); 
+        const c = Math.cos(-angle), s = Math.sin(-angle);
         return new Vector2(this.x*c - this.y*s, this.x*s + this.y*c);
     }
 
@@ -544,7 +544,7 @@ class Vector2
         direction = mod(direction, 4);
         ASSERT(direction===0 || direction===1 || direction===2 || direction===3,
             'Vector2.setDirection() direction must be an integer between 0 and 3.');
-        return vec2(direction%2 ? direction-1 ? -length : length : 0, 
+        return vec2(direction%2 ? direction-1 ? -length : length : 0,
             direction%2 ? 0 : direction ? -length : length);
     }
 
@@ -596,7 +596,7 @@ class Vector2
     /** Returns this vector expressed as a string
      * @param {number} digits - precision to display
      * @return {string} */
-    toString(digits=3) 
+    toString(digits=3)
     {
         ASSERT_NUMBER_VALID(digits);
         if (debug)
@@ -615,7 +615,7 @@ class Vector2
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** 
+/**
  * Create a color object with RGBA values, white by default
  * @param {number} [r=1] - red
  * @param {number} [g=1] - green
@@ -626,7 +626,7 @@ class Vector2
  */
 function rgb(r, g, b, a) { return new Color(r, g, b, a); }
 
-/** 
+/**
  * Create a color object with HSLA values, white by default
  * @param {number} [h=0] - hue
  * @param {number} [s=0] - saturation
@@ -637,7 +637,7 @@ function rgb(r, g, b, a) { return new Color(r, g, b, a); }
  */
 function hsl(h, s, l, a) { return new Color().setHSLA(h, s, l, a); }
 
-/** 
+/**
  * Check if object is a valid Color
  * @param {any} c
  * @return {boolean}
@@ -648,7 +648,7 @@ function isColor(c) { return c instanceof Color; }
 // color asserts
 function ASSERT_COLOR_VALID(c) { ASSERT(isColor(c) && c.isValid(), 'Color is invalid.', c); }
 
-/** 
+/**
  * Color object (red, green, blue, alpha) with some helpful functions
  * @example
  * let a = new Color;              // white
@@ -720,7 +720,7 @@ class Color
      * @param {number} scale
      * @param {number} [alphaScale=scale]
      * @return {Color} */
-    scale(scale, alphaScale=scale) 
+    scale(scale, alphaScale=scale)
     { return new Color(this.r*scale, this.g*scale, this.b*scale, this.a*alphaScale); }
 
     /** Returns a copy of this color clamped to the valid range between 0 and 1
@@ -737,9 +737,9 @@ class Color
         ASSERT_NUMBER_VALID(percent);
         const p = clamp(percent);
         return new Color(
-            c.r*p + this.r*(1-p), 
-            c.g*p + this.g*(1-p), 
-            c.b*p + this.b*(1-p), 
+            c.r*p + this.r*(1-p),
+            c.g*p + this.g*(1-p),
+            c.b*p + this.b*(1-p),
             c.a*p + this.a*(1-p));
     }
 
@@ -797,7 +797,7 @@ class Color
      * @param {number} [amount]
      * @param {number} [alphaAmount]
      * @return {Color} */
-    mutate(amount=.05, alphaAmount=0) 
+    mutate(amount=.05, alphaAmount=0)
     {
         ASSERT_NUMBER_VALID(amount);
         ASSERT_NUMBER_VALID(alphaAmount);
@@ -813,7 +813,7 @@ class Color
     /** Returns this color expressed as a hex color code
      * @param {boolean} [useAlpha] - if alpha should be included in result
      * @return {string} */
-    toString(useAlpha = true)      
+    toString(useAlpha = true)
     {
         ASSERT(typeof useAlpha === 'boolean', 'Use alpha boolean is invalid.', useAlpha);
         if (debug && !this.isValid())
@@ -821,7 +821,7 @@ class Color
         const toHex = (c)=> ((c=clamp(c)*255|0)<16 ? '0' : '') + c.toString(16);
         return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b) + (useAlpha ? toHex(this.a) : '');
     }
-    
+
     /** Set this color from a hex code
      * @param {string} hex - html hex code
      * @return {Color} */
@@ -850,10 +850,10 @@ class Color
         ASSERT_COLOR_VALID(this);
         return this;
     }
-    
+
     /** Returns this color expressed as 32 bit RGBA value
      * @return {number} */
-    rgbaInt()  
+    rgbaInt()
     {
         const r = clamp(this.r)*255|0;
         const g = clamp(this.g)*255<<8;
@@ -874,7 +874,7 @@ class Color
 /** Color - White #ffffff
  *  @type {Color}
  *  @memberof Utilities */
-const WHITE = rgb(); 
+const WHITE = rgb();
 
 /** Color - Clear White #ffffff with 0 alpha
  *  @type {Color}
@@ -989,11 +989,11 @@ class Timer
     /** Get percentage elapsed based on time it was set to, returns 0 if not set
      * @return {number} */
     getPercent() { return this.isSet()? 1-percent(this.time - time, 0, this.setTime) : 0; }
-    
+
     /** Returns this timer expressed as a string
      * @return {string} */
     toString() { if (debug) { return this.isSet() ? Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ) : 'unset'; }}
-    
+
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {number} */
     valueOf() { return this.get(); }

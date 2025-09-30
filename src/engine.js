@@ -1,7 +1,7 @@
-/** 
+/**
  * LittleJS - The Tiny Fast JavaScript Game Engine
  * MIT License - Copyright 2021 Frank Force
- * 
+ *
  * Engine Features
  * - Object oriented system with base class engine object
  * - Base class object handles update, physics, collision, rendering, etc
@@ -120,7 +120,7 @@ function engineAddPlugin(updateFunction, renderFunction)
  *  // Basic engine startup
  *  engineInit(
  *    () => { console.log('Game initialized!'); },  // gameInit
- *    () => { updatePlayer(); },                    // gameUpdate  
+ *    () => { updatePlayer(); },                    // gameUpdate
  *    () => { updateUI(); },                        // gameUpdatePost
  *    () => { drawBackground(); },                  // gameRender
  *    () => { drawHUD(); },                         // gameRenderPost
@@ -146,7 +146,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
 
         // disable smoothing for pixel art
-        overlayContext.imageSmoothingEnabled = 
+        overlayContext.imageSmoothingEnabled =
             mainContext.imageSmoothingEnabled = !tilesPixelated;
 
         // setup gl rendering if enabled
@@ -194,7 +194,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                 deltaSmooth = frameTimeBufferMS;
                 frameTimeBufferMS = 0;
             }
-            
+
             // update multiple frames if necessary in case of slow framerate
             for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / frameRate)
             {
@@ -239,7 +239,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                 overlayContext.textBaseline = 'top';
                 overlayContext.font = '1em monospace';
                 overlayContext.fillStyle = '#000';
-                const text = engineName + ' ' + 'v' + engineVersion + ' / ' 
+                const text = engineName + ' ' + 'v' + engineVersion + ' / '
                     + drawCount + ' / ' + engineObjects.length + ' / ' + averageFPS.toFixed(1)
                     + (glEnable ? ' GL' : ' 2D') ;
                 overlayContext.fillText(text, mainCanvas.width-3, 3);
@@ -255,13 +255,13 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     function updateCanvas()
     {
         if (headlessMode) return;
-        
+
         if (canvasFixedSize.x)
         {
             // clear canvas and set fixed size
             mainCanvas.width  = canvasFixedSize.x;
             mainCanvas.height = canvasFixedSize.y;
-            
+
             // fit to window by adding space on top or bottom if necessary
             const aspect = innerWidth / innerHeight;
             const fixedAspect = mainCanvas.width / mainCanvas.height;
@@ -274,7 +274,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
             mainCanvas.height = min(innerHeight, canvasMaxSize.y);
         }
-        
+
         // clear overlay canvas and set size
         overlayCanvas.width  = mainCanvas.width;
         overlayCanvas.height = mainCanvas.height;
@@ -293,7 +293,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         return startEngine();
 
     // setup html
-    const styleRoot = 
+    const styleRoot =
         'margin:0;' +                 // fill the window
         'overflow:hidden;' +          // no scroll bars
         'background:#000;' +          // set background color
@@ -330,13 +330,13 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     // create offscreen canvas for image processing
     workCanvas = new OffscreenCanvas(256, 256);
     workContext = workCanvas.getContext('2d', { willReadFrequently: true });
-    
+
     // create promises for loading images
     const promises = imageSources.map((src, textureIndex)=>
-        new Promise(resolve => 
+        new Promise(resolve =>
         {
             const image = new Image;
-            image.onerror = image.onload = ()=> 
+            image.onerror = image.onload = ()=>
             {
                 const textureInfo = new TextureInfo(image);
                 textureInfo.createWebGLTexture();
@@ -351,7 +351,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     if (!imageSources.length)
     {
         // no images to load
-        promises.push(new Promise(resolve => 
+        promises.push(new Promise(resolve =>
         {
             const textureInfo = new TextureInfo(new Image);
             textureInfos[0] = textureInfo;
@@ -363,7 +363,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     if (showSplashScreen)
     {
         // draw splash screen
-        promises.push(new Promise(resolve => 
+        promises.push(new Promise(resolve =>
         {
             let t = 0;
             console.log(`${engineName} Engine v${engineVersion}`);
@@ -595,7 +595,7 @@ function drawEngineSplashScreen(t)
     line(36,20,60,20);
 
     // engine front light
-    circle(60,30,4,PI,3*PI,color(3,2)); 
+    circle(60,30,4,PI,3*PI,color(3,2));
     circle(60,30,4,PI,2*PI,color(3,3));
     circle(60,30,4,PI,3*PI);
 
@@ -644,6 +644,6 @@ function drawEngineSplashScreen(t)
         x[j?'strokeText':'fillText'](s[i],X+w/2,55.5,17*p);
         X += w;
     }
-    
+
     x.restore();
 }

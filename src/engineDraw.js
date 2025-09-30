@@ -1,21 +1,21 @@
-/** 
+/**
  * LittleJS Drawing System
  * - Hybrid system with both Canvas2D and WebGL available
  * - Super fast tile sheet rendering with WebGL
  * - Can apply rotation, mirror, color and additive color
  * - Font rendering system with built in engine font
  * - Many useful utility functions
- * 
+ *
  * LittleJS uses a hybrid rendering solution with the best of both Canvas2D and WebGL.
  * There are 3 canvas/contexts available to draw to...
  * mainCanvas - 2D background canvas, non WebGL stuff like tile layers are drawn here.
  * glCanvas - Used by the accelerated WebGL batch rendering system.
  * overlayCanvas - Another 2D canvas that appears on top of the other 2 canvases.
- * 
+ *
  * The WebGL rendering system is very fast with some caveats...
  * - Switching blend modes (additive) or textures causes another draw call which is expensive in excess
  * - Group additive rendering together using renderOrder to mitigate this issue
- * 
+ *
  * The LittleJS rendering solution is intentionally simple, feel free to adjust it for your needs!
  * @namespace Draw
  */
@@ -62,7 +62,7 @@ let workCanvas;
  *  @memberof Draw */
 let workContext;
 
-/** The size of the main canvas (and other secondary canvases) 
+/** The size of the main canvas (and other secondary canvases)
  *  @type {Vector2}
  *  @memberof Draw */
 let mainCanvasSize = vec2();
@@ -77,7 +77,7 @@ let drawCount;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** 
+/**
  * Create a tile info object using a grid based system
  * - This can take vecs or floats for easier use and conversion
  * - If an index is passed in, the tile size and index will determine the position
@@ -122,10 +122,10 @@ function tile(pos=new Vector2, size=tileSizeDefault, textureIndex=0, padding=0)
     }
     else
         tileInfo.pos.set(pos.x*sizePaddedX+padding, pos.y*sizePaddedY+padding);
-    return tileInfo; 
+    return tileInfo;
 }
 
-/** 
+/**
  * Tile Info - Stores info about how to draw a tile
  */
 class TileInfo
@@ -188,7 +188,7 @@ class TextureInfo
     /**
      * Create a TextureInfo, called automatically by the engine
      * @param {HTMLImageElement|OffscreenCanvas} image
-     * @param {WebGLTexture} [glTexture] - webgl texture 
+     * @param {WebGLTexture} [glTexture] - webgl texture
      */
     constructor(image, glTexture)
     {
@@ -228,7 +228,7 @@ class TextureInfo
 function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
     angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace, context)
 {
-    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode'); 
+    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
     ASSERT(isVector2(pos) && pos.isValid(), 'drawTile pos should be a vec2');
     ASSERT(isVector2(size) && size.isValid(), 'drawTile size should be a vec2');
     ASSERT(isColor(color) && (!additiveColor || isColor(additiveColor)), 'drawTile color is invalid');
@@ -256,22 +256,22 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
             {
                 const tileImageFixBleedX = sizeInverse.x*tileFixBleedScale;
                 const tileImageFixBleedY = sizeInverse.y*tileFixBleedScale;
-                glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
-                    x + tileImageFixBleedX,     y + tileImageFixBleedY, 
-                    x - tileImageFixBleedX + w, y - tileImageFixBleedY + h, 
-                    color.rgbaInt(), additiveColor && additiveColor.rgbaInt()); 
+                glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle,
+                    x + tileImageFixBleedX,     y + tileImageFixBleedY,
+                    x - tileImageFixBleedX + w, y - tileImageFixBleedY + h,
+                    color.rgbaInt(), additiveColor && additiveColor.rgbaInt());
             }
             else
             {
-                glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
-                    x, y, x + w, y + h, 
-                    color.rgbaInt(), additiveColor && additiveColor.rgbaInt()); 
+                glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle,
+                    x, y, x + w, y + h,
+                    color.rgbaInt(), additiveColor && additiveColor.rgbaInt());
             }
         }
         else
         {
             // if no tile info, force untextured
-            glDraw(pos.x, pos.y, size.x, size.y, angle, 0, 0, 0, 0, 0, color.rgbaInt()); 
+            glDraw(pos.x, pos.y, size.x, size.y, angle, 0, 0, 0, 0, 0, color.rgbaInt());
         }
     }
     else
@@ -309,8 +309,8 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
-{ 
-    drawTile(pos, size, undefined, color, angle, false, undefined, useWebGL, screenSpace, context); 
+{
+    drawTile(pos, size, undefined, color, angle, false, undefined, useWebGL, screenSpace, context);
 }
 
 /** Draw colored line between two points
@@ -399,7 +399,7 @@ function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, l
         {
             context.strokeStyle = lineColor.toString();
             context.lineWidth = lineWidth;
-            context.stroke();   
+            context.stroke();
         }
     }, screenSpace, context);
 }
@@ -525,7 +525,7 @@ function screenToWorld(screenPos)
 {
     let cameraPosRelativeX = (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale;
     let cameraPosRelativeY = (screenPos.y - mainCanvasSize.y/2 + .5) / -cameraScale;
-    if (cameraAngle) 
+    if (cameraAngle)
     {
         // apply camera rotation
         const cos = Math.cos(-cameraAngle), sin = Math.sin(-cameraAngle);
@@ -618,7 +618,7 @@ function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth,
     {
         // white texture with no additive alpha, no need to tint
         context.globalAlpha = color.a;
-        context.drawImage(image, sx+sx2, sy+sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight); 
+        context.drawImage(image, sx+sx2, sy+sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight);
         context.globalAlpha = 1;
     }
     else
@@ -639,7 +639,7 @@ function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth,
             for (let i = 0; i < data.length; ++i)
                 data[i] = data[i] * colorMultiply[i&3] + colorAdd[i&3] |0;
             workContext.putImageData(imageData, 0, 0);
-            context.drawImage(workCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight); 
+            context.drawImage(workCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight);
         }
         else
         {
@@ -652,7 +652,7 @@ function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth,
             }
             workContext.putImageData(imageData, 0, 0);
             context.globalAlpha = color.a;
-            context.drawImage(workCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight); 
+            context.drawImage(workCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight);
             context.globalAlpha = 1;
         }
     }
@@ -691,7 +691,7 @@ function setCursor(cursorStyle = 'auto')
 
 let engineFontImage;
 
-/** 
+/**
  * Font Image Object - Draw text on a 2D canvas by using characters in an image
  * - 96 characters (from space to tilde) are stored in an image
  * - Uses a default 8x8 font if none is supplied
@@ -699,7 +699,7 @@ let engineFontImage;
  * @example
  * // use built in font
  * const font = new FontImage;
- * 
+ *
  * // draw text
  * font.drawTextScreen("LittleJS\nHello World!", vec2(200, 50));
  */
@@ -766,7 +766,7 @@ class FontImage
                 const x = tile % cols;
                 const y = tile / cols |0;
                 const drawPos = pos.add(vec2(j,i).multiply(drawSize));
-                context.drawImage(this.image, x * size.x, y * size.y, size.x, size.y, 
+                context.drawImage(this.image, x * size.x, y * size.y, size.x, size.y,
                     drawPos.x - centerOffset, drawPos.y, size.x * scale, size.y * scale);
             }
         });

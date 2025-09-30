@@ -3,10 +3,10 @@
 
 'use strict';
 
-/** 
+/**
  * LittleJS - The Tiny Fast JavaScript Game Engine
  * MIT License - Copyright 2021 Frank Force
- * 
+ *
  * Engine Features
  * - Object oriented system with base class engine object
  * - Base class object handles update, physics, collision, rendering, etc
@@ -123,7 +123,7 @@ function engineAddPlugin(updateFunction, renderFunction)
  *  // Basic engine startup
  *  engineInit(
  *    () => { console.log('Game initialized!'); },  // gameInit
- *    () => { updatePlayer(); },                    // gameUpdate  
+ *    () => { updatePlayer(); },                    // gameUpdate
  *    () => { updateUI(); },                        // gameUpdatePost
  *    () => { drawBackground(); },                  // gameRender
  *    () => { drawHUD(); },                         // gameRenderPost
@@ -149,7 +149,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
 
         // disable smoothing for pixel art
-        overlayContext.imageSmoothingEnabled = 
+        overlayContext.imageSmoothingEnabled =
             mainContext.imageSmoothingEnabled = !tilesPixelated;
 
         // setup gl rendering if enabled
@@ -197,7 +197,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                 deltaSmooth = frameTimeBufferMS;
                 frameTimeBufferMS = 0;
             }
-            
+
             // update multiple frames if necessary in case of slow framerate
             for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / frameRate)
             {
@@ -242,7 +242,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                 overlayContext.textBaseline = 'top';
                 overlayContext.font = '1em monospace';
                 overlayContext.fillStyle = '#000';
-                const text = engineName + ' ' + 'v' + engineVersion + ' / ' 
+                const text = engineName + ' ' + 'v' + engineVersion + ' / '
                     + drawCount + ' / ' + engineObjects.length + ' / ' + averageFPS.toFixed(1)
                     + (glEnable ? ' GL' : ' 2D') ;
                 overlayContext.fillText(text, mainCanvas.width-3, 3);
@@ -258,13 +258,13 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     function updateCanvas()
     {
         if (headlessMode) return;
-        
+
         if (canvasFixedSize.x)
         {
             // clear canvas and set fixed size
             mainCanvas.width  = canvasFixedSize.x;
             mainCanvas.height = canvasFixedSize.y;
-            
+
             // fit to window by adding space on top or bottom if necessary
             const aspect = innerWidth / innerHeight;
             const fixedAspect = mainCanvas.width / mainCanvas.height;
@@ -277,7 +277,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
             mainCanvas.height = min(innerHeight, canvasMaxSize.y);
         }
-        
+
         // clear overlay canvas and set size
         overlayCanvas.width  = mainCanvas.width;
         overlayCanvas.height = mainCanvas.height;
@@ -296,7 +296,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         return startEngine();
 
     // setup html
-    const styleRoot = 
+    const styleRoot =
         'margin:0;' +                 // fill the window
         'overflow:hidden;' +          // no scroll bars
         'background:#000;' +          // set background color
@@ -333,13 +333,13 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     // create offscreen canvas for image processing
     workCanvas = new OffscreenCanvas(256, 256);
     workContext = workCanvas.getContext('2d', { willReadFrequently: true });
-    
+
     // create promises for loading images
     const promises = imageSources.map((src, textureIndex)=>
-        new Promise(resolve => 
+        new Promise(resolve =>
         {
             const image = new Image;
-            image.onerror = image.onload = ()=> 
+            image.onerror = image.onload = ()=>
             {
                 const textureInfo = new TextureInfo(image);
                 textureInfo.createWebGLTexture();
@@ -354,7 +354,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     if (!imageSources.length)
     {
         // no images to load
-        promises.push(new Promise(resolve => 
+        promises.push(new Promise(resolve =>
         {
             const textureInfo = new TextureInfo(new Image);
             textureInfos[0] = textureInfo;
@@ -366,7 +366,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     if (showSplashScreen)
     {
         // draw splash screen
-        promises.push(new Promise(resolve => 
+        promises.push(new Promise(resolve =>
         {
             let t = 0;
             console.log(`${engineName} Engine v${engineVersion}`);
@@ -598,7 +598,7 @@ function drawEngineSplashScreen(t)
     line(36,20,60,20);
 
     // engine front light
-    circle(60,30,4,PI,3*PI,color(3,2)); 
+    circle(60,30,4,PI,3*PI,color(3,2));
     circle(60,30,4,PI,2*PI,color(3,3));
     circle(60,30,4,PI,3*PI);
 
@@ -647,10 +647,11 @@ function drawEngineSplashScreen(t)
         x[j?'strokeText':'fillText'](s[i],X+w/2,55.5,17*p);
         X += w;
     }
-    
+
     x.restore();
 }
-/** 
+
+/**
  * LittleJS Debug System
  * - Press Esc to show debug overlay with mouse pick
  * - Number keys toggle debug functions
@@ -703,10 +704,10 @@ let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParti
 // Debug helper functions
 
 /** Asserts if the expression is false, does not do anything in release builds
- *  @param {boolean} assert 
+ *  @param {boolean} assert
  *  @param {...Object} [output] - error message output
  *  @memberof Debug */
-function ASSERT(assert, ...output) 
+function ASSERT(assert, ...output)
 {
     if (enableAsserts)
         console.assert(assert, ...output);
@@ -724,7 +725,7 @@ function debugRect(pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)
 {
     if (typeof size === 'number')
         size = vec2(size); // allow passing in floats
-    ASSERT(typeof color === 'string', 'pass in css color strings'); 
+    ASSERT(typeof color === 'string', 'pass in css color strings');
     debugPrimitives.push({pos, size, color, time:new Timer(time), angle, fill});
 }
 
@@ -738,7 +739,7 @@ function debugRect(pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)
  *  @memberof Debug */
 function debugPoly(pos, points, color='#fff', time=0, angle=0, fill=false)
 {
-    ASSERT(typeof color === 'string', 'pass in css color strings'); 
+    ASSERT(typeof color === 'string', 'pass in css color strings');
     debugPrimitives.push({pos, points, color, time:new Timer(time), angle, fill});
 }
 
@@ -751,7 +752,7 @@ function debugPoly(pos, points, color='#fff', time=0, angle=0, fill=false)
  *  @memberof Debug */
 function debugCircle(pos, radius=0, color='#fff', time=0, fill=false)
 {
-    ASSERT(typeof color === 'string', 'pass in css color strings'); 
+    ASSERT(typeof color === 'string', 'pass in css color strings');
     debugPrimitives.push({pos, size:radius, color, time:new Timer(time), angle:0, fill});
 }
 
@@ -763,7 +764,7 @@ function debugCircle(pos, radius=0, color='#fff', time=0, fill=false)
  *  @memberof Debug */
 function debugPoint(pos, color, time, angle)
 {
-    ASSERT(typeof color === 'string', 'pass in css color strings'); 
+    ASSERT(typeof color === 'string', 'pass in css color strings');
     debugRect(pos, undefined, color, time, angle);
 }
 
@@ -791,11 +792,11 @@ function debugLine(posA, posB, color, thickness=.1, time)
 function debugOverlap(posA, sizeA, posB, sizeB, color)
 {
     const minPos = vec2(
-        min(posA.x - sizeA.x/2, posB.x - sizeB.x/2), 
+        min(posA.x - sizeA.x/2, posB.x - sizeB.x/2),
         min(posA.y - sizeA.y/2, posB.y - sizeB.y/2)
     );
     const maxPos = vec2(
-        max(posA.x + sizeA.x/2, posB.x + sizeB.x/2), 
+        max(posA.x + sizeA.x/2, posB.x + sizeB.x/2),
         max(posA.y + sizeA.y/2, posB.y + sizeB.y/2)
     );
     debugRect(minPos.lerp(maxPos,.5), maxPos.subtract(minPos), color);
@@ -812,7 +813,7 @@ function debugOverlap(posA, sizeA, posB, sizeB, color)
  *  @memberof Debug */
 function debugText(text, pos, size=1, color='#fff', time=0, angle=0, font='monospace')
 {
-    ASSERT(typeof color === 'string', 'pass in css color strings'); 
+    ASSERT(typeof color === 'string', 'pass in css color strings');
     debugPrimitives.push({text, pos, size, color, time:new Timer(time), angle, font});
 }
 
@@ -824,7 +825,7 @@ function debugClear() { debugPrimitives = []; }
  *  @memberof Debug */
 function debugScreenshot() { debugTakeScreenshot = 1; }
 
-/** Save a canvas to disk 
+/** Save a canvas to disk
  *  @param {HTMLCanvasElement|OffscreenCanvas} canvas
  *  @param {string} [filename]
  *  @param {string} [type]
@@ -845,7 +846,7 @@ function debugSaveCanvas(canvas, filename='screenshot', type='image/png')
         debugSaveDataURL(canvas.toDataURL(type), filename);
 }
 
-/** Save a text file to disk 
+/** Save a text file to disk
  *  @param {string}     text
  *  @param {string}     [filename]
  *  @param {string}     [type]
@@ -853,7 +854,7 @@ function debugSaveCanvas(canvas, filename='screenshot', type='image/png')
 function debugSaveText(text, filename='text', type='text/plain')
 { debugSaveDataURL(URL.createObjectURL(new Blob([text], {'type':type})), filename); }
 
-/** Save a data url to disk 
+/** Save a data url to disk
  *  @param {string}     dataURL
  *  @param {string}     filename
  *  @memberof Debug */
@@ -972,7 +973,7 @@ function debugRender()
     {
         const saveContext = mainContext;
         mainContext = overlayContext;
-        
+
         // draw red rectangle around screen
         const cameraSize = getCameraSize();
         debugRect(cameraPos, cameraSize.subtract(vec2(.1)), '#f008');
@@ -1064,14 +1065,14 @@ function debugRender()
                 p.fill && overlayContext.fill();
                 overlayContext.stroke();
             }
-            
+
             overlayContext.restore();
         });
 
         // remove expired primitives
         debugPrimitives = debugPrimitives.filter(r=>r.time<0);
     }
-    
+
     if (debugObject)
     {
         const saveContext = mainContext;
@@ -1080,8 +1081,8 @@ function debugRender()
         raycastHitPos && drawRect(raycastHitPos.floor().add(vec2(.5)), vec2(1), rgb(0,1,1,.3));
         drawLine(mousePos, debugObject.pos, .1, raycastHitPos ? rgb(1,0,0,.5) : rgb(0,1,0,.5));
 
-        const debugText = 'mouse pos = ' + mousePos + 
-            '\nmouse collision = ' + tileCollisionGetData(mousePos) + 
+        const debugText = 'mouse pos = ' + mousePos +
+            '\nmouse collision = ' + tileCollisionGetData(mousePos) +
             '\n\n--- object info ---\n' +
             debugObject.toString();
         drawTextScreen(debugText, mousePosScreen, 24, rgb(), .05, undefined, 'center', 'monospace');
@@ -1147,7 +1148,7 @@ function debugRender()
             overlayContext.fillText(debugRaycast ? 'Debug Raycasts' : '', x, y += h);
             overlayContext.fillText(debugGamepads ? 'Debug Gamepads' : '', x, y += h);
         }
-    
+
         overlayContext.restore();
     }
 }
@@ -1235,12 +1236,13 @@ function debugVideoCaptureUpdate()
 {
     if (!debugVideoCaptureIsActive())
         return; // not recording
-        
+
     // save the video frame
     combineCanvases();
     debugVideoCaptureTrack.requestFrame();
     debugVideoCaptureIcon.textContent = '● REC ' + formatTime(debugVideoCaptureTimer);
 }
+
 /**
  * LittleJS Utility Classes and Functions
  * - General purpose math library
@@ -1395,8 +1397,8 @@ function nearestPowerOfTwo(value) { return 2**Math.ceil(Math.log2(value)); }
  *  @return {boolean}              - True if overlapping
  *  @memberof Utilities */
 function isOverlapping(posA, sizeA, posB, sizeB=vec2())
-{ 
-    return abs(posA.x - posB.x)*2 < sizeA.x + sizeB.x 
+{
+    return abs(posA.x - posB.x)*2 < sizeA.x + sizeB.x
         && abs(posA.y - posB.y)*2 < sizeA.y + sizeB.y;
 }
 
@@ -1451,7 +1453,7 @@ function isIntersecting(start, end, pos, size)
 function wave(frequency=1, amplitude=1, t=time, offset=0)
 { return amplitude/2 * (1 - Math.cos(offset + t*frequency*2*PI)); }
 
-/** Formats seconds to mm:ss style for display purposes 
+/** Formats seconds to mm:ss style for display purposes
  *  @param {number} t - time in seconds
  *  @return {string}
  *  @memberof Utilities */
@@ -1467,7 +1469,7 @@ async function fetchJSON(url)
     return response.json();
 }
 
-/** 
+/**
  * Check if object is a valid number, not NaN or undefined, but it may be infinite
  * @param {any} n
  * @return {boolean}
@@ -1528,13 +1530,13 @@ function randInCircle(radius=1, minRadius=0)
  *  @memberof Random */
 function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear=false)
 {
-    return linear ? colorA.lerp(colorB, rand()) : 
+    return linear ? colorA.lerp(colorB, rand()) :
         new Color(rand(colorA.r,colorB.r), rand(colorA.g,colorB.g), rand(colorA.b,colorB.b), rand(colorA.a,colorB.a));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** 
+/**
  * Seeded random number generator
  * - Can be used to create a deterministic random number sequence
  * @example
@@ -1561,8 +1563,8 @@ class RandomGenerator
     float(valueA=1, valueB=0)
     {
         // xorshift algorithm
-        this.seed ^= this.seed << 13; 
-        this.seed ^= this.seed >>> 17; 
+        this.seed ^= this.seed << 13;
+        this.seed ^= this.seed >>> 17;
         this.seed ^= this.seed << 5;
         return valueB + (valueA - valueB) * ((this.seed >>> 0) / 2**32);
     }
@@ -1615,7 +1617,7 @@ class RandomGenerator
  */
 function vec2(x=0, y) { return new Vector2(x, y === undefined ? x : y); }
 
-/** 
+/**
  * Check if object is a valid Vector2
  * @param {any} v
  * @return {boolean}
@@ -1629,10 +1631,10 @@ function ASSERT_NUMBER_VALID(n) { ASSERT(isNumber(n), 'Number is invalid.', n); 
 function ASSERT_VECTOR2_NORMAL(v)
 {
     ASSERT_VECTOR2_VALID(v);
-    ASSERT(abs(v.lengthSquared()-1) < .01, 'Vector2 is not normal.', v); 
+    ASSERT(abs(v.lengthSquared()-1) < .01, 'Vector2 is not normal.', v);
 }
 
-/** 
+/**
  * 2D Vector object with vector math library
  * - Functions do not change this so they can be chained together
  * @example
@@ -1756,7 +1758,7 @@ class Vector2
      * @param {number} [angle]
      * @param {number} [length]
      * @return {Vector2} */
-    setAngle(angle=0, length=1) 
+    setAngle(angle=0, length=1)
     {
         ASSERT_NUMBER_VALID(angle);
         ASSERT_NUMBER_VALID(length);
@@ -1771,7 +1773,7 @@ class Vector2
     rotate(angle)
     {
         ASSERT_NUMBER_VALID(angle);
-        const c = Math.cos(-angle), s = Math.sin(-angle); 
+        const c = Math.cos(-angle), s = Math.sin(-angle);
         return new Vector2(this.x*c - this.y*s, this.x*s + this.y*c);
     }
 
@@ -1785,7 +1787,7 @@ class Vector2
         direction = mod(direction, 4);
         ASSERT(direction===0 || direction===1 || direction===2 || direction===3,
             'Vector2.setDirection() direction must be an integer between 0 and 3.');
-        return vec2(direction%2 ? direction-1 ? -length : length : 0, 
+        return vec2(direction%2 ? direction-1 ? -length : length : 0,
             direction%2 ? 0 : direction ? -length : length);
     }
 
@@ -1837,7 +1839,7 @@ class Vector2
     /** Returns this vector expressed as a string
      * @param {number} digits - precision to display
      * @return {string} */
-    toString(digits=3) 
+    toString(digits=3)
     {
         ASSERT_NUMBER_VALID(digits);
         if (debug)
@@ -1856,7 +1858,7 @@ class Vector2
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** 
+/**
  * Create a color object with RGBA values, white by default
  * @param {number} [r=1] - red
  * @param {number} [g=1] - green
@@ -1867,7 +1869,7 @@ class Vector2
  */
 function rgb(r, g, b, a) { return new Color(r, g, b, a); }
 
-/** 
+/**
  * Create a color object with HSLA values, white by default
  * @param {number} [h=0] - hue
  * @param {number} [s=0] - saturation
@@ -1878,7 +1880,7 @@ function rgb(r, g, b, a) { return new Color(r, g, b, a); }
  */
 function hsl(h, s, l, a) { return new Color().setHSLA(h, s, l, a); }
 
-/** 
+/**
  * Check if object is a valid Color
  * @param {any} c
  * @return {boolean}
@@ -1889,7 +1891,7 @@ function isColor(c) { return c instanceof Color; }
 // color asserts
 function ASSERT_COLOR_VALID(c) { ASSERT(isColor(c) && c.isValid(), 'Color is invalid.', c); }
 
-/** 
+/**
  * Color object (red, green, blue, alpha) with some helpful functions
  * @example
  * let a = new Color;              // white
@@ -1961,7 +1963,7 @@ class Color
      * @param {number} scale
      * @param {number} [alphaScale=scale]
      * @return {Color} */
-    scale(scale, alphaScale=scale) 
+    scale(scale, alphaScale=scale)
     { return new Color(this.r*scale, this.g*scale, this.b*scale, this.a*alphaScale); }
 
     /** Returns a copy of this color clamped to the valid range between 0 and 1
@@ -1978,9 +1980,9 @@ class Color
         ASSERT_NUMBER_VALID(percent);
         const p = clamp(percent);
         return new Color(
-            c.r*p + this.r*(1-p), 
-            c.g*p + this.g*(1-p), 
-            c.b*p + this.b*(1-p), 
+            c.r*p + this.r*(1-p),
+            c.g*p + this.g*(1-p),
+            c.b*p + this.b*(1-p),
             c.a*p + this.a*(1-p));
     }
 
@@ -2038,7 +2040,7 @@ class Color
      * @param {number} [amount]
      * @param {number} [alphaAmount]
      * @return {Color} */
-    mutate(amount=.05, alphaAmount=0) 
+    mutate(amount=.05, alphaAmount=0)
     {
         ASSERT_NUMBER_VALID(amount);
         ASSERT_NUMBER_VALID(alphaAmount);
@@ -2054,7 +2056,7 @@ class Color
     /** Returns this color expressed as a hex color code
      * @param {boolean} [useAlpha] - if alpha should be included in result
      * @return {string} */
-    toString(useAlpha = true)      
+    toString(useAlpha = true)
     {
         ASSERT(typeof useAlpha === 'boolean', 'Use alpha boolean is invalid.', useAlpha);
         if (debug && !this.isValid())
@@ -2062,7 +2064,7 @@ class Color
         const toHex = (c)=> ((c=clamp(c)*255|0)<16 ? '0' : '') + c.toString(16);
         return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b) + (useAlpha ? toHex(this.a) : '');
     }
-    
+
     /** Set this color from a hex code
      * @param {string} hex - html hex code
      * @return {Color} */
@@ -2091,10 +2093,10 @@ class Color
         ASSERT_COLOR_VALID(this);
         return this;
     }
-    
+
     /** Returns this color expressed as 32 bit RGBA value
      * @return {number} */
-    rgbaInt()  
+    rgbaInt()
     {
         const r = clamp(this.r)*255|0;
         const g = clamp(this.g)*255<<8;
@@ -2115,7 +2117,7 @@ class Color
 /** Color - White #ffffff
  *  @type {Color}
  *  @memberof Utilities */
-const WHITE = rgb(); 
+const WHITE = rgb();
 
 /** Color - Clear White #ffffff with 0 alpha
  *  @type {Color}
@@ -2230,15 +2232,16 @@ class Timer
     /** Get percentage elapsed based on time it was set to, returns 0 if not set
      * @return {number} */
     getPercent() { return this.isSet()? 1-percent(this.time - time, 0, this.setTime) : 0; }
-    
+
     /** Returns this timer expressed as a string
      * @return {string} */
     toString() { if (debug) { return this.isSet() ? Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ) : 'unset'; }}
-    
+
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {number} */
     valueOf() { return this.get(); }
 }
+
 /**
  * LittleJS Engine Settings
  * - All settings for the engine are here
@@ -2577,8 +2580,8 @@ function setCanvasPixelated(pixelated)
  *  @param {boolean} pixelated
  *  @memberof Settings */
 function setOverlayCanvasPixelated(pixelated)
-{ 
-    overlayCanvasPixelated = pixelated; 
+{
+    overlayCanvasPixelated = pixelated;
     if (overlayCanvas)
         overlayCanvas.style.imageRendering = pixelated ? 'pixelated' : '';
 }
@@ -2767,11 +2770,12 @@ function setShowWatermark(show) { showWatermark = show; }
  *  @param {string} key
  *  @memberof Debug */
 function setDebugKey(key) { debugKey = key; }
-/** 
+
+/**
  * LittleJS Object System
  */
 
-/** 
+/**
  * LittleJS Object Base Object Class
  * - Top level object class used by the engine
  * - Automatically adds self to object list
@@ -2794,7 +2798,7 @@ function setDebugKey(key) { debugKey = key; }
  * @example
  * // create an engine object, normally you would first extend the class with your own
  * const pos = vec2(2,3);
- * const object = new EngineObject(pos); 
+ * const object = new EngineObject(pos);
  */
 class EngineObject
 {
@@ -2882,7 +2886,7 @@ class EngineObject
         // add to list of objects
         engineObjects.push(this);
     }
-    
+
     /** Update the object transform, called automatically by engine even when paused */
     updateTransforms()
     {
@@ -2974,7 +2978,7 @@ class EngineObject
                     this.velocity = this.velocity.add(velocity);
                     if (o.mass) // push away if not fixed
                         o.velocity = o.velocity.subtract(velocity);
-                        
+
                     debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f00');
                     continue;
                 }
@@ -2985,7 +2989,7 @@ class EngineObject
                 const isBlockedX = abs(oldPos.y - o.pos.y)*2 < sizeBoth.y;
                 const isBlockedY = abs(oldPos.x - o.pos.x)*2 < sizeBoth.x;
                 const restitution = max(this.restitution, o.restitution);
-                
+
                 if (smallStepUp || isBlockedY || !isBlockedX) // resolve y collision
                 {
                     // push outside object collision
@@ -3073,7 +3077,7 @@ class EngineObject
                         {
                             // move to previous position
                             this.pos.y = oldPos.y;
-                            this.groundObject = undefined; 
+                            this.groundObject = undefined;
                         }
                     }
                     if (blockedLayerX)
@@ -3087,20 +3091,20 @@ class EngineObject
             }
         }
     }
-       
+
     /** Render the object, draws a tile by default, automatically called each frame, sorted by renderOrder */
     render()
     {
         // default object render
         drawTile(this.pos, this.drawSize || this.size, this.tileInfo, this.color, this.angle, this.mirror, this.additiveColor);
     }
-    
+
     /** Destroy this object, destroy its children, detach it's parent, and mark it for removal */
     destroy()
-    { 
+    {
         if (this.destroyed)
             return;
-        
+
         // disconnect from parent and destroy children
         this.destroyed = 1;
         this.parent && this.parent.removeChild(this);
@@ -3126,7 +3130,7 @@ class EngineObject
     /** Convert from world space to local space for a vector (rotation only)
      *  @param {Vector2} vec - world space vector */
     worldToLocalVector(vec) { return vec.rotate(-this.angle); }
-    
+
     /** Called to check if a tile collision should be resolved
      *  @param {number}  tileData - the value of the tile at the position
      *  @param {Vector2} pos      - tile where the collision occurred
@@ -3147,14 +3151,14 @@ class EngineObject
      *  @param {Vector2} acceleration */
     applyAcceleration(acceleration) { if (this.mass) this.velocity = this.velocity.add(acceleration); }
 
-    /** Apply angular acceleration to this object 
+    /** Apply angular acceleration to this object
      *  @param {number} acceleration */
     applyAngularAcceleration(acceleration) { if (this.mass) this.angleVelocity += acceleration; }
 
     /** Apply force to this object (adjust velocity, affected by mass)
      *  @param {Vector2} force */
     applyForce(force) { this.applyAcceleration(force.scale(1/this.mass)); }
-    
+
     /** Get the direction of the mirror
      *  @return {number} -1 if this.mirror is true, or 1 if not mirrored */
     getMirrorSign() { return this.mirror ? -1 : 1; }
@@ -3222,7 +3226,7 @@ class EngineObject
     {
         if (!debug)
             return;
-        
+
         // show object info for debugging
         const size = vec2(max(this.size.x, .2), max(this.size.y, .2));
         const color = rgb(this.collideTiles?1:0, this.collideSolidObjects?1:0, this.isSolid?1:0, .5);
@@ -3232,24 +3236,25 @@ class EngineObject
         this.parent && drawLine(this.pos, this.parent.pos, .1, rgb(1,1,1,.5));
     }
 }
-/** 
+
+/**
  * LittleJS Drawing System
  * - Hybrid system with both Canvas2D and WebGL available
  * - Super fast tile sheet rendering with WebGL
  * - Can apply rotation, mirror, color and additive color
  * - Font rendering system with built in engine font
  * - Many useful utility functions
- * 
+ *
  * LittleJS uses a hybrid rendering solution with the best of both Canvas2D and WebGL.
  * There are 3 canvas/contexts available to draw to...
  * mainCanvas - 2D background canvas, non WebGL stuff like tile layers are drawn here.
  * glCanvas - Used by the accelerated WebGL batch rendering system.
  * overlayCanvas - Another 2D canvas that appears on top of the other 2 canvases.
- * 
+ *
  * The WebGL rendering system is very fast with some caveats...
  * - Switching blend modes (additive) or textures causes another draw call which is expensive in excess
  * - Group additive rendering together using renderOrder to mitigate this issue
- * 
+ *
  * The LittleJS rendering solution is intentionally simple, feel free to adjust it for your needs!
  * @namespace Draw
  */
@@ -3294,7 +3299,7 @@ let workCanvas;
  *  @memberof Draw */
 let workContext;
 
-/** The size of the main canvas (and other secondary canvases) 
+/** The size of the main canvas (and other secondary canvases)
  *  @type {Vector2}
  *  @memberof Draw */
 let mainCanvasSize = vec2();
@@ -3309,7 +3314,7 @@ let drawCount;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** 
+/**
  * Create a tile info object using a grid based system
  * - This can take vecs or floats for easier use and conversion
  * - If an index is passed in, the tile size and index will determine the position
@@ -3354,10 +3359,10 @@ function tile(pos=new Vector2, size=tileSizeDefault, textureIndex=0, padding=0)
     }
     else
         tileInfo.pos.set(pos.x*sizePaddedX+padding, pos.y*sizePaddedY+padding);
-    return tileInfo; 
+    return tileInfo;
 }
 
-/** 
+/**
  * Tile Info - Stores info about how to draw a tile
  */
 class TileInfo
@@ -3420,7 +3425,7 @@ class TextureInfo
     /**
      * Create a TextureInfo, called automatically by the engine
      * @param {HTMLImageElement|OffscreenCanvas} image
-     * @param {WebGLTexture} [glTexture] - webgl texture 
+     * @param {WebGLTexture} [glTexture] - webgl texture
      */
     constructor(image, glTexture)
     {
@@ -3460,7 +3465,7 @@ class TextureInfo
 function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
     angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace, context)
 {
-    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode'); 
+    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
     ASSERT(isVector2(pos) && pos.isValid(), 'drawTile pos should be a vec2');
     ASSERT(isVector2(size) && size.isValid(), 'drawTile size should be a vec2');
     ASSERT(isColor(color) && (!additiveColor || isColor(additiveColor)), 'drawTile color is invalid');
@@ -3488,22 +3493,22 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
             {
                 const tileImageFixBleedX = sizeInverse.x*tileFixBleedScale;
                 const tileImageFixBleedY = sizeInverse.y*tileFixBleedScale;
-                glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
-                    x + tileImageFixBleedX,     y + tileImageFixBleedY, 
-                    x - tileImageFixBleedX + w, y - tileImageFixBleedY + h, 
-                    color.rgbaInt(), additiveColor && additiveColor.rgbaInt()); 
+                glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle,
+                    x + tileImageFixBleedX,     y + tileImageFixBleedY,
+                    x - tileImageFixBleedX + w, y - tileImageFixBleedY + h,
+                    color.rgbaInt(), additiveColor && additiveColor.rgbaInt());
             }
             else
             {
-                glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
-                    x, y, x + w, y + h, 
-                    color.rgbaInt(), additiveColor && additiveColor.rgbaInt()); 
+                glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle,
+                    x, y, x + w, y + h,
+                    color.rgbaInt(), additiveColor && additiveColor.rgbaInt());
             }
         }
         else
         {
             // if no tile info, force untextured
-            glDraw(pos.x, pos.y, size.x, size.y, angle, 0, 0, 0, 0, 0, color.rgbaInt()); 
+            glDraw(pos.x, pos.y, size.x, size.y, angle, 0, 0, 0, 0, 0, color.rgbaInt());
         }
     }
     else
@@ -3541,8 +3546,8 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
-{ 
-    drawTile(pos, size, undefined, color, angle, false, undefined, useWebGL, screenSpace, context); 
+{
+    drawTile(pos, size, undefined, color, angle, false, undefined, useWebGL, screenSpace, context);
 }
 
 /** Draw colored line between two points
@@ -3631,7 +3636,7 @@ function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, l
         {
             context.strokeStyle = lineColor.toString();
             context.lineWidth = lineWidth;
-            context.stroke();   
+            context.stroke();
         }
     }, screenSpace, context);
 }
@@ -3757,7 +3762,7 @@ function screenToWorld(screenPos)
 {
     let cameraPosRelativeX = (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale;
     let cameraPosRelativeY = (screenPos.y - mainCanvasSize.y/2 + .5) / -cameraScale;
-    if (cameraAngle) 
+    if (cameraAngle)
     {
         // apply camera rotation
         const cos = Math.cos(-cameraAngle), sin = Math.sin(-cameraAngle);
@@ -3850,7 +3855,7 @@ function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth,
     {
         // white texture with no additive alpha, no need to tint
         context.globalAlpha = color.a;
-        context.drawImage(image, sx+sx2, sy+sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight); 
+        context.drawImage(image, sx+sx2, sy+sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight);
         context.globalAlpha = 1;
     }
     else
@@ -3871,7 +3876,7 @@ function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth,
             for (let i = 0; i < data.length; ++i)
                 data[i] = data[i] * colorMultiply[i&3] + colorAdd[i&3] |0;
             workContext.putImageData(imageData, 0, 0);
-            context.drawImage(workCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight); 
+            context.drawImage(workCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight);
         }
         else
         {
@@ -3884,7 +3889,7 @@ function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth,
             }
             workContext.putImageData(imageData, 0, 0);
             context.globalAlpha = color.a;
-            context.drawImage(workCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight); 
+            context.drawImage(workCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight);
             context.globalAlpha = 1;
         }
     }
@@ -3923,7 +3928,7 @@ function setCursor(cursorStyle = 'auto')
 
 let engineFontImage;
 
-/** 
+/**
  * Font Image Object - Draw text on a 2D canvas by using characters in an image
  * - 96 characters (from space to tilde) are stored in an image
  * - Uses a default 8x8 font if none is supplied
@@ -3931,7 +3936,7 @@ let engineFontImage;
  * @example
  * // use built in font
  * const font = new FontImage;
- * 
+ *
  * // draw text
  * font.drawTextScreen("LittleJS\nHello World!", vec2(200, 50));
  */
@@ -3998,7 +4003,7 @@ class FontImage
                 const x = tile % cols;
                 const y = tile / cols |0;
                 const drawPos = pos.add(vec2(j,i).multiply(drawSize));
-                context.drawImage(this.image, x * size.x, y * size.y, size.x, size.y, 
+                context.drawImage(this.image, x * size.x, y * size.y, size.x, size.y,
                     drawPos.x - centerOffset, drawPos.y, size.x * scale, size.y * scale);
             }
         });
@@ -4006,7 +4011,8 @@ class FontImage
         context.restore();
     }
 }
-/** 
+
+/**
  * LittleJS Input System
  * - Tracks keyboard down, pressed, and released
  * - Tracks mouse buttons, position, and wheel
@@ -4022,10 +4028,10 @@ class FontImage
  *  @return {boolean}
  *  @memberof Input */
 function keyIsDown(key, device=0)
-{ 
+{
     ASSERT(key !== undefined, 'key is undefined');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
-    return inputData[device] && !!(inputData[device][key] & 1); 
+    return inputData[device] && !!(inputData[device][key] & 1);
 }
 
 /** Returns true if device key was pressed this frame
@@ -4034,10 +4040,10 @@ function keyIsDown(key, device=0)
  *  @return {boolean}
  *  @memberof Input */
 function keyWasPressed(key, device=0)
-{ 
+{
     ASSERT(key !== undefined, 'key is undefined');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
-    return inputData[device] && !!(inputData[device][key] & 2); 
+    return inputData[device] && !!(inputData[device][key] & 2);
 }
 
 /** Returns true if device key was released this frame
@@ -4046,7 +4052,7 @@ function keyWasPressed(key, device=0)
  *  @return {boolean}
  *  @memberof Input */
 function keyWasReleased(key, device=0)
-{ 
+{
     ASSERT(key !== undefined, 'key is undefined');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return inputData[device] && !!(inputData[device][key] & 4);
@@ -4260,7 +4266,7 @@ function inputInit()
         // fix stalled audio requiring user interaction
         if (soundEnable && !headlessMode && audioContext && audioContext.state !== 'running')
             audioContext.resume();
-        
+
         isUsingGamepad = false;
         inputData[0][e.button] = 3;
         mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
@@ -4303,8 +4309,8 @@ function gamepadsUpdate()
     const applyDeadZones = (v)=>
     {
         const min=.3, max=.8;
-        const deadZone = (v)=> 
-            v >  min ?  percent( v, min, max) : 
+        const deadZone = (v)=>
+            v >  min ?  percent( v, min, max) :
             v < -min ? -percent(-v, min, max) : 0;
         return vec2(deadZone(v.x), deadZone(-v.y)).clampLength();
     }
@@ -4360,7 +4366,7 @@ function gamepadsUpdate()
             // read analog sticks
             for (let j = 0; j < gamepad.axes.length-1; j+=2)
                 sticks[j>>1] = applyDeadZones(vec2(gamepad.axes[j],gamepad.axes[j+1]));
-            
+
             // read buttons
             for (let j = gamepad.buttons.length; j--;)
             {
@@ -4376,14 +4382,14 @@ function gamepadsUpdate()
             {
                 // copy dpad to left analog stick when pressed
                 const dpad = vec2(
-                    (gamepadIsDown(15,i)&&1) - (gamepadIsDown(14,i)&&1), 
+                    (gamepadIsDown(15,i)&&1) - (gamepadIsDown(14,i)&&1),
                     (gamepadIsDown(12,i)&&1) - (gamepadIsDown(13,i)&&1));
                 if (dpad.lengthSquared())
                     sticks[0] = dpad.clampLength();
             }
 
             // disable touch gamepad if using real gamepad
-            touchGamepadEnable && isUsingGamepad && touchGamepadTimer.unset(); 
+            touchGamepadEnable && isUsingGamepad && touchGamepadTimer.unset();
         }
     }
 }
@@ -4460,7 +4466,7 @@ function touchInputInit()
         // prevent default handling like copy and magnifier lens
         if (inputPreventDefault && document.hasFocus()) // allow document to get focus
             e.preventDefault();
-        
+
         // must return true so the document will get focus
         return true;
     }
@@ -4472,7 +4478,7 @@ function touchInputInit()
         touchGamepadStick = vec2();
         touchGamepadButtons = [];
         isUsingGamepad = true;
-            
+
         const touching = e.touches.length;
         if (touching)
         {
@@ -4520,7 +4526,7 @@ function touchGamepadRender()
     if (!touchInputEnable || !isTouchDevice || headlessMode) return;
     if (!touchGamepadEnable || !touchGamepadTimer.isSet())
         return;
-    
+
     // fade off when not touching or paused
     const alpha = percent(touchGamepadTimer.get(), 4, 3);
     if (!alpha || paused)
@@ -4555,7 +4561,7 @@ function touchGamepadRender()
         }
         context.stroke();
     }
-    
+
     // draw right face buttons
     const rightCenter = vec2(mainCanvasSize.x-touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
     for (let i=4; i--;)
@@ -4591,7 +4597,8 @@ function pointerLockExit() { document.exitPointerLock && document.exitPointerLoc
  *  @return {boolean}
  *  @memberof Input */
 function pointerLockIsActive() { return document.pointerLockElement === mainCanvas; }
-/** 
+
+/**
  * LittleJS Audio System
  * - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a> - ZzFX Sound Effect Generator
  * - <a href=https://keithclark.github.io/ZzFXM/>ZzFXM Music</a> - ZzFXM Music System
@@ -4615,7 +4622,7 @@ let audioMasterGain;
 function audioInit()
 {
     if (!soundEnable || headlessMode) return;
-    
+
     audioMasterGain = audioContext.createGain();
     audioMasterGain.connect(audioContext.destination);
     audioMasterGain.gain.value = soundVolume; // set starting value
@@ -4623,14 +4630,14 @@ function audioInit()
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** 
+/**
  * Sound Object - Stores a sound for later use and can be played positionally
- * 
+ *
  * <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
  * @example
  * // create a sound
  * const sound_example = new Sound([.5,.5]);
- * 
+ *
  * // play the sound
  * sound_example.play();
  */
@@ -4720,7 +4727,7 @@ class Sound
     {
         if (!this.source)
             return;
-        
+
         // ramp off gain
         const startFade = audioContext.currentTime;
         const endFade = startFade + fadeTime;
@@ -4729,7 +4736,7 @@ class Sound
         this.source.stop(endFade);
         this.source = undefined;
     }
-    
+
     /** Get source of most recent instance of this sound that was played
      *  @return {AudioBufferSourceNode}
      */
@@ -4747,9 +4754,9 @@ class Sound
     /** Get how long this sound is in seconds
      *  @return {number} - How long the sound is in seconds (undefined if loading)
      */
-    getDuration() 
+    getDuration()
     { return this.sampleChannels && this.sampleChannels[0].length / this.sampleRate; }
-    
+
     /** Check if sound is loading, for sounds fetched from a url
      *  @return {boolean} - True if sound is loading and not ready to play
      */
@@ -4758,13 +4765,13 @@ class Sound
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** 
+/**
  * Sound Wave Object - Stores a wave sound for later use and can be played positionally
  * - this can be used to play wave, mp3, and ogg files
  * @example
  * // create a sound
  * const sound_example = new SoundWave('sound.mp3');
- * 
+ *
  * // play the sound
  * sound_example.play();
  */
@@ -4871,7 +4878,7 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
  *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing
  *  @return {AudioBufferSourceNode} - The audio node of the sound played
  *  @memberof Audio */
-function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=zzfxR, gainNode) 
+function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=zzfxR, gainNode)
 {
     if (!soundEnable || headlessMode) return;
 
@@ -4913,7 +4920,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
 // ZzFXMicro - Zuper Zmall Zound Zynth - v1.3.2 by Frank Force
 
 /** Generate and play a ZzFX sound
- *  
+ *
  *  <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
  *  @param {Array} zzfxSound - Array of ZzFX parameters, ex. [.5,.5]
  *  @return {AudioBufferSourceNode} - The audio node of the sound played
@@ -4923,7 +4930,7 @@ function zzfx(...zzfxSound) { return playSamples([zzfxG(...zzfxSound)]); }
 /** Sample rate used for all ZzFX sounds
  *  @default 44100
  *  @memberof Audio */
-const zzfxR = 44100; 
+const zzfxR = 44100;
 
 /** Generate samples for a ZzFX sound
  *  @param {number}  [volume] - Volume scale (percent)
@@ -4952,7 +4959,7 @@ const zzfxR = 44100;
  */
 function zzfxG
 (
-    volume = 1, 
+    volume = 1,
     randomness = .05,
     frequency = 220,
     attack = 0,
@@ -4960,11 +4967,11 @@ function zzfxG
     release = .1,
     shape = 0,
     shapeCurve = 1,
-    slide = 0, 
-    deltaSlide = 0, 
-    pitchJump = 0, 
-    pitchJumpTime = 0, 
-    repeatTime = 0, 
+    slide = 0,
+    deltaSlide = 0,
+    pitchJump = 0,
+    pitchJumpTime = 0,
+    repeatTime = 0,
     noise = 0,
     modulation = 0,
     bitCrush = 0,
@@ -4977,18 +4984,18 @@ function zzfxG
 {
     // init parameters
     let sampleRate = zzfxR,
-        PI2 = PI*2, 
+        PI2 = PI*2,
         startSlide = slide *= 500 * PI2 / sampleRate / sampleRate,
-        startFrequency = frequency *= 
+        startFrequency = frequency *=
             (1 + rand(randomness,-randomness)) * PI2 / sampleRate,
-        modOffset = 0, // modulation offset  
+        modOffset = 0, // modulation offset
         repeat = 0,    // repeat offset
         crush = 0,     // bit crush offset
         jump = 1,      // pitch jump timer
         length,        // sample length
         b = [],        // sample buffer
         t = 0,         // sample time
-        i = 0,         // sample index 
+        i = 0,         // sample index
         s = 0,         // sample value
         f,             // wave frequency
 
@@ -4996,7 +5003,7 @@ function zzfxG
         quality = 2, w = PI2 * abs(filter) * 2 / sampleRate,
         cos = Math.cos(w), alpha = Math.sin(w) / 2 / quality,
         a0 = 1 + alpha, a1 = -2*cos / a0, a2 = (1 - alpha) / a0,
-        b0 = (1 + sign(filter) * cos) / 2 / a0, 
+        b0 = (1 + sign(filter) * cos) / 2 / a0,
         b1 = -(sign(filter) + cos) / a0, b2 = b0,
         x2 = 0, x1 = 0, y2 = 0, y1 = 0;
 
@@ -5042,7 +5049,7 @@ function zzfxG
                 0);                                      // post release
 
             s = delay ? s/2 + (delay > i ? 0 :           // delay
-                (i<length-delay? 1 : (length-i)/delay) * // release delay 
+                (i<length-delay? 1 : (length-i)/delay) * // release delay
                 b[i-delay|0]/2/volume) : s;              // sample delay
 
             if (filter)                                  // apply filter
@@ -5054,14 +5061,14 @@ function zzfxG
         t += f + f*noise*Math.sin(i**5);        // noise
 
         if (jump && ++jump > pitchJumpTime)     // pitch jump
-        { 
+        {
             frequency += pitchJump;             // apply pitch jump
             startFrequency += pitchJump;        // also apply to start
             jump = 0;                           // stop pitch jump time
-        } 
+        }
 
         if (repeatTime && !(++repeat % repeatTime)) // repeat
-        { 
+        {
             frequency = startFrequency;   // reset frequency
             slide = startSlide;           // reset slide
             jump ||= 1;                   // reset pitch jump time
@@ -5070,7 +5077,8 @@ function zzfxG
 
     return b; // return sample buffer
 }
-/** 
+
+/**
  * LittleJS Tile Layer System
  * - Caches arrays of tiles to off screen canvas for fast rendering
  * - Unlimited numbers of layers, allocates canvases as needed
@@ -5084,7 +5092,7 @@ function zzfxG
 // Tile Layer System
 
 /** Keep track of all tile layers with collision
- *  @type {Array<TileCollisionLayer>} 
+ *  @type {Array<TileCollisionLayer>}
  *  @memberof TileCollision */
 let tileCollisionLayers = [];
 
@@ -5140,7 +5148,7 @@ function tileCollisionRaycast(posStart, posEnd, object, solidOnly=true)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-/** 
+/**
  * Load tile layers from exported data
  *  @param {Object}   tileMapData - Level data from exported data
  *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture)
@@ -5179,7 +5187,7 @@ function tileCollisionLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisio
         const tileLayer = new TileCollisionLayer(vec2(), levelSize, tileInfo, layerRenderOrder);
         tileLayers[layerIndex] = tileLayer;
 
-        for (let x=levelSize.x; x--;) 
+        for (let x=levelSize.x; x--;)
         for (let y=levelSize.y; y--;)
         {
             const pos = vec2(x, levelSize.y-1-y);
@@ -5264,7 +5272,7 @@ class CanvasLayer extends EngineObject
         this.glTexture = undefined;
         this.gravityScale = 0; // disable gravity by default for canvas layers
     }
-   
+
     /** Destroy this canvas layer */
     destroy()
     {
@@ -5335,8 +5343,8 @@ class CanvasLayer extends EngineObject
             if (textureInfo)
             {
                 context.globalAlpha = color.a; // only alpha is supported
-                context.drawImage(textureInfo.image, 
-                    tileInfo.pos.x,  tileInfo.pos.y, 
+                context.drawImage(textureInfo.image,
+                    tileInfo.pos.x,  tileInfo.pos.y,
                     tileInfo.size.x, tileInfo.size.y, -.5, -.5, 1, 1);
                 context.globalAlpha = 1;
             }
@@ -5354,7 +5362,7 @@ class CanvasLayer extends EngineObject
      *  @param {Vector2} [size=(1,1)]
      *  @param {Color}   [color=(1,1,1,1)]
      *  @param {number}  [angle=0] */
-    drawRect(pos, size, color, angle) 
+    drawRect(pos, size, color, angle)
     { this.drawTile(pos, size, undefined, color, angle); }
 
     /** Create or update the webgl texture for this layer
@@ -5429,7 +5437,7 @@ class TileLayer extends CanvasLayer
         }
     }
 
-    /** Set data at a given position in the array 
+    /** Set data at a given position in the array
      *  @param {Vector2}       layerPos - Local position in array
      *  @param {TileLayerData} data     - Data to set
      *  @param {boolean}       [redraw] - Force the tile to redraw if true */
@@ -5441,18 +5449,18 @@ class TileLayer extends CanvasLayer
             redraw && this.drawTileData(layerPos);
         }
     }
-    
-    /** Get data at a given position in the array 
+
+    /** Get data at a given position in the array
      *  @param {Vector2} layerPos - Local position in array
      *  @return {TileLayerData} */
     getData(layerPos)
     { return layerPos.arrayCheck(this.size) && this.data[(layerPos.y|0)*this.size.x+layerPos.x|0]; }
-    
+
     // Render the tile layer, called automatically by the engine
     render()
     {
         ASSERT(drawContext !== this.context, 'must call redrawEnd() after drawing tiles!');
-        
+
         // draw the tile layer as a single tile
         const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
         const pos = this.pos.add(this.size.scale(.5));
@@ -5460,7 +5468,7 @@ class TileLayer extends CanvasLayer
         drawTile(pos, this.size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebgl);
     }
 
-    /** Draw all the tile data to an offscreen canvas 
+    /** Draw all the tile data to an offscreen canvas
      *  - This may be slow in some browsers but only needs to be done once */
     redraw()
     {
@@ -5517,7 +5525,7 @@ class TileLayer extends CanvasLayer
     /** Draw the tile at a given position in the tile grid
      *  This can be used to clear out tiles when they are destroyed
      *  Tiles can also be redrawn if inside a redrawStart/End block
-     *  @param {Vector2} layerPos 
+     *  @param {Vector2} layerPos
      *  @param {boolean} [clear] - should the old tile be cleared out
      */
     drawTileData(layerPos, clear=true)
@@ -5698,7 +5706,8 @@ class TileCollisionLayer extends TileLayer
         debugRaycast && debugLine(posStart, posEnd, '#00f', .02);
     }
 }
-/** 
+
+/**
  * LittleJS Particle System
  */
 
@@ -5715,7 +5724,7 @@ class TileCollisionLayer extends TileLayer
  *     rgb(1,1,1,1), rgb(0,0,0,1), // colorStartA, colorStartB
  *     rgb(1,1,1,0), rgb(0,0,0,0), // colorEndA, colorEndB
  *     2, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
- *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate, 
+ *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate,
  *     .5, 1                // randomness, collide, additive, randomColorLinear, renderOrder
  * );
  */
@@ -5751,7 +5760,7 @@ class ParticleEmitter extends EngineObject
      *  @param {boolean}  [localSpace] - Should it be in local space of emitter (world space is default)
      */
     constructor
-    ( 
+    (
         position,
         angle,
         emitSize = 0,
@@ -5773,7 +5782,7 @@ class ParticleEmitter extends EngineObject
         gravityScale = 0,
         particleConeAngle = PI,
         fadeRate = .1,
-        randomness = .2, 
+        randomness = .2,
         collideTiles = false,
         additive = false,
         randomColorLinear = true,
@@ -5843,7 +5852,7 @@ class ParticleEmitter extends EngineObject
         /** @property {Number} - Track particle emit time */
         this.emitTimeBuffer    = 0;
     }
-    
+
     /** Update the emitter to spawn particles, called automatically by engine once each frame */
     update()
     {
@@ -5902,7 +5911,7 @@ class ParticleEmitter extends EngineObject
         const colorStart    = randColor(this.colorStartA, this.colorStartB, this.randomColorLinear);
         const colorEnd      = randColor(this.colorEndA,   this.colorEndB, this.randomColorLinear);
         const velocityAngle = this.localSpace ? coneAngle : this.angle + coneAngle;
-        
+
         // build particle
         const particle = new Particle(pos, this.tileInfo, angle, colorStart, colorEnd, particleTime, sizeStart, sizeEnd, this.fadeRate, this.additive,  this.trailScale, this.localSpace && this, this.particleDestroyCallback);
         particle.velocity      = vec2().setAngle(velocityAngle, speed);
@@ -5961,9 +5970,9 @@ class Particle extends EngineObject
      */
     constructor(position, tileInfo, angle, colorStart, colorEnd, lifeTime, sizeStart, sizeEnd, fadeRate, additive, trailScale, localSpaceEmitter, destroyCallback
     )
-    { 
-        super(position, vec2(), tileInfo, angle); 
-    
+    {
+        super(position, vec2(), tileInfo, angle);
+
         /** @property {Color} - Color at start of life */
         this.colorStart = colorStart;
         /** @property {Color} - Calculated change in color */
@@ -6018,7 +6027,7 @@ class Particle extends EngineObject
             this.colorStart.r + p * this.colorEndDelta.r,
             this.colorStart.g + p * this.colorEndDelta.g,
             this.colorStart.b + p * this.colorEndDelta.b,
-            (this.colorStart.a + p * this.colorEndDelta.a) * 
+            (this.colorStart.a + p * this.colorEndDelta.a) *
              (p < fadeRate ? p/fadeRate : p > 1-fadeRate ? (1-p)/fadeRate : 1)); // fade alpha
 
         // draw the particle
@@ -6028,7 +6037,7 @@ class Particle extends EngineObject
         if (this.localSpaceEmitter)
         {
             // in local space of emitter
-            pos = this.localSpaceEmitter.pos.add(pos.rotate(-this.localSpaceEmitter.angle)); 
+            pos = this.localSpaceEmitter.pos.add(pos.rotate(-this.localSpaceEmitter.angle));
             angle += this.localSpaceEmitter.angle;
         }
         if (this.trailScale)
@@ -6062,7 +6071,8 @@ class Particle extends EngineObject
         }
     }
 }
-/** 
+
+/**
  * LittleJS Medal System
  * - Tracks and displays medals
  * - Saves medals to local storage
@@ -6098,7 +6108,7 @@ function medalsInit(saveName)
     {
         if (!medalsDisplayQueue.length)
             return;
-        
+
         // update first medal in queue
         const medal = medalsDisplayQueue[0];
         const time = timeReal - medalsDisplayTimeLast;
@@ -6113,7 +6123,7 @@ function medalsInit(saveName)
         {
             // slide on/off medals
             const slideOffTime = medalDisplayTime - medalDisplaySlideTime;
-            const hidePercent = 
+            const hidePercent =
                 time < medalDisplaySlideTime ? 1 - time / medalDisplaySlideTime :
                 time > slideOffTime ? (time - slideOffTime) / medalDisplaySlideTime : 0;
             medal.render(hidePercent);
@@ -6129,15 +6139,15 @@ function medalsForEach(callback)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** 
- * Medal - Tracks an unlockable medal 
+/**
+ * Medal - Tracks an unlockable medal
  * @example
  * // create a medal
  * const medal_example = new Medal(0, 'Example Medal', 'More info about the medal goes here.', '🎖️');
- * 
+ *
  * // initialize medals
  * medalsInit('Example Game');
- * 
+ *
  * // unlock the medal
  * medal_example.unlock();
  */
@@ -6153,19 +6163,19 @@ class Medal
     constructor(id, name, description='', icon='🏆', src)
     {
         ASSERT(id >= 0 && !medals[id]);
-        
+
         /** @property {Number} - The unique identifier of the medal */
         this.id = id;
-        
+
         /** @property {String} - Name of the medal */
         this.name = name;
-        
+
         /** @property {String} - Description of the medal */
         this.description = description;
-        
+
         /** @property {String} - Icon for the medal */
         this.icon = icon;
-        
+
         /** @property {boolean} - Is the medal unlocked? */
         this.unlocked = false;
 
@@ -6241,10 +6251,11 @@ class Medal
         else
             drawTextScreen(this.icon, pos, size*.7, BLACK);
     }
- 
+
     // Get local storage key used by the medal
     storageKey() { return medalsSaveName + '_' + this.id; }
 }
+
 /**
  * LittleJS WebGL Interface
  * - All webgl used by the engine is wrapped up here
@@ -6276,7 +6287,7 @@ let glAntialias = true;
 // WebGL internal variables not exposed to documentation
 let glShader, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glInstanceCount, glAdditive, glBatchAdditive;
 
-// WebGL internal constants 
+// WebGL internal constants
 const gl_MAX_INSTANCES = 1e4;
 const gl_INDICES_PER_INSTANCE = 11;
 const gl_INSTANCE_BYTE_STRIDE = gl_INDICES_PER_INSTANCE * 4;
@@ -6381,7 +6392,7 @@ function glPreRender()
     initVertexAttribArray('c', glContext.UNSIGNED_BYTE, 1, 4); // color
     initVertexAttribArray('a', glContext.UNSIGNED_BYTE, 1, 4); // additiveColor
     initVertexAttribArray('r', glContext.FLOAT, 4, 1); // rotation
-    
+
     // build the transform matrix
     const s = vec2(2*cameraScale).divide(mainCanvasSize);
     const rotatedCam = cameraPos.rotate(-cameraAngle);
@@ -6402,7 +6413,7 @@ function glPreRender()
 function glClearCanvas()
 {
     if (!glContext) return;
-    
+
     // clear and set to same size as main canvas
     glContext.viewport(0, 0, glCanvas.width=drawCanvas.width, glCanvas.height=drawCanvas.height);
     glContext.clear(glContext.COLOR_BUFFER_BIT);
@@ -6498,7 +6509,7 @@ function glCreateTexture(image)
         const whitePixel = new Uint8Array([255, 255, 255, 255]);
         glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 1, 1, 0, glContext.RGBA, glContext.UNSIGNED_BYTE, whitePixel);
     }
-    
+
     // set texture filtering
     const filter = tilesPixelated ? glContext.NEAREST : glContext.LINEAR;
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, filter);
@@ -6602,6 +6613,7 @@ function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgb
     glColorData[offset++] = rgbaAdditive;
     glPositionData[offset++] = angle;
 }
+
 /** 
  * LittleJS Newgrounds API
  * - NewgroundsMedal extends Medal with Newgrounds API functionality

@@ -1,4 +1,4 @@
-/** 
+/**
  * LittleJS Medal System
  * - Tracks and displays medals
  * - Saves medals to local storage
@@ -36,7 +36,7 @@ function medalsInit(saveName)
     {
         if (!medalsDisplayQueue.length)
             return;
-        
+
         // update first medal in queue
         const medal = medalsDisplayQueue[0];
         const time = timeReal - medalsDisplayTimeLast;
@@ -51,7 +51,7 @@ function medalsInit(saveName)
         {
             // slide on/off medals
             const slideOffTime = medalDisplayTime - medalDisplaySlideTime;
-            const hidePercent = 
+            const hidePercent =
                 time < medalDisplaySlideTime ? 1 - time / medalDisplaySlideTime :
                 time > slideOffTime ? (time - slideOffTime) / medalDisplaySlideTime : 0;
             medal.render(hidePercent);
@@ -67,15 +67,15 @@ function medalsForEach(callback)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** 
- * Medal - Tracks an unlockable medal 
+/**
+ * Medal - Tracks an unlockable medal
  * @example
  * // create a medal
  * const medal_example = new Medal(0, 'Example Medal', 'More info about the medal goes here.', '🎖️');
- * 
+ *
  * // initialize medals
  * medalsInit('Example Game');
- * 
+ *
  * // unlock the medal
  * medal_example.unlock();
  */
@@ -91,19 +91,19 @@ class Medal
     constructor(id, name, description='', icon='🏆', src)
     {
         ASSERT(id >= 0 && !medals[id]);
-        
+
         /** @property {Number} - The unique identifier of the medal */
         this.id = id;
-        
+
         /** @property {String} - Name of the medal */
         this.name = name;
-        
+
         /** @property {String} - Description of the medal */
         this.description = description;
-        
+
         /** @property {String} - Icon for the medal */
         this.icon = icon;
-        
+
         /** @property {boolean} - Is the medal unlocked? */
         this.unlocked = false;
 
@@ -179,7 +179,7 @@ class Medal
         else
             drawTextScreen(this.icon, pos, size*.7, BLACK);
     }
- 
+
     // Get local storage key used by the medal
     storageKey() { return medalsSaveName + '_' + this.id; }
 }

@@ -1,4 +1,4 @@
-/** 
+/**
  * LittleJS Input System
  * - Tracks keyboard down, pressed, and released
  * - Tracks mouse buttons, position, and wheel
@@ -16,10 +16,10 @@
  *  @return {boolean}
  *  @memberof Input */
 function keyIsDown(key, device=0)
-{ 
+{
     ASSERT(key !== undefined, 'key is undefined');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
-    return inputData[device] && !!(inputData[device][key] & 1); 
+    return inputData[device] && !!(inputData[device][key] & 1);
 }
 
 /** Returns true if device key was pressed this frame
@@ -28,10 +28,10 @@ function keyIsDown(key, device=0)
  *  @return {boolean}
  *  @memberof Input */
 function keyWasPressed(key, device=0)
-{ 
+{
     ASSERT(key !== undefined, 'key is undefined');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
-    return inputData[device] && !!(inputData[device][key] & 2); 
+    return inputData[device] && !!(inputData[device][key] & 2);
 }
 
 /** Returns true if device key was released this frame
@@ -40,7 +40,7 @@ function keyWasPressed(key, device=0)
  *  @return {boolean}
  *  @memberof Input */
 function keyWasReleased(key, device=0)
-{ 
+{
     ASSERT(key !== undefined, 'key is undefined');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return inputData[device] && !!(inputData[device][key] & 4);
@@ -254,7 +254,7 @@ function inputInit()
         // fix stalled audio requiring user interaction
         if (soundEnable && !headlessMode && audioContext && audioContext.state !== 'running')
             audioContext.resume();
-        
+
         isUsingGamepad = false;
         inputData[0][e.button] = 3;
         mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
@@ -297,8 +297,8 @@ function gamepadsUpdate()
     const applyDeadZones = (v)=>
     {
         const min=.3, max=.8;
-        const deadZone = (v)=> 
-            v >  min ?  percent( v, min, max) : 
+        const deadZone = (v)=>
+            v >  min ?  percent( v, min, max) :
             v < -min ? -percent(-v, min, max) : 0;
         return vec2(deadZone(v.x), deadZone(-v.y)).clampLength();
     }
@@ -354,7 +354,7 @@ function gamepadsUpdate()
             // read analog sticks
             for (let j = 0; j < gamepad.axes.length-1; j+=2)
                 sticks[j>>1] = applyDeadZones(vec2(gamepad.axes[j],gamepad.axes[j+1]));
-            
+
             // read buttons
             for (let j = gamepad.buttons.length; j--;)
             {
@@ -370,14 +370,14 @@ function gamepadsUpdate()
             {
                 // copy dpad to left analog stick when pressed
                 const dpad = vec2(
-                    (gamepadIsDown(15,i)&&1) - (gamepadIsDown(14,i)&&1), 
+                    (gamepadIsDown(15,i)&&1) - (gamepadIsDown(14,i)&&1),
                     (gamepadIsDown(12,i)&&1) - (gamepadIsDown(13,i)&&1));
                 if (dpad.lengthSquared())
                     sticks[0] = dpad.clampLength();
             }
 
             // disable touch gamepad if using real gamepad
-            touchGamepadEnable && isUsingGamepad && touchGamepadTimer.unset(); 
+            touchGamepadEnable && isUsingGamepad && touchGamepadTimer.unset();
         }
     }
 }
@@ -454,7 +454,7 @@ function touchInputInit()
         // prevent default handling like copy and magnifier lens
         if (inputPreventDefault && document.hasFocus()) // allow document to get focus
             e.preventDefault();
-        
+
         // must return true so the document will get focus
         return true;
     }
@@ -466,7 +466,7 @@ function touchInputInit()
         touchGamepadStick = vec2();
         touchGamepadButtons = [];
         isUsingGamepad = true;
-            
+
         const touching = e.touches.length;
         if (touching)
         {
@@ -514,7 +514,7 @@ function touchGamepadRender()
     if (!touchInputEnable || !isTouchDevice || headlessMode) return;
     if (!touchGamepadEnable || !touchGamepadTimer.isSet())
         return;
-    
+
     // fade off when not touching or paused
     const alpha = percent(touchGamepadTimer.get(), 4, 3);
     if (!alpha || paused)
@@ -549,7 +549,7 @@ function touchGamepadRender()
         }
         context.stroke();
     }
-    
+
     // draw right face buttons
     const rightCenter = vec2(mainCanvasSize.x-touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
     for (let i=4; i--;)
