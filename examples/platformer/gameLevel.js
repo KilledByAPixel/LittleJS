@@ -39,7 +39,12 @@ export function buildLevel()
 
     // create parallax layers
     for (let i=3; i--;)
-        new GameEffects.ParallaxLayer(i);
+    {
+        const pos = levelSize.scale(.5);
+        const topColor = levelColor.mutate(.2).lerp(sky.skyColor, .8 - i*.15);
+        const bottomColor = levelColor.subtract(LJS.CLEAR_WHITE).mutate(.2);
+        new GameEffects.ParallaxLayer(pos, topColor, bottomColor, i );
+    }
 }
 
 function loadLevelData()

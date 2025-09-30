@@ -81,16 +81,17 @@ const exampleList =
     new ExampleInfo('Sprite Atlas', 'spriteAtlas.js', 'Sprite atlas and tile rendering - [graphics, sprites]'),
     new ExampleInfo('Animation', 'animation.js', 'Sprite animation techniques - [animation, sprites]'),
     new ExampleInfo('Clock', 'clock.js', 'Real-time clock display - [time, ui, utilities]'),
+    new ExampleInfo('Medals', 'medals.js', 'Achievement system demo - [ui, achievements]'),
     new ExampleInfo('Tile Layer', 'tileLayer.js', 'Tile layer rendering system - [tiles, levels]'),
     new ExampleInfo('Piano', 'piano.js', 'Interactive piano keyboard - [audio, input, ui]'),
     new ExampleInfo('Maze Generator', 'maze.js', 'Procedural maze generation - [algorithm, generation]'),
-    new ExampleInfo('Starfield', 'starfield.js', 'Animated parallax starfield - [effects, space]'),
-    new ExampleInfo('Medals', 'medals.js', 'Achievement system demo - [ui, achievements]'),
+    new ExampleInfo('Starfield', 'starfield.js', 'Animated starfield - [effects, space]'),
+    new ExampleInfo('Parallax', 'parallax.js', 'Parallax mountains - [graphics, effects]'),
     new ExampleInfo('--- MINI GAMES ---'),
     new ExampleInfo('Platformer Game', 'platformer.js', 'Jump and run platformer - [game, platformer, physics]'),
     new ExampleInfo('Top Down Game', 'topDown.js', 'Adventure with collision - [game, topdown, rpg]'),
     new ExampleInfo('Tilted View', 'tiltedView.js', 'Pseudo 3D tilted perspective - [3d, camera, perspective]'),
-    new ExampleInfo('Space Game', 'spaceGame.js', 'Spaceship with parallax scrolling - [game, space, shooter]'),
+    new ExampleInfo('Space Game', 'spaceGame.js', 'Spaceship with parallax starfield - [game, space, shooter]'),
     new ExampleInfo('Lander Game', 'landerGame.js', 'Lunar lander physics game - [game, physics, thrust]'),
     new ExampleInfo('Flappy Game', 'flappyGame.js', 'Flappy bird clone - [game, arcade, flying]'),
     new ExampleInfo('Hill Glide Game', 'hillGlideGame.js', 'Tiny wings style glider - [game, physics, flying]'),
@@ -397,7 +398,7 @@ function setCode(code, textFilename)
 
         // intercept asserts
         const originalAssert = iframeContent.console.assert;
-        iframeContent.console.assert = function (condition, output)
+        iframeContent.console.assert = function (condition, ...output)
         {
            if (!condition)
            {
@@ -405,7 +406,10 @@ function setCode(code, textFilename)
                 const errorLine = getErrorLine(stack);
                 if (errorLine >= 0)
                     setErrorLine(errorLine);
-                setErrorMessage('Assertion failed!\n' + (output || '') + '\n' + stack);
+                
+                // format output parameters properly
+                const outputMessage = output.length > 0 ? output.map(m => stringifyMessage(m)).join(' ') : '';
+                setErrorMessage('Assertion failed!\n' + outputMessage + '\n' + stack);
            }
             originalAssert.apply(this, arguments);
         };
