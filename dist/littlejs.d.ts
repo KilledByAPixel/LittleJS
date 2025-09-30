@@ -79,7 +79,7 @@ declare module "littlejsengine" {
      *  // Basic engine startup
      *  engineInit(
      *    () => { console.log('Game initialized!'); },  // gameInit
-     *    () => { updatePlayer(); },                    // gameUpdate
+     *    () => { updateGameLogic(); },                 // gameUpdate
      *    () => { updateUI(); },                        // gameUpdatePost
      *    () => { drawBackground(); },                  // gameRender
      *    () => { drawHUD(); },                         // gameRenderPost
@@ -1601,7 +1601,7 @@ declare module "littlejsengine" {
     /** Set the WebGl texture, called automatically if using multiple textures
      *  - This may also flush the gl buffer resulting in more draw calls and worse performance
      *  @param {WebGLTexture} texture
-     *  @param {boolean} wrap - Should the texture wrap or clamp
+     *  @param {boolean} [wrap] - Should the texture wrap or clamp
      *  @memberof WebGL */
     export function glSetTexture(texture: WebGLTexture, wrap?: boolean): void;
     /** Set anti-aliasing for webgl canvas

@@ -123,7 +123,7 @@ function engineAddPlugin(updateFunction, renderFunction)
  *  // Basic engine startup
  *  engineInit(
  *    () => { console.log('Game initialized!'); },  // gameInit
- *    () => { updatePlayer(); },                    // gameUpdate
+ *    () => { updateGameLogic(); },                 // gameUpdate
  *    () => { updateUI(); },                        // gameUpdatePost
  *    () => { drawBackground(); },                  // gameRender
  *    () => { drawHUD(); },                         // gameRenderPost
@@ -320,7 +320,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     rootElement.appendChild(overlayCanvas);
     overlayContext = overlayCanvas.getContext('2d');
 
-    // set canvas style
+    // set canvases
     const styleCanvas = 'position:absolute;'+ // allow canvases to overlap
         'top:50%;left:50%;transform:translate(-50%,-50%)'; // center on screen
     mainCanvas.style.cssText = overlayCanvas.style.cssText = styleCanvas;
@@ -329,6 +329,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     setCanvasPixelated(canvasPixelated);
     setOverlayCanvasPixelated(overlayCanvasPixelated);
     updateCanvas();
+    glPreRender();
 
     // create offscreen canvas for image processing
     workCanvas = new OffscreenCanvas(256, 256);
@@ -5869,7 +5870,7 @@ function glClearCanvas()
 /** Set the WebGl texture, called automatically if using multiple textures
  *  - This may also flush the gl buffer resulting in more draw calls and worse performance
  *  @param {WebGLTexture} texture
- *  @param {boolean} wrap - Should the texture wrap or clamp
+ *  @param {boolean} [wrap] - Should the texture wrap or clamp
  *  @memberof WebGL */
 function glSetTexture(texture, wrap=false)
 {
