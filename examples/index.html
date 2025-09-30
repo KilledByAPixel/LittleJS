@@ -51,8 +51,6 @@ Theme:
 <script>
 'use strict';
 
-const useCodeMirror = true;
-
 class ExampleInfo
 {
     constructor(name, filename, description='', largeExample=false)
@@ -119,19 +117,28 @@ const exampleList =
 ///////////////////////////////////////////////////////////////////////////////
 
 // global variables
-let iframeExample, inputTimeout, codeMirror, consoleAutoScroll, errorLineMarker, codeIsJS;
+let iframeExample; // iframe of the current loaded example
+let inputTimeout;  // timeout to debounce input
+let consoleAutoScroll; // allow console to scroll automatically
 
-// load the examples into the list
-filterExamples();
+function initExampleBrowser()
+{
+    // load the examples into the list
+    filterExamples();
 
-// set the selected example from the URL parameters
-const urlParams = new URLSearchParams(window.location.search);
-const selectedExample = urlParams.get('example') || '';
-let exampleIndex = exampleList.findIndex((example) => example.filename === selectedExample);
-if (exampleIndex < 0)
-    exampleIndex = 1;
-selectExample.selectedIndex = exampleIndex;
-setExample();
+    // set the selected example from the URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const selectedExample = urlParams.get('example') || '';
+    let exampleIndex = exampleList.findIndex((example) => example.filename === selectedExample);
+    if (exampleIndex < 0)
+        exampleIndex = 1;
+    selectExample.selectedIndex = exampleIndex;
+    setExample();
+
+    // apply responsive layout
+    addEventListener('resize', resizeWindow);
+    resizeWindow();
+}
 
 function resizeWindow()
 {
@@ -143,7 +150,7 @@ function resizeWindow()
         selectExampleText.style.display = 'none';
 
     const windowAspect = innerWidth / innerHeight;
-    const verticalLayout = windowAspect < 1.4;
+    const verticalLayout = windowAspect < 1;
     if (verticalLayout)
     {
         // vertical layout for thin screens
@@ -194,10 +201,6 @@ function resizeWindow()
         }
     }
 }
-
-// apply responsive layout
-addEventListener('resize', resizeWindow);
-resizeWindow();
 
 ///////////////////////////////////////////////////////////////////////////////
 // setting examples
@@ -521,7 +524,7 @@ function setMessage(message, element, clear=true)
         element.value = message;
     else
         element.value += '\n' + message;
-    element.style.display = message ? 'block' : 'none';
+    element.style.display = message ? 'block' : '';
     
     if (element === textareaConsole)
     {
@@ -542,7 +545,7 @@ function setMessage(message, element, clear=true)
 
 function unsetMessage(element) 
 { 
-    element.style.display = 'none'; 
+    element.style.display = ''; 
     element.value = '';
 }
 
@@ -615,7 +618,20 @@ function onScrollConsole()
 textareaConsole.addEventListener('scroll', onScrollConsole);
 
 ///////////////////////////////////////////////////////////////////////////////
+// load saved preferences from localStorage
+const savePrefix = 'LittleJSExamples_';
+const savedTheme = localStorage.getItem(savePrefix+'theme') || defaultTheme;
+const savedFontSize = localStorage.getItem(savePrefix+'fontSize') || defaultFontSize;
+selectFontSize.value = savedFontSize;
+textareaCode.style.fontSize = savedFontSize;
+
+///////////////////////////////////////////////////////////////////////////////
 // setup code mirror
+
+const useCodeMirror = true;
+let codeMirror; // code mirror instance
+let errorLineMarker; // marker for error line in code mirror
+let codeIsJS; // is the current code javascript
 
 const defaultTheme = 'littlejs';
 const defaultFontSize = '16px';
@@ -634,11 +650,7 @@ const themes =
     'yonce'
 ];
 
-// Load saved preferences from localStorage
-const savePrefix = 'LittleJSExamples_';
-const savedTheme = localStorage.getItem(savePrefix+'theme') || defaultTheme;
-const savedFontSize = localStorage.getItem(savePrefix+'fontSize') || defaultFontSize;
-
+// load theme and font size
 for (const theme of themes)
 {
     if (theme != 'littlejs')
@@ -648,9 +660,6 @@ for (const theme of themes)
     selectTheme.add(o);
 }
 
-// Set the saved font size
-selectFontSize.value = savedFontSize;
-textareaCode.style.fontSize = savedFontSize;
 if (useCodeMirror)
 {
     addCodeMirrorElement('codemirror.min.js', 'script').onload = ()=>
@@ -709,6 +718,11 @@ function loadTheme()
         codeMirror.setOption('theme', theme);
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+// start up the browser
+initExampleBrowser()
 
 </script>
 </body>
