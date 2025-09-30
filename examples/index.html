@@ -135,9 +135,11 @@ setExample();
 
 function resizeWindow()
 {
-    // show example text on touch devices
+    // tweak layout for touch devices
     const isTouchDevice = window.ontouchstart !== undefined;
-    if (!isTouchDevice)
+    if (isTouchDevice)
+        container4.style.display = 'none';
+    else
         selectExampleText.style.display = 'none';
 
     const windowAspect = innerWidth / innerHeight;
@@ -147,10 +149,6 @@ function resizeWindow()
         // vertical layout for thin screens
         if (container2.parentNode != container3)
             container3.insertBefore(container2, divCodeOptions);
-
-        // hide full controls
-        container4.style.display = 'none';
-
         // resize iframe to the window
         setFrameSize(innerWidth-35);
 
