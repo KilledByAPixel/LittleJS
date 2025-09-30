@@ -423,7 +423,7 @@ function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=BLACK
  *  @param {number}   angle
  *  @param {boolean}  [mirror]
  *  @param {Function} [drawFunction]
- *  @param {boolean} [screenSpace=false]
+ *  @param {boolean}  [screenSpace=false]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
 function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpace=false, context=drawContext)
