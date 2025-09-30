@@ -28,6 +28,7 @@ class Player extends EngineObject
         if (mouseWasPressed(0) || keyWasPressed('Space'))
             this.velocity = vec2(0,.2);
         this.angle = -this.velocity.y*2;
+        this.pos.y = max(-50, this.pos.y);
     }
 
     collideWithObject(object)
@@ -44,7 +45,7 @@ function gameInit()
     gravity.y = -.01;
     for (let i=100; i--;)
     {
-        const h=50, y=-h/2-6+rand(9), spacing=15, gap=5;
+        const h=100, y=-h/2-6+rand(9), spacing=15, gap=5;
         new Wall(vec2(14 + i*spacing,y+h + gap), vec2(3,h));
         new Wall(vec2(14 + i*spacing,y), vec2(3,h));
     }
