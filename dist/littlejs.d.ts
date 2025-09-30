@@ -1347,15 +1347,15 @@ declare module "littlejsengine" {
      *  @memberof Draw */
     export function worldToScreen(worldPos: Vector2): Vector2;
     /** Draw textured tile centered in world space, with color applied if using WebGL
-     *  @param {Vector2} pos                        - Center of the tile in world space
-     *  @param {Vector2} [size=(1,1)]               - Size of the tile in world space
-     *  @param {TileInfo}[tileInfo]                 - Tile info to use, untextured if undefined
-     *  @param {Color}   [color=(1,1,1,1)]          - Color to modulate with
-     *  @param {number}  [angle]                    - Angle to rotate by
-     *  @param {boolean} [mirror]                   - If true image is flipped along the Y axis
-     *  @param {Color}   [additiveColor]            - Additive color to be applied if any
-     *  @param {boolean} [useWebGL=glEnable]        - Use accelerated WebGL rendering
-     *  @param {boolean} [screenSpace=false]        - If true the pos and size are in screen space
+     *  @param {Vector2}  pos                 - Center of the tile in world space
+     *  @param {Vector2}  [size=(1,1)]        - Size of the tile in world space
+     *  @param {TileInfo} [tileInfo]          - Tile info to use, untextured if undefined
+     *  @param {Color}    [color=(1,1,1,1)]   - Color to modulate with
+     *  @param {number}   [angle]             - Angle to rotate by
+     *  @param {boolean}  [mirror]            - Is image flipped along the Y axis?
+     *  @param {Color}    [additiveColor]     - Additive color to be applied if any
+     *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering?
+     *  @param {boolean}  [screenSpace=false] - Are the pos and size are in screen space?
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
      *  @memberof Draw */
     export function drawTile(pos: Vector2, size?: Vector2, tileInfo?: TileInfo, color?: Color, angle?: number, mirror?: boolean, additiveColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
@@ -1412,7 +1412,7 @@ declare module "littlejsengine" {
      *  @param {number}  [lineWidth=0]
      *  @param {Color}   [lineColor=(0,0,0,1)]
      *  @param {boolean} [useWebGL] - Webgl not supported
-     *  @param {boolean} [screenSpace=false]
+     *  @param {boolean} [screenSpace]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      *  @memberof Draw */
     export function drawCircle(pos: Vector2, radius?: number, color?: Color, lineWidth?: number, lineColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
@@ -1422,7 +1422,7 @@ declare module "littlejsengine" {
      *  @param {number}   angle
      *  @param {boolean}  [mirror]
      *  @param {Function} [drawFunction]
-     *  @param {boolean} [screenSpace=false]
+     *  @param {boolean}  [screenSpace=false]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      *  @memberof Draw */
     export function drawCanvas2D(pos: Vector2, size: Vector2, angle?: number, mirror?: boolean, drawFunction?: Function, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
@@ -1524,7 +1524,7 @@ declare module "littlejsengine" {
      *  @memberof Draw */
     export function toggleFullscreen(): void;
     /** Set the cursor style
-     *  @param {string}  cursorStyle - CSS cursor style (auto, none, crosshair, etc)
+     *  @param {string}  [cursorStyle] - CSS cursor style (auto, none, crosshair, etc)
      *  @memberof Draw */
     export function setCursor(cursorStyle?: string): void;
     /** Get the camera's visible area in world space
@@ -2112,7 +2112,7 @@ declare module "littlejsengine" {
     /** Keep track of all tile layers with collision
      *  @type {Array<TileCollisionLayer>}
      *  @memberof TileCollision */
-    export let tileCollisionLayers: Array<TileCollisionLayer>;
+    export const tileCollisionLayers: Array<TileCollisionLayer>;
     /** Get tile collision data for a given cell in the grid
     *  @param {Vector2} pos
     *  @return {number}

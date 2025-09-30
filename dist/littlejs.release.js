@@ -2899,15 +2899,15 @@ class TextureInfo
 // Drawing functions
 
 /** Draw textured tile centered in world space, with color applied if using WebGL
- *  @param {Vector2} pos                        - Center of the tile in world space
- *  @param {Vector2} [size=(1,1)]               - Size of the tile in world space
- *  @param {TileInfo}[tileInfo]                 - Tile info to use, untextured if undefined
- *  @param {Color}   [color=(1,1,1,1)]          - Color to modulate with
- *  @param {number}  [angle]                    - Angle to rotate by
- *  @param {boolean} [mirror]                   - If true image is flipped along the Y axis
- *  @param {Color}   [additiveColor]            - Additive color to be applied if any
- *  @param {boolean} [useWebGL=glEnable]        - Use accelerated WebGL rendering
- *  @param {boolean} [screenSpace=false]        - If true the pos and size are in screen space
+ *  @param {Vector2}  pos                 - Center of the tile in world space
+ *  @param {Vector2}  [size=(1,1)]        - Size of the tile in world space
+ *  @param {TileInfo} [tileInfo]          - Tile info to use, untextured if undefined
+ *  @param {Color}    [color=(1,1,1,1)]   - Color to modulate with
+ *  @param {number}   [angle]             - Angle to rotate by
+ *  @param {boolean}  [mirror]            - Is image flipped along the Y axis?
+ *  @param {Color}    [additiveColor]     - Additive color to be applied if any
+ *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering?
+ *  @param {boolean}  [screenSpace=false] - Are the pos and size are in screen space?
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
  *  @memberof Draw */
 function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
@@ -3096,10 +3096,10 @@ function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, l
  *  @param {number}  [lineWidth=0]
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {boolean} [useWebGL] - Webgl not supported
- *  @param {boolean} [screenSpace=false]
+ *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=BLACK, useWebGL=false, screenSpace, context=drawContext)
+function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=BLACK, useWebGL=false, screenSpace=false, context=drawContext)
 { drawEllipse(pos, vec2(radius), color, 0, lineWidth, lineColor, useWebGL, screenSpace, context); }
 
 /** Draw directly to a 2d canvas context in world space
@@ -3108,7 +3108,7 @@ function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=BLACK
  *  @param {number}   angle
  *  @param {boolean}  [mirror]
  *  @param {Function} [drawFunction]
- *  @param {boolean} [screenSpace=false]
+ *  @param {boolean}  [screenSpace=false]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
 function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpace=false, context=drawContext)
@@ -3364,7 +3364,7 @@ function toggleFullscreen()
 }
 
 /** Set the cursor style
- *  @param {string}  cursorStyle - CSS cursor style (auto, none, crosshair, etc)
+ *  @param {string}  [cursorStyle] - CSS cursor style (auto, none, crosshair, etc)
  *  @memberof Draw */
 function setCursor(cursorStyle = 'auto')
 {
@@ -4542,7 +4542,7 @@ function zzfxG
 /** Keep track of all tile layers with collision
  *  @type {Array<TileCollisionLayer>}
  *  @memberof TileCollision */
-let tileCollisionLayers = [];
+const tileCollisionLayers = [];
 
 /** Get tile collision data for a given cell in the grid
 *  @param {Vector2} pos
