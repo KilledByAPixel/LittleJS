@@ -16,7 +16,7 @@
 /** Keep track of all tile layers with collision
  *  @type {Array<TileCollisionLayer>}
  *  @memberof TileCollision */
-let tileCollisionLayers = [];
+const tileCollisionLayers = [];
 
 /** Get tile collision data for a given cell in the grid
 *  @param {Vector2} pos
