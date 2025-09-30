@@ -239,11 +239,7 @@ async function loadFile(filename, largeExample)
         textareaCode.disabled = largeExample;
     
     // disable buttons in large example mode
-    buttonPause.disabled = largeExample;
-    buttonRestart.disabled = largeExample;
-    buttonScreenshot.disabled = largeExample;
-    buttonFullscreen.disabled = largeExample;
-    checkboxWebGL.disabled = largeExample;
+    setFrameControlsEnabled(!largeExample);
     
     if (largeExample)
     {
@@ -345,9 +341,20 @@ function restartCode()
     setCode(code);
 }
 
-function setCode(code, textFilename)
+function setFrameControlsEnabled(enabled=true)
 {
-    const largeExample = !!textFilename;
+    buttonPause.disabled = !enabled;
+    buttonRestart.disabled = !enabled;
+    buttonScreenshot.disabled = !enabled;
+    buttonFullscreen.disabled = !enabled;
+    checkboxWebGL.disabled = !enabled;
+}
+
+function setCode(code, filename)
+{
+    const largeExample = !!filename;
+    filename = filename || 'shorts/base.html';
+
     clearTimeout(inputTimeout);
     if (iframeExample)
         iframeContainer.removeChild(iframeExample);
@@ -356,18 +363,26 @@ function setCode(code, textFilename)
     unsetConsoleMessage();
     iframeExample = document.createElement('iframe');
     iframeContainer.appendChild(iframeExample);
+
     iframeExample.onload = ()=>
     {
         if (largeExample)
             return;
 
+        // get the iframe content window and document
         const iframeContent = iframeExample.contentWindow;
         const iframeDocument = iframeContent.document;
+        if (!iframeContent.engineInit)
+        {
+            setErrorMessage(`Failed to load ${filename}`);
+            return;
+        }
 
         // intercept errors
         function getErrorLine(stack)
         {
-            // try to extract line number from stack trace, look for <anonymous> or injectedScript to find the user code
+            // try to extract line number from stack trace
+            // look for <anonymous> or injectedScript to find user code
             const anonymousMatch = stack.match(/(<anonymous>|injectedScript):(\d+)/);
             return anonymousMatch ? parseInt(anonymousMatch[2]) : -1;            
         }
@@ -427,7 +442,7 @@ function setCode(code, textFilename)
         ['log','info','warn','error','debug'].forEach(f=>interceptConsole(f));
 
         {
-            // setup buttons
+            // hook up buttons
             buttonScreenshot.onclick = () =>
             {
                 if (iframeContent.debugScreenshot)
@@ -450,22 +465,34 @@ function setCode(code, textFilename)
             buttonFullscreen.onclick = ()=> iframeContent.toggleFullscreen();
         }
 
-        // set WebGL based on checkbox
-        iframeContent.setGLEnable(checkboxWebGL.checked);
-        checkboxWebGL.onchange = ()=> iframeContent.setGLEnable(checkboxWebGL.checked);
-
         // create a script element that overrides the default functions
         const overrideScript = iframeDocument.createElement('script');
         iframeDocument.body.appendChild(overrideScript);
         overrideScript.text = code;
-        
+
         if (textareaError.style.display === 'block')
-            return; // stop if script error
-        
+            return;
+
         // start LittleJS engine
-        iframeContent.engineInit(iframeContent.gameInit, iframeContent.gameUpdate, iframeContent.gameUpdatePost, iframeContent.gameRender, iframeContent.gameRenderPost, ['tiles.png?'+Date.now()]);
+        iframeContent.engineInit(iframeContent.gameInit, iframeContent.gameUpdate, iframeContent.gameUpdatePost, iframeContent.gameRender, iframeContent.gameRenderPost, ['tiles.png?'+Date.now()])
+        .catch(error =>
+        {
+            const errorLine = getErrorLine(error.stack);
+            if (errorLine >= 0)
+                setErrorLine(errorLine);
+            setErrorMessage(error.message + '\n' + error.stack);
+            throw error;
+        })
+        .then(()=>
+        {
+            // setup frame controls
+            setFrameControlsEnabled();
+            iframeContent.setGLEnable(checkboxWebGL.checked);
+            checkboxWebGL.onchange = ()=> iframeContent.setGLEnable(checkboxWebGL.checked);
+        })
     }
-    iframeExample.src = textFilename || 'shorts/base.html?' + Date.now();
+
+    iframeExample.src = filename + '?' + Date.now();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -572,6 +599,7 @@ function setErrorMessage(message)
 {
     // prevent overwriting an existing error message
     const errorMessageIsVisible = textareaError.style.display === 'block';
+    setFrameControlsEnabled(false);
     if (!errorMessageIsVisible)
         setMessage(message, textareaError);
 }
