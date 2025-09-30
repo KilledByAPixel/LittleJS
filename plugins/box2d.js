@@ -1563,7 +1563,7 @@ class Box2dPlugin
         queryCallback.ReportFixture = function(fixturePointer)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
-            if (dynamicOnly && fixture.GetBody().GetType() != box2d.instance.b2_dynamicBody)
+            if (dynamicOnly && fixture.GetBody().GetType() !== box2d.instance.b2_dynamicBody)
                 return true; // continue getting results
             if (!fixture.TestPoint(box2d.vec2dTo(pos)))
                 return true; // continue getting results

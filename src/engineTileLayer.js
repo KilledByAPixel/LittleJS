@@ -103,7 +103,7 @@ function tileCollisionLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisio
     {
         const dataLayer = tileMapData.layers[layerIndex];
         ASSERT(dataLayer.data && dataLayer.data.length);
-        ASSERT(levelSize.area() == dataLayer.data.length);
+        ASSERT(levelSize.area() === dataLayer.data.length);
 
         const layerRenderOrder = renderOrder - (layerCount - 1 - layerIndex);
         const tileLayer = new TileCollisionLayer(vec2(), levelSize, tileInfo, layerRenderOrder);
@@ -226,7 +226,7 @@ class CanvasLayer extends EngineObject
     draw(pos, size, angle=0, color=WHITE, mirror=false, additiveColor, screenSpace=false, context)
     {
         // draw the canvas layer as a single tile that uses the whole texture
-        const useWebgl = glEnable && this.glTexture != undefined;
+        const useWebgl = glEnable && this.glTexture !== undefined;
         const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
         drawTile(pos, size, tileInfo, color, angle, mirror, additiveColor, useWebgl, screenSpace, context);
     }
@@ -381,12 +381,12 @@ class TileLayer extends CanvasLayer
     // Render the tile layer, called automatically by the engine
     render()
     {
-        ASSERT(drawContext != this.context, 'must call redrawEnd() after drawing tiles!');
+        ASSERT(drawContext !== this.context, 'must call redrawEnd() after drawing tiles!');
         
         // draw the tile layer as a single tile
         const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
         const pos = this.pos.add(this.size.scale(.5));
-        const useWebgl = glEnable && this.glTexture != undefined;
+        const useWebgl = glEnable && this.glTexture !== undefined;
         drawTile(pos, this.size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebgl);
     }
 
@@ -436,7 +436,7 @@ class TileLayer extends CanvasLayer
     /** Call to end the redraw process */
     redrawEnd()
     {
-        ASSERT(drawContext == this.context, 'must call redrawStart() before drawing tiles');
+        ASSERT(drawContext === this.context, 'must call redrawStart() before drawing tiles');
         glCopyToContext(drawContext);
         //debugSaveCanvas(this.canvas);
 
@@ -462,9 +462,9 @@ class TileLayer extends CanvasLayer
 
         // draw the tile if it has layer data
         const d = this.getData(layerPos);
-        if (d.tile != undefined)
+        if (d.tile !== undefined)
         {
-            ASSERT(drawContext == this.context, 'must call redrawStart() before drawing tiles');
+            ASSERT(drawContext === this.context, 'must call redrawStart() before drawing tiles');
             const pos = layerPos.add(vec2(.5));
             const tileInfo = tile(d.tile, s, this.tileInfo.textureIndex, this.tileInfo.padding);
             drawTile(pos, vec2(1), tileInfo, d.color, d.direction*PI/2, d.mirror);

@@ -298,7 +298,7 @@ class UIObject
             this.mouseIsHeld = false;
         }
 
-        if (this.mouseIsOver != mouseWasOver)
+        if (this.mouseIsOver !== mouseWasOver)
             this.mouseIsOver ? this.onEnter() : this.onLeave();
     }
 

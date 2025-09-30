@@ -67,7 +67,7 @@ class Sound
         {
             // generate zzfx sound now for fast playback
             const defaultRandomness = .05;
-            this.randomness = zzfxSound[1] != undefined ? zzfxSound[1] : defaultRandomness;
+            this.randomness = zzfxSound[1] !== undefined ? zzfxSound[1] : defaultRandomness;
             zzfxSound[1] = 0; // generate without randomness
             this.sampleChannels = [zzfxG(...zzfxSound)];
             this.sampleRate = zzfxR;
@@ -306,7 +306,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
     source.connect(pannerNode).connect(gainNode);
 
     // play the sound
-    if (audioContext.state != 'running')
+    if (audioContext.state !== 'running')
     {
         // fix stalled audio and play
         audioContext.resume().then(()=>source.start());

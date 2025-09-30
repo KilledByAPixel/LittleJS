@@ -45,9 +45,9 @@ class EngineObject
         ASSERT(isVector2(pos) && pos.isValid(), 'object pos should be a vec2');
         ASSERT(isVector2(size) && size.isValid(), 'object size should be a vec2');
         ASSERT(!tileInfo || tileInfo instanceof TileInfo, 'object tileInfo should be a TileInfo or undefined');
-        ASSERT(typeof angle == 'number' && isFinite(angle), 'object angle should be a number');
+        ASSERT(typeof angle === 'number' && isFinite(angle), 'object angle should be a number');
         ASSERT(isColor(color) && color.isValid(), 'object color should be a valid rgba color');
-        ASSERT(typeof renderOrder == 'number', 'object renderOrder should be a number');
+        ASSERT(typeof renderOrder === 'number', 'object renderOrder should be a number');
 
         /** @property {Vector2} - World space position of the object */
         this.pos = pos.copy();
@@ -184,7 +184,7 @@ class EngineObject
             for (const o of engineObjectsCollide)
             {
                 // non solid objects don't collide with each other
-                if (!this.isSolid && !o.isSolid || o.destroyed || o.parent || o == this)
+                if (!this.isSolid && !o.isSolid || o.destroyed || o.parent || o === this)
                     continue;
 
                 // check collision
@@ -409,7 +409,7 @@ class EngineObject
      *  @param {EngineObject} child */
     removeChild(child)
     {
-        ASSERT(child.parent == this && this.children.includes(child));
+        ASSERT(child.parent === this && this.children.includes(child));
         this.children.splice(this.children.indexOf(child), 1);
         child.parent = 0;
     }

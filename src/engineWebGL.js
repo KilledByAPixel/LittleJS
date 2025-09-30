@@ -121,7 +121,7 @@ function glPreRender()
         const location = glContext.getAttribLocation(glShader, name);
         const stride = typeSize && gl_INSTANCE_BYTE_STRIDE; // only if not geometry
         const divisor = typeSize && 1; // only if not geometry
-        const normalize = typeSize == 1; // only if color
+        const normalize = typeSize === 1; // only if color
         glContext.enableVertexAttribArray(location);
         glContext.vertexAttribPointer(location, size, type, normalize, stride, offset);
         glContext.vertexAttribDivisor(location, divisor);
@@ -171,7 +171,7 @@ function glClearCanvas()
 function glSetTexture(texture, wrap=false)
 {
     // must flush cache with the old texture to set a new one
-    if (!glContext || texture == glActiveTexture)
+    if (!glContext || texture === glActiveTexture)
         return;
 
     glFlush();
@@ -341,7 +341,7 @@ function glSetAntialias(antialias=true)
 function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgba=-1, rgbaAdditive=0)
 {
     // flush if there is not enough room or if different blend mode
-    if (glInstanceCount >= gl_MAX_INSTANCES || glBatchAdditive != glAdditive)
+    if (glInstanceCount >= gl_MAX_INSTANCES || glBatchAdditive !== glAdditive)
         glFlush();
 
     let offset = glInstanceCount++ * gl_INDICES_PER_INSTANCE;

@@ -20,7 +20,7 @@ const restitution = .2;
 
 export function spawnBox(pos, size=1, color=LJS.WHITE, type=LJS.box2d.bodyTypeDynamic, applyTexture=true, angle=0)
 {
-    size = typeof size == 'number' ? vec2(size) : size; // square
+    size = typeof size === 'number' ? vec2(size) : size; // square
     const o = new LJS.Box2dObject(pos, size, applyTexture && Game.spriteAtlas.squareOutline, angle, color, type);
     o.drawSize = size.scale(1.02); // slightly enlarge to cover gaps
     o.addBox(size, vec2(), 0, density, friction, restitution);

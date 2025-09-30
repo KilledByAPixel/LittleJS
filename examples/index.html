@@ -35,7 +35,7 @@ Theme:
 <div id=iframeContainer></div>
 </div>
 <div>
-<input id=inputSearch placeholder='Search examples...' oninput=filterExamples() onkeydown='if(event.key=="Escape")filterExamples(1)'> 
+<input id=inputSearch placeholder='Search examples...' oninput=filterExamples() onkeydown='if(event.key==="Escape")filterExamples(1)'> 
 <button id=buttonRestart onclick=restartCode()>Restart</button>
 <button id=buttonPause>Pause</button>
 <span id=container4>
@@ -51,7 +51,7 @@ Theme:
 <script>
 'use strict';
 
-const useCodeMiror = true;
+const useCodeMirror = true;
 
 class ExampleInfo
 {
@@ -127,7 +127,7 @@ filterExamples();
 // set the selected example from the URL parameters
 const urlParams = new URLSearchParams(window.location.search);
 const selectedExample = urlParams.get('example') || '';
-let exampleIndex = exampleList.findIndex((example) => example.filename == selectedExample);
+let exampleIndex = exampleList.findIndex((example) => example.filename === selectedExample);
 if (exampleIndex < 0)
     exampleIndex = 1;
 selectExample.selectedIndex = exampleIndex;
@@ -461,7 +461,7 @@ function setCode(code, textFilename)
         iframeDocument.body.appendChild(overrideScript);
         overrideScript.text = code;
         
-        if (textareaError.style.display == 'block')
+        if (textareaError.style.display === 'block')
             return; // stop if script error
         
         // start LittleJS engine
@@ -498,7 +498,7 @@ function setMessage(message, element, clear=true)
         element.value += '\n' + message;
     element.style.display = message ? 'block' : 'none';
     
-    if (element == textareaConsole)
+    if (element === textareaConsole)
     {
         const maxConsoleLines = 100;
         const lines = element.value.split('\n');
@@ -573,7 +573,7 @@ function setErrorLine(lineNumber)
 function setErrorMessage(message)
 {
     // prevent overwriting an existing error message
-    const errorMessageIsVisible = textareaError.style.display == 'block';
+    const errorMessageIsVisible = textareaError.style.display === 'block';
     if (!errorMessageIsVisible)
         setMessage(message, textareaError);
 }
@@ -618,14 +618,14 @@ for (const theme of themes)
     if (theme != 'littlejs')
         addCodeMirrorElement(`theme/${theme}.min.css`, 'link', 'stylesheet');
     const o = new Option(theme);
-    o.selected = theme == savedTheme;
+    o.selected = theme === savedTheme;
     selectTheme.add(o);
 }
 
 // Set the saved font size
 selectFontSize.value = savedFontSize;
 textareaCode.style.fontSize = savedFontSize;
-if (useCodeMiror)
+if (useCodeMirror)
 {
     addCodeMirrorElement('codemirror.min.js', 'script').onload = ()=>
     addCodeMirrorElement('codemirror.min.css', 'link', 'stylesheet').onload = ()=>
@@ -657,7 +657,7 @@ function addCodeMirrorElement(filename, type, rel)
     const e = document.createElement(type);
     e.rel = rel;
     filename = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/' + filename;
-    if (type == 'link')
+    if (type === 'link')
         e.href = filename;
     else
         e.src = filename;

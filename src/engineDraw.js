@@ -99,7 +99,7 @@ function tile(pos=new Vector2, size=tileSizeDefault, textureIndex=0, padding=0)
         return new TileInfo;
 
     // if size is a number, make it a vector
-    if (typeof size == 'number')
+    if (typeof size === 'number')
     {
         ASSERT(size > 0);
         size = new Vector2(size, size);
@@ -113,7 +113,7 @@ function tile(pos=new Vector2, size=tileSizeDefault, textureIndex=0, padding=0)
     ASSERT(!!textureInfo, 'Texture not loaded');
     const sizePaddedX = size.x + padding*2;
     const sizePaddedY = size.y + padding*2;
-    if (typeof pos == 'number')
+    if (typeof pos === 'number')
     {
         const cols = textureInfo.size.x / sizePaddedX |0;
         ASSERT(cols>0, 'Tile size is too big for texture');
@@ -163,7 +163,7 @@ class TileInfo
     */
     frame(frame)
     {
-        ASSERT(typeof frame == 'number');
+        ASSERT(typeof frame === 'number');
         return this.offset(new Vector2(frame*(this.size.x+this.padding*2), 0));
     }
 

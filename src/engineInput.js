@@ -18,7 +18,7 @@
 function keyIsDown(key, device=0)
 { 
     ASSERT(key !== undefined, 'key is undefined');
-    ASSERT(device > 0 || typeof key != 'number' || key < 3, 'use code string for keyboard');
+    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return inputData[device] && !!(inputData[device][key] & 1); 
 }
 
@@ -30,7 +30,7 @@ function keyIsDown(key, device=0)
 function keyWasPressed(key, device=0)
 { 
     ASSERT(key !== undefined, 'key is undefined');
-    ASSERT(device > 0 || typeof key != 'number' || key < 3, 'use code string for keyboard');
+    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return inputData[device] && !!(inputData[device][key] & 2); 
 }
 
@@ -42,7 +42,7 @@ function keyWasPressed(key, device=0)
 function keyWasReleased(key, device=0)
 { 
     ASSERT(key !== undefined, 'key is undefined');
-    ASSERT(device > 0 || typeof key != 'number' || key < 3, 'use code string for keyboard');
+    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return inputData[device] && !!(inputData[device][key] & 4);
 }
 
@@ -241,10 +241,10 @@ function inputInit()
     {
         // handle remapping wasd keys to directions
         return inputWASDEmulateDirection ?
-            c == 'KeyW' ? 'ArrowUp' :
-            c == 'KeyS' ? 'ArrowDown' :
-            c == 'KeyA' ? 'ArrowLeft' :
-            c == 'KeyD' ? 'ArrowRight' : c : c;
+            c === 'KeyW' ? 'ArrowUp' :
+            c === 'KeyS' ? 'ArrowDown' :
+            c === 'KeyA' ? 'ArrowLeft' :
+            c === 'KeyD' ? 'ArrowRight' : c : c;
     }
     function onMouseDown(e)
     {
@@ -252,7 +252,7 @@ function inputInit()
             return;
 
         // fix stalled audio requiring user interaction
-        if (soundEnable && !headlessMode && audioContext && audioContext.state != 'running')
+        if (soundEnable && !headlessMode && audioContext && audioContext.state !== 'running')
             audioContext.resume();
         
         isUsingGamepad = false;
@@ -326,7 +326,7 @@ function gamepadsUpdate()
         const data = inputData[1] || (inputData[1] = []);
         for (let i=10; i--;)
         {
-            const j = i == 3 ? 2 : i == 2 ? 3 : i; // fix button locations
+            const j = i === 3 ? 2 : i === 2 ? 3 : i; // fix button locations
             const wasDown = gamepadIsDown(j,0);
             data[j] = touchGamepadButtons[i] ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
         }
@@ -425,7 +425,7 @@ function touchInputInit()
             handleTouchGamepad(e);
 
         // fix stalled audio requiring user interaction
-        if (soundEnable && !headlessMode && audioContext && audioContext.state != 'running')
+        if (soundEnable && !headlessMode && audioContext && audioContext.state !== 'running')
             audioContext.resume();
 
         // check if touching and pass to mouse events
@@ -545,7 +545,7 @@ function touchGamepadRender()
             const angle = i*PI/4;
             context.arc(leftCenter.x, leftCenter.y,touchGamepadSize*.6, angle + PI/8, angle + PI/8);
             i%2 && context.arc(leftCenter.x, leftCenter.y, touchGamepadSize*.33, angle, angle);
-            i==1 && context.fill();
+            i===1 && context.fill();
         }
         context.stroke();
     }
@@ -584,4 +584,4 @@ function pointerLockExit() { document.exitPointerLock && document.exitPointerLoc
 /** Check if pointer is locked (true if locked)
  *  @return {boolean}
  *  @memberof Input */
-function pointerLockIsActive() { return document.pointerLockElement == mainCanvas; }
+function pointerLockIsActive() { return document.pointerLockElement === mainCanvas; }

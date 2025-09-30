@@ -232,7 +232,7 @@ async function fetchJSON(url)
  * @return {boolean}
  * @memberof Utilities
  */
-function isNumber(n) { return typeof n == 'number' && !isNaN(n); }
+function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -542,7 +542,7 @@ class Vector2
         ASSERT_NUMBER_VALID(direction);
         ASSERT_NUMBER_VALID(length);
         direction = mod(direction, 4);
-        ASSERT(direction==0 || direction==1 || direction==2 || direction==3,
+        ASSERT(direction===0 || direction===1 || direction===2 || direction===3,
             'Vector2.setDirection() direction must be an integer between 0 and 3.');
         return vec2(direction%2 ? direction-1 ? -length : length : 0, 
             direction%2 ? 0 : direction ? -length : length);
@@ -779,15 +779,15 @@ class Color
         const minC = min(r, g, b);
         const l = (maxC + minC) / 2;
         let h = 0, s = 0;
-        if (maxC != minC)
+        if (maxC !== minC)
         {
             let d = maxC - minC;
             s = l > .5 ? d / (2 - maxC - minC) : d / (maxC + minC);
-            if (r == maxC)
+            if (r === maxC)
                 h = (g - b) / d + (g < b ? 6 : 0);
-            else if (g == maxC)
+            else if (g === maxC)
                 h = (b - r) / d + 2;
-            else if (b == maxC)
+            else if (b === maxC)
                 h =  (r - g) / d + 4;
         }
         return [h / 6, s, l, a];
@@ -815,7 +815,7 @@ class Color
      * @return {string} */
     toString(useAlpha = true)      
     {
-        ASSERT(typeof useAlpha == 'boolean', 'Use alpha boolean is invalid.', useAlpha);
+        ASSERT(typeof useAlpha === 'boolean', 'Use alpha boolean is invalid.', useAlpha);
         if (debug && !this.isValid())
             return `#000`;
         const toHex = (c)=> ((c=clamp(c)*255|0)<16 ? '0' : '') + c.toString(16);
@@ -827,7 +827,7 @@ class Color
      * @return {Color} */
     setHex(hex)
     {
-        ASSERT(typeof hex == 'string' && hex[0] == '#', 'Color hex code must be a string starting with #');
+        ASSERT(typeof hex === 'string' && hex[0] === '#', 'Color hex code must be a string starting with #');
         ASSERT([4,5,7,9].includes(hex.length), 'Invalid hex');
 
         if (hex.length < 6)
@@ -836,7 +836,7 @@ class Color
             this.r = fromHex(1);
             this.g = fromHex(2),
             this.b = fromHex(3);
-            this.a = hex.length == 5 ? fromHex(4) : 1;
+            this.a = hex.length === 5 ? fromHex(4) : 1;
         }
         else
         {
@@ -844,7 +844,7 @@ class Color
             this.r = fromHex(1);
             this.g = fromHex(3),
             this.b = fromHex(5);
-            this.a = hex.length == 9 ? fromHex(7) : 1;
+            this.a = hex.length === 9 ? fromHex(7) : 1;
         }
 
         ASSERT_COLOR_VALID(this);

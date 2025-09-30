@@ -72,9 +72,9 @@ function ASSERT(assert, ...output)
  *  @memberof Debug */
 function debugRect(pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)
 {
-    if (typeof size == 'number')
+    if (typeof size === 'number')
         size = vec2(size); // allow passing in floats
-    ASSERT(typeof color == 'string', 'pass in css color strings'); 
+    ASSERT(typeof color === 'string', 'pass in css color strings'); 
     debugPrimitives.push({pos, size, color, time:new Timer(time), angle, fill});
 }
 
@@ -88,7 +88,7 @@ function debugRect(pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)
  *  @memberof Debug */
 function debugPoly(pos, points, color='#fff', time=0, angle=0, fill=false)
 {
-    ASSERT(typeof color == 'string', 'pass in css color strings'); 
+    ASSERT(typeof color === 'string', 'pass in css color strings'); 
     debugPrimitives.push({pos, points, color, time:new Timer(time), angle, fill});
 }
 
@@ -101,7 +101,7 @@ function debugPoly(pos, points, color='#fff', time=0, angle=0, fill=false)
  *  @memberof Debug */
 function debugCircle(pos, radius=0, color='#fff', time=0, fill=false)
 {
-    ASSERT(typeof color == 'string', 'pass in css color strings'); 
+    ASSERT(typeof color === 'string', 'pass in css color strings'); 
     debugPrimitives.push({pos, size:radius, color, time:new Timer(time), angle:0, fill});
 }
 
@@ -113,7 +113,7 @@ function debugCircle(pos, radius=0, color='#fff', time=0, fill=false)
  *  @memberof Debug */
 function debugPoint(pos, color, time, angle)
 {
-    ASSERT(typeof color == 'string', 'pass in css color strings'); 
+    ASSERT(typeof color === 'string', 'pass in css color strings'); 
     debugRect(pos, undefined, color, time, angle);
 }
 
@@ -162,7 +162,7 @@ function debugOverlap(posA, sizeA, posB, sizeB, color)
  *  @memberof Debug */
 function debugText(text, pos, size=1, color='#fff', time=0, angle=0, font='monospace')
 {
-    ASSERT(typeof color == 'string', 'pass in css color strings'); 
+    ASSERT(typeof color === 'string', 'pass in css color strings'); 
     debugPrimitives.push({text, pos, size, color, time:new Timer(time), angle, font});
 }
 
@@ -372,14 +372,14 @@ function debugRender()
             overlayContext.scale(1, p.text ? 1 : -1);
             overlayContext.fillStyle = overlayContext.strokeStyle = p.color;
 
-            if (p.text != undefined)
+            if (p.text !== undefined)
             {
                 overlayContext.font = p.size*cameraScale + 'px '+ p.font;
                 overlayContext.textAlign = 'center';
                 overlayContext.textBaseline = 'middle';
                 overlayContext.fillText(p.text, 0, 0);
             }
-            else if (p.points != undefined)
+            else if (p.points !== undefined)
             {
                 // poly
                 overlayContext.beginPath();
@@ -392,13 +392,13 @@ function debugRender()
                 p.fill && overlayContext.fill();
                 overlayContext.stroke();
             }
-            else if (p.size == 0 || p.size.x === 0 && p.size.y === 0)
+            else if (p.size === 0 || p.size.x === 0 && p.size.y === 0)
             {
                 // point
                 overlayContext.fillRect(-pointSize/2, -1, pointSize, 3);
                 overlayContext.fillRect(-1, -pointSize/2, 3, pointSize);
             }
-            else if (p.size.x != undefined)
+            else if (p.size.x !== undefined)
             {
                 // rect
                 const s = p.size.scale(cameraScale).floor();
