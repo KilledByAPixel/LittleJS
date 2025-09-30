@@ -166,7 +166,7 @@ function glClearCanvas()
 /** Set the WebGl texture, called automatically if using multiple textures
  *  - This may also flush the gl buffer resulting in more draw calls and worse performance
  *  @param {WebGLTexture} texture
- *  @param {boolean} wrap - Should the texture wrap or clamp
+ *  @param {boolean} [wrap] - Should the texture wrap or clamp
  *  @memberof WebGL */
 function glSetTexture(texture, wrap=false)
 {
