@@ -84,7 +84,6 @@ let fontDefault = 'arial';
 let showSplashScreen = false;
 
 /** Disables all rendering, audio, and input for servers
- *  - Must be set before startup to take effect
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -94,7 +93,6 @@ let headlessMode = false;
 // WebGL settings
 
 /** Enable webgl rendering, webgl can be disabled and removed from build (with some features disabled)
- *  - Must be set before startup to take effect
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
