@@ -308,7 +308,6 @@ declare module "littlejsengine" {
      *  @memberof Settings */
     export let showSplashScreen: boolean;
     /** Disables all rendering, audio, and input for servers
-     *  - Must be set before startup to take effect
      *  @type {boolean}
      *  @default
      *  @memberof Settings */
@@ -369,7 +368,6 @@ declare module "littlejsengine" {
      *  @memberof Settings */
     export let particleEmitRateScale: number;
     /** Enable webgl rendering, webgl can be disabled and removed from build (with some features disabled)
-     *  - Must be set before startup to take effect
      *  @type {boolean}
      *  @default
      *  @memberof Settings */
@@ -391,7 +389,6 @@ declare module "littlejsengine" {
     export let inputWASDEmulateDirection: boolean;
     /** True if touch gamepad should appear on mobile devices
      *  - Supports left analog stick, 4 face buttons and start button (button 9)
-     *  - Must be set before startup to take effect
      *  @type {boolean}
      *  @default
      *  @memberof Settings */
@@ -2584,7 +2581,7 @@ declare module "littlejsengine" {
          * @param {number} id       - The scoreboard id
          * @param {string} [user]   - A user's id or name
          * @param {number} [social] - If true, only social scores will be loaded
-         * @param {number} [skip]   - Number of scores to skip before start
+         * @param {number} [skip]   - Number of scores to skip over
          * @param {number} [limit]  - Number of scores to include in the list
          * @return {Object}         - The response JSON object
          */
@@ -2960,7 +2957,9 @@ declare module "littlejsengine" {
      *  @param {boolean} enable
      *  @memberof Box2D */
     export function box2dSetDebug(enable: boolean): void;
-    /** Box2d Init - Call with await before starting LittleJS to init box2d
+    /** Box2d Init - Call with await to init box2d
+     *  @example
+     *  await box2dInit();
      *  @return {Promise<Box2dPlugin>}
      *  @memberof Box2D */
     export function box2dInit(): Promise<Box2dPlugin>;

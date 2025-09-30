@@ -302,9 +302,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         'background:#000;' +          // set background color
         'user-select:none;' +         // prevent hold to select
         '-webkit-user-select:none;' + // compatibility for ios
-        (!touchInputEnable ? '' :     // no touch css settings
         'touch-action:none;' +        // prevent mobile pinch to resize
-        '-webkit-touch-callout:none');// compatibility for ios
+        '-webkit-touch-callout:none';// compatibility for ios
     rootElement.style.cssText = styleRoot;
     drawCanvas = mainCanvas = document.createElement('canvas');
     rootElement.appendChild(mainCanvas);
@@ -921,7 +920,7 @@ async function fetchJSON(url)
  * @return {boolean}
  * @memberof Utilities
  */
-function isNumber(n) { return typeof n == 'number' && !isNaN(n); }
+function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1231,7 +1230,7 @@ class Vector2
         ASSERT_NUMBER_VALID(direction);
         ASSERT_NUMBER_VALID(length);
         direction = mod(direction, 4);
-        ASSERT(direction==0 || direction==1 || direction==2 || direction==3,
+        ASSERT(direction===0 || direction===1 || direction===2 || direction===3,
             'Vector2.setDirection() direction must be an integer between 0 and 3.');
         return vec2(direction%2 ? direction-1 ? -length : length : 0, 
             direction%2 ? 0 : direction ? -length : length);
@@ -1468,15 +1467,15 @@ class Color
         const minC = min(r, g, b);
         const l = (maxC + minC) / 2;
         let h = 0, s = 0;
-        if (maxC != minC)
+        if (maxC !== minC)
         {
             let d = maxC - minC;
             s = l > .5 ? d / (2 - maxC - minC) : d / (maxC + minC);
-            if (r == maxC)
+            if (r === maxC)
                 h = (g - b) / d + (g < b ? 6 : 0);
-            else if (g == maxC)
+            else if (g === maxC)
                 h = (b - r) / d + 2;
-            else if (b == maxC)
+            else if (b === maxC)
                 h =  (r - g) / d + 4;
         }
         return [h / 6, s, l, a];
@@ -1504,7 +1503,7 @@ class Color
      * @return {string} */
     toString(useAlpha = true)      
     {
-        ASSERT(typeof useAlpha == 'boolean', 'Use alpha boolean is invalid.', useAlpha);
+        ASSERT(typeof useAlpha === 'boolean', 'Use alpha boolean is invalid.', useAlpha);
         if (debug && !this.isValid())
             return `#000`;
         const toHex = (c)=> ((c=clamp(c)*255|0)<16 ? '0' : '') + c.toString(16);
@@ -1516,7 +1515,7 @@ class Color
      * @return {Color} */
     setHex(hex)
     {
-        ASSERT(typeof hex == 'string' && hex[0] == '#', 'Color hex code must be a string starting with #');
+        ASSERT(typeof hex === 'string' && hex[0] === '#', 'Color hex code must be a string starting with #');
         ASSERT([4,5,7,9].includes(hex.length), 'Invalid hex');
 
         if (hex.length < 6)
@@ -1525,7 +1524,7 @@ class Color
             this.r = fromHex(1);
             this.g = fromHex(2),
             this.b = fromHex(3);
-            this.a = hex.length == 5 ? fromHex(4) : 1;
+            this.a = hex.length === 5 ? fromHex(4) : 1;
         }
         else
         {
@@ -1533,7 +1532,7 @@ class Color
             this.r = fromHex(1);
             this.g = fromHex(3),
             this.b = fromHex(5);
-            this.a = hex.length == 9 ? fromHex(7) : 1;
+            this.a = hex.length === 9 ? fromHex(7) : 1;
         }
 
         ASSERT_COLOR_VALID(this);
@@ -1771,7 +1770,6 @@ let fontDefault = 'arial';
 let showSplashScreen = false;
 
 /** Disables all rendering, audio, and input for servers
- *  - Must be set before startup to take effect
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -1781,7 +1779,6 @@ let headlessMode = false;
 // WebGL settings
 
 /** Enable webgl rendering, webgl can be disabled and removed from build (with some features disabled)
- *  - Must be set before startup to take effect
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -1882,7 +1879,6 @@ let inputWASDEmulateDirection = true;
 
 /** True if touch input is enabled for mobile devices
  *  - Touch events will be routed to mouse events
- *  - Must be set before startup to take effect
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -1890,7 +1886,6 @@ let touchInputEnable = true;
 
 /** True if touch gamepad should appear on mobile devices
  *  - Supports left analog stick, 4 face buttons and start button (button 9)
- *  - Must be set before startup to take effect
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -2264,9 +2259,9 @@ class EngineObject
         ASSERT(isVector2(pos) && pos.isValid(), 'object pos should be a vec2');
         ASSERT(isVector2(size) && size.isValid(), 'object size should be a vec2');
         ASSERT(!tileInfo || tileInfo instanceof TileInfo, 'object tileInfo should be a TileInfo or undefined');
-        ASSERT(typeof angle == 'number' && isFinite(angle), 'object angle should be a number');
+        ASSERT(typeof angle === 'number' && isFinite(angle), 'object angle should be a number');
         ASSERT(isColor(color) && color.isValid(), 'object color should be a valid rgba color');
-        ASSERT(typeof renderOrder == 'number', 'object renderOrder should be a number');
+        ASSERT(typeof renderOrder === 'number', 'object renderOrder should be a number');
 
         /** @property {Vector2} - World space position of the object */
         this.pos = pos.copy();
@@ -2403,7 +2398,7 @@ class EngineObject
             for (const o of engineObjectsCollide)
             {
                 // non solid objects don't collide with each other
-                if (!this.isSolid && !o.isSolid || o.destroyed || o.parent || o == this)
+                if (!this.isSolid && !o.isSolid || o.destroyed || o.parent || o === this)
                     continue;
 
                 // check collision
@@ -2628,7 +2623,7 @@ class EngineObject
      *  @param {EngineObject} child */
     removeChild(child)
     {
-        ASSERT(child.parent == this && this.children.includes(child));
+        ASSERT(child.parent === this && this.children.includes(child));
         this.children.splice(this.children.indexOf(child), 1);
         child.parent = 0;
     }
@@ -2783,7 +2778,7 @@ function tile(pos=new Vector2, size=tileSizeDefault, textureIndex=0, padding=0)
         return new TileInfo;
 
     // if size is a number, make it a vector
-    if (typeof size == 'number')
+    if (typeof size === 'number')
     {
         ASSERT(size > 0);
         size = new Vector2(size, size);
@@ -2797,7 +2792,7 @@ function tile(pos=new Vector2, size=tileSizeDefault, textureIndex=0, padding=0)
     ASSERT(!!textureInfo, 'Texture not loaded');
     const sizePaddedX = size.x + padding*2;
     const sizePaddedY = size.y + padding*2;
-    if (typeof pos == 'number')
+    if (typeof pos === 'number')
     {
         const cols = textureInfo.size.x / sizePaddedX |0;
         ASSERT(cols>0, 'Tile size is too big for texture');
@@ -2847,7 +2842,7 @@ class TileInfo
     */
     frame(frame)
     {
-        ASSERT(typeof frame == 'number');
+        ASSERT(typeof frame === 'number');
         return this.offset(new Vector2(frame*(this.size.x+this.padding*2), 0));
     }
 
@@ -3476,7 +3471,7 @@ class FontImage
 function keyIsDown(key, device=0)
 { 
     ASSERT(key !== undefined, 'key is undefined');
-    ASSERT(device > 0 || typeof key != 'number' || key < 3, 'use code string for keyboard');
+    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return inputData[device] && !!(inputData[device][key] & 1); 
 }
 
@@ -3488,7 +3483,7 @@ function keyIsDown(key, device=0)
 function keyWasPressed(key, device=0)
 { 
     ASSERT(key !== undefined, 'key is undefined');
-    ASSERT(device > 0 || typeof key != 'number' || key < 3, 'use code string for keyboard');
+    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return inputData[device] && !!(inputData[device][key] & 2); 
 }
 
@@ -3500,7 +3495,7 @@ function keyWasPressed(key, device=0)
 function keyWasReleased(key, device=0)
 { 
     ASSERT(key !== undefined, 'key is undefined');
-    ASSERT(device > 0 || typeof key != 'number' || key < 3, 'use code string for keyboard');
+    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return inputData[device] && !!(inputData[device][key] & 4);
 }
 
@@ -3699,10 +3694,10 @@ function inputInit()
     {
         // handle remapping wasd keys to directions
         return inputWASDEmulateDirection ?
-            c == 'KeyW' ? 'ArrowUp' :
-            c == 'KeyS' ? 'ArrowDown' :
-            c == 'KeyA' ? 'ArrowLeft' :
-            c == 'KeyD' ? 'ArrowRight' : c : c;
+            c === 'KeyW' ? 'ArrowUp' :
+            c === 'KeyS' ? 'ArrowDown' :
+            c === 'KeyA' ? 'ArrowLeft' :
+            c === 'KeyD' ? 'ArrowRight' : c : c;
     }
     function onMouseDown(e)
     {
@@ -3710,7 +3705,7 @@ function inputInit()
             return;
 
         // fix stalled audio requiring user interaction
-        if (soundEnable && !headlessMode && audioContext && audioContext.state != 'running')
+        if (soundEnable && !headlessMode && audioContext && audioContext.state !== 'running')
             audioContext.resume();
         
         isUsingGamepad = false;
@@ -3764,30 +3759,29 @@ function gamepadsUpdate()
     // update touch gamepad if enabled
     if (touchGamepadEnable && isTouchDevice)
     {
-        ASSERT(touchGamepadButtons, 'set touchGamepadEnable before calling init!');
-        if (touchGamepadTimer.isSet())
-        {
-            // read virtual analog stick
-            const sticks = gamepadStickData[0] || (gamepadStickData[0] = []);
-            sticks[0] = vec2();
-            if (touchGamepadAnalog)
-                sticks[0] = applyDeadZones(touchGamepadStick);
-            else if (touchGamepadStick.lengthSquared() > .3)
-            {
-                // convert to 8 way dpad
-                sticks[0].x = Math.round(touchGamepadStick.x);
-                sticks[0].y = -Math.round(touchGamepadStick.y);
-                sticks[0] = sticks[0].clampLength();
-            }
+        if (!touchGamepadTimer.isSet())
+            return;
 
-            // read virtual gamepad buttons
-            const data = inputData[1] || (inputData[1] = []);
-            for (let i=10; i--;)
-            {
-                const j = i == 3 ? 2 : i == 2 ? 3 : i; // fix button locations
-                const wasDown = gamepadIsDown(j,0);
-                data[j] = touchGamepadButtons[i] ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
-            }
+        // read virtual analog stick
+        const sticks = gamepadStickData[0] || (gamepadStickData[0] = []);
+        sticks[0] = vec2();
+        if (touchGamepadAnalog)
+            sticks[0] = applyDeadZones(touchGamepadStick);
+        else if (touchGamepadStick.lengthSquared() > .3)
+        {
+            // convert to 8 way dpad
+            sticks[0].x = Math.round(touchGamepadStick.x);
+            sticks[0].y = -Math.round(touchGamepadStick.y);
+            sticks[0] = sticks[0].clampLength();
+        }
+
+        // read virtual gamepad buttons
+        const data = inputData[1] || (inputData[1] = []);
+        for (let i=10; i--;)
+        {
+            const j = i === 3 ? 2 : i === 2 ? 3 : i; // fix button locations
+            const wasDown = gamepadIsDown(j,0);
+            data[j] = touchGamepadButtons[i] ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
         }
     }
 
@@ -3861,20 +3855,13 @@ function vibrateStop() { vibrate(0); }
 const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
 
 // touch gamepad internal variables
-let touchGamepadTimer = new Timer, touchGamepadButtons, touchGamepadStick;
+let touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadStick = vec2();
 
 // enable touch input mouse passthrough
 function touchInputInit()
 {
     // add non passive touch event listeners
     let handleTouch = handleTouchDefault;
-    if (touchGamepadEnable)
-    {
-        // touch input internal variables
-        handleTouch = handleTouchGamepad;
-        touchGamepadButtons = [];
-        touchGamepadStick = vec2();
-    }
     document.addEventListener('touchstart', (e) => handleTouch(e), { passive: false });
     document.addEventListener('touchmove',  (e) => handleTouch(e), { passive: false });
     document.addEventListener('touchend',   (e) => handleTouch(e), { passive: false });
@@ -3883,8 +3870,15 @@ function touchInputInit()
     let wasTouching;
     function handleTouchDefault(e)
     {
+        if (!touchInputEnable)
+            return;
+
+        // route touch to gamepad
+        if (touchGamepadEnable)
+            handleTouchGamepad(e);
+
         // fix stalled audio requiring user interaction
-        if (soundEnable && !headlessMode && audioContext && audioContext.state != 'running')
+        if (soundEnable && !headlessMode && audioContext && audioContext.state !== 'running')
             audioContext.resume();
 
         // check if touching and pass to mouse events
@@ -3934,9 +3928,6 @@ function touchInputInit()
             {
                 // touch anywhere to press start when paused
                 touchGamepadButtons[9] = 1;
-
-                // call default touch handler so normal touch events still work
-                handleTouchDefault(e);
                 return;
             }
         }
@@ -3967,12 +3958,6 @@ function touchInputInit()
                 touchGamepadButtons[9] = 1;
             }
         }
-
-        // call default touch handler so normal touch events still work
-        handleTouchDefault(e);
-        
-        // must return true so the document will get focus
-        return true;
     }
 }
 
@@ -4013,7 +3998,7 @@ function touchGamepadRender()
             const angle = i*PI/4;
             context.arc(leftCenter.x, leftCenter.y,touchGamepadSize*.6, angle + PI/8, angle + PI/8);
             i%2 && context.arc(leftCenter.x, leftCenter.y, touchGamepadSize*.33, angle, angle);
-            i==1 && context.fill();
+            i===1 && context.fill();
         }
         context.stroke();
     }
@@ -4052,7 +4037,7 @@ function pointerLockExit() { document.exitPointerLock && document.exitPointerLoc
 /** Check if pointer is locked (true if locked)
  *  @return {boolean}
  *  @memberof Input */
-function pointerLockIsActive() { return document.pointerLockElement == mainCanvas; }
+function pointerLockIsActive() { return document.pointerLockElement === mainCanvas; }
 /** 
  * LittleJS Audio System
  * - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a> - ZzFX Sound Effect Generator
@@ -4120,7 +4105,7 @@ class Sound
         {
             // generate zzfx sound now for fast playback
             const defaultRandomness = .05;
-            this.randomness = zzfxSound[1] != undefined ? zzfxSound[1] : defaultRandomness;
+            this.randomness = zzfxSound[1] !== undefined ? zzfxSound[1] : defaultRandomness;
             zzfxSound[1] = 0; // generate without randomness
             this.sampleChannels = [zzfxG(...zzfxSound)];
             this.sampleRate = zzfxR;
@@ -4359,7 +4344,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
     source.connect(pannerNode).connect(gainNode);
 
     // play the sound
-    if (audioContext.state != 'running')
+    if (audioContext.state !== 'running')
     {
         // fix stalled audio and play
         audioContext.resume().then(()=>source.start());
@@ -4635,7 +4620,7 @@ function tileCollisionLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisio
     {
         const dataLayer = tileMapData.layers[layerIndex];
         ASSERT(dataLayer.data && dataLayer.data.length);
-        ASSERT(levelSize.area() == dataLayer.data.length);
+        ASSERT(levelSize.area() === dataLayer.data.length);
 
         const layerRenderOrder = renderOrder - (layerCount - 1 - layerIndex);
         const tileLayer = new TileCollisionLayer(vec2(), levelSize, tileInfo, layerRenderOrder);
@@ -4758,7 +4743,7 @@ class CanvasLayer extends EngineObject
     draw(pos, size, angle=0, color=WHITE, mirror=false, additiveColor, screenSpace=false, context)
     {
         // draw the canvas layer as a single tile that uses the whole texture
-        const useWebgl = glEnable && this.glTexture != undefined;
+        const useWebgl = glEnable && this.glTexture !== undefined;
         const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
         drawTile(pos, size, tileInfo, color, angle, mirror, additiveColor, useWebgl, screenSpace, context);
     }
@@ -4913,12 +4898,12 @@ class TileLayer extends CanvasLayer
     // Render the tile layer, called automatically by the engine
     render()
     {
-        ASSERT(drawContext != this.context, 'must call redrawEnd() after drawing tiles!');
+        ASSERT(drawContext !== this.context, 'must call redrawEnd() after drawing tiles!');
         
         // draw the tile layer as a single tile
         const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
         const pos = this.pos.add(this.size.scale(.5));
-        const useWebgl = glEnable && this.glTexture != undefined;
+        const useWebgl = glEnable && this.glTexture !== undefined;
         drawTile(pos, this.size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebgl);
     }
 
@@ -4968,7 +4953,7 @@ class TileLayer extends CanvasLayer
     /** Call to end the redraw process */
     redrawEnd()
     {
-        ASSERT(drawContext == this.context, 'must call redrawStart() before drawing tiles');
+        ASSERT(drawContext === this.context, 'must call redrawStart() before drawing tiles');
         glCopyToContext(drawContext);
         //debugSaveCanvas(this.canvas);
 
@@ -4994,9 +4979,9 @@ class TileLayer extends CanvasLayer
 
         // draw the tile if it has layer data
         const d = this.getData(layerPos);
-        if (d.tile != undefined)
+        if (d.tile !== undefined)
         {
-            ASSERT(drawContext == this.context, 'must call redrawStart() before drawing tiles');
+            ASSERT(drawContext === this.context, 'must call redrawStart() before drawing tiles');
             const pos = layerPos.add(vec2(.5));
             const tileInfo = tile(d.tile, s, this.tileInfo.textureIndex, this.tileInfo.padding);
             drawTile(pos, vec2(1), tileInfo, d.color, d.direction*PI/2, d.mirror);
@@ -5329,7 +5314,7 @@ class ParticleEmitter extends EngineObject
         if (debugParticles)
         {
             // show emitter bounds
-            const emitSize = typeof this.emitSize == 'number' ? vec2(this.emitSize) : this.emitSize;
+            const emitSize = typeof this.emitSize === 'number' ? vec2(this.emitSize) : this.emitSize;
             debugRect(this.pos, emitSize, '#0f0', 0, this.angle);
         }
     }
@@ -5339,7 +5324,7 @@ class ParticleEmitter extends EngineObject
     emitParticle()
     {
         // spawn a particle
-        let pos = typeof this.emitSize == 'number' ? // check if number was used
+        let pos = typeof this.emitSize === 'number' ? // check if number was used
             randInCircle(this.emitSize/2)            // circle emitter
             : vec2(rand(-.5,.5), rand(-.5,.5))       // box emitter
                 .multiply(this.emitSize).rotate(this.angle)
@@ -5514,7 +5499,7 @@ class Particle extends EngineObject
         this.additive && setBlendMode();
         debugParticles && debugRect(pos, size, '#f005', 0, angle);
 
-        if (p == 1)
+        if (p === 1)
         {
             // destroy particle when it's time runs out
             this.color = color;
@@ -5828,7 +5813,7 @@ function glPreRender()
         const location = glContext.getAttribLocation(glShader, name);
         const stride = typeSize && gl_INSTANCE_BYTE_STRIDE; // only if not geometry
         const divisor = typeSize && 1; // only if not geometry
-        const normalize = typeSize == 1; // only if color
+        const normalize = typeSize === 1; // only if color
         glContext.enableVertexAttribArray(location);
         glContext.vertexAttribPointer(location, size, type, normalize, stride, offset);
         glContext.vertexAttribDivisor(location, divisor);
@@ -5878,7 +5863,7 @@ function glClearCanvas()
 function glSetTexture(texture, wrap=false)
 {
     // must flush cache with the old texture to set a new one
-    if (!glContext || texture == glActiveTexture)
+    if (!glContext || texture === glActiveTexture)
         return;
 
     glFlush();
@@ -6048,7 +6033,7 @@ function glSetAntialias(antialias=true)
 function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgba=-1, rgbaAdditive=0)
 {
     // flush if there is not enough room or if different blend mode
-    if (glInstanceCount >= gl_MAX_INSTANCES || glBatchAdditive != glAdditive)
+    if (glInstanceCount >= gl_MAX_INSTANCES || glBatchAdditive !== glAdditive)
         glFlush();
 
     let offset = glInstanceCount++ * gl_INDICES_PER_INSTANCE;
@@ -6183,7 +6168,7 @@ class NewgroundsPlugin
      * @param {number} id       - The scoreboard id
      * @param {string} [user]   - A user's id or name
      * @param {number} [social] - If true, only social scores will be loaded
-     * @param {number} [skip]   - Number of scores to skip before start
+     * @param {number} [skip]   - Number of scores to skip over
      * @param {number} [limit]  - Number of scores to include in the list
      * @return {Object}         - The response JSON object
      */
@@ -6468,15 +6453,15 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
       // get next offset, use the length of first channel
       nextSampleOffset = outSampleOffset + (patterns[patternIndex][0].length - 2 - (notFirstBeat?0:1)) * beatLength;
       // for each beat in pattern, plus one extra if end of sequence
-      isSequenceEnd = sequenceIndex == sequence.length - 1;
+      isSequenceEnd = sequenceIndex === sequence.length - 1;
       for (i = 2, k = outSampleOffset; i < patternChannel.length + isSequenceEnd; notFirstBeat = ++i) {
 
         // <channel-note>
         note = patternChannel[i];
 
         // stop if end, different instrument or new note
-        stop = i == patternChannel.length + isSequenceEnd - 1 && isSequenceEnd ||
-            instrument != (patternChannel[0] || 0) || note | 0;
+        stop = i === patternChannel.length + isSequenceEnd - 1 && isSequenceEnd ||
+            instrument !== (patternChannel[0] || 0) || note | 0;
 
         // fill buffer with samples for previous beat, most cpu intensive part
         for (j = 0; j < beatLength && notFirstBeat;
@@ -6819,7 +6804,7 @@ class UIObject
             this.mouseIsHeld = false;
         }
 
-        if (this.mouseIsOver != mouseWasOver)
+        if (this.mouseIsOver !== mouseWasOver)
             this.mouseIsOver ? this.onEnter() : this.onLeave();
     }
 
@@ -8630,7 +8615,7 @@ class Box2dPlugin
         queryCallback.ReportFixture = function(fixturePointer)
         {
             const fixture = box2d.instance.wrapPointer(fixturePointer, box2d.instance.b2Fixture);
-            if (dynamicOnly && fixture.GetBody().GetType() != box2d.instance.b2_dynamicBody)
+            if (dynamicOnly && fixture.GetBody().GetType() !== box2d.instance.b2_dynamicBody)
                 return true; // continue getting results
             if (!fixture.TestPoint(box2d.vec2dTo(pos)))
                 return true; // continue getting results
@@ -8761,7 +8746,9 @@ class Box2dPlugin
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-/** Box2d Init - Call with await before starting LittleJS to init box2d
+/** Box2d Init - Call with await to init box2d
+ *  @example
+ *  await box2dInit();
  *  @return {Promise<Box2dPlugin>}
  *  @memberof Box2D */
 async function box2dInit()
@@ -8906,9 +8893,9 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
     {
         // sides
         const horizontal = i%2;
-        const sidePos = cornerOffset.multiply(vec2(horizontal?i==1?1:-1:0, horizontal?0:i?-1:1));
+        const sidePos = cornerOffset.multiply(vec2(horizontal?i===1?1:-1:0, horizontal?0:i?-1:1));
         const sideSize = vec2(horizontal ? borderSize : centerSize.x, horizontal ? centerSize.y : borderSize);
-        const sideTile = centerTile.offset(startTile.size.multiply(vec2(i==1?1:i==3?-1:0,i==0?-flip:i==2?flip:0)))
+        const sideTile = centerTile.offset(startTile.size.multiply(vec2(i===1?1:i===3?-1:0,i===0?-flip:i===2?flip:0)))
         drawTile(pos.add(sidePos.rotate(rotateAngle)), sideSize, sideTile, color, angle, false, additiveColor, useWebGL, screenSpace, context);
     }
     for (let i=4; i--;)
@@ -8969,7 +8956,7 @@ function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor
         // sides
         const a = angle + i*PI/2;
         const horizontal = i%2;
-        const sidePos = cornerOffset.multiply(vec2(horizontal?i==1?1:-1:0, horizontal?0:i?-flip:flip));
+        const sidePos = cornerOffset.multiply(vec2(horizontal?i===1?1:-1:0, horizontal?0:i?-flip:flip));
         const sideSize = vec2(horizontal ? centerSize.y : centerSize.x, borderSize);
         drawTile(pos.add(sidePos.rotate(rotateAngle)), sideSize, sideTile, color, a, false, additiveColor, useWebGL, screenSpace, context);
     }
