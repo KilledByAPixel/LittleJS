@@ -21,10 +21,6 @@ const {vec2, hsl} = LJS;
 LJS.setCanvasPixelated(false);
 LJS.setTilesPixelated(false);
 
-// start up LittleJS Box2D plugin
-await LJS.box2dInit();
-//LJS.box2dSetDebug(true); // enable box2d debug draw
-
 ///////////////////////////////////////////////////////////////////////////////
 // game variables
 
@@ -57,6 +53,10 @@ function setScene(scene)
 ///////////////////////////////////////////////////////////////////////////////
 async function gameInit()
 {
+    // start up LittleJS Box2D plugin
+    await LJS.box2dInit();
+    //LJS.box2dSetDebug(true); // enable box2d debug draw
+
     // create a table of all sprites
     const gameTile = (i)=> LJS.tile(i, 496, 0, 8);
     spriteAtlas =
