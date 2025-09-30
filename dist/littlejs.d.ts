@@ -2733,7 +2733,7 @@ declare module "littlejsengine" {
         *  @param {Color}   [color=uiSystem.defaultColor]
         *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
         *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
-        *  @param {number}  [lineWidth=uiSystem.defaultCornerRadius] */
+        *  @param {number}  [cornerRadius=uiSystem.defaultCornerRadius] */
         drawRect(pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, cornerRadius?: number): void;
         /** Draw a line to the UI context
         *  @param {Vector2} posA
@@ -2785,6 +2785,8 @@ declare module "littlejsengine" {
         lineColor: Color;
         /** @property {number} - width for line drawing */
         lineWidth: number;
+        /** @property {number} - corner radius for rounded rects */
+        cornerRadius: number;
         /** @property {string} - font for this objecct */
         font: string;
         /** @property {number} - override for text height */

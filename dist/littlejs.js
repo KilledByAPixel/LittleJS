@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.13.4';
+const engineVersion = '1.13.5';
 
 /** Frames per second to update
  *  @type {number}
@@ -7184,7 +7184,7 @@ class UISystemPlugin
     *  @param {Color}   [color=uiSystem.defaultColor]
     *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
     *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
-    *  @param {number}  [lineWidth=uiSystem.defaultCornerRadius] */
+    *  @param {number}  [cornerRadius=uiSystem.defaultCornerRadius] */
     drawRect(pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, cornerRadius=uiSystem.defaultCornerRadius)
     {
         const context = uiSystem.uiContext;
@@ -7274,6 +7274,8 @@ class UIObject
         this.lineColor  = uiSystem.defaultLineColor;
         /** @property {number} - width for line drawing */
         this.lineWidth  = uiSystem.defaultLineWidth;
+        /** @property {number} - corner radius for rounded rects */
+        this.cornerRadius = uiSystem.defaultCornerRadius;
         /** @property {string} - font for this objecct */
         this.font       = uiSystem.defaultFont;
         /** @property {number} - override for text height */
@@ -7544,13 +7546,16 @@ class UICheckbox extends UIObject
     }
     render()
     {
+    
         const color = this.mouseIsOver? this.hoverColor : this.color;
         uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, this.lineColor, this.cornerRadius);
         if (this.checked)
         {
-            // draw an X if checked
-            uiSystem.drawLine(this.pos.add(this.size.multiply(vec2(-.5,-.5))), this.pos.add(this.size.multiply(vec2(.5,.5))), this.lineWidth, this.lineColor);
-            uiSystem.drawLine(this.pos.add(this.size.multiply(vec2(-.5,.5))), this.pos.add(this.size.multiply(vec2(.5,-.5))), this.lineWidth, this.lineColor);
+            const p = this.cornerRadius / min(this.size.x, this.size.y) * 2;
+            const length = lerp(1, 2**.5/2, p) / 2;
+            let s = this.size.scale(length);
+            uiSystem.drawLine(this.pos.add(s.multiply(vec2(-1))), this.pos.add(s.multiply(vec2(1))), this.lineWidth, this.lineColor);
+            uiSystem.drawLine(this.pos.add(s.multiply(vec2(-1,1))), this.pos.add(s.multiply(vec2(1,-1))), this.lineWidth, this.lineColor);
         }
     }
 }
