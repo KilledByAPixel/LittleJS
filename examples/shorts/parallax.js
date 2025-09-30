@@ -4,8 +4,8 @@ function gameInit()
     const levelColor = hsl(rand(), .5, .5);
     for (let i=3; i--;)
     {
-        const topColor = levelColor.mutate(.2);
-        const bottomColor = levelColor.subtract(CLEAR_WHITE).mutate(.2);
+        const topColor = levelColor.mutate(.3);
+        const bottomColor = levelColor.subtract(CLEAR_WHITE).mutate(.3);
         new ParallaxLayer(topColor, bottomColor, i);
     }
 }
