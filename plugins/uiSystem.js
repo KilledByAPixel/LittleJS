@@ -40,9 +40,9 @@ class UISystemPlugin
         /** @property {Color} - Default text color for UI elements */
         this.defaultTextColor = BLACK;
         /** @property {Color} - Default button color for UI elements */
-        this.defaultButtonColor = hsl(0,0,.5);
+        this.defaultButtonColor = hsl(0,0,.65);
         /** @property {Color} - Default hover color for UI elements */
-        this.defaultHoverColor = hsl(0,0,.7);
+        this.defaultHoverColor = hsl(0,0,.85);
         /** @property {Color} - Default color for disabled UI elements */
         this.defaultDisabledColor = hsl(0,0,.2);
         /** @property {number} - Default line width for UI elements */
