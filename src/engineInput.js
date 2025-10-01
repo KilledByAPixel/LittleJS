@@ -252,7 +252,7 @@ function inputInit()
             return;
 
         // fix stalled audio requiring user interaction
-        if (soundEnable && !headlessMode && audioContext && audioContext.state !== 'running')
+        if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
             audioContext.resume();
 
         isUsingGamepad = false;
@@ -425,7 +425,7 @@ function touchInputInit()
             handleTouchGamepad(e);
 
         // fix stalled audio requiring user interaction
-        if (soundEnable && !headlessMode && audioContext && audioContext.state !== 'running')
+        if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
             audioContext.resume();
 
         // check if touching and pass to mouse events

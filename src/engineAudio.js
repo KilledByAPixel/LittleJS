@@ -21,6 +21,17 @@ let audioContext = new AudioContext;
  *  @memberof Audio */
 let audioMasterGain;
 
+/** Default sample rate used for sounds
+ *  @default 44100
+ *  @memberof Audio */
+const audioDefaultSampleRate = 44100;
+
+/** Check if the audio context is running and available for playback
+ *  @return {boolean} - True if the audio context is running
+ *  @memberof Audio */
+function audioIsRunning()
+{ return audioContext.state === 'running'; }
+
 function audioInit()
 {
     if (!soundEnable || headlessMode) return;
@@ -56,31 +67,37 @@ class Sound
 
         /** @property {number} - World space max range of sound */
         this.range = range;
-
         /** @property {number} - At what percentage of range should it start tapering */
         this.taper = taper;
-
         /** @property {number} - How much to randomize frequency each time sound plays */
         this.randomness = 0;
+        /** @property {number} - Sample rate for this sound */
+        this.sampleRate = audioDefaultSampleRate;
+        /** @property {number} - Percentage of this sound currently loaded */
+        this.loadedPercent = 0;
 
+        // generate zzfx sound now for fast playback
         if (zzfxSound)
         {
-            // generate zzfx sound now for fast playback
-            const defaultRandomness = .05;
-            this.randomness = zzfxSound[1] !== undefined ? zzfxSound[1] : defaultRandomness;
-            zzfxSound[1] = 0; // generate without randomness
+            // remove randomness so it can be applied on playback
+            const randomnessIndex = 1, defaultRandomness = .05;
+            this.randomness = zzfxSound[randomnessIndex] !== undefined ? 
+                zzfxSound[randomnessIndex] : defaultRandomness;
+            zzfxSound[randomnessIndex] = 0;
+
+            // generate the zzfx samples
             this.sampleChannels = [zzfxG(...zzfxSound)];
-            this.sampleRate = zzfxR;
+            this.loadedPercent = 1;
         }
     }
 
     /** Play the sound
-     *  @param {Vector2} [pos] - World space position to play the sound, sound is not attenuated if null
-     *  @param {number}  [volume] - How much to scale volume by (in addition to range fade)
-     *  @param {number}  [pitch] - How much to scale pitch by (also adjusted by this.randomness)
-     *  @param {number}  [randomnessScale] - How much to scale randomness
-     *  @param {boolean} [loop] - Should the sound loop
-     *  @return {AudioBufferSourceNode} - The audio source node
+     *  @param {Vector2} [pos] - World space position to play the sound if any
+     *  @param {number}  [volume] - How much to scale volume by
+     *  @param {number}  [pitch] - How much to scale pitch by
+     *  @param {number}  [randomnessScale] - How much to scale pitch randomness
+     *  @param {boolean} [loop] - Should the sound loop?
+     *  @return {SoundInstance} - The audio source node
      */
     play(pos, volume=1, pitch=1, randomnessScale=1, loop=false)
     {
@@ -105,53 +122,32 @@ class Sound
             // get pan from screen space coords
             pan = worldToScreen(pos).x * 2/mainCanvas.width - 1;
         }
-
-        // play the sound
-        const playbackRate = pitch + pitch * this.randomness*randomnessScale*rand(-1,1);
-        this.gainNode = audioContext.createGain();
-        this.source = playSamples(this.sampleChannels, volume, playbackRate, pan, loop, this.sampleRate, this.gainNode);
-        return this.source;
+        
+        // Create and return sound instance
+        const rate = pitch + pitch * this.randomness*randomnessScale*rand(-1,1);
+        const instance = new SoundInstance(this, volume, rate, pan, loop);
+        if (instance.isPlaying())
+            return instance; // only return instance if it played successfully
     }
-
-    /** Set the sound volume of the most recently played instance of this sound
-     *  @param {number}  [volume] - How much to scale volume by
+    
+    /** Play a music track that loops by default with full volume and normal pitch
+     *  @param {boolean} [loop] - Should the sound loop?
+     *  @return {SoundInstance} - The audio source node
      */
-    setVolume(volume=1)
-    {
-        if (this.gainNode)
-            this.gainNode.gain.value = volume;
-    }
-
-    /** Stop the last instance of this sound that was played
-     *  @param {number}  [fadeTime] - How long to fade out (seconds)
-     */
-    stop(fadeTime=0)
-    {
-        if (!this.source)
-            return;
-
-        // ramp off gain
-        const startFade = audioContext.currentTime;
-        const endFade = startFade + fadeTime;
-        this.gainNode.gain.linearRampToValueAtTime(1, startFade);
-        this.gainNode.gain.linearRampToValueAtTime(0, endFade);
-        this.source.stop(endFade);
-        this.source = undefined;
-    }
-
-    /** Get source of most recent instance of this sound that was played
-     *  @return {AudioBufferSourceNode}
-     */
-    getSource() { return this.source; }
+    playMusic(loop=true)
+    { return this.play(undefined, 1, 1, 0, loop); }
 
     /** Play the sound as a note with a semitone offset
      *  @param {number}  semitoneOffset - How many semitones to offset pitch
-     *  @param {Vector2} [pos] - World space position to play the sound, sound is not attenuated if null
-     *  @param {number}  [volume=1] - How much to scale volume by (in addition to range fade)
-     *  @return {AudioBufferSourceNode} - The audio source node
+     *  @param {Vector2} [pos] - World space position to play the sound if any
+     *  @param {number}  [volume=1] - How much to scale volume by
+     *  @return {SoundInstance} - The audio source node
      */
     playNote(semitoneOffset, pos, volume)
-    { return this.play(pos, volume, 2**(semitoneOffset/12), 0); }
+    {
+        const pitch = getNoteFrequency(semitoneOffset, 1);
+        return this.play(pos, volume, pitch, 0);
+    }
 
     /** Get how long this sound is in seconds
      *  @return {number} - How long the sound is in seconds (undefined if loading)
@@ -159,10 +155,10 @@ class Sound
     getDuration()
     { return this.sampleChannels && this.sampleChannels[0].length / this.sampleRate; }
 
-    /** Check if sound is loading, for sounds fetched from a url
-     *  @return {boolean} - True if sound is loading and not ready to play
+    /** Check if sound is loaded, for sounds fetched from a url
+     *  @return {boolean} - True if sound is loaded and ready to play
      */
-    isLoading() { return !this.sampleChannels; }
+    isLoaded() { return this.loadedPercent === 1; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -205,26 +201,199 @@ class SoundWave extends Sound
         const response = await fetch(filename);
         const arrayBuffer = await response.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-        this.sampleChannels = [];
-        for (let i = audioBuffer.numberOfChannels; i--;)
-            this.sampleChannels[i] = Array.from(audioBuffer.getChannelData(i));
+        
+        // convert audio buffer to sample channels across multiple frames
+        const channelCount = audioBuffer.numberOfChannels;
+        const samplesPerFrame = 1e5;
+        const sampleChannels = [];
+        for (let channel = 0; channel < channelCount; channel++)
+        {
+            const channelData = audioBuffer.getChannelData(channel);
+            const channelLength = channelData.length;
+            const samples = new Array(channelLength);
+            let sampleIndex = 0;
+            while (sampleIndex < channelLength)
+            {
+                // copy chunk of samples
+                const endIndex = min(sampleIndex + samplesPerFrame, channelLength);
+                for (; sampleIndex < endIndex; sampleIndex++)
+                    samples[sampleIndex] = channelData[sampleIndex];
+                
+                // yield to next frame
+                await new Promise(resolve => setTimeout(resolve, 0));
+
+                // update loaded percent
+                const samplesTotal = channelCount * channelLength;
+                const samplesProcessed = channel * channelLength + sampleIndex;
+                this.loadedPercent = samplesProcessed / samplesTotal;
+            }
+            sampleChannels[channel] = samples;
+        }
+        
+        // setup the sound to be played
         this.sampleRate = audioBuffer.sampleRate;
+        this.sampleChannels = sampleChannels;
+        this.loadedPercent = 1;
         if (this.onloadCallback)
             this.onloadCallback();
     }
 }
 
-/** Play an mp3, ogg, or wav audio from a local file or url
- *  @param {string}  filename - Location of sound file to play
- *  @param {number}  [volume] - How much to scale volume by
- *  @param {boolean} [loop] - True if the music should loop
- *  @return {SoundWave} - The sound object for this file
- *  @memberof Audio */
-function playAudioFile(filename, volume=1, loop=false)
-{
-    if (!soundEnable || headlessMode) return;
+///////////////////////////////////////////////////////////////////////////////
 
-    return new SoundWave(filename,0,0,0, s=>s.play(undefined, volume, 1, 1, loop));
+/** 
+ * Sound Instance - Wraps an AudioBufferSourceNode for individual sound control
+ * Represents a single playing instance of a sound with pause/resume capabilities
+ * @example
+ * // Play a sound and get an instance for control
+ * const jumpSound = new Sound([.5,.5,220]);
+ * const instance = jumpSound.play();
+ * 
+ * // Control the individual instance
+ * instance.setVolume(.5);
+ * instance.pause();
+ * instance.unpause();
+ * instance.stop();
+ */
+class SoundInstance
+{
+    /** Create a sound instance
+     *  @param {Sound}    sound    - Reference to the parent sound object
+     *  @param {number}   [volume] - How much to scale volume by
+     *  @param {number}   [rate]   - The playback rate to use
+     *  @param {number}   [pan]    - How much to apply stereo panning
+     *  @param {boolean}  [loop]   - Should the sound loop? */
+    constructor(sound, volume=1, rate=1, pan=0, loop=false)
+    {
+        ASSERT(sound instanceof Sound, 'SoundInstance requires a valid Sound object');
+        ASSERT(volume >=0, 'Sound volume must be positive or zero');
+        ASSERT(rate >=0, 'Sound rate must be positive or zero');
+        ASSERT(pan >=0, 'Sound pan must be positive or zero');
+
+        /** @property {AudioBufferSourceNode} - The audio source node */
+        this.sound = sound;
+        /** @property {number} - How much to scale volume by */
+        this.volume = volume;
+        /** @property {number} - The playback rate to use */
+        this.rate = rate;
+        /** @property {number} - How much to apply stereo panning */
+        this.pan = pan;
+        /** @property {boolean} - Should the sound loop */
+        this.loop = loop;
+        /** @property {number} - Timestamp for audio context when paused */
+        this.pausedTime = undefined;
+        /** @property {number} - Timestamp for audio context when started */
+        this.startTime = undefined;
+        /** @property {GainNode} - Gain node for the sound */
+        this.gainNode = undefined;
+        /** @property {AudioBufferSourceNode} - Source node of the audio */
+        this.source = undefined;
+        this.start();
+    }
+
+    /** Start playing the sound instance from the offset time
+     *  @param {number} [offset] - Offset in seconds to start playback from 
+     */
+    start(offset=0)
+    {
+        ASSERT(offset >=0, 'Sound start offset must be positive or zero');
+        const onended = ()=> this.source = undefined;
+        this.gainNode = audioContext.createGain();
+        this.source = playSamples(this.sound.sampleChannels, this.volume, this.rate, this.pan, this.loop, this.sound.sampleRate, this.gainNode, offset, onended);
+        this.startTime = audioContext.currentTime - offset;
+        this.pausedTime = undefined;
+    }
+
+    /** Set the volume of this sound instance
+     *  @param {number} volume */
+    setVolume(volume)
+    {
+        ASSERT(volume >=0, 'Sound volume must be positive or zero');
+        if (!this.isPlaying())
+            return;
+        this.gainNode.gain.value = this.volume = volume;
+    }
+
+    /** Stop this sound instance */
+    stop(fadeTime=0)
+    {
+        ASSERT(fadeTime >=0, 'Sound fade time must be positive or zero');
+        if (!this.isPlaying())
+            return;
+
+        if (fadeTime)
+        {
+            // ramp off gain
+            const startFade = audioContext.currentTime;
+            const endFade = startFade + fadeTime;
+            this.gainNode.gain.linearRampToValueAtTime(1, startFade);
+            this.gainNode.gain.linearRampToValueAtTime(0, endFade);
+            this.source.stop(endFade);
+        }
+        else
+            this.source.stop();
+        this.source = undefined;
+        this.pausedTime = undefined;
+    }
+
+    /** Pause this sound instance */
+    pause()
+    {
+        if (this.isStopped() || this.isPaused())
+            return;
+        
+        // save current time and stop sound
+        this.pausedTime = this.getCurrentTime();
+        this.source.stop();
+        this.source = undefined;
+    }
+
+    /** Unpauses this sound instance if it was paused */
+    unpause()
+    {
+        if (!this.isPaused())
+            return;
+        
+        // restart sound from paused time
+        this.start(this.pausedTime);
+        this.pausedTime = undefined;
+    }
+
+    /** Check if this instance is paused and was not stopped
+     *  @return {boolean} - True if paused
+     */
+    isPaused() { return this.pausedTime >= 0; }
+
+    /** Check if this sound has ended or was stopped and was not paused
+     *  @return {boolean} - True if stopped
+     */
+    isStopped() { return !this.isPaused() && !this.source; }
+
+    /** Check if this instance is currently playing
+     *  @return {boolean} - True if playing
+     */
+    isPlaying() { return !!this.source; }
+
+    /** Get the current playback time in seconds
+     *  @return {number} - Current playback time
+     */
+    getCurrentTime()
+    {
+        const deltaTime = mod(audioContext.currentTime - this.startTime, 
+            this.getDuration());
+        return this.isPlaying() ? deltaTime : this.pausedTime;
+    }
+
+    /** Get the total duration of this sound
+     *  @return {number} - Total duration in seconds
+     */
+    getDuration()
+    { return this.sound.getDuration() / this.rate; }
+
+    /** Get source of this sound instance
+     *  @return {AudioBufferSourceNode}
+     */
+    getSource() { return this.source; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -278,9 +447,11 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
  *  @param {boolean}  [loop] - True if the sound should loop when it reaches the end
  *  @param {number}   [sampleRate=44100] - Sample rate for the sound
  *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing
+ *  @param {number}   [offset] - Offset in seconds to start playback from
+ *  @param {Function} [onended] - Callback for when the sound ends
  *  @return {AudioBufferSourceNode} - The audio node of the sound played
  *  @memberof Audio */
-function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=zzfxR, gainNode)
+function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=audioDefaultSampleRate, gainNode, offset=0, onended)
 {
     if (!soundEnable || headlessMode) return;
 
@@ -305,16 +476,20 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
     const pannerNode = new StereoPannerNode(audioContext, {'pan':clamp(pan, -1, 1)});
     source.connect(pannerNode).connect(gainNode);
 
-    // play the sound
-    if (audioContext.state !== 'running')
-    {
-        // fix stalled audio and play
-        audioContext.resume().then(()=>source.start());
-    }
-    else
-        source.start();
+    // callback when the sound ends
+    if (onended)
+        source.addEventListener('ended', (event)=> onended(event));
 
-    // return sound
+    if (!audioIsRunning())
+    {
+        // fix stalled audio
+        audioContext.resume();
+        return;
+    }
+
+    // play and return sound
+    const startOffset = offset * rate;
+    source.start(0, startOffset);
     return source;
 }
 
@@ -328,11 +503,6 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
  *  @return {AudioBufferSourceNode} - The audio node of the sound played
  *  @memberof Audio */
 function zzfx(...zzfxSound) { return playSamples([zzfxG(...zzfxSound)]); }
-
-/** Sample rate used for all ZzFX sounds
- *  @default 44100
- *  @memberof Audio */
-const zzfxR = 44100;
 
 /** Generate samples for a ZzFX sound
  *  @param {number}  [volume] - Volume scale (percent)
@@ -385,7 +555,7 @@ function zzfxG
 )
 {
     // init parameters
-    let sampleRate = zzfxR,
+    let sampleRate = audioDefaultSampleRate,
         PI2 = PI*2,
         startSlide = slide *= 500 * PI2 / sampleRate / sampleRate,
         startFrequency = frequency *=

@@ -278,17 +278,18 @@ export
 	pointerLockIsActive,
 
 	// Audio
+	audioContext,
+	audioMasterGain,
+	audioDefaultSampleRate,
 	Sound,
 	SoundWave,
-	playAudioFile,
+	SoundInstance,
 	speak,
 	speakStop,
 	getNoteFrequency,
 	playSamples,
 	zzfx,
 	zzfxG,
-	zzfxR,
-	audioContext,
 
 	// Base Object
 	EngineObject,

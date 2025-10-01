@@ -46,7 +46,7 @@ class ZzFXMusic extends Sound
         if (!soundEnable || headlessMode) return;
         this.randomness = 0;
         this.sampleChannels = zzfxM(...zzfxMusic);
-        this.sampleRate = zzfxR;
+        this.sampleRate = audioDefaultSampleRate;
     }
 
     /** Play the music
@@ -89,7 +89,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
   let panning = 0;
   let hasMore = 1;
   let sampleCache = {};
-  let beatLength = zzfxR / BPM * 60 >> 2;
+  let beatLength = audioDefaultSampleRate / BPM * 60 >> 2;
 
   // for each channel in order until there are no more
   for (; hasMore; channelIndex++) {
