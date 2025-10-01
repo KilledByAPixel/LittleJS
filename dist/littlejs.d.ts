@@ -1494,27 +1494,34 @@ declare module "littlejsengine" {
          *  @param {HTMLImageElement} [image]    - Image for the font, if undefined default font is used
          *  @param {Vector2} [tileSize=(8,8)]    - Size of the font source tiles
          *  @param {Vector2} [paddingSize=(0,1)] - How much extra space to add between characters
-         *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext] - context to draw to
          */
-        constructor(image?: HTMLImageElement, tileSize?: Vector2, paddingSize?: Vector2, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D);
+        constructor(image?: HTMLImageElement, tileSize?: Vector2, paddingSize?: Vector2, context?: CanvasRenderingContext2D);
         image: any;
         tileSize: Vector2;
         paddingSize: Vector2;
-        context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
         /** Draw text in world space using the image font
          *  @param {string}  text
          *  @param {Vector2} pos
          *  @param {number}  [scale=.25]
          *  @param {boolean} [center]
+         *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D}[context=drawContext]
          */
-        drawText(text: string, pos: Vector2, scale?: number, center?: boolean): void;
-        /** Draw text in screen space using the image font
+        drawText(text: string, pos: Vector2, scale?: number, center?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+        /** Draw text on overlay canvas in world space using the image font
          *  @param {string}  text
          *  @param {Vector2} pos
          *  @param {number}  [scale]
          *  @param {boolean} [center]
          */
-        drawTextScreen(text: string, pos: Vector2, scale?: number, center?: boolean): void;
+        drawTextOverlay(text: string, pos: Vector2, scale?: number, center?: boolean): void;
+        /** Draw text on overlay canvas in screen space using the image font
+         *  @param {string}  text
+         *  @param {Vector2} pos
+         *  @param {number}  [scale]
+         *  @param {boolean} [center]
+         *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
+         */
+        drawTextScreen(text: string, pos: Vector2, scale?: number, center?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     }
     /** Returns true if fullscreen mode is active
      *  @return {boolean}
@@ -1763,6 +1770,28 @@ declare module "littlejsengine" {
      *  @memberof Input */
     export function pointerLockIsActive(): boolean;
     /**
+     * LittleJS Audio System
+     * - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a> - ZzFX Sound Effect Generator
+     * - <a href=https://keithclark.github.io/ZzFXM/>ZzFXM Music</a> - ZzFXM Music System
+     * - Caches sounds and music for fast playback
+     * - Can attenuate and apply stereo panning to sounds
+     * - Ability to play mp3, ogg, and wave files
+     * - Speech synthesis functions
+     * @namespace Audio
+     */
+    /** Audio context used by the engine
+     *  @type {AudioContext}
+     *  @memberof Audio */
+    export let audioContext: AudioContext;
+    /** Master gain node for all audio to pass through
+     *  @type {GainNode}
+     *  @memberof Audio */
+    export let audioMasterGain: GainNode;
+    /** Default sample rate used for sounds
+     *  @default 44100
+     *  @memberof Audio */
+    export const audioDefaultSampleRate: 44100;
+    /**
      * Sound Object - Stores a sound for later use and can be played positionally
      *
      * <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
@@ -1786,46 +1815,40 @@ declare module "littlejsengine" {
         taper: number;
         /** @property {number} - How much to randomize frequency each time sound plays */
         randomness: any;
-        sampleChannels: any[][];
+        /** @property {number} - Sample rate for this sound */
         sampleRate: number;
+        /** @property {number} - Percentage of this sound currently loaded */
+        loadedPercent: number;
+        sampleChannels: any[][];
         /** Play the sound
-         *  @param {Vector2} [pos] - World space position to play the sound, sound is not attenuated if null
-         *  @param {number}  [volume] - How much to scale volume by (in addition to range fade)
-         *  @param {number}  [pitch] - How much to scale pitch by (also adjusted by this.randomness)
-         *  @param {number}  [randomnessScale] - How much to scale randomness
-         *  @param {boolean} [loop] - Should the sound loop
-         *  @return {AudioBufferSourceNode} - The audio source node
-         */
-        play(pos?: Vector2, volume?: number, pitch?: number, randomnessScale?: number, loop?: boolean): AudioBufferSourceNode;
-        gainNode: GainNode;
-        source: AudioBufferSourceNode;
-        /** Set the sound volume of the most recently played instance of this sound
+         *  @param {Vector2} [pos] - World space position to play the sound if any
          *  @param {number}  [volume] - How much to scale volume by
+         *  @param {number}  [pitch] - How much to scale pitch by
+         *  @param {number}  [randomnessScale] - How much to scale pitch randomness
+         *  @param {boolean} [loop] - Should the sound loop?
+         *  @return {SoundInstance} - The audio source node
          */
-        setVolume(volume?: number): void;
-        /** Stop the last instance of this sound that was played
-         *  @param {number}  [fadeTime] - How long to fade out (seconds)
+        play(pos?: Vector2, volume?: number, pitch?: number, randomnessScale?: number, loop?: boolean): SoundInstance;
+        /** Play a music track that loops by default with full volume and normal pitch
+         *  @param {boolean} [loop] - Should the sound loop?
+         *  @return {SoundInstance} - The audio source node
          */
-        stop(fadeTime?: number): void;
-        /** Get source of most recent instance of this sound that was played
-         *  @return {AudioBufferSourceNode}
-         */
-        getSource(): AudioBufferSourceNode;
+        playMusic(loop?: boolean): SoundInstance;
         /** Play the sound as a note with a semitone offset
          *  @param {number}  semitoneOffset - How many semitones to offset pitch
-         *  @param {Vector2} [pos] - World space position to play the sound, sound is not attenuated if null
-         *  @param {number}  [volume=1] - How much to scale volume by (in addition to range fade)
-         *  @return {AudioBufferSourceNode} - The audio source node
+         *  @param {Vector2} [pos] - World space position to play the sound if any
+         *  @param {number}  [volume=1] - How much to scale volume by
+         *  @return {SoundInstance} - The audio source node
          */
-        playNote(semitoneOffset: number, pos?: Vector2, volume?: number): AudioBufferSourceNode;
+        playNote(semitoneOffset: number, pos?: Vector2, volume?: number): SoundInstance;
         /** Get how long this sound is in seconds
          *  @return {number} - How long the sound is in seconds (undefined if loading)
          */
         getDuration(): number;
-        /** Check if sound is loading, for sounds fetched from a url
-         *  @return {boolean} - True if sound is loading and not ready to play
+        /** Check if sound is loaded, for sounds fetched from a url
+         *  @return {boolean} - True if sound is loaded and ready to play
          */
-        isLoading(): boolean;
+        isLoaded(): boolean;
     }
     /**
      * Sound Wave Object - Stores a wave sound for later use and can be played positionally
@@ -1853,13 +1876,84 @@ declare module "littlejsengine" {
         *  @return {Promise<void>} */
         loadSound(filename: string): Promise<void>;
     }
-    /** Play an mp3, ogg, or wav audio from a local file or url
-     *  @param {string}  filename - Location of sound file to play
-     *  @param {number}  [volume] - How much to scale volume by
-     *  @param {boolean} [loop] - True if the music should loop
-     *  @return {SoundWave} - The sound object for this file
-     *  @memberof Audio */
-    export function playAudioFile(filename: string, volume?: number, loop?: boolean): SoundWave;
+    /**
+     * Sound Instance - Wraps an AudioBufferSourceNode for individual sound control
+     * Represents a single playing instance of a sound with pause/resume capabilities
+     * @example
+     * // Play a sound and get an instance for control
+     * const jumpSound = new Sound([.5,.5,220]);
+     * const instance = jumpSound.play();
+     *
+     * // Control the individual instance
+     * instance.setVolume(.5);
+     * instance.pause();
+     * instance.unpause();
+     * instance.stop();
+     */
+    export class SoundInstance {
+        /** Create a sound instance
+         *  @param {Sound}    sound    - Reference to the parent sound object
+         *  @param {number}   [volume] - How much to scale volume by
+         *  @param {number}   [rate]   - The playback rate to use
+         *  @param {number}   [pan]    - How much to apply stereo panning
+         *  @param {boolean}  [loop]   - Should the sound loop? */
+        constructor(sound: Sound, volume?: number, rate?: number, pan?: number, loop?: boolean);
+        /** @property {AudioBufferSourceNode} - The audio source node */
+        sound: Sound;
+        /** @property {number} - How much to scale volume by */
+        volume: number;
+        /** @property {number} - The playback rate to use */
+        rate: number;
+        /** @property {number} - How much to apply stereo panning */
+        pan: number;
+        /** @property {boolean} - Should the sound loop */
+        loop: boolean;
+        /** @property {number} - Timestamp for audio context when paused */
+        pausedTime: number;
+        /** @property {number} - Timestamp for audio context when started */
+        startTime: number;
+        /** @property {GainNode} - Gain node for the sound */
+        gainNode: GainNode;
+        /** @property {AudioBufferSourceNode} - Source node of the audio */
+        source: AudioBufferSourceNode;
+        /** Start playing the sound instance from the offset time
+         *  @param {number} [offset] - Offset in seconds to start playback from
+         */
+        start(offset?: number): void;
+        /** Set the volume of this sound instance
+         *  @param {number} volume */
+        setVolume(volume: number): void;
+        /** Stop this sound instance */
+        stop(fadeTime?: number): void;
+        /** Pause this sound instance */
+        pause(): void;
+        /** Unpauses this sound instance if it was paused */
+        unpause(): void;
+        /** Check if this instance is paused and was not stopped
+         *  @return {boolean} - True if paused
+         */
+        isPaused(): boolean;
+        /** Check if this sound has ended or was stopped and was not paused
+         *  @return {boolean} - True if stopped
+         */
+        isStopped(): boolean;
+        /** Check if this instance is currently playing
+         *  @return {boolean} - True if playing
+         */
+        isPlaying(): boolean;
+        /** Get the current playback time in seconds
+         *  @return {number} - Current playback time
+         */
+        getCurrentTime(): number;
+        /** Get the total duration of this sound
+         *  @return {number} - Total duration in seconds
+         */
+        getDuration(): number;
+        /** Get source of this sound instance
+         *  @return {AudioBufferSourceNode}
+         */
+        getSource(): AudioBufferSourceNode;
+    }
     /** Speak text with passed in settings
      *  @param {string} text - The text to speak
      *  @param {string} [language] - The language/accent to use (examples: en, it, ru, ja, zh)
@@ -1886,9 +1980,11 @@ declare module "littlejsengine" {
      *  @param {boolean}  [loop] - True if the sound should loop when it reaches the end
      *  @param {number}   [sampleRate=44100] - Sample rate for the sound
      *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing
+     *  @param {number}   [offset] - Offset in seconds to start playback from
+     *  @param {Function} [onended] - Callback for when the sound ends
      *  @return {AudioBufferSourceNode} - The audio node of the sound played
      *  @memberof Audio */
-    export function playSamples(sampleChannels: any[], volume?: number, rate?: number, pan?: number, loop?: boolean, sampleRate?: number, gainNode?: GainNode): AudioBufferSourceNode;
+    export function playSamples(sampleChannels: any[], volume?: number, rate?: number, pan?: number, loop?: boolean, sampleRate?: number, gainNode?: GainNode, offset?: number, onended?: Function): AudioBufferSourceNode;
     /** Generate and play a ZzFX sound
      *
      *  <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
@@ -1922,24 +2018,6 @@ declare module "littlejsengine" {
      *  @memberof Audio
      */
     export function zzfxG(volume?: number, randomness?: number, frequency?: number, attack?: number, sustain?: number, release?: number, shape?: number, shapeCurve?: number, slide?: number, deltaSlide?: number, pitchJump?: number, pitchJumpTime?: number, repeatTime?: number, noise?: number, modulation?: number, bitCrush?: number, delay?: number, sustainVolume?: number, decay?: number, tremolo?: number, filter?: number): any[];
-    /** Sample rate used for all ZzFX sounds
-     *  @default 44100
-     *  @memberof Audio */
-    export const zzfxR: 44100;
-    /**
-     * LittleJS Audio System
-     * - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a> - ZzFX Sound Effect Generator
-     * - <a href=https://keithclark.github.io/ZzFXM/>ZzFXM Music</a> - ZzFXM Music System
-     * - Caches sounds and music for fast playback
-     * - Can attenuate and apply stereo panning to sounds
-     * - Ability to play mp3, ogg, and wave files
-     * - Speech synthesis functions
-     * @namespace Audio
-     */
-    /** Audio context used by the engine
-     *  @type {AudioContext}
-     *  @memberof Audio */
-    export let audioContext: AudioContext;
     /**
      * LittleJS Object System
      */
@@ -2909,6 +2987,10 @@ declare module "littlejsengine" {
         constructor(pos?: Vector2, size?: Vector2, checked?: boolean);
         /** @property {boolean} */
         checked: boolean;
+        /** @property {Color} */
+        disabledColor: Color;
+        /** @property {boolean} */
+        disabled: boolean;
     }
     /**
      * UIScrollbar - A UI object that acts as a scrollbar
@@ -2930,6 +3012,8 @@ declare module "littlejsengine" {
         text: string;
         /** @property {Color} */
         handleColor: Color;
+        /** @property {Color} */
+        disabledColor: Color;
     }
     /**
      * LittleJS Box2D Physics Plugin
