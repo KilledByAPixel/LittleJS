@@ -54,25 +54,25 @@ function createUI()
     // example tile image
     const tileTest = new LJS.UITile(vec2(150,-130), vec2(110), tile(3,128))
     uiMenu.addChild(tileTest);
-
-    // example checkbox
-    const checkbox = new LJS.UICheckbox(vec2(-140,-20), vec2(40));
-    uiMenu.addChild(checkbox);
-    checkbox.onChange = ()=> console.log('Checkbox clicked');
-
-    // text attached to checkbox
-    const checkboxText = new LJS.UIText(vec2(170,0), vec2(300, 40), 'Test Checkbox');
-    checkbox.addChild(checkboxText);
-
     // example scrollbar
     const scrollbar = new LJS.UIScrollbar(vec2(0,60), vec2(350, 50));
     uiMenu.addChild(scrollbar);
-    scrollbar.onChange  = ()=> console.log('New scrollbar value:', scrollbar.value);
+    scrollbar.onChange = ()=> scrollbar.text = scrollbar.value.toFixed(2)
+    scrollbar.onChange();
 
     // example button
     const button1 = new LJS.UIButton(vec2(0,140), vec2(350, 50), 'Test Button');
     uiMenu.addChild(button1);
     button1.onClick = ()=> console.log('Button 1 clicked');
+
+    // example checkbox
+    const checkbox = new LJS.UICheckbox(vec2(-140,-20), vec2(40));
+    uiMenu.addChild(checkbox);
+    checkbox.onChange = ()=> button1.disabled = checkbox.checked;
+
+    // text attached to checkbox
+    const checkboxText = new LJS.UIText(vec2(170,0), vec2(300, 40), 'Test Checkbox');
+    checkbox.addChild(checkboxText);
 
     // exit button
     const button2 = new LJS.UIButton(vec2(0,220), vec2(350, 50), 'Exit Menu');

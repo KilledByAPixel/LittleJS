@@ -11,26 +11,33 @@ function gameInit()
     uiSystem.defaultCornerRadius = 8;
 
     // setup example menu
-    uiMenu = new UIObject(mainCanvasSize.scale(.5));
-    const uiBackground = new UIObject(vec2(), vec2(400));
-    uiMenu.addChild(uiBackground);
+    uiBackground = new UIObject(mainCanvasSize.scale(.5), vec2(1e5));
+    uiBackground.color = hsl(0,0,.8);
+    const uiMenu = new UIObject(vec2(), vec2(450));
+    uiBackground.addChild(uiMenu);
 
     // example text
-    const textTitle = new UIText(vec2(0,-100), vec2(400, 60), 'LittleJS UI\nSystem Demo');
+    const textTitle = new UIText(vec2(0,-120), vec2(400, 60), 'LittleJS UI\nSystem Demo');
     uiMenu.addChild(textTitle);
 
     // example button
-    const button1 = new UIButton(vec2(70,40), vec2(100), 'Test');
-    button1.textHeight = 40;
+    const button1 = new UIButton(vec2(70,0), vec2(140, 80), 'Test');
+    button1.textHeight = 60;
     uiMenu.addChild(button1);
     button1.onClick = ()=> uiBackground.color = randColor();
 
     // example checkbox
-    const checkbox = new UICheckbox(vec2(-70,40), vec2(50));
+    const checkbox = new UICheckbox(vec2(-70,0), vec2(50));
+    checkbox.onChange = ()=> button1.disabled = checkbox.checked;
     uiMenu.addChild(checkbox);
 
+    // example scrollbar
+    const scrollbar = new UIScrollbar(vec2(0,90), vec2(300, 50), soundVolume, 'Volume');
+    uiMenu.addChild(scrollbar);
+    scrollbar.onChange = ()=> setSoundVolume(scrollbar.value);
+
     // exit button
-    const button2 = new UIButton(vec2(0,140), vec2(300, 50), 'Exit Menu');
+    const button2 = new UIButton(vec2(0,170), vec2(300, 50), 'Exit Menu');
     button2.textHeight = 40;
     uiMenu.addChild(button2);
     button2.onClick = ()=> uiMenu.visible = false;

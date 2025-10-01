@@ -40,11 +40,11 @@ class UISystemPlugin
         /** @property {Color} - Default text color for UI elements */
         this.defaultTextColor = BLACK;
         /** @property {Color} - Default button color for UI elements */
-        this.defaultButtonColor = hsl(0,0,.65);
+        this.defaultButtonColor = hsl(0,0,.7);
         /** @property {Color} - Default hover color for UI elements */
-        this.defaultHoverColor = hsl(0,0,.85);
+        this.defaultHoverColor = hsl(0,0,.9);
         /** @property {Color} - Default color for disabled UI elements */
-        this.defaultDisabledColor = hsl(0,0,.2);
+        this.defaultDisabledColor = hsl(0,0,.3);
         /** @property {number} - Default line width for UI elements */
         this.defaultLineWidth = 4;
         /** @property {number} - Default rounded rect corner radius for UI elements */
@@ -437,10 +437,12 @@ class UIButton extends UIObject
     }
     render()
     {
+        // draw the button
         const lineColor = this.mouseIsHeld && !this.disabled ? this.color : this.lineColor;
         const color = this.disabled ? this.disabledColor : this.mouseIsOver ? this.hoverColor : this.color;
         uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor, this.cornerRadius);
         
+        // draw the text
         const textScale = .8; // scale text to fit in button
         const textSize = vec2(this.size.x, this.textHeight || this.size.y*textScale);
         uiSystem.drawText(this.text, this.pos, textSize, 
@@ -466,6 +468,10 @@ class UICheckbox extends UIObject
 
         /** @property {boolean} */
         this.checked = checked;
+        /** @property {Color} */
+        this.disabledColor = uiSystem.defaultDisabledColor;
+        /** @property {boolean} */
+        this.disabled = false;
         this.interactive = true;
     }
     onClick()
@@ -475,8 +481,7 @@ class UICheckbox extends UIObject
     }
     render()
     {
-    
-        const color = this.mouseIsOver? this.hoverColor : this.color;
+        const color = this.disabled ? this.disabledColor : this.mouseIsOver ? this.hoverColor : this.color;
         uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, this.lineColor, this.cornerRadius);
         if (this.checked)
         {
@@ -514,6 +519,8 @@ class UIScrollbar extends UIObject
         this.text = text;
         /** @property {Color} */
         this.handleColor = handleColor;
+        /** @property {Color} */
+        this.disabledColor = uiSystem.defaultDisabledColor;
         this.color = color;
         this.interactive = true;
     }
@@ -533,8 +540,9 @@ class UIScrollbar extends UIObject
     }
     render()
     {
-        const lineColor = this.mouseIsHeld ? this.color : this.lineColor;
-        const color = this.mouseIsOver? this.hoverColor : this.color;
+        const lineColor = this.mouseIsHeld && !this.disabled ? this.color : this.lineColor;
+        const color = this.disabled ? this.disabledColor : 
+            this.mouseIsOver ? this.hoverColor : this.color;
         uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor, this.cornerRadius);
     
         const handleSize = vec2(this.size.y);
@@ -542,8 +550,9 @@ class UIScrollbar extends UIObject
         const p1 = this.pos.x - handleWidth/2;
         const p2 = this.pos.x + handleWidth/2;
         const handlePos = vec2(lerp(p1, p2, this.value), this.pos.y);
-        const barColor = this.mouseIsHeld ? this.color : this.handleColor;
-        uiSystem.drawRect(handlePos, handleSize, barColor, this.lineWidth, this.lineColor, this.cornerRadius);
+        const handleColor = this.disabled ? this.disabledColor : 
+            this.mouseIsHeld ? this.color : this.handleColor;
+        uiSystem.drawRect(handlePos, handleSize, handleColor, this.lineWidth, this.lineColor, this.cornerRadius);
 
         const textScale = .8; // scale text to fit in scrollbar
         const textSize = vec2(this.size.x, this.textHeight || this.size.y*textScale);
