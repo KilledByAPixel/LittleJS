@@ -619,6 +619,8 @@ textareaConsole.addEventListener('scroll', onScrollConsole);
 
 ///////////////////////////////////////////////////////////////////////////////
 // load saved preferences from localStorage
+const defaultTheme = 'littlejs';
+const defaultFontSize = '16px';
 const savePrefix = 'LittleJSExamples_';
 const savedTheme = localStorage.getItem(savePrefix+'theme') || defaultTheme;
 const savedFontSize = localStorage.getItem(savePrefix+'fontSize') || defaultFontSize;
@@ -633,8 +635,6 @@ let codeMirror; // code mirror instance
 let errorLineMarker; // marker for error line in code mirror
 let codeIsJS; // is the current code javascript
 
-const defaultTheme = 'littlejs';
-const defaultFontSize = '16px';
 const themes = 
 [
     'littlejs',
