@@ -21,7 +21,7 @@ import * as LJS from '../../dist/littlejs.esm.min.js';
 const {vec2, rgb} = LJS;
 
 // keep our own list of simple sprites and track fps
-let sprites, tileLayer, timeMS, fpsDisplay, statsDisplay, spriteColor, spriteAdditiveColor;
+let sprites, tileLayer, timeMS, fpsDisplay, statsDisplay, spriteColor, spriteAdditiveColor, musicInstance;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -59,8 +59,8 @@ function gameInit()
 ///////////////////////////////////////////////////////////////////////////////
 function gameUpdate()
 {
-    if (LJS.mouseWasPressed(0) && !music.getSource())
-        music.play();
+    if (LJS.mouseWasPressed(0) && !musicInstance)
+        musicInstance = music.play();
 
     // mouse click = change color
     if (LJS.mouseWasPressed(0) || LJS.mouseIsDown(2))

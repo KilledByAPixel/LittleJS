@@ -13,19 +13,18 @@ class PianoKey extends EngineObject
     }
     press()
     {
-        if (!this.isDown)
-            pianoSound.playNote(this.semitone);
-        this.isDown = true;
+        if (!this.soundInstance)
+            this.soundInstance = pianoSound.playNote(this.semitone);
     }
     release()
     {
-        if (this.isDown)
-            pianoSound.stop(.2);
-        this.isDown = false;
+        if (this.soundInstance)
+            this.soundInstance.stop(.2);
+        this.soundInstance = 0;
     }
     render()
     {
-        const color = this.isDown ? RED : this.color;
+        const color = this.soundInstance ? RED : this.color;
         drawRect(this.pos, this.drawSize, color);
     }
 }
@@ -42,7 +41,7 @@ function gameInit()
 function gameUpdate()
 {
     // update state of piano keys
-    const pressedKey = keys.find(k=>k.isDown);
+    const pressedKey = keys.find(k=>k.soundInstance);
     const newPressedKey = mouseIsDown(0) && keys.find(k=>isOverlapping(k.pos, k.size, mousePos));
     if (newPressedKey != pressedKey)
     {
