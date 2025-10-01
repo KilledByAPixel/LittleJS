@@ -247,7 +247,7 @@ class UIObject
      */
     removeChild(child)
     {
-        ASSERT(child.parent == this && this.children.includes(child));
+        ASSERT(child.parent === this && this.children.includes(child));
         this.children.splice(this.children.indexOf(child), 1);
         child.parent = undefined;
     }
@@ -528,7 +528,7 @@ class UIScrollbar extends UIObject
             const p2 = this.pos.x + handleWidth/2;
             const oldValue = this.value;
             this.value = percent(mousePosScreen.x, p1, p2);
-            this.value == oldValue || this.onChange();
+            this.value === oldValue || this.onChange();
         }
     }
     render()

@@ -95,7 +95,7 @@ class Box2dObject extends EngineObject
     renderDebugInfo()
     {
         const isAsleep = !this.getIsAwake();
-        const isStatic = this.getBodyType() == box2d.bodyTypeStatic;
+        const isStatic = this.getBodyType() === box2d.bodyTypeStatic;
         const color = rgb(isAsleep?1:0, isAsleep?1:0, isStatic?1:0, .5);
         this.drawFixtures(color);
     }
