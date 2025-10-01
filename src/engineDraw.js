@@ -493,7 +493,7 @@ function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textA
  *  @param {number}  [maxWidth]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
  *  @memberof Draw */
-function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, maxWidth=undefined, context=overlayContext)
+function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, maxWidth, context=overlayContext)
 {
     context.fillStyle = color.toString();
     context.strokeStyle = lineColor.toString();
@@ -709,7 +709,6 @@ class FontImage
      *  @param {HTMLImageElement} [image]    - Image for the font, if undefined default font is used
      *  @param {Vector2} [tileSize=(8,8)]    - Size of the font source tiles
      *  @param {Vector2} [paddingSize=(0,1)] - How much extra space to add between characters
-     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext] - context to draw to
      */
     constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1), context=overlayContext)
     {
@@ -723,7 +722,6 @@ class FontImage
         this.image = image || engineFontImage;
         this.tileSize = tileSize;
         this.paddingSize = paddingSize;
-        this.context = context;
     }
 
     /** Draw text in world space using the image font
@@ -731,23 +729,32 @@ class FontImage
      *  @param {Vector2} pos
      *  @param {number}  [scale=.25]
      *  @param {boolean} [center]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D}[context=drawContext] 
      */
-    drawText(text, pos, scale=1, center)
+    drawText(text, pos, scale=1, center, context=drawContext)
     {
-        this.drawTextScreen(text, worldToScreen(pos).floor(), scale*cameraScale|0, center);
+        this.drawTextScreen(text, worldToScreen(pos).floor(), scale*cameraScale|0, center, context);
     }
 
-    /** Draw text in screen space using the image font
+    /** Draw text on overlay canvas in world space using the image font
      *  @param {string}  text
      *  @param {Vector2} pos
      *  @param {number}  [scale]
      *  @param {boolean} [center]
      */
-    drawTextScreen(text, pos, scale=4, center)
-    {
-        const context = this.context;
-        context.save();
+    drawTextOverlay(text, pos, scale=4, center)
+    { this.drawText(text, pos, scale, center, overlayContext); }
 
+    /** Draw text on overlay canvas in screen space using the image font
+     *  @param {string}  text
+     *  @param {Vector2} pos
+     *  @param {number}  [scale]
+     *  @param {boolean} [center]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
+     */
+    drawTextScreen(text, pos, scale=4, center, context=overlayContext)
+    {
+        context.save();
         const size = this.tileSize;
         const drawSize = size.add(this.paddingSize).scale(scale);
         const cols = this.image.width / this.tileSize.x |0;
@@ -770,7 +777,6 @@ class FontImage
                     drawPos.x - centerOffset, drawPos.y, size.x * scale, size.y * scale);
             }
         });
-
         context.restore();
     }
 }
