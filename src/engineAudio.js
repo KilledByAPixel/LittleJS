@@ -268,7 +268,7 @@ class SoundInstance
         ASSERT(sound instanceof Sound, 'SoundInstance requires a valid Sound object');
         ASSERT(volume >=0, 'Sound volume must be positive or zero');
         ASSERT(rate >=0, 'Sound rate must be positive or zero');
-        ASSERT(pan >=0, 'Sound pan must be positive or zero');
+        ASSERT(isNumber(pan), 'Sound pan must be a number');
 
         /** @property {AudioBufferSourceNode} - The audio source node */
         this.sound = sound;
