@@ -378,15 +378,18 @@ class EngineObject
 
     /** Apply acceleration to this object (adjust velocity, not affected by mass)
      *  @param {Vector2} acceleration */
-    applyAcceleration(acceleration) { if (this.mass) this.velocity = this.velocity.add(acceleration); }
+    applyAcceleration(acceleration)
+    { if (this.mass) this.velocity = this.velocity.add(acceleration); }
 
     /** Apply angular acceleration to this object
      *  @param {number} acceleration */
-    applyAngularAcceleration(acceleration) { if (this.mass) this.angleVelocity += acceleration; }
+    applyAngularAcceleration(acceleration)
+    { if (this.mass) this.angleVelocity += acceleration; }
 
     /** Apply force to this object (adjust velocity, affected by mass)
      *  @param {Vector2} force */
-    applyForce(force) { this.applyAcceleration(force.scale(1/this.mass)); }
+    applyForce(force)
+    { if (this.mass) this.applyAcceleration(force.scale(1/this.mass)); }
 
     /** Get the direction of the mirror
      *  @return {number} -1 if this.mirror is true, or 1 if not mirrored */
