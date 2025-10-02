@@ -139,7 +139,7 @@ function smoothStep(percent) { return percent * percent * (3 - 2 * percent); }
  *  @memberof Utilities */
 function isPowerOfTwo(value) { return !(value & (value - 1)); }
 
-/** Returns the nearest power of two not less then the value
+/** Returns the nearest power of two not less than the value
  *  @param {number} value
  *  @return {number}
  *  @memberof Utilities */

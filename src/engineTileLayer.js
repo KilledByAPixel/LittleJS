@@ -386,8 +386,8 @@ class TileLayer extends CanvasLayer
         // draw the tile layer as a single tile
         const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
         const pos = this.pos.add(this.size.scale(.5));
-        const useWebgl = glEnable && this.glTexture !== undefined;
-        drawTile(pos, this.size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebgl);
+        const useWebGL = glEnable && this.glTexture !== undefined;
+        drawTile(pos, this.size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebGL);
     }
 
     /** Draw all the tile data to an offscreen canvas
@@ -477,7 +477,7 @@ class TileLayer extends CanvasLayer
  * Tile Collision Layer - a tile layer with collision
  * - adds collision data and functions to TileLayer
  * - there can be multiple tile collision layers
- * - tile collison layers should not overlap each other
+ * - tile collision layers should not overlap each other
  * @extends TileLayer
  */
 class TileCollisionLayer extends TileLayer

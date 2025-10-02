@@ -258,7 +258,7 @@ class SoundWave extends Sound
 class SoundInstance
 {
     /** Create a sound instance
-     *  @param {Sound}    sound    - Reference to the parent sound object
+     *  @param {Sound}    sound    - The sound object
      *  @param {number}   [volume] - How much to scale volume by
      *  @param {number}   [rate]   - The playback rate to use
      *  @param {number}   [pan]    - How much to apply stereo panning
@@ -270,7 +270,7 @@ class SoundInstance
         ASSERT(rate >=0, 'Sound rate must be positive or zero');
         ASSERT(isNumber(pan), 'Sound pan must be a number');
 
-        /** @property {AudioBufferSourceNode} - The audio source node */
+        /** @property {Sound} - The sound object */
         this.sound = sound;
         /** @property {number} - How much to scale volume by */
         this.volume = volume;
