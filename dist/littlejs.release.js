@@ -4147,9 +4147,10 @@ class Sound
      *  @param {number}  [pitch] - How much to scale pitch by
      *  @param {number}  [randomnessScale] - How much to scale pitch randomness
      *  @param {boolean} [loop] - Should the sound loop?
+     *  @param {boolean} [paused] - Should the sound start paused
      *  @return {SoundInstance} - The audio source node
      */
-    play(pos, volume=1, pitch=1, randomnessScale=1, loop=false)
+    play(pos, volume=1, pitch=1, randomnessScale=1, loop=false, paused=false)
     {
         if (!soundEnable || headlessMode) return;
         if (!this.sampleChannels) return;
@@ -4175,18 +4176,20 @@ class Sound
         
         // Create and return sound instance
         const rate = pitch + pitch * this.randomness*randomnessScale*rand(-1,1);
-        return new SoundInstance(this, volume, rate, pan, loop);
+        return new SoundInstance(this, volume, rate, pan, loop, paused);
     }
     
     /** Play a music track that loops by default
      *  @param {number} [volume] - Volume to play the music at
      *  @param {boolean} [loop] - Should the music loop?
+     *  @param {boolean} [paused] - Should the music start paused
      *  @return {SoundInstance} - The audio source node
      */
-    playMusic(volume=1, loop=true)
-    { return this.play(undefined, volume, 1, 0, loop); }
+    playMusic(volume=1, loop=true, paused=false)
+    { return this.play(undefined, volume, 1, 0, loop, paused); }
 
-    /** Play the sound as a note with a semitone offset
+    /** Play the sound as a musical note with a semitone offset
+     *  This can be used to play music with chromatic scales
      *  @param {number}  semitoneOffset - How many semitones to offset pitch
      *  @param {Vector2} [pos] - World space position to play the sound if any
      *  @param {number}  [volume=1] - How much to scale volume by
@@ -4311,8 +4314,9 @@ class SoundInstance
      *  @param {number}   [volume] - How much to scale volume by
      *  @param {number}   [rate]   - The playback rate to use
      *  @param {number}   [pan]    - How much to apply stereo panning
-     *  @param {boolean}  [loop]   - Should the sound loop? */
-    constructor(sound, volume=1, rate=1, pan=0, loop=false)
+     *  @param {boolean}  [loop]   - Should the sound loop?
+     *  @param {boolean}  [paused] - Should the sound start paused? */
+    constructor(sound, volume=1, rate=1, pan=0, loop=false, paused=false)
     {
         ASSERT(sound instanceof Sound, 'SoundInstance requires a valid Sound object');
         ASSERT(volume >= 0, 'Sound volume must be positive or zero');
@@ -4330,7 +4334,7 @@ class SoundInstance
         /** @property {boolean} - Should the sound loop */
         this.loop = loop;
         /** @property {number} - Timestamp for audio context when paused */
-        this.pausedTime = undefined;
+        this.pausedTime = 0;
         /** @property {number} - Timestamp for audio context when started */
         this.startTime = undefined;
         /** @property {GainNode} - Gain node for the sound */
@@ -4343,7 +4347,8 @@ class SoundInstance
             if (source === this.source)
                 this.source = undefined;
         };
-        this.start();
+        if (!paused)
+            this.start();
     }
 
     /** Start playing the sound instance from the offset time
@@ -4352,6 +4357,8 @@ class SoundInstance
     start(offset=0)
     {
         ASSERT(offset >= 0, 'Sound start offset must be positive or zero');
+        if (this.isPlaying())
+            this.stop();
         this.gainNode = audioContext.createGain();
         this.source = playSamples(this.sound.sampleChannels, this.volume, this.rate, this.pan, this.loop, this.sound.sampleRate, this.gainNode, offset, this.onendedCallback);
         this.startTime = audioContext.currentTime - offset;
@@ -4363,70 +4370,66 @@ class SoundInstance
     setVolume(volume)
     {
         ASSERT(volume >= 0, 'Sound volume must be positive or zero');
-        if (!this.isPlaying())
-            return;
-        this.gainNode.gain.value = this.volume = volume;
+        this.volume = volume;
+        if (this.gainNode)
+            this.gainNode.gain.value = volume;
     }
 
-    /** Stop this sound instance */
+    /** Stop this sound instance and reset position to the start */
     stop(fadeTime=0)
     {
         ASSERT(fadeTime >= 0, 'Sound fade time must be positive or zero');
-        if (!this.isPlaying())
-            return;
-
-        if (fadeTime)
+        if (this.isPlaying())
         {
-            // ramp off gain
-            const startFade = audioContext.currentTime;
-            const endFade = startFade + fadeTime;
-            this.gainNode.gain.linearRampToValueAtTime(1, startFade);
-            this.gainNode.gain.linearRampToValueAtTime(0, endFade);
-            this.source.stop(endFade);
+            if (fadeTime)
+            {
+                // ramp off gain
+                const startFade = audioContext.currentTime;
+                const endFade = startFade + fadeTime;
+                this.gainNode.gain.linearRampToValueAtTime(1, startFade);
+                this.gainNode.gain.linearRampToValueAtTime(0, endFade);
+                this.source.stop(endFade);
+            }
+            else
+                this.source.stop();
         }
-        else
-            this.source.stop();
+        this.pausedTime = 0;
         this.source = undefined;
-        this.pausedTime = undefined;
+        this.startTime = undefined;
     }
 
     /** Pause this sound instance */
     pause()
     {
-        if (this.isStopped() || this.isPaused())
+        if (this.isPaused())
             return;
-        
+
         // save current time and stop sound
         this.pausedTime = this.getCurrentTime();
         this.source.stop();
         this.source = undefined;
+        this.startTime = undefined;
     }
 
-    /** Unpauses this sound instance if it was paused */
-    unpause()
+    /** Unpauses this sound instance */
+    resume()
     {
         if (!this.isPaused())
             return;
         
         // restart sound from paused time
         this.start(this.pausedTime);
-        this.pausedTime = undefined;
     }
-
-    /** Check if this instance is paused and was not stopped
-     *  @return {boolean} - True if paused
-     */
-    isPaused() { return this.pausedTime >= 0; }
-
-    /** Check if this sound has ended or was stopped and was not paused
-     *  @return {boolean} - True if stopped
-     */
-    isStopped() { return !this.isPaused() && !this.source; }
 
     /** Check if this instance is currently playing
      *  @return {boolean} - True if playing
      */
     isPlaying() { return !!this.source; }
+
+    /** Check if this instance is paused and was not stopped
+     *  @return {boolean} - True if paused
+     */
+    isPaused() { return !this.isPlaying(); }
 
     /** Get the current playback time in seconds
      *  @return {number} - Current playback time
@@ -4435,14 +4438,13 @@ class SoundInstance
     {
         const deltaTime = mod(audioContext.currentTime - this.startTime, 
             this.getDuration());
-        return this.isPlaying() ? deltaTime : this.isPaused() ? this.pausedTime : 0;
+        return this.isPlaying() ? deltaTime : this.pausedTime;
     }
 
     /** Get the total duration of this sound
      *  @return {number} - Total duration in seconds
      */
-    getDuration()
-    { return this.sound.getDuration() / this.rate; }
+    getDuration() { return this.sound.getDuration() / this.rate; }
 
     /** Get source of this sound instance
      *  @return {AudioBufferSourceNode}

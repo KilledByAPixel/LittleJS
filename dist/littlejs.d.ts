@@ -1821,16 +1821,19 @@ declare module "littlejsengine" {
          *  @param {number}  [pitch] - How much to scale pitch by
          *  @param {number}  [randomnessScale] - How much to scale pitch randomness
          *  @param {boolean} [loop] - Should the sound loop?
+         *  @param {boolean} [paused] - Should the sound start paused
          *  @return {SoundInstance} - The audio source node
          */
-        play(pos?: Vector2, volume?: number, pitch?: number, randomnessScale?: number, loop?: boolean): SoundInstance;
+        play(pos?: Vector2, volume?: number, pitch?: number, randomnessScale?: number, loop?: boolean, paused?: boolean): SoundInstance;
         /** Play a music track that loops by default
          *  @param {number} [volume] - Volume to play the music at
          *  @param {boolean} [loop] - Should the music loop?
+         *  @param {boolean} [paused] - Should the music start paused
          *  @return {SoundInstance} - The audio source node
          */
-        playMusic(volume?: number, loop?: boolean): SoundInstance;
-        /** Play the sound as a note with a semitone offset
+        playMusic(volume?: number, loop?: boolean, paused?: boolean): SoundInstance;
+        /** Play the sound as a musical note with a semitone offset
+         *  This can be used to play music with chromatic scales
          *  @param {number}  semitoneOffset - How many semitones to offset pitch
          *  @param {Vector2} [pos] - World space position to play the sound if any
          *  @param {number}  [volume=1] - How much to scale volume by
@@ -1892,8 +1895,9 @@ declare module "littlejsengine" {
          *  @param {number}   [volume] - How much to scale volume by
          *  @param {number}   [rate]   - The playback rate to use
          *  @param {number}   [pan]    - How much to apply stereo panning
-         *  @param {boolean}  [loop]   - Should the sound loop? */
-        constructor(sound: Sound, volume?: number, rate?: number, pan?: number, loop?: boolean);
+         *  @param {boolean}  [loop]   - Should the sound loop?
+         *  @param {boolean}  [paused] - Should the sound start paused? */
+        constructor(sound: Sound, volume?: number, rate?: number, pan?: number, loop?: boolean, paused?: boolean);
         /** @property {Sound} - The sound object */
         sound: Sound;
         /** @property {number} - How much to scale volume by */
@@ -1920,24 +1924,20 @@ declare module "littlejsengine" {
         /** Set the volume of this sound instance
          *  @param {number} volume */
         setVolume(volume: number): void;
-        /** Stop this sound instance */
+        /** Stop this sound instance and reset position to the start */
         stop(fadeTime?: number): void;
         /** Pause this sound instance */
         pause(): void;
-        /** Unpauses this sound instance if it was paused */
-        unpause(): void;
-        /** Check if this instance is paused and was not stopped
-         *  @return {boolean} - True if paused
-         */
-        isPaused(): boolean;
-        /** Check if this sound has ended or was stopped and was not paused
-         *  @return {boolean} - True if stopped
-         */
-        isStopped(): boolean;
+        /** Unpauses this sound instance */
+        resume(): void;
         /** Check if this instance is currently playing
          *  @return {boolean} - True if playing
          */
         isPlaying(): boolean;
+        /** Check if this instance is paused and was not stopped
+         *  @return {boolean} - True if paused
+         */
+        isPaused(): boolean;
         /** Get the current playback time in seconds
          *  @return {number} - Current playback time
          */
