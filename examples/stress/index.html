@@ -59,8 +59,13 @@ function gameInit()
 ///////////////////////////////////////////////////////////////////////////////
 function gameUpdate()
 {
-    if (LJS.mouseWasPressed(0) && !musicInstance)
-        musicInstance = music.play();
+    if (LJS.mouseWasPressed(0))
+    {
+        if (!musicInstance)
+            musicInstance = music.play();
+        else if (!musicInstance.isPlaying())
+            musicInstance.start();
+    }
 
     // mouse click = change color
     if (LJS.mouseWasPressed(0) || LJS.mouseIsDown(2))
