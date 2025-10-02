@@ -4815,24 +4815,23 @@ class SoundWave extends Sound
         {
             const channelData = audioBuffer.getChannelData(channel);
             const channelLength = channelData.length;
-            const samples = new Array(channelLength);
+            sampleChannels[channel] = new Array(channelLength);
             let sampleIndex = 0;
             while (sampleIndex < channelLength)
             {
+                // yield to next frame
+                await new Promise(resolve => setTimeout(resolve, 0));
+
                 // copy chunk of samples
                 const endIndex = min(sampleIndex + samplesPerFrame, channelLength);
                 for (; sampleIndex < endIndex; sampleIndex++)
-                    samples[sampleIndex] = channelData[sampleIndex];
-                
-                // yield to next frame
-                await new Promise(resolve => setTimeout(resolve, 0));
+                    sampleChannels[channel][sampleIndex] = channelData[sampleIndex];
 
                 // update loaded percent
                 const samplesTotal = channelCount * channelLength;
                 const samplesProcessed = channel * channelLength + sampleIndex;
                 this.loadedPercent = samplesProcessed / samplesTotal;
             }
-            sampleChannels[channel] = samples;
         }
         
         // setup the sound to be played
