@@ -40,10 +40,10 @@ function gameInit()
             return;
         
         // handle play/pause toggle
-        if (!musicInstance || musicInstance.isStopped())
+        if (!musicInstance)
             musicInstance = musicSound.playMusic(musicVolume);
         else if (musicInstance.isPaused())
-            musicInstance.unpause();
+            musicInstance.resume();
         else
             musicInstance.pause();
     };
@@ -56,8 +56,7 @@ function gameInit()
         if (!musicInstance)
             return;
 
-        // unpause and stop sound
-        musicInstance.unpause();
+        // stop sound
         musicInstance.stop();
     };
 
@@ -69,8 +68,7 @@ function gameInit()
         // control music seek position
         const wasPlaying = musicInstance && musicInstance.isPlaying();
         if (!musicInstance)
-            musicInstance = musicSound.playMusic(musicVolume);
-        musicInstance.stop();
+            musicInstance = musicSound.playMusic(musicVolume, true, true);
         progressBar.value = min(progressBar.value, .999); // prevent looping around
         const seekTime = progressBar.value * musicSound.getDuration();
         musicInstance.start(seekTime);
