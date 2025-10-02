@@ -108,7 +108,7 @@ function tile(pos=new Vector2, size=tileSizeDefault, textureIndex=0, padding=0)
     // create tile info object
     const tileInfo = new TileInfo(new Vector2, size, textureIndex, padding);
 
-    // use get the pos of the tile
+    // get the position of the tile
     const textureInfo = textureInfos[textureIndex];
     ASSERT(!!textureInfo, 'Texture not loaded');
     const sizePaddedX = size.x + padding*2;
