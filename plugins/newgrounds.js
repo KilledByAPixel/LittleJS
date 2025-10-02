@@ -24,10 +24,10 @@ class NewgroundsMedal extends Medal
 {
     /** Create a newgrounds medal object and adds it to the list of medals
      *  @param {Number} id            - The unique identifier of the medal
-     *  @param {String} name          - Name of the medal
-     *  @param {String} [description] - Description of the medal
-     *  @param {String} [icon]        - Icon for the medal
-     *  @param {String} [src]         - Image location for the medal
+     *  @param {string} name          - Name of the medal
+     *  @param {string} [description] - Description of the medal
+     *  @param {string} [icon]        - Icon for the medal
+     *  @param {string} [src]         - Image location for the medal
      */
     constructor(id, name, description, icon, src)
     { super(id, name, description, icon, src); }

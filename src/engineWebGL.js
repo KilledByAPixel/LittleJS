@@ -184,7 +184,7 @@ function glSetTexture(texture, wrap=false)
 }
 
 /** Compile WebGL shader of the given type, will throw errors if in debug mode
- *  @param {String} source
+ *  @param {string} source
  *  @param {Number} type
  *  @return {WebGLShader}
  *  @memberof WebGL */
@@ -204,8 +204,8 @@ function glCompileShader(source, type)
 }
 
 /** Create WebGL program with given shaders
- *  @param {String} vsSource
- *  @param {String} fsSource
+ *  @param {string} vsSource
+ *  @param {string} fsSource
  *  @return {WebGLProgram}
  *  @memberof WebGL */
 function glCreateProgram(vsSource, fsSource)

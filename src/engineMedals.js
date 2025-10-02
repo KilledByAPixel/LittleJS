@@ -21,7 +21,7 @@ let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimeLast;
 /** Initialize medals with a save name used for storage
  *  - Call this after creating all medals
  *  - Checks if medals are unlocked
- *  @param {String} saveName
+ *  @param {string} saveName
  *  @memberof Medals */
 function medalsInit(saveName)
 {
@@ -83,10 +83,10 @@ class Medal
 {
     /** Create a medal object and adds it to the list of medals
      *  @param {Number} id            - The unique identifier of the medal
-     *  @param {String} name          - Name of the medal
-     *  @param {String} [description] - Description of the medal
-     *  @param {String} [icon]        - Icon for the medal
-     *  @param {String} [src]         - Image location for the medal
+     *  @param {string} name          - Name of the medal
+     *  @param {string} [description] - Description of the medal
+     *  @param {string} [icon]        - Icon for the medal
+     *  @param {string} [src]         - Image location for the medal
      */
     constructor(id, name, description='', icon='🏆', src)
     {
@@ -95,13 +95,13 @@ class Medal
         /** @property {Number} - The unique identifier of the medal */
         this.id = id;
 
-        /** @property {String} - Name of the medal */
+        /** @property {string} - Name of the medal */
         this.name = name;
 
-        /** @property {String} - Description of the medal */
+        /** @property {string} - Description of the medal */
         this.description = description;
 
-        /** @property {String} - Icon for the medal */
+        /** @property {string} - Icon for the medal */
         this.icon = icon;
 
         /** @property {boolean} - Is the medal unlocked? */
