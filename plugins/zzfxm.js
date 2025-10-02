@@ -49,13 +49,13 @@ class ZzFXMusic extends Sound
         this.sampleRate = audioDefaultSampleRate;
     }
 
-    /** Play the music
-     *  @param {number}  [volume=1] - How much to scale volume by
-     *  @param {boolean} [loop] - True if the music should loop
+    /** Play the music that loops by default
+     *  @param {number}  [volume] - Volume to play the music at
+     *  @param {boolean} [loop] - Should the music loop?
      *  @return {AudioBufferSourceNode} - The audio source node
      */
-    playMusic(volume, loop=false)
-    { return super.play(undefined, volume, 1, 1, loop); }
+    playMusic(volume=1, loop=true)
+    { return super.play(undefined, volume, 1, 0, loop); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
