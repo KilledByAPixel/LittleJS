@@ -84,9 +84,10 @@ iframe
 {
     margin: 0px;
     text-align: center;
-    font-size: 20px;
+    font-size: 15px;
     display: inline-block;
     align-self: center;
+    font-style: italic;
 }
 select
 {
