@@ -64,16 +64,16 @@ class UISystemPlugin
             
         engineAddPlugin(uiUpdate, uiRender);
 
-        function updateInvisible(o)
-        {
-            for (const c of o.children)
-                updateInvisible(c);
-            o.updateInvisible();
-        }
-
         // setup recursive update and render
         function uiUpdate()
         {
+            function updateInvisibleObject(o)
+            {
+                // update invisible objects
+                for (const c of o.children)
+                    updateInvisibleObject(c);
+                o.updateInvisible();
+            }
             function updateObject(o)
             {
                 if (o.visible)
@@ -87,7 +87,7 @@ class UISystemPlugin
                     o.update();
                 }
                 else
-                    updateInvisible(o);
+                    updateInvisibleObject(o);
             }
             uiSystem.uiObjects.forEach(o=> o.parent || updateObject(o));
         }
@@ -188,34 +188,40 @@ class UIObject
     constructor(pos=vec2(), size=vec2())
     {
         /** @property {Vector2} - Local position of the object */
-        this.localPos   = pos.copy();
+        this.localPos = pos.copy();
         /** @property {Vector2} - Screen space position of the object */
-        this.pos        = pos.copy();
+        this.pos = pos.copy();
         /** @property {Vector2} - Screen space size of the object */
-        this.size       = size.copy();
-        /** @property {Color} - color of the object */
-        this.color      = uiSystem.defaultColor;
-        /** @property {Color} - color for text */
-        this.textColor  = uiSystem.defaultTextColor;
-        /** @property {Color} - color used when hovering over the object */
+        this.size = size.copy();
+        /** @property {Color} - Color of the object */
+        this.color = uiSystem.defaultColor;
+        /** @property {string} - Text for this ui object */
+        this.text = undefined;
+        /** @property {Color} - Color when disabled */
+        this.disabledColor = uiSystem.defaultDisabledColor;
+        /** @property {boolean} - Is this object disabled? */
+        this.disabled = false;
+        /** @property {Color} - Color for text */
+        this.textColor = uiSystem.defaultTextColor;
+        /** @property {Color} - Color used when hovering over the object */
         this.hoverColor = uiSystem.defaultHoverColor;
-        /** @property {Color} - color for line drawing */
-        this.lineColor  = uiSystem.defaultLineColor;
-        /** @property {number} - width for line drawing */
-        this.lineWidth  = uiSystem.defaultLineWidth;
-        /** @property {number} - corner radius for rounded rects */
+        /** @property {Color} - Color for line drawing */
+        this.lineColor = uiSystem.defaultLineColor;
+        /** @property {number} - Width for line drawing */
+        this.lineWidth = uiSystem.defaultLineWidth;
+        /** @property {number} - Corner radius for rounded rects */
         this.cornerRadius = uiSystem.defaultCornerRadius;
-        /** @property {string} - font for this objecct */
-        this.font       = uiSystem.defaultFont;
-        /** @property {number} - override for text height */
-        this.textHeight   = undefined;
-        /** @property {boolean} - should this object be drawn */
-        this.visible    = true;
-        /** @property {Array<UIObject>} - a list of this object's children */
-        this.children   = [];
-        /** @property {UIObject} - this object's parent, position is in parent space */
-        this.parent     = undefined;
-        /** @property {number} - Extra size added when checking if element is touched */
+        /** @property {string} - Font for this objecct */
+        this.font = uiSystem.defaultFont;
+        /** @property {number} - Override for text height */
+        this.textHeight = undefined;
+        /** @property {boolean} - Should this object be drawn */
+        this.visible  = true;
+        /** @property {Array<UIObject>} - A list of this object's children */
+        this.children = [];
+        /** @property {UIObject} - This object's parent, position is in parent space */
+        this.parent = undefined;
+        /** @property {number} - Extra size added to make small buttons easier to touch on mobile devices */
         this.extraTouchSize = 0;
         /** @property {Sound} - Sound when interactive element is pressed */
         this.soundPress = uiSystem.defaultSoundPress;
@@ -311,7 +317,7 @@ class UIObject
             uiSystem.drawRect(this.pos, this.size, this.color, this.lineWidth, this.lineColor, this.cornerRadius);
     }
 
-    /** Special update for when object is invisible */
+    /** Special update when object is not visible */
     updateInvisible()
     {
         // reset input state when not visible
@@ -319,28 +325,22 @@ class UIObject
     }
 
     /** Called when the mouse enters the object */
-    onEnter()   
-    {}
+    onEnter() {}
 
     /** Called when the mouse leaves the object */
-    onLeave()   
-    {}
+    onLeave() {}
 
     /** Called when the mouse is pressed while over the object */
-    onPress()   
-    {}
+    onPress() {}
 
     /** Called when the mouse is released while over the object */
-    onRelease() 
-    {}
+    onRelease() {}
 
     /** Called when user clicks on this object */
-    onClick()   
-    {}
+    onClick() {}
 
     /** Called when the state of this object changes */
-    onChange()  
-    {}
+    onChange() {}
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -361,13 +361,13 @@ class UIText extends UIObject
     {
         super(pos, size);
 
-        /** @property {string} */
+        // set properties
         this.text = text;
-        /** @property {string} */
         this.align = align;
+        this.font = font;
 
-        this.font = font; // set font
-        this.lineWidth = 0; // set text to not be outlined by default
+        // make text not outlined by default
+        this.lineWidth = 0;
     }
     render()
     {
@@ -394,13 +394,14 @@ class UITile extends UIObject
     constructor(pos, size, tileInfo, color=WHITE, angle=0, mirror=false)
     {
         super(pos, size);
-
         /** @property {TileInfo} - Tile image to use */
         this.tileInfo = tileInfo;
         /** @property {number} - Angle to rotate in radians */
         this.angle = angle;
         /** @property {boolean} - Should it be mirrored? */
         this.mirror = mirror;
+        
+        // set properties
         this.color = color;
     }
     render()
@@ -426,14 +427,10 @@ class UIButton extends UIObject
     {
         super(pos, size);
 
-        /** @property {string} */
+        // set properties
         this.text = text;
-        /** @property {Color} */
-        this.disabledColor = uiSystem.defaultDisabledColor;
-        /** @property {boolean} */
-        this.disabled = false;
-        this.interactive = true;
         this.color = color;
+        this.interactive = true;
     }
     render()
     {
@@ -443,7 +440,7 @@ class UIButton extends UIObject
         uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor, this.cornerRadius);
         
         // draw the text
-        const textScale = .8; // scale text to fit in button
+        const textScale = .8; // scale text to fit
         const textSize = vec2(this.size.x, this.textHeight || this.size.y*textScale);
         uiSystem.drawText(this.text, this.pos, textSize, 
             this.textColor, 0, undefined, this.align, this.font);
@@ -461,17 +458,18 @@ class UICheckbox extends UIObject
      *  @param {Vector2} [pos]
      *  @param {Vector2} [size]
      *  @param {boolean} [checked]
+     *  @param {string}  [text]
+     *  @param {Color}   [color=uiSystem.defaultButtonColor]
      */
-    constructor(pos, size, checked=false)
+    constructor(pos, size, checked=false, text='', color=uiSystem.defaultButtonColor)
     {
         super(pos, size);
-
-        /** @property {boolean} */
+        /** @property {boolean} - Current percentage value of this scrollbar 0-1 */
         this.checked = checked;
-        /** @property {Color} */
-        this.disabledColor = uiSystem.defaultDisabledColor;
-        /** @property {boolean} */
-        this.disabled = false;
+
+        // set properties
+        this.text = text;
+        this.color = color;
         this.interactive = true;
     }
     onClick()
@@ -491,6 +489,14 @@ class UICheckbox extends UIObject
             uiSystem.drawLine(this.pos.add(s.multiply(vec2(-1))), this.pos.add(s.multiply(vec2(1))), this.lineWidth, this.lineColor);
             uiSystem.drawLine(this.pos.add(s.multiply(vec2(-1,1))), this.pos.add(s.multiply(vec2(1,-1))), this.lineWidth, this.lineColor);
         }
+        
+        // draw the text to the right side of the checkbox
+        const textScale = .8; // scale text to fit
+        const gapScale = .55;
+        const textSize = vec2(this.size.x, this.textHeight || this.size.y*textScale);
+        const pos = this.pos.add(vec2(this.size.x*gapScale,0));
+        uiSystem.drawText(this.text, pos, textSize, 
+            this.textColor, 0, undefined, 'left', this.font);
     }
 }
 
@@ -513,22 +519,22 @@ class UIScrollbar extends UIObject
     {
         super(pos, size);
 
-        /** @property {number} */
+        /** @property {number} - Current percentage value of this scrollbar 0-1 */
         this.value = value;
-        /** @property {string} */
-        this.text = text;
-        /** @property {Color} */
+        /** @property {Color} - Color for the handle part of the scrollbar */
         this.handleColor = handleColor;
-        /** @property {Color} */
-        this.disabledColor = uiSystem.defaultDisabledColor;
+
+        // set properties
+        this.text = text;
         this.color = color;
         this.interactive = true;
     }
     update()
     {
         super.update();
-        if (this.mouseIsHeld)
+        if (this.mouseIsHeld && this.interactive)
         {
+            // check if value changed
             const handleSize = vec2(this.size.y);
             const handleWidth = this.size.x - handleSize.x;
             const p1 = this.pos.x - handleWidth/2;
@@ -540,20 +546,24 @@ class UIScrollbar extends UIObject
     }
     render()
     {
-        const lineColor = this.mouseIsHeld && !this.disabled ? this.color : this.lineColor;
+        // draw the scrollbar background
+        const lineColor = this.interactive && this.mouseIsHeld && !this.disabled ? 
+            this.color : this.lineColor;
         const color = this.disabled ? this.disabledColor : 
-            this.mouseIsOver ? this.hoverColor : this.color;
+            this.interactive && this.mouseIsHeld ? this.hoverColor : this.color;
         uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor, this.cornerRadius);
     
+        // draw the scrollbar handle
         const handleSize = vec2(this.size.y);
         const handleWidth = this.size.x - handleSize.x;
         const p1 = this.pos.x - handleWidth/2;
         const p2 = this.pos.x + handleWidth/2;
         const handlePos = vec2(lerp(p1, p2, this.value), this.pos.y);
         const handleColor = this.disabled ? this.disabledColor : 
-            this.mouseIsHeld ? this.color : this.handleColor;
+            this.interactive && this.mouseIsHeld ? this.color : this.handleColor;
         uiSystem.drawRect(handlePos, handleSize, handleColor, this.lineWidth, this.lineColor, this.cornerRadius);
 
+        // draw the text on the scrollbar
         const textScale = .8; // scale text to fit in scrollbar
         const textSize = vec2(this.size.x, this.textHeight || this.size.y*textScale);
         uiSystem.drawText(this.text, this.pos, textSize, 
