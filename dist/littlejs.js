@@ -274,7 +274,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         else
         {
             // clear canvas and set size to same as window
-            mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
+            mainCanvas.width = min(innerWidth, canvasMaxSize.x);
             mainCanvas.height = min(innerHeight, canvasMaxSize.y);
         }
 
@@ -1383,7 +1383,7 @@ function smoothStep(percent) { return percent * percent * (3 - 2 * percent); }
  *  @memberof Utilities */
 function isPowerOfTwo(value) { return !(value & (value - 1)); }
 
-/** Returns the nearest power of two not less then the value
+/** Returns the nearest power of two not less than the value
  *  @param {number} value
  *  @return {number}
  *  @memberof Utilities */
@@ -1474,8 +1474,7 @@ async function fetchJSON(url)
  * Check if object is a valid number, not NaN or undefined, but it may be infinite
  * @param {any} n
  * @return {boolean}
- * @memberof Utilities
- */
+ * @memberof Utilities */
 function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1614,16 +1613,14 @@ class RandomGenerator
  * let a = vec2(0, 1); // vector with coordinates (0, 1)
  * a = vec2(5);        // set a to (5, 5)
  * b = vec2();         // set b to (0, 0)
- * @memberof Utilities
- */
+ * @memberof Utilities */
 function vec2(x=0, y) { return new Vector2(x, y === undefined ? x : y); }
 
 /**
  * Check if object is a valid Vector2
  * @param {any} v
  * @return {boolean}
- * @memberof Utilities
- */
+ * @memberof Utilities */
 function isVector2(v) { return v instanceof Vector2; }
 
 // vector2 asserts
@@ -1877,16 +1874,14 @@ function rgb(r, g, b, a) { return new Color(r, g, b, a); }
  * @param {number} [l=1] - lightness
  * @param {number} [a=1] - alpha
  * @return {Color}
- * @memberof Utilities
- */
+ * @memberof Utilities */
 function hsl(h, s, l, a) { return new Color().setHSLA(h, s, l, a); }
 
 /**
  * Check if object is a valid Color
  * @param {any} c
  * @return {boolean}
- * @memberof Utilities
- */
+ * @memberof Utilities */
 function isColor(c) { return c instanceof Color; }
 
 // color asserts
@@ -2078,7 +2073,7 @@ class Color
         {
             const fromHex = (c)=> clamp(parseInt(hex[c],16)/15);
             this.r = fromHex(1);
-            this.g = fromHex(2),
+            this.g = fromHex(2);
             this.b = fromHex(3);
             this.a = hex.length === 5 ? fromHex(4) : 1;
         }
@@ -2086,7 +2081,7 @@ class Color
         {
             const fromHex = (c)=> clamp(parseInt(hex.slice(c,c+2),16)/255);
             this.r = fromHex(1);
-            this.g = fromHex(3),
+            this.g = fromHex(3);
             this.b = fromHex(5);
             this.a = hex.length === 9 ? fromHex(7) : 1;
         }
@@ -2274,7 +2269,7 @@ let cameraScale = 32;
 // Display settings
 
 /** Enable applying color to tiles when using canvas2d
- *  - This is slower but should be the same as webgl rendering
+ *  - This is slower but should be the same as WebGL rendering
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -2320,7 +2315,7 @@ let tilesPixelated = true;
  *  @memberof Settings */
 let fontDefault = 'arial';
 
-/** Enable to show the LittleJS splash screen be shown on startup
+/** Enable to show the LittleJS splash screen on startup
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -2335,7 +2330,7 @@ let headlessMode = false;
 ///////////////////////////////////////////////////////////////////////////////
 // WebGL settings
 
-/** Enable webgl rendering, webgl can be disabled and removed from build (with some features disabled)
+/** Enable WebGL accelerated rendering
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -2545,7 +2540,7 @@ function setCameraAngle(angle) { cameraAngle = angle; }
 function setCameraScale(scale) { cameraScale = scale; }
 
 /** Set if tiles should be colorized when using canvas2d
- *  This can be slower but results should look nearly identical to webgl rendering
+ *  This can be slower but results should look nearly identical to WebGL rendering
  *  It can be enabled/disabled at any time
  *  Optimized for performance, and will use faster method if color is white or untextured
  *  @param {boolean} colorTiles
@@ -2597,7 +2592,7 @@ function setTilesPixelated(pixelated) { tilesPixelated = pixelated; }
  *  @memberof Settings */
 function setFontDefault(font) { fontDefault = font; }
 
-/** Set if the LittleJS splash screen be shown on startup
+/** Set if the LittleJS splash screen should be shown on startup
  *  @param {boolean} show
  *  @memberof Settings */
 function setShowSplashScreen(show) { showSplashScreen = show; }
@@ -2607,13 +2602,13 @@ function setShowSplashScreen(show) { showSplashScreen = show; }
  *  @memberof Settings */
 function setHeadlessMode(headless) { headlessMode = headless; }
 
-/** Set if webgl rendering is enabled
+/** Set if WebGL rendering is enabled
  *  @param {boolean} enable
  *  @memberof Settings */
 function setGLEnable(enable)
 {
     glEnable = enable;
-    if (glCanvas) // hide glCanvas if webgl is disabled
+    if (glCanvas) // hide glCanvas if WebGL is disabled
         glCanvas.style.visibility = enable ? 'visible' : 'hidden';
 }
 
@@ -3150,15 +3145,18 @@ class EngineObject
 
     /** Apply acceleration to this object (adjust velocity, not affected by mass)
      *  @param {Vector2} acceleration */
-    applyAcceleration(acceleration) { if (this.mass) this.velocity = this.velocity.add(acceleration); }
+    applyAcceleration(acceleration)
+    { if (this.mass) this.velocity = this.velocity.add(acceleration); }
 
     /** Apply angular acceleration to this object
      *  @param {number} acceleration */
-    applyAngularAcceleration(acceleration) { if (this.mass) this.angleVelocity += acceleration; }
+    applyAngularAcceleration(acceleration)
+    { if (this.mass) this.angleVelocity += acceleration; }
 
     /** Apply force to this object (adjust velocity, affected by mass)
      *  @param {Vector2} force */
-    applyForce(force) { this.applyAcceleration(force.scale(1/this.mass)); }
+    applyForce(force)
+    { if (this.mass) this.applyAcceleration(force.scale(1/this.mass)); }
 
     /** Get the direction of the mirror
      *  @return {number} -1 if this.mirror is true, or 1 if not mirrored */
@@ -3329,8 +3327,7 @@ let drawCount;
  * tile(5, 8)                    // a tile at index 5 using a tile size of 8
  * tile(1, 16, 3)                // a tile at index 1 of size 16 on texture 3
  * tile(vec2(4,8), vec2(30,10))  // a tile at index (4,8) with a size of (30,10)
- * @memberof Draw
- */
+ * @memberof Draw */
 function tile(pos=new Vector2, size=tileSizeDefault, textureIndex=0, padding=0)
 {
     if (headlessMode)
@@ -3346,7 +3343,7 @@ function tile(pos=new Vector2, size=tileSizeDefault, textureIndex=0, padding=0)
     // create tile info object
     const tileInfo = new TileInfo(new Vector2, size, textureIndex, padding);
 
-    // use get the pos of the tile
+    // get the position of the tile
     const textureInfo = textureInfos[textureIndex];
     ASSERT(!!textureInfo, 'Texture not loaded');
     const sizePaddedX = size.x + padding*2;
@@ -3354,7 +3351,7 @@ function tile(pos=new Vector2, size=tileSizeDefault, textureIndex=0, padding=0)
     if (typeof pos === 'number')
     {
         const cols = textureInfo.size.x / sizePaddedX |0;
-        ASSERT(cols>0, 'Tile size is too big for texture');
+        ASSERT(cols > 0, 'Tile size is too big for texture');
         const posX = pos % cols, posY = (pos / cols) |0;
         tileInfo.pos.set(posX*sizePaddedX+padding, posY*sizePaddedY+padding);
     }
@@ -3408,7 +3405,7 @@ class TileInfo
     /**
      * Set this tile to use a full image
      * @param {HTMLImageElement|OffscreenCanvas} image
-     * @param {WebGLTexture} [glTexture] - webgl texture
+     * @param {WebGLTexture} [glTexture] - WebGL texture
      * @return {TileInfo}
      */
     setFullImage(image, glTexture)
@@ -3426,7 +3423,7 @@ class TextureInfo
     /**
      * Create a TextureInfo, called automatically by the engine
      * @param {HTMLImageElement|OffscreenCanvas} image
-     * @param {WebGLTexture} [glTexture] - webgl texture
+     * @param {WebGLTexture} [glTexture] - WebGL texture
      */
     constructor(image, glTexture)
     {
@@ -3436,7 +3433,7 @@ class TextureInfo
         this.size = vec2(image.width, image.height);
         /** @property {Vector2} - inverse of the size, cached for rendering */
         this.sizeInverse = vec2(1/image.width, 1/image.height);
-        /** @property {WebGLTexture} - webgl texture */
+        /** @property {WebGLTexture} - WebGL texture */
         this.glTexture = glTexture;
     }
 
@@ -3578,7 +3575,7 @@ function drawLine(posA, posB, thickness=.1, color, pos=vec2(), angle=0, useWebGL
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {Vector2} [pos=(0,0)] - Offset to apply
  *  @param {number}  [angle] - Angle to rotate by
- *  @param {boolean} [useWebGL] - Webgl not supported
+ *  @param {boolean} [useWebGL] - WebGL not supported
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
@@ -3589,7 +3586,7 @@ function drawPoly(points, color=new Color, lineWidth=0, lineColor=BLACK, pos=vec
     ASSERT(isColor(color) && isColor(lineColor), 'drawPoly color is invalid');
     ASSERT(isNumber(lineWidth), 'drawPoly lineWidth should be a number');
     ASSERT(isNumber(angle), 'drawPoly angle should be a number');
-    ASSERT(!useWebGL, 'drawPoly webgl not supported');
+    ASSERT(!useWebGL, 'drawPoly WebGL not supported');
     drawCanvas2D(pos, vec2(1), angle, false, context=>
     {
         context.beginPath();
@@ -3614,7 +3611,7 @@ function drawPoly(points, color=new Color, lineWidth=0, lineColor=BLACK, pos=vec
  *  @param {number}  [angle]
  *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=(0,0,0,1)]
- *  @param {boolean} [useWebGL] - Webgl not supported
+ *  @param {boolean} [useWebGL] - WebGL not supported
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
@@ -3625,8 +3622,8 @@ function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, l
     ASSERT(isColor(color) && isColor(lineColor), 'drawEllipse color is invalid');
     ASSERT(isNumber(angle), 'drawEllipse angle should be a number');
     ASSERT(isNumber(lineWidth), 'drawEllipse lineWidth should be a number');
-    ASSERT(lineWidth>=0 && lineWidth < size.x && lineWidth < size.y, 'drawEllipse invalid lineWidth');
-    ASSERT(!useWebGL, 'drawEllipse webgl not supported');
+    ASSERT(lineWidth >= 0 && lineWidth < size.x && lineWidth < size.y, 'drawEllipse invalid lineWidth');
+    ASSERT(!useWebGL, 'drawEllipse WebGL not supported');
     drawCanvas2D(pos, vec2(1), angle, false, context=>
     {
         context.beginPath();
@@ -3648,7 +3645,7 @@ function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, l
  *  @param {Color}   [color=(1,1,1,1)]
  *  @param {number}  [lineWidth=0]
  *  @param {Color}   [lineColor=(0,0,0,1)]
- *  @param {boolean} [useWebGL] - Webgl not supported
+ *  @param {boolean} [useWebGL] - WebGL not supported
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
@@ -4183,7 +4180,7 @@ function gamepadWasReleased(button, gamepad=0)
  *  @param {number} [gamepad]
  *  @return {Vector2}
  *  @memberof Input */
-function gamepadStick(stick,  gamepad=0)
+function gamepadStick(stick, gamepad=0)
 { return gamepadStickData[gamepad] ? gamepadStickData[gamepad][stick] || vec2() : vec2(); }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4317,7 +4314,7 @@ function gamepadsUpdate()
     {
         const min=.3, max=.8;
         const deadZone = (v)=>
-            v >  min ?  percent( v, min, max) :
+            v > min ? percent(v, min, max) :
             v < -min ? -percent(-v, min, max) : 0;
         return vec2(deadZone(v.x), deadZone(-v.y)).clampLength();
     }
@@ -4863,7 +4860,7 @@ class SoundWave extends Sound
 class SoundInstance
 {
     /** Create a sound instance
-     *  @param {Sound}    sound    - Reference to the parent sound object
+     *  @param {Sound}    sound    - The sound object
      *  @param {number}   [volume] - How much to scale volume by
      *  @param {number}   [rate]   - The playback rate to use
      *  @param {number}   [pan]    - How much to apply stereo panning
@@ -4871,11 +4868,11 @@ class SoundInstance
     constructor(sound, volume=1, rate=1, pan=0, loop=false)
     {
         ASSERT(sound instanceof Sound, 'SoundInstance requires a valid Sound object');
-        ASSERT(volume >=0, 'Sound volume must be positive or zero');
-        ASSERT(rate >=0, 'Sound rate must be positive or zero');
+        ASSERT(volume >= 0, 'Sound volume must be positive or zero');
+        ASSERT(rate >= 0, 'Sound rate must be positive or zero');
         ASSERT(isNumber(pan), 'Sound pan must be a number');
 
-        /** @property {AudioBufferSourceNode} - The audio source node */
+        /** @property {Sound} - The sound object */
         this.sound = sound;
         /** @property {number} - How much to scale volume by */
         this.volume = volume;
@@ -4907,7 +4904,7 @@ class SoundInstance
      */
     start(offset=0)
     {
-        ASSERT(offset >=0, 'Sound start offset must be positive or zero');
+        ASSERT(offset >= 0, 'Sound start offset must be positive or zero');
         this.gainNode = audioContext.createGain();
         this.source = playSamples(this.sound.sampleChannels, this.volume, this.rate, this.pan, this.loop, this.sound.sampleRate, this.gainNode, offset, this.onendedCallback);
         this.startTime = audioContext.currentTime - offset;
@@ -4918,7 +4915,7 @@ class SoundInstance
      *  @param {number} volume */
     setVolume(volume)
     {
-        ASSERT(volume >=0, 'Sound volume must be positive or zero');
+        ASSERT(volume >= 0, 'Sound volume must be positive or zero');
         if (!this.isPlaying())
             return;
         this.gainNode.gain.value = this.volume = volume;
@@ -4927,7 +4924,7 @@ class SoundInstance
     /** Stop this sound instance */
     stop(fadeTime=0)
     {
-        ASSERT(fadeTime >=0, 'Sound fade time must be positive or zero');
+        ASSERT(fadeTime >= 0, 'Sound fade time must be positive or zero');
         if (!this.isPlaying())
             return;
 
@@ -5137,8 +5134,7 @@ function zzfx(...zzfxSound) { return playSamples([zzfxG(...zzfxSound)]); }
  *  @param {number}  [tremolo] - Trembling effect, rate controlled by repeat time (percent)
  *  @param {number}  [filter] - Filter cutoff frequency, positive for HPF, negative for LPF (Hz)
  *  @return {Array} - Array of audio samples
- *  @memberof Audio
- */
+ *  @memberof Audio */
 function zzfxG
 (
     volume = 1,
@@ -5427,7 +5423,7 @@ class TileLayerData
 /**
  * Canvas Layer - cached off screen rendering system
  * - Contains an offscreen canvas that can be rendered to
- * - Webgl rendering is optional, call useWebGL to enable
+ * - WebGL rendering is optional, call useWebGL to enable
  * @extends EngineObject
  * @example
  * const canvasLayer = new CanvasLayer(vec2(), vec2(200,100));
@@ -5449,7 +5445,7 @@ class CanvasLayer extends EngineObject
         this.canvas = headlessMode ? undefined : new OffscreenCanvas(canvasSize.x, canvasSize.y);
         /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this layer */
         this.context = headlessMode ? undefined : this.canvas.getContext('2d');
-        /** @property {WebGLTexture} - Texture if using webgl for this layer, call useWebGL to enable */
+        /** @property {WebGLTexture} - Texture if using WebGL for this layer, call useWebGL to enable */
         this.glTexture = undefined;
         this.gravityScale = 0; // disable gravity by default for canvas layers
     }
@@ -5460,7 +5456,7 @@ class CanvasLayer extends EngineObject
         if (this.destroyed)
             return;
 
-        // free up the webgl texture
+        // free up the WebGL texture
         if (this.glTexture)
             glDeleteTexture(this.glTexture);
         super.destroy();
@@ -5485,12 +5481,12 @@ class CanvasLayer extends EngineObject
     draw(pos, size, angle=0, color=WHITE, mirror=false, additiveColor, screenSpace=false, context)
     {
         // draw the canvas layer as a single tile that uses the whole texture
-        const useWebgl = glEnable && this.glTexture !== undefined;
+        const useWebGL = glEnable && this.glTexture !== undefined;
         const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
-        drawTile(pos, size, tileInfo, color, angle, mirror, additiveColor, useWebgl, screenSpace, context);
+        drawTile(pos, size, tileInfo, color, angle, mirror, additiveColor, useWebGL, screenSpace, context);
     }
 
-    /** Draw onto the layer canvas in world space (bypass webgl)
+    /** Draw onto the layer canvas in world space (bypass WebGL)
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
      *  @param {number}   angle
@@ -5546,8 +5542,8 @@ class CanvasLayer extends EngineObject
     drawRect(pos, size, color, angle)
     { this.drawTile(pos, size, undefined, color, angle); }
 
-    /** Create or update the webgl texture for this layer
-     *  @param {boolean} [enable] - enable webgl rendering and update the texture */
+    /** Create or update the WebGL texture for this layer
+     *  @param {boolean} [enable] - enable WebGL rendering and update the texture */
     useWebGL(enable=true)
     {
         if (glEnable && enable)
@@ -5593,7 +5589,7 @@ class TileLayer extends CanvasLayer
         this.canvas = new OffscreenCanvas(canvasSize.x, canvasSize.y);
         /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
         this.context = this.canvas.getContext('2d');
-        /** @property {WebGLTexture} - Texture if using webgl for this layer */
+        /** @property {WebGLTexture} - Texture if using WebGL for this layer */
         this.glTexture = useWebGL ? glCreateTexture(this.canvas) : undefined;
         // set no friction by default, applied friction is max of both objects
         this.friction = 0;
@@ -5645,8 +5641,8 @@ class TileLayer extends CanvasLayer
         // draw the tile layer as a single tile
         const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
         const pos = this.pos.add(this.size.scale(.5));
-        const useWebgl = glEnable && this.glTexture !== undefined;
-        drawTile(pos, this.size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebgl);
+        const useWebGL = glEnable && this.glTexture !== undefined;
+        drawTile(pos, this.size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebGL);
     }
 
     /** Draw all the tile data to an offscreen canvas
@@ -5659,7 +5655,7 @@ class TileLayer extends CanvasLayer
             this.drawTileData(vec2(x,y), false);
         this.redrawEnd();
         if (this.glTexture)
-            this.useWebGL(); // update webgl texture
+            this.useWebGL(); // update WebGL texture
     }
 
     /** Call to start the redraw process
@@ -5736,7 +5732,7 @@ class TileLayer extends CanvasLayer
  * Tile Collision Layer - a tile layer with collision
  * - adds collision data and functions to TileLayer
  * - there can be multiple tile collision layers
- * - tile collison layers should not overlap each other
+ * - tile collision layers should not overlap each other
  * @extends TileLayer
  */
 class TileCollisionLayer extends TileLayer
@@ -5913,31 +5909,31 @@ class ParticleEmitter extends EngineObject
 {
     /** Create a particle system with the given settings
      *  @param {Vector2} position - World space position of the emitter
-     *  @param {Number} [angle] - Angle to emit the particles
-     *  @param {Number|Vector2}  [emitSize] - World space size of the emitter (float for circle diameter, vec2 for rect)
-     *  @param {Number} [emitTime] - How long to stay alive (0 is forever)
-     *  @param {Number} [emitRate] - How many particles per second to spawn, does not emit if 0
-     *  @param {Number} [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
+     *  @param {number} [angle] - Angle to emit the particles
+     *  @param {number|Vector2}  [emitSize] - World space size of the emitter (float for circle diameter, vec2 for rect)
+     *  @param {number} [emitTime] - How long to stay alive (0 is forever)
+     *  @param {number} [emitRate] - How many particles per second to spawn, does not emit if 0
+     *  @param {number} [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
      *  @param {TileInfo} [tileInfo] - Tile info to render particles (undefined is untextured)
      *  @param {Color} [colorStartA=(1,1,1,1)] - Color at start of life 1, randomized between start colors
      *  @param {Color} [colorStartB=(1,1,1,1)] - Color at start of life 2, randomized between start colors
      *  @param {Color} [colorEndA=(1,1,1,0)] - Color at end of life 1, randomized between end colors
      *  @param {Color} [colorEndB=(1,1,1,0)] - Color at end of life 2, randomized between end colors
-     *  @param {Number} [particleTime]      - How long particles live
-     *  @param {Number} [sizeStart]         - How big are particles at start
-     *  @param {Number} [sizeEnd]           - How big are particles at end
-     *  @param {Number} [speed]             - How fast are particles when spawned
-     *  @param {Number} [angleSpeed]        - How fast are particles rotating
-     *  @param {Number} [damping]           - How much to dampen particle speed
-     *  @param {Number} [angleDamping]      - How much to dampen particle angular speed
-     *  @param {Number} [gravityScale]      - How much gravity effect particles
-     *  @param {Number} [particleConeAngle] - Cone for start particle angle
-     *  @param {Number} [fadeRate]          - How quick to fade particles at start/end in percent of life
-     *  @param {Number} [randomness]    - Apply extra randomness percent
+     *  @param {number} [particleTime]      - How long particles live
+     *  @param {number} [sizeStart]         - How big are particles at start
+     *  @param {number} [sizeEnd]           - How big are particles at end
+     *  @param {number} [speed]             - How fast are particles when spawned
+     *  @param {number} [angleSpeed]        - How fast are particles rotating
+     *  @param {number} [damping]           - How much to dampen particle speed
+     *  @param {number} [angleDamping]      - How much to dampen particle angular speed
+     *  @param {number} [gravityScale]      - How much gravity effect particles
+     *  @param {number} [particleConeAngle] - Cone for start particle angle
+     *  @param {number} [fadeRate]          - How quick to fade particles at start/end in percent of life
+     *  @param {number} [randomness]    - Apply extra randomness percent
      *  @param {boolean} [collideTiles] - Do particles collide against tiles
      *  @param {boolean} [additive]     - Should particles use additive blend
      *  @param {boolean} [randomColorLinear] - Should color be randomized linearly or across each component
-     *  @param {Number} [renderOrder] - Render order for particles (additive is above other stuff by default)
+     *  @param {number} [renderOrder] - Render order for particles (additive is above other stuff by default)
      *  @param {boolean}  [localSpace] - Should it be in local space of emitter (world space is default)
      */
     constructor
@@ -5974,13 +5970,13 @@ class ParticleEmitter extends EngineObject
         super(position, vec2(), tileInfo, angle, undefined, renderOrder);
 
         // emitter settings
-        /** @property {Number|Vector2} - World space size of the emitter (float for circle diameter, vec2 for rect) */
+        /** @property {number|Vector2} - World space size of the emitter (float for circle diameter, vec2 for rect) */
         this.emitSize = emitSize
-        /** @property {Number} - How long to stay alive (0 is forever) */
+        /** @property {number} - How long to stay alive (0 is forever) */
         this.emitTime = emitTime;
-        /** @property {Number} - How many particles per second to spawn, does not emit if 0 */
+        /** @property {number} - How many particles per second to spawn, does not emit if 0 */
         this.emitRate = emitRate;
-        /** @property {Number} - Local angle to apply velocity to particles from emitter */
+        /** @property {number} - Local angle to apply velocity to particles from emitter */
         this.emitConeAngle = emitConeAngle;
 
         // color settings
@@ -5996,27 +5992,27 @@ class ParticleEmitter extends EngineObject
         this.randomColorLinear = randomColorLinear;
 
         // particle settings
-        /** @property {Number} - How long particles live */
+        /** @property {number} - How long particles live */
         this.particleTime      = particleTime;
-        /** @property {Number} - How big are particles at start */
+        /** @property {number} - How big are particles at start */
         this.sizeStart         = sizeStart;
-        /** @property {Number} - How big are particles at end */
+        /** @property {number} - How big are particles at end */
         this.sizeEnd           = sizeEnd;
-        /** @property {Number} - How fast are particles when spawned */
+        /** @property {number} - How fast are particles when spawned */
         this.speed             = speed;
-        /** @property {Number} - How fast are particles rotating */
+        /** @property {number} - How fast are particles rotating */
         this.angleSpeed        = angleSpeed;
-        /** @property {Number} - How much to dampen particle speed */
+        /** @property {number} - How much to dampen particle speed */
         this.damping           = damping;
-        /** @property {Number} - How much to dampen particle angular speed */
+        /** @property {number} - How much to dampen particle angular speed */
         this.angleDamping      = angleDamping;
-        /** @property {Number} - How much does gravity effect particles */
+        /** @property {number} - How much gravity affects particles */
         this.gravityScale      = gravityScale;
-        /** @property {Number} - Cone for start particle angle */
+        /** @property {number} - Cone for start particle angle */
         this.particleConeAngle = particleConeAngle;
-        /** @property {Number} - How quick to fade in particles at start/end in percent of life */
+        /** @property {number} - How quick to fade in particles at start/end in percent of life */
         this.fadeRate          = fadeRate;
-        /** @property {Number} - Apply extra randomness percent */
+        /** @property {number} - Apply extra randomness percent */
         this.randomness        = randomness;
         /** @property {boolean} - Do particles collide against tiles */
         this.collideTiles      = collideTiles;
@@ -6024,13 +6020,13 @@ class ParticleEmitter extends EngineObject
         this.additive          = additive;
         /** @property {boolean} - Should it be in local space of emitter */
         this.localSpace        = localSpace;
-        /** @property {Number} - If non zero the particle is drawn as a trail, stretched in the direction of velocity */
+        /** @property {number} - If non zero the particle is drawn as a trail, stretched in the direction of velocity */
         this.trailScale        = 0;
         /** @property {Function}   - Callback when particle is destroyed */
         this.particleDestroyCallback = undefined;
         /** @property {Function}   - Callback when particle is created */
         this.particleCreateCallback = undefined;
-        /** @property {Number} - Track particle emit time */
+        /** @property {number} - Track particle emit time */
         this.emitTimeBuffer    = 0;
     }
 
@@ -6137,15 +6133,15 @@ class Particle extends EngineObject
      * Typically this is created automatically by a ParticleEmitter
      * @param {Vector2}  position   - World space position of the particle
      * @param {TileInfo} tileInfo   - Tile info to render particles
-     * @param {Number}   angle      - Angle to rotate the particle
+     * @param {number}   angle      - Angle to rotate the particle
      * @param {Color}    colorStart - Color at start of life
      * @param {Color}    colorEnd   - Color at end of life
-     * @param {Number}   lifeTime   - How long to live for
-     * @param {Number}   sizeStart  - Size at start of life
-     * @param {Number}   sizeEnd    - Size at end of life
-     * @param {Number}   fadeRate   - How quick to fade in/out
+     * @param {number}   lifeTime   - How long to live for
+     * @param {number}   sizeStart  - Size at start of life
+     * @param {number}   sizeEnd    - Size at end of life
+     * @param {number}   fadeRate   - How quick to fade in/out
      * @param {boolean}  additive   - Does it use additive blend mode
-     * @param {Number}   trailScale - If a trail, how long to make it
+     * @param {number}   trailScale - If a trail, how long to make it
      * @param {ParticleEmitter} [localSpaceEmitter] - Parent emitter if local space
      * @param {Function} [destroyCallback] - Callback when particle dies
      */
@@ -6158,17 +6154,17 @@ class Particle extends EngineObject
         this.colorStart = colorStart;
         /** @property {Color} - Calculated change in color */
         this.colorEndDelta = colorEnd.subtract(colorStart);
-        /** @property {Number} - How long to live for */
+        /** @property {number} - How long to live for */
         this.lifeTime = lifeTime;
-        /** @property {Number} - Size at start of life */
+        /** @property {number} - Size at start of life */
         this.sizeStart = sizeStart;
-        /** @property {Number} - Calculated change in size */
+        /** @property {number} - Calculated change in size */
         this.sizeEndDelta = sizeEnd - sizeStart;
-        /** @property {Number} - How quick to fade in/out */
+        /** @property {number} - How quick to fade in/out */
         this.fadeRate = fadeRate;
         /** @property {boolean} - Is it additive */
         this.additive = additive;
-        /** @property {Number} - If a trail, how long to make it */
+        /** @property {number} - If a trail, how long to make it */
         this.trailScale = trailScale;
         /** @property {ParticleEmitter} - Parent emitter if local space */
         this.localSpaceEmitter = localSpaceEmitter;
@@ -6274,7 +6270,7 @@ let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimeLast;
 /** Initialize medals with a save name used for storage
  *  - Call this after creating all medals
  *  - Checks if medals are unlocked
- *  @param {String} saveName
+ *  @param {string} saveName
  *  @memberof Medals */
 function medalsInit(saveName)
 {
@@ -6335,26 +6331,26 @@ function medalsForEach(callback)
 class Medal
 {
     /** Create a medal object and adds it to the list of medals
-     *  @param {Number} id            - The unique identifier of the medal
-     *  @param {String} name          - Name of the medal
-     *  @param {String} [description] - Description of the medal
-     *  @param {String} [icon]        - Icon for the medal
-     *  @param {String} [src]         - Image location for the medal
+     *  @param {number} id            - The unique identifier of the medal
+     *  @param {string} name          - Name of the medal
+     *  @param {string} [description] - Description of the medal
+     *  @param {string} [icon]        - Icon for the medal
+     *  @param {string} [src]         - Image location for the medal
      */
     constructor(id, name, description='', icon='🏆', src)
     {
         ASSERT(id >= 0 && !medals[id]);
 
-        /** @property {Number} - The unique identifier of the medal */
+        /** @property {number} - The unique identifier of the medal */
         this.id = id;
 
-        /** @property {String} - Name of the medal */
+        /** @property {string} - Name of the medal */
         this.name = name;
 
-        /** @property {String} - Description of the medal */
+        /** @property {string} - Description of the medal */
         this.description = description;
 
-        /** @property {String} - Icon for the medal */
+        /** @property {string} - Icon for the medal */
         this.icon = icon;
 
         /** @property {boolean} - Is the medal unlocked? */
@@ -6381,7 +6377,7 @@ class Medal
     }
 
     /** Render a medal
-     *  @param {Number} [hidePercent] - How much to slide the medal off screen
+     *  @param {number} [hidePercent] - How much to slide the medal off screen
      */
     render(hidePercent=0)
     {
@@ -6422,7 +6418,7 @@ class Medal
 
     /** Render the icon for a medal
      *  @param {Vector2} pos - Screen space position
-     *  @param {Number} size - Screen space size
+     *  @param {number} size - Screen space size
      */
     renderIcon(pos, size)
     {
@@ -6439,8 +6435,8 @@ class Medal
 
 /**
  * LittleJS WebGL Interface
- * - All webgl used by the engine is wrapped up here
- * - Will fall back to 2D canvas rendering if webgl is not supported
+ * - All WebGL used by the engine is wrapped up here
+ * - Will fall back to 2D canvas rendering if WebGL is not supported
  * - For normal stuff you won't need to see or call anything in this file
  * - For advanced stuff there are helper functions to create shaders, textures, etc
  * - Can be disabled with glEnable to revert to 2D canvas rendering
@@ -6455,12 +6451,12 @@ class Medal
  *  @memberof WebGL */
 let glCanvas;
 
-/** 2d context for glCanvas
+/** WebGL2 context for `glCanvas`
  *  @type {WebGL2RenderingContext}
  *  @memberof WebGL */
 let glContext;
 
-/** Should webgl be setup with anti-aliasing? must be set before calling engineInit
+/** Should WebGL be setup with anti-aliasing? must be set before calling engineInit
  *  @type {boolean}
  *  @memberof WebGL */
 let glAntialias = true;
@@ -6493,7 +6489,7 @@ function glInit()
         return;
     }
 
-    // create the webgl canvas
+    // create the WebGL canvas
     const rootElement = mainCanvas.parentElement;
     rootElement.appendChild(glCanvas);
 
@@ -6538,7 +6534,7 @@ function glInit()
     glContext.bufferData(glContext.ARRAY_BUFFER, geometry, glContext.STATIC_DRAW);
 }
 
-// Setup webgl render each frame, called automatically by engine
+// Setup WebGL render each frame, called automatically by engine
 // Also used by tile layer rendering when redrawing tiles
 function glPreRender()
 {
@@ -6600,7 +6596,7 @@ function glClearCanvas()
     glContext.clear(glContext.COLOR_BUFFER_BIT);
 }
 
-/** Set the WebGl texture, called automatically if using multiple textures
+/** Set the WebGL texture, called automatically if using multiple textures
  *  - This may also flush the gl buffer resulting in more draw calls and worse performance
  *  @param {WebGLTexture} texture
  *  @param {boolean} [wrap] - Should the texture wrap or clamp
@@ -6621,8 +6617,8 @@ function glSetTexture(texture, wrap=false)
 }
 
 /** Compile WebGL shader of the given type, will throw errors if in debug mode
- *  @param {String} source
- *  @param {Number} type
+ *  @param {string} source
+ *  @param {number} type
  *  @return {WebGLShader}
  *  @memberof WebGL */
 function glCompileShader(source, type)
@@ -6641,8 +6637,8 @@ function glCompileShader(source, type)
 }
 
 /** Create WebGL program with given shaders
- *  @param {String} vsSource
- *  @param {String} fsSource
+ *  @param {string} vsSource
+ *  @param {string} fsSource
  *  @return {WebGLProgram}
  *  @memberof WebGL */
 function glCreateProgram(vsSource, fsSource)
@@ -6753,7 +6749,7 @@ function glCopyToContext(context)
     context.drawImage(glCanvas, 0, 0);
 }
 
-/** Set anti-aliasing for webgl canvas
+/** Set anti-aliasing for WebGL canvas
  *  @param {boolean} [antialias]
  *  @memberof WebGL */
 function glSetAntialias(antialias=true)
@@ -6763,17 +6759,17 @@ function glSetAntialias(antialias=true)
 }
 
 /** Add a sprite to the gl draw list, used by all gl draw functions
- *  @param {Number} x
- *  @param {Number} y
- *  @param {Number} sizeX
- *  @param {Number} sizeY
- *  @param {Number} [angle]
- *  @param {Number} [uv0X]
- *  @param {Number} [uv0Y]
- *  @param {Number} [uv1X]
- *  @param {Number} [uv1Y]
- *  @param {Number} [rgba=-1] - white is -1
- *  @param {Number} [rgbaAdditive=0] - black is 0
+ *  @param {number} x
+ *  @param {number} y
+ *  @param {number} sizeX
+ *  @param {number} sizeY
+ *  @param {number} [angle]
+ *  @param {number} [uv0X]
+ *  @param {number} [uv0Y]
+ *  @param {number} [uv1X]
+ *  @param {number} [uv1Y]
+ *  @param {number} [rgba=-1] - white is -1
+ *  @param {number} [rgbaAdditive=0] - black is 0
  *  @memberof WebGL */
 function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgba=-1, rgbaAdditive=0)
 {
@@ -6818,11 +6814,11 @@ let newgrounds;
 class NewgroundsMedal extends Medal
 {
     /** Create a newgrounds medal object and adds it to the list of medals
-     *  @param {Number} id            - The unique identifier of the medal
-     *  @param {String} name          - Name of the medal
-     *  @param {String} [description] - Description of the medal
-     *  @param {String} [icon]        - Icon for the medal
-     *  @param {String} [src]         - Image location for the medal
+     *  @param {number} id            - The unique identifier of the medal
+     *  @param {string} name          - Name of the medal
+     *  @param {string} [description] - Description of the medal
+     *  @param {string} [icon]        - Icon for the medal
+     *  @param {string} [src]         - Image location for the medal
      */
     constructor(id, name, description, icon, src)
     { super(id, name, description, icon, src); }
@@ -9634,7 +9630,7 @@ function drawNineSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, 
 }
 
 /** Draw a scalable nine-slice UI element in world space
- *  This function can apply color and additive color if webgl is enabled
+ *  This function can apply color and additive color if WebGL is enabled
  *  @param {Vector2} pos - World space position
  *  @param {Vector2} size - World space size
  *  @param {TileInfo} startTile - Starting tile for the nine-slice pattern
@@ -9694,7 +9690,7 @@ function drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2,
 }
 
 /** Draw a scalable three-slice UI element in world space
- *  This function can apply color and additive color if webgl is enabled
+ *  This function can apply color and additive color if WebGL is enabled
  *  @param {Vector2} pos - World space position
  *  @param {Vector2} size - World space size
  *  @param {TileInfo} startTile - Starting tile for the three-slice pattern
