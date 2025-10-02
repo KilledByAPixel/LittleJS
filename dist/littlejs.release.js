@@ -651,7 +651,6 @@ function drawEngineSplashScreen(t)
 
     x.restore();
 }
-
 /**
  * LittleJS - Release Mode
  * - This file is used for release builds in place of engineDebug.js
@@ -690,7 +689,6 @@ function debugVideoCaptureIsActive(){ return false; }
 function debugVideoCaptureStart (){}
 function debugVideoCaptureStop  (){}
 function debugVideoCaptureUpdate(){}
-
 /**
  * LittleJS Utility Classes and Functions
  * - General purpose math library
@@ -1684,7 +1682,6 @@ class Timer
      * @return {number} */
     valueOf() { return this.get(); }
 }
-
 /**
  * LittleJS Engine Settings
  * - All settings for the engine are here
@@ -2213,7 +2210,6 @@ function setShowWatermark(show) { showWatermark = show; }
  *  @param {string} key
  *  @memberof Debug */
 function setDebugKey(key) { debugKey = key; }
-
 /**
  * LittleJS Object System
  */
@@ -2682,7 +2678,6 @@ class EngineObject
         this.parent && drawLine(this.pos, this.parent.pos, .1, rgb(1,1,1,.5));
     }
 }
-
 /**
  * LittleJS Drawing System
  * - Hybrid system with both Canvas2D and WebGL available
@@ -3462,7 +3457,6 @@ class FontImage
         context.restore();
     }
 }
-
 /**
  * LittleJS Input System
  * - Tracks keyboard down, pressed, and released
@@ -4048,7 +4042,6 @@ function pointerLockExit() { document.exitPointerLock && document.exitPointerLoc
  *  @return {boolean}
  *  @memberof Input */
 function pointerLockIsActive() { return document.pointerLockElement === mainCanvas; }
-
 /**
  * LittleJS Audio System
  * - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a> - ZzFX Sound Effect Generator
@@ -5331,7 +5324,6 @@ class TileCollisionLayer extends TileLayer
         debugRaycast && debugLine(posStart, posEnd, '#00f', .02);
     }
 }
-
 /**
  * LittleJS Particle System
  */
@@ -5696,7 +5688,6 @@ class Particle extends EngineObject
         }
     }
 }
-
 /**
  * LittleJS Medal System
  * - Tracks and displays medals
@@ -5880,7 +5871,6 @@ class Medal
     // Get local storage key used by the medal
     storageKey() { return medalsSaveName + '_' + this.id; }
 }
-
 /**
  * LittleJS WebGL Interface
  * - All WebGL used by the engine is wrapped up here
@@ -6238,7 +6228,6 @@ function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgb
     glColorData[offset++] = rgbaAdditive;
     glPositionData[offset++] = angle;
 }
-
 /** 
  * LittleJS Newgrounds API
  * - NewgroundsMedal extends Medal with Newgrounds API functionality
