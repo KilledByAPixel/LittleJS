@@ -77,7 +77,7 @@ let tilesPixelated = true;
  *  @memberof Settings */
 let fontDefault = 'arial';
 
-/** Enable to show the LittleJS splash screen be shown on startup
+/** Enable to show the LittleJS splash screen on startup
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -354,7 +354,7 @@ function setTilesPixelated(pixelated) { tilesPixelated = pixelated; }
  *  @memberof Settings */
 function setFontDefault(font) { fontDefault = font; }
 
-/** Set if the LittleJS splash screen be shown on startup
+/** Set if the LittleJS splash screen should be shown on startup
  *  @param {boolean} show
  *  @memberof Settings */
 function setShowSplashScreen(show) { showSplashScreen = show; }
