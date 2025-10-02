@@ -271,7 +271,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         else
         {
             // clear canvas and set size to same as window
-            mainCanvas.width  = min(innerWidth,  canvasMaxSize.x);
+            mainCanvas.width = min(innerWidth, canvasMaxSize.x);
             mainCanvas.height = min(innerHeight, canvasMaxSize.y);
         }
 

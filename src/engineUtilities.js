@@ -230,8 +230,7 @@ async function fetchJSON(url)
  * Check if object is a valid number, not NaN or undefined, but it may be infinite
  * @param {any} n
  * @return {boolean}
- * @memberof Utilities
- */
+ * @memberof Utilities */
 function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -370,16 +369,14 @@ class RandomGenerator
  * let a = vec2(0, 1); // vector with coordinates (0, 1)
  * a = vec2(5);        // set a to (5, 5)
  * b = vec2();         // set b to (0, 0)
- * @memberof Utilities
- */
+ * @memberof Utilities */
 function vec2(x=0, y) { return new Vector2(x, y === undefined ? x : y); }
 
 /**
  * Check if object is a valid Vector2
  * @param {any} v
  * @return {boolean}
- * @memberof Utilities
- */
+ * @memberof Utilities */
 function isVector2(v) { return v instanceof Vector2; }
 
 // vector2 asserts
@@ -633,16 +630,14 @@ function rgb(r, g, b, a) { return new Color(r, g, b, a); }
  * @param {number} [l=1] - lightness
  * @param {number} [a=1] - alpha
  * @return {Color}
- * @memberof Utilities
- */
+ * @memberof Utilities */
 function hsl(h, s, l, a) { return new Color().setHSLA(h, s, l, a); }
 
 /**
  * Check if object is a valid Color
  * @param {any} c
  * @return {boolean}
- * @memberof Utilities
- */
+ * @memberof Utilities */
 function isColor(c) { return c instanceof Color; }
 
 // color asserts

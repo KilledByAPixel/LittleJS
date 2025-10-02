@@ -532,8 +532,7 @@ function zzfx(...zzfxSound) { return playSamples([zzfxG(...zzfxSound)]); }
  *  @param {number}  [tremolo] - Trembling effect, rate controlled by repeat time (percent)
  *  @param {number}  [filter] - Filter cutoff frequency, positive for HPF, negative for LPF (Hz)
  *  @return {Array} - Array of audio samples
- *  @memberof Audio
- */
+ *  @memberof Audio */
 function zzfxG
 (
     volume = 1,

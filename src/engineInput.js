@@ -164,7 +164,7 @@ function gamepadWasReleased(button, gamepad=0)
  *  @param {number} [gamepad]
  *  @return {Vector2}
  *  @memberof Input */
-function gamepadStick(stick,  gamepad=0)
+function gamepadStick(stick, gamepad=0)
 { return gamepadStickData[gamepad] ? gamepadStickData[gamepad][stick] || vec2() : vec2(); }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -298,7 +298,7 @@ function gamepadsUpdate()
     {
         const min=.3, max=.8;
         const deadZone = (v)=>
-            v >  min ?  percent( v, min, max) :
+            v > min ? percent(v, min, max) :
             v < -min ? -percent(-v, min, max) : 0;
         return vec2(deadZone(v.x), deadZone(-v.y)).clampLength();
     }

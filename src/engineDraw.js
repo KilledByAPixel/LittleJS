@@ -91,8 +91,7 @@ let drawCount;
  * tile(5, 8)                    // a tile at index 5 using a tile size of 8
  * tile(1, 16, 3)                // a tile at index 1 of size 16 on texture 3
  * tile(vec2(4,8), vec2(30,10))  // a tile at index (4,8) with a size of (30,10)
- * @memberof Draw
- */
+ * @memberof Draw */
 function tile(pos=new Vector2, size=tileSizeDefault, textureIndex=0, padding=0)
 {
     if (headlessMode)
