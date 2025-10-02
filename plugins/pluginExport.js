@@ -53,4 +53,4 @@ export
     drawNineSliceScreen,
     drawThreeSlice,
     drawThreeSliceScreen,
-};
+}

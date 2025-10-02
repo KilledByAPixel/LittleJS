@@ -314,4 +314,4 @@ export
 	medalsPreventUnlock,
 	medalsInit,
 	Medal,
-};
+}
