@@ -82,7 +82,7 @@ export function explosion(pos, radius=3)
             GameLevel.decorateTile(pos.add(vec2(x,y)).floor());
     }
 
-    // update webgl texture
+    // update WebGL texture
     GameLevel.updateWebGL(GameLevel.foregroundTileLayer);
 
     // kill/push objects
@@ -153,7 +153,7 @@ export function destroyTile(pos, makeSound = 1, cleanup = 1)
     layer.setData(pos, new LJS.TileLayerData, true);
     layer.setCollisionData(pos, GameLevel.tileType_empty);
 
-    // cleanup neighbors and rebuild webgl
+    // cleanup neighbors and rebuild WebGL
     if (cleanup)
     {
         for (let i=-1;i<=1;++i)
@@ -256,7 +256,7 @@ export class ParallaxLayer extends LJS.CanvasLayer
         // remove gradient sliver from left side
         this.context.clearRect(0,0,1,h);
     
-        // make webgl texture
+        // make WebGL texture
         this.useWebGL(LJS.glEnable);
     }
 

@@ -24,7 +24,7 @@ function drawNineSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, 
 }
 
 /** Draw a scalable nine-slice UI element in world space
- *  This function can apply color and additive color if webgl is enabled
+ *  This function can apply color and additive color if WebGL is enabled
  *  @param {Vector2} pos - World space position
  *  @param {Vector2} size - World space size
  *  @param {TileInfo} startTile - Starting tile for the nine-slice pattern
@@ -84,7 +84,7 @@ function drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2,
 }
 
 /** Draw a scalable three-slice UI element in world space
- *  This function can apply color and additive color if webgl is enabled
+ *  This function can apply color and additive color if WebGL is enabled
  *  @param {Vector2} pos - World space position
  *  @param {Vector2} size - World space size
  *  @param {TileInfo} startTile - Starting tile for the three-slice pattern

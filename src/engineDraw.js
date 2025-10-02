@@ -170,7 +170,7 @@ class TileInfo
     /**
      * Set this tile to use a full image
      * @param {HTMLImageElement|OffscreenCanvas} image
-     * @param {WebGLTexture} [glTexture] - webgl texture
+     * @param {WebGLTexture} [glTexture] - WebGL texture
      * @return {TileInfo}
      */
     setFullImage(image, glTexture)
@@ -188,7 +188,7 @@ class TextureInfo
     /**
      * Create a TextureInfo, called automatically by the engine
      * @param {HTMLImageElement|OffscreenCanvas} image
-     * @param {WebGLTexture} [glTexture] - webgl texture
+     * @param {WebGLTexture} [glTexture] - WebGL texture
      */
     constructor(image, glTexture)
     {
@@ -198,7 +198,7 @@ class TextureInfo
         this.size = vec2(image.width, image.height);
         /** @property {Vector2} - inverse of the size, cached for rendering */
         this.sizeInverse = vec2(1/image.width, 1/image.height);
-        /** @property {WebGLTexture} - webgl texture */
+        /** @property {WebGLTexture} - WebGL texture */
         this.glTexture = glTexture;
     }
 
@@ -351,7 +351,7 @@ function drawPoly(points, color=new Color, lineWidth=0, lineColor=BLACK, pos=vec
     ASSERT(isColor(color) && isColor(lineColor), 'drawPoly color is invalid');
     ASSERT(isNumber(lineWidth), 'drawPoly lineWidth should be a number');
     ASSERT(isNumber(angle), 'drawPoly angle should be a number');
-    ASSERT(!useWebGL, 'drawPoly webgl not supported');
+    ASSERT(!useWebGL, 'drawPoly WebGL not supported');
     drawCanvas2D(pos, vec2(1), angle, false, context=>
     {
         context.beginPath();
@@ -388,7 +388,7 @@ function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, l
     ASSERT(isNumber(angle), 'drawEllipse angle should be a number');
     ASSERT(isNumber(lineWidth), 'drawEllipse lineWidth should be a number');
     ASSERT(lineWidth>=0 && lineWidth < size.x && lineWidth < size.y, 'drawEllipse invalid lineWidth');
-    ASSERT(!useWebGL, 'drawEllipse webgl not supported');
+    ASSERT(!useWebGL, 'drawEllipse WebGL not supported');
     drawCanvas2D(pos, vec2(1), angle, false, context=>
     {
         context.beginPath();

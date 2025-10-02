@@ -31,7 +31,7 @@ let cameraScale = 32;
 // Display settings
 
 /** Enable applying color to tiles when using canvas2d
- *  - This is slower but should be the same as webgl rendering
+ *  - This is slower but should be the same as WebGL rendering
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -92,7 +92,7 @@ let headlessMode = false;
 ///////////////////////////////////////////////////////////////////////////////
 // WebGL settings
 
-/** Enable webgl rendering, webgl can be disabled and removed from build (with some features disabled)
+/** Enable WebGL accelerated rendering
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -302,7 +302,7 @@ function setCameraAngle(angle) { cameraAngle = angle; }
 function setCameraScale(scale) { cameraScale = scale; }
 
 /** Set if tiles should be colorized when using canvas2d
- *  This can be slower but results should look nearly identical to webgl rendering
+ *  This can be slower but results should look nearly identical to WebGL rendering
  *  It can be enabled/disabled at any time
  *  Optimized for performance, and will use faster method if color is white or untextured
  *  @param {boolean} colorTiles
@@ -364,13 +364,13 @@ function setShowSplashScreen(show) { showSplashScreen = show; }
  *  @memberof Settings */
 function setHeadlessMode(headless) { headlessMode = headless; }
 
-/** Set if webgl rendering is enabled
+/** Set if WebGL rendering is enabled
  *  @param {boolean} enable
  *  @memberof Settings */
 function setGLEnable(enable)
 {
     glEnable = enable;
-    if (glCanvas) // hide glCanvas if webgl is disabled
+    if (glCanvas) // hide glCanvas if WebGL is disabled
         glCanvas.style.visibility = enable ? 'visible' : 'hidden';
 }
 

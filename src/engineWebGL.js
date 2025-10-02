@@ -1,7 +1,7 @@
 /**
  * LittleJS WebGL Interface
- * - All webgl used by the engine is wrapped up here
- * - Will fall back to 2D canvas rendering if webgl is not supported
+ * - All WebGL used by the engine is wrapped up here
+ * - Will fall back to 2D canvas rendering if WebGL is not supported
  * - For normal stuff you won't need to see or call anything in this file
  * - For advanced stuff there are helper functions to create shaders, textures, etc
  * - Can be disabled with glEnable to revert to 2D canvas rendering
@@ -23,7 +23,7 @@ let glCanvas;
  *  @memberof WebGL */
 let glContext;
 
-/** Should webgl be setup with anti-aliasing? must be set before calling engineInit
+/** Should WebGL be setup with anti-aliasing? must be set before calling engineInit
  *  @type {boolean}
  *  @memberof WebGL */
 let glAntialias = true;
@@ -56,7 +56,7 @@ function glInit()
         return;
     }
 
-    // create the webgl canvas
+    // create the WebGL canvas
     const rootElement = mainCanvas.parentElement;
     rootElement.appendChild(glCanvas);
 
@@ -101,7 +101,7 @@ function glInit()
     glContext.bufferData(glContext.ARRAY_BUFFER, geometry, glContext.STATIC_DRAW);
 }
 
-// Setup webgl render each frame, called automatically by engine
+// Setup WebGL render each frame, called automatically by engine
 // Also used by tile layer rendering when redrawing tiles
 function glPreRender()
 {
@@ -316,7 +316,7 @@ function glCopyToContext(context)
     context.drawImage(glCanvas, 0, 0);
 }
 
-/** Set anti-aliasing for webgl canvas
+/** Set anti-aliasing for WebGL canvas
  *  @param {boolean} [antialias]
  *  @memberof WebGL */
 function glSetAntialias(antialias=true)

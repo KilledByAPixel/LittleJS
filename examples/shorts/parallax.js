@@ -51,7 +51,7 @@ class ParallaxLayer extends CanvasLayer
         // remove gradient sliver from left side
         this.context.clearRect(0,0,1,h);
     
-        // make webgl texture
+        // make WebGL texture
         this.useWebGL(glEnable);
     }
 

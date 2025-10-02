@@ -26,7 +26,7 @@ class ParticleEmitter extends EngineObject
     /** Create a particle system with the given settings
      *  @param {Vector2} position - World space position of the emitter
      *  @param {number} [angle] - Angle to emit the particles
-     *  @param {Number|Vector2}  [emitSize] - World space size of the emitter (float for circle diameter, vec2 for rect)
+     *  @param {number|Vector2}  [emitSize] - World space size of the emitter (float for circle diameter, vec2 for rect)
      *  @param {number} [emitTime] - How long to stay alive (0 is forever)
      *  @param {number} [emitRate] - How many particles per second to spawn, does not emit if 0
      *  @param {number} [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
@@ -86,7 +86,7 @@ class ParticleEmitter extends EngineObject
         super(position, vec2(), tileInfo, angle, undefined, renderOrder);
 
         // emitter settings
-        /** @property {Number|Vector2} - World space size of the emitter (float for circle diameter, vec2 for rect) */
+        /** @property {number|Vector2} - World space size of the emitter (float for circle diameter, vec2 for rect) */
         this.emitSize = emitSize
         /** @property {number} - How long to stay alive (0 is forever) */
         this.emitTime = emitTime;
@@ -122,7 +122,7 @@ class ParticleEmitter extends EngineObject
         this.damping           = damping;
         /** @property {number} - How much to dampen particle angular speed */
         this.angleDamping      = angleDamping;
-        /** @property {number} - How much does gravity effect particles */
+        /** @property {number} - How much gravity affects particles */
         this.gravityScale      = gravityScale;
         /** @property {number} - Cone for start particle angle */
         this.particleConeAngle = particleConeAngle;

@@ -168,7 +168,7 @@ class TileLayerData
 /**
  * Canvas Layer - cached off screen rendering system
  * - Contains an offscreen canvas that can be rendered to
- * - Webgl rendering is optional, call useWebGL to enable
+ * - WebGL rendering is optional, call useWebGL to enable
  * @extends EngineObject
  * @example
  * const canvasLayer = new CanvasLayer(vec2(), vec2(200,100));
@@ -190,7 +190,7 @@ class CanvasLayer extends EngineObject
         this.canvas = headlessMode ? undefined : new OffscreenCanvas(canvasSize.x, canvasSize.y);
         /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this layer */
         this.context = headlessMode ? undefined : this.canvas.getContext('2d');
-        /** @property {WebGLTexture} - Texture if using webgl for this layer, call useWebGL to enable */
+        /** @property {WebGLTexture} - Texture if using WebGL for this layer, call useWebGL to enable */
         this.glTexture = undefined;
         this.gravityScale = 0; // disable gravity by default for canvas layers
     }
@@ -201,7 +201,7 @@ class CanvasLayer extends EngineObject
         if (this.destroyed)
             return;
 
-        // free up the webgl texture
+        // free up the WebGL texture
         if (this.glTexture)
             glDeleteTexture(this.glTexture);
         super.destroy();
@@ -226,12 +226,12 @@ class CanvasLayer extends EngineObject
     draw(pos, size, angle=0, color=WHITE, mirror=false, additiveColor, screenSpace=false, context)
     {
         // draw the canvas layer as a single tile that uses the whole texture
-        const useWebgl = glEnable && this.glTexture !== undefined;
+        const useWebGL = glEnable && this.glTexture !== undefined;
         const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
-        drawTile(pos, size, tileInfo, color, angle, mirror, additiveColor, useWebgl, screenSpace, context);
+        drawTile(pos, size, tileInfo, color, angle, mirror, additiveColor, useWebGL, screenSpace, context);
     }
 
-    /** Draw onto the layer canvas in world space (bypass webgl)
+    /** Draw onto the layer canvas in world space (bypass WebGL)
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
      *  @param {number}   angle
@@ -287,8 +287,8 @@ class CanvasLayer extends EngineObject
     drawRect(pos, size, color, angle)
     { this.drawTile(pos, size, undefined, color, angle); }
 
-    /** Create or update the webgl texture for this layer
-     *  @param {boolean} [enable] - enable webgl rendering and update the texture */
+    /** Create or update the WebGL texture for this layer
+     *  @param {boolean} [enable] - enable WebGL rendering and update the texture */
     useWebGL(enable=true)
     {
         if (glEnable && enable)
@@ -334,7 +334,7 @@ class TileLayer extends CanvasLayer
         this.canvas = new OffscreenCanvas(canvasSize.x, canvasSize.y);
         /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
         this.context = this.canvas.getContext('2d');
-        /** @property {WebGLTexture} - Texture if using webgl for this layer */
+        /** @property {WebGLTexture} - Texture if using WebGL for this layer */
         this.glTexture = useWebGL ? glCreateTexture(this.canvas) : undefined;
         // set no friction by default, applied friction is max of both objects
         this.friction = 0;
@@ -400,7 +400,7 @@ class TileLayer extends CanvasLayer
             this.drawTileData(vec2(x,y), false);
         this.redrawEnd();
         if (this.glTexture)
-            this.useWebGL(); // update webgl texture
+            this.useWebGL(); // update WebGL texture
     }
 
     /** Call to start the redraw process
