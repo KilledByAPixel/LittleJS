@@ -116,7 +116,7 @@ function tile(pos=new Vector2, size=tileSizeDefault, textureIndex=0, padding=0)
     if (typeof pos === 'number')
     {
         const cols = textureInfo.size.x / sizePaddedX |0;
-        ASSERT(cols>0, 'Tile size is too big for texture');
+        ASSERT(cols > 0, 'Tile size is too big for texture');
         const posX = pos % cols, posY = (pos / cols) |0;
         tileInfo.pos.set(posX*sizePaddedX+padding, posY*sizePaddedY+padding);
     }
@@ -387,7 +387,7 @@ function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, l
     ASSERT(isColor(color) && isColor(lineColor), 'drawEllipse color is invalid');
     ASSERT(isNumber(angle), 'drawEllipse angle should be a number');
     ASSERT(isNumber(lineWidth), 'drawEllipse lineWidth should be a number');
-    ASSERT(lineWidth>=0 && lineWidth < size.x && lineWidth < size.y, 'drawEllipse invalid lineWidth');
+    ASSERT(lineWidth >= 0 && lineWidth < size.x && lineWidth < size.y, 'drawEllipse invalid lineWidth');
     ASSERT(!useWebGL, 'drawEllipse WebGL not supported');
     drawCanvas2D(pos, vec2(1), angle, false, context=>
     {

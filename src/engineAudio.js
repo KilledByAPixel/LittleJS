@@ -266,8 +266,8 @@ class SoundInstance
     constructor(sound, volume=1, rate=1, pan=0, loop=false)
     {
         ASSERT(sound instanceof Sound, 'SoundInstance requires a valid Sound object');
-        ASSERT(volume >=0, 'Sound volume must be positive or zero');
-        ASSERT(rate >=0, 'Sound rate must be positive or zero');
+        ASSERT(volume >= 0, 'Sound volume must be positive or zero');
+        ASSERT(rate >= 0, 'Sound rate must be positive or zero');
         ASSERT(isNumber(pan), 'Sound pan must be a number');
 
         /** @property {Sound} - The sound object */
@@ -302,7 +302,7 @@ class SoundInstance
      */
     start(offset=0)
     {
-        ASSERT(offset >=0, 'Sound start offset must be positive or zero');
+        ASSERT(offset >= 0, 'Sound start offset must be positive or zero');
         this.gainNode = audioContext.createGain();
         this.source = playSamples(this.sound.sampleChannels, this.volume, this.rate, this.pan, this.loop, this.sound.sampleRate, this.gainNode, offset, this.onendedCallback);
         this.startTime = audioContext.currentTime - offset;
@@ -313,7 +313,7 @@ class SoundInstance
      *  @param {number} volume */
     setVolume(volume)
     {
-        ASSERT(volume >=0, 'Sound volume must be positive or zero');
+        ASSERT(volume >= 0, 'Sound volume must be positive or zero');
         if (!this.isPlaying())
             return;
         this.gainNode.gain.value = this.volume = volume;
@@ -322,7 +322,7 @@ class SoundInstance
     /** Stop this sound instance */
     stop(fadeTime=0)
     {
-        ASSERT(fadeTime >=0, 'Sound fade time must be positive or zero');
+        ASSERT(fadeTime >= 0, 'Sound fade time must be positive or zero');
         if (!this.isPlaying())
             return;
 

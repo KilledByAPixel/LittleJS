@@ -834,7 +834,7 @@ class Color
         {
             const fromHex = (c)=> clamp(parseInt(hex[c],16)/15);
             this.r = fromHex(1);
-            this.g = fromHex(2),
+            this.g = fromHex(2);
             this.b = fromHex(3);
             this.a = hex.length === 5 ? fromHex(4) : 1;
         }
@@ -842,7 +842,7 @@ class Color
         {
             const fromHex = (c)=> clamp(parseInt(hex.slice(c,c+2),16)/255);
             this.r = fromHex(1);
-            this.g = fromHex(3),
+            this.g = fromHex(3);
             this.b = fromHex(5);
             this.a = hex.length === 9 ? fromHex(7) : 1;
         }
