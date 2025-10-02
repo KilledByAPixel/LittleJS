@@ -23,7 +23,7 @@ let newgrounds;
 class NewgroundsMedal extends Medal
 {
     /** Create a newgrounds medal object and adds it to the list of medals
-     *  @param {Number} id            - The unique identifier of the medal
+     *  @param {number} id            - The unique identifier of the medal
      *  @param {string} name          - Name of the medal
      *  @param {string} [description] - Description of the medal
      *  @param {string} [icon]        - Icon for the medal

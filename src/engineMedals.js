@@ -82,7 +82,7 @@ function medalsForEach(callback)
 class Medal
 {
     /** Create a medal object and adds it to the list of medals
-     *  @param {Number} id            - The unique identifier of the medal
+     *  @param {number} id            - The unique identifier of the medal
      *  @param {string} name          - Name of the medal
      *  @param {string} [description] - Description of the medal
      *  @param {string} [icon]        - Icon for the medal
@@ -92,7 +92,7 @@ class Medal
     {
         ASSERT(id >= 0 && !medals[id]);
 
-        /** @property {Number} - The unique identifier of the medal */
+        /** @property {number} - The unique identifier of the medal */
         this.id = id;
 
         /** @property {string} - Name of the medal */
@@ -128,7 +128,7 @@ class Medal
     }
 
     /** Render a medal
-     *  @param {Number} [hidePercent] - How much to slide the medal off screen
+     *  @param {number} [hidePercent] - How much to slide the medal off screen
      */
     render(hidePercent=0)
     {
@@ -169,7 +169,7 @@ class Medal
 
     /** Render the icon for a medal
      *  @param {Vector2} pos - Screen space position
-     *  @param {Number} size - Screen space size
+     *  @param {number} size - Screen space size
      */
     renderIcon(pos, size)
     {

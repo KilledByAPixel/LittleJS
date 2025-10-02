@@ -18,7 +18,7 @@
  *  @memberof WebGL */
 let glCanvas;
 
-/** 2d context for glCanvas
+/** WebGL2 context for `glCanvas`
  *  @type {WebGL2RenderingContext}
  *  @memberof WebGL */
 let glContext;
@@ -163,7 +163,7 @@ function glClearCanvas()
     glContext.clear(glContext.COLOR_BUFFER_BIT);
 }
 
-/** Set the WebGl texture, called automatically if using multiple textures
+/** Set the WebGL texture, called automatically if using multiple textures
  *  - This may also flush the gl buffer resulting in more draw calls and worse performance
  *  @param {WebGLTexture} texture
  *  @param {boolean} [wrap] - Should the texture wrap or clamp
@@ -185,7 +185,7 @@ function glSetTexture(texture, wrap=false)
 
 /** Compile WebGL shader of the given type, will throw errors if in debug mode
  *  @param {string} source
- *  @param {Number} type
+ *  @param {number} type
  *  @return {WebGLShader}
  *  @memberof WebGL */
 function glCompileShader(source, type)
@@ -326,17 +326,17 @@ function glSetAntialias(antialias=true)
 }
 
 /** Add a sprite to the gl draw list, used by all gl draw functions
- *  @param {Number} x
- *  @param {Number} y
- *  @param {Number} sizeX
- *  @param {Number} sizeY
- *  @param {Number} [angle]
- *  @param {Number} [uv0X]
- *  @param {Number} [uv0Y]
- *  @param {Number} [uv1X]
- *  @param {Number} [uv1Y]
- *  @param {Number} [rgba=-1] - white is -1
- *  @param {Number} [rgbaAdditive=0] - black is 0
+ *  @param {number} x
+ *  @param {number} y
+ *  @param {number} sizeX
+ *  @param {number} sizeY
+ *  @param {number} [angle]
+ *  @param {number} [uv0X]
+ *  @param {number} [uv0Y]
+ *  @param {number} [uv1X]
+ *  @param {number} [uv1Y]
+ *  @param {number} [rgba=-1] - white is -1
+ *  @param {number} [rgbaAdditive=0] - black is 0
  *  @memberof WebGL */
 function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgba=-1, rgbaAdditive=0)
 {

@@ -25,31 +25,31 @@ class ParticleEmitter extends EngineObject
 {
     /** Create a particle system with the given settings
      *  @param {Vector2} position - World space position of the emitter
-     *  @param {Number} [angle] - Angle to emit the particles
+     *  @param {number} [angle] - Angle to emit the particles
      *  @param {Number|Vector2}  [emitSize] - World space size of the emitter (float for circle diameter, vec2 for rect)
-     *  @param {Number} [emitTime] - How long to stay alive (0 is forever)
-     *  @param {Number} [emitRate] - How many particles per second to spawn, does not emit if 0
-     *  @param {Number} [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
+     *  @param {number} [emitTime] - How long to stay alive (0 is forever)
+     *  @param {number} [emitRate] - How many particles per second to spawn, does not emit if 0
+     *  @param {number} [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
      *  @param {TileInfo} [tileInfo] - Tile info to render particles (undefined is untextured)
      *  @param {Color} [colorStartA=(1,1,1,1)] - Color at start of life 1, randomized between start colors
      *  @param {Color} [colorStartB=(1,1,1,1)] - Color at start of life 2, randomized between start colors
      *  @param {Color} [colorEndA=(1,1,1,0)] - Color at end of life 1, randomized between end colors
      *  @param {Color} [colorEndB=(1,1,1,0)] - Color at end of life 2, randomized between end colors
-     *  @param {Number} [particleTime]      - How long particles live
-     *  @param {Number} [sizeStart]         - How big are particles at start
-     *  @param {Number} [sizeEnd]           - How big are particles at end
-     *  @param {Number} [speed]             - How fast are particles when spawned
-     *  @param {Number} [angleSpeed]        - How fast are particles rotating
-     *  @param {Number} [damping]           - How much to dampen particle speed
-     *  @param {Number} [angleDamping]      - How much to dampen particle angular speed
-     *  @param {Number} [gravityScale]      - How much gravity effect particles
-     *  @param {Number} [particleConeAngle] - Cone for start particle angle
-     *  @param {Number} [fadeRate]          - How quick to fade particles at start/end in percent of life
-     *  @param {Number} [randomness]    - Apply extra randomness percent
+     *  @param {number} [particleTime]      - How long particles live
+     *  @param {number} [sizeStart]         - How big are particles at start
+     *  @param {number} [sizeEnd]           - How big are particles at end
+     *  @param {number} [speed]             - How fast are particles when spawned
+     *  @param {number} [angleSpeed]        - How fast are particles rotating
+     *  @param {number} [damping]           - How much to dampen particle speed
+     *  @param {number} [angleDamping]      - How much to dampen particle angular speed
+     *  @param {number} [gravityScale]      - How much gravity effect particles
+     *  @param {number} [particleConeAngle] - Cone for start particle angle
+     *  @param {number} [fadeRate]          - How quick to fade particles at start/end in percent of life
+     *  @param {number} [randomness]    - Apply extra randomness percent
      *  @param {boolean} [collideTiles] - Do particles collide against tiles
      *  @param {boolean} [additive]     - Should particles use additive blend
      *  @param {boolean} [randomColorLinear] - Should color be randomized linearly or across each component
-     *  @param {Number} [renderOrder] - Render order for particles (additive is above other stuff by default)
+     *  @param {number} [renderOrder] - Render order for particles (additive is above other stuff by default)
      *  @param {boolean}  [localSpace] - Should it be in local space of emitter (world space is default)
      */
     constructor
@@ -88,11 +88,11 @@ class ParticleEmitter extends EngineObject
         // emitter settings
         /** @property {Number|Vector2} - World space size of the emitter (float for circle diameter, vec2 for rect) */
         this.emitSize = emitSize
-        /** @property {Number} - How long to stay alive (0 is forever) */
+        /** @property {number} - How long to stay alive (0 is forever) */
         this.emitTime = emitTime;
-        /** @property {Number} - How many particles per second to spawn, does not emit if 0 */
+        /** @property {number} - How many particles per second to spawn, does not emit if 0 */
         this.emitRate = emitRate;
-        /** @property {Number} - Local angle to apply velocity to particles from emitter */
+        /** @property {number} - Local angle to apply velocity to particles from emitter */
         this.emitConeAngle = emitConeAngle;
 
         // color settings
@@ -108,27 +108,27 @@ class ParticleEmitter extends EngineObject
         this.randomColorLinear = randomColorLinear;
 
         // particle settings
-        /** @property {Number} - How long particles live */
+        /** @property {number} - How long particles live */
         this.particleTime      = particleTime;
-        /** @property {Number} - How big are particles at start */
+        /** @property {number} - How big are particles at start */
         this.sizeStart         = sizeStart;
-        /** @property {Number} - How big are particles at end */
+        /** @property {number} - How big are particles at end */
         this.sizeEnd           = sizeEnd;
-        /** @property {Number} - How fast are particles when spawned */
+        /** @property {number} - How fast are particles when spawned */
         this.speed             = speed;
-        /** @property {Number} - How fast are particles rotating */
+        /** @property {number} - How fast are particles rotating */
         this.angleSpeed        = angleSpeed;
-        /** @property {Number} - How much to dampen particle speed */
+        /** @property {number} - How much to dampen particle speed */
         this.damping           = damping;
-        /** @property {Number} - How much to dampen particle angular speed */
+        /** @property {number} - How much to dampen particle angular speed */
         this.angleDamping      = angleDamping;
-        /** @property {Number} - How much does gravity effect particles */
+        /** @property {number} - How much does gravity effect particles */
         this.gravityScale      = gravityScale;
-        /** @property {Number} - Cone for start particle angle */
+        /** @property {number} - Cone for start particle angle */
         this.particleConeAngle = particleConeAngle;
-        /** @property {Number} - How quick to fade in particles at start/end in percent of life */
+        /** @property {number} - How quick to fade in particles at start/end in percent of life */
         this.fadeRate          = fadeRate;
-        /** @property {Number} - Apply extra randomness percent */
+        /** @property {number} - Apply extra randomness percent */
         this.randomness        = randomness;
         /** @property {boolean} - Do particles collide against tiles */
         this.collideTiles      = collideTiles;
@@ -136,13 +136,13 @@ class ParticleEmitter extends EngineObject
         this.additive          = additive;
         /** @property {boolean} - Should it be in local space of emitter */
         this.localSpace        = localSpace;
-        /** @property {Number} - If non zero the particle is drawn as a trail, stretched in the direction of velocity */
+        /** @property {number} - If non zero the particle is drawn as a trail, stretched in the direction of velocity */
         this.trailScale        = 0;
         /** @property {Function}   - Callback when particle is destroyed */
         this.particleDestroyCallback = undefined;
         /** @property {Function}   - Callback when particle is created */
         this.particleCreateCallback = undefined;
-        /** @property {Number} - Track particle emit time */
+        /** @property {number} - Track particle emit time */
         this.emitTimeBuffer    = 0;
     }
 
@@ -249,15 +249,15 @@ class Particle extends EngineObject
      * Typically this is created automatically by a ParticleEmitter
      * @param {Vector2}  position   - World space position of the particle
      * @param {TileInfo} tileInfo   - Tile info to render particles
-     * @param {Number}   angle      - Angle to rotate the particle
+     * @param {number}   angle      - Angle to rotate the particle
      * @param {Color}    colorStart - Color at start of life
      * @param {Color}    colorEnd   - Color at end of life
-     * @param {Number}   lifeTime   - How long to live for
-     * @param {Number}   sizeStart  - Size at start of life
-     * @param {Number}   sizeEnd    - Size at end of life
-     * @param {Number}   fadeRate   - How quick to fade in/out
+     * @param {number}   lifeTime   - How long to live for
+     * @param {number}   sizeStart  - Size at start of life
+     * @param {number}   sizeEnd    - Size at end of life
+     * @param {number}   fadeRate   - How quick to fade in/out
      * @param {boolean}  additive   - Does it use additive blend mode
-     * @param {Number}   trailScale - If a trail, how long to make it
+     * @param {number}   trailScale - If a trail, how long to make it
      * @param {ParticleEmitter} [localSpaceEmitter] - Parent emitter if local space
      * @param {Function} [destroyCallback] - Callback when particle dies
      */
@@ -270,17 +270,17 @@ class Particle extends EngineObject
         this.colorStart = colorStart;
         /** @property {Color} - Calculated change in color */
         this.colorEndDelta = colorEnd.subtract(colorStart);
-        /** @property {Number} - How long to live for */
+        /** @property {number} - How long to live for */
         this.lifeTime = lifeTime;
-        /** @property {Number} - Size at start of life */
+        /** @property {number} - Size at start of life */
         this.sizeStart = sizeStart;
-        /** @property {Number} - Calculated change in size */
+        /** @property {number} - Calculated change in size */
         this.sizeEndDelta = sizeEnd - sizeStart;
-        /** @property {Number} - How quick to fade in/out */
+        /** @property {number} - How quick to fade in/out */
         this.fadeRate = fadeRate;
         /** @property {boolean} - Is it additive */
         this.additive = additive;
-        /** @property {Number} - If a trail, how long to make it */
+        /** @property {number} - If a trail, how long to make it */
         this.trailScale = trailScale;
         /** @property {ParticleEmitter} - Parent emitter if local space */
         this.localSpaceEmitter = localSpaceEmitter;
