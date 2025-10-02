@@ -92,6 +92,7 @@ class Sound
     }
 
     /** Play the sound
+     *  Sounds may not play until a user interaction occurs
      *  @param {Vector2} [pos] - World space position to play the sound if any
      *  @param {number}  [volume] - How much to scale volume by
      *  @param {number}  [pitch] - How much to scale pitch by
@@ -125,17 +126,16 @@ class Sound
         
         // Create and return sound instance
         const rate = pitch + pitch * this.randomness*randomnessScale*rand(-1,1);
-        const instance = new SoundInstance(this, volume, rate, pan, loop);
-        if (instance.isPlaying())
-            return instance; // only return instance if it played successfully
+        return new SoundInstance(this, volume, rate, pan, loop);
     }
     
-    /** Play a music track that loops by default with full volume and normal pitch
-     *  @param {boolean} [loop] - Should the sound loop?
+    /** Play a music track that loops by default
+     *  @param {number} [volume] - Volume to play the music at
+     *  @param {boolean} [loop] - Should the music loop?
      *  @return {SoundInstance} - The audio source node
      */
-    playMusic(loop=true)
-    { return this.play(undefined, 1, 1, 0, loop); }
+    playMusic(volume=1, loop=true)
+    { return this.play(undefined, volume, 1, 0, loop); }
 
     /** Play the sound as a note with a semitone offset
      *  @param {number}  semitoneOffset - How many semitones to offset pitch
@@ -288,6 +288,12 @@ class SoundInstance
         this.gainNode = undefined;
         /** @property {AudioBufferSourceNode} - Source node of the audio */
         this.source = undefined;
+        // setup end callback and start sound
+        this.onendedCallback = (source)=>
+        {
+            if (source === this.source)
+                this.source = undefined;
+        };
         this.start();
     }
 
@@ -297,9 +303,8 @@ class SoundInstance
     start(offset=0)
     {
         ASSERT(offset >=0, 'Sound start offset must be positive or zero');
-        const onended = ()=> this.source = undefined;
         this.gainNode = audioContext.createGain();
-        this.source = playSamples(this.sound.sampleChannels, this.volume, this.rate, this.pan, this.loop, this.sound.sampleRate, this.gainNode, offset, onended);
+        this.source = playSamples(this.sound.sampleChannels, this.volume, this.rate, this.pan, this.loop, this.sound.sampleRate, this.gainNode, offset, this.onendedCallback);
         this.startTime = audioContext.currentTime - offset;
         this.pausedTime = undefined;
     }
@@ -381,7 +386,7 @@ class SoundInstance
     {
         const deltaTime = mod(audioContext.currentTime - this.startTime, 
             this.getDuration());
-        return this.isPlaying() ? deltaTime : this.pausedTime;
+        return this.isPlaying() ? deltaTime : this.isPaused() ? this.pausedTime : 0;
     }
 
     /** Get the total duration of this sound
@@ -478,11 +483,11 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
 
     // callback when the sound ends
     if (onended)
-        source.addEventListener('ended', (event)=> onended(event));
+        source.addEventListener('ended', ()=> onended(source));
 
     if (!audioIsRunning())
     {
-        // fix stalled audio
+        // fix stalled audio, this sound won't be able to play
         audioContext.resume();
         return;
     }
