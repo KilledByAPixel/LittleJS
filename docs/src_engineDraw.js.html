@@ -1,23 +1,23 @@
 <!DOCTYPE html><html lang="en" style="font-size:16px"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="./static/favicon.png"><title>Source: src/engineDraw.js</title><!--[if lt IE 9]>
       <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]--><script src="scripts/third-party/hljs.js" defer="defer"></script><script src="scripts/third-party/hljs-line-num.js" defer="defer"></script><script src="scripts/third-party/popper.js" defer="defer"></script><script src="scripts/third-party/tippy.js" defer="defer"></script><script src="scripts/third-party/tocbot.min.js"></script><script>var baseURL="/",locationPathname="";baseURL=(locationPathname=document.location.pathname).substr(0,locationPathname.lastIndexOf("/")+1)</script><link rel="stylesheet" href="styles/clean-jsdoc-theme.min.css"><style>.prettyprint code{font-family:monospace}</style><svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><defs><symbol id="copy-icon" viewbox="0 0 488.3 488.3"><g><path d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z"/><path d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z"/></g></symbol><symbol id="search-icon" viewBox="0 0 512 512"><g><g><path d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z"/></g></g><g><g><path d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z"/></g></g></symbol><symbol id="font-size-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11.246 15H4.754l-2 5H.6L7 4h2l6.4 16h-2.154l-2-5zm-.8-2L8 6.885 5.554 13h4.892zM21 12.535V12h2v8h-2v-.535a4 4 0 1 1 0-6.93zM19 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="add-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></symbol><symbol id="minus-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 11h14v2H5z"/></symbol><symbol id="dark-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z"/></symbol><symbol id="light-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/></symbol><symbol id="reset-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.537 19.567A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10c0 2.136-.67 4.116-1.81 5.74L17 12h3a8 8 0 1 0-2.46 5.772l.997 1.795z"/></symbol><symbol id="down-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"></path></symbol><symbol id="codepen-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M16.5 13.202L13 15.535v3.596L19.197 15 16.5 13.202zM14.697 12L12 10.202 9.303 12 12 13.798 14.697 12zM20 10.869L18.303 12 20 13.131V10.87zM19.197 9L13 4.869v3.596l3.5 2.333L19.197 9zM7.5 10.798L11 8.465V4.869L4.803 9 7.5 10.798zM4.803 15L11 19.131v-3.596l-3.5-2.333L4.803 15zM4 13.131L5.697 12 4 10.869v2.262zM2 9a1 1 0 0 1 .445-.832l9-6a1 1 0 0 1 1.11 0l9 6A1 1 0 0 1 22 9v6a1 1 0 0 1-.445.832l-9 6a1 1 0 0 1-1.11 0l-9-6A1 1 0 0 1 2 15V9z"/></symbol><symbol id="close-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z"/></symbol><symbol id="menu-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/></symbol></defs></svg></head><body data-theme="dark"><div class="sidebar-container"><div class="sidebar" id="sidebar"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="sidebar-items-container"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="Color.html">Color</a></div><div class="sidebar-section-children"><a href="EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="FontImage.html">FontImage</a></div><div class="sidebar-section-children"><a href="Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="SoundWave.html">SoundWave</a></div><div class="sidebar-section-children"><a href="TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UIScrollbar.html">UIScrollbar</a></div><div class="sidebar-section-children"><a href="UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileCollision.html">TileCollision</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-global"><div>Global</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="global.html#postProcess">postProcess</a></div><div class="sidebar-section-children"><a href="global.html#uiSystem">uiSystem</a></div><div class="sidebar-section-children"><a href="global.html#zzfxM">zzfxM</a></div></div></div></div></div><div class="navbar-container" id="VuAckcnZhf"><nav class="navbar"><div class="navbar-left-items"></div><div class="navbar-right-items"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div><nav></nav></nav></div><div class="toc-container"><div class="toc-content"><span class="bold">On this page</span><div id="eed4d2a0bfd64539bb9df78095dec881"></div></div></div><div class="body-wrapper"><div class="main-content"><div class="main-wrapper"><section id="source-page" class="source-page"><header><h1 id="title" class="has-anchor">src_engineDraw.js</h1></header><article><pre class="prettyprint source lang-js"><code>/** 
+    <![endif]--><script src="scripts/third-party/hljs.js" defer="defer"></script><script src="scripts/third-party/hljs-line-num.js" defer="defer"></script><script src="scripts/third-party/popper.js" defer="defer"></script><script src="scripts/third-party/tippy.js" defer="defer"></script><script src="scripts/third-party/tocbot.min.js"></script><script>var baseURL="/",locationPathname="";baseURL=(locationPathname=document.location.pathname).substr(0,locationPathname.lastIndexOf("/")+1)</script><link rel="stylesheet" href="styles/clean-jsdoc-theme.min.css"><style>.prettyprint code{font-family:monospace}</style><svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><defs><symbol id="copy-icon" viewbox="0 0 488.3 488.3"><g><path d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z"/><path d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z"/></g></symbol><symbol id="search-icon" viewBox="0 0 512 512"><g><g><path d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z"/></g></g><g><g><path d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z"/></g></g></symbol><symbol id="font-size-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11.246 15H4.754l-2 5H.6L7 4h2l6.4 16h-2.154l-2-5zm-.8-2L8 6.885 5.554 13h4.892zM21 12.535V12h2v8h-2v-.535a4 4 0 1 1 0-6.93zM19 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="add-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></symbol><symbol id="minus-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 11h14v2H5z"/></symbol><symbol id="dark-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z"/></symbol><symbol id="light-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/></symbol><symbol id="reset-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.537 19.567A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10c0 2.136-.67 4.116-1.81 5.74L17 12h3a8 8 0 1 0-2.46 5.772l.997 1.795z"/></symbol><symbol id="down-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"></path></symbol><symbol id="codepen-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M16.5 13.202L13 15.535v3.596L19.197 15 16.5 13.202zM14.697 12L12 10.202 9.303 12 12 13.798 14.697 12zM20 10.869L18.303 12 20 13.131V10.87zM19.197 9L13 4.869v3.596l3.5 2.333L19.197 9zM7.5 10.798L11 8.465V4.869L4.803 9 7.5 10.798zM4.803 15L11 19.131v-3.596l-3.5-2.333L4.803 15zM4 13.131L5.697 12 4 10.869v2.262zM2 9a1 1 0 0 1 .445-.832l9-6a1 1 0 0 1 1.11 0l9 6A1 1 0 0 1 22 9v6a1 1 0 0 1-.445.832l-9 6a1 1 0 0 1-1.11 0l-9-6A1 1 0 0 1 2 15V9z"/></symbol><symbol id="close-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z"/></symbol><symbol id="menu-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/></symbol></defs></svg></head><body data-theme="dark"><div class="sidebar-container"><div class="sidebar" id="sidebar"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="sidebar-items-container"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="Color.html">Color</a></div><div class="sidebar-section-children"><a href="EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="FontImage.html">FontImage</a></div><div class="sidebar-section-children"><a href="Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="SoundWave.html">SoundWave</a></div><div class="sidebar-section-children"><a href="TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UIScrollbar.html">UIScrollbar</a></div><div class="sidebar-section-children"><a href="UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileCollision.html">TileCollision</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-global"><div>Global</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="global.html#postProcess">postProcess</a></div><div class="sidebar-section-children"><a href="global.html#uiSystem">uiSystem</a></div><div class="sidebar-section-children"><a href="global.html#zzfxM">zzfxM</a></div></div></div></div></div><div class="navbar-container" id="VuAckcnZhf"><nav class="navbar"><div class="navbar-left-items"></div><div class="navbar-right-items"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div><nav></nav></nav></div><div class="toc-container"><div class="toc-content"><span class="bold">On this page</span><div id="eed4d2a0bfd64539bb9df78095dec881"></div></div></div><div class="body-wrapper"><div class="main-content"><div class="main-wrapper"><section id="source-page" class="source-page"><header><h1 id="title" class="has-anchor">src_engineDraw.js</h1></header><article><pre class="prettyprint source lang-js"><code>/**
  * LittleJS Drawing System
  * - Hybrid system with both Canvas2D and WebGL available
  * - Super fast tile sheet rendering with WebGL
  * - Can apply rotation, mirror, color and additive color
  * - Font rendering system with built in engine font
  * - Many useful utility functions
- * 
+ *
  * LittleJS uses a hybrid rendering solution with the best of both Canvas2D and WebGL.
  * There are 3 canvas/contexts available to draw to...
  * mainCanvas - 2D background canvas, non WebGL stuff like tile layers are drawn here.
  * glCanvas - Used by the accelerated WebGL batch rendering system.
  * overlayCanvas - Another 2D canvas that appears on top of the other 2 canvases.
- * 
+ *
  * The WebGL rendering system is very fast with some caveats...
  * - Switching blend modes (additive) or textures causes another draw call which is expensive in excess
  * - Group additive rendering together using renderOrder to mitigate this issue
- * 
+ *
  * The LittleJS rendering solution is intentionally simple, feel free to adjust it for your needs!
  * @namespace Draw
  */
@@ -64,7 +64,7 @@ let workCanvas;
  *  @memberof Draw */
 let workContext;
 
-/** The size of the main canvas (and other secondary canvases) 
+/** The size of the main canvas (and other secondary canvases)
  *  @type {Vector2}
  *  @memberof Draw */
 let mainCanvasSize = vec2();
@@ -79,7 +79,7 @@ let drawCount;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** 
+/**
  * Create a tile info object using a grid based system
  * - This can take vecs or floats for easier use and conversion
  * - If an index is passed in, the tile size and index will determine the position
@@ -93,15 +93,14 @@ let drawCount;
  * tile(5, 8)                    // a tile at index 5 using a tile size of 8
  * tile(1, 16, 3)                // a tile at index 1 of size 16 on texture 3
  * tile(vec2(4,8), vec2(30,10))  // a tile at index (4,8) with a size of (30,10)
- * @memberof Draw
- */
+ * @memberof Draw */
 function tile(pos=new Vector2, size=tileSizeDefault, textureIndex=0, padding=0)
 {
     if (headlessMode)
         return new TileInfo;
 
     // if size is a number, make it a vector
-    if (typeof size == 'number')
+    if (typeof size === 'number')
     {
         ASSERT(size > 0);
         size = new Vector2(size, size);
@@ -110,24 +109,24 @@ function tile(pos=new Vector2, size=tileSizeDefault, textureIndex=0, padding=0)
     // create tile info object
     const tileInfo = new TileInfo(new Vector2, size, textureIndex, padding);
 
-    // use get the pos of the tile
+    // get the position of the tile
     const textureInfo = textureInfos[textureIndex];
     ASSERT(!!textureInfo, 'Texture not loaded');
     const sizePaddedX = size.x + padding*2;
     const sizePaddedY = size.y + padding*2;
-    if (typeof pos == 'number')
+    if (typeof pos === 'number')
     {
         const cols = textureInfo.size.x / sizePaddedX |0;
-        ASSERT(cols>0, 'Tile size is too big for texture');
+        ASSERT(cols > 0, 'Tile size is too big for texture');
         const posX = pos % cols, posY = (pos / cols) |0;
         tileInfo.pos.set(posX*sizePaddedX+padding, posY*sizePaddedY+padding);
     }
     else
         tileInfo.pos.set(pos.x*sizePaddedX+padding, pos.y*sizePaddedY+padding);
-    return tileInfo; 
+    return tileInfo;
 }
 
-/** 
+/**
  * Tile Info - Stores info about how to draw a tile
  */
 class TileInfo
@@ -165,14 +164,14 @@ class TileInfo
     */
     frame(frame)
     {
-        ASSERT(typeof frame == 'number');
+        ASSERT(typeof frame === 'number');
         return this.offset(new Vector2(frame*(this.size.x+this.padding*2), 0));
     }
 
     /**
      * Set this tile to use a full image
      * @param {HTMLImageElement|OffscreenCanvas} image
-     * @param {WebGLTexture} [glTexture] - webgl texture
+     * @param {WebGLTexture} [glTexture] - WebGL texture
      * @return {TileInfo}
      */
     setFullImage(image, glTexture)
@@ -190,7 +189,7 @@ class TextureInfo
     /**
      * Create a TextureInfo, called automatically by the engine
      * @param {HTMLImageElement|OffscreenCanvas} image
-     * @param {WebGLTexture} [glTexture] - webgl texture 
+     * @param {WebGLTexture} [glTexture] - WebGL texture
      */
     constructor(image, glTexture)
     {
@@ -200,7 +199,7 @@ class TextureInfo
         this.size = vec2(image.width, image.height);
         /** @property {Vector2} - inverse of the size, cached for rendering */
         this.sizeInverse = vec2(1/image.width, 1/image.height);
-        /** @property {WebGLTexture} - webgl texture */
+        /** @property {WebGLTexture} - WebGL texture */
         this.glTexture = glTexture;
     }
 
@@ -216,28 +215,25 @@ class TextureInfo
 // Drawing functions
 
 /** Draw textured tile centered in world space, with color applied if using WebGL
- *  @param {Vector2} pos                        - Center of the tile in world space
- *  @param {Vector2} [size=(1,1)]               - Size of the tile in world space
- *  @param {TileInfo}[tileInfo]                 - Tile info to use, untextured if undefined
- *  @param {Color}   [color=(1,1,1,1)]          - Color to modulate with
- *  @param {number}  [angle]                    - Angle to rotate by
- *  @param {boolean} [mirror]                   - If true image is flipped along the Y axis
- *  @param {Color}   [additiveColor]            - Additive color to be applied if any
- *  @param {boolean} [useWebGL=glEnable]        - Use accelerated WebGL rendering
- *  @param {boolean} [screenSpace=false]        - If true the pos and size are in screen space
+ *  @param {Vector2}  pos                 - Center of the tile in world space
+ *  @param {Vector2}  [size=(1,1)]        - Size of the tile in world space
+ *  @param {TileInfo} [tileInfo]          - Tile info to use, untextured if undefined
+ *  @param {Color}    [color=(1,1,1,1)]   - Color to modulate with
+ *  @param {number}   [angle]             - Angle to rotate by
+ *  @param {boolean}  [mirror]            - Is image flipped along the Y axis?
+ *  @param {Color}    [additiveColor]     - Additive color to be applied if any
+ *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering?
+ *  @param {boolean}  [screenSpace=false] - Are the pos and size are in screen space?
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
  *  @memberof Draw */
 function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
     angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace, context)
 {
-    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode'); 
+    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
     ASSERT(isVector2(pos) &amp;&amp; pos.isValid(), 'drawTile pos should be a vec2');
     ASSERT(isVector2(size) &amp;&amp; size.isValid(), 'drawTile size should be a vec2');
     ASSERT(isColor(color) &amp;&amp; (!additiveColor || isColor(additiveColor)), 'drawTile color is invalid');
     ASSERT(isNumber(angle), 'drawTile angle should be a number');
-
-    if (color.a &lt;= 0 &amp;&amp; (!additiveColor || additiveColor.a &lt;= 0) || !size.x || !size.y)
-        return; // completely invisible, skip render
 
     const textureInfo = tileInfo &amp;&amp; tileInfo.textureInfo;
     if (useWebGL)
@@ -261,22 +257,22 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
             {
                 const tileImageFixBleedX = sizeInverse.x*tileFixBleedScale;
                 const tileImageFixBleedY = sizeInverse.y*tileFixBleedScale;
-                glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
-                    x + tileImageFixBleedX,     y + tileImageFixBleedY, 
-                    x - tileImageFixBleedX + w, y - tileImageFixBleedY + h, 
-                    color.rgbaInt(), additiveColor &amp;&amp; additiveColor.rgbaInt()); 
+                glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle,
+                    x + tileImageFixBleedX,     y + tileImageFixBleedY,
+                    x - tileImageFixBleedX + w, y - tileImageFixBleedY + h,
+                    color.rgbaInt(), additiveColor &amp;&amp; additiveColor.rgbaInt());
             }
             else
             {
-                glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle, 
-                    x, y, x + w, y + h, 
-                    color.rgbaInt(), additiveColor &amp;&amp; additiveColor.rgbaInt()); 
+                glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle,
+                    x, y, x + w, y + h,
+                    color.rgbaInt(), additiveColor &amp;&amp; additiveColor.rgbaInt());
             }
         }
         else
         {
             // if no tile info, force untextured
-            glDraw(pos.x, pos.y, size.x, size.y, angle, 0, 0, 0, 0, 0, color.rgbaInt()); 
+            glDraw(pos.x, pos.y, size.x, size.y, angle, 0, 0, 0, 0, 0, color.rgbaInt());
         }
     }
     else
@@ -314,8 +310,8 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
 function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
-{ 
-    drawTile(pos, size, undefined, color, angle, false, undefined, useWebGL, screenSpace, context); 
+{
+    drawTile(pos, size, undefined, color, angle, false, undefined, useWebGL, screenSpace, context);
 }
 
 /** Draw colored line between two points
@@ -345,7 +341,7 @@ function drawLine(posA, posB, thickness=.1, color, pos=vec2(), angle=0, useWebGL
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {Vector2} [pos=(0,0)] - Offset to apply
  *  @param {number}  [angle] - Angle to rotate by
- *  @param {boolean} [useWebGL] - Webgl not supported
+ *  @param {boolean} [useWebGL] - WebGL not supported
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
@@ -356,7 +352,7 @@ function drawPoly(points, color=new Color, lineWidth=0, lineColor=BLACK, pos=vec
     ASSERT(isColor(color) &amp;&amp; isColor(lineColor), 'drawPoly color is invalid');
     ASSERT(isNumber(lineWidth), 'drawPoly lineWidth should be a number');
     ASSERT(isNumber(angle), 'drawPoly angle should be a number');
-    ASSERT(!useWebGL, 'drawPoly webgl not supported');
+    ASSERT(!useWebGL, 'drawPoly WebGL not supported');
     drawCanvas2D(pos, vec2(1), angle, false, context=>
     {
         context.beginPath();
@@ -381,7 +377,7 @@ function drawPoly(points, color=new Color, lineWidth=0, lineColor=BLACK, pos=vec
  *  @param {number}  [angle]
  *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=(0,0,0,1)]
- *  @param {boolean} [useWebGL] - Webgl not supported
+ *  @param {boolean} [useWebGL] - WebGL not supported
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
@@ -392,8 +388,8 @@ function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, l
     ASSERT(isColor(color) &amp;&amp; isColor(lineColor), 'drawEllipse color is invalid');
     ASSERT(isNumber(angle), 'drawEllipse angle should be a number');
     ASSERT(isNumber(lineWidth), 'drawEllipse lineWidth should be a number');
-    ASSERT(lineWidth>=0 &amp;&amp; lineWidth &lt; size.x &amp;&amp; lineWidth &lt; size.y, 'drawEllipse invalid lineWidth');
-    ASSERT(!useWebGL, 'drawEllipse webgl not supported');
+    ASSERT(lineWidth >= 0 &amp;&amp; lineWidth &lt; size.x &amp;&amp; lineWidth &lt; size.y, 'drawEllipse invalid lineWidth');
+    ASSERT(!useWebGL, 'drawEllipse WebGL not supported');
     drawCanvas2D(pos, vec2(1), angle, false, context=>
     {
         context.beginPath();
@@ -404,7 +400,7 @@ function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, l
         {
             context.strokeStyle = lineColor.toString();
             context.lineWidth = lineWidth;
-            context.stroke();   
+            context.stroke();
         }
     }, screenSpace, context);
 }
@@ -415,11 +411,11 @@ function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, l
  *  @param {Color}   [color=(1,1,1,1)]
  *  @param {number}  [lineWidth=0]
  *  @param {Color}   [lineColor=(0,0,0,1)]
- *  @param {boolean} [useWebGL] - Webgl not supported
- *  @param {boolean} [screenSpace=false]
+ *  @param {boolean} [useWebGL] - WebGL not supported
+ *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=BLACK, useWebGL=false, screenSpace, context=drawContext)
+function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=BLACK, useWebGL=false, screenSpace=false, context=drawContext)
 { drawEllipse(pos, vec2(radius), color, 0, lineWidth, lineColor, useWebGL, screenSpace, context); }
 
 /** Draw directly to a 2d canvas context in world space
@@ -428,7 +424,7 @@ function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=BLACK
  *  @param {number}   angle
  *  @param {boolean}  [mirror]
  *  @param {Function} [drawFunction]
- *  @param {boolean} [screenSpace=false]
+ *  @param {boolean}  [screenSpace=false]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
 function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpace=false, context=drawContext)
@@ -498,7 +494,7 @@ function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textA
  *  @param {number}  [maxWidth]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
  *  @memberof Draw */
-function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, maxWidth=undefined, context=overlayContext)
+function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, maxWidth, context=overlayContext)
 {
     context.fillStyle = color.toString();
     context.strokeStyle = lineColor.toString();
@@ -530,7 +526,7 @@ function screenToWorld(screenPos)
 {
     let cameraPosRelativeX = (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale;
     let cameraPosRelativeY = (screenPos.y - mainCanvasSize.y/2 + .5) / -cameraScale;
-    if (cameraAngle) 
+    if (cameraAngle)
     {
         // apply camera rotation
         const cos = Math.cos(-cameraAngle), sin = Math.sin(-cameraAngle);
@@ -623,7 +619,7 @@ function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth,
     {
         // white texture with no additive alpha, no need to tint
         context.globalAlpha = color.a;
-        context.drawImage(image, sx+sx2, sy+sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight); 
+        context.drawImage(image, sx+sx2, sy+sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight);
         context.globalAlpha = 1;
     }
     else
@@ -644,7 +640,7 @@ function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth,
             for (let i = 0; i &lt; data.length; ++i)
                 data[i] = data[i] * colorMultiply[i&amp;3] + colorAdd[i&amp;3] |0;
             workContext.putImageData(imageData, 0, 0);
-            context.drawImage(workCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight); 
+            context.drawImage(workCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight);
         }
         else
         {
@@ -657,7 +653,7 @@ function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth,
             }
             workContext.putImageData(imageData, 0, 0);
             context.globalAlpha = color.a;
-            context.drawImage(workCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight); 
+            context.drawImage(workCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight);
             context.globalAlpha = 1;
         }
     }
@@ -684,7 +680,7 @@ function toggleFullscreen()
 }
 
 /** Set the cursor style
- *  @param {string}  cursorStyle - CSS cursor style (auto, none, crosshair, etc)
+ *  @param {string}  [cursorStyle] - CSS cursor style (auto, none, crosshair, etc)
  *  @memberof Draw */
 function setCursor(cursorStyle = 'auto')
 {
@@ -696,7 +692,7 @@ function setCursor(cursorStyle = 'auto')
 
 let engineFontImage;
 
-/** 
+/**
  * Font Image Object - Draw text on a 2D canvas by using characters in an image
  * - 96 characters (from space to tilde) are stored in an image
  * - Uses a default 8x8 font if none is supplied
@@ -704,7 +700,7 @@ let engineFontImage;
  * @example
  * // use built in font
  * const font = new FontImage;
- * 
+ *
  * // draw text
  * font.drawTextScreen("LittleJS\nHello World!", vec2(200, 50));
  */
@@ -714,7 +710,6 @@ class FontImage
      *  @param {HTMLImageElement} [image]    - Image for the font, if undefined default font is used
      *  @param {Vector2} [tileSize=(8,8)]    - Size of the font source tiles
      *  @param {Vector2} [paddingSize=(0,1)] - How much extra space to add between characters
-     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext] - context to draw to
      */
     constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1), context=overlayContext)
     {
@@ -728,7 +723,6 @@ class FontImage
         this.image = image || engineFontImage;
         this.tileSize = tileSize;
         this.paddingSize = paddingSize;
-        this.context = context;
     }
 
     /** Draw text in world space using the image font
@@ -736,23 +730,32 @@ class FontImage
      *  @param {Vector2} pos
      *  @param {number}  [scale=.25]
      *  @param {boolean} [center]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D}[context=drawContext] 
      */
-    drawText(text, pos, scale=1, center)
+    drawText(text, pos, scale=1, center, context=drawContext)
     {
-        this.drawTextScreen(text, worldToScreen(pos).floor(), scale*cameraScale|0, center);
+        this.drawTextScreen(text, worldToScreen(pos).floor(), scale*cameraScale|0, center, context);
     }
 
-    /** Draw text in screen space using the image font
+    /** Draw text on overlay canvas in world space using the image font
      *  @param {string}  text
      *  @param {Vector2} pos
      *  @param {number}  [scale]
      *  @param {boolean} [center]
      */
-    drawTextScreen(text, pos, scale=4, center)
-    {
-        const context = this.context;
-        context.save();
+    drawTextOverlay(text, pos, scale=4, center)
+    { this.drawText(text, pos, scale, center, overlayContext); }
 
+    /** Draw text on overlay canvas in screen space using the image font
+     *  @param {string}  text
+     *  @param {Vector2} pos
+     *  @param {number}  [scale]
+     *  @param {boolean} [center]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
+     */
+    drawTextScreen(text, pos, scale=4, center, context=overlayContext)
+    {
+        context.save();
         const size = this.tileSize;
         const drawSize = size.add(this.paddingSize).scale(scale);
         const cols = this.image.width / this.tileSize.x |0;
@@ -771,11 +774,11 @@ class FontImage
                 const x = tile % cols;
                 const y = tile / cols |0;
                 const drawPos = pos.add(vec2(j,i).multiply(drawSize));
-                context.drawImage(this.image, x * size.x, y * size.y, size.x, size.y, 
+                context.drawImage(this.image, x * size.x, y * size.y, size.x, size.y,
                     drawPos.x - centerOffset, drawPos.y, size.x * scale, size.y * scale);
             }
         });
-
         context.restore();
     }
-}</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="Color.html">Color</a></div><div class="sidebar-section-children"><a href="EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="FontImage.html">FontImage</a></div><div class="sidebar-section-children"><a href="Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="SoundWave.html">SoundWave</a></div><div class="sidebar-section-children"><a href="TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UIScrollbar.html">UIScrollbar</a></div><div class="sidebar-section-children"><a href="UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileCollision.html">TileCollision</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-global"><div>Global</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="global.html#postProcess">postProcess</a></div><div class="sidebar-section-children"><a href="global.html#uiSystem">uiSystem</a></div><div class="sidebar-section-children"><a href="global.html#zzfxM">zzfxM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>
+}
+</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="Color.html">Color</a></div><div class="sidebar-section-children"><a href="EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="FontImage.html">FontImage</a></div><div class="sidebar-section-children"><a href="Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="SoundWave.html">SoundWave</a></div><div class="sidebar-section-children"><a href="TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UIScrollbar.html">UIScrollbar</a></div><div class="sidebar-section-children"><a href="UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileCollision.html">TileCollision</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-global"><div>Global</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="global.html#postProcess">postProcess</a></div><div class="sidebar-section-children"><a href="global.html#uiSystem">uiSystem</a></div><div class="sidebar-section-children"><a href="global.html#zzfxM">zzfxM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>
