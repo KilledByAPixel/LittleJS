@@ -33,13 +33,14 @@ tile(pos, size=(16,16), texture=0, padding=0) // Create a tile info object
 
 // Helper functions 
 abs(value)                                    // Get absolute value
-min(valueA, valueB)                           // Get lowest of values
-max(valueA, valueB)                           // Get highest of values
+min(...values)                                // Get lowest of values
+max(...values)                                // Get highest of values
 sign(value)                                   // Get the sign of value
 mod(dividend, divisor=1)                      // Get remainder of division
 clamp(value, min=0, max=1)                    // Clamps between values
 percent(value, valueA, valueB)                // Get percentage between values
 lerp(valueA, valueB, percent)                 // Linearly interpolates between values
+percentLerp(value, percentA, percentB, lerpA, lerpB) // Lerp that remaps the percent
 distanceWrap(valueA, valueB, wrapSize=1)      // Signed wrapped distance between values
 lerpWrap(valueA, valueB, percent, wrapSize=1) // Linearly interpolates with wrapping
 distanceAngle(angleA, angleB)                 // Signed wrapped distance between angles
@@ -54,7 +55,8 @@ formatTime(t)                                 // Formats seconds for display
 // Random functions
 rand(valueA=1, valueB=0)             // Random float between values
 randInt(valueA, valueB=0)            // Random integer between values
-randSign()                           // Randomly bool either -1 or 1
+randBool(chance=.5)                  // Random boolean with given chance (0 to 1)
+randSign()                           // Randomly either -1 or 1
 randVec2(length=1)                   // Random Vector2 with the passed in length
 randInCircle(radius=1, minRadius=0)  // Random Vector2 within a circle
 randColor(colorA, colorB, linear)    // Random color between values
@@ -111,16 +113,16 @@ RandomGenerator.int(valueA, valueB=0)     // Random integer between values
 RandomGenerator.sign()                    // Randomly either -1 or 1
 
 // Time tracking system
-Timer(timeLeft)        // Create a timer object
-Timer.set(timeLeft=0)  // Set the timer with seconds passed in
-Timer.unset()          // Unset the timer
-Timer.isSet()          // Returns true if set
-Timer.active()         // Returns true if set and has not elapsed
-Timer.elapsed()        // Returns true if set and elapsed
-Timer.get()            // Get how long since elapsed, 0 if not set
-Timer.getPercent()     // Get percent elapsed, 0 if not set
-Timer.toString()       // Get this timer expressed as a string
-Timer.valueOf()        // Get how long since elapsed, 0 if not set
+Timer(timeLeft)       // Create a timer object
+Timer.set(timeLeft=0) // Set the timer with seconds passed in
+Timer.unset()         // Unset the timer
+Timer.isSet()         // Returns true if set
+Timer.active()        // Returns true if set and has not elapsed
+Timer.elapsed()       // Returns true if set and elapsed
+Timer.get()           // Get how long since elapsed, 0 if not set
+Timer.getPercent()    // Get percent elapsed, 0 if not set
+Timer.toString()      // Get this timer expressed as a string
+Timer.valueOf()       // Get how long since elapsed, 0 if not set
 ```
 
 ## LittleJS Drawing System
@@ -131,35 +133,45 @@ Timer.valueOf()        // Get how long since elapsed, 0 if not set
 
 ```javascript
 // Drawing functions
-drawTile(pos, size=(1,1), tileInfo, color=WHITE, angle=0, mirror, additiveColor)
-drawRect(pos, size=(1,1), color=WHITE, angle=0)
-drawLine(posA, posB, thickness=.1, color=WHITE)
-drawCanvas2D(pos, size, angle, mirror, drawFunction)
-drawText(text, pos, size=1, color=WHITE, lineWidth, lineColor)
-drawTextScreen(text, pos, size=1, color=WHITE, lineWidth, lineColor)
+drawTile(pos, size, tileInfo, color=WHITE, angle=0, mirror, additiveColor)
+drawRect(pos, size, color=WHITE, angle=0)
+drawLine(posA, posB, thickness=.1, color=WHITE, pos=(0,0), angle=0)
+drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos, angle=0)
+drawEllipse(pos, size, color=WHITE, angle=0, lineWidth=0, lineColor=BLACK)
+drawCircle(pos, radius=1, color=WHITE, lineWidth=0, lineColor=BLACK)
+drawCanvas2D(pos, size, angle=0, mirror, drawFunction, screenSpace, context)
+
+// Text functions
+drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK)
+drawTextOverlay(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK)
+drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK)
+
+// Utility drawing functions
 setBlendMode(additive)
-toggleFullscreen()
 isFullscreen()
+toggleFullscreen()
 
 // Tile Info Object
-TileInfo(pos=(0,0), size, textureIndex=0) // Create a tile info object
-TileInfo.pos              // Top left corner of tile in pixels
-TileInfo.size             // Size of tile in pixels
-TileInfo.textureIndex     // Texture index to use
-TileInfo.offset(offset)   // Offset this tile by a certain amount in pixels
-TileInfo.frame(frame)     // Offset this tile by a number of animation frames
-TileInfo.textureInfo      // The texture info for this tile
+TileInfo(pos, size, textureIndex=0, padding=0) // Create a tile info object
+TileInfo.pos            // Top left corner of tile in pixels
+TileInfo.size           // Size of tile in pixels
+TileInfo.textureIndex   // Texture index to use
+TileInfo.padding        // How many pixels padding around tiles
+TileInfo.offset(offset) // Offset this tile by a certain amount in pixels
+TileInfo.frame(frame)   // Offset this tile by a number of animation frames
+TileInfo.textureInfo    // The texture info for this tile
 
 // Texture Info Object
-TextureInfo(image)       // Created automatically for each image
-TextureInfo.image        // Image source
-TextureInfo.size         // Size of the image
-TextureInfo.glTexture    // WebGL texture
+TextureInfo(image)      // Created automatically for each image
+TextureInfo.image       // Image source
+TextureInfo.size        // Size of the image
+TextureInfo.glTexture   // WebGL texture
 
 // Font Image Object draws text using characters in an image
 FontImage(image, tileSize=(8,8), paddingSize=(0,1)) // Create an image font
 FontImage.drawText(text, pos, scale, center)        // Draw text in world space
 FontImage.drawTextScreen(text, pos, scale, center)  // Draw text in screen space
+FontImage.drawTextOverlay(text, pos, scale, center) // Draw text to overlay canvas
 
 // Camera settings
 cameraPos = (0,0)        // Position of camera in world space
@@ -183,31 +195,45 @@ tileFixBleedScale = .3     // How much smaller to draw tiles to prevent bleeding
 ```
 
 ## LittleJS Audio System
-- Caches sounds and music for fast playback
+- Caches sounds and music for fast playback with frame-spread loading
+- Individual sound instance control with pause/resume capabilities
 - Can attenuate and apply stereo panning to sounds
-- Ability to play mp3, ogg, and wave file
+- Ability to play mp3, ogg, and wave files with loading progress tracking
 - [ZzFX Sound Effect Generator](https://killedbyapixel.github.io/ZzFX)
 - [ZzFXM Music System](https://keithclark.github.io/ZzFXM)
 
 ```javascript
 // Sound Object
-Sound(zzfxSound)                                        // Create a zzfx sound
-SoundWave(filename, randomness=0)                       // Load a wave, mp3, and ogg
-Sound.play(pos, volume=1, pitch=1, randomness=1, loop)  // Play a sound
-Sound.playNote(semitoneOffset, pos, volume=1)           // Play as note with a semitone offset
-Sound.stop()                                            // Stop the last instance that was played
-Sound.getSource()                                       // Get source of most recent instance
-Sound.getDuration()                                     // Get length of sound in seconds
-Sound.isLoading()                                       // Check if sound is loading
+Sound(zzfxSound, range, taper)                         // Create a zzfx sound
+SoundWave(filename, randomness=0, range, taper)        // Load a wave, mp3, or ogg
+Sound.play(pos, volume=1, pitch=1, randomness=1, loop) // Play a sound, returns SoundInstance
+Sound.playMusic(volume=1, loop=true)                   // Play as music with looping
+Sound.playNote(semitoneOffset, pos, volume=1)          // Play as note with a semitone offset
+Sound.getDuration()                                    // Get length of sound in seconds
+Sound.isLoaded()                                       // Check if sound is currently loading
+Sound.loadedPercent                                    // Get loading progress (0 to 1)
 
-// ZzFXM - A tiny music system
-Music(..zzfxMusic)                                      // Create a zzfx music object
-Music.playMusic(volume, loop=false)                     // Play the music
+// SoundInstance
+SoundInstance.start()             // Start playing the sound
+SoundInstance.setVolume(volume)   // Change volume during playback
+SoundInstance.stop(fadeTime=0)    // Stop with optional fade out
+SoundInstance.pause()             // Pause the sound
+SoundInstance.unpause()           // Resume paused sound
+SoundInstance.isPlaying()         // Check if currently playing
+SoundInstance.isPaused()          // Check if paused
+SoundInstance.isStopped()         // Check if stopped
+SoundInstance.getCurrentTime()    // Get current playback position
+SoundInstance.getDuration()       // Get total duration
+SoundInstance.getSource()         // Get AudioBufferSourceNode
+
+// ZzFXM - Tiny music playing system
+Music(..zzfxMusic)                                   // Create a zzfx music object
+Music.playMusic(volume=1, loop=true)                // Play the music
 
 // Audio functions
-playAudioFile(filename, volume=1, loop=false)           // Play an audio file or url
-speak(text, language='', volume=1, rate=1, pitch=1)     // Speak text line
-speakStop()                                             // Stop all queued speech
+speak(text, language='', volume=1, rate=1, pitch=1)  // Speak text line
+speakStop()                                          // Stop all queued speech
+getNoteFrequency(semitoneOffset, rootFrequency=220)  // Get frequency for musical notes
 
 // Audio settings
 soundEnable = true      // Should sound be enabled?
@@ -228,11 +254,13 @@ soundDefaultTaper = .7  // Default range percent to taper off sound (0-1)
 keyIsDown(key)                        // Is key down?
 keyWasPressed(key)                    // Was key pressed this frame?
 keyWasReleased(key)                   // Was key released this frame?
-keyDirection(up, down, left, right)                        // Get input vector from arrow keys or wasd
+keyDirection(up, down, left, right)   // Get input vector from arrow keys or wasd
 
 // Mouse / Touch
 mousePos                              // World space mouse position
 mousePosScreen                        // Screen space mouse position
+mouseDelta                            // World space mouse movement delta
+mouseDeltaScreen                      // Screen space mouse movement delta
 mouseWheel                            // Delta mouse wheel this frame    
 mouseIsDown(button)                   // Is mouse button down?
 mouseWasPressed(button)               // Was mouse button pressed this frame?
@@ -286,7 +314,7 @@ EngineObject.render()                              // Render object, called auto
 EngineObject.destroy()                             // Destroy this object and children
 EngineObject.collideWithTile(tileData, pos)        // Tile collision resolve check
 EngineObject.collideWithObject(object)             // Object collision resolve check
-EngineObject.getAliveTime(object)                  // How long since object was created
+EngineObject.getAliveTime()                        // How long since object was created
 EngineObject.applyAcceleration(acceleration)       // Apply acceleration
 EngineObject.applyForce(force)                     // Apply force
 EngineObject.getMirrorSign()                       // Get mirror direction (1 or -1)
@@ -324,7 +352,7 @@ objectMaxSpeed = 1            // Clamp max speed to avoid fast objects missing c
 gravity = (0,0)               // How much gravity to apply to objects
 
 // Engine Object functions
-engineObjectsCollect(pos, size, objects=engineObjects)k
+engineObjectsCollect(pos, size, objects=engineObjects)
 engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
 engineObjectsRaycast(start, end, objects=engineObjects)
 engineObjectsDestroy()
@@ -341,6 +369,13 @@ engineObjectsDestroy()
 
 ```javascript
 
+// Canvas Layer
+CanvasLayer(position, size) // Create a canvas layer object
+CanvasLayer.canvas          // The canvas used by this layer
+CanvasLayer.context         // The 2D context of the canvas
+CanvasLayer.getImageData()  // Get image data from canvas
+CanvasLayer.useWebGL()      // Creates or updates WebGL texture
+
 // LittleJS Layer System
 TileLayer(position, size, tileInfo, scale)     // Create a tile layer object
 TileLayer.setData(layerPos, data, redraw)      // Set data at position
@@ -353,7 +388,7 @@ TileLayer.drawCanvas2D(pos, size, angle, mirror, drawFunction)      // Draw to 2
 
 // Tile Layer Data Object
 TileLayerData(tile, direction=0, mirror=false, color=WHITE) // Create tile data object
-TileLayerData.clear()      // Clear this tile data
+TileLayerData.clear()                                       // Clear this tile data
 
 // Tile Collision Layer
 TileCollisionLayer(position, size, tileInfo=tile()) // Create a tile collision layer object
@@ -387,8 +422,8 @@ particleEmitRateScale = 1 // Scales particles emit rate
 
 ```javascript
 ASSERT(assert, output) // Asserts if the expression is false
-debugRect(pos, size, color='#fff', time=0, angle=0, fill)   // Draw debug rectangle
-debugCircle(pos, radius, color='#fff', time=0, fill)        // Draw debug circle
+debugRect(pos, size, color='#fff', time=0, angle=0, fill) // Draw debug rectangle
+debugCircle(pos, radius, color='#fff', time=0, fill)      // Draw debug circle
 debugPoint(pos, color, time, angle)                         // Draw debug point
 debugLine(posA, posB, color, thickness=.1, time)            // Draw debug line
 debugText(text, pos, size=1, color='#fff', time=0, angle=0) // Draw debug text
