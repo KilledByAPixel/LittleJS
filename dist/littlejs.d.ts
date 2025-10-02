@@ -1821,6 +1821,7 @@ declare module "littlejsengine" {
         loadedPercent: number;
         sampleChannels: any[][];
         /** Play the sound
+         *  Sounds may not play until a user interaction occurs
          *  @param {Vector2} [pos] - World space position to play the sound if any
          *  @param {number}  [volume] - How much to scale volume by
          *  @param {number}  [pitch] - How much to scale pitch by
@@ -1829,11 +1830,12 @@ declare module "littlejsengine" {
          *  @return {SoundInstance} - The audio source node
          */
         play(pos?: Vector2, volume?: number, pitch?: number, randomnessScale?: number, loop?: boolean): SoundInstance;
-        /** Play a music track that loops by default with full volume and normal pitch
-         *  @param {boolean} [loop] - Should the sound loop?
+        /** Play a music track that loops by default
+         *  @param {number} [volume] - Volume to play the music at
+         *  @param {boolean} [loop] - Should the music loop?
          *  @return {SoundInstance} - The audio source node
          */
-        playMusic(loop?: boolean): SoundInstance;
+        playMusic(volume?: number, loop?: boolean): SoundInstance;
         /** Play the sound as a note with a semitone offset
          *  @param {number}  semitoneOffset - How many semitones to offset pitch
          *  @param {Vector2} [pos] - World space position to play the sound if any
@@ -1916,6 +1918,7 @@ declare module "littlejsengine" {
         gainNode: GainNode;
         /** @property {AudioBufferSourceNode} - Source node of the audio */
         source: AudioBufferSourceNode;
+        onendedCallback: (source: any) => void;
         /** Start playing the sound instance from the offset time
          *  @param {number} [offset] - Offset in seconds to start playback from
          */
@@ -2747,9 +2750,9 @@ declare module "littlejsengine" {
          */
         constructor(zzfxMusic: [any[], any[], any[], number]);
         sampleChannels: any[];
-        /** Play the music
-         *  @param {number}  [volume=1] - How much to scale volume by
-         *  @param {boolean} [loop] - True if the music should loop
+        /** Play the music that loops by default
+         *  @param {number}  [volume] - Volume to play the music at
+         *  @param {boolean} [loop] - Should the music loop?
          *  @return {AudioBufferSourceNode} - The audio source node
          */
         playMusic(volume?: number, loop?: boolean): AudioBufferSourceNode;
@@ -2853,29 +2856,35 @@ declare module "littlejsengine" {
         pos: Vector2;
         /** @property {Vector2} - Screen space size of the object */
         size: Vector2;
-        /** @property {Color} - color of the object */
+        /** @property {Color} - Color of the object */
         color: Color;
-        /** @property {Color} - color for text */
+        /** @property {string} - Text for this ui object */
+        text: any;
+        /** @property {Color} - Color when disabled */
+        disabledColor: Color;
+        /** @property {boolean} - Is this object disabled? */
+        disabled: boolean;
+        /** @property {Color} - Color for text */
         textColor: Color;
-        /** @property {Color} - color used when hovering over the object */
+        /** @property {Color} - Color used when hovering over the object */
         hoverColor: Color;
-        /** @property {Color} - color for line drawing */
+        /** @property {Color} - Color for line drawing */
         lineColor: Color;
-        /** @property {number} - width for line drawing */
+        /** @property {number} - Width for line drawing */
         lineWidth: number;
-        /** @property {number} - corner radius for rounded rects */
+        /** @property {number} - Corner radius for rounded rects */
         cornerRadius: number;
-        /** @property {string} - font for this objecct */
+        /** @property {string} - Font for this objecct */
         font: string;
-        /** @property {number} - override for text height */
+        /** @property {number} - Override for text height */
         textHeight: any;
-        /** @property {boolean} - should this object be drawn */
+        /** @property {boolean} - Should this object be drawn */
         visible: boolean;
-        /** @property {Array<UIObject>} - a list of this object's children */
+        /** @property {Array<UIObject>} - A list of this object's children */
         children: any[];
-        /** @property {UIObject} - this object's parent, position is in parent space */
+        /** @property {UIObject} - This object's parent, position is in parent space */
         parent: any;
-        /** @property {number} - Extra size added when checking if element is touched */
+        /** @property {number} - Extra size added to make small buttons easier to touch on mobile devices */
         extraTouchSize: number;
         /** @property {Sound} - Sound when interactive element is pressed */
         soundPress: any;
@@ -2901,7 +2910,7 @@ declare module "littlejsengine" {
         update(): void;
         /** Render the object, called automatically by plugin once each frame */
         render(): void;
-        /** Special update for when object is invisible */
+        /** Special update when object is not visible */
         updateInvisible(): void;
         /** Called when the mouse enters the object */
         onEnter(): void;
@@ -2929,9 +2938,7 @@ declare module "littlejsengine" {
          *  @param {string}  [font=uiSystem.defaultFont]
          */
         constructor(pos?: Vector2, size?: Vector2, text?: string, align?: string, font?: string);
-        /** @property {string} */
         text: string;
-        /** @property {string} */
         align: string;
     }
     /**
@@ -2967,12 +2974,7 @@ declare module "littlejsengine" {
          *  @param {Color}   [color=uiSystem.defaultButtonColor]
          */
         constructor(pos?: Vector2, size?: Vector2, text?: string, color?: Color);
-        /** @property {string} */
         text: string;
-        /** @property {Color} */
-        disabledColor: Color;
-        /** @property {boolean} */
-        disabled: boolean;
     }
     /**
      * UICheckbox - A UI object that acts as a checkbox
@@ -2983,14 +2985,13 @@ declare module "littlejsengine" {
          *  @param {Vector2} [pos]
          *  @param {Vector2} [size]
          *  @param {boolean} [checked]
+         *  @param {string}  [text]
+         *  @param {Color}   [color=uiSystem.defaultButtonColor]
          */
-        constructor(pos?: Vector2, size?: Vector2, checked?: boolean);
-        /** @property {boolean} */
+        constructor(pos?: Vector2, size?: Vector2, checked?: boolean, text?: string, color?: Color);
+        /** @property {boolean} - Current percentage value of this scrollbar 0-1 */
         checked: boolean;
-        /** @property {Color} */
-        disabledColor: Color;
-        /** @property {boolean} */
-        disabled: boolean;
+        text: string;
     }
     /**
      * UIScrollbar - A UI object that acts as a scrollbar
@@ -3006,14 +3007,11 @@ declare module "littlejsengine" {
          *  @param {Color}   [handleColor=WHITE]
          */
         constructor(pos?: Vector2, size?: Vector2, value?: number, text?: string, color?: Color, handleColor?: Color);
-        /** @property {number} */
+        /** @property {number} - Current percentage value of this scrollbar 0-1 */
         value: number;
-        /** @property {string} */
-        text: string;
-        /** @property {Color} */
+        /** @property {Color} - Color for the handle part of the scrollbar */
         handleColor: Color;
-        /** @property {Color} */
-        disabledColor: Color;
+        text: string;
     }
     /**
      * LittleJS Box2D Physics Plugin
