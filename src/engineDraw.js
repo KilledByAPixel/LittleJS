@@ -378,13 +378,14 @@ function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0,
  *  @param {Array<Vector2>} points
  *  @param {number}  [width]
  *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {boolean} [wrap] - Should the last point connect to the first?
  *  @param {Vector2} [pos=(0,0)] - Offset to apply
  *  @param {number}  [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawLineList(points, width=.1, color, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace, context)
+function drawLineList(points, width=.1, color, wrap=false, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace, context)
 {
     ASSERT(Array.isArray(points), 'drawLineList points should be an array');
     ASSERT(isNumber(width), 'drawLineList width should be a number');
@@ -401,7 +402,7 @@ function drawLineList(points, width=.1, color, pos=vec2(), angle=0, useWebGL=glE
             pos = screenToWorld(pos);
             scale = 1/cameraScale;
         }
-        glDrawOutlineTransform(points, color.rgbaInt(), width, pos.x, pos.y, scale, scale, angle, false);
+        glDrawOutlineTransform(points, color.rgbaInt(), width, pos.x, pos.y, scale, scale, angle, wrap);
     }
     else
     {
@@ -420,6 +421,8 @@ function drawLineList(points, width=.1, color, pos=vec2(), angle=0, useWebGL=glE
                 else
                     context.moveTo(point.x, point.y);
             }
+            if (wrap)
+                context.closePath();
             context.stroke();
         }, screenSpace, context);
     }
@@ -459,12 +462,16 @@ function drawLine(posA, posB, width=.1, color, pos=vec2(), angle=0, useWebGL, sc
  *  @memberof Draw */
 function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, lineColor=BLACK, angle=0, useWebGL=glEnable, screenSpace=false, context)
 {
+    ASSERT(isVector2(size), 'drawRegularPoly size should be a vec2');
+    ASSERT(isNumber(sides), 'drawRegularPoly sides should be a number');
+
     // build regular polygon points
     const points = [];
+    const sizeX = size.x/2, sizeY = size.y/2;
     for (let i=sides; i--;)
     {
         const a = (i/sides)*PI*2;
-        points.push(vec2(Math.sin(a)*size.x, Math.cos(a)*size.y));
+        points.push(vec2(Math.sin(a)*sizeX, Math.cos(a)*sizeY));
     }
     drawPoly(points, color, lineWidth, lineColor, pos, angle, useWebGL, screenSpace, context);
 }
@@ -523,7 +530,7 @@ function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(),
 
 /** Draw colored ellipse using passed in point
  *  @param {Vector2} pos
- *  @param {Vector2} [size=(1,1)]
+ *  @param {Vector2} [size=(1,1)] - Width and height diameter
  *  @param {Color}   [color=(1,1,1,1)]
  *  @param {number}  [angle]
  *  @param {number}  [lineWidth]
@@ -553,7 +560,7 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
         {
             context.fillStyle = color.toString();
             context.beginPath();
-            context.ellipse(0, 0, size.x, size.y, 0, 0, 9);
+            context.ellipse(0, 0, size.x/2, size.y/2, 0, 0, 9);
             context.fill();
             if (lineWidth)
             {
@@ -567,7 +574,7 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
 
 /** Draw colored circle using passed in point
  *  @param {Vector2} pos
- *  @param {number}  [radius=1]
+ *  @param {number}  [size=1] - Diameter
  *  @param {Color}   [color=(1,1,1,1)]
  *  @param {number}  [lineWidth=0]
  *  @param {Color}   [lineColor=(0,0,0,1)]
@@ -575,8 +582,11 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawCircle(pos, radius=1, color=WHITE, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
-{ drawEllipse(pos, vec2(radius), color, 0, lineWidth, lineColor, useWebGL, screenSpace, context); }
+function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
+{
+    ASSERT(isNumber(size), 'drawCircle size should be a number');
+    drawEllipse(pos, vec2(size), color, 0, lineWidth, lineColor, useWebGL, screenSpace, context);
+}
 
 /** Draw directly to a 2d canvas context in world space
  *  @param {Vector2}  pos

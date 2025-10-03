@@ -13,7 +13,7 @@ To start LittleJS, you need to create a few functions and pass them to engineIni
 
 ```javascript
 // Start up LittleJS engine with your callback functions
-engineInit(init, update, updatePost, render, renderPost, imageSources=[]);
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
 ```
 
 ## LittleJS Utilities Classes and Functions
@@ -135,11 +135,13 @@ Timer.valueOf()       // Get how long since elapsed, 0 if not set
 // Drawing functions
 drawTile(pos, size, tileInfo, color=WHITE, angle=0, mirror, additiveColor)
 drawRect(pos, size, color=WHITE, angle=0)
+drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0)
 drawLine(posA, posB, width=.1, color=WHITE, pos=(0,0), angle=0)
+drawLineList(points, width=.1, color, wrap=false, pos=(0,0), angle=0)
 drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos, angle=0)
-drawRegularPoly(pos, size=(1,1), sides=3, color=WHITE)
-drawEllipse(pos, size, color=WHITE, angle=0, lineWidth=0, lineColor=BLACK)
-drawCircle(pos, radius=1, color=WHITE, lineWidth=0, lineColor=BLACK)
+drawRegularPoly(pos, size=(1,1), sides=3, color=WHITE, lineWidth=0, lineColor=BLACK, angle=0)
+drawEllipse(pos, size=(1,1), color=WHITE, angle=0, lineWidth=0, lineColor=BLACK)
+drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK)
 drawCanvas2D(pos, size, angle=0, mirror, drawFunction, screenSpace, context)
 
 // Text functions
