@@ -21,7 +21,7 @@ import * as LJS from '../../dist/littlejs.esm.min.js';
 const {vec2, rgb} = LJS;
 
 // keep our own list of simple sprites and track fps
-let sprites, tileLayer, timeMS, fpsDisplay, statsDisplay, spriteColor, spriteAdditiveColor, musicInstance;
+let sprites, tileLayer, timeMS, fpsDisplay, statsDisplay, spriteColor, spriteAdditiveColor, musicInstance, hasClicked;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -59,21 +59,14 @@ function gameInit()
 ///////////////////////////////////////////////////////////////////////////////
 function gameUpdate()
 {
-    if (LJS.mouseWasPressed(0))
-    {
-        if (!musicInstance)
-            musicInstance = music.play();
-        else if (!musicInstance.isPlaying())
-            musicInstance.start();
-    }
-
     // mouse click = change color
     if (LJS.mouseWasPressed(0) || LJS.mouseIsDown(2))
     {
+        hasClicked = true;
         spriteColor = LJS.randColor();
         spriteAdditiveColor = LJS.randColor(rgb(.5,.5,.5, 0), rgb(0,0,0,0));
     }
-
+    
     // right click = drop test object
     if (LJS.mouseIsDown(2))
         new TestObject(LJS.mousePos);
@@ -92,9 +85,18 @@ function gameUpdate()
                 additiveColor:spriteAdditiveColor.rgbaInt()
             });
     }
-
+    
     // mouse wheel = zoom
     LJS.setCameraScale(LJS.clamp(LJS.cameraScale*(1-LJS.mouseWheel/10), 1, 1e3));
+    
+    // mouse click = play music
+    if (hasClicked)
+    {
+        if (!musicInstance)
+            musicInstance = music.play();
+        else if (!musicInstance.isPlaying())
+            musicInstance.start();
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
