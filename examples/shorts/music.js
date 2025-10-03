@@ -1,14 +1,11 @@
-// Music player variables
+let playButton, stopButton, progressBar;
 let musicSound = new SoundWave('song.mp3');
 let musicVolume = 1;
 let musicInstance;
 
-// UI elements
-let playButton, stopButton, progressBar;
-
 function gameInit()
 {
-    // load ui system plugin
+    // setup ui system plugin
     new UISystemPlugin;
     uiSystem.defaultSoundPress = new Sound([.5,0,220]);
     uiSystem.defaultSoundClick = new Sound([.5,0,440]);

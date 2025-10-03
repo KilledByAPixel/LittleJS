@@ -1,40 +1,48 @@
-class TimerButton extends EngineObject
-{
-    constructor(pos, time)
-    {
-        super(pos, vec2(5.5));
-        this.time = time;
-        this.timer = new Timer;
-    }
-
-    update()
-    {
-        // start or stop the timer when clicked
-        if (mouseWasPressed(0) && isOverlapping(this.pos, this.size, mousePos))
-            this.timer.isSet() ? this.timer.unset() : this.timer.set(this.time);
-    }
-
-    render()
-    {
-        // get color based on timer state
-        this.color = this.timer.isSet() ? this.timer.active() ? BLUE : RED : GRAY;
-
-        // draw the button and timer text
-        drawRect(this.pos, this.size, this.color);
-        if (this.timer.isSet())
-        {
-            drawTextOverlay(this.timer.get().toFixed(1), this.pos.add(vec2(0,1)), 2);
-            const percent = this.timer.getPercent()*100|0;
-            drawTextOverlay(percent+'%', this.pos.add(vec2(0,-1)), 2);
-        }
-        else
-            drawTextOverlay('Click\nto set', this.pos, 2);
-    }
-}
+let timerButton, timerSlider;
 
 function gameInit()
 {
-    // create some timer buttons
-    new TimerButton(vec2(-5, 0), 3);
-    new TimerButton(vec2( 5, 0), 0);
+    // setup ui system plugin
+    new UISystemPlugin();
+    uiSystem.defaultSoundPress = new Sound([1,0,220]);
+    uiSystem.defaultSoundClick = new Sound([1,0,440]);
+    uiSystem.defaultCornerRadius = 10;
+    
+    // create background
+    const uiBackground = new UIObject(mainCanvasSize.scale(.5), mainCanvasSize);
+    uiBackground.color = hsl(.6, .3, .2);
+
+    // create timer button
+    timerButton = new UIButton(vec2(0, -40), vec2(200, 90), 'Start');
+    timerButton.timer = new Timer;
+    timerButton.onClick = ()=>
+    {
+        if (timerButton.timer.isSet())
+        {
+            timerButton.timer.unset();
+            timerButton.text = 'Start';
+        }
+        else
+        {
+            timerButton.timer.set(3);
+            timerButton.text = 'Stop';
+        }
+    }
+    uiBackground.addChild(timerButton);
+
+    // create non-interactive slider to display timer
+    timerSlider = new UIScrollbar(vec2(0, 100), vec2(400, 50));
+    timerSlider.interactive = false;
+    timerSlider.update = ()=>
+    {
+        // update the timer display
+        const t = timerButton.timer.get();
+        const timeText = t.toFixed(2) + 's';
+        const isSet = timerButton.timer.isSet();
+        const setTime = timerButton.timer.getSetTime();
+        timerSlider.text = timeText;
+        timerSlider.value = setTime ? 1+t/setTime : 0;
+        timerSlider.color = isSet ? t < 0 ? CYAN : RED : GRAY;
+    }
+    timerButton.addChild(timerSlider);
 }
