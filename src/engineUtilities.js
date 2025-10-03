@@ -985,6 +985,10 @@ class Timer
      * @return {number} */
     getPercent() { return this.isSet()? 1-percent(this.time - time, 0, this.setTime) : 0; }
 
+    /** Get the time this timer was set to, returns 0 if not set
+     * @return {number} */
+    getSetTime() { return this.isSet() ? this.setTime : 0; }
+
     /** Returns this timer expressed as a string
      * @return {string} */
     toString() { if (debug) { return this.isSet() ? Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ) : 'unset'; }}
