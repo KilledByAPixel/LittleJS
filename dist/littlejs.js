@@ -2231,6 +2231,10 @@ class Timer
      * @return {number} */
     getPercent() { return this.isSet()? 1-percent(this.time - time, 0, this.setTime) : 0; }
 
+    /** Get the time this timer was set to, returns 0 if not set
+     * @return {number} */
+    getSetTime() { return this.isSet() ? this.setTime : 0; }
+
     /** Returns this timer expressed as a string
      * @return {string} */
     toString() { if (debug) { return this.isSet() ? Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ) : 'unset'; }}
@@ -7121,7 +7125,7 @@ function glDrawPoints(points, rgba)
   
     // setup triangle strip with degenerate verts at start and end
     let offset = glBatchCount * gl_INDICES_PER_POLY_VERTEX;
-    for(let i = vertCount; i--;)
+    for (let i = vertCount; i--;)
     {
         const j = clamp(i-1, 0, vertCount-3);
         const point = points[j];
@@ -7149,7 +7153,7 @@ function glDrawColoredPoints(points, pointColors)
   
     // setup triangle strip with degenerate verts at start and end
     let offset = glBatchCount * gl_INDICES_PER_POLY_VERTEX;
-    for(let i = vertCount; i--;)
+    for (let i = vertCount; i--;)
     {
         const j = clamp(i-1, 0, vertCount-3);
         const point = points[j];
@@ -7872,6 +7876,8 @@ class UISystemPlugin
         this.defaultLineWidth = 4;
         /** @property {number} - Default rounded rect corner radius for UI elements */
         this.defaultCornerRadius = 0;
+        /** @property {number} - Default scale to use for fitting text to object */
+        this.defaultTextScale = .8;
         /** @property {string} - Default font for UI elements */
         this.defaultFont = 'arial';
         /** @property {Sound} - Default sound when interactive UI element is pressed */
@@ -7888,6 +7894,7 @@ class UISystemPlugin
         engineAddPlugin(uiUpdate, uiRender);
 
         // setup recursive update and render
+        // update in reverse order to detect mouse enter/leave
         function uiUpdate()
         {
             function updateInvisibleObject(o)
@@ -7912,7 +7919,11 @@ class UISystemPlugin
                 else
                     updateInvisibleObject(o);
             }
-            uiSystem.uiObjects.forEach(o=> o.parent || updateObject(o));
+            for (let i = uiSystem.uiObjects.length; i--;)
+            {
+                const o = uiSystem.uiObjects[i];
+                o.parent || updateObject(o)
+            }
         }
         function uiRender()
         {
@@ -7991,10 +8002,11 @@ class UISystemPlugin
     *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
     *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
     *  @param {string}  [align]
-    *  @param {string}  [font=uiSystem.defaultFont] */
-    drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont)
+    *  @param {string}  [font=uiSystem.defaultFont]
+    *  @param {boolean} [applyMaxWidth=true] */
+    drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont, applyMaxWidth=true)
     {
-        drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, size.x, uiSystem.uiContext);
+        drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, applyMaxWidth ? size.x : undefined, uiSystem.uiContext);
     }
 }
 
@@ -8036,8 +8048,12 @@ class UIObject
         this.cornerRadius = uiSystem.defaultCornerRadius;
         /** @property {string} - Font for this objecct */
         this.font = uiSystem.defaultFont;
+        /** @property {number} - Override for text width */
+        this.textWidth = undefined;
         /** @property {number} - Override for text height */
         this.textHeight = undefined;
+        /** @property {number} - Scale text to fit in the object */
+        this.textScale = uiSystem.defaultTextScale;
         /** @property {boolean} - Should this object be drawn */
         this.visible  = true;
         /** @property {Array<UIObject>} - A list of this object's children */
@@ -8147,6 +8163,16 @@ class UIObject
         this.mouseIsOver = this.mouseIsHeld = false;
     }
 
+    /** Get the size for text with overrides and scale
+     *  @return {Vector2}
+     */
+    getTextSize()
+    {
+        return vec2(
+            this.textWidth  || this.textScale * this.size.x, 
+            this.textHeight || this.textScale * this.size.y);
+    }
+
     /** Called when the mouse enters the object */
     onEnter() {}
 
@@ -8194,7 +8220,7 @@ class UIText extends UIObject
     }
     render()
     {
-        const textSize = vec2(this.size.x, this.textHeight || this.size.y);
+        const textSize = this.getTextSize();
         uiSystem.drawText(this.text, this.pos, textSize, this.textColor, this.lineWidth, this.lineColor, this.align, this.font);
     }
 }
@@ -8262,9 +8288,8 @@ class UIButton extends UIObject
         const color = this.disabled ? this.disabledColor : this.mouseIsOver ? this.hoverColor : this.color;
         uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor, this.cornerRadius);
         
-        // draw the text
-        const textScale = .8; // scale text to fit
-        const textSize = vec2(this.size.x, this.textHeight || this.size.y*textScale);
+        // draw the text scaled to fit
+        const textSize = this.getTextSize();
         uiSystem.drawText(this.text, this.pos, textSize, 
             this.textColor, 0, undefined, this.align, this.font);
     }
@@ -8313,13 +8338,11 @@ class UICheckbox extends UIObject
             uiSystem.drawLine(this.pos.add(s.multiply(vec2(-1,1))), this.pos.add(s.multiply(vec2(1,-1))), this.lineWidth, this.lineColor);
         }
         
-        // draw the text to the right side of the checkbox
-        const textScale = .8; // scale text to fit
-        const gapScale = .55;
-        const textSize = vec2(this.size.x, this.textHeight || this.size.y*textScale);
-        const pos = this.pos.add(vec2(this.size.x*gapScale,0));
+        // draw the text next to the checkbox
+        const textSize = this.getTextSize();
+        const pos = this.pos.add(vec2(this.size.x,0));
         uiSystem.drawText(this.text, pos, textSize, 
-            this.textColor, 0, undefined, 'left', this.font);
+            this.textColor, 0, undefined, 'left', this.font, false);
     }
 }
 
@@ -8386,9 +8409,8 @@ class UIScrollbar extends UIObject
             this.interactive && this.mouseIsHeld ? this.color : this.handleColor;
         uiSystem.drawRect(handlePos, handleSize, handleColor, this.lineWidth, this.lineColor, this.cornerRadius);
 
-        // draw the text on the scrollbar
-        const textScale = .8; // scale text to fit in scrollbar
-        const textSize = vec2(this.size.x, this.textHeight || this.size.y*textScale);
+        // draw the text scaled to fit on the scrollbar
+        const textSize = this.getTextSize();
         uiSystem.drawText(this.text, this.pos, textSize, 
             this.textColor, 0, undefined, this.align, this.font);
     }

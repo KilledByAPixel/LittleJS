@@ -1105,6 +1105,9 @@ declare module "littlejsengine" {
         /** Get percentage elapsed based on time it was set to, returns 0 if not set
          * @return {number} */
         getPercent(): number;
+        /** Get the time this timer was set to, returns 0 if not set
+         * @return {number} */
+        getSetTime(): number;
         /** Returns this timer expressed as a string
          * @return {string} */
         toString(): string;
@@ -2859,6 +2862,8 @@ declare module "littlejsengine" {
         defaultLineWidth: number;
         /** @property {number} - Default rounded rect corner radius for UI elements */
         defaultCornerRadius: number;
+        /** @property {number} - Default scale to use for fitting text to object */
+        defaultTextScale: number;
         /** @property {string} - Default font for UI elements */
         defaultFont: string;
         /** @property {Sound} - Default sound when interactive UI element is pressed */
@@ -2901,8 +2906,9 @@ declare module "littlejsengine" {
         *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
         *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
         *  @param {string}  [align]
-        *  @param {string}  [font=uiSystem.defaultFont] */
-        drawText(text: string, pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, align?: string, font?: string): void;
+        *  @param {string}  [font=uiSystem.defaultFont]
+        *  @param {boolean} [applyMaxWidth=true] */
+        drawText(text: string, pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, align?: string, font?: string, applyMaxWidth?: boolean): void;
     }
     /**
      * UI Object - Base level object for all UI elements
@@ -2939,8 +2945,12 @@ declare module "littlejsengine" {
         cornerRadius: number;
         /** @property {string} - Font for this objecct */
         font: string;
+        /** @property {number} - Override for text width */
+        textWidth: any;
         /** @property {number} - Override for text height */
         textHeight: any;
+        /** @property {number} - Scale text to fit in the object */
+        textScale: number;
         /** @property {boolean} - Should this object be drawn */
         visible: boolean;
         /** @property {Array<UIObject>} - A list of this object's children */
@@ -2975,6 +2985,10 @@ declare module "littlejsengine" {
         render(): void;
         /** Special update when object is not visible */
         updateInvisible(): void;
+        /** Get the size for text with overrides and scale
+         *  @return {Vector2}
+         */
+        getTextSize(): Vector2;
         /** Called when the mouse enters the object */
         onEnter(): void;
         /** Called when the mouse leaves the object */
