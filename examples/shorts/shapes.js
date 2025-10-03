@@ -2,7 +2,7 @@ function gameRender()
 {
     // polygon shapes
     for (let j=3; j<7; ++j)
-        drawRegularPoly(vec2(j*4-18,0), vec2(1), j, hsl(j/4+time/9,1,.5), time, .2, WHITE);
+        drawRegularPoly(vec2(j*4-18,0), vec2(1), j, hsl(j/4+time/9,1,.5), .2, WHITE, time);
 
     // circles and ellipses
     drawCircle(vec2(0,5), 1+wave(.5), hsl(.15,1,.5));
