@@ -1614,7 +1614,7 @@ declare module "littlejsengine" {
      *  @memberof WebGL */
     export function glDraw(x: number, y: number, sizeX: number, sizeY: number, angle?: number, uv0X?: number, uv0Y?: number, uv1X?: number, uv1Y?: number, rgba?: number, rgbaAdditive?: number): void;
     /** Transform and add a polygon to the gl draw list
-     *  @param {Array} points - Array of Vector2 points
+     *  @param {Array<Vector2>} points - Array of Vector2 points
      *  @param {number} rgba - Color of the polygon as a 32-bit integer
      *  @param {number} x
      *  @param {number} y
@@ -1623,9 +1623,9 @@ declare module "littlejsengine" {
      *  @param {number} angle
      *  @param {boolean} [tristrip] - should tristrip algorithm be used
      *  @memberof WebGL */
-    export function glDrawPointsTransform(points: any[], rgba: number, x: number, y: number, sx: number, sy: number, angle: number, tristrip?: boolean): void;
+    export function glDrawPointsTransform(points: Array<Vector2>, rgba: number, x: number, y: number, sx: number, sy: number, angle: number, tristrip?: boolean): void;
     /** Transform and add a polygon to the gl draw list
-     *  @param {Array} points - Array of Vector2 points
+     *  @param {Array<Vector2>} points - Array of Vector2 points
      *  @param {number} rgba - Color of the polygon as a 32-bit integer
      *  @param {number} lineWidth - Width of the outline
      *  @param {number} x
@@ -1634,12 +1634,17 @@ declare module "littlejsengine" {
      *  @param {number} sy
      *  @param {number} angle
      *  @memberof WebGL */
-    export function glDrawOutlineTransform(points: any[], rgba: number, lineWidth: number, x: number, y: number, sx: number, sy: number, angle: number): void;
-    /** Add a polygon to the gl draw list
-     *  @param {Array} points - Array of Vector2 points in triangle strip order
-     *  @param {number} rgba - Color of the polygon as a 32-bit integer
+    export function glDrawOutlineTransform(points: Array<Vector2>, rgba: number, lineWidth: number, x: number, y: number, sx: number, sy: number, angle: number): void;
+    /** Add a list of points to the gl draw list
+     *  @param {Array<Vector2>} points - Array of Vector2 points in tri strip order
+     *  @param {number} rgba - Color as a 32-bit integer
      *  @memberof WebGL */
-    export function glDrawPoints(points: any[], rgba: number): void;
+    export function glDrawPoints(points: Array<Vector2>, rgba: number): void;
+    /** Add a list of colored points to the gl draw list
+     *  @param {Array<Vector2>} points - Array of Vector2 points in tri strip order
+     *  @param {Array<number>} pointColors - Array of 32-bit integer colors
+     *  @memberof WebGL */
+    export function glDrawColoredPoints(points: Array<Vector2>, pointColors: Array<number>): void;
     /** Should WebGL be setup with anti-aliasing? must be set before calling engineInit
      *  @type {boolean}
      *  @memberof WebGL */
@@ -2209,7 +2214,6 @@ declare module "littlejsengine" {
      * - Caches arrays of tiles to off screen canvas for fast rendering
      * - Unlimited numbers of layers, allocates canvases as needed
      * - Tile layers can be drawn to using their context with canvas2d
-     * - Drawn directly to the main canvas without using WebGL
      * - Tile layers can also have collision with EngineObjects
      * @namespace TileCollision
      */

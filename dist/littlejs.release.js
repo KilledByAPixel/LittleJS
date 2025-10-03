@@ -4761,7 +4761,6 @@ function zzfxG
  * - Caches arrays of tiles to off screen canvas for fast rendering
  * - Unlimited numbers of layers, allocates canvases as needed
  * - Tile layers can be drawn to using their context with canvas2d
- * - Drawn directly to the main canvas without using WebGL
  * - Tile layers can also have collision with EngineObjects
  * @namespace TileCollision
  */
@@ -5963,7 +5962,7 @@ let glAntialias = true;
 let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount;
 
 // WebGL internal constants
-const gl_ARRAY_BUFFER_SIZE = 4e5;
+const gl_ARRAY_BUFFER_SIZE = 5e5;
 const gl_INDICES_PER_INSTANCE = 11;
 const gl_INSTANCE_BYTE_STRIDE = gl_INDICES_PER_INSTANCE * 4;
 const gl_MAX_INSTANCES = gl_ARRAY_BUFFER_SIZE / gl_INSTANCE_BYTE_STRIDE | 0;
@@ -6055,11 +6054,15 @@ function glInit()
     const geometry = new Float32Array([glBatchCount=0,0,1,0,0,1,1,1]);
     glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
     glContext.bufferData(glContext.ARRAY_BUFFER, geometry, glContext.STATIC_DRAW);
+    
+    // setup array buffer
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
+    glContext.bufferData(glContext.ARRAY_BUFFER, gl_ARRAY_BUFFER_SIZE, glContext.DYNAMIC_DRAW);
 }
 
-function glSetInstancedMode(force=false)
+function glSetInstancedMode()
 {
-    if (!glPolyMode && !force)
+    if (!glPolyMode)
         return;
     
     // setup instanced mode
@@ -6080,10 +6083,7 @@ function glSetInstancedMode(force=false)
         glContext.vertexAttribDivisor(location, divisor);
         offset += size*typeSize;
     }
-    glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
     initVertexAttribArray('g', glContext.FLOAT, 0, 2); // geometry
-    glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
-    glContext.bufferData(glContext.ARRAY_BUFFER, gl_ARRAY_BUFFER_SIZE, glContext.DYNAMIC_DRAW);
     initVertexAttribArray('p', glContext.FLOAT, 4, 4); // position & size
     initVertexAttribArray('u', glContext.FLOAT, 4, 4); // texture coords
     initVertexAttribArray('c', glContext.UNSIGNED_BYTE, 1, 4); // color
@@ -6113,8 +6113,6 @@ function glSetPolyMode()
         glContext.vertexAttribDivisor(location, 0);
         offset += size*typeSize;
     }
-    glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
-    glContext.bufferData(glContext.ARRAY_BUFFER, gl_ARRAY_BUFFER_SIZE, glContext.DYNAMIC_DRAW);
     initVertexAttribArray('p', glContext.FLOAT, 4, 2);         // position
     initVertexAttribArray('c', glContext.UNSIGNED_BYTE, 1, 4); // color
 }
@@ -6140,7 +6138,7 @@ function glPreRender()
         1,          1,        1, 0,
         p.x,        p.y,      0, 1];
 
-    // set the same matrix for both shaders
+    // set the same transform matrix for both shaders
     const initUniform = (program, uniform, value) =>
     {
         glContext.useProgram(program);
@@ -6158,9 +6156,12 @@ function glPreRender()
         glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
     }
 
-    // start in instanced rendering mode with additive blending off
-    glAdditive = glBatchAdditive = glPolyMode = false;
-    glSetInstancedMode(true);
+    // start with additive blending off
+    glAdditive = glBatchAdditive = false;
+
+    // force it to enter instanced mode
+    glPolyMode = true;
+    glSetInstancedMode();
 }
 
 /** Clear the canvas and setup the viewport
@@ -6170,7 +6171,9 @@ function glClearCanvas()
     if (!glContext) return;
 
     // clear and set to same size as main canvas
-    glContext.viewport(0, 0, glCanvas.width=drawCanvas.width, glCanvas.height=drawCanvas.height);
+    glCanvas.width = drawCanvas.width;
+    glCanvas.height = drawCanvas.height;
+    glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
     glContext.clear(glContext.COLOR_BUFFER_BIT);
 }
 
@@ -6305,7 +6308,10 @@ function glFlush()
         const destBlend = glBatchAdditive ? glContext.ONE : glContext.ONE_MINUS_SRC_ALPHA;
         glContext.blendFuncSeparate(glContext.SRC_ALPHA, destBlend, glContext.ONE, destBlend);
         glContext.enable(glContext.BLEND);
-        glContext.bufferSubData(glContext.ARRAY_BUFFER, 0, glPositionData);
+        
+        const byteLength = glBatchCount * 
+            (glPolyMode ? gl_INDICES_PER_POLY_VERTEX : gl_INDICES_PER_INSTANCE);
+        glContext.bufferSubData(glContext.ARRAY_BUFFER, 0, glPositionData, 0, byteLength);
         
         // draw the batch
         if (glPolyMode)
@@ -6377,7 +6383,7 @@ function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgb
 }
 
 /** Transform and add a polygon to the gl draw list
- *  @param {Array} points - Array of Vector2 points
+ *  @param {Array<Vector2>} points - Array of Vector2 points
  *  @param {number} rgba - Color of the polygon as a 32-bit integer
  *  @param {number} x
  *  @param {number} y
@@ -6403,7 +6409,7 @@ function glDrawPointsTransform(points, rgba, x, y, sx, sy, angle, tristrip=true)
 }
 
 /** Transform and add a polygon to the gl draw list
- *  @param {Array} points - Array of Vector2 points
+ *  @param {Array<Vector2>} points - Array of Vector2 points
  *  @param {number} rgba - Color of the polygon as a 32-bit integer
  *  @param {number} lineWidth - Width of the outline
  *  @param {number} x
@@ -6418,45 +6424,27 @@ function glDrawOutlineTransform(points, rgba, lineWidth, x, y, sx, sy, angle)
     glDrawPointsTransform(outlinePoints, rgba, x, y, sx, sy, angle, false);
 }
 
-/** Add a polygon to the gl draw list
- *  @param {Array} points - Array of Vector2 points in triangle strip order
- *  @param {number} rgba - Color of the polygon as a 32-bit integer
+/** Add a list of points to the gl draw list
+ *  @param {Array<Vector2>} points - Array of Vector2 points in tri strip order
+ *  @param {number} rgba - Color as a 32-bit integer
  *  @memberof WebGL */
 function glDrawPoints(points, rgba)
 {
     if (!glEnable || points.length < 3)
         return; // needs at least 3 points to have area
     
-    // add 2 degenerate verts if batching with existing polys to separate them
-    const needsBridge = glPolyMode && glBatchCount > 0;
-    const bridgeVerts = needsBridge ? 2 : 0;
-    const vertCount = points.length + bridgeVerts;
-    
     // flush if there is not enough room or if different blend mode
-    if (!glPolyMode || glBatchCount+vertCount >= gl_MAX_POLY_VERTEXES || glBatchAdditive !== glAdditive)
+    const vertCount = points.length + 2;
+    if (glBatchCount+vertCount >= gl_MAX_POLY_VERTEXES || glBatchAdditive !== glAdditive)
         glFlush();
     glSetPolyMode();
   
+    // setup triangle strip wit degenerate verts at start and end
     let offset = glBatchCount * gl_INDICES_PER_POLY_VERTEX;
-    
-    // add degenerate bridge if needed (repeat last vertex of previous poly, then first of new poly)
-    if (needsBridge)
+    for(let i = vertCount; i--;)
     {
-        // repeat last vertex from previous batch (it's at offset - 3)
-        const prevOffset = offset - 3;
-        glPositionData[offset++] = glPositionData[prevOffset];
-        glPositionData[offset++] = glPositionData[prevOffset + 1];
-        glColorData[offset++] = glColorData[prevOffset + 2];
-        
-        // repeat first vertex of new poly
-        glPositionData[offset++] = points[0].x;
-        glPositionData[offset++] = points[0].y;
-        glColorData[offset++] = rgba;
-    }
-    
-    // write vertices - they're already in triangle strip order
-    for (const point of points)
-    {
+        const j = clamp(i-1, 0, vertCount-3);
+        const point = points[j];
         glPositionData[offset++] = point.x;
         glPositionData[offset++] = point.y;
         glColorData[offset++] = rgba;
@@ -6464,16 +6452,46 @@ function glDrawPoints(points, rgba)
     glBatchCount += vertCount;
 }
 
+/** Add a list of colored points to the gl draw list
+ *  @param {Array<Vector2>} points - Array of Vector2 points in tri strip order
+ *  @param {Array<number>} pointColors - Array of 32-bit integer colors
+ *  @memberof WebGL */
+function glDrawColoredPoints(points, pointColors)
+{
+    if (!glEnable || points.length < 3)
+        return; // needs at least 3 points to have area
+    
+    // flush if there is not enough room or if different blend mode
+    const vertCount = points.length + 2;
+    if (glBatchCount+vertCount >= gl_MAX_POLY_VERTEXES || glBatchAdditive !== glAdditive)
+        glFlush();
+    glSetPolyMode();
+  
+    // setup triangle strip wit degenerate verts at start and end
+    let offset = glBatchCount * gl_INDICES_PER_POLY_VERTEX;
+    for(let i = vertCount; i--;)
+    {
+        const j = clamp(i-1, 0, vertCount-3);
+        const point = points[j];
+        const color = pointColors[j];
+        glPositionData[offset++] = point.x;
+        glPositionData[offset++] = point.y;
+        glColorData[offset++] = color;
+    }
+    glBatchCount += vertCount;
+}
+
 // WebGL internal function to convert polygon to outline triangle strip
 function glMakeOutline(points, width)
 {
-    if (points.length < 2)
+    if (points.length < 3)
         return [];
     
     const halfWidth = width / 2;
     const strip = [];
     const n = points.length;
     const e = 1e-6;
+    const miterLimit = width*100;
     for (let i = 0; i < n; i++)
     {
         // for each vertex, calculate normal based on adjacent edges
@@ -6518,8 +6536,8 @@ function glMakeOutline(points, width)
             const dot = nx1 * nx + ny1 * ny;
             if (dot > e)
             {
-                // scale normal by miter length
-                const miterLength = 1 / dot;
+                // scale normal by miter length, clamped to miterLimit
+                const miterLength = min(1 / dot, miterLimit);
                 nx *= miterLength;
                 ny *= miterLength;
             }
@@ -6566,10 +6584,8 @@ function glPolyStrip(points)
     if (signedArea(points) < 0)
         points = points.reverse();
 
-    // tolerance constants
-    const e = 1e-10;
-
     // check if point is inside triangle
+    const e = 1e-9;
     const pointInTriangle = (p, a, b, c)=>
     {
         const c1 = cross(a, b, p);
