@@ -246,8 +246,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                 overlayContext.fillStyle = '#fff';
                 overlayContext.fillText(text, mainCanvas.width-2, 2);
             }
-            if (debug || showWatermark)
-                drawCount = 0;
+            drawCount = 0;
         }
         requestAnimationFrame(engineUpdate);
     }

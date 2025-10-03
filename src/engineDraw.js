@@ -72,7 +72,9 @@ let mainCanvasSize = vec2();
  *  @memberof Draw */
 let textureInfos = [];
 
-// Keep track of how many draw calls there were each frame for debugging
+/** Keeps track of how many draw calls there were each frame for debugging
+ *  @type {number}
+ *  @memberof Draw */
 let drawCount;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -276,7 +278,7 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=WHITE,
     else
     {
         // normal canvas 2D rendering method (slower)
-        showWatermark && ++drawCount;
+        ++drawCount;
         size = new Vector2(size.x, -size.y); // fix upside down sprites
         drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
