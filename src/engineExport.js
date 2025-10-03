@@ -239,6 +239,7 @@ export
 	glDrawPointsTransform,
 	glDrawOutlineTransform,
 	glDrawPoints,
+	glDrawColoredPoints,
 	glAntialias,
 	glShader,
 	glPolyShader,
