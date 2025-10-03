@@ -168,12 +168,12 @@ declare module "littlejsengine" {
     export function debugPoly(pos: Vector2, points: Array<Vector2>, color?: string, time?: number, angle?: number, fill?: boolean): void;
     /** Draw a debug circle in world space
      *  @param {Vector2} pos
-     *  @param {number}  [radius]
+     *  @param {number}  [size] - diameter
      *  @param {string}  [color]
      *  @param {number}  [time]
      *  @param {boolean} [fill]
      *  @memberof Debug */
-    export function debugCircle(pos: Vector2, radius?: number, color?: string, time?: number, fill?: boolean): void;
+    export function debugCircle(pos: Vector2, size?: number, color?: string, time?: number, fill?: boolean): void;
     /** Draw a debug point in world space
      *  @param {Vector2} pos
      *  @param {string}  [color]

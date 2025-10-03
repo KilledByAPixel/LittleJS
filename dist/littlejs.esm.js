@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.14.4';
+const engineVersion = '1.14.5';
 
 /** Frames per second to update
  *  @type {number}
@@ -749,15 +749,15 @@ function debugPoly(pos, points, color='#fff', time=0, angle=0, fill=false)
 
 /** Draw a debug circle in world space
  *  @param {Vector2} pos
- *  @param {number}  [radius]
+ *  @param {number}  [size] - diameter
  *  @param {string}  [color]
  *  @param {number}  [time]
  *  @param {boolean} [fill]
  *  @memberof Debug */
-function debugCircle(pos, radius=0, color='#fff', time=0, fill=false)
+function debugCircle(pos, size=0, color='#fff', time=0, fill=false)
 {
     ASSERT(typeof color === 'string', 'pass in css color strings');
-    debugPrimitives.push({pos, size:radius, color, time:new Timer(time), angle:0, fill});
+    debugPrimitives.push({pos, size, color, time:new Timer(time), angle:0, fill});
 }
 
 /** Draw a debug point in world space
@@ -957,7 +957,7 @@ function debugRender()
                 {
                     const drawPos = centerPos.add(vec2(j*stickScale*2, i*stickScale*3));
                     const stickPos = drawPos.add(sticks[j].scale(stickScale));
-                    debugCircle(drawPos, stickScale, '#fff7',0,true);
+                    debugCircle(drawPos, stickScale*2, '#fff7',0,true);
                     debugLine(drawPos, stickPos, '#f00');
                     debugPoint(stickPos, '#f00');
                 }
@@ -965,7 +965,7 @@ function debugRender()
                 {
                     const drawPos = centerPos.add(vec2(j*buttonScale*2, i*stickScale*3-stickScale-buttonScale));
                     const pressed = gamepad.buttons[j].pressed;
-                    debugCircle(drawPos, buttonScale, pressed ? '#f00' : '#fff7', 0, true);
+                    debugCircle(drawPos, buttonScale*2, pressed ? '#f00' : '#fff7', 0, true);
                     debugText(''+j, drawPos, .2);
                 }
             }
@@ -1065,7 +1065,7 @@ function debugRender()
             {
                 // circle
                 overlayContext.beginPath();
-                overlayContext.arc(0, 0, p.size*cameraScale, 0, 9);
+                overlayContext.arc(0, 0, p.size*cameraScale/2, 0, 9);
                 p.fill && overlayContext.fill();
                 overlayContext.stroke();
             }
