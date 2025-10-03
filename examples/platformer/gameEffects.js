@@ -184,13 +184,7 @@ export class Sky extends LJS.EngineObject
     {
         // fill background with a gradient
         const canvas = LJS.mainCanvas;
-        const gradientDelta = 5;
-        for (let y=0; y<canvas.height; y+=gradientDelta)
-        {
-            // draw horizontal lines to create a gradient
-            const color = this.skyColor.lerp(this.horizonColor, y/canvas.height);
-            LJS.drawRect(vec2(0,y), vec2(canvas.width*2, gradientDelta*2), color, 0, undefined, true)
-        }
+        LJS.drawRectGradient(LJS.cameraPos, LJS.getCameraSize(), this.skyColor, this.horizonColor);
         
         // draw stars
         LJS.setBlendMode(true);
