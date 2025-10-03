@@ -426,7 +426,7 @@ particleEmitRateScale = 1 // Scales particles emit rate
 ```javascript
 ASSERT(assert, output) // Asserts if the expression is false
 debugRect(pos, size, color='#fff', time=0, angle=0, fill) // Draw debug rectangle
-debugCircle(pos, radius, color='#fff', time=0, fill)      // Draw debug circle
+debugCircle(pos, size, color='#fff', time=0, fill)        // Draw debug circle
 debugPoint(pos, color, time, angle)                         // Draw debug point
 debugLine(posA, posB, color, width=.1, time)                // Draw debug line
 debugText(text, pos, size=1, color='#fff', time=0, angle=0) // Draw debug text
