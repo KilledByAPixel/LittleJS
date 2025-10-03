@@ -90,7 +90,7 @@ class Box2dObject extends EngineObject
         if (this.tileInfo)
             super.render();
         else
-            this.drawFixtures(this.color, this.lineColor, this.lineWidth, mainContext);
+            this.drawFixtures(this.color, this.lineColor, this.lineWidth);
     }
 
     /** Render debug info */
@@ -1594,7 +1594,7 @@ class Box2dPlugin
      *  @param {Color} [lineColor]
      *  @param {number} [lineWidth]
      *  @param {CanvasRenderingContext2D} [context] */
-    drawFixture(fixture, pos, angle, color=WHITE, lineColor=BLACK, lineWidth=.1, context=drawContext)
+    drawFixture(fixture, pos, angle, color=WHITE, lineColor=BLACK, lineWidth=.1, context)
     {
         const shape = box2d.castObjectType(fixture.GetShape());
         switch (shape.GetType())
@@ -1604,20 +1604,20 @@ class Box2dPlugin
                 let points = [];
                 for (let i=shape.GetVertexCount(); i--;)
                     points.push(box2d.vec2From(shape.GetVertex(i)));
-                drawPoly(points, color, lineWidth, lineColor, pos, angle, false, false, context);
+                drawPoly(points, color, lineWidth, lineColor, pos, angle);
                 break;
             }
             case box2d.instance.b2Shape.e_circle:
             {
                 const radius = shape.get_m_radius();
-                drawCircle(pos, radius, color, lineWidth, lineColor, false, false, context);
+                drawCircle(pos, radius, color, lineWidth, lineColor);
                 break;
             }
             case box2d.instance.b2Shape.e_edge:
             {
                 const v1 = box2d.vec2From(shape.get_m_vertex1());
                 const v2 = box2d.vec2From(shape.get_m_vertex2());
-                drawLine(v1, v2, lineWidth, lineColor, pos, angle, false, false, context);
+                drawLine(v1, v2, lineWidth, lineColor, pos, angle);
                 break;
             }
         }

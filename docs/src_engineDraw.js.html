@@ -229,11 +229,11 @@ class TextureInfo
 function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
     angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace, context)
 {
-    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
     ASSERT(isVector2(pos) &amp;&amp; pos.isValid(), 'drawTile pos should be a vec2');
     ASSERT(isVector2(size) &amp;&amp; size.isValid(), 'drawTile size should be a vec2');
     ASSERT(isColor(color) &amp;&amp; (!additiveColor || isColor(additiveColor)), 'drawTile color is invalid');
     ASSERT(isNumber(angle), 'drawTile angle should be a number');
+    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
     const textureInfo = tileInfo &amp;&amp; tileInfo.textureInfo;
     if (useWebGL)
@@ -334,6 +334,30 @@ function drawLine(posA, posB, thickness=.1, color, pos=vec2(), angle=0, useWebGL
     drawRect(pos, size, color, angle, useWebGL, screenSpace, context);
 }
 
+/** Draw colored regular polygon using passed in number of sides
+ *  @param {Vector2} pos
+ *  @param {Vector2} [size=(1,1)]
+ *  @param {number}  [sides]
+ *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {number}  [angle]
+ *  @param {number}  [lineWidth]
+ *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {boolean} [useWebGL=glEnable]
+ *  @param {boolean} [screenSpace]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
+ *  @memberof Draw */
+function drawRegularPoly(pos, size=vec2(1), sides=3, color=new Color, angle=0, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
+{
+    // build regular polygon points
+    const points = [];
+    for (let i=sides; i--;)
+    {
+        const a = (i/sides)*PI*2;
+        points.push(vec2(Math.sin(a)*size.x, Math.cos(a)*size.y));
+    }
+    drawPoly(points, color, lineWidth, lineColor, pos, angle, useWebGL, screenSpace, context);
+}
+
 /** Draw colored polygon using passed in points
  *  @param {Array&lt;Vector2>} points - Array of Vector2 points
  *  @param {Color}   [color=(1,1,1,1)]
@@ -341,33 +365,49 @@ function drawLine(posA, posB, thickness=.1, color, pos=vec2(), angle=0, useWebGL
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {Vector2} [pos=(0,0)] - Offset to apply
  *  @param {number}  [angle] - Angle to rotate by
- *  @param {boolean} [useWebGL] - WebGL not supported
+ *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
- *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawPoly(points, color=new Color, lineWidth=0, lineColor=BLACK, pos=vec2(), angle=0, useWebGL=false, screenSpace=false, context=drawContext)
+function drawPoly(points, color=new Color, lineWidth=0, lineColor=BLACK, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=false, context=undefined)
 {
     ASSERT(isVector2(pos) &amp;&amp; pos.isValid(), 'drawPoly pos should be a vec2');
     ASSERT(Array.isArray(points), 'drawPoly points should be an array');
     ASSERT(isColor(color) &amp;&amp; isColor(lineColor), 'drawPoly color is invalid');
     ASSERT(isNumber(lineWidth), 'drawPoly lineWidth should be a number');
     ASSERT(isNumber(angle), 'drawPoly angle should be a number');
-    ASSERT(!useWebGL, 'drawPoly WebGL not supported');
-    drawCanvas2D(pos, vec2(1), angle, false, context=>
+    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+    if (useWebGL)
     {
-        context.beginPath();
-        for (const point of points)
-            context.lineTo(point.x, point.y);
-        context.closePath();
-        context.fillStyle = color.toString();
-        context.fill();
-        if (lineWidth)
+        let scale = 1;
+        if (screenSpace)
         {
-            context.strokeStyle = lineColor.toString();
-            context.lineWidth = lineWidth;
-            context.stroke();
+            // convert to world space
+            pos = screenToWorld(pos);
+            scale = 1/cameraScale;
         }
-    }, screenSpace, context);
+        glDrawPointsTransform(points, color.rgbaInt(), pos.x, pos.y, scale, scale, angle);
+        if (lineWidth > 0)
+            glDrawOutlineTransform(points, lineColor.rgbaInt(), lineWidth, pos.x, pos.y, scale, scale, angle);
+    }
+    else
+    {
+        drawCanvas2D(pos, vec2(1), angle, false, context=>
+        {
+            context.fillStyle = color.toString();
+            context.beginPath();
+            for (const point of points)
+                context.lineTo(point.x, point.y);
+            context.closePath();
+            context.fill();
+            if (lineWidth)
+            {
+                context.strokeStyle = lineColor.toString();
+                context.lineWidth = lineWidth;
+                context.stroke();
+            }
+        }, screenSpace, context);
+    }
 }
 
 /** Draw colored ellipse using passed in point
@@ -377,11 +417,11 @@ function drawPoly(points, color=new Color, lineWidth=0, lineColor=BLACK, pos=vec
  *  @param {number}  [angle]
  *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=(0,0,0,1)]
- *  @param {boolean} [useWebGL] - WebGL not supported
+ *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
- *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, lineColor=BLACK, useWebGL=false, screenSpace=false, context=drawContext)
+function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
 {
     ASSERT(isVector2(pos) &amp;&amp; pos.isValid(), 'drawEllipse pos should be a vec2');
     ASSERT(isVector2(size) &amp;&amp; size.isValid(), 'drawEllipse size should be a vec2');
@@ -389,20 +429,29 @@ function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, l
     ASSERT(isNumber(angle), 'drawEllipse angle should be a number');
     ASSERT(isNumber(lineWidth), 'drawEllipse lineWidth should be a number');
     ASSERT(lineWidth >= 0 &amp;&amp; lineWidth &lt; size.x &amp;&amp; lineWidth &lt; size.y, 'drawEllipse invalid lineWidth');
-    ASSERT(!useWebGL, 'drawEllipse WebGL not supported');
-    drawCanvas2D(pos, vec2(1), angle, false, context=>
+    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+    if (useWebGL)
     {
-        context.beginPath();
-        context.ellipse(0, 0, size.y, size.x, 0, 0, 9);
-        context.fillStyle = color.toString();
-        context.fill();
-        if (lineWidth)
+        // draw as a regular polygon
+        const sides = glCircleSides;
+        drawRegularPoly(pos, size, sides, color, angle, lineWidth, lineColor, useWebGL, screenSpace, context);
+    }
+    else
+    {
+        drawCanvas2D(pos, vec2(1), angle, false, context=>
         {
-            context.strokeStyle = lineColor.toString();
-            context.lineWidth = lineWidth;
-            context.stroke();
-        }
-    }, screenSpace, context);
+            context.fillStyle = color.toString();
+            context.beginPath();
+            context.ellipse(0, 0, size.x, size.y, 0, 0, 9);
+            context.fill();
+            if (lineWidth)
+            {
+                context.strokeStyle = lineColor.toString();
+                context.lineWidth = lineWidth;
+                context.stroke();
+            }
+        }, screenSpace, context);
+    }
 }
 
 /** Draw colored circle using passed in point
@@ -411,11 +460,11 @@ function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, l
  *  @param {Color}   [color=(1,1,1,1)]
  *  @param {number}  [lineWidth=0]
  *  @param {Color}   [lineColor=(0,0,0,1)]
- *  @param {boolean} [useWebGL] - WebGL not supported
+ *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
- *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=BLACK, useWebGL=false, screenSpace=false, context=drawContext)
+function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
 { drawEllipse(pos, vec2(radius), color, 0, lineWidth, lineColor, useWebGL, screenSpace, context); }
 
 /** Draw directly to a 2d canvas context in world space
@@ -780,5 +829,4 @@ class FontImage
         });
         context.restore();
     }
-}
-</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="Color.html">Color</a></div><div class="sidebar-section-children"><a href="EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="FontImage.html">FontImage</a></div><div class="sidebar-section-children"><a href="Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="SoundWave.html">SoundWave</a></div><div class="sidebar-section-children"><a href="TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UIScrollbar.html">UIScrollbar</a></div><div class="sidebar-section-children"><a href="UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileCollision.html">TileCollision</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-global"><div>Global</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="global.html#postProcess">postProcess</a></div><div class="sidebar-section-children"><a href="global.html#uiSystem">uiSystem</a></div><div class="sidebar-section-children"><a href="global.html#zzfxM">zzfxM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>
+}</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="Color.html">Color</a></div><div class="sidebar-section-children"><a href="EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="FontImage.html">FontImage</a></div><div class="sidebar-section-children"><a href="Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="SoundWave.html">SoundWave</a></div><div class="sidebar-section-children"><a href="TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UIScrollbar.html">UIScrollbar</a></div><div class="sidebar-section-children"><a href="UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileCollision.html">TileCollision</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-global"><div>Global</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="global.html#postProcess">postProcess</a></div><div class="sidebar-section-children"><a href="global.html#uiSystem">uiSystem</a></div><div class="sidebar-section-children"><a href="global.html#zzfxM">zzfxM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>

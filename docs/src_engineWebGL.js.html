@@ -31,13 +31,16 @@ let glContext;
 let glAntialias = true;
 
 // WebGL internal variables not exposed to documentation
-let glShader, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glInstanceCount, glAdditive, glBatchAdditive;
+let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount;
 
 // WebGL internal constants
-const gl_MAX_INSTANCES = 1e4;
+const gl_ARRAY_BUFFER_SIZE = 4e5;
 const gl_INDICES_PER_INSTANCE = 11;
 const gl_INSTANCE_BYTE_STRIDE = gl_INDICES_PER_INSTANCE * 4;
-const gl_INSTANCE_BUFFER_SIZE = gl_MAX_INSTANCES * gl_INSTANCE_BYTE_STRIDE;
+const gl_MAX_INSTANCES = gl_ARRAY_BUFFER_SIZE / gl_INSTANCE_BYTE_STRIDE | 0;
+const gl_INDICIES_PER_POLY_VERTEX = 3;
+const gl_POLY_VERTEX_BYTE_STRIDE = gl_INDICIES_PER_POLY_VERTEX * 4;
+const gl_MAX_POLY_VERTEXES = gl_ARRAY_BUFFER_SIZE / gl_POLY_VERTEX_BYTE_STRIDE | 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -62,7 +65,7 @@ function glInit()
     const rootElement = mainCanvas.parentElement;
     rootElement.appendChild(glCanvas);
 
-    // setup vertex and fragment shaders
+    // setup instanced rendering shader program
     glShader = glCreateProgram(
         '#version 300 es\n' +     // specify GLSL ES version
         'precision highp float;'+ // use highp for better accuracy
@@ -90,34 +93,53 @@ function glInit()
         '}'                       // end of shader
     );
 
+    // setup poly rendering shaders
+    glPolyShader = glCreateProgram(
+        '#version 300 es\n' +     // specify GLSL ES version
+        'precision highp float;'+ // use highp for better accuracy
+        'uniform mat4 m;'+        // transform matrix
+        'in vec2 p;'+             // in: position
+        'in vec4 c;'+             // in: color
+        'out vec4 d;'+            // out: color
+        'void main(){'+           // shader entry point
+        'gl_Position=m*vec4(p,1,1);'+ // transform position
+        'd=c;'+                   // pass color to fragment shader
+        '}'                       // end of shader
+        ,
+        '#version 300 es\n' +     // specify GLSL ES version
+        'precision highp float;'+ // use highp for better accuracy
+        'in vec4 d;'+             // in: color
+        'out vec4 c;'+            // out: color
+        'void main(){'+           // shader entry point
+        'c=d;'+                   // set color
+        '}'                       // end of shader
+    );
+
     // init buffers
-    const glInstanceData = new ArrayBuffer(gl_INSTANCE_BUFFER_SIZE);
+    const glInstanceData = new ArrayBuffer(gl_ARRAY_BUFFER_SIZE);
     glPositionData = new Float32Array(glInstanceData);
     glColorData = new Uint32Array(glInstanceData);
     glArrayBuffer = glContext.createBuffer();
     glGeometryBuffer = glContext.createBuffer();
 
     // create the geometry buffer, triangle strip square
-    const geometry = new Float32Array([glInstanceCount=0,0,1,0,0,1,1,1]);
+    const geometry = new Float32Array([glBatchCount=0,0,1,0,0,1,1,1]);
     glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
     glContext.bufferData(glContext.ARRAY_BUFFER, geometry, glContext.STATIC_DRAW);
 }
 
-// Setup WebGL render each frame, called automatically by engine
-// Also used by tile layer rendering when redrawing tiles
-function glPreRender()
+function glSetInstancedMode(force=false)
 {
-    if (!glEnable || !glContext) return;
-
-    // set up the shader and canvas
-    glClearCanvas();
+    if (!glPolyMode &amp;&amp; !force)
+        return;
+    
+    // setup instanced mode
+    glFlush();
+    glPolyMode = false;
     glContext.useProgram(glShader);
-    glContext.activeTexture(glContext.TEXTURE0);
-    if (textureInfos[0])
-        glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture = textureInfos[0].glTexture);
 
     // set vertex attributes
-    let offset = glAdditive = glBatchAdditive = 0;
+    let offset = 0;
     const initVertexAttribArray = (name, type, typeSize, size)=>
     {
         const location = glContext.getAttribLocation(glShader, name);
@@ -132,12 +154,50 @@ function glPreRender()
     glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
     initVertexAttribArray('g', glContext.FLOAT, 0, 2); // geometry
     glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
-    glContext.bufferData(glContext.ARRAY_BUFFER, gl_INSTANCE_BUFFER_SIZE, glContext.DYNAMIC_DRAW);
+    glContext.bufferData(glContext.ARRAY_BUFFER, gl_ARRAY_BUFFER_SIZE, glContext.DYNAMIC_DRAW);
     initVertexAttribArray('p', glContext.FLOAT, 4, 4); // position &amp; size
     initVertexAttribArray('u', glContext.FLOAT, 4, 4); // texture coords
     initVertexAttribArray('c', glContext.UNSIGNED_BYTE, 1, 4); // color
     initVertexAttribArray('a', glContext.UNSIGNED_BYTE, 1, 4); // additiveColor
     initVertexAttribArray('r', glContext.FLOAT, 4, 1); // rotation
+}
+
+function glSetPolyMode()
+{
+    if (glPolyMode)
+        return;
+    
+    // setup poly mode
+    glFlush();
+    glPolyMode = true;
+    glContext.useProgram(glPolyShader);
+
+    // set vertex attributes
+    let offset = 0;
+    const initVertexAttribArray = (name, type, typeSize, size)=>
+    {
+        const location = glContext.getAttribLocation(glPolyShader, name);
+        const normalize = typeSize === 1; // only normalize if color
+        const stride = gl_POLY_VERTEX_BYTE_STRIDE;
+        glContext.enableVertexAttribArray(location);
+        glContext.vertexAttribPointer(location, size, type, normalize, stride, offset);
+        glContext.vertexAttribDivisor(location, 0);
+        offset += size*typeSize;
+    }
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
+    glContext.bufferData(glContext.ARRAY_BUFFER, gl_ARRAY_BUFFER_SIZE, glContext.DYNAMIC_DRAW);
+    initVertexAttribArray('p', glContext.FLOAT, 4, 2);         // position
+    initVertexAttribArray('c', glContext.UNSIGNED_BYTE, 1, 4); // color
+}
+
+// Setup WebGL render each frame, called automatically by engine
+// Also used by tile layer rendering when redrawing tiles
+function glPreRender()
+{
+    if (!glEnable || !glContext) return;
+
+    // clear the canvas
+    glClearCanvas();
 
     // build the transform matrix
     const s = vec2(2*cameraScale).divide(mainCanvasSize);
@@ -145,13 +205,33 @@ function glPreRender()
     const p = vec2(-1).subtract(rotatedCam.multiply(s));
     const ca = Math.cos(cameraAngle);
     const sa = Math.sin(cameraAngle);
-    glContext.uniformMatrix4fv(glContext.getUniformLocation(glShader, 'm'), false,
-    [
+    const transform = [
         s.x  * ca,  s.y * sa, 0, 0,
         -s.x * sa,  s.y * ca, 0, 0,
         1,          1,        1, 0,
-        p.x,        p.y,      0, 1
-    ]);
+        p.x,        p.y,      0, 1];
+
+    // set the same matrix for both shaders
+    const initUniform = (program, uniform, value) =>
+    {
+        glContext.useProgram(program);
+        const location = glContext.getUniformLocation(program, uniform);
+        glContext.uniformMatrix4fv(location, false, value);
+    }
+    initUniform(glPolyShader, 'm', transform);
+    initUniform(glShader, 'm', transform);
+
+    // set the active texture
+    glContext.activeTexture(glContext.TEXTURE0);
+    if (textureInfos[0])
+    {
+        glActiveTexture = textureInfos[0].glTexture;
+        glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
+    }
+
+    // start in instanced rendering mode with additive blending off
+    glAdditive = glBatchAdditive = glPolyMode = false;
+    glSetInstancedMode(true);
 }
 
 /** Clear the canvas and setup the viewport
@@ -263,7 +343,6 @@ function glCreateTexture(image)
     return texture;
 }
 
-
 /** Deletes a WebGL texture
  *  @param {WebGLTexture} [texture]
  *  @memberof WebGL */
@@ -291,18 +370,23 @@ function glSetTextureData(texture, image)
  *  @memberof WebGL */
 function glFlush()
 {
-    if (!glEnable || !glContext || !glInstanceCount) return;
-
-    const destBlend = glBatchAdditive ? glContext.ONE : glContext.ONE_MINUS_SRC_ALPHA;
-    glContext.blendFuncSeparate(glContext.SRC_ALPHA, destBlend, glContext.ONE, destBlend);
-    glContext.enable(glContext.BLEND);
-
-    // draw all the sprites in the batch and reset the buffer
-    glContext.bufferSubData(glContext.ARRAY_BUFFER, 0, glPositionData);
-    glContext.drawArraysInstanced(glContext.TRIANGLE_STRIP, 0, 4, glInstanceCount);
-    if (debug || showWatermark)
-        drawCount += glInstanceCount;
-    glInstanceCount = 0;
+    if (glEnable &amp;&amp; glContext &amp;&amp; glBatchCount)
+    {
+        // set bend mode
+        const destBlend = glBatchAdditive ? glContext.ONE : glContext.ONE_MINUS_SRC_ALPHA;
+        glContext.blendFuncSeparate(glContext.SRC_ALPHA, destBlend, glContext.ONE, destBlend);
+        glContext.enable(glContext.BLEND);
+        glContext.bufferSubData(glContext.ARRAY_BUFFER, 0, glPositionData);
+        
+        // draw the batch
+        if (glPolyMode)
+            glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, glBatchCount);
+        else
+            glContext.drawArraysInstanced(glContext.TRIANGLE_STRIP, 0, 4, glBatchCount);
+        if (debug || showWatermark)
+            drawCount += glBatchCount;
+        glBatchCount = 0;
+    }
     glBatchAdditive = glAdditive;
 }
 
@@ -319,6 +403,7 @@ function glCopyToContext(context)
 }
 
 /** Set anti-aliasing for WebGL canvas
+ *  Must be called before engineInit
  *  @param {boolean} [antialias]
  *  @memberof WebGL */
 function glSetAntialias(antialias=true)
@@ -343,10 +428,12 @@ function glSetAntialias(antialias=true)
 function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgba=-1, rgbaAdditive=0)
 {
     // flush if there is not enough room or if different blend mode
-    if (glInstanceCount >= gl_MAX_INSTANCES || glBatchAdditive !== glAdditive)
+    if (glBatchCount >= gl_MAX_INSTANCES || glBatchAdditive !== glAdditive)
         glFlush();
+    glSetInstancedMode();
 
-    let offset = glInstanceCount++ * gl_INDICES_PER_INSTANCE;
+    glPolyMode = false;
+    let offset = glBatchCount++ * gl_INDICES_PER_INSTANCE;
     glPositionData[offset++] = x;
     glPositionData[offset++] = y;
     glPositionData[offset++] = sizeX;
@@ -359,4 +446,298 @@ function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgb
     glColorData[offset++] = rgbaAdditive;
     glPositionData[offset++] = angle;
 }
-</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="Color.html">Color</a></div><div class="sidebar-section-children"><a href="EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="FontImage.html">FontImage</a></div><div class="sidebar-section-children"><a href="Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="SoundWave.html">SoundWave</a></div><div class="sidebar-section-children"><a href="TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UIScrollbar.html">UIScrollbar</a></div><div class="sidebar-section-children"><a href="UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileCollision.html">TileCollision</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-global"><div>Global</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="global.html#postProcess">postProcess</a></div><div class="sidebar-section-children"><a href="global.html#uiSystem">uiSystem</a></div><div class="sidebar-section-children"><a href="global.html#zzfxM">zzfxM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>
+
+/** Transform and add a polygon to the gl draw list
+ *  @param {Array} points - Array of Vector2 points
+ *  @param {number} rgba - Color of the polygon as a 32-bit integer
+ *  @param {number} x
+ *  @param {number} y
+ *  @param {number} sx
+ *  @param {number} sy
+ *  @param {number} angle
+ *  @param {boolean} [tristrip] - should tristrip algorithm be used
+ *  @memberof WebGL */
+function glDrawPointsTransform(points, rgba, x, y, sx, sy, angle, tristrip=true)
+{
+    const pointsOut = [];
+    for (const p of points)
+    {
+        // transform the point
+        const px = p.x*sx;
+        const py = p.y*sy;
+        const sa = Math.sin(-angle);
+        const ca = Math.cos(-angle);
+        pointsOut.push(vec2(x + ca*px - sa*py, y + sa*px + ca*py));
+    }
+    const drawPoints = tristrip ? glPolyStrip(pointsOut) : pointsOut;
+    glDrawPoints(drawPoints, rgba);
+}
+
+/** Transform and add a polygon to the gl draw list
+ *  @param {Array} points - Array of Vector2 points
+ *  @param {number} rgba - Color of the polygon as a 32-bit integer
+ *  @param {number} lineWidth - Width of the outline
+ *  @param {number} x
+ *  @param {number} y
+ *  @param {number} sx
+ *  @param {number} sy
+ *  @param {number} angle
+ *  @memberof WebGL */
+function glDrawOutlineTransform(points, rgba, lineWidth, x, y, sx, sy, angle)
+{
+    const outlinePoints = glMakeOutline(points, lineWidth);
+    glDrawPointsTransform(outlinePoints, rgba, x, y, sx, sy, angle, false);
+}
+
+/** Add a polygon to the gl draw list
+ *  @param {Array} points - Array of Vector2 points in triangle strip order
+ *  @param {number} rgba - Color of the polygon as a 32-bit integer
+ *  @memberof WebGL */
+function glDrawPoints(points, rgba)
+{
+    if (!glEnable || points.length &lt; 3)
+        return; // needs at least 3 points to have area
+    
+    // add 2 degenerate verts if batching with existing polys to separate them
+    const needsBridge = glPolyMode &amp;&amp; glBatchCount > 0;
+    const bridgeVerts = needsBridge ? 2 : 0;
+    const vertCount = points.length + bridgeVerts;
+    
+    // flush if there is not enough room or if different blend mode
+    if (!glPolyMode || glBatchCount+vertCount >= gl_MAX_POLY_VERTEXES || glBatchAdditive !== glAdditive)
+        glFlush();
+    glSetPolyMode();
+  
+    let offset = glBatchCount * gl_INDICIES_PER_POLY_VERTEX;
+    
+    // add degenerate bridge if needed (repeat last vertex of previous poly, then first of new poly)
+    if (needsBridge)
+    {
+        // repeat last vertex from previous batch (it's at offset - 3)
+        const prevOffset = offset - 3;
+        glPositionData[offset++] = glPositionData[prevOffset];
+        glPositionData[offset++] = glPositionData[prevOffset + 1];
+        glColorData[offset++] = glColorData[prevOffset + 2];
+        
+        // repeat first vertex of new poly
+        glPositionData[offset++] = points[0].x;
+        glPositionData[offset++] = points[0].y;
+        glColorData[offset++] = rgba;
+    }
+    
+    // write vertices - they're already in triangle strip order
+    for (const point of points)
+    {
+        glPositionData[offset++] = point.x;
+        glPositionData[offset++] = point.y;
+        glColorData[offset++] = rgba;
+    }
+    glBatchCount += vertCount;
+}
+
+// WebGL internal function to convert polys to outline
+function glMakeOutline(points, width)
+{
+    if (points.length &lt; 2)
+        return [];
+    
+    const halfWidth = width / 2;
+    const strip = [];
+    const n = points.length;
+    const e = 1e-6;
+    for (let i = 0; i &lt; n; i++)
+    {
+        // for each vertex, calculate normal based on adjacent edges
+        const prev = points[(i - 1 + n) % n];
+        const curr = points[i];
+        const next = points[(i + 1) % n];
+        
+        // direction from previous to current
+        const dx1 = curr.x - prev.x;
+        const dy1 = curr.y - prev.y;
+        const len1 = (dx1*dx1 + dy1*dy1)**.5;
+        
+        // direction from current to next
+        const dx2 = next.x - curr.x;
+        const dy2 = next.y - curr.y;
+        const len2 = (dx2*dx2 + dy2*dy2)**.5;
+        
+        if (len1 &lt; e &amp;&amp; len2 &lt; e)
+            continue; // skip degenerate point
+        
+        // calculate perpendicular normals for each edge
+        const nx1 = len1 > e ? -dy1 / len1 : 0;
+        const ny1 = len1 > e ?  dx1 / len1 : 0;
+        const nx2 = len2 > e ? -dy2 / len2 : 0;
+        const ny2 = len2 > e ?  dx2 / len2 : 0;
+        
+        // average the normals for miter
+        let nx = nx1 + nx2;
+        let ny = ny1 + ny2;
+        const nlen = (nx*nx + ny*ny)**.5;
+        if (nlen &lt; e)
+        {
+            // 180 degree turn - use perpendicular
+            nx = nx1;
+            ny = ny1;
+        }
+        else
+        {
+            // calculate miter length
+            nx /= nlen;
+            ny /= nlen;
+            const dot = nx1 * nx + ny1 * ny;
+            if (dot > e)
+            {
+                // scale normal by miter length
+                const miterLength = 1 / dot;
+                nx *= miterLength;
+                ny *= miterLength;
+            }
+        }
+        
+        // create inner and outer points along the normal
+        const inner = vec2(curr.x - nx * halfWidth, curr.y - ny * halfWidth);
+        const outer = vec2(curr.x + nx * halfWidth, curr.y + ny * halfWidth);
+        strip.push(inner);
+        strip.push(outer);
+    }
+    if (strip.length > 1)
+    {
+        // close the loop
+        strip.push(strip[0]);
+        strip.push(strip[1]);
+    }
+    return strip;
+}
+
+// WebGL internal function to convert polys to tri strips
+function glPolyStrip(points)
+{
+    // validate input
+    if (points.length &lt; 3)
+        return [];
+    
+    // cross product helper: (b-a) x (c-a)
+    const cross = (a,b,c)=> (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+
+    // calculate signed area of polygon
+    const signedArea = (poly)=>
+    {
+        let area = 0;
+        for (let i = poly.length; i--;)
+        {
+            const j = (i+1) % poly.length;
+            area += poly[i].cross(poly[j]);
+        }
+        return area;
+    }
+
+    // ensure counter-clockwise winding
+    if (signedArea(points) &lt; 0)
+        points = points.reverse();
+
+    // tolerance constants
+    const e = 1e-10;
+
+    // check if point is inside triangle
+    const pointInTriangle = (p, a, b, c)=>
+    {
+        const c1 = cross(a, b, p);
+        const c2 = cross(b, c, p);
+        const c3 = cross(c, a, p);
+        const negative = (c1&lt;-e?1:0) + (c2&lt;-e?1:0) + (c3&lt;-e?1:0);
+        const positive = (c1> e?1:0) + (c2> e?1:0) + (c3> e?1:0);
+        return !(negative &amp;&amp; positive);
+    };
+
+    // ear clipping triangulation
+    const indices = [];
+    for (let i = 0; i &lt; points.length; ++i)
+        indices[i] = i;
+    const triangles = [];
+    let attempts = 0;
+    const maxAttempts = points.length ** 2 + 100;
+    while (indices.length > 3 &amp;&amp; attempts++ &lt; maxAttempts)
+    {
+        let foundEar = false;
+        for (let i = indices.length; --i;)
+        {
+            const i0 = indices[(i + indices.length - 1) % indices.length];
+            const i1 = indices[i];
+            const i2 = indices[(i + 1) % indices.length];
+            const a = points[i0], b = points[i1], c = points[i2];
+
+            // check if convex
+            if (cross(a, b, c) &lt; e)
+                continue;
+                
+            // check if any other point is inside
+            let hasInside = false;
+            for (let j = 0; j &lt; indices.length; j++)
+            {
+                const k = indices[j];
+                if (k === i0 || k === i1 || k === i2)
+                    continue;
+                const p = points[k];
+                hasInside = pointInTriangle(p, a, b, c);
+                if (hasInside)
+                    break;
+            }
+            if (hasInside)
+                continue;
+
+            // found valid ear
+            triangles.push([i0, i1, i2]);
+            indices.splice(i, 1);
+            foundEar = true;
+            break;
+        }
+
+        // fallback for degenerate cases
+        if (!foundEar)
+        {
+            let worstIndex = -1, worstValue = Infinity;
+            for (let i = indices.length; --i;)
+            {
+                const i0 = indices[(i + indices.length - 1) % indices.length];
+                const i1 = indices[i];
+                const i2 = indices[(i + 1) % indices.length];
+                const value = abs(cross(points[i0], points[i1], points[i2]));
+                if (value &lt; worstValue)
+                {
+                    worstValue = value;
+                    worstIndex = i;
+                }
+            }
+            if (worstIndex &lt; 0)
+                break;
+            
+            const i0 = indices[(worstIndex + indices.length - 1) % indices.length];
+            const i1 = indices[worstIndex];
+            const i2 = indices[(worstIndex + 1) % indices.length];
+            triangles.push([i0, i1, i2]);
+            indices.splice(worstIndex, 1);
+        }
+    }
+    
+    // add final triangle
+    if (indices.length === 3)
+        triangles.push([indices[0], indices[1], indices[2]]);
+    if (!triangles.length)
+        return [];
+
+    // convert triangles to triangle strip with degenerate connectors
+    const strip = [];
+    let [a0, b0, c0] = triangles[0];
+    strip.push(points[a0], points[b0], points[c0]);
+    for (let i = 1; i &lt; triangles.length; i++)
+    {
+        // add degenerate bridge from last vertex to first of new triangle
+        const [a, b, c] = triangles[i];
+        strip.push(points[c0], points[a]);
+        strip.push(points[a], points[b], points[c]);
+        c0 = c;
+    }
+    return strip;
+}</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="Color.html">Color</a></div><div class="sidebar-section-children"><a href="EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="FontImage.html">FontImage</a></div><div class="sidebar-section-children"><a href="Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="SoundWave.html">SoundWave</a></div><div class="sidebar-section-children"><a href="TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UIScrollbar.html">UIScrollbar</a></div><div class="sidebar-section-children"><a href="UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileCollision.html">TileCollision</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-global"><div>Global</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="global.html#postProcess">postProcess</a></div><div class="sidebar-section-children"><a href="global.html#uiSystem">uiSystem</a></div><div class="sidebar-section-children"><a href="global.html#zzfxM">zzfxM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>
