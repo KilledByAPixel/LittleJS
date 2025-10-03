@@ -224,7 +224,7 @@ class TextureInfo
  *  @param {boolean}  [screenSpace=false] - Are the pos and size are in screen space?
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
  *  @memberof Draw */
-function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
+function drawTile(pos, size=new Vector2(1), tileInfo, color=WHITE,
     angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace, context)
 {
     ASSERT(isVector2(pos) && pos.isValid(), 'drawTile pos should be a vec2');
@@ -344,7 +344,7 @@ function drawLine(posA, posB, thickness=.1, color, pos=vec2(), angle=0, useWebGL
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawRegularPoly(pos, size=vec2(1), sides=3, color=new Color, angle=0, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
+function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, lineColor=BLACK, angle=0, useWebGL=glEnable, screenSpace=false, context)
 {
     // build regular polygon points
     const points = [];
@@ -367,7 +367,7 @@ function drawRegularPoly(pos, size=vec2(1), sides=3, color=new Color, angle=0, l
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawPoly(points, color=new Color, lineWidth=0, lineColor=BLACK, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=false, context=undefined)
+function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=false, context=undefined)
 {
     ASSERT(isVector2(pos) && pos.isValid(), 'drawPoly pos should be a vec2');
     ASSERT(Array.isArray(points), 'drawPoly points should be an array');
@@ -419,7 +419,7 @@ function drawPoly(points, color=new Color, lineWidth=0, lineColor=BLACK, pos=vec
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
+function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
 {
     ASSERT(isVector2(pos) && pos.isValid(), 'drawEllipse pos should be a vec2');
     ASSERT(isVector2(size) && size.isValid(), 'drawEllipse size should be a vec2');
@@ -432,7 +432,7 @@ function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, l
     {
         // draw as a regular polygon
         const sides = glCircleSides;
-        drawRegularPoly(pos, size, sides, color, angle, lineWidth, lineColor, useWebGL, screenSpace, context);
+        drawRegularPoly(pos, size, sides, color, lineWidth, lineColor, angle, useWebGL, screenSpace, context);
     }
     else
     {
@@ -462,7 +462,7 @@ function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, l
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
+function drawCircle(pos, radius=1, color=WHITE, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
 { drawEllipse(pos, vec2(radius), color, 0, lineWidth, lineColor, useWebGL, screenSpace, context); }
 
 /** Draw directly to a 2d canvas context in world space
@@ -541,7 +541,7 @@ function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textA
  *  @param {number}  [maxWidth]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
  *  @memberof Draw */
-function drawTextScreen(text, pos, size=1, color=new Color, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, maxWidth, context=overlayContext)
+function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, maxWidth, context=overlayContext)
 {
     context.fillStyle = color.toString();
     context.strokeStyle = lineColor.toString();
