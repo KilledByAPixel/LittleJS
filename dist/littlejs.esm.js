@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.14.2';
+const engineVersion = '1.14.3';
 
 /** Frames per second to update
  *  @type {number}
@@ -249,8 +249,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                 overlayContext.fillStyle = '#fff';
                 overlayContext.fillText(text, mainCanvas.width-2, 2);
             }
-            if (debug || showWatermark)
-                drawCount = 0;
+            drawCount = 0;
         }
         requestAnimationFrame(engineUpdate);
     }
@@ -284,6 +283,11 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
 
         // save canvas size
         mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
+
+        // set default line join and cap
+        const lineJoin = 'round', lineCap = 'round';
+        mainContext.lineJoin = overlayContext.lineJoin = lineJoin;
+        mainContext.lineCap  = overlayContext.lineCap  = lineCap;
     }
 
     // wait for gameInit to load
@@ -772,13 +776,13 @@ function debugPoint(pos, color, time, angle)
  *  @param {Vector2} posA
  *  @param {Vector2} posB
  *  @param {string}  [color]
- *  @param {number}  [thickness]
+ *  @param {number}  [width]
  *  @param {number}  [time]
  *  @memberof Debug */
-function debugLine(posA, posB, color, thickness=.1, time)
+function debugLine(posA, posB, color, width=.1, time)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
-    const size = vec2(thickness, halfDelta.length()*2);
+    const size = vec2(width, halfDelta.length()*2);
     debugRect(posA.add(halfDelta), size, color, time, halfDelta.angle(), true);
 }
 
@@ -1619,10 +1623,10 @@ function vec2(x=0, y) { return new Vector2(x, y === undefined ? x : y); }
  * @param {any} v
  * @return {boolean}
  * @memberof Utilities */
-function isVector2(v) { return v instanceof Vector2; }
+function isVector2(v) { return v instanceof Vector2 && v.isValid(); }
 
 // vector2 asserts
-function ASSERT_VECTOR2_VALID(v) { ASSERT(isVector2(v) && v.isValid(), 'Vector2 is invalid.', v); }
+function ASSERT_VECTOR2_VALID(v) { ASSERT(isVector2(v), 'Vector2 is invalid.', v); }
 function ASSERT_NUMBER_VALID(n) { ASSERT(isNumber(n), 'Number is invalid.', n); }
 function ASSERT_VECTOR2_NORMAL(v)
 {
@@ -1880,10 +1884,10 @@ function hsl(h, s, l, a) { return new Color().setHSLA(h, s, l, a); }
  * @param {any} c
  * @return {boolean}
  * @memberof Utilities */
-function isColor(c) { return c instanceof Color; }
+function isColor(c) { return c instanceof Color && c.isValid(); }
 
 // color asserts
-function ASSERT_COLOR_VALID(c) { ASSERT(isColor(c) && c.isValid(), 'Color is invalid.', c); }
+function ASSERT_COLOR_VALID(c) { ASSERT(isColor(c), 'Color is invalid.', c); }
 
 /**
  * Color object (red, green, blue, alpha) with some helpful functions
@@ -2816,11 +2820,11 @@ class EngineObject
     constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color=new Color, renderOrder=0)
     {
         // check passed in params
-        ASSERT(isVector2(pos) && pos.isValid(), 'object pos should be a vec2');
-        ASSERT(isVector2(size) && size.isValid(), 'object size should be a vec2');
+        ASSERT(isVector2(pos), 'object pos should be a vec2');
+        ASSERT(isVector2(size), 'object size should be a vec2');
         ASSERT(!tileInfo || tileInfo instanceof TileInfo, 'object tileInfo should be a TileInfo or undefined');
         ASSERT(typeof angle === 'number' && isFinite(angle), 'object angle should be a number');
-        ASSERT(isColor(color) && color.isValid(), 'object color should be a valid rgba color');
+        ASSERT(isColor(color), 'object color should be a valid rgba color');
         ASSERT(typeof renderOrder === 'number', 'object renderOrder should be a number');
 
         /** @property {Vector2} - World space position of the object */
@@ -3314,7 +3318,9 @@ let mainCanvasSize = vec2();
  *  @memberof Draw */
 let textureInfos = [];
 
-// Keep track of how many draw calls there were each frame for debugging
+/** Keeps track of how many draw calls there were each frame for debugging
+ *  @type {number}
+ *  @memberof Draw */
 let drawCount;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3469,8 +3475,8 @@ class TextureInfo
 function drawTile(pos, size=new Vector2(1), tileInfo, color=WHITE,
     angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace, context)
 {
-    ASSERT(isVector2(pos) && pos.isValid(), 'drawTile pos should be a vec2');
-    ASSERT(isVector2(size) && size.isValid(), 'drawTile size should be a vec2');
+    ASSERT(isVector2(pos), 'drawTile pos should be a vec2');
+    ASSERT(isVector2(size), 'drawTile size should be a vec2');
     ASSERT(isColor(color) && (!additiveColor || isColor(additiveColor)), 'drawTile color is invalid');
     ASSERT(isNumber(angle), 'drawTile angle should be a number');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
@@ -3518,7 +3524,7 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=WHITE,
     else
     {
         // normal canvas 2D rendering method (slower)
-        showWatermark && ++drawCount;
+        ++drawCount;
         size = new Vector2(size.x, -size.y); // fix upside down sprites
         drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
@@ -3554,10 +3560,69 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
     drawTile(pos, size, undefined, color, angle, false, undefined, useWebGL, screenSpace, context);
 }
 
-/** Draw colored line between two points
- *  @param {Vector2} posA
- *  @param {Vector2} posB
- *  @param {number}  [thickness]
+/** Draw a rect centered on pos with a gradient from top to bottom
+ *  @param {Vector2} pos
+ *  @param {Vector2} [size=(1,1)]
+ *  @param {Color}   [colorTop=(1,1,1,1)]
+ *  @param {Color}   [colorBottom=(0,0,0,1)]
+ *  @param {number}  [angle]
+ *  @param {boolean} [useWebGL=glEnable]
+ *  @param {boolean} [screenSpace]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
+ *  @memberof Draw */
+function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0, useWebGL=glEnable, screenSpace=false, context)
+{
+    ASSERT(isVector2(pos), 'drawRectGradient pos should be a vec2');
+    ASSERT(isVector2(size), 'drawRectGradient size should be a vec2');
+    ASSERT(isColor(colorTop) && isColor(colorBottom), 'drawRectGradient color is invalid');
+    ASSERT(isNumber(angle), 'drawRectGradient angle should be a number');
+    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+    if (useWebGL)
+    {
+        if (screenSpace)
+        {
+            // convert to world space
+            pos = screenToWorld(pos);
+            size = size.scale(1/cameraScale);
+        }
+        // build 4 corner points for the rectangle
+        const points = [], colors = [];
+        const halfSizeX = size.x/2, halfSizeY = size.y/2;
+        const colorTopInt = colorTop.rgbaInt();
+        const colorBottomInt = colorBottom.rgbaInt();
+        const c = Math.cos(-angle), s = Math.sin(-angle);
+        for (let i=4; i--;)
+        {
+            const x = i & 1 ? halfSizeX : -halfSizeX;
+            const y = i & 2 ? halfSizeY : -halfSizeY;
+            const rx = x * c - y * s;
+            const ry = x * s + y * c;
+            const color = i & 2 ? colorTopInt : colorBottomInt;
+            points.push(vec2(pos.x + rx, pos.y + ry));
+            colors.push(color);
+        }
+        glDrawColoredPoints(points, colors);
+    }
+    else
+    {
+        // normal canvas 2D rendering method (slower)
+        ++drawCount;
+        size = new Vector2(size.x, -size.y); // fix upside down sprites
+        drawCanvas2D(pos, size, angle, false, (context)=>
+        {
+            // if no tile info, use untextured rect
+            const gradient = context.createLinearGradient(0, -.5, 0, .5);
+            gradient.addColorStop(0, colorTop.toString());
+            gradient.addColorStop(1, colorBottom.toString());
+            context.fillStyle = gradient;
+            context.fillRect(-.5, -.5, 1, 1);
+        }, screenSpace, context);
+    }
+}
+
+/** Draw connected lines between a series of points
+ *  @param {Array<Vector2>} points
+ *  @param {number}  [width]
  *  @param {Color}   [color=(1,1,1,1)]
  *  @param {Vector2} [pos=(0,0)] - Offset to apply
  *  @param {number}  [angle] - Angle to rotate by
@@ -3565,10 +3630,62 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawLine(posA, posB, thickness=.1, color, pos=vec2(), angle=0, useWebGL, screenSpace, context)
+function drawLineList(points, width=.1, color, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace, context)
+{
+    ASSERT(Array.isArray(points), 'drawLineList points should be an array');
+    ASSERT(isNumber(width), 'drawLineList width should be a number');
+    ASSERT(isColor(color), 'drawLineList color is invalid');
+    ASSERT(isVector2(pos), 'drawLineList pos should be a vec2');
+    ASSERT(isNumber(angle), 'drawLineList angle should be a number');
+    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+    if (useWebGL)
+    {
+        let scale = 1;
+        if (screenSpace)
+        {
+            // convert to world space
+            pos = screenToWorld(pos);
+            scale = 1/cameraScale;
+        }
+        glDrawOutlineTransform(points, color.rgbaInt(), width, pos.x, pos.y, scale, scale, angle, false);
+    }
+    else
+    {
+        // normal canvas 2D rendering method (slower)
+        ++drawCount;
+        drawCanvas2D(pos, vec2(1), angle, false, (context)=>
+        {
+            context.strokeStyle = color.toString();
+            context.lineWidth = width;
+            context.beginPath();
+            for (let i=0; i<points.length; ++i)
+            {
+                const point = points[i];
+                if (i)
+                    context.lineTo(point.x, point.y);
+                else
+                    context.moveTo(point.x, point.y);
+            }
+            context.stroke();
+        }, screenSpace, context);
+    }
+}
+
+/** Draw colored line between two points
+ *  @param {Vector2} posA
+ *  @param {Vector2} posB
+ *  @param {number}  [width]
+ *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Vector2} [pos=(0,0)] - Offset to apply
+ *  @param {number}  [angle] - Angle to rotate by
+ *  @param {boolean} [useWebGL=glEnable]
+ *  @param {boolean} [screenSpace]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
+ *  @memberof Draw */
+function drawLine(posA, posB, width=.1, color, pos=vec2(), angle=0, useWebGL, screenSpace, context)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
-    const size = vec2(thickness, halfDelta.length()*2);
+    const size = vec2(width, halfDelta.length()*2);
     pos = pos.add(posA.add(halfDelta));
     angle += halfDelta.angle();
     drawRect(pos, size, color, angle, useWebGL, screenSpace, context);
@@ -3611,7 +3728,7 @@ function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, l
  *  @memberof Draw */
 function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=false, context=undefined)
 {
-    ASSERT(isVector2(pos) && pos.isValid(), 'drawPoly pos should be a vec2');
+    ASSERT(isVector2(pos), 'drawPoly pos should be a vec2');
     ASSERT(Array.isArray(points), 'drawPoly points should be an array');
     ASSERT(isColor(color) && isColor(lineColor), 'drawPoly color is invalid');
     ASSERT(isNumber(lineWidth), 'drawPoly lineWidth should be a number');
@@ -3663,8 +3780,8 @@ function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(),
  *  @memberof Draw */
 function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
 {
-    ASSERT(isVector2(pos) && pos.isValid(), 'drawEllipse pos should be a vec2');
-    ASSERT(isVector2(size) && size.isValid(), 'drawEllipse size should be a vec2');
+    ASSERT(isVector2(pos), 'drawEllipse pos should be a vec2');
+    ASSERT(isVector2(size), 'drawEllipse size should be a vec2');
     ASSERT(isColor(color) && isColor(lineColor), 'drawEllipse color is invalid');
     ASSERT(isNumber(angle), 'drawEllipse angle should be a number');
     ASSERT(isNumber(lineWidth), 'drawEllipse lineWidth should be a number');
@@ -3791,7 +3908,6 @@ function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=B
     context.textAlign = textAlign;
     context.font = size + 'px '+ font;
     context.textBaseline = 'middle';
-    context.lineJoin = 'round';
 
     const lines = (text+'').split('\n');
     let posY = pos.y;
@@ -3991,7 +4107,7 @@ let engineFontImage;
  * const font = new FontImage;
  *
  * // draw text
- * font.drawTextScreen("LittleJS\nHello World!", vec2(200, 50));
+ * font.drawTextScreen('LittleJS\nHello World!', vec2(200, 50));
  */
 class FontImage
 {
@@ -6607,10 +6723,6 @@ function glInit()
     const geometry = new Float32Array([glBatchCount=0,0,1,0,0,1,1,1]);
     glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
     glContext.bufferData(glContext.ARRAY_BUFFER, geometry, glContext.STATIC_DRAW);
-    
-    // setup array buffer
-    glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
-    glContext.bufferData(glContext.ARRAY_BUFFER, gl_ARRAY_BUFFER_SIZE, glContext.DYNAMIC_DRAW);
 }
 
 function glSetInstancedMode()
@@ -6636,7 +6748,10 @@ function glSetInstancedMode()
         glContext.vertexAttribDivisor(location, divisor);
         offset += size*typeSize;
     }
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
     initVertexAttribArray('g', glContext.FLOAT, 0, 2); // geometry
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
+    glContext.bufferData(glContext.ARRAY_BUFFER, gl_ARRAY_BUFFER_SIZE, glContext.DYNAMIC_DRAW);
     initVertexAttribArray('p', glContext.FLOAT, 4, 4); // position & size
     initVertexAttribArray('u', glContext.FLOAT, 4, 4); // texture coords
     initVertexAttribArray('c', glContext.UNSIGNED_BYTE, 1, 4); // color
@@ -6666,6 +6781,8 @@ function glSetPolyMode()
         glContext.vertexAttribDivisor(location, 0);
         offset += size*typeSize;
     }
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
+    glContext.bufferData(glContext.ARRAY_BUFFER, gl_ARRAY_BUFFER_SIZE, glContext.DYNAMIC_DRAW);
     initVertexAttribArray('p', glContext.FLOAT, 4, 2);         // position
     initVertexAttribArray('c', glContext.UNSIGNED_BYTE, 1, 4); // color
 }
@@ -6871,8 +6988,7 @@ function glFlush()
             glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, glBatchCount);
         else
             glContext.drawArraysInstanced(glContext.TRIANGLE_STRIP, 0, 4, glBatchCount);
-        if (debug || showWatermark)
-            drawCount += glBatchCount;
+        drawCount += glBatchCount;
         glBatchCount = 0;
     }
     glBatchAdditive = glAdditive;
@@ -6970,10 +7086,11 @@ function glDrawPointsTransform(points, rgba, x, y, sx, sy, angle, tristrip=true)
  *  @param {number} sx
  *  @param {number} sy
  *  @param {number} angle
+ *  @param {boolean} [wrap] - Should the outline connect the first and last points
  *  @memberof WebGL */
-function glDrawOutlineTransform(points, rgba, lineWidth, x, y, sx, sy, angle)
+function glDrawOutlineTransform(points, rgba, lineWidth, x, y, sx, sy, angle, wrap=true)
 {
-    const outlinePoints = glMakeOutline(points, lineWidth);
+    const outlinePoints = glMakeOutline(points, lineWidth, wrap);
     glDrawPointsTransform(outlinePoints, rgba, x, y, sx, sy, angle, false);
 }
 
@@ -6992,7 +7109,7 @@ function glDrawPoints(points, rgba)
         glFlush();
     glSetPolyMode();
   
-    // setup triangle strip wit degenerate verts at start and end
+    // setup triangle strip with degenerate verts at start and end
     let offset = glBatchCount * gl_INDICES_PER_POLY_VERTEX;
     for(let i = vertCount; i--;)
     {
@@ -7020,7 +7137,7 @@ function glDrawColoredPoints(points, pointColors)
         glFlush();
     glSetPolyMode();
   
-    // setup triangle strip wit degenerate verts at start and end
+    // setup triangle strip with degenerate verts at start and end
     let offset = glBatchCount * gl_INDICES_PER_POLY_VERTEX;
     for(let i = vertCount; i--;)
     {
@@ -7035,9 +7152,9 @@ function glDrawColoredPoints(points, pointColors)
 }
 
 // WebGL internal function to convert polygon to outline triangle strip
-function glMakeOutline(points, width)
+function glMakeOutline(points, width, wrap=true)
 {
-    if (points.length < 3)
+    if (points.length < 2)
         return [];
     
     const halfWidth = width / 2;
@@ -7048,9 +7165,9 @@ function glMakeOutline(points, width)
     for (let i = 0; i < n; i++)
     {
         // for each vertex, calculate normal based on adjacent edges
-        const prev = points[(i - 1 + n) % n];
+        const prev = points[wrap ? (i - 1 + n) % n : max(i - 1, 0)];
         const curr = points[i];
-        const next = points[(i + 1) % n];
+        const next = points[wrap ? (i + 1) % n : min(i + 1, n - 1)];
         
         // direction from previous to current
         const dx1 = curr.x - prev.x;
@@ -7102,7 +7219,7 @@ function glMakeOutline(points, width)
         strip.push(inner);
         strip.push(outer);
     }
-    if (strip.length > 1)
+    if (strip.length > 1 && wrap)
     {
         // close the loop
         strip.push(strip[0]);
@@ -10380,11 +10497,14 @@ export
 
 	// Draw
 	textureInfos,
+	drawCount,
 	tile,
 	TileInfo,
 	TextureInfo,
 	mainCanvas,
 	mainContext,
+	drawCanvas,
+	drawContext,
 	overlayCanvas,
 	overlayContext,
 	mainCanvasSize,
@@ -10392,6 +10512,8 @@ export
 	worldToScreen,
 	drawTile,
 	drawRect,
+	drawRectGradient,
+	drawLineList,
 	drawLine,
 	drawPoly,
 	drawEllipse,

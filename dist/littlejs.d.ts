@@ -185,10 +185,10 @@ declare module "littlejsengine" {
      *  @param {Vector2} posA
      *  @param {Vector2} posB
      *  @param {string}  [color]
-     *  @param {number}  [thickness]
+     *  @param {number}  [width]
      *  @param {number}  [time]
      *  @memberof Debug */
-    export function debugLine(posA: Vector2, posB: Vector2, color?: string, thickness?: number, time?: number): void;
+    export function debugLine(posA: Vector2, posB: Vector2, color?: string, width?: number, time?: number): void;
     /** Draw a debug combined axis aligned bounding box in world space
      *  @param {Vector2} posA
      *  @param {Vector2} sizeA
@@ -1216,6 +1216,10 @@ declare module "littlejsengine" {
      *  @type {Array<TextureInfo>}
      *  @memberof Draw */
     export let textureInfos: Array<TextureInfo>;
+    /** Keeps track of how many draw calls there were each frame for debugging
+     *  @type {number}
+     *  @memberof Draw */
+    export let drawCount: number;
     /**
      * Create a tile info object using a grid based system
      * - This can take vecs or floats for easier use and conversion
@@ -1318,6 +1322,14 @@ declare module "littlejsengine" {
      *  @type {CanvasRenderingContext2D}
      *  @memberof Draw */
     export let mainContext: CanvasRenderingContext2D;
+    /** The default canvas to use for drawing, usually mainCanvas
+     *  @type {HTMLCanvasElement|OffscreenCanvas}
+     *  @memberof Draw */
+    export let drawCanvas: HTMLCanvasElement | OffscreenCanvas;
+    /** The default 2d context to use for drawing, usually mainContext
+     *  @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D}
+     *  @memberof Draw */
+    export let drawContext: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
     /** A canvas that appears on top of everything the same size as mainCanvas
      *  @type {HTMLCanvasElement}
      *  @memberof Draw */
@@ -1363,10 +1375,20 @@ declare module "littlejsengine" {
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function drawRect(pos: Vector2, size?: Vector2, color?: Color, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
-    /** Draw colored line between two points
-     *  @param {Vector2} posA
-     *  @param {Vector2} posB
-     *  @param {number}  [thickness]
+    /** Draw a rect centered on pos with a gradient from top to bottom
+     *  @param {Vector2} pos
+     *  @param {Vector2} [size=(1,1)]
+     *  @param {Color}   [colorTop=(1,1,1,1)]
+     *  @param {Color}   [colorBottom=(0,0,0,1)]
+     *  @param {number}  [angle]
+     *  @param {boolean} [useWebGL=glEnable]
+     *  @param {boolean} [screenSpace]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
+     *  @memberof Draw */
+    export function drawRectGradient(pos: Vector2, size?: Vector2, colorTop?: Color, colorBottom?: Color, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    /** Draw connected lines between a series of points
+     *  @param {Array<Vector2>} points
+     *  @param {number}  [width]
      *  @param {Color}   [color=(1,1,1,1)]
      *  @param {Vector2} [pos=(0,0)] - Offset to apply
      *  @param {number}  [angle] - Angle to rotate by
@@ -1374,7 +1396,19 @@ declare module "littlejsengine" {
      *  @param {boolean} [screenSpace]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
-    export function drawLine(posA: Vector2, posB: Vector2, thickness?: number, color?: Color, pos?: Vector2, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    export function drawLineList(points: Array<Vector2>, width?: number, color?: Color, pos?: Vector2, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    /** Draw colored line between two points
+     *  @param {Vector2} posA
+     *  @param {Vector2} posB
+     *  @param {number}  [width]
+     *  @param {Color}   [color=(1,1,1,1)]
+     *  @param {Vector2} [pos=(0,0)] - Offset to apply
+     *  @param {number}  [angle] - Angle to rotate by
+     *  @param {boolean} [useWebGL=glEnable]
+     *  @param {boolean} [screenSpace]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
+     *  @memberof Draw */
+    export function drawLine(posA: Vector2, posB: Vector2, width?: number, color?: Color, pos?: Vector2, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw colored polygon using passed in points
      *  @param {Array<Vector2>} points - Array of Vector2 points
      *  @param {Color}   [color=(1,1,1,1)]
@@ -1481,7 +1515,7 @@ declare module "littlejsengine" {
      * const font = new FontImage;
      *
      * // draw text
-     * font.drawTextScreen("LittleJS\nHello World!", vec2(200, 50));
+     * font.drawTextScreen('LittleJS\nHello World!', vec2(200, 50));
      */
     export class FontImage {
         /** Create an image font
@@ -1633,8 +1667,9 @@ declare module "littlejsengine" {
      *  @param {number} sx
      *  @param {number} sy
      *  @param {number} angle
+     *  @param {boolean} [wrap] - Should the outline connect the first and last points
      *  @memberof WebGL */
-    export function glDrawOutlineTransform(points: Array<Vector2>, rgba: number, lineWidth: number, x: number, y: number, sx: number, sy: number, angle: number): void;
+    export function glDrawOutlineTransform(points: Array<Vector2>, rgba: number, lineWidth: number, x: number, y: number, sx: number, sy: number, angle: number, wrap?: boolean): void;
     /** Add a list of points to the gl draw list
      *  @param {Array<Vector2>} points - Array of Vector2 points in tri strip order
      *  @param {number} rgba - Color as a 32-bit integer
