@@ -4,7 +4,7 @@ let uiMenu;
 
 function gameInit()
 {
-    // load ui system plugin
+    // setup ui system plugin
     new UISystemPlugin;
     uiSystem.defaultSoundPress = new Sound([1,0,220]);
     uiSystem.defaultSoundClick = new Sound([1,0,440]);
