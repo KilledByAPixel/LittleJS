@@ -1610,7 +1610,7 @@ class Box2dPlugin
             case box2d.instance.b2Shape.e_circle:
             {
                 const radius = shape.get_m_radius();
-                drawCircle(pos, radius, color, lineWidth, lineColor);
+                drawCircle(pos, radius*2, color, lineWidth, lineColor);
                 break;
             }
             case box2d.instance.b2Shape.e_edge:
@@ -1761,14 +1761,14 @@ async function box2dInit()
         {
             color = getDebugColor(color);
             center = box2d.vec2FromPointer(center);
-            drawCircle(center, radius, CLEAR_WHITE, debugLineWidth, color, false, false, overlayContext);
+            drawCircle(center, radius*2, CLEAR_WHITE, debugLineWidth, color, false, false, overlayContext);
         };
         debugDraw.DrawSolidCircle = function(center, radius, axis, color)
         {
             color = getDebugColor(color);
             center = box2d.vec2FromPointer(center);
             axis = box2d.vec2FromPointer(axis).scale(radius);
-            drawCircle(center, radius, color, debugLineWidth, color, false, false, overlayContext);
+            drawCircle(center, radius*2, color, debugLineWidth, color, false, false, overlayContext);
             drawLine(vec2(), axis, debugLineWidth, color, center, 0, false, false, overlayContext);
         };
         debugDraw.DrawTransform = function(transform)

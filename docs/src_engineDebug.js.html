@@ -123,13 +123,13 @@ function debugPoint(pos, color, time, angle)
  *  @param {Vector2} posA
  *  @param {Vector2} posB
  *  @param {string}  [color]
- *  @param {number}  [thickness]
+ *  @param {number}  [width]
  *  @param {number}  [time]
  *  @memberof Debug */
-function debugLine(posA, posB, color, thickness=.1, time)
+function debugLine(posA, posB, color, width=.1, time)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
-    const size = vec2(thickness, halfDelta.length()*2);
+    const size = vec2(width, halfDelta.length()*2);
     debugRect(posA.add(halfDelta), size, color, time, halfDelta.angle(), true);
 }
 
@@ -455,7 +455,7 @@ function debugRender()
         let x = 9, y = 0, h = lineHeight;
         if (debugOverlay)
         {
-            overlayContext.fillText(`${engineName} Engine v${engineVersion}`, x, y += h/2 );
+            overlayContext.fillText(`${engineName} v${engineVersion}`, x, y += h/2 );
             overlayContext.fillText('Time: ' + formatTime(time), x, y += h);
             overlayContext.fillText('FPS: ' + averageFPS.toFixed(1), x, y += h);
             overlayContext.fillText('Objects: ' + engineObjects.length, x, y += h);
