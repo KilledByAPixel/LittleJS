@@ -227,8 +227,8 @@ class TextureInfo
 function drawTile(pos, size=new Vector2(1), tileInfo, color=WHITE,
     angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace, context)
 {
-    ASSERT(isVector2(pos) && pos.isValid(), 'drawTile pos should be a vec2');
-    ASSERT(isVector2(size) && size.isValid(), 'drawTile size should be a vec2');
+    ASSERT(isVector2(pos), 'drawTile pos should be a vec2');
+    ASSERT(isVector2(size), 'drawTile size should be a vec2');
     ASSERT(isColor(color) && (!additiveColor || isColor(additiveColor)), 'drawTile color is invalid');
     ASSERT(isNumber(angle), 'drawTile angle should be a number');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
@@ -369,7 +369,7 @@ function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, l
  *  @memberof Draw */
 function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=false, context=undefined)
 {
-    ASSERT(isVector2(pos) && pos.isValid(), 'drawPoly pos should be a vec2');
+    ASSERT(isVector2(pos), 'drawPoly pos should be a vec2');
     ASSERT(Array.isArray(points), 'drawPoly points should be an array');
     ASSERT(isColor(color) && isColor(lineColor), 'drawPoly color is invalid');
     ASSERT(isNumber(lineWidth), 'drawPoly lineWidth should be a number');
@@ -421,8 +421,8 @@ function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(),
  *  @memberof Draw */
 function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
 {
-    ASSERT(isVector2(pos) && pos.isValid(), 'drawEllipse pos should be a vec2');
-    ASSERT(isVector2(size) && size.isValid(), 'drawEllipse size should be a vec2');
+    ASSERT(isVector2(pos), 'drawEllipse pos should be a vec2');
+    ASSERT(isVector2(size), 'drawEllipse size should be a vec2');
     ASSERT(isColor(color) && isColor(lineColor), 'drawEllipse color is invalid');
     ASSERT(isNumber(angle), 'drawEllipse angle should be a number');
     ASSERT(isNumber(lineWidth), 'drawEllipse lineWidth should be a number');

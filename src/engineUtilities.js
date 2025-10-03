@@ -377,10 +377,10 @@ function vec2(x=0, y) { return new Vector2(x, y === undefined ? x : y); }
  * @param {any} v
  * @return {boolean}
  * @memberof Utilities */
-function isVector2(v) { return v instanceof Vector2; }
+function isVector2(v) { return v instanceof Vector2 && v.isValid(); }
 
 // vector2 asserts
-function ASSERT_VECTOR2_VALID(v) { ASSERT(isVector2(v) && v.isValid(), 'Vector2 is invalid.', v); }
+function ASSERT_VECTOR2_VALID(v) { ASSERT(isVector2(v), 'Vector2 is invalid.', v); }
 function ASSERT_NUMBER_VALID(n) { ASSERT(isNumber(n), 'Number is invalid.', n); }
 function ASSERT_VECTOR2_NORMAL(v)
 {
@@ -638,10 +638,10 @@ function hsl(h, s, l, a) { return new Color().setHSLA(h, s, l, a); }
  * @param {any} c
  * @return {boolean}
  * @memberof Utilities */
-function isColor(c) { return c instanceof Color; }
+function isColor(c) { return c instanceof Color && c.isValid(); }
 
 // color asserts
-function ASSERT_COLOR_VALID(c) { ASSERT(isColor(c) && c.isValid(), 'Color is invalid.', c); }
+function ASSERT_COLOR_VALID(c) { ASSERT(isColor(c), 'Color is invalid.', c); }
 
 /**
  * Color object (red, green, blue, alpha) with some helpful functions
