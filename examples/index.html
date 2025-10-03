@@ -61,58 +61,62 @@ class ExampleInfo
         this.filename = filename;
         this.description = description;
         this.largeExample = largeExample;
+        this.isHeading = !filename;
+        this.text = this.name;
+        if (this.description)
+            this.text += this.description;
     }
 }
 
 const exampleList = 
 [
     new ExampleInfo('--- SHORT EXAMPLES ---'),
-    new ExampleInfo('Hello World', 'helloWorld.js', 'Minimal starter example - [basic, beginner]'),
-    new ExampleInfo('Shapes', 'shapes.js', 'Draw geometric shapes - [graphics, primitives, basic]'),
-    new ExampleInfo('Colors', 'colors.js', 'Color object and HSL usage - [graphics, color, basic]'),
-    new ExampleInfo('Blending', 'blending.js', 'Blending modes and transparency - [graphics, effects]'),
-    new ExampleInfo('Timers', 'timers.js', 'Timer object and timing functions - [utilities, time]'),
-    new ExampleInfo('Texture', 'texture.js', 'Display and manipulate textures - [graphics, sprites]'),
-    new ExampleInfo('Particles', 'particles.js', 'Particle system basics - [effects, particles]'),
-    new ExampleInfo('Sound Effects', 'sound.js', 'Example sound effects with ZzFX - [audio, sound]'),
-    new ExampleInfo('Music', 'music.js', 'Example sound loading, play, pause, seek, and stop - [audio, music]'),
-    new ExampleInfo('System Font', 'systemFont.js', 'Built-in bitmap font rendering - [text, font]'),
-    new ExampleInfo('Sprite Atlas', 'spriteAtlas.js', 'Sprite atlas and tile rendering - [graphics, sprites]'),
-    new ExampleInfo('Animation', 'animation.js', 'Sprite animation techniques - [animation, sprites]'),
-    new ExampleInfo('Clock', 'clock.js', 'Real-time clock display - [time, ui, utilities]'),
-    new ExampleInfo('Medals', 'medals.js', 'Achievement system demo - [ui, achievements]'),
-    new ExampleInfo('Tile Layer', 'tileLayer.js', 'Tile layer rendering system - [tiles, levels]'),
-    new ExampleInfo('Piano', 'piano.js', 'Interactive piano keyboard - [audio, input, ui]'),
-    new ExampleInfo('Maze Generator', 'maze.js', 'Procedural maze generation - [algorithm, generation]'),
-    new ExampleInfo('Starfield', 'starfield.js', 'Animated starfield - [effects, space]'),
-    new ExampleInfo('Parallax', 'parallax.js', 'Parallax mountains - [graphics, effects]'),
+    new ExampleInfo('Hello World', 'helloWorld.js', 'Minimal starter example'),
+    new ExampleInfo('Starfield', 'starfield.js', 'Animated parallax starfield'),
+    new ExampleInfo('Shapes', 'shapes.js', 'Draw geometric shapes and primitives'),
+    new ExampleInfo('Colors', 'colors.js', 'Color manipulation and HSL'),
+    new ExampleInfo('Texture', 'texture.js', 'Texture display and manipulation'),
+    new ExampleInfo('Sprite Atlas', 'spriteAtlas.js', 'Sprite atlas and tile rendering'),
+    new ExampleInfo('Animation', 'animation.js', 'Sprite animation system'),
+    new ExampleInfo('Blending', 'blending.js', 'Additive blending and transparency'),
+    new ExampleInfo('Tile Layer', 'tileLayer.js', 'Tile layer rendering system'),
+    new ExampleInfo('Particles', 'particles.js', 'Particle system'),
+    new ExampleInfo('Timers', 'timers.js', 'Timer objects and UI'),
+    new ExampleInfo('Sound Effects', 'sound.js', 'ZzFX sound effect generator'),
+    new ExampleInfo('Music', 'music.js', 'Music playback and controls'),
+    new ExampleInfo('Font Image', 'systemFont.js', 'Bitmap font system with built-in system font'),
+    new ExampleInfo('Parallax', 'parallax.js', 'Parallax scrolling mountains'),
+    new ExampleInfo('Maze Generator', 'maze.js', 'Procedural maze generation'),
+    new ExampleInfo('Medals', 'medals.js', 'Achievement system'),
+    new ExampleInfo('Piano', 'piano.js', 'Interactive piano keyboard'),
+    new ExampleInfo('Clock', 'clock.js', 'Animated analog clock'),
     new ExampleInfo('--- MINI GAMES ---'),
-    new ExampleInfo('Platformer Game', 'platformer.js', 'Jump and run platformer - [game, platformer, physics]'),
-    new ExampleInfo('Top Down Game', 'topDown.js', 'Adventure with collision - [game, topdown, rpg]'),
-    new ExampleInfo('Tilted View', 'tiltedView.js', 'Pseudo 3D tilted perspective - [3d, camera, perspective]'),
-    new ExampleInfo('Space Game', 'spaceGame.js', 'Spaceship with parallax starfield - [game, space, shooter]'),
-    new ExampleInfo('Lander Game', 'landerGame.js', 'Lunar lander physics game - [game, physics, thrust]'),
-    new ExampleInfo('Flappy Game', 'flappyGame.js', 'Flappy bird clone - [game, arcade, flying]'),
-    new ExampleInfo('Hill Glide Game', 'hillGlideGame.js', 'Tiny wings style glider - [game, physics, flying]'),
-    new ExampleInfo('Pong Game', 'pongGame.js', 'Classic paddle ball game - [game, classic, arcade]'),
-    new ExampleInfo('Sliding Puzzle', 'slidingPuzzle.js', 'Tile sliding puzzle game - [game, puzzle, logic]'),
-    new ExampleInfo('Raycasting Game', 'raycasting.js', 'Pseudo 3D raycasting demo - [3d, raycasting, wolfenstein]'),
+    new ExampleInfo('Pong Game', 'pongGame.js', 'Classic paddle ball bouncing'),
+    new ExampleInfo('Platformer Game', 'platformer.js', 'Jump and run side view'),
+    new ExampleInfo('Top Down Game', 'topDown.js', 'Top-down style camera'),
+    new ExampleInfo('Tilted View Game', 'tiltedView.js', 'Pseudo-3D oblique view'),
+    new ExampleInfo('Flappy Game', 'flappyGame.js', 'Flappy bird style game'),
+    new ExampleInfo('Lander Game', 'landerGame.js', 'Lunar lander style game'),
+    new ExampleInfo('Hill Glide Game', 'hillGlideGame.js', 'Tiny wings style sliding game'),
+    new ExampleInfo('Sliding Puzzle', 'slidingPuzzle.js', '15 tile sliding puzzle'),
+    new ExampleInfo('Space Game', 'spaceGame.js', 'Spaceship shooter with parallax'),
+    new ExampleInfo('Raycasting 3D Game', 'raycasting.js', 'Wolfenstein-style raycasting'),
     new ExampleInfo('--- PLUGINS ---'),
-    new ExampleInfo('Box2d Demo', 'box2d.js', 'Box2D physics plugin demo - [physics, box2d, plugin]'),
-    new ExampleInfo('Box2d Car', 'box2dCar.js', 'Drivable car with Box2D - [physics, box2d, vehicle]'),
-    new ExampleInfo('Post Processing', 'postProcess.js', 'Shader effects and filters - [graphics, shaders, effects]'),
-    new ExampleInfo('UI System Plugin', 'uiSystem.js', 'UI elements and widgets - [ui, plugin, interface]'),
-    new ExampleInfo('Nine Slice', 'nineSlice.js', 'Scalable UI panel rendering - [ui, graphics, scaling]'),
+    new ExampleInfo('Box2d Demo', 'box2d.js', 'Box2D physics plugin'),
+    new ExampleInfo('Box2d Car', 'box2dCar.js', 'Drivable car with Box2D physics'),
+    new ExampleInfo('Post Processing', 'postProcess.js', 'Shader effects and filters'),
+    new ExampleInfo('UI System Plugin', 'uiSystem.js', 'Buttons, sliders, and checkboxes'),
+    new ExampleInfo('Nine Slice', 'nineSlice.js', 'Scalable UI panels'),
     new ExampleInfo('--- FULL EXAMPLES ---'),
-    new ExampleInfo('Starter', 'starter', 'Clean project template - [template, beginner]', true),
-    new ExampleInfo('Breakout Tutorial', 'breakoutTutorial', 'Step-by-step breakout guide - [tutorial, breakout]', true),
-    new ExampleInfo('Breakout Game', 'breakout', 'Complete breakout with effects - [game, breakout, complete]', true),
-    new ExampleInfo('Platforming Game', 'platformer', 'Full platformer with levels - [game, platformer, complete]', true),
-    new ExampleInfo('Puzzle Game', 'puzzle', 'Match-3 puzzle with HD graphics - [game, puzzle, match3]', true),
-    new ExampleInfo('Stress Test', 'stress', 'Performance test with music - [performance, test, music]', true),
-    new ExampleInfo('Box2D Plugin', 'box2d', 'Complete Box2D physics demo - [physics, box2d, complete]', true),
-    new ExampleInfo('HTML Menus', 'htmlMenu', 'HTML integration example - [html, ui, integration]', true),
-    new ExampleInfo('UI System Plugin', 'uiSystem', 'Complete UI system demo - [ui, plugin, complete]', true),
+    new ExampleInfo('Starter', 'starter', 'Clean project template', true),
+    new ExampleInfo('Breakout Tutorial', 'breakoutTutorial', 'Step-by-step breakout tutorial', true),
+    new ExampleInfo('Breakout Game', 'breakout', 'Complete breakout game', true),
+    new ExampleInfo('Platforming Game', 'platformer', 'Full platformer with levels', true),
+    new ExampleInfo('Puzzle Game', 'puzzle', 'Match-3 puzzle game', true),
+    new ExampleInfo('Stress Test', 'stress', 'Performance and music test', true),
+    new ExampleInfo('Box2D Plugin', 'box2d', 'Full Box2D physics demo', true),
+    new ExampleInfo('HTML Menus', 'htmlMenu', 'HTML UI integration', true),
+    new ExampleInfo('UI System Plugin', 'uiSystem', 'Complete UI system demo', true),
 ];
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -222,7 +226,7 @@ function setExample()
     
     // load the example
     const example = exampleList[exampleIndex];
-    exampleInfo.innerText = example.name + (example.description ? ' - ' + example.description : '');
+    exampleInfo.innerText = example.text;
     const filename = 'examples/' + example.filename;
     exampleLink.href = 'https://github.com/KilledByAPixel/LittleJS/tree/main/' + filename;
     exampleLink.innerText = 'View code on GitHub';
@@ -300,16 +304,48 @@ function filterExamples(reset=0)
     
     // filter and add matching examples
     const searchTerm = inputSearch.value.toLowerCase().trim();
+    
+    // first pass: find which examples match
+    const matchingIndices = [];
     for (let i = 0; i < exampleList.length; i++)
     {
-        // check if search term matches name or description
         const example = exampleList[i];
-        const text = example.name + (example.description ? ` - ${example.description}` : '');
+        if (!example.filename)
+            continue;
+            
+        // Check if search term matches name or description
         if (example.name.toLowerCase().includes(searchTerm) || 
             example.description.toLowerCase().includes(searchTerm))
+            matchingIndices.push(i);
+    }
+    
+    // second pass: add headings and matching examples
+    let lastHeadingIndex = -1;
+    for (let i = 0; i < exampleList.length; i++)
+    {
+        const example = exampleList[i];
+        if (example.isHeading)
         {
-            const o = new Option(text);
-            o.disabled = !example.filename;
+            // check if there are any matches between this and the next
+            for (let j = i + 1; j < exampleList.length; j++)
+            {
+                if (exampleList[j].isHeading)
+                    break; // hit next heading
+                if (matchingIndices.includes(j))
+                {
+                    // only add heading if there are matches under it
+                    lastHeadingIndex = i;
+                    const o = new Option(example.text);
+                    o.disabled = true;
+                    selectExample.add(o);
+                    break;
+                }
+            }
+        }
+        else if (matchingIndices.includes(i))
+        {
+            // add matching example
+            const o = new Option(example.text);
             o.originalIndex = i;
             selectExample.add(o);
         }
@@ -317,7 +353,7 @@ function filterExamples(reset=0)
     
     if (!selectExample.options.length)
     {
-        // show a message if no matches
+        // show a message if no matches were found
         const o = new Option(`No examples found matching '${searchTerm}'`);
         o.disabled = true;
         selectExample.add(o);
