@@ -1382,9 +1382,9 @@ declare module "littlejsengine" {
      *  @param {Color}   [lineColor=(0,0,0,1)]
      *  @param {Vector2} [pos=(0,0)] - Offset to apply
      *  @param {number}  [angle] - Angle to rotate by
-     *  @param {boolean} [useWebGL] - WebGL not supported
+     *  @param {boolean} [useWebGL=glEnable]
      *  @param {boolean} [screenSpace]
-     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function drawPoly(points: Array<Vector2>, color?: Color, lineWidth?: number, lineColor?: Color, pos?: Vector2, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw colored ellipse using passed in point
@@ -1394,9 +1394,9 @@ declare module "littlejsengine" {
      *  @param {number}  [angle]
      *  @param {number}  [lineWidth]
      *  @param {Color}   [lineColor=(0,0,0,1)]
-     *  @param {boolean} [useWebGL] - WebGL not supported
+     *  @param {boolean} [useWebGL=glEnable]
      *  @param {boolean} [screenSpace]
-     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function drawEllipse(pos: Vector2, size?: Vector2, color?: Color, angle?: number, lineWidth?: number, lineColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw colored circle using passed in point
@@ -1405,9 +1405,9 @@ declare module "littlejsengine" {
      *  @param {Color}   [color=(1,1,1,1)]
      *  @param {number}  [lineWidth=0]
      *  @param {Color}   [lineColor=(0,0,0,1)]
-     *  @param {boolean} [useWebGL] - WebGL not supported
+     *  @param {boolean} [useWebGL=glEnable]
      *  @param {boolean} [screenSpace]
-     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function drawCircle(pos: Vector2, radius?: number, color?: Color, lineWidth?: number, lineColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw directly to a 2d canvas context in world space
@@ -1552,16 +1552,21 @@ declare module "littlejsengine" {
      *  @type {WebGL2RenderingContext}
      *  @memberof WebGL */
     export let glContext: WebGL2RenderingContext;
+    /** Clear the canvas and setup the viewport
+     *  @memberof WebGL */
+    export function glClearCanvas(): void;
+    /** Set the WebGL texture, called automatically if using multiple textures
+     *  - This may also flush the gl buffer resulting in more draw calls and worse performance
+     *  @param {WebGLTexture} texture
+     *  @param {boolean} [wrap] - Should the texture wrap or clamp
+     *  @memberof WebGL */
+    export function glSetTexture(texture: WebGLTexture, wrap?: boolean): void;
     /** Compile WebGL shader of the given type, will throw errors if in debug mode
      *  @param {string} source
      *  @param {number} type
      *  @return {WebGLShader}
      *  @memberof WebGL */
     export function glCompileShader(source: string, type: number): WebGLShader;
-    /** Flush any sprites still in the buffer and copy to main canvas
-     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
-     *  @memberof WebGL */
-    export function glCopyToContext(context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Create WebGL program with given shaders
      *  @param {string} vsSource
      *  @param {string} fsSource
@@ -1582,6 +1587,18 @@ declare module "littlejsengine" {
      *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas} image
      *  @memberof WebGL */
     export function glSetTextureData(texture: WebGLTexture, image: HTMLImageElement | HTMLCanvasElement | OffscreenCanvas): void;
+    /** Draw all sprites and clear out the buffer, called automatically by the system whenever necessary
+     *  @memberof WebGL */
+    export function glFlush(): void;
+    /** Flush any sprites still in the buffer and copy to main canvas
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
+     *  @memberof WebGL */
+    export function glCopyToContext(context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    /** Set anti-aliasing for WebGL canvas
+     *  Must be called before engineInit
+     *  @param {boolean} [antialias]
+     *  @memberof WebGL */
+    export function glSetAntialias(antialias?: boolean): void;
     /** Add a sprite to the gl draw list, used by all gl draw functions
      *  @param {number} x
      *  @param {number} y
@@ -1596,35 +1613,48 @@ declare module "littlejsengine" {
      *  @param {number} [rgbaAdditive=0] - black is 0
      *  @memberof WebGL */
     export function glDraw(x: number, y: number, sizeX: number, sizeY: number, angle?: number, uv0X?: number, uv0Y?: number, uv1X?: number, uv1Y?: number, rgba?: number, rgbaAdditive?: number): void;
-    /** Draw all sprites and clear out the buffer, called automatically by the system whenever necessary
+    /** Transform and add a polygon to the gl draw list
+     *  @param {Array} points - Array of Vector2 points
+     *  @param {number} rgba - Color of the polygon as a 32-bit integer
+     *  @param {number} x
+     *  @param {number} y
+     *  @param {number} sx
+     *  @param {number} sy
+     *  @param {number} angle
+     *  @param {boolean} [tristrip] - should tristrip algorithm be used
      *  @memberof WebGL */
-    export function glFlush(): void;
-    /** Set the WebGL texture, called automatically if using multiple textures
-     *  - This may also flush the gl buffer resulting in more draw calls and worse performance
-     *  @param {WebGLTexture} texture
-     *  @param {boolean} [wrap] - Should the texture wrap or clamp
+    export function glDrawPointsTransform(points: any[], rgba: number, x: number, y: number, sx: number, sy: number, angle: number, tristrip?: boolean): void;
+    /** Transform and add a polygon to the gl draw list
+     *  @param {Array} points - Array of Vector2 points
+     *  @param {number} rgba - Color of the polygon as a 32-bit integer
+     *  @param {number} lineWidth - Width of the outline
+     *  @param {number} x
+     *  @param {number} y
+     *  @param {number} sx
+     *  @param {number} sy
+     *  @param {number} angle
      *  @memberof WebGL */
-    export function glSetTexture(texture: WebGLTexture, wrap?: boolean): void;
-    /** Set anti-aliasing for WebGL canvas
-     *  @param {boolean} [antialias]
+    export function glDrawOutlineTransform(points: any[], rgba: number, lineWidth: number, x: number, y: number, sx: number, sy: number, angle: number): void;
+    /** Add a polygon to the gl draw list
+     *  @param {Array} points - Array of Vector2 points in triangle strip order
+     *  @param {number} rgba - Color of the polygon as a 32-bit integer
      *  @memberof WebGL */
-    export function glSetAntialias(antialias?: boolean): void;
-    /** Clear the canvas and setup the viewport
-     *  @memberof WebGL */
-    export function glClearCanvas(): void;
+    export function glDrawPoints(points: any[], rgba: number): void;
     /** Should WebGL be setup with anti-aliasing? must be set before calling engineInit
      *  @type {boolean}
      *  @memberof WebGL */
     export let glAntialias: boolean;
     export let glShader: any;
+    export let glPolyShader: any;
+    export let glPolyMode: any;
+    export let glAdditive: any;
+    export let glBatchAdditive: any;
     export let glActiveTexture: any;
     export let glArrayBuffer: any;
     export let glGeometryBuffer: any;
     export let glPositionData: any;
     export let glColorData: any;
-    export let glInstanceCount: any;
-    export let glAdditive: any;
-    export let glBatchAdditive: any;
+    export let glBatchCount: any;
     /**
      * LittleJS Input System
      * - Tracks keyboard down, pressed, and released

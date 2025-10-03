@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.13.7';
+const engineVersion = '1.14.1';
 
 /** Frames per second to update
  *  @type {number}
@@ -1780,6 +1780,12 @@ let headlessMode = false;
  *  @memberof Settings */
 let glEnable = true;
 
+/** How many sided poly to use when drawing circles and ellipses with WebGL
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let glCircleSides = 32;
+
 ///////////////////////////////////////////////////////////////////////////////
 // Tile sheet settings
 
@@ -2055,6 +2061,11 @@ function setGLEnable(enable)
     if (glCanvas) // hide glCanvas if WebGL is disabled
         glCanvas.style.visibility = enable ? 'visible' : 'hidden';
 }
+
+/** Set how many sided polygons to use when drawing circles and elipses with WebGL
+ *  @param {number} sides
+ *  @memberof Settings */
+function setGLCircleSides(sides) { glCircleSides = sides; }
 
 /** Set default size of tiles in pixels
  *  @param {Vector2} size
@@ -2905,11 +2916,11 @@ class TextureInfo
 function drawTile(pos, size=new Vector2(1), tileInfo, color=new Color,
     angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace, context)
 {
-    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
     ASSERT(isVector2(pos) && pos.isValid(), 'drawTile pos should be a vec2');
     ASSERT(isVector2(size) && size.isValid(), 'drawTile size should be a vec2');
     ASSERT(isColor(color) && (!additiveColor || isColor(additiveColor)), 'drawTile color is invalid');
     ASSERT(isNumber(angle), 'drawTile angle should be a number');
+    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
     const textureInfo = tileInfo && tileInfo.textureInfo;
     if (useWebGL)
@@ -3010,6 +3021,30 @@ function drawLine(posA, posB, thickness=.1, color, pos=vec2(), angle=0, useWebGL
     drawRect(pos, size, color, angle, useWebGL, screenSpace, context);
 }
 
+/** Draw colored regular polygon using passed in number of sides
+ *  @param {Vector2} pos
+ *  @param {Vector2} [size=(1,1)]
+ *  @param {number}  [sides]
+ *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {number}  [angle]
+ *  @param {number}  [lineWidth]
+ *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {boolean} [useWebGL=glEnable]
+ *  @param {boolean} [screenSpace]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
+ *  @memberof Draw */
+function drawRegularPoly(pos, size=vec2(1), sides=3, color=new Color, angle=0, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
+{
+    // build regular polygon points
+    const points = [];
+    for (let i=sides; i--;)
+    {
+        const a = (i/sides)*PI*2;
+        points.push(vec2(Math.sin(a)*size.x, Math.cos(a)*size.y));
+    }
+    drawPoly(points, color, lineWidth, lineColor, pos, angle, useWebGL, screenSpace, context);
+}
+
 /** Draw colored polygon using passed in points
  *  @param {Array<Vector2>} points - Array of Vector2 points
  *  @param {Color}   [color=(1,1,1,1)]
@@ -3017,33 +3052,49 @@ function drawLine(posA, posB, thickness=.1, color, pos=vec2(), angle=0, useWebGL
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {Vector2} [pos=(0,0)] - Offset to apply
  *  @param {number}  [angle] - Angle to rotate by
- *  @param {boolean} [useWebGL] - WebGL not supported
+ *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
- *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawPoly(points, color=new Color, lineWidth=0, lineColor=BLACK, pos=vec2(), angle=0, useWebGL=false, screenSpace=false, context=drawContext)
+function drawPoly(points, color=new Color, lineWidth=0, lineColor=BLACK, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=false, context=undefined)
 {
     ASSERT(isVector2(pos) && pos.isValid(), 'drawPoly pos should be a vec2');
     ASSERT(Array.isArray(points), 'drawPoly points should be an array');
     ASSERT(isColor(color) && isColor(lineColor), 'drawPoly color is invalid');
     ASSERT(isNumber(lineWidth), 'drawPoly lineWidth should be a number');
     ASSERT(isNumber(angle), 'drawPoly angle should be a number');
-    ASSERT(!useWebGL, 'drawPoly WebGL not supported');
-    drawCanvas2D(pos, vec2(1), angle, false, context=>
+    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+    if (useWebGL)
     {
-        context.beginPath();
-        for (const point of points)
-            context.lineTo(point.x, point.y);
-        context.closePath();
-        context.fillStyle = color.toString();
-        context.fill();
-        if (lineWidth)
+        let scale = 1;
+        if (screenSpace)
         {
-            context.strokeStyle = lineColor.toString();
-            context.lineWidth = lineWidth;
-            context.stroke();
+            // convert to world space
+            pos = screenToWorld(pos);
+            scale = 1/cameraScale;
         }
-    }, screenSpace, context);
+        glDrawPointsTransform(points, color.rgbaInt(), pos.x, pos.y, scale, scale, angle);
+        if (lineWidth > 0)
+            glDrawOutlineTransform(points, lineColor.rgbaInt(), lineWidth, pos.x, pos.y, scale, scale, angle);
+    }
+    else
+    {
+        drawCanvas2D(pos, vec2(1), angle, false, context=>
+        {
+            context.fillStyle = color.toString();
+            context.beginPath();
+            for (const point of points)
+                context.lineTo(point.x, point.y);
+            context.closePath();
+            context.fill();
+            if (lineWidth)
+            {
+                context.strokeStyle = lineColor.toString();
+                context.lineWidth = lineWidth;
+                context.stroke();
+            }
+        }, screenSpace, context);
+    }
 }
 
 /** Draw colored ellipse using passed in point
@@ -3053,11 +3104,11 @@ function drawPoly(points, color=new Color, lineWidth=0, lineColor=BLACK, pos=vec
  *  @param {number}  [angle]
  *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=(0,0,0,1)]
- *  @param {boolean} [useWebGL] - WebGL not supported
+ *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
- *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, lineColor=BLACK, useWebGL=false, screenSpace=false, context=drawContext)
+function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
 {
     ASSERT(isVector2(pos) && pos.isValid(), 'drawEllipse pos should be a vec2');
     ASSERT(isVector2(size) && size.isValid(), 'drawEllipse size should be a vec2');
@@ -3065,20 +3116,29 @@ function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, l
     ASSERT(isNumber(angle), 'drawEllipse angle should be a number');
     ASSERT(isNumber(lineWidth), 'drawEllipse lineWidth should be a number');
     ASSERT(lineWidth >= 0 && lineWidth < size.x && lineWidth < size.y, 'drawEllipse invalid lineWidth');
-    ASSERT(!useWebGL, 'drawEllipse WebGL not supported');
-    drawCanvas2D(pos, vec2(1), angle, false, context=>
+    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+    if (useWebGL)
     {
-        context.beginPath();
-        context.ellipse(0, 0, size.y, size.x, 0, 0, 9);
-        context.fillStyle = color.toString();
-        context.fill();
-        if (lineWidth)
+        // draw as a regular polygon
+        const sides = glCircleSides;
+        drawRegularPoly(pos, size, sides, color, angle, lineWidth, lineColor, useWebGL, screenSpace, context);
+    }
+    else
+    {
+        drawCanvas2D(pos, vec2(1), angle, false, context=>
         {
-            context.strokeStyle = lineColor.toString();
-            context.lineWidth = lineWidth;
-            context.stroke();
-        }
-    }, screenSpace, context);
+            context.fillStyle = color.toString();
+            context.beginPath();
+            context.ellipse(0, 0, size.x, size.y, 0, 0, 9);
+            context.fill();
+            if (lineWidth)
+            {
+                context.strokeStyle = lineColor.toString();
+                context.lineWidth = lineWidth;
+                context.stroke();
+            }
+        }, screenSpace, context);
+    }
 }
 
 /** Draw colored circle using passed in point
@@ -3087,11 +3147,11 @@ function drawEllipse(pos, size=vec2(1), color=new Color, angle=0, lineWidth=0, l
  *  @param {Color}   [color=(1,1,1,1)]
  *  @param {number}  [lineWidth=0]
  *  @param {Color}   [lineColor=(0,0,0,1)]
- *  @param {boolean} [useWebGL] - WebGL not supported
+ *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
- *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=BLACK, useWebGL=false, screenSpace=false, context=drawContext)
+function drawCircle(pos, radius=1, color=new Color, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
 { drawEllipse(pos, vec2(radius), color, 0, lineWidth, lineColor, useWebGL, screenSpace, context); }
 
 /** Draw directly to a 2d canvas context in world space
@@ -5900,13 +5960,16 @@ let glContext;
 let glAntialias = true;
 
 // WebGL internal variables not exposed to documentation
-let glShader, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glInstanceCount, glAdditive, glBatchAdditive;
+let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount;
 
 // WebGL internal constants
-const gl_MAX_INSTANCES = 1e4;
+const gl_ARRAY_BUFFER_SIZE = 4e5;
 const gl_INDICES_PER_INSTANCE = 11;
 const gl_INSTANCE_BYTE_STRIDE = gl_INDICES_PER_INSTANCE * 4;
-const gl_INSTANCE_BUFFER_SIZE = gl_MAX_INSTANCES * gl_INSTANCE_BYTE_STRIDE;
+const gl_MAX_INSTANCES = gl_ARRAY_BUFFER_SIZE / gl_INSTANCE_BYTE_STRIDE | 0;
+const gl_INDICIES_PER_POLY_VERTEX = 3;
+const gl_POLY_VERTEX_BYTE_STRIDE = gl_INDICIES_PER_POLY_VERTEX * 4;
+const gl_MAX_POLY_VERTEXES = gl_ARRAY_BUFFER_SIZE / gl_POLY_VERTEX_BYTE_STRIDE | 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -5931,7 +5994,7 @@ function glInit()
     const rootElement = mainCanvas.parentElement;
     rootElement.appendChild(glCanvas);
 
-    // setup vertex and fragment shaders
+    // setup instanced rendering shader program
     glShader = glCreateProgram(
         '#version 300 es\n' +     // specify GLSL ES version
         'precision highp float;'+ // use highp for better accuracy
@@ -5959,34 +6022,53 @@ function glInit()
         '}'                       // end of shader
     );
 
+    // setup poly rendering shaders
+    glPolyShader = glCreateProgram(
+        '#version 300 es\n' +     // specify GLSL ES version
+        'precision highp float;'+ // use highp for better accuracy
+        'uniform mat4 m;'+        // transform matrix
+        'in vec2 p;'+             // in: position
+        'in vec4 c;'+             // in: color
+        'out vec4 d;'+            // out: color
+        'void main(){'+           // shader entry point
+        'gl_Position=m*vec4(p,1,1);'+ // transform position
+        'd=c;'+                   // pass color to fragment shader
+        '}'                       // end of shader
+        ,
+        '#version 300 es\n' +     // specify GLSL ES version
+        'precision highp float;'+ // use highp for better accuracy
+        'in vec4 d;'+             // in: color
+        'out vec4 c;'+            // out: color
+        'void main(){'+           // shader entry point
+        'c=d;'+                   // set color
+        '}'                       // end of shader
+    );
+
     // init buffers
-    const glInstanceData = new ArrayBuffer(gl_INSTANCE_BUFFER_SIZE);
+    const glInstanceData = new ArrayBuffer(gl_ARRAY_BUFFER_SIZE);
     glPositionData = new Float32Array(glInstanceData);
     glColorData = new Uint32Array(glInstanceData);
     glArrayBuffer = glContext.createBuffer();
     glGeometryBuffer = glContext.createBuffer();
 
     // create the geometry buffer, triangle strip square
-    const geometry = new Float32Array([glInstanceCount=0,0,1,0,0,1,1,1]);
+    const geometry = new Float32Array([glBatchCount=0,0,1,0,0,1,1,1]);
     glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
     glContext.bufferData(glContext.ARRAY_BUFFER, geometry, glContext.STATIC_DRAW);
 }
 
-// Setup WebGL render each frame, called automatically by engine
-// Also used by tile layer rendering when redrawing tiles
-function glPreRender()
+function glSetInstancedMode(force=false)
 {
-    if (!glEnable || !glContext) return;
-
-    // set up the shader and canvas
-    glClearCanvas();
+    if (!glPolyMode && !force)
+        return;
+    
+    // setup instanced mode
+    glFlush();
+    glPolyMode = false;
     glContext.useProgram(glShader);
-    glContext.activeTexture(glContext.TEXTURE0);
-    if (textureInfos[0])
-        glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture = textureInfos[0].glTexture);
 
     // set vertex attributes
-    let offset = glAdditive = glBatchAdditive = 0;
+    let offset = 0;
     const initVertexAttribArray = (name, type, typeSize, size)=>
     {
         const location = glContext.getAttribLocation(glShader, name);
@@ -6001,12 +6083,50 @@ function glPreRender()
     glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
     initVertexAttribArray('g', glContext.FLOAT, 0, 2); // geometry
     glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
-    glContext.bufferData(glContext.ARRAY_BUFFER, gl_INSTANCE_BUFFER_SIZE, glContext.DYNAMIC_DRAW);
+    glContext.bufferData(glContext.ARRAY_BUFFER, gl_ARRAY_BUFFER_SIZE, glContext.DYNAMIC_DRAW);
     initVertexAttribArray('p', glContext.FLOAT, 4, 4); // position & size
     initVertexAttribArray('u', glContext.FLOAT, 4, 4); // texture coords
     initVertexAttribArray('c', glContext.UNSIGNED_BYTE, 1, 4); // color
     initVertexAttribArray('a', glContext.UNSIGNED_BYTE, 1, 4); // additiveColor
     initVertexAttribArray('r', glContext.FLOAT, 4, 1); // rotation
+}
+
+function glSetPolyMode()
+{
+    if (glPolyMode)
+        return;
+    
+    // setup poly mode
+    glFlush();
+    glPolyMode = true;
+    glContext.useProgram(glPolyShader);
+
+    // set vertex attributes
+    let offset = 0;
+    const initVertexAttribArray = (name, type, typeSize, size)=>
+    {
+        const location = glContext.getAttribLocation(glPolyShader, name);
+        const normalize = typeSize === 1; // only normalize if color
+        const stride = gl_POLY_VERTEX_BYTE_STRIDE;
+        glContext.enableVertexAttribArray(location);
+        glContext.vertexAttribPointer(location, size, type, normalize, stride, offset);
+        glContext.vertexAttribDivisor(location, 0);
+        offset += size*typeSize;
+    }
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
+    glContext.bufferData(glContext.ARRAY_BUFFER, gl_ARRAY_BUFFER_SIZE, glContext.DYNAMIC_DRAW);
+    initVertexAttribArray('p', glContext.FLOAT, 4, 2);         // position
+    initVertexAttribArray('c', glContext.UNSIGNED_BYTE, 1, 4); // color
+}
+
+// Setup WebGL render each frame, called automatically by engine
+// Also used by tile layer rendering when redrawing tiles
+function glPreRender()
+{
+    if (!glEnable || !glContext) return;
+
+    // clear the canvas
+    glClearCanvas();
 
     // build the transform matrix
     const s = vec2(2*cameraScale).divide(mainCanvasSize);
@@ -6014,13 +6134,33 @@ function glPreRender()
     const p = vec2(-1).subtract(rotatedCam.multiply(s));
     const ca = Math.cos(cameraAngle);
     const sa = Math.sin(cameraAngle);
-    glContext.uniformMatrix4fv(glContext.getUniformLocation(glShader, 'm'), false,
-    [
+    const transform = [
         s.x  * ca,  s.y * sa, 0, 0,
         -s.x * sa,  s.y * ca, 0, 0,
         1,          1,        1, 0,
-        p.x,        p.y,      0, 1
-    ]);
+        p.x,        p.y,      0, 1];
+
+    // set the same matrix for both shaders
+    const initUniform = (program, uniform, value) =>
+    {
+        glContext.useProgram(program);
+        const location = glContext.getUniformLocation(program, uniform);
+        glContext.uniformMatrix4fv(location, false, value);
+    }
+    initUniform(glPolyShader, 'm', transform);
+    initUniform(glShader, 'm', transform);
+
+    // set the active texture
+    glContext.activeTexture(glContext.TEXTURE0);
+    if (textureInfos[0])
+    {
+        glActiveTexture = textureInfos[0].glTexture;
+        glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
+    }
+
+    // start in instanced rendering mode with additive blending off
+    glAdditive = glBatchAdditive = glPolyMode = false;
+    glSetInstancedMode(true);
 }
 
 /** Clear the canvas and setup the viewport
@@ -6132,7 +6272,6 @@ function glCreateTexture(image)
     return texture;
 }
 
-
 /** Deletes a WebGL texture
  *  @param {WebGLTexture} [texture]
  *  @memberof WebGL */
@@ -6160,18 +6299,23 @@ function glSetTextureData(texture, image)
  *  @memberof WebGL */
 function glFlush()
 {
-    if (!glEnable || !glContext || !glInstanceCount) return;
-
-    const destBlend = glBatchAdditive ? glContext.ONE : glContext.ONE_MINUS_SRC_ALPHA;
-    glContext.blendFuncSeparate(glContext.SRC_ALPHA, destBlend, glContext.ONE, destBlend);
-    glContext.enable(glContext.BLEND);
-
-    // draw all the sprites in the batch and reset the buffer
-    glContext.bufferSubData(glContext.ARRAY_BUFFER, 0, glPositionData);
-    glContext.drawArraysInstanced(glContext.TRIANGLE_STRIP, 0, 4, glInstanceCount);
-    if (debug || showWatermark)
-        drawCount += glInstanceCount;
-    glInstanceCount = 0;
+    if (glEnable && glContext && glBatchCount)
+    {
+        // set bend mode
+        const destBlend = glBatchAdditive ? glContext.ONE : glContext.ONE_MINUS_SRC_ALPHA;
+        glContext.blendFuncSeparate(glContext.SRC_ALPHA, destBlend, glContext.ONE, destBlend);
+        glContext.enable(glContext.BLEND);
+        glContext.bufferSubData(glContext.ARRAY_BUFFER, 0, glPositionData);
+        
+        // draw the batch
+        if (glPolyMode)
+            glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, glBatchCount);
+        else
+            glContext.drawArraysInstanced(glContext.TRIANGLE_STRIP, 0, 4, glBatchCount);
+        if (debug || showWatermark)
+            drawCount += glBatchCount;
+        glBatchCount = 0;
+    }
     glBatchAdditive = glAdditive;
 }
 
@@ -6188,6 +6332,7 @@ function glCopyToContext(context)
 }
 
 /** Set anti-aliasing for WebGL canvas
+ *  Must be called before engineInit
  *  @param {boolean} [antialias]
  *  @memberof WebGL */
 function glSetAntialias(antialias=true)
@@ -6212,10 +6357,12 @@ function glSetAntialias(antialias=true)
 function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgba=-1, rgbaAdditive=0)
 {
     // flush if there is not enough room or if different blend mode
-    if (glInstanceCount >= gl_MAX_INSTANCES || glBatchAdditive !== glAdditive)
+    if (glBatchCount >= gl_MAX_INSTANCES || glBatchAdditive !== glAdditive)
         glFlush();
+    glSetInstancedMode();
 
-    let offset = glInstanceCount++ * gl_INDICES_PER_INSTANCE;
+    glPolyMode = false;
+    let offset = glBatchCount++ * gl_INDICES_PER_INSTANCE;
     glPositionData[offset++] = x;
     glPositionData[offset++] = y;
     glPositionData[offset++] = sizeX;
@@ -6227,6 +6374,301 @@ function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgb
     glColorData[offset++] = rgba;
     glColorData[offset++] = rgbaAdditive;
     glPositionData[offset++] = angle;
+}
+
+/** Transform and add a polygon to the gl draw list
+ *  @param {Array} points - Array of Vector2 points
+ *  @param {number} rgba - Color of the polygon as a 32-bit integer
+ *  @param {number} x
+ *  @param {number} y
+ *  @param {number} sx
+ *  @param {number} sy
+ *  @param {number} angle
+ *  @param {boolean} [tristrip] - should tristrip algorithm be used
+ *  @memberof WebGL */
+function glDrawPointsTransform(points, rgba, x, y, sx, sy, angle, tristrip=true)
+{
+    const pointsOut = [];
+    for (const p of points)
+    {
+        // transform the point
+        const px = p.x*sx;
+        const py = p.y*sy;
+        const sa = Math.sin(-angle);
+        const ca = Math.cos(-angle);
+        pointsOut.push(vec2(x + ca*px - sa*py, y + sa*px + ca*py));
+    }
+    const drawPoints = tristrip ? glPolyStrip(pointsOut) : pointsOut;
+    glDrawPoints(drawPoints, rgba);
+}
+
+/** Transform and add a polygon to the gl draw list
+ *  @param {Array} points - Array of Vector2 points
+ *  @param {number} rgba - Color of the polygon as a 32-bit integer
+ *  @param {number} lineWidth - Width of the outline
+ *  @param {number} x
+ *  @param {number} y
+ *  @param {number} sx
+ *  @param {number} sy
+ *  @param {number} angle
+ *  @memberof WebGL */
+function glDrawOutlineTransform(points, rgba, lineWidth, x, y, sx, sy, angle)
+{
+    const outlinePoints = glMakeOutline(points, lineWidth);
+    glDrawPointsTransform(outlinePoints, rgba, x, y, sx, sy, angle, false);
+}
+
+/** Add a polygon to the gl draw list
+ *  @param {Array} points - Array of Vector2 points in triangle strip order
+ *  @param {number} rgba - Color of the polygon as a 32-bit integer
+ *  @memberof WebGL */
+function glDrawPoints(points, rgba)
+{
+    if (!glEnable || points.length < 3)
+        return; // needs at least 3 points to have area
+    
+    // add 2 degenerate verts if batching with existing polys to separate them
+    const needsBridge = glPolyMode && glBatchCount > 0;
+    const bridgeVerts = needsBridge ? 2 : 0;
+    const vertCount = points.length + bridgeVerts;
+    
+    // flush if there is not enough room or if different blend mode
+    if (!glPolyMode || glBatchCount+vertCount >= gl_MAX_POLY_VERTEXES || glBatchAdditive !== glAdditive)
+        glFlush();
+    glSetPolyMode();
+  
+    let offset = glBatchCount * gl_INDICIES_PER_POLY_VERTEX;
+    
+    // add degenerate bridge if needed (repeat last vertex of previous poly, then first of new poly)
+    if (needsBridge)
+    {
+        // repeat last vertex from previous batch (it's at offset - 3)
+        const prevOffset = offset - 3;
+        glPositionData[offset++] = glPositionData[prevOffset];
+        glPositionData[offset++] = glPositionData[prevOffset + 1];
+        glColorData[offset++] = glColorData[prevOffset + 2];
+        
+        // repeat first vertex of new poly
+        glPositionData[offset++] = points[0].x;
+        glPositionData[offset++] = points[0].y;
+        glColorData[offset++] = rgba;
+    }
+    
+    // write vertices - they're already in triangle strip order
+    for (const point of points)
+    {
+        glPositionData[offset++] = point.x;
+        glPositionData[offset++] = point.y;
+        glColorData[offset++] = rgba;
+    }
+    glBatchCount += vertCount;
+}
+
+// WebGL internal function to convert polys to outline
+function glMakeOutline(points, width)
+{
+    if (points.length < 2)
+        return [];
+    
+    const halfWidth = width / 2;
+    const strip = [];
+    const n = points.length;
+    const e = 1e-6;
+    for (let i = 0; i < n; i++)
+    {
+        // for each vertex, calculate normal based on adjacent edges
+        const prev = points[(i - 1 + n) % n];
+        const curr = points[i];
+        const next = points[(i + 1) % n];
+        
+        // direction from previous to current
+        const dx1 = curr.x - prev.x;
+        const dy1 = curr.y - prev.y;
+        const len1 = (dx1*dx1 + dy1*dy1)**.5;
+        
+        // direction from current to next
+        const dx2 = next.x - curr.x;
+        const dy2 = next.y - curr.y;
+        const len2 = (dx2*dx2 + dy2*dy2)**.5;
+        
+        if (len1 < e && len2 < e)
+            continue; // skip degenerate point
+        
+        // calculate perpendicular normals for each edge
+        const nx1 = len1 > e ? -dy1 / len1 : 0;
+        const ny1 = len1 > e ?  dx1 / len1 : 0;
+        const nx2 = len2 > e ? -dy2 / len2 : 0;
+        const ny2 = len2 > e ?  dx2 / len2 : 0;
+        
+        // average the normals for miter
+        let nx = nx1 + nx2;
+        let ny = ny1 + ny2;
+        const nlen = (nx*nx + ny*ny)**.5;
+        if (nlen < e)
+        {
+            // 180 degree turn - use perpendicular
+            nx = nx1;
+            ny = ny1;
+        }
+        else
+        {
+            // calculate miter length
+            nx /= nlen;
+            ny /= nlen;
+            const dot = nx1 * nx + ny1 * ny;
+            if (dot > e)
+            {
+                // scale normal by miter length
+                const miterLength = 1 / dot;
+                nx *= miterLength;
+                ny *= miterLength;
+            }
+        }
+        
+        // create inner and outer points along the normal
+        const inner = vec2(curr.x - nx * halfWidth, curr.y - ny * halfWidth);
+        const outer = vec2(curr.x + nx * halfWidth, curr.y + ny * halfWidth);
+        strip.push(inner);
+        strip.push(outer);
+    }
+    if (strip.length > 1)
+    {
+        // close the loop
+        strip.push(strip[0]);
+        strip.push(strip[1]);
+    }
+    return strip;
+}
+
+// WebGL internal function to convert polys to tri strips
+function glPolyStrip(points)
+{
+    // validate input
+    if (points.length < 3)
+        return [];
+    
+    // cross product helper: (b-a) x (c-a)
+    const cross = (a,b,c)=> (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+
+    // calculate signed area of polygon
+    const signedArea = (poly)=>
+    {
+        let area = 0;
+        for (let i = poly.length; i--;)
+        {
+            const j = (i+1) % poly.length;
+            area += poly[i].cross(poly[j]);
+        }
+        return area;
+    }
+
+    // ensure counter-clockwise winding
+    if (signedArea(points) < 0)
+        points = points.reverse();
+
+    // tolerance constants
+    const e = 1e-10;
+
+    // check if point is inside triangle
+    const pointInTriangle = (p, a, b, c)=>
+    {
+        const c1 = cross(a, b, p);
+        const c2 = cross(b, c, p);
+        const c3 = cross(c, a, p);
+        const negative = (c1<-e?1:0) + (c2<-e?1:0) + (c3<-e?1:0);
+        const positive = (c1> e?1:0) + (c2> e?1:0) + (c3> e?1:0);
+        return !(negative && positive);
+    };
+
+    // ear clipping triangulation
+    const indices = [];
+    for (let i = 0; i < points.length; ++i)
+        indices[i] = i;
+    const triangles = [];
+    let attempts = 0;
+    const maxAttempts = points.length ** 2 + 100;
+    while (indices.length > 3 && attempts++ < maxAttempts)
+    {
+        let foundEar = false;
+        for (let i = indices.length; --i;)
+        {
+            const i0 = indices[(i + indices.length - 1) % indices.length];
+            const i1 = indices[i];
+            const i2 = indices[(i + 1) % indices.length];
+            const a = points[i0], b = points[i1], c = points[i2];
+
+            // check if convex
+            if (cross(a, b, c) < e)
+                continue;
+                
+            // check if any other point is inside
+            let hasInside = false;
+            for (let j = 0; j < indices.length; j++)
+            {
+                const k = indices[j];
+                if (k === i0 || k === i1 || k === i2)
+                    continue;
+                const p = points[k];
+                hasInside = pointInTriangle(p, a, b, c);
+                if (hasInside)
+                    break;
+            }
+            if (hasInside)
+                continue;
+
+            // found valid ear
+            triangles.push([i0, i1, i2]);
+            indices.splice(i, 1);
+            foundEar = true;
+            break;
+        }
+
+        // fallback for degenerate cases
+        if (!foundEar)
+        {
+            let worstIndex = -1, worstValue = Infinity;
+            for (let i = indices.length; --i;)
+            {
+                const i0 = indices[(i + indices.length - 1) % indices.length];
+                const i1 = indices[i];
+                const i2 = indices[(i + 1) % indices.length];
+                const value = abs(cross(points[i0], points[i1], points[i2]));
+                if (value < worstValue)
+                {
+                    worstValue = value;
+                    worstIndex = i;
+                }
+            }
+            if (worstIndex < 0)
+                break;
+            
+            const i0 = indices[(worstIndex + indices.length - 1) % indices.length];
+            const i1 = indices[worstIndex];
+            const i2 = indices[(worstIndex + 1) % indices.length];
+            triangles.push([i0, i1, i2]);
+            indices.splice(worstIndex, 1);
+        }
+    }
+    
+    // add final triangle
+    if (indices.length === 3)
+        triangles.push([indices[0], indices[1], indices[2]]);
+    if (!triangles.length)
+        return [];
+
+    // convert triangles to triangle strip with degenerate connectors
+    const strip = [];
+    let [a0, b0, c0] = triangles[0];
+    strip.push(points[a0], points[b0], points[c0]);
+    for (let i = 1; i < triangles.length; i++)
+    {
+        // add degenerate bridge from last vertex to first of new triangle
+        const [a, b, c] = triangles[i];
+        strip.push(points[c0], points[a]);
+        strip.push(points[a], points[b], points[c]);
+        c0 = c;
+    }
+    return strip;
 }
 /** 
  * LittleJS Newgrounds API
@@ -7343,7 +7785,7 @@ class Box2dObject extends EngineObject
         if (this.tileInfo)
             super.render();
         else
-            this.drawFixtures(this.color, this.lineColor, this.lineWidth, mainContext);
+            this.drawFixtures(this.color, this.lineColor, this.lineWidth);
     }
 
     /** Render debug info */
@@ -8847,7 +9289,7 @@ class Box2dPlugin
      *  @param {Color} [lineColor]
      *  @param {number} [lineWidth]
      *  @param {CanvasRenderingContext2D} [context] */
-    drawFixture(fixture, pos, angle, color=WHITE, lineColor=BLACK, lineWidth=.1, context=drawContext)
+    drawFixture(fixture, pos, angle, color=WHITE, lineColor=BLACK, lineWidth=.1, context)
     {
         const shape = box2d.castObjectType(fixture.GetShape());
         switch (shape.GetType())
@@ -8857,20 +9299,20 @@ class Box2dPlugin
                 let points = [];
                 for (let i=shape.GetVertexCount(); i--;)
                     points.push(box2d.vec2From(shape.GetVertex(i)));
-                drawPoly(points, color, lineWidth, lineColor, pos, angle, false, false, context);
+                drawPoly(points, color, lineWidth, lineColor, pos, angle);
                 break;
             }
             case box2d.instance.b2Shape.e_circle:
             {
                 const radius = shape.get_m_radius();
-                drawCircle(pos, radius, color, lineWidth, lineColor, false, false, context);
+                drawCircle(pos, radius, color, lineWidth, lineColor);
                 break;
             }
             case box2d.instance.b2Shape.e_edge:
             {
                 const v1 = box2d.vec2From(shape.get_m_vertex1());
                 const v2 = box2d.vec2From(shape.get_m_vertex2());
-                drawLine(v1, v2, lineWidth, lineColor, pos, angle, false, false, context);
+                drawLine(v1, v2, lineWidth, lineColor, pos, angle);
                 break;
             }
         }
