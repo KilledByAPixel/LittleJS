@@ -38,8 +38,8 @@ const gl_ARRAY_BUFFER_SIZE = 4e5;
 const gl_INDICES_PER_INSTANCE = 11;
 const gl_INSTANCE_BYTE_STRIDE = gl_INDICES_PER_INSTANCE * 4;
 const gl_MAX_INSTANCES = gl_ARRAY_BUFFER_SIZE / gl_INSTANCE_BYTE_STRIDE | 0;
-const gl_INDICIES_PER_POLY_VERTEX = 3;
-const gl_POLY_VERTEX_BYTE_STRIDE = gl_INDICIES_PER_POLY_VERTEX * 4;
+const gl_INDICES_PER_POLY_VERTEX = 3;
+const gl_POLY_VERTEX_BYTE_STRIDE = gl_INDICES_PER_POLY_VERTEX * 4;
 const gl_MAX_POLY_VERTEXES = gl_ARRAY_BUFFER_SIZE / gl_POLY_VERTEX_BYTE_STRIDE | 0;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -508,7 +508,7 @@ function glDrawPoints(points, rgba)
         glFlush();
     glSetPolyMode();
   
-    let offset = glBatchCount * gl_INDICIES_PER_POLY_VERTEX;
+    let offset = glBatchCount * gl_INDICES_PER_POLY_VERTEX;
     
     // add degenerate bridge if needed (repeat last vertex of previous poly, then first of new poly)
     if (needsBridge)
@@ -535,7 +535,7 @@ function glDrawPoints(points, rgba)
     glBatchCount += vertCount;
 }
 
-// WebGL internal function to convert polys to outline
+// WebGL internal function to convert polygon to outline triangle strip
 function glMakeOutline(points, width)
 {
     if (points.length &lt; 2)

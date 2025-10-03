@@ -455,7 +455,7 @@ function debugRender()
         let x = 9, y = 0, h = lineHeight;
         if (debugOverlay)
         {
-            overlayContext.fillText(engineName, x, y += h/2 );
+            overlayContext.fillText(`${engineName} Engine v${engineVersion}`, x, y += h/2 );
             overlayContext.fillText('Time: ' + formatTime(time), x, y += h);
             overlayContext.fillText('FPS: ' + averageFPS.toFixed(1), x, y += h);
             overlayContext.fillText('Objects: ' + engineObjects.length, x, y += h);
