@@ -336,7 +336,7 @@ Then increment it in the Brick.collideWithObject function.
 And change that drawTextScreen code we had commented out in gameRenderPost to display the score. We can adjust the position and size of the text to fit at the top of the screen.
 
 ```javascript
-LJS.drawTextScreen("Score " + score, vec2(LJS.mainCanvasSize.x/2, 70), 50); // show score
+LJS.drawTextScreen('Score ' + score, vec2(LJS.mainCanvasSize.x/2, 70), 50); // show score
 ```
 
 ![LittleJS Screenshot](images/9.png)

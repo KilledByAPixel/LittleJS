@@ -144,7 +144,7 @@ function Build(message, outputFile, files=[], buildSteps=[], isPrimaryBuild)
     {
         // add license and strict mode to top
         buffer += license;
-        buffer += "'use strict';\n\n";
+        buffer += `'use strict';\n\n`;
     }
 
     for (const file of files)
@@ -212,7 +212,7 @@ function typeScriptBuildStep(filename)
         const tsFilename = `${BUILD_FOLDER}/${ENGINE_NAME}.d.ts`
         child_process.execSync(`npx tsc ${filename} --declaration --allowJs --emitDeclarationOnly --outFile ${tsFilename}`);
 
-        // Make declare module part use the package name "littlejsengine"
+        // Make declare module part use the package name littlejsengine
         let fileContent = fs.readFileSync(tsFilename, 'utf8');
         fileContent = fileContent.replace(`${ENGINE_NAME}\.esm`, 'littlejsengine')
         fs.writeFileSync(tsFilename, fileContent);

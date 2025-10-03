@@ -183,7 +183,7 @@ function gameRender()
 ///////////////////////////////////////////////////////////////////////////////
 function gameRenderPost()
 {
-    LJS.drawTextScreen("Score " + score, vec2(LJS.mainCanvasSize.x/2, 70), 50); // show score
+    LJS.drawTextScreen('Score ' + score, vec2(LJS.mainCanvasSize.x/2, 70), 50); // show score
 }
 
 ///////////////////////////////////////////////////////////////////////////////

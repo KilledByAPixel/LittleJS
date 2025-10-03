@@ -23,7 +23,7 @@ fs.rmSync(BUILD_FOLDER, { recursive: true, force: true });
 console.log(`Compiling TypeScript...`);
 // Compile all TypeScript files at once
 const tsFiles = tsSourceFiles.join(' ');
-child_process.execSync(`npx tsc ${tsFiles} --outDir "./${BUILD_FOLDER}" --target es2020 --module es2020`, {stdio: 'inherit'});
+child_process.execSync(`npx tsc ${tsFiles} --outDir './${BUILD_FOLDER}' --target es2020 --module es2020`, {stdio: 'inherit'});
 console.log(`TypeScript built in ${((Date.now() - startTime)/1e3).toFixed(2)} seconds!`);
 
 console.log(`Moving js files back to root...`);

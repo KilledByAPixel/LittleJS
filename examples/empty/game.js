@@ -1,6 +1,6 @@
 /*
     Little JS Hello World Demo
-    - Just prints "Hello World!"
+    - Just prints 'Hello World!'
     - A good starting point for new projects
 */
 

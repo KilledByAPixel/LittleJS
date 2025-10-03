@@ -105,7 +105,7 @@ function htmlBuildStep(filename)
     buffer += '<meta charset=utf-8>';
     buffer += '</head>';
     buffer += '<body>';
-    buffer += '<script src="index.js"></script>';
+    buffer += `<script src='index.js'></script>`;
 
     // output html file
     fs.writeFileSync(`${BUILD_FOLDER}/index.html`, buffer, {flag: 'w+'});
