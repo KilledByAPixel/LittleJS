@@ -136,8 +136,8 @@ function gameUpdatePost()
 ///////////////////////////////////////////////////////////////////////////////
 function gameRender()
 {
-    // draw a grey square in the background without using WebGL
-    LJS.drawRect(vec2(20,8), vec2(100), hsl(0,0,.8), 0, false);
+    // draw a grey square in the background
+    LJS.drawRect(vec2(20,8), vec2(100), hsl(0,0,.8));
 
     if (Scenes.scene == 5)
     {
@@ -168,8 +168,8 @@ function gameRenderPost()
 
     // draw to overlay canvas for hud rendering
     const pos = vec2(LJS.mainCanvasSize.x/2, 50);
-    drawText('LittleJS Box2D Demo', 80, 80);
-    drawText(Scenes.sceneName, 60, 100);
+    drawText('LittleJS Box2D Demo', 65, 70);
+    drawText(Scenes.sceneName, 50, 100);
     if (Scenes.scene == 0)
     {
         drawText('Mouse Left = Grab');

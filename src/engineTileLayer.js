@@ -3,7 +3,6 @@
  * - Caches arrays of tiles to off screen canvas for fast rendering
  * - Unlimited numbers of layers, allocates canvases as needed
  * - Tile layers can be drawn to using their context with canvas2d
- * - Drawn directly to the main canvas without using WebGL
  * - Tile layers can also have collision with EngineObjects
  * @namespace TileCollision
  */
