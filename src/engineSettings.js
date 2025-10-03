@@ -98,6 +98,12 @@ let headlessMode = false;
  *  @memberof Settings */
 let glEnable = true;
 
+/** How many sided poly to use when drawing circles and ellipses with WebGL
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let glCircleSides = 32;
+
 ///////////////////////////////////////////////////////////////////////////////
 // Tile sheet settings
 
@@ -373,6 +379,11 @@ function setGLEnable(enable)
     if (glCanvas) // hide glCanvas if WebGL is disabled
         glCanvas.style.visibility = enable ? 'visible' : 'hidden';
 }
+
+/** Set how many sided polygons to use when drawing circles and elipses with WebGL
+ *  @param {number} sides
+ *  @memberof Settings */
+function setGLCircleSides(sides) { glCircleSides = sides; }
 
 /** Set default size of tiles in pixels
  *  @param {Vector2} size
