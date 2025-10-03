@@ -2,15 +2,7 @@ function gameRender()
 {
     // polygon shapes
     for (let j=3; j<7; ++j)
-    {
-        let points = [];
-        for (let i=0; i<j; ++i)
-        {
-            let angle = i * Math.PI * 2 / j;
-            points.push(vec2(j*4-18,0).add(vec2(0,1).rotate(angle)));
-        }
-        drawPoly(points, hsl(j/4+time/9,1,.5)); // draw a regular polygon
-    }
+        drawRegularPoly(vec2(j*4-18,0), vec2(1), j, hsl(j/4+time/9,1,.5), time, .2, WHITE);
 
     // circles and ellipses
     drawCircle(vec2(0,5), 1+wave(.5), hsl(.15,1,.5));
