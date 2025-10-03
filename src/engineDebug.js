@@ -121,13 +121,13 @@ function debugPoint(pos, color, time, angle)
  *  @param {Vector2} posA
  *  @param {Vector2} posB
  *  @param {string}  [color]
- *  @param {number}  [thickness]
+ *  @param {number}  [width]
  *  @param {number}  [time]
  *  @memberof Debug */
-function debugLine(posA, posB, color, thickness=.1, time)
+function debugLine(posA, posB, color, width=.1, time)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
-    const size = vec2(thickness, halfDelta.length()*2);
+    const size = vec2(width, halfDelta.length()*2);
     debugRect(posA.add(halfDelta), size, color, time, halfDelta.angle(), true);
 }
 

@@ -135,7 +135,7 @@ Timer.valueOf()       // Get how long since elapsed, 0 if not set
 // Drawing functions
 drawTile(pos, size, tileInfo, color=WHITE, angle=0, mirror, additiveColor)
 drawRect(pos, size, color=WHITE, angle=0)
-drawLine(posA, posB, thickness=.1, color=WHITE, pos=(0,0), angle=0)
+drawLine(posA, posB, width=.1, color=WHITE, pos=(0,0), angle=0)
 drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos, angle=0)
 drawRegularPoly(pos, size=(1,1), sides=3, color=WHITE)
 drawEllipse(pos, size, color=WHITE, angle=0, lineWidth=0, lineColor=BLACK)
@@ -426,7 +426,7 @@ ASSERT(assert, output) // Asserts if the expression is false
 debugRect(pos, size, color='#fff', time=0, angle=0, fill) // Draw debug rectangle
 debugCircle(pos, radius, color='#fff', time=0, fill)      // Draw debug circle
 debugPoint(pos, color, time, angle)                         // Draw debug point
-debugLine(posA, posB, color, thickness=.1, time)            // Draw debug line
+debugLine(posA, posB, color, width=.1, time)                // Draw debug line
 debugText(text, pos, size=1, color='#fff', time=0, angle=0) // Draw debug text
 debugAABB(pA, sA, pB, sB, color)     // Draw a debug axis aligned box
 debugClear()                         // Clear all debug primitives

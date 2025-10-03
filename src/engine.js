@@ -280,6 +280,11 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
 
         // save canvas size
         mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
+
+        // set default line join and cap
+        const lineJoin = 'round', lineCap = 'round';
+        mainContext.lineJoin = overlayContext.lineJoin = lineJoin;
+        mainContext.lineCap  = overlayContext.lineCap  = lineCap;
     }
 
     // wait for gameInit to load

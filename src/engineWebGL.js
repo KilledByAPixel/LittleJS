@@ -124,10 +124,6 @@ function glInit()
     const geometry = new Float32Array([glBatchCount=0,0,1,0,0,1,1,1]);
     glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
     glContext.bufferData(glContext.ARRAY_BUFFER, geometry, glContext.STATIC_DRAW);
-    
-    // setup array buffer
-    glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
-    glContext.bufferData(glContext.ARRAY_BUFFER, gl_ARRAY_BUFFER_SIZE, glContext.DYNAMIC_DRAW);
 }
 
 function glSetInstancedMode()
@@ -153,7 +149,10 @@ function glSetInstancedMode()
         glContext.vertexAttribDivisor(location, divisor);
         offset += size*typeSize;
     }
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
     initVertexAttribArray('g', glContext.FLOAT, 0, 2); // geometry
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
+    glContext.bufferData(glContext.ARRAY_BUFFER, gl_ARRAY_BUFFER_SIZE, glContext.DYNAMIC_DRAW);
     initVertexAttribArray('p', glContext.FLOAT, 4, 4); // position & size
     initVertexAttribArray('u', glContext.FLOAT, 4, 4); // texture coords
     initVertexAttribArray('c', glContext.UNSIGNED_BYTE, 1, 4); // color
@@ -183,6 +182,8 @@ function glSetPolyMode()
         glContext.vertexAttribDivisor(location, 0);
         offset += size*typeSize;
     }
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
+    glContext.bufferData(glContext.ARRAY_BUFFER, gl_ARRAY_BUFFER_SIZE, glContext.DYNAMIC_DRAW);
     initVertexAttribArray('p', glContext.FLOAT, 4, 2);         // position
     initVertexAttribArray('c', glContext.UNSIGNED_BYTE, 1, 4); // color
 }
@@ -486,10 +487,11 @@ function glDrawPointsTransform(points, rgba, x, y, sx, sy, angle, tristrip=true)
  *  @param {number} sx
  *  @param {number} sy
  *  @param {number} angle
+ *  @param {boolean} [wrap] - Should the outline connect the first and last points
  *  @memberof WebGL */
-function glDrawOutlineTransform(points, rgba, lineWidth, x, y, sx, sy, angle)
+function glDrawOutlineTransform(points, rgba, lineWidth, x, y, sx, sy, angle, wrap=true)
 {
-    const outlinePoints = glMakeOutline(points, lineWidth);
+    const outlinePoints = glMakeOutline(points, lineWidth, wrap);
     glDrawPointsTransform(outlinePoints, rgba, x, y, sx, sy, angle, false);
 }
 
@@ -508,7 +510,7 @@ function glDrawPoints(points, rgba)
         glFlush();
     glSetPolyMode();
   
-    // setup triangle strip wit degenerate verts at start and end
+    // setup triangle strip with degenerate verts at start and end
     let offset = glBatchCount * gl_INDICES_PER_POLY_VERTEX;
     for(let i = vertCount; i--;)
     {
@@ -536,7 +538,7 @@ function glDrawColoredPoints(points, pointColors)
         glFlush();
     glSetPolyMode();
   
-    // setup triangle strip wit degenerate verts at start and end
+    // setup triangle strip with degenerate verts at start and end
     let offset = glBatchCount * gl_INDICES_PER_POLY_VERTEX;
     for(let i = vertCount; i--;)
     {
@@ -551,9 +553,9 @@ function glDrawColoredPoints(points, pointColors)
 }
 
 // WebGL internal function to convert polygon to outline triangle strip
-function glMakeOutline(points, width)
+function glMakeOutline(points, width, wrap=true)
 {
-    if (points.length < 3)
+    if (points.length < 2)
         return [];
     
     const halfWidth = width / 2;
@@ -564,9 +566,9 @@ function glMakeOutline(points, width)
     for (let i = 0; i < n; i++)
     {
         // for each vertex, calculate normal based on adjacent edges
-        const prev = points[(i - 1 + n) % n];
+        const prev = points[wrap ? (i - 1 + n) % n : max(i - 1, 0)];
         const curr = points[i];
-        const next = points[(i + 1) % n];
+        const next = points[wrap ? (i + 1) % n : min(i + 1, n - 1)];
         
         // direction from previous to current
         const dx1 = curr.x - prev.x;
@@ -618,7 +620,7 @@ function glMakeOutline(points, width)
         strip.push(inner);
         strip.push(outer);
     }
-    if (strip.length > 1)
+    if (strip.length > 1 && wrap)
     {
         // close the loop
         strip.push(strip[0]);

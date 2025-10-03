@@ -314,10 +314,69 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
     drawTile(pos, size, undefined, color, angle, false, undefined, useWebGL, screenSpace, context);
 }
 
-/** Draw colored line between two points
- *  @param {Vector2} posA
- *  @param {Vector2} posB
- *  @param {number}  [thickness]
+/** Draw a rect centered on pos with a gradient from top to bottom
+ *  @param {Vector2} pos
+ *  @param {Vector2} [size=(1,1)]
+ *  @param {Color}   [colorTop=(1,1,1,1)]
+ *  @param {Color}   [colorBottom=(0,0,0,1)]
+ *  @param {number}  [angle]
+ *  @param {boolean} [useWebGL=glEnable]
+ *  @param {boolean} [screenSpace]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
+ *  @memberof Draw */
+function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0, useWebGL=glEnable, screenSpace=false, context)
+{
+    ASSERT(isVector2(pos), 'drawRectGradient pos should be a vec2');
+    ASSERT(isVector2(size), 'drawRectGradient size should be a vec2');
+    ASSERT(isColor(colorTop) && isColor(colorBottom), 'drawRectGradient color is invalid');
+    ASSERT(isNumber(angle), 'drawRectGradient angle should be a number');
+    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+    if (useWebGL)
+    {
+        if (screenSpace)
+        {
+            // convert to world space
+            pos = screenToWorld(pos);
+            size = size.scale(1/cameraScale);
+        }
+        // build 4 corner points for the rectangle
+        const points = [], colors = [];
+        const halfSizeX = size.x/2, halfSizeY = size.y/2;
+        const colorTopInt = colorTop.rgbaInt();
+        const colorBottomInt = colorBottom.rgbaInt();
+        const c = Math.cos(-angle), s = Math.sin(-angle);
+        for (let i=4; i--;)
+        {
+            const x = i & 1 ? halfSizeX : -halfSizeX;
+            const y = i & 2 ? halfSizeY : -halfSizeY;
+            const rx = x * c - y * s;
+            const ry = x * s + y * c;
+            const color = i & 2 ? colorTopInt : colorBottomInt;
+            points.push(vec2(pos.x + rx, pos.y + ry));
+            colors.push(color);
+        }
+        glDrawColoredPoints(points, colors);
+    }
+    else
+    {
+        // normal canvas 2D rendering method (slower)
+        ++drawCount;
+        size = new Vector2(size.x, -size.y); // fix upside down sprites
+        drawCanvas2D(pos, size, angle, false, (context)=>
+        {
+            // if no tile info, use untextured rect
+            const gradient = context.createLinearGradient(0, -.5, 0, .5);
+            gradient.addColorStop(0, colorTop.toString());
+            gradient.addColorStop(1, colorBottom.toString());
+            context.fillStyle = gradient;
+            context.fillRect(-.5, -.5, 1, 1);
+        }, screenSpace, context);
+    }
+}
+
+/** Draw connected lines between a series of points
+ *  @param {Array<Vector2>} points
+ *  @param {number}  [width]
  *  @param {Color}   [color=(1,1,1,1)]
  *  @param {Vector2} [pos=(0,0)] - Offset to apply
  *  @param {number}  [angle] - Angle to rotate by
@@ -325,10 +384,62 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawLine(posA, posB, thickness=.1, color, pos=vec2(), angle=0, useWebGL, screenSpace, context)
+function drawLineList(points, width=.1, color, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace, context)
+{
+    ASSERT(Array.isArray(points), 'drawLineList points should be an array');
+    ASSERT(isNumber(width), 'drawLineList width should be a number');
+    ASSERT(isColor(color), 'drawLineList color is invalid');
+    ASSERT(isVector2(pos), 'drawLineList pos should be a vec2');
+    ASSERT(isNumber(angle), 'drawLineList angle should be a number');
+    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+    if (useWebGL)
+    {
+        let scale = 1;
+        if (screenSpace)
+        {
+            // convert to world space
+            pos = screenToWorld(pos);
+            scale = 1/cameraScale;
+        }
+        glDrawOutlineTransform(points, color.rgbaInt(), width, pos.x, pos.y, scale, scale, angle, false);
+    }
+    else
+    {
+        // normal canvas 2D rendering method (slower)
+        ++drawCount;
+        drawCanvas2D(pos, vec2(1), angle, false, (context)=>
+        {
+            context.strokeStyle = color.toString();
+            context.lineWidth = width;
+            context.beginPath();
+            for (let i=0; i<points.length; ++i)
+            {
+                const point = points[i];
+                if (i)
+                    context.lineTo(point.x, point.y);
+                else
+                    context.moveTo(point.x, point.y);
+            }
+            context.stroke();
+        }, screenSpace, context);
+    }
+}
+
+/** Draw colored line between two points
+ *  @param {Vector2} posA
+ *  @param {Vector2} posB
+ *  @param {number}  [width]
+ *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Vector2} [pos=(0,0)] - Offset to apply
+ *  @param {number}  [angle] - Angle to rotate by
+ *  @param {boolean} [useWebGL=glEnable]
+ *  @param {boolean} [screenSpace]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
+ *  @memberof Draw */
+function drawLine(posA, posB, width=.1, color, pos=vec2(), angle=0, useWebGL, screenSpace, context)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
-    const size = vec2(thickness, halfDelta.length()*2);
+    const size = vec2(width, halfDelta.length()*2);
     pos = pos.add(posA.add(halfDelta));
     angle += halfDelta.angle();
     drawRect(pos, size, color, angle, useWebGL, screenSpace, context);
@@ -551,7 +662,6 @@ function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=B
     context.textAlign = textAlign;
     context.font = size + 'px '+ font;
     context.textBaseline = 'middle';
-    context.lineJoin = 'round';
 
     const lines = (text+'').split('\n');
     let posY = pos.y;
@@ -751,7 +861,7 @@ let engineFontImage;
  * const font = new FontImage;
  *
  * // draw text
- * font.drawTextScreen("LittleJS\nHello World!", vec2(200, 50));
+ * font.drawTextScreen('LittleJS\nHello World!', vec2(200, 50));
  */
 class FontImage
 {

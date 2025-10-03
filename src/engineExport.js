@@ -193,11 +193,14 @@ export
 
 	// Draw
 	textureInfos,
+	drawCount,
 	tile,
 	TileInfo,
 	TextureInfo,
 	mainCanvas,
 	mainContext,
+	drawCanvas,
+	drawContext,
 	overlayCanvas,
 	overlayContext,
 	mainCanvasSize,
@@ -205,6 +208,8 @@ export
 	worldToScreen,
 	drawTile,
 	drawRect,
+	drawRectGradient,
+	drawLineList,
 	drawLine,
 	drawPoly,
 	drawEllipse,
