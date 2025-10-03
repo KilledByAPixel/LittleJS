@@ -512,7 +512,7 @@ function glDrawPoints(points, rgba)
   
     // setup triangle strip with degenerate verts at start and end
     let offset = glBatchCount * gl_INDICES_PER_POLY_VERTEX;
-    for(let i = vertCount; i--;)
+    for (let i = vertCount; i--;)
     {
         const j = clamp(i-1, 0, vertCount-3);
         const point = points[j];
@@ -540,7 +540,7 @@ function glDrawColoredPoints(points, pointColors)
   
     // setup triangle strip with degenerate verts at start and end
     let offset = glBatchCount * gl_INDICES_PER_POLY_VERTEX;
-    for(let i = vertCount; i--;)
+    for (let i = vertCount; i--;)
     {
         const j = clamp(i-1, 0, vertCount-3);
         const point = points[j];
