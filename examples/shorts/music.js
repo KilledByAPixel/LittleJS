@@ -1,6 +1,6 @@
 // Music player variables
 let musicSound = new SoundWave('song.mp3');
-let musicVolume = .8;
+let musicVolume = 1;
 let musicInstance;
 
 // UI elements
@@ -10,8 +10,8 @@ function gameInit()
 {
     // load ui system plugin
     new UISystemPlugin;
-    uiSystem.defaultSoundPress = new Sound([.3,0,220]);
-    uiSystem.defaultSoundClick = new Sound([.3,0,440]);
+    uiSystem.defaultSoundPress = new Sound([.5,0,220]);
+    uiSystem.defaultSoundClick = new Sound([.5,0,440]);
     uiSystem.defaultCornerRadius = 20;
 
     // setup music player UI
