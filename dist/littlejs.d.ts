@@ -1390,13 +1390,14 @@ declare module "littlejsengine" {
      *  @param {Array<Vector2>} points
      *  @param {number}  [width]
      *  @param {Color}   [color=(1,1,1,1)]
+     *  @param {boolean} [wrap] - Should the last point connect to the first?
      *  @param {Vector2} [pos=(0,0)] - Offset to apply
      *  @param {number}  [angle] - Angle to rotate by
      *  @param {boolean} [useWebGL=glEnable]
      *  @param {boolean} [screenSpace]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
-    export function drawLineList(points: Array<Vector2>, width?: number, color?: Color, pos?: Vector2, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    export function drawLineList(points: Array<Vector2>, width?: number, color?: Color, wrap?: boolean, pos?: Vector2, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw colored line between two points
      *  @param {Vector2} posA
      *  @param {Vector2} posB
@@ -1423,7 +1424,7 @@ declare module "littlejsengine" {
     export function drawPoly(points: Array<Vector2>, color?: Color, lineWidth?: number, lineColor?: Color, pos?: Vector2, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw colored ellipse using passed in point
      *  @param {Vector2} pos
-     *  @param {Vector2} [size=(1,1)]
+     *  @param {Vector2} [size=(1,1)] - Width and height diameter
      *  @param {Color}   [color=(1,1,1,1)]
      *  @param {number}  [angle]
      *  @param {number}  [lineWidth]
@@ -1435,7 +1436,7 @@ declare module "littlejsengine" {
     export function drawEllipse(pos: Vector2, size?: Vector2, color?: Color, angle?: number, lineWidth?: number, lineColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw colored circle using passed in point
      *  @param {Vector2} pos
-     *  @param {number}  [radius=1]
+     *  @param {number}  [size=1] - Diameter
      *  @param {Color}   [color=(1,1,1,1)]
      *  @param {number}  [lineWidth=0]
      *  @param {Color}   [lineColor=(0,0,0,1)]
@@ -1443,7 +1444,7 @@ declare module "littlejsengine" {
      *  @param {boolean} [screenSpace]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
-    export function drawCircle(pos: Vector2, radius?: number, color?: Color, lineWidth?: number, lineColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    export function drawCircle(pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw directly to a 2d canvas context in world space
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
