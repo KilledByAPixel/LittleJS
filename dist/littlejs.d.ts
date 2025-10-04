@@ -1547,7 +1547,7 @@ declare module "littlejsengine" {
          *  @param {Vector2} pos
          *  @param {number}  [scale=.25]
          *  @param {boolean} [center]
-         *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D}[context=drawContext]
+         *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
          */
         drawText(text: string, pos: Vector2, scale?: number, center?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
         /** Draw text on overlay canvas in world space using the image font
@@ -2379,7 +2379,7 @@ declare module "littlejsengine" {
          *  @param {TileInfo} [tileInfo]
          *  @param {Color}    [color=(1,1,1,1)]
          *  @param {number}   [angle=0]
-         *  @param {boolean}  [mirror=0] */
+         *  @param {boolean}  [mirror=false] */
         drawTile(pos: Vector2, size?: Vector2, tileInfo?: TileInfo, color?: Color, angle?: number, mirror?: boolean): void;
         /** Draw a rectangle onto the layer canvas in world space
          *  @param {Vector2} pos

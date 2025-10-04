@@ -2097,7 +2097,7 @@ function setGLEnable(enable)
         glCanvas.style.visibility = enable ? 'visible' : 'hidden';
 }
 
-/** Set how many sided polygons to use when drawing circles and elipses with WebGL
+/** Set how many sided polygons to use when drawing circles and ellipses with WebGL
  *  @param {number} sides
  *  @memberof Settings */
 function setGLCircleSides(sides) { glCircleSides = sides; }
@@ -2308,7 +2308,7 @@ class EngineObject
         /** @property {Vector2} - World space position of the object */
         this.pos = pos.copy();
         /** @property {Vector2} - World space width and height of the object */
-        this.size = size;
+        this.size = size.copy();
         /** @property {Vector2} - Size of object used for drawing, uses size if not set */
         this.drawSize = undefined;
         /** @property {TileInfo} - Tile info to render object (undefined is untextured) */
@@ -2316,7 +2316,7 @@ class EngineObject
         /** @property {number} - Angle to rotate the object */
         this.angle = angle;
         /** @property {Color} - Color to apply when rendered */
-        this.color = color;
+        this.color = color.copy();
         /** @property {Color} - Additive color to apply when rendered */
         this.additiveColor = undefined;
         /** @property {boolean} - Should it flip along y axis when rendered */
@@ -2440,7 +2440,7 @@ class EngineObject
             for (const o of engineObjectsCollide)
             {
                 // non solid objects don't collide with each other
-                if (!this.isSolid && !o.isSolid || o.destroyed || o.parent || o === this)
+                if ((!this.isSolid && !o.isSolid) || o.destroyed || o.parent || o === this)
                     continue;
 
                 // check collision
@@ -2479,7 +2479,7 @@ class EngineObject
                 {
                     // push outside object collision
                     this.pos.y = o.pos.y + (sizeBoth.y/2 + epsilon) * sign(oldPos.y - o.pos.y);
-                    if (o.groundObject && wasMovingDown || !o.mass)
+                    if ((o.groundObject && wasMovingDown) || !o.mass)
                     {
                         // set ground object if landed on something
                         if (wasMovingDown)
@@ -3630,7 +3630,7 @@ class FontImage
      *  @param {Vector2} pos
      *  @param {number}  [scale=.25]
      *  @param {boolean} [center]
-     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D}[context=drawContext] 
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext] 
      */
     drawText(text, pos, scale=1, center, context=drawContext)
     {
@@ -5076,7 +5076,7 @@ class TileLayerData
         /** @property {boolean} - If the tile should be mirrored along the x axis */
         this.mirror    = mirror;
         /** @property {Color}   - Color of the tile */
-        this.color     = color;
+        this.color     = color.copy();
     }
 
     /** Set this tile to clear, it will not be rendered */
@@ -5175,7 +5175,7 @@ class CanvasLayer extends EngineObject
      *  @param {TileInfo} [tileInfo]
      *  @param {Color}    [color=(1,1,1,1)]
      *  @param {number}   [angle=0]
-     *  @param {boolean}  [mirror=0] */
+     *  @param {boolean}  [mirror=false] */
     drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle, mirror)
     {
         this.drawCanvas2D(pos, size, angle, mirror, (context)=>
@@ -6773,7 +6773,7 @@ function glPolyStrip(points)
     while (indices.length > 3 && attempts++ < maxAttempts)
     {
         let foundEar = false;
-        for (let i = indices.length; --i;)
+        for (let i = 0; i < indices.length; i++)
         {
             const i0 = indices[(i + indices.length - 1) % indices.length];
             const i1 = indices[i];
@@ -6810,7 +6810,7 @@ function glPolyStrip(points)
         if (!foundEar)
         {
             let worstIndex = -1, worstValue = Infinity;
-            for (let i = indices.length; --i;)
+            for (let i = 0; i < indices.length; i++)
             {
                 const i0 = indices[(i + indices.length - 1) % indices.length];
                 const i1 = indices[i];
