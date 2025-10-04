@@ -169,15 +169,15 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         frameTimeBufferMS += paused ? 0 : frameTimeDeltaMS;
         if (!debugSpeedUp)
             frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp min framerate
-        if (debugVideoCaptureIsActive())
-            frameTimeBufferMS = 0; // no time smoothing when capturing video
-        updateCanvas();
 
         if (paused)
         {
+            updateCanvas();
+
             // update object transforms even when paused
             for (const o of engineObjects)
                 o.parent || o.updateTransforms();
+
             inputUpdate();
             pluginUpdateList.forEach(f=>f());
             debugUpdate();
@@ -202,6 +202,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                 time = frame++ / frameRate;
 
                 // update game and objects
+                updateCanvas();
                 inputUpdate();
                 gameUpdate();
                 pluginUpdateList.forEach(f=>f());
@@ -211,14 +212,23 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                 debugUpdate();
                 gameUpdatePost();
                 inputUpdatePost();
+
+                if (debugVideoCaptureIsActive())
+                    renderFrame();
             }
 
             // add the time smoothing back in
             frameTimeBufferMS += deltaSmooth;
         }
 
-        if (!headlessMode)
+        if (!debugVideoCaptureIsActive())
+            renderFrame();
+        requestAnimationFrame(engineUpdate);
+
+        function renderFrame()
         {
+            if (headlessMode) return;
+
             // render sort then render while removing destroyed objects
             enginePreRender();
             gameRender();
@@ -248,7 +258,6 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             }
             drawCount = 0;
         }
-        requestAnimationFrame(engineUpdate);
     }
 
     function updateCanvas()
