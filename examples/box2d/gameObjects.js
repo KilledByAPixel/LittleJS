@@ -18,7 +18,7 @@ const density = 1;
 const friction = .5;
 const restitution = .2;
 
-export function spawnBox(pos, size=1, color=LJS.WHITE, type=LJS.box2d.bodyTypeDynamic, applyTexture=true, angle=0)
+export function spawnBox(pos, size=1, color=LJS.WHITE, type=LJS.box2d.bodyTypeDynamic, applyTexture=false, angle=0)
 {
     size = typeof size === 'number' ? vec2(size) : size; // square
     const o = new LJS.Box2dObject(pos, size, applyTexture && Game.spriteAtlas.squareOutline, angle, color, type);
@@ -27,7 +27,7 @@ export function spawnBox(pos, size=1, color=LJS.WHITE, type=LJS.box2d.bodyTypeDy
     return o;
 }
 
-export function spawnCircle(pos, diameter=1, color=LJS.WHITE, type=LJS.box2d.bodyTypeDynamic, applyTexture=true, angle=0)
+export function spawnCircle(pos, diameter=1, color=LJS.WHITE, type=LJS.box2d.bodyTypeDynamic, applyTexture=false, angle=0)
 {
     const size = vec2(diameter);
     const o = new LJS.Box2dObject(pos, size, applyTexture && Game.spriteAtlas.circleOutline, angle, color, type);
