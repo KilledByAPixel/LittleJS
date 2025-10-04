@@ -260,7 +260,8 @@ function glSetTexture(texture, wrap=false)
         return;
 
     glFlush();
-    glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture = texture);
+    glActiveTexture = texture;
+    glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
 
     // set wrap mode
     const wrapMode = wrap ? glContext.REPEAT : glContext.CLAMP_TO_EDGE;
@@ -310,6 +311,7 @@ function glCreateProgram(vsSource, fsSource)
 }
 
 /** Create WebGL texture from an image and init the texture settings
+ *  Restores the active texture when done
  *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas} [image]
  *  @return {WebGLTexture}
  *  @memberof WebGL */
@@ -319,30 +321,29 @@ function glCreateTexture(image)
 
     // build the texture
     const texture = glContext.createTexture();
-    glContext.bindTexture(glContext.TEXTURE_2D, texture);
+    let mipMap = false;
     if (image && image.width)
     {
         glSetTextureData(texture, image);
-        if (!tilesPixelated && isPowerOfTwo(image.width) && isPowerOfTwo(image.height))
-        {
-            // use mipmap filtering
-            glContext.generateMipmap(glContext.TEXTURE_2D);
-            glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, glContext.LINEAR_MIPMAP_LINEAR);
-            glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, glContext.LINEAR);
-            return texture;
-        }
+        glContext.bindTexture(glContext.TEXTURE_2D, texture);
+        mipMap = !tilesPixelated && isPowerOfTwo(image.width) && isPowerOfTwo(image.height);
     }
     else
     {
         // create a white texture
         const whitePixel = new Uint8Array([255, 255, 255, 255]);
+        glContext.bindTexture(glContext.TEXTURE_2D, texture);
         glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 1, 1, 0, glContext.RGBA, glContext.UNSIGNED_BYTE, whitePixel);
     }
 
     // set texture filtering
-    const filter = tilesPixelated ? glContext.NEAREST : glContext.LINEAR;
-    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, filter);
-    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, filter);
+    const magFilter = tilesPixelated ? glContext.NEAREST : glContext.LINEAR;
+    const minFilter = mipMap ? glContext.LINEAR_MIPMAP_LINEAR : magFilter;
+    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, magFilter);
+    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, minFilter);
+    if (mipMap)
+        glContext.generateMipmap(glContext.TEXTURE_2D);
+    glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture); // rebind active texture
     return texture;
 }
 
@@ -355,7 +356,7 @@ function glDeleteTexture(texture)
     glContext.deleteTexture(texture);
 }
 
-/** Set WebGL texture data from an image
+/** Set WebGL texture data from an image, restores the active texture when done
  *  @param {WebGLTexture} texture
  *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas} image
  *  @memberof WebGL */
@@ -367,6 +368,7 @@ function glSetTextureData(texture, image)
     ASSERT(!!image && image.width > 0, 'Invalid image data.');
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
     glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
+    glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture); // rebind active texture
 }
 
 /** Draw all sprites and clear out the buffer, called automatically by the system whenever necessary
