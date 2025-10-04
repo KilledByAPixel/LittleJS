@@ -186,6 +186,7 @@ getCameraSize()          // Get the camera's visible area in world space
 // Display settings
 canvasMaxSize = (1920, 1200)  // The max size of the canvas
 canvasFixedSize = (0, 0)      // Fixed size of the canvas
+canvasClearColor = BLACK      // Color used to clear the canvas at start of frame
 fontDefault = 'arial'         // Default font used for text rendering
 canvasPixelated = true        // Use nearest neighbor canvas scaling for more pixelated look
 tilesPixelated = true         // Disable filtering for crisper pixel art
