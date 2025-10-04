@@ -2883,7 +2883,7 @@ class TileInfo
     *  @return {TileInfo}
     */
     offset(offset)
-    { return new TileInfo(this.pos.add(offset), this.size, this.textureIndex); }
+    { return new TileInfo(this.pos.add(offset), this.size, this.textureIndex, this.padding, this.bleedScale); }
 
     /** Returns a copy of this tile offset by a number of animation frames
     *  @param {number} frame - Offset to apply in animation frames
