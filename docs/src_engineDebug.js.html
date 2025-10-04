@@ -526,7 +526,7 @@ function debugVideoCaptureStart()
     const chunks = [];
     debugVideoCaptureTrack = stream.getVideoTracks()[0];
     if (debugVideoCaptureTrack.applyConstraints)
-        debugVideoCaptureTrack.applyConstraints({frameRate:frameRate}); // force 60 fps
+        debugVideoCaptureTrack.applyConstraints({frameRate:60}); // force 60 fps
     debugVideoCapture = new MediaRecorder(stream, {mimeType:'video/webm;codecs=vp8'});
     debugVideoCapture.ondataavailable = (e)=> chunks.push(e.data);
     debugVideoCapture.onstop = ()=>

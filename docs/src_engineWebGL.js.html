@@ -262,7 +262,8 @@ function glSetTexture(texture, wrap=false)
         return;
 
     glFlush();
-    glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture = texture);
+    glActiveTexture = texture;
+    glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
 
     // set wrap mode
     const wrapMode = wrap ? glContext.REPEAT : glContext.CLAMP_TO_EDGE;
@@ -312,6 +313,7 @@ function glCreateProgram(vsSource, fsSource)
 }
 
 /** Create WebGL texture from an image and init the texture settings
+ *  Restores the active texture when done
  *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas} [image]
  *  @return {WebGLTexture}
  *  @memberof WebGL */
@@ -321,30 +323,29 @@ function glCreateTexture(image)
 
     // build the texture
     const texture = glContext.createTexture();
-    glContext.bindTexture(glContext.TEXTURE_2D, texture);
+    let mipMap = false;
     if (image &amp;&amp; image.width)
     {
         glSetTextureData(texture, image);
-        if (!tilesPixelated &amp;&amp; isPowerOfTwo(image.width) &amp;&amp; isPowerOfTwo(image.height))
-        {
-            // use mipmap filtering
-            glContext.generateMipmap(glContext.TEXTURE_2D);
-            glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, glContext.LINEAR_MIPMAP_LINEAR);
-            glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, glContext.LINEAR);
-            return texture;
-        }
+        glContext.bindTexture(glContext.TEXTURE_2D, texture);
+        mipMap = !tilesPixelated &amp;&amp; isPowerOfTwo(image.width) &amp;&amp; isPowerOfTwo(image.height);
     }
     else
     {
         // create a white texture
         const whitePixel = new Uint8Array([255, 255, 255, 255]);
+        glContext.bindTexture(glContext.TEXTURE_2D, texture);
         glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 1, 1, 0, glContext.RGBA, glContext.UNSIGNED_BYTE, whitePixel);
     }
 
     // set texture filtering
-    const filter = tilesPixelated ? glContext.NEAREST : glContext.LINEAR;
-    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, filter);
-    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, filter);
+    const magFilter = tilesPixelated ? glContext.NEAREST : glContext.LINEAR;
+    const minFilter = mipMap ? glContext.LINEAR_MIPMAP_LINEAR : magFilter;
+    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, magFilter);
+    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, minFilter);
+    if (mipMap)
+        glContext.generateMipmap(glContext.TEXTURE_2D);
+    glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture); // rebind active texture
     return texture;
 }
 
@@ -357,7 +358,7 @@ function glDeleteTexture(texture)
     glContext.deleteTexture(texture);
 }
 
-/** Set WebGL texture data from an image
+/** Set WebGL texture data from an image, restores the active texture when done
  *  @param {WebGLTexture} texture
  *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas} image
  *  @memberof WebGL */
@@ -369,6 +370,7 @@ function glSetTextureData(texture, image)
     ASSERT(!!image &amp;&amp; image.width > 0, 'Invalid image data.');
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
     glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
+    glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture); // rebind active texture
 }
 
 /** Draw all sprites and clear out the buffer, called automatically by the system whenever necessary
@@ -514,7 +516,7 @@ function glDrawPoints(points, rgba)
   
     // setup triangle strip with degenerate verts at start and end
     let offset = glBatchCount * gl_INDICES_PER_POLY_VERTEX;
-    for(let i = vertCount; i--;)
+    for (let i = vertCount; i--;)
     {
         const j = clamp(i-1, 0, vertCount-3);
         const point = points[j];
@@ -542,7 +544,7 @@ function glDrawColoredPoints(points, pointColors)
   
     // setup triangle strip with degenerate verts at start and end
     let offset = glBatchCount * gl_INDICES_PER_POLY_VERTEX;
-    for(let i = vertCount; i--;)
+    for (let i = vertCount; i--;)
     {
         const j = clamp(i-1, 0, vertCount-3);
         const point = points[j];
@@ -679,7 +681,7 @@ function glPolyStrip(points)
     while (indices.length > 3 &amp;&amp; attempts++ &lt; maxAttempts)
     {
         let foundEar = false;
-        for (let i = indices.length; --i;)
+        for (let i = 0; i &lt; indices.length; i++)
         {
             const i0 = indices[(i + indices.length - 1) % indices.length];
             const i1 = indices[i];
@@ -716,7 +718,7 @@ function glPolyStrip(points)
         if (!foundEar)
         {
             let worstIndex = -1, worstValue = Infinity;
-            for (let i = indices.length; --i;)
+            for (let i = 0; i &lt; indices.length; i++)
             {
                 const i0 = indices[(i + indices.length - 1) % indices.length];
                 const i1 = indices[i];

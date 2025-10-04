@@ -158,7 +158,7 @@ class TileLayerData
         /** @property {boolean} - If the tile should be mirrored along the x axis */
         this.mirror    = mirror;
         /** @property {Color}   - Color of the tile */
-        this.color     = color;
+        this.color     = color.copy();
     }
 
     /** Set this tile to clear, it will not be rendered */
@@ -257,7 +257,7 @@ class CanvasLayer extends EngineObject
      *  @param {TileInfo} [tileInfo]
      *  @param {Color}    [color=(1,1,1,1)]
      *  @param {number}   [angle=0]
-     *  @param {boolean}  [mirror=0] */
+     *  @param {boolean}  [mirror=false] */
     drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle, mirror)
     {
         this.drawCanvas2D(pos, size, angle, mirror, (context)=>
