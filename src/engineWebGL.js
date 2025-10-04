@@ -679,7 +679,7 @@ function glPolyStrip(points)
     while (indices.length > 3 && attempts++ < maxAttempts)
     {
         let foundEar = false;
-        for (let i = indices.length; --i;)
+        for (let i = 0; i < indices.length; i++)
         {
             const i0 = indices[(i + indices.length - 1) % indices.length];
             const i1 = indices[i];
@@ -716,7 +716,7 @@ function glPolyStrip(points)
         if (!foundEar)
         {
             let worstIndex = -1, worstValue = Infinity;
-            for (let i = indices.length; --i;)
+            for (let i = 0; i < indices.length; i++)
             {
                 const i0 = indices[(i + indices.length - 1) % indices.length];
                 const i1 = indices[i];
