@@ -906,7 +906,7 @@ class FontImage
      *  @param {Vector2} pos
      *  @param {number}  [scale=.25]
      *  @param {boolean} [center]
-     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D}[context=drawContext] 
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext] 
      */
     drawText(text, pos, scale=1, center, context=drawContext)
     {

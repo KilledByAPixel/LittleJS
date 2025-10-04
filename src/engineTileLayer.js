@@ -255,7 +255,7 @@ class CanvasLayer extends EngineObject
      *  @param {TileInfo} [tileInfo]
      *  @param {Color}    [color=(1,1,1,1)]
      *  @param {number}   [angle=0]
-     *  @param {boolean}  [mirror=0] */
+     *  @param {boolean}  [mirror=false] */
     drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle, mirror)
     {
         this.drawCanvas2D(pos, size, angle, mirror, (context)=>

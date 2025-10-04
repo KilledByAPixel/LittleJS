@@ -184,7 +184,7 @@ class EngineObject
             for (const o of engineObjectsCollide)
             {
                 // non solid objects don't collide with each other
-                if (!this.isSolid && !o.isSolid || o.destroyed || o.parent || o === this)
+                if ((!this.isSolid && !o.isSolid) || o.destroyed || o.parent || o === this)
                     continue;
 
                 // check collision
@@ -223,7 +223,7 @@ class EngineObject
                 {
                     // push outside object collision
                     this.pos.y = o.pos.y + (sizeBoth.y/2 + epsilon) * sign(oldPos.y - o.pos.y);
-                    if (o.groundObject && wasMovingDown || !o.mass)
+                    if ((o.groundObject && wasMovingDown) || !o.mass)
                     {
                         // set ground object if landed on something
                         if (wasMovingDown)

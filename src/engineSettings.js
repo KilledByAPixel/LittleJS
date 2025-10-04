@@ -390,7 +390,7 @@ function setGLEnable(enable)
         glCanvas.style.visibility = enable ? 'visible' : 'hidden';
 }
 
-/** Set how many sided polygons to use when drawing circles and elipses with WebGL
+/** Set how many sided polygons to use when drawing circles and ellipses with WebGL
  *  @param {number} sides
  *  @memberof Settings */
 function setGLCircleSides(sides) { glCircleSides = sides; }
