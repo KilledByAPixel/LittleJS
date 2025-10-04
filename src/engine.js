@@ -283,6 +283,14 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             mainCanvas.height = min(innerHeight, canvasMaxSize.y);
         }
 
+        // apply the clear color to main canvas
+        if (canvasClearColor.a > 0)
+        {
+            mainContext.fillStyle = canvasClearColor.toString();
+            mainContext.fillRect(0, 0, mainCanvasSize.x, mainCanvasSize.y);
+            mainContext.fillStyle = BLACK.toString();
+        }
+
         // clear overlay canvas and set size
         overlayCanvas.width  = mainCanvas.width;
         overlayCanvas.height = mainCanvas.height;

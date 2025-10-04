@@ -53,6 +53,7 @@ export
 	cameraAngle,
 	cameraScale,
 	canvasColorTiles,
+	canvasClearColor,
 	canvasMaxSize,
 	canvasFixedSize,
 	canvasPixelated,
@@ -94,6 +95,7 @@ export
 	setCameraAngle,
 	setCameraScale,
 	setCanvasColorTiles,
+	setCanvasClearColor,
 	setCanvasMaxSize,
 	setCanvasFixedSize,
 	setCanvasPixelated,
@@ -192,8 +194,6 @@ export
 	MAGENTA,
 
 	// Draw
-	textureInfos,
-	drawCount,
 	tile,
 	TileInfo,
 	TextureInfo,
@@ -204,6 +204,8 @@ export
 	overlayCanvas,
 	overlayContext,
 	mainCanvasSize,
+	textureInfos,
+	drawCount,
 	screenToWorld,
 	worldToScreen,
 	drawTile,

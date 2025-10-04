@@ -37,6 +37,11 @@ let cameraScale = 32;
  *  @memberof Settings */
 let canvasColorTiles = true;
 
+/** Color to clear the canvas to before render
+ *  @type {Color}
+ *  @memberof Draw */
+let canvasClearColor = CLEAR_BLACK;
+
 /** The max size of the canvas, centered if window is larger
  *  @type {Vector2}
  *  @default Vector2(1920,1080)
@@ -314,6 +319,11 @@ function setCameraScale(scale) { cameraScale = scale; }
  *  @param {boolean} colorTiles
  *  @memberof Settings */
 function setCanvasColorTiles(colorTiles) { canvasColorTiles = colorTiles; }
+
+/** Set color to clear the canvas to before render
+ *  @param {Color} color
+ *  @memberof Settings */
+function setCanvasClearColor(color) { canvasClearColor = color; }
 
 /** Set max size of the canvas
  *  @param {Vector2} size
