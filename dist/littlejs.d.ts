@@ -1248,8 +1248,9 @@ declare module "littlejsengine" {
          *  @param {Vector2} [size=tileSizeDefault] - Size of tile in pixels
          *  @param {number}  [textureIndex]         - Texture index to use
          *  @param {number}  [padding]              - How many pixels padding around tiles
+         *  @param {number}  [bleedScale]           - How many pixels smaller to draw tiles
          */
-        constructor(pos?: Vector2, size?: Vector2, textureIndex?: number, padding?: number);
+        constructor(pos?: Vector2, size?: Vector2, textureIndex?: number, padding?: number, bleedScale?: number);
         /** @property {Vector2} - Top left corner of tile in pixels */
         pos: Vector2;
         /** @property {Vector2} - Size of tile in pixels */
@@ -1260,6 +1261,8 @@ declare module "littlejsengine" {
         padding: number;
         /** @property {TextureInfo} - The texture info for this tile */
         textureInfo: TextureInfo;
+        /** @property {float} - Shrinks tile by this many pixels to prevent neighbors bleeding */
+        bleedScale: number;
         /** Returns a copy of this tile offset by a vector
         *  @param {Vector2} offset - Offset to apply in pixels
         *  @return {TileInfo}
@@ -1612,6 +1615,7 @@ declare module "littlejsengine" {
      *  @memberof WebGL */
     export function glCreateProgram(vsSource: string, fsSource: string): WebGLProgram;
     /** Create WebGL texture from an image and init the texture settings
+     *  Restores the active texture when done
      *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas} [image]
      *  @return {WebGLTexture}
      *  @memberof WebGL */
@@ -1620,7 +1624,7 @@ declare module "littlejsengine" {
      *  @param {WebGLTexture} [texture]
      *  @memberof WebGL */
     export function glDeleteTexture(texture?: WebGLTexture): void;
-    /** Set WebGL texture data from an image
+    /** Set WebGL texture data from an image, restores the active texture when done
      *  @param {WebGLTexture} texture
      *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas} image
      *  @memberof WebGL */
