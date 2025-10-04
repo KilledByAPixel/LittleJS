@@ -4,16 +4,11 @@ function gameInit()
 {
     // setup ui system plugin
     new UISystemPlugin();
-    uiSystem.defaultSoundPress = new Sound([1,0,220]);
-    uiSystem.defaultSoundClick = new Sound([1,0,440]);
     uiSystem.defaultCornerRadius = 10;
-    
-    // create background
-    const uiBackground = new UIObject(mainCanvasSize.scale(.5), mainCanvasSize);
-    uiBackground.color = hsl(.6, .3, .2);
 
     // create timer button
-    timerButton = new UIButton(vec2(0, -40), vec2(200, 90), 'Start');
+    const pos = mainCanvasSize.scale(.5).add(vec2(0, -40));
+    timerButton = new UIButton(pos, vec2(200, 90), 'Start');
     timerButton.timer = new Timer;
     timerButton.onClick = ()=>
     {
@@ -28,7 +23,6 @@ function gameInit()
             timerButton.text = 'Stop';
         }
     }
-    uiBackground.addChild(timerButton);
 
     // create non-interactive slider to display timer
     timerSlider = new UIScrollbar(vec2(0, 100), vec2(400, 50));
@@ -41,7 +35,7 @@ function gameInit()
         const isSet = timerButton.timer.isSet();
         const setTime = timerButton.timer.getSetTime();
         timerSlider.text = timeText;
-        timerSlider.value = setTime ? 1+t/setTime : 0;
+        timerSlider.value = setTime ? 1+t/setTime : 1;
         timerSlider.color = isSet ? t < 0 ? CYAN : RED : GRAY;
     }
     timerButton.addChild(timerSlider);
