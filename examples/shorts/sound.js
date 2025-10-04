@@ -34,4 +34,5 @@ function gameInit()
     new SoundButton(vec2(-6,-5),'🌊', new Sound([,.2,40,.5,,1.5,,11,,,,,,199]));
     new SoundButton(vec2( 0,-5),'🛰️', new Sound([,.5,847,.02,.3,.9,1,1.67,,,-294,.04,.13,,,,.1]));
     new SoundButton(vec2( 6,-5),'⚡', new Sound([,,471,,.09,.47,4,1.06,-6.7,,,,,.9,61,.1,,.82,.1]));
+    canvasClearColor = hsl(.6,.3,.2); // background color
 }

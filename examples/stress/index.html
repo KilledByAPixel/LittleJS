@@ -47,7 +47,7 @@ function gameInit()
     LJS.setCanvasFixedSize(vec2(1920, 1080)); // 1080p
     LJS.setCameraScale(20);
     LJS.setCameraPos(tileLayer.size.scale(.5));
-    LJS.mainCanvas.style.background = '#555';
+    LJS.setCanvasClearColor(rgb(.4,.4,.4));
     LJS.setGravity(vec2(0,-.005));
     sprites = [];
 

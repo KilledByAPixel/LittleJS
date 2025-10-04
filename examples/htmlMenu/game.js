@@ -32,6 +32,7 @@ function gameInit()
     button_exitMenu.onclick = function() { setMenuVisible(false); }
     input_test.onchange = function() { alert('New text: ' + this.value); }
     input_rangeTest.onchange = function() { alert('New value: ' + this.value); }
+    LJS.setCanvasClearColor(hsl(0,0,.2));
 
     // show menu for demo
     setMenuVisible(true);
@@ -60,7 +61,6 @@ function gameUpdatePost()
 function gameRender()
 {
     // test game rendering
-    LJS.drawRect(vec2(), vec2(1e3), hsl(0,0,.2));
     for (let i=0; i<1e3; ++i)
     {
         const time = LJS.time;

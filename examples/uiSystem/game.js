@@ -85,6 +85,7 @@ function gameInit()
 {
     new LJS.UISystemPlugin;
     createUI();
+    LJS.setCanvasClearColor(hsl(0,0,.2));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -110,7 +111,6 @@ function gameUpdatePost()
 function gameRender()
 {
     // test game rendering
-    LJS.drawRect(vec2(), vec2(1e3), hsl(0,0,.2));
     for (let i=0; i<1e3; ++i)
     {
         const pos = vec2(30*Math.sin(i+LJS.time/9),20*Math.sin(i*i+LJS.time/9));

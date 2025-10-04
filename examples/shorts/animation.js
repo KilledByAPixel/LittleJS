@@ -1,7 +1,7 @@
+canvasClearColor = GRAY;
+
 function gameRender()
 {
-    drawRect(vec2(0,0), vec2(100), GRAY); // draw background
-
     {
         // animate using multiple frames
         const pos = vec2(-5, 2*abs(Math.sin(time*2*PI)));

@@ -2,6 +2,7 @@ function gameInit()
 {
     cameraPos = vec2(16); // setup camera
     gravity.y = -.01; // enable gravity
+    canvasClearColor = hsl(0,0,.2); // background color
 
     // create tile layer
     const pos = vec2();

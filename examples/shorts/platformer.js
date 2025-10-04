@@ -26,6 +26,7 @@ function gameInit()
     // setup level
     gravity.y = -.05;
     new Player(vec2(5,6));
+    canvasClearColor = hsl(.6,.3,.5);
 
     // create tile layer
     const pos = vec2();

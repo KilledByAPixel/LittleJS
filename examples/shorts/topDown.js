@@ -23,13 +23,14 @@ class Player extends EngineObject
 function gameInit()
 {
     // setup level
+    canvasClearColor = hsl(.3,.2,.6);
     objectDefaultDamping = .7;
     new Player;
 
     // create collision objects
     for (let i=300; i--;)
     {
-        const o = new EngineObject(randInCircle(15+i,7), vec2(rand(4,9),rand(4,9)), 0, 0, hsl(0,0,rand(.8,1)));
+        const o = new EngineObject(randInCircle(15+i,7), vec2(rand(4,9),rand(4,9)), 0, 0, hsl(0,0,rand(.1,.3)));
         o.setCollision(); // make object collide
         o.mass = 0; // make object have static physics
     }

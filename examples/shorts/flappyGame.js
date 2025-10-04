@@ -2,7 +2,7 @@ class Wall extends EngineObject
 {
     constructor(pos, size)
     {
-        super(pos, size, 0, 0, hsl(.4,.5,.4));
+        super(pos, size, 0, 0, hsl(.3,.5,.3));
         this.setCollision(); // make object collide
     }
     update()
@@ -50,4 +50,5 @@ function gameInit()
         new Wall(vec2(14 + i*spacing,y), vec2(3,h));
     }
     new Player(vec2(-7,6));
+    canvasClearColor = hsl(.55,1,.8);
 }

@@ -69,8 +69,7 @@ function gameInit()
 {
     // setup canvas
     LJS.setCanvasFixedSize(vec2(1920, 1080)); // 1080p
-    LJS.mainCanvas.style.background = backgroundColor;
-
+    LJS.setCanvasClearColor(backgroundColor);
     // load high score
     bestScore = localStorage[highScoreKey] || 0;
 

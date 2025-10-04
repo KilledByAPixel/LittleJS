@@ -11,10 +11,8 @@ function gameInit()
     uiSystem.defaultCornerRadius = 8;
 
     // setup example menu
-    uiBackground = new UIObject(mainCanvasSize.scale(.5), vec2(1e5));
-    uiBackground.color = hsl(0,0,.8);
-    const uiMenu = new UIObject(vec2(), vec2(450));
-    uiBackground.addChild(uiMenu);
+    const uiMenu = new UIObject(mainCanvasSize.scale(.5), vec2(450));
+    canvasClearColor = hsl(0,0,.8);
 
     // example text
     const textTitle = new UIText(vec2(0,-120), vec2(400, 60), 'LittleJS UI\nSystem Demo');

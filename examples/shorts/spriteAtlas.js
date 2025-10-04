@@ -1,4 +1,5 @@
 let spriteAtlas;
+canvasClearColor = GRAY;
 
 function gameInit()
 {
@@ -16,8 +17,6 @@ function gameInit()
 
 function gameRender()
 {
-    drawRect(vec2(0,0), vec2(100), GRAY); // draw background
-
     // draw a sprite from the atlas
     let pos = vec2(Math.sin(time)*5,-3);// world position to draw
     let angle = 0;                      // world space angle to draw the tile

@@ -10,6 +10,7 @@ function gameInit()
     uiSystem.defaultSoundPress = new Sound([.5,0,220]);
     uiSystem.defaultSoundClick = new Sound([.5,0,440]);
     uiSystem.defaultCornerRadius = 20;
+    canvasClearColor = hsl(.9,.3,.2); // background color
 
     // setup music player UI
     const musicPlayer = new UIObject(mainCanvasSize.scale(.5), vec2(500, 300));

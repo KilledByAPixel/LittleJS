@@ -44,4 +44,5 @@ function gameInit()
     }
     tileLayer.redraw(); // redraw tile layer with new data
     cameraPos = mazeSize.scale(.5); // center camera
+    canvasClearColor = hsl(rand(),.3,.2); // random background color
 }

@@ -5,6 +5,7 @@ function gameInit()
     // setup ui system plugin
     new UISystemPlugin();
     uiSystem.defaultCornerRadius = 10;
+    canvasClearColor = hsl(.3,.3,.2);
 
     // create timer button
     const pos = mainCanvasSize.scale(.5).add(vec2(0, -40));

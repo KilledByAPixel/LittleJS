@@ -40,17 +40,20 @@ function gameInit()
 {
     gravity.y = -.01;
     new Player(vec2(0,5));
+    canvasClearColor = hsl(.7,1,.8);
 }
 
 function gameRender()
 {
     const h = 100, w = 20;
-    const pos = vec2(), size = vec2(.2,h), color = WHITE;
+    const pos = vec2(), sizeTop = vec2(.4), size = vec2(.2,h), color = WHITE;
     for (let x=cameraPos.x-w; x<cameraPos.x+w; x+=.1)
     {
         pos.x = x;
-        pos.y = getGroundHeight(x)-h/2;
-        color.setHSLA(.2+.2*wave(.2,1,x), .5, .5);
+        pos.y = getGroundHeight(x);
+        drawRect(pos, sizeTop, BLACK);
+        pos.y -= h/2;
+        color.setHSLA(.2+.2*wave(.2,1,x), .7, .5);
         drawRect(pos, size, color);
     }
 }

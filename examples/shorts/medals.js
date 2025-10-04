@@ -12,6 +12,9 @@ medalsInit(saveName);
 medalsForEach(medal=> medal.unlocked = false);
 medal_openedExample.unlock();
 
+// set background color
+canvasClearColor = hsl(.5,.3,.2);
+
 function gameUpdate()
 {
     if (mouseWasPressed(0))

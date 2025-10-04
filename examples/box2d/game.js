@@ -56,6 +56,7 @@ async function gameInit()
     // start up LittleJS Box2D plugin
     await LJS.box2dInit();
     //LJS.box2dSetDebug(true); // enable box2d debug draw
+    LJS.setCanvasClearColor(hsl(0,0,.8));
 
     // create a table of all sprites
     const gameTile = (i)=> LJS.tile(i, 496, 0, 8);
@@ -136,9 +137,6 @@ function gameUpdatePost()
 ///////////////////////////////////////////////////////////////////////////////
 function gameRender()
 {
-    // draw a grey square in the background
-    LJS.drawRect(vec2(20,8), vec2(100), hsl(0,0,.8));
-
     if (Scenes.scene == 5)
     {
         // raycast test

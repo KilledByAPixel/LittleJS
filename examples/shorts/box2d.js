@@ -4,6 +4,7 @@ async function gameInit()
     await box2dInit();
     mouseJoint = 0;
     gravity.y = -50;
+    canvasClearColor = hsl(0,0,.9);
     
     // create ground object
     groundObject = new Box2dObject(vec2(-8), vec2(), 0, 0, GRAY, box2d.bodyTypeStatic);

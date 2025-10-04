@@ -6,6 +6,7 @@ async function gameInit()
     groundObject = new Box2dObject(vec2(-8), vec2(), 0, 0, GRAY, box2d.bodyTypeStatic);
     groundObject.addBox(vec2(100,6));
     new CarObject(vec2(0,-2));
+    canvasClearColor = hsl(0,0,.9);
 }
 
 class CarObject extends Box2dObject

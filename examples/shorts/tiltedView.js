@@ -37,7 +37,7 @@ function gameInit()
 
     // create background objects
     for (let i=1; i<300; ++i)
-        new EngineObject(randInCircle(90), vec2(rand(59),rand(59)), 0, 0, hsl(.4,.3,rand(.1,.2),.8), -1e5);
+        new EngineObject(randInCircle(90), vec2(rand(59),rand(59)), 0, 0, hsl(.4,.2,rand(.4,.5),.8), -1e5);
 
     // create world objects
     for (let i=1; i<1e3; ++i)
