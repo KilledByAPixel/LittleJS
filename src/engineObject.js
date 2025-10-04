@@ -52,7 +52,7 @@ class EngineObject
         /** @property {Vector2} - World space position of the object */
         this.pos = pos.copy();
         /** @property {Vector2} - World space width and height of the object */
-        this.size = size;
+        this.size = size.copy();
         /** @property {Vector2} - Size of object used for drawing, uses size if not set */
         this.drawSize = undefined;
         /** @property {TileInfo} - Tile info to render object (undefined is untextured) */
@@ -60,7 +60,7 @@ class EngineObject
         /** @property {number} - Angle to rotate the object */
         this.angle = angle;
         /** @property {Color} - Color to apply when rendered */
-        this.color = color;
+        this.color = color.copy();
         /** @property {Color} - Additive color to apply when rendered */
         this.additiveColor = undefined;
         /** @property {boolean} - Should it flip along y axis when rendered */

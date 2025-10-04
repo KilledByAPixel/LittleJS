@@ -156,7 +156,7 @@ class TileLayerData
         /** @property {boolean} - If the tile should be mirrored along the x axis */
         this.mirror    = mirror;
         /** @property {Color}   - Color of the tile */
-        this.color     = color;
+        this.color     = color.copy();
     }
 
     /** Set this tile to clear, it will not be rendered */
