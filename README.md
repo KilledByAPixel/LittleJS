@@ -122,6 +122,7 @@ The starter example project includes a node js file [build.js](https://github.co
 Here are a few of the many amazing games created with LittleJS...
 
 - [Space Huggers](https://www.newgrounds.com/portal/view/819609) - Rogulike platformer shoot-em-up game with procedural levels. by [KilledByAPixel](https://frankforce.com/)
+- [Black Cat Squadron](https://js13kgames.com/games/black-cat-squadron) - A one button shooter based on a real WW2 secret US Navy squadron. JS13k 5th place winner! by [repsej](https://github.com/repsej)
 - [L1ttl3 Paws](https://github.com/KilledByAPixel/JS13K2025) - Cat glider with procedural art and levels for JS13K! by [KilledByAPixel](https://frankforce.com/)
 - [The Way of the Dodo](https://js13kgames.com/2024/games/the-way-of-the-dodo) - Single button platformer. JS13k 5th place winner! by [repsej](https://github.com/repsej)
 - [Undergrowth](https://undergrowth.squidband.uk/) - An interactive music videogame for the band Squid. by [KilledByAPixel](https://frankforce.com/)
