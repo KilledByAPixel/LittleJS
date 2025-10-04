@@ -136,8 +136,9 @@ class TileInfo
      *  @param {Vector2} [size=tileSizeDefault] - Size of tile in pixels
      *  @param {number}  [textureIndex]         - Texture index to use
      *  @param {number}  [padding]              - How many pixels padding around tiles
+     *  @param {number}  [bleedScale]           - How many pixels smaller to draw tiles
      */
-    constructor(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0)
+    constructor(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0, bleedScale=tileFixBleedScale)
     {
         /** @property {Vector2} - Top left corner of tile in pixels */
         this.pos = pos.copy();
@@ -149,6 +150,8 @@ class TileInfo
         this.padding = padding;
         /** @property {TextureInfo} - The texture info for this tile */
         this.textureInfo = textureInfos[this.textureIndex];
+        /** @property {float} - Shrinks tile by this many pixels to prevent neighbors bleeding */
+        this.bleedScale = bleedScale;
     }
 
     /** Returns a copy of this tile offset by a vector
@@ -179,6 +182,8 @@ class TileInfo
         this.pos = new Vector2;
         this.size = new Vector2(image.width, image.height);
         this.textureInfo = new TextureInfo(image, glTexture);
+        // do not use padding or bleed
+        this.bleedScale = this.padding = 0;
         return this;
     }
 }
@@ -236,6 +241,7 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=WHITE,
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
     const textureInfo = tileInfo && tileInfo.textureInfo;
+    const bleedScale = tileInfo ? tileInfo.bleedScale : 0;
     if (useWebGL)
     {
         if (screenSpace)
@@ -253,10 +259,10 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=WHITE,
             const w = tileInfo.size.x * sizeInverse.x;
             const h = tileInfo.size.y * sizeInverse.y;
             glSetTexture(textureInfo.glTexture);
-            if (tileFixBleedScale)
+            if (bleedScale)
             {
-                const tileImageFixBleedX = sizeInverse.x*tileFixBleedScale;
-                const tileImageFixBleedY = sizeInverse.y*tileFixBleedScale;
+                const tileImageFixBleedX = sizeInverse.x*bleedScale;
+                const tileImageFixBleedY = sizeInverse.y*bleedScale;
                 glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle,
                     x + tileImageFixBleedX,     y + tileImageFixBleedY,
                     x - tileImageFixBleedX + w, y - tileImageFixBleedY + h,
@@ -287,7 +293,7 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=WHITE,
                 // calculate uvs and render
                 const x = tileInfo.pos.x,  y = tileInfo.pos.y;
                 const w = tileInfo.size.x, h = tileInfo.size.y;
-                drawImageColor(context, textureInfo.image, x, y, w, h, -.5, -.5, 1, 1, color, additiveColor);
+                drawImageColor(context, textureInfo.image, x, y, w, h, -.5, -.5, 1, 1, color, additiveColor, bleedScale);
             }
             else
             {
@@ -775,15 +781,16 @@ function combineCanvases()
     *  @param {number} dHeight
     *  @param {Color} color
     *  @param {Color} [additiveColor]
+    *  @param {number} [bleedScale] - How much to shrink the source, used to fix bleeding
  *  @memberof Draw */
-function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight, color, additiveColor)
+function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight, color, additiveColor, bleedScale=0)
 {
     function isWhite(c) { return c.r >= 1 && c.g >= 1 && c.b >= 1; }
     function isBlack(c) { return c.r <= 0 && c.g <= 0 && c.b <= 0 && c.a <= 0; }
-    const sx2 = tileFixBleedScale;
-    const sy2 = tileFixBleedScale;
-    const sWidth2  = sWidth  - 2*tileFixBleedScale;
-    const sHeight2 = sHeight - 2*tileFixBleedScale;
+    const sx2 = bleedScale;
+    const sy2 = bleedScale;
+    const sWidth2  = sWidth  - 2*bleedScale;
+    const sHeight2 = sHeight - 2*bleedScale;
     if (!canvasColorTiles || (additiveColor ? isWhite(color.add(additiveColor)) && additiveColor.a <= 0 : isWhite(color)))
     {
         // white texture with no additive alpha, no need to tint
