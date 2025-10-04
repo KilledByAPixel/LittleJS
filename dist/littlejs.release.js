@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.14.6';
+const engineVersion = '1.14.7';
 
 /** Frames per second to update
  *  @type {number}
@@ -284,6 +284,14 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             // clear canvas and set size to same as window
             mainCanvas.width = min(innerWidth, canvasMaxSize.x);
             mainCanvas.height = min(innerHeight, canvasMaxSize.y);
+        }
+
+        // apply the clear color to main canvas
+        if (canvasClearColor.a > 0)
+        {
+            mainContext.fillStyle = canvasClearColor.toString();
+            mainContext.fillRect(0, 0, mainCanvasSize.x, mainCanvasSize.y);
+            mainContext.fillStyle = BLACK.toString();
         }
 
         // clear overlay canvas and set size
@@ -1736,6 +1744,11 @@ let cameraScale = 32;
  *  @memberof Settings */
 let canvasColorTiles = true;
 
+/** Color to clear the canvas to before render
+ *  @type {Color}
+ *  @memberof Draw */
+let canvasClearColor = CLEAR_BLACK;
+
 /** The max size of the canvas, centered if window is larger
  *  @type {Vector2}
  *  @default Vector2(1920,1080)
@@ -2013,6 +2026,11 @@ function setCameraScale(scale) { cameraScale = scale; }
  *  @param {boolean} colorTiles
  *  @memberof Settings */
 function setCanvasColorTiles(colorTiles) { canvasColorTiles = colorTiles; }
+
+/** Set color to clear the canvas to before render
+ *  @param {Color} color
+ *  @memberof Settings */
+function setCanvasClearColor(color) { canvasClearColor = color; }
 
 /** Set max size of the canvas
  *  @param {Vector2} size

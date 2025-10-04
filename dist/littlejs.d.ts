@@ -268,6 +268,10 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let canvasColorTiles: boolean;
+    /** Color to clear the canvas to before render
+     *  @type {Color}
+     *  @memberof Draw */
+    export let canvasClearColor: Color;
     /** The max size of the canvas, centered if window is larger
      *  @type {Vector2}
      *  @default Vector2(1920,1080)
@@ -467,6 +471,10 @@ declare module "littlejsengine" {
      *  @param {boolean} colorTiles
      *  @memberof Settings */
     export function setCanvasColorTiles(colorTiles: boolean): void;
+    /** Set color to clear the canvas to before render
+     *  @param {Color} color
+     *  @memberof Settings */
+    export function setCanvasClearColor(color: Color): void;
     /** Set max size of the canvas
      *  @param {Vector2} size
      *  @memberof Settings */
@@ -1215,14 +1223,6 @@ declare module "littlejsengine" {
      *  @type {Color}
      *  @memberof Utilities */
     export const MAGENTA: Color;
-    /** Array containing texture info for batch rendering system
-     *  @type {Array<TextureInfo>}
-     *  @memberof Draw */
-    export let textureInfos: Array<TextureInfo>;
-    /** Keeps track of how many draw calls there were each frame for debugging
-     *  @type {number}
-     *  @memberof Draw */
-    export let drawCount: number;
     /**
      * Create a tile info object using a grid based system
      * - This can take vecs or floats for easier use and conversion
@@ -1348,6 +1348,14 @@ declare module "littlejsengine" {
      *  @type {Vector2}
      *  @memberof Draw */
     export let mainCanvasSize: Vector2;
+    /** Array containing texture info for batch rendering system
+     *  @type {Array<TextureInfo>}
+     *  @memberof Draw */
+    export let textureInfos: Array<TextureInfo>;
+    /** Keeps track of how many draw calls there were each frame for debugging
+     *  @type {number}
+     *  @memberof Draw */
+    export let drawCount: number;
     /** Convert from screen to world space coordinates
      *  @param {Vector2} screenPos
      *  @return {Vector2}
