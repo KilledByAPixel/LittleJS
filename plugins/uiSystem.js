@@ -284,7 +284,7 @@ class UIObject
         const mouseDown = mouseIsDown(0);
         const mousePress = this.dragActivate ? mouseDown : mouseWasPressed(0);
         if (!uiSystem.hoverObject)
-        if (mousePress || !mouseDown || isActive)
+        if (mousePress || isActive || (!mouseDown && !isTouchDevice))
         {
             const size = this.size.add(vec2(isTouchDevice && this.extraTouchSize || 0));
             if (isOverlapping(this.pos, size, mousePosScreen))
