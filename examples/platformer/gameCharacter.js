@@ -22,10 +22,9 @@ const {vec2, hsl, Timer} = LJS;
 export class Character extends GameObjects.GameObject 
 {
     constructor(pos)
-    { 
+    {
         super(pos, vec2(.6,.95));
 
-        this.weapon = new GameObjects.Weapon(pos, this);
         this.lastPos = pos;
         this.groundTimer        = new Timer;
         this.jumpTimer          = new Timer;
@@ -41,6 +40,11 @@ export class Character extends GameObjects.GameObject
         this.health = 1;
         this.climbingLadder = false;
         this.setCollision(true,false);
+        
+        // attach weapon
+        this.weapon = new GameObjects.Weapon(pos);
+        this.weapon.renderOrder = this.renderOrder + 1;
+        this.addChild(this.weapon, vec2(this.size.x,0));
     }
     
     update() 

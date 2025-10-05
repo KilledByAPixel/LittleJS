@@ -227,7 +227,7 @@ export class Grenade extends GameObject
 
 export class Weapon extends LJS.EngineObject 
 {
-    constructor(pos, parent) 
+    constructor(pos) 
     { 
         super(pos, vec2(.6), Game.spriteAtlas.gun);
 
@@ -238,10 +238,8 @@ export class Weapon extends LJS.EngineObject
         this.damage        = 1;
 
         // prepare to fire
-        this.renderOrder = parent.renderOrder + 1;
         this.fireTimeBuffer = this.localAngle = 0;
         this.recoilTimer = new Timer;
-        parent.addChild(this, vec2(.6,0));
 
         // shell effect
         this.addChild(this.shellEmitter = new LJS.ParticleEmitter(
