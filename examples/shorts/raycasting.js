@@ -31,7 +31,10 @@ function gameUpdate()
         playerAngle += mouseDelta.x * .003;
 
     // update player movement, prevent walking through walls
-    const velocity = keyDirection().scale(.1).rotate(playerAngle);
+    let velocity = keyDirection();
+    if (velocity.y && mouseIsDown(0))
+        velocity.y = 1; // forward movement with mouse
+    velocity = velocity.rotate(playerAngle).scale(.1);
     const newPos = playerPos.add(velocity);
     if (!levelTest(newPos.x, newPos.y))
         playerPos = newPos;
