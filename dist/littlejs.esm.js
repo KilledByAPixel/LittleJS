@@ -1127,7 +1127,8 @@ function debugRender()
         {
             overlayContext.fillText(`${engineName} v${engineVersion}`, x, y += h/2 );
             overlayContext.fillText('Time: ' + formatTime(time), x, y += h);
-            overlayContext.fillText('FPS: ' + averageFPS.toFixed(1), x, y += h);
+            overlayContext.fillText('FPS: ' + averageFPS.toFixed(1) + (glEnable?' WebGL':' Canvas2D'), 
+                x, y += h);
             overlayContext.fillText('Objects: ' + engineObjects.length, x, y += h);
             overlayContext.fillText('Draw Count: ' + drawCount, x, y += h);
             overlayContext.fillText('---------', x, y += h);
@@ -4515,7 +4516,7 @@ function inputInit()
     function onMouseLeave()
     {
         // set mouse position and delta when leaving canvas
-        mousePosScreen = vec2(Infinity);
+        mousePosScreen = vec2(-Infinity);
         mouseDeltaScreen = vec2(0);
     }
 }
@@ -8157,7 +8158,7 @@ class UIObject
         const mouseDown = mouseIsDown(0);
         const mousePress = this.dragActivate ? mouseDown : mouseWasPressed(0);
         if (!uiSystem.hoverObject)
-        if (mousePress || !mouseDown || isActive)
+        if (mousePress || isActive || (!mouseDown && !isTouchDevice))
         {
             const size = this.size.add(vec2(isTouchDevice && this.extraTouchSize || 0));
             if (isOverlapping(this.pos, size, mousePosScreen))
