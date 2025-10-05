@@ -41,14 +41,14 @@ function createUI()
     uiMenu.addChild(uiBackground);
 
     // example large text
-    const textTitle = new LJS.UIText(vec2(0,-220), vec2(500, 90), 'Test Title');
+    const textTitle = new LJS.UIText(vec2(0,-220), vec2(500, 120), 'Test Title');
     uiMenu.addChild(textTitle);
     textTitle.textColor = LJS.RED;
     textTitle.lineWidth = 4;
     textTitle.lineColor = LJS.BLUE;
 
     // example multiline text
-    const textTest = new LJS.UIText(vec2(-60,-120), vec2(300, 50), 'Test Text\nSecond text line.')
+    const textTest = new LJS.UIText(vec2(-60,-120), vec2(350, 60), 'Test Text\nSecond text line.')
     uiMenu.addChild(textTest);
 
     // example tile image
@@ -71,7 +71,7 @@ function createUI()
     checkbox.onChange = ()=> button1.disabled = checkbox.checked;
 
     // text attached to checkbox
-    const checkboxText = new LJS.UIText(vec2(170,0), vec2(300, 40), 'Test Checkbox');
+    const checkboxText = new LJS.UIText(vec2(170,0), vec2(300, 60), 'Test Checkbox');
     checkbox.addChild(checkboxText);
 
     // exit button
