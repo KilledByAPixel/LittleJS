@@ -155,8 +155,8 @@ function nearestPowerOfTwo(value) { return 2**Math.ceil(Math.log2(value)); }
  *  @memberof Utilities */
 function isOverlapping(posA, sizeA, posB, sizeB=vec2())
 {
-    return abs(posA.x - posB.x)*2 < sizeA.x + sizeB.x
-        && abs(posA.y - posB.y)*2 < sizeA.y + sizeB.y;
+    return abs(posA.x - posB.x)*2 <= sizeA.x + sizeB.x
+        && abs(posA.y - posB.y)*2 <= sizeA.y + sizeB.y;
 }
 
 /** Returns true if a line segment is intersecting an axis aligned box
