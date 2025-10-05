@@ -38,7 +38,8 @@ class CarObject extends Box2dObject
         
         // car controls - use mouse, arrow keys, or A/D to drive
         const maxSpeed = 40;
-        const input = keyDirection().x || mouseIsDown(0);
+        const input = mouseIsDown(0) ? 1 : 
+            mouseIsDown(2) ? -1 : keyDirection().x ;
         let s = this.wheels[0].motorJoint.getMotorSpeed();
         s = input ? clamp(s - input, -maxSpeed, maxSpeed) : 0;
         this.wheels[0].motorJoint.setMotorSpeed(s);
