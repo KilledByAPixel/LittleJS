@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.14.7';
+const engineVersion = '1.14.8';
 
 /** Frames per second to update
  *  @type {number}
@@ -865,8 +865,8 @@ function nearestPowerOfTwo(value) { return 2**Math.ceil(Math.log2(value)); }
  *  @memberof Utilities */
 function isOverlapping(posA, sizeA, posB, sizeB=vec2())
 {
-    return abs(posA.x - posB.x)*2 < sizeA.x + sizeB.x
-        && abs(posA.y - posB.y)*2 < sizeA.y + sizeB.y;
+    return abs(posA.x - posB.x)*2 <= sizeA.x + sizeB.x
+        && abs(posA.y - posB.y)*2 <= sizeA.y + sizeB.y;
 }
 
 /** Returns true if a line segment is intersecting an axis aligned box
@@ -3897,6 +3897,7 @@ function inputInit()
     document.addEventListener('wheel', onMouseWheel);
     document.addEventListener('contextmenu', onContextMenu);
     document.addEventListener('blur', onBlur);
+    document.addEventListener('mouseleave', onMouseLeave);
 
     // init touch input
     if (isTouchDevice && touchInputEnable)
@@ -3955,6 +3956,12 @@ function inputInit()
     function onMouseWheel(e) { mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY); }
     function onContextMenu(e) { e.preventDefault(); } // prevent right click menu
     function onBlur() { inputClear(); } // reset input when focus is lost
+    function onMouseLeave()
+    {
+        // set mouse position and delta when leaving canvas
+        mousePosScreen = vec2(Infinity);
+        mouseDeltaScreen = vec2(0);
+    }
 }
 
 // convert a mouse or touch event position to screen space
@@ -7373,6 +7380,10 @@ class UISystemPlugin
         this.uiObjects = [];
         /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - Context to render UI elements to */
         this.uiContext = context;
+        /** @property {UIObject} - Top most object user is over */
+        this.hoverObject = undefined;
+        /** @property {UIObject} - Object user is currently interacting with */
+        this.activeObject = undefined;
             
         engineAddPlugin(uiUpdate, uiRender);
 
@@ -7402,6 +7413,8 @@ class UISystemPlugin
                 else
                     updateInvisibleObject(o);
             }
+            // reset hover object at start of update
+            uiSystem.hoverObject = undefined;
             for (let i = uiSystem.uiObjects.length; i--;)
             {
                 const o = uiSystem.uiObjects[i];
@@ -7513,6 +7526,8 @@ class UIObject
         this.size = size.copy();
         /** @property {Color} - Color of the object */
         this.color = uiSystem.defaultColor;
+        /** @property {Color} - Color of the object when active, uses color if undefined */
+        this.activeColor = undefined;
         /** @property {string} - Text for this ui object */
         this.text = undefined;
         /** @property {Color} - Color when disabled */
@@ -7543,7 +7558,7 @@ class UIObject
         this.children = [];
         /** @property {UIObject} - This object's parent, position is in parent space */
         this.parent = undefined;
-        /** @property {number} - Extra size added to make small buttons easier to touch on mobile devices */
+        /** @property {number} - Added size to make small buttons easier to touch on mobile devices */
         this.extraTouchSize = 0;
         /** @property {Sound} - Sound when interactive element is pressed */
         this.soundPress = uiSystem.defaultSoundPress;
@@ -7551,12 +7566,10 @@ class UIObject
         this.soundRelease = uiSystem.defaultSoundRelease;
         /** @property {Sound} - Sound when interactive element is clicked */
         this.soundClick = uiSystem.defaultSoundClick;
-        /** @property {boolean} - Is the mouse over this element */
-        this.mouseIsOver = false;
         /** @property {boolean} - Is this element interactive */
         this.interactive = false;
-        /** @property {boolean} - Is the mouse held on this element (was pressed while over and hasn't been released) */
-        this.mouseIsHeld = false;
+        /** @property {boolean} - Activate when dragged over with mouse held down */
+        this.dragActivate = false;
         uiSystem.uiObjects.push(this);
     }
 
@@ -7583,15 +7596,18 @@ class UIObject
     /** Update the object, called automatically by plugin once each frame */
     update()
     {
-        const mouseWasOver = this.mouseIsOver;
-        const mousePress = mouseWasPressed(0);
+        const wasHover = this.isHoverObject();
+        const isActive = this.isActiveObject();
         const mouseDown = mouseIsDown(0);
-        if (mousePress || !mouseDown || this.mouseIsHeld)
+        const mousePress = this.dragActivate ? mouseDown : mouseWasPressed(0);
+        if (!uiSystem.hoverObject)
+        if (mousePress || !mouseDown || isActive)
         {
             const size = this.size.add(vec2(isTouchDevice && this.extraTouchSize || 0));
-            this.mouseIsOver = isOverlapping(this.pos, size, mousePosScreen);
+            if (isOverlapping(this.pos, size, mousePosScreen))
+                uiSystem.hoverObject = this;
         }
-        if (this.mouseIsOver)
+        if (this.isHoverObject())
         {
             if (mousePress)
                 inputClearKey(0,0,0,1,0); // clear mouse was pressed state
@@ -7604,10 +7620,12 @@ class UIObject
                         this.onPress();
                         if (this.soundPress)
                             this.soundPress.play();
+                        if (uiSystem.activeObject && !isActive)
+                            uiSystem.activeObject.onRelease();
+                        uiSystem.activeObject = this;
                     }
-                    this.mouseIsHeld = true;
                 }
-                if (!mouseDown && this.mouseIsHeld && this.interactive)
+                if (!mouseDown && uiSystem.activeObject === this && this.interactive)
                 {
                     this.onClick();
                     if (this.soundClick)
@@ -7615,35 +7633,34 @@ class UIObject
                 }
             }
         }
-        if (!mouseDown)
+        if (isActive && (!mouseDown || !this.isHoverObject()))
         {
-            if (this.mouseIsHeld && this.interactive)
-            {
-                this.onRelease();
-                if (this.soundRelease)
-                    this.soundRelease.play();
-            }
-            if (isTouchDevice)
-                this.mouseIsOver = false;
-            this.mouseIsHeld = false;
+            this.onRelease();
+            if (this.soundRelease)
+                this.soundRelease.play();
+            uiSystem.activeObject = undefined;
         }
 
-        if (this.mouseIsOver !== mouseWasOver)
-            this.mouseIsOver ? this.onEnter() : this.onLeave();
+        if (this.isHoverObject() !== wasHover)
+            this.isHoverObject() ? this.onEnter() : this.onLeave();
     }
 
     /** Render the object, called automatically by plugin once each frame */
     render()
     {
-        if (this.size.x && this.size.y)
-            uiSystem.drawRect(this.pos, this.size, this.color, this.lineWidth, this.lineColor, this.cornerRadius);
+        if (!this.size.x || !this.size.y) return;
+
+        const lineColor = this.interactive && this.isActiveObject() && !this.disabled ? this.color : this.lineColor;
+        const color = this.interactive ? this.disabled ? this.disabledColor : this.isActiveObject() ? this.activeColor || this.color : this.isHoverObject() ? this.hoverColor : this.color : this.color;
+        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor, this.cornerRadius);
     }
 
     /** Special update when object is not visible */
     updateInvisible()
     {
         // reset input state when not visible
-        this.mouseIsOver = this.mouseIsHeld = false;
+        if (this.isActiveObject())
+            uiSystem.activeObject = undefined;
     }
 
     /** Get the size for text with overrides and scale
@@ -7655,6 +7672,12 @@ class UIObject
             this.textWidth  || this.textScale * this.size.x, 
             this.textHeight || this.textScale * this.size.y);
     }
+
+    /** @return {boolean} - Is the mouse hovering over this element */
+    isHoverObject() { return uiSystem.hoverObject === this; }
+
+    /** @return {boolean} - Is the mouse held onto this element */
+    isActiveObject() { return uiSystem.activeObject === this; }
 
     /** Called when the mouse enters the object */
     onEnter() {}
@@ -7766,10 +7789,7 @@ class UIButton extends UIObject
     }
     render()
     {
-        // draw the button
-        const lineColor = this.mouseIsHeld && !this.disabled ? this.color : this.lineColor;
-        const color = this.disabled ? this.disabledColor : this.mouseIsOver ? this.hoverColor : this.color;
-        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor, this.cornerRadius);
+        super.render();
         
         // draw the text scaled to fit
         const textSize = this.getTextSize();
@@ -7810,8 +7830,7 @@ class UICheckbox extends UIObject
     }
     render()
     {
-        const color = this.disabled ? this.disabledColor : this.mouseIsOver ? this.hoverColor : this.color;
-        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, this.lineColor, this.cornerRadius);
+        super.render();
         if (this.checked)
         {
             const p = this.cornerRadius / min(this.size.x, this.size.y) * 2;
@@ -7861,7 +7880,7 @@ class UIScrollbar extends UIObject
     update()
     {
         super.update();
-        if (this.mouseIsHeld && this.interactive)
+        if (this.isActiveObject() && this.interactive)
         {
             // check if value changed
             const handleSize = vec2(this.size.y);
@@ -7875,12 +7894,7 @@ class UIScrollbar extends UIObject
     }
     render()
     {
-        // draw the scrollbar background
-        const lineColor = this.interactive && this.mouseIsHeld && !this.disabled ? 
-            this.color : this.lineColor;
-        const color = this.disabled ? this.disabledColor : 
-            this.interactive && this.mouseIsHeld ? this.hoverColor : this.color;
-        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor, this.cornerRadius);
+        super.render();
     
         // draw the scrollbar handle
         const handleSize = vec2(this.size.y);
@@ -7889,7 +7903,7 @@ class UIScrollbar extends UIObject
         const p2 = this.pos.x + handleWidth/2;
         const handlePos = vec2(lerp(p1, p2, this.value), this.pos.y);
         const handleColor = this.disabled ? this.disabledColor : 
-            this.interactive && this.mouseIsHeld ? this.color : this.handleColor;
+            this.interactive && this.isActiveObject() ? this.color : this.handleColor;
         uiSystem.drawRect(handlePos, handleSize, handleColor, this.lineWidth, this.lineColor, this.cornerRadius);
 
         // draw the text scaled to fit on the scrollbar

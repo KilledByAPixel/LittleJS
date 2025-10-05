@@ -2888,6 +2888,10 @@ declare module "littlejsengine" {
         uiObjects: any[];
         /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - Context to render UI elements to */
         uiContext: CanvasRenderingContext2D;
+        /** @property {UIObject} - Top most object user is over */
+        hoverObject: any;
+        /** @property {UIObject} - Object user is currently interacting with */
+        activeObject: any;
         /** Draw a rectangle to the UI context
         *  @param {Vector2} pos
         *  @param {Vector2} size
@@ -2939,6 +2943,8 @@ declare module "littlejsengine" {
         size: Vector2;
         /** @property {Color} - Color of the object */
         color: Color;
+        /** @property {Color} - Color of the object when active, uses color if undefined */
+        activeColor: any;
         /** @property {string} - Text for this ui object */
         text: any;
         /** @property {Color} - Color when disabled */
@@ -2969,7 +2975,7 @@ declare module "littlejsengine" {
         children: any[];
         /** @property {UIObject} - This object's parent, position is in parent space */
         parent: any;
-        /** @property {number} - Extra size added to make small buttons easier to touch on mobile devices */
+        /** @property {number} - Added size to make small buttons easier to touch on mobile devices */
         extraTouchSize: number;
         /** @property {Sound} - Sound when interactive element is pressed */
         soundPress: any;
@@ -2977,12 +2983,10 @@ declare module "littlejsengine" {
         soundRelease: any;
         /** @property {Sound} - Sound when interactive element is clicked */
         soundClick: any;
-        /** @property {boolean} - Is the mouse over this element */
-        mouseIsOver: boolean;
         /** @property {boolean} - Is this element interactive */
         interactive: boolean;
-        /** @property {boolean} - Is the mouse held on this element (was pressed while over and hasn't been released) */
-        mouseIsHeld: boolean;
+        /** @property {boolean} - Activate when dragged over with mouse held down */
+        dragActivate: boolean;
         /** Add a child UIObject to this object
          *  @param {UIObject} child
          */
@@ -3001,6 +3005,10 @@ declare module "littlejsengine" {
          *  @return {Vector2}
          */
         getTextSize(): Vector2;
+        /** @return {boolean} - Is the mouse hovering over this element */
+        isHoverObject(): boolean;
+        /** @return {boolean} - Is the mouse held onto this element */
+        isActiveObject(): boolean;
         /** Called when the mouse enters the object */
         onEnter(): void;
         /** Called when the mouse leaves the object */
