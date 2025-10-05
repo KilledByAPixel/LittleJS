@@ -10,22 +10,29 @@ function gameInit()
     uiSystem.defaultSoundClick = new Sound([1,0,440]);
     uiSystem.defaultCornerRadius = 8;
 
+    // example button that returns to menu
+    const buttonBack = new UIButton(mainCanvasSize.scale(.5), vec2(200), 'Back\nto\nMenu');
+    buttonBack.textHeight = 60;
+    buttonBack.onClick = ()=> uiMenu.visible = true;
+
     // setup example menu
-    const uiMenu = new UIObject(mainCanvasSize.scale(.5), vec2(450));
+    const uiMenu = new UIObject(mainCanvasSize.scale(.5), vec2(600,450));
     canvasClearColor = hsl(0,0,.8);
 
     // example text
-    const textTitle = new UIText(vec2(0,-120), vec2(400, 60), 'LittleJS UI\nSystem Demo');
-    uiMenu.addChild(textTitle);
+    uiMenu.addChild(new UIText(vec2(-80,-120), vec2(500, 80), 'LittleJS UI\nSystem Demo'));
+
+    // example image
+    uiMenu.addChild(new UITile(vec2(200,-140), vec2(128), tile(3, 128)));
 
     // example button
-    const button1 = new UIButton(vec2(70,0), vec2(140, 80), 'Test');
+    const button1 = new UIButton(vec2(80,0), vec2(140, 80), 'Test');
     button1.textHeight = 60;
     uiMenu.addChild(button1);
-    button1.onClick = ()=> uiBackground.color = randColor();
+    button1.onClick = ()=> canvasClearColor = randColor();
 
     // example checkbox
-    const checkbox = new UICheckbox(vec2(-70,0), vec2(50));
+    const checkbox = new UICheckbox(vec2(-80,0), vec2(50));
     checkbox.onChange = ()=> button1.disabled = checkbox.checked;
     uiMenu.addChild(checkbox);
 
