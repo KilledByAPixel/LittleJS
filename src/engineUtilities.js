@@ -217,7 +217,12 @@ function wave(frequency=1, amplitude=1, t=time, offset=0)
  *  @param {number} t - time in seconds
  *  @return {string}
  *  @memberof Utilities */
-function formatTime(t) { return (t/60|0) + ':' + (t%60<10?'0':'') + (t%60|0); }
+function formatTime(t)
+{
+    const sign = t < 0 ? '-' : '';
+    t = abs(t)|0;
+    return sign + (t/60|0) + ':' + (t%60<10?'0':'') + t%60;
+}
 
 /** Fetches a JSON file from a URL and returns the parsed JSON object. Must be used with await!
  *  @param {string} url - URL of JSON file
