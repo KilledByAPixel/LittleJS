@@ -216,6 +216,7 @@ function inputInit()
     document.addEventListener('wheel', onMouseWheel);
     document.addEventListener('contextmenu', onContextMenu);
     document.addEventListener('blur', onBlur);
+    document.addEventListener('mouseleave', onMouseLeave);
 
     // init touch input
     if (isTouchDevice && touchInputEnable)
@@ -274,6 +275,12 @@ function inputInit()
     function onMouseWheel(e) { mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY); }
     function onContextMenu(e) { e.preventDefault(); } // prevent right click menu
     function onBlur() { inputClear(); } // reset input when focus is lost
+    function onMouseLeave()
+    {
+        // set mouse position and delta when leaving canvas
+        mousePosScreen = vec2(Infinity);
+        mouseDeltaScreen = vec2(0);
+    }
 }
 
 // convert a mouse or touch event position to screen space
