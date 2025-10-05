@@ -222,6 +222,12 @@ let touchGamepadEnable = false;
  *  @memberof Settings */
 let touchGamepadAnalog = true;
 
+/** Number of buttons on touch gamepad
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let touchGamepadButtonCount = 4;
+
 /** Size of virtual gamepad for touch devices in pixels
  *  @type {number}
  *  @default
