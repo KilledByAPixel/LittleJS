@@ -423,7 +423,7 @@ function setCode(code, filename)
         {
             // try to extract line number from stack trace
             // look for <anonymous> or injectedScript to find user code
-            const anonymousMatch = stack.match(/(<anonymous>|injectedScript):(\d+)/);
+            const anonymousMatch = stack?.match(/(<anonymous>|injectedScript):(\d+)/);
             return anonymousMatch ? parseInt(anonymousMatch[2]) : -1;            
         }
         iframeContent.onerror = (message, source, lineno, colno, error) =>
@@ -520,7 +520,12 @@ function setCode(code, filename)
             const errorLine = getErrorLine(error.stack);
             if (errorLine >= 0)
                 setErrorLine(errorLine);
-            setErrorMessage(error.message + '\n' + error.stack);
+            let message = error;
+            if (error.message)
+                message = error.message;
+            if (error.stack)
+                message += '\n' + error.stack;
+            setErrorMessage(message);
             throw error;
         })
         .then(()=>
