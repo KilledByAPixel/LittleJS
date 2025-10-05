@@ -316,7 +316,8 @@ class UIObject
                 }
             }
         }
-        if (isActive && (!mouseDown || !this.isHoverObject()))
+        if (isActive)
+        if (!mouseDown || (this.dragActivate && !this.isHoverObject()))
         {
             this.onRelease();
             if (this.soundRelease)
