@@ -14,7 +14,6 @@ import * as GameEffects from './gameEffects.js';
 import * as Game from './game.js';
 const {vec2, hsl, tile} = LJS;
 
-export const useWebGLTileLayers = true;
 export const tileType_ladder    = -1;
 export const tileType_empty     = 0;
 export const tileType_solid     = 1;
@@ -138,7 +137,7 @@ function loadLevelData()
         for (pos.x=levelSize.x; pos.x--;)
         for (pos.y=levelSize.y; pos.y--;)
             decorateTile(pos, layer);
-        updateWebGL(tileLayers[layer]);
+        tileLayers[layer].useWebGL();
     }
 }
 
@@ -204,9 +203,4 @@ export function getCameraTarget()
     // camera is above player
     const offset = 100/LJS.cameraScale*LJS.percent(LJS.mainCanvasSize.y, 300, 600);
     return Game.player.pos.add(vec2(0, offset));
-}
-
-export function updateWebGL(layer)
-{
-    layer.useWebGL(useWebGLTileLayers);
 }

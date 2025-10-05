@@ -36,7 +36,11 @@ export const persistentParticleDestroyCallback = (particle)=>
     // copy particle to tile layer on death
     LJS.ASSERT(!particle.tileInfo, 'quick draw to tile layer uses canvas 2d so must be untextured');
     if (particle.groundObject)
+    {
         GameLevel.foregroundTileLayer.drawTile(particle.pos, particle.size, particle.tileInfo, particle.color, particle.angle, particle.mirror);
+        // update WebGL texture
+        GameLevel.foregroundTileLayer.useWebGL();
+    }
 }
 
 export function makeBlood(pos, amount) { makeDebris(pos, hsl(0,1,.5), amount, .1, 0); }
@@ -83,7 +87,7 @@ export function explosion(pos, radius=3)
     }
 
     // update WebGL texture
-    GameLevel.updateWebGL(GameLevel.foregroundTileLayer);
+    GameLevel.foregroundTileLayer.useWebGL();
 
     // kill/push objects
     LJS.engineObjectsCallback(pos, radius*3, (o)=> 
@@ -159,7 +163,7 @@ export function destroyTile(pos, makeSound = 1, cleanup = 1)
         for (let i=-1;i<=1;++i)
         for (let j=-1;j<=1;++j)
             GameLevel.decorateTile(pos.add(vec2(i,j)));
-        GameLevel.updateWebGL(layer);
+        layer.useWebGL();
     }
 
     return true;
