@@ -1715,7 +1715,7 @@ async function box2dInit()
     }
     function box2dRender()
     {
-        if (box2dDebug || debugPhysics && debugOverlay)
+        if (box2dDebug || debugPhysics)
             box2d.world.DrawDebugData();
     }
     
