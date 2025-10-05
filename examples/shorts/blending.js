@@ -1,4 +1,4 @@
-// use smoother textures
+// use smooth blending
 setCanvasPixelated(false);
 setTilesPixelated(false);
 

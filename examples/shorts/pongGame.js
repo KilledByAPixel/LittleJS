@@ -1,4 +1,3 @@
-// globals objects
 let paddle, ball;
 
 class PhysicsObject extends EngineObject

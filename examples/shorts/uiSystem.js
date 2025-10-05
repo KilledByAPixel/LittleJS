@@ -1,7 +1,3 @@
-// globals objects
-const sound_ui = new Sound([1,0]);
-let uiMenu;
-
 function gameInit()
 {
     // setup ui system plugin
