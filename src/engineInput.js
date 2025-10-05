@@ -278,7 +278,7 @@ function inputInit()
     function onMouseLeave()
     {
         // set mouse position and delta when leaving canvas
-        mousePosScreen = vec2(-Infinity);
+        mousePosScreen = vec2(-1);
         mouseDeltaScreen = vec2(0);
     }
 }
