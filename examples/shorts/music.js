@@ -48,7 +48,6 @@ function gameInit()
 
     // stop button
     stopButton = new UIButton(vec2(90, 30), vec2(140, 50), 'Stop');
-    musicPlayer.addChild(stopButton);
     stopButton.onClick = ()=>
     {
         if (!musicInstance)
@@ -57,10 +56,11 @@ function gameInit()
         // stop sound
         musicInstance.stop();
     };
+    musicPlayer.addChild(stopButton);
 
     // progress bar and scrollbar for seeking
     progressBar = new UIScrollbar(vec2(0, 100), vec2(400, 30), 0, 'Progress');
-    musicPlayer.addChild(progressBar);
+    progressBar.disabledColor = RED;
     progressBar.onChange = ()=> 
     {
         // control music seek position
@@ -73,6 +73,7 @@ function gameInit()
         if (!wasPlaying)
             musicInstance.pause();
     };
+    musicPlayer.addChild(progressBar);
 }
 
 function gameUpdate()
