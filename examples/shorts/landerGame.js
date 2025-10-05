@@ -4,14 +4,38 @@ class Player extends EngineObject
     {
         super(pos, vec2(1,2), tile(8), 0, RED);
         this.setCollision(); // make object collide
+        this.angleDamping = .95;
     }
 
     update()
     {
         super.update();
+        
+        // space ship controls
+        const moveInput = keyDirection();
+        this.applyAngularAcceleration(moveInput.x * .002);
+        this.applyAcceleration(vec2().setAngle(this.angle, moveInput.y*.002));
+    }
 
-        // apply movement controls
-        this.applyAcceleration(keyDirection().scale(.002));
+    // explode when it collides
+    collideWithObject()
+    {
+        // don't explode if player is almost still and not tilted
+        if (abs(this.angle) < .2)
+        if (this.velocity.length() < .05)
+            return true;
+
+        this.destroy();
+        new ParticleEmitter(
+            this.pos, 0,      // pos, angle
+            1, .1, 300, 3.14, // emitSize, emitTime, emitRate, emitCone
+            0,                              // tileInfo
+            rgb(1,.5,.1), rgb(1,.1,.1),     // colorStartA, colorStartB
+            rgb(1,.5,.1,0), rgb(1,.1,.1,0), // colorEndA, colorEndB
+            .7, .8, .2, .2, .05,   // time, sizeStart, sizeEnd, speed, angleSpeed
+            .9, 1, -.2, 3.14, .05, // damp, angleDamp, gravity, particleCone, fade
+            1, 0, 1               // randomness, collide, additive
+        );
     }
 }
 
