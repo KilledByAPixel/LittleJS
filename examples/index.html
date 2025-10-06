@@ -53,7 +53,7 @@ Theme:
 
 class ExampleInfo
 {
-    constructor(name, filename, description='', largeExample=false)
+    constructor(name, filename, description='', largeExample=false, tags='')
     {
         if (filename && !largeExample)
             filename = 'shorts/' + filename;
@@ -61,62 +61,66 @@ class ExampleInfo
         this.filename = filename;
         this.description = description;
         this.largeExample = largeExample;
+        this.tags = tags;
         this.isHeading = !filename;
         this.text = this.name;
         if (this.description)
             this.text += ' - ' + this.description;
+        this.selectText = this.text;
+        if (this.tags)
+            this.selectText += ' (' + this.tags + ')';
     }
 }
 
 const exampleList = 
 [
     new ExampleInfo('--- SHORT EXAMPLES ---'),
-    new ExampleInfo('Hello World', 'helloWorld.js', 'Minimal starter example'),
-    new ExampleInfo('Texture', 'texture.js', 'Texture display and manipulation'),
-    new ExampleInfo('Animation', 'animation.js', 'Sprite animation system'),
-    new ExampleInfo('Shapes', 'shapes.js', 'Draw geometric shapes and primitives'),
-    new ExampleInfo('Colors', 'colors.js', 'Color manipulation and HSL'),
-    new ExampleInfo('Starfield', 'starfield.js', 'Animated parallax starfield'),
-    new ExampleInfo('Sprite Atlas', 'spriteAtlas.js', 'Sprite atlas and tile rendering'),
-    new ExampleInfo('Blending', 'blending.js', 'Additive blending and transparency'),
-    new ExampleInfo('Tile Layer', 'tileLayer.js', 'Tile layer rendering system'),
-    new ExampleInfo('Particles', 'particles.js', 'Particle system'),
-    new ExampleInfo('Timers', 'timers.js', 'Timer objects and UI'),
-    new ExampleInfo('Sound Effects', 'sound.js', 'ZzFX sound effect generator'),
-    new ExampleInfo('Music', 'music.js', 'Music playback and controls'),
-    new ExampleInfo('Font Image', 'systemFont.js', 'Bitmap font system with built-in system font'),
-    new ExampleInfo('Parallax', 'parallax.js', 'Parallax scrolling mountains'),
-    new ExampleInfo('Maze Generator', 'maze.js', 'Procedural maze generation'),
-    new ExampleInfo('Medals', 'medals.js', 'Achievement system'),
-    new ExampleInfo('Piano', 'piano.js', 'Interactive piano keyboard'),
-    new ExampleInfo('Clock', 'clock.js', 'Animated analog clock'),
+    new ExampleInfo('Hello World', 'helloWorld.js', 'Minimal starter example', false, 'beginner, gradient, text, tiles'),
+    new ExampleInfo('Texture', 'texture.js', 'Texture display and manipulation', false, 'sprites, loading, tiles'),
+    new ExampleInfo('Animation', 'animation.js', 'Sprite animation system', false, 'frames, loop, tiles, sprites'),
+    new ExampleInfo('Shapes', 'shapes.js', 'Draw geometric shapes and primitives', false, 'circle, ellipses, rectangles, polygon, lines'),
+    new ExampleInfo('Colors', 'colors.js', 'Color manipulation and HSL', false, 'hue, saturation, blending, rectangles'),
+    new ExampleInfo('Starfield', 'starfield.js', 'Animated parallax starfield', false, 'space, movement, depth, rectangles'),
+    new ExampleInfo('Sprite Atlas', 'spriteAtlas.js', 'Sprite atlas and tile rendering', false, 'sheet, frames, tiles'),
+    new ExampleInfo('Blending', 'blending.js', 'Additive blending and transparency', false, 'alpha, color, tiles, smooth'),
+    new ExampleInfo('Tile Layer', 'tileLayer.js', 'Tile layer rendering system', false, 'level, map, grid, particles'),
+    new ExampleInfo('Particles', 'particles.js', 'Particle system', false, 'effects, emitter, physics, fire, smoke'),
+    new ExampleInfo('Timers', 'timers.js', 'Timer objects and UI', false, 'delay, interval, slider'),
+    new ExampleInfo('Sound Effects', 'sound.js', 'ZzFX sound effect generator', false, 'audio, volume, ui'),
+    new ExampleInfo('Music', 'music.js', 'Music playback and controls', false, 'audio, streaming, volume, ui'),
+    new ExampleInfo('Font Image', 'systemFont.js', 'Bitmap font system with built-in system font', false, 'text, characters'),
+    new ExampleInfo('Parallax', 'parallax.js', 'Parallax scrolling mountains', false, 'generative, canvas, background'),
+    new ExampleInfo('Maze Generator', 'maze.js', 'Procedural maze generation', false, 'generative, level, tiles, map, grid'),
+    new ExampleInfo('Medals', 'medals.js', 'Achievement system', false, 'unlock, progress, newgrounds'),
+    new ExampleInfo('Piano', 'piano.js', 'Interactive piano keyboard', false, 'music, notes, ui, instrument'),
+    new ExampleInfo('Clock', 'clock.js', 'Animated analog clock', false, 'time, rotation, lines, rectangles'),
     new ExampleInfo('--- MINI GAMES ---'),
-    new ExampleInfo('Pong Game', 'pongGame.js', 'Classic paddle ball bouncing'),
-    new ExampleInfo('Platformer Game', 'platformer.js', 'Jump and run side view'),
-    new ExampleInfo('Top Down Game', 'topDown.js', 'Top-down style camera'),
-    new ExampleInfo('Tilted View Game', 'tiltedView.js', 'Pseudo-3D oblique view'),
-    new ExampleInfo('Flappy Game', 'flappyGame.js', 'Flappy bird style game'),
-    new ExampleInfo('Lander Game', 'landerGame.js', 'Lunar lander style game'),
-    new ExampleInfo('Hill Glide Game', 'hillGlideGame.js', 'Tiny wings style sliding game'),
-    new ExampleInfo('Sliding Puzzle', 'slidingPuzzle.js', '15 tile sliding puzzle'),
-    new ExampleInfo('Space Game', 'spaceGame.js', 'Spaceship shooter with parallax'),
-    new ExampleInfo('Raycasting 3D Game', 'raycasting.js', 'Wolfenstein-style raycasting'),
+    new ExampleInfo('Pong Game', 'pongGame.js', 'Classic paddle ball bouncing', false, 'objects, collision'),
+    new ExampleInfo('Platformer Game', 'platformer.js', 'Jump and run side view', false, 'objects, gravity, level, tiles, camera'),
+    new ExampleInfo('Top Down Game', 'topDown.js', 'Top-down style camera', false, 'objects, movement, exploration'),
+    new ExampleInfo('Tilted View Game', 'tiltedView.js', 'Pseudo-3D oblique view', false, 'isometric, depth'),
+    new ExampleInfo('Flappy Game', 'flappyGame.js', 'Flappy bird style game', false, 'objects, obstacles'),
+    new ExampleInfo('Lander Game', 'landerGame.js', 'Lunar lander style game', false, 'objects, physics'),
+    new ExampleInfo('Hill Glide Game', 'hillGlideGame.js', 'Tiny wings style sliding game', false, 'objects, physics, speed'),
+    new ExampleInfo('Sliding Puzzle', 'slidingPuzzle.js', '15 tile sliding puzzle', false, 'objects, numbers, ui'),
+    new ExampleInfo('Space Game', 'spaceGame.js', 'Spaceship shooter with parallax', false, 'objects, weapons, stars, camera, rotation'),
+    new ExampleInfo('Raycasting 3D Game', 'raycasting.js', 'Pseudo 3D raycasting demo', false, '3D, maze, camera'),
     new ExampleInfo('--- PLUGINS ---'),
-    new ExampleInfo('Box2d Demo', 'box2d.js', 'Box2D physics plugin'),
-    new ExampleInfo('Box2d Car', 'box2dCar.js', 'Drivable car with Box2D physics'),
-    new ExampleInfo('Post Processing', 'postProcess.js', 'Shader effects and filters'),
-    new ExampleInfo('UI System Plugin', 'uiSystem.js', 'Buttons, sliders, and checkboxes'),
-    new ExampleInfo('Nine Slice', 'nineSlice.js', 'Scalable UI panels'),
+    new ExampleInfo('Box2d Demo', 'box2d.js', 'Box2D physics plugin', false, 'objects, mouse'),
+    new ExampleInfo('Box2d Car', 'box2dCar.js', 'Drivable car with Box2D physics', false, 'objects, vehicle, suspension, wheels'),
+    new ExampleInfo('Post Processing', 'postProcess.js', 'Shader effects and filters', false, 'webgl, visual, effect'),
+    new ExampleInfo('UI System Plugin', 'uiSystem.js', 'Buttons, sliders, and checkboxes', false, 'objects, widgets, interactive'),
+    new ExampleInfo('Nine Slice', 'nineSlice.js', 'Scalable UI panels', false, 'three slice, stretch, corners, text, tiles'),
     new ExampleInfo('--- FULL EXAMPLES ---'),
-    new ExampleInfo('Starter', 'starter', 'Clean project template', true),
-    new ExampleInfo('Breakout Tutorial', 'breakoutTutorial', 'Step-by-step breakout tutorial', true),
-    new ExampleInfo('Breakout Game', 'breakout', 'Complete breakout game', true),
-    new ExampleInfo('Platforming Game', 'platformer', 'Full platformer with levels', true),
-    new ExampleInfo('Puzzle Game', 'puzzle', 'Match-3 puzzle game', true),
-    new ExampleInfo('Stress Test', 'stress', 'Performance and music test', true),
-    new ExampleInfo('Box2D Plugin', 'box2d', 'Full Box2D physics demo', true),
-    new ExampleInfo('HTML Menus', 'htmlMenu', 'HTML UI integration', true),
-    new ExampleInfo('UI System Plugin', 'uiSystem', 'Complete UI system demo', true),
+    new ExampleInfo('Starter', 'starter', 'Clean project template', true, 'base, empty, particles'),
+    new ExampleInfo('Breakout Tutorial', 'breakoutTutorial', 'Step-by-step breakout game tutorial', true, 'objects, physics, score'),
+    new ExampleInfo('Breakout Game', 'breakout', 'Complete breakout game', true, 'objects, physics, score'),
+    new ExampleInfo('Platforming Game', 'platformer', 'Platformer with level loading', true, 'jump, world, tiles, pixel art, sprites'),
+    new ExampleInfo('Puzzle Game', 'puzzle', 'Match 3 style puzzle game', true, 'match, swap, sprites'),
+    new ExampleInfo('Stress Test', 'stress', 'Performance and music test', true, 'optimization, tiles, sprites'),
+    new ExampleInfo('Box2D Plugin', 'box2d', 'Full Box2D physics demo', true, 'objects, bodies, joints'),
+    new ExampleInfo('HTML Menus', 'htmlMenu', 'HTML UI integration', true, 'web, browser, overlay, button, slider, textbox'),
+    new ExampleInfo('UI System Plugin', 'uiSystem', 'Complete UI system demo', true, 'menu, overlay, button, slider, checkbox'),
 ];
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -313,9 +317,10 @@ function filterExamples(reset=0)
         if (!example.filename)
             continue;
             
-        // Check if search term matches name or description
+        // Check if search term matches name, description, or tags
         if (example.name.toLowerCase().includes(searchTerm) || 
-            example.description.toLowerCase().includes(searchTerm))
+            example.description.toLowerCase().includes(searchTerm) ||
+            example.tags.toLowerCase().includes(searchTerm))
             matchingIndices.push(i);
     }
     
@@ -345,7 +350,7 @@ function filterExamples(reset=0)
         else if (matchingIndices.includes(i))
         {
             // add matching example
-            const o = new Option(example.text);
+            const o = new Option(example.selectText);
             o.originalIndex = i;
             selectExample.add(o);
         }

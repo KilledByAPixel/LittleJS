@@ -173,16 +173,20 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         if (!debugSpeedUp)
             frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp min framerate
 
+        let wasUpdated = false;
         if (paused)
         {
+            // update everything except the game and objects
+            wasUpdated = true;
             updateCanvas();
+            inputUpdate();
+            pluginUpdateList.forEach(f=>f());
 
             // update object transforms even when paused
             for (const o of engineObjects)
                 o.parent || o.updateTransforms();
 
-            inputUpdate();
-            pluginUpdateList.forEach(f=>f());
+            // do post update
             debugUpdate();
             gameUpdatePost();
             inputUpdatePost();
@@ -199,12 +203,13 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             }
 
             // update multiple frames if necessary in case of slow framerate
-            for (;frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / frameRate)
+            for (; frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / frameRate)
             {
                 // increment frame and update time
                 time = frame++ / frameRate;
 
                 // update game and objects
+                wasUpdated = true;
                 updateCanvas();
                 inputUpdate();
                 gameUpdate();
@@ -215,7 +220,6 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                 debugUpdate();
                 gameUpdatePost();
                 inputUpdatePost();
-
                 if (debugVideoCaptureIsActive())
                     renderFrame();
             }
@@ -231,6 +235,10 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         function renderFrame()
         {
             if (headlessMode) return;
+
+            // canvas must be updated before rendering
+            if (!wasUpdated)
+                updateCanvas();
 
             // render sort then render while removing destroyed objects
             enginePreRender();
@@ -5636,6 +5644,12 @@ function tileCollisionLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisio
         const tileLayer = new TileCollisionLayer(vec2(), levelSize, tileInfo, layerRenderOrder);
         tileLayers[layerIndex] = tileLayer;
 
+        // apply layer color
+        const layerColor = dataLayer.color || WHITE;
+        if (dataLayer.tintcolor)
+            layerColor.setHex(dataLayer.tintcolor);
+        ASSERT(isColor(layerColor), 'layer color is not a color');
+
         for (let x=levelSize.x; x--;)
         for (let y=levelSize.y; y--;)
         {
@@ -5643,7 +5657,7 @@ function tileCollisionLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisio
             const data = dataLayer.data[x + y*levelSize.x];
             if (data)
             {
-                const layerData = new TileLayerData(data-1);
+                const layerData = new TileLayerData(data-1, 0, false, layerColor);
                 tileLayer.setData(pos, layerData);
 
                 // set collision for top layer
