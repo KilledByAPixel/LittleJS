@@ -396,7 +396,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         promises.push(new Promise(resolve =>
         {
             let t = 0;
-            LOG(`${engineName} Engine v${engineVersion}`);
+            console.log(`${engineName} Engine v${engineVersion}`);
             updateSplash();
             function updateSplash()
             {
