@@ -50,7 +50,7 @@ function loadLevelData()
 {
     // load the level data
     const tileMapData = Game.gameLevelData;
-    tileLayers = LJS.tileCollisionLoad(tileMapData, tile(0,16,1));
+    tileLayers = LJS.tileCollisionLoad(tileMapData, tile(0,16,1), 0, 1);
     levelSize = tileLayers[0].size;
     playerStartPos = vec2(0, levelSize.y); // default player start
     foregroundTileLayer = tileLayers[0];

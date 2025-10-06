@@ -108,6 +108,12 @@ function tileCollisionLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisio
         const tileLayer = new TileCollisionLayer(vec2(), levelSize, tileInfo, layerRenderOrder);
         tileLayers[layerIndex] = tileLayer;
 
+        // apply layer color
+        const layerColor = dataLayer.color || WHITE;
+        if (dataLayer.tintcolor)
+            layerColor.setHex(dataLayer.tintcolor);
+        ASSERT(isColor(layerColor), 'layer color is not a color');
+
         for (let x=levelSize.x; x--;)
         for (let y=levelSize.y; y--;)
         {
@@ -115,7 +121,7 @@ function tileCollisionLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisio
             const data = dataLayer.data[x + y*levelSize.x];
             if (data)
             {
-                const layerData = new TileLayerData(data-1);
+                const layerData = new TileLayerData(data-1, 0, false, layerColor);
                 tileLayer.setData(pos, layerData);
 
                 // set collision for top layer
