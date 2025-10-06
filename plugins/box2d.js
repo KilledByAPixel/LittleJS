@@ -50,7 +50,7 @@ class Box2dObject extends EngineObject
      *  @param {Color}    [color]
      *  @param {number}   [bodyType]
      *  @param {number}   [renderOrder] */
-    constructor(pos=vec2(), size, tileInfo, angle=0, color, bodyType=box2d.bodyTypeDynamic, renderOrder=0)
+    constructor(pos, size, tileInfo, angle=0, color, bodyType=box2d.bodyTypeDynamic, renderOrder=0)
     {
         super(pos, size, tileInfo, angle, color, renderOrder);
 
