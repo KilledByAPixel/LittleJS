@@ -119,12 +119,12 @@ function engineAddPlugin(updateFunction, renderFunction)
  *  @example
  *  // Basic engine startup
  *  engineInit(
- *    () => { console.log('Game initialized!'); },  // gameInit
- *    () => { updateGameLogic(); },                 // gameUpdate
- *    () => { updateUI(); },                        // gameUpdatePost
- *    () => { drawBackground(); },                  // gameRender
- *    () => { drawHUD(); },                         // gameRenderPost
- *    ['tiles.png', 'tilesLevel.png']               // images to load
+ *    () => { LOG('Game initialized!'); },  // gameInit
+ *    () => { updateGameLogic(); },         // gameUpdate
+ *    () => { updateUI(); },                // gameUpdatePost
+ *    () => { drawBackground(); },          // gameRender
+ *    () => { drawHUD(); },                 // gameRenderPost
+ *    ['tiles.png', 'tilesLevel.png']       // images to load
  *  );
  *  @memberof Engine */
 async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
@@ -396,7 +396,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         promises.push(new Promise(resolve =>
         {
             let t = 0;
-            console.log(`${engineName} Engine v${engineVersion}`);
+            LOG(`${engineName} Engine v${engineVersion}`);
             updateSplash();
             function updateSplash()
             {

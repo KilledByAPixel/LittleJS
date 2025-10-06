@@ -31,6 +31,7 @@ export
 
 	// Debug
 	ASSERT,
+	LOG,
 	debugRect,
 	debugPoly,
 	debugCircle,

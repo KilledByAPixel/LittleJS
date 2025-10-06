@@ -16,12 +16,6 @@
  *  @memberof Debug */
 const debug = true;
 
-/** True if asserts are enabled
- *  @type {boolean}
- *  @default
- *  @memberof Debug */
-const enableAsserts = true;
-
 /** Size to render debug points by default
  *  @type {number}
  *  @default
@@ -52,15 +46,16 @@ let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParti
 ///////////////////////////////////////////////////////////////////////////////
 // Debug helper functions
 
-/** Asserts if the expression is false, does not do anything in release builds
+/** Asserts if the expression is false, does nothing in release builds
  *  @param {boolean} assert
  *  @param {...Object} [output] - error message output
  *  @memberof Debug */
-function ASSERT(assert, ...output)
-{
-    if (enableAsserts)
-        console.assert(assert, ...output);
-}
+function ASSERT(assert, ...output) { console.assert(assert, ...output); }
+
+/** Log to console if debug is enabled, does nothing in release builds
+ *  @param {...Object} [output] - message output
+ *  @memberof Debug */
+function LOG(...output) { console.log(...output); }
 
 /** Draw a debug rectangle in world space
  *  @param {Vector2} pos
@@ -554,7 +549,7 @@ function debugVideoCaptureStart()
     }
 
     // start recording
-    console.log('Video capture started.');
+    LOG('Video capture started.');
     debugVideoCapture.start();
     debugVideoCaptureTimer = new Timer(0);
 
@@ -581,7 +576,7 @@ function debugVideoCaptureStop()
         return; // not recording
 
     // stop recording
-    console.log(`Video capture ended. ${debugVideoCaptureTimer.get().toFixed(2)} seconds recorded.`);
+    LOG(`Video capture ended. ${debugVideoCaptureTimer.get().toFixed(2)} seconds recorded.`);
     debugVideoCapture.stop();
     debugVideoCapture = 0;
     debugVideoCaptureIcon.style.display = 'none';

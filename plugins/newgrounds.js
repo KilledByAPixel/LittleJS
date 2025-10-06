@@ -76,7 +76,7 @@ class NewgroundsPlugin
         // get medals
         const medalsResult = this.call('Medal.getList');
         this.medals = medalsResult ? medalsResult.result.data['medals'] : [];
-        debugMedals && console.log(this.medals);
+        debugMedals && LOG(this.medals);
         for (const newgroundsMedal of this.medals)
         {
             const medal = medals[newgroundsMedal['id']];
@@ -99,7 +99,7 @@ class NewgroundsPlugin
         // get scoreboards
         const scoreboardResult = this.call('ScoreBoard.getBoards');
         this.scoreboards = scoreboardResult ? scoreboardResult.result.data.scoreboards : [];
-        debugMedals && console.log(this.scoreboards);
+        debugMedals && LOG(this.scoreboards);
 
         // keep the session alive with a ping every minute
         const keepAliveMS = 60 * 1e3;
@@ -168,10 +168,10 @@ class NewgroundsPlugin
         try { xmlHttp.send(formData); }
         catch(e)
         {
-            debugMedals && console.log('newgrounds call failed', e);
+            debugMedals && LOG('newgrounds call failed', e);
             return;
         }
-        debugMedals && console.log(xmlHttp.responseText);
+        debugMedals && LOG(xmlHttp.responseText);
         return xmlHttp.responseText && JSON.parse(xmlHttp.responseText);
     }
 }

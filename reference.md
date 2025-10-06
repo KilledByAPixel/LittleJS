@@ -441,7 +441,6 @@ debug                // Is debug enabled?
 debugPointSize = .5  // Size to render debug points by default
 debugKey = 'Escape'  // Key code used to toggle debug mode
 debugOverlay         // True if the debug overlay is active
-enableAsserts        // True if asserts are enabled
 showWatermark        // True if watermark with FPS should be show
 ```
 

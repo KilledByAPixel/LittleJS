@@ -18,6 +18,7 @@ const debugMedals = 0;
 
 // debug commands are automatically removed from the final build
 function ASSERT          (){}
+function LOG             (){}
 function debugInit       (){}
 function debugUpdate     (){}
 function debugRender     (){}
