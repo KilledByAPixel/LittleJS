@@ -558,11 +558,7 @@ class Vector2
     direction()
     { return abs(this.x) > abs(this.y) ? this.x < 0 ? 3 : 1 : this.y < 0 ? 2 : 0; }
 
-    /** Returns a copy of this vector that has been inverted
-     * @return {Vector2} */
-    invert() { return new Vector2(this.y, -this.x); }
-
-    /** Returns a copy of this vector absolute values
+    /** Returns a copy of this vector with absolute values
      * @return {Vector2} */
     abs() { return new Vector2(abs(this.x), abs(this.y)); }
 

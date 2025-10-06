@@ -77,7 +77,6 @@ Vector2.normalize(length=1)               // Normalize this vector to length
 Vector2.clampLength(length=1)             // Clamp this vector to length
 Vector2.dot(v)                            // Dot product with vector
 Vector2.cross(v)                          // Cross product with vector
-Vector2.invert()                          // Invert this vector
 Vector2.floor()                           // Floor this vector
 Vector2.area()                            // Get area covered by this vector as a rectangle
 Vector2.lerp(v, percent)                  // Interpolate between vectors
