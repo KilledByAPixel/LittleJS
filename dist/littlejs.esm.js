@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.14.10';
+const engineVersion = '1.14.11';
 
 /** Frames per second to update
  *  @type {number}
@@ -122,12 +122,12 @@ function engineAddPlugin(updateFunction, renderFunction)
  *  @example
  *  // Basic engine startup
  *  engineInit(
- *    () => { console.log('Game initialized!'); },  // gameInit
- *    () => { updateGameLogic(); },                 // gameUpdate
- *    () => { updateUI(); },                        // gameUpdatePost
- *    () => { drawBackground(); },                  // gameRender
- *    () => { drawHUD(); },                         // gameRenderPost
- *    ['tiles.png', 'tilesLevel.png']               // images to load
+ *    () => { LOG('Game initialized!'); },  // gameInit
+ *    () => { updateGameLogic(); },         // gameUpdate
+ *    () => { updateUI(); },                // gameUpdatePost
+ *    () => { drawBackground(); },          // gameRender
+ *    () => { drawHUD(); },                 // gameRenderPost
+ *    ['tiles.png', 'tilesLevel.png']       // images to load
  *  );
  *  @memberof Engine */
 async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
@@ -399,7 +399,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         promises.push(new Promise(resolve =>
         {
             let t = 0;
-            console.log(`${engineName} Engine v${engineVersion}`);
+            LOG(`${engineName} Engine v${engineVersion}`);
             updateSplash();
             function updateSplash()
             {
@@ -696,12 +696,6 @@ function drawEngineSplashScreen(t)
  *  @memberof Debug */
 const debug = true;
 
-/** True if asserts are enabled
- *  @type {boolean}
- *  @default
- *  @memberof Debug */
-const enableAsserts = true;
-
 /** Size to render debug points by default
  *  @type {number}
  *  @default
@@ -732,15 +726,16 @@ let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParti
 ///////////////////////////////////////////////////////////////////////////////
 // Debug helper functions
 
-/** Asserts if the expression is false, does not do anything in release builds
+/** Asserts if the expression is false, does nothing in release builds
  *  @param {boolean} assert
  *  @param {...Object} [output] - error message output
  *  @memberof Debug */
-function ASSERT(assert, ...output)
-{
-    if (enableAsserts)
-        console.assert(assert, ...output);
-}
+function ASSERT(assert, ...output) { console.assert(assert, ...output); }
+
+/** Log to console if debug is enabled, does nothing in release builds
+ *  @param {...Object} [output] - message output
+ *  @memberof Debug */
+function LOG(...output) { console.log(...output); }
 
 /** Draw a debug rectangle in world space
  *  @param {Vector2} pos
@@ -1234,7 +1229,7 @@ function debugVideoCaptureStart()
     }
 
     // start recording
-    console.log('Video capture started.');
+    LOG('Video capture started.');
     debugVideoCapture.start();
     debugVideoCaptureTimer = new Timer(0);
 
@@ -1261,7 +1256,7 @@ function debugVideoCaptureStop()
         return; // not recording
 
     // stop recording
-    console.log(`Video capture ended. ${debugVideoCaptureTimer.get().toFixed(2)} seconds recorded.`);
+    LOG(`Video capture ended. ${debugVideoCaptureTimer.get().toFixed(2)} seconds recorded.`);
     debugVideoCapture.stop();
     debugVideoCapture = 0;
     debugVideoCaptureIcon.style.display = 'none';
@@ -1836,11 +1831,7 @@ class Vector2
     direction()
     { return abs(this.x) > abs(this.y) ? this.x < 0 ? 3 : 1 : this.y < 0 ? 2 : 0; }
 
-    /** Returns a copy of this vector that has been inverted
-     * @return {Vector2} */
-    invert() { return new Vector2(this.y, -this.x); }
-
-    /** Returns a copy of this vector absolute values
+    /** Returns a copy of this vector with absolute values
      * @return {Vector2} */
     abs() { return new Vector2(abs(this.x), abs(this.y)); }
 
@@ -1882,13 +1873,10 @@ class Vector2
     toString(digits=3)
     {
         ASSERT_NUMBER_VALID(digits);
-        if (debug)
-        {
-            if (this.isValid())
-                return `(${(this.x<0?'':' ') + this.x.toFixed(digits)},${(this.y<0?'':' ') + this.y.toFixed(digits)} )`;
-            else
-                return `(${this.x}, ${this.y})`;
-        }
+        if (this.isValid())
+            return `(${(this.x<0?'':' ') + this.x.toFixed(digits)},${(this.y<0?'':' ') + this.y.toFixed(digits)} )`;
+        else
+            return `(${this.x}, ${this.y})`;
     }
 
     /** Checks if this is a valid vector
@@ -2277,7 +2265,7 @@ class Timer
 
     /** Returns this timer expressed as a string
      * @return {string} */
-    toString() { if (debug) { return this.isSet() ? Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ) : 'unset'; }}
+    toString() { return this.isSet() ? Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ) : 'unset'; }
 
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {number} */
@@ -7551,7 +7539,7 @@ class NewgroundsPlugin
         // get medals
         const medalsResult = this.call('Medal.getList');
         this.medals = medalsResult ? medalsResult.result.data['medals'] : [];
-        debugMedals && console.log(this.medals);
+        debugMedals && LOG(this.medals);
         for (const newgroundsMedal of this.medals)
         {
             const medal = medals[newgroundsMedal['id']];
@@ -7574,7 +7562,7 @@ class NewgroundsPlugin
         // get scoreboards
         const scoreboardResult = this.call('ScoreBoard.getBoards');
         this.scoreboards = scoreboardResult ? scoreboardResult.result.data.scoreboards : [];
-        debugMedals && console.log(this.scoreboards);
+        debugMedals && LOG(this.scoreboards);
 
         // keep the session alive with a ping every minute
         const keepAliveMS = 60 * 1e3;
@@ -7643,10 +7631,10 @@ class NewgroundsPlugin
         try { xmlHttp.send(formData); }
         catch(e)
         {
-            debugMedals && console.log('newgrounds call failed', e);
+            debugMedals && LOG('newgrounds call failed', e);
             return;
         }
-        debugMedals && console.log(xmlHttp.responseText);
+        debugMedals && LOG(xmlHttp.responseText);
         return xmlHttp.responseText && JSON.parse(xmlHttp.responseText);
     }
 }
@@ -10480,6 +10468,7 @@ export
 
 	// Debug
 	ASSERT,
+	LOG,
 	debugRect,
 	debugPoly,
 	debugCircle,

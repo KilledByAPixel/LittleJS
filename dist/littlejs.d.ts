@@ -78,12 +78,12 @@ declare module "littlejsengine" {
      *  @example
      *  // Basic engine startup
      *  engineInit(
-     *    () => { console.log('Game initialized!'); },  // gameInit
-     *    () => { updateGameLogic(); },                 // gameUpdate
-     *    () => { updateUI(); },                        // gameUpdatePost
-     *    () => { drawBackground(); },                  // gameRender
-     *    () => { drawHUD(); },                         // gameRenderPost
-     *    ['tiles.png', 'tilesLevel.png']               // images to load
+     *    () => { LOG('Game initialized!'); },  // gameInit
+     *    () => { updateGameLogic(); },         // gameUpdate
+     *    () => { updateUI(); },                // gameUpdatePost
+     *    () => { drawBackground(); },          // gameRender
+     *    () => { drawHUD(); },                 // gameRenderPost
+     *    ['tiles.png', 'tilesLevel.png']       // images to load
      *  );
      *  @memberof Engine */
     export function engineInit(gameInit: Function | (() => Promise<any>), gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, imageSources?: Array<string>, rootElement?: HTMLElement): Promise<void>;
@@ -143,11 +143,15 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Debug */
     export let showWatermark: boolean;
-    /** Asserts if the expression is false, does not do anything in release builds
+    /** Asserts if the expression is false, does nothing in release builds
      *  @param {boolean} assert
      *  @param {...Object} [output] - error message output
      *  @memberof Debug */
     export function ASSERT(assert: boolean, ...output?: any[]): void;
+    /** Log to console if debug is enabled, does nothing in release builds
+     *  @param {...Object} [output] - message output
+     *  @memberof Debug */
+    export function LOG(...output?: any[]): void;
     /** Draw a debug rectangle in world space
      *  @param {Vector2} pos
      *  @param {Vector2} [size=Vector2()]
@@ -952,10 +956,7 @@ declare module "littlejsengine" {
         /** Returns the integer direction of this vector, corresponding to multiples of 90 degree rotation (0-3)
          * @return {number} */
         direction(): number;
-        /** Returns a copy of this vector that has been inverted
-         * @return {Vector2} */
-        invert(): Vector2;
-        /** Returns a copy of this vector absolute values
+        /** Returns a copy of this vector with absolute values
          * @return {Vector2} */
         abs(): Vector2;
         /** Returns a copy of this vector with each axis floored
