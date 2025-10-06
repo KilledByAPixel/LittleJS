@@ -60,64 +60,72 @@ function LOG(...output) { console.log(...output); }
 /** Draw a debug rectangle in world space
  *  @param {Vector2} pos
  *  @param {Vector2} [size=Vector2()]
- *  @param {string}  [color]
- *  @param {number}  [time]
- *  @param {number}  [angle]
+ *  @param {Color|string} [color]
+ *  @param {number} [time]
+ *  @param {number} [angle]
  *  @param {boolean} [fill]
  *  @memberof Debug */
-function debugRect(pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)
+function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false)
 {
     if (typeof size === 'number')
         size = vec2(size); // allow passing in floats
-    ASSERT(typeof color === 'string', 'pass in css color strings');
-    debugPrimitives.push({pos, size, color, time:new Timer(time), angle, fill});
+    if (isColor(color))
+        color = color.toString();
+    pos = pos.copy();
+    size = size.copy();
+    const timer = new Timer(time);
+    debugPrimitives.push({pos:pos.copy(), size:size.copy(), color, timer, angle, fill});
 }
 
 /** Draw a debug poly in world space
  *  @param {Vector2} pos
  *  @param {Array<Vector2>} points
- *  @param {string}  [color]
- *  @param {number}  [time]
- *  @param {number}  [angle]
+ *  @param {Color|string} [color]
+ *  @param {number} [time]
+ *  @param {number} [angle]
  *  @param {boolean} [fill]
  *  @memberof Debug */
-function debugPoly(pos, points, color='#fff', time=0, angle=0, fill=false)
+function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false)
 {
-    ASSERT(typeof color === 'string', 'pass in css color strings');
-    debugPrimitives.push({pos, points, color, time:new Timer(time), angle, fill});
+    if (isColor(color))
+        color = color.toString();
+    pos = pos.copy();
+    points = points.map(p=>p.copy());
+    const timer = new Timer(time);
+    debugPrimitives.push({pos, points, color, timer, angle, fill});
 }
 
 /** Draw a debug circle in world space
  *  @param {Vector2} pos
- *  @param {number}  [size] - diameter
- *  @param {string}  [color]
- *  @param {number}  [time]
+ *  @param {number} [size] - diameter
+ *  @param {Color|string} [color]
+ *  @param {number} [time]
  *  @param {boolean} [fill]
  *  @memberof Debug */
-function debugCircle(pos, size=0, color='#fff', time=0, fill=false)
+function debugCircle(pos, size=0, color=WHITE, time=0, fill=false)
 {
-    ASSERT(typeof color === 'string', 'pass in css color strings');
-    debugPrimitives.push({pos, size, color, time:new Timer(time), angle:0, fill});
+    if (isColor(color))
+        color = color.toString();
+    pos = pos.copy();
+    const timer = new Timer(time);
+    debugPrimitives.push({pos, size, color, timer, angle:0, fill});
 }
 
 /** Draw a debug point in world space
  *  @param {Vector2} pos
- *  @param {string}  [color]
- *  @param {number}  [time]
- *  @param {number}  [angle]
+ *  @param {Color|string} [color]
+ *  @param {number} [time]
+ *  @param {number} [angle]
  *  @memberof Debug */
 function debugPoint(pos, color, time, angle)
-{
-    ASSERT(typeof color === 'string', 'pass in css color strings');
-    debugRect(pos, undefined, color, time, angle);
-}
+{ debugRect(pos, undefined, color, time, angle); }
 
 /** Draw a debug line in world space
  *  @param {Vector2} posA
  *  @param {Vector2} posB
- *  @param {string}  [color]
- *  @param {number}  [width]
- *  @param {number}  [time]
+ *  @param {Color|string} [color]
+ *  @param {number} [width]
+ *  @param {number} [time]
  *  @memberof Debug */
 function debugLine(posA, posB, color, width=.1, time)
 {
@@ -131,7 +139,7 @@ function debugLine(posA, posB, color, width=.1, time)
  *  @param {Vector2} sizeA
  *  @param {Vector2} posB
  *  @param {Vector2} sizeB
- *  @param {string}  [color]
+ *  @param {Color|string} [color]
  *  @memberof Debug */
 function debugOverlap(posA, sizeA, posB, sizeB, color)
 {
@@ -147,18 +155,21 @@ function debugOverlap(posA, sizeA, posB, sizeB, color)
 }
 
 /** Draw a debug axis aligned bounding box in world space
- *  @param {string}  text
+ *  @param {string} text
  *  @param {Vector2} pos
- *  @param {number}  [size]
- *  @param {string}  [color]
- *  @param {number}  [time]
- *  @param {number}  [angle]
- *  @param {string}  [font]
+ *  @param {number} [size]
+ *  @param {Color|string} [color]
+ *  @param {number} [time]
+ *  @param {number} [angle]
+ *  @param {string} [font]
  *  @memberof Debug */
-function debugText(text, pos, size=1, color='#fff', time=0, angle=0, font='monospace')
+function debugText(text, pos, size=1, color=WHITE, time=0, angle=0, font='monospace')
 {
-    ASSERT(typeof color === 'string', 'pass in css color strings');
-    debugPrimitives.push({text, pos, size, color, time:new Timer(time), angle, font});
+    if (isColor(color))
+        color = color.toString();
+    pos = pos.copy();
+    const timer = new Timer(time);
+    debugPrimitives.push({text, pos, size, color, timer, angle, font});
 }
 
 /** Clear all debug primitives in the list
@@ -414,7 +425,7 @@ function debugRender()
         });
 
         // remove expired primitives
-        debugPrimitives = debugPrimitives.filter(r=>r.time<0);
+        debugPrimitives = debugPrimitives.filter(r=>r.timer<0);
     }
 
     if (debugObject)
