@@ -6,27 +6,35 @@ class PuzzlePiece extends EngineObject
 {
     constructor(gridPos, size)
     {
-        const color = rgb(gridPos.x/(gridSize.x-1), gridPos.y/(gridSize.y-1), 1);
+        const x = gridPos.x, y = gridPos.y;
+        const color = rgb(x/(gridSize.x-1), y/(gridSize.y-1), 1);
         super(gridPos.multiply(size), size, 0, 0, color);
         this.gridPos = gridPos;
-        this.text = gridPos.x + gridPos.y*gridSize.x;
+        this.text = x + y*gridSize.x;
+        this.moveTimer = new Timer;
+        this.lastPos = this.pos;
     }
 
     update()
     {
+        const deltaX = emptyGridPos.x - this.gridPos.x;
+        const deltaY = emptyGridPos.y - this.gridPos.y;
         if (mouseWasPressed(0) && isOverlapping(this.pos, this.size, mousePos))
-        if (abs(this.gridPos.x-emptyGridPos.x) + abs(this.gridPos.y-emptyGridPos.y) == 1)
+        if (abs(deltaX) + abs(deltaY) === 1)
         {
             // swap with empty space when clicked on
+            this.lastPos = this.pos;
             this.pos = emptyGridPos.multiply(this.size);
             [emptyGridPos, this.gridPos] = [this.gridPos, emptyGridPos];
+            this.moveTimer.set(.2);
         }
     }
 
     render()
     {
-        super.render();
-        drawTextOverlay(this.text, this.pos, 2.5, BLACK);
+        const pos = this.lastPos.lerp(this.pos, this.moveTimer.getPercent());
+        drawRect(pos, this.size, this.color);
+        drawTextOverlay(this.text, pos, 2.5, BLACK);
     }
 }
 
