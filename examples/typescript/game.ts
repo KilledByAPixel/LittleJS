@@ -90,7 +90,7 @@ function gameUpdate()
         sound_click.play(LJS.mousePos);
 
         // change particle color and set to fade out
-        particleEmitter.colorStartA = hsl();
+        particleEmitter.colorStartA = LJS.randColor();
         particleEmitter.colorStartB = LJS.randColor();
         particleEmitter.colorEndA = particleEmitter.colorStartA.scale(1,0);
         particleEmitter.colorEndB = particleEmitter.colorStartB.scale(1,0);
