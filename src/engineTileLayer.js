@@ -315,6 +315,7 @@ class CanvasLayer extends EngineObject
  * - To allow dynamic modifications, layers are rendered using canvas 2d
  * - Some devices like mobile phones are limited to 4k texture resolution
  * - For with 16x16 tiles this limits layers to 256x256 on mobile devices
+ * - Tile layers are centered on their corner, so normal levels are at (0,0)
  * @extends CanvasLayer
  * @example
  * const tileLayer = new TileLayer(vec2(), vec2(200,100));
@@ -325,11 +326,10 @@ class TileLayer extends CanvasLayer
     *  @param {Vector2}  position      - World space position
     *  @param {Vector2}  size          - World space size
     *  @param {TileInfo} [tileInfo]    - Default tile info for layer (used for size and texture)
-    *  @param {Vector2}  [scale=(1,1)] - How much to scale this layer when rendered
     *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
     *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering
     */
-    constructor(position, size, tileInfo=tile(), scale=vec2(1), renderOrder=0, useWebGL=glEnable)
+    constructor(position, size, tileInfo=tile(), renderOrder=0, useWebGL=glEnable)
     {
         super(position, size, 0, renderOrder, size);
         this.tileInfo = tileInfo;
@@ -390,9 +390,10 @@ class TileLayer extends CanvasLayer
 
         // draw the tile layer as a single tile
         const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
-        const pos = this.pos.add(this.size.scale(.5));
+        const size = this.drawSize || this.size;
+        const pos = this.pos.add(size.scale(.5));
         const useWebGL = glEnable && this.glTexture !== undefined;
-        drawTile(pos, this.size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebGL);
+        drawTile(pos, size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebGL);
     }
 
     /** Draw all the tile data to an offscreen canvas
@@ -496,8 +497,7 @@ class TileCollisionLayer extends TileLayer
     */
     constructor(position, size, tileInfo=tile(), renderOrder=0, useWebGL=glEnable)
     {
-        const scale = vec2(1); // collision layers are not scaled
-        super(position, size.floor(), tileInfo, scale, renderOrder, useWebGL);
+        super(position, size.floor(), tileInfo, renderOrder, useWebGL);
 
         /** @property {Array<number>} - The tile collision grid */
         this.collisionData = [];

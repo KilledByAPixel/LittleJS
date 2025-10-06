@@ -31,10 +31,10 @@ class ParticleEmitter extends EngineObject
      *  @param {number} [emitRate] - How many particles per second to spawn, does not emit if 0
      *  @param {number} [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
      *  @param {TileInfo} [tileInfo] - Tile info to render particles (undefined is untextured)
-     *  @param {Color} [colorStartA=(1,1,1,1)] - Color at start of life 1, randomized between start colors
-     *  @param {Color} [colorStartB=(1,1,1,1)] - Color at start of life 2, randomized between start colors
-     *  @param {Color} [colorEndA=(1,1,1,0)] - Color at end of life 1, randomized between end colors
-     *  @param {Color} [colorEndB=(1,1,1,0)] - Color at end of life 2, randomized between end colors
+     *  @param {Color} [colorStartA=WHITE] - Color at start of life 1, randomized between start colors
+     *  @param {Color} [colorStartB=WHITE] - Color at start of life 2, randomized between start colors
+     *  @param {Color} [colorEndA=CLEAR_WHITE] - Color at end of life 1, randomized between end colors
+     *  @param {Color} [colorEndB=CLEAR_WHITE] - Color at end of life 2, randomized between end colors
      *  @param {number} [particleTime]      - How long particles live
      *  @param {number} [sizeStart]         - How big are particles at start
      *  @param {number} [sizeEnd]           - How big are particles at end
@@ -61,10 +61,10 @@ class ParticleEmitter extends EngineObject
         emitRate = 100,
         emitConeAngle = PI,
         tileInfo,
-        colorStartA = new Color,
-        colorStartB = new Color,
-        colorEndA = new Color(1,1,1,0),
-        colorEndB = new Color(1,1,1,0),
+        colorStartA = WHITE,
+        colorStartB = WHITE,
+        colorEndA = CLEAR_WHITE,
+        colorEndB = CLEAR_WHITE,
         particleTime = .5,
         sizeStart = .1,
         sizeEnd = 1,
@@ -87,7 +87,8 @@ class ParticleEmitter extends EngineObject
 
         // emitter settings
         /** @property {number|Vector2} - World space size of the emitter (float for circle diameter, vec2 for rect) */
-        this.emitSize = emitSize
+        this.emitSize = emitSize instanceof Vector2 ? 
+            emitSize.copy() : emitSize;
         /** @property {number} - How long to stay alive (0 is forever) */
         this.emitTime = emitTime;
         /** @property {number} - How many particles per second to spawn, does not emit if 0 */
@@ -97,13 +98,13 @@ class ParticleEmitter extends EngineObject
 
         // color settings
         /** @property {Color} - Color at start of life 1, randomized between start colors */
-        this.colorStartA = colorStartA;
+        this.colorStartA = colorStartA.copy();
         /** @property {Color} - Color at start of life 2, randomized between start colors */
-        this.colorStartB = colorStartB;
+        this.colorStartB = colorStartB.copy();
         /** @property {Color} - Color at end of life 1, randomized between end colors */
-        this.colorEndA   = colorEndA;
+        this.colorEndA   = colorEndA.copy();
         /** @property {Color} - Color at end of life 2, randomized between end colors */
-        this.colorEndB   = colorEndB;
+        this.colorEndB   = colorEndB.copy();
         /** @property {boolean} - Should color be randomized linearly or across each component */
         this.randomColorLinear = randomColorLinear;
 
@@ -268,14 +269,14 @@ class Particle extends EngineObject
 
         /** @property {Color} - Color at start of life */
         this.colorStart = colorStart;
-        /** @property {Color} - Calculated change in color */
-        this.colorEndDelta = colorEnd.subtract(colorStart);
+        /** @property {Color} - Color at end of life */
+        this.colorEnd = colorEnd;
         /** @property {number} - How long to live for */
         this.lifeTime = lifeTime;
         /** @property {number} - Size at start of life */
         this.sizeStart = sizeStart;
-        /** @property {number} - Calculated change in size */
-        this.sizeEndDelta = sizeEnd - sizeStart;
+        /** @property {number} - Size at end of life */
+        this.sizeEnd = sizeEnd;
         /** @property {number} - How quick to fade in/out */
         this.fadeRate = fadeRate;
         /** @property {boolean} - Is it additive */
@@ -311,54 +312,58 @@ class Particle extends EngineObject
     /** Render the particle, automatically called each frame, sorted by renderOrder */
     render()
     {
-        // modulate size and color
-        const p = this.lifeTime > 0 ? min((time - this.spawnTime) / this.lifeTime, 1) : 1;
-        const radius = this.sizeStart + p * this.sizeEndDelta;
-        const size = vec2(radius);
+        // lerp color and size
+        const p1 = this.lifeTime > 0 ? min((time - this.spawnTime) / this.lifeTime, 1) : 1, p2 = 1-p1;
+        const radius = p2 * this.sizeStart + p1 * this.sizeEnd;
+        this.size.x = this.size.y = radius;
+        this.color.r = p2 * this.colorStart.r + p1 * this.colorEnd.r;
+        this.color.g = p2 * this.colorStart.g + p1 * this.colorEnd.g;
+        this.color.b = p2 * this.colorStart.b + p1 * this.colorEnd.b;
+        this.color.a = p2 * this.colorStart.a + p1 * this.colorEnd.a;
+            
+        // fade alpha
         const fadeRate = this.fadeRate/2;
-        const color = new Color(
-            this.colorStart.r + p * this.colorEndDelta.r,
-            this.colorStart.g + p * this.colorEndDelta.g,
-            this.colorStart.b + p * this.colorEndDelta.b,
-            (this.colorStart.a + p * this.colorEndDelta.a) *
-             (p < fadeRate ? p/fadeRate : p > 1-fadeRate ? (1-p)/fadeRate : 1)); // fade alpha
+        this.color.a *= p1 < fadeRate ? p1/fadeRate : 
+            p1 > 1-fadeRate ? (1-p1)/fadeRate : 1;
 
         // draw the particle
         this.additive && setBlendMode(true);
 
+        // update the position and angle for drawing
         let pos = this.pos, angle = this.angle;
         if (this.localSpaceEmitter)
         {
             // in local space of emitter
-            pos = this.localSpaceEmitter.pos.add(pos.rotate(-this.localSpaceEmitter.angle));
+            const a = this.localSpaceEmitter.angle;
+            const c = Math.cos(a), s = Math.sin(a);
+            pos = this.localSpaceEmitter.pos.add(
+                new Vector2(pos.x*c - pos.y*s, pos.x*s + pos.y*c));
             angle += this.localSpaceEmitter.angle;
         }
         if (this.trailScale)
         {
             // trail style particles
-            let velocity = this.velocity;
-            if (this.localSpaceEmitter)
-                velocity = velocity.rotate(-this.localSpaceEmitter.angle);
-            const speed = velocity.length();
+            const direction = this.localSpaceEmitter ? 
+                this.velocity.rotate(-this.localSpaceEmitter.angle) :
+                this.velocity;
+            const speed = direction.length();
             if (speed)
             {
-                const direction = velocity.scale(1/speed);
+                // stretch in direction of motion
                 const trailLength = speed * this.trailScale;
-                size.y = max(size.x, trailLength);
-                angle = direction.angle();
-                drawTile(pos.add(direction.multiply(vec2(0,-trailLength/2))), size, this.tileInfo, color, angle, this.mirror);
+                this.size.y = max(this.size.x, trailLength);
+                angle = Math.atan2(direction.x, direction.y);
+                drawTile(pos, this.size, this.tileInfo, this.color, angle, this.mirror);
             }
         }
         else
-            drawTile(pos, size, this.tileInfo, color, angle, this.mirror);
+            drawTile(pos, this.size, this.tileInfo, this.color, angle, this.mirror);
         this.additive && setBlendMode();
-        debugParticles && debugRect(pos, size, '#f005', 0, angle);
+        debugParticles && debugRect(pos, this.size, '#f005', 0, angle);
 
-        if (p === 1)
+        if (p1 === 1)
         {
             // destroy particle when it's time runs out
-            this.color = color;
-            this.size = size;
             this.destroyCallback && this.destroyCallback(this);
             this.destroyed = 1;
         }
