@@ -600,13 +600,10 @@ class Vector2
     toString(digits=3)
     {
         ASSERT_NUMBER_VALID(digits);
-        if (debug)
-        {
-            if (this.isValid())
-                return `(${(this.x<0?'':' ') + this.x.toFixed(digits)},${(this.y<0?'':' ') + this.y.toFixed(digits)} )`;
-            else
-                return `(${this.x}, ${this.y})`;
-        }
+        if (this.isValid())
+            return `(${(this.x<0?'':' ') + this.x.toFixed(digits)},${(this.y<0?'':' ') + this.y.toFixed(digits)} )`;
+        else
+            return `(${this.x}, ${this.y})`;
     }
 
     /** Checks if this is a valid vector
@@ -995,7 +992,7 @@ class Timer
 
     /** Returns this timer expressed as a string
      * @return {string} */
-    toString() { if (debug) { return this.isSet() ? Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ) : 'unset'; }}
+    toString() { return this.isSet() ? Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ) : 'unset'; }
 
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {number} */
