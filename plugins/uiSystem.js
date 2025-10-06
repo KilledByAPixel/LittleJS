@@ -208,21 +208,21 @@ class UIObject
         /** @property {Vector2} - Screen space size of the object */
         this.size = size.copy();
         /** @property {Color} - Color of the object */
-        this.color = uiSystem.defaultColor;
+        this.color = uiSystem.defaultColor.copy();
         /** @property {Color} - Color of the object when active, uses color if undefined */
         this.activeColor = undefined;
         /** @property {string} - Text for this ui object */
         this.text = undefined;
         /** @property {Color} - Color when disabled */
-        this.disabledColor = uiSystem.defaultDisabledColor;
+        this.disabledColor = uiSystem.defaultDisabledColor.copy();
         /** @property {boolean} - Is this object disabled? */
         this.disabled = false;
         /** @property {Color} - Color for text */
-        this.textColor = uiSystem.defaultTextColor;
+        this.textColor = uiSystem.defaultTextColor.copy()
         /** @property {Color} - Color used when hovering over the object */
-        this.hoverColor = uiSystem.defaultHoverColor;
+        this.hoverColor = uiSystem.defaultHoverColor.copy()
         /** @property {Color} - Color for line drawing */
-        this.lineColor = uiSystem.defaultLineColor;
+        this.lineColor = uiSystem.defaultLineColor.copy()
         /** @property {number} - Width for line drawing */
         this.lineWidth = uiSystem.defaultLineWidth;
         /** @property {number} - Corner radius for rounded rects */
@@ -439,9 +439,8 @@ class UITile extends UIObject
         this.angle = angle;
         /** @property {boolean} - Should it be mirrored? */
         this.mirror = mirror;
-        
         // set properties
-        this.color = color;
+        this.color = color.copy();
     }
     render()
     {
@@ -468,7 +467,7 @@ class UIButton extends UIObject
 
         // set properties
         this.text = text;
-        this.color = color;
+        this.color = color.copy()
         this.interactive = true;
     }
     render()
@@ -504,7 +503,7 @@ class UICheckbox extends UIObject
 
         // set properties
         this.text = text;
-        this.color = color;
+        this.color = color.copy();
         this.interactive = true;
     }
     onClick()
@@ -554,11 +553,11 @@ class UIScrollbar extends UIObject
         /** @property {number} - Current percentage value of this scrollbar 0-1 */
         this.value = value;
         /** @property {Color} - Color for the handle part of the scrollbar */
-        this.handleColor = handleColor;
+        this.handleColor = handleColor.copy();
 
         // set properties
         this.text = text;
-        this.color = color;
+        this.color = color.copy();
         this.interactive = true;
     }
     update()
