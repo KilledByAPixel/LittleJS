@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.14.11';
+const engineVersion = '1.14.12';
 
 /** Frames per second to update
  *  @type {number}
@@ -399,7 +399,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         promises.push(new Promise(resolve =>
         {
             let t = 0;
-            LOG(`${engineName} Engine v${engineVersion}`);
+            console.log(`${engineName} Engine v${engineVersion}`);
             updateSplash();
             function updateSplash()
             {
@@ -2023,7 +2023,7 @@ let medalsPreventUnlock = false;
 /** Set position of camera in world space
  *  @param {Vector2} pos
  *  @memberof Settings */
-function setCameraPos(pos) { cameraPos = pos; }
+function setCameraPos(pos) { cameraPos = pos.copy(); }
 
 /** Set angle of camera in world space
  *  @param {number} angle
@@ -2046,17 +2046,17 @@ function setCanvasColorTiles(colorTiles) { canvasColorTiles = colorTiles; }
 /** Set color to clear the canvas to before render
  *  @param {Color} color
  *  @memberof Settings */
-function setCanvasClearColor(color) { canvasClearColor = color; }
+function setCanvasClearColor(color) { canvasClearColor = color.copy(); }
 
 /** Set max size of the canvas
  *  @param {Vector2} size
  *  @memberof Settings */
-function setCanvasMaxSize(size) { canvasMaxSize = size; }
+function setCanvasMaxSize(size) { canvasMaxSize = size.copy(); }
 
 /** Set fixed size of the canvas
  *  @param {Vector2} size
  *  @memberof Settings */
-function setCanvasFixedSize(size) { canvasFixedSize = size; }
+function setCanvasFixedSize(size) { canvasFixedSize = size.copy(); }
 
 /** Use nearest scaling algorithm for canvas for more pixelated look
  *  - If enabled sets css image-rendering:pixelated
@@ -2121,7 +2121,7 @@ function setGLCircleSides(sides) { glCircleSides = sides; }
 /** Set default size of tiles in pixels
  *  @param {Vector2} size
  *  @memberof Settings */
-function setTileSizeDefault(size) { tileSizeDefault = size; }
+function setTileSizeDefault(size) { tileSizeDefault = size.copy(); }
 
 /** Set to prevent tile bleeding from neighbors in pixels
  *  @param {number} scale
@@ -2166,7 +2166,7 @@ function setObjectMaxSpeed(speed) { objectMaxSpeed = speed; }
 /** Set how much gravity to apply to objects
  *  @param {Vector2} newGravity
  *  @memberof Settings */
-function setGravity(newGravity) { gravity = newGravity; }
+function setGravity(newGravity) { gravity = newGravity.copy(); }
 
 /** Set to scales emit rate of particles
  *  @param {number} scale
@@ -2256,7 +2256,7 @@ function setMedalDisplaySlideTime(time) { medalDisplaySlideTime = time; }
 /** Set size of medal display
  *  @param {Vector2} size
  *  @memberof Settings */
-function setMedalDisplaySize(size) { medalDisplaySize = size; }
+function setMedalDisplaySize(size) { medalDisplaySize = size.copy(); }
 
 /** Set to stop medals from being unlockable
  *  @param {boolean} preventUnlock
@@ -2304,14 +2304,14 @@ function setDebugKey(key) { debugKey = key; }
 class EngineObject
 {
     /** Create an engine object and adds it to the list of objects
-     *  @param {Vector2}  [pos=(0,0)]       - World space position of the object
-     *  @param {Vector2}  [size=(1,1)]      - World space size of the object
-     *  @param {TileInfo} [tileInfo]        - Tile info to render object (undefined is untextured)
-     *  @param {number}   [angle]           - Angle the object is rotated by
-     *  @param {Color}    [color=(1,1,1,1)] - Color to apply to tile when rendered
-     *  @param {number}   [renderOrder]     - Objects sorted by renderOrder before being rendered
+     *  @param {Vector2}  [pos=(0,0)]   - World space position of the object
+     *  @param {Vector2}  [size=(1,1)]  - World space size of the object
+     *  @param {TileInfo} [tileInfo]    - Tile info to render object (undefined is untextured)
+     *  @param {number}   [angle]       - Angle the object is rotated by
+     *  @param {Color}    [color=WHITE] - Color to apply to tile when rendered
+     *  @param {number}   [renderOrder] - Objects sorted by renderOrder before being rendered
      */
-    constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color=new Color, renderOrder=0)
+    constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color=WHITE, renderOrder=0)
     {
         // check passed in params
         ASSERT(isVector2(pos), 'object pos should be a vec2');
@@ -5285,6 +5285,7 @@ class CanvasLayer extends EngineObject
  * - To allow dynamic modifications, layers are rendered using canvas 2d
  * - Some devices like mobile phones are limited to 4k texture resolution
  * - For with 16x16 tiles this limits layers to 256x256 on mobile devices
+ * - Tile layers are centered on their corner, so normal levels are at (0,0)
  * @extends CanvasLayer
  * @example
  * const tileLayer = new TileLayer(vec2(), vec2(200,100));
@@ -5295,11 +5296,10 @@ class TileLayer extends CanvasLayer
     *  @param {Vector2}  position      - World space position
     *  @param {Vector2}  size          - World space size
     *  @param {TileInfo} [tileInfo]    - Default tile info for layer (used for size and texture)
-    *  @param {Vector2}  [scale=(1,1)] - How much to scale this layer when rendered
     *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
     *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering
     */
-    constructor(position, size, tileInfo=tile(), scale=vec2(1), renderOrder=0, useWebGL=glEnable)
+    constructor(position, size, tileInfo=tile(), renderOrder=0, useWebGL=glEnable)
     {
         super(position, size, 0, renderOrder, size);
         this.tileInfo = tileInfo;
@@ -5360,9 +5360,10 @@ class TileLayer extends CanvasLayer
 
         // draw the tile layer as a single tile
         const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
-        const pos = this.pos.add(this.size.scale(.5));
+        const size = this.drawSize || this.size;
+        const pos = this.pos.add(size.scale(.5));
         const useWebGL = glEnable && this.glTexture !== undefined;
-        drawTile(pos, this.size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebGL);
+        drawTile(pos, size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebGL);
     }
 
     /** Draw all the tile data to an offscreen canvas
@@ -5466,8 +5467,7 @@ class TileCollisionLayer extends TileLayer
     */
     constructor(position, size, tileInfo=tile(), renderOrder=0, useWebGL=glEnable)
     {
-        const scale = vec2(1); // collision layers are not scaled
-        super(position, size.floor(), tileInfo, scale, renderOrder, useWebGL);
+        super(position, size.floor(), tileInfo, renderOrder, useWebGL);
 
         /** @property {Array<number>} - The tile collision grid */
         this.collisionData = [];
@@ -5634,10 +5634,10 @@ class ParticleEmitter extends EngineObject
      *  @param {number} [emitRate] - How many particles per second to spawn, does not emit if 0
      *  @param {number} [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
      *  @param {TileInfo} [tileInfo] - Tile info to render particles (undefined is untextured)
-     *  @param {Color} [colorStartA=(1,1,1,1)] - Color at start of life 1, randomized between start colors
-     *  @param {Color} [colorStartB=(1,1,1,1)] - Color at start of life 2, randomized between start colors
-     *  @param {Color} [colorEndA=(1,1,1,0)] - Color at end of life 1, randomized between end colors
-     *  @param {Color} [colorEndB=(1,1,1,0)] - Color at end of life 2, randomized between end colors
+     *  @param {Color} [colorStartA=WHITE] - Color at start of life 1, randomized between start colors
+     *  @param {Color} [colorStartB=WHITE] - Color at start of life 2, randomized between start colors
+     *  @param {Color} [colorEndA=CLEAR_WHITE] - Color at end of life 1, randomized between end colors
+     *  @param {Color} [colorEndB=CLEAR_WHITE] - Color at end of life 2, randomized between end colors
      *  @param {number} [particleTime]      - How long particles live
      *  @param {number} [sizeStart]         - How big are particles at start
      *  @param {number} [sizeEnd]           - How big are particles at end
@@ -5664,10 +5664,10 @@ class ParticleEmitter extends EngineObject
         emitRate = 100,
         emitConeAngle = PI,
         tileInfo,
-        colorStartA = new Color,
-        colorStartB = new Color,
-        colorEndA = new Color(1,1,1,0),
-        colorEndB = new Color(1,1,1,0),
+        colorStartA = WHITE,
+        colorStartB = WHITE,
+        colorEndA = CLEAR_WHITE,
+        colorEndB = CLEAR_WHITE,
         particleTime = .5,
         sizeStart = .1,
         sizeEnd = 1,
@@ -5690,7 +5690,8 @@ class ParticleEmitter extends EngineObject
 
         // emitter settings
         /** @property {number|Vector2} - World space size of the emitter (float for circle diameter, vec2 for rect) */
-        this.emitSize = emitSize
+        this.emitSize = emitSize instanceof Vector2 ? 
+            emitSize.copy() : emitSize;
         /** @property {number} - How long to stay alive (0 is forever) */
         this.emitTime = emitTime;
         /** @property {number} - How many particles per second to spawn, does not emit if 0 */
@@ -5700,13 +5701,13 @@ class ParticleEmitter extends EngineObject
 
         // color settings
         /** @property {Color} - Color at start of life 1, randomized between start colors */
-        this.colorStartA = colorStartA;
+        this.colorStartA = colorStartA.copy();
         /** @property {Color} - Color at start of life 2, randomized between start colors */
-        this.colorStartB = colorStartB;
+        this.colorStartB = colorStartB.copy();
         /** @property {Color} - Color at end of life 1, randomized between end colors */
-        this.colorEndA   = colorEndA;
+        this.colorEndA   = colorEndA.copy();
         /** @property {Color} - Color at end of life 2, randomized between end colors */
-        this.colorEndB   = colorEndB;
+        this.colorEndB   = colorEndB.copy();
         /** @property {boolean} - Should color be randomized linearly or across each component */
         this.randomColorLinear = randomColorLinear;
 
@@ -5871,14 +5872,14 @@ class Particle extends EngineObject
 
         /** @property {Color} - Color at start of life */
         this.colorStart = colorStart;
-        /** @property {Color} - Calculated change in color */
-        this.colorEndDelta = colorEnd.subtract(colorStart);
+        /** @property {Color} - Color at end of life */
+        this.colorEnd = colorEnd;
         /** @property {number} - How long to live for */
         this.lifeTime = lifeTime;
         /** @property {number} - Size at start of life */
         this.sizeStart = sizeStart;
-        /** @property {number} - Calculated change in size */
-        this.sizeEndDelta = sizeEnd - sizeStart;
+        /** @property {number} - Size at end of life */
+        this.sizeEnd = sizeEnd;
         /** @property {number} - How quick to fade in/out */
         this.fadeRate = fadeRate;
         /** @property {boolean} - Is it additive */
@@ -5914,54 +5915,58 @@ class Particle extends EngineObject
     /** Render the particle, automatically called each frame, sorted by renderOrder */
     render()
     {
-        // modulate size and color
-        const p = this.lifeTime > 0 ? min((time - this.spawnTime) / this.lifeTime, 1) : 1;
-        const radius = this.sizeStart + p * this.sizeEndDelta;
-        const size = vec2(radius);
+        // lerp color and size
+        const p1 = this.lifeTime > 0 ? min((time - this.spawnTime) / this.lifeTime, 1) : 1, p2 = 1-p1;
+        const radius = p2 * this.sizeStart + p1 * this.sizeEnd;
+        this.size.x = this.size.y = radius;
+        this.color.r = p2 * this.colorStart.r + p1 * this.colorEnd.r;
+        this.color.g = p2 * this.colorStart.g + p1 * this.colorEnd.g;
+        this.color.b = p2 * this.colorStart.b + p1 * this.colorEnd.b;
+        this.color.a = p2 * this.colorStart.a + p1 * this.colorEnd.a;
+            
+        // fade alpha
         const fadeRate = this.fadeRate/2;
-        const color = new Color(
-            this.colorStart.r + p * this.colorEndDelta.r,
-            this.colorStart.g + p * this.colorEndDelta.g,
-            this.colorStart.b + p * this.colorEndDelta.b,
-            (this.colorStart.a + p * this.colorEndDelta.a) *
-             (p < fadeRate ? p/fadeRate : p > 1-fadeRate ? (1-p)/fadeRate : 1)); // fade alpha
+        this.color.a *= p1 < fadeRate ? p1/fadeRate : 
+            p1 > 1-fadeRate ? (1-p1)/fadeRate : 1;
 
         // draw the particle
         this.additive && setBlendMode(true);
 
+        // update the position and angle for drawing
         let pos = this.pos, angle = this.angle;
         if (this.localSpaceEmitter)
         {
             // in local space of emitter
-            pos = this.localSpaceEmitter.pos.add(pos.rotate(-this.localSpaceEmitter.angle));
+            const a = this.localSpaceEmitter.angle;
+            const c = Math.cos(a), s = Math.sin(a);
+            pos = this.localSpaceEmitter.pos.add(
+                new Vector2(pos.x*c - pos.y*s, pos.x*s + pos.y*c));
             angle += this.localSpaceEmitter.angle;
         }
         if (this.trailScale)
         {
             // trail style particles
-            let velocity = this.velocity;
-            if (this.localSpaceEmitter)
-                velocity = velocity.rotate(-this.localSpaceEmitter.angle);
-            const speed = velocity.length();
+            const direction = this.localSpaceEmitter ? 
+                this.velocity.rotate(-this.localSpaceEmitter.angle) :
+                this.velocity;
+            const speed = direction.length();
             if (speed)
             {
-                const direction = velocity.scale(1/speed);
+                // stretch in direction of motion
                 const trailLength = speed * this.trailScale;
-                size.y = max(size.x, trailLength);
-                angle = direction.angle();
-                drawTile(pos.add(direction.multiply(vec2(0,-trailLength/2))), size, this.tileInfo, color, angle, this.mirror);
+                this.size.y = max(this.size.x, trailLength);
+                angle = Math.atan2(direction.x, direction.y);
+                drawTile(pos, this.size, this.tileInfo, this.color, angle, this.mirror);
             }
         }
         else
-            drawTile(pos, size, this.tileInfo, color, angle, this.mirror);
+            drawTile(pos, this.size, this.tileInfo, this.color, angle, this.mirror);
         this.additive && setBlendMode();
-        debugParticles && debugRect(pos, size, '#f005', 0, angle);
+        debugParticles && debugRect(pos, this.size, '#f005', 0, angle);
 
-        if (p === 1)
+        if (p1 === 1)
         {
             // destroy particle when it's time runs out
-            this.color = color;
-            this.size = size;
             this.destroyCallback && this.destroyCallback(this);
             this.destroyed = 1;
         }
@@ -6104,11 +6109,12 @@ class Medal
         const height = medalDisplaySize.y;
         const x = overlayCanvas.width - width;
         const y = -height*hidePercent;
+        const backgroundColor = hsl(0,0,.9);
 
         // draw containing rect and clip to that region
         context.save();
         context.beginPath();
-        context.fillStyle = new Color(.9,.9,.9).toString();
+        context.fillStyle = backgroundColor.toString();
         context.strokeStyle = BLACK.toString();
         context.lineWidth = 3;
         context.rect(x, y, width, height);
@@ -7574,21 +7580,21 @@ class UIObject
         /** @property {Vector2} - Screen space size of the object */
         this.size = size.copy();
         /** @property {Color} - Color of the object */
-        this.color = uiSystem.defaultColor;
+        this.color = uiSystem.defaultColor.copy();
         /** @property {Color} - Color of the object when active, uses color if undefined */
         this.activeColor = undefined;
         /** @property {string} - Text for this ui object */
         this.text = undefined;
         /** @property {Color} - Color when disabled */
-        this.disabledColor = uiSystem.defaultDisabledColor;
+        this.disabledColor = uiSystem.defaultDisabledColor.copy();
         /** @property {boolean} - Is this object disabled? */
         this.disabled = false;
         /** @property {Color} - Color for text */
-        this.textColor = uiSystem.defaultTextColor;
+        this.textColor = uiSystem.defaultTextColor.copy()
         /** @property {Color} - Color used when hovering over the object */
-        this.hoverColor = uiSystem.defaultHoverColor;
+        this.hoverColor = uiSystem.defaultHoverColor.copy()
         /** @property {Color} - Color for line drawing */
-        this.lineColor = uiSystem.defaultLineColor;
+        this.lineColor = uiSystem.defaultLineColor.copy()
         /** @property {number} - Width for line drawing */
         this.lineWidth = uiSystem.defaultLineWidth;
         /** @property {number} - Corner radius for rounded rects */
@@ -7805,9 +7811,8 @@ class UITile extends UIObject
         this.angle = angle;
         /** @property {boolean} - Should it be mirrored? */
         this.mirror = mirror;
-        
         // set properties
-        this.color = color;
+        this.color = color.copy();
     }
     render()
     {
@@ -7834,7 +7839,7 @@ class UIButton extends UIObject
 
         // set properties
         this.text = text;
-        this.color = color;
+        this.color = color.copy()
         this.interactive = true;
     }
     render()
@@ -7870,7 +7875,7 @@ class UICheckbox extends UIObject
 
         // set properties
         this.text = text;
-        this.color = color;
+        this.color = color.copy();
         this.interactive = true;
     }
     onClick()
@@ -7920,11 +7925,11 @@ class UIScrollbar extends UIObject
         /** @property {number} - Current percentage value of this scrollbar 0-1 */
         this.value = value;
         /** @property {Color} - Color for the handle part of the scrollbar */
-        this.handleColor = handleColor;
+        this.handleColor = handleColor.copy();
 
         // set properties
         this.text = text;
-        this.color = color;
+        this.color = color.copy();
         this.interactive = true;
     }
     update()
@@ -8012,7 +8017,7 @@ class Box2dObject extends EngineObject
      *  @param {Color}    [color]
      *  @param {number}   [bodyType]
      *  @param {number}   [renderOrder] */
-    constructor(pos=vec2(), size, tileInfo, angle=0, color, bodyType=box2d.bodyTypeDynamic, renderOrder=0)
+    constructor(pos, size, tileInfo, angle=0, color, bodyType=box2d.bodyTypeDynamic, renderOrder=0)
     {
         super(pos, size, tileInfo, angle, color, renderOrder);
 

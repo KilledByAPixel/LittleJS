@@ -155,62 +155,62 @@ declare module "littlejsengine" {
     /** Draw a debug rectangle in world space
      *  @param {Vector2} pos
      *  @param {Vector2} [size=Vector2()]
-     *  @param {string}  [color]
-     *  @param {number}  [time]
-     *  @param {number}  [angle]
+     *  @param {Color|string} [color]
+     *  @param {number} [time]
+     *  @param {number} [angle]
      *  @param {boolean} [fill]
      *  @memberof Debug */
-    export function debugRect(pos: Vector2, size?: Vector2, color?: string, time?: number, angle?: number, fill?: boolean): void;
+    export function debugRect(pos: Vector2, size?: Vector2, color?: Color | string, time?: number, angle?: number, fill?: boolean): void;
     /** Draw a debug poly in world space
      *  @param {Vector2} pos
      *  @param {Array<Vector2>} points
-     *  @param {string}  [color]
-     *  @param {number}  [time]
-     *  @param {number}  [angle]
+     *  @param {Color|string} [color]
+     *  @param {number} [time]
+     *  @param {number} [angle]
      *  @param {boolean} [fill]
      *  @memberof Debug */
-    export function debugPoly(pos: Vector2, points: Array<Vector2>, color?: string, time?: number, angle?: number, fill?: boolean): void;
+    export function debugPoly(pos: Vector2, points: Array<Vector2>, color?: Color | string, time?: number, angle?: number, fill?: boolean): void;
     /** Draw a debug circle in world space
      *  @param {Vector2} pos
-     *  @param {number}  [size] - diameter
-     *  @param {string}  [color]
-     *  @param {number}  [time]
+     *  @param {number} [size] - diameter
+     *  @param {Color|string} [color]
+     *  @param {number} [time]
      *  @param {boolean} [fill]
      *  @memberof Debug */
-    export function debugCircle(pos: Vector2, size?: number, color?: string, time?: number, fill?: boolean): void;
+    export function debugCircle(pos: Vector2, size?: number, color?: Color | string, time?: number, fill?: boolean): void;
     /** Draw a debug point in world space
      *  @param {Vector2} pos
-     *  @param {string}  [color]
-     *  @param {number}  [time]
-     *  @param {number}  [angle]
+     *  @param {Color|string} [color]
+     *  @param {number} [time]
+     *  @param {number} [angle]
      *  @memberof Debug */
-    export function debugPoint(pos: Vector2, color?: string, time?: number, angle?: number): void;
+    export function debugPoint(pos: Vector2, color?: Color | string, time?: number, angle?: number): void;
     /** Draw a debug line in world space
      *  @param {Vector2} posA
      *  @param {Vector2} posB
-     *  @param {string}  [color]
-     *  @param {number}  [width]
-     *  @param {number}  [time]
+     *  @param {Color|string} [color]
+     *  @param {number} [width]
+     *  @param {number} [time]
      *  @memberof Debug */
-    export function debugLine(posA: Vector2, posB: Vector2, color?: string, width?: number, time?: number): void;
+    export function debugLine(posA: Vector2, posB: Vector2, color?: Color | string, width?: number, time?: number): void;
     /** Draw a debug combined axis aligned bounding box in world space
      *  @param {Vector2} posA
      *  @param {Vector2} sizeA
      *  @param {Vector2} posB
      *  @param {Vector2} sizeB
-     *  @param {string}  [color]
+     *  @param {Color|string} [color]
      *  @memberof Debug */
-    export function debugOverlap(posA: Vector2, sizeA: Vector2, posB: Vector2, sizeB: Vector2, color?: string): void;
+    export function debugOverlap(posA: Vector2, sizeA: Vector2, posB: Vector2, sizeB: Vector2, color?: Color | string): void;
     /** Draw a debug axis aligned bounding box in world space
-     *  @param {string}  text
+     *  @param {string} text
      *  @param {Vector2} pos
-     *  @param {number}  [size]
-     *  @param {string}  [color]
-     *  @param {number}  [time]
-     *  @param {number}  [angle]
-     *  @param {string}  [font]
+     *  @param {number} [size]
+     *  @param {Color|string} [color]
+     *  @param {number} [time]
+     *  @param {number} [angle]
+     *  @param {string} [font]
      *  @memberof Debug */
-    export function debugText(text: string, pos: Vector2, size?: number, color?: string, time?: number, angle?: number, font?: string): void;
+    export function debugText(text: string, pos: Vector2, size?: number, color?: Color | string, time?: number, angle?: number, font?: string): void;
     /** Clear all debug primitives in the list
      *  @memberof Debug */
     export function debugClear(): void;
@@ -2131,12 +2131,12 @@ declare module "littlejsengine" {
      */
     export class EngineObject {
         /** Create an engine object and adds it to the list of objects
-         *  @param {Vector2}  [pos=(0,0)]       - World space position of the object
-         *  @param {Vector2}  [size=(1,1)]      - World space size of the object
-         *  @param {TileInfo} [tileInfo]        - Tile info to render object (undefined is untextured)
-         *  @param {number}   [angle]           - Angle the object is rotated by
-         *  @param {Color}    [color=(1,1,1,1)] - Color to apply to tile when rendered
-         *  @param {number}   [renderOrder]     - Objects sorted by renderOrder before being rendered
+         *  @param {Vector2}  [pos=(0,0)]   - World space position of the object
+         *  @param {Vector2}  [size=(1,1)]  - World space size of the object
+         *  @param {TileInfo} [tileInfo]    - Tile info to render object (undefined is untextured)
+         *  @param {number}   [angle]       - Angle the object is rotated by
+         *  @param {Color}    [color=WHITE] - Color to apply to tile when rendered
+         *  @param {number}   [renderOrder] - Objects sorted by renderOrder before being rendered
          */
         constructor(pos?: Vector2, size?: Vector2, tileInfo?: TileInfo, angle?: number, color?: Color, renderOrder?: number);
         /** @property {Vector2} - World space position of the object */
@@ -2398,6 +2398,7 @@ declare module "littlejsengine" {
      * - To allow dynamic modifications, layers are rendered using canvas 2d
      * - Some devices like mobile phones are limited to 4k texture resolution
      * - For with 16x16 tiles this limits layers to 256x256 on mobile devices
+     * - Tile layers are centered on their corner, so normal levels are at (0,0)
      * @extends CanvasLayer
      * @example
      * const tileLayer = new TileLayer(vec2(), vec2(200,100));
@@ -2407,11 +2408,10 @@ declare module "littlejsengine" {
         *  @param {Vector2}  position      - World space position
         *  @param {Vector2}  size          - World space size
         *  @param {TileInfo} [tileInfo]    - Default tile info for layer (used for size and texture)
-        *  @param {Vector2}  [scale=(1,1)] - How much to scale this layer when rendered
         *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
         *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering
         */
-        constructor(position: Vector2, size: Vector2, tileInfo?: TileInfo, scale?: Vector2, renderOrder?: number, useWebGL?: boolean);
+        constructor(position: Vector2, size: Vector2, tileInfo?: TileInfo, renderOrder?: number, useWebGL?: boolean);
         data: TileLayerData[];
         /** Draw all the tile data to an offscreen canvas
          *  - This may be slow in some browsers but only needs to be done once */
@@ -2449,14 +2449,6 @@ declare module "littlejsengine" {
      * @extends TileLayer
      */
     export class TileCollisionLayer extends TileLayer {
-        /** Create a tile layer object
-        *  @param {Vector2}  position      - World space position
-        *  @param {Vector2}  size          - World space size
-        *  @param {TileInfo} [tileInfo]    - Tile info for layer
-        *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
-        *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering
-        */
-        constructor(position: Vector2, size: Vector2, tileInfo?: TileInfo, renderOrder?: number, useWebGL?: boolean);
         /** @property {Array<number>} - The tile collision grid */
         collisionData: any[];
         /** Clear and initialize tile collision to new size
@@ -2513,10 +2505,10 @@ declare module "littlejsengine" {
          *  @param {number} [emitRate] - How many particles per second to spawn, does not emit if 0
          *  @param {number} [emitConeAngle=PI] - Local angle to apply velocity to particles from emitter
          *  @param {TileInfo} [tileInfo] - Tile info to render particles (undefined is untextured)
-         *  @param {Color} [colorStartA=(1,1,1,1)] - Color at start of life 1, randomized between start colors
-         *  @param {Color} [colorStartB=(1,1,1,1)] - Color at start of life 2, randomized between start colors
-         *  @param {Color} [colorEndA=(1,1,1,0)] - Color at end of life 1, randomized between end colors
-         *  @param {Color} [colorEndB=(1,1,1,0)] - Color at end of life 2, randomized between end colors
+         *  @param {Color} [colorStartA=WHITE] - Color at start of life 1, randomized between start colors
+         *  @param {Color} [colorStartB=WHITE] - Color at start of life 2, randomized between start colors
+         *  @param {Color} [colorEndA=CLEAR_WHITE] - Color at end of life 1, randomized between end colors
+         *  @param {Color} [colorEndB=CLEAR_WHITE] - Color at end of life 2, randomized between end colors
          *  @param {number} [particleTime]      - How long particles live
          *  @param {number} [sizeStart]         - How big are particles at start
          *  @param {number} [sizeEnd]           - How big are particles at end
@@ -2610,14 +2602,14 @@ declare module "littlejsengine" {
         constructor(position: Vector2, tileInfo: TileInfo, angle: number, colorStart: Color, colorEnd: Color, lifeTime: number, sizeStart: number, sizeEnd: number, fadeRate: number, additive: boolean, trailScale: number, localSpaceEmitter?: ParticleEmitter, destroyCallback?: Function);
         /** @property {Color} - Color at start of life */
         colorStart: Color;
-        /** @property {Color} - Calculated change in color */
-        colorEndDelta: Color;
+        /** @property {Color} - Color at end of life */
+        colorEnd: Color;
         /** @property {number} - How long to live for */
         lifeTime: number;
         /** @property {number} - Size at start of life */
         sizeStart: number;
-        /** @property {number} - Calculated change in size */
-        sizeEndDelta: number;
+        /** @property {number} - Size at end of life */
+        sizeEnd: number;
         /** @property {number} - How quick to fade in/out */
         fadeRate: number;
         /** @property {boolean} - Is it additive */
