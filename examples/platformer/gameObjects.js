@@ -101,10 +101,14 @@ export class Coin extends LJS.EngineObject
 
     render()
     {
+        // side of coin
+        LJS.drawTile(this.pos, vec2(.1, .6), 0, this.color);
+
         // make it appear to spin
         const t = LJS.time+this.pos.x/4+this.pos.y/4;
-        LJS.drawTile(this.pos, vec2(.1, .6), 0, this.color); // edge of coin
-        LJS.drawTile(this.pos, vec2(.5+.5*Math.sin(t*2*LJS.PI), 1), this.tileInfo, this.color);
+        const spinSize = vec2(.5+.5*Math.sin(t*2*LJS.PI), 1);
+        if (spinSize.x > .1)
+        LJS.drawTile(this.pos, spinSize, this.tileInfo, this.color);
     }
 
     update()
