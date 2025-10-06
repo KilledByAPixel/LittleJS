@@ -32,14 +32,14 @@
 class EngineObject
 {
     /** Create an engine object and adds it to the list of objects
-     *  @param {Vector2}  [pos=(0,0)]       - World space position of the object
-     *  @param {Vector2}  [size=(1,1)]      - World space size of the object
-     *  @param {TileInfo} [tileInfo]        - Tile info to render object (undefined is untextured)
-     *  @param {number}   [angle]           - Angle the object is rotated by
-     *  @param {Color}    [color=(1,1,1,1)] - Color to apply to tile when rendered
-     *  @param {number}   [renderOrder]     - Objects sorted by renderOrder before being rendered
+     *  @param {Vector2}  [pos=(0,0)]   - World space position of the object
+     *  @param {Vector2}  [size=(1,1)]  - World space size of the object
+     *  @param {TileInfo} [tileInfo]    - Tile info to render object (undefined is untextured)
+     *  @param {number}   [angle]       - Angle the object is rotated by
+     *  @param {Color}    [color=WHITE] - Color to apply to tile when rendered
+     *  @param {number}   [renderOrder] - Objects sorted by renderOrder before being rendered
      */
-    constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color=new Color, renderOrder=0)
+    constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color=WHITE, renderOrder=0)
     {
         // check passed in params
         ASSERT(isVector2(pos), 'object pos should be a vec2');

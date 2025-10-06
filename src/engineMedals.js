@@ -137,11 +137,12 @@ class Medal
         const height = medalDisplaySize.y;
         const x = overlayCanvas.width - width;
         const y = -height*hidePercent;
+        const backgroundColor = hsl(0,0,.9);
 
         // draw containing rect and clip to that region
         context.save();
         context.beginPath();
-        context.fillStyle = new Color(.9,.9,.9).toString();
+        context.fillStyle = backgroundColor.toString();
         context.strokeStyle = BLACK.toString();
         context.lineWidth = 3;
         context.rect(x, y, width, height);
