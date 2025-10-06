@@ -63,7 +63,7 @@ function createUI()
     // example button
     const button1 = new LJS.UIButton(vec2(0,140), vec2(350, 50), 'Test Button');
     uiMenu.addChild(button1);
-    button1.onClick = ()=> console.log('Button 1 clicked');
+    button1.onClick = ()=> LOG('Button 1 clicked');
 
     // example checkbox
     const checkbox = new LJS.UICheckbox(vec2(-140,-20), vec2(40));
