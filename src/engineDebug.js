@@ -398,7 +398,7 @@ function debugRender()
                 p.fill && overlayContext.fill();
                 overlayContext.stroke();
             }
-            else if (p.size === 0 || p.size.x === 0 && p.size.y === 0)
+            else if (p.size === 0 || (p.size.x === 0 && p.size.y === 0))
             {
                 // point
                 overlayContext.fillRect(-pointSize/2, -1, pointSize, 3);
