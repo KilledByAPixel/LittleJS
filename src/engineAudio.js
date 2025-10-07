@@ -202,6 +202,8 @@ class SoundWave extends Sound
     async loadSound(filename)
     {
         const response = await fetch(filename);
+        if (!response.ok)
+            throw new Error(`Failed to load sound from ${filename}: ${response.status} ${response.statusText}`);
         const arrayBuffer = await response.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
         

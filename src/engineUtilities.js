@@ -231,6 +231,8 @@ function formatTime(t)
 async function fetchJSON(url)
 {
     const response = await fetch(url);
+    if (!response.ok)
+        throw new Error(`Failed to fetch JSON from ${url}: ${response.status} ${response.statusText}`);
     return response.json();
 }
 
