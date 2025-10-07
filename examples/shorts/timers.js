@@ -1,4 +1,5 @@
 let timerButton, timerSlider;
+let timerSound = new Sound([2,0,999,,,,,1.5,,.3,-99,.1,1.63,,,.11]);
 
 function gameInit()
 {
@@ -13,13 +14,16 @@ function gameInit()
     timerButton.timer = new Timer;
     timerButton.onClick = ()=>
     {
+        timerButton.isSet = true;
         if (timerButton.timer.isSet())
         {
+            timerSound.play(0, .5, 2);
             timerButton.timer.unset();
             timerButton.text = 'Start';
         }
         else
         {
+            timerSound.play(0, .5, .5);
             timerButton.timer.set(3);
             timerButton.text = 'Stop';
         }
@@ -30,6 +34,12 @@ function gameInit()
     timerSlider.interactive = false;
     timerSlider.update = ()=>
     {
+        if (timerButton.isSet && timerButton.timer.elapsed())
+        {
+            timerSound.play();
+            timerButton.isSet = 0;
+        }
+
         // update the timer display
         const t = timerButton.timer.get();
         const timeText = t.toFixed(2) + 's';
