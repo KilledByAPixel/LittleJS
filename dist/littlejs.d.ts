@@ -2201,7 +2201,7 @@ declare module "littlejsengine" {
         update(): void;
         /** Render the object, draws a tile by default, automatically called each frame, sorted by renderOrder */
         render(): void;
-        /** Destroy this object, destroy its children, detach it's parent, and mark it for removal */
+        /** Destroy this object, destroy its children, detach its parent, and mark it for removal */
         destroy(): void;
         destroyed: number;
         /** Convert from local space to world space

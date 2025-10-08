@@ -169,7 +169,7 @@ class Ball extends LJS.EngineObject
 }
 ```
 
-Then we just need to create the ball in gameInit, passing in the camera position for it’s location.
+Then we just need to create the ball in gameInit, passing in the camera position for its location.
 
 ```javascript
 {
@@ -186,7 +186,7 @@ You may have noticed that the ball goes right through the paddle and bricks. To 
 this.setCollision(); // make object collide
 ```
 
-Now the ball collides but unfortunately also pushes the paddle away, not quite what we want. To prevent the paddle from being moved by physics we will make it use static physics by setting it’s mass to 0 in the paddle constructor.
+Now the ball collides but unfortunately also pushes the paddle away, not quite what we want. To prevent the paddle from being moved by physics we will make it use static physics by setting its mass to 0 in the paddle constructor.
 
 ```javascript
 this.mass = 0; // make object have static physics
@@ -202,7 +202,7 @@ this.restitution = 1; // make object bounce
 
 It works! The ball now bounces off the paddle, still not the walls or blocks yet though.
 
-Before we continue, let’s make the ball a bit smaller by changing the super call in it’s constructor.
+Before we continue, let’s make the ball a bit smaller by changing the super call in its constructor.
 
 ```javascript
 super(pos, vec2(.5)); // set object position and size
@@ -343,7 +343,7 @@ LJS.drawTextScreen('Score ' + score, vec2(LJS.mainCanvasSize.x/2, 70), 50); // s
 
 ## Add Sound Effects
 
-So far the game is completely silent. Let’s add sounds using ZzFX. This is a tiny sound effect generator that works in conjunction with LittleJS and can be used on it’s own too.
+So far the game is completely silent. Let’s add sounds using ZzFX. This is a tiny sound effect generator that works in conjunction with LittleJS and can be used on its own too.
 
 We will start with the ball bounce sound. [You can use the official ZzFX sound designer to create your own sound.](https://killedbyapixel.github.io/ZzFX/) I recommend using the Blip preset for this one.
 

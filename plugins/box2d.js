@@ -64,7 +64,7 @@ class Box2dObject extends EngineObject
         this.lineColor = BLACK;
     }
 
-    /** Destroy this object and it's physics body */
+    /** Destroy this object and its physics body */
     destroy()
     {
         // destroy physics body, fixtures, and joints
