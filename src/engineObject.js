@@ -328,7 +328,7 @@ class EngineObject
         drawTile(this.pos, this.drawSize || this.size, this.tileInfo, this.color, this.angle, this.mirror, this.additiveColor);
     }
 
-    /** Destroy this object, destroy its children, detach it's parent, and mark it for removal */
+    /** Destroy this object, destroy its children, detach its parent, and mark it for removal */
     destroy()
     {
         if (this.destroyed)

@@ -363,7 +363,7 @@ class Particle extends EngineObject
 
         if (p1 === 1)
         {
-            // destroy particle when it's time runs out
+            // destroy particle when its time runs out
             this.destroyCallback && this.destroyCallback(this);
             this.destroyed = 1;
         }
