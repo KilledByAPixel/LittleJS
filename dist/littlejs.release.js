@@ -5347,6 +5347,7 @@ class TileLayer extends CanvasLayer
      *  @param {boolean}       [redraw] - Force the tile to redraw if true */
     setData(layerPos, data, redraw=false)
     {
+        ASSERT(data instanceof TileLayerData, 'data must be a TileLayerData');
         if (layerPos.arrayCheck(this.size))
         {
             this.data[(layerPos.y|0)*this.size.x+layerPos.x|0] = data;
