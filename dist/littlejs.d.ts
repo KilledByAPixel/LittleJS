@@ -949,9 +949,10 @@ declare module "littlejsengine" {
          * @param {number} angle
          * @return {Vector2} */
         rotate(angle: number): Vector2;
-        /** Set the integer direction of this vector, corresponding to multiples of 90 degree rotation (0-3)
+        /** Sets this this vector to point in the specified integer direction (0-3), corresponding to multiples of 90 degree rotation
          * @param {number} [direction]
-         * @param {number} [length] */
+         * @param {number} [length]
+         * @return {Vector2} */
         setDirection(direction?: number, length?: number): Vector2;
         /** Returns the integer direction of this vector, corresponding to multiples of 90 degree rotation (0-3)
          * @return {number} */
@@ -2201,7 +2202,7 @@ declare module "littlejsengine" {
         update(): void;
         /** Render the object, draws a tile by default, automatically called each frame, sorted by renderOrder */
         render(): void;
-        /** Destroy this object, destroy its children, detach it's parent, and mark it for removal */
+        /** Destroy this object, destroy its children, detach its parent, and mark it for removal */
         destroy(): void;
         destroyed: number;
         /** Convert from local space to world space

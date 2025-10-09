@@ -1078,7 +1078,7 @@ function debugRender()
                 p.fill && overlayContext.fill();
                 overlayContext.stroke();
             }
-            else if (p.size === 0 || p.size.x === 0 && p.size.y === 0)
+            else if (p.size === 0 || (p.size.x === 0 && p.size.y === 0))
             {
                 // point
                 overlayContext.fillRect(-pointSize/2, -1, pointSize, 3);
@@ -1515,6 +1515,8 @@ function formatTime(t)
 async function fetchJSON(url)
 {
     const response = await fetch(url);
+    if (!response.ok)
+        throw new Error(`Failed to fetch JSON from ${url}: ${response.status} ${response.statusText}`);
     return response.json();
 }
 
@@ -1823,9 +1825,10 @@ class Vector2
         return new Vector2(this.x*c - this.y*s, this.x*s + this.y*c);
     }
 
-    /** Set the integer direction of this vector, corresponding to multiples of 90 degree rotation (0-3)
+    /** Sets this this vector to point in the specified integer direction (0-3), corresponding to multiples of 90 degree rotation
      * @param {number} [direction]
-     * @param {number} [length] */
+     * @param {number} [length]
+     * @return {Vector2} */
     setDirection(direction, length=1)
     {
         ASSERT_NUMBER_VALID(direction);
@@ -1833,8 +1836,10 @@ class Vector2
         direction = mod(direction, 4);
         ASSERT(direction===0 || direction===1 || direction===2 || direction===3,
             'Vector2.setDirection() direction must be an integer between 0 and 3.');
-        return vec2(direction%2 ? direction-1 ? -length : length : 0,
-            direction%2 ? 0 : direction ? -length : length);
+        
+        this.x = direction%2 ? direction-1 ? -length : length : 0;
+        this.y = direction%2 ? 0 : direction ? -length : length;
+        return this;
     }
 
     /** Returns the integer direction of this vector, corresponding to multiples of 90 degree rotation (0-3)
@@ -3165,7 +3170,7 @@ class EngineObject
         drawTile(this.pos, this.drawSize || this.size, this.tileInfo, this.color, this.angle, this.mirror, this.additiveColor);
     }
 
-    /** Destroy this object, destroy its children, detach it's parent, and mark it for removal */
+    /** Destroy this object, destroy its children, detach its parent, and mark it for removal */
     destroy()
     {
         if (this.destroyed)
@@ -5083,6 +5088,8 @@ class SoundWave extends Sound
     async loadSound(filename)
     {
         const response = await fetch(filename);
+        if (!response.ok)
+            throw new Error(`Failed to load sound from ${filename}: ${response.status} ${response.statusText}`);
         const arrayBuffer = await response.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
         
@@ -6531,7 +6538,7 @@ class Particle extends EngineObject
 
         if (p1 === 1)
         {
-            // destroy particle when it's time runs out
+            // destroy particle when its time runs out
             this.destroyCallback && this.destroyCallback(this);
             this.destroyed = 1;
         }
@@ -8596,7 +8603,7 @@ class Box2dObject extends EngineObject
         this.lineColor = BLACK;
     }
 
-    /** Destroy this object and it's physics body */
+    /** Destroy this object and its physics body */
     destroy()
     {
         // destroy physics body, fixtures, and joints
