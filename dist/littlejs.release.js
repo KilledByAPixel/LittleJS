@@ -2319,8 +2319,8 @@ class EngineObject
     constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color=WHITE, renderOrder=0)
     {
         // check passed in params
-        ASSERT(isVector2(pos), 'object pos should be a vec2');
-        ASSERT(isVector2(size), 'object size should be a vec2');
+        ASSERT(isVector2(pos), 'object pos must be a vec2');
+        ASSERT(isVector2(size), 'object size must be a vec2');
         ASSERT(!tileInfo || tileInfo instanceof TileInfo, 'object tileInfo should be a TileInfo or undefined');
         ASSERT(typeof angle === 'number' && isFinite(angle), 'object angle should be a number');
         ASSERT(isColor(color), 'object color should be a valid rgba color');
@@ -2679,6 +2679,8 @@ class EngineObject
     addChild(child, localPos=vec2(), localAngle=0)
     {
         ASSERT(!child.parent && !this.children.includes(child));
+        ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
+        ASSERT(child !== this, 'cannot add self as child');
         this.children.push(child);
         child.parent = this;
         child.localPos = localPos.copy();
@@ -2690,6 +2692,7 @@ class EngineObject
     removeChild(child)
     {
         ASSERT(child.parent === this && this.children.includes(child));
+        ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
         this.children.splice(this.children.indexOf(child), 1);
         child.parent = 0;
     }
@@ -5166,6 +5169,7 @@ class CanvasLayer extends EngineObject
     */
     constructor(position, size, angle=0, renderOrder=0, canvasSize=vec2(512))
     {
+        ASSERT(isVector2(canvasSize), 'canvasSize must be a Vector2');
         super(position, size, undefined, angle, WHITE, renderOrder);
 
         /** @property {HTMLCanvasElement} - The canvas used by this layer */
@@ -5309,8 +5313,8 @@ class TileLayer extends CanvasLayer
     constructor(position, size, tileInfo=tile(), renderOrder=0, useWebGL=glEnable)
     {
         super(position, size, 0, renderOrder, size);
+        
         this.tileInfo = tileInfo;
-
         const canvasSize = size.multiply(tileInfo.size);
         /** @property {HTMLCanvasElement} - The canvas used by this tile layer */
         this.canvas = new OffscreenCanvas(canvasSize.x, canvasSize.y);
@@ -5347,6 +5351,7 @@ class TileLayer extends CanvasLayer
      *  @param {boolean}       [redraw] - Force the tile to redraw if true */
     setData(layerPos, data, redraw=false)
     {
+        ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
         ASSERT(data instanceof TileLayerData, 'data must be a TileLayerData');
         if (layerPos.arrayCheck(this.size))
         {
@@ -5359,7 +5364,10 @@ class TileLayer extends CanvasLayer
      *  @param {Vector2} layerPos - Local position in array
      *  @return {TileLayerData} */
     getData(layerPos)
-    { return layerPos.arrayCheck(this.size) && this.data[(layerPos.y|0)*this.size.x+layerPos.x|0]; }
+    { 
+        ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
+        return layerPos.arrayCheck(this.size) && this.data[(layerPos.y|0)*this.size.x+layerPos.x|0]; 
+    }
 
     // Render the tile layer, called automatically by the engine
     render()
@@ -5505,6 +5513,7 @@ class TileCollisionLayer extends TileLayer
     *  @param {Vector2} size - width and height of tile collision 2d grid */
     initCollision(size)
     {
+        ASSERT(isVector2(size), 'size must be a Vector2');
         this.size = size.floor();
         this.collisionData = [];
         this.collisionData.length = size.area();
@@ -5516,6 +5525,7 @@ class TileCollisionLayer extends TileLayer
     *  @param {number}  [data] */
     setCollisionData(gridPos, data=1)
     {
+        ASSERT(isVector2(gridPos), 'gridPos must be a Vector2');
         const i = (gridPos.y|0)*this.size.x + gridPos.x|0;
         gridPos.arrayCheck(this.size) && (this.collisionData[i] = data);
     }
@@ -5525,6 +5535,7 @@ class TileCollisionLayer extends TileLayer
     *  @return {number} */
     getCollisionData(gridPos)
     {
+        ASSERT(isVector2(gridPos), 'gridPos must be a Vector2');
         const i = (gridPos.y|0)*this.size.x + gridPos.x|0;
         return gridPos.arrayCheck(this.size) ? this.collisionData[i] : 0;
     }
@@ -5536,6 +5547,9 @@ class TileCollisionLayer extends TileLayer
     *  @return {boolean} */
     collisionTest(pos, size=new Vector2, object)
     {
+        ASSERT(isVector2(pos) && isVector2(size), 'pos and size must be Vector2s');
+        ASSERT(!object || object instanceof EngineObject, 'object must be an EngineObject');
+        
         // transform to local layer space
         const posX = pos.x - this.pos.x;
         const posY = pos.y - this.pos.y;
@@ -5566,6 +5580,9 @@ class TileCollisionLayer extends TileLayer
     *  @return {Vector2} */
     collisionRaycast(posStart, posEnd, object)
     {
+        ASSERT(isVector2(posStart) && isVector2(posEnd), 'positions must be Vector2s');
+        ASSERT(!object || object instanceof EngineObject, 'object must be an EngineObject');
+        
         // transform to local layer space
         const posStartX = posStart.x - this.pos.x;
         const posStartY = posStart.y - this.pos.y;
