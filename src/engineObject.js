@@ -42,8 +42,8 @@ class EngineObject
     constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color=WHITE, renderOrder=0)
     {
         // check passed in params
-        ASSERT(isVector2(pos), 'object pos should be a vec2');
-        ASSERT(isVector2(size), 'object size should be a vec2');
+        ASSERT(isVector2(pos), 'object pos must be a vec2');
+        ASSERT(isVector2(size), 'object size must be a vec2');
         ASSERT(!tileInfo || tileInfo instanceof TileInfo, 'object tileInfo should be a TileInfo or undefined');
         ASSERT(typeof angle === 'number' && isFinite(angle), 'object angle should be a number');
         ASSERT(isColor(color), 'object color should be a valid rgba color');
@@ -402,6 +402,8 @@ class EngineObject
     addChild(child, localPos=vec2(), localAngle=0)
     {
         ASSERT(!child.parent && !this.children.includes(child));
+        ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
+        ASSERT(child !== this, 'cannot add self as child');
         this.children.push(child);
         child.parent = this;
         child.localPos = localPos.copy();
@@ -413,6 +415,7 @@ class EngineObject
     removeChild(child)
     {
         ASSERT(child.parent === this && this.children.includes(child));
+        ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
         this.children.splice(this.children.indexOf(child), 1);
         child.parent = 0;
     }
