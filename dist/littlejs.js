@@ -900,7 +900,9 @@ function debugSaveDataURL(dataURL, filename)
     downloadLink.click();
 }
 
-/** Show error as full page of red text
+/** Breaks on all asserts/errors, hides the canvas, and shows message in plain text
+ *  This is a good function to call at the start of your game to catch all errors
+ *  In release builds this function has no effect
  *  @memberof Debug */
 function debugShowErrors()
 {
@@ -909,7 +911,6 @@ function debugShowErrors()
         // replace entire page with error message
         document.body.style = 'background-color:#111;margin:8px';
         document.body.innerHTML = `<pre style=color:#f00;font-size:28px;white-space:pre-wrap>` + message;
-        document.body.appendChild(mainCanvas);
     }
     
     const originalAssert = console.assert;

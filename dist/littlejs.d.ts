@@ -234,7 +234,9 @@ declare module "littlejsengine" {
      *  @param {string}     filename
      *  @memberof Debug */
     export function debugSaveDataURL(dataURL: string, filename: string): void;
-    /** Show error as full page of red text
+    /** Breaks on all asserts/errors, hides the canvas, and shows message in plain text
+     *  This is a good function to call at the start of your game to catch all errors
+     *  In release builds this function has no effect
      *  @memberof Debug */
     export function debugShowErrors(): void;
     /** Check if video capture is active

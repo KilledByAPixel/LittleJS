@@ -900,7 +900,9 @@ function debugSaveDataURL(dataURL, filename)
     downloadLink.click();
 }
 
-/** Show error as full page of red text
+/** Breaks on all asserts/errors, hides the canvas, and shows message in plain text
+ *  This is a good function to call at the start of your game to catch all errors
+ *  In release builds this function has no effect
  *  @memberof Debug */
 function debugShowErrors()
 {
@@ -909,17 +911,8 @@ function debugShowErrors()
         // replace entire page with error message
         document.body.style = 'background-color:#111;margin:8px';
         document.body.innerHTML = `<pre style=color:#f00;font-size:28px;white-space:pre-wrap>` + message;
-
-        const canvasStyle = 'border:0;position:static;transform:none;width:20%;height:20%;border:1px solid #888;margin-top:8px';
-        overlayCanvas.style =canvasStyle;
-        mainCanvas.style =canvasStyle;
-        glCanvas.style = canvasStyle;
-        document.body.appendChild(overlayCanvas);
-        document.body.appendChild(mainCanvas);
-        document.body.appendChild(glCanvas);
     }
     
-    // intercept console.assert to show errors on page
     const originalAssert = console.assert;
     console.assert = (assertion, ...output)=>
     {
@@ -930,9 +923,7 @@ function debugShowErrors()
             const stack = new Error().stack;
             throw 'Assertion failed!\n' + message + '\n' + stack;
         }
-        
     };
-    
     onunhandledrejection = (event)=>
         showError(event.reason.stack || event.reason);
     onerror = (message, source, lineno, colno)=>
