@@ -34,18 +34,18 @@
 class EngineObject
 {
     /** Create an engine object and adds it to the list of objects
-     *  @param {Vector2}  [pos=(0,0)]       - World space position of the object
-     *  @param {Vector2}  [size=(1,1)]      - World space size of the object
-     *  @param {TileInfo} [tileInfo]        - Tile info to render object (undefined is untextured)
-     *  @param {number}   [angle]           - Angle the object is rotated by
-     *  @param {Color}    [color=(1,1,1,1)] - Color to apply to tile when rendered
-     *  @param {number}   [renderOrder]     - Objects sorted by renderOrder before being rendered
+     *  @param {Vector2}  [pos=(0,0)]   - World space position of the object
+     *  @param {Vector2}  [size=(1,1)]  - World space size of the object
+     *  @param {TileInfo} [tileInfo]    - Tile info to render object (undefined is untextured)
+     *  @param {number}   [angle]       - Angle the object is rotated by
+     *  @param {Color}    [color=WHITE] - Color to apply to tile when rendered
+     *  @param {number}   [renderOrder] - Objects sorted by renderOrder before being rendered
      */
-    constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color=new Color, renderOrder=0)
+    constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color=WHITE, renderOrder=0)
     {
         // check passed in params
-        ASSERT(isVector2(pos), 'object pos should be a vec2');
-        ASSERT(isVector2(size), 'object size should be a vec2');
+        ASSERT(isVector2(pos), 'object pos must be a vec2');
+        ASSERT(isVector2(size), 'object size must be a vec2');
         ASSERT(!tileInfo || tileInfo instanceof TileInfo, 'object tileInfo should be a TileInfo or undefined');
         ASSERT(typeof angle === 'number' &amp;&amp; isFinite(angle), 'object angle should be a number');
         ASSERT(isColor(color), 'object color should be a valid rgba color');
@@ -330,7 +330,7 @@ class EngineObject
         drawTile(this.pos, this.drawSize || this.size, this.tileInfo, this.color, this.angle, this.mirror, this.additiveColor);
     }
 
-    /** Destroy this object, destroy its children, detach it's parent, and mark it for removal */
+    /** Destroy this object, destroy its children, detach its parent, and mark it for removal */
     destroy()
     {
         if (this.destroyed)
@@ -404,6 +404,8 @@ class EngineObject
     addChild(child, localPos=vec2(), localAngle=0)
     {
         ASSERT(!child.parent &amp;&amp; !this.children.includes(child));
+        ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
+        ASSERT(child !== this, 'cannot add self as child');
         this.children.push(child);
         child.parent = this;
         child.localPos = localPos.copy();
@@ -415,6 +417,7 @@ class EngineObject
     removeChild(child)
     {
         ASSERT(child.parent === this &amp;&amp; this.children.includes(child));
+        ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
         this.children.splice(this.children.indexOf(child), 1);
         child.parent = 0;
     }

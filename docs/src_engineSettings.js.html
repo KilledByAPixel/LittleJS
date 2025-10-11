@@ -224,6 +224,12 @@ let touchGamepadEnable = false;
  *  @memberof Settings */
 let touchGamepadAnalog = true;
 
+/** Number of buttons on touch gamepad
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let touchGamepadButtonCount = 4;
+
 /** Size of virtual gamepad for touch devices in pixels
  *  @type {number}
  *  @default
@@ -302,7 +308,7 @@ let medalsPreventUnlock = false;
 /** Set position of camera in world space
  *  @param {Vector2} pos
  *  @memberof Settings */
-function setCameraPos(pos) { cameraPos = pos; }
+function setCameraPos(pos) { cameraPos = pos.copy(); }
 
 /** Set angle of camera in world space
  *  @param {number} angle
@@ -325,17 +331,17 @@ function setCanvasColorTiles(colorTiles) { canvasColorTiles = colorTiles; }
 /** Set color to clear the canvas to before render
  *  @param {Color} color
  *  @memberof Settings */
-function setCanvasClearColor(color) { canvasClearColor = color; }
+function setCanvasClearColor(color) { canvasClearColor = color.copy(); }
 
 /** Set max size of the canvas
  *  @param {Vector2} size
  *  @memberof Settings */
-function setCanvasMaxSize(size) { canvasMaxSize = size; }
+function setCanvasMaxSize(size) { canvasMaxSize = size.copy(); }
 
 /** Set fixed size of the canvas
  *  @param {Vector2} size
  *  @memberof Settings */
-function setCanvasFixedSize(size) { canvasFixedSize = size; }
+function setCanvasFixedSize(size) { canvasFixedSize = size.copy(); }
 
 /** Use nearest scaling algorithm for canvas for more pixelated look
  *  - If enabled sets css image-rendering:pixelated
@@ -400,7 +406,7 @@ function setGLCircleSides(sides) { glCircleSides = sides; }
 /** Set default size of tiles in pixels
  *  @param {Vector2} size
  *  @memberof Settings */
-function setTileSizeDefault(size) { tileSizeDefault = size; }
+function setTileSizeDefault(size) { tileSizeDefault = size.copy(); }
 
 /** Set to prevent tile bleeding from neighbors in pixels
  *  @param {number} scale
@@ -445,7 +451,7 @@ function setObjectMaxSpeed(speed) { objectMaxSpeed = speed; }
 /** Set how much gravity to apply to objects
  *  @param {Vector2} newGravity
  *  @memberof Settings */
-function setGravity(newGravity) { gravity = newGravity; }
+function setGravity(newGravity) { gravity = newGravity.copy(); }
 
 /** Set to scales emit rate of particles
  *  @param {number} scale
@@ -535,7 +541,7 @@ function setMedalDisplaySlideTime(time) { medalDisplaySlideTime = time; }
 /** Set size of medal display
  *  @param {Vector2} size
  *  @memberof Settings */
-function setMedalDisplaySize(size) { medalDisplaySize = size; }
+function setMedalDisplaySize(size) { medalDisplaySize = size.copy(); }
 
 /** Set to stop medals from being unlockable
  *  @param {boolean} preventUnlock

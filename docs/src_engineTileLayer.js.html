@@ -110,6 +110,12 @@ function tileCollisionLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisio
         const tileLayer = new TileCollisionLayer(vec2(), levelSize, tileInfo, layerRenderOrder);
         tileLayers[layerIndex] = tileLayer;
 
+        // apply layer color
+        const layerColor = dataLayer.color || WHITE;
+        if (dataLayer.tintcolor)
+            layerColor.setHex(dataLayer.tintcolor);
+        ASSERT(isColor(layerColor), 'layer color is not a color');
+
         for (let x=levelSize.x; x--;)
         for (let y=levelSize.y; y--;)
         {
@@ -117,7 +123,7 @@ function tileCollisionLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisio
             const data = dataLayer.data[x + y*levelSize.x];
             if (data)
             {
-                const layerData = new TileLayerData(data-1);
+                const layerData = new TileLayerData(data-1, 0, false, layerColor);
                 tileLayer.setData(pos, layerData);
 
                 // set collision for top layer
@@ -185,6 +191,7 @@ class CanvasLayer extends EngineObject
     */
     constructor(position, size, angle=0, renderOrder=0, canvasSize=vec2(512))
     {
+        ASSERT(isVector2(canvasSize), 'canvasSize must be a Vector2');
         super(position, size, undefined, angle, WHITE, renderOrder);
 
         /** @property {HTMLCanvasElement} - The canvas used by this layer */
@@ -311,6 +318,7 @@ class CanvasLayer extends EngineObject
  * - To allow dynamic modifications, layers are rendered using canvas 2d
  * - Some devices like mobile phones are limited to 4k texture resolution
  * - For with 16x16 tiles this limits layers to 256x256 on mobile devices
+ * - Tile layers are centered on their corner, so normal levels are at (0,0)
  * @extends CanvasLayer
  * @example
  * const tileLayer = new TileLayer(vec2(), vec2(200,100));
@@ -321,15 +329,14 @@ class TileLayer extends CanvasLayer
     *  @param {Vector2}  position      - World space position
     *  @param {Vector2}  size          - World space size
     *  @param {TileInfo} [tileInfo]    - Default tile info for layer (used for size and texture)
-    *  @param {Vector2}  [scale=(1,1)] - How much to scale this layer when rendered
     *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
     *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering
     */
-    constructor(position, size, tileInfo=tile(), scale=vec2(1), renderOrder=0, useWebGL=glEnable)
+    constructor(position, size, tileInfo=tile(), renderOrder=0, useWebGL=glEnable)
     {
         super(position, size, 0, renderOrder, size);
+        
         this.tileInfo = tileInfo;
-
         const canvasSize = size.multiply(tileInfo.size);
         /** @property {HTMLCanvasElement} - The canvas used by this tile layer */
         this.canvas = new OffscreenCanvas(canvasSize.x, canvasSize.y);
@@ -366,6 +373,8 @@ class TileLayer extends CanvasLayer
      *  @param {boolean}       [redraw] - Force the tile to redraw if true */
     setData(layerPos, data, redraw=false)
     {
+        ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
+        ASSERT(data instanceof TileLayerData, 'data must be a TileLayerData');
         if (layerPos.arrayCheck(this.size))
         {
             this.data[(layerPos.y|0)*this.size.x+layerPos.x|0] = data;
@@ -377,7 +386,10 @@ class TileLayer extends CanvasLayer
      *  @param {Vector2} layerPos - Local position in array
      *  @return {TileLayerData} */
     getData(layerPos)
-    { return layerPos.arrayCheck(this.size) &amp;&amp; this.data[(layerPos.y|0)*this.size.x+layerPos.x|0]; }
+    { 
+        ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
+        return layerPos.arrayCheck(this.size) &amp;&amp; this.data[(layerPos.y|0)*this.size.x+layerPos.x|0]; 
+    }
 
     // Render the tile layer, called automatically by the engine
     render()
@@ -386,9 +398,10 @@ class TileLayer extends CanvasLayer
 
         // draw the tile layer as a single tile
         const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
-        const pos = this.pos.add(this.size.scale(.5));
+        const size = this.drawSize || this.size;
+        const pos = this.pos.add(size.scale(.5));
         const useWebGL = glEnable &amp;&amp; this.glTexture !== undefined;
-        drawTile(pos, this.size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebGL);
+        drawTile(pos, size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebGL);
     }
 
     /** Draw all the tile data to an offscreen canvas
@@ -492,8 +505,7 @@ class TileCollisionLayer extends TileLayer
     */
     constructor(position, size, tileInfo=tile(), renderOrder=0, useWebGL=glEnable)
     {
-        const scale = vec2(1); // collision layers are not scaled
-        super(position, size.floor(), tileInfo, scale, renderOrder, useWebGL);
+        super(position, size.floor(), tileInfo, renderOrder, useWebGL);
 
         /** @property {Array&lt;number>} - The tile collision grid */
         this.collisionData = [];
@@ -523,6 +535,7 @@ class TileCollisionLayer extends TileLayer
     *  @param {Vector2} size - width and height of tile collision 2d grid */
     initCollision(size)
     {
+        ASSERT(isVector2(size), 'size must be a Vector2');
         this.size = size.floor();
         this.collisionData = [];
         this.collisionData.length = size.area();
@@ -534,6 +547,7 @@ class TileCollisionLayer extends TileLayer
     *  @param {number}  [data] */
     setCollisionData(gridPos, data=1)
     {
+        ASSERT(isVector2(gridPos), 'gridPos must be a Vector2');
         const i = (gridPos.y|0)*this.size.x + gridPos.x|0;
         gridPos.arrayCheck(this.size) &amp;&amp; (this.collisionData[i] = data);
     }
@@ -543,6 +557,7 @@ class TileCollisionLayer extends TileLayer
     *  @return {number} */
     getCollisionData(gridPos)
     {
+        ASSERT(isVector2(gridPos), 'gridPos must be a Vector2');
         const i = (gridPos.y|0)*this.size.x + gridPos.x|0;
         return gridPos.arrayCheck(this.size) ? this.collisionData[i] : 0;
     }
@@ -554,6 +569,9 @@ class TileCollisionLayer extends TileLayer
     *  @return {boolean} */
     collisionTest(pos, size=new Vector2, object)
     {
+        ASSERT(isVector2(pos) &amp;&amp; isVector2(size), 'pos and size must be Vector2s');
+        ASSERT(!object || object instanceof EngineObject, 'object must be an EngineObject');
+        
         // transform to local layer space
         const posX = pos.x - this.pos.x;
         const posY = pos.y - this.pos.y;
@@ -584,6 +602,9 @@ class TileCollisionLayer extends TileLayer
     *  @return {Vector2} */
     collisionRaycast(posStart, posEnd, object)
     {
+        ASSERT(isVector2(posStart) &amp;&amp; isVector2(posEnd), 'positions must be Vector2s');
+        ASSERT(!object || object instanceof EngineObject, 'object must be an EngineObject');
+        
         // transform to local layer space
         const posStartX = posStart.x - this.pos.x;
         const posStartY = posStart.y - this.pos.y;

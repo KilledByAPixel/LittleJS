@@ -18,12 +18,6 @@
  *  @memberof Debug */
 const debug = true;
 
-/** True if asserts are enabled
- *  @type {boolean}
- *  @default
- *  @memberof Debug */
-const enableAsserts = true;
-
 /** Size to render debug points by default
  *  @type {number}
  *  @default
@@ -54,77 +48,86 @@ let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParti
 ///////////////////////////////////////////////////////////////////////////////
 // Debug helper functions
 
-/** Asserts if the expression is false, does not do anything in release builds
+/** Asserts if the expression is false, does nothing in release builds
  *  @param {boolean} assert
  *  @param {...Object} [output] - error message output
  *  @memberof Debug */
-function ASSERT(assert, ...output)
-{
-    if (enableAsserts)
-        console.assert(assert, ...output);
-}
+function ASSERT(assert, ...output) { console.assert(assert, ...output); }
+
+/** Log to console if debug is enabled, does nothing in release builds
+ *  @param {...Object} [output] - message output
+ *  @memberof Debug */
+function LOG(...output) { console.log(...output); }
 
 /** Draw a debug rectangle in world space
  *  @param {Vector2} pos
  *  @param {Vector2} [size=Vector2()]
- *  @param {string}  [color]
- *  @param {number}  [time]
- *  @param {number}  [angle]
+ *  @param {Color|string} [color]
+ *  @param {number} [time]
+ *  @param {number} [angle]
  *  @param {boolean} [fill]
  *  @memberof Debug */
-function debugRect(pos, size=vec2(), color='#fff', time=0, angle=0, fill=false)
+function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false)
 {
     if (typeof size === 'number')
         size = vec2(size); // allow passing in floats
-    ASSERT(typeof color === 'string', 'pass in css color strings');
-    debugPrimitives.push({pos, size, color, time:new Timer(time), angle, fill});
+    if (isColor(color))
+        color = color.toString();
+    pos = pos.copy();
+    size = size.copy();
+    const timer = new Timer(time);
+    debugPrimitives.push({pos:pos.copy(), size:size.copy(), color, timer, angle, fill});
 }
 
 /** Draw a debug poly in world space
  *  @param {Vector2} pos
  *  @param {Array&lt;Vector2>} points
- *  @param {string}  [color]
- *  @param {number}  [time]
- *  @param {number}  [angle]
+ *  @param {Color|string} [color]
+ *  @param {number} [time]
+ *  @param {number} [angle]
  *  @param {boolean} [fill]
  *  @memberof Debug */
-function debugPoly(pos, points, color='#fff', time=0, angle=0, fill=false)
+function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false)
 {
-    ASSERT(typeof color === 'string', 'pass in css color strings');
-    debugPrimitives.push({pos, points, color, time:new Timer(time), angle, fill});
+    if (isColor(color))
+        color = color.toString();
+    pos = pos.copy();
+    points = points.map(p=>p.copy());
+    const timer = new Timer(time);
+    debugPrimitives.push({pos, points, color, timer, angle, fill});
 }
 
 /** Draw a debug circle in world space
  *  @param {Vector2} pos
- *  @param {number}  [size] - diameter
- *  @param {string}  [color]
- *  @param {number}  [time]
+ *  @param {number} [size] - diameter
+ *  @param {Color|string} [color]
+ *  @param {number} [time]
  *  @param {boolean} [fill]
  *  @memberof Debug */
-function debugCircle(pos, size=0, color='#fff', time=0, fill=false)
+function debugCircle(pos, size=0, color=WHITE, time=0, fill=false)
 {
-    ASSERT(typeof color === 'string', 'pass in css color strings');
-    debugPrimitives.push({pos, size, color, time:new Timer(time), angle:0, fill});
+    if (isColor(color))
+        color = color.toString();
+    pos = pos.copy();
+    const timer = new Timer(time);
+    debugPrimitives.push({pos, size, color, timer, angle:0, fill});
 }
 
 /** Draw a debug point in world space
  *  @param {Vector2} pos
- *  @param {string}  [color]
- *  @param {number}  [time]
- *  @param {number}  [angle]
+ *  @param {Color|string} [color]
+ *  @param {number} [time]
+ *  @param {number} [angle]
  *  @memberof Debug */
 function debugPoint(pos, color, time, angle)
-{
-    ASSERT(typeof color === 'string', 'pass in css color strings');
-    debugRect(pos, undefined, color, time, angle);
-}
+{ debugRect(pos, undefined, color, time, angle); }
 
 /** Draw a debug line in world space
  *  @param {Vector2} posA
  *  @param {Vector2} posB
- *  @param {string}  [color]
- *  @param {number}  [width]
- *  @param {number}  [time]
+ *  @param {Color|string} [color]
+ *  @param {number} [width]
+ *  @param {number} [time]
  *  @memberof Debug */
 function debugLine(posA, posB, color, width=.1, time)
 {
@@ -138,7 +141,7 @@ function debugLine(posA, posB, color, width=.1, time)
  *  @param {Vector2} sizeA
  *  @param {Vector2} posB
  *  @param {Vector2} sizeB
- *  @param {string}  [color]
+ *  @param {Color|string} [color]
  *  @memberof Debug */
 function debugOverlap(posA, sizeA, posB, sizeB, color)
 {
@@ -154,18 +157,21 @@ function debugOverlap(posA, sizeA, posB, sizeB, color)
 }
 
 /** Draw a debug axis aligned bounding box in world space
- *  @param {string}  text
+ *  @param {string} text
  *  @param {Vector2} pos
- *  @param {number}  [size]
- *  @param {string}  [color]
- *  @param {number}  [time]
- *  @param {number}  [angle]
- *  @param {string}  [font]
+ *  @param {number} [size]
+ *  @param {Color|string} [color]
+ *  @param {number} [time]
+ *  @param {number} [angle]
+ *  @param {string} [font]
  *  @memberof Debug */
-function debugText(text, pos, size=1, color='#fff', time=0, angle=0, font='monospace')
+function debugText(text, pos, size=1, color=WHITE, time=0, angle=0, font='monospace')
 {
-    ASSERT(typeof color === 'string', 'pass in css color strings');
-    debugPrimitives.push({text, pos, size, color, time:new Timer(time), angle, font});
+    if (isColor(color))
+        color = color.toString();
+    pos = pos.copy();
+    const timer = new Timer(time);
+    debugPrimitives.push({text, pos, size, color, timer, angle, font});
 }
 
 /** Clear all debug primitives in the list
@@ -216,17 +222,30 @@ function debugSaveDataURL(dataURL, filename)
     downloadLink.click();
 }
 
-/** Show error as full page of red text
+/** Breaks on all asserts/errors, hides the canvas, and shows message in plain text
+ *  This is a good function to call at the start of your game to catch all errors
+ *  In release builds this function has no effect
  *  @memberof Debug */
 function debugShowErrors()
 {
     const showError = (message)=>
     {
         // replace entire page with error message
-        document.body.style.display = '';
-        document.body.style.backgroundColor = '#111';
-        document.body.innerHTML = `&lt;pre style=color:#f00;font-size:50px;white-space:pre-wrap>` + message;
+        document.body.style = 'background-color:#111;margin:8px';
+        document.body.innerHTML = `&lt;pre style=color:#f00;font-size:28px;white-space:pre-wrap>` + message;
     }
+    
+    const originalAssert = console.assert;
+    console.assert = (assertion, ...output)=>
+    {
+        originalAssert(assertion, ...output);
+        if (!assertion)
+        {
+            const message = output.join(' ');
+            const stack = new Error().stack;
+            throw 'Assertion failed!\n' + message + '\n' + stack;
+        }
+    };
     onunhandledrejection = (event)=>
         showError(event.reason.stack || event.reason);
     onerror = (message, source, lineno, colno)=>
@@ -394,7 +413,7 @@ function debugRender()
                 p.fill &amp;&amp; overlayContext.fill();
                 overlayContext.stroke();
             }
-            else if (p.size === 0 || p.size.x === 0 &amp;&amp; p.size.y === 0)
+            else if (p.size === 0 || (p.size.x === 0 &amp;&amp; p.size.y === 0))
             {
                 // point
                 overlayContext.fillRect(-pointSize/2, -1, pointSize, 3);
@@ -421,7 +440,7 @@ function debugRender()
         });
 
         // remove expired primitives
-        debugPrimitives = debugPrimitives.filter(r=>r.time&lt;0);
+        debugPrimitives = debugPrimitives.filter(r=>r.timer&lt;0);
     }
 
     if (debugObject)
@@ -457,7 +476,8 @@ function debugRender()
         {
             overlayContext.fillText(`${engineName} v${engineVersion}`, x, y += h/2 );
             overlayContext.fillText('Time: ' + formatTime(time), x, y += h);
-            overlayContext.fillText('FPS: ' + averageFPS.toFixed(1), x, y += h);
+            overlayContext.fillText('FPS: ' + averageFPS.toFixed(1) + (glEnable?' WebGL':' Canvas2D'), 
+                x, y += h);
             overlayContext.fillText('Objects: ' + engineObjects.length, x, y += h);
             overlayContext.fillText('Draw Count: ' + drawCount, x, y += h);
             overlayContext.fillText('---------', x, y += h);
@@ -476,12 +496,18 @@ function debugRender()
             overlayContext.fillText('6: Toggle Video Capture', x, y += h);
 
             let keysPressed = '';
+            let mousePressed = '';
             for (const i in inputData[0])
             {
-                if (keyIsDown(i, 0))
+                if (!keyIsDown(i, 0))
+                    continue;
+                if (parseInt(i) &lt; 3)
+                    mousePressed += i + ' ' ;
+                else if (keyIsDown(i, 0))
                     keysPressed += i + ' ' ;
             }
-            keysPressed &amp;&amp; overlayContext.fillText('Keys Down: ' + keysPressed, x, y += h);
+            mousePressed &amp;&amp; overlayContext.fillText('Mouse: ' + mousePressed, x, y += h);
+            keysPressed &amp;&amp; overlayContext.fillText('Keys: ' + keysPressed, x, y += h);
 
             let buttonsPressed = '';
             if (inputData[1])
@@ -549,7 +575,7 @@ function debugVideoCaptureStart()
     }
 
     // start recording
-    console.log('Video capture started.');
+    LOG('Video capture started.');
     debugVideoCapture.start();
     debugVideoCaptureTimer = new Timer(0);
 
@@ -576,7 +602,7 @@ function debugVideoCaptureStop()
         return; // not recording
 
     // stop recording
-    console.log(`Video capture ended. ${debugVideoCaptureTimer.get().toFixed(2)} seconds recorded.`);
+    LOG(`Video capture ended. ${debugVideoCaptureTimer.get().toFixed(2)} seconds recorded.`);
     debugVideoCapture.stop();
     debugVideoCapture = 0;
     debugVideoCaptureIcon.style.display = 'none';

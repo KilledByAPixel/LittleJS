@@ -52,7 +52,7 @@ class Box2dObject extends EngineObject
      *  @param {Color}    [color]
      *  @param {number}   [bodyType]
      *  @param {number}   [renderOrder] */
-    constructor(pos=vec2(), size, tileInfo, angle=0, color, bodyType=box2d.bodyTypeDynamic, renderOrder=0)
+    constructor(pos, size, tileInfo, angle=0, color, bodyType=box2d.bodyTypeDynamic, renderOrder=0)
     {
         super(pos, size, tileInfo, angle, color, renderOrder);
 
@@ -66,7 +66,7 @@ class Box2dObject extends EngineObject
         this.lineColor = BLACK;
     }
 
-    /** Destroy this object and it's physics body */
+    /** Destroy this object and its physics body */
     destroy()
     {
         // destroy physics body, fixtures, and joints
@@ -1717,7 +1717,7 @@ async function box2dInit()
     }
     function box2dRender()
     {
-        if (box2dDebug || debugPhysics &amp;&amp; debugOverlay)
+        if (box2dDebug || debugPhysics)
             box2d.world.DrawDebugData();
     }
     
