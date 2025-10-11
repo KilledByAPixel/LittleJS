@@ -63,10 +63,12 @@ class UISystemPlugin
         this.uiObjects = [];
         /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - Context to render UI elements to */
         this.uiContext = context;
-        /** @property {UIObject} - Top most object user is over */
-        this.hoverObject = undefined;
         /** @property {UIObject} - Object user is currently interacting with */
         this.activeObject = undefined;
+        /** @property {UIObject} - Top most object user is over */
+        this.hoverObject = undefined;
+        /** @property {UIObject} - Hover object at start of update */
+        this.lastHoverObject = undefined;
             
         engineAddPlugin(uiUpdate, uiRender);
 
@@ -97,6 +99,7 @@ class UISystemPlugin
                     updateInvisibleObject(o);
             }
             // reset hover object at start of update
+            uiSystem.lastHoverObject = uiSystem.hoverObject;
             uiSystem.hoverObject = undefined;
             for (let i = uiSystem.uiObjects.length; i--;)
             {
@@ -279,7 +282,7 @@ class UIObject
     /** Update the object, called automatically by plugin once each frame */
     update()
     {
-        const wasHover = this.isHoverObject();
+        const wasHover = uiSystem.lastHoverObject === this;
         const isActive = this.isActiveObject();
         const mouseDown = mouseIsDown(0);
         const mousePress = this.dragActivate ? mouseDown : mouseWasPressed(0);
@@ -292,15 +295,14 @@ class UIObject
         }
         if (this.isHoverObject())
         {
-            if (mousePress)
-                inputClearKey(0,0,0,1,0); // clear mouse was pressed state
             if (!this.disabled)
             {
                 if (mousePress)
                 {
                     if (this.interactive)
                     {
-                        this.onPress();
+                        if (!this.dragActivate || (!wasHover || mouseWasPressed(0)))
+                            this.onPress();
                         if (this.soundPress)
                             this.soundPress.play();
                         if (uiSystem.activeObject && !isActive)
@@ -308,13 +310,15 @@ class UIObject
                         uiSystem.activeObject = this;
                     }
                 }
-                if (!mouseDown && uiSystem.activeObject === this && this.interactive)
+                if (!mouseDown && this.isActiveObject() && this.interactive)
                 {
                     this.onClick();
                     if (this.soundClick)
                         this.soundClick.play();
                 }
             }
+            // clear mouse was pressed state even when disabled
+            mousePress && inputClearKey(0,0,0,1,0);
         }
         if (isActive)
         if (!mouseDown || (this.dragActivate && !this.isHoverObject()))
@@ -325,6 +329,7 @@ class UIObject
             uiSystem.activeObject = undefined;
         }
 
+        // call enter/leave events
         if (this.isHoverObject() !== wasHover)
             this.isHoverObject() ? this.onEnter() : this.onLeave();
     }
