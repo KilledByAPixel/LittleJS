@@ -42,8 +42,8 @@ class UISequencerButton extends UIButton
         }
         else
             this.sound = [sound_drumKick, sound_drumHat][track];
-        this.defaultColor = hsl(hue,.1,.3);
-        this.activeColor = hsl(hue,1,.5);
+        this.defaultColor = hsl(hue,.1,.2);
+        this.activeColor = hsl(hue,1,.6);
     }
     onPress()
     {
