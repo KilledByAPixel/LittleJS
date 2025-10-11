@@ -83,7 +83,7 @@ let drawCount;
  * Create a tile info object using a grid based system
  * - This can take vecs or floats for easier use and conversion
  * - If an index is passed in, the tile size and index will determine the position
- * @param {Vector2|number} [pos=0] - Index of tile in sheet
+ * @param {Vector2|number} [pos=0] - Position of the tile in pixels, or tile index
  * @param {Vector2|number} [size=tileSizeDefault] - Size of tile in pixels
  * @param {number} [textureIndex] - Texture index to use
  * @param {number} [padding] - How many pixels padding around tiles
