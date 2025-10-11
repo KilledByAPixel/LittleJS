@@ -1024,6 +1024,7 @@ function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear=false)
 /**
  * Seeded random number generator
  * - Can be used to create a deterministic random number sequence
+ * @memberof Engine
  * @example
  * let r = new RandomGenerator(123); // random number generator with seed 123
  * let a = r.float();                // random value between 0 and 1
@@ -1120,6 +1121,7 @@ function ASSERT_VECTOR2_NORMAL(v)
 /**
  * 2D Vector object with vector math library
  * - Functions do not change this so they can be chained together
+ * @memberof Engine
  * @example
  * let a = new Vector2(2, 3); // vector with coordinates (2, 3)
  * let b = new Vector2;       // vector with coordinates (0, 0)
@@ -1370,6 +1372,7 @@ function ASSERT_COLOR_VALID(c) { ASSERT(isColor(c), 'Color is invalid.', c); }
 
 /**
  * Color object (red, green, blue, alpha) with some helpful functions
+ * @memberof Engine
  * @example
  * let a = new Color;              // white
  * let b = new Color(1, 0, 0);     // red
@@ -1660,6 +1663,7 @@ const MAGENTA = rgb(1,0,1);
 
 /**
  * Timer object tracks how long has passed since it was set
+ * @memberof Engine
  * @example
  * let a = new Timer;    // creates a timer that is not set
  * a.set(3);             // sets the timer to 3 seconds
@@ -2301,6 +2305,7 @@ function setDebugKey(key) { debugKey = key; }
  * - Collision for objects can be set to be solid to block other objects
  * - Objects may get pushed into overlapping other solid objects, if so they will push away
  * - Solid objects are more performance intensive and should be used sparingly
+ * @memberof Engine
  * @example
  * // create an engine object, normally you would first extend the class with your own
  * const pos = vec2(2,3);
@@ -2876,6 +2881,7 @@ function tile(pos=new Vector2, size=tileSizeDefault, textureIndex=0, padding=0)
 
 /**
  * Tile Info - Stores info about how to draw a tile
+ * @memberof Draw
  */
 class TileInfo
 {
@@ -2936,7 +2942,10 @@ class TileInfo
     }
 }
 
-/** Texture Info - Stores info about each texture */
+/**
+ * Tile Info - Stores info about each texture
+ * @memberof Draw
+ */
 class TextureInfo
 {
     /**
@@ -3621,6 +3630,7 @@ let engineFontImage;
  * - 96 characters (from space to tilde) are stored in an image
  * - Uses a default 8x8 font if none is supplied
  * - You can also use fonts from the main tile sheet
+ * @memberof Draw
  * @example
  * // use built in font
  * const font = new FontImage;
@@ -4371,6 +4381,7 @@ function audioInit()
  * Sound Object - Stores a sound for later use and can be played positionally
  *
  * <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
+ * @memberof Audio
  * @example
  * // create a sound
  * const sound_example = new Sound([.5,.5]);
@@ -4493,6 +4504,8 @@ class Sound
 /**
  * Sound Wave Object - Stores a wave sound for later use and can be played positionally
  * - this can be used to play wave, mp3, and ogg files
+ * @extends Sound
+ * @memberof Audio
  * @example
  * // create a sound
  * const sound_example = new SoundWave('sound.mp3');
@@ -4572,6 +4585,7 @@ class SoundWave extends Sound
 /** 
  * Sound Instance - Wraps an AudioBufferSourceNode for individual sound control
  * Represents a single playing instance of a sound with pause/resume capabilities
+ * @memberof Audio
  * @example
  * // Play a sound and get an instance for control
  * const jumpSound = new Sound([.5,.5,220]);
@@ -4986,7 +5000,7 @@ function zzfxG
  * - Unlimited numbers of layers, allocates canvases as needed
  * - Tile layers can be drawn to using their context with canvas2d
  * - Tile layers can also have collision with EngineObjects
- * @namespace TileCollision
+ * @namespace TileLayers
  */
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4994,13 +5008,13 @@ function zzfxG
 
 /** Keep track of all tile layers with collision
  *  @type {Array<TileCollisionLayer>}
- *  @memberof TileCollision */
+ *  @memberof TileLayers */
 const tileCollisionLayers = [];
 
 /** Get tile collision data for a given cell in the grid
 *  @param {Vector2} pos
 *  @return {number}
-*  @memberof TileCollision */
+*  @memberof TileLayers */
 function tileCollisionGetData(pos)
 {
     // check all tile collision layers
@@ -5016,7 +5030,7 @@ function tileCollisionGetData(pos)
  *  @param {EngineObject} [object] - An object or undefined for generic test
  *  @param {boolean}      [solidOnly] - Only check solid layers if true
  *  @return {TileCollisionLayer}
- *  @memberof TileCollision */
+ *  @memberof TileLayers */
 function tileCollisionTest(pos, size=vec2(), object, solidOnly=true)
 {
     for (const layer of tileCollisionLayers)
@@ -5034,7 +5048,7 @@ function tileCollisionTest(pos, size=vec2(), object, solidOnly=true)
  *  @param {EngineObject} [object] - An object or undefined for generic test
  *  @param {boolean}      [solidOnly=true] - Only check solid layers if true
  *  @return {Vector2}
- *  @memberof TileCollision */
+ *  @memberof TileLayers */
 function tileCollisionRaycast(posStart, posEnd, object, solidOnly=true)
 {
     for (const layer of tileCollisionLayers)
@@ -5057,7 +5071,7 @@ function tileCollisionRaycast(posStart, posEnd, object, solidOnly=true)
  *  @param {number}   [collisionLayer] - Layer to use for collision if any
  *  @param {boolean}  [draw] - Should the layer be drawn automatically
  *  @return {Array<TileCollisionLayer>}
- *  @memberof TileCollision */
+ *  @memberof TileLayers */
 function tileCollisionLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLayer, draw=true)
 {
     if (!tileMapData)
@@ -5118,6 +5132,7 @@ function tileCollisionLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisio
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * Tile layer data object stores info about how to draw a tile
+ * @memberof TileLayers
  * @example
  * // create tile layer data with tile index 0 and random orientation and color
  * const tileIndex = 0;
@@ -5155,6 +5170,7 @@ class TileLayerData
  * - Contains an offscreen canvas that can be rendered to
  * - WebGL rendering is optional, call useWebGL to enable
  * @extends EngineObject
+ * @memberof TileLayers
  * @example
  * const canvasLayer = new CanvasLayer(vec2(), vec2(200,100));
  */
@@ -5298,6 +5314,7 @@ class CanvasLayer extends EngineObject
  * - For with 16x16 tiles this limits layers to 256x256 on mobile devices
  * - Tile layers are centered on their corner, so normal levels are at (0,0)
  * @extends CanvasLayer
+ * @memberof TileLayers
  * @example
  * const tileLayer = new TileLayer(vec2(), vec2(200,100));
  */
@@ -5471,6 +5488,7 @@ class TileLayer extends CanvasLayer
  * - there can be multiple tile collision layers
  * - tile collision layers should not overlap each other
  * @extends TileLayer
+ * @memberof TileLayers
  */
 class TileCollisionLayer extends TileLayer
 {
@@ -5635,6 +5653,7 @@ class TileCollisionLayer extends TileLayer
 /**
  * Particle Emitter - Spawns particles with the given settings
  * @extends EngineObject
+ * @memberof Engine
  * @example
  * // create a particle emitter
  * let pos = vec2(2,3);
@@ -5870,6 +5889,7 @@ class ParticleEmitter extends EngineObject
 /**
  * Particle Object - Created automatically by Particle Emitters
  * @extends EngineObject
+ * @memberof Engine
  */
 class Particle extends EngineObject
 {
@@ -6066,6 +6086,7 @@ function medalsForEach(callback)
 
 /**
  * Medal - Tracks an unlockable medal
+ * @memberof Medals
  * @example
  * // create a medal
  * const medal_example = new Medal(0, 'Example Medal', 'More info about the medal goes here.', '🎖️');
@@ -6941,24 +6962,25 @@ function glPolyStrip(points)
     return strip;
 }
 /** 
- * LittleJS Newgrounds API
+ * LittleJS Newgrounds Plugin
  * - NewgroundsMedal extends Medal with Newgrounds API functionality
- * - Call new NewgroundsPlugin() to setup Newgrounds
+ * - Call new NewgroundsPlugin(app_id) to setup Newgrounds
  * - Uses CryptoJS for encryption if optional cipher is provided
+ * - provides functions to interact with medals scoreboards
  * - Keeps connection alive and logs views
- * - Functions to interact with scoreboards
- * - Functions to unlock medals
+ * @namespace Newgrounds
  */
 
 /** Global Newgrounds object
  *  @type {NewgroundsPlugin}
- *  @memberof Medal */
+ *  @memberof Newgrounds */
 let newgrounds;
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * Newgrounds medal auto unlocks in newgrounds API
  * @extends Medal
+ * @memberof Newgrounds
  */
 class NewgroundsMedal extends Medal
 {
@@ -6983,6 +7005,7 @@ class NewgroundsMedal extends Medal
 ///////////////////////////////////////////////////////////////////////////////
 /** 
  * Newgrounds API object
+ * @memberof Newgrounds
  */
 class NewgroundsPlugin
 {
@@ -7118,19 +7141,22 @@ class NewgroundsPlugin
 /**
  * LittleJS Post Processing Plugin
  * - Supports shadertoy style post processing shaders
- * - call new new PostProcessPlugin() to setup post processing
+ * - call new PostProcessPlugin() to setup post processing
  * - can be enabled to pass other canvases through a final shader
+ * @namespace PostProcess
  */
 
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Global Post Process plugin object
- *  @type {PostProcessPlugin} */
+ *  @type {PostProcessPlugin}
+ *  @memberof PostProcess */
 let postProcess;
 
 /////////////////////////////////////////////////////////////////////////
 /** 
  * UI System Global Object
+ * @memberof PostProcess
  */
 class PostProcessPlugin
 {
@@ -7238,12 +7264,15 @@ class PostProcessPlugin
 }
 /**
  * LittleJS ZzFXM Plugin
+ * @namespace ZzFXM
  */
 
 /**
  * Music Object - Stores a zzfx music track for later use
  * 
  * <a href=https://keithclark.github.io/ZzFXM/>Create music with the ZzFXM tracker.</a>
+ * @extends Sound
+ * @memberof ZzFXM
  * @example
  * // create some music
  * const music_example = new Music(
@@ -7302,7 +7331,8 @@ class ZzFXMusic extends Sound
  *  @param {Array} patterns - Array of pattern data
  *  @param {Array} sequence - Array of pattern indexes
  *  @param {number} [BPM] - Playback speed of the song in BPM
- *  @return {Array} - Left and right channel sample data */
+ *  @return {Array} - Left and right channel sample data
+ *  @memberof ZzFXM */
 function zzfxM(instruments, patterns, sequence, BPM = 125) 
 {
   let i, j, k;
@@ -7405,17 +7435,20 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
  * - Buttons
  * - Checkboxes
  * - Images
+ * @namespace UISystem
  */
 
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Global UI system plugin object
- *  @type {UISystemPlugin} */
+ *  @type {UISystemPlugin}
+ *  @memberof UISystem */
 let uiSystem;
 
 ///////////////////////////////////////////////////////////////////////////////
 /** 
  * UI System Global Object
+ * @memberof UISystem
  */
 class UISystemPlugin
 {
@@ -7611,7 +7644,7 @@ class UISystemPlugin
 ///////////////////////////////////////////////////////////////////////////////
 /** 
  * UI Object - Base level object for all UI elements
- */
+ * @memberof UISystem */
 class UIObject
 {
     /** Create a UIObject
@@ -7807,6 +7840,7 @@ class UIObject
 /** 
  * UIText - A UI object that displays text
  * @extends UIObject
+ * @memberof UISystem
  */
 class UIText extends UIObject
 {
@@ -7840,6 +7874,7 @@ class UIText extends UIObject
 /** 
  * UITile - A UI object that displays a tile image
  * @extends UIObject
+ * @memberof UISystem
  */
 class UITile extends UIObject
 {
@@ -7873,6 +7908,7 @@ class UITile extends UIObject
 /** 
  * UIButton - A UI object that acts as a button
  * @extends UIObject
+ * @memberof UISystem
  */
 class UIButton extends UIObject
 {
@@ -7906,6 +7942,7 @@ class UIButton extends UIObject
 /** 
  * UICheckbox - A UI object that acts as a checkbox
  * @extends UIObject
+ * @memberof UISystem
  */
 class UICheckbox extends UIObject
 {
@@ -7956,6 +7993,7 @@ class UICheckbox extends UIObject
 /** 
  * UIScrollbar - A UI object that acts as a scrollbar
  * @extends UIObject
+ * @memberof UISystem
  */
 class UIScrollbar extends UIObject
 {
@@ -8055,6 +8093,7 @@ function box2dSetDebug(enable) { box2dDebug = enable; }
  * - Each object has a Box2D body which can have multiple fixtures and joints
  * - Provides interface for Box2D body and fixture functions
  * @extends EngineObject
+ * @memberof Box2D
  */
 class Box2dObject extends EngineObject 
 {
@@ -8564,6 +8603,7 @@ class Box2dRaycastResult
  * Box2D Joint
  * - Base class for Box2D joints 
  * - A joint is used to connect objects together
+ * @memberof Box2D
  */
 class Box2dJoint
 {
@@ -8619,6 +8659,7 @@ class Box2dJoint
  * - This a soft constraint with a max force
  * - This allows the constraint to stretch and without applying huge forces
  * @extends Box2dJoint
+ * @memberof Box2D
  */
 class Box2dTargetJoint extends Box2dJoint
 {
@@ -8668,6 +8709,7 @@ class Box2dTargetJoint extends Box2dJoint
  * - Constrains two points on two objects to remain at a fixed distance
  * - You can view this as a massless, rigid rod
  * @extends Box2dJoint
+ * @memberof Box2D
  */
 class Box2dDistanceJoint extends Box2dJoint
 {
@@ -8731,6 +8773,7 @@ class Box2dDistanceJoint extends Box2dJoint
  * Box2D Pin Joint
  * - Pins two objects together at a point
  * @extends Box2dDistanceJoint
+ * @memberof Box2D
  */
 class Box2dPinJoint extends Box2dDistanceJoint
 {
@@ -8750,6 +8793,7 @@ class Box2dPinJoint extends Box2dDistanceJoint
  * Box2D Rope Joint
  * - Enforces a maximum distance between two points on two objects
  * @extends Box2dJoint
+ * @memberof Box2D
  */
 class Box2dRopeJoint extends Box2dJoint
 {
@@ -8802,6 +8846,7 @@ class Box2dRopeJoint extends Box2dJoint
  * - You can use a motor to drive the relative rotation about the shared point
  * - A maximum motor torque is provided so that infinite forces are not generated
  * @extends Box2dJoint
+ * @memberof Box2D
  */
 class Box2dRevoluteJoint extends Box2dJoint
 {
@@ -8903,6 +8948,7 @@ class Box2dRevoluteJoint extends Box2dJoint
  * - Either joint can be a revolute or prismatic joint
  * - You specify a gear ratio to bind the motions together
  * @extends Box2dJoint
+ * @memberof Box2D
  */
 class Box2dGearJoint extends Box2dJoint
 {
@@ -8951,6 +8997,7 @@ class Box2dGearJoint extends Box2dJoint
  * - You can use a joint limit to restrict the range of motion
  * - You can use a joint motor to drive the motion or to model joint friction
  * @extends Box2dJoint
+ * @memberof Box2D
  */
 class Box2dPrismaticJoint extends Box2dJoint
 {
@@ -9060,6 +9107,7 @@ class Box2dPrismaticJoint extends Box2dJoint
  * - You can use a joint motor to drive the motion or to model joint friction
  * - This joint is designed for vehicle suspensions
  * @extends Box2dJoint
+ * @memberof Box2D
  */
 class Box2dWheelJoint extends Box2dJoint
 {
@@ -9155,6 +9203,7 @@ class Box2dWheelJoint extends Box2dJoint
  * Box2D Weld Joint
  * - Glues two objects together
  * @extends Box2dJoint
+ * @memberof Box2D
  */
 class Box2dWeldJoint extends Box2dJoint
 {
@@ -9213,6 +9262,7 @@ class Box2dWeldJoint extends Box2dJoint
  * - Used to apply top-down friction
  * - Provides 2D translational friction and angular friction
  * @extends Box2dJoint
+ * @memberof Box2D
  */
 class Box2dFrictionJoint extends Box2dJoint
 {
@@ -9267,6 +9317,7 @@ class Box2dFrictionJoint extends Box2dJoint
  * - The pulley supports a ratio such that: length1 + ratio * length2 <= constant
  * - The force transmitted is scaled by the ratio
  * @extends Box2dJoint
+ * @memberof Box2D
  */
 class Box2dPulleyJoint extends Box2dJoint
 {
@@ -9334,6 +9385,7 @@ class Box2dPulleyJoint extends Box2dJoint
  * - Controls the relative motion between two objects
  * - Typical usage is to control the movement of a object with respect to the ground
  * @extends Box2dJoint
+ * @memberof Box2D
  */
 class Box2dMotorJoint extends Box2dJoint
 {
@@ -9397,6 +9449,7 @@ class Box2dMotorJoint extends Box2dJoint
 /** 
  * Box2D Global Object
  * - Wraps Box2d world and provides global functions
+ * @memberof Box2D
  */
 class Box2dPlugin
 {

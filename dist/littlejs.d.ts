@@ -814,6 +814,7 @@ declare module "littlejsengine" {
     /**
      * Seeded random number generator
      * - Can be used to create a deterministic random number sequence
+     * @memberof Engine
      * @example
      * let r = new RandomGenerator(123); // random number generator with seed 123
      * let a = r.float();                // random value between 0 and 1
@@ -861,6 +862,7 @@ declare module "littlejsengine" {
     /**
      * 2D Vector object with vector math library
      * - Functions do not change this so they can be chained together
+     * @memberof Engine
      * @example
      * let a = new Vector2(2, 3); // vector with coordinates (2, 3)
      * let b = new Vector2;       // vector with coordinates (0, 0)
@@ -991,6 +993,7 @@ declare module "littlejsengine" {
     }
     /**
      * Color object (red, green, blue, alpha) with some helpful functions
+     * @memberof Engine
      * @example
      * let a = new Color;              // white
      * let b = new Color(1, 0, 0);     // red
@@ -1084,6 +1087,7 @@ declare module "littlejsengine" {
     }
     /**
      * Timer object tracks how long has passed since it was set
+     * @memberof Engine
      * @example
      * let a = new Timer;    // creates a timer that is not set
      * a.set(3);             // sets the timer to 3 seconds
@@ -1245,6 +1249,7 @@ declare module "littlejsengine" {
     export function tile(pos?: Vector2 | number, size?: Vector2 | number, textureIndex?: number, padding?: number): TileInfo;
     /**
      * Tile Info - Stores info about how to draw a tile
+     * @memberof Draw
      */
     export class TileInfo {
         /** Create a tile info object
@@ -1285,7 +1290,10 @@ declare module "littlejsengine" {
          */
         setFullImage(image: HTMLImageElement | OffscreenCanvas, glTexture?: WebGLTexture): TileInfo;
     }
-    /** Texture Info - Stores info about each texture */
+    /**
+     * Tile Info - Stores info about each texture
+     * @memberof Draw
+     */
     export class TextureInfo {
         /**
          * Create a TextureInfo, called automatically by the engine
@@ -1529,6 +1537,7 @@ declare module "littlejsengine" {
      * - 96 characters (from space to tilde) are stored in an image
      * - Uses a default 8x8 font if none is supplied
      * - You can also use fonts from the main tile sheet
+     * @memberof Draw
      * @example
      * // use built in font
      * const font = new FontImage;
@@ -1879,6 +1888,7 @@ declare module "littlejsengine" {
      * Sound Object - Stores a sound for later use and can be played positionally
      *
      * <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
+     * @memberof Audio
      * @example
      * // create a sound
      * const sound_example = new Sound([.5,.5]);
@@ -1942,6 +1952,8 @@ declare module "littlejsengine" {
     /**
      * Sound Wave Object - Stores a wave sound for later use and can be played positionally
      * - this can be used to play wave, mp3, and ogg files
+     * @extends Sound
+     * @memberof Audio
      * @example
      * // create a sound
      * const sound_example = new SoundWave('sound.mp3');
@@ -1968,6 +1980,7 @@ declare module "littlejsengine" {
     /**
      * Sound Instance - Wraps an AudioBufferSourceNode for individual sound control
      * Represents a single playing instance of a sound with pause/resume capabilities
+     * @memberof Audio
      * @example
      * // Play a sound and get an instance for control
      * const jumpSound = new Sound([.5,.5,220]);
@@ -2127,6 +2140,7 @@ declare module "littlejsengine" {
      * - Collision for objects can be set to be solid to block other objects
      * - Objects may get pushed into overlapping other solid objects, if so they will push away
      * - Solid objects are more performance intensive and should be used sparingly
+     * @memberof Engine
      * @example
      * // create an engine object, normally you would first extend the class with your own
      * const pos = vec2(2,3);
@@ -2270,16 +2284,16 @@ declare module "littlejsengine" {
      * - Unlimited numbers of layers, allocates canvases as needed
      * - Tile layers can be drawn to using their context with canvas2d
      * - Tile layers can also have collision with EngineObjects
-     * @namespace TileCollision
+     * @namespace TileLayers
      */
     /** Keep track of all tile layers with collision
      *  @type {Array<TileCollisionLayer>}
-     *  @memberof TileCollision */
+     *  @memberof TileLayers */
     export const tileCollisionLayers: Array<TileCollisionLayer>;
     /** Get tile collision data for a given cell in the grid
     *  @param {Vector2} pos
     *  @return {number}
-    *  @memberof TileCollision */
+    *  @memberof TileLayers */
     export function tileCollisionGetData(pos: Vector2): number;
     /** Check if a tile layer collides with another object
      *  @param {Vector2}      pos
@@ -2287,7 +2301,7 @@ declare module "littlejsengine" {
      *  @param {EngineObject} [object] - An object or undefined for generic test
      *  @param {boolean}      [solidOnly] - Only check solid layers if true
      *  @return {TileCollisionLayer}
-     *  @memberof TileCollision */
+     *  @memberof TileLayers */
     export function tileCollisionTest(pos: Vector2, size?: Vector2, object?: EngineObject, solidOnly?: boolean): TileCollisionLayer;
     /** Return the center of first tile hit, undefined if nothing was hit.
      *  This does not return the exact intersection, but the center of the tile hit.
@@ -2296,7 +2310,7 @@ declare module "littlejsengine" {
      *  @param {EngineObject} [object] - An object or undefined for generic test
      *  @param {boolean}      [solidOnly=true] - Only check solid layers if true
      *  @return {Vector2}
-     *  @memberof TileCollision */
+     *  @memberof TileLayers */
     export function tileCollisionRaycast(posStart: Vector2, posEnd: Vector2, object?: EngineObject, solidOnly?: boolean): Vector2;
     /**
      * Load tile layers from exported data
@@ -2306,10 +2320,11 @@ declare module "littlejsengine" {
      *  @param {number}   [collisionLayer] - Layer to use for collision if any
      *  @param {boolean}  [draw] - Should the layer be drawn automatically
      *  @return {Array<TileCollisionLayer>}
-     *  @memberof TileCollision */
+     *  @memberof TileLayers */
     export function tileCollisionLoad(tileMapData: any, tileInfo?: TileInfo, renderOrder?: number, collisionLayer?: number, draw?: boolean): Array<TileCollisionLayer>;
     /**
      * Tile layer data object stores info about how to draw a tile
+     * @memberof TileLayers
      * @example
      * // create tile layer data with tile index 0 and random orientation and color
      * const tileIndex = 0;
@@ -2341,6 +2356,7 @@ declare module "littlejsengine" {
      * - Contains an offscreen canvas that can be rendered to
      * - WebGL rendering is optional, call useWebGL to enable
      * @extends EngineObject
+     * @memberof TileLayers
      * @example
      * const canvasLayer = new CanvasLayer(vec2(), vec2(200,100));
      */
@@ -2403,6 +2419,7 @@ declare module "littlejsengine" {
      * - For with 16x16 tiles this limits layers to 256x256 on mobile devices
      * - Tile layers are centered on their corner, so normal levels are at (0,0)
      * @extends CanvasLayer
+     * @memberof TileLayers
      * @example
      * const tileLayer = new TileLayer(vec2(), vec2(200,100));
      */
@@ -2450,6 +2467,7 @@ declare module "littlejsengine" {
      * - there can be multiple tile collision layers
      * - tile collision layers should not overlap each other
      * @extends TileLayer
+     * @memberof TileLayers
      */
     export class TileCollisionLayer extends TileLayer {
         /** @property {Array<number>} - The tile collision grid */
@@ -2485,6 +2503,7 @@ declare module "littlejsengine" {
     /**
      * Particle Emitter - Spawns particles with the given settings
      * @extends EngineObject
+     * @memberof Engine
      * @example
      * // create a particle emitter
      * let pos = vec2(2,3);
@@ -2583,6 +2602,7 @@ declare module "littlejsengine" {
     /**
      * Particle Object - Created automatically by Particle Emitters
      * @extends EngineObject
+     * @memberof Engine
      */
     export class Particle extends EngineObject {
         /**
@@ -2648,6 +2668,7 @@ declare module "littlejsengine" {
     export function medalsInit(saveName: string): void;
     /**
      * Medal - Tracks an unlockable medal
+     * @memberof Medals
      * @example
      * // create a medal
      * const medal_example = new Medal(0, 'Example Medal', 'More info about the medal goes here.', '🎖️');
@@ -2692,20 +2713,21 @@ declare module "littlejsengine" {
         storageKey(): string;
     }
     /**
-     * LittleJS Newgrounds API
+     * LittleJS Newgrounds Plugin
      * - NewgroundsMedal extends Medal with Newgrounds API functionality
-     * - Call new NewgroundsPlugin() to setup Newgrounds
+     * - Call new NewgroundsPlugin(app_id) to setup Newgrounds
      * - Uses CryptoJS for encryption if optional cipher is provided
+     * - provides functions to interact with medals scoreboards
      * - Keeps connection alive and logs views
-     * - Functions to interact with scoreboards
-     * - Functions to unlock medals
+     * @namespace Newgrounds
      */
     /** Global Newgrounds object
      *  @type {NewgroundsPlugin}
-     *  @memberof Medal */
+     *  @memberof Newgrounds */
     export let newgrounds: NewgroundsPlugin;
     /**
      * Newgrounds API object
+     * @memberof Newgrounds
      */
     export class NewgroundsPlugin {
         /** Create the global newgrounds object
@@ -2754,20 +2776,24 @@ declare module "littlejsengine" {
     /**
      * Newgrounds medal auto unlocks in newgrounds API
      * @extends Medal
+     * @memberof Newgrounds
      */
     export class NewgroundsMedal extends Medal {
     }
     /**
      * LittleJS Post Processing Plugin
      * - Supports shadertoy style post processing shaders
-     * - call new new PostProcessPlugin() to setup post processing
+     * - call new PostProcessPlugin() to setup post processing
      * - can be enabled to pass other canvases through a final shader
+     * @namespace PostProcess
      */
     /** Global Post Process plugin object
-     *  @type {PostProcessPlugin} */
+     *  @type {PostProcessPlugin}
+     *  @memberof PostProcess */
     export let postProcess: PostProcessPlugin;
     /**
      * UI System Global Object
+     * @memberof PostProcess
      */
     export class PostProcessPlugin {
         /** Create global post processing shader
@@ -2787,11 +2813,14 @@ declare module "littlejsengine" {
     }
     /**
      * LittleJS ZzFXM Plugin
+     * @namespace ZzFXM
      */
     /**
      * Music Object - Stores a zzfx music track for later use
      *
      * <a href=https://keithclark.github.io/ZzFXM/>Create music with the ZzFXM tracker.</a>
+     * @extends Sound
+     * @memberof ZzFXM
      * @example
      * // create some music
      * const music_example = new Music(
@@ -2839,12 +2868,15 @@ declare module "littlejsengine" {
      * - Buttons
      * - Checkboxes
      * - Images
+     * @namespace UISystem
      */
     /** Global UI system plugin object
-     *  @type {UISystemPlugin} */
+     *  @type {UISystemPlugin}
+     *  @memberof UISystem */
     export let uiSystem: UISystemPlugin;
     /**
      * UI System Global Object
+     * @memberof UISystem
      */
     export class UISystemPlugin {
         /** Create the global UI system object
@@ -2933,7 +2965,7 @@ declare module "littlejsengine" {
     }
     /**
      * UI Object - Base level object for all UI elements
-     */
+     * @memberof UISystem */
     export class UIObject {
         /** Create a UIObject
          *  @param {Vector2}  [pos=(0,0)]
@@ -3030,6 +3062,7 @@ declare module "littlejsengine" {
     /**
      * UIText - A UI object that displays text
      * @extends UIObject
+     * @memberof UISystem
      */
     export class UIText extends UIObject {
         /** Create a UIText object
@@ -3046,6 +3079,7 @@ declare module "littlejsengine" {
     /**
      * UITile - A UI object that displays a tile image
      * @extends UIObject
+     * @memberof UISystem
      */
     export class UITile extends UIObject {
         /** Create a UITile object
@@ -3067,6 +3101,7 @@ declare module "littlejsengine" {
     /**
      * UIButton - A UI object that acts as a button
      * @extends UIObject
+     * @memberof UISystem
      */
     export class UIButton extends UIObject {
         /** Create a UIButton object
@@ -3081,6 +3116,7 @@ declare module "littlejsengine" {
     /**
      * UICheckbox - A UI object that acts as a checkbox
      * @extends UIObject
+     * @memberof UISystem
      */
     export class UICheckbox extends UIObject {
         /** Create a UICheckbox object
@@ -3098,6 +3134,7 @@ declare module "littlejsengine" {
     /**
      * UIScrollbar - A UI object that acts as a scrollbar
      * @extends UIObject
+     * @memberof UISystem
      */
     export class UIScrollbar extends UIObject {
         /** Create a UIScrollbar object
@@ -3152,6 +3189,7 @@ declare module "littlejsengine" {
     /**
      * Box2D Global Object
      * - Wraps Box2d world and provides global functions
+     * @memberof Box2D
      */
     export class Box2dPlugin {
         /** Create the global UI system object
@@ -3231,6 +3269,7 @@ declare module "littlejsengine" {
      * - Each object has a Box2D body which can have multiple fixtures and joints
      * - Provides interface for Box2D body and fixture functions
      * @extends EngineObject
+     * @memberof Box2D
      */
     export class Box2dObject extends EngineObject {
         /** Create a LittleJS object with Box2d physics
@@ -3460,6 +3499,7 @@ declare module "littlejsengine" {
      * Box2D Joint
      * - Base class for Box2D joints
      * - A joint is used to connect objects together
+     * @memberof Box2D
      */
     export class Box2dJoint {
         /** Create a box2d joint, the base class is not intended to be used directly
@@ -3501,6 +3541,7 @@ declare module "littlejsengine" {
      * - This a soft constraint with a max force
      * - This allows the constraint to stretch and without applying huge forces
      * @extends Box2dJoint
+     * @memberof Box2D
      */
     export class Box2dTargetJoint extends Box2dJoint {
         /** Create a target joint
@@ -3532,6 +3573,7 @@ declare module "littlejsengine" {
      * - Constrains two points on two objects to remain at a fixed distance
      * - You can view this as a massless, rigid rod
      * @extends Box2dJoint
+     * @memberof Box2D
      */
     export class Box2dDistanceJoint extends Box2dJoint {
         /** Create a distance joint
@@ -3570,6 +3612,7 @@ declare module "littlejsengine" {
      * Box2D Pin Joint
      * - Pins two objects together at a point
      * @extends Box2dDistanceJoint
+     * @memberof Box2D
      */
     export class Box2dPinJoint extends Box2dDistanceJoint {
         /** Create a pin joint
@@ -3583,6 +3626,7 @@ declare module "littlejsengine" {
      * Box2D Rope Joint
      * - Enforces a maximum distance between two points on two objects
      * @extends Box2dJoint
+     * @memberof Box2D
      */
     export class Box2dRopeJoint extends Box2dJoint {
         /** Create a rope joint
@@ -3614,6 +3658,7 @@ declare module "littlejsengine" {
      * - You can use a motor to drive the relative rotation about the shared point
      * - A maximum motor torque is provided so that infinite forces are not generated
      * @extends Box2dJoint
+     * @memberof Box2D
      */
     export class Box2dRevoluteJoint extends Box2dJoint {
         /** Create a revolute joint
@@ -3682,6 +3727,7 @@ declare module "littlejsengine" {
      * - Either joint can be a revolute or prismatic joint
      * - You specify a gear ratio to bind the motions together
      * @extends Box2dJoint
+     * @memberof Box2D
      */
     export class Box2dGearJoint extends Box2dJoint {
         /** Create a gear joint
@@ -3713,6 +3759,7 @@ declare module "littlejsengine" {
      * - You can use a joint limit to restrict the range of motion
      * - You can use a joint motor to drive the motion or to model joint friction
      * @extends Box2dJoint
+     * @memberof Box2D
      */
     export class Box2dPrismaticJoint extends Box2dJoint {
         /** Create a prismatic joint
@@ -3786,6 +3833,7 @@ declare module "littlejsengine" {
      * - You can use a joint motor to drive the motion or to model joint friction
      * - This joint is designed for vehicle suspensions
      * @extends Box2dJoint
+     * @memberof Box2D
      */
     export class Box2dWheelJoint extends Box2dJoint {
         /** Create a wheel joint
@@ -3848,6 +3896,7 @@ declare module "littlejsengine" {
      * Box2D Weld Joint
      * - Glues two objects together
      * @extends Box2dJoint
+     * @memberof Box2D
      */
     export class Box2dWeldJoint extends Box2dJoint {
         /** Create a weld joint
@@ -3883,6 +3932,7 @@ declare module "littlejsengine" {
      * - Used to apply top-down friction
      * - Provides 2D translational friction and angular friction
      * @extends Box2dJoint
+     * @memberof Box2D
      */
     export class Box2dFrictionJoint extends Box2dJoint {
         /** Create a friction joint
@@ -3916,6 +3966,7 @@ declare module "littlejsengine" {
      * - The pulley supports a ratio such that: length1 + ratio * length2 <= constant
      * - The force transmitted is scaled by the ratio
      * @extends Box2dJoint
+     * @memberof Box2D
      */
     export class Box2dPulleyJoint extends Box2dJoint {
         /** Create a pulley joint
@@ -3955,6 +4006,7 @@ declare module "littlejsengine" {
      * - Controls the relative motion between two objects
      * - Typical usage is to control the movement of a object with respect to the ground
      * @extends Box2dJoint
+     * @memberof Box2D
      */
     export class Box2dMotorJoint extends Box2dJoint {
         /** Create a motor joint
