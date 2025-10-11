@@ -1,7 +1,8 @@
-let playButton, stopButton, progressBar;
+let musicPlayer, playButton, stopButton, progressBar, dropZoneText;
 let musicSound = new SoundWave('song.mp3');
 let musicVolume = 1;
 let musicInstance;
+let loadedFileName;
 
 function gameInit()
 {
@@ -13,14 +14,17 @@ function gameInit()
     canvasClearColor = hsl(.9,.3,.2); // background color
 
     // setup music player UI
-    const musicPlayer = new UIObject(mainCanvasSize.scale(.5), vec2(500, 300));
-
-    // title
+    musicPlayer = new UIObject(mainCanvasSize.scale(.5), vec2(500, 300));
     const title = new UIText(vec2(0, -100), vec2(500, 40), 'LittleJS Music Player');
     musicPlayer.addChild(title);
 
+    // drop zone text
+    dropZoneText = new UIText(vec2(0, -60), vec2(450, 20), 'Drag & Drop Audio Files Here');
+    dropZoneText.textColor = hsl(.9, .3, .8, .7);
+    musicPlayer.addChild(dropZoneText);
+
     // volume slider
-    const volumeSlider = new UIScrollbar(vec2(0, -40), vec2(400, 30), musicVolume, 'Music Volume');
+    const volumeSlider = new UIScrollbar(vec2(0, -20), vec2(400, 30), musicVolume, 'Music Volume');
     musicPlayer.addChild(volumeSlider);
     volumeSlider.onChange = () => 
     {
@@ -30,7 +34,7 @@ function gameInit()
     };
 
     // play button
-    playButton = new UIButton(vec2(-90, 30), vec2(140, 50), 'Play');
+    playButton = new UIButton(vec2(-90, 50), vec2(140, 50), 'Play');
     musicPlayer.addChild(playButton);
     playButton.onClick = ()=>
     {
@@ -47,7 +51,7 @@ function gameInit()
     };
 
     // stop button
-    stopButton = new UIButton(vec2(90, 30), vec2(140, 50), 'Stop');
+    stopButton = new UIButton(vec2(90, 50), vec2(140, 50), 'Stop');
     stopButton.onClick = ()=>
     {
         if (!musicInstance)
@@ -59,7 +63,7 @@ function gameInit()
     musicPlayer.addChild(stopButton);
 
     // progress bar and scrollbar for seeking
-    progressBar = new UIScrollbar(vec2(0, 100), vec2(400, 30), 0, 'Progress');
+    progressBar = new UIScrollbar(vec2(0, 120), vec2(400, 30), 0, 'Progress');
     progressBar.disabledColor = RED;
     progressBar.onChange = ()=> 
     {
@@ -74,6 +78,33 @@ function gameInit()
             musicInstance.pause();
     };
     musicPlayer.addChild(progressBar);
+
+    {
+        // setup drag and drop for audio files
+        function onDragEnter() { musicPlayer.color = RED; };
+        function onDragLeave() { musicPlayer.color = WHITE; };
+        function onDrop(e)
+        {
+            musicPlayer.color = WHITE
+            
+            // get the dropped file
+            const file = e.dataTransfer.files[0];
+            if (!file || !file.type.startsWith('audio'))
+                return;
+                
+            // create new sound from dropped file
+            const fileURL = URL.createObjectURL(file);
+            musicSound = new SoundWave(fileURL, musicVolume);
+            loadedFileName = file.name;
+            dropZoneText.text = loadedFileName;
+            
+            // reset UI
+            musicInstance && musicInstance.stop();
+            musicInstance = undefined;
+            progressBar.value = 0;
+        }
+        uiSystem.setupDragAndDrop(onDrop, onDragEnter, onDragLeave);
+    }
 }
 
 function gameUpdate()
@@ -94,8 +125,9 @@ function gameUpdate()
     else
     {
         // update ui text
-        playButton.text = !musicInstance || !musicInstance.isPlaying() ? 'Play' : 'Pause';
-        const currentTime = musicInstance ? musicInstance.getCurrentTime() : 0;
+        const isPlaying = musicInstance && musicInstance.isPlaying();
+        playButton.text = isPlaying ? 'Pause' : 'Play';
+        const currentTime = isPlaying ? musicInstance.getCurrentTime() : 0;
         const duration = musicSound.getDuration();
         if (!progressBar.mouseIsHeld)
             progressBar.value = currentTime / duration;
