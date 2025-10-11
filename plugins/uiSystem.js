@@ -190,6 +190,25 @@ class UISystemPlugin
     {
         drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, applyMaxWidth ? size.x : undefined, uiSystem.uiContext);
     }
+
+    /** Setup drag and drop event handlers
+    *  Automatically prevents defaults and calls the given functions
+    *  @param {Function} [onDrop] - when a file is dropped
+    *  @param {Function} [onDragEnter] - when a file is dragged onto the window
+    *  @param {Function} [onDragLeave] - when a file is dragged off the window
+    *  @param {Function} [onDragOver] - continously when dragging over */
+    setupDragAndDrop(onDrop, onDragEnter, onDragLeave, onDragOver)
+    {
+        function setCallback(callback, listenerType)
+        {
+            function listener(e) { e.preventDefault(); callback && callback(e); }
+            document.addEventListener(listenerType, listener);
+        }
+        setCallback(onDrop,      'drop');
+        setCallback(onDragEnter, 'dragenter');
+        setCallback(onDragLeave, 'dragleave');
+        setCallback(onDragOver,  'dragover');
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
