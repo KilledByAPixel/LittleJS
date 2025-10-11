@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.14.12';
+const engineVersion = '1.14.13';
 
 /** Frames per second to update
  *  @type {number}
@@ -2831,7 +2831,7 @@ let drawCount;
  * Create a tile info object using a grid based system
  * - This can take vecs or floats for easier use and conversion
  * - If an index is passed in, the tile size and index will determine the position
- * @param {Vector2|number} [pos=0] - Index of tile in sheet
+ * @param {Vector2|number} [pos=0] - Position of the tile in pixels, or tile index
  * @param {Vector2|number} [size=tileSizeDefault] - Size of tile in pixels
  * @param {number} [textureIndex] - Texture index to use
  * @param {number} [padding] - How many pixels padding around tiles
@@ -4465,12 +4465,12 @@ class Sound
 
     /** Play the sound as a musical note with a semitone offset
      *  This can be used to play music with chromatic scales
-     *  @param {number}  semitoneOffset - How many semitones to offset pitch
+     *  @param {number}  [semitoneOffset=0] - How many semitones to offset pitch
      *  @param {Vector2} [pos] - World space position to play the sound if any
      *  @param {number}  [volume=1] - How much to scale volume by
      *  @return {SoundInstance} - The audio source node
      */
-    playNote(semitoneOffset, pos, volume)
+    playNote(semitoneOffset=0, pos, volume)
     {
         const pitch = getNoteFrequency(semitoneOffset, 1);
         return this.play(pos, volume, pitch, 0);
@@ -7460,10 +7460,12 @@ class UISystemPlugin
         this.uiObjects = [];
         /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - Context to render UI elements to */
         this.uiContext = context;
-        /** @property {UIObject} - Top most object user is over */
-        this.hoverObject = undefined;
         /** @property {UIObject} - Object user is currently interacting with */
         this.activeObject = undefined;
+        /** @property {UIObject} - Top most object user is over */
+        this.hoverObject = undefined;
+        /** @property {UIObject} - Hover object at start of update */
+        this.lastHoverObject = undefined;
             
         engineAddPlugin(uiUpdate, uiRender);
 
@@ -7494,6 +7496,7 @@ class UISystemPlugin
                     updateInvisibleObject(o);
             }
             // reset hover object at start of update
+            uiSystem.lastHoverObject = uiSystem.hoverObject;
             uiSystem.hoverObject = undefined;
             for (let i = uiSystem.uiObjects.length; i--;)
             {
@@ -7583,6 +7586,25 @@ class UISystemPlugin
     drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont, applyMaxWidth=true)
     {
         drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, applyMaxWidth ? size.x : undefined, uiSystem.uiContext);
+    }
+
+    /** Setup drag and drop event handlers
+    *  Automatically prevents defaults and calls the given functions
+    *  @param {Function} [onDrop] - when a file is dropped
+    *  @param {Function} [onDragEnter] - when a file is dragged onto the window
+    *  @param {Function} [onDragLeave] - when a file is dragged off the window
+    *  @param {Function} [onDragOver] - continously when dragging over */
+    setupDragAndDrop(onDrop, onDragEnter, onDragLeave, onDragOver)
+    {
+        function setCallback(callback, listenerType)
+        {
+            function listener(e) { e.preventDefault(); callback && callback(e); }
+            document.addEventListener(listenerType, listener);
+        }
+        setCallback(onDrop,      'drop');
+        setCallback(onDragEnter, 'dragenter');
+        setCallback(onDragLeave, 'dragleave');
+        setCallback(onDragOver,  'dragover');
     }
 }
 
@@ -7676,7 +7698,7 @@ class UIObject
     /** Update the object, called automatically by plugin once each frame */
     update()
     {
-        const wasHover = this.isHoverObject();
+        const wasHover = uiSystem.lastHoverObject === this;
         const isActive = this.isActiveObject();
         const mouseDown = mouseIsDown(0);
         const mousePress = this.dragActivate ? mouseDown : mouseWasPressed(0);
@@ -7689,15 +7711,14 @@ class UIObject
         }
         if (this.isHoverObject())
         {
-            if (mousePress)
-                inputClearKey(0,0,0,1,0); // clear mouse was pressed state
             if (!this.disabled)
             {
                 if (mousePress)
                 {
                     if (this.interactive)
                     {
-                        this.onPress();
+                        if (!this.dragActivate || (!wasHover || mouseWasPressed(0)))
+                            this.onPress();
                         if (this.soundPress)
                             this.soundPress.play();
                         if (uiSystem.activeObject && !isActive)
@@ -7705,13 +7726,15 @@ class UIObject
                         uiSystem.activeObject = this;
                     }
                 }
-                if (!mouseDown && uiSystem.activeObject === this && this.interactive)
+                if (!mouseDown && this.isActiveObject() && this.interactive)
                 {
                     this.onClick();
                     if (this.soundClick)
                         this.soundClick.play();
                 }
             }
+            // clear mouse was pressed state even when disabled
+            mousePress && inputClearKey(0,0,0,1,0);
         }
         if (isActive)
         if (!mouseDown || (this.dragActivate && !this.isHoverObject()))
@@ -7722,6 +7745,7 @@ class UIObject
             uiSystem.activeObject = undefined;
         }
 
+        // call enter/leave events
         if (this.isHoverObject() !== wasHover)
             this.isHoverObject() ? this.onEnter() : this.onLeave();
     }

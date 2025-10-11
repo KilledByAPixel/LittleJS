@@ -1231,7 +1231,7 @@ declare module "littlejsengine" {
      * Create a tile info object using a grid based system
      * - This can take vecs or floats for easier use and conversion
      * - If an index is passed in, the tile size and index will determine the position
-     * @param {Vector2|number} [pos=0] - Index of tile in sheet
+     * @param {Vector2|number} [pos=0] - Position of the tile in pixels, or tile index
      * @param {Vector2|number} [size=tileSizeDefault] - Size of tile in pixels
      * @param {number} [textureIndex] - Texture index to use
      * @param {number} [padding] - How many pixels padding around tiles
@@ -1924,12 +1924,12 @@ declare module "littlejsengine" {
         playMusic(volume?: number, loop?: boolean, paused?: boolean): SoundInstance;
         /** Play the sound as a musical note with a semitone offset
          *  This can be used to play music with chromatic scales
-         *  @param {number}  semitoneOffset - How many semitones to offset pitch
+         *  @param {number}  [semitoneOffset=0] - How many semitones to offset pitch
          *  @param {Vector2} [pos] - World space position to play the sound if any
          *  @param {number}  [volume=1] - How much to scale volume by
          *  @return {SoundInstance} - The audio source node
          */
-        playNote(semitoneOffset: number, pos?: Vector2, volume?: number): SoundInstance;
+        playNote(semitoneOffset?: number, pos?: Vector2, volume?: number): SoundInstance;
         /** Get how long this sound is in seconds
          *  @return {number} - How long the sound is in seconds (undefined if loading)
          */
@@ -2884,10 +2884,12 @@ declare module "littlejsengine" {
         uiObjects: any[];
         /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - Context to render UI elements to */
         uiContext: CanvasRenderingContext2D;
-        /** @property {UIObject} - Top most object user is over */
-        hoverObject: any;
         /** @property {UIObject} - Object user is currently interacting with */
         activeObject: any;
+        /** @property {UIObject} - Top most object user is over */
+        hoverObject: any;
+        /** @property {UIObject} - Hover object at start of update */
+        lastHoverObject: any;
         /** Draw a rectangle to the UI context
         *  @param {Vector2} pos
         *  @param {Vector2} size
@@ -2921,6 +2923,13 @@ declare module "littlejsengine" {
         *  @param {string}  [font=uiSystem.defaultFont]
         *  @param {boolean} [applyMaxWidth=true] */
         drawText(text: string, pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, align?: string, font?: string, applyMaxWidth?: boolean): void;
+        /** Setup drag and drop event handlers
+        *  Automatically prevents defaults and calls the given functions
+        *  @param {Function} [onDrop] - when a file is dropped
+        *  @param {Function} [onDragEnter] - when a file is dragged onto the window
+        *  @param {Function} [onDragLeave] - when a file is dragged off the window
+        *  @param {Function} [onDragOver] - continously when dragging over */
+        setupDragAndDrop(onDrop?: Function, onDragEnter?: Function, onDragLeave?: Function, onDragOver?: Function): void;
     }
     /**
      * UI Object - Base level object for all UI elements
