@@ -7,6 +7,7 @@
 /**
  * Particle Emitter - Spawns particles with the given settings
  * @extends EngineObject
+ * @memberof Engine
  * @example
  * // create a particle emitter
  * let pos = vec2(2,3);
@@ -242,6 +243,7 @@ class ParticleEmitter extends EngineObject
 /**
  * Particle Object - Created automatically by Particle Emitters
  * @extends EngineObject
+ * @memberof Engine
  */
 class Particle extends EngineObject
 {

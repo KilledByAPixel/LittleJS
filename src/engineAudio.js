@@ -47,6 +47,7 @@ function audioInit()
  * Sound Object - Stores a sound for later use and can be played positionally
  *
  * <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
+ * @memberof Audio
  * @example
  * // create a sound
  * const sound_example = new Sound([.5,.5]);
@@ -169,6 +170,8 @@ class Sound
 /**
  * Sound Wave Object - Stores a wave sound for later use and can be played positionally
  * - this can be used to play wave, mp3, and ogg files
+ * @extends Sound
+ * @memberof Audio
  * @example
  * // create a sound
  * const sound_example = new SoundWave('sound.mp3');
@@ -248,6 +251,7 @@ class SoundWave extends Sound
 /** 
  * Sound Instance - Wraps an AudioBufferSourceNode for individual sound control
  * Represents a single playing instance of a sound with pause/resume capabilities
+ * @memberof Audio
  * @example
  * // Play a sound and get an instance for control
  * const jumpSound = new Sound([.5,.5,220]);

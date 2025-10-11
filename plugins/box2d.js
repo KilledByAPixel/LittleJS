@@ -39,6 +39,7 @@ function box2dSetDebug(enable) { box2dDebug = enable; }
  * - Each object has a Box2D body which can have multiple fixtures and joints
  * - Provides interface for Box2D body and fixture functions
  * @extends EngineObject
+ * @memberof Box2D
  */
 class Box2dObject extends EngineObject 
 {
@@ -548,6 +549,7 @@ class Box2dRaycastResult
  * Box2D Joint
  * - Base class for Box2D joints 
  * - A joint is used to connect objects together
+ * @memberof Box2D
  */
 class Box2dJoint
 {
@@ -603,6 +605,7 @@ class Box2dJoint
  * - This a soft constraint with a max force
  * - This allows the constraint to stretch and without applying huge forces
  * @extends Box2dJoint
+ * @memberof Box2D
  */
 class Box2dTargetJoint extends Box2dJoint
 {
@@ -652,6 +655,7 @@ class Box2dTargetJoint extends Box2dJoint
  * - Constrains two points on two objects to remain at a fixed distance
  * - You can view this as a massless, rigid rod
  * @extends Box2dJoint
+ * @memberof Box2D
  */
 class Box2dDistanceJoint extends Box2dJoint
 {
@@ -715,6 +719,7 @@ class Box2dDistanceJoint extends Box2dJoint
  * Box2D Pin Joint
  * - Pins two objects together at a point
  * @extends Box2dDistanceJoint
+ * @memberof Box2D
  */
 class Box2dPinJoint extends Box2dDistanceJoint
 {
@@ -734,6 +739,7 @@ class Box2dPinJoint extends Box2dDistanceJoint
  * Box2D Rope Joint
  * - Enforces a maximum distance between two points on two objects
  * @extends Box2dJoint
+ * @memberof Box2D
  */
 class Box2dRopeJoint extends Box2dJoint
 {
@@ -786,6 +792,7 @@ class Box2dRopeJoint extends Box2dJoint
  * - You can use a motor to drive the relative rotation about the shared point
  * - A maximum motor torque is provided so that infinite forces are not generated
  * @extends Box2dJoint
+ * @memberof Box2D
  */
 class Box2dRevoluteJoint extends Box2dJoint
 {
@@ -887,6 +894,7 @@ class Box2dRevoluteJoint extends Box2dJoint
  * - Either joint can be a revolute or prismatic joint
  * - You specify a gear ratio to bind the motions together
  * @extends Box2dJoint
+ * @memberof Box2D
  */
 class Box2dGearJoint extends Box2dJoint
 {
@@ -935,6 +943,7 @@ class Box2dGearJoint extends Box2dJoint
  * - You can use a joint limit to restrict the range of motion
  * - You can use a joint motor to drive the motion or to model joint friction
  * @extends Box2dJoint
+ * @memberof Box2D
  */
 class Box2dPrismaticJoint extends Box2dJoint
 {
@@ -1044,6 +1053,7 @@ class Box2dPrismaticJoint extends Box2dJoint
  * - You can use a joint motor to drive the motion or to model joint friction
  * - This joint is designed for vehicle suspensions
  * @extends Box2dJoint
+ * @memberof Box2D
  */
 class Box2dWheelJoint extends Box2dJoint
 {
@@ -1139,6 +1149,7 @@ class Box2dWheelJoint extends Box2dJoint
  * Box2D Weld Joint
  * - Glues two objects together
  * @extends Box2dJoint
+ * @memberof Box2D
  */
 class Box2dWeldJoint extends Box2dJoint
 {
@@ -1197,6 +1208,7 @@ class Box2dWeldJoint extends Box2dJoint
  * - Used to apply top-down friction
  * - Provides 2D translational friction and angular friction
  * @extends Box2dJoint
+ * @memberof Box2D
  */
 class Box2dFrictionJoint extends Box2dJoint
 {
@@ -1251,6 +1263,7 @@ class Box2dFrictionJoint extends Box2dJoint
  * - The pulley supports a ratio such that: length1 + ratio * length2 <= constant
  * - The force transmitted is scaled by the ratio
  * @extends Box2dJoint
+ * @memberof Box2D
  */
 class Box2dPulleyJoint extends Box2dJoint
 {
@@ -1318,6 +1331,7 @@ class Box2dPulleyJoint extends Box2dJoint
  * - Controls the relative motion between two objects
  * - Typical usage is to control the movement of a object with respect to the ground
  * @extends Box2dJoint
+ * @memberof Box2D
  */
 class Box2dMotorJoint extends Box2dJoint
 {
@@ -1381,6 +1395,7 @@ class Box2dMotorJoint extends Box2dJoint
 /** 
  * Box2D Global Object
  * - Wraps Box2d world and provides global functions
+ * @memberof Box2D
  */
 class Box2dPlugin
 {

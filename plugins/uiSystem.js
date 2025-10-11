@@ -6,6 +6,7 @@
  * - Buttons
  * - Checkboxes
  * - Images
+ * @namespace UISystem
  */
 
 'use strict';
@@ -13,12 +14,14 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Global UI system plugin object
- *  @type {UISystemPlugin} */
+ *  @type {UISystemPlugin}
+ *  @memberof UISystem */
 let uiSystem;
 
 ///////////////////////////////////////////////////////////////////////////////
 /** 
  * UI System Global Object
+ * @memberof UISystem
  */
 class UISystemPlugin
 {
@@ -214,7 +217,7 @@ class UISystemPlugin
 ///////////////////////////////////////////////////////////////////////////////
 /** 
  * UI Object - Base level object for all UI elements
- */
+ * @memberof UISystem */
 class UIObject
 {
     /** Create a UIObject
@@ -410,6 +413,7 @@ class UIObject
 /** 
  * UIText - A UI object that displays text
  * @extends UIObject
+ * @memberof UISystem
  */
 class UIText extends UIObject
 {
@@ -443,6 +447,7 @@ class UIText extends UIObject
 /** 
  * UITile - A UI object that displays a tile image
  * @extends UIObject
+ * @memberof UISystem
  */
 class UITile extends UIObject
 {
@@ -476,6 +481,7 @@ class UITile extends UIObject
 /** 
  * UIButton - A UI object that acts as a button
  * @extends UIObject
+ * @memberof UISystem
  */
 class UIButton extends UIObject
 {
@@ -509,6 +515,7 @@ class UIButton extends UIObject
 /** 
  * UICheckbox - A UI object that acts as a checkbox
  * @extends UIObject
+ * @memberof UISystem
  */
 class UICheckbox extends UIObject
 {
@@ -559,6 +566,7 @@ class UICheckbox extends UIObject
 /** 
  * UIScrollbar - A UI object that acts as a scrollbar
  * @extends UIObject
+ * @memberof UISystem
  */
 class UIScrollbar extends UIObject
 {

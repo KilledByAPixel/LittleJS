@@ -4,7 +4,7 @@
  * - Unlimited numbers of layers, allocates canvases as needed
  * - Tile layers can be drawn to using their context with canvas2d
  * - Tile layers can also have collision with EngineObjects
- * @namespace TileCollision
+ * @namespace TileLayers
  */
 
 'use strict';
@@ -14,13 +14,13 @@
 
 /** Keep track of all tile layers with collision
  *  @type {Array<TileCollisionLayer>}
- *  @memberof TileCollision */
+ *  @memberof TileLayers */
 const tileCollisionLayers = [];
 
 /** Get tile collision data for a given cell in the grid
 *  @param {Vector2} pos
 *  @return {number}
-*  @memberof TileCollision */
+*  @memberof TileLayers */
 function tileCollisionGetData(pos)
 {
     // check all tile collision layers
@@ -36,7 +36,7 @@ function tileCollisionGetData(pos)
  *  @param {EngineObject} [object] - An object or undefined for generic test
  *  @param {boolean}      [solidOnly] - Only check solid layers if true
  *  @return {TileCollisionLayer}
- *  @memberof TileCollision */
+ *  @memberof TileLayers */
 function tileCollisionTest(pos, size=vec2(), object, solidOnly=true)
 {
     for (const layer of tileCollisionLayers)
@@ -54,7 +54,7 @@ function tileCollisionTest(pos, size=vec2(), object, solidOnly=true)
  *  @param {EngineObject} [object] - An object or undefined for generic test
  *  @param {boolean}      [solidOnly=true] - Only check solid layers if true
  *  @return {Vector2}
- *  @memberof TileCollision */
+ *  @memberof TileLayers */
 function tileCollisionRaycast(posStart, posEnd, object, solidOnly=true)
 {
     for (const layer of tileCollisionLayers)
@@ -77,7 +77,7 @@ function tileCollisionRaycast(posStart, posEnd, object, solidOnly=true)
  *  @param {number}   [collisionLayer] - Layer to use for collision if any
  *  @param {boolean}  [draw] - Should the layer be drawn automatically
  *  @return {Array<TileCollisionLayer>}
- *  @memberof TileCollision */
+ *  @memberof TileLayers */
 function tileCollisionLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLayer, draw=true)
 {
     if (!tileMapData)
@@ -138,6 +138,7 @@ function tileCollisionLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisio
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * Tile layer data object stores info about how to draw a tile
+ * @memberof TileLayers
  * @example
  * // create tile layer data with tile index 0 and random orientation and color
  * const tileIndex = 0;
@@ -175,6 +176,7 @@ class TileLayerData
  * - Contains an offscreen canvas that can be rendered to
  * - WebGL rendering is optional, call useWebGL to enable
  * @extends EngineObject
+ * @memberof TileLayers
  * @example
  * const canvasLayer = new CanvasLayer(vec2(), vec2(200,100));
  */
@@ -318,6 +320,7 @@ class CanvasLayer extends EngineObject
  * - For with 16x16 tiles this limits layers to 256x256 on mobile devices
  * - Tile layers are centered on their corner, so normal levels are at (0,0)
  * @extends CanvasLayer
+ * @memberof TileLayers
  * @example
  * const tileLayer = new TileLayer(vec2(), vec2(200,100));
  */
@@ -491,6 +494,7 @@ class TileLayer extends CanvasLayer
  * - there can be multiple tile collision layers
  * - tile collision layers should not overlap each other
  * @extends TileLayer
+ * @memberof TileLayers
  */
 class TileCollisionLayer extends TileLayer
 {

@@ -128,6 +128,7 @@ function tile(pos=new Vector2, size=tileSizeDefault, textureIndex=0, padding=0)
 
 /**
  * Tile Info - Stores info about how to draw a tile
+ * @memberof Draw
  */
 class TileInfo
 {
@@ -188,7 +189,10 @@ class TileInfo
     }
 }
 
-/** Texture Info - Stores info about each texture */
+/**
+ * Tile Info - Stores info about each texture
+ * @memberof Draw
+ */
 class TextureInfo
 {
     /**
@@ -873,6 +877,7 @@ let engineFontImage;
  * - 96 characters (from space to tilde) are stored in an image
  * - Uses a default 8x8 font if none is supplied
  * - You can also use fonts from the main tile sheet
+ * @memberof Draw
  * @example
  * // use built in font
  * const font = new FontImage;

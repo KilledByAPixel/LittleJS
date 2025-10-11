@@ -1,5 +1,6 @@
 /**
  * LittleJS ZzFXM Plugin
+ * @namespace ZzFXM
  */
 
 'use strict';
@@ -8,6 +9,8 @@
  * Music Object - Stores a zzfx music track for later use
  * 
  * <a href=https://keithclark.github.io/ZzFXM/>Create music with the ZzFXM tracker.</a>
+ * @extends Sound
+ * @memberof ZzFXM
  * @example
  * // create some music
  * const music_example = new Music(
@@ -66,7 +69,8 @@ class ZzFXMusic extends Sound
  *  @param {Array} patterns - Array of pattern data
  *  @param {Array} sequence - Array of pattern indexes
  *  @param {number} [BPM] - Playback speed of the song in BPM
- *  @return {Array} - Left and right channel sample data */
+ *  @return {Array} - Left and right channel sample data
+ *  @memberof ZzFXM */
 function zzfxM(instruments, patterns, sequence, BPM = 125) 
 {
   let i, j, k;

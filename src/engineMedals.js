@@ -69,6 +69,7 @@ function medalsForEach(callback)
 
 /**
  * Medal - Tracks an unlockable medal
+ * @memberof Medals
  * @example
  * // create a medal
  * const medal_example = new Medal(0, 'Example Medal', 'More info about the medal goes here.', '🎖️');

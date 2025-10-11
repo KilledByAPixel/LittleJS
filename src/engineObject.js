@@ -24,6 +24,7 @@
  * - Collision for objects can be set to be solid to block other objects
  * - Objects may get pushed into overlapping other solid objects, if so they will push away
  * - Solid objects are more performance intensive and should be used sparingly
+ * @memberof Engine
  * @example
  * // create an engine object, normally you would first extend the class with your own
  * const pos = vec2(2,3);

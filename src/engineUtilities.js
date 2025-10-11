@@ -305,6 +305,7 @@ function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear=false)
 /**
  * Seeded random number generator
  * - Can be used to create a deterministic random number sequence
+ * @memberof Engine
  * @example
  * let r = new RandomGenerator(123); // random number generator with seed 123
  * let a = r.float();                // random value between 0 and 1
@@ -401,6 +402,7 @@ function ASSERT_VECTOR2_NORMAL(v)
 /**
  * 2D Vector object with vector math library
  * - Functions do not change this so they can be chained together
+ * @memberof Engine
  * @example
  * let a = new Vector2(2, 3); // vector with coordinates (2, 3)
  * let b = new Vector2;       // vector with coordinates (0, 0)
@@ -651,6 +653,7 @@ function ASSERT_COLOR_VALID(c) { ASSERT(isColor(c), 'Color is invalid.', c); }
 
 /**
  * Color object (red, green, blue, alpha) with some helpful functions
+ * @memberof Engine
  * @example
  * let a = new Color;              // white
  * let b = new Color(1, 0, 0);     // red
@@ -941,6 +944,7 @@ const MAGENTA = rgb(1,0,1);
 
 /**
  * Timer object tracks how long has passed since it was set
+ * @memberof Engine
  * @example
  * let a = new Timer;    // creates a timer that is not set
  * a.set(3);             // sets the timer to 3 seconds

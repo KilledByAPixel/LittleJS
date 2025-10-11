@@ -1,24 +1,25 @@
 /** 
- * LittleJS Newgrounds API
+ * LittleJS Newgrounds Plugin
  * - NewgroundsMedal extends Medal with Newgrounds API functionality
- * - Call new NewgroundsPlugin() to setup Newgrounds
+ * - Call new NewgroundsPlugin(app_id) to setup Newgrounds
  * - Uses CryptoJS for encryption if optional cipher is provided
+ * - provides functions to interact with medals scoreboards
  * - Keeps connection alive and logs views
- * - Functions to interact with scoreboards
- * - Functions to unlock medals
+ * @namespace Newgrounds
  */
 
 'use strict';
 
 /** Global Newgrounds object
  *  @type {NewgroundsPlugin}
- *  @memberof Medal */
+ *  @memberof Newgrounds */
 let newgrounds;
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * Newgrounds medal auto unlocks in newgrounds API
  * @extends Medal
+ * @memberof Newgrounds
  */
 class NewgroundsMedal extends Medal
 {
@@ -43,6 +44,7 @@ class NewgroundsMedal extends Medal
 ///////////////////////////////////////////////////////////////////////////////
 /** 
  * Newgrounds API object
+ * @memberof Newgrounds
  */
 class NewgroundsPlugin
 {
