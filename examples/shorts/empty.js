@@ -26,4 +26,5 @@ function gameRenderPost()
 {
     // called after objects are rendered
     // draw effects or hud that appear above all objects
+    drawTextScreen('LittleJS Engine', mainCanvasSize.scale(.5), 80);
 }
