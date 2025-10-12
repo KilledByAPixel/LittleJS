@@ -7,6 +7,12 @@
 'use strict';
 
 /**
+ *  @callback ParticleCallbackFunction - Function that processes a particle
+ *  @param {Particle} particle
+ *  @memberof Engine
+ */
+
+/**
  * Particle Emitter - Spawns particles with the given settings
  * @extends EngineObject
  * @memberof Engine
@@ -142,9 +148,9 @@ class ParticleEmitter extends EngineObject
         this.localSpace        = localSpace;
         /** @property {number} - If non zero the particle is drawn as a trail, stretched in the direction of velocity */
         this.trailScale        = 0;
-        /** @property {Function}   - Callback when particle is destroyed */
+        /** @property {ParticleCallbackFunction} - Callback when particle is destroyed */
         this.particleDestroyCallback = undefined;
-        /** @property {Function}   - Callback when particle is created */
+        /** @property {ParticleCallbackFunction} - Callback when particle is created */
         this.particleCreateCallback = undefined;
         /** @property {number} - Track particle emit time */
         this.emitTimeBuffer    = 0;
@@ -264,7 +270,7 @@ class Particle extends EngineObject
      * @param {boolean}  additive   - Does it use additive blend mode
      * @param {number}   trailScale - If a trail, how long to make it
      * @param {ParticleEmitter} [localSpaceEmitter] - Parent emitter if local space
-     * @param {Function} [destroyCallback] - Callback when particle dies
+     * @param {ParticleCallbackFunction} [destroyCallback] - Callback when particle dies
      */
     constructor(position, tileInfo, angle, colorStart, colorEnd, lifeTime, sizeStart, sizeEnd, fadeRate, additive, trailScale, localSpaceEmitter, destroyCallback
     )
@@ -289,7 +295,7 @@ class Particle extends EngineObject
         this.trailScale = trailScale;
         /** @property {ParticleEmitter} - Parent emitter if local space */
         this.localSpaceEmitter = localSpaceEmitter;
-        /** @property {Function} - Called when particle dies */
+        /** @property {ParticleCallbackFunction} - Called when particle dies */
         this.destroyCallback = destroyCallback;
         // particles do not clamp speed by default
         this.clampSpeed = false;

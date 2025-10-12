@@ -111,9 +111,9 @@ function tileCollisionLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisio
         tileLayers[layerIndex] = tileLayer;
 
         // apply layer color
-        const layerColor = dataLayer.color || WHITE;
-        if (dataLayer.tintcolor)
-            layerColor.setHex(dataLayer.tintcolor);
+        const layerColor = dataLayer.tintcolor ?
+            new Color().setHex(dataLayer.tintcolor) :
+            dataLayer.color || WHITE;
         ASSERT(isColor(layerColor), 'layer color is not a color');
 
         for (let x=levelSize.x; x--;)
@@ -241,12 +241,18 @@ class CanvasLayer extends EngineObject
         drawTile(pos, size, tileInfo, color, angle, mirror, additiveColor, useWebGL, screenSpace, context);
     }
 
+    /**
+     * @callback Canvas2DDrawCallback - Function that draws to a canvas 2D context
+     * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
+     * @memberof TileLayers
+     */
+
     /** Draw onto the layer canvas in world space (bypass WebGL)
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
      *  @param {number}   angle
      *  @param {boolean}  mirror
-     *  @param {Function} drawFunction */
+     *  @param {Canvas2DDrawCallback} drawFunction */
     drawCanvas2D(pos, size, angle, mirror, drawFunction)
     {
         const context = this.context;
@@ -283,7 +289,7 @@ class CanvasLayer extends EngineObject
             else
             {
                 // untextured
-                context.fillStyle = color;
+                context.fillStyle = color.toString();
                 context.fillRect(-.5, -.5, 1, 1);
             }
         });

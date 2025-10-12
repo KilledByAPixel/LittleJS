@@ -196,12 +196,18 @@ class UISystemPlugin
         drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, applyMaxWidth ? size.x : undefined, uiSystem.uiContext);
     }
 
+    /**
+     * @callback DragAndDropCallback - Callback for drag and drop events
+     * @param {DragEvent} event - The drag event
+     * @memberof UISystem
+     */
+
     /** Setup drag and drop event handlers
     *  Automatically prevents defaults and calls the given functions
-    *  @param {Function} [onDrop] - when a file is dropped
-    *  @param {Function} [onDragEnter] - when a file is dragged onto the window
-    *  @param {Function} [onDragLeave] - when a file is dragged off the window
-    *  @param {Function} [onDragOver] - continously when dragging over */
+    *  @param {DragAndDropCallback} [onDrop] - when a file is dropped
+    *  @param {DragAndDropCallback} [onDragEnter] - when a file is dragged onto the window
+    *  @param {DragAndDropCallback} [onDragLeave] - when a file is dragged off the window
+    *  @param {DragAndDropCallback} [onDragOver] - continously when dragging over */
     setupDragAndDrop(onDrop, onDragEnter, onDragLeave, onDragOver)
     {
         function setCallback(callback, listenerType)

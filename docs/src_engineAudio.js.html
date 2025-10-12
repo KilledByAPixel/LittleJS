@@ -183,19 +183,25 @@ class Sound
  */
 class SoundWave extends Sound
 {
+    /**
+     * @callback SoundLoadCallback - Function called when sound is loaded
+     * @param {SoundWave} sound
+     * @memberof Audio
+     */
+    
     /** Create a sound object and cache the wave file for later use
      *  @param {string} filename - Filename of audio file to load
      *  @param {number} [randomness] - How much to randomize frequency each time sound plays
      *  @param {number} [range=soundDefaultRange] - World space max range of sound
      *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
-     *  @param {Function} [onloadCallback] - callback function to call when sound is loaded
+     *  @param {SoundLoadCallback} [onloadCallback] - callback function to call when sound is loaded
      */
     constructor(filename, randomness=0, range, taper, onloadCallback)
     {
         super(undefined, range, taper);
         if (!soundEnable || headlessMode) return;
 
-        /** @property {Function} - callback function to call when sound is loaded */
+        /** @property {SoundLoadCallback} - callback function to call when sound is loaded */
         this.onloadCallback = onloadCallback;
         this.randomness = randomness;
         this.loadSound(filename);
@@ -244,7 +250,7 @@ class SoundWave extends Sound
         this.sampleChannels = sampleChannels;
         this.loadedPercent = 1;
         if (this.onloadCallback)
-            this.onloadCallback();
+            this.onloadCallback(this);
     }
 }
 
@@ -453,6 +459,12 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/**
+ * @callback AudioEndedCallback - Function called when a sound ends
+ * @param {AudioBufferSourceNode} source
+ * @memberof Audio
+ */
+
 /** Play cached audio samples with given settings
  *  @param {Array}    sampleChannels - Array of arrays of samples to play (for stereo playback)
  *  @param {number}   [volume] - How much to scale volume by
@@ -462,7 +474,7 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
  *  @param {number}   [sampleRate=44100] - Sample rate for the sound
  *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing
  *  @param {number}   [offset] - Offset in seconds to start playback from
- *  @param {Function} [onended] - Callback for when the sound ends
+ *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
  *  @return {AudioBufferSourceNode} - The audio node of the sound played
  *  @memberof Audio */
 function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=audioDefaultSampleRate, gainNode, offset=0, onended)
