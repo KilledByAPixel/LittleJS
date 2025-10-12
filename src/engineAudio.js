@@ -460,6 +460,7 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
 /**
  * @callback AudioEndedCallback - Function called when a sound ends
  * @param {AudioBufferSourceNode} source
+ * @memberof Audio
  */
 
 /** Play cached audio samples with given settings
