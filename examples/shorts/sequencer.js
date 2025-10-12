@@ -54,7 +54,6 @@ class UISequencerButton extends UIButton
     }
     render()
     {
-        // update color based on active column
         this.activeColor = eraseMode ? RED : WHITE;
         this.color = this.isActiveObject() ? BLACK : 
             hsl(this.hue, this.isOn ? 1 : .5, this.isOn ? .5 : .1); 
