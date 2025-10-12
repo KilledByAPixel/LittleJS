@@ -238,10 +238,11 @@ class TextureInfo
 function drawTile(pos, size=new Vector2(1), tileInfo, color=WHITE,
     angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace, context)
 {
-    ASSERT(isVector2(pos), 'drawTile pos should be a vec2');
-    ASSERT(isVector2(size), 'drawTile size should be a vec2');
-    ASSERT(isColor(color) && (!additiveColor || isColor(additiveColor)), 'drawTile color is invalid');
-    ASSERT(isNumber(angle), 'drawTile angle should be a number');
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(isVector2(size), 'size must be a vec2');
+    ASSERT(isColor(color), 'color is invalid');
+    ASSERT(isNumber(angle), 'angle must be a number');
+    ASSERT(!additiveColor || isColor(additiveColor), 'additiveColor must be a color');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
     const textureInfo = tileInfo && tileInfo.textureInfo;
@@ -336,10 +337,10 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
  *  @memberof Draw */
 function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0, useWebGL=glEnable, screenSpace=false, context)
 {
-    ASSERT(isVector2(pos), 'drawRectGradient pos should be a vec2');
-    ASSERT(isVector2(size), 'drawRectGradient size should be a vec2');
-    ASSERT(isColor(colorTop) && isColor(colorBottom), 'drawRectGradient color is invalid');
-    ASSERT(isNumber(angle), 'drawRectGradient angle should be a number');
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(isVector2(size), 'size must be a vec2');
+    ASSERT(isColor(colorTop) && isColor(colorBottom), 'color is invalid');
+    ASSERT(isNumber(angle), 'angle must be a number');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
     if (useWebGL)
     {
@@ -397,11 +398,11 @@ function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0,
  *  @memberof Draw */
 function drawLineList(points, width=.1, color, wrap=false, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace, context)
 {
-    ASSERT(Array.isArray(points), 'drawLineList points should be an array');
-    ASSERT(isNumber(width), 'drawLineList width should be a number');
-    ASSERT(isColor(color), 'drawLineList color is invalid');
-    ASSERT(isVector2(pos), 'drawLineList pos should be a vec2');
-    ASSERT(isNumber(angle), 'drawLineList angle should be a number');
+    ASSERT(Array.isArray(points), 'points must be an array');
+    ASSERT(isNumber(width), 'width must be a number');
+    ASSERT(isColor(color), 'color is invalid');
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(isNumber(angle), 'angle must be a number');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
     if (useWebGL)
     {
@@ -472,8 +473,8 @@ function drawLine(posA, posB, width=.1, color, pos=vec2(), angle=0, useWebGL, sc
  *  @memberof Draw */
 function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, lineColor=BLACK, angle=0, useWebGL=glEnable, screenSpace=false, context)
 {
-    ASSERT(isVector2(size), 'drawRegularPoly size should be a vec2');
-    ASSERT(isNumber(sides), 'drawRegularPoly sides should be a number');
+    ASSERT(isVector2(size), 'size must be a vec2');
+    ASSERT(isNumber(sides), 'sides must be a number');
 
     // build regular polygon points
     const points = [];
@@ -499,12 +500,13 @@ function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, l
  *  @memberof Draw */
 function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=false, context=undefined)
 {
-    ASSERT(isVector2(pos), 'drawPoly pos should be a vec2');
-    ASSERT(Array.isArray(points), 'drawPoly points should be an array');
-    ASSERT(isColor(color) && isColor(lineColor), 'drawPoly color is invalid');
-    ASSERT(isNumber(lineWidth), 'drawPoly lineWidth should be a number');
-    ASSERT(isNumber(angle), 'drawPoly angle should be a number');
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(Array.isArray(points), 'points must be an array');
+    ASSERT(isColor(color) && isColor(lineColor), 'color is invalid');
+    ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
+    ASSERT(isNumber(angle), 'angle must be a number');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+
     if (useWebGL)
     {
         let scale = 1;
@@ -551,13 +553,14 @@ function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(),
  *  @memberof Draw */
 function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
 {
-    ASSERT(isVector2(pos), 'drawEllipse pos should be a vec2');
-    ASSERT(isVector2(size), 'drawEllipse size should be a vec2');
-    ASSERT(isColor(color) && isColor(lineColor), 'drawEllipse color is invalid');
-    ASSERT(isNumber(angle), 'drawEllipse angle should be a number');
-    ASSERT(isNumber(lineWidth), 'drawEllipse lineWidth should be a number');
-    ASSERT(lineWidth >= 0 && lineWidth < size.x && lineWidth < size.y, 'drawEllipse invalid lineWidth');
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(isVector2(size), 'size must be a vec2');
+    ASSERT(isColor(color) && isColor(lineColor), 'color is invalid');
+    ASSERT(isNumber(angle), 'angle must be a number');
+    ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
+    ASSERT(lineWidth >= 0 && lineWidth < size.x && lineWidth < size.y, 'invalid lineWidth');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+
     if (useWebGL)
     {
         // draw as a regular polygon
@@ -594,7 +597,7 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
  *  @memberof Draw */
 function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
 {
-    ASSERT(isNumber(size), 'drawCircle size should be a number');
+    ASSERT(isNumber(size), 'size must be a number');
     drawEllipse(pos, vec2(size), color, 0, lineWidth, lineColor, useWebGL, screenSpace, context);
 }
 
@@ -615,6 +618,11 @@ function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useW
  *  @memberof Draw */
 function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpace=false, context=drawContext)
 {
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(isVector2(size), 'size must be a vec2');
+    ASSERT(isNumber(angle), 'angle must be a number');
+    ASSERT(typeof drawFunction === 'function', 'drawFunction must be a function');
+
     if (!screenSpace)
     {
         // transform from world space to screen space
@@ -682,6 +690,16 @@ function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textA
  *  @memberof Draw */
 function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, maxWidth, context=overlayContext)
 {
+    ASSERT(typeof text === 'string', 'text must be a string');
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(isNumber(size), 'size must be a number');
+    ASSERT(isColor(color), 'color must be a color');
+    ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
+    ASSERT(isColor(lineColor), 'lineColor must be a color');
+    ASSERT(isColor(lineColor), 'lineColor must be a color');
+    ASSERT(['left','center','right'].includes(textAlign), 'align must be left, center, or right');
+    ASSERT(typeof font === 'string', 'font must be a string');
+    
     context.fillStyle = color.toString();
     context.strokeStyle = lineColor.toString();
     context.lineWidth = lineWidth;
