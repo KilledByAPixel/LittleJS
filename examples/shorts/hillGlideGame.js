@@ -2,7 +2,7 @@ class Player extends EngineObject
 {
     constructor(pos)
     {
-        super(pos, vec2(2), tile(9), 0, CYAN);
+        super(pos, vec2(2), tile(9), 0, RED);
         this.damping = 1; // disable damping
         this.clampSpeed = false; // disable speed clamping
     }
@@ -42,7 +42,7 @@ function gameInit()
 {
     gravity.y = -.01;
     new Player(vec2(0,5));
-    canvasClearColor = hsl(.7,1,.8);
+    canvasClearColor = hsl(.6,1,.8);
 }
 
 function gameRender()
