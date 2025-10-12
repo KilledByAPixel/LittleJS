@@ -1230,6 +1230,12 @@ declare module "littlejsengine" {
      * @return {boolean}
      * @memberof Utilities */
     export function isNumber(n: any): boolean;
+    /**
+     * Check if object is a valid string or can be converted to one
+     * @param {any} s
+     * @return {boolean}
+     * @memberof Utilities */
+    export function isString(s: any): boolean;
     /** Color - White #ffffff
      *  @type {Color}
      *  @memberof Utilities */

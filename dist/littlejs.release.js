@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.14.15';
+const engineVersion = '1.14.16';
 
 /** Frames per second to update
  *  @type {number}
@@ -383,6 +383,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     const promises = imageSources.map((src, textureIndex)=>
         new Promise(resolve =>
         {
+            ASSERT(isString(src), 'imageSources must be an array of strings');
+
             const image = new Image;
             image.onerror = image.onload = ()=>
             {
@@ -983,6 +985,13 @@ async function fetchJSON(url)
  * @memberof Utilities */
 function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
 
+/**
+ * Check if object is a valid string or can be converted to one
+ * @param {any} s
+ * @return {boolean}
+ * @memberof Utilities */
+function isString(s) { return s !== undefined && s !== null && typeof s.toString() === 'string'; }
+
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Random global functions
@@ -1571,7 +1580,8 @@ class Color
      * @return {Color} */
     setHex(hex)
     {
-        ASSERT(typeof hex === 'string' && hex[0] === '#', 'Color hex code must be a string starting with #');
+        ASSERT(isString(hex), 'Color hex code must be a string');
+        ASSERT(hex[0] === '#', 'Color hex code must start with #');
         ASSERT([4,5,7,9].includes(hex.length), 'Invalid hex');
 
         if (hex.length < 6)
@@ -3494,7 +3504,7 @@ function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textA
  *  @memberof Draw */
 function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, maxWidth, context=overlayContext)
 {
-    ASSERT(typeof text === 'string', 'text must be a string');
+    ASSERT(isString(text), 'text must be a string');
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isNumber(size), 'size must be a number');
     ASSERT(isColor(color), 'color must be a color');
@@ -3502,7 +3512,7 @@ function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=B
     ASSERT(isColor(lineColor), 'lineColor must be a color');
     ASSERT(isColor(lineColor), 'lineColor must be a color');
     ASSERT(['left','center','right'].includes(textAlign), 'align must be left, center, or right');
-    ASSERT(typeof font === 'string', 'font must be a string');
+    ASSERT(isString(font), 'font must be a string');
     
     context.fillStyle = color.toString();
     context.strokeStyle = lineColor.toString();
@@ -3762,7 +3772,7 @@ class FontImage
      *  @param {boolean} [center]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      */
-    drawTextScreen(text, pos, scale=4, center, context=overlayContext)
+    drawTextScreen(text, pos, scale=4, center=true, context=overlayContext)
     {
         context.save();
         const size = this.tileSize;
@@ -4607,11 +4617,12 @@ class SoundWave extends Sound
     {
         super(undefined, range, taper);
         if (!soundEnable || headlessMode) return;
+        ASSERT(!filename || isString(filename), 'filename must be a string');
 
         /** @property {SoundLoadCallback} - callback function to call when sound is loaded */
         this.onloadCallback = onloadCallback;
         this.randomness = randomness;
-        this.loadSound(filename);
+        filename && this.loadSound(filename);
     }
 
     /** Loads a sound from a URL and decodes it into sample data. Must be used with await!
@@ -4913,16 +4924,14 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
     if (onended)
         source.addEventListener('ended', ()=> onended(source));
 
+    const startOffset = offset * rate;
     if (!audioIsRunning())
     {
-        // fix stalled audio, this sound won't be able to play
-        audioContext.resume();
-        return;
+        // fix stalled audio and start
+        audioContext.resume().then(()=>source.start(0, startOffset));
     }
-
-    // play and return sound
-    const startOffset = offset * rate;
-    source.start(0, startOffset);
+    else
+        source.start(0, startOffset);
     return source;
 }
 
@@ -7915,7 +7924,7 @@ class UIObject
         if (!this.size.x || !this.size.y) return;
 
         const lineColor = this.interactive && this.isActiveObject() && !this.disabled ? this.color : this.lineColor;
-        const color = this.interactive ? this.disabled ? this.disabledColor : this.isActiveObject() ? this.activeColor || this.color : this.isHoverObject() ? this.hoverColor : this.color : this.color;
+        const color = this.disabled ? this.disabledColor : this.interactive ? this.isActiveObject() ? this.activeColor || this.color : this.isHoverObject() ? this.hoverColor : this.color : this.color;
         uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor, this.cornerRadius);
     }
 
@@ -7981,9 +7990,9 @@ class UIText extends UIObject
     {
         super(pos, size);
 
-        ASSERT(typeof text === 'string', 'ui text must be a string');
+        ASSERT(isString(text), 'ui text must be a string');
         ASSERT(['left','center','right'].includes(align), 'ui text align must be left, center, or right');
-        ASSERT(typeof font === 'string', 'ui text font must be a string');
+        ASSERT(isString(font), 'ui text font must be a string');
 
         // set properties
         this.text = text;
@@ -8057,7 +8066,7 @@ class UIButton extends UIObject
     {
         super(pos, size);
 
-        ASSERT(typeof text === 'string', 'ui button must be a string');
+        ASSERT(isString(text), 'ui button must be a string');
         ASSERT(isColor(color), 'ui button color must be a color');
 
         // set properties
@@ -8095,7 +8104,7 @@ class UICheckbox extends UIObject
     {
         super(pos, size);
 
-        ASSERT(typeof text === 'string', 'ui checkbox must be a string');
+        ASSERT(isString(text), 'ui checkbox must be a string');
         ASSERT(isColor(color), 'ui checkbox color must be a color');
 
         /** @property {boolean} - Current percentage value of this scrollbar 0-1 */
@@ -8151,7 +8160,7 @@ class UIScrollbar extends UIObject
         super(pos, size);
 
         ASSERT(isNumber(value), 'ui scrollbar value must be a number');
-        ASSERT(typeof text === 'string', 'ui scrollbar must be a string');
+        ASSERT(isString(text), 'ui scrollbar must be a string');
         ASSERT(isColor(color), 'ui scrollbar color must be a color');
         ASSERT(isColor(handleColor), 'ui scrollbar handleColor must be a color');
 

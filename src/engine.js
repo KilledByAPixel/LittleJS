@@ -30,7 +30,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.14.15';
+const engineVersion = '1.14.16';
 
 /** Frames per second to update
  *  @type {number}
@@ -380,6 +380,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     const promises = imageSources.map((src, textureIndex)=>
         new Promise(resolve =>
         {
+            ASSERT(isString(src), 'imageSources must be an array of strings');
 
             const image = new Image;
             image.onerror = image.onload = ()=>
