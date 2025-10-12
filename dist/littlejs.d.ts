@@ -1,5 +1,37 @@
 declare module "littlejsengine" {
     /**
+     * - Update or render function for a plugin
+     */
+    export type PluginCallback = () => any;
+    /**
+     * - Called after the engine starts, can be async
+     */
+    export type GameInitCallback = () => void | Promise<void>;
+    /**
+     * - Update or render function for the game
+     */
+    export type GameCallback = () => any;
+    /**
+     * - Function that processes an object
+     */
+    export type ObjectCallbackFunction = (uiObjects: EngineObject) => any;
+    /**
+     * - A function that draws to a 2D canvas context
+     */
+    export type Canvas2DDrawFunction = (context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D) => any;
+    /**
+     * - Function called when a sound ends
+     */
+    export type AudioEndedCallback = (source: AudioBufferSourceNode) => any;
+    /**
+     * - Function that processes a medal
+     */
+    export type MedalCallbackFunction = (medal: Medal) => any;
+    /**
+     * - Function that processes a particle
+     */
+    export type ParticleCallbackFunction = (particle: Particle) => any;
+    /**
      * LittleJS - The Tiny Fast JavaScript Game Engine
      * MIT License - Copyright 2021 Frank Force
      *
@@ -67,12 +99,21 @@ declare module "littlejsengine" {
      *  @param {boolean} [isPaused]
      *  @memberof Engine */
     export function setPaused(isPaused?: boolean): void;
+    /**
+     * @callback GameInitCallback - Called after the engine starts, can be async
+     * @returns {void|Promise<void>}
+     * @memberof Engine
+     */
+    /**
+     * @callback GameCallback - Update or render function for the game
+     * @memberof Engine
+     */
     /** Startup LittleJS engine with your callback functions
-     *  @param {Function|function():Promise} gameInit - Called once after the engine starts up, can be async for loading
-     *  @param {Function} gameUpdate - Called every frame before objects are updated (60fps), use for game logic
-     *  @param {Function} gameUpdatePost - Called after physics and objects are updated, even when paused, use for UI updates
-     *  @param {Function} gameRender - Called before objects are rendered, use for drawing backgrounds/world elements
-     *  @param {Function} gameRenderPost - Called after objects are rendered, use for drawing UI/overlays
+     *  @param {GameInitCallback} gameInit - Called once after the engine starts up, can be async for loading
+     *  @param {GameCallback} gameUpdate - Called every frame before objects are updated (60fps), use for game logic
+     *  @param {GameCallback} gameUpdatePost - Called after physics and objects are updated, even when paused, use for UI updates
+     *  @param {GameCallback} gameRender - Called before objects are rendered, use for drawing backgrounds/world elements
+     *  @param {GameCallback} gameRenderPost - Called after objects are rendered, use for drawing UI/overlays
      *  @param {Array<string>} [imageSources=[]] - List of image file paths to preload (e.g., ['player.png', 'tiles.png'])
      *  @param {HTMLElement} [rootElement] - Root DOM element to attach canvas to, defaults to document.body
      *  @example
@@ -86,7 +127,7 @@ declare module "littlejsengine" {
      *    ['tiles.png', 'tilesLevel.png']       // images to load
      *  );
      *  @memberof Engine */
-    export function engineInit(gameInit: Function | (() => Promise<any>), gameUpdate: Function, gameUpdatePost: Function, gameRender: Function, gameRenderPost: Function, imageSources?: Array<string>, rootElement?: HTMLElement): Promise<void>;
+    export function engineInit(gameInit: GameInitCallback, gameUpdate: GameCallback, gameUpdatePost: GameCallback, gameRender: GameCallback, gameRenderPost: GameCallback, imageSources?: Array<string>, rootElement?: HTMLElement): Promise<void>;
     /** Update each engine object, remove destroyed objects, and update time
      *  @memberof Engine */
     export function engineObjectsUpdate(): void;
@@ -100,13 +141,18 @@ declare module "littlejsengine" {
      *  @return {Array<EngineObject>}                        - List of collected objects
      *  @memberof Engine */
     export function engineObjectsCollect(pos?: Vector2, size?: Vector2 | number, objects?: Array<EngineObject>): Array<EngineObject>;
+    /**
+     * @callback ObjectCallbackFunction - Function that processes an object
+     * @param {EngineObject} uiObjects
+     *  @memberof Engine
+     */
     /** Triggers a callback for each object within a given area
-     *  @param {Vector2} [pos]                 - Center of test area, or undefined for all objects
-     *  @param {Vector2|number} [size]         - Radius of circle if float, rectangle size if Vector2
-     *  @param {Function} [callbackFunction]   - Calls this function on every object that passes the test
+     *  @param {Vector2} [pos] - Center of test area, or undefined for all objects
+     *  @param {Vector2|number} [size] - Radius of circle if float, rectangle size if Vector2
+     *  @param {ObjectCallbackFunction} [callbackFunction] - Calls this function on every object that passes the test
      *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
      *  @memberof Engine */
-    export function engineObjectsCallback(pos?: Vector2, size?: Vector2 | number, callbackFunction?: Function, objects?: Array<EngineObject>): void;
+    export function engineObjectsCallback(pos?: Vector2, size?: Vector2 | number, callbackFunction?: ObjectCallbackFunction, objects?: Array<EngineObject>): void;
     /** Return a list of objects intersecting a ray
      *  @param {Vector2} start
      *  @param {Vector2} end
@@ -114,11 +160,15 @@ declare module "littlejsengine" {
      *  @return {Array<EngineObject>} - List of objects hit
      *  @memberof Engine */
     export function engineObjectsRaycast(start: Vector2, end: Vector2, objects?: Array<EngineObject>): Array<EngineObject>;
+    /**
+     * @callback PluginCallback - Update or render function for a plugin
+     * @memberof Engine
+     */
     /** Add a new update function for a plugin
-     *  @param {Function} [updateFunction]
-     *  @param {Function} [renderFunction]
+     *  @param {PluginCallback} [updateFunction]
+     *  @param {PluginCallback} [renderFunction]
      *  @memberof Engine */
-    export function engineAddPlugin(updateFunction?: Function, renderFunction?: Function): void;
+    export function engineAddPlugin(updateFunction?: PluginCallback, renderFunction?: PluginCallback): void;
     /**
      * LittleJS Debug System
      * - Press Esc to show debug overlay with mouse pick
@@ -1472,16 +1522,21 @@ declare module "littlejsengine" {
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function drawCircle(pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    /**
+     * @callback Canvas2DDrawFunction - A function that draws to a 2D canvas context
+     * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
+     * @memberof Draw
+     */
     /** Draw directly to a 2d canvas context in world space
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
      *  @param {number}   angle
      *  @param {boolean}  [mirror]
-     *  @param {Function} [drawFunction]
+     *  @param {Canvas2DDrawFunction} [drawFunction]
      *  @param {boolean}  [screenSpace=false]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      *  @memberof Draw */
-    export function drawCanvas2D(pos: Vector2, size: Vector2, angle?: number, mirror?: boolean, drawFunction?: Function, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    export function drawCanvas2D(pos: Vector2, size: Vector2, angle?: number, mirror?: boolean, drawFunction?: Canvas2DDrawFunction, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw text on main canvas in world space
      *  Automatically splits new lines into rows
      *  @param {string}  text
@@ -1963,16 +2018,21 @@ declare module "littlejsengine" {
      * sound_example.play();
      */
     export class SoundWave extends Sound {
+        /**
+         * @callback SoundLoadCallback - Function called when sound is loaded
+         * @param {SoundWave} sound
+         * @memberof Audio
+         */
         /** Create a sound object and cache the wave file for later use
          *  @param {string} filename - Filename of audio file to load
          *  @param {number} [randomness] - How much to randomize frequency each time sound plays
          *  @param {number} [range=soundDefaultRange] - World space max range of sound
          *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
-         *  @param {Function} [onloadCallback] - callback function to call when sound is loaded
+         *  @param {SoundLoadCallback} [onloadCallback] - callback function to call when sound is loaded
          */
-        constructor(filename: string, randomness?: number, range?: number, taper?: number, onloadCallback?: Function);
-        /** @property {Function} - callback function to call when sound is loaded */
-        onloadCallback: Function;
+        constructor(filename: string, randomness?: number, range?: number, taper?: number, onloadCallback?: (sound: SoundWave) => SoundWave);
+        /** @property {SoundLoadCallback} - callback function to call when sound is loaded */
+        onloadCallback: (sound: SoundWave) => SoundWave;
         /** Loads a sound from a URL and decodes it into sample data. Must be used with await!
         *  @param {string} filename
         *  @return {Promise<void>} */
@@ -2073,6 +2133,11 @@ declare module "littlejsengine" {
      *  @return {number} - The frequency of the note
      *  @memberof Audio */
     export function getNoteFrequency(semitoneOffset: number, rootFrequency?: number): number;
+    /**
+     * @callback AudioEndedCallback - Function called when a sound ends
+     * @param {AudioBufferSourceNode} source
+     * @memberof Audio
+     */
     /** Play cached audio samples with given settings
      *  @param {Array}    sampleChannels - Array of arrays of samples to play (for stereo playback)
      *  @param {number}   [volume] - How much to scale volume by
@@ -2082,10 +2147,10 @@ declare module "littlejsengine" {
      *  @param {number}   [sampleRate=44100] - Sample rate for the sound
      *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing
      *  @param {number}   [offset] - Offset in seconds to start playback from
-     *  @param {Function} [onended] - Callback for when the sound ends
+     *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
      *  @return {AudioBufferSourceNode} - The audio node of the sound played
      *  @memberof Audio */
-    export function playSamples(sampleChannels: any[], volume?: number, rate?: number, pan?: number, loop?: boolean, sampleRate?: number, gainNode?: GainNode, offset?: number, onended?: Function): AudioBufferSourceNode;
+    export function playSamples(sampleChannels: any[], volume?: number, rate?: number, pan?: number, loop?: boolean, sampleRate?: number, gainNode?: GainNode, offset?: number, onended?: AudioEndedCallback): AudioBufferSourceNode;
     /** Generate and play a ZzFX sound
      *
      *  <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
@@ -2387,13 +2452,18 @@ declare module "littlejsengine" {
         *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
         *  @memberof Draw */
         draw(pos: Vector2, size?: Vector2, angle?: number, color?: Color, mirror?: boolean, additiveColor?: Color, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+        /**
+         * @callback Canvas2DDrawCallback - Function that draws to a canvas 2D context
+         * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
+         * @memberof TileLayers
+         */
         /** Draw onto the layer canvas in world space (bypass WebGL)
          *  @param {Vector2}  pos
          *  @param {Vector2}  size
          *  @param {number}   angle
          *  @param {boolean}  mirror
-         *  @param {Function} drawFunction */
-        drawCanvas2D(pos: Vector2, size: Vector2, angle: number, mirror: boolean, drawFunction: Function): void;
+         *  @param {Canvas2DDrawCallback} drawFunction */
+        drawCanvas2D(pos: Vector2, size: Vector2, angle: number, mirror: boolean, drawFunction: (context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D) => any): void;
         /** Draw a tile onto the layer canvas in world space
          *  @param {Vector2}  pos
          *  @param {Vector2}  [size=(1,1)]
@@ -2502,6 +2572,11 @@ declare module "littlejsengine" {
      * LittleJS Particle System
      */
     /**
+     *  @callback ParticleCallbackFunction - Function that processes a particle
+     *  @param {Particle} particle
+     *  @memberof Engine
+     */
+    /**
      * Particle Emitter - Spawns particles with the given settings
      * @extends EngineObject
      * @memberof Engine
@@ -2590,9 +2665,9 @@ declare module "littlejsengine" {
         localSpace: boolean;
         /** @property {number} - If non zero the particle is drawn as a trail, stretched in the direction of velocity */
         trailScale: number;
-        /** @property {Function}   - Callback when particle is destroyed */
+        /** @property {ParticleCallbackFunction} - Callback when particle is destroyed */
         particleDestroyCallback: any;
-        /** @property {Function}   - Callback when particle is created */
+        /** @property {ParticleCallbackFunction} - Callback when particle is created */
         particleCreateCallback: any;
         /** @property {number} - Track particle emit time */
         emitTimeBuffer: number;
@@ -2621,9 +2696,9 @@ declare module "littlejsengine" {
          * @param {boolean}  additive   - Does it use additive blend mode
          * @param {number}   trailScale - If a trail, how long to make it
          * @param {ParticleEmitter} [localSpaceEmitter] - Parent emitter if local space
-         * @param {Function} [destroyCallback] - Callback when particle dies
+         * @param {ParticleCallbackFunction} [destroyCallback] - Callback when particle dies
          */
-        constructor(position: Vector2, tileInfo: TileInfo, angle: number, colorStart: Color, colorEnd: Color, lifeTime: number, sizeStart: number, sizeEnd: number, fadeRate: number, additive: boolean, trailScale: number, localSpaceEmitter?: ParticleEmitter, destroyCallback?: Function);
+        constructor(position: Vector2, tileInfo: TileInfo, angle: number, colorStart: Color, colorEnd: Color, lifeTime: number, sizeStart: number, sizeEnd: number, fadeRate: number, additive: boolean, trailScale: number, localSpaceEmitter?: ParticleEmitter, destroyCallback?: ParticleCallbackFunction);
         /** @property {Color} - Color at start of life */
         colorStart: Color;
         /** @property {Color} - Color at end of life */
@@ -2642,8 +2717,8 @@ declare module "littlejsengine" {
         trailScale: number;
         /** @property {ParticleEmitter} - Parent emitter if local space */
         localSpaceEmitter: ParticleEmitter;
-        /** @property {Function} - Called when particle dies */
-        destroyCallback: Function;
+        /** @property {ParticleCallbackFunction} - Called when particle dies */
+        destroyCallback: ParticleCallbackFunction;
     }
     /**
      * LittleJS Medal System
@@ -2956,13 +3031,18 @@ declare module "littlejsengine" {
         *  @param {string}  [font=uiSystem.defaultFont]
         *  @param {boolean} [applyMaxWidth=true] */
         drawText(text: string, pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, align?: string, font?: string, applyMaxWidth?: boolean): void;
+        /**
+         * @callback DragAndDropCallback - Callback for drag and drop events
+         * @param {DragEvent} event - The drag event
+         * @memberof UISystem
+         */
         /** Setup drag and drop event handlers
         *  Automatically prevents defaults and calls the given functions
-        *  @param {Function} [onDrop] - when a file is dropped
-        *  @param {Function} [onDragEnter] - when a file is dragged onto the window
-        *  @param {Function} [onDragLeave] - when a file is dragged off the window
-        *  @param {Function} [onDragOver] - continously when dragging over */
-        setupDragAndDrop(onDrop?: Function, onDragEnter?: Function, onDragLeave?: Function, onDragOver?: Function): void;
+        *  @param {DragAndDropCallback} [onDrop] - when a file is dropped
+        *  @param {DragAndDropCallback} [onDragEnter] - when a file is dragged onto the window
+        *  @param {DragAndDropCallback} [onDragLeave] - when a file is dragged off the window
+        *  @param {DragAndDropCallback} [onDragOver] - continously when dragging over */
+        setupDragAndDrop(onDrop?: (event: DragEvent) => any, onDragEnter?: (event: DragEvent) => any, onDragLeave?: (event: DragEvent) => any, onDragOver?: (event: DragEvent) => any): void;
     }
     /**
      * UI Object - Base level object for all UI elements

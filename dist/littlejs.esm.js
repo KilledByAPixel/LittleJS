@@ -96,9 +96,14 @@ let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
 
 const pluginUpdateList = [], pluginRenderList = [];
 
+/**
+ * @callback PluginCallback - Update or render function for a plugin
+ * @memberof Engine
+ */
+
 /** Add a new update function for a plugin
- *  @param {Function} [updateFunction]
- *  @param {Function} [renderFunction]
+ *  @param {PluginCallback} [updateFunction]
+ *  @param {PluginCallback} [renderFunction]
  *  @memberof Engine */
 function engineAddPlugin(updateFunction, renderFunction)
 {
@@ -111,12 +116,22 @@ function engineAddPlugin(updateFunction, renderFunction)
 ///////////////////////////////////////////////////////////////////////////////
 // Main Engine Functions
 
+/**
+ * @callback GameInitCallback - Called after the engine starts, can be async
+ * @returns {void|Promise<void>}
+ * @memberof Engine
+ */
+/**
+ * @callback GameCallback - Update or render function for the game
+ * @memberof Engine
+ */
+
 /** Startup LittleJS engine with your callback functions
- *  @param {Function|function():Promise} gameInit - Called once after the engine starts up, can be async for loading
- *  @param {Function} gameUpdate - Called every frame before objects are updated (60fps), use for game logic
- *  @param {Function} gameUpdatePost - Called after physics and objects are updated, even when paused, use for UI updates
- *  @param {Function} gameRender - Called before objects are rendered, use for drawing backgrounds/world elements
- *  @param {Function} gameRenderPost - Called after objects are rendered, use for drawing UI/overlays
+ *  @param {GameInitCallback} gameInit - Called once after the engine starts up, can be async for loading
+ *  @param {GameCallback} gameUpdate - Called every frame before objects are updated (60fps), use for game logic
+ *  @param {GameCallback} gameUpdatePost - Called after physics and objects are updated, even when paused, use for UI updates
+ *  @param {GameCallback} gameRender - Called before objects are rendered, use for drawing backgrounds/world elements
+ *  @param {GameCallback} gameRenderPost - Called after objects are rendered, use for drawing UI/overlays
  *  @param {Array<string>} [imageSources=[]] - List of image file paths to preload (e.g., ['player.png', 'tiles.png'])
  *  @param {HTMLElement} [rootElement] - Root DOM element to attach canvas to, defaults to document.body
  *  @example
@@ -483,10 +498,16 @@ function engineObjectsCollect(pos, size, objects=engineObjects)
     return collectedObjects;
 }
 
+/**
+ * @callback ObjectCallbackFunction - Function that processes an object
+ * @param {EngineObject} uiObjects
+ *  @memberof Engine
+ */
+
 /** Triggers a callback for each object within a given area
- *  @param {Vector2} [pos]                 - Center of test area, or undefined for all objects
- *  @param {Vector2|number} [size]         - Radius of circle if float, rectangle size if Vector2
- *  @param {Function} [callbackFunction]   - Calls this function on every object that passes the test
+ *  @param {Vector2} [pos] - Center of test area, or undefined for all objects
+ *  @param {Vector2|number} [size] - Radius of circle if float, rectangle size if Vector2
+ *  @param {ObjectCallbackFunction} [callbackFunction] - Calls this function on every object that passes the test
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
  *  @memberof Engine */
 function engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
@@ -3965,12 +3986,18 @@ function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useW
     drawEllipse(pos, vec2(size), color, 0, lineWidth, lineColor, useWebGL, screenSpace, context);
 }
 
+/**
+ * @callback Canvas2DDrawFunction - A function that draws to a 2D canvas context
+ * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
+ * @memberof Draw
+ */
+
 /** Draw directly to a 2d canvas context in world space
  *  @param {Vector2}  pos
  *  @param {Vector2}  size
  *  @param {number}   angle
  *  @param {boolean}  [mirror]
- *  @param {Function} [drawFunction]
+ *  @param {Canvas2DDrawFunction} [drawFunction]
  *  @param {boolean}  [screenSpace=false]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
@@ -5129,19 +5156,25 @@ class Sound
  */
 class SoundWave extends Sound
 {
+    /**
+     * @callback SoundLoadCallback - Function called when sound is loaded
+     * @param {SoundWave} sound
+     * @memberof Audio
+     */
+    
     /** Create a sound object and cache the wave file for later use
      *  @param {string} filename - Filename of audio file to load
      *  @param {number} [randomness] - How much to randomize frequency each time sound plays
      *  @param {number} [range=soundDefaultRange] - World space max range of sound
      *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
-     *  @param {Function} [onloadCallback] - callback function to call when sound is loaded
+     *  @param {SoundLoadCallback} [onloadCallback] - callback function to call when sound is loaded
      */
     constructor(filename, randomness=0, range, taper, onloadCallback)
     {
         super(undefined, range, taper);
         if (!soundEnable || headlessMode) return;
 
-        /** @property {Function} - callback function to call when sound is loaded */
+        /** @property {SoundLoadCallback} - callback function to call when sound is loaded */
         this.onloadCallback = onloadCallback;
         this.randomness = randomness;
         this.loadSound(filename);
@@ -5190,7 +5223,7 @@ class SoundWave extends Sound
         this.sampleChannels = sampleChannels;
         this.loadedPercent = 1;
         if (this.onloadCallback)
-            this.onloadCallback();
+            this.onloadCallback(this);
     }
 }
 
@@ -5399,6 +5432,12 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/**
+ * @callback AudioEndedCallback - Function called when a sound ends
+ * @param {AudioBufferSourceNode} source
+ * @memberof Audio
+ */
+
 /** Play cached audio samples with given settings
  *  @param {Array}    sampleChannels - Array of arrays of samples to play (for stereo playback)
  *  @param {number}   [volume] - How much to scale volume by
@@ -5408,7 +5447,7 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
  *  @param {number}   [sampleRate=44100] - Sample rate for the sound
  *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing
  *  @param {number}   [offset] - Offset in seconds to start playback from
- *  @param {Function} [onended] - Callback for when the sound ends
+ *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
  *  @return {AudioBufferSourceNode} - The audio node of the sound played
  *  @memberof Audio */
 function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=audioDefaultSampleRate, gainNode, offset=0, onended)
@@ -5847,12 +5886,18 @@ class CanvasLayer extends EngineObject
         drawTile(pos, size, tileInfo, color, angle, mirror, additiveColor, useWebGL, screenSpace, context);
     }
 
+    /**
+     * @callback Canvas2DDrawCallback - Function that draws to a canvas 2D context
+     * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
+     * @memberof TileLayers
+     */
+
     /** Draw onto the layer canvas in world space (bypass WebGL)
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
      *  @param {number}   angle
      *  @param {boolean}  mirror
-     *  @param {Function} drawFunction */
+     *  @param {Canvas2DDrawCallback} drawFunction */
     drawCanvas2D(pos, size, angle, mirror, drawFunction)
     {
         const context = this.context;
@@ -5889,7 +5934,7 @@ class CanvasLayer extends EngineObject
             else
             {
                 // untextured
-                context.fillStyle = color;
+                context.fillStyle = color.toString();
                 context.fillRect(-.5, -.5, 1, 1);
             }
         });
@@ -6265,6 +6310,12 @@ class TileCollisionLayer extends TileLayer
  */
 
 /**
+ *  @callback ParticleCallbackFunction - Function that processes a particle
+ *  @param {Particle} particle
+ *  @memberof Engine
+ */
+
+/**
  * Particle Emitter - Spawns particles with the given settings
  * @extends EngineObject
  * @memberof Engine
@@ -6400,9 +6451,9 @@ class ParticleEmitter extends EngineObject
         this.localSpace        = localSpace;
         /** @property {number} - If non zero the particle is drawn as a trail, stretched in the direction of velocity */
         this.trailScale        = 0;
-        /** @property {Function}   - Callback when particle is destroyed */
+        /** @property {ParticleCallbackFunction} - Callback when particle is destroyed */
         this.particleDestroyCallback = undefined;
-        /** @property {Function}   - Callback when particle is created */
+        /** @property {ParticleCallbackFunction} - Callback when particle is created */
         this.particleCreateCallback = undefined;
         /** @property {number} - Track particle emit time */
         this.emitTimeBuffer    = 0;
@@ -6522,7 +6573,7 @@ class Particle extends EngineObject
      * @param {boolean}  additive   - Does it use additive blend mode
      * @param {number}   trailScale - If a trail, how long to make it
      * @param {ParticleEmitter} [localSpaceEmitter] - Parent emitter if local space
-     * @param {Function} [destroyCallback] - Callback when particle dies
+     * @param {ParticleCallbackFunction} [destroyCallback] - Callback when particle dies
      */
     constructor(position, tileInfo, angle, colorStart, colorEnd, lifeTime, sizeStart, sizeEnd, fadeRate, additive, trailScale, localSpaceEmitter, destroyCallback
     )
@@ -6547,7 +6598,7 @@ class Particle extends EngineObject
         this.trailScale = trailScale;
         /** @property {ParticleEmitter} - Parent emitter if local space */
         this.localSpaceEmitter = localSpaceEmitter;
-        /** @property {Function} - Called when particle dies */
+        /** @property {ParticleCallbackFunction} - Called when particle dies */
         this.destroyCallback = destroyCallback;
         // particles do not clamp speed by default
         this.clampSpeed = false;
@@ -6690,8 +6741,14 @@ function medalsInit(saveName)
     }
 }
 
+/**
+ *  @callback MedalCallbackFunction - Function that processes a medal
+ *  @param {Medal} medal
+ *  @memberof Medals
+ */
+
 /** Calls a function for each medal
- *  @param {Function} callback
+ *  @param {MedalCallbackFunction} callback
  *  @memberof Medals */
 function medalsForEach(callback)
 { Object.values(medals).forEach(medal=>callback(medal)); }
@@ -8235,12 +8292,18 @@ class UISystemPlugin
         drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, applyMaxWidth ? size.x : undefined, uiSystem.uiContext);
     }
 
+    /**
+     * @callback DragAndDropCallback - Callback for drag and drop events
+     * @param {DragEvent} event - The drag event
+     * @memberof UISystem
+     */
+
     /** Setup drag and drop event handlers
     *  Automatically prevents defaults and calls the given functions
-    *  @param {Function} [onDrop] - when a file is dropped
-    *  @param {Function} [onDragEnter] - when a file is dragged onto the window
-    *  @param {Function} [onDragLeave] - when a file is dragged off the window
-    *  @param {Function} [onDragOver] - continously when dragging over */
+    *  @param {DragAndDropCallback} [onDrop] - when a file is dropped
+    *  @param {DragAndDropCallback} [onDragEnter] - when a file is dragged onto the window
+    *  @param {DragAndDropCallback} [onDragLeave] - when a file is dragged off the window
+    *  @param {DragAndDropCallback} [onDragOver] - continously when dragging over */
     setupDragAndDrop(onDrop, onDragEnter, onDragLeave, onDragOver)
     {
         function setCallback(callback, listenerType)
