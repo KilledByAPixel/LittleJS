@@ -383,7 +383,7 @@ class UIObject
         if (!this.size.x || !this.size.y) return;
 
         const lineColor = this.interactive && this.isActiveObject() && !this.disabled ? this.color : this.lineColor;
-        const color = this.interactive ? this.disabled ? this.disabledColor : this.isActiveObject() ? this.activeColor || this.color : this.isHoverObject() ? this.hoverColor : this.color : this.color;
+        const color = this.disabled ? this.disabledColor : this.interactive ? this.isActiveObject() ? this.activeColor || this.color : this.isHoverObject() ? this.hoverColor : this.color : this.color;
         uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor, this.cornerRadius);
     }
 
@@ -449,9 +449,9 @@ class UIText extends UIObject
     {
         super(pos, size);
 
-        ASSERT(typeof text === 'string', 'ui text must be a string');
+        ASSERT(isString(text), 'ui text must be a string');
         ASSERT(['left','center','right'].includes(align), 'ui text align must be left, center, or right');
-        ASSERT(typeof font === 'string', 'ui text font must be a string');
+        ASSERT(isString(font), 'ui text font must be a string');
 
         // set properties
         this.text = text;
@@ -525,7 +525,7 @@ class UIButton extends UIObject
     {
         super(pos, size);
 
-        ASSERT(typeof text === 'string', 'ui button must be a string');
+        ASSERT(isString(text), 'ui button must be a string');
         ASSERT(isColor(color), 'ui button color must be a color');
 
         // set properties
@@ -563,7 +563,7 @@ class UICheckbox extends UIObject
     {
         super(pos, size);
 
-        ASSERT(typeof text === 'string', 'ui checkbox must be a string');
+        ASSERT(isString(text), 'ui checkbox must be a string');
         ASSERT(isColor(color), 'ui checkbox color must be a color');
 
         /** @property {boolean} - Current percentage value of this scrollbar 0-1 */
@@ -619,7 +619,7 @@ class UIScrollbar extends UIObject
         super(pos, size);
 
         ASSERT(isNumber(value), 'ui scrollbar value must be a number');
-        ASSERT(typeof text === 'string', 'ui scrollbar must be a string');
+        ASSERT(isString(text), 'ui scrollbar must be a string');
         ASSERT(isColor(color), 'ui scrollbar color must be a color');
         ASSERT(isColor(handleColor), 'ui scrollbar handleColor must be a color');
 
