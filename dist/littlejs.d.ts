@@ -2387,7 +2387,7 @@ declare module "littlejsengine" {
      *  @param {boolean}  [draw] - Should the layer be drawn automatically
      *  @return {Array<TileCollisionLayer>}
      *  @memberof TileLayers */
-    export function tileCollisionLoad(tileMapData: any, tileInfo?: TileInfo, renderOrder?: number, collisionLayer?: number, draw?: boolean): Array<TileCollisionLayer>;
+    export function tileLayersLoad(tileMapData: any, tileInfo?: TileInfo, renderOrder?: number, collisionLayer?: number, draw?: boolean): Array<TileCollisionLayer>;
     /**
      * Tile layer data object stores info about how to draw a tile
      * @memberof TileLayers
