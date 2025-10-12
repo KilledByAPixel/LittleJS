@@ -524,13 +524,13 @@ function setCode(code, filename)
         iframeContent.engineInit(iframeContent.gameInit, iframeContent.gameUpdate, iframeContent.gameUpdatePost, iframeContent.gameRender, iframeContent.gameRenderPost, ['tiles.png?'+Date.now()])
         .catch(error =>
         {
-            const errorLine = getErrorLine(error.stack);
+            const errorLine = error ? getErrorLine(error.stack) : -1;
             if (errorLine >= 0)
                 setErrorLine(errorLine);
             let message = error;
-            if (error.message)
+            if (error && error.message)
                 message = error.message;
-            if (error.stack)
+            if (error && error.stack)
                 message += '\n' + error.stack;
             setErrorMessage(message);
             throw error;
