@@ -111,7 +111,7 @@ function gameUpdate()
     if (currentStep == lastStep && lastStepTime)
         return;
 
-    // play active sound when step changes
+    // play sounds when step changes
     for (let i=trackCount; i--;)
     {
         const noteButton = sequencer[currentStep + i*stepCount];
