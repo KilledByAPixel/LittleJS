@@ -504,16 +504,14 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
     if (onended)
         source.addEventListener('ended', ()=> onended(source));
 
+    const startOffset = offset * rate;
     if (!audioIsRunning())
     {
-        // fix stalled audio, this sound won't be able to play
-        audioContext.resume();
-        return;
+        // fix stalled audio and start
+        audioContext.resume().then(()=>source.start(0, startOffset));
     }
-
-    // play and return sound
-    const startOffset = offset * rate;
-    source.start(0, startOffset);
+    else
+        source.start(0, startOffset);
     return source;
 }
 
