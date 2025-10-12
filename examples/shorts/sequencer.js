@@ -17,33 +17,31 @@ class UISequencerButton extends UIButton
 {
     constructor(step, track)
     {
-        const gapSize = 8;
-        const size = vec2(60, 28);
+        const size = vec2(68, 35);
         let pos = vec2(step, trackCount-1-track);
-        pos = pos.multiply(size.add(vec2(gapSize)));
-        pos = pos.add(vec2(240, 30));
+        pos = pos.multiply(size);
+        pos = pos.add(vec2(240, 40));
         super(pos, size);
 
         this.step = step;
         this.track = track;
+        this.cornerRadius = 0;
         this.dragActivate = true;
         this.isOn = false;
 
         // set instrument and color based on track
         const pianoStart = 2;
-        let hue = track*.15;
+        this.hue = track*.15;
         if (track >= pianoStart)
         {
             const octave = Math.floor((track-pianoStart) / scale.length);
             const scaleNote = (track-pianoStart) % scale.length;
             this.semitone = scale[scaleNote] + 12*octave;
             this.sound = sound_piano;
-            hue = .6 - scaleNote/40 + octave*.2;
+            this.hue = .6 - scaleNote/40 + octave*.2;
         }
         else
             this.sound = [sound_drumKick, sound_drumHat][track];
-        this.defaultColor = hsl(hue,.1,.2);
-        this.activeColor = hsl(hue,1,.6);
     }
     onPress()
     {
@@ -57,7 +55,9 @@ class UISequencerButton extends UIButton
     render()
     {
         // update color based on active column
-        this.color = this.isOn ? this.activeColor : this.defaultColor;
+        this.activeColor = eraseMode ? RED : WHITE;
+        this.color = this.isActiveObject() ? BLACK : 
+            hsl(this.hue, this.isOn ? 1 : .5, this.isOn ? .5 : .1); 
         if (isPlaying && this.step == currentStep)
             this.color = this.color.lerp(WHITE, .5);
         super.render();
