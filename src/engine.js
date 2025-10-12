@@ -380,6 +380,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     const promises = imageSources.map((src, textureIndex)=>
         new Promise(resolve =>
         {
+
             const image = new Image;
             image.onerror = image.onload = ()=>
             {

@@ -690,7 +690,7 @@ function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textA
  *  @memberof Draw */
 function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, maxWidth, context=overlayContext)
 {
-    ASSERT(typeof text === 'string', 'text must be a string');
+    ASSERT(isString(text), 'text must be a string');
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isNumber(size), 'size must be a number');
     ASSERT(isColor(color), 'color must be a color');
@@ -698,7 +698,7 @@ function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=B
     ASSERT(isColor(lineColor), 'lineColor must be a color');
     ASSERT(isColor(lineColor), 'lineColor must be a color');
     ASSERT(['left','center','right'].includes(textAlign), 'align must be left, center, or right');
-    ASSERT(typeof font === 'string', 'font must be a string');
+    ASSERT(isString(font), 'font must be a string');
     
     context.fillStyle = color.toString();
     context.strokeStyle = lineColor.toString();
@@ -958,7 +958,7 @@ class FontImage
      *  @param {boolean} [center]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      */
-    drawTextScreen(text, pos, scale=4, center, context=overlayContext)
+    drawTextScreen(text, pos, scale=4, center=true, context=overlayContext)
     {
         context.save();
         const size = this.tileSize;

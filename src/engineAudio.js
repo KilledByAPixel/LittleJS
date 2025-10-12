@@ -198,11 +198,12 @@ class SoundWave extends Sound
     {
         super(undefined, range, taper);
         if (!soundEnable || headlessMode) return;
+        ASSERT(!filename || isString(filename), 'filename must be a string');
 
         /** @property {SoundLoadCallback} - callback function to call when sound is loaded */
         this.onloadCallback = onloadCallback;
         this.randomness = randomness;
-        this.loadSound(filename);
+        filename && this.loadSound(filename);
     }
 
     /** Loads a sound from a URL and decodes it into sample data. Must be used with await!

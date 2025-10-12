@@ -838,7 +838,8 @@ class Color
      * @return {Color} */
     setHex(hex)
     {
-        ASSERT(typeof hex === 'string' && hex[0] === '#', 'Color hex code must be a string starting with #');
+        ASSERT(isString(hex), 'Color hex code must be a string');
+        ASSERT(hex[0] === '#', 'Color hex code must start with #');
         ASSERT([4,5,7,9].includes(hex.length), 'Invalid hex');
 
         if (hex.length < 6)
