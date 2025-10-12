@@ -243,6 +243,13 @@ async function fetchJSON(url)
  * @memberof Utilities */
 function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
 
+/**
+ * Check if object is a valid string or can be converted to one
+ * @param {any} s
+ * @return {boolean}
+ * @memberof Utilities */
+function isString(s) { return s !== undefined && s !== null && typeof s.toString() === 'string'; }
+
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Random global functions

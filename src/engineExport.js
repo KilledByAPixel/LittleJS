@@ -178,6 +178,7 @@ export
 	isColor,
 	isVector2,
 	isNumber,
+	isString,
 
 	// Default Colors
 	WHITE,
