@@ -144,6 +144,7 @@ declare module "littlejsengine" {
      *  @memberof Debug */
     export let showWatermark: boolean;
     /** Asserts if the expression is false, does nothing in release builds
+     *  Halts execution if the assert fails and throws an error
      *  @param {boolean} assert
      *  @param {...Object} [output] - error message output
      *  @memberof Debug */

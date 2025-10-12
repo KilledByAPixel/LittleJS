@@ -727,10 +727,16 @@ let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParti
 // Debug helper functions
 
 /** Asserts if the expression is false, does nothing in release builds
+ *  Halts execution if the assert fails and throws an error
  *  @param {boolean} assert
  *  @param {...Object} [output] - error message output
  *  @memberof Debug */
-function ASSERT(assert, ...output) { console.assert(assert, ...output); }
+function ASSERT(assert, ...output)
+{
+    if (assert) return;
+    console.assert(assert, ...output)
+    throw new Error('Assert failed!'); // halt execution
+}
 
 /** Log to console if debug is enabled, does nothing in release builds
  *  @param {...Object} [output] - message output
