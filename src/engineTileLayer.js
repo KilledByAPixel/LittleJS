@@ -281,7 +281,7 @@ class CanvasLayer extends EngineObject
             else
             {
                 // untextured
-                context.fillStyle = color;
+                context.fillStyle = color.toString();
                 context.fillRect(-.5, -.5, 1, 1);
             }
         });
