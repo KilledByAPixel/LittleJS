@@ -46,7 +46,7 @@ function gameInit()
 function gameRender()
 {
     const h = 100, w = 20;
-    const pos = vec2(), sizeTop = vec2(.4), size = vec2(.2,h), color = WHITE;
+    const pos = vec2(), sizeTop = vec2(.4), size = vec2(.2,h), color = rgb();
     for (let x=cameraPos.x-w; x<cameraPos.x+w; x+=.1)
     {
         pos.x = x;

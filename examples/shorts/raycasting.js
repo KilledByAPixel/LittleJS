@@ -45,7 +45,7 @@ function gameRender()
     {
         // draw horizontal slizes to create floor and ceiling
         const h = 9;
-        let pos = vec2(), size = vec2(39, .15), color = WHITE;
+        let pos = vec2(), size = vec2(39, .15), color = rgb();
         for (let y=-h; y<h; y+=.1)
         {
             const p = 1.01-abs(y/h)
@@ -57,7 +57,7 @@ function gameRender()
     {
         // draw vertical slices to create the walls
         const w = 20;
-        const pos = vec2(), size = vec2(.15), color = WHITE;
+        const pos = vec2(), size = vec2(.15), color = rgb();
         for (let x=-w; x<w; x+=.1)
         {
             const p = raycast(playerPos, playerAngle + x/w);
