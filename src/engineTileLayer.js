@@ -239,12 +239,18 @@ class CanvasLayer extends EngineObject
         drawTile(pos, size, tileInfo, color, angle, mirror, additiveColor, useWebGL, screenSpace, context);
     }
 
+    /**
+     * @callback Canvas2DDrawCallback - Function that draws to a canvas 2D context
+     * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
+     * @memberof TileLayers
+     */
+
     /** Draw onto the layer canvas in world space (bypass WebGL)
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
      *  @param {number}   angle
      *  @param {boolean}  mirror
-     *  @param {Function} drawFunction */
+     *  @param {Canvas2DDrawCallback} drawFunction */
     drawCanvas2D(pos, size, angle, mirror, drawFunction)
     {
         const context = this.context;

@@ -59,8 +59,14 @@ function medalsInit(saveName)
     }
 }
 
+/**
+ *  @callback MedalCallbackFunction - Function that processes a medal
+ *  @param {Medal} medal
+ *  @memberof Medals
+ */
+
 /** Calls a function for each medal
- *  @param {Function} callback
+ *  @param {MedalCallbackFunction} callback
  *  @memberof Medals */
 function medalsForEach(callback)
 { Object.values(medals).forEach(medal=>callback(medal)); }

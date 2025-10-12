@@ -598,12 +598,18 @@ function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useW
     drawEllipse(pos, vec2(size), color, 0, lineWidth, lineColor, useWebGL, screenSpace, context);
 }
 
+/**
+ * @callback Canvas2DDrawFunction - A function that draws to a 2D canvas context
+ * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
+ * @memberof Draw
+ */
+
 /** Draw directly to a 2d canvas context in world space
  *  @param {Vector2}  pos
  *  @param {Vector2}  size
  *  @param {number}   angle
  *  @param {boolean}  [mirror]
- *  @param {Function} [drawFunction]
+ *  @param {Canvas2DDrawFunction} [drawFunction]
  *  @param {boolean}  [screenSpace=false]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */

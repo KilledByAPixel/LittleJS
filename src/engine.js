@@ -93,9 +93,14 @@ let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
 
 const pluginUpdateList = [], pluginRenderList = [];
 
+/**
+ * @callback PluginCallback - Update or render function for a plugin
+ * @memberof Engine
+ */
+
 /** Add a new update function for a plugin
- *  @param {Function} [updateFunction]
- *  @param {Function} [renderFunction]
+ *  @param {PluginCallback} [updateFunction]
+ *  @param {PluginCallback} [renderFunction]
  *  @memberof Engine */
 function engineAddPlugin(updateFunction, renderFunction)
 {
@@ -108,12 +113,22 @@ function engineAddPlugin(updateFunction, renderFunction)
 ///////////////////////////////////////////////////////////////////////////////
 // Main Engine Functions
 
+/**
+ * @callback GameInitCallback - Called after the engine starts, can be async
+ * @returns {void|Promise<void>}
+ * @memberof Engine
+ */
+/**
+ * @callback GameCallback - Update or render function for the game
+ * @memberof Engine
+ */
+
 /** Startup LittleJS engine with your callback functions
- *  @param {Function|function():Promise} gameInit - Called once after the engine starts up, can be async for loading
- *  @param {Function} gameUpdate - Called every frame before objects are updated (60fps), use for game logic
- *  @param {Function} gameUpdatePost - Called after physics and objects are updated, even when paused, use for UI updates
- *  @param {Function} gameRender - Called before objects are rendered, use for drawing backgrounds/world elements
- *  @param {Function} gameRenderPost - Called after objects are rendered, use for drawing UI/overlays
+ *  @param {GameInitCallback} gameInit - Called once after the engine starts up, can be async for loading
+ *  @param {GameCallback} gameUpdate - Called every frame before objects are updated (60fps), use for game logic
+ *  @param {GameCallback} gameUpdatePost - Called after physics and objects are updated, even when paused, use for UI updates
+ *  @param {GameCallback} gameRender - Called before objects are rendered, use for drawing backgrounds/world elements
+ *  @param {GameCallback} gameRenderPost - Called after objects are rendered, use for drawing UI/overlays
  *  @param {Array<string>} [imageSources=[]] - List of image file paths to preload (e.g., ['player.png', 'tiles.png'])
  *  @param {HTMLElement} [rootElement] - Root DOM element to attach canvas to, defaults to document.body
  *  @example
@@ -480,10 +495,16 @@ function engineObjectsCollect(pos, size, objects=engineObjects)
     return collectedObjects;
 }
 
+/**
+ * @callback ObjectCallbackFunction - Function that processes an object
+ * @param {EngineObject} uiObjects
+ *  @memberof Engine
+ */
+
 /** Triggers a callback for each object within a given area
- *  @param {Vector2} [pos]                 - Center of test area, or undefined for all objects
- *  @param {Vector2|number} [size]         - Radius of circle if float, rectangle size if Vector2
- *  @param {Function} [callbackFunction]   - Calls this function on every object that passes the test
+ *  @param {Vector2} [pos] - Center of test area, or undefined for all objects
+ *  @param {Vector2|number} [size] - Radius of circle if float, rectangle size if Vector2
+ *  @param {ObjectCallbackFunction} [callbackFunction] - Calls this function on every object that passes the test
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
  *  @memberof Engine */
 function engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects)
