@@ -70,7 +70,7 @@ function gameInit()
     // initialize UI system
     new UISystemPlugin;
     uiSystem.defaultCornerRadius = 8;
-    canvasClearColor = hsl(0,0,.1);
+    canvasClearColor = hsl(0,0,.3);
 
     // create sequencer buttons
     for (let step=stepCount; step--;)
