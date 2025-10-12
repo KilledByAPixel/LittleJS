@@ -399,7 +399,7 @@ TileCollisionLayer.setCollisionData(pos, data=1)    // Set tile collision data a
 tileCollisionGetData(pos)                           // Get tile collision data at pos
 tileCollisionTest(pos, size=(0,0), object)          // Check if collision should occur
 tileCollisionRaycast(posStart, posEnd, object)      // Return the center of tile if hit
-tileCollisionLoad(tileMapData, tileInfo)            // Load tile layers from exported data
+tileLayersLoad(tileMapData, tileInfo)            // Load tile layers from exported data
 
 ```
 

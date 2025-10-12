@@ -313,7 +313,7 @@ export
 	tileCollisionGetData,
 	tileCollisionTest,
 	tileCollisionRaycast,
-	tileCollisionLoad,
+	tileLayersLoad,
 	TileLayerData,
 	CanvasLayer,
 	TileLayer,

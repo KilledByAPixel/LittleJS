@@ -78,7 +78,7 @@ function tileCollisionRaycast(posStart, posEnd, object, solidOnly=true)
  *  @param {boolean}  [draw] - Should the layer be drawn automatically
  *  @return {Array<TileCollisionLayer>}
  *  @memberof TileLayers */
-function tileCollisionLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLayer, draw=true)
+function tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLayer, draw=true)
 {
     if (!tileMapData)
     {
