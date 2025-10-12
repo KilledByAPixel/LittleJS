@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.14.13';
+const engineVersion = '1.14.14';
 
 /** Frames per second to update
  *  @type {number}
@@ -2175,67 +2175,67 @@ class Color
 /** Color - White #ffffff
  *  @type {Color}
  *  @memberof Utilities */
-const WHITE = rgb();
+const WHITE = Object.freeze(rgb());
 
-/** Color - Clear White #ffffff with 0 alpha
+/** Color - Clear White #757474ff with 0 alpha
  *  @type {Color}
  *  @memberof Utilities */
-const CLEAR_WHITE = rgb(1,1,1,0);
+const CLEAR_WHITE = Object.freeze(rgb(1,1,1,0));
 
 /** Color - Black #000000
  *  @type {Color}
  *  @memberof Utilities */
-const BLACK = rgb(0,0,0);
+const BLACK = Object.freeze(rgb(0,0,0));
 
 /** Color - Clear Black #000000 with 0 alpha
  *  @type {Color}
  *  @memberof Utilities */
-const CLEAR_BLACK = rgb(0,0,0,0);
+const CLEAR_BLACK = Object.freeze(rgb(0,0,0,0));
 
 /** Color - Gray #808080
  *  @type {Color}
  *  @memberof Utilities */
-const GRAY = rgb(.5,.5,.5);
+const GRAY = Object.freeze(rgb(.5,.5,.5));
 
 /** Color - Red #ff0000
  *  @type {Color}
  *  @memberof Utilities */
-const RED = rgb(1,0,0);
+const RED = Object.freeze(rgb(1,0,0));
 
 /** Color - Orange #ff8000
  *  @type {Color}
  *  @memberof Utilities */
-const ORANGE = rgb(1,.5,0);
+const ORANGE = Object.freeze(rgb(1,.5,0));
 
 /** Color - Yellow #ffff00
  *  @type {Color}
  *  @memberof Utilities */
-const YELLOW = rgb(1,1,0);
+const YELLOW = Object.freeze(rgb(1,1,0));
 
 /** Color - Green #00ff00
  *  @type {Color}
  *  @memberof Utilities */
-const GREEN = rgb(0,1,0);
+const GREEN = Object.freeze(rgb(0,1,0));
 
 /** Color - Cyan #00ffff
  *  @type {Color}
  *  @memberof Utilities */
-const CYAN = rgb(0,1,1);
+const CYAN = Object.freeze(rgb(0,1,1));
 
 /** Color - Blue #0000ff
  *  @type {Color}
  *  @memberof Utilities */
-const BLUE = rgb(0,0,1);
+const BLUE = Object.freeze(rgb(0,0,1));
 
 /** Color - Purple #8000ff
  *  @type {Color}
  *  @memberof Utilities */
-const PURPLE = rgb(.5,0,1);
+const PURPLE = Object.freeze(rgb(.5,0,1));
 
 /** Color - Magenta #ff00ff
  *  @type {Color}
  *  @memberof Utilities */
-const MAGENTA = rgb(1,0,1);
+const MAGENTA = Object.freeze(rgb(1,0,1));
 
 ///////////////////////////////////////////////////////////////////////////////
 

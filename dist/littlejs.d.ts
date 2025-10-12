@@ -1183,7 +1183,7 @@ declare module "littlejsengine" {
      *  @type {Color}
      *  @memberof Utilities */
     export const WHITE: Color;
-    /** Color - Clear White #ffffff with 0 alpha
+    /** Color - Clear White #757474ff with 0 alpha
      *  @type {Color}
      *  @memberof Utilities */
     export const CLEAR_WHITE: Color;
