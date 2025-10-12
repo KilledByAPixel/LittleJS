@@ -5103,9 +5103,9 @@ function tileCollisionLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisio
         tileLayers[layerIndex] = tileLayer;
 
         // apply layer color
-        const layerColor = dataLayer.color || WHITE;
-        if (dataLayer.tintcolor)
-            layerColor.setHex(dataLayer.tintcolor);
+        const layerColor = dataLayer.tintcolor ?
+            new Color().setHex(dataLayer.tintcolor) :
+            dataLayer.color || WHITE;
         ASSERT(isColor(layerColor), 'layer color is not a color');
 
         for (let x=levelSize.x; x--;)
