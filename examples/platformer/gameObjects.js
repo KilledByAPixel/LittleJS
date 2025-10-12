@@ -247,13 +247,13 @@ export class Weapon extends LJS.EngineObject
 
         // shell effect
         this.addChild(this.shellEmitter = new LJS.ParticleEmitter(
-            vec2(), 0, 0, 0, 0, .1,  // pos, angle, emitSize, emitTime, emitRate, emitCone
+            vec2(), 0, 0, 0, 0, .1,  // pos, angle, size, time, rate, cone
             0,                       // tileInfo
             rgb(1,.8,.5), rgb(.9,.7,.5), // colorStartA, colorStartB
             rgb(1,.8,.5), rgb(.9,.7,.5), // colorEndA, colorEndB
             3, .1, .1, .15, .1, // time, sizeStart, sizeEnd, speed, angleSpeed
             1, .95, 1, 0, 0,    // damp, angleDamp, gravity, particleCone, fade
-            .1, 1               // randomness, collide, additive, colorLinear, renderOrder
+            .1, 1               // randomness, collide
         ), vec2(.1,0), -.8);
         this.shellEmitter.restitution = .5;
         this.shellEmitter.particleDestroyCallback = GameEffects.persistentParticleDestroyCallback;
@@ -368,13 +368,13 @@ export class Bullet extends LJS.EngineObject
 
         // spark effects
         const emitter = new LJS.ParticleEmitter(
-            this.pos, 0, 0, .1, 100, .5, // pos, angle, emitSize, emitTime, emitRate, emitCone
+            this.pos, 0, 0, .1, 100, .5, // pos, angle, size, time, rate, cone
             0,                           // tileInfo
             rgb(1,1,0), rgb(1,0,0), // colorStartA, colorStartB
             rgb(1,1,0), rgb(1,0,0), // colorEndA, colorEndB
             .2, .2, 0, .1, .1,  // time, sizeStart, sizeEnd, speed, angleSpeed
             1, 1, .5, 3.14, .1, // damp, angleDamp, gravityScale, particleCone, fade, 
-            .5, 1, 1            // randomness, collide, additive, colorLinear, renderOrder
+            .5, 1, 1            // randomness, collide, additive
         );
         emitter.trailScale = 1;
         emitter.restitution = .3;

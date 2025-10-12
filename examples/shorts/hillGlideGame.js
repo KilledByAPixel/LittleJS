@@ -11,12 +11,14 @@ class Player extends EngineObject
     {
         super.update();
 
+        // check ground height
         const h = getGroundHeight(this.pos.x);
         if (this.pos.y < h + this.size.y/2)
         {
             // clamp to ground and reflect velocity
             this.pos.y = h + this.size.y/2;
-            const n = vec2((h-getGroundHeight(this.pos.x+.1))/.1, 1).normalize();
+            const h2 = getGroundHeight(this.pos.x+.1);
+            const n = vec2((h-h2)/.1, 1).normalize();
             this.velocity = this.velocity.reflect(n,0);
         }
 
@@ -45,8 +47,12 @@ function gameInit()
 
 function gameRender()
 {
+    // draw ground as a series of thin rectangles
     const h = 100, w = 20;
-    const pos = vec2(), sizeTop = vec2(.4), size = vec2(.2,h), color = rgb();
+    const pos = vec2();
+    const sizeTop = vec2(.4);
+    const size = vec2(.2,h);
+    const color = rgb();
     for (let x=cameraPos.x-w; x<cameraPos.x+w; x+=.1)
     {
         pos.x = x;

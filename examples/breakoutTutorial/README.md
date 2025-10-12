@@ -426,7 +426,7 @@ Now you should see this simple particle effect play wherever a brick breaks. You
 const color = this.color;
 new LJS.ParticleEmitter(
     this.pos, 0,             // pos, angle
-    this.size, .1, 200, 3.14,// emitSize, emitTime, emitRate, emitCone
+    this.size, .1, 200, 3.14,// emitSize, emitTime, rate, cone
     undefined,               // tileInfo
     color, color,                       // colorStartA, colorStartB
     color.scale(1,0), color.scale(1,0), // colorEndA, colorEndB

@@ -7,13 +7,16 @@ async function gameInit()
     canvasClearColor = hsl(0,0,.9);
     
     // create ground object
-    groundObject = new Box2dObject(vec2(-8), vec2(), 0, 0, GRAY, box2d.bodyTypeStatic);
+    groundObject = new Box2dObject(vec2(-8), vec2(), 0, 0,
+        GRAY, box2d.bodyTypeStatic);
     groundObject.addBox(vec2(100,2));
 
     // add some random objects
     for (let i=50; i--;)
     {
-        const o = new Box2dObject(randInCircle(5), vec2(), 0, 0, randColor());
+        const pos = randInCircle(5);
+        const color = randColor();
+        const o = new Box2dObject(pos, vec2(), 0, 0, color);
         randInt(2) ? o.addCircle(rand(1,2)) : o.addRandomPoly(rand(1,2));
     }
 }
@@ -36,7 +39,8 @@ function gameUpdate()
         // grab object
         const object = box2d.pointCast(mousePos);
         if (object)
-            mouseJoint = new Box2dTargetJoint(object, groundObject, mousePos);
+            mouseJoint = new Box2dTargetJoint(object,
+                groundObject, mousePos);
     }
 }
 

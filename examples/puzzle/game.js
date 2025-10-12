@@ -309,7 +309,7 @@ function clearMatches()
             const color2 = color1.lerp(hsl(), .5);
             new LJS.ParticleEmitter(
                 pos.add(vec2(.5)), 0, // pos, angle
-                .5, .1, 200, 3.14,    // emitSize, emitTime, emitRate, emitCone
+                .5, .1, 200, 3.14,    // emitSize, emitTime, rate, cone
                 0,                    // tileInfo
                 color1, color2,                      // colorStartA, colorStartB
                 color1.scale(1,0), color2.scale(1,0),// colorEndA, colorEndB

@@ -88,14 +88,15 @@ const exampleList =
     new ExampleInfo('Particles', 'particles.js', 'Particle system', false, 'effects, emitter, physics, fire, smoke'),
     new ExampleInfo('Timers', 'timers.js', 'Timer objects and UI', false, 'delay, interval, slider'),
     new ExampleInfo('Sound Effects', 'sound.js', 'ZzFX sound effect generator', false, 'audio, volume, ui'),
-    new ExampleInfo('Music', 'music.js', 'Music playback and controls with drag and drop', false, 'music, sound, audio, streaming, volume, ui'),
+    new ExampleInfo('Music', 'music.js', 'Basic music load, play, pause, and stop', false, 'music, sound, audio, streaming, volume, ui'),
     new ExampleInfo('Font Image', 'systemFont.js', 'Bitmap font system with built-in system font', false, 'text, characters'),
     new ExampleInfo('Parallax', 'parallax.js', 'Parallax scrolling mountains', false, 'generative, canvas, background'),
     new ExampleInfo('Maze Generator', 'maze.js', 'Procedural maze generation', false, 'generative, level, tiles, map, grid'),
     new ExampleInfo('Medals', 'medals.js', 'Achievement system', false, 'unlock, progress, newgrounds'),
+    new ExampleInfo('Clock', 'clock.js', 'Animated analog clock', false, 'time, rotation, lines, rectangles'),
     new ExampleInfo('Piano', 'piano.js', 'Interactive piano keyboard', false, 'music, sound, audio, notes, ui, instrument'),
     new ExampleInfo('Step Sequencer', 'sequencer.js', 'Simple music loop creation tool', false, 'music, sound, audio, notes, ui, instrument'),
-    new ExampleInfo('Clock', 'clock.js', 'Animated analog clock', false, 'time, rotation, lines, rectangles'),
+    new ExampleInfo('Music Player', 'musicPlayer.js', 'Advanced music player with audio seeking and drag and drop', false, 'music, sound, audio, streaming, volume, ui'),
     new ExampleInfo('--- MINI GAMES ---'),
     new ExampleInfo('Pong Game', 'pongGame.js', 'Classic paddle ball bouncing', false, 'objects, collision'),
     new ExampleInfo('Platformer Game', 'platformer.js', 'Jump and run side view', false, 'objects, gravity, level, tiles, camera'),
@@ -235,7 +236,7 @@ function setExample()
     exampleInfo.innerText = example.text;
     const filename = 'examples/' + example.filename;
     exampleLink.href = 'https://github.com/KilledByAPixel/LittleJS/tree/main/' + filename;
-    exampleLink.innerText = 'View code on GitHub';
+    exampleLink.innerText = 'View on GitHub: ' + example.filename;
     
     // update URL parameter
     const url = new URL(window.location);

@@ -5,7 +5,7 @@ function gameInit()
     // fire
     new ParticleEmitter(
         vec2(-5,-2), 0,                // pos, angle
-        2, 0, 200, PI,                 // emitSize, emitTime, emitRate, emitCone
+        2, 0, 200, PI,                 // emitSize, emitTime, rate, cone
         tile(0),                       // tileInfo
         rgb(1,.5,.1), rgb(1,.1,.1),    // colorStartA, colorStartB
         rgb(1,.5,.1,0), rgb(1,.1,.1,0),// colorEndA, colorEndB
@@ -17,7 +17,7 @@ function gameInit()
     // smoke
     new ParticleEmitter(
         vec2(5,-2), 0,               // pos, angle
-        3, 0, 100, PI,               // emitSize, emitTime, emitRate, emitCone
+        3, 0, 100, PI,               // emitSize, emitTime, rate, cone
         tile(0),                     // tileInfo
         hsl(0,0,0,.5), hsl(0,0,1,.5),// colorStartA, colorStartB
         hsl(0,0,0,0), hsl(0,0,1,0),  // colorEndA, colorEndB

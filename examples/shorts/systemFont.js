@@ -2,7 +2,7 @@ function gameRender()
 {
     // draw text with built in font image system font
     const font = new FontImage;
-    font.drawText('System Font Test', cameraPos.add(vec2(0,3)), .2, true);
+    font.drawText('System Font Test', cameraPos.add(vec2(0,3)), .2);
 
     // show every character in the system font
     let s = '';
@@ -12,5 +12,5 @@ function gameRender()
             s += '\n';
         s += String.fromCharCode(i);
     }
-    font.drawText(s, cameraPos, .1, true);
+    font.drawText(s, cameraPos, .1);
 }

@@ -68,7 +68,12 @@ function gameRender()
         }
     }
     // draw instructions and pointer lock status
-    const instructions = pointerLockIsActive() ? 'Mouse Control Active - ESC To Exit' : 'Click To Enable Mouse Control';
+    const instructions = pointerLockIsActive() ? 
+        'Mouse Control Active - ESC To Exit' : 
+        'Click To Enable Mouse Control';
+    const textPos = vec2(mainCanvasSize.x/2, 50);
+    const textSize = 24;
+    const textColor = pointerLockIsActive() ? GREEN : WHITE;
     if (!isTouchDevice)
-        drawTextScreen(instructions, vec2(mainCanvasSize.x/2, 50), 24, pointerLockIsActive() ? GREEN : WHITE);
+        drawTextScreen(instructions, textPos, textSize, textColor);
 }

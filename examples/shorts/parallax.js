@@ -23,7 +23,7 @@ class ParallaxLayer extends CanvasLayer
         const w = canvasSize.x, h = canvasSize.y;
         for (let i = h; i--;)
         {
-            // draw a 1 pixel gradient line on the left side of the canvas
+            // draw a 1 pixel gradient line on the left side
             const p = i/h;
             this.context.fillStyle = topColor.lerp(bottomColor, p);
             this.context.fillRect(0, i, 1, 1);
@@ -34,7 +34,8 @@ class ParallaxLayer extends CanvasLayer
         const levelness = .005; // how much the mountains level out
         const slopeRange = 1;   // max slope of the mountains
         const startGroundLevel = h/2;
-        let y = startGroundLevel, groundSlope = rand(-slopeRange, slopeRange);
+        let y = startGroundLevel;
+        let groundSlope = rand(-slopeRange, slopeRange);
         for (let x=w; x--;)
         {
             // pull slope towards start ground level
@@ -45,7 +46,7 @@ class ParallaxLayer extends CanvasLayer
                 groundSlope = rand(-slopeRange, slopeRange);
 
             // draw 1 pixel wide vertical slice of mountain
-            this.context.drawImage(this.canvas, 0, 0, 1, h, x, y, 1, h - y);
+            this.context.drawImage(this.canvas, 0,0,1,h,x,y,1,h-y);
         }
 
         // remove gradient sliver from left side

@@ -1,8 +1,8 @@
 // create example medals
-const medal_openedExample = new Medal(0, 'Opened Example',   'You opened this example!');
-const medal_leftClick     = new Medal(1, 'Left Clicked',     'You left clicked!',     '🐁');
-const medal_rightClick    = new Medal(2, 'Right Clicked',    'You right clicked!',    '🐭');
-const medal_spacePressed  = new Medal(3, 'Pressed Spacebar', 'You pressed spacebar!', '🚀');
+const medal_openedExample = new Medal(0, 'Open', 'Opened this example!');
+const medal_leftClick = new Medal(1, 'Lefty', 'Left clicked!', '🐁');
+const medal_rightClick = new Medal(2, 'Righty', 'Right clicked!', '🐭');
+const medal_spacePressed = new Medal(3, 'Space', 'Pressed spacebar!', '🚀');
 
 // setup medals
 const saveName = 'Medals Example';

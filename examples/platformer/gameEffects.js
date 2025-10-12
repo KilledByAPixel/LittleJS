@@ -48,13 +48,13 @@ export function makeDebris(pos, color = hsl(), amount = 50, size=.2, restitution
 {
     const color2 = color.lerp(hsl(), .5);
     const emitter = new LJS.ParticleEmitter(
-        pos, 0, 1, .1, amount/.1, 3.14, // pos, angle, emitSize, emitTime, emitRate, emitCone
+        pos, 0, 1, .1, amount/.1, 3.14, // pos, angle, size, time, rate, cone
         0,                     // tileInfo
         color, color2,         // colorStartA, colorStartB
         color, color2,         // colorEndA, colorEndB
         3, size,size, .1, .05, // time, sizeStart, sizeEnd, speed, angleSpeed
         1, .95, .4, 3.14, 0,   // damp, angleDamp, gravity, particleCone, fade
-        .5, 1                  // randomness, collide, additive, colorLinear, renderOrder
+        .5, 1                  // randomness, collide
     );
     emitter.restitution = restitution;
     emitter.particleDestroyCallback = persistentParticleDestroyCallback;
@@ -109,7 +109,7 @@ export function explosion(pos, radius=3)
     // smoke
     new LJS.ParticleEmitter(
         pos, 0,                       // pos, angle
-        radius/2, .2, 50*radius, 3.14,// emitSize, emitTime, emitRate, emitCone
+        radius/2, .2, 50*radius, 3.14,// emitSize, emitTime, rate, cone
         0,                            // tileInfo
         hsl(0,0,0), hsl(0,0,0),       // colorStartA, colorStartB
         hsl(0,0,0,0), hsl(0,0,0,0),   // colorEndA, colorEndB
@@ -121,7 +121,7 @@ export function explosion(pos, radius=3)
     // fire
     new LJS.ParticleEmitter(
         pos, 0,                         // pos, angle
-        radius/2, .1, 100*radius, 3.14, // emitSize, emitTime, emitRate, emitCone
+        radius/2, .1, 100*radius, 3.14, // emitSize, emitTime, rate, cone
         0,                              // tileInfo
         rgb(1,.5,.1), rgb(1,.1,.1),     // colorStartA, colorStartB
         rgb(1,.5,.1,0), rgb(1,.1,.1,0), // colorEndA, colorEndB

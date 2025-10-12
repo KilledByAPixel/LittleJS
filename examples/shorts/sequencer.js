@@ -50,7 +50,8 @@ class UISequencerButton extends UIButton
             eraseMode = this.isOn;
         this.isOn = !eraseMode;
         eraseMode || this.playSound();
-        sequencer[this.step + this.track*stepCount] = eraseMode ? 0 : this;
+        const index = this.step + this.track*stepCount;
+        sequencer[index] = eraseMode ? 0 : this;
     }
     render()
     {
@@ -114,7 +115,8 @@ function gameUpdate()
     // play sounds when step changes
     for (let i=trackCount; i--;)
     {
-        const noteButton = sequencer[currentStep + i*stepCount];
+        const index = currentStep + i*stepCount;
+        const noteButton = sequencer[index];
         noteButton && noteButton.playSound();
     }
 }

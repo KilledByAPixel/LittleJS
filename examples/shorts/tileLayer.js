@@ -30,19 +30,19 @@ function gameUpdate()
 {
     if (mouseWasPressed(0))
     {
-        // create particle emitter
+        // create particle emitter to test the collision
         const hue = rand();
         const particleEmitter = new ParticleEmitter(
-            mousePos, 0,                // emitPos, emitAngle
-            0, 0.1, 500, PI,            // emitSize, emitTime, emitRate, emitCone
-            tile(0, 16),                // tileIndex, tileSize
-            hsl(hue,1,.5),   hsl(hue,1,1),   // colorStartA, colorStartB
-            hsl(hue,1,.5,0), hsl(hue,1,1,0), // colorEndA, colorEndB
-            2, .2, .2, .2, .05,         // time, sizeStart, sizeEnd, speed, angleSpeed
-            .99, 1, 1, PI,              // damping, angleDamping, gravityScale, cone
-            .05, .8, true, false        // fadeRate, randomness, collide, additive
+            mousePos, 0,
+            0, 0.1, 500, PI,
+            tile(0, 16),
+            hsl(hue,1,.5),   hsl(hue,1,1),
+            hsl(hue,1,.5,0), hsl(hue,1,1,0),
+            2, .2, .2, .2, .05,
+            .99, 1, 1, PI,
+            .05, .8, true
         );
         particleEmitter.restitution = .5; // bounce when it collides
-        particleEmitter.trailScale = 2;  // stretch in direction of motion
+        particleEmitter.trailScale = 2;  // stretch as it moves
     }
 }

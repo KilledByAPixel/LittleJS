@@ -3,7 +3,8 @@ async function gameInit()
     // setup box2d and create the objects
     await box2dInit();
     gravity.y = -20;
-    groundObject = new Box2dObject(vec2(-8), vec2(), 0, 0, GRAY, box2d.bodyTypeStatic);
+    groundObject = new Box2dObject(vec2(-8), vec2(), 0, 0,
+        GRAY, box2d.bodyTypeStatic);
     groundObject.addBox(vec2(100,6));
     new CarObject(vec2(0,-2));
     canvasClearColor = hsl(0,0,.9);

@@ -117,7 +117,7 @@ class Brick extends LJS.EngineObject
         const color = this.color;
         new LJS.ParticleEmitter(
             this.pos, 0,             // pos, angle
-            this.size, .1, 200, 3.14,// emitSize, emitTime, emitRate, emitCone
+            this.size, .1, 200, 3.14,// emitSize, emitTime, rate, cone
             undefined,               // tileInfo
             color, color,                       // colorStartA, colorStartB
             color.scale(1,0), color.scale(1,0), // colorEndA, colorEndB

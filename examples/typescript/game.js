@@ -52,7 +52,7 @@ function gameInit() {
     LJS.setGravity(vec2(0, -.01));
     // create particle emitter
     particleEmitter = new LJS.ParticleEmitter(vec2(16, 9), 0, // emitPos, emitAngle
-    1, 0, 500, Math.PI, // emitSize, emitTime, emitRate, emitCone
+    1, 0, 500, Math.PI, // emitSize, emitTime, rate, cone
     tile(0, 16), // tileIndex, tileSize
     hsl(1, 1, 1), hsl(0, 0, 0), // colorStartA, colorStartB
     hsl(0, 0, 0, 0), hsl(0, 0, 0, 0), // colorEndA, colorEndB
@@ -61,7 +61,7 @@ function gameInit() {
     .05, .5, true, true // fadeRate, randomness, collide, additive
     );
     particleEmitter.restitution = .3; // bounce when it collides
-    particleEmitter.trailScale = 2; // stretch in direction of motion
+    particleEmitter.trailScale = 2; // stretch as it moves
 }
 ///////////////////////////////////////////////////////////////////////////////
 function gameUpdate() {

@@ -19,7 +19,8 @@ class PuzzlePiece extends EngineObject
     {
         const deltaX = emptyGridPos.x - this.gridPos.x;
         const deltaY = emptyGridPos.y - this.gridPos.y;
-        if (mouseWasPressed(0) && isOverlapping(this.pos, this.size, mousePos))
+        if (mouseWasPressed(0))
+        if (isOverlapping(this.pos, this.size, mousePos))
         if (abs(deltaX) + abs(deltaY) === 1)
         {
             // swap with empty space when clicked on
@@ -32,7 +33,8 @@ class PuzzlePiece extends EngineObject
 
     render()
     {
-        const pos = this.lastPos.lerp(this.pos, this.moveTimer.getPercent());
+        const movePercent = this.moveTimer.getPercent();
+        const pos = this.lastPos.lerp(this.pos, movePercent);
         drawRect(pos, this.size, this.color);
         drawTextOverlay(this.text, pos, 2.5, BLACK);
     }

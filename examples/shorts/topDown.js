@@ -30,7 +30,10 @@ function gameInit()
     // create collision objects
     for (let i=300; i--;)
     {
-        const o = new EngineObject(randInCircle(15+i,7), vec2(rand(4,9),rand(4,9)), 0, 0, hsl(0,0,rand(.1,.3)));
+        const pos = randInCircle(15+i,7);
+        const size = vec2(rand(4,9),rand(4,9));
+        const color = hsl(.1,.5,rand(.2,.3));
+        const o = new EngineObject(pos, size, 0, 0, color);
         o.setCollision(); // make object collide
         o.mass = 0; // make object have static physics
     }

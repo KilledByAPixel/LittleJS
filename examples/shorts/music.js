@@ -1,8 +1,7 @@
-let musicPlayer, playButton, stopButton, progressBar, dropZoneText;
+let musicPlayer, playButton, stopButton, infoText;
 let musicSound = new SoundWave('song.mp3');
 let musicVolume = 1;
-let musicInstance;
-let loadedFileName;
+let music;
 
 function gameInit()
 {
@@ -14,23 +13,21 @@ function gameInit()
     canvasClearColor = hsl(.9,.3,.2); // background color
 
     // setup music player UI
-    musicPlayer = new UIObject(mainCanvasSize.scale(.5), vec2(500, 300));
-    const title = new UIText(vec2(0, -100), vec2(500, 40), 'LittleJS Music Player');
-    musicPlayer.addChild(title);
+    musicPlayer = new UIObject(mainCanvasSize.scale(.5), vec2(500, 220));
 
-    // drop zone text
-    dropZoneText = new UIText(vec2(0, -60), vec2(450, 20), 'Drag & Drop Audio Files Here');
-    dropZoneText.textColor = hsl(.9, .3, .8, .7);
-    musicPlayer.addChild(dropZoneText);
+    // infomation text
+    infoText = new UIText(vec2(0, -70), vec2(400, 50));
+    musicPlayer.addChild(infoText);
 
     // volume slider
-    const volumeSlider = new UIScrollbar(vec2(0, -20), vec2(400, 30), musicVolume, 'Music Volume');
+    const volumeSlider = new UIScrollbar(vec2(0, -20), vec2(400, 30), 
+        musicVolume, 'Music Volume');
     musicPlayer.addChild(volumeSlider);
     volumeSlider.onChange = () => 
     {
         musicVolume = volumeSlider.value;
-        if (musicInstance) 
-            musicInstance.setVolume(musicVolume);
+        if (music) 
+            music.setVolume(musicVolume);
     };
 
     // play button
@@ -42,96 +39,40 @@ function gameInit()
             return;
         
         // handle play/pause toggle
-        if (!musicInstance)
-            musicInstance = musicSound.playMusic(musicVolume);
-        else if (musicInstance.isPaused())
-            musicInstance.resume();
+        if (!music)
+            music = musicSound.playMusic(musicVolume);
+        else if (music.isPaused())
+            music.resume();
         else
-            musicInstance.pause();
+            music.pause();
     };
 
     // stop button
     stopButton = new UIButton(vec2(90, 50), vec2(140, 50), 'Stop');
-    stopButton.onClick = ()=>
-    {
-        if (!musicInstance)
-            return;
-
-        // stop sound
-        musicInstance.stop();
-    };
+    stopButton.onClick = ()=>  music && music.stop();
     musicPlayer.addChild(stopButton);
-
-    // progress bar and scrollbar for seeking
-    progressBar = new UIScrollbar(vec2(0, 120), vec2(400, 30), 0, 'Progress');
-    progressBar.disabledColor = RED;
-    progressBar.onChange = ()=> 
-    {
-        // control music seek position
-        const wasPlaying = musicInstance && musicInstance.isPlaying();
-        if (!musicInstance)
-            musicInstance = musicSound.playMusic(musicVolume, true, true);
-        progressBar.value = min(progressBar.value, .999); // prevent looping around
-        const seekTime = progressBar.value * musicSound.getDuration();
-        musicInstance.start(seekTime);
-        if (!wasPlaying)
-            musicInstance.pause();
-    };
-    musicPlayer.addChild(progressBar);
-
-    {
-        // setup drag and drop for audio files
-        function onDragEnter() { musicPlayer.color = RED; };
-        function onDragLeave() { musicPlayer.color = WHITE; };
-        function onDrop(e)
-        {
-            musicPlayer.color = WHITE
-            
-            // get the dropped file
-            const file = e.dataTransfer.files[0];
-            if (!file || !file.type.startsWith('audio'))
-                return;
-                
-            // create new sound from dropped file
-            const fileURL = URL.createObjectURL(file);
-            musicSound = new SoundWave(fileURL, musicVolume);
-            loadedFileName = file.name;
-            dropZoneText.text = loadedFileName;
-            
-            // reset UI
-            musicInstance && musicInstance.stop();
-            musicInstance = undefined;
-            progressBar.value = 0;
-        }
-        uiSystem.setupDragAndDrop(onDrop, onDragEnter, onDragLeave);
-    }
 }
 
 function gameUpdate()
 {
-    // disable buttons while loading or waiting for interaction
-    const isDisabled = !musicSound.isLoaded() || !audioIsRunning();
-    playButton.disabled  = isDisabled
-    stopButton.disabled  = isDisabled
-    progressBar.disabled = isDisabled
+    // disable buttons while loading
+    const isDisabled = !musicSound.isLoaded();
+    playButton.disabled = stopButton.disabled = isDisabled;
 
     // update ui
-    if (!musicSound.isLoaded())
+    if (isDisabled)
     {
         // update loading progress
-        const loadingPercent = musicSound.loadedPercent * 100;
-        progressBar.text = `Loading: ${(loadingPercent).toFixed(2)}%`;
+        const loadingPercent = musicSound.loadedPercent * 100|0;
+        infoText.text = `Loading: ${loadingPercent}%`;
     }
     else
     {
         // update ui text
-        const isPlaying = musicInstance && musicInstance.isPlaying();
+        const isPlaying = music && music.isPlaying();
         playButton.text = isPlaying ? 'Pause' : 'Play';
-        const currentTime = isPlaying ? musicInstance.getCurrentTime() : 0;
+        const current = music ? music.getCurrentTime() : 0;
         const duration = musicSound.getDuration();
-        if (!progressBar.mouseIsHeld)
-            progressBar.value = currentTime / duration;
-        const timeText = `${formatTime(currentTime)} / ${formatTime(duration)}`;
-        progressBar.text = audioIsRunning() ? timeText : 'Click to Enable Audio';
+        infoText.text = formatTime(current) +' / '+ formatTime(duration);
     }
 }

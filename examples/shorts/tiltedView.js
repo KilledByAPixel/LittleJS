@@ -9,7 +9,8 @@ class GameObject extends EngineObject
     render()
     {
         // adjust draw postion to be at the bottom of the object
-        const pos = this.pos.add(vec2(0,this.size.y/2).rotate(this.angle));
+        const offset = vec2(0,this.size.y/2).rotate(this.angle);
+        const pos = this.pos.add(offset);
         drawTile(pos, this.size, this.tileInfo, this.color, this.angle);
     }
 }
@@ -37,9 +38,19 @@ function gameInit()
 
     // create background objects
     for (let i=1; i<300; ++i)
-        new EngineObject(randInCircle(90), vec2(rand(59),rand(59)), 0, 0, hsl(.4,.2,rand(.4,.5),.8), -1e5);
+    {
+        const pos = randInCircle(90);
+        const size = vec2(rand(59), rand(59));
+        const color = hsl(.4,.2,rand(.4,.5),.8);
+        new EngineObject(pos, size, 0, 0, color, -1e5);
+    }
 
     // create world objects
     for (let i=1; i<1e3; ++i)
-        new GameObject(randInCircle(7+i,7), vec2(rand(1,2),rand(4,9)), 0, 0, hsl(.1,.5,rand(.2,.3)));
+    {
+        const pos = randInCircle(7+i,7);
+        const size = vec2(rand(1,2),rand(4,9));
+        const color = hsl(.1,.5,rand(.2,.3));
+        new GameObject(pos, size, 0, 0, color);
+    }
 }

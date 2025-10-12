@@ -471,7 +471,7 @@ export function explosion(pos, radius=3, strength=300)
     // smoke
     new LJS.ParticleEmitter(
         pos, 0,                       // pos, angle
-        radius/2, .2, 50*radius, 3.14,// emitSize, emitTime, emitRate, emitCone
+        radius/2, .2, 50*radius, 3.14,// emitSize, emitTime, rate, cone
         Game.spriteAtlas.dot,         // tileInfo
         hsl(0,0,0),   hsl(0,0,0),     // colorStartA, colorStartB
         hsl(0,0,0,0), hsl(0,0,0,0),   // colorEndA, colorEndB
@@ -483,7 +483,7 @@ export function explosion(pos, radius=3, strength=300)
     // fire
     new LJS.ParticleEmitter(
         pos, 0,                         // pos, angle
-        radius, .1, 100*radius, 3.14,   // emitSize, emitTime, emitRate, emitCone
+        radius, .1, 100*radius, 3.14,   // emitSize, emitTime, rate, cone
         Game.spriteAtlas.dot,           // tileInfo
         hsl(0,1,.5),   hsl(.15,1,.5),   // colorStartA, colorStartB
         hsl(0,1,.5,0), hsl(.1, 1,.5,0), // colorEndA, colorEndB
