@@ -42,7 +42,7 @@ function gameRender()
     const range = 32, halfRange = range/2;
 
     // precreate variables to avoid overhead
-    const pos = vec2(), size = vec2(), color = WHITE;
+    const pos = vec2(), size = vec2(), color = rgb();
     for (let i=1e3; i--;)
     {
         // use math to generate random star positions
