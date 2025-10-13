@@ -9,9 +9,10 @@ class GameObject extends EngineObject
     render()
     {
         // adjust draw postion to be at the bottom of the object
-        const offset = vec2(0,this.size.y/2).rotate(this.angle);
+        const drawSize = this.drawSize || this.size;
+        const offset = vec2(0,drawSize.y/2).rotate(this.angle);
         const pos = this.pos.add(offset);
-        drawTile(pos, this.size, this.tileInfo, this.color, this.angle);
+        drawTile(pos, drawSize, this.tileInfo, this.color, this.angle);
     }
 }
 
@@ -24,6 +25,7 @@ class Player extends GameObject
         // apply movement controls
         const moveInput = keyDirection().clampLength(1).scale(.2);
         this.velocity = this.velocity.add(moveInput);
+        this.setCollision(); // make object collide
 
         // move camera with player
         cameraPos = this.pos.add(vec2(0,2));
@@ -34,7 +36,8 @@ function gameInit()
 {
     // setup level
     objectDefaultDamping = .7;
-    new Player(vec2(), vec2(3), tile(5), 0, RED);
+    const player = new Player(vec2(), vec2(3,1), tile(5), 0, RED);
+    player.drawSize = vec2(3);
 
     // create background objects
     for (let i=1; i<300; ++i)
@@ -49,8 +52,13 @@ function gameInit()
     for (let i=1; i<1e3; ++i)
     {
         const pos = randInCircle(7+i,7);
-        const size = vec2(rand(1,2),rand(4,9));
-        const color = hsl(.1,.5,rand(.2,.3));
-        new GameObject(pos, size, 0, 0, color);
+        const isRock = randBool();
+        const size = vec2(isRock ? rand(2,4) : rand(1,2));
+        const color = hsl(.1,isRock ? 0 : .5,rand(.2,.3));
+        const o = new GameObject(pos, size, 0, 0, color);
+        o.setCollision(); // make object collide
+        o.mass = 0; // make object have static physics
+        o.angle = rand(-.1,.1); // random tilt
+        o.drawSize = vec2(size.x, isRock ? rand(2,4) : rand(5,10));
     }
 }
