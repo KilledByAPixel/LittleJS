@@ -57,7 +57,7 @@ class UISequencerButton extends UIButton
     {
         this.activeColor = eraseMode ? RED : WHITE;
         this.color = this.isActiveObject() ? BLACK : 
-            hsl(this.hue, this.isOn ? 1 : .5, this.isOn ? .5 : .1); 
+            hsl(this.hue, this.isOn ? 1 : .5, this.isOn ? .5 : .15); 
         if (isPlaying && this.step == currentStep)
             this.color = this.color.lerp(WHITE, .5);
         super.render();
