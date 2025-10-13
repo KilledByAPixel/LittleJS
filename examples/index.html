@@ -21,8 +21,7 @@ Theme:
     <option value=20px>L</option>
     <option value=24px>XL</option>
 </select>
-<span class=nowrap><input type=checkbox id=checkboxLiveEdit checked>Live Edit</span>
-<span class=nowrap><input type=checkbox id=checkboxJumpToErrors>Jump to Errors</span>
+<span class=nowrap><input type=checkbox id=checkboxLiveEdit onchange=writeSaveData() checked>Live Edit</span>
 </div>
 <div id=divTextareas>
 <textarea id=textareaCode oninput=codeInput() spellcheck=false></textarea>
@@ -141,7 +140,7 @@ function initExampleBrowser()
     // set the selected example from the URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const selectedExample = urlParams.get('example') || '';
-    let exampleIndex = exampleList.findIndex((example) => example.filename === selectedExample);
+    let exampleIndex = exampleList.findIndex((example) => example.name === selectedExample);
     if (exampleIndex < 0)
         exampleIndex = 1;
     selectExample.selectedIndex = exampleIndex;
@@ -240,7 +239,7 @@ function setExample()
     
     // update URL parameter
     const url = new URL(window.location);
-    url.searchParams.set('example', example.filename);
+    url.searchParams.set('example', example.name);
     window.history.replaceState({}, '', url);
     
     loadFile(example.filename, example.largeExample);
@@ -616,35 +615,6 @@ function setErrorLine(lineNumber)
         clearErrorLine();
         --lineNumber; // codeMirror uses 0-based line numbers
         errorLineMarker = codeMirror.getDoc().addLineClass(lineNumber, 'background', 'error-line');
-        if (checkboxJumpToErrors.checked)
-        {
-            codeMirror.scrollIntoView({line: lineNumber, ch: 0});
-            codeMirror.focus();
-        }
-    }
-    else if (textareaCode && checkboxJumpToErrors.checked)
-    {
-        // for textarea, calculate character position and set cursor
-        const lines = textareaCode.value.split('\n');
-        let charPos = 0;
-        for (let i = 0; i < lineNumber - 1 && i < lines.length; i++)
-        {
-            charPos += lines[i].length + 1; // +1 for newline character
-        }
-        textareaCode.setSelectionRange(charPos, charPos);
-        if (checkboxJumpToErrors.checked)
-        {
-            const line = textareaCode.value.split('\n');
-            lineNumber = Math.min(Math.max(0, lineNumber-1), lines.length-1);
-
-            // select error line in textarea
-            let start = 0;
-            for (let i = 0; i < lineNumber; i++) 
-                start += lines[i].length + 1;
-            textareaCode.selectionStart = start;
-            textareaCode.selectionEnd = start + lines[lineNumber].length;
-            textareaCode.focus();
-        }
     }
 }
 
@@ -669,13 +639,41 @@ textareaConsole.addEventListener('scroll', onScrollConsole);
 
 ///////////////////////////////////////////////////////////////////////////////
 // load saved preferences from localStorage
-const defaultTheme = 'littlejs';
-const defaultFontSize = '16px';
-const savePrefix = 'LittleJSExamples_';
-const savedTheme = localStorage.getItem(savePrefix+'theme') || defaultTheme;
-const savedFontSize = localStorage.getItem(savePrefix+'fontSize') || defaultFontSize;
-selectFontSize.value = savedFontSize;
-textareaCode.style.fontSize = savedFontSize;
+const saveName = 'LittleJSExamples';
+let savedTheme;
+
+function readSaveData()
+{
+    // load saved preferences
+    const defaultTheme = 'littlejs';
+    const defaultFontSize = '16px';
+    const saveDataJSON = localStorage.getItem(saveName);
+    const saveData = saveDataJSON ? JSON.parse(saveDataJSON) : {};
+    selectTheme.value = savedTheme = saveData.theme ?? defaultTheme;
+    selectFontSize.value = saveData.fontSize ?? defaultFontSize;
+}
+readSaveData();
+
+function writeSaveData()
+{
+    // Save preferences to localStorage
+    const theme = selectTheme.value;
+    const fontSize = selectFontSize.value;
+    const saveData =
+    {
+        theme,
+        fontSize
+    };
+    const saveDataJSON = JSON.stringify(saveData);
+    localStorage.setItem(saveName, saveDataJSON);
+}
+
+function resetDefaults()
+{
+    localStorage.removeItem(saveName);
+    readSaveData();
+    loadTheme();
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // setup code mirror
@@ -753,20 +751,18 @@ function addCodeMirrorElement(filename, type, rel)
 
 function loadTheme()
 {
-    const theme = selectTheme.value;
-    const size = selectFontSize.value;
-    
-    // Save preferences to localStorage
-    localStorage.setItem(savePrefix+'theme', theme);
-    localStorage.setItem(savePrefix+'fontSize', size);
-    
     // Apply the theme and font size
-    textareaCode.style.fontSize = size;
+    const theme = selectTheme.value;
+    const fontSize = selectFontSize.value;
+    textareaCode.style.fontSize = fontSize;
     if (codeMirror)
     {
-        codeMirror.getWrapperElement().style.fontSize = size;
+        codeMirror.getWrapperElement().style.fontSize = fontSize;
         codeMirror.setOption('theme', theme);
     }
+    
+    // Save preferences to localStorage
+    writeSaveData();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
