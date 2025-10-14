@@ -32,7 +32,7 @@ function gameInit()
     {
         const pos = randInCircle(15+i,7);
         const size = vec2(rand(4,9),rand(4,9));
-        const color = hsl(.1,.5,rand(.2,.3));
+        const color = hsl(.1,.5,rand(.2));
         const o = new EngineObject(pos, size, 0, 0, color);
         o.setCollision(); // make object collide
         o.mass = 0; // make object have static physics
