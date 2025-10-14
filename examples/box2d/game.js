@@ -56,10 +56,9 @@ async function gameInit()
     // start up LittleJS Box2D plugin
     await LJS.box2dInit();
     //LJS.box2dSetDebug(true); // enable box2d debug draw
-    LJS.setCanvasClearColor(hsl(0,0,.8));
 
     // create a table of all sprites
-    const gameTile = (i)=> LJS.tile(i, 496, 0, 8);
+    const gameTile = (i)=> LJS.tile(i, 124, 0, 2);
     spriteAtlas =
     {
         circle:         gameTile(0),
@@ -71,6 +70,8 @@ async function gameInit()
         squareOutline2: gameTile(6),
     };
 
+    // startup the demo
+    LJS.setCanvasClearColor(hsl(0,0,.8));
     setScene(startScene);
 }
 
