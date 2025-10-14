@@ -318,6 +318,8 @@ class UIObject
         this.interactive = false;
         /** @property {boolean} - Activate when dragged over with mouse held down */
         this.dragActivate = false;
+        /** @property {boolean} - True if this can be a hover object */
+        this.canBeHover = true;
         uiSystem.uiObjects.push(this);
     }
 
@@ -348,13 +350,10 @@ class UIObject
         const isActive = this.isActiveObject();
         const mouseDown = mouseIsDown(0);
         const mousePress = this.dragActivate ? mouseDown : mouseWasPressed(0);
-        if (!uiSystem.hoverObject)
+        if (this.canBeHover)
         if (mousePress || isActive || (!mouseDown && !isTouchDevice))
-        {
-            const size = this.size.add(vec2(isTouchDevice && this.extraTouchSize || 0));
-            if (isOverlapping(this.pos, size, mousePosScreen))
-                uiSystem.hoverObject = this;
-        }
+        if (!uiSystem.hoverObject && this.isMouseOverlapping())
+            uiSystem.hoverObject = this;
         if (this.isHoverObject())
         {
             if (!this.disabled)
@@ -479,6 +478,8 @@ class UIText extends UIObject
 
         // make text not outlined by default
         this.lineWidth = 0;
+        // text can not be a hover object by default
+        this.canBeHover = false;
     }
     render()
     {
