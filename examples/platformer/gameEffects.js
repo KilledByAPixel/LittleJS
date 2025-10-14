@@ -255,7 +255,7 @@ export class ParallaxLayer extends LJS.CanvasLayer
         this.context.clearRect(0,0,1,h);
     
         // make WebGL texture
-        this.useWebGL(LJS.glEnable);
+        this.useWebGL();
     }
 
     render()

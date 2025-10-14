@@ -25,80 +25,97 @@ class PostProcessPlugin
     /** Create global post processing shader
     *  @param {string} shaderCode
     *  @param {boolean} [includeOverlay]
+    *  @param {boolean} [includeMainCanvas]
      *  @example
      *  // create the post process plugin object
      *  new PostProcessPlugin(shaderCode);
      */
-    constructor(shaderCode, includeOverlay=false)
+    constructor(shaderCode, includeOverlay=false, includeMainCanvas=true)
     {
         ASSERT(!postProcess, 'Post process already initialized');
         postProcess = this;
-
-        if (headlessMode) return;
-
-        if (!glEnable)
-        {
-            console.warn('PostProcessPlugin: WebGL not enabled!');
-            return;
-        }
 
         if (!shaderCode) // default shader pass through
             shaderCode = 'void mainImage(out vec4 c,vec2 p){c=texture(iChannel0,p/iResolution.xy);}';
 
         /** @property {WebGLProgram} - Shader for post processing */
-        this.shader = glCreateProgram(
-            '#version 300 es\n' +            // specify GLSL ES version
-            'precision highp float;'+        // use highp for better accuracy
-            'in vec2 p;'+                    // position
-            'void main(){'+                  // shader entry point
-            'gl_Position=vec4(p+p-1.,1,1);'+ // set position
-            '}'                              // end of shader
-            ,
-            '#version 300 es\n' +            // specify GLSL ES version
-            'precision highp float;'+        // use highp for better accuracy
-            'uniform sampler2D iChannel0;'+  // input texture
-            'uniform vec3 iResolution;'+     // size of output texture
-            'uniform float iTime;'+          // time
-            'out vec4 c;'+                   // out color
-            '\n' + shaderCode + '\n'+        // insert custom shader code
-            'void main(){'+                  // shader entry point
-            'mainImage(c,gl_FragCoord.xy);'+ // call post process function
-            'c.a=1.;'+                       // always use full alpha
-            '}'                              // end of shader
-        );
+        this.shader = undefined;
 
         /** @property {WebGLTexture} - Texture for post processing */
-        this.texture = glCreateTexture();
+        this.texture = undefined;
 
-        /** @property {boolean} - Should overlay canvas be included in post processing */
-        this.includeOverlay = includeOverlay;
+        // setup the post processing plugin
+        initPostProcess();
+        engineAddPlugin(undefined, postProcessRender, postProcessContextLost, postProcessContextRestored);
 
-        // Render the post processing shader, called automatically by the engine
-        engineAddPlugin(undefined, postProcessRender);
+        function initPostProcess()
+        {
+            if (headlessMode) return;
+
+            if (!glEnable)
+            {
+                console.warn('PostProcessPlugin: WebGL not enabled!');
+                return;
+            }
+
+            // create resources
+            postProcess.texture = glCreateTexture();
+            postProcess.shader = glCreateProgram(
+                '#version 300 es\n' +            // specify GLSL ES version
+                'precision highp float;'+        // use highp for better accuracy
+                'in vec2 p;'+                    // position
+                'void main(){'+                  // shader entry point
+                'gl_Position=vec4(p+p-1.,1,1);'+ // set position
+                '}'                              // end of shader
+                ,
+                '#version 300 es\n' +            // specify GLSL ES version
+                'precision highp float;'+        // use highp for better accuracy
+                'uniform sampler2D iChannel0;'+  // input texture
+                'uniform vec3 iResolution;'+     // size of output texture
+                'uniform float iTime;'+          // time
+                'out vec4 c;'+                   // out color
+                '\n' + shaderCode + '\n'+        // insert custom shader code
+                'void main(){'+                  // shader entry point
+                'mainImage(c,gl_FragCoord.xy);'+ // call post process function
+                'c.a=1.;'+                       // always use full alpha
+                '}'                              // end of shader
+            );
+        }
+        function postProcessContextLost()
+        {
+            postProcess.shader = undefined;
+            postProcess.texture = undefined;
+            LOG('PostProcessPlugin: WebGL context lost');
+        }
+        function postProcessContextRestored()
+        {
+            initPostProcess();
+            LOG('PostProcessPlugin: WebGL context restored');
+        }
         function postProcessRender()
         {
             if (headlessMode) return;
+
+            if (!glEnable)
+                return;
             
-            // prepare to render post process shader
-            if (glEnable)
+            // clear out the buffer
+            glFlush();
+            
+            if (includeMainCanvas || includeOverlay)
             {
-                glFlush(); // clear out the buffer
-                mainContext.drawImage(glCanvas, 0, 0); // copy to the main canvas
-            }
-            else
-            {
-                // set the viewport
-                glContext.viewport(0, 0, glCanvas.width = drawCanvas.width, glCanvas.height = drawCanvas.height);
+                // copy WebGL to the main canvas
+                mainContext.drawImage(glCanvas, 0, 0);
+
+                if (includeOverlay)
+                {
+                    // copy overlay canvas so it will be included in post processing
+                    mainContext.drawImage(overlayCanvas, 0, 0);
+                    overlayCanvas.width |= 0; // clear overlay canvas
+                }
             }
 
-            if (postProcess.includeOverlay)
-            {
-                // copy overlay canvas so it will be included in post processing
-                mainContext.drawImage(overlayCanvas, 0, 0);
-                overlayCanvas.width |= 0;
-            }
-
-            // setup shader program to draw one triangle
+            // setup shader program to draw a quad
             glContext.useProgram(postProcess.shader);
             glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
             glContext.pixelStorei(glContext.UNPACK_FLIP_Y_WEBGL, 1);
@@ -107,7 +124,10 @@ class PostProcessPlugin
             // set textures, pass in the 2d canvas and gl canvas in separate texture channels
             glContext.activeTexture(glContext.TEXTURE0);
             glContext.bindTexture(glContext.TEXTURE_2D, postProcess.texture);
-            glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, mainCanvas);
+            if (includeMainCanvas || includeOverlay)
+            {
+                glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, mainCanvas);
+            }
 
             // set vertex position attribute
             const vertexByteStride = 8;

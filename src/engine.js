@@ -91,7 +91,17 @@ let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
 ///////////////////////////////////////////////////////////////////////////////
 // plugin hooks
 
-const pluginUpdateList = [], pluginRenderList = [];
+const pluginList = [];
+class EnginePlugin
+{
+    constructor(update, render, glContextLost, glContextRestored)
+    {
+        this.update = update;
+        this.render = render;
+        this.glContextLost = glContextLost;
+        this.glContextRestored = glContextRestored;
+    }
+}
 
 /**
  * @callback PluginCallback - Update or render function for a plugin
@@ -99,15 +109,21 @@ const pluginUpdateList = [], pluginRenderList = [];
  */
 
 /** Add a new update function for a plugin
- *  @param {PluginCallback} [updateFunction]
- *  @param {PluginCallback} [renderFunction]
+ *  @param {PluginCallback} [update]
+ *  @param {PluginCallback} [render]
+ *  @param {PluginCallback} [glContextLost]
+ *  @param {PluginCallback} [glContextRestored]
  *  @memberof Engine */
-function engineAddPlugin(updateFunction, renderFunction)
+function engineAddPlugin(update, render, glContextLost, glContextRestored)
 {
-    ASSERT(!pluginUpdateList.includes(updateFunction));
-    ASSERT(!pluginRenderList.includes(renderFunction));
-    updateFunction && pluginUpdateList.push(updateFunction);
-    renderFunction && pluginRenderList.push(renderFunction);
+    // make sure plugin functions are unique
+    ASSERT(!pluginList.find(p=>p.update===update));
+    ASSERT(!pluginList.find(p=>p.render===render));
+    ASSERT(!pluginList.find(p=>p.glContextLost===glContextLost));
+    ASSERT(!pluginList.find(p=>p.glContextRestored===glContextRestored));
+
+    const plugin = new EnginePlugin(update, render, glContextLost, glContextRestored);
+    pluginList.push(plugin);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -192,7 +208,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             wasUpdated = true;
             updateCanvas();
             inputUpdate();
-            pluginUpdateList.forEach(f=>f());
+            pluginList.forEach(plugin=>plugin.update?.());
 
             // update object transforms even when paused
             for (const o of engineObjects)
@@ -225,7 +241,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                 updateCanvas();
                 inputUpdate();
                 gameUpdate();
-                pluginUpdateList.forEach(f=>f());
+                pluginList.forEach(plugin=>plugin.update?.());
                 engineObjectsUpdate();
 
                 // do post update
@@ -259,7 +275,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             for (const o of engineObjects)
                 o.destroyed || o.render();
             gameRenderPost();
-            pluginRenderList.forEach(f=>f());
+            pluginList.forEach(plugin=>plugin.render?.());
             touchGamepadRender();
             debugRender();
             glFlush();
@@ -386,7 +402,6 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             image.onerror = image.onload = ()=>
             {
                 const textureInfo = new TextureInfo(image);
-                textureInfo.createWebGLTexture();
                 textureInfos[textureIndex] = textureInfo;
                 resolve();
             }
@@ -402,7 +417,6 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         {
             const textureInfo = new TextureInfo(new Image);
             textureInfos[0] = textureInfo;
-            textureInfo.createWebGLTexture();
             resolve();
         }));
     }

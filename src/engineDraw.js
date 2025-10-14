@@ -173,16 +173,15 @@ class TileInfo
     }
 
     /**
-     * Set this tile to use a full image
-     * @param {HTMLImageElement|OffscreenCanvas} image
-     * @param {WebGLTexture} [glTexture] - WebGL texture
+     * Set this tile to use a full image in a texture info
+     * @param {TextureInfo} textureInfo
      * @return {TileInfo}
      */
-    setFullImage(image, glTexture)
+    setFullImage(textureInfo)
     {
         this.pos = new Vector2;
-        this.size = new Vector2(image.width, image.height);
-        this.textureInfo = new TextureInfo(image, glTexture);
+        this.size = textureInfo.size.copy();
+        this.textureInfo = textureInfo;
         // do not use padding or bleed
         this.bleedScale = this.padding = 0;
         return this;
@@ -198,26 +197,30 @@ class TextureInfo
     /**
      * Create a TextureInfo, called automatically by the engine
      * @param {HTMLImageElement|OffscreenCanvas} image
-     * @param {WebGLTexture} [glTexture] - WebGL texture
+     * @param {boolean} [useWebGL] - Should use WebGL if available?
      */
-    constructor(image, glTexture)
+    constructor(image, useWebGL=true)
     {
-        /** @property {HTMLImageElement} - image source */
+        /** @property {HTMLImageElement|OffscreenCanvas} - image source */
         this.image = image;
         /** @property {Vector2} - size of the image */
         this.size = vec2(image.width, image.height);
         /** @property {Vector2} - inverse of the size, cached for rendering */
         this.sizeInverse = vec2(1/image.width, 1/image.height);
         /** @property {WebGLTexture} - WebGL texture */
-        this.glTexture = glTexture;
+        this.glTexture = undefined;
+        useWebGL && this.createWebGLTexture();
     }
 
-    createWebGLTexture()
-    {
-        ASSERT(!this.glTexture);
-        if (glEnable)
-            this.glTexture = glCreateTexture(this.image);
-    }
+    /** Creates the WebGL texture, updates if already created */
+    createWebGLTexture() { glRegisterTextureInfo(this); }
+
+    /** Destroys the WebGL texture */
+    destroyWebGLTexture() { glUnregisterTextureInfo(this); }
+
+    /** Check if the texture is webgl enabled
+     * @return {boolean} */
+    hasWebGL() { return !!this.glTexture; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
