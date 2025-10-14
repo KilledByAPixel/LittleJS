@@ -55,7 +55,7 @@ class UISystemPlugin
         /** @property {number} - Default scale to use for fitting text to object */
         this.defaultTextScale = .8;
         /** @property {string} - Default font for UI elements */
-        this.defaultFont = 'arial';
+        this.defaultFont = fontDefault;
         /** @property {Sound} - Default sound when interactive UI element is pressed */
         this.defaultSoundPress = undefined;
         /** @property {Sound} - Default sound when interactive UI element is released */
@@ -200,10 +200,11 @@ class UISystemPlugin
     *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
     *  @param {string}  [align]
     *  @param {string}  [font=uiSystem.defaultFont]
+    *  @param {string}  [fontStyle]
     *  @param {boolean} [applyMaxWidth=true] */
-    drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont, applyMaxWidth=true)
+    drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont, fontStyle='', applyMaxWidth=true)
     {
-        drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, applyMaxWidth ? size.x : undefined, uiSystem.uiContext);
+        drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, uiSystem.uiContext);
     }
 
     /**
@@ -275,6 +276,8 @@ class UIObject
         this.cornerRadius = uiSystem.defaultCornerRadius;
         /** @property {string} - Font for this objecct */
         this.font = uiSystem.defaultFont;
+        /** @property {string} - Font style for this object or undefined */
+        this.fontStyle = undefined;
         /** @property {number} - Override for text width */
         this.textWidth = undefined;
         /** @property {number} - Override for text height */
@@ -464,7 +467,7 @@ class UIText extends UIObject
     render()
     {
         const textSize = this.getTextSize();
-        uiSystem.drawText(this.text, this.pos, textSize, this.textColor, this.lineWidth, this.lineColor, this.align, this.font);
+        uiSystem.drawText(this.text, this.pos, textSize, this.textColor, this.lineWidth, this.lineColor, this.align, this.font, this.fontStyle);
     }
 }
 
@@ -540,7 +543,7 @@ class UIButton extends UIObject
         // draw the text scaled to fit
         const textSize = this.getTextSize();
         uiSystem.drawText(this.text, this.pos, textSize, 
-            this.textColor, 0, undefined, this.align, this.font);
+            this.textColor, 0, undefined, this.align, this.font, this.fontStyle);
     }
 }
 
@@ -594,7 +597,7 @@ class UICheckbox extends UIObject
         const textSize = this.getTextSize();
         const pos = this.pos.add(vec2(this.size.x,0));
         uiSystem.drawText(this.text, pos, textSize, 
-            this.textColor, 0, undefined, 'left', this.font, false);
+            this.textColor, 0, undefined, 'left', this.font, this.fontStyle, false);
     }
 }
 
@@ -679,6 +682,6 @@ class UIScrollbar extends UIObject
         // draw the text scaled to fit on the scrollbar
         const textSize = this.getTextSize();
         uiSystem.drawText(this.text, this.pos, textSize, 
-            this.textColor, 0, undefined, this.align, this.font);
+            this.textColor, 0, undefined, this.align, this.font, this.fontStyle);
     }
 }
