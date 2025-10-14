@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.14.17';
+const engineVersion = '1.14.18';
 
 /** Frames per second to update
  *  @type {number}
@@ -4065,12 +4065,13 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {CanvasTextAlign}  [textAlign='center']
  *  @param {string}  [font=fontDefault]
+ *  @param {string}  [fontStyle]
  *  @param {number}  [maxWidth]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, maxWidth, context=drawContext)
+function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, fontStyle, maxWidth, context=drawContext)
 {
-    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, maxWidth, context);
+    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, fontStyle, maxWidth, context);
 }
 
 /** Draw text on overlay canvas in world space
@@ -4083,11 +4084,12 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {CanvasTextAlign}  [textAlign='center']
  *  @param {string}  [font=fontDefault]
+ *  @param {string}  [fontStyle]
  *  @param {number}  [maxWidth]
  *  @memberof Draw */
-function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, maxWidth)
+function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, fontStyle, maxWidth)
 {
-    drawText(text, pos, size, color, lineWidth, lineColor, textAlign, font, maxWidth, overlayContext);
+    drawText(text, pos, size, color, lineWidth, lineColor, textAlign, font, fontStyle, maxWidth, overlayContext);
 }
 
 /** Draw text on overlay canvas in screen space
@@ -4100,10 +4102,11 @@ function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textA
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {CanvasTextAlign}  [textAlign]
  *  @param {string}  [font=fontDefault]
+ *  @param {string}  [fontStyle]
  *  @param {number}  [maxWidth]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
  *  @memberof Draw */
-function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, maxWidth, context=overlayContext)
+function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, context=overlayContext)
 {
     ASSERT(isString(text), 'text must be a string');
     ASSERT(isVector2(pos), 'pos must be a vec2');
@@ -4111,15 +4114,15 @@ function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=B
     ASSERT(isColor(color), 'color must be a color');
     ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
     ASSERT(isColor(lineColor), 'lineColor must be a color');
-    ASSERT(isColor(lineColor), 'lineColor must be a color');
     ASSERT(['left','center','right'].includes(textAlign), 'align must be left, center, or right');
     ASSERT(isString(font), 'font must be a string');
+    ASSERT(isString(fontStyle), 'fontStyle must be a string');
     
     context.fillStyle = color.toString();
     context.strokeStyle = lineColor.toString();
     context.lineWidth = lineWidth;
     context.textAlign = textAlign;
-    context.font = size + 'px '+ font;
+    context.font = fontStyle + ' ' + size + 'px '+ font;
     context.textBaseline = 'middle';
 
     const lines = (text+'').split('\n');
@@ -4327,11 +4330,11 @@ let engineFontImage;
 class FontImage
 {
     /** Create an image font
-     *  @param {HTMLImageElement} [image]    - Image for the font, if undefined default font is used
-     *  @param {Vector2} [tileSize=(8,8)]    - Size of the font source tiles
-     *  @param {Vector2} [paddingSize=(0,1)] - How much extra space to add between characters
+     *  @param {HTMLImageElement} [image] - Image for the font, default if undefined
+     *  @param {Vector2} [tileSize=(8,8)] - Size of the font source tiles
+     *  @param {Vector2} [paddingSize=(0,1)] - How much space between characters
      */
-    constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1), context=overlayContext)
+    constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1))
     {
         // load default font image
         if (!engineFontImage)
@@ -8260,6 +8263,8 @@ class UISystemPlugin
         this.defaultHoverColor = hsl(0,0,.9);
         /** @property {Color} - Default color for disabled UI elements */
         this.defaultDisabledColor = hsl(0,0,.3);
+        /** @property {Color} - Uses a gradient fill combined with color */
+        this.defaultGradientColor = undefined;
         /** @property {number} - Default line width for UI elements */
         this.defaultLineWidth = 4;
         /** @property {number} - Default rounded rect corner radius for UI elements */
@@ -8267,7 +8272,7 @@ class UISystemPlugin
         /** @property {number} - Default scale to use for fitting text to object */
         this.defaultTextScale = .8;
         /** @property {string} - Default font for UI elements */
-        this.defaultFont = 'arial';
+        this.defaultFont = fontDefault;
         /** @property {Sound} - Default sound when interactive UI element is pressed */
         this.defaultSoundPress = undefined;
         /** @property {Sound} - Default sound when interactive UI element is released */
@@ -8284,7 +8289,9 @@ class UISystemPlugin
         this.hoverObject = undefined;
         /** @property {UIObject} - Hover object at start of update */
         this.lastHoverObject = undefined;
-            
+        /** @property {number} - If set ui coords will be renormalized to this canvas height */
+        this.nativeHeight = 0;
+
         engineAddPlugin(uiUpdate, uiRender);
 
         // setup recursive update and render
@@ -8324,6 +8331,17 @@ class UISystemPlugin
         }
         function uiRender()
         {
+            const context = uiSystem.uiContext;
+            context.save();
+            if (uiSystem.nativeHeight)
+            {
+                // convert to native height
+                const s = mainCanvasSize.y / uiSystem.nativeHeight;
+                context.translate(-s*mainCanvasSize.x/2,0);
+                context.scale(s,s);
+                context.translate(mainCanvasSize.x/2/s,0);
+            }
+
             function renderObject(o)
             {
                 if (!o.visible)
@@ -8335,6 +8353,7 @@ class UISystemPlugin
                     renderObject(c);
             }
             uiSystem.uiObjects.forEach(o=> o.parent || renderObject(o));
+            context.restore();
         }
     }
 
@@ -8344,8 +8363,9 @@ class UISystemPlugin
     *  @param {Color}   [color=uiSystem.defaultColor]
     *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
     *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
-    *  @param {number}  [cornerRadius=uiSystem.defaultCornerRadius] */
-    drawRect(pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, cornerRadius=uiSystem.defaultCornerRadius)
+    *  @param {number}  [cornerRadius=uiSystem.defaultCornerRadius]
+    *  @param {Color}   [gradientColor=uiSystem.defaultGradientColor] */
+    drawRect(pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, cornerRadius=uiSystem.defaultCornerRadius, gradientColor=uiSystem.defaultGradientColor)
     {
         ASSERT(isVector2(pos), 'pos must be a vec2');
         ASSERT(isVector2(size), 'size must be a vec2');
@@ -8355,7 +8375,18 @@ class UISystemPlugin
         ASSERT(isNumber(cornerRadius), 'cornerRadius must be a number');
         
         const context = uiSystem.uiContext;
-        context.fillStyle = color.toString();
+        if (gradientColor)
+        {
+            const g = context.createLinearGradient(
+                pos.x, pos.y-size.y/2, pos.x, pos.y+size.y/2);
+            const c = color.toString();
+            g.addColorStop(0, c);
+            g.addColorStop(.5, gradientColor.toString());
+            g.addColorStop(1, c);
+            context.fillStyle = g;
+        }
+        else
+            context.fillStyle = color.toString();
         context.beginPath();
         if (cornerRadius && context['roundRect'])
             context['roundRect'](pos.x-size.x/2, pos.y-size.y/2, size.x, size.y, cornerRadius);
@@ -8412,10 +8443,11 @@ class UISystemPlugin
     *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
     *  @param {string}  [align]
     *  @param {string}  [font=uiSystem.defaultFont]
+    *  @param {string}  [fontStyle]
     *  @param {boolean} [applyMaxWidth=true] */
-    drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont, applyMaxWidth=true)
+    drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont, fontStyle='', applyMaxWidth=true)
     {
-        drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, applyMaxWidth ? size.x : undefined, uiSystem.uiContext);
+        drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, uiSystem.uiContext);
     }
 
     /**
@@ -8476,17 +8508,21 @@ class UIObject
         /** @property {boolean} - Is this object disabled? */
         this.disabled = false;
         /** @property {Color} - Color for text */
-        this.textColor = uiSystem.defaultTextColor.copy()
+        this.textColor = uiSystem.defaultTextColor.copy();
         /** @property {Color} - Color used when hovering over the object */
-        this.hoverColor = uiSystem.defaultHoverColor.copy()
+        this.hoverColor = uiSystem.defaultHoverColor.copy();
         /** @property {Color} - Color for line drawing */
-        this.lineColor = uiSystem.defaultLineColor.copy()
+        this.lineColor = uiSystem.defaultLineColor.copy();
+        /** @property {Color} - Uses a gradient fill combined with color */
+        this.gradientColor = uiSystem.defaultGradientColor ? uiSystem.defaultGradientColor.copy() : undefined;
         /** @property {number} - Width for line drawing */
         this.lineWidth = uiSystem.defaultLineWidth;
         /** @property {number} - Corner radius for rounded rects */
         this.cornerRadius = uiSystem.defaultCornerRadius;
         /** @property {string} - Font for this objecct */
         this.font = uiSystem.defaultFont;
+        /** @property {string} - Font style for this object or undefined */
+        this.fontStyle = undefined;
         /** @property {number} - Override for text width */
         this.textWidth = undefined;
         /** @property {number} - Override for text height */
@@ -8511,6 +8547,8 @@ class UIObject
         this.interactive = false;
         /** @property {boolean} - Activate when dragged over with mouse held down */
         this.dragActivate = false;
+        /** @property {boolean} - True if this can be a hover object */
+        this.canBeHover = true;
         uiSystem.uiObjects.push(this);
     }
 
@@ -8534,6 +8572,26 @@ class UIObject
         child.parent = undefined;
     }
 
+    /** Check if the mouse is overlapping a box in screen space
+     *  @return {boolean} - True if overlapping
+     */
+    isMouseOverlapping()
+    {
+        const size = !isTouchDevice ? this.size :
+                this.size.add(vec2(this.extraTouchSize || 0));
+        if (!uiSystem.nativeHeight)
+            return isOverlapping(this.pos, size, mousePosScreen);
+
+        const s = mainCanvasSize.y / uiSystem.nativeHeight;
+        const sInv = 1/s;
+        let pos = mousePosScreen.copy();
+        pos.x += s*mainCanvasSize.x/2;
+        pos.x *= sInv;
+        pos.y *= sInv;
+        pos.x -= sInv*mainCanvasSize.x/2;
+        return isOverlapping(this.pos, size, pos);
+    }
+
     /** Update the object, called automatically by plugin once each frame */
     update()
     {
@@ -8541,13 +8599,10 @@ class UIObject
         const isActive = this.isActiveObject();
         const mouseDown = mouseIsDown(0);
         const mousePress = this.dragActivate ? mouseDown : mouseWasPressed(0);
-        if (!uiSystem.hoverObject)
+        if (this.canBeHover)
         if (mousePress || isActive || (!mouseDown && !isTouchDevice))
-        {
-            const size = this.size.add(vec2(isTouchDevice && this.extraTouchSize || 0));
-            if (isOverlapping(this.pos, size, mousePosScreen))
-                uiSystem.hoverObject = this;
-        }
+        if (!uiSystem.hoverObject && this.isMouseOverlapping())
+            uiSystem.hoverObject = this;
         if (this.isHoverObject())
         {
             if (!this.disabled)
@@ -8672,11 +8727,13 @@ class UIText extends UIObject
 
         // make text not outlined by default
         this.lineWidth = 0;
+        // text can not be a hover object by default
+        this.canBeHover = false;
     }
     render()
     {
         const textSize = this.getTextSize();
-        uiSystem.drawText(this.text, this.pos, textSize, this.textColor, this.lineWidth, this.lineColor, this.align, this.font);
+        uiSystem.drawText(this.text, this.pos, textSize, this.textColor, this.lineWidth, this.lineColor, this.align, this.font, this.fontStyle);
     }
 }
 
@@ -8742,7 +8799,7 @@ class UIButton extends UIObject
 
         // set properties
         this.text = text;
-        this.color = color.copy()
+        this.color = color.copy();
         this.interactive = true;
     }
     render()
@@ -8752,7 +8809,7 @@ class UIButton extends UIObject
         // draw the text scaled to fit
         const textSize = this.getTextSize();
         uiSystem.drawText(this.text, this.pos, textSize, 
-            this.textColor, 0, undefined, this.align, this.font);
+            this.textColor, 0, undefined, this.align, this.font, this.fontStyle);
     }
 }
 
@@ -8806,7 +8863,7 @@ class UICheckbox extends UIObject
         const textSize = this.getTextSize();
         const pos = this.pos.add(vec2(this.size.x,0));
         uiSystem.drawText(this.text, pos, textSize, 
-            this.textColor, 0, undefined, 'left', this.font, false);
+            this.textColor, 0, undefined, 'left', this.font, this.fontStyle, false);
     }
 }
 
@@ -8884,14 +8941,13 @@ class UIScrollbar extends UIObject
         const handlePos = isHorizontal ? 
             vec2(lerp(p1, p2, this.value), this.pos.y) :
             vec2(this.pos.x, lerp(p2, p1, this.value))
-        const handleColor = this.disabled ? this.disabledColor : 
-            this.interactive && this.isActiveObject() ? this.color : this.handleColor;
+        const handleColor = this.disabled ? this.disabledColor : this.handleColor;
         uiSystem.drawRect(handlePos, vec2(handleSize), handleColor, this.lineWidth, this.lineColor, this.cornerRadius);
 
         // draw the text scaled to fit on the scrollbar
         const textSize = this.getTextSize();
         uiSystem.drawText(this.text, this.pos, textSize, 
-            this.textColor, 0, undefined, this.align, this.font);
+            this.textColor, 0, undefined, this.align, this.font, this.fontStyle);
     }
 }
 /**

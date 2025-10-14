@@ -1560,10 +1560,11 @@ declare module "littlejsengine" {
      *  @param {Color}   [lineColor=(0,0,0,1)]
      *  @param {CanvasTextAlign}  [textAlign='center']
      *  @param {string}  [font=fontDefault]
+     *  @param {string}  [fontStyle]
      *  @param {number}  [maxWidth]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      *  @memberof Draw */
-    export function drawText(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, maxWidth?: number, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    export function drawText(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, fontStyle?: string, maxWidth?: number, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw text on overlay canvas in world space
      *  Automatically splits new lines into rows
      *  @param {string}  text
@@ -1574,9 +1575,10 @@ declare module "littlejsengine" {
      *  @param {Color}   [lineColor=(0,0,0,1)]
      *  @param {CanvasTextAlign}  [textAlign='center']
      *  @param {string}  [font=fontDefault]
+     *  @param {string}  [fontStyle]
      *  @param {number}  [maxWidth]
      *  @memberof Draw */
-    export function drawTextOverlay(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, maxWidth?: number): void;
+    export function drawTextOverlay(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, fontStyle?: string, maxWidth?: number): void;
     /** Draw text on overlay canvas in screen space
      *  Automatically splits new lines into rows
      *  @param {string}  text
@@ -1587,10 +1589,11 @@ declare module "littlejsengine" {
      *  @param {Color}   [lineColor=(0,0,0,1)]
      *  @param {CanvasTextAlign}  [textAlign]
      *  @param {string}  [font=fontDefault]
+     *  @param {string}  [fontStyle]
      *  @param {number}  [maxWidth]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
      *  @memberof Draw */
-    export function drawTextScreen(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, maxWidth?: number, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    export function drawTextScreen(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, fontStyle?: string, maxWidth?: number, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Enable normal or additive blend mode
      *  @param {boolean} [additive]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
@@ -1616,11 +1619,11 @@ declare module "littlejsengine" {
      */
     export class FontImage {
         /** Create an image font
-         *  @param {HTMLImageElement} [image]    - Image for the font, if undefined default font is used
-         *  @param {Vector2} [tileSize=(8,8)]    - Size of the font source tiles
-         *  @param {Vector2} [paddingSize=(0,1)] - How much extra space to add between characters
+         *  @param {HTMLImageElement} [image] - Image for the font, default if undefined
+         *  @param {Vector2} [tileSize=(8,8)] - Size of the font source tiles
+         *  @param {Vector2} [paddingSize=(0,1)] - How much space between characters
          */
-        constructor(image?: HTMLImageElement, tileSize?: Vector2, paddingSize?: Vector2, context?: CanvasRenderingContext2D);
+        constructor(image?: HTMLImageElement, tileSize?: Vector2, paddingSize?: Vector2);
         image: any;
         tileSize: Vector2;
         paddingSize: Vector2;
@@ -2985,6 +2988,8 @@ declare module "littlejsengine" {
         defaultHoverColor: Color;
         /** @property {Color} - Default color for disabled UI elements */
         defaultDisabledColor: Color;
+        /** @property {Color} - Uses a gradient fill combined with color */
+        defaultGradientColor: any;
         /** @property {number} - Default line width for UI elements */
         defaultLineWidth: number;
         /** @property {number} - Default rounded rect corner radius for UI elements */
@@ -3009,14 +3014,17 @@ declare module "littlejsengine" {
         hoverObject: any;
         /** @property {UIObject} - Hover object at start of update */
         lastHoverObject: any;
+        /** @property {number} - If set ui coords will be renormalized to this canvas height */
+        nativeHeight: number;
         /** Draw a rectangle to the UI context
         *  @param {Vector2} pos
         *  @param {Vector2} size
         *  @param {Color}   [color=uiSystem.defaultColor]
         *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
         *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
-        *  @param {number}  [cornerRadius=uiSystem.defaultCornerRadius] */
-        drawRect(pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, cornerRadius?: number): void;
+        *  @param {number}  [cornerRadius=uiSystem.defaultCornerRadius]
+        *  @param {Color}   [gradientColor=uiSystem.defaultGradientColor] */
+        drawRect(pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, cornerRadius?: number, gradientColor?: Color): void;
         /** Draw a line to the UI context
         *  @param {Vector2} posA
         *  @param {Vector2} posB
@@ -3040,8 +3048,9 @@ declare module "littlejsengine" {
         *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
         *  @param {string}  [align]
         *  @param {string}  [font=uiSystem.defaultFont]
+        *  @param {string}  [fontStyle]
         *  @param {boolean} [applyMaxWidth=true] */
-        drawText(text: string, pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, align?: string, font?: string, applyMaxWidth?: boolean): void;
+        drawText(text: string, pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, align?: string, font?: string, fontStyle?: string, applyMaxWidth?: boolean): void;
         /**
          * @callback DragAndDropCallback - Callback for drag and drop events
          * @param {DragEvent} event - The drag event
@@ -3086,12 +3095,16 @@ declare module "littlejsengine" {
         hoverColor: Color;
         /** @property {Color} - Color for line drawing */
         lineColor: Color;
+        /** @property {Color} - Uses a gradient fill combined with color */
+        gradientColor: any;
         /** @property {number} - Width for line drawing */
         lineWidth: number;
         /** @property {number} - Corner radius for rounded rects */
         cornerRadius: number;
         /** @property {string} - Font for this objecct */
         font: string;
+        /** @property {string} - Font style for this object or undefined */
+        fontStyle: any;
         /** @property {number} - Override for text width */
         textWidth: any;
         /** @property {number} - Override for text height */
@@ -3116,6 +3129,8 @@ declare module "littlejsengine" {
         interactive: boolean;
         /** @property {boolean} - Activate when dragged over with mouse held down */
         dragActivate: boolean;
+        /** @property {boolean} - True if this can be a hover object */
+        canBeHover: boolean;
         /** Add a child UIObject to this object
          *  @param {UIObject} child
          */
@@ -3124,6 +3139,10 @@ declare module "littlejsengine" {
          *  @param {UIObject} child
          */
         removeChild(child: UIObject): void;
+        /** Check if the mouse is overlapping a box in screen space
+         *  @return {boolean} - True if overlapping
+         */
+        isMouseOverlapping(): boolean;
         /** Update the object, called automatically by plugin once each frame */
         update(): void;
         /** Render the object, called automatically by plugin once each frame */
