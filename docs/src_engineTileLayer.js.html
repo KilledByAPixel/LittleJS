@@ -80,7 +80,7 @@ function tileCollisionRaycast(posStart, posEnd, object, solidOnly=true)
  *  @param {boolean}  [draw] - Should the layer be drawn automatically
  *  @return {Array&lt;TileCollisionLayer>}
  *  @memberof TileLayers */
-function tileCollisionLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLayer, draw=true)
+function tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLayer, draw=true)
 {
     if (!tileMapData)
     {
@@ -200,9 +200,11 @@ class CanvasLayer extends EngineObject
         this.canvas = headlessMode ? undefined : new OffscreenCanvas(canvasSize.x, canvasSize.y);
         /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this layer */
         this.context = headlessMode ? undefined : this.canvas.getContext('2d');
-        /** @property {WebGLTexture} - Texture if using WebGL for this layer, call useWebGL to enable */
-        this.glTexture = undefined;
-        this.gravityScale = 0; // disable gravity by default for canvas layers
+        /** @property {TextureInfo} - Texture info to use for this object rendering */
+        this.textureInfo = new TextureInfo(this.canvas, false);
+
+        // disable physics by default
+        this.mass = this.gravityScale = this.friction = this.restitution = 0;
     }
 
     /** Destroy this canvas layer */
@@ -211,9 +213,7 @@ class CanvasLayer extends EngineObject
         if (this.destroyed)
             return;
 
-        // free up the WebGL texture
-        if (this.glTexture)
-            glDeleteTexture(this.glTexture);
+        this.textureInfo.destroyWebGLTexture();
         super.destroy();
     }
 
@@ -236,8 +236,8 @@ class CanvasLayer extends EngineObject
     draw(pos, size, angle=0, color=WHITE, mirror=false, additiveColor, screenSpace=false, context)
     {
         // draw the canvas layer as a single tile that uses the whole texture
-        const useWebGL = glEnable &amp;&amp; this.glTexture !== undefined;
-        const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
+        const useWebGL = glEnable &amp;&amp; this.textureInfo.hasWebGL();
+        const tileInfo = new TileInfo().setFullImage(this.textureInfo);
         drawTile(pos, size, tileInfo, color, angle, mirror, additiveColor, useWebGL, screenSpace, context);
     }
 
@@ -307,15 +307,10 @@ class CanvasLayer extends EngineObject
      *  @param {boolean} [enable] - enable WebGL rendering and update the texture */
     useWebGL(enable=true)
     {
-        if (glEnable &amp;&amp; enable)
-        {
-            if (this.glTexture)
-                glSetTextureData(this.glTexture, this.canvas);
-            else
-                this.glTexture = glCreateTexture(this.canvas);
-        }
+        if (enable)
+            this.textureInfo.createWebGLTexture();
         else
-            this.glTexture = undefined;
+            this.textureInfo.destroyWebGLTexture();
     }
 }
 
@@ -339,24 +334,14 @@ class TileLayer extends CanvasLayer
     *  @param {Vector2}  size          - World space size
     *  @param {TileInfo} [tileInfo]    - Default tile info for layer (used for size and texture)
     *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
-    *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering
     */
-    constructor(position, size, tileInfo=tile(), renderOrder=0, useWebGL=glEnable)
+    constructor(position, size, tileInfo=tile(), renderOrder=0)
     {
-        super(position, size, 0, renderOrder, size);
-        
-        this.tileInfo = tileInfo;
         const canvasSize = size.multiply(tileInfo.size);
-        /** @property {HTMLCanvasElement} - The canvas used by this tile layer */
-        this.canvas = new OffscreenCanvas(canvasSize.x, canvasSize.y);
-        /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
-        this.context = this.canvas.getContext('2d');
-        /** @property {WebGLTexture} - Texture if using WebGL for this layer */
-        this.glTexture = useWebGL ? glCreateTexture(this.canvas) : undefined;
-        // set no friction by default, applied friction is max of both objects
-        this.friction = 0;
-        // set no restitution by default, applied restitution is max of both objects
-        this.restitution = 0;
+        super(position, size, 0, renderOrder, canvasSize);
+
+        // set tile info
+        this.tileInfo = tileInfo;
 
         // init tile data
         this.data = [];
@@ -406,10 +391,10 @@ class TileLayer extends CanvasLayer
         ASSERT(drawContext !== this.context, 'must call redrawEnd() after drawing tiles!');
 
         // draw the tile layer as a single tile
-        const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
+        const tileInfo = new TileInfo().setFullImage(this.textureInfo);
         const size = this.drawSize || this.size;
         const pos = this.pos.add(size.scale(.5));
-        const useWebGL = glEnable &amp;&amp; this.glTexture !== undefined;
+        const useWebGL = glEnable &amp;&amp; this.textureInfo.hasWebGL();
         drawTile(pos, size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebGL);
     }
 
@@ -422,8 +407,7 @@ class TileLayer extends CanvasLayer
         for (let y = this.size.y; y--;)
             this.drawTileData(vec2(x,y), false);
         this.redrawEnd();
-        if (this.glTexture)
-            this.useWebGL(); // update WebGL texture
+        this.useWebGL();
     }
 
     /** Call to start the redraw process
@@ -511,11 +495,10 @@ class TileCollisionLayer extends TileLayer
     *  @param {Vector2}  size          - World space size
     *  @param {TileInfo} [tileInfo]    - Tile info for layer
     *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
-    *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering
     */
-    constructor(position, size, tileInfo=tile(), renderOrder=0, useWebGL=glEnable)
+    constructor(position, size, tileInfo=tile(), renderOrder=0)
     {
-        super(position, size.floor(), tileInfo, renderOrder, useWebGL);
+        super(position, size.floor(), tileInfo, renderOrder);
 
         /** @property {Array&lt;number>} - The tile collision grid */
         this.collisionData = [];

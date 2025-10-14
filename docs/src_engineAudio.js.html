@@ -200,11 +200,12 @@ class SoundWave extends Sound
     {
         super(undefined, range, taper);
         if (!soundEnable || headlessMode) return;
+        ASSERT(!filename || isString(filename), 'filename must be a string');
 
         /** @property {SoundLoadCallback} - callback function to call when sound is loaded */
         this.onloadCallback = onloadCallback;
         this.randomness = randomness;
-        this.loadSound(filename);
+        filename &amp;&amp; this.loadSound(filename);
     }
 
     /** Loads a sound from a URL and decodes it into sample data. Must be used with await!
@@ -506,16 +507,14 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
     if (onended)
         source.addEventListener('ended', ()=> onended(source));
 
+    const startOffset = offset * rate;
     if (!audioIsRunning())
     {
-        // fix stalled audio, this sound won't be able to play
-        audioContext.resume();
-        return;
+        // fix stalled audio and start
+        audioContext.resume().then(()=>source.start(0, startOffset));
     }
-
-    // play and return sound
-    const startOffset = offset * rate;
-    source.start(0, startOffset);
+    else
+        source.start(0, startOffset);
     return source;
 }
 

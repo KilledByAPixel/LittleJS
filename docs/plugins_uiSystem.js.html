@@ -50,6 +50,8 @@ class UISystemPlugin
         this.defaultHoverColor = hsl(0,0,.9);
         /** @property {Color} - Default color for disabled UI elements */
         this.defaultDisabledColor = hsl(0,0,.3);
+        /** @property {Color} - Uses a gradient fill combined with color */
+        this.defaultGradientColor = undefined;
         /** @property {number} - Default line width for UI elements */
         this.defaultLineWidth = 4;
         /** @property {number} - Default rounded rect corner radius for UI elements */
@@ -57,7 +59,7 @@ class UISystemPlugin
         /** @property {number} - Default scale to use for fitting text to object */
         this.defaultTextScale = .8;
         /** @property {string} - Default font for UI elements */
-        this.defaultFont = 'arial';
+        this.defaultFont = fontDefault;
         /** @property {Sound} - Default sound when interactive UI element is pressed */
         this.defaultSoundPress = undefined;
         /** @property {Sound} - Default sound when interactive UI element is released */
@@ -74,7 +76,9 @@ class UISystemPlugin
         this.hoverObject = undefined;
         /** @property {UIObject} - Hover object at start of update */
         this.lastHoverObject = undefined;
-            
+        /** @property {number} - If set ui coords will be renormalized to this canvas height */
+        this.nativeHeight = 0;
+
         engineAddPlugin(uiUpdate, uiRender);
 
         // setup recursive update and render
@@ -114,6 +118,17 @@ class UISystemPlugin
         }
         function uiRender()
         {
+            const context = uiSystem.uiContext;
+            context.save();
+            if (uiSystem.nativeHeight)
+            {
+                // convert to native height
+                const s = mainCanvasSize.y / uiSystem.nativeHeight;
+                context.translate(-s*mainCanvasSize.x/2,0);
+                context.scale(s,s);
+                context.translate(mainCanvasSize.x/2/s,0);
+            }
+
             function renderObject(o)
             {
                 if (!o.visible)
@@ -125,6 +140,7 @@ class UISystemPlugin
                     renderObject(c);
             }
             uiSystem.uiObjects.forEach(o=> o.parent || renderObject(o));
+            context.restore();
         }
     }
 
@@ -134,11 +150,30 @@ class UISystemPlugin
     *  @param {Color}   [color=uiSystem.defaultColor]
     *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
     *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
-    *  @param {number}  [cornerRadius=uiSystem.defaultCornerRadius] */
-    drawRect(pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, cornerRadius=uiSystem.defaultCornerRadius)
+    *  @param {number}  [cornerRadius=uiSystem.defaultCornerRadius]
+    *  @param {Color}   [gradientColor=uiSystem.defaultGradientColor] */
+    drawRect(pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, cornerRadius=uiSystem.defaultCornerRadius, gradientColor=uiSystem.defaultGradientColor)
     {
+        ASSERT(isVector2(pos), 'pos must be a vec2');
+        ASSERT(isVector2(size), 'size must be a vec2');
+        ASSERT(isColor(color), 'color must be a color');
+        ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
+        ASSERT(isColor(lineColor), 'lineColor must be a color');
+        ASSERT(isNumber(cornerRadius), 'cornerRadius must be a number');
+        
         const context = uiSystem.uiContext;
-        context.fillStyle = color.toString();
+        if (gradientColor)
+        {
+            const g = context.createLinearGradient(
+                pos.x, pos.y-size.y/2, pos.x, pos.y+size.y/2);
+            const c = color.toString();
+            g.addColorStop(0, c);
+            g.addColorStop(.5, gradientColor.toString());
+            g.addColorStop(1, c);
+            context.fillStyle = g;
+        }
+        else
+            context.fillStyle = color.toString();
         context.beginPath();
         if (cornerRadius &amp;&amp; context['roundRect'])
             context['roundRect'](pos.x-size.x/2, pos.y-size.y/2, size.x, size.y, cornerRadius);
@@ -160,6 +195,11 @@ class UISystemPlugin
     *  @param {Color}   [lineColor=uiSystem.defaultLineColor] */
     drawLine(posA, posB, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor)
     {
+        ASSERT(isVector2(posA), 'posA must be a vec2');
+        ASSERT(isVector2(posB), 'posB must be a vec2');
+        ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
+        ASSERT(isColor(lineColor), 'lineColor must be a color');
+
         const context = uiSystem.uiContext;
         context.strokeStyle = lineColor.toString();
         context.lineWidth = lineWidth;
@@ -190,10 +230,11 @@ class UISystemPlugin
     *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
     *  @param {string}  [align]
     *  @param {string}  [font=uiSystem.defaultFont]
+    *  @param {string}  [fontStyle]
     *  @param {boolean} [applyMaxWidth=true] */
-    drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont, applyMaxWidth=true)
+    drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont, fontStyle='', applyMaxWidth=true)
     {
-        drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, applyMaxWidth ? size.x : undefined, uiSystem.uiContext);
+        drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, uiSystem.uiContext);
     }
 
     /**
@@ -234,6 +275,9 @@ class UIObject
      */
     constructor(pos=vec2(), size=vec2())
     {
+        ASSERT(isVector2(pos), 'ui object pos must be a vec2');
+        ASSERT(isVector2(size), 'ui object size must be a vec2');
+
         /** @property {Vector2} - Local position of the object */
         this.localPos = pos.copy();
         /** @property {Vector2} - Screen space position of the object */
@@ -251,17 +295,21 @@ class UIObject
         /** @property {boolean} - Is this object disabled? */
         this.disabled = false;
         /** @property {Color} - Color for text */
-        this.textColor = uiSystem.defaultTextColor.copy()
+        this.textColor = uiSystem.defaultTextColor.copy();
         /** @property {Color} - Color used when hovering over the object */
-        this.hoverColor = uiSystem.defaultHoverColor.copy()
+        this.hoverColor = uiSystem.defaultHoverColor.copy();
         /** @property {Color} - Color for line drawing */
-        this.lineColor = uiSystem.defaultLineColor.copy()
+        this.lineColor = uiSystem.defaultLineColor.copy();
+        /** @property {Color} - Uses a gradient fill combined with color */
+        this.gradientColor = uiSystem.defaultGradientColor ? uiSystem.defaultGradientColor.copy() : undefined;
         /** @property {number} - Width for line drawing */
         this.lineWidth = uiSystem.defaultLineWidth;
         /** @property {number} - Corner radius for rounded rects */
         this.cornerRadius = uiSystem.defaultCornerRadius;
         /** @property {string} - Font for this objecct */
         this.font = uiSystem.defaultFont;
+        /** @property {string} - Font style for this object or undefined */
+        this.fontStyle = undefined;
         /** @property {number} - Override for text width */
         this.textWidth = undefined;
         /** @property {number} - Override for text height */
@@ -286,6 +334,8 @@ class UIObject
         this.interactive = false;
         /** @property {boolean} - Activate when dragged over with mouse held down */
         this.dragActivate = false;
+        /** @property {boolean} - True if this can be a hover object */
+        this.canBeHover = true;
         uiSystem.uiObjects.push(this);
     }
 
@@ -309,6 +359,26 @@ class UIObject
         child.parent = undefined;
     }
 
+    /** Check if the mouse is overlapping a box in screen space
+     *  @return {boolean} - True if overlapping
+     */
+    isMouseOverlapping()
+    {
+        const size = !isTouchDevice ? this.size :
+                this.size.add(vec2(this.extraTouchSize || 0));
+        if (!uiSystem.nativeHeight)
+            return isOverlapping(this.pos, size, mousePosScreen);
+
+        const s = mainCanvasSize.y / uiSystem.nativeHeight;
+        const sInv = 1/s;
+        let pos = mousePosScreen.copy();
+        pos.x += s*mainCanvasSize.x/2;
+        pos.x *= sInv;
+        pos.y *= sInv;
+        pos.x -= sInv*mainCanvasSize.x/2;
+        return isOverlapping(this.pos, size, pos);
+    }
+
     /** Update the object, called automatically by plugin once each frame */
     update()
     {
@@ -316,13 +386,10 @@ class UIObject
         const isActive = this.isActiveObject();
         const mouseDown = mouseIsDown(0);
         const mousePress = this.dragActivate ? mouseDown : mouseWasPressed(0);
-        if (!uiSystem.hoverObject)
+        if (this.canBeHover)
         if (mousePress || isActive || (!mouseDown &amp;&amp; !isTouchDevice))
-        {
-            const size = this.size.add(vec2(isTouchDevice &amp;&amp; this.extraTouchSize || 0));
-            if (isOverlapping(this.pos, size, mousePosScreen))
-                uiSystem.hoverObject = this;
-        }
+        if (!uiSystem.hoverObject &amp;&amp; this.isMouseOverlapping())
+            uiSystem.hoverObject = this;
         if (this.isHoverObject())
         {
             if (!this.disabled)
@@ -370,7 +437,7 @@ class UIObject
         if (!this.size.x || !this.size.y) return;
 
         const lineColor = this.interactive &amp;&amp; this.isActiveObject() &amp;&amp; !this.disabled ? this.color : this.lineColor;
-        const color = this.interactive ? this.disabled ? this.disabledColor : this.isActiveObject() ? this.activeColor || this.color : this.isHoverObject() ? this.hoverColor : this.color : this.color;
+        const color = this.disabled ? this.disabledColor : this.interactive ? this.isActiveObject() ? this.activeColor || this.color : this.isHoverObject() ? this.hoverColor : this.color : this.color;
         uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor, this.cornerRadius);
     }
 
@@ -436,6 +503,10 @@ class UIText extends UIObject
     {
         super(pos, size);
 
+        ASSERT(isString(text), 'ui text must be a string');
+        ASSERT(['left','center','right'].includes(align), 'ui text align must be left, center, or right');
+        ASSERT(isString(font), 'ui text font must be a string');
+
         // set properties
         this.text = text;
         this.align = align;
@@ -443,11 +514,13 @@ class UIText extends UIObject
 
         // make text not outlined by default
         this.lineWidth = 0;
+        // text can not be a hover object by default
+        this.canBeHover = false;
     }
     render()
     {
         const textSize = this.getTextSize();
-        uiSystem.drawText(this.text, this.pos, textSize, this.textColor, this.lineWidth, this.lineColor, this.align, this.font);
+        uiSystem.drawText(this.text, this.pos, textSize, this.textColor, this.lineWidth, this.lineColor, this.align, this.font, this.fontStyle);
     }
 }
 
@@ -470,6 +543,11 @@ class UITile extends UIObject
     constructor(pos, size, tileInfo, color=WHITE, angle=0, mirror=false)
     {
         super(pos, size);
+
+        ASSERT(tileInfo instanceof TileInfo, 'ui tile tileInfo must be a TileInfo');
+        ASSERT(isColor(color), 'ui tile color must be a color');
+        ASSERT(isNumber(angle), 'ui tile angle must be a number');
+
         /** @property {TileInfo} - Tile image to use */
         this.tileInfo = tileInfo;
         /** @property {number} - Angle to rotate in radians */
@@ -503,9 +581,12 @@ class UIButton extends UIObject
     {
         super(pos, size);
 
+        ASSERT(isString(text), 'ui button must be a string');
+        ASSERT(isColor(color), 'ui button color must be a color');
+
         // set properties
         this.text = text;
-        this.color = color.copy()
+        this.color = color.copy();
         this.interactive = true;
     }
     render()
@@ -515,7 +596,7 @@ class UIButton extends UIObject
         // draw the text scaled to fit
         const textSize = this.getTextSize();
         uiSystem.drawText(this.text, this.pos, textSize, 
-            this.textColor, 0, undefined, this.align, this.font);
+            this.textColor, 0, undefined, this.align, this.font, this.fontStyle);
     }
 }
 
@@ -537,9 +618,12 @@ class UICheckbox extends UIObject
     constructor(pos, size, checked=false, text='', color=uiSystem.defaultButtonColor)
     {
         super(pos, size);
+
+        ASSERT(isString(text), 'ui checkbox must be a string');
+        ASSERT(isColor(color), 'ui checkbox color must be a color');
+
         /** @property {boolean} - Current percentage value of this scrollbar 0-1 */
         this.checked = checked;
-
         // set properties
         this.text = text;
         this.color = color.copy();
@@ -566,7 +650,7 @@ class UICheckbox extends UIObject
         const textSize = this.getTextSize();
         const pos = this.pos.add(vec2(this.size.x,0));
         uiSystem.drawText(this.text, pos, textSize, 
-            this.textColor, 0, undefined, 'left', this.font, false);
+            this.textColor, 0, undefined, 'left', this.font, this.fontStyle, false);
     }
 }
 
@@ -590,6 +674,11 @@ class UIScrollbar extends UIObject
     {
         super(pos, size);
 
+        ASSERT(isNumber(value), 'ui scrollbar value must be a number');
+        ASSERT(isString(text), 'ui scrollbar must be a string');
+        ASSERT(isColor(color), 'ui scrollbar color must be a color');
+        ASSERT(isColor(handleColor), 'ui scrollbar handleColor must be a color');
+
         /** @property {number} - Current percentage value of this scrollbar 0-1 */
         this.value = value;
         /** @property {Color} - Color for the handle part of the scrollbar */
@@ -605,33 +694,46 @@ class UIScrollbar extends UIObject
         super.update();
         if (this.isActiveObject() &amp;&amp; this.interactive)
         {
+            // handle horizontal or vertical scrollbar
+            const isHorizontal = this.size.x > this.size.y;
+            const handleSize = isHorizontal ? this.size.y : this.size.x;
+            const barSize = isHorizontal ? this.size.x : this.size.y;
+            const centerPos = isHorizontal ? this.pos.x : this.pos.y;
+
             // check if value changed
-            const handleSize = vec2(this.size.y);
-            const handleWidth = this.size.x - handleSize.x;
-            const p1 = this.pos.x - handleWidth/2;
-            const p2 = this.pos.x + handleWidth/2;
+            const handleWidth = barSize - handleSize;
+            const p1 = centerPos - handleWidth/2;
+            const p2 = centerPos + handleWidth/2;
             const oldValue = this.value;
-            this.value = percent(mousePosScreen.x, p1, p2);
+            this.value = isHorizontal ? 
+                percent(mousePosScreen.x, p1, p2) :
+                percent(mousePosScreen.y, p2, p1);
             this.value === oldValue || this.onChange();
         }
     }
     render()
     {
         super.render();
-    
+
+        // handle horizontal or vertical scrollbar
+        const isHorizontal = this.size.x > this.size.y;
+        const handleSize = isHorizontal ? this.size.y : this.size.x;
+        const barSize = isHorizontal ? this.size.x : this.size.y;
+        const centerPos = isHorizontal ? this.pos.x : this.pos.y;
+        
         // draw the scrollbar handle
-        const handleSize = vec2(this.size.y);
-        const handleWidth = this.size.x - handleSize.x;
-        const p1 = this.pos.x - handleWidth/2;
-        const p2 = this.pos.x + handleWidth/2;
-        const handlePos = vec2(lerp(p1, p2, this.value), this.pos.y);
-        const handleColor = this.disabled ? this.disabledColor : 
-            this.interactive &amp;&amp; this.isActiveObject() ? this.color : this.handleColor;
-        uiSystem.drawRect(handlePos, handleSize, handleColor, this.lineWidth, this.lineColor, this.cornerRadius);
+        const handleWidth = barSize - handleSize;
+        const p1 = centerPos - handleWidth/2;
+        const p2 = centerPos + handleWidth/2;
+        const handlePos = isHorizontal ? 
+            vec2(lerp(p1, p2, this.value), this.pos.y) :
+            vec2(this.pos.x, lerp(p2, p1, this.value))
+        const handleColor = this.disabled ? this.disabledColor : this.handleColor;
+        uiSystem.drawRect(handlePos, vec2(handleSize), handleColor, this.lineWidth, this.lineColor, this.cornerRadius);
 
         // draw the text scaled to fit on the scrollbar
         const textSize = this.getTextSize();
         uiSystem.drawText(this.text, this.pos, textSize, 
-            this.textColor, 0, undefined, this.align, this.font);
+            this.textColor, 0, undefined, this.align, this.font, this.fontStyle);
     }
 }</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="Audio.SoundWave.html">SoundWave</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Draw.FontImage.html">FontImage</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Engine.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UIScrollbar.html">UIScrollbar</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>

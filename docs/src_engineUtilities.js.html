@@ -245,6 +245,13 @@ async function fetchJSON(url)
  * @memberof Utilities */
 function isNumber(n) { return typeof n === 'number' &amp;&amp; !isNaN(n); }
 
+/**
+ * Check if object is a valid string or can be converted to one
+ * @param {any} s
+ * @return {boolean}
+ * @memberof Utilities */
+function isString(s) { return s !== undefined &amp;&amp; s !== null &amp;&amp; typeof s.toString() === 'string'; }
+
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Random global functions
@@ -833,7 +840,8 @@ class Color
      * @return {Color} */
     setHex(hex)
     {
-        ASSERT(typeof hex === 'string' &amp;&amp; hex[0] === '#', 'Color hex code must be a string starting with #');
+        ASSERT(isString(hex), 'Color hex code must be a string');
+        ASSERT(hex[0] === '#', 'Color hex code must start with #');
         ASSERT([4,5,7,9].includes(hex.length), 'Invalid hex');
 
         if (hex.length &lt; 6)

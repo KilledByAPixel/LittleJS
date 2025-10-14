@@ -31,7 +31,7 @@ let glContext;
 let glAntialias = true;
 
 // WebGL internal variables not exposed to documentation
-let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount;
+let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos;
 
 // WebGL internal constants
 const gl_ARRAY_BUFFER_SIZE = 5e5;
@@ -47,6 +47,9 @@ const gl_MAX_POLY_VERTEXES = gl_ARRAY_BUFFER_SIZE / gl_POLY_VERTEX_BYTE_STRIDE |
 // Initialize WebGL, called automatically by the engine
 function glInit()
 {
+    // keep set of texture infos so they can be restored if context is lost
+    glTextureInfos = new Set;
+
     if (!glEnable || headlessMode) return;
 
     // create the canvas and textures
@@ -64,68 +67,101 @@ function glInit()
     // create the WebGL canvas
     const rootElement = mainCanvas.parentElement;
     rootElement.appendChild(glCanvas);
+    
+    // startup webgl
+    initWebGL();
 
-    // setup instanced rendering shader program
-    glShader = glCreateProgram(
-        '#version 300 es\n' +     // specify GLSL ES version
-        'precision highp float;'+ // use highp for better accuracy
-        'uniform mat4 m;'+        // transform matrix
-        'in vec2 g;'+             // in: geometry
-        'in vec4 p,u,c,a;'+       // in: position/size, uvs, color, additiveColor
-        'in float r;'+            // in: rotation
-        'out vec2 v;'+            // out: uv
-        'out vec4 d,e;'+          // out: color, additiveColor
-        'void main(){'+           // shader entry point
-        'vec2 s=(g-.5)*p.zw;'+    // get size offset
-        'gl_Position=m*vec4(p.xy+s*cos(r)-vec2(-s.y,s)*sin(r),1,1);'+ // transform position
-        'v=mix(u.xw,u.zy,g);'+    // pass uv to fragment shader
-        'd=c;e=a;'+               // pass colors to fragment shader
-        '}'                       // end of shader
-        ,
-        '#version 300 es\n' +     // specify GLSL ES version
-        'precision highp float;'+ // use highp for better accuracy
-        'uniform sampler2D s;'+   // texture
-        'in vec2 v;'+             // in: uv
-        'in vec4 d,e;'+           // in: color, additiveColor
-        'out vec4 c;'+            // out: color
-        'void main(){'+           // shader entry point
-        'c=texture(s,v)*d+e;'+    // modulate texture by color plus additive
-        '}'                       // end of shader
-    );
+    // setup context lost and restore handlers
+    glCanvas.addEventListener('webglcontextlost', (e)=>
+    {
+        glEnable = false; // disable WebGL rendering
+        glCanvas.style.display = 'none'; // hide the gl canvas
+        e.preventDefault(); // prevent default to allow restoration
+        LOG('WebGL context lost! Switching to Canvas2d rendering.');
 
-    // setup poly rendering shaders
-    glPolyShader = glCreateProgram(
-        '#version 300 es\n' +     // specify GLSL ES version
-        'precision highp float;'+ // use highp for better accuracy
-        'uniform mat4 m;'+        // transform matrix
-        'in vec2 p;'+             // in: position
-        'in vec4 c;'+             // in: color
-        'out vec4 d;'+            // out: color
-        'void main(){'+           // shader entry point
-        'gl_Position=m*vec4(p,1,1);'+ // transform position
-        'd=c;'+                   // pass color to fragment shader
-        '}'                       // end of shader
-        ,
-        '#version 300 es\n' +     // specify GLSL ES version
-        'precision highp float;'+ // use highp for better accuracy
-        'in vec4 d;'+             // in: color
-        'out vec4 c;'+            // out: color
-        'void main(){'+           // shader entry point
-        'c=d;'+                   // set color
-        '}'                       // end of shader
-    );
+        // remove WebGL textures
+        for (const info of glTextureInfos)
+            info.glTexture = undefined;
+        glActiveTexture = undefined;
+        pluginList.forEach(plugin=>plugin.glContextLost?.());
+    });
+    glCanvas.addEventListener('webglcontextrestored', ()=>
+    {
+        glEnable = true; // disable WebGL rendering
+        glCanvas.style.display = ''; // show the gl canvas
+        LOG('WebGL context restored, reinitializing...');
 
-    // init buffers
-    const glInstanceData = new ArrayBuffer(gl_ARRAY_BUFFER_SIZE);
-    glPositionData = new Float32Array(glInstanceData);
-    glColorData = new Uint32Array(glInstanceData);
-    glArrayBuffer = glContext.createBuffer();
-    glGeometryBuffer = glContext.createBuffer();
+        // reinit WebGL and restore textures
+        initWebGL();
+        for (const info of glTextureInfos)
+            info.glTexture = glCreateTexture(info.image);
+        pluginList.forEach(plugin=>plugin.glContextRestored?.());
+    });
 
-    // create the geometry buffer, triangle strip square
-    const geometry = new Float32Array([glBatchCount=0,0,1,0,0,1,1,1]);
-    glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
-    glContext.bufferData(glContext.ARRAY_BUFFER, geometry, glContext.STATIC_DRAW);
+    function initWebGL()
+    {
+        // setup instanced rendering shader program
+        glShader = glCreateProgram(
+            '#version 300 es\n' +     // specify GLSL ES version
+            'precision highp float;'+ // use highp for better accuracy
+            'uniform mat4 m;'+        // transform matrix
+            'in vec2 g;'+             // in: geometry
+            'in vec4 p,u,c,a;'+       // in: position/size, uvs, color, additiveColor
+            'in float r;'+            // in: rotation
+            'out vec2 v;'+            // out: uv
+            'out vec4 d,e;'+          // out: color, additiveColor
+            'void main(){'+           // shader entry point
+            'vec2 s=(g-.5)*p.zw;'+    // get size offset
+            'gl_Position=m*vec4(p.xy+s*cos(r)-vec2(-s.y,s)*sin(r),1,1);'+ // transform position
+            'v=mix(u.xw,u.zy,g);'+    // pass uv to fragment shader
+            'd=c;e=a;'+               // pass colors to fragment shader
+            '}'                       // end of shader
+            ,
+            '#version 300 es\n' +     // specify GLSL ES version
+            'precision highp float;'+ // use highp for better accuracy
+            'uniform sampler2D s;'+   // texture
+            'in vec2 v;'+             // in: uv
+            'in vec4 d,e;'+           // in: color, additiveColor
+            'out vec4 c;'+            // out: color
+            'void main(){'+           // shader entry point
+            'c=texture(s,v)*d+e;'+    // modulate texture by color plus additive
+            '}'                       // end of shader
+        );
+
+        // setup poly rendering shaders
+        glPolyShader = glCreateProgram(
+            '#version 300 es\n' +     // specify GLSL ES version
+            'precision highp float;'+ // use highp for better accuracy
+            'uniform mat4 m;'+        // transform matrix
+            'in vec2 p;'+             // in: position
+            'in vec4 c;'+             // in: color
+            'out vec4 d;'+            // out: color
+            'void main(){'+           // shader entry point
+            'gl_Position=m*vec4(p,1,1);'+ // transform position
+            'd=c;'+                   // pass color to fragment shader
+            '}'                       // end of shader
+            ,
+            '#version 300 es\n' +     // specify GLSL ES version
+            'precision highp float;'+ // use highp for better accuracy
+            'in vec4 d;'+             // in: color
+            'out vec4 c;'+            // out: color
+            'void main(){'+           // shader entry point
+            'c=d;'+                   // set color
+            '}'                       // end of shader
+        );
+
+        // init buffers
+        const glInstanceData = new ArrayBuffer(gl_ARRAY_BUFFER_SIZE);
+        glPositionData = new Float32Array(glInstanceData);
+        glColorData = new Uint32Array(glInstanceData);
+        glArrayBuffer = glContext.createBuffer();
+        glGeometryBuffer = glContext.createBuffer();
+
+        // create the geometry buffer, triangle strip square
+        const geometry = new Float32Array([glBatchCount=0,0,1,0,0,1,1,1]);
+        glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
+        glContext.bufferData(glContext.ARRAY_BUFFER, geometry, glContext.STATIC_DRAW);
+    }
 }
 
 function glSetInstancedMode()
@@ -232,7 +268,7 @@ function glPreRender()
     // start with additive blending off
     glAdditive = glBatchAdditive = false;
 
-    // force it to enter instanced mode
+    // force it to set instanced mode by first setting poly mode true
     glPolyMode = true;
     glSetInstancedMode();
 }
@@ -371,6 +407,37 @@ function glSetTextureData(texture, image)
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
     glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
     glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture); // rebind active texture
+}
+
+/** Tells WebGL to create or update the glTexture and start tracking it
+ *  @param {TextureInfo} textureInfo
+ *  @memberof WebGL */
+function glRegisterTextureInfo(textureInfo)
+{
+    // add texture info to tracking list
+    glTextureInfos.add(textureInfo);
+
+    if (!glContext) return;
+
+    // create or set the texture data
+    if (textureInfo.glTexture)
+        glSetTextureData(textureInfo.glTexture, textureInfo.image);
+    else
+        textureInfo.glTexture = glCreateTexture(textureInfo.image);
+}
+
+/** Tells WebGL to destroy the glTexture and stop tracking it
+ *  @param {TextureInfo} textureInfo
+ *  @memberof WebGL */
+function glUnregisterTextureInfo(textureInfo)
+{
+    // delete texture info from tracking list
+    glTextureInfos.delete(textureInfo);
+
+    // unset and destroy the texture
+    const glTexture = textureInfo.glTexture;
+    textureInfo.glTexture = undefined;
+    glDeleteTexture(glTexture);
 }
 
 /** Draw all sprites and clear out the buffer, called automatically by the system whenever necessary

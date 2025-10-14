@@ -175,16 +175,15 @@ class TileInfo
     }
 
     /**
-     * Set this tile to use a full image
-     * @param {HTMLImageElement|OffscreenCanvas} image
-     * @param {WebGLTexture} [glTexture] - WebGL texture
+     * Set this tile to use a full image in a texture info
+     * @param {TextureInfo} textureInfo
      * @return {TileInfo}
      */
-    setFullImage(image, glTexture)
+    setFullImage(textureInfo)
     {
         this.pos = new Vector2;
-        this.size = new Vector2(image.width, image.height);
-        this.textureInfo = new TextureInfo(image, glTexture);
+        this.size = textureInfo.size.copy();
+        this.textureInfo = textureInfo;
         // do not use padding or bleed
         this.bleedScale = this.padding = 0;
         return this;
@@ -200,26 +199,30 @@ class TextureInfo
     /**
      * Create a TextureInfo, called automatically by the engine
      * @param {HTMLImageElement|OffscreenCanvas} image
-     * @param {WebGLTexture} [glTexture] - WebGL texture
+     * @param {boolean} [useWebGL] - Should use WebGL if available?
      */
-    constructor(image, glTexture)
+    constructor(image, useWebGL=true)
     {
-        /** @property {HTMLImageElement} - image source */
+        /** @property {HTMLImageElement|OffscreenCanvas} - image source */
         this.image = image;
         /** @property {Vector2} - size of the image */
         this.size = vec2(image.width, image.height);
         /** @property {Vector2} - inverse of the size, cached for rendering */
         this.sizeInverse = vec2(1/image.width, 1/image.height);
         /** @property {WebGLTexture} - WebGL texture */
-        this.glTexture = glTexture;
+        this.glTexture = undefined;
+        useWebGL &amp;&amp; this.createWebGLTexture();
     }
 
-    createWebGLTexture()
-    {
-        ASSERT(!this.glTexture);
-        if (glEnable)
-            this.glTexture = glCreateTexture(this.image);
-    }
+    /** Creates the WebGL texture, updates if already created */
+    createWebGLTexture() { glRegisterTextureInfo(this); }
+
+    /** Destroys the WebGL texture */
+    destroyWebGLTexture() { glUnregisterTextureInfo(this); }
+
+    /** Check if the texture is webgl enabled
+     * @return {boolean} */
+    hasWebGL() { return !!this.glTexture; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -240,10 +243,11 @@ class TextureInfo
 function drawTile(pos, size=new Vector2(1), tileInfo, color=WHITE,
     angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace, context)
 {
-    ASSERT(isVector2(pos), 'drawTile pos should be a vec2');
-    ASSERT(isVector2(size), 'drawTile size should be a vec2');
-    ASSERT(isColor(color) &amp;&amp; (!additiveColor || isColor(additiveColor)), 'drawTile color is invalid');
-    ASSERT(isNumber(angle), 'drawTile angle should be a number');
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(isVector2(size), 'size must be a vec2');
+    ASSERT(isColor(color), 'color is invalid');
+    ASSERT(isNumber(angle), 'angle must be a number');
+    ASSERT(!additiveColor || isColor(additiveColor), 'additiveColor must be a color');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
     const textureInfo = tileInfo &amp;&amp; tileInfo.textureInfo;
@@ -338,10 +342,10 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
  *  @memberof Draw */
 function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0, useWebGL=glEnable, screenSpace=false, context)
 {
-    ASSERT(isVector2(pos), 'drawRectGradient pos should be a vec2');
-    ASSERT(isVector2(size), 'drawRectGradient size should be a vec2');
-    ASSERT(isColor(colorTop) &amp;&amp; isColor(colorBottom), 'drawRectGradient color is invalid');
-    ASSERT(isNumber(angle), 'drawRectGradient angle should be a number');
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(isVector2(size), 'size must be a vec2');
+    ASSERT(isColor(colorTop) &amp;&amp; isColor(colorBottom), 'color is invalid');
+    ASSERT(isNumber(angle), 'angle must be a number');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
     if (useWebGL)
     {
@@ -399,11 +403,11 @@ function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0,
  *  @memberof Draw */
 function drawLineList(points, width=.1, color, wrap=false, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace, context)
 {
-    ASSERT(Array.isArray(points), 'drawLineList points should be an array');
-    ASSERT(isNumber(width), 'drawLineList width should be a number');
-    ASSERT(isColor(color), 'drawLineList color is invalid');
-    ASSERT(isVector2(pos), 'drawLineList pos should be a vec2');
-    ASSERT(isNumber(angle), 'drawLineList angle should be a number');
+    ASSERT(Array.isArray(points), 'points must be an array');
+    ASSERT(isNumber(width), 'width must be a number');
+    ASSERT(isColor(color), 'color is invalid');
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(isNumber(angle), 'angle must be a number');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
     if (useWebGL)
     {
@@ -474,8 +478,8 @@ function drawLine(posA, posB, width=.1, color, pos=vec2(), angle=0, useWebGL, sc
  *  @memberof Draw */
 function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, lineColor=BLACK, angle=0, useWebGL=glEnable, screenSpace=false, context)
 {
-    ASSERT(isVector2(size), 'drawRegularPoly size should be a vec2');
-    ASSERT(isNumber(sides), 'drawRegularPoly sides should be a number');
+    ASSERT(isVector2(size), 'size must be a vec2');
+    ASSERT(isNumber(sides), 'sides must be a number');
 
     // build regular polygon points
     const points = [];
@@ -501,12 +505,13 @@ function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, l
  *  @memberof Draw */
 function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=false, context=undefined)
 {
-    ASSERT(isVector2(pos), 'drawPoly pos should be a vec2');
-    ASSERT(Array.isArray(points), 'drawPoly points should be an array');
-    ASSERT(isColor(color) &amp;&amp; isColor(lineColor), 'drawPoly color is invalid');
-    ASSERT(isNumber(lineWidth), 'drawPoly lineWidth should be a number');
-    ASSERT(isNumber(angle), 'drawPoly angle should be a number');
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(Array.isArray(points), 'points must be an array');
+    ASSERT(isColor(color) &amp;&amp; isColor(lineColor), 'color is invalid');
+    ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
+    ASSERT(isNumber(angle), 'angle must be a number');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+
     if (useWebGL)
     {
         let scale = 1;
@@ -553,13 +558,14 @@ function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(),
  *  @memberof Draw */
 function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
 {
-    ASSERT(isVector2(pos), 'drawEllipse pos should be a vec2');
-    ASSERT(isVector2(size), 'drawEllipse size should be a vec2');
-    ASSERT(isColor(color) &amp;&amp; isColor(lineColor), 'drawEllipse color is invalid');
-    ASSERT(isNumber(angle), 'drawEllipse angle should be a number');
-    ASSERT(isNumber(lineWidth), 'drawEllipse lineWidth should be a number');
-    ASSERT(lineWidth >= 0 &amp;&amp; lineWidth &lt; size.x &amp;&amp; lineWidth &lt; size.y, 'drawEllipse invalid lineWidth');
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(isVector2(size), 'size must be a vec2');
+    ASSERT(isColor(color) &amp;&amp; isColor(lineColor), 'color is invalid');
+    ASSERT(isNumber(angle), 'angle must be a number');
+    ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
+    ASSERT(lineWidth >= 0 &amp;&amp; lineWidth &lt; size.x &amp;&amp; lineWidth &lt; size.y, 'invalid lineWidth');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+
     if (useWebGL)
     {
         // draw as a regular polygon
@@ -596,7 +602,7 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
  *  @memberof Draw */
 function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
 {
-    ASSERT(isNumber(size), 'drawCircle size should be a number');
+    ASSERT(isNumber(size), 'size must be a number');
     drawEllipse(pos, vec2(size), color, 0, lineWidth, lineColor, useWebGL, screenSpace, context);
 }
 
@@ -617,6 +623,11 @@ function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useW
  *  @memberof Draw */
 function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpace=false, context=drawContext)
 {
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(isVector2(size), 'size must be a vec2');
+    ASSERT(isNumber(angle), 'angle must be a number');
+    ASSERT(typeof drawFunction === 'function', 'drawFunction must be a function');
+
     if (!screenSpace)
     {
         // transform from world space to screen space
@@ -644,12 +655,13 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {CanvasTextAlign}  [textAlign='center']
  *  @param {string}  [font=fontDefault]
+ *  @param {string}  [fontStyle]
  *  @param {number}  [maxWidth]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, maxWidth, context=drawContext)
+function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, fontStyle, maxWidth, context=drawContext)
 {
-    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, maxWidth, context);
+    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, fontStyle, maxWidth, context);
 }
 
 /** Draw text on overlay canvas in world space
@@ -662,11 +674,12 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {CanvasTextAlign}  [textAlign='center']
  *  @param {string}  [font=fontDefault]
+ *  @param {string}  [fontStyle]
  *  @param {number}  [maxWidth]
  *  @memberof Draw */
-function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, maxWidth)
+function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, fontStyle, maxWidth)
 {
-    drawText(text, pos, size, color, lineWidth, lineColor, textAlign, font, maxWidth, overlayContext);
+    drawText(text, pos, size, color, lineWidth, lineColor, textAlign, font, fontStyle, maxWidth, overlayContext);
 }
 
 /** Draw text on overlay canvas in screen space
@@ -679,16 +692,27 @@ function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textA
  *  @param {Color}   [lineColor=(0,0,0,1)]
  *  @param {CanvasTextAlign}  [textAlign]
  *  @param {string}  [font=fontDefault]
+ *  @param {string}  [fontStyle]
  *  @param {number}  [maxWidth]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
  *  @memberof Draw */
-function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, maxWidth, context=overlayContext)
+function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, context=overlayContext)
 {
+    ASSERT(isString(text), 'text must be a string');
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(isNumber(size), 'size must be a number');
+    ASSERT(isColor(color), 'color must be a color');
+    ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
+    ASSERT(isColor(lineColor), 'lineColor must be a color');
+    ASSERT(['left','center','right'].includes(textAlign), 'align must be left, center, or right');
+    ASSERT(isString(font), 'font must be a string');
+    ASSERT(isString(fontStyle), 'fontStyle must be a string');
+    
     context.fillStyle = color.toString();
     context.strokeStyle = lineColor.toString();
     context.lineWidth = lineWidth;
     context.textAlign = textAlign;
-    context.font = size + 'px '+ font;
+    context.font = fontStyle + ' ' + size + 'px '+ font;
     context.textBaseline = 'middle';
 
     const lines = (text+'').split('\n');
@@ -896,11 +920,11 @@ let engineFontImage;
 class FontImage
 {
     /** Create an image font
-     *  @param {HTMLImageElement} [image]    - Image for the font, if undefined default font is used
-     *  @param {Vector2} [tileSize=(8,8)]    - Size of the font source tiles
-     *  @param {Vector2} [paddingSize=(0,1)] - How much extra space to add between characters
+     *  @param {HTMLImageElement} [image] - Image for the font, default if undefined
+     *  @param {Vector2} [tileSize=(8,8)] - Size of the font source tiles
+     *  @param {Vector2} [paddingSize=(0,1)] - How much space between characters
      */
-    constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1), context=overlayContext)
+    constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1))
     {
         // load default font image
         if (!engineFontImage)
@@ -942,7 +966,7 @@ class FontImage
      *  @param {boolean} [center]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      */
-    drawTextScreen(text, pos, scale=4, center, context=overlayContext)
+    drawTextScreen(text, pos, scale=4, center=true, context=overlayContext)
     {
         context.save();
         const size = this.tileSize;
