@@ -120,10 +120,10 @@ class EnginePlugin
 function engineAddPlugin(update, render, glContextLost, glContextRestored)
 {
     // make sure plugin functions are unique
-    ASSERT(!pluginList.find(p=>p.update===update));
-    ASSERT(!pluginList.find(p=>p.render===render));
-    ASSERT(!pluginList.find(p=>p.glContextLost===glContextLost));
-    ASSERT(!pluginList.find(p=>p.glContextRestored===glContextRestored));
+    ASSERT(!pluginList.find(p=>
+        p.update === update && p.render === render &&
+        p.glContextLost === glContextLost &&
+        p.glContextRestored === glContextRestored));
 
     const plugin = new EnginePlugin(update, render, glContextLost, glContextRestored);
     pluginList.push(plugin);
