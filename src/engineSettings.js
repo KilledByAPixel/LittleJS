@@ -216,6 +216,14 @@ let touchInputEnable = true;
  *  @memberof Settings */
 let touchGamepadEnable = false;
 
+/** True if touch gamepad should have start button in the center
+ *  - When the game is paused, any touch will press the button
+ *  - This can function as a way to pause/unpause the game
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let touchGamepadCenterButton = true;
+
 /** True if touch gamepad should be analog stick or false to use if 8 way dpad
  *  @type {boolean}
  *  @default
@@ -480,6 +488,12 @@ function setTouchInputEnable(enable) { touchInputEnable = enable; }
  *  @param {boolean} enable
  *  @memberof Settings */
 function setTouchGamepadEnable(enable) { touchGamepadEnable = enable; }
+
+/** True if touch gamepad should have start button in the center
+ *  - This can function as a way to pause/unpause the game
+ *  @param {boolean} enable
+ *  @memberof Settings */
+function setTouchGamepadCenterButton(enable) { touchGamepadCenterButton = enable; }
 
 /** Set if touch gamepad should be analog stick or 8 way dpad
  *  @param {boolean} analog
