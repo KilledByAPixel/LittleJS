@@ -74,7 +74,9 @@ class UISystemPlugin
         this.hoverObject = undefined;
         /** @property {UIObject} - Hover object at start of update */
         this.lastHoverObject = undefined;
-            
+        /** @property {number} - If set ui coords will be renormalized to this canvas height */
+        this.nativeHeight = 0;
+
         engineAddPlugin(uiUpdate, uiRender);
 
         // setup recursive update and render
@@ -114,6 +116,17 @@ class UISystemPlugin
         }
         function uiRender()
         {
+            const context = uiSystem.uiContext;
+            context.save();
+            if (uiSystem.nativeHeight)
+            {
+                // convert to native height
+                const s = mainCanvasSize.y / uiSystem.nativeHeight;
+                context.translate(-s*mainCanvasSize.x/2,0);
+                context.scale(s,s);
+                context.translate(mainCanvasSize.x/2/s,0);
+            }
+
             function renderObject(o)
             {
                 if (!o.visible)
@@ -125,6 +138,7 @@ class UISystemPlugin
                     renderObject(c);
             }
             uiSystem.uiObjects.forEach(o=> o.parent || renderObject(o));
+            context.restore();
         }
     }
 
@@ -341,6 +355,26 @@ class UIObject
         ASSERT(child.parent === this && this.children.includes(child));
         this.children.splice(this.children.indexOf(child), 1);
         child.parent = undefined;
+    }
+
+    /** Check if the mouse is overlapping a box in screen space
+     *  @return {boolean} - True if overlapping
+     */
+    isMouseOverlapping()
+    {
+        const size = !isTouchDevice ? this.size :
+                this.size.add(vec2(this.extraTouchSize || 0));
+        if (!uiSystem.nativeHeight)
+            return isOverlapping(this.pos, size, mousePosScreen);
+
+        const s = mainCanvasSize.y / uiSystem.nativeHeight;
+        const sInv = 1/s;
+        let pos = mousePosScreen.copy();
+        pos.x += s*mainCanvasSize.x/2;
+        pos.x *= sInv;
+        pos.y *= sInv;
+        pos.x -= sInv*mainCanvasSize.x/2;
+        return isOverlapping(this.pos, size, pos);
     }
 
     /** Update the object, called automatically by plugin once each frame */
