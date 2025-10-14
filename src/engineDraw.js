@@ -699,7 +699,6 @@ function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=B
     ASSERT(isColor(color), 'color must be a color');
     ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
     ASSERT(isColor(lineColor), 'lineColor must be a color');
-    ASSERT(isColor(lineColor), 'lineColor must be a color');
     ASSERT(['left','center','right'].includes(textAlign), 'align must be left, center, or right');
     ASSERT(isString(font), 'font must be a string');
     
@@ -915,11 +914,11 @@ let engineFontImage;
 class FontImage
 {
     /** Create an image font
-     *  @param {HTMLImageElement} [image]    - Image for the font, if undefined default font is used
-     *  @param {Vector2} [tileSize=(8,8)]    - Size of the font source tiles
-     *  @param {Vector2} [paddingSize=(0,1)] - How much extra space to add between characters
+     *  @param {HTMLImageElement} [image] - Image for the font, default if undefined
+     *  @param {Vector2} [tileSize=(8,8)] - Size of the font source tiles
+     *  @param {Vector2} [paddingSize=(0,1)] - How much space between characters
      */
-    constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1), context=overlayContext)
+    constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1))
     {
         // load default font image
         if (!engineFontImage)
