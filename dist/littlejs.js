@@ -2601,6 +2601,14 @@ let touchInputEnable = true;
  *  @memberof Settings */
 let touchGamepadEnable = false;
 
+/** True if touch gamepad should have start button in the center
+ *  - When the game is paused, any touch will press the button
+ *  - This can function as a way to pause/unpause the game
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let touchGamepadCenterButton = true;
+
 /** True if touch gamepad should be analog stick or false to use if 8 way dpad
  *  @type {boolean}
  *  @default
@@ -2865,6 +2873,12 @@ function setTouchInputEnable(enable) { touchInputEnable = enable; }
  *  @param {boolean} enable
  *  @memberof Settings */
 function setTouchGamepadEnable(enable) { touchGamepadEnable = enable; }
+
+/** True if touch gamepad should have start button in the center
+ *  - This can function as a way to pause/unpause the game
+ *  @param {boolean} enable
+ *  @memberof Settings */
+function setTouchGamepadCenterButton(enable) { touchGamepadCenterButton = enable; }
 
 /** Set if touch gamepad should be analog stick or 8 way dpad
  *  @param {boolean} analog
@@ -4893,7 +4907,7 @@ function touchInputInit()
         if (touching)
         {
             touchGamepadTimer.set();
-            if (paused && !wasTouching)
+            if (touchGamepadCenterButton && !wasTouching && paused)
             {
                 // touch anywhere to press start when paused
                 touchGamepadButtons[9] = 1;
@@ -4932,7 +4946,8 @@ function touchInputInit()
                 if (button < touchGamepadButtonCount)
                     touchGamepadButtons[button] = 1;
             }
-            else if (startCenter.distance(touchPos) < touchGamepadSize && !wasTouching)
+            else if (touchGamepadCenterButton && !wasTouching && 
+                startCenter.distance(touchPos) < touchGamepadSize)
             {
                 // virtual start button in center
                 touchGamepadButtons[9] = 1;
@@ -6506,6 +6521,12 @@ class ParticleEmitter extends EngineObject
         this.particleCreateCallback = undefined;
         /** @property {number} - Track particle emit time */
         this.emitTimeBuffer    = 0;
+        /** @property {number} - Percentage of velocity to pass to particles (0-1) */
+        this.velocityInheritance = 0;
+
+        // track previous position and angle
+        this.previousAngle = this.angle;
+        this.previousPos = this.pos.copy();
     }
 
     /** Update the emitter to spawn particles, called automatically by engine once each frame */
@@ -6513,6 +6534,18 @@ class ParticleEmitter extends EngineObject
     {
         // only do default update to apply parent transforms
         this.parent && super.update();
+
+        if (this.velocityInheritance)
+        {
+            // pass emitter velocity to particles
+            const p = this.velocityInheritance;
+            this.velocity.x = p * (this.pos.x - this.previousPos.x);
+            this.velocity.y = p * (this.pos.y - this.previousPos.y);
+            this.angleVelocity = p * (this.angle - this.previousAngle);
+            this.previousAngle = this.angle;
+            this.previousPos.x = this.pos.x;
+            this.previousPos.y = this.pos.y;
+        }
 
         // update emitter
         if (!this.emitTime || this.getAliveTime() <= this.emitTime)
@@ -6571,7 +6604,7 @@ class ParticleEmitter extends EngineObject
         const particle = new Particle(pos, this.tileInfo, angle, colorStart, colorEnd, particleTime, sizeStart, sizeEnd, this.fadeRate, this.additive,  this.trailScale, this.localSpace && this, this.particleDestroyCallback);
         particle.velocity      = vec2().setAngle(velocityAngle, speed);
         particle.angleVelocity = angleSpeed;
-        if (!this.localSpace)
+        if (!this.localSpace && this.velocityInheritance > 0)
         {
             // apply emitter velocity to particle
             particle.velocity.x += this.velocity.x;
@@ -6669,6 +6702,16 @@ class Particle extends EngineObject
                 this.velocity.y *= s;
             }
         }
+
+        if (this.lifeTime > 0 && time - this.spawnTime > this.lifeTime)
+        {
+            // destroy particle when its time runs out
+            const c = this.colorEnd;
+            this.color.set(c.r, c.g, c.b, c.a);
+            this.size.set(this.sizeEnd, this.sizeEnd);
+            this.destroyCallback && this.destroyCallback(this);
+            this.destroyed = 1;
+        }
     }
 
     /** Render the particle, automatically called each frame, sorted by renderOrder */
@@ -6677,7 +6720,7 @@ class Particle extends EngineObject
         // lerp color and size
         const p1 = this.lifeTime > 0 ? min((time - this.spawnTime) / this.lifeTime, 1) : 1, p2 = 1-p1;
         const radius = p2 * this.sizeStart + p1 * this.sizeEnd;
-        this.size.x = this.size.y = radius;
+        const size = vec2(radius);
         this.color.r = p2 * this.colorStart.r + p1 * this.colorEnd.r;
         this.color.g = p2 * this.colorStart.g + p1 * this.colorEnd.g;
         this.color.b = p2 * this.colorStart.b + p1 * this.colorEnd.b;
@@ -6713,22 +6756,15 @@ class Particle extends EngineObject
             {
                 // stretch in direction of motion
                 const trailLength = speed * this.trailScale;
-                this.size.y = max(this.size.x, trailLength);
+                size.y = max(size.x, trailLength);
                 angle = Math.atan2(direction.x, direction.y);
-                drawTile(pos, this.size, this.tileInfo, this.color, angle, this.mirror);
+                drawTile(pos, size, this.tileInfo, this.color, angle, this.mirror);
             }
         }
         else
-            drawTile(pos, this.size, this.tileInfo, this.color, angle, this.mirror);
+            drawTile(pos, size, this.tileInfo, this.color, angle, this.mirror);
         this.additive && setBlendMode();
-        debugParticles && debugRect(pos, this.size, '#f005', 0, angle);
-
-        if (p1 === 1)
-        {
-            // destroy particle when its time runs out
-            this.destroyCallback && this.destroyCallback(this);
-            this.destroyed = 1;
-        }
+        debugParticles && debugRect(pos, size, '#f005', 0, angle);
     }
 }
 /**

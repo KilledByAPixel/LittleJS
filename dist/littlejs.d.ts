@@ -456,6 +456,13 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let touchGamepadEnable: boolean;
+    /** True if touch gamepad should have start button in the center
+     *  - When the game is paused, any touch will press the button
+     *  - This can function as a way to pause/unpause the game
+     *  @type {boolean}
+     *  @default
+     *  @memberof Settings */
+    export let touchGamepadCenterButton: boolean;
     /** True if touch gamepad should be analog stick or false to use if 8 way dpad
      *  @type {boolean}
      *  @default
@@ -637,6 +644,11 @@ declare module "littlejsengine" {
      *  @param {boolean} enable
      *  @memberof Settings */
     export function setTouchGamepadEnable(enable: boolean): void;
+    /** True if touch gamepad should have start button in the center
+     *  - This can function as a way to pause/unpause the game
+     *  @param {boolean} enable
+     *  @memberof Settings */
+    export function setTouchGamepadCenterButton(enable: boolean): void;
     /** Set if touch gamepad should be analog stick or 8 way dpad
      *  @param {boolean} analog
      *  @memberof Settings */
@@ -2685,6 +2697,10 @@ declare module "littlejsengine" {
         particleCreateCallback: any;
         /** @property {number} - Track particle emit time */
         emitTimeBuffer: number;
+        /** @property {number} - Percentage of velocity to pass to particles (0-1) */
+        velocityInheritance: number;
+        previousAngle: number;
+        previousPos: Vector2;
         /** Spawn one particle
          *  @return {Particle} */
         emitParticle(): Particle;
