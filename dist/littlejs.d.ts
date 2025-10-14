@@ -2164,7 +2164,7 @@ declare module "littlejsengine" {
      *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing
      *  @param {number}   [offset] - Offset in seconds to start playback from
      *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
-     *  @return {AudioBufferSourceNode} - The audio node of the sound played
+     *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails
      *  @memberof Audio */
     export function playSamples(sampleChannels: any[], volume?: number, rate?: number, pan?: number, loop?: boolean, sampleRate?: number, gainNode?: GainNode, offset?: number, onended?: AudioEndedCallback): AudioBufferSourceNode;
     /** Generate and play a ZzFX sound
