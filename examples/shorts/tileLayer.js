@@ -43,6 +43,6 @@ function gameUpdate()
             .05, .8, true
         );
         particleEmitter.restitution = .5; // bounce when it collides
-        particleEmitter.trailScale = 2;  // stretch as it moves
+        particleEmitter.trailScale = 2;   // stretch as it moves
     }
 }

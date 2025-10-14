@@ -73,7 +73,7 @@ function gameInit()
         tile(0, 16),                // tileIndex, tileSize
         hsl(1,1,1),   hsl(0,0,0),   // colorStartA, colorStartB
         hsl(0,0,0,0), hsl(0,0,0,0), // colorEndA, colorEndB
-        2, .2, .2, .1, .05,   // time, sizeStart, sizeEnd, speed, angleSpeed
+        1, .2, .2, .1, .05,   // time, sizeStart, sizeEnd, speed, angleSpeed
         .99, 1, 1, Math.PI,   // damping, angleDamping, gravityScale, cone
         .05, .5, true, true   // fadeRate, randomness, collide, additive
     );
