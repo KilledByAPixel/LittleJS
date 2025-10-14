@@ -691,8 +691,7 @@ class UIScrollbar extends UIObject
         const handlePos = isHorizontal ? 
             vec2(lerp(p1, p2, this.value), this.pos.y) :
             vec2(this.pos.x, lerp(p2, p1, this.value))
-        const handleColor = this.disabled ? this.disabledColor : 
-            this.interactive && this.isActiveObject() ? this.color : this.handleColor;
+        const handleColor = this.disabled ? this.disabledColor : this.handleColor;
         uiSystem.drawRect(handlePos, vec2(handleSize), handleColor, this.lineWidth, this.lineColor, this.cornerRadius);
 
         // draw the text scaled to fit on the scrollbar
