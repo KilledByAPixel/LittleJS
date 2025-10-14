@@ -75,6 +75,7 @@ function gameInit()
     );
     particleEmitter.restitution = .3; // bounce when it collides
     particleEmitter.trailScale = 2;   // stretch as it moves
+    particleEmitter.velocityInheritance = .3; // inherit emitter velocity
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -104,10 +105,7 @@ function gameUpdate()
 
     // move particles to mouse location if on screen
     if (mousePosScreen.x)
-    {
         particleEmitter.pos = mousePos;
-        particleEmitter.velocity = mouseDelta.scale(.3*timeDelta);
-    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
