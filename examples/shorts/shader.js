@@ -25,7 +25,5 @@ void mainImage(out vec4 c, vec2 p)
 
 function gameInit()
 {
-    // faster without copying the overlay or main canvas
-    const includeOverlay = false, includeMainCanvas = false;
-    new PostProcessPlugin(shader, includeOverlay, includeMainCanvas);
+    new PostProcessPlugin(shader);
 }
