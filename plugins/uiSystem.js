@@ -48,6 +48,8 @@ class UISystemPlugin
         this.defaultHoverColor = hsl(0,0,.9);
         /** @property {Color} - Default color for disabled UI elements */
         this.defaultDisabledColor = hsl(0,0,.3);
+        /** @property {Color} - Uses a gradient fill combined with color */
+        this.defaultGradientColor = undefined;
         /** @property {number} - Default line width for UI elements */
         this.defaultLineWidth = 4;
         /** @property {number} - Default rounded rect corner radius for UI elements */
@@ -132,8 +134,9 @@ class UISystemPlugin
     *  @param {Color}   [color=uiSystem.defaultColor]
     *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
     *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
-    *  @param {number}  [cornerRadius=uiSystem.defaultCornerRadius] */
-    drawRect(pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, cornerRadius=uiSystem.defaultCornerRadius)
+    *  @param {number}  [cornerRadius=uiSystem.defaultCornerRadius]
+    *  @param {Color}   [gradientColor=uiSystem.defaultGradientColor] */
+    drawRect(pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, cornerRadius=uiSystem.defaultCornerRadius, gradientColor=uiSystem.defaultGradientColor)
     {
         ASSERT(isVector2(pos), 'pos must be a vec2');
         ASSERT(isVector2(size), 'size must be a vec2');
@@ -143,7 +146,18 @@ class UISystemPlugin
         ASSERT(isNumber(cornerRadius), 'cornerRadius must be a number');
         
         const context = uiSystem.uiContext;
-        context.fillStyle = color.toString();
+        if (gradientColor)
+        {
+            const g = context.createLinearGradient(
+                pos.x, pos.y-size.y/2, pos.x, pos.y+size.y/2);
+            const c = color.toString();
+            g.addColorStop(0, c);
+            g.addColorStop(.5, gradientColor.toString());
+            g.addColorStop(1, c);
+            context.fillStyle = g;
+        }
+        else
+            context.fillStyle = color.toString();
         context.beginPath();
         if (cornerRadius && context['roundRect'])
             context['roundRect'](pos.x-size.x/2, pos.y-size.y/2, size.x, size.y, cornerRadius);
@@ -265,11 +279,13 @@ class UIObject
         /** @property {boolean} - Is this object disabled? */
         this.disabled = false;
         /** @property {Color} - Color for text */
-        this.textColor = uiSystem.defaultTextColor.copy()
+        this.textColor = uiSystem.defaultTextColor.copy();
         /** @property {Color} - Color used when hovering over the object */
-        this.hoverColor = uiSystem.defaultHoverColor.copy()
+        this.hoverColor = uiSystem.defaultHoverColor.copy();
         /** @property {Color} - Color for line drawing */
-        this.lineColor = uiSystem.defaultLineColor.copy()
+        this.lineColor = uiSystem.defaultLineColor.copy();
+        /** @property {Color} - Uses a gradient fill combined with color */
+        this.gradientColor = uiSystem.defaultGradientColor ? uiSystem.defaultGradientColor.copy() : undefined;
         /** @property {number} - Width for line drawing */
         this.lineWidth = uiSystem.defaultLineWidth;
         /** @property {number} - Corner radius for rounded rects */
@@ -533,7 +549,7 @@ class UIButton extends UIObject
 
         // set properties
         this.text = text;
-        this.color = color.copy()
+        this.color = color.copy();
         this.interactive = true;
     }
     render()
