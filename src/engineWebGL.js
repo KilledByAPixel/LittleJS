@@ -412,7 +412,9 @@ function glSetTextureData(texture, image)
  *  @memberof WebGL */
 function glRegisterTextureInfo(textureInfo)
 {
-    // add texture info to tracking list
+    if (headlessMode) return;
+
+    // add texture info to tracking list even if gl is not enabled
     glTextureInfos.add(textureInfo);
 
     if (!glContext) return;
@@ -429,7 +431,9 @@ function glRegisterTextureInfo(textureInfo)
  *  @memberof WebGL */
 function glUnregisterTextureInfo(textureInfo)
 {
-    // delete texture info from tracking list
+    if (headlessMode) return;
+
+    // delete texture info from tracking list even if gl is not enabled
     glTextureInfos.delete(textureInfo);
 
     // unset and destroy the texture

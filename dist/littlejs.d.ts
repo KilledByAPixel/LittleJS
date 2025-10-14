@@ -2455,7 +2455,6 @@ declare module "littlejsengine" {
         canvas: OffscreenCanvas;
         /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this layer */
         context: OffscreenCanvasRenderingContext2D;
-        /** @property {TextureInfo} - Texture info to use for this object rendering */
         textureInfo: TextureInfo;
         /** Draw this canvas layer centered in world space, with color applied if using WebGL
         *  @param {Vector2} pos - Center in world space

@@ -197,9 +197,10 @@ class CanvasLayer extends EngineObject
         /** @property {HTMLCanvasElement} - The canvas used by this layer */
         this.canvas = headlessMode ? undefined : new OffscreenCanvas(canvasSize.x, canvasSize.y);
         /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this layer */
-        this.context = headlessMode ? undefined : this.canvas.getContext('2d');
+        this.context = this.canvas?.getContext('2d');
         /** @property {TextureInfo} - Texture info to use for this object rendering */
-        this.textureInfo = new TextureInfo(this.canvas, false);
+        const useWebGL = false; // do not use webgl by default
+        this.textureInfo = new TextureInfo(this.canvas, useWebGL);
 
         // disable physics by default
         this.mass = this.gravityScale = this.friction = this.restitution = 0;
@@ -253,6 +254,8 @@ class CanvasLayer extends EngineObject
      *  @param {Canvas2DDrawCallback} drawFunction */
     drawCanvas2D(pos, size, angle, mirror, drawFunction)
     {
+        if (!this.context) return;
+
         const context = this.context;
         context.save();
         pos = pos.subtract(this.pos).multiply(this.tileInfo.size);
@@ -413,6 +416,8 @@ class TileLayer extends CanvasLayer
      *  @param {boolean} [clear] - Should it clear the canvas before drawing */
     redrawStart(clear=false)
     {
+        if (!this.context) return;
+
         // save current render settings
         /** @type {[HTMLCanvasElement|OffscreenCanvas, CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number]} */
         this.savedRenderSettings = [drawCanvas, drawContext, mainCanvasSize, cameraPos, cameraScale];
@@ -441,6 +446,8 @@ class TileLayer extends CanvasLayer
     /** Call to end the redraw process */
     redrawEnd()
     {
+        if (!this.context) return;
+
         ASSERT(drawContext === this.context, 'must call redrawStart() before drawing tiles');
         glCopyToContext(drawContext);
         //debugSaveCanvas(this.canvas);
@@ -457,6 +464,8 @@ class TileLayer extends CanvasLayer
      */
     drawTileData(layerPos, clear=true)
     {
+        if (!this.context) return;
+        
         // clear out where the tile was, for full opaque tiles this can be skipped
         const s = this.tileInfo.size;
         if (clear)

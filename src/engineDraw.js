@@ -204,9 +204,9 @@ class TextureInfo
         /** @property {HTMLImageElement|OffscreenCanvas} - image source */
         this.image = image;
         /** @property {Vector2} - size of the image */
-        this.size = vec2(image.width, image.height);
+        this.size = image ? vec2(image.width, image.height) : vec2();
         /** @property {Vector2} - inverse of the size, cached for rendering */
-        this.sizeInverse = vec2(1/image.width, 1/image.height);
+        this.sizeInverse = image ? vec2(1/image.width, 1/image.height) : vec2();
         /** @property {WebGLTexture} - WebGL texture */
         this.glTexture = undefined;
         useWebGL && this.createWebGLTexture();
