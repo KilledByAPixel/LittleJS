@@ -165,10 +165,12 @@ declare module "littlejsengine" {
      * @memberof Engine
      */
     /** Add a new update function for a plugin
-     *  @param {PluginCallback} [updateFunction]
-     *  @param {PluginCallback} [renderFunction]
+     *  @param {PluginCallback} [update]
+     *  @param {PluginCallback} [render]
+     *  @param {PluginCallback} [glContextLost]
+     *  @param {PluginCallback} [glContextRestored]
      *  @memberof Engine */
-    export function engineAddPlugin(updateFunction?: PluginCallback, renderFunction?: PluginCallback): void;
+    export function engineAddPlugin(update?: PluginCallback, render?: PluginCallback, glContextLost?: PluginCallback, glContextRestored?: PluginCallback): void;
     /**
      * LittleJS Debug System
      * - Press Esc to show debug overlay with mouse pick
@@ -1340,12 +1342,11 @@ declare module "littlejsengine" {
         */
         frame(frame: number): TileInfo;
         /**
-         * Set this tile to use a full image
-         * @param {HTMLImageElement|OffscreenCanvas} image
-         * @param {WebGLTexture} [glTexture] - WebGL texture
+         * Set this tile to use a full image in a texture info
+         * @param {TextureInfo} textureInfo
          * @return {TileInfo}
          */
-        setFullImage(image: HTMLImageElement | OffscreenCanvas, glTexture?: WebGLTexture): TileInfo;
+        setFullImage(textureInfo: TextureInfo): TileInfo;
     }
     /**
      * Tile Info - Stores info about each texture
@@ -1355,18 +1356,24 @@ declare module "littlejsengine" {
         /**
          * Create a TextureInfo, called automatically by the engine
          * @param {HTMLImageElement|OffscreenCanvas} image
-         * @param {WebGLTexture} [glTexture] - WebGL texture
+         * @param {boolean} [useWebGL] - Should use WebGL if available?
          */
-        constructor(image: HTMLImageElement | OffscreenCanvas, glTexture?: WebGLTexture);
-        /** @property {HTMLImageElement} - image source */
+        constructor(image: HTMLImageElement | OffscreenCanvas, useWebGL?: boolean);
+        /** @property {HTMLImageElement|OffscreenCanvas} - image source */
         image: OffscreenCanvas | HTMLImageElement;
         /** @property {Vector2} - size of the image */
         size: Vector2;
         /** @property {Vector2} - inverse of the size, cached for rendering */
         sizeInverse: Vector2;
         /** @property {WebGLTexture} - WebGL texture */
-        glTexture: WebGLTexture;
+        glTexture: any;
+        /** Creates the WebGL texture, updates if already created */
         createWebGLTexture(): void;
+        /** Destroys the WebGL texture */
+        destroyWebGLTexture(): void;
+        /** Check if the texture is webgl enabled
+         * @return {boolean} */
+        hasWebGL(): boolean;
     }
     /**
      * LittleJS Drawing System
@@ -2445,8 +2452,8 @@ declare module "littlejsengine" {
         canvas: OffscreenCanvas;
         /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this layer */
         context: OffscreenCanvasRenderingContext2D;
-        /** @property {WebGLTexture} - Texture if using WebGL for this layer, call useWebGL to enable */
-        glTexture: WebGLTexture;
+        /** @property {TextureInfo} - Texture info to use for this object rendering */
+        textureInfo: TextureInfo;
         /** Draw this canvas layer centered in world space, with color applied if using WebGL
         *  @param {Vector2} pos - Center in world space
         *  @param {Vector2} [size] - Size in world space
@@ -2506,9 +2513,8 @@ declare module "littlejsengine" {
         *  @param {Vector2}  size          - World space size
         *  @param {TileInfo} [tileInfo]    - Default tile info for layer (used for size and texture)
         *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
-        *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering
         */
-        constructor(position: Vector2, size: Vector2, tileInfo?: TileInfo, renderOrder?: number, useWebGL?: boolean);
+        constructor(position: Vector2, size: Vector2, tileInfo?: TileInfo, renderOrder?: number);
         data: TileLayerData[];
         /** Draw all the tile data to an offscreen canvas
          *  - This may be slow in some browsers but only needs to be done once */
@@ -2595,7 +2601,7 @@ declare module "littlejsengine" {
      *     tile(0, 16),                // tileInfo
      *     rgb(1,1,1,1), rgb(0,0,0,1), // colorStartA, colorStartB
      *     rgb(1,1,1,0), rgb(0,0,0,0), // colorEndA, colorEndB
-     *     2, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
+     *     1, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
      *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate,
      *     .5, 1                // randomness, collide, additive, randomColorLinear, renderOrder
      * );
@@ -2881,17 +2887,16 @@ declare module "littlejsengine" {
         /** Create global post processing shader
         *  @param {string} shaderCode
         *  @param {boolean} [includeOverlay]
+        *  @param {boolean} [includeMainCanvas]
          *  @example
          *  // create the post process plugin object
          *  new PostProcessPlugin(shaderCode);
          */
-        constructor(shaderCode: string, includeOverlay?: boolean);
+        constructor(shaderCode: string, includeOverlay?: boolean, includeMainCanvas?: boolean);
         /** @property {WebGLProgram} - Shader for post processing */
-        shader: WebGLProgram;
+        shader: any;
         /** @property {WebGLTexture} - Texture for post processing */
-        texture: WebGLTexture;
-        /** @property {boolean} - Should overlay canvas be included in post processing */
-        includeOverlay: boolean;
+        texture: any;
     }
     /**
      * LittleJS ZzFXM Plugin

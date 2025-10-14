@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.14.16';
+const engineVersion = '1.14.17';
 
 /** Frames per second to update
  *  @type {number}
@@ -94,7 +94,17 @@ let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
 ///////////////////////////////////////////////////////////////////////////////
 // plugin hooks
 
-const pluginUpdateList = [], pluginRenderList = [];
+const pluginList = [];
+class EnginePlugin
+{
+    constructor(update, render, glContextLost, glContextRestored)
+    {
+        this.update = update;
+        this.render = render;
+        this.glContextLost = glContextLost;
+        this.glContextRestored = glContextRestored;
+    }
+}
 
 /**
  * @callback PluginCallback - Update or render function for a plugin
@@ -102,15 +112,21 @@ const pluginUpdateList = [], pluginRenderList = [];
  */
 
 /** Add a new update function for a plugin
- *  @param {PluginCallback} [updateFunction]
- *  @param {PluginCallback} [renderFunction]
+ *  @param {PluginCallback} [update]
+ *  @param {PluginCallback} [render]
+ *  @param {PluginCallback} [glContextLost]
+ *  @param {PluginCallback} [glContextRestored]
  *  @memberof Engine */
-function engineAddPlugin(updateFunction, renderFunction)
+function engineAddPlugin(update, render, glContextLost, glContextRestored)
 {
-    ASSERT(!pluginUpdateList.includes(updateFunction));
-    ASSERT(!pluginRenderList.includes(renderFunction));
-    updateFunction && pluginUpdateList.push(updateFunction);
-    renderFunction && pluginRenderList.push(renderFunction);
+    // make sure plugin functions are unique
+    ASSERT(!pluginList.find(p=>p.update===update));
+    ASSERT(!pluginList.find(p=>p.render===render));
+    ASSERT(!pluginList.find(p=>p.glContextLost===glContextLost));
+    ASSERT(!pluginList.find(p=>p.glContextRestored===glContextRestored));
+
+    const plugin = new EnginePlugin(update, render, glContextLost, glContextRestored);
+    pluginList.push(plugin);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -195,7 +211,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             wasUpdated = true;
             updateCanvas();
             inputUpdate();
-            pluginUpdateList.forEach(f=>f());
+            pluginList.forEach(plugin=>plugin.update?.());
 
             // update object transforms even when paused
             for (const o of engineObjects)
@@ -228,7 +244,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                 updateCanvas();
                 inputUpdate();
                 gameUpdate();
-                pluginUpdateList.forEach(f=>f());
+                pluginList.forEach(plugin=>plugin.update?.());
                 engineObjectsUpdate();
 
                 // do post update
@@ -262,7 +278,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             for (const o of engineObjects)
                 o.destroyed || o.render();
             gameRenderPost();
-            pluginRenderList.forEach(f=>f());
+            pluginList.forEach(plugin=>plugin.render?.());
             touchGamepadRender();
             debugRender();
             glFlush();
@@ -389,7 +405,6 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             image.onerror = image.onload = ()=>
             {
                 const textureInfo = new TextureInfo(image);
-                textureInfo.createWebGLTexture();
                 textureInfos[textureIndex] = textureInfo;
                 resolve();
             }
@@ -405,7 +420,6 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         {
             const textureInfo = new TextureInfo(new Image);
             textureInfos[0] = textureInfo;
-            textureInfo.createWebGLTexture();
             resolve();
         }));
     }
@@ -2987,16 +3001,15 @@ class TileInfo
     }
 
     /**
-     * Set this tile to use a full image
-     * @param {HTMLImageElement|OffscreenCanvas} image
-     * @param {WebGLTexture} [glTexture] - WebGL texture
+     * Set this tile to use a full image in a texture info
+     * @param {TextureInfo} textureInfo
      * @return {TileInfo}
      */
-    setFullImage(image, glTexture)
+    setFullImage(textureInfo)
     {
         this.pos = new Vector2;
-        this.size = new Vector2(image.width, image.height);
-        this.textureInfo = new TextureInfo(image, glTexture);
+        this.size = textureInfo.size.copy();
+        this.textureInfo = textureInfo;
         // do not use padding or bleed
         this.bleedScale = this.padding = 0;
         return this;
@@ -3012,26 +3025,30 @@ class TextureInfo
     /**
      * Create a TextureInfo, called automatically by the engine
      * @param {HTMLImageElement|OffscreenCanvas} image
-     * @param {WebGLTexture} [glTexture] - WebGL texture
+     * @param {boolean} [useWebGL] - Should use WebGL if available?
      */
-    constructor(image, glTexture)
+    constructor(image, useWebGL=true)
     {
-        /** @property {HTMLImageElement} - image source */
+        /** @property {HTMLImageElement|OffscreenCanvas} - image source */
         this.image = image;
         /** @property {Vector2} - size of the image */
         this.size = vec2(image.width, image.height);
         /** @property {Vector2} - inverse of the size, cached for rendering */
         this.sizeInverse = vec2(1/image.width, 1/image.height);
         /** @property {WebGLTexture} - WebGL texture */
-        this.glTexture = glTexture;
+        this.glTexture = undefined;
+        useWebGL && this.createWebGLTexture();
     }
 
-    createWebGLTexture()
-    {
-        ASSERT(!this.glTexture);
-        if (glEnable)
-            this.glTexture = glCreateTexture(this.image);
-    }
+    /** Creates the WebGL texture, updates if already created */
+    createWebGLTexture() { glRegisterTextureInfo(this); }
+
+    /** Destroys the WebGL texture */
+    destroyWebGLTexture() { glUnregisterTextureInfo(this); }
+
+    /** Check if the texture is webgl enabled
+     * @return {boolean} */
+    hasWebGL() { return !!this.glTexture; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -5288,9 +5305,11 @@ class CanvasLayer extends EngineObject
         this.canvas = headlessMode ? undefined : new OffscreenCanvas(canvasSize.x, canvasSize.y);
         /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this layer */
         this.context = headlessMode ? undefined : this.canvas.getContext('2d');
-        /** @property {WebGLTexture} - Texture if using WebGL for this layer, call useWebGL to enable */
-        this.glTexture = undefined;
-        this.gravityScale = 0; // disable gravity by default for canvas layers
+        /** @property {TextureInfo} - Texture info to use for this object rendering */
+        this.textureInfo = new TextureInfo(this.canvas, false);
+
+        // disable physics by default
+        this.mass = this.gravityScale = this.friction = this.restitution = 0;
     }
 
     /** Destroy this canvas layer */
@@ -5299,9 +5318,7 @@ class CanvasLayer extends EngineObject
         if (this.destroyed)
             return;
 
-        // free up the WebGL texture
-        if (this.glTexture)
-            glDeleteTexture(this.glTexture);
+        this.textureInfo.destroyWebGLTexture();
         super.destroy();
     }
 
@@ -5324,8 +5341,8 @@ class CanvasLayer extends EngineObject
     draw(pos, size, angle=0, color=WHITE, mirror=false, additiveColor, screenSpace=false, context)
     {
         // draw the canvas layer as a single tile that uses the whole texture
-        const useWebGL = glEnable && this.glTexture !== undefined;
-        const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
+        const useWebGL = glEnable && this.textureInfo.hasWebGL();
+        const tileInfo = new TileInfo().setFullImage(this.textureInfo);
         drawTile(pos, size, tileInfo, color, angle, mirror, additiveColor, useWebGL, screenSpace, context);
     }
 
@@ -5395,15 +5412,10 @@ class CanvasLayer extends EngineObject
      *  @param {boolean} [enable] - enable WebGL rendering and update the texture */
     useWebGL(enable=true)
     {
-        if (glEnable && enable)
-        {
-            if (this.glTexture)
-                glSetTextureData(this.glTexture, this.canvas);
-            else
-                this.glTexture = glCreateTexture(this.canvas);
-        }
+        if (enable)
+            this.textureInfo.createWebGLTexture();
         else
-            this.glTexture = undefined;
+            this.textureInfo.destroyWebGLTexture();
     }
 }
 
@@ -5427,24 +5439,14 @@ class TileLayer extends CanvasLayer
     *  @param {Vector2}  size          - World space size
     *  @param {TileInfo} [tileInfo]    - Default tile info for layer (used for size and texture)
     *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
-    *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering
     */
-    constructor(position, size, tileInfo=tile(), renderOrder=0, useWebGL=glEnable)
+    constructor(position, size, tileInfo=tile(), renderOrder=0)
     {
-        super(position, size, 0, renderOrder, size);
-        
-        this.tileInfo = tileInfo;
         const canvasSize = size.multiply(tileInfo.size);
-        /** @property {HTMLCanvasElement} - The canvas used by this tile layer */
-        this.canvas = new OffscreenCanvas(canvasSize.x, canvasSize.y);
-        /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this tile layer */
-        this.context = this.canvas.getContext('2d');
-        /** @property {WebGLTexture} - Texture if using WebGL for this layer */
-        this.glTexture = useWebGL ? glCreateTexture(this.canvas) : undefined;
-        // set no friction by default, applied friction is max of both objects
-        this.friction = 0;
-        // set no restitution by default, applied restitution is max of both objects
-        this.restitution = 0;
+        super(position, size, 0, renderOrder, canvasSize);
+
+        // set tile info
+        this.tileInfo = tileInfo;
 
         // init tile data
         this.data = [];
@@ -5494,10 +5496,10 @@ class TileLayer extends CanvasLayer
         ASSERT(drawContext !== this.context, 'must call redrawEnd() after drawing tiles!');
 
         // draw the tile layer as a single tile
-        const tileInfo = new TileInfo().setFullImage(this.canvas, this.glTexture);
+        const tileInfo = new TileInfo().setFullImage(this.textureInfo);
         const size = this.drawSize || this.size;
         const pos = this.pos.add(size.scale(.5));
-        const useWebGL = glEnable && this.glTexture !== undefined;
+        const useWebGL = glEnable && this.textureInfo.hasWebGL();
         drawTile(pos, size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebGL);
     }
 
@@ -5510,8 +5512,7 @@ class TileLayer extends CanvasLayer
         for (let y = this.size.y; y--;)
             this.drawTileData(vec2(x,y), false);
         this.redrawEnd();
-        if (this.glTexture)
-            this.useWebGL(); // update WebGL texture
+        this.useWebGL();
     }
 
     /** Call to start the redraw process
@@ -5599,11 +5600,10 @@ class TileCollisionLayer extends TileLayer
     *  @param {Vector2}  size          - World space size
     *  @param {TileInfo} [tileInfo]    - Tile info for layer
     *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
-    *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering
     */
-    constructor(position, size, tileInfo=tile(), renderOrder=0, useWebGL=glEnable)
+    constructor(position, size, tileInfo=tile(), renderOrder=0)
     {
-        super(position, size.floor(), tileInfo, renderOrder, useWebGL);
+        super(position, size.floor(), tileInfo, renderOrder);
 
         /** @property {Array<number>} - The tile collision grid */
         this.collisionData = [];
@@ -5771,7 +5771,7 @@ class TileCollisionLayer extends TileLayer
  *     tile(0, 16),                // tileInfo
  *     rgb(1,1,1,1), rgb(0,0,0,1), // colorStartA, colorStartB
  *     rgb(1,1,1,0), rgb(0,0,0,0), // colorEndA, colorEndB
- *     2, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
+ *     1, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
  *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate,
  *     .5, 1                // randomness, collide, additive, randomColorLinear, renderOrder
  * );
@@ -6345,7 +6345,7 @@ let glContext;
 let glAntialias = true;
 
 // WebGL internal variables not exposed to documentation
-let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount;
+let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos;
 
 // WebGL internal constants
 const gl_ARRAY_BUFFER_SIZE = 5e5;
@@ -6361,6 +6361,9 @@ const gl_MAX_POLY_VERTEXES = gl_ARRAY_BUFFER_SIZE / gl_POLY_VERTEX_BYTE_STRIDE |
 // Initialize WebGL, called automatically by the engine
 function glInit()
 {
+    // keep set of texture infos so they can be restored if context is lost
+    glTextureInfos = new Set;
+
     if (!glEnable || headlessMode) return;
 
     // create the canvas and textures
@@ -6378,68 +6381,101 @@ function glInit()
     // create the WebGL canvas
     const rootElement = mainCanvas.parentElement;
     rootElement.appendChild(glCanvas);
+    
+    // startup webgl
+    initWebGL();
 
-    // setup instanced rendering shader program
-    glShader = glCreateProgram(
-        '#version 300 es\n' +     // specify GLSL ES version
-        'precision highp float;'+ // use highp for better accuracy
-        'uniform mat4 m;'+        // transform matrix
-        'in vec2 g;'+             // in: geometry
-        'in vec4 p,u,c,a;'+       // in: position/size, uvs, color, additiveColor
-        'in float r;'+            // in: rotation
-        'out vec2 v;'+            // out: uv
-        'out vec4 d,e;'+          // out: color, additiveColor
-        'void main(){'+           // shader entry point
-        'vec2 s=(g-.5)*p.zw;'+    // get size offset
-        'gl_Position=m*vec4(p.xy+s*cos(r)-vec2(-s.y,s)*sin(r),1,1);'+ // transform position
-        'v=mix(u.xw,u.zy,g);'+    // pass uv to fragment shader
-        'd=c;e=a;'+               // pass colors to fragment shader
-        '}'                       // end of shader
-        ,
-        '#version 300 es\n' +     // specify GLSL ES version
-        'precision highp float;'+ // use highp for better accuracy
-        'uniform sampler2D s;'+   // texture
-        'in vec2 v;'+             // in: uv
-        'in vec4 d,e;'+           // in: color, additiveColor
-        'out vec4 c;'+            // out: color
-        'void main(){'+           // shader entry point
-        'c=texture(s,v)*d+e;'+    // modulate texture by color plus additive
-        '}'                       // end of shader
-    );
+    // setup context lost and restore handlers
+    glCanvas.addEventListener('webglcontextlost', (e)=>
+    {
+        glEnable = false; // disable WebGL rendering
+        glCanvas.style.display = 'none'; // hide the gl canvas
+        e.preventDefault(); // prevent default to allow restoration
+        LOG('WebGL context lost! Switching to Canvas2d rendering.');
 
-    // setup poly rendering shaders
-    glPolyShader = glCreateProgram(
-        '#version 300 es\n' +     // specify GLSL ES version
-        'precision highp float;'+ // use highp for better accuracy
-        'uniform mat4 m;'+        // transform matrix
-        'in vec2 p;'+             // in: position
-        'in vec4 c;'+             // in: color
-        'out vec4 d;'+            // out: color
-        'void main(){'+           // shader entry point
-        'gl_Position=m*vec4(p,1,1);'+ // transform position
-        'd=c;'+                   // pass color to fragment shader
-        '}'                       // end of shader
-        ,
-        '#version 300 es\n' +     // specify GLSL ES version
-        'precision highp float;'+ // use highp for better accuracy
-        'in vec4 d;'+             // in: color
-        'out vec4 c;'+            // out: color
-        'void main(){'+           // shader entry point
-        'c=d;'+                   // set color
-        '}'                       // end of shader
-    );
+        // remove WebGL textures
+        for (const info of glTextureInfos)
+            info.glTexture = undefined;
+        glActiveTexture = undefined;
+        pluginList.forEach(plugin=>plugin.glContextLost?.());
+    });
+    glCanvas.addEventListener('webglcontextrestored', ()=>
+    {
+        glEnable = true; // disable WebGL rendering
+        glCanvas.style.display = ''; // show the gl canvas
+        LOG('WebGL context restored, reinitializing...');
 
-    // init buffers
-    const glInstanceData = new ArrayBuffer(gl_ARRAY_BUFFER_SIZE);
-    glPositionData = new Float32Array(glInstanceData);
-    glColorData = new Uint32Array(glInstanceData);
-    glArrayBuffer = glContext.createBuffer();
-    glGeometryBuffer = glContext.createBuffer();
+        // reinit WebGL and restore textures
+        initWebGL();
+        for (const info of glTextureInfos)
+            info.glTexture = glCreateTexture(info.image);
+        pluginList.forEach(plugin=>plugin.glContextRestored?.());
+    });
 
-    // create the geometry buffer, triangle strip square
-    const geometry = new Float32Array([glBatchCount=0,0,1,0,0,1,1,1]);
-    glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
-    glContext.bufferData(glContext.ARRAY_BUFFER, geometry, glContext.STATIC_DRAW);
+    function initWebGL()
+    {
+        // setup instanced rendering shader program
+        glShader = glCreateProgram(
+            '#version 300 es\n' +     // specify GLSL ES version
+            'precision highp float;'+ // use highp for better accuracy
+            'uniform mat4 m;'+        // transform matrix
+            'in vec2 g;'+             // in: geometry
+            'in vec4 p,u,c,a;'+       // in: position/size, uvs, color, additiveColor
+            'in float r;'+            // in: rotation
+            'out vec2 v;'+            // out: uv
+            'out vec4 d,e;'+          // out: color, additiveColor
+            'void main(){'+           // shader entry point
+            'vec2 s=(g-.5)*p.zw;'+    // get size offset
+            'gl_Position=m*vec4(p.xy+s*cos(r)-vec2(-s.y,s)*sin(r),1,1);'+ // transform position
+            'v=mix(u.xw,u.zy,g);'+    // pass uv to fragment shader
+            'd=c;e=a;'+               // pass colors to fragment shader
+            '}'                       // end of shader
+            ,
+            '#version 300 es\n' +     // specify GLSL ES version
+            'precision highp float;'+ // use highp for better accuracy
+            'uniform sampler2D s;'+   // texture
+            'in vec2 v;'+             // in: uv
+            'in vec4 d,e;'+           // in: color, additiveColor
+            'out vec4 c;'+            // out: color
+            'void main(){'+           // shader entry point
+            'c=texture(s,v)*d+e;'+    // modulate texture by color plus additive
+            '}'                       // end of shader
+        );
+
+        // setup poly rendering shaders
+        glPolyShader = glCreateProgram(
+            '#version 300 es\n' +     // specify GLSL ES version
+            'precision highp float;'+ // use highp for better accuracy
+            'uniform mat4 m;'+        // transform matrix
+            'in vec2 p;'+             // in: position
+            'in vec4 c;'+             // in: color
+            'out vec4 d;'+            // out: color
+            'void main(){'+           // shader entry point
+            'gl_Position=m*vec4(p,1,1);'+ // transform position
+            'd=c;'+                   // pass color to fragment shader
+            '}'                       // end of shader
+            ,
+            '#version 300 es\n' +     // specify GLSL ES version
+            'precision highp float;'+ // use highp for better accuracy
+            'in vec4 d;'+             // in: color
+            'out vec4 c;'+            // out: color
+            'void main(){'+           // shader entry point
+            'c=d;'+                   // set color
+            '}'                       // end of shader
+        );
+
+        // init buffers
+        const glInstanceData = new ArrayBuffer(gl_ARRAY_BUFFER_SIZE);
+        glPositionData = new Float32Array(glInstanceData);
+        glColorData = new Uint32Array(glInstanceData);
+        glArrayBuffer = glContext.createBuffer();
+        glGeometryBuffer = glContext.createBuffer();
+
+        // create the geometry buffer, triangle strip square
+        const geometry = new Float32Array([glBatchCount=0,0,1,0,0,1,1,1]);
+        glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
+        glContext.bufferData(glContext.ARRAY_BUFFER, geometry, glContext.STATIC_DRAW);
+    }
 }
 
 function glSetInstancedMode()
@@ -6546,7 +6582,7 @@ function glPreRender()
     // start with additive blending off
     glAdditive = glBatchAdditive = false;
 
-    // force it to enter instanced mode
+    // force it to set instanced mode by first setting poly mode true
     glPolyMode = true;
     glSetInstancedMode();
 }
@@ -6685,6 +6721,37 @@ function glSetTextureData(texture, image)
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
     glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
     glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture); // rebind active texture
+}
+
+/** Tells WebGL to create or update the glTexture and start tracking it
+ *  @param {TextureInfo} textureInfo
+ *  @memberof WebGL */
+function glRegisterTextureInfo(textureInfo)
+{
+    // add texture info to tracking list
+    glTextureInfos.add(textureInfo);
+
+    if (!glContext) return;
+
+    // create or set the texture data
+    if (textureInfo.glTexture)
+        glSetTextureData(textureInfo.glTexture, textureInfo.image);
+    else
+        textureInfo.glTexture = glCreateTexture(textureInfo.image);
+}
+
+/** Tells WebGL to destroy the glTexture and stop tracking it
+ *  @param {TextureInfo} textureInfo
+ *  @memberof WebGL */
+function glUnregisterTextureInfo(textureInfo)
+{
+    // delete texture info from tracking list
+    glTextureInfos.delete(textureInfo);
+
+    // unset and destroy the texture
+    const glTexture = textureInfo.glTexture;
+    textureInfo.glTexture = undefined;
+    glDeleteTexture(glTexture);
 }
 
 /** Draw all sprites and clear out the buffer, called automatically by the system whenever necessary
@@ -7277,80 +7344,97 @@ class PostProcessPlugin
     /** Create global post processing shader
     *  @param {string} shaderCode
     *  @param {boolean} [includeOverlay]
+    *  @param {boolean} [includeMainCanvas]
      *  @example
      *  // create the post process plugin object
      *  new PostProcessPlugin(shaderCode);
      */
-    constructor(shaderCode, includeOverlay=false)
+    constructor(shaderCode, includeOverlay=false, includeMainCanvas=true)
     {
         ASSERT(!postProcess, 'Post process already initialized');
         postProcess = this;
-
-        if (headlessMode) return;
-
-        if (!glEnable)
-        {
-            console.warn('PostProcessPlugin: WebGL not enabled!');
-            return;
-        }
 
         if (!shaderCode) // default shader pass through
             shaderCode = 'void mainImage(out vec4 c,vec2 p){c=texture(iChannel0,p/iResolution.xy);}';
 
         /** @property {WebGLProgram} - Shader for post processing */
-        this.shader = glCreateProgram(
-            '#version 300 es\n' +            // specify GLSL ES version
-            'precision highp float;'+        // use highp for better accuracy
-            'in vec2 p;'+                    // position
-            'void main(){'+                  // shader entry point
-            'gl_Position=vec4(p+p-1.,1,1);'+ // set position
-            '}'                              // end of shader
-            ,
-            '#version 300 es\n' +            // specify GLSL ES version
-            'precision highp float;'+        // use highp for better accuracy
-            'uniform sampler2D iChannel0;'+  // input texture
-            'uniform vec3 iResolution;'+     // size of output texture
-            'uniform float iTime;'+          // time
-            'out vec4 c;'+                   // out color
-            '\n' + shaderCode + '\n'+        // insert custom shader code
-            'void main(){'+                  // shader entry point
-            'mainImage(c,gl_FragCoord.xy);'+ // call post process function
-            'c.a=1.;'+                       // always use full alpha
-            '}'                              // end of shader
-        );
+        this.shader = undefined;
 
         /** @property {WebGLTexture} - Texture for post processing */
-        this.texture = glCreateTexture();
+        this.texture = undefined;
 
-        /** @property {boolean} - Should overlay canvas be included in post processing */
-        this.includeOverlay = includeOverlay;
+        // setup the post processing plugin
+        initPostProcess();
+        engineAddPlugin(undefined, postProcessRender, postProcessContextLost, postProcessContextRestored);
 
-        // Render the post processing shader, called automatically by the engine
-        engineAddPlugin(undefined, postProcessRender);
+        function initPostProcess()
+        {
+            if (headlessMode) return;
+
+            if (!glEnable)
+            {
+                console.warn('PostProcessPlugin: WebGL not enabled!');
+                return;
+            }
+
+            // create resources
+            postProcess.texture = glCreateTexture();
+            postProcess.shader = glCreateProgram(
+                '#version 300 es\n' +            // specify GLSL ES version
+                'precision highp float;'+        // use highp for better accuracy
+                'in vec2 p;'+                    // position
+                'void main(){'+                  // shader entry point
+                'gl_Position=vec4(p+p-1.,1,1);'+ // set position
+                '}'                              // end of shader
+                ,
+                '#version 300 es\n' +            // specify GLSL ES version
+                'precision highp float;'+        // use highp for better accuracy
+                'uniform sampler2D iChannel0;'+  // input texture
+                'uniform vec3 iResolution;'+     // size of output texture
+                'uniform float iTime;'+          // time
+                'out vec4 c;'+                   // out color
+                '\n' + shaderCode + '\n'+        // insert custom shader code
+                'void main(){'+                  // shader entry point
+                'mainImage(c,gl_FragCoord.xy);'+ // call post process function
+                'c.a=1.;'+                       // always use full alpha
+                '}'                              // end of shader
+            );
+        }
+        function postProcessContextLost()
+        {
+            postProcess.shader = undefined;
+            postProcess.texture = undefined;
+            LOG('PostProcessPlugin: WebGL context lost');
+        }
+        function postProcessContextRestored()
+        {
+            initPostProcess();
+            LOG('PostProcessPlugin: WebGL context restored');
+        }
         function postProcessRender()
         {
             if (headlessMode) return;
+
+            if (!glEnable)
+                return;
             
-            // prepare to render post process shader
-            if (glEnable)
+            // clear out the buffer
+            glFlush();
+            
+            if (includeMainCanvas || includeOverlay)
             {
-                glFlush(); // clear out the buffer
-                mainContext.drawImage(glCanvas, 0, 0); // copy to the main canvas
-            }
-            else
-            {
-                // set the viewport
-                glContext.viewport(0, 0, glCanvas.width = drawCanvas.width, glCanvas.height = drawCanvas.height);
+                // copy WebGL to the main canvas
+                mainContext.drawImage(glCanvas, 0, 0);
+
+                if (includeOverlay)
+                {
+                    // copy overlay canvas so it will be included in post processing
+                    mainContext.drawImage(overlayCanvas, 0, 0);
+                    overlayCanvas.width |= 0; // clear overlay canvas
+                }
             }
 
-            if (postProcess.includeOverlay)
-            {
-                // copy overlay canvas so it will be included in post processing
-                mainContext.drawImage(overlayCanvas, 0, 0);
-                overlayCanvas.width |= 0;
-            }
-
-            // setup shader program to draw one triangle
+            // setup shader program to draw a quad
             glContext.useProgram(postProcess.shader);
             glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
             glContext.pixelStorei(glContext.UNPACK_FLIP_Y_WEBGL, 1);
@@ -7359,7 +7443,10 @@ class PostProcessPlugin
             // set textures, pass in the 2d canvas and gl canvas in separate texture channels
             glContext.activeTexture(glContext.TEXTURE0);
             glContext.bindTexture(glContext.TEXTURE_2D, postProcess.texture);
-            glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, mainCanvas);
+            if (includeMainCanvas || includeOverlay)
+            {
+                glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, mainCanvas);
+            }
 
             // set vertex position attribute
             const vertexByteStride = 8;
