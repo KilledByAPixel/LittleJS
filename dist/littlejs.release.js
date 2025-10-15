@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.14.19';
+const engineVersion = '1.14.20';
 
 /** Frames per second to update
  *  @type {number}
@@ -5336,6 +5336,8 @@ class CanvasLayer extends EngineObject
         /** @property {TextureInfo} - Texture info to use for this object rendering */
         const useWebGL = false; // do not use webgl by default
         this.textureInfo = new TextureInfo(this.canvas, useWebGL);
+        /** @property {boolean} - True if WebGL texture needs to be refreshed */
+        this.refreshWebGL = false;
 
         // disable physics by default
         this.mass = this.gravityScale = this.friction = this.restitution = 0;
@@ -5369,8 +5371,15 @@ class CanvasLayer extends EngineObject
     *  @memberof Draw */
     draw(pos, size, angle=0, color=WHITE, mirror=false, additiveColor, screenSpace=false, context)
     {
-        // draw the canvas layer as a single tile that uses the whole texture
         const useWebGL = glEnable && this.textureInfo.hasWebGL();
+        if (useWebGL && this.refreshWebGL)
+        {
+            // update the WebGL texture
+            this.textureInfo.createWebGLTexture();
+            this.refreshWebGL = false;
+        }
+
+        // draw the canvas layer as a single tile that uses the whole texture
         const tileInfo = new TileInfo().setFullImage(this.textureInfo);
         drawTile(pos, size, tileInfo, color, angle, mirror, additiveColor, useWebGL, screenSpace, context);
     }
@@ -5440,9 +5449,18 @@ class CanvasLayer extends EngineObject
     { this.drawTile(pos, size, undefined, color, angle); }
 
     /** Create or update the WebGL texture for this layer
-     *  @param {boolean} [enable] - enable WebGL rendering and update the texture */
-    useWebGL(enable=true)
+     *  @param {boolean} [enable] - enable WebGL rendering and update the texture 
+     *  @param {boolean} [immediate] - shoulkd the texture be updated immediately
+     */
+    useWebGL(enable=true, immediate=false)
     {
+        if (!immediate && enable && this.textureInfo.hasWebGL())
+        {
+            // refresh the texture when needed
+            this.refreshWebGL = true;
+            return;
+        }
+
         if (enable)
             this.textureInfo.createWebGLTexture();
         else
@@ -5525,6 +5543,13 @@ class TileLayer extends CanvasLayer
     render()
     {
         ASSERT(drawContext !== this.context, 'must call redrawEnd() after drawing tiles!');
+
+        if (this.refreshWebGL)
+        {
+            // update the WebGL texture
+            this.textureInfo.createWebGLTexture();
+            this.refreshWebGL = false;
+        }
 
         // draw the tile layer as a single tile
         const tileInfo = new TileInfo().setFullImage(this.textureInfo);

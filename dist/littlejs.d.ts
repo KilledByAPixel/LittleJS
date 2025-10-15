@@ -2468,6 +2468,8 @@ declare module "littlejsengine" {
         /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this layer */
         context: OffscreenCanvasRenderingContext2D;
         textureInfo: TextureInfo;
+        /** @property {boolean} - True if WebGL texture needs to be refreshed */
+        refreshWebGL: boolean;
         /** Draw this canvas layer centered in world space, with color applied if using WebGL
         *  @param {Vector2} pos - Center in world space
         *  @param {Vector2} [size] - Size in world space
@@ -2506,8 +2508,10 @@ declare module "littlejsengine" {
          *  @param {number}  [angle=0] */
         drawRect(pos: Vector2, size?: Vector2, color?: Color, angle?: number): void;
         /** Create or update the WebGL texture for this layer
-         *  @param {boolean} [enable] - enable WebGL rendering and update the texture */
-        useWebGL(enable?: boolean): void;
+         *  @param {boolean} [enable] - enable WebGL rendering and update the texture
+         *  @param {boolean} [immediate] - shoulkd the texture be updated immediately
+         */
+        useWebGL(enable?: boolean, immediate?: boolean): void;
     }
     /**
      * Tile Layer - cached rendering system for tile layers
