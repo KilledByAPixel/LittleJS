@@ -15,6 +15,9 @@ import * as LJS from '../../dist/littlejs.esm.js';
 import * as GameLevel from './gameLevel.js';
 const {vec2, hsl, rgb} = LJS;
 
+// use low graphics mode on mobile devices
+const lowGraphicsMode = LJS.isTouchDevice;
+
 ///////////////////////////////////////////////////////////////////////////////
 // sound effects
 
@@ -33,7 +36,9 @@ export const sound_score =        new LJS.Sound([,,783,,.03,.02,1,2,,,940,.03,,,
 
 export const persistentParticleDestroyCallback = (particle)=>
 {
-    // copy particle to tile layer on death
+    if (lowGraphicsMode) return;
+
+    // draw particle to tile layer on death
     LJS.ASSERT(!particle.tileInfo, 'quick draw to tile layer uses canvas 2d so must be untextured');
     if (particle.groundObject)
     {
@@ -193,7 +198,7 @@ export class Sky extends LJS.EngineObject
         // draw stars
         LJS.setBlendMode(true);
         const random = new LJS.RandomGenerator(this.seed);
-        for (let i=1e3; i--;)
+        for (let i= lowGraphicsMode ? 500 : 1e3; i--;)
         {
             const size = random.float(.5,2)**2;
             const speed = random.float() < .9 ? random.float(5) : random.float(9,99);
