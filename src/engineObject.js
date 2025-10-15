@@ -287,6 +287,27 @@ class EngineObject
                     // test which side we bounced off (or both if a corner)
                     const blockedLayerY = tileCollisionTest(vec2(oldPos.x, this.pos.y), this.size, this);
                     const blockedLayerX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
+
+                    if (blockedLayerX)
+                    {
+                        // try to move up a tiny bit
+                        const epsilon = 1e-3;
+                        const maxMoveUp = .1;
+                        const y = Math.floor(oldPos.y-this.size.y/2+1) +
+                            this.size.y/2 + epsilon;
+                        const delta = y - this.pos.y;
+                        if (delta < maxMoveUp)
+                        if (!tileCollisionTest(vec2(this.pos.x, y), this.size, this))
+                        {   
+                            this.pos.y = y;
+                            debugPhysics && debugRect(this.pos, this.size, '#ff0');
+                            return;
+                        }
+
+                        // move to previous position and bounce
+                        this.pos.x = oldPos.x;
+                        this.velocity.x *= -this.restitution;
+                    }
                     if (blockedLayerY || !blockedLayerX)
                     {
                         // bounce velocity
@@ -309,12 +330,6 @@ class EngineObject
                             this.pos.y = oldPos.y;
                             this.groundObject = undefined;
                         }
-                    }
-                    if (blockedLayerX)
-                    {
-                        // move to previous position and bounce
-                        this.pos.x = oldPos.x;
-                        this.velocity.x *= -this.restitution;
                     }
                     debugPhysics && debugRect(this.pos, this.size, '#f00');
                 }
