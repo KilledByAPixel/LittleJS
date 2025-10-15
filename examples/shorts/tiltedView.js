@@ -10,7 +10,7 @@ class GameObject extends EngineObject
     {
         // adjust draw postion to be at the bottom of the object
         const drawSize = this.drawSize || this.size;
-        const offset = vec2(0,drawSize.y/2).rotate(this.angle);
+        const offset = this.getUp(drawSize.y/2);
         const pos = this.pos.add(offset);
         drawTile(pos, drawSize, this.tileInfo, this.color, this.angle);
     }

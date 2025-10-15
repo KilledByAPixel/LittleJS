@@ -23,7 +23,7 @@ class Player extends EngineObject
             // shoot bullet
             const pos = this.pos.add(vec2(0,1).rotate(cameraAngle));
             const bullet = new EngineObject(pos, vec2(.2,.5), 0, this.angle);
-            bullet.velocity = vec2(0,.5).rotate(this.angle);
+            bullet.velocity = this.getUp(.5);
             bullet.velocity = bullet.velocity.add(this.velocity);
             this.shootTimer.set(.1);
         }
