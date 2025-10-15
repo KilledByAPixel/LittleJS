@@ -2349,6 +2349,14 @@ declare module "littlejsengine" {
          *  @return {boolean}            - true if the collision should be resolved
          */
         collideWithObject(object: EngineObject): boolean;
+        /** Get this object's up vector
+         *  @param {number} [scale] - length of the vector
+         *  @return {Vector2} */
+        getUp(scale?: number): Vector2;
+        /** Get this object's right vector
+         *  @param {number} [scale] - length of the vector
+         *  @return {Vector2} */
+        getRight(scale?: number): Vector2;
         /** How long since the object was created
          *  @return {number} */
         getAliveTime(): number;

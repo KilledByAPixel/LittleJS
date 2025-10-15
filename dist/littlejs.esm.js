@@ -3375,6 +3375,16 @@ class EngineObject
      */
     collideWithObject(object) { return true; }
 
+    /** Get this object's up vector
+     *  @param {number} [scale] - length of the vector
+     *  @return {Vector2} */
+    getUp(scale=1) { return vec2().setAngle(this.angle, scale); }
+
+    /** Get this object's right vector
+     *  @param {number} [scale] - length of the vector
+     *  @return {Vector2} */
+    getRight(scale=1) { return vec2().setAngle(this.angle+PI/2, scale); }
+
     /** How long since the object was created
      *  @return {number} */
     getAliveTime() { return time - this.spawnTime; }
