@@ -1130,6 +1130,39 @@ class RandomGenerator
     *  @return {Vector2} */
     vec2(valueA=1, valueB=0)
     { return vec2(this.float(valueA, valueB), this.float(valueA, valueB)); }
+
+    /** Returns a random color between the two passed in colors, combine components if linear
+    *  @param {Color}   [colorA=(1,1,1,1)]
+    *  @param {Color}   [colorB=(0,0,0,1)]
+    *  @param {boolean} [linear]
+    *  @return {Color} */
+    randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear=false)
+    {
+        return linear ? colorA.lerp(colorB, this.float()) :
+            new Color(
+                this.float(colorA.r,colorB.r), 
+                this.float(colorA.g,colorB.g), 
+                this.float(colorA.b,colorB.b), 
+                this.float(colorA.a,colorB.a));
+    }
+
+    /** Returns a new color that has each component randomly adjusted
+     * @param {Color} color
+     * @param {number} [amount]
+     * @param {number} [alphaAmount]
+     * @return {Color} */
+    mutateColor(color, amount=.05, alphaAmount=0)
+    {
+        ASSERT_NUMBER_VALID(amount);
+        ASSERT_NUMBER_VALID(alphaAmount);
+        return new Color
+        (
+            color.r + this.float(amount, -amount),
+            color.g + this.float(amount, -amount),
+            color.b + this.float(amount, -amount),
+            color.a + this.float(alphaAmount, -alphaAmount)
+        ).clamp();
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2657,6 +2690,27 @@ class EngineObject
                     // test which side we bounced off (or both if a corner)
                     const blockedLayerY = tileCollisionTest(vec2(oldPos.x, this.pos.y), this.size, this);
                     const blockedLayerX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
+
+                    if (blockedLayerX)
+                    {
+                        // try to move up a tiny bit
+                        const epsilon = 1e-3;
+                        const maxMoveUp = .1;
+                        const y = Math.floor(oldPos.y-this.size.y/2+1) +
+                            this.size.y/2 + epsilon;
+                        const delta = y - this.pos.y;
+                        if (delta < maxMoveUp)
+                        if (!tileCollisionTest(vec2(this.pos.x, y), this.size, this))
+                        {   
+                            this.pos.y = y;
+                            debugPhysics && debugRect(this.pos, this.size, '#ff0');
+                            return;
+                        }
+
+                        // move to previous position and bounce
+                        this.pos.x = oldPos.x;
+                        this.velocity.x *= -this.restitution;
+                    }
                     if (blockedLayerY || !blockedLayerX)
                     {
                         // bounce velocity
@@ -2679,12 +2733,6 @@ class EngineObject
                             this.pos.y = oldPos.y;
                             this.groundObject = undefined;
                         }
-                    }
-                    if (blockedLayerX)
-                    {
-                        // move to previous position and bounce
-                        this.pos.x = oldPos.x;
-                        this.velocity.x *= -this.restitution;
                     }
                     debugPhysics && debugRect(this.pos, this.size, '#f00');
                 }

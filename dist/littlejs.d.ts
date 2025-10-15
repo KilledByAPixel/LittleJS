@@ -923,6 +923,18 @@ declare module "littlejsengine" {
         *  @param {number} [valueB]
         *  @return {Vector2} */
         vec2(valueA?: number, valueB?: number): Vector2;
+        /** Returns a random color between the two passed in colors, combine components if linear
+        *  @param {Color}   [colorA=(1,1,1,1)]
+        *  @param {Color}   [colorB=(0,0,0,1)]
+        *  @param {boolean} [linear]
+        *  @return {Color} */
+        randColor(colorA?: Color, colorB?: Color, linear?: boolean): Color;
+        /** Returns a new color that has each component randomly adjusted
+         * @param {Color} color
+         * @param {number} [amount]
+         * @param {number} [alphaAmount]
+         * @return {Color} */
+        mutateColor(color: Color, amount?: number, alphaAmount?: number): Color;
     }
     /**
      * 2D Vector object with vector math library
