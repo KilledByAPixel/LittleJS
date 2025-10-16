@@ -919,67 +919,67 @@ class Color
 /** Color - White #ffffff
  *  @type {Color}
  *  @memberof Utilities */
-const WHITE = protectEngineConstant(rgb());
+const WHITE = debugProtectConstant(rgb());
 
 /** Color - Clear White #757474ff with 0 alpha
  *  @type {Color}
  *  @memberof Utilities */
-const CLEAR_WHITE = protectEngineConstant(rgb(1,1,1,0));
+const CLEAR_WHITE = debugProtectConstant(rgb(1,1,1,0));
 
 /** Color - Black #000000
  *  @type {Color}
  *  @memberof Utilities */
-const BLACK = protectEngineConstant(rgb(0,0,0));
+const BLACK = debugProtectConstant(rgb(0,0,0));
 
 /** Color - Clear Black #000000 with 0 alpha
  *  @type {Color}
  *  @memberof Utilities */
-const CLEAR_BLACK = protectEngineConstant(rgb(0,0,0,0));
+const CLEAR_BLACK = debugProtectConstant(rgb(0,0,0,0));
 
 /** Color - Gray #808080
  *  @type {Color}
  *  @memberof Utilities */
-const GRAY = protectEngineConstant(rgb(.5,.5,.5));
+const GRAY = debugProtectConstant(rgb(.5,.5,.5));
 
 /** Color - Red #ff0000
  *  @type {Color}
  *  @memberof Utilities */
-const RED = protectEngineConstant(rgb(1,0,0));
+const RED = debugProtectConstant(rgb(1,0,0));
 
 /** Color - Orange #ff8000
  *  @type {Color}
  *  @memberof Utilities */
-const ORANGE = protectEngineConstant(rgb(1,.5,0));
+const ORANGE = debugProtectConstant(rgb(1,.5,0));
 
 /** Color - Yellow #ffff00
  *  @type {Color}
  *  @memberof Utilities */
-const YELLOW = protectEngineConstant(rgb(1,1,0));
+const YELLOW = debugProtectConstant(rgb(1,1,0));
 
 /** Color - Green #00ff00
  *  @type {Color}
  *  @memberof Utilities */
-const GREEN = protectEngineConstant(rgb(0,1,0));
+const GREEN = debugProtectConstant(rgb(0,1,0));
 
 /** Color - Cyan #00ffff
  *  @type {Color}
  *  @memberof Utilities */
-const CYAN = protectEngineConstant(rgb(0,1,1));
+const CYAN = debugProtectConstant(rgb(0,1,1));
 
 /** Color - Blue #0000ff
  *  @type {Color}
  *  @memberof Utilities */
-const BLUE = protectEngineConstant(rgb(0,0,1));
+const BLUE = debugProtectConstant(rgb(0,0,1));
 
 /** Color - Purple #8000ff
  *  @type {Color}
  *  @memberof Utilities */
-const PURPLE = protectEngineConstant(rgb(.5,0,1));
+const PURPLE = debugProtectConstant(rgb(.5,0,1));
 
 /** Color - Magenta #ff00ff
  *  @type {Color}
  *  @memberof Utilities */
-const MAGENTA = protectEngineConstant(rgb(1,0,1));
+const MAGENTA = debugProtectConstant(rgb(1,0,1));
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1047,34 +1047,4 @@ class Timer
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {number} */
     valueOf() { return this.get(); }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Helper functions used by the engine
-
-// make color constants immutable with debug assertions
-function protectEngineConstant(obj)
-{
-    if (debug)
-    {
-        // get properties and store original values
-        const props = Object.keys(obj), values = {};
-        props.forEach(prop => values[prop] = obj[prop]);
-        
-        // replace with getters/setters that assert
-        props.forEach(prop =>
-        {
-            Object.defineProperty(obj, prop, {
-                get: () => values[prop],
-                set: (value) => 
-                {
-                    ASSERT(false, `Cannot modify engine constant. Attempted to set constant (${obj}) property '${prop}' to '${value}'.`);
-                },
-                enumerable: true
-            });
-        });
-    }
-    
-    // freeze the object to prevent adding new properties
-    return Object.freeze(obj);
 }

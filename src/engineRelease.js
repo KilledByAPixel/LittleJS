@@ -39,3 +39,4 @@ function debugVideoCaptureIsActive(){ return false; }
 function debugVideoCaptureStart (){}
 function debugVideoCaptureStop  (){}
 function debugVideoCaptureUpdate(){}
+function debugProtectConstant(o){ return o; }

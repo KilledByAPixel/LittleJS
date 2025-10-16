@@ -623,3 +623,30 @@ function debugVideoCaptureUpdate()
     debugVideoCaptureTrack.requestFrame();
     debugVideoCaptureIcon.textContent = '● REC ' + formatTime(debugVideoCaptureTimer);
 }
+
+// make color constants immutable with debug assertions
+function debugProtectConstant(obj)
+{
+    if (debug)
+    {
+        // get properties and store original values
+        const props = Object.keys(obj), values = {};
+        props.forEach(prop => values[prop] = obj[prop]);
+        
+        // replace with getters/setters that assert
+        props.forEach(prop =>
+        {
+            Object.defineProperty(obj, prop, {
+                get: () => values[prop],
+                set: (value) => 
+                {
+                    ASSERT(false, `Cannot modify engine constant. Attempted to set constant (${obj}) property '${prop}' to '${value}'.`);
+                },
+                enumerable: true
+            });
+        });
+    }
+    
+    // freeze the object to prevent adding new properties
+    return Object.freeze(obj);
+}
