@@ -491,7 +491,7 @@ function touchInputInit()
         if (touching)
         {
             touchGamepadTimer.set();
-            if (paused &amp;&amp; !wasTouching)
+            if (touchGamepadCenterButton &amp;&amp; !wasTouching &amp;&amp; paused)
             {
                 // touch anywhere to press start when paused
                 touchGamepadButtons[9] = 1;
@@ -530,7 +530,8 @@ function touchInputInit()
                 if (button &lt; touchGamepadButtonCount)
                     touchGamepadButtons[button] = 1;
             }
-            else if (startCenter.distance(touchPos) &lt; touchGamepadSize &amp;&amp; !wasTouching)
+            else if (touchGamepadCenterButton &amp;&amp; !wasTouching &amp;&amp; 
+                startCenter.distance(touchPos) &lt; touchGamepadSize)
             {
                 // virtual start button in center
                 touchGamepadButtons[9] = 1;

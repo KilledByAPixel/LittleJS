@@ -252,6 +252,84 @@ function isNumber(n) { return typeof n === 'number' &amp;&amp; !isNaN(n); }
  * @memberof Utilities */
 function isString(s) { return s !== undefined &amp;&amp; s !== null &amp;&amp; typeof s.toString() === 'string'; }
 
+/**
+ * @callback LineTestFunction - Checks if a position is colliding
+ * @param {Vector2} pos
+ * @memberof Draw
+ */
+
+/**
+ * Casts a ray and returns position of the first collision found, or undefined if none are found
+ * @param {Vector2} posStart
+ * @param {Vector2} posEnd
+ * @param {LineTestFunction} testFunction - Check if colliding
+ * @param {Vector2} [normal] - Optional vector to store the normal
+ * @return {Vector2|undefined} - Position of the collision or undefined if none found
+ * @memberof Utilities */
+function lineTest(posStart, posEnd, testFunction, normal)
+{
+    ASSERT(isVector2(posStart), 'posStart must be a vec2');
+    ASSERT(isVector2(posEnd), 'posEnd must be a vec2');
+    ASSERT(typeof testFunction === 'function', 'testFunction must be a function');
+    ASSERT(!normal || isVector2(normal), 'normal must be a vec2');
+
+    // get ray direction and length
+    const dx = posEnd.x - posStart.x;
+    const dy = posEnd.y - posStart.y;
+    const totalLength = Math.hypot(dx, dy);
+    if (!totalLength)
+        return;
+
+    // current integer cell we are in
+    const pos = posStart.floor();
+
+    // normalize ray direction
+    const dirX = dx / totalLength;
+    const dirY = dy / totalLength;
+
+    // step direction in grid
+    const stepX = sign(dirX);
+    const stepY = sign(dirY);
+
+    // distance along the ray to cross one full cell in X or Y
+    const tDeltaX = dirX ? abs(1 / dirX) : Infinity;
+    const tDeltaY = dirY ? abs(1 / dirY) : Infinity;
+
+    // distance along the ray from start to the first grid boundary
+    const nextGridX = stepX > 0 ? pos.x + 1 : pos.x;
+    const nextGridY = stepY > 0 ? pos.y + 1 : pos.y;
+    const tMaxX = dirX ? (nextGridX - posStart.x) / dirX : Infinity;
+    const tMaxY = dirY ? (nextGridY - posStart.y) / dirY : Infinity;
+
+    // use line drawing algorithm to test for collisions
+    let t = 0, tX = tMaxX, tY = tMaxY, wasX = tDeltaX &lt; tDeltaY;
+    while (t &lt; totalLength)
+    {
+        if (testFunction(pos))
+        {
+            // set exact hit point and normal
+            pos.set( posStart.x + dirX*t, posStart.y + dirY*t);
+            if (normal)
+                wasX ? normal.set(-stepX,0) : normal.set(0,-stepY);
+            return pos;
+        }
+
+        // advance to the next cell boundary
+        if (wasX = tX &lt; tY)
+        {
+            pos.x += stepX;
+            t = tX;
+            tX += tDeltaX;
+        }
+        else
+        {
+            pos.y += stepY;
+            t = tY;
+            tY += tDeltaY;
+        }
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Random global functions
@@ -376,6 +454,39 @@ class RandomGenerator
     *  @return {Vector2} */
     vec2(valueA=1, valueB=0)
     { return vec2(this.float(valueA, valueB), this.float(valueA, valueB)); }
+
+    /** Returns a random color between the two passed in colors, combine components if linear
+    *  @param {Color}   [colorA=(1,1,1,1)]
+    *  @param {Color}   [colorB=(0,0,0,1)]
+    *  @param {boolean} [linear]
+    *  @return {Color} */
+    randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear=false)
+    {
+        return linear ? colorA.lerp(colorB, this.float()) :
+            new Color(
+                this.float(colorA.r,colorB.r), 
+                this.float(colorA.g,colorB.g), 
+                this.float(colorA.b,colorB.b), 
+                this.float(colorA.a,colorB.a));
+    }
+
+    /** Returns a new color that has each component randomly adjusted
+     * @param {Color} color
+     * @param {number} [amount]
+     * @param {number} [alphaAmount]
+     * @return {Color} */
+    mutateColor(color, amount=.05, alphaAmount=0)
+    {
+        ASSERT_NUMBER_VALID(amount);
+        ASSERT_NUMBER_VALID(alphaAmount);
+        return new Color
+        (
+            color.r + this.float(amount, -amount),
+            color.g + this.float(amount, -amount),
+            color.b + this.float(amount, -amount),
+            color.a + this.float(alphaAmount, -alphaAmount)
+        ).clamp();
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -888,67 +999,67 @@ class Color
 /** Color - White #ffffff
  *  @type {Color}
  *  @memberof Utilities */
-const WHITE = protectEngineConstant(rgb());
+const WHITE = debugProtectConstant(rgb());
 
 /** Color - Clear White #757474ff with 0 alpha
  *  @type {Color}
  *  @memberof Utilities */
-const CLEAR_WHITE = protectEngineConstant(rgb(1,1,1,0));
+const CLEAR_WHITE = debugProtectConstant(rgb(1,1,1,0));
 
 /** Color - Black #000000
  *  @type {Color}
  *  @memberof Utilities */
-const BLACK = protectEngineConstant(rgb(0,0,0));
+const BLACK = debugProtectConstant(rgb(0,0,0));
 
 /** Color - Clear Black #000000 with 0 alpha
  *  @type {Color}
  *  @memberof Utilities */
-const CLEAR_BLACK = protectEngineConstant(rgb(0,0,0,0));
+const CLEAR_BLACK = debugProtectConstant(rgb(0,0,0,0));
 
 /** Color - Gray #808080
  *  @type {Color}
  *  @memberof Utilities */
-const GRAY = protectEngineConstant(rgb(.5,.5,.5));
+const GRAY = debugProtectConstant(rgb(.5,.5,.5));
 
 /** Color - Red #ff0000
  *  @type {Color}
  *  @memberof Utilities */
-const RED = protectEngineConstant(rgb(1,0,0));
+const RED = debugProtectConstant(rgb(1,0,0));
 
 /** Color - Orange #ff8000
  *  @type {Color}
  *  @memberof Utilities */
-const ORANGE = protectEngineConstant(rgb(1,.5,0));
+const ORANGE = debugProtectConstant(rgb(1,.5,0));
 
 /** Color - Yellow #ffff00
  *  @type {Color}
  *  @memberof Utilities */
-const YELLOW = protectEngineConstant(rgb(1,1,0));
+const YELLOW = debugProtectConstant(rgb(1,1,0));
 
 /** Color - Green #00ff00
  *  @type {Color}
  *  @memberof Utilities */
-const GREEN = protectEngineConstant(rgb(0,1,0));
+const GREEN = debugProtectConstant(rgb(0,1,0));
 
 /** Color - Cyan #00ffff
  *  @type {Color}
  *  @memberof Utilities */
-const CYAN = protectEngineConstant(rgb(0,1,1));
+const CYAN = debugProtectConstant(rgb(0,1,1));
 
 /** Color - Blue #0000ff
  *  @type {Color}
  *  @memberof Utilities */
-const BLUE = protectEngineConstant(rgb(0,0,1));
+const BLUE = debugProtectConstant(rgb(0,0,1));
 
 /** Color - Purple #8000ff
  *  @type {Color}
  *  @memberof Utilities */
-const PURPLE = protectEngineConstant(rgb(.5,0,1));
+const PURPLE = debugProtectConstant(rgb(.5,0,1));
 
 /** Color - Magenta #ff00ff
  *  @type {Color}
  *  @memberof Utilities */
-const MAGENTA = protectEngineConstant(rgb(1,0,1));
+const MAGENTA = debugProtectConstant(rgb(1,0,1));
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1016,34 +1127,4 @@ class Timer
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {number} */
     valueOf() { return this.get(); }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Helper functions used by the engine
-
-// make color constants immutable with debug assertions
-function protectEngineConstant(obj)
-{
-    if (debug)
-    {
-        // get properties and store original values
-        const props = Object.keys(obj), values = {};
-        props.forEach(prop => values[prop] = obj[prop]);
-        
-        // replace with getters/setters that assert
-        props.forEach(prop =>
-        {
-            Object.defineProperty(obj, prop, {
-                get: () => values[prop],
-                set: (value) => 
-                {
-                    ASSERT(false, `Cannot modify engine constant. Attempted to set constant (${obj}) property '${prop}' to '${value}'.`);
-                },
-                enumerable: true
-            });
-        });
-    }
-    
-    // freeze the object to prevent adding new properties
-    return Object.freeze(obj);
 }</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="Audio.SoundWave.html">SoundWave</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Draw.FontImage.html">FontImage</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Engine.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UIScrollbar.html">UIScrollbar</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>

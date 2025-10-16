@@ -326,8 +326,16 @@ class SoundInstance
             this.stop();
         this.gainNode = audioContext.createGain();
         this.source = playSamples(this.sound.sampleChannels, this.volume, this.rate, this.pan, this.loop, this.sound.sampleRate, this.gainNode, offset, this.onendedCallback);
-        this.startTime = audioContext.currentTime - offset;
-        this.pausedTime = undefined;
+        if (this.source)
+        {
+            this.startTime = audioContext.currentTime - offset;
+            this.pausedTime = undefined;
+        }
+        else
+        {
+            this.startTime = undefined;
+            this.pausedTime = 0;
+        }
     }
 
     /** Set the volume of this sound instance
@@ -476,11 +484,18 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
  *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing
  *  @param {number}   [offset] - Offset in seconds to start playback from
  *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
- *  @return {AudioBufferSourceNode} - The audio node of the sound played
+ *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails
  *  @memberof Audio */
 function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate=audioDefaultSampleRate, gainNode, offset=0, onended)
 {
     if (!soundEnable || headlessMode) return;
+
+    if (!audioIsRunning())
+    {
+        // fix stalled audio, this sound won't be able to play
+        audioContext.resume();
+        return;
+    }
 
     // create buffer and source
     const channelCount = sampleChannels.length;
@@ -507,14 +522,9 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
     if (onended)
         source.addEventListener('ended', ()=> onended(source));
 
+    // play and return sound
     const startOffset = offset * rate;
-    if (!audioIsRunning())
-    {
-        // fix stalled audio and start
-        audioContext.resume().then(()=>source.start(0, startOffset));
-    }
-    else
-        source.start(0, startOffset);
+    source.start(0, startOffset);
     return source;
 }
 
