@@ -1960,6 +1960,10 @@ declare module "littlejsengine" {
      *  @type {number}
      *  @memberof Input */
     export let mouseWheel: number;
+    /** True if mouse was inside the document window, set to false when mouse leaves
+     *  @type {boolean}
+     *  @memberof Input */
+    export let mouseInWindow: boolean;
     /** Returns true if user is using gamepad (has more recently pressed a gamepad button)
      *  @type {boolean}
      *  @memberof Input */
@@ -2478,6 +2482,7 @@ declare module "littlejsengine" {
      *  @memberof TileLayers */
     export function tileCollisionTest(pos: Vector2, size?: Vector2, object?: EngineObject, solidOnly?: boolean): TileCollisionLayer;
     /** Return the exact position of the boudnary of first tile hit, undefined if nothing was hit.
+     *  The point will be inside the colliding tile if it hits (may have a tiny shift)
      *  @param {Vector2}      posStart
      *  @param {Vector2}      posEnd
      *  @param {EngineObject} [object] - An object or undefined for generic test
@@ -2671,6 +2676,7 @@ declare module "littlejsengine" {
         *  @return {boolean} */
         collisionTest(pos: Vector2, size?: Vector2, object?: EngineObject): boolean;
         /** Return the exact position of the boudnary of first tile hit, undefined if nothing was hit.
+        *  The point will be inside the colliding tile if it hits (may have a tiny shift)
         *  @param {Vector2}      posStart
         *  @param {Vector2}      posEnd
         *  @param {EngineObject} [object] - An object or undefined for generic test

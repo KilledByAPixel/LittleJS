@@ -4823,6 +4823,11 @@ let mouseDeltaScreen = vec2();
  *  @memberof Input */
 let mouseWheel = 0;
 
+/** True if mouse was inside the document window, set to false when mouse leaves
+ *  @type {boolean}
+ *  @memberof Input */
+let mouseInWindow = true;
+
 /** Returns true if user is using gamepad (has more recently pressed a gamepad button)
  *  @type {boolean}
  *  @memberof Input */
@@ -4917,6 +4922,7 @@ function inputInit()
     document.addEventListener('mousedown', onMouseDown);
     document.addEventListener('mouseup', onMouseUp);
     document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseleave', onMouseLeave);
     document.addEventListener('wheel', onMouseWheel);
     document.addEventListener('contextmenu', onContextMenu);
     document.addEventListener('blur', onBlur);
@@ -4941,14 +4947,14 @@ function inputInit()
         if (inputWASDEmulateDirection)
             inputData[0][remapKey(e.code)] = 4;
     }
-    function remapKey(c)
+    function remapKey(k)
     {
         // handle remapping wasd keys to directions
         return inputWASDEmulateDirection ?
-            c === 'KeyW' ? 'ArrowUp' :
-            c === 'KeyS' ? 'ArrowDown' :
-            c === 'KeyA' ? 'ArrowLeft' :
-            c === 'KeyD' ? 'ArrowRight' : c : c;
+            k === 'KeyW' ? 'ArrowUp' :
+            k === 'KeyS' ? 'ArrowDown' :
+            k === 'KeyA' ? 'ArrowLeft' :
+            k === 'KeyD' ? 'ArrowRight' : k : k;
     }
     function onMouseDown(e)
     {
@@ -4975,10 +4981,12 @@ function inputInit()
     }
     function onMouseMove(e)
     {
+        mouseInWindow = true;
         let mousePosScreenLast = mousePosScreen;
         mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
         mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
     }
+    function onMouseLeave() { mouseInWindow = false; } // mouse moved off window
     function onMouseWheel(e) { mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY); }
     function onContextMenu(e) { e.preventDefault(); } // prevent right click menu
     function onBlur() { inputClear(); } // reset input when focus is lost
@@ -6050,6 +6058,7 @@ function tileCollisionTest(pos, size=vec2(), object, solidOnly=true)
 }
 
 /** Return the exact position of the boudnary of first tile hit, undefined if nothing was hit.
+ *  The point will be inside the colliding tile if it hits (may have a tiny shift)
  *  @param {Vector2}      posStart
  *  @param {Vector2}      posEnd
  *  @param {EngineObject} [object] - An object or undefined for generic test
@@ -6623,6 +6632,7 @@ class TileCollisionLayer extends TileLayer
     }
 
     /** Return the exact position of the boudnary of first tile hit, undefined if nothing was hit.
+    *  The point will be inside the colliding tile if it hits (may have a tiny shift)
     *  @param {Vector2}      posStart
     *  @param {Vector2}      posEnd
     *  @param {EngineObject} [object] - An object or undefined for generic test
@@ -8927,6 +8937,8 @@ class UIObject
      */
     isMouseOverlapping()
     {
+        if (!mouseInWindow) return false;
+
         const size = !isTouchDevice ? this.size :
                 this.size.add(vec2(this.extraTouchSize || 0));
         if (!uiSystem.nativeHeight)
