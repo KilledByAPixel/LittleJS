@@ -513,7 +513,7 @@ function engineObjectsCollect(pos, size, objects=engineObjects)
 
 /**
  * @callback ObjectCallbackFunction - Function that processes an object
- * @param {EngineObject} uiObjects
+ * @param {EngineObject} object
  *  @memberof Engine
  */
 
