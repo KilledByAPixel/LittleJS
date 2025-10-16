@@ -47,23 +47,22 @@ function tileCollisionTest(pos, size=vec2(), object, solidOnly=true)
     }
 }
 
-/** Return the center of first tile hit, undefined if nothing was hit.
- *  This does not return the exact intersection, but the center of the tile hit.
+/** Return the exact position of the boudnary of first tile hit, undefined if nothing was hit.
  *  @param {Vector2}      posStart
  *  @param {Vector2}      posEnd
  *  @param {EngineObject} [object] - An object or undefined for generic test
+ *  @param {Vector2}      [normal] - Optional normal of the surface hit
  *  @param {boolean}      [solidOnly=true] - Only check solid layers if true
- *  @return {Vector2}
+ *  @return {Vector2|undefined} - position of the center of the tile hit or undefined if no hit
  *  @memberof TileLayers */
-function tileCollisionRaycast(posStart, posEnd, object, solidOnly=true)
+function tileCollisionRaycast(posStart, posEnd, object, normal, solidOnly=true)
 {
     for (const layer of tileCollisionLayers)
     {
         if (!solidOnly || layer.isSolid)
         {
-            const hitPos = layer.collisionRaycast(posStart, posEnd, object)
-            if (hitPos)
-                return hitPos;
+            const hitPos = layer.collisionRaycast(posStart, posEnd, object, normal)
+            if (hitPos) return hitPos;
         }
     }
 }
@@ -356,7 +355,7 @@ class TileLayer extends CanvasLayer
     */
     constructor(position, size, tileInfo=tile(), renderOrder=0)
     {
-        const canvasSize = size.multiply(tileInfo.size);
+        const canvasSize = tileInfo ? size.multiply(tileInfo.size) : size;
         super(position, size, 0, renderOrder, canvasSize);
 
         // set tile info
@@ -452,8 +451,9 @@ class TileLayer extends CanvasLayer
         drawCanvas = this.canvas;
         drawContext = this.context;
         cameraPos = this.size.scale(.5);
-        cameraScale = this.tileInfo.size.x;
-        mainCanvasSize = this.size.multiply(this.tileInfo.size);
+        const tileSize = this.tileInfo ? this.tileInfo.size : vec2(1);
+        cameraScale = tileSize.x;
+        mainCanvasSize = this.size.multiply(tileSize);
         if (clear)
         {
             // clear and set size
@@ -613,65 +613,41 @@ class TileCollisionLayer extends TileLayer
             // check if the object should collide with this tile
             const tileData = this.collisionData[y*this.size.x+x];
             if (tileData)
-            if (!object || object.collideWithTile(tileData, hitPos.set(x, y)))
+            if (!object || object.collideWithTile(tileData, 
+                hitPos.set(x + this.pos.x, y + this.pos.y)))
                 return true;
         }
         return false;
     }
 
-    /** Return the center of first tile hit, undefined if nothing was hit.
-    *  This does not return the exact intersection, but the center of the tile hit.
+    /** Return the exact position of the boudnary of first tile hit, undefined if nothing was hit.
     *  @param {Vector2}      posStart
     *  @param {Vector2}      posEnd
-    *  @param {EngineObject} [object]
-    *  @return {Vector2} */
-    collisionRaycast(posStart, posEnd, object)
+    *  @param {EngineObject} [object] - An object or undefined for generic test
+    *  @param {Vector2}      [normal] - Optional normal of the surface hit
+    *  @return {Vector2|undefined} */
+    collisionRaycast(posStart, posEnd, object, normal)
     {
         ASSERT(isVector2(posStart) && isVector2(posEnd), 'positions must be Vector2s');
         ASSERT(!object || object instanceof EngineObject, 'object must be an EngineObject');
-        
-        // transform to local layer space
-        const posStartX = posStart.x - this.pos.x;
-        const posStartY = posStart.y - this.pos.y;
-        const posEndX   = posEnd.x   - this.pos.x;
-        const posEndY   = posEnd.y   - this.pos.y;
 
-        // test if a ray collides with tiles from start to end
-        const deltaX = posEndX - posStartX;
-        const deltaY = posEndY - posStartY;
-        const totalLength = (deltaX**2 + deltaY**2)**.5;
-        const unitX = abs(totalLength/deltaX);
-        const unitY = abs(totalLength/deltaY);
-
-        // setup iteration variables
-        const pos = posStart.floor(), signDeltaX = sign(deltaX), signDeltaY = sign(deltaY);
-        let xi = unitX * (deltaX < 0 ? posStart.x - pos.x : pos.x - posStart.x + 1) || 0;
-        let yi = unitY * (deltaY < 0 ? posStart.y - pos.y : pos.y - posStart.y + 1) || 0;
-
-        // use line drawing algorithm to test for collisions
-        while (true)
+        const localPos = new Vector2;
+        const collisionTest = (pos)=>
         {
             // check for tile collision
-            const tileData = this.getCollisionData(pos);
-            if (tileData && (!object || object.collideWithTile(tileData, pos)))
-            {
-                pos.x += .5; pos.y += .5;
-                debugRaycast && debugLine(posStart, posEnd, '#f00', .02);
-                debugRaycast && debugPoint(pos, '#ff0');
-                return pos;
-            }
-
-            // check if past the end
-            if (xi >= totalLength && yi >= totalLength)
-                break;
-
-            // get coordinates of next tile to check
-            if (xi > yi)
-                pos.y += signDeltaY, yi += unitY;
-            else
-                pos.x += signDeltaX, xi += unitX;
+            localPos.set(pos.x - this.pos.x, pos.y - this.pos.y);
+            const tileData = this.getCollisionData(localPos);
+            return tileData && (!object || object.collideWithTile(tileData, pos));
         }
-
         debugRaycast && debugLine(posStart, posEnd, '#00f', .02);
+        const hitPos = lineTest(posStart, posEnd, collisionTest, normal);
+        if (hitPos)
+        {
+            debugRaycast && debugLine(posStart, hitPos, '#f00', .02);
+            debugRaycast && debugPoint(hitPos, '#0f0');
+            debugRaycast && normal && 
+                debugLine(hitPos, hitPos.add(normal), '#ff0', .02);
+            return hitPos;
+        }
     }
 }

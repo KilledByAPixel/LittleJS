@@ -250,6 +250,84 @@ function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
  * @memberof Utilities */
 function isString(s) { return s !== undefined && s !== null && typeof s.toString() === 'string'; }
 
+/**
+ * @callback LineTestFunction - Checks if a position is colliding
+ * @param {Vector2} pos
+ * @memberof Draw
+ */
+
+/**
+ * Casts a ray and returns position of the first collision found, or undefined if none are found
+ * @param {Vector2} posStart
+ * @param {Vector2} posEnd
+ * @param {LineTestFunction} testFunction - Check if colliding
+ * @param {Vector2} [normal] - Optional vector to store the normal
+ * @return {Vector2|undefined} - Position of the collision or undefined if none found
+ * @memberof Utilities */
+function lineTest(posStart, posEnd, testFunction, normal)
+{
+    ASSERT(isVector2(posStart), 'posStart must be a vec2');
+    ASSERT(isVector2(posEnd), 'posEnd must be a vec2');
+    ASSERT(typeof testFunction === 'function', 'testFunction must be a function');
+    ASSERT(!normal || isVector2(normal), 'normal must be a vec2');
+
+    // get ray direction and length
+    const dx = posEnd.x - posStart.x;
+    const dy = posEnd.y - posStart.y;
+    const totalLength = Math.hypot(dx, dy);
+    if (!totalLength)
+        return;
+
+    // current integer cell we are in
+    const pos = posStart.floor();
+
+    // normalize ray direction
+    const dirX = dx / totalLength;
+    const dirY = dy / totalLength;
+
+    // step direction in grid
+    const stepX = sign(dirX);
+    const stepY = sign(dirY);
+
+    // distance along the ray to cross one full cell in X or Y
+    const tDeltaX = dirX ? abs(1 / dirX) : Infinity;
+    const tDeltaY = dirY ? abs(1 / dirY) : Infinity;
+
+    // distance along the ray from start to the first grid boundary
+    const nextGridX = stepX > 0 ? pos.x + 1 : pos.x;
+    const nextGridY = stepY > 0 ? pos.y + 1 : pos.y;
+    const tMaxX = dirX ? (nextGridX - posStart.x) / dirX : Infinity;
+    const tMaxY = dirY ? (nextGridY - posStart.y) / dirY : Infinity;
+
+    // use line drawing algorithm to test for collisions
+    let t = 0, tX = tMaxX, tY = tMaxY, wasX = tDeltaX < tDeltaY;
+    while (t < totalLength)
+    {
+        if (testFunction(pos))
+        {
+            // set exact hit point and normal
+            pos.set( posStart.x + dirX*t, posStart.y + dirY*t);
+            if (normal)
+                wasX ? normal.set(-stepX,0) : normal.set(0,-stepY);
+            return pos;
+        }
+
+        // advance to the next cell boundary
+        if (wasX = tX < tY)
+        {
+            pos.x += stepX;
+            t = tX;
+            tX += tDeltaX;
+        }
+        else
+        {
+            pos.y += stepY;
+            t = tY;
+            tY += tDeltaY;
+        }
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Random global functions
