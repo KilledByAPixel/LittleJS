@@ -739,18 +739,18 @@ function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=B
  *  @memberof Draw */
 function screenToWorld(screenPos)
 {
-    let cameraPosRelativeX = (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale;
-    let cameraPosRelativeY = (screenPos.y - mainCanvasSize.y/2 + .5) / -cameraScale;
+    let x = (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale;
+    let y = (screenPos.y - mainCanvasSize.y/2 + .5) / -cameraScale;
     if (cameraAngle)
     {
         // apply camera rotation
         const c = cos(-cameraAngle), s = sin(-cameraAngle);
-        const rotatedX = cameraPosRelativeX * c - cameraPosRelativeY * s;
-        const rotatedY = cameraPosRelativeX * s + cameraPosRelativeY * c;
-        cameraPosRelativeX = rotatedX;
-        cameraPosRelativeY = rotatedY;
+        const rotatedX = x * c - y * s;
+        const rotatedY = x * s + y * c;
+        x = rotatedX;
+        y = rotatedY;
     }
-    return new Vector2(cameraPosRelativeX + cameraPos.x, cameraPosRelativeY + cameraPos.y);
+    return new Vector2(x + cameraPos.x, y + cameraPos.y);
 }
 
 /** Convert from world to screen space coordinates
@@ -759,22 +759,62 @@ function screenToWorld(screenPos)
  *  @memberof Draw */
 function worldToScreen(worldPos)
 {
-    let cameraPosRelativeX = worldPos.x - cameraPos.x;
-    let cameraPosRelativeY = worldPos.y - cameraPos.y;
+    let x = worldPos.x - cameraPos.x;
+    let y = worldPos.y - cameraPos.y;
     if (cameraAngle)
     {
         // apply inverse camera rotation
         const c = cos(cameraAngle), s = sin(cameraAngle);
-        const rotatedX = cameraPosRelativeX * c - cameraPosRelativeY * s;
-        const rotatedY = cameraPosRelativeX * s + cameraPosRelativeY * c;
-        cameraPosRelativeX = rotatedX;
-        cameraPosRelativeY = rotatedY;
+        const rotatedX = x * c - y * s;
+        const rotatedY = x * s + y * c;
+        x = rotatedX;
+        y = rotatedY;
     }
     return new Vector2
     (
-        cameraPosRelativeX *  cameraScale + mainCanvasSize.x/2 - .5,
-        cameraPosRelativeY * -cameraScale + mainCanvasSize.y/2 - .5
+        x *  cameraScale + mainCanvasSize.x/2 - .5,
+        y * -cameraScale + mainCanvasSize.y/2 - .5
     );
+}
+
+/** Convert from screen to world space coordinates for a directional vector (no translation)
+ *  @param {Vector2} screenDelta
+ *  @return {Vector2}
+ *  @memberof Draw */
+function screenToWorldDelta(screenDelta)
+{
+    let x = screenDelta.x /  cameraScale;
+    let y = screenDelta.y / -cameraScale;
+    if (cameraAngle)
+    {
+        // apply camera rotation
+        const c = cos(-cameraAngle), s = sin(-cameraAngle);
+        const rotatedX = x * c - y * s;
+        const rotatedY = x * s + y * c;
+        x = rotatedX;
+        y = rotatedY;
+    }
+    return new Vector2(x, y);
+}
+
+/** Convert from screen to world space coordinates for a directional vector (no translation)
+ *  @param {Vector2} worldDelta
+ *  @return {Vector2}
+ *  @memberof Draw */
+function worldToScreenDelta(worldDelta)
+{
+    let x = worldDelta.x;
+    let y = worldDelta.y;
+    if (cameraAngle)
+    {
+        // apply inverse camera rotation
+        const c = cos(cameraAngle), s = sin(cameraAngle);
+        const rotatedX = x * c - y * s;
+        const rotatedY = x * s + y * c;
+        x = rotatedX;
+        y = rotatedY;
+    }
+    return new Vector2(x *  cameraScale, y * -cameraScale);
 }
 
 /** Get the camera's visible area in world space
