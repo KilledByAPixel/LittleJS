@@ -293,7 +293,7 @@ class EngineObject
                         // try to move up a tiny bit
                         const epsilon = 1e-3;
                         const maxMoveUp = .1;
-                        const y = Math.floor(oldPos.y-this.size.y/2+1) +
+                        const y = floor(oldPos.y-this.size.y/2+1) +
                             this.size.y/2 + epsilon;
                         const delta = y - this.pos.y;
                         if (delta < maxMoveUp)

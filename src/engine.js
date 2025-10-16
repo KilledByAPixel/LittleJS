@@ -30,7 +30,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.14.22';
+const engineVersion = '1.14.23';
 
 /** Frames per second to update
  *  @type {number}
@@ -561,7 +561,7 @@ function drawEngineSplashScreen(t)
         // background
         const p3 = percent(t, 1, .8);
         const p4 = percent(t, 0, .5);
-        const g = x.createRadialGradient(w/2,h/2,0,w/2,h/2,Math.hypot(w,h)*.7);
+        const g = x.createRadialGradient(w/2,h/2,0,w/2,h/2,hypot(w,h)*.7);
         g.addColorStop(0,hsl(0,0,lerp(0,p3/2,p4),p3).toString());
         g.addColorStop(1,hsl(0,0,0,p3).toString());
         x.save();

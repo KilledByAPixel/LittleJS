@@ -371,7 +371,7 @@ class Particle extends EngineObject
         {
             // in local space of emitter
             const a = this.localSpaceEmitter.angle;
-            const c = Math.cos(a), s = Math.sin(a);
+            const c = cos(a), s = sin(a);
             pos = this.localSpaceEmitter.pos.add(
                 new Vector2(pos.x*c - pos.y*s, pos.x*s + pos.y*c));
             angle += this.localSpaceEmitter.angle;
@@ -388,7 +388,7 @@ class Particle extends EngineObject
                 // stretch in direction of motion
                 const trailLength = speed * this.trailScale;
                 size.y = max(size.x, trailLength);
-                angle = Math.atan2(direction.x, direction.y);
+                angle = atan2(direction.x, direction.y);
                 drawTile(pos, size, this.tileInfo, this.color, angle, this.mirror);
             }
         }

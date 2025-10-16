@@ -324,8 +324,8 @@ function gamepadsUpdate()
         else if (touchGamepadStick.lengthSquared() > .3)
         {
             // convert to 8 way dpad
-            sticks[0].x = Math.round(touchGamepadStick.x);
-            sticks[0].y = -Math.round(touchGamepadStick.y);
+            sticks[0].x = round(touchGamepadStick.x);
+            sticks[0].y = -round(touchGamepadStick.y);
             sticks[0] = sticks[0].clampLength();
         }
 

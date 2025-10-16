@@ -605,10 +605,10 @@ function zzfxG
 
         // biquad LP/HP filter
         quality = 2, w = PI2 * abs(filter) * 2 / sampleRate,
-        cos = Math.cos(w), alpha = Math.sin(w) / 2 / quality,
-        a0 = 1 + alpha, a1 = -2*cos / a0, a2 = (1 - alpha) / a0,
-        b0 = (1 + sign(filter) * cos) / 2 / a0,
-        b1 = -(sign(filter) + cos) / a0, b2 = b0,
+        cosw = cos(w), alpha = sin(w) / 2 / quality,
+        a0 = 1 + alpha, a1 = -2*cosw / a0, a2 = (1 - alpha) / a0,
+        b0 = (1 + sign(filter) * cosw) / 2 / a0,
+        b1 = -(sign(filter) + cosw) / a0, b2 = b0,
         x2 = 0, x1 = 0, y2 = 0, y1 = 0;
 
         // scale by sample rate
@@ -631,15 +631,15 @@ function zzfxG
         if (!(++crush%(bitCrush*100|0)))                   // bit crush
         {
             s = shape? shape>1? shape>2? shape>3? shape>4? // wave shape
-                (t/PI2%1 < shapeCurve/2? 1 : -1) :         // 5 square duty
-                Math.sin(t**3) :                           // 4 noise
-                Math.max(Math.min(Math.tan(t),1),-1):      // 3 tan
-                1-(2*t/PI2%2+2)%2:                         // 2 saw
-                1-4*abs(Math.round(t/PI2)-t/PI2):          // 1 triangle
-                Math.sin(t);                               // 0 sin
+                (t/PI2%1 < shapeCurve/2? 1 : -1) : // 5 square duty
+                sin(t**3) :                        // 4 noise
+                max(min(tan(t),1),-1):             // 3 tan
+                1-(2*t/PI2%2+2)%2:                 // 2 saw
+                1-4*abs(round(t/PI2)-t/PI2):       // 1 triangle
+                sin(t);                            // 0 sin
 
             s = (repeatTime ?
-                    1 - tremolo + tremolo*Math.sin(PI2*i/repeatTime) // tremolo
+                    1 - tremolo + tremolo*sin(PI2*i/repeatTime) // tremolo
                     : 1) *
                 (shape>4?s:sign(s)*abs(s)**shapeCurve) * // shape curve
                 (i < attack ? i/attack :                 // attack
@@ -661,8 +661,8 @@ function zzfxG
         }
 
         f = (frequency += slide += deltaSlide) *// frequency
-            Math.cos(modulation*modOffset++);   // modulation
-        t += f + f*noise*Math.sin(i**5);        // noise
+            cos(modulation*modOffset++);        // modulation
+        t += f + f*noise*sin(i**5);             // noise
 
         if (jump && ++jump > pitchJumpTime)     // pitch jump
         {

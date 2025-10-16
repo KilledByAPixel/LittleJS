@@ -10,7 +10,7 @@
 
 'use strict';
 
-/** A shortcut to get Math.PI
+/** The value of PI
  *  @type {number}
  *  @default Math.PI
  *  @memberof Utilities */
@@ -20,25 +20,80 @@ const PI = Math.PI;
  *  @param {number} value
  *  @return {number}
  *  @memberof Utilities */
-function abs(value) { return Math.abs(value); }
+const abs = Math.abs;
+
+/** Returns floored value of value passed in
+ *  @param {number} value
+ *  @return {number}
+ *  @memberof Utilities */
+const floor = Math.floor;
+
+/** Returns ceiled value of value passed in
+ *  @param {number} value
+ *  @return {number}
+ *  @memberof Utilities */
+const ceil = Math.ceil;
+
+/** Returns rounded value passed in
+ *  @param {number} value
+ *  @return {number}
+ *  @memberof Utilities */
+const round = Math.round;
 
 /** Returns lowest value passed in
  *  @param {...number} values
  *  @return {number}
  *  @memberof Utilities */
-function min(...values) { return Math.min(...values); }
+const min = Math.min;
 
 /** Returns highest value passed in
  *  @param {...number} values
  *  @return {number}
  *  @memberof Utilities */
-function max(...values) { return Math.max(...values); }
+const max = Math.max;
 
 /** Returns the sign of value passed in
  *  @param {number} value
  *  @return {number}
  *  @memberof Utilities */
-function sign(value) { return Math.sign(value); }
+const sign = Math.sign;
+
+/** Returns hypotenuse of values passed in
+ *  @param {...number} values
+ *  @return {number}
+ *  @memberof Utilities */
+const hypot = Math.hypot;
+
+/** Returns log2 of value passed in
+ *  @param {number} value
+ *  @return {number}
+ *  @memberof Utilities */
+const log2 = Math.log2;
+
+/** Returns sin of value passed in
+ *  @param {number} value
+ *  @return {number}
+ *  @memberof Utilities */
+const sin = Math.sin;
+
+/** Returns cos of value passed in
+ *  @param {number} value
+ *  @return {number}
+ *  @memberof Utilities */
+const cos = Math.cos;
+
+/** Returns tan of value passed in
+ *  @param {number} value
+ *  @return {number}
+ *  @memberof Utilities */
+const tan = Math.tan;
+
+/** Returns atan2 of values passed in
+ *  @param {number} y
+ *  @param {number} x
+ *  @return {number}
+ *  @memberof Utilities */
+const atan2 = Math.atan2;
 
 /** Returns first parm modulo the second param, but adjusted so negative numbers work as expected
  *  @param {number} dividend
@@ -143,7 +198,7 @@ function isPowerOfTwo(value) { return !(value & (value - 1)); }
  *  @param {number} value
  *  @return {number}
  *  @memberof Utilities */
-function nearestPowerOfTwo(value) { return 2**Math.ceil(Math.log2(value)); }
+function nearestPowerOfTwo(value) { return 2**ceil(log2(value)); }
 
 /** Returns true if two axis aligned bounding boxes are overlapping
  *  this can be used for simple collision detection between objects
@@ -211,7 +266,7 @@ function isIntersecting(start, end, pos, size)
  *  @return {number}            - Value waving between 0 and amplitude
  *  @memberof Utilities */
 function wave(frequency=1, amplitude=1, t=time, offset=0)
-{ return amplitude/2 * (1 - Math.cos(offset + t*frequency*2*PI)); }
+{ return amplitude/2 * (1 - cos(offset + t*frequency*2*PI)); }
 
 /** Formats seconds to mm:ss style for display purposes
  *  @param {number} t - time in seconds
@@ -274,7 +329,7 @@ function lineTest(posStart, posEnd, testFunction, normal)
     // get ray direction and length
     const dx = posEnd.x - posStart.x;
     const dy = posEnd.y - posStart.y;
-    const totalLength = Math.hypot(dx, dy);
+    const totalLength = hypot(dx, dy);
     if (!totalLength)
         return;
 
@@ -305,14 +360,26 @@ function lineTest(posStart, posEnd, testFunction, normal)
     {
         if (testFunction(pos))
         {
-            // set exact hit point and normal
-            pos.set( posStart.x + dirX*t, posStart.y + dirY*t);
+            // set hit point
+            const hitPos = vec2(posStart.x + dirX*t, posStart.y + dirY*t);
+
+            // move inside of tile if on positive edge
+            const e = 1e-9;
+            if (wasX)
+            {
+                if (stepX < 0)
+                    hitPos.x -= e;
+            }
+            if (stepY < 0)
+                hitPos.y -= e;
+
+            // set normal
             if (normal)
                 wasX ? normal.set(-stepX,0) : normal.set(0,-stepY);
-            return pos;
+            return hitPos;
         }
 
-        // advance to the next cell boundary
+        // advance to the next grid boundary
         if (wasX = tX < tY)
         {
             pos.x += stepX;
@@ -346,7 +413,7 @@ function rand(valueA=1, valueB=0) { return valueB + Math.random() * (valueA-valu
  *  @param {number} [valueB]
  *  @return {number}
  *  @memberof Random */
-function randInt(valueA, valueB=0) { return Math.floor(rand(valueA,valueB)); }
+function randInt(valueA, valueB=0) { return floor(rand(valueA,valueB)); }
 
 /** Randomly returns true or false given the chance of true passed in
  *  @param {number} [chance]
@@ -425,7 +492,7 @@ class RandomGenerator
     *  @param {number} valueA
     *  @param {number} [valueB]
     *  @return {number} */
-    int(valueA, valueB=0) { return Math.floor(this.float(valueA, valueB)); }
+    int(valueA, valueB=0) { return floor(this.float(valueA, valueB)); }
 
     /** Randomly returns true or false given the chance of true passed in
     *  @param {number} [chance]
@@ -636,7 +703,7 @@ class Vector2
 
     /** Returns the clockwise angle of this vector, up is angle 0
      * @return {number} */
-    angle() { return Math.atan2(this.x, this.y); }
+    angle() { return atan2(this.x, this.y); }
 
     /** Sets this vector with clockwise angle and length passed in
      * @param {number} [angle]
@@ -646,8 +713,8 @@ class Vector2
     {
         ASSERT_NUMBER_VALID(angle);
         ASSERT_NUMBER_VALID(length);
-        this.x = length*Math.sin(angle);
-        this.y = length*Math.cos(angle);
+        this.x = length*sin(angle);
+        this.y = length*cos(angle);
         return this;
     }
 
@@ -657,7 +724,7 @@ class Vector2
     rotate(angle)
     {
         ASSERT_NUMBER_VALID(angle);
-        const c = Math.cos(-angle), s = Math.sin(-angle);
+        const c = cos(-angle), s = sin(-angle);
         return new Vector2(this.x*c - this.y*s, this.x*s + this.y*c);
     }
 
@@ -689,7 +756,7 @@ class Vector2
 
     /** Returns a copy of this vector with each axis floored
      * @return {Vector2} */
-    floor() { return new Vector2(Math.floor(this.x), Math.floor(this.y)); }
+    floor() { return new Vector2(floor(this.x), floor(this.y)); }
 
     /** Returns new vec2 with modded values
     *  @param {number} [divisor]
@@ -1120,7 +1187,7 @@ class Timer
 
     /** Returns this timer expressed as a string
      * @return {string} */
-    toString() { return this.isSet() ? Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ) : 'unset'; }
+    toString() { return this.isSet() ? abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ) : 'unset'; }
 
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {number} */

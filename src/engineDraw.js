@@ -360,7 +360,7 @@ function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0,
         const halfSizeX = size.x/2, halfSizeY = size.y/2;
         const colorTopInt = colorTop.rgbaInt();
         const colorBottomInt = colorBottom.rgbaInt();
-        const c = Math.cos(-angle), s = Math.sin(-angle);
+        const c = cos(-angle), s = sin(-angle);
         for (let i=4; i--;)
         {
             const x = i & 1 ? halfSizeX : -halfSizeX;
@@ -490,7 +490,7 @@ function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, l
     for (let i=sides; i--;)
     {
         const a = (i/sides)*PI*2;
-        points.push(vec2(Math.sin(a)*sizeX, Math.cos(a)*sizeY));
+        points.push(vec2(sin(a)*sizeX, cos(a)*sizeY));
     }
     drawPoly(points, color, lineWidth, lineColor, pos, angle, useWebGL, screenSpace, context);
 }
@@ -744,9 +744,9 @@ function screenToWorld(screenPos)
     if (cameraAngle)
     {
         // apply camera rotation
-        const cos = Math.cos(-cameraAngle), sin = Math.sin(-cameraAngle);
-        const rotatedX = cameraPosRelativeX * cos - cameraPosRelativeY * sin;
-        const rotatedY = cameraPosRelativeX * sin + cameraPosRelativeY * cos;
+        const c = cos(-cameraAngle), s = sin(-cameraAngle);
+        const rotatedX = cameraPosRelativeX * c - cameraPosRelativeY * s;
+        const rotatedY = cameraPosRelativeX * s + cameraPosRelativeY * c;
         cameraPosRelativeX = rotatedX;
         cameraPosRelativeY = rotatedY;
     }
@@ -764,9 +764,9 @@ function worldToScreen(worldPos)
     if (cameraAngle)
     {
         // apply inverse camera rotation
-        const cos = Math.cos(cameraAngle), sin = Math.sin(cameraAngle);
-        const rotatedX = cameraPosRelativeX * cos - cameraPosRelativeY * sin;
-        const rotatedY = cameraPosRelativeX * sin + cameraPosRelativeY * cos;
+        const c = cos(cameraAngle), s = sin(cameraAngle);
+        const rotatedX = cameraPosRelativeX * c - cameraPosRelativeY * s;
+        const rotatedY = cameraPosRelativeX * s + cameraPosRelativeY * c;
         cameraPosRelativeX = rotatedX;
         cameraPosRelativeY = rotatedY;
     }
