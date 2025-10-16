@@ -290,6 +290,7 @@ export
 	mouseDelta,
 	mouseDeltaScreen,
 	mouseWheel,
+	mouseInWindow,
 	isUsingGamepad,
 	inputPreventDefault,
 	setInputPreventDefault,

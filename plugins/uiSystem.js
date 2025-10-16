@@ -362,6 +362,8 @@ class UIObject
      */
     isMouseOverlapping()
     {
+        if (!mouseInWindow) return false;
+
         const size = !isTouchDevice ? this.size :
                 this.size.add(vec2(this.extraTouchSize || 0));
         if (!uiSystem.nativeHeight)
