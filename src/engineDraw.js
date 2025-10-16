@@ -252,6 +252,7 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=WHITE,
     const bleedScale = tileInfo ? tileInfo.bleedScale : 0;
     if (useWebGL)
     {
+        ASSERT(!!glContext, 'WebGL is not enabled!');
         if (screenSpace)
         {
             // convert to world space
@@ -347,6 +348,7 @@ function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0,
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
     if (useWebGL)
     {
+        ASSERT(!!glContext, 'WebGL is not enabled!');
         if (screenSpace)
         {
             // convert to world space
@@ -409,6 +411,7 @@ function drawLineList(points, width=.1, color, wrap=false, pos=vec2(), angle=0, 
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
     if (useWebGL)
     {
+        ASSERT(!!glContext, 'WebGL is not enabled!');
         let scale = 1;
         if (screenSpace)
         {
@@ -512,6 +515,7 @@ function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(),
 
     if (useWebGL)
     {
+        ASSERT(!!glContext, 'WebGL is not enabled!');
         let scale = 1;
         if (screenSpace)
         {
