@@ -13,7 +13,8 @@ class BounceObject extends EngineObject
         // show debug info
         debugText('Debug Text', this.pos.add(vec2(0,3)), 1, WHITE);
         debugRect(this.pos, this.size, RED);
-        debugPoly(mousePos, [vec2(-2,-1), vec2(0,2), vec2(2,-1)], YELLOW);
+        const trianglePoints = [vec2(-2,-1), vec2(0,2), vec2(2,-1)];
+        debugPoly(mousePos, trianglePoints, YELLOW);
         debugLine(this.pos, mousePos, BLUE);
 
         // bounce off screen edges
