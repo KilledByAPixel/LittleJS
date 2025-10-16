@@ -12,7 +12,7 @@ function gameUpdate()
     if (keyWasPressed('Escape'))
         pointerLockExit()
     if (pointerLockIsActive() || isTouchDevice)
-        playerAngle += mouseDelta.x * .003;
+        playerAngle += mouseDelta.x * .03;
 
     // update player movement, prevent walking through walls
     const velocity = keyDirection().rotate(playerAngle).scale(.05);
