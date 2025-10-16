@@ -829,6 +829,8 @@ function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth,
     function isBlack(c) { return c.r <= 0 && c.g <= 0 && c.b <= 0 && c.a <= 0; }
     const sx2 = bleedScale;
     const sy2 = bleedScale;
+    sWidth  = max(1,sWidth|0);
+    sHeight = max(1,sHeight|0);
     const sWidth2  = sWidth  - 2*bleedScale;
     const sHeight2 = sHeight - 2*bleedScale;
     if (!canvasColorTiles || (additiveColor ? isWhite(color.add(additiveColor)) && additiveColor.a <= 0 : isWhite(color)))
@@ -843,7 +845,7 @@ function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth,
         // copy to offscreen canvas
         workCanvas.width = sWidth;
         workCanvas.height = sHeight;
-        workContext.drawImage(image, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
+        workContext.drawImage(image, sx|0, sy|0, sWidth, sHeight, 0, 0, sWidth, sHeight);
 
         // tint image using offscreen work context
         const imageData = workContext.getImageData(0, 0, sWidth, sHeight);
