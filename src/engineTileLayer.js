@@ -643,6 +643,8 @@ class TileCollisionLayer extends TileLayer
         const hitPos = lineTest(posStart, posEnd, collisionTest, normal);
         if (hitPos)
         {
+            const tilePos = hitPos.floor().add(vec2(.5));
+            debugRaycast && debugRect(tilePos, vec2(1), '#f008');
             debugRaycast && debugLine(posStart, hitPos, '#f00', .02);
             debugRaycast && debugPoint(hitPos, '#0f0');
             debugRaycast && normal && 
