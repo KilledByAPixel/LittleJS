@@ -1516,6 +1516,16 @@ declare module "littlejsengine" {
      *  @return {Vector2}
      *  @memberof Draw */
     export function worldToScreen(worldPos: Vector2): Vector2;
+    /** Convert from screen to world space coordinates for a directional vector (no translation)
+     *  @param {Vector2} screenDelta
+     *  @return {Vector2}
+     *  @memberof Draw */
+    export function screenToWorldDelta(screenDelta: Vector2): Vector2;
+    /** Convert from screen to world space coordinates for a directional vector (no translation)
+     *  @param {Vector2} worldDelta
+     *  @return {Vector2}
+     *  @memberof Draw */
+    export function worldToScreenDelta(worldDelta: Vector2): Vector2;
     /** Draw textured tile centered in world space, with color applied if using WebGL
      *  @param {Vector2}  pos                 - Center of the tile in world space
      *  @param {Vector2}  [size=(1,1)]        - Size of the tile in world space
