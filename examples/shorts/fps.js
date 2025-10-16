@@ -4,15 +4,6 @@ setTileFixBleedScale(0);
 // a simple function to create the level
 const levelTest = (p)=> (Math.floor(p.x)**3&Math.floor(p.y)**2)%30>5;
 
-// cast a ray and return the hit position
-function raycast(pos, angle, normal)
-{
-    const maxDistance = 50;
-    const endPos = vec2().setAngle(angle, maxDistance);
-    endPos.x += pos.x; endPos.y += pos.y;
-    return lineTest(pos, endPos, levelTest, normal);
-}
-
 function gameUpdate()
 {
     // update camera angle with mouse pointer lock
@@ -55,14 +46,21 @@ function gameRender()
     }
     {
         // draw vertical slices to create the walls
-        const w = 20;
-        const pos = vec2(), size = vec2(.15), color = rgb();
-        const tileInfo = new TileInfo(vec2(),vec2(0,16));
+        // create objects in advance for optimal performance
+        const w = 15;
+        const maxDistance = 50;
+        const pos = vec2(), endPos = vec2(), size = vec2(.15);
+        const tileInfo = new TileInfo(vec2(), vec2(0,16));
         const normal = vec2(), light = vec2().setAngle(2);
-        for (let x=-w; x<w; x+=.1)
+        const color = rgb();
+        for (pos.x=-w; pos.x<w; pos.x+=.1)
         {
             // cast ray for this slice
-            const p = raycast(playerPos, playerAngle + x/w, normal);
+            const angle = playerAngle + pos.x/w/2;
+            endPos.setAngle(angle, maxDistance);
+            endPos.x += playerPos.x;
+            endPos.y += playerPos.y;
+            const p = lineTest(playerPos, endPos, levelTest, normal);
             if (!p) continue;
 
             // get texture coordinate
@@ -70,13 +68,12 @@ function gameRender()
             tileInfo.pos.x = 161 + 14*t;
 
             // apply fog and lighting
-            const d = p.distance(playerPos)/40;
+            const d = p.distance(playerPos)/maxDistance;
             const l = max(0, normal.dot(light));
             size.y = .5/d;
             color.setHSLA(.6, 1-d, .7-d+l*.3);
 
             // draw the section the wall
-            pos.x = x;
             drawTile(pos, size, tileInfo, color);
         }
     }
