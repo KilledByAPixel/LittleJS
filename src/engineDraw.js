@@ -461,6 +461,8 @@ function drawLine(posA, posB, width=.1, color, pos=vec2(), angle=0, useWebGL, sc
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(width, halfDelta.length()*2);
     pos = pos.add(posA.add(halfDelta));
+    if (screenSpace)
+        halfDelta.y *= -1;  // flip angle Y if screen space
     angle += halfDelta.angle();
     drawRect(pos, size, color, angle, useWebGL, screenSpace, context);
 }
