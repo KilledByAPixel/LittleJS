@@ -1761,7 +1761,6 @@ class Color
      * @return {string} */
     toString(useAlpha = true)
     {
-        ASSERT(typeof useAlpha === 'boolean', 'Use alpha boolean is invalid.', useAlpha);
         if (debug && !this.isValid())
             return `#000`;
         const toHex = (c)=> ((c=clamp(c)*255|0)<16 ? '0' : '') + c.toString(16);

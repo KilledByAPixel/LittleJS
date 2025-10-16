@@ -790,6 +790,12 @@ function LOG(...output) { console.log(...output); }
  *  @memberof Debug */
 function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false)
 {
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(isVector2(size), 'size must be a vec2');
+    ASSERT(isString(color) || isColor(color), 'color is invalid');
+    ASSERT(isNumber(time), 'time must be a number');
+    ASSERT(isNumber(angle), 'angle must be a number');
+
     if (typeof size === 'number')
         size = vec2(size); // allow passing in floats
     if (isColor(color))
@@ -810,6 +816,12 @@ function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false)
  *  @memberof Debug */
 function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false)
 {
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(Array.isArray(points), 'points must be an array');
+    ASSERT(isString(color) || isColor(color), 'color is invalid');
+    ASSERT(isNumber(time), 'time must be a number');
+    ASSERT(isNumber(angle), 'angle must be a number');
+
     if (isColor(color))
         color = color.toString();
     pos = pos.copy();
@@ -827,6 +839,11 @@ function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false)
  *  @memberof Debug */
 function debugCircle(pos, size=0, color=WHITE, time=0, fill=false)
 {
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(isNumber(size), 'size must be a number');
+    ASSERT(isString(color) || isColor(color), 'color is invalid');
+    ASSERT(isNumber(time), 'time must be a number');
+
     if (isColor(color))
         color = color.toString();
     pos = pos.copy();
@@ -852,6 +869,10 @@ function debugPoint(pos, color, time, angle)
  *  @memberof Debug */
 function debugLine(posA, posB, color, width=.1, time)
 {
+    ASSERT(isVector2(posA), 'posA must be a vec2');
+    ASSERT(isVector2(posB), 'posB must be sa vec2');
+    ASSERT(isNumber(width), 'width must be a number');
+
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(width, halfDelta.length()*2);
     debugRect(posA.add(halfDelta), size, color, time, halfDelta.angle(), true);
@@ -866,6 +887,11 @@ function debugLine(posA, posB, color, width=.1, time)
  *  @memberof Debug */
 function debugOverlap(posA, sizeA, posB, sizeB, color)
 {
+    ASSERT(isVector2(posA), 'posA must be a vec2');
+    ASSERT(isVector2(posB), 'posB must be a vec2');
+    ASSERT(isVector2(sizeA), 'sizeA must be a vec2');
+    ASSERT(isVector2(sizeB), 'sizeB must be a vec2');
+
     const minPos = vec2(
         min(posA.x - sizeA.x/2, posB.x - sizeB.x/2),
         min(posA.y - sizeA.y/2, posB.y - sizeB.y/2)
@@ -888,6 +914,14 @@ function debugOverlap(posA, sizeA, posB, sizeB, color)
  *  @memberof Debug */
 function debugText(text, pos, size=1, color=WHITE, time=0, angle=0, font='monospace')
 {
+    ASSERT(isString(text), 'text must be a string');
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(isNumber(size), 'size must be a number');
+    ASSERT(isString(color) || isColor(color), 'color is invalid');
+    ASSERT(isNumber(time), 'time must be a number');
+    ASSERT(isNumber(angle), 'angle must be a number');
+    ASSERT(isString(font), 'font must be a string');
+
     if (isColor(color))
         color = color.toString();
     pos = pos.copy();
@@ -2371,7 +2405,6 @@ class Color
      * @return {string} */
     toString(useAlpha = true)
     {
-        ASSERT(typeof useAlpha === 'boolean', 'Use alpha boolean is invalid.', useAlpha);
         if (debug && !this.isValid())
             return `#000`;
         const toHex = (c)=> ((c=clamp(c)*255|0)<16 ? '0' : '') + c.toString(16);
