@@ -64,7 +64,7 @@ function gameRender()
     for (let i=0; i<1e3; ++i)
     {
         const time = LJS.time;
-        const pos = vec2(30*Math.sin(i+time/9),20*Math.sin(i*i+time/9));
+        const pos = vec2(30*LJS.sin(i+time/9),20*LJS.sin(i*i+time/9));
         LJS.drawTile(pos, vec2(2), tile(3,128), hsl(i/9,1,.4), time+i, !(i%2), hsl(i/9,1,.1,0));
     }
 }

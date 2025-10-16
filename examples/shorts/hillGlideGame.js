@@ -35,7 +35,7 @@ class Player extends EngineObject
 
 function getGroundHeight(x)
 {
-    return Math.sin(x/4)*2 + Math.sin(x/17);
+    return sin(x/4)*2 + sin(x/17);
 }
 
 function gameInit()

@@ -9,7 +9,7 @@ function gameRender()
         pos.x = offset%70 - 35;
         pos.y = i/110 - 9;
         size.x = size.y = i%.11 + .07;
-        color.set(1,1,1,Math.sin(i)**4);
+        color.set(1,1,1,sin(i)**4);
         drawRect(pos, size, color);
     }
 }

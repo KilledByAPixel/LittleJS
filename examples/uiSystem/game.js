@@ -64,7 +64,7 @@ function createUI()
     // example button
     const button1 = new LJS.UIButton(vec2(0,140), vec2(350, 50), 'Test Button');
     uiMenu.addChild(button1);
-    button1.onClick = ()=> uiBackground.color = hsl(Math.random(),1,.7);
+    button1.onClick = ()=> uiBackground.color = hsl(LJS.rand(),1,.7);
 
     // example checkbox
     const checkbox = new LJS.UICheckbox(vec2(-140,-20), vec2(40));
@@ -114,7 +114,7 @@ function gameRender()
     // test game rendering
     for (let i=0; i<1e3; ++i)
     {
-        const pos = vec2(30*Math.sin(i+LJS.time/9),20*Math.sin(i*i+LJS.time/9));
+        const pos = vec2(30*LJS.sin(i+LJS.time/9),20*LJS.sin(i*i+LJS.time/9));
         LJS.drawTile(pos, vec2(2), tile(3,128), hsl(i/9,1,.4), LJS.time+i, !(i%2), hsl(i/9,1,.1,0));
     }
 }

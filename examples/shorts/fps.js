@@ -2,7 +2,7 @@ let playerPos = vec2(), playerAngle = 0;
 setTileFixBleedScale(0);
 
 // a simple function to create the level
-const levelTest = (p)=> (Math.floor(p.x)**3&Math.floor(p.y)**2)%30>5;
+const levelTest = (p)=> (floor(p.x)**3&floor(p.y)**2)%30>5;
 
 function gameUpdate()
 {

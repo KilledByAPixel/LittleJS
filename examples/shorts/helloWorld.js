@@ -7,5 +7,5 @@ function gameRender()
     drawTextOverlay('LittleJS Engine', vec2(0,3), 3);
         
     // draw a tile
-    drawTile(vec2(Math.sin(time)*3,-2), vec2(7), tile(3,128));
+    drawTile(vec2(sin(time)*3,-2), vec2(7), tile(3,128));
 }

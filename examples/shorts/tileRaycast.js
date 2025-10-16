@@ -22,11 +22,15 @@ function gameInit()
 function gameRenderPost()
 {
     // cast ray from camera center to mouse
-    drawLine(cameraPos, mousePos, .1, BLUE);
+    drawLine(cameraPos, mousePos, .1, CYAN);
     const normal = vec2();
     const hit = tileCollisionRaycast(cameraPos, mousePos, 0, normal);
     if (hit)
     {
+        // draw hit tile
+        const tilePos = hit.floor().add(vec2(.5));
+        drawRect(tilePos, vec2(1), RED);
+
         // draw hit point and normal
         drawRect(hit, vec2(.2), GREEN);
         drawLine(cameraPos, hit, .1, RED);

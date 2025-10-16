@@ -6,7 +6,7 @@ function gameInit()
 function gameRender()
 {
     drawRect(vec2(), vec2(99), GRAY);
-    drawTile(vec2(Math.sin(time)*3, 0), vec2(12), tile(3,128));
+    drawTile(vec2(sin(time)*3, 0), vec2(12), tile(3,128));
 }
 
 const tvShader = `

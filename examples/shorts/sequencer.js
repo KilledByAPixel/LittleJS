@@ -34,7 +34,7 @@ class UISequencerButton extends UIButton
         this.hue = track*.15;
         if (track >= pianoStart)
         {
-            const octave = Math.floor((track-pianoStart) / scale.length);
+            const octave = floor((track-pianoStart) / scale.length);
             const scaleNote = (track-pianoStart) % scale.length;
             this.semitone = scale[scaleNote] + 12*octave;
             this.sound = sound_piano;
@@ -93,7 +93,7 @@ function gameInit()
     tempoSlider.onChange = ()=>
     {
         tempo = lerp(minTempo, maxTempo, tempoSlider.value);
-        tempo = Math.floor(tempo/10) * 10; // round to nearest 10th
+        tempo = floor(tempo/10) * 10; // round to nearest 10th
         tempoSlider.text = `${tempo} BPM`;
     };
     tempoSlider.onChange();
@@ -108,7 +108,7 @@ function gameUpdate()
     const lastStepTime = stepTime;
     const lastStep = currentStep;
     stepTime += timeDelta*tempo/60;
-    currentStep = Math.floor(stepTime) % stepCount;
+    currentStep = floor(stepTime) % stepCount;
     if (currentStep == lastStep && lastStepTime)
         return;
 

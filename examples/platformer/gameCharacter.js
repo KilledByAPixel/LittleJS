@@ -238,7 +238,7 @@ export class Character extends GameObjects.GameObject
         if (!this.isDead())
         {
             // bounce pos with walk cycle
-            bodyPos = bodyPos.add(vec2(0,.05*Math.sin(this.walkCyclePercent*LJS.PI)));
+            bodyPos = bodyPos.add(vec2(0,.05*LJS.sin(this.walkCyclePercent*LJS.PI)));
 
             // make bottom flush
             bodyPos = bodyPos.add(vec2(0,(this.drawSize.y-this.size.y)/2));

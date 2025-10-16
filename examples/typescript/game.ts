@@ -69,13 +69,13 @@ function gameInit()
     // create particle emitter
     particleEmitter = new LJS.ParticleEmitter(
         vec2(16,9), 0,              // emitPos, emitAngle
-        1, 0, 500, Math.PI,         // emitSize, emitTime, rate, cone
+        0, 0, 500, 3.14,            // emitSize, emitTime, rate, cone
         tile(0, 16),                // tileIndex, tileSize
         hsl(1,1,1),   hsl(0,0,0),   // colorStartA, colorStartB
         hsl(0,0,0,0), hsl(0,0,0,0), // colorEndA, colorEndB
-        1, .2, .2, .1, .05,   // time, sizeStart, sizeEnd, speed, angleSpeed
-        .99, 1, 1, Math.PI,   // damping, angleDamping, gravityScale, cone
-        .05, .5, true, true   // fadeRate, randomness, collide, additive
+        1, .2, .2, .1, .05, // time, sizeStart, sizeEnd, speed, angleSpeed
+        .99, 1, 1, 3.14,    // damping, angleDamping, gravityScale, cone
+        .05, .5, true, true // fadeRate, randomness, collide, additive
     );
     particleEmitter.restitution = .3; // bounce when it collides
     particleEmitter.trailScale = 2;  // stretch stretch as it moves

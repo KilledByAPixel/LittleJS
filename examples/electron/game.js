@@ -16,13 +16,6 @@ setTileFixBleedScale(.5);
 // sound effects
 const sound_click = new Sound([1,.5]);
 
-// medals
-const medal_example = new Medal(0, 'Example Medal', 'Welcome to LittleJS!');
-medalsInit('Hello World');
-
-// game variables
-let particleEmitter;
-
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
@@ -58,24 +51,6 @@ function gameInit()
     // setup camera
     setCameraPos(vec2(16,8));
     setCameraScale(32);
-
-    // enable gravity
-    setGravity(vec2(0,-.01));
-
-    // create particle emitter
-    particleEmitter = new ParticleEmitter(
-        vec2(16,9), 0,              // emitPos, emitAngle
-        0, 0, 500, PI,              // emitSize, emitTime, rate, cone
-        tile(0, 16),                // tileIndex, tileSize
-        hsl(1,1,1),   hsl(0,0,0),   // colorStartA, colorStartB
-        hsl(0,0,0,0), hsl(0,0,0,0), // colorEndA, colorEndB
-        1, .2, .2, .1, .05,         // time, sizeStart, sizeEnd, speed, angleSpeed
-        .99, 1, 1, PI,              // damping, angleDamping, gravityScale, cone
-        .05, .5, true, true         // fadeRate, randomness, collide, additive
-    );
-    particleEmitter.restitution = .3; // bounce when it collides
-    particleEmitter.trailScale = 2;   // stretch as it moves
-    particleEmitter.velocityInheritance = .3; // inherit emitter velocity
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -85,15 +60,6 @@ function gameUpdate()
     {
         // play sound when mouse is pressed
         sound_click.play(mousePos);
-
-        // change particle color and set to fade out
-        particleEmitter.colorStartA = randColor();
-        particleEmitter.colorStartB = randColor();
-        particleEmitter.colorEndA = particleEmitter.colorStartA.scale(1,0);
-        particleEmitter.colorEndB = particleEmitter.colorStartB.scale(1,0);
-
-        // unlock medals
-        medal_example.unlock();
     }
 
     if (mouseWheel)
@@ -102,10 +68,6 @@ function gameUpdate()
         cameraScale -= sign(mouseWheel)*cameraScale/5;
         cameraScale = clamp(cameraScale, 10, 300);
     }
-
-    // move particles to mouse location if on screen
-    if (mousePosScreen.x)
-        particleEmitter.pos = mousePos;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -128,7 +90,7 @@ function gameRender()
 function gameRenderPost()
 {
     // draw to overlay canvas for hud rendering
-    drawTextScreen('LittleJS Demo', 
+    drawTextScreen('LittleJS Electron Demo', 
         vec2(mainCanvasSize.x/2, 70), 80,   // position, size
         hsl(0,0,1), 6, hsl(0,0,0));         // color, outline size and color
 }

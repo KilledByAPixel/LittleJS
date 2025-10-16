@@ -298,12 +298,10 @@ function getCode()
 {
     const expand = inputExpand.checked;
     let code = '';
-
-    // https://www.codingem.com/javascript-how-to-limit-decimal-places/
-    Number.prototype.round = function(n) {
-        const d = Math.pow(10, n);
-        return Math.round((this + Number.EPSILON) * d) / d;
-    }
+    
+    // limit float precision to prevent long strings
+    const trimFloat = (n, decimals=3)=>
+        Number(Number(n).toFixed(decimals));
 
     code = 'new ParticleEmitter(';
     if (expand)
@@ -325,13 +323,12 @@ function getCode()
         else if (type == 'color')
         {
             const c = particleSystem[name];
-            const p = 3;
-            value = `new Color(${c.r.round(p)}, ${c.g.round(p)}, ${c.b.round(p)}, ${c.a.round(p)})`;
+            value = `new Color(${trimFloat(c.r)}, ${trimFloat(c.g)}, ${trimFloat(c.b)}, ${trimFloat(c.a)})`;
         }
         else if (type == 'checkbox')
             value = particleSystem[name] ? 1 : 0;
         else
-            value = particleSystem[name].round(3);
+            value = trimFloat(particleSystem[name]);
         if (expand)
             code += '  ';
         code += value;

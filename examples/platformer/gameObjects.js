@@ -106,7 +106,7 @@ export class Coin extends LJS.EngineObject
 
         // make it appear to spin
         const t = LJS.time+this.pos.x/4+this.pos.y/4;
-        const spinSize = vec2(.5+.5*Math.sin(t*2*LJS.PI), 1);
+        const spinSize = vec2(.5+.5*LJS.sin(t*2*LJS.PI), 1);
         if (spinSize.x > .1)
         LJS.drawTile(this.pos, spinSize, this.tileInfo, this.color);
     }
@@ -174,7 +174,7 @@ export class Enemy extends GameObject
     {
         // bounce by changing size
         const bounceTime = this.bounceTime*6;
-        this.drawSize = vec2(1-.1*Math.sin(bounceTime), 1+.1*Math.sin(bounceTime));
+        this.drawSize = vec2(1-.1*LJS.sin(bounceTime), 1+.1*LJS.sin(bounceTime));
 
         // make bottom flush
         let bodyPos = this.pos;
@@ -221,7 +221,7 @@ export class Grenade extends GameObject
 
         // draw additive flash exploding
         LJS.setBlendMode(true);
-        const flash = Math.cos(this.getAliveTime()*2*LJS.PI);
+        const flash = LJS.cos(this.getAliveTime()*2*LJS.PI);
         LJS.drawTile(this.pos, vec2(2), Game.spriteAtlas.circle, hsl(0,1,.5,.2-.2*flash));
         LJS.setBlendMode(false);
     }
