@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.14.24';
+const engineVersion = '1.14.25';
 
 /** Frames per second to update
  *  @type {number}
@@ -4340,7 +4340,12 @@ function inputInit()
         mouseInWindow = true;
         let mousePosScreenLast = mousePosScreen;
         mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
-        mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
+
+        // when pointer is locked use movementX/Y for delta
+        const movement = pointerLockIsActive() ?
+            vec2(e.movementX, e.movementY) :
+            mousePosScreen.subtract(mousePosScreenLast);
+        mouseDeltaScreen = mouseDeltaScreen.add(movement);
     }
     function onMouseLeave() { mouseInWindow = false; } // mouse moved off window
     function onMouseWheel(e) { mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY); }
