@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.14.21';
+const engineVersion = '1.14.22';
 
 /** Frames per second to update
  *  @type {number}
@@ -516,7 +516,7 @@ function engineObjectsCollect(pos, size, objects=engineObjects)
 
 /**
  * @callback ObjectCallbackFunction - Function that processes an object
- * @param {EngineObject} uiObjects
+ * @param {EngineObject} object
  *  @memberof Engine
  */
 
@@ -1340,6 +1340,33 @@ function debugVideoCaptureUpdate()
     debugVideoCaptureTrack.requestFrame();
     debugVideoCaptureIcon.textContent = '● REC ' + formatTime(debugVideoCaptureTimer);
 }
+
+// make color constants immutable with debug assertions
+function debugProtectConstant(obj)
+{
+    if (debug)
+    {
+        // get properties and store original values
+        const props = Object.keys(obj), values = {};
+        props.forEach(prop => values[prop] = obj[prop]);
+        
+        // replace with getters/setters that assert
+        props.forEach(prop =>
+        {
+            Object.defineProperty(obj, prop, {
+                get: () => values[prop],
+                set: (value) => 
+                {
+                    ASSERT(false, `Cannot modify engine constant. Attempted to set constant (${obj}) property '${prop}' to '${value}'.`);
+                },
+                enumerable: true
+            });
+        });
+    }
+    
+    // freeze the object to prevent adding new properties
+    return Object.freeze(obj);
+}
 /**
  * LittleJS Utility Classes and Functions
  * - General purpose math library
@@ -1589,6 +1616,84 @@ function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
  * @return {boolean}
  * @memberof Utilities */
 function isString(s) { return s !== undefined && s !== null && typeof s.toString() === 'string'; }
+
+/**
+ * @callback LineTestFunction - Checks if a position is colliding
+ * @param {Vector2} pos
+ * @memberof Draw
+ */
+
+/**
+ * Casts a ray and returns position of the first collision found, or undefined if none are found
+ * @param {Vector2} posStart
+ * @param {Vector2} posEnd
+ * @param {LineTestFunction} testFunction - Check if colliding
+ * @param {Vector2} [normal] - Optional vector to store the normal
+ * @return {Vector2|undefined} - Position of the collision or undefined if none found
+ * @memberof Utilities */
+function lineTest(posStart, posEnd, testFunction, normal)
+{
+    ASSERT(isVector2(posStart), 'posStart must be a vec2');
+    ASSERT(isVector2(posEnd), 'posEnd must be a vec2');
+    ASSERT(typeof testFunction === 'function', 'testFunction must be a function');
+    ASSERT(!normal || isVector2(normal), 'normal must be a vec2');
+
+    // get ray direction and length
+    const dx = posEnd.x - posStart.x;
+    const dy = posEnd.y - posStart.y;
+    const totalLength = Math.hypot(dx, dy);
+    if (!totalLength)
+        return;
+
+    // current integer cell we are in
+    const pos = posStart.floor();
+
+    // normalize ray direction
+    const dirX = dx / totalLength;
+    const dirY = dy / totalLength;
+
+    // step direction in grid
+    const stepX = sign(dirX);
+    const stepY = sign(dirY);
+
+    // distance along the ray to cross one full cell in X or Y
+    const tDeltaX = dirX ? abs(1 / dirX) : Infinity;
+    const tDeltaY = dirY ? abs(1 / dirY) : Infinity;
+
+    // distance along the ray from start to the first grid boundary
+    const nextGridX = stepX > 0 ? pos.x + 1 : pos.x;
+    const nextGridY = stepY > 0 ? pos.y + 1 : pos.y;
+    const tMaxX = dirX ? (nextGridX - posStart.x) / dirX : Infinity;
+    const tMaxY = dirY ? (nextGridY - posStart.y) / dirY : Infinity;
+
+    // use line drawing algorithm to test for collisions
+    let t = 0, tX = tMaxX, tY = tMaxY, wasX = tDeltaX < tDeltaY;
+    while (t < totalLength)
+    {
+        if (testFunction(pos))
+        {
+            // set exact hit point and normal
+            pos.set( posStart.x + dirX*t, posStart.y + dirY*t);
+            if (normal)
+                wasX ? normal.set(-stepX,0) : normal.set(0,-stepY);
+            return pos;
+        }
+
+        // advance to the next cell boundary
+        if (wasX = tX < tY)
+        {
+            pos.x += stepX;
+            t = tX;
+            tX += tDeltaX;
+        }
+        else
+        {
+            pos.y += stepY;
+            t = tY;
+            tY += tDeltaY;
+        }
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -2259,67 +2364,67 @@ class Color
 /** Color - White #ffffff
  *  @type {Color}
  *  @memberof Utilities */
-const WHITE = protectEngineConstant(rgb());
+const WHITE = debugProtectConstant(rgb());
 
 /** Color - Clear White #757474ff with 0 alpha
  *  @type {Color}
  *  @memberof Utilities */
-const CLEAR_WHITE = protectEngineConstant(rgb(1,1,1,0));
+const CLEAR_WHITE = debugProtectConstant(rgb(1,1,1,0));
 
 /** Color - Black #000000
  *  @type {Color}
  *  @memberof Utilities */
-const BLACK = protectEngineConstant(rgb(0,0,0));
+const BLACK = debugProtectConstant(rgb(0,0,0));
 
 /** Color - Clear Black #000000 with 0 alpha
  *  @type {Color}
  *  @memberof Utilities */
-const CLEAR_BLACK = protectEngineConstant(rgb(0,0,0,0));
+const CLEAR_BLACK = debugProtectConstant(rgb(0,0,0,0));
 
 /** Color - Gray #808080
  *  @type {Color}
  *  @memberof Utilities */
-const GRAY = protectEngineConstant(rgb(.5,.5,.5));
+const GRAY = debugProtectConstant(rgb(.5,.5,.5));
 
 /** Color - Red #ff0000
  *  @type {Color}
  *  @memberof Utilities */
-const RED = protectEngineConstant(rgb(1,0,0));
+const RED = debugProtectConstant(rgb(1,0,0));
 
 /** Color - Orange #ff8000
  *  @type {Color}
  *  @memberof Utilities */
-const ORANGE = protectEngineConstant(rgb(1,.5,0));
+const ORANGE = debugProtectConstant(rgb(1,.5,0));
 
 /** Color - Yellow #ffff00
  *  @type {Color}
  *  @memberof Utilities */
-const YELLOW = protectEngineConstant(rgb(1,1,0));
+const YELLOW = debugProtectConstant(rgb(1,1,0));
 
 /** Color - Green #00ff00
  *  @type {Color}
  *  @memberof Utilities */
-const GREEN = protectEngineConstant(rgb(0,1,0));
+const GREEN = debugProtectConstant(rgb(0,1,0));
 
 /** Color - Cyan #00ffff
  *  @type {Color}
  *  @memberof Utilities */
-const CYAN = protectEngineConstant(rgb(0,1,1));
+const CYAN = debugProtectConstant(rgb(0,1,1));
 
 /** Color - Blue #0000ff
  *  @type {Color}
  *  @memberof Utilities */
-const BLUE = protectEngineConstant(rgb(0,0,1));
+const BLUE = debugProtectConstant(rgb(0,0,1));
 
 /** Color - Purple #8000ff
  *  @type {Color}
  *  @memberof Utilities */
-const PURPLE = protectEngineConstant(rgb(.5,0,1));
+const PURPLE = debugProtectConstant(rgb(.5,0,1));
 
 /** Color - Magenta #ff00ff
  *  @type {Color}
  *  @memberof Utilities */
-const MAGENTA = protectEngineConstant(rgb(1,0,1));
+const MAGENTA = debugProtectConstant(rgb(1,0,1));
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -2387,36 +2492,6 @@ class Timer
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {number} */
     valueOf() { return this.get(); }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Helper functions used by the engine
-
-// make color constants immutable with debug assertions
-function protectEngineConstant(obj)
-{
-    if (debug)
-    {
-        // get properties and store original values
-        const props = Object.keys(obj), values = {};
-        props.forEach(prop => values[prop] = obj[prop]);
-        
-        // replace with getters/setters that assert
-        props.forEach(prop =>
-        {
-            Object.defineProperty(obj, prop, {
-                get: () => values[prop],
-                set: (value) => 
-                {
-                    ASSERT(false, `Cannot modify engine constant. Attempted to set constant (${obj}) property '${prop}' to '${value}'.`);
-                },
-                enumerable: true
-            });
-        });
-    }
-    
-    // freeze the object to prevent adding new properties
-    return Object.freeze(obj);
 }
 /**
  * LittleJS Engine Settings
@@ -2817,9 +2892,14 @@ function setHeadlessMode(headless) { headlessMode = headless; }
  *  @memberof Settings */
 function setGLEnable(enable)
 {
+    if (enable && !glCanBeEnabled)
+    {
+        console.warn('Can not enable WebGL if it was disabled on start.');
+        return;
+    }
     glEnable = enable;
     if (glCanvas) // hide glCanvas if WebGL is disabled
-        glCanvas.style.visibility = enable ? 'visible' : 'hidden';
+        glCanvas.style.display = enable ? '' : 'none';
 }
 
 /** Set how many sided polygons to use when drawing circles and ellipses with WebGL
@@ -3736,6 +3816,7 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=WHITE,
     const bleedScale = tileInfo ? tileInfo.bleedScale : 0;
     if (useWebGL)
     {
+        ASSERT(!!glContext, 'WebGL is not enabled!');
         if (screenSpace)
         {
             // convert to world space
@@ -3831,6 +3912,7 @@ function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0,
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
     if (useWebGL)
     {
+        ASSERT(!!glContext, 'WebGL is not enabled!');
         if (screenSpace)
         {
             // convert to world space
@@ -3893,6 +3975,7 @@ function drawLineList(points, width=.1, color, wrap=false, pos=vec2(), angle=0, 
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
     if (useWebGL)
     {
+        ASSERT(!!glContext, 'WebGL is not enabled!');
         let scale = 1;
         if (screenSpace)
         {
@@ -3942,6 +4025,8 @@ function drawLine(posA, posB, width=.1, color, pos=vec2(), angle=0, useWebGL, sc
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(width, halfDelta.length()*2);
     pos = pos.add(posA.add(halfDelta));
+    if (screenSpace)
+        halfDelta.y *= -1;  // flip angle Y if screen space
     angle += halfDelta.angle();
     drawRect(pos, size, color, angle, useWebGL, screenSpace, context);
 }
@@ -3996,6 +4081,7 @@ function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(),
 
     if (useWebGL)
     {
+        ASSERT(!!glContext, 'WebGL is not enabled!');
         let scale = 1;
         if (screenSpace)
         {
@@ -4307,6 +4393,8 @@ function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth,
     function isBlack(c) { return c.r <= 0 && c.g <= 0 && c.b <= 0 && c.a <= 0; }
     const sx2 = bleedScale;
     const sy2 = bleedScale;
+    sWidth  = max(1,sWidth|0);
+    sHeight = max(1,sHeight|0);
     const sWidth2  = sWidth  - 2*bleedScale;
     const sHeight2 = sHeight - 2*bleedScale;
     if (!canvasColorTiles || (additiveColor ? isWhite(color.add(additiveColor)) && additiveColor.a <= 0 : isWhite(color)))
@@ -4321,7 +4409,7 @@ function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth,
         // copy to offscreen canvas
         workCanvas.width = sWidth;
         workCanvas.height = sHeight;
-        workContext.drawImage(image, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
+        workContext.drawImage(image, sx|0, sy|0, sWidth, sHeight, 0, 0, sWidth, sHeight);
 
         // tint image using offscreen work context
         const imageData = workContext.getImageData(0, 0, sWidth, sHeight);
@@ -5824,23 +5912,22 @@ function tileCollisionTest(pos, size=vec2(), object, solidOnly=true)
     }
 }
 
-/** Return the center of first tile hit, undefined if nothing was hit.
- *  This does not return the exact intersection, but the center of the tile hit.
+/** Return the exact position of the boudnary of first tile hit, undefined if nothing was hit.
  *  @param {Vector2}      posStart
  *  @param {Vector2}      posEnd
  *  @param {EngineObject} [object] - An object or undefined for generic test
+ *  @param {Vector2}      [normal] - Optional normal of the surface hit
  *  @param {boolean}      [solidOnly=true] - Only check solid layers if true
- *  @return {Vector2}
+ *  @return {Vector2|undefined} - position of the center of the tile hit or undefined if no hit
  *  @memberof TileLayers */
-function tileCollisionRaycast(posStart, posEnd, object, solidOnly=true)
+function tileCollisionRaycast(posStart, posEnd, object, normal, solidOnly=true)
 {
     for (const layer of tileCollisionLayers)
     {
         if (!solidOnly || layer.isSolid)
         {
-            const hitPos = layer.collisionRaycast(posStart, posEnd, object)
-            if (hitPos)
-                return hitPos;
+            const hitPos = layer.collisionRaycast(posStart, posEnd, object, normal)
+            if (hitPos) return hitPos;
         }
     }
 }
@@ -6133,7 +6220,7 @@ class TileLayer extends CanvasLayer
     */
     constructor(position, size, tileInfo=tile(), renderOrder=0)
     {
-        const canvasSize = size.multiply(tileInfo.size);
+        const canvasSize = tileInfo ? size.multiply(tileInfo.size) : size;
         super(position, size, 0, renderOrder, canvasSize);
 
         // set tile info
@@ -6229,8 +6316,9 @@ class TileLayer extends CanvasLayer
         drawCanvas = this.canvas;
         drawContext = this.context;
         cameraPos = this.size.scale(.5);
-        cameraScale = this.tileInfo.size.x;
-        mainCanvasSize = this.size.multiply(this.tileInfo.size);
+        const tileSize = this.tileInfo ? this.tileInfo.size : vec2(1);
+        cameraScale = tileSize.x;
+        mainCanvasSize = this.size.multiply(tileSize);
         if (clear)
         {
             // clear and set size
@@ -6390,66 +6478,42 @@ class TileCollisionLayer extends TileLayer
             // check if the object should collide with this tile
             const tileData = this.collisionData[y*this.size.x+x];
             if (tileData)
-            if (!object || object.collideWithTile(tileData, hitPos.set(x, y)))
+            if (!object || object.collideWithTile(tileData, 
+                hitPos.set(x + this.pos.x, y + this.pos.y)))
                 return true;
         }
         return false;
     }
 
-    /** Return the center of first tile hit, undefined if nothing was hit.
-    *  This does not return the exact intersection, but the center of the tile hit.
+    /** Return the exact position of the boudnary of first tile hit, undefined if nothing was hit.
     *  @param {Vector2}      posStart
     *  @param {Vector2}      posEnd
-    *  @param {EngineObject} [object]
-    *  @return {Vector2} */
-    collisionRaycast(posStart, posEnd, object)
+    *  @param {EngineObject} [object] - An object or undefined for generic test
+    *  @param {Vector2}      [normal] - Optional normal of the surface hit
+    *  @return {Vector2|undefined} */
+    collisionRaycast(posStart, posEnd, object, normal)
     {
         ASSERT(isVector2(posStart) && isVector2(posEnd), 'positions must be Vector2s');
         ASSERT(!object || object instanceof EngineObject, 'object must be an EngineObject');
-        
-        // transform to local layer space
-        const posStartX = posStart.x - this.pos.x;
-        const posStartY = posStart.y - this.pos.y;
-        const posEndX   = posEnd.x   - this.pos.x;
-        const posEndY   = posEnd.y   - this.pos.y;
 
-        // test if a ray collides with tiles from start to end
-        const deltaX = posEndX - posStartX;
-        const deltaY = posEndY - posStartY;
-        const totalLength = (deltaX**2 + deltaY**2)**.5;
-        const unitX = abs(totalLength/deltaX);
-        const unitY = abs(totalLength/deltaY);
-
-        // setup iteration variables
-        const pos = posStart.floor(), signDeltaX = sign(deltaX), signDeltaY = sign(deltaY);
-        let xi = unitX * (deltaX < 0 ? posStart.x - pos.x : pos.x - posStart.x + 1) || 0;
-        let yi = unitY * (deltaY < 0 ? posStart.y - pos.y : pos.y - posStart.y + 1) || 0;
-
-        // use line drawing algorithm to test for collisions
-        while (true)
+        const localPos = new Vector2;
+        const collisionTest = (pos)=>
         {
             // check for tile collision
-            const tileData = this.getCollisionData(pos);
-            if (tileData && (!object || object.collideWithTile(tileData, pos)))
-            {
-                pos.x += .5; pos.y += .5;
-                debugRaycast && debugLine(posStart, posEnd, '#f00', .02);
-                debugRaycast && debugPoint(pos, '#ff0');
-                return pos;
-            }
-
-            // check if past the end
-            if (xi >= totalLength && yi >= totalLength)
-                break;
-
-            // get coordinates of next tile to check
-            if (xi > yi)
-                pos.y += signDeltaY, yi += unitY;
-            else
-                pos.x += signDeltaX, xi += unitX;
+            localPos.set(pos.x - this.pos.x, pos.y - this.pos.y);
+            const tileData = this.getCollisionData(localPos);
+            return tileData && (!object || object.collideWithTile(tileData, pos));
         }
-
         debugRaycast && debugLine(posStart, posEnd, '#00f', .02);
+        const hitPos = lineTest(posStart, posEnd, collisionTest, normal);
+        if (hitPos)
+        {
+            debugRaycast && debugLine(posStart, hitPos, '#f00', .02);
+            debugRaycast && debugPoint(hitPos, '#0f0');
+            debugRaycast && normal && 
+                debugLine(hitPos, hitPos.add(normal), '#ff0', .02);
+            return hitPos;
+        }
     }
 }
 /**
@@ -7070,7 +7134,7 @@ let glContext;
 let glAntialias = true;
 
 // WebGL internal variables not exposed to documentation
-let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos;
+let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos, glCanBeEnabled = true;
 
 // WebGL internal constants
 const gl_ARRAY_BUFFER_SIZE = 5e5;
@@ -7089,7 +7153,11 @@ function glInit()
     // keep set of texture infos so they can be restored if context is lost
     glTextureInfos = new Set;
 
-    if (!glEnable || headlessMode) return;
+    if (!glEnable || headlessMode)
+    {
+        glCanBeEnabled = false;
+        return;
+    }
 
     // create the canvas and textures
     glCanvas = document.createElement('canvas');
@@ -7100,10 +7168,11 @@ function glInit()
         console.warn('WebGL2 not supported, falling back to 2D canvas rendering!');
         glCanvas = glContext = undefined;
         glEnable = false;
+        glCanBeEnabled = false;
         return;
     }
 
-    // create the WebGL canvas
+    // attach the WebGL canvas
     const rootElement = mainCanvas.parentElement;
     rootElement.appendChild(glCanvas);
     
@@ -7126,7 +7195,7 @@ function glInit()
     });
     glCanvas.addEventListener('webglcontextrestored', ()=>
     {
-        glEnable = true; // disable WebGL rendering
+        glEnable = true; // re-enable WebGL rendering
         glCanvas.style.display = ''; // show the gl canvas
         LOG('WebGL context restored, reinitializing...');
 

@@ -14,7 +14,11 @@ declare module "littlejsengine" {
     /**
      * - Function that processes an object
      */
-    export type ObjectCallbackFunction = (uiObjects: EngineObject) => any;
+    export type ObjectCallbackFunction = (object: EngineObject) => any;
+    /**
+     * - Checks if a position is colliding
+     */
+    export type LineTestFunction = (pos: Vector2) => any;
     /**
      * - A function that draws to a 2D canvas context
      */
@@ -143,7 +147,7 @@ declare module "littlejsengine" {
     export function engineObjectsCollect(pos?: Vector2, size?: Vector2 | number, objects?: Array<EngineObject>): Array<EngineObject>;
     /**
      * @callback ObjectCallbackFunction - Function that processes an object
-     * @param {EngineObject} uiObjects
+     * @param {EngineObject} object
      *  @memberof Engine
      */
     /** Triggers a callback for each object within a given area
@@ -2417,15 +2421,15 @@ declare module "littlejsengine" {
      *  @return {TileCollisionLayer}
      *  @memberof TileLayers */
     export function tileCollisionTest(pos: Vector2, size?: Vector2, object?: EngineObject, solidOnly?: boolean): TileCollisionLayer;
-    /** Return the center of first tile hit, undefined if nothing was hit.
-     *  This does not return the exact intersection, but the center of the tile hit.
+    /** Return the exact position of the boudnary of first tile hit, undefined if nothing was hit.
      *  @param {Vector2}      posStart
      *  @param {Vector2}      posEnd
      *  @param {EngineObject} [object] - An object or undefined for generic test
+     *  @param {Vector2}      [normal] - Optional normal of the surface hit
      *  @param {boolean}      [solidOnly=true] - Only check solid layers if true
-     *  @return {Vector2}
+     *  @return {Vector2|undefined} - position of the center of the tile hit or undefined if no hit
      *  @memberof TileLayers */
-    export function tileCollisionRaycast(posStart: Vector2, posEnd: Vector2, object?: EngineObject, solidOnly?: boolean): Vector2;
+    export function tileCollisionRaycast(posStart: Vector2, posEnd: Vector2, object?: EngineObject, normal?: Vector2, solidOnly?: boolean): Vector2 | undefined;
     /**
      * Load tile layers from exported data
      *  @param {Object}   tileMapData - Level data from exported data
@@ -2610,13 +2614,13 @@ declare module "littlejsengine" {
         *  @param {EngineObject} [object]
         *  @return {boolean} */
         collisionTest(pos: Vector2, size?: Vector2, object?: EngineObject): boolean;
-        /** Return the center of first tile hit, undefined if nothing was hit.
-        *  This does not return the exact intersection, but the center of the tile hit.
+        /** Return the exact position of the boudnary of first tile hit, undefined if nothing was hit.
         *  @param {Vector2}      posStart
         *  @param {Vector2}      posEnd
-        *  @param {EngineObject} [object]
-        *  @return {Vector2} */
-        collisionRaycast(posStart: Vector2, posEnd: Vector2, object?: EngineObject): Vector2;
+        *  @param {EngineObject} [object] - An object or undefined for generic test
+        *  @param {Vector2}      [normal] - Optional normal of the surface hit
+        *  @return {Vector2|undefined} */
+        collisionRaycast(posStart: Vector2, posEnd: Vector2, object?: EngineObject, normal?: Vector2): Vector2 | undefined;
     }
     /**
      * LittleJS Particle System
