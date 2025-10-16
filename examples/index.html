@@ -551,7 +551,10 @@ function setCode(code, filename)
         {
             // setup frame controls
             setFrameControlsEnabled();
-            iframeContent.setGLEnable(checkboxWebGL.checked);
+            if (iframeContent.glCanEnable())
+                iframeContent.setGLEnable(checkboxWebGL.checked);
+            else
+                checkboxWebGL.disabled = true;
             checkboxWebGL.onchange = ()=> iframeContent.setGLEnable(checkboxWebGL.checked);
         })
     }

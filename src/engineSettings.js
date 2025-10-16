@@ -399,9 +399,14 @@ function setHeadlessMode(headless) { headlessMode = headless; }
  *  @memberof Settings */
 function setGLEnable(enable)
 {
+    if (enable && !glCanBeEnabled)
+    {
+        console.warn('Can not enable WebGL if it was disabled on start.');
+        return;
+    }
     glEnable = enable;
     if (glCanvas) // hide glCanvas if WebGL is disabled
-        glCanvas.style.visibility = enable ? 'visible' : 'hidden';
+        glCanvas.style.display = enable ? '' : 'none';
 }
 
 /** Set how many sided polygons to use when drawing circles and ellipses with WebGL

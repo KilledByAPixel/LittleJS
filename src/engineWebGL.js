@@ -29,7 +29,7 @@ let glContext;
 let glAntialias = true;
 
 // WebGL internal variables not exposed to documentation
-let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos;
+let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos, glCanBeEnabled = true;
 
 // WebGL internal constants
 const gl_ARRAY_BUFFER_SIZE = 5e5;
@@ -48,7 +48,11 @@ function glInit()
     // keep set of texture infos so they can be restored if context is lost
     glTextureInfos = new Set;
 
-    if (!glEnable || headlessMode) return;
+    if (!glEnable || headlessMode)
+    {
+        glCanBeEnabled = false;
+        return;
+    }
 
     // create the canvas and textures
     glCanvas = document.createElement('canvas');
@@ -59,10 +63,11 @@ function glInit()
         console.warn('WebGL2 not supported, falling back to 2D canvas rendering!');
         glCanvas = glContext = undefined;
         glEnable = false;
+        glCanBeEnabled = false;
         return;
     }
 
-    // create the WebGL canvas
+    // attach the WebGL canvas
     const rootElement = mainCanvas.parentElement;
     rootElement.appendChild(glCanvas);
     
@@ -85,7 +90,7 @@ function glInit()
     });
     glCanvas.addEventListener('webglcontextrestored', ()=>
     {
-        glEnable = true; // disable WebGL rendering
+        glEnable = true; // re-enable WebGL rendering
         glCanvas.style.display = ''; // show the gl canvas
         LOG('WebGL context restored, reinitializing...');
 
