@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.14.22';
+const engineVersion = '1.14.23';
 
 /** Frames per second to update
  *  @type {number}
@@ -564,7 +564,7 @@ function drawEngineSplashScreen(t)
         // background
         const p3 = percent(t, 1, .8);
         const p4 = percent(t, 0, .5);
-        const g = x.createRadialGradient(w/2,h/2,0,w/2,h/2,Math.hypot(w,h)*.7);
+        const g = x.createRadialGradient(w/2,h/2,0,w/2,h/2,hypot(w,h)*.7);
         g.addColorStop(0,hsl(0,0,lerp(0,p3/2,p4),p3).toString());
         g.addColorStop(1,hsl(0,0,0,p3).toString());
         x.save();
@@ -1377,7 +1377,7 @@ function debugProtectConstant(obj)
  * @namespace Utilities
  */
 
-/** A shortcut to get Math.PI
+/** The value of PI
  *  @type {number}
  *  @default Math.PI
  *  @memberof Utilities */
@@ -1387,25 +1387,80 @@ const PI = Math.PI;
  *  @param {number} value
  *  @return {number}
  *  @memberof Utilities */
-function abs(value) { return Math.abs(value); }
+const abs = Math.abs;
+
+/** Returns floored value of value passed in
+ *  @param {number} value
+ *  @return {number}
+ *  @memberof Utilities */
+const floor = Math.floor;
+
+/** Returns ceiled value of value passed in
+ *  @param {number} value
+ *  @return {number}
+ *  @memberof Utilities */
+const ceil = Math.ceil;
+
+/** Returns rounded value passed in
+ *  @param {number} value
+ *  @return {number}
+ *  @memberof Utilities */
+const round = Math.round;
 
 /** Returns lowest value passed in
  *  @param {...number} values
  *  @return {number}
  *  @memberof Utilities */
-function min(...values) { return Math.min(...values); }
+const min = Math.min;
 
 /** Returns highest value passed in
  *  @param {...number} values
  *  @return {number}
  *  @memberof Utilities */
-function max(...values) { return Math.max(...values); }
+const max = Math.max;
 
 /** Returns the sign of value passed in
  *  @param {number} value
  *  @return {number}
  *  @memberof Utilities */
-function sign(value) { return Math.sign(value); }
+const sign = Math.sign;
+
+/** Returns hypotenuse of values passed in
+ *  @param {...number} values
+ *  @return {number}
+ *  @memberof Utilities */
+const hypot = Math.hypot;
+
+/** Returns log2 of value passed in
+ *  @param {number} value
+ *  @return {number}
+ *  @memberof Utilities */
+const log2 = Math.log2;
+
+/** Returns sin of value passed in
+ *  @param {number} value
+ *  @return {number}
+ *  @memberof Utilities */
+const sin = Math.sin;
+
+/** Returns cos of value passed in
+ *  @param {number} value
+ *  @return {number}
+ *  @memberof Utilities */
+const cos = Math.cos;
+
+/** Returns tan of value passed in
+ *  @param {number} value
+ *  @return {number}
+ *  @memberof Utilities */
+const tan = Math.tan;
+
+/** Returns atan2 of values passed in
+ *  @param {number} y
+ *  @param {number} x
+ *  @return {number}
+ *  @memberof Utilities */
+const atan2 = Math.atan2;
 
 /** Returns first parm modulo the second param, but adjusted so negative numbers work as expected
  *  @param {number} dividend
@@ -1510,7 +1565,7 @@ function isPowerOfTwo(value) { return !(value & (value - 1)); }
  *  @param {number} value
  *  @return {number}
  *  @memberof Utilities */
-function nearestPowerOfTwo(value) { return 2**Math.ceil(Math.log2(value)); }
+function nearestPowerOfTwo(value) { return 2**ceil(log2(value)); }
 
 /** Returns true if two axis aligned bounding boxes are overlapping
  *  this can be used for simple collision detection between objects
@@ -1578,7 +1633,7 @@ function isIntersecting(start, end, pos, size)
  *  @return {number}            - Value waving between 0 and amplitude
  *  @memberof Utilities */
 function wave(frequency=1, amplitude=1, t=time, offset=0)
-{ return amplitude/2 * (1 - Math.cos(offset + t*frequency*2*PI)); }
+{ return amplitude/2 * (1 - cos(offset + t*frequency*2*PI)); }
 
 /** Formats seconds to mm:ss style for display purposes
  *  @param {number} t - time in seconds
@@ -1641,7 +1696,7 @@ function lineTest(posStart, posEnd, testFunction, normal)
     // get ray direction and length
     const dx = posEnd.x - posStart.x;
     const dy = posEnd.y - posStart.y;
-    const totalLength = Math.hypot(dx, dy);
+    const totalLength = hypot(dx, dy);
     if (!totalLength)
         return;
 
@@ -1672,14 +1727,26 @@ function lineTest(posStart, posEnd, testFunction, normal)
     {
         if (testFunction(pos))
         {
-            // set exact hit point and normal
-            pos.set( posStart.x + dirX*t, posStart.y + dirY*t);
+            // set hit point
+            const hitPos = vec2(posStart.x + dirX*t, posStart.y + dirY*t);
+
+            // move inside of tile if on positive edge
+            const e = 1e-9;
+            if (wasX)
+            {
+                if (stepX < 0)
+                    hitPos.x -= e;
+            }
+            if (stepY < 0)
+                hitPos.y -= e;
+
+            // set normal
             if (normal)
                 wasX ? normal.set(-stepX,0) : normal.set(0,-stepY);
-            return pos;
+            return hitPos;
         }
 
-        // advance to the next cell boundary
+        // advance to the next grid boundary
         if (wasX = tX < tY)
         {
             pos.x += stepX;
@@ -1713,7 +1780,7 @@ function rand(valueA=1, valueB=0) { return valueB + Math.random() * (valueA-valu
  *  @param {number} [valueB]
  *  @return {number}
  *  @memberof Random */
-function randInt(valueA, valueB=0) { return Math.floor(rand(valueA,valueB)); }
+function randInt(valueA, valueB=0) { return floor(rand(valueA,valueB)); }
 
 /** Randomly returns true or false given the chance of true passed in
  *  @param {number} [chance]
@@ -1792,7 +1859,7 @@ class RandomGenerator
     *  @param {number} valueA
     *  @param {number} [valueB]
     *  @return {number} */
-    int(valueA, valueB=0) { return Math.floor(this.float(valueA, valueB)); }
+    int(valueA, valueB=0) { return floor(this.float(valueA, valueB)); }
 
     /** Randomly returns true or false given the chance of true passed in
     *  @param {number} [chance]
@@ -2003,7 +2070,7 @@ class Vector2
 
     /** Returns the clockwise angle of this vector, up is angle 0
      * @return {number} */
-    angle() { return Math.atan2(this.x, this.y); }
+    angle() { return atan2(this.x, this.y); }
 
     /** Sets this vector with clockwise angle and length passed in
      * @param {number} [angle]
@@ -2013,8 +2080,8 @@ class Vector2
     {
         ASSERT_NUMBER_VALID(angle);
         ASSERT_NUMBER_VALID(length);
-        this.x = length*Math.sin(angle);
-        this.y = length*Math.cos(angle);
+        this.x = length*sin(angle);
+        this.y = length*cos(angle);
         return this;
     }
 
@@ -2024,7 +2091,7 @@ class Vector2
     rotate(angle)
     {
         ASSERT_NUMBER_VALID(angle);
-        const c = Math.cos(-angle), s = Math.sin(-angle);
+        const c = cos(-angle), s = sin(-angle);
         return new Vector2(this.x*c - this.y*s, this.x*s + this.y*c);
     }
 
@@ -2056,7 +2123,7 @@ class Vector2
 
     /** Returns a copy of this vector with each axis floored
      * @return {Vector2} */
-    floor() { return new Vector2(Math.floor(this.x), Math.floor(this.y)); }
+    floor() { return new Vector2(floor(this.x), floor(this.y)); }
 
     /** Returns new vec2 with modded values
     *  @param {number} [divisor]
@@ -2487,7 +2554,7 @@ class Timer
 
     /** Returns this timer expressed as a string
      * @return {string} */
-    toString() { return this.isSet() ? Math.abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ) : 'unset'; }
+    toString() { return this.isSet() ? abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ) : 'unset'; }
 
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {number} */
@@ -3360,7 +3427,7 @@ class EngineObject
                         // try to move up a tiny bit
                         const epsilon = 1e-3;
                         const maxMoveUp = .1;
-                        const y = Math.floor(oldPos.y-this.size.y/2+1) +
+                        const y = floor(oldPos.y-this.size.y/2+1) +
                             this.size.y/2 + epsilon;
                         const delta = y - this.pos.y;
                         if (delta < maxMoveUp)
@@ -3924,7 +3991,7 @@ function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0,
         const halfSizeX = size.x/2, halfSizeY = size.y/2;
         const colorTopInt = colorTop.rgbaInt();
         const colorBottomInt = colorBottom.rgbaInt();
-        const c = Math.cos(-angle), s = Math.sin(-angle);
+        const c = cos(-angle), s = sin(-angle);
         for (let i=4; i--;)
         {
             const x = i & 1 ? halfSizeX : -halfSizeX;
@@ -4054,7 +4121,7 @@ function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, l
     for (let i=sides; i--;)
     {
         const a = (i/sides)*PI*2;
-        points.push(vec2(Math.sin(a)*sizeX, Math.cos(a)*sizeY));
+        points.push(vec2(sin(a)*sizeX, cos(a)*sizeY));
     }
     drawPoly(points, color, lineWidth, lineColor, pos, angle, useWebGL, screenSpace, context);
 }
@@ -4308,9 +4375,9 @@ function screenToWorld(screenPos)
     if (cameraAngle)
     {
         // apply camera rotation
-        const cos = Math.cos(-cameraAngle), sin = Math.sin(-cameraAngle);
-        const rotatedX = cameraPosRelativeX * cos - cameraPosRelativeY * sin;
-        const rotatedY = cameraPosRelativeX * sin + cameraPosRelativeY * cos;
+        const c = cos(-cameraAngle), s = sin(-cameraAngle);
+        const rotatedX = cameraPosRelativeX * c - cameraPosRelativeY * s;
+        const rotatedY = cameraPosRelativeX * s + cameraPosRelativeY * c;
         cameraPosRelativeX = rotatedX;
         cameraPosRelativeY = rotatedY;
     }
@@ -4328,9 +4395,9 @@ function worldToScreen(worldPos)
     if (cameraAngle)
     {
         // apply inverse camera rotation
-        const cos = Math.cos(cameraAngle), sin = Math.sin(cameraAngle);
-        const rotatedX = cameraPosRelativeX * cos - cameraPosRelativeY * sin;
-        const rotatedY = cameraPosRelativeX * sin + cameraPosRelativeY * cos;
+        const c = cos(cameraAngle), s = sin(cameraAngle);
+        const rotatedX = cameraPosRelativeX * c - cameraPosRelativeY * s;
+        const rotatedY = cameraPosRelativeX * s + cameraPosRelativeY * c;
         cameraPosRelativeX = rotatedX;
         cameraPosRelativeY = rotatedY;
     }
@@ -4888,8 +4955,8 @@ function gamepadsUpdate()
         else if (touchGamepadStick.lengthSquared() > .3)
         {
             // convert to 8 way dpad
-            sticks[0].x = Math.round(touchGamepadStick.x);
-            sticks[0].y = -Math.round(touchGamepadStick.y);
+            sticks[0].x = round(touchGamepadStick.x);
+            sticks[0].y = -round(touchGamepadStick.y);
             sticks[0] = sticks[0].clampLength();
         }
 
@@ -5789,10 +5856,10 @@ function zzfxG
 
         // biquad LP/HP filter
         quality = 2, w = PI2 * abs(filter) * 2 / sampleRate,
-        cos = Math.cos(w), alpha = Math.sin(w) / 2 / quality,
-        a0 = 1 + alpha, a1 = -2*cos / a0, a2 = (1 - alpha) / a0,
-        b0 = (1 + sign(filter) * cos) / 2 / a0,
-        b1 = -(sign(filter) + cos) / a0, b2 = b0,
+        cosw = cos(w), alpha = sin(w) / 2 / quality,
+        a0 = 1 + alpha, a1 = -2*cosw / a0, a2 = (1 - alpha) / a0,
+        b0 = (1 + sign(filter) * cosw) / 2 / a0,
+        b1 = -(sign(filter) + cosw) / a0, b2 = b0,
         x2 = 0, x1 = 0, y2 = 0, y1 = 0;
 
         // scale by sample rate
@@ -5815,15 +5882,15 @@ function zzfxG
         if (!(++crush%(bitCrush*100|0)))                   // bit crush
         {
             s = shape? shape>1? shape>2? shape>3? shape>4? // wave shape
-                (t/PI2%1 < shapeCurve/2? 1 : -1) :         // 5 square duty
-                Math.sin(t**3) :                           // 4 noise
-                Math.max(Math.min(Math.tan(t),1),-1):      // 3 tan
-                1-(2*t/PI2%2+2)%2:                         // 2 saw
-                1-4*abs(Math.round(t/PI2)-t/PI2):          // 1 triangle
-                Math.sin(t);                               // 0 sin
+                (t/PI2%1 < shapeCurve/2? 1 : -1) : // 5 square duty
+                sin(t**3) :                        // 4 noise
+                max(min(tan(t),1),-1):             // 3 tan
+                1-(2*t/PI2%2+2)%2:                 // 2 saw
+                1-4*abs(round(t/PI2)-t/PI2):       // 1 triangle
+                sin(t);                            // 0 sin
 
             s = (repeatTime ?
-                    1 - tremolo + tremolo*Math.sin(PI2*i/repeatTime) // tremolo
+                    1 - tremolo + tremolo*sin(PI2*i/repeatTime) // tremolo
                     : 1) *
                 (shape>4?s:sign(s)*abs(s)**shapeCurve) * // shape curve
                 (i < attack ? i/attack :                 // attack
@@ -5845,8 +5912,8 @@ function zzfxG
         }
 
         f = (frequency += slide += deltaSlide) *// frequency
-            Math.cos(modulation*modOffset++);   // modulation
-        t += f + f*noise*Math.sin(i**5);        // noise
+            cos(modulation*modOffset++);        // modulation
+        t += f + f*noise*sin(i**5);             // noise
 
         if (jump && ++jump > pitchJumpTime)     // pitch jump
         {
@@ -6508,6 +6575,8 @@ class TileCollisionLayer extends TileLayer
         const hitPos = lineTest(posStart, posEnd, collisionTest, normal);
         if (hitPos)
         {
+            const tilePos = hitPos.floor().add(vec2(.5));
+            debugRaycast && debugRect(tilePos, vec2(1), '#f008');
             debugRaycast && debugLine(posStart, hitPos, '#f00', .02);
             debugRaycast && debugPoint(hitPos, '#0f0');
             debugRaycast && normal && 
@@ -6887,7 +6956,7 @@ class Particle extends EngineObject
         {
             // in local space of emitter
             const a = this.localSpaceEmitter.angle;
-            const c = Math.cos(a), s = Math.sin(a);
+            const c = cos(a), s = sin(a);
             pos = this.localSpaceEmitter.pos.add(
                 new Vector2(pos.x*c - pos.y*s, pos.x*s + pos.y*c));
             angle += this.localSpaceEmitter.angle;
@@ -6904,7 +6973,7 @@ class Particle extends EngineObject
                 // stretch in direction of motion
                 const trailLength = speed * this.trailScale;
                 size.y = max(size.x, trailLength);
-                angle = Math.atan2(direction.x, direction.y);
+                angle = atan2(direction.x, direction.y);
                 drawTile(pos, size, this.tileInfo, this.color, angle, this.mirror);
             }
         }
@@ -7347,8 +7416,8 @@ function glPreRender()
     const s = vec2(2*cameraScale).divide(mainCanvasSize);
     const rotatedCam = cameraPos.rotate(-cameraAngle);
     const p = vec2(-1).subtract(rotatedCam.multiply(s));
-    const ca = Math.cos(cameraAngle);
-    const sa = Math.sin(cameraAngle);
+    const ca = cos(cameraAngle);
+    const sa = sin(cameraAngle);
     const transform = [
         s.x  * ca,  s.y * sa, 0, 0,
         -s.x * sa,  s.y * ca, 0, 0,
@@ -7653,8 +7722,8 @@ function glDrawPointsTransform(points, rgba, x, y, sx, sy, angle, tristrip=true)
         // transform the point
         const px = p.x*sx;
         const py = p.y*sy;
-        const sa = Math.sin(-angle);
-        const ca = Math.cos(-angle);
+        const sa = sin(-angle);
+        const ca = cos(-angle);
         pointsOut.push(vec2(x + ca*px - sa*py, y + sa*px + ca*py));
     }
     const drawPoints = tristrip ? glPolyStrip(pointsOut) : pointsOut;
@@ -11239,9 +11308,18 @@ export
 	// Utilities
 	PI,
 	abs,
+	floor,
+	ceil,
+	round,
 	min,
 	max,
 	sign,
+	hypot,
+	log2,
+	sin,
+	cos,
+	tan,
+	atan2,
 	mod,
 	clamp,
 	percent,

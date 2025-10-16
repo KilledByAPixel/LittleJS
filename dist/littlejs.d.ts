@@ -718,7 +718,7 @@ declare module "littlejsengine" {
      * - RandomGenerator - seeded random number generator
      * @namespace Utilities
      */
-    /** A shortcut to get Math.PI
+    /** The value of PI
      *  @type {number}
      *  @default Math.PI
      *  @memberof Utilities */
@@ -727,22 +727,68 @@ declare module "littlejsengine" {
      *  @param {number} value
      *  @return {number}
      *  @memberof Utilities */
-    export function abs(value: number): number;
+    export const abs: (x: number) => number;
+    /** Returns floored value of value passed in
+     *  @param {number} value
+     *  @return {number}
+     *  @memberof Utilities */
+    export const floor: (x: number) => number;
+    /** Returns ceiled value of value passed in
+     *  @param {number} value
+     *  @return {number}
+     *  @memberof Utilities */
+    export const ceil: (x: number) => number;
+    /** Returns rounded value passed in
+     *  @param {number} value
+     *  @return {number}
+     *  @memberof Utilities */
+    export const round: (x: number) => number;
     /** Returns lowest value passed in
      *  @param {...number} values
      *  @return {number}
      *  @memberof Utilities */
-    export function min(...values: number[]): number;
+    export const min: (...values: number[]) => number;
     /** Returns highest value passed in
      *  @param {...number} values
      *  @return {number}
      *  @memberof Utilities */
-    export function max(...values: number[]): number;
+    export const max: (...values: number[]) => number;
     /** Returns the sign of value passed in
      *  @param {number} value
      *  @return {number}
      *  @memberof Utilities */
-    export function sign(value: number): number;
+    export const sign: (x: number) => number;
+    /** Returns hypotenuse of values passed in
+     *  @param {...number} values
+     *  @return {number}
+     *  @memberof Utilities */
+    export const hypot: (...values: number[]) => number;
+    /** Returns log2 of value passed in
+     *  @param {number} value
+     *  @return {number}
+     *  @memberof Utilities */
+    export const log2: (x: number) => number;
+    /** Returns sin of value passed in
+     *  @param {number} value
+     *  @return {number}
+     *  @memberof Utilities */
+    export const sin: (x: number) => number;
+    /** Returns cos of value passed in
+     *  @param {number} value
+     *  @return {number}
+     *  @memberof Utilities */
+    export const cos: (x: number) => number;
+    /** Returns tan of value passed in
+     *  @param {number} value
+     *  @return {number}
+     *  @memberof Utilities */
+    export const tan: (x: number) => number;
+    /** Returns atan2 of values passed in
+     *  @param {number} y
+     *  @param {number} x
+     *  @return {number}
+     *  @memberof Utilities */
+    export const atan2: (y: number, x: number) => number;
     /** Returns first parm modulo the second param, but adjusted so negative numbers work as expected
      *  @param {number} dividend
      *  @param {number} [divisor]
