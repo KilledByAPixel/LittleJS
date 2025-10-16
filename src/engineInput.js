@@ -182,9 +182,9 @@ function inputUpdate()
     if(!(touchInputEnable && isTouchDevice) && !document.hasFocus())
         inputClear();
 
-    // update mouse world space position
+    // update mouse world space position and delta
     mousePos = screenToWorld(mousePosScreen);
-    mouseDelta = mouseDeltaScreen.multiply(vec2(1,-1)).rotate(-cameraAngle);
+    mouseDelta = screenToWorldDelta(mouseDeltaScreen);
 
     // update gamepads if enabled
     gamepadsUpdate();
@@ -216,7 +216,6 @@ function inputInit()
     document.addEventListener('wheel', onMouseWheel);
     document.addEventListener('contextmenu', onContextMenu);
     document.addEventListener('blur', onBlur);
-    document.addEventListener('mouseleave', onMouseLeave);
 
     // init touch input
     if (isTouchDevice && touchInputEnable)
@@ -258,7 +257,10 @@ function inputInit()
 
         isUsingGamepad = false;
         inputData[0][e.button] = 3;
+
+        let mousePosScreenLast = mousePosScreen;
         mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
+        mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
         inputPreventDefault && e.button && e.preventDefault();
     }
     function onMouseUp(e)
@@ -269,18 +271,13 @@ function inputInit()
     }
     function onMouseMove(e)
     {
+        let mousePosScreenLast = mousePosScreen;
         mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
-        mouseDeltaScreen = mouseDeltaScreen.add(vec2(e.movementX, e.movementY));
+        mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
     }
     function onMouseWheel(e) { mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY); }
     function onContextMenu(e) { e.preventDefault(); } // prevent right click menu
     function onBlur() { inputClear(); } // reset input when focus is lost
-    function onMouseLeave()
-    {
-        // set mouse position and delta when leaving canvas
-        mousePosScreen = vec2(-1);
-        mouseDeltaScreen = vec2(0);
-    }
 }
 
 // convert a mouse or touch event position to screen space
@@ -453,11 +450,11 @@ function touchInputInit()
         {
             // set event pos and pass it along
             const pos = vec2(e.touches[0].clientX, e.touches[0].clientY);
-            const lastMousePosScreen = mousePosScreen;
+            const mousePosScreenLast = mousePosScreen;
             mousePosScreen = mouseEventToScreen(pos);
             if (wasTouching)
             {
-                mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(lastMousePosScreen));
+                mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
                 isUsingGamepad = touchGamepadEnable;
             }
             else
