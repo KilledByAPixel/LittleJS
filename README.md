@@ -12,7 +12,7 @@
 
 </div>
 
-## 🚂 All aboard!
+## 🚂 All Aboard!
 
 LittleJS is a fast, lightweight, and fully open source HTML5 game engine designed for simplicity and performance.
 Its small footprint is packed with a comprehensive feature set including hybrid rendering, physics, particles, sound, and input handling.
@@ -36,10 +36,11 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 
 ### ✨ Graphics
 
-- Super fast WebGL2 + Canvas2D hybrid rendering
+- Super fast WebGL2 + Canvas2D hybrid rendering system
 - 100,000+ sprites at solid 60fps
 - Apply [Shadertoy](https://www.shadertoy.com) style shaders for post-processing effects
 - Robust particle effect system and [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
+- Falls back to Canvas2D if WebGL can't be created or is lost
 
 ### 🔊 Audio
 
@@ -64,7 +65,7 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 - Compatible with all modern web browsers and on mobile devices
 - Support for TypeScript and Modules with example projects for both
 - Ideal for size coding competitions like [Js13kGames](https://js13kgames.com/)
-- Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE) so it can be used for anything you want forever
+- Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE)
 
 ### 🛠️ Developer Tools
 
@@ -105,15 +106,15 @@ These demos are for both learning and using as starter projects to create your o
 
 ## Builds
 
-To easily include LittleJS in your game, you can use one of the pre-built js files.
+| File | Mode | Module | Use case |
+|------|------|--------|----------|
+| [littlejs.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.js) | Debug | No | Full engine with debug functions and asserts |
+| [littlejs.release.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.release.js) | Release | No | Full engine optimized for release |
+| [littlejs.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.min.js) | Release | No | Full engine optimized for release and minified |
+| [littlejs.esm.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.esm.js) | Debug | ESM | Full engine with debug functions and asserts |
+| [littlejs.esm.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.esm.min.js) | Release | ESM | Full engine optimized for release and minified |
 
-- [littlejs.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.js) - The full game engine with debug mode available
-- [littlejs.release.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.release.js) - The engine optimized for release builds
-- [littlejs.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.min.js) - The engine in release mode and minified
-- [littlejs.esm.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.esm.js) - The engine exported as a module with debug mode available
-- [littlejs.esm.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.esm.min.js) - The engine exported as a minified module in release mode
-
-To rebuild the engine you must first run ```npm install``` to setup the necessary npm dependencies. Then call ```npm run build``` to build the engine.
+To rebuild the engine first run ```npm install``` to setup the necessary npm dependencies. Then call ```npm run build``` to build the engine.
 
 The starter example project includes a node js file [build.js](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/starter/build.js) that compresses everything into a tiny zip file using Google Closure, UglifyJS, and ECT Zip.
 
@@ -121,7 +122,7 @@ The starter example project includes a node js file [build.js](https://github.co
 
 Here are a few of the many amazing games created with LittleJS...
 
-- [Space Huggers](https://www.newgrounds.com/portal/view/819609) - Rogulike platformer shoot-em-up game with procedural levels. by [KilledByAPixel](https://frankforce.com/)
+- [Space Huggers](https://www.newgrounds.com/portal/view/819609) - Roguelike platformer shoot-em-up game with procedural levels. by [KilledByAPixel](https://frankforce.com/)
 - [Black Cat Squadron](https://js13kgames.com/games/black-cat-squadron) - One button shooter based on a WW2 Navy squadron. JS13k 5th place! by [repsej](https://github.com/repsej)
 - [L1ttl3 Paws](https://github.com/KilledByAPixel/JS13K2025) - Cat glider with procedural art and levels for JS13K! by [KilledByAPixel](https://frankforce.com/)
 - [KleptoKitty](https://js13kgames.com/games/kleptokitty) - Cat themed heist puzzle. JS13K 22nd place. by [eoinmcg](https://eoinmcg.itch.io/)
@@ -129,9 +130,9 @@ Here are a few of the many amazing games created with LittleJS...
 - [Undergrowth](https://undergrowth.squidband.uk/) - An interactive music videogame for the band Squid. by [KilledByAPixel](https://frankforce.com/)
 - [204Snake!](https://www.newgrounds.com/portal/view/960100) - A puzzle game that combines 2048 with snake. LittleJS Jam 1st place! by [Sodoj](https://sodoj.itch.io/) and [Shai-P](https://shai-p.itch.io/)
 - [GATOR](https://www.newgrounds.com/portal/view/960757) - Retro platformer shooter game where you rescue animals. LittleJS Jam 2nd place! by [eoinmcg](https://eoinmcg.itch.io/)
-- [A Hedgehog's search](https://willsm1111.itch.io/a-hedgehogs-search) - Adventure game staring a hedgehog. LittleJS Jam 3rd place! by [willsm1111](https://willsm1111.itch.io/)
+- [A Hedgehog's search](https://willsm1111.itch.io/a-hedgehogs-search) - Adventure game starring a hedgehog. LittleJS Jam 3rd place! by [willsm1111](https://willsm1111.itch.io/)
 - [Wendol Village](https://js13kgames.com/2024/games/wendol-village) - Warcraft inspired RTS game. by [sanojian](https://github.com/sanojian)
-- [Dead Again](https://js13kgames.com/entries/dead-again) - Top down survial horror. by [sanojian & repsej](https://github.com/sanojian/js13k_2022)
+- [Dead Again](https://js13kgames.com/entries/dead-again) - Top down survival horror. by [sanojian & repsej](https://github.com/sanojian/js13k_2022)
 - [Isletopia](https://store.steampowered.com/app/1861260/Isletopia) - Relaxing strategy game of greenifying barren islands. by [Gamex Studio](https://x.com/gamesgamex)
 - [Tetrimals](https://nixn.itch.io/tetrimals) - A puzzle game mixing Tetris with animals. by [nixn](https://nixn.itch.io/)
 - [Watch the Pups](https://ma5a.itch.io/watch-the-pups) - The aim of the game is to take care of some puppies. by [masa](https://ma5a.itch.io/)
