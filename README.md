@@ -51,13 +51,13 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 ### 🎮 Input
 
 - Comprehensive input handling for keyboard, mouse, gamepad, and touch
-- Automatic touch mouse emulation
+- Automatic touch pad mouse emulation
 - On screen touch gamepad designed for mobile devices
 
 ### 💥 Physics
 
 - Robust arcade physics system with collision handling
-- Box2d fully integrated for more realistic physics
+- Full Box2D integration for more realistic physics
 - Tilemap collision with raycasting
 
 ### 🚀 Flexibility
@@ -65,7 +65,7 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 - Compatible with all modern web browsers and on mobile devices
 - Support for TypeScript and Modules with example projects for both
 - Ideal for size coding competitions like [Js13kGames](https://js13kgames.com/)
-- Open Source with the [MIT license](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE)
+- Open Source and [MIT licensed](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE)
 
 ### 🛠️ Developer Tools
 
@@ -130,7 +130,7 @@ Here are a few of the many amazing games created with LittleJS...
 - [Undergrowth](https://undergrowth.squidband.uk/) - An interactive music videogame for the band Squid. by [KilledByAPixel](https://frankforce.com/)
 - [204Snake!](https://www.newgrounds.com/portal/view/960100) - A puzzle game that combines 2048 with snake. LittleJS Jam 1st place! by [Sodoj](https://sodoj.itch.io/) and [Shai-P](https://shai-p.itch.io/)
 - [GATOR](https://www.newgrounds.com/portal/view/960757) - Retro platformer shooter game where you rescue animals. LittleJS Jam 2nd place! by [eoinmcg](https://eoinmcg.itch.io/)
-- [A Hedgehog's search](https://willsm1111.itch.io/a-hedgehogs-search) - Adventure game starring a hedgehog. LittleJS Jam 3rd place! by [willsm1111](https://willsm1111.itch.io/)
+- [A Hedgehog's Search](https://willsm1111.itch.io/a-hedgehogs-search) - Adventure game starring a hedgehog. LittleJS Jam 3rd place! by [willsm1111](https://willsm1111.itch.io/)
 - [Wendol Village](https://js13kgames.com/2024/games/wendol-village) - Warcraft inspired RTS game. by [sanojian](https://github.com/sanojian)
 - [Dead Again](https://js13kgames.com/entries/dead-again) - Top down survival horror. by [sanojian & repsej](https://github.com/sanojian/js13k_2022)
 - [Isletopia](https://store.steampowered.com/app/1861260/Isletopia) - Relaxing strategy game of greenifying barren islands. by [Gamex Studio](https://x.com/gamesgamex)
