@@ -658,6 +658,9 @@ function debugVideoCaptureUpdate()
     debugVideoCaptureIcon.textContent = '● REC ' + formatTime(debugVideoCaptureTimer);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// debug utility functions
+
 // make color constants immutable with debug assertions
 function debugProtectConstant(obj)
 {
