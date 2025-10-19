@@ -271,7 +271,7 @@ class UISystemPlugin
     
         const s = mainCanvasSize.y / uiSystem.nativeHeight;
         const sInv = 1/s;
-        const p = mousePosScreen.copy();
+        const p = pos.copy();
         p.x += s*mainCanvasSize.x/2;
         p.x *= sInv;
         p.y *= sInv;
