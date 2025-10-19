@@ -1375,6 +1375,9 @@ function debugVideoCaptureUpdate()
     debugVideoCaptureIcon.textContent = '● REC ' + formatTime(debugVideoCaptureTimer);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// debug utility functions
+
 // make color constants immutable with debug assertions
 function debugProtectConstant(obj)
 {
@@ -4968,7 +4971,7 @@ function inputInit()
         isUsingGamepad = false;
         inputData[0][e.button] = 3;
 
-        let mousePosScreenLast = mousePosScreen;
+        const mousePosScreenLast = mousePosScreen;
         mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
         mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
         inputPreventDefault && e.button && e.preventDefault();
@@ -4982,7 +4985,7 @@ function inputInit()
     function onMouseMove(e)
     {
         mouseInWindow = true;
-        let mousePosScreenLast = mousePosScreen;
+        const mousePosScreenLast = mousePosScreen;
         mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
 
         // when pointer is locked use movementX/Y for delta
@@ -5130,7 +5133,7 @@ let touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadStick =
 function touchGamepadButtonCenter()
 {
     // draw right face buttons
-    let center = vec2(mainCanvasSize.x-touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
+    const center = vec2(mainCanvasSize.x-touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
     if (touchGamepadButtonCount <= 2)
         center.x += touchGamepadSize/2;
     return center;
@@ -5140,14 +5143,13 @@ function touchGamepadButtonCenter()
 function touchInputInit()
 {
     // add non passive touch event listeners
-    let handleTouch = handleTouchDefault;
     document.addEventListener('touchstart', (e) => handleTouch(e), { passive: false });
     document.addEventListener('touchmove',  (e) => handleTouch(e), { passive: false });
     document.addEventListener('touchend',   (e) => handleTouch(e), { passive: false });
 
     // handle all touch events the same way
     let wasTouching;
-    function handleTouchDefault(e)
+    function handleTouch(e)
     {
         if (!touchInputEnable)
             return;
@@ -5298,7 +5300,7 @@ function touchGamepadRender()
     const buttonSize = touchGamepadButtonCount > 1 ? touchGamepadSize/4 : touchGamepadSize/2;
     for (let i=0; i<touchGamepadButtonCount; i++)
     {
-        let j = mod(i-1, 4);
+        const j = mod(i-1, 4);
         let button = touchGamepadButtonCount > 2 ? 
             j : min(j, touchGamepadButtonCount-1);
         // fix button locations (swap 2 and 3 to match gamepad layout)
@@ -6852,7 +6854,7 @@ class ParticleEmitter extends EngineObject
         if (!this.emitTime || this.getAliveTime() <= this.emitTime)
         {
             // emit particles
-            if (this.emitRate * particleEmitRateScale)
+            if (this.emitRate && particleEmitRateScale)
             {
                 const rate = 1/this.emitRate/particleEmitRateScale;
                 for (this.emitTimeBuffer += timeDelta; this.emitTimeBuffer > 0; this.emitTimeBuffer -= rate)
@@ -8839,6 +8841,25 @@ class UISystemPlugin
         setCallback(onDragLeave, 'dragleave');
         setCallback(onDragOver,  'dragover');
     }
+
+    /** Convert a screen space position to native UI position
+     *  @param {Vector2} pos
+     *  @return {Vector2}
+     */
+    screenToNative(pos)
+    {
+        if (!uiSystem.nativeHeight)
+            return pos;
+    
+        const s = mainCanvasSize.y / uiSystem.nativeHeight;
+        const sInv = 1/s;
+        const p = mousePosScreen.copy();
+        p.x += s*mainCanvasSize.x/2;
+        p.x *= sInv;
+        p.y *= sInv;
+        p.x -= sInv*mainCanvasSize.x/2;
+        return p;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -8946,22 +8967,16 @@ class UIObject
 
         const size = !isTouchDevice ? this.size :
                 this.size.add(vec2(this.extraTouchSize || 0));
-        if (!uiSystem.nativeHeight)
-            return isOverlapping(this.pos, size, mousePosScreen);
-
-        const s = mainCanvasSize.y / uiSystem.nativeHeight;
-        const sInv = 1/s;
-        let pos = mousePosScreen.copy();
-        pos.x += s*mainCanvasSize.x/2;
-        pos.x *= sInv;
-        pos.y *= sInv;
-        pos.x -= sInv*mainCanvasSize.x/2;
+        const pos = uiSystem.screenToNative(mousePosScreen);
         return isOverlapping(this.pos, size, pos);
     }
 
     /** Update the object, called automatically by plugin once each frame */
     update()
     {
+        // call the custom update callback
+        this.onUpdate();
+
         const wasHover = uiSystem.lastHoverObject === this;
         const isActive = this.isActiveObject();
         const mouseDown = mouseIsDown(0);
@@ -9044,6 +9059,9 @@ class UIObject
 
     /** @return {boolean} - Is the mouse held onto this element */
     isActiveObject() { return uiSystem.activeObject === this; }
+
+    /** Called each frame when object updates */
+    onUpdate() {}
 
     /** Called when the mouse enters the object */
     onEnter() {}
@@ -9285,9 +9303,11 @@ class UIScrollbar extends UIObject
             const p1 = centerPos - handleWidth/2;
             const p2 = centerPos + handleWidth/2;
             const oldValue = this.value;
+
+            const p = uiSystem.screenToNative(mousePosScreen);
             this.value = isHorizontal ? 
-                percent(mousePosScreen.x, p1, p2) :
-                percent(mousePosScreen.y, p2, p1);
+                percent(p.x, p1, p2) :
+                percent(p.y, p2, p1);
             this.value === oldValue || this.onChange();
         }
     }

@@ -3168,6 +3168,11 @@ declare module "littlejsengine" {
         *  @param {DragAndDropCallback} [onDragLeave] - when a file is dragged off the window
         *  @param {DragAndDropCallback} [onDragOver] - continously when dragging over */
         setupDragAndDrop(onDrop?: (event: DragEvent) => any, onDragEnter?: (event: DragEvent) => any, onDragLeave?: (event: DragEvent) => any, onDragOver?: (event: DragEvent) => any): void;
+        /** Convert a screen space position to native UI position
+         *  @param {Vector2} pos
+         *  @return {Vector2}
+         */
+        screenToNative(pos: Vector2): Vector2;
     }
     /**
      * UI Object - Base level object for all UI elements
@@ -3262,6 +3267,8 @@ declare module "littlejsengine" {
         isHoverObject(): boolean;
         /** @return {boolean} - Is the mouse held onto this element */
         isActiveObject(): boolean;
+        /** Called each frame when object updates */
+        onUpdate(): void;
         /** Called when the mouse enters the object */
         onEnter(): void;
         /** Called when the mouse leaves the object */
