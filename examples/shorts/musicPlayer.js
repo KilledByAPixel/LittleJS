@@ -13,7 +13,8 @@ function gameInit()
     canvasClearColor = hsl(.9,.3,.2);
 
     // setup music player UI
-    musicPlayer = new UIObject(mainCanvasSize.scale(.5), vec2(500, 300));
+    const center = mainCanvasSize.scale(.5);
+    musicPlayer = new UIObject(center, vec2(500, 300));
     const title = new UIText(vec2(0, -100), vec2(500, 40),
         'LittleJS Music Player');
     musicPlayer.addChild(title);
@@ -21,7 +22,7 @@ function gameInit()
     // drop zone text
     const dropZoneText = new UIText(vec2(0, -60), vec2(450, 20),
         'Drag & Drop Audio Files Here!');
-    dropZoneText.textColor = hsl(.9, .3, .8, .7);
+    dropZoneText.textColor = GRAY;
     musicPlayer.addChild(dropZoneText);
 
     // volume slider
@@ -128,7 +129,8 @@ function gameUpdate()
         playButton.text = isPlaying ? 'Pause' : 'Play';
         const current = music ? music.getCurrentTime() : 0;
         const duration = musicSound.getDuration();
-        progressBar.text = formatTime(current) +' / '+ formatTime(duration);
+        progressBar.text = formatTime(current) +
+            ' / ' + formatTime(duration);
         if (!progressBar.mouseIsHeld)
             progressBar.value = current / duration;
     }

@@ -13,7 +13,8 @@ function gameInit()
     canvasClearColor = hsl(.9,.3,.2);
 
     // setup music player UI
-    musicPlayer = new UIObject(mainCanvasSize.scale(.5), vec2(500, 220));
+    const center = mainCanvasSize.scale(.5);
+    musicPlayer = new UIObject(center, vec2(500, 220));
 
     // infomation text
     infoText = new UIText(vec2(0, -70), vec2(400, 50));
@@ -71,8 +72,8 @@ function gameUpdate()
         // update ui text
         const isPlaying = music && music.isPlaying();
         playButton.text = isPlaying ? 'Pause' : 'Play';
-        const current = music ? music.getCurrentTime() : 0;
-        const duration = musicSound.getDuration();
-        infoText.text = formatTime(current) +' / '+ formatTime(duration);
+        const current = formatTime(music ? music.getCurrentTime() : 0);
+        const duration = formatTime(musicSound.getDuration());
+        infoText.text = current + ' / ' + duration;
     }
 }
