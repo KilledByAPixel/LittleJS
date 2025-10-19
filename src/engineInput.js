@@ -264,7 +264,7 @@ function inputInit()
         isUsingGamepad = false;
         inputData[0][e.button] = 3;
 
-        let mousePosScreenLast = mousePosScreen;
+        const mousePosScreenLast = mousePosScreen;
         mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
         mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
         inputPreventDefault && e.button && e.preventDefault();
@@ -278,7 +278,7 @@ function inputInit()
     function onMouseMove(e)
     {
         mouseInWindow = true;
-        let mousePosScreenLast = mousePosScreen;
+        const mousePosScreenLast = mousePosScreen;
         mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
 
         // when pointer is locked use movementX/Y for delta
@@ -426,7 +426,7 @@ let touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadStick =
 function touchGamepadButtonCenter()
 {
     // draw right face buttons
-    let center = vec2(mainCanvasSize.x-touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
+    const center = vec2(mainCanvasSize.x-touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
     if (touchGamepadButtonCount <= 2)
         center.x += touchGamepadSize/2;
     return center;
@@ -436,14 +436,13 @@ function touchGamepadButtonCenter()
 function touchInputInit()
 {
     // add non passive touch event listeners
-    let handleTouch = handleTouchDefault;
     document.addEventListener('touchstart', (e) => handleTouch(e), { passive: false });
     document.addEventListener('touchmove',  (e) => handleTouch(e), { passive: false });
     document.addEventListener('touchend',   (e) => handleTouch(e), { passive: false });
 
     // handle all touch events the same way
     let wasTouching;
-    function handleTouchDefault(e)
+    function handleTouch(e)
     {
         if (!touchInputEnable)
             return;
@@ -594,7 +593,7 @@ function touchGamepadRender()
     const buttonSize = touchGamepadButtonCount > 1 ? touchGamepadSize/4 : touchGamepadSize/2;
     for (let i=0; i<touchGamepadButtonCount; i++)
     {
-        let j = mod(i-1, 4);
+        const j = mod(i-1, 4);
         let button = touchGamepadButtonCount > 2 ? 
             j : min(j, touchGamepadButtonCount-1);
         // fix button locations (swap 2 and 3 to match gamepad layout)
