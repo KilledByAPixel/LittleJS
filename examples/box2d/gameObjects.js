@@ -38,7 +38,7 @@ export function spawnCircle(pos, diameter=1, color=LJS.WHITE, type=LJS.box2d.bod
 export function spawnRandomPoly(pos, diameter=1, color=LJS.WHITE, type=LJS.box2d.bodyTypeDynamic, angle=0)
 {
     const o = new LJS.Box2dObject(pos, vec2(), 0, angle, color, type);
-    o.addRandomPoly(diameter, vec2(), 0, density, friction, restitution);
+    o.addRandomPoly(diameter, density, friction, restitution);
     return o;
 }
 
