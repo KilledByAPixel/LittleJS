@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.15.0';
+const engineVersion = '1.15.1';
 
 /** Frames per second to update
  *  @type {number}
@@ -490,10 +490,10 @@ function engineObjectsDestroy()
 }
 
 /** Collects all object within a given area
- *  @param {Vector2} [pos]                 - Center of test area, or undefined for all objects
- *  @param {Vector2|number} [size]         - Radius of circle if float, rectangle size if Vector2
+ *  @param {Vector2} [pos] - Center of test area, or undefined for all objects
+ *  @param {Vector2|number} [size] - Radius of circle if float, rectangle size if Vector2
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
- *  @return {Array<EngineObject>}                        - List of collected objects
+ *  @return {Array<EngineObject>} - List of collected objects
  *  @memberof Engine */
 function engineObjectsCollect(pos, size, objects=engineObjects)
 {
@@ -3991,7 +3991,7 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=WHITE,
     {
         // normal canvas 2D rendering method (slower)
         ++drawCount;
-        size = new Vector2(size.x, -size.y); // fix upside down sprites
+        size = new Vector2(size.x, -size.y); // flip upside down sprites
         drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
             if (textureInfo)
@@ -8735,11 +8735,16 @@ class UISystemPlugin
             // reset hover object at start of update
             uiSystem.lastHoverObject = uiSystem.hoverObject;
             uiSystem.hoverObject = undefined;
+
+            // update in reverse order so topmost objects get priority
             for (let i = uiSystem.uiObjects.length; i--;)
             {
                 const o = uiSystem.uiObjects[i];
                 o.parent || updateObject(o)
             }
+
+            // remove destroyed objects
+            uiSystem.uiObjects = uiSystem.uiObjects.filter(o=>!o.destroyed);
         }
         function uiRender()
         {
@@ -8909,6 +8914,15 @@ class UISystemPlugin
         p.x -= sInv*mainCanvasSize.x/2;
         return p;
     }
+
+    /** Destroy and remove all objects
+    *  @memberof Engine */
+    destroyObjects()
+    {
+        for (const o of this.uiObjects)
+            o.parent || o.destroy();
+        this.uiObjects = this.uiObjects.filter(o=>!o.destroyed);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -9010,6 +9024,22 @@ class UIObject
         child.parent = undefined;
     }
 
+
+    /** Destroy this object, destroy its children, detach its parent, and mark it for removal */
+    destroy()
+    {
+        if (this.destroyed)
+            return;
+
+        // disconnect from parent and destroy children
+        this.destroyed = 1;
+        this.parent && this.parent.removeChild(this);
+        for (const child of this.children)
+        {
+            child.parent = 0;
+            child.destroy();
+        }
+    }
     /** Check if the mouse is overlapping a box in screen space
      *  @return {boolean} - True if overlapping
      */
@@ -9388,6 +9418,149 @@ class UIScrollbar extends UIObject
         const textSize = this.getTextSize();
         uiSystem.drawText(this.text, this.pos, textSize, 
             this.textColor, 0, undefined, this.align, this.font, this.fontStyle, true, this.textShadow);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * VideoPlayerUIObject - A UI object that plays video
+ * @extends UIObject
+ * @example
+ * // Create a video player UI object
+ * const video = new VideoPlayerUIObject(vec2(400, 300), vec2(320, 240), 'cutscene.mp4', true);
+ * video.play();
+ * @memberof UISystem
+ */
+class UIVideo extends UIObject
+{
+    /** Create a video player UI object
+     *  @param {Vector2} [pos]
+     *  @param {Vector2} [size]
+     *  @param {string} src - Video file path or URL
+     *  @param {boolean} [autoplay=false] - Start playing immediately?
+     *  @param {boolean} [loop=false] - Loop the video?
+     *  @param {number} [volume=1] - Volume percent scaled by global volume (0-1)
+     */
+    constructor(pos, size, src, autoplay=false, loop=false, volume=1)
+    {
+        super(pos, size || vec2());
+        
+        ASSERT(isString(src), 'video src must be a string');
+        ASSERT(isNumber(volume), 'video volume must be a number');
+
+        this.color = BLACK; // default to black background
+        this.cornerRadius = 0; // default to no corner radius
+
+        /** @property {float} - The video volume */
+        this.volume = volume;
+
+        // create video element
+        /** @property {HTMLVideoElement} - The video player */
+        this.video = document.createElement('video');
+        this.video.loop = loop;
+        this.video.volume = clamp(volume * soundVolume);
+        this.video.muted = !soundEnable;
+        this.video.style.display = 'none';
+        this.video.src = src;
+        document.body.appendChild(this.video);
+        autoplay && this.play();
+    }
+    
+    /** Play or resume the video
+     *  @return {Promise} Promise that resolves when playback starts */
+    play()
+    {
+        const promise = this.video.play();
+        promise?.catch(()=>{}); // silently ignore play errors
+        return promise;
+    }
+    
+    /** Pause the video */
+    pause() { this.video.pause(); }
+    
+    /** Stop and reset the video */
+    stop() { this.video.pause(); this.video.currentTime = 0; }
+    
+    /** Check if video is currently loading
+     *  @return {boolean} */
+    isLoadng()
+    { return this.video.readyState < this.video.HAVE_CURRENT_DATA; }
+    
+    /** Check if video is currently paused
+     *  @return {boolean} */
+    isPaused() { return this.video.paused; }
+    
+    /** Check if video is currently playing
+     *  @return {boolean} */
+    isPlaying()
+    { return !this.isPaused() && !this.hasEnded() && !this.isLoadng(); }
+    
+    /** Check if video has ended playing
+     *  @return {boolean} */
+    hasEnded() { return this.video.ended; }
+    
+    /** Set volume (0-1)
+     *  @param {number} volume - Volume level (0-1) */
+    setVolume(volume)
+    {
+        this.volume = volume;
+        this.video.volume = clamp(volume * soundVolume);
+    }
+    
+    /** Set playback speed
+     *  @param {number} rate - Playback rate multiplier */
+    setPlaybackRate(rate) { this.video.playbackRate = rate; }
+    
+    /** Get current time in seconds
+     *  @return {number} Current playback time */
+    getCurrentTime() { return this.video.currentTime || 0; }
+    
+    /** Get duration in seconds
+     *  @return {number} Total video duration */
+    getDuration() { return this.video.duration || 0; }
+    
+    /** Get the native video dimensions 
+     *  @return {Vector2} Video dimensions (may be 0,0 if metadata not loaded) */
+    getVideoSize()
+    { return vec2(this.video.videoWidth, this.video.videoHeight); }
+    
+    /** Seek to time in seconds
+     *  @param {number} time - Time in seconds to seek to */
+    setTime(time)
+    { this.video.currentTime = clamp(time, 0, this.getDuration()); }
+
+    update()
+    {
+        super.update();
+
+        // update volume based on global sound volume
+        this.video.volume = clamp(this.volume * soundVolume);
+    }
+    
+    /** Render video to UI canvas */
+    render()
+    {
+        super.render();
+
+        if (this.isLoadng())
+            return;
+        const context = uiSystem.uiContext;
+        const s = this.size;
+        context.save();
+        context.translate(this.pos.x, this.pos.y);
+        context.drawImage(this.video, -s.x/2, -s.y/2, s.x, s.y);
+        context.restore();
+    }
+    
+    /** Clean up video on destroy */
+    destroy()
+    {
+        if (this.destroyed)
+            return;
+
+        this.video.pause();
+        this.video.remove();
+        super.destroy();
     }
 }
 /**

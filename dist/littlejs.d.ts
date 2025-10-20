@@ -139,10 +139,10 @@ declare module "littlejsengine" {
      *  @memberof Engine */
     export function engineObjectsDestroy(): void;
     /** Collects all object within a given area
-     *  @param {Vector2} [pos]                 - Center of test area, or undefined for all objects
-     *  @param {Vector2|number} [size]         - Radius of circle if float, rectangle size if Vector2
+     *  @param {Vector2} [pos] - Center of test area, or undefined for all objects
+     *  @param {Vector2|number} [size] - Radius of circle if float, rectangle size if Vector2
      *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
-     *  @return {Array<EngineObject>}                        - List of collected objects
+     *  @return {Array<EngineObject>} - List of collected objects
      *  @memberof Engine */
     export function engineObjectsCollect(pos?: Vector2, size?: Vector2 | number, objects?: Array<EngineObject>): Array<EngineObject>;
     /**
@@ -3204,6 +3204,9 @@ declare module "littlejsengine" {
          *  @return {Vector2}
          */
         screenToNative(pos: Vector2): Vector2;
+        /** Destroy and remove all objects
+        *  @memberof Engine */
+        destroyObjects(): void;
     }
     /**
      * UI Object - Base level object for all UI elements
@@ -3282,6 +3285,9 @@ declare module "littlejsengine" {
          *  @param {UIObject} child
          */
         removeChild(child: UIObject): void;
+        /** Destroy this object, destroy its children, detach its parent, and mark it for removal */
+        destroy(): void;
+        destroyed: number;
         /** Check if the mouse is overlapping a box in screen space
          *  @return {boolean} - True if overlapping
          */
@@ -3407,6 +3413,67 @@ declare module "littlejsengine" {
         /** @property {Color} - Color for the handle part of the scrollbar */
         handleColor: Color;
         text: string;
+    }
+    /**
+     * VideoPlayerUIObject - A UI object that plays video
+     * @extends UIObject
+     * @example
+     * // Create a video player UI object
+     * const video = new VideoPlayerUIObject(vec2(400, 300), vec2(320, 240), 'cutscene.mp4', true);
+     * video.play();
+     * @memberof UISystem
+     */
+    export class UIVideo extends UIObject {
+        /** Create a video player UI object
+         *  @param {Vector2} [pos]
+         *  @param {Vector2} [size]
+         *  @param {string} src - Video file path or URL
+         *  @param {boolean} [autoplay=false] - Start playing immediately?
+         *  @param {boolean} [loop=false] - Loop the video?
+         *  @param {number} [volume=1] - Volume percent scaled by global volume (0-1)
+         */
+        constructor(pos?: Vector2, size?: Vector2, src: string, autoplay?: boolean, loop?: boolean, volume?: number);
+        /** @property {float} - The video volume */
+        volume: number;
+        /** @property {HTMLVideoElement} - The video player */
+        video: HTMLVideoElement;
+        /** Play or resume the video
+         *  @return {Promise} Promise that resolves when playback starts */
+        play(): Promise<any>;
+        /** Pause the video */
+        pause(): void;
+        /** Stop and reset the video */
+        stop(): void;
+        /** Check if video is currently loading
+         *  @return {boolean} */
+        isLoadng(): boolean;
+        /** Check if video is currently paused
+         *  @return {boolean} */
+        isPaused(): boolean;
+        /** Check if video is currently playing
+         *  @return {boolean} */
+        isPlaying(): boolean;
+        /** Check if video has ended playing
+         *  @return {boolean} */
+        hasEnded(): boolean;
+        /** Set volume (0-1)
+         *  @param {number} volume - Volume level (0-1) */
+        setVolume(volume: number): void;
+        /** Set playback speed
+         *  @param {number} rate - Playback rate multiplier */
+        setPlaybackRate(rate: number): void;
+        /** Get current time in seconds
+         *  @return {number} Current playback time */
+        getCurrentTime(): number;
+        /** Get duration in seconds
+         *  @return {number} Total video duration */
+        getDuration(): number;
+        /** Get the native video dimensions
+         *  @return {Vector2} Video dimensions (may be 0,0 if metadata not loaded) */
+        getVideoSize(): Vector2;
+        /** Seek to time in seconds
+         *  @param {number} time - Time in seconds to seek to */
+        setTime(time: number): void;
     }
     /**
      * LittleJS Box2D Physics Plugin
