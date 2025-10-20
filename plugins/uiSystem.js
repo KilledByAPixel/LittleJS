@@ -145,12 +145,12 @@ class UISystemPlugin
     /** Draw a rectangle to the UI context
     *  @param {Vector2} pos
     *  @param {Vector2} size
-    *  @param {Color}   [color=uiSystem.defaultColor]
-    *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
-    *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
-    *  @param {number}  [cornerRadius=uiSystem.defaultCornerRadius]
-    *  @param {Color}   [gradientColor=uiSystem.defaultGradientColor] */
-    drawRect(pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, cornerRadius=uiSystem.defaultCornerRadius, gradientColor=uiSystem.defaultGradientColor)
+    *  @param {Color}   [color]
+    *  @param {number}  [lineWidth]
+    *  @param {Color}   [lineColor]
+    *  @param {number}  [cornerRadius]
+    *  @param {Color}   [gradientColor] */
+    drawRect(pos, size, color=WHITE, lineWidth=0, lineColor=BLACK, cornerRadius=0, gradientColor)
     {
         ASSERT(isVector2(pos), 'pos must be a vec2');
         ASSERT(isVector2(size), 'size must be a vec2');
@@ -229,9 +229,13 @@ class UISystemPlugin
     *  @param {string}  [align]
     *  @param {string}  [font=uiSystem.defaultFont]
     *  @param {string}  [fontStyle]
-    *  @param {boolean} [applyMaxWidth=true] */
-    drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont, fontStyle='', applyMaxWidth=true)
+    *  @param {boolean} [applyMaxWidth=true]
+    *  @param {Vector2} [textShadow]
+     */
+    drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont, fontStyle='', applyMaxWidth=true, textShadow=undefined)
     {
+        if (textShadow)
+            drawTextScreen(text, pos.add(textShadow), size.y, BLACK, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, uiSystem.uiContext);
         drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, uiSystem.uiContext);
     }
 
@@ -354,6 +358,9 @@ class UIObject
         /** @property {boolean} - True if this can be a hover object */
         this.canBeHover = true;
         uiSystem.uiObjects.push(this);
+        
+        /** @property {Vector2} - How much to offset the text shadow or undefined */
+        this.textShadow = undefined;
     }
 
     /** Add a child UIObject to this object
@@ -451,7 +458,7 @@ class UIObject
 
         const lineColor = this.interactive && this.isActiveObject() && !this.disabled ? this.color : this.lineColor;
         const color = this.disabled ? this.disabledColor : this.interactive ? this.isActiveObject() ? this.activeColor || this.color : this.isHoverObject() ? this.hoverColor : this.color : this.color;
-        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor, this.cornerRadius);
+        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor, this.cornerRadius, this.gradientColor);
     }
 
     /** Special update when object is not visible */
@@ -535,8 +542,9 @@ class UIText extends UIObject
     }
     render()
     {
+        // only render the text
         const textSize = this.getTextSize();
-        uiSystem.drawText(this.text, this.pos, textSize, this.textColor, this.lineWidth, this.lineColor, this.align, this.font, this.fontStyle);
+        uiSystem.drawText(this.text, this.pos, textSize, this.textColor, this.lineWidth, this.lineColor, this.align, this.font, this.fontStyle, true, this.textShadow);
     }
 }
 
@@ -612,7 +620,7 @@ class UIButton extends UIObject
         // draw the text scaled to fit
         const textSize = this.getTextSize();
         uiSystem.drawText(this.text, this.pos, textSize, 
-            this.textColor, 0, undefined, this.align, this.font, this.fontStyle);
+            this.textColor, 0, undefined, this.align, this.font, this.fontStyle, true, this.textShadow);
     }
 }
 
@@ -666,7 +674,7 @@ class UICheckbox extends UIObject
         const textSize = this.getTextSize();
         const pos = this.pos.add(vec2(this.size.x,0));
         uiSystem.drawText(this.text, pos, textSize, 
-            this.textColor, 0, undefined, 'left', this.font, this.fontStyle, false);
+            this.textColor, 0, undefined, 'left', this.font, this.fontStyle, false, this.textShadow);
     }
 }
 
@@ -747,11 +755,11 @@ class UIScrollbar extends UIObject
             vec2(lerp(p1, p2, this.value), this.pos.y) :
             vec2(this.pos.x, lerp(p2, p1, this.value))
         const handleColor = this.disabled ? this.disabledColor : this.handleColor;
-        uiSystem.drawRect(handlePos, vec2(handleSize), handleColor, this.lineWidth, this.lineColor, this.cornerRadius);
+        uiSystem.drawRect(handlePos, vec2(handleSize), handleColor, this.lineWidth, this.lineColor, this.cornerRadius, this.gradientColor);
 
         // draw the text scaled to fit on the scrollbar
         const textSize = this.getTextSize();
         uiSystem.drawText(this.text, this.pos, textSize, 
-            this.textColor, 0, undefined, this.align, this.font, this.fontStyle);
+            this.textColor, 0, undefined, this.align, this.font, this.fontStyle, true, this.textShadow);
     }
 }
