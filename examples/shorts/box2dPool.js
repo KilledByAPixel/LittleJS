@@ -10,7 +10,7 @@ class Ball extends Box2dObject
         super(position, vec2(), 0, 0, color);
 
         // setup pool ball physics
-        const friction = .2, restitution = .95;
+        const friction = 0, restitution = .95;
         this.addCircle(1, vec2(), 1, friction, restitution);
         this.setLinearDamping(.4);
         this.setBullet(true);
@@ -112,7 +112,7 @@ function gameUpdate()
         // hit the cue ball
         const accel = getHitOffset().scale(8);
         cueBall.applyAcceleration(accel);
-        hitSound.play(cueBall.pos, length/maxHitDistance);
+        hitSound.play(cueBall.pos);
     }
 }
 
