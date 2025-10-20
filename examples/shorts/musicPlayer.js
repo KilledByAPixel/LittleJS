@@ -1,6 +1,5 @@
-let musicPlayer, playButton, stopButton, progressBar;
-let musicSound, music;
-let musicVolume = 1;
+
+let musicVolume = 1, musicSound, musicInstance;
 
 function gameInit()
 {
@@ -32,8 +31,7 @@ function gameInit()
     volumeSlider.onChange = () => 
     {
         musicVolume = volumeSlider.value;
-        if (music) 
-            music.setVolume(musicVolume);
+        musicInstance?.setVolume(musicVolume);
     };
 
     // play button
@@ -45,17 +43,17 @@ function gameInit()
             return;
         
         // handle play/pause toggle
-        if (!music)
-            music = musicSound.playMusic(musicVolume);
-        else if (music.isPaused())
-            music.resume();
+        if (!musicInstance)
+            musicInstance = musicSound.playMusic(musicVolume);
+        else if (musicInstance.isPaused())
+            musicInstance.resume();
         else
-            music.pause();
+            musicInstance.pause();
     };
 
     // stop button
     stopButton = new UIButton(vec2(90, 50), vec2(140, 50), 'Stop');
-    stopButton.onClick = ()=>  music && music.stop();
+    stopButton.onClick = ()=>  musicInstance?.stop();
     musicPlayer.addChild(stopButton);
 
     // progress bar and scrollbar for seeking
@@ -64,14 +62,14 @@ function gameInit()
     progressBar.onChange = ()=> 
     {
         // control music seek position
-        const wasPlaying = music && music.isPlaying();
-        if (!music)
-            music = musicSound.playMusic(musicVolume, true, true);
+        const wasPlaying = musicInstance?.isPlaying();
+        if (!musicInstance)
+            musicInstance = musicSound.playMusic(musicVolume, 1, 1);
         progressBar.value = min(progressBar.value, .999); // prevent wrap
         const seekTime = progressBar.value * musicSound.getDuration();
-        music.start(seekTime);
+        musicInstance.start(seekTime);
         if (!wasPlaying)
-            music.pause();
+            musicInstance.pause();
     };
     musicPlayer.addChild(progressBar);
 
@@ -94,8 +92,8 @@ function gameInit()
             dropZoneText.text = file.name;
             
             // reset UI
-            music && music.stop();
-            music = undefined;
+            musicInstance?.stop();
+            musicInstance = undefined;
             progressBar.value = 0;
         }
         uiSystem.setupDragAndDrop(onDrop, onDragEnter, onDragLeave);
@@ -125,13 +123,13 @@ function gameUpdate()
     else
     {
         // update ui text
-        const isPlaying = music && music.isPlaying();
+        const isPlaying = musicInstance?.isPlaying();
         playButton.text = isPlaying ? 'Pause' : 'Play';
-        const current = music ? music.getCurrentTime() : 0;
+        const current = musicInstance?.getCurrentTime() || 0;
         const duration = musicSound.getDuration();
         progressBar.text = formatTime(current) +
             ' / ' + formatTime(duration);
-        if (!progressBar.mouseIsHeld)
+        if (!progressBar.isActiveObject())
             progressBar.value = current / duration;
     }
 }

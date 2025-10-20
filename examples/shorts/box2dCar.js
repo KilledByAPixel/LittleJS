@@ -3,9 +3,19 @@ async function gameInit()
     // setup box2d and create the objects
     await box2dInit();
     gravity.y = -20;
-    groundObject = new Box2dObject(vec2(-8), vec2(), 0, 0,
-        GRAY, box2d.bodyTypeStatic);
-    groundObject.addBox(vec2(100,6));
+
+    // create edge list for ground
+    const edgePoints = [];
+    for (let i=0, y=0, s=0; i<1e3; ++i)
+    {   
+        y = clamp(y+rand(-1,1),0,5);
+        edgePoints.push(vec2(i*5-15, y-8));
+    }
+    const ground = new Box2dStaticObject;
+    ground.lineWidth = 1;
+    ground.addEdgeList(edgePoints);
+
+    // make a car
     new CarObject(vec2(0,-2));
     canvasClearColor = hsl(0,0,.9);
 }
@@ -14,9 +24,10 @@ class CarObject extends Box2dObject
 {
     constructor(pos)
     {
-        super(pos, vec2(), 0, 0, RED);
+        super(pos);
 
         // create car with wheels
+        this.color = RED;
         this.addBox(vec2(7,2));
         const frequency = 4, maxTorque = 250;
         this.wheels = [];
@@ -28,7 +39,8 @@ class CarObject extends Box2dObject
             joint.setSpringFrequencyHz(frequency);
             joint.setMaxMotorTorque(maxTorque);
             joint.enableMotor(!i);
-            wheel.addCircle(2, vec2(), 1, 1);
+            const friction = 1;
+            wheel.addCircle(2, vec2(), 1, friction);
             wheel.motorJoint = joint;
             this.wheels[i] = wheel;
         }
@@ -42,5 +54,6 @@ class CarObject extends Box2dObject
         let s = this.wheels[0].motorJoint.getMotorSpeed();
         s = input ? clamp(s - input, -maxSpeed, maxSpeed) : 0;
         this.wheels[0].motorJoint.setMotorSpeed(s);
+        cameraPos.x = this.pos.x;
     }
 }

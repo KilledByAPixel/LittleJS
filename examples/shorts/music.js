@@ -1,7 +1,5 @@
-let musicPlayer, playButton, stopButton, infoText;
-let musicSound = new SoundWave('song.mp3');
-let musicVolume = 1;
-let music;
+const musicSound = new SoundWave('song.mp3');
+let musicVolume = 1, musicInstance;
 
 function gameInit()
 {
@@ -27,8 +25,7 @@ function gameInit()
     volumeSlider.onChange = () => 
     {
         musicVolume = volumeSlider.value;
-        if (music) 
-            music.setVolume(musicVolume);
+        musicInstance?.setVolume(musicVolume);
     };
 
     // play button
@@ -40,17 +37,17 @@ function gameInit()
             return;
         
         // handle play/pause toggle
-        if (!music)
-            music = musicSound.playMusic(musicVolume);
-        else if (music.isPaused())
-            music.resume();
+        if (!musicInstance)
+            musicInstance = musicSound.playMusic(musicVolume);
+        else if (musicInstance.isPaused())
+            musicInstance.resume();
         else
-            music.pause();
+            musicInstance.pause();
     };
 
     // stop button
     stopButton = new UIButton(vec2(90, 50), vec2(140, 50), 'Stop');
-    stopButton.onClick = ()=>  music && music.stop();
+    stopButton.onClick = ()=>  musicInstance?.stop();
     musicPlayer.addChild(stopButton);
 }
 
@@ -70,9 +67,9 @@ function gameUpdate()
     else
     {
         // update ui text
-        const isPlaying = music && music.isPlaying();
+        const isPlaying = musicInstance?.isPlaying();
         playButton.text = isPlaying ? 'Pause' : 'Play';
-        const current = formatTime(music ? music.getCurrentTime() : 0);
+        const current = formatTime(musicInstance?.getCurrentTime());
         const duration = formatTime(musicSound.getDuration());
         infoText.text = current + ' / ' + duration;
     }

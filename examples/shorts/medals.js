@@ -4,19 +4,25 @@ const medal_leftClick = new Medal(1, 'Lefty', 'Left clicked!', '🐁');
 const medal_rightClick = new Medal(2, 'Righty', 'Right clicked!', '🐭');
 const medal_spacePressed = new Medal(3, 'Space', 'Pressed spacebar!', '🚀');
 
-// setup medals
-const saveName = 'Medals Example';
-medalsInit(saveName);
+function gameInit()
+{
+    // setup medals
+    const saveName = 'Medals Example';
+    medalsInit(saveName);
 
-// clear medals for testing
-medalsForEach(medal=> medal.unlocked = false);
-medal_openedExample.unlock();
+    // clear unlocked medals for testing
+    medalsForEach(medal=> medal.unlocked = false);
 
-// set background color
-canvasClearColor = hsl(.5,.3,.2);
+    // unlock the example medal
+    medal_openedExample.unlock();
+
+    // set background color
+    canvasClearColor = hsl(.5,.3,.2);
+}
 
 function gameUpdate()
 {
+    // unlock example medals based on input
     if (mouseWasPressed(0))
         medal_leftClick.unlock();
     if (mouseWasPressed(2))
@@ -25,7 +31,7 @@ function gameUpdate()
         medal_spacePressed.unlock();
 }
 
-function gameRender()
+function gameRenderPost()
 {
     const size = 80;
     let pos = mainCanvasSize.scale(.5).subtract(vec2(0,40));
