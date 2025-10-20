@@ -108,11 +108,16 @@ class UISystemPlugin
             // reset hover object at start of update
             uiSystem.lastHoverObject = uiSystem.hoverObject;
             uiSystem.hoverObject = undefined;
+
+            // update in reverse order so topmost objects get priority
             for (let i = uiSystem.uiObjects.length; i--;)
             {
                 const o = uiSystem.uiObjects[i];
                 o.parent || updateObject(o)
             }
+
+            // remove destroyed objects
+            uiSystem.uiObjects = uiSystem.uiObjects.filter(o=>!o.destroyed);
         }
         function uiRender()
         {
@@ -282,6 +287,15 @@ class UISystemPlugin
         p.x -= sInv*mainCanvasSize.x/2;
         return p;
     }
+
+    /** Destroy and remove all objects
+    *  @memberof Engine */
+    destroyObjects()
+    {
+        for (const o of this.uiObjects)
+            o.parent || o.destroy();
+        this.uiObjects = this.uiObjects.filter(o=>!o.destroyed);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -383,6 +397,22 @@ class UIObject
         child.parent = undefined;
     }
 
+
+    /** Destroy this object, destroy its children, detach its parent, and mark it for removal */
+    destroy()
+    {
+        if (this.destroyed)
+            return;
+
+        // disconnect from parent and destroy children
+        this.destroyed = 1;
+        this.parent && this.parent.removeChild(this);
+        for (const child of this.children)
+        {
+            child.parent = 0;
+            child.destroy();
+        }
+    }
     /** Check if the mouse is overlapping a box in screen space
      *  @return {boolean} - True if overlapping
      */
