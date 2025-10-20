@@ -12,7 +12,7 @@ class Player extends EngineObject
         // space ship controls
         const moveInput = keyDirection();
         this.applyAngularAcceleration(moveInput.x * .002);
-        const accel = this.getRight(moveInput.y*.002);
+        const accel = this.getUp(moveInput.y*.002);
         this.applyAcceleration(accel);
     }
 
