@@ -63,14 +63,18 @@ class Box2dObject extends EngineObject
         this.body = box2d.world.CreateBody(bodyDef);
         this.body.object = this;
         this.lineColor = BLACK;
+        box2d.objects.push(this);
     }
 
     /** Destroy this object and its physics body */
     destroy()
     {
+        if (this.destroyed)
+            return;
+
         // destroy physics body, fixtures, and joints
-        this.body && box2d.world.DestroyBody(this.body);
-        this.body = 0;
+        ASSERT(this.body, 'Box2dObject has no body to destroy');
+        box2d.world.DestroyBody(this.body);
         super.destroy();
     }
 
@@ -1416,6 +1420,7 @@ class Box2dPlugin
         box2d = this;
         this.instance = instance;
         this.world = new box2d.instance.b2World();
+        this.objects = [];
 
         /** @property {number} - Velocity iterations per update*/
         this.velocityIterations = 8;
@@ -1739,11 +1744,14 @@ async function box2dInit()
             return;
 
         box2d.step();
+
+        // remove destroyed objects
+        box2d.objects = box2d.objects.filter(o=>!o.destroyed);
         
         // copy box2d physics results to engine objects
-        for (const o of engineObjects)
+        for (const o of box2d.objects)
         {
-            if (o instanceof Box2dObject && o.body)
+            if (o.body)
             {
                 o.pos = box2d.vec2From(o.body.GetPosition());
                 o.angle = -o.body.GetAngle();
