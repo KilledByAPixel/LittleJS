@@ -25,6 +25,7 @@ export
     UIButton,
     UICheckbox,
     UIScrollbar,
+    UIVideo,
 
     // Box2D Physics
     box2d,
