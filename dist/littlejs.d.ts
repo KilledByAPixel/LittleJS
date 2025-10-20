@@ -904,6 +904,11 @@ declare module "littlejsengine" {
      *  @return {number}
      *  @memberof Random */
     export function randInt(valueA: number, valueB?: number): number;
+    /** Randomly returns true or false given the chance of true passed in
+     *  @param {number} [chance]
+     *  @return {boolean}
+     *  @memberof Random */
+    export function randBool(chance?: number): boolean;
     /** Randomly returns either -1 or 1
      *  @return {number}
      *  @memberof Random */
@@ -2388,6 +2393,8 @@ declare module "littlejsengine" {
         /** Update the object transform, called automatically by engine even when paused */
         updateTransforms(): void;
         /** Update the object physics, called automatically by engine once each frame */
+        updatePhysics(): void;
+        /** Update the object, called automatically by engine once each frame. Does nothing by default. */
         update(): void;
         /** Render the object, draws a tile by default, automatically called each frame, sorted by renderOrder */
         render(): void;

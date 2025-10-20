@@ -30,7 +30,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.14.26';
+const engineVersion = '1.14.27';
 
 /** Frames per second to update
  *  @type {number}
@@ -453,21 +453,24 @@ function engineObjectsUpdate()
     // recursive object update
     function updateObject(o)
     {
-        if (!o.destroyed)
-        {
-            o.update();
-            for (const child of o.children)
-                updateObject(child);
-        }
+        if (o.destroyed)
+            return;
+
+        o.update();
+        for (const child of o.children)
+            updateObject(child);
     }
     for (const o of engineObjects)
     {
+        if (o.parent)
+            continue;
+
         // update top level objects
-        if (!o.parent)
-        {
-            updateObject(o);
-            o.updateTransforms();
-        }
+        o.update();
+        o.updatePhysics();
+        for (const child of o.children)
+            updateObject(child);
+        o.updateTransforms();
     }
 
     // remove destroyed objects

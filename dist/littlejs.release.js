@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.14.26';
+const engineVersion = '1.14.27';
 
 /** Frames per second to update
  *  @type {number}
@@ -456,21 +456,24 @@ function engineObjectsUpdate()
     // recursive object update
     function updateObject(o)
     {
-        if (!o.destroyed)
-        {
-            o.update();
-            for (const child of o.children)
-                updateObject(child);
-        }
+        if (o.destroyed)
+            return;
+
+        o.update();
+        for (const child of o.children)
+            updateObject(child);
     }
     for (const o of engineObjects)
     {
+        if (o.parent)
+            continue;
+
         // update top level objects
-        if (!o.parent)
-        {
-            updateObject(o);
-            o.updateTransforms();
-        }
+        o.update();
+        o.updatePhysics();
+        for (const child of o.children)
+            updateObject(child);
+        o.updateTransforms();
     }
 
     // remove destroyed objects
@@ -2658,11 +2661,10 @@ class EngineObject
     }
 
     /** Update the object physics, called automatically by engine once each frame */
-    update()
+    updatePhysics()
     {
         // child objects do not have physics
-        if (this.parent)
-            return;
+        ASSERT(!this.parent);
 
         if (this.clampSpeed)
         {
@@ -2859,6 +2861,9 @@ class EngineObject
             }
         }
     }
+
+    /** Update the object, called automatically by engine once each frame. Does nothing by default. */
+    update() {}
 
     /** Render the object, draws a tile by default, automatically called each frame, sorted by renderOrder */
     render()
@@ -6200,9 +6205,6 @@ class ParticleEmitter extends EngineObject
     /** Update the emitter to spawn particles, called automatically by engine once each frame */
     update()
     {
-        // only do default update to apply parent transforms
-        this.parent && super.update();
-
         if (this.velocityInheritance)
         {
             // pass emitter velocity to particles
@@ -6357,8 +6359,6 @@ class Particle extends EngineObject
     /** Update the object physics, called automatically by engine once each frame */
     update()
     {
-        super.update();
-
         if (this.collideTiles || this.collideSolidObjects)
         {
             // only apply max circular speed if particle can collide
@@ -6602,11 +6602,11 @@ class Medal
         const descriptionSize = height*.3;
         const pos = vec2(x + medalDisplayIconSize + 2*gap.x, y + gap.y*2 + nameSize/2);
         const textWidth = width - medalDisplayIconSize - 3*gap.x;
-        drawTextScreen(this.name, pos, nameSize, BLACK, 0, undefined, 'left', undefined, textWidth);
+        drawTextScreen(this.name, pos, nameSize, BLACK, 0, undefined, 'left', undefined, undefined, textWidth);
 
         // draw the description
         pos.y = y + height - gap.y*2 - descriptionSize/2;
-        drawTextScreen(this.description, pos, descriptionSize, BLACK, 0, undefined, 'left', undefined, textWidth);
+        drawTextScreen(this.description, pos, descriptionSize, BLACK, 0, undefined, 'left', undefined, undefined, textWidth);
         context.restore();
     }
 
@@ -8182,8 +8182,8 @@ class UISystemPlugin
     drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont, fontStyle='', applyMaxWidth=true, textShadow=undefined)
     {
         if (textShadow)
-            drawTextScreen(text, pos.add(textShadow), size.y, BLACK, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, uiSystem.uiContext);
-        drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, uiSystem.uiContext);
+            drawTextScreen(text, pos.add(textShadow), size.y, BLACK, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, 0, uiSystem.uiContext);
+        drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, 0, uiSystem.uiContext);
     }
 
     /**
@@ -8784,13 +8784,8 @@ class Box2dObject extends EngineObject
         super.destroy();
     }
 
-    /** Copy box2d update sim data */
-    update()
-    {
-        // use box2d physics update instead of normal engine update
-        this.pos = box2d.vec2From(this.body.GetPosition());
-        this.angle = -this.body.GetAngle();
-    }
+    /** Box2d objects updated with Box2d world step */
+    updatePhysics() {}
 
     /** Render the object, uses box2d drawing if no tile info exists */
     render()
@@ -10450,8 +10445,20 @@ async function box2dInit()
     // add the box2d plugin to the engine
     function box2dUpdate()
     {
-        if (!paused)
-            box2d.step();
+        if (paused)
+            return;
+
+        box2d.step();
+        
+        // copy box2d physics results to engine objects
+        for (const o of engineObjects)
+        {
+            if (o instanceof Box2dObject && o.body)
+            {
+                o.pos = box2d.vec2From(o.body.GetPosition());
+                o.angle = -o.body.GetAngle();
+            }
+        }
     }
     function box2dRender()
     {
