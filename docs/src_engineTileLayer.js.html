@@ -50,6 +50,7 @@ function tileCollisionTest(pos, size=vec2(), object, solidOnly=true)
 }
 
 /** Return the exact position of the boudnary of first tile hit, undefined if nothing was hit.
+ *  The point will be inside the colliding tile if it hits (may have a tiny shift)
  *  @param {Vector2}      posStart
  *  @param {Vector2}      posEnd
  *  @param {EngineObject} [object] - An object or undefined for generic test
@@ -623,6 +624,7 @@ class TileCollisionLayer extends TileLayer
     }
 
     /** Return the exact position of the boudnary of first tile hit, undefined if nothing was hit.
+    *  The point will be inside the colliding tile if it hits (may have a tiny shift)
     *  @param {Vector2}      posStart
     *  @param {Vector2}      posEnd
     *  @param {EngineObject} [object] - An object or undefined for generic test
@@ -645,6 +647,8 @@ class TileCollisionLayer extends TileLayer
         const hitPos = lineTest(posStart, posEnd, collisionTest, normal);
         if (hitPos)
         {
+            const tilePos = hitPos.floor().add(vec2(.5));
+            debugRaycast &amp;&amp; debugRect(tilePos, vec2(1), '#f008');
             debugRaycast &amp;&amp; debugLine(posStart, hitPos, '#f00', .02);
             debugRaycast &amp;&amp; debugPoint(hitPos, '#0f0');
             debugRaycast &amp;&amp; normal &amp;&amp; 

@@ -169,11 +169,11 @@ class Medal
         const descriptionSize = height*.3;
         const pos = vec2(x + medalDisplayIconSize + 2*gap.x, y + gap.y*2 + nameSize/2);
         const textWidth = width - medalDisplayIconSize - 3*gap.x;
-        drawTextScreen(this.name, pos, nameSize, BLACK, 0, undefined, 'left', undefined, textWidth);
+        drawTextScreen(this.name, pos, nameSize, BLACK, 0, undefined, 'left', undefined, undefined, textWidth);
 
         // draw the description
         pos.y = y + height - gap.y*2 - descriptionSize/2;
-        drawTextScreen(this.description, pos, descriptionSize, BLACK, 0, undefined, 'left', undefined, textWidth);
+        drawTextScreen(this.description, pos, descriptionSize, BLACK, 0, undefined, 'left', undefined, undefined, textWidth);
         context.restore();
     }
 

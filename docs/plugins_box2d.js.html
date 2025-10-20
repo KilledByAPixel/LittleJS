@@ -65,24 +65,23 @@ class Box2dObject extends EngineObject
         this.body = box2d.world.CreateBody(bodyDef);
         this.body.object = this;
         this.lineColor = BLACK;
+        box2d.objects.push(this);
     }
 
     /** Destroy this object and its physics body */
     destroy()
     {
+        if (this.destroyed)
+            return;
+
         // destroy physics body, fixtures, and joints
-        this.body &amp;&amp; box2d.world.DestroyBody(this.body);
-        this.body = 0;
+        ASSERT(this.body, 'Box2dObject has no body to destroy');
+        box2d.world.DestroyBody(this.body);
         super.destroy();
     }
 
-    /** Copy box2d update sim data */
-    update()
-    {
-        // use box2d physics update instead of normal engine update
-        this.pos = box2d.vec2From(this.body.GetPosition());
-        this.angle = -this.body.GetAngle();
-    }
+    /** Box2d objects updated with Box2d world step */
+    updatePhysics() {}
 
     /** Render the object, uses box2d drawing if no tile info exists */
     render()
@@ -331,6 +330,10 @@ class Box2dObject extends EngineObject
      *  @return {number} */
     getBodyType() { return this.body.GetType(); }
     
+    /** Get the speed of this object
+     *  @return {number} */
+    getSpeed() { return this.getLinearVelocity().length(); }
+
     ///////////////////////////////////////////////////////////////////////////////
     // physics set functions
 
@@ -346,33 +349,40 @@ class Box2dObject extends EngineObject
     
     /** Sets the position
      *  @param {Vector2} pos */
-    setPosition(pos) { this.setTransform(pos, this.body.GetAngle()); }
+    setPosition(pos)
+    { this.setTransform(pos, this.body.GetAngle()); }
 
     /** Sets the angle
      *  @param {number} angle */
-    setAngle(angle) { this.setTransform(box2d.vec2From(this.body.GetPosition()), -angle); }
+    setAngle(angle)
+    { this.setTransform(box2d.vec2From(this.body.GetPosition()), -angle); }
 
     /** Sets the linear velocity
      *  @param {Vector2} velocity */
-    setLinearVelocity(velocity) { this.body.SetLinearVelocity(box2d.vec2dTo(velocity)); }
+    setLinearVelocity(velocity)
+    { this.body.SetLinearVelocity(box2d.vec2dTo(velocity)); }
 
     /** Sets the angular velocity
      *  @param {number} angularVelocity */
-    setAngularVelocity(angularVelocity) { this.body.SetAngularVelocity(angularVelocity); }
+    setAngularVelocity(angularVelocity)
+    { this.body.SetAngularVelocity(angularVelocity); }
 
     /** Sets the linear damping
      *  @param {number} damping */
-    setLinearDamping(damping) { this.body.SetLinearDamping(damping); }
+    setLinearDamping(damping)
+    { this.body.SetLinearDamping(damping); }
 
     /** Sets the angular damping
      *  @param {number} damping */
-    setAngularDamping(damping) { this.body.SetAngularDamping(damping); }
+    setAngularDamping(damping)
+    { this.body.SetAngularDamping(damping); }
 
     /** Sets the gravity scale
      *  @param {number} [scale] */
-    setGravityScale(scale=1) { this.body.SetGravityScale(this.gravityScale = scale); }
+    setGravityScale(scale=1)
+    { this.body.SetGravityScale(this.gravityScale = scale); }
 
-    /** Should this body be treated like a bullet for continuous collision detection?
+    /** Should be like a bullet for continuous collision detection?
      *  @param {boolean} [isBullet] */
     setBullet(isBullet=true) { this.body.SetBullet(isBullet); }
 
@@ -386,11 +396,13 @@ class Box2dObject extends EngineObject
 
     /** Set whether the body is allowed to sleep
      *  @param {boolean} [isAllowed] */
-    setSleepingAllowed(isAllowed=true) { this.body.SetSleepingAllowed(isAllowed); }
+    setSleepingAllowed(isAllowed=true)
+    { this.body.SetSleepingAllowed(isAllowed); }
     
     /** Set whether the body can rotate
      *  @param {boolean} [isFixed] */
-    setFixedRotation(isFixed=true) { this.body.SetFixedRotation(isFixed); }
+    setFixedRotation(isFixed=true)
+    { this.body.SetFixedRotation(isFixed); }
 
     /** Set the center of mass of the body
      *  @param {Vector2} center */
@@ -402,10 +414,11 @@ class Box2dObject extends EngineObject
     
     /** Set the moment of inertia of the body
      *  @param {number} momentOfInertia */
-    setMomentOfInertia(momentOfInertia) { this.setMassData(undefined, undefined, momentOfInertia) }
+    setMomentOfInertia(momentOfInertia)
+    { this.setMassData(undefined, undefined, momentOfInertia) }
     
     /** Reset the mass, center of mass, and moment */
-    resetMassData()  { this.body.ResetMassData(); }
+    resetMassData() { this.body.ResetMassData(); }
     
     /** Set the mass data of the body
      *  @param {Vector2} [localCenter]
@@ -1409,6 +1422,7 @@ class Box2dPlugin
         box2d = this;
         this.instance = instance;
         this.world = new box2d.instance.b2World();
+        this.objects = [];
 
         /** @property {number} - Velocity iterations per update*/
         this.velocityIterations = 8;
@@ -1651,9 +1665,10 @@ class Box2dPlugin
 
     /** converts a box2d vec2 pointer to a Vector2
      *  @param {Object} v */
-    vec2FromPointer(v)
+    vec2FromPointer(vp)
     {
-        return box2d.vec2From(box2d.instance.wrapPointer(v, box2d.instance.b2Vec2));
+        const v = box2d.instance.wrapPointer(vp, box2d.instance.b2Vec2);
+        return box2d.vec2From(v);
     }
 
     /** converts a Vector2 to a box2 vec2
@@ -1727,8 +1742,23 @@ async function box2dInit()
     // add the box2d plugin to the engine
     function box2dUpdate()
     {
-        if (!paused)
-            box2d.step();
+        if (paused)
+            return;
+
+        box2d.step();
+
+        // remove destroyed objects
+        box2d.objects = box2d.objects.filter(o=>!o.destroyed);
+        
+        // copy box2d physics results to engine objects
+        for (const o of box2d.objects)
+        {
+            if (o.body)
+            {
+                o.pos = box2d.vec2From(o.body.GetPosition());
+                o.angle = -o.body.GetAngle();
+            }
+        }
     }
     function box2dRender()
     {

@@ -121,6 +121,11 @@ let mouseDeltaScreen = vec2();
  *  @memberof Input */
 let mouseWheel = 0;
 
+/** True if mouse was inside the document window, set to false when mouse leaves
+ *  @type {boolean}
+ *  @memberof Input */
+let mouseInWindow = true;
+
 /** Returns true if user is using gamepad (has more recently pressed a gamepad button)
  *  @type {boolean}
  *  @memberof Input */
@@ -184,9 +189,9 @@ function inputUpdate()
     if(!(touchInputEnable &amp;&amp; isTouchDevice) &amp;&amp; !document.hasFocus())
         inputClear();
 
-    // update mouse world space position
+    // update mouse world space position and delta
     mousePos = screenToWorld(mousePosScreen);
-    mouseDelta = mouseDeltaScreen.multiply(vec2(1,-1)).rotate(-cameraAngle);
+    mouseDelta = screenToWorldDelta(mouseDeltaScreen);
 
     // update gamepads if enabled
     gamepadsUpdate();
@@ -215,10 +220,10 @@ function inputInit()
     document.addEventListener('mousedown', onMouseDown);
     document.addEventListener('mouseup', onMouseUp);
     document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseleave', onMouseLeave);
     document.addEventListener('wheel', onMouseWheel);
     document.addEventListener('contextmenu', onContextMenu);
     document.addEventListener('blur', onBlur);
-    document.addEventListener('mouseleave', onMouseLeave);
 
     // init touch input
     if (isTouchDevice &amp;&amp; touchInputEnable)
@@ -240,14 +245,14 @@ function inputInit()
         if (inputWASDEmulateDirection)
             inputData[0][remapKey(e.code)] = 4;
     }
-    function remapKey(c)
+    function remapKey(k)
     {
         // handle remapping wasd keys to directions
         return inputWASDEmulateDirection ?
-            c === 'KeyW' ? 'ArrowUp' :
-            c === 'KeyS' ? 'ArrowDown' :
-            c === 'KeyA' ? 'ArrowLeft' :
-            c === 'KeyD' ? 'ArrowRight' : c : c;
+            k === 'KeyW' ? 'ArrowUp' :
+            k === 'KeyS' ? 'ArrowDown' :
+            k === 'KeyA' ? 'ArrowLeft' :
+            k === 'KeyD' ? 'ArrowRight' : k : k;
     }
     function onMouseDown(e)
     {
@@ -260,7 +265,10 @@ function inputInit()
 
         isUsingGamepad = false;
         inputData[0][e.button] = 3;
+
+        const mousePosScreenLast = mousePosScreen;
         mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
+        mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
         inputPreventDefault &amp;&amp; e.button &amp;&amp; e.preventDefault();
     }
     function onMouseUp(e)
@@ -271,18 +279,20 @@ function inputInit()
     }
     function onMouseMove(e)
     {
+        mouseInWindow = true;
+        const mousePosScreenLast = mousePosScreen;
         mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
-        mouseDeltaScreen = mouseDeltaScreen.add(vec2(e.movementX, e.movementY));
+
+        // when pointer is locked use movementX/Y for delta
+        const movement = pointerLockIsActive() ?
+            vec2(e.movementX, e.movementY) :
+            mousePosScreen.subtract(mousePosScreenLast);
+        mouseDeltaScreen = mouseDeltaScreen.add(movement);
     }
+    function onMouseLeave() { mouseInWindow = false; } // mouse moved off window
     function onMouseWheel(e) { mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY); }
     function onContextMenu(e) { e.preventDefault(); } // prevent right click menu
     function onBlur() { inputClear(); } // reset input when focus is lost
-    function onMouseLeave()
-    {
-        // set mouse position and delta when leaving canvas
-        mousePosScreen = vec2(-1);
-        mouseDeltaScreen = vec2(0);
-    }
 }
 
 // convert a mouse or touch event position to screen space
@@ -326,8 +336,8 @@ function gamepadsUpdate()
         else if (touchGamepadStick.lengthSquared() > .3)
         {
             // convert to 8 way dpad
-            sticks[0].x = Math.round(touchGamepadStick.x);
-            sticks[0].y = -Math.round(touchGamepadStick.y);
+            sticks[0].x = round(touchGamepadStick.x);
+            sticks[0].y = -round(touchGamepadStick.y);
             sticks[0] = sticks[0].clampLength();
         }
 
@@ -418,7 +428,7 @@ let touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadStick =
 function touchGamepadButtonCenter()
 {
     // draw right face buttons
-    let center = vec2(mainCanvasSize.x-touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
+    const center = vec2(mainCanvasSize.x-touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
     if (touchGamepadButtonCount &lt;= 2)
         center.x += touchGamepadSize/2;
     return center;
@@ -428,14 +438,13 @@ function touchGamepadButtonCenter()
 function touchInputInit()
 {
     // add non passive touch event listeners
-    let handleTouch = handleTouchDefault;
     document.addEventListener('touchstart', (e) => handleTouch(e), { passive: false });
     document.addEventListener('touchmove',  (e) => handleTouch(e), { passive: false });
     document.addEventListener('touchend',   (e) => handleTouch(e), { passive: false });
 
     // handle all touch events the same way
     let wasTouching;
-    function handleTouchDefault(e)
+    function handleTouch(e)
     {
         if (!touchInputEnable)
             return;
@@ -455,11 +464,11 @@ function touchInputInit()
         {
             // set event pos and pass it along
             const pos = vec2(e.touches[0].clientX, e.touches[0].clientY);
-            const lastMousePosScreen = mousePosScreen;
+            const mousePosScreenLast = mousePosScreen;
             mousePosScreen = mouseEventToScreen(pos);
             if (wasTouching)
             {
-                mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(lastMousePosScreen));
+                mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
                 isUsingGamepad = touchGamepadEnable;
             }
             else
@@ -586,7 +595,7 @@ function touchGamepadRender()
     const buttonSize = touchGamepadButtonCount > 1 ? touchGamepadSize/4 : touchGamepadSize/2;
     for (let i=0; i&lt;touchGamepadButtonCount; i++)
     {
-        let j = mod(i-1, 4);
+        const j = mod(i-1, 4);
         let button = touchGamepadButtonCount > 2 ? 
             j : min(j, touchGamepadButtonCount-1);
         // fix button locations (swap 2 and 3 to match gamepad layout)

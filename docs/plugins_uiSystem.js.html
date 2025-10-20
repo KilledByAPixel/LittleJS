@@ -147,12 +147,12 @@ class UISystemPlugin
     /** Draw a rectangle to the UI context
     *  @param {Vector2} pos
     *  @param {Vector2} size
-    *  @param {Color}   [color=uiSystem.defaultColor]
-    *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
-    *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
-    *  @param {number}  [cornerRadius=uiSystem.defaultCornerRadius]
-    *  @param {Color}   [gradientColor=uiSystem.defaultGradientColor] */
-    drawRect(pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, cornerRadius=uiSystem.defaultCornerRadius, gradientColor=uiSystem.defaultGradientColor)
+    *  @param {Color}   [color]
+    *  @param {number}  [lineWidth]
+    *  @param {Color}   [lineColor]
+    *  @param {number}  [cornerRadius]
+    *  @param {Color}   [gradientColor] */
+    drawRect(pos, size, color=WHITE, lineWidth=0, lineColor=BLACK, cornerRadius=0, gradientColor)
     {
         ASSERT(isVector2(pos), 'pos must be a vec2');
         ASSERT(isVector2(size), 'size must be a vec2');
@@ -231,10 +231,14 @@ class UISystemPlugin
     *  @param {string}  [align]
     *  @param {string}  [font=uiSystem.defaultFont]
     *  @param {string}  [fontStyle]
-    *  @param {boolean} [applyMaxWidth=true] */
-    drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont, fontStyle='', applyMaxWidth=true)
+    *  @param {boolean} [applyMaxWidth=true]
+    *  @param {Vector2} [textShadow]
+     */
+    drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont, fontStyle='', applyMaxWidth=true, textShadow=undefined)
     {
-        drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, uiSystem.uiContext);
+        if (textShadow)
+            drawTextScreen(text, pos.add(textShadow), size.y, BLACK, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, 0, uiSystem.uiContext);
+        drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, 0, uiSystem.uiContext);
     }
 
     /**
@@ -260,6 +264,25 @@ class UISystemPlugin
         setCallback(onDragEnter, 'dragenter');
         setCallback(onDragLeave, 'dragleave');
         setCallback(onDragOver,  'dragover');
+    }
+
+    /** Convert a screen space position to native UI position
+     *  @param {Vector2} pos
+     *  @return {Vector2}
+     */
+    screenToNative(pos)
+    {
+        if (!uiSystem.nativeHeight)
+            return pos;
+    
+        const s = mainCanvasSize.y / uiSystem.nativeHeight;
+        const sInv = 1/s;
+        const p = pos.copy();
+        p.x += s*mainCanvasSize.x/2;
+        p.x *= sInv;
+        p.y *= sInv;
+        p.x -= sInv*mainCanvasSize.x/2;
+        return p;
     }
 }
 
@@ -337,6 +360,9 @@ class UIObject
         /** @property {boolean} - True if this can be a hover object */
         this.canBeHover = true;
         uiSystem.uiObjects.push(this);
+        
+        /** @property {Vector2} - How much to offset the text shadow or undefined */
+        this.textShadow = undefined;
     }
 
     /** Add a child UIObject to this object
@@ -364,24 +390,20 @@ class UIObject
      */
     isMouseOverlapping()
     {
+        if (!mouseInWindow) return false;
+
         const size = !isTouchDevice ? this.size :
                 this.size.add(vec2(this.extraTouchSize || 0));
-        if (!uiSystem.nativeHeight)
-            return isOverlapping(this.pos, size, mousePosScreen);
-
-        const s = mainCanvasSize.y / uiSystem.nativeHeight;
-        const sInv = 1/s;
-        let pos = mousePosScreen.copy();
-        pos.x += s*mainCanvasSize.x/2;
-        pos.x *= sInv;
-        pos.y *= sInv;
-        pos.x -= sInv*mainCanvasSize.x/2;
+        const pos = uiSystem.screenToNative(mousePosScreen);
         return isOverlapping(this.pos, size, pos);
     }
 
     /** Update the object, called automatically by plugin once each frame */
     update()
     {
+        // call the custom update callback
+        this.onUpdate();
+
         const wasHover = uiSystem.lastHoverObject === this;
         const isActive = this.isActiveObject();
         const mouseDown = mouseIsDown(0);
@@ -438,7 +460,7 @@ class UIObject
 
         const lineColor = this.interactive &amp;&amp; this.isActiveObject() &amp;&amp; !this.disabled ? this.color : this.lineColor;
         const color = this.disabled ? this.disabledColor : this.interactive ? this.isActiveObject() ? this.activeColor || this.color : this.isHoverObject() ? this.hoverColor : this.color : this.color;
-        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor, this.cornerRadius);
+        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor, this.cornerRadius, this.gradientColor);
     }
 
     /** Special update when object is not visible */
@@ -464,6 +486,9 @@ class UIObject
 
     /** @return {boolean} - Is the mouse held onto this element */
     isActiveObject() { return uiSystem.activeObject === this; }
+
+    /** Called each frame when object updates */
+    onUpdate() {}
 
     /** Called when the mouse enters the object */
     onEnter() {}
@@ -519,8 +544,9 @@ class UIText extends UIObject
     }
     render()
     {
+        // only render the text
         const textSize = this.getTextSize();
-        uiSystem.drawText(this.text, this.pos, textSize, this.textColor, this.lineWidth, this.lineColor, this.align, this.font, this.fontStyle);
+        uiSystem.drawText(this.text, this.pos, textSize, this.textColor, this.lineWidth, this.lineColor, this.align, this.font, this.fontStyle, true, this.textShadow);
     }
 }
 
@@ -596,7 +622,7 @@ class UIButton extends UIObject
         // draw the text scaled to fit
         const textSize = this.getTextSize();
         uiSystem.drawText(this.text, this.pos, textSize, 
-            this.textColor, 0, undefined, this.align, this.font, this.fontStyle);
+            this.textColor, 0, undefined, this.align, this.font, this.fontStyle, true, this.textShadow);
     }
 }
 
@@ -650,7 +676,7 @@ class UICheckbox extends UIObject
         const textSize = this.getTextSize();
         const pos = this.pos.add(vec2(this.size.x,0));
         uiSystem.drawText(this.text, pos, textSize, 
-            this.textColor, 0, undefined, 'left', this.font, this.fontStyle, false);
+            this.textColor, 0, undefined, 'left', this.font, this.fontStyle, false, this.textShadow);
     }
 }
 
@@ -705,9 +731,11 @@ class UIScrollbar extends UIObject
             const p1 = centerPos - handleWidth/2;
             const p2 = centerPos + handleWidth/2;
             const oldValue = this.value;
+
+            const p = uiSystem.screenToNative(mousePosScreen);
             this.value = isHorizontal ? 
-                percent(mousePosScreen.x, p1, p2) :
-                percent(mousePosScreen.y, p2, p1);
+                percent(p.x, p1, p2) :
+                percent(p.y, p2, p1);
             this.value === oldValue || this.onChange();
         }
     }
@@ -729,11 +757,11 @@ class UIScrollbar extends UIObject
             vec2(lerp(p1, p2, this.value), this.pos.y) :
             vec2(this.pos.x, lerp(p2, p1, this.value))
         const handleColor = this.disabled ? this.disabledColor : this.handleColor;
-        uiSystem.drawRect(handlePos, vec2(handleSize), handleColor, this.lineWidth, this.lineColor, this.cornerRadius);
+        uiSystem.drawRect(handlePos, vec2(handleSize), handleColor, this.lineWidth, this.lineColor, this.cornerRadius, this.gradientColor);
 
         // draw the text scaled to fit on the scrollbar
         const textSize = this.getTextSize();
         uiSystem.drawText(this.text, this.pos, textSize, 
-            this.textColor, 0, undefined, this.align, this.font, this.fontStyle);
+            this.textColor, 0, undefined, this.align, this.font, this.fontStyle, true, this.textShadow);
     }
 }</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="Audio.SoundWave.html">SoundWave</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Draw.FontImage.html">FontImage</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Engine.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UIScrollbar.html">UIScrollbar</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>

@@ -165,9 +165,6 @@ class ParticleEmitter extends EngineObject
     /** Update the emitter to spawn particles, called automatically by engine once each frame */
     update()
     {
-        // only do default update to apply parent transforms
-        this.parent &amp;&amp; super.update();
-
         if (this.velocityInheritance)
         {
             // pass emitter velocity to particles
@@ -184,7 +181,7 @@ class ParticleEmitter extends EngineObject
         if (!this.emitTime || this.getAliveTime() &lt;= this.emitTime)
         {
             // emit particles
-            if (this.emitRate * particleEmitRateScale)
+            if (this.emitRate &amp;&amp; particleEmitRateScale)
             {
                 const rate = 1/this.emitRate/particleEmitRateScale;
                 for (this.emitTimeBuffer += timeDelta; this.emitTimeBuffer > 0; this.emitTimeBuffer -= rate)
@@ -322,8 +319,6 @@ class Particle extends EngineObject
     /** Update the object physics, called automatically by engine once each frame */
     update()
     {
-        super.update();
-
         if (this.collideTiles || this.collideSolidObjects)
         {
             // only apply max circular speed if particle can collide
@@ -373,7 +368,7 @@ class Particle extends EngineObject
         {
             // in local space of emitter
             const a = this.localSpaceEmitter.angle;
-            const c = Math.cos(a), s = Math.sin(a);
+            const c = cos(a), s = sin(a);
             pos = this.localSpaceEmitter.pos.add(
                 new Vector2(pos.x*c - pos.y*s, pos.x*s + pos.y*c));
             angle += this.localSpaceEmitter.angle;
@@ -390,7 +385,7 @@ class Particle extends EngineObject
                 // stretch in direction of motion
                 const trailLength = speed * this.trailScale;
                 size.y = max(size.x, trailLength);
-                angle = Math.atan2(direction.x, direction.y);
+                angle = atan2(direction.x, direction.y);
                 drawTile(pos, size, this.tileInfo, this.color, angle, this.mirror);
             }
         }

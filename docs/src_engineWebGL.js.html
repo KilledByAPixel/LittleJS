@@ -244,8 +244,8 @@ function glPreRender()
     const s = vec2(2*cameraScale).divide(mainCanvasSize);
     const rotatedCam = cameraPos.rotate(-cameraAngle);
     const p = vec2(-1).subtract(rotatedCam.multiply(s));
-    const ca = Math.cos(cameraAngle);
-    const sa = Math.sin(cameraAngle);
+    const ca = cos(cameraAngle);
+    const sa = sin(cameraAngle);
     const transform = [
         s.x  * ca,  s.y * sa, 0, 0,
         -s.x * sa,  s.y * ca, 0, 0,
@@ -550,8 +550,8 @@ function glDrawPointsTransform(points, rgba, x, y, sx, sy, angle, tristrip=true)
         // transform the point
         const px = p.x*sx;
         const py = p.y*sy;
-        const sa = Math.sin(-angle);
-        const ca = Math.cos(-angle);
+        const sa = sin(-angle);
+        const ca = cos(-angle);
         pointsOut.push(vec2(x + ca*px - sa*py, y + sa*px + ca*py));
     }
     const drawPoints = tristrip ? glPolyStrip(pointsOut) : pointsOut;
