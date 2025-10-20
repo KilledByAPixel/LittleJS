@@ -9,8 +9,6 @@ class Player extends EngineObject
 
     update()
     {
-        super.update();
-        
         // space ship controls
         const moveInput = keyDirection();
         this.applyAngularAcceleration(moveInput.x * .002);

@@ -9,8 +9,6 @@ class Player extends EngineObject
 
     update()
     {
-        super.update();
-
         // apply movement controls
         const moveInput = keyDirection().clampLength(1).scale(.2);
         this.velocity = this.velocity.add(moveInput);

@@ -74,13 +74,8 @@ class Box2dObject extends EngineObject
         super.destroy();
     }
 
-    /** Copy box2d update sim data */
-    update()
-    {
-        // use box2d physics update instead of normal engine update
-        this.pos = box2d.vec2From(this.body.GetPosition());
-        this.angle = -this.body.GetAngle();
-    }
+    /** Box2d objects updated with Box2d world step */
+    updatePhysics() {}
 
     /** Render the object, uses box2d drawing if no tile info exists */
     render()
@@ -1740,8 +1735,20 @@ async function box2dInit()
     // add the box2d plugin to the engine
     function box2dUpdate()
     {
-        if (!paused)
-            box2d.step();
+        if (paused)
+            return;
+
+        box2d.step();
+        
+        // copy box2d physics results to engine objects
+        for (const o of engineObjects)
+        {
+            if (o instanceof Box2dObject && o.body)
+            {
+                o.pos = box2d.vec2From(o.body.GetPosition());
+                o.angle = -o.body.GetAngle();
+            }
+        }
     }
     function box2dRender()
     {

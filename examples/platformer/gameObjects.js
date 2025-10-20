@@ -26,8 +26,6 @@ export class GameObject extends LJS.EngineObject
 
     update()
     {
-        super.update();
-
         // flash white when damaged
         let brightness = 0;
         if (!this.isDead() && this.damageTimer.isSet())
@@ -97,6 +95,7 @@ export class Coin extends LJS.EngineObject
     { 
         super(pos, vec2(1), Game.spriteAtlas.coin);
         this.color = hsl(.15,1,.5);
+        this.mass = 0;
     }
 
     render()
@@ -261,8 +260,6 @@ export class Weapon extends LJS.EngineObject
 
     update()
     {
-        super.update();
-
         // update recoil
         if (this.recoilTimer.active())
             this.localAngle = LJS.lerp(this.localAngle, 0, this.recoilTimer.getPercent());
@@ -318,8 +315,6 @@ export class Bullet extends LJS.EngineObject
             if (o.isGameObject)
                 this.collideWithObject(o)
         });
-            
-        super.update();
 
         this.angle = this.velocity.angle();
         this.range -= this.getSpeed();

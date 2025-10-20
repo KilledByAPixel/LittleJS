@@ -8,8 +8,6 @@ class BounceObject extends EngineObject
 
     update()
     {
-        super.update();
-
         // show debug info
         debugText('Debug Text', this.pos.add(vec2(0,3)), 1, WHITE);
         debugRect(this.pos, this.size, RED);

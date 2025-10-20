@@ -34,6 +34,7 @@ export class Character extends GameObjects.GameObject
         this.deadTimer          = new Timer;
         this.grenadeThrowTimer   = new Timer;
         this.drawSize = vec2(1);
+        this.moveInput = vec2();
         this.color = hsl(LJS.rand(),1,.7);
         this.renderOrder = 10;
         this.walkCyclePercent = 0;
@@ -195,7 +196,7 @@ export class Character extends GameObjects.GameObject
         // track last pos for ladder collision code
         this.lastPos = this.pos.copy();
 
-        // call parent and update physics
+        // call parent
         super.update();
 
         // update walk cycle

@@ -24,7 +24,6 @@ class Ball extends Box2dObject
     }
     update()
     {
-        super.update();
         if (this.pocketed)
         {
             // handle pocketed balls

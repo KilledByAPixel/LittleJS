@@ -35,8 +35,6 @@ class CarObject extends Box2dObject
     }
     update()
     {
-        super.update();
-        
         // car controls - use mouse, arrow keys, or A/D to drive
         const maxSpeed = 40;
         const input = mouseIsDown(0) ? 1 : 

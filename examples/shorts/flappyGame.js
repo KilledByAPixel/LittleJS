@@ -4,6 +4,7 @@ class Wall extends EngineObject
     {
         super(pos, size, 0, 0, hsl(.3,.5,.3));
         this.setCollision(); // make object collide
+        this.mass = 0;
     }
     update()
     {

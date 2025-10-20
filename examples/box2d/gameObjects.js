@@ -147,8 +147,6 @@ export class CarObject extends LJS.Box2dObject
     }
     update()
     {
-        super.update();
-
         // car controls
         const maxSpeed = 40;
         const input = LJS.keyDirection().x;
@@ -393,8 +391,6 @@ export class ClothObject extends LJS.Box2dObject
     }
     update()
     {
-        super.update();
-        
         for (let y=this.sizeCount.y; y--;)
         for (let x=this.sizeCount.x; x--;)
         {

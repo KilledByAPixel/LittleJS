@@ -8,8 +8,6 @@ class Player extends EngineObject
 
     update()
     {
-        super.update();
-
         // apply movement controls
         const moveInput = keyDirection();
         this.velocity.x += moveInput.x * (this.groundObject ? .1: .01);

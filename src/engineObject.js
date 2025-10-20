@@ -135,11 +135,10 @@ class EngineObject
     }
 
     /** Update the object physics, called automatically by engine once each frame */
-    update()
+    updatePhysics()
     {
         // child objects do not have physics
-        if (this.parent)
-            return;
+        ASSERT(!this.parent);
 
         if (this.clampSpeed)
         {
@@ -336,6 +335,9 @@ class EngineObject
             }
         }
     }
+
+    /** Update the object, called automatically by engine once each frame. Does nothing by default. */
+    update() {}
 
     /** Render the object, draws a tile by default, automatically called each frame, sorted by renderOrder */
     render()

@@ -163,9 +163,6 @@ class ParticleEmitter extends EngineObject
     /** Update the emitter to spawn particles, called automatically by engine once each frame */
     update()
     {
-        // only do default update to apply parent transforms
-        this.parent && super.update();
-
         if (this.velocityInheritance)
         {
             // pass emitter velocity to particles
@@ -320,8 +317,6 @@ class Particle extends EngineObject
     /** Update the object physics, called automatically by engine once each frame */
     update()
     {
-        super.update();
-
         if (this.collideTiles || this.collideSolidObjects)
         {
             // only apply max circular speed if particle can collide

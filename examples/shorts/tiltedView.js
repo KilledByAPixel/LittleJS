@@ -3,7 +3,6 @@ class GameObject extends EngineObject
     update()
     {
         this.renderOrder = -this.pos.y; // sort by y position
-        super.update();
     }
 
     render()
@@ -20,8 +19,6 @@ class Player extends GameObject
 {
     update()
     {
-        super.update();
-
         // apply movement controls
         const moveInput = keyDirection().clampLength(1).scale(.2);
         this.velocity = this.velocity.add(moveInput);

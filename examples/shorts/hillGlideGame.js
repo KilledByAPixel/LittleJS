@@ -9,8 +9,6 @@ class Player extends EngineObject
 
     update()
     {
-        super.update();
-
         // check ground height
         const h = getGroundHeight(this.pos.x);
         if (this.pos.y < h + this.size.y/2)
