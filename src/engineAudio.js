@@ -168,7 +168,7 @@ class Sound
      *  @return {number} - How long the sound is in seconds (undefined if loading)
      */
     getDuration()
-    { return this.sampleChannels && this.sampleRate && this.sampleChannels ?[0].length / this.sampleRate : 0; }
+    { return this.sampleChannels && this.sampleRate ? this.sampleChannels[0].length / this.sampleRate : 0; }
 
     /** Check if sound is loaded, for sounds fetched from a url
      *  @return {boolean} - True if sound is loaded and ready to play
