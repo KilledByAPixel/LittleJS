@@ -2463,6 +2463,16 @@ declare module "littlejsengine" {
         /** Removes a child from this one
          *  @param {EngineObject} child */
         removeChild(child: EngineObject): void;
+        /** Check if overlapping another engine object
+         *  Collisions are resoloved to prevent overlaps
+         *  @param {EngineObject} object
+         *  @return {boolean} */
+        isOverlappingObject(object: EngineObject): boolean;
+        /** Check if overlapping a point or aligned bounding box
+         *  @param {Vector2} pos          - Center of box
+         *  @param {Vector2} [size=(0,0)] - Size of box, uses a point if undefined
+         *  @return {boolean} */
+        isOverlapping(pos: Vector2, size?: Vector2): boolean;
         /** Set how this object collides
          *  @param {boolean} [collideSolidObjects] - Does it collide with solid objects?
          *  @param {boolean} [isSolid]             - Does it collide with and block other objects? (expensive in large numbers)
@@ -3401,9 +3411,9 @@ declare module "littlejsengine" {
     /**
      * LittleJS Box2D Physics Plugin
      * - Box2dObject extends EngineObject with Box2D physics
-     * - Call box2dInit() before engineInit() to enable
+     * - Call box2dInit() to enable
      * - You will also need to include box2d.wasm.js
-     * - Uses a super fast web assembly port of Box2D
+     * - Uses a super fast web assembly port of Box2D v2.3.1
      * - More info: https://github.com/kripken/box2d.js
      * - Functions to create polygon, circle, and edge shapes
      * - Contact begin and end callbacks
@@ -3512,9 +3522,9 @@ declare module "littlejsengine" {
     }
     /**
      * Box2D Object - extend with your own custom physics objects
-     * - A LittleJS object with Box2D physics
-     * - Each object has a Box2D body which can have multiple fixtures and joints
+     * - A LittleJS object with Box2D physics, dynamic by default
      * - Provides interface for Box2D body and fixture functions
+     * - Each object can have multiple fixtures and joints
      * @extends EngineObject
      * @memberof Box2D
      */
@@ -3530,6 +3540,8 @@ declare module "littlejsengine" {
         constructor(pos?: Vector2, size?: Vector2, tileInfo?: TileInfo, angle?: number, color?: Color, bodyType?: number, renderOrder?: number);
         body: any;
         lineColor: Color;
+        edgeLists: any[];
+        edgeLoops: any[];
         /** Draws all this object's fixtures
          *  @param {Color}  [color]
          *  @param {Color}  [lineColor]
@@ -3596,13 +3608,6 @@ declare module "littlejsengine" {
          *  @param {number}  [restitution]
          *  @param {boolean} [isSensor] */
         addEdge(point1: Vector2, point2: Vector2, density?: number, friction?: number, restitution?: number, isSensor?: boolean): any;
-        /** Add an edge loop to the body, an edge loop connects the end points
-         *  @param {Array<Vector2>} points
-         *  @param {number}  [density]
-         *  @param {number}  [friction]
-         *  @param {number}  [restitution]
-         *  @param {boolean} [isSensor] */
-        addEdgeLoop(points: Array<Vector2>, density?: number, friction?: number, restitution?: number, isSensor?: boolean): any[];
         /** Add an edge list to the body
          *  @param {Array<Vector2>} points
          *  @param {number}  [density]
@@ -3610,6 +3615,13 @@ declare module "littlejsengine" {
          *  @param {number}  [restitution]
          *  @param {boolean} [isSensor] */
         addEdgeList(points: Array<Vector2>, density?: number, friction?: number, restitution?: number, isSensor?: boolean): any[];
+        /** Add an edge loop to the body, an edge loop connects the end points
+         *  @param {Array<Vector2>} points
+         *  @param {number}  [density]
+         *  @param {number}  [friction]
+         *  @param {number}  [restitution]
+         *  @param {boolean} [isSensor] */
+        addEdgeLoop(points: Array<Vector2>, density?: number, friction?: number, restitution?: number, isSensor?: boolean): any[];
         /** Gets the center of mass
          *  @return {Vector2} */
         getCenterOfMass(): Vector2;
@@ -3718,6 +3730,36 @@ declare module "littlejsengine" {
         /** Get list of joints for this object
          *  @return {Array<Object>} */
         getJointList(): Array<any>;
+    }
+    /**
+     * Box2D Static Object - Box2d with a static physics body
+     * @extends Box2dObject
+     * @memberof Box2D
+     */
+    export class Box2dStaticObject extends Box2dObject {
+        /** Create a LittleJS object with Box2d physics
+         *  @param {Vector2}  [pos]
+         *  @param {Vector2}  [size]
+         *  @param {TileInfo} [tileInfo]
+         *  @param {number}   [angle]
+         *  @param {Color}    [color]
+         *  @param {number}   [renderOrder] */
+        constructor(pos?: Vector2, size?: Vector2, tileInfo?: TileInfo, angle?: number, color?: Color, renderOrder?: number);
+    }
+    /**
+     * Box2D Kiematic Object - Box2d with a kinematic physics body
+     * @extends Box2dObject
+     * @memberof Box2D
+     */
+    export class Box2dKiematicObject extends Box2dObject {
+        /** Create a LittleJS object with Box2d physics
+         *  @param {Vector2}  [pos]
+         *  @param {Vector2}  [size]
+         *  @param {TileInfo} [tileInfo]
+         *  @param {number}   [angle]
+         *  @param {Color}    [color]
+         *  @param {number}   [renderOrder] */
+        constructor(pos?: Vector2, size?: Vector2, tileInfo?: TileInfo, angle?: number, color?: Color, renderOrder?: number);
     }
     /**
      * Box2D Raycast Result
