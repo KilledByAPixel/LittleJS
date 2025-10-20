@@ -403,7 +403,7 @@ function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0,
  *  @memberof Draw */
 function drawLineList(points, width=.1, color, wrap=false, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace, context)
 {
-    ASSERT(Array.isArray(points), 'points must be an array');
+    ASSERT(isArray(points), 'points must be an array');
     ASSERT(isNumber(width), 'width must be a number');
     ASSERT(isColor(color), 'color is invalid');
     ASSERT(isVector2(pos), 'pos must be a vec2');
@@ -509,7 +509,7 @@ function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, l
 function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=false, context=undefined)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
-    ASSERT(Array.isArray(points), 'points must be an array');
+    ASSERT(isArray(points), 'points must be an array');
     ASSERT(isColor(color) && isColor(lineColor), 'color is invalid');
     ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
     ASSERT(isNumber(angle), 'angle must be a number');

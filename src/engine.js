@@ -161,7 +161,7 @@ function engineAddPlugin(update, render, glContextLost, glContextRestored)
 async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
 {
     ASSERT(!mainContext, 'engine already initialized');
-    ASSERT(Array.isArray(imageSources), 'pass in images as array');
+    ASSERT(isArray(imageSources), 'pass in images as array');
 
     // allow passing in empty functions
     gameInit       ||= ()=>{};

@@ -66,7 +66,7 @@ class Sound
     {
         if (!soundEnable || headlessMode) return;
 
-        ASSERT(!zzfxSound || Array.isArray(zzfxSound), 'zzfxSound is invalid');
+        ASSERT(!zzfxSound || isArray(zzfxSound), 'zzfxSound is invalid');
         ASSERT(isNumber(range), 'range must be a number');
         ASSERT(isNumber(taper), 'taper must be a number');
 

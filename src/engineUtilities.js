@@ -306,6 +306,13 @@ function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
 function isString(s) { return s !== undefined && s !== null && typeof s.toString() === 'string'; }
 
 /**
+ * Check if object is an array
+ * @param {any} a
+ * @return {boolean}
+ * @memberof Utilities */
+function isArray(a) { return Array.isArray(a); }
+
+/**
  * @callback LineTestFunction - Checks if a position is colliding
  * @param {Vector2} pos
  * @memberof Draw

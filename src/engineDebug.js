@@ -100,7 +100,7 @@ function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false)
 function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
-    ASSERT(Array.isArray(points), 'points must be an array');
+    ASSERT(isArray(points), 'points must be an array');
     ASSERT(isString(color) || isColor(color), 'color is invalid');
     ASSERT(isNumber(time), 'time must be a number');
     ASSERT(isNumber(angle), 'angle must be a number');
