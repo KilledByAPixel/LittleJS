@@ -294,7 +294,7 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=WHITE,
     {
         // normal canvas 2D rendering method (slower)
         ++drawCount;
-        size = new Vector2(size.x, -size.y); // fix upside down sprites
+        size = new Vector2(size.x, -size.y); // flip upside down sprites
         drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
             if (textureInfo)
