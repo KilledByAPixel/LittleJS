@@ -1317,6 +1317,12 @@ declare module "littlejsengine" {
      * @return {boolean}
      * @memberof Utilities */
     export function isString(s: any): boolean;
+    /**
+     * Check if object is an array
+     * @param {any} a
+     * @return {boolean}
+     * @memberof Utilities */
+    export function isArray(a: any): boolean;
     /** Color - White #ffffff
      *  @type {Color}
      *  @memberof Utilities */

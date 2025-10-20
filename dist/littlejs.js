@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.14.27';
+const engineVersion = '1.14.28';
 
 /** Frames per second to update
  *  @type {number}
@@ -164,7 +164,7 @@ function engineAddPlugin(update, render, glContextLost, glContextRestored)
 async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
 {
     ASSERT(!mainContext, 'engine already initialized');
-    ASSERT(Array.isArray(imageSources), 'pass in images as array');
+    ASSERT(isArray(imageSources), 'pass in images as array');
 
     // allow passing in empty functions
     gameInit       ||= ()=>{};
@@ -820,7 +820,7 @@ function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false)
 function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
-    ASSERT(Array.isArray(points), 'points must be an array');
+    ASSERT(isArray(points), 'points must be an array');
     ASSERT(isString(color) || isColor(color), 'color is invalid');
     ASSERT(isNumber(time), 'time must be a number');
     ASSERT(isNumber(angle), 'angle must be a number');
@@ -1711,6 +1711,13 @@ function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
  * @return {boolean}
  * @memberof Utilities */
 function isString(s) { return s !== undefined && s !== null && typeof s.toString() === 'string'; }
+
+/**
+ * Check if object is an array
+ * @param {any} a
+ * @return {boolean}
+ * @memberof Utilities */
+function isArray(a) { return Array.isArray(a); }
 
 /**
  * @callback LineTestFunction - Checks if a position is colliding
@@ -4079,7 +4086,7 @@ function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0,
  *  @memberof Draw */
 function drawLineList(points, width=.1, color, wrap=false, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace, context)
 {
-    ASSERT(Array.isArray(points), 'points must be an array');
+    ASSERT(isArray(points), 'points must be an array');
     ASSERT(isNumber(width), 'width must be a number');
     ASSERT(isColor(color), 'color is invalid');
     ASSERT(isVector2(pos), 'pos must be a vec2');
@@ -4185,7 +4192,7 @@ function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, l
 function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=false, context=undefined)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
-    ASSERT(Array.isArray(points), 'points must be an array');
+    ASSERT(isArray(points), 'points must be an array');
     ASSERT(isColor(color) && isColor(lineColor), 'color is invalid');
     ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
     ASSERT(isNumber(angle), 'angle must be a number');
@@ -5419,7 +5426,7 @@ class Sound
     {
         if (!soundEnable || headlessMode) return;
 
-        ASSERT(!zzfxSound || Array.isArray(zzfxSound), 'zzfxSound is invalid');
+        ASSERT(!zzfxSound || isArray(zzfxSound), 'zzfxSound is invalid');
         ASSERT(isNumber(range), 'range must be a number');
         ASSERT(isNumber(taper), 'taper must be a number');
 
@@ -5521,7 +5528,7 @@ class Sound
      *  @return {number} - How long the sound is in seconds (undefined if loading)
      */
     getDuration()
-    { return this.sampleChannels && this.sampleChannels[0].length / this.sampleRate; }
+    { return this.sampleChannels && this.sampleRate ? this.sampleChannels[0].length / this.sampleRate : 0; }
 
     /** Check if sound is loaded, for sounds fetched from a url
      *  @return {boolean} - True if sound is loaded and ready to play
@@ -5780,7 +5787,7 @@ class SoundInstance
     /** Get the total duration of this sound
      *  @return {number} - Total duration in seconds
      */
-    getDuration() { return this.sound.getDuration() / this.rate; }
+    getDuration() { return this.rate ? this.sound.getDuration() / this.rate : 0; }
 
     /** Get source of this sound instance
      *  @return {AudioBufferSourceNode}
@@ -9502,6 +9509,10 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addShape(shape, density=1, friction=.2, restitution=0, isSensor=false)
     {
+        ASSERT(isNumber(density), 'density must be a number');
+        ASSERT(isNumber(friction), 'friction must be a number');
+        ASSERT(isNumber(restitution), 'restitution must be a number');
+
         const fd = new box2d.instance.b2FixtureDef();
         fd.set_shape(shape);
         fd.set_density(density);
@@ -9521,6 +9532,11 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addBox(size=vec2(1), offset=vec2(), angle=0, density, friction, restitution, isSensor)
     {
+        ASSERT(isVector2(size), 'size must be a Vector2');
+        ASSERT(size.x > 0 && size.y > 0, 'size must be positive');
+        ASSERT(isVector2(offset), 'offset must be a Vector2');
+        ASSERT(isNumber(angle), 'angle must be a number');
+
         const shape = new box2d.instance.b2PolygonShape();
         shape.SetAsBox(size.x/2, size.y/2, box2d.vec2dTo(offset), angle);
         return this.addShape(shape, density, friction, restitution, isSensor);
@@ -9534,6 +9550,8 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addPoly(points, density, friction, restitution, isSensor)
     {
+        ASSERT(isArray(points), 'points must be an array');
+
         function box2dCreatePolygonShape(points)
         {
             function box2dCreatePointList(points)
@@ -9569,6 +9587,9 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addRegularPoly(diameter=1, sides=8, density, friction, restitution, isSensor)
     {
+        ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
+        ASSERT(isNumber(sides) && sides>2, 'sides must be a positive number greater than 2');
+
         const points = [];
         const radius = diameter/2;
         for (let i=sides; i--;)
@@ -9584,6 +9605,8 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addRandomPoly(diameter=1, density, friction, restitution, isSensor)
     {
+        ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
+
         const sides = randInt(3, 9);
         const points = [];
         const radius = diameter/2;
@@ -9601,6 +9624,9 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addCircle(diameter=1, offset=vec2(), density, friction, restitution, isSensor)
     {
+        ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
+        ASSERT(isVector2(offset), 'offset must be a Vector2');
+        
         const shape = new box2d.instance.b2CircleShape();
         shape.set_m_p(box2d.vec2dTo(offset));
         shape.set_m_radius(diameter/2);
@@ -9616,6 +9642,9 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addEdge(point1, point2, density, friction, restitution, isSensor)
     {
+        ASSERT(isVector2(point1), 'point1 must be a Vector2');
+        ASSERT(isVector2(point2), 'point2 must be a Vector2');
+
         const shape = new box2d.instance.b2EdgeShape();
         shape.Set(box2d.vec2dTo(point1), box2d.vec2dTo(point2));
         return this.addShape(shape, density, friction, restitution, isSensor);
@@ -9629,6 +9658,8 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addEdgeLoop(points, density, friction, restitution, isSensor)
     {
+        ASSERT(isArray(points), 'points must be an array');
+
         const fixtures = [];
         const getPoint = i=> points[mod(i,points.length)];
         for (let i=0; i<points.length; ++i)
@@ -9652,6 +9683,7 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addEdgeList(points, density, friction, restitution, isSensor)
     {
+        ASSERT(isArray(points), 'points must be an array');
         const fixtures = [];
         for (let i=0; i<points.length-1; ++i)
         {
