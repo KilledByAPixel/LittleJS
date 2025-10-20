@@ -173,6 +173,7 @@ export
 	// Random
 	rand,
 	randInt,
+	randBool,
 	randSign,
 	randInCircle,
 	randVec2,
