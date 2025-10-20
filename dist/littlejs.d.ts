@@ -3437,6 +3437,7 @@ declare module "littlejsengine" {
         constructor(instance: any);
         instance: any;
         world: any;
+        objects: any[];
         /** @property {number} - Velocity iterations per update*/
         velocityIterations: number;
         /** @property {number} - Position iterations per update*/

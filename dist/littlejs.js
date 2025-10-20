@@ -5419,6 +5419,10 @@ class Sound
     {
         if (!soundEnable || headlessMode) return;
 
+        ASSERT(!zzfxSound || Array.isArray(zzfxSound), 'zzfxSound is invalid');
+        ASSERT(isNumber(range), 'range must be a number');
+        ASSERT(isNumber(taper), 'taper must be a number');
+
         /** @property {number} - World space max range of sound */
         this.range = range;
         /** @property {number} - At what percentage of range should it start tapering */
@@ -5457,6 +5461,12 @@ class Sound
      */
     play(pos, volume=1, pitch=1, randomnessScale=1, loop=false, paused=false)
     {
+        ASSERT(!pos || isVector2(pos), 'pos must be a vec2');
+        ASSERT(isNumber(volume), 'volume must be a number');
+        ASSERT(isNumber(pitch), 'pitch must be a number');
+        ASSERT(isNumber(randomnessScale), 'randomnessScale must be a number');
+
+
         if (!soundEnable || headlessMode) return;
         if (!this.sampleChannels) return;
 
@@ -5502,6 +5512,7 @@ class Sound
      */
     playNote(semitoneOffset=0, pos, volume)
     {
+        ASSERT(isNumber(semitoneOffset), 'semitoneOffset must be a number');
         const pitch = getNoteFrequency(semitoneOffset, 1);
         return this.play(pos, volume, pitch, 0);
     }
@@ -5552,6 +5563,7 @@ class SoundWave extends Sound
         super(undefined, range, taper);
         if (!soundEnable || headlessMode) return;
         ASSERT(!filename || isString(filename), 'filename must be a string');
+        ASSERT(isNumber(randomness), 'randomness must be a number');
 
         /** @property {SoundLoadCallback} - callback function to call when sound is loaded */
         this.onloadCallback = onloadCallback;
@@ -9420,14 +9432,18 @@ class Box2dObject extends EngineObject
         this.body = box2d.world.CreateBody(bodyDef);
         this.body.object = this;
         this.lineColor = BLACK;
+        box2d.objects.push(this);
     }
 
     /** Destroy this object and its physics body */
     destroy()
     {
+        if (this.destroyed)
+            return;
+
         // destroy physics body, fixtures, and joints
-        this.body && box2d.world.DestroyBody(this.body);
-        this.body = 0;
+        ASSERT(this.body, 'Box2dObject has no body to destroy');
+        box2d.world.DestroyBody(this.body);
         super.destroy();
     }
 
@@ -10773,6 +10789,7 @@ class Box2dPlugin
         box2d = this;
         this.instance = instance;
         this.world = new box2d.instance.b2World();
+        this.objects = [];
 
         /** @property {number} - Velocity iterations per update*/
         this.velocityIterations = 8;
@@ -11096,11 +11113,14 @@ async function box2dInit()
             return;
 
         box2d.step();
+
+        // remove destroyed objects
+        box2d.objects = box2d.objects.filter(o=>!o.destroyed);
         
         // copy box2d physics results to engine objects
-        for (const o of engineObjects)
+        for (const o of box2d.objects)
         {
-            if (o instanceof Box2dObject && o.body)
+            if (o.body)
             {
                 o.pos = box2d.vec2From(o.body.GetPosition());
                 o.angle = -o.body.GetAngle();
