@@ -1,5 +1,4 @@
-let hitSound = new Sound([,,2e3,,,.01]);
-let cueBall;
+const hitSound = new Sound([,,2e3,,,.01]);
 const maxHitDistance = 6;
 
 class Ball extends Box2dObject
@@ -8,6 +7,7 @@ class Ball extends Box2dObject
     {
         const color = hsl(number/9, 1, number? .5 : 1);
         super(position, vec2(), 0, 0, color);
+        this.number = number;
 
         // setup pool ball physics
         const friction = 0, restitution = .95;
@@ -15,38 +15,50 @@ class Ball extends Box2dObject
         this.setLinearDamping(.4);
         this.setBullet(true);
         this.setFixedRotation(true);
-        this.number = number;
     }
     beginContact()
     {
         const volume = clamp(this.getSpeed()/20);
-        hitSound.play(this.pos, volume);
+        hitSound.play(this.pos, clamp(this.getSpeed()/20));
+    }
+    canHit() { return this == cueBall && this.getSpeed() < 1; }
+    getHitOffset()
+    {
+        // hit from cue ball to mouse position
+        const deltaPos = mousePos.subtract(this.pos);
+        const length = min(deltaPos.length(), maxHitDistance);
+        return deltaPos.normalize(length); 
     }
     update()
     {
-        if (this.pocketed)
+        if (this.canHit() && mouseWasPressed(0))
         {
-            // handle pocketed balls
-            if (this.number)
-	            this.destroy();
-           	else
-            {
-                // reset cue ball
-                this.setPosition(vec2(-7,0));
-                this.setLinearVelocity(vec2());
-                this.pocketed = 0;
-            }
+            // hit the cue ball
+            const accel = this.getHitOffset().scale(8);
+            this.applyAcceleration(accel);
+            hitSound.play(cueBall.pos);
         }
+        if (this.pocketed)
+            this.destroy();
     }
     render()
     {
         super.render();
 
-        // draw ball number
+        // draw white circle and ball number
         drawCircle(this.pos, .6, WHITE);
         const textPos = this.pos.add(vec2(0,-.06));
        	if (this.number)
             drawTextOverlay(this.number, textPos, .5, BLACK);
+        if (this.canHit())
+        {
+            // draw the aim line
+            const offset = this.getHitOffset();
+            const endPos = this.pos.add(offset);
+            const width = offset.length()/maxHitDistance;
+            drawLine(this.pos, endPos, width, hsl(0,1,.5,.5), 
+                vec2(), 0, false, false, overlayContext);
+        }
     }
 }
 
@@ -63,7 +75,7 @@ class Pocket extends Box2dObject
     render()
     {
         // add ball size to pocket size for drawing
-        drawCircle(this.pos, this.size.x+1, BLACK);
+        drawCircle(this.pos, this.size.x + 1, BLACK);
     }
     beginContact(other) { other.pocketed = 1; }
 }
@@ -91,38 +103,6 @@ async function gameInit()
     let number = 1;
     for (let i=5;   i--;)
     for (let j=i+1; j--;)
-        new Ball(vec2(i*.9, j-i/2), number++);
-    cueBall = new Ball(vec2(-7, 0));
-}
-
-const canHit = ()=> cueBall.getSpeed() < 1;
-
-function getHitOffset()
-{
-    // hit from cue ball to mouse position
-    const deltaPos = mousePos.subtract(cueBall.pos);
-    const length = min(deltaPos.length(), maxHitDistance);
-    return deltaPos.normalize(length); 
-}
-
-function gameUpdate()
-{
-    if (mouseWasPressed(0) && canHit())
-    {
-        // hit the cue ball
-        const accel = getHitOffset().scale(8);
-        cueBall.applyAcceleration(accel);
-        hitSound.play(cueBall.pos);
-    }
-}
-
-function gameRenderPost()
-{
-    if (canHit())
-    {
-        // draw the aim line
-        const endPos = cueBall.pos.add(getHitOffset());
-        const width = getHitOffset().length()/maxHitDistance;
-        drawLine(cueBall.pos, endPos, width, hsl(0,1,.5,.5));
-    }
+        new Ball(vec2(6+i*.9, j-i/2), number++);
+    cueBall = new Ball(vec2(-6, 0));
 }
