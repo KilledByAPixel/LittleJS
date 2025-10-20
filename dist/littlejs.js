@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.14.25';
+const engineVersion = '1.14.26';
 
 /** Frames per second to update
  *  @type {number}
@@ -3572,6 +3572,10 @@ class EngineObject
      *  @return {number} */
     getAliveTime() { return time - this.spawnTime; }
 
+    /** Get the speed of this object
+     *  @return {number} */
+    getSpeed() { return this.velocity.length(); }
+
     /** Apply acceleration to this object (adjust velocity, not affected by mass)
      *  @param {Vector2} acceleration */
     applyAcceleration(acceleration)
@@ -4328,11 +4332,12 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
  *  @param {string}  [font=fontDefault]
  *  @param {string}  [fontStyle]
  *  @param {number}  [maxWidth]
+ *  @param {number}  [angle]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, fontStyle, maxWidth, context=drawContext)
+function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, fontStyle, maxWidth, angle=0, context=drawContext)
 {
-    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, fontStyle, maxWidth, context);
+    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, fontStyle, maxWidth, angle, context);
 }
 
 /** Draw text on overlay canvas in world space
@@ -4347,10 +4352,11 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
  *  @param {string}  [font=fontDefault]
  *  @param {string}  [fontStyle]
  *  @param {number}  [maxWidth]
+ *  @param {number}  [angle]
  *  @memberof Draw */
-function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, fontStyle, maxWidth)
+function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, fontStyle, maxWidth, angle=0)
 {
-    drawText(text, pos, size, color, lineWidth, lineColor, textAlign, font, fontStyle, maxWidth, overlayContext);
+    drawText(text, pos, size, color, lineWidth, lineColor, textAlign, font, fontStyle, maxWidth, angle, overlayContext);
 }
 
 /** Draw text on overlay canvas in screen space
@@ -4365,9 +4371,10 @@ function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textA
  *  @param {string}  [font=fontDefault]
  *  @param {string}  [fontStyle]
  *  @param {number}  [maxWidth]
+ *  @param {number}  [angle]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
  *  @memberof Draw */
-function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, context=overlayContext)
+function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, angle=0, context=overlayContext)
 {
     ASSERT(isString(text), 'text must be a string');
     ASSERT(isVector2(pos), 'pos must be a vec2');
@@ -4378,6 +4385,7 @@ function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=B
     ASSERT(['left','center','right'].includes(textAlign), 'align must be left, center, or right');
     ASSERT(isString(font), 'font must be a string');
     ASSERT(isString(fontStyle), 'fontStyle must be a string');
+    ASSERT(isNumber(angle), 'angle must be a number');
     
     context.fillStyle = color.toString();
     context.strokeStyle = lineColor.toString();
@@ -4387,14 +4395,18 @@ function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=B
     context.textBaseline = 'middle';
 
     const lines = (text+'').split('\n');
-    let posY = pos.y;
-    posY -= (lines.length-1) * size/2; // center text vertically
+    const posY = pos.y - (lines.length-1) * size/2; // center vertically
+    context.save();
+    context.translate(pos.x, posY);
+    context.rotate(-angle);
+    let yOffset = 0;
     lines.forEach(line=>
     {
-        lineWidth && context.strokeText(line, pos.x, posY, maxWidth);
-        context.fillText(line, pos.x, posY, maxWidth);
-        posY += size;
+        lineWidth && context.strokeText(line, 0, yOffset, maxWidth);
+        context.fillText(line, 0, yOffset, maxWidth);
+        yOffset += size;
     });
+    context.restore();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -8727,12 +8739,12 @@ class UISystemPlugin
     /** Draw a rectangle to the UI context
     *  @param {Vector2} pos
     *  @param {Vector2} size
-    *  @param {Color}   [color=uiSystem.defaultColor]
-    *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
-    *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
-    *  @param {number}  [cornerRadius=uiSystem.defaultCornerRadius]
-    *  @param {Color}   [gradientColor=uiSystem.defaultGradientColor] */
-    drawRect(pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, cornerRadius=uiSystem.defaultCornerRadius, gradientColor=uiSystem.defaultGradientColor)
+    *  @param {Color}   [color]
+    *  @param {number}  [lineWidth]
+    *  @param {Color}   [lineColor]
+    *  @param {number}  [cornerRadius]
+    *  @param {Color}   [gradientColor] */
+    drawRect(pos, size, color=WHITE, lineWidth=0, lineColor=BLACK, cornerRadius=0, gradientColor)
     {
         ASSERT(isVector2(pos), 'pos must be a vec2');
         ASSERT(isVector2(size), 'size must be a vec2');
@@ -8811,9 +8823,13 @@ class UISystemPlugin
     *  @param {string}  [align]
     *  @param {string}  [font=uiSystem.defaultFont]
     *  @param {string}  [fontStyle]
-    *  @param {boolean} [applyMaxWidth=true] */
-    drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont, fontStyle='', applyMaxWidth=true)
+    *  @param {boolean} [applyMaxWidth=true]
+    *  @param {Vector2} [textShadow]
+     */
+    drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont, fontStyle='', applyMaxWidth=true, textShadow=undefined)
     {
+        if (textShadow)
+            drawTextScreen(text, pos.add(textShadow), size.y, BLACK, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, uiSystem.uiContext);
         drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, uiSystem.uiContext);
     }
 
@@ -8936,6 +8952,9 @@ class UIObject
         /** @property {boolean} - True if this can be a hover object */
         this.canBeHover = true;
         uiSystem.uiObjects.push(this);
+        
+        /** @property {Vector2} - How much to offset the text shadow or undefined */
+        this.textShadow = undefined;
     }
 
     /** Add a child UIObject to this object
@@ -9033,7 +9052,7 @@ class UIObject
 
         const lineColor = this.interactive && this.isActiveObject() && !this.disabled ? this.color : this.lineColor;
         const color = this.disabled ? this.disabledColor : this.interactive ? this.isActiveObject() ? this.activeColor || this.color : this.isHoverObject() ? this.hoverColor : this.color : this.color;
-        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor, this.cornerRadius);
+        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor, this.cornerRadius, this.gradientColor);
     }
 
     /** Special update when object is not visible */
@@ -9117,8 +9136,9 @@ class UIText extends UIObject
     }
     render()
     {
+        // only render the text
         const textSize = this.getTextSize();
-        uiSystem.drawText(this.text, this.pos, textSize, this.textColor, this.lineWidth, this.lineColor, this.align, this.font, this.fontStyle);
+        uiSystem.drawText(this.text, this.pos, textSize, this.textColor, this.lineWidth, this.lineColor, this.align, this.font, this.fontStyle, true, this.textShadow);
     }
 }
 
@@ -9194,7 +9214,7 @@ class UIButton extends UIObject
         // draw the text scaled to fit
         const textSize = this.getTextSize();
         uiSystem.drawText(this.text, this.pos, textSize, 
-            this.textColor, 0, undefined, this.align, this.font, this.fontStyle);
+            this.textColor, 0, undefined, this.align, this.font, this.fontStyle, true, this.textShadow);
     }
 }
 
@@ -9248,7 +9268,7 @@ class UICheckbox extends UIObject
         const textSize = this.getTextSize();
         const pos = this.pos.add(vec2(this.size.x,0));
         uiSystem.drawText(this.text, pos, textSize, 
-            this.textColor, 0, undefined, 'left', this.font, this.fontStyle, false);
+            this.textColor, 0, undefined, 'left', this.font, this.fontStyle, false, this.textShadow);
     }
 }
 
@@ -9329,12 +9349,12 @@ class UIScrollbar extends UIObject
             vec2(lerp(p1, p2, this.value), this.pos.y) :
             vec2(this.pos.x, lerp(p2, p1, this.value))
         const handleColor = this.disabled ? this.disabledColor : this.handleColor;
-        uiSystem.drawRect(handlePos, vec2(handleSize), handleColor, this.lineWidth, this.lineColor, this.cornerRadius);
+        uiSystem.drawRect(handlePos, vec2(handleSize), handleColor, this.lineWidth, this.lineColor, this.cornerRadius, this.gradientColor);
 
         // draw the text scaled to fit on the scrollbar
         const textSize = this.getTextSize();
         uiSystem.drawText(this.text, this.pos, textSize, 
-            this.textColor, 0, undefined, this.align, this.font, this.fontStyle);
+            this.textColor, 0, undefined, this.align, this.font, this.fontStyle, true, this.textShadow);
     }
 }
 /**
@@ -9666,6 +9686,10 @@ class Box2dObject extends EngineObject
      *  @return {number} */
     getBodyType() { return this.body.GetType(); }
     
+    /** Get the speed of this object
+     *  @return {number} */
+    getSpeed() { return this.getLinearVelocity().length(); }
+
     ///////////////////////////////////////////////////////////////////////////////
     // physics set functions
 
@@ -9681,33 +9705,40 @@ class Box2dObject extends EngineObject
     
     /** Sets the position
      *  @param {Vector2} pos */
-    setPosition(pos) { this.setTransform(pos, this.body.GetAngle()); }
+    setPosition(pos)
+    { this.setTransform(pos, this.body.GetAngle()); }
 
     /** Sets the angle
      *  @param {number} angle */
-    setAngle(angle) { this.setTransform(box2d.vec2From(this.body.GetPosition()), -angle); }
+    setAngle(angle)
+    { this.setTransform(box2d.vec2From(this.body.GetPosition()), -angle); }
 
     /** Sets the linear velocity
      *  @param {Vector2} velocity */
-    setLinearVelocity(velocity) { this.body.SetLinearVelocity(box2d.vec2dTo(velocity)); }
+    setLinearVelocity(velocity)
+    { this.body.SetLinearVelocity(box2d.vec2dTo(velocity)); }
 
     /** Sets the angular velocity
      *  @param {number} angularVelocity */
-    setAngularVelocity(angularVelocity) { this.body.SetAngularVelocity(angularVelocity); }
+    setAngularVelocity(angularVelocity)
+    { this.body.SetAngularVelocity(angularVelocity); }
 
     /** Sets the linear damping
      *  @param {number} damping */
-    setLinearDamping(damping) { this.body.SetLinearDamping(damping); }
+    setLinearDamping(damping)
+    { this.body.SetLinearDamping(damping); }
 
     /** Sets the angular damping
      *  @param {number} damping */
-    setAngularDamping(damping) { this.body.SetAngularDamping(damping); }
+    setAngularDamping(damping)
+    { this.body.SetAngularDamping(damping); }
 
     /** Sets the gravity scale
      *  @param {number} [scale] */
-    setGravityScale(scale=1) { this.body.SetGravityScale(this.gravityScale = scale); }
+    setGravityScale(scale=1)
+    { this.body.SetGravityScale(this.gravityScale = scale); }
 
-    /** Should this body be treated like a bullet for continuous collision detection?
+    /** Should be like a bullet for continuous collision detection?
      *  @param {boolean} [isBullet] */
     setBullet(isBullet=true) { this.body.SetBullet(isBullet); }
 
@@ -9721,11 +9752,13 @@ class Box2dObject extends EngineObject
 
     /** Set whether the body is allowed to sleep
      *  @param {boolean} [isAllowed] */
-    setSleepingAllowed(isAllowed=true) { this.body.SetSleepingAllowed(isAllowed); }
+    setSleepingAllowed(isAllowed=true)
+    { this.body.SetSleepingAllowed(isAllowed); }
     
     /** Set whether the body can rotate
      *  @param {boolean} [isFixed] */
-    setFixedRotation(isFixed=true) { this.body.SetFixedRotation(isFixed); }
+    setFixedRotation(isFixed=true)
+    { this.body.SetFixedRotation(isFixed); }
 
     /** Set the center of mass of the body
      *  @param {Vector2} center */
@@ -9737,10 +9770,11 @@ class Box2dObject extends EngineObject
     
     /** Set the moment of inertia of the body
      *  @param {number} momentOfInertia */
-    setMomentOfInertia(momentOfInertia) { this.setMassData(undefined, undefined, momentOfInertia) }
+    setMomentOfInertia(momentOfInertia)
+    { this.setMassData(undefined, undefined, momentOfInertia) }
     
     /** Reset the mass, center of mass, and moment */
-    resetMassData()  { this.body.ResetMassData(); }
+    resetMassData() { this.body.ResetMassData(); }
     
     /** Set the mass data of the body
      *  @param {Vector2} [localCenter]
@@ -10986,9 +11020,10 @@ class Box2dPlugin
 
     /** converts a box2d vec2 pointer to a Vector2
      *  @param {Object} v */
-    vec2FromPointer(v)
+    vec2FromPointer(vp)
     {
-        return box2d.vec2From(box2d.instance.wrapPointer(v, box2d.instance.b2Vec2));
+        const v = box2d.instance.wrapPointer(vp, box2d.instance.b2Vec2);
+        return box2d.vec2From(v);
     }
 
     /** converts a Vector2 to a box2 vec2

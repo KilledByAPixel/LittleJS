@@ -1646,9 +1646,10 @@ declare module "littlejsengine" {
      *  @param {string}  [font=fontDefault]
      *  @param {string}  [fontStyle]
      *  @param {number}  [maxWidth]
+     *  @param {number}  [angle]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      *  @memberof Draw */
-    export function drawText(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, fontStyle?: string, maxWidth?: number, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    export function drawText(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, fontStyle?: string, maxWidth?: number, angle?: number, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw text on overlay canvas in world space
      *  Automatically splits new lines into rows
      *  @param {string}  text
@@ -1661,8 +1662,9 @@ declare module "littlejsengine" {
      *  @param {string}  [font=fontDefault]
      *  @param {string}  [fontStyle]
      *  @param {number}  [maxWidth]
+     *  @param {number}  [angle]
      *  @memberof Draw */
-    export function drawTextOverlay(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, fontStyle?: string, maxWidth?: number): void;
+    export function drawTextOverlay(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, fontStyle?: string, maxWidth?: number, angle?: number): void;
     /** Draw text on overlay canvas in screen space
      *  Automatically splits new lines into rows
      *  @param {string}  text
@@ -1675,9 +1677,10 @@ declare module "littlejsengine" {
      *  @param {string}  [font=fontDefault]
      *  @param {string}  [fontStyle]
      *  @param {number}  [maxWidth]
+     *  @param {number}  [angle]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
      *  @memberof Draw */
-    export function drawTextScreen(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, fontStyle?: string, maxWidth?: number, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    export function drawTextScreen(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, fontStyle?: string, maxWidth?: number, angle?: number, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Enable normal or additive blend mode
      *  @param {boolean} [additive]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
@@ -2424,6 +2427,9 @@ declare module "littlejsengine" {
         /** How long since the object was created
          *  @return {number} */
         getAliveTime(): number;
+        /** Get the speed of this object
+         *  @return {number} */
+        getSpeed(): number;
         /** Apply acceleration to this object (adjust velocity, not affected by mass)
          *  @param {Vector2} acceleration */
         applyAcceleration(acceleration: Vector2): void;
@@ -3124,11 +3130,11 @@ declare module "littlejsengine" {
         /** Draw a rectangle to the UI context
         *  @param {Vector2} pos
         *  @param {Vector2} size
-        *  @param {Color}   [color=uiSystem.defaultColor]
-        *  @param {number}  [lineWidth=uiSystem.defaultLineWidth]
-        *  @param {Color}   [lineColor=uiSystem.defaultLineColor]
-        *  @param {number}  [cornerRadius=uiSystem.defaultCornerRadius]
-        *  @param {Color}   [gradientColor=uiSystem.defaultGradientColor] */
+        *  @param {Color}   [color]
+        *  @param {number}  [lineWidth]
+        *  @param {Color}   [lineColor]
+        *  @param {number}  [cornerRadius]
+        *  @param {Color}   [gradientColor] */
         drawRect(pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, cornerRadius?: number, gradientColor?: Color): void;
         /** Draw a line to the UI context
         *  @param {Vector2} posA
@@ -3154,8 +3160,10 @@ declare module "littlejsengine" {
         *  @param {string}  [align]
         *  @param {string}  [font=uiSystem.defaultFont]
         *  @param {string}  [fontStyle]
-        *  @param {boolean} [applyMaxWidth=true] */
-        drawText(text: string, pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, align?: string, font?: string, fontStyle?: string, applyMaxWidth?: boolean): void;
+        *  @param {boolean} [applyMaxWidth=true]
+        *  @param {Vector2} [textShadow]
+         */
+        drawText(text: string, pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, align?: string, font?: string, fontStyle?: string, applyMaxWidth?: boolean, textShadow?: Vector2): void;
         /**
          * @callback DragAndDropCallback - Callback for drag and drop events
          * @param {DragEvent} event - The drag event
@@ -3241,6 +3249,8 @@ declare module "littlejsengine" {
         dragActivate: boolean;
         /** @property {boolean} - True if this can be a hover object */
         canBeHover: boolean;
+        /** @property {Vector2} - How much to offset the text shadow or undefined */
+        textShadow: any;
         /** Add a child UIObject to this object
          *  @param {UIObject} child
          */
@@ -3475,7 +3485,7 @@ declare module "littlejsengine" {
         vec2From(v: any): Vector2;
         /** converts a box2d vec2 pointer to a Vector2
          *  @param {Object} v */
-        vec2FromPointer(v: any): Vector2;
+        vec2FromPointer(vp: any): Vector2;
         /** converts a Vector2 to a box2 vec2
          *  @param {Vector2} v */
         vec2dTo(v: Vector2): any;
@@ -3632,7 +3642,7 @@ declare module "littlejsengine" {
         /** Sets the gravity scale
          *  @param {number} [scale] */
         setGravityScale(scale?: number): void;
-        /** Should this body be treated like a bullet for continuous collision detection?
+        /** Should be like a bullet for continuous collision detection?
          *  @param {boolean} [isBullet] */
         setBullet(isBullet?: boolean): void;
         /** Set the sleep state of the body
