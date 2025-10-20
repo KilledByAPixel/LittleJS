@@ -503,7 +503,7 @@ function engineObjectsCollect(pos, size, objects=engineObjects)
     else if (size instanceof Vector2)  // bounding box test
     {
         for (const o of objects)
-            isOverlapping(pos, size, o.pos, o.size) && collectedObjects.push(o);
+            o.isOverlapping(pos, size) && collectedObjects.push(o);
     }
     else  // circle test
     {

@@ -154,7 +154,7 @@ export class Enemy extends GameObject
             this.velocity = vec2(LJS.rand(.1,-.1), LJS.rand(.4,.2));
 
         // damage player if touching
-        if (LJS.isOverlapping(this.pos, this.size, Game.player.pos, Game.player.size))
+        if (this.isOverlappingObject(Game.player))
             Game.player.damage(1, this);
     }
 

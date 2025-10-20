@@ -20,7 +20,7 @@ class PuzzlePiece extends EngineObject
         const deltaX = emptyGridPos.x - this.gridPos.x;
         const deltaY = emptyGridPos.y - this.gridPos.y;
         if (mouseWasPressed(0))
-        if (isOverlapping(this.pos, this.size, mousePos))
+        if (this.isOverlapping(mousePos))
         if (abs(deltaX) + abs(deltaY) === 1)
         {
             // swap with empty space when clicked on

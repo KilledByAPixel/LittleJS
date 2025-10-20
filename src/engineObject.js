@@ -188,7 +188,7 @@ class EngineObject
                     continue;
 
                 // check collision
-                if (!isOverlapping(this.pos, this.size, o.pos, o.size))
+                if (!this.isOverlappingObject(o))
                     continue;
 
                 // notify objects of collision and check if should be resolved
@@ -451,6 +451,20 @@ class EngineObject
         this.children.splice(this.children.indexOf(child), 1);
         child.parent = 0;
     }
+
+    /** Check if overlapping another engine object
+     *  Collisions are resoloved to prevent overlaps
+     *  @param {EngineObject} object
+     *  @return {boolean} */
+    isOverlappingObject(object)
+    { return this.isOverlapping(object.pos, object.size); }
+
+    /** Check if overlapping a point or aligned bounding box
+     *  @param {Vector2} pos          - Center of box
+     *  @param {Vector2} [size=(0,0)] - Size of box, uses a point if undefined
+     *  @return {boolean} */
+    isOverlapping(pos, size=vec2())
+    { return isOverlapping(this.pos, this.size, pos, size); }
 
     /** Set how this object collides
      *  @param {boolean} [collideSolidObjects] - Does it collide with solid objects?
