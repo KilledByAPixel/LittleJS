@@ -661,11 +661,12 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
  *  @param {string}  [font=fontDefault]
  *  @param {string}  [fontStyle]
  *  @param {number}  [maxWidth]
+ *  @param {number}  [angle]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, fontStyle, maxWidth, context=drawContext)
+function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, fontStyle, maxWidth, angle=0, context=drawContext)
 {
-    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, fontStyle, maxWidth, context);
+    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, fontStyle, maxWidth, angle, context);
 }
 
 /** Draw text on overlay canvas in world space
@@ -680,10 +681,11 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
  *  @param {string}  [font=fontDefault]
  *  @param {string}  [fontStyle]
  *  @param {number}  [maxWidth]
+ *  @param {number}  [angle]
  *  @memberof Draw */
-function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, fontStyle, maxWidth)
+function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, fontStyle, maxWidth, angle=0)
 {
-    drawText(text, pos, size, color, lineWidth, lineColor, textAlign, font, fontStyle, maxWidth, overlayContext);
+    drawText(text, pos, size, color, lineWidth, lineColor, textAlign, font, fontStyle, maxWidth, angle, overlayContext);
 }
 
 /** Draw text on overlay canvas in screen space
@@ -698,9 +700,10 @@ function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textA
  *  @param {string}  [font=fontDefault]
  *  @param {string}  [fontStyle]
  *  @param {number}  [maxWidth]
+ *  @param {number}  [angle]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
  *  @memberof Draw */
-function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, context=overlayContext)
+function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, angle=0, context=overlayContext)
 {
     ASSERT(isString(text), 'text must be a string');
     ASSERT(isVector2(pos), 'pos must be a vec2');
@@ -711,6 +714,7 @@ function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=B
     ASSERT(['left','center','right'].includes(textAlign), 'align must be left, center, or right');
     ASSERT(isString(font), 'font must be a string');
     ASSERT(isString(fontStyle), 'fontStyle must be a string');
+    ASSERT(isNumber(angle), 'angle must be a number');
     
     context.fillStyle = color.toString();
     context.strokeStyle = lineColor.toString();
@@ -720,14 +724,18 @@ function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=B
     context.textBaseline = 'middle';
 
     const lines = (text+'').split('\n');
-    let posY = pos.y;
-    posY -= (lines.length-1) * size/2; // center text vertically
+    const posY = pos.y - (lines.length-1) * size/2; // center vertically
+    context.save();
+    context.translate(pos.x, posY);
+    context.rotate(-angle);
+    let yOffset = 0;
     lines.forEach(line=>
     {
-        lineWidth && context.strokeText(line, pos.x, posY, maxWidth);
-        context.fillText(line, pos.x, posY, maxWidth);
-        posY += size;
+        lineWidth && context.strokeText(line, 0, yOffset, maxWidth);
+        context.fillText(line, 0, yOffset, maxWidth);
+        yOffset += size;
     });
+    context.restore();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
