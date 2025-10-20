@@ -133,6 +133,10 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addShape(shape, density=1, friction=.2, restitution=0, isSensor=false)
     {
+        ASSERT(isNumber(density), 'density must be a number');
+        ASSERT(isNumber(friction), 'friction must be a number');
+        ASSERT(isNumber(restitution), 'restitution must be a number');
+
         const fd = new box2d.instance.b2FixtureDef();
         fd.set_shape(shape);
         fd.set_density(density);
@@ -152,6 +156,11 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addBox(size=vec2(1), offset=vec2(), angle=0, density, friction, restitution, isSensor)
     {
+        ASSERT(isVector2(size), 'size must be a Vector2');
+        ASSERT(size.x > 0 && size.y > 0, 'size must be positive');
+        ASSERT(isVector2(offset), 'offset must be a Vector2');
+        ASSERT(isNumber(angle), 'angle must be a number');
+
         const shape = new box2d.instance.b2PolygonShape();
         shape.SetAsBox(size.x/2, size.y/2, box2d.vec2dTo(offset), angle);
         return this.addShape(shape, density, friction, restitution, isSensor);
@@ -165,6 +174,8 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addPoly(points, density, friction, restitution, isSensor)
     {
+        ASSERT(isArray(points), 'points must be an array');
+
         function box2dCreatePolygonShape(points)
         {
             function box2dCreatePointList(points)
@@ -200,6 +211,9 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addRegularPoly(diameter=1, sides=8, density, friction, restitution, isSensor)
     {
+        ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
+        ASSERT(isNumber(sides) && sides>2, 'sides must be a positive number greater than 2');
+
         const points = [];
         const radius = diameter/2;
         for (let i=sides; i--;)
@@ -215,6 +229,8 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addRandomPoly(diameter=1, density, friction, restitution, isSensor)
     {
+        ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
+
         const sides = randInt(3, 9);
         const points = [];
         const radius = diameter/2;
@@ -232,6 +248,9 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addCircle(diameter=1, offset=vec2(), density, friction, restitution, isSensor)
     {
+        ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
+        ASSERT(isVector2(offset), 'offset must be a Vector2');
+        
         const shape = new box2d.instance.b2CircleShape();
         shape.set_m_p(box2d.vec2dTo(offset));
         shape.set_m_radius(diameter/2);
@@ -247,6 +266,9 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addEdge(point1, point2, density, friction, restitution, isSensor)
     {
+        ASSERT(isVector2(point1), 'point1 must be a Vector2');
+        ASSERT(isVector2(point2), 'point2 must be a Vector2');
+
         const shape = new box2d.instance.b2EdgeShape();
         shape.Set(box2d.vec2dTo(point1), box2d.vec2dTo(point2));
         return this.addShape(shape, density, friction, restitution, isSensor);
@@ -260,6 +282,8 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addEdgeLoop(points, density, friction, restitution, isSensor)
     {
+        ASSERT(isArray(points), 'points must be an array');
+
         const fixtures = [];
         const getPoint = i=> points[mod(i,points.length)];
         for (let i=0; i<points.length; ++i)
@@ -283,6 +307,7 @@ class Box2dObject extends EngineObject
      *  @param {boolean} [isSensor] */
     addEdgeList(points, density, friction, restitution, isSensor)
     {
+        ASSERT(isArray(points), 'points must be an array');
         const fixtures = [];
         for (let i=0; i<points.length-1; ++i)
         {
