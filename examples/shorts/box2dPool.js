@@ -62,11 +62,11 @@ class Ball extends Box2dObject
     }
 }
 
-class Pocket extends Box2dObject
+class Pocket extends Box2dStaticObject
 {
     constructor(pos, size)
     {
-        super(pos, size, 0, 0, BLACK, box2d.bodyTypeStatic);
+        super(pos, size, 0, 0, BLACK);
 
         // create a sensor circle for pocket
         this.addCircle(size.x);
@@ -87,8 +87,8 @@ async function gameInit()
     canvasClearColor = hsl(.4,.5,.5);
 
     // create table walls
-    const groundObject = new Box2dObject(vec2(), vec2(), 0, 0,
-        hsl(.1,1,.2), box2d.bodyTypeStatic);
+    const groundObject = new Box2dStaticObject;
+    groundObject.color = hsl(.1,1,.2);
     groundObject.addBox(vec2(100,3), vec2( 0, 8.5));
     groundObject.addBox(vec2(100,3), vec2( 0,-8.5));
     groundObject.addBox(vec2(3,100), vec2( 15,0));

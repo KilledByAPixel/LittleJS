@@ -137,14 +137,14 @@ export function loadScene(_scene)
         }
         {
             // distance joint
-            const o1 = new LJS.Box2dObject(vec2(30,11), vec2(4), Game.spriteAtlas.circleOutline, 0, LJS.randColor(), LJS.box2d.bodyTypeStatic);
+            const o1 = new LJS.Box2dStaticObject(vec2(30,11), vec2(4), Game.spriteAtlas.circleOutline, 0, LJS.randColor());
             o1.renderOrder = -2;
             const o2 = GameObjects.spawnCircle(vec2(30,8), 2, LJS.randColor());
             new LJS.Box2dDistanceJoint(o1, o2);
         }
         {
             // motor joint
-            const o = new LJS.Box2dObject(vec2(10,8), vec2(4), Game.spriteAtlas.circleOutline, 0, LJS.randColor(), LJS.box2d.bodyTypeStatic);
+            const o = new LJS.Box2dStaticObject(vec2(10,8), vec2(4), Game.spriteAtlas.circleOutline, 0, LJS.randColor());
             o.renderOrder = -2;
             new GameObjects.MotorJointObject(vec2(10,8), vec2(2), LJS.randColor(), o);
         }

@@ -1085,6 +1085,50 @@ class Box2dPrismaticJoint extends Box2dJoint
 
 ///////////////////////////////////////////////////////////////////////////////
 /** 
+ * Box2D Static Object - Box2d with a static physics body
+ * @extends Box2dObject
+ * @memberof Box2D
+ */
+class Box2dStaticObject extends Box2dObject 
+{
+    /** Create a LittleJS object with Box2d physics
+     *  @param {Vector2}  [pos]
+     *  @param {Vector2}  [size]
+     *  @param {TileInfo} [tileInfo]
+     *  @param {number}   [angle]
+     *  @param {Color}    [color]
+     *  @param {number}   [renderOrder] */
+    constructor(pos, size, tileInfo, angle=0, color, renderOrder=0)
+    {
+        const bodyType = box2d.bodyTypeStatic;
+        super(pos, size, tileInfo, angle, color, bodyType, renderOrder);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Box2D Kiematic Object - Box2d with a kinematic physics body
+ * @extends Box2dObject
+ * @memberof Box2D
+ */
+class Box2dKiematicObject extends Box2dObject 
+{
+    /** Create a LittleJS object with Box2d physics
+     *  @param {Vector2}  [pos]
+     *  @param {Vector2}  [size]
+     *  @param {TileInfo} [tileInfo]
+     *  @param {number}   [angle]
+     *  @param {Color}    [color]
+     *  @param {number}   [renderOrder] */
+    constructor(pos, size, tileInfo, angle=0, color, renderOrder=0)
+    {
+        const bodyType = box2d.bodyTypeKinematic;
+        super(pos, size, tileInfo, angle, color, bodyType, renderOrder);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
  * Box2D Wheel Joint
  * - Provides two degrees of freedom: translation along an axis fixed in objectA and rotation
  * - You can use a joint limit to restrict the range of motion

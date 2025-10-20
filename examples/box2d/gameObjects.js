@@ -77,7 +77,7 @@ export function spawnRandomEdges()
     for (let i=40, y=0; i--;)
         edgePoints.push(vec2(i, y=LJS.clamp(y+LJS.rand(-2,2),0,5)));
     edgePoints.push(vec2(0,0));
-    const o = new LJS.Box2dObject(vec2(), vec2(), 0, 0, LJS.BLACK, LJS.box2d.bodyTypeStatic);
+    const o = new LJS.Box2dStaticObject;
     o.addEdgeList(edgePoints);
 }
 
@@ -164,11 +164,11 @@ export class CarObject extends LJS.Box2dObject
 ///////////////////////////////////////////////////////////////////////////////
 
 // changes objects color when touched
-export class ContactTester extends LJS.Box2dObject
+export class ContactTester extends LJS.Box2dStaticObject
 {
     constructor(pos, size, color, contactColor, isCircle=true, isSensor=true)
     {
-        super(pos, size, 0, 0, color, LJS.box2d.bodyTypeStatic);
+        super(pos, size, 0, 0, color);
         isCircle ? this.addCircle(size.x) : this.addBox(size);
         this.setSensor(isSensor);
         this.contactColor = contactColor;
@@ -323,11 +323,11 @@ export class SoftBodyObject extends LJS.Box2dObject
 ///////////////////////////////////////////////////////////////////////////////
 
 // cloth sim using grid of rope joints
-export class ClothObject extends LJS.Box2dObject
+export class ClothObject extends LJS.Box2dStaticObject
 {
     constructor(pos, scale, sizeCount, color, maxJointStress=10)
     {
-        super(pos, vec2(), 0, 0, color, LJS.box2d.bodyTypeStatic);
+        super(pos, vec2(), 0, 0, color);
         const nodeSize = sizeCount.subtract(vec2(1));
         const spacing = scale.divide(nodeSize);
         const objectDiameter = LJS.min(spacing.x, spacing.y);

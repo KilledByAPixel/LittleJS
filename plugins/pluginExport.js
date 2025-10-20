@@ -33,6 +33,8 @@ export
     box2dInit,
     Box2dPlugin,
     Box2dObject,
+    Box2dStaticObject,
+    Box2dKiematicObject,
     Box2dRaycastResult,
     Box2dJoint,
     Box2dTargetJoint,

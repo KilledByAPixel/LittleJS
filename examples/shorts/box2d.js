@@ -7,8 +7,8 @@ async function gameInit()
     canvasClearColor = hsl(0,0,.9);
     
     // create ground object
-    groundObject = new Box2dObject(vec2(-8), vec2(), 0, 0,
-        GRAY, box2d.bodyTypeStatic);
+    groundObject = new Box2dStaticObject(vec2(-8));
+    groundObject.color = GRAY;
     groundObject.addBox(vec2(100,2));
 
     // add some random objects
