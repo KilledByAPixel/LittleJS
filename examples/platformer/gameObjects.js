@@ -322,7 +322,7 @@ export class Bullet extends LJS.EngineObject
         super.update();
 
         this.angle = this.velocity.angle();
-        this.range -= this.velocity.length();
+        this.range -= this.getSpeed();
         if (this.range < 0)
         {
             new LJS.ParticleEmitter(

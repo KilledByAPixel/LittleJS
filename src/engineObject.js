@@ -402,6 +402,10 @@ class EngineObject
      *  @return {number} */
     getAliveTime() { return time - this.spawnTime; }
 
+    /** Get the speed of this object
+     *  @return {number} */
+    getSpeed() { return this.velocity.length(); }
+
     /** Apply acceleration to this object (adjust velocity, not affected by mass)
      *  @param {Vector2} acceleration */
     applyAcceleration(acceleration)

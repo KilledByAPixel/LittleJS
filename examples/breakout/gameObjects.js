@@ -137,7 +137,7 @@ export class Ball extends PhysicsObject
         this.velocity.y = LJS.max(-this.velocity.y, .2);
 
         // speed up
-        const speed = LJS.min(1.04*this.velocity.length(), .5);
+        const speed = LJS.min(1.04*this.getSpeed(), .5);
         this.velocity = this.velocity.normalize(speed);
         sound_bounce.play(this.pos, 1, speed*2);
 

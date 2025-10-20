@@ -199,7 +199,7 @@ export class Character extends GameObjects.GameObject
         super.update();
 
         // update walk cycle
-        const speed = this.velocity.length();
+        const speed = this.getSpeed();
         if (this.climbingLadder || this.groundTimer.active() && !this.dodgeTimer.active())
         {
             this.walkCyclePercent += speed * .5;

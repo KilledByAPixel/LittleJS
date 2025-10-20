@@ -329,6 +329,10 @@ class Box2dObject extends EngineObject
      *  @return {number} */
     getBodyType() { return this.body.GetType(); }
     
+    /** Get the speed of this object
+     *  @return {number} */
+    getSpeed() { return this.getLinearVelocity().length(); }
+
     ///////////////////////////////////////////////////////////////////////////////
     // physics set functions
 
