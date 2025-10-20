@@ -487,10 +487,10 @@ function engineObjectsDestroy()
 }
 
 /** Collects all object within a given area
- *  @param {Vector2} [pos]                 - Center of test area, or undefined for all objects
- *  @param {Vector2|number} [size]         - Radius of circle if float, rectangle size if Vector2
+ *  @param {Vector2} [pos] - Center of test area, or undefined for all objects
+ *  @param {Vector2|number} [size] - Radius of circle if float, rectangle size if Vector2
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
- *  @return {Array<EngineObject>}                        - List of collected objects
+ *  @return {Array<EngineObject>} - List of collected objects
  *  @memberof Engine */
 function engineObjectsCollect(pos, size, objects=engineObjects)
 {
