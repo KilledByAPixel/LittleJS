@@ -1,9 +1,9 @@
 /**
  * LittleJS Box2D Physics Plugin
  * - Box2dObject extends EngineObject with Box2D physics
- * - Call box2dInit() before engineInit() to enable
+ * - Call box2dInit() to enable
  * - You will also need to include box2d.wasm.js
- * - Uses a super fast web assembly port of Box2D
+ * - Uses a super fast web assembly port of Box2D v2.3.1
  * - More info: https://github.com/kripken/box2d.js
  * - Functions to create polygon, circle, and edge shapes
  * - Contact begin and end callbacks
@@ -35,9 +35,9 @@ function box2dSetDebug(enable) { box2dDebug = enable; }
 ///////////////////////////////////////////////////////////////////////////////
 /** 
  * Box2D Object - extend with your own custom physics objects
- * - A LittleJS object with Box2D physics
- * - Each object has a Box2D body which can have multiple fixtures and joints
+ * - A LittleJS object with Box2D physics, dynamic by default
  * - Provides interface for Box2D body and fixture functions
+ * - Each object can have multiple fixtures and joints
  * @extends EngineObject
  * @memberof Box2D
  */
@@ -51,7 +51,7 @@ class Box2dObject extends EngineObject
      *  @param {Color}    [color]
      *  @param {number}   [bodyType]
      *  @param {number}   [renderOrder] */
-    constructor(pos, size, tileInfo, angle=0, color, bodyType=box2d.bodyTypeDynamic, renderOrder=0)
+    constructor(pos=vec2(), size=vec2(), tileInfo, angle=0, color, bodyType=box2d.bodyTypeDynamic, renderOrder=0)
     {
         super(pos, size, tileInfo, angle, color, renderOrder);
 
@@ -64,6 +64,10 @@ class Box2dObject extends EngineObject
         this.body.object = this;
         this.lineColor = BLACK;
         box2d.objects.push(this);
+        
+        // edge lists and loops for drawing
+        this.edgeLists = [];
+        this.edgeLoops = [];
     }
 
     /** Destroy this object and its physics body */
@@ -105,10 +109,23 @@ class Box2dObject extends EngineObject
      *  @param {Color}  [lineColor]
      *  @param {number} [lineWidth]
      *  @param {CanvasRenderingContext2D} [context] */
-    drawFixtures(color=WHITE, lineColor, lineWidth=.1, context)
+    drawFixtures(color=WHITE, lineColor=BLACK, lineWidth=.1, context)
     {
-        this.getFixtureList().forEach(fixture=>
-            box2d.drawFixture(fixture, this.pos, this.angle, color, lineColor, lineWidth, context));
+        // draw non-edge fixtures
+        this.getFixtureList().forEach((fixture)=>
+        {
+            const shape = box2d.castObjectType(fixture.GetShape());
+            if (shape.GetType() !== box2d.instance.b2Shape.e_edge)
+            {
+                box2d.drawFixture(fixture, this.pos, this.angle, color, lineColor, lineWidth, context);
+            }
+        });
+
+        // draw edges using a single draw line for better connections
+        this.edgeLists.forEach(points=>
+            drawLineList(points, lineWidth, lineColor, false, this.pos, this.angle));
+        this.edgeLoops.forEach(points=>
+            drawLineList(points, lineWidth, lineColor, true, this.pos, this.angle));
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -274,6 +291,32 @@ class Box2dObject extends EngineObject
         return this.addShape(shape, density, friction, restitution, isSensor);
     }
 
+    /** Add an edge list to the body
+     *  @param {Array<Vector2>} points
+     *  @param {number}  [density]
+     *  @param {number}  [friction]
+     *  @param {number}  [restitution]
+     *  @param {boolean} [isSensor] */
+    addEdgeList(points, density, friction, restitution, isSensor)
+    {
+        ASSERT(isArray(points), 'points must be an array');
+        const fixtures = [], edgePoints = [];
+        for (let i=0; i<points.length-1; ++i)
+        {
+            const shape = new box2d.instance.b2EdgeShape();
+            points[i-1] && shape.set_m_vertex0(box2d.vec2dTo(points[i-1]));
+            points[i+0] && shape.set_m_vertex1(box2d.vec2dTo(points[i+0]));
+            points[i+1] && shape.set_m_vertex2(box2d.vec2dTo(points[i+1]));
+            points[i+2] && shape.set_m_vertex3(box2d.vec2dTo(points[i+2]));
+            const f = this.addShape(shape, density, friction, restitution, isSensor);
+            fixtures.push(f);
+            edgePoints.push(points[i].copy());
+        }
+        edgePoints.push(points[points.length-1].copy());
+        this.edgeLists.push(edgePoints);
+        return fixtures;
+    }
+
     /** Add an edge loop to the body, an edge loop connects the end points
      *  @param {Array<Vector2>} points
      *  @param {number}  [density]
@@ -283,8 +326,7 @@ class Box2dObject extends EngineObject
     addEdgeLoop(points, density, friction, restitution, isSensor)
     {
         ASSERT(isArray(points), 'points must be an array');
-
-        const fixtures = [];
+        const fixtures = [], edgePoints = [];
         const getPoint = i=> points[mod(i,points.length)];
         for (let i=0; i<points.length; ++i)
         {
@@ -295,30 +337,9 @@ class Box2dObject extends EngineObject
             shape.set_m_vertex3(box2d.vec2dTo(getPoint(i+2)));
             const f = this.addShape(shape, density, friction, restitution, isSensor);
             fixtures.push(f);
+            i < points.length && edgePoints.push(points[i].copy());
         }
-        return fixtures;
-    }
-
-    /** Add an edge list to the body
-     *  @param {Array<Vector2>} points
-     *  @param {number}  [density]
-     *  @param {number}  [friction]
-     *  @param {number}  [restitution]
-     *  @param {boolean} [isSensor] */
-    addEdgeList(points, density, friction, restitution, isSensor)
-    {
-        ASSERT(isArray(points), 'points must be an array');
-        const fixtures = [];
-        for (let i=0; i<points.length-1; ++i)
-        {
-            const shape = new box2d.instance.b2EdgeShape();
-            points[i-1] && shape.set_m_vertex0(box2d.vec2dTo(points[i-1]));
-            points[i+0] && shape.set_m_vertex1(box2d.vec2dTo(points[i+0]));
-            points[i+1] && shape.set_m_vertex2(box2d.vec2dTo(points[i+1]));
-            points[i+2] && shape.set_m_vertex3(box2d.vec2dTo(points[i+2]));
-            const f = this.addShape(shape, density, friction, restitution, isSensor);
-            fixtures.push(f);
-        }
+        this.edgeLoops.push(edgePoints);
         return fixtures;
     }
 
