@@ -739,6 +739,26 @@ class UIObject
     isInteractive()
     { return this.interactive && this.visible && !this.disabled;}
 
+    /** Returns string containing info about this object for debugging
+     *  @return {string} */
+    toString()
+    {
+        if (!debug) return;
+        
+        let text = 'type = ' + this.constructor.name;
+        if (this.text)
+            text += '\ntext = ' + this.text;
+        if (this.pos.x || this.pos.y)
+            text += '\npos = ' + this.pos;
+        if (this.localPos.x || this.localPos.y)
+            text += '\localPos = ' + this.localPos;
+        if (this.size.x || this.size.y)
+            text += '\nsize = ' + this.size;
+        if (this.color)
+            text += '\ncolor = ' + this.color;
+        return text;
+    }
+
     /** Called each frame when object updates */
     onUpdate() {}
 
