@@ -184,7 +184,7 @@ function inputUpdate()
     if (headlessMode) return;
 
     // clear input when lost focus (prevent stuck keys)
-    if(!(touchInputEnable && isTouchDevice) && !document.hasFocus())
+    if (!(touchInputEnable && isTouchDevice) && !document.hasFocus())
         inputClear();
 
     // update mouse world space position and delta
