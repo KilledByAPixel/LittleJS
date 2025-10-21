@@ -160,6 +160,9 @@ class ParticleEmitter extends EngineObject
         this.previousPos = this.pos.copy();
     }
 
+    /** Emitters do not have physics */
+    updatePhysics() {}
+
     /** Update the emitter to spawn particles, called automatically by engine once each frame */
     update()
     {
