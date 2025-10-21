@@ -9112,7 +9112,8 @@ class UIScrollbar extends UIObject
         {
             // gamepad/keyboard navigation adjustment
             const direction = uiSystem.getNavigationOtherDirection();
-            this.value = clamp(this.value + direction*.01);
+            if (!uiSystem.navigationTimer.active())
+                this.value = clamp(this.value + direction*.01);
         }
         this.value === oldValue || this.onChange();
     }
