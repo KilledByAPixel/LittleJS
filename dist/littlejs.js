@@ -8893,11 +8893,10 @@ class UISystemPlugin
                 // update in reverse order to detect mouse enter/leave
                 for (let i=o.children.length; i--;)
                     updateObject(o.children[i], disabled);
-                o.update();
+                o.update(disabled);
             }
 
-            if (uiSystem.activeObject)
-            if (!uiSystem.activeObject.visible || uiSystem.activeObject.disabled)
+            if (uiSystem.activeObject && !uiSystem.activeObject.visible)
                 uiSystem.activeObject = undefined;
 
             // reset hover object at start of update
@@ -8981,15 +8980,18 @@ class UISystemPlugin
                 context.translate(mainCanvasSize.x/2/s,0);
             }
 
-            function renderObject(o)
+            function renderObject(o, disabled=false)
             {
+                // pass disabled state to children
+                disabled ||= o.disabled;
+
                 if (!o.visible)
                     return;
                 if (o.parent)
                     o.pos = o.localPos.add(o.parent.pos);
-                o.render();
+                o.render(disabled);
                 for (const c of o.children)
-                    renderObject(c);
+                    renderObject(c, disabled);
             }
             uiSystem.uiObjects.forEach(o=> o.parent || renderObject(o));
             context.restore();
@@ -9400,11 +9402,17 @@ class UIObject
         return isOverlapping(this.pos, size, pos);
     }
 
-    /** Update the object, called automatically by plugin once each frame */
-    update()
+    /** Update the object, called automatically by plugin once each frame 
+     *  @param {boolean} disabled - Is the object disabled
+     */
+    update(disabled)
     {
         // call the custom update callback
         this.onUpdate();
+
+        // unset active if disabled
+        if (disabled && this == uiSystem.activeObject)
+            uiSystem.activeObject = undefined;
 
         const wasHover = uiSystem.lastHoverObject === this;
         const isActive = this.isActiveObject();
@@ -9416,7 +9424,7 @@ class UIObject
             uiSystem.hoverObject = this;
         if (this.isHoverObject())
         {
-            if (!this.disabled)
+            if (!disabled)
             {
                 if (mousePress)
                 {
@@ -9456,17 +9464,19 @@ class UIObject
             this.isHoverObject() ? this.onEnter() : this.onLeave();
     }
 
-    /** Render the object, called automatically by plugin once each frame */
-    render()
+    /** Render the object, called automatically by plugin once each frame 
+     *  @param {boolean} disabled - Is the object disabled
+     */
+    render(disabled)
     {
         if (!this.size.x || !this.size.y) return;
 
         const isNavigationObject = this.isNavigationObject();
         const lineColor = isNavigationObject ? this.color :
-            this.interactive && this.isActiveObject() && !this.disabled ?
+            this.interactive && this.isActiveObject() && !disabled ?
             this.color : this.lineColor;
         const color = isNavigationObject ? this.hoverColor :
-            this.disabled ? this.disabledColor : 
+            disabled ? this.disabledColor : 
             this.interactive ? 
                 this.isHoverObject() ? this.hoverColor : 
                 this.isActiveObject() ? this.activeColor || this.color : 
@@ -9660,9 +9670,9 @@ class UIButton extends UIObject
         this.color = color.copy();
         this.interactive = true;
     }
-    render()
+    render(disabled)
     {
-        super.render();
+        super.render(disabled);
         
         // draw the text scaled to fit
         const textSize = this.getTextSize();
@@ -9705,9 +9715,9 @@ class UICheckbox extends UIObject
         this.checked = !this.checked;
         this.onChange();
     }
-    render()
+    render(disabled)
     {
-        super.render();
+        super.render(disabled);
         if (this.checked)
         {
             const p = this.cornerRadius / min(this.size.x, this.size.y) * 2;
@@ -9760,9 +9770,9 @@ class UIScrollbar extends UIObject
         this.color = color.copy();
         this.interactive = true;
     }
-    update()
+    update(disabled)
     {
-        super.update();
+        super.update(disabled);
         if (!this.interactive)
             return;
 
@@ -9793,9 +9803,9 @@ class UIScrollbar extends UIObject
         }
         this.value === oldValue || this.onChange();
     }
-    render()
+    render(disabled)
     {
-        super.render();
+        super.render(disabled);
 
         // handle horizontal or vertical scrollbar
         const isHorizontal = this.size.x > this.size.y;
@@ -9810,7 +9820,7 @@ class UIScrollbar extends UIObject
         const handlePos = isHorizontal ? 
             vec2(lerp(p1, p2, this.value), this.pos.y) :
             vec2(this.pos.x, lerp(p2, p1, this.value))
-        const handleColor = this.disabled ? this.disabledColor : this.handleColor;
+        const handleColor = disabled ? this.disabledColor : this.handleColor;
         uiSystem.drawRect(handlePos, vec2(handleSize), handleColor, this.lineWidth, this.lineColor, this.cornerRadius, this.gradientColor);
 
         // draw the text scaled to fit on the scrollbar
@@ -9935,18 +9945,18 @@ class UIVideo extends UIObject
     setTime(time)
     { this.video.currentTime = clamp(time, 0, this.getDuration()); }
 
-    update()
+    update(disabled)
     {
-        super.update();
+        super.update(disabled);
 
         // update volume based on global sound volume
         this.video.volume = clamp(this.volume * soundVolume);
     }
     
     /** Render video to UI canvas */
-    render()
+    render(disabled)
     {
-        super.render();
+        super.render(disabled);
 
         if (this.isLoading())
             return;
