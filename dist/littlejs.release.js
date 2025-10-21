@@ -134,7 +134,7 @@ function engineAddPlugin(update, render, glContextLost, glContextRestored)
 
 /**
  * @callback GameInitCallback - Called after the engine starts, can be async
- * @returns {void|Promise<void>}
+ * @return {void|Promise<void>}
  * @memberof Engine
  */
 /**
@@ -908,7 +908,7 @@ function percentLerp(value, percentA, percentB, lerpA, lerpB)
  *  @param {number} valueA
  *  @param {number} valueB
  *  @param {number} [wrapSize]
- *  @returns {number}
+ *  @return {number}
  *  @memberof Utilities */
 function distanceWrap(valueA, valueB, wrapSize=1)
 { const d = (valueA - valueB) % wrapSize; return d*2 % wrapSize - d; }
@@ -918,7 +918,7 @@ function distanceWrap(valueA, valueB, wrapSize=1)
  *  @param {number} valueB
  *  @param {number} percent
  *  @param {number} [wrapSize]
- *  @returns {number}
+ *  @return {number}
  *  @memberof Utilities */
 function lerpWrap(valueA, valueB, percent, wrapSize=1)
 {
@@ -930,7 +930,7 @@ function lerpWrap(valueA, valueB, percent, wrapSize=1)
 /** Returns signed wrapped distance between the two angles passed in
  *  @param {number} angleA
  *  @param {number} angleB
- *  @returns {number}
+ *  @return {number}
  *  @memberof Utilities */
 function distanceAngle(angleA, angleB) { return distanceWrap(angleA, angleB, 2*PI); }
 
@@ -938,7 +938,7 @@ function distanceAngle(angleA, angleB) { return distanceWrap(angleA, angleB, 2*P
  *  @param {number} angleA
  *  @param {number} angleB
  *  @param {number} percent
- *  @returns {number}
+ *  @return {number}
  *  @memberof Utilities */
 function lerpAngle(angleA, angleB, percent) { return lerpWrap(angleA, angleB, percent, 2*PI); }
 
@@ -1907,11 +1907,14 @@ const MAGENTA = debugProtectConstant(rgb(1,0,1));
 class Timer
 {
     /** Create a timer object set time passed in
-     *  @param {number} [timeLeft] - How much time left before the timer elapses in seconds */
-    constructor(timeLeft)
+     *  @param {number} [timeLeft] - How much time left before the timer 
+     *  @param {boolean} [useRealTime] - Should the timer keep running even when the game is paused? (useful for UI) */
+    constructor(timeLeft, useRealTime=false)
     {
         ASSERT(timeLeft === undefined || isNumber(timeLeft), 'Constructed Timer is invalid.', timeLeft);
-        this.time = timeLeft === undefined ? undefined : time + timeLeft;
+        this.useRealTime = useRealTime;
+        const globalTime = this.getGlobalTime();
+        this.time = timeLeft === undefined ? undefined : globalTime + timeLeft;
         this.setTime = timeLeft;
     }
 
@@ -1920,8 +1923,17 @@ class Timer
     set(timeLeft=0)
     {
         ASSERT(isNumber(timeLeft), 'Timer is invalid.', timeLeft);
-        this.time = time + timeLeft;
+        const globalTime = this.getGlobalTime();
+        this.time = globalTime + timeLeft;
         this.setTime = timeLeft;
+    }
+
+    /** Set if the timer should keep running even when the game is paused
+     *  @param {boolean} [useRealTime] */
+    setUseRealTime(useRealTime=true)
+    {
+        ASSERT(!this.isSet(), 'Cannot change global time setting while timer is set.');
+        this.useRealTime = useRealTime;
     }
 
     /** Unset the timer */
@@ -1933,23 +1945,27 @@ class Timer
 
     /** Returns true if set and has not elapsed
      * @return {boolean} */
-    active() { return time < this.time; }
+    active() { return this.getGlobalTime() < this.time; }
 
     /** Returns true if set and elapsed
      * @return {boolean} */
-    elapsed() { return time >= this.time; }
+    elapsed() { return this.getGlobalTime() >= this.time; }
 
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {number} */
-    get() { return this.isSet()? time - this.time : 0; }
+    get() { return this.isSet()? this.getGlobalTime() - this.time : 0; }
 
     /** Get percentage elapsed based on time it was set to, returns 0 if not set
      * @return {number} */
-    getPercent() { return this.isSet()? 1-percent(this.time - time, 0, this.setTime) : 0; }
+    getPercent() { return this.isSet()? 1-percent(this.time - this.getGlobalTime(), 0, this.setTime) : 0; }
 
     /** Get the time this timer was set to, returns 0 if not set
      * @return {number} */
     getSetTime() { return this.isSet() ? this.setTime : 0; }
+
+    /** Get the current global time this timer is based on
+     * @return {number} */
+    getGlobalTime() { return this.useRealTime ? timeReal : time; }
 
     /** Returns this timer expressed as a string
      * @return {string} */
@@ -8823,8 +8839,9 @@ class UIVideo extends UIObject
      *  @return {Promise} Promise that resolves when playback starts */
     play()
     {
+        // try to play the video, catch any errors (autoplay may be blocked)
         const promise = this.video.play();
-        promise?.catch(()=>{}); // silently ignore play errors
+        promise?.catch(()=>{});
         return promise;
     }
     

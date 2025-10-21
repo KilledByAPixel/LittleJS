@@ -105,7 +105,7 @@ declare module "littlejsengine" {
     export function setPaused(isPaused?: boolean): void;
     /**
      * @callback GameInitCallback - Called after the engine starts, can be async
-     * @returns {void|Promise<void>}
+     * @return {void|Promise<void>}
      * @memberof Engine
      */
     /**
@@ -813,7 +813,7 @@ declare module "littlejsengine" {
      *  @param {number} valueA
      *  @param {number} valueB
      *  @param {number} [wrapSize]
-     *  @returns {number}
+     *  @return {number}
      *  @memberof Utilities */
     export function distanceWrap(valueA: number, valueB: number, wrapSize?: number): number;
     /** Linearly interpolates between values passed in with wrapping
@@ -821,20 +821,20 @@ declare module "littlejsengine" {
      *  @param {number} valueB
      *  @param {number} percent
      *  @param {number} [wrapSize]
-     *  @returns {number}
+     *  @return {number}
      *  @memberof Utilities */
     export function lerpWrap(valueA: number, valueB: number, percent: number, wrapSize?: number): number;
     /** Returns signed wrapped distance between the two angles passed in
      *  @param {number} angleA
      *  @param {number} angleB
-     *  @returns {number}
+     *  @return {number}
      *  @memberof Utilities */
     export function distanceAngle(angleA: number, angleB: number): number;
     /** Linearly interpolates between the angles passed in with wrapping
      *  @param {number} angleA
      *  @param {number} angleB
      *  @param {number} percent
-     *  @returns {number}
+     *  @return {number}
      *  @memberof Utilities */
     export function lerpAngle(angleA: number, angleB: number, percent: number): number;
     /** Linearly interpolates between values passed in using percent
@@ -1229,13 +1229,18 @@ declare module "littlejsengine" {
      */
     export class Timer {
         /** Create a timer object set time passed in
-         *  @param {number} [timeLeft] - How much time left before the timer elapses in seconds */
-        constructor(timeLeft?: number);
+         *  @param {number} [timeLeft] - How much time left before the timer
+         *  @param {boolean} [useRealTime] - Should the timer keep running even when the game is paused? (useful for UI) */
+        constructor(timeLeft?: number, useRealTime?: boolean);
+        useRealTime: boolean;
         time: number;
         setTime: number;
         /** Set the timer with seconds passed in
          *  @param {number} [timeLeft] - How much time left before the timer is elapsed in seconds */
         set(timeLeft?: number): void;
+        /** Set if the timer should keep running even when the game is paused
+         *  @param {boolean} [useRealTime] */
+        setUseRealTime(useRealTime?: boolean): void;
         /** Unset the timer */
         unset(): void;
         /** Returns true if set
@@ -1256,6 +1261,9 @@ declare module "littlejsengine" {
         /** Get the time this timer was set to, returns 0 if not set
          * @return {number} */
         getSetTime(): number;
+        /** Get the current global time this timer is based on
+         * @return {number} */
+        getGlobalTime(): number;
         /** Returns this timer expressed as a string
          * @return {string} */
         toString(): string;
