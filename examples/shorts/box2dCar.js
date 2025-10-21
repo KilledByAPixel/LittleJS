@@ -39,7 +39,7 @@ class CarObject extends Box2dObject
             joint.setSpringFrequencyHz(frequency);
             joint.setMaxMotorTorque(maxTorque);
             joint.enableMotor(!i);
-            const friction = 1;
+            const friction = 20;
             wheel.addCircle(2, vec2(), 1, friction);
             wheel.motorJoint = joint;
             this.wheels[i] = wheel;
