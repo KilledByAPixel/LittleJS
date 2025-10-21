@@ -70,8 +70,9 @@ function LOG(...output) { console.log(...output); }
  *  @param {number} [time]
  *  @param {number} [angle]
  *  @param {boolean} [fill]
+ *  @param {boolean} [screenSpace]
  *  @memberof Debug */
-function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false)
+function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false, screenSpace=false)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isVector2(size), 'size must be a vec2');
@@ -86,7 +87,7 @@ function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false)
     pos = pos.copy();
     size = size.copy();
     const timer = new Timer(time);
-    debugPrimitives.push({pos:pos.copy(), size:size.copy(), color, timer, angle, fill});
+    debugPrimitives.push({pos:pos.copy(), size:size.copy(), color, timer, angle, fill, screenSpace});
 }
 
 /** Draw a debug poly in world space
@@ -96,8 +97,9 @@ function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false)
  *  @param {number} [time]
  *  @param {number} [angle]
  *  @param {boolean} [fill]
+ *  @param {boolean} [screenSpace]
  *  @memberof Debug */
-function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false)
+function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false, screenSpace=false)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isArray(points), 'points must be an array');
@@ -110,7 +112,7 @@ function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false)
     pos = pos.copy();
     points = points.map(p=>p.copy());
     const timer = new Timer(time);
-    debugPrimitives.push({pos, points, color, timer, angle, fill});
+    debugPrimitives.push({pos, points, color, timer, angle, fill, screenSpace});
 }
 
 /** Draw a debug circle in world space
@@ -119,8 +121,9 @@ function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false)
  *  @param {Color|string} [color]
  *  @param {number} [time]
  *  @param {boolean} [fill]
+ *  @param {boolean} [screenSpace]
  *  @memberof Debug */
-function debugCircle(pos, size=0, color=WHITE, time=0, fill=false)
+function debugCircle(pos, size=0, color=WHITE, time=0, fill=false, screenSpace=false)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isNumber(size), 'size must be a number');
@@ -131,7 +134,7 @@ function debugCircle(pos, size=0, color=WHITE, time=0, fill=false)
         color = color.toString();
     pos = pos.copy();
     const timer = new Timer(time);
-    debugPrimitives.push({pos, size, color, timer, angle:0, fill});
+    debugPrimitives.push({pos, size, color, timer, angle:0, fill, screenSpace});
 }
 
 /** Draw a debug point in world space
@@ -139,9 +142,10 @@ function debugCircle(pos, size=0, color=WHITE, time=0, fill=false)
  *  @param {Color|string} [color]
  *  @param {number} [time]
  *  @param {number} [angle]
+ *  @param {boolean} [screenSpace]
  *  @memberof Debug */
-function debugPoint(pos, color, time, angle)
-{ debugRect(pos, undefined, color, time, angle); }
+function debugPoint(pos, color, time, angle, screenSpace=false)
+{ debugRect(pos, undefined, color, time, angle, false, screenSpace); }
 
 /** Draw a debug line in world space
  *  @param {Vector2} posA
@@ -149,8 +153,9 @@ function debugPoint(pos, color, time, angle)
  *  @param {Color|string} [color]
  *  @param {number} [width]
  *  @param {number} [time]
+ *  @param {boolean} [screenSpace]
  *  @memberof Debug */
-function debugLine(posA, posB, color, width=.1, time)
+function debugLine(posA, posB, color, width=.1, time, screenSpace=false)
 {
     ASSERT(isVector2(posA), 'posA must be a vec2');
     ASSERT(isVector2(posB), 'posB must be sa vec2');
@@ -158,7 +163,7 @@ function debugLine(posA, posB, color, width=.1, time)
 
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(width, halfDelta.length()*2);
-    debugRect(posA.add(halfDelta), size, color, time, halfDelta.angle(), true);
+    debugRect(posA.add(halfDelta), size, color, time, halfDelta.angle(), true, screenSpace);
 }
 
 /** Draw a debug combined axis aligned bounding box in world space
@@ -167,8 +172,10 @@ function debugLine(posA, posB, color, width=.1, time)
  *  @param {Vector2} posB
  *  @param {Vector2} sizeB
  *  @param {Color|string} [color]
+ *  @param {number} [time]
+ *  @param {boolean} [screenSpace]
  *  @memberof Debug */
-function debugOverlap(posA, sizeA, posB, sizeB, color)
+function debugOverlap(posA, sizeA, posB, sizeB, color, time, screenSpace=false)
 {
     ASSERT(isVector2(posA), 'posA must be a vec2');
     ASSERT(isVector2(posB), 'posB must be a vec2');
@@ -183,7 +190,7 @@ function debugOverlap(posA, sizeA, posB, sizeB, color)
         max(posA.x + sizeA.x/2, posB.x + sizeB.x/2),
         max(posA.y + sizeA.y/2, posB.y + sizeB.y/2)
     );
-    debugRect(minPos.lerp(maxPos,.5), maxPos.subtract(minPos), color);
+    debugRect(minPos.lerp(maxPos,.5), maxPos.subtract(minPos), color, time, 0, false, screenSpace);
 }
 
 /** Draw a debug axis aligned bounding box in world space
@@ -194,8 +201,9 @@ function debugOverlap(posA, sizeA, posB, sizeB, color)
  *  @param {number} [time]
  *  @param {number} [angle]
  *  @param {string} [font]
+ *  @param {boolean} [screenSpace]
  *  @memberof Debug */
-function debugText(text, pos, size=1, color=WHITE, time=0, angle=0, font='monospace')
+function debugText(text, pos, size=1, color=WHITE, time=0, angle=0, font='monospace', screenSpace=false)
 {
     ASSERT(isString(text), 'text must be a string');
     ASSERT(isVector2(pos), 'pos must be a vec2');
@@ -209,7 +217,7 @@ function debugText(text, pos, size=1, color=WHITE, time=0, angle=0, font='monosp
         color = color.toString();
     pos = pos.copy();
     const timer = new Timer(time);
-    debugPrimitives.push({text, pos, size, color, timer, angle, font});
+    debugPrimitives.push({text, pos, size, color, timer, angle, font, screenSpace});
 }
 
 /** Clear all debug primitives in the list
@@ -419,21 +427,26 @@ function debugRender()
     {
         // draw debug primitives
         overlayContext.lineWidth = 2;
-        const pointSize = debugPointSize * cameraScale;
         debugPrimitives.forEach(p=>
         {
             overlayContext.save();
 
             // create canvas transform from world space to screen space
-            const pos = worldToScreen(p.pos);
+            // without scaling because we want consistent pixel sizes
+            let pos = p.pos, scale = 1, angle = p.angle;
+            if (!p.screenSpace)
+            {
+                pos = worldToScreen(p.pos);
+                scale = cameraScale;
+                angle -= cameraAngle;
+            }
             overlayContext.translate(pos.x|0, pos.y|0);
-            overlayContext.rotate(p.angle);
+            overlayContext.rotate(angle);
             overlayContext.scale(1, p.text ? 1 : -1);
             overlayContext.fillStyle = overlayContext.strokeStyle = p.color;
-
             if (p.text !== undefined)
             {
-                overlayContext.font = p.size*cameraScale + 'px '+ p.font;
+                overlayContext.font = p.size*scale + 'px '+ p.font;
                 overlayContext.textAlign = 'center';
                 overlayContext.textBaseline = 'middle';
                 overlayContext.fillText(p.text, 0, 0);
@@ -444,7 +457,7 @@ function debugRender()
                 overlayContext.beginPath();
                 for (const point of p.points)
                 {
-                    const p2 = point.scale(cameraScale).floor();
+                    const p2 = point.scale(scale).floor();
                     overlayContext.lineTo(p2.x, p2.y);
                 }
                 overlayContext.closePath();
@@ -454,13 +467,14 @@ function debugRender()
             else if (p.size === 0 || (p.size.x === 0 && p.size.y === 0))
             {
                 // point
+                const pointSize = debugPointSize * scale;
                 overlayContext.fillRect(-pointSize/2, -1, pointSize, 3);
                 overlayContext.fillRect(-1, -pointSize/2, 3, pointSize);
             }
             else if (p.size.x !== undefined)
             {
                 // rect
-                const s = p.size.scale(cameraScale).floor();
+                const s = p.size.scale(scale).floor();
                 const w = s.x, h = s.y;
                 p.fill && overlayContext.fillRect(-w/2|0, -h/2|0, w, h);
                 overlayContext.strokeRect(-w/2|0, -h/2|0, w, h);
@@ -469,7 +483,7 @@ function debugRender()
             {
                 // circle
                 overlayContext.beginPath();
-                overlayContext.arc(0, 0, p.size*cameraScale/2, 0, 9);
+                overlayContext.arc(0, 0, p.size*scale/2, 0, 9);
                 p.fill && overlayContext.fill();
                 overlayContext.stroke();
             }
