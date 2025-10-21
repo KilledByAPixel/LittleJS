@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.15.1';
+const engineVersion = '1.15.2';
 
 /** Frames per second to update
  *  @type {number}
@@ -6250,6 +6250,9 @@ class ParticleEmitter extends EngineObject
         this.previousAngle = this.angle;
         this.previousPos = this.pos.copy();
     }
+
+    /** Emitters do not have physics */
+    updatePhysics() {}
 
     /** Update the emitter to spawn particles, called automatically by engine once each frame */
     update()
