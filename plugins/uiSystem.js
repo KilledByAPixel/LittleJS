@@ -36,6 +36,7 @@ class UISystemPlugin
         ASSERT(!uiSystem, 'UI system already initialized');
         uiSystem = this;
 
+        // default settings
         /** @property {Color} - Default fill color for UI elements */
         this.defaultColor = WHITE;
         /** @property {Color} - Default outline color for UI elements */
@@ -64,6 +65,13 @@ class UISystemPlugin
         this.defaultSoundRelease = undefined;
         /** @property {Sound} - Default sound when interactive UI element is clicked */
         this.defaultSoundClick = undefined;
+        /** @property {Color} - Color for shadow */
+        this.defaultShadowColor = CLEAR_BLACK;
+        /** @property {number} - Size of shadow blur */
+        this.defaultShadowBlur = 5;
+        /** @property {Vector2} - Offset of shadow blur */
+        this.defaultShadowOffset = vec2(5);
+        // system state
         /** @property {Array<UIObject>} - List of all UI elements */
         this.uiObjects = [];
         /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - Context to render UI elements to */
@@ -154,8 +162,11 @@ class UISystemPlugin
     *  @param {number}  [lineWidth]
     *  @param {Color}   [lineColor]
     *  @param {number}  [cornerRadius]
-    *  @param {Color}   [gradientColor] */
-    drawRect(pos, size, color=WHITE, lineWidth=0, lineColor=BLACK, cornerRadius=0, gradientColor)
+    *  @param {Color}   [gradientColor]
+    *  @param {Color}   [shadowColor]
+    *  @param {number}  [shadowBlur]
+    *  @param {Color}   [shadowOffset] */
+    drawRect(pos, size, color=WHITE, lineWidth=0, lineColor=BLACK, cornerRadius=0, gradientColor, shadowColor=BLACK, shadowBlur=0, shadowOffset=vec2())
     {
         ASSERT(isVector2(pos), 'pos must be a vec2');
         ASSERT(isVector2(size), 'size must be a vec2');
@@ -177,12 +188,22 @@ class UISystemPlugin
         }
         else
             context.fillStyle = color.toString();
+        if (shadowBlur || shadowOffset.x || shadowOffset.y)
+        if (shadowColor.a > 0)
+        {
+            // setup shadow
+            context.shadowColor = shadowColor.toString();
+            context.shadowBlur = shadowBlur;
+            context.shadowOffsetX = shadowOffset.x;
+            context.shadowOffsetY = shadowOffset.y;
+        }
         context.beginPath();
         if (cornerRadius && context['roundRect'])
             context['roundRect'](pos.x-size.x/2, pos.y-size.y/2, size.x, size.y, cornerRadius);
         else
             context.rect(pos.x-size.x/2, pos.y-size.y/2, size.x, size.y);
         context.fill();
+        context.shadowColor = '#0000'
         if (lineWidth)
         {
             context.strokeStyle = lineColor.toString();
@@ -371,6 +392,12 @@ class UIObject
         this.dragActivate = false;
         /** @property {boolean} - True if this can be a hover object */
         this.canBeHover = true;
+        /** @property {Color} - Color for shadow, undefined if no shadow */
+        this.shadowColor = uiSystem.defaultShadowColor?.copy();
+        /** @property {number} - Size of shadow blur */
+        this.shadowBlur = uiSystem.defaultShadowBlur;
+        /** @property {Vector2} - Offset of shadow blur */
+        this.shadowOffset = uiSystem.defaultShadowOffset.copy();
         uiSystem.uiObjects.push(this);
         
         /** @property {Vector2} - How much to offset the text shadow or undefined */
@@ -488,7 +515,7 @@ class UIObject
 
         const lineColor = this.interactive && this.isActiveObject() && !this.disabled ? this.color : this.lineColor;
         const color = this.disabled ? this.disabledColor : this.interactive ? this.isActiveObject() ? this.activeColor || this.color : this.isHoverObject() ? this.hoverColor : this.color : this.color;
-        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor, this.cornerRadius, this.gradientColor);
+        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor, this.cornerRadius, this.gradientColor, this.shadowColor, this.shadowBlur, this.shadowOffset);
     }
 
     /** Special update when object is not visible */
