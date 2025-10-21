@@ -28,6 +28,7 @@ class UISequencerButton extends UIButton
         this.cornerRadius = 0;
         this.dragActivate = true;
         this.isOn = false;
+        this.shadowColor = CLEAR_BLACK;
 
         // set instrument and color based on track
         const pianoStart = 2;
@@ -70,6 +71,7 @@ function gameInit()
     // initialize UI system
     new UISystemPlugin;
     uiSystem.defaultCornerRadius = 8;
+    uiSystem.defaultShadowColor = BLACK;
     canvasClearColor = hsl(0,0,.3);
 
     // create sequencer buttons

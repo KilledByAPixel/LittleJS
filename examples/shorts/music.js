@@ -8,6 +8,7 @@ function gameInit()
     uiSystem.defaultSoundPress = new Sound([.5,0,220]);
     uiSystem.defaultSoundClick = new Sound([.5,0,440]);
     uiSystem.defaultCornerRadius = 20;
+    uiSystem.defaultShadowColor = BLACK;
     canvasClearColor = hsl(.9,.3,.2);
 
     // setup music player UI

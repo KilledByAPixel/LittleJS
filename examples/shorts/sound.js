@@ -2,6 +2,7 @@ function gameInit()
 {
     // initialize UI system
     new UISystemPlugin;
+    uiSystem.defaultShadowColor = BLACK;
     canvasClearColor = hsl(.6,.3,.2);
 
     // create a grid of buttons with different sounds

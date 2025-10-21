@@ -1,8 +1,9 @@
 function gameInit()
 {
     new UISystemPlugin;
-    canvasClearColor = hsl(0,0,.1);
     uiSystem.defaultCornerRadius = 20;
+    uiSystem.defaultShadowColor = BLACK;
+    canvasClearColor = hsl(0,0,.1);
 
     // video player
     const center = mainCanvasSize.scale(.5);

@@ -5,6 +5,7 @@ function gameInit()
     uiSystem.defaultSoundPress = new Sound([.5,0,220]);
     uiSystem.defaultSoundClick = new Sound([.5,0,440]);
     uiSystem.defaultCornerRadius = 8;
+    uiSystem.defaultShadowColor = BLACK;
 
     // example button that returns to menu
     const buttonBack = new UIButton(mainCanvasSize.scale(.5), vec2(200),

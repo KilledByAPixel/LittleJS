@@ -5,6 +5,7 @@ function gameInit()
     // setup ui system plugin
     new UISystemPlugin();
     uiSystem.defaultCornerRadius = 10;
+    uiSystem.defaultShadowColor = BLACK;
     canvasClearColor = hsl(.3,.3,.2);
 
     // create timer button
