@@ -2044,8 +2044,14 @@ class Vector2
     {
         this.x = x;
         this.y = y;
+        ASSERT_VECTOR2_VALID(this);
         return this;
     }
+
+    /** Sets this vector from another vector and returns self
+     *  @param {Vector2} v - other vector
+     *  @return {Vector2} */
+    setFrom(v) { return this.set(v.x, v.y); }
 
     /** Returns a new vector that is a copy of this
      *  @return {Vector2} */
@@ -2109,7 +2115,7 @@ class Vector2
     clampLength(length=1)
     {
         const l = this.length();
-        return l > length ? this.scale(length/l) : this;
+        return l > length ? this.scale(length/l) : this.copy();
     }
 
     /** Returns the dot product of this and the vector passed in
@@ -2306,8 +2312,14 @@ class Color
         this.g = g;
         this.b = b;
         this.a = a;
+        ASSERT_COLOR_VALID(this);
         return this;
     }
+
+    /** Sets this color from another color and returns self
+     * @param {Color} c - other color
+     * @return {Color} */
+    setFrom(c) { return this.set(c.r, c.g, c.b, c.a); }
 
     /** Returns a new color that is a copy of this
      * @return {Color} */
@@ -2860,17 +2872,17 @@ let touchGamepadEnable = false;
  *  @memberof Settings */
 let touchGamepadCenterButton = true;
 
+/** Number of buttons on touch gamepad (0-4), if 1 also acts as right analog stick
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let touchGamepadButtonCount = 4;
+
 /** True if touch gamepad should be analog stick or false to use if 8 way dpad
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
 let touchGamepadAnalog = true;
-
-/** Number of buttons on touch gamepad
- *  @type {number}
- *  @default
- *  @memberof Settings */
-let touchGamepadButtonCount = 4;
 
 /** Size of virtual gamepad for touch devices in pixels
  *  @type {number}
@@ -3136,6 +3148,11 @@ function setTouchGamepadEnable(enable) { touchGamepadEnable = enable; }
  *  @memberof Settings */
 function setTouchGamepadCenterButton(enable) { touchGamepadCenterButton = enable; }
 
+/** Set number of buttons on touch gamepad (0-4), if 1 also acts as right analog stick
+ *  @param {number} count
+ *  @memberof Settings */
+function setTouchGamepadButtonCount(count) { touchGamepadButtonCount = count; }
+
 /** Set if touch gamepad should be analog stick or 8 way dpad
  *  @param {boolean} analog
  *  @memberof Settings */
@@ -3344,7 +3361,7 @@ class EngineObject
             child.updateTransforms();
     }
 
-    /** Update the object physics, called automatically by engine once each frame */
+    /** Update the object physics, called automatically by engine once each frame. Can be overridden to stop or change how physics works for an object. */
     updatePhysics()
     {
         // child objects do not have physics
@@ -3880,7 +3897,7 @@ class TileInfo
         this.padding = padding;
         /** @property {TextureInfo} - The texture info for this tile */
         this.textureInfo = textureInfos[this.textureIndex];
-        /** @property {float} - Shrinks tile by this many pixels to prevent neighbors bleeding */
+        /** @property {number} - Shrinks tile by this many pixels to prevent neighbors bleeding */
         this.bleedScale = bleedScale;
     }
 
@@ -4578,10 +4595,27 @@ function worldToScreenTransform(worldPos, worldSize, worldAngle=0)
     ];
 }
 
-/** Get the camera's visible area in world space
+/** Get the size of the camera window in world space
  *  @return {Vector2}
  *  @memberof Draw */
 function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
+
+/** Check if a point or circle is on screen
+ *  If size is a Vector2, uses the largest dimension as diameter
+ *  This can be used to cull offscreen objects from render or update
+ *  @param {Vector2} pos - world space position
+ *  @param {Vector2|number} size - world space size or diameter
+ *  @return {boolean}
+ *  @memberof Draw */
+function isOnScreen(pos, size=0)
+{
+    pos = worldToScreen(pos);
+    if (size instanceof Vector2)
+        size = max(size.x, size.y); // use largest dimension
+    size *= cameraScale/2;
+    return pos.x + size > 0 && pos.x - size < mainCanvasSize.x &&
+           pos.y + size > 0 && pos.y - size < mainCanvasSize.y;
+}
 
 /** Enable normal or additive blend mode
  *  @param {boolean} [additive]
@@ -4858,7 +4892,15 @@ function keyDirection(up='ArrowUp', down='ArrowDown', left='ArrowLeft', right='A
 
 /** Clears all input
  *  @memberof Input */
-function inputClear() { inputData = [[]]; touchGamepadButtons = []; }
+function inputClear()
+{
+    inputData.length = 0;
+    inputData[0] = [];
+    touchGamepadButtons.length = 0;
+    touchGamepadSticks.length = 0;
+    gamepadStickData.length = 0;
+    gamepadDpadData.length = 0;
+}
 
 /** Clears an input key state
  *  @param {string|number} key
@@ -4971,14 +5013,21 @@ function gamepadWasReleased(button, gamepad=0)
  *  @return {Vector2}
  *  @memberof Input */
 function gamepadStick(stick, gamepad=0)
-{ return gamepadStickData[gamepad] ? gamepadStickData[gamepad][stick] || vec2() : vec2(); }
+{ return gamepadStickData[gamepad]?.[stick] ?? vec2(); }
+
+/** Returns gamepad dpad value
+ *  @param {number} [gamepad]
+ *  @return {Vector2}
+ *  @memberof Input */
+function gamepadDpad(gamepad=0)
+{ return gamepadDpadData[gamepad] ?? vec2(); }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Input system functions called automatically by engine
 
 // input is stored as a bit field for each key: 1 = isDown, 2 = wasPressed, 4 = wasReleased
 // mouse and keyboard are stored together in device 0, gamepads are in devices > 0
-let inputData = [[]];
+const inputData = [[]];
 
 function inputUpdate()
 {
@@ -5107,7 +5156,7 @@ function mouseEventToScreen(mousePos)
 // Gamepad input
 
 // gamepad internal variables
-const gamepadStickData = [];
+const gamepadStickData = [], gamepadDpadData = [];
 
 // gamepads are updated by engine every frame automatically
 function gamepadsUpdate()
@@ -5128,20 +5177,27 @@ function gamepadsUpdate()
             return;
 
         // read virtual analog stick
-        const sticks = gamepadStickData[0] || (gamepadStickData[0] = []);
+        const sticks = gamepadStickData[0] ?? (gamepadStickData[0] = []);
+        const dpad = gamepadDpadData[0] ?? (gamepadDpadData[0] = vec2());
         sticks[0] = vec2();
+        dpad.set();
+        const leftTouchStick = touchGamepadSticks[0] ?? vec2();
         if (touchGamepadAnalog)
-            sticks[0] = applyDeadZones(touchGamepadStick);
-        else if (touchGamepadStick.lengthSquared() > .3)
+            sticks[0] = applyDeadZones(leftTouchStick);
+        else if (leftTouchStick.lengthSquared() > .3)
         {
             // convert to 8 way dpad
-            sticks[0].x = round(touchGamepadStick.x);
-            sticks[0].y = -round(touchGamepadStick.y);
-            sticks[0] = sticks[0].clampLength();
+            const x = clamp(sign(leftTouchStick.x), -1, 1);
+            const y = clamp(sign(leftTouchStick.y), -1, 1);
+            dpad.set(x, -y);
+            sticks[0] = dpad.clampLength(); // clamp to circle
         }
+        const rightTouchStick = touchGamepadSticks[1] ?? vec2();
+        if (touchGamepadButtonCount === 1)
+            sticks[1] = applyDeadZones(rightTouchStick);
 
         // read virtual gamepad buttons
-        const data = inputData[1] || (inputData[1] = []);
+        const data = inputData[1] ?? (inputData[1] = []);
         for (let i=10; i--;)
         {
             const wasDown = gamepadIsDown(i,0);
@@ -5166,8 +5222,9 @@ function gamepadsUpdate()
     {
         // get or create gamepad data
         const gamepad = gamepads[i];
-        const data = inputData[i+1] || (inputData[i+1] = []);
-        const sticks = gamepadStickData[i] || (gamepadStickData[i] = []);
+        const data = inputData[i+1] ?? (inputData[i+1] = []);
+        const sticks = gamepadStickData[i] ?? (gamepadStickData[i] = []);
+        const dpad = gamepadDpadData[i] ?? (gamepadDpadData[i] = vec2());
 
         if (gamepad)
         {
@@ -5186,12 +5243,24 @@ function gamepadsUpdate()
                     isUsingGamepad = true;
             }
 
-            if (gamepadDirectionEmulateStick)
+            if (gamepad.mapping === 'standard')
             {
-                // copy dpad to left analog stick when pressed
-                const dpad = vec2(
+                // get dpad buttons (standard mapping)
+                dpad.set(
                     (gamepadIsDown(15,i)&&1) - (gamepadIsDown(14,i)&&1),
                     (gamepadIsDown(12,i)&&1) - (gamepadIsDown(13,i)&&1));
+            }
+            else if (gamepad.axes && gamepad.axes.length >= 2)
+            {
+                // digital style dpad from axes
+                const x = clamp(sign(gamepad.axes[0]), -1, 1);
+                const y = clamp(sign(gamepad.axes[1]), -1, 1);
+                dpad.set(x, -y);
+            }
+
+            // copy dpad to left analog stick when pressed
+            if (gamepadDirectionEmulateStick)
+            {
                 if (dpad.lengthSquared())
                     sticks[0] = dpad.clampLength();
             }
@@ -5222,13 +5291,13 @@ function vibrateStop() { vibrate(0); }
 const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
 
 // touch gamepad internal variables
-let touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadStick = vec2();
+const touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadSticks = [];
 
 function touchGamepadButtonCenter()
 {
     // draw right face buttons
     const center = vec2(mainCanvasSize.x-touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
-    if (touchGamepadButtonCount <= 2)
+    if (touchGamepadButtonCount === 2)
         center.x += touchGamepadSize/2;
     return center;
 }
@@ -5291,8 +5360,10 @@ function touchInputInit()
     function handleTouchGamepad(e)
     {
         // clear touch gamepad input
-        touchGamepadStick = vec2();
-        touchGamepadButtons = [];
+        touchGamepadSticks.length = 0;
+        touchGamepadSticks[0] = vec2();
+        touchGamepadSticks[1] = vec2();
+        touchGamepadButtons.length = 0;
         isUsingGamepad = true;
 
         const touching = e.touches.length;
@@ -5307,6 +5378,10 @@ function touchInputInit()
             }
         }
 
+        // don't process touch gamepad if paused
+        if (paused)
+            return;
+
         // get center of left and right sides
         const stickCenter = vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
         const buttonCenter = touchGamepadButtonCenter();
@@ -5319,10 +5394,17 @@ function touchInputInit()
             if (stickCenter.distance(touchPos) < touchGamepadSize)
             {
                 // virtual analog stick
-                touchGamepadStick = touchPos.subtract(stickCenter).scale(2/touchGamepadSize).clampLength();
+                const delta = touchPos.subtract(stickCenter);
+                touchGamepadSticks[0] = delta.scale(2/touchGamepadSize).clampLength();
             }
             else if (buttonCenter.distance(touchPos) < touchGamepadSize)
             {
+                if (touchGamepadButtonCount === 1)
+                {
+                    // virtual right analog stick
+                    const delta = touchPos.subtract(buttonCenter);
+                    touchGamepadSticks[1] = delta.scale(2/touchGamepadSize).clampLength();
+                }
                 // virtual face buttons
                 let button = buttonCenter.subtract(touchPos).direction();
                 button = mod(button+2, 4);
@@ -5338,7 +5420,7 @@ function touchInputInit()
                 if (button < touchGamepadButtonCount)
                     touchGamepadButtons[button] = 1;
             }
-            else if (touchGamepadCenterButton && !wasTouching && 
+            else if (touchGamepadCenterButton && 
                 startCenter.distance(touchPos) < touchGamepadSize)
             {
                 // virtual start button in center
@@ -5368,43 +5450,49 @@ function touchGamepadRender()
     context.lineWidth = 3;
 
     // draw left analog stick
-    context.fillStyle = touchGamepadStick.lengthSquared() > 0 ? '#fff' : '#000';
+    const leftTouchStick = touchGamepadSticks[0] ?? vec2();
+    context.fillStyle = leftTouchStick.lengthSquared() > 0 ? '#fff' : '#000';
     context.beginPath();
     const stickCenter = vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
-    if (touchGamepadAnalog) // draw circle shaped gamepad
+    if (touchGamepadAnalog)
     {
+        // draw circle shaped gamepad
         context.arc(stickCenter.x, stickCenter.y, touchGamepadSize/2, 0, 9);
-        context.fill();
-        context.stroke();
     }
-    else // draw cross shaped gamepad
+    else
     {
-        for (let i=10; i--;)
+        // draw cross shaped gamepad
+        for (let i=10; --i;)
         {
             const angle = i*PI/4;
             context.arc(stickCenter.x, stickCenter.y,touchGamepadSize*.6, angle + PI/8, angle + PI/8);
             i%2 && context.arc(stickCenter.x, stickCenter.y, touchGamepadSize*.33, angle, angle);
-            i===1 && context.fill();
         }
-        context.stroke();
     }
+    context.fill();
+    context.stroke();
 
     // draw right face buttons
     const buttonCenter = touchGamepadButtonCenter();
-    const buttonSize = touchGamepadButtonCount > 1 ? touchGamepadSize/4 : touchGamepadSize/2;
-    for (let i=0; i<touchGamepadButtonCount; i++)
     {
-        const j = mod(i-1, 4);
-        let button = touchGamepadButtonCount > 2 ? 
-            j : min(j, touchGamepadButtonCount-1);
-        // fix button locations (swap 2 and 3 to match gamepad layout)
-        button = button === 3 ? 2 : button === 2 ? 3 : button;
-        const pos = buttonCenter.add(vec2().setDirection(j, touchGamepadSize/2));
-        context.fillStyle = touchGamepadButtons[button] ? '#fff' : '#000';
-        context.beginPath();
-        context.arc(pos.x, pos.y, buttonSize, 0,9);
-        context.fill();
-        context.stroke();
+        const buttonSize = touchGamepadButtonCount > 1 ? 
+            touchGamepadSize/4 : touchGamepadSize/2;
+        for (let i=0; i<touchGamepadButtonCount; i++)
+        {
+            const j = mod(i-1, 4);
+            let button = touchGamepadButtonCount > 2 ? 
+                j : min(j, touchGamepadButtonCount-1);
+            // fix button locations (swap 2 and 3 to match gamepad layout)
+            button = button === 3 ? 2 : button === 2 ? 3 : button;
+            let pos = buttonCenter;
+            if (touchGamepadButtonCount > 1)
+                pos = pos.add(vec2().setDirection(j, touchGamepadSize/2));
+            context.fillStyle = touchGamepadButtons[button] ? '#fff' : '#000';
+            context.beginPath();
+            context.arc(pos.x, pos.y, buttonSize, 0,9);
+            context.fill();
+            context.stroke();
+        }
     }
 
     // set canvas back to normal
@@ -8756,6 +8844,23 @@ class UISystemPlugin
         this.defaultShadowBlur = 5;
         /** @property {Vector2} - Offset of shadow blur */
         this.defaultShadowOffset = vec2(5);
+        /** @property {number} - If set ui coords will be renormalized to this canvas height */
+        this.nativeHeight = 0;
+
+        // navigation properties
+        /** @property {UIObject} - Object currently selected by navigation (gamepad or keyboard) */
+        this.navigationObject = undefined;
+        /** @property {number} - Gamepad index to use for UI navigation */
+        this.navigationGamepadIndex = 0;
+        /** @property {Timer} - Cooldown timer for navigation inputs */
+        this.navigationTimer = new Timer(undefined, true);
+        /** @property {number} - Time between navigation inputs in seconds */
+        this.navigationDelay = .2;
+        /** @property {boolean} - shoudld the vertical axis be used for navigation? */
+        this.navigationVertical = true;
+        /** @property {boolean} - True if user last used navigation instead of mouse */
+        this.navigationMode = true;
+
         // system state
         /** @property {Array<UIObject>} - List of all UI elements */
         this.uiObjects = [];
@@ -8767,8 +8872,6 @@ class UISystemPlugin
         this.hoverObject = undefined;
         /** @property {UIObject} - Hover object at start of update */
         this.lastHoverObject = undefined;
-        /** @property {number} - If set ui coords will be renormalized to this canvas height */
-        this.nativeHeight = 0;
 
         engineAddPlugin(uiUpdate, uiRender);
 
@@ -8798,15 +8901,74 @@ class UISystemPlugin
                 else
                     updateInvisibleObject(o);
             }
+
             // reset hover object at start of update
             uiSystem.lastHoverObject = uiSystem.hoverObject;
             uiSystem.hoverObject = undefined;
+
+            if (mouseWasPressed(0))
+            {
+                uiSystem.navigationMode = false;
+                uiSystem.navigationObject = undefined;
+            }
+
+            // navigation with gamepad/keyboard
+            const navigableObjects = uiSystem.getNavigableObjects();
+            if (!navigableObjects.length)
+                uiSystem.navigationObject = undefined;
+            else
+            {
+                // select first object if current is not valid
+                if (!navigableObjects.includes(uiSystem.navigationObject))
+                    uiSystem.navigationObject = undefined;
+                if (uiSystem.navigationMode && !uiSystem.navigationObject)
+                {
+                    // select first auto focus object
+                    uiSystem.navigationObject = navigableObjects.find(o=>o.navigationAutoSelect);
+                }
+                
+                // navigate with dpad or left stick
+                if (!uiSystem.navigationTimer.active())
+                {
+                    // navigate through list with gamepad or keyboard
+                    const direction = sign(uiSystem.getNavigationDirection());
+                    if (direction)
+                    {
+                        let newIndex;
+                        if (!uiSystem.navigationObject)
+                            newIndex = direction > 0 ? 0 : navigableObjects.length-1;
+                        else
+                        {
+                            const currentIndex = navigableObjects.indexOf(uiSystem.navigationObject);
+                            newIndex = mod(currentIndex + direction, navigableObjects.length);
+                        }
+                        
+                        const newNavigationObject = navigableObjects[newIndex];
+                        if (uiSystem.navigationObject !== newNavigationObject)
+                        {
+                            uiSystem.navigationMode = true;
+                            uiSystem.navigationObject = newNavigationObject;
+                            uiSystem.navigationTimer.set(uiSystem.navigationDelay);
+                            newNavigationObject.soundPress?.play();
+                        }
+                    }
+                }
+
+                // activate the navigation object when pressed
+                if (uiSystem.navigationObject)
+                if (uiSystem.getNavigationWasPressed())
+                {
+                    const o = uiSystem.navigationObject;
+                    o.onClick();
+                    o.soundClick?.play();
+                }
+            }
 
             // update in reverse order so topmost objects get priority
             for (let i = uiSystem.uiObjects.length; i--;)
             {
                 const o = uiSystem.uiObjects[i];
-                o.parent || updateObject(o)
+                o.parent || updateObject(o);
             }
 
             // remove destroyed objects
@@ -9027,6 +9189,80 @@ class UISystemPlugin
         for (const o of this.uiObjects)
             o.parent || o.destroy();
         this.uiObjects = this.uiObjects.filter(o=>!o.destroyed);
+        this.activeObject = undefined;
+        this.hoverObject = undefined;
+        this.lastHoverObject = undefined;
+    }
+
+    /** Get all navigable UI objects sorted by navigationIndex
+     *  @return {Array<UIObject>} */
+    getNavigableObjects()
+    {
+        function getNavigableRecursive(o)
+        {
+            if (!o.visible)
+                return; // skip children if parent is invisible
+
+            if (o.isInteractive() && o.navigationIndex !== undefined)
+                objects.push(o);
+            for (let i=o.children.length; i--;)
+                getNavigableRecursive(o.children[i]);
+        }
+
+        // get all the valid navigatable objects recursively
+        let objects = [];
+        for (let i = uiSystem.uiObjects.length; i--;)
+        {
+            const o = uiSystem.uiObjects[i];
+            o.parent || getNavigableRecursive(o);
+        }
+
+        // sort by navigationIndex (lower numbers first)
+        objects.sort((a, b)=> a.navigationIndex - b.navigationIndex);
+        return objects;
+    }
+
+    /** Get navigation direction from gamepad or keyboard
+     *  @return {number} */
+    getNavigationDirection()
+    {
+        const vertical = uiSystem.navigationVertical;
+        if (isUsingGamepad)
+        {
+            const gamepad = this.navigationGamepadIndex;
+            const stick = gamepadStick(0, gamepad);
+            const dpad = gamepadDpad(gamepad);
+            return vertical ? -(stick.y || dpad.y) : (stick.x || dpad.x);
+        }
+        const back = vertical ? 'ArrowUp' : 'ArrowLeft';
+        const forward = vertical ? 'ArrowDown' : 'ArrowRight';
+        return keyIsDown(back) ? -1 : keyIsDown(forward) ? 1 : 0;
+    }
+
+    /** Get other axis navigation direction from gamepad or keyboard
+     *  @return {Vector2} */
+    getNavigationOtherDirection()
+    {
+        const vertical = uiSystem.navigationVertical;
+        if (isUsingGamepad)
+        {
+            const gamepad = this.navigationGamepadIndex;
+            const stick = gamepadStick(0, gamepad);
+            const dpad = gamepadDpad(gamepad);
+            return !vertical ? (stick.y || dpad.y) : (stick.x || dpad.x);
+        }
+        const back = !vertical ? 'ArrowUp' : 'ArrowLeft';
+        const forward = !vertical ? 'ArrowDown' : 'ArrowRight';
+        return keyIsDown(back) ? -1 : keyIsDown(forward) ? 1 : 0;
+    }
+
+    /** Get if navigation button was pressed from gamepad or keyboard
+     *  @return {boolean} */
+    getNavigationWasPressed()
+    {
+        const gamepad = this.navigationGamepadIndex;
+        return isUsingGamepad ? gamepadWasPressed(0, gamepad) : 
+            keyWasPressed('Space') || keyWasPressed('Enter');
     }
 }
 
@@ -9109,6 +9345,11 @@ class UIObject
         this.shadowBlur = uiSystem.defaultShadowBlur;
         /** @property {Vector2} - Offset of shadow blur */
         this.shadowOffset = uiSystem.defaultShadowOffset.copy();
+        /** @property {number} - Optional navigation order index, lower values are selected first */
+        this.navigationIndex = undefined;
+        /** @property {boolean} - Should this be auto selected by navigation? Must also have valid navigation index. */
+        this.navigationAutoSelect = false;
+        
         uiSystem.uiObjects.push(this);
         
         /** @property {Vector2} - How much to offset the text shadow or undefined */
@@ -9188,8 +9429,7 @@ class UIObject
                     {
                         if (!this.dragActivate || (!wasHover || mouseWasPressed(0)))
                             this.onPress();
-                        if (this.soundPress)
-                            this.soundPress.play();
+                        this.soundPress?.play();
                         if (uiSystem.activeObject && !isActive)
                             uiSystem.activeObject.onRelease();
                         uiSystem.activeObject = this;
@@ -9198,19 +9438,21 @@ class UIObject
                 if (!mouseDown && this.isActiveObject() && this.interactive)
                 {
                     this.onClick();
-                    if (this.soundClick)
-                        this.soundClick.play();
+                    this.soundClick?.play();
                 }
             }
-            // clear mouse was pressed state even when disabled
-            mousePress && inputClearKey(0,0,0,1,0);
+
+            if (mousePress)
+            {
+                // clear mouse was pressed state even when disabled
+                mousePress && inputClearKey(0,0,0,1,0);
+            }
         }
         if (isActive)
         if (!mouseDown || (this.dragActivate && !this.isHoverObject()))
         {
             this.onRelease();
-            if (this.soundRelease)
-                this.soundRelease.play();
+            this.soundRelease?.play();
             uiSystem.activeObject = undefined;
         }
 
@@ -9224,9 +9466,19 @@ class UIObject
     {
         if (!this.size.x || !this.size.y) return;
 
-        const lineColor = this.interactive && this.isActiveObject() && !this.disabled ? this.color : this.lineColor;
-        const color = this.disabled ? this.disabledColor : this.interactive ? this.isActiveObject() ? this.activeColor || this.color : this.isHoverObject() ? this.hoverColor : this.color : this.color;
-        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor, this.cornerRadius, this.gradientColor, this.shadowColor, this.shadowBlur, this.shadowOffset);
+        const isNavigationObject = this.isNavigationObject();
+        const lineColor = isNavigationObject ? this.color :
+            this.interactive && this.isActiveObject() && !this.disabled ?
+            this.color : this.lineColor;
+        const color = isNavigationObject ? this.hoverColor :
+            this.disabled ? this.disabledColor : 
+            this.interactive ? 
+                this.isHoverObject() ? this.hoverColor : 
+                this.isActiveObject() ? this.activeColor || this.color : 
+                this.color : this.color;
+        const lineWidth = this.lineWidth * (isNavigationObject ? 1.5 : 1);
+        
+        uiSystem.drawRect(this.pos, this.size, color, lineWidth, lineColor, this.cornerRadius, this.gradientColor, this.shadowColor, this.shadowBlur, this.shadowOffset);
     }
 
     /** Special update when object is not visible */
@@ -9252,6 +9504,13 @@ class UIObject
 
     /** @return {boolean} - Is the mouse held onto this element */
     isActiveObject() { return uiSystem.activeObject === this; }
+
+    /** @return {boolean} - Is the gamepad or keyboard navigation object */
+    isNavigationObject() { return uiSystem.navigationObject === this; }
+
+    /** @return {boolean} - Can it be interacted with */
+    isInteractive()
+    { return this.interactive && this.visible && !this.disabled;}
 
     /** Called each frame when object updates */
     onUpdate() {}
@@ -9489,7 +9748,11 @@ class UIScrollbar extends UIObject
     update()
     {
         super.update();
-        if (this.isActiveObject() && this.interactive)
+        if (!this.interactive)
+            return;
+
+        const oldValue = this.value;
+        if (this.isActiveObject())
         {
             // handle horizontal or vertical scrollbar
             const isHorizontal = this.size.x > this.size.y;
@@ -9501,14 +9764,18 @@ class UIScrollbar extends UIObject
             const handleWidth = barSize - handleSize;
             const p1 = centerPos - handleWidth/2;
             const p2 = centerPos + handleWidth/2;
-            const oldValue = this.value;
-
             const p = uiSystem.screenToNative(mousePosScreen);
             this.value = isHorizontal ? 
                 percent(p.x, p1, p2) :
                 percent(p.y, p2, p1);
-            this.value === oldValue || this.onChange();
         }
+        else if (this.isNavigationObject())
+        {
+            // gamepad/keyboard navigation adjustment
+            const direction = uiSystem.getNavigationOtherDirection();
+            this.value = clamp(this.value + direction*.01);
+        }
+        this.value === oldValue || this.onChange();
     }
     render()
     {
@@ -9567,7 +9834,7 @@ class UIVideo extends UIObject
         this.color = BLACK; // default to black background
         this.cornerRadius = 0; // default to no corner radius
 
-        /** @property {float} - The video volume */
+        /** @property {number} - The video volume */
         this.volume = volume;
 
         // create video element
@@ -11443,7 +11710,7 @@ class Box2dPlugin
      *  @param {Vector2} v */
     vec2dTo(v)
     {
-        ASSERT(v instanceof Vector2);
+        ASSERT(isVector2(v));
         return new box2d.instance.b2Vec2(v.x, v.y);
     }
 
@@ -11860,6 +12127,7 @@ export
 	setInputWASDEmulateDirection,
 	setTouchGamepadEnable,
 	setTouchGamepadCenterButton,
+	setTouchGamepadButtonCount,
 	setTouchGamepadAnalog,
 	setTouchGamepadSize,
 	setTouchGamepadAlpha,
