@@ -3154,6 +3154,12 @@ declare module "littlejsengine" {
         defaultSoundRelease: any;
         /** @property {Sound} - Default sound when interactive UI element is clicked */
         defaultSoundClick: any;
+        /** @property {Color} - Color for shadow */
+        defaultShadowColor: Color;
+        /** @property {number} - Size of shadow blur */
+        defaultShadowBlur: number;
+        /** @property {Vector2} - Offset of shadow blur */
+        defaultShadowOffset: Vector2;
         /** @property {Array<UIObject>} - List of all UI elements */
         uiObjects: any[];
         /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - Context to render UI elements to */
@@ -3173,8 +3179,11 @@ declare module "littlejsengine" {
         *  @param {number}  [lineWidth]
         *  @param {Color}   [lineColor]
         *  @param {number}  [cornerRadius]
-        *  @param {Color}   [gradientColor] */
-        drawRect(pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, cornerRadius?: number, gradientColor?: Color): void;
+        *  @param {Color}   [gradientColor]
+        *  @param {Color}   [shadowColor]
+        *  @param {number}  [shadowBlur]
+        *  @param {Color}   [shadowOffset] */
+        drawRect(pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, cornerRadius?: number, gradientColor?: Color, shadowColor?: Color, shadowBlur?: number, shadowOffset?: Color): void;
         /** Draw a line to the UI context
         *  @param {Vector2} posA
         *  @param {Vector2} posB
@@ -3291,6 +3300,12 @@ declare module "littlejsengine" {
         dragActivate: boolean;
         /** @property {boolean} - True if this can be a hover object */
         canBeHover: boolean;
+        /** @property {Color} - Color for shadow, undefined if no shadow */
+        shadowColor: Color;
+        /** @property {number} - Size of shadow blur */
+        shadowBlur: number;
+        /** @property {Vector2} - Offset of shadow blur */
+        shadowOffset: Vector2;
         /** @property {Vector2} - How much to offset the text shadow or undefined */
         textShadow: any;
         /** Add a child UIObject to this object
