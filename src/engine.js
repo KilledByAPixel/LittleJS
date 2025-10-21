@@ -131,7 +131,7 @@ function engineAddPlugin(update, render, glContextLost, glContextRestored)
 
 /**
  * @callback GameInitCallback - Called after the engine starts, can be async
- * @returns {void|Promise<void>}
+ * @return {void|Promise<void>}
  * @memberof Engine
  */
 /**

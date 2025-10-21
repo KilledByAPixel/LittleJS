@@ -148,7 +148,7 @@ function percentLerp(value, percentA, percentB, lerpA, lerpB)
  *  @param {number} valueA
  *  @param {number} valueB
  *  @param {number} [wrapSize]
- *  @returns {number}
+ *  @return {number}
  *  @memberof Utilities */
 function distanceWrap(valueA, valueB, wrapSize=1)
 { const d = (valueA - valueB) % wrapSize; return d*2 % wrapSize - d; }
@@ -158,7 +158,7 @@ function distanceWrap(valueA, valueB, wrapSize=1)
  *  @param {number} valueB
  *  @param {number} percent
  *  @param {number} [wrapSize]
- *  @returns {number}
+ *  @return {number}
  *  @memberof Utilities */
 function lerpWrap(valueA, valueB, percent, wrapSize=1)
 {
@@ -170,7 +170,7 @@ function lerpWrap(valueA, valueB, percent, wrapSize=1)
 /** Returns signed wrapped distance between the two angles passed in
  *  @param {number} angleA
  *  @param {number} angleB
- *  @returns {number}
+ *  @return {number}
  *  @memberof Utilities */
 function distanceAngle(angleA, angleB) { return distanceWrap(angleA, angleB, 2*PI); }
 
@@ -178,7 +178,7 @@ function distanceAngle(angleA, angleB) { return distanceWrap(angleA, angleB, 2*P
  *  @param {number} angleA
  *  @param {number} angleB
  *  @param {number} percent
- *  @returns {number}
+ *  @return {number}
  *  @memberof Utilities */
 function lerpAngle(angleA, angleB, percent) { return lerpWrap(angleA, angleB, percent, 2*PI); }
 
