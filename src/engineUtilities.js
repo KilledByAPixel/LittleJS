@@ -1147,11 +1147,14 @@ const MAGENTA = debugProtectConstant(rgb(1,0,1));
 class Timer
 {
     /** Create a timer object set time passed in
-     *  @param {number} [timeLeft] - How much time left before the timer elapses in seconds */
-    constructor(timeLeft)
+     *  @param {number} [timeLeft] - How much time left before the timer 
+     *  @param {boolean} [useRealTime] - Should the timer keep running even when the game is paused? (useful for UI) */
+    constructor(timeLeft, useRealTime=false)
     {
         ASSERT(timeLeft === undefined || isNumber(timeLeft), 'Constructed Timer is invalid.', timeLeft);
-        this.time = timeLeft === undefined ? undefined : time + timeLeft;
+        this.useRealTime = useRealTime;
+        const globalTime = this.getGlobalTime();
+        this.time = timeLeft === undefined ? undefined : globalTime + timeLeft;
         this.setTime = timeLeft;
     }
 
@@ -1160,8 +1163,17 @@ class Timer
     set(timeLeft=0)
     {
         ASSERT(isNumber(timeLeft), 'Timer is invalid.', timeLeft);
-        this.time = time + timeLeft;
+        const globalTime = this.getGlobalTime();
+        this.time = globalTime + timeLeft;
         this.setTime = timeLeft;
+    }
+
+    /** Set if the timer should keep running even when the game is paused
+     *  @param {boolean} [useRealTime] */
+    setUseRealTime(useRealTime=true)
+    {
+        ASSERT(!this.isSet(), 'Cannot change global time setting while timer is set.');
+        this.useRealTime = useRealTime;
     }
 
     /** Unset the timer */
@@ -1173,23 +1185,27 @@ class Timer
 
     /** Returns true if set and has not elapsed
      * @return {boolean} */
-    active() { return time < this.time; }
+    active() { return this.getGlobalTime() < this.time; }
 
     /** Returns true if set and elapsed
      * @return {boolean} */
-    elapsed() { return time >= this.time; }
+    elapsed() { return this.getGlobalTime() >= this.time; }
 
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {number} */
-    get() { return this.isSet()? time - this.time : 0; }
+    get() { return this.isSet()? this.getGlobalTime() - this.time : 0; }
 
     /** Get percentage elapsed based on time it was set to, returns 0 if not set
      * @return {number} */
-    getPercent() { return this.isSet()? 1-percent(this.time - time, 0, this.setTime) : 0; }
+    getPercent() { return this.isSet()? 1-percent(this.time - this.getGlobalTime(), 0, this.setTime) : 0; }
 
     /** Get the time this timer was set to, returns 0 if not set
      * @return {number} */
     getSetTime() { return this.isSet() ? this.setTime : 0; }
+
+    /** Get the current global time this timer is based on
+     * @return {number} */
+    getGlobalTime() { return this.useRealTime ? timeReal : time; }
 
     /** Returns this timer expressed as a string
      * @return {string} */
