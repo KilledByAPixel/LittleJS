@@ -224,17 +224,17 @@ let touchGamepadEnable = false;
  *  @memberof Settings */
 let touchGamepadCenterButton = true;
 
+/** Number of buttons on touch gamepad (0-4), if 1 also acts as right analog stick
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let touchGamepadButtonCount = 4;
+
 /** True if touch gamepad should be analog stick or false to use if 8 way dpad
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
 let touchGamepadAnalog = true;
-
-/** Number of buttons on touch gamepad
- *  @type {number}
- *  @default
- *  @memberof Settings */
-let touchGamepadButtonCount = 4;
 
 /** Size of virtual gamepad for touch devices in pixels
  *  @type {number}
@@ -499,6 +499,11 @@ function setTouchGamepadEnable(enable) { touchGamepadEnable = enable; }
  *  @param {boolean} enable
  *  @memberof Settings */
 function setTouchGamepadCenterButton(enable) { touchGamepadCenterButton = enable; }
+
+/** Set number of buttons on touch gamepad (0-4), if 1 also acts as right analog stick
+ *  @param {number} count
+ *  @memberof Settings */
+function setTouchGamepadButtonCount(count) { touchGamepadButtonCount = count; }
 
 /** Set if touch gamepad should be analog stick or 8 way dpad
  *  @param {boolean} analog

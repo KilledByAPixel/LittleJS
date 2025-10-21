@@ -124,6 +124,7 @@ export
 	setInputWASDEmulateDirection,
 	setTouchGamepadEnable,
 	setTouchGamepadCenterButton,
+	setTouchGamepadButtonCount,
 	setTouchGamepadAnalog,
 	setTouchGamepadSize,
 	setTouchGamepadAlpha,
