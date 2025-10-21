@@ -623,8 +623,14 @@ class Vector2
     {
         this.x = x;
         this.y = y;
+        ASSERT_VECTOR2_VALID(this);
         return this;
     }
+
+    /** Sets this vector from another vector and returns self
+     *  @param {Vector2} v - other vector
+     *  @return {Vector2} */
+    setFrom(v) { return this.set(v.x, v.y); }
 
     /** Returns a new vector that is a copy of this
      *  @return {Vector2} */
@@ -885,8 +891,14 @@ class Color
         this.g = g;
         this.b = b;
         this.a = a;
+        ASSERT_COLOR_VALID(this);
         return this;
     }
+
+    /** Sets this color from another color and returns self
+     * @param {Color} c - other color
+     * @return {Color} */
+    setFrom(c) { return this.set(c.r, c.g, c.b, c.a); }
 
     /** Returns a new color that is a copy of this
      * @return {Color} */
