@@ -184,11 +184,7 @@ class UISystemPlugin
                 // activate the navigation object when pressed
                 if (uiSystem.navigationObject)
                 if (uiSystem.getNavigationWasPressed())
-                {
-                    const o = uiSystem.navigationObject;
-                    o.onClick();
-                    o.soundClick?.play();
-                }
+                    uiSystem.navigationObject.navigatePressed();
             }
 
             // update in reverse order so topmost objects get priority
@@ -726,6 +722,13 @@ class UIObject
             this.textHeight || this.textScale * this.size.y);
     }
 
+    /** Called when the navigation button is pressed on this object */
+    navigatePressed()
+    {
+        this.onClick();
+        this.soundClick?.play();
+    }
+
     /** @return {boolean} - Is the mouse hovering over this element */
     isHoverObject() { return uiSystem.hoverObject === this; }
 
@@ -1049,6 +1052,12 @@ class UIScrollbar extends UIObject
         const textSize = this.getTextSize();
         uiSystem.drawText(this.text, this.pos, textSize, 
             this.textColor, 0, undefined, this.align, this.font, this.fontStyle, true, this.textShadow);
+    }
+    navigatePressed()
+    {
+        // toggle value between 0 and 1
+        this.value = this.value ? 0 : 1;
+        super.navigatePressed();
     }
 }
 
