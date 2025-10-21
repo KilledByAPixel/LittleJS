@@ -113,7 +113,6 @@ class Sound
         ASSERT(isNumber(pitch), 'pitch must be a number');
         ASSERT(isNumber(randomnessScale), 'randomnessScale must be a number');
 
-
         if (!soundEnable || headlessMode) return;
         if (!this.sampleChannels) return;
 
