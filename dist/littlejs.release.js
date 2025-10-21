@@ -600,7 +600,7 @@ function drawEngineSplashScreen(t)
         C ? x.fill() : x.stroke();
     };
     const color = (c=0, l=0) =>
-        hsl([.98,.3,.57,.14][c%4]-10,.8,[0,.3,.5,.8,.9][l]).toString();
+        hsl([.98,.3,.57,.14][c%4],.8,[0,.3,.5,.8,.9][l]).toString();
     const alpha = wave(1,1,t);
     const p = percent(alpha, .1, .5);
 
@@ -8227,7 +8227,7 @@ class UISystemPlugin
         else
             context.rect(pos.x-size.x/2, pos.y-size.y/2, size.x, size.y);
         context.fill();
-        context.shadowColor = '#0000'
+        context.shadowColor = '#0000';
         if (lineWidth)
         {
             context.strokeStyle = lineColor.toString();
@@ -8263,10 +8263,24 @@ class UISystemPlugin
     *  @param {TileInfo} tileInfo
     *  @param {Color}    [color=uiSystem.defaultColor]
     *  @param {number}   [angle]
-    *  @param {boolean}  [mirror] */
-    drawTile(pos, size, tileInfo, color=uiSystem.defaultColor, angle=0, mirror=false)
+    *  @param {boolean}  [mirror]
+    *  @param {Color}    [shadowColor]
+    *  @param {number}   [shadowBlur]
+    *  @param {Color}    [shadowOffset] */
+    drawTile(pos, size, tileInfo, color=uiSystem.defaultColor, angle=0, mirror=false, shadowColor=BLACK, shadowBlur=0, shadowOffset=vec2())
     {
-        drawTile(pos, size, tileInfo, color, angle, mirror, CLEAR_BLACK, false, true, uiSystem.uiContext);
+        const context = uiSystem.uiContext;
+        if (shadowBlur || shadowOffset.x || shadowOffset.y)
+        if (shadowColor.a > 0)
+        {
+            // setup shadow
+            context.shadowColor = shadowColor.toString();
+            context.shadowBlur = shadowBlur;
+            context.shadowOffsetX = shadowOffset.x;
+            context.shadowOffsetY = shadowOffset.y;
+        }
+        drawTile(pos, size, tileInfo, color, angle, mirror, CLEAR_BLACK, false, true, context);
+        context.shadowColor = '#0000';
     }
 
     /** Draw text to the UI context
@@ -8281,12 +8295,25 @@ class UISystemPlugin
     *  @param {string}  [fontStyle]
     *  @param {boolean} [applyMaxWidth=true]
     *  @param {Vector2} [textShadow]
-     */
-    drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont, fontStyle='', applyMaxWidth=true, textShadow=undefined)
+    *  @param {Color}    [shadowColor]
+    *  @param {number}   [shadowBlur]
+    *  @param {Color}    [shadowOffset] */
+    drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont, fontStyle='', applyMaxWidth=true, textShadow=undefined, shadowColor=BLACK, shadowBlur=0, shadowOffset=vec2())
     {
-        if (textShadow)
-            drawTextScreen(text, pos.add(textShadow), size.y, BLACK, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, 0, uiSystem.uiContext);
-        drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, 0, uiSystem.uiContext);
+        const context = uiSystem.uiContext;
+        if (textShadow && shadowColor.a > 0)
+            drawTextScreen(text, pos.add(textShadow), size.y, shadowColor, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, 0, context);
+        if (shadowBlur || shadowOffset.x || shadowOffset.y)
+        if (shadowColor.a > 0)
+        {
+            // setup shadow
+            context.shadowColor = shadowColor.toString();
+            context.shadowBlur = shadowBlur;
+            context.shadowOffsetX = shadowOffset.x;
+            context.shadowOffsetY = shadowOffset.y;
+        }
+        drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, 0, context);
+        context.shadowColor = '#0000';
     }
 
     /**
@@ -8316,8 +8343,7 @@ class UISystemPlugin
 
     /** Convert a screen space position to native UI position
      *  @param {Vector2} pos
-     *  @return {Vector2}
-     */
+     *  @return {Vector2} */
     screenToNative(pos)
     {
         if (!uiSystem.nativeHeight)
@@ -8620,12 +8646,14 @@ class UIText extends UIObject
         this.lineWidth = 0;
         // text can not be a hover object by default
         this.canBeHover = false;
+        // no shadow by default
+        this.shadowColor = CLEAR_BLACK;
     }
     render()
     {
         // only render the text
         const textSize = this.getTextSize();
-        uiSystem.drawText(this.text, this.pos, textSize, this.textColor, this.lineWidth, this.lineColor, this.align, this.font, this.fontStyle, true, this.textShadow);
+        uiSystem.drawText(this.text, this.pos, textSize, this.textColor, this.lineWidth, this.lineColor, this.align, this.font, this.fontStyle, true, this.textShadow, this.shadowColor, this.shadowBlur, this.shadowOffset);
     }
 }
 
@@ -8661,10 +8689,13 @@ class UITile extends UIObject
         this.mirror = mirror;
         // set properties
         this.color = color.copy();
+
+        // no shadow by default
+        this.shadowColor = CLEAR_BLACK;
     }
     render()
     {
-        uiSystem.drawTile(this.pos, this.size, this.tileInfo, this.color, this.angle, this.mirror);
+        uiSystem.drawTile(this.pos, this.size, this.tileInfo, this.color, this.angle, this.mirror, this.shadowColor, this.shadowBlur, this.shadowOffset);
     }
 }
 

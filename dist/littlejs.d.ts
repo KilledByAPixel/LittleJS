@@ -3196,8 +3196,11 @@ declare module "littlejsengine" {
         *  @param {TileInfo} tileInfo
         *  @param {Color}    [color=uiSystem.defaultColor]
         *  @param {number}   [angle]
-        *  @param {boolean}  [mirror] */
-        drawTile(pos: Vector2, size: Vector2, tileInfo: TileInfo, color?: Color, angle?: number, mirror?: boolean): void;
+        *  @param {boolean}  [mirror]
+        *  @param {Color}    [shadowColor]
+        *  @param {number}   [shadowBlur]
+        *  @param {Color}    [shadowOffset] */
+        drawTile(pos: Vector2, size: Vector2, tileInfo: TileInfo, color?: Color, angle?: number, mirror?: boolean, shadowColor?: Color, shadowBlur?: number, shadowOffset?: Color): void;
         /** Draw text to the UI context
         *  @param {string}  text
         *  @param {Vector2} pos
@@ -3210,8 +3213,10 @@ declare module "littlejsengine" {
         *  @param {string}  [fontStyle]
         *  @param {boolean} [applyMaxWidth=true]
         *  @param {Vector2} [textShadow]
-         */
-        drawText(text: string, pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, align?: string, font?: string, fontStyle?: string, applyMaxWidth?: boolean, textShadow?: Vector2): void;
+        *  @param {Color}    [shadowColor]
+        *  @param {number}   [shadowBlur]
+        *  @param {Color}    [shadowOffset] */
+        drawText(text: string, pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, align?: string, font?: string, fontStyle?: string, applyMaxWidth?: boolean, textShadow?: Vector2, shadowColor?: Color, shadowBlur?: number, shadowOffset?: Color): void;
         /**
          * @callback DragAndDropCallback - Callback for drag and drop events
          * @param {DragEvent} event - The drag event
@@ -3226,8 +3231,7 @@ declare module "littlejsengine" {
         setupDragAndDrop(onDrop?: (event: DragEvent) => any, onDragEnter?: (event: DragEvent) => any, onDragLeave?: (event: DragEvent) => any, onDragOver?: (event: DragEvent) => any): void;
         /** Convert a screen space position to native UI position
          *  @param {Vector2} pos
-         *  @return {Vector2}
-         */
+         *  @return {Vector2} */
         screenToNative(pos: Vector2): Vector2;
         /** Destroy and remove all objects
         *  @memberof Engine */
