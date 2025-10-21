@@ -250,15 +250,11 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=WHITE,
 
     const textureInfo = tileInfo && tileInfo.textureInfo;
     const bleedScale = tileInfo ? tileInfo.bleedScale : 0;
-    if (useWebGL)
+    if (useWebGL && glEnable)
     {
         ASSERT(!!glContext, 'WebGL is not enabled!');
         if (screenSpace)
-        {
-            // convert to world space
-            pos = screenToWorld(pos);
-            size = size.scale(1/cameraScale);
-        }
+            [pos, size, angle] = screenToWorldTransform(pos, size, angle);
         if (textureInfo)
         {
             // calculate uvs and render
@@ -346,7 +342,8 @@ function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0,
     ASSERT(isColor(colorTop) && isColor(colorBottom), 'color is invalid');
     ASSERT(isNumber(angle), 'angle must be a number');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
-    if (useWebGL)
+
+    if (useWebGL && glEnable)
     {
         ASSERT(!!glContext, 'WebGL is not enabled!');
         if (screenSpace)
@@ -354,6 +351,7 @@ function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0,
             // convert to world space
             pos = screenToWorld(pos);
             size = size.scale(1/cameraScale);
+            angle += cameraAngle;
         }
         // build 4 corner points for the rectangle
         const points = [], colors = [];
@@ -409,17 +407,14 @@ function drawLineList(points, width=.1, color, wrap=false, pos=vec2(), angle=0, 
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isNumber(angle), 'angle must be a number');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
-    if (useWebGL)
+
+    if (useWebGL && glEnable)
     {
         ASSERT(!!glContext, 'WebGL is not enabled!');
-        let scale = 1;
+        let size = vec2(1);
         if (screenSpace)
-        {
-            // convert to world space
-            pos = screenToWorld(pos);
-            scale = 1/cameraScale;
-        }
-        glDrawOutlineTransform(points, color.rgbaInt(), width, pos.x, pos.y, scale, scale, angle, wrap);
+            [pos, size, angle] = screenToWorldTransform(pos, size, angle);
+        glDrawOutlineTransform(points, color.rgbaInt(), width, pos.x, pos.y, size.x, size.y, angle, wrap);
     }
     else
     {
@@ -515,19 +510,15 @@ function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(),
     ASSERT(isNumber(angle), 'angle must be a number');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
-    if (useWebGL)
+    if (useWebGL && glEnable)
     {
         ASSERT(!!glContext, 'WebGL is not enabled!');
-        let scale = 1;
+        let size = vec2(1);
         if (screenSpace)
-        {
-            // convert to world space
-            pos = screenToWorld(pos);
-            scale = 1/cameraScale;
-        }
-        glDrawPointsTransform(points, color.rgbaInt(), pos.x, pos.y, scale, scale, angle);
+            [pos, size, angle] = screenToWorldTransform(pos, size, angle);
+        glDrawPointsTransform(points, color.rgbaInt(), pos.x, pos.y, size.x, size.y, angle);
         if (lineWidth > 0)
-            glDrawOutlineTransform(points, lineColor.rgbaInt(), lineWidth, pos.x, pos.y, scale, scale, angle);
+            glDrawOutlineTransform(points, lineColor.rgbaInt(), lineWidth, pos.x, pos.y, size.x, size.y, angle);
     }
     else
     {
@@ -570,7 +561,7 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
     ASSERT(lineWidth >= 0 && lineWidth < size.x && lineWidth < size.y, 'invalid lineWidth');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
-    if (useWebGL)
+    if (useWebGL && glEnable)
     {
         // draw as a regular polygon
         const sides = glCircleSides;
@@ -633,14 +624,10 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
     ASSERT(typeof drawFunction === 'function', 'drawFunction must be a function');
 
     if (!screenSpace)
-    {
-        // transform from world space to screen space
-        pos = worldToScreen(pos);
-        size = size.scale(cameraScale);
-    }
+        [pos, size, angle] = worldToScreenTransform(pos, size, angle);
     context.save();
     context.translate(pos.x+.5, pos.y+.5);
-    context.rotate(angle-cameraAngle);
+    context.rotate(angle);
     context.scale(mirror ? -size.x : size.x, -size.y);
     drawFunction(context);
     context.restore();
@@ -666,7 +653,14 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
  *  @memberof Draw */
 function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, fontStyle, maxWidth, angle=0, context=drawContext)
 {
-    drawTextScreen(text, worldToScreen(pos), size*cameraScale, color, lineWidth*cameraScale, lineColor, textAlign, font, fontStyle, maxWidth, angle, context);
+    // convert to screen space
+    pos = worldToScreen(pos);
+    size *= cameraScale;
+    lineWidth *= cameraScale;
+    angle -= cameraAngle;
+    angle *= -1;
+
+    drawTextScreen(text, pos, size, color, lineWidth, lineColor, textAlign, font, fontStyle, maxWidth, angle, context);
 }
 
 /** Draw text on overlay canvas in world space
@@ -823,6 +817,36 @@ function worldToScreenDelta(worldDelta)
         y = rotatedY;
     }
     return new Vector2(x *  cameraScale, y * -cameraScale);
+}
+
+/** Convert screen space transform to world space
+ *  @param {Vector2} screenPos
+ *  @param {Vector2} screenSize  
+ *  @param {number} [screenAngle]
+ *  @return {[Vector2, Vector2, number]} - [pos, size, angle]
+ *  @memberof Draw */
+function screenToWorldTransform(screenPos, screenSize, screenAngle=0)
+{
+    return [
+        screenToWorld(screenPos),
+        screenSize.scale(1/cameraScale),
+        screenAngle + cameraAngle
+    ];
+}
+
+/** Convert world space transform to screen space
+ *  @param {Vector2} worldPos
+ *  @param {Vector2} worldSize  
+ *  @param {number} [worldAngle]
+ *  @return {[Vector2, Vector2, number]} - [pos, size, angle]
+ *  @memberof Draw */
+function worldToScreenTransform(worldPos, worldSize, worldAngle=0)
+{
+    return [
+        worldToScreen(worldPos),
+        worldSize.scale(cameraScale),
+        worldAngle - cameraAngle
+    ];
 }
 
 /** Get the camera's visible area in world space
