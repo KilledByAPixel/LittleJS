@@ -3237,9 +3237,9 @@ declare module "littlejsengine" {
         *  @param {string}  [fontStyle]
         *  @param {boolean} [applyMaxWidth=true]
         *  @param {Vector2} [textShadow]
-        *  @param {Color}    [shadowColor]
-        *  @param {number}   [shadowBlur]
-        *  @param {Color}    [shadowOffset] */
+        *  @param {Color}   [shadowColor]
+        *  @param {number}  [shadowBlur]
+        *  @param {Color}   [shadowOffset] */
         drawText(text: string, pos: Vector2, size: Vector2, color?: Color, lineWidth?: number, lineColor?: Color, align?: string, font?: string, fontStyle?: string, applyMaxWidth?: boolean, textShadow?: Vector2, shadowColor?: Color, shadowBlur?: number, shadowOffset?: Color): void;
         /**
          * @callback DragAndDropCallback - Callback for drag and drop events
@@ -3320,6 +3320,8 @@ declare module "littlejsengine" {
         textHeight: any;
         /** @property {number} - Scale text to fit in the object */
         textScale: number;
+        /** @property {Vector2} - How much to offset the text shadow or undefined */
+        textShadow: any;
         /** @property {boolean} - Should this object be drawn */
         visible: boolean;
         /** @property {Array<UIObject>} - A list of this object's children */
@@ -3350,8 +3352,6 @@ declare module "littlejsengine" {
         navigationIndex: any;
         /** @property {boolean} - Should this be auto selected by navigation? Must also have valid navigation index. */
         navigationAutoSelect: boolean;
-        /** @property {Vector2} - How much to offset the text shadow or undefined */
-        textShadow: any;
         /** Add a child UIObject to this object
          *  @param {UIObject} child
          */
@@ -3371,8 +3371,6 @@ declare module "littlejsengine" {
         update(): void;
         /** Render the object, called automatically by plugin once each frame */
         render(): void;
-        /** Special update when object is not visible */
-        updateInvisible(): void;
         /** Get the size for text with overrides and scale
          *  @return {Vector2}
          */

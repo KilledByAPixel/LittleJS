@@ -8878,28 +8878,27 @@ class UISystemPlugin
         // update in reverse order to detect mouse enter/leave
         function uiUpdate()
         {
-            function updateInvisibleObject(o)
+            function updateObject(o, disabled=false)
             {
-                // update invisible objects
-                for (const c of o.children)
-                    updateInvisibleObject(c);
-                o.updateInvisible();
+                if (!o.visible)
+                    return;
+
+                // set position in parent space
+                if (o.parent)
+                    o.pos = o.localPos.add(o.parent.pos);
+
+                // pass disabled state to children
+                disabled ||= o.disabled;
+
+                // update in reverse order to detect mouse enter/leave
+                for (let i=o.children.length; i--;)
+                    updateObject(o.children[i], disabled);
+                o.update();
             }
-            function updateObject(o)
-            {
-                if (o.visible)
-                {
-                    // set position in parent space
-                    if (o.parent)
-                        o.pos = o.localPos.add(o.parent.pos);
-                    // update in reverse order to detect mouse enter/leave
-                    for (let i=o.children.length; i--;)
-                        updateObject(o.children[i]);
-                    o.update();
-                }
-                else
-                    updateInvisibleObject(o);
-            }
+
+            if (uiSystem.activeObject)
+            if (!uiSystem.activeObject.visible || uiSystem.activeObject.disabled)
+                uiSystem.activeObject = undefined;
 
             // reset hover object at start of update
             uiSystem.lastHoverObject = uiSystem.hoverObject;
@@ -9113,22 +9112,24 @@ class UISystemPlugin
     *  @param {string}  [fontStyle]
     *  @param {boolean} [applyMaxWidth=true]
     *  @param {Vector2} [textShadow]
-    *  @param {Color}    [shadowColor]
-    *  @param {number}   [shadowBlur]
-    *  @param {Color}    [shadowOffset] */
+    *  @param {Color}   [shadowColor]
+    *  @param {number}  [shadowBlur]
+    *  @param {Color}   [shadowOffset] */
     drawText(text, pos, size, color=uiSystem.defaultColor, lineWidth=uiSystem.defaultLineWidth, lineColor=uiSystem.defaultLineColor, align='center', font=uiSystem.defaultFont, fontStyle='', applyMaxWidth=true, textShadow=undefined, shadowColor=BLACK, shadowBlur=0, shadowOffset=vec2())
     {
         const context = uiSystem.uiContext;
-        if (textShadow && shadowColor.a > 0)
-            drawTextScreen(text, pos.add(textShadow), size.y, shadowColor, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, 0, context);
-        if (shadowBlur || shadowOffset.x || shadowOffset.y)
         if (shadowColor.a > 0)
         {
-            // setup shadow
-            context.shadowColor = shadowColor.toString();
-            context.shadowBlur = shadowBlur;
-            context.shadowOffsetX = shadowOffset.x;
-            context.shadowOffsetY = shadowOffset.y;
+            if (textShadow)
+                drawTextScreen(text, pos.add(textShadow), size.y, shadowColor, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, 0, context);
+            if (shadowBlur || shadowOffset.x || shadowOffset.y)
+            {
+                // setup shadow
+                context.shadowColor = shadowColor.toString();
+                context.shadowBlur = shadowBlur;
+                context.shadowOffsetX = shadowOffset.x;
+                context.shadowOffsetY = shadowOffset.y;
+            }
         }
         drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, 0, context);
         context.shadowColor = '#0000';
@@ -9195,8 +9196,8 @@ class UISystemPlugin
     {
         function getNavigableRecursive(o)
         {
-            if (!o.visible)
-                return; // skip children if parent is invisible
+            if (!o.visible || o.disabled)
+                return; // skip children if parent is invisible or disabled
 
             if (o.isInteractive() && o.navigationIndex !== undefined)
                 objects.push(o);
@@ -9314,6 +9315,8 @@ class UIObject
         this.textHeight = undefined;
         /** @property {number} - Scale text to fit in the object */
         this.textScale = uiSystem.defaultTextScale;
+        /** @property {Vector2} - How much to offset the text shadow or undefined */
+        this.textShadow = undefined;
         /** @property {boolean} - Should this object be drawn */
         this.visible  = true;
         /** @property {Array<UIObject>} - A list of this object's children */
@@ -9346,9 +9349,6 @@ class UIObject
         this.navigationAutoSelect = false;
         
         uiSystem.uiObjects.push(this);
-        
-        /** @property {Vector2} - How much to offset the text shadow or undefined */
-        this.textShadow = undefined;
     }
 
     /** Add a child UIObject to this object
@@ -9476,14 +9476,6 @@ class UIObject
         uiSystem.drawRect(this.pos, this.size, color, lineWidth, lineColor, this.cornerRadius, this.gradientColor, this.shadowColor, this.shadowBlur, this.shadowOffset);
     }
 
-    /** Special update when object is not visible */
-    updateInvisible()
-    {
-        // reset input state when not visible
-        if (this.isActiveObject())
-            uiSystem.activeObject = undefined;
-    }
-
     /** Get the size for text with overrides and scale
      *  @return {Vector2}
      */
@@ -9588,8 +9580,9 @@ class UIText extends UIObject
         this.lineWidth = 0;
         // text can not be a hover object by default
         this.canBeHover = false;
-        // no shadow by default
-        this.shadowColor = CLEAR_BLACK;
+        // no shadow blur by default
+        this.shadowBlur = 0;
+        this.shadowOffset = vec2();
     }
     render()
     {
