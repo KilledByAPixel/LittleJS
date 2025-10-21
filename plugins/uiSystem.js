@@ -1115,7 +1115,7 @@ class UIVideo extends UIObject
     
     /** Check if video is currently loading
      *  @return {boolean} */
-    isLoadng()
+    isLoading()
     { return this.video.readyState < this.video.HAVE_CURRENT_DATA; }
     
     /** Check if video is currently paused
@@ -1125,7 +1125,7 @@ class UIVideo extends UIObject
     /** Check if video is currently playing
      *  @return {boolean} */
     isPlaying()
-    { return !this.isPaused() && !this.hasEnded() && !this.isLoadng(); }
+    { return !this.isPaused() && !this.hasEnded() && !this.isLoading(); }
     
     /** Check if video has ended playing
      *  @return {boolean} */
@@ -1174,7 +1174,7 @@ class UIVideo extends UIObject
     {
         super.render();
 
-        if (this.isLoadng())
+        if (this.isLoading())
             return;
         const context = uiSystem.uiContext;
         const s = this.size;
