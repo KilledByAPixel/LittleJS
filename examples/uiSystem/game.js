@@ -56,30 +56,39 @@ function createUI()
     // example tile image
     const tileTest = new LJS.UITile(vec2(150,-130), vec2(110), tile(3,128))
     uiMenu.addChild(tileTest);
-    // example scrollbar
-    const scrollbar = new LJS.UIScrollbar(vec2(0,60), vec2(350, 50));
-    uiMenu.addChild(scrollbar);
-    scrollbar.onChange = ()=> scrollbar.text = scrollbar.value.toFixed(2)
-    scrollbar.onChange();
 
-    // example button
-    const button1 = new LJS.UIButton(vec2(0,140), vec2(350, 50), 'Test Button');
-    uiMenu.addChild(button1);
-    button1.onClick = ()=> uiBackground.color = hsl(LJS.rand(),1,.7);
-
+    // setup navigation index for gamepad and keyboard navigation
+    let navigationIndex = 0;
+    
     // example checkbox
     const checkbox = new LJS.UICheckbox(vec2(-140,-20), vec2(40));
     uiMenu.addChild(checkbox);
     checkbox.onChange = ()=> button1.disabled = checkbox.checked;
+    checkbox.navigationIndex = ++navigationIndex;
 
     // text attached to checkbox
     const checkboxText = new LJS.UIText(vec2(170,0), vec2(300, 60), 'Test Checkbox');
     checkbox.addChild(checkboxText);
 
+    // example scrollbar
+    const scrollbar = new LJS.UIScrollbar(vec2(0,60), vec2(350, 50));
+    uiMenu.addChild(scrollbar);
+    scrollbar.onChange = ()=> scrollbar.text = scrollbar.value.toFixed(2)
+    scrollbar.onChange();
+    scrollbar.navigationIndex = ++navigationIndex;
+
+    // example button
+    const button1 = new LJS.UIButton(vec2(0,140), vec2(350, 50), 'Test Button');
+    uiMenu.addChild(button1);
+    button1.onClick = ()=> uiBackground.color = hsl(LJS.rand(),1,.7);
+    button1.navigationIndex = ++navigationIndex;
+
     // exit button
     const button2 = new LJS.UIButton(vec2(0,220), vec2(350, 50), 'Exit Menu');
     uiMenu.addChild(button2);
     button2.onClick = ()=> setMenuVisible(false);
+    button2.navigationIndex = ++navigationIndex;
+    button2.navigationAutoSelect = true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
