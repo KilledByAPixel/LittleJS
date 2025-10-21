@@ -553,7 +553,7 @@ class TileCollisionLayer extends TileLayer
         // remove from collision layers array and destroy
         const index = tileCollisionLayers.indexOf(this);
         ASSERT(index >= 0, 'tile collision layer not found in array');
-        tileCollisionLayers.splice(index, 1);
+        index >= 0 && tileCollisionLayers.splice(index, 1);
         super.destroy();
     }
 

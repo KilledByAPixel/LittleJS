@@ -448,7 +448,9 @@ class EngineObject
     {
         ASSERT(child.parent === this && this.children.includes(child));
         ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
-        this.children.splice(this.children.indexOf(child), 1);
+        const index = this.children.indexOf(child);
+        ASSERT(index >= 0, 'child not found in children array');
+        index >= 0 && this.children.splice(index, 1);
         child.parent = 0;
     }
 
