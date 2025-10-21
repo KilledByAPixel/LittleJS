@@ -487,21 +487,20 @@ class EngineObject
      *  @return {string} */
     toString()
     {
-        if (debug)
-        {
-            let text = 'type = ' + this.constructor.name;
-            if (this.pos.x || this.pos.y)
-                text += '\npos = ' + this.pos;
-            if (this.velocity.x || this.velocity.y)
-                text += '\nvelocity = ' + this.velocity;
-            if (this.size.x || this.size.y)
-                text += '\nsize = ' + this.size;
-            if (this.angle)
-                text += '\nangle = ' + this.angle.toFixed(3);
-            if (this.color)
-                text += '\ncolor = ' + this.color;
-            return text;
-        }
+        if (!debug) return;
+        
+        let text = 'type = ' + this.constructor.name;
+        if (this.pos.x || this.pos.y)
+            text += '\npos = ' + this.pos;
+        if (this.velocity.x || this.velocity.y)
+            text += '\nvelocity = ' + this.velocity;
+        if (this.size.x || this.size.y)
+            text += '\nsize = ' + this.size;
+        if (this.angle)
+            text += '\nangle = ' + this.angle.toFixed(3);
+        if (this.color)
+            text += '\ncolor = ' + this.color;
+        return text;
     }
 
     /** Render debug info for this object  */
