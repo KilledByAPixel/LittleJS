@@ -854,6 +854,23 @@ function worldToScreenTransform(worldPos, worldSize, worldAngle=0)
  *  @memberof Draw */
 function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
 
+/** Check if a point or circle is on screen
+ *  If size is a Vector2, uses the largest dimension as diameter
+ *  This can be used to cull offscreen objects from render or update
+ *  @param {Vector2} pos - world space position
+ *  @param {Vector2|number} size - world space size or diameter
+ *  @return {boolean}
+ *  @memberof Draw */
+function isOnScreen(pos, size=0)
+{
+    pos = worldToScreen(pos);
+    if (size instanceof Vector2)
+        size = max(size.x, size.y); // use largest dimension
+    size *= cameraScale/2;
+    return pos.x + size > 0 && pos.x - size < mainCanvasSize.x &&
+           pos.y + size > 0 && pos.y - size < mainCanvasSize.y;
+}
+
 /** Enable normal or additive blend mode
  *  @param {boolean} [additive]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
