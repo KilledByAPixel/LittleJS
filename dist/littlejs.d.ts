@@ -216,8 +216,9 @@ declare module "littlejsengine" {
      *  @param {number} [time]
      *  @param {number} [angle]
      *  @param {boolean} [fill]
+     *  @param {boolean} [screenSpace]
      *  @memberof Debug */
-    export function debugRect(pos: Vector2, size?: Vector2, color?: Color | string, time?: number, angle?: number, fill?: boolean): void;
+    export function debugRect(pos: Vector2, size?: Vector2, color?: Color | string, time?: number, angle?: number, fill?: boolean, screenSpace?: boolean): void;
     /** Draw a debug poly in world space
      *  @param {Vector2} pos
      *  @param {Array<Vector2>} points
@@ -225,39 +226,45 @@ declare module "littlejsengine" {
      *  @param {number} [time]
      *  @param {number} [angle]
      *  @param {boolean} [fill]
+     *  @param {boolean} [screenSpace]
      *  @memberof Debug */
-    export function debugPoly(pos: Vector2, points: Array<Vector2>, color?: Color | string, time?: number, angle?: number, fill?: boolean): void;
+    export function debugPoly(pos: Vector2, points: Array<Vector2>, color?: Color | string, time?: number, angle?: number, fill?: boolean, screenSpace?: boolean): void;
     /** Draw a debug circle in world space
      *  @param {Vector2} pos
      *  @param {number} [size] - diameter
      *  @param {Color|string} [color]
      *  @param {number} [time]
      *  @param {boolean} [fill]
+     *  @param {boolean} [screenSpace]
      *  @memberof Debug */
-    export function debugCircle(pos: Vector2, size?: number, color?: Color | string, time?: number, fill?: boolean): void;
+    export function debugCircle(pos: Vector2, size?: number, color?: Color | string, time?: number, fill?: boolean, screenSpace?: boolean): void;
     /** Draw a debug point in world space
      *  @param {Vector2} pos
      *  @param {Color|string} [color]
      *  @param {number} [time]
      *  @param {number} [angle]
+     *  @param {boolean} [screenSpace]
      *  @memberof Debug */
-    export function debugPoint(pos: Vector2, color?: Color | string, time?: number, angle?: number): void;
+    export function debugPoint(pos: Vector2, color?: Color | string, time?: number, angle?: number, screenSpace?: boolean): void;
     /** Draw a debug line in world space
      *  @param {Vector2} posA
      *  @param {Vector2} posB
      *  @param {Color|string} [color]
      *  @param {number} [width]
      *  @param {number} [time]
+     *  @param {boolean} [screenSpace]
      *  @memberof Debug */
-    export function debugLine(posA: Vector2, posB: Vector2, color?: Color | string, width?: number, time?: number): void;
+    export function debugLine(posA: Vector2, posB: Vector2, color?: Color | string, width?: number, time?: number, screenSpace?: boolean): void;
     /** Draw a debug combined axis aligned bounding box in world space
      *  @param {Vector2} posA
      *  @param {Vector2} sizeA
      *  @param {Vector2} posB
      *  @param {Vector2} sizeB
      *  @param {Color|string} [color]
+     *  @param {number} [time]
+     *  @param {boolean} [screenSpace]
      *  @memberof Debug */
-    export function debugOverlap(posA: Vector2, sizeA: Vector2, posB: Vector2, sizeB: Vector2, color?: Color | string): void;
+    export function debugOverlap(posA: Vector2, sizeA: Vector2, posB: Vector2, sizeB: Vector2, color?: Color | string, time?: number, screenSpace?: boolean): void;
     /** Draw a debug axis aligned bounding box in world space
      *  @param {string} text
      *  @param {Vector2} pos
@@ -266,8 +273,9 @@ declare module "littlejsengine" {
      *  @param {number} [time]
      *  @param {number} [angle]
      *  @param {string} [font]
+     *  @param {boolean} [screenSpace]
      *  @memberof Debug */
-    export function debugText(text: string, pos: Vector2, size?: number, color?: Color | string, time?: number, angle?: number, font?: string): void;
+    export function debugText(text: string, pos: Vector2, size?: number, color?: Color | string, time?: number, angle?: number, font?: string, screenSpace?: boolean): void;
     /** Clear all debug primitives in the list
      *  @memberof Debug */
     export function debugClear(): void;
