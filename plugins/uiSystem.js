@@ -71,6 +71,23 @@ class UISystemPlugin
         this.defaultShadowBlur = 5;
         /** @property {Vector2} - Offset of shadow blur */
         this.defaultShadowOffset = vec2(5);
+        /** @property {number} - If set ui coords will be renormalized to this canvas height */
+        this.nativeHeight = 0;
+
+        // navigation properties
+        /** @property {UIObject} - Object currently selected by navigation (gamepad or keyboard) */
+        this.navigationObject = undefined;
+        /** @property {number} - Gamepad index to use for UI navigation */
+        this.navigationGamepadIndex = 0;
+        /** @property {Timer} - Cooldown timer for navigation inputs */
+        this.navigationTimer = new Timer(undefined, true);
+        /** @property {number} - Time between navigation inputs in seconds */
+        this.navigationDelay = .2;
+        /** @property {boolean} - shoudld the vertical axis be used for navigation? */
+        this.navigationVertical = true;
+        /** @property {boolean} - True if user last used navigation instead of mouse */
+        this.navigationMode = true;
+
         // system state
         /** @property {Array<UIObject>} - List of all UI elements */
         this.uiObjects = [];
@@ -82,8 +99,6 @@ class UISystemPlugin
         this.hoverObject = undefined;
         /** @property {UIObject} - Hover object at start of update */
         this.lastHoverObject = undefined;
-        /** @property {number} - If set ui coords will be renormalized to this canvas height */
-        this.nativeHeight = 0;
 
         engineAddPlugin(uiUpdate, uiRender);
 
@@ -113,15 +128,74 @@ class UISystemPlugin
                 else
                     updateInvisibleObject(o);
             }
+
             // reset hover object at start of update
             uiSystem.lastHoverObject = uiSystem.hoverObject;
             uiSystem.hoverObject = undefined;
+
+            if (mouseWasPressed(0))
+            {
+                uiSystem.navigationMode = false;
+                uiSystem.navigationObject = undefined;
+            }
+
+            // navigation with gamepad/keyboard
+            const navigableObjects = uiSystem.getNavigableObjects();
+            if (!navigableObjects.length)
+                uiSystem.navigationObject = undefined;
+            else
+            {
+                // select first object if current is not valid
+                if (!navigableObjects.includes(uiSystem.navigationObject))
+                    uiSystem.navigationObject = undefined;
+                if (uiSystem.navigationMode && !uiSystem.navigationObject)
+                {
+                    // select first auto focus object
+                    uiSystem.navigationObject = navigableObjects.find(o=>o.navigationAutoSelect);
+                }
+                
+                // navigate with dpad or left stick
+                if (!uiSystem.navigationTimer.active())
+                {
+                    // navigate through list with gamepad or keyboard
+                    const direction = sign(uiSystem.getNavigationDirection());
+                    if (direction)
+                    {
+                        let newIndex;
+                        if (!uiSystem.navigationObject)
+                            newIndex = direction > 0 ? 0 : navigableObjects.length-1;
+                        else
+                        {
+                            const currentIndex = navigableObjects.indexOf(uiSystem.navigationObject);
+                            newIndex = mod(currentIndex + direction, navigableObjects.length);
+                        }
+                        
+                        const newNavigationObject = navigableObjects[newIndex];
+                        if (uiSystem.navigationObject !== newNavigationObject)
+                        {
+                            uiSystem.navigationMode = true;
+                            uiSystem.navigationObject = newNavigationObject;
+                            uiSystem.navigationTimer.set(uiSystem.navigationDelay);
+                            newNavigationObject.soundPress?.play();
+                        }
+                    }
+                }
+
+                // activate the navigation object when pressed
+                if (uiSystem.navigationObject)
+                if (uiSystem.getNavigationWasPressed())
+                {
+                    const o = uiSystem.navigationObject;
+                    o.onClick();
+                    o.soundClick?.play();
+                }
+            }
 
             // update in reverse order so topmost objects get priority
             for (let i = uiSystem.uiObjects.length; i--;)
             {
                 const o = uiSystem.uiObjects[i];
-                o.parent || updateObject(o)
+                o.parent || updateObject(o);
             }
 
             // remove destroyed objects
@@ -342,6 +416,80 @@ class UISystemPlugin
         for (const o of this.uiObjects)
             o.parent || o.destroy();
         this.uiObjects = this.uiObjects.filter(o=>!o.destroyed);
+        this.activeObject = undefined;
+        this.hoverObject = undefined;
+        this.lastHoverObject = undefined;
+    }
+
+    /** Get all navigable UI objects sorted by navigationIndex
+     *  @return {Array<UIObject>} */
+    getNavigableObjects()
+    {
+        function getNavigableRecursive(o)
+        {
+            if (!o.visible)
+                return; // skip children if parent is invisible
+
+            if (o.isInteractive() && o.navigationIndex !== undefined)
+                objects.push(o);
+            for (let i=o.children.length; i--;)
+                getNavigableRecursive(o.children[i]);
+        }
+
+        // get all the valid navigatable objects recursively
+        let objects = [];
+        for (let i = uiSystem.uiObjects.length; i--;)
+        {
+            const o = uiSystem.uiObjects[i];
+            o.parent || getNavigableRecursive(o);
+        }
+
+        // sort by navigationIndex (lower numbers first)
+        objects.sort((a, b)=> a.navigationIndex - b.navigationIndex);
+        return objects;
+    }
+
+    /** Get navigation direction from gamepad or keyboard
+     *  @return {number} */
+    getNavigationDirection()
+    {
+        const vertical = uiSystem.navigationVertical;
+        if (isUsingGamepad)
+        {
+            const gamepad = this.navigationGamepadIndex;
+            const stick = gamepadStick(0, gamepad);
+            const dpad = gamepadDpad(gamepad);
+            return vertical ? -(stick.y || dpad.y) : (stick.x || dpad.x);
+        }
+        const back = vertical ? 'ArrowUp' : 'ArrowLeft';
+        const forward = vertical ? 'ArrowDown' : 'ArrowRight';
+        return keyIsDown(back) ? -1 : keyIsDown(forward) ? 1 : 0;
+    }
+
+    /** Get other axis navigation direction from gamepad or keyboard
+     *  @return {Vector2} */
+    getNavigationOtherDirection()
+    {
+        const vertical = uiSystem.navigationVertical;
+        if (isUsingGamepad)
+        {
+            const gamepad = this.navigationGamepadIndex;
+            const stick = gamepadStick(0, gamepad);
+            const dpad = gamepadDpad(gamepad);
+            return !vertical ? (stick.y || dpad.y) : (stick.x || dpad.x);
+        }
+        const back = !vertical ? 'ArrowUp' : 'ArrowLeft';
+        const forward = !vertical ? 'ArrowDown' : 'ArrowRight';
+        return keyIsDown(back) ? -1 : keyIsDown(forward) ? 1 : 0;
+    }
+
+    /** Get if navigation button was pressed from gamepad or keyboard
+     *  @return {boolean} */
+    getNavigationWasPressed()
+    {
+        const gamepad = this.navigationGamepadIndex;
+        return isUsingGamepad ? gamepadWasPressed(0, gamepad) : 
+            keyWasPressed('Space') || keyWasPressed('Enter');
     }
 }
 
@@ -424,6 +572,11 @@ class UIObject
         this.shadowBlur = uiSystem.defaultShadowBlur;
         /** @property {Vector2} - Offset of shadow blur */
         this.shadowOffset = uiSystem.defaultShadowOffset.copy();
+        /** @property {number} - Optional navigation order index, lower values are selected first */
+        this.navigationIndex = undefined;
+        /** @property {boolean} - Should this be auto selected by navigation? Must also have valid navigation index. */
+        this.navigationAutoSelect = false;
+        
         uiSystem.uiObjects.push(this);
         
         /** @property {Vector2} - How much to offset the text shadow or undefined */
@@ -503,8 +656,7 @@ class UIObject
                     {
                         if (!this.dragActivate || (!wasHover || mouseWasPressed(0)))
                             this.onPress();
-                        if (this.soundPress)
-                            this.soundPress.play();
+                        this.soundPress?.play();
                         if (uiSystem.activeObject && !isActive)
                             uiSystem.activeObject.onRelease();
                         uiSystem.activeObject = this;
@@ -513,19 +665,21 @@ class UIObject
                 if (!mouseDown && this.isActiveObject() && this.interactive)
                 {
                     this.onClick();
-                    if (this.soundClick)
-                        this.soundClick.play();
+                    this.soundClick?.play();
                 }
             }
-            // clear mouse was pressed state even when disabled
-            mousePress && inputClearKey(0,0,0,1,0);
+
+            if (mousePress)
+            {
+                // clear mouse was pressed state even when disabled
+                mousePress && inputClearKey(0,0,0,1,0);
+            }
         }
         if (isActive)
         if (!mouseDown || (this.dragActivate && !this.isHoverObject()))
         {
             this.onRelease();
-            if (this.soundRelease)
-                this.soundRelease.play();
+            this.soundRelease?.play();
             uiSystem.activeObject = undefined;
         }
 
@@ -539,9 +693,19 @@ class UIObject
     {
         if (!this.size.x || !this.size.y) return;
 
-        const lineColor = this.interactive && this.isActiveObject() && !this.disabled ? this.color : this.lineColor;
-        const color = this.disabled ? this.disabledColor : this.interactive ? this.isActiveObject() ? this.activeColor || this.color : this.isHoverObject() ? this.hoverColor : this.color : this.color;
-        uiSystem.drawRect(this.pos, this.size, color, this.lineWidth, lineColor, this.cornerRadius, this.gradientColor, this.shadowColor, this.shadowBlur, this.shadowOffset);
+        const isNavigationObject = this.isNavigationObject();
+        const lineColor = isNavigationObject ? this.color :
+            this.interactive && this.isActiveObject() && !this.disabled ?
+            this.color : this.lineColor;
+        const color = isNavigationObject ? this.hoverColor :
+            this.disabled ? this.disabledColor : 
+            this.interactive ? 
+                this.isHoverObject() ? this.hoverColor : 
+                this.isActiveObject() ? this.activeColor || this.color : 
+                this.color : this.color;
+        const lineWidth = this.lineWidth * (isNavigationObject ? 1.5 : 1);
+        
+        uiSystem.drawRect(this.pos, this.size, color, lineWidth, lineColor, this.cornerRadius, this.gradientColor, this.shadowColor, this.shadowBlur, this.shadowOffset);
     }
 
     /** Special update when object is not visible */
@@ -567,6 +731,13 @@ class UIObject
 
     /** @return {boolean} - Is the mouse held onto this element */
     isActiveObject() { return uiSystem.activeObject === this; }
+
+    /** @return {boolean} - Is the gamepad or keyboard navigation object */
+    isNavigationObject() { return uiSystem.navigationObject === this; }
+
+    /** @return {boolean} - Can it be interacted with */
+    isInteractive()
+    { return this.interactive && this.visible && !this.disabled;}
 
     /** Called each frame when object updates */
     onUpdate() {}
@@ -804,7 +975,11 @@ class UIScrollbar extends UIObject
     update()
     {
         super.update();
-        if (this.isActiveObject() && this.interactive)
+        if (!this.interactive)
+            return;
+
+        const oldValue = this.value;
+        if (this.isActiveObject())
         {
             // handle horizontal or vertical scrollbar
             const isHorizontal = this.size.x > this.size.y;
@@ -816,14 +991,18 @@ class UIScrollbar extends UIObject
             const handleWidth = barSize - handleSize;
             const p1 = centerPos - handleWidth/2;
             const p2 = centerPos + handleWidth/2;
-            const oldValue = this.value;
-
             const p = uiSystem.screenToNative(mousePosScreen);
             this.value = isHorizontal ? 
                 percent(p.x, p1, p2) :
                 percent(p.y, p2, p1);
-            this.value === oldValue || this.onChange();
         }
+        else if (this.isNavigationObject())
+        {
+            // gamepad/keyboard navigation adjustment
+            const direction = uiSystem.getNavigationOtherDirection();
+            this.value = clamp(this.value + direction*.01);
+        }
+        this.value === oldValue || this.onChange();
     }
     render()
     {
@@ -882,7 +1061,7 @@ class UIVideo extends UIObject
         this.color = BLACK; // default to black background
         this.cornerRadius = 0; // default to no corner radius
 
-        /** @property {float} - The video volume */
+        /** @property {number} - The video volume */
         this.volume = volume;
 
         // create video element
