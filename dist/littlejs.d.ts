@@ -661,6 +661,10 @@ declare module "littlejsengine" {
      *  @param {boolean} enable
      *  @memberof Settings */
     export function setTouchGamepadCenterButton(enable: boolean): void;
+    /** Set number of buttons on touch gamepad (0-4), if 1 also acts as right analog stick
+     *  @param {number} count
+     *  @memberof Settings */
+    export function setTouchGamepadButtonCount(count: number): void;
     /** Set if touch gamepad should be analog stick or 8 way dpad
      *  @param {boolean} analog
      *  @memberof Settings */
@@ -1023,6 +1027,10 @@ declare module "littlejsengine" {
          *  @param {number} [y] - Y axis location
          *  @return {Vector2} */
         set(x?: number, y?: number): Vector2;
+        /** Sets this vector from another vector and returns self
+         *  @param {Vector2} v - other vector
+         *  @return {Vector2} */
+        setFrom(v: Vector2): Vector2;
         /** Returns a new vector that is a copy of this
          *  @return {Vector2} */
         copy(): Vector2;
@@ -1163,6 +1171,10 @@ declare module "littlejsengine" {
          *  @param {number} [a] - alpha
          *  @return {Color} */
         set(r?: number, g?: number, b?: number, a?: number): Color;
+        /** Sets this color from another color and returns self
+         * @param {Color} c - other color
+         * @return {Color} */
+        setFrom(c: Color): Color;
         /** Returns a new color that is a copy of this
          * @return {Color} */
         copy(): Color;
@@ -1430,7 +1442,7 @@ declare module "littlejsengine" {
         padding: number;
         /** @property {TextureInfo} - The texture info for this tile */
         textureInfo: TextureInfo;
-        /** @property {float} - Shrinks tile by this many pixels to prevent neighbors bleeding */
+        /** @property {number} - Shrinks tile by this many pixels to prevent neighbors bleeding */
         bleedScale: number;
         /** Returns a copy of this tile offset by a vector
         *  @param {Vector2} offset - Offset to apply in pixels
@@ -1776,7 +1788,7 @@ declare module "littlejsengine" {
      *  @param {string}  [cursorStyle] - CSS cursor style (auto, none, crosshair, etc)
      *  @memberof Draw */
     export function setCursor(cursorStyle?: string): void;
-    /** Get the camera's visible area in world space
+    /** Get the size of the camera window in world space
      *  @return {Vector2}
      *  @memberof Draw */
     export function getCameraSize(): Vector2;
@@ -2414,7 +2426,7 @@ declare module "littlejsengine" {
         collideRaycast: boolean;
         /** Update the object transform, called automatically by engine even when paused */
         updateTransforms(): void;
-        /** Update the object physics, called automatically by engine once each frame */
+        /** Update the object physics, called automatically by engine once each frame. Can be overridden to stop or change how physics works for an object. */
         updatePhysics(): void;
         /** Update the object, called automatically by engine once each frame. Does nothing by default. */
         update(): void;
@@ -3160,6 +3172,20 @@ declare module "littlejsengine" {
         defaultShadowBlur: number;
         /** @property {Vector2} - Offset of shadow blur */
         defaultShadowOffset: Vector2;
+        /** @property {number} - If set ui coords will be renormalized to this canvas height */
+        nativeHeight: number;
+        /** @property {UIObject} - Object currently selected by navigation (gamepad or keyboard) */
+        navigationObject: any;
+        /** @property {number} - Gamepad index to use for UI navigation */
+        navigationGamepadIndex: number;
+        /** @property {Timer} - Cooldown timer for navigation inputs */
+        navigationTimer: Timer;
+        /** @property {number} - Time between navigation inputs in seconds */
+        navigationDelay: number;
+        /** @property {boolean} - shoudld the vertical axis be used for navigation? */
+        navigationVertical: boolean;
+        /** @property {boolean} - True if user last used navigation instead of mouse */
+        navigationMode: boolean;
         /** @property {Array<UIObject>} - List of all UI elements */
         uiObjects: any[];
         /** @property {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} - Context to render UI elements to */
@@ -3170,8 +3196,6 @@ declare module "littlejsengine" {
         hoverObject: any;
         /** @property {UIObject} - Hover object at start of update */
         lastHoverObject: any;
-        /** @property {number} - If set ui coords will be renormalized to this canvas height */
-        nativeHeight: number;
         /** Draw a rectangle to the UI context
         *  @param {Vector2} pos
         *  @param {Vector2} size
@@ -3236,6 +3260,18 @@ declare module "littlejsengine" {
         /** Destroy and remove all objects
         *  @memberof Engine */
         destroyObjects(): void;
+        /** Get all navigable UI objects sorted by navigationIndex
+         *  @return {Array<UIObject>} */
+        getNavigableObjects(): Array<UIObject>;
+        /** Get navigation direction from gamepad or keyboard
+         *  @return {number} */
+        getNavigationDirection(): number;
+        /** Get other axis navigation direction from gamepad or keyboard
+         *  @return {Vector2} */
+        getNavigationOtherDirection(): Vector2;
+        /** Get if navigation button was pressed from gamepad or keyboard
+         *  @return {boolean} */
+        getNavigationWasPressed(): boolean;
     }
     /**
      * UI Object - Base level object for all UI elements
@@ -3310,6 +3346,10 @@ declare module "littlejsengine" {
         shadowBlur: number;
         /** @property {Vector2} - Offset of shadow blur */
         shadowOffset: Vector2;
+        /** @property {number} - Optional navigation order index, lower values are selected first */
+        navigationIndex: any;
+        /** @property {boolean} - Should this be auto selected by navigation? Must also have valid navigation index. */
+        navigationAutoSelect: boolean;
         /** @property {Vector2} - How much to offset the text shadow or undefined */
         textShadow: any;
         /** Add a child UIObject to this object
@@ -3341,6 +3381,10 @@ declare module "littlejsengine" {
         isHoverObject(): boolean;
         /** @return {boolean} - Is the mouse held onto this element */
         isActiveObject(): boolean;
+        /** @return {boolean} - Is the gamepad or keyboard navigation object */
+        isNavigationObject(): boolean;
+        /** @return {boolean} - Can it be interacted with */
+        isInteractive(): boolean;
         /** Called each frame when object updates */
         onUpdate(): void;
         /** Called when the mouse enters the object */
@@ -3468,7 +3512,7 @@ declare module "littlejsengine" {
          *  @param {number} [volume=1] - Volume percent scaled by global volume (0-1)
          */
         constructor(pos?: Vector2, size?: Vector2, src: string, autoplay?: boolean, loop?: boolean, volume?: number);
-        /** @property {float} - The video volume */
+        /** @property {number} - The video volume */
         volume: number;
         /** @property {HTMLVideoElement} - The video player */
         video: HTMLVideoElement;
