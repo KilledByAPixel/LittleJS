@@ -3714,21 +3714,20 @@ class EngineObject
      *  @return {string} */
     toString()
     {
-        if (debug)
-        {
-            let text = 'type = ' + this.constructor.name;
-            if (this.pos.x || this.pos.y)
-                text += '\npos = ' + this.pos;
-            if (this.velocity.x || this.velocity.y)
-                text += '\nvelocity = ' + this.velocity;
-            if (this.size.x || this.size.y)
-                text += '\nsize = ' + this.size;
-            if (this.angle)
-                text += '\nangle = ' + this.angle.toFixed(3);
-            if (this.color)
-                text += '\ncolor = ' + this.color;
-            return text;
-        }
+        if (!debug) return;
+        
+        let text = 'type = ' + this.constructor.name;
+        if (this.pos.x || this.pos.y)
+            text += '\npos = ' + this.pos;
+        if (this.velocity.x || this.velocity.y)
+            text += '\nvelocity = ' + this.velocity;
+        if (this.size.x || this.size.y)
+            text += '\nsize = ' + this.size;
+        if (this.angle)
+            text += '\nangle = ' + this.angle.toFixed(3);
+        if (this.color)
+            text += '\ncolor = ' + this.color;
+        return text;
     }
 
     /** Render debug info for this object  */
@@ -8957,11 +8956,7 @@ class UISystemPlugin
                 // activate the navigation object when pressed
                 if (uiSystem.navigationObject)
                 if (uiSystem.getNavigationWasPressed())
-                {
-                    const o = uiSystem.navigationObject;
-                    o.onClick();
-                    o.soundClick?.play();
-                }
+                    uiSystem.navigationObject.navigatePressed();
             }
 
             // update in reverse order so topmost objects get priority
@@ -9499,6 +9494,13 @@ class UIObject
             this.textHeight || this.textScale * this.size.y);
     }
 
+    /** Called when the navigation button is pressed on this object */
+    navigatePressed()
+    {
+        this.onClick();
+        this.soundClick?.play();
+    }
+
     /** @return {boolean} - Is the mouse hovering over this element */
     isHoverObject() { return uiSystem.hoverObject === this; }
 
@@ -9511,6 +9513,26 @@ class UIObject
     /** @return {boolean} - Can it be interacted with */
     isInteractive()
     { return this.interactive && this.visible && !this.disabled;}
+
+    /** Returns string containing info about this object for debugging
+     *  @return {string} */
+    toString()
+    {
+        if (!debug) return;
+        
+        let text = 'type = ' + this.constructor.name;
+        if (this.text)
+            text += '\ntext = ' + this.text;
+        if (this.pos.x || this.pos.y)
+            text += '\npos = ' + this.pos;
+        if (this.localPos.x || this.localPos.y)
+            text += '\localPos = ' + this.localPos;
+        if (this.size.x || this.size.y)
+            text += '\nsize = ' + this.size;
+        if (this.color)
+            text += '\ncolor = ' + this.color;
+        return text;
+    }
 
     /** Called each frame when object updates */
     onUpdate() {}
@@ -9803,6 +9825,12 @@ class UIScrollbar extends UIObject
         uiSystem.drawText(this.text, this.pos, textSize, 
             this.textColor, 0, undefined, this.align, this.font, this.fontStyle, true, this.textShadow);
     }
+    navigatePressed()
+    {
+        // toggle value between 0 and 1
+        this.value = this.value ? 0 : 1;
+        super.navigatePressed();
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -9868,7 +9896,7 @@ class UIVideo extends UIObject
     
     /** Check if video is currently loading
      *  @return {boolean} */
-    isLoadng()
+    isLoading()
     { return this.video.readyState < this.video.HAVE_CURRENT_DATA; }
     
     /** Check if video is currently paused
@@ -9878,7 +9906,7 @@ class UIVideo extends UIObject
     /** Check if video is currently playing
      *  @return {boolean} */
     isPlaying()
-    { return !this.isPaused() && !this.hasEnded() && !this.isLoadng(); }
+    { return !this.isPaused() && !this.hasEnded() && !this.isLoading(); }
     
     /** Check if video has ended playing
      *  @return {boolean} */
@@ -9927,7 +9955,7 @@ class UIVideo extends UIObject
     {
         super.render();
 
-        if (this.isLoadng())
+        if (this.isLoading())
             return;
         const context = uiSystem.uiContext;
         const s = this.size;

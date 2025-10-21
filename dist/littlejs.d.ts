@@ -3377,6 +3377,8 @@ declare module "littlejsengine" {
          *  @return {Vector2}
          */
         getTextSize(): Vector2;
+        /** Called when the navigation button is pressed on this object */
+        navigatePressed(): void;
         /** @return {boolean} - Is the mouse hovering over this element */
         isHoverObject(): boolean;
         /** @return {boolean} - Is the mouse held onto this element */
@@ -3385,6 +3387,9 @@ declare module "littlejsengine" {
         isNavigationObject(): boolean;
         /** @return {boolean} - Can it be interacted with */
         isInteractive(): boolean;
+        /** Returns string containing info about this object for debugging
+         *  @return {string} */
+        toString(): string;
         /** Called each frame when object updates */
         onUpdate(): void;
         /** Called when the mouse enters the object */
@@ -3525,7 +3530,7 @@ declare module "littlejsengine" {
         stop(): void;
         /** Check if video is currently loading
          *  @return {boolean} */
-        isLoadng(): boolean;
+        isLoading(): boolean;
         /** Check if video is currently paused
          *  @return {boolean} */
         isPaused(): boolean;
