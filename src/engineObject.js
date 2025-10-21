@@ -134,7 +134,7 @@ class EngineObject
             child.updateTransforms();
     }
 
-    /** Update the object physics, called automatically by engine once each frame */
+    /** Update the object physics, called automatically by engine once each frame. Can be overridden to stop or change how physics works for an object. */
     updatePhysics()
     {
         // child objects do not have physics

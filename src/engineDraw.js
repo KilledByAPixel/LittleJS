@@ -151,7 +151,7 @@ class TileInfo
         this.padding = padding;
         /** @property {TextureInfo} - The texture info for this tile */
         this.textureInfo = textureInfos[this.textureIndex];
-        /** @property {float} - Shrinks tile by this many pixels to prevent neighbors bleeding */
+        /** @property {number} - Shrinks tile by this many pixels to prevent neighbors bleeding */
         this.bleedScale = bleedScale;
     }
 
@@ -849,7 +849,7 @@ function worldToScreenTransform(worldPos, worldSize, worldAngle=0)
     ];
 }
 
-/** Get the camera's visible area in world space
+/** Get the size of the camera window in world space
  *  @return {Vector2}
  *  @memberof Draw */
 function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
