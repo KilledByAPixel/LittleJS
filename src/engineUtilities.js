@@ -694,7 +694,7 @@ class Vector2
     clampLength(length=1)
     {
         const l = this.length();
-        return l > length ? this.scale(length/l) : this;
+        return l > length ? this.scale(length/l) : this.copy();
     }
 
     /** Returns the dot product of this and the vector passed in
