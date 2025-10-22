@@ -539,21 +539,18 @@ class UISystemPlugin
         // confirm menu
         const confirmMenu = new UIObject(vec2(), size);
         uiSystem.confirmDialog = confirmMenu;
-        const originalRender = confirmMenu.render;
-        confirmMenu.render = function() 
+        confirmMenu.onRender = ()=> 
         {
-            this.pos = uiSystem.screenToNative(mainCanvasSize.scale(.5));
+            confirmMenu.pos = uiSystem.screenToNative(mainCanvasSize.scale(.5));
             const backgroundColor = hsl(0,0,0,.7);
-            uiSystem.drawRect(this.pos, vec2(1e9), backgroundColor);
-            originalRender.call(this);
+            uiSystem.drawRect(vec2(), vec2(1e9), backgroundColor);
         }
-        const originalUpdate = confirmMenu.update;
-        confirmMenu.update = function() 
+        confirmMenu.onUpdate = ()=>
         {
-            originalUpdate.call(this);
             if (keyWasPressed(exitKey))
                 closeMenu();
         }
+        confirmMenu.isMouseOverlapping = ()=> true; // always hover
         
         // title text
         const textTitle = new UIText(vec2(0,-50), vec2(size.x-10,70), text);
@@ -786,6 +783,9 @@ class UIObject
     /** Render the object, called automatically by plugin once each frame */
     render()
     {
+        // call the custom render callback
+        this.onRender();
+
         if (!this.size.x || !this.size.y) return;
 
         const isNavigationObject = this.isNavigationObject();
@@ -852,8 +852,11 @@ class UIObject
         return text;
     }
 
-    /** Called each frame when object updates */
+    /** Called each frame before object updates */
     onUpdate() {}
+
+    /** Called each frame before object renders */
+    onRender() {}
 
     /** Called when the mouse enters the object */
     onEnter() {}
