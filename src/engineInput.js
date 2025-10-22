@@ -252,7 +252,15 @@ function inputInit()
                 inputData[0][remapKey(e.code)] = 3;
         }
 
-        // prevent default like arrow keys moving the page
+        // prevent arrow key from moving the page
+        const preventDefaultKeys = 
+        [
+            'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', // scrolling
+            'Space',        // page down scroll
+            'Tab',          // focus navigation
+            'Backspace',    // browser back
+        ];
+        if (preventDefaultKeys.includes(e.code))
         if (inputPreventDefault && document.hasFocus() && e.cancelable)
             e.preventDefault();
     }
