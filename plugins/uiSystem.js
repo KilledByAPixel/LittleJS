@@ -86,7 +86,7 @@ class UISystemPlugin
         /** @property {boolean} - should the navigation be horizontal, vertical, or both? */
         this.navigationDirection = 1;
         /** @property {boolean} - True if user last used navigation instead of mouse */
-        this.navigationMode = true;
+        this.navigationMode = false;
 
         // system state
         /** @property {Array<UIObject>} - List of all UI elements */
@@ -184,6 +184,7 @@ class UISystemPlugin
                         if (uiSystem.navigationObject !== newNavigationObject)
                         {
                             uiSystem.navigationMode = true;
+                            uiSystem.hoverObject = undefined;
                             uiSystem.navigationObject = newNavigationObject;
                             uiSystem.navigationTimer.set(uiSystem.navigationDelay);
                             newNavigationObject.soundPress &&
@@ -674,6 +675,7 @@ class UIObject
         const mouseDown = mouseIsDown(0);
         const mousePress = this.dragActivate ? mouseDown : mouseWasPressed(0);
         if (this.canBeHover)
+        if (!uiSystem.navigationMode) // no mouse hover in navigation mode
         if (mousePress || isActive || (!mouseDown && !isTouchDevice))
         if (!uiSystem.hoverObject && this.isMouseOverlapping())
             uiSystem.hoverObject = this;
