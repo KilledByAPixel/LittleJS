@@ -700,11 +700,8 @@ class UIObject
                 }
             }
 
-            if (mousePress)
-            {
-                // clear mouse was pressed state even when disabled
-                mousePress && inputClearKey(0,0,0,1,0);
-            }
+            // clear mouse was pressed state even when disabled
+            mousePress && inputClearKey(0,0,0,1,0);
         }
         if (isActive)
         if (!mouseDown || (this.dragActivate && !this.isHoverObject()))
