@@ -1,11 +1,14 @@
 /**
  * LittleJS User Interface Plugin
  * - call new UISystemPlugin() to setup the UI system
+ * - Gamepad and keyboard navigation support
  * - Nested Menus
  * - Text
  * - Buttons
  * - Checkboxes
  * - Images
+ * - Scrollbars
+ * - Video
  * @namespace UISystem
  */
 
@@ -99,6 +102,8 @@ class UISystemPlugin
         this.hoverObject = undefined;
         /** @property {UIObject} - Hover object at start of update */
         this.lastHoverObject = undefined;
+        /** @property {UIObject} - Current confirm menu being shown */
+        this.confirmDialog = undefined;
 
         engineAddPlugin(uiUpdate, uiRender);
 
@@ -106,22 +111,18 @@ class UISystemPlugin
         // update in reverse order to detect mouse enter/leave
         function uiUpdate()
         {
-            function updateObject(o, disabled=false)
+            function updateObject(o)
             {
-                if (!o.visible)
-                    return;
+                if (!o.visible) return;
 
                 // set position in parent space
                 if (o.parent)
                     o.pos = o.localPos.add(o.parent.pos);
 
-                // pass disabled state to children
-                disabled ||= o.disabled;
-
                 // update in reverse order to detect mouse enter/leave
                 for (let i=o.children.length; i--;)
-                    updateObject(o.children[i], disabled);
-                o.update(disabled);
+                    updateObject(o.children[i]);
+                o.update();
             }
 
             if (uiSystem.activeObject && !uiSystem.activeObject.visible)
@@ -222,20 +223,16 @@ class UISystemPlugin
                 context.translate(mainCanvasSize.x/2/s,0);
             }
 
-            function renderObject(o, disabled=false)
+            function renderObject(o)
             {
-                // pass disabled state to children
-                disabled ||= o.disabled;
-
-                if (!o.visible)
-                    return;
+                if (!o.visible) return;
 
                 // set position in parent space
                 if (o.parent)
                     o.pos = o.localPos.add(o.parent.pos);
-                o.render(disabled);
+                o.render();
                 for (const c of o.children)
-                    renderObject(c, disabled);
+                    renderObject(c);
             }
             uiSystem.uiObjects.forEach(o=> o.parent || renderObject(o));
             context.restore();
@@ -291,7 +288,7 @@ class UISystemPlugin
             context.rect(pos.x-size.x/2, pos.y-size.y/2, size.x, size.y);
         context.fill();
         context.shadowColor = '#0000';
-        if (lineWidth)
+        if (lineWidth && lineColor.a > 0)
         {
             context.strokeStyle = lineColor.toString();
             context.lineWidth = lineWidth;
@@ -495,7 +492,7 @@ class UISystemPlugin
     getNavigationOtherDirection()
     {
         if (uiSystem.navigationDirection === 2)
-            return 0; // both disabled
+            return 0; // other direction disabled
 
         const vertical = uiSystem.navigationDirection === 1;
         if (isUsingGamepad)
@@ -517,6 +514,74 @@ class UISystemPlugin
         const gamepad = this.navigationGamepadIndex;
         return isUsingGamepad ? gamepadWasPressed(0, gamepad) : 
             keyWasPressed('Space') || keyWasPressed('Enter');
+    }
+        
+    /** Show a confirmation dialog with Yes/No buttons
+     *  Centers the dialog on the screen with darkened background
+     *  @param {string} [text] - The message to display
+     *  @param {Function} [yesCallback] - Called when Yes is clicked
+     *  @param {Function} [noCallback] - Called when No is clicked
+     *  @param {Vector2} [size] - Size of the confirmation dialog
+     *  @param {string} [exitKey] - Key that can exit the menu
+     *  @return {UIObject} The confirmation menu object
+     */
+    showConfirmDialog(text='Are you sure?', yesCallback, noCallback, size=vec2(500,250), exitKey='Escape')
+    {
+        ASSERT(!uiSystem.confirmDialog);
+
+        const savedNavigationDirection = uiSystem.navigationDirection;
+
+        // allow both axies for navigation
+        uiSystem.navigationDirection = 2;
+
+        // confirm menu
+        const confirmMenu = new UIObject(vec2(), size);
+        uiSystem.confirmDialog = confirmMenu;
+        const originalRender = confirmMenu.render;
+        confirmMenu.render = function() 
+        {
+            this.pos = uiSystem.screenToNative(mainCanvasSize.scale(.5));
+            const backgroundColor = hsl(0,0,0,.7);
+            uiSystem.drawRect(this.pos, vec2(1e9), backgroundColor);
+            originalRender.call(this);
+        }
+        const originalUpdate = confirmMenu.update;
+        confirmMenu.update = function() 
+        {
+            originalUpdate.call(this);
+            if (keyWasPressed(exitKey))
+                closeMenu();
+        }
+        
+        // title text
+        const textTitle = new UIText(vec2(0,-50), vec2(size.x-10,70), text);
+        confirmMenu.addChild(textTitle);
+        
+        // yes button
+        const buttonYes = new UIButton(vec2(-80,50), vec2(120,70), 'Yes');
+        buttonYes.textHeight = 40;
+        buttonYes.navigationIndex = 1;
+        buttonYes.hoverColor = hsl(0,1,.5);
+        buttonYes.onClick = ()=> { closeMenu(); yesCallback && yesCallback(); }; 
+        confirmMenu.addChild(buttonYes);
+        
+        // no button
+        const buttonNo = new UIButton(vec2(80,50), vec2(120,70), 'No');
+        buttonNo.textHeight = 40;
+        buttonNo.navigationIndex = 2;
+        buttonNo.navigationAutoSelect = true;
+        buttonNo.onClick = ()=> { closeMenu(); noCallback && noCallback(); };
+        confirmMenu.addChild(buttonNo);
+
+        // close menu and return to normal navigation
+        function closeMenu()
+        {
+            ASSERT(uiSystem.confirmDialog === confirmMenu);
+            confirmMenu.destroy();
+            uiSystem.confirmDialog = undefined;
+            uiSystem.navigationDirection = savedNavigationDirection;
+            inputClear();
+        }
     }
 }
 
@@ -629,7 +694,6 @@ class UIObject
         child.parent = undefined;
     }
 
-
     /** Destroy this object, destroy its children, detach its parent, and mark it for removal */
     destroy()
     {
@@ -645,6 +709,7 @@ class UIObject
             child.destroy();
         }
     }
+
     /** Check if the mouse is overlapping a box in screen space
      *  @return {boolean} - True if overlapping
      */
@@ -658,16 +723,14 @@ class UIObject
         return isOverlapping(this.pos, size, pos);
     }
 
-    /** Update the object, called automatically by plugin once each frame 
-     *  @param {boolean} disabled - Is the object disabled
-     */
-    update(disabled)
+    /** Update the object, called automatically by plugin once each frame */
+    update()
     {
         // call the custom update callback
         this.onUpdate();
 
         // unset active if disabled
-        if (disabled && this == uiSystem.activeObject)
+        if (this.disabled && this == uiSystem.activeObject)
             uiSystem.activeObject = undefined;
 
         const wasHover = uiSystem.lastHoverObject === this;
@@ -681,7 +744,7 @@ class UIObject
             uiSystem.hoverObject = this;
         if (this.isHoverObject())
         {
-            if (!disabled)
+            if (!this.disabled)
             {
                 if (mousePress)
                 {
@@ -718,19 +781,17 @@ class UIObject
             this.isHoverObject() ? this.onEnter() : this.onLeave();
     }
 
-    /** Render the object, called automatically by plugin once each frame 
-     *  @param {boolean} disabled - Is the object disabled
-     */
-    render(disabled)
+    /** Render the object, called automatically by plugin once each frame */
+    render()
     {
         if (!this.size.x || !this.size.y) return;
 
         const isNavigationObject = this.isNavigationObject();
         const lineColor = isNavigationObject ? this.color :
-            this.interactive && this.isActiveObject() && !disabled ?
+            this.interactive && this.isActiveObject() && !this.disabled ?
             this.color : this.lineColor;
         const color = isNavigationObject ? this.hoverColor :
-            disabled ? this.disabledColor : 
+            this.disabled ? this.disabledColor : 
             this.interactive ? 
                 this.isHoverObject() ? this.hoverColor : 
                 this.isActiveObject() ? this.activeColor || this.color : 
@@ -767,8 +828,7 @@ class UIObject
     isNavigationObject() { return uiSystem.navigationObject === this; }
 
     /** @return {boolean} - Can it be interacted with */
-    isInteractive()
-    { return this.interactive && this.visible && !this.disabled;}
+    isInteractive() { return this.interactive && this.visible && !this.disabled;}
 
     /** Returns string containing info about this object for debugging
      *  @return {string} */
@@ -924,9 +984,9 @@ class UIButton extends UIObject
         this.color = color.copy();
         this.interactive = true;
     }
-    render(disabled)
+    render()
     {
-        super.render(disabled);
+        super.render();
         
         // draw the text scaled to fit
         const textSize = this.getTextSize();
@@ -969,9 +1029,9 @@ class UICheckbox extends UIObject
         this.checked = !this.checked;
         this.onChange();
     }
-    render(disabled)
+    render()
     {
-        super.render(disabled);
+        super.render();
         if (this.checked)
         {
             const p = this.cornerRadius / min(this.size.x, this.size.y) * 2;
@@ -1024,9 +1084,9 @@ class UIScrollbar extends UIObject
         this.color = color.copy();
         this.interactive = true;
     }
-    update(disabled)
+    update()
     {
-        super.update(disabled);
+        super.update();
         if (!this.interactive)
             return;
 
@@ -1057,9 +1117,9 @@ class UIScrollbar extends UIObject
         }
         this.value === oldValue || this.onChange();
     }
-    render(disabled)
+    render()
     {
-        super.render(disabled);
+        super.render();
 
         // handle horizontal or vertical scrollbar
         const isHorizontal = this.size.x > this.size.y;
@@ -1074,7 +1134,7 @@ class UIScrollbar extends UIObject
         const handlePos = isHorizontal ? 
             vec2(lerp(p1, p2, this.value), this.pos.y) :
             vec2(this.pos.x, lerp(p2, p1, this.value))
-        const handleColor = disabled ? this.disabledColor : this.handleColor;
+        const handleColor = this.disabled ? this.disabledColor : this.handleColor;
         uiSystem.drawRect(handlePos, vec2(handleSize), handleColor, this.lineWidth, this.lineColor, this.cornerRadius, this.gradientColor);
 
         // draw the text scaled to fit on the scrollbar
@@ -1200,18 +1260,18 @@ class UIVideo extends UIObject
     setTime(time)
     { this.video.currentTime = clamp(time, 0, this.getDuration()); }
 
-    update(disabled)
+    update()
     {
-        super.update(disabled);
+        super.update();
 
         // update volume based on global sound volume
         this.video.volume = clamp(this.volume * soundVolume);
     }
     
     /** Render video to UI canvas */
-    render(disabled)
+    render()
     {
-        super.render(disabled);
+        super.render();
 
         if (this.isLoading())
             return;
