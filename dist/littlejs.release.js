@@ -8578,6 +8578,8 @@ class UISystemPlugin
         for (let i = uiSystem.uiObjects.length; i--;)
         {
             const o = uiSystem.uiObjects[i];
+            if (uiSystem.confirmDialog && o !== uiSystem.confirmDialog)
+                continue;
             o.parent || getNavigableRecursive(o);
         }
 
@@ -8658,7 +8660,6 @@ class UISystemPlugin
 
         // allow both axies for navigation
         uiSystem.navigationDirection = 2;
-        uiSystem.navigationObject = undefined;
 
         // confirm menu
         const confirmMenu = new UIObject(vec2(), size);
