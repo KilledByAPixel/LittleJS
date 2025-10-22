@@ -146,6 +146,8 @@ class UISystemPlugin
                 // select first object if current is not valid
                 if (!navigableObjects.includes(uiSystem.navigationObject))
                     uiSystem.navigationObject = undefined;
+
+                if (!isTouchDevice)
                 if (uiSystem.navigationMode && !uiSystem.navigationObject)
                 {
                     // select first auto focus object
