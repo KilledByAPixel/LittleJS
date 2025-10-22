@@ -143,7 +143,7 @@ class UISystemPlugin
                 uiSystem.navigationObject = undefined;
             else
             {
-                // select first object if current is not valid
+                // unselect object if it is no longer navigable
                 if (!navigableObjects.includes(uiSystem.navigationObject))
                     uiSystem.navigationObject = undefined;
 
@@ -161,22 +161,33 @@ class UISystemPlugin
                     const direction = sign(uiSystem.getNavigationDirection());
                     if (direction)
                     {
-                        let newIndex;
+                        let newNavigationObject;
                         if (!uiSystem.navigationObject)
-                            newIndex = direction > 0 ? 0 : navigableObjects.length-1;
+                        {
+                            // use auto select object
+                            newNavigationObject = navigableObjects.find(o=>o.navigationAutoSelect);
+
+                            if (!newNavigationObject)
+                            {
+                                // try first or last object
+                                const newIndex = direction > 0 ? 0 : navigableObjects.length-1;
+                                newNavigationObject = navigableObjects[newIndex];
+                            }
+                        }
                         else
                         {
                             const currentIndex = navigableObjects.indexOf(uiSystem.navigationObject);
-                            newIndex = mod(currentIndex + direction, navigableObjects.length);
+                            const newIndex = mod(currentIndex + direction, navigableObjects.length);
+                            newNavigationObject = navigableObjects[newIndex];
                         }
                         
-                        const newNavigationObject = navigableObjects[newIndex];
                         if (uiSystem.navigationObject !== newNavigationObject)
                         {
                             uiSystem.navigationMode = true;
                             uiSystem.navigationObject = newNavigationObject;
                             uiSystem.navigationTimer.set(uiSystem.navigationDelay);
-                            newNavigationObject.soundPress?.play();
+                            newNavigationObject.soundPress &&
+                                newNavigationObject.soundPress.play();
                         }
                     }
                 }
@@ -574,7 +585,7 @@ class UIObject
         /** @property {number} - Size of shadow blur */
         this.shadowBlur = uiSystem.defaultShadowBlur;
         /** @property {Vector2} - Offset of shadow blur */
-        this.shadowOffset = uiSystem.defaultShadowOffset.copy();
+        this.shadowOffset = uiSystem.defaultShadowOffset?.copy();
         /** @property {number} - Optional navigation order index, lower values are selected first */
         this.navigationIndex = undefined;
         /** @property {boolean} - Should this be auto selected by navigation? Must also have valid navigation index. */
@@ -662,7 +673,7 @@ class UIObject
                     {
                         if (!this.dragActivate || (!wasHover || mouseWasPressed(0)))
                             this.onPress();
-                        this.soundPress?.play();
+                        this.soundPress && this.soundPress.play();
                         if (uiSystem.activeObject && !isActive)
                             uiSystem.activeObject.onRelease();
                         uiSystem.activeObject = this;
@@ -671,7 +682,7 @@ class UIObject
                 if (!mouseDown && this.isActiveObject() && this.interactive)
                 {
                     this.onClick();
-                    this.soundClick?.play();
+                    this.soundClick && this.soundClick.play();
                 }
             }
 
@@ -685,7 +696,7 @@ class UIObject
         if (!mouseDown || (this.dragActivate && !this.isHoverObject()))
         {
             this.onRelease();
-            this.soundRelease?.play();
+            this.soundRelease && this.soundRelease.play();
             uiSystem.activeObject = undefined;
         }
 
@@ -730,7 +741,7 @@ class UIObject
     navigatePressed()
     {
         this.onClick();
-        this.soundClick?.play();
+        this.soundClick && this.soundClick.play();
     }
 
     /** @return {boolean} - Is the mouse hovering over this element */
@@ -1062,6 +1073,7 @@ class UIScrollbar extends UIObject
     {
         // toggle value between 0 and 1
         this.value = this.value ? 0 : 1;
+        this.onRelease();
         super.navigatePressed();
     }
 }
