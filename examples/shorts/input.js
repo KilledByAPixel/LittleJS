@@ -20,6 +20,7 @@ function gameUpdate()
             if (gamepadIsDown(i))
                 debugCircle(pos, 1, RED, 0, 1);
             debugCircle(pos, 1, WHITE);
+            debugText(i, pos, .5);
         }
     }
     else if (isTouchDevice)
@@ -54,6 +55,7 @@ function gameUpdate()
             if (mouseIsDown(i))
                 debugCircle(pos, 1, RED, 0, 1);
             debugCircle(pos, 1, WHITE);
+            debugText(i, pos, .5);
         }
     }
 }
