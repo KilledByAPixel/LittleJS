@@ -83,8 +83,8 @@ class UISystemPlugin
         this.navigationTimer = new Timer(undefined, true);
         /** @property {number} - Time between navigation inputs in seconds */
         this.navigationDelay = .2;
-        /** @property {boolean} - shoudld the vertical axis be used for navigation? */
-        this.navigationVertical = true;
+        /** @property {boolean} - should the navigation be horizontal, vertical, or both? */
+        this.navigationDirection = 1;
         /** @property {boolean} - True if user last used navigation instead of mouse */
         this.navigationMode = true;
 
@@ -228,6 +228,8 @@ class UISystemPlugin
 
                 if (!o.visible)
                     return;
+
+                // set position in parent space
                 if (o.parent)
                     o.pos = o.localPos.add(o.parent.pos);
                 o.render(disabled);
@@ -465,16 +467,25 @@ class UISystemPlugin
      *  @return {number} */
     getNavigationDirection()
     {
-        const vertical = uiSystem.navigationVertical;
+        const vertical = uiSystem.navigationDirection === 1;
+        const both = uiSystem.navigationDirection === 2;
         if (isUsingGamepad)
         {
             const gamepad = this.navigationGamepadIndex;
             const stick = gamepadStick(0, gamepad);
             const dpad = gamepadDpad(gamepad);
+            if (both)
+                return -(stick.y || dpad.y) || (stick.x || dpad.x);
             return vertical ? -(stick.y || dpad.y) : (stick.x || dpad.x);
         }
-        const back = vertical ? 'ArrowUp' : 'ArrowLeft';
-        const forward = vertical ? 'ArrowDown' : 'ArrowRight';
+        const up = 'ArrowUp', down = 'ArrowDown', left = 'ArrowLeft', right = 'ArrowRight';
+        if (both)
+        {
+            return keyIsDown(up) || keyIsDown(left) ? -1 : 
+                keyIsDown(down) || keyIsDown(right) ? 1 : 0;
+        }
+        const back = vertical ? up : left;
+        const forward = vertical ? down : right;
         return keyIsDown(back) ? -1 : keyIsDown(forward) ? 1 : 0;
     }
 
@@ -482,7 +493,10 @@ class UISystemPlugin
      *  @return {Vector2} */
     getNavigationOtherDirection()
     {
-        const vertical = uiSystem.navigationVertical;
+        if (uiSystem.navigationDirection === 2)
+            return 0; // both disabled
+
+        const vertical = uiSystem.navigationDirection === 1;
         if (isUsingGamepad)
         {
             const gamepad = this.navigationGamepadIndex;
