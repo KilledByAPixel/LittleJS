@@ -391,7 +391,7 @@ class UISystemPlugin
     *  @param {DragAndDropCallback} [onDrop] - when a file is dropped
     *  @param {DragAndDropCallback} [onDragEnter] - when a file is dragged onto the window
     *  @param {DragAndDropCallback} [onDragLeave] - when a file is dragged off the window
-    *  @param {DragAndDropCallback} [onDragOver] - continously when dragging over */
+    *  @param {DragAndDropCallback} [onDragOver] - continuously when dragging over */
     setupDragAndDrop(onDrop, onDragEnter, onDragLeave, onDragOver)
     {
         function setCallback(callback, listenerType)
@@ -450,7 +450,7 @@ class UISystemPlugin
                 getNavigableRecursive(o.children[i]);
         }
 
-        // get all the valid navigatable objects recursively
+        // get all the valid navigable objects recursively
         let objects = [];
         for (let i = uiSystem.uiObjects.length; i--;)
         {

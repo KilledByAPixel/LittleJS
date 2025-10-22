@@ -47,7 +47,7 @@ function tileCollisionTest(pos, size=vec2(), object, solidOnly=true)
     }
 }
 
-/** Return the exact position of the boudnary of first tile hit, undefined if nothing was hit.
+/** Return the exact position of the boundary of first tile hit, undefined if nothing was hit.
  *  The point will be inside the colliding tile if it hits (may have a tiny shift)
  *  @param {Vector2}      posStart
  *  @param {Vector2}      posEnd
@@ -621,7 +621,7 @@ class TileCollisionLayer extends TileLayer
         return false;
     }
 
-    /** Return the exact position of the boudnary of first tile hit, undefined if nothing was hit.
+    /** Return the exact position of the boundary of first tile hit, undefined if nothing was hit.
     *  The point will be inside the colliding tile if it hits (may have a tiny shift)
     *  @param {Vector2}      posStart
     *  @param {Vector2}      posEnd
