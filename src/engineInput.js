@@ -366,8 +366,8 @@ function gamepadsUpdate()
         else if (leftTouchStick.lengthSquared() > .3)
         {
             // convert to 8 way dpad
-            const x = clamp(sign(leftTouchStick.x), -1, 1);
-            const y = clamp(sign(leftTouchStick.y), -1, 1);
+            const x = clamp(round(leftTouchStick.x), -1, 1);
+            const y = clamp(round(leftTouchStick.y), -1, 1);
             dpad.set(x, -y);
             sticks[0] = dpad.clampLength(); // clamp to circle
         }
@@ -432,8 +432,8 @@ function gamepadsUpdate()
             else if (gamepad.axes && gamepad.axes.length >= 2)
             {
                 // digital style dpad from axes
-                const x = clamp(sign(gamepad.axes[0]), -1, 1);
-                const y = clamp(sign(gamepad.axes[1]), -1, 1);
+                const x = clamp(round(gamepad.axes[0]), -1, 1);
+                const y = clamp(round(gamepad.axes[1]), -1, 1);
                 dpad.set(x, -y);
             }
 
