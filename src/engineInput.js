@@ -251,6 +251,10 @@ function inputInit()
             if (inputWASDEmulateDirection)
                 inputData[0][remapKey(e.code)] = 3;
         }
+
+        // prevent default like arrow keys moving the page
+        if (inputPreventDefault && document.hasFocus() && e.cancelable)
+            e.preventDefault();
     }
     function onKeyUp(e)
     {
@@ -282,7 +286,9 @@ function inputInit()
         const mousePosScreenLast = mousePosScreen;
         mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
         mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
-        inputPreventDefault && e.button && e.preventDefault();
+
+        if (inputPreventDefault && document.hasFocus() && e.cancelable)
+            e.preventDefault();
     }
     function onMouseUp(e)
     {
