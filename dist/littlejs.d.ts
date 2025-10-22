@@ -3403,8 +3403,10 @@ declare module "littlejsengine" {
         /** Returns string containing info about this object for debugging
          *  @return {string} */
         toString(): string;
-        /** Called each frame when object updates */
+        /** Called each frame before object updates */
         onUpdate(): void;
+        /** Called each frame before object renders */
+        onRender(): void;
         /** Called when the mouse enters the object */
         onEnter(): void;
         /** Called when the mouse leaves the object */
