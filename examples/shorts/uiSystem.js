@@ -45,8 +45,8 @@ function gameInit()
     button2.navigationIndex = ++navigationIndex;
     button2.navigationAutoSelect = true;
     uiMenu.addChild(button2);
-    button2.onClick = ()=> 
-        { uiMenu.visible=false; buttonBack.visible=true; }
+    button2.onClick = ()=> uiSystem.showConfirmDialog('Exit menu?',
+        ()=> { uiMenu.visible=false; buttonBack.visible=true; });
 
     // example button that returns to menu
     const buttonBack = new UIButton(mainCanvasSize.scale(.5), vec2(200),

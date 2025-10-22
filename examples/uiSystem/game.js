@@ -86,7 +86,8 @@ function createUI()
     // exit button
     const button2 = new LJS.UIButton(vec2(0,220), vec2(350, 50), 'Exit Menu');
     uiMenu.addChild(button2);
-    button2.onClick = ()=> setMenuVisible(false);
+    button2.onClick = ()=> LJS.uiSystem.showConfirmDialog('Exit menu?',
+        ()=> setMenuVisible(false));
     button2.navigationIndex = ++navigationIndex;
     button2.navigationAutoSelect = true;
 }
@@ -107,9 +108,11 @@ function gameUpdate()
 ///////////////////////////////////////////////////////////////////////////////
 function gameUpdatePost()
 {
-    // toggle menu visibility
-    if (LJS.keyWasPressed('KeyM'))
+    if (LJS.keyWasPressed('KeyM') && !LJS.uiSystem.confirmDialog)
+    {
+        // toggle menu visibility
         setMenuVisible(!getMenuVisible());
+    }
 
     // center ui
     uiRoot.pos.x = LJS.mainCanvasSize.x/2;
