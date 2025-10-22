@@ -2538,7 +2538,7 @@ declare module "littlejsengine" {
      *  @return {TileCollisionLayer}
      *  @memberof TileLayers */
     export function tileCollisionTest(pos: Vector2, size?: Vector2, object?: EngineObject, solidOnly?: boolean): TileCollisionLayer;
-    /** Return the exact position of the boudnary of first tile hit, undefined if nothing was hit.
+    /** Return the exact position of the boundary of first tile hit, undefined if nothing was hit.
      *  The point will be inside the colliding tile if it hits (may have a tiny shift)
      *  @param {Vector2}      posStart
      *  @param {Vector2}      posEnd
@@ -2732,7 +2732,7 @@ declare module "littlejsengine" {
         *  @param {EngineObject} [object]
         *  @return {boolean} */
         collisionTest(pos: Vector2, size?: Vector2, object?: EngineObject): boolean;
-        /** Return the exact position of the boudnary of first tile hit, undefined if nothing was hit.
+        /** Return the exact position of the boundary of first tile hit, undefined if nothing was hit.
         *  The point will be inside the colliding tile if it hits (may have a tiny shift)
         *  @param {Vector2}      posStart
         *  @param {Vector2}      posEnd
@@ -3251,7 +3251,7 @@ declare module "littlejsengine" {
         *  @param {DragAndDropCallback} [onDrop] - when a file is dropped
         *  @param {DragAndDropCallback} [onDragEnter] - when a file is dragged onto the window
         *  @param {DragAndDropCallback} [onDragLeave] - when a file is dragged off the window
-        *  @param {DragAndDropCallback} [onDragOver] - continously when dragging over */
+        *  @param {DragAndDropCallback} [onDragOver] - continuously when dragging over */
         setupDragAndDrop(onDrop?: (event: DragEvent) => any, onDragEnter?: (event: DragEvent) => any, onDragLeave?: (event: DragEvent) => any, onDragOver?: (event: DragEvent) => any): void;
         /** Convert a screen space position to native UI position
          *  @param {Vector2} pos

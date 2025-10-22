@@ -5200,8 +5200,8 @@ function gamepadsUpdate()
         else if (leftTouchStick.lengthSquared() > .3)
         {
             // convert to 8 way dpad
-            const x = clamp(sign(leftTouchStick.x), -1, 1);
-            const y = clamp(sign(leftTouchStick.y), -1, 1);
+            const x = clamp(round(leftTouchStick.x), -1, 1);
+            const y = clamp(round(leftTouchStick.y), -1, 1);
             dpad.set(x, -y);
             sticks[0] = dpad.clampLength(); // clamp to circle
         }
@@ -5266,8 +5266,8 @@ function gamepadsUpdate()
             else if (gamepad.axes && gamepad.axes.length >= 2)
             {
                 // digital style dpad from axes
-                const x = clamp(sign(gamepad.axes[0]), -1, 1);
-                const y = clamp(sign(gamepad.axes[1]), -1, 1);
+                const x = clamp(round(gamepad.axes[0]), -1, 1);
+                const y = clamp(round(gamepad.axes[1]), -1, 1);
                 dpad.set(x, -y);
             }
 
@@ -6270,7 +6270,7 @@ function tileCollisionTest(pos, size=vec2(), object, solidOnly=true)
     }
 }
 
-/** Return the exact position of the boudnary of first tile hit, undefined if nothing was hit.
+/** Return the exact position of the boundary of first tile hit, undefined if nothing was hit.
  *  The point will be inside the colliding tile if it hits (may have a tiny shift)
  *  @param {Vector2}      posStart
  *  @param {Vector2}      posEnd
@@ -6844,7 +6844,7 @@ class TileCollisionLayer extends TileLayer
         return false;
     }
 
-    /** Return the exact position of the boudnary of first tile hit, undefined if nothing was hit.
+    /** Return the exact position of the boundary of first tile hit, undefined if nothing was hit.
     *  The point will be inside the colliding tile if it hits (may have a tiny shift)
     *  @param {Vector2}      posStart
     *  @param {Vector2}      posEnd
@@ -8872,7 +8872,7 @@ class UISystemPlugin
         /** @property {boolean} - should the navigation be horizontal, vertical, or both? */
         this.navigationDirection = 1;
         /** @property {boolean} - True if user last used navigation instead of mouse */
-        this.navigationMode = true;
+        this.navigationMode = false;
 
         // system state
         /** @property {Array<UIObject>} - List of all UI elements */
@@ -8970,6 +8970,7 @@ class UISystemPlugin
                         if (uiSystem.navigationObject !== newNavigationObject)
                         {
                             uiSystem.navigationMode = true;
+                            uiSystem.hoverObject = undefined;
                             uiSystem.navigationObject = newNavigationObject;
                             uiSystem.navigationTimer.set(uiSystem.navigationDelay);
                             newNavigationObject.soundPress &&
@@ -9177,7 +9178,7 @@ class UISystemPlugin
     *  @param {DragAndDropCallback} [onDrop] - when a file is dropped
     *  @param {DragAndDropCallback} [onDragEnter] - when a file is dragged onto the window
     *  @param {DragAndDropCallback} [onDragLeave] - when a file is dragged off the window
-    *  @param {DragAndDropCallback} [onDragOver] - continously when dragging over */
+    *  @param {DragAndDropCallback} [onDragOver] - continuously when dragging over */
     setupDragAndDrop(onDrop, onDragEnter, onDragLeave, onDragOver)
     {
         function setCallback(callback, listenerType)
@@ -9236,7 +9237,7 @@ class UISystemPlugin
                 getNavigableRecursive(o.children[i]);
         }
 
-        // get all the valid navigatable objects recursively
+        // get all the valid navigable objects recursively
         let objects = [];
         for (let i = uiSystem.uiObjects.length; i--;)
         {
@@ -9460,6 +9461,7 @@ class UIObject
         const mouseDown = mouseIsDown(0);
         const mousePress = this.dragActivate ? mouseDown : mouseWasPressed(0);
         if (this.canBeHover)
+        if (!uiSystem.navigationMode) // no mouse hover in navigation mode
         if (mousePress || isActive || (!mouseDown && !isTouchDevice))
         if (!uiSystem.hoverObject && this.isMouseOverlapping())
             uiSystem.hoverObject = this;
