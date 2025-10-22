@@ -3115,11 +3115,14 @@ declare module "littlejsengine" {
     /**
      * LittleJS User Interface Plugin
      * - call new UISystemPlugin() to setup the UI system
+     * - Gamepad and keyboard navigation support
      * - Nested Menus
      * - Text
      * - Buttons
      * - Checkboxes
      * - Images
+     * - Scrollbars
+     * - Video
      * @namespace UISystem
      */
     /** Global UI system plugin object
@@ -3196,6 +3199,8 @@ declare module "littlejsengine" {
         hoverObject: any;
         /** @property {UIObject} - Hover object at start of update */
         lastHoverObject: any;
+        /** @property {UIObject} - Current confirm menu being shown */
+        confirmDialog: any;
         /** Draw a rectangle to the UI context
         *  @param {Vector2} pos
         *  @param {Vector2} size
@@ -3272,6 +3277,16 @@ declare module "littlejsengine" {
         /** Get if navigation button was pressed from gamepad or keyboard
          *  @return {boolean} */
         getNavigationWasPressed(): boolean;
+        /** Show a confirmation dialog with Yes/No buttons
+         *  Centers the dialog on the screen with darkened background
+         *  @param {string} [text] - The message to display
+         *  @param {Function} [yesCallback] - Called when Yes is clicked
+         *  @param {Function} [noCallback] - Called when No is clicked
+         *  @param {Vector2} [size] - Size of the confirmation dialog
+         *  @param {string} [exitKey] - Key that can exit the menu
+         *  @return {UIObject} The confirmation menu object
+         */
+        showConfirmDialog(text?: string, yesCallback?: Function, noCallback?: Function, size?: Vector2, exitKey?: string): UIObject;
     }
     /**
      * UI Object - Base level object for all UI elements
@@ -3367,14 +3382,10 @@ declare module "littlejsengine" {
          *  @return {boolean} - True if overlapping
          */
         isMouseOverlapping(): boolean;
-        /** Update the object, called automatically by plugin once each frame
-         *  @param {boolean} disabled - Is the object disabled
-         */
-        update(disabled: boolean): void;
-        /** Render the object, called automatically by plugin once each frame
-         *  @param {boolean} disabled - Is the object disabled
-         */
-        render(disabled: boolean): void;
+        /** Update the object, called automatically by plugin once each frame */
+        update(): void;
+        /** Render the object, called automatically by plugin once each frame */
+        render(): void;
         /** Get the size for text with overrides and scale
          *  @return {Vector2}
          */
@@ -3423,7 +3434,6 @@ declare module "littlejsengine" {
         constructor(pos?: Vector2, size?: Vector2, text?: string, align?: string, font?: string);
         text: string;
         align: string;
-        render(): void;
     }
     /**
      * UITile - A UI object that displays a tile image
@@ -3446,7 +3456,6 @@ declare module "littlejsengine" {
         angle: number;
         /** @property {boolean} - Should it be mirrored? */
         mirror: boolean;
-        render(): void;
     }
     /**
      * UIButton - A UI object that acts as a button
@@ -3462,7 +3471,6 @@ declare module "littlejsengine" {
          */
         constructor(pos?: Vector2, size?: Vector2, text?: string, color?: Color);
         text: string;
-        render(disabled: any): void;
     }
     /**
      * UICheckbox - A UI object that acts as a checkbox
@@ -3481,7 +3489,6 @@ declare module "littlejsengine" {
         /** @property {boolean} - Current percentage value of this scrollbar 0-1 */
         checked: boolean;
         text: string;
-        render(disabled: any): void;
     }
     /**
      * UIScrollbar - A UI object that acts as a scrollbar
@@ -3503,8 +3510,6 @@ declare module "littlejsengine" {
         /** @property {Color} - Color for the handle part of the scrollbar */
         handleColor: Color;
         text: string;
-        update(disabled: any): void;
-        render(disabled: any): void;
     }
     /**
      * VideoPlayerUIObject - A UI object that plays video
@@ -3566,9 +3571,6 @@ declare module "littlejsengine" {
         /** Seek to time in seconds
          *  @param {number} time - Time in seconds to seek to */
         setTime(time: number): void;
-        update(disabled: any): void;
-        /** Render video to UI canvas */
-        render(disabled: any): void;
     }
     /**
      * LittleJS Box2D Physics Plugin
