@@ -3182,8 +3182,8 @@ declare module "littlejsengine" {
         navigationTimer: Timer;
         /** @property {number} - Time between navigation inputs in seconds */
         navigationDelay: number;
-        /** @property {boolean} - shoudld the vertical axis be used for navigation? */
-        navigationVertical: boolean;
+        /** @property {boolean} - should the navigation be horizontal, vertical, or both? */
+        navigationDirection: number;
         /** @property {boolean} - True if user last used navigation instead of mouse */
         navigationMode: boolean;
         /** @property {Array<UIObject>} - List of all UI elements */

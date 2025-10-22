@@ -5085,6 +5085,18 @@ function inputInit()
             if (inputWASDEmulateDirection)
                 inputData[0][remapKey(e.code)] = 3;
         }
+
+        // prevent arrow key from moving the page
+        const preventDefaultKeys = 
+        [
+            'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', // scrolling
+            'Space',        // page down scroll
+            'Tab',          // focus navigation
+            'Backspace',    // browser back
+        ];
+        if (preventDefaultKeys.includes(e.code))
+        if (inputPreventDefault && document.hasFocus() && e.cancelable)
+            e.preventDefault();
     }
     function onKeyUp(e)
     {
@@ -5116,7 +5128,9 @@ function inputInit()
         const mousePosScreenLast = mousePosScreen;
         mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
         mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
-        inputPreventDefault && e.button && e.preventDefault();
+
+        if (inputPreventDefault && document.hasFocus() && e.cancelable)
+            e.preventDefault();
     }
     function onMouseUp(e)
     {
@@ -8855,8 +8869,8 @@ class UISystemPlugin
         this.navigationTimer = new Timer(undefined, true);
         /** @property {number} - Time between navigation inputs in seconds */
         this.navigationDelay = .2;
-        /** @property {boolean} - shoudld the vertical axis be used for navigation? */
-        this.navigationVertical = true;
+        /** @property {boolean} - should the navigation be horizontal, vertical, or both? */
+        this.navigationDirection = 1;
         /** @property {boolean} - True if user last used navigation instead of mouse */
         this.navigationMode = true;
 
@@ -8915,9 +8929,11 @@ class UISystemPlugin
                 uiSystem.navigationObject = undefined;
             else
             {
-                // select first object if current is not valid
+                // unselect object if it is no longer navigable
                 if (!navigableObjects.includes(uiSystem.navigationObject))
                     uiSystem.navigationObject = undefined;
+
+                if (!isTouchDevice)
                 if (uiSystem.navigationMode && !uiSystem.navigationObject)
                 {
                     // select first auto focus object
@@ -8931,22 +8947,33 @@ class UISystemPlugin
                     const direction = sign(uiSystem.getNavigationDirection());
                     if (direction)
                     {
-                        let newIndex;
+                        let newNavigationObject;
                         if (!uiSystem.navigationObject)
-                            newIndex = direction > 0 ? 0 : navigableObjects.length-1;
+                        {
+                            // use auto select object
+                            newNavigationObject = navigableObjects.find(o=>o.navigationAutoSelect);
+
+                            if (!newNavigationObject)
+                            {
+                                // try first or last object
+                                const newIndex = direction > 0 ? 0 : navigableObjects.length-1;
+                                newNavigationObject = navigableObjects[newIndex];
+                            }
+                        }
                         else
                         {
                             const currentIndex = navigableObjects.indexOf(uiSystem.navigationObject);
-                            newIndex = mod(currentIndex + direction, navigableObjects.length);
+                            const newIndex = mod(currentIndex + direction, navigableObjects.length);
+                            newNavigationObject = navigableObjects[newIndex];
                         }
                         
-                        const newNavigationObject = navigableObjects[newIndex];
                         if (uiSystem.navigationObject !== newNavigationObject)
                         {
                             uiSystem.navigationMode = true;
                             uiSystem.navigationObject = newNavigationObject;
                             uiSystem.navigationTimer.set(uiSystem.navigationDelay);
-                            newNavigationObject.soundPress?.play();
+                            newNavigationObject.soundPress &&
+                                newNavigationObject.soundPress.play();
                         }
                     }
                 }
@@ -8987,6 +9014,8 @@ class UISystemPlugin
 
                 if (!o.visible)
                     return;
+
+                // set position in parent space
                 if (o.parent)
                     o.pos = o.localPos.add(o.parent.pos);
                 o.render(disabled);
@@ -9224,16 +9253,25 @@ class UISystemPlugin
      *  @return {number} */
     getNavigationDirection()
     {
-        const vertical = uiSystem.navigationVertical;
+        const vertical = uiSystem.navigationDirection === 1;
+        const both = uiSystem.navigationDirection === 2;
         if (isUsingGamepad)
         {
             const gamepad = this.navigationGamepadIndex;
             const stick = gamepadStick(0, gamepad);
             const dpad = gamepadDpad(gamepad);
+            if (both)
+                return -(stick.y || dpad.y) || (stick.x || dpad.x);
             return vertical ? -(stick.y || dpad.y) : (stick.x || dpad.x);
         }
-        const back = vertical ? 'ArrowUp' : 'ArrowLeft';
-        const forward = vertical ? 'ArrowDown' : 'ArrowRight';
+        const up = 'ArrowUp', down = 'ArrowDown', left = 'ArrowLeft', right = 'ArrowRight';
+        if (both)
+        {
+            return keyIsDown(up) || keyIsDown(left) ? -1 : 
+                keyIsDown(down) || keyIsDown(right) ? 1 : 0;
+        }
+        const back = vertical ? up : left;
+        const forward = vertical ? down : right;
         return keyIsDown(back) ? -1 : keyIsDown(forward) ? 1 : 0;
     }
 
@@ -9241,7 +9279,10 @@ class UISystemPlugin
      *  @return {Vector2} */
     getNavigationOtherDirection()
     {
-        const vertical = uiSystem.navigationVertical;
+        if (uiSystem.navigationDirection === 2)
+            return 0; // both disabled
+
+        const vertical = uiSystem.navigationDirection === 1;
         if (isUsingGamepad)
         {
             const gamepad = this.navigationGamepadIndex;
@@ -9344,7 +9385,7 @@ class UIObject
         /** @property {number} - Size of shadow blur */
         this.shadowBlur = uiSystem.defaultShadowBlur;
         /** @property {Vector2} - Offset of shadow blur */
-        this.shadowOffset = uiSystem.defaultShadowOffset.copy();
+        this.shadowOffset = uiSystem.defaultShadowOffset?.copy();
         /** @property {number} - Optional navigation order index, lower values are selected first */
         this.navigationIndex = undefined;
         /** @property {boolean} - Should this be auto selected by navigation? Must also have valid navigation index. */
@@ -9432,7 +9473,7 @@ class UIObject
                     {
                         if (!this.dragActivate || (!wasHover || mouseWasPressed(0)))
                             this.onPress();
-                        this.soundPress?.play();
+                        this.soundPress && this.soundPress.play();
                         if (uiSystem.activeObject && !isActive)
                             uiSystem.activeObject.onRelease();
                         uiSystem.activeObject = this;
@@ -9441,21 +9482,18 @@ class UIObject
                 if (!mouseDown && this.isActiveObject() && this.interactive)
                 {
                     this.onClick();
-                    this.soundClick?.play();
+                    this.soundClick && this.soundClick.play();
                 }
             }
 
-            if (mousePress)
-            {
-                // clear mouse was pressed state even when disabled
-                mousePress && inputClearKey(0,0,0,1,0);
-            }
+            // clear mouse was pressed state even when disabled
+            mousePress && inputClearKey(0,0,0,1,0);
         }
         if (isActive)
         if (!mouseDown || (this.dragActivate && !this.isHoverObject()))
         {
             this.onRelease();
-            this.soundRelease?.play();
+            this.soundRelease && this.soundRelease.play();
             uiSystem.activeObject = undefined;
         }
 
@@ -9500,7 +9538,7 @@ class UIObject
     navigatePressed()
     {
         this.onClick();
-        this.soundClick?.play();
+        this.soundClick && this.soundClick.play();
     }
 
     /** @return {boolean} - Is the mouse hovering over this element */
@@ -9832,6 +9870,7 @@ class UIScrollbar extends UIObject
     {
         // toggle value between 0 and 1
         this.value = this.value ? 0 : 1;
+        this.onRelease();
         super.navigatePressed();
     }
 }
