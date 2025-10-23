@@ -18,6 +18,8 @@ export
 
     // UI System
     uiSystem,
+    uiDebug,
+    uiSetDebug,
     UISystemPlugin,
     UIObject,
     UIText,
