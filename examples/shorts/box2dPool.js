@@ -17,21 +17,17 @@ class Ball extends Box2dObject
         this.setFixedRotation(true);
     }
     beginContact()
-    {
-        const volume = clamp(this.getSpeed()/20);
-        hitSound.play(this.pos, clamp(this.getSpeed()/20));
-    }
-    canHit() { return this == cueBall && this.getSpeed() < 1; }
+    { hitSound.play(this.pos, clamp(this.getSpeed()/20)); }
+    canHit()
+    { return this == cueBall && this.getSpeed() < 1; }
+    getHitStrength()
+    { return this.getHitOffset().length()/maxHitDistance; }
     getHitOffset()
     {
         // hit from cue ball to mouse position
         const deltaPos = mousePos.subtract(this.pos);
         const length = min(deltaPos.length(), maxHitDistance);
         return deltaPos.normalize(length); 
-    }
-    getHitStrength()
-    { 
-        return this.getHitOffset().length()/maxHitDistance;
     }
     update()
     {
