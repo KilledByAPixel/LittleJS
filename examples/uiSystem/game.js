@@ -32,7 +32,7 @@ function createUI()
     const uiInfo = new LJS.UIText(vec2(0,90), vec2(1e3, 70), 
         'LittleJS UI System Example\nM = Toggle menu');
     uiInfo.textColor = LJS.WHITE;
-    uiInfo.lineWidth = 8;
+    uiInfo.textLineWidth = 8;
     uiRoot.addChild(uiInfo);
 
     // setup example menu
@@ -46,8 +46,8 @@ function createUI()
     const textTitle = new LJS.UIText(vec2(0,-220), vec2(500, 120), 'Test Title');
     uiMenu.addChild(textTitle);
     textTitle.textColor = LJS.RED;
-    textTitle.lineWidth = 4;
-    textTitle.lineColor = LJS.BLUE;
+    textTitle.textLineColor = LJS.BLUE;
+    textTitle.textLineWidth = 4;
 
     // example multiline text
     const textTest = new LJS.UIText(vec2(-60,-120), vec2(350, 60), 'Test Text\nSecond text line.')
