@@ -340,6 +340,7 @@ function filterExamples(reset=0)
             
         // Check if search term matches name, description, or tags
         if (example.name.toLowerCase().includes(searchTerm) || 
+            example.filename.toLowerCase().includes(searchTerm) ||
             example.description.toLowerCase().includes(searchTerm) ||
             example.tags.toLowerCase().includes(searchTerm))
             matchingIndices.push(i);
