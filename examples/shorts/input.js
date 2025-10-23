@@ -2,7 +2,7 @@ function gameUpdate()
 {
     if (isTouchDevice)
     {
-        debugText('Touch Gamepad Mode', vec2(0,4));
+        debugText('Touch Gamepad Mode', vec2(0,5));
         touchGamepadEnable = 1;
 
         // touch input routed to mouse
@@ -10,7 +10,7 @@ function gameUpdate()
     }
     else if (isUsingGamepad)
     {
-        debugText('Gamepad Mode', vec2(0,4));
+        debugText('Gamepad Mode', vec2(0,5));
 
         // analog sticks
         for (let i=2; i--;)
@@ -33,7 +33,7 @@ function gameUpdate()
     }
     else
     {
-        debugText('Mouse and Keyboard Mode', vec2(0,4));
+        debugText('Mouse and Keyboard Mode', vec2(0,5));
 
         // keyboard key (space bar)
         debugRect(vec2(), vec2(4), WHITE);
@@ -50,7 +50,7 @@ function gameUpdate()
         // mouse buttons
         for (let i=3; i--;)
         {
-            const pos = vec2(-2 + i*2, -4);
+            const pos = vec2(-2 + i*2, -5);
             if (mouseIsDown(i))
                 debugCircle(pos, 2, RED, 0, 1);
             debugCircle(pos, 2, WHITE);
