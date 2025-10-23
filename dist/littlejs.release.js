@@ -8146,6 +8146,17 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
  *  @memberof UISystem */
 let uiSystem;
 
+/** Enable UI system debug drawing
+ *  @type {boolean}
+ *  @default
+ *  @memberof UISystem */
+let uiDebug = false;
+
+/** Enable UI system debug drawing
+ *  @param {boolean} enable
+ *  @memberof UISystem */
+function uiSetDebug(enable) { uiDebug = enable; }
+
 ///////////////////////////////////////////////////////////////////////////////
 /** 
  * UI System Global Object
@@ -8184,7 +8195,7 @@ class UISystemPlugin
         /** @property {number} - Default rounded rect corner radius for UI elements */
         this.defaultCornerRadius = 0;
         /** @property {number} - Default scale to use for fitting text to object */
-        this.defaultTextScale = .8;
+        this.defaultTextFitScale = .8;
         /** @property {string} - Default font for UI elements */
         this.defaultFont = fontDefault;
         /** @property {Sound} - Default sound when interactive UI element is pressed */
@@ -8348,18 +8359,33 @@ class UISystemPlugin
                 context.translate(mainCanvasSize.x/2/s,0);
             }
 
-            function renderObject(o)
+            function renderObject(o, visible=true)
             {
-                if (!o.visible) return;
-
                 // set position in parent space
                 if (o.parent)
                     o.pos = o.localPos.add(o.parent.pos);
-                o.render();
+
+                // pass visible state to children
+                visible &&= o.visible;
+                visible && o.render();
                 for (const c of o.children)
-                    renderObject(c);
+                    renderObject(c, visible);
             }
             uiSystem.uiObjects.forEach(o=> o.parent || renderObject(o));
+
+            if (uiDebug)
+            {
+                // debug render all objects
+                function renderDebug(o)
+                {
+                    if (!o.visible)
+                        return;
+                    o.renderDebug();
+                    for (const c of o.children)
+                        renderDebug(c);
+                }
+                uiSystem.uiObjects.forEach(o=> o.parent || renderDebug(o));
+            }
             context.restore();
         }
     }
@@ -8761,9 +8787,13 @@ class UIObject
         /** @property {number} - Override for text height */
         this.textHeight = undefined;
         /** @property {number} - Scale text to fit in the object */
-        this.textScale = uiSystem.defaultTextScale;
+        this.textFitScale = uiSystem.defaultTextFitScale;
         /** @property {Vector2} - How much to offset the text shadow or undefined */
         this.textShadow = undefined;
+        /** @property {number} - Color for text line drawing  */
+        this.textLineColor = uiSystem.defaultLineColor.copy();
+        /** @property {number} - Width for text line drawing */
+        this.textLineWidth = 0;
         /** @property {boolean} - Should this object be drawn */
         this.visible  = true;
         /** @property {Array<UIObject>} - A list of this object's children */
@@ -8934,8 +8964,8 @@ class UIObject
     getTextSize()
     {
         return vec2(
-            this.textWidth  || this.textScale * this.size.x, 
-            this.textHeight || this.textScale * this.size.y);
+            this.textWidth  || this.textFitScale * this.size.x, 
+            this.textHeight || this.textFitScale * this.size.y);
     }
 
     /** Called when the navigation button is pressed on this object */
@@ -8975,6 +9005,17 @@ class UIObject
         if (this.color)
             text += '\ncolor = ' + this.color;
         return text;
+    }
+
+    /** Called if uiDebug is enabled */
+    renderDebug()
+    {
+        // apply color based on state
+        const color = 
+            this.isHoverObject() ? YELLOW : 
+            this.disabled ? PURPLE :
+            this.interactive ? RED : BLUE;
+        uiSystem.drawRect(this.pos, this.size, CLEAR_BLACK, 4, color);
     }
 
     /** Called each frame before object updates */
@@ -9030,19 +9071,25 @@ class UIText extends UIObject
         this.align = align;
         this.font = font;
 
-        // make text not outlined by default
-        this.lineWidth = 0;
         // text can not be a hover object by default
         this.canBeHover = false;
-        // no shadow blur by default
-        this.shadowBlur = 0;
-        this.shadowOffset = vec2();
+        
+        // no background by default
+        this.color = CLEAR_BLACK;
+        this.shadowColor = CLEAR_BLACK;
+        this.gradientColor = undefined;
+        this.lineWidth = 0;
+
+        // use max fit scale by default
+        this.textFitScale = 1;
     }
     render()
     {
-        // only render the text
+        super.render();
+
+        // render the text
         const textSize = this.getTextSize();
-        uiSystem.drawText(this.text, this.pos, textSize, this.textColor, this.lineWidth, this.lineColor, this.align, this.font, this.fontStyle, true, this.textShadow, this.shadowColor, this.shadowBlur, this.shadowOffset);
+        uiSystem.drawText(this.text, this.pos, textSize, this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow, this.shadowColor, this.shadowBlur, this.shadowOffset);
     }
 }
 
@@ -9109,6 +9156,9 @@ class UIButton extends UIObject
         ASSERT(isString(text), 'ui button must be a string');
         ASSERT(isColor(color), 'ui button color must be a color');
 
+        /** @property {Vector2} - Text offset for the button */
+        this.textOffset = vec2();
+
         // set properties
         this.text = text;
         this.color = color.copy();
@@ -9120,8 +9170,8 @@ class UIButton extends UIObject
         
         // draw the text scaled to fit
         const textSize = this.getTextSize();
-        uiSystem.drawText(this.text, this.pos, textSize, 
-            this.textColor, 0, undefined, this.align, this.font, this.fontStyle, true, this.textShadow);
+        uiSystem.drawText(this.text, this.pos.add(this.textOffset), textSize, 
+            this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow);
     }
 }
 
@@ -9175,7 +9225,7 @@ class UICheckbox extends UIObject
         const textSize = this.getTextSize();
         const pos = this.pos.add(vec2(this.size.x,0));
         uiSystem.drawText(this.text, pos, textSize, 
-            this.textColor, 0, undefined, 'left', this.font, this.fontStyle, false, this.textShadow);
+            this.textColor, this.textLineWidth, this.textLineColor, 'left', this.font, this.fontStyle, false, this.textShadow);
     }
 }
 
@@ -9270,7 +9320,7 @@ class UIScrollbar extends UIObject
         // draw the text scaled to fit on the scrollbar
         const textSize = this.getTextSize();
         uiSystem.drawText(this.text, this.pos, textSize, 
-            this.textColor, 0, undefined, this.align, this.font, this.fontStyle, true, this.textShadow);
+            this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow);
     }
     navigatePressed()
     {

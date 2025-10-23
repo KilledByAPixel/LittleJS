@@ -3129,6 +3129,15 @@ declare module "littlejsengine" {
      *  @type {UISystemPlugin}
      *  @memberof UISystem */
     export let uiSystem: UISystemPlugin;
+    /** Enable UI system debug drawing
+     *  @type {boolean}
+     *  @default
+     *  @memberof UISystem */
+    export let uiDebug: boolean;
+    /** Enable UI system debug drawing
+     *  @param {boolean} enable
+     *  @memberof UISystem */
+    export function uiSetDebug(enable: boolean): void;
     /**
      * UI System Global Object
      * @memberof UISystem
@@ -3160,7 +3169,7 @@ declare module "littlejsengine" {
         /** @property {number} - Default rounded rect corner radius for UI elements */
         defaultCornerRadius: number;
         /** @property {number} - Default scale to use for fitting text to object */
-        defaultTextScale: number;
+        defaultTextFitScale: number;
         /** @property {string} - Default font for UI elements */
         defaultFont: string;
         /** @property {Sound} - Default sound when interactive UI element is pressed */
@@ -3334,9 +3343,13 @@ declare module "littlejsengine" {
         /** @property {number} - Override for text height */
         textHeight: any;
         /** @property {number} - Scale text to fit in the object */
-        textScale: number;
+        textFitScale: number;
         /** @property {Vector2} - How much to offset the text shadow or undefined */
         textShadow: any;
+        /** @property {number} - Color for text line drawing  */
+        textLineColor: Color;
+        /** @property {number} - Width for text line drawing */
+        textLineWidth: number;
         /** @property {boolean} - Should this object be drawn */
         visible: boolean;
         /** @property {Array<UIObject>} - A list of this object's children */
@@ -3403,6 +3416,8 @@ declare module "littlejsengine" {
         /** Returns string containing info about this object for debugging
          *  @return {string} */
         toString(): string;
+        /** Called if uiDebug is enabled */
+        renderDebug(): void;
         /** Called each frame before object updates */
         onUpdate(): void;
         /** Called each frame before object renders */
@@ -3472,6 +3487,8 @@ declare module "littlejsengine" {
          *  @param {Color}   [color=uiSystem.defaultButtonColor]
          */
         constructor(pos?: Vector2, size?: Vector2, text?: string, color?: Color);
+        /** @property {Vector2} - Text offset for the button */
+        textOffset: Vector2;
         text: string;
     }
     /**
