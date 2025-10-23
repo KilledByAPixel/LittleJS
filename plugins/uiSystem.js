@@ -579,7 +579,8 @@ class UISystemPlugin
         confirmMenu.isMouseOverlapping = ()=> true; // always hover
         
         // title text
-        const textTitle = new UIText(vec2(0,-50), vec2(size.x-10,70), text);
+        const gap = 50;
+        const textTitle = new UIText(vec2(0,-50), vec2(size.x-gap,70), text);
         confirmMenu.addChild(textTitle);
         
         // yes button
