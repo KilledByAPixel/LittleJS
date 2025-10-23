@@ -241,7 +241,7 @@ class UISystemPlugin
                     o.pos = o.localPos.add(o.parent.pos);
 
                 // pass visible state to children
-                visible &&= o.visible;
+                visible &&= !!o.visible;
                 visible && o.render();
                 for (const c of o.children)
                     renderObject(c, visible);
