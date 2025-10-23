@@ -984,6 +984,9 @@ class UIButton extends UIObject
         ASSERT(isString(text), 'ui button must be a string');
         ASSERT(isColor(color), 'ui button color must be a color');
 
+        /** @property {Vector2} - Text offset for the button */
+        this.textOffset = vec2();
+
         // set properties
         this.text = text;
         this.color = color.copy();
@@ -995,7 +998,7 @@ class UIButton extends UIObject
         
         // draw the text scaled to fit
         const textSize = this.getTextSize();
-        uiSystem.drawText(this.text, this.pos, textSize, 
+        uiSystem.drawText(this.text, this.pos.add(this.textOffset), textSize, 
             this.textColor, 0, undefined, this.align, this.font, this.fontStyle, true, this.textShadow);
     }
 }
