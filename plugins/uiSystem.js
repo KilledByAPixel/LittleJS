@@ -21,6 +21,17 @@
  *  @memberof UISystem */
 let uiSystem;
 
+/** Enable UI system debug drawing
+ *  @type {boolean}
+ *  @default
+ *  @memberof UISystem */
+let uiDebug = false;
+
+/** Enable UI system debug drawing
+ *  @param {boolean} enable
+ *  @memberof UISystem */
+function uiSetDebug(enable) { uiDebug = enable; }
+
 ///////////////////////////////////////////////////////////////////////////////
 /** 
  * UI System Global Object
@@ -223,18 +234,33 @@ class UISystemPlugin
                 context.translate(mainCanvasSize.x/2/s,0);
             }
 
-            function renderObject(o)
+            function renderObject(o, visible=true)
             {
-                if (!o.visible) return;
-
                 // set position in parent space
                 if (o.parent)
                     o.pos = o.localPos.add(o.parent.pos);
-                o.render();
+
+                // pass visible state to children
+                visible &&= o.visible;
+                visible && o.render();
                 for (const c of o.children)
-                    renderObject(c);
+                    renderObject(c, visible);
             }
             uiSystem.uiObjects.forEach(o=> o.parent || renderObject(o));
+
+            if (uiDebug)
+            {
+                // debug render all objects
+                function renderDebug(o)
+                {
+                    if (!o.visible)
+                        return;
+                    o.renderDebug();
+                    for (const c of o.children)
+                        renderDebug(c);
+                }
+                uiSystem.uiObjects.forEach(o=> o.parent || renderDebug(o));
+            }
             context.restore();
         }
     }
@@ -850,6 +876,17 @@ class UIObject
         if (this.color)
             text += '\ncolor = ' + this.color;
         return text;
+    }
+
+    /** Called if uiDebug is enabled */
+    renderDebug()
+    {
+        // apply color based on state
+        const color = 
+            this.isHoverObject() ? YELLOW : 
+            this.disabled ? PURPLE :
+            this.interactive ? RED : BLUE;
+        uiSystem.drawRect(this.pos, this.size, CLEAR_BLACK, 4, color);
     }
 
     /** Called each frame before object updates */
