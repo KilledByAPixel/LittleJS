@@ -1,4 +1,4 @@
-const hitSound = new Sound([,,2e3,,,.01]);
+const hitSound = new Sound([,.1,2e3,,,.01,,,,,,,,1]);
 const maxHitDistance = 6;
 
 class Ball extends Box2dObject
@@ -29,6 +29,10 @@ class Ball extends Box2dObject
         const length = min(deltaPos.length(), maxHitDistance);
         return deltaPos.normalize(length); 
     }
+    getHitStrength()
+    { 
+        return this.getHitOffset().length()/maxHitDistance;
+    }
     update()
     {
         if (this.canHit() && mouseWasPressed(0))
@@ -36,7 +40,7 @@ class Ball extends Box2dObject
             // hit the cue ball
             const accel = this.getHitOffset().scale(8);
             this.applyAcceleration(accel);
-            hitSound.play(cueBall.pos);
+            hitSound.play(cueBall.pos, this.getHitStrength(), .5);
         }
         if (this.pocketed)
             this.destroy();
@@ -53,9 +57,8 @@ class Ball extends Box2dObject
         if (this.canHit())
         {
             // draw the aim line
-            const offset = this.getHitOffset();
-            const endPos = this.pos.add(offset);
-            const width = offset.length()/maxHitDistance;
+            const endPos = this.pos.add(this.getHitOffset());
+            const width = this.getHitStrength();
             drawLine(this.pos, endPos, width, hsl(0,1,.5,.5), 
                 vec2(), 0, false, false, overlayContext);
         }
