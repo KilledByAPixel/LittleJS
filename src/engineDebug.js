@@ -561,14 +561,18 @@ function debugRender()
             mousePressed && overlayContext.fillText('Mouse: ' + mousePressed, x, y += h);
             keysPressed && overlayContext.fillText('Keys: ' + keysPressed, x, y += h);
 
-            let buttonsPressed = '';
-            if (inputData[1])
-            for (const i in inputData[1])
+            // show gamepad buttons
+            for (let i = 1; i < inputData.length; i++)
             {
-                if (keyIsDown(i, 1))
-                    buttonsPressed += i + ' ' ;
+                let buttonsPressed = '';
+                if (inputData[i])
+                for (const j in inputData[i])
+                {
+                    if (keyIsDown(j, i))
+                        buttonsPressed += j + ' ' ;
+                }
+                buttonsPressed && overlayContext.fillText(`Gamepad ${i-1}: ` + buttonsPressed, x, y += h);
             }
-            buttonsPressed && overlayContext.fillText('Gamepad: ' + buttonsPressed, x, y += h);
         }
         else
         {
