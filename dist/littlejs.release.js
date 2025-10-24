@@ -1541,6 +1541,10 @@ class Vector2
      * @return {number} */
     area() { return abs(this.x * this.y); }
 
+    /** Returns true if this vector is (0,0)
+     * @return {boolean} */
+    isZero() { return !this.x && !this.y; }
+
     /** Returns a new vector that is p percent between this and the vector passed in
      * @param {Vector2} v - other vector
      * @param {number}  percent
@@ -3722,7 +3726,7 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
 
 /** Draw text on main canvas in world space
  *  Automatically splits new lines into rows
- *  @param {string}  text
+ *  @param {string|number}  text
  *  @param {Vector2} pos
  *  @param {number}  [size]
  *  @param {Color}   [color=(1,1,1,1)]
@@ -3749,7 +3753,7 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
 
 /** Draw text on overlay canvas in world space
  *  Automatically splits new lines into rows
- *  @param {string}  text
+ *  @param {string|number}  text
  *  @param {Vector2} pos
  *  @param {number}  [size]
  *  @param {Color}   [color=(1,1,1,1)]
@@ -3768,7 +3772,7 @@ function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textA
 
 /** Draw text on overlay canvas in screen space
  *  Automatically splits new lines into rows
- *  @param {string}  text
+ *  @param {string|number}  text
  *  @param {Vector2} pos
  *  @param {number}  [size]
  *  @param {Color}   [color=(1,1,1,1)]
@@ -4118,7 +4122,7 @@ class FontImage
     }
 
     /** Draw text in world space using the image font
-     *  @param {string}  text
+     *  @param {string|number}  text
      *  @param {Vector2} pos
      *  @param {number}  [scale=.25]
      *  @param {boolean} [center]
@@ -4130,7 +4134,7 @@ class FontImage
     }
 
     /** Draw text on overlay canvas in world space using the image font
-     *  @param {string}  text
+     *  @param {string|number}  text
      *  @param {Vector2} pos
      *  @param {number}  [scale]
      *  @param {boolean} [center]
@@ -4139,7 +4143,7 @@ class FontImage
     { this.drawText(text, pos, scale, center, overlayContext); }
 
     /** Draw text on overlay canvas in screen space using the image font
-     *  @param {string}  text
+     *  @param {string|number}  text
      *  @param {Vector2} pos
      *  @param {number}  [scale]
      *  @param {boolean} [center]
@@ -4223,6 +4227,11 @@ let isUsingGamepad = false;
  *  @memberof Input */
 let inputPreventDefault = true;
 
+/** Main gamepad index, automatically set to first connected gamepad
+ *  @type {number}
+ *  @memberof Input */
+let gamepadMain = 0;
+
 /** Prevents input continuing to the default browser handling
  *  This is useful to disable for html menus so the browser can handle input normally
  *  @param {boolean} preventDefault
@@ -4266,7 +4275,7 @@ function keyIsDown(key, device=0)
 {
     ASSERT(isString(key), 'key must be a number or string');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
-    return inputData[device] && !!(inputData[device][key] & 1);
+    return !!(inputData[device]?.[key] & 1);
 }
 
 /** Returns true if device key was pressed this frame
@@ -4278,7 +4287,7 @@ function keyWasPressed(key, device=0)
 {
     ASSERT(isString(key), 'key must be a number or string');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
-    return inputData[device] && !!(inputData[device][key] & 2);
+    return !!(inputData[device]?.[key] & 2);
 }
 
 /** Returns true if device key was released this frame
@@ -4290,7 +4299,7 @@ function keyWasReleased(key, device=0)
 {
     ASSERT(isString(key), 'key must be a number or string');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
-    return inputData[device] && !!(inputData[device][key] & 4);
+    return !!(inputData[device]?.[key] & 4);
 }
 
 /** Returns input vector from arrow keys or WASD if enabled
@@ -4348,7 +4357,7 @@ function mouseWasReleased(button)
  *  @param {number} [gamepad]
  *  @return {boolean}
  *  @memberof Input */
-function gamepadIsDown(button, gamepad=0)
+function gamepadIsDown(button, gamepad=gamepadMain)
 {
     ASSERT(isNumber(button), 'button must be a number');
     ASSERT(isNumber(gamepad), 'gamepad must be a number');
@@ -4360,7 +4369,7 @@ function gamepadIsDown(button, gamepad=0)
  *  @param {number} [gamepad]
  *  @return {boolean}
  *  @memberof Input */
-function gamepadWasPressed(button, gamepad=0)
+function gamepadWasPressed(button, gamepad=gamepadMain)
 {
     ASSERT(isNumber(button), 'button must be a number');
     ASSERT(isNumber(gamepad), 'gamepad must be a number');
@@ -4372,7 +4381,7 @@ function gamepadWasPressed(button, gamepad=0)
  *  @param {number} [gamepad]
  *  @return {boolean}
  *  @memberof Input */
-function gamepadWasReleased(button, gamepad=0)
+function gamepadWasReleased(button, gamepad=gamepadMain)
 {
     ASSERT(isNumber(button), 'button must be a number');
     ASSERT(isNumber(gamepad), 'gamepad must be a number');
@@ -4384,7 +4393,7 @@ function gamepadWasReleased(button, gamepad=0)
  *  @param {number} [gamepad]
  *  @return {Vector2}
  *  @memberof Input */
-function gamepadStick(stick, gamepad=0)
+function gamepadStick(stick, gamepad=gamepadMain)
 {
     ASSERT(isNumber(stick), 'stick must be a number');
     ASSERT(isNumber(gamepad), 'gamepad must be a number');
@@ -4395,15 +4404,25 @@ function gamepadStick(stick, gamepad=0)
  *  @param {number} [gamepad]
  *  @return {Vector2}
  *  @memberof Input */
-function gamepadDpad(gamepad=0)
+function gamepadDpad(gamepad=gamepadMain)
 {
     ASSERT(isNumber(gamepad), 'gamepad must be a number');
     return gamepadDpadData[gamepad] ?? vec2();
 }
 
+/** Returns true if passed in gamepad is connected
+ *  @param {number} [gamepad]
+ *  @return {boolean}
+ *  @memberof Input */
+function gamepadConnected(gamepad=gamepadMain)
+{
+    ASSERT(isNumber(gamepad), 'gamepad must be a number');
+    return !!inputData[gamepad+1];
+}
+
 /** True if a touch device has been detected
  *  @memberof Input */
-const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
+const isTouchDevice = !headlessMode && navigator?.maxTouchPoints > 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -4426,15 +4445,12 @@ function vibrateStop() { vibrate(0); }
 /** Request to lock the pointer, does not work on touch devices
  *  @memberof Input */
 function pointerLockRequest()
-{
-    if (!isTouchDevice)
-        mainCanvas.requestPointerLock && mainCanvas.requestPointerLock();
-}
+{ !isTouchDevice && mainCanvas.requestPointerLock?.(); }
 
 /** Request to unlock the pointer
  *  @memberof Input */
 function pointerLockExit()
-{ document.exitPointerLock && document.exitPointerLock(); }
+{ document.exitPointerLock?.(); }
 
 /** Check if pointer is locked (true if locked)
  *  @return {boolean}
@@ -4651,58 +4667,67 @@ function gamepadsUpdate()
         return;
 
     // poll gamepads
+    const maxGamepads = 8;
     const gamepads = navigator.getGamepads();
-    for (let i = gamepads.length; i--;)
+    const gamepadCount = min(maxGamepads, gamepads.length)
+    for (let i=0; i<gamepadCount; ++i)
     {
         // get or create gamepad data
         const gamepad = gamepads[i];
+        if (!gamepad)
+        {
+            // clear gamepad data if not connected
+            inputData[i+1] = undefined;
+            gamepadStickData[i] = undefined;
+            gamepadDpadData[i] = undefined;
+            continue;
+        }
+
         const data = inputData[i+1] ?? (inputData[i+1] = []);
         const sticks = gamepadStickData[i] ?? (gamepadStickData[i] = []);
         const dpad = gamepadDpadData[i] ?? (gamepadDpadData[i] = vec2());
+    
+        // set new main gamepad if current is not connected
+        if (!gamepads[gamepadMain])
+            gamepadMain = i;
 
-        if (gamepad)
+        // read analog sticks
+        for (let j = 0; j < gamepad.axes.length-1; j+=2)
+            sticks[j>>1] = applyDeadZones(vec2(gamepad.axes[j],gamepad.axes[j+1]));
+
+        // read buttons
+        for (let j = gamepad.buttons.length; j--;)
         {
-            // read analog sticks
-            for (let j = 0; j < gamepad.axes.length-1; j+=2)
-                sticks[j>>1] = applyDeadZones(vec2(gamepad.axes[j],gamepad.axes[j+1]));
-
-            // read buttons
-            for (let j = gamepad.buttons.length; j--;)
-            {
-                const button = gamepad.buttons[j];
-                const wasDown = gamepadIsDown(j,i);
-                data[j] = button.pressed ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
-                if (!button.value || button.value > .9) // must be a full press
-                if (!i && button.pressed)
-                    isUsingGamepad = true;
-            }
-
-            if (gamepad.mapping === 'standard')
-            {
-                // get dpad buttons (standard mapping)
-                dpad.set(
-                    (gamepadIsDown(15,i)&&1) - (gamepadIsDown(14,i)&&1),
-                    (gamepadIsDown(12,i)&&1) - (gamepadIsDown(13,i)&&1));
-            }
-            else if (gamepad.axes && gamepad.axes.length >= 2)
-            {
-                // digital style dpad from axes
-                const x = clamp(round(gamepad.axes[0]), -1, 1);
-                const y = clamp(round(gamepad.axes[1]), -1, 1);
-                dpad.set(x, -y);
-            }
-
-            // copy dpad to left analog stick when pressed
-            if (gamepadDirectionEmulateStick)
-            {
-                if (dpad.lengthSquared())
-                    sticks[0] = dpad.clampLength();
-            }
-
-            // disable touch gamepad if using real gamepad
-            touchGamepadEnable && isUsingGamepad && touchGamepadTimer.unset();
+            const button = gamepad.buttons[j];
+            const wasDown = gamepadIsDown(j,i);
+            data[j] = button.pressed ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
+            if (!button.value || button.value > .9) // must be a full press
+            if (!i && button.pressed)
+                isUsingGamepad = true;
         }
+
+        if (gamepad.mapping === 'standard')
+        {
+            // get dpad buttons (standard mapping)
+            dpad.set(
+                (gamepadIsDown(15,i)&&1) - (gamepadIsDown(14,i)&&1),
+                (gamepadIsDown(12,i)&&1) - (gamepadIsDown(13,i)&&1));
+        }
+        else if (gamepad.axes && gamepad.axes.length >= 2)
+        {
+            // digital style dpad from axes
+            const x = clamp(round(gamepad.axes[0]), -1, 1);
+            const y = clamp(round(gamepad.axes[1]), -1, 1);
+            dpad.set(x, -y);
+        }
+
+        // copy dpad to left analog stick when pressed
+        if (gamepadDirectionEmulateStick && !dpad.isZero())
+            sticks[0] = dpad.clampLength();
     }
+
+    // disable touch gamepad if using real gamepad
+    touchGamepadEnable && isUsingGamepad && touchGamepadTimer.unset();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4902,9 +4927,8 @@ function touchGamepadRender()
                 j : min(j, touchGamepadButtonCount-1);
             // fix button locations (swap 2 and 3 to match gamepad layout)
             button = button === 3 ? 2 : button === 2 ? 3 : button;
-            let pos = buttonCenter;
-            if (touchGamepadButtonCount > 1)
-                pos = pos.add(vec2().setDirection(j, touchGamepadSize/2));
+            const pos = touchGamepadButtonCount < 2 ? buttonCenter :
+                buttonCenter.add(vec2().setDirection(j, touchGamepadSize/2));
             context.fillStyle = touchGamepadButtons[button] ? '#fff' : '#000';
             context.beginPath();
             context.arc(pos.x, pos.y, buttonSize, 0,9);
@@ -8193,15 +8217,18 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
 let uiSystem;
 
 /** Enable UI system debug drawing
- *  @type {boolean}
+ *  0=off, 1=normal, 2=show invisible
+ *  @type {number}
  *  @default
  *  @memberof UISystem */
-let uiDebug = false;
+let uiDebug = 0;
 
 /** Enable UI system debug drawing
- *  @param {boolean} enable
+ *  0=off, 1=normal, 2=show invisible
+ *  @param {number|boolean} enable
  *  @memberof UISystem */
-function uiSetDebug(enable) { uiDebug = enable; }
+function uiSetDebug(debugMode)
+{ uiDebug = typeof debugMode === 'boolean' ? (debugMode ? 1 : 0) : debugMode; }
 
 ///////////////////////////////////////////////////////////////////////////////
 /** 
@@ -8289,24 +8316,18 @@ class UISystemPlugin
 
         engineAddPlugin(uiUpdate, uiRender);
 
+        // set object position in parent space
+        function updateTransforms(o)
+        {
+            if (!o.parent) return;
+            o.pos.x = o.localPos.x + o.parent.pos.x;
+            o.pos.y = o.localPos.y + o.parent.pos.y;
+        }
+
         // setup recursive update and render
         // update in reverse order to detect mouse enter/leave
         function uiUpdate()
         {
-            function updateObject(o)
-            {
-                if (!o.visible) return;
-
-                // set position in parent space
-                if (o.parent)
-                    o.pos = o.localPos.add(o.parent.pos);
-
-                // update in reverse order to detect mouse enter/leave
-                for (let i=o.children.length; i--;)
-                    updateObject(o.children[i]);
-                o.update();
-            }
-
             if (uiSystem.activeObject && !uiSystem.activeObject.visible)
                 uiSystem.activeObject = undefined;
 
@@ -8391,6 +8412,17 @@ class UISystemPlugin
 
             // remove destroyed objects
             uiSystem.uiObjects = uiSystem.uiObjects.filter(o=>!o.destroyed);
+
+            function updateObject(o)
+            {
+                if (!o.visible) return;
+
+                // update in reverse order to detect mouse enter/leave
+                updateTransforms(o);
+                for (let i=o.children.length; i--;)
+                    updateObject(o.children[i]);
+                o.update();
+            }
         }
         function uiRender()
         {
@@ -8405,30 +8437,28 @@ class UISystemPlugin
                 context.translate(mainCanvasSize.x/2/s,0);
             }
 
-            function renderObject(o, visible=true)
+            function renderObject(o)
             {
-                // set position in parent space
-                if (o.parent)
-                    o.pos = o.localPos.add(o.parent.pos);
+                if (!o.visible) return;
 
-                // pass visible state to children
-                visible &&= !!o.visible;
-                visible && o.render();
+                // render object and children
+                updateTransforms(o);
+                o.render();
                 for (const c of o.children)
-                    renderObject(c, visible);
+                    renderObject(c);
             }
             uiSystem.uiObjects.forEach(o=> o.parent || renderObject(o));
 
-            if (uiDebug)
+            if (uiDebug > 0)
             {
                 // debug render all objects
-                function renderDebug(o)
+                function renderDebug(o, visible=true)
                 {
-                    if (!o.visible)
-                        return;
-                    o.renderDebug();
+                    visible &&= !!o.visible;
+                    updateTransforms(o);
+                    o.renderDebug(visible);
                     for (const c of o.children)
-                        renderDebug(c);
+                        renderDebug(c, visible);
                 }
                 uiSystem.uiObjects.forEach(o=> o.parent || renderDebug(o));
             }
@@ -8876,8 +8906,7 @@ class UIObject
     }
 
     /** Add a child UIObject to this object
-     *  @param {UIObject} child
-     */
+     *  @param {UIObject} child */
     addChild(child)
     {
         ASSERT(!child.parent && !this.children.includes(child));
@@ -8886,8 +8915,7 @@ class UIObject
     }
 
     /** Remove a child UIObject from this object
-     *  @param {UIObject} child
-     */
+     *  @param {UIObject} child */
     removeChild(child)
     {
         ASSERT(child.parent === this && this.children.includes(child));
@@ -8912,8 +8940,7 @@ class UIObject
     }
 
     /** Check if the mouse is overlapping a box in screen space
-     *  @return {boolean} - True if overlapping
-     */
+     *  @return {boolean} - True if overlapping */
     isMouseOverlapping()
     {
         if (!mouseInWindow) return false;
@@ -9006,8 +9033,7 @@ class UIObject
     }
 
     /** Get the size for text with overrides and scale
-     *  @return {Vector2}
-     */
+     *  @return {Vector2} */
     getTextSize()
     {
         return vec2(
@@ -9054,11 +9080,13 @@ class UIObject
         return text;
     }
 
-    /** Called if uiDebug is enabled */
-    renderDebug()
+    /** Called if uiDebug is enabled
+     *  @param {boolean} visible */
+    renderDebug(visible=true)
     {
         // apply color based on state
         const color = 
+            !visible ? GREEN :
             this.isHoverObject() ? YELLOW : 
             this.disabled ? PURPLE :
             this.interactive ? RED : BLUE;

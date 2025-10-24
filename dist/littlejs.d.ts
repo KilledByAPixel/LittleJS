@@ -266,7 +266,7 @@ declare module "littlejsengine" {
      *  @memberof Debug */
     export function debugOverlap(posA: Vector2, sizeA: Vector2, posB: Vector2, sizeB: Vector2, color?: Color | string, time?: number, screenSpace?: boolean): void;
     /** Draw a debug axis aligned bounding box in world space
-     *  @param {string} text
+     *  @param {string|number} text
      *  @param {Vector2} pos
      *  @param {number} [size]
      *  @param {Color|string} [color]
@@ -275,7 +275,7 @@ declare module "littlejsengine" {
      *  @param {string} [font]
      *  @param {boolean} [screenSpace]
      *  @memberof Debug */
-    export function debugText(text: string, pos: Vector2, size?: number, color?: Color | string, time?: number, angle?: number, font?: string, screenSpace?: boolean): void;
+    export function debugText(text: string | number, pos: Vector2, size?: number, color?: Color | string, time?: number, angle?: number, font?: string, screenSpace?: boolean): void;
     /** Clear all debug primitives in the list
      *  @memberof Debug */
     export function debugClear(): void;
@@ -1122,6 +1122,9 @@ declare module "littlejsengine" {
         /** Returns the area this vector covers as a rectangle
          * @return {number} */
         area(): number;
+        /** Returns true if this vector is (0,0)
+         * @return {boolean} */
+        isZero(): boolean;
         /** Returns a new vector that is p percent between this and the vector passed in
          * @param {Vector2} v - other vector
          * @param {number}  percent
@@ -1675,7 +1678,7 @@ declare module "littlejsengine" {
     export function drawCanvas2D(pos: Vector2, size: Vector2, angle?: number, mirror?: boolean, drawFunction?: Canvas2DDrawFunction, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw text on main canvas in world space
      *  Automatically splits new lines into rows
-     *  @param {string}  text
+     *  @param {string|number}  text
      *  @param {Vector2} pos
      *  @param {number}  [size]
      *  @param {Color}   [color=(1,1,1,1)]
@@ -1688,10 +1691,10 @@ declare module "littlejsengine" {
      *  @param {number}  [angle]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      *  @memberof Draw */
-    export function drawText(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, fontStyle?: string, maxWidth?: number, angle?: number, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    export function drawText(text: string | number, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, fontStyle?: string, maxWidth?: number, angle?: number, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw text on overlay canvas in world space
      *  Automatically splits new lines into rows
-     *  @param {string}  text
+     *  @param {string|number}  text
      *  @param {Vector2} pos
      *  @param {number}  [size]
      *  @param {Color}   [color=(1,1,1,1)]
@@ -1703,10 +1706,10 @@ declare module "littlejsengine" {
      *  @param {number}  [maxWidth]
      *  @param {number}  [angle]
      *  @memberof Draw */
-    export function drawTextOverlay(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, fontStyle?: string, maxWidth?: number, angle?: number): void;
+    export function drawTextOverlay(text: string | number, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, fontStyle?: string, maxWidth?: number, angle?: number): void;
     /** Draw text on overlay canvas in screen space
      *  Automatically splits new lines into rows
-     *  @param {string}  text
+     *  @param {string|number}  text
      *  @param {Vector2} pos
      *  @param {number}  [size]
      *  @param {Color}   [color=(1,1,1,1)]
@@ -1719,7 +1722,7 @@ declare module "littlejsengine" {
      *  @param {number}  [angle]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
      *  @memberof Draw */
-    export function drawTextScreen(text: string, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, fontStyle?: string, maxWidth?: number, angle?: number, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    export function drawTextScreen(text: string | number, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, fontStyle?: string, maxWidth?: number, angle?: number, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Enable normal or additive blend mode
      *  @param {boolean} [additive]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
@@ -1754,28 +1757,28 @@ declare module "littlejsengine" {
         tileSize: Vector2;
         paddingSize: Vector2;
         /** Draw text in world space using the image font
-         *  @param {string}  text
+         *  @param {string|number}  text
          *  @param {Vector2} pos
          *  @param {number}  [scale=.25]
          *  @param {boolean} [center]
          *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
          */
-        drawText(text: string, pos: Vector2, scale?: number, center?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+        drawText(text: string | number, pos: Vector2, scale?: number, center?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
         /** Draw text on overlay canvas in world space using the image font
-         *  @param {string}  text
+         *  @param {string|number}  text
          *  @param {Vector2} pos
          *  @param {number}  [scale]
          *  @param {boolean} [center]
          */
-        drawTextOverlay(text: string, pos: Vector2, scale?: number, center?: boolean): void;
+        drawTextOverlay(text: string | number, pos: Vector2, scale?: number, center?: boolean): void;
         /** Draw text on overlay canvas in screen space using the image font
-         *  @param {string}  text
+         *  @param {string|number}  text
          *  @param {Vector2} pos
          *  @param {number}  [scale]
          *  @param {boolean} [center]
          *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
          */
-        drawTextScreen(text: string, pos: Vector2, scale?: number, center?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+        drawTextScreen(text: string | number, pos: Vector2, scale?: number, center?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     }
     /** Returns true if fullscreen mode is active
      *  @return {boolean}
@@ -2018,6 +2021,10 @@ declare module "littlejsengine" {
      *  @type {boolean}
      *  @memberof Input */
     export let inputPreventDefault: boolean;
+    /** Main gamepad index, automatically set to first connected gamepad
+     *  @type {number}
+     *  @memberof Input */
+    export let gamepadMain: number;
     /** Prevents input continuing to the default browser handling
      *  This is useful to disable for html menus so the browser can handle input normally
      *  @param {boolean} preventDefault
@@ -2047,7 +2054,16 @@ declare module "littlejsengine" {
      *  @return {Vector2}
      *  @memberof Input */
     export function gamepadStick(stick: number, gamepad?: number): Vector2;
-    export function gamepadsUpdate(): void;
+    /** Returns gamepad dpad value
+     *  @param {number} [gamepad]
+     *  @return {Vector2}
+     *  @memberof Input */
+    export function gamepadDpad(gamepad?: number): Vector2;
+    /** Returns true if passed in gamepad is connected
+     *  @param {number} [gamepad]
+     *  @return {boolean}
+     *  @memberof Input */
+    export function gamepadConnected(gamepad?: number): boolean;
     /** Pulse the vibration hardware if it exists
      *  @param {number|Array} [pattern] - single value in ms or vibration interval array
      *  @memberof Input */
@@ -3134,14 +3150,16 @@ declare module "littlejsengine" {
      *  @memberof UISystem */
     export let uiSystem: UISystemPlugin;
     /** Enable UI system debug drawing
-     *  @type {boolean}
+     *  0=off, 1=normal, 2=show invisible
+     *  @type {number}
      *  @default
      *  @memberof UISystem */
-    export let uiDebug: boolean;
+    export let uiDebug: number;
     /** Enable UI system debug drawing
-     *  @param {boolean} enable
+     *  0=off, 1=normal, 2=show invisible
+     *  @param {number|boolean} enable
      *  @memberof UISystem */
-    export function uiSetDebug(enable: boolean): void;
+    export function uiSetDebug(debugMode: any): void;
     /**
      * UI System Global Object
      * @memberof UISystem
@@ -3385,27 +3403,23 @@ declare module "littlejsengine" {
         /** @property {boolean} - Should this be auto selected by navigation? Must also have valid navigation index. */
         navigationAutoSelect: boolean;
         /** Add a child UIObject to this object
-         *  @param {UIObject} child
-         */
+         *  @param {UIObject} child */
         addChild(child: UIObject): void;
         /** Remove a child UIObject from this object
-         *  @param {UIObject} child
-         */
+         *  @param {UIObject} child */
         removeChild(child: UIObject): void;
         /** Destroy this object, destroy its children, detach its parent, and mark it for removal */
         destroy(): void;
         destroyed: number;
         /** Check if the mouse is overlapping a box in screen space
-         *  @return {boolean} - True if overlapping
-         */
+         *  @return {boolean} - True if overlapping */
         isMouseOverlapping(): boolean;
         /** Update the object, called automatically by plugin once each frame */
         update(): void;
         /** Render the object, called automatically by plugin once each frame */
         render(): void;
         /** Get the size for text with overrides and scale
-         *  @return {Vector2}
-         */
+         *  @return {Vector2} */
         getTextSize(): Vector2;
         /** Called when the navigation button is pressed on this object */
         navigatePressed(): void;
@@ -3420,8 +3434,9 @@ declare module "littlejsengine" {
         /** Returns string containing info about this object for debugging
          *  @return {string} */
         toString(): string;
-        /** Called if uiDebug is enabled */
-        renderDebug(): void;
+        /** Called if uiDebug is enabled
+         *  @param {boolean} visible */
+        renderDebug(visible?: boolean): void;
         /** Called each frame before object updates */
         onUpdate(): void;
         /** Called each frame before object renders */
