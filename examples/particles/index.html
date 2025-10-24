@@ -7,8 +7,21 @@
 <style>
 input { width:99px; }
 button { margin:1px; }
+body { color:#fff; }
+#div_emitterSettings
+{
+    position:absolute;
+    z-index: 1;
+    height: 100vh;
+    overflow:auto;
+    padding:5px;
+    font-family:sans-serif;
+    column-count: 2;
+    column-fill: auto;
+}
 </style>
 </head><body>
+<div id=div_emitterSettings></div>
 <script type=module>
 
 // import LittleJS module
@@ -19,6 +32,9 @@ const {vec2} = LJS;
 
 // fix texture bleeding by shrinking tiles slightly
 LJS.setTileFixBleedScale(.5);
+
+// allow html input controls
+LJS.setInputPreventDefault(false);
 
 let particleEditor = 0, particleSystem, particleSystemDiv, particleSystemCode;
 let inputExpand;
@@ -56,7 +72,6 @@ addSetting('gravityScale',     '', -1e9, 1e9, .1, 'How much does gravity effect 
 addSetting('particleConeAngle','', 0,    1e9, .1, 'Cone for start particle angle');
 addSetting('fadeRate',         '', 0,    1,   .01,'How quickly particles fade in percent of life');
 addSetting('randomness',       '', 0,    1,   .01,'Apply extra randomness percent');
-addSetting('collideTiles',     'checkbox',0,0,0,  'Do particles collide against tiles?');
 addSetting('additive',         'checkbox',0,0,0,  'Should particles use addtive blend?');
 addSetting('randomColorLinear','checkbox',0,0,0,  'Should color be randomized linearly?');
 
@@ -77,10 +92,11 @@ function gameInit()
     LJS.setGravity(vec2(0,-.01));
     LJS.setCameraScale(64);
 
-    const div = particleSystemDiv = document.createElement('div');
-    div.innerHTML = '<big><b>LittleJS Particle Tool';
-    div.style = 'position:absolute;top:10px;left:10px;color:#fff';
-    document.body.appendChild(div);
+    const div = div_emitterSettings;
+    const title = document.createElement('span')
+    title.innerText = 'LittleJS Particle Tool';
+    title.style = 'font-size:20px;font-weight:bold;';
+    div.appendChild(title);
 
     for (const setting of particleSettings)
     {
@@ -181,7 +197,7 @@ function gameInit()
     //div.appendChild(document.createTextNode('JavaScript Code... '));
     div.appendChild(document.createElement('br'));
     div.appendChild(particleSystemCode = document.createElement('textarea'));
-    particleSystemCode.style.width = '500px';
+    particleSystemCode.style.width = '300px';
     particleSystemCode.style.height = '100px';
     particleSystemCode.disabled = true;
 
