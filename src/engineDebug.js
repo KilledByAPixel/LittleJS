@@ -352,34 +352,46 @@ function debugRender()
         debugTakeScreenshot = 0;
     }
 
-    if (debugGamepads && gamepadsEnable && navigator.getGamepads)
+    if (debugGamepads && gamepadsEnable)
     {
-        // gamepad debug display
-        const gamepads = navigator.getGamepads();
-        for (let i = gamepads.length; i--;)
+        // draw gamepads
+        const maxGamepads = 8;
+        let gamepadConnectedCount = 0;
+        for (let i = 0; i < maxGamepads; i++)
+            gamepadConnected(i) && gamepadConnectedCount++;
+
+        for (let i = 0; i < maxGamepads; i++)
         {
-            const gamepad = gamepads[i];
-            if (gamepad)
+            if (!gamepadConnected(i))
+                continue;
+
+            const stickScale = 1;
+            const buttonScale = .2;
+            const cornerPos = cameraPos.add(vec2(-stickScale*2, ((gamepadConnectedCount-1)/2-i)*stickScale*3));
+            debugText(i, cornerPos.add(vec2(-stickScale, stickScale)), 1);
+            if (i === gamepadMain)
+                debugText('Main', cornerPos.add(vec2(-stickScale*2, 0)),1, '#0f0');
+
+            // read analog sticks
+            const stickCount = gamepadStickData[i].length;
+            for (let j = 0; j < stickCount; j++)
             {
-                const stickScale = 1;
-                const buttonScale = .2;
-                const centerPos = cameraPos;
-                const sticks = gamepadStickData[i];
-                for (let j = sticks.length; j--;)
-                {
-                    const drawPos = centerPos.add(vec2(j*stickScale*2, i*stickScale*3));
-                    const stickPos = drawPos.add(sticks[j].scale(stickScale));
-                    debugCircle(drawPos, stickScale*2, '#fff7',0,true);
-                    debugLine(drawPos, stickPos, '#f00');
-                    debugPoint(stickPos, '#f00');
-                }
-                for (let j = gamepad.buttons.length; j--;)
-                {
-                    const drawPos = centerPos.add(vec2(j*buttonScale*2, i*stickScale*3-stickScale-buttonScale));
-                    const pressed = gamepad.buttons[j].pressed;
-                    debugCircle(drawPos, buttonScale*2, pressed ? '#f00' : '#fff7', 0, true);
-                    debugText(''+j, drawPos, .2);
-                }
+                const stick = gamepadStick(j, i);
+                const drawPos = cornerPos.add(vec2(j*stickScale*2, 0));
+                const stickPos = drawPos.add(stick.scale(stickScale));
+                debugCircle(drawPos, stickScale*2, '#fff7',0,true);
+                debugLine(drawPos, stickPos, '#f00');
+                debugText(j, drawPos, .3);
+                debugPoint(stickPos, '#f00');
+            }
+
+            const buttonCount = inputData[i+1].length;
+            for (let j = 0; j < buttonCount; j++)
+            {
+                const drawPos = cornerPos.add(vec2(j*buttonScale*2, -stickScale-buttonScale*2));
+                const pressed = gamepadIsDown(j, i);
+                debugCircle(drawPos, buttonScale*2, pressed ? '#f00' : '#fff7', 0, true);
+                debugText(j, drawPos, .3);
             }
         }
     }

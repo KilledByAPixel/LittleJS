@@ -50,6 +50,11 @@ let isUsingGamepad = false;
  *  @memberof Input */
 let inputPreventDefault = true;
 
+/** Main gamepad index, automatically set to first connected gamepad
+ *  @type {number}
+ *  @memberof Input */
+let gamepadMain = 0;
+
 /** Prevents input continuing to the default browser handling
  *  This is useful to disable for html menus so the browser can handle input normally
  *  @param {boolean} preventDefault
@@ -93,7 +98,7 @@ function keyIsDown(key, device=0)
 {
     ASSERT(isString(key), 'key must be a number or string');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
-    return inputData[device] && !!(inputData[device][key] & 1);
+    return !!(inputData[device]?.[key] & 1);
 }
 
 /** Returns true if device key was pressed this frame
@@ -105,7 +110,7 @@ function keyWasPressed(key, device=0)
 {
     ASSERT(isString(key), 'key must be a number or string');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
-    return inputData[device] && !!(inputData[device][key] & 2);
+    return !!(inputData[device]?.[key] & 2);
 }
 
 /** Returns true if device key was released this frame
@@ -117,7 +122,7 @@ function keyWasReleased(key, device=0)
 {
     ASSERT(isString(key), 'key must be a number or string');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
-    return inputData[device] && !!(inputData[device][key] & 4);
+    return !!(inputData[device]?.[key] & 4);
 }
 
 /** Returns input vector from arrow keys or WASD if enabled
@@ -175,7 +180,7 @@ function mouseWasReleased(button)
  *  @param {number} [gamepad]
  *  @return {boolean}
  *  @memberof Input */
-function gamepadIsDown(button, gamepad=0)
+function gamepadIsDown(button, gamepad=gamepadMain)
 {
     ASSERT(isNumber(button), 'button must be a number');
     ASSERT(isNumber(gamepad), 'gamepad must be a number');
@@ -187,7 +192,7 @@ function gamepadIsDown(button, gamepad=0)
  *  @param {number} [gamepad]
  *  @return {boolean}
  *  @memberof Input */
-function gamepadWasPressed(button, gamepad=0)
+function gamepadWasPressed(button, gamepad=gamepadMain)
 {
     ASSERT(isNumber(button), 'button must be a number');
     ASSERT(isNumber(gamepad), 'gamepad must be a number');
@@ -199,7 +204,7 @@ function gamepadWasPressed(button, gamepad=0)
  *  @param {number} [gamepad]
  *  @return {boolean}
  *  @memberof Input */
-function gamepadWasReleased(button, gamepad=0)
+function gamepadWasReleased(button, gamepad=gamepadMain)
 {
     ASSERT(isNumber(button), 'button must be a number');
     ASSERT(isNumber(gamepad), 'gamepad must be a number');
@@ -211,7 +216,7 @@ function gamepadWasReleased(button, gamepad=0)
  *  @param {number} [gamepad]
  *  @return {Vector2}
  *  @memberof Input */
-function gamepadStick(stick, gamepad=0)
+function gamepadStick(stick, gamepad=gamepadMain)
 {
     ASSERT(isNumber(stick), 'stick must be a number');
     ASSERT(isNumber(gamepad), 'gamepad must be a number');
@@ -222,15 +227,25 @@ function gamepadStick(stick, gamepad=0)
  *  @param {number} [gamepad]
  *  @return {Vector2}
  *  @memberof Input */
-function gamepadDpad(gamepad=0)
+function gamepadDpad(gamepad=gamepadMain)
 {
     ASSERT(isNumber(gamepad), 'gamepad must be a number');
     return gamepadDpadData[gamepad] ?? vec2();
 }
 
+/** Returns true if passed in gamepad is connected
+ *  @param {number} [gamepad]
+ *  @return {boolean}
+ *  @memberof Input */
+function gamepadConnected(gamepad=gamepadMain)
+{
+    ASSERT(isNumber(gamepad), 'gamepad must be a number');
+    return !!inputData[gamepad+1];
+}
+
 /** True if a touch device has been detected
  *  @memberof Input */
-const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
+const isTouchDevice = !headlessMode && navigator?.maxTouchPoints > 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -253,15 +268,12 @@ function vibrateStop() { vibrate(0); }
 /** Request to lock the pointer, does not work on touch devices
  *  @memberof Input */
 function pointerLockRequest()
-{
-    if (!isTouchDevice)
-        mainCanvas.requestPointerLock && mainCanvas.requestPointerLock();
-}
+{ !isTouchDevice && mainCanvas.requestPointerLock?.(); }
 
 /** Request to unlock the pointer
  *  @memberof Input */
 function pointerLockExit()
-{ document.exitPointerLock && document.exitPointerLock(); }
+{ document.exitPointerLock?.(); }
 
 /** Check if pointer is locked (true if locked)
  *  @return {boolean}
@@ -478,58 +490,67 @@ function gamepadsUpdate()
         return;
 
     // poll gamepads
+    const maxGamepads = 8;
     const gamepads = navigator.getGamepads();
-    for (let i = gamepads.length; i--;)
+    const gamepadCount = min(maxGamepads, gamepads.length)
+    for (let i=0; i<gamepadCount; ++i)
     {
         // get or create gamepad data
         const gamepad = gamepads[i];
+        if (!gamepad)
+        {
+            // clear gamepad data if not connected
+            inputData[i+1] = undefined;
+            gamepadStickData[i] = undefined;
+            gamepadDpadData[i] = undefined;
+            continue;
+        }
+
         const data = inputData[i+1] ?? (inputData[i+1] = []);
         const sticks = gamepadStickData[i] ?? (gamepadStickData[i] = []);
         const dpad = gamepadDpadData[i] ?? (gamepadDpadData[i] = vec2());
+    
+        // set new main gamepad if current is not connected
+        if (!gamepads[gamepadMain])
+            gamepadMain = i;
 
-        if (gamepad)
+        // read analog sticks
+        for (let j = 0; j < gamepad.axes.length-1; j+=2)
+            sticks[j>>1] = applyDeadZones(vec2(gamepad.axes[j],gamepad.axes[j+1]));
+
+        // read buttons
+        for (let j = gamepad.buttons.length; j--;)
         {
-            // read analog sticks
-            for (let j = 0; j < gamepad.axes.length-1; j+=2)
-                sticks[j>>1] = applyDeadZones(vec2(gamepad.axes[j],gamepad.axes[j+1]));
-
-            // read buttons
-            for (let j = gamepad.buttons.length; j--;)
-            {
-                const button = gamepad.buttons[j];
-                const wasDown = gamepadIsDown(j,i);
-                data[j] = button.pressed ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
-                if (!button.value || button.value > .9) // must be a full press
-                if (!i && button.pressed)
-                    isUsingGamepad = true;
-            }
-
-            if (gamepad.mapping === 'standard')
-            {
-                // get dpad buttons (standard mapping)
-                dpad.set(
-                    (gamepadIsDown(15,i)&&1) - (gamepadIsDown(14,i)&&1),
-                    (gamepadIsDown(12,i)&&1) - (gamepadIsDown(13,i)&&1));
-            }
-            else if (gamepad.axes && gamepad.axes.length >= 2)
-            {
-                // digital style dpad from axes
-                const x = clamp(round(gamepad.axes[0]), -1, 1);
-                const y = clamp(round(gamepad.axes[1]), -1, 1);
-                dpad.set(x, -y);
-            }
-
-            // copy dpad to left analog stick when pressed
-            if (gamepadDirectionEmulateStick)
-            {
-                if (dpad.lengthSquared())
-                    sticks[0] = dpad.clampLength();
-            }
-
-            // disable touch gamepad if using real gamepad
-            touchGamepadEnable && isUsingGamepad && touchGamepadTimer.unset();
+            const button = gamepad.buttons[j];
+            const wasDown = gamepadIsDown(j,i);
+            data[j] = button.pressed ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
+            if (!button.value || button.value > .9) // must be a full press
+            if (!i && button.pressed)
+                isUsingGamepad = true;
         }
+
+        if (gamepad.mapping === 'standard')
+        {
+            // get dpad buttons (standard mapping)
+            dpad.set(
+                (gamepadIsDown(15,i)&&1) - (gamepadIsDown(14,i)&&1),
+                (gamepadIsDown(12,i)&&1) - (gamepadIsDown(13,i)&&1));
+        }
+        else if (gamepad.axes && gamepad.axes.length >= 2)
+        {
+            // digital style dpad from axes
+            const x = clamp(round(gamepad.axes[0]), -1, 1);
+            const y = clamp(round(gamepad.axes[1]), -1, 1);
+            dpad.set(x, -y);
+        }
+
+        // copy dpad to left analog stick when pressed
+        if (gamepadDirectionEmulateStick && !dpad.isZero())
+            sticks[0] = dpad.clampLength();
     }
+
+    // disable touch gamepad if using real gamepad
+    touchGamepadEnable && isUsingGamepad && touchGamepadTimer.unset();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -729,9 +750,8 @@ function touchGamepadRender()
                 j : min(j, touchGamepadButtonCount-1);
             // fix button locations (swap 2 and 3 to match gamepad layout)
             button = button === 3 ? 2 : button === 2 ? 3 : button;
-            let pos = buttonCenter;
-            if (touchGamepadButtonCount > 1)
-                pos = pos.add(vec2().setDirection(j, touchGamepadSize/2));
+            const pos = touchGamepadButtonCount < 2 ? buttonCenter :
+                buttonCenter.add(vec2().setDirection(j, touchGamepadSize/2));
             context.fillStyle = touchGamepadButtons[button] ? '#fff' : '#000';
             context.beginPath();
             context.arc(pos.x, pos.y, buttonSize, 0,9);
