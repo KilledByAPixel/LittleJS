@@ -1922,15 +1922,6 @@ declare module "littlejsengine" {
     export let glPositionData: any;
     export let glColorData: any;
     export let glBatchCount: any;
-    /**
-     * LittleJS Input System
-     * - Tracks keyboard down, pressed, and released
-     * - Tracks mouse buttons, position, and wheel
-     * - Tracks multiple analog gamepads
-     * - Touch input is handled as mouse input
-     * - Virtual gamepad for touch devices
-     * @namespace Input
-     */
     /** Returns true if device key is down
      *  @param {string|number} key
      *  @param {number} [device]
@@ -1950,6 +1941,10 @@ declare module "littlejsengine" {
      *  @memberof Input */
     export function keyWasReleased(key: string | number, device?: number): boolean;
     /** Returns input vector from arrow keys or WASD if enabled
+     *  @param {string} [up]
+     *  @param {string} [down]
+     *  @param {string} [left]
+     *  @param {string} [right]
      *  @return {Vector2}
      *  @memberof Input */
     export function keyDirection(up?: string, down?: string, left?: string, right?: string): Vector2;
@@ -1982,6 +1977,15 @@ declare module "littlejsengine" {
      *  @return {boolean}
      *  @memberof Input */
     export function mouseWasReleased(button: number): boolean;
+    /**
+     * LittleJS Input System
+     * - Tracks keyboard down, pressed, and released
+     * - Tracks mouse buttons, position, and wheel
+     * - Tracks multiple analog gamepads
+     * - Touch input is handled as mouse input
+     * - Virtual gamepad for touch devices
+     * @namespace Input
+     */
     /** Mouse pos in world space
      *  @type {Vector2}
      *  @memberof Input */

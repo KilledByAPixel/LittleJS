@@ -4844,98 +4844,6 @@ class FontImage
  * @namespace Input
  */
 
-/** Returns true if device key is down
- *  @param {string|number} key
- *  @param {number} [device]
- *  @return {boolean}
- *  @memberof Input */
-function keyIsDown(key, device=0)
-{
-    ASSERT(key !== undefined, 'key is undefined');
-    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
-    return inputData[device] && !!(inputData[device][key] & 1);
-}
-
-/** Returns true if device key was pressed this frame
- *  @param {string|number} key
- *  @param {number} [device]
- *  @return {boolean}
- *  @memberof Input */
-function keyWasPressed(key, device=0)
-{
-    ASSERT(key !== undefined, 'key is undefined');
-    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
-    return inputData[device] && !!(inputData[device][key] & 2);
-}
-
-/** Returns true if device key was released this frame
- *  @param {string|number} key
- *  @param {number} [device]
- *  @return {boolean}
- *  @memberof Input */
-function keyWasReleased(key, device=0)
-{
-    ASSERT(key !== undefined, 'key is undefined');
-    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
-    return inputData[device] && !!(inputData[device][key] & 4);
-}
-
-/** Returns input vector from arrow keys or WASD if enabled
- *  @return {Vector2}
- *  @memberof Input */
-function keyDirection(up='ArrowUp', down='ArrowDown', left='ArrowLeft', right='ArrowRight')
-{
-    const k = (key)=> keyIsDown(key) ? 1 : 0;
-    return vec2(k(right) - k(left), k(up) - k(down));
-}
-
-/** Clears all input
- *  @memberof Input */
-function inputClear()
-{
-    inputData.length = 0;
-    inputData[0] = [];
-    touchGamepadButtons.length = 0;
-    touchGamepadSticks.length = 0;
-    gamepadStickData.length = 0;
-    gamepadDpadData.length = 0;
-}
-
-/** Clears an input key state
- *  @param {string|number} key
- *  @param {number} [device]
- *  @param {boolean} [clearDown=true]
- *  @param {boolean} [clearPressed=true]
- *  @param {boolean} [clearReleased=true]
- *  @memberof Input */
-function inputClearKey(key, device=0, clearDown=true, clearPressed=true, clearReleased=true)
-{
-    if (!inputData[device])
-        return;
-    inputData[device][key] &= ~((clearDown?1:0)|(clearPressed?2:0)|(clearReleased?4:0));
-}
-
-/** Returns true if mouse button is down
- *  @function
- *  @param {number} button
- *  @return {boolean}
- *  @memberof Input */
-function mouseIsDown(button) { return keyIsDown(button); }
-
-/** Returns true if mouse button was pressed
- *  @function
- *  @param {number} button
- *  @return {boolean}
- *  @memberof Input */
-function mouseWasPressed(button) { return keyWasPressed(button); }
-
-/** Returns true if mouse button was released
- *  @function
- *  @param {number} button
- *  @return {boolean}
- *  @memberof Input */
-function mouseWasReleased(button) { return keyWasReleased(button); }
-
 /** Mouse pos in world space
  *  @type {Vector2}
  *  @memberof Input */
@@ -4982,13 +4890,131 @@ let inputPreventDefault = true;
  *  @memberof Input */
 function setInputPreventDefault(preventDefault) { inputPreventDefault = preventDefault; }
 
+/** Clears an input key state
+ *  @param {string|number} key
+ *  @param {number} [device]
+ *  @param {boolean} [clearDown=true]
+ *  @param {boolean} [clearPressed=true]
+ *  @param {boolean} [clearReleased=true]
+ *  @memberof Input */
+function inputClearKey(key, device=0, clearDown=true, clearPressed=true, clearReleased=true)
+{
+    if (!inputData[device])
+        return;
+    inputData[device][key] &= ~((clearDown?1:0)|(clearPressed?2:0)|(clearReleased?4:0));
+}
+
+/** Clears all input
+ *  @memberof Input */
+function inputClear()
+{
+    inputData.length = 0;
+    inputData[0] = [];
+    touchGamepadButtons.length = 0;
+    touchGamepadSticks.length = 0;
+    gamepadStickData.length = 0;
+    gamepadDpadData.length = 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+/** Returns true if device key is down
+ *  @param {string|number} key
+ *  @param {number} [device]
+ *  @return {boolean}
+ *  @memberof Input */
+function keyIsDown(key, device=0)
+{
+    ASSERT(isString(key), 'key must be a number or string');
+    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
+    return inputData[device] && !!(inputData[device][key] & 1);
+}
+
+/** Returns true if device key was pressed this frame
+ *  @param {string|number} key
+ *  @param {number} [device]
+ *  @return {boolean}
+ *  @memberof Input */
+function keyWasPressed(key, device=0)
+{
+    ASSERT(isString(key), 'key must be a number or string');
+    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
+    return inputData[device] && !!(inputData[device][key] & 2);
+}
+
+/** Returns true if device key was released this frame
+ *  @param {string|number} key
+ *  @param {number} [device]
+ *  @return {boolean}
+ *  @memberof Input */
+function keyWasReleased(key, device=0)
+{
+    ASSERT(isString(key), 'key must be a number or string');
+    ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
+    return inputData[device] && !!(inputData[device][key] & 4);
+}
+
+/** Returns input vector from arrow keys or WASD if enabled
+ *  @param {string} [up]
+ *  @param {string} [down]
+ *  @param {string} [left]
+ *  @param {string} [right]
+ *  @return {Vector2}
+ *  @memberof Input */
+function keyDirection(up='ArrowUp', down='ArrowDown', left='ArrowLeft', right='ArrowRight')
+{
+    ASSERT(isString(up),    'up key must be a string');
+    ASSERT(isString(down),  'down key must be a string');
+    ASSERT(isString(left),  'left key must be a string');
+    ASSERT(isString(right), 'right key must be a string');
+    const k = (key)=> keyIsDown(key) ? 1 : 0;
+    return vec2(k(right) - k(left), k(up) - k(down));
+}
+
+/** Returns true if mouse button is down
+ *  @function
+ *  @param {number} button
+ *  @return {boolean}
+ *  @memberof Input */
+function mouseIsDown(button)
+{
+    ASSERT(isNumber(button), 'mouse button must be a number');
+    return keyIsDown(button);
+}
+
+/** Returns true if mouse button was pressed
+ *  @function
+ *  @param {number} button
+ *  @return {boolean}
+ *  @memberof Input */
+function mouseWasPressed(button)
+{
+    ASSERT(isNumber(button), 'mouse button must be a number');
+    return keyWasPressed(button);
+}
+
+/** Returns true if mouse button was released
+ *  @function
+ *  @param {number} button
+ *  @return {boolean}
+ *  @memberof Input */
+function mouseWasReleased(button)
+{
+    ASSERT(isNumber(button), 'mouse button must be a number');
+    return keyWasReleased(button);
+}
+
 /** Returns true if gamepad button is down
  *  @param {number} button
  *  @param {number} [gamepad]
  *  @return {boolean}
  *  @memberof Input */
 function gamepadIsDown(button, gamepad=0)
-{ return keyIsDown(button, gamepad+1); }
+{
+    ASSERT(isNumber(button), 'button must be a number');
+    ASSERT(isNumber(gamepad), 'gamepad must be a number');
+    return keyIsDown(button, gamepad+1);
+}
 
 /** Returns true if gamepad button was pressed
  *  @param {number} button
@@ -4996,7 +5022,11 @@ function gamepadIsDown(button, gamepad=0)
  *  @return {boolean}
  *  @memberof Input */
 function gamepadWasPressed(button, gamepad=0)
-{ return keyWasPressed(button, gamepad+1); }
+{
+    ASSERT(isNumber(button), 'button must be a number');
+    ASSERT(isNumber(gamepad), 'gamepad must be a number');
+    return keyWasPressed(button, gamepad+1);
+}
 
 /** Returns true if gamepad button was released
  *  @param {number} button
@@ -5004,7 +5034,11 @@ function gamepadWasPressed(button, gamepad=0)
  *  @return {boolean}
  *  @memberof Input */
 function gamepadWasReleased(button, gamepad=0)
-{ return keyWasReleased(button, gamepad+1); }
+{
+    ASSERT(isNumber(button), 'button must be a number');
+    ASSERT(isNumber(gamepad), 'gamepad must be a number');
+    return keyWasReleased(button, gamepad+1);
+}
 
 /** Returns gamepad stick value
  *  @param {number} stick
@@ -5012,17 +5046,65 @@ function gamepadWasReleased(button, gamepad=0)
  *  @return {Vector2}
  *  @memberof Input */
 function gamepadStick(stick, gamepad=0)
-{ return gamepadStickData[gamepad]?.[stick] ?? vec2(); }
+{
+    ASSERT(isNumber(stick), 'stick must be a number');
+    ASSERT(isNumber(gamepad), 'gamepad must be a number');
+    return gamepadStickData[gamepad]?.[stick] ?? vec2();
+}
 
 /** Returns gamepad dpad value
  *  @param {number} [gamepad]
  *  @return {Vector2}
  *  @memberof Input */
 function gamepadDpad(gamepad=0)
-{ return gamepadDpadData[gamepad] ?? vec2(); }
+{
+    ASSERT(isNumber(gamepad), 'gamepad must be a number');
+    return gamepadDpadData[gamepad] ?? vec2();
+}
+
+/** True if a touch device has been detected
+ *  @memberof Input */
+const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
 
 ///////////////////////////////////////////////////////////////////////////////
-// Input system functions called automatically by engine
+
+/** Pulse the vibration hardware if it exists
+ *  @param {number|Array} [pattern] - single value in ms or vibration interval array
+ *  @memberof Input */
+function vibrate(pattern=100)
+{
+    ASSERT(isNumber(pattern) || isArray(pattern), 'pattern must be a number or array');
+    vibrateEnable && !headlessMode && navigator && navigator.vibrate && navigator.vibrate(pattern);
+}
+
+/** Cancel any ongoing vibration
+ *  @memberof Input */
+function vibrateStop() { vibrate(0); }
+
+///////////////////////////////////////////////////////////////////////////////
+// Pointer Lock
+
+/** Request to lock the pointer, does not work on touch devices
+ *  @memberof Input */
+function pointerLockRequest()
+{
+    if (!isTouchDevice)
+        mainCanvas.requestPointerLock && mainCanvas.requestPointerLock();
+}
+
+/** Request to unlock the pointer
+ *  @memberof Input */
+function pointerLockExit()
+{ document.exitPointerLock && document.exitPointerLock(); }
+
+/** Check if pointer is locked (true if locked)
+ *  @return {boolean}
+ *  @memberof Input */
+function pointerLockIsActive()
+{ return document.pointerLockElement === mainCanvas; }
+
+///////////////////////////////////////////////////////////////////////////////
+// Input system functions and variables used by engine
 
 // input is stored as a bit field for each key: 1 = isDown, 2 = wasPressed, 4 = wasReleased
 // mouse and keyboard are stored together in device 0, gamepads are in devices > 0
@@ -5285,23 +5367,7 @@ function gamepadsUpdate()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
-/** Pulse the vibration hardware if it exists
- *  @param {number|Array} [pattern] - single value in ms or vibration interval array
- *  @memberof Input */
-function vibrate(pattern=100)
-{ vibrateEnable && !headlessMode && navigator && navigator.vibrate && navigator.vibrate(pattern); }
-
-/** Cancel any ongoing vibration
- *  @memberof Input */
-function vibrateStop() { vibrate(0); }
-
-///////////////////////////////////////////////////////////////////////////////
 // Touch input & virtual on screen gamepad
-
-/** True if a touch device has been detected
- *  @memberof Input */
-const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
 
 // touch gamepad internal variables
 const touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadSticks = [];
@@ -5511,26 +5577,6 @@ function touchGamepadRender()
     // set canvas back to normal
     context.restore();
 }
-
-///////////////////////////////////////////////////////////////////////////////
-// Pointer Lock
-
-/** Request to lock the pointer, does not work on touch devices
- *  @memberof Input */
-function pointerLockRequest()
-{
-    if (!isTouchDevice)
-        mainCanvas.requestPointerLock && mainCanvas.requestPointerLock();
-}
-
-/** Request to unlock the pointer
- *  @memberof Input */
-function pointerLockExit() { document.exitPointerLock && document.exitPointerLock(); }
-
-/** Check if pointer is locked (true if locked)
- *  @return {boolean}
- *  @memberof Input */
-function pointerLockIsActive() { return document.pointerLockElement === mainCanvas; }
 /**
  * LittleJS Audio System
  * - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a> - ZzFX Sound Effect Generator
@@ -9027,7 +9073,7 @@ class UISystemPlugin
                     o.pos = o.localPos.add(o.parent.pos);
 
                 // pass visible state to children
-                visible &&= o.visible;
+                visible &&= !!o.visible;
                 visible && o.render();
                 for (const c of o.children)
                     renderObject(c, visible);
@@ -9365,7 +9411,8 @@ class UISystemPlugin
         confirmMenu.isMouseOverlapping = ()=> true; // always hover
         
         // title text
-        const textTitle = new UIText(vec2(0,-50), vec2(size.x-10,70), text);
+        const gap = 50;
+        const textTitle = new UIText(vec2(0,-50), vec2(size.x-gap,70), text);
         confirmMenu.addChild(textTitle);
         
         // yes button
