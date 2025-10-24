@@ -22,15 +22,18 @@
 let uiSystem;
 
 /** Enable UI system debug drawing
- *  @type {boolean}
+ *  0=off, 1=normal, 2=show invisible
+ *  @type {number}
  *  @default
  *  @memberof UISystem */
-let uiDebug = false;
+let uiDebug = 0;
 
 /** Enable UI system debug drawing
- *  @param {boolean} enable
+ *  0=off, 1=normal, 2=show invisible
+ *  @param {number|boolean} enable
  *  @memberof UISystem */
-function uiSetDebug(enable) { uiDebug = enable; }
+function uiSetDebug(debugMode)
+{ uiDebug = typeof debugMode === 'boolean' ? (debugMode ? 1 : 0) : debugMode; }
 
 ///////////////////////////////////////////////////////////////////////////////
 /** 
@@ -118,24 +121,18 @@ class UISystemPlugin
 
         engineAddPlugin(uiUpdate, uiRender);
 
+        // set object position in parent space
+        function updateTransforms(o)
+        {
+            if (!o.parent) return;
+            o.pos.x = o.localPos.x + o.parent.pos.x;
+            o.pos.y = o.localPos.y + o.parent.pos.y;
+        }
+
         // setup recursive update and render
         // update in reverse order to detect mouse enter/leave
         function uiUpdate()
         {
-            function updateObject(o)
-            {
-                if (!o.visible) return;
-
-                // set position in parent space
-                if (o.parent)
-                    o.pos = o.localPos.add(o.parent.pos);
-
-                // update in reverse order to detect mouse enter/leave
-                for (let i=o.children.length; i--;)
-                    updateObject(o.children[i]);
-                o.update();
-            }
-
             if (uiSystem.activeObject && !uiSystem.activeObject.visible)
                 uiSystem.activeObject = undefined;
 
@@ -220,6 +217,17 @@ class UISystemPlugin
 
             // remove destroyed objects
             uiSystem.uiObjects = uiSystem.uiObjects.filter(o=>!o.destroyed);
+
+            function updateObject(o)
+            {
+                if (!o.visible) return;
+
+                // update in reverse order to detect mouse enter/leave
+                updateTransforms(o);
+                for (let i=o.children.length; i--;)
+                    updateObject(o.children[i]);
+                o.update();
+            }
         }
         function uiRender()
         {
@@ -238,28 +246,24 @@ class UISystemPlugin
             {
                 if (!o.visible) return;
 
-                // set position in parent space
-                if (o.parent)
-                    o.pos = o.localPos.add(o.parent.pos);
-
-                // render children
+                // render object and children
+                updateTransforms(o);
                 o.render();
                 for (const c of o.children)
                     renderObject(c);
             }
             uiSystem.uiObjects.forEach(o=> o.parent || renderObject(o));
 
-            if (uiDebug)
+            if (uiDebug > 0)
             {
                 // debug render all objects
-                function renderDebug(o)
+                function renderDebug(o, visible=true)
                 {
-                    if (!o.visible) return;
-
-                    // call debug render on object and children
-                    o.renderDebug();
+                    visible &&= !!o.visible;
+                    updateTransforms(o);
+                    o.renderDebug(visible);
                     for (const c of o.children)
-                        renderDebug(c);
+                        renderDebug(c, visible);
                 }
                 uiSystem.uiObjects.forEach(o=> o.parent || renderDebug(o));
             }
@@ -707,8 +711,7 @@ class UIObject
     }
 
     /** Add a child UIObject to this object
-     *  @param {UIObject} child
-     */
+     *  @param {UIObject} child */
     addChild(child)
     {
         ASSERT(!child.parent && !this.children.includes(child));
@@ -717,8 +720,7 @@ class UIObject
     }
 
     /** Remove a child UIObject from this object
-     *  @param {UIObject} child
-     */
+     *  @param {UIObject} child */
     removeChild(child)
     {
         ASSERT(child.parent === this && this.children.includes(child));
@@ -743,8 +745,7 @@ class UIObject
     }
 
     /** Check if the mouse is overlapping a box in screen space
-     *  @return {boolean} - True if overlapping
-     */
+     *  @return {boolean} - True if overlapping */
     isMouseOverlapping()
     {
         if (!mouseInWindow) return false;
@@ -837,8 +838,7 @@ class UIObject
     }
 
     /** Get the size for text with overrides and scale
-     *  @return {Vector2}
-     */
+     *  @return {Vector2} */
     getTextSize()
     {
         return vec2(
@@ -885,11 +885,13 @@ class UIObject
         return text;
     }
 
-    /** Called if uiDebug is enabled */
-    renderDebug()
+    /** Called if uiDebug is enabled
+     *  @param {boolean} visible */
+    renderDebug(visible=true)
     {
         // apply color based on state
         const color = 
+            !visible ? GREEN :
             this.isHoverObject() ? YELLOW : 
             this.disabled ? PURPLE :
             this.interactive ? RED : BLUE;
