@@ -234,17 +234,18 @@ class UISystemPlugin
                 context.translate(mainCanvasSize.x/2/s,0);
             }
 
-            function renderObject(o, visible=true)
+            function renderObject(o)
             {
+                if (!o.visible) return;
+
                 // set position in parent space
                 if (o.parent)
                     o.pos = o.localPos.add(o.parent.pos);
 
-                // pass visible state to children
-                visible &&= !!o.visible;
-                visible && o.render();
+                // render children
+                o.render();
                 for (const c of o.children)
-                    renderObject(c, visible);
+                    renderObject(c);
             }
             uiSystem.uiObjects.forEach(o=> o.parent || renderObject(o));
 
@@ -253,8 +254,9 @@ class UISystemPlugin
                 // debug render all objects
                 function renderDebug(o)
                 {
-                    if (!o.visible)
-                        return;
+                    if (!o.visible) return;
+
+                    // call debug render on object and children
                     o.renderDebug();
                     for (const c of o.children)
                         renderDebug(c);
@@ -370,7 +372,7 @@ class UISystemPlugin
     }
 
     /** Draw text to the UI context
-    *  @param {string|number}  text
+    *  @param {string}  text
     *  @param {Vector2} pos
     *  @param {Vector2} size
     *  @param {Color}   [color=uiSystem.defaultColor]
