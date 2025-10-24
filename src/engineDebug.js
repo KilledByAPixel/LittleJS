@@ -194,7 +194,7 @@ function debugOverlap(posA, sizeA, posB, sizeB, color, time, screenSpace=false)
 }
 
 /** Draw a debug axis aligned bounding box in world space
- *  @param {string} text
+ *  @param {string|number} text
  *  @param {Vector2} pos
  *  @param {number} [size]
  *  @param {Color|string} [color]

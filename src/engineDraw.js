@@ -638,7 +638,7 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
 
 /** Draw text on main canvas in world space
  *  Automatically splits new lines into rows
- *  @param {string}  text
+ *  @param {string|number}  text
  *  @param {Vector2} pos
  *  @param {number}  [size]
  *  @param {Color}   [color=(1,1,1,1)]
@@ -665,7 +665,7 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
 
 /** Draw text on overlay canvas in world space
  *  Automatically splits new lines into rows
- *  @param {string}  text
+ *  @param {string|number}  text
  *  @param {Vector2} pos
  *  @param {number}  [size]
  *  @param {Color}   [color=(1,1,1,1)]
@@ -684,7 +684,7 @@ function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textA
 
 /** Draw text on overlay canvas in screen space
  *  Automatically splits new lines into rows
- *  @param {string}  text
+ *  @param {string|number}  text
  *  @param {Vector2} pos
  *  @param {number}  [size]
  *  @param {Color}   [color=(1,1,1,1)]
@@ -1034,7 +1034,7 @@ class FontImage
     }
 
     /** Draw text in world space using the image font
-     *  @param {string}  text
+     *  @param {string|number}  text
      *  @param {Vector2} pos
      *  @param {number}  [scale=.25]
      *  @param {boolean} [center]
@@ -1046,7 +1046,7 @@ class FontImage
     }
 
     /** Draw text on overlay canvas in world space using the image font
-     *  @param {string}  text
+     *  @param {string|number}  text
      *  @param {Vector2} pos
      *  @param {number}  [scale]
      *  @param {boolean} [center]
@@ -1055,7 +1055,7 @@ class FontImage
     { this.drawText(text, pos, scale, center, overlayContext); }
 
     /** Draw text on overlay canvas in screen space using the image font
-     *  @param {string}  text
+     *  @param {string|number}  text
      *  @param {Vector2} pos
      *  @param {number}  [scale]
      *  @param {boolean} [center]

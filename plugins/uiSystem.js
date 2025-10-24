@@ -370,7 +370,7 @@ class UISystemPlugin
     }
 
     /** Draw text to the UI context
-    *  @param {string}  text
+    *  @param {string|number}  text
     *  @param {Vector2} pos
     *  @param {Vector2} size
     *  @param {Color}   [color=uiSystem.defaultColor]
