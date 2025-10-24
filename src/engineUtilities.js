@@ -781,6 +781,10 @@ class Vector2
      * @return {number} */
     area() { return abs(this.x * this.y); }
 
+    /** Returns true if this vector is (0,0)
+     * @return {boolean} */
+    isZero() { return !this.x && !this.y; }
+
     /** Returns a new vector that is p percent between this and the vector passed in
      * @param {Vector2} v - other vector
      * @param {number}  percent
