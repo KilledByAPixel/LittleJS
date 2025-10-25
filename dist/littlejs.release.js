@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.15.6';
+const engineVersion = '1.15.7';
 
 /** Frames per second to update
  *  @type {number}
@@ -4422,7 +4422,7 @@ function gamepadConnected(gamepad=gamepadMain)
 
 /** True if a touch device has been detected
  *  @memberof Input */
-const isTouchDevice = !headlessMode && navigator?.maxTouchPoints > 0;
+const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
 
 ///////////////////////////////////////////////////////////////////////////////
 
