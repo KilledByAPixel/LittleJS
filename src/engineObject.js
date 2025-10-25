@@ -167,7 +167,7 @@ class EngineObject
         if (!enablePhysicsSolver || !this.mass) // don't do collision for static objects
             return;
 
-        const wasMovingDown = this.velocity.y < 0;
+        const wasFalling = this.velocity.y < 0 && gravity.y < 0 || this.velocity.y > 0 && gravity.y > 0;
         if (this.groundObject)
         {
             // apply friction in local space of ground object
@@ -223,10 +223,10 @@ class EngineObject
                 {
                     // push outside object collision
                     this.pos.y = o.pos.y + (sizeBoth.y/2 + epsilon) * sign(oldPos.y - o.pos.y);
-                    if ((o.groundObject && wasMovingDown) || !o.mass)
+                    if ((o.groundObject && wasFalling) || !o.mass)
                     {
                         // set ground object if landed on something
-                        if (wasMovingDown)
+                        if (wasFalling)
                             this.groundObject = o;
 
                         // bounce if other object is fixed or grounded
@@ -313,12 +313,15 @@ class EngineObject
                         const restitution = max(this.restitution, hitLayer.restitution);
                         this.velocity.y *= -restitution;
 
-                        if (wasMovingDown)
+                        if (wasFalling)
                         {
-                            // adjust position to slightly above nearest tile boundary
+                            // adjust position to slightly away from nearest tile
                             // this prevents gap between object and ground
                             const epsilon = .0001;
-                            this.pos.y = (oldPos.y-this.size.y/2|0)+this.size.y/2+epsilon;
+                            const offset = this.size.y/2 + epsilon;
+                            this.pos.y = gravity.y < 0 ?
+                                floor(oldPos.y-this.size.y/2) + offset :
+                                ceil( oldPos.y+this.size.y/2) - offset;
 
                             // set ground object for tile collision
                             this.groundObject = hitLayer;
