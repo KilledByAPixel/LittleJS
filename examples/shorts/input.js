@@ -11,7 +11,10 @@ function gameUpdate()
             debugPoint(mousePos, mouseIsDown(0) ? RED : YELLOW, 1);
         }
         else
+        {
             debugText('Gamepad Mode', vec2(0,5));
+            debugText('Primary Gamepad: ' + gamepadPrimary, vec2(0,4));
+        }
 
         // analog sticks
         for (let i=2; i--;)
