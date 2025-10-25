@@ -245,7 +245,7 @@ function gamepadConnected(gamepad=gamepadMain)
 
 /** True if a touch device has been detected
  *  @memberof Input */
-const isTouchDevice = !headlessMode && navigator?.maxTouchPoints > 0;
+const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
 
 ///////////////////////////////////////////////////////////////////////////////
 
