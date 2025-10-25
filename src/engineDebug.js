@@ -369,7 +369,7 @@ function debugRender()
             const buttonScale = .2;
             const cornerPos = cameraPos.add(vec2(-stickScale*2, ((gamepadConnectedCount-1)/2-i)*stickScale*3));
             debugText(i, cornerPos.add(vec2(-stickScale, stickScale)), 1);
-            if (i === gamepadMain)
+            if (i === gamepadPrimary)
                 debugText('Main', cornerPos.add(vec2(-stickScale*2, 0)),1, '#0f0');
 
             // read analog sticks

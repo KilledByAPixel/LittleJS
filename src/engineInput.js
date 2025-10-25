@@ -50,10 +50,10 @@ let isUsingGamepad = false;
  *  @memberof Input */
 let inputPreventDefault = true;
 
-/** Main gamepad index, automatically set to first connected gamepad
+/** Primary gamepad index, automatically set to first gamepad with input
  *  @type {number}
  *  @memberof Input */
-let gamepadMain = 0;
+let gamepadPrimary = 0;
 
 /** Prevents input continuing to the default browser handling
  *  This is useful to disable for html menus so the browser can handle input normally
@@ -180,7 +180,7 @@ function mouseWasReleased(button)
  *  @param {number} [gamepad]
  *  @return {boolean}
  *  @memberof Input */
-function gamepadIsDown(button, gamepad=gamepadMain)
+function gamepadIsDown(button, gamepad=gamepadPrimary)
 {
     ASSERT(isNumber(button), 'button must be a number');
     ASSERT(isNumber(gamepad), 'gamepad must be a number');
@@ -192,7 +192,7 @@ function gamepadIsDown(button, gamepad=gamepadMain)
  *  @param {number} [gamepad]
  *  @return {boolean}
  *  @memberof Input */
-function gamepadWasPressed(button, gamepad=gamepadMain)
+function gamepadWasPressed(button, gamepad=gamepadPrimary)
 {
     ASSERT(isNumber(button), 'button must be a number');
     ASSERT(isNumber(gamepad), 'gamepad must be a number');
@@ -204,7 +204,7 @@ function gamepadWasPressed(button, gamepad=gamepadMain)
  *  @param {number} [gamepad]
  *  @return {boolean}
  *  @memberof Input */
-function gamepadWasReleased(button, gamepad=gamepadMain)
+function gamepadWasReleased(button, gamepad=gamepadPrimary)
 {
     ASSERT(isNumber(button), 'button must be a number');
     ASSERT(isNumber(gamepad), 'gamepad must be a number');
@@ -216,7 +216,7 @@ function gamepadWasReleased(button, gamepad=gamepadMain)
  *  @param {number} [gamepad]
  *  @return {Vector2}
  *  @memberof Input */
-function gamepadStick(stick, gamepad=gamepadMain)
+function gamepadStick(stick, gamepad=gamepadPrimary)
 {
     ASSERT(isNumber(stick), 'stick must be a number');
     ASSERT(isNumber(gamepad), 'gamepad must be a number');
@@ -227,7 +227,7 @@ function gamepadStick(stick, gamepad=gamepadMain)
  *  @param {number} [gamepad]
  *  @return {Vector2}
  *  @memberof Input */
-function gamepadDpad(gamepad=gamepadMain)
+function gamepadDpad(gamepad=gamepadPrimary)
 {
     ASSERT(isNumber(gamepad), 'gamepad must be a number');
     return gamepadDpadData[gamepad] ?? vec2();
@@ -237,7 +237,7 @@ function gamepadDpad(gamepad=gamepadMain)
  *  @param {number} [gamepad]
  *  @return {boolean}
  *  @memberof Input */
-function gamepadConnected(gamepad=gamepadMain)
+function gamepadConnected(gamepad=gamepadPrimary)
 {
     ASSERT(isNumber(gamepad), 'gamepad must be a number');
     return !!inputData[gamepad+1];
@@ -429,7 +429,7 @@ function mouseEventToScreen(mousePos)
 // Gamepad input
 
 // gamepad internal variables
-const gamepadStickData = [], gamepadDpadData = [];
+const gamepadStickData = [], gamepadDpadData = [], gamepadHadInput = [];
 
 // gamepads are updated by engine every frame automatically
 function gamepadsUpdate()
@@ -450,7 +450,7 @@ function gamepadsUpdate()
             return;
 
         // read virtual analog stick
-        gamepadMain = 0; // touch gamepad uses index 0
+        gamepadPrimary = 0; // touch gamepad uses index 0
         const sticks = gamepadStickData[0] ?? (gamepadStickData[0] = []);
         const dpad = gamepadDpadData[0] ?? (gamepadDpadData[0] = vec2());
         sticks[0] = vec2();
@@ -504,30 +504,39 @@ function gamepadsUpdate()
             inputData[i+1] = undefined;
             gamepadStickData[i] = undefined;
             gamepadDpadData[i] = undefined;
+            gamepadHadInput[i] = undefined;
             continue;
         }
 
         const data = inputData[i+1] ?? (inputData[i+1] = []);
         const sticks = gamepadStickData[i] ?? (gamepadStickData[i] = []);
         const dpad = gamepadDpadData[i] ?? (gamepadDpadData[i] = vec2());
-    
-        // set new main gamepad if current is not connected
-        if (!gamepads[gamepadMain])
-            gamepadMain = i;
 
         // read analog sticks
         for (let j = 0; j < gamepad.axes.length-1; j+=2)
             sticks[j>>1] = applyDeadZones(vec2(gamepad.axes[j],gamepad.axes[j+1]));
 
         // read buttons
+        let hadInput = false;
         for (let j = gamepad.buttons.length; j--;)
         {
             const button = gamepad.buttons[j];
             const wasDown = gamepadIsDown(j,i);
             data[j] = button.pressed ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
-            if (!button.value || button.value > .9) // must be a full press
-            if (!i && button.pressed)
-                isUsingGamepad = true;
+
+            // check for any input on this gamepad, analog must be full press
+            if (button.pressed)
+            if (!button.value || button.value > .9)
+                hadInput = true;
+        }
+        
+        // set new primary gamepad if current is not connected
+        if (hadInput)
+        {
+            gamepadHadInput[i] = true;
+            if (!gamepadHadInput[gamepadPrimary])
+                gamepadPrimary = i;
+            isUsingGamepad ||= (gamepadPrimary === i);
         }
 
         if (gamepad.mapping === 'standard')

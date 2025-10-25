@@ -296,7 +296,7 @@ export
 	mouseInWindow,
 	isUsingGamepad,
 	inputPreventDefault,
-	gamepadMain,
+	gamepadPrimary,
 	setInputPreventDefault,
 	gamepadIsDown,
 	gamepadWasPressed,
