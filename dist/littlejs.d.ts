@@ -2021,10 +2021,10 @@ declare module "littlejsengine" {
      *  @type {boolean}
      *  @memberof Input */
     export let inputPreventDefault: boolean;
-    /** Main gamepad index, automatically set to first connected gamepad
+    /** Primary gamepad index, automatically set to first gamepad with input
      *  @type {number}
      *  @memberof Input */
-    export let gamepadMain: number;
+    export let gamepadPrimary: number;
     /** Prevents input continuing to the default browser handling
      *  This is useful to disable for html menus so the browser can handle input normally
      *  @param {boolean} preventDefault
