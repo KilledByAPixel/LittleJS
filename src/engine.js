@@ -276,7 +276,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                 o.destroyed || o.render();
             gameRenderPost();
             pluginList.forEach(plugin=>plugin.render?.());
-            touchGamepadRender();
+            inputRender();
             debugRender();
             glFlush();
             debugVideoCaptureUpdate();
