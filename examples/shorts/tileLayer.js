@@ -11,11 +11,11 @@ function gameInit()
     for (pos.y = tileLayer.size.y; pos.y--;)
     {
         // check if tile should be solid
-        if (rand() < .7)
+        if (randBool(.7))
             continue;
         
         // set tile data
-        const tileIndex = 1;
+        const tileIndex = 11;
         const direction = randInt(4)
         const mirror = randBool();
         const color = randColor(WHITE, hsl(0,0,.2));
