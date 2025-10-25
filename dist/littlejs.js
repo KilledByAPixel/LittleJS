@@ -5304,6 +5304,7 @@ function gamepadsUpdate()
             return;
 
         // read virtual analog stick
+        gamepadMain = 0; // touch gamepad uses index 0
         const sticks = gamepadStickData[0] ?? (gamepadStickData[0] = []);
         const dpad = gamepadDpadData[0] ?? (gamepadDpadData[0] = vec2());
         sticks[0] = vec2();
