@@ -1,16 +1,17 @@
 function gameUpdate()
 {
-    if (isTouchDevice)
+    touchGamepadEnable = 1;
+    if (isTouchDevice || isUsingGamepad)
     {
-        debugText('Touch Gamepad Mode', vec2(0,5));
-        touchGamepadEnable = 1;
+        if (isTouchDevice)
+        {
+            debugText('Touch Gamepad Mode', vec2(0,5));
 
-        // touch input routed to mouse
-        debugPoint(mousePos, mouseIsDown(0) ? RED : YELLOW, 1);
-    }
-    else if (isUsingGamepad)
-    {
-        debugText('Gamepad Mode', vec2(0,5));
+            // touch input is routed to mouse
+            debugPoint(mousePos, mouseIsDown(0) ? RED : YELLOW, 1);
+        }
+        else
+            debugText('Gamepad Mode', vec2(0,5));
 
         // analog sticks
         for (let i=2; i--;)
