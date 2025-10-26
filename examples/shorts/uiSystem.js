@@ -13,7 +13,7 @@ function gameInit()
     canvasClearColor = hsl(0,0,.8);
 
     // example text
-    uiMenu.addChild(new UIText(vec2(-80,-120), vec2(500, 80),
+    uiMenu.addChild(new UIText(vec2(-80,-120), vec2(400, 80),
         'LittleJS UI\nSystem Demo'));
 
     // example image

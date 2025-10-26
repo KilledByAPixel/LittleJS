@@ -43,14 +43,14 @@ function createUI()
     uiMenu.addChild(uiBackground);
 
     // example large text
-    const textTitle = new LJS.UIText(vec2(0,-220), vec2(500, 120), 'Test Title');
+    const textTitle = new LJS.UIText(vec2(0,-220), vec2(400, 120), 'Test Title');
     uiMenu.addChild(textTitle);
     textTitle.textColor = LJS.RED;
     textTitle.textLineColor = LJS.BLUE;
     textTitle.textLineWidth = 4;
 
     // example multiline text
-    const textTest = new LJS.UIText(vec2(-60,-120), vec2(350, 60), 'Test Text\nSecond text line.')
+    const textTest = new LJS.UIText(vec2(-60,-120), vec2(300, 60), 'Test Text\nSecond text line.')
     uiMenu.addChild(textTest);
 
     // example tile image
@@ -61,14 +61,11 @@ function createUI()
     let navigationIndex = 0;
     
     // example checkbox
-    const checkbox = new LJS.UICheckbox(vec2(-140,-20), vec2(40));
+    const checkbox = new LJS.UICheckbox(vec2(-140,-20), vec2(50));
     uiMenu.addChild(checkbox);
     checkbox.onChange = ()=> button1.disabled = checkbox.checked;
     checkbox.navigationIndex = ++navigationIndex;
-
-    // text attached to checkbox
-    const checkboxText = new LJS.UIText(vec2(170,0), vec2(300, 60), 'Test Checkbox');
-    checkbox.addChild(checkboxText);
+    checkbox.text = 'Test Checkbox';
 
     // example scrollbar
     const scrollbar = new LJS.UIScrollbar(vec2(0,60), vec2(350, 50));
