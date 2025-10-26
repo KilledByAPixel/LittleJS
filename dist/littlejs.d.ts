@@ -3210,8 +3210,6 @@ declare module "littlejsengine" {
         nativeHeight: number;
         /** @property {UIObject} - Object currently selected by navigation (gamepad or keyboard) */
         navigationObject: any;
-        /** @property {number} - Gamepad index to use for UI navigation */
-        navigationGamepadIndex: number;
         /** @property {Timer} - Cooldown timer for navigation inputs */
         navigationTimer: Timer;
         /** @property {number} - Time between navigation inputs in seconds */
