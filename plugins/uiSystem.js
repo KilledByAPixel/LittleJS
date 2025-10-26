@@ -94,8 +94,6 @@ class UISystemPlugin
         // navigation properties
         /** @property {UIObject} - Object currently selected by navigation (gamepad or keyboard) */
         this.navigationObject = undefined;
-        /** @property {number} - Gamepad index to use for UI navigation */
-        this.navigationGamepadIndex = 0;
         /** @property {Timer} - Cooldown timer for navigation inputs */
         this.navigationTimer = new Timer(undefined, true);
         /** @property {number} - Time between navigation inputs in seconds */
@@ -503,9 +501,8 @@ class UISystemPlugin
         const both = uiSystem.navigationDirection === 2;
         if (isUsingGamepad)
         {
-            const gamepad = this.navigationGamepadIndex;
-            const stick = gamepadStick(0, gamepad);
-            const dpad = gamepadDpad(gamepad);
+            const stick = gamepadStick(0, gamepadPrimary);
+            const dpad = gamepadDpad(gamepadPrimary);
             if (both)
                 return -(stick.y || dpad.y) || (stick.x || dpad.x);
             return vertical ? -(stick.y || dpad.y) : (stick.x || dpad.x);
@@ -531,9 +528,8 @@ class UISystemPlugin
         const vertical = uiSystem.navigationDirection === 1;
         if (isUsingGamepad)
         {
-            const gamepad = this.navigationGamepadIndex;
-            const stick = gamepadStick(0, gamepad);
-            const dpad = gamepadDpad(gamepad);
+            const stick = gamepadStick(0, gamepadPrimary);
+            const dpad = gamepadDpad(gamepadPrimary);
             return !vertical ? (stick.y || dpad.y) : (stick.x || dpad.x);
         }
         const back = !vertical ? 'ArrowUp' : 'ArrowLeft';
@@ -545,8 +541,7 @@ class UISystemPlugin
      *  @return {boolean} */
     getNavigationWasPressed()
     {
-        const gamepad = this.navigationGamepadIndex;
-        return isUsingGamepad ? gamepadWasPressed(0, gamepad) : 
+        return isUsingGamepad ? gamepadWasPressed(0, gamepadPrimary) : 
             keyWasPressed('Space') || keyWasPressed('Enter');
     }
         
