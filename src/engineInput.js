@@ -243,6 +243,16 @@ function gamepadConnected(gamepad=gamepadPrimary)
     return !!inputData[gamepad+1];
 }
 
+/** Returns how many control sticks the passed in gamepad has
+ *  @param {number} [gamepad]
+ *  @return {number}
+ *  @memberof Input */
+function gamepadStickCount(gamepad=gamepadPrimary)
+{
+    ASSERT(isNumber(gamepad), 'gamepad must be a number');
+    return gamepadStickData[gamepad]?.length ?? 0;
+}
+
 /** True if a touch device has been detected
  *  @memberof Input */
 const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
