@@ -104,7 +104,7 @@ function gameUpdate()
     }
 
     // controls
-    if (LJS.mouseIsDown(1) || LJS.mouseIsDown('KeyZ'))
+    if (LJS.mouseIsDown(1) || LJS.keyIsDown('KeyZ'))
     {
         const isSet = repeatSpawnTimer.isSet();
         if (!isSet || repeatSpawnTimer.elapsed())
