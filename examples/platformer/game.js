@@ -24,6 +24,13 @@ export function addToDeaths() { ++deaths; }
 // enable touch gamepad on touch devices
 LJS.setTouchGamepadEnable(true);
 
+// limit canvas aspect ratios to support most modern HD devices
+LJS.setCanvasMinAspect(.4);
+LJS.setCanvasMaxAspect(2.5);
+
+// limit size to to 4k HD
+LJS.setCanvasMaxSize(vec2(3840, 2160));
+
 ///////////////////////////////////////////////////////////////////////////////
 function loadLevel()
 {
