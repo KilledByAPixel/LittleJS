@@ -48,6 +48,20 @@ let canvasClearColor = CLEAR_BLACK;
  *  @memberof Settings */
 let canvasMaxSize = vec2(1920, 1080);
 
+/** Minimum aspect ratio of the canvas (width/height), unused if 0
+ *  Can be used with canvasMaxAspect to limit aspect ratio
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let canvasMinAspect = 0;
+
+/** Maximum aspect ratio of the canvas (width/height), unused if 0
+ *  Can be used with canvasMinAspect to limit aspect ratio
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let canvasMaxAspect = 0;
+
 /** Fixed size of the canvas, if enabled canvas size never changes
  * - you may also need to set mainCanvasSize if using screen space coords in startup
  *  @type {Vector2}
@@ -343,6 +357,16 @@ function setCanvasClearColor(color) { canvasClearColor = color.copy(); }
  *  @param {Vector2} size
  *  @memberof Settings */
 function setCanvasMaxSize(size) { canvasMaxSize = size.copy(); }
+
+/** Set minimum aspect ratio of the canvas (width/height), unused if 0
+ *  @param {number} aspect
+ *  @memberof Settings */
+function setCanvasMinAspect(aspect) { canvasMinAspect = aspect; }
+
+/** Set maximum aspect ratio of the canvas (width/height), unused if 0
+ *  @param {number} aspect
+ *  @memberof Settings */
+function setCanvasMaxAspect(aspect) { canvasMaxAspect = aspect; }
 
 /** Set fixed size of the canvas
  *  @param {Vector2} size
