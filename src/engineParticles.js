@@ -109,9 +109,9 @@ class ParticleEmitter extends EngineObject
         /** @property {Color} - Color at start of life 2, randomized between start colors */
         this.colorStartB = colorStartB.copy();
         /** @property {Color} - Color at end of life 1, randomized between end colors */
-        this.colorEndA   = colorEndA.copy();
+        this.colorEndA = colorEndA.copy();
         /** @property {Color} - Color at end of life 2, randomized between end colors */
-        this.colorEndB   = colorEndB.copy();
+        this.colorEndB = colorEndB.copy();
         /** @property {boolean} - Should color be randomized linearly or across each component */
         this.randomColorLinear = randomColorLinear;
 
@@ -195,8 +195,10 @@ class ParticleEmitter extends EngineObject
         if (debugParticles)
         {
             // show emitter bounds
-            const emitSize = typeof this.emitSize === 'number' ? vec2(this.emitSize) : this.emitSize;
-            debugRect(this.pos, emitSize, '#0f0', 0, this.angle);
+            if (typeof this.emitSize === 'number')
+                debugCircle(this.pos, this.emitSize/2, '#0f0');
+            else
+                debugRect(this.pos, this.emitSize, '#0f0', 0, this.angle);
         }
     }
 
@@ -206,8 +208,8 @@ class ParticleEmitter extends EngineObject
     {
         // spawn a particle
         let pos = typeof this.emitSize === 'number' ? // check if number was used
-            randInCircle(this.emitSize/2)            // circle emitter
-            : vec2(rand(-.5,.5), rand(-.5,.5))       // box emitter
+            randInCircle(this.emitSize/2)             // circle emitter
+            : vec2(rand(-.5,.5), rand(-.5,.5))        // box emitter
                 .multiply(this.emitSize).rotate(this.angle)
         let angle = rand(this.particleConeAngle, -this.particleConeAngle);
         if (!this.localSpace)

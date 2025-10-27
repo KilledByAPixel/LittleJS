@@ -211,8 +211,7 @@ class CanvasLayer extends EngineObject
     /** Destroy this canvas layer */
     destroy()
     {
-        if (this.destroyed)
-            return;
+        if (this.destroyed) return;
 
         this.textureInfo.destroyWebGLTexture();
         super.destroy();

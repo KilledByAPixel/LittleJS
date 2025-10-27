@@ -583,9 +583,11 @@ function inputUpdate()
                 dpad.set(x, -y);
                 sticks[0] = dpad.clampLength(); // clamp to circle
             }
-            const rightTouchStick = touchGamepadSticks[1] ?? vec2();
             if (touchGamepadButtonCount === 1)
+            {
+                const rightTouchStick = touchGamepadSticks[1] ?? vec2();
                 sticks[1] = applyDeadZones(rightTouchStick);
+            }
 
             // read virtual gamepad buttons
             const data = inputData[1] ?? (inputData[1] = []);
