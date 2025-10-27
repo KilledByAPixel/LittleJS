@@ -329,6 +329,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             
             // responsive aspect ratio with native resolution
             const innerAspect = innerWidth / innerHeight;
+            ASSERT(canvasMinAspect <= canvasMaxAspect); 
             if (canvasMaxAspect && innerAspect > canvasMaxAspect)
             {
                 // full height
