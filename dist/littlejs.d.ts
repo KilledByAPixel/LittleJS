@@ -133,6 +133,7 @@ declare module "littlejsengine" {
      *  @memberof Engine */
     export function engineInit(gameInit: GameInitCallback, gameUpdate: GameCallback, gameUpdatePost: GameCallback, gameRender: GameCallback, gameRenderPost: GameCallback, imageSources?: Array<string>, rootElement?: HTMLElement): Promise<void>;
     /** Update each engine object, remove destroyed objects, and update time
+     * can be called manually if objects need to be updated outside of main loop
      *  @memberof Engine */
     export function engineObjectsUpdate(): void;
     /** Destroy and remove all objects
@@ -348,6 +349,18 @@ declare module "littlejsengine" {
      *  @default Vector2(1920,1080)
      *  @memberof Settings */
     export let canvasMaxSize: Vector2;
+    /** Minimum aspect ratio of the canvas (width/height), unused if 0
+     *  Can be used with canvasMaxAspect to limit aspect ratio
+     *  @type {number}
+     *  @default
+     *  @memberof Settings */
+    export let canvasMinAspect: number;
+    /** Maximum aspect ratio of the canvas (width/height), unused if 0
+     *  Can be used with canvasMinAspect to limit aspect ratio
+     *  @type {number}
+     *  @default
+     *  @memberof Settings */
+    export let canvasMaxAspect: number;
     /** Fixed size of the canvas, if enabled canvas size never changes
      * - you may also need to set mainCanvasSize if using screen space coords in startup
      *  @type {Vector2}
@@ -557,6 +570,14 @@ declare module "littlejsengine" {
      *  @param {Vector2} size
      *  @memberof Settings */
     export function setCanvasMaxSize(size: Vector2): void;
+    /** Set minimum aspect ratio of the canvas (width/height), unused if 0
+     *  @param {number} aspect
+     *  @memberof Settings */
+    export function setCanvasMinAspect(aspect: number): void;
+    /** Set maximum aspect ratio of the canvas (width/height), unused if 0
+     *  @param {number} aspect
+     *  @memberof Settings */
+    export function setCanvasMaxAspect(aspect: number): void;
     /** Set fixed size of the canvas
      *  @param {Vector2} size
      *  @memberof Settings */

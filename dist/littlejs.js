@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.15.8';
+const engineVersion = '1.15.9';
 
 /** Frames per second to update
  *  @type {number}
@@ -308,22 +308,47 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
 
         if (canvasFixedSize.x)
         {
-            // clear canvas and set fixed size
-            mainCanvas.width  = canvasFixedSize.x;
-            mainCanvas.height = canvasFixedSize.y;
+            // set canvas fixed size
+            mainCanvasSize = canvasFixedSize.copy();
 
-            // fit to window by adding space on top or bottom if necessary
-            const aspect = innerWidth / innerHeight;
-            const fixedAspect = mainCanvas.width / mainCanvas.height;
-            (glCanvas||mainCanvas).style.width = mainCanvas.style.width = overlayCanvas.style.width  = aspect < fixedAspect ? '100%' : '';
-            (glCanvas||mainCanvas).style.height = mainCanvas.style.height = overlayCanvas.style.height = aspect < fixedAspect ? '' : '100%';
+            // fit to window using css width and height
+            const innerAspect = innerWidth / innerHeight;
+            const fixedAspect = canvasFixedSize.x / canvasFixedSize.y;
+            const w = innerAspect < fixedAspect ? '100%' : '';
+            const h = innerAspect < fixedAspect ? '' : '100%';
+            overlayCanvas.style.width  = mainCanvas.style.width  = w;
+            overlayCanvas.style.height = mainCanvas.style.height = h;
+            if (glCanvas)
+            {
+                glCanvas.style.width  = w;
+                glCanvas.style.height = h;
+            }
         }
         else
         {
-            // clear canvas and set size to same as window
-            mainCanvas.width = min(innerWidth, canvasMaxSize.x);
-            mainCanvas.height = min(innerHeight, canvasMaxSize.y);
+            // get main canvas size based on window size
+            mainCanvasSize.x = min(innerWidth,  canvasMaxSize.x);
+            mainCanvasSize.y = min(innerHeight, canvasMaxSize.y);
+            
+            // responsive aspect ratio with native resolution
+            const innerAspect = innerWidth / innerHeight;
+            if (canvasMaxAspect && innerAspect > canvasMaxAspect)
+            {
+                // full height
+                const w = mainCanvasSize.y * canvasMaxAspect | 0;
+                mainCanvasSize.x = min(w,  canvasMaxSize.x);
+            }
+            else if (innerAspect < canvasMinAspect)
+            {
+                // full width
+                const h = mainCanvasSize.x / canvasMinAspect | 0;
+                mainCanvasSize.y = min(h, canvasMaxSize.y);
+            }
         }
+
+        // clear main and overlay canvas and set size
+        overlayCanvas.width  = mainCanvas.width  = mainCanvasSize.x;
+        overlayCanvas.height = mainCanvas.height = mainCanvasSize.y;
 
         // apply the clear color to main canvas
         if (canvasClearColor.a > 0)
@@ -332,13 +357,6 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             mainContext.fillRect(0, 0, mainCanvasSize.x, mainCanvasSize.y);
             mainContext.fillStyle = BLACK.toString();
         }
-
-        // clear overlay canvas and set size
-        overlayCanvas.width  = mainCanvas.width;
-        overlayCanvas.height = mainCanvas.height;
-
-        // save canvas size
-        mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
 
         // set default line join and cap
         const lineJoin = 'round', lineCap = 'round';
@@ -363,7 +381,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         'user-select:none;' +         // prevent hold to select
         '-webkit-user-select:none;' + // compatibility for ios
         'touch-action:none;' +        // prevent mobile pinch to resize
-        '-webkit-touch-callout:none';// compatibility for ios
+        '-webkit-touch-callout:none'; // compatibility for ios
     rootElement.style.cssText = styleRoot;
     drawCanvas = mainCanvas = document.createElement('canvas');
     rootElement.appendChild(mainCanvas);
@@ -380,7 +398,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     rootElement.appendChild(overlayCanvas);
     overlayContext = overlayCanvas.getContext('2d');
 
-    // set canvases
+    // setup canvases
+    // transform way is still more reliable then flexbox or grid
     const styleCanvas = 'position:absolute;'+ // allow canvases to overlap
         'top:50%;left:50%;transform:translate(-50%,-50%)'; // center on screen
     mainCanvas.style.cssText = overlayCanvas.style.cssText = styleCanvas;
@@ -445,6 +464,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     await Promise.all(promises);
     return startEngine();
 
+    ///////////////////////////////////////////////////////////////////////////
+    // LittleJS Splash Screen
     function drawEngineSplashScreen(t)
     {
         const x = overlayContext;
@@ -607,9 +628,11 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         }
         x.restore();
     }
+    ///////////////////////////////////////////////////////////////////////////
 }
 
 /** Update each engine object, remove destroyed objects, and update time
+ * can be called manually if objects need to be updated outside of main loop
  *  @memberof Engine */
 function engineObjectsUpdate()
 {
@@ -661,18 +684,21 @@ function engineObjectsDestroy()
 function engineObjectsCollect(pos, size, objects=engineObjects)
 {
     const collectedObjects = [];
-    if (!pos) // all objects
+    if (!pos)
     {
+        // all objects
         for (const o of objects)
             collectedObjects.push(o);
     }
-    else if (size instanceof Vector2)  // bounding box test
+    else if (size instanceof Vector2)
     {
+        // bounding box test
         for (const o of objects)
             o.isOverlapping(pos, size) && collectedObjects.push(o);
     }
-    else  // circle test
+    else
     {
+        // circle test
         const sizeSquared = size*size;
         for (const o of objects)
             pos.distanceSquared(o.pos) < sizeSquared && collectedObjects.push(o);
@@ -2712,6 +2738,20 @@ let canvasClearColor = CLEAR_BLACK;
  *  @memberof Settings */
 let canvasMaxSize = vec2(1920, 1080);
 
+/** Minimum aspect ratio of the canvas (width/height), unused if 0
+ *  Can be used with canvasMaxAspect to limit aspect ratio
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let canvasMinAspect = 0;
+
+/** Maximum aspect ratio of the canvas (width/height), unused if 0
+ *  Can be used with canvasMinAspect to limit aspect ratio
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let canvasMaxAspect = 0;
+
 /** Fixed size of the canvas, if enabled canvas size never changes
  * - you may also need to set mainCanvasSize if using screen space coords in startup
  *  @type {Vector2}
@@ -3007,6 +3047,16 @@ function setCanvasClearColor(color) { canvasClearColor = color.copy(); }
  *  @param {Vector2} size
  *  @memberof Settings */
 function setCanvasMaxSize(size) { canvasMaxSize = size.copy(); }
+
+/** Set minimum aspect ratio of the canvas (width/height), unused if 0
+ *  @param {number} aspect
+ *  @memberof Settings */
+function setCanvasMinAspect(aspect) { canvasMinAspect = aspect; }
+
+/** Set maximum aspect ratio of the canvas (width/height), unused if 0
+ *  @param {number} aspect
+ *  @memberof Settings */
+function setCanvasMaxAspect(aspect) { canvasMaxAspect = aspect; }
 
 /** Set fixed size of the canvas
  *  @param {Vector2} size
@@ -5096,6 +5146,16 @@ function gamepadConnected(gamepad=gamepadPrimary)
     return !!inputData[gamepad+1];
 }
 
+/** Returns how many control sticks the passed in gamepad has
+ *  @param {number} [gamepad]
+ *  @return {number}
+ *  @memberof Input */
+function gamepadStickCount(gamepad=gamepadPrimary)
+{
+    ASSERT(isNumber(gamepad), 'gamepad must be a number');
+    return gamepadStickData[gamepad]?.length ?? 0;
+}
+
 /** True if a touch device has been detected
  *  @memberof Input */
 const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
@@ -5436,9 +5496,11 @@ function inputUpdate()
                 dpad.set(x, -y);
                 sticks[0] = dpad.clampLength(); // clamp to circle
             }
-            const rightTouchStick = touchGamepadSticks[1] ?? vec2();
             if (touchGamepadButtonCount === 1)
+            {
+                const rightTouchStick = touchGamepadSticks[1] ?? vec2();
                 sticks[1] = applyDeadZones(rightTouchStick);
+            }
 
             // read virtual gamepad buttons
             const data = inputData[1] ?? (inputData[1] = []);
@@ -6530,8 +6592,7 @@ class CanvasLayer extends EngineObject
     /** Destroy this canvas layer */
     destroy()
     {
-        if (this.destroyed)
-            return;
+        if (this.destroyed) return;
 
         this.textureInfo.destroyWebGLTexture();
         super.destroy();
@@ -7083,9 +7144,9 @@ class ParticleEmitter extends EngineObject
         /** @property {Color} - Color at start of life 2, randomized between start colors */
         this.colorStartB = colorStartB.copy();
         /** @property {Color} - Color at end of life 1, randomized between end colors */
-        this.colorEndA   = colorEndA.copy();
+        this.colorEndA = colorEndA.copy();
         /** @property {Color} - Color at end of life 2, randomized between end colors */
-        this.colorEndB   = colorEndB.copy();
+        this.colorEndB = colorEndB.copy();
         /** @property {boolean} - Should color be randomized linearly or across each component */
         this.randomColorLinear = randomColorLinear;
 
@@ -7169,8 +7230,10 @@ class ParticleEmitter extends EngineObject
         if (debugParticles)
         {
             // show emitter bounds
-            const emitSize = typeof this.emitSize === 'number' ? vec2(this.emitSize) : this.emitSize;
-            debugRect(this.pos, emitSize, '#0f0', 0, this.angle);
+            if (typeof this.emitSize === 'number')
+                debugCircle(this.pos, this.emitSize/2, '#0f0');
+            else
+                debugRect(this.pos, this.emitSize, '#0f0', 0, this.angle);
         }
     }
 
@@ -7180,8 +7243,8 @@ class ParticleEmitter extends EngineObject
     {
         // spawn a particle
         let pos = typeof this.emitSize === 'number' ? // check if number was used
-            randInCircle(this.emitSize/2)            // circle emitter
-            : vec2(rand(-.5,.5), rand(-.5,.5))       // box emitter
+            randInCircle(this.emitSize/2)             // circle emitter
+            : vec2(rand(-.5,.5), rand(-.5,.5))        // box emitter
                 .multiply(this.emitSize).rotate(this.angle)
         let angle = rand(this.particleConeAngle, -this.particleConeAngle);
         if (!this.localSpace)
