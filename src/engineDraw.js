@@ -863,12 +863,30 @@ function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
  *  @memberof Draw */
 function isOnScreen(pos, size=0)
 {
-    pos = worldToScreen(pos);
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(isVector2(size) || isNumber(size), 'size must be a vec2 or number');
+
+    // optimized circle on screen test
+    // pos = worldToScreen(pos);
+    let x = pos.x - cameraPos.x;
+    let y = pos.y - cameraPos.y;
+    if (cameraAngle)
+    {
+        // apply inverse camera rotation
+        const c = cos(cameraAngle), s = sin(cameraAngle);
+        const xr = x * c - y * s, yr = x * s + y * c;
+        x = xr; y = yr;
+    }
+    x *= cameraScale*2; y *= -cameraScale*2;
+
     if (size instanceof Vector2)
-        size = max(size.x, size.y); // use largest dimension
-    size *= cameraScale/2;
-    return pos.x + size > 0 && pos.x - size < mainCanvasSize.x &&
-           pos.y + size > 0 && pos.y - size < mainCanvasSize.y;
+        size = size.length(); // use length of vector as diameter
+    size *= cameraScale;
+
+    // check against screen bounds
+    const w = mainCanvasSize.x, h = mainCanvasSize.y;
+    return x + size > -w && x - size < w &&
+           y + size > -h && y - size < h;
 }
 
 /** Enable normal or additive blend mode
