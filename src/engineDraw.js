@@ -741,16 +741,16 @@ function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=B
  *  @memberof Draw */
 function screenToWorld(screenPos)
 {
+    ASSERT(isVector2(screenPos), 'screenPos must be a vec2');
+
     let x = (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale;
     let y = (screenPos.y - mainCanvasSize.y/2 + .5) / -cameraScale;
     if (cameraAngle)
     {
         // apply camera rotation
         const c = cos(-cameraAngle), s = sin(-cameraAngle);
-        const rotatedX = x * c - y * s;
-        const rotatedY = x * s + y * c;
-        x = rotatedX;
-        y = rotatedY;
+        const xr = x * c - y * s, yr = x * s + y * c;
+        x = xr; y = yr;
     }
     return new Vector2(x + cameraPos.x, y + cameraPos.y);
 }
@@ -761,16 +761,16 @@ function screenToWorld(screenPos)
  *  @memberof Draw */
 function worldToScreen(worldPos)
 {
+    ASSERT(isVector2(worldPos), 'worldPos must be a vec2');
+
     let x = worldPos.x - cameraPos.x;
     let y = worldPos.y - cameraPos.y;
     if (cameraAngle)
     {
         // apply inverse camera rotation
         const c = cos(cameraAngle), s = sin(cameraAngle);
-        const rotatedX = x * c - y * s;
-        const rotatedY = x * s + y * c;
-        x = rotatedX;
-        y = rotatedY;
+        const xr = x * c - y * s, yr = x * s + y * c;
+        x = xr; y = yr;
     }
     return new Vector2
     (
@@ -785,16 +785,16 @@ function worldToScreen(worldPos)
  *  @memberof Draw */
 function screenToWorldDelta(screenDelta)
 {
+    ASSERT(isVector2(screenDelta), 'screenDelta must be a vec2');
+
     let x = screenDelta.x /  cameraScale;
     let y = screenDelta.y / -cameraScale;
     if (cameraAngle)
     {
         // apply camera rotation
         const c = cos(-cameraAngle), s = sin(-cameraAngle);
-        const rotatedX = x * c - y * s;
-        const rotatedY = x * s + y * c;
-        x = rotatedX;
-        y = rotatedY;
+        const xr = x * c - y * s, yr = x * s + y * c;
+        x = xr; y = yr;
     }
     return new Vector2(x, y);
 }
@@ -805,16 +805,16 @@ function screenToWorldDelta(screenDelta)
  *  @memberof Draw */
 function worldToScreenDelta(worldDelta)
 {
+    ASSERT(isVector2(worldDelta), 'worldDelta must be a vec2');
+
     let x = worldDelta.x;
     let y = worldDelta.y;
     if (cameraAngle)
     {
         // apply inverse camera rotation
         const c = cos(cameraAngle), s = sin(cameraAngle);
-        const rotatedX = x * c - y * s;
-        const rotatedY = x * s + y * c;
-        x = rotatedX;
-        y = rotatedY;
+        const xr = x * c - y * s, yr = x * s + y * c;
+        x = xr; y = yr;
     }
     return new Vector2(x *  cameraScale, y * -cameraScale);
 }
@@ -827,6 +827,10 @@ function worldToScreenDelta(worldDelta)
  *  @memberof Draw */
 function screenToWorldTransform(screenPos, screenSize, screenAngle=0)
 {
+    ASSERT(isVector2(screenPos), 'screenPos must be a vec2');
+    ASSERT(isVector2(screenSize), 'screenSize must be a vec2');
+    ASSERT(isNumber(screenAngle), 'screenAngle must be a number');
+
     return [
         screenToWorld(screenPos),
         screenSize.scale(1/cameraScale),
@@ -842,6 +846,10 @@ function screenToWorldTransform(screenPos, screenSize, screenAngle=0)
  *  @memberof Draw */
 function worldToScreenTransform(worldPos, worldSize, worldAngle=0)
 {
+    ASSERT(isVector2(worldPos), 'worldPos must be a vec2');
+    ASSERT(isVector2(worldSize), 'worldSize must be a vec2');
+    ASSERT(isNumber(worldAngle), 'worldAngle must be a number');
+
     return [
         worldToScreen(worldPos),
         worldSize.scale(cameraScale),
@@ -854,8 +862,8 @@ function worldToScreenTransform(worldPos, worldSize, worldAngle=0)
  *  @memberof Draw */
 function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
 
-/** Check if a point or circle is on screen
- *  If size is a Vector2, uses the largest dimension as diameter
+/** Check if a box, point, or circle is on screen with a circle test
+ *  If size is a Vector2, uses the length as diameter
  *  This can be used to cull offscreen objects from render or update
  *  @param {Vector2} pos - world space position
  *  @param {Vector2|number} size - world space size or diameter
