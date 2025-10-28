@@ -32,6 +32,33 @@ function gameInit()
     uiMenu.addChild(button1);
     button1.onClick = ()=> canvasClearColor = randColor();
 
+    const button5 = new UIButton(vec2(220,0), vec2(80), '?');
+    button5.textHeight = 60;
+    button5.navigationIndex = ++navigationIndex;
+    uiMenu.addChild(button5);
+    button5.onClick = ()=>
+{
+    // Check if Web Share API is available
+    if (!navigator.share)
+    {
+        console.log('Share API not supported');
+        return;
+    }
+    
+    navigator.share({
+        title: 'LittleJS',
+        text: 'Check out this awesome game engine!',
+        url: 'https://github.com/KilledByAPixel/LittleJS'
+    })
+    .then(()=> console.log('Shared successfully'))
+    .catch((error)=> 
+    {
+        // Don't log error if user cancelled
+        if (error.name !== 'AbortError')
+            console.error('Share failed:', error);
+    });
+}
+
     // example scrollbar
     const scrollbar = new UIScrollbar(vec2(0,90), vec2(300, 50), 
         soundVolume, 'Volume');
