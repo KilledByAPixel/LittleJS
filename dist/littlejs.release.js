@@ -332,6 +332,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             
             // responsive aspect ratio with native resolution
             const innerAspect = innerWidth / innerHeight;
+            ASSERT(canvasMinAspect <= canvasMaxAspect); 
             if (canvasMaxAspect && innerAspect > canvasMaxAspect)
             {
                 // full height
@@ -3878,16 +3879,16 @@ function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=B
  *  @memberof Draw */
 function screenToWorld(screenPos)
 {
+    ASSERT(isVector2(screenPos), 'screenPos must be a vec2');
+
     let x = (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale;
     let y = (screenPos.y - mainCanvasSize.y/2 + .5) / -cameraScale;
     if (cameraAngle)
     {
         // apply camera rotation
         const c = cos(-cameraAngle), s = sin(-cameraAngle);
-        const rotatedX = x * c - y * s;
-        const rotatedY = x * s + y * c;
-        x = rotatedX;
-        y = rotatedY;
+        const xr = x * c - y * s, yr = x * s + y * c;
+        x = xr; y = yr;
     }
     return new Vector2(x + cameraPos.x, y + cameraPos.y);
 }
@@ -3898,16 +3899,16 @@ function screenToWorld(screenPos)
  *  @memberof Draw */
 function worldToScreen(worldPos)
 {
+    ASSERT(isVector2(worldPos), 'worldPos must be a vec2');
+
     let x = worldPos.x - cameraPos.x;
     let y = worldPos.y - cameraPos.y;
     if (cameraAngle)
     {
         // apply inverse camera rotation
         const c = cos(cameraAngle), s = sin(cameraAngle);
-        const rotatedX = x * c - y * s;
-        const rotatedY = x * s + y * c;
-        x = rotatedX;
-        y = rotatedY;
+        const xr = x * c - y * s, yr = x * s + y * c;
+        x = xr; y = yr;
     }
     return new Vector2
     (
@@ -3922,16 +3923,16 @@ function worldToScreen(worldPos)
  *  @memberof Draw */
 function screenToWorldDelta(screenDelta)
 {
+    ASSERT(isVector2(screenDelta), 'screenDelta must be a vec2');
+
     let x = screenDelta.x /  cameraScale;
     let y = screenDelta.y / -cameraScale;
     if (cameraAngle)
     {
         // apply camera rotation
         const c = cos(-cameraAngle), s = sin(-cameraAngle);
-        const rotatedX = x * c - y * s;
-        const rotatedY = x * s + y * c;
-        x = rotatedX;
-        y = rotatedY;
+        const xr = x * c - y * s, yr = x * s + y * c;
+        x = xr; y = yr;
     }
     return new Vector2(x, y);
 }
@@ -3942,16 +3943,16 @@ function screenToWorldDelta(screenDelta)
  *  @memberof Draw */
 function worldToScreenDelta(worldDelta)
 {
+    ASSERT(isVector2(worldDelta), 'worldDelta must be a vec2');
+
     let x = worldDelta.x;
     let y = worldDelta.y;
     if (cameraAngle)
     {
         // apply inverse camera rotation
         const c = cos(cameraAngle), s = sin(cameraAngle);
-        const rotatedX = x * c - y * s;
-        const rotatedY = x * s + y * c;
-        x = rotatedX;
-        y = rotatedY;
+        const xr = x * c - y * s, yr = x * s + y * c;
+        x = xr; y = yr;
     }
     return new Vector2(x *  cameraScale, y * -cameraScale);
 }
@@ -3964,6 +3965,10 @@ function worldToScreenDelta(worldDelta)
  *  @memberof Draw */
 function screenToWorldTransform(screenPos, screenSize, screenAngle=0)
 {
+    ASSERT(isVector2(screenPos), 'screenPos must be a vec2');
+    ASSERT(isVector2(screenSize), 'screenSize must be a vec2');
+    ASSERT(isNumber(screenAngle), 'screenAngle must be a number');
+
     return [
         screenToWorld(screenPos),
         screenSize.scale(1/cameraScale),
@@ -3979,6 +3984,10 @@ function screenToWorldTransform(screenPos, screenSize, screenAngle=0)
  *  @memberof Draw */
 function worldToScreenTransform(worldPos, worldSize, worldAngle=0)
 {
+    ASSERT(isVector2(worldPos), 'worldPos must be a vec2');
+    ASSERT(isVector2(worldSize), 'worldSize must be a vec2');
+    ASSERT(isNumber(worldAngle), 'worldAngle must be a number');
+
     return [
         worldToScreen(worldPos),
         worldSize.scale(cameraScale),
@@ -3991,8 +4000,8 @@ function worldToScreenTransform(worldPos, worldSize, worldAngle=0)
  *  @memberof Draw */
 function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
 
-/** Check if a point or circle is on screen
- *  If size is a Vector2, uses the largest dimension as diameter
+/** Check if a box, point, or circle is on screen with a circle test
+ *  If size is a Vector2, uses the length as diameter
  *  This can be used to cull offscreen objects from render or update
  *  @param {Vector2} pos - world space position
  *  @param {Vector2|number} size - world space size or diameter
@@ -4000,12 +4009,30 @@ function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
  *  @memberof Draw */
 function isOnScreen(pos, size=0)
 {
-    pos = worldToScreen(pos);
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(isVector2(size) || isNumber(size), 'size must be a vec2 or number');
+
+    // optimized circle on screen test
+    // pos = worldToScreen(pos);
+    let x = pos.x - cameraPos.x;
+    let y = pos.y - cameraPos.y;
+    if (cameraAngle)
+    {
+        // apply inverse camera rotation
+        const c = cos(cameraAngle), s = sin(cameraAngle);
+        const xr = x * c - y * s, yr = x * s + y * c;
+        x = xr; y = yr;
+    }
+    x *= cameraScale*2; y *= -cameraScale*2;
+
     if (size instanceof Vector2)
-        size = max(size.x, size.y); // use largest dimension
-    size *= cameraScale/2;
-    return pos.x + size > 0 && pos.x - size < mainCanvasSize.x &&
-           pos.y + size > 0 && pos.y - size < mainCanvasSize.y;
+        size = size.length(); // use length of vector as diameter
+    size *= cameraScale;
+
+    // check against screen bounds
+    const w = mainCanvasSize.x, h = mainCanvasSize.y;
+    return x + size > -w && x - size < w &&
+           y + size > -h && y - size < h;
 }
 
 /** Enable normal or additive blend mode
