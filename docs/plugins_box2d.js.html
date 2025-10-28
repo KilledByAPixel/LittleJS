@@ -1765,7 +1765,7 @@ class Box2dPlugin
      *  @param {Vector2} v */
     vec2dTo(v)
     {
-        ASSERT(v instanceof Vector2);
+        ASSERT(isVector2(v));
         return new box2d.instance.b2Vec2(v.x, v.y);
     }
 

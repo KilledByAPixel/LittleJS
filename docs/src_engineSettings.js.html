@@ -50,6 +50,20 @@ let canvasClearColor = CLEAR_BLACK;
  *  @memberof Settings */
 let canvasMaxSize = vec2(1920, 1080);
 
+/** Minimum aspect ratio of the canvas (width/height), unused if 0
+ *  Can be used with canvasMaxAspect to limit aspect ratio
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let canvasMinAspect = 0;
+
+/** Maximum aspect ratio of the canvas (width/height), unused if 0
+ *  Can be used with canvasMinAspect to limit aspect ratio
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let canvasMaxAspect = 0;
+
 /** Fixed size of the canvas, if enabled canvas size never changes
  * - you may also need to set mainCanvasSize if using screen space coords in startup
  *  @type {Vector2}
@@ -226,17 +240,17 @@ let touchGamepadEnable = false;
  *  @memberof Settings */
 let touchGamepadCenterButton = true;
 
+/** Number of buttons on touch gamepad (0-4), if 1 also acts as right analog stick
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let touchGamepadButtonCount = 4;
+
 /** True if touch gamepad should be analog stick or false to use if 8 way dpad
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
 let touchGamepadAnalog = true;
-
-/** Number of buttons on touch gamepad
- *  @type {number}
- *  @default
- *  @memberof Settings */
-let touchGamepadButtonCount = 4;
 
 /** Size of virtual gamepad for touch devices in pixels
  *  @type {number}
@@ -345,6 +359,16 @@ function setCanvasClearColor(color) { canvasClearColor = color.copy(); }
  *  @param {Vector2} size
  *  @memberof Settings */
 function setCanvasMaxSize(size) { canvasMaxSize = size.copy(); }
+
+/** Set minimum aspect ratio of the canvas (width/height), unused if 0
+ *  @param {number} aspect
+ *  @memberof Settings */
+function setCanvasMinAspect(aspect) { canvasMinAspect = aspect; }
+
+/** Set maximum aspect ratio of the canvas (width/height), unused if 0
+ *  @param {number} aspect
+ *  @memberof Settings */
+function setCanvasMaxAspect(aspect) { canvasMaxAspect = aspect; }
 
 /** Set fixed size of the canvas
  *  @param {Vector2} size
@@ -501,6 +525,11 @@ function setTouchGamepadEnable(enable) { touchGamepadEnable = enable; }
  *  @param {boolean} enable
  *  @memberof Settings */
 function setTouchGamepadCenterButton(enable) { touchGamepadCenterButton = enable; }
+
+/** Set number of buttons on touch gamepad (0-4), if 1 also acts as right analog stick
+ *  @param {number} count
+ *  @memberof Settings */
+function setTouchGamepadButtonCount(count) { touchGamepadButtonCount = count; }
 
 /** Set if touch gamepad should be analog stick or 8 way dpad
  *  @param {boolean} analog

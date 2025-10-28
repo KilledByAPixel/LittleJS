@@ -153,7 +153,7 @@ class TileInfo
         this.padding = padding;
         /** @property {TextureInfo} - The texture info for this tile */
         this.textureInfo = textureInfos[this.textureIndex];
-        /** @property {float} - Shrinks tile by this many pixels to prevent neighbors bleeding */
+        /** @property {number} - Shrinks tile by this many pixels to prevent neighbors bleeding */
         this.bleedScale = bleedScale;
     }
 
@@ -640,7 +640,7 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
 
 /** Draw text on main canvas in world space
  *  Automatically splits new lines into rows
- *  @param {string}  text
+ *  @param {string|number}  text
  *  @param {Vector2} pos
  *  @param {number}  [size]
  *  @param {Color}   [color=(1,1,1,1)]
@@ -667,7 +667,7 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
 
 /** Draw text on overlay canvas in world space
  *  Automatically splits new lines into rows
- *  @param {string}  text
+ *  @param {string|number}  text
  *  @param {Vector2} pos
  *  @param {number}  [size]
  *  @param {Color}   [color=(1,1,1,1)]
@@ -686,7 +686,7 @@ function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textA
 
 /** Draw text on overlay canvas in screen space
  *  Automatically splits new lines into rows
- *  @param {string}  text
+ *  @param {string|number}  text
  *  @param {Vector2} pos
  *  @param {number}  [size]
  *  @param {Color}   [color=(1,1,1,1)]
@@ -851,10 +851,27 @@ function worldToScreenTransform(worldPos, worldSize, worldAngle=0)
     ];
 }
 
-/** Get the camera's visible area in world space
+/** Get the size of the camera window in world space
  *  @return {Vector2}
  *  @memberof Draw */
 function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
+
+/** Check if a point or circle is on screen
+ *  If size is a Vector2, uses the largest dimension as diameter
+ *  This can be used to cull offscreen objects from render or update
+ *  @param {Vector2} pos - world space position
+ *  @param {Vector2|number} size - world space size or diameter
+ *  @return {boolean}
+ *  @memberof Draw */
+function isOnScreen(pos, size=0)
+{
+    pos = worldToScreen(pos);
+    if (size instanceof Vector2)
+        size = max(size.x, size.y); // use largest dimension
+    size *= cameraScale/2;
+    return pos.x + size > 0 &amp;&amp; pos.x - size &lt; mainCanvasSize.x &amp;&amp;
+           pos.y + size > 0 &amp;&amp; pos.y - size &lt; mainCanvasSize.y;
+}
 
 /** Enable normal or additive blend mode
  *  @param {boolean} [additive]
@@ -1019,7 +1036,7 @@ class FontImage
     }
 
     /** Draw text in world space using the image font
-     *  @param {string}  text
+     *  @param {string|number}  text
      *  @param {Vector2} pos
      *  @param {number}  [scale=.25]
      *  @param {boolean} [center]
@@ -1031,7 +1048,7 @@ class FontImage
     }
 
     /** Draw text on overlay canvas in world space using the image font
-     *  @param {string}  text
+     *  @param {string|number}  text
      *  @param {Vector2} pos
      *  @param {number}  [scale]
      *  @param {boolean} [center]
@@ -1040,7 +1057,7 @@ class FontImage
     { this.drawText(text, pos, scale, center, overlayContext); }
 
     /** Draw text on overlay canvas in screen space using the image font
-     *  @param {string}  text
+     *  @param {string|number}  text
      *  @param {Vector2} pos
      *  @param {number}  [scale]
      *  @param {boolean} [center]

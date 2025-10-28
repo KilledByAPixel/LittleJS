@@ -625,8 +625,14 @@ class Vector2
     {
         this.x = x;
         this.y = y;
+        ASSERT_VECTOR2_VALID(this);
         return this;
     }
+
+    /** Sets this vector from another vector and returns self
+     *  @param {Vector2} v - other vector
+     *  @return {Vector2} */
+    setFrom(v) { return this.set(v.x, v.y); }
 
     /** Returns a new vector that is a copy of this
      *  @return {Vector2} */
@@ -690,7 +696,7 @@ class Vector2
     clampLength(length=1)
     {
         const l = this.length();
-        return l > length ? this.scale(length/l) : this;
+        return l > length ? this.scale(length/l) : this.copy();
     }
 
     /** Returns the dot product of this and the vector passed in
@@ -776,6 +782,10 @@ class Vector2
     /** Returns the area this vector covers as a rectangle
      * @return {number} */
     area() { return abs(this.x * this.y); }
+
+    /** Returns true if this vector is (0,0)
+     * @return {boolean} */
+    isZero() { return !this.x &amp;&amp; !this.y; }
 
     /** Returns a new vector that is p percent between this and the vector passed in
      * @param {Vector2} v - other vector
@@ -887,8 +897,14 @@ class Color
         this.g = g;
         this.b = b;
         this.a = a;
+        ASSERT_COLOR_VALID(this);
         return this;
     }
+
+    /** Sets this color from another color and returns self
+     * @param {Color} c - other color
+     * @return {Color} */
+    setFrom(c) { return this.set(c.r, c.g, c.b, c.a); }
 
     /** Returns a new color that is a copy of this
      * @return {Color} */

@@ -136,7 +136,7 @@ class EngineObject
             child.updateTransforms();
     }
 
-    /** Update the object physics, called automatically by engine once each frame */
+    /** Update the object physics, called automatically by engine once each frame. Can be overridden to stop or change how physics works for an object. */
     updatePhysics()
     {
         // child objects do not have physics
@@ -169,7 +169,7 @@ class EngineObject
         if (!enablePhysicsSolver || !this.mass) // don't do collision for static objects
             return;
 
-        const wasMovingDown = this.velocity.y &lt; 0;
+        const wasFalling = this.velocity.y &lt; 0 &amp;&amp; gravity.y &lt; 0 || this.velocity.y > 0 &amp;&amp; gravity.y > 0;
         if (this.groundObject)
         {
             // apply friction in local space of ground object
@@ -225,10 +225,10 @@ class EngineObject
                 {
                     // push outside object collision
                     this.pos.y = o.pos.y + (sizeBoth.y/2 + epsilon) * sign(oldPos.y - o.pos.y);
-                    if ((o.groundObject &amp;&amp; wasMovingDown) || !o.mass)
+                    if ((o.groundObject &amp;&amp; wasFalling) || !o.mass)
                     {
                         // set ground object if landed on something
-                        if (wasMovingDown)
+                        if (wasFalling)
                             this.groundObject = o;
 
                         // bounce if other object is fixed or grounded
@@ -315,12 +315,15 @@ class EngineObject
                         const restitution = max(this.restitution, hitLayer.restitution);
                         this.velocity.y *= -restitution;
 
-                        if (wasMovingDown)
+                        if (wasFalling)
                         {
-                            // adjust position to slightly above nearest tile boundary
+                            // adjust position to slightly away from nearest tile
                             // this prevents gap between object and ground
                             const epsilon = .0001;
-                            this.pos.y = (oldPos.y-this.size.y/2|0)+this.size.y/2+epsilon;
+                            const offset = this.size.y/2 + epsilon;
+                            this.pos.y = gravity.y &lt; 0 ?
+                                floor(oldPos.y-this.size.y/2) + offset :
+                                ceil( oldPos.y+this.size.y/2) - offset;
 
                             // set ground object for tile collision
                             this.groundObject = hitLayer;
@@ -489,21 +492,20 @@ class EngineObject
      *  @return {string} */
     toString()
     {
-        if (debug)
-        {
-            let text = 'type = ' + this.constructor.name;
-            if (this.pos.x || this.pos.y)
-                text += '\npos = ' + this.pos;
-            if (this.velocity.x || this.velocity.y)
-                text += '\nvelocity = ' + this.velocity;
-            if (this.size.x || this.size.y)
-                text += '\nsize = ' + this.size;
-            if (this.angle)
-                text += '\nangle = ' + this.angle.toFixed(3);
-            if (this.color)
-                text += '\ncolor = ' + this.color;
-            return text;
-        }
+        if (!debug) return;
+        
+        let text = 'type = ' + this.constructor.name;
+        if (this.pos.x || this.pos.y)
+            text += '\npos = ' + this.pos;
+        if (this.velocity.x || this.velocity.y)
+            text += '\nvelocity = ' + this.velocity;
+        if (this.size.x || this.size.y)
+            text += '\nsize = ' + this.size;
+        if (this.angle)
+            text += '\nangle = ' + this.angle.toFixed(3);
+        if (this.color)
+            text += '\ncolor = ' + this.color;
+        return text;
     }
 
     /** Render debug info for this object  */
