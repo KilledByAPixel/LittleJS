@@ -578,12 +578,12 @@ declare module "littlejsengine" {
      *  @param {number} aspect
      *  @memberof Settings */
     export function setCanvasMaxAspect(aspect: number): void;
+    export function setCanvasMaxAspect(aspect: any): void;
     /** Set fixed size of the canvas
      *  @param {Vector2} size
      *  @memberof Settings */
     export function setCanvasFixedSize(size: Vector2): void;
     /** Use nearest scaling algorithm for canvas for more pixelated look
-     *  - If enabled sets css image-rendering:pixelated
      *  @param {boolean} pixelated
      *  @memberof Settings */
     export function setCanvasPixelated(pixelated: boolean): void;
@@ -2524,11 +2524,12 @@ declare module "littlejsengine" {
         /** Get the direction of the mirror
          *  @return {number} -1 if this.mirror is true, or 1 if not mirrored */
         getMirrorSign(): number;
-        /** Attaches a child to this with a given local transform
+        /** Attaches a child to this with a local transform, returns child for chaining
          *  @param {EngineObject} child
          *  @param {Vector2}      [localPos=(0,0)]
-         *  @param {number}       [localAngle] */
-        addChild(child: EngineObject, localPos?: Vector2, localAngle?: number): void;
+         *  @param {number}       [localAngle]
+         *  @return {EngineObject} The child object added */
+        addChild(child: EngineObject, localPos?: Vector2, localAngle?: number): EngineObject;
         /** Removes a child from this one
          *  @param {EngineObject} child */
         removeChild(child: EngineObject): void;
@@ -3421,9 +3422,10 @@ declare module "littlejsengine" {
         navigationIndex: any;
         /** @property {boolean} - Should this be auto selected by navigation? Must also have valid navigation index. */
         navigationAutoSelect: boolean;
-        /** Add a child UIObject to this object
-         *  @param {UIObject} child */
-        addChild(child: UIObject): void;
+        /** Add a child UIObject to this object, returns child for chaining
+         *  @param {UIObject} child
+         *  @return {UIObject} The child object added */
+        addChild(child: UIObject): UIObject;
         /** Remove a child UIObject from this object
          *  @param {UIObject} child */
         removeChild(child: UIObject): void;

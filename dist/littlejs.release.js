@@ -384,8 +384,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         'touch-action:none;' +        // prevent mobile pinch to resize
         '-webkit-touch-callout:none'; // compatibility for ios
     rootElement.style.cssText = styleRoot;
-    drawCanvas = mainCanvas = document.createElement('canvas');
-    rootElement.appendChild(mainCanvas);
+    drawCanvas = mainCanvas = rootElement.appendChild(document.createElement('canvas'));
     drawContext = mainContext = mainCanvas.getContext('2d');
 
     // init stuff and start engine
@@ -394,10 +393,19 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     debugInit();
     glInit();
 
-    // create overlay canvas for hud to appear above gl canvas
-    overlayCanvas = document.createElement('canvas')
-    rootElement.appendChild(overlayCanvas);
-    overlayContext = overlayCanvas.getContext('2d');
+    // setup the overlay canvas
+    if (canvasMainAsOverlay)
+    {
+        // use main canvas as overlay to improve performance on some systems
+        overlayCanvas = mainCanvas;
+        overlayContext = mainContext;
+    }
+    else
+    {
+        // create overlay canvas for hud to appear above gl canvas
+        overlayCanvas = rootElement.appendChild(document.createElement('canvas'));
+        overlayContext = overlayCanvas.getContext('2d');
+    }
 
     // setup canvases
     // transform way is still more reliable then flexbox or grid
@@ -407,7 +415,10 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     if (glCanvas)
         glCanvas.style.cssText = styleCanvas;
     setCanvasPixelated(canvasPixelated);
-    setOverlayCanvasPixelated(overlayCanvasPixelated);
+    if (canvasMainAsOverlay)
+        overlayCanvas.style.zIndex = '1'; // put main/overlay canvas above gl canvas
+    else
+        setOverlayCanvasPixelated(overlayCanvasPixelated);
     updateCanvas();
     glPreRender();
 
@@ -2083,6 +2094,15 @@ let canvasMaxAspect = 0;
  *  @memberof Settings */
 let canvasFixedSize = vec2();
 
+/** If set this makes the main canvas also be the overlay canvas
+ *  This will also set the main canvas to be above the WebGL canvas
+ *  This can improve performance on some systems but has some limitations
+ *  Must be set before initialization
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let canvasMainAsOverlay = false;
+
 /** Use nearest canvas scaling for more pixelated look
  *  - If enabled sets css image-rendering:pixelated
  *  @type {boolean}
@@ -2386,9 +2406,19 @@ function setCanvasMaxAspect(aspect) { canvasMaxAspect = aspect; }
  *  @param {Vector2} size
  *  @memberof Settings */
 function setCanvasFixedSize(size) { canvasFixedSize = size.copy(); }
+function setCanvasMaxAspect(aspect) { canvasMaxAspect = aspect; }
+
+/** Sets the main canvas to be used as the overlay canvas
+ *  Must be set before initialization
+ *  @param {boolean} enable
+ *  @memberof Settings */
+function setCanvasMainAsOverlay(enable)
+{
+    ASSERT(!mainCanvas, 'canvasMainAsOverlay must be set before initialization');
+    canvasMainAsOverlay = enable;
+}
 
 /** Use nearest scaling algorithm for canvas for more pixelated look
- *  - If enabled sets css image-rendering:pixelated
  *  @param {boolean} pixelated
  *  @memberof Settings */
 function setCanvasPixelated(pixelated)
@@ -3047,10 +3077,11 @@ class EngineObject
      *  @return {number} -1 if this.mirror is true, or 1 if not mirrored */
     getMirrorSign() { return this.mirror ? -1 : 1; }
 
-    /** Attaches a child to this with a given local transform
+    /** Attaches a child to this with a local transform, returns child for chaining   
      *  @param {EngineObject} child
      *  @param {Vector2}      [localPos=(0,0)]
-     *  @param {number}       [localAngle] */
+     *  @param {number}       [localAngle]
+     *  @return {EngineObject} The child object added */
     addChild(child, localPos=vec2(), localAngle=0)
     {
         ASSERT(!child.parent && !this.children.includes(child));
@@ -3060,6 +3091,7 @@ class EngineObject
         child.parent = this;
         child.localPos = localPos.copy();
         child.localAngle = localAngle;
+        return child;
     }
 
     /** Removes a child from this one
@@ -9000,13 +9032,15 @@ class UIObject
         uiSystem.uiObjects.push(this);
     }
 
-    /** Add a child UIObject to this object
-     *  @param {UIObject} child */
+    /** Add a child UIObject to this object, returns child for chaining
+     *  @param {UIObject} child
+     *  @return {UIObject} The child object added */
     addChild(child)
     {
         ASSERT(!child.parent && !this.children.includes(child));
         this.children.push(child);
         child.parent = this;
+        return child;
     }
 
     /** Remove a child UIObject from this object
