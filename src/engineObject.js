@@ -430,10 +430,11 @@ class EngineObject
      *  @return {number} -1 if this.mirror is true, or 1 if not mirrored */
     getMirrorSign() { return this.mirror ? -1 : 1; }
 
-    /** Attaches a child to this with a given local transform
+    /** Attaches a child to this with a local transform, returns child for chaining   
      *  @param {EngineObject} child
      *  @param {Vector2}      [localPos=(0,0)]
-     *  @param {number}       [localAngle] */
+     *  @param {number}       [localAngle]
+     *  @return {EngineObject} The child object added */
     addChild(child, localPos=vec2(), localAngle=0)
     {
         ASSERT(!child.parent && !this.children.includes(child));
@@ -443,6 +444,7 @@ class EngineObject
         child.parent = this;
         child.localPos = localPos.copy();
         child.localAngle = localAngle;
+        return child;
     }
 
     /** Removes a child from this one

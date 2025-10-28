@@ -705,13 +705,15 @@ class UIObject
         uiSystem.uiObjects.push(this);
     }
 
-    /** Add a child UIObject to this object
-     *  @param {UIObject} child */
+    /** Add a child UIObject to this object, returns child for chaining
+     *  @param {UIObject} child
+     *  @return {UIObject} The child object added */
     addChild(child)
     {
         ASSERT(!child.parent && !this.children.includes(child));
         this.children.push(child);
         child.parent = this;
+        return child;
     }
 
     /** Remove a child UIObject from this object
