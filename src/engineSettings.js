@@ -69,6 +69,15 @@ let canvasMaxAspect = 0;
  *  @memberof Settings */
 let canvasFixedSize = vec2();
 
+/** If set this makes the main canvas also be the overlay canvas
+ *  This will also set the main canvas to be above the WebGL canvas
+ *  This can improve performance on some systems but has some limitations
+ *  Must be set before initialization
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let canvasMainAsOverlay = false;
+
 /** Use nearest canvas scaling for more pixelated look
  *  - If enabled sets css image-rendering:pixelated
  *  @type {boolean}
@@ -372,9 +381,19 @@ function setCanvasMaxAspect(aspect) { canvasMaxAspect = aspect; }
  *  @param {Vector2} size
  *  @memberof Settings */
 function setCanvasFixedSize(size) { canvasFixedSize = size.copy(); }
+function setCanvasMaxAspect(aspect) { canvasMaxAspect = aspect; }
+
+/** Sets the main canvas to be used as the overlay canvas
+ *  Must be set before initialization
+ *  @param {boolean} enable
+ *  @memberof Settings */
+function setCanvasMainAsOverlay(enable)
+{
+    ASSERT(!mainCanvas, 'canvasMainAsOverlay must be set before initialization');
+    canvasMainAsOverlay = enable;
+}
 
 /** Use nearest scaling algorithm for canvas for more pixelated look
- *  - If enabled sets css image-rendering:pixelated
  *  @param {boolean} pixelated
  *  @memberof Settings */
 function setCanvasPixelated(pixelated)

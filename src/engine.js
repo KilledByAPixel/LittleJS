@@ -381,8 +381,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         'touch-action:none;' +        // prevent mobile pinch to resize
         '-webkit-touch-callout:none'; // compatibility for ios
     rootElement.style.cssText = styleRoot;
-    drawCanvas = mainCanvas = document.createElement('canvas');
-    rootElement.appendChild(mainCanvas);
+    drawCanvas = mainCanvas = rootElement.appendChild(document.createElement('canvas'));
     drawContext = mainContext = mainCanvas.getContext('2d');
 
     // init stuff and start engine
@@ -391,10 +390,19 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     debugInit();
     glInit();
 
-    // create overlay canvas for hud to appear above gl canvas
-    overlayCanvas = document.createElement('canvas')
-    rootElement.appendChild(overlayCanvas);
-    overlayContext = overlayCanvas.getContext('2d');
+    // setup the overlay canvas
+    if (canvasMainAsOverlay)
+    {
+        // use main canvas as overlay to improve performance on some systems
+        overlayCanvas = mainCanvas;
+        overlayContext = mainContext;
+    }
+    else
+    {
+        // create overlay canvas for hud to appear above gl canvas
+        overlayCanvas = rootElement.appendChild(document.createElement('canvas'));
+        overlayContext = overlayCanvas.getContext('2d');
+    }
 
     // setup canvases
     // transform way is still more reliable then flexbox or grid
@@ -404,7 +412,10 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     if (glCanvas)
         glCanvas.style.cssText = styleCanvas;
     setCanvasPixelated(canvasPixelated);
-    setOverlayCanvasPixelated(overlayCanvasPixelated);
+    if (canvasMainAsOverlay)
+        overlayCanvas.style.zIndex = '1'; // put main/overlay canvas above gl canvas
+    else
+        setOverlayCanvasPixelated(overlayCanvasPixelated);
     updateCanvas();
     glPreRender();
 
