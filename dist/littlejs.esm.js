@@ -1098,10 +1098,7 @@ function debugRender()
     if (debugTakeScreenshot)
     {
         // combine canvases, remove alpha and save
-        combineCanvases();
-        const w = mainCanvas.width, h = mainCanvas.height;
-        overlayContext.fillRect(0,0,w,h);
-        overlayContext.drawImage(mainCanvas, 0, 0);
+        combineCanvases(true);
         debugSaveCanvas(overlayCanvas);
         debugTakeScreenshot = 0;
     }
@@ -1368,6 +1365,20 @@ function debugVideoCaptureStart()
 {
     if (debugVideoCaptureIsActive())
         return; // already recording
+
+    if (canvasMainAsOverlay)
+    {
+        canvasMainAsOverlay = false;
+        LOG('Warning: canvasMainAsOverlay disabled for video capture.');
+
+        // create overlay canvas
+        const rootElement = mainCanvas.parentElement;
+        overlayCanvas = rootElement.appendChild(document.createElement('canvas'));
+        overlayContext = overlayCanvas.getContext('2d');
+        overlayCanvas.style.cssText = mainCanvas.style.cssText;
+        setOverlayCanvasPixelated(overlayCanvasPixelated);
+        mainCanvas.style.zIndex = '';
+    }
 
     // captureStream passing in 0 to only capture when requestFrame() is called
     const stream = mainCanvas.captureStream(0);
@@ -4757,9 +4768,40 @@ function setBlendMode(additive=false, context)
 
 /** Combines all LittleJS canvases onto the main canvas and clears them
  *  This is necessary for things like saving a screenshot
+ *  @param {boolean} [removeAlpha] - If true, the alpha channel will be removed
  *  @memberof Draw */
-function combineCanvases()
+function combineCanvases(removeAlpha=false)
 {
+    const w = mainCanvasSize.x, h = mainCanvasSize.y;
+    if (removeAlpha)
+    {
+        workCanvas.width = w;
+        workCanvas.height = h;
+        workContext.fillRect(0,0,w,h); // black background
+        if (!canvasMainAsOverlay)
+            workContext.drawImage(mainCanvas, 0, 0);
+        glCopyToContext(workContext);
+        workContext.drawImage(overlayCanvas, 0, 0);
+
+        glClearCanvas();
+        overlayCanvas.width |= 0;
+        overlayContext.drawImage(workCanvas, 0, 0);
+        return;
+    }
+
+    if (canvasMainAsOverlay)
+    {
+        workCanvas.width = w;
+        workCanvas.height = h;
+        glCopyToContext(workContext);
+        workContext.drawImage(overlayCanvas, 0, 0);
+
+        glClearCanvas();
+        overlayCanvas.width |= 0;
+        overlayContext.drawImage(workCanvas, 0, 0);
+        return;
+    }
+
     // combine canvases
     glCopyToContext(mainContext);
     mainContext.drawImage(overlayCanvas, 0, 0);

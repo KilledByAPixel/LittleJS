@@ -4080,9 +4080,40 @@ function setBlendMode(additive=false, context)
 
 /** Combines all LittleJS canvases onto the main canvas and clears them
  *  This is necessary for things like saving a screenshot
+ *  @param {boolean} [removeAlpha] - If true, the alpha channel will be removed
  *  @memberof Draw */
-function combineCanvases()
+function combineCanvases(removeAlpha=false)
 {
+    const w = mainCanvasSize.x, h = mainCanvasSize.y;
+    if (removeAlpha)
+    {
+        workCanvas.width = w;
+        workCanvas.height = h;
+        workContext.fillRect(0,0,w,h); // black background
+        if (!canvasMainAsOverlay)
+            workContext.drawImage(mainCanvas, 0, 0);
+        glCopyToContext(workContext);
+        workContext.drawImage(overlayCanvas, 0, 0);
+
+        glClearCanvas();
+        overlayCanvas.width |= 0;
+        overlayContext.drawImage(workCanvas, 0, 0);
+        return;
+    }
+
+    if (canvasMainAsOverlay)
+    {
+        workCanvas.width = w;
+        workCanvas.height = h;
+        glCopyToContext(workContext);
+        workContext.drawImage(overlayCanvas, 0, 0);
+
+        glClearCanvas();
+        overlayCanvas.width |= 0;
+        overlayContext.drawImage(workCanvas, 0, 0);
+        return;
+    }
+
     // combine canvases
     glCopyToContext(mainContext);
     mainContext.drawImage(overlayCanvas, 0, 0);
