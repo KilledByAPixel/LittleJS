@@ -3094,7 +3094,6 @@ function setCanvasMaxAspect(aspect) { canvasMaxAspect = aspect; }
  *  @param {Vector2} size
  *  @memberof Settings */
 function setCanvasFixedSize(size) { canvasFixedSize = size.copy(); }
-function setCanvasMaxAspect(aspect) { canvasMaxAspect = aspect; }
 
 /** Sets the main canvas to be used as the overlay canvas
  *  Must be set before initialization

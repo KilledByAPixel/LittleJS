@@ -578,7 +578,6 @@ declare module "littlejsengine" {
      *  @param {number} aspect
      *  @memberof Settings */
     export function setCanvasMaxAspect(aspect: number): void;
-    export function setCanvasMaxAspect(aspect: any): void;
     /** Set fixed size of the canvas
      *  @param {Vector2} size
      *  @memberof Settings */
@@ -1751,8 +1750,9 @@ declare module "littlejsengine" {
     export function setBlendMode(additive?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Combines all LittleJS canvases onto the main canvas and clears them
      *  This is necessary for things like saving a screenshot
+     *  @param {boolean} [removeAlpha] - If true, the alpha channel will be removed
      *  @memberof Draw */
-    export function combineCanvases(): void;
+    export function combineCanvases(removeAlpha?: boolean): void;
     export let engineFontImage: any;
     /**
      * Font Image Object - Draw text on a 2D canvas by using characters in an image
