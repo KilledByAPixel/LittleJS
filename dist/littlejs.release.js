@@ -8411,6 +8411,8 @@ class UISystemPlugin
         uiSystem = this;
 
         // default settings
+        /** @property {boolean} - Activate when mouse is pressed down instead of clicked */
+        this.activateOnPress = false;
         /** @property {Color} - Default fill color for UI elements */
         this.defaultColor = WHITE;
         /** @property {Color} - Default outline color for UI elements */
@@ -9143,8 +9145,16 @@ class UIObject
                         if (uiSystem.activeObject && !isActive)
                             uiSystem.activeObject.onRelease();
                         uiSystem.activeObject = this;
+
+                        if (uiSystem.activateOnPress)
+                        {
+                            this.onClick();
+                            if (!this.soundPress && this.soundClick)
+                                this.soundClick.play();
+                        }
                     }
                 }
+                if (!uiSystem.activateOnPress)
                 if (!mouseDown && this.isActiveObject() && this.interactive)
                 {
                     this.onClick();

@@ -3194,6 +3194,8 @@ declare module "littlejsengine" {
          *  new UISystemPlugin;
          */
         constructor(context?: CanvasRenderingContext2D);
+        /** @property {boolean} - Activate when mouse is pressed down instead of clicked */
+        activateOnPress: boolean;
         /** @property {Color} - Default fill color for UI elements */
         defaultColor: Color;
         /** @property {Color} - Default outline color for UI elements */
