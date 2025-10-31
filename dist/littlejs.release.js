@@ -387,7 +387,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         'touch-action:none;' +        // prevent mobile pinch to resize
         '-webkit-touch-callout:none'; // compatibility for ios
     rootElement.style.cssText = styleRoot;
-    drawCanvas = mainCanvas = rootElement.appendChild(document.createElement('canvas'));
+    mainCanvas = rootElement.appendChild(document.createElement('canvas'));
     drawContext = mainContext = mainCanvas.getContext('2d');
 
     // init stuff and start engine
@@ -3150,11 +3150,6 @@ let mainCanvas;
  *  @memberof Draw */
 let mainContext;
 
-/** The default canvas to use for drawing, usually mainCanvas
- *  @type {HTMLCanvasElement|OffscreenCanvas}
- *  @memberof Draw */
-let drawCanvas;
-
 /** The default 2d context to use for drawing, usually mainContext
  *  @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D}
  *  @memberof Draw */
@@ -3794,9 +3789,9 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
  *  @param {string}  [fontStyle]
  *  @param {number}  [maxWidth]
  *  @param {number}  [angle]
- *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, angle=0, context=mainContext)
+function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, angle=0, context=drawContext)
 {
     ASSERT(isString(text), 'text must be a string');
     ASSERT(isVector2(pos), 'pos must be a vec2');
@@ -4178,7 +4173,7 @@ class FontImage
      *  @param {boolean} [center]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      */
-    drawTextScreen(text, pos, scale=4, center=true, context=mainContext)
+    drawTextScreen(text, pos, scale=4, center=true, context=drawContext)
     {
         context.save();
         const size = this.tileSize;
@@ -6127,12 +6122,11 @@ class TileLayer extends CanvasLayer
         if (!this.context) return;
 
         // save current render settings
-        /** @type {[HTMLCanvasElement|OffscreenCanvas, CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, Color]} */
-        this.savedRenderSettings = [drawCanvas, drawContext, mainCanvasSize, cameraPos, cameraScale, canvasClearColor];
+        /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, Color]} */
+        this.savedRenderSettings = [drawContext, mainCanvasSize, cameraPos, cameraScale, canvasClearColor];
 
         // set the draw canvas and context to this layer
         // use camera settings to match this layer's canvas
-        drawCanvas = this.canvas;
         drawContext = this.context;
         cameraPos = this.size.scale(.5);
         const tileSize = this.tileInfo ? this.tileInfo.size : vec2(1);
@@ -6142,8 +6136,8 @@ class TileLayer extends CanvasLayer
         if (clear)
         {
             // clear and set size
-            drawCanvas.width  = mainCanvasSize.x;
-            drawCanvas.height = mainCanvasSize.y;
+            this.canvas.width  = mainCanvasSize.x;
+            this.canvas.height = mainCanvasSize.y;
         }
 
         // disable smoothing for pixel art
@@ -6163,7 +6157,7 @@ class TileLayer extends CanvasLayer
         //debugSaveCanvas(this.canvas);
 
         // set stuff back to normal
-        [drawCanvas, drawContext, mainCanvasSize, cameraPos, cameraScale, canvasClearColor] = this.savedRenderSettings;
+        [drawContext, mainCanvasSize, cameraPos, cameraScale, canvasClearColor] = this.savedRenderSettings;
     }
 
     /** Draw the tile at a given position in the tile grid
@@ -7210,8 +7204,8 @@ function glClearCanvas()
     if (!glContext) return;
 
     // clear and set to same size as main canvas
-    glCanvas.width = drawCanvas.width;
-    glCanvas.height = drawCanvas.height;
+    glCanvas.width = mainCanvasSize.x;
+    glCanvas.height = mainCanvasSize.y;
     glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
     const color = canvasClearColor;
     if (color.a > 0)

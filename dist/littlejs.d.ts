@@ -1535,10 +1535,6 @@ declare module "littlejsengine" {
      *  @type {CanvasRenderingContext2D}
      *  @memberof Draw */
     export let mainContext: CanvasRenderingContext2D;
-    /** The default canvas to use for drawing, usually mainCanvas
-     *  @type {HTMLCanvasElement|OffscreenCanvas}
-     *  @memberof Draw */
-    export let drawCanvas: HTMLCanvasElement | OffscreenCanvas;
     /** The default 2d context to use for drawing, usually mainContext
      *  @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D}
      *  @memberof Draw */
@@ -1728,7 +1724,7 @@ declare module "littlejsengine" {
      *  @param {string}  [fontStyle]
      *  @param {number}  [maxWidth]
      *  @param {number}  [angle]
-     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      *  @memberof Draw */
     export function drawTextScreen(text: string | number, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, fontStyle?: string, maxWidth?: number, angle?: number, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Enable normal or additive blend mode
@@ -2723,8 +2719,8 @@ declare module "littlejsengine" {
          *  @param {Vector2} layerPos - Local position in array
          *  @return {TileLayerData} */
         getData(layerPos: Vector2): TileLayerData;
-        /** @type {[HTMLCanvasElement|OffscreenCanvas, CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, Color]} */
-        savedRenderSettings: [HTMLCanvasElement | OffscreenCanvas, CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, Color];
+        /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, Color]} */
+        savedRenderSettings: [CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, Color];
     }
     /**
      * Tile Collision Layer - a tile layer with collision
