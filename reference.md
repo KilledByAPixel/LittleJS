@@ -193,8 +193,8 @@ showSplashScreen = false      // Show the LittleJS splash screen on startup
 glEnable = true               // Enable fast WebGL rendering
 
 // Tile sheet settings
-tileSizeDefault = (16,16)  // Default size of tiles in pixels
-tileFixBleedScale = .3     // How much smaller to draw tiles to prevent bleeding
+tileDefaultSize = (16,16) // Default size of tiles in pixels
+tileDefaultBleed = .3     // How much smaller to draw tiles to prevent bleeding
 ```
 
 ## LittleJS Audio System

@@ -139,13 +139,19 @@ let glCircleSides = 32;
  *  @type {Vector2}
  *  @default Vector2(16,16)
  *  @memberof Settings */
-let tileSizeDefault = vec2(16);
+let tileDefaultSize = vec2(16);
 
-/** How many pixels smaller to draw tiles to prevent bleeding from neighbors
+/** Default padding pixels around tiles
  *  @type {number}
  *  @default
  *  @memberof Settings */
-let tileFixBleedScale = 0;
+let tileDefaultPadding = 0;
+
+/** Default amount of pixels smaller to draw tiles to prevent neighbor bleeding
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let tileDefaultBleed = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Object settings
@@ -459,12 +465,17 @@ function setGLCircleSides(sides) { glCircleSides = sides; }
 /** Set default size of tiles in pixels
  *  @param {Vector2} size
  *  @memberof Settings */
-function setTileSizeDefault(size) { tileSizeDefault = size.copy(); }
+function setTileDefaultSize(size) { tileDefaultSize = size.copy(); }
 
-/** Set to prevent tile bleeding from neighbors in pixels
- *  @param {number} scale
+/** Default padding pixels around tiles
+ *  @param {number} padding
  *  @memberof Settings */
-function setTileFixBleedScale(scale) { tileFixBleedScale = scale; }
+function setTileDefaultPadding(padding) { tileDefaultPadding = padding; }
+
+/** Default amount of pixels smaller to draw tiles to prevent neighbor bleeding
+ *  @param {number} bleed
+ *  @memberof Settings */
+function setTileDefaultBleed(bleed) { tileDefaultBleed = bleed; }
 
 /** Set if collisions between objects are enabled
  *  @param {boolean} enable

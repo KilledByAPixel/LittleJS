@@ -14,7 +14,7 @@ const {tile, vec2, hsl} = LJS;
 LJS.setShowSplashScreen(true);
 
 // fix texture bleeding by shrinking tile slightly
-LJS.setTileFixBleedScale(.5);
+LJS.setTileDefaultBleed(.5);
 
 // sound effects
 const sound_click = new LJS.Sound([1,.5]);
