@@ -249,7 +249,7 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=WHITE,
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
     const textureInfo = tileInfo && tileInfo.textureInfo;
-    const bleed = tileInfo?.bleed || 0;
+    const bleed = tileInfo?.bleed ?? 0;
     if (useWebGL && glEnable)
     {
         ASSERT(!!glContext, 'WebGL is not enabled!');
