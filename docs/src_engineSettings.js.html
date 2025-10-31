@@ -76,15 +76,7 @@ let canvasFixedSize = vec2();
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
-let canvasPixelated = true;
-
-/** Use nearest canvas scaling for more pixelated look
- *  - If enabled sets css image-rendering:pixelated
- *  - This defaults to false because text looks better with smoothing
- *  @type {boolean}
- *  @default
- *  @memberof Settings */
-let overlayCanvasPixelated = false;
+let canvasPixelated = false;
 
 /** Disables texture filtering for crisper pixel art
  *  @type {boolean}
@@ -132,13 +124,19 @@ let glCircleSides = 32;
  *  @type {Vector2}
  *  @default Vector2(16,16)
  *  @memberof Settings */
-let tileSizeDefault = vec2(16);
+let tileDefaultSize = vec2(16);
 
-/** How many pixels smaller to draw tiles to prevent bleeding from neighbors
+/** Default padding pixels around tiles
  *  @type {number}
  *  @default
  *  @memberof Settings */
-let tileFixBleedScale = 0;
+let tileDefaultPadding = 0;
+
+/** Default amount of pixels smaller to draw tiles to prevent neighbor bleeding
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let tileDefaultBleed = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Object settings
@@ -376,7 +374,6 @@ function setCanvasMaxAspect(aspect) { canvasMaxAspect = aspect; }
 function setCanvasFixedSize(size) { canvasFixedSize = size.copy(); }
 
 /** Use nearest scaling algorithm for canvas for more pixelated look
- *  - If enabled sets css image-rendering:pixelated
  *  @param {boolean} pixelated
  *  @memberof Settings */
 function setCanvasPixelated(pixelated)
@@ -386,18 +383,6 @@ function setCanvasPixelated(pixelated)
         mainCanvas.style.imageRendering = pixelated ? 'pixelated' : '';
     if (glCanvas)
         glCanvas.style.imageRendering = pixelated ? 'pixelated' : '';
-}
-
-/** Use nearest scaling algorithm for canvas for more pixelated look
- *  - If enabled sets css image-rendering:pixelated
- *  - This defaults to false because text looks better with smoothing
- *  @param {boolean} pixelated
- *  @memberof Settings */
-function setOverlayCanvasPixelated(pixelated)
-{
-    overlayCanvasPixelated = pixelated;
-    if (overlayCanvas)
-        overlayCanvas.style.imageRendering = pixelated ? 'pixelated' : '';
 }
 
 /** Disables texture filtering for crisper pixel art
@@ -443,12 +428,17 @@ function setGLCircleSides(sides) { glCircleSides = sides; }
 /** Set default size of tiles in pixels
  *  @param {Vector2} size
  *  @memberof Settings */
-function setTileSizeDefault(size) { tileSizeDefault = size.copy(); }
+function setTileDefaultSize(size) { tileDefaultSize = size.copy(); }
 
-/** Set to prevent tile bleeding from neighbors in pixels
- *  @param {number} scale
+/** Default padding pixels around tiles
+ *  @param {number} padding
  *  @memberof Settings */
-function setTileFixBleedScale(scale) { tileFixBleedScale = scale; }
+function setTileDefaultPadding(padding) { tileDefaultPadding = padding; }
+
+/** Default amount of pixels smaller to draw tiles to prevent neighbor bleeding
+ *  @param {number} bleed
+ *  @memberof Settings */
+function setTileDefaultBleed(bleed) { tileDefaultBleed = bleed; }
 
 /** Set if collisions between objects are enabled
  *  @param {boolean} enable
@@ -599,7 +589,7 @@ function setMedalsPreventUnlock(preventUnlock) { medalsPreventUnlock = preventUn
 /** Set if watermark with FPS should be shown
  *  @param {boolean} show
  *  @memberof Debug */
-function setShowWatermark(show) { showWatermark = show; }
+function setDebugWatermark(show) { debugWatermark = show; }
 
 /** Set key code used to toggle debug mode, Esc by default
  *  @param {string} key

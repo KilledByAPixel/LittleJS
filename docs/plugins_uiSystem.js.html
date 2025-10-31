@@ -50,12 +50,14 @@ class UISystemPlugin
      *  // create the ui plugin object
      *  new UISystemPlugin;
      */
-    constructor(context=overlayContext)
+    constructor(context=mainContext)
     {
         ASSERT(!uiSystem, 'UI system already initialized');
         uiSystem = this;
 
         // default settings
+        /** @property {boolean} - Activate when mouse is pressed down instead of clicked */
+        this.activateOnPress = false;
         /** @property {Color} - Default fill color for UI elements */
         this.defaultColor = WHITE;
         /** @property {Color} - Default outline color for UI elements */
@@ -707,13 +709,15 @@ class UIObject
         uiSystem.uiObjects.push(this);
     }
 
-    /** Add a child UIObject to this object
-     *  @param {UIObject} child */
+    /** Add a child UIObject to this object, returns child for chaining
+     *  @param {UIObject} child
+     *  @return {UIObject} The child object added */
     addChild(child)
     {
         ASSERT(!child.parent &amp;&amp; !this.children.includes(child));
         this.children.push(child);
         child.parent = this;
+        return child;
     }
 
     /** Remove a child UIObject from this object
@@ -786,8 +790,16 @@ class UIObject
                         if (uiSystem.activeObject &amp;&amp; !isActive)
                             uiSystem.activeObject.onRelease();
                         uiSystem.activeObject = this;
+
+                        if (uiSystem.activateOnPress)
+                        {
+                            this.onClick();
+                            if (!this.soundPress &amp;&amp; this.soundClick)
+                                this.soundClick.play();
+                        }
                     }
                 }
+                if (!uiSystem.activateOnPress)
                 if (!mouseDown &amp;&amp; this.isActiveObject() &amp;&amp; this.interactive)
                 {
                     this.onClick();
