@@ -373,13 +373,6 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let canvasPixelated: boolean;
-    /** Use nearest canvas scaling for more pixelated look
-     *  - If enabled sets css image-rendering:pixelated
-     *  - This defaults to false because text looks better with smoothing
-     *  @type {boolean}
-     *  @default
-     *  @memberof Settings */
-    export let overlayCanvasPixelated: boolean;
     /** Disables texture filtering for crisper pixel art
      *  @type {boolean}
      *  @default
@@ -591,12 +584,6 @@ declare module "littlejsengine" {
      *  @param {boolean} pixelated
      *  @memberof Settings */
     export function setCanvasPixelated(pixelated: boolean): void;
-    /** Use nearest scaling algorithm for canvas for more pixelated look
-     *  - If enabled sets css image-rendering:pixelated
-     *  - This defaults to false because text looks better with smoothing
-     *  @param {boolean} pixelated
-     *  @memberof Settings */
-    export function setOverlayCanvasPixelated(pixelated: boolean): void;
     /** Disables texture filtering for crisper pixel art
      *  @param {boolean} pixelated
      *  @memberof Settings */
@@ -1532,7 +1519,6 @@ declare module "littlejsengine" {
      * There are 3 canvas/contexts available to draw to...
      * mainCanvas - 2D background canvas, non WebGL stuff like tile layers are drawn here.
      * glCanvas - Used by the accelerated WebGL batch rendering system.
-     * overlayCanvas - Another 2D canvas that appears on top of the other 2 canvases.
      *
      * The WebGL rendering system is very fast with some caveats...
      * - Switching blend modes (additive) or textures causes another draw call which is expensive in excess
@@ -1557,14 +1543,22 @@ declare module "littlejsengine" {
      *  @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D}
      *  @memberof Draw */
     export let drawContext: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
-    /** A canvas that appears on top of everything the same size as mainCanvas
-     *  @type {HTMLCanvasElement}
+    /** Offscreen canvas that can be used for image processing
+     *  @type {OffscreenCanvas}
      *  @memberof Draw */
-    export let overlayCanvas: HTMLCanvasElement;
-    /** 2d context for overlayCanvas
-     *  @type {CanvasRenderingContext2D}
+    export let workCanvas: OffscreenCanvas;
+    /** Offscreen canvas that can be used for image processing
+     *  @type {OffscreenCanvasRenderingContext2D}
      *  @memberof Draw */
-    export let overlayContext: CanvasRenderingContext2D;
+    export let workContext: OffscreenCanvasRenderingContext2D;
+    /** Offscreen canvas with willReadFrequently that can be used for image processing
+     *  @type {OffscreenCanvas}
+     *  @memberof Draw */
+    export let workReadCanvas: OffscreenCanvas;
+    /** Offscreen canvas with willReadFrequently that can be used for image processing
+     *  @type {OffscreenCanvasRenderingContext2D}
+     *  @memberof Draw */
+    export let workReadContext: OffscreenCanvasRenderingContext2D;
     /** The size of the main canvas (and other secondary canvases)
      *  @type {Vector2}
      *  @memberof Draw */
@@ -1721,22 +1715,7 @@ declare module "littlejsengine" {
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      *  @memberof Draw */
     export function drawText(text: string | number, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, fontStyle?: string, maxWidth?: number, angle?: number, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
-    /** Draw text on overlay canvas in world space
-     *  Automatically splits new lines into rows
-     *  @param {string|number}  text
-     *  @param {Vector2} pos
-     *  @param {number}  [size]
-     *  @param {Color}   [color=(1,1,1,1)]
-     *  @param {number}  [lineWidth]
-     *  @param {Color}   [lineColor=(0,0,0,1)]
-     *  @param {CanvasTextAlign}  [textAlign='center']
-     *  @param {string}  [font=fontDefault]
-     *  @param {string}  [fontStyle]
-     *  @param {number}  [maxWidth]
-     *  @param {number}  [angle]
-     *  @memberof Draw */
-    export function drawTextOverlay(text: string | number, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, fontStyle?: string, maxWidth?: number, angle?: number): void;
-    /** Draw text on overlay canvas in screen space
+    /** Draw text in screen space
      *  Automatically splits new lines into rows
      *  @param {string|number}  text
      *  @param {Vector2} pos
@@ -1749,7 +1728,7 @@ declare module "littlejsengine" {
      *  @param {string}  [fontStyle]
      *  @param {number}  [maxWidth]
      *  @param {number}  [angle]
-     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
      *  @memberof Draw */
     export function drawTextScreen(text: string | number, pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, fontStyle?: string, maxWidth?: number, angle?: number, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Enable normal or additive blend mode
@@ -1757,11 +1736,10 @@ declare module "littlejsengine" {
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function setBlendMode(additive?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
-    /** Combines all LittleJS canvases onto the main canvas and clears them
-     *  This is necessary for things like saving a screenshot
-     *  @param {boolean} [removeAlpha] - If true, the alpha channel will be removed
+    /** Combines LittleJS canvases onto the main canvas
+     *  This is necessary for things like screenshots and video
      *  @memberof Draw */
-    export function combineCanvases(removeAlpha?: boolean): void;
+    export function combineCanvases(): void;
     export let engineFontImage: any;
     /**
      * Font Image Object - Draw text on a 2D canvas by using characters in an image
@@ -1794,14 +1772,7 @@ declare module "littlejsengine" {
          *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
          */
         drawText(text: string | number, pos: Vector2, scale?: number, center?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
-        /** Draw text on overlay canvas in world space using the image font
-         *  @param {string|number}  text
-         *  @param {Vector2} pos
-         *  @param {number}  [scale]
-         *  @param {boolean} [center]
-         */
-        drawTextOverlay(text: string | number, pos: Vector2, scale?: number, center?: boolean): void;
-        /** Draw text on overlay canvas in screen space using the image font
+        /** Draw text in screen space using the image font
          *  @param {string|number}  text
          *  @param {Vector2} pos
          *  @param {number}  [scale]
@@ -1837,7 +1808,7 @@ declare module "littlejsengine" {
      * - Supports shadertoy style post processing shaders via plugin
      * @namespace WebGL
      */
-    /** The WebGL canvas which appears above the main canvas and below the overlay canvas
+    /** The WebGL canvas which appears below the main canvas
      *  @type {HTMLCanvasElement}
      *  @memberof WebGL */
     export let glCanvas: HTMLCanvasElement;
@@ -2752,8 +2723,8 @@ declare module "littlejsengine" {
          *  @param {Vector2} layerPos - Local position in array
          *  @return {TileLayerData} */
         getData(layerPos: Vector2): TileLayerData;
-        /** @type {[HTMLCanvasElement|OffscreenCanvas, CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number]} */
-        savedRenderSettings: [HTMLCanvasElement | OffscreenCanvas, CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, Vector2, Vector2, number];
+        /** @type {[HTMLCanvasElement|OffscreenCanvas, CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, Color]} */
+        savedRenderSettings: [HTMLCanvasElement | OffscreenCanvas, CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, Color];
     }
     /**
      * Tile Collision Layer - a tile layer with collision
@@ -3102,13 +3073,12 @@ declare module "littlejsengine" {
     export class PostProcessPlugin {
         /** Create global post processing shader
         *  @param {string} shaderCode
-        *  @param {boolean} [includeOverlay]
         *  @param {boolean} [includeMainCanvas]
          *  @example
          *  // create the post process plugin object
          *  new PostProcessPlugin(shaderCode);
          */
-        constructor(shaderCode: string, includeOverlay?: boolean, includeMainCanvas?: boolean);
+        constructor(shaderCode: string, includeMainCanvas?: boolean);
         /** @property {WebGLProgram} - Shader for post processing */
         shader: any;
         /** @property {WebGLTexture} - Texture for post processing */
@@ -4588,8 +4558,8 @@ declare module "littlejsengine" {
      * - Nine slice and three slice drawing
      * @namespace DrawUtilities
      */
-    /** Draw a scalable nine-slice UI element to the overlay canvas in screen space
-     *  This function can not apply color because it draws using the overlay 2d context
+    /** Draw a scalable nine-slice UI element to the main canvas in screen space
+     *  This function can not apply color because it draws using the 2d context
      *  @param {Vector2} pos - Screen space position
      *  @param {Vector2} size - Screen space size
      *  @param {TileInfo} startTile - Starting tile for the nine-slice pattern
@@ -4613,8 +4583,8 @@ declare module "littlejsengine" {
      *  @param {CanvasRenderingContext2D} [context] - Canvas context to use
      *  @memberof DrawUtilities */
     export function drawThreeSlice(pos: Vector2, size: Vector2, startTile: TileInfo, color?: Color, borderSize?: number, additiveColor?: Color, extraSpace?: number, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
-    /** Draw a scalable three-slice UI element to the overlay canvas in screen space
-     *  This function can not apply color because it draws using the overlay 2d context
+    /** Draw a scalable three-slice UI element to the main canvas in screen space
+     *  This function can not apply color because it draws using the 2d context
      *  @param {Vector2} pos - Screen space position
      *  @param {Vector2} size - Screen space size
      *  @param {TileInfo} startTile - Starting tile for the three-slice pattern

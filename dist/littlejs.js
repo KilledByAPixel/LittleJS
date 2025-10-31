@@ -180,8 +180,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
 
         // disable smoothing for pixel art
-        overlayContext.imageSmoothingEnabled =
-            mainContext.imageSmoothingEnabled = !tilesPixelated;
+        mainContext.imageSmoothingEnabled = !tilesPixelated;
 
         // setup gl rendering if enabled
         glPreRender();
@@ -287,16 +286,16 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             if (debugWatermark && !debugVideoCaptureIsActive())
             {
                 // update fps display
-                overlayContext.textAlign = 'right';
-                overlayContext.textBaseline = 'top';
-                overlayContext.font = '1em monospace';
-                overlayContext.fillStyle = '#000';
+                mainContext.textAlign = 'right';
+                mainContext.textBaseline = 'top';
+                mainContext.font = '1em monospace';
+                mainContext.fillStyle = '#000';
                 const text = engineName + ' ' + 'v' + engineVersion + ' / '
                     + drawCount + ' / ' + engineObjects.length + ' / ' + averageFPS.toFixed(1)
                     + (glEnable ? ' GL' : ' 2D') ;
-                overlayContext.fillText(text, mainCanvas.width-3, 3);
-                overlayContext.fillStyle = '#fff';
-                overlayContext.fillText(text, mainCanvas.width-2, 2);
+                mainContext.fillText(text, mainCanvas.width-3, 3);
+                mainContext.fillStyle = '#fff';
+                mainContext.fillText(text, mainCanvas.width-2, 2);
             }
             drawCount = 0;
         }
@@ -316,8 +315,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             const fixedAspect = canvasFixedSize.x / canvasFixedSize.y;
             const w = innerAspect < fixedAspect ? '100%' : '';
             const h = innerAspect < fixedAspect ? '' : '100%';
-            overlayCanvas.style.width  = mainCanvas.style.width  = w;
-            overlayCanvas.style.height = mainCanvas.style.height = h;
+            mainCanvas.style.width  = w;
+            mainCanvas.style.height = h;
             if (glCanvas)
             {
                 glCanvas.style.width  = w;
@@ -347,12 +346,12 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             }
         }
 
-        // clear main and overlay canvas and set size
-        overlayCanvas.width  = mainCanvas.width  = mainCanvasSize.x;
-        overlayCanvas.height = mainCanvas.height = mainCanvasSize.y;
+        // clear main canvas and set size
+        mainCanvas.width  = mainCanvasSize.x;
+        mainCanvas.height = mainCanvasSize.y;
 
         // apply the clear color to main canvas
-        if (canvasClearColor.a > 0)
+        if (canvasClearColor.a > 0 && !glEnable)
         {
             mainContext.fillStyle = canvasClearColor.toString();
             mainContext.fillRect(0, 0, mainCanvasSize.x, mainCanvasSize.y);
@@ -360,9 +359,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         }
 
         // set default line join and cap
-        const lineJoin = 'round', lineCap = 'round';
-        mainContext.lineJoin = overlayContext.lineJoin = lineJoin;
-        mainContext.lineCap  = overlayContext.lineCap  = lineCap;
+        mainContext.lineJoin = 'round';
+        mainContext.lineCap  = 'round';
     }
 
     // wait for gameInit to load
@@ -373,6 +371,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     }
     if (headlessMode)
         return startEngine();
+
+    // setup webgl
+    glInit(rootElement);
 
     // setup html
     const styleRoot =
@@ -391,40 +392,23 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     inputInit();
     audioInit();
     debugInit();
-    glInit();
-
-    // setup the overlay canvas
-    if (canvasMainAsOverlay)
-    {
-        // use main canvas as overlay to improve performance on some systems
-        overlayCanvas = mainCanvas;
-        overlayContext = mainContext;
-    }
-    else
-    {
-        // create overlay canvas for hud to appear above gl canvas
-        overlayCanvas = rootElement.appendChild(document.createElement('canvas'));
-        overlayContext = overlayCanvas.getContext('2d');
-    }
 
     // setup canvases
     // transform way is still more reliable then flexbox or grid
     const styleCanvas = 'position:absolute;'+ // allow canvases to overlap
         'top:50%;left:50%;transform:translate(-50%,-50%)'; // center on screen
-    mainCanvas.style.cssText = overlayCanvas.style.cssText = styleCanvas;
+    mainCanvas.style.cssText = styleCanvas;
     if (glCanvas)
         glCanvas.style.cssText = styleCanvas;
     setCanvasPixelated(canvasPixelated);
-    if (canvasMainAsOverlay)
-        overlayCanvas.style.zIndex = '1'; // put main/overlay canvas above gl canvas
-    else
-        setOverlayCanvasPixelated(overlayCanvasPixelated);
     updateCanvas();
     glPreRender();
 
-    // create offscreen canvas for image processing
-    workCanvas = new OffscreenCanvas(256, 256);
-    workContext = workCanvas.getContext('2d', { willReadFrequently: true });
+    // create offscreen canvases for image processing
+    workCanvas = new OffscreenCanvas(64, 64);
+    workContext = workCanvas.getContext('2d');
+    workReadCanvas = new OffscreenCanvas(64, 64);
+    workReadContext = workReadCanvas.getContext('2d', { willReadFrequently: true });
 
     // create promises for loading images
     const promises = imageSources.map((src, textureIndex)=>
@@ -480,9 +464,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     // LittleJS Splash Screen
     function drawEngineSplashScreen(t)
     {
-        const x = overlayContext;
-        const w = overlayCanvas.width = innerWidth;
-        const h = overlayCanvas.height = innerHeight;
+        const x = mainContext;
+        const w = mainCanvas.width = innerWidth;
+        const h = mainCanvas.height = innerHeight;
 
         {
             // background
@@ -1098,11 +1082,12 @@ function debugRender()
     if (debugTakeScreenshot)
     {
         // combine canvases, remove alpha and save
-        combineCanvases(true);
-        debugSaveCanvas(overlayCanvas);
+        combineCanvases();
+        debugSaveCanvas(mainCanvas);
         debugTakeScreenshot = 0;
     }
 
+    const debugContext = mainContext;
     if (debugGamepads && gamepadsEnable)
     {
         // draw gamepads
@@ -1150,9 +1135,6 @@ function debugRender()
     let debugObject;
     if (debugOverlay)
     {
-        const saveContext = mainContext;
-        mainContext = overlayContext;
-
         // draw red rectangle around screen
         const cameraSize = getCameraSize();
         debugRect(cameraPos, cameraSize.subtract(vec2(.1)), '#f008');
@@ -1184,15 +1166,14 @@ function debugRender()
             // show floored tile pick for tile collision
             drawRect(mousePos.floor().add(vec2(.5)), vec2(1), rgb(1,1,0,.5));
         }
-        mainContext = saveContext;
     }
 
     {
         // draw debug primitives
-        overlayContext.lineWidth = 2;
+        debugContext.lineWidth = 2;
         debugPrimitives.forEach(p=>
         {
-            overlayContext.save();
+            debugContext.save();
 
             // create canvas transform from world space to screen space
             // without scaling because we want consistent pixel sizes
@@ -1203,55 +1184,56 @@ function debugRender()
                 scale = cameraScale;
                 angle -= cameraAngle;
             }
-            overlayContext.translate(pos.x|0, pos.y|0);
-            overlayContext.rotate(angle);
-            overlayContext.scale(1, p.text ? 1 : -1);
-            overlayContext.fillStyle = overlayContext.strokeStyle = p.color;
+            debugContext.translate(pos.x|0, pos.y|0);
+            debugContext.rotate(angle);
+            debugContext.scale(1, p.text ? 1 : -1);
+            debugContext.fillStyle = p.color;
+            debugContext.strokeStyle = p.color;
             if (p.text !== undefined)
             {
-                overlayContext.font = p.size*scale + 'px '+ p.font;
-                overlayContext.textAlign = 'center';
-                overlayContext.textBaseline = 'middle';
-                overlayContext.fillText(p.text, 0, 0);
+                debugContext.font = p.size*scale + 'px '+ p.font;
+                debugContext.textAlign = 'center';
+                debugContext.textBaseline = 'middle';
+                debugContext.fillText(p.text, 0, 0);
             }
             else if (p.points !== undefined)
             {
                 // poly
-                overlayContext.beginPath();
+                debugContext.beginPath();
                 for (const point of p.points)
                 {
                     const p2 = point.scale(scale).floor();
-                    overlayContext.lineTo(p2.x, p2.y);
+                    debugContext.lineTo(p2.x, p2.y);
                 }
-                overlayContext.closePath();
-                p.fill && overlayContext.fill();
-                overlayContext.stroke();
+                debugContext.closePath();
+                p.fill && debugContext.fill();
+                debugContext.stroke();
             }
             else if (p.size === 0 || (p.size.x === 0 && p.size.y === 0))
             {
                 // point
                 const pointSize = debugPointSize * scale;
-                overlayContext.fillRect(-pointSize/2, -1, pointSize, 3);
-                overlayContext.fillRect(-1, -pointSize/2, 3, pointSize);
+                debugContext.fillRect(-pointSize/2, -1, pointSize, 3);
+                debugContext.fillRect(-1, -pointSize/2, 3, pointSize);
             }
             else if (p.size.x !== undefined)
             {
                 // rect
                 const s = p.size.scale(scale).floor();
                 const w = s.x, h = s.y;
-                p.fill && overlayContext.fillRect(-w/2|0, -h/2|0, w, h);
-                overlayContext.strokeRect(-w/2|0, -h/2|0, w, h);
+                p.fill && debugContext.fillRect(-w/2|0, -h/2|0, w, h);
+                debugContext.strokeRect(-w/2|0, -h/2|0, w, h);
             }
             else
             {
                 // circle
-                overlayContext.beginPath();
-                overlayContext.arc(0, 0, p.size*scale/2, 0, 9);
-                p.fill && overlayContext.fill();
-                overlayContext.stroke();
+                debugContext.beginPath();
+                debugContext.arc(0, 0, p.size*scale/2, 0, 9);
+                p.fill && debugContext.fill();
+                debugContext.stroke();
             }
 
-            overlayContext.restore();
+            debugContext.restore();
         });
 
         // remove expired primitives
@@ -1260,55 +1242,53 @@ function debugRender()
 
     if (debugObject)
     {
-        const saveContext = mainContext;
-        mainContext = overlayContext;
         const raycastHitPos = tileCollisionRaycast(debugObject.pos, mousePos);
         raycastHitPos && drawRect(raycastHitPos.floor().add(vec2(.5)), vec2(1), rgb(0,1,1,.3));
         drawLine(mousePos, debugObject.pos, .1, raycastHitPos ? rgb(1,0,0,.5) : rgb(0,1,0,.5));
 
-        const debugText = 'mouse pos = ' + mousePos +
-            '\nmouse collision = ' + tileCollisionGetData(mousePos) +
-            '\n\n--- object info ---\n' +
-            debugObject.toString();
+        let debugText = 'mouse pos = ' + mousePos;
+        if (tileCollisionLayers.length)
+            debugText += '\nmouse collision = ' + tileCollisionGetData(mousePos);
+        debugText += '\n\n--- object info ---\n';
+        debugText += debugObject.toString();
         drawTextScreen(debugText, mousePosScreen, 24, rgb(), .05, undefined, 'center', 'monospace');
-        mainContext = saveContext;
     }
 
     {
         // draw debug overlay
         const fontSize = 20;
         const lineHeight = fontSize * 1.2 | 0;
-        overlayContext.save();
-        overlayContext.fillStyle = '#fff';
-        overlayContext.textAlign = 'left';
-        overlayContext.textBaseline = 'top';
-        overlayContext.font = fontSize + 'px monospace';
-        overlayContext.shadowColor = '#000';
-        overlayContext.shadowBlur = 9;
+        debugContext.save();
+        debugContext.fillStyle = '#fff';
+        debugContext.textAlign = 'left';
+        debugContext.textBaseline = 'top';
+        debugContext.font = fontSize + 'px monospace';
+        debugContext.shadowColor = '#000';
+        debugContext.shadowBlur = 9;
 
         let x = 9, y = 0, h = lineHeight;
         if (debugOverlay)
         {
-            overlayContext.fillText(`${engineName} v${engineVersion}`, x, y += h/2 );
-            overlayContext.fillText('Time: ' + formatTime(time), x, y += h);
-            overlayContext.fillText('FPS: ' + averageFPS.toFixed(1) + (glEnable?' WebGL':' Canvas2D'), 
+            debugContext.fillText(`${engineName} v${engineVersion}`, x, y += h/2 );
+            debugContext.fillText('Time: ' + formatTime(time), x, y += h);
+            debugContext.fillText('FPS: ' + averageFPS.toFixed(1) + (glEnable?' WebGL':' Canvas2D'), 
                 x, y += h);
-            overlayContext.fillText('Objects: ' + engineObjects.length, x, y += h);
-            overlayContext.fillText('Draw Count: ' + drawCount, x, y += h);
-            overlayContext.fillText('---------', x, y += h);
-            overlayContext.fillStyle = '#f00';
-            overlayContext.fillText('ESC: Debug Overlay', x, y += h);
-            overlayContext.fillStyle = debugPhysics ? '#f00' : '#fff';
-            overlayContext.fillText('1: Debug Physics', x, y += h);
-            overlayContext.fillStyle = debugParticles ? '#f00' : '#fff';
-            overlayContext.fillText('2: Debug Particles', x, y += h);
-            overlayContext.fillStyle = debugGamepads ? '#f00' : '#fff';
-            overlayContext.fillText('3: Debug Gamepads', x, y += h);
-            overlayContext.fillStyle = debugRaycast ? '#f00' : '#fff';
-            overlayContext.fillText('4: Debug Raycasts', x, y += h);
-            overlayContext.fillStyle = '#fff';
-            overlayContext.fillText('5: Save Screenshot', x, y += h);
-            overlayContext.fillText('6: Toggle Video Capture', x, y += h);
+            debugContext.fillText('Objects: ' + engineObjects.length, x, y += h);
+            debugContext.fillText('Draw Count: ' + drawCount, x, y += h);
+            debugContext.fillText('---------', x, y += h);
+            debugContext.fillStyle = '#f00';
+            debugContext.fillText('ESC: Debug Overlay', x, y += h);
+            debugContext.fillStyle = debugPhysics ? '#f00' : '#fff';
+            debugContext.fillText('1: Debug Physics', x, y += h);
+            debugContext.fillStyle = debugParticles ? '#f00' : '#fff';
+            debugContext.fillText('2: Debug Particles', x, y += h);
+            debugContext.fillStyle = debugGamepads ? '#f00' : '#fff';
+            debugContext.fillText('3: Debug Gamepads', x, y += h);
+            debugContext.fillStyle = debugRaycast ? '#f00' : '#fff';
+            debugContext.fillText('4: Debug Raycasts', x, y += h);
+            debugContext.fillStyle = '#fff';
+            debugContext.fillText('5: Save Screenshot', x, y += h);
+            debugContext.fillText('6: Toggle Video Capture', x, y += h);
 
             let keysPressed = '';
             let mousePressed = '';
@@ -1321,8 +1301,8 @@ function debugRender()
                 else if (keyIsDown(i, 0))
                     keysPressed += i + ' ' ;
             }
-            mousePressed && overlayContext.fillText('Mouse: ' + mousePressed, x, y += h);
-            keysPressed && overlayContext.fillText('Keys: ' + keysPressed, x, y += h);
+            mousePressed && debugContext.fillText('Mouse: ' + mousePressed, x, y += h);
+            keysPressed && debugContext.fillText('Keys: ' + keysPressed, x, y += h);
 
             // show gamepad buttons
             for (let i = 1; i < inputData.length; i++)
@@ -1334,18 +1314,18 @@ function debugRender()
                     if (keyIsDown(j, i))
                         buttonsPressed += j + ' ' ;
                 }
-                buttonsPressed && overlayContext.fillText(`Gamepad ${i-1}: ` + buttonsPressed, x, y += h);
+                buttonsPressed && debugContext.fillText(`Gamepad ${i-1}: ` + buttonsPressed, x, y += h);
             }
         }
         else
         {
-            overlayContext.fillText(debugPhysics ? 'Debug Physics' : '', x, y += h);
-            overlayContext.fillText(debugParticles ? 'Debug Particles' : '', x, y += h);
-            overlayContext.fillText(debugRaycast ? 'Debug Raycasts' : '', x, y += h);
-            overlayContext.fillText(debugGamepads ? 'Debug Gamepads' : '', x, y += h);
+            debugContext.fillText(debugPhysics ? 'Debug Physics' : '', x, y += h);
+            debugContext.fillText(debugParticles ? 'Debug Particles' : '', x, y += h);
+            debugContext.fillText(debugRaycast ? 'Debug Raycasts' : '', x, y += h);
+            debugContext.fillText(debugGamepads ? 'Debug Gamepads' : '', x, y += h);
         }
 
-        overlayContext.restore();
+        debugContext.restore();
     }
 }
 
@@ -1365,20 +1345,6 @@ function debugVideoCaptureStart()
 {
     if (debugVideoCaptureIsActive())
         return; // already recording
-
-    if (canvasMainAsOverlay)
-    {
-        canvasMainAsOverlay = false;
-        LOG('Warning: canvasMainAsOverlay disabled for video capture.');
-
-        // create overlay canvas
-        const rootElement = mainCanvas.parentElement;
-        overlayCanvas = rootElement.appendChild(document.createElement('canvas'));
-        overlayContext = overlayCanvas.getContext('2d');
-        overlayCanvas.style.cssText = mainCanvas.style.cssText;
-        setOverlayCanvasPixelated(overlayCanvasPixelated);
-        mainCanvas.style.zIndex = '';
-    }
 
     // captureStream passing in 0 to only capture when requestFrame() is called
     const stream = mainCanvas.captureStream(0);
@@ -2774,29 +2740,12 @@ let canvasMaxAspect = 0;
  *  @memberof Settings */
 let canvasFixedSize = vec2();
 
-/** If set this makes the main canvas also be the overlay canvas
- *  This will also set the main canvas to be above the WebGL canvas
- *  This can improve performance on some systems but has some limitations
- *  Must be set before initialization
- *  @type {boolean}
- *  @default
- *  @memberof Settings */
-let canvasMainAsOverlay = false;
-
 /** Use nearest canvas scaling for more pixelated look
  *  - If enabled sets css image-rendering:pixelated
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
-let canvasPixelated = true;
-
-/** Use nearest canvas scaling for more pixelated look
- *  - If enabled sets css image-rendering:pixelated
- *  - This defaults to false because text looks better with smoothing
- *  @type {boolean}
- *  @default
- *  @memberof Settings */
-let overlayCanvasPixelated = false;
+let canvasPixelated = false;
 
 /** Disables texture filtering for crisper pixel art
  *  @type {boolean}
@@ -3093,16 +3042,6 @@ function setCanvasMaxAspect(aspect) { canvasMaxAspect = aspect; }
  *  @memberof Settings */
 function setCanvasFixedSize(size) { canvasFixedSize = size.copy(); }
 
-/** Sets the main canvas to be used as the overlay canvas
- *  Must be set before initialization
- *  @param {boolean} enable
- *  @memberof Settings */
-function setCanvasMainAsOverlay(enable)
-{
-    ASSERT(!mainCanvas, 'canvasMainAsOverlay must be set before initialization');
-    canvasMainAsOverlay = enable;
-}
-
 /** Use nearest scaling algorithm for canvas for more pixelated look
  *  @param {boolean} pixelated
  *  @memberof Settings */
@@ -3113,18 +3052,6 @@ function setCanvasPixelated(pixelated)
         mainCanvas.style.imageRendering = pixelated ? 'pixelated' : '';
     if (glCanvas)
         glCanvas.style.imageRendering = pixelated ? 'pixelated' : '';
-}
-
-/** Use nearest scaling algorithm for canvas for more pixelated look
- *  - If enabled sets css image-rendering:pixelated
- *  - This defaults to false because text looks better with smoothing
- *  @param {boolean} pixelated
- *  @memberof Settings */
-function setOverlayCanvasPixelated(pixelated)
-{
-    overlayCanvasPixelated = pixelated;
-    if (overlayCanvas)
-        overlayCanvas.style.imageRendering = pixelated ? 'pixelated' : '';
 }
 
 /** Disables texture filtering for crisper pixel art
@@ -3872,7 +3799,6 @@ class EngineObject
  * There are 3 canvas/contexts available to draw to...
  * mainCanvas - 2D background canvas, non WebGL stuff like tile layers are drawn here.
  * glCanvas - Used by the accelerated WebGL batch rendering system.
- * overlayCanvas - Another 2D canvas that appears on top of the other 2 canvases.
  *
  * The WebGL rendering system is very fast with some caveats...
  * - Switching blend modes (additive) or textures causes another draw call which is expensive in excess
@@ -3891,16 +3817,6 @@ let mainCanvas;
  *  @type {CanvasRenderingContext2D}
  *  @memberof Draw */
 let mainContext;
-
-/** A canvas that appears on top of everything the same size as mainCanvas
- *  @type {HTMLCanvasElement}
- *  @memberof Draw */
-let overlayCanvas;
-
-/** 2d context for overlayCanvas
- *  @type {CanvasRenderingContext2D}
- *  @memberof Draw */
-let overlayContext;
 
 /** The default canvas to use for drawing, usually mainCanvas
  *  @type {HTMLCanvasElement|OffscreenCanvas}
@@ -3921,6 +3837,16 @@ let workCanvas;
  *  @type {OffscreenCanvasRenderingContext2D}
  *  @memberof Draw */
 let workContext;
+
+/** Offscreen canvas with willReadFrequently that can be used for image processing
+ *  @type {OffscreenCanvas}
+ *  @memberof Draw */
+let workReadCanvas;
+
+/** Offscreen canvas with willReadFrequently that can be used for image processing
+ *  @type {OffscreenCanvasRenderingContext2D}
+ *  @memberof Draw */
+let workReadContext;
 
 /** The size of the main canvas (and other secondary canvases)
  *  @type {Vector2}
@@ -4523,26 +4449,7 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
     drawTextScreen(text, pos, size, color, lineWidth, lineColor, textAlign, font, fontStyle, maxWidth, angle, context);
 }
 
-/** Draw text on overlay canvas in world space
- *  Automatically splits new lines into rows
- *  @param {string|number}  text
- *  @param {Vector2} pos
- *  @param {number}  [size]
- *  @param {Color}   [color=(1,1,1,1)]
- *  @param {number}  [lineWidth]
- *  @param {Color}   [lineColor=(0,0,0,1)]
- *  @param {CanvasTextAlign}  [textAlign='center']
- *  @param {string}  [font=fontDefault]
- *  @param {string}  [fontStyle]
- *  @param {number}  [maxWidth]
- *  @param {number}  [angle]
- *  @memberof Draw */
-function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, fontStyle, maxWidth, angle=0)
-{
-    drawText(text, pos, size, color, lineWidth, lineColor, textAlign, font, fontStyle, maxWidth, angle, overlayContext);
-}
-
-/** Draw text on overlay canvas in screen space
+/** Draw text in screen space
  *  Automatically splits new lines into rows
  *  @param {string|number}  text
  *  @param {Vector2} pos
@@ -4555,9 +4462,9 @@ function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textA
  *  @param {string}  [fontStyle]
  *  @param {number}  [maxWidth]
  *  @param {number}  [angle]
- *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
-function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, angle=0, context=overlayContext)
+function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, angle=0, context=mainContext)
 {
     ASSERT(isString(text), 'text must be a string');
     ASSERT(isVector2(pos), 'pos must be a vec2');
@@ -4768,49 +4675,19 @@ function setBlendMode(additive=false, context)
     context.globalCompositeOperation = additive ? 'lighter' : 'source-over';
 }
 
-/** Combines all LittleJS canvases onto the main canvas and clears them
- *  This is necessary for things like saving a screenshot
- *  @param {boolean} [removeAlpha] - If true, the alpha channel will be removed
+/** Combines LittleJS canvases onto the main canvas
+ *  This is necessary for things like screenshots and video
  *  @memberof Draw */
-function combineCanvases(removeAlpha=false)
+function combineCanvases()
 {
     const w = mainCanvasSize.x, h = mainCanvasSize.y;
-    if (removeAlpha)
-    {
-        workCanvas.width = w;
-        workCanvas.height = h;
-        workContext.fillRect(0,0,w,h); // black background
-        if (!canvasMainAsOverlay)
-            workContext.drawImage(mainCanvas, 0, 0);
-        glCopyToContext(workContext);
-        workContext.drawImage(overlayCanvas, 0, 0);
-
-        glClearCanvas();
-        overlayCanvas.width |= 0;
-        overlayContext.drawImage(workCanvas, 0, 0);
-        return;
-    }
-
-    if (canvasMainAsOverlay)
-    {
-        workCanvas.width = w;
-        workCanvas.height = h;
-        glCopyToContext(workContext);
-        workContext.drawImage(overlayCanvas, 0, 0);
-
-        glClearCanvas();
-        overlayCanvas.width |= 0;
-        overlayContext.drawImage(workCanvas, 0, 0);
-        return;
-    }
-
-    // combine canvases
-    glCopyToContext(mainContext);
-    mainContext.drawImage(overlayCanvas, 0, 0);
-
-    // clear canvases
-    glClearCanvas();
-    overlayCanvas.width |= 0;
+    workCanvas.width = w;
+    workCanvas.height = h;
+    workContext.fillRect(0,0,w,h); // remove background alpha
+    glCopyToContext(workContext);
+    workContext.drawImage(mainCanvas, 0, 0);
+    mainCanvas.width |= 0;
+    mainContext.drawImage(workCanvas, 0, 0);
 }
 
 /** Helper function to draw an image with color and additive color applied
@@ -4849,12 +4726,12 @@ function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth,
     else
     {
         // copy to offscreen canvas
-        workCanvas.width = sWidth;
-        workCanvas.height = sHeight;
-        workContext.drawImage(image, sx|0, sy|0, sWidth, sHeight, 0, 0, sWidth, sHeight);
+        workReadCanvas.width = sWidth;
+        workReadCanvas.height = sHeight;
+        workReadContext.drawImage(image, sx|0, sy|0, sWidth, sHeight, 0, 0, sWidth, sHeight);
 
         // tint image using offscreen work context
-        const imageData = workContext.getImageData(0, 0, sWidth, sHeight);
+        const imageData = workReadContext.getImageData(0, 0, sWidth, sHeight);
         const data = imageData.data;
         if (additiveColor && !isBlack(additiveColor))
         {
@@ -4863,8 +4740,8 @@ function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth,
             const colorAdd = [additiveColor.r * 255, additiveColor.g * 255, additiveColor.b * 255, additiveColor.a * 255];
             for (let i = 0; i < data.length; ++i)
                 data[i] = data[i] * colorMultiply[i&3] + colorAdd[i&3] |0;
-            workContext.putImageData(imageData, 0, 0);
-            context.drawImage(workCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight);
+            workReadContext.putImageData(imageData, 0, 0);
+            context.drawImage(workReadCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight);
         }
         else
         {
@@ -4875,9 +4752,9 @@ function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth,
                 data[i+1] *= color.g;
                 data[i+2] *= color.b;
             }
-            workContext.putImageData(imageData, 0, 0);
+            workReadContext.putImageData(imageData, 0, 0);
             context.globalAlpha = color.a;
-            context.drawImage(workCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight);
+            context.drawImage(workReadCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight);
             context.globalAlpha = 1;
         }
     }
@@ -4939,7 +4816,7 @@ class FontImage
     constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1))
     {
         // load default font image
-        if (!engineFontImage)
+        if (!image && !engineFontImage)
         {
             engineFontImage = new Image;
             engineFontImage.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAAYAQAAAAA9+x6JAAAAAnRSTlMAAHaTzTgAAAGiSURBVHjaZZABhxxBEIUf6ECLBdFY+Q0PMNgf0yCgsSAGZcT9sgIPtBWwIA5wgAPEoHUyJeeSlW+gjK+fegWwtROWpVQEyWh2npdpBmTUFVhb29RINgLIukoXr5LIAvYQ5ve+1FqWEMqNKTX3FAJHyQDRZvmKWubAACcv5z5Gtg2oyCWE+Yk/8JZQX1jTTCpKAFGIgza+dJCNBF2UskRlsgwitHbSV0QLgt9sTPtsRlvJjEr8C/FARWA2bJ/TtJ7lko34dNDn6usJUMzuErP89UUBJbWeozrwLLncXczd508deAjLWipLO4Q5XGPcJvPu92cNDaN0P5G1FL0nSOzddZOrJ6rNhbXGmeDvO3TF7DeJWl4bvaYQTNHCTeuqKZmbjHaSOFes+IX/+IhHrnAkXOAsfn24EM68XieIECoccD4KZLk/odiwzeo2rovYdhvb2HYFgyznJyDpYJdYOmfXgVdJTaUi4xA2uWYNYec9BLeqdl9EsoTw582mSFDX2DxVLbNt9U3YYoeatBad1c2Tj8t2akrjaIGJNywKB/7h75/gN3vCMSaadIUTAAAAAElFTkSuQmCC';
@@ -4962,23 +4839,14 @@ class FontImage
         this.drawTextScreen(text, worldToScreen(pos).floor(), scale*cameraScale|0, center, context);
     }
 
-    /** Draw text on overlay canvas in world space using the image font
-     *  @param {string|number}  text
-     *  @param {Vector2} pos
-     *  @param {number}  [scale]
-     *  @param {boolean} [center]
-     */
-    drawTextOverlay(text, pos, scale=4, center)
-    { this.drawText(text, pos, scale, center, overlayContext); }
-
-    /** Draw text on overlay canvas in screen space using the image font
+    /** Draw text in screen space using the image font
      *  @param {string|number}  text
      *  @param {Vector2} pos
      *  @param {number}  [scale]
      *  @param {boolean} [center]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      */
-    drawTextScreen(text, pos, scale=4, center=true, context=overlayContext)
+    drawTextScreen(text, pos, scale=4, center=true, context=mainContext)
     {
         context.save();
         const size = this.tileSize;
@@ -5728,7 +5596,7 @@ function inputRender()
             return;
 
         // setup the canvas
-        const context = overlayContext;
+        const context = mainContext;
         context.save();
         context.globalAlpha = alpha*touchGamepadAlpha;
         context.strokeStyle = '#fff';
@@ -6927,8 +6795,8 @@ class TileLayer extends CanvasLayer
         if (!this.context) return;
 
         // save current render settings
-        /** @type {[HTMLCanvasElement|OffscreenCanvas, CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number]} */
-        this.savedRenderSettings = [drawCanvas, drawContext, mainCanvasSize, cameraPos, cameraScale];
+        /** @type {[HTMLCanvasElement|OffscreenCanvas, CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, Color]} */
+        this.savedRenderSettings = [drawCanvas, drawContext, mainCanvasSize, cameraPos, cameraScale, canvasClearColor];
 
         // set the draw canvas and context to this layer
         // use camera settings to match this layer's canvas
@@ -6937,6 +6805,7 @@ class TileLayer extends CanvasLayer
         cameraPos = this.size.scale(.5);
         const tileSize = this.tileInfo ? this.tileInfo.size : vec2(1);
         cameraScale = tileSize.x;
+        canvasClearColor = CLEAR_BLACK;
         mainCanvasSize = this.size.multiply(tileSize);
         if (clear)
         {
@@ -6962,7 +6831,7 @@ class TileLayer extends CanvasLayer
         //debugSaveCanvas(this.canvas);
 
         // set stuff back to normal
-        [drawCanvas, drawContext, mainCanvasSize, cameraPos, cameraScale] = this.savedRenderSettings;
+        [drawCanvas, drawContext, mainCanvasSize, cameraPos, cameraScale, canvasClearColor] = this.savedRenderSettings;
     }
 
     /** Draw the tile at a given position in the tile grid
@@ -7675,10 +7544,10 @@ class Medal
      */
     render(hidePercent=0)
     {
-        const context = overlayContext;
+        const context = mainContext;
         const width = min(medalDisplaySize.x, mainCanvas.width);
         const height = medalDisplaySize.y;
-        const x = overlayCanvas.width - width;
+        const x = mainCanvas.width - width;
         const y = -height*hidePercent;
         const backgroundColor = hsl(0,0,.9);
 
@@ -7719,7 +7588,7 @@ class Medal
     {
         // draw the image or icon
         if (this.image)
-            overlayContext.drawImage(this.image, pos.x-size/2, pos.y-size/2, size, size);
+            mainContext.drawImage(this.image, pos.x-size/2, pos.y-size/2, size, size);
         else
             drawTextScreen(this.icon, pos, size*.7, BLACK);
     }
@@ -7740,7 +7609,7 @@ class Medal
  * @namespace WebGL
  */
 
-/** The WebGL canvas which appears above the main canvas and below the overlay canvas
+/** The WebGL canvas which appears below the main canvas
  *  @type {HTMLCanvasElement}
  *  @memberof WebGL */
 let glCanvas;
@@ -7770,7 +7639,7 @@ const gl_MAX_POLY_VERTEXES = gl_ARRAY_BUFFER_SIZE / gl_POLY_VERTEX_BYTE_STRIDE |
 ///////////////////////////////////////////////////////////////////////////////
 
 // Initialize WebGL, called automatically by the engine
-function glInit()
+function glInit(rootElement)
 {
     // keep set of texture infos so they can be restored if context is lost
     glTextureInfos = new Set;
@@ -7794,8 +7663,7 @@ function glInit()
         return;
     }
 
-    // attach the WebGL canvas
-    const rootElement = mainCanvas.parentElement;
+    // attach the WebGL canvas;
     rootElement.appendChild(glCanvas);
     
     // startup webgl
@@ -8013,6 +7881,9 @@ function glClearCanvas()
     glCanvas.width = drawCanvas.width;
     glCanvas.height = drawCanvas.height;
     glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
+    const color = canvasClearColor;
+    if (color.a > 0)
+        glContext.clearColor(color.r, color.g, color.b, color.a);
     glContext.clear(glContext.COLOR_BUFFER_BIT);
 }
 
@@ -8242,7 +8113,6 @@ function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgb
         glFlush();
     glSetInstancedMode();
 
-    glPolyMode = false;
     let offset = glBatchCount++ * gl_INDICES_PER_INSTANCE;
     glPositionData[offset++] = x;
     glPositionData[offset++] = y;
@@ -8763,13 +8633,12 @@ class PostProcessPlugin
 {
     /** Create global post processing shader
     *  @param {string} shaderCode
-    *  @param {boolean} [includeOverlay]
     *  @param {boolean} [includeMainCanvas]
      *  @example
      *  // create the post process plugin object
      *  new PostProcessPlugin(shaderCode);
      */
-    constructor(shaderCode, includeOverlay=false, includeMainCanvas=true)
+    constructor(shaderCode, includeMainCanvas=true)
     {
         ASSERT(!postProcess, 'Post process already initialized');
         postProcess = this;
@@ -8841,17 +8710,19 @@ class PostProcessPlugin
             // clear out the buffer
             glFlush();
             
-            if (includeMainCanvas || includeOverlay)
+            // setup texture
+            glContext.activeTexture(glContext.TEXTURE0);
+            glContext.bindTexture(glContext.TEXTURE_2D, postProcess.texture);
+            if (includeMainCanvas)
             {
-                // copy WebGL to the main canvas
-                mainContext.drawImage(glCanvas, 0, 0);
-
-                if (includeOverlay)
-                {
-                    // copy overlay canvas so it will be included in post processing
-                    mainContext.drawImage(overlayCanvas, 0, 0);
-                    overlayCanvas.width |= 0; // clear overlay canvas
-                }
+                // copy main canvas to work canvas
+                workCanvas.width = mainCanvasSize.x;
+                workCanvas.height = mainCanvasSize.y;
+                glCopyToContext(workContext);
+                workContext.drawImage(mainCanvas, 0, 0);
+                
+                // copy work canvas to texture
+                glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, workCanvas);
             }
 
             // setup shader program to draw a quad
@@ -8859,14 +8730,6 @@ class PostProcessPlugin
             glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
             glContext.pixelStorei(glContext.UNPACK_FLIP_Y_WEBGL, 1);
             glContext.disable(glContext.BLEND);
-
-            // set textures, pass in the 2d canvas and gl canvas in separate texture channels
-            glContext.activeTexture(glContext.TEXTURE0);
-            glContext.bindTexture(glContext.TEXTURE_2D, postProcess.texture);
-            if (includeMainCanvas || includeOverlay)
-            {
-                glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, mainCanvas);
-            }
 
             // set vertex position attribute
             const vertexByteStride = 8;
@@ -9096,7 +8959,7 @@ class UISystemPlugin
      *  // create the ui plugin object
      *  new UISystemPlugin;
      */
-    constructor(context=overlayContext)
+    constructor(context=mainContext)
     {
         ASSERT(!uiSystem, 'UI system already initialized');
         uiSystem = this;
@@ -12285,33 +12148,33 @@ async function box2dInit()
             color = getDebugColor(color);
             point1 = box2d.vec2FromPointer(point1);
             point2 = box2d.vec2FromPointer(point2);
-            drawLine(point1, point2, debugLineWidth, color, vec2(), 0, false, false, overlayContext);
+            drawLine(point1, point2, debugLineWidth, color, vec2(), 0, false);
         };
         debugDraw.DrawPolygon = function(vertices, vertexCount, color)
         {
             color = getDebugColor(color);
             const points = getPointsList(vertices, vertexCount);
-            drawPoly(points, CLEAR_WHITE, debugLineWidth, color, vec2(), 0, false, false, overlayContext);
+            drawPoly(points, CLEAR_WHITE, debugLineWidth, color, vec2(), 0, false);
         };
         debugDraw.DrawSolidPolygon = function(vertices, vertexCount, color)
         {
             color = getDebugColor(color);
             const points = getPointsList(vertices, vertexCount);
-            drawPoly(points, color, 0, color, vec2(), 0, false, false, overlayContext);
+            drawPoly(points, color, 0, color, vec2(), 0, false);
         };
         debugDraw.DrawCircle = function(center, radius, color)
         {
             color = getDebugColor(color);
             center = box2d.vec2FromPointer(center);
-            drawCircle(center, radius*2, CLEAR_WHITE, debugLineWidth, color, false, false, overlayContext);
+            drawCircle(center, radius*2, CLEAR_WHITE, debugLineWidth, color, false);
         };
         debugDraw.DrawSolidCircle = function(center, radius, axis, color)
         {
             color = getDebugColor(color);
             center = box2d.vec2FromPointer(center);
             axis = box2d.vec2FromPointer(axis).scale(radius);
-            drawCircle(center, radius*2, color, debugLineWidth, color, false, false, overlayContext);
-            drawLine(vec2(), axis, debugLineWidth, color, center, 0, false, false, overlayContext);
+            drawCircle(center, radius*2, color, debugLineWidth, color, false);
+            drawLine(vec2(), axis, debugLineWidth, color, center, 0, false);
         };
         debugDraw.DrawTransform = function(transform)
         {
@@ -12320,8 +12183,8 @@ async function box2dInit()
             const angle = -transform.get_q().GetAngle();
             const p1 = vec2(1,0), c1 = rgb(.75,0,0,.8);
             const p2 = vec2(0,1), c2 = rgb(0,.75,0,.8);
-            drawLine(vec2(), p1, debugLineWidth, c1, pos, angle, false, false, overlayContext);
-            drawLine(vec2(), p2, debugLineWidth, c2, pos, angle, false, false, overlayContext);
+            drawLine(vec2(), p1, debugLineWidth, c1, pos, angle, false);
+            drawLine(vec2(), p2, debugLineWidth, c2, pos, angle, false);
         }
             
         debugDraw.AppendFlags(box2d.instance.b2Draw.e_shapeBit);
@@ -12341,8 +12204,8 @@ async function box2dInit()
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** Draw a scalable nine-slice UI element to the overlay canvas in screen space
- *  This function can not apply color because it draws using the overlay 2d context
+/** Draw a scalable nine-slice UI element to the main canvas in screen space
+ *  This function can not apply color because it draws using the 2d context
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - Starting tile for the nine-slice pattern
@@ -12352,7 +12215,7 @@ async function box2dInit()
  *  @memberof DrawUtilities */
 function drawNineSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, angle=0)
 {
-    drawNineSlice(pos, size, startTile, WHITE, borderSize, BLACK, extraSpace, angle, false, true, overlayContext);
+    drawNineSlice(pos, size, startTile, WHITE, borderSize, BLACK, extraSpace, angle, false, true);
 }
 
 /** Draw a scalable nine-slice UI element in world space
@@ -12401,8 +12264,8 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
     }
 }
 
-/** Draw a scalable three-slice UI element to the overlay canvas in screen space
- *  This function can not apply color because it draws using the overlay 2d context
+/** Draw a scalable three-slice UI element to the main canvas in screen space
+ *  This function can not apply color because it draws using the 2d context
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - Starting tile for the three-slice pattern
@@ -12412,7 +12275,7 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
  *  @memberof DrawUtilities */
 function drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, angle=0)
 {
-    drawThreeSlice(pos, size, startTile, WHITE, borderSize, BLACK, extraSpace, angle, false, true, overlayContext);
+    drawThreeSlice(pos, size, startTile, WHITE, borderSize, BLACK, extraSpace, angle, false, true);
 }
 
 /** Draw a scalable three-slice UI element in world space
