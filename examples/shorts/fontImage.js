@@ -1,10 +1,10 @@
 function gameRender()
 {
-    // draw text with built in font image system font
+    // draw text with built in engine font image
     const font = new FontImage;
-    font.drawText('System Font Test', cameraPos.add(vec2(0,3)), .2);
+    font.drawText('Engine Font Test', cameraPos.add(vec2(0,3)), .2);
 
-    // show every character in the system font
+    // show every character in the font
     let s = '';
     for (let i=32; i<128; ++i)
     {
