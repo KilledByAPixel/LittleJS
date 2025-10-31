@@ -6824,7 +6824,7 @@ class TileLayer extends CanvasLayer
         }
 
         // disable smoothing for pixel art
-        this.context.imageSmoothingEnabled = !tilesPixelated;
+        drawContext.imageSmoothingEnabled = !tilesPixelated;
 
         // setup gl rendering if enabled
         glPreRender();
