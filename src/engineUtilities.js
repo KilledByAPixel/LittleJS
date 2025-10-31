@@ -126,11 +126,7 @@ function percent(value, valueA, valueB)
  *  @return {number}
  *  @memberof Utilities */
 function lerp(valueA, valueB, percent)
-{
-    if (valueA >= 0 && valueA <= 1 && ((valueB < 0 || valueB > 1) && (percent < 0 || percent > 1)))
-        console.warn('lerp() parameter order changed! use lerp(start, end, p)');
-    return valueA + clamp(percent) * (valueB-valueA);
-}
+{ return valueA + clamp(percent) * (valueB-valueA); }
 
 /** Gets percent between percentA and percentB and linearly interpolates between lerpA and lerpB
  *  A shortcut for lerp(lerpA, lerpB, percent(value, percentA, percentB))
@@ -161,11 +157,7 @@ function distanceWrap(valueA, valueB, wrapSize=1)
  *  @return {number}
  *  @memberof Utilities */
 function lerpWrap(valueA, valueB, percent, wrapSize=1)
-{
-    if (valueA >= 0 && valueA <= 1 && ((valueB < 0 || valueB > 1) && (percent < 0 || percent > 1)))
-        console.warn('lerpWrap() parameter order changed! use lerpWrap(start, end, p)');
-    return valueA + clamp(percent) * distanceWrap(valueB, valueA, wrapSize);
-}
+{ return valueA + clamp(percent) * distanceWrap(valueB, valueA, wrapSize); }
 
 /** Returns signed wrapped distance between the two angles passed in
  *  @param {number} angleA
