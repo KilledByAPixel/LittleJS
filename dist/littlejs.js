@@ -220,6 +220,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             debugUpdate();
             gameUpdatePost();
             inputUpdatePost();
+            if (debugVideoCaptureIsActive())
+                renderFrame();
         }
         else
         {
@@ -1050,6 +1052,13 @@ function debugUpdate()
     if (!debug)
         return;
 
+    if (debugVideoCaptureIsActive())
+    {
+        // control to stop video capture
+        if (keyWasPressed('Digit6') || keyWasPressed(debugKey))
+            debugVideoCaptureStop();
+    }
+
     if (keyWasPressed(debugKey)) // Esc
         debugOverlay = !debugOverlay;
     if (debugOverlay)
@@ -1066,8 +1075,8 @@ function debugUpdate()
             debugRaycast = !debugRaycast;
         if (keyWasPressed('Digit5'))
             debugScreenshot();
-        if (keyWasPressed('Digit6'))
-            debugVideoCaptureIsActive() ? debugVideoCaptureStop() : debugVideoCaptureStart();
+        if (keyWasPressed('Digit6') && !debugVideoCaptureIsActive())
+            debugVideoCaptureStart();
     }
 }
 
@@ -1376,7 +1385,7 @@ function debugVideoCaptureStart()
     // start recording
     LOG('Video capture started.');
     debugVideoCapture.start();
-    debugVideoCaptureTimer = new Timer(0);
+    debugVideoCaptureTimer = new Timer(0, true);
 
     if (!debugVideoCaptureIcon)
     {
