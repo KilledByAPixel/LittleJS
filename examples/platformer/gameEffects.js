@@ -128,8 +128,8 @@ export function explosion(pos, radius=3)
         pos, 0,                         // pos, angle
         radius/2, .1, 100*radius, 3.14, // emitSize, emitTime, rate, cone
         0,                              // tileInfo
-        rgb(1,.5,.1), rgb(1,.1,.1),     // colorStartA, colorStartB
-        rgb(1,.5,.1,0), rgb(1,.1,.1,0), // colorEndA, colorEndB
+        rgb(1,.5,.2), rgb(1,.1,.1),     // colorStartA, colorStartB
+        rgb(1,.5,.2,0), rgb(1,.1,.1,0), // colorEndA, colorEndB
         .7, .8, .2, .2, .05,   // time, sizeStart, sizeEnd, speed, angleSpeed
         .9, 1, -.2, 3.14, .05, // damp, angleDamp, gravity, particleCone, fade
         .5, 0, 1, 0, 1e9       // randomness, collide, additive, colorLinear, renderOrder

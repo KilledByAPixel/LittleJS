@@ -478,11 +478,11 @@ export function explosion(pos, radius=3, strength=300)
 
     // fire
     new LJS.ParticleEmitter(
-        pos, 0,                         // pos, angle
-        radius, .1, 100*radius, 3.14,   // emitSize, emitTime, rate, cone
-        Game.spriteAtlas.dot,           // tileInfo
-        hsl(0,1,.5),   hsl(.15,1,.5),   // colorStartA, colorStartB
-        hsl(0,1,.5,0), hsl(.1, 1,.5,0), // colorEndA, colorEndB
+        pos, 0,                          // pos, angle
+        radius, .1, 100*radius, 3.14,    // emitSize, emitTime, rate, cone
+        Game.spriteAtlas.dot,            // tileInfo
+        hsl(0,.8,.5),   hsl(.15,.8,.5),  // colorStartA, colorStartB
+        hsl(0,.8,.5,0), hsl(.1, .8,.5,0),// colorEndA, colorEndB
         .7, 1, .5, .1, .1,   // time, sizeStart, sizeEnd, speed, angleSpeed
         .9, 1, 0, 3.14, .05, // damp, angleDamp, gravity, particleCone, fade
         1, 0, 1, 0, 1e9      // randomness, collide, additive, colorLinear, renderOrder
