@@ -217,6 +217,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             debugUpdate();
             gameUpdatePost();
             inputUpdatePost();
+            if (debugVideoCaptureIsActive())
+                renderFrame();
         }
         else
         {
