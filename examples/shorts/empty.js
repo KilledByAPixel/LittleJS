@@ -26,5 +26,5 @@ function gameRenderPost()
 {
     // called after objects are rendered
     // draw effects or hud that appear above all objects
-    drawTextOverlay('LittleJS Engine', vec2(0,6), 3);
+    drawText('LittleJS Engine', vec2(0,6), 3);
 }

@@ -72,7 +72,6 @@ function gameRender()
 ///////////////////////////////////////////////////////////////////////////////
 function gameRenderPost()
 {
-    // draw to overlay canvas for hud rendering
     LJS.drawTextScreen('LittleJS HTML Menu Example\nM = Open menu', 
         vec2(LJS.mainCanvasSize.x/2, 70), 60, // position, size
         hsl(0,0,1), 6, hsl(0,0,0));           // color, outline size and color

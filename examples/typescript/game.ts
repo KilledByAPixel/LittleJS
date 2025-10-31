@@ -124,7 +124,6 @@ function gameRender()
 ///////////////////////////////////////////////////////////////////////////////
 function gameRenderPost()
 {
-    // draw to overlay canvas for hud rendering
     LJS.drawTextScreen('LittleJS with TypeScript', vec2(LJS.mainCanvasSize.x/2, 80), 80);
 }
 

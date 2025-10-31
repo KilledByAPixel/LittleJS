@@ -10,7 +10,7 @@ function gameRender()
         const color = hsl(.1,.5,.9);
         const border = .5;
         drawNineSlice(pos, size, nineSliceTile, color, border);
-        drawTextOverlay('Nine Slice\nThin Border', pos, 1, BLACK);
+        drawText('Nine Slice\nThin Border', pos, 1, BLACK);
     }
     {
         // draw nine slice in screen space with thick border and rotation
@@ -28,7 +28,7 @@ function gameRender()
         const border = 2 + wave(.2)*2;
         const additive = hsl(time/30,.5,.5);
         drawThreeSlice(pos, size, threeSliceTile, WHITE, border, additive);
-        drawTextOverlay('Three Slice\nVariable\nBorder', pos, 1, BLACK);
+        drawText('Three Slice\nVariable\nBorder', pos, 1, BLACK);
     }
     {
         // draw three slice in screen space with changing size        

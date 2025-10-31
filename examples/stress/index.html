@@ -51,7 +51,7 @@ function gameInit()
     LJS.setGravity(vec2(0,-.005));
     sprites = [];
 
-    // display stats using a div so when using glOverlay it still appears on top
+    // display stats using a div so it doesn't use canvas rendering
     document.body.appendChild(statsDisplay = document.createElement('div'));
     statsDisplay.style = 'position:absolute;width:100%;font-size:3em;text-align:center;font-family:arial;user-select:none;';
 }

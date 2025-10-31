@@ -49,14 +49,14 @@ class Ball extends Box2dObject
         drawCircle(this.pos, .6, WHITE);
         const textPos = this.pos.add(vec2(0,-.06));
        	if (this.number)
-            drawTextOverlay(this.number, textPos, .5, BLACK);
+            drawText(this.number, textPos, .5, BLACK);
         if (this.canHit())
         {
             // draw the aim line
             const endPos = this.pos.add(this.getHitOffset());
             const width = this.getHitStrength();
             drawLine(this.pos, endPos, width, hsl(0,1,.5,.5), 
-                vec2(), 0, false, false, overlayContext);
+                vec2(), 0, false);
         }
     }
 }

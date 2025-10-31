@@ -9,8 +9,8 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** Draw a scalable nine-slice UI element to the overlay canvas in screen space
- *  This function can not apply color because it draws using the overlay 2d context
+/** Draw a scalable nine-slice UI element to the main canvas in screen space
+ *  This function can not apply color because it draws using the 2d context
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - Starting tile for the nine-slice pattern
@@ -20,7 +20,7 @@
  *  @memberof DrawUtilities */
 function drawNineSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, angle=0)
 {
-    drawNineSlice(pos, size, startTile, WHITE, borderSize, BLACK, extraSpace, angle, false, true, overlayContext);
+    drawNineSlice(pos, size, startTile, WHITE, borderSize, BLACK, extraSpace, angle, false, true);
 }
 
 /** Draw a scalable nine-slice UI element in world space
@@ -69,8 +69,8 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
     }
 }
 
-/** Draw a scalable three-slice UI element to the overlay canvas in screen space
- *  This function can not apply color because it draws using the overlay 2d context
+/** Draw a scalable three-slice UI element to the main canvas in screen space
+ *  This function can not apply color because it draws using the 2d context
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - Starting tile for the three-slice pattern
@@ -80,7 +80,7 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
  *  @memberof DrawUtilities */
 function drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, angle=0)
 {
-    drawThreeSlice(pos, size, startTile, WHITE, borderSize, BLACK, extraSpace, angle, false, true, overlayContext);
+    drawThreeSlice(pos, size, startTile, WHITE, borderSize, BLACK, extraSpace, angle, false, true);
 }
 
 /** Draw a scalable three-slice UI element in world space

@@ -177,8 +177,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         mainCanvasSize = vec2(mainCanvas.width, mainCanvas.height);
 
         // disable smoothing for pixel art
-        overlayContext.imageSmoothingEnabled =
-            mainContext.imageSmoothingEnabled = !tilesPixelated;
+        mainContext.imageSmoothingEnabled = !tilesPixelated;
 
         // setup gl rendering if enabled
         glPreRender();
@@ -284,16 +283,16 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             if (debugWatermark && !debugVideoCaptureIsActive())
             {
                 // update fps display
-                overlayContext.textAlign = 'right';
-                overlayContext.textBaseline = 'top';
-                overlayContext.font = '1em monospace';
-                overlayContext.fillStyle = '#000';
+                mainContext.textAlign = 'right';
+                mainContext.textBaseline = 'top';
+                mainContext.font = '1em monospace';
+                mainContext.fillStyle = '#000';
                 const text = engineName + ' ' + 'v' + engineVersion + ' / '
                     + drawCount + ' / ' + engineObjects.length + ' / ' + averageFPS.toFixed(1)
                     + (glEnable ? ' GL' : ' 2D') ;
-                overlayContext.fillText(text, mainCanvas.width-3, 3);
-                overlayContext.fillStyle = '#fff';
-                overlayContext.fillText(text, mainCanvas.width-2, 2);
+                mainContext.fillText(text, mainCanvas.width-3, 3);
+                mainContext.fillStyle = '#fff';
+                mainContext.fillText(text, mainCanvas.width-2, 2);
             }
             drawCount = 0;
         }
@@ -313,8 +312,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             const fixedAspect = canvasFixedSize.x / canvasFixedSize.y;
             const w = innerAspect < fixedAspect ? '100%' : '';
             const h = innerAspect < fixedAspect ? '' : '100%';
-            overlayCanvas.style.width  = mainCanvas.style.width  = w;
-            overlayCanvas.style.height = mainCanvas.style.height = h;
+            mainCanvas.style.width  = w;
+            mainCanvas.style.height = h;
             if (glCanvas)
             {
                 glCanvas.style.width  = w;
@@ -344,12 +343,12 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             }
         }
 
-        // clear main and overlay canvas and set size
-        overlayCanvas.width  = mainCanvas.width  = mainCanvasSize.x;
-        overlayCanvas.height = mainCanvas.height = mainCanvasSize.y;
+        // clear main canvas and set size
+        mainCanvas.width  = mainCanvasSize.x;
+        mainCanvas.height = mainCanvasSize.y;
 
         // apply the clear color to main canvas
-        if (canvasClearColor.a > 0)
+        if (canvasClearColor.a > 0 && !glEnable)
         {
             mainContext.fillStyle = canvasClearColor.toString();
             mainContext.fillRect(0, 0, mainCanvasSize.x, mainCanvasSize.y);
@@ -357,9 +356,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         }
 
         // set default line join and cap
-        const lineJoin = 'round', lineCap = 'round';
-        mainContext.lineJoin = overlayContext.lineJoin = lineJoin;
-        mainContext.lineCap  = overlayContext.lineCap  = lineCap;
+        mainContext.lineJoin = 'round';
+        mainContext.lineCap  = 'round';
     }
 
     // wait for gameInit to load
@@ -370,6 +368,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     }
     if (headlessMode)
         return startEngine();
+
+    // setup webgl
+    glInit(rootElement);
 
     // setup html
     const styleRoot =
@@ -388,40 +389,23 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     inputInit();
     audioInit();
     debugInit();
-    glInit();
-
-    // setup the overlay canvas
-    if (canvasMainAsOverlay)
-    {
-        // use main canvas as overlay to improve performance on some systems
-        overlayCanvas = mainCanvas;
-        overlayContext = mainContext;
-    }
-    else
-    {
-        // create overlay canvas for hud to appear above gl canvas
-        overlayCanvas = rootElement.appendChild(document.createElement('canvas'));
-        overlayContext = overlayCanvas.getContext('2d');
-    }
 
     // setup canvases
     // transform way is still more reliable then flexbox or grid
     const styleCanvas = 'position:absolute;'+ // allow canvases to overlap
         'top:50%;left:50%;transform:translate(-50%,-50%)'; // center on screen
-    mainCanvas.style.cssText = overlayCanvas.style.cssText = styleCanvas;
+    mainCanvas.style.cssText = styleCanvas;
     if (glCanvas)
         glCanvas.style.cssText = styleCanvas;
     setCanvasPixelated(canvasPixelated);
-    if (canvasMainAsOverlay)
-        overlayCanvas.style.zIndex = '1'; // put main/overlay canvas above gl canvas
-    else
-        setOverlayCanvasPixelated(overlayCanvasPixelated);
     updateCanvas();
     glPreRender();
 
-    // create offscreen canvas for image processing
-    workCanvas = new OffscreenCanvas(256, 256);
-    workContext = workCanvas.getContext('2d', { willReadFrequently: true });
+    // create offscreen canvases for image processing
+    workCanvas = new OffscreenCanvas(64, 64);
+    workContext = workCanvas.getContext('2d');
+    workReadCanvas = new OffscreenCanvas(64, 64);
+    workReadContext = workReadCanvas.getContext('2d', { willReadFrequently: true });
 
     // create promises for loading images
     const promises = imageSources.map((src, textureIndex)=>
@@ -477,9 +461,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     // LittleJS Splash Screen
     function drawEngineSplashScreen(t)
     {
-        const x = overlayContext;
-        const w = overlayCanvas.width = innerWidth;
-        const h = overlayCanvas.height = innerHeight;
+        const x = mainContext;
+        const w = mainCanvas.width = innerWidth;
+        const h = mainCanvas.height = innerHeight;
 
         {
             // background

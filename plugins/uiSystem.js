@@ -48,7 +48,7 @@ class UISystemPlugin
      *  // create the ui plugin object
      *  new UISystemPlugin;
      */
-    constructor(context=overlayContext)
+    constructor(context=mainContext)
     {
         ASSERT(!uiSystem, 'UI system already initialized');
         uiSystem = this;

@@ -239,8 +239,8 @@ function gameRender()
 function gameRenderPost()
 {
     // draw text on top of everything
-    LJS.drawTextOverlay('Score: ' + score,    LJS.cameraPos.add(vec2(-3,-3.1)), .9, hsl(), .1);
-    LJS.drawTextOverlay('Best: ' + bestScore, LJS.cameraPos.add(vec2( 3,-3.1)), .9, hsl(), .1);
+    LJS.drawText('Score: ' + score,    LJS.cameraPos.add(vec2(-3,-3.1)), .9, hsl(), .1);
+    LJS.drawText('Best: ' + bestScore, LJS.cameraPos.add(vec2( 3,-3.1)), .9, hsl(), .1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

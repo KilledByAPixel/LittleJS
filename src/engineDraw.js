@@ -10,7 +10,6 @@
  * There are 3 canvas/contexts available to draw to...
  * mainCanvas - 2D background canvas, non WebGL stuff like tile layers are drawn here.
  * glCanvas - Used by the accelerated WebGL batch rendering system.
- * overlayCanvas - Another 2D canvas that appears on top of the other 2 canvases.
  *
  * The WebGL rendering system is very fast with some caveats...
  * - Switching blend modes (additive) or textures causes another draw call which is expensive in excess
@@ -32,16 +31,6 @@ let mainCanvas;
  *  @memberof Draw */
 let mainContext;
 
-/** A canvas that appears on top of everything the same size as mainCanvas
- *  @type {HTMLCanvasElement}
- *  @memberof Draw */
-let overlayCanvas;
-
-/** 2d context for overlayCanvas
- *  @type {CanvasRenderingContext2D}
- *  @memberof Draw */
-let overlayContext;
-
 /** The default canvas to use for drawing, usually mainCanvas
  *  @type {HTMLCanvasElement|OffscreenCanvas}
  *  @memberof Draw */
@@ -61,6 +50,16 @@ let workCanvas;
  *  @type {OffscreenCanvasRenderingContext2D}
  *  @memberof Draw */
 let workContext;
+
+/** Offscreen canvas with willReadFrequently that can be used for image processing
+ *  @type {OffscreenCanvas}
+ *  @memberof Draw */
+let workReadCanvas;
+
+/** Offscreen canvas with willReadFrequently that can be used for image processing
+ *  @type {OffscreenCanvasRenderingContext2D}
+ *  @memberof Draw */
+let workReadContext;
 
 /** The size of the main canvas (and other secondary canvases)
  *  @type {Vector2}
@@ -663,26 +662,7 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
     drawTextScreen(text, pos, size, color, lineWidth, lineColor, textAlign, font, fontStyle, maxWidth, angle, context);
 }
 
-/** Draw text on overlay canvas in world space
- *  Automatically splits new lines into rows
- *  @param {string|number}  text
- *  @param {Vector2} pos
- *  @param {number}  [size]
- *  @param {Color}   [color=(1,1,1,1)]
- *  @param {number}  [lineWidth]
- *  @param {Color}   [lineColor=(0,0,0,1)]
- *  @param {CanvasTextAlign}  [textAlign='center']
- *  @param {string}  [font=fontDefault]
- *  @param {string}  [fontStyle]
- *  @param {number}  [maxWidth]
- *  @param {number}  [angle]
- *  @memberof Draw */
-function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, fontStyle, maxWidth, angle=0)
-{
-    drawText(text, pos, size, color, lineWidth, lineColor, textAlign, font, fontStyle, maxWidth, angle, overlayContext);
-}
-
-/** Draw text on overlay canvas in screen space
+/** Draw text in screen space
  *  Automatically splits new lines into rows
  *  @param {string|number}  text
  *  @param {Vector2} pos
@@ -695,9 +675,9 @@ function drawTextOverlay(text, pos, size=1, color, lineWidth=0, lineColor, textA
  *  @param {string}  [fontStyle]
  *  @param {number}  [maxWidth]
  *  @param {number}  [angle]
- *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=overlayContext]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=mainContext]
  *  @memberof Draw */
-function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, angle=0, context=overlayContext)
+function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, angle=0, context=mainContext)
 {
     ASSERT(isString(text), 'text must be a string');
     ASSERT(isVector2(pos), 'pos must be a vec2');
@@ -908,49 +888,19 @@ function setBlendMode(additive=false, context)
     context.globalCompositeOperation = additive ? 'lighter' : 'source-over';
 }
 
-/** Combines all LittleJS canvases onto the main canvas and clears them
- *  This is necessary for things like saving a screenshot
- *  @param {boolean} [removeAlpha] - If true, the alpha channel will be removed
+/** Combines LittleJS canvases onto the main canvas
+ *  This is necessary for things like screenshots and video
  *  @memberof Draw */
-function combineCanvases(removeAlpha=false)
+function combineCanvases()
 {
     const w = mainCanvasSize.x, h = mainCanvasSize.y;
-    if (removeAlpha)
-    {
-        workCanvas.width = w;
-        workCanvas.height = h;
-        workContext.fillRect(0,0,w,h); // black background
-        if (!canvasMainAsOverlay)
-            workContext.drawImage(mainCanvas, 0, 0);
-        glCopyToContext(workContext);
-        workContext.drawImage(overlayCanvas, 0, 0);
-
-        glClearCanvas();
-        overlayCanvas.width |= 0;
-        overlayContext.drawImage(workCanvas, 0, 0);
-        return;
-    }
-
-    if (canvasMainAsOverlay)
-    {
-        workCanvas.width = w;
-        workCanvas.height = h;
-        glCopyToContext(workContext);
-        workContext.drawImage(overlayCanvas, 0, 0);
-
-        glClearCanvas();
-        overlayCanvas.width |= 0;
-        overlayContext.drawImage(workCanvas, 0, 0);
-        return;
-    }
-
-    // combine canvases
-    glCopyToContext(mainContext);
-    mainContext.drawImage(overlayCanvas, 0, 0);
-
-    // clear canvases
-    glClearCanvas();
-    overlayCanvas.width |= 0;
+    workCanvas.width = w;
+    workCanvas.height = h;
+    workContext.fillRect(0,0,w,h); // remove background alpha
+    glCopyToContext(workContext);
+    workContext.drawImage(mainCanvas, 0, 0);
+    mainCanvas.width |= 0;
+    mainContext.drawImage(workCanvas, 0, 0);
 }
 
 /** Helper function to draw an image with color and additive color applied
@@ -989,12 +939,12 @@ function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth,
     else
     {
         // copy to offscreen canvas
-        workCanvas.width = sWidth;
-        workCanvas.height = sHeight;
-        workContext.drawImage(image, sx|0, sy|0, sWidth, sHeight, 0, 0, sWidth, sHeight);
+        workReadCanvas.width = sWidth;
+        workReadCanvas.height = sHeight;
+        workReadContext.drawImage(image, sx|0, sy|0, sWidth, sHeight, 0, 0, sWidth, sHeight);
 
         // tint image using offscreen work context
-        const imageData = workContext.getImageData(0, 0, sWidth, sHeight);
+        const imageData = workReadContext.getImageData(0, 0, sWidth, sHeight);
         const data = imageData.data;
         if (additiveColor && !isBlack(additiveColor))
         {
@@ -1003,8 +953,8 @@ function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth,
             const colorAdd = [additiveColor.r * 255, additiveColor.g * 255, additiveColor.b * 255, additiveColor.a * 255];
             for (let i = 0; i < data.length; ++i)
                 data[i] = data[i] * colorMultiply[i&3] + colorAdd[i&3] |0;
-            workContext.putImageData(imageData, 0, 0);
-            context.drawImage(workCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight);
+            workReadContext.putImageData(imageData, 0, 0);
+            context.drawImage(workReadCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight);
         }
         else
         {
@@ -1015,9 +965,9 @@ function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth,
                 data[i+1] *= color.g;
                 data[i+2] *= color.b;
             }
-            workContext.putImageData(imageData, 0, 0);
+            workReadContext.putImageData(imageData, 0, 0);
             context.globalAlpha = color.a;
-            context.drawImage(workCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight);
+            context.drawImage(workReadCanvas, sx2, sy2, sWidth2, sHeight2, dx, dy, dWidth, dHeight);
             context.globalAlpha = 1;
         }
     }
@@ -1102,23 +1052,14 @@ class FontImage
         this.drawTextScreen(text, worldToScreen(pos).floor(), scale*cameraScale|0, center, context);
     }
 
-    /** Draw text on overlay canvas in world space using the image font
-     *  @param {string|number}  text
-     *  @param {Vector2} pos
-     *  @param {number}  [scale]
-     *  @param {boolean} [center]
-     */
-    drawTextOverlay(text, pos, scale=4, center)
-    { this.drawText(text, pos, scale, center, overlayContext); }
-
-    /** Draw text on overlay canvas in screen space using the image font
+    /** Draw text in screen space using the image font
      *  @param {string|number}  text
      *  @param {Vector2} pos
      *  @param {number}  [scale]
      *  @param {boolean} [center]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      */
-    drawTextScreen(text, pos, scale=4, center=true, context=overlayContext)
+    drawTextScreen(text, pos, scale=4, center=true, context=mainContext)
     {
         context.save();
         const size = this.tileSize;

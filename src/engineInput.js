@@ -722,7 +722,7 @@ function inputRender()
             return;
 
         // setup the canvas
-        const context = overlayContext;
+        const context = mainContext;
         context.save();
         context.globalAlpha = alpha*touchGamepadAlpha;
         context.strokeStyle = '#fff';

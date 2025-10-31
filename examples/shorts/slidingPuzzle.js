@@ -36,7 +36,7 @@ class PuzzlePiece extends EngineObject
         const movePercent = this.moveTimer.getPercent();
         const pos = this.lastPos.lerp(this.pos, movePercent);
         drawRect(pos, this.size, this.color);
-        drawTextOverlay(this.text, pos, 2.5, BLACK);
+        drawText(this.text, pos, 2.5, BLACK);
     }
 }
 

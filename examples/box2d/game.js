@@ -165,7 +165,7 @@ function gameRenderPost()
         LJS.drawLine(LJS.mousePos, ab, .1, LJS.BLACK);
     }
 
-    // draw to overlay canvas for hud rendering
+    // draw demo info
     const pos = vec2(LJS.mainCanvasSize.x/2, 50);
     drawText('LittleJS Box2D Demo', 65, 70);
     drawText(Scenes.sceneName, 50, 100);

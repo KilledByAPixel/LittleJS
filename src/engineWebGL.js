@@ -13,7 +13,7 @@
 
 'use strict';
 
-/** The WebGL canvas which appears above the main canvas and below the overlay canvas
+/** The WebGL canvas which appears below the main canvas
  *  @type {HTMLCanvasElement}
  *  @memberof WebGL */
 let glCanvas;
@@ -43,7 +43,7 @@ const gl_MAX_POLY_VERTEXES = gl_ARRAY_BUFFER_SIZE / gl_POLY_VERTEX_BYTE_STRIDE |
 ///////////////////////////////////////////////////////////////////////////////
 
 // Initialize WebGL, called automatically by the engine
-function glInit()
+function glInit(rootElement)
 {
     // keep set of texture infos so they can be restored if context is lost
     glTextureInfos = new Set;
@@ -67,8 +67,7 @@ function glInit()
         return;
     }
 
-    // attach the WebGL canvas
-    const rootElement = mainCanvas.parentElement;
+    // attach the WebGL canvas;
     rootElement.appendChild(glCanvas);
     
     // startup webgl
@@ -286,6 +285,9 @@ function glClearCanvas()
     glCanvas.width = drawCanvas.width;
     glCanvas.height = drawCanvas.height;
     glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
+    const color = canvasClearColor;
+    if (color.a > 0)
+        glContext.clearColor(color.r, color.g, color.b, color.a);
     glContext.clear(glContext.COLOR_BUFFER_BIT);
 }
 
@@ -515,7 +517,6 @@ function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgb
         glFlush();
     glSetInstancedMode();
 
-    glPolyMode = false;
     let offset = glBatchCount++ * gl_INDICES_PER_INSTANCE;
     glPositionData[offset++] = x;
     glPositionData[offset++] = y;

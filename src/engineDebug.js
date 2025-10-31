@@ -344,11 +344,12 @@ function debugRender()
     if (debugTakeScreenshot)
     {
         // combine canvases, remove alpha and save
-        combineCanvases(true);
-        debugSaveCanvas(overlayCanvas);
+        combineCanvases();
+        debugSaveCanvas(mainCanvas);
         debugTakeScreenshot = 0;
     }
 
+    const debugContext = mainContext;
     if (debugGamepads && gamepadsEnable)
     {
         // draw gamepads
@@ -396,9 +397,6 @@ function debugRender()
     let debugObject;
     if (debugOverlay)
     {
-        const saveContext = mainContext;
-        mainContext = overlayContext;
-
         // draw red rectangle around screen
         const cameraSize = getCameraSize();
         debugRect(cameraPos, cameraSize.subtract(vec2(.1)), '#f008');
@@ -430,15 +428,14 @@ function debugRender()
             // show floored tile pick for tile collision
             drawRect(mousePos.floor().add(vec2(.5)), vec2(1), rgb(1,1,0,.5));
         }
-        mainContext = saveContext;
     }
 
     {
         // draw debug primitives
-        overlayContext.lineWidth = 2;
+        debugContext.lineWidth = 2;
         debugPrimitives.forEach(p=>
         {
-            overlayContext.save();
+            debugContext.save();
 
             // create canvas transform from world space to screen space
             // without scaling because we want consistent pixel sizes
@@ -449,55 +446,56 @@ function debugRender()
                 scale = cameraScale;
                 angle -= cameraAngle;
             }
-            overlayContext.translate(pos.x|0, pos.y|0);
-            overlayContext.rotate(angle);
-            overlayContext.scale(1, p.text ? 1 : -1);
-            overlayContext.fillStyle = overlayContext.strokeStyle = p.color;
+            debugContext.translate(pos.x|0, pos.y|0);
+            debugContext.rotate(angle);
+            debugContext.scale(1, p.text ? 1 : -1);
+            debugContext.fillStyle = p.color;
+            debugContext.strokeStyle = p.color;
             if (p.text !== undefined)
             {
-                overlayContext.font = p.size*scale + 'px '+ p.font;
-                overlayContext.textAlign = 'center';
-                overlayContext.textBaseline = 'middle';
-                overlayContext.fillText(p.text, 0, 0);
+                debugContext.font = p.size*scale + 'px '+ p.font;
+                debugContext.textAlign = 'center';
+                debugContext.textBaseline = 'middle';
+                debugContext.fillText(p.text, 0, 0);
             }
             else if (p.points !== undefined)
             {
                 // poly
-                overlayContext.beginPath();
+                debugContext.beginPath();
                 for (const point of p.points)
                 {
                     const p2 = point.scale(scale).floor();
-                    overlayContext.lineTo(p2.x, p2.y);
+                    debugContext.lineTo(p2.x, p2.y);
                 }
-                overlayContext.closePath();
-                p.fill && overlayContext.fill();
-                overlayContext.stroke();
+                debugContext.closePath();
+                p.fill && debugContext.fill();
+                debugContext.stroke();
             }
             else if (p.size === 0 || (p.size.x === 0 && p.size.y === 0))
             {
                 // point
                 const pointSize = debugPointSize * scale;
-                overlayContext.fillRect(-pointSize/2, -1, pointSize, 3);
-                overlayContext.fillRect(-1, -pointSize/2, 3, pointSize);
+                debugContext.fillRect(-pointSize/2, -1, pointSize, 3);
+                debugContext.fillRect(-1, -pointSize/2, 3, pointSize);
             }
             else if (p.size.x !== undefined)
             {
                 // rect
                 const s = p.size.scale(scale).floor();
                 const w = s.x, h = s.y;
-                p.fill && overlayContext.fillRect(-w/2|0, -h/2|0, w, h);
-                overlayContext.strokeRect(-w/2|0, -h/2|0, w, h);
+                p.fill && debugContext.fillRect(-w/2|0, -h/2|0, w, h);
+                debugContext.strokeRect(-w/2|0, -h/2|0, w, h);
             }
             else
             {
                 // circle
-                overlayContext.beginPath();
-                overlayContext.arc(0, 0, p.size*scale/2, 0, 9);
-                p.fill && overlayContext.fill();
-                overlayContext.stroke();
+                debugContext.beginPath();
+                debugContext.arc(0, 0, p.size*scale/2, 0, 9);
+                p.fill && debugContext.fill();
+                debugContext.stroke();
             }
 
-            overlayContext.restore();
+            debugContext.restore();
         });
 
         // remove expired primitives
@@ -506,55 +504,53 @@ function debugRender()
 
     if (debugObject)
     {
-        const saveContext = mainContext;
-        mainContext = overlayContext;
         const raycastHitPos = tileCollisionRaycast(debugObject.pos, mousePos);
         raycastHitPos && drawRect(raycastHitPos.floor().add(vec2(.5)), vec2(1), rgb(0,1,1,.3));
         drawLine(mousePos, debugObject.pos, .1, raycastHitPos ? rgb(1,0,0,.5) : rgb(0,1,0,.5));
 
-        const debugText = 'mouse pos = ' + mousePos +
-            '\nmouse collision = ' + tileCollisionGetData(mousePos) +
-            '\n\n--- object info ---\n' +
-            debugObject.toString();
+        let debugText = 'mouse pos = ' + mousePos;
+        if (tileCollisionLayers.length)
+            debugText += '\nmouse collision = ' + tileCollisionGetData(mousePos);
+        debugText += '\n\n--- object info ---\n';
+        debugText += debugObject.toString();
         drawTextScreen(debugText, mousePosScreen, 24, rgb(), .05, undefined, 'center', 'monospace');
-        mainContext = saveContext;
     }
 
     {
         // draw debug overlay
         const fontSize = 20;
         const lineHeight = fontSize * 1.2 | 0;
-        overlayContext.save();
-        overlayContext.fillStyle = '#fff';
-        overlayContext.textAlign = 'left';
-        overlayContext.textBaseline = 'top';
-        overlayContext.font = fontSize + 'px monospace';
-        overlayContext.shadowColor = '#000';
-        overlayContext.shadowBlur = 9;
+        debugContext.save();
+        debugContext.fillStyle = '#fff';
+        debugContext.textAlign = 'left';
+        debugContext.textBaseline = 'top';
+        debugContext.font = fontSize + 'px monospace';
+        debugContext.shadowColor = '#000';
+        debugContext.shadowBlur = 9;
 
         let x = 9, y = 0, h = lineHeight;
         if (debugOverlay)
         {
-            overlayContext.fillText(`${engineName} v${engineVersion}`, x, y += h/2 );
-            overlayContext.fillText('Time: ' + formatTime(time), x, y += h);
-            overlayContext.fillText('FPS: ' + averageFPS.toFixed(1) + (glEnable?' WebGL':' Canvas2D'), 
+            debugContext.fillText(`${engineName} v${engineVersion}`, x, y += h/2 );
+            debugContext.fillText('Time: ' + formatTime(time), x, y += h);
+            debugContext.fillText('FPS: ' + averageFPS.toFixed(1) + (glEnable?' WebGL':' Canvas2D'), 
                 x, y += h);
-            overlayContext.fillText('Objects: ' + engineObjects.length, x, y += h);
-            overlayContext.fillText('Draw Count: ' + drawCount, x, y += h);
-            overlayContext.fillText('---------', x, y += h);
-            overlayContext.fillStyle = '#f00';
-            overlayContext.fillText('ESC: Debug Overlay', x, y += h);
-            overlayContext.fillStyle = debugPhysics ? '#f00' : '#fff';
-            overlayContext.fillText('1: Debug Physics', x, y += h);
-            overlayContext.fillStyle = debugParticles ? '#f00' : '#fff';
-            overlayContext.fillText('2: Debug Particles', x, y += h);
-            overlayContext.fillStyle = debugGamepads ? '#f00' : '#fff';
-            overlayContext.fillText('3: Debug Gamepads', x, y += h);
-            overlayContext.fillStyle = debugRaycast ? '#f00' : '#fff';
-            overlayContext.fillText('4: Debug Raycasts', x, y += h);
-            overlayContext.fillStyle = '#fff';
-            overlayContext.fillText('5: Save Screenshot', x, y += h);
-            overlayContext.fillText('6: Toggle Video Capture', x, y += h);
+            debugContext.fillText('Objects: ' + engineObjects.length, x, y += h);
+            debugContext.fillText('Draw Count: ' + drawCount, x, y += h);
+            debugContext.fillText('---------', x, y += h);
+            debugContext.fillStyle = '#f00';
+            debugContext.fillText('ESC: Debug Overlay', x, y += h);
+            debugContext.fillStyle = debugPhysics ? '#f00' : '#fff';
+            debugContext.fillText('1: Debug Physics', x, y += h);
+            debugContext.fillStyle = debugParticles ? '#f00' : '#fff';
+            debugContext.fillText('2: Debug Particles', x, y += h);
+            debugContext.fillStyle = debugGamepads ? '#f00' : '#fff';
+            debugContext.fillText('3: Debug Gamepads', x, y += h);
+            debugContext.fillStyle = debugRaycast ? '#f00' : '#fff';
+            debugContext.fillText('4: Debug Raycasts', x, y += h);
+            debugContext.fillStyle = '#fff';
+            debugContext.fillText('5: Save Screenshot', x, y += h);
+            debugContext.fillText('6: Toggle Video Capture', x, y += h);
 
             let keysPressed = '';
             let mousePressed = '';
@@ -567,8 +563,8 @@ function debugRender()
                 else if (keyIsDown(i, 0))
                     keysPressed += i + ' ' ;
             }
-            mousePressed && overlayContext.fillText('Mouse: ' + mousePressed, x, y += h);
-            keysPressed && overlayContext.fillText('Keys: ' + keysPressed, x, y += h);
+            mousePressed && debugContext.fillText('Mouse: ' + mousePressed, x, y += h);
+            keysPressed && debugContext.fillText('Keys: ' + keysPressed, x, y += h);
 
             // show gamepad buttons
             for (let i = 1; i < inputData.length; i++)
@@ -580,18 +576,18 @@ function debugRender()
                     if (keyIsDown(j, i))
                         buttonsPressed += j + ' ' ;
                 }
-                buttonsPressed && overlayContext.fillText(`Gamepad ${i-1}: ` + buttonsPressed, x, y += h);
+                buttonsPressed && debugContext.fillText(`Gamepad ${i-1}: ` + buttonsPressed, x, y += h);
             }
         }
         else
         {
-            overlayContext.fillText(debugPhysics ? 'Debug Physics' : '', x, y += h);
-            overlayContext.fillText(debugParticles ? 'Debug Particles' : '', x, y += h);
-            overlayContext.fillText(debugRaycast ? 'Debug Raycasts' : '', x, y += h);
-            overlayContext.fillText(debugGamepads ? 'Debug Gamepads' : '', x, y += h);
+            debugContext.fillText(debugPhysics ? 'Debug Physics' : '', x, y += h);
+            debugContext.fillText(debugParticles ? 'Debug Particles' : '', x, y += h);
+            debugContext.fillText(debugRaycast ? 'Debug Raycasts' : '', x, y += h);
+            debugContext.fillText(debugGamepads ? 'Debug Gamepads' : '', x, y += h);
         }
 
-        overlayContext.restore();
+        debugContext.restore();
     }
 }
 
@@ -611,20 +607,6 @@ function debugVideoCaptureStart()
 {
     if (debugVideoCaptureIsActive())
         return; // already recording
-
-    if (canvasMainAsOverlay)
-    {
-        canvasMainAsOverlay = false;
-        LOG('Warning: canvasMainAsOverlay disabled for video capture.');
-
-        // create overlay canvas
-        const rootElement = mainCanvas.parentElement;
-        overlayCanvas = rootElement.appendChild(document.createElement('canvas'));
-        overlayContext = overlayCanvas.getContext('2d');
-        overlayCanvas.style.cssText = mainCanvas.style.cssText;
-        setOverlayCanvasPixelated(overlayCanvasPixelated);
-        mainCanvas.style.zIndex = '';
-    }
 
     // captureStream passing in 0 to only capture when requestFrame() is called
     const stream = mainCanvas.captureStream(0);

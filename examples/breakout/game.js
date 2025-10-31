@@ -105,11 +105,11 @@ function gameRenderPost()
     // use built in image font for text
     const font = new LJS.FontImage;
 
-    font.drawTextOverlay('Score: ' + score, LJS.cameraPos.add(vec2(0,9.7)), .15, true);
+    font.drawText('Score: ' + score, LJS.cameraPos.add(vec2(0,9.7)), .15, true);
     if (!brickCount)
-        font.drawTextOverlay('You Win!', LJS.cameraPos.add(vec2(0,-5)), .2, true);
+        font.drawText('You Win!', LJS.cameraPos.add(vec2(0,-5)), .2, true);
     else if (!ball)
-        font.drawTextOverlay('Click to Play', LJS.cameraPos.add(vec2(0,-5)), .2, true);
+        font.drawText('Click to Play', LJS.cameraPos.add(vec2(0,-5)), .2, true);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

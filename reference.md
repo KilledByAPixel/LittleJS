@@ -145,7 +145,6 @@ drawCanvas2D(pos, size, angle=0, mirror, drawFunction, screenSpace, context)
 
 // Text functions
 drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK)
-drawTextOverlay(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK)
 drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK)
 
 // Utility drawing functions
@@ -173,7 +172,6 @@ TextureInfo.glTexture   // WebGL texture
 FontImage(image, tileSize=(8,8), paddingSize=(0,1)) // Create an image font
 FontImage.drawText(text, pos, scale, center)        // Draw text in world space
 FontImage.drawTextScreen(text, pos, scale, center)  // Draw text in screen space
-FontImage.drawTextOverlay(text, pos, scale, center) // Draw text to overlay canvas
 
 // Camera settings
 cameraPos = (0,0)        // Position of camera in world space

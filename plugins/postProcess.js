@@ -24,13 +24,12 @@ class PostProcessPlugin
 {
     /** Create global post processing shader
     *  @param {string} shaderCode
-    *  @param {boolean} [includeOverlay]
     *  @param {boolean} [includeMainCanvas]
      *  @example
      *  // create the post process plugin object
      *  new PostProcessPlugin(shaderCode);
      */
-    constructor(shaderCode, includeOverlay=false, includeMainCanvas=true)
+    constructor(shaderCode, includeMainCanvas=true)
     {
         ASSERT(!postProcess, 'Post process already initialized');
         postProcess = this;
@@ -102,17 +101,19 @@ class PostProcessPlugin
             // clear out the buffer
             glFlush();
             
-            if (includeMainCanvas || includeOverlay)
+            // setup texture
+            glContext.activeTexture(glContext.TEXTURE0);
+            glContext.bindTexture(glContext.TEXTURE_2D, postProcess.texture);
+            if (includeMainCanvas)
             {
-                // copy WebGL to the main canvas
-                mainContext.drawImage(glCanvas, 0, 0);
-
-                if (includeOverlay)
-                {
-                    // copy overlay canvas so it will be included in post processing
-                    mainContext.drawImage(overlayCanvas, 0, 0);
-                    overlayCanvas.width |= 0; // clear overlay canvas
-                }
+                // copy main canvas to work canvas
+                workCanvas.width = mainCanvasSize.x;
+                workCanvas.height = mainCanvasSize.y;
+                glCopyToContext(workContext);
+                workContext.drawImage(mainCanvas, 0, 0);
+                
+                // copy work canvas to texture
+                glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, workCanvas);
             }
 
             // setup shader program to draw a quad
@@ -120,14 +121,6 @@ class PostProcessPlugin
             glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
             glContext.pixelStorei(glContext.UNPACK_FLIP_Y_WEBGL, 1);
             glContext.disable(glContext.BLEND);
-
-            // set textures, pass in the 2d canvas and gl canvas in separate texture channels
-            glContext.activeTexture(glContext.TEXTURE0);
-            glContext.bindTexture(glContext.TEXTURE_2D, postProcess.texture);
-            if (includeMainCanvas || includeOverlay)
-            {
-                glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, mainCanvas);
-            }
 
             // set vertex position attribute
             const vertexByteStride = 8;

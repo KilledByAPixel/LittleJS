@@ -126,10 +126,10 @@ function gameRender()
 ///////////////////////////////////////////////////////////////////////////////
 function gameRenderPost()
 {
-    // draw to overlay canvas for hud rendering
+    // draw to main canvas for hud rendering
     const drawText = (text, x, y, size=40) =>
     {
-        const context = LJS.overlayContext;
+        const context = LJS.mainContext;
         context.textAlign = 'center';
         context.textBaseline = 'top';
         context.font = size + 'px arial';
@@ -138,8 +138,8 @@ function gameRenderPost()
         context.strokeText(text, x, y);
         context.fillText(text, x, y);
     }
-    drawText('Score: ' + score,   LJS.overlayCanvas.width*1/4, 20);
-    drawText('Deaths: ' + deaths, LJS.overlayCanvas.width*3/4, 20);
+    drawText('Score: ' + score,   LJS.mainCanvas.width*1/4, 20);
+    drawText('Deaths: ' + deaths, LJS.mainCanvas.width*3/4, 20);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

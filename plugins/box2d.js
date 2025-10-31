@@ -1876,33 +1876,33 @@ async function box2dInit()
             color = getDebugColor(color);
             point1 = box2d.vec2FromPointer(point1);
             point2 = box2d.vec2FromPointer(point2);
-            drawLine(point1, point2, debugLineWidth, color, vec2(), 0, false, false, overlayContext);
+            drawLine(point1, point2, debugLineWidth, color, vec2(), 0, false);
         };
         debugDraw.DrawPolygon = function(vertices, vertexCount, color)
         {
             color = getDebugColor(color);
             const points = getPointsList(vertices, vertexCount);
-            drawPoly(points, CLEAR_WHITE, debugLineWidth, color, vec2(), 0, false, false, overlayContext);
+            drawPoly(points, CLEAR_WHITE, debugLineWidth, color, vec2(), 0, false);
         };
         debugDraw.DrawSolidPolygon = function(vertices, vertexCount, color)
         {
             color = getDebugColor(color);
             const points = getPointsList(vertices, vertexCount);
-            drawPoly(points, color, 0, color, vec2(), 0, false, false, overlayContext);
+            drawPoly(points, color, 0, color, vec2(), 0, false);
         };
         debugDraw.DrawCircle = function(center, radius, color)
         {
             color = getDebugColor(color);
             center = box2d.vec2FromPointer(center);
-            drawCircle(center, radius*2, CLEAR_WHITE, debugLineWidth, color, false, false, overlayContext);
+            drawCircle(center, radius*2, CLEAR_WHITE, debugLineWidth, color, false);
         };
         debugDraw.DrawSolidCircle = function(center, radius, axis, color)
         {
             color = getDebugColor(color);
             center = box2d.vec2FromPointer(center);
             axis = box2d.vec2FromPointer(axis).scale(radius);
-            drawCircle(center, radius*2, color, debugLineWidth, color, false, false, overlayContext);
-            drawLine(vec2(), axis, debugLineWidth, color, center, 0, false, false, overlayContext);
+            drawCircle(center, radius*2, color, debugLineWidth, color, false);
+            drawLine(vec2(), axis, debugLineWidth, color, center, 0, false);
         };
         debugDraw.DrawTransform = function(transform)
         {
@@ -1911,8 +1911,8 @@ async function box2dInit()
             const angle = -transform.get_q().GetAngle();
             const p1 = vec2(1,0), c1 = rgb(.75,0,0,.8);
             const p2 = vec2(0,1), c2 = rgb(0,.75,0,.8);
-            drawLine(vec2(), p1, debugLineWidth, c1, pos, angle, false, false, overlayContext);
-            drawLine(vec2(), p2, debugLineWidth, c2, pos, angle, false, false, overlayContext);
+            drawLine(vec2(), p1, debugLineWidth, c1, pos, angle, false);
+            drawLine(vec2(), p2, debugLineWidth, c2, pos, angle, false);
         }
             
         debugDraw.AppendFlags(box2d.instance.b2Draw.e_shapeBit);

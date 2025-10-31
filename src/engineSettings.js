@@ -69,29 +69,12 @@ let canvasMaxAspect = 0;
  *  @memberof Settings */
 let canvasFixedSize = vec2();
 
-/** If set this makes the main canvas also be the overlay canvas
- *  This will also set the main canvas to be above the WebGL canvas
- *  This can improve performance on some systems but has some limitations
- *  Must be set before initialization
- *  @type {boolean}
- *  @default
- *  @memberof Settings */
-let canvasMainAsOverlay = false;
-
 /** Use nearest canvas scaling for more pixelated look
  *  - If enabled sets css image-rendering:pixelated
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
-let canvasPixelated = true;
-
-/** Use nearest canvas scaling for more pixelated look
- *  - If enabled sets css image-rendering:pixelated
- *  - This defaults to false because text looks better with smoothing
- *  @type {boolean}
- *  @default
- *  @memberof Settings */
-let overlayCanvasPixelated = false;
+let canvasPixelated = false;
 
 /** Disables texture filtering for crisper pixel art
  *  @type {boolean}
@@ -388,16 +371,6 @@ function setCanvasMaxAspect(aspect) { canvasMaxAspect = aspect; }
  *  @memberof Settings */
 function setCanvasFixedSize(size) { canvasFixedSize = size.copy(); }
 
-/** Sets the main canvas to be used as the overlay canvas
- *  Must be set before initialization
- *  @param {boolean} enable
- *  @memberof Settings */
-function setCanvasMainAsOverlay(enable)
-{
-    ASSERT(!mainCanvas, 'canvasMainAsOverlay must be set before initialization');
-    canvasMainAsOverlay = enable;
-}
-
 /** Use nearest scaling algorithm for canvas for more pixelated look
  *  @param {boolean} pixelated
  *  @memberof Settings */
@@ -408,18 +381,6 @@ function setCanvasPixelated(pixelated)
         mainCanvas.style.imageRendering = pixelated ? 'pixelated' : '';
     if (glCanvas)
         glCanvas.style.imageRendering = pixelated ? 'pixelated' : '';
-}
-
-/** Use nearest scaling algorithm for canvas for more pixelated look
- *  - If enabled sets css image-rendering:pixelated
- *  - This defaults to false because text looks better with smoothing
- *  @param {boolean} pixelated
- *  @memberof Settings */
-function setOverlayCanvasPixelated(pixelated)
-{
-    overlayCanvasPixelated = pixelated;
-    if (overlayCanvas)
-        overlayCanvas.style.imageRendering = pixelated ? 'pixelated' : '';
 }
 
 /** Disables texture filtering for crisper pixel art
