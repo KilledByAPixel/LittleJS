@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.15.9';
+const engineVersion = '1.16.1';
 
 /** Frames per second to update
  *  @type {number}
@@ -193,7 +193,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         // update time keeping
         let frameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
         frameTimeLastMS = frameTimeMS;
-        if (debug || showWatermark)
+        if (debug || debugWatermark)
             averageFPS = lerp(averageFPS, 1e3/(frameTimeDeltaMS||1), .05);
         const debugSpeedUp   = debug && keyIsDown('Equal'); // +
         const debugSpeedDown = debug && keyIsDown('Minus'); // -
@@ -284,7 +284,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             glFlush();
             debugVideoCaptureUpdate();
 
-            if (showWatermark && !debugVideoCaptureIsActive())
+            if (debugWatermark && !debugVideoCaptureIsActive())
             {
                 // update fps display
                 overlayContext.textAlign = 'right';
@@ -780,7 +780,7 @@ const debugPointSize = .5;
  *  @type {boolean}
  *  @default
  *  @memberof Debug */
-let showWatermark = true;
+let debugWatermark = true;
 
 /** Key code used to toggle debug mode, Esc by default
  *  @type {string}
@@ -1071,7 +1071,7 @@ function debugUpdate()
     if (debugOverlay)
     {
         if (keyWasPressed('Digit0'))
-            showWatermark = !showWatermark;
+            debugWatermark = !debugWatermark;
         if (keyWasPressed('Digit1'))
             debugPhysics = !debugPhysics, debugParticles = false;
         if (keyWasPressed('Digit2'))
@@ -1608,11 +1608,7 @@ function percent(value, valueA, valueB)
  *  @return {number}
  *  @memberof Utilities */
 function lerp(valueA, valueB, percent)
-{
-    if (valueA >= 0 && valueA <= 1 && ((valueB < 0 || valueB > 1) && (percent < 0 || percent > 1)))
-        console.warn('lerp() parameter order changed! use lerp(start, end, p)');
-    return valueA + clamp(percent) * (valueB-valueA);
-}
+{ return valueA + clamp(percent) * (valueB-valueA); }
 
 /** Gets percent between percentA and percentB and linearly interpolates between lerpA and lerpB
  *  A shortcut for lerp(lerpA, lerpB, percent(value, percentA, percentB))
@@ -1643,11 +1639,7 @@ function distanceWrap(valueA, valueB, wrapSize=1)
  *  @return {number}
  *  @memberof Utilities */
 function lerpWrap(valueA, valueB, percent, wrapSize=1)
-{
-    if (valueA >= 0 && valueA <= 1 && ((valueB < 0 || valueB > 1) && (percent < 0 || percent > 1)))
-        console.warn('lerpWrap() parameter order changed! use lerpWrap(start, end, p)');
-    return valueA + clamp(percent) * distanceWrap(valueB, valueA, wrapSize);
-}
+{ return valueA + clamp(percent) * distanceWrap(valueB, valueA, wrapSize); }
 
 /** Returns signed wrapped distance between the two angles passed in
  *  @param {number} angleA
@@ -2852,13 +2844,19 @@ let glCircleSides = 32;
  *  @type {Vector2}
  *  @default Vector2(16,16)
  *  @memberof Settings */
-let tileSizeDefault = vec2(16);
+let tileDefaultSize = vec2(16);
 
-/** How many pixels smaller to draw tiles to prevent bleeding from neighbors
+/** Default padding pixels around tiles
  *  @type {number}
  *  @default
  *  @memberof Settings */
-let tileFixBleedScale = 0;
+let tileDefaultPadding = 0;
+
+/** Default amount of pixels smaller to draw tiles to prevent neighbor bleeding
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let tileDefaultBleed = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Object settings
@@ -3172,12 +3170,17 @@ function setGLCircleSides(sides) { glCircleSides = sides; }
 /** Set default size of tiles in pixels
  *  @param {Vector2} size
  *  @memberof Settings */
-function setTileSizeDefault(size) { tileSizeDefault = size.copy(); }
+function setTileDefaultSize(size) { tileDefaultSize = size.copy(); }
 
-/** Set to prevent tile bleeding from neighbors in pixels
- *  @param {number} scale
+/** Default padding pixels around tiles
+ *  @param {number} padding
  *  @memberof Settings */
-function setTileFixBleedScale(scale) { tileFixBleedScale = scale; }
+function setTileDefaultPadding(padding) { tileDefaultPadding = padding; }
+
+/** Default amount of pixels smaller to draw tiles to prevent neighbor bleeding
+ *  @param {number} bleed
+ *  @memberof Settings */
+function setTileDefaultBleed(bleed) { tileDefaultBleed = bleed; }
 
 /** Set if collisions between objects are enabled
  *  @param {boolean} enable
@@ -3328,7 +3331,7 @@ function setMedalsPreventUnlock(preventUnlock) { medalsPreventUnlock = preventUn
 /** Set if watermark with FPS should be shown
  *  @param {boolean} show
  *  @memberof Debug */
-function setShowWatermark(show) { showWatermark = show; }
+function setDebugWatermark(show) { debugWatermark = show; }
 
 /** Set key code used to toggle debug mode, Esc by default
  *  @param {string} key
@@ -3941,7 +3944,7 @@ let drawCount;
  * - This can take vecs or floats for easier use and conversion
  * - If an index is passed in, the tile size and index will determine the position
  * @param {Vector2|number} [pos=0] - Position of the tile in pixels, or tile index
- * @param {Vector2|number} [size=tileSizeDefault] - Size of tile in pixels
+ * @param {Vector2|number} [size] - Size of tile in pixels
  * @param {number} [textureIndex] - Texture index to use
  * @param {number} [padding] - How many pixels padding around tiles
  * @return {TileInfo}
@@ -3951,7 +3954,7 @@ let drawCount;
  * tile(1, 16, 3)                // a tile at index 1 of size 16 on texture 3
  * tile(vec2(4,8), vec2(30,10))  // a tile at index (4,8) with a size of (30,10)
  * @memberof Draw */
-function tile(pos=new Vector2, size=tileSizeDefault, textureIndex=0, padding=0)
+function tile(pos=new Vector2, size=tileDefaultSize, textureIndex=0, padding=tileDefaultPadding)
 {
     if (headlessMode)
         return new TileInfo;
@@ -3990,13 +3993,13 @@ function tile(pos=new Vector2, size=tileSizeDefault, textureIndex=0, padding=0)
 class TileInfo
 {
     /** Create a tile info object
-     *  @param {Vector2} [pos=(0,0)]            - Top left corner of tile in pixels
-     *  @param {Vector2} [size=tileSizeDefault] - Size of tile in pixels
-     *  @param {number}  [textureIndex]         - Texture index to use
-     *  @param {number}  [padding]              - How many pixels padding around tiles
-     *  @param {number}  [bleedScale]           - How many pixels smaller to draw tiles
+     *  @param {Vector2} [pos=(0,0)] - Top left corner of tile in pixels
+     *  @param {Vector2} [size] - Size of tile in pixels
+     *  @param {number}  [textureIndex] - Texture index to use
+     *  @param {number}  [padding] - How many pixels padding around tiles
+     *  @param {number}  [bleed] - How many pixels smaller to draw tiles
      */
-    constructor(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0, bleedScale=tileFixBleedScale)
+    constructor(pos=vec2(), size=tileDefaultSize, textureIndex=0, padding=tileDefaultPadding, bleed=tileDefaultBleed)
     {
         /** @property {Vector2} - Top left corner of tile in pixels */
         this.pos = pos.copy();
@@ -4009,7 +4012,7 @@ class TileInfo
         /** @property {TextureInfo} - The texture info for this tile */
         this.textureInfo = textureInfos[this.textureIndex];
         /** @property {number} - Shrinks tile by this many pixels to prevent neighbors bleeding */
-        this.bleedScale = bleedScale;
+        this.bleed = bleed;
     }
 
     /** Returns a copy of this tile offset by a vector
@@ -4017,7 +4020,7 @@ class TileInfo
     *  @return {TileInfo}
     */
     offset(offset)
-    { return new TileInfo(this.pos.add(offset), this.size, this.textureIndex, this.padding, this.bleedScale); }
+    { return new TileInfo(this.pos.add(offset), this.size, this.textureIndex, this.padding, this.bleed); }
 
     /** Returns a copy of this tile offset by a number of animation frames
     *  @param {number} frame - Offset to apply in animation frames
@@ -4040,7 +4043,7 @@ class TileInfo
         this.size = textureInfo.size.copy();
         this.textureInfo = textureInfo;
         // do not use padding or bleed
-        this.bleedScale = this.padding = 0;
+        this.bleed = this.padding = 0;
         return this;
     }
 }
@@ -4106,7 +4109,7 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=WHITE,
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
     const textureInfo = tileInfo && tileInfo.textureInfo;
-    const bleedScale = tileInfo ? tileInfo.bleedScale : 0;
+    const bleed = tileInfo?.bleed ?? 0;
     if (useWebGL && glEnable)
     {
         ASSERT(!!glContext, 'WebGL is not enabled!');
@@ -4121,13 +4124,13 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=WHITE,
             const w = tileInfo.size.x * sizeInverse.x;
             const h = tileInfo.size.y * sizeInverse.y;
             glSetTexture(textureInfo.glTexture);
-            if (bleedScale)
+            if (bleed)
             {
-                const tileImageFixBleedX = sizeInverse.x*bleedScale;
-                const tileImageFixBleedY = sizeInverse.y*bleedScale;
+                const bleedX = sizeInverse.x*bleed;
+                const bleedY = sizeInverse.y*bleed;
                 glDraw(pos.x, pos.y, mirror ? -size.x : size.x, size.y, angle,
-                    x + tileImageFixBleedX,     y + tileImageFixBleedY,
-                    x - tileImageFixBleedX + w, y - tileImageFixBleedY + h,
+                    x + bleedX,     y + bleedY,
+                    x - bleedX + w, y - bleedY + h,
                     color.rgbaInt(), additiveColor && additiveColor.rgbaInt());
             }
             else
@@ -4155,7 +4158,7 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=WHITE,
                 // calculate uvs and render
                 const x = tileInfo.pos.x,  y = tileInfo.pos.y;
                 const w = tileInfo.size.x, h = tileInfo.size.y;
-                drawImageColor(context, textureInfo.image, x, y, w, h, -.5, -.5, 1, 1, color, additiveColor, bleedScale);
+                drawImageColor(context, textureInfo.image, x, y, w, h, -.5, -.5, 1, 1, color, additiveColor, bleed);
             }
             else
             {
@@ -4824,18 +4827,18 @@ function combineCanvases(removeAlpha=false)
     *  @param {number} dHeight
     *  @param {Color} color
     *  @param {Color} [additiveColor]
-    *  @param {number} [bleedScale] - How much to shrink the source, used to fix bleeding
+    *  @param {number} [bleed] - How many pixels to shrink the source, used to fix bleeding
  *  @memberof Draw */
-function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight, color, additiveColor, bleedScale=0)
+function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight, color, additiveColor, bleed=0)
 {
     function isWhite(c) { return c.r >= 1 && c.g >= 1 && c.b >= 1; }
     function isBlack(c) { return c.r <= 0 && c.g <= 0 && c.b <= 0 && c.a <= 0; }
-    const sx2 = bleedScale;
-    const sy2 = bleedScale;
+    const sx2 = bleed;
+    const sy2 = bleed;
     sWidth  = max(1,sWidth|0);
     sHeight = max(1,sHeight|0);
-    const sWidth2  = sWidth  - 2*bleedScale;
-    const sHeight2 = sHeight - 2*bleedScale;
+    const sWidth2  = sWidth  - 2*bleed;
+    const sHeight2 = sHeight - 2*bleed;
     if (!canvasColorTiles || (additiveColor ? isWhite(color.add(additiveColor)) && additiveColor.a <= 0 : isWhite(color)))
     {
         // white texture with no additive alpha, no need to tint
@@ -5967,12 +5970,12 @@ class Sound
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
- * Sound Wave Object - Stores a wave sound for later use and can be played positionally
- * - this can be used to play wave, mp3, and ogg files
+ * Sound Wave Object - Loads and stores an audio file for later use
+ * - this can be used to load and play wave, mp3, and ogg files
  * @extends Sound
  * @memberof Audio
  * @example
- * // create a sound
+ * // load an audio asset file
  * const sound_example = new SoundWave('sound.mp3');
  *
  * // play the sound
@@ -12489,7 +12492,7 @@ export
 	// Globals
 	debug,
 	debugOverlay,
-	showWatermark,
+	debugWatermark,
 
 	// Debug
 	ASSERT,
@@ -12527,8 +12530,9 @@ export
 	fontDefault,
 	showSplashScreen,
 	headlessMode,
-	tileSizeDefault,
-	tileFixBleedScale,
+	tileDefaultSize,
+	tileDefaultPadding,
+	tileDefaultBleed,
 	enablePhysicsSolver,
 	objectDefaultMass,
 	objectDefaultDamping,
@@ -12573,8 +12577,9 @@ export
 	setShowSplashScreen,
 	setHeadlessMode,
 	setGLEnable,
-	setTileSizeDefault,
-	setTileFixBleedScale,
+	setTileDefaultSize,
+	setTileDefaultPadding,
+	setTileDefaultBleed,
 	setEnablePhysicsSolver,
 	setObjectDefaultMass,
 	setObjectDefaultDamping,
@@ -12603,7 +12608,7 @@ export
 	setMedalDisplaySlideTime,
 	setMedalDisplaySize,
 	setMedalsPreventUnlock,
-	setShowWatermark,
+	setDebugWatermark,
 	setDebugKey,
 
 	// Utilities

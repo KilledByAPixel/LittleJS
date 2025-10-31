@@ -199,7 +199,7 @@ declare module "littlejsengine" {
      *  @type {boolean}
      *  @default
      *  @memberof Debug */
-    export let showWatermark: boolean;
+    export let debugWatermark: boolean;
     /** Asserts if the expression is false, does nothing in release builds
      *  Halts execution if the assert fails and throws an error
      *  @param {boolean} assert
@@ -404,12 +404,17 @@ declare module "littlejsengine" {
      *  @type {Vector2}
      *  @default Vector2(16,16)
      *  @memberof Settings */
-    export let tileSizeDefault: Vector2;
-    /** How many pixels smaller to draw tiles to prevent bleeding from neighbors
+    export let tileDefaultSize: Vector2;
+    /** Default padding pixels around tiles
      *  @type {number}
      *  @default
      *  @memberof Settings */
-    export let tileFixBleedScale: number;
+    export let tileDefaultPadding: number;
+    /** Default amount of pixels smaller to draw tiles to prevent neighbor bleeding
+     *  @type {number}
+     *  @default
+     *  @memberof Settings */
+    export let tileDefaultBleed: number;
     /** Enable physics solver for collisions between objects
      *  @type {boolean}
      *  @default
@@ -615,11 +620,15 @@ declare module "littlejsengine" {
     /** Set default size of tiles in pixels
      *  @param {Vector2} size
      *  @memberof Settings */
-    export function setTileSizeDefault(size: Vector2): void;
-    /** Set to prevent tile bleeding from neighbors in pixels
-     *  @param {number} scale
+    export function setTileDefaultSize(size: Vector2): void;
+    /** Default padding pixels around tiles
+     *  @param {number} padding
      *  @memberof Settings */
-    export function setTileFixBleedScale(scale: number): void;
+    export function setTileDefaultPadding(padding: number): void;
+    /** Default amount of pixels smaller to draw tiles to prevent neighbor bleeding
+     *  @param {number} bleed
+     *  @memberof Settings */
+    export function setTileDefaultBleed(bleed: number): void;
     /** Set if collisions between objects are enabled
      *  @param {boolean} enable
      *  @memberof Settings */
@@ -736,7 +745,7 @@ declare module "littlejsengine" {
     /** Set if watermark with FPS should be shown
      *  @param {boolean} show
      *  @memberof Debug */
-    export function setShowWatermark(show: boolean): void;
+    export function setDebugWatermark(show: boolean): void;
     /** Set key code used to toggle debug mode, Esc by default
      *  @param {string} key
      *  @memberof Debug */
@@ -1431,7 +1440,7 @@ declare module "littlejsengine" {
      * - This can take vecs or floats for easier use and conversion
      * - If an index is passed in, the tile size and index will determine the position
      * @param {Vector2|number} [pos=0] - Position of the tile in pixels, or tile index
-     * @param {Vector2|number} [size=tileSizeDefault] - Size of tile in pixels
+     * @param {Vector2|number} [size] - Size of tile in pixels
      * @param {number} [textureIndex] - Texture index to use
      * @param {number} [padding] - How many pixels padding around tiles
      * @return {TileInfo}
@@ -1448,13 +1457,13 @@ declare module "littlejsengine" {
      */
     export class TileInfo {
         /** Create a tile info object
-         *  @param {Vector2} [pos=(0,0)]            - Top left corner of tile in pixels
-         *  @param {Vector2} [size=tileSizeDefault] - Size of tile in pixels
-         *  @param {number}  [textureIndex]         - Texture index to use
-         *  @param {number}  [padding]              - How many pixels padding around tiles
-         *  @param {number}  [bleedScale]           - How many pixels smaller to draw tiles
+         *  @param {Vector2} [pos=(0,0)] - Top left corner of tile in pixels
+         *  @param {Vector2} [size] - Size of tile in pixels
+         *  @param {number}  [textureIndex] - Texture index to use
+         *  @param {number}  [padding] - How many pixels padding around tiles
+         *  @param {number}  [bleed] - How many pixels smaller to draw tiles
          */
-        constructor(pos?: Vector2, size?: Vector2, textureIndex?: number, padding?: number, bleedScale?: number);
+        constructor(pos?: Vector2, size?: Vector2, textureIndex?: number, padding?: number, bleed?: number);
         /** @property {Vector2} - Top left corner of tile in pixels */
         pos: Vector2;
         /** @property {Vector2} - Size of tile in pixels */
@@ -1466,7 +1475,7 @@ declare module "littlejsengine" {
         /** @property {TextureInfo} - The texture info for this tile */
         textureInfo: TextureInfo;
         /** @property {number} - Shrinks tile by this many pixels to prevent neighbors bleeding */
-        bleedScale: number;
+        bleed: number;
         /** Returns a copy of this tile offset by a vector
         *  @param {Vector2} offset - Offset to apply in pixels
         *  @return {TileInfo}
@@ -2193,12 +2202,12 @@ declare module "littlejsengine" {
         isLoaded(): boolean;
     }
     /**
-     * Sound Wave Object - Stores a wave sound for later use and can be played positionally
-     * - this can be used to play wave, mp3, and ogg files
+     * Sound Wave Object - Loads and stores an audio file for later use
+     * - this can be used to load and play wave, mp3, and ogg files
      * @extends Sound
      * @memberof Audio
      * @example
-     * // create a sound
+     * // load an audio asset file
      * const sound_example = new SoundWave('sound.mp3');
      *
      * // play the sound
