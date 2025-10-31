@@ -31,11 +31,6 @@ let mainCanvas;
  *  @memberof Draw */
 let mainContext;
 
-/** The default canvas to use for drawing, usually mainCanvas
- *  @type {HTMLCanvasElement|OffscreenCanvas}
- *  @memberof Draw */
-let drawCanvas;
-
 /** The default 2d context to use for drawing, usually mainContext
  *  @type {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D}
  *  @memberof Draw */

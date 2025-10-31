@@ -282,8 +282,8 @@ function glClearCanvas()
     if (!glContext) return;
 
     // clear and set to same size as main canvas
-    glCanvas.width = drawCanvas.width;
-    glCanvas.height = drawCanvas.height;
+    glCanvas.width = mainCanvasSize.x;
+    glCanvas.height = mainCanvasSize.y;
     glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
     const color = canvasClearColor;
     if (color.a > 0)

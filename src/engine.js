@@ -384,7 +384,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         'touch-action:none;' +        // prevent mobile pinch to resize
         '-webkit-touch-callout:none'; // compatibility for ios
     rootElement.style.cssText = styleRoot;
-    drawCanvas = mainCanvas = rootElement.appendChild(document.createElement('canvas'));
+    mainCanvas = rootElement.appendChild(document.createElement('canvas'));
     drawContext = mainContext = mainCanvas.getContext('2d');
 
     // init stuff and start engine

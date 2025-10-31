@@ -219,7 +219,6 @@ export
 	TextureInfo,
 	mainCanvas,
 	mainContext,
-	drawCanvas,
 	drawContext,
 	workCanvas,
 	workContext,

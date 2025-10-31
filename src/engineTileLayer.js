@@ -443,12 +443,11 @@ class TileLayer extends CanvasLayer
         if (!this.context) return;
 
         // save current render settings
-        /** @type {[HTMLCanvasElement|OffscreenCanvas, CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, Color]} */
-        this.savedRenderSettings = [drawCanvas, drawContext, mainCanvasSize, cameraPos, cameraScale, canvasClearColor];
+        /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, Color]} */
+        this.savedRenderSettings = [drawContext, mainCanvasSize, cameraPos, cameraScale, canvasClearColor];
 
         // set the draw canvas and context to this layer
         // use camera settings to match this layer's canvas
-        drawCanvas = this.canvas;
         drawContext = this.context;
         cameraPos = this.size.scale(.5);
         const tileSize = this.tileInfo ? this.tileInfo.size : vec2(1);
@@ -458,8 +457,8 @@ class TileLayer extends CanvasLayer
         if (clear)
         {
             // clear and set size
-            drawCanvas.width  = mainCanvasSize.x;
-            drawCanvas.height = mainCanvasSize.y;
+            this.canvas.width  = mainCanvasSize.x;
+            this.canvas.height = mainCanvasSize.y;
         }
 
         // disable smoothing for pixel art
@@ -479,7 +478,7 @@ class TileLayer extends CanvasLayer
         //debugSaveCanvas(this.canvas);
 
         // set stuff back to normal
-        [drawCanvas, drawContext, mainCanvasSize, cameraPos, cameraScale, canvasClearColor] = this.savedRenderSettings;
+        [drawContext, mainCanvasSize, cameraPos, cameraScale, canvasClearColor] = this.savedRenderSettings;
     }
 
     /** Draw the tile at a given position in the tile grid
