@@ -626,7 +626,7 @@ function setMedalsPreventUnlock(preventUnlock) { medalsPreventUnlock = preventUn
 /** Set if watermark with FPS should be shown
  *  @param {boolean} show
  *  @memberof Debug */
-function setShowWatermark(show) { showWatermark = show; }
+function setDebugWatermark(show) { debugWatermark = show; }
 
 /** Set key code used to toggle debug mode, Esc by default
  *  @param {string} key

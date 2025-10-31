@@ -440,8 +440,8 @@ debugSaveDataURL(dataURL, filename)  // Save url to a file
 debug                // Is debug enabled?
 debugPointSize = .5  // Size to render debug points by default
 debugKey = 'Escape'  // Key code used to toggle debug mode
-debugOverlay         // True if the debug overlay is active
-showWatermark        // True if watermark with FPS should be show
+debugOverlay         // Is the debug overlay is active?
+debugWatermark       // Should watermark with FPS appear in debug mode?
 ```
 
 [LittleJS Engine](https://github.com/KilledByAPixel/LittleJS) Copyright 2021 Frank Force

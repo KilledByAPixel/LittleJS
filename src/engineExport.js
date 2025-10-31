@@ -27,7 +27,7 @@ export
 	// Globals
 	debug,
 	debugOverlay,
-	showWatermark,
+	debugWatermark,
 
 	// Debug
 	ASSERT,
@@ -143,7 +143,7 @@ export
 	setMedalDisplaySlideTime,
 	setMedalDisplaySize,
 	setMedalsPreventUnlock,
-	setShowWatermark,
+	setDebugWatermark,
 	setDebugKey,
 
 	// Utilities

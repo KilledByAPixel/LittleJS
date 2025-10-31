@@ -26,7 +26,7 @@ const debugPointSize = .5;
  *  @type {boolean}
  *  @default
  *  @memberof Debug */
-let showWatermark = true;
+let debugWatermark = true;
 
 /** Key code used to toggle debug mode, Esc by default
  *  @type {string}
@@ -317,7 +317,7 @@ function debugUpdate()
     if (debugOverlay)
     {
         if (keyWasPressed('Digit0'))
-            showWatermark = !showWatermark;
+            debugWatermark = !debugWatermark;
         if (keyWasPressed('Digit1'))
             debugPhysics = !debugPhysics, debugParticles = false;
         if (keyWasPressed('Digit2'))

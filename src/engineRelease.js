@@ -6,7 +6,7 @@
 
 'use strict';
 
-let showWatermark = 0;
+let debugWatermark = 0;
 let debugKey = '';
 const debug = 0;
 const debugOverlay = 0;

@@ -190,7 +190,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         // update time keeping
         let frameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
         frameTimeLastMS = frameTimeMS;
-        if (debug || showWatermark)
+        if (debug || debugWatermark)
             averageFPS = lerp(averageFPS, 1e3/(frameTimeDeltaMS||1), .05);
         const debugSpeedUp   = debug && keyIsDown('Equal'); // +
         const debugSpeedDown = debug && keyIsDown('Minus'); // -
@@ -281,7 +281,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             glFlush();
             debugVideoCaptureUpdate();
 
-            if (showWatermark && !debugVideoCaptureIsActive())
+            if (debugWatermark && !debugVideoCaptureIsActive())
             {
                 // update fps display
                 overlayContext.textAlign = 'right';
