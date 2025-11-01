@@ -272,34 +272,20 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             if (!wasUpdated)
                 updateCanvas();
 
-            // render sort then render while removing destroyed objects
+            // render the game and objects
             enginePreRender();
             gameRender();
             engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
             for (const o of engineObjects)
                 o.destroyed || o.render();
+
+            // post rendering
             gameRenderPost();
             pluginList.forEach(plugin=>plugin.render?.());
             inputRender();
             debugRender();
             glFlush();
-            if (debugVideoCaptureIsActive())
-                debugVideoCaptureUpdate();
-
-            if (debugWatermark && !debugVideoCaptureIsActive())
-            {
-                // update fps display
-                mainContext.textAlign = 'right';
-                mainContext.textBaseline = 'top';
-                mainContext.font = '1em monospace';
-                mainContext.fillStyle = '#000';
-                const text = engineName + ' ' + 'v' + engineVersion + ' / '
-                    + drawCount + ' / ' + engineObjects.length + ' / ' + averageFPS.toFixed(1)
-                    + (glEnable ? ' GL' : ' 2D') ;
-                mainContext.fillText(text, mainCanvas.width-3, 3);
-                mainContext.fillStyle = '#fff';
-                mainContext.fillText(text, mainCanvas.width-2, 2);
-            }
+            debugRenderPost();
             drawCount = 0;
         }
     }
@@ -365,15 +351,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         mainContext.lineJoin = 'round';
         mainContext.lineCap  = 'round';
     }
-
-    // wait for gameInit to load
-    async function startEngine()
-    {
-        await gameInit();
-        engineUpdate();
-    }
-    if (headlessMode)
-        return startEngine();
+    
+    // skip setup if headless
+    if (headlessMode) return startEngine();
 
     // setup webgl
     glInit(rootElement);
@@ -462,6 +442,13 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     // wait for all the promises to finish
     await Promise.all(promises);
     return startEngine();
+
+    async function startEngine()
+    {
+        // wait for gameInit to load
+        await gameInit();
+        engineUpdate();
+    }
 
     ///////////////////////////////////////////////////////////////////////////
     // LittleJS Splash Screen
@@ -1052,13 +1039,6 @@ function debugUpdate()
 {
     if (!debug) return;
 
-    if (debugVideoCaptureIsActive())
-    {
-        // control to stop video capture
-        if (keyWasPressed('Digit6') || keyWasPressed(debugKey))
-            debugVideoCaptureStop();
-    }
-
     if (keyWasPressed(debugKey)) // Esc
         debugOverlay = !debugOverlay;
     if (debugOverlay)
@@ -1075,9 +1055,15 @@ function debugUpdate()
             debugRaycast = !debugRaycast;
         if (keyWasPressed('Digit5'))
             debugScreenshot();
-        if (keyWasPressed('Digit6') && !debugVideoCaptureIsActive())
-            debugVideoCaptureStart();
     }
+    if (debugVideoCaptureIsActive())
+    {
+        // control to stop video capture
+        if (!debugOverlay || keyWasPressed('Digit6'))
+            debugVideoCaptureStop();
+    }
+    else if (debugOverlay && keyWasPressed('Digit6'))
+        debugVideoCaptureStart();
 }
 
 function debugRender()
@@ -1338,6 +1324,29 @@ function debugRender()
     }
 }
 
+function debugRenderPost()
+{
+    if (debugVideoCaptureIsActive())
+    {
+        debugVideoCaptureUpdate();
+        return;
+    }
+
+    if (!debugWatermark) return;
+    
+    // update fps display
+    mainContext.textAlign = 'right';
+    mainContext.textBaseline = 'top';
+    mainContext.font = '1em monospace';
+    mainContext.fillStyle = '#000';
+    const text = engineName + ' v' + engineVersion + ' / '
+        + drawCount + ' / ' + engineObjects.length + ' / ' + averageFPS.toFixed(1)
+        + (glEnable ? ' GL' : ' 2D') ;
+    mainContext.fillText(text, mainCanvas.width-3, 3);
+    mainContext.fillStyle = '#fff';
+    mainContext.fillText(text, mainCanvas.width-2, 2);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // video capture - records video and audio at 60 fps using MediaRecorder API
 
@@ -1410,7 +1419,9 @@ function debugVideoCaptureStop()
     // stop recording
     LOG(`Video capture ended. ${debugVideoCaptureTimer.get().toFixed(2)} seconds recorded.`);
     debugVideoCapture.stop();
-    debugVideoCapture = 0;
+    debugVideoCaptureTrack.stop();
+    debugVideoCaptureTrack = undefined;
+    debugVideoCapture = undefined;
     debugVideoCaptureIcon.style.display = 'none';
 }
 
@@ -2713,7 +2724,7 @@ let cameraScale = 32;
  *  @memberof Settings */
 let canvasColorTiles = true;
 
-/** Color to clear the canvas to before render
+/** Color to clear the canvas to before render, does not clear if alpha is 0
  *  @type {Color}
  *  @memberof Draw */
 let canvasClearColor = CLEAR_BLACK;
@@ -3022,7 +3033,7 @@ function setCameraScale(scale) { cameraScale = scale; }
  *  @memberof Settings */
 function setCanvasColorTiles(colorTiles) { canvasColorTiles = colorTiles; }
 
-/** Set color to clear the canvas to before render
+/** Set color to clear the canvas to before render, does not clear if alpha is 0
  *  @param {Color} color
  *  @memberof Settings */
 function setCanvasClearColor(color) { canvasClearColor = color.copy(); }
@@ -4409,7 +4420,11 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
     ASSERT(typeof drawFunction === 'function', 'drawFunction must be a function');
 
     if (!screenSpace)
-        [pos, size, angle] = worldToScreenTransform(pos, size, angle);
+    {
+        pos = worldToScreen(pos);
+        size = size.scale(cameraScale);
+        angle -= cameraAngle;
+    }
     context.save();
     context.translate(pos.x+.5, pos.y+.5);
     context.rotate(angle);
@@ -4601,25 +4616,6 @@ function screenToWorldTransform(screenPos, screenSize, screenAngle=0)
         screenToWorld(screenPos),
         screenSize.scale(1/cameraScale),
         screenAngle + cameraAngle
-    ];
-}
-
-/** Convert world space transform to screen space
- *  @param {Vector2} worldPos
- *  @param {Vector2} worldSize  
- *  @param {number} [worldAngle]
- *  @return {[Vector2, Vector2, number]} - [pos, size, angle]
- *  @memberof Draw */
-function worldToScreenTransform(worldPos, worldSize, worldAngle=0)
-{
-    ASSERT(isVector2(worldPos), 'worldPos must be a vec2');
-    ASSERT(isVector2(worldSize), 'worldSize must be a vec2');
-    ASSERT(isNumber(worldAngle), 'worldAngle must be a number');
-
-    return [
-        worldToScreen(worldPos),
-        worldSize.scale(cameraScale),
-        worldAngle - cameraAngle
     ];
 }
 

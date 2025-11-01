@@ -340,7 +340,7 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let canvasColorTiles: boolean;
-    /** Color to clear the canvas to before render
+    /** Color to clear the canvas to before render, does not clear if alpha is 0
      *  @type {Color}
      *  @memberof Draw */
     export let canvasClearColor: Color;
@@ -560,7 +560,7 @@ declare module "littlejsengine" {
      *  @param {boolean} colorTiles
      *  @memberof Settings */
     export function setCanvasColorTiles(colorTiles: boolean): void;
-    /** Set color to clear the canvas to before render
+    /** Set color to clear the canvas to before render, does not clear if alpha is 0
      *  @param {Color} color
      *  @memberof Settings */
     export function setCanvasClearColor(color: Color): void;
@@ -1587,6 +1587,13 @@ declare module "littlejsengine" {
      *  @return {Vector2}
      *  @memberof Draw */
     export function worldToScreenDelta(worldDelta: Vector2): Vector2;
+    /** Convert screen space transform to world space
+     *  @param {Vector2} screenPos
+     *  @param {Vector2} screenSize
+     *  @param {number} [screenAngle]
+     *  @return {[Vector2, Vector2, number]} - [pos, size, angle]
+     *  @memberof Draw */
+    export function screenToWorldTransform(screenPos: Vector2, screenSize: Vector2, screenAngle?: number): [Vector2, Vector2, number];
     /** Draw textured tile centered in world space, with color applied if using WebGL
      *  @param {Vector2}  pos                 - Center of the tile in world space
      *  @param {Vector2}  [size=(1,1)]        - Size of the tile in world space
