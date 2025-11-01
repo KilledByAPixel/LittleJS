@@ -283,7 +283,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             inputRender();
             debugRender();
             glFlush();
-            debugVideoCaptureUpdate();
+            if (debugVideoCaptureIsActive())
+                debugVideoCaptureUpdate();
 
             if (debugWatermark && !debugVideoCaptureIsActive())
             {
@@ -1049,8 +1050,7 @@ function debugInit()
 
 function debugUpdate()
 {
-    if (!debug)
-        return;
+    if (!debug) return;
 
     if (debugVideoCaptureIsActive())
     {
@@ -1352,8 +1352,7 @@ function debugVideoCaptureIsActive() { return !!debugVideoCapture; }
  *  @memberof Debug */
 function debugVideoCaptureStart()
 {
-    if (debugVideoCaptureIsActive())
-        return; // already recording
+    ASSERT(!debugVideoCaptureIsActive(), 'Already capturing video!');
 
     // captureStream passing in 0 to only capture when requestFrame() is called
     const stream = mainCanvas.captureStream(0);
@@ -1406,8 +1405,7 @@ function debugVideoCaptureStart()
  *  @memberof Debug */
 function debugVideoCaptureStop()
 {
-    if (!debugVideoCaptureIsActive())
-        return; // not recording
+    ASSERT(debugVideoCaptureIsActive(), 'Not capturing video!');
 
     // stop recording
     LOG(`Video capture ended. ${debugVideoCaptureTimer.get().toFixed(2)} seconds recorded.`);
@@ -1419,8 +1417,7 @@ function debugVideoCaptureStop()
 // update video capture, called automatically by engine
 function debugVideoCaptureUpdate()
 {
-    if (!debugVideoCaptureIsActive())
-        return; // not recording
+    ASSERT(debugVideoCaptureIsActive(), 'Not capturing video!');
 
     // save the video frame
     combineCanvases();
@@ -1786,8 +1783,7 @@ function lineTest(posStart, posEnd, testFunction, normal)
     const dx = posEnd.x - posStart.x;
     const dy = posEnd.y - posStart.y;
     const totalLength = hypot(dx, dy);
-    if (!totalLength)
-        return;
+    if (!totalLength) return;
 
     // current integer cell we are in
     const pos = posStart.floor();
@@ -2477,7 +2473,7 @@ class Color
     toString(useAlpha = true)
     {
         if (debug && !this.isValid())
-            return `#000`;
+            return '#000';
         const toHex = (c)=> ((c=clamp(c)*255|0)<16 ? '0' : '') + c.toString(16);
         return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b) + (useAlpha ? toHex(this.a) : '');
     }
@@ -3784,8 +3780,7 @@ class EngineObject
     /** Render debug info for this object  */
     renderDebugInfo()
     {
-        if (!debug)
-            return;
+        if (!debug) return;
 
         // show object info for debugging
         const size = vec2(max(this.size.x, .2), max(this.size.y, .2));
@@ -5243,8 +5238,7 @@ function inputInit()
     }
     function onMouseDown(e)
     {
-        if (isTouchDevice && touchInputEnable)
-            return;
+        if (isTouchDevice && touchInputEnable) return;
 
         // fix stalled audio requiring user interaction
         if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
@@ -5295,8 +5289,7 @@ function inputInit()
         let wasTouching;
         function handleTouch(e)
         {
-            if (!touchInputEnable)
-                return;
+            if (!touchInputEnable) return;
 
             // route touch to gamepad
             if (touchGamepadEnable)
@@ -5360,8 +5353,7 @@ function inputInit()
             }
 
             // don't process touch gamepad if paused
-            if (paused)
-                return;
+            if (paused) return;
 
             // get center of left and right sides
             const stickCenter = vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
@@ -6047,8 +6039,7 @@ class SoundInstance
     /** Pause this sound instance */
     pause()
     {
-        if (this.isPaused())
-            return;
+        if (this.isPaused()) return;
 
         // save current time and stop sound
         this.pausedTime = this.getCurrentTime();
@@ -6060,8 +6051,7 @@ class SoundInstance
     /** Unpauses this sound instance */
     resume()
     {
-        if (!this.isPaused())
-            return;
+        if (!this.isPaused()) return;
         
         // restart sound from paused time
         this.start(this.pausedTime);
@@ -6902,8 +6892,7 @@ class TileCollisionLayer extends TileLayer
     /** Destroy this tile layer */
     destroy()
     {
-        if (this.destroyed)
-            return;
+        if (this.destroyed) return;
 
         // remove from collision layers array and destroy
         const index = tileCollisionLayers.indexOf(this);
@@ -7440,10 +7429,11 @@ function medalsInit(saveName)
 
     // engine automatically renders medals
     engineAddPlugin(undefined, medalsRender);
+
+    // plugin functions
     function medalsRender()
     {
-        if (!medalsDisplayQueue.length)
-            return;
+        if (!medalsDisplayQueue.length) return;
 
         // update first medal in queue
         const medal = medalsDisplayQueue[0];
@@ -7533,8 +7523,7 @@ class Medal
     /** Unlocks a medal if not already unlocked */
     unlock()
     {
-        if (medalsPreventUnlock || this.unlocked)
-            return;
+        if (medalsPreventUnlock || this.unlocked) return;
 
         // save the medal
         ASSERT(medalsSaveName, 'save name must be set');
@@ -7767,8 +7756,7 @@ function glInit(rootElement)
 
 function glSetInstancedMode()
 {
-    if (!glPolyMode)
-        return;
+    if (!glPolyMode) return;
     
     // setup instanced mode
     glFlush();
@@ -7801,8 +7789,7 @@ function glSetInstancedMode()
 
 function glSetPolyMode()
 {
-    if (glPolyMode)
-        return;
+    if (glPolyMode) return;
     
     // setup poly mode
     glFlush();
@@ -7898,8 +7885,7 @@ function glClearCanvas()
 function glSetTexture(texture, wrap=false)
 {
     // must flush cache with the old texture to set a new one
-    if (!glContext || texture === glActiveTexture)
-        return;
+    if (!glContext || texture === glActiveTexture) return;
 
     glFlush();
     glActiveTexture = texture;
@@ -7995,6 +7981,7 @@ function glCreateTexture(image)
 function glDeleteTexture(texture)
 {
     if (!glContext) return;
+    
     glContext.deleteTexture(texture);
 }
 
@@ -8079,8 +8066,7 @@ function glFlush()
  *  @memberof WebGL */
 function glCopyToContext(context)
 {
-    if (!glEnable || !glContext)
-        return;
+    if (!glEnable || !glContext) return;
 
     glFlush();
     context.drawImage(glCanvas, 0, 0);
@@ -9676,7 +9662,7 @@ class UIObject
         this.onUpdate();
 
         // unset active if disabled
-        if (this.disabled && this == uiSystem.activeObject)
+        if (this.disabled && this === uiSystem.activeObject)
             uiSystem.activeObject = undefined;
 
         const wasHover = uiSystem.lastHoverObject === this;
