@@ -762,7 +762,7 @@ class UIObject
         this.onUpdate();
 
         // unset active if disabled
-        if (this.disabled && this == uiSystem.activeObject)
+        if (this.disabled && this === uiSystem.activeObject)
             uiSystem.activeObject = undefined;
 
         const wasHover = uiSystem.lastHoverObject === this;
