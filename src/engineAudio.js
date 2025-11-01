@@ -383,8 +383,7 @@ class SoundInstance
     /** Pause this sound instance */
     pause()
     {
-        if (this.isPaused())
-            return;
+        if (this.isPaused()) return;
 
         // save current time and stop sound
         this.pausedTime = this.getCurrentTime();
@@ -396,8 +395,7 @@ class SoundInstance
     /** Unpauses this sound instance */
     resume()
     {
-        if (!this.isPaused())
-            return;
+        if (!this.isPaused()) return;
         
         // restart sound from paused time
         this.start(this.pausedTime);

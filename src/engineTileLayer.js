@@ -546,8 +546,7 @@ class TileCollisionLayer extends TileLayer
     /** Destroy this tile layer */
     destroy()
     {
-        if (this.destroyed)
-            return;
+        if (this.destroyed) return;
 
         // remove from collision layers array and destroy
         const index = tileCollisionLayers.indexOf(this);

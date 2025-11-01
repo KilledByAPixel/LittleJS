@@ -365,8 +365,7 @@ function inputInit()
     }
     function onMouseDown(e)
     {
-        if (isTouchDevice && touchInputEnable)
-            return;
+        if (isTouchDevice && touchInputEnable) return;
 
         // fix stalled audio requiring user interaction
         if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
@@ -417,8 +416,7 @@ function inputInit()
         let wasTouching;
         function handleTouch(e)
         {
-            if (!touchInputEnable)
-                return;
+            if (!touchInputEnable) return;
 
             // route touch to gamepad
             if (touchGamepadEnable)
@@ -482,8 +480,7 @@ function inputInit()
             }
 
             // don't process touch gamepad if paused
-            if (paused)
-                return;
+            if (paused) return;
 
             // get center of left and right sides
             const stickCenter = vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);

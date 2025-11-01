@@ -32,10 +32,11 @@ function medalsInit(saveName)
 
     // engine automatically renders medals
     engineAddPlugin(undefined, medalsRender);
+
+    // plugin functions
     function medalsRender()
     {
-        if (!medalsDisplayQueue.length)
-            return;
+        if (!medalsDisplayQueue.length) return;
 
         // update first medal in queue
         const medal = medalsDisplayQueue[0];
@@ -125,8 +126,7 @@ class Medal
     /** Unlocks a medal if not already unlocked */
     unlock()
     {
-        if (medalsPreventUnlock || this.unlocked)
-            return;
+        if (medalsPreventUnlock || this.unlocked) return;
 
         // save the medal
         ASSERT(medalsSaveName, 'save name must be set');

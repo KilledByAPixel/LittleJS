@@ -280,7 +280,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             inputRender();
             debugRender();
             glFlush();
-            debugVideoCaptureUpdate();
+            if (debugVideoCaptureIsActive())
+                debugVideoCaptureUpdate();
 
             if (debugWatermark && !debugVideoCaptureIsActive())
             {

@@ -168,8 +168,7 @@ function glInit(rootElement)
 
 function glSetInstancedMode()
 {
-    if (!glPolyMode)
-        return;
+    if (!glPolyMode) return;
     
     // setup instanced mode
     glFlush();
@@ -202,8 +201,7 @@ function glSetInstancedMode()
 
 function glSetPolyMode()
 {
-    if (glPolyMode)
-        return;
+    if (glPolyMode) return;
     
     // setup poly mode
     glFlush();
@@ -299,8 +297,7 @@ function glClearCanvas()
 function glSetTexture(texture, wrap=false)
 {
     // must flush cache with the old texture to set a new one
-    if (!glContext || texture === glActiveTexture)
-        return;
+    if (!glContext || texture === glActiveTexture) return;
 
     glFlush();
     glActiveTexture = texture;
@@ -396,6 +393,7 @@ function glCreateTexture(image)
 function glDeleteTexture(texture)
 {
     if (!glContext) return;
+    
     glContext.deleteTexture(texture);
 }
 
@@ -480,8 +478,7 @@ function glFlush()
  *  @memberof WebGL */
 function glCopyToContext(context)
 {
-    if (!glEnable || !glContext)
-        return;
+    if (!glEnable || !glContext) return;
 
     glFlush();
     context.drawImage(glCanvas, 0, 0);

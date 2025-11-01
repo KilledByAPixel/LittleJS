@@ -329,8 +329,7 @@ function lineTest(posStart, posEnd, testFunction, normal)
     const dx = posEnd.x - posStart.x;
     const dy = posEnd.y - posStart.y;
     const totalLength = hypot(dx, dy);
-    if (!totalLength)
-        return;
+    if (!totalLength) return;
 
     // current integer cell we are in
     const pos = posStart.floor();
@@ -1020,7 +1019,7 @@ class Color
     toString(useAlpha = true)
     {
         if (debug && !this.isValid())
-            return `#000`;
+            return '#000';
         const toHex = (c)=> ((c=clamp(c)*255|0)<16 ? '0' : '') + c.toString(16);
         return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b) + (useAlpha ? toHex(this.a) : '');
     }

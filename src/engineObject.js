@@ -511,8 +511,7 @@ class EngineObject
     /** Render debug info for this object  */
     renderDebugInfo()
     {
-        if (!debug)
-            return;
+        if (!debug) return;
 
         // show object info for debugging
         const size = vec2(max(this.size.x, .2), max(this.size.y, .2));

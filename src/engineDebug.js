@@ -309,8 +309,7 @@ function debugInit()
 
 function debugUpdate()
 {
-    if (!debug)
-        return;
+    if (!debug) return;
 
     if (debugVideoCaptureIsActive())
     {
@@ -612,8 +611,7 @@ function debugVideoCaptureIsActive() { return !!debugVideoCapture; }
  *  @memberof Debug */
 function debugVideoCaptureStart()
 {
-    if (debugVideoCaptureIsActive())
-        return; // already recording
+    ASSERT(!debugVideoCaptureIsActive(), 'Already capturing video!');
 
     // captureStream passing in 0 to only capture when requestFrame() is called
     const stream = mainCanvas.captureStream(0);
@@ -666,8 +664,7 @@ function debugVideoCaptureStart()
  *  @memberof Debug */
 function debugVideoCaptureStop()
 {
-    if (!debugVideoCaptureIsActive())
-        return; // not recording
+    ASSERT(debugVideoCaptureIsActive(), 'Not capturing video!');
 
     // stop recording
     LOG(`Video capture ended. ${debugVideoCaptureTimer.get().toFixed(2)} seconds recorded.`);
@@ -679,8 +676,7 @@ function debugVideoCaptureStop()
 // update video capture, called automatically by engine
 function debugVideoCaptureUpdate()
 {
-    if (!debugVideoCaptureIsActive())
-        return; // not recording
+    ASSERT(debugVideoCaptureIsActive(), 'Not capturing video!');
 
     // save the video frame
     combineCanvases();
