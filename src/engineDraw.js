@@ -800,7 +800,7 @@ function worldToScreenDelta(worldDelta)
 
 /** Convert screen space transform to world space
  *  @param {Vector2} screenPos
- *  @param {Vector2} screenSize  
+ *  @param {Vector2} screenSize
  *  @param {number} [screenAngle]
  *  @return {[Vector2, Vector2, number]} - [pos, size, angle]
  *  @memberof Draw */

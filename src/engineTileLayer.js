@@ -400,7 +400,7 @@ class TileLayer extends CanvasLayer
     getData(layerPos)
     { 
         ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
-        return layerPos.arrayCheck(this.size) && this.data[(layerPos.y|0)*this.size.x+layerPos.x|0]; 
+        return layerPos.arrayCheck(this.size) && this.data[(layerPos.y|0)*this.size.x+layerPos.x|0];
     }
 
     // Render the tile layer, called automatically by the engine

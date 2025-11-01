@@ -317,7 +317,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             
             // responsive aspect ratio with native resolution
             const innerAspect = innerWidth / innerHeight;
-            ASSERT(canvasMinAspect <= canvasMaxAspect); 
+            ASSERT(canvasMinAspect <= canvasMaxAspect);
             if (canvasMaxAspect && innerAspect > canvasMaxAspect)
             {
                 // full height
@@ -374,7 +374,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     debugInit();
 
     // setup canvases
-    // transform way is still more reliable then flexbox or grid
+    // transform way is still more reliable than flexbox or grid
     const styleCanvas = 'position:absolute;'+ // allow canvases to overlap
         'top:50%;left:50%;transform:translate(-50%,-50%)'; // center on screen
     mainCanvas.style.cssText = styleCanvas;

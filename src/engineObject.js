@@ -297,7 +297,7 @@ class EngineObject
                         const delta = y - this.pos.y;
                         if (delta < maxMoveUp)
                         if (!tileCollisionTest(vec2(this.pos.x, y), this.size, this))
-                        {   
+                        {
                             this.pos.y = y;
                             debugPhysics && debugRect(this.pos, this.size, '#ff0');
                             return;
@@ -430,7 +430,7 @@ class EngineObject
      *  @return {number} -1 if this.mirror is true, or 1 if not mirrored */
     getMirrorSign() { return this.mirror ? -1 : 1; }
 
-    /** Attaches a child to this with a local transform, returns child for chaining   
+    /** Attaches a child to this with a local transform, returns child for chaining
      *  @param {EngineObject} child
      *  @param {Vector2}      [localPos=(0,0)]
      *  @param {number}       [localAngle]
