@@ -618,7 +618,11 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
     ASSERT(typeof drawFunction === 'function', 'drawFunction must be a function');
 
     if (!screenSpace)
-        [pos, size, angle] = worldToScreenTransform(pos, size, angle);
+    {
+        pos = worldToScreen(pos);
+        size = size.scale(cameraScale);
+        angle -= cameraAngle;
+    }
     context.save();
     context.translate(pos.x+.5, pos.y+.5);
     context.rotate(angle);
@@ -810,25 +814,6 @@ function screenToWorldTransform(screenPos, screenSize, screenAngle=0)
         screenToWorld(screenPos),
         screenSize.scale(1/cameraScale),
         screenAngle + cameraAngle
-    ];
-}
-
-/** Convert world space transform to screen space
- *  @param {Vector2} worldPos
- *  @param {Vector2} worldSize  
- *  @param {number} [worldAngle]
- *  @return {[Vector2, Vector2, number]} - [pos, size, angle]
- *  @memberof Draw */
-function worldToScreenTransform(worldPos, worldSize, worldAngle=0)
-{
-    ASSERT(isVector2(worldPos), 'worldPos must be a vec2');
-    ASSERT(isVector2(worldSize), 'worldSize must be a vec2');
-    ASSERT(isNumber(worldAngle), 'worldAngle must be a number');
-
-    return [
-        worldToScreen(worldPos),
-        worldSize.scale(cameraScale),
-        worldAngle - cameraAngle
     ];
 }
 
