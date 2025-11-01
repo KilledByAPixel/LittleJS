@@ -597,6 +597,24 @@ function debugRender()
     }
 }
 
+function debugRenderPost()
+{
+    if (!debugWatermark) return;
+    if (debugVideoCaptureIsActive()) return;
+    
+    // update fps display
+    mainContext.textAlign = 'right';
+    mainContext.textBaseline = 'top';
+    mainContext.font = '1em monospace';
+    mainContext.fillStyle = '#000';
+    const text = engineName + ' v' + engineVersion + ' / '
+        + drawCount + ' / ' + engineObjects.length + ' / ' + averageFPS.toFixed(1)
+        + (glEnable ? ' GL' : ' 2D') ;
+    mainContext.fillText(text, mainCanvas.width-3, 3);
+    mainContext.fillStyle = '#fff';
+    mainContext.fillText(text, mainCanvas.width-2, 2);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // video capture - records video and audio at 60 fps using MediaRecorder API
 

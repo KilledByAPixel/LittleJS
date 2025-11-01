@@ -37,7 +37,7 @@ let cameraScale = 32;
  *  @memberof Settings */
 let canvasColorTiles = true;
 
-/** Color to clear the canvas to before render
+/** Color to clear the canvas to before render, does not clear if alpha is 0
  *  @type {Color}
  *  @memberof Draw */
 let canvasClearColor = CLEAR_BLACK;
@@ -346,7 +346,7 @@ function setCameraScale(scale) { cameraScale = scale; }
  *  @memberof Settings */
 function setCanvasColorTiles(colorTiles) { canvasColorTiles = colorTiles; }
 
-/** Set color to clear the canvas to before render
+/** Set color to clear the canvas to before render, does not clear if alpha is 0
  *  @param {Color} color
  *  @memberof Settings */
 function setCanvasClearColor(color) { canvasClearColor = color.copy(); }

@@ -269,12 +269,14 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             if (!wasUpdated)
                 updateCanvas();
 
-            // render sort then render while removing destroyed objects
+            // render the game and objects
             enginePreRender();
             gameRender();
             engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
             for (const o of engineObjects)
                 o.destroyed || o.render();
+
+            // post rendering
             gameRenderPost();
             pluginList.forEach(plugin=>plugin.render?.());
             inputRender();
@@ -282,21 +284,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             glFlush();
             if (debugVideoCaptureIsActive())
                 debugVideoCaptureUpdate();
-
-            if (debugWatermark && !debugVideoCaptureIsActive())
-            {
-                // update fps display
-                mainContext.textAlign = 'right';
-                mainContext.textBaseline = 'top';
-                mainContext.font = '1em monospace';
-                mainContext.fillStyle = '#000';
-                const text = engineName + ' ' + 'v' + engineVersion + ' / '
-                    + drawCount + ' / ' + engineObjects.length + ' / ' + averageFPS.toFixed(1)
-                    + (glEnable ? ' GL' : ' 2D') ;
-                mainContext.fillText(text, mainCanvas.width-3, 3);
-                mainContext.fillStyle = '#fff';
-                mainContext.fillText(text, mainCanvas.width-2, 2);
-            }
+            debugRenderPost();
             drawCount = 0;
         }
     }
@@ -362,15 +350,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         mainContext.lineJoin = 'round';
         mainContext.lineCap  = 'round';
     }
-
-    // wait for gameInit to load
-    async function startEngine()
-    {
-        await gameInit();
-        engineUpdate();
-    }
-    if (headlessMode)
-        return startEngine();
+    
+    // skip setup if headless
+    if (headlessMode) return startEngine();
 
     // setup webgl
     glInit(rootElement);
@@ -459,6 +441,13 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     // wait for all the promises to finish
     await Promise.all(promises);
     return startEngine();
+
+    async function startEngine()
+    {
+        // wait for gameInit to load
+        await gameInit();
+        engineUpdate();
+    }
 
     ///////////////////////////////////////////////////////////////////////////
     // LittleJS Splash Screen
