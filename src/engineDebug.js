@@ -311,13 +311,6 @@ function debugUpdate()
 {
     if (!debug) return;
 
-    if (debugVideoCaptureIsActive())
-    {
-        // control to stop video capture
-        if (keyWasPressed('Digit6') || keyWasPressed(debugKey))
-            debugVideoCaptureStop();
-    }
-
     if (keyWasPressed(debugKey)) // Esc
         debugOverlay = !debugOverlay;
     if (debugOverlay)
@@ -334,9 +327,15 @@ function debugUpdate()
             debugRaycast = !debugRaycast;
         if (keyWasPressed('Digit5'))
             debugScreenshot();
-        if (keyWasPressed('Digit6') && !debugVideoCaptureIsActive())
-            debugVideoCaptureStart();
     }
+    if (debugVideoCaptureIsActive())
+    {
+        // control to stop video capture
+        if (!debugOverlay || keyWasPressed('Digit6'))
+            debugVideoCaptureStop();
+    }
+    else if (debugOverlay && keyWasPressed('Digit6'))
+        debugVideoCaptureStart();
 }
 
 function debugRender()
@@ -599,8 +598,13 @@ function debugRender()
 
 function debugRenderPost()
 {
+    if (debugVideoCaptureIsActive())
+    {
+        debugVideoCaptureUpdate();
+        return;
+    }
+
     if (!debugWatermark) return;
-    if (debugVideoCaptureIsActive()) return;
     
     // update fps display
     mainContext.textAlign = 'right';
@@ -687,7 +691,9 @@ function debugVideoCaptureStop()
     // stop recording
     LOG(`Video capture ended. ${debugVideoCaptureTimer.get().toFixed(2)} seconds recorded.`);
     debugVideoCapture.stop();
-    debugVideoCapture = 0;
+    debugVideoCaptureTrack.stop();
+    debugVideoCaptureTrack = undefined;
+    debugVideoCapture = undefined;
     debugVideoCaptureIcon.style.display = 'none';
 }
 

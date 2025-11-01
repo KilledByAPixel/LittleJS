@@ -282,8 +282,6 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             inputRender();
             debugRender();
             glFlush();
-            if (debugVideoCaptureIsActive())
-                debugVideoCaptureUpdate();
             debugRenderPost();
             drawCount = 0;
         }

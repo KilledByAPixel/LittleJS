@@ -22,6 +22,7 @@ function LOG             (){}
 function debugInit       (){}
 function debugUpdate     (){}
 function debugRender     (){}
+function debugRenderPost (){}
 function debugRect       (){}
 function debugPoly       (){}
 function debugCircle     (){}
