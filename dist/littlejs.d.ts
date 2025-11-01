@@ -283,37 +283,20 @@ declare module "littlejsengine" {
     /** Trigger debug system to take a screenshot
      *  @memberof Debug */
     export function debugScreenshot(): void;
-    /** Save a canvas to disk
-     *  @param {HTMLCanvasElement|OffscreenCanvas} canvas
-     *  @param {string} [filename]
-     *  @param {string} [type]
-     *  @memberof Debug */
-    export function debugSaveCanvas(canvas: HTMLCanvasElement | OffscreenCanvas, filename?: string, type?: string): void;
-    /** Save a text file to disk
-     *  @param {string}     text
-     *  @param {string}     [filename]
-     *  @param {string}     [type]
-     *  @memberof Debug */
-    export function debugSaveText(text: string, filename?: string, type?: string): void;
-    /** Save a data url to disk
-     *  @param {string}     dataURL
-     *  @param {string}     filename
-     *  @memberof Debug */
-    export function debugSaveDataURL(dataURL: string, filename: string): void;
     /** Breaks on all asserts/errors, hides the canvas, and shows message in plain text
      *  This is a good function to call at the start of your game to catch all errors
      *  In release builds this function has no effect
      *  @memberof Debug */
     export function debugShowErrors(): void;
-    /** Check if video capture is active
-     *  @memberof Debug */
-    export function debugVideoCaptureIsActive(): boolean;
     /** Start capturing video
      *  @memberof Debug */
     export function debugVideoCaptureStart(): void;
     /** Stop capturing video and save to disk
      *  @memberof Debug */
     export function debugVideoCaptureStop(): void;
+    /** Check if video capture is active
+     *  @memberof Debug */
+    export function debugVideoCaptureIsActive(): boolean;
     /**
      * LittleJS Engine Settings
      * - All settings for the engine are here
@@ -744,105 +727,105 @@ declare module "littlejsengine" {
      * - Color - holds a rgba color with some math functions
      * - Timer - tracks time automatically
      * - RandomGenerator - seeded random number generator
-     * @namespace Utilities
+     * @namespace Math
      */
     /** The value of PI
      *  @type {number}
      *  @default Math.PI
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const PI: number;
     /** Returns absolute value of value passed in
      *  @param {number} value
      *  @return {number}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const abs: (x: number) => number;
     /** Returns floored value of value passed in
      *  @param {number} value
      *  @return {number}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const floor: (x: number) => number;
     /** Returns ceiled value of value passed in
      *  @param {number} value
      *  @return {number}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const ceil: (x: number) => number;
     /** Returns rounded value passed in
      *  @param {number} value
      *  @return {number}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const round: (x: number) => number;
     /** Returns lowest value passed in
      *  @param {...number} values
      *  @return {number}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const min: (...values: number[]) => number;
     /** Returns highest value passed in
      *  @param {...number} values
      *  @return {number}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const max: (...values: number[]) => number;
     /** Returns the sign of value passed in
      *  @param {number} value
      *  @return {number}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const sign: (x: number) => number;
     /** Returns hypotenuse of values passed in
      *  @param {...number} values
      *  @return {number}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const hypot: (...values: number[]) => number;
     /** Returns log2 of value passed in
      *  @param {number} value
      *  @return {number}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const log2: (x: number) => number;
     /** Returns sin of value passed in
      *  @param {number} value
      *  @return {number}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const sin: (x: number) => number;
     /** Returns cos of value passed in
      *  @param {number} value
      *  @return {number}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const cos: (x: number) => number;
     /** Returns tan of value passed in
      *  @param {number} value
      *  @return {number}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const tan: (x: number) => number;
     /** Returns atan2 of values passed in
      *  @param {number} y
      *  @param {number} x
      *  @return {number}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const atan2: (y: number, x: number) => number;
     /** Returns first parm modulo the second param, but adjusted so negative numbers work as expected
      *  @param {number} dividend
      *  @param {number} [divisor]
      *  @return {number}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export function mod(dividend: number, divisor?: number): number;
     /** Clamps the value between max and min
      *  @param {number} value
      *  @param {number} [min]
      *  @param {number} [max]
      *  @return {number}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export function clamp(value: number, min?: number, max?: number): number;
     /** Returns what percentage the value is between valueA and valueB
      *  @param {number} value
      *  @param {number} valueA
      *  @param {number} valueB
      *  @return {number}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export function percent(value: number, valueA: number, valueB: number): number;
     /** Returns signed wrapped distance between the two values passed in
      *  @param {number} valueA
      *  @param {number} valueB
      *  @param {number} [wrapSize]
      *  @return {number}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export function distanceWrap(valueA: number, valueB: number, wrapSize?: number): number;
     /** Linearly interpolates between values passed in with wrapping
      *  @param {number} valueA
@@ -850,37 +833,37 @@ declare module "littlejsengine" {
      *  @param {number} percent
      *  @param {number} [wrapSize]
      *  @return {number}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export function lerpWrap(valueA: number, valueB: number, percent: number, wrapSize?: number): number;
     /** Returns signed wrapped distance between the two angles passed in
      *  @param {number} angleA
      *  @param {number} angleB
      *  @return {number}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export function distanceAngle(angleA: number, angleB: number): number;
     /** Linearly interpolates between the angles passed in with wrapping
      *  @param {number} angleA
      *  @param {number} angleB
      *  @param {number} percent
      *  @return {number}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export function lerpAngle(angleA: number, angleB: number, percent: number): number;
     /** Linearly interpolates between values passed in using percent
      *  @param {number} valueA
      *  @param {number} valueB
      *  @param {number} percent
      *  @return {number}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export function lerp(valueA: number, valueB: number, percent: number): number;
     /** Applies smoothstep function to the percentage value
      *  @param {number} percent
      *  @return {number}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export function smoothStep(percent: number): number;
     /** Returns the nearest power of two not less than the value
      *  @param {number} value
      *  @return {number}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export function nearestPowerOfTwo(value: number): number;
     /** Returns true if two axis aligned bounding boxes are overlapping
      *  this can be used for simple collision detection between objects
@@ -889,7 +872,7 @@ declare module "littlejsengine" {
      *  @param {Vector2} posB          - Center of box B
      *  @param {Vector2} [sizeB=(0,0)] - Size of box B, uses a point if undefined
      *  @return {boolean}              - True if overlapping
-     *  @memberof Utilities */
+     *  @memberof Math */
     export function isOverlapping(posA: Vector2, sizeA: Vector2, posB: Vector2, sizeB?: Vector2): boolean;
     /** Returns true if a line segment is intersecting an axis aligned box
      *  @param {Vector2} start - Start of raycast
@@ -897,7 +880,7 @@ declare module "littlejsengine" {
      *  @param {Vector2} pos   - Center of box
      *  @param {Vector2} size  - Size of box
      *  @return {boolean}      - True if intersecting
-     *  @memberof Utilities */
+     *  @memberof Math */
     export function isIntersecting(start: Vector2, end: Vector2, pos: Vector2, size: Vector2): boolean;
     /** Returns an oscillating wave between 0 and amplitude with frequency of 1 Hz by default
      *  @param {number} [frequency] - Frequency of the wave in Hz
@@ -905,8 +888,17 @@ declare module "littlejsengine" {
      *  @param {number} [t=time]    - Value to use for time of the wave
      *  @param {number} [offset]    - Value to use for time offset of the wave
      *  @return {number}            - Value waving between 0 and amplitude
-     *  @memberof Utilities */
+     *  @memberof Math */
     export function wave(frequency?: number, amplitude?: number, t?: number, offset?: number): number;
+    /**
+     * LittleJS Utility Classes and Functions
+     * - General purpose math library
+     * - Vector2 - fast, simple, easy 2D vector class
+     * - Color - holds a rgba color with some math functions
+     * - Timer - tracks time automatically
+     * - RandomGenerator - seeded random number generator
+     * @namespace Utilities
+     */
     /** Formats seconds to mm:ss style for display purposes
      *  @param {number} t - time in seconds
      *  @return {string}
@@ -917,6 +909,24 @@ declare module "littlejsengine" {
      *  @return {Promise<object>}
      *  @memberof Utilities */
     export function fetchJSON(url: string): Promise<object>;
+    /** Save a text file to disk
+     *  @param {string} text
+     *  @param {string} [filename]
+     *  @param {string} [type]
+     *  @memberof Utilities */
+    export function saveText(text: string, filename?: string, type?: string): void;
+    /** Save a canvas to disk
+     *  @param {HTMLCanvasElement|OffscreenCanvas} canvas
+     *  @param {string} [filename]
+     *  @param {string} [type]
+     *  @memberof Utilities */
+    export function saveCanvas(canvas: HTMLCanvasElement | OffscreenCanvas, filename?: string, type?: string): void;
+    /** Save a data url to disk
+     *  @param {string} url
+     *  @param {string} [filename]
+     *  @param {number} [revokeTime] - how long before revoking the url
+     *  @memberof Utilities */
+    export function saveDataURL(url: string, filename?: string, revokeTime?: number): void;
     /** Random global functions
      *  @namespace Random */
     /** Returns a random value between the two values passed in
@@ -1319,7 +1329,7 @@ declare module "littlejsengine" {
      * let a = vec2(0, 1); // vector with coordinates (0, 1)
      * a = vec2(5);        // set a to (5, 5)
      * b = vec2();         // set b to (0, 0)
-     * @memberof Utilities */
+     * @memberof Math */
     export function vec2(x?: number, y?: number): Vector2;
     /**
      * Create a color object with RGBA values, white by default
@@ -1328,7 +1338,7 @@ declare module "littlejsengine" {
      * @param {number} [b=1] - blue
      * @param {number} [a=1] - alpha
      * @return {Color}
-     * @memberof Utilities
+     * @memberof Math
      */
     export function rgb(r?: number, g?: number, b?: number, a?: number): Color;
     /**
@@ -1338,89 +1348,89 @@ declare module "littlejsengine" {
      * @param {number} [l=1] - lightness
      * @param {number} [a=1] - alpha
      * @return {Color}
-     * @memberof Utilities */
+     * @memberof Math */
     export function hsl(h?: number, s?: number, l?: number, a?: number): Color;
     /**
      * Check if object is a valid Color
      * @param {any} c
      * @return {boolean}
-     * @memberof Utilities */
+     * @memberof Math */
     export function isColor(c: any): boolean;
     /**
      * Check if object is a valid Vector2
      * @param {any} v
      * @return {boolean}
-     * @memberof Utilities */
+     * @memberof Math */
     export function isVector2(v: any): boolean;
     /**
      * Check if object is a valid number, not NaN or undefined, but it may be infinite
      * @param {any} n
      * @return {boolean}
-     * @memberof Utilities */
+     * @memberof Math */
     export function isNumber(n: any): boolean;
     /**
      * Check if object is a valid string or can be converted to one
      * @param {any} s
      * @return {boolean}
-     * @memberof Utilities */
+     * @memberof Math */
     export function isString(s: any): boolean;
     /**
      * Check if object is an array
      * @param {any} a
      * @return {boolean}
-     * @memberof Utilities */
+     * @memberof Math */
     export function isArray(a: any): boolean;
     /** Color - White #ffffff
      *  @type {Color}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const WHITE: Color;
     /** Color - Clear White #757474ff with 0 alpha
      *  @type {Color}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const CLEAR_WHITE: Color;
     /** Color - Black #000000
      *  @type {Color}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const BLACK: Color;
     /** Color - Clear Black #000000 with 0 alpha
      *  @type {Color}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const CLEAR_BLACK: Color;
     /** Color - Gray #808080
      *  @type {Color}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const GRAY: Color;
     /** Color - Red #ff0000
      *  @type {Color}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const RED: Color;
     /** Color - Orange #ff8000
      *  @type {Color}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const ORANGE: Color;
     /** Color - Yellow #ffff00
      *  @type {Color}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const YELLOW: Color;
     /** Color - Green #00ff00
      *  @type {Color}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const GREEN: Color;
     /** Color - Cyan #00ffff
      *  @type {Color}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const CYAN: Color;
     /** Color - Blue #0000ff
      *  @type {Color}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const BLUE: Color;
     /** Color - Purple #8000ff
      *  @type {Color}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const PURPLE: Color;
     /** Color - Magenta #ff00ff
      *  @type {Color}
-     *  @memberof Utilities */
+     *  @memberof Math */
     export const MAGENTA: Color;
     /**
      * Create a tile info object using a grid based system

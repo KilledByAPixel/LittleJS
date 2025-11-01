@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.16.1';
+const engineVersion = '1.16.2';
 
 /** Frames per second to update
  *  @type {number}
@@ -769,7 +769,7 @@ let debugKey = 'Escape';
 let debugOverlay = false;
 
 // Engine internal variables not exposed to documentation
-let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugMedals = false, debugTakeScreenshot, downloadLink, debugCanvas;
+let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugMedals = false, debugTakeScreenshot;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Debug helper functions
@@ -956,46 +956,6 @@ function debugClear() { debugPrimitives = []; }
  *  @memberof Debug */
 function debugScreenshot() { debugTakeScreenshot = 1; }
 
-/** Save a canvas to disk
- *  @param {HTMLCanvasElement|OffscreenCanvas} canvas
- *  @param {string} [filename]
- *  @param {string} [type]
- *  @memberof Debug */
-function debugSaveCanvas(canvas, filename='screenshot', type='image/png')
-{
-    if (canvas instanceof OffscreenCanvas)
-    {
-        // copy to temporary canvas and save
-        if (!debugCanvas)
-            debugCanvas = document.createElement('canvas');
-        debugCanvas.width = canvas.width;
-        debugCanvas.height = canvas.height;
-        debugCanvas.getContext('2d').drawImage(canvas, 0, 0);
-        debugSaveDataURL(debugCanvas.toDataURL(type), filename);
-    }
-    else
-        debugSaveDataURL(canvas.toDataURL(type), filename);
-}
-
-/** Save a text file to disk
- *  @param {string}     text
- *  @param {string}     [filename]
- *  @param {string}     [type]
- *  @memberof Debug */
-function debugSaveText(text, filename='text', type='text/plain')
-{ debugSaveDataURL(URL.createObjectURL(new Blob([text], {'type':type})), filename); }
-
-/** Save a data url to disk
- *  @param {string}     dataURL
- *  @param {string}     filename
- *  @memberof Debug */
-function debugSaveDataURL(dataURL, filename)
-{
-    downloadLink.download = filename;
-    downloadLink.href = dataURL;
-    downloadLink.click();
-}
-
 /** Breaks on all asserts/errors, hides the canvas, and shows message in plain text
  *  This is a good function to call at the start of your game to catch all errors
  *  In release builds this function has no effect
@@ -1031,8 +991,6 @@ function debugShowErrors()
 
 function debugInit()
 {
-    // create link for saving screenshots
-    downloadLink = document.createElement('a');
 }
 
 function debugUpdate()
@@ -1078,7 +1036,7 @@ function debugRender()
     {
         // combine canvases, remove alpha and save
         combineCanvases();
-        debugSaveCanvas(mainCanvas);
+        saveCanvas(mainCanvas);
         debugTakeScreenshot = 0;
     }
 
@@ -1392,10 +1350,7 @@ function debugVideoCaptureStart()
     {
         const blob = new Blob(chunks, {type: 'video/webm'});
         const url = URL.createObjectURL(blob);
-        downloadLink.download = 'capture.webm';
-        downloadLink.href = url;
-        downloadLink.click();
-        URL.revokeObjectURL(url);
+        saveDataURL(url, 'capture.webm', 1e3);
     };
 
     let audioStreamDestination, silentAudioSource;
@@ -1499,99 +1454,99 @@ function debugProtectConstant(obj)
  * - Color - holds a rgba color with some math functions
  * - Timer - tracks time automatically
  * - RandomGenerator - seeded random number generator
- * @namespace Utilities
+ * @namespace Math
  */
 
 /** The value of PI
  *  @type {number}
  *  @default Math.PI
- *  @memberof Utilities */
+ *  @memberof Math */
 const PI = Math.PI;
 
 /** Returns absolute value of value passed in
  *  @param {number} value
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 const abs = Math.abs;
 
 /** Returns floored value of value passed in
  *  @param {number} value
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 const floor = Math.floor;
 
 /** Returns ceiled value of value passed in
  *  @param {number} value
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 const ceil = Math.ceil;
 
 /** Returns rounded value passed in
  *  @param {number} value
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 const round = Math.round;
 
 /** Returns lowest value passed in
  *  @param {...number} values
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 const min = Math.min;
 
 /** Returns highest value passed in
  *  @param {...number} values
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 const max = Math.max;
 
 /** Returns the sign of value passed in
  *  @param {number} value
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 const sign = Math.sign;
 
 /** Returns hypotenuse of values passed in
  *  @param {...number} values
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 const hypot = Math.hypot;
 
 /** Returns log2 of value passed in
  *  @param {number} value
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 const log2 = Math.log2;
 
 /** Returns sin of value passed in
  *  @param {number} value
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 const sin = Math.sin;
 
 /** Returns cos of value passed in
  *  @param {number} value
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 const cos = Math.cos;
 
 /** Returns tan of value passed in
  *  @param {number} value
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 const tan = Math.tan;
 
 /** Returns atan2 of values passed in
  *  @param {number} y
  *  @param {number} x
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 const atan2 = Math.atan2;
 
 /** Returns first parm modulo the second param, but adjusted so negative numbers work as expected
  *  @param {number} dividend
  *  @param {number} [divisor]
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 function mod(dividend, divisor=1) { return ((dividend % divisor) + divisor) % divisor; }
 
 /** Clamps the value between max and min
@@ -1599,7 +1554,7 @@ function mod(dividend, divisor=1) { return ((dividend % divisor) + divisor) % di
  *  @param {number} [min]
  *  @param {number} [max]
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 function clamp(value, min=0, max=1) { return value < min ? min : value > max ? max : value; }
 
 /** Returns what percentage the value is between valueA and valueB
@@ -1607,7 +1562,7 @@ function clamp(value, min=0, max=1) { return value < min ? min : value > max ? m
  *  @param {number} valueA
  *  @param {number} valueB
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 function percent(value, valueA, valueB)
 { return (valueB-=valueA) ? clamp((value-valueA)/valueB) : 0; }
 
@@ -1616,7 +1571,7 @@ function percent(value, valueA, valueB)
  *  @param {number} valueB
  *  @param {number} percent
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 function lerp(valueA, valueB, percent)
 { return valueA + clamp(percent) * (valueB-valueA); }
 
@@ -1628,7 +1583,7 @@ function lerp(valueA, valueB, percent)
  *  @param {number} lerpA
  *  @param {number} lerpB
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 function percentLerp(value, percentA, percentB, lerpA, lerpB)
 { return lerp(lerpA, lerpB, percent(value, percentA, percentB)); }
 
@@ -1637,7 +1592,7 @@ function percentLerp(value, percentA, percentB, lerpA, lerpB)
  *  @param {number} valueB
  *  @param {number} [wrapSize]
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 function distanceWrap(valueA, valueB, wrapSize=1)
 { const d = (valueA - valueB) % wrapSize; return d*2 % wrapSize - d; }
 
@@ -1647,7 +1602,7 @@ function distanceWrap(valueA, valueB, wrapSize=1)
  *  @param {number} percent
  *  @param {number} [wrapSize]
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 function lerpWrap(valueA, valueB, percent, wrapSize=1)
 { return valueA + clamp(percent) * distanceWrap(valueB, valueA, wrapSize); }
 
@@ -1655,7 +1610,7 @@ function lerpWrap(valueA, valueB, percent, wrapSize=1)
  *  @param {number} angleA
  *  @param {number} angleB
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 function distanceAngle(angleA, angleB) { return distanceWrap(angleA, angleB, 2*PI); }
 
 /** Linearly interpolates between the angles passed in with wrapping
@@ -1663,25 +1618,25 @@ function distanceAngle(angleA, angleB) { return distanceWrap(angleA, angleB, 2*P
  *  @param {number} angleB
  *  @param {number} percent
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 function lerpAngle(angleA, angleB, percent) { return lerpWrap(angleA, angleB, percent, 2*PI); }
 
 /** Applies smoothstep function to the percentage value
  *  @param {number} percent
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 function smoothStep(percent) { return percent * percent * (3 - 2 * percent); }
 
 /** Checks if the value passed in is a power of two
  *  @param {number} value
  *  @return {boolean}
- *  @memberof Utilities */
+ *  @memberof Math */
 function isPowerOfTwo(value) { return !(value & (value - 1)); }
 
 /** Returns the nearest power of two not less than the value
  *  @param {number} value
  *  @return {number}
- *  @memberof Utilities */
+ *  @memberof Math */
 function nearestPowerOfTwo(value) { return 2**ceil(log2(value)); }
 
 /** Returns true if two axis aligned bounding boxes are overlapping
@@ -1691,7 +1646,7 @@ function nearestPowerOfTwo(value) { return 2**ceil(log2(value)); }
  *  @param {Vector2} posB          - Center of box B
  *  @param {Vector2} [sizeB=(0,0)] - Size of box B, uses a point if undefined
  *  @return {boolean}              - True if overlapping
- *  @memberof Utilities */
+ *  @memberof Math */
 function isOverlapping(posA, sizeA, posB, sizeB=vec2())
 {
     const dx = (posA.x - posB.x)*2;
@@ -1707,7 +1662,7 @@ function isOverlapping(posA, sizeA, posB, sizeB=vec2())
  *  @param {Vector2} pos   - Center of box
  *  @param {Vector2} size  - Size of box
  *  @return {boolean}      - True if intersecting
- *  @memberof Utilities */
+ *  @memberof Math */
 function isIntersecting(start, end, pos, size)
 {
     // Liang-Barsky algorithm
@@ -1748,52 +1703,29 @@ function isIntersecting(start, end, pos, size)
  *  @param {number} [t=time]    - Value to use for time of the wave
  *  @param {number} [offset]    - Value to use for time offset of the wave
  *  @return {number}            - Value waving between 0 and amplitude
- *  @memberof Utilities */
+ *  @memberof Math */
 function wave(frequency=1, amplitude=1, t=time, offset=0)
 { return amplitude/2 * (1 - cos(offset + t*frequency*2*PI)); }
-
-/** Formats seconds to mm:ss style for display purposes
- *  @param {number} t - time in seconds
- *  @return {string}
- *  @memberof Utilities */
-function formatTime(t)
-{
-    const sign = t < 0 ? '-' : '';
-    t = abs(t)|0;
-    return sign + (t/60|0) + ':' + (t%60<10?'0':'') + t%60;
-}
-
-/** Fetches a JSON file from a URL and returns the parsed JSON object. Must be used with await!
- *  @param {string} url - URL of JSON file
- *  @return {Promise<object>}
- *  @memberof Utilities */
-async function fetchJSON(url)
-{
-    const response = await fetch(url);
-    if (!response.ok)
-        throw new Error(`Failed to fetch JSON from ${url}: ${response.status} ${response.statusText}`);
-    return response.json();
-}
 
 /**
  * Check if object is a valid number, not NaN or undefined, but it may be infinite
  * @param {any} n
  * @return {boolean}
- * @memberof Utilities */
+ * @memberof Math */
 function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
 
 /**
  * Check if object is a valid string or can be converted to one
  * @param {any} s
  * @return {boolean}
- * @memberof Utilities */
+ * @memberof Math */
 function isString(s) { return s !== undefined && s !== null && typeof s.toString() === 'string'; }
 
 /**
  * Check if object is an array
  * @param {any} a
  * @return {boolean}
- * @memberof Utilities */
+ * @memberof Math */
 function isArray(a) { return Array.isArray(a); }
 
 /**
@@ -1809,7 +1741,7 @@ function isArray(a) { return Array.isArray(a); }
  * @param {LineTestFunction} testFunction - Check if colliding
  * @param {Vector2} [normal] - Optional vector to store the normal
  * @return {Vector2|undefined} - Position of the collision or undefined if none found
- * @memberof Utilities */
+ * @memberof Math */
 function lineTest(posStart, posEnd, testFunction, normal)
 {
     ASSERT(isVector2(posStart), 'posStart must be a vec2');
@@ -2055,14 +1987,14 @@ class RandomGenerator
  * let a = vec2(0, 1); // vector with coordinates (0, 1)
  * a = vec2(5);        // set a to (5, 5)
  * b = vec2();         // set b to (0, 0)
- * @memberof Utilities */
+ * @memberof Math */
 function vec2(x=0, y) { return new Vector2(x, y === undefined ? x : y); }
 
 /**
  * Check if object is a valid Vector2
  * @param {any} v
  * @return {boolean}
- * @memberof Utilities */
+ * @memberof Math */
 function isVector2(v) { return v instanceof Vector2 && v.isValid(); }
 
 // vector2 asserts
@@ -2312,7 +2244,7 @@ class Vector2
  * @param {number} [b=1] - blue
  * @param {number} [a=1] - alpha
  * @return {Color}
- * @memberof Utilities
+ * @memberof Math
  */
 function rgb(r, g, b, a) { return new Color(r, g, b, a); }
 
@@ -2323,14 +2255,14 @@ function rgb(r, g, b, a) { return new Color(r, g, b, a); }
  * @param {number} [l=1] - lightness
  * @param {number} [a=1] - alpha
  * @return {Color}
- * @memberof Utilities */
+ * @memberof Math */
 function hsl(h, s, l, a) { return new Color().setHSLA(h, s, l, a); }
 
 /**
  * Check if object is a valid Color
  * @param {any} c
  * @return {boolean}
- * @memberof Utilities */
+ * @memberof Math */
 function isColor(c) { return c instanceof Color && c.isValid(); }
 
 // color asserts
@@ -2568,67 +2500,67 @@ class Color
 
 /** Color - White #ffffff
  *  @type {Color}
- *  @memberof Utilities */
+ *  @memberof Math */
 const WHITE = debugProtectConstant(rgb());
 
 /** Color - Clear White #757474ff with 0 alpha
  *  @type {Color}
- *  @memberof Utilities */
+ *  @memberof Math */
 const CLEAR_WHITE = debugProtectConstant(rgb(1,1,1,0));
 
 /** Color - Black #000000
  *  @type {Color}
- *  @memberof Utilities */
+ *  @memberof Math */
 const BLACK = debugProtectConstant(rgb(0,0,0));
 
 /** Color - Clear Black #000000 with 0 alpha
  *  @type {Color}
- *  @memberof Utilities */
+ *  @memberof Math */
 const CLEAR_BLACK = debugProtectConstant(rgb(0,0,0,0));
 
 /** Color - Gray #808080
  *  @type {Color}
- *  @memberof Utilities */
+ *  @memberof Math */
 const GRAY = debugProtectConstant(rgb(.5,.5,.5));
 
 /** Color - Red #ff0000
  *  @type {Color}
- *  @memberof Utilities */
+ *  @memberof Math */
 const RED = debugProtectConstant(rgb(1,0,0));
 
 /** Color - Orange #ff8000
  *  @type {Color}
- *  @memberof Utilities */
+ *  @memberof Math */
 const ORANGE = debugProtectConstant(rgb(1,.5,0));
 
 /** Color - Yellow #ffff00
  *  @type {Color}
- *  @memberof Utilities */
+ *  @memberof Math */
 const YELLOW = debugProtectConstant(rgb(1,1,0));
 
 /** Color - Green #00ff00
  *  @type {Color}
- *  @memberof Utilities */
+ *  @memberof Math */
 const GREEN = debugProtectConstant(rgb(0,1,0));
 
 /** Color - Cyan #00ffff
  *  @type {Color}
- *  @memberof Utilities */
+ *  @memberof Math */
 const CYAN = debugProtectConstant(rgb(0,1,1));
 
 /** Color - Blue #0000ff
  *  @type {Color}
- *  @memberof Utilities */
+ *  @memberof Math */
 const BLUE = debugProtectConstant(rgb(0,0,1));
 
 /** Color - Purple #8000ff
  *  @type {Color}
- *  @memberof Utilities */
+ *  @memberof Math */
 const PURPLE = debugProtectConstant(rgb(.5,0,1));
 
 /** Color - Magenta #ff00ff
  *  @type {Color}
- *  @memberof Utilities */
+ *  @memberof Math */
 const MAGENTA = debugProtectConstant(rgb(1,0,1));
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2713,6 +2645,84 @@ class Timer
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {number} */
     valueOf() { return this.get(); }
+}
+/**
+ * LittleJS Utility Classes and Functions
+ * - General purpose math library
+ * - Vector2 - fast, simple, easy 2D vector class
+ * - Color - holds a rgba color with some math functions
+ * - Timer - tracks time automatically
+ * - RandomGenerator - seeded random number generator
+ * @namespace Utilities
+ */
+
+/** Formats seconds to mm:ss style for display purposes
+ *  @param {number} t - time in seconds
+ *  @return {string}
+ *  @memberof Utilities */
+function formatTime(t)
+{
+    const sign = t < 0 ? '-' : '';
+    t = abs(t)|0;
+    return sign + (t/60|0) + ':' + (t%60<10?'0':'') + t%60;
+}
+
+/** Fetches a JSON file from a URL and returns the parsed JSON object. Must be used with await!
+ *  @param {string} url - URL of JSON file
+ *  @return {Promise<object>}
+ *  @memberof Utilities */
+async function fetchJSON(url)
+{
+    const response = await fetch(url);
+    if (!response.ok)
+        throw new Error(`Failed to fetch JSON from ${url}: ${response.status} ${response.statusText}`);
+    return response.json();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+/** Save a text file to disk
+ *  @param {string} text
+ *  @param {string} [filename]
+ *  @param {string} [type]
+ *  @memberof Utilities */
+function saveText(text, filename='text', type='text/plain')
+{ saveDataURL(URL.createObjectURL(new Blob([text], {'type':type})), filename); }
+
+/** Save a canvas to disk
+ *  @param {HTMLCanvasElement|OffscreenCanvas} canvas
+ *  @param {string} [filename]
+ *  @param {string} [type]
+ *  @memberof Utilities */
+function saveCanvas(canvas, filename='screenshot', type='image/png')
+{
+    if (canvas instanceof OffscreenCanvas)
+    {
+        // copy to temporary canvas and save
+        const saveCanvas = document.createElement('canvas');
+        saveCanvas.width = canvas.width;
+        saveCanvas.height = canvas.height;
+        saveCanvas.getContext('2d').drawImage(canvas, 0, 0);
+        saveDataURL(saveCanvas.toDataURL(type), filename);
+    }
+    else
+        saveDataURL(canvas.toDataURL(type), filename);
+}
+
+/** Save a data url to disk
+ *  @param {string} url
+ *  @param {string} [filename]
+ *  @param {number} [revokeTime] - how long before revoking the url
+ *  @memberof Utilities */
+function saveDataURL(url, filename='download', revokeTime)
+{
+    // create link for saving screenshots
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = url;
+    link.click();
+    if (revokeTime !== undefined)
+        setTimeout(()=> URL.revokeObjectURL(url), revokeTime);
 }
 /**
  * LittleJS Engine Settings
@@ -6844,7 +6854,7 @@ class TileLayer extends CanvasLayer
 
         ASSERT(drawContext === this.context, 'must call redrawStart() before drawing tiles');
         glCopyToContext(drawContext);
-        //debugSaveCanvas(this.canvas);
+        //saveCanvas(this.canvas);
 
         // set stuff back to normal
         [drawContext, mainCanvasSize, cameraPos, cameraScale, canvasClearColor] = this.savedRenderSettings;
