@@ -623,7 +623,7 @@ function debugRenderPost()
 // video capture - records video and audio at 60 fps using MediaRecorder API
 
 // internal variables used to capture video
-let debugVideoCapture, debugVideoCaptureTrack, debugVideoCaptureIcon, debugVideoCaptureTimer;
+let debugVideoCapture, debugVideoCaptureIcon;
 
 /** Check if video capture is active
  *  @memberof Debug */
@@ -634,38 +634,6 @@ function debugVideoCaptureIsActive() { return !!debugVideoCapture; }
 function debugVideoCaptureStart()
 {
     ASSERT(!debugVideoCaptureIsActive(), 'Already capturing video!');
-
-    // captureStream passing in 0 to only capture when requestFrame() is called
-    const stream = mainCanvas.captureStream(0);
-    const chunks = [];
-    debugVideoCaptureTrack = stream.getVideoTracks()[0];
-    if (debugVideoCaptureTrack.applyConstraints)
-        debugVideoCaptureTrack.applyConstraints({frameRate:60}); // force 60 fps
-    debugVideoCapture = new MediaRecorder(stream, {mimeType:'video/webm;codecs=vp8'});
-    debugVideoCapture.ondataavailable = (e)=> chunks.push(e.data);
-    debugVideoCapture.onstop = ()=>
-    {
-        const blob = new Blob(chunks, {type: 'video/webm'});
-        const url = URL.createObjectURL(blob);
-        downloadLink.download = 'capture.webm';
-        downloadLink.href = url;
-        downloadLink.click();
-        URL.revokeObjectURL(url);
-    };
-
-    if (audioMasterGain)
-    {
-        // connect to audio master gain node
-        const audioStreamDestination = audioContext.createMediaStreamDestination();
-        audioMasterGain.connect(audioStreamDestination);
-        for (const track of audioStreamDestination.stream.getAudioTracks())
-            stream.addTrack(track); // add audio tracks to capture stream
-    }
-
-    // start recording
-    LOG('Video capture started.');
-    debugVideoCapture.start();
-    debugVideoCaptureTimer = new Timer(0, true);
 
     if (!debugVideoCaptureIcon)
     {
@@ -680,6 +648,57 @@ function debugVideoCaptureStart()
     // show recording icon
     debugVideoCaptureIcon.textContent = '';
     debugVideoCaptureIcon.style.display = '';
+
+    // setup captureStream to capture manually by passing 0
+    const stream = mainCanvas.captureStream(0);
+    const chunks = [];
+    const videoTrack = stream.getVideoTracks()[0];
+    videoTrack.applyConstraints({frameRate:frameRate});
+
+    // set up the media recorder
+    const mediaRecorder = new MediaRecorder(stream, 
+        {mimeType:'video/webm;codecs=vp8'});
+    mediaRecorder.ondataavailable = (e)=> chunks.push(e.data);
+    mediaRecorder.onstop = ()=>
+    {
+        const blob = new Blob(chunks, {type: 'video/webm'});
+        const url = URL.createObjectURL(blob);
+        downloadLink.download = 'capture.webm';
+        downloadLink.href = url;
+        downloadLink.click();
+        URL.revokeObjectURL(url);
+    };
+
+    let audioStreamDestination, silentAudioSource;
+    if (soundEnable)
+    {
+        // create silent audio source
+        // fixes issue where video can not start recording without audio
+        silentAudioSource = new ConstantSourceNode(audioContext, { offset: 0 });
+        silentAudioSource.connect(audioMasterGain);
+        silentAudioSource.start();
+
+        // connect to audio master gain node
+        audioStreamDestination = audioContext.createMediaStreamDestination();
+        audioMasterGain.connect(audioStreamDestination);
+        for (const track of audioStreamDestination.stream.getAudioTracks())
+            stream.addTrack(track); // add audio tracks to capture stream
+    }
+
+    // start recording
+    LOG('Video capture started.');
+    mediaRecorder.start();
+    const captureTimer = new Timer(0, true);
+
+    // save debug video info
+    debugVideoCapture =
+    {
+        mediaRecorder,
+        captureTimer,
+        videoTrack,
+        audioStreamDestination,
+        silentAudioSource
+    };
 }
 
 /** Stop capturing video and save to disk
@@ -689,12 +708,12 @@ function debugVideoCaptureStop()
     ASSERT(debugVideoCaptureIsActive(), 'Not capturing video!');
 
     // stop recording
-    LOG(`Video capture ended. ${debugVideoCaptureTimer.get().toFixed(2)} seconds recorded.`);
-    debugVideoCapture.stop();
-    debugVideoCaptureTrack.stop();
-    debugVideoCaptureTrack = undefined;
-    debugVideoCapture = undefined;
+    LOG(`Video capture ended. ${debugVideoCapture.captureTimer.get().toFixed(2)} seconds recorded.`);
     debugVideoCaptureIcon.style.display = 'none';
+    debugVideoCapture.silentAudioSource?.stop();
+    debugVideoCapture.mediaRecorder?.stop();
+    debugVideoCapture.videoTrack?.stop();
+    debugVideoCapture = undefined;
 }
 
 // update video capture, called automatically by engine
@@ -704,8 +723,9 @@ function debugVideoCaptureUpdate()
 
     // save the video frame
     combineCanvases();
-    debugVideoCaptureTrack.requestFrame();
-    debugVideoCaptureIcon.textContent = '● REC ' + formatTime(debugVideoCaptureTimer);
+    debugVideoCapture.videoTrack.requestFrame();
+    debugVideoCaptureIcon.textContent = '● REC ' 
+        + formatTime(debugVideoCapture.captureTimer);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
