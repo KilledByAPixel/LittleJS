@@ -176,6 +176,7 @@ export
 	saveText,
 	saveCanvas,
 	saveDataURL,
+	shareURL,
 
 	// Random
 	rand,

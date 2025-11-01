@@ -70,6 +70,9 @@ function saveCanvas(canvas, filename='screenshot', type='image/png')
  *  @memberof Utilities */
 function saveDataURL(url, filename='download', revokeTime)
 {
+    ASSERT(isString(url), 'saveDataURL requires url string');
+    ASSERT(isString(filename), 'saveDataURL requires filename string');
+
     // create link for saving screenshots
     const link = document.createElement('a');
     link.download = filename;
@@ -77,4 +80,16 @@ function saveDataURL(url, filename='download', revokeTime)
     link.click();
     if (revokeTime !== undefined)
         setTimeout(()=> URL.revokeObjectURL(url), revokeTime);
+}
+
+/** Share content using the native share dialog if available
+ *  @param {string} title - title of the share
+ *  @param {string} url - url to share
+ *  @param {Function} [callback] - Called when share is complete
+ *  @memberof Utilities */
+function shareURL(title, url, callback)
+{
+    ASSERT(isString(title), 'shareURL requires title string');
+    ASSERT(isString(url), 'shareURL requires url string');
+    navigator.share?.({title, url}).then(()=>callback?.());
 }
