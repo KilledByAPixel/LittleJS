@@ -2,7 +2,7 @@
 
 <div align='center'>
     
-![LittleJS Screenshot](examples/logo.png)
+![LittleJS Logo](examples/logo.png)
 
 [![NPM Package][npm]][npm-url]
 [![Build Size][build-size]][build-size-url]
