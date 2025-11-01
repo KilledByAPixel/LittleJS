@@ -231,6 +231,7 @@ export
 	worldToScreen,
 	screenToWorldDelta,
 	worldToScreenDelta,
+	screenToWorldTransform,
 	drawTile,
 	drawRect,
 	drawRectGradient,
