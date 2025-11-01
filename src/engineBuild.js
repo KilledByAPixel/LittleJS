@@ -16,6 +16,7 @@ const SOURCE_FOLDER = 'src';
 const PLUGIN_FOLDER = 'plugins';
 const engineSourceFiles =
 [
+    `${SOURCE_FOLDER}/engineMath.js`,
     `${SOURCE_FOLDER}/engineUtilities.js`,
     `${SOURCE_FOLDER}/engineSettings.js`,
     `${SOURCE_FOLDER}/engineObject.js`,

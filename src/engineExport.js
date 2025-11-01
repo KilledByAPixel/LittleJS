@@ -41,13 +41,10 @@ export
 	debugText,
 	debugClear,
 	debugScreenshot,
-	debugSaveCanvas,
-	debugSaveText,
-	debugSaveDataURL,
 	debugShowErrors,
-	debugVideoCaptureIsActive,
 	debugVideoCaptureStart,
 	debugVideoCaptureStop,
+	debugVideoCaptureIsActive,
 
 	// Settings
 	cameraPos,
@@ -144,7 +141,7 @@ export
 	setDebugWatermark,
 	setDebugKey,
 
-	// Utilities
+	// Math
 	PI,
 	abs,
 	floor,
@@ -172,8 +169,13 @@ export
 	isOverlapping,
 	isIntersecting,
 	wave,
+
+	// Utilities
 	formatTime,
 	fetchJSON,
+	saveText,
+	saveCanvas,
+	saveDataURL,
 
 	// Random
 	rand,

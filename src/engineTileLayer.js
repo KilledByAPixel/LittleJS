@@ -475,7 +475,7 @@ class TileLayer extends CanvasLayer
 
         ASSERT(drawContext === this.context, 'must call redrawStart() before drawing tiles');
         glCopyToContext(drawContext);
-        //debugSaveCanvas(this.canvas);
+        //saveCanvas(this.canvas);
 
         // set stuff back to normal
         [drawContext, mainCanvasSize, cameraPos, cameraScale, canvasClearColor] = this.savedRenderSettings;

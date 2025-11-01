@@ -41,7 +41,7 @@ let debugKey = 'Escape';
 let debugOverlay = false;
 
 // Engine internal variables not exposed to documentation
-let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugMedals = false, debugTakeScreenshot, downloadLink, debugCanvas;
+let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugMedals = false, debugTakeScreenshot;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Debug helper functions
@@ -228,46 +228,6 @@ function debugClear() { debugPrimitives = []; }
  *  @memberof Debug */
 function debugScreenshot() { debugTakeScreenshot = 1; }
 
-/** Save a canvas to disk
- *  @param {HTMLCanvasElement|OffscreenCanvas} canvas
- *  @param {string} [filename]
- *  @param {string} [type]
- *  @memberof Debug */
-function debugSaveCanvas(canvas, filename='screenshot', type='image/png')
-{
-    if (canvas instanceof OffscreenCanvas)
-    {
-        // copy to temporary canvas and save
-        if (!debugCanvas)
-            debugCanvas = document.createElement('canvas');
-        debugCanvas.width = canvas.width;
-        debugCanvas.height = canvas.height;
-        debugCanvas.getContext('2d').drawImage(canvas, 0, 0);
-        debugSaveDataURL(debugCanvas.toDataURL(type), filename);
-    }
-    else
-        debugSaveDataURL(canvas.toDataURL(type), filename);
-}
-
-/** Save a text file to disk
- *  @param {string}     text
- *  @param {string}     [filename]
- *  @param {string}     [type]
- *  @memberof Debug */
-function debugSaveText(text, filename='text', type='text/plain')
-{ debugSaveDataURL(URL.createObjectURL(new Blob([text], {'type':type})), filename); }
-
-/** Save a data url to disk
- *  @param {string}     dataURL
- *  @param {string}     filename
- *  @memberof Debug */
-function debugSaveDataURL(dataURL, filename)
-{
-    downloadLink.download = filename;
-    downloadLink.href = dataURL;
-    downloadLink.click();
-}
-
 /** Breaks on all asserts/errors, hides the canvas, and shows message in plain text
  *  This is a good function to call at the start of your game to catch all errors
  *  In release builds this function has no effect
@@ -303,8 +263,6 @@ function debugShowErrors()
 
 function debugInit()
 {
-    // create link for saving screenshots
-    downloadLink = document.createElement('a');
 }
 
 function debugUpdate()
@@ -350,7 +308,7 @@ function debugRender()
     {
         // combine canvases, remove alpha and save
         combineCanvases();
-        debugSaveCanvas(mainCanvas);
+        saveCanvas(mainCanvas);
         debugTakeScreenshot = 0;
     }
 
@@ -664,10 +622,7 @@ function debugVideoCaptureStart()
     {
         const blob = new Blob(chunks, {type: 'video/webm'});
         const url = URL.createObjectURL(blob);
-        downloadLink.download = 'capture.webm';
-        downloadLink.href = url;
-        downloadLink.click();
-        URL.revokeObjectURL(url);
+        saveDataURL(url, 'capture.webm', 1e3);
     };
 
     let audioStreamDestination, silentAudioSource;

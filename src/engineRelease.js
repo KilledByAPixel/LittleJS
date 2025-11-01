@@ -32,9 +32,6 @@ function debugOverlap    (){}
 function debugText       (){}
 function debugClear      (){}
 function debugScreenshot (){}
-function debugSaveCanvas (){}
-function debugSaveText   (){}
-function debugSaveDataURL(){}
 function debugShowErrors(){}
 function debugVideoCaptureIsActive(){ return false; }
 function debugVideoCaptureStart (){}
