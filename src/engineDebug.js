@@ -651,8 +651,9 @@ function debugVideoCaptureStart()
 
     // setup captureStream to capture manually by passing 0
     const stream = mainCanvas.captureStream(0);
-    const chunks = [];
     const videoTrack = stream.getVideoTracks()[0];
+    const captureTimer = new Timer(0, true);
+    const chunks = [];
     videoTrack.applyConstraints({frameRate:frameRate});
 
     // set up the media recorder
@@ -686,9 +687,15 @@ function debugVideoCaptureStart()
     }
 
     // start recording
+    try { mediaRecorder.start(); }
+    catch(e)
+    {
+        LOG('Video capture not supported in this browser!');
+        silentAudioSource?.stop();
+        return;
+    }
+
     LOG('Video capture started.');
-    mediaRecorder.start();
-    const captureTimer = new Timer(0, true);
 
     // save debug video info
     debugVideoCapture =
@@ -696,8 +703,8 @@ function debugVideoCaptureStart()
         mediaRecorder,
         captureTimer,
         videoTrack,
-        audioStreamDestination,
-        silentAudioSource
+        silentAudioSource,
+        audioStreamDestination
     };
 }
 
