@@ -320,7 +320,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             
             // responsive aspect ratio with native resolution
             const innerAspect = innerWidth / innerHeight;
-            ASSERT(canvasMinAspect <= canvasMaxAspect); 
+            ASSERT(canvasMinAspect <= canvasMaxAspect);
             if (canvasMaxAspect && innerAspect > canvasMaxAspect)
             {
                 // full height
@@ -377,7 +377,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     debugInit();
 
     // setup canvases
-    // transform way is still more reliable then flexbox or grid
+    // transform way is still more reliable than flexbox or grid
     const styleCanvas = 'position:absolute;'+ // allow canvases to overlap
         'top:50%;left:50%;transform:translate(-50%,-50%)'; // center on screen
     mainCanvas.style.cssText = styleCanvas;
@@ -2035,6 +2035,9 @@ function saveCanvas(canvas, filename='screenshot', type='image/png')
  *  @memberof Utilities */
 function saveDataURL(url, filename='download', revokeTime)
 {
+    ASSERT(isString(url), 'saveDataURL requires url string');
+    ASSERT(isString(filename), 'saveDataURL requires filename string');
+
     // create link for saving screenshots
     const link = document.createElement('a');
     link.download = filename;
@@ -2042,6 +2045,18 @@ function saveDataURL(url, filename='download', revokeTime)
     link.click();
     if (revokeTime !== undefined)
         setTimeout(()=> URL.revokeObjectURL(url), revokeTime);
+}
+
+/** Share content using the native share dialog if available
+ *  @param {string} title - title of the share
+ *  @param {string} url - url to share
+ *  @param {Function} [callback] - Called when share is complete
+ *  @memberof Utilities */
+function shareURL(title, url, callback)
+{
+    ASSERT(isString(title), 'shareURL requires title string');
+    ASSERT(isString(url), 'shareURL requires url string');
+    navigator.share?.({title, url}).then(()=>callback?.());
 }
 /**
  * LittleJS Engine Settings
@@ -2933,7 +2948,7 @@ class EngineObject
                         const delta = y - this.pos.y;
                         if (delta < maxMoveUp)
                         if (!tileCollisionTest(vec2(this.pos.x, y), this.size, this))
-                        {   
+                        {
                             this.pos.y = y;
                             debugPhysics && debugRect(this.pos, this.size, '#ff0');
                             return;
@@ -3066,7 +3081,7 @@ class EngineObject
      *  @return {number} -1 if this.mirror is true, or 1 if not mirrored */
     getMirrorSign() { return this.mirror ? -1 : 1; }
 
-    /** Attaches a child to this with a local transform, returns child for chaining   
+    /** Attaches a child to this with a local transform, returns child for chaining
      *  @param {EngineObject} child
      *  @param {Vector2}      [localPos=(0,0)]
      *  @param {number}       [localAngle]
@@ -3958,7 +3973,7 @@ function worldToScreenDelta(worldDelta)
 
 /** Convert screen space transform to world space
  *  @param {Vector2} screenPos
- *  @param {Vector2} screenSize  
+ *  @param {Vector2} screenSize
  *  @param {number} [screenAngle]
  *  @return {[Vector2, Vector2, number]} - [pos, size, angle]
  *  @memberof Draw */
@@ -6098,7 +6113,7 @@ class TileLayer extends CanvasLayer
     getData(layerPos)
     { 
         ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
-        return layerPos.arrayCheck(this.size) && this.data[(layerPos.y|0)*this.size.x+layerPos.x|0]; 
+        return layerPos.arrayCheck(this.size) && this.data[(layerPos.y|0)*this.size.x+layerPos.x|0];
     }
 
     // Render the tile layer, called automatically by the engine

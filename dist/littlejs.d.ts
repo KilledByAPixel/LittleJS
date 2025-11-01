@@ -927,6 +927,12 @@ declare module "littlejsengine" {
      *  @param {number} [revokeTime] - how long before revoking the url
      *  @memberof Utilities */
     export function saveDataURL(url: string, filename?: string, revokeTime?: number): void;
+    /** Share content using the native share dialog if available
+     *  @param {string} title - title of the share
+     *  @param {string} url - url to share
+     *  @param {Function} [callback] - Called when share is complete
+     *  @memberof Utilities */
+    export function shareURL(title: string, url: string, callback?: Function): void;
     /** Random global functions
      *  @namespace Random */
     /** Returns a random value between the two values passed in
