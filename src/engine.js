@@ -631,7 +631,7 @@ function engineObjectsUpdate()
     }
     for (const o of engineObjects)
     {
-        if (o.parent) continue;
+        if (o.parent || o.destroyed) continue;
 
         // update top level objects
         o.update();
