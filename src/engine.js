@@ -515,7 +515,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         rect(25,8,8,8);
 
         // cab
-        rect(25,16,7,23,color());
+        rect(25,16,7,24,color());
         rect(11,39,14,-23,color(1,1));
         rect(11,16,14,18,color(1,2));
         rect(11,16,14,8,color(1,3));
