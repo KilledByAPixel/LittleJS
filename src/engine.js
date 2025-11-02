@@ -430,7 +430,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             function updateSplash()
             {
                 inputClear();
-                drawEngineSplashScreen(t+=.01);
+                drawEngineLogo(t+=.01);
                 t>1 ? resolve() : setTimeout(updateSplash, 16);
             }
         }));
@@ -447,10 +447,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         engineUpdate();
     }
 
-    ///////////////////////////////////////////////////////////////////////////
-    // LittleJS Splash Screen
-    function drawEngineSplashScreen(t)
+    function drawEngineLogo(t)
     {
+        // LittleJS Logo and Splash Screen
         const x = mainContext;
         const w = mainCanvas.width = innerWidth;
         const h = mainCanvas.height = innerHeight;
@@ -611,7 +610,6 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         }
         x.restore();
     }
-    ///////////////////////////////////////////////////////////////////////////
 }
 
 /** Update each engine object, remove destroyed objects, and update time
@@ -625,8 +623,7 @@ function engineObjectsUpdate()
     // recursive object update
     function updateObject(o)
     {
-        if (o.destroyed)
-            return;
+        if (o.destroyed) return;
 
         o.update();
         for (const child of o.children)
@@ -634,8 +631,7 @@ function engineObjectsUpdate()
     }
     for (const o of engineObjects)
     {
-        if (o.parent)
-            continue;
+        if (o.parent) continue;
 
         // update top level objects
         o.update();

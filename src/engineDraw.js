@@ -422,13 +422,9 @@ function drawLineList(points, width=.1, color, wrap=false, pos=vec2(), angle=0, 
             for (let i=0; i<points.length; ++i)
             {
                 const point = points[i];
-                if (i)
-                    context.lineTo(point.x, point.y);
-                else
-                    context.moveTo(point.x, point.y);
+                context.lineTo(point.x, point.y);
             }
-            if (wrap)
-                context.closePath();
+            wrap && context.closePath();
             context.stroke();
         }, screenSpace, context);
     }

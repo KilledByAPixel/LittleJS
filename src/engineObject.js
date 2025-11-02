@@ -164,8 +164,9 @@ class EngineObject
         // physics sanity checks
         ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
         ASSERT(this.damping >= 0 && this.damping <= 1);
-        if (!enablePhysicsSolver || !this.mass) // don't do collision for static objects
-            return;
+
+        // don't do collision for static objects or if solver disabled
+        if (!enablePhysicsSolver || !this.mass) return;
 
         const wasFalling = this.velocity.y < 0 && gravity.y < 0 || this.velocity.y > 0 && gravity.y > 0;
         if (this.groundObject)
@@ -183,19 +184,19 @@ class EngineObject
             const epsilon = .001; // necessary to push slightly outside of the collision
             for (const o of engineObjectsCollide)
             {
+                // skip destroyed, child objects, or self collision
+                if (o.destroyed || o.parent || o === this) continue;
+
                 // non solid objects don't collide with each other
-                if ((!this.isSolid && !o.isSolid) || o.destroyed || o.parent || o === this)
-                    continue;
+                if (!this.isSolid && !o.isSolid) continue;
 
                 // check collision
-                if (!this.isOverlappingObject(o))
-                    continue;
+                if (!this.isOverlappingObject(o)) continue;
 
                 // notify objects of collision and check if should be resolved
                 const collide1 = this.collideWithObject(o);
                 const collide2 = o.collideWithObject(this);
-                if (!collide1 || !collide2)
-                    continue;
+                if (!collide1 || !collide2) continue;
 
                 if (isOverlapping(oldPos, this.size, o.pos, o.size))
                 {

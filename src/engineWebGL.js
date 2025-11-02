@@ -382,7 +382,9 @@ function glCreateTexture(image)
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, minFilter);
     if (mipMap)
         glContext.generateMipmap(glContext.TEXTURE_2D);
-    glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture); // rebind active texture
+
+    // rebind active texture
+    glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
     return texture;
 }
 
@@ -408,7 +410,9 @@ function glSetTextureData(texture, image)
     ASSERT(!!image && image.width > 0, 'Invalid image data.');
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
     glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
-    glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture); // rebind active texture
+
+    // rebind active texture
+    glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
 }
 
 /** Tells WebGL to create or update the glTexture and start tracking it
@@ -760,23 +764,20 @@ function glPolyStrip(points)
             const a = points[i0], b = points[i1], c = points[i2];
 
             // check if convex
-            if (cross(a, b, c) < e)
-                continue;
+            if (cross(a, b, c) < e) continue;
                 
             // check if any other point is inside
             let hasInside = false;
             for (let j = 0; j < indices.length; j++)
             {
                 const k = indices[j];
-                if (k === i0 || k === i1 || k === i2)
-                    continue;
+                if (k === i0 || k === i1 || k === i2) continue;
+
                 const p = points[k];
                 hasInside = pointInTriangle(p, a, b, c);
-                if (hasInside)
-                    break;
+                if (hasInside) break;
             }
-            if (hasInside)
-                continue;
+            if (hasInside) continue;
 
             // found valid ear
             triangles.push([i0, i1, i2]);
@@ -801,8 +802,7 @@ function glPolyStrip(points)
                     worstIndex = i;
                 }
             }
-            if (worstIndex < 0)
-                break;
+            if (worstIndex < 0) break;
             
             const i0 = indices[(worstIndex + indices.length - 1) % indices.length];
             const i1 = indices[worstIndex];

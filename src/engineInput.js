@@ -383,8 +383,8 @@ function inputInit()
     }
     function onMouseUp(e)
     {
-        if (isTouchDevice && touchInputEnable)
-            return;
+        if (isTouchDevice && touchInputEnable) return;
+
         inputData[0][e.button] = (inputData[0][e.button]&2) | 4;
     }
     function onMouseMove(e)
@@ -570,8 +570,7 @@ function inputUpdate()
         // update touch gamepad if enabled
         if (touchGamepadEnable && isTouchDevice)
         {
-            if (!touchGamepadTimer.isSet())
-                return;
+            if (!touchGamepadTimer.isSet()) return;
 
             // read virtual analog stick
             gamepadPrimary = 0; // touch gamepad uses index 0
@@ -609,12 +608,10 @@ function inputUpdate()
         }
 
         // return if gamepads are disabled or not supported
-        if (!gamepadsEnable || !navigator || !navigator.getGamepads)
-            return;
+        if (!gamepadsEnable || !navigator || !navigator.getGamepads) return;
 
         // only poll gamepads when focused or in debug mode
-        if (!debug && !document.hasFocus())
-            return;
+        if (!debug && !document.hasFocus()) return;
 
         // poll gamepads
         const maxGamepads = 8;
@@ -651,8 +648,7 @@ function inputUpdate()
                 data[j] = button.pressed ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
 
                 // check for any input on this gamepad, analog must be full press
-                if (button.pressed)
-                if (!button.value || button.value > .9)
+                if (button.pressed && (!button.value || button.value > .9))
                     hadInput = true;
             }
             
@@ -710,13 +706,11 @@ function inputRender()
     function touchGamepadRender()
     {
         if (!touchInputEnable || !isTouchDevice || headlessMode) return;
-        if (!touchGamepadEnable || !touchGamepadTimer.isSet())
-            return;
+        if (!touchGamepadEnable || !touchGamepadTimer.isSet()) return;
 
         // fade off when not touching or paused
         const alpha = percent(touchGamepadTimer.get(), 4, 3);
-        if (!alpha || paused)
-            return;
+        if (!alpha || paused) return;
 
         // setup the canvas
         const context = mainContext;
