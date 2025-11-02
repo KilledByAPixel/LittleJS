@@ -284,8 +284,7 @@ function glClearCanvas()
     glCanvas.height = mainCanvasSize.y;
     glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
     const color = canvasClearColor;
-    if (color.a > 0)
-        glContext.clearColor(color.r, color.g, color.b, color.a);
+    glContext.clearColor(color.r, color.g, color.b, color.a);
     glContext.clear(glContext.COLOR_BUFFER_BIT);
 }
 
