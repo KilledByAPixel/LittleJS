@@ -735,10 +735,10 @@ class UIObject
 
         // disconnect from parent and destroy children
         this.destroyed = 1;
-        this.parent && this.parent.removeChild(this);
+        this.parent?.removeChild(this);
         for (const child of this.children)
         {
-            child.parent = 0;
+            child.parent = undefined;
             child.destroy();
         }
     }
