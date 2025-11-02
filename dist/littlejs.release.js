@@ -494,7 +494,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             C ? x.fill() : x.stroke();
         };
         const color = (c=0, l=0) =>
-            hsl([.98,.3,.57,.14][c%4],.8,[0,.3,.5,.8,.9][l]).toString();
+            hsl([.98,.3,.57,.14][c%4],.9,[0,.3,.5,.8,.9][l]).toString();
         const alpha = wave(1,1,t);
         const p = percent(alpha, .1, .5);
 
