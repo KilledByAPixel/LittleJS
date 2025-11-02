@@ -721,12 +721,11 @@ declare module "littlejsengine" {
      *  @memberof Debug */
     export function setDebugKey(key: string): void;
     /**
-     * LittleJS Utility Classes and Functions
+     * LittleJS Math Classes and Functions
      * - General purpose math library
-     * - Vector2 - fast, simple, easy 2D vector class
-     * - Color - holds a rgba color with some math functions
-     * - Timer - tracks time automatically
      * - RandomGenerator - seeded random number generator
+     * - Vector2 - fast, simple, easy 2D vector class
+     * - Color - holds a rgba color with math functions
      * @namespace Math
      */
     /** The value of PI
@@ -892,11 +891,8 @@ declare module "littlejsengine" {
     export function wave(frequency?: number, amplitude?: number, t?: number, offset?: number): number;
     /**
      * LittleJS Utility Classes and Functions
-     * - General purpose math library
-     * - Vector2 - fast, simple, easy 2D vector class
-     * - Color - holds a rgba color with some math functions
+     * - General purpose utilities
      * - Timer - tracks time automatically
-     * - RandomGenerator - seeded random number generator
      * @namespace Utilities
      */
     /** Formats seconds to mm:ss style for display purposes

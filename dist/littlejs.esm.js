@@ -1444,12 +1444,11 @@ function debugProtectConstant(obj)
     return Object.freeze(obj);
 }
 /**
- * LittleJS Utility Classes and Functions
+ * LittleJS Math Classes and Functions
  * - General purpose math library
- * - Vector2 - fast, simple, easy 2D vector class
- * - Color - holds a rgba color with some math functions
- * - Timer - tracks time automatically
  * - RandomGenerator - seeded random number generator
+ * - Vector2 - fast, simple, easy 2D vector class
+ * - Color - holds a rgba color with math functions
  * @namespace Math
  */
 
@@ -2558,97 +2557,10 @@ const PURPLE = debugProtectConstant(rgb(.5,0,1));
  *  @type {Color}
  *  @memberof Math */
 const MAGENTA = debugProtectConstant(rgb(1,0,1));
-
-///////////////////////////////////////////////////////////////////////////////
-
-/**
- * Timer object tracks how long has passed since it was set
- * @memberof Engine
- * @example
- * let a = new Timer;    // creates a timer that is not set
- * a.set(3);             // sets the timer to 3 seconds
- *
- * let b = new Timer(1); // creates a timer with 1 second left
- * b.unset();            // unset the timer
- */
-class Timer
-{
-    /** Create a timer object set time passed in
-     *  @param {number} [timeLeft] - How much time left before the timer 
-     *  @param {boolean} [useRealTime] - Should the timer keep running even when the game is paused? (useful for UI) */
-    constructor(timeLeft, useRealTime=false)
-    {
-        ASSERT(timeLeft === undefined || isNumber(timeLeft), 'Constructed Timer is invalid.', timeLeft);
-        this.useRealTime = useRealTime;
-        const globalTime = this.getGlobalTime();
-        this.time = timeLeft === undefined ? undefined : globalTime + timeLeft;
-        this.setTime = timeLeft;
-    }
-
-    /** Set the timer with seconds passed in
-     *  @param {number} [timeLeft] - How much time left before the timer is elapsed in seconds */
-    set(timeLeft=0)
-    {
-        ASSERT(isNumber(timeLeft), 'Timer is invalid.', timeLeft);
-        const globalTime = this.getGlobalTime();
-        this.time = globalTime + timeLeft;
-        this.setTime = timeLeft;
-    }
-
-    /** Set if the timer should keep running even when the game is paused
-     *  @param {boolean} [useRealTime] */
-    setUseRealTime(useRealTime=true)
-    {
-        ASSERT(!this.isSet(), 'Cannot change global time setting while timer is set.');
-        this.useRealTime = useRealTime;
-    }
-
-    /** Unset the timer */
-    unset() { this.time = undefined; }
-
-    /** Returns true if set
-     * @return {boolean} */
-    isSet() { return this.time !== undefined; }
-
-    /** Returns true if set and has not elapsed
-     * @return {boolean} */
-    active() { return this.getGlobalTime() < this.time; }
-
-    /** Returns true if set and elapsed
-     * @return {boolean} */
-    elapsed() { return this.getGlobalTime() >= this.time; }
-
-    /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
-     * @return {number} */
-    get() { return this.isSet()? this.getGlobalTime() - this.time : 0; }
-
-    /** Get percentage elapsed based on time it was set to, returns 0 if not set
-     * @return {number} */
-    getPercent() { return this.isSet()? 1-percent(this.time - this.getGlobalTime(), 0, this.setTime) : 0; }
-
-    /** Get the time this timer was set to, returns 0 if not set
-     * @return {number} */
-    getSetTime() { return this.isSet() ? this.setTime : 0; }
-
-    /** Get the current global time this timer is based on
-     * @return {number} */
-    getGlobalTime() { return this.useRealTime ? timeReal : time; }
-
-    /** Returns this timer expressed as a string
-     * @return {string} */
-    toString() { return this.isSet() ? abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ) : 'unset'; }
-
-    /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
-     * @return {number} */
-    valueOf() { return this.get(); }
-}
 /**
  * LittleJS Utility Classes and Functions
- * - General purpose math library
- * - Vector2 - fast, simple, easy 2D vector class
- * - Color - holds a rgba color with some math functions
+ * - General purpose utilities
  * - Timer - tracks time automatically
- * - RandomGenerator - seeded random number generator
  * @namespace Utilities
  */
 
@@ -2734,6 +2646,90 @@ function shareURL(title, url, callback)
     ASSERT(isString(title), 'shareURL requires title string');
     ASSERT(isString(url), 'shareURL requires url string');
     navigator.share?.({title, url}).then(()=>callback?.());
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Timer object tracks how long has passed since it was set
+ * @memberof Engine
+ * @example
+ * let a = new Timer;    // creates a timer that is not set
+ * a.set(3);             // sets the timer to 3 seconds
+ *
+ * let b = new Timer(1); // creates a timer with 1 second left
+ * b.unset();            // unset the timer
+ */
+class Timer
+{
+    /** Create a timer object set time passed in
+     *  @param {number} [timeLeft] - How much time left before the timer 
+     *  @param {boolean} [useRealTime] - Should the timer keep running even when the game is paused? (useful for UI) */
+    constructor(timeLeft, useRealTime=false)
+    {
+        ASSERT(timeLeft === undefined || isNumber(timeLeft), 'Constructed Timer is invalid.', timeLeft);
+        this.useRealTime = useRealTime;
+        const globalTime = this.getGlobalTime();
+        this.time = timeLeft === undefined ? undefined : globalTime + timeLeft;
+        this.setTime = timeLeft;
+    }
+
+    /** Set the timer with seconds passed in
+     *  @param {number} [timeLeft] - How much time left before the timer is elapsed in seconds */
+    set(timeLeft=0)
+    {
+        ASSERT(isNumber(timeLeft), 'Timer is invalid.', timeLeft);
+        const globalTime = this.getGlobalTime();
+        this.time = globalTime + timeLeft;
+        this.setTime = timeLeft;
+    }
+
+    /** Set if the timer should keep running even when the game is paused
+     *  @param {boolean} [useRealTime] */
+    setUseRealTime(useRealTime=true)
+    {
+        ASSERT(!this.isSet(), 'Cannot change global time setting while timer is set.');
+        this.useRealTime = useRealTime;
+    }
+
+    /** Unset the timer */
+    unset() { this.time = undefined; }
+
+    /** Returns true if set
+     * @return {boolean} */
+    isSet() { return this.time !== undefined; }
+
+    /** Returns true if set and has not elapsed
+     * @return {boolean} */
+    active() { return this.getGlobalTime() < this.time; }
+
+    /** Returns true if set and elapsed
+     * @return {boolean} */
+    elapsed() { return this.getGlobalTime() >= this.time; }
+
+    /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
+     * @return {number} */
+    get() { return this.isSet()? this.getGlobalTime() - this.time : 0; }
+
+    /** Get percentage elapsed based on time it was set to, returns 0 if not set
+     * @return {number} */
+    getPercent() { return this.isSet()? 1-percent(this.time - this.getGlobalTime(), 0, this.setTime) : 0; }
+
+    /** Get the time this timer was set to, returns 0 if not set
+     * @return {number} */
+    getSetTime() { return this.isSet() ? this.setTime : 0; }
+
+    /** Get the current global time this timer is based on
+     * @return {number} */
+    getGlobalTime() { return this.useRealTime ? timeReal : time; }
+
+    /** Returns this timer expressed as a string
+     * @return {string} */
+    toString() { return this.isSet() ? abs(this.get()) + ' seconds ' + (this.get()<0 ? 'before' : 'after' ) : 'unset'; }
+
+    /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
+     * @return {number} */
+    valueOf() { return this.get(); }
 }
 /**
  * LittleJS Engine Settings
