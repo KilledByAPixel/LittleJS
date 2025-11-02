@@ -265,7 +265,7 @@ const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
 function vibrate(pattern=100)
 {
     ASSERT(isNumber(pattern) || isArray(pattern), 'pattern must be a number or array');
-    vibrateEnable && !headlessMode && navigator && navigator.vibrate && navigator.vibrate(pattern);
+    vibrateEnable && !headlessMode && navigator?.vibrate?.(pattern);
 }
 
 /** Cancel any ongoing vibration

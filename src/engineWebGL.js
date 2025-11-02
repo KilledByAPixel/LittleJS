@@ -361,7 +361,7 @@ function glCreateTexture(image)
     // build the texture
     const texture = glContext.createTexture();
     let mipMap = false;
-    if (image && image.width)
+    if (image?.width)
     {
         glSetTextureData(texture, image);
         glContext.bindTexture(glContext.TEXTURE_2D, texture);
@@ -407,7 +407,7 @@ function glSetTextureData(texture, image)
     if (!glContext) return;
 
     // build the texture
-    ASSERT(!!image && image.width > 0, 'Invalid image data.');
+    ASSERT(image?.width > 0, 'Invalid image data.');
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
     glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
 

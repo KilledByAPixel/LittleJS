@@ -272,7 +272,7 @@ function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
  * @param {any} s
  * @return {boolean}
  * @memberof Math */
-function isString(s) { return s !== undefined && s !== null && typeof s.toString() === 'string'; }
+function isString(s) { return s != null && typeof s?.toString() === 'string'; }
 
 /**
  * Check if object is an array
@@ -541,7 +541,7 @@ class RandomGenerator
  * a = vec2(5);        // set a to (5, 5)
  * b = vec2();         // set b to (0, 0)
  * @memberof Math */
-function vec2(x=0, y) { return new Vector2(x, y === undefined ? x : y); }
+function vec2(x=0, y) { return new Vector2(x, y ?? x); }
 
 /**
  * Check if object is a valid Vector2

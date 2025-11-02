@@ -255,7 +255,7 @@ class ParticleEmitter extends EngineObject
         particle.mirror        = randBool();
 
         // call particle create callback
-        this.particleCreateCallback && this.particleCreateCallback(particle);
+        this.particleCreateCallback?.(particle);
 
         // return the newly created particle
         return particle;
@@ -340,7 +340,7 @@ class Particle extends EngineObject
             const c = this.colorEnd;
             this.color.set(c.r, c.g, c.b, c.a);
             this.size.set(this.sizeEnd, this.sizeEnd);
-            this.destroyCallback && this.destroyCallback(this);
+            this.destroyCallback?.(this);
             this.destroyed = 1;
         }
     }

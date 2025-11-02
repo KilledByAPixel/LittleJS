@@ -86,8 +86,7 @@ class Sound
         {
             // remove randomness so it can be applied on playback
             const randomnessIndex = 1, defaultRandomness = .05;
-            this.randomness = zzfxSound[randomnessIndex] !== undefined ? 
-                zzfxSound[randomnessIndex] : defaultRandomness;
+            this.randomness = zzfxSound[randomnessIndex] ?? defaultRandomness;
             zzfxSound[randomnessIndex] = 0;
 
             // generate the zzfx samples
@@ -167,7 +166,7 @@ class Sound
      *  @return {number} - How long the sound is in seconds (undefined if loading)
      */
     getDuration()
-    { return this.sampleChannels && this.sampleRate ? this.sampleChannels[0].length / this.sampleRate : 0; }
+    { return this.sampleChannels?.[0].length / this.sampleRate || 0; }
 
     /** Check if sound is loaded, for sounds fetched from a url
      *  @return {boolean} - True if sound is loaded and ready to play
@@ -259,8 +258,7 @@ class SoundWave extends Sound
         this.sampleRate = audioBuffer.sampleRate;
         this.sampleChannels = sampleChannels;
         this.loadedPercent = 1;
-        if (this.onloadCallback)
-            this.onloadCallback(this);
+        this.onloadCallback?.(this);
     }
 }
 
@@ -463,7 +461,7 @@ function speak(text, language='', volume=1, rate=1, pitch=1)
 
 /** Stop all queued speech
  *  @memberof Audio */
-function speakStop() {speechSynthesis && speechSynthesis.cancel();}
+function speakStop() {speechSynthesis?.cancel();}
 
 /** Get frequency of a note on a musical scale
  *  @param {number} semitoneOffset - How many semitones away from the root note

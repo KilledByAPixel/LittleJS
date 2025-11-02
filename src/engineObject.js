@@ -173,7 +173,7 @@ class EngineObject
         {
             // apply friction in local space of ground object
             const friction = max(this.friction, this.groundObject.friction);
-            const groundSpeed = this.groundObject.velocity ? this.groundObject.velocity.x : 0;
+            const groundSpeed = this.groundObject.velocity.x;
             this.velocity.x = groundSpeed + (this.velocity.x - groundSpeed) * friction;
             this.groundObject = undefined;
         }
@@ -358,7 +358,7 @@ class EngineObject
 
         // disconnect from parent and destroy children
         this.destroyed = 1;
-        this.parent && this.parent.removeChild(this);
+        this.parent?.removeChild(this);
         for (const child of this.children)
         {
             child.parent = 0;

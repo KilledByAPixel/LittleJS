@@ -286,7 +286,7 @@ class CanvasLayer extends EngineObject
     {
         this.drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
-            const textureInfo = tileInfo && tileInfo.textureInfo;
+            const textureInfo = tileInfo?.textureInfo;
             if (textureInfo)
             {
                 context.globalAlpha = color.a; // only alpha is supported
@@ -450,7 +450,7 @@ class TileLayer extends CanvasLayer
         // use camera settings to match this layer's canvas
         drawContext = this.context;
         cameraPos = this.size.scale(.5);
-        const tileSize = this.tileInfo ? this.tileInfo.size : vec2(1);
+        const tileSize = this.tileInfo?.size ?? vec2(1);
         cameraScale = tileSize.x;
         canvasClearColor = CLEAR_BLACK;
         mainCanvasSize = this.size.multiply(tileSize);
