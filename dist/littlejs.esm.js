@@ -1715,7 +1715,7 @@ function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
  * @param {any} s
  * @return {boolean}
  * @memberof Math */
-function isString(s) { return s !== undefined && s !== null && typeof s.toString() === 'string'; }
+function isString(s) { return s != null && typeof s?.toString() === 'string'; }
 
 /**
  * Check if object is an array
@@ -1984,7 +1984,7 @@ class RandomGenerator
  * a = vec2(5);        // set a to (5, 5)
  * b = vec2();         // set b to (0, 0)
  * @memberof Math */
-function vec2(x=0, y) { return new Vector2(x, y === undefined ? x : y); }
+function vec2(x=0, y) { return new Vector2(x, y ?? x); }
 
 /**
  * Check if object is a valid Vector2
@@ -3501,7 +3501,7 @@ class EngineObject
         {
             // apply friction in local space of ground object
             const friction = max(this.friction, this.groundObject.friction);
-            const groundSpeed = this.groundObject.velocity ? this.groundObject.velocity.x : 0;
+            const groundSpeed = this.groundObject.velocity.x;
             this.velocity.x = groundSpeed + (this.velocity.x - groundSpeed) * friction;
             this.groundObject = undefined;
         }
@@ -3686,7 +3686,7 @@ class EngineObject
 
         // disconnect from parent and destroy children
         this.destroyed = 1;
-        this.parent && this.parent.removeChild(this);
+        this.parent?.removeChild(this);
         for (const child of this.children)
         {
             child.parent = 0;
@@ -5179,7 +5179,7 @@ const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
 function vibrate(pattern=100)
 {
     ASSERT(isNumber(pattern) || isArray(pattern), 'pattern must be a number or array');
-    vibrateEnable && !headlessMode && navigator && navigator.vibrate && navigator.vibrate(pattern);
+    vibrateEnable && !headlessMode && navigator?.vibrate?.(pattern);
 }
 
 /** Cancel any ongoing vibration
@@ -5777,8 +5777,7 @@ class Sound
         {
             // remove randomness so it can be applied on playback
             const randomnessIndex = 1, defaultRandomness = .05;
-            this.randomness = zzfxSound[randomnessIndex] !== undefined ? 
-                zzfxSound[randomnessIndex] : defaultRandomness;
+            this.randomness = zzfxSound[randomnessIndex] ?? defaultRandomness;
             zzfxSound[randomnessIndex] = 0;
 
             // generate the zzfx samples
@@ -5858,7 +5857,7 @@ class Sound
      *  @return {number} - How long the sound is in seconds (undefined if loading)
      */
     getDuration()
-    { return this.sampleChannels && this.sampleRate ? this.sampleChannels[0].length / this.sampleRate : 0; }
+    { return this.sampleChannels?.[0].length / this.sampleRate || 0; }
 
     /** Check if sound is loaded, for sounds fetched from a url
      *  @return {boolean} - True if sound is loaded and ready to play
@@ -5950,8 +5949,7 @@ class SoundWave extends Sound
         this.sampleRate = audioBuffer.sampleRate;
         this.sampleChannels = sampleChannels;
         this.loadedPercent = 1;
-        if (this.onloadCallback)
-            this.onloadCallback(this);
+        this.onloadCallback?.(this);
     }
 }
 
@@ -6154,7 +6152,7 @@ function speak(text, language='', volume=1, rate=1, pitch=1)
 
 /** Stop all queued speech
  *  @memberof Audio */
-function speakStop() {speechSynthesis && speechSynthesis.cancel();}
+function speakStop() {speechSynthesis?.cancel();}
 
 /** Get frequency of a note on a musical scale
  *  @param {number} semitoneOffset - How many semitones away from the root note
@@ -6667,7 +6665,7 @@ class CanvasLayer extends EngineObject
     {
         this.drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
-            const textureInfo = tileInfo && tileInfo.textureInfo;
+            const textureInfo = tileInfo?.textureInfo;
             if (textureInfo)
             {
                 context.globalAlpha = color.a; // only alpha is supported
@@ -6831,7 +6829,7 @@ class TileLayer extends CanvasLayer
         // use camera settings to match this layer's canvas
         drawContext = this.context;
         cameraPos = this.size.scale(.5);
-        const tileSize = this.tileInfo ? this.tileInfo.size : vec2(1);
+        const tileSize = this.tileInfo?.size ?? vec2(1);
         cameraScale = tileSize.x;
         canvasClearColor = CLEAR_BLACK;
         mainCanvasSize = this.size.multiply(tileSize);
@@ -7289,7 +7287,7 @@ class ParticleEmitter extends EngineObject
         particle.mirror        = randBool();
 
         // call particle create callback
-        this.particleCreateCallback && this.particleCreateCallback(particle);
+        this.particleCreateCallback?.(particle);
 
         // return the newly created particle
         return particle;
@@ -7374,7 +7372,7 @@ class Particle extends EngineObject
             const c = this.colorEnd;
             this.color.set(c.r, c.g, c.b, c.a);
             this.size.set(this.sizeEnd, this.sizeEnd);
-            this.destroyCallback && this.destroyCallback(this);
+            this.destroyCallback?.(this);
             this.destroyed = 1;
         }
     }
@@ -7984,7 +7982,7 @@ function glCreateTexture(image)
     // build the texture
     const texture = glContext.createTexture();
     let mipMap = false;
-    if (image && image.width)
+    if (image?.width)
     {
         glSetTextureData(texture, image);
         glContext.bindTexture(glContext.TEXTURE_2D, texture);
@@ -8030,7 +8028,7 @@ function glSetTextureData(texture, image)
     if (!glContext) return;
 
     // build the texture
-    ASSERT(!!image && image.width > 0, 'Invalid image data.');
+    ASSERT(image?.width > 0, 'Invalid image data.');
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
     glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
 
