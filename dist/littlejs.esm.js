@@ -433,7 +433,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             function updateSplash()
             {
                 inputClear();
-                drawEngineSplashScreen(t+=.01);
+                drawEngineLogo(t+=.01);
                 t>1 ? resolve() : setTimeout(updateSplash, 16);
             }
         }));
@@ -450,10 +450,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         engineUpdate();
     }
 
-    ///////////////////////////////////////////////////////////////////////////
-    // LittleJS Splash Screen
-    function drawEngineSplashScreen(t)
+    function drawEngineLogo(t)
     {
+        // LittleJS Logo and Splash Screen
         const x = mainContext;
         const w = mainCanvas.width = innerWidth;
         const h = mainCanvas.height = innerHeight;
@@ -614,7 +613,6 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         }
         x.restore();
     }
-    ///////////////////////////////////////////////////////////////////////////
 }
 
 /** Update each engine object, remove destroyed objects, and update time
@@ -628,8 +626,7 @@ function engineObjectsUpdate()
     // recursive object update
     function updateObject(o)
     {
-        if (o.destroyed)
-            return;
+        if (o.destroyed) return;
 
         o.update();
         for (const child of o.children)
@@ -637,8 +634,7 @@ function engineObjectsUpdate()
     }
     for (const o of engineObjects)
     {
-        if (o.parent)
-            continue;
+        if (o.parent) continue;
 
         // update top level objects
         o.update();
@@ -3496,8 +3492,9 @@ class EngineObject
         // physics sanity checks
         ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
         ASSERT(this.damping >= 0 && this.damping <= 1);
-        if (!enablePhysicsSolver || !this.mass) // don't do collision for static objects
-            return;
+
+        // don't do collision for static objects or if solver disabled
+        if (!enablePhysicsSolver || !this.mass) return;
 
         const wasFalling = this.velocity.y < 0 && gravity.y < 0 || this.velocity.y > 0 && gravity.y > 0;
         if (this.groundObject)
@@ -3515,19 +3512,19 @@ class EngineObject
             const epsilon = .001; // necessary to push slightly outside of the collision
             for (const o of engineObjectsCollide)
             {
+                // skip destroyed, child objects, or self collision
+                if (o.destroyed || o.parent || o === this) continue;
+
                 // non solid objects don't collide with each other
-                if ((!this.isSolid && !o.isSolid) || o.destroyed || o.parent || o === this)
-                    continue;
+                if (!this.isSolid && !o.isSolid) continue;
 
                 // check collision
-                if (!this.isOverlappingObject(o))
-                    continue;
+                if (!this.isOverlappingObject(o)) continue;
 
                 // notify objects of collision and check if should be resolved
                 const collide1 = this.collideWithObject(o);
                 const collide2 = o.collideWithObject(this);
-                if (!collide1 || !collide2)
-                    continue;
+                if (!collide1 || !collide2) continue;
 
                 if (isOverlapping(oldPos, this.size, o.pos, o.size))
                 {
@@ -4276,13 +4273,9 @@ function drawLineList(points, width=.1, color, wrap=false, pos=vec2(), angle=0, 
             for (let i=0; i<points.length; ++i)
             {
                 const point = points[i];
-                if (i)
-                    context.lineTo(point.x, point.y);
-                else
-                    context.moveTo(point.x, point.y);
+                context.lineTo(point.x, point.y);
             }
-            if (wrap)
-                context.closePath();
+            wrap && context.closePath();
             context.stroke();
         }, screenSpace, context);
     }
@@ -5304,8 +5297,8 @@ function inputInit()
     }
     function onMouseUp(e)
     {
-        if (isTouchDevice && touchInputEnable)
-            return;
+        if (isTouchDevice && touchInputEnable) return;
+
         inputData[0][e.button] = (inputData[0][e.button]&2) | 4;
     }
     function onMouseMove(e)
@@ -5491,8 +5484,7 @@ function inputUpdate()
         // update touch gamepad if enabled
         if (touchGamepadEnable && isTouchDevice)
         {
-            if (!touchGamepadTimer.isSet())
-                return;
+            if (!touchGamepadTimer.isSet()) return;
 
             // read virtual analog stick
             gamepadPrimary = 0; // touch gamepad uses index 0
@@ -5530,12 +5522,10 @@ function inputUpdate()
         }
 
         // return if gamepads are disabled or not supported
-        if (!gamepadsEnable || !navigator || !navigator.getGamepads)
-            return;
+        if (!gamepadsEnable || !navigator || !navigator.getGamepads) return;
 
         // only poll gamepads when focused or in debug mode
-        if (!debug && !document.hasFocus())
-            return;
+        if (!debug && !document.hasFocus()) return;
 
         // poll gamepads
         const maxGamepads = 8;
@@ -5572,8 +5562,7 @@ function inputUpdate()
                 data[j] = button.pressed ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
 
                 // check for any input on this gamepad, analog must be full press
-                if (button.pressed)
-                if (!button.value || button.value > .9)
+                if (button.pressed && (!button.value || button.value > .9))
                     hadInput = true;
             }
             
@@ -5631,13 +5620,11 @@ function inputRender()
     function touchGamepadRender()
     {
         if (!touchInputEnable || !isTouchDevice || headlessMode) return;
-        if (!touchGamepadEnable || !touchGamepadTimer.isSet())
-            return;
+        if (!touchGamepadEnable || !touchGamepadTimer.isSet()) return;
 
         // fade off when not touching or paused
         const alpha = percent(touchGamepadTimer.get(), 4, 3);
-        if (!alpha || paused)
-            return;
+        if (!alpha || paused) return;
 
         // setup the canvas
         const context = mainContext;
@@ -7920,8 +7907,7 @@ function glClearCanvas()
     glCanvas.height = mainCanvasSize.y;
     glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
     const color = canvasClearColor;
-    if (color.a > 0)
-        glContext.clearColor(color.r, color.g, color.b, color.a);
+    glContext.clearColor(color.r, color.g, color.b, color.a);
     glContext.clear(glContext.COLOR_BUFFER_BIT);
 }
 
@@ -8019,7 +8005,9 @@ function glCreateTexture(image)
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, minFilter);
     if (mipMap)
         glContext.generateMipmap(glContext.TEXTURE_2D);
-    glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture); // rebind active texture
+
+    // rebind active texture
+    glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
     return texture;
 }
 
@@ -8045,7 +8033,9 @@ function glSetTextureData(texture, image)
     ASSERT(!!image && image.width > 0, 'Invalid image data.');
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
     glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
-    glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture); // rebind active texture
+
+    // rebind active texture
+    glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
 }
 
 /** Tells WebGL to create or update the glTexture and start tracking it
@@ -8397,23 +8387,20 @@ function glPolyStrip(points)
             const a = points[i0], b = points[i1], c = points[i2];
 
             // check if convex
-            if (cross(a, b, c) < e)
-                continue;
+            if (cross(a, b, c) < e) continue;
                 
             // check if any other point is inside
             let hasInside = false;
             for (let j = 0; j < indices.length; j++)
             {
                 const k = indices[j];
-                if (k === i0 || k === i1 || k === i2)
-                    continue;
+                if (k === i0 || k === i1 || k === i2) continue;
+
                 const p = points[k];
                 hasInside = pointInTriangle(p, a, b, c);
-                if (hasInside)
-                    break;
+                if (hasInside) break;
             }
-            if (hasInside)
-                continue;
+            if (hasInside) continue;
 
             // found valid ear
             triangles.push([i0, i1, i2]);
@@ -8438,8 +8425,7 @@ function glPolyStrip(points)
                     worstIndex = i;
                 }
             }
-            if (worstIndex < 0)
-                break;
+            if (worstIndex < 0) break;
             
             const i0 = indices[(worstIndex + indices.length - 1) % indices.length];
             const i1 = indices[worstIndex];
