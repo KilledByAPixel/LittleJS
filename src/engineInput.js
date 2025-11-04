@@ -55,6 +55,10 @@ let inputPreventDefault = true;
  *  @memberof Input */
 let gamepadPrimary = 0;
 
+/** True if a touch device has been detected
+ *  @memberof Input */
+const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
+
 /** Prevents input continuing to the default browser handling
  *  This is useful to disable for html menus so the browser can handle input normally
  *  @param {boolean} preventDefault
@@ -252,10 +256,6 @@ function gamepadStickCount(gamepad=gamepadPrimary)
     ASSERT(isNumber(gamepad), 'gamepad must be a number');
     return gamepadStickData[gamepad]?.length ?? 0;
 }
-
-/** True if a touch device has been detected
- *  @memberof Input */
-const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
 
 ///////////////////////////////////////////////////////////////////////////////
 
