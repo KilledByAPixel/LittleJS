@@ -875,7 +875,6 @@ function combineCanvases()
     workContext.fillRect(0,0,w,h); // remove background alpha
     glCopyToContext(workContext);
     workContext.drawImage(mainCanvas, 0, 0);
-    mainCanvas.width |= 0;
     mainContext.drawImage(workCanvas, 0, 0);
 }
 
