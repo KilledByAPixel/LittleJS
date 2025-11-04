@@ -138,7 +138,7 @@ function setupPostProcess()
 
         // scan lines
         const float scanlineScale = 2.;
-        const float scanlineAlpha = .3;
+        const float scanlineAlpha = .6;
         c *= 1. - scanlineAlpha*cos(p.y*2.*iResolution.y/scanlineScale);
 
         {
@@ -168,7 +168,7 @@ function setupPostProcess()
         c *= 1.-pow((dx*dx + dy*dy)/vignette, vignettePow);
     }`;
 
-    new LJS.PostProcessPlugin(televisionShader);
+    new LJS.PostProcessPlugin(televisionShader, true);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

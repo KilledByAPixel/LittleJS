@@ -24,14 +24,16 @@ class PostProcessPlugin
 {
     /** Create global post processing shader
     *  @param {string} shaderCode
-    *  @param {boolean} [includeMainCanvas]
-     *  @example
-     *  // create the post process plugin object
-     *  new PostProcessPlugin(shaderCode);
-     */
-    constructor(shaderCode, includeMainCanvas=true)
+    *  @param {boolean} [includeMainCanvas] - combine mainCanvs onto glCanvas
+    *  @param {boolean} [feedbackTexture] - use glCanvas from previous frame as the texture
+    *  @example
+    *  // create the post process plugin object
+    *  new PostProcessPlugin(shaderCode);
+    */
+    constructor(shaderCode, includeMainCanvas=false, feedbackTexture=false)
     {
         ASSERT(!postProcess, 'Post process already initialized');
+        ASSERT(!(includeMainCanvas && feedbackTexture), 'Post process cannot both include main canvas and use feedback texture');
         postProcess = this;
 
         if (!shaderCode) // default shader pass through
@@ -125,9 +127,15 @@ class PostProcessPlugin
                 workCanvas.height = mainCanvasSize.y;
                 glCopyToContext(workContext);
                 workContext.drawImage(mainCanvas, 0, 0);
+                mainCanvas.width |= 0
                 
                 // copy work canvas to texture
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, workCanvas);
+            }
+            else if (!feedbackTexture)
+            {
+                // copy glCanvas to texture
+                glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, glCanvas);
             }
             
             // set uniforms and draw
@@ -137,7 +145,7 @@ class PostProcessPlugin
             glContext.uniform3f(uniformLocation('iResolution'), mainCanvas.width, mainCanvas.height, 1);
             glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, 4);
 
-            if (!includeMainCanvas)
+            if (feedbackTexture)
             {
                 // pass glCanvas back to overlay texture
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, glCanvas);
