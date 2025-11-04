@@ -3088,12 +3088,13 @@ declare module "littlejsengine" {
     export class PostProcessPlugin {
         /** Create global post processing shader
         *  @param {string} shaderCode
-        *  @param {boolean} [includeMainCanvas]
-         *  @example
-         *  // create the post process plugin object
-         *  new PostProcessPlugin(shaderCode);
-         */
-        constructor(shaderCode: string, includeMainCanvas?: boolean);
+        *  @param {boolean} [includeMainCanvas] - combine mainCanvs onto glCanvas
+        *  @param {boolean} [feedbackTexture] - use glCanvas from previous frame as the texture
+        *  @example
+        *  // create the post process plugin object
+        *  new PostProcessPlugin(shaderCode);
+        */
+        constructor(shaderCode: string, includeMainCanvas?: boolean, feedbackTexture?: boolean);
         /** @property {WebGLProgram} - Shader for post processing */
         shader: any;
         /** @property {WebGLTexture} - Texture for post processing */
