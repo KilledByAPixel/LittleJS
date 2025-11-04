@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.16.2';
+const engineVersion = '1.16.3';
 
 /** Frames per second to update
  *  @type {number}
@@ -4041,7 +4041,6 @@ function combineCanvases()
     workContext.fillRect(0,0,w,h); // remove background alpha
     glCopyToContext(workContext);
     workContext.drawImage(mainCanvas, 0, 0);
-    mainCanvas.width |= 0;
     mainContext.drawImage(workCanvas, 0, 0);
 }
 
@@ -6965,7 +6964,7 @@ let glContext;
 let glAntialias = true;
 
 // WebGL internal variables not exposed to documentation
-let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos, glCanBeEnabled = true;
+let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos, glCanBeEnabled = true, glInstancedVAO, glPolyVAO;
 
 // WebGL internal constants
 const gl_ARRAY_BUFFER_SIZE = 5e5;
@@ -7041,7 +7040,7 @@ function glInit(rootElement)
         // setup instanced rendering shader program
         glShader = glCreateProgram(
             '#version 300 es\n' +     // specify GLSL ES version
-            'precision highp float;'+ // use highp for better accuracy
+            'precision highp float;'+ // use highp for accuracy
             'uniform mat4 m;'+        // transform matrix
             'in vec2 g;'+             // in: geometry
             'in vec4 p,u,c,a;'+       // in: position/size, uvs, color, additiveColor
@@ -7056,7 +7055,7 @@ function glInit(rootElement)
             '}'                       // end of shader
             ,
             '#version 300 es\n' +     // specify GLSL ES version
-            'precision highp float;'+ // use highp for better accuracy
+            'precision highp float;'+ // use highp for accuracy
             'uniform sampler2D s;'+   // texture
             'in vec2 v;'+             // in: uv
             'in vec4 d,e;'+           // in: color, additiveColor
@@ -7094,11 +7093,49 @@ function glInit(rootElement)
         glColorData = new Uint32Array(glInstanceData);
         glArrayBuffer = glContext.createBuffer();
         glGeometryBuffer = glContext.createBuffer();
+        glBatchCount = 0;
 
         // create the geometry buffer, triangle strip square
-        const geometry = new Float32Array([glBatchCount=0,0,1,0,0,1,1,1]);
+        const geometry = new Float32Array([0,0,1,0,0,1,1,1]);
         glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
         glContext.bufferData(glContext.ARRAY_BUFFER, geometry, glContext.STATIC_DRAW);
+        
+        let offset, shader, stride;
+        const initVertexAttrib = (name, type, typeSize, size, divisor=0)=>
+        {
+            const location = glContext.getAttribLocation(shader, name);
+            const normalize = typeSize === 1;
+            const fixedStride = typeSize && stride;
+            glContext.enableVertexAttribArray(location);
+            glContext.vertexAttribPointer(location, size, type, normalize, fixedStride, offset);
+            glContext.vertexAttribDivisor(location, divisor);
+            offset += size*typeSize;
+        }
+
+        // setup VAO for instanced rendering
+        glInstancedVAO = glContext.createVertexArray();
+        glContext.bindVertexArray(glInstancedVAO);
+        
+        // configure instanced vertex attributes
+        offset = 0, shader = glShader, stride = gl_INSTANCE_BYTE_STRIDE;
+        glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
+        initVertexAttrib('g', glContext.FLOAT, 0, 2); // geometry
+        glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
+        glContext.bufferData(glContext.ARRAY_BUFFER, gl_ARRAY_BUFFER_SIZE, glContext.DYNAMIC_DRAW);
+        initVertexAttrib('p', glContext.FLOAT, 4, 4, 1); // position & size
+        initVertexAttrib('u', glContext.FLOAT, 4, 4, 1); // texture coords
+        initVertexAttrib('c', glContext.UNSIGNED_BYTE, 1, 4, 1); // color
+        initVertexAttrib('a', glContext.UNSIGNED_BYTE, 1, 4, 1); // additiveColor
+        initVertexAttrib('r', glContext.FLOAT, 4, 1, 1); // rotation
+
+        // setup VAO for poly rendering
+        glPolyVAO = glContext.createVertexArray();
+        glContext.bindVertexArray(glPolyVAO);
+        
+        // configure poly vertex attributes
+        offset = 0, shader = glPolyShader, stride = gl_POLY_VERTEX_BYTE_STRIDE;
+        initVertexAttrib('p', glContext.FLOAT, 4, 2);         // position
+        initVertexAttrib('c', glContext.UNSIGNED_BYTE, 1, 4); // color
     }
 }
 
@@ -7110,29 +7147,7 @@ function glSetInstancedMode()
     glFlush();
     glPolyMode = false;
     glContext.useProgram(glShader);
-
-    // set vertex attributes
-    let offset = 0;
-    const initVertexAttribArray = (name, type, typeSize, size)=>
-    {
-        const location = glContext.getAttribLocation(glShader, name);
-        const stride = typeSize && gl_INSTANCE_BYTE_STRIDE; // only if not geometry
-        const divisor = typeSize && 1; // only if not geometry
-        const normalize = typeSize === 1; // only if color
-        glContext.enableVertexAttribArray(location);
-        glContext.vertexAttribPointer(location, size, type, normalize, stride, offset);
-        glContext.vertexAttribDivisor(location, divisor);
-        offset += size*typeSize;
-    }
-    glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
-    initVertexAttribArray('g', glContext.FLOAT, 0, 2); // geometry
-    glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
-    glContext.bufferData(glContext.ARRAY_BUFFER, gl_ARRAY_BUFFER_SIZE, glContext.DYNAMIC_DRAW);
-    initVertexAttribArray('p', glContext.FLOAT, 4, 4); // position & size
-    initVertexAttribArray('u', glContext.FLOAT, 4, 4); // texture coords
-    initVertexAttribArray('c', glContext.UNSIGNED_BYTE, 1, 4); // color
-    initVertexAttribArray('a', glContext.UNSIGNED_BYTE, 1, 4); // additiveColor
-    initVertexAttribArray('r', glContext.FLOAT, 4, 1); // rotation
+    glContext.bindVertexArray(glInstancedVAO);
 }
 
 function glSetPolyMode()
@@ -7143,23 +7158,7 @@ function glSetPolyMode()
     glFlush();
     glPolyMode = true;
     glContext.useProgram(glPolyShader);
-
-    // set vertex attributes
-    let offset = 0;
-    const initVertexAttribArray = (name, type, typeSize, size)=>
-    {
-        const location = glContext.getAttribLocation(glPolyShader, name);
-        const normalize = typeSize === 1; // only normalize if color
-        const stride = gl_POLY_VERTEX_BYTE_STRIDE;
-        glContext.enableVertexAttribArray(location);
-        glContext.vertexAttribPointer(location, size, type, normalize, stride, offset);
-        glContext.vertexAttribDivisor(location, 0);
-        offset += size*typeSize;
-    }
-    glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
-    glContext.bufferData(glContext.ARRAY_BUFFER, gl_ARRAY_BUFFER_SIZE, glContext.DYNAMIC_DRAW);
-    initVertexAttribArray('p', glContext.FLOAT, 4, 2);         // position
-    initVertexAttribArray('c', glContext.UNSIGNED_BYTE, 1, 4); // color
+    glContext.bindVertexArray(glPolyVAO);
 }
 
 // Setup WebGL render each frame, called automatically by engine
@@ -7200,6 +7199,9 @@ function glPreRender()
         glActiveTexture = textureInfos[0].glTexture;
         glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
     }
+
+    // rebind the array buffer
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glArrayBuffer);
 
     // start with additive blending off
     glAdditive = glBatchAdditive = false;
@@ -7984,9 +7986,10 @@ class PostProcessPlugin
 
         /** @property {WebGLProgram} - Shader for post processing */
         this.shader = undefined;
-
         /** @property {WebGLTexture} - Texture for post processing */
         this.texture = undefined;
+        /** @property {WebGLVertexArrayObject} - Vertex array object */
+        this.vao = undefined;
 
         // setup the post processing plugin
         initPostProcess();
@@ -7995,7 +7998,6 @@ class PostProcessPlugin
         function initPostProcess()
         {
             if (headlessMode) return;
-
             if (!glEnable)
             {
                 console.warn('PostProcessPlugin: WebGL not enabled!');
@@ -8006,14 +8008,14 @@ class PostProcessPlugin
             postProcess.texture = glCreateTexture();
             postProcess.shader = glCreateProgram(
                 '#version 300 es\n' +            // specify GLSL ES version
-                'precision highp float;'+        // use highp for better accuracy
+                'precision highp float;'+        // use highp for accuracy
                 'in vec2 p;'+                    // position
                 'void main(){'+                  // shader entry point
                 'gl_Position=vec4(p+p-1.,1,1);'+ // set position
                 '}'                              // end of shader
                 ,
                 '#version 300 es\n' +            // specify GLSL ES version
-                'precision highp float;'+        // use highp for better accuracy
+                'precision highp float;'+        // use highp for accuracy
                 'uniform sampler2D iChannel0;'+  // input texture
                 'uniform vec3 iResolution;'+     // size of output texture
                 'uniform float iTime;'+          // time
@@ -8024,6 +8026,17 @@ class PostProcessPlugin
                 'c.a=1.;'+                       // always use full alpha
                 '}'                              // end of shader
             );
+
+            // setup VAO for post processing
+            postProcess.vao = glContext.createVertexArray();
+            glContext.bindVertexArray(postProcess.vao);
+            glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
+
+            // configure vertex attributes
+            const vertexByteStride = 8;
+            const pLocation = glContext.getAttribLocation(postProcess.shader, 'p');
+            glContext.enableVertexAttribArray(pLocation);
+            glContext.vertexAttribPointer(pLocation, 2, glContext.FLOAT, false, vertexByteStride, 0);
         }
         function postProcessContextLost()
         {
@@ -8038,14 +8051,17 @@ class PostProcessPlugin
         }
         function postProcessRender()
         {
-            if (headlessMode) return;
-
-            if (!glEnable)
-                return;
+            if (headlessMode || !glEnable) return;
             
             // clear out the buffer
             glFlush();
-            
+
+            // setup shader program to draw a quad
+            glContext.useProgram(postProcess.shader);
+            glContext.bindVertexArray(postProcess.vao);
+            glContext.pixelStorei(glContext.UNPACK_FLIP_Y_WEBGL, true);
+            glContext.disable(glContext.BLEND);
+
             // setup texture
             glContext.activeTexture(glContext.TEXTURE0);
             glContext.bindTexture(glContext.TEXTURE_2D, postProcess.texture);
@@ -8060,25 +8076,19 @@ class PostProcessPlugin
                 // copy work canvas to texture
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, workCanvas);
             }
-
-            // setup shader program to draw a quad
-            glContext.useProgram(postProcess.shader);
-            glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
-            glContext.pixelStorei(glContext.UNPACK_FLIP_Y_WEBGL, 1);
-            glContext.disable(glContext.BLEND);
-
-            // set vertex position attribute
-            const vertexByteStride = 8;
-            const pLocation = glContext.getAttribLocation(postProcess.shader, 'p');
-            glContext.enableVertexAttribArray(pLocation);
-            glContext.vertexAttribPointer(pLocation, 2, glContext.FLOAT, false, vertexByteStride, 0);
-
+            
             // set uniforms and draw
             const uniformLocation = (name)=>glContext.getUniformLocation(postProcess.shader, name);
             glContext.uniform1i(uniformLocation('iChannel0'), 0);
             glContext.uniform1f(uniformLocation('iTime'), time);
             glContext.uniform3f(uniformLocation('iResolution'), mainCanvas.width, mainCanvas.height, 1);
             glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, 4);
+
+            if (!includeMainCanvas)
+            {
+                // pass glCanvas back to overlay texture
+                glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, glCanvas);
+            }
         }
     }
 }

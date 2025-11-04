@@ -3098,6 +3098,8 @@ declare module "littlejsengine" {
         shader: any;
         /** @property {WebGLTexture} - Texture for post processing */
         texture: any;
+        /** @property {WebGLVertexArrayObject} - Vertex array object */
+        vao: any;
     }
     /**
      * LittleJS ZzFXM Plugin
