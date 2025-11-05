@@ -501,13 +501,12 @@ class TileLayer extends CanvasLayer
 
         // draw the tile if it has layer data
         const d = this.getData(layerPos);
-        if (d.tile !== undefined)
-        {
-            ASSERT(drawContext === this.context, 'must call redrawStart() before drawing tiles');
-            const pos = layerPos.add(vec2(.5));
-            const tileInfo = tile(d.tile, s, this.tileInfo.textureIndex, this.tileInfo.padding);
-            drawTile(pos, vec2(1), tileInfo, d.color, d.direction*PI/2, d.mirror);
-        }
+        if (!d.tile) return;
+        
+        ASSERT(drawContext === this.context, 'must call redrawStart() before drawing tiles');
+        const pos = layerPos.add(vec2(.5));
+        const tileInfo = this.tileInfo && this.tileInfo.tile(d.tile);
+        drawTile(pos, vec2(1), tileInfo, d.color, d.direction*PI/2, d.mirror);
     }
 }
 

@@ -419,6 +419,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         }));
     }
 
+    // load engine font image
+    promises.push(fontImageInit());
+
     if (showSplashScreen)
     {
         // draw splash screen

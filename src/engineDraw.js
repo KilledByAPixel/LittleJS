@@ -77,10 +77,11 @@ let drawCount;
  * Create a tile info object using a grid based system
  * - This can take vecs or floats for easier use and conversion
  * - If an index is passed in, the tile size and index will determine the position
- * @param {Vector2|number} [pos=0] - Position of the tile in pixels, or tile index
+ * @param {Vector2|number} [index=0] - Index of the tile in 1d or 2d form
  * @param {Vector2|number} [size] - Size of tile in pixels
- * @param {number} [textureIndex] - Texture index to use
+ * @param {TextureInfo|number} [texture] - Texture index or info to use
  * @param {number} [padding] - How many pixels padding around tiles
+ * @param {number} [bleed] - How many pixels smaller to draw tiles
  * @return {TileInfo}
  * @example
  * tile(2)                       // a tile at index 2 using the default tile size of 16
@@ -88,36 +89,43 @@ let drawCount;
  * tile(1, 16, 3)                // a tile at index 1 of size 16 on texture 3
  * tile(vec2(4,8), vec2(30,10))  // a tile at index (4,8) with a size of (30,10)
  * @memberof Draw */
-function tile(pos=new Vector2, size=tileDefaultSize, textureIndex=0, padding=tileDefaultPadding)
+function tile(index=new Vector2, size=tileDefaultSize, texture=0, padding=tileDefaultPadding, bleed=tileDefaultBleed)
 {
-    if (headlessMode)
-        return new TileInfo;
+    ASSERT(isVector2(index) || typeof index === 'number', 'index must be a vec2 or number');
+    ASSERT(isVector2(size) || typeof size === 'number', 'size must be a vec2 or number');
+    ASSERT(isNumber(texture) || texture instanceof TextureInfo, 'texture must be a number or TextureInfo');
+    ASSERT(isNumber(padding), 'padding must be a number');
 
-    // if size is a number, make it a vector
+    if (headlessMode) return new TileInfo;
+
     if (typeof size === 'number')
     {
+        // if size is a number, make it a vector
         ASSERT(size > 0);
         size = new Vector2(size, size);
     }
 
     // create tile info object
-    const tileInfo = new TileInfo(new Vector2, size, textureIndex, padding);
+    const textureInfo = typeof texture === 'number' ?
+        textureInfos[texture] : texture;
 
     // get the position of the tile
-    const textureInfo = textureInfos[textureIndex];
-    ASSERT(!!textureInfo, 'Texture not loaded');
     const sizePaddedX = size.x + padding*2;
     const sizePaddedY = size.y + padding*2;
-    if (typeof pos === 'number')
+    let x, y;
+    if (typeof index === 'number')
     {
         const cols = textureInfo.size.x / sizePaddedX |0;
-        ASSERT(cols > 0, 'Tile size is too big for texture');
-        const posX = pos % cols, posY = (pos / cols) |0;
-        tileInfo.pos.set(posX*sizePaddedX+padding, posY*sizePaddedY+padding);
+        x = index % cols;
+        y = index / cols |0;
     }
     else
-        tileInfo.pos.set(pos.x*sizePaddedX+padding, pos.y*sizePaddedY+padding);
-    return tileInfo;
+    {
+        x = index.x;
+        y = index.y;
+    }
+    const pos = new Vector2(x*sizePaddedX + padding, y*sizePaddedY + padding);
+    return new TileInfo(pos, size, textureInfo, padding, bleed);
 }
 
 /**
@@ -129,22 +137,20 @@ class TileInfo
     /** Create a tile info object
      *  @param {Vector2} [pos=(0,0)] - Top left corner of tile in pixels
      *  @param {Vector2} [size] - Size of tile in pixels
-     *  @param {number}  [textureIndex] - Texture index to use
-     *  @param {number}  [padding] - How many pixels padding around tiles
-     *  @param {number}  [bleed] - How many pixels smaller to draw tiles
+     *  @param {TextureInfo} [textureInfo] - Texture info to use
+     *  @param {number} [padding] - How many pixels padding around tiles
+     *  @param {number} [bleed] - How many pixels smaller to draw tiles
      */
-    constructor(pos=vec2(), size=tileDefaultSize, textureIndex=0, padding=tileDefaultPadding, bleed=tileDefaultBleed)
+    constructor(pos=vec2(), size=tileDefaultSize, textureInfo=textureInfos[0], padding=tileDefaultPadding, bleed=tileDefaultBleed)
     {
         /** @property {Vector2} - Top left corner of tile in pixels */
         this.pos = pos.copy();
         /** @property {Vector2} - Size of tile in pixels */
         this.size = size.copy();
-        /** @property {number} - Texture index to use */
-        this.textureIndex = textureIndex;
         /** @property {number} - How many pixels padding around tiles */
         this.padding = padding;
         /** @property {TextureInfo} - The texture info for this tile */
-        this.textureInfo = textureInfos[this.textureIndex];
+        this.textureInfo = textureInfo;
         /** @property {number} - Shrinks tile by this many pixels to prevent neighbors bleeding */
         this.bleed = bleed;
     }
@@ -154,7 +160,7 @@ class TileInfo
     *  @return {TileInfo}
     */
     offset(offset)
-    { return new TileInfo(this.pos.add(offset), this.size, this.textureIndex, this.padding, this.bleed); }
+    { return new TileInfo(this.pos.add(offset), this.size, this.textureInfo, this.padding, this.bleed); }
 
     /** Returns a copy of this tile offset by a number of animation frames
     *  @param {number} frame - Offset to apply in animation frames
@@ -163,23 +169,33 @@ class TileInfo
     frame(frame)
     {
         ASSERT(typeof frame === 'number');
-        return this.offset(new Vector2(frame*(this.size.x+this.padding*2), 0));
+        const w = this.size.x + this.padding*2;
+        const x = frame*w;
+        ASSERT(x < this.textureInfo.size.x, 'frame extends beyond texture width!');
+        return this.offset(new Vector2(x));
     }
 
     /**
      * Set this tile to use a full image in a texture info
-     * @param {TextureInfo} textureInfo
+     * @param {TextureInfo} [textureInfo]
      * @return {TileInfo}
      */
-    setFullImage(textureInfo)
+    setFullImage(textureInfo=this.textureInfo)
     {
+        this.textureInfo = textureInfo;
         this.pos = new Vector2;
         this.size = textureInfo.size.copy();
-        this.textureInfo = textureInfo;
-        // do not use padding or bleed
         this.bleed = this.padding = 0;
         return this;
     }
+
+    /**
+     * Returns a tile info for an index using this tile as refrence
+     * @param {Vector2|number} [index=0]
+     * @return {TileInfo}
+     */
+    tile(index)
+    { return tile(index, this.size, this.textureInfo, this.padding, this.bleed); }
 }
 
 /**
@@ -661,7 +677,7 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
  *  Automatically splits new lines into rows
  *  @param {string|number}  text
  *  @param {Vector2} pos
- *  @param {number}  [size]
+ *  @param {number}  size
  *  @param {Color}   [color=(1,1,1,1)]
  *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=(0,0,0,1)]
@@ -672,7 +688,7 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
  *  @param {number}  [angle]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, angle=0, context=drawContext)
+function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, angle=0, context=drawContext)
 {
     ASSERT(isString(text), 'text must be a string');
     ASSERT(isVector2(pos), 'pos must be a vec2');
@@ -979,17 +995,20 @@ function setCursor(cursorStyle = 'auto')
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/** Engine font image, 8x8 font provided by the engine
+ *  @type {FontImage}
+ *  @memberof Draw */
 let engineFontImage;
 
 /**
- * Font Image Object - Draw text on a 2D canvas by using characters in an image
+ * Font Image Object - Draw text by using tiles in an image
  * - 96 characters (from space to tilde) are stored in an image
  * - Uses a default 8x8 font if none is supplied
  * - You can also use fonts from the main tile sheet
  * @memberof Draw
  * @example
  * // use built in font
- * const font = new FontImage;
+ * const font = engineFontImage;
  *
  * // draw text
  * font.drawTextScreen('LittleJS\nHello World!', vec2(200, 50));
@@ -997,68 +1016,93 @@ let engineFontImage;
 class FontImage
 {
     /** Create an image font
-     *  @param {HTMLImageElement} [image] - Image for the font, default if undefined
-     *  @param {Vector2} [tileSize=(8,8)] - Size of the font source tiles
-     *  @param {Vector2} [paddingSize=(0,1)] - How much space between characters
+     *  @param {TileInfo} tileInfo - Texture source for the font
      */
-    constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1))
+    constructor(tileInfo)
     {
-        // load default font image
-        if (!image && !engineFontImage)
-        {
-            engineFontImage = new Image;
-            engineFontImage.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAAYAQAAAAA9+x6JAAAAAnRSTlMAAHaTzTgAAAGiSURBVHjaZZABhxxBEIUf6ECLBdFY+Q0PMNgf0yCgsSAGZcT9sgIPtBWwIA5wgAPEoHUyJeeSlW+gjK+fegWwtROWpVQEyWh2npdpBmTUFVhb29RINgLIukoXr5LIAvYQ5ve+1FqWEMqNKTX3FAJHyQDRZvmKWubAACcv5z5Gtg2oyCWE+Yk/8JZQX1jTTCpKAFGIgza+dJCNBF2UskRlsgwitHbSV0QLgt9sTPtsRlvJjEr8C/FARWA2bJ/TtJ7lko34dNDn6usJUMzuErP89UUBJbWeozrwLLncXczd508deAjLWipLO4Q5XGPcJvPu92cNDaN0P5G1FL0nSOzddZOrJ6rNhbXGmeDvO3TF7DeJWl4bvaYQTNHCTeuqKZmbjHaSOFes+IX/+IhHrnAkXOAsfn24EM68XieIECoccD4KZLk/odiwzeo2rovYdhvb2HYFgyznJyDpYJdYOmfXgVdJTaUi4xA2uWYNYec9BLeqdl9EsoTw582mSFDX2DxVLbNt9U3YYoeatBad1c2Tj8t2akrjaIGJNywKB/7h75/gN3vCMSaadIUTAAAAAElFTkSuQmCC';
-        }
-
-        this.image = image || engineFontImage;
-        this.tileSize = tileSize;
-        this.paddingSize = paddingSize;
+        ASSERT(!!tileInfo, 'tileInfo is required for FontImage');
+        
+        /** @property {TileInfo} - Tile info used as template for this font */
+        this.tileInfo = tileInfo;
     }
 
     /** Draw text in world space using the image font
-     *  @param {string|number}  text
+     *  @param {string|number} text
      *  @param {Vector2} pos
-     *  @param {number}  [scale=.25]
-     *  @param {boolean} [center]
-     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext] 
+     *  @param {Vector2|number} [size]
+     *  @param {boolean} [center=true]
+     *  @param {Color} [color=(1,1,1,1)]
+     *  @param {boolean} [useWebGL=glEnable]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] 
      */
-    drawText(text, pos, scale=1, center, context=drawContext)
+    drawText(text, pos, size=1, center, color, useWebGL, context)
     {
-        this.drawTextScreen(text, worldToScreen(pos).floor(), scale*cameraScale|0, center, context);
+        ASSERT(isVector2(size) || typeof size === 'number', 'size must be a vec2 or number');
+
+        if (typeof size === 'number')
+        {
+            // if size is a number, make it a vector
+            ASSERT(size > 0);
+            size *= cameraScale;
+            size = new Vector2(size, size);
+        }
+        else
+            size = size.scale(cameraScale);
+        this.drawTextScreen(text, worldToScreen(pos), size, center, color, useWebGL, context);
     }
 
     /** Draw text in screen space using the image font
-     *  @param {string|number}  text
+     *  @param {string|number} text
      *  @param {Vector2} pos
-     *  @param {number}  [scale]
+     *  @param {Vector2|number} size
      *  @param {boolean} [center]
-     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
+     *  @param {Color} [color=(1,1,1,1)]
+     *  @param {boolean} [useWebGL=glEnable]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      */
-    drawTextScreen(text, pos, scale=4, center=true, context=drawContext)
+    drawTextScreen(text, pos, size, center=true, color=WHITE, useWebGL=glEnable, context)
     {
-        context.save();
-        const size = this.tileSize;
-        const drawSize = size.add(this.paddingSize).scale(scale);
-        const cols = this.image.width / this.tileSize.x |0;
-        (text+'').split('\n').forEach((line, i)=>
+        ASSERT(isString(text), 'text must be a string');
+        ASSERT(isVector2(pos), 'pos must be a vec2');
+        ASSERT(isVector2(size) || typeof size === 'number', 'size must be a vec2 or number');
+        ASSERT(isColor(color), 'color must be a color');
+
+        size = typeof size === 'number' ? new Vector2(size, size) : size;
+        const drawPos = new Vector2;
+        (text+'').split('\n').forEach((line, j)=>
         {
-            const centerOffset = center ? line.length * size.x * scale / 2 |0 : 0;
-            for (let j=line.length; j--;)
+            const centerOffset = center ? (line.length-1) * size.x / 2 : 0;
+            for (let i=line.length; i--;)
             {
                 // draw each character
-                let charCode = line[j].charCodeAt(0);
-                if (charCode < 32 || charCode > 127)
-                    charCode = 127; // unknown character
-
-                // get the character source location and draw it
-                const tile = charCode - 32;
-                const x = tile % cols;
-                const y = tile / cols |0;
-                const drawPos = pos.add(vec2(j,i).multiply(drawSize));
-                context.drawImage(this.image, x * size.x, y * size.y, size.x, size.y,
-                    drawPos.x - centerOffset, drawPos.y, size.x * scale, size.y * scale);
+                const charCode = line.charCodeAt(i);
+                const index = charCode < 32 || charCode > 127 ?
+                    95 : charCode - 32; // handle out of range characters
+                const tileInfo = this.tileInfo.tile(index);
+                drawPos.x = pos.x + i * size.x - centerOffset |0;
+                drawPos.y = pos.y + j * size.y |0;
+                drawTile(drawPos, size, tileInfo, color, 0, false, undefined, useWebGL, true, context);
             }
         });
-        context.restore();
     }
+}
+
+// load engine font, called automatically by engine on initialization
+function fontImageInit()
+{
+    return new Promise(resolve =>
+    {
+        // create the engine font
+        const image = new Image;
+        image.onerror = image.onload = ()=>
+        {
+            const textureInfo = new TextureInfo(image);
+            const tilePos = vec2(), tileSize = vec2(8), padding = 1, bleed = 0;
+            const tileInfo = new TileInfo(tilePos, tileSize, textureInfo, padding, bleed);
+            engineFontImage = new FontImage(tileInfo);
+            resolve();
+        }
+        image.crossOrigin = 'anonymous';
+        image.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAAAeAQMAAABnrVXaAAAABlBMVEUAAAD///+l2Z/dAAAAAXRSTlMAQObYZgAAAjpJREFUOMu9kzFu2zAUhn+CAROgqrk+B2l0BWYxMjlXeYaAtFtbdA1sGgHqRQfI0CNkSG5AwYB0BQ8d5Bsomwah6CPVeGg6tEPzAxLwyI+P78cP4u9lNO9OoMKnLMOobG5020/yaj/MrRcCGh1gBbyiLTPJEYaIiom5KM9Jq7KgynMGtb6L4GL4MF2H4LQKCXTvDVw2I4MsgZT7QLExdiutH+D08VOP3INXRrWX1/mmpbkNgAPYRVANb4xpcegYvhiNbIXauQICEjBuYLfMakaakWQeXxiZ0VDtuJCKs3ztMV59QtsHJNcRxDzfdL21ty3PrfIcXTN+E+GFAv6T5nbT9jd50/WFxb5ksdAv49qS6ouymG66ji08UMT6moykYLAo+V0j23GN4m829ZySAD5K7QsBfQTvOG8eE+gTeGYRAmnNAubN3hf5Zv9tJWDHp/VTuaSm7SN4fyINQqaNO3RMVxvpSPXnOChnRNvFcGY0gnwiPswYwTKVPE0zVtX3mTEIOoFzaqLrGuJaV+Uqumb71fVk/VoOH3cdLNQP/FHi8hV0CQNoqBZsUPlLPMsdCJro9QAaQQ0woDy9BJm0eTxCFnO9srcYlhNVlfR2EyTrph1uUtbUtAJifwRgrKuYdXVHeb0YI3QpawohQHkloI3J5FuVwI5ORxC9k2Tuz9Ir1IjgeIPGMHYkAZe2RuYkmWFmt3gGbTPOmBUWVTmRmHtGrfpzG/yuQNOKa6gBB/WA9khitPgl6/GP+gl2Af6tCbvaygAAAABJRU5ErkJggg==';
+    });
 }
