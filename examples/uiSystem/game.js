@@ -38,7 +38,7 @@ function createUI()
     // setup example menu
     uiMenu = new LJS.UIObject(vec2(0,500));
     uiRoot.addChild(uiMenu);
-    const uiBackground = new LJS.UIObject(vec2(0,0), vec2(450,580));
+    const uiBackground = new LJS.UIObject(vec2(), vec2(450,580));
     uiBackground.lineWidth = 8;
     uiMenu.addChild(uiBackground);
 

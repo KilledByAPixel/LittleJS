@@ -76,7 +76,7 @@ export function spawnRandomEdges()
     edgePoints.push(vec2(40,0));
     for (let i=40, y=0; i--;)
         edgePoints.push(vec2(i, y=LJS.clamp(y+LJS.rand(-2,2),0,5)));
-    edgePoints.push(vec2(0,0));
+    edgePoints.push(vec2());
     const o = new LJS.Box2dStaticObject;
     o.addEdgeList(edgePoints);
 }

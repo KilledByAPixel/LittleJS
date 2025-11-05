@@ -1,8 +1,8 @@
 function gameRender()
 {
     // draw text with built in engine font image
-    const font = new FontImage;
-    font.drawText('Engine Font Test', cameraPos.add(vec2(0,3)), .2);
+    const font = engineFontImage
+    font.drawText('Engine Font', vec2(0,3), 2);
 
     // show every character in the font
     let s = '';
@@ -12,5 +12,6 @@ function gameRender()
             s += '\n';
         s += String.fromCharCode(i);
     }
-    font.drawText(s, cameraPos, .1);
+
+    font.drawText(s, vec2());
 }

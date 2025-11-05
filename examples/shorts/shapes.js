@@ -7,7 +7,7 @@ function gameRender()
 
     // polygon shapes
     drawRectGradient(vec2(-6,0), vec2(5,4), RED, BLUE)
-    drawRegularPoly(vec2(0,0), vec2(4), 3, PURPLE, .3, WHITE, time);
+    drawRegularPoly(vec2(), vec2(4), 3, PURPLE, .3, WHITE, time);
     let starPath = []
     for (let i=10; i--;)
         starPath.push(vec2(0,2*(i%2?.4:1)).rotate(i/10*PI*2));

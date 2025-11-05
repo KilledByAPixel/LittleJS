@@ -103,13 +103,12 @@ function gameRender()
 function gameRenderPost()
 {
     // use built in image font for text
-    const font = new LJS.FontImage;
-
-    font.drawText('Score: ' + score, LJS.cameraPos.add(vec2(0,9.7)), .15, true);
+    const font = LJS.engineFontImage;
+    font.drawText('Score: ' + score, LJS.cameraPos.add(vec2(0,9.2)), 1);
     if (!brickCount)
-        font.drawText('You Win!', LJS.cameraPos.add(vec2(0,-5)), .2, true);
+        font.drawText('You Win!', LJS.cameraPos.add(vec2(0,-5)), 2);
     else if (!ball)
-        font.drawText('Click to Play', LJS.cameraPos.add(vec2(0,-5)), .2, true);
+        font.drawText('Click to Play', LJS.cameraPos.add(vec2(0,-5)), 2);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -168,7 +167,7 @@ function setupPostProcess()
         c *= 1.-pow((dx*dx + dy*dy)/vignette, vignettePow);
     }`;
 
-    new LJS.PostProcessPlugin(televisionShader, true);
+    new LJS.PostProcessPlugin(televisionShader);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
