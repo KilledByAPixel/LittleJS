@@ -4169,8 +4169,10 @@ let engineFontImage;
 /**
  * Font Image Object - Draw text by using tiles in an image
  * - 96 characters (from space to tilde) are stored in an image
- * - Uses a default 8x8 font if none is supplied
- * - You can also use fonts from the main tile sheet
+ * - A 8x8 default engine font is supplied for general use
+ * - This system is WebGL enabled for fast text rendering
+ * - Fonts can also be colored and scaled along each axis
+ * 
  * @memberof Draw
  * @example
  * // use built in font
@@ -4182,14 +4184,14 @@ let engineFontImage;
 class FontImage
 {
     /** Create an image font
-     *  @param {TileInfo} tileInfo - Texture source for the font
+     *  @param {TileInfo} tileInfo - Tile info of first characeter in font
      */
     constructor(tileInfo)
     {
         ASSERT(!!tileInfo, 'tileInfo is required for FontImage');
         
-        /** @property {TileInfo} - Tile info used as template for this font */
-        this.tileInfo = tileInfo;
+        /** @property {TileInfo} - Tile info for the font */
+        this.tileInfo = tileInfo.frame(0);
     }
 
     /** Draw text in world space using the image font
@@ -4233,18 +4235,35 @@ class FontImage
         ASSERT(isVector2(size) || typeof size === 'number', 'size must be a vec2 or number');
         ASSERT(isColor(color), 'color must be a color');
 
+        // if size is a number, make it a vector
         size = typeof size === 'number' ? new Vector2(size, size) : size;
+
+        // precache objects for drawing
         const drawPos = new Vector2;
+        const tileInfo = this.tileInfo;
+        const padding = tileInfo.padding;
+        const sizePaddedX = tileInfo.size.x + padding*2;
+        const sizePaddedY = tileInfo.size.y + padding*2;
+        const cols = tileInfo.textureInfo.size.x / sizePaddedX |0;
+
+        // draw each line of text
         (text+'').split('\n').forEach((line, j)=>
         {
             const centerOffset = center ? (line.length-1) * size.x / 2 : 0;
             for (let i=line.length; i--;)
             {
-                // draw each character
+                // get the character index
                 const charCode = line.charCodeAt(i);
                 const index = charCode < 32 || charCode > 127 ?
                     95 : charCode - 32; // handle out of range characters
-                const tileInfo = this.tileInfo.tile(index);
+
+                // get the position of the tile
+                const x = index % cols;
+                const y = index / cols |0;
+                tileInfo.pos.x = x*sizePaddedX + padding;
+                tileInfo.pos.y = y*sizePaddedY + padding;
+
+                // draw the tile
                 drawPos.x = pos.x + i * size.x - centerOffset |0;
                 drawPos.y = pos.y + j * size.y |0;
                 drawTile(drawPos, size, tileInfo, color, 0, false, undefined, useWebGL, true, context);
@@ -4253,7 +4272,7 @@ class FontImage
     }
 }
 
-// load engine font, called automatically by engine on initialization
+// load engine font, called automatically on startup
 function fontImageInit()
 {
     return new Promise(resolve =>
@@ -4262,8 +4281,8 @@ function fontImageInit()
         const image = new Image;
         image.onerror = image.onload = ()=>
         {
+            const tilePos=vec2(), tileSize=vec2(8), padding=1, bleed=0;
             const textureInfo = new TextureInfo(image);
-            const tilePos = vec2(), tileSize = vec2(8), padding = 1, bleed = 0;
             const tileInfo = new TileInfo(tilePos, tileSize, textureInfo, padding, bleed);
             engineFontImage = new FontImage(tileInfo);
             resolve();
@@ -7182,9 +7201,9 @@ function glInit(rootElement)
     }
 }
 
-function glSetInstancedMode()
+function glSetInstancedMode(force=false)
 {
-    if (!glPolyMode) return;
+    if (!force && !glPolyMode) return;
     
     // setup instanced mode
     glFlush();
@@ -7249,9 +7268,8 @@ function glPreRender()
     // start with additive blending off
     glAdditive = glBatchAdditive = false;
 
-    // force it to set instanced mode by first setting poly mode true
-    glPolyMode = true;
-    glSetInstancedMode();
+    // force it to set instanced mode
+    glSetInstancedMode(true);
 }
 
 /** Clear the canvas and setup the viewport
@@ -8140,6 +8158,9 @@ class PostProcessPlugin
                 // pass glCanvas back to overlay texture
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, glCanvas);
             }
+
+            // force it to set instanced mode
+            glSetInstancedMode(true);
         }
     }
 }

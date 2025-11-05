@@ -1764,8 +1764,10 @@ declare module "littlejsengine" {
     /**
      * Font Image Object - Draw text by using tiles in an image
      * - 96 characters (from space to tilde) are stored in an image
-     * - Uses a default 8x8 font if none is supplied
-     * - You can also use fonts from the main tile sheet
+     * - A 8x8 default engine font is supplied for general use
+     * - This system is WebGL enabled for fast text rendering
+     * - Fonts can also be colored and scaled along each axis
+     *
      * @memberof Draw
      * @example
      * // use built in font
@@ -1776,10 +1778,10 @@ declare module "littlejsengine" {
      */
     export class FontImage {
         /** Create an image font
-         *  @param {TileInfo} tileInfo - Texture source for the font
+         *  @param {TileInfo} tileInfo - Tile info of first characeter in font
          */
         constructor(tileInfo: TileInfo);
-        /** @property {TileInfo} - Tile info used as template for this font */
+        /** @property {TileInfo} - Tile info for the font */
         tileInfo: TileInfo;
         /** Draw text in world space using the image font
          *  @param {string|number} text
