@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.16.3';
+const engineVersion = '1.16.4';
 
 /** Frames per second to update
  *  @type {number}
@@ -422,6 +422,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         }));
     }
 
+    // load engine font image
+    promises.push(fontImageInit());
+
     if (showSplashScreen)
     {
         // draw splash screen
@@ -448,170 +451,6 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         // wait for gameInit to load
         await gameInit();
         engineUpdate();
-    }
-
-    function drawEngineLogo(t)
-    {
-        // LittleJS Logo and Splash Screen
-        const x = mainContext;
-        const w = mainCanvas.width = innerWidth;
-        const h = mainCanvas.height = innerHeight;
-
-        {
-            // background
-            const p3 = percent(t, 1, .8);
-            const p4 = percent(t, 0, .5);
-            const g = x.createRadialGradient(w/2,h/2,0,w/2,h/2,hypot(w,h)*.7);
-            g.addColorStop(0,hsl(0,0,lerp(0,p3/2,p4),p3).toString());
-            g.addColorStop(1,hsl(0,0,0,p3).toString());
-            x.save();
-            x.fillStyle = g;
-            x.fillRect(0,0,w,h);
-        }
-
-        // draw LittleJS logo...
-        const rect = (X, Y, W, H, C)=>
-        {
-            x.beginPath();
-            x.rect(X,Y,W,C?H*p:H);
-            x.fillStyle = C;
-            C ? x.fill() : x.stroke();
-        };
-        const line = (X, Y, Z, W)=>
-        {
-            x.beginPath();
-            x.lineTo(X,Y);
-            x.lineTo(Z,W);
-            x.stroke();
-        };
-        const circle = (X, Y, R, A=0, B=2*PI, C, F)=>
-        {
-            const D = (A+B)/2, E = p*(B-A)/2;
-            x.beginPath();
-            F && x.lineTo(X,Y);
-            x.arc(X,Y,R,D-E,D+E);
-            x.fillStyle = C;
-            C ? x.fill() : x.stroke();
-        };
-        const color = (c=0, l=0) =>
-            hsl([.98,.3,.57,.14][c%4],.9,[0,.3,.5,.8,.9][l]).toString();
-        const alpha = wave(1,1,t);
-        const p = percent(alpha, .1, .5);
-
-        // setup
-        x.translate(w/2,h/2);
-        const size = min(6, min(w,h)/99); // fit to screen
-        x.scale(size,size);
-        x.translate(-40,-35);
-        x.lineJoin = x.lineCap = 'round';
-        x.lineWidth = .1 + p*1.9;
-
-        // drawing effect
-        const p2 = percent(alpha,.1,1);
-        x.setLineDash([99*p2,99]);
-
-        // cab top
-        rect(7,16,18,-8,color(2,2));
-        rect(7,8,18,4,color(2,3));
-        rect(25,8,8,8,color(2,1));
-        rect(25,8,-18,8);
-        rect(25,8,8,8);
-
-        // cab
-        rect(25,16,7,24,color());
-        rect(11,39,14,-23,color(1,1));
-        rect(11,16,14,18,color(1,2));
-        rect(11,16,14,8,color(1,3));
-        rect(25,16,-14,24);
-
-        // cab window
-        rect(15,29,6,-9,color(2,2));
-        circle(15,21,5,0,PI/2,color(2,4),1);
-        rect(21,21,-6,9);
-
-        // little stack
-        rect(37,14,9,6,color(3,2));
-        rect(37,14,4.5,6,color(3,3));
-        rect(37,14,9,6);
-
-        // big stack
-        rect(50,20,10,-8,color(0,1));
-        rect(50,20,6.5,-8,color(0,2));
-        rect(50,20,3.5,-8,color(0,3));
-        rect(50,20,10,-8);
-        circle(55,2,11.4,.5,PI-.5,color(3,3));
-        circle(55,2,11.4,.5,PI/2,color(3,2),1);
-        circle(55,2,11.4,.5,PI-.5);
-        rect(45,7,20,-7,color(0,2));
-        rect(45,-1,20,4,color(0,3));
-        rect(45,-1,20,8);
-
-        // engine
-        for (let i=5; i--;)
-        {
-            // stagger radius to fix slight seam
-            circle(60-i*6,30, 9.9,0,2*PI,color(i+2,3));
-            circle(60-i*6,30,10.0,-.5,PI+.5,color(i+2,2));
-            circle(60-i*6,30,10.1,.5,PI-.5,color(i+2,1));
-        }
-
-        // engine outline
-        circle(36,30,10,PI/2,PI*3/2);
-        circle(48,30,10,PI/2,PI*3/2);
-        circle(60,30,10);
-        line(36,20,60,20);
-
-        // engine front light
-        circle(60,30,4,PI,3*PI,color(3,2));
-        circle(60,30,4,PI,2*PI,color(3,3));
-        circle(60,30,4,PI,3*PI);
-
-        // front brush
-        for (let i=6; i--;)
-        {
-            x.beginPath();
-            x.lineTo(53,54);
-            x.lineTo(53,40);
-            x.lineTo(53+(1+i*2.9)*p,40);
-            x.lineTo(53+(4+i*3.5)*p,54);
-            x.fillStyle = color(0,i%2+2);
-            x.fill();
-            i%2 && x.stroke();
-        }
-
-        // wheels
-        rect(6,40,5,5);
-        rect(6,40,5,5,color());
-        rect(15,54,38,-14,color());
-        for (let i=3; i--;)
-        for (let j=2; j--;)
-        {
-            circle(15*i+15,47,j?7:1,PI,3*PI,color(i,3));
-            x.stroke();
-            circle(15*i+15,47,j?7:1,0,PI,color(i,2));
-            x.stroke();
-        }
-        line(6,40,68,40); // center
-        line(77,54,4,54); // bottom
-
-        // draw engine name
-        const s = engineName;
-        x.font = '900 16px arial';
-        x.textAlign = 'center';
-        x.textBaseline = 'top';
-        x.lineWidth = .1+p*3.9;
-        let w2 = 0;
-        for (let i=0; i<s.length; ++i)
-            w2 += x.measureText(s[i]).width;
-        for (let j=2; j--;)
-        for (let i=0, X=41-w2/2; i<s.length; ++i)
-        {
-            x.fillStyle = color(i,2);
-            const w = x.measureText(s[i]).width;
-            x[j?'strokeText':'fillText'](s[i],X+w/2,55.5,17*p);
-            X += w;
-        }
-        x.restore();
     }
 }
 
@@ -723,6 +562,171 @@ function engineObjectsRaycast(start, end, objects=engineObjects)
 
     debugRaycast && debugLine(start, end, hitObjects.length ? '#f00' : '#00f', .02);
     return hitObjects;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+function drawEngineLogo(t)
+{
+    // LittleJS Logo and Splash Screen
+    const x = mainContext;
+    const w = mainCanvas.width = innerWidth;
+    const h = mainCanvas.height = innerHeight;
+
+    {
+        // background
+        const p3 = percent(t, 1, .8);
+        const p4 = percent(t, 0, .5);
+        const g = x.createRadialGradient(w/2,h/2,0,w/2,h/2,hypot(w,h)*.7);
+        g.addColorStop(0,hsl(0,0,lerp(0,p3/2,p4),p3).toString());
+        g.addColorStop(1,hsl(0,0,0,p3).toString());
+        x.save();
+        x.fillStyle = g;
+        x.fillRect(0,0,w,h);
+    }
+
+    // draw LittleJS logo...
+    const rect = (X, Y, W, H, C)=>
+    {
+        x.beginPath();
+        x.rect(X,Y,W,C?H*p:H);
+        x.fillStyle = C;
+        C ? x.fill() : x.stroke();
+    };
+    const line = (X, Y, Z, W)=>
+    {
+        x.beginPath();
+        x.lineTo(X,Y);
+        x.lineTo(Z,W);
+        x.stroke();
+    };
+    const circle = (X, Y, R, A=0, B=2*PI, C, F)=>
+    {
+        const D = (A+B)/2, E = p*(B-A)/2;
+        x.beginPath();
+        F && x.lineTo(X,Y);
+        x.arc(X,Y,R,D-E,D+E);
+        x.fillStyle = C;
+        C ? x.fill() : x.stroke();
+    };
+    const color = (c=0, l=0) =>
+        hsl([.98,.3,.57,.14][c%4],.9,[0,.3,.5,.8,.9][l]).toString();
+    const alpha = wave(1,1,t);
+    const p = percent(alpha, .1, .5);
+
+    // setup
+    x.translate(w/2,h/2);
+    const size = min(6, min(w,h)/99); // fit to screen
+    x.scale(size,size);
+    x.translate(-40,-35);
+    x.lineJoin = x.lineCap = 'round';
+    x.lineWidth = .1 + p*1.9;
+
+    // drawing effect
+    const p2 = percent(alpha,.1,1);
+    x.setLineDash([99*p2,99]);
+
+    // cab top
+    rect(7,16,18,-8,color(2,2));
+    rect(7,8,18,4,color(2,3));
+    rect(25,8,8,8,color(2,1));
+    rect(25,8,-18,8);
+    rect(25,8,8,8);
+
+    // cab
+    rect(25,16,7,24,color());
+    rect(11,39,14,-23,color(1,1));
+    rect(11,16,14,18,color(1,2));
+    rect(11,16,14,8,color(1,3));
+    rect(25,16,-14,24);
+
+    // cab window
+    rect(15,29,6,-9,color(2,2));
+    circle(15,21,5,0,PI/2,color(2,4),1);
+    rect(21,21,-6,9);
+
+    // little stack
+    rect(37,14,9,6,color(3,2));
+    rect(37,14,4.5,6,color(3,3));
+    rect(37,14,9,6);
+
+    // big stack
+    rect(50,20,10,-8,color(0,1));
+    rect(50,20,6.5,-8,color(0,2));
+    rect(50,20,3.5,-8,color(0,3));
+    rect(50,20,10,-8);
+    circle(55,2,11.4,.5,PI-.5,color(3,3));
+    circle(55,2,11.4,.5,PI/2,color(3,2),1);
+    circle(55,2,11.4,.5,PI-.5);
+    rect(45,7,20,-7,color(0,2));
+    rect(45,-1,20,4,color(0,3));
+    rect(45,-1,20,8);
+
+    // engine
+    for (let i=5; i--;)
+    {
+        // stagger radius to fix slight seam
+        circle(60-i*6,30, 9.9,0,2*PI,color(i+2,3));
+        circle(60-i*6,30,10.0,-.5,PI+.5,color(i+2,2));
+        circle(60-i*6,30,10.1,.5,PI-.5,color(i+2,1));
+    }
+
+    // engine outline
+    circle(36,30,10,PI/2,PI*3/2);
+    circle(48,30,10,PI/2,PI*3/2);
+    circle(60,30,10);
+    line(36,20,60,20);
+
+    // engine front light
+    circle(60,30,4,PI,3*PI,color(3,2));
+    circle(60,30,4,PI,2*PI,color(3,3));
+    circle(60,30,4,PI,3*PI);
+
+    // front brush
+    for (let i=6; i--;)
+    {
+        x.beginPath();
+        x.lineTo(53,54);
+        x.lineTo(53,40);
+        x.lineTo(53+(1+i*2.9)*p,40);
+        x.lineTo(53+(4+i*3.5)*p,54);
+        x.fillStyle = color(0,i%2+2);
+        x.fill();
+        i%2 && x.stroke();
+    }
+
+    // wheels
+    rect(6,40,5,5);
+    rect(6,40,5,5,color());
+    rect(15,54,38,-14,color());
+    for (let i=3; i--;)
+    for (let j=2; j--;)
+    {
+        circle(15*i+15,47,j?7:1,PI,3*PI,color(i,3));
+        x.stroke();
+        circle(15*i+15,47,j?7:1,0,PI,color(i,2));
+        x.stroke();
+    }
+    line(6,40,68,40); // center
+    line(77,54,4,54); // bottom
+
+    // draw engine name
+    const s = engineName;
+    x.font = '900 16px arial';
+    x.textAlign = 'center';
+    x.textBaseline = 'top';
+    x.lineWidth = .1+p*3.9;
+    let w2 = 0;
+    for (let i=0; i<s.length; ++i)
+        w2 += x.measureText(s[i]).width;
+    for (let j=2; j--;)
+    for (let i=0, X=41-w2/2; i<s.length; ++i)
+    {
+        x.fillStyle = color(i,2);
+        const w = x.measureText(s[i]).width;
+        x[j?'strokeText':'fillText'](s[i],X+w/2,55.5,17*p);
+        X += w;
+    }
+    x.restore();
 }
 /**
  * LittleJS - Release Mode
@@ -955,11 +959,11 @@ function nearestPowerOfTwo(value) { return 2**ceil(log2(value)); }
 
 /** Returns true if two axis aligned bounding boxes are overlapping
  *  this can be used for simple collision detection between objects
- *  @param {Vector2} posA          - Center of box A
- *  @param {Vector2} sizeA         - Size of box A
- *  @param {Vector2} posB          - Center of box B
- *  @param {Vector2} [sizeB=(0,0)] - Size of box B, uses a point if undefined
- *  @return {boolean}              - True if overlapping
+ *  @param {Vector2} posA - Center of box A
+ *  @param {Vector2} sizeA - Size of box A
+ *  @param {Vector2} posB - Center of box B
+ *  @param {Vector2} [sizeB=vec2()] - Size of box B, uses a point if undefined
+ *  @return {boolean} - True if overlapping
  *  @memberof Math */
 function isOverlapping(posA, sizeA, posB, sizeB=vec2())
 {
@@ -1177,8 +1181,8 @@ function randInCircle(radius=1, minRadius=0)
 { return radius > 0 ? randVec2(radius * rand(minRadius / radius, 1)**.5) : new Vector2; }
 
 /** Returns a random color between the two passed in colors, combine components if linear
- *  @param {Color}   [colorA=(1,1,1,1)]
- *  @param {Color}   [colorB=(0,0,0,1)]
+ *  @param {Color}   [colorA=WHITE]
+ *  @param {Color}   [colorB=BLACK]
  *  @param {boolean} [linear]
  *  @return {Color}
  *  @memberof Random */
@@ -1257,8 +1261,8 @@ class RandomGenerator
     { return vec2(this.float(valueA, valueB), this.float(valueA, valueB)); }
 
     /** Returns a random color between the two passed in colors, combine components if linear
-    *  @param {Color}   [colorA=(1,1,1,1)]
-    *  @param {Color}   [colorB=(0,0,0,1)]
+    *  @param {Color}   [colorA=WHITE]
+    *  @param {Color}   [colorB=BLACK]
     *  @param {boolean} [linear]
     *  @return {Color} */
     randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear=false)
@@ -1509,10 +1513,6 @@ class Vector2
     /** Returns the area this vector covers as a rectangle
      * @return {number} */
     area() { return abs(this.x * this.y); }
-
-    /** Returns true if this vector is (0,0)
-     * @return {boolean} */
-    isZero() { return !this.x && !this.y; }
 
     /** Returns a new vector that is p percent between this and the vector passed in
      * @param {Vector2} v - other vector
@@ -2676,10 +2676,10 @@ function setDebugKey(key) { debugKey = key; }
 class EngineObject
 {
     /** Create an engine object and adds it to the list of objects
-     *  @param {Vector2}  [pos=(0,0)]   - World space position of the object
-     *  @param {Vector2}  [size=(1,1)]  - World space size of the object
-     *  @param {TileInfo} [tileInfo]    - Tile info to render object (undefined is untextured)
-     *  @param {number}   [angle]       - Angle the object is rotated by
+     *  @param {Vector2}  [pos=vec2()] - World space position of the object
+     *  @param {Vector2}  [size=vec2(1)] - World space size of the object
+     *  @param {TileInfo} [tileInfo] - Tile info to render object (undefined is untextured)
+     *  @param {number}   [angle] - Angle the object is rotated by
      *  @param {Color}    [color=WHITE] - Color to apply to tile when rendered
      *  @param {number}   [renderOrder] - Objects sorted by renderOrder before being rendered
      */
@@ -3076,7 +3076,7 @@ class EngineObject
 
     /** Attaches a child to this with a local transform, returns child for chaining
      *  @param {EngineObject} child
-     *  @param {Vector2}      [localPos=(0,0)]
+     *  @param {Vector2}      [localPos=vec2()]
      *  @param {number}       [localAngle]
      *  @return {EngineObject} The child object added */
     addChild(child, localPos=vec2(), localAngle=0)
@@ -3112,7 +3112,7 @@ class EngineObject
 
     /** Check if overlapping a point or aligned bounding box
      *  @param {Vector2} pos          - Center of box
-     *  @param {Vector2} [size=(0,0)] - Size of box, uses a point if undefined
+     *  @param {Vector2} [size=vec2()] - Size of box, uses a point if undefined
      *  @return {boolean} */
     isOverlapping(pos, size=vec2())
     { return isOverlapping(this.pos, this.size, pos, size); }
@@ -3243,10 +3243,11 @@ let drawCount;
  * Create a tile info object using a grid based system
  * - This can take vecs or floats for easier use and conversion
  * - If an index is passed in, the tile size and index will determine the position
- * @param {Vector2|number} [pos=0] - Position of the tile in pixels, or tile index
+ * @param {Vector2|number} [index=0] - Index of the tile in 1d or 2d form
  * @param {Vector2|number} [size] - Size of tile in pixels
- * @param {number} [textureIndex] - Texture index to use
+ * @param {TextureInfo|number} [texture] - Texture index or info to use
  * @param {number} [padding] - How many pixels padding around tiles
+ * @param {number} [bleed] - How many pixels smaller to draw tiles
  * @return {TileInfo}
  * @example
  * tile(2)                       // a tile at index 2 using the default tile size of 16
@@ -3254,36 +3255,43 @@ let drawCount;
  * tile(1, 16, 3)                // a tile at index 1 of size 16 on texture 3
  * tile(vec2(4,8), vec2(30,10))  // a tile at index (4,8) with a size of (30,10)
  * @memberof Draw */
-function tile(pos=new Vector2, size=tileDefaultSize, textureIndex=0, padding=tileDefaultPadding)
+function tile(index=new Vector2, size=tileDefaultSize, texture=0, padding=tileDefaultPadding, bleed=tileDefaultBleed)
 {
-    if (headlessMode)
-        return new TileInfo;
+    ASSERT(isVector2(index) || typeof index === 'number', 'index must be a vec2 or number');
+    ASSERT(isVector2(size) || typeof size === 'number', 'size must be a vec2 or number');
+    ASSERT(isNumber(texture) || texture instanceof TextureInfo, 'texture must be a number or TextureInfo');
+    ASSERT(isNumber(padding), 'padding must be a number');
 
-    // if size is a number, make it a vector
+    if (headlessMode) return new TileInfo;
+
     if (typeof size === 'number')
     {
+        // if size is a number, make it a vector
         ASSERT(size > 0);
         size = new Vector2(size, size);
     }
 
     // create tile info object
-    const tileInfo = new TileInfo(new Vector2, size, textureIndex, padding);
+    const textureInfo = typeof texture === 'number' ?
+        textureInfos[texture] : texture;
 
     // get the position of the tile
-    const textureInfo = textureInfos[textureIndex];
-    ASSERT(!!textureInfo, 'Texture not loaded');
     const sizePaddedX = size.x + padding*2;
     const sizePaddedY = size.y + padding*2;
-    if (typeof pos === 'number')
+    let x, y;
+    if (typeof index === 'number')
     {
         const cols = textureInfo.size.x / sizePaddedX |0;
-        ASSERT(cols > 0, 'Tile size is too big for texture');
-        const posX = pos % cols, posY = (pos / cols) |0;
-        tileInfo.pos.set(posX*sizePaddedX+padding, posY*sizePaddedY+padding);
+        x = index % cols;
+        y = index / cols |0;
     }
     else
-        tileInfo.pos.set(pos.x*sizePaddedX+padding, pos.y*sizePaddedY+padding);
-    return tileInfo;
+    {
+        x = index.x;
+        y = index.y;
+    }
+    const pos = new Vector2(x*sizePaddedX + padding, y*sizePaddedY + padding);
+    return new TileInfo(pos, size, textureInfo, padding, bleed);
 }
 
 /**
@@ -3293,24 +3301,22 @@ function tile(pos=new Vector2, size=tileDefaultSize, textureIndex=0, padding=til
 class TileInfo
 {
     /** Create a tile info object
-     *  @param {Vector2} [pos=(0,0)] - Top left corner of tile in pixels
+     *  @param {Vector2} [pos=vec2()] - Top left corner of tile in pixels
      *  @param {Vector2} [size] - Size of tile in pixels
-     *  @param {number}  [textureIndex] - Texture index to use
-     *  @param {number}  [padding] - How many pixels padding around tiles
-     *  @param {number}  [bleed] - How many pixels smaller to draw tiles
+     *  @param {TextureInfo} [textureInfo] - Texture info to use
+     *  @param {number} [padding] - How many pixels padding around tiles
+     *  @param {number} [bleed] - How many pixels smaller to draw tiles
      */
-    constructor(pos=vec2(), size=tileDefaultSize, textureIndex=0, padding=tileDefaultPadding, bleed=tileDefaultBleed)
+    constructor(pos=vec2(), size=tileDefaultSize, textureInfo=textureInfos[0], padding=tileDefaultPadding, bleed=tileDefaultBleed)
     {
         /** @property {Vector2} - Top left corner of tile in pixels */
         this.pos = pos.copy();
         /** @property {Vector2} - Size of tile in pixels */
         this.size = size.copy();
-        /** @property {number} - Texture index to use */
-        this.textureIndex = textureIndex;
         /** @property {number} - How many pixels padding around tiles */
         this.padding = padding;
         /** @property {TextureInfo} - The texture info for this tile */
-        this.textureInfo = textureInfos[this.textureIndex];
+        this.textureInfo = textureInfo;
         /** @property {number} - Shrinks tile by this many pixels to prevent neighbors bleeding */
         this.bleed = bleed;
     }
@@ -3320,7 +3326,7 @@ class TileInfo
     *  @return {TileInfo}
     */
     offset(offset)
-    { return new TileInfo(this.pos.add(offset), this.size, this.textureIndex, this.padding, this.bleed); }
+    { return new TileInfo(this.pos.add(offset), this.size, this.textureInfo, this.padding, this.bleed); }
 
     /** Returns a copy of this tile offset by a number of animation frames
     *  @param {number} frame - Offset to apply in animation frames
@@ -3329,23 +3335,33 @@ class TileInfo
     frame(frame)
     {
         ASSERT(typeof frame === 'number');
-        return this.offset(new Vector2(frame*(this.size.x+this.padding*2), 0));
+        const w = this.size.x + this.padding*2;
+        const x = frame*w;
+        ASSERT(x < this.textureInfo.size.x, 'frame extends beyond texture width!');
+        return this.offset(new Vector2(x));
     }
 
     /**
      * Set this tile to use a full image in a texture info
-     * @param {TextureInfo} textureInfo
+     * @param {TextureInfo} [textureInfo]
      * @return {TileInfo}
      */
-    setFullImage(textureInfo)
+    setFullImage(textureInfo=this.textureInfo)
     {
+        this.textureInfo = textureInfo;
         this.pos = new Vector2;
         this.size = textureInfo.size.copy();
-        this.textureInfo = textureInfo;
-        // do not use padding or bleed
         this.bleed = this.padding = 0;
         return this;
     }
+
+    /**
+     * Returns a tile info for an index using this tile as refrence
+     * @param {Vector2|number} [index=0]
+     * @return {TileInfo}
+     */
+    tile(index)
+    { return tile(index, this.size, this.textureInfo, this.padding, this.bleed); }
 }
 
 /**
@@ -3387,13 +3403,13 @@ class TextureInfo
 // Drawing functions
 
 /** Draw textured tile centered in world space, with color applied if using WebGL
- *  @param {Vector2}  pos                 - Center of the tile in world space
- *  @param {Vector2}  [size=(1,1)]        - Size of the tile in world space
- *  @param {TileInfo} [tileInfo]          - Tile info to use, untextured if undefined
- *  @param {Color}    [color=(1,1,1,1)]   - Color to modulate with
- *  @param {number}   [angle]             - Angle to rotate by
- *  @param {boolean}  [mirror]            - Is image flipped along the Y axis?
- *  @param {Color}    [additiveColor]     - Additive color to be applied if any
+ *  @param {Vector2}  pos - Center of the tile in world space
+ *  @param {Vector2}  [size=vec2(1)] - Size of the tile in world space
+ *  @param {TileInfo} [tileInfo] - Tile info to use, untextured if undefined
+ *  @param {Color}    [color=WHITE] - Color to modulate with
+ *  @param {number}   [angle] - Angle to rotate by
+ *  @param {boolean}  [mirror] - Is image flipped along the Y axis?
+ *  @param {Color}    [additiveColor] - Additive color to be applied if any
  *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering?
  *  @param {boolean}  [screenSpace=false] - Are the pos and size are in screen space?
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
@@ -3473,8 +3489,8 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=WHITE,
 
 /** Draw colored rect centered on pos
  *  @param {Vector2} pos
- *  @param {Vector2} [size=(1,1)]
- *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Vector2} [size=vec2(1)]
+ *  @param {Color}   [color=WHITE]
  *  @param {number}  [angle]
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
@@ -3487,9 +3503,9 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
 
 /** Draw a rect centered on pos with a gradient from top to bottom
  *  @param {Vector2} pos
- *  @param {Vector2} [size=(1,1)]
- *  @param {Color}   [colorTop=(1,1,1,1)]
- *  @param {Color}   [colorBottom=(0,0,0,1)]
+ *  @param {Vector2} [size=vec2(1)]
+ *  @param {Color}   [colorTop=WHITE]
+ *  @param {Color}   [colorBottom=BLACK]
  *  @param {number}  [angle]
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
@@ -3551,9 +3567,9 @@ function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0,
 /** Draw connected lines between a series of points
  *  @param {Array<Vector2>} points
  *  @param {number}  [width]
- *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Color}   [color=WHITE]
  *  @param {boolean} [wrap] - Should the last point connect to the first?
- *  @param {Vector2} [pos=(0,0)] - Offset to apply
+ *  @param {Vector2} [pos=vec2()] - Offset to apply
  *  @param {number}  [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
@@ -3600,8 +3616,8 @@ function drawLineList(points, width=.1, color, wrap=false, pos=vec2(), angle=0, 
  *  @param {Vector2} posA
  *  @param {Vector2} posB
  *  @param {number}  [width]
- *  @param {Color}   [color=(1,1,1,1)]
- *  @param {Vector2} [pos=(0,0)] - Offset to apply
+ *  @param {Color}   [color=WHITE]
+ *  @param {Vector2} [pos=vec2()] - Offset to apply
  *  @param {number}  [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
@@ -3620,12 +3636,12 @@ function drawLine(posA, posB, width=.1, color, pos=vec2(), angle=0, useWebGL, sc
 
 /** Draw colored regular polygon using passed in number of sides
  *  @param {Vector2} pos
- *  @param {Vector2} [size=(1,1)]
+ *  @param {Vector2} [size=vec2(1)]
  *  @param {number}  [sides]
- *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Color}   [color=WHITE]
  *  @param {number}  [angle]
  *  @param {number}  [lineWidth]
- *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {Color}   [lineColor=BLACK]
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
@@ -3648,10 +3664,10 @@ function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, l
 
 /** Draw colored polygon using passed in points
  *  @param {Array<Vector2>} points - Array of Vector2 points
- *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Color}   [color=WHITE]
  *  @param {number}  [lineWidth]
- *  @param {Color}   [lineColor=(0,0,0,1)]
- *  @param {Vector2} [pos=(0,0)] - Offset to apply
+ *  @param {Color}   [lineColor=BLACK]
+ *  @param {Vector2} [pos=vec2()] - Offset to apply
  *  @param {number}  [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
@@ -3698,11 +3714,11 @@ function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(),
 
 /** Draw colored ellipse using passed in point
  *  @param {Vector2} pos
- *  @param {Vector2} [size=(1,1)] - Width and height diameter
- *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Vector2} [size=vec2(1)] - Width and height diameter
+ *  @param {Color}   [color=WHITE]
  *  @param {number}  [angle]
  *  @param {number}  [lineWidth]
- *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {Color}   [lineColor=BLACK]
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
@@ -3744,9 +3760,9 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
 /** Draw colored circle using passed in point
  *  @param {Vector2} pos
  *  @param {number}  [size=1] - Diameter
- *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Color}   [color=WHITE]
  *  @param {number}  [lineWidth=0]
- *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {Color}   [lineColor=BLACK]
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
@@ -3801,9 +3817,9 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
  *  @param {string|number}  text
  *  @param {Vector2} pos
  *  @param {number}  [size]
- *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Color}   [color=WHITE]
  *  @param {number}  [lineWidth]
- *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {Color}   [lineColor=BLACK]
  *  @param {CanvasTextAlign}  [textAlign='center']
  *  @param {string}  [font=fontDefault]
  *  @param {string}  [fontStyle]
@@ -3827,10 +3843,10 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
  *  Automatically splits new lines into rows
  *  @param {string|number}  text
  *  @param {Vector2} pos
- *  @param {number}  [size]
- *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {number}  size
+ *  @param {Color}   [color=WHITE]
  *  @param {number}  [lineWidth]
- *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {Color}   [lineColor=BLACK]
  *  @param {CanvasTextAlign}  [textAlign]
  *  @param {string}  [font=fontDefault]
  *  @param {string}  [fontStyle]
@@ -3838,7 +3854,7 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
  *  @param {number}  [angle]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, angle=0, context=drawContext)
+function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, angle=0, context=drawContext)
 {
     ASSERT(isString(text), 'text must be a string');
     ASSERT(isVector2(pos), 'pos must be a vec2');
@@ -4145,17 +4161,20 @@ function setCursor(cursorStyle = 'auto')
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/** Engine font image, 8x8 font provided by the engine
+ *  @type {FontImage}
+ *  @memberof Draw */
 let engineFontImage;
 
 /**
- * Font Image Object - Draw text on a 2D canvas by using characters in an image
+ * Font Image Object - Draw text by using tiles in an image
  * - 96 characters (from space to tilde) are stored in an image
  * - Uses a default 8x8 font if none is supplied
  * - You can also use fonts from the main tile sheet
  * @memberof Draw
  * @example
  * // use built in font
- * const font = new FontImage;
+ * const font = engineFontImage;
  *
  * // draw text
  * font.drawTextScreen('LittleJS\nHello World!', vec2(200, 50));
@@ -4163,70 +4182,95 @@ let engineFontImage;
 class FontImage
 {
     /** Create an image font
-     *  @param {HTMLImageElement} [image] - Image for the font, default if undefined
-     *  @param {Vector2} [tileSize=(8,8)] - Size of the font source tiles
-     *  @param {Vector2} [paddingSize=(0,1)] - How much space between characters
+     *  @param {TileInfo} tileInfo - Texture source for the font
      */
-    constructor(image, tileSize=vec2(8), paddingSize=vec2(0,1))
+    constructor(tileInfo)
     {
-        // load default font image
-        if (!image && !engineFontImage)
-        {
-            engineFontImage = new Image;
-            engineFontImage.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAAYAQAAAAA9+x6JAAAAAnRSTlMAAHaTzTgAAAGiSURBVHjaZZABhxxBEIUf6ECLBdFY+Q0PMNgf0yCgsSAGZcT9sgIPtBWwIA5wgAPEoHUyJeeSlW+gjK+fegWwtROWpVQEyWh2npdpBmTUFVhb29RINgLIukoXr5LIAvYQ5ve+1FqWEMqNKTX3FAJHyQDRZvmKWubAACcv5z5Gtg2oyCWE+Yk/8JZQX1jTTCpKAFGIgza+dJCNBF2UskRlsgwitHbSV0QLgt9sTPtsRlvJjEr8C/FARWA2bJ/TtJ7lko34dNDn6usJUMzuErP89UUBJbWeozrwLLncXczd508deAjLWipLO4Q5XGPcJvPu92cNDaN0P5G1FL0nSOzddZOrJ6rNhbXGmeDvO3TF7DeJWl4bvaYQTNHCTeuqKZmbjHaSOFes+IX/+IhHrnAkXOAsfn24EM68XieIECoccD4KZLk/odiwzeo2rovYdhvb2HYFgyznJyDpYJdYOmfXgVdJTaUi4xA2uWYNYec9BLeqdl9EsoTw582mSFDX2DxVLbNt9U3YYoeatBad1c2Tj8t2akrjaIGJNywKB/7h75/gN3vCMSaadIUTAAAAAElFTkSuQmCC';
-        }
-
-        this.image = image || engineFontImage;
-        this.tileSize = tileSize;
-        this.paddingSize = paddingSize;
+        ASSERT(!!tileInfo, 'tileInfo is required for FontImage');
+        
+        /** @property {TileInfo} - Tile info used as template for this font */
+        this.tileInfo = tileInfo;
     }
 
     /** Draw text in world space using the image font
-     *  @param {string|number}  text
+     *  @param {string|number} text
      *  @param {Vector2} pos
-     *  @param {number}  [scale=.25]
-     *  @param {boolean} [center]
-     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext] 
+     *  @param {Vector2|number} [size]
+     *  @param {boolean} [center=true]
+     *  @param {Color} [color=WHITE]
+     *  @param {boolean} [useWebGL=glEnable]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] 
      */
-    drawText(text, pos, scale=1, center, context=drawContext)
+    drawText(text, pos, size=1, center, color, useWebGL, context)
     {
-        this.drawTextScreen(text, worldToScreen(pos).floor(), scale*cameraScale|0, center, context);
+        ASSERT(isVector2(size) || typeof size === 'number', 'size must be a vec2 or number');
+
+        if (typeof size === 'number')
+        {
+            // if size is a number, make it a vector
+            ASSERT(size > 0);
+            size *= cameraScale;
+            size = new Vector2(size, size);
+        }
+        else
+            size = size.scale(cameraScale);
+        this.drawTextScreen(text, worldToScreen(pos), size, center, color, useWebGL, context);
     }
 
     /** Draw text in screen space using the image font
-     *  @param {string|number}  text
+     *  @param {string|number} text
      *  @param {Vector2} pos
-     *  @param {number}  [scale]
+     *  @param {Vector2|number} size
      *  @param {boolean} [center]
-     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
+     *  @param {Color} [color=WHITE]
+     *  @param {boolean} [useWebGL=glEnable]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      */
-    drawTextScreen(text, pos, scale=4, center=true, context=drawContext)
+    drawTextScreen(text, pos, size, center=true, color=WHITE, useWebGL=glEnable, context)
     {
-        context.save();
-        const size = this.tileSize;
-        const drawSize = size.add(this.paddingSize).scale(scale);
-        const cols = this.image.width / this.tileSize.x |0;
-        (text+'').split('\n').forEach((line, i)=>
+        ASSERT(isString(text), 'text must be a string');
+        ASSERT(isVector2(pos), 'pos must be a vec2');
+        ASSERT(isVector2(size) || typeof size === 'number', 'size must be a vec2 or number');
+        ASSERT(isColor(color), 'color must be a color');
+
+        size = typeof size === 'number' ? new Vector2(size, size) : size;
+        const drawPos = new Vector2;
+        (text+'').split('\n').forEach((line, j)=>
         {
-            const centerOffset = center ? line.length * size.x * scale / 2 |0 : 0;
-            for (let j=line.length; j--;)
+            const centerOffset = center ? (line.length-1) * size.x / 2 : 0;
+            for (let i=line.length; i--;)
             {
                 // draw each character
-                let charCode = line[j].charCodeAt(0);
-                if (charCode < 32 || charCode > 127)
-                    charCode = 127; // unknown character
-
-                // get the character source location and draw it
-                const tile = charCode - 32;
-                const x = tile % cols;
-                const y = tile / cols |0;
-                const drawPos = pos.add(vec2(j,i).multiply(drawSize));
-                context.drawImage(this.image, x * size.x, y * size.y, size.x, size.y,
-                    drawPos.x - centerOffset, drawPos.y, size.x * scale, size.y * scale);
+                const charCode = line.charCodeAt(i);
+                const index = charCode < 32 || charCode > 127 ?
+                    95 : charCode - 32; // handle out of range characters
+                const tileInfo = this.tileInfo.tile(index);
+                drawPos.x = pos.x + i * size.x - centerOffset |0;
+                drawPos.y = pos.y + j * size.y |0;
+                drawTile(drawPos, size, tileInfo, color, 0, false, undefined, useWebGL, true, context);
             }
         });
-        context.restore();
     }
+}
+
+// load engine font, called automatically by engine on initialization
+function fontImageInit()
+{
+    return new Promise(resolve =>
+    {
+        // create the engine font
+        const image = new Image;
+        image.onerror = image.onload = ()=>
+        {
+            const textureInfo = new TextureInfo(image);
+            const tilePos = vec2(), tileSize = vec2(8), padding = 1, bleed = 0;
+            const tileInfo = new TileInfo(tilePos, tileSize, textureInfo, padding, bleed);
+            engineFontImage = new FontImage(tileInfo);
+            resolve();
+        }
+        image.crossOrigin = 'anonymous';
+        image.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAAAeAQMAAABnrVXaAAAABlBMVEUAAAD///+l2Z/dAAAAAXRSTlMAQObYZgAAAjpJREFUOMu9kzFu2zAUhn+CAROgqrk+B2l0BWYxMjlXeYaAtFtbdA1sGgHqRQfI0CNkSG5AwYB0BQ8d5Bsomwah6CPVeGg6tEPzAxLwyI+P78cP4u9lNO9OoMKnLMOobG5020/yaj/MrRcCGh1gBbyiLTPJEYaIiom5KM9Jq7KgynMGtb6L4GL4MF2H4LQKCXTvDVw2I4MsgZT7QLExdiutH+D08VOP3INXRrWX1/mmpbkNgAPYRVANb4xpcegYvhiNbIXauQICEjBuYLfMakaakWQeXxiZ0VDtuJCKs3ztMV59QtsHJNcRxDzfdL21ty3PrfIcXTN+E+GFAv6T5nbT9jd50/WFxb5ksdAv49qS6ouymG66ji08UMT6moykYLAo+V0j23GN4m829ZySAD5K7QsBfQTvOG8eE+gTeGYRAmnNAubN3hf5Zv9tJWDHp/VTuaSm7SN4fyINQqaNO3RMVxvpSPXnOChnRNvFcGY0gnwiPswYwTKVPE0zVtX3mTEIOoFzaqLrGuJaV+Uqumb71fVk/VoOH3cdLNQP/FHi8hV0CQNoqBZsUPlLPMsdCJro9QAaQQ0woDy9BJm0eTxCFnO9srcYlhNVlfR2EyTrph1uUtbUtAJifwRgrKuYdXVHeb0YI3QpawohQHkloI3J5FuVwI5ORxC9k2Tuz9Ir1IjgeIPGMHYkAZe2RuYkmWFmt3gGbTPOmBUWVTmRmHtGrfpzG/yuQNOKa6gBB/WA9khitPgl6/GP+gl2Af6tCbvaygAAAABJRU5ErkJggg==';
+    });
 }
 /**
  * LittleJS Input System
@@ -4282,6 +4326,10 @@ let inputPreventDefault = true;
  *  @type {number}
  *  @memberof Input */
 let gamepadPrimary = 0;
+
+/** True if a touch device has been detected
+ *  @memberof Input */
+const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
 
 /** Prevents input continuing to the default browser handling
  *  This is useful to disable for html menus so the browser can handle input normally
@@ -4480,10 +4528,6 @@ function gamepadStickCount(gamepad=gamepadPrimary)
     ASSERT(isNumber(gamepad), 'gamepad must be a number');
     return gamepadStickData[gamepad]?.length ?? 0;
 }
-
-/** True if a touch device has been detected
- *  @memberof Input */
-const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -4905,7 +4949,7 @@ function inputUpdate()
             }
 
             // copy dpad to left analog stick when pressed
-            if (gamepadDirectionEmulateStick && !dpad.isZero())
+            if (gamepadDirectionEmulateStick && (dpad.x || dpad.y))
                 sticks[0] = dpad.clampLength();
         }
 
@@ -5725,7 +5769,7 @@ function tileCollisionGetData(pos)
 
 /** Check if a tile layer collides with another object
  *  @param {Vector2}      pos
- *  @param {Vector2}      [size=(0,0)]
+ *  @param {Vector2}      [size=vec2()]
  *  @param {EngineObject} [object] - An object or undefined for generic test
  *  @param {boolean}      [solidOnly] - Only check solid layers if true
  *  @return {TileCollisionLayer}
@@ -5843,20 +5887,20 @@ function tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLa
 class TileLayerData
 {
     /** Create a tile layer data object, one for each tile in a TileLayer
-     *  @param {number}  [tile]      - The tile to use, untextured if undefined
+     *  @param {number}  [tile] - The tile to use, untextured if undefined
      *  @param {number}  [direction] - Integer direction of tile, in 90 degree increments
-     *  @param {boolean} [mirror]    - If the tile should be mirrored along the x axis
-     *  @param {Color}   [color]     - Color of the tile */
+     *  @param {boolean} [mirror] - If the tile should be mirrored along the x axis
+     *  @param {Color}   [color] - Color of the tile */
     constructor(tile, direction=0, mirror=false, color=new Color)
     {
-        /** @property {number}  - The tile to use, untextured if undefined */
-        this.tile      = tile;
-        /** @property {number}  - Integer direction of tile, in 90 degree increments */
+        /** @property {number} - The tile to use, untextured if undefined */
+        this.tile = tile;
+        /** @property {number} - Integer direction of tile, in 90 degree increments */
         this.direction = direction;
         /** @property {boolean} - If the tile should be mirrored along the x axis */
-        this.mirror    = mirror;
-        /** @property {Color}   - Color of the tile */
-        this.color     = color.copy();
+        this.mirror = mirror;
+        /** @property {Color} - Color of the tile */
+        this.color = color.copy();
     }
 
     /** Set this tile to clear, it will not be rendered */
@@ -5970,9 +6014,9 @@ class CanvasLayer extends EngineObject
 
     /** Draw a tile onto the layer canvas in world space
      *  @param {Vector2}  pos
-     *  @param {Vector2}  [size=(1,1)]
+     *  @param {Vector2}  [size=vec2(1)]
      *  @param {TileInfo} [tileInfo]
-     *  @param {Color}    [color=(1,1,1,1)]
+     *  @param {Color}    [color=WHITE]
      *  @param {number}   [angle=0]
      *  @param {boolean}  [mirror=false] */
     drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle, mirror)
@@ -5999,8 +6043,8 @@ class CanvasLayer extends EngineObject
 
     /** Draw a rectangle onto the layer canvas in world space
      *  @param {Vector2} pos
-     *  @param {Vector2} [size=(1,1)]
-     *  @param {Color}   [color=(1,1,1,1)]
+     *  @param {Vector2} [size=vec2(1)]
+     *  @param {Color}   [color=WHITE]
      *  @param {number}  [angle=0] */
     drawRect(pos, size, color, angle)
     { this.drawTile(pos, size, undefined, color, angle); }
@@ -6041,9 +6085,9 @@ class CanvasLayer extends EngineObject
 class TileLayer extends CanvasLayer
 {
     /** Create a tile layer object
-    *  @param {Vector2}  position      - World space position
-    *  @param {Vector2}  size          - World space size
-    *  @param {TileInfo} [tileInfo]    - Default tile info for layer (used for size and texture)
+    *  @param {Vector2}  position - World space position
+    *  @param {Vector2}  size - World space size
+    *  @param {TileInfo} [tileInfo] - Default tile info for layer (used for size and texture)
     *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
     */
     constructor(position, size, tileInfo=tile(), renderOrder=0)
@@ -6074,7 +6118,7 @@ class TileLayer extends CanvasLayer
 
     /** Set data at a given position in the array
      *  @param {Vector2}       layerPos - Local position in array
-     *  @param {TileLayerData} data     - Data to set
+     *  @param {TileLayerData} data - Data to set
      *  @param {boolean}       [redraw] - Force the tile to redraw if true */
     setData(layerPos, data, redraw=false)
     {
@@ -6194,13 +6238,12 @@ class TileLayer extends CanvasLayer
 
         // draw the tile if it has layer data
         const d = this.getData(layerPos);
-        if (d.tile !== undefined)
-        {
-            ASSERT(drawContext === this.context, 'must call redrawStart() before drawing tiles');
-            const pos = layerPos.add(vec2(.5));
-            const tileInfo = tile(d.tile, s, this.tileInfo.textureIndex, this.tileInfo.padding);
-            drawTile(pos, vec2(1), tileInfo, d.color, d.direction*PI/2, d.mirror);
-        }
+        if (!d.tile) return;
+        
+        ASSERT(drawContext === this.context, 'must call redrawStart() before drawing tiles');
+        const pos = layerPos.add(vec2(.5));
+        const tileInfo = this.tileInfo && this.tileInfo.tile(d.tile);
+        drawTile(pos, vec2(1), tileInfo, d.color, d.direction*PI/2, d.mirror);
     }
 }
 
@@ -6281,7 +6324,7 @@ class TileCollisionLayer extends TileLayer
 
     /** Check if collision with another object should occur
     *  @param {Vector2}      pos
-    *  @param {Vector2}      [size=(0,0)]
+    *  @param {Vector2}      [size=vec2()]
     *  @param {EngineObject} [object]
     *  @return {boolean} */
     collisionTest(pos, size=new Vector2, object)
@@ -8777,7 +8820,7 @@ class UISystemPlugin
         const up = 'ArrowUp', down = 'ArrowDown', left = 'ArrowLeft', right = 'ArrowRight';
         if (both)
         {
-            return keyIsDown(up) || keyIsDown(left) ? -1 : 
+            return keyIsDown(up) || keyIsDown(left) ? -1 :
                 keyIsDown(down) || keyIsDown(right) ? 1 : 0;
         }
         const back = vertical ? up : left;
@@ -8808,7 +8851,7 @@ class UISystemPlugin
      *  @return {boolean} */
     getNavigationWasPressed()
     {
-        return isUsingGamepad ? gamepadWasPressed(0, gamepadPrimary) : 
+        return isUsingGamepad ? gamepadWasPressed(0, gamepadPrimary) :
             keyWasPressed('Space') || keyWasPressed('Enter');
     }
         
@@ -8856,7 +8899,7 @@ class UISystemPlugin
         buttonYes.textHeight = 40;
         buttonYes.navigationIndex = 1;
         buttonYes.hoverColor = hsl(0,1,.5);
-        buttonYes.onClick = ()=> { closeMenu(); yesCallback && yesCallback(); }; 
+        buttonYes.onClick = ()=> { closeMenu(); yesCallback && yesCallback(); };
         confirmMenu.addChild(buttonYes);
         
         // no button
@@ -8886,8 +8929,8 @@ class UISystemPlugin
 class UIObject
 {
     /** Create a UIObject
-     *  @param {Vector2}  [pos=(0,0)]
-     *  @param {Vector2}  [size=(1,1)]
+     *  @param {Vector2}  [pos=vec2()]
+     *  @param {Vector2}  [size=vec2(1)]
      */
     constructor(pos=vec2(), size=vec2())
     {
@@ -8902,7 +8945,7 @@ class UIObject
         this.size = size.copy();
         /** @property {Color} - Color of the object */
         this.color = uiSystem.defaultColor.copy();
-        /** @property {Color} - Color of the object when active, uses color if undefined */
+        /** @property {Color} - Color of the object when active, uses hoverColor if undefined */
         this.activeColor = undefined;
         /** @property {string} - Text for this ui object */
         this.text = undefined;
@@ -9099,10 +9142,10 @@ class UIObject
             this.interactive && this.isActiveObject() && !this.disabled ?
             this.color : this.lineColor;
         const color = isNavigationObject ? this.hoverColor :
-            this.disabled ? this.disabledColor : 
-            this.interactive ? 
-                this.isHoverObject() ? this.hoverColor : 
-                this.isActiveObject() ? this.activeColor || this.color : 
+            this.disabled ? this.disabledColor :
+            this.interactive ?
+                this.isActiveObject() ? this.activeColor || this.hoverColor :
+                this.isHoverObject() ? this.hoverColor :
                 this.color : this.color;
         const lineWidth = this.lineWidth * (isNavigationObject ? 1.5 : 1);
         
@@ -9114,7 +9157,7 @@ class UIObject
     getTextSize()
     {
         return vec2(
-            this.textWidth  || this.textFitScale * this.size.x, 
+            this.textWidth  || this.textFitScale * this.size.x,
             this.textHeight || this.textFitScale * this.size.y);
     }
 
@@ -9162,9 +9205,9 @@ class UIObject
     renderDebug(visible=true)
     {
         // apply color based on state
-        const color = 
+        const color =
             !visible ? GREEN :
-            this.isHoverObject() ? YELLOW : 
+            this.isHoverObject() ? YELLOW :
             this.disabled ? PURPLE :
             this.interactive ? RED : BLUE;
         uiSystem.drawRect(this.pos, this.size, CLEAR_BLACK, 4, color);
