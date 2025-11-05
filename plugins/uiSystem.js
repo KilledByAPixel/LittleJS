@@ -834,10 +834,10 @@ class UIObject
             this.interactive && this.isActiveObject() && !this.disabled ?
             this.color : this.lineColor;
         const color = isNavigationObject ? this.hoverColor :
-            this.disabled ? this.disabledColor : 
-            this.interactive ? 
-                this.isHoverObject() ? this.hoverColor : 
-                this.isActiveObject() ? this.activeColor || this.color : 
+            this.disabled ? this.disabledColor :
+            this.interactive ?
+                this.isActiveObject() ? this.activeColor || this.hoverColor :
+                this.isHoverObject() ? this.hoverColor :
                 this.color : this.color;
         const lineWidth = this.lineWidth * (isNavigationObject ? 1.5 : 1);
         
