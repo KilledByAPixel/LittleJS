@@ -204,9 +204,9 @@ function glInit(rootElement)
     }
 }
 
-function glSetInstancedMode()
+function glSetInstancedMode(force=false)
 {
-    if (!glPolyMode) return;
+    if (!force && !glPolyMode) return;
     
     // setup instanced mode
     glFlush();
@@ -271,9 +271,8 @@ function glPreRender()
     // start with additive blending off
     glAdditive = glBatchAdditive = false;
 
-    // force it to set instanced mode by first setting poly mode true
-    glPolyMode = true;
-    glSetInstancedMode();
+    // force it to set instanced mode
+    glSetInstancedMode(true);
 }
 
 /** Clear the canvas and setup the viewport

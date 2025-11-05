@@ -150,6 +150,9 @@ class PostProcessPlugin
                 // pass glCanvas back to overlay texture
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, glCanvas);
             }
+
+            // force it to set instanced mode
+            glSetInstancedMode(true);
         }
     }
 }
