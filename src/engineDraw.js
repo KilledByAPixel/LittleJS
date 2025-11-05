@@ -1018,14 +1018,14 @@ let engineFontImage;
 class FontImage
 {
     /** Create an image font
-     *  @param {TileInfo} tileInfo - Texture source for the font
+     *  @param {TileInfo} tileInfo - Tile info of first characeter in font
      */
     constructor(tileInfo)
     {
         ASSERT(!!tileInfo, 'tileInfo is required for FontImage');
         
-        /** @property {TileInfo} - Tile info used as template for this font */
-        this.tileInfo = tileInfo;
+        /** @property {TileInfo} - Tile info for the font */
+        this.tileInfo = tileInfo.frame(0);
     }
 
     /** Draw text in world space using the image font
@@ -1074,7 +1074,7 @@ class FontImage
 
         // precache objects for drawing
         const drawPos = new Vector2;
-        const tileInfo = this.tileInfo.frame(0);
+        const tileInfo = this.tileInfo;
         const padding = tileInfo.padding;
         const sizePaddedX = tileInfo.size.x + padding*2;
         const sizePaddedY = tileInfo.size.y + padding*2;
