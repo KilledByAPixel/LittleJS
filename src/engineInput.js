@@ -677,7 +677,7 @@ function inputUpdate()
             }
 
             // copy dpad to left analog stick when pressed
-            if (gamepadDirectionEmulateStick && !dpad.isZero())
+            if (gamepadDirectionEmulateStick && (dpad.x || dpad.y))
                 sticks[0] = dpad.clampLength();
         }
 
