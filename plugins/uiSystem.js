@@ -512,7 +512,7 @@ class UISystemPlugin
         const up = 'ArrowUp', down = 'ArrowDown', left = 'ArrowLeft', right = 'ArrowRight';
         if (both)
         {
-            return keyIsDown(up) || keyIsDown(left) ? -1 : 
+            return keyIsDown(up) || keyIsDown(left) ? -1 :
                 keyIsDown(down) || keyIsDown(right) ? 1 : 0;
         }
         const back = vertical ? up : left;
@@ -543,7 +543,7 @@ class UISystemPlugin
      *  @return {boolean} */
     getNavigationWasPressed()
     {
-        return isUsingGamepad ? gamepadWasPressed(0, gamepadPrimary) : 
+        return isUsingGamepad ? gamepadWasPressed(0, gamepadPrimary) :
             keyWasPressed('Space') || keyWasPressed('Enter');
     }
         
@@ -591,7 +591,7 @@ class UISystemPlugin
         buttonYes.textHeight = 40;
         buttonYes.navigationIndex = 1;
         buttonYes.hoverColor = hsl(0,1,.5);
-        buttonYes.onClick = ()=> { closeMenu(); yesCallback && yesCallback(); }; 
+        buttonYes.onClick = ()=> { closeMenu(); yesCallback && yesCallback(); };
         confirmMenu.addChild(buttonYes);
         
         // no button
@@ -621,8 +621,8 @@ class UISystemPlugin
 class UIObject
 {
     /** Create a UIObject
-     *  @param {Vector2}  [pos=(0,0)]
-     *  @param {Vector2}  [size=(1,1)]
+     *  @param {Vector2}  [pos=vec2()]
+     *  @param {Vector2}  [size=vec2(1)]
      */
     constructor(pos=vec2(), size=vec2())
     {
@@ -637,7 +637,7 @@ class UIObject
         this.size = size.copy();
         /** @property {Color} - Color of the object */
         this.color = uiSystem.defaultColor.copy();
-        /** @property {Color} - Color of the object when active, uses color if undefined */
+        /** @property {Color} - Color of the object when active, uses hoverColor if undefined */
         this.activeColor = undefined;
         /** @property {string} - Text for this ui object */
         this.text = undefined;
@@ -849,7 +849,7 @@ class UIObject
     getTextSize()
     {
         return vec2(
-            this.textWidth  || this.textFitScale * this.size.x, 
+            this.textWidth  || this.textFitScale * this.size.x,
             this.textHeight || this.textFitScale * this.size.y);
     }
 
@@ -897,9 +897,9 @@ class UIObject
     renderDebug(visible=true)
     {
         // apply color based on state
-        const color = 
+        const color =
             !visible ? GREEN :
-            this.isHoverObject() ? YELLOW : 
+            this.isHoverObject() ? YELLOW :
             this.disabled ? PURPLE :
             this.interactive ? RED : BLUE;
         uiSystem.drawRect(this.pos, this.size, CLEAR_BLACK, 4, color);

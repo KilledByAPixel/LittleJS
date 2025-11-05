@@ -33,10 +33,10 @@
 class EngineObject
 {
     /** Create an engine object and adds it to the list of objects
-     *  @param {Vector2}  [pos=(0,0)]   - World space position of the object
-     *  @param {Vector2}  [size=(1,1)]  - World space size of the object
-     *  @param {TileInfo} [tileInfo]    - Tile info to render object (undefined is untextured)
-     *  @param {number}   [angle]       - Angle the object is rotated by
+     *  @param {Vector2}  [pos=vec2()] - World space position of the object
+     *  @param {Vector2}  [size=vec2(1)] - World space size of the object
+     *  @param {TileInfo} [tileInfo] - Tile info to render object (undefined is untextured)
+     *  @param {number}   [angle] - Angle the object is rotated by
      *  @param {Color}    [color=WHITE] - Color to apply to tile when rendered
      *  @param {number}   [renderOrder] - Objects sorted by renderOrder before being rendered
      */
@@ -433,7 +433,7 @@ class EngineObject
 
     /** Attaches a child to this with a local transform, returns child for chaining
      *  @param {EngineObject} child
-     *  @param {Vector2}      [localPos=(0,0)]
+     *  @param {Vector2}      [localPos=vec2()]
      *  @param {number}       [localAngle]
      *  @return {EngineObject} The child object added */
     addChild(child, localPos=vec2(), localAngle=0)
@@ -469,7 +469,7 @@ class EngineObject
 
     /** Check if overlapping a point or aligned bounding box
      *  @param {Vector2} pos          - Center of box
-     *  @param {Vector2} [size=(0,0)] - Size of box, uses a point if undefined
+     *  @param {Vector2} [size=vec2()] - Size of box, uses a point if undefined
      *  @return {boolean} */
     isOverlapping(pos, size=vec2())
     { return isOverlapping(this.pos, this.size, pos, size); }

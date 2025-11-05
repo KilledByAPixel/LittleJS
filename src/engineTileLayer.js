@@ -32,7 +32,7 @@ function tileCollisionGetData(pos)
 
 /** Check if a tile layer collides with another object
  *  @param {Vector2}      pos
- *  @param {Vector2}      [size=(0,0)]
+ *  @param {Vector2}      [size=vec2()]
  *  @param {EngineObject} [object] - An object or undefined for generic test
  *  @param {boolean}      [solidOnly] - Only check solid layers if true
  *  @return {TileCollisionLayer}
@@ -150,20 +150,20 @@ function tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLa
 class TileLayerData
 {
     /** Create a tile layer data object, one for each tile in a TileLayer
-     *  @param {number}  [tile]      - The tile to use, untextured if undefined
+     *  @param {number}  [tile] - The tile to use, untextured if undefined
      *  @param {number}  [direction] - Integer direction of tile, in 90 degree increments
-     *  @param {boolean} [mirror]    - If the tile should be mirrored along the x axis
-     *  @param {Color}   [color]     - Color of the tile */
+     *  @param {boolean} [mirror] - If the tile should be mirrored along the x axis
+     *  @param {Color}   [color] - Color of the tile */
     constructor(tile, direction=0, mirror=false, color=new Color)
     {
-        /** @property {number}  - The tile to use, untextured if undefined */
-        this.tile      = tile;
-        /** @property {number}  - Integer direction of tile, in 90 degree increments */
+        /** @property {number} - The tile to use, untextured if undefined */
+        this.tile = tile;
+        /** @property {number} - Integer direction of tile, in 90 degree increments */
         this.direction = direction;
         /** @property {boolean} - If the tile should be mirrored along the x axis */
-        this.mirror    = mirror;
-        /** @property {Color}   - Color of the tile */
-        this.color     = color.copy();
+        this.mirror = mirror;
+        /** @property {Color} - Color of the tile */
+        this.color = color.copy();
     }
 
     /** Set this tile to clear, it will not be rendered */
@@ -277,9 +277,9 @@ class CanvasLayer extends EngineObject
 
     /** Draw a tile onto the layer canvas in world space
      *  @param {Vector2}  pos
-     *  @param {Vector2}  [size=(1,1)]
+     *  @param {Vector2}  [size=vec2(1)]
      *  @param {TileInfo} [tileInfo]
-     *  @param {Color}    [color=(1,1,1,1)]
+     *  @param {Color}    [color=WHITE]
      *  @param {number}   [angle=0]
      *  @param {boolean}  [mirror=false] */
     drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle, mirror)
@@ -306,8 +306,8 @@ class CanvasLayer extends EngineObject
 
     /** Draw a rectangle onto the layer canvas in world space
      *  @param {Vector2} pos
-     *  @param {Vector2} [size=(1,1)]
-     *  @param {Color}   [color=(1,1,1,1)]
+     *  @param {Vector2} [size=vec2(1)]
+     *  @param {Color}   [color=WHITE]
      *  @param {number}  [angle=0] */
     drawRect(pos, size, color, angle)
     { this.drawTile(pos, size, undefined, color, angle); }
@@ -348,9 +348,9 @@ class CanvasLayer extends EngineObject
 class TileLayer extends CanvasLayer
 {
     /** Create a tile layer object
-    *  @param {Vector2}  position      - World space position
-    *  @param {Vector2}  size          - World space size
-    *  @param {TileInfo} [tileInfo]    - Default tile info for layer (used for size and texture)
+    *  @param {Vector2}  position - World space position
+    *  @param {Vector2}  size - World space size
+    *  @param {TileInfo} [tileInfo] - Default tile info for layer (used for size and texture)
     *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
     */
     constructor(position, size, tileInfo=tile(), renderOrder=0)
@@ -381,7 +381,7 @@ class TileLayer extends CanvasLayer
 
     /** Set data at a given position in the array
      *  @param {Vector2}       layerPos - Local position in array
-     *  @param {TileLayerData} data     - Data to set
+     *  @param {TileLayerData} data - Data to set
      *  @param {boolean}       [redraw] - Force the tile to redraw if true */
     setData(layerPos, data, redraw=false)
     {
@@ -587,7 +587,7 @@ class TileCollisionLayer extends TileLayer
 
     /** Check if collision with another object should occur
     *  @param {Vector2}      pos
-    *  @param {Vector2}      [size=(0,0)]
+    *  @param {Vector2}      [size=vec2()]
     *  @param {EngineObject} [object]
     *  @return {boolean} */
     collisionTest(pos, size=new Vector2, object)

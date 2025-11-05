@@ -135,7 +135,7 @@ function tile(index=new Vector2, size=tileDefaultSize, texture=0, padding=tileDe
 class TileInfo
 {
     /** Create a tile info object
-     *  @param {Vector2} [pos=(0,0)] - Top left corner of tile in pixels
+     *  @param {Vector2} [pos=vec2()] - Top left corner of tile in pixels
      *  @param {Vector2} [size] - Size of tile in pixels
      *  @param {TextureInfo} [textureInfo] - Texture info to use
      *  @param {number} [padding] - How many pixels padding around tiles
@@ -237,13 +237,13 @@ class TextureInfo
 // Drawing functions
 
 /** Draw textured tile centered in world space, with color applied if using WebGL
- *  @param {Vector2}  pos                 - Center of the tile in world space
- *  @param {Vector2}  [size=(1,1)]        - Size of the tile in world space
- *  @param {TileInfo} [tileInfo]          - Tile info to use, untextured if undefined
- *  @param {Color}    [color=(1,1,1,1)]   - Color to modulate with
- *  @param {number}   [angle]             - Angle to rotate by
- *  @param {boolean}  [mirror]            - Is image flipped along the Y axis?
- *  @param {Color}    [additiveColor]     - Additive color to be applied if any
+ *  @param {Vector2}  pos - Center of the tile in world space
+ *  @param {Vector2}  [size=vec2(1)] - Size of the tile in world space
+ *  @param {TileInfo} [tileInfo] - Tile info to use, untextured if undefined
+ *  @param {Color}    [color=WHITE] - Color to modulate with
+ *  @param {number}   [angle] - Angle to rotate by
+ *  @param {boolean}  [mirror] - Is image flipped along the Y axis?
+ *  @param {Color}    [additiveColor] - Additive color to be applied if any
  *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering?
  *  @param {boolean}  [screenSpace=false] - Are the pos and size are in screen space?
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
@@ -323,8 +323,8 @@ function drawTile(pos, size=new Vector2(1), tileInfo, color=WHITE,
 
 /** Draw colored rect centered on pos
  *  @param {Vector2} pos
- *  @param {Vector2} [size=(1,1)]
- *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Vector2} [size=vec2(1)]
+ *  @param {Color}   [color=WHITE]
  *  @param {number}  [angle]
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
@@ -337,9 +337,9 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
 
 /** Draw a rect centered on pos with a gradient from top to bottom
  *  @param {Vector2} pos
- *  @param {Vector2} [size=(1,1)]
- *  @param {Color}   [colorTop=(1,1,1,1)]
- *  @param {Color}   [colorBottom=(0,0,0,1)]
+ *  @param {Vector2} [size=vec2(1)]
+ *  @param {Color}   [colorTop=WHITE]
+ *  @param {Color}   [colorBottom=BLACK]
  *  @param {number}  [angle]
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
@@ -401,9 +401,9 @@ function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0,
 /** Draw connected lines between a series of points
  *  @param {Array<Vector2>} points
  *  @param {number}  [width]
- *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Color}   [color=WHITE]
  *  @param {boolean} [wrap] - Should the last point connect to the first?
- *  @param {Vector2} [pos=(0,0)] - Offset to apply
+ *  @param {Vector2} [pos=vec2()] - Offset to apply
  *  @param {number}  [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
@@ -450,8 +450,8 @@ function drawLineList(points, width=.1, color, wrap=false, pos=vec2(), angle=0, 
  *  @param {Vector2} posA
  *  @param {Vector2} posB
  *  @param {number}  [width]
- *  @param {Color}   [color=(1,1,1,1)]
- *  @param {Vector2} [pos=(0,0)] - Offset to apply
+ *  @param {Color}   [color=WHITE]
+ *  @param {Vector2} [pos=vec2()] - Offset to apply
  *  @param {number}  [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
@@ -470,12 +470,12 @@ function drawLine(posA, posB, width=.1, color, pos=vec2(), angle=0, useWebGL, sc
 
 /** Draw colored regular polygon using passed in number of sides
  *  @param {Vector2} pos
- *  @param {Vector2} [size=(1,1)]
+ *  @param {Vector2} [size=vec2(1)]
  *  @param {number}  [sides]
- *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Color}   [color=WHITE]
  *  @param {number}  [angle]
  *  @param {number}  [lineWidth]
- *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {Color}   [lineColor=BLACK]
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
@@ -498,10 +498,10 @@ function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, l
 
 /** Draw colored polygon using passed in points
  *  @param {Array<Vector2>} points - Array of Vector2 points
- *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Color}   [color=WHITE]
  *  @param {number}  [lineWidth]
- *  @param {Color}   [lineColor=(0,0,0,1)]
- *  @param {Vector2} [pos=(0,0)] - Offset to apply
+ *  @param {Color}   [lineColor=BLACK]
+ *  @param {Vector2} [pos=vec2()] - Offset to apply
  *  @param {number}  [angle] - Angle to rotate by
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
@@ -548,11 +548,11 @@ function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(),
 
 /** Draw colored ellipse using passed in point
  *  @param {Vector2} pos
- *  @param {Vector2} [size=(1,1)] - Width and height diameter
- *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Vector2} [size=vec2(1)] - Width and height diameter
+ *  @param {Color}   [color=WHITE]
  *  @param {number}  [angle]
  *  @param {number}  [lineWidth]
- *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {Color}   [lineColor=BLACK]
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
@@ -594,9 +594,9 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
 /** Draw colored circle using passed in point
  *  @param {Vector2} pos
  *  @param {number}  [size=1] - Diameter
- *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Color}   [color=WHITE]
  *  @param {number}  [lineWidth=0]
- *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {Color}   [lineColor=BLACK]
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
@@ -651,9 +651,9 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
  *  @param {string|number}  text
  *  @param {Vector2} pos
  *  @param {number}  [size]
- *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Color}   [color=WHITE]
  *  @param {number}  [lineWidth]
- *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {Color}   [lineColor=BLACK]
  *  @param {CanvasTextAlign}  [textAlign='center']
  *  @param {string}  [font=fontDefault]
  *  @param {string}  [fontStyle]
@@ -678,9 +678,9 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
  *  @param {string|number}  text
  *  @param {Vector2} pos
  *  @param {number}  size
- *  @param {Color}   [color=(1,1,1,1)]
+ *  @param {Color}   [color=WHITE]
  *  @param {number}  [lineWidth]
- *  @param {Color}   [lineColor=(0,0,0,1)]
+ *  @param {Color}   [lineColor=BLACK]
  *  @param {CanvasTextAlign}  [textAlign]
  *  @param {string}  [font=fontDefault]
  *  @param {string}  [fontStyle]
@@ -1031,7 +1031,7 @@ class FontImage
      *  @param {Vector2} pos
      *  @param {Vector2|number} [size]
      *  @param {boolean} [center=true]
-     *  @param {Color} [color=(1,1,1,1)]
+     *  @param {Color} [color=WHITE]
      *  @param {boolean} [useWebGL=glEnable]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] 
      */
@@ -1056,7 +1056,7 @@ class FontImage
      *  @param {Vector2} pos
      *  @param {Vector2|number} size
      *  @param {boolean} [center]
-     *  @param {Color} [color=(1,1,1,1)]
+     *  @param {Color} [color=WHITE]
      *  @param {boolean} [useWebGL=glEnable]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      */

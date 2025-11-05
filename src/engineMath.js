@@ -193,11 +193,11 @@ function nearestPowerOfTwo(value) { return 2**ceil(log2(value)); }
 
 /** Returns true if two axis aligned bounding boxes are overlapping
  *  this can be used for simple collision detection between objects
- *  @param {Vector2} posA          - Center of box A
- *  @param {Vector2} sizeA         - Size of box A
- *  @param {Vector2} posB          - Center of box B
- *  @param {Vector2} [sizeB=(0,0)] - Size of box B, uses a point if undefined
- *  @return {boolean}              - True if overlapping
+ *  @param {Vector2} posA - Center of box A
+ *  @param {Vector2} sizeA - Size of box A
+ *  @param {Vector2} posB - Center of box B
+ *  @param {Vector2} [sizeB=vec2()] - Size of box B, uses a point if undefined
+ *  @return {boolean} - True if overlapping
  *  @memberof Math */
 function isOverlapping(posA, sizeA, posB, sizeB=vec2())
 {
@@ -415,8 +415,8 @@ function randInCircle(radius=1, minRadius=0)
 { return radius > 0 ? randVec2(radius * rand(minRadius / radius, 1)**.5) : new Vector2; }
 
 /** Returns a random color between the two passed in colors, combine components if linear
- *  @param {Color}   [colorA=(1,1,1,1)]
- *  @param {Color}   [colorB=(0,0,0,1)]
+ *  @param {Color}   [colorA=WHITE]
+ *  @param {Color}   [colorB=BLACK]
  *  @param {boolean} [linear]
  *  @return {Color}
  *  @memberof Random */
@@ -495,8 +495,8 @@ class RandomGenerator
     { return vec2(this.float(valueA, valueB), this.float(valueA, valueB)); }
 
     /** Returns a random color between the two passed in colors, combine components if linear
-    *  @param {Color}   [colorA=(1,1,1,1)]
-    *  @param {Color}   [colorB=(0,0,0,1)]
+    *  @param {Color}   [colorA=WHITE]
+    *  @param {Color}   [colorB=BLACK]
     *  @param {boolean} [linear]
     *  @return {Color} */
     randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear=false)
