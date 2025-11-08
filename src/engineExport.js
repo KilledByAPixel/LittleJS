@@ -274,6 +274,8 @@ export
     glDrawOutlineTransform,
     glDrawPoints,
     glDrawColoredPoints,
+    glSetRenderTarget,
+    glClearRect,
 
     // Input
     keyIsDown,
