@@ -2649,12 +2649,14 @@ declare module "littlejsengine" {
          *  @param {number}   [angle] - Angle the layer is rotated by
          *  @param {number}   [renderOrder] - Objects sorted by renderOrder
          *  @param {Vector2}  [canvasSize] - Default size of canvas, can be changed later
+         *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
         */
-        constructor(position?: Vector2, size?: Vector2, angle?: number, renderOrder?: number, canvasSize?: Vector2);
+        constructor(position?: Vector2, size?: Vector2, angle?: number, renderOrder?: number, canvasSize?: Vector2, useWebGL?: boolean);
         /** @property {HTMLCanvasElement} - The canvas used by this layer */
         canvas: OffscreenCanvas;
         /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this layer */
         context: OffscreenCanvasRenderingContext2D;
+        /** @property {TextureInfo} - Texture info to use for this object rendering */
         textureInfo: TextureInfo;
         /** Draw this canvas layer centered in world space, with color applied if using WebGL
         *  @param {Vector2} pos - Center in world space
@@ -2666,7 +2668,7 @@ declare module "littlejsengine" {
         *  @param {boolean} [screenSpace] - If true the pos and size are in screen space
         *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
         *  @memberof Draw */
-        draw(pos: Vector2, size?: Vector2, angle?: number, color?: Color, mirror?: boolean, additiveColor?: Color, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+        draw(pos: Vector2, size?: Vector2, color?: Color, angle?: number, mirror?: boolean, additiveColor?: Color, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
         /** Draw a tile onto the layer canvas in world space
          *  @param {Vector2}  pos
          *  @param {Vector2}  [size=vec2(1)]
@@ -2709,6 +2711,8 @@ declare module "littlejsengine" {
         constructor(position: Vector2, size: Vector2, tileInfo?: TileInfo, renderOrder?: number);
         /** @property {Array<TileLayerData>} - Default tile info for layer */
         data: TileLayerData[];
+        /** @property {boolean} - Is this layer using a webgl texture? */
+        isUsingWebGL: boolean;
         /** Draw all the tile data to an offscreen canvas
          *  - This may be slow if not using webgl but only needs to be done once */
         redraw(): void;
@@ -2744,7 +2748,7 @@ declare module "littlejsengine" {
         /** Clear a rectangle in layer space
          *  @param {Vector2} pos
          *  @param {Vector2} size
-         *  @param {Color} [color] - Color to modulate with
+         *  @param {Color} [color=WHITE] - Color to modulate with
          *  @param {number} [angle] - Angle to rotate by
          */
         drawLayerRect(pos: Vector2, size: Vector2, color?: Color, angle?: number): void;
@@ -2762,6 +2766,8 @@ declare module "littlejsengine" {
          *  @param {Vector2} layerPos - Local position in array
          *  @return {TileLayerData} */
         getData(layerPos: Vector2): TileLayerData;
+        /** Called after this layer is redrawn, does nothing by default */
+        onRedraw(): void;
         /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, Color]} */
         savedRenderSettings: [CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, Color];
     }
