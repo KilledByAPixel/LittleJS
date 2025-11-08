@@ -375,7 +375,7 @@ CanvasLayer(position, size) // Create a canvas layer object
 CanvasLayer.canvas          // The canvas used by this layer
 CanvasLayer.context         // The 2D context of the canvas
 CanvasLayer.getImageData()  // Get image data from canvas
-CanvasLayer.useWebGL()      // Creates or updates WebGL texture
+CanvasLayer.updateWebGL()   // Creates or updates WebGL texture
 
 // LittleJS Layer System
 TileLayer(position, size, tileInfo, scale)     // Create a tile layer object
