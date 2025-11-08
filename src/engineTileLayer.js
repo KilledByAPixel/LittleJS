@@ -203,7 +203,7 @@ class CanvasLayer extends EngineObject
         this.textureInfo = new TextureInfo(this.canvas, useWebGL);
 
         // disable physics by default
-        this.mass = this.gravityScale = this.friction = this.restitution = 0;
+        this.mass = 0;
     }
 
     /** Destroy this canvas layer */
