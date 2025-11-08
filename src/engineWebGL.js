@@ -29,7 +29,7 @@ let glContext;
 let glAntialias = true;
 
 // WebGL internal variables not exposed to documentation
-let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos, glCanBeEnabled = true, glInstancedVAO, glPolyVAO;
+let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glCanBeEnabled = true;
 
 // WebGL internal constants
 const gl_ARRAY_BUFFER_SIZE = 5e5;
@@ -201,6 +201,9 @@ function glInit(rootElement)
         offset = 0, shader = glPolyShader, stride = gl_POLY_VERTEX_BYTE_STRIDE;
         initVertexAttrib('p', glContext.FLOAT, 4, 2);         // position
         initVertexAttrib('c', glContext.UNSIGNED_BYTE, 1, 4); // color
+
+        // create a frame buffer object
+        glFramebuffer = glContext.createFramebuffer();
     }
 }
 
@@ -228,15 +231,25 @@ function glSetPolyMode()
 
 // Setup WebGL render each frame, called automatically by engine
 // Also used by tile layer rendering when redrawing tiles
-function glPreRender()
+function glPreRender(clear=true)
 {
     if (!glEnable || !glContext) return;
 
-    // clear the canvas
-    glClearCanvas();
+    ASSERT(!glBatchCount, 'glPreRender called with unflushed batch.');
+
+    if (!glRenderTarget)
+    {
+        // set to same size as main canvas
+        glCanvas.width = mainCanvasSize.x;
+        glCanvas.height = mainCanvasSize.y;
+    }
+    glContext.viewport(0, 0, mainCanvasSize.x, mainCanvasSize.y);
+    clear && glClearCanvas();
 
     // build the transform matrix
     const s = vec2(2*cameraScale).divide(mainCanvasSize);
+    if (glRenderTarget)
+        s.y = -s.y; // invert y when using render target
     const rotatedCam = cameraPos.rotate(-cameraAngle);
     const p = vec2(-1).subtract(rotatedCam.multiply(s));
     const ca = cos(cameraAngle);
@@ -281,10 +294,7 @@ function glClearCanvas()
 {
     if (!glContext) return;
 
-    // clear and set to same size as main canvas
-    glCanvas.width = mainCanvasSize.x;
-    glCanvas.height = mainCanvasSize.y;
-    glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
+    // clear using the canvasClearColor
     const color = canvasClearColor;
     glContext.clearColor(color.r, color.g, color.b, color.a);
     glContext.clear(glContext.COLOR_BUFFER_BIT);
@@ -632,6 +642,48 @@ function glDrawColoredPoints(points, pointColors)
     }
     glBatchCount += vertCount;
 }
+
+/** Set the WebGL render target to the given texture or back to the canvas
+ *  @param {WebGLTexture} [texture] - a texture or undefined to use normal glCanvas
+ *  @param {boolean} [clear] - should the render target be cleared
+ *  @memberof WebGL */
+function glSetRenderTarget(texture, clear=false)
+{
+    if (texture)
+    {
+        glRenderTarget = texture;
+        glContext.bindFramebuffer(glContext.FRAMEBUFFER, glFramebuffer);
+        glContext.framebufferTexture2D(glContext.FRAMEBUFFER, 
+            glContext.COLOR_ATTACHMENT0, glContext.TEXTURE_2D, texture, 0);
+       glPreRender(clear);
+    }
+    else
+    {
+        glFlush();
+        glRenderTarget = undefined;
+        glContext.bindFramebuffer(glContext.FRAMEBUFFER, null);
+    }
+}
+
+/** Clear out a rectangle area of the WebGL canvas or render target
+ *  @param {number} x
+ *  @param {number} y
+ *  @param {number} width
+ *  @param {number} height
+ *  @memberof WebGL */
+function glClearRect(x, y, width, height)
+{
+    if (!glEnable) return;
+
+    // Enable scissor test to clear only the specified area
+    glContext.enable(glContext.SCISSOR_TEST);
+    glContext.scissor(x, y, width, height);
+    glContext.clearColor(0, 0, 0, 0);
+    glContext.clear(glContext.COLOR_BUFFER_BIT);
+    glContext.disable(glContext.SCISSOR_TEST);
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 // WebGL internal function to convert polygon to outline triangle strip
 function glMakeOutline(points, width, wrap=true)
