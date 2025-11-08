@@ -3,7 +3,7 @@ let currentStep = 0, stepTime = 0, tempo = 240;
 let isPlaying = false, eraseMode = false;
 
 // sound sequencer instruments
-const sound_piano = new Sound([.3,0,220,,.1]);
+const sound_piano = new Sound([.2,0,220,,.1]);
 const sound_drumKick = new Sound([,,99,,,.02,,,,,,,,2]);
 const sound_drumHat = new Sound([,,1e3,,,.01,4,,,,,,,,,,,,,,4e3]);
 
