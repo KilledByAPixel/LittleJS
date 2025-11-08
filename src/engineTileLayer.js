@@ -305,7 +305,7 @@ class TileLayer extends CanvasLayer
     constructor(position, size, tileInfo=tile(), renderOrder=0)
     {
         const canvasSize = tileInfo ? size.multiply(tileInfo.size) : size;
-        const useWebGL = glEnable;
+        const useWebGL = true;
         super(position, size, 0, renderOrder, canvasSize, useWebGL);
         
         /** @property {TileInfo} - Default tile info for layer */
