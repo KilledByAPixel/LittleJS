@@ -85,8 +85,9 @@ function getPaused() { return paused; }
  *  @memberof Engine */
 function setPaused(isPaused=true) { paused = isPaused; }
 
-// Frame time tracking
+// Engine internal variables
 let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
+let showEngineVersion = true;
 
 ///////////////////////////////////////////////////////////////////////////////
 // plugin hooks
@@ -160,6 +161,7 @@ function engineAddPlugin(update, render, glContextLost, glContextRestored)
  *  @memberof Engine */
 async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
 {
+    showEngineVersion && console.log(`${engineName} Engine v${engineVersion}`);
     ASSERT(!mainContext, 'engine already initialized');
     ASSERT(isArray(imageSources), 'pass in images as array');
 
@@ -428,7 +430,6 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         promises.push(new Promise(resolve =>
         {
             let t = 0;
-            console.log(`${engineName} Engine v${engineVersion}`);
             updateSplash();
             function updateSplash()
             {
