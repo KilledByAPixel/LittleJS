@@ -188,8 +188,9 @@ class CanvasLayer extends EngineObject
      *  @param {number}   [angle] - Angle the layer is rotated by
      *  @param {number}   [renderOrder] - Objects sorted by renderOrder
      *  @param {Vector2}  [canvasSize] - Default size of canvas, can be changed later
+     *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
     */
-    constructor(position, size, angle=0, renderOrder=0, canvasSize=vec2(512))
+    constructor(position, size, angle=0, renderOrder=0, canvasSize=vec2(512), useWebGL=glEnable)
     {
         ASSERT(isVector2(canvasSize), 'canvasSize must be a Vector2');
         super(position, size, undefined, angle, WHITE, renderOrder);
@@ -199,7 +200,6 @@ class CanvasLayer extends EngineObject
         /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this layer */
         this.context = this.canvas?.getContext('2d');
         /** @property {TextureInfo} - Texture info to use for this object rendering */
-        const useWebGL = false; // do not use webgl by default
         this.textureInfo = new TextureInfo(this.canvas, useWebGL);
 
         // disable physics by default
@@ -218,7 +218,7 @@ class CanvasLayer extends EngineObject
     // Render the layer, called automatically by the engine
     render()
     {
-        this.draw(this.pos, this.size, this.angle, this.color, this.mirror, this.additiveColor);
+        this.draw(this.pos, this.size, this.color, this.angle, this.mirror, this.additiveColor);
     }
 
     /** Draw this canvas layer centered in world space, with color applied if using WebGL
@@ -231,7 +231,7 @@ class CanvasLayer extends EngineObject
     *  @param {boolean} [screenSpace] - If true the pos and size are in screen space
     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
     *  @memberof Draw */
-    draw(pos, size, angle=0, color=WHITE, mirror=false, additiveColor, screenSpace=false, context)
+    draw(pos, size, color=WHITE, angle=0, mirror=false, additiveColor, screenSpace=false, context)
     {
         // draw the canvas layer as a single tile that uses the whole texture
         const tileInfo = new TileInfo().setFullImage(this.textureInfo);
@@ -305,12 +305,30 @@ class TileLayer extends CanvasLayer
     constructor(position, size, tileInfo=tile(), renderOrder=0)
     {
         const canvasSize = tileInfo ? size.multiply(tileInfo.size) : size;
-        super(position, size, 0, renderOrder, canvasSize);
+        const useWebGL = glEnable;
+        super(position, size, 0, renderOrder, canvasSize, useWebGL);
         
         /** @property {TileInfo} - Default tile info for layer */
         this.tileInfo = undefined;
         /** @property {Array<TileLayerData>} - Default tile info for layer */
         this.data = [];
+        /** @property {boolean} - Is this layer using a webgl texture? */
+        this.isUsingWebGL = false;
+
+        if (headlessMode)
+        {
+            // disable rendering in headless mode
+            this.render         = () => {};
+            this.redraw         = () => {};
+            this.redrawStart    = () => {};
+            this.redrawEnd      = () => {};
+            this.drawTileData   = () => {};
+            this.redrawTileData = () => {};
+            this.drawLayerTile  = () => {};
+            this.drawLayerRect  = () => {};
+            this.clearLayerRect = () => {};
+            return;
+        }
         
         if (tileInfo)
         {
@@ -322,20 +340,6 @@ class TileLayer extends CanvasLayer
         // init tile data
         for (let j = this.size.area(); j--;)
             this.data.push(new TileLayerData);
-
-        if (headlessMode)
-        {
-            // disable rendering
-            this.render         = () => {};
-            this.redraw         = () => {};
-            this.redrawStart    = () => {};
-            this.redrawEnd      = () => {};
-            this.drawTileData   = () => {};
-            this.redrawTileData = () => {};
-            this.drawLayerTile  = () => {};
-            this.drawLayerRect  = () => {};
-            this.clearLayerRect = () => {};
-        }
     }
 
     /** Set data at a given position in the array
@@ -365,6 +369,17 @@ class TileLayer extends CanvasLayer
         return layerPos.arrayCheck(this.size) && this.data[(layerPos.y|0)*this.size.x+layerPos.x|0];
     }
 
+    // Update the tile layer, refresh texture if needed
+    update()
+    {
+        if (!glEnable && this.isUsingWebGL)
+        {
+            // redraw the layer if webgl was disabled or context lost
+            this.isUsingWebGL = false;
+            this.redraw();
+        }
+    }
+
     // Render the tile layer, called automatically by the engine
     render()
     {
@@ -372,7 +387,7 @@ class TileLayer extends CanvasLayer
 
         const size = this.drawSize || this.size;
         const pos = this.pos.add(size.scale(.5));
-        this.draw(pos, this.size, this.angle, this.color, this.mirror, this.additiveColor);
+        this.draw(pos, this.size, this.color, this.angle, this.mirror, this.additiveColor);
     }
 
     /** Draw all the tile data to an offscreen canvas
@@ -407,14 +422,9 @@ class TileLayer extends CanvasLayer
         cameraPos = this.size.multiply(tileSize).scale(.5);
         cameraScale = 1;
 
-        // create webgl texture
-        if (glEnable && !this.hasWebGL())
-        {
-            this.textureInfo.createWebGLTexture();
-            clear = false; // no need to clear if just created
-        }
-        const useWebGL = this.hasWebGL();
-        if (useWebGL)
+        // set render target to this layer
+        this.isUsingWebGL = this.hasWebGL();
+        if (this.isUsingWebGL)
             glSetRenderTarget(this.textureInfo.glTexture, clear);
         else if (clear)
         {
@@ -498,10 +508,10 @@ class TileLayer extends CanvasLayer
     /** Clear a rectangle in layer space
      *  @param {Vector2} pos
      *  @param {Vector2} size
-     *  @param {Color} [color] - Color to modulate with
+     *  @param {Color} [color=WHITE] - Color to modulate with
      *  @param {number} [angle] - Angle to rotate by
      */
-    drawLayerRect(pos, size, color, angle)
+    drawLayerRect(pos, size, color, angle=0)
     { this.drawLayerTile(pos, size, undefined, color, angle); }
 
     /** Clear a rectangle in layer space
