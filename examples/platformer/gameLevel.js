@@ -126,18 +126,15 @@ function loadLevelData()
                 }
             }
         }
+        
+        tileLayer.onRedraw = ()=>
+        {
+            // apply decoration to level tiles
+            for (let x=levelSize.x; x--;)
+            for (let y=levelSize.y; y--;)
+                decorateTile(vec2(x,y), tileLayer);
+        }
         tileLayer.redraw();
-    }
-
-    // apply decoration to all level tiles
-    const pos = vec2();
-    for (const layer of tileLayers)
-    {
-        layer.redrawStart();
-        for (pos.x=levelSize.x; pos.x--;)
-        for (pos.y=levelSize.y; pos.y--;)
-            decorateTile(pos, layer);
-        layer.redrawEnd();
     }
 }
 

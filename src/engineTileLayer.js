@@ -390,6 +390,9 @@ class TileLayer extends CanvasLayer
         this.draw(pos, this.size, this.color, this.angle, this.mirror, this.additiveColor);
     }
 
+    /** Called after this layer is redrawn, does nothing by default */
+    onRedraw() {}
+
     /** Draw all the tile data to an offscreen canvas
      *  - This may be slow if not using webgl but only needs to be done once */
     redraw()
@@ -398,6 +401,8 @@ class TileLayer extends CanvasLayer
         for (let x = this.size.x; x--;)
         for (let y = this.size.y; y--;)
             this.drawTileData(vec2(x,y), false);
+        this.hasWebGL() && glFlush();
+        this.onRedraw();
         this.redrawEnd();
     }
 
@@ -426,15 +431,17 @@ class TileLayer extends CanvasLayer
         this.isUsingWebGL = this.hasWebGL();
         if (this.isUsingWebGL)
             glSetRenderTarget(this.textureInfo.glTexture, clear);
-        else if (clear)
+        else
         {
-            // clear and set size
-            this.canvas.width  = mainCanvasSize.x;
-            this.canvas.height = mainCanvasSize.y;
+            // disable smoothing for pixel art
+            this.context.imageSmoothingEnabled = !tilesPixelated;
+            if (clear)
+            {
+                // clear and set size
+                this.canvas.width  = mainCanvasSize.x;
+                this.canvas.height = mainCanvasSize.y;
+            }
         }
-
-        // disable smoothing for pixel art
-        drawContext.imageSmoothingEnabled = !tilesPixelated;
     }
 
     /** Call to end the redraw process */
