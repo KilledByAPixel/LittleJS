@@ -382,15 +382,15 @@ class EngineObject
      *  @param {Vector2} vec - world space vector */
     worldToLocalVector(vec) { return vec.rotate(-this.angle); }
 
-    /** Called to check if a tile collision should be resolved
+    /** Called to check if a tile collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
      *  @param {number}  tileData - the value of the tile at the position
-     *  @param {Vector2} pos      - tile where the collision occurred
-     *  @return {boolean}         - true if the collision should be resolved */
+     *  @param {Vector2} pos - tile where the collision occurred
+     *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity */
     collideWithTile(tileData, pos) { return tileData > 0; }
 
-    /** Called to check if a object collision should be resolved
+    /** Called by the engine to check if an object collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
      *  @param {EngineObject} object - the object to test against
-     *  @return {boolean}            - true if the collision should be resolved
+     *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity
      */
     collideWithObject(object) { return true; }
 
