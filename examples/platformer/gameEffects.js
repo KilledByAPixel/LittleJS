@@ -43,8 +43,6 @@ export const persistentParticleDestroyCallback = (particle)=>
     if (particle.groundObject)
     {
         GameLevel.foregroundTileLayer.drawTile(particle.pos, particle.size, particle.tileInfo, particle.color, particle.angle, particle.mirror);
-        // update WebGL texture
-        GameLevel.foregroundTileLayer.useWebGL();
     }
 }
 
@@ -74,25 +72,26 @@ export function explosion(pos, radius=3)
 
     sound_explosion.play(pos);
 
-    // destroy level
-    for (let x = -radius; x < radius; ++x)
     {
-        const h = (radius*radius - x*x)**.5;
-        for (let y = -h; y <= h; ++y)
-            destroyTile(pos.add(vec2(x,y)), 0, 0);
+        // destroy level
+        const layer = GameLevel.tileLayers[1];
+        layer.redrawStart();
+        for (let x = -radius; x < radius; ++x)
+        {
+            const h = (radius*radius - x*x)**.5;
+            for (let y = -h; y <= h; ++y)
+                destroyTile(pos.add(vec2(x,y)), 0, 0);
+        }
+        // cleanup neighbors
+        const cleanupRadius = radius + 2;
+        for (let x = -cleanupRadius; x < cleanupRadius; ++x)
+        {
+            const h = (cleanupRadius**2 - x**2)**.5;
+            for (let y = -h; y < h; ++y)
+                GameLevel.decorateTile(pos.add(vec2(x,y)).floor(), layer);
+        }
+        layer.redrawEnd();
     }
-
-    // cleanup neighbors
-    const cleanupRadius = radius + 2;
-    for (let x = -cleanupRadius; x < cleanupRadius; ++x)
-    {
-        const h = (cleanupRadius**2 - x**2)**.5;
-        for (let y = -h; y < h; ++y)
-            GameLevel.decorateTile(pos.add(vec2(x,y)).floor());
-    }
-
-    // update WebGL texture
-    GameLevel.foregroundTileLayer.useWebGL();
 
     // kill/push objects
     LJS.engineObjectsCallback(pos, radius*3, (o)=> 
@@ -165,10 +164,12 @@ export function destroyTile(pos, makeSound = 1, cleanup = 1)
     // cleanup neighbors and rebuild WebGL
     if (cleanup)
     {
+        const layer = GameLevel.tileLayers[1];
+        layer.redrawStart();
         for (let i=-1;i<=1;++i)
         for (let j=-1;j<=1;++j)
-            GameLevel.decorateTile(pos.add(vec2(i,j)));
-        layer.useWebGL();
+            GameLevel.decorateTile(pos.add(vec2(i,j)), layer);
+        layer.redrawEnd();
     }
 
     return true;
@@ -260,7 +261,7 @@ export class ParallaxLayer extends LJS.CanvasLayer
         this.context.clearRect(0,0,1,h);
     
         // make WebGL texture
-        this.useWebGL();
+        this.updateWebGL();
     }
 
     render()

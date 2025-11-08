@@ -131,23 +131,23 @@ function loadLevelData()
 
     // apply decoration to all level tiles
     const pos = vec2();
-    const layerCount = tileMapData.layers.length;
-    for (let layer=layerCount; layer--;)
+    for (const layer of tileLayers)
     {
+        layer.redrawStart();
         for (pos.x=levelSize.x; pos.x--;)
         for (pos.y=levelSize.y; pos.y--;)
             decorateTile(pos, layer);
-        tileLayers[layer].useWebGL();
+        layer.redrawEnd();
     }
 }
 
-export function decorateTile(pos, layer=1)
+export function decorateTile(pos, tileLayer)
 {
     LJS.ASSERT((pos.x|0) == pos.x && (pos.y|0)== pos.y);
-    const tileLayer = tileLayers[layer];
     if (!tileLayer)
         return;
 
+    const w = tileLayer.tileInfo.size.x;
     if (tileLayer == foregroundTileLayer)
     {
         const tileType = tileLayer.getCollisionData(pos);
@@ -167,12 +167,11 @@ export function decorateTile(pos, layer=1)
 
             // make pixel perfect outlines
             const size = i&1 ? vec2(2, 16) : vec2(16, 2);
-            tileLayer.context.fillStyle = levelOutlineColor.mutate(.1);
             const drawPos = pos.scale(16)
                 .add(vec2(i==1?14:0,(i==0?14:0)))
                 .subtract((i&1? vec2(0,8-size.y/2) : vec2(8-size.x/2,0)));
-            tileLayer.context.fillRect(
-                drawPos.x, tileLayer.canvas.height - drawPos.y, size.x, -size.y);
+            const color = levelOutlineColor.mutate(.1);
+            tileLayer.drawLayerRect(drawPos, size, color);
         }
     }
     else
@@ -185,15 +184,18 @@ export function decorateTile(pos, layer=1)
             const neighborTileDataB = tileLayer.getData(pos.add(vec2().setDirection((i+1)%4))).tile;
             if (neighborTileDataA > 0 || neighborTileDataB > 0)
                 continue;
+                
+            // get direction of corner
+            const directionVector = vec2();
+            if (i==0) directionVector.set(w-1,w-1);
+            if (i==1) directionVector.set(w-1,1);
+            if (i==2) directionVector.set(1,1);
+            if (i==3) directionVector.set(1,w-1);
 
-            const directionVector = vec2().setAngle((i+.5)*LJS.PI/2, 10).floor();
-            const drawPos = pos.add(vec2(.5))            // center
-                .scale(16).add(directionVector).floor(); // direction offset
-
-            // clear rect without any scaling to prevent blur from filtering
-            const s = 2;
-            tileLayer.context.clearRect(
-                drawPos.x - s/2, tileLayer.canvas.height - drawPos.y - s/2, s, s);
+            // clear rect from corner
+            const s = vec2(2);
+            const drawPos = pos.scale(w).add(directionVector).subtract(s.scale(.5));
+            tileLayer.clearLayerRect(drawPos, s);
         }
     }
 }
