@@ -158,6 +158,7 @@ function glInit(rootElement)
         glColorData = new Uint32Array(glInstanceData);
         glArrayBuffer = glContext.createBuffer();
         glGeometryBuffer = glContext.createBuffer();
+        glFramebuffer = glContext.createFramebuffer();
         glBatchCount = 0;
 
         // create the geometry buffer, triangle strip square
@@ -201,9 +202,6 @@ function glInit(rootElement)
         offset = 0, shader = glPolyShader, stride = gl_POLY_VERTEX_BYTE_STRIDE;
         initVertexAttrib('p', glContext.FLOAT, 4, 2);         // position
         initVertexAttrib('c', glContext.UNSIGNED_BYTE, 1, 4); // color
-
-        // create a frame buffer object
-        glFramebuffer = glContext.createFramebuffer();
     }
 }
 
