@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.16.4';
+const engineVersion = '1.17.0';
 
 /** Frames per second to update
  *  @type {number}
@@ -3025,15 +3025,15 @@ class EngineObject
      *  @param {Vector2} vec - world space vector */
     worldToLocalVector(vec) { return vec.rotate(-this.angle); }
 
-    /** Called to check if a tile collision should be resolved
+    /** Called to check if a tile collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
      *  @param {number}  tileData - the value of the tile at the position
-     *  @param {Vector2} pos      - tile where the collision occurred
-     *  @return {boolean}         - true if the collision should be resolved */
+     *  @param {Vector2} pos - tile where the collision occurred
+     *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity */
     collideWithTile(tileData, pos) { return tileData > 0; }
 
-    /** Called to check if a object collision should be resolved
+    /** Called by the engine to check if an object collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
      *  @param {EngineObject} object - the object to test against
-     *  @return {boolean}            - true if the collision should be resolved
+     *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity
      */
     collideWithObject(object) { return true; }
 
@@ -3402,7 +3402,7 @@ class TextureInfo
 ///////////////////////////////////////////////////////////////////////////////
 // Drawing functions
 
-/** Draw textured tile centered in world space, with color applied if using WebGL
+/** Draw textured tile centered in world space
  *  @param {Vector2}  pos - Center of the tile in world space
  *  @param {Vector2}  [size=vec2(1)] - Size of the tile in world space
  *  @param {TileInfo} [tileInfo] - Tile info to use, untextured if undefined
@@ -3414,7 +3414,7 @@ class TextureInfo
  *  @param {boolean}  [screenSpace=false] - Are the pos and size are in screen space?
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
  *  @memberof Draw */
-function drawTile(pos, size=new Vector2(1), tileInfo, color=WHITE,
+function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
     angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace, context)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
@@ -4039,10 +4039,9 @@ function isOnScreen(pos, size=0)
  *  @param {boolean} [additive]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function setBlendMode(additive=false, context)
+function setBlendMode(additive=false, context=drawContext)
 {
     glAdditive = additive;
-    context ||= drawContext;
     context.globalCompositeOperation = additive ? 'lighter' : 'source-over';
 }
 
@@ -5930,7 +5929,7 @@ class TileLayerData
 /**
  * Canvas Layer - cached off screen rendering system
  * - Contains an offscreen canvas that can be rendered to
- * - WebGL rendering is optional, call useWebGL to enable
+ * - WebGL rendering is optional, call updateWebGL to enable/update
  * @extends EngineObject
  * @memberof TileLayers
  * @example
@@ -5957,8 +5956,6 @@ class CanvasLayer extends EngineObject
         /** @property {TextureInfo} - Texture info to use for this object rendering */
         const useWebGL = false; // do not use webgl by default
         this.textureInfo = new TextureInfo(this.canvas, useWebGL);
-        /** @property {boolean} - True if WebGL texture needs to be refreshed */
-        this.refreshWebGL = false;
 
         // disable physics by default
         this.mass = this.gravityScale = this.friction = this.restitution = 0;
@@ -5991,44 +5988,10 @@ class CanvasLayer extends EngineObject
     *  @memberof Draw */
     draw(pos, size, angle=0, color=WHITE, mirror=false, additiveColor, screenSpace=false, context)
     {
-        const useWebGL = glEnable && this.textureInfo.hasWebGL();
-        if (useWebGL && this.refreshWebGL)
-        {
-            // update the WebGL texture
-            this.textureInfo.createWebGLTexture();
-            this.refreshWebGL = false;
-        }
-
         // draw the canvas layer as a single tile that uses the whole texture
         const tileInfo = new TileInfo().setFullImage(this.textureInfo);
+        const useWebGL = this.hasWebGL();
         drawTile(pos, size, tileInfo, color, angle, mirror, additiveColor, useWebGL, screenSpace, context);
-    }
-
-    /**
-     * @callback Canvas2DDrawCallback - Function that draws to a canvas 2D context
-     * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
-     * @memberof TileLayers
-     */
-
-    /** Draw onto the layer canvas in world space (bypass WebGL)
-     *  @param {Vector2}  pos
-     *  @param {Vector2}  size
-     *  @param {number}   angle
-     *  @param {boolean}  mirror
-     *  @param {Canvas2DDrawCallback} drawFunction */
-    drawCanvas2D(pos, size, angle, mirror, drawFunction)
-    {
-        if (!this.context) return;
-
-        const context = this.context;
-        context.save();
-        pos = pos.subtract(this.pos).multiply(this.tileInfo.size);
-        size = size.multiply(this.tileInfo.size);
-        context.translate(pos.x, this.canvas.height - pos.y);
-        context.rotate(angle);
-        context.scale(mirror ? -size.x : size.x, size.y);
-        drawFunction(context);
-        context.restore();
     }
 
     /** Draw a tile onto the layer canvas in world space
@@ -6036,56 +5999,41 @@ class CanvasLayer extends EngineObject
      *  @param {Vector2}  [size=vec2(1)]
      *  @param {TileInfo} [tileInfo]
      *  @param {Color}    [color=WHITE]
-     *  @param {number}   [angle=0]
-     *  @param {boolean}  [mirror=false] */
-    drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle, mirror)
+     *  @param {number}   [angle]
+     *  @param {boolean}  [mirror] */
+    drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle=0, mirror=false)
     {
-        this.drawCanvas2D(pos, size, angle, mirror, (context)=>
-        {
-            const textureInfo = tileInfo?.textureInfo;
-            if (textureInfo)
-            {
-                context.globalAlpha = color.a; // only alpha is supported
-                context.drawImage(textureInfo.image,
-                    tileInfo.pos.x,  tileInfo.pos.y,
-                    tileInfo.size.x, tileInfo.size.y, -.5, -.5, 1, 1);
-                context.globalAlpha = 1;
-            }
-            else
-            {
-                // untextured
-                context.fillStyle = color.toString();
-                context.fillRect(-.5, -.5, 1, 1);
-            }
-        });
+        pos = pos.subtract(this.pos).multiply(this.tileInfo.size);
+        size = size.multiply(this.tileInfo.size);
+        pos.y = this.canvas.height - pos.y;
+
+        // draw the tile onto the layer canvas
+        const oldMainCanvasSize = mainCanvasSize;
+        mainCanvasSize = vec2(this.canvas.width, this.canvas.height);
+        const useWebGL = this.hasWebGL();
+        useWebGL && glSetRenderTarget(this.textureInfo.glTexture);
+        const drawContext = useWebGL ? undefined : this.context;
+        drawTile(pos, size, tileInfo, color, angle, mirror, undefined, useWebGL, true, drawContext);
+        useWebGL && glSetRenderTarget();
+        mainCanvasSize = oldMainCanvasSize;
     }
 
     /** Draw a rectangle onto the layer canvas in world space
      *  @param {Vector2} pos
      *  @param {Vector2} [size=vec2(1)]
      *  @param {Color}   [color=WHITE]
-     *  @param {number}  [angle=0] */
+     *  @param {number}  [angle] */
     drawRect(pos, size, color, angle)
     { this.drawTile(pos, size, undefined, color, angle); }
 
-    /** Create or update the WebGL texture for this layer
-     *  @param {boolean} [enable] - enable WebGL rendering and update the texture 
-     *  @param {boolean} [immediate] - shoulkd the texture be updated immediately
-     */
-    useWebGL(enable=true, immediate=false)
-    {
-        if (!immediate && enable && this.textureInfo.hasWebGL())
-        {
-            // refresh the texture when needed
-            this.refreshWebGL = true;
-            return;
-        }
+    /** Create WebGL texture if necessary and copy layer canvas to it */
+    updateWebGL()
+    { this.textureInfo.createWebGLTexture(); }
 
-        if (enable)
-            this.textureInfo.createWebGLTexture();
-        else
-            this.textureInfo.destroyWebGLTexture();
-    }
+    /** Check if this layer is using WebGL
+     *  @return {boolean} */
+    hasWebGL()
+    { return glEnable && this.textureInfo.hasWebGL(); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -6113,25 +6061,35 @@ class TileLayer extends CanvasLayer
     {
         const canvasSize = tileInfo ? size.multiply(tileInfo.size) : size;
         super(position, size, 0, renderOrder, canvasSize);
-
-        // set tile info
-        this.tileInfo = tileInfo;
+        
+        /** @property {TileInfo} - Default tile info for layer */
+        this.tileInfo = undefined;
+        /** @property {Array<TileLayerData>} - Default tile info for layer */
+        this.data = [];
+        
+        if (tileInfo)
+        {
+            // set tile info
+            this.tileInfo = tileInfo.frame(0);
+            this.tileInfo.bleed = 0; // disable bleed for tile layers
+        }
 
         // init tile data
-        this.data = [];
         for (let j = this.size.area(); j--;)
             this.data.push(new TileLayerData);
 
         if (headlessMode)
         {
             // disable rendering
-            this.redraw       = () => {};
-            this.render       = () => {};
-            this.redrawStart  = () => {};
-            this.redrawEnd    = () => {};
-            this.drawTileData = () => {};
-            this.drawCanvas2D = () => {};
-            this.useWebGL     = () => {};
+            this.render         = () => {};
+            this.redraw         = () => {};
+            this.redrawStart    = () => {};
+            this.redrawEnd      = () => {};
+            this.drawTileData   = () => {};
+            this.redrawTileData = () => {};
+            this.drawLayerTile  = () => {};
+            this.drawLayerRect  = () => {};
+            this.clearLayerRect = () => {};
         }
     }
 
@@ -6141,13 +6099,16 @@ class TileLayer extends CanvasLayer
      *  @param {boolean}       [redraw] - Force the tile to redraw if true */
     setData(layerPos, data, redraw=false)
     {
+        layerPos = layerPos.floor();
         ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
         ASSERT(data instanceof TileLayerData, 'data must be a TileLayerData');
-        if (layerPos.arrayCheck(this.size))
-        {
-            this.data[(layerPos.y|0)*this.size.x+layerPos.x|0] = data;
-            redraw && this.drawTileData(layerPos);
-        }
+
+        if (!layerPos.arrayCheck(this.size)) return;
+        this.data[(layerPos.y|0)*this.size.x+layerPos.x|0] = data;
+
+        if (!redraw) return;
+        const isRedraw = drawContext === this.context;
+        isRedraw ? this.drawTileData(layerPos) : this.redrawTileData(layerPos);
     }
 
     /** Get data at a given position in the array
@@ -6164,23 +6125,13 @@ class TileLayer extends CanvasLayer
     {
         ASSERT(drawContext !== this.context, 'must call redrawEnd() after drawing tiles!');
 
-        if (this.refreshWebGL)
-        {
-            // update the WebGL texture
-            this.textureInfo.createWebGLTexture();
-            this.refreshWebGL = false;
-        }
-
-        // draw the tile layer as a single tile
-        const tileInfo = new TileInfo().setFullImage(this.textureInfo);
         const size = this.drawSize || this.size;
         const pos = this.pos.add(size.scale(.5));
-        const useWebGL = glEnable && this.textureInfo.hasWebGL();
-        drawTile(pos, size, tileInfo, WHITE, 0, false, CLEAR_BLACK, useWebGL);
+        this.draw(pos, this.size, this.angle, this.color, this.mirror, this.additiveColor);
     }
 
     /** Draw all the tile data to an offscreen canvas
-     *  - This may be slow in some browsers but only needs to be done once */
+     *  - This may be slow if not using webgl but only needs to be done once */
     redraw()
     {
         this.redrawStart(true);
@@ -6188,16 +6139,16 @@ class TileLayer extends CanvasLayer
         for (let y = this.size.y; y--;)
             this.drawTileData(vec2(x,y), false);
         this.redrawEnd();
-        this.useWebGL();
     }
 
     /** Call to start the redraw process
-     *  - This can be used to manually update small parts of the level
+     *  - This can be used to manually update parts of the level
      *  @param {boolean} [clear] - Should it clear the canvas before drawing */
     redrawStart(clear=false)
     {
         if (!this.context) return;
-
+        ASSERT(drawContext !== this.context);
+        
         // save current render settings
         /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, Color]} */
         this.savedRenderSettings = [drawContext, mainCanvasSize, cameraPos, cameraScale, canvasClearColor];
@@ -6205,12 +6156,22 @@ class TileLayer extends CanvasLayer
         // set the draw canvas and context to this layer
         // use camera settings to match this layer's canvas
         drawContext = this.context;
-        cameraPos = this.size.scale(.5);
         const tileSize = this.tileInfo?.size ?? vec2(1);
-        cameraScale = tileSize.x;
-        canvasClearColor = CLEAR_BLACK;
         mainCanvasSize = this.size.multiply(tileSize);
-        if (clear)
+        canvasClearColor = CLEAR_BLACK;
+        cameraPos = this.size.multiply(tileSize).scale(.5);
+        cameraScale = 1;
+
+        // create webgl texture
+        if (glEnable && !this.hasWebGL())
+        {
+            this.textureInfo.createWebGLTexture();
+            clear = false; // no need to clear if just created
+        }
+        const useWebGL = this.hasWebGL();
+        if (useWebGL)
+            glSetRenderTarget(this.textureInfo.glTexture, clear);
+        else if (clear)
         {
             // clear and set size
             this.canvas.width  = mainCanvasSize.x;
@@ -6219,19 +6180,16 @@ class TileLayer extends CanvasLayer
 
         // disable smoothing for pixel art
         drawContext.imageSmoothingEnabled = !tilesPixelated;
-
-        // setup gl rendering if enabled
-        glPreRender();
     }
 
     /** Call to end the redraw process */
     redrawEnd()
     {
         if (!this.context) return;
+        ASSERT(drawContext === this.context);
 
-        ASSERT(drawContext === this.context, 'must call redrawStart() before drawing tiles');
-        glCopyToContext(drawContext);
-        //saveCanvas(this.canvas);
+        if (glEnable && this.textureInfo.glTexture)
+            glSetRenderTarget();
 
         // set stuff back to normal
         [drawContext, mainCanvasSize, cameraPos, cameraScale, canvasClearColor] = this.savedRenderSettings;
@@ -6246,23 +6204,75 @@ class TileLayer extends CanvasLayer
     drawTileData(layerPos, clear=true)
     {
         if (!this.context) return;
+        ASSERT(drawContext === this.context, 'must call redrawStart() before drawing tiles');
         
-        // clear out where the tile was, for full opaque tiles this can be skipped
-        const s = this.tileInfo.size;
-        if (clear)
-        {
-            const pos = layerPos.multiply(s);
-            this.context.clearRect(pos.x, this.canvas.height-pos.y, s.x, -s.y);
-        }
+        // clear out where the tile was, can be skipped for fully opaque tiles
+        const drawSize = this.tileInfo?.size ?? vec2(1);
+        const drawPos = layerPos.multiply(drawSize);
+        clear && this.clearLayerRect(drawPos, drawSize);
 
         // draw the tile if it has layer data
         const d = this.getData(layerPos);
         if (!d.tile) return;
-        
-        ASSERT(drawContext === this.context, 'must call redrawStart() before drawing tiles');
-        const pos = layerPos.add(vec2(.5));
+
         const tileInfo = this.tileInfo && this.tileInfo.tile(d.tile);
-        drawTile(pos, vec2(1), tileInfo, d.color, d.direction*PI/2, d.mirror);
+        this.drawLayerTile(drawPos, drawSize, tileInfo, d.color, d.direction*PI/2, d.mirror);
+    }
+
+    /** Draw the tile at a given position in the tile grid
+     *  This can be used to clear tiles when they are destroyed
+     *  For better performance use drawTileData inside a redrawStart/End block
+     *  @param {Vector2} layerPos
+     *  @param {boolean} [clear] - should the old tile be cleared
+     */
+    redrawTileData(layerPos, clear=true)
+    {
+        if (!this.context) return;
+        ASSERT(drawContext !== this.context, 'redrawStart() should not be active when calling redrawTileData(), instead use drawTileData()');
+
+        this.redrawStart();
+        this.drawTileData(layerPos, clear);
+        this.redrawEnd();
+    }
+
+    /** Draw textured tile in layer space
+     *  @param {Vector2}  pos - Position in pixel coordinates
+     *  @param {Vector2}  [size=vec2(1)] - Size of the tile
+     *  @param {TileInfo} [tileInfo] - Tile info to use, untextured if undefined
+     *  @param {Color}    [color=WHITE] - Color to modulate with
+     *  @param {number}   [angle] - Angle to rotate by
+     *  @param {boolean}  [mirror] - Is image flipped along the Y axis?
+     *  @param {Color}    [additiveColor] - Additive color to be applied if any */
+    drawLayerTile(pos, size=vec2(1), tileInfo, color=WHITE,
+    angle=0, mirror, additiveColor)
+    {
+        const drawPos = pos.add(size.scale(.5));
+        drawTile(drawPos, size, tileInfo, color, angle, mirror, additiveColor);
+    }
+
+    /** Clear a rectangle in layer space
+     *  @param {Vector2} pos
+     *  @param {Vector2} size
+     *  @param {Color} [color] - Color to modulate with
+     *  @param {number} [angle] - Angle to rotate by
+     */
+    drawLayerRect(pos, size, color, angle)
+    { this.drawLayerTile(pos, size, undefined, color, angle); }
+
+    /** Clear a rectangle in layer space
+     *  @param {Vector2} pos - position in pixel coordinates
+     *  @param {Vector2} size
+     */
+    clearLayerRect(pos, size)
+    {
+        ASSERT(drawContext === this.context, 'must call redrawStart() before clearing tiles');
+
+        const x = pos.x, y = this.canvas.height - pos.y - size.y;
+        const useWebGL = this.hasWebGL();
+        if (useWebGL)
+            glClearRect(x, y, size.x, size.y);
+        else
+            this.context.clearRect(x, y, size.x, size.y);
     }
 }
 
@@ -6271,7 +6281,6 @@ class TileLayer extends CanvasLayer
  * Tile Collision Layer - a tile layer with collision
  * - adds collision data and functions to TileLayer
  * - there can be multiple tile collision layers
- * - tile collision layers should not overlap each other
  * @extends TileLayer
  * @memberof TileLayers
  */
@@ -7026,7 +7035,7 @@ let glContext;
 let glAntialias = true;
 
 // WebGL internal variables not exposed to documentation
-let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos, glCanBeEnabled = true, glInstancedVAO, glPolyVAO;
+let glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glCanBeEnabled = true;
 
 // WebGL internal constants
 const gl_ARRAY_BUFFER_SIZE = 5e5;
@@ -7198,6 +7207,9 @@ function glInit(rootElement)
         offset = 0, shader = glPolyShader, stride = gl_POLY_VERTEX_BYTE_STRIDE;
         initVertexAttrib('p', glContext.FLOAT, 4, 2);         // position
         initVertexAttrib('c', glContext.UNSIGNED_BYTE, 1, 4); // color
+
+        // create a frame buffer object
+        glFramebuffer = glContext.createFramebuffer();
     }
 }
 
@@ -7225,15 +7237,25 @@ function glSetPolyMode()
 
 // Setup WebGL render each frame, called automatically by engine
 // Also used by tile layer rendering when redrawing tiles
-function glPreRender()
+function glPreRender(clear=true)
 {
     if (!glEnable || !glContext) return;
 
-    // clear the canvas
-    glClearCanvas();
+    ASSERT(!glBatchCount, 'glPreRender called with unflushed batch.');
+
+    if (!glRenderTarget)
+    {
+        // set to same size as main canvas
+        glCanvas.width = mainCanvasSize.x;
+        glCanvas.height = mainCanvasSize.y;
+    }
+    glContext.viewport(0, 0, mainCanvasSize.x, mainCanvasSize.y);
+    clear && glClearCanvas();
 
     // build the transform matrix
     const s = vec2(2*cameraScale).divide(mainCanvasSize);
+    if (glRenderTarget)
+        s.y = -s.y; // invert y when using render target
     const rotatedCam = cameraPos.rotate(-cameraAngle);
     const p = vec2(-1).subtract(rotatedCam.multiply(s));
     const ca = cos(cameraAngle);
@@ -7278,10 +7300,7 @@ function glClearCanvas()
 {
     if (!glContext) return;
 
-    // clear and set to same size as main canvas
-    glCanvas.width = mainCanvasSize.x;
-    glCanvas.height = mainCanvasSize.y;
-    glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
+    // clear using the canvasClearColor
     const color = canvasClearColor;
     glContext.clearColor(color.r, color.g, color.b, color.a);
     glContext.clear(glContext.COLOR_BUFFER_BIT);
@@ -7629,6 +7648,48 @@ function glDrawColoredPoints(points, pointColors)
     }
     glBatchCount += vertCount;
 }
+
+/** Set the WebGL render target to the given texture or back to the canvas
+ *  @param {WebGLTexture} [texture] - a texture or undefined to use normal glCanvas
+ *  @param {boolean} [clear] - should the render target be cleared
+ *  @memberof WebGL */
+function glSetRenderTarget(texture, clear=false)
+{
+    if (texture)
+    {
+        glRenderTarget = texture;
+        glContext.bindFramebuffer(glContext.FRAMEBUFFER, glFramebuffer);
+        glContext.framebufferTexture2D(glContext.FRAMEBUFFER, 
+            glContext.COLOR_ATTACHMENT0, glContext.TEXTURE_2D, texture, 0);
+       glPreRender(clear);
+    }
+    else
+    {
+        glFlush();
+        glRenderTarget = undefined;
+        glContext.bindFramebuffer(glContext.FRAMEBUFFER, null);
+    }
+}
+
+/** Clear out a rectangle area of the WebGL canvas or render target
+ *  @param {number} x
+ *  @param {number} y
+ *  @param {number} width
+ *  @param {number} height
+ *  @memberof WebGL */
+function glClearRect(x, y, width, height)
+{
+    if (!glEnable) return;
+
+    // Enable scissor test to clear only the specified area
+    glContext.enable(glContext.SCISSOR_TEST);
+    glContext.scissor(x, y, width, height);
+    glContext.clearColor(0, 0, 0, 0);
+    glContext.clear(glContext.COLOR_BUFFER_BIT);
+    glContext.disable(glContext.SCISSOR_TEST);
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 // WebGL internal function to convert polygon to outline triangle strip
 function glMakeOutline(points, width, wrap=true)

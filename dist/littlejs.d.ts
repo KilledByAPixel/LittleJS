@@ -1608,7 +1608,7 @@ declare module "littlejsengine" {
      *  @return {[Vector2, Vector2, number]} - [pos, size, angle]
      *  @memberof Draw */
     export function screenToWorldTransform(screenPos: Vector2, screenSize: Vector2, screenAngle?: number): [Vector2, Vector2, number];
-    /** Draw textured tile centered in world space, with color applied if using WebGL
+    /** Draw textured tile centered in world space
      *  @param {Vector2}  pos - Center of the tile in world space
      *  @param {Vector2}  [size=vec2(1)] - Size of the tile in world space
      *  @param {TileInfo} [tileInfo] - Tile info to use, untextured if undefined
@@ -1938,6 +1938,18 @@ declare module "littlejsengine" {
      *  @param {Array<number>} pointColors - Array of 32-bit integer colors
      *  @memberof WebGL */
     export function glDrawColoredPoints(points: Array<Vector2>, pointColors: Array<number>): void;
+    /** Set the WebGL render target to the given texture or back to the canvas
+     *  @param {WebGLTexture} [texture] - a texture or undefined to use normal glCanvas
+     *  @param {boolean} [clear] - should the render target be cleared
+     *  @memberof WebGL */
+    export function glSetRenderTarget(texture?: WebGLTexture, clear?: boolean): void;
+    /** Clear out a rectangle area of the WebGL canvas or render target
+     *  @param {number} x
+     *  @param {number} y
+     *  @param {number} width
+     *  @param {number} height
+     *  @memberof WebGL */
+    export function glClearRect(x: number, y: number, width: number, height: number): void;
     /** Returns true if device key is down
      *  @param {string|number} key
      *  @param {number} [device]
@@ -2480,14 +2492,14 @@ declare module "littlejsengine" {
         /** Convert from world space to local space for a vector (rotation only)
          *  @param {Vector2} vec - world space vector */
         worldToLocalVector(vec: Vector2): Vector2;
-        /** Called to check if a tile collision should be resolved
+        /** Called to check if a tile collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
          *  @param {number}  tileData - the value of the tile at the position
-         *  @param {Vector2} pos      - tile where the collision occurred
-         *  @return {boolean}         - true if the collision should be resolved */
+         *  @param {Vector2} pos - tile where the collision occurred
+         *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity */
         collideWithTile(tileData: number, pos: Vector2): boolean;
-        /** Called to check if a object collision should be resolved
+        /** Called by the engine to check if an object collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
          *  @param {EngineObject} object - the object to test against
-         *  @return {boolean}            - true if the collision should be resolved
+         *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity
          */
         collideWithObject(object: EngineObject): boolean;
         /** Get this object's up vector
@@ -2624,7 +2636,7 @@ declare module "littlejsengine" {
     /**
      * Canvas Layer - cached off screen rendering system
      * - Contains an offscreen canvas that can be rendered to
-     * - WebGL rendering is optional, call useWebGL to enable
+     * - WebGL rendering is optional, call updateWebGL to enable/update
      * @extends EngineObject
      * @memberof TileLayers
      * @example
@@ -2644,8 +2656,6 @@ declare module "littlejsengine" {
         /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this layer */
         context: OffscreenCanvasRenderingContext2D;
         textureInfo: TextureInfo;
-        /** @property {boolean} - True if WebGL texture needs to be refreshed */
-        refreshWebGL: boolean;
         /** Draw this canvas layer centered in world space, with color applied if using WebGL
         *  @param {Vector2} pos - Center in world space
         *  @param {Vector2} [size] - Size in world space
@@ -2657,37 +2667,25 @@ declare module "littlejsengine" {
         *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
         *  @memberof Draw */
         draw(pos: Vector2, size?: Vector2, angle?: number, color?: Color, mirror?: boolean, additiveColor?: Color, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
-        /**
-         * @callback Canvas2DDrawCallback - Function that draws to a canvas 2D context
-         * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
-         * @memberof TileLayers
-         */
-        /** Draw onto the layer canvas in world space (bypass WebGL)
-         *  @param {Vector2}  pos
-         *  @param {Vector2}  size
-         *  @param {number}   angle
-         *  @param {boolean}  mirror
-         *  @param {Canvas2DDrawCallback} drawFunction */
-        drawCanvas2D(pos: Vector2, size: Vector2, angle: number, mirror: boolean, drawFunction: (context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D) => any): void;
         /** Draw a tile onto the layer canvas in world space
          *  @param {Vector2}  pos
          *  @param {Vector2}  [size=vec2(1)]
          *  @param {TileInfo} [tileInfo]
          *  @param {Color}    [color=WHITE]
-         *  @param {number}   [angle=0]
-         *  @param {boolean}  [mirror=false] */
+         *  @param {number}   [angle]
+         *  @param {boolean}  [mirror] */
         drawTile(pos: Vector2, size?: Vector2, tileInfo?: TileInfo, color?: Color, angle?: number, mirror?: boolean): void;
         /** Draw a rectangle onto the layer canvas in world space
          *  @param {Vector2} pos
          *  @param {Vector2} [size=vec2(1)]
          *  @param {Color}   [color=WHITE]
-         *  @param {number}  [angle=0] */
+         *  @param {number}  [angle] */
         drawRect(pos: Vector2, size?: Vector2, color?: Color, angle?: number): void;
-        /** Create or update the WebGL texture for this layer
-         *  @param {boolean} [enable] - enable WebGL rendering and update the texture
-         *  @param {boolean} [immediate] - shoulkd the texture be updated immediately
-         */
-        useWebGL(enable?: boolean, immediate?: boolean): void;
+        /** Create WebGL texture if necessary and copy layer canvas to it */
+        updateWebGL(): void;
+        /** Check if this layer is using WebGL
+         *  @return {boolean} */
+        hasWebGL(): boolean;
     }
     /**
      * Tile Layer - cached rendering system for tile layers
@@ -2709,12 +2707,13 @@ declare module "littlejsengine" {
         *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
         */
         constructor(position: Vector2, size: Vector2, tileInfo?: TileInfo, renderOrder?: number);
+        /** @property {Array<TileLayerData>} - Default tile info for layer */
         data: TileLayerData[];
         /** Draw all the tile data to an offscreen canvas
-         *  - This may be slow in some browsers but only needs to be done once */
+         *  - This may be slow if not using webgl but only needs to be done once */
         redraw(): void;
         /** Call to start the redraw process
-         *  - This can be used to manually update small parts of the level
+         *  - This can be used to manually update parts of the level
          *  @param {boolean} [clear] - Should it clear the canvas before drawing */
         redrawStart(clear?: boolean): void;
         /** Call to end the redraw process */
@@ -2726,6 +2725,34 @@ declare module "littlejsengine" {
          *  @param {boolean} [clear] - should the old tile be cleared out
          */
         drawTileData(layerPos: Vector2, clear?: boolean): void;
+        /** Draw the tile at a given position in the tile grid
+         *  This can be used to clear tiles when they are destroyed
+         *  For better performance use drawTileData inside a redrawStart/End block
+         *  @param {Vector2} layerPos
+         *  @param {boolean} [clear] - should the old tile be cleared
+         */
+        redrawTileData(layerPos: Vector2, clear?: boolean): void;
+        /** Draw textured tile in layer space
+         *  @param {Vector2}  pos - Position in pixel coordinates
+         *  @param {Vector2}  [size=vec2(1)] - Size of the tile
+         *  @param {TileInfo} [tileInfo] - Tile info to use, untextured if undefined
+         *  @param {Color}    [color=WHITE] - Color to modulate with
+         *  @param {number}   [angle] - Angle to rotate by
+         *  @param {boolean}  [mirror] - Is image flipped along the Y axis?
+         *  @param {Color}    [additiveColor] - Additive color to be applied if any */
+        drawLayerTile(pos: Vector2, size?: Vector2, tileInfo?: TileInfo, color?: Color, angle?: number, mirror?: boolean, additiveColor?: Color): void;
+        /** Clear a rectangle in layer space
+         *  @param {Vector2} pos
+         *  @param {Vector2} size
+         *  @param {Color} [color] - Color to modulate with
+         *  @param {number} [angle] - Angle to rotate by
+         */
+        drawLayerRect(pos: Vector2, size: Vector2, color?: Color, angle?: number): void;
+        /** Clear a rectangle in layer space
+         *  @param {Vector2} pos - position in pixel coordinates
+         *  @param {Vector2} size
+         */
+        clearLayerRect(pos: Vector2, size: Vector2): void;
         /** Set data at a given position in the array
          *  @param {Vector2}       layerPos - Local position in array
          *  @param {TileLayerData} data - Data to set
@@ -2742,7 +2769,6 @@ declare module "littlejsengine" {
      * Tile Collision Layer - a tile layer with collision
      * - adds collision data and functions to TileLayer
      * - there can be multiple tile collision layers
-     * - tile collision layers should not overlap each other
      * @extends TileLayer
      * @memberof TileLayers
      */
