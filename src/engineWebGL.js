@@ -653,7 +653,7 @@ function glSetRenderTarget(texture, clear=false)
         glContext.bindFramebuffer(glContext.FRAMEBUFFER, glFramebuffer);
         glContext.framebufferTexture2D(glContext.FRAMEBUFFER, 
             glContext.COLOR_ATTACHMENT0, glContext.TEXTURE_2D, texture, 0);
-       glPreRender(clear);
+        glPreRender(clear);
     }
     else
     {
