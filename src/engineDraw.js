@@ -236,7 +236,7 @@ class TextureInfo
 ///////////////////////////////////////////////////////////////////////////////
 // Drawing functions
 
-/** Draw textured tile centered in world space, with color applied if using WebGL
+/** Draw textured tile centered in world space
  *  @param {Vector2}  pos - Center of the tile in world space
  *  @param {Vector2}  [size=vec2(1)] - Size of the tile in world space
  *  @param {TileInfo} [tileInfo] - Tile info to use, untextured if undefined
@@ -248,7 +248,7 @@ class TextureInfo
  *  @param {boolean}  [screenSpace=false] - Are the pos and size are in screen space?
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
  *  @memberof Draw */
-function drawTile(pos, size=new Vector2(1), tileInfo, color=WHITE,
+function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
     angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace, context)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
@@ -873,10 +873,9 @@ function isOnScreen(pos, size=0)
  *  @param {boolean} [additive]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function setBlendMode(additive=false, context)
+function setBlendMode(additive=false, context=drawContext)
 {
     glAdditive = additive;
-    context ||= drawContext;
     context.globalCompositeOperation = additive ? 'lighter' : 'source-over';
 }
 
