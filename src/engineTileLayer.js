@@ -190,7 +190,7 @@ class CanvasLayer extends EngineObject
      *  @param {Vector2}  [canvasSize] - Default size of canvas, can be changed later
      *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
     */
-    constructor(position, size, angle=0, renderOrder=0, canvasSize=vec2(512), useWebGL=glEnable)
+    constructor(position, size, angle=0, renderOrder=0, canvasSize=vec2(512), useWebGL=true)
     {
         ASSERT(isVector2(canvasSize), 'canvasSize must be a Vector2');
         super(position, size, undefined, angle, WHITE, renderOrder);
@@ -301,11 +301,11 @@ class TileLayer extends CanvasLayer
     *  @param {Vector2}  size - World space size
     *  @param {TileInfo} [tileInfo] - Default tile info for layer (used for size and texture)
     *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
+    *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
     */
-    constructor(position, size, tileInfo=tile(), renderOrder=0)
+    constructor(position, size, tileInfo=tile(), renderOrder=0, useWebGL=true)
     {
         const canvasSize = tileInfo ? size.multiply(tileInfo.size) : size;
-        const useWebGL = true;
         super(position, size, 0, renderOrder, canvasSize, useWebGL);
         
         /** @property {TileInfo} - Default tile info for layer */
@@ -401,7 +401,7 @@ class TileLayer extends CanvasLayer
         for (let x = this.size.x; x--;)
         for (let y = this.size.y; y--;)
             this.drawTileData(vec2(x,y), false);
-        this.hasWebGL() && glFlush();
+        this.isUsingWebGL && glFlush();
         this.onRedraw();
         this.redrawEnd();
     }
@@ -450,10 +450,9 @@ class TileLayer extends CanvasLayer
         if (!this.context) return;
         ASSERT(drawContext === this.context);
 
-        if (glEnable && this.textureInfo.glTexture)
-            glSetRenderTarget();
-
         // set stuff back to normal
+        if (this.isUsingWebGL)
+            glSetRenderTarget();
         [drawContext, mainCanvasSize, cameraPos, cameraScale, canvasClearColor] = this.savedRenderSettings;
     }
 
@@ -509,7 +508,7 @@ class TileLayer extends CanvasLayer
     angle=0, mirror, additiveColor)
     {
         const drawPos = pos.add(size.scale(.5));
-        drawTile(drawPos, size, tileInfo, color, angle, mirror, additiveColor);
+        drawTile(drawPos, size, tileInfo, color, angle, mirror, additiveColor, this.isUsingWebGL);
     }
 
     /** Clear a rectangle in layer space
@@ -553,10 +552,11 @@ class TileCollisionLayer extends TileLayer
     *  @param {Vector2}  size          - World space size
     *  @param {TileInfo} [tileInfo]    - Tile info for layer
     *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
+    *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
     */
-    constructor(position, size, tileInfo=tile(), renderOrder=0)
+    constructor(position, size, tileInfo=tile(), renderOrder=0, useWebGL=true)
     {
-        super(position, size.floor(), tileInfo, renderOrder);
+        super(position, size.floor(), tileInfo, renderOrder, useWebGL);
 
         /** @property {Array<number>} - The tile collision grid */
         this.collisionData = [];
