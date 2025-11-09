@@ -2707,8 +2707,9 @@ declare module "littlejsengine" {
         *  @param {Vector2}  size - World space size
         *  @param {TileInfo} [tileInfo] - Default tile info for layer (used for size and texture)
         *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
+        *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
         */
-        constructor(position: Vector2, size: Vector2, tileInfo?: TileInfo, renderOrder?: number);
+        constructor(position: Vector2, size: Vector2, tileInfo?: TileInfo, renderOrder?: number, useWebGL?: boolean);
         /** @property {Array<TileLayerData>} - Default tile info for layer */
         data: TileLayerData[];
         /** @property {boolean} - Is this layer using a webgl texture? */
