@@ -89,7 +89,7 @@ function gameInit()
                 
             // create new sound from dropped file
             const fileURL = URL.createObjectURL(file);
-            musicSound = new SoundWave(fileURL, musicVolume);
+            musicSound = new Sound(fileURL, musicVolume);
             dropZoneText.text = file.name;
             
             // reset UI

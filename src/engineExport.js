@@ -315,7 +315,6 @@ export
     audioMasterGain,
     audioDefaultSampleRate,
     Sound,
-    SoundWave,
     SoundInstance,
     speak,
     speakStop,

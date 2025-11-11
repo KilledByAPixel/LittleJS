@@ -44,29 +44,46 @@ function audioInit()
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
- * Sound Object - Stores a sound for later use and can be played positionally
+ * Sound Object - Stores a sound for later
+ * - this can be used to load and play wave, mp3, and ogg files
+ * - it can also create sounds using the ZzFX sound generator
+ * - can attenuate and apply stereo panning to sounds
+ * - sound instance control with pause/resume capability
  *
  * <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
  * @memberof Audio
  * @example
- * // create a sound
+ * // load an audio asset file
+ * const sound_example = new Sound('sound.mp3');
+ *
+ * // create a zzfx sound
  * const sound_example = new Sound([.5,.5]);
  *
- * // play the sound
+ * // play a sound
  * sound_example.play();
  */
 class Sound
 {
-    /** Create a sound object and cache the zzfx samples for later use
-     *  @param {Array}  zzfxSound - Array of zzfx parameters, ex. [.5,.5]
+    /**
+     * @callback SoundLoadCallback - Function called when sound is loaded
+     * @param {Sound} sound
+     * @memberof Audio
+     */
+    
+    /** Create a sound object and cache the audio for later use
+     *  @param {string|Array} asset - Filename of audio file or zzfx array
+     *  @param {number} [randomness] - How much to randomize frequency each time sound plays, for zzfx sounds the zzfx default is used if undefined
      *  @param {number} [range=soundDefaultRange] - World space max range of sound
      *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
+     *  @param {SoundLoadCallback} [onloadCallback] - callback function to call when sound is loaded
      */
-    constructor(zzfxSound, range=soundDefaultRange, taper=soundDefaultTaper)
+    constructor(asset, randomness, range=soundDefaultRange, taper=soundDefaultTaper, onloadCallback)
     {
         if (!soundEnable || headlessMode) return;
 
-        ASSERT(!zzfxSound || isArray(zzfxSound), 'zzfxSound is invalid');
+        ASSERT(!asset || isArray(asset) || isString(asset), 'asset must be a file name or zzfx array');
+        ASSERT(randomness === undefined || isNumber(randomness), 'randomness must be a number');
+        ASSERT(randomness === undefined || randomness >= 0 && randomness <=1, 'randomness must be between 0 and 1');
         ASSERT(isNumber(range), 'range must be a number');
         ASSERT(isNumber(taper), 'taper must be a number');
 
@@ -75,23 +92,35 @@ class Sound
         /** @property {number} - At what percentage of range should it start tapering */
         this.taper = taper;
         /** @property {number} - How much to randomize frequency each time sound plays */
-        this.randomness = 0;
+        this.randomness = randomness || 0;
         /** @property {number} - Sample rate for this sound */
         this.sampleRate = audioDefaultSampleRate;
         /** @property {number} - Percentage of this sound currently loaded */
         this.loadedPercent = 0;
+        /** @property {SoundLoadCallback} - function to call when sound is loaded */
+        this.onloadCallback = onloadCallback;
 
-        // generate zzfx sound now for fast playback
-        if (zzfxSound)
+        if (Array.isArray(asset))
         {
+            // generate zzfx sound
+            const zzfxSound = asset;
+
             // remove randomness so it can be applied on playback
-            const randomnessIndex = 1, defaultRandomness = .05;
+            const defaultRandomness = randomness ?? .05;
+            const randomnessIndex = 1;
             this.randomness = zzfxSound[randomnessIndex] ?? defaultRandomness;
             zzfxSound[randomnessIndex] = 0;
 
             // generate the zzfx samples
             this.sampleChannels = [zzfxG(...zzfxSound)];
             this.loadedPercent = 1;
+            onloadCallback?.(this);
+        }
+        else if (typeof asset === 'string')
+        {
+            // load the audio file
+            const filename = asset;
+            this.loadSound(filename);
         }
     }
 
@@ -172,51 +201,8 @@ class Sound
      *  @return {boolean} - True if sound is loaded and ready to play
      */
     isLoaded() { return this.loadedPercent === 1; }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-/**
- * Sound Wave Object - Loads and stores an audio file for later use
- * - this can be used to load and play wave, mp3, and ogg files
- * @extends Sound
- * @memberof Audio
- * @example
- * // load an audio asset file
- * const sound_example = new SoundWave('sound.mp3');
- *
- * // play the sound
- * sound_example.play();
- */
-class SoundWave extends Sound
-{
-    /**
-     * @callback SoundLoadCallback - Function called when sound is loaded
-     * @param {SoundWave} sound
-     * @memberof Audio
-     */
     
-    /** Create a sound object and cache the wave file for later use
-     *  @param {string} filename - Filename of audio file to load
-     *  @param {number} [randomness] - How much to randomize frequency each time sound plays
-     *  @param {number} [range=soundDefaultRange] - World space max range of sound
-     *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
-     *  @param {SoundLoadCallback} [onloadCallback] - callback function to call when sound is loaded
-     */
-    constructor(filename, randomness=0, range, taper, onloadCallback)
-    {
-        super(undefined, range, taper);
-        if (!soundEnable || headlessMode) return;
-        ASSERT(!filename || isString(filename), 'filename must be a string');
-        ASSERT(isNumber(randomness), 'randomness must be a number');
-
-        /** @property {SoundLoadCallback} - callback function to call when sound is loaded */
-        this.onloadCallback = onloadCallback;
-        this.randomness = randomness;
-        filename && this.loadSound(filename);
-    }
-
-    /** Loads a sound from a URL and decodes it into sample data. Must be used with await!
+    /** Loads a sound from a URL and decodes it into sample data.
     *  @param {string} filename
     *  @return {Promise<void>} */
     async loadSound(filename)

@@ -205,8 +205,8 @@ tileDefaultBleed = .3     // How much smaller to draw tiles to prevent bleeding
 
 ```javascript
 // Sound Object
-Sound(zzfxSound, range, taper)                         // Create a zzfx sound
-SoundWave(filename, randomness=0, range, taper)        // Load a wave, mp3, or ogg
+Sound(zzfxSound, randomness, range, taper)             // Create a zzfx sound
+Sound(filename, randomness, range, taper)              // Load a wave, mp3, or ogg
 Sound.play(pos, volume=1, pitch=1, randomness=1, loop) // Play a sound, returns SoundInstance
 Sound.playMusic(volume=1, loop=true)                   // Play as music with looping
 Sound.playNote(semitoneOffset, pos, volume=1)          // Play as note with a semitone offset

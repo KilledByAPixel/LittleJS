@@ -1,4 +1,4 @@
-const musicSound = new SoundWave('song.mp3');
+const musicSound = new Sound('song.mp3');
 let musicVolume = 1, musicInstance;
 
 function gameInit()
