@@ -3,10 +3,10 @@ const maxHitDistance = 6;
 
 class Ball extends Box2dObject
 {
-    constructor(position, number=0)
+    constructor(pos, number=0)
     {
         const color = hsl(number/9, 1, number? .5 : 1);
-        super(position, vec2(), 0, 0, color);
+        super(pos, vec2(), 0, 0, color);
         this.number = number;
 
         // setup pool ball physics

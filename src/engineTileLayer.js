@@ -183,17 +183,17 @@ class TileLayerData
 class CanvasLayer extends EngineObject
 {
     /** Create a canvas layer object
-     *  @param {Vector2}  [position] - World space position of the layer
+     *  @param {Vector2}  [pos] - World space position of the layer
      *  @param {Vector2}  [size] - World space size of the layer
      *  @param {number}   [angle] - Angle the layer is rotated by
      *  @param {number}   [renderOrder] - Objects sorted by renderOrder
      *  @param {Vector2}  [canvasSize] - Default size of canvas, can be changed later
      *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
     */
-    constructor(position, size, angle=0, renderOrder=0, canvasSize=vec2(512), useWebGL=true)
+    constructor(pos, size, angle=0, renderOrder=0, canvasSize=vec2(512), useWebGL=true)
     {
         ASSERT(isVector2(canvasSize), 'canvasSize must be a Vector2');
-        super(position, size, undefined, angle, WHITE, renderOrder);
+        super(pos, size, undefined, angle, WHITE, renderOrder);
 
         /** @property {HTMLCanvasElement} - The canvas used by this layer */
         this.canvas = headlessMode ? undefined : new OffscreenCanvas(canvasSize.x, canvasSize.y);
@@ -297,16 +297,16 @@ class CanvasLayer extends EngineObject
 class TileLayer extends CanvasLayer
 {
     /** Create a tile layer object
-    *  @param {Vector2}  position - World space position
+    *  @param {Vector2}  pos - World space position
     *  @param {Vector2}  size - World space size
     *  @param {TileInfo} [tileInfo] - Default tile info for layer (used for size and texture)
     *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
     *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
     */
-    constructor(position, size, tileInfo=tile(), renderOrder=0, useWebGL=true)
+    constructor(pos, size, tileInfo=tile(), renderOrder=0, useWebGL=true)
     {
         const canvasSize = tileInfo ? size.multiply(tileInfo.size) : size;
-        super(position, size, 0, renderOrder, canvasSize, useWebGL);
+        super(pos, size, 0, renderOrder, canvasSize, useWebGL);
         
         /** @property {TileInfo} - Default tile info for layer */
         this.tileInfo = undefined;
@@ -548,15 +548,15 @@ class TileLayer extends CanvasLayer
 class TileCollisionLayer extends TileLayer
 {
     /** Create a tile layer object
-    *  @param {Vector2}  position      - World space position
-    *  @param {Vector2}  size          - World space size
-    *  @param {TileInfo} [tileInfo]    - Tile info for layer
+    *  @param {Vector2}  pos - World space position
+    *  @param {Vector2}  size - World space size
+    *  @param {TileInfo} [tileInfo] - Tile info for layer
     *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
     *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
     */
-    constructor(position, size, tileInfo=tile(), renderOrder=0, useWebGL=true)
+    constructor(pos, size, tileInfo=tile(), renderOrder=0, useWebGL=true)
     {
-        super(position, size.floor(), tileInfo, renderOrder, useWebGL);
+        super(pos, size.floor(), tileInfo, renderOrder, useWebGL);
 
         /** @property {Array<number>} - The tile collision grid */
         this.collisionData = [];
