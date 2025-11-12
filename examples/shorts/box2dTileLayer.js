@@ -1,4 +1,4 @@
-let tileLayer;
+let box2DTileLayer;
 
 async function gameInit()
 {
@@ -10,7 +10,7 @@ async function gameInit()
 
     // create tile layer
     const pos = vec2();
-    tileLayer = new Box2dTileLayer(pos, vec2(32));
+    const tileLayer = new TileCollisionLayer(pos, vec2(32));
     for (pos.x = tileLayer.size.x; pos.x--;)
     for (pos.y = tileLayer.size.y; pos.y--;)
     {
@@ -28,7 +28,7 @@ async function gameInit()
         tileLayer.setCollisionData(pos);
     }
     tileLayer.redraw(); // redraw tile layer with new data
-    tileLayer.buildCollision(); // create box2d collision from tile layer
+    box2DTileLayer = new Box2dTileLayer(tileLayer);
 }
 
 function gameUpdate()
@@ -36,9 +36,9 @@ function gameUpdate()
     if (mouseWasPressed(0))
     {
         // clear tile that was clicked
-        tileLayer.clearData(mousePos, true);
-        tileLayer.clearCollisionData(mousePos);
-        tileLayer.buildCollision();
+        box2DTileLayer.tileLayer.clearData(mousePos, true);
+        box2DTileLayer.tileLayer.clearCollisionData(mousePos);
+        box2DTileLayer.buildCollision();
 
         // spawn box2d object at mouse position
         const o = new Box2dObject(mousePos, vec2(), 0, 0, randColor());
