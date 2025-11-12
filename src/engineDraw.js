@@ -258,7 +258,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
     ASSERT(!additiveColor || isColor(additiveColor), 'additiveColor must be a color');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
-    const textureInfo = tileInfo && tileInfo.textureInfo;
+    const textureInfo = tileInfo?.textureInfo;
     const bleed = tileInfo?.bleed ?? 0;
     if (useWebGL && glEnable)
     {
@@ -564,8 +564,11 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
     ASSERT(isColor(color) && isColor(lineColor), 'color is invalid');
     ASSERT(isNumber(angle), 'angle must be a number');
     ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
-    ASSERT(lineWidth >= 0 && lineWidth < size.x && lineWidth < size.y, 'invalid lineWidth');
+    ASSERT(lineWidth >= 0, 'lineWidth must be a positive value or 0');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+
+    // clamp line width to prevent artifacts
+    lineWidth = clamp(lineWidth, 0, Math.min(size.x, size.y));
 
     if (useWebGL && glEnable)
     {

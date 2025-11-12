@@ -616,7 +616,7 @@ function inputUpdate()
         // poll gamepads
         const maxGamepads = 8;
         const gamepads = navigator.getGamepads();
-        const gamepadCount = min(maxGamepads, gamepads.length)
+        const gamepadCount = min(maxGamepads, gamepads.length);
         for (let i=0; i<gamepadCount; ++i)
         {
             // get or create gamepad data

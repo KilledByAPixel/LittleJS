@@ -92,7 +92,7 @@ class Sound
         /** @property {number} - At what percentage of range should it start tapering */
         this.taper = taper;
         /** @property {number} - How much to randomize frequency each time sound plays */
-        this.randomness = randomness || 0;
+        this.randomness = randomness ?? 0;
         /** @property {number} - Sample rate for this sound */
         this.sampleRate = audioDefaultSampleRate;
         /** @property {number} - Percentage of this sound currently loaded */
@@ -195,7 +195,7 @@ class Sound
      *  @return {number} - How long the sound is in seconds (undefined if loading)
      */
     getDuration()
-    { return this.sampleChannels?.[0].length / this.sampleRate || 0; }
+    { return this.sampleChannels?.[0]?.length / this.sampleRate || 0; }
 
     /** Check if sound is loaded, for sounds fetched from a url
      *  @return {boolean} - True if sound is loaded and ready to play

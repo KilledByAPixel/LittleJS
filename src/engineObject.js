@@ -277,7 +277,7 @@ class EngineObject
         if (this.collideTiles)
         {
             // check collision against tiles
-            const hitLayer = tileCollisionTest(this.pos, this.size, this)
+            const hitLayer = tileCollisionTest(this.pos, this.size, this);
             if (hitLayer)
             {
                 // if already was stuck in collision, don't do anything
