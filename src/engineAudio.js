@@ -71,7 +71,7 @@ class Sound
      */
     
     /** Create a sound object and cache the audio for later use
-     *  @param {string|Array} asset - Filename of audio file or zzfx array
+     *  @param {string|Array} [asset] - Filename of audio file or zzfx array
      *  @param {number} [randomness] - How much to randomize frequency each time sound plays, for zzfx sounds the zzfx default is used if undefined
      *  @param {number} [range=soundDefaultRange] - World space max range of sound
      *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
@@ -172,7 +172,7 @@ class Sound
      *  @param {number} [volume] - Volume to play the music at
      *  @param {boolean} [loop] - Should the music loop?
      *  @param {boolean} [paused] - Should the music start paused
-     *  @return {SoundInstance} - The audio source node
+     *  @return {SoundInstance} - The sound instance
      */
     playMusic(volume=1, loop=true, paused=false)
     { return this.play(undefined, volume, 1, 0, loop, paused); }
@@ -182,7 +182,7 @@ class Sound
      *  @param {number}  [semitoneOffset=0] - How many semitones to offset pitch
      *  @param {Vector2} [pos] - World space position to play the sound if any
      *  @param {number}  [volume=1] - How much to scale volume by
-     *  @return {SoundInstance} - The audio source node
+     *  @return {SoundInstance} - The sound instance
      */
     playNote(semitoneOffset=0, pos, volume)
     {

@@ -16,25 +16,25 @@
 const PI = Math.PI;
 
 /** Returns absolute value of value passed in
- *  @param {number} value
+ *  @param {number} x
  *  @return {number}
  *  @memberof Math */
 const abs = Math.abs;
 
 /** Returns floored value of value passed in
- *  @param {number} value
+ *  @param {number} x
  *  @return {number}
  *  @memberof Math */
 const floor = Math.floor;
 
 /** Returns ceiled value of value passed in
- *  @param {number} value
+ *  @param {number} x
  *  @return {number}
  *  @memberof Math */
 const ceil = Math.ceil;
 
 /** Returns rounded value passed in
- *  @param {number} value
+ *  @param {number} x
  *  @return {number}
  *  @memberof Math */
 const round = Math.round;
@@ -52,7 +52,7 @@ const min = Math.min;
 const max = Math.max;
 
 /** Returns the sign of value passed in
- *  @param {number} value
+ *  @param {number} x
  *  @return {number}
  *  @memberof Math */
 const sign = Math.sign;
@@ -64,25 +64,25 @@ const sign = Math.sign;
 const hypot = Math.hypot;
 
 /** Returns log2 of value passed in
- *  @param {number} value
+ *  @param {number} x
  *  @return {number}
  *  @memberof Math */
 const log2 = Math.log2;
 
 /** Returns sin of value passed in
- *  @param {number} value
+ *  @param {number} x
  *  @return {number}
  *  @memberof Math */
 const sin = Math.sin;
 
 /** Returns cos of value passed in
- *  @param {number} value
+ *  @param {number} x
  *  @return {number}
  *  @memberof Math */
 const cos = Math.cos;
 
 /** Returns tan of value passed in
- *  @param {number} value
+ *  @param {number} x
  *  @return {number}
  *  @memberof Math */
 const tan = Math.tan;

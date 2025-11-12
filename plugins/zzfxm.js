@@ -55,7 +55,7 @@ class ZzFXMusic extends Sound
     /** Play the music that loops by default
      *  @param {number}  [volume] - Volume to play the music at
      *  @param {boolean} [loop] - Should the music loop?
-     *  @return {AudioBufferSourceNode} - The audio source node
+     *  @return {SoundInstance} - The sound instance
      */
     playMusic(volume=1, loop=true)
     { return super.play(undefined, volume, 1, 0, loop); }

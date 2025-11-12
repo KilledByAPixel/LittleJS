@@ -49,7 +49,7 @@ let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParti
 /** Asserts if the expression is false, does nothing in release builds
  *  Halts execution if the assert fails and throws an error
  *  @param {boolean} assert
- *  @param {...Object} [output] - error message output
+ *  @param {...Object} output - error message output
  *  @memberof Debug */
 function ASSERT(assert, ...output)
 {
@@ -59,7 +59,7 @@ function ASSERT(assert, ...output)
 }
 
 /** Log to console if debug is enabled, does nothing in release builds
- *  @param {...Object} [output] - message output
+ *  @param {...Object} output - message output
  *  @memberof Debug */
 function LOG(...output) { console.log(...output); }
 

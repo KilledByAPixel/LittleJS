@@ -30,7 +30,7 @@ let uiDebug = 0;
 
 /** Enable UI system debug drawing
  *  0=off, 1=normal, 2=show invisible
- *  @param {number|boolean} enable
+ *  @param {number|boolean} debugMode
  *  @memberof UISystem */
 function uiSetDebug(debugMode)
 { uiDebug = typeof debugMode === 'boolean' ? (debugMode ? 1 : 0) : debugMode; }
@@ -1231,8 +1231,8 @@ class UIScrollbar extends UIObject
 class UIVideo extends UIObject
 {
     /** Create a video player UI object
-     *  @param {Vector2} [pos]
-     *  @param {Vector2} [size]
+     *  @param {Vector2} pos
+     *  @param {Vector2} size
      *  @param {string} src - Video file path or URL
      *  @param {boolean} [autoplay=false] - Start playing immediately?
      *  @param {boolean} [loop=false] - Loop the video?
