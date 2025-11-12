@@ -153,7 +153,7 @@ export function destroyTile(pos, makeSound = 1, cleanup = 1)
     makeSound && sound_destroyObject.play(centerPos);
 
     // set and clear tile
-    layer.setData(pos, new LJS.TileLayerData, true);
+    layer.clearData(pos, true);
     layer.setCollisionData(pos, GameLevel.tileType_empty);
 
     // cleanup neighbors and rebuild WebGL

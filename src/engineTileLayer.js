@@ -360,6 +360,12 @@ class TileLayer extends CanvasLayer
         isRedraw ? this.drawTileData(layerPos) : this.redrawTileData(layerPos);
     }
 
+    /** Clear data at a given position in the array
+     *  @param {Vector2} layerPos - Local position in array
+     *  @param {boolean} [redraw] - Force the tile to redraw if true */
+    clearData(layerPos, redraw=false)
+    { this.setData(layerPos, new TileLayerData, redraw=false) }
+
     /** Get data at a given position in the array
      *  @param {Vector2} layerPos - Local position in array
      *  @return {TileLayerData} */
@@ -456,7 +462,7 @@ class TileLayer extends CanvasLayer
         [drawContext, mainCanvasSize, cameraPos, cameraScale, canvasClearColor] = this.savedRenderSettings;
     }
 
-    /** Draw the tile at a given position in the tile grid
+    /** Draw the tile at a given position in the tile layer
      *  This can be used to clear out tiles when they are destroyed
      *  Tiles can also be redrawn if inside a redrawStart/End block
      *  @param {Vector2} layerPos
@@ -480,7 +486,7 @@ class TileLayer extends CanvasLayer
         this.drawLayerTile(drawPos, drawSize, tileInfo, d.color, d.direction*PI/2, d.mirror);
     }
 
-    /** Draw the tile at a given position in the tile grid
+    /** Draw the tile at a given position in the tile layer
      *  This can be used to clear tiles when they are destroyed
      *  For better performance use drawTileData inside a redrawStart/End block
      *  @param {Vector2} layerPos
@@ -592,24 +598,29 @@ class TileCollisionLayer extends TileLayer
         this.collisionData.fill(0);
     }
 
-    /** Set tile collision data for a given cell in the grid
-    *  @param {Vector2} gridPos
+    /** Set tile collision data for a given cell in the layer
+    *  @param {Vector2} layerPos
     *  @param {number}  [data] */
-    setCollisionData(gridPos, data=1)
+    setCollisionData(layerPos, data=1)
     {
-        ASSERT(isVector2(gridPos), 'gridPos must be a Vector2');
-        const i = (gridPos.y|0)*this.size.x + gridPos.x|0;
-        gridPos.arrayCheck(this.size) && (this.collisionData[i] = data);
+        ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
+        const i = (layerPos.y|0)*this.size.x + layerPos.x|0;
+        layerPos.arrayCheck(this.size) && (this.collisionData[i] = data);
     }
 
-    /** Get tile collision data for a given cell in the grid
-    *  @param {Vector2} gridPos
+    /** Clear tile collision data for a given cell in the layer
+    *  @param {Vector2} layerPos */
+    clearCollisionData(layerPos)
+    { this.setCollisionData(layerPos, 0); }
+
+    /** Get tile collision data for a given cell in the layer
+    *  @param {Vector2} layerPos
     *  @return {number} */
-    getCollisionData(gridPos)
+    getCollisionData(layerPos)
     {
-        ASSERT(isVector2(gridPos), 'gridPos must be a Vector2');
-        const i = (gridPos.y|0)*this.size.x + gridPos.x|0;
-        return gridPos.arrayCheck(this.size) ? this.collisionData[i] : 0;
+        ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
+        const i = (layerPos.y|0)*this.size.x + layerPos.x|0;
+        return layerPos.arrayCheck(this.size) ? this.collisionData[i] : 0;
     }
 
     /** Check if collision with another object should occur

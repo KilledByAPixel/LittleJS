@@ -96,8 +96,8 @@ function loadLevelData()
                     new GameObjects.Coin(objectPos);
 
                 // replace with empty tile and empty collision
-                tileLayer.setData(pos, new LJS.TileLayerData);
-                tileLayer.setCollisionData(pos, 0);
+                tileLayer.clearData(pos);
+                tileLayer.clearCollisionData(pos);
                 continue;
             }
 
@@ -151,7 +151,7 @@ export function decorateTile(pos, tileLayer)
         if (tileType <= 0)
         {
             // force it to clear if it is empty
-            tileType || tileLayer.setData(pos, new LJS.TileLayerData, 1);
+            tileType || tileLayer.clearData(pos, true);
             return;
         }
         if (tileType == tileType_breakable)

@@ -380,6 +380,7 @@ CanvasLayer.updateWebGL()   // Creates or updates WebGL texture
 // LittleJS Layer System
 TileLayer(position, size, tileInfo, scale)     // Create a tile layer object
 TileLayer.setData(layerPos, data, redraw)      // Set data at position
+TileLayer.clearData(layerPos, redraw)          // Clear data at position
 TileLayer.getData(layerPos)                    // Get data at position
 TileLayer.redraw()                             // Draw to an offscreen canvas
 TileLayer.drawTileData(layerPos, clear=true)   // Draw the tile
