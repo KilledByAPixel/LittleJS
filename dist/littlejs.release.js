@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.17.4';
+const engineVersion = '1.17.5';
 
 /** Frames per second to update
  *  @type {number}
@@ -10119,6 +10119,10 @@ class Box2dObject extends EngineObject
      *  @param {Object} [fixture] */
     destroyFixture(fixture) { this.body.DestroyFixture(fixture); }
 
+    /** Destroy all fixture from the body */
+    destroyAllFixtures()
+    { this.getFixtureList().forEach(fixture=>this.destroyFixture(fixture)); }
+
     ///////////////////////////////////////////////////////////////////////////////
     // physics get functions
 
@@ -10351,30 +10355,75 @@ class Box2dObject extends EngineObject
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Box2D Static Object - Box2d with a static physics body
+ * @extends Box2dObject
+ * @memberof Box2D
+ */
+class Box2dStaticObject extends Box2dObject 
+{
+    /** Create a LittleJS object with Box2d physics
+     *  @param {Vector2}  [pos]
+     *  @param {Vector2}  [size]
+     *  @param {TileInfo} [tileInfo]
+     *  @param {number}   [angle]
+     *  @param {Color}    [color]
+     *  @param {number}   [renderOrder] */
+    constructor(pos, size, tileInfo, angle=0, color, renderOrder=0)
+    {
+        const bodyType = box2d.bodyTypeStatic;
+        super(pos, size, tileInfo, angle, color, bodyType, renderOrder);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * Box2D Kiematic Object - Box2d with a kinematic physics body
+ * @extends Box2dObject
+ * @memberof Box2D
+ */
+class Box2dKiematicObject extends Box2dObject 
+{
+    /** Create a LittleJS object with Box2d physics
+     *  @param {Vector2}  [pos]
+     *  @param {Vector2}  [size]
+     *  @param {TileInfo} [tileInfo]
+     *  @param {number}   [angle]
+     *  @param {Color}    [color]
+     *  @param {number}   [renderOrder] */
+    constructor(pos, size, tileInfo, angle=0, color, renderOrder=0)
+    {
+        const bodyType = box2d.bodyTypeKinematic;
+        super(pos, size, tileInfo, angle, color, bodyType, renderOrder);
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * Box2d Tile Layer
  * - adds Box2d support to tile layers
  * - creates static box2d fixtures for solid tiles
- * @extends TileLayer
- * @memberof TileLayers
+ * @extends Box2dObject
+ * @memberof Box2D
  */
-class Box2dTileLayer extends TileCollisionLayer
+class Box2dTileLayer extends Box2dStaticObject
 {
-    /** Create a tile layer object
-    *  @param {Vector2}  pos - World space position
-    *  @param {Vector2}  size - World space size
-    *  @param {TileInfo} [tileInfo] - Tile info for layer
-    *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
-    *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
-    */
-    constructor(pos, size, tileInfo=tile(), renderOrder=0, useWebGL=true)
+    /** Create a Box2d tile layer object
+    *  @param {TileCollisionLayer} tileLayer - Tile layer for this object */
+    constructor(tileLayer)
     {
-        super(pos, size.floor(), tileInfo, renderOrder, useWebGL);
+        ASSERT(tileLayer instanceof TileCollisionLayer, 'tileLayer must be a TileCollisionLayer');
+        super(tileLayer.pos, tileLayer.size);
 
-        /** @property {Box2dStaticObject} - The box2d object */
-        this.box2dObject = undefined;
+        /** @property {TileLayer} - The tile layer */
+        this.tileLayer = tileLayer;
+        this.addChild(tileLayer);
+    }
+
+    render()
+    {
+        // do not render fixtures, tile layer handles rendering
     }
     
     /** Create box2d collision fixtures for solid tiles
@@ -10382,25 +10431,24 @@ class Box2dTileLayer extends TileCollisionLayer
     *  @param {number} [restitution] */
     buildCollision(friction=.2, restitution=0)
     {
-        // destroy any existing box2d object
-        this.box2dObject?.destroy();
+        // destroy all fixtures and create new ones
+        this.destroyAllFixtures();
 
         // create box2d object for this layer
-        this.box2dObject = new Box2dStaticObject(this.pos, this.size);
-        this.box2dObject.color = CLEAR_BLACK;
-        this.box2dObject.lineColor = CLEAR_BLACK;
-        this.addChild(this.box2dObject);
+        const size = this.tileLayer.size;
+        this.pos = this.tileLayer.pos.copy();
+        this.size = size.copy();
 
         // track which tiles have been processed
         const processed = [];
-        const getIndex = (x, y)=> x + y * this.size.x;
+        const getIndex = (x, y)=> x + y * size.x;
         const isSolidUnprocessed = (x, y)=>
             !processed[getIndex(x, y)] &&
-            this.getCollisionData(vec2(x, y)) > 0;
+            this.tileLayer.getCollisionData(vec2(x, y)) > 0;
 
         // combine tiles into larger boxes
-        for (let x = 0; x < this.size.x; ++x)
-        for (let y = 0; y < this.size.y; ++y)
+        for (let x = 0; x < size.x; ++x)
+        for (let y = 0; y < size.y; ++y)
         {
             if (!isSolidUnprocessed(x, y)) continue;
 
@@ -10430,9 +10478,9 @@ class Box2dTileLayer extends TileCollisionLayer
                 processed[getIndex(x + rectX, y + rectY)] = true;
 
             // create a single fixture for the entire rectangle
-            const size = vec2(width, height);
+            const shapeSize = vec2(width, height);
             const offset = vec2(x + width/2, y + height/2);
-            this.box2dObject.addBox(size, offset, 0, 0, friction, restitution);
+            this.addBox(shapeSize, offset, 0, 0, friction, restitution);
         }
     }
 }
@@ -10965,50 +11013,6 @@ class Box2dPrismaticJoint extends Box2dJoint
      *  @param {number} time
      *  @return {number} */
     getMotorForce(time) { return this.box2dJoint.GetMotorForce(1/time); }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-/** 
- * Box2D Static Object - Box2d with a static physics body
- * @extends Box2dObject
- * @memberof Box2D
- */
-class Box2dStaticObject extends Box2dObject 
-{
-    /** Create a LittleJS object with Box2d physics
-     *  @param {Vector2}  [pos]
-     *  @param {Vector2}  [size]
-     *  @param {TileInfo} [tileInfo]
-     *  @param {number}   [angle]
-     *  @param {Color}    [color]
-     *  @param {number}   [renderOrder] */
-    constructor(pos, size, tileInfo, angle=0, color, renderOrder=0)
-    {
-        const bodyType = box2d.bodyTypeStatic;
-        super(pos, size, tileInfo, angle, color, bodyType, renderOrder);
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-/** 
- * Box2D Kiematic Object - Box2d with a kinematic physics body
- * @extends Box2dObject
- * @memberof Box2D
- */
-class Box2dKiematicObject extends Box2dObject 
-{
-    /** Create a LittleJS object with Box2d physics
-     *  @param {Vector2}  [pos]
-     *  @param {Vector2}  [size]
-     *  @param {TileInfo} [tileInfo]
-     *  @param {number}   [angle]
-     *  @param {Color}    [color]
-     *  @param {number}   [renderOrder] */
-    constructor(pos, size, tileInfo, angle=0, color, renderOrder=0)
-    {
-        const bodyType = box2d.bodyTypeKinematic;
-        super(pos, size, tileInfo, angle, color, bodyType, renderOrder);
-    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

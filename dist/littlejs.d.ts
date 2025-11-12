@@ -3881,6 +3881,8 @@ declare module "littlejsengine" {
         /** Destroy a fixture from the body
          *  @param {Object} [fixture] */
         destroyFixture(fixture?: any): void;
+        /** Destroy all fixture from the body */
+        destroyAllFixtures(): void;
         /** Gets the center of mass
          *  @return {Vector2} */
         getCenterOfMass(): Vector2;
