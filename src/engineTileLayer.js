@@ -364,7 +364,7 @@ class TileLayer extends CanvasLayer
      *  @param {Vector2} layerPos - Local position in array
      *  @param {boolean} [redraw] - Force the tile to redraw if true */
     clearData(layerPos, redraw=false)
-    { this.setData(layerPos, new TileLayerData, redraw=false) }
+    { this.setData(layerPos, new TileLayerData, redraw) }
 
     /** Get data at a given position in the array
      *  @param {Vector2} layerPos - Local position in array
