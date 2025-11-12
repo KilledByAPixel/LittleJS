@@ -123,11 +123,11 @@ declare module "littlejsengine" {
      *  @example
      *  // Basic engine startup
      *  engineInit(
-     *    () => { LOG('Game initialized!'); },  // gameInit
-     *    () => { updateGameLogic(); },         // gameUpdate
-     *    () => { updateUI(); },                // gameUpdatePost
-     *    () => { drawBackground(); },          // gameRender
-     *    () => { drawHUD(); },                 // gameRenderPost
+     *    ()=> { LOG('Game initialized!'); },  // gameInit
+     *    ()=> { updateGameLogic(); },         // gameUpdate
+     *    ()=> { updateUI(); },                // gameUpdatePost
+     *    ()=> { drawBackground(); },          // gameRender
+     *    ()=> { drawHUD(); },                 // gameRenderPost
      *    ['tiles.png', 'tilesLevel.png']       // images to load
      *  );
      *  @memberof Engine */
@@ -203,13 +203,13 @@ declare module "littlejsengine" {
     /** Asserts if the expression is false, does nothing in release builds
      *  Halts execution if the assert fails and throws an error
      *  @param {boolean} assert
-     *  @param {...Object} [output] - error message output
+     *  @param {...Object} output - error message output
      *  @memberof Debug */
-    export function ASSERT(assert: boolean, ...output?: any[]): void;
+    export function ASSERT(assert: boolean, ...output: any[]): void;
     /** Log to console if debug is enabled, does nothing in release builds
-     *  @param {...Object} [output] - message output
+     *  @param {...Object} output - message output
      *  @memberof Debug */
-    export function LOG(...output?: any[]): void;
+    export function LOG(...output: any[]): void;
     /** Draw a debug rectangle in world space
      *  @param {Vector2} pos
      *  @param {Vector2} [size=vec2(0)]
@@ -734,22 +734,22 @@ declare module "littlejsengine" {
      *  @memberof Math */
     export const PI: number;
     /** Returns absolute value of value passed in
-     *  @param {number} value
+     *  @param {number} x
      *  @return {number}
      *  @memberof Math */
     export const abs: (x: number) => number;
     /** Returns floored value of value passed in
-     *  @param {number} value
+     *  @param {number} x
      *  @return {number}
      *  @memberof Math */
     export const floor: (x: number) => number;
     /** Returns ceiled value of value passed in
-     *  @param {number} value
+     *  @param {number} x
      *  @return {number}
      *  @memberof Math */
     export const ceil: (x: number) => number;
     /** Returns rounded value passed in
-     *  @param {number} value
+     *  @param {number} x
      *  @return {number}
      *  @memberof Math */
     export const round: (x: number) => number;
@@ -764,7 +764,7 @@ declare module "littlejsengine" {
      *  @memberof Math */
     export const max: (...values: number[]) => number;
     /** Returns the sign of value passed in
-     *  @param {number} value
+     *  @param {number} x
      *  @return {number}
      *  @memberof Math */
     export const sign: (x: number) => number;
@@ -774,22 +774,22 @@ declare module "littlejsengine" {
      *  @memberof Math */
     export const hypot: (...values: number[]) => number;
     /** Returns log2 of value passed in
-     *  @param {number} value
+     *  @param {number} x
      *  @return {number}
      *  @memberof Math */
     export const log2: (x: number) => number;
     /** Returns sin of value passed in
-     *  @param {number} value
+     *  @param {number} x
      *  @return {number}
      *  @memberof Math */
     export const sin: (x: number) => number;
     /** Returns cos of value passed in
-     *  @param {number} value
+     *  @param {number} x
      *  @return {number}
      *  @memberof Math */
     export const cos: (x: number) => number;
     /** Returns tan of value passed in
-     *  @param {number} value
+     *  @param {number} x
      *  @return {number}
      *  @memberof Math */
     export const tan: (x: number) => number;
@@ -2132,24 +2132,38 @@ declare module "littlejsengine" {
      *  @memberof Audio */
     export const audioDefaultSampleRate: 44100;
     /**
-     * Sound Object - Stores a sound for later use and can be played positionally
+     * Sound Object - Stores a sound for later
+     * - this can be used to load and play wave, mp3, and ogg files
+     * - it can also create sounds using the ZzFX sound generator
+     * - can attenuate and apply stereo panning to sounds
+     * - sound instance control with pause/resume capability
      *
      * <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
      * @memberof Audio
      * @example
-     * // create a sound
+     * // load an audio asset file
+     * const sound_example = new Sound('sound.mp3');
+     *
+     * // create a zzfx sound
      * const sound_example = new Sound([.5,.5]);
      *
-     * // play the sound
+     * // play a sound
      * sound_example.play();
      */
     export class Sound {
-        /** Create a sound object and cache the zzfx samples for later use
-         *  @param {Array}  zzfxSound - Array of zzfx parameters, ex. [.5,.5]
+        /**
+         * @callback SoundLoadCallback - Function called when sound is loaded
+         * @param {Sound} sound
+         * @memberof Audio
+         */
+        /** Create a sound object and cache the audio for later use
+         *  @param {string|Array} [asset] - Filename of audio file or zzfx array
+         *  @param {number} [randomness] - How much to randomize frequency each time sound plays, for zzfx sounds the zzfx default is used if undefined
          *  @param {number} [range=soundDefaultRange] - World space max range of sound
          *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
+         *  @param {SoundLoadCallback} [onloadCallback] - callback function to call when sound is loaded
          */
-        constructor(zzfxSound: any[], range?: number, taper?: number);
+        constructor(asset?: string | any[], randomness?: number, range?: number, taper?: number, onloadCallback?: (sound: Sound) => Sound);
         /** @property {number} - World space max range of sound */
         range: number;
         /** @property {number} - At what percentage of range should it start tapering */
@@ -2160,6 +2174,8 @@ declare module "littlejsengine" {
         sampleRate: number;
         /** @property {number} - Percentage of this sound currently loaded */
         loadedPercent: number;
+        /** @property {SoundLoadCallback} - function to call when sound is loaded */
+        onloadCallback: (sound: Sound) => Sound;
         sampleChannels: any[][];
         /** Play the sound
          *  Sounds may not play until a user interaction occurs
@@ -2176,7 +2192,7 @@ declare module "littlejsengine" {
          *  @param {number} [volume] - Volume to play the music at
          *  @param {boolean} [loop] - Should the music loop?
          *  @param {boolean} [paused] - Should the music start paused
-         *  @return {SoundInstance} - The audio source node
+         *  @return {SoundInstance} - The sound instance
          */
         playMusic(volume?: number, loop?: boolean, paused?: boolean): SoundInstance;
         /** Play the sound as a musical note with a semitone offset
@@ -2184,7 +2200,7 @@ declare module "littlejsengine" {
          *  @param {number}  [semitoneOffset=0] - How many semitones to offset pitch
          *  @param {Vector2} [pos] - World space position to play the sound if any
          *  @param {number}  [volume=1] - How much to scale volume by
-         *  @return {SoundInstance} - The audio source node
+         *  @return {SoundInstance} - The sound instance
          */
         playNote(semitoneOffset?: number, pos?: Vector2, volume?: number): SoundInstance;
         /** Get how long this sound is in seconds
@@ -2195,36 +2211,7 @@ declare module "littlejsengine" {
          *  @return {boolean} - True if sound is loaded and ready to play
          */
         isLoaded(): boolean;
-    }
-    /**
-     * Sound Wave Object - Loads and stores an audio file for later use
-     * - this can be used to load and play wave, mp3, and ogg files
-     * @extends Sound
-     * @memberof Audio
-     * @example
-     * // load an audio asset file
-     * const sound_example = new SoundWave('sound.mp3');
-     *
-     * // play the sound
-     * sound_example.play();
-     */
-    export class SoundWave extends Sound {
-        /**
-         * @callback SoundLoadCallback - Function called when sound is loaded
-         * @param {SoundWave} sound
-         * @memberof Audio
-         */
-        /** Create a sound object and cache the wave file for later use
-         *  @param {string} filename - Filename of audio file to load
-         *  @param {number} [randomness] - How much to randomize frequency each time sound plays
-         *  @param {number} [range=soundDefaultRange] - World space max range of sound
-         *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
-         *  @param {SoundLoadCallback} [onloadCallback] - callback function to call when sound is loaded
-         */
-        constructor(filename: string, randomness?: number, range?: number, taper?: number, onloadCallback?: (sound: SoundWave) => SoundWave);
-        /** @property {SoundLoadCallback} - callback function to call when sound is loaded */
-        onloadCallback: (sound: SoundWave) => SoundWave;
-        /** Loads a sound from a URL and decodes it into sample data. Must be used with await!
+        /** Loads a sound from a URL and decodes it into sample data.
         *  @param {string} filename
         *  @return {Promise<void>} */
         loadSound(filename: string): Promise<void>;
@@ -2644,14 +2631,14 @@ declare module "littlejsengine" {
      */
     export class CanvasLayer extends EngineObject {
         /** Create a canvas layer object
-         *  @param {Vector2}  [position] - World space position of the layer
+         *  @param {Vector2}  [pos] - World space position of the layer
          *  @param {Vector2}  [size] - World space size of the layer
          *  @param {number}   [angle] - Angle the layer is rotated by
          *  @param {number}   [renderOrder] - Objects sorted by renderOrder
          *  @param {Vector2}  [canvasSize] - Default size of canvas, can be changed later
          *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
         */
-        constructor(position?: Vector2, size?: Vector2, angle?: number, renderOrder?: number, canvasSize?: Vector2, useWebGL?: boolean);
+        constructor(pos?: Vector2, size?: Vector2, angle?: number, renderOrder?: number, canvasSize?: Vector2, useWebGL?: boolean);
         /** @property {HTMLCanvasElement} - The canvas used by this layer */
         canvas: OffscreenCanvas;
         /** @property {OffscreenCanvasRenderingContext2D} - The 2D canvas context used by this layer */
@@ -2703,13 +2690,13 @@ declare module "littlejsengine" {
      */
     export class TileLayer extends CanvasLayer {
         /** Create a tile layer object
-        *  @param {Vector2}  position - World space position
+        *  @param {Vector2}  pos - World space position
         *  @param {Vector2}  size - World space size
         *  @param {TileInfo} [tileInfo] - Default tile info for layer (used for size and texture)
         *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
         *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
         */
-        constructor(position: Vector2, size: Vector2, tileInfo?: TileInfo, renderOrder?: number, useWebGL?: boolean);
+        constructor(pos: Vector2, size: Vector2, tileInfo?: TileInfo, renderOrder?: number, useWebGL?: boolean);
         /** @property {Array<TileLayerData>} - Default tile info for layer */
         data: TileLayerData[];
         /** @property {boolean} - Is this layer using a webgl texture? */
@@ -2723,14 +2710,14 @@ declare module "littlejsengine" {
         redrawStart(clear?: boolean): void;
         /** Call to end the redraw process */
         redrawEnd(): void;
-        /** Draw the tile at a given position in the tile grid
+        /** Draw the tile at a given position in the tile layer
          *  This can be used to clear out tiles when they are destroyed
          *  Tiles can also be redrawn if inside a redrawStart/End block
          *  @param {Vector2} layerPos
          *  @param {boolean} [clear] - should the old tile be cleared out
          */
         drawTileData(layerPos: Vector2, clear?: boolean): void;
-        /** Draw the tile at a given position in the tile grid
+        /** Draw the tile at a given position in the tile layer
          *  This can be used to clear tiles when they are destroyed
          *  For better performance use drawTileData inside a redrawStart/End block
          *  @param {Vector2} layerPos
@@ -2763,6 +2750,10 @@ declare module "littlejsengine" {
          *  @param {TileLayerData} data - Data to set
          *  @param {boolean}       [redraw] - Force the tile to redraw if true */
         setData(layerPos: Vector2, data: TileLayerData, redraw?: boolean): void;
+        /** Clear data at a given position in the array
+         *  @param {Vector2} layerPos - Local position in array
+         *  @param {boolean} [redraw] - Force the tile to redraw if true */
+        clearData(layerPos: Vector2, redraw?: boolean): void;
         /** Get data at a given position in the array
          *  @param {Vector2} layerPos - Local position in array
          *  @return {TileLayerData} */
@@ -2785,14 +2776,17 @@ declare module "littlejsengine" {
         /** Clear and initialize tile collision to new size
         *  @param {Vector2} size - width and height of tile collision 2d grid */
         initCollision(size: Vector2): void;
-        /** Set tile collision data for a given cell in the grid
-        *  @param {Vector2} gridPos
+        /** Set tile collision data for a given cell in the layer
+        *  @param {Vector2} layerPos
         *  @param {number}  [data] */
-        setCollisionData(gridPos: Vector2, data?: number): void;
-        /** Get tile collision data for a given cell in the grid
-        *  @param {Vector2} gridPos
+        setCollisionData(layerPos: Vector2, data?: number): void;
+        /** Clear tile collision data for a given cell in the layer
+        *  @param {Vector2} layerPos */
+        clearCollisionData(layerPos: Vector2): void;
+        /** Get tile collision data for a given cell in the layer
+        *  @param {Vector2} layerPos
         *  @return {number} */
-        getCollisionData(gridPos: Vector2): number;
+        getCollisionData(layerPos: Vector2): number;
         /** Check if collision with another object should occur
         *  @param {Vector2}      pos
         *  @param {Vector2}      [size=vec2()]
@@ -3177,9 +3171,9 @@ declare module "littlejsengine" {
         /** Play the music that loops by default
          *  @param {number}  [volume] - Volume to play the music at
          *  @param {boolean} [loop] - Should the music loop?
-         *  @return {AudioBufferSourceNode} - The audio source node
+         *  @return {SoundInstance} - The sound instance
          */
-        playMusic(volume?: number, loop?: boolean): AudioBufferSourceNode;
+        playMusic(volume?: number, loop?: boolean): SoundInstance;
     }
     /**
      * LittleJS User Interface Plugin
@@ -3206,9 +3200,9 @@ declare module "littlejsengine" {
     export let uiDebug: number;
     /** Enable UI system debug drawing
      *  0=off, 1=normal, 2=show invisible
-     *  @param {number|boolean} enable
+     *  @param {number|boolean} debugMode
      *  @memberof UISystem */
-    export function uiSetDebug(debugMode: any): void;
+    export function uiSetDebug(debugMode: number | boolean): void;
     /**
      * UI System Global Object
      * @memberof UISystem
@@ -3610,14 +3604,14 @@ declare module "littlejsengine" {
      */
     export class UIVideo extends UIObject {
         /** Create a video player UI object
-         *  @param {Vector2} [pos]
-         *  @param {Vector2} [size]
+         *  @param {Vector2} pos
+         *  @param {Vector2} size
          *  @param {string} src - Video file path or URL
          *  @param {boolean} [autoplay=false] - Start playing immediately?
          *  @param {boolean} [loop=false] - Loop the video?
          *  @param {number} [volume=1] - Volume percent scaled by global volume (0-1)
          */
-        constructor(pos?: Vector2, size?: Vector2, src: string, autoplay?: boolean, loop?: boolean, volume?: number);
+        constructor(pos: Vector2, size: Vector2, src: string, autoplay?: boolean, loop?: boolean, volume?: number);
         /** @property {number} - The video volume */
         volume: number;
         /** @property {HTMLVideoElement} - The video player */
@@ -3671,6 +3665,7 @@ declare module "littlejsengine" {
      * - Contact begin and end callbacks
      * - Wraps b2Vec2 type to/from Vector2
      * - Raycasting and querying
+     * - Box2dTileLayer for grid based collision
      * - Every type of joint
      * - Debug physics drawing
      * @namespace Box2D
@@ -3703,8 +3698,11 @@ declare module "littlejsengine" {
         /** Create the global UI system object
          *  @param {Object} instance */
         constructor(instance: any);
+        /** @property {Object} - The Box2d instance */
         instance: any;
+        /** @property {Object} - The Box2d world */
         world: any;
+        /** @property {Array<Box2dObject>} - List of all Box2d objects */
         objects: any[];
         /** @property {number} - Velocity iterations per update*/
         velocityIterations: number;
@@ -3754,13 +3752,14 @@ declare module "littlejsengine" {
          *  @param {Color} [color]
          *  @param {Color} [lineColor]
          *  @param {number} [lineWidth]
+         *  @param {boolean} [useWebGL=glEnable]
          *  @param {CanvasRenderingContext2D} [context] */
-        drawFixture(fixture: any, pos: Vector2, angle: number, color?: Color, lineColor?: Color, lineWidth?: number, context?: CanvasRenderingContext2D): void;
+        drawFixture(fixture: any, pos: Vector2, angle: number, color?: Color, lineColor?: Color, lineWidth?: number, useWebgl: any, context?: CanvasRenderingContext2D): void;
         /** converts a box2d vec2 to a Vector2
          *  @param {Object} v */
         vec2From(v: any): Vector2;
         /** converts a box2d vec2 pointer to a Vector2
-         *  @param {Object} v */
+         *  @param {Object} vp */
         vec2FromPointer(vp: any): Vector2;
         /** converts a Vector2 to a box2 vec2
          *  @param {Vector2} v */
@@ -3790,16 +3789,21 @@ declare module "littlejsengine" {
          *  @param {number}   [bodyType]
          *  @param {number}   [renderOrder] */
         constructor(pos?: Vector2, size?: Vector2, tileInfo?: TileInfo, angle?: number, color?: Color, bodyType?: number, renderOrder?: number);
+        /** @property {Object} - The Box2d body */
         body: any;
+        /** @property {Color} - Line color used for default box2d drawing */
         lineColor: Color;
+        /** @property {Array<Object>} - List of all edges for default box2d drawing */
         edgeLists: any[];
+        /** @property {Array<Object>} - List of all edge loops for default box2d drawing */
         edgeLoops: any[];
         /** Draws all this object's fixtures
-         *  @param {Color}  [color]
-         *  @param {Color}  [lineColor]
-         *  @param {number} [lineWidth]
+         *  @param {Color}   [color]
+         *  @param {Color}   [lineColor]
+         *  @param {number}  [lineWidth]
+         *  @param {boolean} [useWebGL=glEnable]
          *  @param {CanvasRenderingContext2D} [context] */
-        drawFixtures(color?: Color, lineColor?: Color, lineWidth?: number, context?: CanvasRenderingContext2D): void;
+        drawFixtures(color?: Color, lineColor?: Color, lineWidth?: number, useWebGL?: boolean, context?: CanvasRenderingContext2D): void;
         /** Called when a contact begins
          *  @param {Box2dObject} otherObject */
         beginContact(otherObject: Box2dObject): void;
@@ -3874,6 +3878,9 @@ declare module "littlejsengine" {
          *  @param {number}  [restitution]
          *  @param {boolean} [isSensor] */
         addEdgeLoop(points: Array<Vector2>, density?: number, friction?: number, restitution?: number, isSensor?: boolean): any[];
+        /** Destroy a fixture from the body
+         *  @param {Object} [fixture] */
+        destroyFixture(fixture?: any): void;
         /** Gets the center of mass
          *  @return {Vector2} */
         getCenterOfMass(): Vector2;
@@ -4046,6 +4053,7 @@ declare module "littlejsengine" {
         /** Create a box2d joint, the base class is not intended to be used directly
          *  @param {Object} jointDef */
         constructor(jointDef: any);
+        /** @property {Object} - The Box2d joint */
         box2dJoint: any;
         /** Destroy this joint */
         destroy(): void;
@@ -4276,8 +4284,8 @@ declare module "littlejsengine" {
          *  @param {Box2dObject} objectB
          *  @param {Box2dJoint} joint1
          *  @param {Box2dJoint} joint2
-         *  @param {ratio} [ratio] */
-        constructor(objectA: Box2dObject, objectB: Box2dObject, joint1: Box2dJoint, joint2: Box2dJoint, ratio?: ratio);
+         *  @param {number} [ratio] */
+        constructor(objectA: Box2dObject, objectB: Box2dObject, joint1: Box2dJoint, joint2: Box2dJoint, ratio?: number);
         joint1: Box2dJoint;
         joint2: Box2dJoint;
         /** Get the first joint

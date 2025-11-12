@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.17.2';
+const engineVersion = '1.17.3';
 
 /** Frames per second to update
  *  @type {number}
@@ -154,11 +154,11 @@ function engineAddPlugin(update, render, glContextLost, glContextRestored)
  *  @example
  *  // Basic engine startup
  *  engineInit(
- *    () => { LOG('Game initialized!'); },  // gameInit
- *    () => { updateGameLogic(); },         // gameUpdate
- *    () => { updateUI(); },                // gameUpdatePost
- *    () => { drawBackground(); },          // gameRender
- *    () => { drawHUD(); },                 // gameRenderPost
+ *    ()=> { LOG('Game initialized!'); },  // gameInit
+ *    ()=> { updateGameLogic(); },         // gameUpdate
+ *    ()=> { updateUI(); },                // gameUpdatePost
+ *    ()=> { drawBackground(); },          // gameRender
+ *    ()=> { drawHUD(); },                 // gameRenderPost
  *    ['tiles.png', 'tilesLevel.png']       // images to load
  *  );
  *  @memberof Engine */
@@ -609,7 +609,7 @@ function drawEngineLogo(t)
         x.fillStyle = C;
         C ? x.fill() : x.stroke();
     };
-    const color = (c=0, l=0) =>
+    const color = (c=0, l=0)=>
         hsl([.98,.3,.57,.14][c%4],.9,[0,.3,.5,.8,.9][l]).toString();
     const alpha = wave(1,1,t);
     const p = percent(alpha, .1, .5);
@@ -783,25 +783,25 @@ function debugProtectConstant(o){ return o; }
 const PI = Math.PI;
 
 /** Returns absolute value of value passed in
- *  @param {number} value
+ *  @param {number} x
  *  @return {number}
  *  @memberof Math */
 const abs = Math.abs;
 
 /** Returns floored value of value passed in
- *  @param {number} value
+ *  @param {number} x
  *  @return {number}
  *  @memberof Math */
 const floor = Math.floor;
 
 /** Returns ceiled value of value passed in
- *  @param {number} value
+ *  @param {number} x
  *  @return {number}
  *  @memberof Math */
 const ceil = Math.ceil;
 
 /** Returns rounded value passed in
- *  @param {number} value
+ *  @param {number} x
  *  @return {number}
  *  @memberof Math */
 const round = Math.round;
@@ -819,7 +819,7 @@ const min = Math.min;
 const max = Math.max;
 
 /** Returns the sign of value passed in
- *  @param {number} value
+ *  @param {number} x
  *  @return {number}
  *  @memberof Math */
 const sign = Math.sign;
@@ -831,25 +831,25 @@ const sign = Math.sign;
 const hypot = Math.hypot;
 
 /** Returns log2 of value passed in
- *  @param {number} value
+ *  @param {number} x
  *  @return {number}
  *  @memberof Math */
 const log2 = Math.log2;
 
 /** Returns sin of value passed in
- *  @param {number} value
+ *  @param {number} x
  *  @return {number}
  *  @memberof Math */
 const sin = Math.sin;
 
 /** Returns cos of value passed in
- *  @param {number} value
+ *  @param {number} x
  *  @return {number}
  *  @memberof Math */
 const cos = Math.cos;
 
 /** Returns tan of value passed in
- *  @param {number} value
+ *  @param {number} x
  *  @return {number}
  *  @memberof Math */
 const tan = Math.tan;
@@ -2921,7 +2921,7 @@ class EngineObject
         if (this.collideTiles)
         {
             // check collision against tiles
-            const hitLayer = tileCollisionTest(this.pos, this.size, this)
+            const hitLayer = tileCollisionTest(this.pos, this.size, this);
             if (hitLayer)
             {
                 // if already was stuck in collision, don't do anything
@@ -3425,7 +3425,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
     ASSERT(!additiveColor || isColor(additiveColor), 'additiveColor must be a color');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
-    const textureInfo = tileInfo && tileInfo.textureInfo;
+    const textureInfo = tileInfo?.textureInfo;
     const bleed = tileInfo?.bleed ?? 0;
     if (useWebGL && glEnable)
     {
@@ -3731,8 +3731,11 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
     ASSERT(isColor(color) && isColor(lineColor), 'color is invalid');
     ASSERT(isNumber(angle), 'angle must be a number');
     ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
-    ASSERT(lineWidth >= 0 && lineWidth < size.x && lineWidth < size.y, 'invalid lineWidth');
+    ASSERT(lineWidth >= 0, 'lineWidth must be a positive value or 0');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+
+    // clamp line width to prevent artifacts
+    lineWidth = clamp(lineWidth, 0, Math.min(size.x, size.y));
 
     if (useWebGL && glEnable)
     {
@@ -4699,9 +4702,9 @@ function inputInit()
     function touchInputInit()
     {
         // add non passive touch event listeners
-        document.addEventListener('touchstart', (e) => handleTouch(e), { passive: false });
-        document.addEventListener('touchmove',  (e) => handleTouch(e), { passive: false });
-        document.addEventListener('touchend',   (e) => handleTouch(e), { passive: false });
+        document.addEventListener('touchstart', (e)=> handleTouch(e), { passive: false });
+        document.addEventListener('touchmove',  (e)=> handleTouch(e), { passive: false });
+        document.addEventListener('touchend',   (e)=> handleTouch(e), { passive: false });
 
         // handle all touch events the same way
         let wasTouching;
@@ -4907,7 +4910,7 @@ function inputUpdate()
         // poll gamepads
         const maxGamepads = 8;
         const gamepads = navigator.getGamepads();
-        const gamepadCount = min(maxGamepads, gamepads.length)
+        const gamepadCount = min(maxGamepads, gamepads.length);
         for (let i=0; i<gamepadCount; ++i)
         {
             // get or create gamepad data
@@ -5112,29 +5115,46 @@ function audioInit()
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
- * Sound Object - Stores a sound for later use and can be played positionally
+ * Sound Object - Stores a sound for later
+ * - this can be used to load and play wave, mp3, and ogg files
+ * - it can also create sounds using the ZzFX sound generator
+ * - can attenuate and apply stereo panning to sounds
+ * - sound instance control with pause/resume capability
  *
  * <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
  * @memberof Audio
  * @example
- * // create a sound
+ * // load an audio asset file
+ * const sound_example = new Sound('sound.mp3');
+ *
+ * // create a zzfx sound
  * const sound_example = new Sound([.5,.5]);
  *
- * // play the sound
+ * // play a sound
  * sound_example.play();
  */
 class Sound
 {
-    /** Create a sound object and cache the zzfx samples for later use
-     *  @param {Array}  zzfxSound - Array of zzfx parameters, ex. [.5,.5]
+    /**
+     * @callback SoundLoadCallback - Function called when sound is loaded
+     * @param {Sound} sound
+     * @memberof Audio
+     */
+    
+    /** Create a sound object and cache the audio for later use
+     *  @param {string|Array} [asset] - Filename of audio file or zzfx array
+     *  @param {number} [randomness] - How much to randomize frequency each time sound plays, for zzfx sounds the zzfx default is used if undefined
      *  @param {number} [range=soundDefaultRange] - World space max range of sound
      *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
+     *  @param {SoundLoadCallback} [onloadCallback] - callback function to call when sound is loaded
      */
-    constructor(zzfxSound, range=soundDefaultRange, taper=soundDefaultTaper)
+    constructor(asset, randomness, range=soundDefaultRange, taper=soundDefaultTaper, onloadCallback)
     {
         if (!soundEnable || headlessMode) return;
 
-        ASSERT(!zzfxSound || isArray(zzfxSound), 'zzfxSound is invalid');
+        ASSERT(!asset || isArray(asset) || isString(asset), 'asset must be a file name or zzfx array');
+        ASSERT(randomness === undefined || isNumber(randomness), 'randomness must be a number');
+        ASSERT(randomness === undefined || randomness >= 0 && randomness <=1, 'randomness must be between 0 and 1');
         ASSERT(isNumber(range), 'range must be a number');
         ASSERT(isNumber(taper), 'taper must be a number');
 
@@ -5143,23 +5163,35 @@ class Sound
         /** @property {number} - At what percentage of range should it start tapering */
         this.taper = taper;
         /** @property {number} - How much to randomize frequency each time sound plays */
-        this.randomness = 0;
+        this.randomness = randomness ?? 0;
         /** @property {number} - Sample rate for this sound */
         this.sampleRate = audioDefaultSampleRate;
         /** @property {number} - Percentage of this sound currently loaded */
         this.loadedPercent = 0;
+        /** @property {SoundLoadCallback} - function to call when sound is loaded */
+        this.onloadCallback = onloadCallback;
 
-        // generate zzfx sound now for fast playback
-        if (zzfxSound)
+        if (Array.isArray(asset))
         {
+            // generate zzfx sound
+            const zzfxSound = asset;
+
             // remove randomness so it can be applied on playback
-            const randomnessIndex = 1, defaultRandomness = .05;
+            const defaultRandomness = randomness ?? .05;
+            const randomnessIndex = 1;
             this.randomness = zzfxSound[randomnessIndex] ?? defaultRandomness;
             zzfxSound[randomnessIndex] = 0;
 
             // generate the zzfx samples
             this.sampleChannels = [zzfxG(...zzfxSound)];
             this.loadedPercent = 1;
+            onloadCallback?.(this);
+        }
+        else if (typeof asset === 'string')
+        {
+            // load the audio file
+            const filename = asset;
+            this.loadSound(filename);
         }
     }
 
@@ -5211,7 +5243,7 @@ class Sound
      *  @param {number} [volume] - Volume to play the music at
      *  @param {boolean} [loop] - Should the music loop?
      *  @param {boolean} [paused] - Should the music start paused
-     *  @return {SoundInstance} - The audio source node
+     *  @return {SoundInstance} - The sound instance
      */
     playMusic(volume=1, loop=true, paused=false)
     { return this.play(undefined, volume, 1, 0, loop, paused); }
@@ -5221,7 +5253,7 @@ class Sound
      *  @param {number}  [semitoneOffset=0] - How many semitones to offset pitch
      *  @param {Vector2} [pos] - World space position to play the sound if any
      *  @param {number}  [volume=1] - How much to scale volume by
-     *  @return {SoundInstance} - The audio source node
+     *  @return {SoundInstance} - The sound instance
      */
     playNote(semitoneOffset=0, pos, volume)
     {
@@ -5234,57 +5266,14 @@ class Sound
      *  @return {number} - How long the sound is in seconds (undefined if loading)
      */
     getDuration()
-    { return this.sampleChannels?.[0].length / this.sampleRate || 0; }
+    { return this.sampleChannels?.[0]?.length / this.sampleRate || 0; }
 
     /** Check if sound is loaded, for sounds fetched from a url
      *  @return {boolean} - True if sound is loaded and ready to play
      */
     isLoaded() { return this.loadedPercent === 1; }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-/**
- * Sound Wave Object - Loads and stores an audio file for later use
- * - this can be used to load and play wave, mp3, and ogg files
- * @extends Sound
- * @memberof Audio
- * @example
- * // load an audio asset file
- * const sound_example = new SoundWave('sound.mp3');
- *
- * // play the sound
- * sound_example.play();
- */
-class SoundWave extends Sound
-{
-    /**
-     * @callback SoundLoadCallback - Function called when sound is loaded
-     * @param {SoundWave} sound
-     * @memberof Audio
-     */
     
-    /** Create a sound object and cache the wave file for later use
-     *  @param {string} filename - Filename of audio file to load
-     *  @param {number} [randomness] - How much to randomize frequency each time sound plays
-     *  @param {number} [range=soundDefaultRange] - World space max range of sound
-     *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
-     *  @param {SoundLoadCallback} [onloadCallback] - callback function to call when sound is loaded
-     */
-    constructor(filename, randomness=0, range, taper, onloadCallback)
-    {
-        super(undefined, range, taper);
-        if (!soundEnable || headlessMode) return;
-        ASSERT(!filename || isString(filename), 'filename must be a string');
-        ASSERT(isNumber(randomness), 'randomness must be a number');
-
-        /** @property {SoundLoadCallback} - callback function to call when sound is loaded */
-        this.onloadCallback = onloadCallback;
-        this.randomness = randomness;
-        filename && this.loadSound(filename);
-    }
-
-    /** Loads a sound from a URL and decodes it into sample data. Must be used with await!
+    /** Loads a sound from a URL and decodes it into sample data.
     *  @param {string} filename
     *  @return {Promise<void>} */
     async loadSound(filename)
@@ -5939,17 +5928,17 @@ class TileLayerData
 class CanvasLayer extends EngineObject
 {
     /** Create a canvas layer object
-     *  @param {Vector2}  [position] - World space position of the layer
+     *  @param {Vector2}  [pos] - World space position of the layer
      *  @param {Vector2}  [size] - World space size of the layer
      *  @param {number}   [angle] - Angle the layer is rotated by
      *  @param {number}   [renderOrder] - Objects sorted by renderOrder
      *  @param {Vector2}  [canvasSize] - Default size of canvas, can be changed later
      *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
     */
-    constructor(position, size, angle=0, renderOrder=0, canvasSize=vec2(512), useWebGL=true)
+    constructor(pos, size, angle=0, renderOrder=0, canvasSize=vec2(512), useWebGL=true)
     {
         ASSERT(isVector2(canvasSize), 'canvasSize must be a Vector2');
-        super(position, size, undefined, angle, WHITE, renderOrder);
+        super(pos, size, undefined, angle, WHITE, renderOrder);
 
         /** @property {HTMLCanvasElement} - The canvas used by this layer */
         this.canvas = headlessMode ? undefined : new OffscreenCanvas(canvasSize.x, canvasSize.y);
@@ -6053,16 +6042,16 @@ class CanvasLayer extends EngineObject
 class TileLayer extends CanvasLayer
 {
     /** Create a tile layer object
-    *  @param {Vector2}  position - World space position
+    *  @param {Vector2}  pos - World space position
     *  @param {Vector2}  size - World space size
     *  @param {TileInfo} [tileInfo] - Default tile info for layer (used for size and texture)
     *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
     *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
     */
-    constructor(position, size, tileInfo=tile(), renderOrder=0, useWebGL=true)
+    constructor(pos, size, tileInfo=tile(), renderOrder=0, useWebGL=true)
     {
         const canvasSize = tileInfo ? size.multiply(tileInfo.size) : size;
-        super(position, size, 0, renderOrder, canvasSize, useWebGL);
+        super(pos, size, 0, renderOrder, canvasSize, useWebGL);
         
         /** @property {TileInfo} - Default tile info for layer */
         this.tileInfo = undefined;
@@ -6074,15 +6063,15 @@ class TileLayer extends CanvasLayer
         if (headlessMode)
         {
             // disable rendering in headless mode
-            this.render         = () => {};
-            this.redraw         = () => {};
-            this.redrawStart    = () => {};
-            this.redrawEnd      = () => {};
-            this.drawTileData   = () => {};
-            this.redrawTileData = () => {};
-            this.drawLayerTile  = () => {};
-            this.drawLayerRect  = () => {};
-            this.clearLayerRect = () => {};
+            this.render         = ()=> {};
+            this.redraw         = ()=> {};
+            this.redrawStart    = ()=> {};
+            this.redrawEnd      = ()=> {};
+            this.drawTileData   = ()=> {};
+            this.redrawTileData = ()=> {};
+            this.drawLayerTile  = ()=> {};
+            this.drawLayerRect  = ()=> {};
+            this.clearLayerRect = ()=> {};
             return;
         }
         
@@ -6115,6 +6104,12 @@ class TileLayer extends CanvasLayer
         const isRedraw = drawContext === this.context;
         isRedraw ? this.drawTileData(layerPos) : this.redrawTileData(layerPos);
     }
+
+    /** Clear data at a given position in the array
+     *  @param {Vector2} layerPos - Local position in array
+     *  @param {boolean} [redraw] - Force the tile to redraw if true */
+    clearData(layerPos, redraw=false)
+    { this.setData(layerPos, new TileLayerData, redraw=false) }
 
     /** Get data at a given position in the array
      *  @param {Vector2} layerPos - Local position in array
@@ -6212,7 +6207,7 @@ class TileLayer extends CanvasLayer
         [drawContext, mainCanvasSize, cameraPos, cameraScale, canvasClearColor] = this.savedRenderSettings;
     }
 
-    /** Draw the tile at a given position in the tile grid
+    /** Draw the tile at a given position in the tile layer
      *  This can be used to clear out tiles when they are destroyed
      *  Tiles can also be redrawn if inside a redrawStart/End block
      *  @param {Vector2} layerPos
@@ -6236,7 +6231,7 @@ class TileLayer extends CanvasLayer
         this.drawLayerTile(drawPos, drawSize, tileInfo, d.color, d.direction*PI/2, d.mirror);
     }
 
-    /** Draw the tile at a given position in the tile grid
+    /** Draw the tile at a given position in the tile layer
      *  This can be used to clear tiles when they are destroyed
      *  For better performance use drawTileData inside a redrawStart/End block
      *  @param {Vector2} layerPos
@@ -6304,15 +6299,15 @@ class TileLayer extends CanvasLayer
 class TileCollisionLayer extends TileLayer
 {
     /** Create a tile layer object
-    *  @param {Vector2}  position      - World space position
-    *  @param {Vector2}  size          - World space size
-    *  @param {TileInfo} [tileInfo]    - Tile info for layer
+    *  @param {Vector2}  pos - World space position
+    *  @param {Vector2}  size - World space size
+    *  @param {TileInfo} [tileInfo] - Tile info for layer
     *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
     *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
     */
-    constructor(position, size, tileInfo=tile(), renderOrder=0, useWebGL=true)
+    constructor(pos, size, tileInfo=tile(), renderOrder=0, useWebGL=true)
     {
-        super(position, size.floor(), tileInfo, renderOrder, useWebGL);
+        super(pos, size.floor(), tileInfo, renderOrder, useWebGL);
 
         /** @property {Array<number>} - The tile collision grid */
         this.collisionData = [];
@@ -6348,24 +6343,29 @@ class TileCollisionLayer extends TileLayer
         this.collisionData.fill(0);
     }
 
-    /** Set tile collision data for a given cell in the grid
-    *  @param {Vector2} gridPos
+    /** Set tile collision data for a given cell in the layer
+    *  @param {Vector2} layerPos
     *  @param {number}  [data] */
-    setCollisionData(gridPos, data=1)
+    setCollisionData(layerPos, data=1)
     {
-        ASSERT(isVector2(gridPos), 'gridPos must be a Vector2');
-        const i = (gridPos.y|0)*this.size.x + gridPos.x|0;
-        gridPos.arrayCheck(this.size) && (this.collisionData[i] = data);
+        ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
+        const i = (layerPos.y|0)*this.size.x + layerPos.x|0;
+        layerPos.arrayCheck(this.size) && (this.collisionData[i] = data);
     }
 
-    /** Get tile collision data for a given cell in the grid
-    *  @param {Vector2} gridPos
+    /** Clear tile collision data for a given cell in the layer
+    *  @param {Vector2} layerPos */
+    clearCollisionData(layerPos)
+    { this.setCollisionData(layerPos, 0); }
+
+    /** Get tile collision data for a given cell in the layer
+    *  @param {Vector2} layerPos
     *  @return {number} */
-    getCollisionData(gridPos)
+    getCollisionData(layerPos)
     {
-        ASSERT(isVector2(gridPos), 'gridPos must be a Vector2');
-        const i = (gridPos.y|0)*this.size.x + gridPos.x|0;
-        return gridPos.arrayCheck(this.size) ? this.collisionData[i] : 0;
+        ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
+        const i = (layerPos.y|0)*this.size.x + layerPos.x|0;
+        return layerPos.arrayCheck(this.size) ? this.collisionData[i] : 0;
     }
 
     /** Check if collision with another object should occur
@@ -7283,7 +7283,7 @@ function glPreRender(clear=true)
         p.x,        p.y,      0, 1];
 
     // set the same transform matrix for both shaders
-    const initUniform = (program, uniform, value) =>
+    const initUniform = (program, uniform, value)=>
     {
         glContext.useProgram(program);
         const location = glContext.getUniformLocation(program, uniform);
@@ -8296,7 +8296,7 @@ class ZzFXMusic extends Sound
     /** Play the music that loops by default
      *  @param {number}  [volume] - Volume to play the music at
      *  @param {boolean} [loop] - Should the music loop?
-     *  @return {AudioBufferSourceNode} - The audio source node
+     *  @return {SoundInstance} - The sound instance
      */
     playMusic(volume=1, loop=true)
     { return super.play(undefined, volume, 1, 0, loop); }
@@ -8343,7 +8343,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
     sampleBuffer = [hasMore = notFirstBeat = outSampleOffset = 0];
 
     // for each pattern in sequence
-    sequence.forEach((patternIndex, sequenceIndex) => {
+    sequence.forEach((patternIndex, sequenceIndex)=> {
       // get pattern for current channel, use empty 1 note pattern if none found
       patternChannel = patterns[patternIndex][channelIndex] || [0, 0, 0];
 
@@ -8436,7 +8436,7 @@ let uiDebug = 0;
 
 /** Enable UI system debug drawing
  *  0=off, 1=normal, 2=show invisible
- *  @param {number|boolean} enable
+ *  @param {number|boolean} debugMode
  *  @memberof UISystem */
 function uiSetDebug(debugMode)
 { uiDebug = typeof debugMode === 'boolean' ? (debugMode ? 1 : 0) : debugMode; }
@@ -9637,8 +9637,8 @@ class UIScrollbar extends UIObject
 class UIVideo extends UIObject
 {
     /** Create a video player UI object
-     *  @param {Vector2} [pos]
-     *  @param {Vector2} [size]
+     *  @param {Vector2} pos
+     *  @param {Vector2} size
      *  @param {string} src - Video file path or URL
      *  @param {boolean} [autoplay=false] - Start playing immediately?
      *  @param {boolean} [loop=false] - Loop the video?
@@ -9778,6 +9778,7 @@ class UIVideo extends UIObject
  * - Contact begin and end callbacks
  * - Wraps b2Vec2 type to/from Vector2
  * - Raycasting and querying
+ * - Box2dTileLayer for grid based collision
  * - Every type of joint
  * - Debug physics drawing
  * @namespace Box2D
@@ -9827,21 +9828,24 @@ class Box2dObject extends EngineObject
         bodyDef.set_type(bodyType);
         bodyDef.set_position(box2d.vec2dTo(pos));
         bodyDef.set_angle(-angle);
-        this.body = box2d.world.CreateBody(bodyDef);
-        this.body.object = this;
-        this.lineColor = BLACK;
-        box2d.objects.push(this);
         
-        // edge lists and loops for drawing
+        /** @property {Object} - The Box2d body */
+        this.body = box2d.world.CreateBody(bodyDef);
+        /** @property {Color} - Line color used for default box2d drawing */
+        this.lineColor = BLACK;
+        /** @property {Array<Object>} - List of all edges for default box2d drawing */
         this.edgeLists = [];
+        /** @property {Array<Object>} - List of all edge loops for default box2d drawing */
         this.edgeLoops = [];
+
+        this.body.object = this; // link body to this object
+        box2d.objects.push(this); // keep track of all box2d objects
     }
 
     /** Destroy this object and its physics body */
     destroy()
     {
-        if (this.destroyed)
-            return;
+        if (this.destroyed) return;
 
         // destroy physics body, fixtures, and joints
         ASSERT(this.body, 'Box2dObject has no body to destroy');
@@ -9872,11 +9876,12 @@ class Box2dObject extends EngineObject
     }
 
     /** Draws all this object's fixtures 
-     *  @param {Color}  [color]
-     *  @param {Color}  [lineColor]
-     *  @param {number} [lineWidth]
+     *  @param {Color}   [color]
+     *  @param {Color}   [lineColor]
+     *  @param {number}  [lineWidth]
+     *  @param {boolean} [useWebGL=glEnable]
      *  @param {CanvasRenderingContext2D} [context] */
-    drawFixtures(color=WHITE, lineColor=BLACK, lineWidth=.1, context)
+    drawFixtures(color=WHITE, lineColor=BLACK, lineWidth=.1, useWebGL, context)
     {
         // draw non-edge fixtures
         this.getFixtureList().forEach((fixture)=>
@@ -9884,7 +9889,7 @@ class Box2dObject extends EngineObject
             const shape = box2d.castObjectType(fixture.GetShape());
             if (shape.GetType() !== box2d.instance.b2Shape.e_edge)
             {
-                box2d.drawFixture(fixture, this.pos, this.angle, color, lineColor, lineWidth, context);
+                box2d.drawFixture(fixture, this.pos, this.angle, color, lineColor, lineWidth, useWebGL, context);
             }
         });
 
@@ -10109,6 +10114,10 @@ class Box2dObject extends EngineObject
         this.edgeLoops.push(edgePoints);
         return fixtures;
     }
+
+    /** Destroy a fixture from the body
+     *  @param {Object} [fixture] */
+    destroyFixture(fixture) { this.body.DestroyFixture(fixture); }
 
     ///////////////////////////////////////////////////////////////////////////////
     // physics get functions
@@ -10342,6 +10351,92 @@ class Box2dObject extends EngineObject
     }
 }
 
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * Box2d Tile Layer
+ * - adds Box2d support to tile layers
+ * - creates static box2d fixtures for solid tiles
+ * @extends TileLayer
+ * @memberof TileLayers
+ */
+class Box2dTileLayer extends TileCollisionLayer
+{
+    /** Create a tile layer object
+    *  @param {Vector2}  pos - World space position
+    *  @param {Vector2}  size - World space size
+    *  @param {TileInfo} [tileInfo] - Tile info for layer
+    *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
+    *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
+    */
+    constructor(pos, size, tileInfo=tile(), renderOrder=0, useWebGL=true)
+    {
+        super(pos, size.floor(), tileInfo, renderOrder, useWebGL);
+
+        /** @property {Box2dStaticObject} - The box2d object */
+        this.box2dObject = undefined;
+    }
+    
+    /** Create box2d collision fixtures for solid tiles
+    *  @param {number} [friction]
+    *  @param {number} [restitution] */
+    buildCollision(friction=.2, restitution=0)
+    {
+        // destroy any existing box2d object
+        this.box2dObject?.destroy();
+
+        // create box2d object for this layer
+        this.box2dObject = new Box2dStaticObject(this.pos, this.size);
+        this.box2dObject.color = CLEAR_BLACK;
+        this.box2dObject.lineColor = CLEAR_BLACK;
+        this.addChild(this.box2dObject);
+
+        // track which tiles have been processed
+        const processed = [];
+        const getIndex = (x, y)=> x + y * this.size.x;
+        const isSolidUnprocessed = (x, y)=>
+            !processed[getIndex(x, y)] &&
+            this.getCollisionData(vec2(x, y)) > 0;
+
+        // combine tiles into larger boxes
+        for (let x = 0; x < this.size.x; ++x)
+        for (let y = 0; y < this.size.y; ++y)
+        {
+            if (!isSolidUnprocessed(x, y)) continue;
+
+            // find max width by scanning right
+            let width = 1, height = 1, canExpand = true;
+            while (isSolidUnprocessed(x + width, y))
+                ++width;
+
+            // find max height by scanning up, ensuring all rows have the same width
+            while (canExpand)
+            {
+                for (let checkX = 0; checkX < width; ++checkX)
+                {
+                    if (!isSolidUnprocessed(x + checkX, y + height))
+                    {
+                        canExpand = false;
+                        break;
+                    }
+                }
+                if (canExpand)
+                    ++height;
+            }
+
+            // mark all tiles in this rectangle as processed
+            for (let rectX = width;  rectX--;)
+            for (let rectY = height; rectY--;)
+                processed[getIndex(x + rectX, y + rectY)] = true;
+
+            // create a single fixture for the entire rectangle
+            const size = vec2(width, height);
+            const offset = vec2(x + width/2, y + height/2);
+            this.box2dObject.addBox(size, offset, 0, 0, friction, restitution);
+        }
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 /** 
  * Box2D Raycast Result
@@ -10383,6 +10478,7 @@ class Box2dJoint
      *  @param {Object} jointDef */
     constructor(jointDef)
     {
+        /** @property {Object} - The Box2d joint */
         this.box2dJoint = box2d.castObjectType(box2d.world.CreateJoint(jointDef));
     }
 
@@ -10729,7 +10825,7 @@ class Box2dGearJoint extends Box2dJoint
      *  @param {Box2dObject} objectB
      *  @param {Box2dJoint} joint1
      *  @param {Box2dJoint} joint2
-     *  @param {ratio} [ratio] */
+     *  @param {number} [ratio] */
     constructor(objectA, objectB, joint1, joint2, ratio=1)
     {
         const jointDef = new box2d.instance.b2GearJointDef();
@@ -11275,10 +11371,13 @@ class Box2dPlugin
     {
         ASSERT(!box2d, 'Box2D already initialized');
         box2d = this;
-        this.instance = instance;
-        this.world = new box2d.instance.b2World();
-        this.objects = [];
 
+        /** @property {Object} - The Box2d instance */
+        this.instance = instance;
+        /** @property {Object} - The Box2d world */
+        this.world = new box2d.instance.b2World();
+        /** @property {Array<Box2dObject>} - List of all Box2d objects */
+        this.objects = [];
         /** @property {number} - Velocity iterations per update*/
         this.velocityIterations = 8;
         /** @property {number} - Position iterations per update*/
@@ -11477,8 +11576,9 @@ class Box2dPlugin
      *  @param {Color} [color]
      *  @param {Color} [lineColor]
      *  @param {number} [lineWidth]
+     *  @param {boolean} [useWebGL=glEnable]
      *  @param {CanvasRenderingContext2D} [context] */
-    drawFixture(fixture, pos, angle, color=WHITE, lineColor=BLACK, lineWidth=.1, context)
+    drawFixture(fixture, pos, angle, color=WHITE, lineColor=BLACK, lineWidth=.1, useWebgl, context)
     {
         const shape = box2d.castObjectType(fixture.GetShape());
         switch (shape.GetType())
@@ -11488,20 +11588,20 @@ class Box2dPlugin
                 let points = [];
                 for (let i=shape.GetVertexCount(); i--;)
                     points.push(box2d.vec2From(shape.GetVertex(i)));
-                drawPoly(points, color, lineWidth, lineColor, pos, angle);
+                drawPoly(points, color, lineWidth, lineColor, pos, angle, useWebgl, false, context);
                 break;
             }
             case box2d.instance.b2Shape.e_circle:
             {
                 const radius = shape.get_m_radius();
-                drawCircle(pos, radius*2, color, lineWidth, lineColor);
+                drawCircle(pos, radius*2, color, lineWidth, lineColor, useWebgl, false, context);
                 break;
             }
             case box2d.instance.b2Shape.e_edge:
             {
                 const v1 = box2d.vec2From(shape.get_m_vertex1());
                 const v2 = box2d.vec2From(shape.get_m_vertex2());
-                drawLine(v1, v2, lineWidth, lineColor, pos, angle);
+                drawLine(v1, v2, lineWidth, lineColor, pos, angle, useWebgl, false, context);
                 break;
             }
         }
@@ -11519,7 +11619,7 @@ class Box2dPlugin
     }
 
     /** converts a box2d vec2 pointer to a Vector2
-     *  @param {Object} v */
+     *  @param {Object} vp */
     vec2FromPointer(vp)
     {
         const v = box2d.instance.wrapPointer(vp, box2d.instance.b2Vec2);
@@ -11631,7 +11731,7 @@ async function box2dInit()
         const box2dColorPointer = (c)=>
             box2dColor(box2d.instance.wrapPointer(c, box2d.instance.b2Color));
         const getDebugColor = (color)=>box2dColorPointer(color).scale(1,.8);
-        const getPointsList = (vertices, vertexCount) =>
+        const getPointsList = (vertices, vertexCount)=>
         {
             const points = [];
             for (let i=vertexCount; i--;)
