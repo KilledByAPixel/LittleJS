@@ -126,7 +126,7 @@ export class CarObject extends LJS.Box2dObject
         const maxTorque   = 35;
         const sprite      = Game.spriteAtlas.wheel;
         this.wheels = [];
-        const makeWheel = (pos, isMotor) =>
+        const makeWheel = (pos, isMotor)=>
         {
             const wheel = new LJS.Box2dObject(pos, vec2(diameter), sprite);
             const joint = new LJS.Box2dWheelJoint(this, wheel);
@@ -284,7 +284,7 @@ export class SoftBodyObject extends LJS.Box2dObject
         for (let x=sizeCount.x; x--;)
         {
             const o = this.getNode(x, y);
-            const tryAddJoint = (xo, yo) =>
+            const tryAddJoint = (xo, yo)=>
             {
                 const o2 = this.getNode(x+xo, y+yo);
                 const joint = o2 ? new LJS.Box2dWeldJoint(o, o2) : 0;
@@ -360,7 +360,7 @@ export class ClothObject extends LJS.Box2dStaticObject
             const d = y%2 ? 1 : -1;
             const x2 = d>1 ? x : sizeCount.x-1-x;
             const o = this.getNode(x2, y);
-            const tryAddJoint = (xo, yo) =>
+            const tryAddJoint = (xo, yo)=>
             {
                 const o2 = this.getNode(x2+xo, y+yo);
                 const joint = o2 ? new LJS.Box2dRopeJoint(o, o2) : 0;

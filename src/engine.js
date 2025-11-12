@@ -151,11 +151,11 @@ function engineAddPlugin(update, render, glContextLost, glContextRestored)
  *  @example
  *  // Basic engine startup
  *  engineInit(
- *    () => { LOG('Game initialized!'); },  // gameInit
- *    () => { updateGameLogic(); },         // gameUpdate
- *    () => { updateUI(); },                // gameUpdatePost
- *    () => { drawBackground(); },          // gameRender
- *    () => { drawHUD(); },                 // gameRenderPost
+ *    ()=> { LOG('Game initialized!'); },  // gameInit
+ *    ()=> { updateGameLogic(); },         // gameUpdate
+ *    ()=> { updateUI(); },                // gameUpdatePost
+ *    ()=> { drawBackground(); },          // gameRender
+ *    ()=> { drawHUD(); },                 // gameRenderPost
  *    ['tiles.png', 'tilesLevel.png']       // images to load
  *  );
  *  @memberof Engine */
@@ -606,7 +606,7 @@ function drawEngineLogo(t)
         x.fillStyle = C;
         C ? x.fill() : x.stroke();
     };
-    const color = (c=0, l=0) =>
+    const color = (c=0, l=0)=>
         hsl([.98,.3,.57,.14][c%4],.9,[0,.3,.5,.8,.9][l]).toString();
     const alpha = wave(1,1,t);
     const p = percent(alpha, .1, .5);

@@ -408,9 +408,9 @@ function inputInit()
     function touchInputInit()
     {
         // add non passive touch event listeners
-        document.addEventListener('touchstart', (e) => handleTouch(e), { passive: false });
-        document.addEventListener('touchmove',  (e) => handleTouch(e), { passive: false });
-        document.addEventListener('touchend',   (e) => handleTouch(e), { passive: false });
+        document.addEventListener('touchstart', (e)=> handleTouch(e), { passive: false });
+        document.addEventListener('touchmove',  (e)=> handleTouch(e), { passive: false });
+        document.addEventListener('touchend',   (e)=> handleTouch(e), { passive: false });
 
         // handle all touch events the same way
         let wasTouching;

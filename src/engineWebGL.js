@@ -259,7 +259,7 @@ function glPreRender(clear=true)
         p.x,        p.y,      0, 1];
 
     // set the same transform matrix for both shaders
-    const initUniform = (program, uniform, value) =>
+    const initUniform = (program, uniform, value)=>
     {
         glContext.useProgram(program);
         const location = glContext.getUniformLocation(program, uniform);

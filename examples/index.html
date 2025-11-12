@@ -160,7 +160,7 @@ function initExampleBrowser()
     // set the selected example from the URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const selectedExample = urlParams.get('example') || '';
-    let exampleIndex = exampleList.findIndex((example) => example.name === selectedExample);
+    let exampleIndex = exampleList.findIndex((example)=> example.name === selectedExample);
     if (exampleIndex < 0)
         exampleIndex = 1;
     selectExample.selectedIndex = exampleIndex;
@@ -399,7 +399,7 @@ function codeInput()
     // debounce input - get content from code mirror if available, otherwise from textarea
     clearTimeout(inputTimeout);
     const code = codeMirror ? codeMirror.getValue() : textareaCode.value;
-    inputTimeout = setTimeout(() => setCode(code), 500);
+    inputTimeout = setTimeout(()=> setCode(code), 500);
 }
 
 function restartCode()
@@ -454,7 +454,7 @@ function setCode(code, filename)
             const anonymousMatch = stack?.match(/(<anonymous>|injectedScript):(\d+)/);
             return anonymousMatch ? parseInt(anonymousMatch[2]) : -1;            
         }
-        iframeContent.onerror = (message, source, lineno, colno, error) =>
+        iframeContent.onerror = (message, source, lineno, colno, error)=>
         {
             let text = message;
             if (lineno)  
@@ -464,7 +464,7 @@ function setCode(code, filename)
             setErrorMessage(text);
             setErrorLine(lineno);
         }
-        iframeContent.onunhandledrejection = (event) => 
+        iframeContent.onunhandledrejection = (event)=> 
         {
             let text = event.reason;
             setErrorMessage(text);
@@ -511,14 +511,14 @@ function setCode(code, filename)
 
         {
             // hook up buttons
-            buttonScreenshot.onclick = () =>
+            buttonScreenshot.onclick = ()=>
             {
                 if (iframeContent.debugScreenshot)
                     iframeContent.debugScreenshot();
             }
 
             // pause/resume functionality
-            buttonPause.onclick = () =>
+            buttonPause.onclick = ()=>
             {
                 if (!iframeContent.getPaused || !iframeContent.setPaused)
                     return;

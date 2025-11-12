@@ -102,7 +102,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
     sampleBuffer = [hasMore = notFirstBeat = outSampleOffset = 0];
 
     // for each pattern in sequence
-    sequence.forEach((patternIndex, sequenceIndex) => {
+    sequence.forEach((patternIndex, sequenceIndex)=> {
       // get pattern for current channel, use empty 1 note pattern if none found
       patternChannel = patterns[patternIndex][channelIndex] || [0, 0, 0];
 

@@ -127,7 +127,7 @@ function gameRender()
 function gameRenderPost()
 {
     // draw to main canvas for hud rendering
-    const drawText = (text, x, y, size=40) =>
+    const drawText = (text, x, y, size=40)=>
     {
         const context = LJS.mainContext;
         context.textAlign = 'center';

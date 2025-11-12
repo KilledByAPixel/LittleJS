@@ -318,15 +318,15 @@ class TileLayer extends CanvasLayer
         if (headlessMode)
         {
             // disable rendering in headless mode
-            this.render         = () => {};
-            this.redraw         = () => {};
-            this.redrawStart    = () => {};
-            this.redrawEnd      = () => {};
-            this.drawTileData   = () => {};
-            this.redrawTileData = () => {};
-            this.drawLayerTile  = () => {};
-            this.drawLayerRect  = () => {};
-            this.clearLayerRect = () => {};
+            this.render         = ()=> {};
+            this.redraw         = ()=> {};
+            this.redrawStart    = ()=> {};
+            this.redrawEnd      = ()=> {};
+            this.drawTileData   = ()=> {};
+            this.redrawTileData = ()=> {};
+            this.drawLayerTile  = ()=> {};
+            this.drawLayerRect  = ()=> {};
+            this.clearLayerRect = ()=> {};
             return;
         }
         

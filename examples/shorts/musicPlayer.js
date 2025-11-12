@@ -29,7 +29,7 @@ function gameInit()
     const volumeSlider = new UIScrollbar(vec2(0, -20), vec2(400, 30),
         musicVolume, 'Music Volume');
     musicPlayer.addChild(volumeSlider);
-    volumeSlider.onChange = () => 
+    volumeSlider.onChange = ()=> 
     {
         musicVolume = volumeSlider.value;
         musicInstance?.setVolume(musicVolume);

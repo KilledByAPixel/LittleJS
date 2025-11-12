@@ -44,8 +44,8 @@ const tileColors =
 ];
 const tileTypeCount = tileColors.length;
 
-const getTile = (pos)       => level[pos.x + pos.y * levelSize.x];
-const setTile = (pos, data) => level[pos.x + pos.y * levelSize.x] = data;
+const getTile = (pos)=> level[pos.x + pos.y * levelSize.x];
+const setTile = (pos, data)=> level[pos.x + pos.y * levelSize.x] = data;
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameReset()

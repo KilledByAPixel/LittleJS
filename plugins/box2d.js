@@ -1964,7 +1964,7 @@ async function box2dInit()
         const box2dColorPointer = (c)=>
             box2dColor(box2d.instance.wrapPointer(c, box2d.instance.b2Color));
         const getDebugColor = (color)=>box2dColorPointer(color).scale(1,.8);
-        const getPointsList = (vertices, vertexCount) =>
+        const getPointsList = (vertices, vertexCount)=>
         {
             const points = [];
             for (let i=vertexCount; i--;)

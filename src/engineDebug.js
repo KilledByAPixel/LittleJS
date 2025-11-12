@@ -706,8 +706,8 @@ function debugProtectConstant(obj)
         props.forEach(prop =>
         {
             Object.defineProperty(obj, prop, {
-                get: () => values[prop],
-                set: (value) => 
+                get: ()=> values[prop],
+                set: (value)=> 
                 {
                     ASSERT(false, `Cannot modify engine constant. Attempted to set constant (${obj}) property '${prop}' to '${value}'.`);
                 },
