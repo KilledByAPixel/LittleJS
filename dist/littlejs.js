@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.17.3';
+const engineVersion = '1.17.4';
 
 /** Frames per second to update
  *  @type {number}
@@ -6790,7 +6790,7 @@ class TileLayer extends CanvasLayer
      *  @param {Vector2} layerPos - Local position in array
      *  @param {boolean} [redraw] - Force the tile to redraw if true */
     clearData(layerPos, redraw=false)
-    { this.setData(layerPos, new TileLayerData, redraw=false) }
+    { this.setData(layerPos, new TileLayerData, redraw) }
 
     /** Get data at a given position in the array
      *  @param {Vector2} layerPos - Local position in array
