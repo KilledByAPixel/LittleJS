@@ -36,23 +36,23 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 
 ### ✨ Graphics
 
-- Super fast WebGL2 + Canvas2D hybrid rendering system
+- Super fast WebGL2 + Canvas2D hybrid rendering system for sprites and tilemaps
 - 100,000+ sprites at solid 60fps
 - Apply [Shadertoy](https://www.shadertoy.com) style shaders for post-processing effects
 - Robust particle effect system and [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
-- Falls back to Canvas2D if WebGL can't be created or is lost
+- Falls back to Canvas2D if WebGL can't be created or context is lost
 
 ### 🔊 Audio
 
-- Positional sound effects with distance falloff
+- Sound and music with mp3, ogg, wave, or [ZzFXM](https://keithclark.github.io/ZzFXM/)
 - Use [ZzFX](https://killedbyapixel.github.io/ZzFX/) sound effect generator to play sounds without asset files
-- Music and sound with mp3, ogg, wave, or [ZzFXM](https://keithclark.github.io/ZzFXM/)
+- Positional sound effects with distance falloff
 
 ### 🎮 Input
 
-- Comprehensive input handling for keyboard, mouse, gamepad, and touch
-- Automatic touch pad mouse emulation
-- On screen touch gamepad designed for mobile devices
+- Comprehensive input handling for mouse, keyboard, gamepad, and touch
+- Touch pad acts as a mouse with no additional code
+- Customizable on screen gamepad designed for mobile devices
 
 ### 💥 Physics
 
@@ -62,8 +62,8 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 
 ### 🚀 Flexibility
 
-- Compatible with all modern web browsers and on mobile devices
-- Support for TypeScript and Modules with example projects for both
+- Compatible with all modern web browsers, operating systems, and mobile devices
+- TypeScript and Module support with example projects for both
 - Ideal for size coding competitions like [Js13kGames](https://js13kgames.com/)
 - Open Source and [MIT licensed](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE)
 
