@@ -9,6 +9,7 @@
  * - Contact begin and end callbacks
  * - Wraps b2Vec2 type to/from Vector2
  * - Raycasting and querying
+ * - Box2dTileLayer for grid based collision
  * - Every type of joint
  * - Debug physics drawing
  * @namespace Box2D
@@ -60,21 +61,24 @@ class Box2dObject extends EngineObject
         bodyDef.set_type(bodyType);
         bodyDef.set_position(box2d.vec2dTo(pos));
         bodyDef.set_angle(-angle);
-        this.body = box2d.world.CreateBody(bodyDef);
-        this.body.object = this;
-        this.lineColor = BLACK;
-        box2d.objects.push(this);
         
-        // edge lists and loops for drawing
+        /** @property {Object} - The Box2d body */
+        this.body = box2d.world.CreateBody(bodyDef);
+        /** @property {Color} - Line color used for default box2d drawing */
+        this.lineColor = BLACK;
+        /** @property {Array<Object>} - List of all edges for default box2d drawing */
         this.edgeLists = [];
+        /** @property {Array<Object>} - List of all edge loops for default box2d drawing */
         this.edgeLoops = [];
+
+        this.body.object = this; // link body to this object
+        box2d.objects.push(this); // keep track of all box2d objects
     }
 
     /** Destroy this object and its physics body */
     destroy()
     {
-        if (this.destroyed)
-            return;
+        if (this.destroyed) return;
 
         // destroy physics body, fixtures, and joints
         ASSERT(this.body, 'Box2dObject has no body to destroy');
@@ -105,11 +109,12 @@ class Box2dObject extends EngineObject
     }
 
     /** Draws all this object's fixtures 
-     *  @param {Color}  [color]
-     *  @param {Color}  [lineColor]
-     *  @param {number} [lineWidth]
+     *  @param {Color}   [color]
+     *  @param {Color}   [lineColor]
+     *  @param {number}  [lineWidth]
+     *  @param {boolean} [useWebGL=glEnable]
      *  @param {CanvasRenderingContext2D} [context] */
-    drawFixtures(color=WHITE, lineColor=BLACK, lineWidth=.1, context)
+    drawFixtures(color=WHITE, lineColor=BLACK, lineWidth=.1, useWebGL, context)
     {
         // draw non-edge fixtures
         this.getFixtureList().forEach((fixture)=>
@@ -117,7 +122,7 @@ class Box2dObject extends EngineObject
             const shape = box2d.castObjectType(fixture.GetShape());
             if (shape.GetType() !== box2d.instance.b2Shape.e_edge)
             {
-                box2d.drawFixture(fixture, this.pos, this.angle, color, lineColor, lineWidth, context);
+                box2d.drawFixture(fixture, this.pos, this.angle, color, lineColor, lineWidth, useWebGL, context);
             }
         });
 
@@ -342,6 +347,10 @@ class Box2dObject extends EngineObject
         this.edgeLoops.push(edgePoints);
         return fixtures;
     }
+
+    /** Destroy a fixture from the body
+     *  @param {Object} [fixture] */
+    destroyFixture(fixture) { this.body.DestroyFixture(fixture); }
 
     ///////////////////////////////////////////////////////////////////////////////
     // physics get functions
@@ -575,6 +584,92 @@ class Box2dObject extends EngineObject
     }
 }
 
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * Box2d Tile Layer
+ * - adds Box2d support to tile layers
+ * - creates static box2d fixtures for solid tiles
+ * @extends TileLayer
+ * @memberof TileLayers
+ */
+class Box2dTileLayer extends TileCollisionLayer
+{
+    /** Create a tile layer object
+    *  @param {Vector2}  pos - World space position
+    *  @param {Vector2}  size - World space size
+    *  @param {TileInfo} [tileInfo] - Tile info for layer
+    *  @param {number}   [renderOrder] - Objects are sorted by renderOrder
+    *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
+    */
+    constructor(pos, size, tileInfo=tile(), renderOrder=0, useWebGL=true)
+    {
+        super(pos, size.floor(), tileInfo, renderOrder, useWebGL);
+
+        /** @property {Box2dStaticObject} - The box2d object */
+        this.box2dObject = undefined;
+    }
+    
+    /** Create box2d collision fixtures for solid tiles
+    *  @param {number} [friction]
+    *  @param {number} [restitution] */
+    buildCollision(friction=.2, restitution=0)
+    {
+        // destroy any existing box2d object
+        this.box2dObject?.destroy();
+
+        // create box2d object for this layer
+        this.box2dObject = new Box2dStaticObject(this.pos, this.size);
+        this.box2dObject.color = CLEAR_BLACK;
+        this.box2dObject.lineColor = CLEAR_BLACK;
+        this.addChild(this.box2dObject);
+
+        // track which tiles have been processed
+        const processed = [];
+        const getIndex = (x, y)=> x + y * this.size.x;
+        const isSolidUnprocessed = (x, y)=>
+            !processed[getIndex(x, y)] &&
+            this.getCollisionData(vec2(x, y)) > 0;
+
+        // combine tiles into larger boxes
+        for (let x = 0; x < this.size.x; ++x)
+        for (let y = 0; y < this.size.y; ++y)
+        {
+            if (!isSolidUnprocessed(x, y)) continue;
+
+            // find max width by scanning right
+            let width = 1, height = 1, canExpand = true;
+            while (isSolidUnprocessed(x + width, y))
+                ++width;
+
+            // find max height by scanning up, ensuring all rows have the same width
+            while (canExpand)
+            {
+                for (let checkX = 0; checkX < width; ++checkX)
+                {
+                    if (!isSolidUnprocessed(x + checkX, y + height))
+                    {
+                        canExpand = false;
+                        break;
+                    }
+                }
+                if (canExpand)
+                    ++height;
+            }
+
+            // mark all tiles in this rectangle as processed
+            for (let rectX = width;  rectX--;)
+            for (let rectY = height; rectY--;)
+                processed[getIndex(x + rectX, y + rectY)] = true;
+
+            // create a single fixture for the entire rectangle
+            const size = vec2(width, height);
+            const offset = vec2(x + width/2, y + height/2);
+            this.box2dObject.addBox(size, offset, 0, 0, friction, restitution);
+        }
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 /** 
  * Box2D Raycast Result
@@ -616,6 +711,7 @@ class Box2dJoint
      *  @param {Object} jointDef */
     constructor(jointDef)
     {
+        /** @property {Object} - The Box2d joint */
         this.box2dJoint = box2d.castObjectType(box2d.world.CreateJoint(jointDef));
     }
 
@@ -962,7 +1058,7 @@ class Box2dGearJoint extends Box2dJoint
      *  @param {Box2dObject} objectB
      *  @param {Box2dJoint} joint1
      *  @param {Box2dJoint} joint2
-     *  @param {ratio} [ratio] */
+     *  @param {number} [ratio] */
     constructor(objectA, objectB, joint1, joint2, ratio=1)
     {
         const jointDef = new box2d.instance.b2GearJointDef();
@@ -1508,10 +1604,13 @@ class Box2dPlugin
     {
         ASSERT(!box2d, 'Box2D already initialized');
         box2d = this;
-        this.instance = instance;
-        this.world = new box2d.instance.b2World();
-        this.objects = [];
 
+        /** @property {Object} - The Box2d instance */
+        this.instance = instance;
+        /** @property {Object} - The Box2d world */
+        this.world = new box2d.instance.b2World();
+        /** @property {Array<Box2dObject>} - List of all Box2d objects */
+        this.objects = [];
         /** @property {number} - Velocity iterations per update*/
         this.velocityIterations = 8;
         /** @property {number} - Position iterations per update*/
@@ -1710,8 +1809,9 @@ class Box2dPlugin
      *  @param {Color} [color]
      *  @param {Color} [lineColor]
      *  @param {number} [lineWidth]
+     *  @param {boolean} [useWebGL=glEnable]
      *  @param {CanvasRenderingContext2D} [context] */
-    drawFixture(fixture, pos, angle, color=WHITE, lineColor=BLACK, lineWidth=.1, context)
+    drawFixture(fixture, pos, angle, color=WHITE, lineColor=BLACK, lineWidth=.1, useWebgl, context)
     {
         const shape = box2d.castObjectType(fixture.GetShape());
         switch (shape.GetType())
@@ -1721,20 +1821,20 @@ class Box2dPlugin
                 let points = [];
                 for (let i=shape.GetVertexCount(); i--;)
                     points.push(box2d.vec2From(shape.GetVertex(i)));
-                drawPoly(points, color, lineWidth, lineColor, pos, angle);
+                drawPoly(points, color, lineWidth, lineColor, pos, angle, useWebgl, false, context);
                 break;
             }
             case box2d.instance.b2Shape.e_circle:
             {
                 const radius = shape.get_m_radius();
-                drawCircle(pos, radius*2, color, lineWidth, lineColor);
+                drawCircle(pos, radius*2, color, lineWidth, lineColor, useWebgl, false, context);
                 break;
             }
             case box2d.instance.b2Shape.e_edge:
             {
                 const v1 = box2d.vec2From(shape.get_m_vertex1());
                 const v2 = box2d.vec2From(shape.get_m_vertex2());
-                drawLine(v1, v2, lineWidth, lineColor, pos, angle);
+                drawLine(v1, v2, lineWidth, lineColor, pos, angle, useWebgl, false, context);
                 break;
             }
         }
@@ -1752,7 +1852,7 @@ class Box2dPlugin
     }
 
     /** converts a box2d vec2 pointer to a Vector2
-     *  @param {Object} v */
+     *  @param {Object} vp */
     vec2FromPointer(vp)
     {
         const v = box2d.instance.wrapPointer(vp, box2d.instance.b2Vec2);
