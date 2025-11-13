@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.17.7';
+const engineVersion = '1.17.8';
 
 /** Frames per second to update
  *  @type {number}
@@ -10345,6 +10345,8 @@ class UIScrollbar extends UIObject
         this.value = value;
         /** @property {Color} - Color for the handle part of the scrollbar */
         this.handleColor = handleColor.copy();
+        /** @property {boolean} - Should it fill up like a progress bar? */
+        this.fillMode = false;
 
         // set properties
         this.text = text;
@@ -10390,19 +10392,30 @@ class UIScrollbar extends UIObject
 
         // handle horizontal or vertical scrollbar
         const isHorizontal = this.size.x > this.size.y;
-        const handleSize = isHorizontal ? this.size.y : this.size.x;
-        const barSize = isHorizontal ? this.size.x : this.size.y;
-        const centerPos = isHorizontal ? this.pos.x : this.pos.y;
-        
-        // draw the scrollbar handle
-        const handleWidth = barSize - handleSize;
-        const p1 = centerPos - handleWidth/2;
-        const p2 = centerPos + handleWidth/2;
-        const handlePos = isHorizontal ? 
-            vec2(lerp(p1, p2, this.value), this.pos.y) :
-            vec2(this.pos.x, lerp(p2, p1, this.value))
-        const handleColor = this.disabled ? this.disabledColor : this.handleColor;
-        uiSystem.drawRect(handlePos, vec2(handleSize), handleColor, this.lineWidth, this.lineColor, this.cornerRadius, this.gradientColor);
+        const barWidth = isHorizontal ? this.size.x : this.size.y;
+        const handleWidth = isHorizontal ? this.size.y : this.size.x;
+        if (this.fillMode)
+        {
+            // draw progress bar
+            const minWidth = min(handleWidth, this.cornerRadius * 2);
+            const progressWidth = lerp(minWidth, barWidth, this.value);
+            const p = (progressWidth - barWidth) * (isHorizontal ? .5 : -.5);
+            const pos = this.pos.add(isHorizontal ? vec2(p, 0) : vec2(0, p));
+            const color = this.disabled ? this.disabledColor : this.handleColor;
+            const drawSize = isHorizontal ? 
+                vec2(progressWidth, this.size.y) : vec2(this.size.x, progressWidth);
+            uiSystem.drawRect(pos, drawSize, color, this.lineWidth, this.lineColor, this.cornerRadius, this.gradientColor);
+        }
+        else
+        {
+            // draw the scrollbar handle
+            const value = isHorizontal ? this.value : 1 - this.value;
+            const p = (barWidth - handleWidth) * (value - .5);
+            const pos = this.pos.add(isHorizontal ? vec2(p, 0) : vec2(0, p));
+            const color = this.disabled ? this.disabledColor : this.handleColor;
+            const drawSize = vec2(handleWidth);
+            uiSystem.drawRect(pos, drawSize, color, this.lineWidth, this.lineColor, this.cornerRadius, this.gradientColor);
+        }
 
         // draw the text scaled to fit on the scrollbar
         const textSize = this.getTextSize();

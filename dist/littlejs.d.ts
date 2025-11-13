@@ -3633,6 +3633,8 @@ declare module "littlejsengine" {
         value: number;
         /** @property {Color} - Color for the handle part of the scrollbar */
         handleColor: Color;
+        /** @property {boolean} - Should it fill up like a progress bar? */
+        fillMode: boolean;
         text: string;
     }
     /**
