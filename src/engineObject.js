@@ -350,11 +350,11 @@ class EngineObject
         drawTile(this.pos, this.drawSize || this.size, this.tileInfo, this.color, this.angle, this.mirror, this.additiveColor);
     }
 
-    /** Destroy this object, destroy its children, detach its parent, and mark it for removal */
-    destroy()
+    /** Destroy this object, destroy its children, detach its parent, and mark it for removal
+     *  @param {boolean} [immediate] - should attached effects be allowed to die off? */
+    destroy(immediate=false)
     {
-        if (this.destroyed)
-            return;
+        if (this.destroyed) return;
 
         // disconnect from parent and destroy children
         this.destroyed = true;
@@ -362,7 +362,7 @@ class EngineObject
         for (const child of this.children)
         {
             child.parent = undefined;
-            child.destroy();
+            child.destroy(immediate);
         }
     }
 

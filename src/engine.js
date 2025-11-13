@@ -486,11 +486,14 @@ function engineObjectsUpdate()
 }
 
 /** Destroy and remove all objects
+ *  - This can be used to clear out all objects when restarting a level
+ *  - Objects can override their destroy function to do cleanup or stick around
+ *  @param {boolean} [immediate] - should attached effects be allowed to die off?
  *  @memberof Engine */
-function engineObjectsDestroy()
+function engineObjectsDestroy(immediate=true)
 {
     for (const o of engineObjects)
-        o.parent || o.destroy();
+        o.parent || o.destroy(immediate);
     engineObjects = engineObjects.filter(o=>!o.destroyed);
 }
 
