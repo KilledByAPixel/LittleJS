@@ -24,7 +24,7 @@ class PostProcessPlugin
 {
     /** Create global post processing shader
     *  @param {string} shaderCode
-    *  @param {boolean} [includeMainCanvas] - combine mainCanvs onto glCanvas
+    *  @param {boolean} [includeMainCanvas] - combine mainCanvas onto glCanvas
     *  @param {boolean} [feedbackTexture] - use glCanvas from previous frame as the texture
     *  @example
     *  // create the post process plugin object

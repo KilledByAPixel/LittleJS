@@ -769,7 +769,7 @@ function inputRender()
     }
 }
 
-// center position for right tocuh pad face buttons
+// center position for right touch pad face buttons
 function touchGamepadButtonCenter()
 {
     const center = mainCanvasSize.subtract(vec2(touchGamepadSize));

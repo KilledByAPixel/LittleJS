@@ -15,7 +15,7 @@ function gameInit()
     const center = mainCanvasSize.scale(.5);
     musicPlayer = new UIObject(center, vec2(500, 220));
 
-    // infomation text
+    // information text
     infoText = new UIText(vec2(0, -70), vec2(400, 50));
     musicPlayer.addChild(infoText);
 

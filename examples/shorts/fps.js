@@ -33,7 +33,7 @@ function gameUpdate()
 function gameRender()
 {
     {
-        // draw horizontal slizes to create floor and ceiling
+        // draw horizontal slices to create floor and ceiling
         const h = 9;
         let pos = vec2(), size = vec2(39, .15), color = rgb();
         for (let y=-h; y<h; y+=.1)

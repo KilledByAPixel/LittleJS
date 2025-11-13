@@ -7,7 +7,7 @@ class GameObject extends EngineObject
 
     render()
     {
-        // adjust draw postion to be at the bottom of the object
+        // adjust draw position to be at the bottom of the object
         const drawSize = this.drawSize || this.size;
         const offset = this.getUp(drawSize.y/2);
         const pos = this.pos.add(offset);

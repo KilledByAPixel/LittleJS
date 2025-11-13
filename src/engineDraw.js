@@ -190,7 +190,7 @@ class TileInfo
     }
 
     /**
-     * Returns a tile info for an index using this tile as refrence
+     * Returns a tile info for an index using this tile as reference
      * @param {Vector2|number} [index=0]
      * @return {TileInfo}
      */
@@ -1020,7 +1020,7 @@ let engineFontImage;
 class FontImage
 {
     /** Create an image font
-     *  @param {TileInfo} tileInfo - Tile info of first characeter in font
+     *  @param {TileInfo} tileInfo - Tile info of first character in font
      */
     constructor(tileInfo)
     {

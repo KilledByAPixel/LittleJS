@@ -461,7 +461,7 @@ class EngineObject
     }
 
     /** Check if overlapping another engine object
-     *  Collisions are resoloved to prevent overlaps
+     *  Collisions are resolved to prevent overlaps
      *  @param {EngineObject} object
      *  @return {boolean} */
     isOverlappingObject(object)

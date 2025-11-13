@@ -64,8 +64,8 @@ class ParallaxLayer extends CanvasLayer
         const distance = 3 + depth;
         const parallax = vec2(.2, .05).scale(depth**2+1);
         const cameraDeltaFromCenter = viewerPos.multiply(parallax);
-        const positonOffset = vec2(0, 4-depth*3);
-        this.pos = cameraDeltaFromCenter.add(positonOffset)
+        const positionOffset = vec2(0, 4-depth*3);
+        this.pos = cameraDeltaFromCenter.add(positionOffset)
         this.size = canvasSize.scale(distance/cameraScale);
         super.render();
     }

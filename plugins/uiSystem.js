@@ -96,7 +96,7 @@ class UISystemPlugin
         // navigation properties
         /** @property {UIObject} - Object currently selected by navigation (gamepad or keyboard) */
         this.navigationObject = undefined;
-        /** @property {Timer} - Cooldown timer for navigation inputs */
+        /** @property {Timer} - Cool down timer for navigation inputs */
         this.navigationTimer = new Timer(undefined, true);
         /** @property {number} - Time between navigation inputs in seconds */
         this.navigationDelay = .2;
@@ -562,7 +562,7 @@ class UISystemPlugin
 
         const savedNavigationDirection = uiSystem.navigationDirection;
 
-        // allow both axies for navigation
+        // allow both axes for navigation
         uiSystem.navigationDirection = 2;
 
         // confirm menu
@@ -657,7 +657,7 @@ class UIObject
         this.lineWidth = uiSystem.defaultLineWidth;
         /** @property {number} - Corner radius for rounded rects */
         this.cornerRadius = uiSystem.defaultCornerRadius;
-        /** @property {string} - Font for this objecct */
+        /** @property {string} - Font for this object */
         this.font = uiSystem.defaultFont;
         /** @property {string} - Font style for this object or undefined */
         this.fontStyle = undefined;
@@ -1224,7 +1224,7 @@ class UIScrollbar extends UIObject
  * @extends UIObject
  * @example
  * // Create a video player UI object
- * const video = new VideoPlayerUIObject(vec2(400, 300), vec2(320, 240), 'cutscene.mp4', true);
+ * const video = new VideoPlayerUIObject(vec2(400, 300), vec2(320, 240), 'video.mp4', true);
  * video.play();
  * @memberof UISystem
  */

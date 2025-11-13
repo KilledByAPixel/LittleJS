@@ -612,11 +612,11 @@ class Box2dStaticObject extends Box2dObject
 
 ///////////////////////////////////////////////////////////////////////////////
 /** 
- * Box2D Kiematic Object - Box2d with a kinematic physics body
+ * Box2D Kinematic Object - Box2d with a kinematic physics body
  * @extends Box2dObject
  * @memberof Box2D
  */
-class Box2dKiematicObject extends Box2dObject 
+class Box2dKinematicObject extends Box2dObject 
 {
     /** Create a LittleJS object with Box2d physics
      *  @param {Vector2}  [pos]
