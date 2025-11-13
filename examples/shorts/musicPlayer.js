@@ -1,5 +1,5 @@
 
-let musicVolume = 1, musicSound, musicInstance;
+let musicVolume = .8, musicSound, musicInstance;
 
 function gameInit()
 {
@@ -28,6 +28,7 @@ function gameInit()
     // volume slider
     const volumeSlider = new UIScrollbar(vec2(0, -20), vec2(400, 30),
         musicVolume, 'Music Volume');
+    volumeSlider.fillMode = true;
     musicPlayer.addChild(volumeSlider);
     volumeSlider.onChange = ()=> 
     {
