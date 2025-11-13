@@ -3786,7 +3786,7 @@ class EngineObject
     }
 
     /** Check if overlapping another engine object
-     *  Collisions are resoloved to prevent overlaps
+     *  Collisions are resolved to prevent overlaps
      *  @param {EngineObject} object
      *  @return {boolean} */
     isOverlappingObject(object)
@@ -4038,7 +4038,7 @@ class TileInfo
     }
 
     /**
-     * Returns a tile info for an index using this tile as refrence
+     * Returns a tile info for an index using this tile as reference
      * @param {Vector2|number} [index=0]
      * @return {TileInfo}
      */
@@ -4868,7 +4868,7 @@ let engineFontImage;
 class FontImage
 {
     /** Create an image font
-     *  @param {TileInfo} tileInfo - Tile info of first characeter in font
+     *  @param {TileInfo} tileInfo - Tile info of first character in font
      */
     constructor(tileInfo)
     {
@@ -5744,7 +5744,7 @@ function inputRender()
     }
 }
 
-// center position for right tocuh pad face buttons
+// center position for right touch pad face buttons
 function touchGamepadButtonCenter()
 {
     const center = mainCanvasSize.subtract(vec2(touchGamepadSize));
@@ -8924,7 +8924,7 @@ class PostProcessPlugin
 {
     /** Create global post processing shader
     *  @param {string} shaderCode
-    *  @param {boolean} [includeMainCanvas] - combine mainCanvs onto glCanvas
+    *  @param {boolean} [includeMainCanvas] - combine mainCanvas onto glCanvas
     *  @param {boolean} [feedbackTexture] - use glCanvas from previous frame as the texture
     *  @example
     *  // create the post process plugin object
@@ -9317,7 +9317,7 @@ class UISystemPlugin
         // navigation properties
         /** @property {UIObject} - Object currently selected by navigation (gamepad or keyboard) */
         this.navigationObject = undefined;
-        /** @property {Timer} - Cooldown timer for navigation inputs */
+        /** @property {Timer} - Cool down timer for navigation inputs */
         this.navigationTimer = new Timer(undefined, true);
         /** @property {number} - Time between navigation inputs in seconds */
         this.navigationDelay = .2;
@@ -9783,7 +9783,7 @@ class UISystemPlugin
 
         const savedNavigationDirection = uiSystem.navigationDirection;
 
-        // allow both axies for navigation
+        // allow both axes for navigation
         uiSystem.navigationDirection = 2;
 
         // confirm menu
@@ -9878,7 +9878,7 @@ class UIObject
         this.lineWidth = uiSystem.defaultLineWidth;
         /** @property {number} - Corner radius for rounded rects */
         this.cornerRadius = uiSystem.defaultCornerRadius;
-        /** @property {string} - Font for this objecct */
+        /** @property {string} - Font for this object */
         this.font = uiSystem.defaultFont;
         /** @property {string} - Font style for this object or undefined */
         this.fontStyle = undefined;
@@ -10445,7 +10445,7 @@ class UIScrollbar extends UIObject
  * @extends UIObject
  * @example
  * // Create a video player UI object
- * const video = new VideoPlayerUIObject(vec2(400, 300), vec2(320, 240), 'cutscene.mp4', true);
+ * const video = new VideoPlayerUIObject(vec2(400, 300), vec2(320, 240), 'video.mp4', true);
  * video.play();
  * @memberof UISystem
  */
@@ -11194,11 +11194,11 @@ class Box2dStaticObject extends Box2dObject
 
 ///////////////////////////////////////////////////////////////////////////////
 /** 
- * Box2D Kiematic Object - Box2d with a kinematic physics body
+ * Box2D Kinematic Object - Box2d with a kinematic physics body
  * @extends Box2dObject
  * @memberof Box2D
  */
-class Box2dKiematicObject extends Box2dObject 
+class Box2dKinematicObject extends Box2dObject 
 {
     /** Create a LittleJS object with Box2d physics
      *  @param {Vector2}  [pos]

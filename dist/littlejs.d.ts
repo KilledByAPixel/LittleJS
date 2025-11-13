@@ -1492,7 +1492,7 @@ declare module "littlejsengine" {
          */
         setFullImage(textureInfo?: TextureInfo): TileInfo;
         /**
-         * Returns a tile info for an index using this tile as refrence
+         * Returns a tile info for an index using this tile as reference
          * @param {Vector2|number} [index=0]
          * @return {TileInfo}
          */
@@ -1782,7 +1782,7 @@ declare module "littlejsengine" {
      */
     export class FontImage {
         /** Create an image font
-         *  @param {TileInfo} tileInfo - Tile info of first characeter in font
+         *  @param {TileInfo} tileInfo - Tile info of first character in font
          */
         constructor(tileInfo: TileInfo);
         /** @property {TileInfo} - Tile info for the font */
@@ -2530,7 +2530,7 @@ declare module "littlejsengine" {
          *  @param {EngineObject} child */
         removeChild(child: EngineObject): void;
         /** Check if overlapping another engine object
-         *  Collisions are resoloved to prevent overlaps
+         *  Collisions are resolved to prevent overlaps
          *  @param {EngineObject} object
          *  @return {boolean} */
         isOverlappingObject(object: EngineObject): boolean;
@@ -3146,7 +3146,7 @@ declare module "littlejsengine" {
     export class PostProcessPlugin {
         /** Create global post processing shader
         *  @param {string} shaderCode
-        *  @param {boolean} [includeMainCanvas] - combine mainCanvs onto glCanvas
+        *  @param {boolean} [includeMainCanvas] - combine mainCanvas onto glCanvas
         *  @param {boolean} [feedbackTexture] - use glCanvas from previous frame as the texture
         *  @example
         *  // create the post process plugin object
@@ -3289,7 +3289,7 @@ declare module "littlejsengine" {
         nativeHeight: number;
         /** @property {UIObject} - Object currently selected by navigation (gamepad or keyboard) */
         navigationObject: any;
-        /** @property {Timer} - Cooldown timer for navigation inputs */
+        /** @property {Timer} - Cool down timer for navigation inputs */
         navigationTimer: Timer;
         /** @property {number} - Time between navigation inputs in seconds */
         navigationDelay: number;
@@ -3433,7 +3433,7 @@ declare module "littlejsengine" {
         lineWidth: number;
         /** @property {number} - Corner radius for rounded rects */
         cornerRadius: number;
-        /** @property {string} - Font for this objecct */
+        /** @property {string} - Font for this object */
         font: string;
         /** @property {string} - Font style for this object or undefined */
         fontStyle: any;
@@ -3632,7 +3632,7 @@ declare module "littlejsengine" {
      * @extends UIObject
      * @example
      * // Create a video player UI object
-     * const video = new VideoPlayerUIObject(vec2(400, 300), vec2(320, 240), 'cutscene.mp4', true);
+     * const video = new VideoPlayerUIObject(vec2(400, 300), vec2(320, 240), 'video.mp4', true);
      * video.play();
      * @memberof UISystem
      */
@@ -4042,11 +4042,11 @@ declare module "littlejsengine" {
         constructor(pos?: Vector2, size?: Vector2, tileInfo?: TileInfo, angle?: number, color?: Color, renderOrder?: number);
     }
     /**
-     * Box2D Kiematic Object - Box2d with a kinematic physics body
+     * Box2D Kinematic Object - Box2d with a kinematic physics body
      * @extends Box2dObject
      * @memberof Box2D
      */
-    export class Box2dKiematicObject extends Box2dObject {
+    export class Box2dKinematicObject extends Box2dObject {
         /** Create a LittleJS object with Box2d physics
          *  @param {Vector2}  [pos]
          *  @param {Vector2}  [size]
