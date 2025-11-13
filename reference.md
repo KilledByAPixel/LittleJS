@@ -371,14 +371,14 @@ engineObjectsDestroy()
 ```javascript
 
 // Canvas Layer
-CanvasLayer(position, size) // Create a canvas layer object
+CanvasLayer(pos, size)      // Create a canvas layer object
 CanvasLayer.canvas          // The canvas used by this layer
 CanvasLayer.context         // The 2D context of the canvas
 CanvasLayer.getImageData()  // Get image data from canvas
 CanvasLayer.updateWebGL()   // Creates or updates WebGL texture
 
 // LittleJS Layer System
-TileLayer(position, size, tileInfo, scale)     // Create a tile layer object
+TileLayer(pos, size, tileInfo, scale)          // Create a tile layer object
 TileLayer.setData(layerPos, data, redraw)      // Set data at position
 TileLayer.clearData(layerPos, redraw)          // Clear data at position
 TileLayer.getData(layerPos)                    // Get data at position
@@ -393,12 +393,12 @@ TileLayerData(tile, direction=0, mirror=false, color=WHITE) // Create tile data 
 TileLayerData.clear()                                       // Clear this tile data
 
 // Tile Collision Layer
-TileCollisionLayer(position, size, tileInfo=tile()) // Create a tile collision layer object
+TileCollisionLayer(pos, size, tileInfo=tile())      // Create a tile collision layer object
 TileCollisionLayer.setCollisionData(pos, data=1)    // Set tile collision data at pos
 tileCollisionGetData(pos)                           // Get tile collision data at pos
 tileCollisionTest(pos, size=(0,0), object)          // Check if collision should occur
 tileCollisionRaycast(posStart, posEnd, object)      // Return the center of tile if hit
-tileLayersLoad(tileMapData, tileInfo)            // Load tile layers from exported data
+tileLayersLoad(tileMapData, tileInfo)               // Load tile layers from exported data
 
 ```
 
@@ -408,8 +408,8 @@ tileLayersLoad(tileMapData, tileInfo)            // Load tile layers from export
 
 ```javascript
 // Particle Emitter Object
-ParticleEmitter(position, angle, ...settings) // Create a particle system
-ParticleEmitter.emitParticle()                // Spawn one particle
+ParticleEmitter(pos, angle, ...settings) // Create a particle system
+ParticleEmitter.emitParticle()           // Spawn one particle
 
 // Particle Settings
 particleEmitRateScale = 1 // Scales particles emit rate

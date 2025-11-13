@@ -668,20 +668,19 @@ class Box2dTileLayer extends Box2dStaticObject
         this.destroyAllFixtures();
 
         // create box2d object for this layer
-        const size = this.tileLayer.size;
         this.pos = this.tileLayer.pos.copy();
-        this.size = size.copy();
+        this.size = this.tileLayer.size.copy();
 
         // track which tiles have been processed
         const processed = [];
-        const getIndex = (x, y)=> x + y * size.x;
+        const getIndex = (x, y)=> x + y * this.size.x;
         const isSolidUnprocessed = (x, y)=>
             !processed[getIndex(x, y)] &&
             this.tileLayer.getCollisionData(vec2(x, y)) > 0;
 
         // combine tiles into larger boxes
-        for (let x = 0; x < size.x; ++x)
-        for (let y = 0; y < size.y; ++y)
+        for (let x = 0; x < this.size.x; ++x)
+        for (let y = 0; y < this.size.y; ++y)
         {
             if (!isSolidUnprocessed(x, y)) continue;
 

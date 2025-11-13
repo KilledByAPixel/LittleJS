@@ -66,17 +66,19 @@ class EngineObject
         this.additiveColor = undefined;
         /** @property {boolean} - Should it flip along y axis when rendered */
         this.mirror = false;
+        /** @property {boolean} - Has object been destroyed? */
+        this.destroyed = false;
 
         // physical properties
-        /** @property {number} [mass=objectDefaultMass] - How heavy the object is, static if 0 */
+        /** @property {number} - How heavy the object is, static if 0 */
         this.mass = objectDefaultMass;
-        /** @property {number} [damping=objectDefaultDamping] - How much to slow down velocity each frame (0-1) */
+        /** @property {number} - How much to slow down velocity each frame (0-1) */
         this.damping = objectDefaultDamping;
-        /** @property {number} [angleDamping=objectDefaultAngleDamping] - How much to slow down rotation each frame (0-1) */
+        /** @property {number} - How much to slow down rotation each frame (0-1) */
         this.angleDamping = objectDefaultAngleDamping;
-        /** @property {number} [restitution=objectDefaultRestitution] - How bouncy the object is when colliding (0-1) */
+        /** @property {number} - How bouncy the object is when colliding (0-1) */
         this.restitution = objectDefaultRestitution;
-        /** @property {number} [friction=objectDefaultFriction] - How much friction to apply when sliding (0-1) */
+        /** @property {number} - How much friction to apply when sliding (0-1) */
         this.friction  = objectDefaultFriction;
         /** @property {number} - How much to scale gravity by for this object */
         this.gravityScale = 1;
@@ -285,10 +287,10 @@ class EngineObject
                 if (!tileCollisionTest(oldPos, this.size, this))
                 {
                     // test which side we bounced off (or both if a corner)
-                    const blockedLayerY = tileCollisionTest(vec2(oldPos.x, this.pos.y), this.size, this);
-                    const blockedLayerX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
-
-                    if (blockedLayerX)
+                    const isBlockedX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
+                    const isBlockedY = tileCollisionTest(vec2(oldPos.x, this.pos.y), this.size, this);
+                    const restitution = max(this.restitution, hitLayer.restitution);
+                    if (isBlockedX)
                     {
                         // try to move up a tiny bit
                         const epsilon = 1e-3;
@@ -304,16 +306,12 @@ class EngineObject
                             return;
                         }
 
-                        // move to previous position and bounce
+                        // move to previous X position and bounce
                         this.pos.x = oldPos.x;
-                        this.velocity.x *= -this.restitution;
+                        this.velocity.x *= -restitution;
                     }
-                    if (blockedLayerY || !blockedLayerX)
+                    if (isBlockedY || !isBlockedX)
                     {
-                        // bounce velocity
-                        const restitution = max(this.restitution, hitLayer.restitution);
-                        this.velocity.y *= -restitution;
-
                         if (wasFalling)
                         {
                             // adjust position to slightly away from nearest tile
@@ -329,10 +327,12 @@ class EngineObject
                         }
                         else
                         {
-                            // move to previous position
+                            // move to previous Y position
                             this.pos.y = oldPos.y;
                             this.groundObject = undefined;
                         }
+                        // bounce velocity
+                        this.velocity.y *= -restitution;
                     }
                     debugPhysics && debugRect(this.pos, this.size, '#f00');
                 }
@@ -357,7 +357,7 @@ class EngineObject
             return;
 
         // disconnect from parent and destroy children
-        this.destroyed = 1;
+        this.destroyed = true;
         this.parent?.removeChild(this);
         for (const child of this.children)
         {

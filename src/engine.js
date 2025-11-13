@@ -461,13 +461,13 @@ function engineObjectsUpdate()
     engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);
 
     // recursive object update
-    function updateObject(o)
+    function updateChildObject(o)
     {
         if (o.destroyed) return;
 
         o.update();
         for (const child of o.children)
-            updateObject(child);
+            updateChildObject(child);
     }
     for (const o of engineObjects)
     {
@@ -477,7 +477,7 @@ function engineObjectsUpdate()
         o.update();
         o.updatePhysics();
         for (const child of o.children)
-            updateObject(child);
+            updateChildObject(child);
         o.updateTransforms();
     }
 
