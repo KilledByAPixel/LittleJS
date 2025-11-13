@@ -34,7 +34,11 @@ declare module "littlejsengine" {
     /**
      * - Function that processes a particle
      */
-    export type ParticleCallbackFunction = (particle: Particle) => any;
+    export type ParticleCallback = (particle: Particle) => any;
+    /**
+     * - Collide callback for particles
+     */
+    export type ParticleCollideCallback = (particle: Particle, collideObject: EngineObject) => any;
     /**
      * LittleJS - The Tiny Fast JavaScript Game Engine
      * MIT License - Copyright 2021 Frank Force
@@ -2416,15 +2420,17 @@ declare module "littlejsengine" {
         additiveColor: any;
         /** @property {boolean} - Should it flip along y axis when rendered */
         mirror: boolean;
-        /** @property {number} [mass=objectDefaultMass] - How heavy the object is, static if 0 */
+        /** @property {boolean} - Has object been destroyed? */
+        destroyed: boolean;
+        /** @property {number} - How heavy the object is, static if 0 */
         mass: number;
-        /** @property {number} [damping=objectDefaultDamping] - How much to slow down velocity each frame (0-1) */
+        /** @property {number} - How much to slow down velocity each frame (0-1) */
         damping: number;
-        /** @property {number} [angleDamping=objectDefaultAngleDamping] - How much to slow down rotation each frame (0-1) */
+        /** @property {number} - How much to slow down rotation each frame (0-1) */
         angleDamping: number;
-        /** @property {number} [restitution=objectDefaultRestitution] - How bouncy the object is when colliding (0-1) */
+        /** @property {number} - How bouncy the object is when colliding (0-1) */
         restitution: number;
-        /** @property {number} [friction=objectDefaultFriction] - How much friction to apply when sliding (0-1) */
+        /** @property {number} - How much friction to apply when sliding (0-1) */
         friction: number;
         /** @property {number} - How much to scale gravity by for this object */
         gravityScale: number;
@@ -2466,7 +2472,6 @@ declare module "littlejsengine" {
         render(): void;
         /** Destroy this object, destroy its children, detach its parent, and mark it for removal */
         destroy(): void;
-        destroyed: number;
         /** Convert from local space to world space
          *  @param {Vector2} pos - local space point */
         localToWorld(pos: Vector2): Vector2;
@@ -2804,16 +2809,23 @@ declare module "littlejsengine" {
     }
     /**
      * LittleJS Particle System
+     * @namespace Particles
      */
     /**
-     *  @callback ParticleCallbackFunction - Function that processes a particle
+     *  @callback ParticleCallback - Function that processes a particle
      *  @param {Particle} particle
-     *  @memberof Engine
+     *  @memberof Particles
+     */
+    /**
+     *  @callback ParticleCollideCallback - Collide callback for particles
+     *  @param {Particle} particle
+     *  @param {EngineObject} collideObject
+     *  @memberof Particles
      */
     /**
      * Particle Emitter - Spawns particles with the given settings
      * @extends EngineObject
-     * @memberof Engine
+     * @memberof Particles
      * @example
      * // create a particle emitter
      * let pos = vec2(2,3);
@@ -2830,7 +2842,7 @@ declare module "littlejsengine" {
      */
     export class ParticleEmitter extends EngineObject {
         /** Create a particle system with the given settings
-         *  @param {Vector2} position - World space position of the emitter
+         *  @param {Vector2} pos - World space position of the emitter
          *  @param {number} [angle] - Angle to emit the particles
          *  @param {number|Vector2}  [emitSize] - World space size of the emitter (float for circle diameter, vec2 for rect)
          *  @param {number} [emitTime] - How long to stay alive (0 is forever)
@@ -2858,9 +2870,11 @@ declare module "littlejsengine" {
          *  @param {number} [renderOrder] - Render order for particles (additive is above other stuff by default)
          *  @param {boolean}  [localSpace] - Should it be in local space of emitter (world space is default)
          */
-        constructor(position: Vector2, angle?: number, emitSize?: number | Vector2, emitTime?: number, emitRate?: number, emitConeAngle?: number, tileInfo?: TileInfo, colorStartA?: Color, colorStartB?: Color, colorEndA?: Color, colorEndB?: Color, particleTime?: number, sizeStart?: number, sizeEnd?: number, speed?: number, angleSpeed?: number, damping?: number, angleDamping?: number, gravityScale?: number, particleConeAngle?: number, fadeRate?: number, randomness?: number, collideTiles?: boolean, additive?: boolean, randomColorLinear?: boolean, renderOrder?: number, localSpace?: boolean);
+        constructor(pos: Vector2, angle?: number, emitSize?: number | Vector2, emitTime?: number, emitRate?: number, emitConeAngle?: number, tileInfo?: TileInfo, colorStartA?: Color, colorStartB?: Color, colorEndA?: Color, colorEndB?: Color, particleTime?: number, sizeStart?: number, sizeEnd?: number, speed?: number, angleSpeed?: number, damping?: number, angleDamping?: number, gravityScale?: number, particleConeAngle?: number, fadeRate?: number, randomness?: number, collideTiles?: boolean, additive?: boolean, randomColorLinear?: boolean, renderOrder?: number, localSpace?: boolean);
+        /** @property {boolean} - Should particles be emitted in a circle */
+        emitCircle: boolean;
         /** @property {number|Vector2} - World space size of the emitter (float for circle diameter, vec2 for rect) */
-        emitSize: number | Vector2;
+        emitSize: Vector2;
         /** @property {number} - How long to stay alive (0 is forever) */
         emitTime: number;
         /** @property {number} - How many particles per second to spawn, does not emit if 0 */
@@ -2899,14 +2913,18 @@ declare module "littlejsengine" {
         localSpace: boolean;
         /** @property {number} - If non zero the particle is drawn as a trail, stretched in the direction of velocity */
         trailScale: number;
-        /** @property {ParticleCallbackFunction} - Callback when particle is destroyed */
-        particleDestroyCallback: any;
-        /** @property {ParticleCallbackFunction} - Callback when particle is created */
+        /** @property {ParticleCallback} - Callback when particle is created */
         particleCreateCallback: any;
-        /** @property {number} - Track particle emit time */
-        emitTimeBuffer: number;
+        /** @property {ParticleCallback} - Callback when particle is destroyed */
+        particleDestroyCallback: any;
+        /** @property {ParticleCollideCallback} - Callback when particle collides */
+        particleCollideCallback: any;
         /** @property {number} - Percentage of velocity to pass to particles (0-1) */
         velocityInheritance: number;
+        /** @property {number} - Track particle emit time */
+        emitTimeBuffer: number;
+        /** @property {ParticleGroup} - Handles updating and rendering particles */
+        particleGroup: ParticleGroup;
         previousAngle: number;
         previousPos: Vector2;
         /** Spawn one particle
@@ -2915,48 +2933,64 @@ declare module "littlejsengine" {
     }
     /**
      * Particle Object - Created automatically by Particle Emitters
-     * @extends EngineObject
-     * @memberof Engine
+     * @memberof Particles
      */
-    export class Particle extends EngineObject {
+    export class Particle {
         /**
          * Create a particle with the passed in settings
          * Typically this is created automatically by a ParticleEmitter
-         * @param {Vector2}  position   - World space position of the particle
-         * @param {TileInfo} tileInfo   - Tile info to render particles
-         * @param {number}   angle      - Angle to rotate the particle
-         * @param {Color}    colorStart - Color at start of life
-         * @param {Color}    colorEnd   - Color at end of life
-         * @param {number}   lifeTime   - How long to live for
-         * @param {number}   sizeStart  - Size at start of life
-         * @param {number}   sizeEnd    - Size at end of life
-         * @param {number}   fadeRate   - How quick to fade in/out
-         * @param {boolean}  additive   - Does it use additive blend mode
-         * @param {number}   trailScale - If a trail, how long to make it
-         * @param {ParticleEmitter} [localSpaceEmitter] - Parent emitter if local space
-         * @param {ParticleCallbackFunction} [destroyCallback] - Callback when particle dies
+         * @param {ParticleEmitter} emitter - The emitter that created this particle
+         * @param {Vector2} pos             - World or local space position
+         * @param {number}  angle           - Angle of the particle
+         * @param {Color}   colorStart      - Color at start of life
+         * @param {Color}   colorEnd        - Color at end of life
+         * @param {number}  lifeTime        - How long to live for
+         * @param {number}  sizeStart       - Size at start of life
+         * @param {number}  sizeEnd         - Size at end of life
+         * @param {Vector2} [velocity]      - Velocity of the particle
+         * @param {number}  [angleVelocity] - Angular speed of the particle
          */
-        constructor(position: Vector2, tileInfo: TileInfo, angle: number, colorStart: Color, colorEnd: Color, lifeTime: number, sizeStart: number, sizeEnd: number, fadeRate: number, additive: boolean, trailScale: number, localSpaceEmitter?: ParticleEmitter, destroyCallback?: ParticleCallbackFunction);
-        /** @property {Color} - Color at start of life */
+        constructor(emitter: ParticleEmitter, pos: Vector2, angle: number, colorStart: Color, colorEnd: Color, lifeTime: number, sizeStart: number, sizeEnd: number, velocity?: Vector2, angleVelocity?: number);
+        /** @property {ParticleEmitter} */
+        emitter: ParticleEmitter;
+        /** @property {Vector2} */
+        pos: Vector2;
+        /** @property {number} */
+        angle: number;
+        /** @property {Vector2} */
+        size: Vector2;
+        /** @property {Color} */
+        color: Color;
+        /** @property {Color} */
         colorStart: Color;
-        /** @property {Color} - Color at end of life */
+        /** @property {Color} */
         colorEnd: Color;
-        /** @property {number} - How long to live for */
+        /** @property {number} */
         lifeTime: number;
-        /** @property {number} - Size at start of life */
+        /** @property {number} */
         sizeStart: number;
-        /** @property {number} - Size at end of life */
+        /** @property {number} */
         sizeEnd: number;
-        /** @property {number} - How quick to fade in/out */
-        fadeRate: number;
-        /** @property {boolean} - Is it additive */
-        additive: boolean;
-        /** @property {number} - If a trail, how long to make it */
-        trailScale: number;
-        /** @property {ParticleEmitter} - Parent emitter if local space */
-        localSpaceEmitter: ParticleEmitter;
-        /** @property {ParticleCallbackFunction} - Called when particle dies */
-        destroyCallback: ParticleCallbackFunction;
+        /** @property {Vector2} */
+        velocity: Vector2;
+        /** @property {number} */
+        angleVelocity: number;
+        /** @property {number} */
+        spawnTime: number;
+        /** @property {boolean} */
+        mirror: boolean;
+        /** @property {EngineObject} */
+        groundObject: TileCollisionLayer;
+        /** @property {boolean} */
+        destroyed: boolean;
+        /** @property {TileInfo} */
+        tileInfo: TileInfo;
+        /** Update the particle */
+        update(): void;
+        /** Destroy this particle */
+        destroy(): void;
+        /** Render the particle, automatically called each frame */
+        render(): void;
     }
     /**
      * LittleJS Medal System
@@ -4651,4 +4685,22 @@ declare module "littlejsengine" {
      *  @param {number} [angle] - Angle to rotate by
      *  @memberof DrawUtilities */
     export function drawThreeSliceScreen(pos: Vector2, size: Vector2, startTile: TileInfo, borderSize?: number, extraSpace?: number, angle?: number): void;
+    /**
+     * Particle Group - Created automatically by Particle Emitters
+     * @extends EngineObject
+     * @memberof Particles
+     */
+    class ParticleGroup extends EngineObject {
+        /** Create a particle group for the given emitter
+         *  @param {ParticleEmitter} emitter - The emitter for this group */
+        constructor(emitter: ParticleEmitter);
+        /** @property {ParticleEmitter} - the emitter for this group */
+        emitter: ParticleEmitter;
+        /** @property {Array<Particle>} - Array of particles in this group */
+        particles: any[];
+        /** Add a particle to this group
+         *  @param {Particle} particle */
+        addParticle(particle: Particle): void;
+    }
+    export {};
 }

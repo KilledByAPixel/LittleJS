@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.17.5';
+const engineVersion = '1.17.6';
 
 /** Frames per second to update
  *  @type {number}
@@ -464,13 +464,13 @@ function engineObjectsUpdate()
     engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);
 
     // recursive object update
-    function updateObject(o)
+    function updateChildObject(o)
     {
         if (o.destroyed) return;
 
         o.update();
         for (const child of o.children)
-            updateObject(child);
+            updateChildObject(child);
     }
     for (const o of engineObjects)
     {
@@ -480,7 +480,7 @@ function engineObjectsUpdate()
         o.update();
         o.updatePhysics();
         for (const child of o.children)
-            updateObject(child);
+            updateChildObject(child);
         o.updateTransforms();
     }
 
@@ -2710,17 +2710,19 @@ class EngineObject
         this.additiveColor = undefined;
         /** @property {boolean} - Should it flip along y axis when rendered */
         this.mirror = false;
+        /** @property {boolean} - Has object been destroyed? */
+        this.destroyed = false;
 
         // physical properties
-        /** @property {number} [mass=objectDefaultMass] - How heavy the object is, static if 0 */
+        /** @property {number} - How heavy the object is, static if 0 */
         this.mass = objectDefaultMass;
-        /** @property {number} [damping=objectDefaultDamping] - How much to slow down velocity each frame (0-1) */
+        /** @property {number} - How much to slow down velocity each frame (0-1) */
         this.damping = objectDefaultDamping;
-        /** @property {number} [angleDamping=objectDefaultAngleDamping] - How much to slow down rotation each frame (0-1) */
+        /** @property {number} - How much to slow down rotation each frame (0-1) */
         this.angleDamping = objectDefaultAngleDamping;
-        /** @property {number} [restitution=objectDefaultRestitution] - How bouncy the object is when colliding (0-1) */
+        /** @property {number} - How bouncy the object is when colliding (0-1) */
         this.restitution = objectDefaultRestitution;
-        /** @property {number} [friction=objectDefaultFriction] - How much friction to apply when sliding (0-1) */
+        /** @property {number} - How much friction to apply when sliding (0-1) */
         this.friction  = objectDefaultFriction;
         /** @property {number} - How much to scale gravity by for this object */
         this.gravityScale = 1;
@@ -2929,10 +2931,10 @@ class EngineObject
                 if (!tileCollisionTest(oldPos, this.size, this))
                 {
                     // test which side we bounced off (or both if a corner)
-                    const blockedLayerY = tileCollisionTest(vec2(oldPos.x, this.pos.y), this.size, this);
-                    const blockedLayerX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
-
-                    if (blockedLayerX)
+                    const isBlockedX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
+                    const isBlockedY = tileCollisionTest(vec2(oldPos.x, this.pos.y), this.size, this);
+                    const restitution = max(this.restitution, hitLayer.restitution);
+                    if (isBlockedX)
                     {
                         // try to move up a tiny bit
                         const epsilon = 1e-3;
@@ -2948,16 +2950,12 @@ class EngineObject
                             return;
                         }
 
-                        // move to previous position and bounce
+                        // move to previous X position and bounce
                         this.pos.x = oldPos.x;
-                        this.velocity.x *= -this.restitution;
+                        this.velocity.x *= -restitution;
                     }
-                    if (blockedLayerY || !blockedLayerX)
+                    if (isBlockedY || !isBlockedX)
                     {
-                        // bounce velocity
-                        const restitution = max(this.restitution, hitLayer.restitution);
-                        this.velocity.y *= -restitution;
-
                         if (wasFalling)
                         {
                             // adjust position to slightly away from nearest tile
@@ -2973,10 +2971,12 @@ class EngineObject
                         }
                         else
                         {
-                            // move to previous position
+                            // move to previous Y position
                             this.pos.y = oldPos.y;
                             this.groundObject = undefined;
                         }
+                        // bounce velocity
+                        this.velocity.y *= -restitution;
                     }
                     debugPhysics && debugRect(this.pos, this.size, '#f00');
                 }
@@ -3001,7 +3001,7 @@ class EngineObject
             return;
 
         // disconnect from parent and destroy children
-        this.destroyed = 1;
+        this.destroyed = true;
         this.parent?.removeChild(this);
         for (const child of this.children)
         {
@@ -6437,18 +6437,26 @@ class TileCollisionLayer extends TileLayer
 }
 /**
  * LittleJS Particle System
+ * @namespace Particles
  */
 
 /**
- *  @callback ParticleCallbackFunction - Function that processes a particle
+ *  @callback ParticleCallback - Function that processes a particle
  *  @param {Particle} particle
- *  @memberof Engine
+ *  @memberof Particles
+ */
+
+/**
+ *  @callback ParticleCollideCallback - Collide callback for particles
+ *  @param {Particle} particle
+ *  @param {EngineObject} collideObject
+ *  @memberof Particles
  */
 
 /**
  * Particle Emitter - Spawns particles with the given settings
  * @extends EngineObject
- * @memberof Engine
+ * @memberof Particles
  * @example
  * // create a particle emitter
  * let pos = vec2(2,3);
@@ -6466,7 +6474,7 @@ class TileCollisionLayer extends TileLayer
 class ParticleEmitter extends EngineObject
 {
     /** Create a particle system with the given settings
-     *  @param {Vector2} position - World space position of the emitter
+     *  @param {Vector2} pos - World space position of the emitter
      *  @param {number} [angle] - Angle to emit the particles
      *  @param {number|Vector2}  [emitSize] - World space size of the emitter (float for circle diameter, vec2 for rect)
      *  @param {number} [emitTime] - How long to stay alive (0 is forever)
@@ -6496,7 +6504,7 @@ class ParticleEmitter extends EngineObject
      */
     constructor
     (
-        position,
+        pos,
         angle,
         emitSize = 0,
         emitTime = 0,
@@ -6525,12 +6533,13 @@ class ParticleEmitter extends EngineObject
         localSpace = false
     )
     {
-        super(position, vec2(), tileInfo, angle, undefined, renderOrder);
+        super(pos, vec2(), tileInfo, angle, undefined, renderOrder);
 
         // emitter settings
+        /** @property {boolean} - Should particles be emitted in a circle */
+        this.emitCircle = typeof emitSize === 'number';
         /** @property {number|Vector2} - World space size of the emitter (float for circle diameter, vec2 for rect) */
-        this.emitSize = emitSize instanceof Vector2 ? 
-            emitSize.copy() : emitSize;
+        this.emitSize = typeof emitSize === 'number' ? vec2(emitSize) : emitSize.copy();
         /** @property {number} - How long to stay alive (0 is forever) */
         this.emitTime = emitTime;
         /** @property {number} - How many particles per second to spawn, does not emit if 0 */
@@ -6581,26 +6590,35 @@ class ParticleEmitter extends EngineObject
         this.localSpace        = localSpace;
         /** @property {number} - If non zero the particle is drawn as a trail, stretched in the direction of velocity */
         this.trailScale        = 0;
-        /** @property {ParticleCallbackFunction} - Callback when particle is destroyed */
-        this.particleDestroyCallback = undefined;
-        /** @property {ParticleCallbackFunction} - Callback when particle is created */
+        /** @property {ParticleCallback} - Callback when particle is created */
         this.particleCreateCallback = undefined;
-        /** @property {number} - Track particle emit time */
-        this.emitTimeBuffer    = 0;
+        /** @property {ParticleCallback} - Callback when particle is destroyed */
+        this.particleDestroyCallback = undefined;
+        /** @property {ParticleCollideCallback} - Callback when particle collides */
+        this.particleCollideCallback = undefined;
         /** @property {number} - Percentage of velocity to pass to particles (0-1) */
         this.velocityInheritance = 0;
+        /** @property {number} - Track particle emit time */
+        this.emitTimeBuffer = 0;
+        /** @property {ParticleGroup} - Handles updating and rendering particles */
+        this.particleGroup = new ParticleGroup(this);
 
         // track previous position and angle
         this.previousAngle = this.angle;
         this.previousPos = this.pos.copy();
     }
 
-    /** Emitters do not have physics */
-    updatePhysics() {}
-
     /** Update the emitter to spawn particles, called automatically by engine once each frame */
     update()
     {
+        // physics sanity checks
+        ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
+        ASSERT(this.damping >= 0 && this.damping <= 1);
+
+        // update particle group render order
+        this.particleGroup.renderOrder = this.renderOrder;
+        this.particleGroup.pos = this.pos.copy();
+
         if (this.velocityInheritance)
         {
             // pass emitter velocity to particles
@@ -6630,8 +6648,8 @@ class ParticleEmitter extends EngineObject
         if (debugParticles)
         {
             // show emitter bounds
-            if (typeof this.emitSize === 'number')
-                debugCircle(this.pos, this.emitSize/2, '#0f0');
+            if (this.emitCircle)
+                debugCircle(this.pos, this.emitSize.x/2, '#0f0');
             else
                 debugRect(this.pos, this.emitSize, '#0f0', 0, this.angle);
         }
@@ -6642,14 +6660,15 @@ class ParticleEmitter extends EngineObject
     emitParticle()
     {
         // spawn a particle
-        let pos = typeof this.emitSize === 'number' ? // check if number was used
-            randInCircle(this.emitSize/2)             // circle emitter
-            : vec2(rand(-.5,.5), rand(-.5,.5))        // box emitter
+        let pos = this.emitCircle ?            // check if circle emitter
+            randInCircle(this.emitSize.x/2)    // circle emitter
+            : vec2(rand(-.5,.5), rand(-.5,.5)) // box emitter
                 .multiply(this.emitSize).rotate(this.angle)
         let angle = rand(this.particleConeAngle, -this.particleConeAngle);
         if (!this.localSpace)
         {
-            pos = this.pos.add(pos);
+            pos.x += this.pos.x;
+            pos.y += this.pos.y;
             angle += this.angle;
         }
 
@@ -6669,25 +6688,17 @@ class ParticleEmitter extends EngineObject
         const velocityAngle = this.localSpace ? coneAngle : this.angle + coneAngle;
 
         // build particle
-        const particle = new Particle(pos, this.tileInfo, angle, colorStart, colorEnd, particleTime, sizeStart, sizeEnd, this.fadeRate, this.additive,  this.trailScale, this.localSpace && this, this.particleDestroyCallback);
-        particle.velocity      = vec2().setAngle(velocityAngle, speed);
-        particle.angleVelocity = angleSpeed;
+        const velocity = vec2(speed*sin(velocityAngle), speed*cos(velocityAngle));
+        let angleVelocity = angleSpeed;
         if (!this.localSpace && this.velocityInheritance > 0)
         {
             // apply emitter velocity to particle
-            particle.velocity.x += this.velocity.x;
-            particle.velocity.y += this.velocity.y;
-            particle.angleVelocity += this.angleVelocity;
+            velocity.x += this.velocity.x;
+            velocity.y += this.velocity.y;
+            angleVelocity += this.angleVelocity;
         }
-        particle.fadeRate      = this.fadeRate;
-        particle.damping       = this.damping;
-        particle.angleDamping  = this.angleDamping;
-        particle.restitution   = this.restitution;
-        particle.friction      = this.friction;
-        particle.gravityScale  = this.gravityScale;
-        particle.collideTiles  = this.collideTiles;
-        particle.renderOrder   = this.renderOrder;
-        particle.mirror        = randBool();
+        const particle = new Particle(this, pos, angle, colorStart, colorEnd, particleTime, sizeStart, sizeEnd, velocity, angleVelocity);
+        this.particleGroup.addParticle(particle);
 
         // call particle create callback
         this.particleCreateCallback?.(particle);
@@ -6696,140 +6707,263 @@ class ParticleEmitter extends EngineObject
         return particle;
     }
 
-    // Particle emitters are not rendered, only the particles are
+    /** Particle emitters do not have physics */
+    updatePhysics() {}
+
+    /** Particle emitters are not rendered */
     render() {}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
- * Particle Object - Created automatically by Particle Emitters
+ * Particle Group - Created automatically by Particle Emitters
  * @extends EngineObject
- * @memberof Engine
+ * @memberof Particles
  */
-class Particle extends EngineObject
+class ParticleGroup extends EngineObject
+{
+    /** Create a particle group for the given emitter
+     *  @param {ParticleEmitter} emitter - The emitter for this group */
+    constructor(emitter)
+    {
+        super(emitter.pos, vec2(), undefined, 0, undefined, emitter.renderOrder);
+
+        /** @property {ParticleEmitter} - the emitter for this group */
+        this.emitter = emitter;
+        /** @property {Array<Particle>} - Array of particles in this group */
+        this.particles = [];
+    }
+
+    /** Add a particle to this group
+     *  @param {Particle} particle */
+    addParticle(particle) { this.particles.push(particle); }
+
+    update()
+    {
+        // update and remove destroyed particles
+        this.particles = this.particles.filter((p)=>
+        {
+            p.update();
+            return !p.destroyed;
+        });
+
+        // remove group if emitter destroyed and no particles left
+        if (this.emitter.destroyed && this.particles.length === 0)
+            this.destroy();
+    }
+
+    render()
+    {
+        // render all particles
+        for (const particle of this.particles)
+            particle.render();
+    }
+
+    /** Particle groups do not have physics */
+    updatePhysics() {}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * Particle Object - Created automatically by Particle Emitters
+ * @memberof Particles
+ */
+class Particle 
 {
     /**
      * Create a particle with the passed in settings
      * Typically this is created automatically by a ParticleEmitter
-     * @param {Vector2}  position   - World space position of the particle
-     * @param {TileInfo} tileInfo   - Tile info to render particles
-     * @param {number}   angle      - Angle to rotate the particle
-     * @param {Color}    colorStart - Color at start of life
-     * @param {Color}    colorEnd   - Color at end of life
-     * @param {number}   lifeTime   - How long to live for
-     * @param {number}   sizeStart  - Size at start of life
-     * @param {number}   sizeEnd    - Size at end of life
-     * @param {number}   fadeRate   - How quick to fade in/out
-     * @param {boolean}  additive   - Does it use additive blend mode
-     * @param {number}   trailScale - If a trail, how long to make it
-     * @param {ParticleEmitter} [localSpaceEmitter] - Parent emitter if local space
-     * @param {ParticleCallbackFunction} [destroyCallback] - Callback when particle dies
+     * @param {ParticleEmitter} emitter - The emitter that created this particle
+     * @param {Vector2} pos             - World or local space position
+     * @param {number}  angle           - Angle of the particle
+     * @param {Color}   colorStart      - Color at start of life
+     * @param {Color}   colorEnd        - Color at end of life
+     * @param {number}  lifeTime        - How long to live for
+     * @param {number}  sizeStart       - Size at start of life
+     * @param {number}  sizeEnd         - Size at end of life
+     * @param {Vector2} [velocity]      - Velocity of the particle
+     * @param {number}  [angleVelocity] - Angular speed of the particle
      */
-    constructor(position, tileInfo, angle, colorStart, colorEnd, lifeTime, sizeStart, sizeEnd, fadeRate, additive, trailScale, localSpaceEmitter, destroyCallback
-    )
+    constructor(emitter, pos, angle, colorStart, colorEnd, lifeTime, sizeStart, sizeEnd, velocity = vec2(), angleVelocity = 0)
     {
-        super(position, vec2(), tileInfo, angle);
-
-        /** @property {Color} - Color at start of life */
+        /** @property {ParticleEmitter} */
+        this.emitter = emitter;
+        /** @property {Vector2} */
+        this.pos = pos;
+        /** @property {number} */
+        this.angle = angle;
+        /** @property {Vector2} */
+        this.size = vec2(sizeStart);
+        /** @property {Color} */
+        this.color = colorStart.copy();
+        /** @property {Color} */
         this.colorStart = colorStart;
-        /** @property {Color} - Color at end of life */
+        /** @property {Color} */
         this.colorEnd = colorEnd;
-        /** @property {number} - How long to live for */
+        /** @property {number} */
         this.lifeTime = lifeTime;
-        /** @property {number} - Size at start of life */
+        /** @property {number} */
         this.sizeStart = sizeStart;
-        /** @property {number} - Size at end of life */
+        /** @property {number} */
         this.sizeEnd = sizeEnd;
-        /** @property {number} - How quick to fade in/out */
-        this.fadeRate = fadeRate;
-        /** @property {boolean} - Is it additive */
-        this.additive = additive;
-        /** @property {number} - If a trail, how long to make it */
-        this.trailScale = trailScale;
-        /** @property {ParticleEmitter} - Parent emitter if local space */
-        this.localSpaceEmitter = localSpaceEmitter;
-        /** @property {ParticleCallbackFunction} - Called when particle dies */
-        this.destroyCallback = destroyCallback;
-        // particles do not clamp speed by default
-        this.clampSpeed = false;
+        /** @property {Vector2} */
+        this.velocity = velocity;
+        /** @property {number} */
+        this.angleVelocity = angleVelocity;
+        /** @property {number} */
+        this.spawnTime = time;
+        /** @property {boolean} */
+        this.mirror = randBool();
+        /** @property {EngineObject} */
+        this.groundObject = undefined;
+        /** @property {boolean} */
+        this.destroyed = false;
+        /** @property {TileInfo} */
+        this.tileInfo = emitter.tileInfo;
     }
 
-    /** Update the object physics, called automatically by engine once each frame */
+    /** Update the particle */
     update()
     {
-        if (this.collideTiles || this.collideSolidObjects)
-        {
-            // only apply max circular speed if particle can collide
-            const length2 = this.velocity.lengthSquared();
-            if (length2 > objectMaxSpeed*objectMaxSpeed)
-            {
-                const s = objectMaxSpeed / length2**.5;
-                this.velocity.x *= s;
-                this.velocity.y *= s;
-            }
-        }
+        // emitter properties
+        const emitter = this.emitter;
+        const damping = emitter.damping;
+        const angleDamping = emitter.angleDamping;
+        const restitution = emitter.restitution;
+        const friction = emitter.friction;
+        const gravityScale = emitter.gravityScale;
+        const collideTiles = emitter.collideTiles;
+        const collideCallback = emitter.particleCollideCallback;
 
+        // destroy particle when its time runs out
         if (this.lifeTime > 0 && time - this.spawnTime > this.lifeTime)
         {
-            // destroy particle when its time runs out
-            const c = this.colorEnd;
-            this.color.set(c.r, c.g, c.b, c.a);
-            this.size.set(this.sizeEnd, this.sizeEnd);
-            this.destroyCallback?.(this);
-            this.destroyed = 1;
+            this.destroy();
+            return;
+        }
+
+        // apply physics
+        const oldPos = this.pos.copy();
+        this.velocity.x *= damping;
+        this.velocity.y *= damping;
+        this.pos.x += this.velocity.x += gravity.x * gravityScale;
+        this.pos.y += this.velocity.y += gravity.y * gravityScale;
+        this.angle += this.angleVelocity *= angleDamping;
+
+        // don't do collision if solver disabled
+        if (!enablePhysicsSolver || !collideTiles) return;
+        
+        // apply max circular speed to prevent going through collision
+        const length2 = this.velocity.lengthSquared();
+        if (length2 > objectMaxSpeed*objectMaxSpeed)
+        {
+            const s = objectMaxSpeed / length2**.5;
+            this.velocity.x *= s;
+            this.velocity.y *= s;
+        }
+
+        // check collision against tiles
+        this.groundObject = undefined;
+        const hitLayer = tileCollisionTest(this.pos);
+        if (hitLayer)
+        {
+            // if already was stuck in collision, don't do anything
+            if (!tileCollisionTest(oldPos))
+            {
+                // test which side we bounced off (or both if a corner)
+                const isBlockedX = tileCollisionTest(vec2(this.pos.x, oldPos.y));
+                const isBlockedY = tileCollisionTest(vec2(oldPos.x, this.pos.y));
+                const hitRestitution = max(restitution, hitLayer.restitution);
+                const hitFriction = max(friction, hitLayer.friction);
+                if (isBlockedX)
+                {
+                    // move to previous X position and bounce
+                    this.pos.x = oldPos.x;
+                    this.velocity.x *= -hitRestitution;
+                    this.velocity.y *= hitFriction;
+                }
+                if (isBlockedY || !isBlockedX)
+                {
+                    const wasFalling = this.velocity.y < 0 && gravity.y < 0 || this.velocity.y > 0 && gravity.y > 0;
+                    if (wasFalling)
+                        this.groundObject = hitLayer;
+
+                    // move to previous Y position and bounce
+                    this.pos.y = oldPos.y;
+                    this.velocity.y *= -hitRestitution;
+                    this.velocity.x *= hitFriction;
+                }
+                collideCallback?.(this, hitLayer);
+                debugPhysics && debugRect(this.pos, this.size, '#f00');
+            }
         }
     }
 
-    /** Render the particle, automatically called each frame, sorted by renderOrder */
+    /** Destroy this particle */
+    destroy()
+    {
+        const destroyCallback = this.emitter.particleDestroyCallback;
+        const c = this.colorEnd;
+        this.color.set(c.r, c.g, c.b, c.a);
+        this.size.set(this.sizeEnd, this.sizeEnd);
+        this.destroyed = true;
+        destroyCallback?.(this);
+    }
+
+    /** Render the particle, automatically called each frame */
     render()
     {
+        // emitter properties
+        const emitter = this.emitter;
+        const localSpace = emitter.localSpace;
+        const additive = emitter.additive;
+        const trailScale = emitter.trailScale;
+        const fadeRate = emitter.fadeRate / 2;
+
         // lerp color and size
         const p1 = this.lifeTime > 0 ? min((time - this.spawnTime) / this.lifeTime, 1) : 1, p2 = 1-p1;
         const radius = p2 * this.sizeStart + p1 * this.sizeEnd;
         const size = vec2(radius);
+        const alphaFade = p1 < fadeRate ? p1/fadeRate : 
+            p1 > 1-fadeRate ? (1-p1)/fadeRate : 1;
         this.color.r = p2 * this.colorStart.r + p1 * this.colorEnd.r;
         this.color.g = p2 * this.colorStart.g + p1 * this.colorEnd.g;
         this.color.b = p2 * this.colorStart.b + p1 * this.colorEnd.b;
-        this.color.a = p2 * this.colorStart.a + p1 * this.colorEnd.a;
-            
-        // fade alpha
-        const fadeRate = this.fadeRate/2;
-        this.color.a *= p1 < fadeRate ? p1/fadeRate : 
-            p1 > 1-fadeRate ? (1-p1)/fadeRate : 1;
+        this.color.a = (p2 * this.colorStart.a + p1 * this.colorEnd.a) * alphaFade;
 
         // draw the particle
-        this.additive && setBlendMode(true);
+        additive && setBlendMode(true);
 
         // update the position and angle for drawing
-        let pos = this.pos, angle = this.angle;
-        if (this.localSpaceEmitter)
+        const pos = this.pos.copy();
+        let angle = this.angle;
+        if (localSpace)
         {
             // in local space of emitter
-            const a = this.localSpaceEmitter.angle;
+            const a = emitter.angle;
             const c = cos(a), s = sin(a);
-            pos = this.localSpaceEmitter.pos.add(
-                new Vector2(pos.x*c - pos.y*s, pos.x*s + pos.y*c));
-            angle += this.localSpaceEmitter.angle;
+            pos.set(emitter.pos.x + pos.x*c - pos.y*s, 
+                emitter.pos.y + pos.x*s + pos.y*c);
+            angle += a;
         }
-        if (this.trailScale)
+        if (trailScale)
         {
             // trail style particles
-            const direction = this.localSpaceEmitter ? 
-                this.velocity.rotate(-this.localSpaceEmitter.angle) :
-                this.velocity;
-            const speed = direction.length();
+            const velocity = localSpace ? 
+                this.velocity.rotate(-emitter.angle) : this.velocity;
+            const speed = velocity.length();
             if (speed)
             {
                 // stretch in direction of motion
-                const trailLength = speed * this.trailScale;
+                const trailLength = speed * trailScale;
                 size.y = max(size.x, trailLength);
-                angle = atan2(direction.x, direction.y);
+                angle = atan2(velocity.x, velocity.y);
                 drawTile(pos, size, this.tileInfo, this.color, angle, this.mirror);
             }
         }
         else
             drawTile(pos, size, this.tileInfo, this.color, angle, this.mirror);
-        this.additive && setBlendMode();
+        additive && setBlendMode();
         debugParticles && debugRect(pos, size, '#f005', 0, angle);
     }
 }
@@ -10435,20 +10569,19 @@ class Box2dTileLayer extends Box2dStaticObject
         this.destroyAllFixtures();
 
         // create box2d object for this layer
-        const size = this.tileLayer.size;
         this.pos = this.tileLayer.pos.copy();
-        this.size = size.copy();
+        this.size = this.tileLayer.size.copy();
 
         // track which tiles have been processed
         const processed = [];
-        const getIndex = (x, y)=> x + y * size.x;
+        const getIndex = (x, y)=> x + y * this.size.x;
         const isSolidUnprocessed = (x, y)=>
             !processed[getIndex(x, y)] &&
             this.tileLayer.getCollisionData(vec2(x, y)) > 0;
 
         // combine tiles into larger boxes
-        for (let x = 0; x < size.x; ++x)
-        for (let y = 0; y < size.y; ++y)
+        for (let x = 0; x < this.size.x; ++x)
+        for (let y = 0; y < this.size.y; ++y)
         {
             if (!isSolidUnprocessed(x, y)) continue;
 
