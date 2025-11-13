@@ -46,7 +46,7 @@ export function makeDebris(pos, color = hsl(), amount = 50, size=.2, restitution
 {
     const color2 = color.lerp(hsl(), .5);
     const emitter = new LJS.ParticleEmitter(
-        pos, 0, 1, .1, amount/.1, 3.14, // pos, angle, size, time, rate, cone
+        pos, 0, .5, .1, amount/.1, 3.14, // pos, angle, size, time, rate, cone
         0,                     // tileInfo
         color, color2,         // colorStartA, colorStartB
         color, color2,         // colorEndA, colorEndB
