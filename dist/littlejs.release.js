@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.17.6';
+const engineVersion = '1.17.7';
 
 /** Frames per second to update
  *  @type {number}
@@ -489,11 +489,14 @@ function engineObjectsUpdate()
 }
 
 /** Destroy and remove all objects
+ *  - This can be used to clear out all objects when restarting a level
+ *  - Objects can override their destroy function to do cleanup or stick around
+ *  @param {boolean} [immediate] - should attached effects be allowed to die off?
  *  @memberof Engine */
-function engineObjectsDestroy()
+function engineObjectsDestroy(immediate=true)
 {
     for (const o of engineObjects)
-        o.parent || o.destroy();
+        o.parent || o.destroy(immediate);
     engineObjects = engineObjects.filter(o=>!o.destroyed);
 }
 
@@ -2994,11 +2997,11 @@ class EngineObject
         drawTile(this.pos, this.drawSize || this.size, this.tileInfo, this.color, this.angle, this.mirror, this.additiveColor);
     }
 
-    /** Destroy this object, destroy its children, detach its parent, and mark it for removal */
-    destroy()
+    /** Destroy this object, destroy its children, detach its parent, and mark it for removal
+     *  @param {boolean} [immediate] - should attached effects be allowed to die off? */
+    destroy(immediate=false)
     {
-        if (this.destroyed)
-            return;
+        if (this.destroyed) return;
 
         // disconnect from parent and destroy children
         this.destroyed = true;
@@ -3006,7 +3009,7 @@ class EngineObject
         for (const child of this.children)
         {
             child.parent = undefined;
-            child.destroy();
+            child.destroy(immediate);
         }
     }
 
@@ -6600,8 +6603,8 @@ class ParticleEmitter extends EngineObject
         this.velocityInheritance = 0;
         /** @property {number} - Track particle emit time */
         this.emitTimeBuffer = 0;
-        /** @property {ParticleGroup} - Handles updating and rendering particles */
-        this.particleGroup = new ParticleGroup(this);
+        /** @property {Array<Particle>} - Array of particles for this emitter */
+        this.particles = [];
 
         // track previous position and angle
         this.previousAngle = this.angle;
@@ -6614,10 +6617,6 @@ class ParticleEmitter extends EngineObject
         // physics sanity checks
         ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1);
         ASSERT(this.damping >= 0 && this.damping <= 1);
-
-        // update particle group render order
-        this.particleGroup.renderOrder = this.renderOrder;
-        this.particleGroup.pos = this.pos.copy();
 
         if (this.velocityInheritance)
         {
@@ -6632,7 +6631,7 @@ class ParticleEmitter extends EngineObject
         }
 
         // update emitter
-        if (!this.emitTime || this.getAliveTime() <= this.emitTime)
+        if (this.isActive())
         {
             // emit particles
             if (this.emitRate && particleEmitRateScale)
@@ -6642,8 +6641,15 @@ class ParticleEmitter extends EngineObject
                     this.emitParticle();
             }
         }
-        else
-            this.destroy();
+        else if (this.particles.length === 0)
+            this.destroy(true);
+            
+        // update and remove destroyed particles
+        this.particles = this.particles.filter((p)=>
+        {
+            p.update();
+            return !p.destroyed;
+        });
 
         if (debugParticles)
         {
@@ -6698,7 +6704,7 @@ class ParticleEmitter extends EngineObject
             angleVelocity += this.angleVelocity;
         }
         const particle = new Particle(this, pos, angle, colorStart, colorEnd, particleTime, sizeStart, sizeEnd, velocity, angleVelocity);
-        this.particleGroup.addParticle(particle);
+        this.particles.push(particle);
 
         // call particle create callback
         this.particleCreateCallback?.(particle);
@@ -6710,48 +6716,7 @@ class ParticleEmitter extends EngineObject
     /** Particle emitters do not have physics */
     updatePhysics() {}
 
-    /** Particle emitters are not rendered */
-    render() {}
-}
-
-///////////////////////////////////////////////////////////////////////////////
-/**
- * Particle Group - Created automatically by Particle Emitters
- * @extends EngineObject
- * @memberof Particles
- */
-class ParticleGroup extends EngineObject
-{
-    /** Create a particle group for the given emitter
-     *  @param {ParticleEmitter} emitter - The emitter for this group */
-    constructor(emitter)
-    {
-        super(emitter.pos, vec2(), undefined, 0, undefined, emitter.renderOrder);
-
-        /** @property {ParticleEmitter} - the emitter for this group */
-        this.emitter = emitter;
-        /** @property {Array<Particle>} - Array of particles in this group */
-        this.particles = [];
-    }
-
-    /** Add a particle to this group
-     *  @param {Particle} particle */
-    addParticle(particle) { this.particles.push(particle); }
-
-    update()
-    {
-        // update and remove destroyed particles
-        this.particles = this.particles.filter((p)=>
-        {
-            p.update();
-            return !p.destroyed;
-        });
-
-        // remove group if emitter destroyed and no particles left
-        if (this.emitter.destroyed && this.particles.length === 0)
-            this.destroy();
-    }
-
+    /** Render all particles for this emitter */
     render()
     {
         // render all particles
@@ -6759,8 +6724,22 @@ class ParticleGroup extends EngineObject
             particle.render();
     }
 
-    /** Particle groups do not have physics */
-    updatePhysics() {}
+    /** is emitter actively spawning */
+    isActive() { return !this.emitTime || this.getAliveTime() < this.emitTime; }
+
+    /** Destroy the particle emitter
+     *  @param {boolean} [immediate] - should particle emitters and other attached effects be allowed to die off */
+    destroy(immediate=false)
+    {
+        if (!immediate && this.particles.length > 0)
+        {
+            // stop emitting new particles and die off
+            this.emitTime = -1;
+            return;
+        }
+        
+        super.destroy(immediate);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

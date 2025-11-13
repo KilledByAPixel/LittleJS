@@ -141,8 +141,11 @@ declare module "littlejsengine" {
      *  @memberof Engine */
     export function engineObjectsUpdate(): void;
     /** Destroy and remove all objects
+     *  - This can be used to clear out all objects when restarting a level
+     *  - Objects can override their destroy function to do cleanup or stick around
+     *  @param {boolean} [immediate] - should attached effects be allowed to die off?
      *  @memberof Engine */
-    export function engineObjectsDestroy(): void;
+    export function engineObjectsDestroy(immediate?: boolean): void;
     /** Collects all object within a given area
      *  @param {Vector2} [pos] - Center of test area, or undefined for all objects
      *  @param {Vector2|number} [size] - Radius of circle if float, rectangle size if Vector2
@@ -2470,8 +2473,9 @@ declare module "littlejsengine" {
         update(): void;
         /** Render the object, draws a tile by default, automatically called each frame, sorted by renderOrder */
         render(): void;
-        /** Destroy this object, destroy its children, detach its parent, and mark it for removal */
-        destroy(): void;
+        /** Destroy this object, destroy its children, detach its parent, and mark it for removal
+         *  @param {boolean} [immediate] - should attached effects be allowed to die off? */
+        destroy(immediate?: boolean): void;
         /** Convert from local space to world space
          *  @param {Vector2} pos - local space point */
         localToWorld(pos: Vector2): Vector2;
@@ -2650,6 +2654,8 @@ declare module "littlejsengine" {
         context: OffscreenCanvasRenderingContext2D;
         /** @property {TextureInfo} - Texture info to use for this object rendering */
         textureInfo: TextureInfo;
+        /** Destroy this canvas layer */
+        destroy(): void;
         /** Draw this canvas layer centered in world space, with color applied if using WebGL
         *  @param {Vector2} pos - Center in world space
         *  @param {Vector2} [size] - Size in world space
@@ -2923,13 +2929,15 @@ declare module "littlejsengine" {
         velocityInheritance: number;
         /** @property {number} - Track particle emit time */
         emitTimeBuffer: number;
-        /** @property {ParticleGroup} - Handles updating and rendering particles */
-        particleGroup: ParticleGroup;
+        /** @property {Array<Particle>} - Array of particles for this emitter */
+        particles: any[];
         previousAngle: number;
         previousPos: Vector2;
         /** Spawn one particle
          *  @return {Particle} */
         emitParticle(): Particle;
+        /** is emitter actively spawning */
+        isActive(): boolean;
     }
     /**
      * Particle Object - Created automatically by Particle Emitters
@@ -3831,6 +3839,8 @@ declare module "littlejsengine" {
         edgeLists: any[];
         /** @property {Array<Object>} - List of all edge loops for default box2d drawing */
         edgeLoops: any[];
+        /** Destroy this object and its physics body */
+        destroy(): void;
         /** Draws all this object's fixtures
          *  @param {Color}   [color]
          *  @param {Color}   [lineColor]
@@ -4685,22 +4695,4 @@ declare module "littlejsengine" {
      *  @param {number} [angle] - Angle to rotate by
      *  @memberof DrawUtilities */
     export function drawThreeSliceScreen(pos: Vector2, size: Vector2, startTile: TileInfo, borderSize?: number, extraSpace?: number, angle?: number): void;
-    /**
-     * Particle Group - Created automatically by Particle Emitters
-     * @extends EngineObject
-     * @memberof Particles
-     */
-    class ParticleGroup extends EngineObject {
-        /** Create a particle group for the given emitter
-         *  @param {ParticleEmitter} emitter - The emitter for this group */
-        constructor(emitter: ParticleEmitter);
-        /** @property {ParticleEmitter} - the emitter for this group */
-        emitter: ParticleEmitter;
-        /** @property {Array<Particle>} - Array of particles in this group */
-        particles: any[];
-        /** Add a particle to this group
-         *  @param {Particle} particle */
-        addParticle(particle: Particle): void;
-    }
-    export {};
 }
