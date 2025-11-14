@@ -28,6 +28,10 @@ declare module "littlejsengine" {
      */
     export type AudioEndedCallback = (source: AudioBufferSourceNode) => any;
     /**
+     * - Function to handle a tile collision test
+     */
+    export type TileCollisionCallback = (tileData: number, pos: Vector2) => any;
+    /**
      * - Function that processes a medal
      */
     export type MedalCallbackFunction = (medal: Medal) => any;
@@ -2573,23 +2577,29 @@ declare module "littlejsengine" {
     *  @memberof TileLayers */
     export function tileCollisionGetData(pos: Vector2): number;
     /** Check if a tile layer collides with another object
-     *  @param {Vector2}      pos
-     *  @param {Vector2}      [size=vec2()]
-     *  @param {EngineObject} [object] - An object or undefined for generic test
-     *  @param {boolean}      [solidOnly] - Only check solid layers if true
+     *  @param {Vector2} pos
+     *  @param {Vector2} [size=vec2()]
+     *  @param {EngineObject|TileCollisionCallback} [callbackObject] - Callback, engine object, or undefined
+     *  @param {boolean} [solidOnly] - Only check solid layers if true
      *  @return {TileCollisionLayer}
      *  @memberof TileLayers */
-    export function tileCollisionTest(pos: Vector2, size?: Vector2, object?: EngineObject, solidOnly?: boolean): TileCollisionLayer;
+    export function tileCollisionTest(pos: Vector2, size?: Vector2, callbackObject?: EngineObject | TileCollisionCallback, solidOnly?: boolean): TileCollisionLayer;
+    /**
+     *  @callback TileCollisionCallback - Function to handle a tile collision test
+     *  @param {number} tileData - the value of the tile at the position
+     *  @param {Vector2} pos - world space position of tile where the collision occurred
+     *  @memberof TileLayers
+     */
     /** Return the exact position of the boundary of first tile hit, undefined if nothing was hit.
-     *  The point will be inside the colliding tile if it hits (may have a tiny shift)
-     *  @param {Vector2}      posStart
-     *  @param {Vector2}      posEnd
-     *  @param {EngineObject} [object] - An object or undefined for generic test
-     *  @param {Vector2}      [normal] - Optional normal of the surface hit
-     *  @param {boolean}      [solidOnly=true] - Only check solid layers if true
+     *  The point will be inside the colliding tile if it hits
+     *  @param {Vector2} posStart
+     *  @param {Vector2} posEnd
+     *  @param {EngineObject|TileCollisionCallback} [callbackObject] - Callback, engine object, or undefined
+     *  @param {Vector2} [normal] - Optional normal of the surface hit
+     *  @param {boolean} [solidOnly=true] - Only check solid layers if true
      *  @return {Vector2|undefined} - position of the center of the tile hit or undefined if no hit
      *  @memberof TileLayers */
-    export function tileCollisionRaycast(posStart: Vector2, posEnd: Vector2, object?: EngineObject, normal?: Vector2, solidOnly?: boolean): Vector2 | undefined;
+    export function tileCollisionRaycast(posStart: Vector2, posEnd: Vector2, callbackObject?: EngineObject | TileCollisionCallback, normal?: Vector2, solidOnly?: boolean): Vector2 | undefined;
     /**
      * Load tile layers from exported data
      *  @param {Object}   tileMapData - Level data from exported data
@@ -2801,20 +2811,23 @@ declare module "littlejsengine" {
         /** Check if collision with another object should occur
         *  @param {Vector2}      pos
         *  @param {Vector2}      [size=vec2()]
-        *  @param {EngineObject} [object]
+        *  @param {EngineObject|TileCollisionCallback} [callbackObject] - Callback, engine object, or undefined
         *  @return {boolean} */
-        collisionTest(pos: Vector2, size?: Vector2, object?: EngineObject): boolean;
+        collisionTest(pos: Vector2, size?: Vector2, callbackObject?: EngineObject | TileCollisionCallback): boolean;
         /** Return the exact position of the boundary of first tile hit, undefined if nothing was hit.
         *  The point will be inside the colliding tile if it hits (may have a tiny shift)
-        *  @param {Vector2}      posStart
-        *  @param {Vector2}      posEnd
-        *  @param {EngineObject} [object] - An object or undefined for generic test
-        *  @param {Vector2}      [normal] - Optional normal of the surface hit
+        *  @param {Vector2} posStart
+        *  @param {Vector2} posEnd
+        *  @param {EngineObject|TileCollisionCallback} [callbackObject] - Callback, engine object, or undefined
+        *  @param {Vector2} [normal] - Optional normal of the surface hit
         *  @return {Vector2|undefined} */
-        collisionRaycast(posStart: Vector2, posEnd: Vector2, object?: EngineObject, normal?: Vector2): Vector2 | undefined;
+        collisionRaycast(posStart: Vector2, posEnd: Vector2, callbackObject?: EngineObject | TileCollisionCallback, normal?: Vector2): Vector2 | undefined;
     }
     /**
      * LittleJS Particle System
+     * - A simple but fast and flexible particle system
+     * - Lightweight Particles are created and managed by ParticleEmitters
+     * - The particle design tool can be used to help create emitters
      * @namespace Particles
      */
     /**

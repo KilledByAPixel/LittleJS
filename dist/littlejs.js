@@ -6460,38 +6460,45 @@ function tileCollisionGetData(pos)
 }
 
 /** Check if a tile layer collides with another object
- *  @param {Vector2}      pos
- *  @param {Vector2}      [size=vec2()]
- *  @param {EngineObject} [object] - An object or undefined for generic test
- *  @param {boolean}      [solidOnly] - Only check solid layers if true
+ *  @param {Vector2} pos
+ *  @param {Vector2} [size=vec2()]
+ *  @param {EngineObject|TileCollisionCallback} [callbackObject] - Callback, engine object, or undefined
+ *  @param {boolean} [solidOnly] - Only check solid layers if true
  *  @return {TileCollisionLayer}
  *  @memberof TileLayers */
-function tileCollisionTest(pos, size=vec2(), object, solidOnly=true)
+function tileCollisionTest(pos, size=vec2(), callbackObject, solidOnly=true)
 {
     for (const layer of tileCollisionLayers)
     {
         if (!solidOnly || layer.isSolid)
-        if (layer.collisionTest(pos, size, object))
+        if (layer.collisionTest(pos, size, callbackObject))
             return layer;
     }
 }
 
+/**
+ *  @callback TileCollisionCallback - Function to handle a tile collision test
+ *  @param {number} tileData - the value of the tile at the position
+ *  @param {Vector2} pos - world space position of tile where the collision occurred
+ *  @memberof TileLayers
+ */
+
 /** Return the exact position of the boundary of first tile hit, undefined if nothing was hit.
- *  The point will be inside the colliding tile if it hits (may have a tiny shift)
- *  @param {Vector2}      posStart
- *  @param {Vector2}      posEnd
- *  @param {EngineObject} [object] - An object or undefined for generic test
- *  @param {Vector2}      [normal] - Optional normal of the surface hit
- *  @param {boolean}      [solidOnly=true] - Only check solid layers if true
+ *  The point will be inside the colliding tile if it hits
+ *  @param {Vector2} posStart
+ *  @param {Vector2} posEnd
+ *  @param {EngineObject|TileCollisionCallback} [callbackObject] - Callback, engine object, or undefined
+ *  @param {Vector2} [normal] - Optional normal of the surface hit
+ *  @param {boolean} [solidOnly=true] - Only check solid layers if true
  *  @return {Vector2|undefined} - position of the center of the tile hit or undefined if no hit
  *  @memberof TileLayers */
-function tileCollisionRaycast(posStart, posEnd, object, normal, solidOnly=true)
+function tileCollisionRaycast(posStart, posEnd, callbackObject, normal, solidOnly=true)
 {
     for (const layer of tileCollisionLayers)
     {
         if (!solidOnly || layer.isSolid)
         {
-            const hitPos = layer.collisionRaycast(posStart, posEnd, object, normal)
+            const hitPos = layer.collisionRaycast(posStart, posEnd, callbackObject, normal)
             if (hitPos) return hitPos;
         }
     }
@@ -7055,18 +7062,22 @@ class TileCollisionLayer extends TileLayer
     /** Check if collision with another object should occur
     *  @param {Vector2}      pos
     *  @param {Vector2}      [size=vec2()]
-    *  @param {EngineObject} [object]
+    *  @param {EngineObject|TileCollisionCallback} [callbackObject] - Callback, engine object, or undefined
     *  @return {boolean} */
-    collisionTest(pos, size=new Vector2, object)
+    collisionTest(pos, size=new Vector2, callbackObject)
     {
         ASSERT(isVector2(pos) && isVector2(size), 'pos and size must be Vector2s');
-        ASSERT(!object || object instanceof EngineObject, 'object must be an EngineObject');
-        
-        // transform to local layer space
-        const posX = pos.x - this.pos.x;
-        const posY = pos.y - this.pos.y;
+        ASSERT(!callbackObject || typeof callbackObject === 'function' || callbackObject instanceof EngineObject, 'callbackObject must be a funtion or EngineObject');
+
+        // make function to check for collision
+        const collisionTest = callbackObject ? typeof callbackObject === 'function' ?
+            (tileData, pos)=> callbackObject(tileData, pos) :
+            (tileData, pos)=> callbackObject.collideWithTile(tileData, pos) :
+            ()=> true;
 
         // check any tiles in the area for collision
+        const posX = pos.x - this.pos.x;
+        const posY = pos.y - this.pos.y;
         const minX = max(posX - size.x/2|0, 0);
         const minY = max(posY - size.y/2|0, 0);
         const maxX = min(posX + size.x/2, this.size.x);
@@ -7077,9 +7088,7 @@ class TileCollisionLayer extends TileLayer
         {
             // check if the object should collide with this tile
             const tileData = this.collisionData[y*this.size.x+x];
-            if (tileData)
-            if (!object || object.collideWithTile(tileData, 
-                hitPos.set(x + this.pos.x, y + this.pos.y)))
+            if (tileData && collisionTest(tileData, hitPos.set(x+this.pos.x, y+this.pos.y)))
                 return true;
         }
         return false;
@@ -7087,40 +7096,47 @@ class TileCollisionLayer extends TileLayer
 
     /** Return the exact position of the boundary of first tile hit, undefined if nothing was hit.
     *  The point will be inside the colliding tile if it hits (may have a tiny shift)
-    *  @param {Vector2}      posStart
-    *  @param {Vector2}      posEnd
-    *  @param {EngineObject} [object] - An object or undefined for generic test
-    *  @param {Vector2}      [normal] - Optional normal of the surface hit
+    *  @param {Vector2} posStart
+    *  @param {Vector2} posEnd
+    *  @param {EngineObject|TileCollisionCallback} [callbackObject] - Callback, engine object, or undefined
+    *  @param {Vector2} [normal] - Optional normal of the surface hit
     *  @return {Vector2|undefined} */
-    collisionRaycast(posStart, posEnd, object, normal)
+    collisionRaycast(posStart, posEnd, callbackObject, normal)
     {
         ASSERT(isVector2(posStart) && isVector2(posEnd), 'positions must be Vector2s');
-        ASSERT(!object || object instanceof EngineObject, 'object must be an EngineObject');
+        ASSERT(!callbackObject || typeof callbackObject === 'function' || callbackObject instanceof EngineObject, 'callbackObject must be a funtion or EngineObject');
 
-        const localPos = new Vector2;
-        const collisionTest = (pos)=>
+        // make function to check for collision
+        const collisionTest = callbackObject ? typeof callbackObject === 'function' ?
+            (tileData, pos)=> callbackObject(tileData, pos) :
+            (tileData, pos)=> callbackObject.collideWithTile(tileData, pos) :
+            ()=> true;
+        const testFunction = (pos)=>
         {
-            // check for tile collision
-            localPos.set(pos.x - this.pos.x, pos.y - this.pos.y);
-            const tileData = this.getCollisionData(localPos);
-            return tileData && (!object || object.collideWithTile(tileData, pos));
+            const tileData = this.getCollisionData(localPos.set(pos.x - this.pos.x, pos.y - this.pos.y));
+            return tileData && collisionTest(tileData, pos);
         }
-        debugRaycast && debugLine(posStart, posEnd, '#00f', .02);
-        const hitPos = lineTest(posStart, posEnd, collisionTest, normal);
-        if (hitPos)
+
+        // use line test against tile collision
+        const localPos = new Vector2;
+        const hitPos = lineTest(posStart, posEnd, testFunction, normal);
+        if (debugRaycast && hitPos)
         {
             const tilePos = hitPos.floor().add(vec2(.5));
-            debugRaycast && debugRect(tilePos, vec2(1), '#f008');
-            debugRaycast && debugLine(posStart, hitPos, '#f00', .02);
-            debugRaycast && debugPoint(hitPos, '#0f0');
-            debugRaycast && normal && 
-                debugLine(hitPos, hitPos.add(normal), '#ff0', .02);
-            return hitPos;
+            debugRect(tilePos, vec2(1), '#f008');
+            debugLine(posStart, posEnd, '#00f', .02);
+            debugLine(posStart, hitPos, '#f00', .02);
+            debugPoint(hitPos, '#0f0');
+            normal && debugLine(hitPos, hitPos.add(normal), '#ff0', .02);
         }
+        return hitPos;
     }
 }
 /**
  * LittleJS Particle System
+ * - A simple but fast and flexible particle system
+ * - Lightweight Particles are created and managed by ParticleEmitters
+ * - The particle design tool can be used to help create emitters
  * @namespace Particles
  */
 
@@ -7412,14 +7428,15 @@ class ParticleEmitter extends EngineObject
      *  @param {boolean} [immediate] - should particle emitters and other attached effects be allowed to die off */
     destroy(immediate=false)
     {
+        if (this.destroyed) return;
+
+        super.destroy(immediate);
         if (!immediate && this.particles.length > 0)
         {
-            // stop emitting new particles and die off
+            // wait for particles to die off
+            this.destroyed = false;
             this.emitTime = -1;
-            return;
         }
-        
-        super.destroy(immediate);
     }
 }
 
