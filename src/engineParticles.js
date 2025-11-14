@@ -1,5 +1,8 @@
 /**
  * LittleJS Particle System
+ * - A simple but fast and flexible particle system
+ * - Lightweight Particles are created and managed by ParticleEmitters
+ * - The particle design tool can be used to help create emitters
  * @namespace Particles
  */
 
@@ -293,14 +296,15 @@ class ParticleEmitter extends EngineObject
      *  @param {boolean} [immediate] - should particle emitters and other attached effects be allowed to die off */
     destroy(immediate=false)
     {
+        if (this.destroyed) return;
+
+        super.destroy(immediate);
         if (!immediate && this.particles.length > 0)
         {
-            // stop emitting new particles and die off
+            // wait for particles to die off
+            this.destroyed = false;
             this.emitTime = -1;
-            return;
         }
-        
-        super.destroy(immediate);
     }
 }
 
