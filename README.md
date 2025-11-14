@@ -20,7 +20,7 @@ The code is clean and well documented with some fun examples to get you started 
 
 ### 🚀 Join the LittleJS Game Jam
 
-*The Second Annual LittleJS Game Jam is currently in progress, running from Oct 3 to Nov 10! Unleash your creativity and develop amazing games using the LittleJS game engine. 🕹️🎮 [Sign up today and get more info about the jam on itch.io!](https://itch.io/jam/littlejs-game-jam-2025)*
+*The Second Annual LittleJS Game Jam is currently in progress, voting ends on 11/24! 🕹️🎮 [Sign up today and get more info about the jam on itch.io!](https://itch.io/jam/littlejs-game-jam-2025)*
 
 <div align='center'>
 
@@ -108,11 +108,11 @@ These demos are for both learning and using as starter projects to create your o
 
 | File | Mode | Module | Use case |
 |------|------|--------|----------|
-| [littlejs.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.js) | Debug | No | Full engine with debug functions and asserts |
-| [littlejs.release.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.release.js) | Release | No | Full engine optimized for release |
-| [littlejs.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.min.js) | Release | No | Full engine optimized for release and minified |
-| [littlejs.esm.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.esm.js) | Debug | ESM | Full engine with debug functions and asserts |
-| [littlejs.esm.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.esm.min.js) | Release | ESM | Full engine optimized for release and minified |
+| [littlejs.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.js) | Debug | No | Debug mode with asserts |
+| [littlejs.release.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.release.js) | Release | No | Optimized for release |
+| [littlejs.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.min.js) | Release | No | Optimized for release and minified |
+| [littlejs.esm.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.esm.js) | Debug | ESM | Debug mode with asserts |
+| [littlejs.esm.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.esm.min.js) | Release | ESM | Optimized for release and minified |
 
 To rebuild the engine first run ```npm install``` to setup the necessary npm dependencies. Then call ```npm run build``` to build the engine.
 
