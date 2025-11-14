@@ -48,9 +48,9 @@ function tileCollisionTest(pos, size=vec2(), callbackObject, solidOnly=true)
 }
 
 /**
- *  @callback TileCollisionCallback - Function that processes a particle
+ *  @callback TileCollisionCallback - Function to handle a tile collision test
  *  @param {number} tileData - the value of the tile at the position
- *  @param {Vector2} pos - tile where the collision occurred
+ *  @param {Vector2} pos - world space position of tile where the collision occurred
  *  @memberof TileLayers
  */
 
