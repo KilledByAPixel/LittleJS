@@ -566,166 +566,171 @@ function engineObjectsRaycast(start, end, objects=engineObjects)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-function drawEngineLogo(t)
+function drawEngineLogo(t, showName=true)
 {
     // LittleJS Logo and Splash Screen
     const x = mainContext;
     const w = mainCanvas.width = innerWidth;
     const h = mainCanvas.height = innerHeight;
-
     {
         // background
         const p3 = percent(t, 1, .8);
         const p4 = percent(t, 0, .5);
-        const g = x.createRadialGradient(w/2,h/2,0,w/2,h/2,hypot(w,h)*.7);
+        const g = x.createRadialGradient(w/2,h/2,0,w/2,h/2,hypot(w,h)*.6);
         g.addColorStop(0,hsl(0,0,lerp(0,p3/2,p4),p3).toString());
         g.addColorStop(1,hsl(0,0,0,p3).toString());
         x.save();
         x.fillStyle = g;
         x.fillRect(0,0,w,h);
     }
-
-    // draw LittleJS logo...
-    const rect = (X, Y, W, H, C)=>
+    const gradient=(X1,Y1,X2,Y2,C)=>
+    {
+        x.fillStyle = C;
+        if (C && C !== '#000')
+        {
+            const g = x.fillStyle = x.createLinearGradient(X1,Y1,X2,Y2);
+            g.addColorStop(0,'#fff');
+            g.addColorStop(.8,C);
+        }
+    }
+    const circle=(X,Y,R,A=0,B=2*PI,C)=>
+    {
+        x.beginPath();
+        const D=(A+B)/2, E=p*(B-A)/2;
+        x.arc(X,Y,R,D-E,D+E);
+        gradient(X,Y-R,X,Y+R,C);
+        C ? x.fill() : x.stroke();
+    }
+    const rect=(X,Y,W,H,C)=>
     {
         x.beginPath();
         x.rect(X,Y,W,C?H*p:H);
-        x.fillStyle = C;
+        gradient(X,Y+H,X+W,Y,C);
         C ? x.fill() : x.stroke();
-    };
-    const line = (X, Y, Z, W)=>
+    }
+    const poly=(points,C,Y,H)=>
+    {
+        x.beginPath();
+        for (const p of points)
+            x.lineTo(p.x, p.y);
+        x.closePath();
+        gradient(0, Y, 0, Y+H,C);
+        C ? x.fill() : x.stroke();
+    }
+    const line=(X,Y,Z,W)=>
     {
         x.beginPath();
         x.lineTo(X,Y);
         x.lineTo(Z,W);
         x.stroke();
-    };
-    const circle = (X, Y, R, A=0, B=2*PI, C, F)=>
-    {
-        const D = (A+B)/2, E = p*(B-A)/2;
-        x.beginPath();
-        F && x.lineTo(X,Y);
-        x.arc(X,Y,R,D-E,D+E);
-        x.fillStyle = C;
-        C ? x.fill() : x.stroke();
-    };
-    const color = (c=0, l=0)=>
-        hsl([.98,.3,.57,.14][c%4],.9,[0,.3,.5,.8,.9][l]).toString();
+    }
+    const color=(c=0,l=0)=>l?`hsl(${[.95,.58,.16][c%3]*360} 99%${[0,50,50,80,90][l]}%`:'#000';
+
+    // center and fit tos screen
     const alpha = wave(1,1,t);
     const p = percent(alpha, .1, .5);
-
-    // setup
+    const size = min(6, min(w,h)/99);
     x.translate(w/2,h/2);
-    const size = min(6, min(w,h)/99); // fit to screen
     x.scale(size,size);
     x.translate(-40,-35);
+    p < 1 && x.setLineDash([99*p,99]);
     x.lineJoin = x.lineCap = 'round';
     x.lineWidth = .1 + p*1.9;
+    //x.strokeStyle='#fff7';
 
-    // drawing effect
-    const p2 = percent(alpha,.1,1);
-    x.setLineDash([99*p2,99]);
+    if (showName)
+    {
+        // engine name text
+        let Y = 54;
+        const s = 'LittleJS';
+        x.font = '900 16px arial';
+        x.lineWidth = .1+p*3.9;
+        x.textAlign = 'center';
+        x.textBaseline = 'top';
+        x.fillStyle = color(0,0);
+        rect(11,Y,59,12*p,color());
+        let w2 = 0;
+        for (let i=0;i<s.length;++i)
+            w2+=x.measureText(s[i]).width;
+        
+        for (let j=2;j--;)
+        for (let i=0,X=41-w2/2;i<s.length;++i)
+        {
+            const c = color(i>5?1:0,2);
+            const w = x.measureText(s[i]).width;
+            const X2 = X+w/2;
+            gradient(X, Y+2, X+w, Y+15, c);
+            x[j?'strokeText':'fillText'](s[i],X2,Y+.5,17*p);
+            X += w;
+        }
+
+        x.lineWidth = .1 + p*1.9;
+        line(77,Y,4,Y); // bottom
+    }
 
     // cab top
-    rect(7,16,18,-8,color(2,2));
-    rect(7,8,18,4,color(2,3));
-    rect(25,8,8,8,color(2,1));
-    rect(25,8,-18,8);
-    rect(25,8,8,8);
+    rect(7,16,26,-7,color(0,2));
+    rect(7,9,26,7);
 
     // cab
-    rect(25,16,7,24,color());
-    rect(11,39,14,-23,color(1,1));
-    rect(11,16,14,18,color(1,2));
-    rect(11,16,14,8,color(1,3));
+    rect(24,16,10,24,color());
+    rect(11,39,14,-23,color(1,2));
     rect(25,16,-14,24);
 
     // cab window
-    rect(15,29,6,-9,color(2,2));
-    circle(15,21,5,0,PI/2,color(2,4),1);
+    rect(15,30,6,-9,color(2,2));
     rect(21,21,-6,9);
 
     // little stack
-    rect(37,14,9,6,color(3,2));
-    rect(37,14,4.5,6,color(3,3));
-    rect(37,14,9,6);
+    rect(38,15,6,6,color(2,2));
+    rect(38,15,6,6);
 
-    // big stack
-    rect(50,20,10,-8,color(0,1));
-    rect(50,20,6.5,-8,color(0,2));
-    rect(50,20,3.5,-8,color(0,3));
-    rect(50,20,10,-8);
-    circle(55,2,11.4,.5,PI-.5,color(3,3));
-    circle(55,2,11.4,.5,PI/2,color(3,2),1);
-    circle(55,2,11.4,.5,PI-.5);
-    rect(45,7,20,-7,color(0,2));
-    rect(45,-1,20,4,color(0,3));
-    rect(45,-1,20,8);
+    {
+        // big stack
+        rect(49,20,10,-6,color(0,2));
+        rect(49,20,10,-6);
+        const points = [vec2(44,8),vec2(64,8),vec2(59,8+6*p),vec2(49,8+6*p)];
+        poly(points,color(1,1),8,6*p);
+        poly(points);
+        rect(44,8,20,-7,color(0,2));
+        rect(44,1,20,7);
+    }
 
     // engine
-    for (let i=5; i--;)
-    {
-        // stagger radius to fix slight seam
-        circle(60-i*6,30, 9.9,0,2*PI,color(i+2,3));
-        circle(60-i*6,30,10.0,-.5,PI+.5,color(i+2,2));
-        circle(60-i*6,30,10.1,.5,PI-.5,color(i+2,1));
-    }
+    for (let i=5;i--;)
+        circle(59-i*6,30,10,0,2*PI,color(1,2))
 
     // engine outline
-    circle(36,30,10,PI/2,PI*3/2);
-    circle(48,30,10,PI/2,PI*3/2);
-    circle(60,30,10);
-    line(36,20,60,20);
+    circle(35,30,10,PI/2,PI*3/2);
+    circle(47,30,10,PI/2,PI*3/2);
+    circle(59,30,10);
+    line(34,20,56,20);
 
-    // engine front light
-    circle(60,30,4,PI,3*PI,color(3,2));
-    circle(60,30,4,PI,2*PI,color(3,3));
-    circle(60,30,4,PI,3*PI);
+    // engine bottom
+    rect(7,40,10,7);
+    rect(7,40,10,7,color());
+    rect(18,40,42,14);
+    rect(18,40,42,14,color());
 
-    // front brush
-    for (let i=6; i--;)
-    {
-        x.beginPath();
-        x.lineTo(53,54);
-        x.lineTo(53,40);
-        x.lineTo(53+(1+i*2.9)*p,40);
-        x.lineTo(53+(4+i*3.5)*p,54);
-        x.fillStyle = color(0,i%2+2);
-        x.fill();
-        i%2 && x.stroke();
-    }
+    // light
+    circle(59,30,4,PI,3*PI,color(2,2));
+    circle(59,30,4,PI,3*PI);
 
     // wheels
-    rect(6,40,5,5);
-    rect(6,40,5,5,color());
-    rect(15,54,38,-14,color());
-    for (let i=3; i--;)
-    for (let j=2; j--;)
+    for (let i=3;i--;)
+    for (let j=2;j--;)
+        circle(15*i+18,47,j?7:1,PI,3*PI,color(2,j&&2)),
+        x.stroke();
+    
+    // front brush
+    for (let i=2;i--;)
     {
-        circle(15*i+15,47,j?7:1,PI,3*PI,color(i,3));
-        x.stroke();
-        circle(15*i+15,47,j?7:1,0,PI,color(i,2));
-        x.stroke();
+        let w=6, s=7;
+        let o=53+w*p*i
+        const points = [vec2(o+s,54),vec2(o,40),vec2(o+w*p,40),vec2(o+s+w*p,54)];
+        poly(points,color(0,1),40,14);
+        poly(points);
     }
-    line(6,40,68,40); // center
-    line(77,54,4,54); // bottom
 
-    // draw engine name
-    const s = engineName;
-    x.font = '900 16px arial';
-    x.textAlign = 'center';
-    x.textBaseline = 'top';
-    x.lineWidth = .1+p*3.9;
-    let w2 = 0;
-    for (let i=0; i<s.length; ++i)
-        w2 += x.measureText(s[i]).width;
-    for (let j=2; j--;)
-    for (let i=0, X=41-w2/2; i<s.length; ++i)
-    {
-        x.fillStyle = color(i,2);
-        const w = x.measureText(s[i]).width;
-        x[j?'strokeText':'fillText'](s[i],X+w/2,55.5,17*p);
-        X += w;
-    }
     x.restore();
 }
