@@ -42,7 +42,7 @@ declare module "littlejsengine" {
     /**
      * - Collide callback for particles
      */
-    export type ParticleCollideCallback = (particle: Particle, collideObject: EngineObject) => any;
+    export type ParticleCollideCallback = (particle: Particle, tileData: number, pos: Vector2) => any;
     /**
      * LittleJS - The Tiny Fast JavaScript Game Engine
      * MIT License - Copyright 2021 Frank Force
@@ -900,12 +900,6 @@ declare module "littlejsengine" {
      *  @return {number}            - Value waving between 0 and amplitude
      *  @memberof Math */
     export function wave(frequency?: number, amplitude?: number, t?: number, offset?: number): number;
-    /**
-     * LittleJS Utility Classes and Functions
-     * - General purpose utilities
-     * - Timer - tracks time automatically
-     * @namespace Utilities
-     */
     /** Formats seconds to mm:ss style for display purposes
      *  @param {number} t - time in seconds
      *  @return {string}
@@ -940,6 +934,17 @@ declare module "littlejsengine" {
      *  @param {Function} [callback] - Called when share is complete
      *  @memberof Utilities */
     export function shareURL(title: string, url: string, callback?: Function): void;
+    /** Read save data from local storage
+     *  @param {string} saveName - unique name for the game/save
+     *  @param {Object} [defaultSaveData] - default values for save
+     *  @return {Object}
+     *  @memberof Utilities */
+    export function readSaveData(saveName: string, defaultSaveData?: any): any;
+    /** Write save data to local storage
+     *  @param {string} saveName - unique name for the game/save
+     *  @param {Object} saveData - object containing data to be saved
+     *  @memberof Utilities */
+    export function writeSaveData(saveName: string, saveData: any): void;
     /** Random global functions
      *  @namespace Random */
     /** Returns a random value between the two values passed in
@@ -1276,6 +1281,12 @@ declare module "littlejsengine" {
          * @return {boolean} */
         isValid(): boolean;
     }
+    /**
+     * LittleJS Utility Classes and Functions
+     * - General purpose utilities
+     * - Timer - tracks time automatically
+     * @namespace Utilities
+     */
     /**
      * Timer object tracks how long has passed since it was set
      * @memberof Engine
@@ -2573,14 +2584,15 @@ declare module "littlejsengine" {
     export const tileCollisionLayers: Array<TileCollisionLayer>;
     /** Get tile collision data for a given cell in the grid
     *  @param {Vector2} pos
+    *  @param {boolean} [solidOnly] - Only check solid layers?
     *  @return {number}
     *  @memberof TileLayers */
-    export function tileCollisionGetData(pos: Vector2): number;
+    export function tileCollisionGetData(pos: Vector2, solidOnly?: boolean): number;
     /** Check if a tile layer collides with another object
      *  @param {Vector2} pos
      *  @param {Vector2} [size=vec2()]
      *  @param {EngineObject|TileCollisionCallback} [callbackObject] - Callback, engine object, or undefined
-     *  @param {boolean} [solidOnly] - Only check solid layers if true
+     *  @param {boolean} [solidOnly] - Only check solid layers?
      *  @return {TileCollisionLayer}
      *  @memberof TileLayers */
     export function tileCollisionTest(pos: Vector2, size?: Vector2, callbackObject?: EngineObject | TileCollisionCallback, solidOnly?: boolean): TileCollisionLayer;
@@ -2596,7 +2608,7 @@ declare module "littlejsengine" {
      *  @param {Vector2} posEnd
      *  @param {EngineObject|TileCollisionCallback} [callbackObject] - Callback, engine object, or undefined
      *  @param {Vector2} [normal] - Optional normal of the surface hit
-     *  @param {boolean} [solidOnly=true] - Only check solid layers if true
+     *  @param {boolean} [solidOnly=true] - Only check solid layers?
      *  @return {Vector2|undefined} - position of the center of the tile hit or undefined if no hit
      *  @memberof TileLayers */
     export function tileCollisionRaycast(posStart: Vector2, posEnd: Vector2, callbackObject?: EngineObject | TileCollisionCallback, normal?: Vector2, solidOnly?: boolean): Vector2 | undefined;
@@ -2838,7 +2850,8 @@ declare module "littlejsengine" {
     /**
      *  @callback ParticleCollideCallback - Collide callback for particles
      *  @param {Particle} particle
-     *  @param {EngineObject} collideObject
+     *  @param {number} tileData
+     *  @param {Vector2} pos
      *  @memberof Particles
      */
     /**
