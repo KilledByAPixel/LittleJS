@@ -174,3 +174,30 @@ class Timer
      * @return {number} */
     valueOf() { return this.get(); }
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+/** Read save data from local storage
+ *  @param {string} saveName - unique name for the game/save
+ *  @param {Object} [defaultSaveData] - default values for save
+ *  @return {Object}
+ *  @memberof Utilities */
+function readSaveData(saveName, defaultSaveData)
+{
+    ASSERT(isString(saveName), 'loadData requires saveName string');
+    
+    // replace undefined values with defaults
+    const data = localStorage[saveName];
+    const loadedData = data ? JSON.parse(data) : {};
+    return { ...defaultSaveData, ...loadedData };
+}
+
+/** Write save data to local storage
+ *  @param {string} saveName - unique name for the game/save
+ *  @param {Object} saveData - object containing data to be saved
+ *  @memberof Utilities */
+function writeSaveData(saveName, saveData)
+{
+    ASSERT(isString(saveName), 'saveData requires saveName string');
+    localStorage[saveName] = JSON.stringify(saveData);
+}

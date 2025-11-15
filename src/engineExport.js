@@ -177,6 +177,8 @@ export
     saveCanvas,
     saveDataURL,
     shareURL,
+    readSaveData,
+    writeSaveData,
 
     // Random
     rand,
