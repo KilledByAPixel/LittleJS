@@ -17,7 +17,8 @@
 /**
  *  @callback ParticleCollideCallback - Collide callback for particles
  *  @param {Particle} particle
- *  @param {EngineObject} collideObject
+ *  @param {number} tileData
+ *  @param {Vector2} pos
  *  @memberof Particles
  */
 
@@ -409,37 +410,45 @@ class Particle
 
         // check collision against tiles
         this.groundObject = undefined;
-        const hitLayer = tileCollisionTest(this.pos);
-        if (hitLayer)
+        const testCollision = collideCallback ? (pos)=>
+        {
+            const data = tileCollisionGetData(pos);
+            return data && collideCallback(this, data, pos);
+        } : (pos)=> tileCollisionGetData(pos) > 0;
+
+        if (testCollision(this.pos))
         {
             // if already was stuck in collision, don't do anything
-            if (!tileCollisionTest(oldPos))
+            const hitLayer = tileCollisionTest(this.pos);
+            if (!testCollision(oldPos))
             {
-                // test which side we bounced off (or both if a corner)
-                const isBlockedX = tileCollisionTest(vec2(this.pos.x, oldPos.y));
-                const isBlockedY = tileCollisionTest(vec2(oldPos.x, this.pos.y));
-                const hitRestitution = max(restitution, hitLayer.restitution);
-                const hitFriction = max(friction, hitLayer.friction);
-                if (isBlockedX)
+                if (!collideCallback || collideCallback?.(this, hitLayer))
                 {
-                    // move to previous X position and bounce
-                    this.pos.x = oldPos.x;
-                    this.velocity.x *= -hitRestitution;
-                    this.velocity.y *= hitFriction;
-                }
-                if (isBlockedY || !isBlockedX)
-                {
-                    const wasFalling = this.velocity.y < 0 && gravity.y < 0 || this.velocity.y > 0 && gravity.y > 0;
-                    if (wasFalling)
-                        this.groundObject = hitLayer;
+                    // test which side we bounced off (or both if a corner)
+                    const isBlockedX = testCollision(vec2(this.pos.x, oldPos.y));
+                    const isBlockedY = testCollision(vec2(oldPos.x, this.pos.y));
+                    const hitRestitution = max(restitution, hitLayer.restitution);
+                    const hitFriction = max(friction, hitLayer.friction);
+                    if (isBlockedX)
+                    {
+                        // move to previous X position and bounce
+                        this.pos.x = oldPos.x;
+                        this.velocity.x *= -hitRestitution;
+                        this.velocity.y *= hitFriction;
+                    }
+                    if (isBlockedY || !isBlockedX)
+                    {
+                        const wasFalling = this.velocity.y < 0 && gravity.y < 0 || this.velocity.y > 0 && gravity.y > 0;
+                        if (wasFalling)
+                            this.groundObject = hitLayer;
 
-                    // move to previous Y position and bounce
-                    this.pos.y = oldPos.y;
-                    this.velocity.y *= -hitRestitution;
-                    this.velocity.x *= hitFriction;
+                        // move to previous Y position and bounce
+                        this.pos.y = oldPos.y;
+                        this.velocity.y *= -hitRestitution;
+                        this.velocity.x *= hitFriction;
+                    }
+                    debugPhysics && debugRect(this.pos, this.size, '#f00');
                 }
-                collideCallback?.(this, hitLayer);
-                debugPhysics && debugRect(this.pos, this.size, '#f00');
             }
         }
     }

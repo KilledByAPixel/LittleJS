@@ -19,14 +19,19 @@ const tileCollisionLayers = [];
 
 /** Get tile collision data for a given cell in the grid
 *  @param {Vector2} pos
+*  @param {boolean} [solidOnly] - Only check solid layers?
 *  @return {number}
 *  @memberof TileLayers */
-function tileCollisionGetData(pos)
+function tileCollisionGetData(pos, solidOnly=true)
 {
     // check all tile collision layers
     for (const layer of tileCollisionLayers)
+        if (!solidOnly || layer.isSolid)
         if (pos.arrayCheck(layer.size))
-            return layer.getCollisionData(pos);
+        {
+            const data = layer.getCollisionData(pos);
+            if (data) return data;
+        }
     return 0;
 }
 
@@ -34,7 +39,7 @@ function tileCollisionGetData(pos)
  *  @param {Vector2} pos
  *  @param {Vector2} [size=vec2()]
  *  @param {EngineObject|TileCollisionCallback} [callbackObject] - Callback, engine object, or undefined
- *  @param {boolean} [solidOnly] - Only check solid layers if true
+ *  @param {boolean} [solidOnly] - Only check solid layers?
  *  @return {TileCollisionLayer}
  *  @memberof TileLayers */
 function tileCollisionTest(pos, size=vec2(), callbackObject, solidOnly=true)
@@ -60,7 +65,7 @@ function tileCollisionTest(pos, size=vec2(), callbackObject, solidOnly=true)
  *  @param {Vector2} posEnd
  *  @param {EngineObject|TileCollisionCallback} [callbackObject] - Callback, engine object, or undefined
  *  @param {Vector2} [normal] - Optional normal of the surface hit
- *  @param {boolean} [solidOnly=true] - Only check solid layers if true
+ *  @param {boolean} [solidOnly=true] - Only check solid layers?
  *  @return {Vector2|undefined} - position of the center of the tile hit or undefined if no hit
  *  @memberof TileLayers */
 function tileCollisionRaycast(posStart, posEnd, callbackObject, normal, solidOnly=true)
@@ -681,7 +686,7 @@ class TileCollisionLayer extends TileLayer
         const collisionTest = callbackObject ? typeof callbackObject === 'function' ?
             (tileData, pos)=> callbackObject(tileData, pos) :
             (tileData, pos)=> callbackObject.collideWithTile(tileData, pos) :
-            ()=> true;
+            (tileData)=> tileData > 0;
         const testFunction = (pos)=>
         {
             const tileData = this.getCollisionData(localPos.set(pos.x - this.pos.x, pos.y - this.pos.y));
