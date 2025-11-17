@@ -678,8 +678,8 @@ function drawEngineLogo(t)
     rect(44,8,20,-7,0);
 
     // engine
-    for (let i=5;i--;) circle(59-i*6,30,10,0,9,1,0);
-    circle(59,30,4,0,9,2); // light
+    for (let i=5;i--;) circle(59-i*6,30,10,0,7,1,0);
+    circle(59,30,4,0,7,2); // light
 
     // engine outline
     rect(35,20,24,0);  // top
@@ -690,9 +690,7 @@ function drawEngineLogo(t)
     rect(17,40,43,14,-1); // bottom center
 
     // wheels
-    for (let i=3;i--;)
-    for (let j=2;j--;)
-        circle(15*i+17,47,j?7:1,PI,3*PI,2);
+    for (let i=3;i--;) for (let j=2;j--;) circle(15*i+17,47,j?7:1,0,7,2);
     
     // cowcatcher
     for (let i=2;i--;)
