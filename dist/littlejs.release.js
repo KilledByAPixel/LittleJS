@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.17.9';
+const engineVersion = '1.17.10';
 
 /** Frames per second to update
  *  @type {number}
@@ -569,8 +569,11 @@ function engineObjectsRaycast(start, end, objects=engineObjects)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-function drawEngineLogo(t, showName=true)
+function drawEngineLogo(t)
 {
+    const blackAndWhite = 0;
+    const showName = 1;
+
     // LittleJS Logo and Splash Screen
     const x = mainContext;
     const w = mainCanvas.width = innerWidth;
@@ -586,48 +589,44 @@ function drawEngineLogo(t, showName=true)
         x.fillStyle = g;
         x.fillRect(0,0,w,h);
     }
-    const gradient=(X1,Y1,X2,Y2,C)=>
+    const gradient = (X1,Y1,X2,Y2,C,S=1)=>
     {
-        x.fillStyle = C;
-        if (C && C !== '#000')
+        if (C >= 0)
         {
-            const g = x.fillStyle = x.createLinearGradient(X1,Y1,X2,Y2);
-            g.addColorStop(0,'#fff');
-            g.addColorStop(.8,C);
+            if (blackAndWhite)
+                x.fillStyle = '#fff';
+            else
+            {
+                const g = x.fillStyle = x.createLinearGradient(X1,Y1,X2,Y2);
+                g.addColorStop(0,color(C,2));
+                g.addColorStop(1,color(C,1));
+            }
         }
+        else
+            x.fillStyle = '#000';
+        C >= -1 ? (x.fill(), S && x.stroke()) : x.stroke();
     }
-    const circle=(X,Y,R,A=0,B=2*PI,C)=>
+    const circle = (X,Y,R,A=0,B=2*PI,C,S)=>
     {
         x.beginPath();
-        const D=(A+B)/2, E=p*(B-A)/2;
-        x.arc(X,Y,R,D-E,D+E);
-        gradient(X,Y-R,X,Y+R,C);
-        C ? x.fill() : x.stroke();
+        x.arc(X,Y,R,p*A,p*B);
+        gradient(X,Y-R,X,Y+R,C,S);
     }
-    const rect=(X,Y,W,H,C)=>
+    const rect = (X,Y,W,H,C)=>
     {
         x.beginPath();
-        x.rect(X,Y,W,C?H*p:H);
+        x.rect(X,Y,W,H*p);
         gradient(X,Y+H,X+W,Y,C);
-        C ? x.fill() : x.stroke();
     }
-    const poly=(points,C,Y,H)=>
+    const poly = (points,C,Y,H)=>
     {
         x.beginPath();
         for (const p of points)
             x.lineTo(p.x, p.y);
         x.closePath();
         gradient(0, Y, 0, Y+H,C);
-        C ? x.fill() : x.stroke();
     }
-    const line=(X,Y,Z,W)=>
-    {
-        x.beginPath();
-        x.lineTo(X,Y);
-        x.lineTo(Z,W);
-        x.stroke();
-    }
-    const color=(c=0,l=0)=>l?`hsl(${[.95,.58,.16][c%3]*360} 99%${[0,50,50,80,90][l]}%`:'#000';
+    const color = (c,l)=> l?`hsl(${[.95,.56,.13][c%3]*360} 99%${[0,50,75][l]}%`:'#000';
 
     // center and fit tos screen
     const alpha = wave(1,1,t);
@@ -644,95 +643,66 @@ function drawEngineLogo(t, showName=true)
     if (showName)
     {
         // engine name text
-        let Y = 54;
+        const Y = 54;
         const s = 'LittleJS';
-        x.font = '900 16px arial';
+        x.font = '900 15.5px arial';
         x.lineWidth = .1+p*3.9;
         x.textAlign = 'center';
         x.textBaseline = 'top';
-        x.fillStyle = color(0,0);
-        rect(11,Y,59,12*p,color());
+        rect(11,Y+2,59,8*p,-1);
+        x.beginPath();
+
         let w2 = 0;
         for (let i=0;i<s.length;++i)
-            w2+=x.measureText(s[i]).width;
-        
+            w2 += x.measureText(s[i]).width;
         for (let j=2;j--;)
-        for (let i=0,X=41-w2/2;i<s.length;++i)
+        for (let i=0,X=40-w2/2;i<s.length;++i)
         {
-            const c = color(i>5?1:0,2);
-            const w = x.measureText(s[i]).width;
-            const X2 = X+w/2;
-            gradient(X, Y+2, X+w, Y+15, c);
+            const w = x.measureText(s[i]).width, X2 = X+w/2;
+            gradient(X2,Y,X2+2,Y+13,i>5?1:0);
             x[j?'strokeText':'fillText'](s[i],X2,Y+.5,17*p);
             X += w;
         }
 
         x.lineWidth = .1 + p*1.9;
-        line(77,Y,4,Y); // bottom
+        rect(3,Y,73,0); // bottom
     }
 
-    // cab top
-    rect(7,16,26,-7,color(0,2));
-    rect(7,9,26,7);
+    rect(7,15,26,-7,0);   // cab top
+    rect(25,15,8,25,-1);  // cab front
+    rect(10,40,15,-25,1); // cab back
+    rect(14,21,7,9,2);    // cab window
+    rect(38,15,6,6,2);    // little stack
 
-    // cab
-    rect(24,16,10,24,color());
-    rect(11,39,14,-23,color(1,2));
-    rect(25,16,-14,24);
-
-    // cab window
-    rect(15,30,6,-9,color(2,2));
-    rect(21,21,-6,9);
-
-    // little stack
-    rect(38,15,6,6,color(2,2));
-    rect(38,15,6,6);
-
-    {
-        // big stack
-        rect(49,20,10,-6,color(0,2));
-        rect(49,20,10,-6);
-        const points = [vec2(44,8),vec2(64,8),vec2(59,8+6*p),vec2(49,8+6*p)];
-        poly(points,color(1,1),8,6*p);
-        poly(points);
-        rect(44,8,20,-7,color(0,2));
-        rect(44,1,20,7);
-    }
+    // big stack
+    rect(49,20,10,-6,0);
+    const stackPoints = [vec2(44,8),vec2(64,8),vec2(59,8+6*p),vec2(49,8+6*p)];
+    poly(stackPoints,2,8,6*p);
+    rect(44,8,20,-7,0);
 
     // engine
-    for (let i=5;i--;)
-        circle(59-i*6,30,10,0,2*PI,color(1,2))
+    for (let i=5;i--;) circle(59-i*6,30,10,0,9,1,0);
+    circle(59,30,4,0,9,2); // light
 
     // engine outline
-    circle(35,30,10,PI/2,PI*3/2);
-    circle(47,30,10,PI/2,PI*3/2);
-    circle(59,30,10);
-    line(34,20,56,20);
-
-    // engine bottom
-    rect(7,40,10,7);
-    rect(7,40,10,7,color());
-    rect(18,40,42,14);
-    rect(18,40,42,14,color());
-
-    // light
-    circle(59,30,4,PI,3*PI,color(2,2));
-    circle(59,30,4,PI,3*PI);
+    rect(35,20,24,0);  // top
+    circle(59,30,10);  // front
+    circle(47,30,10,PI/2,PI*3/2); // middle
+    circle(35,30,10,PI/2,PI*3/2); // back
+    rect(7,40,13,7,-1);   // bottom back
+    rect(17,40,43,14,-1); // bottom center
 
     // wheels
     for (let i=3;i--;)
     for (let j=2;j--;)
-        circle(15*i+18,47,j?7:1,PI,3*PI,color(2,j&&2)),
-        x.stroke();
+        circle(15*i+17,47,j?7:1,PI,3*PI,2);
     
-    // front brush
+    // cowcatcher
     for (let i=2;i--;)
     {
-        let w=6, s=7;
-        let o=53+w*p*i
+        let w=6, s=7, o=53+w*p*i
         const points = [vec2(o+s,54),vec2(o,40),vec2(o+w*p,40),vec2(o+s+w*p,54)];
-        poly(points,color(0,1),40,14);
-        poly(points);
+        poly(points,0,40,14);
     }
 
     x.restore();
