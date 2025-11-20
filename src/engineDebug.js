@@ -158,7 +158,7 @@ function debugPoint(pos, color, time, angle, screenSpace=false)
 function debugLine(posA, posB, color, width=.1, time, screenSpace=false)
 {
     ASSERT(isVector2(posA), 'posA must be a vec2');
-    ASSERT(isVector2(posB), 'posB must be sa vec2');
+    ASSERT(isVector2(posB), 'posB must be a vec2');
     ASSERT(isNumber(width), 'width must be a number');
 
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);

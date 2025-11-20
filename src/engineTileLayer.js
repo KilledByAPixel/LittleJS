@@ -643,7 +643,7 @@ class TileCollisionLayer extends TileLayer
     collisionTest(pos, size=new Vector2, callbackObject)
     {
         ASSERT(isVector2(pos) && isVector2(size), 'pos and size must be Vector2s');
-        ASSERT(!callbackObject || typeof callbackObject === 'function' || callbackObject instanceof EngineObject, 'callbackObject must be a funtion or EngineObject');
+        ASSERT(!callbackObject || typeof callbackObject === 'function' || callbackObject instanceof EngineObject, 'callbackObject must be a function or EngineObject');
 
         // make function to check for collision
         const collisionTest = callbackObject ? typeof callbackObject === 'function' ?
@@ -680,7 +680,7 @@ class TileCollisionLayer extends TileLayer
     collisionRaycast(posStart, posEnd, callbackObject, normal)
     {
         ASSERT(isVector2(posStart) && isVector2(posEnd), 'positions must be Vector2s');
-        ASSERT(!callbackObject || typeof callbackObject === 'function' || callbackObject instanceof EngineObject, 'callbackObject must be a funtion or EngineObject');
+        ASSERT(!callbackObject || typeof callbackObject === 'function' || callbackObject instanceof EngineObject, 'callbackObject must be a function or EngineObject');
 
         // make function to check for collision
         const collisionTest = callbackObject ? typeof callbackObject === 'function' ?

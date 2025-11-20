@@ -1051,7 +1051,7 @@ class Color
  *  @memberof Math */
 const WHITE = debugProtectConstant(rgb());
 
-/** Color - Clear White #757474ff with 0 alpha
+/** Color - Clear White #ffffff00 with 0 alpha
  *  @type {Color}
  *  @memberof Math */
 const CLEAR_WHITE = debugProtectConstant(rgb(1,1,1,0));
@@ -1061,7 +1061,7 @@ const CLEAR_WHITE = debugProtectConstant(rgb(1,1,1,0));
  *  @memberof Math */
 const BLACK = debugProtectConstant(rgb(0,0,0));
 
-/** Color - Clear Black #000000 with 0 alpha
+/** Color - Clear Black #00000000 with 0 alpha
  *  @type {Color}
  *  @memberof Math */
 const CLEAR_BLACK = debugProtectConstant(rgb(0,0,0,0));
