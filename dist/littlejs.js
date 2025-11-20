@@ -681,8 +681,8 @@ function drawEngineLogo(t)
     rect(44,8,20,-7,0);
 
     // engine
-    for (let i=5;i--;) circle(59-i*6,30,10,0,9,1,0);
-    circle(59,30,4,0,9,2); // light
+    for (let i=5;i--;) circle(59-i*6,30,10,0,7,1,0);
+    circle(59,30,4,0,7,2); // light
 
     // engine outline
     rect(35,20,24,0);  // top
@@ -693,9 +693,7 @@ function drawEngineLogo(t)
     rect(17,40,43,14,-1); // bottom center
 
     // wheels
-    for (let i=3;i--;)
-    for (let j=2;j--;)
-        circle(15*i+17,47,j?7:1,PI,3*PI,2);
+    for (let i=3;i--;) for (let j=2;j--;) circle(15*i+17,47,j?7:1,0,7,2);
     
     // cowcatcher
     for (let i=2;i--;)
@@ -865,7 +863,7 @@ function debugPoint(pos, color, time, angle, screenSpace=false)
 function debugLine(posA, posB, color, width=.1, time, screenSpace=false)
 {
     ASSERT(isVector2(posA), 'posA must be a vec2');
-    ASSERT(isVector2(posB), 'posB must be sa vec2');
+    ASSERT(isVector2(posB), 'posB must be a vec2');
     ASSERT(isNumber(width), 'width must be a number');
 
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
@@ -2477,7 +2475,7 @@ class Color
  *  @memberof Math */
 const WHITE = debugProtectConstant(rgb());
 
-/** Color - Clear White #757474ff with 0 alpha
+/** Color - Clear White #ffffff00 with 0 alpha
  *  @type {Color}
  *  @memberof Math */
 const CLEAR_WHITE = debugProtectConstant(rgb(1,1,1,0));
@@ -2487,7 +2485,7 @@ const CLEAR_WHITE = debugProtectConstant(rgb(1,1,1,0));
  *  @memberof Math */
 const BLACK = debugProtectConstant(rgb(0,0,0));
 
-/** Color - Clear Black #000000 with 0 alpha
+/** Color - Clear Black #00000000 with 0 alpha
  *  @type {Color}
  *  @memberof Math */
 const CLEAR_BLACK = debugProtectConstant(rgb(0,0,0,0));
@@ -7074,7 +7072,7 @@ class TileCollisionLayer extends TileLayer
     collisionTest(pos, size=new Vector2, callbackObject)
     {
         ASSERT(isVector2(pos) && isVector2(size), 'pos and size must be Vector2s');
-        ASSERT(!callbackObject || typeof callbackObject === 'function' || callbackObject instanceof EngineObject, 'callbackObject must be a funtion or EngineObject');
+        ASSERT(!callbackObject || typeof callbackObject === 'function' || callbackObject instanceof EngineObject, 'callbackObject must be a function or EngineObject');
 
         // make function to check for collision
         const collisionTest = callbackObject ? typeof callbackObject === 'function' ?
@@ -7111,7 +7109,7 @@ class TileCollisionLayer extends TileLayer
     collisionRaycast(posStart, posEnd, callbackObject, normal)
     {
         ASSERT(isVector2(posStart) && isVector2(posEnd), 'positions must be Vector2s');
-        ASSERT(!callbackObject || typeof callbackObject === 'function' || callbackObject instanceof EngineObject, 'callbackObject must be a funtion or EngineObject');
+        ASSERT(!callbackObject || typeof callbackObject === 'function' || callbackObject instanceof EngineObject, 'callbackObject must be a function or EngineObject');
 
         // make function to check for collision
         const collisionTest = callbackObject ? typeof callbackObject === 'function' ?

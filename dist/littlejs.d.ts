@@ -1405,7 +1405,7 @@ declare module "littlejsengine" {
      *  @type {Color}
      *  @memberof Math */
     export const WHITE: Color;
-    /** Color - Clear White #757474ff with 0 alpha
+    /** Color - Clear White #ffffff00 with 0 alpha
      *  @type {Color}
      *  @memberof Math */
     export const CLEAR_WHITE: Color;
@@ -1413,7 +1413,7 @@ declare module "littlejsengine" {
      *  @type {Color}
      *  @memberof Math */
     export const BLACK: Color;
-    /** Color - Clear Black #000000 with 0 alpha
+    /** Color - Clear Black #00000000 with 0 alpha
      *  @type {Color}
      *  @memberof Math */
     export const CLEAR_BLACK: Color;
