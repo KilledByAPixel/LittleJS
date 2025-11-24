@@ -142,6 +142,8 @@ Here are a few of the many amazing games created with LittleJS...
 - [LittleJS Jam 2024 Results](https://itch.io/jam/littlejs-jam-2024/results) - All the games from the first LittleJS Game Jam.
 - [LittleJS Jam 2025 Results](https://itch.io/jam/littlejs-game-jam-2025/results) - All the games from the second LittleJS Game Jam.
 
+![LittleJS Screenshot](examples/games.jpg)
+
 ![LittleJS Logo](examples/favicon.png)
 
 [npm]: https://img.shields.io/npm/v/littlejsengine
