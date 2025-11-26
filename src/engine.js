@@ -646,7 +646,7 @@ function drawEngineLogo(t)
         x.lineWidth = .1+p*3.9;
         x.textAlign = 'center';
         x.textBaseline = 'top';
-        rect(11,Y+2,59,8*p,-1);
+        rect(11,Y+1,59,8*p,-1);
         x.beginPath();
 
         let w2 = 0;
@@ -669,8 +669,8 @@ function drawEngineLogo(t)
     rect(25,15,8,25,-1);  // cab front
     rect(10,40,15,-25,1); // cab back
     rect(14,21,7,9,2);    // cab window
-    rect(38,15,6,6,2);    // little stack
-
+    rect(38,20,6,-6,2);   // little stack
+    
     // big stack
     rect(49,20,10,-6,0);
     const stackPoints = [vec2(44,8),vec2(64,8),vec2(59,8+6*p),vec2(49,8+6*p)];
@@ -678,7 +678,7 @@ function drawEngineLogo(t)
     rect(44,8,20,-7,0);
 
     // engine
-    for (let i=5;i--;) circle(59-i*6,30,10,0,7,1,0);
+    for (let i=5;i--;) circle(59-i*6*p,30,10,0,2*PI,1,0);
     circle(59,30,4,0,7,2); // light
 
     // engine outline
@@ -690,7 +690,7 @@ function drawEngineLogo(t)
     rect(17,40,43,14,-1); // bottom center
 
     // wheels
-    for (let i=3;i--;) for (let j=2;j--;) circle(15*i+17,47,j?7:1,0,7,2);
+    for (let i=3;i--;) for (let j=2;j--;) circle(17+15*i,47,j?7:1,0,2*PI,2);
     
     // cowcatcher
     for (let i=2;i--;)
