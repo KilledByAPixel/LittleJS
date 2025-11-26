@@ -1134,21 +1134,18 @@ class FontImage
 }
 
 // load engine font, called automatically on startup
-function fontImageInit()
+async function fontImageInit()
 {
-    return new Promise(resolve =>
+    const image = new Image;
+    await new Promise(resolve =>
     {
-        // create the engine font
-        const image = new Image;
-        image.onerror = image.onload = ()=>
-        {
-            const tilePos=vec2(), tileSize=vec2(8), padding=1, bleed=0;
-            const textureInfo = new TextureInfo(image);
-            const tileInfo = new TileInfo(tilePos, tileSize, textureInfo, padding, bleed);
-            engineFontImage = new FontImage(tileInfo);
-            resolve();
-        }
+        image.onerror = image.onload = resolve;
         image.crossOrigin = 'anonymous';
         image.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAAAeAQMAAABnrVXaAAAABlBMVEUAAAD///+l2Z/dAAAAAXRSTlMAQObYZgAAAjpJREFUOMu9kzFu2zAUhn+CAROgqrk+B2l0BWYxMjlXeYaAtFtbdA1sGgHqRQfI0CNkSG5AwYB0BQ8d5Bsomwah6CPVeGg6tEPzAxLwyI+P78cP4u9lNO9OoMKnLMOobG5020/yaj/MrRcCGh1gBbyiLTPJEYaIiom5KM9Jq7KgynMGtb6L4GL4MF2H4LQKCXTvDVw2I4MsgZT7QLExdiutH+D08VOP3INXRrWX1/mmpbkNgAPYRVANb4xpcegYvhiNbIXauQICEjBuYLfMakaakWQeXxiZ0VDtuJCKs3ztMV59QtsHJNcRxDzfdL21ty3PrfIcXTN+E+GFAv6T5nbT9jd50/WFxb5ksdAv49qS6ouymG66ji08UMT6moykYLAo+V0j23GN4m829ZySAD5K7QsBfQTvOG8eE+gTeGYRAmnNAubN3hf5Zv9tJWDHp/VTuaSm7SN4fyINQqaNO3RMVxvpSPXnOChnRNvFcGY0gnwiPswYwTKVPE0zVtX3mTEIOoFzaqLrGuJaV+Uqumb71fVk/VoOH3cdLNQP/FHi8hV0CQNoqBZsUPlLPMsdCJro9QAaQQ0woDy9BJm0eTxCFnO9srcYlhNVlfR2EyTrph1uUtbUtAJifwRgrKuYdXVHeb0YI3QpawohQHkloI3J5FuVwI5ORxC9k2Tuz9Ir1IjgeIPGMHYkAZe2RuYkmWFmt3gGbTPOmBUWVTmRmHtGrfpzG/yuQNOKa6gBB/WA9khitPgl6/GP+gl2Af6tCbvaygAAAABJRU5ErkJggg==';
     });
+    
+    const tilePos=vec2(), tileSize=vec2(8), padding=1, bleed=0;
+    const textureInfo = new TextureInfo(image);
+    const tileInfo = new TileInfo(tilePos, tileSize, textureInfo, padding, bleed);
+    engineFontImage = new FontImage(tileInfo);
 }

@@ -204,7 +204,7 @@ class Sound
     
     /** Loads a sound from a URL and decodes it into sample data.
     *  @param {string} filename
-    *  @return {Promise<void>} */
+    *  @return {Promise} */
     async loadSound(filename)
     {
         const response = await fetch(filename);

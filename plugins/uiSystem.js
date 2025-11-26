@@ -1278,12 +1278,11 @@ class UIVideo extends UIObject
     
     /** Play or resume the video
      *  @return {Promise} Promise that resolves when playback starts */
-    play()
+    async play()
     {
         // try to play the video, catch any errors (autoplay may be blocked)
-        const promise = this.video.play();
-        promise?.catch(()=>{});
-        return promise;
+        try { await this.video.play(); }
+        catch(e) {}
     }
     
     /** Pause the video */
