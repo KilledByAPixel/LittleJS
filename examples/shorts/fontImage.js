@@ -1,7 +1,7 @@
 function gameRender()
 {
     // draw text with built in engine font image
-    const font = engineFontImage
+    const font = engineFontImage;
     font.drawText('Engine Font', vec2(0,3), 2);
 
     // show every character in the font
