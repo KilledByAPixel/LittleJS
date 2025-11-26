@@ -393,33 +393,11 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     workReadContext = workReadCanvas.getContext('2d', { willReadFrequently: true });
 
     // create promises for loading images
-    const promises = imageSources.map((src, textureIndex)=>
-        new Promise(resolve =>
-        {
-            ASSERT(isString(src), 'imageSources must be an array of strings');
+    const promises = imageSources.map((src, i)=> loadTexture(i, src));
 
-            const image = new Image;
-            image.onerror = image.onload = ()=>
-            {
-                const textureInfo = new TextureInfo(image);
-                textureInfos[textureIndex] = textureInfo;
-                resolve();
-            }
-            image.crossOrigin = 'anonymous';
-            image.src = src;
-        })
-    );
-
+    // no images to load
     if (!imageSources.length)
-    {
-        // no images to load
-        promises.push(new Promise(resolve =>
-        {
-            const textureInfo = new TextureInfo(new Image);
-            textureInfos[0] = textureInfo;
-            resolve();
-        }));
-    }
+        promises.push(loadTexture(0));
 
     // load engine font image
     promises.push(fontImageInit());

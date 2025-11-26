@@ -729,6 +729,31 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
 ///////////////////////////////////////////////////////////////////////////////
 // Drawing utilities
 
+/** Load a texture at a specific index
+ *  @param {number} textureIndex - Index to store the texture at
+ *  @param {string} [src] - Image source path
+ *  @return {Promise} Promise that resolves when texture is loaded
+ *  @memberof Draw */
+async function loadTexture(textureIndex, src)
+{
+    ASSERT(isNumber(textureIndex), 'textureIndex must be a number');
+    ASSERT(!textureInfos[textureIndex], 'textureIndex is already loaded!');
+    ASSERT(!src || isString(src), 'image src must be a string');
+    
+    const image = new Image;
+    if (src)
+    {
+        await new Promise(resolve =>
+        {
+            image.onerror = image.onload = resolve;
+            image.crossOrigin = 'anonymous';
+            image.src = src;
+        });
+    }
+    
+    textureInfos[textureIndex] = new TextureInfo(image);
+}
+
 /** Convert from screen to world space coordinates
  *  @param {Vector2} screenPos
  *  @return {Vector2}
