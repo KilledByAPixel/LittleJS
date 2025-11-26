@@ -344,7 +344,7 @@ function lineTest(posStart, posEnd, testFunction, normal)
                 if (stepX < 0)
                     hitPos.x -= e;
             }
-            if (stepY < 0)
+            else if (stepY < 0)
                 hitPos.y -= e;
 
             // set normal
