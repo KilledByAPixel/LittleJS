@@ -2235,8 +2235,8 @@ declare module "littlejsengine" {
         isLoaded(): boolean;
         /** Loads a sound from a URL and decodes it into sample data.
         *  @param {string} filename
-        *  @return {Promise<void>} */
-        loadSound(filename: string): Promise<void>;
+        *  @return {Promise} */
+        loadSound(filename: string): Promise<any>;
     }
     /**
      * Sound Instance - Wraps an AudioBufferSourceNode for individual sound control

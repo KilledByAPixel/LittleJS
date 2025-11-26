@@ -396,33 +396,11 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     workReadContext = workReadCanvas.getContext('2d', { willReadFrequently: true });
 
     // create promises for loading images
-    const promises = imageSources.map((src, textureIndex)=>
-        new Promise(resolve =>
-        {
-            ASSERT(isString(src), 'imageSources must be an array of strings');
+    const promises = imageSources.map((src, i)=> loadTexture(i, src));
 
-            const image = new Image;
-            image.onerror = image.onload = ()=>
-            {
-                const textureInfo = new TextureInfo(image);
-                textureInfos[textureIndex] = textureInfo;
-                resolve();
-            }
-            image.crossOrigin = 'anonymous';
-            image.src = src;
-        })
-    );
-
+    // no images to load
     if (!imageSources.length)
-    {
-        // no images to load
-        promises.push(new Promise(resolve =>
-        {
-            const textureInfo = new TextureInfo(new Image);
-            textureInfos[0] = textureInfo;
-            resolve();
-        }));
-    }
+        promises.push(loadTexture(0));
 
     // load engine font image
     promises.push(fontImageInit());
@@ -649,7 +627,7 @@ function drawEngineLogo(t)
         x.lineWidth = .1+p*3.9;
         x.textAlign = 'center';
         x.textBaseline = 'top';
-        rect(11,Y+2,59,8*p,-1);
+        rect(11,Y+1,59,8*p,-1);
         x.beginPath();
 
         let w2 = 0;
@@ -672,8 +650,8 @@ function drawEngineLogo(t)
     rect(25,15,8,25,-1);  // cab front
     rect(10,40,15,-25,1); // cab back
     rect(14,21,7,9,2);    // cab window
-    rect(38,15,6,6,2);    // little stack
-
+    rect(38,20,6,-6,2);   // little stack
+    
     // big stack
     rect(49,20,10,-6,0);
     const stackPoints = [vec2(44,8),vec2(64,8),vec2(59,8+6*p),vec2(49,8+6*p)];
@@ -681,7 +659,7 @@ function drawEngineLogo(t)
     rect(44,8,20,-7,0);
 
     // engine
-    for (let i=5;i--;) circle(59-i*6,30,10,0,7,1,0);
+    for (let i=5;i--;) circle(59-i*6*p,30,10,0,2*PI,1,0);
     circle(59,30,4,0,7,2); // light
 
     // engine outline
@@ -693,7 +671,7 @@ function drawEngineLogo(t)
     rect(17,40,43,14,-1); // bottom center
 
     // wheels
-    for (let i=3;i--;) for (let j=2;j--;) circle(15*i+17,47,j?7:1,0,7,2);
+    for (let i=3;i--;) for (let j=2;j--;) circle(17+15*i,47,j?7:1,0,2*PI,2);
     
     // cowcatcher
     for (let i=2;i--;)
@@ -1087,7 +1065,7 @@ function lineTest(posStart, posEnd, testFunction, normal)
                 if (stepX < 0)
                     hitPos.x -= e;
             }
-            if (stepY < 0)
+            else if (stepY < 0)
                 hitPos.y -= e;
 
             // set normal
@@ -3899,6 +3877,31 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
 ///////////////////////////////////////////////////////////////////////////////
 // Drawing utilities
 
+/** Load a texture at a specific index
+ *  @param {number} textureIndex - Index to store the texture at
+ *  @param {string} [src] - Image source path
+ *  @return {Promise} Promise that resolves when texture is loaded
+ *  @memberof Draw */
+async function loadTexture(textureIndex, src)
+{
+    ASSERT(isNumber(textureIndex), 'textureIndex must be a number');
+    ASSERT(!textureInfos[textureIndex], 'textureIndex is already loaded!');
+    ASSERT(!src || isString(src), 'image src must be a string');
+    
+    const image = new Image;
+    if (src)
+    {
+        await new Promise(resolve =>
+        {
+            image.onerror = image.onload = resolve;
+            image.crossOrigin = 'anonymous';
+            image.src = src;
+        });
+    }
+    
+    textureInfos[textureIndex] = new TextureInfo(image);
+}
+
 /** Convert from screen to world space coordinates
  *  @param {Vector2} screenPos
  *  @return {Vector2}
@@ -4279,23 +4282,20 @@ class FontImage
 }
 
 // load engine font, called automatically on startup
-function fontImageInit()
+async function fontImageInit()
 {
-    return new Promise(resolve =>
+    const image = new Image;
+    await new Promise(resolve =>
     {
-        // create the engine font
-        const image = new Image;
-        image.onerror = image.onload = ()=>
-        {
-            const tilePos=vec2(), tileSize=vec2(8), padding=1, bleed=0;
-            const textureInfo = new TextureInfo(image);
-            const tileInfo = new TileInfo(tilePos, tileSize, textureInfo, padding, bleed);
-            engineFontImage = new FontImage(tileInfo);
-            resolve();
-        }
+        image.onerror = image.onload = resolve;
         image.crossOrigin = 'anonymous';
         image.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAAAeAQMAAABnrVXaAAAABlBMVEUAAAD///+l2Z/dAAAAAXRSTlMAQObYZgAAAjpJREFUOMu9kzFu2zAUhn+CAROgqrk+B2l0BWYxMjlXeYaAtFtbdA1sGgHqRQfI0CNkSG5AwYB0BQ8d5Bsomwah6CPVeGg6tEPzAxLwyI+P78cP4u9lNO9OoMKnLMOobG5020/yaj/MrRcCGh1gBbyiLTPJEYaIiom5KM9Jq7KgynMGtb6L4GL4MF2H4LQKCXTvDVw2I4MsgZT7QLExdiutH+D08VOP3INXRrWX1/mmpbkNgAPYRVANb4xpcegYvhiNbIXauQICEjBuYLfMakaakWQeXxiZ0VDtuJCKs3ztMV59QtsHJNcRxDzfdL21ty3PrfIcXTN+E+GFAv6T5nbT9jd50/WFxb5ksdAv49qS6ouymG66ji08UMT6moykYLAo+V0j23GN4m829ZySAD5K7QsBfQTvOG8eE+gTeGYRAmnNAubN3hf5Zv9tJWDHp/VTuaSm7SN4fyINQqaNO3RMVxvpSPXnOChnRNvFcGY0gnwiPswYwTKVPE0zVtX3mTEIOoFzaqLrGuJaV+Uqumb71fVk/VoOH3cdLNQP/FHi8hV0CQNoqBZsUPlLPMsdCJro9QAaQQ0woDy9BJm0eTxCFnO9srcYlhNVlfR2EyTrph1uUtbUtAJifwRgrKuYdXVHeb0YI3QpawohQHkloI3J5FuVwI5ORxC9k2Tuz9Ir1IjgeIPGMHYkAZe2RuYkmWFmt3gGbTPOmBUWVTmRmHtGrfpzG/yuQNOKa6gBB/WA9khitPgl6/GP+gl2Af6tCbvaygAAAABJRU5ErkJggg==';
     });
+    
+    const tilePos=vec2(), tileSize=vec2(8), padding=1, bleed=0;
+    const textureInfo = new TextureInfo(image);
+    const tileInfo = new TileInfo(tilePos, tileSize, textureInfo, padding, bleed);
+    engineFontImage = new FontImage(tileInfo);
 }
 /**
  * LittleJS Input System
@@ -5278,7 +5278,7 @@ class Sound
     
     /** Loads a sound from a URL and decodes it into sample data.
     *  @param {string} filename
-    *  @return {Promise<void>} */
+    *  @return {Promise} */
     async loadSound(filename)
     {
         const response = await fetch(filename);
@@ -9828,12 +9828,11 @@ class UIVideo extends UIObject
     
     /** Play or resume the video
      *  @return {Promise} Promise that resolves when playback starts */
-    play()
+    async play()
     {
         // try to play the video, catch any errors (autoplay may be blocked)
-        const promise = this.video.play();
-        promise?.catch(()=>{});
-        return promise;
+        try { await this.video.play(); }
+        catch(e) {}
     }
     
     /** Pause the video */
