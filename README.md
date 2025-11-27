@@ -18,10 +18,6 @@ LittleJS is a fast, lightweight, and fully open source HTML5 game engine designe
 Its small footprint is packed with a comprehensive feature set including hybrid rendering, physics, particles, sound, and input handling.
 The code is clean and well documented with some fun examples to get you started right away. Choo-Choo!
 
-### 🚀 Join the LittleJS Game Jam
-
-*The Second Annual LittleJS Game Jam is currently in progress, voting ends on 11/24! 🕹️🎮 [Sign up today and get more info about the jam on itch.io!](https://itch.io/jam/littlejs-game-jam-2025)*
-
 <div align='center'>
 
 ## [Demos](https://killedbyapixel.github.io/LittleJS/examples) | [Docs](https://killedbyapixel.github.io/LittleJS/docs) | [Trailer](https://youtu.be/chuBzGjv7Ms) | [Discord](https://discord.gg/zb7hcGkyZe) | [Tutorial](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/breakoutTutorial/README.md) | [FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md)
@@ -40,7 +36,6 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 - 100,000+ sprites at solid 60fps
 - Apply [Shadertoy](https://www.shadertoy.com) style shaders for post-processing effects
 - Robust particle effect system and [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
-- Falls back to Canvas2D if WebGL can't be created or context is lost
 
 ### 🔊 Audio
 
@@ -57,8 +52,8 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 ### 💥 Physics
 
 - Robust arcade physics system with collision handling
+- Fast tilemap collision with raycasting
 - Full Box2D integration for more realistic physics
-- Tilemap collision with raycasting
 
 ### 🚀 Flexibility
 
@@ -73,8 +68,6 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 - Debug primitive rendering system
 - Screenshot and video capture tools
 - Node.js build system
-- Bitmap font rendering and built in engine font
-- Optimized for AI-assisted development
 - Medal tracking system with [Newgrounds](https://www.newgrounds.com/) support
 
 ## How To Use LittleJS
