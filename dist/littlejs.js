@@ -1669,7 +1669,9 @@ function wave(frequency=1, amplitude=1, t=time, offset=0)
 function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
 
 /**
- * Check if object is a valid string or can be converted to one
+ * Check if object can be converted to a string (has a toString method)
+ * - Returns true for strings, numbers, and most objects
+ * - Returns false for null and undefined
  * @param {any} s
  * @return {boolean}
  * @memberof Math */
@@ -6017,7 +6019,7 @@ class Sound
  * // Control the individual instance
  * instance.setVolume(.5);
  * instance.pause();
- * instance.unpause();
+ * instance.resume();
  * instance.stop();
  */
 class SoundInstance
@@ -6131,7 +6133,7 @@ class SoundInstance
         this.startTime = undefined;
     }
 
-    /** Unpauses this sound instance */
+    /** Resume this sound instance */
     resume()
     {
         if (!this.isPaused()) return;
@@ -6145,8 +6147,8 @@ class SoundInstance
      */
     isPlaying() { return !!this.source; }
 
-    /** Check if this instance is paused and was not stopped
-     *  @return {boolean} - True if paused
+    /** Check if this instance is paused or stopped (not currently playing)
+     *  @return {boolean} - True if not playing
      */
     isPaused() { return !this.isPlaying(); }
 
@@ -10440,7 +10442,7 @@ class UIScrollbar extends UIObject
         else
         {
             // draw the scrollbar handle
-            const value = isHorizontal ? this.value : 1 - this.value;
+            const value = clamp(isHorizontal ? this.value : 1 - this.value);
             const p = (barWidth - handleWidth) * (value - .5);
             const pos = this.pos.add(isHorizontal ? vec2(p, 0) : vec2(0, p));
             const color = this.disabled ? this.disabledColor : this.handleColor;

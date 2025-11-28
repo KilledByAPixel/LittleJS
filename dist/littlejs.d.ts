@@ -1390,7 +1390,9 @@ declare module "littlejsengine" {
      * @memberof Math */
     export function isNumber(n: any): boolean;
     /**
-     * Check if object is a valid string or can be converted to one
+     * Check if object can be converted to a string (has a toString method)
+     * - Returns true for strings, numbers, and most objects
+     * - Returns false for null and undefined
      * @param {any} s
      * @return {boolean}
      * @memberof Math */
@@ -2250,7 +2252,7 @@ declare module "littlejsengine" {
      * // Control the individual instance
      * instance.setVolume(.5);
      * instance.pause();
-     * instance.unpause();
+     * instance.resume();
      * instance.stop();
      */
     export class SoundInstance {
@@ -2292,14 +2294,14 @@ declare module "littlejsengine" {
         stop(fadeTime?: number): void;
         /** Pause this sound instance */
         pause(): void;
-        /** Unpauses this sound instance */
+        /** Resume this sound instance */
         resume(): void;
         /** Check if this instance is currently playing
          *  @return {boolean} - True if playing
          */
         isPlaying(): boolean;
-        /** Check if this instance is paused and was not stopped
-         *  @return {boolean} - True if paused
+        /** Check if this instance is paused or stopped (not currently playing)
+         *  @return {boolean} - True if not playing
          */
         isPaused(): boolean;
         /** Get the current playback time in seconds
