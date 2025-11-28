@@ -15,12 +15,8 @@
 ## 🚂 All Aboard!
 
 LittleJS is a fast, lightweight, and fully open source HTML5 game engine designed for simplicity and performance.
-Its small footprint is packed with a comprehensive feature set including hybrid rendering, physics, particles, sound, and input handling.
-The code is clean and well documented with some fun examples to get you started right away. Choo-Choo!
-
-### 🚀 Join the LittleJS Game Jam
-
-*The Second Annual LittleJS Game Jam is currently in progress, voting ends on 11/24! 🕹️🎮 [Sign up today and get more info about the jam on itch.io!](https://itch.io/jam/littlejs-game-jam-2025)*
+Its small footprint is packed with a comprehensive feature set including rendering, physics, particles, sound, and input handling.
+The code is very clean and well documented with many examples to get you started quickly.
 
 <div align='center'>
 
@@ -30,17 +26,14 @@ The code is clean and well documented with some fun examples to get you started 
 
 ![LittleJS Screenshot](examples/screenshot.jpg)
 
-## About LittleJS Engine
-
-LittleJS is a small but powerful game engine with many features and no dependencies.
+## LittleJS Features
 
 ### ✨ Graphics
 
-- Super fast WebGL2 + Canvas2D hybrid rendering system for sprites and tilemaps
-- 100,000+ sprites at solid 60fps
+- Super fast WebGL2 + Canvas2D hybrid rendering system
+- 100K+ sprites at 60fps
 - Apply [Shadertoy](https://www.shadertoy.com) style shaders for post-processing effects
 - Robust particle effect system and [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
-- Falls back to Canvas2D if WebGL can't be created or context is lost
 
 ### 🔊 Audio
 
@@ -57,8 +50,8 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 ### 💥 Physics
 
 - Robust arcade physics system with collision handling
+- Fast tilemap collision with raycasting
 - Full Box2D integration for more realistic physics
-- Tilemap collision with raycasting
 
 ### 🚀 Flexibility
 
@@ -73,27 +66,25 @@ LittleJS is a small but powerful game engine with many features and no dependenc
 - Debug primitive rendering system
 - Screenshot and video capture tools
 - Node.js build system
-- Bitmap font rendering and built in engine font
-- Optimized for AI-assisted development
 - Medal tracking system with [Newgrounds](https://www.newgrounds.com/) support
 
 ## How To Use LittleJS
 
 To get started download the latest LittleJS package from GitHub or install via npm: ```npm install littlejsengine```
 
-*You need to run a local web server to run LittleJS games during development!* You may see a console error like 'The image element contains cross-origin data.' Don't panic, it's easy to fix! If you are using [Visual Studio Code](https://code.visualstudio.com/) there is a [Live Preview Extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.live-server) that will handle this for you automatically. Another option is to setup a simple local web server like [http-server](https://www.npmjs.com/package/http-server) via npm.
+*You will need to run a local web server to run LittleJS games during development!* If you are using [Visual Studio Code](https://code.visualstudio.com/) there is a [Live Preview Extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.live-server) that will handle this for you automatically. Another option is to setup a simple local web server like [http-server](https://www.npmjs.com/package/http-server) via npm.
 
 - [Watch this GitNation talk](https://youtu.be/_dXKU0WgAj8?si=ZDXLYAFDWp54hrGT) to hear more about LittleJS works and get some tips on how to use it.
-- Learn how to make a simple game from scratch with [The Breakout Tutorial.](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial)
-- [Make a ski game with LittleJS](https://eoinmcgrath.com/little-ski/tutorial.html) - Check out this tutorial by eoinmcg that shows how to make a pixel art style game.
-- [LittleJS Engine Quick Reference Sheet](https://github.com/KilledByAPixel/LittleJS/blob/main/reference.md) - This cheat sheet can help you get started.
-- [Check out The Little JS FAQ for more help getting started](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md).
-- Join our vibrant community on [Discord](https://discord.gg/zb7hcGkyZe) to get help, share your projects, and collaborate with others!
-- For Js13k there is a [separate branch that builds to a 7KB zip](https://github.com/KilledByAPixel/LittleJS/tree/js13k)
+- [Tutorial: Breakout](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial) - Learn how to make a simple game from scratch
+- [Tutorial: Make a ski game](https://eoinmcgrath.com/little-ski/tutorial.html) - This tutorial by eoinmcg that shows how to make a pixel art style game.
+- [LittleJS Quick Reference Sheet](https://github.com/KilledByAPixel/LittleJS/blob/main/reference.md) - A reference sheet to help you get started.
+- [Little JS FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md) - Answers to common questions about LittleJS.
+- [LittleJS Discord](https://discord.gg/zb7hcGkyZe) - Join our vibrant community on Discord to get help, share your projects, and collaborate.
+- [JS13k Branch](https://github.com/KilledByAPixel/LittleJS/tree/js13k) - For size coding events like JS13k there is a special branch that builds to a 7KB zip.
 
 ## Examples
 
-These demos are for both learning and using as starter projects to create your own games.
+LittleJS comes with a several demos both for learning and using as starter projects to create new games.
 
 - [Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter/) - Clean example with only a few things to get you started
 - [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/) - Block breaking game with post-processing effects
@@ -113,10 +104,6 @@ These demos are for both learning and using as starter projects to create your o
 | [littlejs.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.min.js) | Release | No | Optimized for release and minified |
 | [littlejs.esm.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.esm.js) | Debug | ESM | Debug mode with asserts |
 | [littlejs.esm.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.esm.min.js) | Release | ESM | Optimized for release and minified |
-
-To rebuild the engine first run ```npm install``` to setup the necessary npm dependencies. Then call ```npm run build``` to build the engine.
-
-The starter example project includes a node js file [build.js](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/starter/build.js) that compresses everything into a tiny zip file using Google Closure, UglifyJS, and ECT Zip.
 
 ## Games Made With LittleJS
 
