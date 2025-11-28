@@ -267,7 +267,9 @@ function wave(frequency=1, amplitude=1, t=time, offset=0)
 function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
 
 /**
- * Check if object is a valid string or can be converted to one
+ * Check if object can be converted to a string (has a toString method)
+ * - Returns true for strings, numbers, and most objects
+ * - Returns false for null and undefined
  * @param {any} s
  * @return {boolean}
  * @memberof Math */

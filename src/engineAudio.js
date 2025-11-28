@@ -262,7 +262,7 @@ class Sound
  * // Control the individual instance
  * instance.setVolume(.5);
  * instance.pause();
- * instance.unpause();
+ * instance.resume();
  * instance.stop();
  */
 class SoundInstance
@@ -376,7 +376,7 @@ class SoundInstance
         this.startTime = undefined;
     }
 
-    /** Unpauses this sound instance */
+    /** Resume this sound instance */
     resume()
     {
         if (!this.isPaused()) return;
@@ -390,8 +390,8 @@ class SoundInstance
      */
     isPlaying() { return !!this.source; }
 
-    /** Check if this instance is paused and was not stopped
-     *  @return {boolean} - True if paused
+    /** Check if this instance is paused or stopped (not currently playing)
+     *  @return {boolean} - True if not playing
      */
     isPaused() { return !this.isPlaying(); }
 
