@@ -1209,7 +1209,7 @@ class UIScrollbar extends UIObject
         else
         {
             // draw the scrollbar handle
-            const value = isHorizontal ? this.value : 1 - this.value;
+            const value = clamp(isHorizontal ? this.value : 1 - this.value);
             const p = (barWidth - handleWidth) * (value - .5);
             const pos = this.pos.add(isHorizontal ? vec2(p, 0) : vec2(0, p));
             const color = this.disabled ? this.disabledColor : this.handleColor;
