@@ -38,6 +38,7 @@ export
     Box2dObject,
     Box2dStaticObject,
     Box2dKinematicObject,
+    Box2dTileLayer,
     Box2dRaycastResult,
     Box2dJoint,
     Box2dTargetJoint,
