@@ -33,7 +33,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.17.10';
+const engineVersion = '1.17.11';
 
 /** Frames per second to update
  *  @type {number}
@@ -13154,6 +13154,7 @@ export
     Box2dObject,
     Box2dStaticObject,
     Box2dKinematicObject,
+    Box2dTileLayer,
     Box2dRaycastResult,
     Box2dJoint,
     Box2dTargetJoint,

@@ -4097,6 +4097,24 @@ declare module "littlejsengine" {
         constructor(pos?: Vector2, size?: Vector2, tileInfo?: TileInfo, angle?: number, color?: Color, renderOrder?: number);
     }
     /**
+     * Box2d Tile Layer
+     * - adds Box2d support to tile layers
+     * - creates static box2d fixtures for solid tiles
+     * @extends Box2dObject
+     * @memberof Box2D
+     */
+    export class Box2dTileLayer extends Box2dObject {
+        /** Create a Box2d tile layer object
+        *  @param {TileCollisionLayer} tileLayer - Tile layer for this object */
+        constructor(tileLayer: TileCollisionLayer);
+        /** @property {TileLayer} - The tile layer */
+        tileLayer: TileCollisionLayer;
+        /** Create box2d collision fixtures for solid tiles
+        *  @param {number} [friction]
+        *  @param {number} [restitution] */
+        buildCollision(friction?: number, restitution?: number): void;
+    }
+    /**
      * Box2D Raycast Result
      * - Holds results from a box2d raycast queries
      * - Automatically created by box2d raycast functions
