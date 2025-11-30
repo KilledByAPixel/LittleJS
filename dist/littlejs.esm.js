@@ -8,18 +8,20 @@
  * MIT License - Copyright 2021 Frank Force
  *
  * Engine Features
- * - Object oriented system with base class engine object
- * - Base class object handles update, physics, collision, rendering, etc
- * - Engine helper classes and functions like Vector2, Color, and Timer
- * - Super fast rendering system for tile sheets
- * - Sound effects audio with zzfx and music with zzfxm
- * - Input processing system with gamepad and touchscreen support
- * - Tile layer rendering and collision system
- * - Particle effect system
- * - Medal system tracks and displays achievements
- * - Debug tools and debug rendering system
- * - Post processing effects
- * - Call engineInit() to start it up!
+ * - Object oriented system with EngineObject base class
+ * - Automatic object lifecycle (update, physics, collision, rendering)
+ * - Engine helper classes: Vector2, Color, Timer, RandomGenerator
+ * - Hybrid rendering with WebGL batching and Canvas2D fallback
+ * - Audio system with wave, mp3, or ZzFX sound effects
+ * - Input system with keyboard, mouse, gamepad, and touch support
+ * - Tile layer rendering and collision detection
+ * - Particle effect system with emitters
+ * - Medal/achievement system with local storage
+ * - Comprehensive debug tools and visualizations
+ * - Fixed 60 FPS timestep with configurable time scale
+ * - Raycast and spatial query utilities
+ * - Plugin system for extending engine functionality
+ * - Start with engineInit() and provide your game callbacks
  * @namespace Engine
  */
 
@@ -685,11 +687,14 @@ function drawEngineLogo(t)
 }
 /**
  * LittleJS Debug System
- * - Press Esc to show debug overlay with mouse pick
- * - Number keys toggle debug functions
- * - +/- apply time scale
- * - Debug primitive rendering
- * - Save a 2d canvas as a png image
+ * - Press Esc to toggle debug overlay with object picking
+ * - Number keys toggle debug visualizations (physics, particles, etc.)
+ * - +/- keys control time scale for slow motion/fast forward
+ * - ASSERT and LOG macros for development (removed in release builds)
+ * - Debug primitive rendering (rectangles, circles, lines, points, text)
+ * - Screenshot and video capture support
+ * - FPS counter and performance watermark
+ * - Debug overlay shows mouse position and picked objects
  * @namespace Debug
  */
 
@@ -1404,10 +1409,17 @@ function debugProtectConstant(obj)
 }
 /**
  * LittleJS Math Classes and Functions
- * - General purpose math library
- * - RandomGenerator - seeded random number generator
- * - Vector2 - fast, simple, easy 2D vector class
- * - Color - holds a rgba color with math functions
+ * - Comprehensive math utilities for game development
+ * - Vector2 class for 2D positions, directions, and math operations
+ * - Color class for RGBA colors with interpolation and manipulation
+ * - RandomGenerator for seeded pseudo-random number generation
+ * - Math shortcuts (PI, abs, floor, ceil, min, max, sin, cos, etc.)
+ * - Interpolation functions (lerp, smoothStep, percent)
+ * - Clamping, wrapping, and modulo operations
+ * - Angle utilities with wrap-around support
+ * - Collision detection (overlapping, intersection, line tests)
+ * - Random number generation and seeding
+ * - Type checking utilities
  * @namespace Math
  */
 
@@ -2516,8 +2528,12 @@ const PURPLE = debugProtectConstant(rgb(.5,0,1));
 const MAGENTA = debugProtectConstant(rgb(1,0,1));
 /**
  * LittleJS Utility Classes and Functions
- * - General purpose utilities
- * - Timer - tracks time automatically
+ * - Timer - tracks time automatically with support for pause and real-time modes
+ * - Time formatting helper
+ * - JSON file fetching
+ * - File saving (text, canvas, data URLs)
+ * - Native share dialog support
+ * - Local storage save data management
  * @namespace Utilities
  */
 
@@ -3310,6 +3326,13 @@ function setDebugWatermark(show) { debugWatermark = show; }
 function setDebugKey(key) { debugKey = key; }
 /**
  * LittleJS Object System
+ * - EngineObject is the base class for all game objects
+ * - Handles automatic updating, rendering, physics, and collision
+ * - Supports parent-child hierarchies with transform inheritance
+ * - 2D physics with velocity, acceleration, damping, and gravity
+ * - Collision system with tiles and other objects
+ * - Renders sprites from tile sheets with color and rotation
+ * - Objects sorted by renderOrder for layered rendering
  */
 
 /**
@@ -3833,22 +3856,23 @@ class EngineObject
 }
 /**
  * LittleJS Drawing System
- * - Hybrid system with both Canvas2D and WebGL available
- * - Super fast tile sheet rendering with WebGL
- * - Can apply rotation, mirror, color and additive color
- * - Font rendering system with built in engine font
- * - Many useful utility functions
+ * - Hybrid rendering with both Canvas2D and WebGL support
+ * - Optimized tile sheet sprite rendering using WebGL batching
+ * - Primitive drawing for polygons, ellipses, and lines
+ * - Tile-based rendering with TileInfo and TextureInfo classes
+ * - Text rendering with custom fonts and FontImage support
+ * - Color and additive color blending for effects
+ * - Rotation, mirroring, and scaling transformations
+ * - Camera system with position, scale, and rotation
+ * - Multiple canvas support (main, WebGL, work canvases)
+ * - Gradient fills and outlined shapes
+ * - Image manipulation and color tinting
  *
- * LittleJS uses a hybrid rendering solution with the best of both Canvas2D and WebGL.
- * There are 3 canvas/contexts available to draw to...
- * mainCanvas - 2D background canvas, non WebGL stuff like tile layers are drawn here.
- * glCanvas - Used by the accelerated WebGL batch rendering system.
+ * Rendering Architecture:
+ * - glCanvas: WebGL canvas for accelerated sprite batch rendering
+ * - mainCanvas: Canvas2D overlay for text, UI, and custom drawing
+ * - All draw functions default to WebGL when enabled, can force Canvas2D with useWebGL parameter
  *
- * The WebGL rendering system is very fast with some caveats...
- * - Switching blend modes (additive) or textures causes another draw call which is expensive in excess
- * - Group additive rendering together using renderOrder to mitigate this issue
- *
- * The LittleJS rendering solution is intentionally simple, feel free to adjust it for your needs!
  * @namespace Draw
  */
 
@@ -4982,11 +5006,14 @@ async function fontImageInit()
 }
 /**
  * LittleJS Input System
- * - Tracks keyboard down, pressed, and released
- * - Tracks mouse buttons, position, and wheel
- * - Tracks multiple analog gamepads
- * - Touch input is handled as mouse input
- * - Virtual gamepad for touch devices
+ * - Keyboard input with key down, pressed, and released states
+ * - Mouse input with position (world and screen space), buttons, and wheel
+ * - Gamepad support for multiple controllers with analog sticks and buttons
+ * - Touch input mapped to mouse position and buttons
+ * - Virtual on-screen gamepad for mobile devices
+ * - Automatic gamepad vs keyboard/mouse detection
+ * - Input event prevention for canvas focus
+ * - Clipboard copy/paste support
  * @namespace Input
  */
 
@@ -5759,12 +5786,15 @@ function touchGamepadButtonCenter()
 }
 /**
  * LittleJS Audio System
- * - <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX Sound Effects</a> - ZzFX Sound Effect Generator
- * - <a href=https://keithclark.github.io/ZzFXM/>ZzFXM Music</a> - ZzFXM Music System
- * - Caches sounds and music for fast playback
- * - Can attenuate and apply stereo panning to sounds
- * - Ability to play mp3, ogg, and wave files
- * - Speech synthesis functions
+ * - Play audio files (mp3, ogg, wave) and generate sounds with ZzFX
+ * - ZzFX sound generator integration: <a href=https://killedbyapixel.github.io/ZzFX/>ZzFX</a>
+ * - Sound caching for fast playback and memory efficiency
+ * - Volume control with attenuation and stereo panning
+ * - 2D spatial audio based on camera position with distance-based falloff
+ * - Sound instance management (pause, resume, stop)
+ * - Speech synthesis for text-to-speech
+ * - Music playback with ZzFXM support
+ * - Web Audio API integration with master gain control
  * @namespace Audio
  */
 
@@ -6433,10 +6463,14 @@ function zzfxG
 }
 /**
  * LittleJS Tile Layer System
- * - Caches arrays of tiles to off screen canvas for fast rendering
- * - Unlimited numbers of layers, allocates canvases as needed
- * - Tile layers can be drawn to using their context with canvas2d
- * - Tile layers can also have collision with EngineObjects
+ * - Renders large tile-based levels efficiently using cached canvases
+ * - Unlimited tile layers with automatic canvas allocation
+ * - Layers support both rendering and collision detection
+ * - Direct canvas2d drawing access for custom tile rendering
+ * - TileLayer for rendering, TileCollisionLayer for physics
+ * - Collision callbacks for tile interactions with objects
+ * - Optimized raycast support for tile-based physics
+ * - Integration with Box2D physics via Box2DTileLayer plugin
  * @namespace TileLayers
  */
 
@@ -7141,9 +7175,14 @@ class TileCollisionLayer extends TileLayer
 }
 /**
  * LittleJS Particle System
- * - A simple but fast and flexible particle system
- * - Lightweight Particles are created and managed by ParticleEmitters
- * - The particle design tool can be used to help create emitters
+ * - Fast and flexible particle effects system
+ * - ParticleEmitter spawns and manages lightweight Particle objects
+ * - Particles support color gradients, fading, rotation, and scaling
+ * - Physics simulation with velocity, gravity, and damping
+ * - Collision detection with tile layers
+ * - Additive blending for glowing effects
+ * - Cone-based emission with randomization
+ * - Particle design tool available for easy emitter creation
  * @namespace Particles
  */
 
@@ -7662,9 +7701,12 @@ class Particle
 }
 /**
  * LittleJS Medal System
- * - Tracks and displays medals
- * - Saves medals to local storage
- * - Newgrounds integration
+ * - Achievement/trophy system for games
+ * - Medal class with name, description, icon, and unlock tracking
+ * - Automatic saving to local storage
+ * - Visual display queue with slide-in notifications
+ * - Newgrounds API integration for online achievements
+ * - Debug mode to unlock/reset medals during development
  * @namespace Medals
  */
 
@@ -7853,14 +7895,17 @@ class Medal
 }
 /**
  * LittleJS WebGL Interface
- * - All WebGL used by the engine is wrapped up here
- * - Will fall back to 2D canvas rendering if WebGL is not supported
- * - For normal stuff you won't need to see or call anything in this file
- * - For advanced stuff there are helper functions to create shaders, textures, etc
- * - Can be disabled with glEnable to revert to 2D canvas rendering
- * - Batches sprite rendering on GPU for incredibly fast performance
- * - Sprite transform math is done in the shader where possible
- * - Supports shadertoy style post processing shaders via plugin
+ * - WebGL2 rendering engine for high-performance graphics
+ * - Batched sprite rendering for drawing thousands of sprites efficiently
+ * - Instanced rendering using vertex array objects (VAOs)
+ * - Polygon rendering with triangle strip support
+ * - Shader system with custom vertex and fragment shaders
+ * - Texture management with automatic atlas support
+ * - Post-processing effects via framebuffer and shader plugins
+ * - Automatic fallback to Canvas2D if WebGL is unavailable
+ * - Context loss and restoration handling
+ * - Can be disabled with glEnable setting
+ * - Advanced users can create custom shaders and render targets
  * @namespace WebGL
  */
 
@@ -12765,6 +12810,7 @@ function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor
 
 /**
  * LittleJS Module Export
+ * - Exports all engine modules and functions for external use
  */
 
 export
