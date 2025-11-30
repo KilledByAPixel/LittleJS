@@ -1,9 +1,13 @@
 /**
  * LittleJS Tile Layer System
- * - Caches arrays of tiles to off screen canvas for fast rendering
- * - Unlimited numbers of layers, allocates canvases as needed
- * - Tile layers can be drawn to using their context with canvas2d
- * - Tile layers can also have collision with EngineObjects
+ * - Renders large tile-based levels efficiently using cached canvases
+ * - Unlimited tile layers with automatic canvas allocation
+ * - Layers support both rendering and collision detection
+ * - Direct canvas2d drawing access for custom tile rendering
+ * - TileLayer for rendering, TileCollisionLayer for physics
+ * - Collision callbacks for tile interactions with objects
+ * - Optimized raycast support for tile-based physics
+ * - Integration with Box2D physics via Box2DTileLayer plugin
  * @namespace TileLayers
  */
 

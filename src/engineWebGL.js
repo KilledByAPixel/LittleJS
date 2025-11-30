@@ -1,13 +1,16 @@
 /**
  * LittleJS WebGL Interface
- * - All WebGL used by the engine is wrapped up here
- * - Will fall back to 2D canvas rendering if WebGL is not supported
- * - For normal stuff you won't need to see or call anything in this file
- * - For advanced stuff there are helper functions to create shaders, textures, etc
- * - Can be disabled with glEnable to revert to 2D canvas rendering
- * - Batches sprite rendering on GPU for incredibly fast performance
- * - Sprite transform math is done in the shader where possible
- * - Supports shadertoy style post processing shaders via plugin
+ * - WebGL2 rendering engine for high-performance graphics
+ * - Batched sprite rendering for drawing thousands of sprites efficiently
+ * - Instanced rendering using vertex array objects (VAOs)
+ * - Polygon rendering with triangle strip support
+ * - Shader system with custom vertex and fragment shaders
+ * - Texture management with automatic atlas support
+ * - Post-processing effects via framebuffer and shader plugins
+ * - Automatic fallback to Canvas2D if WebGL is unavailable
+ * - Context loss and restoration handling
+ * - Can be disabled with glEnable setting
+ * - Advanced users can create custom shaders and render targets
  * @namespace WebGL
  */
 

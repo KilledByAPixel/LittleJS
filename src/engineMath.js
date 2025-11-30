@@ -1,9 +1,16 @@
 /**
  * LittleJS Math Classes and Functions
- * - General purpose math library
- * - RandomGenerator - seeded random number generator
- * - Vector2 - fast, simple, easy 2D vector class
- * - Color - holds a rgba color with math functions
+ * - Comprehensive math utilities for game development
+ * - Vector2 class for 2D positions, directions, and math operations
+ * - Color class for RGBA colors with interpolation and manipulation
+ * - RandomGenerator for seeded pseudo-random number generation
+ * - Math shortcuts (PI, abs, floor, ceil, min, max, sin, cos, etc.)
+ * - Interpolation functions (lerp, smoothStep, percent)
+ * - Clamping, wrapping, and modulo operations
+ * - Angle utilities with wrap-around support
+ * - Collision detection (overlapping, intersection, line tests)
+ * - Random number generation and seeding
+ * - Type checking utilities
  * @namespace Math
  */
 

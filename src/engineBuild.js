@@ -2,10 +2,13 @@
 
 /**
  * LittleJS Build System
- * - Combine input files
- * - Run custom build steps
- * - Check for errors
- * - Output to build folder
+ * - Concatenates engine source files into distributable bundles
+ * - Generates multiple output formats (standard, ES6 module, minified)
+ * - Creates debug and release builds (with/without debug code)
+ * - Produces TypeScript definition file (.d.ts)
+ * - Includes plugin files in builds
+ * - Validates code and checks for errors
+ * - Outputs to dist/ folder
  */
 
 'use strict';

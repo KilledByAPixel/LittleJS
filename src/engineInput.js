@@ -1,10 +1,13 @@
 /**
  * LittleJS Input System
- * - Tracks keyboard down, pressed, and released
- * - Tracks mouse buttons, position, and wheel
- * - Tracks multiple analog gamepads
- * - Touch input is handled as mouse input
- * - Virtual gamepad for touch devices
+ * - Keyboard input with key down, pressed, and released states
+ * - Mouse input with position (world and screen space), buttons, and wheel
+ * - Gamepad support for multiple controllers with analog sticks and buttons
+ * - Touch input mapped to mouse position and buttons
+ * - Virtual on-screen gamepad for mobile devices
+ * - Automatic gamepad vs keyboard/mouse detection
+ * - Input event prevention for canvas focus
+ * - Clipboard copy/paste support
  * @namespace Input
  */
 

@@ -3,18 +3,20 @@
  * MIT License - Copyright 2021 Frank Force
  *
  * Engine Features
- * - Object oriented system with base class engine object
- * - Base class object handles update, physics, collision, rendering, etc
- * - Engine helper classes and functions like Vector2, Color, and Timer
- * - Super fast rendering system for tile sheets
- * - Sound effects audio with zzfx and music with zzfxm
- * - Input processing system with gamepad and touchscreen support
- * - Tile layer rendering and collision system
- * - Particle effect system
- * - Medal system tracks and displays achievements
- * - Debug tools and debug rendering system
- * - Post processing effects
- * - Call engineInit() to start it up!
+ * - Object oriented system with EngineObject base class
+ * - Automatic object lifecycle (update, physics, collision, rendering)
+ * - Engine helper classes: Vector2, Color, Timer, RandomGenerator
+ * - Hybrid rendering with WebGL batching and Canvas2D fallback
+ * - Audio system with wave, mp3, or ZzFX sound effects
+ * - Input system with keyboard, mouse, gamepad, and touch support
+ * - Tile layer rendering and collision detection
+ * - Particle effect system with emitters
+ * - Medal/achievement system with local storage
+ * - Comprehensive debug tools and visualizations
+ * - Fixed 60 FPS timestep with configurable time scale
+ * - Raycast and spatial query utilities
+ * - Plugin system for extending engine functionality
+ * - Start with engineInit() and provide your game callbacks
  * @namespace Engine
  */
 

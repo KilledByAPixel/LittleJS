@@ -1,5 +1,12 @@
 /**
  * LittleJS Object System
+ * - EngineObject is the base class for all game objects
+ * - Handles automatic updating, rendering, physics, and collision
+ * - Supports parent-child hierarchies with transform inheritance
+ * - 2D physics with velocity, acceleration, damping, and gravity
+ * - Collision system with tiles and other objects
+ * - Renders sprites from tile sheets with color and rotation
+ * - Objects sorted by renderOrder for layered rendering
  */
 
 'use strict';

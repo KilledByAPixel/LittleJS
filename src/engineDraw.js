@@ -1,21 +1,22 @@
 /**
  * LittleJS Drawing System
- * - Hybrid system with both Canvas2D and WebGL available
- * - Super fast tile sheet rendering with WebGL
- * - Can apply rotation, mirror, color and additive color
- * - Font rendering system with built in engine font
- * - Many useful utility functions
+ * - Hybrid rendering with both Canvas2D and WebGL support
+ * - Optimized tile sheet sprite rendering using WebGL batching
+ * - Primitive drawing for polygons, ellipses, and lines
+ * - Tile-based rendering with TileInfo and TextureInfo classes
+ * - Text rendering with custom fonts and FontImage support
+ * - Color and additive color blending for effects
+ * - Rotation, mirroring, and scaling transformations
+ * - Camera system with position, scale, and rotation
+ * - Multiple canvas support (main, WebGL, work canvases)
+ * - Gradient fills and outlined shapes
+ * - Image manipulation and color tinting
  *
- * LittleJS uses a hybrid rendering solution with the best of both Canvas2D and WebGL.
- * There are 3 canvas/contexts available to draw to...
- * mainCanvas - 2D background canvas, non WebGL stuff like tile layers are drawn here.
- * glCanvas - Used by the accelerated WebGL batch rendering system.
+ * Rendering Architecture:
+ * - glCanvas: WebGL canvas for accelerated sprite batch rendering
+ * - mainCanvas: Canvas2D overlay for text, UI, and custom drawing
+ * - All draw functions default to WebGL when enabled, can force Canvas2D with useWebGL parameter
  *
- * The WebGL rendering system is very fast with some caveats...
- * - Switching blend modes (additive) or textures causes another draw call which is expensive in excess
- * - Group additive rendering together using renderOrder to mitigate this issue
- *
- * The LittleJS rendering solution is intentionally simple, feel free to adjust it for your needs!
  * @namespace Draw
  */
 

@@ -1,7 +1,11 @@
 /**
  * LittleJS - Release Mode
- * - This file is used for release builds in place of engineDebug.js
- * - Debug functionality is disabled to reduce size and increase performance
+ * - Replaces engineDebug.js in production builds
+ * - All debug functions are stubbed out as no-ops
+ * - Removes ASSERT and LOG calls to reduce file size
+ * - Disables debug overlay, watermark, and visualizations
+ * - Improves performance by eliminating debug overhead
+ * - Significantly reduces final bundle size
  */
 
 'use strict';

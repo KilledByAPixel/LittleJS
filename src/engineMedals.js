@@ -1,8 +1,11 @@
 /**
  * LittleJS Medal System
- * - Tracks and displays medals
- * - Saves medals to local storage
- * - Newgrounds integration
+ * - Achievement/trophy system for games
+ * - Medal class with name, description, icon, and unlock tracking
+ * - Automatic saving to local storage
+ * - Visual display queue with slide-in notifications
+ * - Newgrounds API integration for online achievements
+ * - Debug mode to unlock/reset medals during development
  * @namespace Medals
  */
 

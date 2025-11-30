@@ -1,10 +1,13 @@
 /**
  * LittleJS Debug System
- * - Press Esc to show debug overlay with mouse pick
- * - Number keys toggle debug functions
- * - +/- apply time scale
- * - Debug primitive rendering
- * - Save a 2d canvas as a png image
+ * - Press Esc to toggle debug overlay with object picking
+ * - Number keys toggle debug visualizations (physics, particles, etc.)
+ * - +/- keys control time scale for slow motion/fast forward
+ * - ASSERT and LOG macros for development (removed in release builds)
+ * - Debug primitive rendering (rectangles, circles, lines, points, text)
+ * - Screenshot and video capture support
+ * - FPS counter and performance watermark
+ * - Debug overlay shows mouse position and picked objects
  * @namespace Debug
  */
 

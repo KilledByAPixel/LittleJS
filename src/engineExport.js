@@ -1,5 +1,6 @@
 /**
  * LittleJS Module Export
+ * - Exports all engine modules and functions for external use
  */
 
 export

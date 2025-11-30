@@ -1,7 +1,11 @@
 /**
  * LittleJS Utility Classes and Functions
- * - General purpose utilities
- * - Timer - tracks time automatically
+ * - Timer - tracks time automatically with support for pause and real-time modes
+ * - Time formatting helper
+ * - JSON file fetching
+ * - File saving (text, canvas, data URLs)
+ * - Native share dialog support
+ * - Local storage save data management
  * @namespace Utilities
  */
 

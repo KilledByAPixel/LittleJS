@@ -1,8 +1,13 @@
 /**
  * LittleJS Particle System
- * - A simple but fast and flexible particle system
- * - Lightweight Particles are created and managed by ParticleEmitters
- * - The particle design tool can be used to help create emitters
+ * - Fast and flexible particle effects system
+ * - ParticleEmitter spawns and manages lightweight Particle objects
+ * - Particles support color gradients, fading, rotation, and scaling
+ * - Physics simulation with velocity, gravity, and damping
+ * - Collision detection with tile layers
+ * - Additive blending for glowing effects
+ * - Cone-based emission with randomization
+ * - Particle design tool available for easy emitter creation
  * @namespace Particles
  */
 
