@@ -69,9 +69,7 @@ The code is very clean and well documented with many examples to get you started
 
 To get started download the latest LittleJS package from GitHub or install via npm: ```npm install littlejsengine```
 
-*You will need to run a local web server to run LittleJS games during development!* If you are using [Visual Studio Code](https://code.visualstudio.com/) there is a [Live Preview Extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.live-server) that will handle this for you automatically. Another option is to setup a simple local web server like [http-server](https://www.npmjs.com/package/http-server) via npm.
-
-- [Watch this GitNation talk](https://youtu.be/_dXKU0WgAj8?si=ZDXLYAFDWp54hrGT) to hear more about LittleJS works and get some tips on how to use it.
+- [Making Awesome Games With LittleJS](https://youtu.be/_dXKU0WgAj8?si=ZDXLYAFDWp54hrGT) - A short talk about LittleJS with some tips on how to use it.
 - [Tutorial: Breakout](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial) - Learn how to make a simple game from scratch
 - [Tutorial: Make a ski game](https://eoinmcgrath.com/little-ski/tutorial.html) - This tutorial by eoinmcg that shows how to make a pixel art style game.
 - [LittleJS Quick Reference Sheet](https://github.com/KilledByAPixel/LittleJS/blob/main/reference.md) - A reference sheet to help you get started.
