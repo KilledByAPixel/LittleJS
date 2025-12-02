@@ -31,42 +31,39 @@ The code is very clean and well documented with many examples to get you started
 ### ✨ Graphics
 
 - Super fast WebGL2 + Canvas2D hybrid rendering system
-- 100K+ sprites at 60fps
 - Apply [Shadertoy](https://www.shadertoy.com) style shaders for post-processing effects
 - Robust particle effect system and [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
 
 ### 🔊 Audio
 
-- Sound and music with mp3, ogg, wave, or [ZzFXM](https://keithclark.github.io/ZzFXM/)
+- Sound and music with mp3, ogg, or wave files
 - Use [ZzFX](https://killedbyapixel.github.io/ZzFX/) sound effect generator to play sounds without asset files
-- Positional sound effects with distance falloff
 
 ### 🎮 Input
 
 - Comprehensive input handling for mouse, keyboard, gamepad, and touch
-- Touch pad acts as a mouse with no additional code
 - Customizable on screen gamepad designed for mobile devices
 
 ### 💥 Physics
 
 - Robust arcade physics system with collision handling
 - Fast tilemap collision with raycasting
-- Full Box2D integration for more realistic physics
+- Full Box2D integration for realistic physics
 
 ### 🚀 Flexibility
 
-- Compatible with all modern web browsers, operating systems, and mobile devices
+- Compatible with all modern web browsers and mobile devices
 - TypeScript and Module support with example projects for both
-- Ideal for size coding competitions like [Js13kGames](https://js13kgames.com/)
+- Great for size coding competitions like [Js13kGames](https://js13kgames.com/)
 - Open Source and [MIT licensed](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE)
 
 ### 🛠️ Developer Tools
 
 - Live example browser with code editor
-- Debug primitive rendering system
+- Debug overlay and primitive rendering system
 - Screenshot and video capture tools
-- Node.js build system
 - Medal tracking system with [Newgrounds](https://www.newgrounds.com/) support
+- Node.js build system
 
 ## How To Use LittleJS
 
@@ -79,7 +76,6 @@ To get started download the latest LittleJS package from GitHub or install via n
 - [Tutorial: Make a ski game](https://eoinmcgrath.com/little-ski/tutorial.html) - This tutorial by eoinmcg that shows how to make a pixel art style game.
 - [LittleJS Quick Reference Sheet](https://github.com/KilledByAPixel/LittleJS/blob/main/reference.md) - A reference sheet to help you get started.
 - [Little JS FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md) - Answers to common questions about LittleJS.
-- [LittleJS Discord](https://discord.gg/zb7hcGkyZe) - Join our vibrant community on Discord to get help, share your projects, and collaborate.
 - [JS13k Branch](https://github.com/KilledByAPixel/LittleJS/tree/js13k) - For size coding events like JS13k there is a special branch that builds to a 7KB zip.
 
 ## Examples
