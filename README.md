@@ -20,7 +20,7 @@ The code is very clean and well documented with many examples to get you started
 
 <div align='center'>
 
-## [Demos](https://killedbyapixel.github.io/LittleJS/examples) | [Docs](https://killedbyapixel.github.io/LittleJS/docs) | [Trailer](https://youtu.be/chuBzGjv7Ms) | [Discord](https://discord.gg/zb7hcGkyZe) | [Tutorial](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/breakoutTutorial/README.md) | [FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md)
+## [Demos](https://killedbyapixel.github.io/LittleJS/examples) | [Docs](https://killedbyapixel.github.io/LittleJS/docs) | [Trailer](https://youtu.be/chuBzGjv7Ms) | [Discord](https://discord.gg/zb7hcGkyZe) | [FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md)
 
 </div>
 
@@ -47,7 +47,7 @@ The code is very clean and well documented with many examples to get you started
 ### 💥 Physics
 
 - Robust arcade physics system with collision handling
-- Fast tilemap collision with raycasting
+- Fast tilemap collision and raycasting
 - Full Box2D integration for realistic physics
 
 ### 🚀 Flexibility
@@ -61,7 +61,6 @@ The code is very clean and well documented with many examples to get you started
 
 - Live example browser with code editor
 - Debug overlay and primitive rendering system
-- Screenshot and video capture tools
 - Medal tracking system with [Newgrounds](https://www.newgrounds.com/) support
 - Node.js build system
 
@@ -80,14 +79,13 @@ To get started download the latest LittleJS package from GitHub or install via n
 
 LittleJS comes with a several demos both for learning and using as starter projects to create new games.
 
-- [Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter/) - Clean example with only a few things to get you started
+- [Example Browser](https://killedbyapixel.github.io/LittleJS/examples/) - Live example browser with all examples
 - [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/) - Block breaking game with post-processing effects
 - [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Match 3 puzzle game with HD rendering and high score tracking
-- [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter with level data from [Tiled Editor](https://github.com/mapeditor/tiled)
+- [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter that loads level data from [Tiled Editor](https://github.com/mapeditor/tiled)
 - [Box2D Demo](https://killedbyapixel.github.io/LittleJS/examples/box2d/) - Box2D plugin demonstration and testbed
-- [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress/) - Max sprite/object test and music system demo
+- [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress/) - Sprite rendering benchmark and music system demo
 - [Particle System Designer](https://killedbyapixel.github.io/LittleJS/examples/particles/) - Particle system editor and visualizer
-- [Example Browser](https://killedbyapixel.github.io/LittleJS/examples/) - Live example browser with all examples
 
 ## Builds
 
