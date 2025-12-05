@@ -747,6 +747,15 @@ class Vector2
      * @return {Vector2} */
     floor() { return new Vector2(floor(this.x), floor(this.y)); }
 
+    /** Returns a copy of this vector snapped to a grid
+     *  @param {number} grid - grid size to snap to
+     *  @return {Vector2} */
+    snap(grid)
+    {
+        ASSERT_NUMBER_VALID(grid);
+        return new Vector2(floor(this.x*grid)/grid, floor(this.y*grid)/grid);
+    }
+
     /** Returns new vec2 with modded values
     *  @param {number} [divisor]
     *  @return {Vector2} */
