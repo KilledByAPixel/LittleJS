@@ -61,7 +61,7 @@ function gameInit() {
     .05, .5, true, true // fadeRate, randomness, collide, additive
     );
     particleEmitter.restitution = .3; // bounce when it collides
-    particleEmitter.trailScale = 2;  // stretch as it moves
+    particleEmitter.trailScale = 2; // stretch stretch as it moves
     particleEmitter.velocityInheritance = .3; // inherit emitter velocity
 }
 ///////////////////////////////////////////////////////////////////////////////
