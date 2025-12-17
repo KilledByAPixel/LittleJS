@@ -23,6 +23,7 @@ export
     UISystemPlugin,
     UIObject,
     UIText,
+    UITextInput,
     UITile,
     UIButton,
     UICheckbox,

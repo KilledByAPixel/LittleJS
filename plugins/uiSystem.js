@@ -118,8 +118,15 @@ class UISystemPlugin
         this.lastHoverObject = undefined;
         /** @property {UIObject} - Current confirm menu being shown */
         this.confirmDialog = undefined;
+        /** @property {UIObject} - Object to send keyboard input to */
+        this.keyInputObject = undefined;
 
         engineAddPlugin(uiUpdate, uiRender);
+
+        // key down handler
+        function onKeyDown(e)
+        { uiSystem.keyInputObject?.onKeyDown(e); }
+        document.addEventListener('keydown', onKeyDown);
 
         // set object position in parent space
         function updateTransforms(o)
@@ -139,9 +146,18 @@ class UISystemPlugin
             // reset hover object at start of update
             uiSystem.lastHoverObject = uiSystem.hoverObject;
             uiSystem.hoverObject = undefined;
-
+            
             if (mouseWasPressed(0))
             {
+                // exit navigation mode on mouse press
+                uiSystem.navigationMode = false;
+                uiSystem.navigationObject = undefined;
+            }
+            if (uiSystem.keyInputObject)
+            {
+                // handle text input
+                uiSystem.activeObject = uiSystem.keyInputObject;
+                uiSystem.hoverObject = uiSystem.keyInputObject;
                 uiSystem.navigationMode = false;
                 uiSystem.navigationObject = undefined;
             }
@@ -150,7 +166,7 @@ class UISystemPlugin
             const navigableObjects = uiSystem.getNavigableObjects();
             if (!navigableObjects.length)
                 uiSystem.navigationObject = undefined;
-            else
+            else if (!uiSystem.keyInputObject)
             {
                 // unselect object if it is no longer navigable
                 if (!navigableObjects.includes(uiSystem.navigationObject))
@@ -463,6 +479,7 @@ class UISystemPlugin
         this.activeObject = undefined;
         this.hoverObject = undefined;
         this.lastHoverObject = undefined;
+        this.keyInputObject = undefined;
     }
 
     /** Get all navigable UI objects sorted by navigationIndex
@@ -743,7 +760,7 @@ class UIObject
         }
     }
 
-    /** Check if the mouse is overlapping a box in screen space
+    /** Check if the mouse is overlapping this ui object
      *  @return {boolean} - True if overlapping */
     isMouseOverlapping()
     {
@@ -762,8 +779,16 @@ class UIObject
         this.onUpdate();
 
         // unset active if disabled
-        if (this.disabled && this === uiSystem.activeObject)
-            uiSystem.activeObject = undefined;
+        if (this.disabled)
+        {
+            if (this === uiSystem.activeObject)
+                uiSystem.activeObject = undefined;
+            if (this === uiSystem.keyInputObject)
+                uiSystem.keyInputObject = undefined;
+        }
+
+        if (uiSystem.keyInputObject)
+            return;
 
         const wasHover = uiSystem.lastHoverObject === this;
         const isActive = this.isActiveObject();
@@ -790,19 +815,12 @@ class UIObject
                         uiSystem.activeObject = this;
 
                         if (uiSystem.activateOnPress)
-                        {
-                            this.onClick();
-                            if (!this.soundPress && this.soundClick)
-                                this.soundClick.play();
-                        }
+                            this.click(!this.soundPress);
                     }
                 }
                 if (!uiSystem.activateOnPress)
                 if (!mouseDown && this.isActiveObject() && this.interactive)
-                {
-                    this.onClick();
-                    this.soundClick && this.soundClick.play();
-                }
+                    this.click();
             }
 
             // clear mouse was pressed state even when disabled
@@ -854,11 +872,7 @@ class UIObject
     }
 
     /** Called when the navigation button is pressed on this object */
-    navigatePressed()
-    {
-        this.onClick();
-        this.soundClick && this.soundClick.play();
-    }
+    navigatePressed() { this.click(); }
 
     /** @return {boolean} - Is the mouse hovering over this element */
     isHoverObject() { return uiSystem.hoverObject === this; }
@@ -868,6 +882,9 @@ class UIObject
 
     /** @return {boolean} - Is the gamepad or keyboard navigation object */
     isNavigationObject() { return uiSystem.navigationObject === this; }
+
+    /** @return {boolean} - Is this object in keyboard input mode */
+    isKeyInputObject() { return uiSystem.keyInputObject === this; }
 
     /** @return {boolean} - Can it be interacted with */
     isInteractive() { return this.interactive && this.visible && !this.disabled;}
@@ -903,6 +920,15 @@ class UIObject
             this.disabled ? PURPLE :
             this.interactive ? RED : BLUE;
         uiSystem.drawRect(this.pos, this.size, CLEAR_BLACK, 4, color);
+    }
+
+    /** Internal function called when object is clicked
+     *  @param {boolean} [playSound] */
+    click(playSound)
+    {
+        this.onClick(); 
+        if (playSound && this.soundClick)
+            this.soundClick.play();
     }
 
     /** Called each frame before object updates */
@@ -977,6 +1003,102 @@ class UIText extends UIObject
         // render the text
         const textSize = this.getTextSize();
         uiSystem.drawText(this.text, this.pos, textSize, this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow, this.shadowColor, this.shadowBlur, this.shadowOffset);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/** 
+ * UITextInput - An editable text input field
+ * - A simple text entry field that supports basic editing
+ * - Suitable for short text input like names or numbers
+ * @extends UIObject
+ * @memberof UISystem
+ */
+class UITextInput extends UIObject
+{
+    /** Create a UITextInput object
+     *  @param {Vector2} [pos]
+     *  @param {Vector2} [size]
+     *  @param {string}  [text]
+     */
+    constructor(pos, size, text='')
+    {
+        super(pos, size);
+
+        ASSERT(isString(text), 'ui text must be a string');
+
+        /** @property {number} - Max length of input (0 = no limit) */
+        this.maxLength = 0;
+
+        // set properties
+        this.text = text;
+        this.interactive = true;
+        this.canBeHover = true;
+    }
+
+    click()
+    {
+        // start editing the text
+        uiSystem.keyInputObject = this;
+        this.onClick();
+    }
+
+    /** Stop editing the text edited */
+    stopEditing()
+    {
+        if (!this.isKeyInputObject())
+            return;
+
+        if (this.soundRelease)
+            this.soundRelease.play();
+        uiSystem.activeObject = undefined;
+        uiSystem.keyInputObject = undefined;
+        this.onChange();
+    }
+
+    /** Key down event handler if this object is being edited
+     *  @param {KeyboardEvent} [e] */
+    onKeyDown(e)
+    {
+        const code = e.code, key = e.key
+        if (code === 'Backspace')
+            this.text = this.text.slice(0, -1);
+        else if (code === 'Enter' || code === 'Escape')
+            this.stopEditing();
+        else if (key.length === 1) // printable characters
+        {
+            if (!this.maxLength || this.text.length < this.maxLength)
+                this.text += key;
+        }
+    }
+
+    update()
+    {
+        super.update();
+
+        if (!this.isKeyInputObject())
+            return;
+
+        // click off object to stop editing
+        if (mouseWasPressed(0) && !this.isMouseOverlapping() ||
+            gamepadWasPressed(0, gamepadPrimary))
+        {
+            this.stopEditing();
+            inputClearKey(0,0);
+        }
+    }
+
+    render()
+    {
+        super.render();
+
+        // draw the text scaled to fit
+        const textSize = this.getTextSize();
+        let text = this.text;
+        if (this.isKeyInputObject()) // add a cursor to end of text
+            text += timeReal%1 < .5 ?  '█' : '░';
+        uiSystem.drawText(text, this.pos, textSize, 
+            this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow);
     }
 }
 
@@ -1091,9 +1213,10 @@ class UICheckbox extends UIObject
         this.color = color.copy();
         this.interactive = true;
     }
-    onClick()
+    click()
     {
         this.checked = !this.checked;
+        this.onClick();
         this.onChange();
     }
     render()
