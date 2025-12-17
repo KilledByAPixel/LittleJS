@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 /**
  * LittleJS Build System
  * - Concatenates engine source files into distributable bundles
@@ -11,12 +9,19 @@
  * - Outputs to dist/ folder
  */
 
-'use strict';
+import fs from 'node:fs';
+import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const ROOT_DIR = join(__dirname, '..');
 
 const ENGINE_NAME = 'littlejs';
-const BUILD_FOLDER = 'dist';
-const SOURCE_FOLDER = 'src';
-const PLUGIN_FOLDER = 'plugins';
+const BUILD_FOLDER = join(ROOT_DIR, 'dist');
+const SOURCE_FOLDER = join(ROOT_DIR, 'src');
+const PLUGIN_FOLDER = join(ROOT_DIR, 'plugins');
 const engineSourceFiles =
 [
     `${SOURCE_FOLDER}/engineMath.js`,
@@ -56,10 +61,8 @@ const license = '// LittleJS Engine - MIT License - Copyright 2021 Frank Force\n
                 '// https://github.com/KilledByAPixel/LittleJS\n\n';
 
 console.log(asciiArt);
-console.log('Choo Choo... Building LittleJS Engine!\n');
+console.log('🚂 Choo Choo... Building LittleJS Engine!');
 const startTime = Date.now();
-const fs = require('node:fs');
-const child_process = require('node:child_process');
 
 try
 {
@@ -74,71 +77,82 @@ try
 }
 catch (e) { handleError(e, 'Failed to create build folder!'); }
 
-Build
-(
-    'Build Engine -- all',
-    `${BUILD_FOLDER}/${ENGINE_NAME}.js`,
-    [
-        `${SOURCE_FOLDER}/engine.js`,
-        `${SOURCE_FOLDER}/engineDebug.js`,
-        ...engineSourceFiles,
-        ...enginePluginFiles
-    ],
-    [], true
-);
+// Build all versions
+await buildAll();
 
-Build
-(
-    'Build Engine -- release',
-    `${BUILD_FOLDER}/${ENGINE_NAME}.release.js`,
-    [
-        `${SOURCE_FOLDER}/engine.js`,
-        `${SOURCE_FOLDER}/engineRelease.js`,
-        ...engineSourceFiles,
-        ...enginePluginFiles
-    ],
-    [], true
-);
+console.log(`Engine built in ${((Date.now() - startTime)/1e3).toFixed(2)} seconds! ✨`);
 
-Build
-(
-    'Build Engine -- minified',
-    `${BUILD_FOLDER}/${ENGINE_NAME}.min.js`,
-    [`${BUILD_FOLDER}/${ENGINE_NAME}.release.js`],
-    [closureCompilerStep, uglifyBuildStep, addLicenseStep]
-);
+///////////////////////////////////////////////////////////////////////////////
 
-Build
-(
-    'Build Engine -- ESM',
-    `${BUILD_FOLDER}/${ENGINE_NAME}.esm.js`,
-    [
-        `${BUILD_FOLDER}/${ENGINE_NAME}.js`,
-        `${SOURCE_FOLDER}/engineExport.js`,
-        `${PLUGIN_FOLDER}/pluginExport.js`
-    ],
-    [typeScriptBuildStep]
-);
+async function buildAll()
+{
+    // Build independent base versions in parallel
+    await Promise.all([
+        Build
+        (
+            'Build Engine -- all',
+            `${BUILD_FOLDER}/${ENGINE_NAME}.js`,
+            [
+                `${SOURCE_FOLDER}/engine.js`,
+                `${SOURCE_FOLDER}/engineDebug.js`,
+                ...engineSourceFiles,
+                ...enginePluginFiles
+            ],
+            [], true
+        ),
+        Build
+        (
+            'Build Engine -- release',
+            `${BUILD_FOLDER}/${ENGINE_NAME}.release.js`,
+            [
+                `${SOURCE_FOLDER}/engine.js`,
+                `${SOURCE_FOLDER}/engineRelease.js`,
+                ...engineSourceFiles,
+                ...enginePluginFiles
+            ],
+            [], true
+        )
+    ]);
 
-Build
-(
-    'Build Engine -- ESM minified release',
-    `${BUILD_FOLDER}/${ENGINE_NAME}.esm.min.js`,
-    [
-        `${BUILD_FOLDER}/${ENGINE_NAME}.release.js`,
-        `${SOURCE_FOLDER}/engineExport.js`,
-        `${PLUGIN_FOLDER}/pluginExport.js`
-    ],
-    [uglifyBuildStep, addLicenseStep]
-);
-
-console.log(`Engine built in ${((Date.now() - startTime)/1e3).toFixed(2)} seconds!`);
+    // Build dependent versions in parallel
+    await Promise.all([
+        Build
+        (
+            'Build Engine -- minified',
+            `${BUILD_FOLDER}/${ENGINE_NAME}.min.js`,
+            [`${BUILD_FOLDER}/${ENGINE_NAME}.release.js`],
+            [closureCompilerStep, uglifyBuildStep, addLicenseStep]
+        ),
+        Build
+        (
+            'Build Engine -- ESM',
+            `${BUILD_FOLDER}/${ENGINE_NAME}.esm.js`,
+            [
+                `${BUILD_FOLDER}/${ENGINE_NAME}.js`,
+                `${SOURCE_FOLDER}/engineExport.js`,
+                `${PLUGIN_FOLDER}/pluginExport.js`
+            ],
+            [typeScriptBuildStep]
+        ),
+        Build
+        (
+            'Build Engine -- ESM minified release',
+            `${BUILD_FOLDER}/${ENGINE_NAME}.esm.min.js`,
+            [
+                `${BUILD_FOLDER}/${ENGINE_NAME}.release.js`,
+                `${SOURCE_FOLDER}/engineExport.js`,
+                `${PLUGIN_FOLDER}/pluginExport.js`
+            ],
+            [uglifyBuildStep, addLicenseStep]
+        )
+    ]);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
 // A single build with its own source files, build steps, and output file
 // - each build step is a callback that accepts a single filename
-function Build(message, outputFile, files=[], buildSteps=[], isPrimaryBuild)
+async function Build(message, outputFile, files=[], buildSteps=[], isPrimaryBuild)
 {
     console.log(message);
 
@@ -179,18 +193,18 @@ function closureCompilerStep(filename)
     fs.copyFileSync(filename, filenameTemp);
     try
     {
-        child_process.execSync(`npx google-closure-compiler --js=${filenameTemp} --js_output_file=${filename} --warning_level=VERBOSE --jscomp_off=*`);
+        execSync(`npx google-closure-compiler --js=${filenameTemp} --js_output_file=${filename} --warning_level=VERBOSE --jscomp_off=*`);
         fs.rmSync(filenameTemp);
     }
     catch (e) { handleError(e, 'Failed to run Closure Compiler step!'); }
-};
+}
 
 // Process with Uglify to minify
 function uglifyBuildStep(filename)
 {
     try
     {
-        child_process.execSync(`npx uglifyjs ${filename} -o ${filename}`);
+        execSync(`npx uglifyjs ${filename} -o ${filename}`);
     }
     catch (e) { handleError(e,'Failed to run Uglify minification step!'); }
 };
@@ -213,8 +227,8 @@ function typeScriptBuildStep(filename)
 {
     try
     {
-        const tsFilename = `${BUILD_FOLDER}/${ENGINE_NAME}.d.ts`
-        child_process.execSync(`npx tsc ${filename} --declaration --allowJs --emitDeclarationOnly --outFile ${tsFilename}`);
+        const tsFilename = join(BUILD_FOLDER, `${ENGINE_NAME}.d.ts`);
+        execSync(`npx -p typescript tsc ${filename} --declaration --allowJs --emitDeclarationOnly --outFile ${tsFilename}`);
 
         // Make declare module part use the package name littlejsengine
         let fileContent = fs.readFileSync(tsFilename, 'utf8');

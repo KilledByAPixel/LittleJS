@@ -30,7 +30,7 @@
   },
   "homepage": "https://github.com/KilledByAPixel/LittleJS",
   "scripts": {
-    "build": "node src/engineBuild.js"
+    "build": "node src/engineBuild.mjs"
   },
   "devDependencies": {
     "bestzip": "^2.2.1",

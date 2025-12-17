@@ -1,20 +1,25 @@
-#!/usr/bin/env node
-
 /** 
  * LittleJS Build System
  */
 
 'use strict';
 
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import fs from 'node:fs';
+import { execSync } from 'node:child_process';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 const PROGRAM_TITLE = 'Little JS Starter Project';
 const PROGRAM_NAME = 'game';
-const BUILD_FOLDER = 'build';
+const BUILD_FOLDER = join(__dirname, 'build');
 const sourceFiles =
 [
     'game.js',
     // add your game's source files here
 ];
-const engineFile = '../../dist/littlejs.esm.min.js'; // Use the minified ES module
+const engineFile = join(__dirname, '../../dist/littlejs.esm.min.js'); // Use the minified ES module
 const dataFiles =
 [
     'tiles.png',
@@ -23,23 +28,21 @@ const dataFiles =
 
 console.log(`Building ${PROGRAM_NAME}...`);
 const startTime = Date.now();
-const fs = require('node:fs');
-const child_process = require('node:child_process');
 
 // rebuild engine
-//child_process.execSync(`npm run build`, { stdio: 'inherit' });
+//execSync(`npm run build`, { stdio: 'inherit' });
 
 // remove old files and setup build folder
 fs.rmSync(BUILD_FOLDER, { recursive: true, force: true });
-fs.rmSync(`${PROGRAM_NAME}.zip`, { force: true });
+fs.rmSync(join(__dirname, `${PROGRAM_NAME}.zip`), { force: true });
 fs.mkdirSync(BUILD_FOLDER);
 
 // copy data files
 for (const file of dataFiles)
-    fs.copyFileSync(file, `${BUILD_FOLDER}/${file}`);
+    fs.copyFileSync(join(__dirname, file), join(BUILD_FOLDER, file));
 
 // copy engine module
-fs.copyFileSync(engineFile, `${BUILD_FOLDER}/littlejs.esm.min.js`);
+fs.copyFileSync(engineFile, join(BUILD_FOLDER, 'littlejs.esm.min.js'));
 
 Build
 (
@@ -59,8 +62,8 @@ function Build(files=[], buildSteps=[])
     // process each source file separately (don't concatenate modules!)
     for (const file of files)
     {
-        const outputFile = `${BUILD_FOLDER}/${file}`;
-        fs.copyFileSync(file, outputFile);
+        const outputFile = join(BUILD_FOLDER, file);
+        fs.copyFileSync(join(__dirname, file), outputFile);
         moduleFixStep(outputFile);
         uglifyBuildStep(outputFile);
     }
@@ -89,8 +92,8 @@ function moduleFixStep(filename)
 function uglifyBuildStep(filename)
 {
     console.log('Running uglify...');
-    child_process.execSync(`npx uglifyjs ${filename} -c -m -o ${filename}`, {stdio: 'inherit'});
-};
+    execSync(`npx uglifyjs ${filename} -c -m -o ${filename}`, {stdio: 'inherit'});
+}
 
 function htmlBuildStep()
 {
@@ -108,14 +111,14 @@ function htmlBuildStep()
     buffer += '</body>';
 
     // output html file
-    fs.writeFileSync(`${BUILD_FOLDER}/index.html`, buffer, {flag: 'w+'});
-};
+    fs.writeFileSync(join(BUILD_FOLDER, 'index.html'), buffer, {flag: 'w+'});
+}
 
 function zipBuildStep()
 {
     console.log('Zipping...');
     const sources = ['index.html', 'littlejs.esm.min.js', ...sourceFiles, ...dataFiles];
     const sourceList = sources.join(' ');
-    child_process.execSync(`npx bestzip ../${PROGRAM_NAME}.zip ${sourceList}`, {cwd:BUILD_FOLDER, stdio: 'inherit'});
-    console.log(`Size of ${PROGRAM_NAME}.zip: ${fs.statSync(`${PROGRAM_NAME}.zip`).size} bytes`);
-};
+    execSync(`npx bestzip ../${PROGRAM_NAME}.zip ${sourceList}`, {cwd:BUILD_FOLDER, stdio: 'inherit'});
+    console.log(`Size of ${PROGRAM_NAME}.zip: ${fs.statSync(join(__dirname, `${PROGRAM_NAME}.zip`)).size} bytes`);
+}

@@ -3,6 +3,15 @@
     "allowJs": true,
     "module": "es2020",
     "target": "es2020",
-    "outDir": "build"
-  }
+    "outDir": "build",
+    "moduleResolution": "bundler",
+    "skipLibCheck": true
+  },
+  "include": [
+    "*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "build"
+  ]
 }

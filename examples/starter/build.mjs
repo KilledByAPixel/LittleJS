@@ -1,19 +1,24 @@
-#!/usr/bin/env node
-
 /** 
  * LittleJS Build System
  */
 
 'use strict';
 
-const PROGRAM_TITLE = 'Little JS Electron Project';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import fs from 'node:fs';
+import { execSync } from 'node:child_process';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const PROGRAM_TITLE = 'Little JS Starter Project';
 const PROGRAM_NAME = 'game';
-const BUILD_FOLDER = 'build';
+const BUILD_FOLDER = join(__dirname, 'build');
 const USE_ROADROLLER = false; // enable for extra compression
 const sourceFiles =
 [
-    '../../dist/littlejs.release.js',
-    'game.js',
+    join(__dirname, '../../dist/littlejs.release.js'),
+    join(__dirname, 'game.js'),
     // add your game's files here
 ];
 const dataFiles =
@@ -24,28 +29,26 @@ const dataFiles =
 
 console.log(`Building ${PROGRAM_NAME}...`);
 const startTime = Date.now();
-const fs = require('node:fs');
-const child_process = require('node:child_process');
 
 // rebuild engine
-//child_process.execSync(`npm run build`, { stdio: 'inherit' });
+//execSync(`npm run build`, { stdio: 'inherit' });
 
 // remove old files and setup build folder
 fs.rmSync(BUILD_FOLDER, { recursive: true, force: true });
-fs.rmSync(`${PROGRAM_NAME}.zip`, { force: true });
+fs.rmSync(join(__dirname, `${PROGRAM_NAME}.zip`), { force: true });
 fs.mkdirSync(BUILD_FOLDER);
 
 // copy data files
 for (const file of dataFiles)
-    fs.copyFileSync(file, `${BUILD_FOLDER}/${file}`);
+    fs.copyFileSync(join(__dirname, file), join(BUILD_FOLDER, file));
 
 Build
 (
-    `${BUILD_FOLDER}/index.js`,
+    join(BUILD_FOLDER, 'index.js'),
     sourceFiles,
     USE_ROADROLLER ? 
-        [closureCompilerStep, uglifyBuildStep, roadrollerBuildStep, htmlBuildStep, electronBuildStep] :
-        [closureCompilerStep, uglifyBuildStep, htmlBuildStep, electronBuildStep]
+        [closureCompilerStep, uglifyBuildStep, roadrollerBuildStep, htmlBuildStep, zipBuildStep] :
+        [closureCompilerStep, uglifyBuildStep, htmlBuildStep, zipBuildStep]
 );
 
 console.log('');
@@ -77,48 +80,47 @@ function closureCompilerStep(filename)
     // use closer compiler to minify the code
     const filenameTemp = filename + '.tmp';
     fs.copyFileSync(filename, filenameTemp);
-    child_process.execSync(`npx google-closure-compiler --js=${filenameTemp} --js_output_file=${filename} --compilation_level=ADVANCED --warning_level=VERBOSE --jscomp_off=* --assume_function_wrapper`, {stdio: 'inherit'});
+    execSync(`npx google-closure-compiler --js=${filenameTemp} --js_output_file=${filename} --compilation_level=ADVANCED --warning_level=VERBOSE --jscomp_off=* --assume_function_wrapper`, {stdio: 'inherit'});
     fs.rmSync(filenameTemp);
-};
+}
 
 function uglifyBuildStep(filename)
 {
     console.log('Running uglify...');
-    child_process.execSync(`npx uglifyjs ${filename} -c -m -o ${filename}`, {stdio: 'inherit'});
-};
+    execSync(`npx uglifyjs ${filename} -c -m -o ${filename}`, {stdio: 'inherit'});
+}
 
 function roadrollerBuildStep(filename)
 {
     console.log('Running roadroller...');
-    child_process.execSync(`npx roadroller ${filename} -o ${filename}`, {stdio: 'inherit'});
-};
+    execSync(`npx roadroller ${filename} -o ${filename}`, {stdio: 'inherit'});
+}
 
 function htmlBuildStep(filename)
 {
     console.log('Building html...');
 
     // create html file
-    let buffer = '';
+    let buffer = ''
     buffer += '<!DOCTYPE html>';
     buffer += '<head>';
     buffer += `<title>${PROGRAM_TITLE}</title>`;
     buffer += '<meta charset=utf-8>';
     buffer += '</head>';
     buffer += '<body>';
-    buffer += `<script src='index.js'></script>`;
+    buffer += '<script>';
+    buffer += fs.readFileSync(filename) + '\n';
+    buffer += '</script>';
 
     // output html file
-    fs.writeFileSync(`${BUILD_FOLDER}/index.html`, buffer, {flag: 'w+'});
-};
+    fs.writeFileSync(join(BUILD_FOLDER, 'index.html'), buffer, {flag: 'w+'});
+}
 
-function electronBuildStep(filename)
+function zipBuildStep(filename)
 {
-    console.log('Building executable with electron...');
-
-    // copy elecron files to build folder
-    fs.copyFileSync('electron.js', `${BUILD_FOLDER}/electron.js`);
-    fs.copyFileSync('package.json', `${BUILD_FOLDER}/package.json`);
-
-    // run electron packager
-    child_process.execSync(`npx electron-packager ./${BUILD_FOLDER} --overwrite`, {stdio: 'inherit'});
-};
+    console.log('Zipping...');
+    const sources = ['index.html', ...dataFiles];
+    const sourceList = sources.join(' ');
+    execSync(`npx bestzip ../${PROGRAM_NAME}.zip ${sourceList}`, {cwd:BUILD_FOLDER, stdio: 'inherit'});
+    console.log(`Size of ${PROGRAM_NAME}.zip: ${fs.statSync(join(__dirname, `${PROGRAM_NAME}.zip`)).size} bytes`);
+}
