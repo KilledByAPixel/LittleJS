@@ -26,11 +26,12 @@ function gameInit()
     uiMenu.addChild(checkbox);
 
     // example button
-    const button1 = new UITextInput(vec2(50,0), vec2(300, 80), 'Text Input');
-    button1.textHeight = 60;
-    button1.navigationIndex = ++navigationIndex;
-    uiMenu.addChild(button1);
-    button1.onChange = ()=> canvasClearColor = randColor();
+    const textInput = new UITextInput(vec2(50,0), vec2(300, 80), 'Text Input');
+    textInput.textHeight = 60;
+    textInput.maxLength = 16;
+    textInput.navigationIndex = ++navigationIndex;
+    uiMenu.addChild(textInput);
+    textInput.onChange = ()=> canvasClearColor = randColor();
 
     // example scrollbar
     const scrollbar = new UIScrollbar(vec2(0,90), vec2(400, 50), 
@@ -40,12 +41,12 @@ function gameInit()
     scrollbar.onChange = ()=> setSoundVolume(scrollbar.value);
 
     // exit button
-    const button2 = new UIButton(vec2(0,170), vec2(200, 50), 'Exit Menu');
-    button2.textHeight = 40;
-    button2.navigationIndex = ++navigationIndex;
-    button2.navigationAutoSelect = true;
-    uiMenu.addChild(button2);
-    button2.onClick = ()=> uiSystem.showConfirmDialog('Exit menu?',
+    const button1 = new UIButton(vec2(0,170), vec2(200, 50), 'Exit Menu');
+    button1.textHeight = 40;
+    button1.navigationIndex = ++navigationIndex;
+    button1.navigationAutoSelect = true;
+    uiMenu.addChild(button1);
+    button1.onClick = ()=> uiSystem.showConfirmDialog('Exit menu?',
         ()=> { uiMenu.visible=false; buttonBack.visible=true; });
 
     // example button that returns to menu
