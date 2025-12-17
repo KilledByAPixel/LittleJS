@@ -1171,6 +1171,10 @@ declare module "littlejsengine" {
         /** Returns a copy of this vector with each axis floored
          * @return {Vector2} */
         floor(): Vector2;
+        /** Returns a copy of this vector snapped to a grid
+         *  @param {number} grid - grid size to snap to
+         *  @return {Vector2} */
+        snap(grid: number): Vector2;
         /** Returns new vec2 with modded values
         *  @param {number} [divisor]
         *  @return {Vector2} */
@@ -3390,6 +3394,8 @@ declare module "littlejsengine" {
         lastHoverObject: any;
         /** @property {UIObject} - Current confirm menu being shown */
         confirmDialog: any;
+        /** @property {UIObject} - Object to send keyboard input to */
+        keyInputObject: any;
         /** Draw a rectangle to the UI context
         *  @param {Vector2} pos
         *  @param {Vector2} size
@@ -3570,7 +3576,7 @@ declare module "littlejsengine" {
         /** Destroy this object, destroy its children, detach its parent, and mark it for removal */
         destroy(): void;
         destroyed: number;
-        /** Check if the mouse is overlapping a box in screen space
+        /** Check if the mouse is overlapping this ui object
          *  @return {boolean} - True if overlapping */
         isMouseOverlapping(): boolean;
         /** Update the object, called automatically by plugin once each frame */
@@ -3588,6 +3594,8 @@ declare module "littlejsengine" {
         isActiveObject(): boolean;
         /** @return {boolean} - Is the gamepad or keyboard navigation object */
         isNavigationObject(): boolean;
+        /** @return {boolean} - Is this object in keyboard input mode */
+        isKeyInputObject(): boolean;
         /** @return {boolean} - Can it be interacted with */
         isInteractive(): boolean;
         /** Returns string containing info about this object for debugging
@@ -3596,6 +3604,9 @@ declare module "littlejsengine" {
         /** Called if uiDebug is enabled
          *  @param {boolean} visible */
         renderDebug(visible?: boolean): void;
+        /** Internal function called when object is clicked
+         *  @param {boolean} [playSound] */
+        click(playSound?: boolean): void;
         /** Called each frame before object updates */
         onUpdate(): void;
         /** Called each frame before object renders */
@@ -3629,6 +3640,30 @@ declare module "littlejsengine" {
         constructor(pos?: Vector2, size?: Vector2, text?: string, align?: string, font?: string);
         text: string;
         align: string;
+    }
+    /**
+     * UITextInput - An editable text input field
+     * - A simple text entry field that supports basic editing
+     * - Suitable for short text input like names or numbers
+     * @extends UIObject
+     * @memberof UISystem
+     */
+    export class UITextInput extends UIObject {
+        /** Create a UITextInput object
+         *  @param {Vector2} [pos]
+         *  @param {Vector2} [size]
+         *  @param {string}  [text]
+         */
+        constructor(pos?: Vector2, size?: Vector2, text?: string);
+        /** @property {number} - Max length of input (0 = no limit) */
+        maxLength: number;
+        text: string;
+        click(): void;
+        /** Stop editing the text edited */
+        stopEditing(): void;
+        /** Key down event handler if this object is being edited
+         *  @param {KeyboardEvent} [e] */
+        onKeyDown(e?: KeyboardEvent): void;
     }
     /**
      * UITile - A UI object that displays a tile image
@@ -3686,6 +3721,7 @@ declare module "littlejsengine" {
         /** @property {boolean} - Current percentage value of this scrollbar 0-1 */
         checked: boolean;
         text: string;
+        click(): void;
     }
     /**
      * UIScrollbar - A UI object that acts as a scrollbar
