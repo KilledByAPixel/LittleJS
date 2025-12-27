@@ -521,12 +521,16 @@ class EngineObject
     {
         if (!debug) return;
 
+        // check if there is anything to show
+        const hasPhysics = this.collideTiles || this.collideSolidObjects || this.isSolid;
+        if (!hasPhysics && !this.parent) return;
+
         // show object info for debugging
         const size = vec2(max(this.size.x, .2), max(this.size.y, .2));
         const color = rgb(this.collideTiles?1:0, this.collideSolidObjects?1:0, this.isSolid?1:0, .5);
-        drawRect(this.pos, size, color, this.angle);
+        debugRect(this.pos, size, color, 0, this.angle, hasPhysics);
         if (this.parent)
-            drawRect(this.pos, size.scale(.8), rgb(1,1,1,.5), this.angle);
-        this.parent && drawLine(this.pos, this.parent.pos, .1, rgb(1,1,1,.5));
+            debugRect(this.pos, size.scale(.8), rgb(1,1,1,.5), 0, this.angle);
+        this.parent && debugLine(this.pos, this.parent.pos, rgb(1,1,1,.5), .5);
     }
 }
