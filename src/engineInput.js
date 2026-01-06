@@ -339,7 +339,19 @@ function inputInit()
                 inputData[0][remapKey(e.code)] = 3;
         }
 
-        // prevent arrow key from moving the page
+        // try to prevent default browser handling of input
+        if (!inputPreventDefault || !document.hasFocus() || !e.cancelable) return;
+
+        // don't break browser shortcuts
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+        // don't interfere with user typing into UI fields
+        if (isTextInput(e.target) || isTextInput(document.activeElement)) return;
+
+        // fix browser setting "Search for text when you start typing"
+        const printable = typeof e.key === 'string' && e.key.length === 1;
+
+        // prevent arrow key and other default keys from messing with stuff
         const preventDefaultKeys = 
         [
             'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', // scrolling
@@ -347,9 +359,15 @@ function inputInit()
             'Tab',          // focus navigation
             'Backspace',    // browser back
         ];
-        if (preventDefaultKeys.includes(e.code))
-        if (inputPreventDefault && document.hasFocus() && e.cancelable)
+        if (preventDefaultKeys.includes(e.code) || printable)
             e.preventDefault();
+                    
+        function isTextInput(element)
+        {
+            const tag = element?.tagName;
+            const editable = element?.isContentEditable;
+            return editable || ['INPUT','TEXTAREA','SELECT'].includes(tag);
+        }
     }
     function onKeyUp(e)
     {
