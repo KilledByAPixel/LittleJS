@@ -49,7 +49,6 @@ smoothStep(percent)                           // Applies smoothstep function
 nearestPowerOfTwo(value)                      // Returns the nearest power of two
 isOverlapping(pointA, sizeA, pointB, sizeB)   // Checks if bounding boxes overlap
 isIntersecting(start, end, pos, size)         // Checks if ray intersects box
-wave(frequency=1, amplitude=1, t=time)        // Returns oscillating wave
 formatTime(t)                                 // Formats seconds for display 
 
 // Random functions

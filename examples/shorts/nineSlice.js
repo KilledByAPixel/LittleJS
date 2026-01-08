@@ -6,7 +6,7 @@ function gameRender()
     {
         // draw nine slice with thin border and color
         const pos = vec2(-7,4);
-        const size = vec2(11+wave(.5,2), 6);
+        const size = vec2(11+oscillate(.5,2), 6);
         const color = hsl(.1,.5,.9);
         const border = .5;
         drawNineSlice(pos, size, nineSliceTile, color, border);
@@ -25,7 +25,7 @@ function gameRender()
         // draw three slice with variable border and additive color
         const pos = vec2(-7,-4);
         const size = vec2(9, 7);
-        const border = 2 + wave(.2)*2;
+        const border = 2 + oscillate(.2)*2;
         const additive = hsl(time/30,.5,.5);
         drawThreeSlice(pos, size, threeSliceTile, WHITE, border, additive);
         drawText('Three Slice\nVariable\nBorder', pos, 1, BLACK);
@@ -33,7 +33,7 @@ function gameRender()
     {
         // draw three slice in screen space with changing size        
         const pos = vec2(700,420);
-        const size = vec2(350-wave(.3,90),120+wave(.3,60));
+        const size = vec2(350-oscillate(.3,90),120+oscillate(.3,60));
         drawThreeSliceScreen(pos, size, threeSliceTile);
         drawTextScreen('Three Slice\nScreen Space', pos, 30, BLACK);
     }

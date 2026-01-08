@@ -2,7 +2,7 @@ function gameRender()
 {
     // circles and ellipses
     drawEllipse(vec2(-6,5), vec2(3,2), YELLOW, .5);
-    drawCircle(vec2(0,5), 2+wave(.5), RED);
+    drawCircle(vec2(0,5), 2+oscillate(.5), RED);
     drawEllipse(vec2(6,5), vec2(2,4), CLEAR_BLACK, .3, .5, CYAN)
 
     // polygon shapes

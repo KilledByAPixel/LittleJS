@@ -57,7 +57,7 @@ function gameRender()
         pos.y = getGroundHeight(x);
         drawRect(pos, sizeTop, BLACK);
         pos.y -= h/2;
-        color.setHSLA(.2+.2*wave(.2,1,x), .7, .5);
+        color.setHSLA(.2+.2*oscillate(.2,1,x), .7, .5);
         drawRect(pos, size, color);
     }
 }
