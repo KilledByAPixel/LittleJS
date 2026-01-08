@@ -30,7 +30,7 @@ The code is very clean and well documented with many examples to get you started
 
 ### ✨ Graphics
 
-- Super fast WebGL2 + Canvas2D hybrid rendering system
+- Blazing fast WebGL2 + Canvas2D hybrid rendering system
 - Apply [Shadertoy](https://www.shadertoy.com) style shaders for post-processing effects
 - Robust particle effect system and [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
 
@@ -53,7 +53,7 @@ The code is very clean and well documented with many examples to get you started
 ### 🚀 Flexibility
 
 - Compatible with all modern web browsers and mobile devices
-- TypeScript and Module support with example projects for both
+- Full TypeScript and Module support with example projects for both
 - Great for size coding competitions like [Js13kGames](https://js13kgames.com/)
 - Open Source and [MIT licensed](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE)
 
