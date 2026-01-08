@@ -904,14 +904,6 @@ declare module "littlejsengine" {
      *  @return {boolean}      - True if intersecting
      *  @memberof Math */
     export function isIntersecting(start: Vector2, end: Vector2, pos: Vector2, size: Vector2): boolean;
-    /** Returns an oscillating wave between 0 and amplitude with frequency of 1 Hz by default
-     *  @param {number} [frequency] - Frequency of the wave in Hz
-     *  @param {number} [amplitude] - Amplitude (max height) of the wave
-     *  @param {number} [t=time]    - Value to use for time of the wave
-     *  @param {number} [offset]    - Value to use for time offset of the wave
-     *  @return {number}            - Value waving between 0 and amplitude
-     *  @memberof Math */
-    export function wave(frequency?: number, amplitude?: number, t?: number, offset?: number): number;
     /** Formats seconds to mm:ss style for display purposes
      *  @param {number} t - time in seconds
      *  @return {string}
