@@ -3310,6 +3310,7 @@ function tile(index=new Vector2, size=tileDefaultSize, texture=0, padding=tileDe
     // create tile info object
     const textureInfo = typeof texture === 'number' ?
         textureInfos[texture] : texture;
+    ASSERT(textureInfo instanceof TextureInfo, 'tile texture is not loaded');
 
     // get the position of the tile
     const sizePaddedX = size.x + padding*2;
