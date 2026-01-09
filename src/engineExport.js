@@ -169,7 +169,7 @@ export
     nearestPowerOfTwo,
     isOverlapping,
     isIntersecting,
-    wave,
+    oscillate,
 
     // Utilities
     formatTime,
