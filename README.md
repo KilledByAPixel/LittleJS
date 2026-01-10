@@ -18,6 +18,10 @@ LittleJS is a fast, lightweight, and fully open source HTML5 game engine designe
 Its small footprint is packed with a comprehensive feature set including rendering, physics, particles, sound, and input handling.
 The code is very clean and well documented with many examples to get you started quickly.
 
+### 🚀 Join the LittleJS Game Jam
+
+*The Third Annual LittleJS Game Jam will take place From Oct 2 to Nov 1! Unleash your creativity and develop amazing games using the LittleJS game engine. 🕹️🎮 [Sign up today and get more info about the jam on itch.io!](https://itch.io/jam/littlejs-jam)*
+
 <div align='center'>
 
 ## [Demos](https://killedbyapixel.github.io/LittleJS/examples) | [Docs](https://killedbyapixel.github.io/LittleJS/docs) | [Trailer](https://youtu.be/chuBzGjv7Ms) | [Discord](https://discord.gg/zb7hcGkyZe) | [FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md)
