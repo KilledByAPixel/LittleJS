@@ -41,7 +41,8 @@ The code is very clean and well documented with many examples to get you started
 ### 🔊 Audio
 
 - Sound and music with mp3, ogg, or wave files
-- Use [ZzFX](https://killedbyapixel.github.io/ZzFX/) sound effect generator to play sounds without asset files
+- Use [ZzFX](https://killedbyapixel.github.io/ZzFX/) sound generator to play sounds without asset files
+- Spatial audio stereo panning
 
 ### 🎮 Input
 
@@ -64,6 +65,7 @@ The code is very clean and well documented with many examples to get you started
 ### 🛠️ Developer Tools
 
 - Live example browser with code editor
+- Import level editor data from [Tiled](https://github.com/mapeditor/tiled) or other JSON
 - Debug overlay and primitive rendering system
 - Medal tracking system with [Newgrounds](https://www.newgrounds.com/) support
 - Node.js build system
@@ -86,7 +88,7 @@ LittleJS comes with a several demos both for learning and using as starter proje
 - [Example Browser](https://killedbyapixel.github.io/LittleJS/examples/) - Live example browser with all examples
 - [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/) - Block breaking game with post-processing effects
 - [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Match 3 puzzle game with HD rendering and high score tracking
-- [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter that loads level data from [Tiled Editor](https://github.com/mapeditor/tiled)
+- [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter demo that loads level data
 - [Box2D Demo](https://killedbyapixel.github.io/LittleJS/examples/box2d/) - Box2D plugin demonstration and testbed
 - [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress/) - Sprite rendering benchmark and music system demo
 - [Particle System Designer](https://killedbyapixel.github.io/LittleJS/examples/particles/) - Particle system editor and visualizer
