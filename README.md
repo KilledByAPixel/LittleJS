@@ -18,6 +18,10 @@ LittleJS is a fast, lightweight, and fully open source HTML5 game engine designe
 Its small footprint is packed with a comprehensive feature set including rendering, physics, particles, sound, and input handling.
 The code is very clean and well documented with many examples to get you started quickly.
 
+### 🚀 Join the LittleJS Game Jam
+
+*The Third Annual LittleJS Game Jam will take place From Oct 2 to Nov 2! Unleash your creativity and develop amazing games using the LittleJS game engine. 🕹️🎮 [Sign up today and get more info about the jam on itch.io!](https://itch.io/jam/littlejs-jam)*
+
 <div align='center'>
 
 ## [Demos](https://killedbyapixel.github.io/LittleJS/examples) | [Docs](https://killedbyapixel.github.io/LittleJS/docs) | [Trailer](https://youtu.be/chuBzGjv7Ms) | [Discord](https://discord.gg/zb7hcGkyZe) | [FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md)
@@ -37,7 +41,8 @@ The code is very clean and well documented with many examples to get you started
 ### 🔊 Audio
 
 - Sound and music with mp3, ogg, or wave files
-- Use [ZzFX](https://killedbyapixel.github.io/ZzFX/) sound effect generator to play sounds without asset files
+- Use [ZzFX](https://killedbyapixel.github.io/ZzFX/) sound generator to play sounds without asset files
+- Spatial audio stereo panning
 
 ### 🎮 Input
 
@@ -60,6 +65,7 @@ The code is very clean and well documented with many examples to get you started
 ### 🛠️ Developer Tools
 
 - Live example browser with code editor
+- Import level editor data from [Tiled](https://github.com/mapeditor/tiled) or other JSON
 - Debug overlay and primitive rendering system
 - Medal tracking system with [Newgrounds](https://www.newgrounds.com/) support
 - Node.js build system
@@ -74,6 +80,7 @@ To get started download the latest LittleJS package from GitHub or install via n
 - [LittleJS Quick Reference Sheet](https://github.com/KilledByAPixel/LittleJS/blob/main/reference.md) - A reference sheet to help you get started.
 - [Little JS FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md) - Answers to common questions about LittleJS.
 - [JS13k Branch](https://github.com/KilledByAPixel/LittleJS/tree/js13k) - For size coding events like JS13k there is a special branch that builds to a 7KB zip.
+- [LittleJS GPT AI](https://chatgpt.com/g/g-67c7c080b5bc81919736bc8815836be6-make-games-with-littlejs) - Use AI to make games without writing any code!
 
 ## Examples
 
@@ -82,7 +89,7 @@ LittleJS comes with a several demos both for learning and using as starter proje
 - [Example Browser](https://killedbyapixel.github.io/LittleJS/examples/) - Live example browser with all examples
 - [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/) - Block breaking game with post-processing effects
 - [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Match 3 puzzle game with HD rendering and high score tracking
-- [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter that loads level data from [Tiled Editor](https://github.com/mapeditor/tiled)
+- [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter demo that loads level data
 - [Box2D Demo](https://killedbyapixel.github.io/LittleJS/examples/box2d/) - Box2D plugin demonstration and testbed
 - [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress/) - Sprite rendering benchmark and music system demo
 - [Particle System Designer](https://killedbyapixel.github.io/LittleJS/examples/particles/) - Particle system editor and visualizer
