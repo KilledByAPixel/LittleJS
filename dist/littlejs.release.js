@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.17.14';
+const engineVersion = '1.17.15';
 
 /** Frames per second to update
  *  @type {number}
@@ -1087,15 +1087,17 @@ function lineTest(posStart, posEnd, testFunction, normal)
             // set hit point
             const hitPos = vec2(posStart.x + dirX*t, posStart.y + dirY*t);
 
-            // move inside of tile if on positive edge
+            // ensure result is inside the tile
             const e = 1e-9;
-            if (wasX)
-            {
-                if (stepX < 0)
-                    hitPos.x -= e;
-            }
-            else if (stepY < 0)
-                hitPos.y -= e;
+            const hitPosFloor = hitPos.floor();
+            if (hitPosFloor.x < pos.x)
+                hitPos.x = pos.x;
+            else if (hitPosFloor.x > pos.x)
+                hitPos.x = pos.x + 1 - e;
+            if (hitPosFloor.y < pos.y)
+                hitPos.y = pos.y;
+            else if (hitPosFloor.y > pos.y) 
+                hitPos.y = pos.y + 1 - e;
 
             // set normal
             if (normal)
