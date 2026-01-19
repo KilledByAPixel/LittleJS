@@ -276,8 +276,6 @@ function debugUpdate()
         debugOverlay = !debugOverlay;
     if (debugOverlay)
     {
-        if (keyWasPressed('Digit0'))
-            debugWatermark = !debugWatermark;
         if (keyWasPressed('Digit1'))
             debugPhysics = !debugPhysics, debugParticles = false;
         if (keyWasPressed('Digit2'))
@@ -565,7 +563,7 @@ function debugRenderPost()
         return;
     }
 
-    if (!debugWatermark) return;
+    if (!debugWatermark && !debugOverlay) return;
     
     // update fps display
     mainContext.textAlign = 'right';
