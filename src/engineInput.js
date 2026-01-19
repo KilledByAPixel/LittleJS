@@ -727,10 +727,10 @@ function inputRender()
     function touchGamepadRender()
     {
         if (!touchInputEnable || !isTouchDevice || headlessMode) return;
-        if (!touchGamepadEnable || !touchGamepadTimer.isSet()) return;
+        if (!touchGamepadEnable || !touchGamepadTimer.isSet() && touchGamepadDisplayTime) return;
 
         // fade off when not touching or paused
-        const alpha = percent(touchGamepadTimer.get(), 4, 3);
+        const alpha = touchGamepadDisplayTime ? percent(touchGamepadTimer.get(), touchGamepadDisplayTime+1, touchGamepadDisplayTime) : 1;
         if (!alpha || paused) return;
 
         // setup the canvas

@@ -83,6 +83,7 @@ export
     touchGamepadAnalog,
     touchGamepadSize,
     touchGamepadAlpha,
+    touchGamepadDisplayTime,
     vibrateEnable,
     soundEnable,
     soundVolume,

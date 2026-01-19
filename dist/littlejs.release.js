@@ -2336,6 +2336,12 @@ let touchGamepadSize = 99;
  *  @memberof Settings */
 let touchGamepadAlpha = .3;
 
+/** How long to display the touch gamepad on screen in seconds, set to 0 to always display
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let touchGamepadDisplayTime = 3;
+
 /** Allow vibration hardware if it exists
  *  @type {boolean}
  *  @default
@@ -2609,6 +2615,11 @@ function setTouchGamepadSize(size) { touchGamepadSize = size; }
  *  @param {number} alpha
  *  @memberof Settings */
 function setTouchGamepadAlpha(alpha) { touchGamepadAlpha = alpha; }
+
+/** Set how long to display the touch gamepad on screen in seconds, set to 0 to always display
+ *  @param {number} time
+ *  @memberof Settings */
+function setTouchGamepadDisplayTime(time) { touchGamepadDisplayTime = time; }
 
 /** Set to allow vibration hardware if it exists
  *  @param {boolean} enable
@@ -5081,10 +5092,10 @@ function inputRender()
     function touchGamepadRender()
     {
         if (!touchInputEnable || !isTouchDevice || headlessMode) return;
-        if (!touchGamepadEnable || !touchGamepadTimer.isSet()) return;
+        if (!touchGamepadEnable || !touchGamepadTimer.isSet() && touchGamepadDisplayTime) return;
 
         // fade off when not touching or paused
-        const alpha = percent(touchGamepadTimer.get(), 4, 3);
+        const alpha = touchGamepadDisplayTime ? percent(touchGamepadTimer.get(), touchGamepadDisplayTime+1, touchGamepadDisplayTime) : 1;
         if (!alpha || paused) return;
 
         // setup the canvas
