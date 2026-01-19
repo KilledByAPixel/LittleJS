@@ -500,6 +500,11 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let touchGamepadAlpha: number;
+    /** How long to display the touch gamepad on screen in seconds, set to 0 to always display
+     *  @type {number}
+     *  @default
+     *  @memberof Settings */
+    export let touchGamepadDisplayTime: number;
     /** Allow vibration hardware if it exists
      *  @type {boolean}
      *  @default
