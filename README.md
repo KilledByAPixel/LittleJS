@@ -25,6 +25,7 @@ This was done to allow the main line LittleJS engine to continue evoling while a
 - Includes fully automated Node.js build system.
 
 ## 💥 [Live Demo of Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter)
+## 🛠️ [Main LittleJS Repo](https://killedbyapixel.github.io/LittleJS)
 
 ## 🎮 Examples
 
