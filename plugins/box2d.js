@@ -1044,7 +1044,7 @@ class Box2dRevoluteJoint extends Box2dJoint
 
     /** Enable/disable the joint limit
      *  @param {boolean} [enable] */
-    enableLimit(enable=true) { return this.box2dJoint.enableLimit(enable); }
+    enableLimit(enable=true) { return this.box2dJoint.EnableLimit(enable); }
 
     /** Get the lower joint limit
      *  @return {number} */
@@ -1202,7 +1202,7 @@ class Box2dPrismaticJoint extends Box2dJoint
     
     /** Enable/disable the joint limit
      *  @param {boolean} [enable] */
-    enableLimit(enable=true) { return this.box2dJoint.enableLimit(enable); }
+    enableLimit(enable=true) { return this.box2dJoint.EnableLimit(enable); }
     
     /** Get the lower joint limit
      *  @return {number} */
