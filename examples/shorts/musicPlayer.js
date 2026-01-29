@@ -26,7 +26,7 @@ function gameInit()
     musicPlayer.addChild(dropZoneText);
 
     // volume slider
-    const volumeSlider = new UIScrollbar(vec2(0, -20), vec2(400, 30),
+    const volumeSlider = new UISlider(vec2(0, -20), vec2(400, 30),
         musicVolume, 'Music Volume');
     volumeSlider.fillMode = true;
     musicPlayer.addChild(volumeSlider);
@@ -58,8 +58,8 @@ function gameInit()
     stopButton.onClick = ()=>  musicInstance?.stop();
     musicPlayer.addChild(stopButton);
 
-    // progress bar and scrollbar for seeking
-    progressBar = new UIScrollbar(vec2(0, 120), vec2(400, 30), 0);
+    // progress bar and slider for seeking
+    progressBar = new UISlider(vec2(0, 120), vec2(400, 30), 0);
     progressBar.disabledColor = RED;
     progressBar.onChange = ()=> 
     {

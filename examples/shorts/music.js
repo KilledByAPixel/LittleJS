@@ -20,7 +20,7 @@ function gameInit()
     musicPlayer.addChild(infoText);
 
     // volume slider
-    const volumeSlider = new UIScrollbar(vec2(0, -20), vec2(400, 30), 
+    const volumeSlider = new UISlider(vec2(0, -20), vec2(400, 30), 
         musicVolume, 'Music Volume');
     volumeSlider.fillMode = true;
     musicPlayer.addChild(volumeSlider);

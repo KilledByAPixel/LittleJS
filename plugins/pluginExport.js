@@ -27,7 +27,7 @@ export
     UITile,
     UIButton,
     UICheckbox,
-    UIScrollbar,
+    UISlider,
     UIVideo,
 
     // Box2D Physics

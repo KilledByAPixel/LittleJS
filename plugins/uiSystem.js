@@ -7,7 +7,7 @@
  * - Buttons
  * - Checkboxes
  * - Images
- * - Scrollbars
+ * - Sliders
  * - Video
  * @namespace UISystem
  */
@@ -1206,7 +1206,7 @@ class UICheckbox extends UIObject
         ASSERT(isString(text), 'ui checkbox must be a string');
         ASSERT(isColor(color), 'ui checkbox color must be a color');
 
-        /** @property {boolean} - Current percentage value of this scrollbar 0-1 */
+        /** @property {boolean} - Current percentage value of this slider 0-1 */
         this.checked = checked;
         // set properties
         this.text = text;
@@ -1241,13 +1241,13 @@ class UICheckbox extends UIObject
 
 ///////////////////////////////////////////////////////////////////////////////
 /** 
- * UIScrollbar - A UI object that acts as a scrollbar
+ * UISlider - A UI object that acts as a slider or scrollbar
  * @extends UIObject
  * @memberof UISystem
  */
-class UIScrollbar extends UIObject
+class UISlider extends UIObject
 {
-    /** Create a UIScrollbar object
+    /** Create a UISlider object
      *  @param {Vector2} [pos]
      *  @param {Vector2} [size]
      *  @param {number}  [value]
@@ -1259,14 +1259,14 @@ class UIScrollbar extends UIObject
     {
         super(pos, size);
 
-        ASSERT(isNumber(value), 'ui scrollbar value must be a number');
-        ASSERT(isString(text), 'ui scrollbar must be a string');
-        ASSERT(isColor(color), 'ui scrollbar color must be a color');
-        ASSERT(isColor(handleColor), 'ui scrollbar handleColor must be a color');
+        ASSERT(isNumber(value), 'ui slider value must be a number');
+        ASSERT(isString(text), 'ui slider must be a string');
+        ASSERT(isColor(color), 'ui slider color must be a color');
+        ASSERT(isColor(handleColor), 'ui slider handleColor must be a color');
 
-        /** @property {number} - Current percentage value of this scrollbar 0-1 */
+        /** @property {number} - Current percentage value of this slider 0-1 */
         this.value = value;
-        /** @property {Color} - Color for the handle part of the scrollbar */
+        /** @property {Color} - Color for the handle part of the slider */
         this.handleColor = handleColor.copy();
         /** @property {boolean} - Should it fill up like a progress bar? */
         this.fillMode = false;
@@ -1285,7 +1285,7 @@ class UIScrollbar extends UIObject
         const oldValue = this.value;
         if (this.isActiveObject())
         {
-            // handle horizontal or vertical scrollbar
+            // handle horizontal or vertical slider
             const isHorizontal = this.size.x > this.size.y;
             const handleSize = isHorizontal ? this.size.y : this.size.x;
             const barSize = isHorizontal ? this.size.x : this.size.y;
@@ -1313,7 +1313,7 @@ class UIScrollbar extends UIObject
     {
         super.render();
 
-        // handle horizontal or vertical scrollbar
+        // handle horizontal or vertical slider
         const isHorizontal = this.size.x > this.size.y;
         const barWidth = isHorizontal ? this.size.x : this.size.y;
         const handleWidth = isHorizontal ? this.size.y : this.size.x;
@@ -1331,7 +1331,7 @@ class UIScrollbar extends UIObject
         }
         else
         {
-            // draw the scrollbar handle
+            // draw the slider handle
             const value = clamp(isHorizontal ? this.value : 1 - this.value);
             const p = (barWidth - handleWidth) * (value - .5);
             const pos = this.pos.add(isHorizontal ? vec2(p, 0) : vec2(0, p));
@@ -1340,7 +1340,7 @@ class UIScrollbar extends UIObject
             uiSystem.drawRect(pos, drawSize, color, this.lineWidth, this.lineColor, this.cornerRadius, this.gradientColor);
         }
 
-        // draw the text scaled to fit on the scrollbar
+        // draw the text scaled to fit on the slider
         const textSize = this.getTextSize();
         uiSystem.drawText(this.text, this.pos, textSize, 
             this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow);

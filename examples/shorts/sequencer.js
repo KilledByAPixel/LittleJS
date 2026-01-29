@@ -91,7 +91,7 @@ function gameInit()
     // create tempo slider
     const minTempo = 120, maxTempo = 480;
     const tempoPercent = percent(tempo, minTempo, maxTempo);
-    const tempoSlider = new UIScrollbar(vec2(380,500), vec2(340,40), tempoPercent);
+    const tempoSlider = new UISlider(vec2(380,500), vec2(340,40), tempoPercent);
     tempoSlider.onChange = ()=>
     {
         tempo = lerp(minTempo, maxTempo, tempoSlider.value);

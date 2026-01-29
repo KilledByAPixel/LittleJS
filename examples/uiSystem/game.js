@@ -67,12 +67,12 @@ function createUI()
     checkbox.navigationIndex = ++navigationIndex;
     checkbox.text = 'Test Checkbox';
 
-    // example scrollbar
-    const scrollbar = new LJS.UIScrollbar(vec2(0,60), vec2(350, 50));
-    uiMenu.addChild(scrollbar);
-    scrollbar.onChange = ()=> scrollbar.text = scrollbar.value.toFixed(2)
-    scrollbar.onChange();
-    scrollbar.navigationIndex = ++navigationIndex;
+    // example slider
+    const slider = new LJS.UISlider(vec2(0,60), vec2(350, 50));
+    uiMenu.addChild(slider);
+    slider.onChange = ()=> slider.text = slider.value.toFixed(2)
+    slider.onChange();
+    slider.navigationIndex = ++navigationIndex;
 
     // example button
     const button1 = new LJS.UIButton(vec2(0,140), vec2(350, 50), 'Test Button');

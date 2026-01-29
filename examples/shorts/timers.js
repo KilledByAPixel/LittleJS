@@ -30,7 +30,7 @@ function gameInit()
     }
 
     // create non-interactive slider to display timer
-    timerSlider = new UIScrollbar(vec2(0, 100), vec2(400, 50));
+    timerSlider = new UISlider(vec2(0, 100), vec2(400, 50));
     timerSlider.interactive = false;
     timerSlider.update = ()=>
     {

@@ -33,12 +33,12 @@ function gameInit()
     uiMenu.addChild(textInput);
     textInput.onChange = ()=> canvasClearColor = randColor();
 
-    // example scrollbar
-    const scrollbar = new UIScrollbar(vec2(0,90), vec2(400, 50), 
+    // example slider
+    const slider = new UISlider(vec2(0,90), vec2(400, 50), 
         soundVolume, 'Volume');
-    scrollbar.navigationIndex = ++navigationIndex;
-    uiMenu.addChild(scrollbar);
-    scrollbar.onChange = ()=> setSoundVolume(scrollbar.value);
+    slider.navigationIndex = ++navigationIndex;
+    uiMenu.addChild(slider);
+    slider.onChange = ()=> setSoundVolume(slider.value);
 
     // exit button
     const button1 = new UIButton(vec2(0,170), vec2(200, 50), 'Exit Menu');
