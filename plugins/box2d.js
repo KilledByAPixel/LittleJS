@@ -119,7 +119,7 @@ class Box2dObject extends EngineObject
         // draw non-edge fixtures
         this.getFixtureList().forEach((fixture)=>
         {
-            const shape = box2d.castObjectType(fixture.GetShape());
+            const shape = box2d.castShapeObject(fixture.GetShape());
             if (shape.GetType() !== box2d.instance.b2Shape.e_edge)
             {
                 box2d.drawFixture(fixture, this.pos, this.angle, color, lineColor, lineWidth, useWebGL, context);
@@ -759,7 +759,7 @@ class Box2dJoint
     constructor(jointDef)
     {
         /** @property {Object} - The Box2d joint */
-        this.box2dJoint = box2d.castObjectType(box2d.world.CreateJoint(jointDef));
+        this.box2dJoint = box2d.castJointObject(box2d.world.CreateJoint(jointDef));
     }
 
     /** Destroy this joint */
@@ -1816,7 +1816,7 @@ class Box2dPlugin
      *  @param {CanvasRenderingContext2D} [context] */
     drawFixture(fixture, pos, angle, color=WHITE, lineColor=BLACK, lineWidth=.1, useWebgl, context)
     {
-        const shape = box2d.castObjectType(fixture.GetShape());
+        const shape = box2d.castShapeObject(fixture.GetShape());
         switch (shape.GetType())
         {
             case box2d.instance.b2Shape.e_polygon:
@@ -1874,9 +1874,9 @@ class Box2dPlugin
      *  @param {Object} o */
     isNull(o) { return !box2d.instance.getPointer(o); }
 
-    /** casts a box2d object to its correct type
+    /** casts a box2d object to a shape type
      *  @param {Object} o */
-    castObjectType(o)
+    castShapeObject(o)
     {
         switch (o.GetType())
         {
@@ -1888,6 +1888,17 @@ class Box2dPlugin
                 return box2d.instance.castObject(o, box2d.instance.b2PolygonShape);
             case box2d.instance.b2Shape.e_chain:
                 return box2d.instance.castObject(o, box2d.instance.b2ChainShape);
+        }
+        
+        ASSERT(false, 'Unknown box2d object type');
+    }
+
+    /** casts a box2d object to a joint type
+     *  @param {Object} o */
+    castJointObject(o)
+    {
+        switch (o.GetType())
+        {
             case box2d.instance.e_revoluteJoint:
                 return box2d.instance.castObject(o, box2d.instance.b2RevoluteJoint);
             case box2d.instance.e_prismaticJoint:
