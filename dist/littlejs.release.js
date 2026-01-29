@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.17.15';
+const engineVersion = '1.18.0';
 
 /** Frames per second to update
  *  @type {number}
@@ -8666,7 +8666,7 @@ function zzfxM(instruments, patterns, sequence, BPM = 125)
  * - Buttons
  * - Checkboxes
  * - Images
- * - Scrollbars
+ * - Sliders
  * - Video
  * @namespace UISystem
  */
@@ -9863,7 +9863,7 @@ class UICheckbox extends UIObject
         ASSERT(isString(text), 'ui checkbox must be a string');
         ASSERT(isColor(color), 'ui checkbox color must be a color');
 
-        /** @property {boolean} - Current percentage value of this scrollbar 0-1 */
+        /** @property {boolean} - Current percentage value of this slider 0-1 */
         this.checked = checked;
         // set properties
         this.text = text;
@@ -9898,13 +9898,13 @@ class UICheckbox extends UIObject
 
 ///////////////////////////////////////////////////////////////////////////////
 /** 
- * UIScrollbar - A UI object that acts as a scrollbar
+ * UISlider - A UI object that acts as a slider or scrollbar
  * @extends UIObject
  * @memberof UISystem
  */
-class UIScrollbar extends UIObject
+class UISlider extends UIObject
 {
-    /** Create a UIScrollbar object
+    /** Create a UISlider object
      *  @param {Vector2} [pos]
      *  @param {Vector2} [size]
      *  @param {number}  [value]
@@ -9916,14 +9916,14 @@ class UIScrollbar extends UIObject
     {
         super(pos, size);
 
-        ASSERT(isNumber(value), 'ui scrollbar value must be a number');
-        ASSERT(isString(text), 'ui scrollbar must be a string');
-        ASSERT(isColor(color), 'ui scrollbar color must be a color');
-        ASSERT(isColor(handleColor), 'ui scrollbar handleColor must be a color');
+        ASSERT(isNumber(value), 'ui slider value must be a number');
+        ASSERT(isString(text), 'ui slider must be a string');
+        ASSERT(isColor(color), 'ui slider color must be a color');
+        ASSERT(isColor(handleColor), 'ui slider handleColor must be a color');
 
-        /** @property {number} - Current percentage value of this scrollbar 0-1 */
+        /** @property {number} - Current percentage value of this slider 0-1 */
         this.value = value;
-        /** @property {Color} - Color for the handle part of the scrollbar */
+        /** @property {Color} - Color for the handle part of the slider */
         this.handleColor = handleColor.copy();
         /** @property {boolean} - Should it fill up like a progress bar? */
         this.fillMode = false;
@@ -9942,7 +9942,7 @@ class UIScrollbar extends UIObject
         const oldValue = this.value;
         if (this.isActiveObject())
         {
-            // handle horizontal or vertical scrollbar
+            // handle horizontal or vertical slider
             const isHorizontal = this.size.x > this.size.y;
             const handleSize = isHorizontal ? this.size.y : this.size.x;
             const barSize = isHorizontal ? this.size.x : this.size.y;
@@ -9970,7 +9970,7 @@ class UIScrollbar extends UIObject
     {
         super.render();
 
-        // handle horizontal or vertical scrollbar
+        // handle horizontal or vertical slider
         const isHorizontal = this.size.x > this.size.y;
         const barWidth = isHorizontal ? this.size.x : this.size.y;
         const handleWidth = isHorizontal ? this.size.y : this.size.x;
@@ -9988,7 +9988,7 @@ class UIScrollbar extends UIObject
         }
         else
         {
-            // draw the scrollbar handle
+            // draw the slider handle
             const value = clamp(isHorizontal ? this.value : 1 - this.value);
             const p = (barWidth - handleWidth) * (value - .5);
             const pos = this.pos.add(isHorizontal ? vec2(p, 0) : vec2(0, p));
@@ -9997,7 +9997,7 @@ class UIScrollbar extends UIObject
             uiSystem.drawRect(pos, drawSize, color, this.lineWidth, this.lineColor, this.cornerRadius, this.gradientColor);
         }
 
-        // draw the text scaled to fit on the scrollbar
+        // draw the text scaled to fit on the slider
         const textSize = this.getTextSize();
         uiSystem.drawText(this.text, this.pos, textSize, 
             this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow);
@@ -10272,7 +10272,7 @@ class Box2dObject extends EngineObject
         // draw non-edge fixtures
         this.getFixtureList().forEach((fixture)=>
         {
-            const shape = box2d.castObjectType(fixture.GetShape());
+            const shape = box2d.castShapeObject(fixture.GetShape());
             if (shape.GetType() !== box2d.instance.b2Shape.e_edge)
             {
                 box2d.drawFixture(fixture, this.pos, this.angle, color, lineColor, lineWidth, useWebGL, context);
@@ -10912,7 +10912,7 @@ class Box2dJoint
     constructor(jointDef)
     {
         /** @property {Object} - The Box2d joint */
-        this.box2dJoint = box2d.castObjectType(box2d.world.CreateJoint(jointDef));
+        this.box2dJoint = box2d.castJointObject(box2d.world.CreateJoint(jointDef));
     }
 
     /** Destroy this joint */
@@ -11197,7 +11197,7 @@ class Box2dRevoluteJoint extends Box2dJoint
 
     /** Enable/disable the joint limit
      *  @param {boolean} [enable] */
-    enableLimit(enable=true) { return this.box2dJoint.enableLimit(enable); }
+    enableLimit(enable=true) { return this.box2dJoint.EnableLimit(enable); }
 
     /** Get the lower joint limit
      *  @return {number} */
@@ -11355,7 +11355,7 @@ class Box2dPrismaticJoint extends Box2dJoint
     
     /** Enable/disable the joint limit
      *  @param {boolean} [enable] */
-    enableLimit(enable=true) { return this.box2dJoint.enableLimit(enable); }
+    enableLimit(enable=true) { return this.box2dJoint.EnableLimit(enable); }
     
     /** Get the lower joint limit
      *  @return {number} */
@@ -11969,7 +11969,7 @@ class Box2dPlugin
      *  @param {CanvasRenderingContext2D} [context] */
     drawFixture(fixture, pos, angle, color=WHITE, lineColor=BLACK, lineWidth=.1, useWebgl, context)
     {
-        const shape = box2d.castObjectType(fixture.GetShape());
+        const shape = box2d.castShapeObject(fixture.GetShape());
         switch (shape.GetType())
         {
             case box2d.instance.b2Shape.e_polygon:
@@ -12027,9 +12027,9 @@ class Box2dPlugin
      *  @param {Object} o */
     isNull(o) { return !box2d.instance.getPointer(o); }
 
-    /** casts a box2d object to its correct type
+    /** casts a box2d object to a shape type
      *  @param {Object} o */
-    castObjectType(o)
+    castShapeObject(o)
     {
         switch (o.GetType())
         {
@@ -12041,6 +12041,17 @@ class Box2dPlugin
                 return box2d.instance.castObject(o, box2d.instance.b2PolygonShape);
             case box2d.instance.b2Shape.e_chain:
                 return box2d.instance.castObject(o, box2d.instance.b2ChainShape);
+        }
+        
+        ASSERT(false, 'Unknown box2d object type');
+    }
+
+    /** casts a box2d object to a joint type
+     *  @param {Object} o */
+    castJointObject(o)
+    {
+        switch (o.GetType())
+        {
             case box2d.instance.e_revoluteJoint:
                 return box2d.instance.castObject(o, box2d.instance.b2RevoluteJoint);
             case box2d.instance.e_prismaticJoint:

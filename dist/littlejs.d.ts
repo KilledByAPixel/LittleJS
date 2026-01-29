@@ -3309,7 +3309,7 @@ declare module "littlejsengine" {
      * - Buttons
      * - Checkboxes
      * - Images
-     * - Scrollbars
+     * - Sliders
      * - Video
      * @namespace UISystem
      */
@@ -3724,18 +3724,18 @@ declare module "littlejsengine" {
          *  @param {Color}   [color=uiSystem.defaultButtonColor]
          */
         constructor(pos?: Vector2, size?: Vector2, checked?: boolean, text?: string, color?: Color);
-        /** @property {boolean} - Current percentage value of this scrollbar 0-1 */
+        /** @property {boolean} - Current percentage value of this slider 0-1 */
         checked: boolean;
         text: string;
         click(): void;
     }
     /**
-     * UIScrollbar - A UI object that acts as a scrollbar
+     * UISlider - A UI object that acts as a slider or scrollbar
      * @extends UIObject
      * @memberof UISystem
      */
-    export class UIScrollbar extends UIObject {
-        /** Create a UIScrollbar object
+    export class UISlider extends UIObject {
+        /** Create a UISlider object
          *  @param {Vector2} [pos]
          *  @param {Vector2} [size]
          *  @param {number}  [value]
@@ -3744,9 +3744,9 @@ declare module "littlejsengine" {
          *  @param {Color}   [handleColor=WHITE]
          */
         constructor(pos?: Vector2, size?: Vector2, value?: number, text?: string, color?: Color, handleColor?: Color);
-        /** @property {number} - Current percentage value of this scrollbar 0-1 */
+        /** @property {number} - Current percentage value of this slider 0-1 */
         value: number;
-        /** @property {Color} - Color for the handle part of the scrollbar */
+        /** @property {Color} - Color for the handle part of the slider */
         handleColor: Color;
         /** @property {boolean} - Should it fill up like a progress bar? */
         fillMode: boolean;
@@ -3926,9 +3926,12 @@ declare module "littlejsengine" {
         /** checks if a box2d object is null
          *  @param {Object} o */
         isNull(o: any): boolean;
-        /** casts a box2d object to its correct type
+        /** casts a box2d object to a shape type
          *  @param {Object} o */
-        castObjectType(o: any): any;
+        castShapeObject(o: any): any;
+        /** casts a box2d object to a joint type
+         *  @param {Object} o */
+        castJointObject(o: any): any;
     }
     /**
      * Box2D Object - extend with your own custom physics objects
