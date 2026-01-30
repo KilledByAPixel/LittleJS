@@ -81,6 +81,7 @@ To get started download the latest LittleJS package from GitHub or install via n
 - [Little JS FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md) - Answers to common questions about LittleJS.
 - [JS13k Branch](https://github.com/KilledByAPixel/LittleJS/tree/js13k) - For size coding events like JS13k there is a special branch that builds to a 7KB zip.
 - [LittleJS GPT AI](https://chatgpt.com/g/g-67c7c080b5bc81919736bc8815836be6-make-games-with-littlejs) - Use AI to make games without writing any code!
+- [LittleJS AI Info](https://github.com/KilledByAPixel/LittleJS-AI) - Experiments, games, and templates to improve LittleJS + AI workflows.
 
 ## Examples
 
