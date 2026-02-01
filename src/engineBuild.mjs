@@ -61,7 +61,7 @@ const license = '// LittleJS Engine - MIT License - Copyright 2021 Frank Force\n
                 '// https://github.com/KilledByAPixel/LittleJS\n\n';
 
 console.log(asciiArt);
-console.log('🚂 Choo Choo... Building LittleJS Engine!');
+console.log('Choo Choo... Building LittleJS Engine!');
 const startTime = Date.now();
 
 try
