@@ -69,7 +69,7 @@ function gameUpdate()
     
     // right click = drop test object
     if (LJS.mouseIsDown(2))
-        new TestObject(LJS.mousePos);
+        new TestObject(LJS.mousePos.add(LJS.randInCircle()));
 
     // mouse hold = add objects
     if (LJS.mouseIsDown(0))
