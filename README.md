@@ -125,6 +125,7 @@ Here are a few of the many amazing games created with LittleJS...
 - [Bug&Bee](https://itch.io/jam/littlejs-game-jam-2025/results) - Low fi shoot em up with co-op gameplay. LittleJS Jam 1st place! by [eoinmcg](https://eoinmcg.itch.io/)
 - [Little Platformer](https://psemo.itch.io/little-platformer) - Platformer with many mechanics. LittleJS Jam 2st place! by [PSEMO](https://psemo.itch.io/), [Solita666](https://itch.io/profile/solita666), [GabrielRG](https://gabrielrg.itch.io/), [Nate](https://natesassoon.itch.io/)
 - [Rogue Pong](https://itch.io/jam/littlejs-game-jam-2025/rate/4004165) - Roguelike crossed with classic pong gameplay. LittleJS Jam 3rd place! by [webdevbrian](https://webdevbrian.itch.io/)
+- [Orbitswarm](https://focaccai.itch.io/orbitswarm) - Fast paced space strategy game. by [Focaccai](https://www.focaccai.com/)
 - [LittleJS Jam 2024 Results](https://itch.io/jam/littlejs-jam-2024/results) - All the games from the first LittleJS Game Jam.
 - [LittleJS Jam 2025 Results](https://itch.io/jam/littlejs-game-jam-2025/results) - All the games from the second LittleJS Game Jam.
 
