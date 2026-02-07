@@ -17,7 +17,7 @@
  *  @type {boolean}
  *  @default
  *  @memberof Debug */
-const debug = true;
+let debug = true;
 
 /** Size to render debug points by default
  *  @type {number}
@@ -65,6 +65,13 @@ function ASSERT(assert, ...output)
  *  @param {...Object} output - message output
  *  @memberof Debug */
 function LOG(...output) { console.log(...output); }
+
+/** Set the value of the debug global variable
+*  @param {boolean} [newValue]
+*  @memberof Debug */
+function setDebug(newValue) {
+    debug = newValue;
+}
 
 /** Draw a debug rectangle in world space
  *  @param {Vector2} pos
