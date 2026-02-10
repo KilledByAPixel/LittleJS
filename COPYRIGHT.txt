@@ -1,3 +1,22 @@
+LittleJS Notices and Third-Party Licenses
+=========================================
+
+This repository is licensed under the MIT License. See the file LICENSE.
+
+This file collects copyright notices and third-party license texts for
+software included with or used by this repository. If you redistribute
+LittleJS with third-party components, keep the relevant notices below.
+
+-------------------------------------------------------------------------------
+
+LittleJS Engine License
+
+Copyright (c) 2021 Frank Force
+http://www.frankforce.com
+Licensed under the MIT License. See LICENSE.
+
+-------------------------------------------------------------------------------
+
 Box2D License
 
 Copyright (c) 2006-2013 Erin Catto http://www.gphysics.com
