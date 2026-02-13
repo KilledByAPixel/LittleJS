@@ -103,7 +103,7 @@ function inputClear()
  *  @memberof Input */
 function keyIsDown(key, device=0)
 {
-    ASSERT(isString(key), 'key must be a number or string');
+    ASSERT(isString(key) || isNumber(key), 'key must be a number or string');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 1);
 }
@@ -115,7 +115,7 @@ function keyIsDown(key, device=0)
  *  @memberof Input */
 function keyWasPressed(key, device=0)
 {
-    ASSERT(isString(key), 'key must be a number or string');
+    ASSERT(isString(key) || isNumber(key), 'key must be a number or string');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 2);
 }
@@ -127,7 +127,7 @@ function keyWasPressed(key, device=0)
  *  @memberof Input */
 function keyWasReleased(key, device=0)
 {
-    ASSERT(isString(key), 'key must be a number or string');
+    ASSERT(isString(key) || isNumber(key), 'key must be a number or string');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 4);
 }
