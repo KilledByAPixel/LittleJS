@@ -321,7 +321,7 @@ function inputInit()
     document.addEventListener('mouseup', onMouseUp);
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseleave', onMouseLeave);
-    document.addEventListener('wheel', onMouseWheel);
+    document.addEventListener('wheel', onMouseWheel, { passive: false });
     document.addEventListener('contextmenu', onContextMenu);
     document.addEventListener('blur', onBlur);
 
@@ -340,7 +340,7 @@ function inputInit()
         }
 
         // try to prevent default browser handling of input
-        if (!inputPreventDefault || !document.hasFocus() || !e.cancelable) return;
+        if (!inputPreventDefault || !e.cancelable || !document.hasFocus()) return;
 
         // don't break browser shortcuts
         if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -399,7 +399,7 @@ function inputInit()
         mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
         mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
 
-        if (inputPreventDefault && document.hasFocus() && e.cancelable)
+        if (inputPreventDefault && e.cancelable && document.hasFocus())
             e.preventDefault();
     }
     function onMouseUp(e)
@@ -421,7 +421,12 @@ function inputInit()
         mouseDeltaScreen = mouseDeltaScreen.add(movement);
     }
     function onMouseLeave() { mouseInWindow = false; } // mouse moved off window
-    function onMouseWheel(e) { mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY); }
+    function onMouseWheel(e) 
+    { 
+        mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY);
+        if (inputPreventDefault && e.cancelable && document.hasFocus())
+            e.preventDefault(); // prevent page scrolling
+    }
     function onContextMenu(e) { e.preventDefault(); } // prevent right click menu
     function onBlur() { inputClear(); } // reset input when focus is lost
 
@@ -471,7 +476,7 @@ function inputInit()
             wasTouching = touching;
 
             // prevent default handling like copy, magnifier lens, and scrolling
-            if (inputPreventDefault && document.hasFocus() && e.cancelable)
+            if (inputPreventDefault && e.cancelable && document.hasFocus())
                 e.preventDefault();
 
             // must return true so the document will get focus
