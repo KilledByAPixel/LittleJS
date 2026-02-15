@@ -266,6 +266,7 @@ function debugShowErrors()
 
 function debugInit()
 {
+    console.warn("LittleJS DEBUG build loaded. Use the release build for production.");
 }
 
 function debugUpdate()
