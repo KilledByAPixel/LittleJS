@@ -72,7 +72,21 @@ The code is very clean and well documented with many examples to get you started
 
 ## How To Use LittleJS
 
-To get started download the latest LittleJS package from GitHub or install via npm: ```npm install littlejsengine```
+
+To get started download the latest LittleJS package from GitHub or install via npm: 
+
+```
+npm install littlejsengine
+```
+
+or  use `degit` for empty Vite tameplate
+
+```
+npx degit KilledByAPixel/LittleJS/examples/vite-js-starter my-little-game
+```
+
+
+## Tutorials
 
 - [Making Awesome Games With LittleJS](https://youtu.be/_dXKU0WgAj8?si=ZDXLYAFDWp54hrGT) - A short talk about LittleJS with some tips on how to use it.
 - [Tutorial: Breakout](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial) - Learn how to make a simple game from scratch
