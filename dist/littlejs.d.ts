@@ -333,6 +333,14 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let cameraScale: number;
+    /** Scale applied to engine time, can be used for slow motion or fast forward
+     *  - 1 is normal speed, 2 is double speed, 0.5 is half speed
+     *  - 0 freezes the simulation without setting the paused flag
+     *  - Should be >= 0; stacks multiplicatively with the debug +/- shortcut
+     *  @type {number}
+     *  @default
+     *  @memberof Settings */
+    export let timeScale: number;
     /** Enable applying color to tiles when using canvas2d
      *  - This is slower but should be the same as WebGL rendering
      *  @type {boolean}
@@ -567,6 +575,10 @@ declare module "littlejsengine" {
      *  @param {number} scale
      *  @memberof Settings */
     export function setCameraScale(scale: number): void;
+    /** Set scale applied to engine time
+     *  @param {number} scale
+     *  @memberof Settings */
+    export function setTimeScale(scale: number): void;
     /** Set if tiles should be colorized when using canvas2d
      *  This can be slower but results should look nearly identical to WebGL rendering
      *  It can be enabled/disabled at any time

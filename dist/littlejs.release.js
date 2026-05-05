@@ -200,11 +200,12 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             averageFPS = lerp(averageFPS, 1e3/(frameTimeDeltaMS||1), .05);
         const debugSpeedUp   = debug && keyIsDown('Equal'); // +
         const debugSpeedDown = debug && keyIsDown('Minus'); // -
-        if (debug) // +/- to speed/slow time
-            frameTimeDeltaMS *= debugSpeedUp ? 10 : debugSpeedDown ? .1 : 1;
+        const debugScale = debugSpeedUp ? 10 : debugSpeedDown ? .1 : 1;
+        const combinedScale = timeScale * debugScale;
+        frameTimeDeltaMS *= combinedScale;
         timeReal += frameTimeDeltaMS / 1e3;
         frameTimeBufferMS += paused ? 0 : frameTimeDeltaMS;
-        if (!debugSpeedUp)
+        if (combinedScale <= 1)
             frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp min framerate
 
         let wasUpdated = false;
@@ -2121,6 +2122,18 @@ let cameraAngle = 0;
 let cameraScale = 32;
 
 ///////////////////////////////////////////////////////////////////////////////
+// Time settings
+
+/** Scale applied to engine time, can be used for slow motion or fast forward
+ *  - 1 is normal speed, 2 is double speed, 0.5 is half speed
+ *  - 0 freezes the simulation without setting the paused flag
+ *  - Should be >= 0; stacks multiplicatively with the debug +/- shortcut
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let timeScale = 1;
+
+///////////////////////////////////////////////////////////////////////////////
 // Display settings
 
 /** Enable applying color to tiles when using canvas2d
@@ -2447,6 +2460,11 @@ function setCameraAngle(angle) { cameraAngle = angle; }
  *  @param {number} scale
  *  @memberof Settings */
 function setCameraScale(scale) { cameraScale = scale; }
+
+/** Set scale applied to engine time
+ *  @param {number} scale
+ *  @memberof Settings */
+function setTimeScale(scale) { timeScale = scale; }
 
 /** Set if tiles should be colorized when using canvas2d
  *  This can be slower but results should look nearly identical to WebGL rendering
