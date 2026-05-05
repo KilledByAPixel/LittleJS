@@ -28,6 +28,18 @@ let cameraAngle = 0;
 let cameraScale = 32;
 
 ///////////////////////////////////////////////////////////////////////////////
+// Time settings
+
+/** Scale applied to engine time, can be used for slow motion or fast forward
+ *  - 1 is normal speed, 2 is double speed, 0.5 is half speed
+ *  - 0 freezes the simulation without setting the paused flag
+ *  - Should be >= 0; stacks multiplicatively with the debug +/- shortcut
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let timeScale = 1;
+
+///////////////////////////////////////////////////////////////////////////////
 // Display settings
 
 /** Enable applying color to tiles when using canvas2d
@@ -354,6 +366,11 @@ function setCameraAngle(angle) { cameraAngle = angle; }
  *  @param {number} scale
  *  @memberof Settings */
 function setCameraScale(scale) { cameraScale = scale; }
+
+/** Set scale applied to engine time
+ *  @param {number} scale
+ *  @memberof Settings */
+function setTimeScale(scale) { timeScale = scale; }
 
 /** Set if tiles should be colorized when using canvas2d
  *  This can be slower but results should look nearly identical to WebGL rendering

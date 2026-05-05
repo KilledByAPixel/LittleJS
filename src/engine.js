@@ -197,11 +197,12 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             averageFPS = lerp(averageFPS, 1e3/(frameTimeDeltaMS||1), .05);
         const debugSpeedUp   = debug && keyIsDown('Equal'); // +
         const debugSpeedDown = debug && keyIsDown('Minus'); // -
-        if (debug) // +/- to speed/slow time
-            frameTimeDeltaMS *= debugSpeedUp ? 10 : debugSpeedDown ? .1 : 1;
+        const debugScale = debugSpeedUp ? 10 : debugSpeedDown ? .1 : 1;
+        const combinedScale = timeScale * debugScale;
+        frameTimeDeltaMS *= combinedScale;
         timeReal += frameTimeDeltaMS / 1e3;
         frameTimeBufferMS += paused ? 0 : frameTimeDeltaMS;
-        if (!debugSpeedUp)
+        if (combinedScale <= 1)
             frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp min framerate
 
         let wasUpdated = false;
