@@ -141,6 +141,7 @@ drawEllipse(pos, size, color)           // filled ellipse
 
 ## Common pitfalls
 
+- **New public APIs must be added to `src/engineExport.js`** - Variables and functions added to engine source files are accessible in script-tag builds automatically, but the ESM build (`littlejs.esm.js`) and TypeScript definitions (`littlejs.d.ts`) only include what's listed in `engineExport.js`. Plugin exports go in `plugins/pluginExport.js`. Forgetting this means ESM/TS users can't access the new API.
 - **ASSERT and LOG are stripped in release builds** - Don't rely on side effects
 - **Don't modify constant colors** - `WHITE`, `BLACK`, `RED`, etc. are frozen; use `.copy()` first
 - **Time variables are global** - `time`, `frame` update automatically each frame
