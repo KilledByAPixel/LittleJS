@@ -10615,7 +10615,8 @@ class Box2dObject extends EngineObject
     {
         this.pos = pos;
         this.angle = angle;
-        this.body.SetTransform(box2d.vec2dTo(pos), angle);
+        // box2d uses reverse angle
+        this.body.SetTransform(box2d.vec2dTo(pos), -angle);
     }
     
     /** Sets the position
@@ -10626,7 +10627,7 @@ class Box2dObject extends EngineObject
     /** Sets the angle
      *  @param {number} angle */
     setAngle(angle)
-    { this.setTransform(box2d.vec2From(this.body.GetPosition()), -angle); }
+    { this.setTransform(box2d.vec2From(this.body.GetPosition()), angle); }
 
     /** Sets the linear velocity
      *  @param {Vector2} velocity */
@@ -12171,6 +12172,7 @@ async function box2dInit()
         {
             if (o.body)
             {
+                // box2d uses reverse angle
                 o.pos = box2d.vec2From(o.body.GetPosition());
                 o.angle = -o.body.GetAngle();
             }
