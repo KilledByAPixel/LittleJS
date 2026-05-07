@@ -10340,7 +10340,7 @@ class UIObject
 
     /** Internal function called when object is clicked
      *  @param {boolean} [playSound] */
-    click(playSound)
+    click(playSound=true)
     {
         this.onClick(); 
         if (playSound && this.soundClick)
