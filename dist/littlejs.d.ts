@@ -2201,6 +2201,15 @@ declare module "littlejsengine" {
      *  @return {boolean}
      *  @memberof Input */
     export function gamepadConnected(gamepad?: number): boolean;
+    /** Pulse a gamepad's vibration hardware using the dual-rumble effect if it exists
+     *  Strong magnitude is usually the left side motor, weak magnitude is usually the right side motor
+     *  @param {number} [gamepad] - gamepad index
+     *  @param {number} [duration] - effect duration in ms
+     *  @param {number} [strongMagnitude] - strong (left) motor intensity, 0 to 1
+     *  @param {number} [weakMagnitude] - weak (right) motor intensity, 0 to 1
+     *  @param {number} [startDelay] - delay in ms before the effect starts
+     *  @memberof Input */
+    export function gamepadVibrate(gamepad?: number, duration?: number, strongMagnitude?: number, weakMagnitude?: number, startDelay?: number): void;
     /** Pulse the vibration hardware if it exists
      *  @param {number|Array} [pattern] - single value in ms or vibration interval array
      *  @memberof Input */

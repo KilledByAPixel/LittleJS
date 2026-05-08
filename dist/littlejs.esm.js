@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.18.2';
+const engineVersion = '1.18.3';
 
 /** Frames per second to update
  *  @type {number}
@@ -5358,6 +5358,22 @@ function gamepadStickCount(gamepad=gamepadPrimary)
 {
     ASSERT(isNumber(gamepad), 'gamepad must be a number');
     return gamepadStickData[gamepad]?.length ?? 0;
+}
+
+/** Pulse a gamepad's vibration hardware using the dual-rumble effect if it exists
+ *  Strong magnitude is usually the left side motor, weak magnitude is usually the right side motor
+ *  @param {number} [gamepad] - gamepad index
+ *  @param {number} [duration] - effect duration in ms
+ *  @param {number} [strongMagnitude] - strong (left) motor intensity, 0 to 1
+ *  @param {number} [weakMagnitude] - weak (right) motor intensity, 0 to 1
+ *  @param {number} [startDelay] - delay in ms before the effect starts
+ *  @memberof Input */
+function gamepadVibrate(gamepad=gamepadPrimary, duration=200, strongMagnitude=1, weakMagnitude=1, startDelay=0)
+{
+    ASSERT(isNumber(gamepad), 'gamepad must be a number');
+    if (!vibrateEnable || headlessMode) return;
+    const pad = navigator?.getGamepads?.()[gamepad];
+    pad?.vibrationActuator?.playEffect?.('dual-rumble', {duration, strongMagnitude, weakMagnitude, startDelay});
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -13398,6 +13414,7 @@ export
     gamepadStick,
     gamepadDpad,
     gamepadConnected,
+    gamepadVibrate,
     vibrate,
     vibrateStop,
     pointerLockRequest,
