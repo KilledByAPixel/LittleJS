@@ -315,6 +315,7 @@ export
     gamepadDpad,
     gamepadConnected,
     gamepadVibrate,
+    gamepadVibrateStop,
     vibrate,
     vibrateStop,
     pointerLockRequest,
