@@ -25,6 +25,8 @@ const ROW_PINGPONG  =  1.8;
 const ROW_EASE_TOP  =  0;
 const EASE_SPACING  =  1.2;
 const ROW_REALTIME  = -8.5;
+const ROW_VECTOR2   = -10.2;
+const ROW_COLOR     = -11.7;
 const LABEL_X       = -9;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -35,6 +37,8 @@ const chainObj    = { pos: vec2(-5, ROW_CHAIN), size: 1 };
 const loopObj     = { pos: vec2(-5, ROW_LOOP) };
 const pingPongObj = { pos: vec2(-5, ROW_PINGPONG) };
 const realObj     = { pos: vec2(-5, ROW_REALTIME) };
+const vec2Obj     = { pos: vec2(-5, ROW_VECTOR2 + 0.4) };
+const colorObj    = { pos: vec2(0, ROW_COLOR), color: hsl(0, 0.8, 0.6) };
 let   countdownValue = 10;
 
 const easingDemos =
@@ -79,6 +83,15 @@ function gameInit()
 
     // 6) Real-time tween — keeps moving while game is paused
     tweenProperty(realObj.pos, 'x', -5, 5, 2, { useRealTime: true }).pingPong();
+
+    // 7) Vector2 tween — moves diagonally (interpolates both x and y)
+    tweenProperty(vec2Obj, 'pos',
+        vec2(-5, ROW_VECTOR2 + 0.4),
+        vec2( 5, ROW_VECTOR2 - 0.4),
+        2).pingPong();
+
+    // 8) Color tween — pulses between two colors using Color.lerp()
+    tweenProperty(colorObj, 'color', hsl(0, 0.8, 0.6), hsl(0.6, 0.8, 0.6), 2).pingPong();
 }
 
 function startChain()
@@ -113,6 +126,8 @@ function gameRender()
     for (let i = 0; i < easingObjs.length; i++)
         drawRect(easingObjs[i].pos, vec2(0.6), hsl(i / easingObjs.length, 0.8, 0.6));
     drawRect(realObj.pos,     vec2(0.8), hsl(0.85, 0.8, 0.6));
+    drawRect(vec2Obj.pos,     vec2(0.8), hsl(0.15, 0.8, 0.6));
+    drawRect(colorObj.pos,    vec2(0.8), colorObj.color);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -138,6 +153,8 @@ function gameRenderPost()
         drawText(label, vec2(LABEL_X, ROW_EASE_TOP - i * EASE_SPACING), 0.5, labelColor);
     }
     drawText('useRealTime', vec2(LABEL_X, ROW_REALTIME), 0.6, labelColor);
+    drawText('Vector2',     vec2(LABEL_X, ROW_VECTOR2),  0.6, labelColor);
+    drawText('Color',       vec2(LABEL_X, ROW_COLOR),    0.6, labelColor);
 
     // Live countdown value sitting on the callback row, between label and the easing rows
     const countdownText = Math.ceil(countdownValue).toString();
