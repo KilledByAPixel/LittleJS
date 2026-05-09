@@ -66,7 +66,7 @@ let frame = 0;
  *  @memberof Engine */
 let time = 0;
 
-/** Actual clock time since start in seconds (not affected by pause or frame rate clamping)
+/** Actual clock time since start in seconds (not affected by pause, timescale, or frame rate clamping)
  *  @type {number}
  *  @memberof Engine */
 let timeReal = 0;
@@ -195,13 +195,12 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         frameTimeLastMS = frameTimeMS;
         if (debug || debugWatermark)
             averageFPS = lerp(averageFPS, 1e3/(frameTimeDeltaMS||1), .05);
-
-        // time real is not affected time scale
-        timeReal += frameTimeDeltaMS / 1e3;
-
         const debugSpeedUp   = debug && keyIsDown('Equal'); // +
         const debugSpeedDown = debug && keyIsDown('Minus'); // -
         const debugScale = debugSpeedUp ? 10 : debugSpeedDown ? .1 : 1;
+
+        // apply time deltas
+        timeReal += frameTimeDeltaMS * debugScale / 1e3;
         const combinedScale = timeScale * debugScale;
         frameTimeDeltaMS *= combinedScale;
         frameTimeBufferMS += paused ? 0 : frameTimeDeltaMS;
