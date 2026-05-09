@@ -360,3 +360,29 @@ test('Calling Tween.then after Tween.loop overrides the loop (last call wins)', 
     tweenUpdate(1.0); // no further iterations
     assert.deepEqual(calls, [0, 10]);
 });
+
+test('Tween.pingPong(3) swaps start/end between iterations', () =>
+{
+    const calls = [];
+    new Tween((v) => calls.push(v), 0, 10, 1).pingPong(3);
+    tweenUpdate(1.0); // iter 1 (0→10) completes; iter 2 (10→0) starts (snaps to 10)
+    tweenUpdate(1.0); // iter 2 completes (→0); iter 3 (0→10) starts (snaps to 0)
+    tweenUpdate(1.0); // iter 3 completes (→10); chain ends
+    assert.deepEqual(calls, [0, 10, 10, 0, 0, 10]);
+});
+
+test('Tween.pingPong returns this for chaining', () =>
+{
+    const t = new Tween(() => {});
+    assert.equal(t.pingPong(2), t);
+    t.stop();
+});
+
+test('Tween.pingPong(1) ends after one iteration', () =>
+{
+    const calls = [];
+    new Tween((v) => calls.push(v), 0, 10, 1).pingPong(1);
+    tweenUpdate(1.0);
+    tweenUpdate(1.0);
+    assert.deepEqual(calls, [0, 10]);
+});

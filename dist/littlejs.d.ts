@@ -4928,7 +4928,7 @@ declare module "littlejsengine" {
         ease: (arg0: number) => number;
         realTime: boolean;
         paused: boolean;
-        thenCallback: (() => void) | (() => void);
+        thenCallback: (() => void) | (() => void) | (() => void);
         loopMode: number;
         loopRemaining: number;
         /** Set the easing curve and return this for chaining.
@@ -4955,6 +4955,14 @@ declare module "littlejsengine" {
          *  @returns {Tween}
          *  @memberof TweenSystem */
         loop(count?: number): Tween;
+        /** Like `loop`, but swap `start` and `end` between iterations so the value
+         *  bounces back and forth. `pingPong()` with no argument bounces forever.
+         *
+         *  Mutually exclusive with `loop`.
+         *  @param {number} [count=Infinity]
+         *  @returns {Tween}
+         *  @memberof TweenSystem */
+        pingPong(count?: number): Tween;
         /** Pause this tween. While paused, tweenUpdate skips it.
          *  @memberof TweenSystem */
         pause(): void;

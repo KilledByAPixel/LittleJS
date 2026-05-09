@@ -109,6 +109,21 @@ class Tween
         return this;
     }
 
+    /** Like `loop`, but swap `start` and `end` between iterations so the value
+     *  bounces back and forth. `pingPong()` with no argument bounces forever.
+     *
+     *  Mutually exclusive with `loop`.
+     *  @param {number} [count=Infinity]
+     *  @returns {Tween}
+     *  @memberof TweenSystem */
+    pingPong(count = Infinity)
+    {
+        this.loopMode = 2;
+        this.loopRemaining = count;
+        this.thenCallback = () => pingPongContinuation(this);
+        return this;
+    }
+
     /** Pause this tween. While paused, tweenUpdate skips it.
      *  @memberof TweenSystem */
     pause() { this.paused = true; }
@@ -330,6 +345,19 @@ function loopContinuation(prev)
         ? Infinity
         : prev.loopRemaining - 1;
     next.thenCallback = () => loopContinuation(next);
+}
+
+// Continuation for pingPong: spawns a new tween with start and end swapped.
+function pingPongContinuation(prev)
+{
+    if (prev.loopRemaining !== Infinity && prev.loopRemaining <= 1) return;
+    const next = new Tween(prev.callback, prev.end, prev.start, prev.duration,
+        { ease: prev.ease, realTime: prev.realTime });
+    next.loopMode = 2;
+    next.loopRemaining = prev.loopRemaining === Infinity
+        ? Infinity
+        : prev.loopRemaining - 1;
+    next.thenCallback = () => pingPongContinuation(next);
 }
 
 /** Engine plugin hook: advance every active tween by the appropriate delta.
