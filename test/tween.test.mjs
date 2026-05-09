@@ -541,3 +541,24 @@ test('Tween throws on type mismatch (Vector2 start, Color end)', () =>
 {
     assert.throws(() => new Tween(() => {}, vec2(0, 0), rgb(1, 0, 0, 1), 1));
 });
+
+test('Tween.getValue returns the current interpolated value', () =>
+{
+    const t = new Tween(() => {}, 0, 100, 1);
+    assert.equal(t.getValue(), 0); // at construction
+    tweenUpdate(0.25);
+    assert(near(t.getValue(), 25));
+    tweenUpdate(0.25);
+    assert(near(t.getValue(), 50));
+    t.stop();
+});
+
+test('Tween.getValue returns a Vector2 for Vector2 tweens', () =>
+{
+    const t = new Tween(() => {}, vec2(0, 0), vec2(10, 20), 1);
+    const v = t.getValue();
+    assert(v instanceof Vector2);
+    assert(near(v.x, 0));
+    assert(near(v.y, 0));
+    t.stop();
+});

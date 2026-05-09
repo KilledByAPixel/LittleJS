@@ -174,6 +174,16 @@ class Tween
         return percent(this.duration - this.life, 0, this.duration);
     }
 
+    /** Get the current interpolated value (the value most recently passed to
+     *  the callback). Returns a number, Vector2, or Color depending on the
+     *  tween's start/end types.
+     *  @returns {number|Vector2|Color}
+     *  @memberof TweenSystem */
+    getValue()
+    {
+        return this.interp(this.life);
+    }
+
     /** Compute the interpolated value at the given remaining `life`.
      *  At life === duration the result is `start`; at life === 0 it is `end`.
      *  @param {number} life
@@ -363,17 +373,24 @@ Ease.BEZIER = (x1, y1, x2, y2) =>
 /** Tween a property on an object by dot-path. Returns the underlying Tween
  *  so all chaining methods (`setEase`, `then`, `loop`, `pingPong`, etc.)
  *  remain available.
+ *
+ *  `start` and `end` may be numbers, Vector2 instances, Color instances, or
+ *  any object with a `lerp(other, percent) => sameType` method.
  *  @param {Object} target - The object whose property is being animated
- *  @param {string} propertyPath - Dot-separated path, e.g. `'pos.x'`
- *  @param {number} start - Starting value
- *  @param {number} end - Ending value
+ *  @param {string} propertyPath - Dot-separated path, e.g. `'pos.x'` or `'color'`
+ *  @param {number|Vector2|Color} start - Starting value
+ *  @param {number|Vector2|Color} end - Ending value
  *  @param {number} [duration=1] - Duration in seconds
  *  @param {Object} [options] - Same options as the Tween constructor
  *  @returns {Tween}
  *  @memberof TweenSystem
  *  @example
- *  // Slide an object across the screen with an ease-out sine curve.
+ *  // Numeric: slide an object's x with an ease-out sine curve
  *  tweenProperty(player, 'pos.x', 0, 10, 2).setEase(Ease.OUT(Ease.SINE));
+ *  // Vector2: animate a position diagonally
+ *  tweenProperty(player, 'pos', vec2(-5, 0), vec2(5, 3), 2);
+ *  // Color: pulse between two colors
+ *  tweenProperty(sprite, 'color', RED, BLUE, 1).pingPong();
  */
 function tweenProperty(target, propertyPath, start, end, duration = 1, options = {})
 {
