@@ -306,7 +306,7 @@ function glClearCanvas()
  *  @param {WebGLTexture} texture
  *  @param {boolean} [wrap] - Should the texture wrap or clamp
  *  @memberof WebGL */
-function glSetTexture(texture, wrap=false)
+function glSetTexture(texture, wrap=true)
 {
     // must flush cache with the old texture to set a new one
     if (!glContext || texture === glActiveTexture) return;
