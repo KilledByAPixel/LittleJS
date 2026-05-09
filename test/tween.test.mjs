@@ -248,3 +248,72 @@ test('tweenUpdate skips a tween whose paused field is true', () =>
     assert.deepEqual(calls, [0]); // only the constructor start snap
     t.stop();
 });
+
+test('Tween.pause prevents advancement', () =>
+{
+    const calls = [];
+    const t = new Tween((v) => calls.push(v), 0, 10, 1);
+    t.pause();
+    tweenUpdate(0.5);
+    assert.deepEqual(calls, [0]); // no advance
+    t.stop();
+});
+
+test('Tween.resume re-enables advancement', () =>
+{
+    const calls = [];
+    const t = new Tween((v) => calls.push(v), 0, 10, 1, { paused: true });
+    tweenUpdate(0.5); // paused, no advance
+    assert.deepEqual(calls, [0]);
+    t.resume();
+    tweenUpdate(0.5);
+    assert.equal(calls.length, 2);
+    assert(near(calls[1], 5));
+    t.stop();
+});
+
+test('Tween.stop prevents the then-callback from firing', () =>
+{
+    let thenCalls = 0;
+    const t = new Tween(() => {}, 0, 1, 1).then(() => thenCalls++);
+    t.stop();
+    tweenUpdate(2.0);
+    assert.equal(thenCalls, 0);
+});
+
+test('Tween.restart resets life, clears pause, re-snaps to start', () =>
+{
+    const calls = [];
+    const t = new Tween((v) => calls.push(v), 0, 10, 1);
+    tweenUpdate(0.6); // partway: calls = [0, 6]
+    t.pause();
+    t.restart();
+    assert.equal(t.life, 1);
+    assert.equal(t.paused, false);
+    // restart fires callback with start again
+    assert.equal(calls[calls.length - 1], 0);
+    t.stop();
+});
+
+test('Tween.restart re-adds a stopped tween to the active list', () =>
+{
+    const calls = [];
+    const t = new Tween((v) => calls.push(v), 0, 10, 1);
+    t.stop();
+    assert.equal(t.isActive(), false);
+    t.restart();
+    assert.equal(t.isActive(), true);
+    t.stop();
+});
+
+test('Tween.isActive reflects active list + pause', () =>
+{
+    const t = new Tween(() => {}, 0, 1, 1);
+    assert.equal(t.isActive(), true);
+    t.pause();
+    assert.equal(t.isActive(), false);
+    t.resume();
+    assert.equal(t.isActive(), true);
+    t.stop();
+    assert.equal(t.isActive(), false);
+});

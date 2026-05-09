@@ -12514,6 +12514,34 @@ class Tween
         return this;
     }
 
+    /** Pause this tween. While paused, tweenUpdate skips it.
+     *  @memberof TweenSystem */
+    pause() { this.paused = true; }
+
+    /** Resume a paused tween.
+     *  @memberof TweenSystem */
+    resume() { this.paused = false; }
+
+    /** Reset this tween to the start: life back to duration, pause cleared,
+     *  re-added to the active list if previously stopped, and the callback
+     *  re-fired with the start value.
+     *  @memberof TweenSystem */
+    restart()
+    {
+        this.life = this.duration;
+        this.paused = false;
+        if (tweenActive.indexOf(this) < 0) tweenActive.push(this);
+        this.callback(this.interp(this.duration));
+    }
+
+    /** True if this tween is in the active list and not paused.
+     *  @returns {boolean}
+     *  @memberof TweenSystem */
+    isActive()
+    {
+        return !this.paused && tweenActive.indexOf(this) >= 0;
+    }
+
     /** Compute the interpolated value at the given remaining `life`.
      *  At life === duration the result is `start`; at life === 0 it is `end`.
      *  @param {number} life

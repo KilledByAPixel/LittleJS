@@ -4942,6 +4942,21 @@ declare module "littlejsengine" {
          *  @returns {Tween}
          *  @memberof TweenSystem */
         then(callback: () => void): Tween;
+        /** Pause this tween. While paused, tweenUpdate skips it.
+         *  @memberof TweenSystem */
+        pause(): void;
+        /** Resume a paused tween.
+         *  @memberof TweenSystem */
+        resume(): void;
+        /** Reset this tween to the start: life back to duration, pause cleared,
+         *  re-added to the active list if previously stopped, and the callback
+         *  re-fired with the start value.
+         *  @memberof TweenSystem */
+        restart(): void;
+        /** True if this tween is in the active list and not paused.
+         *  @returns {boolean}
+         *  @memberof TweenSystem */
+        isActive(): boolean;
         /** Compute the interpolated value at the given remaining `life`.
          *  At life === duration the result is `start`; at life === 0 it is `end`.
          *  @param {number} life
