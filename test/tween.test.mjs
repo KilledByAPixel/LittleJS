@@ -26,7 +26,7 @@ test('Ease.POWER(2) returns x squared', () =>
     assert(near(f(1), 1));
 });
 
-test('Ease.SINE / CIRC / EXPO / BACK / ELASTIC / SPRING start at 0 and end at 1', () =>
+test('Ease.SINE / CIRC / BACK / SPRING anchor at both 0 and 1; EXPO and ELASTIC only at 1', () =>
 {
     for (const f of [Ease.SINE, Ease.CIRC, Ease.BACK])
     {
@@ -35,7 +35,8 @@ test('Ease.SINE / CIRC / EXPO / BACK / ELASTIC / SPRING start at 0 and end at 1'
     }
     // EXPO doesn't hit 0 exactly at x=0 by formula (2^-10 ≈ 0.001), but does hit 1 at x=1
     assert(near(Ease.EXPO(1), 1));
-    // ELASTIC has a -2^0 * sin(...) term that finishes at exactly 1 at x=1
+    // ELASTIC also doesn't start at 0 (formula gives -2^-10 * sin(37π/6) ≈ -0.0005),
+    // but does finish at exactly 1 at x=1.
     assert(near(Ease.ELASTIC(1), 1));
     // SPRING formula evaluates to 1 at x=1
     assert(near(Ease.SPRING(1), 1));
