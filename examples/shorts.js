@@ -288,7 +288,6 @@ function filterExamples(reset=0)
     }
 
     // second pass: add headings and matching examples
-    let lastHeadingIndex = -1;
     for (let i = 0; i < exampleList.length; i++)
     {
         const example = exampleList[i];
@@ -302,7 +301,6 @@ function filterExamples(reset=0)
                 if (matchingIndices.includes(j))
                 {
                     // only add heading if there are matches under it
-                    lastHeadingIndex = i;
                     const o = new Option(example.text);
                     o.disabled = true;
                     selectExample.add(o);
@@ -406,11 +404,9 @@ function setCode(code, filename)
         }
         iframeContent.onunhandledrejection = (event)=>
         {
-            let text = event.reason;
-            setErrorMessage(text);
+            setErrorMessage(event.reason);
             if (event.reason && event.reason.stack)
             {
-                text = event.reason.stack;
                 const errorLine = getErrorLine(event.reason.stack);
                 if (errorLine >= 0)
                     setErrorLine(errorLine);
