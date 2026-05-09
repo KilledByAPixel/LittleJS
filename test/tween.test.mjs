@@ -89,3 +89,14 @@ test('Ease.IN_OUT(LINEAR) at 0.5 is 0.5 (regression: original referenced undefin
     assert(near(f(0.5), 0.5));
     assert(near(f(1), 1, 1e-3));
 });
+
+test('Ease.BOUNCE is easeOutBounce: peaks at 1 in the first half (matches JSDoc "ease-out")', () =>
+{
+    // First peak (impact) at x = 4/11 ≈ 0.36 — this is the easeOutBounce signature.
+    // If someone refactors BOUNCE to easeInBounce by mistake (e.g., wrapping in Ease.OUT),
+    // this test will catch it because easeInBounce stays near 0 until x ≈ 0.64.
+    assert(near(Ease.BOUNCE(4/11), 1, 1e-9));
+    // At x=0.5 (between first impact at 4/11 and second at 8/11) the value dips back to 0.75.
+    // (easeInBounce would be at ~0.234 here.)
+    assert(near(Ease.BOUNCE(0.5), 0.765625, 1e-9));
+});

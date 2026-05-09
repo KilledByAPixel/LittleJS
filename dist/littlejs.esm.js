@@ -13203,14 +13203,10 @@ Ease.SPRING = (x) =>
  *  @memberof TweenSystem */
 Ease.BOUNCE = (x) =>
 {
-    const bounceOut = (t) =>
-    {
-        if (t < 4 / 11) return 7.5625 * t * t;
-        if (t < 8 / 11) return 7.5625 * (t -= 6 / 11) * t + 0.75;
-        if (t < 10 / 11) return 7.5625 * (t -= 9 / 11) * t + 0.9375;
-        return 7.5625 * (t -= 10.5 / 11) * t + 0.984375;
-    };
-    return Ease.OUT(bounceOut)(x);
+    if (x < 4 / 11) return 7.5625 * x * x;
+    if (x < 8 / 11) return 7.5625 * (x -= 6 / 11) * x + 0.75;
+    if (x < 10 / 11) return 7.5625 * (x -= 9 / 11) * x + 0.9375;
+    return 7.5625 * (x -= 10.5 / 11) * x + 0.984375;
 };
 
 /** Identity wrapper, included for symmetry with OUT and IN_OUT.
