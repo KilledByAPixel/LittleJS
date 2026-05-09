@@ -8,7 +8,8 @@ test('Tween, tweenProperty, tweenStopAll, tweenUpdate, Ease are exported from th
     assert.equal(typeof tweenProperty, 'function');
     assert.equal(typeof tweenStopAll, 'function');
     assert.equal(typeof tweenUpdate, 'function');
-    assert.equal(typeof Ease, 'function');
+    assert.equal(typeof Ease, 'object'); // namespace object, not a class
+    assert.equal(typeof Ease.LINEAR, 'function');
 });
 
 const near = (a, b, eps=1e-9) => Math.abs(a - b) <= eps;

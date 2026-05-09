@@ -5041,111 +5041,20 @@ declare module "littlejsengine" {
      *  @param {number} [realDelta] - Real-time delta in seconds; default: timeReal - lastTimeReal
      *  @memberof TweenSystem */
     export function tweenUpdate(gameDelta?: number, realDelta?: number): void;
-    /** Library of static easing curves and curve modifiers.
-     *  All curves accept `x` in [0,1] and return [0,1] (with possible overshoot
-     *  for ELASTIC/BACK/SPRING/BOUNCE).
-     *  @memberof TweenSystem
-     *  @example
-     *  // Use a basic curve
-     *  new Tween(callback, 0, 10, 1).setEase(Ease.SINE);
-     *  // Use a modifier on a curve
-     *  new Tween(callback, 0, 10, 1).setEase(Ease.OUT(Ease.BACK));
-     */
-    export class Ease {
-    }
     export namespace Ease {
-        /** Linear (identity) curve.
-         *  @param {number} x
-         *  @returns {number}
-         *  @memberof TweenSystem */
         function LINEAR(x: number): number;
-        /** Power curve factory: `Ease.POWER(n)` returns `x => x**n`.
-         *  Use n=2 for quadratic, n=3 for cubic, etc.
-         *  @param {number} n
-         *  @returns {function(number):number}
-         *  @memberof TweenSystem */
         function POWER(n: number): (arg0: number) => number;
-        /** Sine ease-in curve: starts slow, ends fast.
-         *  @param {number} x
-         *  @returns {number}
-         *  @memberof TweenSystem */
         function SINE(x: number): number;
-        /** Circular ease-in curve.
-         *  @param {number} x
-         *  @returns {number}
-         *  @memberof TweenSystem */
         function CIRC(x: number): number;
-        /** Exponential ease-in curve (`2^(10x-10)`).
-         *  @param {number} x
-         *  @returns {number}
-         *  @memberof TweenSystem */
         function EXPO(x: number): number;
-        /** Back ease-in: overshoots backward at the start before snapping forward.
-         *  @param {number} x
-         *  @returns {number}
-         *  @memberof TweenSystem */
         function BACK(x: number): number;
-        /** Elastic ease-in: oscillates with decreasing amplitude.
-         *  @param {number} x
-         *  @returns {number}
-         *  @memberof TweenSystem */
         function ELASTIC(x: number): number;
-        /** Spring-like ease-out: oscillates outward after passing the target.
-         *  @param {number} x
-         *  @returns {number}
-         *  @memberof TweenSystem */
         function SPRING(x: number): number;
-        /** Bouncing ease-out: bounces with decreasing height as it approaches 1.
-         *  @param {number} x
-         *  @returns {number}
-         *  @memberof TweenSystem */
         function BOUNCE(x: number): number;
-        /** Ease-in direction modifier: returns the curve unchanged. Symmetric with
-         *  `OUT` and `IN_OUT`. Base curves are already ease-in by convention, so
-         *  wrapping a curve in `IN` is a no-op — useful when picking the direction
-         *  programmatically.
-         *  @param {function(number):number} f - Curve to use as ease-in (returned unchanged)
-         *  @returns {function(number):number}
-         *  @memberof TweenSystem
-         *  @example
-         *  // Pick direction at runtime
-         *  const dir = bouncyMode ? Ease.OUT : Ease.IN;
-         *  new Tween(cb, 0, 10, 1).setEase(dir(Ease.BACK));
-         */
         function IN(f: (arg0: number) => number): (arg0: number) => number;
-        /** Reverse a curve so it eases out instead of in: `x => 1 - f(1 - x)`.
-         *  @param {function(number):number} f
-         *  @returns {function(number):number}
-         *  @memberof TweenSystem
-         *  @example
-         *  Ease.OUT(Ease.POWER(2)) // ease-out quadratic
-         */
         function OUT(f: (arg0: number) => number): (arg0: number) => number;
-        /** Combine the first half of `f` with `Ease.OUT(f)` for a symmetric curve.
-         *  Bug-fix vs the original library: the original referenced an undefined
-         *  global `Piecewise`; this implementation routes through `Ease.PIECEWISE`.
-         *  @param {function(number):number} f
-         *  @returns {function(number):number}
-         *  @memberof TweenSystem */
         function IN_OUT(f: (arg0: number) => number): (arg0: number) => number;
-        /** Split [0,1] into N equal sections and run a different curve in each.
-         *  Each curve is mapped to its section: section i runs over [i/n, (i+1)/n]
-         *  and its output is mapped to [i/n, (i+1)/n] of the overall range.
-         *  @param {...function(number):number} fns
-         *  @returns {function(number):number}
-         *  @memberof TweenSystem */
         function PIECEWISE(...fns: ((arg0: number) => number)[]): (arg0: number) => number;
-        /** Cubic Bezier curve solver in the style of CSS `cubic-bezier`.
-         *  Control points (0,0), (x1,y1), (x2,y2), (1,1).
-         *  @param {number} x1
-         *  @param {number} y1
-         *  @param {number} x2
-         *  @param {number} y2
-         *  @returns {function(number):number}
-         *  @memberof TweenSystem
-         *  @example
-         *  Ease.BEZIER(0.25, 0.1, 0.25, 1) // CSS "ease"
-         */
         function BEZIER(x1: number, y1: number, x2: number, y2: number): (arg0: number) => number;
     }
 }
