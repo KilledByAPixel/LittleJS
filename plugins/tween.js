@@ -36,7 +36,7 @@ class Tween
      *  @param {number} [duration=1] - Duration in seconds
      *  @param {Object} [options]
      *  @param {function(number):number} [options.ease] - Easing function (defaults to LINEAR)
-     *  @param {boolean} [options.realTime=false] - Ignore game pause and time scale
+     *  @param {boolean} [options.useRealTime=false] - Advance even when the game is paused (matches Timer's useRealTime)
      *  @param {boolean} [options.paused=false] - Start in paused state */
     constructor(callback, start = 0, end = 1, duration = 1, options = {})
     {
@@ -51,7 +51,7 @@ class Tween
         this.duration = duration;
         this.life = duration;
         this.ease = options.ease || Ease.LINEAR;
-        this.realTime = !!options.realTime;
+        this.useRealTime = !!options.useRealTime;
         this.paused = !!options.paused;
 
         /** @private completion callback set by then(), loop(), pingPong(). */
@@ -379,7 +379,7 @@ function loopContinuation(prev)
 {
     if (prev.loopRemaining !== Infinity && prev.loopRemaining <= 1) return;
     const next = new Tween(prev.callback, prev.start, prev.end, prev.duration,
-        { ease: prev.ease, realTime: prev.realTime });
+        { ease: prev.ease, useRealTime: prev.useRealTime });
     next.loopRemaining = prev.loopRemaining === Infinity
         ? Infinity
         : prev.loopRemaining - 1;
@@ -391,7 +391,7 @@ function pingPongContinuation(prev)
 {
     if (prev.loopRemaining !== Infinity && prev.loopRemaining <= 1) return;
     const next = new Tween(prev.callback, prev.end, prev.start, prev.duration,
-        { ease: prev.ease, realTime: prev.realTime });
+        { ease: prev.ease, useRealTime: prev.useRealTime });
     next.loopRemaining = prev.loopRemaining === Infinity
         ? Infinity
         : prev.loopRemaining - 1;
@@ -426,7 +426,7 @@ function tweenUpdate(gameDelta, realDelta)
     {
         const t = tweenActive[i];
         if (t.paused) continue;
-        const dt = t.realTime ? realDelta : gameDelta;
+        const dt = t.useRealTime ? realDelta : gameDelta;
         if (dt <= 0) continue;
 
         t.life -= dt;

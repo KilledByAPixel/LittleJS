@@ -78,7 +78,7 @@ function gameInit()
     }
 
     // 6) Real-time tween — keeps moving while game is paused
-    tweenProperty(realObj.pos, 'x', -5, 5, 2, { realTime: true }).pingPong();
+    tweenProperty(realObj.pos, 'x', -5, 5, 2, { useRealTime: true }).pingPong();
 }
 
 function startChain()
@@ -123,7 +123,7 @@ function gameRenderPost()
 
     // Title and subtitle (world space, centered)
     drawText('LittleJS Tween System Example', vec2(0, 13), 1.4, labelColor);
-    drawText('Press P to pause — the bottom row uses realTime and keeps moving',
+    drawText('Press P to pause — the bottom row uses useRealTime and keeps moving',
         vec2(0, 11.5), 0.5, subColor);
 
     // Row labels (centered at LABEL_X, sitting just left of the animating objects)
@@ -137,7 +137,7 @@ function gameRenderPost()
         const [label] = easingDemos[i];
         drawText(label, vec2(LABEL_X, ROW_EASE_TOP - i * EASE_SPACING), 0.5, labelColor);
     }
-    drawText('realTime',   vec2(LABEL_X, ROW_REALTIME),  0.6, labelColor);
+    drawText('useRealTime', vec2(LABEL_X, ROW_REALTIME), 0.6, labelColor);
 
     // Live countdown value sitting on the callback row, between label and the easing rows
     const countdownText = Math.ceil(countdownValue).toString();

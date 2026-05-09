@@ -4913,11 +4913,11 @@ declare module "littlejsengine" {
          *  @param {number} [duration=1] - Duration in seconds
          *  @param {Object} [options]
          *  @param {function(number):number} [options.ease] - Easing function (defaults to LINEAR)
-         *  @param {boolean} [options.realTime=false] - Ignore game pause and time scale
+         *  @param {boolean} [options.useRealTime=false] - Advance even when the game is paused (matches Timer's useRealTime)
          *  @param {boolean} [options.paused=false] - Start in paused state */
         constructor(callback: (arg0: number) => void, start?: number, end?: number, duration?: number, options?: {
             ease?: (arg0: number) => number;
-            realTime?: boolean;
+            useRealTime?: boolean;
             paused?: boolean;
         });
         callback: (arg0: number) => void;
@@ -4926,7 +4926,7 @@ declare module "littlejsengine" {
         duration: number;
         life: number;
         ease: (arg0: number) => number;
-        realTime: boolean;
+        useRealTime: boolean;
         paused: boolean;
         /** @private completion callback set by then(), loop(), pingPong(). */
         private thenCallback;

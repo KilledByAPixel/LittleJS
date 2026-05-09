@@ -137,25 +137,25 @@ test('Tween constructor calls callback once with the start value', () =>
     t.stop(); // cleanup
 });
 
-test('Tween constructor stores duration, ease, realTime, paused options', () =>
+test('Tween constructor stores duration, ease, useRealTime, paused options', () =>
 {
-    const t = new Tween(() => {}, 0, 1, 2, { ease: Ease.SINE, realTime: true, paused: true });
+    const t = new Tween(() => {}, 0, 1, 2, { ease: Ease.SINE, useRealTime: true, paused: true });
     assert.equal(t.duration, 2);
     assert.equal(t.life, 2);
     assert.equal(t.ease, Ease.SINE);
-    assert.equal(t.realTime, true);
+    assert.equal(t.useRealTime, true);
     assert.equal(t.paused, true);
     t.stop();
 });
 
-test('Tween defaults: start=0 end=1 duration=1 ease=LINEAR realTime=false paused=false', () =>
+test('Tween defaults: start=0 end=1 duration=1 ease=LINEAR useRealTime=false paused=false', () =>
 {
     const t = new Tween(() => {});
     assert.equal(t.start, 0);
     assert.equal(t.end, 1);
     assert.equal(t.duration, 1);
     assert.equal(t.ease, Ease.LINEAR);
-    assert.equal(t.realTime, false);
+    assert.equal(t.useRealTime, false);
     assert.equal(t.paused, false);
     t.stop();
 });
@@ -216,10 +216,10 @@ test('Tween that overshoots its remaining life still fires end value once', () =
     assert.deepEqual(calls, [0, 10]);
 });
 
-test('realTime: true tween advances on realDelta even when gameDelta is 0', () =>
+test('useRealTime: true tween advances on realDelta even when gameDelta is 0', () =>
 {
     const calls = [];
-    new Tween((v) => calls.push(v), 0, 10, 1, { realTime: true });
+    new Tween((v) => calls.push(v), 0, 10, 1, { useRealTime: true });
     tweenUpdate(0, 1.0); // game frozen, real time advances 1s
     assert.deepEqual(calls, [0, 10]);
 });
@@ -427,21 +427,21 @@ test('tweenProperty returns the underlying Tween for chaining', () =>
     t.stop();
 });
 
-test('tweenProperty supports options like realTime', () =>
+test('tweenProperty supports options like useRealTime', () =>
 {
     const obj = { x: 0 };
-    const t = tweenProperty(obj, 'x', 0, 10, 1, { realTime: true });
-    assert.equal(t.realTime, true);
+    const t = tweenProperty(obj, 'x', 0, 10, 1, { useRealTime: true });
+    assert.equal(t.useRealTime, true);
     tweenUpdate(0, 1.0); // game frozen, real advances
     assert(near(obj.x, 10));
 });
 
-test('integration: chain setEase + then + tweenProperty + realTime', () =>
+test('integration: chain setEase + then + tweenProperty + useRealTime', () =>
 {
     const obj = { value: 0 };
     let chainFinished = false;
 
-    tweenProperty(obj, 'value', 0, 100, 2, { realTime: true })
+    tweenProperty(obj, 'value', 0, 100, 2, { useRealTime: true })
         .setEase(Ease.OUT(Ease.POWER(2)))
         .then(() => { chainFinished = true; });
 
