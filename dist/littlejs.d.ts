@@ -4988,9 +4988,22 @@ declare module "littlejsengine" {
          *  @memberof TweenSystem */
         stop(): void;
     }
-    /** Tween a property on an object by dot-path.
-     *  @memberof TweenSystem */
-    export function tweenProperty(): void;
+    /** Tween a property on an object by dot-path. Returns the underlying Tween
+     *  so all chaining methods (`setEase`, `then`, `loop`, `pingPong`, etc.)
+     *  remain available.
+     *  @param {Object} target - The object whose property is being animated
+     *  @param {string} propertyPath - Dot-separated path, e.g. `'pos.x'`
+     *  @param {number} start - Starting value
+     *  @param {number} end - Ending value
+     *  @param {number} [duration=1] - Duration in seconds
+     *  @param {Object} [options] - Same options as the Tween constructor
+     *  @returns {Tween}
+     *  @memberof TweenSystem
+     *  @example
+     *  // Slide an object across the screen with an ease-out sine curve.
+     *  tweenProperty(player, 'pos.x', 0, 10, 2).setEase(Ease.OUT(Ease.SINE));
+     */
+    export function tweenProperty(target: any, propertyPath: string, start: number, end: number, duration?: number, options?: any): Tween;
     /** Library of static easing curves and curve modifiers.
      *  All curves accept `x` in [0,1] and return [0,1] (with possible overshoot
      *  for ELASTIC/BACK/SPRING/BOUNCE).

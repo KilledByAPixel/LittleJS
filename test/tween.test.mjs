@@ -386,3 +386,44 @@ test('Tween.pingPong(1) ends after one iteration', () =>
     tweenUpdate(1.0);
     assert.deepEqual(calls, [0, 10]);
 });
+
+test('tweenProperty drives a flat property by name', () =>
+{
+    const obj = { x: 0 };
+    const t = tweenProperty(obj, 'x', 0, 10, 1);
+    assert.equal(obj.x, 0); // constructor snaps to start
+    tweenUpdate(0.5);
+    assert(near(obj.x, 5));
+    tweenUpdate(0.5);
+    assert(near(obj.x, 10));
+});
+
+test('tweenProperty walks dot paths into nested objects', () =>
+{
+    const obj = { pos: { x: 0, y: 0 } };
+    tweenProperty(obj, 'pos.x', 0, 10, 1);
+    assert.equal(obj.pos.x, 0);
+    assert.equal(obj.pos.y, 0); // unaffected
+    tweenUpdate(1.0);
+    assert(near(obj.pos.x, 10));
+    assert.equal(obj.pos.y, 0);
+});
+
+test('tweenProperty returns the underlying Tween for chaining', () =>
+{
+    const obj = { x: 0 };
+    const t = tweenProperty(obj, 'x', 0, 10, 1);
+    assert(t instanceof Tween);
+    // chain methods work
+    assert.equal(t.setEase(Ease.SINE), t);
+    t.stop();
+});
+
+test('tweenProperty supports options like realTime', () =>
+{
+    const obj = { x: 0 };
+    const t = tweenProperty(obj, 'x', 0, 10, 1, { realTime: true });
+    assert.equal(t.realTime, true);
+    tweenUpdate(0, 1.0); // game frozen, real advances
+    assert(near(obj.x, 10));
+});

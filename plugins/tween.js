@@ -328,9 +328,36 @@ Ease.BEZIER = (x1, y1, x2, y2) =>
     };
 };
 
-/** Tween a property on an object by dot-path.
- *  @memberof TweenSystem */
-function tweenProperty() {}
+/** Tween a property on an object by dot-path. Returns the underlying Tween
+ *  so all chaining methods (`setEase`, `then`, `loop`, `pingPong`, etc.)
+ *  remain available.
+ *  @param {Object} target - The object whose property is being animated
+ *  @param {string} propertyPath - Dot-separated path, e.g. `'pos.x'`
+ *  @param {number} start - Starting value
+ *  @param {number} end - Ending value
+ *  @param {number} [duration=1] - Duration in seconds
+ *  @param {Object} [options] - Same options as the Tween constructor
+ *  @returns {Tween}
+ *  @memberof TweenSystem
+ *  @example
+ *  // Slide an object across the screen with an ease-out sine curve.
+ *  tweenProperty(player, 'pos.x', 0, 10, 2).setEase(Ease.OUT(Ease.SINE));
+ */
+function tweenProperty(target, propertyPath, start, end, duration = 1, options = {})
+{
+    ASSERT(target != null && typeof target === 'object', 'tweenProperty target must be an object');
+    ASSERT(isString(propertyPath) && propertyPath.length > 0, 'tweenProperty propertyPath must be a non-empty string');
+
+    const parts = propertyPath.split('.');
+    const lastKey = parts.pop();
+    const callback = (value) =>
+    {
+        let obj = target;
+        for (const k of parts) obj = obj[k];
+        obj[lastKey] = value;
+    };
+    return new Tween(callback, start, end, duration, options);
+}
 
 // Continuation that schedules the next loop iteration when one finishes.
 // Called from the completed tween's `then` slot. Decrements the counter and
