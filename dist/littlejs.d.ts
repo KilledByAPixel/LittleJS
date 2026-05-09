@@ -1955,9 +1955,8 @@ declare module "littlejsengine" {
     /** Set the WebGL texture, called automatically if using multiple textures
      *  - This may also flush the gl buffer resulting in more draw calls and worse performance
      *  @param {WebGLTexture} texture
-     *  @param {boolean} [wrap] - Should the texture wrap or clamp
      *  @memberof WebGL */
-    export function glSetTexture(texture: WebGLTexture, wrap?: boolean): void;
+    export function glSetTexture(texture: WebGLTexture): void;
     /** Compile WebGL shader of the given type, will throw errors if in debug mode
      *  @param {string} source
      *  @param {number} type

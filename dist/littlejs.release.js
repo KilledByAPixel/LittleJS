@@ -7683,9 +7683,8 @@ function glClearCanvas()
 /** Set the WebGL texture, called automatically if using multiple textures
  *  - This may also flush the gl buffer resulting in more draw calls and worse performance
  *  @param {WebGLTexture} texture
- *  @param {boolean} [wrap] - Should the texture wrap or clamp
  *  @memberof WebGL */
-function glSetTexture(texture, wrap=false)
+function glSetTexture(texture)
 {
     // must flush cache with the old texture to set a new one
     if (!glContext || texture === glActiveTexture) return;
@@ -7693,11 +7692,6 @@ function glSetTexture(texture, wrap=false)
     glFlush();
     glActiveTexture = texture;
     glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
-
-    // set wrap mode
-    const wrapMode = wrap ? glContext.REPEAT : glContext.CLAMP_TO_EDGE;
-    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, wrapMode);
-    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, wrapMode);
 }
 
 /** Compile WebGL shader of the given type, will throw errors if in debug mode
@@ -7772,6 +7766,8 @@ function glCreateTexture(image)
     const minFilter = mipMap ? glContext.LINEAR_MIPMAP_LINEAR : magFilter;
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, magFilter);
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, minFilter);
+    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, glContext.REPEAT);
+    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, glContext.REPEAT);
     if (mipMap)
         glContext.generateMipmap(glContext.TEXTURE_2D);
 
