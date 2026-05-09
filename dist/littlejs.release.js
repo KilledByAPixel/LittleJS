@@ -12555,7 +12555,8 @@ function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor
 }
 /**
  * LittleJS Tween System Plugin
- * - Lightweight numeric tweens with chainable easing, looping, and ping-pong
+ * - Lightweight tweens for numbers, Vector2, Color, or any .lerp-able type
+ * - Chainable easing, looping, and ping-pong
  * - Property-path helper for the common case of animating an object field
  * - Auto-updates via engineAddPlugin; pauses with the game by default
  * @namespace TweenSystem
