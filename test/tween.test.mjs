@@ -46,3 +46,46 @@ test('Ease.BOUNCE finishes at 1', () =>
 {
     assert(near(Ease.BOUNCE(1), 1, 1e-6));
 });
+
+test('Ease.IN is identity', () =>
+{
+    assert(near(Ease.IN(0), 0));
+    assert(near(Ease.IN(0.5), 0.5));
+    assert(near(Ease.IN(1), 1));
+});
+
+test('Ease.OUT(LINEAR) is identity', () =>
+{
+    const f = Ease.OUT(Ease.LINEAR);
+    assert(near(f(0), 0));
+    assert(near(f(0.5), 0.5));
+    assert(near(f(1), 1));
+});
+
+test('Ease.OUT(POWER(2)) starts fast, ends slow', () =>
+{
+    const f = Ease.OUT(Ease.POWER(2));
+    assert(near(f(0), 0));
+    assert(near(f(1), 1));
+    // f(x) = 1 - (1-x)^2; f(0.5) = 1 - 0.25 = 0.75
+    assert(near(f(0.5), 0.75));
+});
+
+test('Ease.PIECEWISE splits range across the supplied curves', () =>
+{
+    // PIECEWISE(LINEAR, LINEAR) is equivalent to LINEAR
+    const f = Ease.PIECEWISE(Ease.LINEAR, Ease.LINEAR);
+    assert(near(f(0), 0));
+    assert(near(f(0.25), 0.25));
+    assert(near(f(0.5), 0.5));
+    assert(near(f(0.75), 0.75));
+    assert(near(f(0.9999), 0.9999, 1e-3));
+});
+
+test('Ease.IN_OUT(LINEAR) at 0.5 is 0.5 (regression: original referenced undefined Piecewise)', () =>
+{
+    const f = Ease.IN_OUT(Ease.LINEAR);
+    assert(near(f(0), 0));
+    assert(near(f(0.5), 0.5));
+    assert(near(f(1), 1, 1e-3));
+});

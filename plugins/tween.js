@@ -96,16 +96,53 @@ Ease.SPRING = (x) =>
  *  @memberof TweenSystem */
 Ease.BOUNCE = (x) =>
 {
-    // Internal recursive bounce-out helper. Replaced with `Ease.OUT(bounceIn)`
-    // wiring once the modifiers are added in the next task.
-    const bounceOut = (x) =>
+    const bounceOut = (t) =>
     {
-        if (x < 4 / 11) return 7.5625 * x * x;
-        if (x < 8 / 11) return 7.5625 * (x -= 6 / 11) * x + 0.75;
-        if (x < 10 / 11) return 7.5625 * (x -= 9 / 11) * x + 0.9375;
-        return 7.5625 * (x -= 10.5 / 11) * x + 0.984375;
+        if (t < 4 / 11) return 7.5625 * t * t;
+        if (t < 8 / 11) return 7.5625 * (t -= 6 / 11) * t + 0.75;
+        if (t < 10 / 11) return 7.5625 * (t -= 9 / 11) * t + 0.9375;
+        return 7.5625 * (t -= 10.5 / 11) * t + 0.984375;
     };
-    return bounceOut(x);
+    return Ease.OUT(bounceOut)(x);
+};
+
+/** Identity wrapper, included for symmetry with OUT and IN_OUT.
+ *  @param {number} x
+ *  @returns {number}
+ *  @memberof TweenSystem */
+Ease.IN = (x) => x;
+
+/** Reverse a curve so it eases out instead of in: `x => 1 - f(1 - x)`.
+ *  @param {function(number):number} f
+ *  @returns {function(number):number}
+ *  @memberof TweenSystem
+ *  @example
+ *  Ease.OUT(Ease.POWER(2)) // ease-out quadratic
+ */
+Ease.OUT = (f) => (x) => 1 - f(1 - x);
+
+/** Combine the first half of `f` with `Ease.OUT(f)` for a symmetric curve.
+ *  Bug-fix vs the original library: the original referenced an undefined
+ *  global `Piecewise`; this implementation routes through `Ease.PIECEWISE`.
+ *  @param {function(number):number} f
+ *  @returns {function(number):number}
+ *  @memberof TweenSystem */
+Ease.IN_OUT = (f) => Ease.PIECEWISE(f, Ease.OUT(f));
+
+/** Split [0,1] into N equal sections and run a different curve in each.
+ *  Each curve is mapped to its section: section i runs over [i/n, (i+1)/n]
+ *  and its output is mapped to [i/n, (i+1)/n] of the overall range.
+ *  @param {...function(number):number} fns
+ *  @returns {function(number):number}
+ *  @memberof TweenSystem */
+Ease.PIECEWISE = (...fns) =>
+{
+    const n = fns.length;
+    return (x) =>
+    {
+        const i = (x * n - 1e-9) >> 0;
+        return (fns[i]((x - i / n) * n) + i) / n;
+    };
 };
 
 /** Tween a property on an object by dot-path.
