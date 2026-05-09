@@ -1,4 +1,3 @@
-
 const slider = { pos: vec2(-3, 1) };
 const pulser = { color: RED };
 let bouncerY = 4;
