@@ -3696,8 +3696,7 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
     ASSERT(!additiveColor || isColor(additiveColor), 'additiveColor must be a color');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
-    // count the draw and short-circuit in headless mode before any texture or DOM access
-    ++drawCount;
+    // short-circuit before texture lookup — textureInfos[0] is undefined in headless mode
     if (headlessMode) return;
 
     // resolve texture argument: TextureInfo or index
@@ -3717,6 +3716,9 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
         return;
     }
 
+    // Canvas2D path — increment drawCount here (WebGL batch counts via glBatchCount)
+    ++drawCount;
+
     if (!screenSpace)
     {
         pos = worldToScreen(pos);
@@ -3727,10 +3729,14 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
     // pick image source: raw, or tinted bake. Match drawImageColor's
     // "no tint needed" predicate so behavior stays consistent.
     function isWhite(c) { return c.r >= 1 && c.g >= 1 && c.b >= 1; }
+    function isBlack(c) { return c.r <= 0 && c.g <= 0 && c.b <= 0 && c.a <= 0; }
     const noTint = !canvasColorTiles ||
         (additiveColor
             ? isWhite(color.add(additiveColor)) && additiveColor.a <= 0
             : isWhite(color));
+    // alpha is baked into pixels by bakeTintedImage's additive branch;
+    // in that case globalAlpha must NOT also apply color.a
+    const alphaBaked = !noTint && additiveColor && !isBlack(additiveColor);
     const source = noTint
         ? textureInfo.image
         : bakeTintedImage(textureInfo.image, color, additiveColor);
@@ -3739,7 +3745,7 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
     context.save();
     context.translate(pos.x + .5, pos.y + .5);
     context.rotate(angle);
-    context.globalAlpha = color.a;
+    context.globalAlpha = alphaBaked ? 1 : color.a;
 
     const pattern = context.createPattern(source, 'repeat');
     // map pattern-source pixels into user space so the rect contains

@@ -267,8 +267,8 @@ test('drawTextureWrapped is callable in headless mode', async () =>
 {
     const mod = await import('../dist/littlejs.esm.js');
     const { drawTextureWrapped, vec2 } = mod;
-    // headlessMode short-circuits before any rendering, so this just
-    // exercises argument resolution + index-to-TextureInfo lookup
+    // headlessMode short-circuits before texture lookup, so this just
+    // exercises argument-type ASSERTs (which are stripped in release)
     assert.doesNotThrow(() =>
         drawTextureWrapped(vec2(), vec2(1, 1), vec2(2, 2)));
 });
