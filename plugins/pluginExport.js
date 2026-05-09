@@ -65,4 +65,5 @@ export
     Tween,
     tweenProperty,
     Ease,
+    tweenUpdate,
 }

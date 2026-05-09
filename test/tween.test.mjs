@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Tween, tweenProperty, Ease } from '../dist/littlejs.esm.js';
+import { Tween, tweenProperty, Ease, tweenUpdate } from '../dist/littlejs.esm.js';
 
 test('Tween, tweenProperty, Ease are exported from the bundle', () =>
 {
@@ -158,5 +158,69 @@ test('Tween.setEase returns this and updates ease', () =>
     const ret = t.setEase(Ease.SINE);
     assert.equal(ret, t);
     assert.equal(t.ease, Ease.SINE);
+    t.stop();
+});
+
+test('Tween advances toward end as tweenUpdate is called', () =>
+{
+    const calls = [];
+    const t = new Tween((v) => calls.push(v), 0, 10, 1); // 1 second, 0 → 10
+    // constructor pushed start
+    assert.deepEqual(calls, [0]);
+    tweenUpdate(0.5); // halfway
+    assert.equal(calls.length, 2);
+    assert(near(calls[1], 5));
+    t.stop();
+});
+
+test('Tween completes after duration seconds and fires the end value', () =>
+{
+    const calls = [];
+    new Tween((v) => calls.push(v), 0, 10, 1);
+    tweenUpdate(1.0); // exactly one duration
+    // expect [start=0, end=10] — final callback fires with the end value
+    assert.deepEqual(calls, [0, 10]);
+});
+
+test('Tween.then(fn) fires once at completion', () =>
+{
+    let thenCalls = 0;
+    const t = new Tween(() => {}, 0, 1, 1).then(() => thenCalls++);
+    tweenUpdate(1.0);
+    assert.equal(thenCalls, 1);
+    // a second update must not re-fire it (tween is removed from active list)
+    tweenUpdate(1.0);
+    assert.equal(thenCalls, 1);
+});
+
+test('Tween.then returns this for chaining', () =>
+{
+    const t = new Tween(() => {});
+    assert.equal(t.then(() => {}), t);
+    t.stop();
+});
+
+test('Tween that overshoots its remaining life still fires end value once', () =>
+{
+    const calls = [];
+    new Tween((v) => calls.push(v), 0, 10, 1);
+    tweenUpdate(5.0); // way past duration
+    assert.deepEqual(calls, [0, 10]);
+});
+
+test('realTime: true tween advances on realDelta even when gameDelta is 0', () =>
+{
+    const calls = [];
+    new Tween((v) => calls.push(v), 0, 10, 1, { realTime: true });
+    tweenUpdate(0, 1.0); // game frozen, real time advances 1s
+    assert.deepEqual(calls, [0, 10]);
+});
+
+test('Default tween (game time) does not advance when gameDelta is 0', () =>
+{
+    const calls = [];
+    const t = new Tween((v) => calls.push(v), 0, 10, 1);
+    tweenUpdate(0, 1.0); // game frozen, only real advances; default tween ignores realDelta
+    assert.deepEqual(calls, [0]);
     t.stop();
 });

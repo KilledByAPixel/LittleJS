@@ -76,6 +76,22 @@ class Tween
         return this;
     }
 
+    /** Set a single completion callback. Calling `then` again replaces the
+     *  previous callback. Returns this for chaining.
+     *
+     *  Calling `then` after `loop` or `pingPong` overrides the loop chain —
+     *  last call wins.
+     *  @param {function():void} callback
+     *  @returns {Tween}
+     *  @memberof TweenSystem */
+    then(callback)
+    {
+        this.thenCallback = callback;
+        this.loopMode = 0;
+        this.loopRemaining = 0;
+        return this;
+    }
+
     /** Compute the interpolated value at the given remaining `life`.
      *  At life === duration the result is `start`; at life === 0 it is `end`.
      *  @param {number} life
@@ -256,9 +272,53 @@ Ease.BEZIER = (x1, y1, x2, y2) =>
  *  @memberof TweenSystem */
 function tweenProperty() {}
 
-/** Engine plugin hook: called every render frame to advance active tweens.
+/** Engine plugin hook: advance every active tween by the appropriate delta.
+ *  Called once per render frame by the engine (no arguments). May also be
+ *  called explicitly with `(gameDelta, realDelta)` to drive tweens manually
+ *  — useful for headless tests or custom replay/scrubbing systems.
+ *  @param {number} [gameDelta] - Game-time delta in seconds; default: time - lastTime
+ *  @param {number} [realDelta] - Real-time delta in seconds; default: timeReal - lastTimeReal
  *  @memberof TweenSystem */
-function tweenUpdate() {}
+function tweenUpdate(gameDelta, realDelta)
+{
+    if (gameDelta === undefined)
+    {
+        // Engine path: compute deltas from engine time globals.
+        gameDelta = time - lastTime;
+        realDelta = timeReal - lastTimeReal;
+        lastTime = time;
+        lastTimeReal = timeReal;
+    }
+    else if (realDelta === undefined)
+    {
+        // Manual path with one arg: real and game advance together.
+        realDelta = gameDelta;
+    }
+
+    // Iterate in reverse so removals don't disturb iteration.
+    for (let i = tweenActive.length; i--;)
+    {
+        const t = tweenActive[i];
+        if (t.paused) continue;
+        const dt = t.realTime ? realDelta : gameDelta;
+        if (dt <= 0) continue;
+
+        t.life -= dt;
+        if (t.life > 0)
+        {
+            t.callback(t.interp(t.life));
+        }
+        else
+        {
+            // Completion: fire end value, remove from active, fire then-callback.
+            t.callback(t.interp(0));
+            tweenActive.splice(i, 1);
+            const cb = t.thenCallback;
+            t.thenCallback = undefined;
+            if (cb) cb();
+        }
+    }
+}
 
 // Register with the engine so tweens auto-advance.
 engineAddPlugin(tweenUpdate);

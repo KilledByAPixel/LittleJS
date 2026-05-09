@@ -4928,7 +4928,7 @@ declare module "littlejsengine" {
         ease: (arg0: number) => number;
         realTime: boolean;
         paused: boolean;
-        thenCallback: any;
+        thenCallback: () => void;
         loopMode: number;
         loopRemaining: number;
         /** Set the easing curve and return this for chaining.
@@ -4936,6 +4936,15 @@ declare module "littlejsengine" {
          *  @returns {Tween}
          *  @memberof TweenSystem */
         setEase(easeFn: (arg0: number) => number): Tween;
+        /** Set a single completion callback. Calling `then` again replaces the
+         *  previous callback. Returns this for chaining.
+         *
+         *  Calling `then` after `loop` or `pingPong` overrides the loop chain —
+         *  last call wins.
+         *  @param {function():void} callback
+         *  @returns {Tween}
+         *  @memberof TweenSystem */
+        then(callback: () => void): Tween;
         /** Compute the interpolated value at the given remaining `life`.
          *  At life === duration the result is `start`; at life === 0 it is `end`.
          *  @param {number} life
@@ -5048,4 +5057,12 @@ declare module "littlejsengine" {
          */
         function BEZIER(x1: number, y1: number, x2: number, y2: number): (arg0: number) => number;
     }
+    /** Engine plugin hook: advance every active tween by the appropriate delta.
+     *  Called once per render frame by the engine (no arguments). May also be
+     *  called explicitly with `(gameDelta, realDelta)` to drive tweens manually
+     *  — useful for headless tests or custom replay/scrubbing systems.
+     *  @param {number} [gameDelta] - Game-time delta in seconds; default: time - lastTime
+     *  @param {number} [realDelta] - Real-time delta in seconds; default: timeReal - lastTimeReal
+     *  @memberof TweenSystem */
+    export function tweenUpdate(gameDelta?: number, realDelta?: number): void;
 }
