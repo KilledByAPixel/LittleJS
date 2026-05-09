@@ -141,6 +141,43 @@ Ease.PIECEWISE = (...fns) =>
     };
 };
 
+/** Cubic Bezier curve solver in the style of CSS `cubic-bezier`.
+ *  Control points (0,0), (x1,y1), (x2,y2), (1,1).
+ *  @param {number} x1
+ *  @param {number} y1
+ *  @param {number} x2
+ *  @param {number} y2
+ *  @returns {function(number):number}
+ *  @memberof TweenSystem
+ *  @example
+ *  Ease.BEZIER(0.25, 0.1, 0.25, 1) // CSS "ease"
+ */
+Ease.BEZIER = (x1, y1, x2, y2) =>
+{
+    // Parametric cubic Bezier with implicit (0,0) and (1,1) endpoints.
+    const curve = (t) =>
+    {
+        const u = 1 - t;
+        const c1 = 3 * u * u * t;
+        const c2 = 3 * u * t * t;
+        const t3 = t ** 3;
+        return [c1 * x1 + c2 * x2 + t3, c1 * y1 + c2 * y2 + t3];
+    };
+    return (x) =>
+    {
+        // Binary search for t such that curve(t).x ≈ x, then return curve(t).y.
+        let t0 = 0, t1 = 1;
+        for (let i = 0; i < 128; i++)
+        {
+            const tMid = (t0 + t1) / 2;
+            const [bx, by] = curve(tMid);
+            if (Math.abs(bx - x) < 1e-5) return by;
+            if (bx < x) t0 = tMid; else t1 = tMid;
+        }
+        return curve((t0 + t1) / 2)[1];
+    };
+};
+
 /** Tween a property on an object by dot-path.
  *  @memberof TweenSystem */
 function tweenProperty() {}

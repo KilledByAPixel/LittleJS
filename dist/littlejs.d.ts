@@ -4990,5 +4990,17 @@ declare module "littlejsengine" {
          *  @returns {function(number):number}
          *  @memberof TweenSystem */
         function PIECEWISE(...fns: ((arg0: number) => number)[]): (arg0: number) => number;
+        /** Cubic Bezier curve solver in the style of CSS `cubic-bezier`.
+         *  Control points (0,0), (x1,y1), (x2,y2), (1,1).
+         *  @param {number} x1
+         *  @param {number} y1
+         *  @param {number} x2
+         *  @param {number} y2
+         *  @returns {function(number):number}
+         *  @memberof TweenSystem
+         *  @example
+         *  Ease.BEZIER(0.25, 0.1, 0.25, 1) // CSS "ease"
+         */
+        function BEZIER(x1: number, y1: number, x2: number, y2: number): (arg0: number) => number;
     }
 }

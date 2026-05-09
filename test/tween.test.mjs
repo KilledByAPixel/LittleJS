@@ -100,3 +100,23 @@ test('Ease.BOUNCE is easeOutBounce: peaks at 1 in the first half (matches JSDoc 
     // (easeInBounce would be at ~0.234 here.)
     assert(near(Ease.BOUNCE(0.5), 0.765625, 1e-9));
 });
+
+test('Ease.BEZIER(0,0,1,1) is approximately linear', () =>
+{
+    const f = Ease.BEZIER(0, 0, 1, 1);
+    assert(near(f(0), 0, 1e-3));
+    assert(near(f(0.25), 0.25, 1e-3));
+    assert(near(f(0.5), 0.5, 1e-3));
+    assert(near(f(0.75), 0.75, 1e-3));
+    assert(near(f(1), 1, 1e-3));
+});
+
+test('Ease.BEZIER endpoints are (0,0) and (1,1) for symmetric ease-in-out', () =>
+{
+    // ease-in-out style control points
+    const f = Ease.BEZIER(0.42, 0, 0.58, 1);
+    assert(near(f(0), 0, 1e-3));
+    assert(near(f(1), 1, 1e-3));
+    // crosses 0.5 at x=0.5 due to symmetry
+    assert(near(f(0.5), 0.5, 1e-2));
+});
