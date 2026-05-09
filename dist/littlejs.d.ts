@@ -4905,7 +4905,63 @@ declare module "littlejsengine" {
      *  @memberof TweenSystem */
     export function tweenProperty(): void;
     /** Library of static easing curves and curve modifiers.
-     *  @memberof TweenSystem */
+     *  All curves accept `x` in [0,1] and return [0,1] (with possible overshoot
+     *  for ELASTIC/BACK/SPRING/BOUNCE).
+     *  @memberof TweenSystem
+     *  @example
+     *  // Use a basic curve
+     *  new Tween(callback, 0, 10, 1).setEase(Ease.SINE);
+     *  // Use a modifier on a curve
+     *  new Tween(callback, 0, 10, 1).setEase(Ease.OUT(Ease.BACK));
+     */
     export class Ease {
+    }
+    export namespace Ease {
+        /** Linear (identity) curve.
+         *  @param {number} x
+         *  @returns {number}
+         *  @memberof TweenSystem */
+        function LINEAR(x: number): number;
+        /** Power curve factory: `Ease.POWER(n)` returns `x => x**n`.
+         *  Use n=2 for quadratic, n=3 for cubic, etc.
+         *  @param {number} n
+         *  @returns {function(number):number}
+         *  @memberof TweenSystem */
+        function POWER(n: number): (arg0: number) => number;
+        /** Sine ease-in curve: starts slow, ends fast.
+         *  @param {number} x
+         *  @returns {number}
+         *  @memberof TweenSystem */
+        function SINE(x: number): number;
+        /** Circular ease-in curve.
+         *  @param {number} x
+         *  @returns {number}
+         *  @memberof TweenSystem */
+        function CIRC(x: number): number;
+        /** Exponential ease-in curve (`2^(10x-10)`).
+         *  @param {number} x
+         *  @returns {number}
+         *  @memberof TweenSystem */
+        function EXPO(x: number): number;
+        /** Back ease-in: overshoots backward at the start before snapping forward.
+         *  @param {number} x
+         *  @returns {number}
+         *  @memberof TweenSystem */
+        function BACK(x: number): number;
+        /** Elastic ease-in: oscillates with decreasing amplitude.
+         *  @param {number} x
+         *  @returns {number}
+         *  @memberof TweenSystem */
+        function ELASTIC(x: number): number;
+        /** Spring-like ease-out: oscillates outward after passing the target.
+         *  @param {number} x
+         *  @returns {number}
+         *  @memberof TweenSystem */
+        function SPRING(x: number): number;
+        /** Bouncing ease-out: bounces with decreasing height as it approaches 1.
+         *  @param {number} x
+         *  @returns {number}
+         *  @memberof TweenSystem */
+        function BOUNCE(x: number): number;
     }
 }
