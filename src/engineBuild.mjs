@@ -44,6 +44,7 @@ const enginePluginFiles =
     `${PLUGIN_FOLDER}/uiSystem.js`,
     `${PLUGIN_FOLDER}/box2d.js`,
     `${PLUGIN_FOLDER}/drawUtilities.js`,
+    `${PLUGIN_FOLDER}/tween.js`,
 ];
 const engineExtraFiles =
 [

@@ -2210,6 +2210,9 @@ declare module "littlejsengine" {
      *  @param {number} [startDelay] - delay in ms before the effect starts
      *  @memberof Input */
     export function gamepadVibrate(gamepad?: number, duration?: number, strongMagnitude?: number, weakMagnitude?: number, startDelay?: number): void;
+    /** Stop vibration on a gamepad
+     *  @memberof Input */
+    export function gamepadVibrateStop(gamepad?: number): void;
     /** Pulse the vibration hardware if it exists
      *  @param {number|Array} [pattern] - single value in ms or vibration interval array
      *  @memberof Input */
@@ -4894,4 +4897,15 @@ declare module "littlejsengine" {
      *  @param {number} [angle] - Angle to rotate by
      *  @memberof DrawUtilities */
     export function drawThreeSliceScreen(pos: Vector2, size: Vector2, startTile: TileInfo, borderSize?: number, extraSpace?: number, angle?: number): void;
+    /** A numeric tween. See class body for chaining + control methods.
+     *  @memberof TweenSystem */
+    export class Tween {
+    }
+    /** Tween a property on an object by dot-path.
+     *  @memberof TweenSystem */
+    export function tweenProperty(): void;
+    /** Library of static easing curves and curve modifiers.
+     *  @memberof TweenSystem */
+    export class Ease {
+    }
 }

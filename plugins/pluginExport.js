@@ -60,4 +60,9 @@ export
     drawNineSliceScreen,
     drawThreeSlice,
     drawThreeSliceScreen,
+
+    // Tween System
+    Tween,
+    tweenProperty,
+    Ease,
 }
