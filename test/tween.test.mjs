@@ -1,11 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Tween, tweenProperty, Ease, tweenUpdate } from '../dist/littlejs.esm.js';
+import { Tween, tweenProperty, tweenStopAll, tweenUpdate, Ease } from '../dist/littlejs.esm.js';
 
-test('Tween, tweenProperty, Ease are exported from the bundle', () =>
+test('Tween, tweenProperty, tweenStopAll, tweenUpdate, Ease are exported from the bundle', () =>
 {
     assert.equal(typeof Tween, 'function');
     assert.equal(typeof tweenProperty, 'function');
+    assert.equal(typeof tweenStopAll, 'function');
+    assert.equal(typeof tweenUpdate, 'function');
     assert.equal(typeof Ease, 'function');
 });
 
@@ -47,8 +49,14 @@ test('Ease.BOUNCE finishes at 1', () =>
     assert(near(Ease.BOUNCE(1), 1, 1e-6));
 });
 
-test('Ease.IN is identity', () =>
+test('Ease.IN is the identity transformer: returns the curve unchanged', () =>
 {
+    // Direction-modifier shape: takes a curve, returns a curve. Used for
+    // programmatic direction picking, e.g. (bouncy ? Ease.OUT : Ease.IN)(curve).
+    assert.equal(Ease.IN(Ease.SINE), Ease.SINE);
+    assert.equal(Ease.IN(Ease.BACK), Ease.BACK);
+    // The implementation is a true identity function, so passing a number
+    // also returns it unchanged — meaning Ease.IN doubles as a linear curve.
     assert(near(Ease.IN(0), 0));
     assert(near(Ease.IN(0.5), 0.5));
     assert(near(Ease.IN(1), 1));
@@ -443,4 +451,36 @@ test('integration: chain setEase + then + tweenProperty + realTime', () =>
     tweenUpdate(0, 1.0); // finish
     assert(near(obj.value, 100));
     assert.equal(chainFinished, true);
+});
+
+test('Tween.getPercent: 0 at start, 0.5 at midpoint, 1 at completion', () =>
+{
+    const t = new Tween(() => {}, 0, 10, 1);
+    assert.equal(t.getPercent(), 0);
+    tweenUpdate(0.5);
+    assert(near(t.getPercent(), 0.5));
+    tweenUpdate(0.5); // completes the tween
+    assert.equal(t.getPercent(), 1);
+});
+
+test('Tween.getPercent clamps overshoot to 1', () =>
+{
+    const t = new Tween(() => {}, 0, 10, 1);
+    tweenUpdate(5.0); // overshoot
+    assert.equal(t.getPercent(), 1);
+});
+
+test('tweenStopAll stops every active tween and prevents then-callbacks from firing', () =>
+{
+    let cbCalls = 0;
+    let thenCalls = 0;
+    new Tween(() => cbCalls++, 0, 1, 1).then(() => thenCalls += 100);
+    new Tween(() => cbCalls++, 0, 1, 1).then(() => thenCalls += 100);
+    new Tween(() => cbCalls++, 0, 1, 1);
+    // 3 callbacks fired from constructors snapping to start
+    assert.equal(cbCalls, 3);
+    tweenStopAll();
+    tweenUpdate(2.0); // would normally complete every tween, but they're stopped
+    assert.equal(cbCalls, 3); // no advancement — still just the snaps
+    assert.equal(thenCalls, 0); // no then-callbacks fired
 });

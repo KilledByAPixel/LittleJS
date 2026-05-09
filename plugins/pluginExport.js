@@ -64,6 +64,7 @@ export
     // Tween System
     Tween,
     tweenProperty,
-    Ease,
+    tweenStopAll,
     tweenUpdate,
+    Ease,
 }

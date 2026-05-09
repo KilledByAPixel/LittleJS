@@ -823,17 +823,17 @@ declare module "littlejsengine" {
      *  @param {number} x
      *  @return {number}
      *  @memberof Math */
-    export const sign: (x: number) => number;
+    export const sign: any;
     /** Returns hypotenuse of values passed in
      *  @param {...number} values
      *  @return {number}
      *  @memberof Math */
-    export const hypot: (...values: number[]) => number;
+    export const hypot: any;
     /** Returns log2 of value passed in
      *  @param {number} x
      *  @return {number}
      *  @memberof Math */
-    export const log2: (x: number) => number;
+    export const log2: any;
     /** Returns sin of value passed in
      *  @param {number} x
      *  @return {number}
@@ -4928,9 +4928,10 @@ declare module "littlejsengine" {
         ease: (arg0: number) => number;
         realTime: boolean;
         paused: boolean;
-        thenCallback: (() => void) | (() => void) | (() => void);
-        loopMode: number;
-        loopRemaining: number;
+        /** @private completion callback set by then(), loop(), pingPong(). */
+        private thenCallback;
+        /** @private remaining iterations including the current run (loop/pingPong only). */
+        private loopRemaining;
         /** Set the easing curve and return this for chaining.
          *  @param {function(number):number} easeFn
          *  @returns {Tween}
@@ -4939,8 +4940,8 @@ declare module "littlejsengine" {
         /** Set a single completion callback. Calling `then` again replaces the
          *  previous callback. Returns this for chaining.
          *
-         *  Calling `then` after `loop` (or `pingPong` from Task 9) overrides the
-         *  loop chain — last call wins.
+         *  Calling `then` after `loop` or `pingPong` overrides the loop chain
+         *  (last call wins).
          *  @param {function():void} callback
          *  @returns {Tween}
          *  @memberof TweenSystem */
@@ -4949,8 +4950,8 @@ declare module "littlejsengine" {
          *  fresh tween with the same parameters takes over via the `then` slot.
          *  `loop()` with no argument loops forever.
          *
-         *  Mutually exclusive with `pingPong` (added in a later task). Calling
-         *  `then` after `loop` clears the loop (last call wins).
+         *  Mutually exclusive with `pingPong`; calling either replaces the other,
+         *  and calling `then` after either clears the loop (last call wins).
          *  @param {number} [count=Infinity]
          *  @returns {Tween}
          *  @memberof TweenSystem */
@@ -4958,7 +4959,8 @@ declare module "littlejsengine" {
         /** Like `loop`, but swap `start` and `end` between iterations so the value
          *  bounces back and forth. `pingPong()` with no argument bounces forever.
          *
-         *  Mutually exclusive with `loop`.
+         *  Mutually exclusive with `loop`; calling either replaces the other, and
+         *  calling `then` after either clears the loop (last call wins).
          *  @param {number} [count=Infinity]
          *  @returns {Tween}
          *  @memberof TweenSystem */
@@ -4978,6 +4980,11 @@ declare module "littlejsengine" {
          *  @returns {boolean}
          *  @memberof TweenSystem */
         isActive(): boolean;
+        /** Get how far this tween has progressed, from 0 (just started) to 1
+         *  (completed). Clamped — overshoot past completion still reads 1.
+         *  @returns {number}
+         *  @memberof TweenSystem */
+        getPercent(): number;
         /** Compute the interpolated value at the given remaining `life`.
          *  At life === duration the result is `start`; at life === 0 it is `end`.
          *  @param {number} life
@@ -5004,6 +5011,18 @@ declare module "littlejsengine" {
      *  tweenProperty(player, 'pos.x', 0, 10, 2).setEase(Ease.OUT(Ease.SINE));
      */
     export function tweenProperty(target: any, propertyPath: string, start: number, end: number, duration?: number, options?: any): Tween;
+    /** Stop every active tween and clear their then-callbacks. Useful for resets
+     *  on level transitions or when changing scenes.
+     *  @memberof TweenSystem */
+    export function tweenStopAll(): void;
+    /** Engine plugin hook: advance every active tween by the appropriate delta.
+     *  Called once per render frame by the engine (no arguments). May also be
+     *  called explicitly with `(gameDelta, realDelta)` to drive tweens manually
+     *  — useful for headless tests or custom replay/scrubbing systems.
+     *  @param {number} [gameDelta] - Game-time delta in seconds; default: time - lastTime
+     *  @param {number} [realDelta] - Real-time delta in seconds; default: timeReal - lastTimeReal
+     *  @memberof TweenSystem */
+    export function tweenUpdate(gameDelta?: number, realDelta?: number): void;
     /** Library of static easing curves and curve modifiers.
      *  All curves accept `x` in [0,1] and return [0,1] (with possible overshoot
      *  for ELASTIC/BACK/SPRING/BOUNCE).
@@ -5063,11 +5082,19 @@ declare module "littlejsengine" {
          *  @returns {number}
          *  @memberof TweenSystem */
         function BOUNCE(x: number): number;
-        /** Identity wrapper, included for symmetry with OUT and IN_OUT.
-         *  @param {number} x
-         *  @returns {number}
-         *  @memberof TweenSystem */
-        function IN(x: number): number;
+        /** Ease-in direction modifier: returns the curve unchanged. Symmetric with
+         *  `OUT` and `IN_OUT`. Base curves are already ease-in by convention, so
+         *  wrapping a curve in `IN` is a no-op — useful when picking the direction
+         *  programmatically.
+         *  @param {function(number):number} f - Curve to use as ease-in (returned unchanged)
+         *  @returns {function(number):number}
+         *  @memberof TweenSystem
+         *  @example
+         *  // Pick direction at runtime
+         *  const dir = bouncyMode ? Ease.OUT : Ease.IN;
+         *  new Tween(cb, 0, 10, 1).setEase(dir(Ease.BACK));
+         */
+        function IN(f: (arg0: number) => number): (arg0: number) => number;
         /** Reverse a curve so it eases out instead of in: `x => 1 - f(1 - x)`.
          *  @param {function(number):number} f
          *  @returns {function(number):number}
@@ -5103,12 +5130,4 @@ declare module "littlejsengine" {
          */
         function BEZIER(x1: number, y1: number, x2: number, y2: number): (arg0: number) => number;
     }
-    /** Engine plugin hook: advance every active tween by the appropriate delta.
-     *  Called once per render frame by the engine (no arguments). May also be
-     *  called explicitly with `(gameDelta, realDelta)` to drive tweens manually
-     *  — useful for headless tests or custom replay/scrubbing systems.
-     *  @param {number} [gameDelta] - Game-time delta in seconds; default: time - lastTime
-     *  @param {number} [realDelta] - Real-time delta in seconds; default: timeReal - lastTimeReal
-     *  @memberof TweenSystem */
-    export function tweenUpdate(gameDelta?: number, realDelta?: number): void;
 }

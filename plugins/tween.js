@@ -54,11 +54,9 @@ class Tween
         this.realTime = !!options.realTime;
         this.paused = !!options.paused;
 
-        // Internal: completion callback set by then(), loop(), pingPong().
+        /** @private completion callback set by then(), loop(), pingPong(). */
         this.thenCallback = undefined;
-        // Internal: 0=none, 1=loop, 2=pingPong; tracks how thenCallback was assigned.
-        this.loopMode = 0;
-        // Internal: remaining iterations including the current run.
+        /** @private remaining iterations including the current run (loop/pingPong only). */
         this.loopRemaining = 0;
 
         tweenActive.push(this);
@@ -79,15 +77,14 @@ class Tween
     /** Set a single completion callback. Calling `then` again replaces the
      *  previous callback. Returns this for chaining.
      *
-     *  Calling `then` after `loop` (or `pingPong` from Task 9) overrides the
-     *  loop chain — last call wins.
+     *  Calling `then` after `loop` or `pingPong` overrides the loop chain
+     *  (last call wins).
      *  @param {function():void} callback
      *  @returns {Tween}
      *  @memberof TweenSystem */
     then(callback)
     {
         this.thenCallback = callback;
-        this.loopMode = 0;
         this.loopRemaining = 0;
         return this;
     }
@@ -96,14 +93,13 @@ class Tween
      *  fresh tween with the same parameters takes over via the `then` slot.
      *  `loop()` with no argument loops forever.
      *
-     *  Mutually exclusive with `pingPong` (added in a later task). Calling
-     *  `then` after `loop` clears the loop (last call wins).
+     *  Mutually exclusive with `pingPong`; calling either replaces the other,
+     *  and calling `then` after either clears the loop (last call wins).
      *  @param {number} [count=Infinity]
      *  @returns {Tween}
      *  @memberof TweenSystem */
     loop(count = Infinity)
     {
-        this.loopMode = 1;
         this.loopRemaining = count;
         this.thenCallback = () => loopContinuation(this);
         return this;
@@ -112,13 +108,13 @@ class Tween
     /** Like `loop`, but swap `start` and `end` between iterations so the value
      *  bounces back and forth. `pingPong()` with no argument bounces forever.
      *
-     *  Mutually exclusive with `loop`.
+     *  Mutually exclusive with `loop`; calling either replaces the other, and
+     *  calling `then` after either clears the loop (last call wins).
      *  @param {number} [count=Infinity]
      *  @returns {Tween}
      *  @memberof TweenSystem */
     pingPong(count = Infinity)
     {
-        this.loopMode = 2;
         this.loopRemaining = count;
         this.thenCallback = () => pingPongContinuation(this);
         return this;
@@ -150,6 +146,15 @@ class Tween
     isActive()
     {
         return !this.paused && tweenActive.indexOf(this) >= 0;
+    }
+
+    /** Get how far this tween has progressed, from 0 (just started) to 1
+     *  (completed). Clamped — overshoot past completion still reads 1.
+     *  @returns {number}
+     *  @memberof TweenSystem */
+    getPercent()
+    {
+        return percent(this.duration - this.life, 0, this.duration);
     }
 
     /** Compute the interpolated value at the given remaining `life`.
@@ -252,11 +257,19 @@ Ease.BOUNCE = (x) =>
     return 7.5625 * (x -= 10.5 / 11) * x + 0.984375;
 };
 
-/** Identity wrapper, included for symmetry with OUT and IN_OUT.
- *  @param {number} x
- *  @returns {number}
- *  @memberof TweenSystem */
-Ease.IN = (x) => x;
+/** Ease-in direction modifier: returns the curve unchanged. Symmetric with
+ *  `OUT` and `IN_OUT`. Base curves are already ease-in by convention, so
+ *  wrapping a curve in `IN` is a no-op — useful when picking the direction
+ *  programmatically.
+ *  @param {function(number):number} f - Curve to use as ease-in (returned unchanged)
+ *  @returns {function(number):number}
+ *  @memberof TweenSystem
+ *  @example
+ *  // Pick direction at runtime
+ *  const dir = bouncyMode ? Ease.OUT : Ease.IN;
+ *  new Tween(cb, 0, 10, 1).setEase(dir(Ease.BACK));
+ */
+Ease.IN = (f) => f;
 
 /** Reverse a curve so it eases out instead of in: `x => 1 - f(1 - x)`.
  *  @param {function(number):number} f
@@ -367,7 +380,6 @@ function loopContinuation(prev)
     if (prev.loopRemaining !== Infinity && prev.loopRemaining <= 1) return;
     const next = new Tween(prev.callback, prev.start, prev.end, prev.duration,
         { ease: prev.ease, realTime: prev.realTime });
-    next.loopMode = 1;
     next.loopRemaining = prev.loopRemaining === Infinity
         ? Infinity
         : prev.loopRemaining - 1;
@@ -380,7 +392,6 @@ function pingPongContinuation(prev)
     if (prev.loopRemaining !== Infinity && prev.loopRemaining <= 1) return;
     const next = new Tween(prev.callback, prev.end, prev.start, prev.duration,
         { ease: prev.ease, realTime: prev.realTime });
-    next.loopMode = 2;
     next.loopRemaining = prev.loopRemaining === Infinity
         ? Infinity
         : prev.loopRemaining - 1;
@@ -433,6 +444,15 @@ function tweenUpdate(gameDelta, realDelta)
             if (cb) cb();
         }
     }
+}
+
+/** Stop every active tween and clear their then-callbacks. Useful for resets
+ *  on level transitions or when changing scenes.
+ *  @memberof TweenSystem */
+function tweenStopAll()
+{
+    for (const t of tweenActive) t.thenCallback = undefined;
+    tweenActive.length = 0;
 }
 
 // Register with the engine so tweens auto-advance.
