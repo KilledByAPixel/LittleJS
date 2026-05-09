@@ -248,6 +248,7 @@ export
     drawTile,
     drawRect,
     drawRectGradient,
+    drawTextureWrapped,
     drawLineList,
     drawLine,
     drawPoly,

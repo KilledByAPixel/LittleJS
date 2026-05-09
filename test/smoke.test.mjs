@@ -256,3 +256,19 @@ test('TileLayer extends CanvasLayer and stubs render methods in headless', () =>
     assert.doesNotThrow(() => tl.render());
     assert.doesNotThrow(() => tl.redraw());
 });
+
+test('drawTextureWrapped is exported', async () =>
+{
+    const mod = await import('../dist/littlejs.esm.js');
+    assert.equal(typeof mod.drawTextureWrapped, 'function');
+});
+
+test('drawTextureWrapped is callable in headless mode', async () =>
+{
+    const mod = await import('../dist/littlejs.esm.js');
+    const { drawTextureWrapped, vec2 } = mod;
+    // headlessMode short-circuits before any rendering, so this just
+    // exercises argument resolution + index-to-TextureInfo lookup
+    assert.doesNotThrow(() =>
+        drawTextureWrapped(vec2(), vec2(1, 1), vec2(2, 2)));
+});

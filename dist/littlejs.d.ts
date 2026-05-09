@@ -1745,6 +1745,21 @@ declare module "littlejsengine" {
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function drawRectGradient(pos: Vector2, size?: Vector2, colorTop?: Color, colorBottom?: Color, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    /** Draw a texture tiled (wrapped) across a rectangle in world space.
+     *  Useful for backgrounds, repeating patterns, and seamless fills.
+     *  The whole texture is tiled — sub-region (TileInfo) wrapping is not supported.
+     *  @param {Vector2}  pos          - Center of the rect in world space
+     *  @param {Vector2}  size         - Size of the rect in world space
+     *  @param {Vector2}  wrapCount    - How many times the texture repeats (x, y)
+     *  @param {TextureInfo|number} [texture=0] - TextureInfo or texture index into textureInfos
+     *  @param {Color}    [color=WHITE] - Color to modulate with
+     *  @param {number}   [angle=0] - Angle to rotate by
+     *  @param {Color}    [additiveColor] - Additive color to be applied if any
+     *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering?
+     *  @param {boolean}  [screenSpace=false] - Are pos and size in screen space?
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
+     *  @memberof Draw */
+    export function drawTextureWrapped(pos: Vector2, size: Vector2, wrapCount: Vector2, texture?: TextureInfo | number, color?: Color, angle?: number, additiveColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw connected lines between a series of points
      *  @param {Array<Vector2>} points
      *  @param {number}  [width]

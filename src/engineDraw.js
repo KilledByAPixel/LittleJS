@@ -401,6 +401,90 @@ function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0,
     }
 }
 
+/** Draw a texture tiled (wrapped) across a rectangle in world space.
+ *  Useful for backgrounds, repeating patterns, and seamless fills.
+ *  The whole texture is tiled — sub-region (TileInfo) wrapping is not supported.
+ *  @param {Vector2}  pos          - Center of the rect in world space
+ *  @param {Vector2}  size         - Size of the rect in world space
+ *  @param {Vector2}  wrapCount    - How many times the texture repeats (x, y)
+ *  @param {TextureInfo|number} [texture=0] - TextureInfo or texture index into textureInfos
+ *  @param {Color}    [color=WHITE] - Color to modulate with
+ *  @param {number}   [angle=0] - Angle to rotate by
+ *  @param {Color}    [additiveColor] - Additive color to be applied if any
+ *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering?
+ *  @param {boolean}  [screenSpace=false] - Are pos and size in screen space?
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
+ *  @memberof Draw */
+function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
+    angle=0, additiveColor, useWebGL=glEnable, screenSpace=false, context)
+{
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(isVector2(size), 'size must be a vec2');
+    ASSERT(isVector2(wrapCount), 'wrapCount must be a vec2');
+    ASSERT(isColor(color), 'color is invalid');
+    ASSERT(isNumber(angle), 'angle must be a number');
+    ASSERT(!additiveColor || isColor(additiveColor), 'additiveColor must be a color');
+    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+
+    // count the draw and short-circuit in headless mode before any texture or DOM access
+    ++drawCount;
+    if (headlessMode) return;
+
+    // resolve texture argument: TextureInfo or index
+    const textureInfo = typeof texture === 'number' ? textureInfos[texture] : texture;
+    ASSERT(textureInfo instanceof TextureInfo, 'texture not loaded');
+    ASSERT(textureInfo.size.x > 0, 'texture not loaded');
+
+    if (useWebGL && glEnable)
+    {
+        ASSERT(!!glContext, 'WebGL is not enabled!');
+        if (screenSpace)
+            [pos, size, angle] = screenToWorldTransform(pos, size, angle);
+        glSetTexture(textureInfo.glTexture);
+        glDraw(pos.x, pos.y, size.x, size.y, angle,
+            0, 0, wrapCount.x, wrapCount.y,
+            color.rgbaInt(), additiveColor && additiveColor.rgbaInt());
+        return;
+    }
+
+    if (!screenSpace)
+    {
+        pos = worldToScreen(pos);
+        size = size.scale(cameraScale);
+        angle -= cameraAngle;
+    }
+
+    // pick image source: raw, or tinted bake. Match drawImageColor's
+    // "no tint needed" predicate so behavior stays consistent.
+    function isWhite(c) { return c.r >= 1 && c.g >= 1 && c.b >= 1; }
+    const noTint = !canvasColorTiles ||
+        (additiveColor
+            ? isWhite(color.add(additiveColor)) && additiveColor.a <= 0
+            : isWhite(color));
+    const source = noTint
+        ? textureInfo.image
+        : bakeTintedImage(textureInfo.image, color, additiveColor);
+
+    context = context || drawContext;
+    context.save();
+    context.translate(pos.x + .5, pos.y + .5);
+    context.rotate(angle);
+    context.globalAlpha = color.a;
+
+    const pattern = context.createPattern(source, 'repeat');
+    // map pattern-source pixels into user space so the rect contains
+    // wrapCount.x × wrapCount.y repeats
+    const m = new DOMMatrix()
+        .translate(-size.x/2, -size.y/2)
+        .scale(size.x / (wrapCount.x * source.width),
+               size.y / (wrapCount.y * source.height));
+    pattern.setTransform(m);
+    context.fillStyle = pattern;
+    context.fillRect(-size.x/2, -size.y/2, size.x, size.y);
+    context.globalAlpha = 1;
+    context.restore();
+}
+
 /** Draw connected lines between a series of points
  *  @param {Array<Vector2>} points
  *  @param {number}  [width]
@@ -922,6 +1006,44 @@ function combineCanvases()
     glCopyToContext(workContext);
     workContext.drawImage(mainCanvas, 0, 0);
     mainContext.drawImage(workCanvas, 0, 0);
+}
+
+// Internal: bake a color/additive-color tint into workReadCanvas at the
+// image's native resolution. Returns the work canvas, suitable for
+// passing to context.createPattern. Used by drawTextureWrapped's
+// Canvas2D path. Caller is responsible for short-circuiting when no
+// tint is needed (i.e. color is white and additiveColor is black/none).
+function bakeTintedImage(image, color, additiveColor)
+{
+    function isBlack(c) { return c.r <= 0 && c.g <= 0 && c.b <= 0 && c.a <= 0; }
+    const w = image.width|0, h = image.height|0;
+    workReadCanvas.width = w;
+    workReadCanvas.height = h;
+    workReadContext.drawImage(image, 0, 0);
+
+    const imageData = workReadContext.getImageData(0, 0, w, h);
+    const data = imageData.data;
+    if (additiveColor && !isBlack(additiveColor))
+    {
+        // multiply + additive (slower)
+        const colorMultiply = [color.r, color.g, color.b, color.a];
+        const colorAdd = [additiveColor.r * 255, additiveColor.g * 255,
+                          additiveColor.b * 255, additiveColor.a * 255];
+        for (let i = 0; i < data.length; ++i)
+            data[i] = data[i] * colorMultiply[i&3] + colorAdd[i&3] |0;
+    }
+    else
+    {
+        // multiply only (faster, alpha left intact for globalAlpha)
+        for (let i = 0; i < data.length; i+=4)
+        {
+            data[i  ] *= color.r;
+            data[i+1] *= color.g;
+            data[i+2] *= color.b;
+        }
+    }
+    workReadContext.putImageData(imageData, 0, 0);
+    return workReadCanvas;
 }
 
 /** Helper function to draw an image with color and additive color applied
