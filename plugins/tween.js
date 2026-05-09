@@ -19,9 +19,83 @@ let lastTimeReal = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** A numeric tween. See class body for chaining + control methods.
- *  @memberof TweenSystem */
-class Tween {}
+/** A numeric tween: drives a callback with a value interpolated between
+ *  `start` and `end` over `duration` seconds. Pauses with the game by default.
+ *  @memberof TweenSystem
+ *  @example
+ *  // Animate a fade-out over 2 seconds with an ease-out sine curve.
+ *  new Tween((v) => obj.alpha = v, 1, 0, 2, { ease: Ease.OUT(Ease.SINE) });
+ */
+class Tween
+{
+    /** Create a new tween. The callback fires immediately with `start` so the
+     *  target snaps to the start value on the same frame the tween is created.
+     *  @param {function(number):void} callback - Called with the interpolated value each frame
+     *  @param {number} [start=0] - Starting value
+     *  @param {number} [end=1] - Ending value
+     *  @param {number} [duration=1] - Duration in seconds
+     *  @param {Object} [options]
+     *  @param {function(number):number} [options.ease] - Easing function (defaults to LINEAR)
+     *  @param {boolean} [options.realTime=false] - Ignore game pause and time scale
+     *  @param {boolean} [options.paused=false] - Start in paused state */
+    constructor(callback, start = 0, end = 1, duration = 1, options = {})
+    {
+        ASSERT(typeof callback === 'function', 'Tween callback must be a function');
+        ASSERT(isNumber(start), 'Tween start must be a number');
+        ASSERT(isNumber(end), 'Tween end must be a number');
+        ASSERT(isNumber(duration) && duration > 0, 'Tween duration must be > 0');
+
+        this.callback = callback;
+        this.start = start;
+        this.end = end;
+        this.duration = duration;
+        this.life = duration;
+        this.ease = options.ease || Ease.LINEAR;
+        this.realTime = !!options.realTime;
+        this.paused = !!options.paused;
+
+        // Internal: completion callback set by then(), loop(), pingPong().
+        this.thenCallback = undefined;
+        // Internal: 0=none, 1=loop, 2=pingPong; tracks how thenCallback was assigned.
+        this.loopMode = 0;
+        // Internal: remaining iterations including the current run.
+        this.loopRemaining = 0;
+
+        tweenActive.push(this);
+        // Snap target to start immediately.
+        callback(this.interp(duration));
+    }
+
+    /** Set the easing curve and return this for chaining.
+     *  @param {function(number):number} easeFn
+     *  @returns {Tween}
+     *  @memberof TweenSystem */
+    setEase(easeFn)
+    {
+        this.ease = easeFn;
+        return this;
+    }
+
+    /** Compute the interpolated value at the given remaining `life`.
+     *  At life === duration the result is `start`; at life === 0 it is `end`.
+     *  @param {number} life
+     *  @returns {number}
+     *  @memberof TweenSystem */
+    interp(life)
+    {
+        const x = (this.duration - life) / this.duration;
+        return this.start + (this.end - this.start) * this.ease(x);
+    }
+
+    /** Remove this tween from the active list and prevent any pending then-callback.
+     *  @memberof TweenSystem */
+    stop()
+    {
+        const i = tweenActive.indexOf(this);
+        if (i >= 0) tweenActive.splice(i, 1);
+        this.thenCallback = undefined;
+    }
+}
 
 /** Library of static easing curves and curve modifiers.
  *  All curves accept `x` in [0,1] and return [0,1] (with possible overshoot

@@ -4897,9 +4897,54 @@ declare module "littlejsengine" {
      *  @param {number} [angle] - Angle to rotate by
      *  @memberof DrawUtilities */
     export function drawThreeSliceScreen(pos: Vector2, size: Vector2, startTile: TileInfo, borderSize?: number, extraSpace?: number, angle?: number): void;
-    /** A numeric tween. See class body for chaining + control methods.
-     *  @memberof TweenSystem */
+    /** A numeric tween: drives a callback with a value interpolated between
+     *  `start` and `end` over `duration` seconds. Pauses with the game by default.
+     *  @memberof TweenSystem
+     *  @example
+     *  // Animate a fade-out over 2 seconds with an ease-out sine curve.
+     *  new Tween((v) => obj.alpha = v, 1, 0, 2, { ease: Ease.OUT(Ease.SINE) });
+     */
     export class Tween {
+        /** Create a new tween. The callback fires immediately with `start` so the
+         *  target snaps to the start value on the same frame the tween is created.
+         *  @param {function(number):void} callback - Called with the interpolated value each frame
+         *  @param {number} [start=0] - Starting value
+         *  @param {number} [end=1] - Ending value
+         *  @param {number} [duration=1] - Duration in seconds
+         *  @param {Object} [options]
+         *  @param {function(number):number} [options.ease] - Easing function (defaults to LINEAR)
+         *  @param {boolean} [options.realTime=false] - Ignore game pause and time scale
+         *  @param {boolean} [options.paused=false] - Start in paused state */
+        constructor(callback: (arg0: number) => void, start?: number, end?: number, duration?: number, options?: {
+            ease?: (arg0: number) => number;
+            realTime?: boolean;
+            paused?: boolean;
+        });
+        callback: (arg0: number) => void;
+        start: number;
+        end: number;
+        duration: number;
+        life: number;
+        ease: (arg0: number) => number;
+        realTime: boolean;
+        paused: boolean;
+        thenCallback: any;
+        loopMode: number;
+        loopRemaining: number;
+        /** Set the easing curve and return this for chaining.
+         *  @param {function(number):number} easeFn
+         *  @returns {Tween}
+         *  @memberof TweenSystem */
+        setEase(easeFn: (arg0: number) => number): Tween;
+        /** Compute the interpolated value at the given remaining `life`.
+         *  At life === duration the result is `start`; at life === 0 it is `end`.
+         *  @param {number} life
+         *  @returns {number}
+         *  @memberof TweenSystem */
+        interp(life: number): number;
+        /** Remove this tween from the active list and prevent any pending then-callback.
+         *  @memberof TweenSystem */
+        stop(): void;
     }
     /** Tween a property on an object by dot-path.
      *  @memberof TweenSystem */

@@ -120,3 +120,43 @@ test('Ease.BEZIER endpoints are (0,0) and (1,1) for symmetric ease-in-out', () =
     // crosses 0.5 at x=0.5 due to symmetry
     assert(near(f(0.5), 0.5, 1e-2));
 });
+
+test('Tween constructor calls callback once with the start value', () =>
+{
+    const calls = [];
+    const t = new Tween((v) => calls.push(v), 5, 10, 1);
+    assert.deepEqual(calls, [5]);
+    t.stop(); // cleanup
+});
+
+test('Tween constructor stores duration, ease, realTime, paused options', () =>
+{
+    const t = new Tween(() => {}, 0, 1, 2, { ease: Ease.SINE, realTime: true, paused: true });
+    assert.equal(t.duration, 2);
+    assert.equal(t.life, 2);
+    assert.equal(t.ease, Ease.SINE);
+    assert.equal(t.realTime, true);
+    assert.equal(t.paused, true);
+    t.stop();
+});
+
+test('Tween defaults: start=0 end=1 duration=1 ease=LINEAR realTime=false paused=false', () =>
+{
+    const t = new Tween(() => {});
+    assert.equal(t.start, 0);
+    assert.equal(t.end, 1);
+    assert.equal(t.duration, 1);
+    assert.equal(t.ease, Ease.LINEAR);
+    assert.equal(t.realTime, false);
+    assert.equal(t.paused, false);
+    t.stop();
+});
+
+test('Tween.setEase returns this and updates ease', () =>
+{
+    const t = new Tween(() => {});
+    const ret = t.setEase(Ease.SINE);
+    assert.equal(ret, t);
+    assert.equal(t.ease, Ease.SINE);
+    t.stop();
+});
