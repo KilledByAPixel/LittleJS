@@ -17,6 +17,10 @@ const tweenActive = [];
 let lastTime = 0;
 let lastTimeReal = 0;
 
+// True if the value is an instance of a class that exposes a numeric-percent
+// `lerp(other, percent)` method (Vector2, Color, or any future class).
+function isLerpable(v) { return v && typeof v.lerp === 'function'; }
+
 ///////////////////////////////////////////////////////////////////////////////
 
 /** A numeric tween: drives a callback with a value interpolated between
@@ -30,9 +34,14 @@ class Tween
 {
     /** Create a new tween. The callback fires immediately with `start` so the
      *  target snaps to the start value on the same frame the tween is created.
-     *  @param {function(number):void} callback - Called with the interpolated value each frame
-     *  @param {number} [start=0] - Starting value
-     *  @param {number} [end=1] - Ending value
+     *
+     *  `start` and `end` may be numbers, Vector2 instances, Color instances, or
+     *  any object exposing a `lerp(other, percent) => sameType` method. The
+     *  callback receives the interpolated value (a number, or a fresh instance
+     *  for lerp-able types). Both endpoints must be the same type.
+     *  @param {function(number|Vector2|Color):void} callback - Called with the interpolated value each frame
+     *  @param {number|Vector2|Color} [start=0] - Starting value
+     *  @param {number|Vector2|Color} [end=1] - Ending value
      *  @param {number} [duration=1] - Duration in seconds
      *  @param {Object} [options]
      *  @param {function(number):number} [options.ease] - Easing function (defaults to LINEAR)
@@ -41,8 +50,16 @@ class Tween
     constructor(callback, start = 0, end = 1, duration = 1, options = {})
     {
         ASSERT(typeof callback === 'function', 'Tween callback must be a function');
-        ASSERT(isNumber(start), 'Tween start must be a number');
-        ASSERT(isNumber(end), 'Tween end must be a number');
+        if (isLerpable(start))
+        {
+            ASSERT(start.constructor === end.constructor,
+                'Tween start and end must be the same type');
+        }
+        else
+        {
+            ASSERT(isNumber(start), 'Tween start must be a number or have a .lerp method');
+            ASSERT(isNumber(end),   'Tween end must be a number when start is a number');
+        }
         ASSERT(isNumber(duration) && duration > 0, 'Tween duration must be > 0');
 
         this.callback = callback;
@@ -164,8 +181,10 @@ class Tween
      *  @memberof TweenSystem */
     interp(life)
     {
-        const x = (this.duration - life) / this.duration;
-        return this.start + (this.end - this.start) * this.ease(x);
+        const x = this.ease((this.duration - life) / this.duration);
+        if (isLerpable(this.start))
+            return this.start.lerp(this.end, x);
+        return this.start + (this.end - this.start) * x;
     }
 
     /** Remove this tween from the active list and prevent any pending then-callback.

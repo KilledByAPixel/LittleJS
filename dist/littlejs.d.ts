@@ -96,7 +96,7 @@ declare module "littlejsengine" {
      *  @type {number}
      *  @memberof Engine */
     export let time: number;
-    /** Actual clock time since start in seconds (not affected by pause or frame rate clamping)
+    /** Actual clock time since start in seconds (not affected by pause, timescale, or frame rate clamping)
      *  @type {number}
      *  @memberof Engine */
     export let timeReal: number;
@@ -4907,22 +4907,27 @@ declare module "littlejsengine" {
     export class Tween {
         /** Create a new tween. The callback fires immediately with `start` so the
          *  target snaps to the start value on the same frame the tween is created.
-         *  @param {function(number):void} callback - Called with the interpolated value each frame
-         *  @param {number} [start=0] - Starting value
-         *  @param {number} [end=1] - Ending value
+         *
+         *  `start` and `end` may be numbers, Vector2 instances, Color instances, or
+         *  any object exposing a `lerp(other, percent) => sameType` method. The
+         *  callback receives the interpolated value (a number, or a fresh instance
+         *  for lerp-able types). Both endpoints must be the same type.
+         *  @param {function(number|Vector2|Color):void} callback - Called with the interpolated value each frame
+         *  @param {number|Vector2|Color} [start=0] - Starting value
+         *  @param {number|Vector2|Color} [end=1] - Ending value
          *  @param {number} [duration=1] - Duration in seconds
          *  @param {Object} [options]
          *  @param {function(number):number} [options.ease] - Easing function (defaults to LINEAR)
          *  @param {boolean} [options.useRealTime=false] - Advance even when the game is paused (matches Timer's useRealTime)
          *  @param {boolean} [options.paused=false] - Start in paused state */
-        constructor(callback: (arg0: number) => void, start?: number, end?: number, duration?: number, options?: {
+        constructor(callback: (arg0: number | Vector2 | Color) => void, start?: number | Vector2 | Color, end?: number | Vector2 | Color, duration?: number, options?: {
             ease?: (arg0: number) => number;
             useRealTime?: boolean;
             paused?: boolean;
         });
-        callback: (arg0: number) => void;
-        start: number;
-        end: number;
+        callback: (arg0: number | Vector2 | Color) => void;
+        start: number | Vector2 | Color;
+        end: number | Vector2 | Color;
         duration: number;
         life: number;
         ease: (arg0: number) => number;

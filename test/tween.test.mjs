@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Tween, tweenProperty, tweenStopAll, tweenUpdate, Ease } from '../dist/littlejs.esm.js';
+import { Tween, tweenProperty, tweenStopAll, tweenUpdate, Ease, vec2, rgb, Vector2, Color } from '../dist/littlejs.esm.js';
 
 test('Tween, tweenProperty, tweenStopAll, tweenUpdate, Ease are exported from the bundle', () =>
 {
@@ -483,4 +483,61 @@ test('tweenStopAll stops every active tween and prevents then-callbacks from fir
     tweenUpdate(2.0); // would normally complete every tween, but they're stopped
     assert.equal(cbCalls, 3); // no advancement — still just the snaps
     assert.equal(thenCalls, 0); // no then-callbacks fired
+});
+
+test('Tween accepts Vector2 start/end and interpolates each component', () =>
+{
+    const calls = [];
+    new Tween((v) => calls.push(v), vec2(0, 0), vec2(10, 20), 1);
+    // Constructor snap fires the start value
+    assert.equal(calls.length, 1);
+    assert(calls[0] instanceof Vector2);
+    assert(near(calls[0].x, 0));
+    assert(near(calls[0].y, 0));
+
+    // Halfway: interpolated component-wise
+    tweenUpdate(0.5);
+    assert.equal(calls.length, 2);
+    assert(near(calls[1].x, 5));
+    assert(near(calls[1].y, 10));
+
+    // Completion: end value fires once
+    tweenUpdate(0.5);
+    assert.equal(calls.length, 3);
+    assert(near(calls[2].x, 10));
+    assert(near(calls[2].y, 20));
+});
+
+test('Tween accepts Color start/end and interpolates each channel', () =>
+{
+    const calls = [];
+    new Tween((c) => calls.push(c), rgb(0, 0, 0, 1), rgb(1, 1, 1, 0), 1);
+    // Halfway should be (0.5, 0.5, 0.5, 0.5)
+    tweenUpdate(0.5);
+    const mid = calls[calls.length - 1];
+    assert(mid instanceof Color);
+    assert(near(mid.r, 0.5));
+    assert(near(mid.g, 0.5));
+    assert(near(mid.b, 0.5));
+    assert(near(mid.a, 0.5));
+});
+
+test('tweenProperty walks dot-paths and assigns Vector2 values', () =>
+{
+    const obj = { pos: vec2(0, 0) };
+    tweenProperty(obj, 'pos', vec2(0, 0), vec2(10, 20), 1);
+    // Constructor snap: obj.pos is replaced with a fresh Vector2 equal to start
+    assert(obj.pos instanceof Vector2);
+    assert(near(obj.pos.x, 0));
+    assert(near(obj.pos.y, 0));
+
+    // Completion
+    tweenUpdate(1.0);
+    assert(near(obj.pos.x, 10));
+    assert(near(obj.pos.y, 20));
+});
+
+test('Tween throws on type mismatch (Vector2 start, Color end)', () =>
+{
+    assert.throws(() => new Tween(() => {}, vec2(0, 0), rgb(1, 0, 0, 1), 1));
 });
