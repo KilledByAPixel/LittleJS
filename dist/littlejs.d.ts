@@ -4928,7 +4928,7 @@ declare module "littlejsengine" {
         ease: (arg0: number) => number;
         realTime: boolean;
         paused: boolean;
-        thenCallback: () => void;
+        thenCallback: (() => void) | (() => void);
         loopMode: number;
         loopRemaining: number;
         /** Set the easing curve and return this for chaining.
@@ -4938,10 +4938,23 @@ declare module "littlejsengine" {
         setEase(easeFn: (arg0: number) => number): Tween;
         /** Set a single completion callback. Calling `then` again replaces the
          *  previous callback. Returns this for chaining.
+         *
+         *  Calling `then` after `loop` (or `pingPong` from Task 9) overrides the
+         *  loop chain — last call wins.
          *  @param {function():void} callback
          *  @returns {Tween}
          *  @memberof TweenSystem */
         then(callback: () => void): Tween;
+        /** Repeat this tween `n` total times. After each iteration finishes, a
+         *  fresh tween with the same parameters takes over via the `then` slot.
+         *  `loop()` with no argument loops forever.
+         *
+         *  Mutually exclusive with `pingPong` (added in a later task). Calling
+         *  `then` after `loop` clears the loop (last call wins).
+         *  @param {number} [count=Infinity]
+         *  @returns {Tween}
+         *  @memberof TweenSystem */
+        loop(count?: number): Tween;
         /** Pause this tween. While paused, tweenUpdate skips it.
          *  @memberof TweenSystem */
         pause(): void;

@@ -317,3 +317,46 @@ test('Tween.isActive reflects active list + pause', () =>
     t.stop();
     assert.equal(t.isActive(), false);
 });
+
+test('Tween.loop(3) runs 3 total iterations', () =>
+{
+    const calls = [];
+    new Tween((v) => calls.push(v), 0, 10, 1).loop(3);
+    // iteration 1: constructor pushes 0; tweenUpdate(1.0) pushes 10
+    tweenUpdate(1.0);
+    // then-callback fires, creates iteration 2; that constructor pushes 0
+    // iteration 2: tweenUpdate below pushes 10, etc
+    tweenUpdate(1.0);
+    tweenUpdate(1.0);
+    // 3 iterations × 2 callback fires (start, end) each = 6 calls
+    assert.deepEqual(calls, [0, 10, 0, 10, 0, 10]);
+});
+
+test('Tween.loop(1) is the same as no loop (chain ends after first iteration)', () =>
+{
+    const calls = [];
+    new Tween((v) => calls.push(v), 0, 10, 1).loop(1);
+    tweenUpdate(1.0);
+    tweenUpdate(1.0); // no second iteration scheduled
+    assert.deepEqual(calls, [0, 10]);
+});
+
+test('Tween.loop returns this for chaining', () =>
+{
+    const t = new Tween(() => {});
+    assert.equal(t.loop(2), t);
+    t.stop();
+});
+
+test('Calling Tween.then after Tween.loop overrides the loop (last call wins)', () =>
+{
+    let thenCalls = 0;
+    const calls = [];
+    new Tween((v) => { calls.push(v); }, 0, 10, 1)
+        .loop(5)
+        .then(() => thenCalls++);
+    tweenUpdate(1.0); // iteration 1 ends; then() fires its callback; loop chain is replaced
+    assert.equal(thenCalls, 1);
+    tweenUpdate(1.0); // no further iterations
+    assert.deepEqual(calls, [0, 10]);
+});

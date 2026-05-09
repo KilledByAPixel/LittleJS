@@ -12505,12 +12505,34 @@ class Tween
 
     /** Set a single completion callback. Calling `then` again replaces the
      *  previous callback. Returns this for chaining.
+     *
+     *  Calling `then` after `loop` (or `pingPong` from Task 9) overrides the
+     *  loop chain — last call wins.
      *  @param {function():void} callback
      *  @returns {Tween}
      *  @memberof TweenSystem */
     then(callback)
     {
         this.thenCallback = callback;
+        this.loopMode = 0;
+        this.loopRemaining = 0;
+        return this;
+    }
+
+    /** Repeat this tween `n` total times. After each iteration finishes, a
+     *  fresh tween with the same parameters takes over via the `then` slot.
+     *  `loop()` with no argument loops forever.
+     *
+     *  Mutually exclusive with `pingPong` (added in a later task). Calling
+     *  `then` after `loop` clears the loop (last call wins).
+     *  @param {number} [count=Infinity]
+     *  @returns {Tween}
+     *  @memberof TweenSystem */
+    loop(count = Infinity)
+    {
+        this.loopMode = 1;
+        this.loopRemaining = count;
+        this.thenCallback = () => loopContinuation(this);
         return this;
     }
 
@@ -12721,6 +12743,21 @@ Ease.BEZIER = (x1, y1, x2, y2) =>
 /** Tween a property on an object by dot-path.
  *  @memberof TweenSystem */
 function tweenProperty() {}
+
+// Continuation that schedules the next loop iteration when one finishes.
+// Called from the completed tween's `then` slot. Decrements the counter and
+// only spawns a new tween if more iterations remain.
+function loopContinuation(prev)
+{
+    if (prev.loopRemaining !== Infinity && prev.loopRemaining <= 1) return;
+    const next = new Tween(prev.callback, prev.start, prev.end, prev.duration,
+        { ease: prev.ease, realTime: prev.realTime });
+    next.loopMode = 1;
+    next.loopRemaining = prev.loopRemaining === Infinity
+        ? Infinity
+        : prev.loopRemaining - 1;
+    next.thenCallback = () => loopContinuation(next);
+}
 
 /** Engine plugin hook: advance every active tween by the appropriate delta.
  *  Called once per render frame by the engine (no arguments). May also be
