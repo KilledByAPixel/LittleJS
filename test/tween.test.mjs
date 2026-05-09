@@ -427,3 +427,20 @@ test('tweenProperty supports options like realTime', () =>
     tweenUpdate(0, 1.0); // game frozen, real advances
     assert(near(obj.x, 10));
 });
+
+test('integration: chain setEase + then + tweenProperty + realTime', () =>
+{
+    const obj = { value: 0 };
+    let chainFinished = false;
+
+    tweenProperty(obj, 'value', 0, 100, 2, { realTime: true })
+        .setEase(Ease.OUT(Ease.POWER(2)))
+        .then(() => { chainFinished = true; });
+
+    assert.equal(obj.value, 0);
+    tweenUpdate(0, 1.0); // half duration on real time
+    assert(obj.value > 0 && obj.value < 100, 'value should be partway');
+    tweenUpdate(0, 1.0); // finish
+    assert(near(obj.value, 100));
+    assert.equal(chainFinished, true);
+});
