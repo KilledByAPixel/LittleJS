@@ -134,6 +134,7 @@ Timer.valueOf()       // Get how long since elapsed, 0 if not set
 drawTile(pos, size, tileInfo, color=WHITE, angle=0, mirror, additiveColor)
 drawRect(pos, size, color=WHITE, angle=0)
 drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0)
+drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE, angle=0, additiveColor)
 drawLine(posA, posB, width=.1, color=WHITE, pos=(0,0), angle=0)
 drawLineList(points, width=.1, color, wrap=false, pos=(0,0), angle=0)
 drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos, angle=0)

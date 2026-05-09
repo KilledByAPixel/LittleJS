@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.18.3';
+const engineVersion = '1.18.4';
 
 /** Frames per second to update
  *  @type {number}
@@ -4022,6 +4022,12 @@ let textureInfos = [];
  *  @memberof Draw */
 let drawCount;
 
+// internal predicates for tint short-circuiting in canvas2D draw paths
+// isWhite ignores alpha because alpha is applied via globalAlpha, not multiply
+// isBlack includes alpha so additive colors that only contribute alpha are not skipped
+/** @param {Color} c */ function isWhite(c) { return c.r >= 1 && c.g >= 1 && c.b >= 1; }
+/** @param {Color} c */ function isBlack(c) { return c.r <= 0 && c.g <= 0 && c.b <= 0 && c.a <= 0; }
+
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -4375,6 +4381,8 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
     ASSERT(isNumber(angle), 'angle must be a number');
     ASSERT(!additiveColor || isColor(additiveColor), 'additiveColor must be a color');
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+    ASSERT(!(texture instanceof TileInfo),
+        'pass a TextureInfo or texture index, not a TileInfo — use tileInfo.textureInfo');
 
     // short-circuit before texture lookup — textureInfos[0] is undefined in headless mode
     if (headlessMode) return;
@@ -4408,8 +4416,6 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
 
     // pick image source: raw, or tinted bake. Match drawImageColor's
     // "no tint needed" predicate so behavior stays consistent.
-    function isWhite(c) { return c.r >= 1 && c.g >= 1 && c.b >= 1; }
-    function isBlack(c) { return c.r <= 0 && c.g <= 0 && c.b <= 0 && c.a <= 0; }
     const noTint = !canvasColorTiles ||
         (additiveColor
             ? isWhite(color.add(additiveColor)) && additiveColor.a <= 0
@@ -4971,7 +4977,6 @@ function combineCanvases()
 // tint is needed (i.e. color is white and additiveColor is black/none).
 function bakeTintedImage(image, color, additiveColor)
 {
-    function isBlack(c) { return c.r <= 0 && c.g <= 0 && c.b <= 0 && c.a <= 0; }
     const w = image.width|0, h = image.height|0;
     workReadCanvas.width = w;
     workReadCanvas.height = h;
@@ -4990,7 +4995,7 @@ function bakeTintedImage(image, color, additiveColor)
     }
     else
     {
-        // multiply only (faster, alpha left intact for globalAlpha)
+        // RGB only, faster — alpha left intact for the caller
         for (let i = 0; i < data.length; i+=4)
         {
             data[i  ] *= color.r;
@@ -5020,8 +5025,6 @@ function bakeTintedImage(image, color, additiveColor)
  *  @memberof Draw */
 function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight, color, additiveColor, bleed=0)
 {
-    function isWhite(c) { return c.r >= 1 && c.g >= 1 && c.b >= 1; }
-    function isBlack(c) { return c.r <= 0 && c.g <= 0 && c.b <= 0 && c.a <= 0; }
     const sx2 = bleed;
     const sy2 = bleed;
     sWidth  = max(1,sWidth|0);
