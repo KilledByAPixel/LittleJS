@@ -99,15 +99,26 @@ test('Ease.IN_OUT(LINEAR) at 0.5 is 0.5 (regression: original referenced undefin
     assert(near(f(1), 1, 1e-3));
 });
 
-test('Ease.BOUNCE is easeOutBounce: peaks at 1 in the first half (matches JSDoc "ease-out")', () =>
+test('Ease.BOUNCE is the ease-in form (slow ramp, bouncing impacts near the end)', () =>
 {
-    // First peak (impact) at x = 4/11 ≈ 0.36 — this is the easeOutBounce signature.
-    // If someone refactors BOUNCE to easeInBounce by mistake (e.g., wrapping in Ease.OUT),
-    // this test will catch it because easeInBounce stays near 0 until x ≈ 0.64.
-    assert(near(Ease.BOUNCE(4/11), 1, 1e-9));
-    // At x=0.5 (between first impact at 4/11 and second at 8/11) the value dips back to 0.75.
-    // (easeInBounce would be at ~0.234 here.)
-    assert(near(Ease.BOUNCE(0.5), 0.765625, 1e-9));
+    // Mirror of easeOutBounce: where easeOutBounce peaks at 1 at x = 4/11
+    // (early), easeInBounce reaches 0 at x = 1 - 4/11 = 7/11 (late dip near
+    // the start). This direction matches the other ease-in base curves.
+    assert(near(Ease.BOUNCE(7/11), 0, 1e-9));
+    // At x=0.5 the ease-in form is 1 - 0.765625 = 0.234375.
+    assert(near(Ease.BOUNCE(0.5), 0.234375, 1e-9));
+    // Endpoints
+    assert(near(Ease.BOUNCE(0), 0, 1e-9));
+    assert(near(Ease.BOUNCE(1), 1, 1e-9));
+});
+
+test('Ease.OUT(Ease.BOUNCE) is the canonical "ground impact" easeOutBounce', () =>
+{
+    const f = Ease.OUT(Ease.BOUNCE);
+    // Now THIS is the form where the value peaks at 1 at x = 4/11 (early
+    // bounce) — the shape users expect when they want a bouncing landing.
+    assert(near(f(4/11), 1, 1e-9));
+    assert(near(f(0.5), 0.765625, 1e-9));
 });
 
 test('Ease.BEZIER(0,0,1,1) is approximately linear', () =>

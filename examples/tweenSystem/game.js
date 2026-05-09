@@ -24,9 +24,9 @@ const ROW_LOOP      =  3.6;
 const ROW_PINGPONG  =  1.8;
 const ROW_EASE_TOP  =  0;
 const EASE_SPACING  =  1.2;
-const ROW_REALTIME  = -8.5;
-const ROW_VECTOR2   = -10.2;
-const ROW_COLOR     = -11.7;
+const ROW_REALTIME  = -10.0;
+const ROW_VECTOR2   = -11.7;
+const ROW_COLOR     = -13.2;
 const LABEL_X       = -9;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -48,7 +48,9 @@ const easingDemos =
     ['OUT(POWER(2))',  Ease.OUT(Ease.POWER(2))],
     ['OUT(BACK)',      Ease.OUT(Ease.BACK)],
     ['OUT(ELASTIC)',   Ease.OUT(Ease.ELASTIC)],
-    ['BOUNCE',         Ease.BOUNCE],
+    ['OUT(BOUNCE)',    Ease.OUT(Ease.BOUNCE)],
+    ['IN_OUT(POW(3))', Ease.IN_OUT(Ease.POWER(3))],
+    ['BEZIER',         Ease.BEZIER(0.25, 0.1, 0.25, 1)],
 ];
 const easingObjs = easingDemos.map((_, i) => ({
     pos: vec2(-5, ROW_EASE_TOP - i * EASE_SPACING)

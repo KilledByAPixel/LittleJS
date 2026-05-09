@@ -275,16 +275,27 @@ const Ease =
             (1 - x)) *
             (1.0 + 1.2 * x),
 
-    /** Bouncing ease-out: bounces with decreasing height as it approaches 1.
+    /** Bouncing ease-in: slow ramp with bouncing impacts near the end.
+     *  Symmetric with the other base curves, which are all ease-in. To get the
+     *  classic "object falls and hits the ground" shape (bounces near x=1),
+     *  wrap with `Ease.OUT`: `Ease.OUT(Ease.BOUNCE)`.
      *  @param {number} x
      *  @returns {number}
-     *  @memberof TweenSystem */
+     *  @memberof TweenSystem
+     *  @example
+     *  Ease.BOUNCE                  // ease-in bounce (slow, then bouncy at end)
+     *  Ease.OUT(Ease.BOUNCE)        // ease-out bounce (object hits ground)
+     *  Ease.IN_OUT(Ease.BOUNCE)     // bounces at both ends
+     */
     BOUNCE: (x) =>
     {
-        if (x < 4 / 11) return 7.5625 * x * x;
-        if (x < 8 / 11) return 7.5625 * (x -= 6 / 11) * x + 0.75;
-        if (x < 10 / 11) return 7.5625 * (x -= 9 / 11) * x + 0.9375;
-        return 7.5625 * (x -= 10.5 / 11) * x + 0.984375;
+        // Inverted form of the standard easeOutBounce: 1 - bounceOut(1 - x).
+        let t = 1 - x, f;
+        if (t < 4 / 11) f = 7.5625 * t * t;
+        else if (t < 8 / 11) f = 7.5625 * (t -= 6 / 11) * t + 0.75;
+        else if (t < 10 / 11) f = 7.5625 * (t -= 9 / 11) * t + 0.9375;
+        else f = 7.5625 * (t -= 10.5 / 11) * t + 0.984375;
+        return 1 - f;
     },
 
     /** Ease-in direction modifier: returns the curve unchanged. Symmetric
