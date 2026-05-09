@@ -12505,17 +12505,12 @@ class Tween
 
     /** Set a single completion callback. Calling `then` again replaces the
      *  previous callback. Returns this for chaining.
-     *
-     *  Calling `then` after `loop` or `pingPong` overrides the loop chain —
-     *  last call wins.
      *  @param {function():void} callback
      *  @returns {Tween}
      *  @memberof TweenSystem */
     then(callback)
     {
         this.thenCallback = callback;
-        this.loopMode = 0;
-        this.loopRemaining = 0;
         return this;
     }
 

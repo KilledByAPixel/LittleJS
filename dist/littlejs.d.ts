@@ -4938,9 +4938,6 @@ declare module "littlejsengine" {
         setEase(easeFn: (arg0: number) => number): Tween;
         /** Set a single completion callback. Calling `then` again replaces the
          *  previous callback. Returns this for chaining.
-         *
-         *  Calling `then` after `loop` or `pingPong` overrides the loop chain —
-         *  last call wins.
          *  @param {function():void} callback
          *  @returns {Tween}
          *  @memberof TweenSystem */

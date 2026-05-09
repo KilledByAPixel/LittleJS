@@ -224,3 +224,27 @@ test('Default tween (game time) does not advance when gameDelta is 0', () =>
     assert.deepEqual(calls, [0]);
     t.stop();
 });
+
+test('Multiple tweens complete in a single tweenUpdate without skipping', () =>
+{
+    const aCalls = [];
+    const bCalls = [];
+    let aThen = 0;
+    let bThen = 0;
+    new Tween((v) => aCalls.push(v), 0, 10, 1).then(() => aThen++);
+    new Tween((v) => bCalls.push(v), 0, 20, 1).then(() => bThen++);
+    tweenUpdate(1.0); // both should finish
+    assert.deepEqual(aCalls, [0, 10]);
+    assert.deepEqual(bCalls, [0, 20]);
+    assert.equal(aThen, 1);
+    assert.equal(bThen, 1);
+});
+
+test('tweenUpdate skips a tween whose paused field is true', () =>
+{
+    const calls = [];
+    const t = new Tween((v) => calls.push(v), 0, 10, 1, { paused: true });
+    tweenUpdate(2.0);
+    assert.deepEqual(calls, [0]); // only the constructor start snap
+    t.stop();
+});
