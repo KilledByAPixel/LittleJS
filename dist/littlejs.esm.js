@@ -14105,6 +14105,7 @@ export
     medals,
     medalsPreventUnlock,
     medalsInit,
+    medalsForEach,
     Medal,
 }
 /**

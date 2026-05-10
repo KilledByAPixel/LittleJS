@@ -3184,6 +3184,15 @@ declare module "littlejsengine" {
      *  @memberof Medals */
     export function medalsInit(saveName: string): void;
     /**
+     *  @callback MedalCallbackFunction - Function that processes a medal
+     *  @param {Medal} medal
+     *  @memberof Medals
+     */
+    /** Calls a function for each medal
+     *  @param {MedalCallbackFunction} callback
+     *  @memberof Medals */
+    export function medalsForEach(callback: MedalCallbackFunction): void;
+    /**
      * Medal - Tracks an unlockable medal
      * @memberof Medals
      * @example
