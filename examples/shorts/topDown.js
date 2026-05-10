@@ -13,8 +13,8 @@ class Player extends EngineObject
         const moveInput = keyDirection().clampLength(1).scale(.2);
         this.velocity = this.velocity.add(moveInput);
 
-        // move camera with player
-        cameraPos = this.pos;
+        // smoothly follow player with lerp
+        cameraPos = cameraPos.lerp(this.pos, .1);
     }
 }
 

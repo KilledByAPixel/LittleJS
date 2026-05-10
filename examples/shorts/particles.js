@@ -1,3 +1,5 @@
+let cometEmitter;
+
 function gameInit()
 {
     gravity.y = -.01; // set default gravity
@@ -13,7 +15,7 @@ function gameInit()
         .9, 1, -1, PI, .05,// damp, angleDamp, gravity, particleCone, fade
         .5, 0, 1, 0        // randomness, collide, additive, colorLinear
     );
-    
+
     // smoke
     new ParticleEmitter(
         vec2(5,-2), 0,               // pos, angle
@@ -25,4 +27,22 @@ function gameInit()
         .85, 1, -1, PI, .3,// damp, angleDamp, gravity, particleCone, fade
         .5, 0, 0, 1        // randomness, collide, additive, colorLinear
     );
+
+    // comet emitter - position updated each frame in gameUpdate
+    cometEmitter = new ParticleEmitter(
+        vec2(), 0,                   // pos, angle
+        0, 0, 100, PI,               // emitSize, emitTime, rate, cone
+        tile(0),                     // tileInfo
+        rgb(1,1,.5), rgb(1,.5,.5),   // colorStartA, colorStartB
+        rgb(1,0,0,0), rgb(.5,0,1,0), // colorEndA, colorEndB
+        .8, .5, .1, .01, 0,   // time, sizeStart, sizeEnd, speed, angleSpeed
+        .95, 1, .02, PI, .1,// damp, angleDamp, gravity, particleCone, fade
+        .3, 0, 1, 0        // randomness, collide, additive, colorLinear
+    );
+}
+
+function gameUpdate()
+{
+    // move comet emitter back and forth so it trails particles
+    cometEmitter.pos = vec2(sin(time)*9, 5);
 }
