@@ -82,9 +82,11 @@ npm install littlejsengine
 or  use `degit` for empty Vite tameplate
 
 ```
-npx degit KilledByAPixel/LittleJS/examples/vite-js-starter my-little-game
+npx degit KilledByAPixel/LittleJS/examples/vite-starter my-game
+cd my-game
+npm install
+npm run dev
 ```
-
 
 ## Tutorials
 
