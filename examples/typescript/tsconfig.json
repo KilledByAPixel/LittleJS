@@ -4,6 +4,7 @@
     "module": "es2020",
     "target": "es2020",
     "outDir": "build",
+    "rootDir": "../..",
     "moduleResolution": "bundler",
     "skipLibCheck": true
   },
