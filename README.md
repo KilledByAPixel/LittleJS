@@ -59,6 +59,7 @@ The code is very clean and well documented with many examples to get you started
 
 - Compatible with all modern web browsers and mobile devices
 - Full TypeScript and Module support with example projects for both
+- [Vite](https://vite.dev) starter template for instant dev server with hot reload
 - Great for size coding competitions like [Js13kGames](https://js13kgames.com/)
 - Open Source and [MIT licensed](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE)
 
@@ -79,7 +80,7 @@ To get started download the latest LittleJS package from GitHub or install via n
 npm install littlejsengine
 ```
 
-or  use `degit` for empty Vite tameplate
+or use `degit` for an empty Vite template
 
 ```
 npx degit KilledByAPixel/LittleJS/examples/vite-starter my-game
