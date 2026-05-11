@@ -46,6 +46,7 @@ const enginePluginFiles =
     `${PLUGIN_FOLDER}/box2d.js`,
     `${PLUGIN_FOLDER}/drawUtilities.js`,
     `${PLUGIN_FOLDER}/tweenSystem.js`,
+    `${PLUGIN_FOLDER}/pathFinder.js`,
 ];
 const engineExtraFiles =
 [

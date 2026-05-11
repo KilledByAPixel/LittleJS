@@ -81,4 +81,7 @@ export
     tweenStopAll,
     tweenUpdate,
     Ease,
+
+    // Path Finding
+    PathFinder,
 }
