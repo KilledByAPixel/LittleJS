@@ -338,4 +338,38 @@ class PathFinder
         }
         return null;
     }
+
+    /** Find a path from startPos to endPos in world space. Returns an array
+     *  of world-space Vector2 points; empty array if no path exists.
+     *
+     *  Start and end are snapped to the nearest walkable tile via
+     *  getNearestClearNode. Intermediate points are tile centers unless the
+     *  string-pulling smoothing pass moves them off-grid.
+     *  @param {Vector2} startPos - World-space start
+     *  @param {Vector2} endPos - World-space end
+     *  @returns {Vector2[]}
+     *  @memberof PathFinding */
+    findPath(startPos, endPos)
+    {
+        ASSERT(isVector2(startPos) && isVector2(endPos), 'findPath needs Vector2 endpoints');
+
+        this.buildNodeData();
+
+        const startNode = this.getNearestClearNode(startPos);
+        const endNode = this.getNearestClearNode(endPos);
+        if (!startNode || !endNode) return [];
+
+        // Trivial case: start and end snapped to the same tile.
+        if (startNode === endNode) return [startNode.posWorld];
+
+        if (!this.aStarSearch(startNode, endNode)) return [];
+
+        // Walk back from endNode via parent pointers to build the node list.
+        const nodePath = [];
+        for (let n = endNode; n; n = n.parent)
+            nodePath.unshift(n);
+
+        // Convert to world-space Vector2 path.
+        return nodePath.map(n => n.posWorld);
+    }
 }

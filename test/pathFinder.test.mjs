@@ -184,3 +184,47 @@ test('aStarSearch routes around high-cost tiles when a cheaper detour exists', (
     }
     assert.equal(visitedZeroCostTile, true);
 });
+
+test('findPath returns a single-element path when start and end snap to the same tile', () =>
+{
+    const pf = new PathFinder(vec2(5, 5));
+    pf.smoothPath = false;
+    const path = pf.findPath(vec2(2.5, 2.5), vec2(2.5, 2.5));
+    assert.equal(path.length, 1);
+    assert.equal(path[0].x, 2.5);
+    assert.equal(path[0].y, 2.5);
+});
+
+test('findPath returns [] when no path exists', () =>
+{
+    const pf = new PathFinder(vec2(5, 5));
+    pf.smoothPath = false;
+    pf.isWalkable = (x, y) => x !== 2;
+    const path = pf.findPath(vec2(0.5, 0.5), vec2(4.5, 4.5));
+    assert.deepEqual(path, []);
+});
+
+test('findPath returns a connected path on an open grid', () =>
+{
+    const pf = new PathFinder(vec2(5, 5));
+    pf.smoothPath = false;
+    const path = pf.findPath(vec2(0.5, 0.5), vec2(4.5, 4.5));
+    assert(path.length >= 2);
+    // First point is the snapped start; last is the snapped end.
+    assert.equal(path[0].x, 0.5);
+    assert.equal(path[0].y, 0.5);
+    assert.equal(path[path.length - 1].x, 4.5);
+    assert.equal(path[path.length - 1].y, 4.5);
+});
+
+test('findPath snaps a start position that lands on a blocked tile', () =>
+{
+    const pf = new PathFinder(vec2(5, 5));
+    pf.smoothPath = false;
+    pf.isWalkable = (x, y) => !(x === 0 && y === 0);
+    // Click directly on the blocked (0,0) tile; should snap to a neighbor.
+    const path = pf.findPath(vec2(0.5, 0.5), vec2(4.5, 4.5));
+    assert(path.length >= 2);
+    // The snapped start is NOT (0.5, 0.5) since that's blocked.
+    assert.notEqual(path[0].x === 0.5 && path[0].y === 0.5, true);
+});
