@@ -7,26 +7,26 @@ function gameInit()
     uiSystem.defaultCornerRadius = 8;
     uiSystem.defaultShadowColor = BLACK;
 
-    // setup example menu
+    // setup example menu with auto-layout (1 column vertical list)
     let navigationIndex = 0;
-    const uiMenu = new UIObject(mainCanvasSize.scale(.5), vec2(700,450));
+    const uiMenu = new UILayout(mainCanvasSize.scale(.5), 1, 20, 30);
     canvasClearColor = hsl(0,0,.8);
 
     // example text
-    uiMenu.addChild(new UIText(vec2(-100,-120), vec2(450, 80),
+    uiMenu.addChild(new UIText(vec2(), vec2(450, 80),
         'LittleJS UI\nSystem Demo'));
 
     // example image
-    uiMenu.addChild(new UITile(vec2(230,-140), vec2(170), tile(3, 128)));
+    uiMenu.addChild(new UITile(vec2(), vec2(170), tile(3, 128)));
 
     // example checkbox
-    const checkbox = new UICheckbox(vec2(-170,0), vec2(50));
+    const checkbox = new UICheckbox(vec2(), vec2(50));
     checkbox.navigationIndex = ++navigationIndex;
     checkbox.onChange = ()=> button1.disabled = checkbox.checked;
     uiMenu.addChild(checkbox);
 
-    // example button
-    const textInput = new UITextInput(vec2(50,0), vec2(300, 80), 'Text Input');
+    // example text input
+    const textInput = new UITextInput(vec2(), vec2(300, 80), 'Text Input');
     textInput.textHeight = 60;
     textInput.maxLength = 16;
     textInput.navigationIndex = ++navigationIndex;
@@ -34,14 +34,14 @@ function gameInit()
     textInput.onChange = ()=> canvasClearColor = randColor();
 
     // example slider
-    const slider = new UISlider(vec2(0,90), vec2(400, 50), 
+    const slider = new UISlider(vec2(), vec2(400, 50),
         soundVolume, 'Volume');
     slider.navigationIndex = ++navigationIndex;
     uiMenu.addChild(slider);
     slider.onChange = ()=> setSoundVolume(slider.value);
 
     // exit button
-    const button1 = new UIButton(vec2(0,170), vec2(200, 50), 'Exit Menu');
+    const button1 = new UIButton(vec2(), vec2(200, 50), 'Exit Menu');
     button1.textHeight = 40;
     button1.navigationIndex = ++navigationIndex;
     button1.navigationAutoSelect = true;
@@ -56,6 +56,6 @@ function gameInit()
     buttonBack.textHeight = 60;
     buttonBack.navigationIndex = ++navigationIndex;
     buttonBack.navigationAutoSelect = true;
-    buttonBack.onClick = ()=> 
+    buttonBack.onClick = ()=>
         { uiMenu.visible=true; buttonBack.visible=false; }
 }
