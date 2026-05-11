@@ -228,3 +228,48 @@ test('findPath snaps a start position that lands on a blocked tile', () =>
     // The snapped start is NOT (0.5, 0.5) since that's blocked.
     assert.notEqual(path[0].x === 0.5 && path[0].y === 0.5, true);
 });
+
+test('smoothPathCorners removes a redundant 45-degree corner', () =>
+{
+    const pf = new PathFinder(vec2(4, 4));
+    pf.buildNodeData();
+    // Three nodes where (next - prev) is a unit cardinal step (lengthSq=1).
+    // Construct: (0,0) -> (1,1) -> (1,0). dx=1,dy=0 → lengthSq=1.
+    const path = [pf.getNode(0, 0), pf.getNode(1, 1), pf.getNode(1, 0)];
+    pf.smoothPathCorners(path);
+    assert.equal(path.length, 2);
+    assert.equal(path[0], pf.getNode(0, 0));
+    assert.equal(path[1], pf.getNode(1, 0));
+});
+
+test('smoothPathCorners collapses a 90-degree corner when the diagonal is clear', () =>
+{
+    const pf = new PathFinder(vec2(3, 3));
+    pf.buildNodeData();
+    // (0,0) -> (1,0) -> (1,1): 90° corner. The alternative diagonal cell (0,1)
+    // is clear so the middle node should be removed.
+    const path = [pf.getNode(0, 0), pf.getNode(1, 0), pf.getNode(1, 1)];
+    pf.smoothPathCorners(path);
+    // Expect middle node removed.
+    assert.equal(path.length, 2);
+});
+
+test('smoothPathCorners keeps a 90-degree corner when the diagonal shortcut is blocked', () =>
+{
+    const pf = new PathFinder(vec2(3, 3));
+    // Block (0,1) so the shortcut cell is not clear.
+    pf.isWalkable = (x, y) => !(x === 0 && y === 1);
+    pf.buildNodeData();
+    const path = [pf.getNode(0, 0), pf.getNode(1, 0), pf.getNode(1, 1)];
+    pf.smoothPathCorners(path);
+    assert.equal(path.length, 3);
+});
+
+test('smoothPathCorners is a no-op on a 2-node path', () =>
+{
+    const pf = new PathFinder(vec2(3, 3));
+    pf.buildNodeData();
+    const path = [pf.getNode(0, 0), pf.getNode(2, 2)];
+    pf.smoothPathCorners(path);
+    assert.equal(path.length, 2);
+});

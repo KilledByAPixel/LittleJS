@@ -339,6 +339,143 @@ class PathFinder
         return null;
     }
 
+    /** Smooth a node path by removing redundant turns and tightening corners
+     *  where a grid-aligned diagonal is clear. Modifies the path in place.
+     *  Stays on the grid — does not introduce off-tile-center points.
+     *  Port of ShortenPath() in pathFinding.cpp.
+     *  @param {PathFinderNode[]} path
+     *  @private */
+    smoothPathCorners(path)
+    {
+        if (path.length <= 2) return;
+
+        let i = 1;
+        while (i < path.length - 1)
+        {
+            const prev = path[i - 1];
+            const node = path[i];
+            const next = path[i + 1];
+
+            const dx = next.pos.x - prev.pos.x;
+            const dy = next.pos.y - prev.pos.y;
+            const lenSq = dx * dx + dy * dy;
+
+            // dx,dy is the prev-to-current step direction; needed for the
+            // 135° "mostly vertical/horizontal" disambiguation.
+            const stepDx = node.pos.x - prev.pos.x;
+            const stepDy = node.pos.y - prev.pos.y;
+            const stepDxNext = next.pos.x - node.pos.x;
+            const stepDyNext = next.pos.y - node.pos.y;
+
+            if (lenSq === 1)
+            {
+                // 45° angle — middle node is off the straight line. Drop it.
+                if (this.debug && this.debugTime > 0)
+                    debugCircle(node.posWorld, 0.3, rgb(0.5, 0, 0.5, 0.5), this.debugTime);
+                path.splice(i, 1);
+                i = Math.max(1, i - 1);
+                continue;
+            }
+            else if (lenSq === 2)
+            {
+                // 90° corner. Check the alternative-diagonal cell.
+                if (this.debug && this.debugTime > 0)
+                    debugCircle(node.posWorld, 0.3, rgb(1, 0, 0, 0.5), this.debugTime);
+
+                let sx, sy;
+                if (prev.pos.y === node.pos.y && next.pos.x === node.pos.x)
+                { sx = prev.pos.x; sy = next.pos.y; }
+                else
+                { sx = next.pos.x; sy = prev.pos.y; }
+
+                const shortcut = this.getNode(sx, sy);
+                if (shortcut && shortcut.isClear())
+                {
+                    path.splice(i, 1);
+                    i = Math.max(1, i - 1);
+                    continue;
+                }
+            }
+            else if (lenSq === 5)
+            {
+                // 135° angle (a knight's-move offset). Try to relocate the
+                // middle node to whichever of two candidate cells is closer
+                // to prev-of-prev, and only if the corner cut is also clear.
+                if (this.debug && this.debugTime > 0)
+                    debugCircle(node.posWorld, 0.3, rgb(1, 1, 0, 0.5), this.debugTime);
+
+                const prevPrev = i >= 2 ? path[i - 2] : prev;
+                let s1x, s1y, s2x, s2y;
+                if (stepDx === 0 || stepDxNext === 0)
+                {
+                    // mostly vertical
+                    s1x = next.pos.x; s1y = node.pos.y;
+                    s2x = prev.pos.x; s2y = node.pos.y;
+                }
+                else
+                {
+                    // mostly horizontal
+                    s1x = node.pos.x; s1y = next.pos.y;
+                    s2x = node.pos.x; s2y = prev.pos.y;
+                }
+                const dd1x = s1x - prevPrev.pos.x;
+                const dd1y = s1y - prevPrev.pos.y;
+                const dd2x = s2x - prevPrev.pos.x;
+                const dd2y = s2y - prevPrev.pos.y;
+                const dist1Sq = dd1x * dd1x + dd1y * dd1y;
+                const dist2Sq = dd2x * dd2x + dd2y * dd2y;
+                const sx = dist1Sq < dist2Sq ? s1x : s1x === s2x && s1y === s2y ? s1x : s2x;
+                const sy = dist1Sq < dist2Sq ? s1y : s1x === s2x && s1y === s2y ? s1y : s2y;
+
+                const shortcut = this.getNode(sx, sy);
+                if (shortcut && shortcut !== node && shortcut.isClear())
+                {
+                    // Also check the cut-corner cell is clear.
+                    const ccx = next.pos.x + s2x - s1x;
+                    const ccy = next.pos.y + s2y - s1y;
+                    const cutCorner = this.getNode(ccx, ccy);
+                    if (cutCorner && cutCorner.isClear())
+                    {
+                        path[i] = shortcut;
+                        i = Math.max(1, i - 1);
+                        continue;
+                    }
+                }
+            }
+            else if (lenSq === 4 || lenSq === 8)
+            {
+                // Straight line or a 1-cell bump.
+                if (this.debug && this.debugTime > 0)
+                    debugCircle(node.posWorld, 0.3, rgb(0, 1, 0, 0.5), this.debugTime);
+
+                if (stepDx === stepDxNext && stepDy === stepDyNext)
+                {
+                    // Truly straight — nothing to do, advance.
+                    ++i;
+                    continue;
+                }
+                else
+                {
+                    // Bump — try to flatten via the in-line cell.
+                    let sx, sy;
+                    if (prev.pos.y === next.pos.y)
+                    { sx = node.pos.x; sy = prev.pos.y; }
+                    else
+                    { sx = prev.pos.x; sy = node.pos.y; }
+                    const shortcut = this.getNode(sx, sy);
+                    if (shortcut && shortcut.isClear())
+                    {
+                        path[i] = shortcut;
+                        i = Math.max(1, i - 1);
+                        continue;
+                    }
+                }
+            }
+
+            ++i;
+        }
+    }
+
     /** Find a path from startPos to endPos in world space. Returns an array
      *  of world-space Vector2 points; empty array if no path exists.
      *
