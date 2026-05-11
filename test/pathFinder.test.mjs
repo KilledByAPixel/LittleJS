@@ -115,3 +115,51 @@ test('getNearestClearNode skips cost-weighted tiles in favor of zero-cost neighb
     const node = pf.getNearestClearNode(vec2(2.5, 2.5));
     assert.notEqual(node.pos.x === 2 && node.pos.y === 2, true);
 });
+
+test('aStarSearch finds a path on a connected grid', () =>
+{
+    const pf = new PathFinder(vec2(5, 5));
+    pf.buildNodeData();
+    const ok = pf.aStarSearch(pf.getNode(0, 0), pf.getNode(4, 4));
+    assert.equal(ok, true);
+    // End node has a parent chain leading back to start.
+    let n = pf.getNode(4, 4);
+    let chain = 0;
+    while (n.parent) { n = n.parent; chain++; if (chain > 100) break; }
+    assert.equal(n, pf.getNode(0, 0));
+});
+
+test('aStarSearch returns false when start and end are disconnected', () =>
+{
+    const pf = new PathFinder(vec2(5, 5));
+    // Wall down the middle column 2; no diagonal escape because columns 1 and 3
+    // are walkable on every row but the wall blocks every column-2 cell.
+    pf.isWalkable = (x, y) => x !== 2;
+    pf.buildNodeData();
+    const ok = pf.aStarSearch(pf.getNode(0, 0), pf.getNode(4, 4));
+    assert.equal(ok, false);
+});
+
+test('aStarSearch respects maxLoop and returns false if exceeded', () =>
+{
+    const pf = new PathFinder(vec2(20, 20));
+    pf.buildNodeData();
+    pf.maxLoop = 1;
+    const ok = pf.aStarSearch(pf.getNode(0, 0), pf.getNode(19, 19));
+    assert.equal(ok, false);
+});
+
+test('aStarSearch refuses to cut a diagonal between two adjacent walls', () =>
+{
+    // Layout (W = wall, . = open):
+    //   . W
+    //   W .
+    // From (0,0) the only walkable diagonal neighbor is (1,1), but both
+    // cardinals (1,0) and (0,1) are walls, so the diagonal step must be
+    // refused. With (1,1) unreachable except through walls, the search fails.
+    const pf = new PathFinder(vec2(2, 2));
+    pf.isWalkable = (x, y) => !((x === 1 && y === 0) || (x === 0 && y === 1));
+    pf.buildNodeData();
+    const ok = pf.aStarSearch(pf.getNode(0, 0), pf.getNode(1, 1));
+    assert.equal(ok, false);
+});

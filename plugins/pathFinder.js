@@ -205,6 +205,91 @@ class PathFinder
         }
     }
 
+    /** Core A* search loop. Expects buildNodeData() to have been called first.
+     *  Marks node.parent for path reconstruction. Returns true if endNode was
+     *  reached; false on disconnected goal or maxLoop exhaustion.
+     *  @param {PathFinderNode} startNode
+     *  @param {PathFinderNode} endNode
+     *  @returns {boolean}
+     *  @private */
+    aStarSearch(startNode, endNode)
+    {
+        ASSERT(startNode && endNode, 'aStarSearch needs both endpoints');
+
+        const openList = [startNode];
+        startNode.isOpen = true;
+        let loopCount = 0;
+
+        while (openList.length > 0)
+        {
+            // Find the open node with the smallest f score (linear scan).
+            // Same as the C++ — fine up to a few thousand nodes.
+            let bestIndex = 0;
+            let bestF = openList[0].f;
+            for (let i = 1; i < openList.length; ++i)
+            {
+                if (openList[i].f < bestF)
+                {
+                    bestF = openList[i].f;
+                    bestIndex = i;
+                }
+            }
+            const current = openList[bestIndex];
+
+            if (current === endNode) break;
+            if (++loopCount > this.maxLoop) break;
+
+            // Move current from open to closed.
+            current.isOpen = false;
+            openList.splice(bestIndex, 1);
+            current.isClosed = true;
+
+            if (this.debug && this.debugTime > 0)
+                debugRect(current.posWorld, vec2(1), rgb(1, 1, 1, 0.05), this.debugTime);
+
+            // Expand all 8 neighbors.
+            for (let dy = -1; dy <= 1; ++dy)
+            for (let dx = -1; dx <= 1; ++dx)
+            {
+                if (dx === 0 && dy === 0) continue;
+                const neighbor = this.getNode(current.pos.x + dx, current.pos.y + dy);
+                if (!neighbor || !neighbor.walkable || neighbor.isClosed) continue;
+
+                let stepCost = 1;
+                if (dx !== 0 && dy !== 0)
+                {
+                    // Diagonal step: refuse if either cardinal neighbor is
+                    // blocked or has cost. Prevents cutting through corners.
+                    const card1 = this.getNode(current.pos.x + dx, current.pos.y);
+                    if (!card1 || card1.cost > 0 || !card1.walkable) continue;
+                    const card2 = this.getNode(current.pos.x, current.pos.y + dy);
+                    if (!card2 || card2.cost > 0 || !card2.walkable) continue;
+                    stepCost = PATHFINDER_DIAGONAL_COST;
+                }
+
+                const tentativeG = current.g + stepCost + neighbor.cost;
+                if (!neighbor.isOpen)
+                {
+                    neighbor.isOpen = true;
+                    openList.push(neighbor);
+                }
+                else if (tentativeG >= neighbor.g)
+                {
+                    continue;
+                }
+
+                // Best path so far through neighbor — record it.
+                neighbor.parent = current;
+                neighbor.g = tentativeG;
+                const gdx = endNode.pos.x - neighbor.pos.x;
+                const gdy = endNode.pos.y - neighbor.pos.y;
+                neighbor.f = neighbor.g + (gdx * gdx + gdy * gdy) * this.heuristicWeight;
+            }
+        }
+
+        return endNode.parent !== null;
+    }
+
     /** Find the clear (walkable, zero-cost) node closest to the given world
      *  position. Spirals outward in expanding boxes until a clear node is
      *  found or the search range is exhausted. Useful for snapping a click
