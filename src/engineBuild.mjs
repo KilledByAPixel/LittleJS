@@ -34,6 +34,7 @@ const engineSourceFiles =
     `${SOURCE_FOLDER}/engineTileLayer.js`,
     `${SOURCE_FOLDER}/engineParticles.js`,
     `${SOURCE_FOLDER}/engineWebGL.js`,
+    `${SOURCE_FOLDER}/engineLogo.js`,
 ];
 const enginePluginFiles =
 [
