@@ -96,6 +96,14 @@ isVector2(v)  // true if valid Vector2
 isColor(c)    // true if valid Color
 ```
 
+### Math aliases
+Engine source exposes short aliases for common `Math.*` calls — prefer them
+over `Math.X` in engine and plugin code:
+```javascript
+abs, floor, ceil, round, min, max, sign, hypot, log2, sin, cos, tan, atan2, PI
+```
+For things without an alias (e.g. `Math.trunc`, `Math.SQRT2`), use `Math.*` as normal.
+
 ### Global variables
 - Engine time: `time`, `timeReal`, `frame`, `timeDelta`
 - Camera: `cameraPos`, `cameraScale`, `cameraAngle`

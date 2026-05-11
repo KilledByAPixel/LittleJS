@@ -162,7 +162,7 @@ class PathFinder
     {
         const ox = this.tileLayer ? this.tileLayer.pos.x : 0;
         const oy = this.tileLayer ? this.tileLayer.pos.y : 0;
-        return vec2(Math.floor(worldPos.x - ox), Math.floor(worldPos.y - oy));
+        return vec2(floor(worldPos.x - ox), floor(worldPos.y - oy));
     }
 
     /** Convert integer tile coords to the world-space center of that tile.
@@ -193,7 +193,7 @@ class PathFinder
             const node = this.nodes[x + y * w];
             node.reset();
             const walkable = !!this.isWalkable(x, y);
-            const cost = walkable ? Math.max(0, this.getCost(x, y)) : 0;
+            const cost = walkable ? max(0, this.getCost(x, y)) : 0;
             node.walkable = walkable;
             node.cost = cost;
             node.posWorld.set(x + 0.5 + ox, y + 0.5 + oy);
@@ -203,7 +203,7 @@ class PathFinder
                 if (!walkable)
                     debugRect(node.posWorld, PATHFINDER_TILE_VEC, rgb(1, 0, 0, 0.25), this.debugTime);
                 else if (cost > 0)
-                    debugRect(node.posWorld, PATHFINDER_TILE_VEC, rgb(1, 0, 0, Math.min(0.2, cost * 0.05)), this.debugTime);
+                    debugRect(node.posWorld, PATHFINDER_TILE_VEC, rgb(1, 0, 0, min(0.2, cost * 0.05)), this.debugTime);
             }
         }
     }
@@ -317,8 +317,8 @@ class PathFinder
         // Inline worldToTile to avoid a Vector2 allocation per call.
         const ox = this.tileLayer ? this.tileLayer.pos.x : 0;
         const oy = this.tileLayer ? this.tileLayer.pos.y : 0;
-        const centerX = Math.floor(worldPos.x - ox);
-        const centerY = Math.floor(worldPos.y - oy);
+        const centerX = floor(worldPos.x - ox);
+        const centerY = floor(worldPos.y - oy);
 
         for (let offset = 0; offset <= searchRange; ++offset)
         {
@@ -330,7 +330,7 @@ class PathFinder
             {
                 // Only scan the perimeter of the current ring (skip the
                 // interior we've already searched in earlier iterations).
-                if (offset > 0 && Math.abs(dx) !== offset && Math.abs(dy) !== offset)
+                if (offset > 0 && abs(dx) !== offset && abs(dy) !== offset)
                     continue;
 
                 const node = this.getNode(centerX + dx, centerY + dy);
@@ -384,7 +384,7 @@ class PathFinder
                 if (this.debug && this.debugTime > 0)
                     debugCircle(node.posWorld, 0.3, rgb(0.5, 0, 0.5, 0.5), this.debugTime);
                 path.splice(i, 1);
-                i = Math.max(1, i - 1);
+                i = max(1, i - 1);
                 continue;
             }
             else if (lenSq === 2)
@@ -403,7 +403,7 @@ class PathFinder
                 if (shortcut && shortcut.isClear())
                 {
                     path.splice(i, 1);
-                    i = Math.max(1, i - 1);
+                    i = max(1, i - 1);
                     continue;
                 }
             }
@@ -448,7 +448,7 @@ class PathFinder
                     if (cutCorner && cutCorner.isClear())
                     {
                         path[i] = shortcut;
-                        i = Math.max(1, i - 1);
+                        i = max(1, i - 1);
                         continue;
                     }
                 }
@@ -477,7 +477,7 @@ class PathFinder
                     if (shortcut && shortcut.isClear())
                     {
                         path[i] = shortcut;
-                        i = Math.max(1, i - 1);
+                        i = max(1, i - 1);
                         continue;
                     }
                 }
@@ -602,10 +602,10 @@ class PathFinder
 
         const dx = endPos.x - startPos.x;
         const dy = endPos.y - startPos.y;
-        const adx = Math.abs(dx);
-        const ady = Math.abs(dy);
-        const sx = Math.sign(dx);
-        const sy = Math.sign(dy);
+        const adx = abs(dx);
+        const ady = abs(dy);
+        const sx = sign(dx);
+        const sy = sign(dy);
         let x = startPos.x;
         let y = startPos.y;
 
