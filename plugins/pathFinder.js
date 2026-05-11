@@ -489,11 +489,14 @@ class PathFinder
      *  @private */
     isLineClear(startPos, endPos)
     {
+        ASSERT(isVector2(startPos) && isVector2(endPos), 'isLineClear needs Vector2 endpoints');
         const isClear = (x, y) =>
         {
             const n = this.getNode(x, y);
             return n !== null && n.isClear();
         };
+        ASSERT(isClear(startPos.x, startPos.y) && isClear(endPos.x, endPos.y),
+            'isLineClear endpoints must be in-bounds and clear');
 
         const dx = endPos.x - startPos.x;
         const dy = endPos.y - startPos.y;

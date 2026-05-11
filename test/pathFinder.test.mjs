@@ -303,3 +303,25 @@ test('isLineClear returns false when a wall blocks the line', () =>
     // Diagonal from (0,0) to (4,4) passes through (2,2).
     assert.equal(pf.isLineClear(vec2(0, 0), vec2(4, 4)), false);
 });
+
+test('isLineClear returns true for a shallow slope (2:1) on an open grid', () =>
+{
+    const pf = new PathFinder(vec2(6, 6));
+    pf.buildNodeData();
+    assert.equal(pf.isLineClear(vec2(0, 0), vec2(4, 2)), true);
+});
+
+test('isLineClear returns true for a steep slope (1:2) on an open grid', () =>
+{
+    const pf = new PathFinder(vec2(6, 6));
+    pf.buildNodeData();
+    assert.equal(pf.isLineClear(vec2(0, 0), vec2(2, 4)), true);
+});
+
+test('isLineClear returns true for a negative-slope diagonal on an open grid', () =>
+{
+    const pf = new PathFinder(vec2(5, 5));
+    pf.buildNodeData();
+    // (4, 0) -> (0, 4): negative dx, positive dy. Exercises Math.trunc with negative dividend.
+    assert.equal(pf.isLineClear(vec2(4, 0), vec2(0, 4)), true);
+});
