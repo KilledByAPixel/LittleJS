@@ -312,9 +312,13 @@ function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
         }
         else
         {
-            // if no tile info, force untextured (white 1x1 fallback texture)
+            // if no tile info, force untextured by zeroing rgba (so whatever
+            // texture is bound doesn't leak in) and folding color+additive
+            // into the additive slot — matches the Canvas2D path's
+            // color.add(additiveColor) on line ~337.
+            const combined = additiveColor ? color.add(additiveColor) : color;
             glDraw(pos.x, pos.y, size.x, size.y, angle, 0, 0, 0, 0,
-                color.rgbaInt(), additiveColor && additiveColor.rgbaInt());
+                0, combined.rgbaInt());
         }
     }
     else
