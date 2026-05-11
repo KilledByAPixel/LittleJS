@@ -106,3 +106,12 @@ test('getNearestClearNode returns null for a position outside the grid', () =>
     pf.buildNodeData();
     assert.equal(pf.getNearestClearNode(vec2(-50, -50), 1), null);
 });
+
+test('getNearestClearNode skips cost-weighted tiles in favor of zero-cost neighbors', () =>
+{
+    const pf = new PathFinder(vec2(5, 5));
+    pf.getCost = (x, y) => x === 2 && y === 2 ? 5 : 0;
+    pf.buildNodeData();
+    const node = pf.getNearestClearNode(vec2(2.5, 2.5));
+    assert.notEqual(node.pos.x === 2 && node.pos.y === 2, true);
+});

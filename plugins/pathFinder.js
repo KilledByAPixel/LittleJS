@@ -205,10 +205,14 @@ class PathFinder
         }
     }
 
-    /** Find the walkable node closest to the given world position. Spirals
-     *  outward in expanding boxes until a walkable node is found or the
-     *  search range is exhausted. Useful for snapping a click or NPC spawn
-     *  position to the nearest open tile.
+    /** Find the clear (walkable, zero-cost) node closest to the given world
+     *  position. Spirals outward in expanding boxes until a clear node is
+     *  found or the search range is exhausted. Useful for snapping a click
+     *  or NPC spawn position to the nearest open tile.
+     *
+     *  Requires `buildNodeData()` to have been called first. `findPath`
+     *  invokes it automatically; if you call `getNearestClearNode` directly
+     *  on a fresh PathFinder, call `buildNodeData()` once beforehand.
      *  @param {Vector2} worldPos
      *  @param {number} [searchRange=10] - Max box-radius in tiles
      *  @returns {PathFinderNode|null}
@@ -232,7 +236,7 @@ class PathFinder
                     continue;
 
                 const node = this.getNode(center.x + dx, center.y + dy);
-                if (!node || !node.walkable) continue;
+                if (!node || !node.isClear()) continue;
 
                 const ddx = node.posWorld.x - worldPos.x;
                 const ddy = node.posWorld.y - worldPos.y;
