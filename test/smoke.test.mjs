@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    EngineObject, ParticleEmitter, TileLayerData, TileInfo,
+    EngineObject, ParticleEmitter, TileLayerData, TileInfo, TextureInfo,
     TileLayer, CanvasLayer, Medal,
     Timer, tile, vec2, rgb,
 } from '../dist/littlejs.esm.js';
@@ -208,6 +208,67 @@ test('EngineObject.destroy disconnects from parent', () =>
     assert.deepEqual(parent.children, []);           // parent's children array spliced
 });
 
+// Regression pins for the inline-math rewrite of updateTransforms.
+// The fast path skips trig when parent.angle === 0; the slow path uses
+// Vector2.rotate semantics: c=cos(-a), s=sin(-a), (x*c - y*s, x*s + y*c).
+test('updateTransforms parent at origin, no rotation: child.pos == localPos', () =>
+{
+    const parent = new EngineObject(vec2(0, 0), vec2(1, 1));
+    const child = new EngineObject(vec2(0, 0), vec2(1, 1));
+    parent.addChild(child, vec2(2, 3));
+    parent.updateTransforms();
+    assert(near(child.pos.x, 2));
+    assert(near(child.pos.y, 3));
+});
+
+test('updateTransforms parent translated, no rotation: child.pos = localPos + parent.pos', () =>
+{
+    const parent = new EngineObject(vec2(10, -5), vec2(1, 1));
+    const child = new EngineObject(vec2(0, 0), vec2(1, 1));
+    parent.addChild(child, vec2(2, 3));
+    parent.updateTransforms();
+    assert(near(child.pos.x, 12));
+    assert(near(child.pos.y, -2));
+});
+
+test('updateTransforms parent rotated PI: child localPos (1,0) -> (-1,0)', () =>
+{
+    // Rotating a vector 180° flips both axes, no sign-convention ambiguity.
+    const parent = new EngineObject(vec2(0, 0), vec2(1, 1), undefined, Math.PI);
+    const child = new EngineObject(vec2(0, 0), vec2(1, 1));
+    parent.addChild(child, vec2(1, 0));
+    parent.updateTransforms();
+    assert(near(child.pos.x, -1, 1e-9));
+    assert(near(child.pos.y, 0, 1e-9));
+    assert(near(child.angle, Math.PI));
+});
+
+test('updateTransforms parent rotated PI/2 matches Vector2.rotate semantics', () =>
+{
+    // LittleJS rotation is clockwise from up: cos(-a), sin(-a) form.
+    // Pin against the engine's own Vector2.rotate so the regression check
+    // can't drift from the engine's chosen convention.
+    const parent = new EngineObject(vec2(0, 0), vec2(1, 1), undefined, Math.PI/2);
+    const child = new EngineObject(vec2(0, 0), vec2(1, 1));
+    parent.addChild(child, vec2(1, 0));
+    parent.updateTransforms();
+    const expected = vec2(1, 0).rotate(Math.PI/2);
+    assert(near(child.pos.x, expected.x, 1e-9));
+    assert(near(child.pos.y, expected.y, 1e-9));
+});
+
+test('updateTransforms mirrored parent flips child x and angle', () =>
+{
+    const parent = new EngineObject(vec2(0, 0), vec2(1, 1));
+    parent.mirror = true;
+    const child = new EngineObject(vec2(0, 0), vec2(1, 1));
+    parent.addChild(child, vec2(2, 3), 0.5);
+    parent.updateTransforms();
+    assert(near(child.pos.x, -2));                  // x mirrored
+    assert(near(child.pos.y, 3));                   // y unchanged
+    assert(near(child.angle, -0.5));                // angle mirrored
+});
+
 test('EngineObject.getAliveTime is 0 right after construction (time=0 in headless)', () =>
 {
     const o = new EngineObject(vec2(0, 0), vec2(1, 1));
@@ -255,6 +316,34 @@ test('TileLayer extends CanvasLayer and stubs render methods in headless', () =>
     // in headless the render-family methods are replaced with no-op arrow functions
     assert.doesNotThrow(() => tl.render());
     assert.doesNotThrow(() => tl.redraw());
+});
+
+// Regression pin for the texture-wrap default flip (CLAMP_TO_EDGE by default).
+// A revert of this change would silently re-enable global REPEAT — this test
+// catches it.
+test('TextureInfo wrap defaults to false (CLAMP_TO_EDGE)', () =>
+{
+    const stubImage = { width: 64, height: 64 };
+    const ti = new TextureInfo(stubImage);
+    assert.equal(ti.wrap, false);
+});
+
+test('TextureInfo wrap=true is respected when explicitly passed', () =>
+{
+    const stubImage = { width: 64, height: 64 };
+    const ti = new TextureInfo(stubImage, true, true);
+    assert.equal(ti.wrap, true);
+});
+
+test('TextureInfo.setWrap() toggles the wrap flag', () =>
+{
+    const stubImage = { width: 64, height: 64 };
+    const ti = new TextureInfo(stubImage);
+    assert.equal(ti.wrap, false);
+    ti.setWrap();                                    // default arg is true
+    assert.equal(ti.wrap, true);
+    ti.setWrap(false);
+    assert.equal(ti.wrap, false);
 });
 
 test('drawTextureWrapped is exported', async () =>

@@ -571,9 +571,12 @@ obj.addEdgeList(points, offset, angle, density, friction, restitution, isSensor)
 obj.setFilterData(categoryBits, maskBits, groupIndex)
 
 // Forces and motion
-obj.applyForce(force, pos)             // Force in Newtons at world pos
-obj.applyAcceleration(accel, pos)      // force = mass * accel
+obj.applyForce(force, pos)             // Force in Newtons at world pos (sustained)
+obj.applyAcceleration(accel, pos)      // Δvelocity = accel per call (mass-independent, matches EngineObject)
+obj.applyImpulse(impulse, pos)         // Δvelocity = impulse / mass (instantaneous; use for one-shot hits)
 obj.applyTorque(torque)
+obj.applyAngularAcceleration(accel)    // Δangular velocity = accel per call (mass-independent)
+obj.applyAngularImpulse(impulse)       // Δangular velocity = impulse / inertia (instantaneous)
 obj.setLinearVelocity(vel)
 obj.setAngularVelocity(av)
 obj.setAwake(awake=true)

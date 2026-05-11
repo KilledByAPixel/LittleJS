@@ -67,7 +67,7 @@ function drawEngineLogo(t)
     }
     const color = (c,l)=> l?`hsl(${[.95,.56,.13][c%3]*360} 99%${[0,50,75][l]}%`:'#000';
 
-    // center and fit tos screen
+    // center and fit to screen
     const alpha = oscillate(1,1,t);
     const p = percent(alpha, .1, .5);
     const size = min(6, min(w,h)/99);

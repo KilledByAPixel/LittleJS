@@ -190,9 +190,14 @@ function readSaveData(saveName, defaultSaveData)
 {
     ASSERT(isString(saveName), 'loadData requires saveName string');
     
-    // replace undefined values with defaults
+    // replace undefined values with defaults; tolerate corrupt JSON
     const data = localStorage[saveName];
-    const loadedData = data ? JSON.parse(data) : {};
+    let loadedData = {};
+    if (data)
+    {
+        try { loadedData = JSON.parse(data); }
+        catch { LOG('readSaveData: corrupt JSON for', saveName, '— using defaults'); }
+    }
     return { ...defaultSaveData, ...loadedData };
 }
 

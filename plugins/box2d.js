@@ -525,15 +525,29 @@ class Box2dObject extends EngineObject
         this.body.ApplyForce(box2d.vec2dTo(force), box2d.vec2dTo(pos));
     }
 
-    /** Apply acceleration to this object (force = mass * acceleration)
+    /** Apply acceleration to this object (changes velocity by acceleration,
+     *  mass-independent — matches EngineObject.applyAcceleration semantics).
+     *  Use applyImpulse if you want the mass-dependent velocity change
+     *  Δv = impulse / mass, or applyForce for a Newton-style sustained force.
      *  @param {Vector2} acceleration
      *  @param {Vector2} [pos] */
     applyAcceleration(acceleration, pos)
     {
         pos ||= this.getCenterOfMass();
         this.setAwake();
-        const force = acceleration.scale(this.getMass());
-        this.body.ApplyForce(box2d.vec2dTo(force), box2d.vec2dTo(pos));
+        const impulse = acceleration.scale(this.getMass());
+        this.body.ApplyLinearImpulse(box2d.vec2dTo(impulse), box2d.vec2dTo(pos));
+    }
+
+    /** Apply an instantaneous linear impulse. Changes velocity immediately by
+     *  impulse / mass (so heavier bodies move less for the same impulse).
+     *  @param {Vector2} impulse
+     *  @param {Vector2} [pos] */
+    applyImpulse(impulse, pos)
+    {
+        pos ||= this.getCenterOfMass();
+        this.setAwake();
+        this.body.ApplyLinearImpulse(box2d.vec2dTo(impulse), box2d.vec2dTo(pos));
     }
 
     /** Apply torque to this object
@@ -543,13 +557,23 @@ class Box2dObject extends EngineObject
         this.setAwake();
         this.body.ApplyTorque(torque);
     }
-    
-    /** Apply angular acceleration to this object
+
+    /** Apply angular acceleration to this object (changes angular velocity by
+     *  acceleration, mass-independent — matches EngineObject semantics).
      *  @param {number} acceleration */
     applyAngularAcceleration(acceleration)
     {
         this.setAwake();
-        this.body.ApplyAngularImpulse(acceleration);
+        this.body.ApplyAngularImpulse(acceleration * this.getInertia());
+    }
+
+    /** Apply an instantaneous angular impulse. Changes angular velocity by
+     *  impulse / inertia immediately.
+     *  @param {number} impulse */
+    applyAngularImpulse(impulse)
+    {
+        this.setAwake();
+        this.body.ApplyAngularImpulse(impulse);
     }
 
     ///////////////////////////////////////////////////////////////////////////////

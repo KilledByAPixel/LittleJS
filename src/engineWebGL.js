@@ -685,6 +685,7 @@ function glSetRenderTarget(texture, clear=false)
         glFlush();
         glRenderTarget = undefined;
         glContext.bindFramebuffer(glContext.FRAMEBUFFER, null);
+        glContext.viewport(0, 0, mainCanvasSize.x, mainCanvasSize.y);
     }
 }
 
@@ -807,9 +808,9 @@ function glPolyStrip(points)
         return area;
     }
 
-    // ensure counter-clockwise winding
+    // ensure counter-clockwise winding (slice first so we don't mutate caller's array)
     if (signedArea(points) < 0)
-        points = points.reverse();
+        points = points.slice().reverse();
 
     // check if point is inside triangle
     const e = 1e-9;

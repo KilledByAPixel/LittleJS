@@ -153,7 +153,11 @@ function percentLerp(value, percentA, percentB, lerpA, lerpB)
  *  @return {number}
  *  @memberof Math */
 function distanceWrap(valueA, valueB, wrapSize=1)
-{ const d = (valueA - valueB) % wrapSize; return d*2 % wrapSize - d; }
+{
+    ASSERT(wrapSize > 0, 'distanceWrap wrapSize must be > 0');
+    const d = (valueA - valueB) % wrapSize;
+    return d*2 % wrapSize - d;
+}
 
 /** Linearly interpolates between values passed in with wrapping
  *  @param {number} valueA
@@ -470,6 +474,7 @@ class RandomGenerator
      *  @param {number} [seed] - Starting seed or engine default seed */
     constructor(seed = 123456789)
     {
+        ASSERT(seed !== 0, 'RandomGenerator seed must be non-zero (xorshift is fixed at 0)');
         /** @property {number} - random seed */
         this.seed = seed;
     }
@@ -763,8 +768,10 @@ class Vector2
      * @return {Vector2} */
     floor() { return new Vector2(floor(this.x), floor(this.y)); }
 
-    /** Returns a copy of this vector snapped to a grid
-     *  @param {number} grid - grid size to snap to
+    /** Returns a copy of this vector snapped to a grid. Note that `grid` is
+     *  the number of snap steps per unit (so `grid=2` snaps to halves and
+     *  `grid=0.5` snaps to twos), not the cell size.
+     *  @param {number} grid - snap steps per unit
      *  @return {Vector2} */
     snap(grid)
     {

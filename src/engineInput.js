@@ -66,7 +66,7 @@ const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
  *  This is useful to disable for html menus so the browser can handle input normally
  *  @param {boolean} preventDefault
  *  @memberof Input */
-function setInputPreventDefault(preventDefault) { inputPreventDefault = preventDefault; }
+function setInputPreventDefault(preventDefault=true) { inputPreventDefault = preventDefault; }
 
 /** Clears an input key state
  *  @param {string|number} key

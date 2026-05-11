@@ -33,9 +33,9 @@ class Ball extends Box2dObject
     {
         if (this.canHit() && mouseWasPressed(0))
         {
-            // hit the cue ball
-            const accel = this.getHitOffset().scale(8);
-            this.applyAcceleration(accel);
+            // hit the cue ball with an instantaneous impulse
+            const impulse = this.getHitOffset().scale(8);
+            this.applyImpulse(impulse);
             hitSound.play(cueBall.pos, this.getHitStrength(), .5);
         }
         if (this.pocketed)

@@ -1232,8 +1232,10 @@ declare module "littlejsengine" {
         /** Returns a copy of this vector with each axis floored
          * @return {Vector2} */
         floor(): Vector2;
-        /** Returns a copy of this vector snapped to a grid
-         *  @param {number} grid - grid size to snap to
+        /** Returns a copy of this vector snapped to a grid. Note that `grid` is
+         *  the number of snap steps per unit (so `grid=2` snaps to halves and
+         *  `grid=0.5` snaps to twos), not the cell size.
+         *  @param {number} grid - snap steps per unit
          *  @return {Vector2} */
         snap(grid: number): Vector2;
         /** Returns new vec2 with modded values
@@ -2217,7 +2219,7 @@ declare module "littlejsengine" {
      *  This is useful to disable for html menus so the browser can handle input normally
      *  @param {boolean} preventDefault
      *  @memberof Input */
-    export function setInputPreventDefault(preventDefault: boolean): void;
+    export function setInputPreventDefault(preventDefault?: boolean): void;
     /** Returns true if gamepad button is down
      *  @param {number} button
      *  @param {number} [gamepad]
@@ -2299,7 +2301,9 @@ declare module "littlejsengine" {
      * - Web Audio API integration with master gain control
      * @namespace Audio
      */
-    /** Audio context used by the engine
+    /** Audio context used by the engine. Created lazily in audioInit() to avoid
+     *  browser autoplay warnings about constructing an AudioContext before any
+     *  user gesture.
      *  @type {AudioContext}
      *  @memberof Audio */
     export let audioContext: AudioContext;
@@ -4329,13 +4333,25 @@ declare module "littlejsengine" {
          *  @param {Vector2} force
          *  @param {Vector2} [pos] */
         applyForce(force: Vector2, pos?: Vector2): void;
-        /** Apply acceleration to this object (force = mass * acceleration)
+        /** Apply acceleration to this object (changes velocity by acceleration,
+         *  mass-independent — matches EngineObject.applyAcceleration semantics).
+         *  Use applyImpulse if you want the mass-dependent velocity change
+         *  Δv = impulse / mass, or applyForce for a Newton-style sustained force.
          *  @param {Vector2} acceleration
          *  @param {Vector2} [pos] */
         applyAcceleration(acceleration: Vector2, pos?: Vector2): void;
+        /** Apply an instantaneous linear impulse. Changes velocity immediately by
+         *  impulse / mass (so heavier bodies move less for the same impulse).
+         *  @param {Vector2} impulse
+         *  @param {Vector2} [pos] */
+        applyImpulse(impulse: Vector2, pos?: Vector2): void;
         /** Apply torque to this object
          *  @param {number} torque */
         applyTorque(torque: number): void;
+        /** Apply an instantaneous angular impulse. Changes angular velocity by
+         *  impulse / inertia immediately.
+         *  @param {number} impulse */
+        applyAngularImpulse(impulse: number): void;
         /** Check if this object has any fixtures
          *  @return {boolean} */
         hasFixtures(): boolean;

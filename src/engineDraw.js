@@ -312,8 +312,9 @@ function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
         }
         else
         {
-            // if no tile info, force untextured
-            glDraw(pos.x, pos.y, size.x, size.y, angle, 0, 0, 0, 0, 0, color.rgbaInt());
+            // if no tile info, force untextured (white 1x1 fallback texture)
+            glDraw(pos.x, pos.y, size.x, size.y, angle, 0, 0, 0, 0,
+                color.rgbaInt(), additiveColor && additiveColor.rgbaInt());
         }
     }
     else

@@ -584,6 +584,7 @@ const debugPhysics = 0;
 const debugParticles = 0;
 const debugRaycast = 0;
 const debugGamepads = 0;
+const debugPointSize = .5;
 
 // debug commands are automatically removed from the final build
 function ASSERT          (){}
@@ -760,7 +761,11 @@ function percentLerp(value, percentA, percentB, lerpA, lerpB)
  *  @return {number}
  *  @memberof Math */
 function distanceWrap(valueA, valueB, wrapSize=1)
-{ const d = (valueA - valueB) % wrapSize; return d*2 % wrapSize - d; }
+{
+    ASSERT(wrapSize > 0, 'distanceWrap wrapSize must be > 0');
+    const d = (valueA - valueB) % wrapSize;
+    return d*2 % wrapSize - d;
+}
 
 /** Linearly interpolates between values passed in with wrapping
  *  @param {number} valueA
@@ -1077,6 +1082,7 @@ class RandomGenerator
      *  @param {number} [seed] - Starting seed or engine default seed */
     constructor(seed = 123456789)
     {
+        ASSERT(seed !== 0, 'RandomGenerator seed must be non-zero (xorshift is fixed at 0)');
         /** @property {number} - random seed */
         this.seed = seed;
     }
@@ -1370,8 +1376,10 @@ class Vector2
      * @return {Vector2} */
     floor() { return new Vector2(floor(this.x), floor(this.y)); }
 
-    /** Returns a copy of this vector snapped to a grid
-     *  @param {number} grid - grid size to snap to
+    /** Returns a copy of this vector snapped to a grid. Note that `grid` is
+     *  the number of snap steps per unit (so `grid=2` snaps to halves and
+     *  `grid=0.5` snaps to twos), not the cell size.
+     *  @param {number} grid - snap steps per unit
      *  @return {Vector2} */
     snap(grid)
     {
@@ -1941,9 +1949,14 @@ function readSaveData(saveName, defaultSaveData)
 {
     ASSERT(isString(saveName), 'loadData requires saveName string');
     
-    // replace undefined values with defaults
+    // replace undefined values with defaults; tolerate corrupt JSON
     const data = localStorage[saveName];
-    const loadedData = data ? JSON.parse(data) : {};
+    let loadedData = {};
+    if (data)
+    {
+        try { loadedData = JSON.parse(data); }
+        catch { LOG('readSaveData: corrupt JSON for', saveName, '— using defaults'); }
+    }
     return { ...defaultSaveData, ...loadedData };
 }
 
@@ -3401,8 +3414,9 @@ function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
         }
         else
         {
-            // if no tile info, force untextured
-            glDraw(pos.x, pos.y, size.x, size.y, angle, 0, 0, 0, 0, 0, color.rgbaInt());
+            // if no tile info, force untextured (white 1x1 fallback texture)
+            glDraw(pos.x, pos.y, size.x, size.y, angle, 0, 0, 0, 0,
+                color.rgbaInt(), additiveColor && additiveColor.rgbaInt());
         }
     }
     else
@@ -4451,7 +4465,7 @@ const isTouchDevice = !headlessMode && window.ontouchstart !== undefined;
  *  This is useful to disable for html menus so the browser can handle input normally
  *  @param {boolean} preventDefault
  *  @memberof Input */
-function setInputPreventDefault(preventDefault) { inputPreventDefault = preventDefault; }
+function setInputPreventDefault(preventDefault=true) { inputPreventDefault = preventDefault; }
 
 /** Clears an input key state
  *  @param {string|number} key
@@ -5247,10 +5261,12 @@ function touchGamepadButtonCenter()
  * @namespace Audio
  */
 
-/** Audio context used by the engine
+/** Audio context used by the engine. Created lazily in audioInit() to avoid
+ *  browser autoplay warnings about constructing an AudioContext before any
+ *  user gesture.
  *  @type {AudioContext}
  *  @memberof Audio */
-let audioContext = new AudioContext;
+let audioContext;
 
 /** Master gain node for all audio to pass through
  *  @type {GainNode}
@@ -5266,12 +5282,13 @@ const audioDefaultSampleRate = 44100;
  *  @return {boolean} - True if the audio context is running
  *  @memberof Audio */
 function audioIsRunning()
-{ return audioContext.state === 'running'; }
+{ return audioContext?.state === 'running'; }
 
 function audioInit()
 {
     if (!soundEnable || headlessMode) return;
 
+    audioContext = new AudioContext;
     audioMasterGain = audioContext.createGain();
     audioMasterGain.connect(audioContext.destination);
     audioMasterGain.gain.value = soundVolume; // set starting value
@@ -5338,8 +5355,8 @@ class Sound
 
         if (Array.isArray(asset))
         {
-            // generate zzfx sound
-            const zzfxSound = asset;
+            // generate zzfx sound — copy so we don't mutate the caller's array
+            const zzfxSound = asset.slice();
 
             // remove randomness so it can be applied on playback
             const defaultRandomness = randomness ?? .05;
@@ -7836,6 +7853,7 @@ function glSetRenderTarget(texture, clear=false)
         glFlush();
         glRenderTarget = undefined;
         glContext.bindFramebuffer(glContext.FRAMEBUFFER, null);
+        glContext.viewport(0, 0, mainCanvasSize.x, mainCanvasSize.y);
     }
 }
 
@@ -7958,9 +7976,9 @@ function glPolyStrip(points)
         return area;
     }
 
-    // ensure counter-clockwise winding
+    // ensure counter-clockwise winding (slice first so we don't mutate caller's array)
     if (signedArea(points) < 0)
-        points = points.reverse();
+        points = points.slice().reverse();
 
     // check if point is inside triangle
     const e = 1e-9;
@@ -8127,7 +8145,7 @@ function drawEngineLogo(t)
     }
     const color = (c,l)=> l?`hsl(${[.95,.56,.13][c%3]*360} 99%${[0,50,75][l]}%`:'#000';
 
-    // center and fit tos screen
+    // center and fit to screen
     const alpha = oscillate(1,1,t);
     const p = percent(alpha, .1, .5);
     const size = min(6, min(w,h)/99);
@@ -11110,15 +11128,29 @@ class Box2dObject extends EngineObject
         this.body.ApplyForce(box2d.vec2dTo(force), box2d.vec2dTo(pos));
     }
 
-    /** Apply acceleration to this object (force = mass * acceleration)
+    /** Apply acceleration to this object (changes velocity by acceleration,
+     *  mass-independent — matches EngineObject.applyAcceleration semantics).
+     *  Use applyImpulse if you want the mass-dependent velocity change
+     *  Δv = impulse / mass, or applyForce for a Newton-style sustained force.
      *  @param {Vector2} acceleration
      *  @param {Vector2} [pos] */
     applyAcceleration(acceleration, pos)
     {
         pos ||= this.getCenterOfMass();
         this.setAwake();
-        const force = acceleration.scale(this.getMass());
-        this.body.ApplyForce(box2d.vec2dTo(force), box2d.vec2dTo(pos));
+        const impulse = acceleration.scale(this.getMass());
+        this.body.ApplyLinearImpulse(box2d.vec2dTo(impulse), box2d.vec2dTo(pos));
+    }
+
+    /** Apply an instantaneous linear impulse. Changes velocity immediately by
+     *  impulse / mass (so heavier bodies move less for the same impulse).
+     *  @param {Vector2} impulse
+     *  @param {Vector2} [pos] */
+    applyImpulse(impulse, pos)
+    {
+        pos ||= this.getCenterOfMass();
+        this.setAwake();
+        this.body.ApplyLinearImpulse(box2d.vec2dTo(impulse), box2d.vec2dTo(pos));
     }
 
     /** Apply torque to this object
@@ -11128,13 +11160,23 @@ class Box2dObject extends EngineObject
         this.setAwake();
         this.body.ApplyTorque(torque);
     }
-    
-    /** Apply angular acceleration to this object
+
+    /** Apply angular acceleration to this object (changes angular velocity by
+     *  acceleration, mass-independent — matches EngineObject semantics).
      *  @param {number} acceleration */
     applyAngularAcceleration(acceleration)
     {
         this.setAwake();
-        this.body.ApplyAngularImpulse(acceleration);
+        this.body.ApplyAngularImpulse(acceleration * this.getInertia());
+    }
+
+    /** Apply an instantaneous angular impulse. Changes angular velocity by
+     *  impulse / inertia immediately.
+     *  @param {number} impulse */
+    applyAngularImpulse(impulse)
+    {
+        this.setAwake();
+        this.body.ApplyAngularImpulse(impulse);
     }
 
     ///////////////////////////////////////////////////////////////////////////////
