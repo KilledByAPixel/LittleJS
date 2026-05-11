@@ -11,6 +11,8 @@
 
 'use strict';
 
+let debugMedals = false;
+
 /** List of all medals
  *  @type {Object}
  *  @memberof Medals */

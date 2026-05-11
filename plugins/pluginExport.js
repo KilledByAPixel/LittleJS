@@ -4,6 +4,13 @@
 
 export
 {
+    // Medals
+    medals,
+    medalsPreventUnlock,
+    medalsInit,
+    medalsForEach,
+    Medal,
+
     // Newgrounds
     newgrounds,
     NewgroundsPlugin,

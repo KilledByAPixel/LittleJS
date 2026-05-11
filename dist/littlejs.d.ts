@@ -3158,16 +3158,6 @@ declare module "littlejsengine" {
         /** Render the particle, automatically called each frame */
         render(): void;
     }
-    /**
-     * LittleJS Medal System
-     * - Achievement/trophy system for games
-     * - Medal class with name, description, icon, and unlock tracking
-     * - Automatic saving to local storage
-     * - Visual display queue with slide-in notifications
-     * - Newgrounds API integration for online achievements
-     * - Debug mode to unlock/reset medals during development
-     * @namespace Medals
-     */
     /** List of all medals
      *  @type {Object}
      *  @memberof Medals */

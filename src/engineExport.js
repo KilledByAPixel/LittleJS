@@ -354,10 +354,4 @@ export
     ParticleEmitter,
     Particle,
 
-    // Medals
-    medals,
-    medalsPreventUnlock,
-    medalsInit,
-    medalsForEach,
-    Medal,
 }

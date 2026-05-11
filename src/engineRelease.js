@@ -18,7 +18,6 @@ const debugPhysics = 0;
 const debugParticles = 0;
 const debugRaycast = 0;
 const debugGamepads = 0;
-const debugMedals = 0;
 
 // debug commands are automatically removed from the final build
 function ASSERT          (){}

@@ -33,11 +33,11 @@ const engineSourceFiles =
     `${SOURCE_FOLDER}/engineAudio.js`,
     `${SOURCE_FOLDER}/engineTileLayer.js`,
     `${SOURCE_FOLDER}/engineParticles.js`,
-    `${SOURCE_FOLDER}/engineMedals.js`,
     `${SOURCE_FOLDER}/engineWebGL.js`,
 ];
 const enginePluginFiles =
 [
+    `${PLUGIN_FOLDER}/medalSystem.js`,
     `${PLUGIN_FOLDER}/newgrounds.js`,
     `${PLUGIN_FOLDER}/postProcess.js`,
     `${PLUGIN_FOLDER}/zzfxm.js`,
