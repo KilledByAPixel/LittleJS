@@ -215,6 +215,8 @@ class PathFinder
     aStarSearch(startNode, endNode)
     {
         ASSERT(startNode && endNode, 'aStarSearch needs both endpoints');
+        ASSERT(startNode !== endNode, 'aStarSearch: start and end must differ — caller should handle trivial case');
+        ASSERT(startNode.walkable && endNode.walkable, 'aStarSearch: endpoints must be walkable');
 
         const openList = [startNode];
         startNode.isOpen = true;

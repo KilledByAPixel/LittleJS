@@ -163,3 +163,24 @@ test('aStarSearch refuses to cut a diagonal between two adjacent walls', () =>
     const ok = pf.aStarSearch(pf.getNode(0, 0), pf.getNode(1, 1));
     assert.equal(ok, false);
 });
+
+test('aStarSearch routes around high-cost tiles when a cheaper detour exists', () =>
+{
+    // 5x3 grid. Middle row has cost 100, so the optimal path from (0,1) to
+    // (4,1) should NOT cut straight through the middle — it should detour
+    // up to row 0 (or down to row 2) where cost is 0.
+    const pf = new PathFinder(vec2(5, 3));
+    pf.getCost = (x, y) => y === 1 ? 100 : 0;
+    pf.buildNodeData();
+    const ok = pf.aStarSearch(pf.getNode(0, 1), pf.getNode(4, 1));
+    assert.equal(ok, true);
+    // Reconstruct the path and confirm at least one intermediate node has cost 0.
+    let n = pf.getNode(4, 1);
+    let visitedZeroCostTile = false;
+    while (n.parent)
+    {
+        n = n.parent;
+        if (n !== pf.getNode(0, 1) && n.cost === 0) visitedZeroCostTile = true;
+    }
+    assert.equal(visitedZeroCostTile, true);
+});
