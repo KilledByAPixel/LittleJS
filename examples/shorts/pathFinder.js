@@ -6,31 +6,34 @@ function gameInit()
     const gridSize = vec2(30, 20);
     tileLayer = new TileCollisionLayer(vec2(), gridSize);
 
-    // scatter solid tiles, leaving a small clearing at the center
+    // scatter solid tiles with a small central clearing
     const center = gridSize.scale(0.5);
     const wallColor = hsl(0.6, 0.6, 0.5);
     for (let x = 0; x < gridSize.x; ++x)
     for (let y = 0; y < gridSize.y; ++y)
     {
         const here = vec2(x, y);
-        if (here.distance(center) < 2) continue; // keep a clearing
+        if (here.distance(center) < 2)
+            continue; // keep center clear
         if (rand() < 0.25)
         {
+            const data = new TileLayerData(1, 0, false, wallColor);
             tileLayer.setCollisionData(here, 1);
-            tileLayer.setData(here, new TileLayerData(1, 0, false, wallColor));
+            tileLayer.setData(here, data);
         }
     }
-    tileLayer.redraw(); // render the wall tiles into the layer's offscreen canvas
+    tileLayer.redraw(); 
 
+    // create the pathfinder with the tile layer collision
     pathFinder = new PathFinder(tileLayer);
-    pathFinder.debug = true;
-    pathFinder.debugTime = 0.5;
+    //pathFinder.debug = true;
 
-    // snap the player to clear center tile and save pos
+    // snap the player to center tile and save pos
     const startNode = pathFinder.getNearestClearNode(center);
     ASSERT(startNode, 'no clear tile near grid center — try regenerating');
     playerPos = startNode.posWorld.copy();
 
+    // setup the game
     cameraPos = center;
     cameraScale = 25;
     canvasClearColor = hsl(0.6, 0.3, 0.12);
@@ -44,15 +47,13 @@ function gameUpdate()
 
 function gameRender()
 {
-    // (Walls render through tileLayer's built-in tile rendering.)
-
-    // Player.
+    // draw the player
     drawCircle(playerPos, 0.4, GREEN);
 
-    // Final path — drawn here too so it's visible even when debug is off.
+    // draw the final path
     for (let i = 1; i < path.length; ++i)
+    {
+        drawCircle(path[i], 0.5, RED);
         drawLine(path[i - 1], path[i], 0.15, RED);
-
-    // Hint.
-    drawText('Click to set destination', vec2(cameraPos.x, cameraPos.y + 12), 0.6, WHITE);
+    }
 }
