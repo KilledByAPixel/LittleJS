@@ -3904,11 +3904,12 @@ declare module "littlejsengine" {
     export class UILayout extends UIObject {
         /** Create a UILayout container that auto-arranges children
          *  @param {Vector2} [pos]
-         *  @param {number}  [columns=1]  - Number of columns (1 = vertical list)
-         *  @param {number}  [gap=10]     - Space between children
-         *  @param {number}  [padding=10] - Space between container border and children
+         *  @param {number}  [columns=1]     - Number of columns (1 = vertical list)
+         *  @param {number}  [gap=10]        - Space between children
+         *  @param {number}  [padding=10]    - Space between container border and children
+         *  @param {boolean} [transparent=false] - If true, draws no background, outline, or shadow
          */
-        constructor(pos?: Vector2, columns?: number, gap?: number, padding?: number);
+        constructor(pos?: Vector2, columns?: number, gap?: number, padding?: number, transparent?: boolean);
         /** @property {number} - Number of columns in the layout */
         columns: number;
         /** @property {number} - Space between children */

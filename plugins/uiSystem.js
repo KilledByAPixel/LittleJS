@@ -1513,11 +1513,12 @@ class UILayout extends UIObject
 {
     /** Create a UILayout container that auto-arranges children
      *  @param {Vector2} [pos]
-     *  @param {number}  [columns=1]  - Number of columns (1 = vertical list)
-     *  @param {number}  [gap=10]     - Space between children
-     *  @param {number}  [padding=10] - Space between container border and children
+     *  @param {number}  [columns=1]     - Number of columns (1 = vertical list)
+     *  @param {number}  [gap=10]        - Space between children
+     *  @param {number}  [padding=10]    - Space between container border and children
+     *  @param {boolean} [transparent=false] - If true, draws no background, outline, or shadow
      */
-    constructor(pos, columns=1, gap=10, padding=10)
+    constructor(pos, columns=1, gap=10, padding=10, transparent=false)
     {
         super(pos);
 
@@ -1531,6 +1532,15 @@ class UILayout extends UIObject
         this.gap = gap;
         /** @property {number} - Space between container border and children */
         this.padding = padding;
+
+        if (transparent)
+        {
+            // pure positioning helper - skip background, outline, and shadow
+            this.color = CLEAR_BLACK;
+            this.gradientColor = undefined;
+            this.lineWidth = 0;
+            this.shadowColor = CLEAR_BLACK;
+        }
         this.relayout();
     }
 
