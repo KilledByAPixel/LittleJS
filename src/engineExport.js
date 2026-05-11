@@ -265,6 +265,7 @@ export
     glAntialias,
     glClearCanvas,
     glSetTexture,
+    glSetTextureWrap,
     glCompileShader,
     glCreateProgram,
     glCreateTexture,

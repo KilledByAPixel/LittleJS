@@ -1574,8 +1574,9 @@ declare module "littlejsengine" {
          * Create a TextureInfo, called automatically by the engine
          * @param {HTMLImageElement|OffscreenCanvas} image
          * @param {boolean} [useWebGL] - Should use WebGL if available?
+         * @param {boolean} [wrap] - Should the texture wrap (REPEAT) or clamp (CLAMP_TO_EDGE)?
          */
-        constructor(image: HTMLImageElement | OffscreenCanvas, useWebGL?: boolean);
+        constructor(image: HTMLImageElement | OffscreenCanvas, useWebGL?: boolean, wrap?: boolean);
         /** @property {HTMLImageElement|OffscreenCanvas} - image source */
         image: OffscreenCanvas | HTMLImageElement;
         /** @property {Vector2} - size of the image */
@@ -1584,6 +1585,8 @@ declare module "littlejsengine" {
         sizeInverse: Vector2;
         /** @property {WebGLTexture} - WebGL texture */
         glTexture: any;
+        /** @property {boolean} - true for REPEAT wrap mode, false for CLAMP_TO_EDGE */
+        wrap: boolean;
         /** Creates the WebGL texture, updates if already created */
         createWebGLTexture(): void;
         /** Destroys the WebGL texture */
@@ -1591,6 +1594,9 @@ declare module "littlejsengine" {
         /** Check if the texture is webgl enabled
          * @return {boolean} */
         hasWebGL(): boolean;
+        /** Set the wrap mode for this texture
+         *  @param {boolean} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE */
+        setWrap(wrap?: boolean): void;
     }
     /**
      * LittleJS Drawing System
@@ -1941,6 +1947,12 @@ declare module "littlejsengine" {
      *  @param {WebGLTexture} texture
      *  @memberof WebGL */
     export function glSetTexture(texture: WebGLTexture): void;
+    /** Set the wrap mode (REPEAT or CLAMP_TO_EDGE) on an existing WebGL texture
+     *  Flushes the current batch only if the texture is the active one
+     *  @param {WebGLTexture} texture
+     *  @param {boolean} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE
+     *  @memberof WebGL */
+    export function glSetTextureWrap(texture: WebGLTexture, wrap?: boolean): void;
     /** Compile WebGL shader of the given type, will throw errors if in debug mode
      *  @param {string} source
      *  @param {number} type
@@ -1956,9 +1968,10 @@ declare module "littlejsengine" {
     /** Create WebGL texture from an image and init the texture settings
      *  Restores the active texture when done
      *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas} [image]
+     *  @param {boolean} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE
      *  @return {WebGLTexture}
      *  @memberof WebGL */
-    export function glCreateTexture(image?: HTMLImageElement | HTMLCanvasElement | OffscreenCanvas): WebGLTexture;
+    export function glCreateTexture(image?: HTMLImageElement | HTMLCanvasElement | OffscreenCanvas, wrap?: boolean): WebGLTexture;
     /** Deletes a WebGL texture
      *  @param {WebGLTexture} [texture]
      *  @memberof WebGL */

@@ -3981,8 +3981,9 @@ class TextureInfo
      * Create a TextureInfo, called automatically by the engine
      * @param {HTMLImageElement|OffscreenCanvas} image
      * @param {boolean} [useWebGL] - Should use WebGL if available?
+     * @param {boolean} [wrap] - Should the texture wrap (REPEAT) or clamp (CLAMP_TO_EDGE)?
      */
-    constructor(image, useWebGL=true)
+    constructor(image, useWebGL=true, wrap=false)
     {
         /** @property {HTMLImageElement|OffscreenCanvas} - image source */
         this.image = image;
@@ -3992,6 +3993,8 @@ class TextureInfo
         this.sizeInverse = image ? vec2(1/image.width, 1/image.height) : vec2();
         /** @property {WebGLTexture} - WebGL texture */
         this.glTexture = undefined;
+        /** @property {boolean} - true for REPEAT wrap mode, false for CLAMP_TO_EDGE */
+        this.wrap = wrap;
         useWebGL && this.createWebGLTexture();
     }
 
@@ -4004,6 +4007,14 @@ class TextureInfo
     /** Check if the texture is webgl enabled
      * @return {boolean} */
     hasWebGL() { return !!this.glTexture; }
+
+    /** Set the wrap mode for this texture
+     *  @param {boolean} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE */
+    setWrap(wrap=true)
+    {
+        this.wrap = wrap;
+        glSetTextureWrap(this.glTexture, wrap);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4205,6 +4216,8 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
     const textureInfo = typeof texture === 'number' ? textureInfos[texture] : texture;
     ASSERT(textureInfo instanceof TextureInfo, 'texture not loaded');
     ASSERT(textureInfo.size.x > 0, 'texture not loaded');
+    ASSERT(textureInfo.wrap,
+        'drawTextureWrapped requires a wrap-enabled texture; call textureInfo.setWrap(true) first');
 
     if (useWebGL && glEnable)
     {
@@ -7909,7 +7922,7 @@ function glInit(rootElement)
         // reinit WebGL and restore textures
         initWebGL();
         for (const info of glTextureInfos)
-            info.glTexture = glCreateTexture(info.image);
+            info.glTexture = glCreateTexture(info.image, info.wrap);
         pluginList.forEach(plugin=>plugin.glContextRestored?.());
     });
 
@@ -8125,6 +8138,30 @@ function glSetTexture(texture)
     glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
 }
 
+/** Set the wrap mode (REPEAT or CLAMP_TO_EDGE) on an existing WebGL texture
+ *  Flushes the current batch only if the texture is the active one
+ *  @param {WebGLTexture} texture
+ *  @param {boolean} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE
+ *  @memberof WebGL */
+function glSetTextureWrap(texture, wrap=true)
+{
+    if (!glContext || !texture) return;
+
+    // flush only if changing wrap on the currently bound texture
+    const isCurrent = texture === glActiveTexture;
+    if (isCurrent)
+        glFlush();
+    else
+        glContext.bindTexture(glContext.TEXTURE_2D, texture);
+
+    const wrapMode = wrap ? glContext.REPEAT : glContext.CLAMP_TO_EDGE;
+    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, wrapMode);
+    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, wrapMode);
+
+    if (!isCurrent && glActiveTexture)
+        glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
+}
+
 /** Compile WebGL shader of the given type, will throw errors if in debug mode
  *  @param {string} source
  *  @param {number} type
@@ -8169,9 +8206,10 @@ function glCreateProgram(vsSource, fsSource)
 /** Create WebGL texture from an image and init the texture settings
  *  Restores the active texture when done
  *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas} [image]
+ *  @param {boolean} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE
  *  @return {WebGLTexture}
  *  @memberof WebGL */
-function glCreateTexture(image)
+function glCreateTexture(image, wrap=false)
 {
     if (!glContext) return;
 
@@ -8197,8 +8235,9 @@ function glCreateTexture(image)
     const minFilter = mipMap ? glContext.LINEAR_MIPMAP_LINEAR : magFilter;
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, magFilter);
     glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, minFilter);
-    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, glContext.REPEAT);
-    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, glContext.REPEAT);
+    const wrapMode = wrap ? glContext.REPEAT : glContext.CLAMP_TO_EDGE;
+    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, wrapMode);
+    glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, wrapMode);
     if (mipMap)
         glContext.generateMipmap(glContext.TEXTURE_2D);
 
@@ -8250,7 +8289,7 @@ function glRegisterTextureInfo(textureInfo)
     if (textureInfo.glTexture)
         glSetTextureData(textureInfo.glTexture, textureInfo.image);
     else
-        textureInfo.glTexture = glCreateTexture(textureInfo.image);
+        textureInfo.glTexture = glCreateTexture(textureInfo.image, textureInfo.wrap);
 }
 
 /** Tells WebGL to destroy the glTexture and stop tracking it
@@ -14911,6 +14950,7 @@ export
     glAntialias,
     glClearCanvas,
     glSetTexture,
+    glSetTextureWrap,
     glCompileShader,
     glCreateProgram,
     glCreateTexture,

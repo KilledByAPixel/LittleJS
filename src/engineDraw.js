@@ -217,8 +217,9 @@ class TextureInfo
      * Create a TextureInfo, called automatically by the engine
      * @param {HTMLImageElement|OffscreenCanvas} image
      * @param {boolean} [useWebGL] - Should use WebGL if available?
+     * @param {boolean} [wrap] - Should the texture wrap (REPEAT) or clamp (CLAMP_TO_EDGE)?
      */
-    constructor(image, useWebGL=true)
+    constructor(image, useWebGL=true, wrap=false)
     {
         /** @property {HTMLImageElement|OffscreenCanvas} - image source */
         this.image = image;
@@ -228,6 +229,8 @@ class TextureInfo
         this.sizeInverse = image ? vec2(1/image.width, 1/image.height) : vec2();
         /** @property {WebGLTexture} - WebGL texture */
         this.glTexture = undefined;
+        /** @property {boolean} - true for REPEAT wrap mode, false for CLAMP_TO_EDGE */
+        this.wrap = wrap;
         useWebGL && this.createWebGLTexture();
     }
 
@@ -240,6 +243,14 @@ class TextureInfo
     /** Check if the texture is webgl enabled
      * @return {boolean} */
     hasWebGL() { return !!this.glTexture; }
+
+    /** Set the wrap mode for this texture
+     *  @param {boolean} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE */
+    setWrap(wrap=true)
+    {
+        this.wrap = wrap;
+        glSetTextureWrap(this.glTexture, wrap);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -441,6 +452,8 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
     const textureInfo = typeof texture === 'number' ? textureInfos[texture] : texture;
     ASSERT(textureInfo instanceof TextureInfo, 'texture not loaded');
     ASSERT(textureInfo.size.x > 0, 'texture not loaded');
+    ASSERT(textureInfo.wrap,
+        'drawTextureWrapped requires a wrap-enabled texture; call textureInfo.setWrap(true) first');
 
     if (useWebGL && glEnable)
     {

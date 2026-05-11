@@ -1,3 +1,9 @@
+function gameInit()
+{
+    // enable wrap mode on the default tile sheet
+    textureInfos[0].setWrap(true);
+}
+
 function gameRender()
 {
     // draw a wrapped texture
