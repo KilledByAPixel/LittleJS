@@ -392,3 +392,23 @@ test('findPath with smoothPath=true on an open grid collapses to start+end', () 
     assert.equal(path[1].x, 7.5);
     assert.equal(path[1].y, 7.5);
 });
+
+test('findPath returns copies, not live node references', () =>
+{
+    const pf = new PathFinder(vec2(3, 3));
+    const path = pf.findPath(vec2(0.5, 0.5), vec2(2.5, 2.5));
+    assert(path.length >= 1);
+    path[0].x = 999;
+    const node = pf.getNode(0, 0);
+    assert.notEqual(node.posWorld.x, 999);
+});
+
+test('findPath single-element path is also a copy, not a live reference', () =>
+{
+    const pf = new PathFinder(vec2(3, 3));
+    const path = pf.findPath(vec2(1.5, 1.5), vec2(1.5, 1.5));
+    assert.equal(path.length, 1);
+    path[0].x = 999;
+    const node = pf.getNode(1, 1);
+    assert.notEqual(node.posWorld.x, 999);
+});

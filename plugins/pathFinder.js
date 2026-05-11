@@ -152,7 +152,8 @@ class PathFinder
 
     /** Convert a world-space position to integer tile coords (no clamping).
      *  @param {Vector2} worldPos
-     *  @returns {Vector2} */
+     *  @returns {Vector2}
+     *  @memberof PathFinding */
     worldToTile(worldPos)
     {
         const ox = this.tileLayer ? this.tileLayer.pos.x : 0;
@@ -163,7 +164,8 @@ class PathFinder
     /** Convert integer tile coords to the world-space center of that tile.
      *  @param {number} x
      *  @param {number} y
-     *  @returns {Vector2} */
+     *  @returns {Vector2}
+     *  @memberof PathFinding */
     tileToWorld(x, y)
     {
         const ox = this.tileLayer ? this.tileLayer.pos.x : 0;

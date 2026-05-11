@@ -25,7 +25,10 @@ function gameInit()
     pathFinder.debugTime = 0.5;
 
     // Snap the player to a guaranteed-clear center tile.
-    playerPos = pathFinder.getNearestClearNode(center).posWorld;
+    // Copy because the node's posWorld is internal state that buildNodeData rewrites.
+    const startNode = pathFinder.getNearestClearNode(center);
+    ASSERT(startNode, 'no clear tile near grid center — try regenerating');
+    playerPos = startNode.posWorld.copy();
 
     cameraPos = center;
     cameraScale = 25;
