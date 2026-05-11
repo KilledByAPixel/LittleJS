@@ -113,6 +113,9 @@ class PathFinder
         for (let y = 0; y < this.size.y; ++y)
         for (let x = 0; x < this.size.x; ++x)
             this.nodes[x + y * this.size.x] = new PathFinderNode(x, y);
+
+        // Scratch Vector2 reused to avoid allocations in the isWalkable hot path.
+        this._collisionScratch = vec2();
     }
 
     /** Default walkability: if a tile layer was provided, returns true when the
@@ -124,7 +127,7 @@ class PathFinder
     isWalkable(x, y)
     {
         if (!this.tileLayer) return true;
-        return !this.tileLayer.getCollisionData(vec2(x, y));
+        return !this.tileLayer.getCollisionData(this._collisionScratch.set(x, y));
     }
 
     /** Default extra cost for stepping on a cell. Returns 0 (free) by default.
@@ -166,5 +169,39 @@ class PathFinder
         const ox = this.tileLayer ? this.tileLayer.pos.x : 0;
         const oy = this.tileLayer ? this.tileLayer.pos.y : 0;
         return vec2(x + 0.5 + ox, y + 0.5 + oy);
+    }
+
+    /** Reset all nodes and re-populate walkable / cost / posWorld from the
+     *  current isWalkable / getCost overrides. Called at the start of
+     *  findPath; exposed so tests and tooling can drive it directly.
+     *  @private */
+    buildNodeData()
+    {
+        if (this.debug && this.debugTime > 0)
+        {
+            // Faint red overlay on blocked tiles during build.
+            // (Drawn after the per-cell walkable check below.)
+        }
+        const w = this.size.x;
+        const h = this.size.y;
+        for (let y = 0; y < h; ++y)
+        for (let x = 0; x < w; ++x)
+        {
+            const node = this.nodes[x + y * w];
+            node.reset();
+            const walkable = !!this.isWalkable(x, y);
+            const cost = walkable ? Math.max(0, this.getCost(x, y)) : 0;
+            node.walkable = walkable;
+            node.cost = cost;
+            node.posWorld = this.tileToWorld(x, y);
+
+            if (this.debug && this.debugTime > 0)
+            {
+                if (!walkable)
+                    debugRect(node.posWorld, vec2(1), rgb(1, 0, 0, 0.25), this.debugTime);
+                else if (cost > 0)
+                    debugRect(node.posWorld, vec2(1), rgb(1, 0, 0, Math.min(0.2, cost * 0.05)), this.debugTime);
+            }
+        }
     }
 }
