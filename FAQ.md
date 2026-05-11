@@ -131,11 +131,15 @@ npm install littlejsengine
 ```javascript
 import { engineInit, drawText, vec2 } from 'littlejsengine';
 
+function gameInit() {}
+function gameUpdate() {}
+function gameUpdatePost() {}
+function gameRender() {}
 function gameRenderPost() {
     drawText('Hello!', vec2(0,0), 4);
 }
 
-engineInit(undefined, undefined, undefined, undefined, gameRenderPost, ['tiles.png']);
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);
 ```
 
 You can also import everything under a namespace:
@@ -145,7 +149,7 @@ import * as LJS from 'littlejsengine';
 LJS.drawText('Hello!', LJS.vec2(0,0), 4);
 ```
 
-See [examples/module/](examples/module/) for a full working example, and the Vite section below for setting up a build tool around it.
+See [examples/module/](examples/module/) for a working example, and the Vite section below for setting up a build tool around an npm-installed copy.
 
 ### How do I use LittleJS with TypeScript?
 
@@ -158,11 +162,15 @@ npm install littlejsengine
 ```typescript
 import { engineInit, drawText, vec2 } from 'littlejsengine';
 
+function gameInit(): void {}
+function gameUpdate(): void {}
+function gameUpdatePost(): void {}
+function gameRender(): void {}
 function gameRenderPost(): void {
     drawText('Hello!', vec2(0,0), 4);
 }
 
-engineInit(undefined, undefined, undefined, undefined, gameRenderPost, ['tiles.png']);
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);
 ```
 
 See [examples/typescript/](examples/typescript/) for a complete TypeScript project with `tsconfig.json`. You can also adapt the Vite starter — Vite supports TypeScript out of the box, just rename `src/main.js` to `src/main.ts` and update the `index.html` script reference.
@@ -368,7 +376,16 @@ The shader gets these uniforms automatically:
 - `iResolution` (`vec3`) — canvas width, height, and `1`
 - `iTime` (`float`) — seconds since engine start
 
-The constructor also accepts a `feedbackTexture: true` argument for effects that need the previous frame (motion trails, etc.). See [plugins/postProcess.js](plugins/postProcess.js) and the [Breakout example](https://killedbyapixel.github.io/LittleJS/examples/breakout/) for working post-process effects.
+The constructor has two optional positional arguments after the shader source:
+
+```javascript
+new PostProcessPlugin(shader, includeMainCanvas, feedbackTexture);
+```
+
+- `includeMainCanvas=true` composites the Canvas2D layer (where some debug and text rendering goes) onto the WebGL canvas before the shader runs. Pass `true` if your post-process effect should apply to *everything* on screen, not just the WebGL-rendered objects.
+- `feedbackTexture=true` makes the previous frame available as `iChannel0` for effects like motion trails or feedback loops. Mutually exclusive with `includeMainCanvas`.
+
+See [plugins/postProcess.js](plugins/postProcess.js) and the [Breakout example](https://killedbyapixel.github.io/LittleJS/examples/breakout/) for working post-process effects.
 
 ### How do I play sounds in LittleJS?
 
@@ -392,12 +409,14 @@ function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0)
 
 ### How can I check if an object is on screen?
 
-You can use the isOverlapping function to check the object against the camera. For culling you maybe want to enlarge the object size slightly to account for attached objects or rotation, I usually do this.size.scale(2).
+You can use the `isOverlapping` function to check the object against the camera's viewable window. For culling you might want to enlarge the object size slightly to account for attached objects or rotation — I usually do `this.size.scale(2)`.
 
 ```javascript
-if (!isOverlapping(this.pos, this.size, cameraPos, renderWindowSize))
+if (!isOverlapping(this.pos, this.size, cameraPos, getCameraSize()))
     return;
 ```
+
+`getCameraSize()` returns the viewable window in world units (canvas pixel size divided by `cameraScale`).
 
 ---
 
