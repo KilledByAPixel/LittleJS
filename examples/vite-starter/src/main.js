@@ -1,4 +1,4 @@
-import { engineInit, drawText, vec2 } from "littlejsengine";
+import { engineInit, drawText, drawTile, tile, vec2 } from 'littlejsengine';
 
 function gameInit() {
     // called once after the engine starts up
@@ -23,7 +23,14 @@ function gameRender() {
 function gameRenderPost() {
     // called after objects are rendered
     // draw effects or hud that appear above all objects
-    drawText('LittleJS Engine', vec2(0, 6), 3);
+    drawTile(vec2(0, 0), vec2(8), tile(3, 128));
+    drawText('LittleJS + Vite', vec2(0, 6), 2);
 }
 
-engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
+// tiles.png lives in public/, served from the site root in dev and build
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);
+
+// LittleJS owns global engine state (canvas, WebGL, input, RAF loop), so
+// partial HMR would leave ghost listeners and a duplicate render loop.
+// Force a full page reload on every save instead.
+if (import.meta.hot) import.meta.hot.accept(() => location.reload());

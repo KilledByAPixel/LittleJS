@@ -1,35 +1,46 @@
-# LittleJS + Vite 
+# LittleJS + Vite
 
-This tamplate provides a minimal setup to get LittleJs wokring in Vite. 
+This template provides a minimal setup to get LittleJS working in Vite.
 
-
-# Vite features ⚡
+## Getting started
 
 ```
+npm install
 npm run dev
 ```
 
-- A dev server that serves your source files over [native ES modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules), with [rich built-in features](https://vite.dev/guide/features.html) and fast [Hot Module Replacement (HMR)](https://vite.dev/guide/features.html#hot-module-replacement).
+## Vite commands
+
+```
+npm run dev       # dev server with hot reload
+npm run build     # build to dist/
+npm run preview   # preview the production build
+```
+
+See the [Vite docs](https://vite.dev) for more.
+
+## Assets
+
+Files in `public/` are served from the site root in dev and copied as-is to `dist/` on build. The tilesheet lives there, which is why `engineInit(..., ['tiles.png'])` works in both dev and the built output.
+
+For assets you want Vite to hash and bundle (the usual case for large projects), import them from `src/` instead:
+
+```js
+import tilesURL from './tiles.png';
+```
+
+## Deploying
+
+The included `vite.config.js` sets `base: './'`, which makes the built site work from any subdirectory — including GitHub Pages project sites and itch.io uploads. The `public/.nojekyll` file ships in the build so GitHub Pages won't ignore Vite's underscore-prefixed chunk files.
+
+To deploy:
 
 ```
 npm run build
 ```
 
-- A [build command](https://vite.dev/guide/build.html) that bundles your code with [Rollup](https://rollupjs.org), pre-configured to output optimized static assets for production.
+then upload the contents of `dist/` (or zip them for itch.io).
 
+## LittleJS
 
-```
-npm run preview
-```
-
-- [Preview command](https://vite.dev/config/preview-options) to test your build
-
-
-In addition, Vite is highly extensible via its [Plugin API](https://vite.dev/guide/api-plugin.html) and [JavaScript API](https://vite.dev/guide/api-javascript.html) with full typing support.
-
-[Read the Docs to Learn More](https://vite.dev).
-
-
-# LittleJS 
-
-[Read the Docs to Learn More](https://github.com/KilledByAPixel/LittleJS)
+[Read the LittleJS docs to learn more](https://github.com/KilledByAPixel/LittleJS).
