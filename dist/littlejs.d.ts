@@ -3891,6 +3891,36 @@ declare module "littlejsengine" {
         setTime(time: number): void;
     }
     /**
+     * UILayout - A container that auto-arranges children in a vertical list, horizontal list, or grid
+     * - Set columns to 1 for a vertical list (default)
+     * - Set columns to children.length for a horizontal list
+     * - Set columns to N (1 < N < children.length) for a grid with N columns
+     * - Per-child sizing: each row's height = max child.size.y in that row, each column's width = max child.size.x in that column
+     * - Children are positioned centered in their cell
+     * - Container auto-sizes to fit children plus padding
+     * @extends UIObject
+     * @memberof UISystem
+     */
+    export class UILayout extends UIObject {
+        /** Create a UILayout container that auto-arranges children
+         *  @param {Vector2} [pos]
+         *  @param {number}  [columns=1]  - Number of columns (1 = vertical list)
+         *  @param {number}  [gap=10]     - Space between children
+         *  @param {number}  [padding=10] - Space between container border and children
+         */
+        constructor(pos?: Vector2, columns?: number, gap?: number, padding?: number);
+        /** @property {number} - Number of columns in the layout */
+        columns: number;
+        /** @property {number} - Space between children */
+        gap: number;
+        /** @property {number} - Space between container border and children */
+        padding: number;
+        /** Recompute child positions and container size based on per-child sizes.
+         *  Called automatically by addChild and removeChild. Call manually if you
+         *  mutate a child's size or change columns, gap, or padding. */
+        relayout(): void;
+    }
+    /**
      * LittleJS Box2D Physics Plugin
      * - Box2dObject extends EngineObject with Box2D physics
      * - Call box2dInit() to enable

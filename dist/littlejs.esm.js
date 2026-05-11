@@ -15029,6 +15029,7 @@ export
     UICheckbox,
     UISlider,
     UIVideo,
+    UILayout,
 
     // Box2D Physics
     box2d,
