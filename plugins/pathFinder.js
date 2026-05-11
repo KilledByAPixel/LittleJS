@@ -115,7 +115,7 @@ class PathFinder
             this.nodes[x + y * this.size.x] = new PathFinderNode(x, y);
 
         // Scratch Vector2 reused to avoid allocations in the isWalkable hot path.
-        this._collisionScratch = vec2();
+        this.collisionScratch = vec2();
     }
 
     /** Default walkability: if a tile layer was provided, returns true when the
@@ -127,7 +127,7 @@ class PathFinder
     isWalkable(x, y)
     {
         if (!this.tileLayer) return true;
-        return !this.tileLayer.getCollisionData(this._collisionScratch.set(x, y));
+        return !this.tileLayer.getCollisionData(this.collisionScratch.set(x, y));
     }
 
     /** Default extra cost for stepping on a cell. Returns 0 (free) by default.
@@ -177,13 +177,10 @@ class PathFinder
      *  @private */
     buildNodeData()
     {
-        if (this.debug && this.debugTime > 0)
-        {
-            // Faint red overlay on blocked tiles during build.
-            // (Drawn after the per-cell walkable check below.)
-        }
         const w = this.size.x;
         const h = this.size.y;
+        const ox = this.tileLayer ? this.tileLayer.pos.x : 0;
+        const oy = this.tileLayer ? this.tileLayer.pos.y : 0;
         for (let y = 0; y < h; ++y)
         for (let x = 0; x < w; ++x)
         {
@@ -193,7 +190,7 @@ class PathFinder
             const cost = walkable ? Math.max(0, this.getCost(x, y)) : 0;
             node.walkable = walkable;
             node.cost = cost;
-            node.posWorld = this.tileToWorld(x, y);
+            node.posWorld.set(x + 0.5 + ox, y + 0.5 + oy);
 
             if (this.debug && this.debugTime > 0)
             {
@@ -704,7 +701,7 @@ class PathFinder
         if (!startNode || !endNode) return [];
 
         // Trivial case: start and end snapped to the same tile.
-        if (startNode === endNode) return [startNode.posWorld];
+        if (startNode === endNode) return [startNode.posWorld.copy()];
 
         if (!this.aStarSearch(startNode, endNode)) return [];
 
@@ -719,8 +716,9 @@ class PathFinder
             this.smoothPathStringPull(nodePath);
         }
 
-        // Convert to world-space Vector2 path.
-        const result = nodePath.map(n => n.posWorld);
+        // Convert to world-space Vector2 path. Return copies, not live node
+        // references — callers shouldn't be able to mutate the grid.
+        const result = nodePath.map(n => n.posWorld.copy());
 
         if (this.debug && this.debugTime > 0 && result.length > 0)
         {
