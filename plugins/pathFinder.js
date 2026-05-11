@@ -476,6 +476,90 @@ class PathFinder
         }
     }
 
+    /** Smooth a node path via line-of-sight ("string pulling"). Walks the
+     *  input path collapsing runs of nodes into straight segments whenever
+     *  isLineClear permits, so the result can leave grid centers and cut
+     *  cleanly across open spaces.
+     *
+     *  Bails (leaves the path unchanged) if any node has nonzero cost — a
+     *  straight geometric shortcut can't be trusted to be the lowest-cost
+     *  route when cost-weighted terrain is in play.
+     *
+     *  Port of ShortenPath2() in pathFinding.cpp.
+     *  @param {PathFinderNode[]} path
+     *  @private */
+    smoothPathStringPull(path)
+    {
+        if (path.length <= 2) return;
+        for (const n of path)
+        {
+            if (!n.isClear()) return;
+        }
+
+        const original = path.slice();
+        path.length = 0;
+        path.push(original[0]);
+        let searchIndex = 0;
+
+        for (let i = 1; i < original.length; ++i)
+        {
+            const node = original[i];
+
+            // Skip if node is collinear with the search-window start and the
+            // previous node — it adds no information. Note: a == b is the
+            // degenerate i=1, searchIndex=0 case; skip the test then.
+            {
+                const a = original[searchIndex];
+                const b = original[i - 1];
+                if (a !== b)
+                {
+                    const cross =
+                        (b.pos.x - a.pos.x) * (node.pos.y - a.pos.y) -
+                        (b.pos.y - a.pos.y) * (node.pos.x - a.pos.x);
+                    if (cross === 0) continue;
+                }
+            }
+
+            if (!this.isLineClear(node.pos, path[path.length - 1].pos))
+            {
+                // Look ahead — if any later node has a clear shot to the
+                // back of our new path, skip this node and try later.
+                let foundClearAfter = false;
+                for (let j = i + 1; j < original.length; ++j)
+                {
+                    if (this.isLineClear(original[j].pos, path[path.length - 1].pos))
+                    {
+                        foundClearAfter = true;
+                        break;
+                    }
+                }
+                if (foundClearAfter)
+                {
+                    if (this.debug && this.debugTime > 0)
+                        debugLine(node.posWorld, path[path.length - 1].posWorld, rgb(0, 0, 1, 0.3), 0.02, this.debugTime);
+                    continue;
+                }
+
+                // No clear line ahead — fall back to the last waypoint we did
+                // have a clear line to. searchIndex tracks our scan position.
+                while (true)
+                {
+                    const cand = original[searchIndex];
+                    if (this.isLineClear(node.pos, cand.pos))
+                    {
+                        path.push(cand);
+                        i = searchIndex;
+                        break;
+                    }
+                    searchIndex++;
+                    ASSERT(searchIndex < original.length, 'smoothPathStringPull: ran out of candidates');
+                }
+            }
+        }
+
+        path.push(original[original.length - 1]);
+    }
+
     /** Check that the line between two tile-coord endpoints stays entirely
      *  inside walkable, zero-cost cells. Stricter than just sampling along
      *  the line — it also checks the diagonal-corner-adjacent cells so the

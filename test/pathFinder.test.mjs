@@ -325,3 +325,48 @@ test('isLineClear returns true for a negative-slope diagonal on an open grid', (
     // (4, 0) -> (0, 4): negative dx, positive dy. Exercises Math.trunc with negative dividend.
     assert.equal(pf.isLineClear(vec2(4, 0), vec2(0, 4)), true);
 });
+
+test('smoothPathStringPull collapses a stairstep path across open space', () =>
+{
+    const pf = new PathFinder(vec2(5, 5));
+    pf.buildNodeData();
+    // Stairstep diagonal: 5 nodes that can all be reached by a single LOS line.
+    const stair = [
+        pf.getNode(0, 0),
+        pf.getNode(1, 0),
+        pf.getNode(1, 1),
+        pf.getNode(2, 1),
+        pf.getNode(2, 2),
+    ];
+    pf.smoothPathStringPull(stair);
+    // Should collapse to 2 nodes — start and end — since the line is clear.
+    assert.equal(stair.length, 2);
+    assert.equal(stair[0].pos.x, 0);
+    assert.equal(stair[stair.length - 1].pos.x, 2);
+});
+
+test('smoothPathStringPull bails out when a node has nonzero cost', () =>
+{
+    const pf = new PathFinder(vec2(5, 5));
+    pf.getCost = (x, y) => x === 1 && y === 1 ? 3 : 0;
+    pf.buildNodeData();
+    const stair = [
+        pf.getNode(0, 0),
+        pf.getNode(1, 0),
+        pf.getNode(1, 1),
+        pf.getNode(2, 1),
+        pf.getNode(2, 2),
+    ];
+    const originalLength = stair.length;
+    pf.smoothPathStringPull(stair);
+    assert.equal(stair.length, originalLength);
+});
+
+test('smoothPathStringPull is a no-op on a 2-node path', () =>
+{
+    const pf = new PathFinder(vec2(3, 3));
+    pf.buildNodeData();
+    const path = [pf.getNode(0, 0), pf.getNode(2, 2)];
+    pf.smoothPathStringPull(path);
+    assert.equal(path.length, 2);
+});
