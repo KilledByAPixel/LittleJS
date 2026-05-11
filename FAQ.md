@@ -120,6 +120,8 @@ function gameRenderPost()
 engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);
 ```
 
+This is the simplest setup — two files served by a local web server. If you'd rather start from a bundler-based project with hot reload, see [How do I use Vite with LittleJS?](#how-do-i-use-vite-with-littlejs) for the official Vite starter template.
+
 ### How do I use LittleJS as an ES module?
 
 If you're using a bundler (Vite, Rollup, webpack, etc.) or just want to use native ES modules, install via npm and import what you need:
@@ -149,7 +151,7 @@ import * as LJS from 'littlejsengine';
 LJS.drawText('Hello!', LJS.vec2(0,0), 4);
 ```
 
-See [examples/module/](examples/module/) for a working example, and the Vite section below for setting up a build tool around an npm-installed copy.
+For a working example, see [examples/module/](examples/module/). That example imports from a relative path (`'../../dist/littlejs.esm.js'`) since it runs straight out of the repo without `npm install` — once you've installed the package, replace that with `'littlejsengine'` as shown above. The Vite section below shows the full bundler-based setup.
 
 ### How do I use LittleJS with TypeScript?
 
@@ -313,14 +315,53 @@ Once loaded, the underlying images are available via `textureInfos[0].image`, `t
 
 ### What is the tile function and how do tile indexes work?
 
-The tile function is a very useful function that takes a tile index and size and returns a TileInfo object which can be passed to functions like drawTile. It works by using the tileIndex multiplied by the tileSize to get the coordinates for the TileInfo. It's also possible to pass in padding for sheets that are set up for it.
+The `tile` function returns a `TileInfo` object pointing at a region of a loaded image, ready to pass to `drawTile`, an `EngineObject`, a particle emitter, etc.
+
+```javascript
+tile(2)                       // index 2 at the default tile size (16x16)
+tile(5, 8)                    // index 5 at 8x8 tile size
+tile(1, 16, 3)                // index 1 of size 16 on texture 3 (multi-image projects)
+tile(vec2(4,8), vec2(30,10))  // explicit (x,y) tile position with a 30x10 region
+```
+
+When you pass a numeric index, the engine multiplies it by the tile size to get pixel coordinates inside the texture. Indexes count left-to-right, top-to-bottom — so for a 16x16 tile sheet, `tile(0, 16)` is the top-left tile, `tile(1, 16)` is the one to its right, `tile(8, 16)` wraps to the next row if your sheet is 8 tiles wide, etc.
+
+The full signature is `tile(index, size, texture, padding, bleed)`:
+- `texture` — which loaded image to read from (index into the array you passed to `engineInit`, default 0)
+- `padding` — pixels of padding between tiles in the sheet, if you laid them out with space around each
+- `bleed` — shrink the sampled region slightly to avoid edge bleeding (see the tile-bleed entry above)
 
 ### Can I add and switch between multiple sprites for a game object?
 
-You can set the object's tileInfo to a new sprite, or just call drawTile directly with any sprite.
+Yes — there are several ways depending on what you need.
 
-```javascript 
-this.tileInfo = tile(3, 32);
+**Set the sprite when creating the object** via the `tileInfo` parameter on `EngineObject`:
+
+```javascript
+class Player extends EngineObject {
+    constructor(pos) {
+        super(pos, vec2(1), tile(0, 16)); // start with tile index 0
+    }
+}
+```
+
+**Swap the sprite at runtime** by assigning a new `TileInfo`:
+
+```javascript
+this.tileInfo = tile(3, 16); // now showing tile index 3
+```
+
+**For frame-based animation**, store a base `TileInfo` and use `.frame(n)` to offset along the row:
+
+```javascript
+const baseSprite = tile(2, 16);
+this.tileInfo = baseSprite.frame(animationFrame); // 0, 1, 2... walks to the right
+```
+
+**To draw an arbitrary sprite without an object**, call `drawTile` directly:
+
+```javascript
+drawTile(pos, vec2(1), tile(5, 16));
 ```
 
 ### There are thin lines around my sprites sometimes, how can I fix that?
@@ -516,8 +557,8 @@ You can create a particle system in code using the ParticleEmitter object.
 // fire particle system
 new ParticleEmitter(
     pos, 0,                         // pos, angle
-    1, .1, 100, PI,                 // emitSize, emitTime, emitRate, emiteCone
-    0,                              // tileInfo
+    1, .1, 100, PI,                 // emitSize, emitTime, emitRate, emitCone
+    undefined,                      // tileInfo (undefined = untextured)
     rgb(1,.5,.1), rgb(1,.1,.1),     // colorStartA, colorStartB
     rgb(1,.5,.1,0), rgb(1,.1,.1,0), // colorEndA, colorEndB
     .7, .8, .2, .2, .05,  // time, sizeStart, sizeEnd, speed, angleSpeed
