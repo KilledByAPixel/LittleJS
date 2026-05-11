@@ -10,7 +10,8 @@ Getting Started
 - [Why do I see a blank screen when I run my game?](#why-do-i-see-a-blank-screen-when-i-run-my-game)
 - [Do I need a local server to run LittleJS games, and how do I set one up?](#do-i-need-a-local-server-to-run-littlejs-games-and-how-do-i-set-one-up)
 - [How does the camera and world coordinate systems work?](#how-does-the-camera-and-world-coordinate-systems-work)
-- [Can I use LittleJS with build tools like Vite?](#can-i-use-littlejs-with-build-tools-like-vite)
+- [How do I use Vite with LittleJS?](#how-do-i-use-vite-with-littlejs)
+- [How do I use Box2D with Vite?](#how-do-i-use-box2d-with-vite)
 
 Graphics and Sound
 - [How do I load and add images to my game?](#how-do-i-load-and-add-images-to-my-game)
@@ -137,9 +138,70 @@ The conversion from world to screen is determined by the camera position and sca
 Camera scale determines how many screen pixels equals 1 world unit while the cameraPosition is the offset in world units.
 There is also a function you can use called getCameraSize() to get the viewable camera window in world coordinates.
 
-### Can I use LittleJS with build tools like Vite?
+### How do I use Vite with LittleJS?
 
-Yes, many people have set up projects using Vite and other build tools. [An example you can look at to get started is Michael Haynie shared their project for LittleJS Jam using Vite and several other tools!](https://github.com/michael-dean-haynie/littlejs-game-jam-2024)
+There is an official [Vite](https://vite.dev) starter template in `examples/vite-starter`. The fastest way to start a new project from it is with [degit](https://github.com/Rich-Harris/degit):
+
+```
+npx degit KilledByAPixel/LittleJS/examples/vite-starter my-game
+cd my-game
+npm install
+npm run dev
+```
+
+Vite will print a local URL (usually `http://localhost:5173/`) — open it and you should see the LittleJS logo tile and "LittleJS + Vite" text.
+
+Key things the template sets up for you:
+- `base: './'` in `vite.config.js` so the build works on GitHub Pages, itch.io, and other subdirectory hosts without further config.
+- Assets in `public/` (like `tiles.png`) are served at the site root in dev and copied to the build output, so `engineInit(..., ['tiles.png'])` works in both modes without a separate import.
+- A `public/.nojekyll` marker so GitHub Pages serves Vite's `_`-prefixed chunk files correctly.
+- A full page reload on save instead of partial HMR, since LittleJS has engine-level global state (canvas, WebGL, input listeners, the RAF loop) that doesn't survive a module hot swap. The relevant line in `src/main.js` is `if (import.meta.hot) import.meta.hot.accept(() => location.reload())`.
+
+Requires Node 20.19+ or 22.12+ (Vite 7 requirement). Other community projects like [Michael Haynie's LittleJS Jam project](https://github.com/michael-dean-haynie/littlejs-game-jam-2024) are good real-world references for more elaborate Vite setups.
+
+### How do I use Box2D with Vite?
+
+Box2D ships as two separate files in the npm package: `box2d.wasm.js` (the Emscripten loader, ~300KB) and `box2d.wasm.wasm` (the binary, ~167KB). Both live in `node_modules/littlejsengine/dist/`.
+
+The catch: `box2d.wasm.js` fetches the `.wasm` from **its own script directory** using `document.currentScript.src`. That means the two files have to be served side by side, and `box2d.wasm.js` has to be loaded as a classic `<script>` tag — not a module, no `defer`, no `async` — so `document.currentScript` resolves correctly.
+
+**To add Box2D to the Vite starter:**
+
+1. Copy both files into `public/`:
+
+```
+public/
+  box2d.wasm.js
+  box2d.wasm.wasm
+```
+
+2. Add a script tag to `index.html` *before* your module script:
+
+```html
+<script src=./box2d.wasm.js></script>
+<script src=./src/main.js type=module></script>
+```
+
+Vite may print an informational warning during build that the classic script can't be bundled without `type=module` — this is expected and harmless. The classic-script form is exactly what's needed so Emscripten can read `document.currentScript.src` to locate the `.wasm` file.
+
+3. Await `box2dInit()` in `main.js` before `engineInit`:
+
+```javascript
+import { box2dInit, engineInit } from 'littlejsengine';
+
+await box2dInit();
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);
+```
+
+To avoid copying the files by hand on every fresh install, add a `postinstall` script to `package.json`:
+
+```json
+"scripts": {
+  "postinstall": "node -e \"['box2d.wasm.js','box2d.wasm.wasm'].forEach(f=>require('fs').copyFileSync('node_modules/littlejsengine/dist/'+f,'public/'+f))\""
+}
+```
+
+Then `npm install` keeps `public/box2d.wasm.*` in sync with whatever version of `littlejsengine` you have installed. Add them to `.gitignore` if you don't want the binaries in your repo.
 
 ---
 
