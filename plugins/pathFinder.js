@@ -296,16 +296,19 @@ class PathFinder
      *  found or the search range is exhausted. Useful for snapping a click
      *  or NPC spawn position to the nearest open tile.
      *
-     *  Requires `buildNodeData()` to have been called first. `findPath`
-     *  invokes it automatically; if you call `getNearestClearNode` directly
-     *  on a fresh PathFinder, call `buildNodeData()` once beforehand.
+     *  By default, calls `buildNodeData()` first so it works correctly on a
+     *  fresh PathFinder. If you're calling it many times in a row with
+     *  unchanged walkability, pass `rebuild=false` and call `buildNodeData()`
+     *  once externally to avoid redundant work.
      *  @param {Vector2} worldPos
      *  @param {number} [searchRange=10] - Max box-radius in tiles
+     *  @param {boolean} [rebuild=true] - Whether to call buildNodeData first
      *  @returns {PathFinderNode|null}
      *  @memberof PathFinding */
-    getNearestClearNode(worldPos, searchRange = 10)
+    getNearestClearNode(worldPos, searchRange = 10, rebuild = true)
     {
         ASSERT(isVector2(worldPos), 'worldPos must be a Vector2');
+        if (rebuild) this.buildNodeData();
         const center = this.worldToTile(worldPos);
 
         for (let offset = 0; offset <= searchRange; ++offset)
@@ -698,8 +701,9 @@ class PathFinder
 
         this.buildNodeData();
 
-        const startNode = this.getNearestClearNode(startPos);
-        const endNode = this.getNearestClearNode(endPos);
+        // rebuild=false because we just built — avoid redundant work per snap.
+        const startNode = this.getNearestClearNode(startPos, 10, false);
+        const endNode = this.getNearestClearNode(endPos, 10, false);
         if (!startNode || !endNode) return [];
 
         // Trivial case: start and end snapped to the same tile.
