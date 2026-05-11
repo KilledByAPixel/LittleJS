@@ -713,7 +713,25 @@ class PathFinder
         for (let n = endNode; n; n = n.parent)
             nodePath.unshift(n);
 
+        if (this.smoothPath)
+        {
+            this.smoothPathCorners(nodePath);
+            this.smoothPathStringPull(nodePath);
+        }
+
         // Convert to world-space Vector2 path.
-        return nodePath.map(n => n.posWorld);
+        const result = nodePath.map(n => n.posWorld);
+
+        if (this.debug && this.debugTime > 0 && result.length > 0)
+        {
+            for (let i = 1; i < result.length; ++i)
+                debugLine(result[i - 1], result[i], RED, 0.1, this.debugTime);
+            for (const p of result)
+                debugCircle(p, 0.5, rgb(1, 0, 0, 0.3), this.debugTime);
+            debugCircle(result[0], 0.5, rgb(0, 1, 0, 0.5), this.debugTime);
+            debugCircle(result[result.length - 1], 0.5, rgb(0, 1, 0, 0.5), this.debugTime);
+        }
+
+        return result;
     }
 }

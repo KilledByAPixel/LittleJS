@@ -370,3 +370,25 @@ test('smoothPathStringPull is a no-op on a 2-node path', () =>
     pf.smoothPathStringPull(path);
     assert.equal(path.length, 2);
 });
+
+test('findPath with smoothPath=true produces a shorter or equal node count than raw A*', () =>
+{
+    const pf = new PathFinder(vec2(8, 8));
+    pf.smoothPath = false;
+    const raw = pf.findPath(vec2(0.5, 0.5), vec2(7.5, 7.5));
+    pf.smoothPath = true;
+    const smooth = pf.findPath(vec2(0.5, 0.5), vec2(7.5, 7.5));
+    assert(smooth.length <= raw.length);
+});
+
+test('findPath with smoothPath=true on an open grid collapses to start+end', () =>
+{
+    const pf = new PathFinder(vec2(8, 8));
+    pf.smoothPath = true;
+    const path = pf.findPath(vec2(0.5, 0.5), vec2(7.5, 7.5));
+    assert.equal(path.length, 2);
+    assert.equal(path[0].x, 0.5);
+    assert.equal(path[0].y, 0.5);
+    assert.equal(path[1].x, 7.5);
+    assert.equal(path[1].y, 7.5);
+});
