@@ -315,11 +315,14 @@ class ParticleEmitter extends EngineObject
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// scratch vector reused by Particle.render to avoid per-frame allocations
+const particleDrawPos = new Vector2;
+
 /**
  * Particle Object - Created automatically by Particle Emitters
  * @memberof Particles
  */
-class Particle 
+class Particle
 {
     /**
      * Create a particle with the passed in settings
@@ -494,14 +497,14 @@ class Particle
         additive && setBlendMode(true);
 
         // update the position and angle for drawing
-        const pos = this.pos.copy();
+        const pos = particleDrawPos.set(this.pos.x, this.pos.y);
         let angle = this.angle;
         if (localSpace)
         {
             // in local space of emitter
             const a = emitter.angle;
             const c = cos(a), s = sin(a);
-            pos.set(emitter.pos.x + pos.x*c - pos.y*s, 
+            pos.set(emitter.pos.x + pos.x*c - pos.y*s,
                 emitter.pos.y + pos.x*s + pos.y*c);
             angle += a;
         }

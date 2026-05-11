@@ -88,6 +88,10 @@ declare module "littlejsengine" {
      *  @type {Array<EngineObject>}
      *  @memberof Engine */
     export let engineObjects: Array<EngineObject>;
+    /** Array with only objects set to collide with other objects this frame (for optimization)
+     *  @type {Array<EngineObject>}
+     *  @memberof Engine */
+    export let engineObjectsCollide: Array<EngineObject>;
     /** Current update frame, used to calculate time
      *  @type {number}
      *  @memberof Engine */
@@ -226,6 +230,11 @@ declare module "littlejsengine" {
      *  @param {...Object} output - message output
      *  @memberof Debug */
     export function LOG(...output: any[]): void;
+    /** Size to render debug points by default
+     *  @type {number}
+     *  @default
+     *  @memberof Debug */
+    export const debugPointSize: number;
     /** Draw a debug rectangle in world space
      *  @param {Vector2} pos
      *  @param {Vector2} [size=vec2(0)]
@@ -471,6 +480,11 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let glEnable: boolean;
+    /** How many sided poly to use when drawing circles and ellipses with WebGL
+     *  @type {number}
+     *  @default
+     *  @memberof Settings */
+    export let glCircleSides: number;
     /** Should gamepads be allowed
      *  @type {boolean}
      *  @default
@@ -486,6 +500,12 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let inputWASDEmulateDirection: boolean;
+    /** True if touch input is enabled for mobile devices
+     *  - Touch events will be routed to mouse events
+     *  @type {boolean}
+     *  @default
+     *  @memberof Settings */
+    export let touchInputEnable: boolean;
     /** True if touch gamepad should appear on mobile devices
      *  - Supports left analog stick, 4 face buttons and start button (button 9)
      *  - setTouchGamepadButtonCount(1) to use face buttons as right analog stick
@@ -503,6 +523,11 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let touchGamepadCenterButtonSize: number;
+    /** Number of buttons on touch gamepad (0-4), if 1 also acts as right analog stick
+     *  @type {number}
+     *  @default
+     *  @memberof Settings */
+    export let touchGamepadButtonCount: number;
     /** True if touch gamepad should be analog stick or false to use if 8 way dpad
      *  @type {boolean}
      *  @default
@@ -668,6 +693,10 @@ declare module "littlejsengine" {
      *  @param {number} scale
      *  @memberof Settings */
     export function setParticleEmitRateScale(scale: number): void;
+    /** Set how many sided polygons to use when drawing circles and ellipses with WebGL
+     *  @param {number} sides
+     *  @memberof Settings */
+    export function setGLCircleSides(sides: number): void;
     /** Set if touch input is allowed
      *  @param {boolean} enable
      *  @memberof Settings */
@@ -899,6 +928,11 @@ declare module "littlejsengine" {
      *  @return {number}
      *  @memberof Math */
     export function nearestPowerOfTwo(value: number): number;
+    /** Checks if the value passed in is a power of two
+     *  @param {number} value
+     *  @return {boolean}
+     *  @memberof Math */
+    export function isPowerOfTwo(value: number): boolean;
     /** Returns true if two axis aligned bounding boxes are overlapping
      *  this can be used for simple collision detection between objects
      *  @param {Vector2} posA - Center of box A
@@ -1771,6 +1805,19 @@ declare module "littlejsengine" {
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function drawPoly(points: Array<Vector2>, color?: Color, lineWidth?: number, lineColor?: Color, pos?: Vector2, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    /** Draw colored regular polygon using passed in number of sides
+     *  @param {Vector2} pos
+     *  @param {Vector2} [size=vec2(1)]
+     *  @param {number}  [sides]
+     *  @param {Color}   [color=WHITE]
+     *  @param {number}  [angle]
+     *  @param {number}  [lineWidth]
+     *  @param {Color}   [lineColor=BLACK]
+     *  @param {boolean} [useWebGL=glEnable]
+     *  @param {boolean} [screenSpace]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
+     *  @memberof Draw */
+    export function drawRegularPoly(pos: Vector2, size?: Vector2, sides?: number, color?: Color, lineWidth?: number, lineColor?: Color, angle?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Draw colored ellipse using passed in point
      *  @param {Vector2} pos
      *  @param {Vector2} [size=vec2(1)] - Width and height diameter
@@ -1912,6 +1959,14 @@ declare module "littlejsengine" {
      *  @return {Vector2}
      *  @memberof Draw */
     export function getCameraSize(): Vector2;
+    /** Check if a box, point, or circle is on screen with a circle test
+     *  If size is a Vector2, uses the length as diameter
+     *  This can be used to cull offscreen objects from render or update
+     *  @param {Vector2} pos - world space position
+     *  @param {Vector2|number} size - world space size or diameter
+     *  @return {boolean}
+     *  @memberof Draw */
+    export function isOnScreen(pos: Vector2, size?: Vector2 | number): boolean;
     /**
      * LittleJS WebGL Interface
      * - WebGL2 rendering engine for high-performance graphics
@@ -2187,6 +2242,11 @@ declare module "littlejsengine" {
      *  @return {Vector2}
      *  @memberof Input */
     export function gamepadStick(stick: number, gamepad?: number): Vector2;
+    /** Returns how many control sticks the passed in gamepad has
+     *  @param {number} [gamepad]
+     *  @return {number}
+     *  @memberof Input */
+    export function gamepadStickCount(gamepad?: number): number;
     /** Returns gamepad dpad value
      *  @param {number} [gamepad]
      *  @return {Vector2}
@@ -2251,6 +2311,10 @@ declare module "littlejsengine" {
      *  @default 44100
      *  @memberof Audio */
     export const audioDefaultSampleRate: 44100;
+    /** Check if the audio context is running and available for playback
+     *  @return {boolean} - True if the audio context is running
+     *  @memberof Audio */
+    export function audioIsRunning(): boolean;
     /**
      * Sound Object - Stores a sound for later
      * - this can be used to load and play wave, mp3, and ogg files
@@ -3554,7 +3618,7 @@ declare module "littlejsengine" {
          *  @return {Vector2} */
         screenToNative(pos: Vector2): Vector2;
         /** Destroy and remove all objects
-        *  @memberof Engine */
+        *  @memberof UISystem */
         destroyObjects(): void;
         /** Get all navigable UI objects sorted by navigationIndex
          *  @return {Array<UIObject>} */
@@ -4257,7 +4321,7 @@ declare module "littlejsengine" {
          *  @param {Vector2} force
          *  @param {Vector2} [pos] */
         applyForce(force: Vector2, pos?: Vector2): void;
-        /** Apply acceleration to this object
+        /** Apply acceleration to this object (force = mass * acceleration)
          *  @param {Vector2} acceleration
          *  @param {Vector2} [pos] */
         applyAcceleration(acceleration: Vector2, pos?: Vector2): void;
@@ -5251,7 +5315,7 @@ declare module "littlejsengine" {
      *  PathFinder construction; reset (not reallocated) at the start of every
      *  findPath call.
      *  @memberof PathFinding */
-    class PathFinderNode {
+    export class PathFinderNode {
         /** @param {number} x - Tile x
          *  @param {number} y - Tile y */
         constructor(x: number, y: number);
@@ -5278,5 +5342,4 @@ declare module "littlejsengine" {
         /** True if walkable and not blocked by cost. */
         isClear(): boolean;
     }
-    export {};
 }

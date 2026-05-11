@@ -132,10 +132,18 @@ class EngineObject
         const parent = this.parent;
         if (parent)
         {
-            // copy parent pos/angle
+            // compose with parent transform inline to avoid intermediate vector allocs
             const mirror = parent.getMirrorSign();
-            this.pos = this.localPos.multiply(vec2(mirror,1)).rotate(parent.angle).add(parent.pos);
-            this.angle = mirror*this.localAngle + parent.angle;
+            const lp = this.localPos, pp = parent.pos;
+            const lx = lp.x*mirror, ly = lp.y, pa = parent.angle;
+            if (pa)
+            {
+                const c = cos(-pa), s = sin(-pa);
+                this.pos = new Vector2(lx*c - ly*s + pp.x, lx*s + ly*c + pp.y);
+            }
+            else
+                this.pos = new Vector2(lx + pp.x, ly + pp.y);
+            this.angle = mirror*this.localAngle + pa;
         }
 
         // update children
@@ -501,8 +509,6 @@ class EngineObject
      *  @return {string} */
     toString()
     {
-        if (!debug) return;
-        
         let text = 'type = ' + this.constructor.name;
         if (this.pos.x || this.pos.y)
             text += '\npos = ' + this.pos;

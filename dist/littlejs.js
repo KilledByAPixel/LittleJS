@@ -207,7 +207,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         const combinedScale = timeScale * debugScale;
         frameTimeDeltaMS *= combinedScale;
         frameTimeBufferMS += paused ? 0 : frameTimeDeltaMS;
-        if (combinedScale <= 1)
+        if (debugScale <= 1)
             frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp min framerate
 
         let wasUpdated = false;
@@ -3361,10 +3361,18 @@ class EngineObject
         const parent = this.parent;
         if (parent)
         {
-            // copy parent pos/angle
+            // compose with parent transform inline to avoid intermediate vector allocs
             const mirror = parent.getMirrorSign();
-            this.pos = this.localPos.multiply(vec2(mirror,1)).rotate(parent.angle).add(parent.pos);
-            this.angle = mirror*this.localAngle + parent.angle;
+            const lp = this.localPos, pp = parent.pos;
+            const lx = lp.x*mirror, ly = lp.y, pa = parent.angle;
+            if (pa)
+            {
+                const c = cos(-pa), s = sin(-pa);
+                this.pos = new Vector2(lx*c - ly*s + pp.x, lx*s + ly*c + pp.y);
+            }
+            else
+                this.pos = new Vector2(lx + pp.x, ly + pp.y);
+            this.angle = mirror*this.localAngle + pa;
         }
 
         // update children
@@ -3730,8 +3738,6 @@ class EngineObject
      *  @return {string} */
     toString()
     {
-        if (!debug) return;
-        
         let text = 'type = ' + this.constructor.name;
         if (this.pos.x || this.pos.y)
             text += '\npos = ' + this.pos;
@@ -7612,11 +7618,14 @@ class ParticleEmitter extends EngineObject
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// scratch vector reused by Particle.render to avoid per-frame allocations
+const particleDrawPos = new Vector2;
+
 /**
  * Particle Object - Created automatically by Particle Emitters
  * @memberof Particles
  */
-class Particle 
+class Particle
 {
     /**
      * Create a particle with the passed in settings
@@ -7791,14 +7800,14 @@ class Particle
         additive && setBlendMode(true);
 
         // update the position and angle for drawing
-        const pos = this.pos.copy();
+        const pos = particleDrawPos.set(this.pos.x, this.pos.y);
         let angle = this.angle;
         if (localSpace)
         {
             // in local space of emitter
             const a = emitter.angle;
             const c = cos(a), s = sin(a);
-            pos.set(emitter.pos.x + pos.x*c - pos.y*s, 
+            pos.set(emitter.pos.x + pos.x*c - pos.y*s,
                 emitter.pos.y + pos.x*s + pos.y*c);
             angle += a;
         }
@@ -10092,7 +10101,7 @@ class UISystemPlugin
     }
 
     /** Destroy and remove all objects
-    *  @memberof Engine */
+    *  @memberof UISystem */
     destroyObjects()
     {
         for (const o of this.uiObjects)
@@ -10515,15 +10524,13 @@ class UIObject
      *  @return {string} */
     toString()
     {
-        if (!debug) return;
-        
         let text = 'type = ' + this.constructor.name;
         if (this.text)
             text += '\ntext = ' + this.text;
         if (this.pos.x || this.pos.y)
             text += '\npos = ' + this.pos;
         if (this.localPos.x || this.localPos.y)
-            text += '\localPos = ' + this.localPos;
+            text += '\nlocalPos = ' + this.localPos;
         if (this.size.x || this.size.y)
             text += '\nsize = ' + this.size;
         if (this.color)
@@ -11772,14 +11779,15 @@ class Box2dObject extends EngineObject
         this.body.ApplyForce(box2d.vec2dTo(force), box2d.vec2dTo(pos));
     }
 
-    /** Apply acceleration to this object
+    /** Apply acceleration to this object (force = mass * acceleration)
      *  @param {Vector2} acceleration
      *  @param {Vector2} [pos] */
     applyAcceleration(acceleration, pos)
-    { 
+    {
         pos ||= this.getCenterOfMass();
         this.setAwake();
-        this.body.ApplyLinearImpulse(box2d.vec2dTo(acceleration), box2d.vec2dTo(pos));
+        const force = acceleration.scale(this.getMass());
+        this.body.ApplyForce(box2d.vec2dTo(force), box2d.vec2dTo(pos));
     }
 
     /** Apply torque to this object
@@ -12041,7 +12049,7 @@ class Box2dJoint
     
     /** Check if the connected bodies should collide
      *  @return {boolean} */
-    getCollideConnected()   { return this.box2dJoint.getCollideConnected();}
+    getCollideConnected()   { return this.box2dJoint.GetCollideConnected();}
 
     /** Check if either connected body is active
      *  @return {boolean} */
@@ -13654,13 +13662,13 @@ const Ease =
      *  @param {number} x
      *  @returns {number}
      *  @memberof TweenSystem */
-    SINE: (x) => 1 - Math.cos(x * (Math.PI / 2)),
+    SINE: (x) => 1 - cos(x * (PI / 2)),
 
     /** Circular ease-in curve.
      *  @param {number} x
      *  @returns {number}
      *  @memberof TweenSystem */
-    CIRC: (x) => 1 - Math.sqrt(1 - x * x),
+    CIRC: (x) => 1 - (1 - x * x)**.5,
 
     /** Exponential ease-in curve (`2^(10x-10)`).
      *  @param {number} x
@@ -13679,7 +13687,7 @@ const Ease =
      *  @returns {number}
      *  @memberof TweenSystem */
     ELASTIC: (x) =>
-        -(2 ** (10 * x - 10)) * Math.sin(((37 - 40 * x) * Math.PI) / 6),
+        -(2 ** (10 * x - 10)) * sin(((37 - 40 * x) * PI) / 6),
 
     /** Spring-like ease-out: oscillates outward after passing the target.
      *  @param {number} x
@@ -13687,8 +13695,8 @@ const Ease =
      *  @memberof TweenSystem */
     SPRING: (x) =>
         1 -
-        (Math.sin(Math.PI * (1 - x) * (0.2 + 2.5 * (1 - x) ** 3)) *
-            Math.pow(x, 2.2) +
+        (sin(PI * (1 - x) * (0.2 + 2.5 * (1 - x) ** 3)) *
+            x ** 2.2 +
             (1 - x)) *
             (1.0 + 1.2 * x),
 
@@ -13792,7 +13800,7 @@ const Ease =
             {
                 const tMid = (t0 + t1) / 2;
                 const [bx, by] = curve(tMid);
-                if (Math.abs(bx - x) < 1e-5) return by;
+                if (abs(bx - x) < 1e-5) return by;
                 if (bx < x) t0 = tMid; else t1 = tMid;
             }
             return curve((t0 + t1) / 2)[1];
@@ -14477,7 +14485,7 @@ class PathFinder
 
                 // No clear line ahead — fall back to the last waypoint we did
                 // have a clear line to. searchIndex tracks our scan position.
-                while (true)
+                for (; searchIndex < original.length; ++searchIndex)
                 {
                     const cand = original[searchIndex];
                     if (this.isLineClear(node.pos, cand.pos))
@@ -14486,9 +14494,8 @@ class PathFinder
                         i = searchIndex;
                         break;
                     }
-                    searchIndex++;
-                    ASSERT(searchIndex < original.length, 'smoothPathStringPull: ran out of candidates');
                 }
+                ASSERT(searchIndex < original.length, 'smoothPathStringPull: ran out of candidates');
             }
         }
 

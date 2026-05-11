@@ -553,7 +553,7 @@ class PathFinder
 
                 // No clear line ahead — fall back to the last waypoint we did
                 // have a clear line to. searchIndex tracks our scan position.
-                while (true)
+                for (; searchIndex < original.length; ++searchIndex)
                 {
                     const cand = original[searchIndex];
                     if (this.isLineClear(node.pos, cand.pos))
@@ -562,9 +562,8 @@ class PathFinder
                         i = searchIndex;
                         break;
                     }
-                    searchIndex++;
-                    ASSERT(searchIndex < original.length, 'smoothPathStringPull: ran out of candidates');
                 }
+                ASSERT(searchIndex < original.length, 'smoothPathStringPull: ran out of candidates');
             }
         }
 

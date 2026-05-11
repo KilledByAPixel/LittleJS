@@ -204,7 +204,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         const combinedScale = timeScale * debugScale;
         frameTimeDeltaMS *= combinedScale;
         frameTimeBufferMS += paused ? 0 : frameTimeDeltaMS;
-        if (combinedScale <= 1)
+        if (debugScale <= 1)
             frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp min framerate
 
         let wasUpdated = false;

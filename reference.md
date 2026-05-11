@@ -163,13 +163,15 @@ TileInfo.frame(frame)   // Offset this tile by a number of animation frames
 TileInfo.textureInfo    // The texture info for this tile
 
 // Texture Info Object
-TextureInfo(image)      // Created automatically for each image
+TextureInfo(image, useWebGL=true, wrap=false) // Created automatically for each image
 TextureInfo.image       // Image source
 TextureInfo.size        // Size of the image
 TextureInfo.glTexture   // WebGL texture
+TextureInfo.wrap        // Whether texture is set to REPEAT (true) or CLAMP_TO_EDGE
+TextureInfo.setWrap(wrap=true) // Enable or disable wrapping for this texture
 
 // Font Image Object draws text using characters in an image
-FontImage(image, tileSize=(8,8), paddingSize=(0,1)) // Create an image font
+FontImage(tileInfo)                                 // Create a font from a tile sheet
 FontImage.drawText(text, pos, scale, center)        // Draw text in world space
 FontImage.drawTextScreen(text, pos, scale, center)  // Draw text in screen space
 
@@ -207,7 +209,7 @@ tileDefaultBleed = .3     // How much smaller to draw tiles to prevent bleeding
 // Sound Object
 Sound(zzfxSound, randomness, range, taper)             // Create a zzfx sound
 Sound(filename, randomness, range, taper)              // Load a wave, mp3, or ogg
-Sound.play(pos, volume=1, pitch=1, randomness=1, loop) // Play a sound, returns SoundInstance
+Sound.play(pos, volume=1, pitch=1, randomness=1, loop=false, paused=false) // Play a sound, returns SoundInstance
 Sound.playMusic(volume=1, loop=true)                   // Play as music with looping
 Sound.playNote(semitoneOffset, pos, volume=1)          // Play as note with a semitone offset
 Sound.getDuration()                                    // Get length of sound in seconds
@@ -215,7 +217,6 @@ Sound.isLoaded()                                       // Check if sound is curr
 Sound.loadedPercent                                    // Get loading progress (0 to 1)
 
 // SoundInstance
-SoundInstance.start()             // Start playing the sound
 SoundInstance.setVolume(volume)   // Change volume during playback
 SoundInstance.stop(fadeTime=0)    // Stop with optional fade out
 SoundInstance.pause()             // Pause the sound
@@ -228,8 +229,8 @@ SoundInstance.getDuration()       // Get total duration
 SoundInstance.getSource()         // Get AudioBufferSourceNode
 
 // ZzFXM - Tiny music playing system
-Music(..zzfxMusic)                                   // Create a zzfx music object
-Music.playMusic(volume=1, loop=true)                // Play the music
+ZzFXMusic(zzfxMusic)                                 // Create a zzfx music object
+ZzFXMusic.playMusic(volume=1, loop=true)             // Play the music
 
 // Audio functions
 speak(text, language='', volume=1, rate=1, pitch=1)  // Speak text line
@@ -275,7 +276,7 @@ gamepadWasReleased(button, gamepad=0) // Was gamepad button released this frame?
 gamepadStick(stickIndex, gamepad=0)   // Get gamepad analog stick value
 
 // Touch Gamepad
-touchGamepadEnabled                   // Is on screen touch gamepad enabled?
+touchGamepadEnable                    // Is on screen touch gamepad enabled?
 touchGamepadAnalog                    // Is touch gamepad analog or 8 way dpad?
 touchGamepadSize                      // Size of touch gamepad
 touchGamepadAlpha                     // Alpha of touch gamepad
@@ -475,7 +476,7 @@ debugCircle(pos, size, color='#fff', time=0, fill)        // Draw debug circle
 debugPoint(pos, color, time, angle)                         // Draw debug point
 debugLine(posA, posB, color, width=.1, time)                // Draw debug line
 debugText(text, pos, size=1, color='#fff', time=0, angle=0) // Draw debug text
-debugAABB(pA, sA, pB, sB, color) // Draw a debug axis aligned box
+debugOverlap(pA, sA, pB, sB, color) // Draw a debug overlap between two boxes
 debugClear()                     // Clear all debug primitives
 saveCanvas(canvas, filename)     // Save canvas to a file
 saveText(text, filename)         // Save text to a file 

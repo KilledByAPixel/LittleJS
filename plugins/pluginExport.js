@@ -85,4 +85,5 @@ export
 
     // Path Finding
     PathFinder,
+    PathFinderNode,
 }

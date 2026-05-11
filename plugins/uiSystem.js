@@ -470,7 +470,7 @@ class UISystemPlugin
     }
 
     /** Destroy and remove all objects
-    *  @memberof Engine */
+    *  @memberof UISystem */
     destroyObjects()
     {
         for (const o of this.uiObjects)
@@ -893,15 +893,13 @@ class UIObject
      *  @return {string} */
     toString()
     {
-        if (!debug) return;
-        
         let text = 'type = ' + this.constructor.name;
         if (this.text)
             text += '\ntext = ' + this.text;
         if (this.pos.x || this.pos.y)
             text += '\npos = ' + this.pos;
         if (this.localPos.x || this.localPos.y)
-            text += '\localPos = ' + this.localPos;
+            text += '\nlocalPos = ' + this.localPos;
         if (this.size.x || this.size.y)
             text += '\nsize = ' + this.size;
         if (this.color)

@@ -525,14 +525,15 @@ class Box2dObject extends EngineObject
         this.body.ApplyForce(box2d.vec2dTo(force), box2d.vec2dTo(pos));
     }
 
-    /** Apply acceleration to this object
+    /** Apply acceleration to this object (force = mass * acceleration)
      *  @param {Vector2} acceleration
      *  @param {Vector2} [pos] */
     applyAcceleration(acceleration, pos)
-    { 
+    {
         pos ||= this.getCenterOfMass();
         this.setAwake();
-        this.body.ApplyLinearImpulse(box2d.vec2dTo(acceleration), box2d.vec2dTo(pos));
+        const force = acceleration.scale(this.getMass());
+        this.body.ApplyForce(box2d.vec2dTo(force), box2d.vec2dTo(pos));
     }
 
     /** Apply torque to this object
@@ -794,7 +795,7 @@ class Box2dJoint
     
     /** Check if the connected bodies should collide
      *  @return {boolean} */
-    getCollideConnected()   { return this.box2dJoint.getCollideConnected();}
+    getCollideConnected()   { return this.box2dJoint.GetCollideConnected();}
 
     /** Check if either connected body is active
      *  @return {boolean} */

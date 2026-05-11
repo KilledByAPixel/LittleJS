@@ -238,7 +238,7 @@ const Ease =
      *  @param {number} x
      *  @returns {number}
      *  @memberof TweenSystem */
-    SINE: (x) => 1 - cos(x * (PI / 2)),
+    SINE: (x) => 1 - Math.cos(x * (Math.PI / 2)),
 
     /** Circular ease-in curve.
      *  @param {number} x
@@ -263,7 +263,7 @@ const Ease =
      *  @returns {number}
      *  @memberof TweenSystem */
     ELASTIC: (x) =>
-        -(2 ** (10 * x - 10)) * sin(((37 - 40 * x) * PI) / 6),
+        -(2 ** (10 * x - 10)) * Math.sin(((37 - 40 * x) * Math.PI) / 6),
 
     /** Spring-like ease-out: oscillates outward after passing the target.
      *  @param {number} x
@@ -271,8 +271,8 @@ const Ease =
      *  @memberof TweenSystem */
     SPRING: (x) =>
         1 -
-        (sin(PI * (1 - x) * (0.2 + 2.5 * (1 - x) ** 3)) *
-            x ** 2.2 +
+        (Math.sin(Math.PI * (1 - x) * (0.2 + 2.5 * (1 - x) ** 3)) *
+            Math.pow(x, 2.2) +
             (1 - x)) *
             (1.0 + 1.2 * x),
 
@@ -376,7 +376,7 @@ const Ease =
             {
                 const tMid = (t0 + t1) / 2;
                 const [bx, by] = curve(tMid);
-                if (abs(bx - x) < 1e-5) return by;
+                if (Math.abs(bx - x) < 1e-5) return by;
                 if (bx < x) t0 = tMid; else t1 = tMid;
             }
             return curve((t0 + t1) / 2)[1];
