@@ -8850,25 +8850,25 @@ let debugMedals = false;
 
 /** How long to show medals for in seconds
  *  @type {number}
- *  @default 5
+ *  @default
  *  @memberof Settings */
 let medalDisplayTime = 5;
 
 /** How quickly to slide on/off medals in seconds
  *  @type {number}
- *  @default 0.5
+ *  @default
  *  @memberof Settings */
 let medalDisplaySlideTime = .5;
 
 /** Size of medal display
  *  @type {Vector2}
- *  @default vec2(640, 80)
+ *  @default Vector2(640,80)
  *  @memberof Settings */
 let medalDisplaySize = vec2(640, 80);
 
 /** Set to stop medals from being unlockable (like if cheats are enabled)
  *  @type {boolean}
- *  @default false
+ *  @default
  *  @memberof Settings */
 let medalsPreventUnlock = false;
 

@@ -3133,7 +3133,7 @@ declare module "littlejsengine" {
     export const medals: any;
     /** Set to stop medals from being unlockable (like if cheats are enabled)
      *  @type {boolean}
-     *  @default false
+     *  @default
      *  @memberof Settings */
     export let medalsPreventUnlock: boolean;
     /** Initialize medals with a save name used for storage
@@ -3199,17 +3199,17 @@ declare module "littlejsengine" {
     }
     /** How long to show medals for in seconds
      *  @type {number}
-     *  @default 5
+     *  @default
      *  @memberof Settings */
     export let medalDisplayTime: number;
     /** How quickly to slide on/off medals in seconds
      *  @type {number}
-     *  @default 0.5
+     *  @default
      *  @memberof Settings */
     export let medalDisplaySlideTime: number;
     /** Size of medal display
      *  @type {Vector2}
-     *  @default vec2(640, 80)
+     *  @default Vector2(640,80)
      *  @memberof Settings */
     export let medalDisplaySize: Vector2;
     /** Set how long to show medals for in seconds
