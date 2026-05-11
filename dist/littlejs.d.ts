@@ -548,21 +548,6 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let soundDefaultTaper: number;
-    /** How long to show medals for in seconds
-     *  @type {number}
-     *  @default
-     *  @memberof Settings */
-    export let medalDisplayTime: number;
-    /** How quickly to slide on/off medals in seconds
-     *  @type {number}
-     *  @default
-     *  @memberof Settings */
-    export let medalDisplaySlideTime: number;
-    /** Size of medal display
-     *  @type {Vector2}
-     *  @default Vector2(640,80)
-     *  @memberof Settings */
-    export let medalDisplaySize: Vector2;
     /** Set position of camera in world space
      *  @param {Vector2} pos
      *  @memberof Settings */
@@ -745,22 +730,6 @@ declare module "littlejsengine" {
      *  @param {number} taper
      *  @memberof Settings */
     export function setSoundDefaultTaper(taper: number): void;
-    /** Set how long to show medals for in seconds
-     *  @param {number} time
-     *  @memberof Settings */
-    export function setMedalDisplayTime(time: number): void;
-    /** Set how quickly to slide on/off medals in seconds
-     *  @param {number} time
-     *  @memberof Settings */
-    export function setMedalDisplaySlideTime(time: number): void;
-    /** Set size of medal display
-     *  @param {Vector2} size
-     *  @memberof Settings */
-    export function setMedalDisplaySize(size: Vector2): void;
-    /** Set to stop medals from being unlockable
-     *  @param {boolean} preventUnlock
-     *  @memberof Settings */
-    export function setMedalsPreventUnlock(preventUnlock: boolean): void;
     /** Set if watermark with FPS should be shown
      *  @param {boolean} show
      *  @memberof Debug */
@@ -3164,7 +3133,7 @@ declare module "littlejsengine" {
     export const medals: any;
     /** Set to stop medals from being unlockable (like if cheats are enabled)
      *  @type {boolean}
-     *  @default
+     *  @default false
      *  @memberof Settings */
     export let medalsPreventUnlock: boolean;
     /** Initialize medals with a save name used for storage
@@ -3228,6 +3197,37 @@ declare module "littlejsengine" {
         renderIcon(pos: Vector2, size: number): void;
         storageKey(): string;
     }
+    /** How long to show medals for in seconds
+     *  @type {number}
+     *  @default 5
+     *  @memberof Settings */
+    export let medalDisplayTime: number;
+    /** How quickly to slide on/off medals in seconds
+     *  @type {number}
+     *  @default 0.5
+     *  @memberof Settings */
+    export let medalDisplaySlideTime: number;
+    /** Size of medal display
+     *  @type {Vector2}
+     *  @default vec2(640, 80)
+     *  @memberof Settings */
+    export let medalDisplaySize: Vector2;
+    /** Set how long to show medals for in seconds
+     *  @param {number} time
+     *  @memberof Settings */
+    export function setMedalDisplayTime(time: number): void;
+    /** Set how quickly to slide on/off medals in seconds
+     *  @param {number} time
+     *  @memberof Settings */
+    export function setMedalDisplaySlideTime(time: number): void;
+    /** Set size of medal display
+     *  @param {Vector2} size
+     *  @memberof Settings */
+    export function setMedalDisplaySize(size: Vector2): void;
+    /** Set to stop medals from being unlockable
+     *  @param {boolean} preventUnlock
+     *  @memberof Settings */
+    export function setMedalsPreventUnlock(preventUnlock: boolean): void;
     /**
      * LittleJS Newgrounds Plugin
      * - NewgroundsMedal extends Medal with Newgrounds API functionality

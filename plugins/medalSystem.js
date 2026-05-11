@@ -13,6 +13,33 @@
 
 let debugMedals = false;
 
+///////////////////////////////////////////////////////////////////////////////
+// Medals settings
+
+/** How long to show medals for in seconds
+ *  @type {number}
+ *  @default 5
+ *  @memberof Settings */
+let medalDisplayTime = 5;
+
+/** How quickly to slide on/off medals in seconds
+ *  @type {number}
+ *  @default 0.5
+ *  @memberof Settings */
+let medalDisplaySlideTime = .5;
+
+/** Size of medal display
+ *  @type {Vector2}
+ *  @default vec2(640, 80)
+ *  @memberof Settings */
+let medalDisplaySize = vec2(640, 80);
+
+/** Set to stop medals from being unlockable (like if cheats are enabled)
+ *  @type {boolean}
+ *  @default false
+ *  @memberof Settings */
+let medalsPreventUnlock = false;
+
 /** List of all medals
  *  @type {Object}
  *  @memberof Medals */
@@ -196,3 +223,26 @@ class Medal
     // Get local storage key used by the medal
     storageKey() { return medalsSaveName + '_' + this.id; }
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// Medals setting setters
+
+/** Set how long to show medals for in seconds
+ *  @param {number} time
+ *  @memberof Settings */
+function setMedalDisplayTime(time) { medalDisplayTime = time; }
+
+/** Set how quickly to slide on/off medals in seconds
+ *  @param {number} time
+ *  @memberof Settings */
+function setMedalDisplaySlideTime(time) { medalDisplaySlideTime = time; }
+
+/** Set size of medal display
+ *  @param {Vector2} size
+ *  @memberof Settings */
+function setMedalDisplaySize(size) { medalDisplaySize = size.copy(); }
+
+/** Set to stop medals from being unlockable
+ *  @param {boolean} preventUnlock
+ *  @memberof Settings */
+function setMedalsPreventUnlock(preventUnlock) { medalsPreventUnlock = preventUnlock; }

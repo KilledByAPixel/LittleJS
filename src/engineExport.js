@@ -91,9 +91,6 @@ export
     soundVolume,
     soundDefaultRange,
     soundDefaultTaper,
-    medalDisplayTime,
-    medalDisplaySlideTime,
-    medalDisplaySize,
 
     // Setters for globals
     setCameraPos,
@@ -140,10 +137,6 @@ export
     setSoundVolume,
     setSoundDefaultRange,
     setSoundDefaultTaper,
-    setMedalDisplayTime,
-    setMedalDisplaySlideTime,
-    setMedalDisplaySize,
-    setMedalsPreventUnlock,
     setDebugWatermark,
     setDebugKey,
 

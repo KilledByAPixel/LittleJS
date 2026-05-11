@@ -10,6 +10,13 @@ export
     medalsInit,
     medalsForEach,
     Medal,
+    medalDisplayTime,
+    medalDisplaySlideTime,
+    medalDisplaySize,
+    setMedalDisplayTime,
+    setMedalDisplaySlideTime,
+    setMedalDisplaySize,
+    setMedalsPreventUnlock,
 
     // Newgrounds
     newgrounds,

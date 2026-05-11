@@ -323,33 +323,6 @@ let soundDefaultRange = 40;
 let soundDefaultTaper = .7;
 
 ///////////////////////////////////////////////////////////////////////////////
-// Medals settings
-
-/** How long to show medals for in seconds
- *  @type {number}
- *  @default
- *  @memberof Settings */
-let medalDisplayTime = 5;
-
-/** How quickly to slide on/off medals in seconds
- *  @type {number}
- *  @default
- *  @memberof Settings */
-let medalDisplaySlideTime = .5;
-
-/** Size of medal display
- *  @type {Vector2}
- *  @default Vector2(640,80)
- *  @memberof Settings */
-let medalDisplaySize = vec2(640, 80);
-
-/** Set to stop medals from being unlockable (like if cheats are enabled)
- *  @type {boolean}
- *  @default
- *  @memberof Settings */
-let medalsPreventUnlock = false;
-
-///////////////////////////////////////////////////////////////////////////////
 // Setters for global variables
 
 /** Set position of camera in world space
@@ -609,26 +582,6 @@ function setSoundDefaultRange(range) { soundDefaultRange = range; }
  *  @param {number} taper
  *  @memberof Settings */
 function setSoundDefaultTaper(taper) { soundDefaultTaper = taper; }
-
-/** Set how long to show medals for in seconds
- *  @param {number} time
- *  @memberof Settings */
-function setMedalDisplayTime(time) { medalDisplayTime = time; }
-
-/** Set how quickly to slide on/off medals in seconds
- *  @param {number} time
- *  @memberof Settings */
-function setMedalDisplaySlideTime(time) { medalDisplaySlideTime = time; }
-
-/** Set size of medal display
- *  @param {Vector2} size
- *  @memberof Settings */
-function setMedalDisplaySize(size) { medalDisplaySize = size.copy(); }
-
-/** Set to stop medals from being unlockable
- *  @param {boolean} preventUnlock
- *  @memberof Settings */
-function setMedalsPreventUnlock(preventUnlock) { medalsPreventUnlock = preventUnlock; }
 
 /** Set if watermark with FPS should be shown
  *  @param {boolean} show
