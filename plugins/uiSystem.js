@@ -1496,3 +1496,121 @@ class UIVideo extends UIObject
         super.destroy();
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * UILayout - A container that auto-arranges children in a vertical list, horizontal list, or grid
+ * - Set columns to 1 for a vertical list (default)
+ * - Set columns to children.length for a horizontal list
+ * - Set columns to N (1 < N < children.length) for a grid with N columns
+ * - Per-child sizing: each row's height = max child.size.y in that row, each column's width = max child.size.x in that column
+ * - Children are positioned centered in their cell
+ * - Container auto-sizes to fit children plus padding
+ * @extends UIObject
+ * @memberof UISystem
+ */
+class UILayout extends UIObject
+{
+    /** Create a UILayout container that auto-arranges children
+     *  @param {Vector2} [pos]
+     *  @param {number}  [columns=1]  - Number of columns (1 = vertical list)
+     *  @param {number}  [gap=10]     - Space between children
+     *  @param {number}  [padding=10] - Space between container border and children
+     */
+    constructor(pos, columns=1, gap=10, padding=10)
+    {
+        super(pos);
+
+        ASSERT(isNumber(columns) && columns >= 1, 'ui layout columns must be a number >= 1');
+        ASSERT(isNumber(gap), 'ui layout gap must be a number');
+        ASSERT(isNumber(padding), 'ui layout padding must be a number');
+
+        /** @property {number} - Number of columns in the layout */
+        this.columns = columns;
+        /** @property {number} - Space between children */
+        this.gap = gap;
+        /** @property {number} - Space between container border and children */
+        this.padding = padding;
+    }
+
+    /** Add a child UIObject and re-layout
+     *  @param {UIObject} child
+     *  @return {UIObject} The child object added */
+    addChild(child)
+    {
+        super.addChild(child);
+        this.relayout();
+        return child;
+    }
+
+    /** Remove a child UIObject and re-layout
+     *  @param {UIObject} child */
+    removeChild(child)
+    {
+        super.removeChild(child);
+        this.relayout();
+    }
+
+    /** Recompute child positions and container size based on per-child sizes.
+     *  Called automatically by addChild and removeChild. Call manually if you
+     *  mutate a child's size or change columns, gap, or padding. */
+    relayout()
+    {
+        const n = this.children.length;
+        if (!n)
+        {
+            this.size = vec2(this.padding * 2);
+            return;
+        }
+
+        const cols = this.columns;
+        const rows = ceil(n / cols);
+        const colWidths = new Array(cols).fill(0);
+        const rowHeights = new Array(rows).fill(0);
+
+        // first pass: compute column widths and row heights from child sizes
+        for (let i = 0; i < n; ++i)
+        {
+            const col = i % cols;
+            const row = floor(i / cols);
+            const child = this.children[i];
+            colWidths[col] = max(colWidths[col], child.size.x);
+            rowHeights[row] = max(rowHeights[row], child.size.y);
+        }
+
+        // total content size (sum of column widths/row heights plus gaps between them)
+        let contentWidth = this.gap * (cols - 1);
+        for (const w of colWidths) contentWidth += w;
+        let contentHeight = this.gap * (rows - 1);
+        for (const h of rowHeights) contentHeight += h;
+
+        // cumulative column/row offsets so positioning is O(n) not O(n^2)
+        const colOffsets = new Array(cols);
+        let xAcc = 0;
+        for (let c = 0; c < cols; ++c)
+        {
+            colOffsets[c] = xAcc;
+            xAcc += colWidths[c];
+        }
+        const rowOffsets = new Array(rows);
+        let yAcc = 0;
+        for (let r = 0; r < rows; ++r)
+        {
+            rowOffsets[r] = yAcc;
+            yAcc += rowHeights[r];
+        }
+
+        // second pass: position each child centered in its cell
+        for (let i = 0; i < n; ++i)
+        {
+            const col = i % cols;
+            const row = floor(i / cols);
+            const x = -contentWidth/2 + colOffsets[col] + this.gap * col + colWidths[col] / 2;
+            const y = -contentHeight/2 + rowOffsets[row] + this.gap * row + rowHeights[row] / 2;
+            this.children[i].localPos = vec2(x, y);
+        }
+
+        // container size = content + padding on all sides
+        this.size = vec2(contentWidth + this.padding * 2, contentHeight + this.padding * 2);
+    }
+}
