@@ -5070,4 +5070,169 @@ declare module "littlejsengine" {
         function PIECEWISE(...fns: ((arg0: number) => number)[]): (arg0: number) => number;
         function BEZIER(x1: number, y1: number, x2: number, y2: number): (arg0: number) => number;
     }
+    /** Grid pathfinder using A* with two optional smoothing passes.
+     *  @memberof PathFinding
+     *  @example
+     *  // Tile-layer driven (most common):
+     *  const pf = new PathFinder(myTileCollisionLayer);
+     *  const path = pf.findPath(player.pos, mousePos);
+     *
+     *  // Bare grid with custom walkability:
+     *  const pf = new PathFinder(vec2(50, 50));
+     *  pf.isWalkable = (x, y) => myGrid[y*50 + x] === 0;
+     */
+    export class PathFinder {
+        /** @param {TileCollisionLayer|Vector2} source - Either a TileCollisionLayer
+         *  (size and walkability auto-derived) or a Vector2 grid size (user
+         *  overrides isWalkable). */
+        constructor(source: TileCollisionLayer | Vector2);
+        size: any;
+        tileLayer: Vector2 | TileCollisionLayer;
+        heuristicWeight: number;
+        maxLoop: number;
+        smoothPath: boolean;
+        debug: boolean;
+        debugTime: number;
+        nodes: any[];
+        collisionScratch: Vector2;
+        /** Default walkability: if a tile layer was provided, returns true when the
+         *  cell has no solid collision data; otherwise returns true. Override on
+         *  the instance or via a subclass.
+         *  @param {number} x - Tile x
+         *  @param {number} y - Tile y
+         *  @returns {boolean} */
+        isWalkable(x: number, y: number): boolean;
+        /** Default extra cost for stepping on a cell. Returns 0 (free) by default.
+         *  Override to add cost-weighted terrain (mud, swamp, etc).
+         *  @param {number} x - Tile x
+         *  @param {number} y - Tile y
+         *  @returns {number} */
+        getCost(x: number, y: number): number;
+        /** Get the node at tile coords, or null if out of bounds.
+         *  @param {number} x
+         *  @param {number} y
+         *  @returns {PathFinderNode|null} */
+        getNode(x: number, y: number): PathFinderNode | null;
+        /** Convert a world-space position to integer tile coords (no clamping).
+         *  @param {Vector2} worldPos
+         *  @returns {Vector2}
+         *  @memberof PathFinding */
+        worldToTile(worldPos: Vector2): Vector2;
+        /** Convert integer tile coords to the world-space center of that tile.
+         *  @param {number} x
+         *  @param {number} y
+         *  @returns {Vector2}
+         *  @memberof PathFinding */
+        tileToWorld(x: number, y: number): Vector2;
+        /** Reset all nodes and re-populate walkable / cost / posWorld from the
+         *  current isWalkable / getCost overrides. Called at the start of
+         *  findPath; exposed so tests and tooling can drive it directly.
+         *  @private */
+        private buildNodeData;
+        /** Core A* search loop. Expects buildNodeData() to have been called first.
+         *  Marks node.parent for path reconstruction. Returns true if endNode was
+         *  reached; false on disconnected goal or maxLoop exhaustion.
+         *  @param {PathFinderNode} startNode
+         *  @param {PathFinderNode} endNode
+         *  @returns {boolean}
+         *  @private */
+        private aStarSearch;
+        /** Find the clear (walkable, zero-cost) node closest to the given world
+         *  position. Spirals outward in expanding boxes until a clear node is
+         *  found or the search range is exhausted. Useful for snapping a click
+         *  or NPC spawn position to the nearest open tile.
+         *
+         *  By default, calls `buildNodeData()` first so it works correctly on a
+         *  fresh PathFinder. If you're calling it many times in a row with
+         *  unchanged walkability, pass `rebuild=false` and call `buildNodeData()`
+         *  once externally to avoid redundant work.
+         *  @param {Vector2} worldPos
+         *  @param {number} [searchRange=10] - Max box-radius in tiles
+         *  @param {boolean} [rebuild=true] - Whether to call buildNodeData first
+         *  @returns {PathFinderNode|null}
+         *  @memberof PathFinding */
+        getNearestClearNode(worldPos: Vector2, searchRange?: number, rebuild?: boolean): PathFinderNode | null;
+        /** Smooth a node path by removing redundant turns and tightening corners
+         *  where a grid-aligned diagonal is clear. Modifies the path in place.
+         *  Stays on the grid — does not introduce off-tile-center points.
+         *  Port of ShortenPath() in pathFinding.cpp.
+         *  @param {PathFinderNode[]} path
+         *  @private */
+        private smoothPathCorners;
+        /** Smooth a node path via line-of-sight ("string pulling"). Walks the
+         *  input path collapsing runs of nodes into straight segments whenever
+         *  isLineClear permits, so the result can leave grid centers and cut
+         *  cleanly across open spaces.
+         *
+         *  Bails (leaves the path unchanged) if any node has nonzero cost — a
+         *  straight geometric shortcut can't be trusted to be the lowest-cost
+         *  route when cost-weighted terrain is in play.
+         *
+         *  Port of ShortenPath2() in pathFinding.cpp.
+         *  @param {PathFinderNode[]} path
+         *  @private */
+        private smoothPathStringPull;
+        /** Lookup helper: true when the node at tile coords (x, y) is in-bounds
+         *  and clear (walkable, zero-cost). Used by isLineClear's hot path.
+         *  @param {number} x
+         *  @param {number} y
+         *  @returns {boolean}
+         *  @private */
+        private isNodeClear;
+        /** Check that the line between two tile-coord endpoints stays entirely
+         *  inside walkable, zero-cost cells. Stricter than just sampling along
+         *  the line — it also checks the diagonal-corner-adjacent cells so the
+         *  line can never "scrape past" a wall corner.
+         *
+         *  Both endpoints must themselves be clear (asserted in debug). Port of
+         *  CheckLine() in pathFinding.cpp.
+         *  @param {Vector2} startPos - Tile coords
+         *  @param {Vector2} endPos - Tile coords
+         *  @returns {boolean}
+         *  @private */
+        private isLineClear;
+        /** Find a path from startPos to endPos in world space. Returns an array
+         *  of world-space Vector2 points; empty array if no path exists.
+         *
+         *  Start and end are snapped to the nearest walkable tile via
+         *  getNearestClearNode. Intermediate points are tile centers unless the
+         *  string-pulling smoothing pass moves them off-grid.
+         *  @param {Vector2} startPos - World-space start
+         *  @param {Vector2} endPos - World-space end
+         *  @returns {Vector2[]}
+         *  @memberof PathFinding */
+        findPath(startPos: Vector2, endPos: Vector2): Vector2[];
+    }
+    /** A single grid cell tracked by the pathfinder. Allocated once per cell at
+     *  PathFinder construction; reset (not reallocated) at the start of every
+     *  findPath call.
+     *  @memberof PathFinding */
+    class PathFinderNode {
+        /** @param {number} x - Tile x
+         *  @param {number} y - Tile y */
+        constructor(x: number, y: number);
+        /** @property {Vector2} - Tile coords (integer) */
+        pos: Vector2;
+        /** @property {Vector2} - World-space center of this tile (set by buildNodeData) */
+        posWorld: Vector2;
+        /** @property {boolean} - True if this cell is passable (cleared each findPath call) */
+        walkable: boolean;
+        /** @property {number} - Extra cost added to A* G-score for stepping on this cell */
+        cost: number;
+        /** @property {number} - A* G-score: actual cost from start to this node */
+        g: number;
+        /** @property {number} - A* F-score: G + heuristic */
+        f: number;
+        /** @property {PathFinderNode|null} - Parent for path reconstruction */
+        parent: any;
+        /** @property {boolean} - In the A* open list */
+        isOpen: boolean;
+        /** @property {boolean} - In the A* closed list */
+        isClosed: boolean;
+        /** Reset per-search state (called at the start of buildNodeData). */
+        reset(): void;
+        /** True if walkable and not blocked by cost. */
+        isClear(): boolean;
+    }
+    export {};
 }
