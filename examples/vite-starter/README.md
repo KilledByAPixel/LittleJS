@@ -2,6 +2,19 @@
 
 This template provides a minimal setup to get LittleJS working in Vite.
 
+## Use as a template
+
+Spin up a fresh project from this template with [degit](https://github.com/Rich-Harris/degit):
+
+```
+npx degit KilledByAPixel/LittleJS/examples/vite-starter my-game
+cd my-game
+npm install
+npm run dev
+```
+
+Requires Node 20.19+ or 22.12+ (Vite 7 requirement).
+
 ## Getting started
 
 ```
