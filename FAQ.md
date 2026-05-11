@@ -2,7 +2,7 @@
 
 Welcome to the LittleJS FAQ!
 This document addresses common questions and issues to help developers get started and troubleshoot their projects.
-If you don’t find an answer here, feel free to ask the community or check the documentation.
+If you don't find an answer here, feel free to ask the community or check the documentation.
 
 Getting Started
 - [What is LittleJS, and how is it different from other JavaScript game engines?](#what-is-littlejs-and-how-is-it-different-from-other-javascript-game-engines)
@@ -299,7 +299,7 @@ Then zip up your game folder for itch.io or push to GitHub Pages.
 
 ### How do I load and add images to my game?
 
-First you need to load an image file. For LittleJS this is typically done on startup via a parameter to engineInit that is a list of images to load. The engine will ensure that the images are all loaded before starting. Each source image can be up to 4096x4096 in size so most games only need one texture, though it's possible to load as many as you need.
+First you need to load an image file. For LittleJS this is typically done on startup via a parameter to engineInit that is a list of images to load. The engine will ensure that all images are loaded before starting. Most modern devices support textures up to 4096x4096 or larger, though some older mobile devices cap out at 2048x2048 — keep that lower limit in mind if you need broad compatibility. Most games only need one texture, but you can load as many as you need.
 
 ```javascript
 engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);
@@ -374,14 +374,18 @@ That's called tile bleeding — pixels from one tile blend into a neighboring ti
 
 ### How do I handle animations in LittleJS?
 
-You can use the TileInfo.frame function passing in the number of animation frames to offset the sprite.
-It sounds kind of weird at first but imagine your sprites are all aligned on a grid with frames of animations being next to eachother.
-This allows easily indexing into those animations from the base sprite location.
-For example to animate the player sprite you might do something like this...
+Use the `TileInfo.frame(n)` method to offset along a row of animation frames on your sprite sheet. Lay out each animation's frames left-to-right next to each other on the sheet, then index into them from a base sprite:
 
-```javascript 
-this.tileInfo = spriteAtlas.player.frame(animationFrame);
+```javascript
+// store the base sprite (the first frame of the animation)
+const playerSprite = tile(0, 16);
+
+// inside update(), advance the frame based on time
+const animationFrame = Math.floor(time * 10) % 4; // 4-frame loop at 10 FPS
+this.tileInfo = playerSprite.frame(animationFrame);
 ```
+
+`time` is a global updated by the engine each frame (in seconds). The `% 4` keeps the index inside the 4 frames you actually drew on the sheet — adjust to match your animation length.
 
 ### How do I control the camera in LittleJS?
 
@@ -442,11 +446,18 @@ sound_click.play(pos, volume, pitch); // play a sound
 
 ### If I load several images, how do I control which is used?
 
-There is just an optional parameter you can pass to the tile function or to TileInfo called textureIndex. It defaults to 0 so if you only have one texture, you may not have noticed it. If you set to another number will select another texture in list. Something to keep in mind for large games is that changing the target texture will require WebGL to flush the render batch which can cause slowdown if it is done many times per frame.
+Pass multiple image paths to `engineInit` and select between them with the third argument to `tile()` (the `texture` index):
 
 ```javascript
-function tile(pos=vec2(), size=tileSizeDefault, textureIndex=0, padding=0)
+// load two images
+engineInit(..., ['tiles.png', 'background.png']);
+
+// later, draw a tile from each
+const fgTile = tile(0, 16);       // texture 0 → tiles.png
+const bgTile = tile(0, 16, 1);    // texture 1 → background.png
 ```
+
+The `texture` argument defaults to `0`, so single-image projects can ignore it. One thing to keep in mind for large games: switching between textures forces WebGL to flush its current render batch, so frequently alternating between textures within a single frame can hurt performance. Group draws by texture where you can.
 
 ### How can I check if an object is on screen?
 
@@ -469,7 +480,7 @@ LittleJS provides input handling functions for keyboard, mouse, and gamepads. To
 
 ```javascript
 if (keyIsDown('ArrowLeft')) // Left arrow key
-   obj.x -= 5;
+   obj.pos.x -= 5;
 if (mouseWasReleased(0)) // Left mouse button
    console.log('Mouse clicked at:', mousePos);
 if (gamepadWasPressed(0)) // Gamepad button 0
