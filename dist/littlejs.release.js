@@ -10433,6 +10433,7 @@ class UILayout extends UIObject
         this.gap = gap;
         /** @property {number} - Space between container border and children */
         this.padding = padding;
+        this.relayout();
     }
 
     /** Add a child UIObject and re-layout
