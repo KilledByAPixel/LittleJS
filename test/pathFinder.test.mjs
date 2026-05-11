@@ -68,3 +68,41 @@ test('PathFinder.buildNodeData sets posWorld to tile centers', () =>
     assert.equal(pf.getNode(2, 1).posWorld.x, 2.5);
     assert.equal(pf.getNode(2, 1).posWorld.y, 1.5);
 });
+
+test('getNearestClearNode returns the node at the exact position when walkable', () =>
+{
+    const pf = new PathFinder(vec2(5, 5));
+    pf.buildNodeData();
+    const node = pf.getNearestClearNode(vec2(2.5, 2.5));
+    assert.equal(node.pos.x, 2);
+    assert.equal(node.pos.y, 2);
+});
+
+test('getNearestClearNode skips blocked cells and finds the nearest walkable', () =>
+{
+    const pf = new PathFinder(vec2(5, 5));
+    // Block only the center tile.
+    pf.isWalkable = (x, y) => !(x === 2 && y === 2);
+    pf.buildNodeData();
+    const node = pf.getNearestClearNode(vec2(2.5, 2.5));
+    // Must not be the center; must be one of the 8 neighbors.
+    assert.notEqual(node.pos.x === 2 && node.pos.y === 2, true);
+    const dx = Math.abs(node.pos.x - 2);
+    const dy = Math.abs(node.pos.y - 2);
+    assert(dx <= 1 && dy <= 1);
+});
+
+test('getNearestClearNode returns null when every cell within searchRange is blocked', () =>
+{
+    const pf = new PathFinder(vec2(5, 5));
+    pf.isWalkable = () => false;
+    pf.buildNodeData();
+    assert.equal(pf.getNearestClearNode(vec2(2.5, 2.5), 2), null);
+});
+
+test('getNearestClearNode returns null for a position outside the grid', () =>
+{
+    const pf = new PathFinder(vec2(3, 3));
+    pf.buildNodeData();
+    assert.equal(pf.getNearestClearNode(vec2(-50, -50), 1), null);
+});

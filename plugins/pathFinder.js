@@ -204,4 +204,47 @@ class PathFinder
             }
         }
     }
+
+    /** Find the walkable node closest to the given world position. Spirals
+     *  outward in expanding boxes until a walkable node is found or the
+     *  search range is exhausted. Useful for snapping a click or NPC spawn
+     *  position to the nearest open tile.
+     *  @param {Vector2} worldPos
+     *  @param {number} [searchRange=10] - Max box-radius in tiles
+     *  @returns {PathFinderNode|null}
+     *  @memberof PathFinding */
+    getNearestClearNode(worldPos, searchRange = 10)
+    {
+        ASSERT(isVector2(worldPos), 'worldPos must be a Vector2');
+        const center = this.worldToTile(worldPos);
+
+        for (let offset = 0; offset <= searchRange; ++offset)
+        {
+            let nearest = null;
+            let nearestDistSq = 0;
+
+            for (let dy = -offset; dy <= offset; ++dy)
+            for (let dx = -offset; dx <= offset; ++dx)
+            {
+                // Only scan the perimeter of the current ring (skip the
+                // interior we've already searched in earlier iterations).
+                if (offset > 0 && Math.abs(dx) !== offset && Math.abs(dy) !== offset)
+                    continue;
+
+                const node = this.getNode(center.x + dx, center.y + dy);
+                if (!node || !node.walkable) continue;
+
+                const ddx = node.posWorld.x - worldPos.x;
+                const ddy = node.posWorld.y - worldPos.y;
+                const distSq = ddx * ddx + ddy * ddy;
+                if (!nearest || distSq < nearestDistSq)
+                {
+                    nearest = node;
+                    nearestDistSq = distSq;
+                }
+            }
+            if (nearest) return nearest;
+        }
+        return null;
+    }
 }
