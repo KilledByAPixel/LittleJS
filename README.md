@@ -26,6 +26,7 @@ This was done to allow the main line LittleJS engine to continue evoling while a
 
 ## 💥 [Live Demo of Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter)
 ## 🛠️ [Main LittleJS Repo](https://killedbyapixel.github.io/LittleJS)
+## 🧙 [LittleJS13k Wizard](https://github.com/eoinmcg/create-js13k-littlejs) by [eoinmcg](https://github.com/eoinmcg)
 
 ## 🎮 Examples
 
