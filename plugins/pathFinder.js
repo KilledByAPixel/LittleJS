@@ -476,6 +476,126 @@ class PathFinder
         }
     }
 
+    /** Check that the line between two tile-coord endpoints stays entirely
+     *  inside walkable, zero-cost cells. Stricter than just sampling along
+     *  the line — it also checks the diagonal-corner-adjacent cells so the
+     *  line can never "scrape past" a wall corner.
+     *
+     *  Both endpoints must themselves be clear (asserted in debug). Port of
+     *  CheckLine() in pathFinding.cpp.
+     *  @param {Vector2} startPos - Tile coords
+     *  @param {Vector2} endPos - Tile coords
+     *  @returns {boolean}
+     *  @private */
+    isLineClear(startPos, endPos)
+    {
+        const isClear = (x, y) =>
+        {
+            const n = this.getNode(x, y);
+            return n !== null && n.isClear();
+        };
+
+        const dx = endPos.x - startPos.x;
+        const dy = endPos.y - startPos.y;
+        const adx = Math.abs(dx);
+        const ady = Math.abs(dy);
+        const sx = Math.sign(dx);
+        const sy = Math.sign(dy);
+        let x = startPos.x;
+        let y = startPos.y;
+
+        if (ady === adx)
+        {
+            // Pure diagonal.
+            while (x !== endPos.x)
+            {
+                if (x !== startPos.x)
+                {
+                    if (!isClear(x, y)) return false;
+                    if (!isClear(x, y - sy)) return false;
+                }
+                if (!isClear(x, y + sy)) return false;
+                x += sx;
+                y += sy;
+            }
+            if (!isClear(endPos.x, endPos.y - sy)) return false;
+        }
+        else if (ady < adx)
+        {
+            // Mostly horizontal.
+            if (dy === 0)
+            {
+                // Purely horizontal.
+                x += sx;
+                while (x !== endPos.x)
+                {
+                    if (!isClear(x, y)) return false;
+                    x += sx;
+                }
+            }
+            else
+            {
+                let lastY = startPos.y;
+                while (x !== endPos.x)
+                {
+                    y = startPos.y + Math.trunc((dy * (x - startPos.x)) / dx);
+                    if (lastY !== y)
+                    {
+                        if (!isClear(x - sx, y + sy)) return false;
+                        if (!isClear(x, y - sy)) return false;
+                    }
+                    lastY = y;
+                    if (x !== startPos.x)
+                    {
+                        if (!isClear(x, y)) return false;
+                    }
+                    y += sy;
+                    if (!isClear(x, y)) return false;
+                    x += sx;
+                }
+                const finalY = endPos.y - sy;
+                if (!isClear(endPos.x, finalY)) return false;
+            }
+        }
+        else
+        {
+            // Mostly vertical.
+            if (dx === 0)
+            {
+                y += sy;
+                while (y !== endPos.y)
+                {
+                    if (!isClear(x, y)) return false;
+                    y += sy;
+                }
+            }
+            else
+            {
+                let lastX = startPos.x;
+                while (y !== endPos.y)
+                {
+                    x = startPos.x + Math.trunc((dx * (y - startPos.y)) / dy);
+                    if (lastX !== x)
+                    {
+                        if (!isClear(x + sx, y - sy)) return false;
+                        if (!isClear(x - sx, y)) return false;
+                    }
+                    lastX = x;
+                    if (y !== startPos.y)
+                    {
+                        if (!isClear(x, y)) return false;
+                    }
+                    x += sx;
+                    if (!isClear(x, y)) return false;
+                    y += sy;
+                }
+                const finalX = endPos.x - sx;
+                if (!isClear(finalX, endPos.y)) return false;
+            }
+        }
+        return true;
+    }
+
     /** Find a path from startPos to endPos in world space. Returns an array
      *  of world-space Vector2 points; empty array if no path exists.
      *

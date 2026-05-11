@@ -273,3 +273,33 @@ test('smoothPathCorners is a no-op on a 2-node path', () =>
     pf.smoothPathCorners(path);
     assert.equal(path.length, 2);
 });
+
+test('isLineClear returns true for a horizontal line on an open grid', () =>
+{
+    const pf = new PathFinder(vec2(5, 5));
+    pf.buildNodeData();
+    assert.equal(pf.isLineClear(vec2(0, 2), vec2(4, 2)), true);
+});
+
+test('isLineClear returns true for a vertical line on an open grid', () =>
+{
+    const pf = new PathFinder(vec2(5, 5));
+    pf.buildNodeData();
+    assert.equal(pf.isLineClear(vec2(2, 0), vec2(2, 4)), true);
+});
+
+test('isLineClear returns true for a pure diagonal on an open grid', () =>
+{
+    const pf = new PathFinder(vec2(5, 5));
+    pf.buildNodeData();
+    assert.equal(pf.isLineClear(vec2(0, 0), vec2(4, 4)), true);
+});
+
+test('isLineClear returns false when a wall blocks the line', () =>
+{
+    const pf = new PathFinder(vec2(5, 5));
+    pf.isWalkable = (x, y) => !(x === 2 && y === 2);
+    pf.buildNodeData();
+    // Diagonal from (0,0) to (4,4) passes through (2,2).
+    assert.equal(pf.isLineClear(vec2(0, 0), vec2(4, 4)), false);
+});
