@@ -78,6 +78,7 @@ const exampleList =
     new ExampleInfo('UI System', 'uiSystem.js', 'Buttons, sliders, and checkboxes', false, 'objects, widgets, interactive'),
     new ExampleInfo('Nine Slice', 'nineSlice.js', 'Scalable UI panels', false, 'three slice, stretch, corners, text, tiles'),
     new ExampleInfo('Tween', 'tween.js', 'Numeric, Vector2, and Color tweens with easing', false, 'animation, easing, lerp, pingpong, interpolation'),
+    new ExampleInfo('Path Finder', 'pathFinder.js', 'A* pathfinding plugin with smoothing and debug visualization', false, 'ai, navigation, astar, grid, search'),
     new ExampleInfo('--- FULL EXAMPLES ---'),
     new ExampleInfo('Starter', 'starter', 'Clean project template', true, 'base, empty, particles'),
     new ExampleInfo('Breakout Tutorial', 'breakoutTutorial', 'Step-by-step breakout game tutorial', true, 'objects, physics, score'),
