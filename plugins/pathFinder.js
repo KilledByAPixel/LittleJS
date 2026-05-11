@@ -14,6 +14,10 @@
 // Diagonal step cost — pre-computed for the A* expansion inner loop.
 const PATHFINDER_DIAGONAL_COST = Math.SQRT2;
 
+// Shared 1x1 size vector for per-tile debugRect calls. debugRect copies the
+// argument internally, so reusing one instance is safe.
+const PATHFINDER_TILE_VEC = vec2(1);
+
 ///////////////////////////////////////////////////////////////////////////////
 
 /** A single grid cell tracked by the pathfinder. Allocated once per cell at
@@ -197,9 +201,9 @@ class PathFinder
             if (this.debug && this.debugTime > 0)
             {
                 if (!walkable)
-                    debugRect(node.posWorld, vec2(1), rgb(1, 0, 0, 0.25), this.debugTime);
+                    debugRect(node.posWorld, PATHFINDER_TILE_VEC, rgb(1, 0, 0, 0.25), this.debugTime);
                 else if (cost > 0)
-                    debugRect(node.posWorld, vec2(1), rgb(1, 0, 0, Math.min(0.2, cost * 0.05)), this.debugTime);
+                    debugRect(node.posWorld, PATHFINDER_TILE_VEC, rgb(1, 0, 0, Math.min(0.2, cost * 0.05)), this.debugTime);
             }
         }
     }
@@ -246,7 +250,7 @@ class PathFinder
             current.isClosed = true;
 
             if (this.debug && this.debugTime > 0)
-                debugRect(current.posWorld, vec2(1), rgb(1, 1, 1, 0.05), this.debugTime);
+                debugRect(current.posWorld, PATHFINDER_TILE_VEC, rgb(1, 1, 1, 0.05), this.debugTime);
 
             // Expand all 8 neighbors.
             for (let dy = -1; dy <= 1; ++dy)
@@ -309,7 +313,12 @@ class PathFinder
     {
         ASSERT(isVector2(worldPos), 'worldPos must be a Vector2');
         if (rebuild) this.buildNodeData();
-        const center = this.worldToTile(worldPos);
+
+        // Inline worldToTile to avoid a Vector2 allocation per call.
+        const ox = this.tileLayer ? this.tileLayer.pos.x : 0;
+        const oy = this.tileLayer ? this.tileLayer.pos.y : 0;
+        const centerX = Math.floor(worldPos.x - ox);
+        const centerY = Math.floor(worldPos.y - oy);
 
         for (let offset = 0; offset <= searchRange; ++offset)
         {
@@ -324,7 +333,7 @@ class PathFinder
                 if (offset > 0 && Math.abs(dx) !== offset && Math.abs(dy) !== offset)
                     continue;
 
-                const node = this.getNode(center.x + dx, center.y + dy);
+                const node = this.getNode(centerX + dx, centerY + dy);
                 if (!node || !node.isClear()) continue;
 
                 const ddx = node.posWorld.x - worldPos.x;
@@ -562,6 +571,18 @@ class PathFinder
         path.push(original[original.length - 1]);
     }
 
+    /** Lookup helper: true when the node at tile coords (x, y) is in-bounds
+     *  and clear (walkable, zero-cost). Used by isLineClear's hot path.
+     *  @param {number} x
+     *  @param {number} y
+     *  @returns {boolean}
+     *  @private */
+    isNodeClear(x, y)
+    {
+        const n = this.getNode(x, y);
+        return n !== null && n.isClear();
+    }
+
     /** Check that the line between two tile-coord endpoints stays entirely
      *  inside walkable, zero-cost cells. Stricter than just sampling along
      *  the line — it also checks the diagonal-corner-adjacent cells so the
@@ -576,12 +597,7 @@ class PathFinder
     isLineClear(startPos, endPos)
     {
         ASSERT(isVector2(startPos) && isVector2(endPos), 'isLineClear needs Vector2 endpoints');
-        const isClear = (x, y) =>
-        {
-            const n = this.getNode(x, y);
-            return n !== null && n.isClear();
-        };
-        ASSERT(isClear(startPos.x, startPos.y) && isClear(endPos.x, endPos.y),
+        ASSERT(this.isNodeClear(startPos.x, startPos.y) && this.isNodeClear(endPos.x, endPos.y),
             'isLineClear endpoints must be in-bounds and clear');
 
         const dx = endPos.x - startPos.x;
@@ -600,14 +616,14 @@ class PathFinder
             {
                 if (x !== startPos.x)
                 {
-                    if (!isClear(x, y)) return false;
-                    if (!isClear(x, y - sy)) return false;
+                    if (!this.isNodeClear(x, y)) return false;
+                    if (!this.isNodeClear(x, y - sy)) return false;
                 }
-                if (!isClear(x, y + sy)) return false;
+                if (!this.isNodeClear(x, y + sy)) return false;
                 x += sx;
                 y += sy;
             }
-            if (!isClear(endPos.x, endPos.y - sy)) return false;
+            if (!this.isNodeClear(endPos.x, endPos.y - sy)) return false;
         }
         else if (ady < adx)
         {
@@ -618,7 +634,7 @@ class PathFinder
                 x += sx;
                 while (x !== endPos.x)
                 {
-                    if (!isClear(x, y)) return false;
+                    if (!this.isNodeClear(x, y)) return false;
                     x += sx;
                 }
             }
@@ -630,20 +646,20 @@ class PathFinder
                     y = startPos.y + Math.trunc((dy * (x - startPos.x)) / dx);
                     if (lastY !== y)
                     {
-                        if (!isClear(x - sx, y + sy)) return false;
-                        if (!isClear(x, y - sy)) return false;
+                        if (!this.isNodeClear(x - sx, y + sy)) return false;
+                        if (!this.isNodeClear(x, y - sy)) return false;
                     }
                     lastY = y;
                     if (x !== startPos.x)
                     {
-                        if (!isClear(x, y)) return false;
+                        if (!this.isNodeClear(x, y)) return false;
                     }
                     y += sy;
-                    if (!isClear(x, y)) return false;
+                    if (!this.isNodeClear(x, y)) return false;
                     x += sx;
                 }
                 const finalY = endPos.y - sy;
-                if (!isClear(endPos.x, finalY)) return false;
+                if (!this.isNodeClear(endPos.x, finalY)) return false;
             }
         }
         else
@@ -654,7 +670,7 @@ class PathFinder
                 y += sy;
                 while (y !== endPos.y)
                 {
-                    if (!isClear(x, y)) return false;
+                    if (!this.isNodeClear(x, y)) return false;
                     y += sy;
                 }
             }
@@ -666,20 +682,20 @@ class PathFinder
                     x = startPos.x + Math.trunc((dx * (y - startPos.y)) / dy);
                     if (lastX !== x)
                     {
-                        if (!isClear(x + sx, y - sy)) return false;
-                        if (!isClear(x - sx, y)) return false;
+                        if (!this.isNodeClear(x + sx, y - sy)) return false;
+                        if (!this.isNodeClear(x - sx, y)) return false;
                     }
                     lastX = x;
                     if (y !== startPos.y)
                     {
-                        if (!isClear(x, y)) return false;
+                        if (!this.isNodeClear(x, y)) return false;
                     }
                     x += sx;
-                    if (!isClear(x, y)) return false;
+                    if (!this.isNodeClear(x, y)) return false;
                     y += sy;
                 }
                 const finalX = endPos.x - sx;
-                if (!isClear(finalX, endPos.y)) return false;
+                if (!this.isNodeClear(finalX, endPos.y)) return false;
             }
         }
         return true;
@@ -711,10 +727,12 @@ class PathFinder
 
         if (!this.aStarSearch(startNode, endNode)) return [];
 
-        // Walk back from endNode via parent pointers to build the node list.
+        // Walk back from endNode via parent pointers, then reverse — cheaper
+        // than unshifting on every step.
         const nodePath = [];
         for (let n = endNode; n; n = n.parent)
-            nodePath.unshift(n);
+            nodePath.push(n);
+        nodePath.reverse();
 
         if (this.smoothPath)
         {

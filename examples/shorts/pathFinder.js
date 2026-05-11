@@ -1,13 +1,14 @@
-let tileLayer, pathFinder, playerPos, path = [], walls = [];
+let tileLayer, pathFinder, playerPos, path = [];
 
 function gameInit()
 {
-    // Sparse obstacle field — not a maze, so string-pulling has room to demo.
+    // make sparse obstacle field collision for demo
     const gridSize = vec2(30, 20);
     tileLayer = new TileCollisionLayer(vec2(), gridSize);
 
-    // Scatter ~25% solid tiles, leaving a small clearing at the center for the player.
+    // scatter solid tiles, leaving a small clearing at the center
     const center = gridSize.scale(0.5);
+    const wallColor = hsl(0.6, 0.6, 0.5);
     for (let x = 0; x < gridSize.x; ++x)
     for (let y = 0; y < gridSize.y; ++y)
     {
@@ -16,16 +17,16 @@ function gameInit()
         if (rand() < 0.25)
         {
             tileLayer.setCollisionData(here, 1);
-            walls.push(here);
+            tileLayer.setData(here, new TileLayerData(1, 0, false, wallColor));
         }
     }
+    tileLayer.redraw(); // render the wall tiles into the layer's offscreen canvas
 
     pathFinder = new PathFinder(tileLayer);
     pathFinder.debug = true;
     pathFinder.debugTime = 0.5;
 
-    // Snap the player to a guaranteed-clear center tile.
-    // Copy because the node's posWorld is internal state that buildNodeData rewrites.
+    // snap the player to clear center tile and save pos
     const startNode = pathFinder.getNearestClearNode(center);
     ASSERT(startNode, 'no clear tile near grid center — try regenerating');
     playerPos = startNode.posWorld.copy();
@@ -43,9 +44,7 @@ function gameUpdate()
 
 function gameRender()
 {
-    // Walls — drawn ourselves so the demo doesn't depend on tiles.png content.
-    for (const w of walls)
-        drawRect(w.add(vec2(0.5)), vec2(0.95), hsl(0.6, 0.6, 0.5));
+    // (Walls render through tileLayer's built-in tile rendering.)
 
     // Player.
     drawCircle(playerPos, 0.4, GREEN);
