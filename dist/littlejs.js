@@ -9749,15 +9749,12 @@ class UISystemPlugin
         this.lastHoverObject = undefined;
         /** @property {UIObject} - Current confirm menu being shown */
         this.confirmDialog = undefined;
-        /** @property {UIObject} - Object to send keyboard input to */
-        this.keyInputObject = undefined;
+        /** @private */
+        this._keyInputObject = undefined;
+        /** @private */
+        this._onKeyDown = (e) => this._keyInputObject?.onKeyDown(e);
 
         engineAddPlugin(uiUpdate, uiRender);
-
-        // key down handler
-        function onKeyDown(e)
-        { uiSystem.keyInputObject?.onKeyDown(e); }
-        document.addEventListener('keydown', onKeyDown);
 
         // set object position in parent space
         function updateTransforms(o)
@@ -10098,6 +10095,21 @@ class UISystemPlugin
         p.y *= sInv;
         p.x -= sInv*mainCanvasSize.x/2;
         return p;
+    }
+
+    /** Object to send keyboard input to (typically a UITextInput).
+     *  The document keydown listener is only attached while this is set,
+     *  so games that never use text input pay no event-handling cost.
+     *  @type {UIObject} */
+    get keyInputObject() { return this._keyInputObject; }
+    set keyInputObject(obj)
+    {
+        const had = !!this._keyInputObject;
+        this._keyInputObject = obj;
+        if (!had && obj)
+            document.addEventListener('keydown', this._onKeyDown);
+        else if (had && !obj)
+            document.removeEventListener('keydown', this._onKeyDown);
     }
 
     /** Destroy and remove all objects

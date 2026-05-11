@@ -462,6 +462,189 @@ options.paused       // Start in paused state (default false)
 tweenStopAll()                 // Stop every active tween (e.g. on level reset)
 ```
 
+## LittleJS PathFinding System
+- A* pathfinding on a grid
+- Works with a TileCollisionLayer or a bare grid with custom walkability
+- Optional path smoothing (corner cleanup + string-pull line-of-sight)
+- See `examples/shorts/pathFinder.js` for a demo
+
+```javascript
+// Construct from a TileCollisionLayer or a Vector2 grid size
+const pf = new PathFinder(tileCollisionLayer);
+const pf = new PathFinder(vec2(50, 50));
+pf.isWalkable = (x, y) => myGrid[y*50 + x] === 0; // bare grid: provide your own
+
+// Tunables (set freely)
+pf.heuristicWeight = 1     // > 1 = greedier search, faster but less optimal
+pf.maxLoop = 500           // max A* iterations per findPath
+pf.smoothPath = true       // run smoothing pass on result
+pf.debug = false           // draw search visualization
+pf.debugTime = 2           // seconds debug visuals persist
+
+// Main API
+pf.findPath(startPos, endPos)        // Returns array of world positions, or empty if no path
+pf.isLineClear(startPos, endPos)     // True if a straight line passes through walkable tiles
+pf.getNearestClearNode(worldPos, searchRange=10) // Snap an obstructed point to the nearest open tile
+pf.isWalkable(x, y)                  // Override for custom walkability
+pf.getCost(x, y)                     // Override for weighted tiles (0 = clear)
+
+// Conversion helpers
+pf.worldToTile(worldPos)             // Vector2 -> tile coords
+pf.tileToWorld(x, y)                 // tile coords -> Vector2 (tile center)
+pf.getNode(x, y)                     // Get PathFinderNode at tile coords
+```
+
+## LittleJS UI System
+- Standalone UI plugin with buttons, text, sliders, checkboxes, text input, video, and auto-layout
+- Auto-registers via `engineAddPlugin` — `new UISystemPlugin()` is all you need
+- Keyboard listener only attached while a UITextInput is being edited
+- See `examples/uiSystem/` and `examples/shorts/uiSystem.js` for demos
+
+```javascript
+// Setup
+const ui = new UISystemPlugin()        // Creates global uiSystem
+uiSystem.defaultColor                  // Default style values used by all widgets
+uiSystem.defaultLineColor              // (override before constructing widgets)
+uiSystem.defaultLineWidth
+uiSystem.defaultButtonColor
+uiSystem.defaultHoverColor
+uiSystem.defaultFont
+uiSystem.nativeHeight                  // If set, UI coords are normalized to this height
+uiSystem.destroyObjects()              // Remove all UI elements
+
+// Confirm dialog
+uiSystem.showConfirmDialog(text='Are you sure?', yes, no, size, exitKey='Escape')
+
+// Drawing helpers (use these instead of the engine's draw* during UI rendering)
+uiSystem.drawRect(pos, size, color, lineWidth, lineColor, cornerRadius, gradientColor, shadowColor, shadowBlur, shadowOffset)
+uiSystem.drawTile(pos, size, tileInfo, color, angle, mirror, shadowColor, shadowBlur, shadowOffset)
+uiSystem.drawText(text, pos, size, color, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth, textShadow, shadowColor, shadowBlur, shadowOffset)
+uiSystem.drawLine(posA, posB, lineWidth, lineColor)
+
+// Base widget
+new UIObject(pos=vec2(), size=vec2())
+UIObject.addChild(child)               // Returns child, parents it
+UIObject.removeChild(child)
+UIObject.destroy()
+UIObject.isHoverObject()               // True if mouse is over this object
+UIObject.isInteractive()
+UIObject.onClick / onPress / onRelease / onChange / onEnter / onLeave / onUpdate / onRender // Hooks
+
+// Widgets
+new UIText(pos, size, text='', align='center', font)
+new UITile(pos, size, tileInfo, color, angle=0, mirror=false)
+new UIButton(pos, size, text='', color)
+new UICheckbox(pos, size, checked=false, text='', color)  // .checked toggles on click
+new UISlider(pos, size, value=.5, text='', color, handleColor)  // .value in [0, 1]
+new UITextInput(pos, size, text='')   // .text holds current value
+new UIVideo(pos, size, src, autoplay=false, loop=false, volume=1)
+
+// Auto-layout container — arranges children into a grid
+new UILayout(pos, columns=1, gap=10, padding=10, transparent=false)
+UILayout.addChild(child)               // Triggers relayout
+UILayout.relayout()                    // Call manually if you mutate a child's size
+```
+
+## LittleJS Box2D Physics
+- Optional plugin wrapping the Box2D physics engine (via box2d.wasm.js)
+- Drop-in replacement for engine objects: `Box2dObject extends EngineObject`
+- Joints, raycasting, polygon/circle/edge fixtures
+- See `examples/box2d/` for a full demo
+
+```javascript
+// Setup (call once before engineInit)
+await box2dInit()              // Loads the WASM and creates global box2d / Box2dPlugin
+box2dSetDebug(true)            // Toggle debug rendering of physics shapes
+box2d.setGravity(vec2(0,-20))  // World gravity
+
+// Bodies — extend EngineObject, integrate with physics
+new Box2dObject(pos, size, tileInfo, angle, color, bodyType)   // Dynamic by default
+new Box2dStaticObject(pos, size, tileInfo, angle, color)       // Immovable
+new Box2dKinematicObject(pos, size, tileInfo, angle, color)    // Moves but ignores forces
+new Box2dTileLayer(pos, tileLayer)                             // Static collision from a TileLayer
+
+// Common fixture setup (call from constructor or after creation)
+obj.addBox(size, offset, angle, density, friction, restitution, isSensor)
+obj.addCircle(diameter, offset, density, friction, restitution, isSensor)
+obj.addPoly(points, offset, angle, density, friction, restitution, isSensor)
+obj.addEdgeList(points, offset, angle, density, friction, restitution, isSensor)
+obj.setFilterData(categoryBits, maskBits, groupIndex)
+
+// Forces and motion
+obj.applyForce(force, pos)             // Force in Newtons at world pos
+obj.applyAcceleration(accel, pos)      // force = mass * accel
+obj.applyTorque(torque)
+obj.setLinearVelocity(vel)
+obj.setAngularVelocity(av)
+obj.setAwake(awake=true)
+obj.setMassData(mass, localCenter, I)
+obj.getMass() / getCenterOfMass() / getInertia()
+
+// Raycasting
+box2d.raycast(startPos, endPos, filterCallback?) // Returns Box2dRaycastResult or undefined
+
+// Joints — all extend Box2dJoint
+new Box2dTargetJoint(object, targetPos)        // Drag toward a point (mouse-follow)
+new Box2dDistanceJoint(objectA, objectB, anchorA, anchorB)
+new Box2dPinJoint(objectA, objectB, anchor)
+new Box2dRopeJoint(objectA, objectB, anchorA, anchorB, maxLength)
+new Box2dRevoluteJoint(objectA, objectB, anchor)
+new Box2dPrismaticJoint(objectA, objectB, anchor, axis)
+new Box2dWheelJoint(objectA, objectB, anchor, axis)
+new Box2dWeldJoint(objectA, objectB, anchor)
+new Box2dFrictionJoint(objectA, objectB, anchor)
+new Box2dPulleyJoint(objectA, objectB, groundA, groundB, anchorA, anchorB, ratio)
+new Box2dMotorJoint(objectA, objectB)
+new Box2dGearJoint(jointA, jointB, ratio)
+```
+
+## LittleJS Medals & Newgrounds
+- Achievement/medal system with on-screen popup, save/restore via localStorage
+- Optional Newgrounds integration: syncs medals and scoreboards when hosted on Newgrounds
+- See `examples/shorts/medals.js` for a demo
+
+```javascript
+// Medals
+new Medal(id, name, description='', icon='🏆', src)  // src is optional image url
+medal.unlock()                       // Mark unlocked, save, and queue the popup
+medal.unlocked                       // True after unlock
+medal.storageKey()                   // localStorage key for this medal
+
+medals                               // Global { [id]: Medal } map
+medalsInit(saveName)                 // Restore unlocked state from localStorage under saveName
+medalsForEach(callback)              // Iterate all registered medals
+medalsPreventUnlock                  // Block unlocks (testing / debug)
+
+// Display tuning
+medalDisplayTime / setMedalDisplayTime(seconds)
+medalDisplaySlideTime / setMedalDisplaySlideTime(seconds)
+medalDisplaySize / setMedalDisplaySize(vec2)
+
+// Newgrounds integration (only used when hosted on Newgrounds)
+await newgrounds                     // The global is set by NewgroundsPlugin
+new NewgroundsPlugin(app_id, cipher) // Auto-fetches medals and scoreboards
+newgrounds.unlockMedal(id)           // Server-side unlock
+newgrounds.postScore(id, value)      // Submit to a scoreboard
+newgrounds.getScores(id, user, social, skip, limit)
+newgrounds.logView()                 // Track a page view
+new NewgroundsMedal(id, name, description, icon)
+```
+
+## LittleJS Drawing Utilities
+- Optional plugin: nine-slice and three-slice helpers for scalable UI panels
+- World-space (WebGL or 2D) and screen-space (always 2D) variants
+- See `examples/shorts/nineSlice.js` and `examples/shorts/threeSlice.js`
+
+```javascript
+// Nine-slice — 3x3 tile grid scaled to fit
+drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
+drawNineSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, angle=0)
+
+// Three-slice — 1x3 tile strip (corner / side / center) rotated around the box
+drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
+drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, angle=0)
+```
+
 ## LittleJS Debugging System
 - Press Escape key to toggle debug overlay
 - Number keys toggle debug functions

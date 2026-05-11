@@ -3554,8 +3554,10 @@ declare module "littlejsengine" {
         lastHoverObject: any;
         /** @property {UIObject} - Current confirm menu being shown */
         confirmDialog: any;
-        /** @property {UIObject} - Object to send keyboard input to */
-        keyInputObject: any;
+        /** @private */
+        private _keyInputObject;
+        /** @private */
+        private _onKeyDown;
         /** Draw a rectangle to the UI context
         *  @param {Vector2} pos
         *  @param {Vector2} size
@@ -3617,6 +3619,12 @@ declare module "littlejsengine" {
          *  @param {Vector2} pos
          *  @return {Vector2} */
         screenToNative(pos: Vector2): Vector2;
+        set keyInputObject(arg: UIObject);
+        /** Object to send keyboard input to (typically a UITextInput).
+         *  The document keydown listener is only attached while this is set,
+         *  so games that never use text input pay no event-handling cost.
+         *  @type {UIObject} */
+        get keyInputObject(): UIObject;
         /** Destroy and remove all objects
         *  @memberof UISystem */
         destroyObjects(): void;
