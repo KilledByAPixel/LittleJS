@@ -12,8 +12,7 @@ function gameInit()
     canvasClearColor = hsl(.9,.3,.2);
 
     // setup music player UI
-    const center = mainCanvasSize.scale(.5);
-    musicPlayer = new UIObject(center, vec2(500, 220));
+    musicPlayer = new UIObject(vec2(), vec2(500, 220));
 
     // information text
     infoText = new UIText(vec2(0, -70), vec2(400, 50));

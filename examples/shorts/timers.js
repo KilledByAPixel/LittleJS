@@ -9,8 +9,7 @@ function gameInit()
     canvasClearColor = hsl(.3,.3,.2);
 
     // create timer button
-    const pos = mainCanvasSize.scale(.5).add(vec2(0, -40));
-    timerButton = new UIButton(pos, vec2(200, 90), 'Start');
+    timerButton = new UIButton(vec2(0, -40), vec2(200, 90), 'Start');
     timerButton.timer = new Timer;
     timerButton.onClick = ()=>
     {

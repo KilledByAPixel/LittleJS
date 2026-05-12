@@ -10,7 +10,6 @@ function gameInit()
     function makeSoundButton(pos, icon, sound)
     {
         pos = pos.multiply(vec2(w+gap, h+gap));
-        pos = pos.add(mainCanvasSize.scale(.5));
         const button = new UIButton(pos, vec2(w, h), icon);
         button.textHeight = 100;
         button.onClick = ()=> sound.play();

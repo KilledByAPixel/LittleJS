@@ -12,7 +12,6 @@ function gameInit()
     function makeButton(pos, text, onClick)
     {
         pos = pos.multiply(vec2(w+gap, h+gap));
-        pos = pos.add(mainCanvasSize.scale(.5));
         const button = new UIButton(pos, vec2(w, h), text);
         button.onClick = onClick;
     }

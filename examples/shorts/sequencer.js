@@ -20,7 +20,7 @@ class UISequencerButton extends UIButton
         const size = vec2(68, 35);
         let pos = vec2(step, trackCount-1-track);
         pos = pos.multiply(size);
-        pos = pos.add(vec2(240, 40));
+        pos = pos.add(vec2(240, 40)).subtract(mainCanvasSize.scale(.5));
         super(pos, size);
 
         this.step = step;
@@ -80,7 +80,7 @@ function gameInit()
         new UISequencerButton(step, track);
 
     // create play/stop button
-    const playButton = new UIButton(vec2(660,500), vec2(180,60), 'PLAY');
+    const playButton = new UIButton(vec2(660,500).subtract(mainCanvasSize.scale(.5)), vec2(180,60), 'PLAY');
     playButton.onClick = ()=>
     {
         isPlaying = !isPlaying;
@@ -91,7 +91,7 @@ function gameInit()
     // create tempo slider
     const minTempo = 120, maxTempo = 480;
     const tempoPercent = percent(tempo, minTempo, maxTempo);
-    const tempoSlider = new UISlider(vec2(380,500), vec2(340,40), tempoPercent);
+    const tempoSlider = new UISlider(vec2(380,500).subtract(mainCanvasSize.scale(.5)), vec2(340,40), tempoPercent);
     tempoSlider.onChange = ()=>
     {
         tempo = lerp(minTempo, maxTempo, tempoSlider.value);

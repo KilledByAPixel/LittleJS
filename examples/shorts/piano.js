@@ -7,7 +7,6 @@ class PianoKey extends UIButton
         const keySize = 65;
         size = size.scale(keySize);
         pos = pos.scale(keySize).add(vec2(0,size.y/2-keySize*2));
-        pos = pos.add(mainCanvasSize.scale(.5));
         super(pos, size, '', color);
 
         this.dragActivate = true;
