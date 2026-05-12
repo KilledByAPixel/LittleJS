@@ -11,6 +11,7 @@ These instructions are for making changes in the LittleJS repo safely. Optimize 
   - Make changes in `src/` (and `plugins/` when appropriate), then run the build.
 - **Match surrounding style.** Follow the conventions in the files you touch.
 - **Avoid breaking public APIs.** If a change could break users, call it out clearly and offer a compatible alternative.
+- **Keep agent-generated working files under `.claude/`.** `docs/` is the published JSDoc API site — do not write into it. Superpowers plans go in `.claude/superpowers/plans/` and specs in `.claude/superpowers/specs/` (overrides the skill defaults). The `.claude/` folder is gitignored.
 
 If anything in this doc conflicts with the actual repo behavior, follow the repo behavior and update this doc.
 
