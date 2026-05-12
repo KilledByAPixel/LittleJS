@@ -523,6 +523,7 @@ uiSystem.drawLine(posA, posB, lineWidth, lineColor)
 
 // Base widget
 new UIObject(pos=vec2(), size=vec2())
+UIObject.anchor                        // vec2 in [-1,1]; anchors to parent (or canvas if root) + self-pivot; default vec2()=center
 UIObject.addChild(child)               // Returns child, parents it
 UIObject.removeChild(child)
 UIObject.destroy()

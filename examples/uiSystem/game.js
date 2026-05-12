@@ -88,6 +88,11 @@ function createUI()
         ()=> setMenuVisible(false));
     button2.navigationIndex = ++navigationIndex;
     button2.navigationAutoSelect = true;
+
+    // menu toggle button anchored to top-left corner of the canvas with a 20px inset
+    const buttonToggle = new LJS.UIButton(vec2(20, 20), vec2(150, 60), 'Menu');
+    buttonToggle.anchor = vec2(-1, -1);
+    buttonToggle.onClick = ()=> setMenuVisible(!getMenuVisible());
 }
 
 ///////////////////////////////////////////////////////////////////////////////
