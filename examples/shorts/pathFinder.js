@@ -37,7 +37,7 @@ function gameInit()
 
 function gameUpdate()
 {
-    if (mouseWasPressed(0))
+    if (mouseIsDown(0))
         path = pathFinder.findPath(playerPos, mousePos);
 }
 
