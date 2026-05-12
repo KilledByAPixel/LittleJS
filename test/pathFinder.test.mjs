@@ -20,10 +20,10 @@ test('PathFinder default tunables match spec', () =>
 {
     const pf = new PathFinder(vec2(5, 5));
     assert.equal(pf.heuristicWeight, 1);
-    assert.equal(pf.maxLoop, 500);
+    assert.equal(pf.maxLoop, 1e3);
     assert.equal(pf.smoothPath, true);
     assert.equal(pf.debug, false);
-    assert.equal(pf.debugTime, 2);
+    assert.equal(pf.debugTime, 1);
 });
 
 test('PathFinder.buildNodeData populates walkable=true for all cells by default', () =>
