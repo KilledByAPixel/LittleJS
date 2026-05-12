@@ -63,13 +63,18 @@ class NewgroundsPlugin
         ASSERT(!cipher || cryptoJS, 'must provide cryptojs if there is a cipher');
 
         newgrounds = this; // set global newgrounds object
+        /** @property {string} - The newgrounds App ID */
         this.app_id = app_id;
+        /** @property {string|undefined} - AES-128/Base64 encryption key, if any */
         this.cipher = cipher;
+        /** @property {Object|undefined} - CryptoJS instance used when cipher is set */
         this.cryptoJS = cryptoJS;
+        /** @property {string} - Hostname used when logging views */
         this.host = location ? location.hostname : '';
 
         // get session id from url search params
         const url = new URL(location.href);
+        /** @property {string|null} - Newgrounds session id from the URL (null when not logged in) */
         this.session_id = url.searchParams.get('ngio_session_id');
 
         if (!this.session_id)
@@ -77,6 +82,7 @@ class NewgroundsPlugin
 
         // get medals
         const medalsResult = this.call('Medal.getList');
+        /** @property {Array} - Medals fetched from Newgrounds (empty until session is active) */
         this.medals = medalsResult ? medalsResult.result.data['medals'] : [];
         debugMedals && LOG(this.medals);
         for (const newgroundsMedal of this.medals)
@@ -100,6 +106,7 @@ class NewgroundsPlugin
     
         // get scoreboards
         const scoreboardResult = this.call('ScoreBoard.getBoards');
+        /** @property {Array} - Scoreboards fetched from Newgrounds */
         this.scoreboards = scoreboardResult ? scoreboardResult.result.data.scoreboards : [];
         debugMedals && LOG(this.scoreboards);
 

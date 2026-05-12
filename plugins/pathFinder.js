@@ -94,7 +94,9 @@ class PathFinder
         // .size + .getCollisionData.
         if (isVector2(source))
         {
+            /** @property {Vector2} - Grid dimensions in tiles */
             this.size = source.floor();
+            /** @property {TileCollisionLayer|undefined} - Tile layer driving walkability, if any */
             this.tileLayer = undefined;
         }
         else
@@ -106,13 +108,18 @@ class PathFinder
         }
 
         // Tunables (public, freely re-assignable).
+        /** @property {number} - A* heuristic multiplier (1 = admissible, higher = greedier) */
         this.heuristicWeight = 1;
+        /** @property {number} - Maximum A* expansions before giving up */
         this.maxLoop = 1e3;
+        /** @property {boolean} - If true, post-process paths with two-pass smoothing */
         this.smoothPath = true;
+        /** @property {boolean} - If true, draw debug visualization during findPath */
         this.debug = false;
+        /** @property {number} - Debug primitive lifetime in seconds (0 disables drawing) */
         this.debugTime = 1;
 
-        // Pre-allocate the node array — one node per tile, reused across calls.
+        /** @property {Array<PathFinderNode>} - Flat row-major array of size.x*size.y nodes */
         this.nodes = new Array(this.size.x * this.size.y);
         for (let y = 0; y < this.size.y; ++y)
         for (let x = 0; x < this.size.x; ++x)

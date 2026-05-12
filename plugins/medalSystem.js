@@ -147,7 +147,8 @@ class Medal
         /** @property {boolean} - Is the medal unlocked? */
         this.unlocked = false;
 
-        // load the source image if provided
+        /** @property {HTMLImageElement|undefined} - Source image for the medal icon, if any */
+        this.image = undefined;
         if (src)
             (this.image = new Image).src = src;
 

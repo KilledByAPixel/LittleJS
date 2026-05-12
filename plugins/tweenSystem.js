@@ -63,13 +63,21 @@ class Tween
         }
         ASSERT(isNumber(duration) && duration > 0, 'Tween duration must be > 0');
 
+        /** @property {function(number|Vector2|Color):void} - Called with the interpolated value each frame */
         this.callback = callback;
+        /** @property {number|Vector2|Color} - Starting value */
         this.start = start;
+        /** @property {number|Vector2|Color} - Ending value */
         this.end = end;
+        /** @property {number} - Total duration in seconds */
         this.duration = duration;
+        /** @property {number} - Remaining time in seconds (counts down from duration to 0) */
         this.life = duration;
+        /** @property {function(number):number} - Easing curve mapping [0,1] -> [0,1] */
         this.ease = options.ease || Ease.LINEAR;
+        /** @property {boolean} - If true, advance even when the game is paused */
         this.useRealTime = !!options.useRealTime;
+        /** @property {boolean} - If true, stop advancing until cleared */
         this.paused = !!options.paused;
 
         /** @private completion callback set by then(), loop(), pingPong(). */
