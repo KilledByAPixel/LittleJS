@@ -110,7 +110,7 @@ class PathFinder
         this.maxLoop = 1e3;
         this.smoothPath = true;
         this.debug = false;
-        this.debugTime = 2;
+        this.debugTime = 1;
 
         // Pre-allocate the node array — one node per tile, reused across calls.
         this.nodes = new Array(this.size.x * this.size.y);
