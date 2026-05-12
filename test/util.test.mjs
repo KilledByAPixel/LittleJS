@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isNumber, isString, isArray, isVector2, isColor, vec2, rgb, Vector2, Color, formatTime } from '../dist/littlejs.esm.js';
+import { isNumber, isStringLike, isArray, isVector2, isColor, vec2, rgb, Vector2, Color, formatTime } from '../dist/littlejs.esm.js';
 
 test('isNumber', () =>
 {
@@ -14,19 +14,18 @@ test('isNumber', () =>
     assert.equal(isNumber({}), false);
 });
 
-test('isString', () =>
+test('isStringLike', () =>
 {
-    // Implementation is `s != null && typeof s?.toString() === 'string'`, so it
-    // accepts anything with a toString — including arrays, objects, numbers.
-    // Only null/undefined are rejected. These cases pin that (surprising) contract
-    // so a future "tightening" to `typeof s === 'string'` would fail here loudly.
-    assert.equal(isString(''), true);
-    assert.equal(isString('abc'), true);
-    assert.equal(isString(42), true);
-    assert.equal(isString([]), true);
-    assert.equal(isString({}), true);
-    assert.equal(isString(null), false);
-    assert.equal(isString(undefined), false);
+    // isStringLike accepts anything with a toString that returns a string —
+    // strings, numbers, arrays, plain objects — and rejects null/undefined.
+    // Use `typeof x === 'string'` inline if you want strict-string semantics.
+    assert.equal(isStringLike(''), true);
+    assert.equal(isStringLike('abc'), true);
+    assert.equal(isStringLike(42), true);
+    assert.equal(isStringLike([]), true);
+    assert.equal(isStringLike({}), true);
+    assert.equal(isStringLike(null), false);
+    assert.equal(isStringLike(undefined), false);
 });
 
 test('isArray', () =>

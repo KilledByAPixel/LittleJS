@@ -155,8 +155,8 @@ function saveCanvas(canvas, filename='screenshot', type='image/png')
  *  @memberof Utilities */
 function saveDataURL(url, filename='download', revokeTime)
 {
-    ASSERT(isString(url), 'saveDataURL requires url string');
-    ASSERT(isString(filename), 'saveDataURL requires filename string');
+    ASSERT(isStringLike(url), 'saveDataURL requires url string');
+    ASSERT(isStringLike(filename), 'saveDataURL requires filename string');
 
     // create link for saving screenshots
     const link = document.createElement('a');
@@ -174,8 +174,8 @@ function saveDataURL(url, filename='download', revokeTime)
  *  @memberof Utilities */
 function shareURL(title, url, callback)
 {
-    ASSERT(isString(title), 'shareURL requires title string');
-    ASSERT(isString(url), 'shareURL requires url string');
+    ASSERT(isStringLike(title), 'shareURL requires title string');
+    ASSERT(isStringLike(url), 'shareURL requires url string');
     navigator.share?.({title, url}).then(()=>callback?.());
 }
 
@@ -188,7 +188,7 @@ function shareURL(title, url, callback)
  *  @memberof Utilities */
 function readSaveData(saveName, defaultSaveData)
 {
-    ASSERT(isString(saveName), 'loadData requires saveName string');
+    ASSERT(isStringLike(saveName), 'loadData requires saveName string');
     
     // replace undefined values with defaults; tolerate corrupt JSON
     const data = localStorage[saveName];
@@ -207,6 +207,6 @@ function readSaveData(saveName, defaultSaveData)
  *  @memberof Utilities */
 function writeSaveData(saveName, saveData)
 {
-    ASSERT(isString(saveName), 'saveData requires saveName string');
+    ASSERT(isStringLike(saveName), 'saveData requires saveName string');
     localStorage[saveName] = JSON.stringify(saveData);
 }

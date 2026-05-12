@@ -900,13 +900,15 @@ function oscillate(frequency=1, amplitude=1, t=time, offset=0, type=0)
 function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
 
 /**
- * Check if object can be converted to a string (has a toString method)
+ * Check if a value is stringifiable — i.e. it has a toString that returns
+ * a string. Use this for ASSERTs and inputs that will be coerced to text;
+ * use `typeof x === 'string'` inline if you need strict-string semantics.
  * - Returns true for strings, numbers, and most objects
  * - Returns false for null and undefined
  * @param {any} s
  * @return {boolean}
  * @memberof Math */
-function isString(s) { return s != null && typeof s?.toString() === 'string'; }
+function isStringLike(s) { return s != null && typeof s?.toString() === 'string'; }
 
 /**
  * Check if object is an array
@@ -1650,7 +1652,7 @@ class Color
      * @return {Color} */
     setHex(hex)
     {
-        ASSERT(isString(hex), 'Color hex code must be a string');
+        ASSERT(isStringLike(hex), 'Color hex code must be a string');
         ASSERT(hex[0] === '#', 'Color hex code must start with #');
         ASSERT([4,5,7,9].includes(hex.length), 'Invalid hex');
 
@@ -1914,8 +1916,8 @@ function saveCanvas(canvas, filename='screenshot', type='image/png')
  *  @memberof Utilities */
 function saveDataURL(url, filename='download', revokeTime)
 {
-    ASSERT(isString(url), 'saveDataURL requires url string');
-    ASSERT(isString(filename), 'saveDataURL requires filename string');
+    ASSERT(isStringLike(url), 'saveDataURL requires url string');
+    ASSERT(isStringLike(filename), 'saveDataURL requires filename string');
 
     // create link for saving screenshots
     const link = document.createElement('a');
@@ -1933,8 +1935,8 @@ function saveDataURL(url, filename='download', revokeTime)
  *  @memberof Utilities */
 function shareURL(title, url, callback)
 {
-    ASSERT(isString(title), 'shareURL requires title string');
-    ASSERT(isString(url), 'shareURL requires url string');
+    ASSERT(isStringLike(title), 'shareURL requires title string');
+    ASSERT(isStringLike(url), 'shareURL requires url string');
     navigator.share?.({title, url}).then(()=>callback?.());
 }
 
@@ -1947,7 +1949,7 @@ function shareURL(title, url, callback)
  *  @memberof Utilities */
 function readSaveData(saveName, defaultSaveData)
 {
-    ASSERT(isString(saveName), 'loadData requires saveName string');
+    ASSERT(isStringLike(saveName), 'loadData requires saveName string');
     
     // replace undefined values with defaults; tolerate corrupt JSON
     const data = localStorage[saveName];
@@ -1966,7 +1968,7 @@ function readSaveData(saveName, defaultSaveData)
  *  @memberof Utilities */
 function writeSaveData(saveName, saveData)
 {
-    ASSERT(isString(saveName), 'saveData requires saveName string');
+    ASSERT(isStringLike(saveName), 'saveData requires saveName string');
     localStorage[saveName] = JSON.stringify(saveData);
 }
 /**
@@ -3912,15 +3914,15 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
  *  @memberof Draw */
 function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, angle=0, context=drawContext)
 {
-    ASSERT(isString(text), 'text must be a string');
+    ASSERT(isStringLike(text), 'text must be a string');
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isNumber(size), 'size must be a number');
     ASSERT(isColor(color), 'color must be a color');
     ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
     ASSERT(isColor(lineColor), 'lineColor must be a color');
     ASSERT(['left','center','right'].includes(textAlign), 'align must be left, center, or right');
-    ASSERT(isString(font), 'font must be a string');
-    ASSERT(isString(fontStyle), 'fontStyle must be a string');
+    ASSERT(isStringLike(font), 'font must be a string');
+    ASSERT(isStringLike(fontStyle), 'fontStyle must be a string');
     ASSERT(isNumber(angle), 'angle must be a number');
     
     context.fillStyle = color.toString();
@@ -3957,7 +3959,7 @@ async function loadTexture(textureIndex, src)
 {
     ASSERT(isNumber(textureIndex), 'textureIndex must be a number');
     ASSERT(!textureInfos[textureIndex], 'textureIndex is already loaded!');
-    ASSERT(!src || isString(src), 'image src must be a string');
+    ASSERT(!src || isStringLike(src), 'image src must be a string');
     
     const image = new Image;
     if (src)
@@ -4345,7 +4347,7 @@ class FontImage
      */
     drawTextScreen(text, pos, size, center=true, color=WHITE, useWebGL=glEnable, context)
     {
-        ASSERT(isString(text), 'text must be a string');
+        ASSERT(isStringLike(text), 'text must be a string');
         ASSERT(isVector2(pos), 'pos must be a vec2');
         ASSERT(isVector2(size) || typeof size === 'number', 'size must be a vec2 or number');
         ASSERT(isColor(color), 'color must be a color');
@@ -4506,7 +4508,7 @@ function inputClear()
  *  @memberof Input */
 function keyIsDown(key, device=0)
 {
-    ASSERT(isString(key), 'key must be a number or string');
+    ASSERT(isStringLike(key), 'key must be a number or string');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 1);
 }
@@ -4518,7 +4520,7 @@ function keyIsDown(key, device=0)
  *  @memberof Input */
 function keyWasPressed(key, device=0)
 {
-    ASSERT(isString(key), 'key must be a number or string');
+    ASSERT(isStringLike(key), 'key must be a number or string');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 2);
 }
@@ -4530,7 +4532,7 @@ function keyWasPressed(key, device=0)
  *  @memberof Input */
 function keyWasReleased(key, device=0)
 {
-    ASSERT(isString(key), 'key must be a number or string');
+    ASSERT(isStringLike(key), 'key must be a number or string');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 4);
 }
@@ -4544,10 +4546,10 @@ function keyWasReleased(key, device=0)
  *  @memberof Input */
 function keyDirection(up='ArrowUp', down='ArrowDown', left='ArrowLeft', right='ArrowRight')
 {
-    ASSERT(isString(up),    'up key must be a string');
-    ASSERT(isString(down),  'down key must be a string');
-    ASSERT(isString(left),  'left key must be a string');
-    ASSERT(isString(right), 'right key must be a string');
+    ASSERT(isStringLike(up),    'up key must be a string');
+    ASSERT(isStringLike(down),  'down key must be a string');
+    ASSERT(isStringLike(left),  'left key must be a string');
+    ASSERT(isStringLike(right), 'right key must be a string');
     const k = (key)=> keyIsDown(key) ? 1 : 0;
     return vec2(k(right) - k(left), k(up) - k(down));
 }
@@ -5265,12 +5267,10 @@ function touchGamepadButtonCenter()
  * @namespace Audio
  */
 
-/** Audio context used by the engine. Created lazily in audioInit() to avoid
- *  browser autoplay warnings about constructing an AudioContext before any
- *  user gesture.
+/** Audio context used by the engine
  *  @type {AudioContext}
  *  @memberof Audio */
-let audioContext;
+let audioContext = new AudioContext;
 
 /** Master gain node for all audio to pass through
  *  @type {GainNode}
@@ -5286,13 +5286,12 @@ const audioDefaultSampleRate = 44100;
  *  @return {boolean} - True if the audio context is running
  *  @memberof Audio */
 function audioIsRunning()
-{ return audioContext?.state === 'running'; }
+{ return audioContext.state === 'running'; }
 
 function audioInit()
 {
     if (!soundEnable || headlessMode) return;
 
-    audioContext = new AudioContext;
     audioMasterGain = audioContext.createGain();
     audioMasterGain.connect(audioContext.destination);
     audioMasterGain.gain.value = soundVolume; // set starting value
@@ -5338,7 +5337,7 @@ class Sound
     {
         if (!soundEnable || headlessMode) return;
 
-        ASSERT(!asset || isArray(asset) || isString(asset), 'asset must be a file name or zzfx array');
+        ASSERT(!asset || isArray(asset) || isStringLike(asset), 'asset must be a file name or zzfx array');
         ASSERT(randomness === undefined || isNumber(randomness), 'randomness must be a number');
         ASSERT(randomness === undefined || randomness >= 0 && randomness <=1, 'randomness must be between 0 and 1');
         ASSERT(isNumber(range), 'range must be a number');
@@ -9979,9 +9978,9 @@ class UIText extends UIObject
     {
         super(pos, size);
 
-        ASSERT(isString(text), 'ui text must be a string');
+        ASSERT(isStringLike(text), 'ui text must be a string');
         ASSERT(['left','center','right'].includes(align), 'ui text align must be left, center, or right');
-        ASSERT(isString(font), 'ui text font must be a string');
+        ASSERT(isStringLike(font), 'ui text font must be a string');
 
         // set properties
         this.text = text;
@@ -10029,7 +10028,7 @@ class UITextInput extends UIObject
     {
         super(pos, size);
 
-        ASSERT(isString(text), 'ui text must be a string');
+        ASSERT(isStringLike(text), 'ui text must be a string');
 
         /** @property {number} - Max length of input (0 = no limit) */
         this.maxLength = 0;
@@ -10166,7 +10165,7 @@ class UIButton extends UIObject
     {
         super(pos, size);
 
-        ASSERT(isString(text), 'ui button must be a string');
+        ASSERT(isStringLike(text), 'ui button must be a string');
         ASSERT(isColor(color), 'ui button color must be a color');
 
         /** @property {Vector2} - Text offset for the button */
@@ -10207,7 +10206,7 @@ class UICheckbox extends UIObject
     {
         super(pos, size);
 
-        ASSERT(isString(text), 'ui checkbox must be a string');
+        ASSERT(isStringLike(text), 'ui checkbox must be a string');
         ASSERT(isColor(color), 'ui checkbox color must be a color');
 
         /** @property {boolean} - Current percentage value of this slider 0-1 */
@@ -10264,7 +10263,7 @@ class UISlider extends UIObject
         super(pos, size);
 
         ASSERT(isNumber(value), 'ui slider value must be a number');
-        ASSERT(isString(text), 'ui slider must be a string');
+        ASSERT(isStringLike(text), 'ui slider must be a string');
         ASSERT(isColor(color), 'ui slider color must be a color');
         ASSERT(isColor(handleColor), 'ui slider handleColor must be a color');
 
@@ -10382,7 +10381,7 @@ class UIVideo extends UIObject
     {
         super(pos, size || vec2());
         
-        ASSERT(isString(src), 'video src must be a string');
+        ASSERT(isStringLike(src), 'video src must be a string');
         ASSERT(isNumber(volume), 'video volume must be a number');
 
         this.color = BLACK; // default to black background
@@ -13232,7 +13231,7 @@ const Ease =
 function tweenProperty(target, propertyPath, start, end, duration = 1, options = {})
 {
     ASSERT(target != null && typeof target === 'object', 'tweenProperty target must be an object');
-    ASSERT(isString(propertyPath) && propertyPath.length > 0, 'tweenProperty propertyPath must be a non-empty string');
+    ASSERT(isStringLike(propertyPath) && propertyPath.length > 0, 'tweenProperty propertyPath must be a non-empty string');
 
     const parts = propertyPath.split('.');
     const lastKey = parts.pop();

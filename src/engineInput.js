@@ -103,7 +103,7 @@ function inputClear()
  *  @memberof Input */
 function keyIsDown(key, device=0)
 {
-    ASSERT(isString(key), 'key must be a number or string');
+    ASSERT(isStringLike(key), 'key must be a number or string');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 1);
 }
@@ -115,7 +115,7 @@ function keyIsDown(key, device=0)
  *  @memberof Input */
 function keyWasPressed(key, device=0)
 {
-    ASSERT(isString(key), 'key must be a number or string');
+    ASSERT(isStringLike(key), 'key must be a number or string');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 2);
 }
@@ -127,7 +127,7 @@ function keyWasPressed(key, device=0)
  *  @memberof Input */
 function keyWasReleased(key, device=0)
 {
-    ASSERT(isString(key), 'key must be a number or string');
+    ASSERT(isStringLike(key), 'key must be a number or string');
     ASSERT(device > 0 || typeof key !== 'number' || key < 3, 'use code string for keyboard');
     return !!(inputData[device]?.[key] & 4);
 }
@@ -141,10 +141,10 @@ function keyWasReleased(key, device=0)
  *  @memberof Input */
 function keyDirection(up='ArrowUp', down='ArrowDown', left='ArrowLeft', right='ArrowRight')
 {
-    ASSERT(isString(up),    'up key must be a string');
-    ASSERT(isString(down),  'down key must be a string');
-    ASSERT(isString(left),  'left key must be a string');
-    ASSERT(isString(right), 'right key must be a string');
+    ASSERT(isStringLike(up),    'up key must be a string');
+    ASSERT(isStringLike(down),  'down key must be a string');
+    ASSERT(isStringLike(left),  'left key must be a string');
+    ASSERT(isStringLike(right), 'right key must be a string');
     const k = (key)=> keyIsDown(key) ? 1 : 0;
     return vec2(k(right) - k(left), k(up) - k(down));
 }

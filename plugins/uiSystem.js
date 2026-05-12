@@ -1007,9 +1007,9 @@ class UIText extends UIObject
     {
         super(pos, size);
 
-        ASSERT(isString(text), 'ui text must be a string');
+        ASSERT(isStringLike(text), 'ui text must be a string');
         ASSERT(['left','center','right'].includes(align), 'ui text align must be left, center, or right');
-        ASSERT(isString(font), 'ui text font must be a string');
+        ASSERT(isStringLike(font), 'ui text font must be a string');
 
         // set properties
         this.text = text;
@@ -1057,7 +1057,7 @@ class UITextInput extends UIObject
     {
         super(pos, size);
 
-        ASSERT(isString(text), 'ui text must be a string');
+        ASSERT(isStringLike(text), 'ui text must be a string');
 
         /** @property {number} - Max length of input (0 = no limit) */
         this.maxLength = 0;
@@ -1194,7 +1194,7 @@ class UIButton extends UIObject
     {
         super(pos, size);
 
-        ASSERT(isString(text), 'ui button must be a string');
+        ASSERT(isStringLike(text), 'ui button must be a string');
         ASSERT(isColor(color), 'ui button color must be a color');
 
         /** @property {Vector2} - Text offset for the button */
@@ -1235,7 +1235,7 @@ class UICheckbox extends UIObject
     {
         super(pos, size);
 
-        ASSERT(isString(text), 'ui checkbox must be a string');
+        ASSERT(isStringLike(text), 'ui checkbox must be a string');
         ASSERT(isColor(color), 'ui checkbox color must be a color');
 
         /** @property {boolean} - Current percentage value of this slider 0-1 */
@@ -1292,7 +1292,7 @@ class UISlider extends UIObject
         super(pos, size);
 
         ASSERT(isNumber(value), 'ui slider value must be a number');
-        ASSERT(isString(text), 'ui slider must be a string');
+        ASSERT(isStringLike(text), 'ui slider must be a string');
         ASSERT(isColor(color), 'ui slider color must be a color');
         ASSERT(isColor(handleColor), 'ui slider handleColor must be a color');
 
@@ -1410,7 +1410,7 @@ class UIVideo extends UIObject
     {
         super(pos, size || vec2());
         
-        ASSERT(isString(src), 'video src must be a string');
+        ASSERT(isStringLike(src), 'video src must be a string');
         ASSERT(isNumber(volume), 'video volume must be a number');
 
         this.color = BLACK; // default to black background

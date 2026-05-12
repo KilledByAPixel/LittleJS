@@ -409,7 +409,7 @@ const Ease =
 function tweenProperty(target, propertyPath, start, end, duration = 1, options = {})
 {
     ASSERT(target != null && typeof target === 'object', 'tweenProperty target must be an object');
-    ASSERT(isString(propertyPath) && propertyPath.length > 0, 'tweenProperty propertyPath must be a non-empty string');
+    ASSERT(isStringLike(propertyPath) && propertyPath.length > 0, 'tweenProperty propertyPath must be a non-empty string');
 
     const parts = propertyPath.split('.');
     const lastKey = parts.pop();

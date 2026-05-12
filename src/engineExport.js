@@ -208,7 +208,7 @@ export
     isColor,
     isVector2,
     isNumber,
-    isString,
+    isStringLike,
     isArray,
 
     // Default Colors

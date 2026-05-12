@@ -79,7 +79,7 @@ function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false, s
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isVector2(size), 'size must be a vec2');
-    ASSERT(isString(color) || isColor(color), 'color is invalid');
+    ASSERT(isStringLike(color) || isColor(color), 'color is invalid');
     ASSERT(isNumber(time), 'time must be a number');
     ASSERT(isNumber(angle), 'angle must be a number');
 
@@ -106,7 +106,7 @@ function debugPoly(pos, points, color=WHITE, time=0, angle=0, fill=false, screen
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isArray(points), 'points must be an array');
-    ASSERT(isString(color) || isColor(color), 'color is invalid');
+    ASSERT(isStringLike(color) || isColor(color), 'color is invalid');
     ASSERT(isNumber(time), 'time must be a number');
     ASSERT(isNumber(angle), 'angle must be a number');
 
@@ -130,7 +130,7 @@ function debugCircle(pos, size=0, color=WHITE, time=0, fill=false, screenSpace=f
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isNumber(size), 'size must be a number');
-    ASSERT(isString(color) || isColor(color), 'color is invalid');
+    ASSERT(isStringLike(color) || isColor(color), 'color is invalid');
     ASSERT(isNumber(time), 'time must be a number');
 
     if (isColor(color))
@@ -208,13 +208,13 @@ function debugOverlap(posA, sizeA, posB, sizeB, color, time, screenSpace=false)
  *  @memberof Debug */
 function debugText(text, pos, size=1, color=WHITE, time=0, angle=0, font='monospace', screenSpace=false)
 {
-    ASSERT(isString(text), 'text must be a string');
+    ASSERT(isStringLike(text), 'text must be a string');
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isNumber(size), 'size must be a number');
-    ASSERT(isString(color) || isColor(color), 'color is invalid');
+    ASSERT(isStringLike(color) || isColor(color), 'color is invalid');
     ASSERT(isNumber(time), 'time must be a number');
     ASSERT(isNumber(angle), 'angle must be a number');
-    ASSERT(isString(font), 'font must be a string');
+    ASSERT(isStringLike(font), 'font must be a string');
 
     if (isColor(color))
         color = color.toString();

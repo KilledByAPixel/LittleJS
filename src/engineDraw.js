@@ -810,15 +810,15 @@ function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, f
  *  @memberof Draw */
 function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, angle=0, context=drawContext)
 {
-    ASSERT(isString(text), 'text must be a string');
+    ASSERT(isStringLike(text), 'text must be a string');
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isNumber(size), 'size must be a number');
     ASSERT(isColor(color), 'color must be a color');
     ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
     ASSERT(isColor(lineColor), 'lineColor must be a color');
     ASSERT(['left','center','right'].includes(textAlign), 'align must be left, center, or right');
-    ASSERT(isString(font), 'font must be a string');
-    ASSERT(isString(fontStyle), 'fontStyle must be a string');
+    ASSERT(isStringLike(font), 'font must be a string');
+    ASSERT(isStringLike(fontStyle), 'fontStyle must be a string');
     ASSERT(isNumber(angle), 'angle must be a number');
     
     context.fillStyle = color.toString();
@@ -855,7 +855,7 @@ async function loadTexture(textureIndex, src)
 {
     ASSERT(isNumber(textureIndex), 'textureIndex must be a number');
     ASSERT(!textureInfos[textureIndex], 'textureIndex is already loaded!');
-    ASSERT(!src || isString(src), 'image src must be a string');
+    ASSERT(!src || isStringLike(src), 'image src must be a string');
     
     const image = new Image;
     if (src)
@@ -1243,7 +1243,7 @@ class FontImage
      */
     drawTextScreen(text, pos, size, center=true, color=WHITE, useWebGL=glEnable, context)
     {
-        ASSERT(isString(text), 'text must be a string');
+        ASSERT(isStringLike(text), 'text must be a string');
         ASSERT(isVector2(pos), 'pos must be a vec2');
         ASSERT(isVector2(size) || typeof size === 'number', 'size must be a vec2 or number');
         ASSERT(isColor(color), 'color must be a color');

@@ -14,12 +14,10 @@
 
 'use strict';
 
-/** Audio context used by the engine. Created lazily in audioInit() to avoid
- *  browser autoplay warnings about constructing an AudioContext before any
- *  user gesture.
+/** Audio context used by the engine
  *  @type {AudioContext}
  *  @memberof Audio */
-let audioContext;
+let audioContext = new AudioContext;
 
 /** Master gain node for all audio to pass through
  *  @type {GainNode}
@@ -35,13 +33,12 @@ const audioDefaultSampleRate = 44100;
  *  @return {boolean} - True if the audio context is running
  *  @memberof Audio */
 function audioIsRunning()
-{ return audioContext?.state === 'running'; }
+{ return audioContext.state === 'running'; }
 
 function audioInit()
 {
     if (!soundEnable || headlessMode) return;
 
-    audioContext = new AudioContext;
     audioMasterGain = audioContext.createGain();
     audioMasterGain.connect(audioContext.destination);
     audioMasterGain.gain.value = soundVolume; // set starting value
@@ -87,7 +84,7 @@ class Sound
     {
         if (!soundEnable || headlessMode) return;
 
-        ASSERT(!asset || isArray(asset) || isString(asset), 'asset must be a file name or zzfx array');
+        ASSERT(!asset || isArray(asset) || isStringLike(asset), 'asset must be a file name or zzfx array');
         ASSERT(randomness === undefined || isNumber(randomness), 'randomness must be a number');
         ASSERT(randomness === undefined || randomness >= 0 && randomness <=1, 'randomness must be between 0 and 1');
         ASSERT(isNumber(range), 'range must be a number');

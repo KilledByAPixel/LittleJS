@@ -1473,13 +1473,15 @@ declare module "littlejsengine" {
      * @memberof Math */
     export function isNumber(n: any): boolean;
     /**
-     * Check if object can be converted to a string (has a toString method)
+     * Check if a value is stringifiable — i.e. it has a toString that returns
+     * a string. Use this for ASSERTs and inputs that will be coerced to text;
+     * use `typeof x === 'string'` inline if you need strict-string semantics.
      * - Returns true for strings, numbers, and most objects
      * - Returns false for null and undefined
      * @param {any} s
      * @return {boolean}
      * @memberof Math */
-    export function isString(s: any): boolean;
+    export function isStringLike(s: any): boolean;
     /**
      * Check if object is an array
      * @param {any} a
@@ -2301,9 +2303,7 @@ declare module "littlejsengine" {
      * - Web Audio API integration with master gain control
      * @namespace Audio
      */
-    /** Audio context used by the engine. Created lazily in audioInit() to avoid
-     *  browser autoplay warnings about constructing an AudioContext before any
-     *  user gesture.
+    /** Audio context used by the engine
      *  @type {AudioContext}
      *  @memberof Audio */
     export let audioContext: AudioContext;

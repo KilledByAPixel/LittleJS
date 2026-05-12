@@ -90,7 +90,7 @@ Use constructors for game objects and complex types:
 Use built-in type helpers for validation:
 ```javascript
 isNumber(n)   // true if number and not NaN
-isString(s)   // true if not null/undefined (has toString)
+isStringLike(s) // true if stringifiable (has toString returning a string)
 isArray(a)    // true if array
 isVector2(v)  // true if valid Vector2
 isColor(c)    // true if valid Color

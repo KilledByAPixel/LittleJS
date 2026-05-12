@@ -292,13 +292,15 @@ function oscillate(frequency=1, amplitude=1, t=time, offset=0, type=0)
 function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
 
 /**
- * Check if object can be converted to a string (has a toString method)
+ * Check if a value is stringifiable — i.e. it has a toString that returns
+ * a string. Use this for ASSERTs and inputs that will be coerced to text;
+ * use `typeof x === 'string'` inline if you need strict-string semantics.
  * - Returns true for strings, numbers, and most objects
  * - Returns false for null and undefined
  * @param {any} s
  * @return {boolean}
  * @memberof Math */
-function isString(s) { return s != null && typeof s?.toString() === 'string'; }
+function isStringLike(s) { return s != null && typeof s?.toString() === 'string'; }
 
 /**
  * Check if object is an array
@@ -1042,7 +1044,7 @@ class Color
      * @return {Color} */
     setHex(hex)
     {
-        ASSERT(isString(hex), 'Color hex code must be a string');
+        ASSERT(isStringLike(hex), 'Color hex code must be a string');
         ASSERT(hex[0] === '#', 'Color hex code must start with #');
         ASSERT([4,5,7,9].includes(hex.length), 'Invalid hex');
 
