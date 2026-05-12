@@ -107,7 +107,7 @@ class PathFinder
 
         // Tunables (public, freely re-assignable).
         this.heuristicWeight = 1;
-        this.maxLoop = 500;
+        this.maxLoop = 1e3;
         this.smoothPath = true;
         this.debug = false;
         this.debugTime = 2;
