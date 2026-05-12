@@ -573,6 +573,24 @@ class PathFinder
         path.push(original[original.length - 1]);
     }
 
+    /** Drop any middle node that lies exactly on the line through its two
+     *  neighbors. Backstop for the smoothing passes — the corners pass
+     *  intentionally keeps truly-straight runs, and the string-pulling pass
+     *  checks collinearity against the original path, not the in-progress
+     *  result, so it can leave 3+ collinear nodes in some edge cases.
+     *  @param {PathFinderNode[]} path
+     *  @private */
+    dropCollinearNodes(path)
+    {
+        for (let i = path.length - 2; i >= 1; --i)
+        {
+            const a = path[i - 1], b = path[i], c = path[i + 1];
+            if ((b.pos.x - a.pos.x) * (c.pos.y - a.pos.y) ===
+                (b.pos.y - a.pos.y) * (c.pos.x - a.pos.x))
+                path.splice(i, 1);
+        }
+    }
+
     /** Lookup helper: true when the node at tile coords (x, y) is in-bounds
      *  and clear (walkable, zero-cost). Used by isLineClear's hot path.
      *  @param {number} x
@@ -740,6 +758,7 @@ class PathFinder
         {
             this.smoothPathCorners(nodePath);
             this.smoothPathStringPull(nodePath);
+            this.dropCollinearNodes(nodePath);
         }
 
         // Convert to world-space Vector2 path. Return copies, not live node
