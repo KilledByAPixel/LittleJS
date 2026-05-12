@@ -89,10 +89,21 @@ function createUI()
     button2.navigationIndex = ++navigationIndex;
     button2.navigationAutoSelect = true;
 
-    // menu toggle button anchored to top-left corner of the canvas with a 20px inset
-    const buttonToggle = new LJS.UIButton(vec2(20, 20), vec2(150, 60), 'Menu');
+    // hamburger menu toggle button anchored to top-left corner with a 20px inset
+    const buttonToggle = new LJS.UIButton(vec2(20, 20), vec2(70, 60));
     buttonToggle.anchor = vec2(-1, -1);
     buttonToggle.onClick = ()=> setMenuVisible(!getMenuVisible());
+    // three stacked lines drawn on top of the button as child rects
+    for (let i = -1; i <= 1; ++i)
+    {
+        const line = new LJS.UIObject(vec2(0, i*12), vec2(36, 5));
+        line.color = LJS.BLACK;
+        line.gradientColor = undefined;
+        line.lineWidth = 0;
+        line.shadowColor = LJS.CLEAR_BLACK;
+        line.canBeHover = false;
+        buttonToggle.addChild(line);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
