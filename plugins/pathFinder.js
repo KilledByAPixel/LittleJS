@@ -286,9 +286,12 @@ class PathFinder
                 // Best path so far through neighbor — record it.
                 neighbor.parent = current;
                 neighbor.g = tentativeG;
-                const gdx = endNode.pos.x - neighbor.pos.x;
-                const gdy = endNode.pos.y - neighbor.pos.y;
-                neighbor.f = neighbor.g + (gdx * gdx + gdy * gdy) * this.heuristicWeight;
+                // Octile heuristic — tightest admissible distance for an
+                // 8-connected grid with cardinal cost 1 and diagonal cost √2.
+                const adx = abs(endNode.pos.x - neighbor.pos.x);
+                const ady = abs(endNode.pos.y - neighbor.pos.y);
+                const h = max(adx, ady) + (Math.SQRT2 - 1) * min(adx, ady);
+                neighbor.f = neighbor.g + h * this.heuristicWeight;
             }
         }
 
