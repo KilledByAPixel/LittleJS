@@ -29,6 +29,13 @@
     "url": "https://github.com/KilledByAPixel/LittleJS/issues"
   },
   "homepage": "https://github.com/KilledByAPixel/LittleJS",
+  "files": [
+    "dist/",
+    "src/",
+    "plugins/",
+    "COPYRIGHT.txt",
+    "FAQ.md"
+  ],
   "scripts": {
     "build": "node src/engineBuild.mjs",
     "test": "node --test --import ./test/setup.mjs \"test/**/*.test.mjs\""
