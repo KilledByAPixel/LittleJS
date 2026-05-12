@@ -3264,6 +3264,7 @@ declare module "littlejsengine" {
         icon: string;
         /** @property {boolean} - Is the medal unlocked? */
         unlocked: boolean;
+        /** @property {HTMLImageElement|undefined} - Source image for the medal icon, if any */
         image: HTMLImageElement;
         /** Unlocks a medal if not already unlocked */
         unlock(): void;
@@ -3337,12 +3338,19 @@ declare module "littlejsengine" {
          *  new NewgroundsPlugin(app_id);
          */
         constructor(app_id: string, cipher?: string, cryptoJS?: any);
+        /** @property {string} - The newgrounds App ID */
         app_id: string;
+        /** @property {string|undefined} - AES-128/Base64 encryption key, if any */
         cipher: string;
+        /** @property {Object|undefined} - CryptoJS instance used when cipher is set */
         cryptoJS: any;
+        /** @property {string} - Hostname used when logging views */
         host: string;
+        /** @property {string|null} - Newgrounds session id from the URL (null when not logged in) */
         session_id: string;
+        /** @property {Array} - Medals fetched from Newgrounds (empty until session is active) */
         medals: any;
+        /** @property {Array} - Scoreboards fetched from Newgrounds */
         scoreboards: any;
         /** Send message to unlock a medal by id
          * @param {number} id - The medal id */
@@ -5074,13 +5082,21 @@ declare module "littlejsengine" {
             useRealTime?: boolean;
             paused?: boolean;
         });
+        /** @property {function(number|Vector2|Color):void} - Called with the interpolated value each frame */
         callback: (arg0: number | Vector2 | Color) => void;
+        /** @property {number|Vector2|Color} - Starting value */
         start: number | Vector2 | Color;
+        /** @property {number|Vector2|Color} - Ending value */
         end: number | Vector2 | Color;
+        /** @property {number} - Total duration in seconds */
         duration: number;
+        /** @property {number} - Remaining time in seconds (counts down from duration to 0) */
         life: number;
+        /** @property {function(number):number} - Easing curve mapping [0,1] -> [0,1] */
         ease: (arg0: number) => number;
+        /** @property {boolean} - If true, advance even when the game is paused */
         useRealTime: boolean;
+        /** @property {boolean} - If true, stop advancing until cleared */
         paused: boolean;
         /** @private completion callback set by then(), loop(), pingPong(). */
         private thenCallback;
@@ -5222,13 +5238,21 @@ declare module "littlejsengine" {
          *  (size and walkability auto-derived) or a Vector2 grid size (user
          *  overrides isWalkable). */
         constructor(source: TileCollisionLayer | Vector2);
+        /** @property {Vector2} - Grid dimensions in tiles */
         size: any;
+        /** @property {TileCollisionLayer|undefined} - Tile layer driving walkability, if any */
         tileLayer: Vector2 | TileCollisionLayer;
+        /** @property {number} - A* heuristic multiplier (1 = admissible, higher = greedier) */
         heuristicWeight: number;
+        /** @property {number} - Maximum A* expansions before giving up */
         maxLoop: number;
+        /** @property {boolean} - If true, post-process paths with two-pass smoothing */
         smoothPath: boolean;
+        /** @property {boolean} - If true, draw debug visualization during findPath */
         debug: boolean;
+        /** @property {number} - Debug primitive lifetime in seconds (0 disables drawing) */
         debugTime: number;
+        /** @property {Array<PathFinderNode>} - Flat row-major array of size.x*size.y nodes */
         nodes: any[];
         collisionScratch: Vector2;
         /** Default walkability: if a tile layer was provided, returns true when the

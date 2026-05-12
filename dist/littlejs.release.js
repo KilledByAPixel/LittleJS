@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.18.8';
+const engineVersion = '1.18.10';
 
 /** Frames per second to update
  *  @type {number}
@@ -8373,7 +8373,8 @@ class Medal
         /** @property {boolean} - Is the medal unlocked? */
         this.unlocked = false;
 
-        // load the source image if provided
+        /** @property {HTMLImageElement|undefined} - Source image for the medal icon, if any */
+        this.image = undefined;
         if (src)
             (this.image = new Image).src = src;
 
@@ -8536,13 +8537,18 @@ class NewgroundsPlugin
         ASSERT(!cipher || cryptoJS, 'must provide cryptojs if there is a cipher');
 
         newgrounds = this; // set global newgrounds object
+        /** @property {string} - The newgrounds App ID */
         this.app_id = app_id;
+        /** @property {string|undefined} - AES-128/Base64 encryption key, if any */
         this.cipher = cipher;
+        /** @property {Object|undefined} - CryptoJS instance used when cipher is set */
         this.cryptoJS = cryptoJS;
+        /** @property {string} - Hostname used when logging views */
         this.host = location ? location.hostname : '';
 
         // get session id from url search params
         const url = new URL(location.href);
+        /** @property {string|null} - Newgrounds session id from the URL (null when not logged in) */
         this.session_id = url.searchParams.get('ngio_session_id');
 
         if (!this.session_id)
@@ -8550,6 +8556,7 @@ class NewgroundsPlugin
 
         // get medals
         const medalsResult = this.call('Medal.getList');
+        /** @property {Array} - Medals fetched from Newgrounds (empty until session is active) */
         this.medals = medalsResult ? medalsResult.result.data['medals'] : [];
         debugMedals && LOG(this.medals);
         for (const newgroundsMedal of this.medals)
@@ -8573,6 +8580,7 @@ class NewgroundsPlugin
     
         // get scoreboards
         const scoreboardResult = this.call('ScoreBoard.getBoards');
+        /** @property {Array} - Scoreboards fetched from Newgrounds */
         this.scoreboards = scoreboardResult ? scoreboardResult.result.data.scoreboards : [];
         debugMedals && LOG(this.scoreboards);
 
@@ -12885,13 +12893,21 @@ class Tween
         }
         ASSERT(isNumber(duration) && duration > 0, 'Tween duration must be > 0');
 
+        /** @property {function(number|Vector2|Color):void} - Called with the interpolated value each frame */
         this.callback = callback;
+        /** @property {number|Vector2|Color} - Starting value */
         this.start = start;
+        /** @property {number|Vector2|Color} - Ending value */
         this.end = end;
+        /** @property {number} - Total duration in seconds */
         this.duration = duration;
+        /** @property {number} - Remaining time in seconds (counts down from duration to 0) */
         this.life = duration;
+        /** @property {function(number):number} - Easing curve mapping [0,1] -> [0,1] */
         this.ease = options.ease || Ease.LINEAR;
+        /** @property {boolean} - If true, advance even when the game is paused */
         this.useRealTime = !!options.useRealTime;
+        /** @property {boolean} - If true, stop advancing until cleared */
         this.paused = !!options.paused;
 
         /** @private completion callback set by then(), loop(), pingPong(). */
@@ -13424,7 +13440,9 @@ class PathFinder
         // .size + .getCollisionData.
         if (isVector2(source))
         {
+            /** @property {Vector2} - Grid dimensions in tiles */
             this.size = source.floor();
+            /** @property {TileCollisionLayer|undefined} - Tile layer driving walkability, if any */
             this.tileLayer = undefined;
         }
         else
@@ -13436,13 +13454,18 @@ class PathFinder
         }
 
         // Tunables (public, freely re-assignable).
+        /** @property {number} - A* heuristic multiplier (1 = admissible, higher = greedier) */
         this.heuristicWeight = 1;
+        /** @property {number} - Maximum A* expansions before giving up */
         this.maxLoop = 1e3;
+        /** @property {boolean} - If true, post-process paths with two-pass smoothing */
         this.smoothPath = true;
+        /** @property {boolean} - If true, draw debug visualization during findPath */
         this.debug = false;
+        /** @property {number} - Debug primitive lifetime in seconds (0 disables drawing) */
         this.debugTime = 1;
 
-        // Pre-allocate the node array — one node per tile, reused across calls.
+        /** @property {Array<PathFinderNode>} - Flat row-major array of size.x*size.y nodes */
         this.nodes = new Array(this.size.x * this.size.y);
         for (let y = 0; y < this.size.y; ++y)
         for (let x = 0; x < this.size.x; ++x)
