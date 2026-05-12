@@ -125,12 +125,31 @@ class UISystemPlugin
 
         engineAddPlugin(uiUpdate, uiRender);
 
-        // set object position in parent space
+        // set object position based on anchor target (parent box, or canvas for roots),
+        // self-pivot, and localPos offset
         function updateTransforms(o)
         {
-            if (!o.parent) return;
-            o.pos.x = o.localPos.x + o.parent.pos.x;
-            o.pos.y = o.localPos.y + o.parent.pos.y;
+            let targetPos, targetSize;
+            if (o.parent)
+            {
+                targetPos = o.parent.pos;
+                targetSize = o.parent.size;
+            }
+            else
+            {
+                // anchor to canvas in native coords (handles nativeHeight if set)
+                targetPos = uiSystem.screenToNative(mainCanvasSize.scale(.5));
+                targetSize = uiSystem.nativeHeight
+                    ? vec2(mainCanvasSize.x * uiSystem.nativeHeight / mainCanvasSize.y,
+                           uiSystem.nativeHeight)
+                    : mainCanvasSize;
+            }
+
+            const a = o.anchor;
+            o.pos = targetPos
+                .add(targetSize.multiply(a).scale(.5))   // anchor point on target
+                .subtract(o.size.multiply(a).scale(.5))  // pivot shift on self
+                .add(o.localPos);                        // user offset
         }
 
         // setup recursive update and render
@@ -597,9 +616,8 @@ class UISystemPlugin
         // confirm menu
         const confirmMenu = new UIObject(vec2(), size);
         uiSystem.confirmDialog = confirmMenu;
-        confirmMenu.onRender = ()=> 
+        confirmMenu.onRender = ()=>
         {
-            confirmMenu.pos = uiSystem.screenToNative(mainCanvasSize.scale(.5));
             const backgroundColor = hsl(0,0,0,.7);
             uiSystem.drawRect(vec2(), vec2(1e9), backgroundColor);
         }
@@ -732,7 +750,11 @@ class UIObject
         this.navigationIndex = undefined;
         /** @property {boolean} - Should this be auto selected by navigation? Must also have valid navigation index. */
         this.navigationAutoSelect = false;
-        
+        /** @property {Vector2} - Where on parent (or canvas if no parent) this object is anchored.
+         *  Components in [-1, 1]: (0,0)=center, (-1,-1)=top-left, (1,1)=bottom-right.
+         *  Also acts as self-pivot — e.g. (1,-1) puts your top-right corner at the anchor point. */
+        this.anchor = vec2();
+
         uiSystem.uiObjects.push(this);
     }
 

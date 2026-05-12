@@ -3738,6 +3738,10 @@ declare module "littlejsengine" {
         navigationIndex: any;
         /** @property {boolean} - Should this be auto selected by navigation? Must also have valid navigation index. */
         navigationAutoSelect: boolean;
+        /** @property {Vector2} - Where on parent (or canvas if no parent) this object is anchored.
+         *  Components in [-1, 1]: (0,0)=center, (-1,-1)=top-left, (1,1)=bottom-right.
+         *  Also acts as self-pivot — e.g. (1,-1) puts your top-right corner at the anchor point. */
+        anchor: Vector2;
         /** Add a child UIObject to this object, returns child for chaining
          *  @param {UIObject} child
          *  @return {UIObject} The child object added */

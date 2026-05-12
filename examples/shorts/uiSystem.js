@@ -9,7 +9,7 @@ function gameInit()
 
     // setup example menu
     let navigationIndex = 0;
-    const uiMenu = new UIObject(mainCanvasSize.scale(.5), vec2(700,450));
+    const uiMenu = new UIObject(vec2(), vec2(700,450));
     canvasClearColor = hsl(0,0,.8);
 
     // example text
@@ -50,7 +50,7 @@ function gameInit()
         ()=> { uiMenu.visible=false; buttonBack.visible=true; });
 
     // example button that returns to menu
-    const buttonBack = new UIButton(mainCanvasSize.scale(.5), vec2(200),
+    const buttonBack = new UIButton(vec2(), vec2(200),
         'Back\nto\nMenu');
     buttonBack.visible = false;
     buttonBack.textHeight = 60;

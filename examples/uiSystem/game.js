@@ -29,7 +29,8 @@ function createUI()
 
     // setup root to attach all ui elements to
     uiRoot = new LJS.UIObject;
-    const uiInfo = new LJS.UIText(vec2(0,90), vec2(1e3, 70), 
+    uiRoot.anchor = vec2(0, -1); // top-center of canvas
+    const uiInfo = new LJS.UIText(vec2(0,90), vec2(1e3, 70),
         'LittleJS UI System Example\nM = Toggle menu');
     uiInfo.textColor = LJS.WHITE;
     uiInfo.textLineWidth = 8;
@@ -110,9 +111,6 @@ function gameUpdatePost()
         // toggle menu visibility
         setMenuVisible(!getMenuVisible());
     }
-
-    // center ui
-    uiRoot.pos.x = LJS.mainCanvasSize.x/2;
 
     // pause when menu is visible
     LJS.setPaused(getMenuVisible())

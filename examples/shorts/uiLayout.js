@@ -9,7 +9,7 @@ function gameInit()
     canvasClearColor = hsl(0,0,.3);
 
     // outer vertical layout: title on top, grid below
-    const menu = new UILayout(mainCanvasSize.scale(.5), 1, 20, 30);
+    const menu = new UILayout(vec2(), 1, 20, 30);
     menu.addChild(new UIText(vec2(), vec2(400, 60), 'Level Select'));
 
     // inner 3x2 grid of level select buttons
