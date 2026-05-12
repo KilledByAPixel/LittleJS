@@ -207,7 +207,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         const combinedScale = timeScale * debugScale;
         frameTimeDeltaMS *= combinedScale;
         frameTimeBufferMS += paused ? 0 : frameTimeDeltaMS;
-        if (debugScale <= 1)
+        if (combinedScale <= 1)
             frameTimeBufferMS = min(frameTimeBufferMS, 50); // clamp min framerate
 
         let wasUpdated = false;
@@ -14117,10 +14117,10 @@ class PathFinder
 
         // Tunables (public, freely re-assignable).
         this.heuristicWeight = 1;
-        this.maxLoop = 500;
+        this.maxLoop = 1e3;
         this.smoothPath = true;
         this.debug = false;
-        this.debugTime = 2;
+        this.debugTime = 1;
 
         // Pre-allocate the node array — one node per tile, reused across calls.
         this.nodes = new Array(this.size.x * this.size.y);
@@ -14296,9 +14296,12 @@ class PathFinder
                 // Best path so far through neighbor — record it.
                 neighbor.parent = current;
                 neighbor.g = tentativeG;
-                const gdx = endNode.pos.x - neighbor.pos.x;
-                const gdy = endNode.pos.y - neighbor.pos.y;
-                neighbor.f = neighbor.g + (gdx * gdx + gdy * gdy) * this.heuristicWeight;
+                // Octile heuristic — tightest admissible distance for an
+                // 8-connected grid with cardinal cost 1 and diagonal cost √2.
+                const adx = abs(endNode.pos.x - neighbor.pos.x);
+                const ady = abs(endNode.pos.y - neighbor.pos.y);
+                const h = max(adx, ady) + (Math.SQRT2 - 1) * min(adx, ady);
+                neighbor.f = neighbor.g + h * this.heuristicWeight;
             }
         }
 
@@ -14580,6 +14583,24 @@ class PathFinder
         path.push(original[original.length - 1]);
     }
 
+    /** Drop any middle node that lies exactly on the line through its two
+     *  neighbors. Backstop for the smoothing passes — the corners pass
+     *  intentionally keeps truly-straight runs, and the string-pulling pass
+     *  checks collinearity against the original path, not the in-progress
+     *  result, so it can leave 3+ collinear nodes in some edge cases.
+     *  @param {PathFinderNode[]} path
+     *  @private */
+    dropCollinearNodes(path)
+    {
+        for (let i = path.length - 2; i >= 1; --i)
+        {
+            const a = path[i - 1], b = path[i], c = path[i + 1];
+            if ((b.pos.x - a.pos.x) * (c.pos.y - a.pos.y) ===
+                (b.pos.y - a.pos.y) * (c.pos.x - a.pos.x))
+                path.splice(i, 1);
+        }
+    }
+
     /** Lookup helper: true when the node at tile coords (x, y) is in-bounds
      *  and clear (walkable, zero-cost). Used by isLineClear's hot path.
      *  @param {number} x
@@ -14747,6 +14768,7 @@ class PathFinder
         {
             this.smoothPathCorners(nodePath);
             this.smoothPathStringPull(nodePath);
+            this.dropCollinearNodes(nodePath);
         }
 
         // Convert to world-space Vector2 path. Return copies, not live node

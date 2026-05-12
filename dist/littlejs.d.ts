@@ -5308,6 +5308,14 @@ declare module "littlejsengine" {
          *  @param {PathFinderNode[]} path
          *  @private */
         private smoothPathStringPull;
+        /** Drop any middle node that lies exactly on the line through its two
+         *  neighbors. Backstop for the smoothing passes — the corners pass
+         *  intentionally keeps truly-straight runs, and the string-pulling pass
+         *  checks collinearity against the original path, not the in-progress
+         *  result, so it can leave 3+ collinear nodes in some edge cases.
+         *  @param {PathFinderNode[]} path
+         *  @private */
+        private dropCollinearNodes;
         /** Lookup helper: true when the node at tile coords (x, y) is in-bounds
          *  and clear (walkable, zero-cost). Used by isLineClear's hot path.
          *  @param {number} x
