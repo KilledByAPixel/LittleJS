@@ -53,7 +53,8 @@ The code is very clean and well documented with many examples to get you started
 
 - Robust arcade physics system with collision handling
 - Fast tilemap collision and raycasting
-- Full Box2D integration for realistic physics
+- Full [Box2D](https://box2d.org/) integration for realistic physics
+- Fast physics with [Box2D v2.3.1 WASM](https://github.com/kripken/box2d.js)
 - Grid-based A* pathfinding plugin with optional path smoothing
 
 ### 🚀 Flexibility
