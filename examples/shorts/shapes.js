@@ -14,7 +14,7 @@ function gameRender()
     drawPoly(starPath, BLUE, .1, GREEN, vec2(6, 0));
 
     // rects and lines
-    drawCircleGradient(vec2(-6,-5), 4, WHITE, CLEAR_WHITE);
+    drawCircleGradient(vec2(-6,-5), 4, GREEN, hsl(.3,1,.5,0));
     drawRect(vec2(0,-5), vec2(4,3+oscillate(.5)), ORANGE);
     drawLine(vec2(3,-7), vec2(8,-3), 1,  hsl(0,0,1,.5));
     const zPath = [vec2(8,-3), vec2(3,-3), vec2(8,-7), vec2(3,-7)];
