@@ -255,6 +255,7 @@ export
     drawRegularPoly,
     drawEllipse,
     drawCircle,
+    drawCircleGradient,
     drawCanvas2D,
     drawText,
     drawTextScreen,

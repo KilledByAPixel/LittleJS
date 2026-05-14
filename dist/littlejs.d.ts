@@ -1845,6 +1845,16 @@ declare module "littlejsengine" {
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function drawCircle(pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    /** Draw a circle filled with a radial gradient from the center to the rim
+     *  @param {Vector2} pos
+     *  @param {number}  [size=1] - Diameter
+     *  @param {Color}   [colorInner=WHITE]
+     *  @param {Color}   [colorOuter=BLACK]
+     *  @param {boolean} [useWebGL=glEnable]
+     *  @param {boolean} [screenSpace]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
+     *  @memberof Draw */
+    export function drawCircleGradient(pos: Vector2, size?: number, colorInner?: Color, colorOuter?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /**
      * @callback Canvas2DDrawFunction - A function that draws to a 2D canvas context
      * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context

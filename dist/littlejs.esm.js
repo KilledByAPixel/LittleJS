@@ -4511,6 +4511,70 @@ function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useW
     drawEllipse(pos, vec2(size), color, 0, lineWidth, lineColor, useWebGL, screenSpace, context);
 }
 
+/** Draw a circle filled with a radial gradient from the center to the rim
+ *  @param {Vector2} pos
+ *  @param {number}  [size=1] - Diameter
+ *  @param {Color}   [colorInner=WHITE]
+ *  @param {Color}   [colorOuter=BLACK]
+ *  @param {boolean} [useWebGL=glEnable]
+ *  @param {boolean} [screenSpace]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
+ *  @memberof Draw */
+function drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=BLACK, useWebGL=glEnable, screenSpace=false, context)
+{
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(isNumber(size), 'size must be a number');
+    ASSERT(isColor(colorInner) && isColor(colorOuter), 'color is invalid');
+    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+
+    if (headlessMode) return;
+
+    if (useWebGL && glEnable)
+    {
+        ASSERT(!!glContext, 'WebGL is not enabled!');
+        if (screenSpace)
+        {
+            // convert to world space (matches drawRectGradient's WebGL branch)
+            pos = screenToWorld(pos);
+            size /= cameraScale;
+        }
+
+        // Encode a triangle fan inside a tristrip: interleave the center vertex
+        // between every ring vertex. Each adjacent (C,R_i)->(C,R_{i+1}) pair
+        // produces one degenerate triangle and one real fan slice, giving a
+        // true vertex-color-interpolated radial gradient via the existing helper.
+        const sides = glCircleSides;
+        const radius = size / 2;
+        const innerInt = colorInner.rgbaInt();
+        const outerInt = colorOuter.rgbaInt();
+        const points = [], colors = [];
+        for (let i = 0; i <= sides; i++)
+        {
+            const a = (i % sides) / sides * PI * 2;
+            points.push(pos);
+            colors.push(innerInt);
+            points.push(vec2(pos.x + sin(a) * radius, pos.y + cos(a) * radius));
+            colors.push(outerInt);
+        }
+        glDrawColoredPoints(points, colors);
+    }
+    else
+    {
+        // Canvas2D path: native radial gradient (slower but matches WebGL visually)
+        ++drawCount;
+        drawCanvas2D(pos, vec2(size), 0, false, (context)=>
+        {
+            const gradient = context.createRadialGradient(0, 0, 0, 0, 0, .5);
+            gradient.addColorStop(0, colorInner.toString());
+            gradient.addColorStop(1, colorOuter.toString());
+            context.fillStyle = gradient;
+            context.beginPath();
+            context.ellipse(0, 0, .5, .5, 0, 0, 9);
+            context.fill();
+        }, screenSpace, context);
+    }
+}
+
 /**
  * @callback Canvas2DDrawFunction - A function that draws to a 2D canvas context
  * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
@@ -15070,6 +15134,7 @@ export
     drawRegularPoly,
     drawEllipse,
     drawCircle,
+    drawCircleGradient,
     drawCanvas2D,
     drawText,
     drawTextScreen,

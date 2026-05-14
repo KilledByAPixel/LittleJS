@@ -361,3 +361,17 @@ test('drawTextureWrapped is callable in headless mode', async () =>
     assert.doesNotThrow(() =>
         drawTextureWrapped(vec2(), vec2(1, 1), vec2(2, 2)));
 });
+
+test('drawCircleGradient is exported', async () =>
+{
+    const mod = await import('../dist/littlejs.esm.js');
+    assert.equal(typeof mod.drawCircleGradient, 'function');
+});
+
+test('drawCircleGradient is callable in headless mode', async () =>
+{
+    const mod = await import('../dist/littlejs.esm.js');
+    const { drawCircleGradient, vec2, rgb } = mod;
+    assert.doesNotThrow(() =>
+        drawCircleGradient(vec2(), 1, rgb(1, 1, 1), rgb(0, 0, 0)));
+});
