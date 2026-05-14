@@ -3840,6 +3840,7 @@ function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useW
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
+let drawCircleGradientOffset = 0;
 function drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=CLEAR_WHITE, useWebGL=glEnable, screenSpace=false, context)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
@@ -3858,17 +3859,21 @@ function drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=CLEAR_WHIT
             pos = screenToWorld(pos);
             size /= cameraScale;
         }
-        // fan as tristrip; open and close on the rim so back-to-back
-        // gradients at the same position bridge as point-degenerates
-        // instead of leaking a spoke from center to top
+        // fan as tristrip; rotate the boundary vertex by one slice per call
+        // so back-to-back gradients at the same position have their hole
+        // (from gpu edge-rule on the boundary line-degen) at different rim
+        // verts and don't visibly stack
         const sides = glCircleSides;
         const radius = size/2;
         const innerInt = colorInner.rgbaInt();
         const outerInt = colorOuter.rgbaInt();
-        const points = [vec2(pos.x, pos.y + radius)], colors = [outerInt];
+        const offset = drawCircleGradientOffset++;
+        const startA = (offset%sides)/sides*PI*2;
+        const points = [vec2(pos.x + sin(startA)*radius, pos.y + cos(startA)*radius)];
+        const colors = [outerInt];
         for (let i=sides; i--;)
         {
-            const a = i/sides*PI*2;
+            const a = ((i+offset)%sides)/sides*PI*2;
             points.push(pos);
             colors.push(innerInt);
             points.push(vec2(pos.x + sin(a)*radius, pos.y + cos(a)*radius));
