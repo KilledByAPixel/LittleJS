@@ -370,13 +370,13 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
  *  @param {Vector2} pos
  *  @param {Vector2} [size=vec2(1)]
  *  @param {Color}   [colorTop=WHITE]
- *  @param {Color}   [colorBottom=BLACK]
+ *  @param {Color}   [colorBottom=CLEAR_WHITE]
  *  @param {number}  [angle]
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0, useWebGL=glEnable, screenSpace=false, context)
+function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=CLEAR_WHITE, angle=0, useWebGL=glEnable, screenSpace=false, context)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isVector2(size), 'size must be a vec2');
