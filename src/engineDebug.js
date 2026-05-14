@@ -502,7 +502,8 @@ function debugRender()
             debugContext.fillText('FPS: ' + averageFPS.toFixed(1) + (glEnable?' WebGL':' Canvas2D'), 
                 x, y += h);
             debugContext.fillText('Objects: ' + engineObjects.length, x, y += h);
-            debugContext.fillText('Draw Count: ' + drawCount, x, y += h);
+            debugContext.fillText('Draw Calls: ' + drawCount, x, y += h);
+            debugContext.fillText('Primitives: ' + primitiveCount, x, y += h);
             debugContext.fillText('---------', x, y += h);
             debugContext.fillStyle = '#f00';
             debugContext.fillText('ESC: Debug Overlay', x, y += h);
@@ -573,7 +574,8 @@ function debugRenderPost()
     mainContext.font = '1em monospace';
     mainContext.fillStyle = '#000';
     const text = engineName + ' v' + engineVersion + ' / '
-        + drawCount + ' / ' + engineObjects.length + ' / ' + averageFPS.toFixed(1)
+        + drawCount + ' / ' + primitiveCount + ' / '
+        + engineObjects.length + ' / ' + averageFPS.toFixed(1)
         + (glEnable ? ' GL' : ' 2D') ;
     mainContext.fillText(text, mainCanvas.width-3, 3);
     mainContext.fillStyle = '#fff';

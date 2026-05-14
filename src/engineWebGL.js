@@ -505,7 +505,8 @@ function glFlush()
             glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, glBatchCount);
         else
             glContext.drawArraysInstanced(glContext.TRIANGLE_STRIP, 0, 4, glBatchCount);
-        drawCount += glBatchCount;
+        ++drawCount;
+        primitiveCount += glBatchCount;
         glBatchCount = 0;
     }
     glBatchAdditive = glAdditive;

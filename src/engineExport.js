@@ -240,6 +240,7 @@ export
     mainCanvasSize,
     textureInfos,
     drawCount,
+    primitiveCount,
     screenToWorld,
     worldToScreen,
     screenToWorldDelta,

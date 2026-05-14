@@ -291,6 +291,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             glFlush();
             debugRenderPost();
             drawCount = 0;
+            primitiveCount = 0;
         }
     }
 

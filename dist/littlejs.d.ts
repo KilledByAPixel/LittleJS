@@ -1697,6 +1697,11 @@ declare module "littlejsengine" {
      *  @type {number}
      *  @memberof Draw */
     export let drawCount: number;
+    /** Keeps track of how many primitives were drawn each frame for debugging
+     *  A single draw call can render many primitives (e.g. a WebGL sprite batch).
+     *  @type {number}
+     *  @memberof Draw */
+    export let primitiveCount: number;
     /** Convert from screen to world space coordinates
      *  @param {Vector2} screenPos
      *  @return {Vector2}

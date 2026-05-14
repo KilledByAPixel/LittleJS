@@ -294,6 +294,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             glFlush();
             debugRenderPost();
             drawCount = 0;
+            primitiveCount = 0;
         }
     }
 
@@ -3176,6 +3177,12 @@ let textureInfos = [];
  *  @memberof Draw */
 let drawCount;
 
+/** Keeps track of how many primitives were drawn each frame for debugging
+ *  A single draw call can render many primitives (e.g. a WebGL sprite batch).
+ *  @type {number}
+ *  @memberof Draw */
+let primitiveCount;
+
 // internal predicates for tint short-circuiting in canvas2D draw paths
 // isWhite ignores alpha because alpha is applied via globalAlpha, not multiply
 // isBlack includes alpha so additive colors that only contribute alpha are not skipped
@@ -3429,6 +3436,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
     {
         // normal canvas 2D rendering method (slower)
         ++drawCount;
+        ++primitiveCount;
         size = new Vector2(size.x, -size.y); // flip upside down sprites
         drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
@@ -3514,6 +3522,7 @@ function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0,
     {
         // normal canvas 2D rendering method (slower)
         ++drawCount;
+        ++primitiveCount;
         size = new Vector2(size.x, -size.y); // fix upside down sprites
         drawCanvas2D(pos, size, angle, false, (context)=>
         {
@@ -3576,8 +3585,9 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
         return;
     }
 
-    // Canvas2D path — increment drawCount here (WebGL batch counts via glBatchCount)
+    // Canvas2D path — increment counts here (WebGL counts via glFlush)
     ++drawCount;
+    ++primitiveCount;
 
     if (!screenSpace)
     {
@@ -3651,6 +3661,7 @@ function drawLineList(points, width=.1, color, wrap=false, pos=vec2(), angle=0, 
     {
         // normal canvas 2D rendering method (slower)
         ++drawCount;
+        ++primitiveCount;
         drawCanvas2D(pos, vec2(1), angle, false, (context)=>
         {
             context.strokeStyle = color.toString();
@@ -3888,6 +3899,7 @@ function drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=CLEAR_WHIT
     {
         // normal canvas 2D rendering method (slower)
         ++drawCount;
+        ++primitiveCount;
         drawCanvas2D(pos, vec2(size), 0, false, (context)=>
         {
             const gradient = context.createRadialGradient(0, 0, 0, 0, 0, .5);
@@ -7746,7 +7758,8 @@ function glFlush()
             glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, glBatchCount);
         else
             glContext.drawArraysInstanced(glContext.TRIANGLE_STRIP, 0, 4, glBatchCount);
-        drawCount += glBatchCount;
+        ++drawCount;
+        primitiveCount += glBatchCount;
         glBatchCount = 0;
     }
     glBatchAdditive = glAdditive;
