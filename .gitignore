@@ -10,3 +10,4 @@ examples/electron/build
 examples/electron/*win32*
 docs/superpowers/
 .claude/
+.vscode/

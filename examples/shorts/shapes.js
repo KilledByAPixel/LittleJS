@@ -1,8 +1,8 @@
 function gameRender()
 {
     // circles and ellipses
-    drawEllipse(vec2(-6,5), vec2(3,2), YELLOW, .5);
-    drawCircle(vec2(0,5), 2+oscillate(.5), RED);
+    drawEllipse(vec2(-6,5), vec2(4,3), YELLOW, .5);
+    drawCircle(vec2(0,5), 3+oscillate(.5), RED);
     drawEllipse(vec2(6,5), vec2(2,4), CLEAR_BLACK, .3, .5, CYAN)
 
     // polygon shapes
@@ -14,9 +14,9 @@ function gameRender()
     drawPoly(starPath, BLUE, .1, GREEN, vec2(6, 0));
 
     // rects and lines
-    drawCircleGradient(vec2(-6,-5), 3, YELLOW, RED);
-    drawRect(vec2(0,-5), vec2(4,3), ORANGE, time);
-    drawLine(vec2(-5,-7), vec2(5,-3), 1,  hsl(0,0,1,.5));
-    const zPath = [vec2(5,-3), vec2(-3,-3), vec2(5,-7), vec2(-3,-7)];
+    drawCircleGradient(vec2(-6,-5), 4, WHITE, CLEAR_WHITE);
+    drawRect(vec2(0,-5), vec2(4,3+oscillate(.5)), ORANGE);
+    drawLine(vec2(3,-7), vec2(8,-3), 1,  hsl(0,0,1,.5));
+    const zPath = [vec2(8,-3), vec2(3,-3), vec2(8,-7), vec2(3,-7)];
     drawLineList(zPath, .4, MAGENTA);
 }
