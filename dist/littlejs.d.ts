@@ -1849,7 +1849,7 @@ declare module "littlejsengine" {
      *  @param {Vector2} pos
      *  @param {number}  [size=1] - Diameter
      *  @param {Color}   [colorInner=WHITE]
-     *  @param {Color}   [colorOuter=BLACK]
+     *  @param {Color}   [colorOuter=CLEAR_WHITE]
      *  @param {boolean} [useWebGL=glEnable]
      *  @param {boolean} [screenSpace]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
