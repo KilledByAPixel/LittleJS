@@ -2072,6 +2072,18 @@ declare module "littlejsengine" {
      *  @param {number} [rgbaAdditive=0] - black is 0
      *  @memberof WebGL */
     export function glDraw(x: number, y: number, sizeX: number, sizeY: number, angle?: number, uv0X?: number, uv0Y?: number, uv1X?: number, uv1Y?: number, rgba?: number, rgbaAdditive?: number): void;
+    /** Add an untextured rect to the gl draw list
+     *  Picks the optimal path: if already in poly mode, emits a tristrip rect
+     *  so it batches with surrounding polys; otherwise uses the instanced path
+     *  with uvs and rgba zeroed so the color falls through the additive slot.
+     *  @param {number} x
+     *  @param {number} y
+     *  @param {number} sizeX
+     *  @param {number} sizeY
+     *  @param {number} angle
+     *  @param {number} rgba - color as 32-bit integer
+     *  @memberof WebGL */
+    export function glDrawUntextured(x: number, y: number, sizeX: number, sizeY: number, angle: number, rgba: number): void;
     /** Transform and add a polygon to the gl draw list
      *  @param {Array<Vector2>} points - Array of Vector2 points
      *  @param {number} rgba - Color of the polygon as a 32-bit integer
