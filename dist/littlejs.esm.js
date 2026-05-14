@@ -4512,6 +4512,9 @@ function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useW
 }
 
 /** Draw a circle filled with a radial gradient from the center to the rim
+ *  - Best when batched with other untextured polys
+ *  - If drawing mostly textured sprites, bake the gradient into a texture and use drawTile instead
+ *  - Stacking gradients at the exact same position may show a faint vertical artifact
  *  @param {Vector2} pos
  *  @param {number}  [size=1] - Diameter
  *  @param {Color}   [colorInner=WHITE]
