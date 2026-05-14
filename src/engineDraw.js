@@ -731,12 +731,12 @@ function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useW
  *  @param {Vector2} pos
  *  @param {number}  [size=1] - Diameter
  *  @param {Color}   [colorInner=WHITE]
- *  @param {Color}   [colorOuter=BLACK]
+ *  @param {Color}   [colorOuter=CLEAR_WHITE]
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=BLACK, useWebGL=glEnable, screenSpace=false, context)
+function drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=CLEAR_WHITE, useWebGL=glEnable, screenSpace=false, context)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isNumber(size), 'size must be a number');
