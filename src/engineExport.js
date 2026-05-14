@@ -286,6 +286,7 @@ export
     glCopyToContext,
     glSetAntialias,
     glDraw,
+    glDrawUntextured,
     glDrawPointsTransform,
     glDrawOutlineTransform,
     glDrawPoints,

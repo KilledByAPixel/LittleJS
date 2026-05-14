@@ -567,6 +567,67 @@ function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgb
     glPositionData[offset++] = angle;
 }
 
+/** Add an untextured rect to the gl draw list
+ *  Picks the optimal path: if already in poly mode, emits a tristrip rect
+ *  so it batches with surrounding polys; otherwise uses the instanced path
+ *  with uvs and rgba zeroed so the color falls through the additive slot.
+ *  @param {number} x
+ *  @param {number} y
+ *  @param {number} sizeX
+ *  @param {number} sizeY
+ *  @param {number} angle
+ *  @param {number} rgba - color as 32-bit integer
+ *  @memberof WebGL */
+function glDrawUntextured(x, y, sizeX, sizeY, angle, rgba)
+{
+    if (glPolyMode)
+    {
+        // batch with surrounding polys as a 4-vertex tristrip rect
+        const vertCount = 6; // 4 corners + 2 degenerate verts
+        if (glBatchCount+vertCount >= gl_MAX_POLY_VERTEXES || glBatchAdditive !== glAdditive)
+            glFlush();
+
+        // compute rotated corners in world space (matches glDrawPointsTransform rotation)
+        const hx = sizeX*.5, hy = sizeY*.5;
+        const c = cos(angle), s = sin(angle);
+        const chx = c*hx, shx = s*hx, chy = c*hy, shy = s*hy;
+        const x0 = x - chx - shy, y0 = y + shx - chy; // (-hx,-hy)
+        const x1 = x + chx - shy, y1 = y - shx - chy; // ( hx,-hy)
+        const x2 = x - chx + shy, y2 = y + shx + chy; // (-hx, hy)
+        const x3 = x + chx + shy, y3 = y - shx + chy; // ( hx, hy)
+
+        // write tristrip with leading/trailing degenerate verts
+        let offset = glBatchCount * gl_INDICES_PER_POLY_VERTEX;
+        glPositionData[offset++] = x0; glPositionData[offset++] = y0; glColorData[offset++] = rgba;
+        glPositionData[offset++] = x0; glPositionData[offset++] = y0; glColorData[offset++] = rgba;
+        glPositionData[offset++] = x1; glPositionData[offset++] = y1; glColorData[offset++] = rgba;
+        glPositionData[offset++] = x2; glPositionData[offset++] = y2; glColorData[offset++] = rgba;
+        glPositionData[offset++] = x3; glPositionData[offset++] = y3; glColorData[offset++] = rgba;
+        glPositionData[offset++] = x3; glPositionData[offset++] = y3; glColorData[offset++] = rgba;
+        glBatchCount += vertCount;
+        return;
+    }
+
+    // instanced path: zero uvs and rgba so the texture contribution is killed,
+    // then carry the real color in the additive slot
+    if (glBatchCount >= gl_MAX_INSTANCES || glBatchAdditive !== glAdditive)
+        glFlush();
+    glSetInstancedMode();
+
+    let offset = glBatchCount++ * gl_INDICES_PER_INSTANCE;
+    glPositionData[offset++] = x;
+    glPositionData[offset++] = y;
+    glPositionData[offset++] = sizeX;
+    glPositionData[offset++] = sizeY;
+    glPositionData[offset++] = 0;
+    glPositionData[offset++] = 0;
+    glPositionData[offset++] = 0;
+    glPositionData[offset++] = 0;
+    glColorData[offset++] = 0;
+    glColorData[offset++] = rgba;
+    glPositionData[offset++] = angle;
+}
+
 /** Transform and add a polygon to the gl draw list
  *  @param {Array<Vector2>} points - Array of Vector2 points
  *  @param {number} rgba - Color of the polygon as a 32-bit integer
