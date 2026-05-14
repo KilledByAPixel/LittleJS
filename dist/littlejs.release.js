@@ -3854,33 +3854,29 @@ function drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=BLACK, use
         ASSERT(!!glContext, 'WebGL is not enabled!');
         if (screenSpace)
         {
-            // convert to world space (matches drawRectGradient's WebGL branch)
+            // convert to world space
             pos = screenToWorld(pos);
             size /= cameraScale;
         }
-
-        // Encode a triangle fan inside a tristrip: interleave the center vertex
-        // between every ring vertex. Each adjacent (C,R_i)->(C,R_{i+1}) pair
-        // produces one degenerate triangle and one real fan slice, giving a
-        // true vertex-color-interpolated radial gradient via the existing helper.
+        // encode fan as tristrip: interleave center between every ring vertex
         const sides = glCircleSides;
-        const radius = size / 2;
+        const radius = size/2;
         const innerInt = colorInner.rgbaInt();
         const outerInt = colorOuter.rgbaInt();
         const points = [], colors = [];
-        for (let i = 0; i <= sides; i++)
+        for (let i=sides+1; i--;)
         {
-            const a = (i % sides) / sides * PI * 2;
+            const a = (i%sides)/sides*PI*2;
             points.push(pos);
             colors.push(innerInt);
-            points.push(vec2(pos.x + sin(a) * radius, pos.y + cos(a) * radius));
+            points.push(vec2(pos.x + sin(a)*radius, pos.y + cos(a)*radius));
             colors.push(outerInt);
         }
         glDrawColoredPoints(points, colors);
     }
     else
     {
-        // Canvas2D path: native radial gradient (slower but matches WebGL visually)
+        // normal canvas 2D rendering method (slower)
         ++drawCount;
         drawCanvas2D(pos, vec2(size), 0, false, (context)=>
         {
