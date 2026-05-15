@@ -6,6 +6,7 @@
  * - File saving (text, canvas, data URLs)
  * - Native share dialog support
  * - Local storage save data management
+ * - Gradient noise (1D and 2D)
  * @namespace Utilities
  */
 
@@ -209,4 +210,46 @@ function writeSaveData(saveName, saveData)
 {
     ASSERT(isStringLike(saveName), 'saveData requires saveName string');
     localStorage[saveName] = JSON.stringify(saveData);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+// Deterministic well-distributed hash of an integer lattice index to [0, 1).
+// Murmur3 finalizer — adjacent integers produce uncorrelated outputs.
+function noiseHash(i)
+{
+    let h = (i | 0) ^ 0x9e3779b9;
+    h = Math.imul(h ^ (h >>> 16), 0x85ebca6b);
+    h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+    h ^= h >>> 16;
+    return (h >>> 0) / 2**32;
+}
+
+/** 1D gradient noise — returns a smooth value in [0, 1] for any real x.
+ *  Integer inputs land on deterministic lattice values; non-integer inputs
+ *  are interpolated with smoothStep for C1 continuity.
+ *  @param {number} x
+ *  @return {number}
+ *  @memberof Utilities */
+function noise1D(x)
+{
+    const i = floor(x);
+    return lerp(noiseHash(i), noiseHash(i + 1), smoothStep(x - i));
+}
+
+/** 2D gradient noise — returns a smooth value in [0, 1] for any real (x, y).
+ *  @param {number} x
+ *  @param {number} y
+ *  @return {number}
+ *  @memberof Utilities */
+function noise2D(x, y)
+{
+    const ix = floor(x), iy = floor(y);
+    const fx = smoothStep(x - ix), fy = smoothStep(y - iy);
+    // large prime decorrelates neighboring rows
+    const h = (a, b) => noiseHash(a + b * 374761393);
+    return lerp(
+        lerp(h(ix,     iy    ), h(ix + 1, iy    ), fx),
+        lerp(h(ix,     iy + 1), h(ix + 1, iy + 1), fx),
+        fy);
 }

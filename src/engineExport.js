@@ -187,6 +187,8 @@ export
     shareURL,
     readSaveData,
     writeSaveData,
+    noise1D,
+    noise2D,
 
     // Random
     rand,

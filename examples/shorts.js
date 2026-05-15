@@ -39,6 +39,7 @@ const exampleList =
     new ExampleInfo('Clock', 'clock.js', 'Animated analog clock', false, 'time, rotation, lines, rectangle'),
     new ExampleInfo('Starfield', 'starfield.js', 'Animated parallax starfield', false, 'space, movement, depth, rectangle'),
     new ExampleInfo('Parallax', 'parallax.js', 'Parallax scrolling mountains', false, 'generative, canvas, background'),
+    new ExampleInfo('Noise', 'noise.js', 'Gradient noise 1D and 2D fields', false, 'generative, procedural, noise1D, noise2D, random'),
     new ExampleInfo('Debug Drawing', 'debugDraw.js', 'Debug drawing system', false, 'debug, circle, line, rectangle'),
     new ExampleInfo('--- AUDIO ---'),
     new ExampleInfo('Sound Effects', 'sound.js', 'ZzFX sound effect generator', false, 'audio, volume, ui'),
