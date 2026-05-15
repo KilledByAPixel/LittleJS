@@ -2,7 +2,7 @@ class Player extends EngineObject
 {
     constructor(pos)
     {
-        super(pos, vec2(2,4), 0, 0, RED);
+        super(pos, vec2(1,2), 0, 0, RED);
         this.setCollision(); // make object collide
     }
 
