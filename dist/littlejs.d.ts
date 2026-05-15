@@ -1018,6 +1018,19 @@ declare module "littlejsengine" {
      *  @param {Object} saveData - object containing data to be saved
      *  @memberof Utilities */
     export function writeSaveData(saveName: string, saveData: any): void;
+    /** 1D gradient noise — returns a smooth value in [0, 1] for any real x.
+     *  Integer inputs land on deterministic lattice values; non-integer inputs
+     *  are interpolated with smoothStep for C1 continuity.
+     *  @param {number} x
+     *  @return {number}
+     *  @memberof Utilities */
+    export function noise1D(x: number): number;
+    /** 2D gradient noise — returns a smooth value in [0, 1] for any real (x, y).
+     *  @param {number} x
+     *  @param {number} y
+     *  @return {number}
+     *  @memberof Utilities */
+    export function noise2D(x: number, y: number): number;
     /** Random global functions
      *  @namespace Random */
     /** Returns a random value between the two values passed in
@@ -1368,6 +1381,7 @@ declare module "littlejsengine" {
      * - File saving (text, canvas, data URLs)
      * - Native share dialog support
      * - Local storage save data management
+     * - Gradient noise (1D and 2D)
      * @namespace Utilities
      */
     /**
@@ -1756,7 +1770,7 @@ declare module "littlejsengine" {
      *  @param {Vector2} pos
      *  @param {Vector2} [size=vec2(1)]
      *  @param {Color}   [colorTop=WHITE]
-     *  @param {Color}   [colorBottom=BLACK]
+     *  @param {Color}   [colorBottom=CLEAR_WHITE]
      *  @param {number}  [angle]
      *  @param {boolean} [useWebGL=glEnable]
      *  @param {boolean} [screenSpace]
