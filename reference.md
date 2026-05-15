@@ -233,7 +233,7 @@ ZzFXMusic(zzfxMusic)                                 // Create a zzfx music obje
 ZzFXMusic.playMusic(volume=1, loop=true)             // Play the music
 
 // Audio functions
-speak(text, language='', volume=1, rate=1, pitch=1)  // Speak text line
+speak(text, volume=1, rate=1, pitch=1, language='')  // Speak text line
 speakStop()                                          // Stop all queued speech
 getNoteFrequency(semitoneOffset, rootFrequency=220)  // Get frequency for musical notes
 

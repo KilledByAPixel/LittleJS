@@ -17,11 +17,11 @@ function gameInit()
 
     // different language
     makeButton(vec2(-1,0), 'Italian',
-        ()=> speak('Ciao mondo', 'it'));
+        ()=> speak('Ciao mondo', 1, 1, 1, 'it'));
 
     // high pitch, fast
     makeButton(vec2(0,-1), 'High & Fast',
-        ()=> speak('Hello World', '', 1, 2, 2));
+        ()=> speak('Hello World', 1, 2, 2));
 
     // default voice
     makeButton(vec2(0,0), 'Hello World',
@@ -29,7 +29,7 @@ function gameInit()
 
     // low pitch, slow
     makeButton(vec2(0,1), 'Low & Slow',
-        ()=> speak('Hello World', '', 1, .5, .5));
+        ()=> speak('Hello World', 1, .5, .5));
 
     // stop all speech
     makeButton(vec2(1,0), 'Stop', speakStop);
