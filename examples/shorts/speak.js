@@ -15,22 +15,22 @@ function gameInit()
         button.onClick = onClick;
     }
 
-    // default voice
-    makeButton(vec2(0,-1), 'Hello World',
-        ()=> speak('Hello World'));
-
     // different language
     makeButton(vec2(-1,0), 'Italian',
         ()=> speak('Ciao mondo', 'it'));
 
     // high pitch, fast
-    makeButton(vec2(0,0), 'High & Fast',
+    makeButton(vec2(0,-1), 'High & Fast',
         ()=> speak('Hello World', '', 1, 2, 2));
 
+    // default voice
+    makeButton(vec2(0,0), 'Hello World',
+        ()=> speak('Hello World'));
+
     // low pitch, slow
-    makeButton(vec2(1,0), 'Low & Slow',
+    makeButton(vec2(0,1), 'Low & Slow',
         ()=> speak('Hello World', '', 1, .5, .5));
 
     // stop all speech
-    makeButton(vec2(0,1), 'Stop', speakStop);
+    makeButton(vec2(1,0), 'Stop', speakStop);
 }
