@@ -9,7 +9,7 @@ function drawArrow(origin, v, color=WHITE)
 function gameRender()
 {
     const a = vec2(0, 2).rotate(time); // rotating vector
-    const b = vec2(2, 0);               // fixed vector
+    const b = vec2(2, 0);              // fixed vector
 
     // addition: chain head to tail
     let o = vec2(-7, 3);

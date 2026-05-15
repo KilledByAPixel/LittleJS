@@ -14,8 +14,13 @@ function gameRender()
     {
         pos.x = ox + i * cell;
         pos.y = oy + j * cell;
-        const n = noise2D(pos.x * scale + time, pos.y * scale);
-        color.set(n, n, n);
+        // sample each color channel with a different noise offset
+        const nx = pos.x * scale + time;
+        const ny = pos.y * scale;
+        color.set(
+            noise2D(nx,  ny       ),
+            noise2D(nx,  ny + 1e3 ),
+            noise2D(nx,  ny + 2e3 ));
         drawRect(pos, s, color);
     }
 
@@ -27,6 +32,4 @@ function gameRender()
         const y = top + noise1D(x * scale + time) * 2 - 1;
         drawRect(vec2(x, y), vec2(cell, .15), YELLOW);
     }
-
-    drawText('noise2D field (scrolling) + noise1D curve', vec2(0, size.y/2 - .5), .8);
 }
