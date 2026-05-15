@@ -24,12 +24,11 @@ function gameRender()
         drawRect(pos, s, color);
     }
 
-    // 1D noise plotted as a curve along the top
-    const top = cameraPos.y + size.y / 2 - 1.5;
+    // 1D noise plotted as a curve in center
     for (let i = 0; i < cols; ++i)
     {
         const x = ox + i * cell;
-        const y = top + noise1D(x * scale + time) * 2 - 1;
+        const y = noise1D(x * scale + time) * 2 - 1;
         drawRect(vec2(x, y), vec2(cell, .15), YELLOW);
     }
 }
