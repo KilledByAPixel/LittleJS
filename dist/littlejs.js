@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.18.11.1';
+const engineVersion = '1.18.12';
 
 /** Frames per second to update
  *  @type {number}
@@ -6482,14 +6482,15 @@ class SoundInstance
 
 /** Speak text with passed in settings
  *  @param {string} text - The text to speak
- *  @param {string} [language] - The language/accent to use (examples: en, it, ru, ja, zh)
  *  @param {number} [volume] - How much to scale volume by
  *  @param {number} [rate] - How quickly to speak
  *  @param {number} [pitch] - How much to change the pitch by
+ *  @param {string} [language] - The language/accent to use (examples: en, it, ru, ja, zh)
  *  @return {SpeechSynthesisUtterance} - The utterance that was spoken
  *  @memberof Audio */
-function speak(text, language='', volume=1, rate=1, pitch=1)
+function speak(text, volume=1, rate=1, pitch=1, language='')
 {
+    ASSERT(typeof volume !== 'string', 'speak() signature changed: language is now the last parameter, after pitch');
     if (!soundEnable || headlessMode) return;
     if (!speechSynthesis) return;
 

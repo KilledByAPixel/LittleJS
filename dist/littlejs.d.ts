@@ -2515,13 +2515,13 @@ declare module "littlejsengine" {
     }
     /** Speak text with passed in settings
      *  @param {string} text - The text to speak
-     *  @param {string} [language] - The language/accent to use (examples: en, it, ru, ja, zh)
      *  @param {number} [volume] - How much to scale volume by
      *  @param {number} [rate] - How quickly to speak
      *  @param {number} [pitch] - How much to change the pitch by
+     *  @param {string} [language] - The language/accent to use (examples: en, it, ru, ja, zh)
      *  @return {SpeechSynthesisUtterance} - The utterance that was spoken
      *  @memberof Audio */
-    export function speak(text: string, language?: string, volume?: number, rate?: number, pitch?: number): SpeechSynthesisUtterance;
+    export function speak(text: string, volume?: number, rate?: number, pitch?: number, language?: string): SpeechSynthesisUtterance;
     /** Stop all queued speech
      *  @memberof Audio */
     export function speakStop(): void;
