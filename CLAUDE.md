@@ -18,7 +18,7 @@ If anything in this doc conflicts with the actual repo behavior, follow the repo
 ## Key resources
 
 - `README.md` - Overview and getting started
-- `reference.md` - API quick reference
+- `REFERENCE.md` - API quick reference
 - `examples/` - Working examples demonstrating engine features
 
 ## Architecture overview
