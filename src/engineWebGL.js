@@ -446,6 +446,10 @@ function glSetTextureData(texture, image)
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
     glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
 
+    // keep mipmaps in sync with new level 0 data (same condition as glCreateTexture)
+    if (!tilesPixelated && isPowerOfTwo(image.width) && isPowerOfTwo(image.height))
+        glContext.generateMipmap(glContext.TEXTURE_2D);
+
     // rebind active texture
     glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
 }
