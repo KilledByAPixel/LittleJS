@@ -513,7 +513,14 @@ class RandomGenerator
     *  @param {number} [valueA]
     *  @param {number} [valueB]
     *  @return {number} */
-    floatSign(valueA=1, valueB=0) { return this.float(valueA, valueB) * this.sign(); }
+    floatSign(valueA=1, valueB=0)
+    {
+        const lo = min(valueA, valueB);
+        const hi = max(valueA, valueB);
+        const d = hi - lo;
+        const e = this.float(d*2);
+        return e < d ? lo + e : d - lo - e;
+    }
 
     /** Returns a random angle between -PI and PI
     *  @return {number} */
