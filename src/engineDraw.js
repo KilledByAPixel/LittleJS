@@ -318,10 +318,8 @@ function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
         }
         else
         {
-            // untextured: glDrawUntextured picks the optimal path (poly
-            // tristrip if already in poly mode, otherwise instanced with
-            // uvs/rgba zeroed). Color+additive are folded together to match
-            // the Canvas2D path's color.add(additiveColor) on line ~337.
+            // untextured: fold color+additive to match the Canvas2D path's
+            // color.add(additiveColor) on line ~337.
             const combined = additiveColor ? color.add(additiveColor) : color;
             glDrawUntextured(pos.x, pos.y, size.x, size.y, angle, combined.rgbaInt());
         }
