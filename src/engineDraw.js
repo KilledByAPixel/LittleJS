@@ -153,8 +153,8 @@ class TileInfo
      *  @param {Vector2} [pos=vec2()] - Top left corner of tile in pixels
      *  @param {Vector2} [size] - Size of tile in pixels
      *  @param {TextureInfo} [textureInfo] - Texture info to use
-     *  @param {number} [padding] - How many pixels padding around tiles
-     *  @param {number} [bleed] - How many pixels smaller to draw tiles
+     *  @param {number} [padding] - How many pixels padding around all sides of each tile (increases grid size, does not affect tile size)
+     *  @param {number} [bleed] - How many pixels smaller to shrink UVS of tiles (does not affect grid size, only UVs)
      */
     constructor(pos=vec2(), size=tileDefaultSize, textureInfo=textureInfos[0], padding=tileDefaultPadding, bleed=tileDefaultBleed)
     {
