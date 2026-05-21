@@ -1804,7 +1804,14 @@ class RandomGenerator
     *  @param {number} [valueA]
     *  @param {number} [valueB]
     *  @return {number} */
-    floatSign(valueA=1, valueB=0) { return this.float(valueA, valueB) * this.sign(); }
+    floatSign(valueA=1, valueB=0)
+    {
+        const lo = min(valueA, valueB);
+        const hi = max(valueA, valueB);
+        const d = hi - lo;
+        const e = this.float(d*2);
+        return e < d ? lo + e : d - lo - e;
+    }
 
     /** Returns a random angle between -PI and PI
     *  @return {number} */
@@ -3983,8 +3990,8 @@ class TileInfo
      *  @param {Vector2} [pos=vec2()] - Top left corner of tile in pixels
      *  @param {Vector2} [size] - Size of tile in pixels
      *  @param {TextureInfo} [textureInfo] - Texture info to use
-     *  @param {number} [padding] - How many pixels padding around tiles
-     *  @param {number} [bleed] - How many pixels smaller to draw tiles
+     *  @param {number} [padding] - How many pixels padding around all sides of each tile (increases grid size, does not affect tile size)
+     *  @param {number} [bleed] - How many pixels smaller to shrink UVS of tiles (does not affect grid size, only UVs)
      */
     constructor(pos=vec2(), size=tileDefaultSize, textureInfo=textureInfos[0], padding=tileDefaultPadding, bleed=tileDefaultBleed)
     {
@@ -4148,10 +4155,8 @@ function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
         }
         else
         {
-            // untextured: glDrawUntextured picks the optimal path (poly
-            // tristrip if already in poly mode, otherwise instanced with
-            // uvs/rgba zeroed). Color+additive are folded together to match
-            // the Canvas2D path's color.add(additiveColor) on line ~337.
+            // untextured: fold color+additive to match the Canvas2D path's
+            // color.add(additiveColor) on line ~337.
             const combined = additiveColor ? color.add(additiveColor) : color;
             glDrawUntextured(pos.x, pos.y, size.x, size.y, angle, combined.rgbaInt());
         }
@@ -8550,9 +8555,9 @@ function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgb
 }
 
 /** Add an untextured rect to the gl draw list
- *  Picks the optimal path: if already in poly mode, emits a tristrip rect
- *  so it batches with surrounding polys; otherwise uses the instanced path
- *  with uvs and rgba zeroed so the color falls through the additive slot.
+ *  Zeroes the uvs and rgba so the texture contribution multiplies to 0,
+ *  then carries the real color in the additive slot. Works regardless of
+ *  which texture is currently bound.
  *  @param {number} x
  *  @param {number} y
  *  @param {number} sizeX
@@ -8562,52 +8567,7 @@ function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgb
  *  @memberof WebGL */
 function glDrawUntextured(x, y, sizeX, sizeY, angle, rgba)
 {
-    if (glPolyMode)
-    {
-        // batch with surrounding polys as a 4-vertex tristrip rect
-        const vertCount = 6; // 4 corners + 2 degenerate verts
-        if (glBatchCount+vertCount >= gl_MAX_POLY_VERTEXES || glBatchAdditive !== glAdditive)
-            glFlush();
-
-        // compute rotated corners in world space (matches glDrawPointsTransform rotation)
-        const hx = sizeX*.5, hy = sizeY*.5;
-        const c = cos(angle), s = sin(angle);
-        const chx = c*hx, shx = s*hx, chy = c*hy, shy = s*hy;
-        const x0 = x - chx - shy, y0 = y + shx - chy; // (-hx,-hy)
-        const x1 = x + chx - shy, y1 = y - shx - chy; // ( hx,-hy)
-        const x2 = x - chx + shy, y2 = y + shx + chy; // (-hx, hy)
-        const x3 = x + chx + shy, y3 = y - shx + chy; // ( hx, hy)
-
-        // write tristrip with leading/trailing degenerate verts
-        let offset = glBatchCount * gl_INDICES_PER_POLY_VERTEX;
-        glPositionData[offset++] = x0; glPositionData[offset++] = y0; glColorData[offset++] = rgba;
-        glPositionData[offset++] = x0; glPositionData[offset++] = y0; glColorData[offset++] = rgba;
-        glPositionData[offset++] = x1; glPositionData[offset++] = y1; glColorData[offset++] = rgba;
-        glPositionData[offset++] = x2; glPositionData[offset++] = y2; glColorData[offset++] = rgba;
-        glPositionData[offset++] = x3; glPositionData[offset++] = y3; glColorData[offset++] = rgba;
-        glPositionData[offset++] = x3; glPositionData[offset++] = y3; glColorData[offset++] = rgba;
-        glBatchCount += vertCount;
-        return;
-    }
-
-    // instanced path: zero uvs and rgba so the texture contribution is killed,
-    // then carry the real color in the additive slot
-    if (glBatchCount >= gl_MAX_INSTANCES || glBatchAdditive !== glAdditive)
-        glFlush();
-    glSetInstancedMode();
-
-    let offset = glBatchCount++ * gl_INDICES_PER_INSTANCE;
-    glPositionData[offset++] = x;
-    glPositionData[offset++] = y;
-    glPositionData[offset++] = sizeX;
-    glPositionData[offset++] = sizeY;
-    glPositionData[offset++] = 0;
-    glPositionData[offset++] = 0;
-    glPositionData[offset++] = 0;
-    glPositionData[offset++] = 0;
-    glColorData[offset++] = 0;
-    glColorData[offset++] = rgba;
-    glPositionData[offset++] = angle;
+    glDraw(x, y, sizeX, sizeY, angle, 0, 0, 0, 0, 0, rgba);
 }
 
 /** Transform and add a polygon to the gl draw list

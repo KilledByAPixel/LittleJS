@@ -1580,8 +1580,8 @@ declare module "littlejsengine" {
          *  @param {Vector2} [pos=vec2()] - Top left corner of tile in pixels
          *  @param {Vector2} [size] - Size of tile in pixels
          *  @param {TextureInfo} [textureInfo] - Texture info to use
-         *  @param {number} [padding] - How many pixels padding around tiles
-         *  @param {number} [bleed] - How many pixels smaller to draw tiles
+         *  @param {number} [padding] - How many pixels padding around all sides of each tile (increases grid size, does not affect tile size)
+         *  @param {number} [bleed] - How many pixels smaller to shrink UVS of tiles (does not affect grid size, only UVs)
          */
         constructor(pos?: Vector2, size?: Vector2, textureInfo?: TextureInfo, padding?: number, bleed?: number);
         /** @property {Vector2} - Top left corner of tile in pixels */
@@ -2087,9 +2087,9 @@ declare module "littlejsengine" {
      *  @memberof WebGL */
     export function glDraw(x: number, y: number, sizeX: number, sizeY: number, angle?: number, uv0X?: number, uv0Y?: number, uv1X?: number, uv1Y?: number, rgba?: number, rgbaAdditive?: number): void;
     /** Add an untextured rect to the gl draw list
-     *  Picks the optimal path: if already in poly mode, emits a tristrip rect
-     *  so it batches with surrounding polys; otherwise uses the instanced path
-     *  with uvs and rgba zeroed so the color falls through the additive slot.
+     *  Zeroes the uvs and rgba so the texture contribution multiplies to 0,
+     *  then carries the real color in the additive slot. Works regardless of
+     *  which texture is currently bound.
      *  @param {number} x
      *  @param {number} y
      *  @param {number} sizeX
@@ -3249,6 +3249,21 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let medalsPreventUnlock: boolean;
+    /** How long to show medals for in seconds
+     *  @type {number}
+     *  @default
+     *  @memberof Settings */
+    export let medalDisplayTime: number;
+    /** How quickly to slide on/off medals in seconds
+     *  @type {number}
+     *  @default
+     *  @memberof Settings */
+    export let medalDisplaySlideTime: number;
+    /** Size of medal display
+     *  @type {Vector2}
+     *  @default Vector2(640,80)
+     *  @memberof Settings */
+    export let medalDisplaySize: Vector2;
     /** Initialize medals with a save name used for storage
      *  - Call this after creating all medals
      *  - Checks if medals are unlocked
@@ -3264,6 +3279,22 @@ declare module "littlejsengine" {
      *  @param {MedalCallbackFunction} callback
      *  @memberof Medals */
     export function medalsForEach(callback: MedalCallbackFunction): void;
+    /** Set how long to show medals for in seconds
+     *  @param {number} time
+     *  @memberof Settings */
+    export function setMedalDisplayTime(time: number): void;
+    /** Set how quickly to slide on/off medals in seconds
+     *  @param {number} time
+     *  @memberof Settings */
+    export function setMedalDisplaySlideTime(time: number): void;
+    /** Set size of medal display
+     *  @param {Vector2} size
+     *  @memberof Settings */
+    export function setMedalDisplaySize(size: Vector2): void;
+    /** Set to stop medals from being unlockable
+     *  @param {boolean} preventUnlock
+     *  @memberof Settings */
+    export function setMedalsPreventUnlock(preventUnlock: boolean): void;
     /**
      * Medal - Tracks an unlockable medal
      * @memberof Medals
@@ -3311,37 +3342,6 @@ declare module "littlejsengine" {
         renderIcon(pos: Vector2, size: number): void;
         storageKey(): string;
     }
-    /** How long to show medals for in seconds
-     *  @type {number}
-     *  @default
-     *  @memberof Settings */
-    export let medalDisplayTime: number;
-    /** How quickly to slide on/off medals in seconds
-     *  @type {number}
-     *  @default
-     *  @memberof Settings */
-    export let medalDisplaySlideTime: number;
-    /** Size of medal display
-     *  @type {Vector2}
-     *  @default Vector2(640,80)
-     *  @memberof Settings */
-    export let medalDisplaySize: Vector2;
-    /** Set how long to show medals for in seconds
-     *  @param {number} time
-     *  @memberof Settings */
-    export function setMedalDisplayTime(time: number): void;
-    /** Set how quickly to slide on/off medals in seconds
-     *  @param {number} time
-     *  @memberof Settings */
-    export function setMedalDisplaySlideTime(time: number): void;
-    /** Set size of medal display
-     *  @param {Vector2} size
-     *  @memberof Settings */
-    export function setMedalDisplaySize(size: Vector2): void;
-    /** Set to stop medals from being unlockable
-     *  @param {boolean} preventUnlock
-     *  @memberof Settings */
-    export function setMedalsPreventUnlock(preventUnlock: boolean): void;
     /**
      * LittleJS Newgrounds Plugin
      * - NewgroundsMedal extends Medal with Newgrounds API functionality
