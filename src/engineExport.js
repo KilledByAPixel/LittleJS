@@ -258,6 +258,7 @@ export
     drawRegularPoly,
     drawEllipse,
     drawCircle,
+    drawEllipseGradient,
     drawCircleGradient,
     drawCanvas2D,
     drawText,
