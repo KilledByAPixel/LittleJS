@@ -3889,6 +3889,86 @@ function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useW
     drawEllipse(pos, vec2(size), color, 0, lineWidth, lineColor, useWebGL, screenSpace, context);
 }
 
+/** Draw an ellipse filled with a radial gradient from the center to the rim
+ *  - Best when batched with other untextured polys
+ *  - If drawing mostly textured sprites, bake the gradient into a texture and use drawTile instead
+ *  - Stacking gradients at the exact same position may show a faint vertical artifact
+ *  @param {Vector2} pos
+ *  @param {Vector2} [size=vec2(1)] - Width and height diameter
+ *  @param {Color}   [colorInner=WHITE]
+ *  @param {Color}   [colorOuter=CLEAR_WHITE]
+ *  @param {number}  [angle]
+ *  @param {boolean} [useWebGL=glEnable]
+ *  @param {boolean} [screenSpace]
+ *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
+ *  @memberof Draw */
+let drawEllipseGradientOffset = 0;
+function drawEllipseGradient(pos, size=vec2(1), colorInner=WHITE, colorOuter=CLEAR_WHITE, angle=0, useWebGL=glEnable, screenSpace=false, context)
+{
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(isVector2(size), 'size must be a vec2');
+    ASSERT(isColor(colorInner) && isColor(colorOuter), 'color is invalid');
+    ASSERT(isNumber(angle), 'angle must be a number');
+    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
+
+    if (headlessMode) return;
+
+    if (useWebGL && glEnable)
+    {
+        ASSERT(!!glContext, 'WebGL is not enabled!');
+        if (screenSpace)
+        {
+            // convert to world space
+            pos = screenToWorld(pos);
+            size = size.scale(1/cameraScale);
+            angle += cameraAngle;
+        }
+        // fan as tristrip; rotate the boundary vertex by one slice per call
+        // so back-to-back gradients at the same position have their hole
+        // (from gpu edge-rule on the boundary line-degen) at different rim
+        // verts and don't visibly stack
+        const sides = glCircleSides;
+        const radiusX = size.x/2, radiusY = size.y/2;
+        const innerInt = colorInner.rgbaInt();
+        const outerInt = colorOuter.rgbaInt();
+        const offset = drawEllipseGradientOffset++;
+        const c = cos(-angle), s = sin(-angle);
+        const rim = (a) =>
+        {
+            const lx = sin(a)*radiusX, ly = cos(a)*radiusY;
+            return vec2(pos.x + lx*c - ly*s, pos.y + lx*s + ly*c);
+        };
+        const startA = (offset%sides)/sides*PI*2;
+        const points = [rim(startA)];
+        const colors = [outerInt];
+        for (let i=sides; i--;)
+        {
+            const a = ((i+offset)%sides)/sides*PI*2;
+            points.push(pos);
+            colors.push(innerInt);
+            points.push(rim(a));
+            colors.push(outerInt);
+        }
+        glDrawColoredPoints(points, colors);
+    }
+    else
+    {
+        // normal canvas 2D rendering method (slower)
+        ++drawCount;
+        ++primitiveCount;
+        drawCanvas2D(pos, size, angle, false, (context)=>
+        {
+            const gradient = context.createRadialGradient(0, 0, 0, 0, 0, .5);
+            gradient.addColorStop(0, colorInner.toString());
+            gradient.addColorStop(1, colorOuter.toString());
+            context.fillStyle = gradient;
+            context.beginPath();
+            context.ellipse(0, 0, .5, .5, 0, 0, 9);
+            context.fill();
+        }, screenSpace, context);
+    }
+}
+
 /** Draw a circle filled with a radial gradient from the center to the rim
  *  - Best when batched with other untextured polys
  *  - If drawing mostly textured sprites, bake the gradient into a texture and use drawTile instead
@@ -3901,63 +3981,10 @@ function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useW
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-let drawCircleGradientOffset = 0;
 function drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=CLEAR_WHITE, useWebGL=glEnable, screenSpace=false, context)
 {
-    ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isNumber(size), 'size must be a number');
-    ASSERT(isColor(colorInner) && isColor(colorOuter), 'color is invalid');
-    ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
-
-    if (headlessMode) return;
-
-    if (useWebGL && glEnable)
-    {
-        ASSERT(!!glContext, 'WebGL is not enabled!');
-        if (screenSpace)
-        {
-            // convert to world space
-            pos = screenToWorld(pos);
-            size /= cameraScale;
-        }
-        // fan as tristrip; rotate the boundary vertex by one slice per call
-        // so back-to-back gradients at the same position have their hole
-        // (from gpu edge-rule on the boundary line-degen) at different rim
-        // verts and don't visibly stack
-        const sides = glCircleSides;
-        const radius = size/2;
-        const innerInt = colorInner.rgbaInt();
-        const outerInt = colorOuter.rgbaInt();
-        const offset = drawCircleGradientOffset++;
-        const startA = (offset%sides)/sides*PI*2;
-        const points = [vec2(pos.x + sin(startA)*radius, pos.y + cos(startA)*radius)];
-        const colors = [outerInt];
-        for (let i=sides; i--;)
-        {
-            const a = ((i+offset)%sides)/sides*PI*2;
-            points.push(pos);
-            colors.push(innerInt);
-            points.push(vec2(pos.x + sin(a)*radius, pos.y + cos(a)*radius));
-            colors.push(outerInt);
-        }
-        glDrawColoredPoints(points, colors);
-    }
-    else
-    {
-        // normal canvas 2D rendering method (slower)
-        ++drawCount;
-        ++primitiveCount;
-        drawCanvas2D(pos, vec2(size), 0, false, (context)=>
-        {
-            const gradient = context.createRadialGradient(0, 0, 0, 0, 0, .5);
-            gradient.addColorStop(0, colorInner.toString());
-            gradient.addColorStop(1, colorOuter.toString());
-            context.fillStyle = gradient;
-            context.beginPath();
-            context.ellipse(0, 0, .5, .5, 0, 0, 9);
-            context.fill();
-        }, screenSpace, context);
-    }
+    drawEllipseGradient(pos, vec2(size), colorInner, colorOuter, 0, useWebGL, screenSpace, context);
 }
 
 /**

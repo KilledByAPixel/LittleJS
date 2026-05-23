@@ -1864,7 +1864,20 @@ declare module "littlejsengine" {
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
     export function drawCircle(pos: Vector2, size?: number, color?: Color, lineWidth?: number, lineColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
-    export function drawCircleGradient(pos: any, size: number, colorInner: Color, colorOuter: Color, useWebGL: boolean, screenSpace: boolean, context: any): void;
+    export function drawEllipseGradient(pos: any, size: Vector2, colorInner: Color, colorOuter: Color, angle: number, useWebGL: boolean, screenSpace: boolean, context: any): void;
+    /** Draw a circle filled with a radial gradient from the center to the rim
+     *  - Best when batched with other untextured polys
+     *  - If drawing mostly textured sprites, bake the gradient into a texture and use drawTile instead
+     *  - Stacking gradients at the exact same position may show a faint vertical artifact
+     *  @param {Vector2} pos
+     *  @param {number}  [size=1] - Diameter
+     *  @param {Color}   [colorInner=WHITE]
+     *  @param {Color}   [colorOuter=CLEAR_WHITE]
+     *  @param {boolean} [useWebGL=glEnable]
+     *  @param {boolean} [screenSpace]
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
+     *  @memberof Draw */
+    export function drawCircleGradient(pos: Vector2, size?: number, colorInner?: Color, colorOuter?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /**
      * @callback Canvas2DDrawFunction - A function that draws to a 2D canvas context
      * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
