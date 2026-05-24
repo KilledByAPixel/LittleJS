@@ -516,7 +516,8 @@ declare module "littlejsengine" {
      *  @memberof Settings */
     export let touchGamepadEnable: boolean;
     /** True if touch gamepad should have start button in the center
-     *  - Prevents activating if overlappng with virtual stick or buttons if they are enabled
+     *  - Prevents activating within 2*touchGamepadSize of the virtual stick or face buttons
+     *    (one radius for the visible control + one radius of buffer beyond its edge)
      *  - When the game is paused, any touch will press the button
      *  - Set size to enable the center button
      *  @type {number}

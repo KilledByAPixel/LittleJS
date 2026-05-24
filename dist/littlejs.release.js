@@ -2273,7 +2273,8 @@ let touchInputEnable = true;
 let touchGamepadEnable = false;
 
 /** True if touch gamepad should have start button in the center
- *  - Prevents activating if overlappng with virtual stick or buttons if they are enabled
+ *  - Prevents activating within 2*touchGamepadSize of the virtual stick or face buttons
+ *    (one radius for the visible control + one radius of buffer beyond its edge)
  *  - When the game is paused, any touch will press the button
  *  - Set size to enable the center button
  *  @type {number}
@@ -5135,9 +5136,14 @@ function inputInit()
                     if (button < touchGamepadButtonCount)
                         touchGamepadButtons[button] = 1;
                 }
-                else if (startCenter.distance(touchPos) < touchGamepadCenterButtonSize)
+                else if (startCenter.distance(touchPos)  < touchGamepadCenterButtonSize &&
+                         stickCenter.distance(touchPos)  >= 2 * touchGamepadSize &&
+                         buttonCenter.distance(touchPos) >= 2 * touchGamepadSize)
                 {
                     // virtual start button in center
+                    // require a fat-finger buffer of touchGamepadSize beyond the
+                    // edge of the stick/buttons so drift off those controls can't
+                    // accidentally fire start
                     touchGamepadButtons[9] = 1;
                 }
             }
@@ -5193,7 +5199,12 @@ function inputUpdate()
                 debugCircle(stickCenter, 2*touchGamepadSize, 'cyan', 0, false, true);
                 debugCircle(buttonCenter, 2*touchGamepadSize, 'cyan', 0, false, true);
                 if (touchGamepadCenterButtonSize)
+                {
                     debugCircle(startCenter, 2*touchGamepadCenterButtonSize, 'cyan', 0, false, true);
+                    // exclusion bubbles around controls (where start is blocked)
+                    debugCircle(stickCenter,  4*touchGamepadSize, 'magenta', 0, false, true);
+                    debugCircle(buttonCenter, 4*touchGamepadSize, 'magenta', 0, false, true);
+                }
             }
 
             if (!touchGamepadTimer.isSet()) return;
