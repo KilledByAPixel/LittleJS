@@ -176,7 +176,9 @@ class Box2dObject extends EngineObject
     /** Add a box shape to the body
      *  @param {Vector2} [size]
      *  @param {Vector2} [offset]
-     *  @param {number}  [angle]
+     *  @param {number}  [angle] - LittleJS convention (clockwise positive).
+     *      Negated internally to match Box2D's CCW-positive convention so the
+     *      fixture aligns with the same angle passed to drawRect/drawTile.
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
@@ -189,7 +191,7 @@ class Box2dObject extends EngineObject
         ASSERT(isNumber(angle), 'angle must be a number');
 
         const shape = new box2d.instance.b2PolygonShape();
-        shape.SetAsBox(size.x/2, size.y/2, box2d.vec2dTo(offset), angle);
+        shape.SetAsBox(size.x/2, size.y/2, box2d.vec2dTo(offset), -angle);
         return this.addShape(shape, density, friction, restitution, isSensor);
     }
 
@@ -491,9 +493,10 @@ class Box2dObject extends EngineObject
     {
         const data = new box2d.instance.b2MassData();
         this.body.GetMassData(data);
-        localCenter && data.set_center(box2d.vec2dTo(localCenter));
-        mass && data.set_mass(mass);
-        momentOfInertia && data.set_I(momentOfInertia);
+        // use !== undefined so setMass(0) (static-equivalent) isn't silently ignored
+        if (localCenter !== undefined) data.set_center(box2d.vec2dTo(localCenter));
+        if (mass !== undefined) data.set_mass(mass);
+        if (momentOfInertia !== undefined) data.set_I(momentOfInertia);
         this.body.SetMassData(data);
     }
 
