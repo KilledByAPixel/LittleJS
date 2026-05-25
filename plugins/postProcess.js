@@ -107,9 +107,13 @@ class PostProcessPlugin
         function postProcessRender()
         {
             if (headlessMode || !glEnable) return;
-            
+
             // clear out the buffer
             glFlush();
+
+            // ensure we render to the default framebuffer (in case any earlier
+            // caller this frame left a render target bound)
+            glContext.bindFramebuffer(glContext.FRAMEBUFFER, null);
 
             // setup shader program to draw a quad
             glContext.useProgram(postProcess.shader);
