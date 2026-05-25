@@ -644,6 +644,7 @@ function glDrawPoints(points, rgba)
     if (glBatchCount+vertCount >= gl_MAX_POLY_VERTEXES || glBatchAdditive !== glAdditive)
         glFlush();
     ASSERT(vertCount < gl_MAX_POLY_VERTEXES, 'poly exceeds max batch size');
+    if (vertCount >= gl_MAX_POLY_VERTEXES) return; // release-build safety net
     glSetPolyMode();
   
     // setup triangle strip with degenerate verts at start and end
@@ -673,6 +674,7 @@ function glDrawColoredPoints(points, pointColors)
     if (glBatchCount+vertCount >= gl_MAX_POLY_VERTEXES || glBatchAdditive !== glAdditive)
         glFlush();
     ASSERT(vertCount < gl_MAX_POLY_VERTEXES, 'poly exceeds max batch size');
+    if (vertCount >= gl_MAX_POLY_VERTEXES) return; // release-build safety net
     glSetPolyMode();
   
     // setup triangle strip with degenerate verts at start and end
