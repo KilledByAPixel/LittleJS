@@ -71,7 +71,7 @@ class EngineObject
         this.color = color.copy();
         /** @property {Color} - Additive color to apply when rendered */
         this.additiveColor = undefined;
-        /** @property {boolean} - Should the rendered tile flip along the y axis. Affects rendering only — collision, physics, and localToWorld/worldToLocal ignore this flag. */
+        /** @property {boolean} - Should the rendered tile flip along the y axis. Affects rendering and the local→world transform of attached children (a mirrored parent flips its children's localPos.x and localAngle). Does not affect this object's own physics, collision, or localToWorld/worldToLocal. */
         this.mirror = false;
         /** @property {boolean} - Has object been destroyed? */
         this.destroyed = false;
@@ -313,10 +313,11 @@ class EngineObject
                     if (isBlockedX)
                     {
                         // try to step over a 1-tile bump (direction follows gravity sign
-                        // so inverted gravity steps down off a ceiling bump instead of up)
+                        // so inverted gravity steps down off a ceiling bump instead of up;
+                        // zero gravity defaults to the normal-gravity step-up direction)
                         const epsilon = 1e-3;
                         const maxMove = .1;
-                        const gravitySign = gravity.y < 0 ? 1 : -1;
+                        const gravitySign = gravity.y > 0 ? -1 : 1;
                         const y = gravitySign > 0 ?
                             floor(oldPos.y-this.size.y/2+1) + this.size.y/2 + epsilon :
                             ceil( oldPos.y+this.size.y/2-1) - this.size.y/2 - epsilon;
