@@ -447,9 +447,11 @@ function inputInit()
         mouseDeltaScreen = mouseDeltaScreen.add(movement);
     }
     function onMouseLeave() { mouseInWindow = false; } // mouse moved off window
-    function onMouseWheel(e) 
-    { 
-        mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY);
+    function onMouseWheel(e)
+    {
+        // accumulate so multiple wheel events in one frame are not lost
+        if (!e.ctrlKey)
+            mouseWheel += sign(e.deltaY);
         if (inputPreventDefault && e.cancelable && document.hasFocus())
             e.preventDefault(); // prevent page scrolling
     }
