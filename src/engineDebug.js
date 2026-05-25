@@ -154,7 +154,7 @@ function debugPoint(pos, color, time, angle, screenSpace=false)
  *  @param {number} [time]
  *  @param {boolean} [screenSpace]
  *  @memberof Debug */
-function debugLine(posA, posB, color, width=.1, time, screenSpace=false)
+function debugLine(posA, posB, color, width=.1, time=0, screenSpace=false)
 {
     ASSERT(isVector2(posA), 'posA must be a vec2');
     ASSERT(isVector2(posB), 'posB must be a vec2');
