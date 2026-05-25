@@ -198,7 +198,10 @@ class Sound
      *  @return {number} - How long the sound is in seconds (undefined if loading)
      */
     getDuration()
-    { return this.sampleChannels?.[0]?.length / this.sampleRate || 0; }
+    {
+        const length = this.sampleChannels?.[0]?.length;
+        return length === undefined ? undefined : length / this.sampleRate;
+    }
 
     /** Check if sound is loaded, for sounds fetched from a url
      *  @return {boolean} - True if sound is loaded and ready to play
@@ -352,10 +355,11 @@ class SoundInstance
         {
             if (fadeTime)
             {
-                // ramp off gain
+                // ramp off gain from current volume (not 1, or low-volume
+                // instances would jump back up before fading)
                 const startFade = audioContext.currentTime;
                 const endFade = startFade + fadeTime;
-                this.gainNode.gain.linearRampToValueAtTime(1, startFade);
+                this.gainNode.gain.setValueAtTime(this.volume, startFade);
                 this.gainNode.gain.linearRampToValueAtTime(0, endFade);
                 this.source.stop(endFade);
             }
