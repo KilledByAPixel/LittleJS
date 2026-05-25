@@ -456,11 +456,17 @@ class UISystemPlugin
     *  @param {DragAndDropCallback} [onDragOver] - continuously when dragging over */
     setupDragAndDrop(onDrop, onDragEnter, onDragLeave, onDragOver)
     {
-        function setCallback(callback, listenerType)
+        // remove any prior listeners so repeated setup calls don't stack
+        if (this._dragListeners)
+            for (const [type, listener] of this._dragListeners)
+                document.removeEventListener(type, listener);
+        this._dragListeners = [];
+        const setCallback = (callback, listenerType)=>
         {
-            function listener(e) { e.preventDefault(); callback && callback(e); }
+            const listener = (e)=> { e.preventDefault(); callback && callback(e); };
             document.addEventListener(listenerType, listener);
-        }
+            this._dragListeners.push([listenerType, listener]);
+        };
         setCallback(onDrop,      'drop');
         setCallback(onDragEnter, 'dragenter');
         setCallback(onDragLeave, 'dragleave');
@@ -784,6 +790,15 @@ class UIObject
         if (this.destroyed)
             return;
 
+        // clear ui-system references that point at this object so events
+        // don't keep firing against a destroyed target (especially the
+        // keydown listener attached for keyInputObject)
+        if (uiSystem.activeObject     === this) uiSystem.activeObject     = undefined;
+        if (uiSystem.hoverObject      === this) uiSystem.hoverObject      = undefined;
+        if (uiSystem.lastHoverObject  === this) uiSystem.lastHoverObject  = undefined;
+        if (uiSystem.navigationObject === this) uiSystem.navigationObject = undefined;
+        if (uiSystem.keyInputObject   === this) uiSystem.keyInputObject   = undefined;
+
         // disconnect from parent and destroy children
         this.destroyed = 1;
         this.parent?.removeChild(this);
@@ -792,6 +807,8 @@ class UIObject
             child.parent = undefined;
             child.destroy();
         }
+        // clear references so destroyed children can be GC'd
+        this.children.length = 0;
     }
 
     /** Check if the mouse is overlapping this ui object
@@ -1381,6 +1398,7 @@ class UISlider extends UIObject
     {
         // toggle value between 0 and 1
         this.value = this.value ? 0 : 1;
+        this.onChange();
         this.onRelease();
         super.navigatePressed();
     }
