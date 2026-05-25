@@ -83,7 +83,7 @@ class NewgroundsPlugin
         // get medals
         const medalsResult = this.call('Medal.getList');
         /** @property {Array} - Medals fetched from Newgrounds (empty until session is active) */
-        this.medals = medalsResult ? medalsResult.result.data['medals'] : [];
+        this.medals = medalsResult?.result?.data?.['medals'] || [];
         debugMedals && LOG(this.medals);
         for (const newgroundsMedal of this.medals)
         {
@@ -107,7 +107,7 @@ class NewgroundsPlugin
         // get scoreboards
         const scoreboardResult = this.call('ScoreBoard.getBoards');
         /** @property {Array} - Scoreboards fetched from Newgrounds */
-        this.scoreboards = scoreboardResult ? scoreboardResult.result.data.scoreboards : [];
+        this.scoreboards = scoreboardResult?.result?.data?.scoreboards || [];
         debugMedals && LOG(this.scoreboards);
 
         // keep the session alive with a ping every minute
