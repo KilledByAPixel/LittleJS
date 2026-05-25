@@ -17,9 +17,9 @@ function gameInit()
     const grid = new UILayout(vec2(), 3, 20, 0, true);
     for (let i = 1; i <= 6; ++i)
     {
-        const button = new UIButton(vec2(), vec2(120, 80), 'Level\n' + i);
+        const button = new UIButton(vec2(), vec2(220, 120), 'Level\n' + i);
         button.color = hsl((i-1)/6, .7, .6);
-        button.textHeight = 26;
+        button.textHeight = 42;
         button.navigationIndex = i;
         button.onClick = ()=> canvasClearColor = hsl((i-1)/6, .5, .2);
         grid.addChild(button);
