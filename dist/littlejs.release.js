@@ -2073,7 +2073,7 @@ let canvasColorTiles = true;
 
 /** Color to clear the canvas to before render, does not clear if alpha is 0
  *  @type {Color}
- *  @memberof Draw */
+ *  @memberof Settings */
 let canvasClearColor = CLEAR_BLACK;
 
 /** The max size of the canvas, centered if window is larger
@@ -3084,10 +3084,7 @@ class EngineObject
     removeChild(child)
     {
         ASSERT(child.parent === this && this.children.includes(child));
-        ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
-        const index = this.children.indexOf(child);
-        ASSERT(index >= 0, 'child not found in children array');
-        index >= 0 && this.children.splice(index, 1);
+        this.children.splice(this.children.indexOf(child), 1);
         child.parent = undefined;
     }
 
@@ -3258,7 +3255,7 @@ let primitiveCount;
  * tile(1, 16, 3)                // a tile at index 1 of size 16 on texture 3
  * tile(vec2(4,8), vec2(30,10))  // a tile at index (4,8) with a size of (30,10)
  * @memberof Draw */
-function tile(index=new Vector2, size=tileDefaultSize, texture=0, padding=tileDefaultPadding, bleed=tileDefaultBleed)
+function tile(index=0, size=tileDefaultSize, texture=0, padding=tileDefaultPadding, bleed=tileDefaultBleed)
 {
     ASSERT(isVector2(index) || typeof index === 'number', 'index must be a vec2 or number');
     ASSERT(isVector2(size) || typeof size === 'number', 'size must be a vec2 or number');
@@ -3753,9 +3750,9 @@ function drawLine(posA, posB, width=.1, color, pos=vec2(), angle=0, useWebGL, sc
  *  @param {Vector2} [size=vec2(1)]
  *  @param {number}  [sides]
  *  @param {Color}   [color=WHITE]
- *  @param {number}  [angle]
  *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=BLACK]
+ *  @param {number}  [angle]
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
@@ -4293,7 +4290,10 @@ function combineCanvases()
     const w = mainCanvasSize.x, h = mainCanvasSize.y;
     workCanvas.width = w;
     workCanvas.height = h;
-    workContext.fillRect(0,0,w,h); // remove background alpha
+    // remove background alpha — explicit fillStyle so a previous caller
+    // leaving workContext.fillStyle transparent can't silently no-op this
+    workContext.fillStyle = '#000';
+    workContext.fillRect(0,0,w,h);
     glCopyToContext(workContext);
     workContext.drawImage(mainCanvas, 0, 0);
     mainContext.drawImage(workCanvas, 0, 0);
@@ -5185,7 +5185,7 @@ function inputUpdate()
                 v > min ? percent(v, min, max) :
                 v < -min ? -percent(-v, min, max) : 0;
             return vec2(deadZone(v.x), deadZone(-v.y)).clampLength();
-        }
+        };
 
         // update touch gamepad if enabled
         if (touchGamepadEnable && isTouchDevice)
@@ -5618,7 +5618,10 @@ class Sound
      *  @return {number} - How long the sound is in seconds (undefined if loading)
      */
     getDuration()
-    { return this.sampleChannels?.[0]?.length / this.sampleRate || 0; }
+    {
+        const length = this.sampleChannels?.[0]?.length;
+        return length === undefined ? undefined : length / this.sampleRate;
+    }
 
     /** Check if sound is loaded, for sounds fetched from a url
      *  @return {boolean} - True if sound is loaded and ready to play
@@ -5772,10 +5775,11 @@ class SoundInstance
         {
             if (fadeTime)
             {
-                // ramp off gain
+                // ramp off gain from current volume (not 1, or low-volume
+                // instances would jump back up before fading)
                 const startFade = audioContext.currentTime;
                 const endFade = startFade + fadeTime;
-                this.gainNode.gain.linearRampToValueAtTime(1, startFade);
+                this.gainNode.gain.setValueAtTime(this.volume, startFade);
                 this.gainNode.gain.linearRampToValueAtTime(0, endFade);
                 this.source.stop(endFade);
             }
@@ -6467,7 +6471,7 @@ class TileLayer extends CanvasLayer
         ASSERT(data instanceof TileLayerData, 'data must be a TileLayerData');
 
         if (!layerPos.arrayCheck(this.size)) return;
-        this.data[(layerPos.y|0)*this.size.x+layerPos.x|0] = data;
+        this.data[(layerPos.y|0)*this.size.x + (layerPos.x|0)] = data;
 
         if (!redraw) return;
         const isRedraw = drawContext === this.context;
@@ -6486,7 +6490,7 @@ class TileLayer extends CanvasLayer
     getData(layerPos)
     { 
         ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
-        return layerPos.arrayCheck(this.size) && this.data[(layerPos.y|0)*this.size.x+layerPos.x|0];
+        return layerPos.arrayCheck(this.size) && this.data[(layerPos.y|0)*this.size.x + (layerPos.x|0)];
     }
 
     // Update the tile layer, refresh texture if needed
@@ -6718,7 +6722,7 @@ class TileCollisionLayer extends TileLayer
     setCollisionData(layerPos, data=1)
     {
         ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
-        const i = (layerPos.y|0)*this.size.x + layerPos.x|0;
+        const i = (layerPos.y|0)*this.size.x + (layerPos.x|0);
         layerPos.arrayCheck(this.size) && (this.collisionData[i] = data);
     }
 
@@ -6733,7 +6737,7 @@ class TileCollisionLayer extends TileLayer
     getCollisionData(layerPos)
     {
         ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
-        const i = (layerPos.y|0)*this.size.x + layerPos.x|0;
+        const i = (layerPos.y|0)*this.size.x + (layerPos.x|0);
         return layerPos.arrayCheck(this.size) ? this.collisionData[i] : 0;
     }
 
@@ -6878,7 +6882,7 @@ class ParticleEmitter extends EngineObject
      *  @param {number} [angleDamping]      - How much to dampen particle angular speed
      *  @param {number} [gravityScale]      - How much gravity effect particles
      *  @param {number} [particleConeAngle] - Cone for start particle angle
-     *  @param {number} [fadeRate]          - How quick to fade particles at start/end in percent of life
+     *  @param {number} [fadeRate]          - Fraction of life spent fading: half at fade-in (start), half at fade-out (end). e.g. .2 = 10% fade-in, 80% full opacity, 10% fade-out
      *  @param {number} [randomness]    - Apply extra randomness percent
      *  @param {boolean} [collideTiles] - Do particles collide against tiles
      *  @param {boolean} [additive]     - Should particles use additive blend
@@ -6962,7 +6966,7 @@ class ParticleEmitter extends EngineObject
         this.gravityScale      = gravityScale;
         /** @property {number} - Cone for start particle angle */
         this.particleConeAngle = particleConeAngle;
-        /** @property {number} - How quick to fade in particles at start/end in percent of life */
+        /** @property {number} - Fraction of life spent fading, split half at start and half at end (e.g. .2 = 10% fade-in + 10% fade-out) */
         this.fadeRate          = fadeRate;
         /** @property {number} - Apply extra randomness percent */
         this.randomness        = randomness;
@@ -7834,7 +7838,7 @@ function glFlush()
 {
     if (glEnable && glContext && glBatchCount)
     {
-        // set bend mode
+        // set blend mode
         const destBlend = glBatchAdditive ? glContext.ONE : glContext.ONE_MINUS_SRC_ALPHA;
         glContext.blendFuncSeparate(glContext.SRC_ALPHA, destBlend, glContext.ONE, destBlend);
         glContext.enable(glContext.BLEND);
@@ -7939,13 +7943,13 @@ function glDrawUntextured(x, y, sizeX, sizeY, angle, rgba)
 function glDrawPointsTransform(points, rgba, x, y, sx, sy, angle, tristrip=true)
 {
     const pointsOut = [];
+    const sa = sin(-angle);
+    const ca = cos(-angle);
     for (const p of points)
     {
         // transform the point
         const px = p.x*sx;
         const py = p.y*sy;
-        const sa = sin(-angle);
-        const ca = cos(-angle);
         pointsOut.push(vec2(x + ca*px - sa*py, y + sa*px + ca*py));
     }
     const drawPoints = tristrip ? glPolyStrip(pointsOut) : pointsOut;
@@ -7977,11 +7981,12 @@ function glDrawPoints(points, rgba)
 {
     if (!glEnable || points.length < 3)
         return; // needs at least 3 points to have area
-    
+
     // flush if there is not enough room or if different blend mode
     const vertCount = points.length + 2;
     if (glBatchCount+vertCount >= gl_MAX_POLY_VERTEXES || glBatchAdditive !== glAdditive)
         glFlush();
+    ASSERT(vertCount < gl_MAX_POLY_VERTEXES, 'poly exceeds max batch size');
     glSetPolyMode();
   
     // setup triangle strip with degenerate verts at start and end
@@ -8005,11 +8010,12 @@ function glDrawColoredPoints(points, pointColors)
 {
     if (!glEnable || points.length < 3)
         return; // needs at least 3 points to have area
-    
+
     // flush if there is not enough room or if different blend mode
     const vertCount = points.length + 2;
     if (glBatchCount+vertCount >= gl_MAX_POLY_VERTEXES || glBatchAdditive !== glAdditive)
         glFlush();
+    ASSERT(vertCount < gl_MAX_POLY_VERTEXES, 'poly exceeds max batch size');
     glSetPolyMode();
   
     // setup triangle strip with degenerate verts at start and end
@@ -8335,7 +8341,7 @@ function drawEngineLogo(t)
         x.closePath();
         gradient(0, Y, 0, Y+H,C);
     }
-    const color = (c,l)=> l?`hsl(${[.95,.56,.13][c%3]*360} 99%${[0,50,75][l]}%`:'#000';
+    const color = (c,l)=> l?`hsl(${[.95,.56,.13][c%3]*360} 99%${[0,50,75][l]}%)`:'#000';
 
     // center and fit to screen
     const alpha = oscillate(1,1,t);

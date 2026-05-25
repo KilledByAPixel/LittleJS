@@ -291,7 +291,7 @@ declare module "littlejsengine" {
      *  @param {boolean} [screenSpace]
      *  @memberof Debug */
     export function debugOverlap(posA: Vector2, sizeA: Vector2, posB: Vector2, sizeB: Vector2, color?: Color | string, time?: number, screenSpace?: boolean): void;
-    /** Draw a debug axis aligned bounding box in world space
+    /** Draw debug text in world space
      *  @param {string|number} text
      *  @param {Vector2} pos
      *  @param {number} [size]
@@ -358,7 +358,7 @@ declare module "littlejsengine" {
     export let canvasColorTiles: boolean;
     /** Color to clear the canvas to before render, does not clear if alpha is 0
      *  @type {Color}
-     *  @memberof Draw */
+     *  @memberof Settings */
     export let canvasClearColor: Color;
     /** The max size of the canvas, centered if window is larger
      *  @type {Vector2}
@@ -740,6 +740,10 @@ declare module "littlejsengine" {
      *  @param {number} alpha
      *  @memberof Settings */
     export function setTouchGamepadAlpha(alpha: number): void;
+    /** Set how long to display the touch gamepad on screen in seconds, set to 0 to always display
+     *  @param {number} time
+     *  @memberof Settings */
+    export function setTouchGamepadDisplayTime(time: number): void;
     /** Set to allow vibration hardware if it exists
      *  @param {boolean} enable
      *  @memberof Settings */
@@ -1834,9 +1838,9 @@ declare module "littlejsengine" {
      *  @param {Vector2} [size=vec2(1)]
      *  @param {number}  [sides]
      *  @param {Color}   [color=WHITE]
-     *  @param {number}  [angle]
      *  @param {number}  [lineWidth]
      *  @param {Color}   [lineColor=BLACK]
+     *  @param {number}  [angle]
      *  @param {boolean} [useWebGL=glEnable]
      *  @param {boolean} [screenSpace]
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
@@ -3122,7 +3126,7 @@ declare module "littlejsengine" {
          *  @param {number} [angleDamping]      - How much to dampen particle angular speed
          *  @param {number} [gravityScale]      - How much gravity effect particles
          *  @param {number} [particleConeAngle] - Cone for start particle angle
-         *  @param {number} [fadeRate]          - How quick to fade particles at start/end in percent of life
+         *  @param {number} [fadeRate]          - Fraction of life spent fading: half at fade-in (start), half at fade-out (end). e.g. .2 = 10% fade-in, 80% full opacity, 10% fade-out
          *  @param {number} [randomness]    - Apply extra randomness percent
          *  @param {boolean} [collideTiles] - Do particles collide against tiles
          *  @param {boolean} [additive]     - Should particles use additive blend
@@ -3163,7 +3167,7 @@ declare module "littlejsengine" {
         angleSpeed: number;
         /** @property {number} - Cone for start particle angle */
         particleConeAngle: number;
-        /** @property {number} - How quick to fade in particles at start/end in percent of life */
+        /** @property {number} - Fraction of life spent fading, split half at start and half at end (e.g. .2 = 10% fade-in + 10% fade-out) */
         fadeRate: number;
         /** @property {number} - Apply extra randomness percent */
         randomness: number;
