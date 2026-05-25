@@ -62,19 +62,19 @@ const max = Math.max;
  *  @param {number} x
  *  @return {number}
  *  @memberof Math */
-const sign = Math.sign;
+const sign = (x) => Math.sign(x);
 
 /** Returns hypotenuse of values passed in
  *  @param {...number} values
  *  @return {number}
  *  @memberof Math */
-const hypot = Math.hypot;
+const hypot = (...values) => Math.hypot(...values);
 
 /** Returns log2 of value passed in
  *  @param {number} x
  *  @return {number}
  *  @memberof Math */
-const log2 = Math.log2;
+const log2 = (x) => Math.log2(x);
 
 /** Returns sin of value passed in
  *  @param {number} x
