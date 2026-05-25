@@ -33,7 +33,7 @@ const exampleList =
     new ExampleInfo('Sprite Atlas', 'spriteAtlas.js', 'Sprite atlas and tile rendering', false, 'sheet, frames, tiles'),
     new ExampleInfo('Animation', 'animation.js', 'Sprite animation system', false, 'frames, loop, tiles, sprites'),
     new ExampleInfo('Blending', 'blending.js', 'Additive blending and transparency', false, 'alpha, color, tiles, smooth'),
-    new ExampleInfo('Font Image', 'fontImage.js', 'Bitmap font system with built-in system font', false, 'text, characters'),
+    new ExampleInfo('Image Font', 'imageFont.js', 'Bitmap font system with built-in system font', false, 'text, characters'),
     new ExampleInfo('Particles', 'particles.js', 'Particle system', false, 'effects, emitter, physics, fire, smoke, comet'),
     new ExampleInfo('Tile Layer', 'tileLayer.js', 'Tile layer rendering system', false, 'level, map, grid, particles'),
     new ExampleInfo('Clock', 'clock.js', 'Animated analog clock', false, 'time, rotation, lines, rectangle'),

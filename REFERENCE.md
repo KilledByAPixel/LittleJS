@@ -170,10 +170,10 @@ TextureInfo.glTexture   // WebGL texture
 TextureInfo.wrap        // Whether texture is set to REPEAT (true) or CLAMP_TO_EDGE
 TextureInfo.setWrap(wrap=true) // Enable or disable wrapping for this texture
 
-// Font Image Object draws text using characters in an image
-FontImage(tileInfo)                                 // Create a font from a tile sheet
-FontImage.drawText(text, pos, scale, center)        // Draw text in world space
-FontImage.drawTextScreen(text, pos, scale, center)  // Draw text in screen space
+// Image Font Object draws text using characters in an image
+ImageFont(tileInfo)                                 // Create a font from a tile sheet
+ImageFont.drawText(text, pos, scale, center)        // Draw text in world space
+ImageFont.drawTextScreen(text, pos, scale, center)  // Draw text in screen space
 
 // Camera settings
 cameraPos = (0,0)        // Position of camera in world space
