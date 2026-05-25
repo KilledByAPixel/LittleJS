@@ -305,7 +305,7 @@ function isStringLike(s) { return s != null && typeof s?.toString() === 'string'
 /**
  * Check if object is an array
  * @param {any} a
- * @return {boolean}
+ * @return {a is Array<any>}
  * @memberof Math */
 function isArray(a) { return Array.isArray(a); }
 
