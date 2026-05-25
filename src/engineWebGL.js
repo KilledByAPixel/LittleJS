@@ -88,6 +88,10 @@ function glInit(rootElement)
         for (const info of glTextureInfos)
             info.glTexture = undefined;
         glActiveTexture = undefined;
+        // drop any partially-filled batch so the next glFlush doesn't
+        // upload stale glBatchCount against fresh empty buffers on restore
+        glBatchCount = 0;
+        glPolyMode = false;
         pluginList.forEach(plugin=>plugin.glContextLost?.());
     });
     glCanvas.addEventListener('webglcontextrestored', ()=>
