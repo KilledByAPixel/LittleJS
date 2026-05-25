@@ -3384,7 +3384,7 @@ class EngineObject
         this.color = color.copy();
         /** @property {Color} - Additive color to apply when rendered */
         this.additiveColor = undefined;
-        /** @property {boolean} - Should the rendered tile flip along the y axis. Affects rendering only — collision, physics, and localToWorld/worldToLocal ignore this flag. */
+        /** @property {boolean} - Should the rendered tile flip along the y axis. Affects rendering and the local→world transform of attached children (a mirrored parent flips its children's localPos.x and localAngle). Does not affect this object's own physics, collision, or localToWorld/worldToLocal. */
         this.mirror = false;
         /** @property {boolean} - Has object been destroyed? */
         this.destroyed = false;
@@ -3626,10 +3626,11 @@ class EngineObject
                     if (isBlockedX)
                     {
                         // try to step over a 1-tile bump (direction follows gravity sign
-                        // so inverted gravity steps down off a ceiling bump instead of up)
+                        // so inverted gravity steps down off a ceiling bump instead of up;
+                        // zero gravity defaults to the normal-gravity step-up direction)
                         const epsilon = 1e-3;
                         const maxMove = .1;
-                        const gravitySign = gravity.y < 0 ? 1 : -1;
+                        const gravitySign = gravity.y > 0 ? -1 : 1;
                         const y = gravitySign > 0 ?
                             floor(oldPos.y-this.size.y/2+1) + this.size.y/2 + epsilon :
                             ceil( oldPos.y+this.size.y/2-1) - this.size.y/2 - epsilon;
@@ -6486,9 +6487,12 @@ class SoundInstance
             if (fadeTime)
             {
                 // ramp off gain from current volume (not 1, or low-volume
-                // instances would jump back up before fading)
+                // instances would jump back up before fading);
+                // cancel any prior scheduling so stacked stop calls don't
+                // re-anchor partway through a previous fade
                 const startFade = audioContext.currentTime;
                 const endFade = startFade + fadeTime;
+                this.gainNode.gain.cancelScheduledValues(startFade);
                 this.gainNode.gain.setValueAtTime(this.volume, startFade);
                 this.gainNode.gain.linearRampToValueAtTime(0, endFade);
                 this.source.stop(endFade);
@@ -6537,9 +6541,10 @@ class SoundInstance
      */
     getCurrentTime()
     {
-        const deltaTime = mod(audioContext.currentTime - this.startTime, 
-            this.getDuration());
-        return this.isPlaying() ? deltaTime : this.pausedTime;
+        if (!this.isPlaying()) return this.pausedTime;
+        const duration = this.getDuration();
+        // guard mod against 0 duration (rate=0 or sound not loaded)
+        return duration ? mod(audioContext.currentTime - this.startTime, duration) : 0;
     }
 
     /** Get the total duration of this sound
@@ -6651,9 +6656,14 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
     const pannerNode = new StereoPannerNode(audioContext, {'pan':clamp(pan, -1, 1)});
     source.connect(pannerNode).connect(gainNode);
 
-    // callback when the sound ends
-    if (onended)
-        source.addEventListener('ended', ()=> onended(source));
+    // disconnect nodes when the sound ends so the audio graph doesn't grow
+    // unbounded across many play() calls (source.stop() also fires 'ended')
+    source.addEventListener('ended', ()=>
+    {
+        gainNode.disconnect();
+        pannerNode.disconnect();
+        if (onended) onended(source);
+    });
 
     // play and return sound
     const startOffset = offset * rate;

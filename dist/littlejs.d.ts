@@ -2660,7 +2660,7 @@ declare module "littlejsengine" {
         color: Color;
         /** @property {Color} - Additive color to apply when rendered */
         additiveColor: any;
-        /** @property {boolean} - Should the rendered tile flip along the y axis. Affects rendering only — collision, physics, and localToWorld/worldToLocal ignore this flag. */
+        /** @property {boolean} - Should the rendered tile flip along the y axis. Affects rendering and the local→world transform of attached children (a mirrored parent flips its children's localPos.x and localAngle). Does not affect this object's own physics, collision, or localToWorld/worldToLocal. */
         mirror: boolean;
         /** @property {boolean} - Has object been destroyed? */
         destroyed: boolean;
