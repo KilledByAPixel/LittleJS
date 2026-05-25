@@ -3399,9 +3399,7 @@ declare module "littlejsengine" {
         host: string;
         /** @property {string|null} - Newgrounds session id from the URL (null when not logged in) */
         session_id: string;
-        /** @property {Array} - Medals fetched from Newgrounds (empty until session is active) */
         medals: any;
-        /** @property {Array} - Scoreboards fetched from Newgrounds */
         scoreboards: any;
         /** Send message to unlock a medal by id
          * @param {number} id - The medal id */

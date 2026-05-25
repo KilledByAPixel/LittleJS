@@ -168,6 +168,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
 {
     showEngineVersion && console.log(`${engineName} Engine v${engineVersion}`);
     ASSERT(!mainContext, 'engine already initialized');
+    // runtime guard so release builds (where the assert is stripped) don't
+    // double-register listeners / double-add canvases on a second call
+    if (mainContext) return;
     ASSERT(isArray(imageSources), 'pass in images as array');
 
     // allow passing in empty functions
@@ -195,6 +198,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     {
         // update time keeping
         let frameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
+        // skip delta on the very first frame so timeReal doesn't jump
+        // by ~page-load-time when RAF starts handing real timestamps
+        if (!frameTimeLastMS) frameTimeDeltaMS = 0;
         frameTimeLastMS = frameTimeMS;
         if (debug || debugWatermark)
             averageFPS = lerp(averageFPS, 1e3/(frameTimeDeltaMS||1), .05);
@@ -8822,8 +8828,20 @@ class NewgroundsPlugin
 
         // get medals
         const medalsResult = this.call('Medal.getList');
+
+        // bail early if the first call failed (offline / bad session /
+        // server error) so we don't block the main thread on more sync
+        // XHRs that are guaranteed to also fail
+        if (!medalsResult || !medalsResult.result || medalsResult.result.error)
+        {
+            debugMedals && LOG('Newgrounds session unavailable; skipping plugin init');
+            this.medals = [];
+            this.scoreboards = [];
+            return;
+        }
+
         /** @property {Array} - Medals fetched from Newgrounds (empty until session is active) */
-        this.medals = medalsResult?.result?.data?.['medals'] || [];
+        this.medals = medalsResult.result.data?.['medals'] || [];
         debugMedals && LOG(this.medals);
         for (const newgroundsMedal of this.medals)
         {
@@ -8843,7 +8861,7 @@ class NewgroundsPlugin
                     medal.description = medal.description + ` (${ medal.value })`;
             }
         }
-    
+
         // get scoreboards
         const scoreboardResult = this.call('ScoreBoard.getBoards');
         /** @property {Array} - Scoreboards fetched from Newgrounds */
