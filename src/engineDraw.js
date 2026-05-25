@@ -275,7 +275,7 @@ class TextureInfo
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
-    angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace, context)
+    angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace=false, context)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isVector2(size), 'size must be a vec2');
@@ -532,7 +532,7 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace, context)
+function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=false, context)
 {
     ASSERT(isArray(points), 'points must be an array');
     ASSERT(isNumber(width), 'width must be a number');
@@ -581,7 +581,7 @@ function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), ang
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawLine(posA, posB, width=.1, color=WHITE, pos=vec2(), angle=0, useWebGL, screenSpace, context)
+function drawLine(posA, posB, width=.1, color=WHITE, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=false, context)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(width, halfDelta.length()*2);
@@ -692,7 +692,7 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
     // clamp line width to prevent artifacts
-    lineWidth = clamp(lineWidth, 0, Math.min(size.x, size.y));
+    lineWidth = clamp(lineWidth, 0, min(size.x, size.y));
 
     if (useWebGL && glEnable)
     {
@@ -886,7 +886,7 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
  *  @param {number}  [angle]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, fontStyle, maxWidth, angle=0, context=drawContext)
+function drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, angle=0, context=drawContext)
 {
     // convert to screen space
     pos = worldToScreen(pos);
