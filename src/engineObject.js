@@ -157,6 +157,9 @@ class EngineObject
         // child objects do not have physics
         ASSERT(!this.parent);
 
+        // bail if a collision callback destroyed us mid-frame
+        if (this.destroyed) return;
+
         if (this.clampSpeed)
         {
             // limit max speed to prevent missing collisions
@@ -453,6 +456,8 @@ class EngineObject
      *  @return {EngineObject} The child object added */
     addChild(child, localPos=vec2(), localAngle=0)
     {
+        ASSERT(!this.destroyed, 'cannot add child to destroyed object');
+        if (this.destroyed) return child;
         ASSERT(!child.parent && !this.children.includes(child));
         ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
         ASSERT(child !== this, 'cannot add self as child');
