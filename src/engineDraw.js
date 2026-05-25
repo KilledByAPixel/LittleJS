@@ -186,7 +186,7 @@ class TileInfo
         ASSERT(typeof frame === 'number');
         const w = this.size.x + this.padding*2;
         const x = frame*w;
-        ASSERT(x < this.textureInfo.size.x, 'frame extends beyond texture width!');
+        ASSERT(x + this.size.x <= this.textureInfo.size.x, 'frame extends beyond texture width!');
         return this.offset(new Vector2(x));
     }
 
@@ -532,7 +532,7 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawLineList(points, width=.1, color, wrap=false, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace, context)
+function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace, context)
 {
     ASSERT(isArray(points), 'points must be an array');
     ASSERT(isNumber(width), 'width must be a number');
@@ -581,7 +581,7 @@ function drawLineList(points, width=.1, color, wrap=false, pos=vec2(), angle=0, 
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawLine(posA, posB, width=.1, color, pos=vec2(), angle=0, useWebGL, screenSpace, context)
+function drawLine(posA, posB, width=.1, color=WHITE, pos=vec2(), angle=0, useWebGL, screenSpace, context)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(width, halfDelta.length()*2);
