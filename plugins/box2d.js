@@ -83,6 +83,11 @@ class Box2dObject extends EngineObject
         // destroy physics body, fixtures, and joints
         ASSERT(this.body, 'Box2dObject has no body to destroy');
         box2d.world.DestroyBody(this.body);
+
+        // remove from tracked list so paused / headless sessions don't leak
+        const i = box2d.objects.indexOf(this);
+        if (i >= 0)
+            box2d.objects.splice(i, 1);
         super.destroy();
     }
 
@@ -1660,6 +1665,8 @@ class Box2dPlugin
             const fixtureB = contact.GetFixtureB();
             const objectA  = fixtureA.GetBody().object;
             const objectB  = fixtureB.GetBody().object;
+            // raw user-created b2Bodies may have no .object — skip those
+            if (!objectA || !objectB) return;
             objectA.beginContact(objectB);
             objectB.beginContact(objectA);
         }
@@ -1670,6 +1677,7 @@ class Box2dPlugin
             const fixtureB = contact.GetFixtureB();
             const objectA  = fixtureA.GetBody().object;
             const objectB  = fixtureB.GetBody().object;
+            if (!objectA || !objectB) return;
             objectA.endContact(objectB);
             objectB.endContact(objectA);
         };
@@ -2048,7 +2056,7 @@ async function box2dInit()
         debugDraw.DrawTransform = function(transform)
         {
             transform = box2d.instance.wrapPointer(transform, box2d.instance.b2Transform);
-            const pos = vec2(transform.get_p());
+            const pos = box2d.vec2From(transform.get_p());
             const angle = -transform.get_q().GetAngle();
             const p1 = vec2(1,0), c1 = rgb(.75,0,0,.8);
             const p2 = vec2(0,1), c2 = rgb(0,.75,0,.8);
