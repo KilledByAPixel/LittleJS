@@ -29,7 +29,7 @@ engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ima
 vec2(x=0, y=x)                                // Create a 2D vector with Vector or floats
 rgb(r=1, g=1, b=1, a=1)                       // Create a color object with RGBA values
 hsl(h=0, s=0, l=1, a=1)                       // Create a color object with HSLA values
-tile(pos, size=(16,16), texture=0, padding=0) // Create a tile info object
+tile(index=0, size=(16,16), texture=0, padding=0, bleed=0) // Create a tile info object
 
 // Helper functions 
 abs(value)                                    // Get absolute value
@@ -153,7 +153,7 @@ isFullscreen()
 toggleFullscreen()
 
 // Tile Info Object
-TileInfo(pos, size, textureIndex=0, padding=0) // Create a tile info object
+TileInfo(pos, size, textureInfo, padding=0, bleed=0) // Create a tile info object
 TileInfo.pos            // Top left corner of tile in pixels
 TileInfo.size           // Size of tile in pixels
 TileInfo.textureIndex   // Texture index to use
@@ -183,18 +183,18 @@ worldToScreen(worldPos)  // Convert from world to screen space coordinates
 getCameraSize()          // Get the camera's visible area in world space
 
 // Display settings
-canvasMaxSize = (1920, 1200)  // The max size of the canvas
+canvasMaxSize = (1920, 1080)  // The max size of the canvas
 canvasFixedSize = (0, 0)      // Fixed size of the canvas
 canvasClearColor = BLACK      // Color used to clear the canvas at start of frame
 fontDefault = 'arial'         // Default font used for text rendering
-canvasPixelated = true        // Use nearest neighbor canvas scaling for more pixelated look
+canvasPixelated = false       // Use nearest neighbor canvas scaling for more pixelated look
 tilesPixelated = true         // Disable filtering for crisper pixel art
 showSplashScreen = false      // Show the LittleJS splash screen on startup
 glEnable = true               // Enable fast WebGL rendering
 
 // Tile sheet settings
 tileDefaultSize = (16,16) // Default size of tiles in pixels
-tileDefaultBleed = .3     // How much smaller to draw tiles to prevent bleeding
+tileDefaultBleed = 0      // How much smaller to draw tiles to prevent bleeding
 ```
 
 ## LittleJS Audio System
@@ -212,8 +212,8 @@ Sound(filename, randomness, range, taper)              // Load a wave, mp3, or o
 Sound.play(pos, volume=1, pitch=1, randomness=1, loop=false, paused=false) // Play a sound, returns SoundInstance
 Sound.playMusic(volume=1, loop=true)                   // Play as music with looping
 Sound.playNote(semitoneOffset, pos, volume=1)          // Play as note with a semitone offset
-Sound.getDuration()                                    // Get length of sound in seconds
-Sound.isLoaded()                                       // Check if sound is currently loading
+Sound.getDuration()                                    // Get length of sound in seconds (0 if loading)
+Sound.isLoaded()                                       // Check if sound is fully loaded
 Sound.loadedPercent                                    // Get loading progress (0 to 1)
 
 // SoundInstance
@@ -292,7 +292,7 @@ inputWASDEmulateDirection = true      // Should WASD keys be routed to the direc
 vibrateEnable = true                  // Allow vibration hardware if it exists?
 touchGamepadEnable = false            // Should touch gamepad appear on mobile devices?
 touchGamepadAnalog = true             // Should touch gamepad be analog or 8 way dpad?
-touchGamepadSize = 99                 // Size of virtual gamepad for touch devices
+touchGamepadSize = 100                // Size of virtual gamepad for touch devices
 touchGamepadAlpha = .3                // Transparency of touch gamepad overlay
 ```
 
@@ -379,7 +379,7 @@ CanvasLayer.getImageData()  // Get image data from canvas
 CanvasLayer.updateWebGL()   // Creates or updates WebGL texture
 
 // LittleJS Layer System
-TileLayer(pos, size, tileInfo, scale)          // Create a tile layer object
+TileLayer(pos, size, tileInfo, renderOrder=0, useWebGL=true) // Create a tile layer object
 TileLayer.setData(layerPos, data, redraw)      // Set data at position
 TileLayer.clearData(layerPos, redraw)          // Clear data at position
 TileLayer.getData(layerPos)                    // Get data at position
