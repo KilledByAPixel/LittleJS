@@ -671,19 +671,19 @@ const max = Math.max;
  *  @param {number} x
  *  @return {number}
  *  @memberof Math */
-const sign = Math.sign;
+const sign = (x) => Math.sign(x);
 
 /** Returns hypotenuse of values passed in
  *  @param {...number} values
  *  @return {number}
  *  @memberof Math */
-const hypot = Math.hypot;
+const hypot = (...values) => Math.hypot(...values);
 
 /** Returns log2 of value passed in
  *  @param {number} x
  *  @return {number}
  *  @memberof Math */
-const log2 = Math.log2;
+const log2 = (x) => Math.log2(x);
 
 /** Returns sin of value passed in
  *  @param {number} x
@@ -2850,6 +2850,8 @@ class EngineObject
 
                 // notify objects of collision and check if should be resolved
                 const collide1 = this.collideWithObject(o);
+                // callback may have destroyed us; stop resolving against more objects
+                if (this.destroyed) return;
                 const collide2 = o.collideWithObject(this);
                 if (!collide1 || !collide2) continue;
 

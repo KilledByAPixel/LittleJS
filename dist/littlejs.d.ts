@@ -826,17 +826,17 @@ declare module "littlejsengine" {
      *  @param {number} x
      *  @return {number}
      *  @memberof Math */
-    export const sign: any;
+    export function sign(x: number): number;
     /** Returns hypotenuse of values passed in
      *  @param {...number} values
      *  @return {number}
      *  @memberof Math */
-    export const hypot: any;
+    export function hypot(...values: number[]): number;
     /** Returns log2 of value passed in
      *  @param {number} x
      *  @return {number}
      *  @memberof Math */
-    export const log2: any;
+    export function log2(x: number): number;
     /** Returns sin of value passed in
      *  @param {number} x
      *  @return {number}
