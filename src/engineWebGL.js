@@ -744,7 +744,8 @@ function glMakeOutline(points, width, wrap=true)
     const strip = [];
     const n = points.length;
     const e = 1e-6;
-    const miterLimit = width*100;
+    // miter ratio cap (dimensionless, matches SVG/Canvas2D convention)
+    const miterLimit = 10;
     for (let i = 0; i < n; i++)
     {
         // for each vertex, calculate normal based on adjacent edges
