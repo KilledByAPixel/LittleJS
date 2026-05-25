@@ -83,12 +83,8 @@ function debugRect(pos, size=vec2(), color=WHITE, time=0, angle=0, fill=false, s
     ASSERT(isNumber(time), 'time must be a number');
     ASSERT(isNumber(angle), 'angle must be a number');
 
-    if (typeof size === 'number')
-        size = vec2(size); // allow passing in floats
     if (isColor(color))
         color = color.toString();
-    pos = pos.copy();
-    size = size.copy();
     const timer = new Timer(time);
     debugPrimitives.push({pos:pos.copy(), size:size.copy(), color, timer, angle, fill, screenSpace});
 }
@@ -527,7 +523,7 @@ function debugRender()
                     continue;
                 if (parseInt(i) < 3)
                     mousePressed += i + ' ' ;
-                else if (keyIsDown(i, 0))
+                else
                     keysPressed += i + ' ' ;
             }
             mousePressed && debugContext.fillText('Mouse: ' + mousePressed, x, y += h);

@@ -65,7 +65,7 @@ function drawEngineLogo(t)
         x.closePath();
         gradient(0, Y, 0, Y+H,C);
     }
-    const color = (c,l)=> l?`hsl(${[.95,.56,.13][c%3]*360} 99%${[0,50,75][l]}%`:'#000';
+    const color = (c,l)=> l?`hsl(${[.95,.56,.13][c%3]*360} 99%${[0,50,75][l]}%)`:'#000';
 
     // center and fit to screen
     const alpha = oscillate(1,1,t);

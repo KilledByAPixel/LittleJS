@@ -51,7 +51,7 @@ let canvasColorTiles = true;
 
 /** Color to clear the canvas to before render, does not clear if alpha is 0
  *  @type {Color}
- *  @memberof Draw */
+ *  @memberof Settings */
 let canvasClearColor = CLEAR_BLACK;
 
 /** The max size of the canvas, centered if window is larger
