@@ -495,7 +495,7 @@ function glFlush()
 {
     if (glEnable && glContext && glBatchCount)
     {
-        // set bend mode
+        // set blend mode
         const destBlend = glBatchAdditive ? glContext.ONE : glContext.ONE_MINUS_SRC_ALPHA;
         glContext.blendFuncSeparate(glContext.SRC_ALPHA, destBlend, glContext.ONE, destBlend);
         glContext.enable(glContext.BLEND);
@@ -600,13 +600,13 @@ function glDrawUntextured(x, y, sizeX, sizeY, angle, rgba)
 function glDrawPointsTransform(points, rgba, x, y, sx, sy, angle, tristrip=true)
 {
     const pointsOut = [];
+    const sa = sin(-angle);
+    const ca = cos(-angle);
     for (const p of points)
     {
         // transform the point
         const px = p.x*sx;
         const py = p.y*sy;
-        const sa = sin(-angle);
-        const ca = cos(-angle);
         pointsOut.push(vec2(x + ca*px - sa*py, y + sa*px + ca*py));
     }
     const drawPoints = tristrip ? glPolyStrip(pointsOut) : pointsOut;
@@ -638,11 +638,12 @@ function glDrawPoints(points, rgba)
 {
     if (!glEnable || points.length < 3)
         return; // needs at least 3 points to have area
-    
+
     // flush if there is not enough room or if different blend mode
     const vertCount = points.length + 2;
     if (glBatchCount+vertCount >= gl_MAX_POLY_VERTEXES || glBatchAdditive !== glAdditive)
         glFlush();
+    ASSERT(vertCount < gl_MAX_POLY_VERTEXES, 'poly exceeds max batch size');
     glSetPolyMode();
   
     // setup triangle strip with degenerate verts at start and end
@@ -666,11 +667,12 @@ function glDrawColoredPoints(points, pointColors)
 {
     if (!glEnable || points.length < 3)
         return; // needs at least 3 points to have area
-    
+
     // flush if there is not enough room or if different blend mode
     const vertCount = points.length + 2;
     if (glBatchCount+vertCount >= gl_MAX_POLY_VERTEXES || glBatchAdditive !== glAdditive)
         glFlush();
+    ASSERT(vertCount < gl_MAX_POLY_VERTEXES, 'poly exceeds max batch size');
     glSetPolyMode();
   
     // setup triangle strip with degenerate verts at start and end
