@@ -258,7 +258,7 @@ const Ease =
      *  @param {number} x
      *  @returns {number}
      *  @memberof TweenSystem */
-    EXPO: (x) => 2 ** (10 * x - 10),
+    EXPO: (x) => x === 0 ? 0 : 2 ** (10 * x - 10),
 
     /** Back ease-in: overshoots backward at the start before snapping forward.
      *  @param {number} x
@@ -271,6 +271,8 @@ const Ease =
      *  @returns {number}
      *  @memberof TweenSystem */
     ELASTIC: (x) =>
+        x === 0 ? 0 :
+        x === 1 ? 1 :
         -(2 ** (10 * x - 10)) * sin(((37 - 40 * x) * PI) / 6),
 
     /** Spring-like ease-out: oscillates outward after passing the target.
