@@ -68,7 +68,7 @@ class ParticleEmitter extends EngineObject
      *  @param {number} [angleDamping]      - How much to dampen particle angular speed
      *  @param {number} [gravityScale]      - How much gravity effect particles
      *  @param {number} [particleConeAngle] - Cone for start particle angle
-     *  @param {number} [fadeRate]          - How quick to fade particles at start/end in percent of life
+     *  @param {number} [fadeRate]          - Fraction of life spent fading: half at fade-in (start), half at fade-out (end). e.g. .2 = 10% fade-in, 80% full opacity, 10% fade-out
      *  @param {number} [randomness]    - Apply extra randomness percent
      *  @param {boolean} [collideTiles] - Do particles collide against tiles
      *  @param {boolean} [additive]     - Should particles use additive blend
@@ -152,7 +152,7 @@ class ParticleEmitter extends EngineObject
         this.gravityScale      = gravityScale;
         /** @property {number} - Cone for start particle angle */
         this.particleConeAngle = particleConeAngle;
-        /** @property {number} - How quick to fade in particles at start/end in percent of life */
+        /** @property {number} - Fraction of life spent fading, split half at start and half at end (e.g. .2 = 10% fade-in + 10% fade-out) */
         this.fadeRate          = fadeRate;
         /** @property {number} - Apply extra randomness percent */
         this.randomness        = randomness;
