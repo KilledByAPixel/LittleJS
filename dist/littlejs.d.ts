@@ -1505,9 +1505,9 @@ declare module "littlejsengine" {
     /**
      * Check if object is an array
      * @param {any} a
-     * @return {boolean}
+     * @return {a is Array<any>}
      * @memberof Math */
-    export function isArray(a: any): boolean;
+    export function isArray(a: any): a is any[];
     /** Color - White #ffffff
      *  @type {Color}
      *  @memberof Math */
@@ -3517,6 +3517,14 @@ declare module "littlejsengine" {
          */
         playMusic(volume?: number, loop?: boolean): SoundInstance;
     }
+    /** Generate samples for a ZzFM song with given parameters
+     *  @param {Array} instruments - Array of ZzFX sound parameters
+     *  @param {Array} patterns - Array of pattern data
+     *  @param {Array} sequence - Array of pattern indexes
+     *  @param {number} [BPM] - Playback speed of the song in BPM
+     *  @return {Array} - Left and right channel sample data
+     *  @memberof ZzFXM */
+    export function zzfxM(instruments: any[], patterns: any[], sequence: any[], BPM?: number): any[];
     /**
      * LittleJS User Interface Plugin
      * - call new UISystemPlugin() to setup the UI system
@@ -3678,6 +3686,7 @@ declare module "littlejsengine" {
         *  @param {DragAndDropCallback} [onDragLeave] - when a file is dragged off the window
         *  @param {DragAndDropCallback} [onDragOver] - continuously when dragging over */
         setupDragAndDrop(onDrop?: (event: DragEvent) => any, onDragEnter?: (event: DragEvent) => any, onDragLeave?: (event: DragEvent) => any, onDragOver?: (event: DragEvent) => any): void;
+        _dragListeners: any[];
         /** Convert a screen space position to native UI position
          *  @param {Vector2} pos
          *  @return {Vector2} */
@@ -4244,7 +4253,9 @@ declare module "littlejsengine" {
         /** Add a box shape to the body
          *  @param {Vector2} [size]
          *  @param {Vector2} [offset]
-         *  @param {number}  [angle]
+         *  @param {number}  [angle] - LittleJS convention (clockwise positive).
+         *      Negated internally to match Box2D's CCW-positive convention so the
+         *      fixture aligns with the same angle passed to drawRect/drawTile.
          *  @param {number}  [density]
          *  @param {number}  [friction]
          *  @param {number}  [restitution]

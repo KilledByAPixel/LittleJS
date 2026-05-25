@@ -721,7 +721,7 @@ function debugPoint(pos, color, time, angle, screenSpace=false)
  *  @param {number} [time]
  *  @param {boolean} [screenSpace]
  *  @memberof Debug */
-function debugLine(posA, posB, color, width=.1, time, screenSpace=false)
+function debugLine(posA, posB, color, width=.1, time=0, screenSpace=false)
 {
     ASSERT(isVector2(posA), 'posA must be a vec2');
     ASSERT(isVector2(posB), 'posB must be a vec2');
@@ -1592,7 +1592,7 @@ function isStringLike(s) { return s != null && typeof s?.toString() === 'string'
 /**
  * Check if object is an array
  * @param {any} a
- * @return {boolean}
+ * @return {a is Array<any>}
  * @memberof Math */
 function isArray(a) { return Array.isArray(a); }
 
@@ -4112,7 +4112,7 @@ class TextureInfo
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
-    angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace, context)
+    angle=0, mirror, additiveColor, useWebGL=glEnable, screenSpace=false, context)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isVector2(size), 'size must be a vec2');
@@ -4369,7 +4369,7 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace, context)
+function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=false, context)
 {
     ASSERT(isArray(points), 'points must be an array');
     ASSERT(isNumber(width), 'width must be a number');
@@ -4418,7 +4418,7 @@ function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), ang
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawLine(posA, posB, width=.1, color=WHITE, pos=vec2(), angle=0, useWebGL, screenSpace, context)
+function drawLine(posA, posB, width=.1, color=WHITE, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=false, context)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(width, halfDelta.length()*2);
@@ -4529,7 +4529,7 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
     ASSERT(!context || !useWebGL, 'context only supported in canvas 2D mode');
 
     // clamp line width to prevent artifacts
-    lineWidth = clamp(lineWidth, 0, Math.min(size.x, size.y));
+    lineWidth = clamp(lineWidth, 0, min(size.x, size.y));
 
     if (useWebGL && glEnable)
     {
@@ -4723,7 +4723,7 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
  *  @param {number}  [angle]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
  *  @memberof Draw */
-function drawText(text, pos, size=1, color, lineWidth=0, lineColor, textAlign, font, fontStyle, maxWidth, angle=0, context=drawContext)
+function drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, angle=0, context=drawContext)
 {
     // convert to screen space
     pos = worldToScreen(pos);
@@ -6209,7 +6209,7 @@ class Sound
         /** @property {SoundLoadCallback} - function to call when sound is loaded */
         this.onloadCallback = onloadCallback;
 
-        if (Array.isArray(asset))
+        if (isArray(asset))
         {
             // generate zzfx sound — copy so we don't mutate the caller's array
             const zzfxSound = asset.slice();
@@ -9443,7 +9443,7 @@ class NewgroundsPlugin
         // get medals
         const medalsResult = this.call('Medal.getList');
         /** @property {Array} - Medals fetched from Newgrounds (empty until session is active) */
-        this.medals = medalsResult ? medalsResult.result.data['medals'] : [];
+        this.medals = medalsResult?.result?.data?.['medals'] || [];
         debugMedals && LOG(this.medals);
         for (const newgroundsMedal of this.medals)
         {
@@ -9467,7 +9467,7 @@ class NewgroundsPlugin
         // get scoreboards
         const scoreboardResult = this.call('ScoreBoard.getBoards');
         /** @property {Array} - Scoreboards fetched from Newgrounds */
-        this.scoreboards = scoreboardResult ? scoreboardResult.result.data.scoreboards : [];
+        this.scoreboards = scoreboardResult?.result?.data?.scoreboards || [];
         debugMedals && LOG(this.scoreboards);
 
         // keep the session alive with a ping every minute
@@ -10324,11 +10324,17 @@ class UISystemPlugin
     *  @param {DragAndDropCallback} [onDragOver] - continuously when dragging over */
     setupDragAndDrop(onDrop, onDragEnter, onDragLeave, onDragOver)
     {
-        function setCallback(callback, listenerType)
+        // remove any prior listeners so repeated setup calls don't stack
+        if (this._dragListeners)
+            for (const [type, listener] of this._dragListeners)
+                document.removeEventListener(type, listener);
+        this._dragListeners = [];
+        const setCallback = (callback, listenerType)=>
         {
-            function listener(e) { e.preventDefault(); callback && callback(e); }
+            const listener = (e)=> { e.preventDefault(); callback && callback(e); };
             document.addEventListener(listenerType, listener);
-        }
+            this._dragListeners.push([listenerType, listener]);
+        };
         setCallback(onDrop,      'drop');
         setCallback(onDragEnter, 'dragenter');
         setCallback(onDragLeave, 'dragleave');
@@ -10652,6 +10658,15 @@ class UIObject
         if (this.destroyed)
             return;
 
+        // clear ui-system references that point at this object so events
+        // don't keep firing against a destroyed target (especially the
+        // keydown listener attached for keyInputObject)
+        if (uiSystem.activeObject     === this) uiSystem.activeObject     = undefined;
+        if (uiSystem.hoverObject      === this) uiSystem.hoverObject      = undefined;
+        if (uiSystem.lastHoverObject  === this) uiSystem.lastHoverObject  = undefined;
+        if (uiSystem.navigationObject === this) uiSystem.navigationObject = undefined;
+        if (uiSystem.keyInputObject   === this) uiSystem.keyInputObject   = undefined;
+
         // disconnect from parent and destroy children
         this.destroyed = 1;
         this.parent?.removeChild(this);
@@ -10660,6 +10675,8 @@ class UIObject
             child.parent = undefined;
             child.destroy();
         }
+        // clear references so destroyed children can be GC'd
+        this.children.length = 0;
     }
 
     /** Check if the mouse is overlapping this ui object
@@ -11249,6 +11266,7 @@ class UISlider extends UIObject
     {
         // toggle value between 0 and 1
         this.value = this.value ? 0 : 1;
+        this.onChange();
         this.onRelease();
         super.navigatePressed();
     }
@@ -11701,7 +11719,9 @@ class Box2dObject extends EngineObject
     /** Add a box shape to the body
      *  @param {Vector2} [size]
      *  @param {Vector2} [offset]
-     *  @param {number}  [angle]
+     *  @param {number}  [angle] - LittleJS convention (clockwise positive).
+     *      Negated internally to match Box2D's CCW-positive convention so the
+     *      fixture aligns with the same angle passed to drawRect/drawTile.
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
@@ -11714,7 +11734,7 @@ class Box2dObject extends EngineObject
         ASSERT(isNumber(angle), 'angle must be a number');
 
         const shape = new box2d.instance.b2PolygonShape();
-        shape.SetAsBox(size.x/2, size.y/2, box2d.vec2dTo(offset), angle);
+        shape.SetAsBox(size.x/2, size.y/2, box2d.vec2dTo(offset), -angle);
         return this.addShape(shape, density, friction, restitution, isSensor);
     }
 
@@ -12016,9 +12036,10 @@ class Box2dObject extends EngineObject
     {
         const data = new box2d.instance.b2MassData();
         this.body.GetMassData(data);
-        localCenter && data.set_center(box2d.vec2dTo(localCenter));
-        mass && data.set_mass(mass);
-        momentOfInertia && data.set_I(momentOfInertia);
+        // use !== undefined so setMass(0) (static-equivalent) isn't silently ignored
+        if (localCenter !== undefined) data.set_center(box2d.vec2dTo(localCenter));
+        if (mass !== undefined) data.set_mass(mass);
+        if (momentOfInertia !== undefined) data.set_I(momentOfInertia);
         this.body.SetMassData(data);
     }
 
@@ -14158,29 +14179,32 @@ function tweenProperty(target, propertyPath, start, end, duration = 1, options =
 }
 
 // Continuation that schedules the next loop iteration when one finishes.
-// Called from the completed tween's `then` slot. Decrements the counter and
-// only spawns a new tween if more iterations remain.
-function loopContinuation(prev)
+// Reuses the same Tween object across iterations so the user's handle
+// from `.loop()` keeps working — calling `.stop()` mid-loop now cancels
+// the entire chain instead of just the current iteration.
+function loopContinuation(tween)
 {
-    if (prev.loopRemaining !== Infinity && prev.loopRemaining <= 1) return;
-    const next = new Tween(prev.callback, prev.start, prev.end, prev.duration,
-        { ease: prev.ease, useRealTime: prev.useRealTime });
-    next.loopRemaining = prev.loopRemaining === Infinity
-        ? Infinity
-        : prev.loopRemaining - 1;
-    next.thenCallback = () => loopContinuation(next);
+    if (tween.loopRemaining !== Infinity && tween.loopRemaining <= 1) return;
+    if (tween.loopRemaining !== Infinity) tween.loopRemaining -= 1;
+    tween.life = tween.duration;
+    tween.thenCallback = () => loopContinuation(tween);
+    tweenActive.push(tween);
+    // snap to start for the new iteration (matches Tween constructor behavior)
+    tween.callback(tween.interp(tween.duration));
 }
 
-// Continuation for pingPong: spawns a new tween with start and end swapped.
-function pingPongContinuation(prev)
+// Continuation for pingPong: swaps start and end on the same tween each iteration.
+function pingPongContinuation(tween)
 {
-    if (prev.loopRemaining !== Infinity && prev.loopRemaining <= 1) return;
-    const next = new Tween(prev.callback, prev.end, prev.start, prev.duration,
-        { ease: prev.ease, useRealTime: prev.useRealTime });
-    next.loopRemaining = prev.loopRemaining === Infinity
-        ? Infinity
-        : prev.loopRemaining - 1;
-    next.thenCallback = () => pingPongContinuation(next);
+    if (tween.loopRemaining !== Infinity && tween.loopRemaining <= 1) return;
+    if (tween.loopRemaining !== Infinity) tween.loopRemaining -= 1;
+    const tmp = tween.start;
+    tween.start = tween.end;
+    tween.end = tmp;
+    tween.life = tween.duration;
+    tween.thenCallback = () => pingPongContinuation(tween);
+    tweenActive.push(tween);
+    tween.callback(tween.interp(tween.duration));
 }
 
 /** Engine plugin hook: advance every active tween by the appropriate delta.
