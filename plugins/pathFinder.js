@@ -271,11 +271,13 @@ class PathFinder
                 if (dx !== 0 && dy !== 0)
                 {
                     // Diagonal step: refuse if either cardinal neighbor is
-                    // blocked or has cost. Prevents cutting through corners.
+                    // blocked. Prevents cutting through walls at corners.
+                    // (Costed-but-walkable cardinals do not block — diagonal
+                    // movement around expensive terrain is standard A*.)
                     const card1 = this.getNode(current.pos.x + dx, current.pos.y);
-                    if (!card1 || card1.cost > 0 || !card1.walkable) continue;
+                    if (!card1 || !card1.walkable) continue;
                     const card2 = this.getNode(current.pos.x, current.pos.y + dy);
-                    if (!card2 || card2.cost > 0 || !card2.walkable) continue;
+                    if (!card2 || !card2.walkable) continue;
                     stepCost = PATHFINDER_DIAGONAL_COST;
                 }
 
