@@ -146,9 +146,9 @@ function gameInit()
     paddle = new Paddle;
 
     // create walls
-    new Wall(vec2(-.5,levelSize.y/2),            vec2(1,100)) // top
-    new Wall(vec2(levelSize.x+.5,levelSize.y/2), vec2(1,100)) // left
-    new Wall(vec2(levelSize.x/2,levelSize.y+.5), vec2(100,1)) // right
+    new Wall(vec2(-.5,levelSize.y/2),            vec2(1,100)) // left
+    new Wall(vec2(levelSize.x+.5,levelSize.y/2), vec2(1,100)) // right
+    new Wall(vec2(levelSize.x/2,levelSize.y+.5), vec2(100,1)) // top
 }
 
 ///////////////////////////////////////////////////////////////////////////////
