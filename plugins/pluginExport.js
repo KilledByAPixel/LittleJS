@@ -29,6 +29,7 @@ export
 
     // ZzFXMusic
     ZzFXMusic,
+    zzfxM,
 
     // UI System
     uiSystem,
