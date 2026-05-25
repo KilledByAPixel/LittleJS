@@ -151,6 +151,9 @@ class PostProcessPlugin
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, glCanvas);
             }
 
+            // restore default so subsequent dynamic texture uploads aren't flipped
+            glContext.pixelStorei(glContext.UNPACK_FLIP_Y_WEBGL, false);
+
             // force it to set instanced mode
             glSetInstancedMode(true);
         }
