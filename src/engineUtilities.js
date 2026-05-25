@@ -196,15 +196,20 @@ function shareURL(title, url, callback)
 function readSaveData(saveName, defaultSaveData)
 {
     ASSERT(isStringLike(saveName), 'loadData requires saveName string');
-    
-    // replace undefined values with defaults; tolerate corrupt JSON
-    const data = localStorage[saveName];
+
+    // tolerate localStorage being unavailable (iOS private mode, sandboxed
+    // iframes) and corrupt JSON in stored data
     let loadedData = {};
-    if (data)
+    try
     {
-        try { loadedData = JSON.parse(data); }
-        catch { LOG('readSaveData: corrupt JSON for', saveName, '— using defaults'); }
+        const data = localStorage[saveName];
+        if (data)
+        {
+            try { loadedData = JSON.parse(data); }
+            catch { LOG('readSaveData: corrupt JSON for', saveName, '— using defaults'); }
+        }
     }
+    catch { LOG('readSaveData: localStorage unavailable — using defaults'); }
     return { ...defaultSaveData, ...loadedData };
 }
 
@@ -215,7 +220,9 @@ function readSaveData(saveName, defaultSaveData)
 function writeSaveData(saveName, saveData)
 {
     ASSERT(isStringLike(saveName), 'saveData requires saveName string');
-    localStorage[saveName] = JSON.stringify(saveData);
+    // tolerate localStorage being unavailable or quota exceeded
+    try { localStorage[saveName] = JSON.stringify(saveData); }
+    catch { LOG('writeSaveData: failed to write', saveName); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
