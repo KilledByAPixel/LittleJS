@@ -164,7 +164,7 @@ function engineAddPlugin(update, render, glContextLost, glContextRestored)
  *    ['tiles.png', 'tilesLevel.png']       // images to load
  *  );
  *  @memberof Engine */
-async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
+async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement)
 {
     showEngineVersion && console.log(`${engineName} Engine v${engineVersion}`);
     ASSERT(!mainContext, 'engine already initialized');
@@ -172,6 +172,11 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     // double-register listeners / double-add canvases on a second call
     if (mainContext) return;
     ASSERT(isArray(imageSources), 'pass in images as array');
+
+    // ensure body exists for minimal HTML where the script runs before <body> is parsed
+    if (!document.body)
+        document.documentElement.appendChild(document.createElement('body'));
+    rootElement ||= document.body;
 
     // allow passing in empty functions
     gameInit       ||= ()=>{};
