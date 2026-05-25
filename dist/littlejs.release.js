@@ -1972,15 +1972,20 @@ function shareURL(title, url, callback)
 function readSaveData(saveName, defaultSaveData)
 {
     ASSERT(isStringLike(saveName), 'loadData requires saveName string');
-    
-    // replace undefined values with defaults; tolerate corrupt JSON
-    const data = localStorage[saveName];
+
+    // tolerate localStorage being unavailable (iOS private mode, sandboxed
+    // iframes) and corrupt JSON in stored data
     let loadedData = {};
-    if (data)
+    try
     {
-        try { loadedData = JSON.parse(data); }
-        catch { LOG('readSaveData: corrupt JSON for', saveName, '— using defaults'); }
+        const data = localStorage[saveName];
+        if (data)
+        {
+            try { loadedData = JSON.parse(data); }
+            catch { LOG('readSaveData: corrupt JSON for', saveName, '— using defaults'); }
+        }
     }
+    catch { LOG('readSaveData: localStorage unavailable — using defaults'); }
     return { ...defaultSaveData, ...loadedData };
 }
 
@@ -1991,7 +1996,9 @@ function readSaveData(saveName, defaultSaveData)
 function writeSaveData(saveName, saveData)
 {
     ASSERT(isStringLike(saveName), 'saveData requires saveName string');
-    localStorage[saveName] = JSON.stringify(saveData);
+    // tolerate localStorage being unavailable or quota exceeded
+    try { localStorage[saveName] = JSON.stringify(saveData); }
+    catch { LOG('writeSaveData: failed to write', saveName); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2785,6 +2792,9 @@ class EngineObject
         // child objects do not have physics
         ASSERT(!this.parent);
 
+        // bail if a collision callback destroyed us mid-frame
+        if (this.destroyed) return;
+
         if (this.clampSpeed)
         {
             // limit max speed to prevent missing collisions
@@ -3081,6 +3091,8 @@ class EngineObject
      *  @return {EngineObject} The child object added */
     addChild(child, localPos=vec2(), localAngle=0)
     {
+        ASSERT(!this.destroyed, 'cannot add child to destroyed object');
+        if (this.destroyed) return child;
         ASSERT(!child.parent && !this.children.includes(child));
         ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
         ASSERT(child !== this, 'cannot add self as child');
@@ -4092,16 +4104,16 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
     ASSERT(isStringLike(fontStyle), 'fontStyle must be a string');
     ASSERT(isNumber(angle), 'angle must be a number');
     
+    const lines = (text+'').split('\n');
+    const posY = pos.y - (lines.length-1) * size/2; // center vertically
+    // save before style mutations so caller's context state is preserved
+    context.save();
     context.fillStyle = color.toString();
     context.strokeStyle = lineColor.toString();
     context.lineWidth = lineWidth;
     context.textAlign = textAlign;
     context.font = fontStyle + ' ' + size + 'px '+ font;
     context.textBaseline = 'middle';
-
-    const lines = (text+'').split('\n');
-    const posY = pos.y - (lines.length-1) * size/2; // center vertically
-    context.save();
     context.translate(pos.x, posY);
     context.rotate(-angle);
     let yOffset = 0;
@@ -4261,6 +4273,9 @@ function isOnScreen(pos, size=0)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isVector2(size) || isNumber(size), 'size must be a vec2 or number');
+
+    // cameraScale of 0 collapses world coords; nothing is visible
+    if (!cameraScale) return false;
 
     // optimized circle on screen test
     // pos = worldToScreen(pos);
@@ -5630,13 +5645,10 @@ class Sound
     }
 
     /** Get how long this sound is in seconds
-     *  @return {number} - How long the sound is in seconds (undefined if loading)
+     *  @return {number} - How long the sound is in seconds (0 if loading)
      */
     getDuration()
-    {
-        const length = this.sampleChannels?.[0]?.length;
-        return length === undefined ? undefined : length / this.sampleRate;
-    }
+    { return this.sampleChannels?.[0]?.length / this.sampleRate || 0; }
 
     /** Check if sound is loaded, for sounds fetched from a url
      *  @return {boolean} - True if sound is loaded and ready to play
@@ -5848,7 +5860,7 @@ class SoundInstance
     }
 
     /** Get the total duration of this sound
-     *  @return {number} - Total duration in seconds
+     *  @return {number} - Total duration in seconds (0 if loading)
      */
     getDuration() { return this.rate ? this.sound.getDuration() / this.rate : 0; }
 
@@ -13336,7 +13348,7 @@ const Ease =
      *  @param {number} x
      *  @returns {number}
      *  @memberof TweenSystem */
-    EXPO: (x) => 2 ** (10 * x - 10),
+    EXPO: (x) => x === 0 ? 0 : 2 ** (10 * x - 10),
 
     /** Back ease-in: overshoots backward at the start before snapping forward.
      *  @param {number} x
@@ -13349,6 +13361,8 @@ const Ease =
      *  @returns {number}
      *  @memberof TweenSystem */
     ELASTIC: (x) =>
+        x === 0 ? 0 :
+        x === 1 ? 1 :
         -(2 ** (10 * x - 10)) * sin(((37 - 40 * x) * PI) / 6),
 
     /** Spring-like ease-out: oscillates outward after passing the target.
@@ -13868,11 +13882,13 @@ class PathFinder
                 if (dx !== 0 && dy !== 0)
                 {
                     // Diagonal step: refuse if either cardinal neighbor is
-                    // blocked or has cost. Prevents cutting through corners.
+                    // blocked. Prevents cutting through walls at corners.
+                    // (Costed-but-walkable cardinals do not block — diagonal
+                    // movement around expensive terrain is standard A*.)
                     const card1 = this.getNode(current.pos.x + dx, current.pos.y);
-                    if (!card1 || card1.cost > 0 || !card1.walkable) continue;
+                    if (!card1 || !card1.walkable) continue;
                     const card2 = this.getNode(current.pos.x, current.pos.y + dy);
-                    if (!card2 || card2.cost > 0 || !card2.walkable) continue;
+                    if (!card2 || !card2.walkable) continue;
                     stepCost = PATHFINDER_DIAGONAL_COST;
                 }
 

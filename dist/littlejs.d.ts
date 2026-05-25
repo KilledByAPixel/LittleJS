@@ -2443,7 +2443,7 @@ declare module "littlejsengine" {
          */
         playNote(semitoneOffset?: number, pos?: Vector2, volume?: number): SoundInstance;
         /** Get how long this sound is in seconds
-         *  @return {number} - How long the sound is in seconds (undefined if loading)
+         *  @return {number} - How long the sound is in seconds (0 if loading)
          */
         getDuration(): number;
         /** Check if sound is loaded, for sounds fetched from a url
@@ -2524,7 +2524,7 @@ declare module "littlejsengine" {
          */
         getCurrentTime(): number;
         /** Get the total duration of this sound
-         *  @return {number} - Total duration in seconds
+         *  @return {number} - Total duration in seconds (0 if loading)
          */
         getDuration(): number;
         /** Get source of this sound instance
