@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.18.14';
+const engineVersion = '1.18.15';
 
 /** Frames per second to update
  *  @type {number}
@@ -6026,7 +6026,7 @@ function inputUpdate()
 
             if (gamepad.mapping === 'standard')
             {
-                // get dpad buttons (standard mapping only)
+                // get dpad buttons (standard mapping)
                 dpad.set(
                     (gamepadIsDown(15,i)&&1) - (gamepadIsDown(14,i)&&1),
                     (gamepadIsDown(12,i)&&1) - (gamepadIsDown(13,i)&&1));
