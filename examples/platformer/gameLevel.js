@@ -176,9 +176,9 @@ export function decorateTile(pos, tileLayer)
         // make round corners
         for (let i=4; i--;)
         {
-            // check corner neighbors
-            const neighborTileDataA = tileLayer.getData(pos.add(vec2().setDirection(i))).tile;
-            const neighborTileDataB = tileLayer.getData(pos.add(vec2().setDirection((i+1)%4))).tile;
+            // check corner neighbors (getData returns undefined for out-of-bounds)
+            const neighborTileDataA = tileLayer.getData(pos.add(vec2().setDirection(i)))?.tile;
+            const neighborTileDataB = tileLayer.getData(pos.add(vec2().setDirection((i+1)%4)))?.tile;
             if (neighborTileDataA > 0 || neighborTileDataB > 0)
                 continue;
                 
