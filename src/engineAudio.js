@@ -195,13 +195,10 @@ class Sound
     }
 
     /** Get how long this sound is in seconds
-     *  @return {number} - How long the sound is in seconds (undefined if loading)
+     *  @return {number} - How long the sound is in seconds (0 if loading)
      */
     getDuration()
-    {
-        const length = this.sampleChannels?.[0]?.length;
-        return length === undefined ? undefined : length / this.sampleRate;
-    }
+    { return this.sampleChannels?.[0]?.length / this.sampleRate || 0; }
 
     /** Check if sound is loaded, for sounds fetched from a url
      *  @return {boolean} - True if sound is loaded and ready to play
@@ -413,7 +410,7 @@ class SoundInstance
     }
 
     /** Get the total duration of this sound
-     *  @return {number} - Total duration in seconds
+     *  @return {number} - Total duration in seconds (0 if loading)
      */
     getDuration() { return this.rate ? this.sound.getDuration() / this.rate : 0; }
 
