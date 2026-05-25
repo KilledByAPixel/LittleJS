@@ -42,9 +42,9 @@ function gameReset()
         new GameObjects.Brick(pos);
 
     // create walls
-    new GameObjects.Wall(vec2(-.5,levelSize.y/2),            vec2(1,100)); // top
-    new GameObjects.Wall(vec2(levelSize.x+.5,levelSize.y/2), vec2(1,100)); // left
-    new GameObjects.Wall(vec2(levelSize.x/2,levelSize.y+.5), vec2(100,1)); // right
+    new GameObjects.Wall(vec2(-.5,levelSize.y/2),            vec2(1,100)); // left
+    new GameObjects.Wall(vec2(levelSize.x+.5,levelSize.y/2), vec2(1,100)); // right
+    new GameObjects.Wall(vec2(levelSize.x/2,levelSize.y+.5), vec2(100,1)); // top
 
     // spawn player paddle
     paddle = new GameObjects.Paddle(vec2(levelSize.x/2-12, 1));
