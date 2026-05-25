@@ -82,8 +82,20 @@ class NewgroundsPlugin
 
         // get medals
         const medalsResult = this.call('Medal.getList');
+
+        // bail early if the first call failed (offline / bad session /
+        // server error) so we don't block the main thread on more sync
+        // XHRs that are guaranteed to also fail
+        if (!medalsResult || !medalsResult.result || medalsResult.result.error)
+        {
+            debugMedals && LOG('Newgrounds session unavailable; skipping plugin init');
+            this.medals = [];
+            this.scoreboards = [];
+            return;
+        }
+
         /** @property {Array} - Medals fetched from Newgrounds (empty until session is active) */
-        this.medals = medalsResult?.result?.data?.['medals'] || [];
+        this.medals = medalsResult.result.data?.['medals'] || [];
         debugMedals && LOG(this.medals);
         for (const newgroundsMedal of this.medals)
         {
@@ -103,7 +115,7 @@ class NewgroundsPlugin
                     medal.description = medal.description + ` (${ medal.value })`;
             }
         }
-    
+
         // get scoreboards
         const scoreboardResult = this.call('ScoreBoard.getBoards');
         /** @property {Array} - Scoreboards fetched from Newgrounds */
