@@ -71,7 +71,7 @@ class EngineObject
         this.color = color.copy();
         /** @property {Color} - Additive color to apply when rendered */
         this.additiveColor = undefined;
-        /** @property {boolean} - Should it flip along y axis when rendered */
+        /** @property {boolean} - Should the rendered tile flip along the y axis. Affects rendering only — collision, physics, and localToWorld/worldToLocal ignore this flag. */
         this.mirror = false;
         /** @property {boolean} - Has object been destroyed? */
         this.destroyed = false;
