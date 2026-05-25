@@ -430,33 +430,32 @@ class Particle
             const hitLayer = tileCollisionTest(this.pos);
             if (!testCollision(oldPos))
             {
-                if (!collideCallback || collideCallback?.(this, hitLayer))
+                // testCollision already invoked collideCallback with the
+                // correct (this, data, pos) args; no need to re-check here.
+                // test which side we bounced off (or both if a corner)
+                const isBlockedX = testCollision(vec2(this.pos.x, oldPos.y));
+                const isBlockedY = testCollision(vec2(oldPos.x, this.pos.y));
+                const hitRestitution = max(restitution, hitLayer.restitution);
+                const hitFriction = max(friction, hitLayer.friction);
+                if (isBlockedX)
                 {
-                    // test which side we bounced off (or both if a corner)
-                    const isBlockedX = testCollision(vec2(this.pos.x, oldPos.y));
-                    const isBlockedY = testCollision(vec2(oldPos.x, this.pos.y));
-                    const hitRestitution = max(restitution, hitLayer.restitution);
-                    const hitFriction = max(friction, hitLayer.friction);
-                    if (isBlockedX)
-                    {
-                        // move to previous X position and bounce
-                        this.pos.x = oldPos.x;
-                        this.velocity.x *= -hitRestitution;
-                        this.velocity.y *= hitFriction;
-                    }
-                    if (isBlockedY || !isBlockedX)
-                    {
-                        const wasFalling = this.velocity.y < 0 && gravity.y < 0 || this.velocity.y > 0 && gravity.y > 0;
-                        if (wasFalling)
-                            this.groundObject = hitLayer;
-
-                        // move to previous Y position and bounce
-                        this.pos.y = oldPos.y;
-                        this.velocity.y *= -hitRestitution;
-                        this.velocity.x *= hitFriction;
-                    }
-                    debugPhysics && debugRect(this.pos, this.size, '#f00');
+                    // move to previous X position and bounce
+                    this.pos.x = oldPos.x;
+                    this.velocity.x *= -hitRestitution;
+                    this.velocity.y *= hitFriction;
                 }
+                if (isBlockedY || !isBlockedX)
+                {
+                    const wasFalling = this.velocity.y < 0 && gravity.y < 0 || this.velocity.y > 0 && gravity.y > 0;
+                    if (wasFalling)
+                        this.groundObject = hitLayer;
+
+                    // move to previous Y position and bounce
+                    this.pos.y = oldPos.y;
+                    this.velocity.y *= -hitRestitution;
+                    this.velocity.x *= hitFriction;
+                }
+                debugPhysics && debugRect(this.pos, this.size, '#f00');
             }
         }
     }
