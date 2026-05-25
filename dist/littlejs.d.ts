@@ -1657,7 +1657,7 @@ declare module "littlejsengine" {
      * - Optimized tile sheet sprite rendering using WebGL batching
      * - Primitive drawing for polygons, ellipses, and lines
      * - Tile-based rendering with TileInfo and TextureInfo classes
-     * - Text rendering with custom fonts and FontImage support
+     * - Text rendering with custom fonts and ImageFont support
      * - Color and additive color blending for effects
      * - Rotation, mirroring, and scaling transformations
      * - Camera system with position, scale, and rotation
@@ -1936,11 +1936,11 @@ declare module "littlejsengine" {
      *  @memberof Draw */
     export function combineCanvases(): void;
     /** Engine font image, 8x8 font provided by the engine
-     *  @type {FontImage}
+     *  @type {ImageFont}
      *  @memberof Draw */
-    export let engineFontImage: FontImage;
+    export let engineImageFont: ImageFont;
     /**
-     * Font Image Object - Draw text by using tiles in an image
+     * Image Font Object - Draw text by using tiles in an image
      * - 96 characters (from space to tilde) are stored in an image
      * - A 8x8 default engine font is supplied for general use
      * - This system is WebGL enabled for fast text rendering
@@ -1949,12 +1949,12 @@ declare module "littlejsengine" {
      * @memberof Draw
      * @example
      * // use built in font
-     * const font = engineFontImage;
+     * const font = engineImageFont;
      *
      * // draw text
      * font.drawTextScreen('LittleJS\nHello World!', vec2(200, 50));
      */
-    export class FontImage {
+    export class ImageFont {
         /** Create an image font
          *  @param {TileInfo} tileInfo - Tile info of first character in font
          */

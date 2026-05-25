@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.18.12.1';
+const engineVersion = '1.18.13';
 
 /** Frames per second to update
  *  @type {number}
@@ -425,7 +425,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         promises.push(loadTexture(0));
 
     // load engine font image
-    promises.push(fontImageInit());
+    promises.push(imageFontInit());
 
     if (showSplashScreen)
     {
@@ -3844,7 +3844,7 @@ class EngineObject
  * - Optimized tile sheet sprite rendering using WebGL batching
  * - Primitive drawing for polygons, ellipses, and lines
  * - Tile-based rendering with TileInfo and TextureInfo classes
- * - Text rendering with custom fonts and FontImage support
+ * - Text rendering with custom fonts and ImageFont support
  * - Color and additive color blending for effects
  * - Rotation, mirroring, and scaling transformations
  * - Camera system with position, scale, and rotation
@@ -5118,33 +5118,33 @@ function setCursor(cursorStyle = 'auto')
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Engine font image, 8x8 font provided by the engine
- *  @type {FontImage}
+ *  @type {ImageFont}
  *  @memberof Draw */
-let engineFontImage;
+let engineImageFont;
 
 /**
- * Font Image Object - Draw text by using tiles in an image
+ * Image Font Object - Draw text by using tiles in an image
  * - 96 characters (from space to tilde) are stored in an image
  * - A 8x8 default engine font is supplied for general use
  * - This system is WebGL enabled for fast text rendering
  * - Fonts can also be colored and scaled along each axis
- * 
+ *
  * @memberof Draw
  * @example
  * // use built in font
- * const font = engineFontImage;
+ * const font = engineImageFont;
  *
  * // draw text
  * font.drawTextScreen('LittleJS\nHello World!', vec2(200, 50));
  */
-class FontImage
+class ImageFont
 {
     /** Create an image font
      *  @param {TileInfo} tileInfo - Tile info of first character in font
      */
     constructor(tileInfo)
     {
-        ASSERT(!!tileInfo, 'tileInfo is required for FontImage');
+        ASSERT(!!tileInfo, 'tileInfo is required for ImageFont');
         
         /** @property {TileInfo} - Tile info for the font */
         this.tileInfo = tileInfo.frame(0);
@@ -5229,7 +5229,7 @@ class FontImage
 }
 
 // load engine font, called automatically on startup
-async function fontImageInit()
+async function imageFontInit()
 {
     const image = new Image;
     await new Promise(resolve =>
@@ -5242,7 +5242,7 @@ async function fontImageInit()
     const tilePos=vec2(), tileSize=vec2(8), padding=1, bleed=0;
     const textureInfo = new TextureInfo(image);
     const tileInfo = new TileInfo(tilePos, tileSize, textureInfo, padding, bleed);
-    engineFontImage = new FontImage(tileInfo);
+    engineImageFont = new ImageFont(tileInfo);
 }
 /**
  * LittleJS Input System
