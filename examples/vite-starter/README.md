@@ -13,7 +13,7 @@ npm install
 npm run dev
 ```
 
-Requires Node 20.19+ or 22.12+ (Vite 7 requirement).
+Requires Node 20.19+ or 22.12+ (Vite 7's requirement; the LittleJS engine itself runs on Node 18+).
 
 ## Getting started
 
