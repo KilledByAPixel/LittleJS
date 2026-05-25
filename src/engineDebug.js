@@ -192,7 +192,7 @@ function debugOverlap(posA, sizeA, posB, sizeB, color, time, screenSpace=false)
     debugRect(minPos.lerp(maxPos,.5), maxPos.subtract(minPos), color, time, 0, false, screenSpace);
 }
 
-/** Draw a debug axis aligned bounding box in world space
+/** Draw debug text in world space
  *  @param {string|number} text
  *  @param {Vector2} pos
  *  @param {number} [size]
