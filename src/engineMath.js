@@ -443,7 +443,7 @@ function randVec2(length=1) { return new Vector2().setAngle(rand(2*PI), length);
  *  @return {Vector2}
  *  @memberof Random */
 function randInCircle(radius=1, minRadius=0)
-{ return radius > 0 ? randVec2(radius * rand(minRadius / radius, 1)**.5) : new Vector2; }
+{ return radius > 0 ? randVec2(radius * rand(clamp(minRadius / radius), 1)**.5) : new Vector2; }
 
 /** Returns a random color between the two passed in colors, combine components if linear
  *  @param {Color}   [colorA=WHITE]
