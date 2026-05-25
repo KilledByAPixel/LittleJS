@@ -138,6 +138,7 @@ export
     setTouchGamepadAnalog,
     setTouchGamepadSize,
     setTouchGamepadAlpha,
+    setTouchGamepadDisplayTime,
     setVibrateEnable,
     setSoundEnable,
     setSoundVolume,
