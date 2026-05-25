@@ -267,7 +267,7 @@ export class SoftBodyObject extends LJS.Box2dObject
         // create nodes
         this.nodes = [];
         for (let y=sizeCount.y; y--;)
-        for (let x=sizeCount.y; x--;)
+        for (let x=sizeCount.x; x--;)
         {
             const mass = .1;
             const center = vec2(x-nodeSize.x/2, y-nodeSize.y/2);
@@ -303,7 +303,7 @@ export class SoftBodyObject extends LJS.Box2dObject
         const sx = this.sizeCount.x;
         const sy = this.sizeCount.y;
         for (let x = 0; x < sx; ++x) poly.push(this.getNode(x, 0).pos);
-        for (let y = 0; y < sy.y; ++y) poly.push(this.getNode(sx-1, y).pos);
+        for (let y = 0; y < sy; ++y) poly.push(this.getNode(sx-1, y).pos);
         for (let x = sx; x--;) poly.push(this.getNode(x, sy-1).pos);
         for (let y = sy; y--;) poly.push(this.getNode(0, y).pos);
         LJS.drawPoly(poly, LJS.BLACK)
@@ -338,7 +338,7 @@ export class ClothObject extends LJS.Box2dStaticObject
         // create nodes
         this.nodes = [];
         for (let y=sizeCount.y; y--;)
-        for (let x=sizeCount.y; x--;)
+        for (let x=sizeCount.x; x--;)
         {
             const mass = .5;
             const center = vec2(x-nodeSize.x/2, y-nodeSize.y/2);
