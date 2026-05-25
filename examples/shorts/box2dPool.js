@@ -102,6 +102,6 @@ async function gameInit()
     let number = 1;
     for (let i=5;   i--;)
     for (let j=i+1; j--;)
-        new Ball(vec2(6+i*.9, j-i/2), number++);
+        new Ball(vec2(6+i*.88, j-i/2), number++);
     cueBall = new Ball(vec2(-6, 0));
 }
