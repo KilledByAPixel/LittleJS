@@ -1427,7 +1427,8 @@ declare module "littlejsengine" {
         /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
          * @return {number} */
         get(): number;
-        /** Get percentage elapsed based on time it was set to, returns 0 if not set
+        /** Get percentage elapsed based on time it was set to, returns 0 if not set.
+         *  Zero-duration timers report 1 (already elapsed).
          * @return {number} */
         getPercent(): number;
         /** Get the time this timer was set to, returns 0 if not set

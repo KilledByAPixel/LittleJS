@@ -1052,7 +1052,7 @@ function randVec2(length=1) { return new Vector2().setAngle(rand(2*PI), length);
  *  @return {Vector2}
  *  @memberof Random */
 function randInCircle(radius=1, minRadius=0)
-{ return radius > 0 ? randVec2(radius * rand(minRadius / radius, 1)**.5) : new Vector2; }
+{ return radius > 0 ? randVec2(radius * rand(clamp(minRadius / radius), 1)**.5) : new Vector2; }
 
 /** Returns a random color between the two passed in colors, combine components if linear
  *  @param {Color}   [colorA=WHITE]
@@ -1842,9 +1842,15 @@ class Timer
      * @return {number} */
     get() { return this.isSet()? this.getGlobalTime() - this.time : 0; }
 
-    /** Get percentage elapsed based on time it was set to, returns 0 if not set
+    /** Get percentage elapsed based on time it was set to, returns 0 if not set.
+     *  Zero-duration timers report 1 (already elapsed).
      * @return {number} */
-    getPercent() { return this.isSet()? 1-percent(this.time - this.getGlobalTime(), 0, this.setTime) : 0; }
+    getPercent()
+    {
+        if (!this.isSet()) return 0;
+        if (!this.setTime) return 1;
+        return 1 - percent(this.time - this.getGlobalTime(), 0, this.setTime);
+    }
 
     /** Get the time this timer was set to, returns 0 if not set
      * @return {number} */
@@ -1871,9 +1877,9 @@ class Timer
  *  @memberof Utilities */
 function formatTime(t)
 {
-    const sign = t < 0 ? '-' : '';
+    const signStr = t < 0 ? '-' : '';
     t = abs(t)|0;
-    return sign + (t/60|0) + ':' + (t%60<10?'0':'') + t%60;
+    return signStr + (t/60|0) + ':' + (t%60<10?'0':'') + t%60;
 }
 
 /** Fetches a JSON file from a URL and returns the parsed JSON object. Must be used with await!
@@ -3339,7 +3345,7 @@ class TileInfo
         ASSERT(typeof frame === 'number');
         const w = this.size.x + this.padding*2;
         const x = frame*w;
-        ASSERT(x < this.textureInfo.size.x, 'frame extends beyond texture width!');
+        ASSERT(x + this.size.x <= this.textureInfo.size.x, 'frame extends beyond texture width!');
         return this.offset(new Vector2(x));
     }
 
@@ -3685,7 +3691,7 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawLineList(points, width=.1, color, wrap=false, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace, context)
+function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace, context)
 {
     ASSERT(isArray(points), 'points must be an array');
     ASSERT(isNumber(width), 'width must be a number');
@@ -3734,7 +3740,7 @@ function drawLineList(points, width=.1, color, wrap=false, pos=vec2(), angle=0, 
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawLine(posA, posB, width=.1, color, pos=vec2(), angle=0, useWebGL, screenSpace, context)
+function drawLine(posA, posB, width=.1, color=WHITE, pos=vec2(), angle=0, useWebGL, screenSpace, context)
 {
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(width, halfDelta.length()*2);
@@ -5009,9 +5015,11 @@ function inputInit()
         mouseDeltaScreen = mouseDeltaScreen.add(movement);
     }
     function onMouseLeave() { mouseInWindow = false; } // mouse moved off window
-    function onMouseWheel(e) 
-    { 
-        mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY);
+    function onMouseWheel(e)
+    {
+        // accumulate so multiple wheel events in one frame are not lost
+        if (!e.ctrlKey)
+            mouseWheel += sign(e.deltaY);
         if (inputPreventDefault && e.cancelable && document.hasFocus())
             e.preventDefault(); // prevent page scrolling
     }
@@ -5857,7 +5865,7 @@ function speak(text, volume=1, rate=1, pitch=1, language='')
 {
     ASSERT(typeof volume !== 'string', 'speak() signature changed: language is now the last parameter, after pitch');
     if (!soundEnable || headlessMode) return;
-    if (!speechSynthesis) return;
+    if (typeof speechSynthesis === 'undefined') return;
 
     // common languages (not supported by all browsers)
     // en - english,  it - italian, fr - french,  de - german, es - spanish
@@ -5875,7 +5883,11 @@ function speak(text, volume=1, rate=1, pitch=1, language='')
 
 /** Stop all queued speech
  *  @memberof Audio */
-function speakStop() {speechSynthesis?.cancel();}
+function speakStop()
+{
+    if (typeof speechSynthesis !== 'undefined')
+        speechSynthesis.cancel();
+}
 
 /** Get frequency of a note on a musical scale
  *  @param {number} semitoneOffset - How many semitones away from the root note
@@ -7244,33 +7256,32 @@ class Particle
             const hitLayer = tileCollisionTest(this.pos);
             if (!testCollision(oldPos))
             {
-                if (!collideCallback || collideCallback?.(this, hitLayer))
+                // testCollision already invoked collideCallback with the
+                // correct (this, data, pos) args; no need to re-check here.
+                // test which side we bounced off (or both if a corner)
+                const isBlockedX = testCollision(vec2(this.pos.x, oldPos.y));
+                const isBlockedY = testCollision(vec2(oldPos.x, this.pos.y));
+                const hitRestitution = max(restitution, hitLayer.restitution);
+                const hitFriction = max(friction, hitLayer.friction);
+                if (isBlockedX)
                 {
-                    // test which side we bounced off (or both if a corner)
-                    const isBlockedX = testCollision(vec2(this.pos.x, oldPos.y));
-                    const isBlockedY = testCollision(vec2(oldPos.x, this.pos.y));
-                    const hitRestitution = max(restitution, hitLayer.restitution);
-                    const hitFriction = max(friction, hitLayer.friction);
-                    if (isBlockedX)
-                    {
-                        // move to previous X position and bounce
-                        this.pos.x = oldPos.x;
-                        this.velocity.x *= -hitRestitution;
-                        this.velocity.y *= hitFriction;
-                    }
-                    if (isBlockedY || !isBlockedX)
-                    {
-                        const wasFalling = this.velocity.y < 0 && gravity.y < 0 || this.velocity.y > 0 && gravity.y > 0;
-                        if (wasFalling)
-                            this.groundObject = hitLayer;
-
-                        // move to previous Y position and bounce
-                        this.pos.y = oldPos.y;
-                        this.velocity.y *= -hitRestitution;
-                        this.velocity.x *= hitFriction;
-                    }
-                    debugPhysics && debugRect(this.pos, this.size, '#f00');
+                    // move to previous X position and bounce
+                    this.pos.x = oldPos.x;
+                    this.velocity.x *= -hitRestitution;
+                    this.velocity.y *= hitFriction;
                 }
+                if (isBlockedY || !isBlockedX)
+                {
+                    const wasFalling = this.velocity.y < 0 && gravity.y < 0 || this.velocity.y > 0 && gravity.y > 0;
+                    if (wasFalling)
+                        this.groundObject = hitLayer;
+
+                    // move to previous Y position and bounce
+                    this.pos.y = oldPos.y;
+                    this.velocity.y *= -hitRestitution;
+                    this.velocity.x *= hitFriction;
+                }
+                debugPhysics && debugRect(this.pos, this.size, '#f00');
             }
         }
     }
@@ -7987,6 +7998,7 @@ function glDrawPoints(points, rgba)
     if (glBatchCount+vertCount >= gl_MAX_POLY_VERTEXES || glBatchAdditive !== glAdditive)
         glFlush();
     ASSERT(vertCount < gl_MAX_POLY_VERTEXES, 'poly exceeds max batch size');
+    if (vertCount >= gl_MAX_POLY_VERTEXES) return; // release-build safety net
     glSetPolyMode();
   
     // setup triangle strip with degenerate verts at start and end
@@ -8016,6 +8028,7 @@ function glDrawColoredPoints(points, pointColors)
     if (glBatchCount+vertCount >= gl_MAX_POLY_VERTEXES || glBatchAdditive !== glAdditive)
         glFlush();
     ASSERT(vertCount < gl_MAX_POLY_VERTEXES, 'poly exceeds max batch size');
+    if (vertCount >= gl_MAX_POLY_VERTEXES) return; // release-build safety net
     glSetPolyMode();
   
     // setup triangle strip with degenerate verts at start and end
@@ -9003,6 +9016,9 @@ class PostProcessPlugin
                 // pass glCanvas back to overlay texture
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, glCanvas);
             }
+
+            // restore default so subsequent dynamic texture uploads aren't flipped
+            glContext.pixelStorei(glContext.UNPACK_FLIP_Y_WEBGL, false);
 
             // force it to set instanced mode
             glSetInstancedMode(true);
@@ -10914,6 +10930,11 @@ class Box2dObject extends EngineObject
         // destroy physics body, fixtures, and joints
         ASSERT(this.body, 'Box2dObject has no body to destroy');
         box2d.world.DestroyBody(this.body);
+
+        // remove from tracked list so paused / headless sessions don't leak
+        const i = box2d.objects.indexOf(this);
+        if (i >= 0)
+            box2d.objects.splice(i, 1);
         super.destroy();
     }
 
@@ -12491,6 +12512,8 @@ class Box2dPlugin
             const fixtureB = contact.GetFixtureB();
             const objectA  = fixtureA.GetBody().object;
             const objectB  = fixtureB.GetBody().object;
+            // raw user-created b2Bodies may have no .object — skip those
+            if (!objectA || !objectB) return;
             objectA.beginContact(objectB);
             objectB.beginContact(objectA);
         }
@@ -12501,6 +12524,7 @@ class Box2dPlugin
             const fixtureB = contact.GetFixtureB();
             const objectA  = fixtureA.GetBody().object;
             const objectB  = fixtureB.GetBody().object;
+            if (!objectA || !objectB) return;
             objectA.endContact(objectB);
             objectB.endContact(objectA);
         };
@@ -12879,7 +12903,7 @@ async function box2dInit()
         debugDraw.DrawTransform = function(transform)
         {
             transform = box2d.instance.wrapPointer(transform, box2d.instance.b2Transform);
-            const pos = vec2(transform.get_p());
+            const pos = box2d.vec2From(transform.get_p());
             const angle = -transform.get_q().GetAngle();
             const p1 = vec2(1,0), c1 = rgb(.75,0,0,.8);
             const p2 = vec2(0,1), c2 = rgb(0,.75,0,.8);
