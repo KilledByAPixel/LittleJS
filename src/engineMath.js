@@ -216,7 +216,8 @@ function isOverlapping(posA, sizeA, posB, sizeB=vec2())
     const dy = (posA.y - posB.y)*2;
     const sx = sizeA.x + sizeB.x;
     const sy = sizeA.y + sizeB.y;
-    return dx >= -sx && dx < sx && dy >= -sy && dy < sy;
+    // symmetric so isOverlapping(A,B) === isOverlapping(B,A) at touching edges
+    return abs(dx) < sx && abs(dy) < sy;
 }
 
 /** Returns true if a line segment is intersecting an axis aligned box
@@ -443,7 +444,13 @@ function randVec2(length=1) { return new Vector2().setAngle(rand(2*PI), length);
  *  @return {Vector2}
  *  @memberof Random */
 function randInCircle(radius=1, minRadius=0)
-{ return radius > 0 ? randVec2(radius * rand(clamp(minRadius / radius), 1)**.5) : new Vector2; }
+{
+    // r is uniform in area ⇒ r² uniform in [minRadius², radius²]
+    // (the squared inner bound is what makes minRadius the actual exclusion edge)
+    if (radius <= 0) return new Vector2;
+    const ratio = clamp(minRadius / radius);
+    return randVec2(radius * rand(ratio*ratio, 1)**.5);
+}
 
 /** Returns a random color between the two passed in colors, combine components if linear
  *  @param {Color}   [colorA=WHITE]
