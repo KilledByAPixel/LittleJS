@@ -70,7 +70,7 @@ function gameUpdate()
         // update ui text
         const isPlaying = musicInstance?.isPlaying();
         playButton.text = isPlaying ? 'Pause' : 'Play';
-        const current = formatTime(musicInstance?.getCurrentTime());
+        const current = formatTime(musicInstance?.getCurrentTime() || 0);
         const duration = formatTime(musicSound.getDuration());
         infoText.text = current + ' / ' + duration;
     }
