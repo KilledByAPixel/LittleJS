@@ -90,19 +90,17 @@ npm install
 npm run dev
 ```
 
-Here is a minimal Hello World game. Save it as an HTML file alongside `dist/littlejs.js` and open it in a browser.
+Here is a minimal Hello World example game.
 
 ```html
 <!DOCTYPE html>
-<script src="dist/littlejs.js"></script>
+<script src="../dist/littlejs.js"></script>
 <script>
 function gameInit() {}
 function gameUpdate() {}
 function gameUpdatePost() {}
 function gameRender() {}
-function gameRenderPost() {
-    drawTextScreen('Hello World!', mainCanvasSize.scale(.5), 80);
-}
+function gameRenderPost() { drawTextScreen('Hello World!', mainCanvasSize.scale(.5), 80); }
 engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
 </script>
 ```
