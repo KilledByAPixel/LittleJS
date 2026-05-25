@@ -102,7 +102,7 @@ let primitiveCount;
  * tile(1, 16, 3)                // a tile at index 1 of size 16 on texture 3
  * tile(vec2(4,8), vec2(30,10))  // a tile at index (4,8) with a size of (30,10)
  * @memberof Draw */
-function tile(index=new Vector2, size=tileDefaultSize, texture=0, padding=tileDefaultPadding, bleed=tileDefaultBleed)
+function tile(index=0, size=tileDefaultSize, texture=0, padding=tileDefaultPadding, bleed=tileDefaultBleed)
 {
     ASSERT(isVector2(index) || typeof index === 'number', 'index must be a vec2 or number');
     ASSERT(isVector2(size) || typeof size === 'number', 'size must be a vec2 or number');
@@ -597,9 +597,9 @@ function drawLine(posA, posB, width=.1, color, pos=vec2(), angle=0, useWebGL, sc
  *  @param {Vector2} [size=vec2(1)]
  *  @param {number}  [sides]
  *  @param {Color}   [color=WHITE]
- *  @param {number}  [angle]
  *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=BLACK]
+ *  @param {number}  [angle]
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
@@ -1137,7 +1137,10 @@ function combineCanvases()
     const w = mainCanvasSize.x, h = mainCanvasSize.y;
     workCanvas.width = w;
     workCanvas.height = h;
-    workContext.fillRect(0,0,w,h); // remove background alpha
+    // remove background alpha — explicit fillStyle so a previous caller
+    // leaving workContext.fillStyle transparent can't silently no-op this
+    workContext.fillStyle = '#000';
+    workContext.fillRect(0,0,w,h);
     glCopyToContext(workContext);
     workContext.drawImage(mainCanvas, 0, 0);
     mainContext.drawImage(workCanvas, 0, 0);

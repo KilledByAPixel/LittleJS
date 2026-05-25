@@ -623,7 +623,7 @@ function inputUpdate()
                 v > min ? percent(v, min, max) :
                 v < -min ? -percent(-v, min, max) : 0;
             return vec2(deadZone(v.x), deadZone(-v.y)).clampLength();
-        }
+        };
 
         // update touch gamepad if enabled
         if (touchGamepadEnable && isTouchDevice)

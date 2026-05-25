@@ -369,7 +369,7 @@ class TileLayer extends CanvasLayer
         ASSERT(data instanceof TileLayerData, 'data must be a TileLayerData');
 
         if (!layerPos.arrayCheck(this.size)) return;
-        this.data[(layerPos.y|0)*this.size.x+layerPos.x|0] = data;
+        this.data[(layerPos.y|0)*this.size.x + (layerPos.x|0)] = data;
 
         if (!redraw) return;
         const isRedraw = drawContext === this.context;
@@ -388,7 +388,7 @@ class TileLayer extends CanvasLayer
     getData(layerPos)
     { 
         ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
-        return layerPos.arrayCheck(this.size) && this.data[(layerPos.y|0)*this.size.x+layerPos.x|0];
+        return layerPos.arrayCheck(this.size) && this.data[(layerPos.y|0)*this.size.x + (layerPos.x|0)];
     }
 
     // Update the tile layer, refresh texture if needed
