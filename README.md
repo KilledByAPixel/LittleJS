@@ -8,6 +8,7 @@
 [![Build Size][build-size]][build-size-url]
 [![NPM Downloads][npm-downloads]][npmtrends-url]
 [![DeepScan][deepscan]][deepscan-url]
+[![MIT License][license]][license-url]
 [![Discord][discord]][discord-url]
 
 </div>
@@ -24,7 +25,7 @@ The code is very clean and well documented with many examples to get you started
 
 <div align='center' markdown='1'>
 
-## [Demos](https://killedbyapixel.github.io/LittleJS/examples) | [Docs](https://killedbyapixel.github.io/LittleJS/docs) | [Trailer](https://youtu.be/chuBzGjv7Ms) | [Discord](https://discord.gg/zb7hcGkyZe) | [FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md)
+## [Demos](https://killedbyapixel.github.io/LittleJS/examples) | [Docs](https://killedbyapixel.github.io/LittleJS/docs) | [Reference](https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md) | [FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md) | [Trailer](https://youtu.be/chuBzGjv7Ms) | [Discord](https://discord.gg/zb7hcGkyZe)
 
 </div>
 
@@ -89,6 +90,23 @@ npm install
 npm run dev
 ```
 
+Here is a minimal Hello World game. Save it as an HTML file alongside `dist/littlejs.js` and open it in a browser.
+
+```html
+<!DOCTYPE html>
+<script src="dist/littlejs.js"></script>
+<script>
+function gameInit() {}
+function gameUpdate() {}
+function gameUpdatePost() {}
+function gameRender() {}
+function gameRenderPost() {
+    drawTextScreen('Hello World!', mainCanvasSize.scale(.5), 80);
+}
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
+</script>
+```
+
 ## Tutorials
 
 - [Making Awesome Games With LittleJS](https://youtu.be/_dXKU0WgAj8?si=ZDXLYAFDWp54hrGT) - A short talk about LittleJS with some tips on how to use it.
@@ -101,9 +119,10 @@ npm run dev
 
 ## Examples
 
-LittleJS comes with a several demos both for learning and using as starter projects to create new games.
+LittleJS comes with several demos both for learning and using as starter projects to create new games.
 
-- [Example Browser](https://killedbyapixel.github.io/LittleJS/examples/) - Live example browser with all examples
+- [Example Browser](https://killedbyapixel.github.io/LittleJS/examples/) - Live example browser with all examples and editable source
+- [Short Examples](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/shorts) - 60+ single-file demos showing off individual engine features
 - [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/) - Block breaking game with post-processing effects
 - [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Match 3 puzzle game with HD rendering and high score tracking
 - [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter demo that loads level data
@@ -141,13 +160,15 @@ Here are a few of the many amazing games created with LittleJS...
 - [Bug&Bee](https://itch.io/jam/littlejs-game-jam-2025/results) - Low fi shoot em up with co-op gameplay. LittleJS Jam 1st place! by [eoinmcg](https://eoinmcg.itch.io/)
 - [Little Platformer](https://psemo.itch.io/little-platformer) - Platformer with many mechanics. LittleJS Jam 2st place! by [PSEMO](https://psemo.itch.io/), [Solita666](https://itch.io/profile/solita666), [GabrielRG](https://gabrielrg.itch.io/), [Nate](https://natesassoon.itch.io/)
 - [Rogue Pong](https://itch.io/jam/littlejs-game-jam-2025/rate/4004165) - Roguelike crossed with classic pong gameplay. LittleJS Jam 3rd place! by [webdevbrian](https://webdevbrian.itch.io/)
-- [Orbitswarm](https://focaccai.itch.io/orbitswarm) - Fast paced space strategy game. by [Focaccai](https://www.focaccai.com/)
+- [Alien Escape Pinball](https://focaccai.itch.io/alien-pinball) - Pinball game with physics and aliens. by [Focaccai](https://www.focaccai.com/)
 - [LittleJS Jam 2024 Results](https://itch.io/jam/littlejs-jam-2024/results) - All the games from the first LittleJS Game Jam.
 - [LittleJS Jam 2025 Results](https://itch.io/jam/littlejs-game-jam-2025/results) - All the games from the second LittleJS Game Jam.
 
-![LittleJS Screenshot](examples/games.jpg)
+![A collage of screenshots from games made with LittleJS](examples/games.jpg)
 
-![LittleJS Logo](examples/favicon.png)
+*A sample of games built with LittleJS.*
+
+![LittleJS pixel-art favicon](examples/favicon.png)
 
 [npm]: https://img.shields.io/npm/v/littlejsengine
 [npm-url]: https://www.npmjs.com/package/littlejsengine
@@ -159,3 +180,5 @@ Here are a few of the many amazing games created with LittleJS...
 [deepscan-url]: https://deepscan.io/dashboard#view=project&tid=22950&pid=26229&bid=831487
 [discord]: https://img.shields.io/discord/939926111469568050
 [discord-url]: https://discord.gg/zb7hcGkyZe
+[license]: https://img.shields.io/github/license/KilledByAPixel/LittleJS
+[license-url]: https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE
