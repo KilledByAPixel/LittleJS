@@ -437,7 +437,7 @@ function speak(text, volume=1, rate=1, pitch=1, language='')
 {
     ASSERT(typeof volume !== 'string', 'speak() signature changed: language is now the last parameter, after pitch');
     if (!soundEnable || headlessMode) return;
-    if (!speechSynthesis) return;
+    if (typeof speechSynthesis === 'undefined') return;
 
     // common languages (not supported by all browsers)
     // en - english,  it - italian, fr - french,  de - german, es - spanish
@@ -455,7 +455,11 @@ function speak(text, volume=1, rate=1, pitch=1, language='')
 
 /** Stop all queued speech
  *  @memberof Audio */
-function speakStop() {speechSynthesis?.cancel();}
+function speakStop()
+{
+    if (typeof speechSynthesis !== 'undefined')
+        speechSynthesis.cancel();
+}
 
 /** Get frequency of a note on a musical scale
  *  @param {number} semitoneOffset - How many semitones away from the root note
