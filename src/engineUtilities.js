@@ -73,9 +73,15 @@ class Timer
      * @return {number} */
     get() { return this.isSet()? this.getGlobalTime() - this.time : 0; }
 
-    /** Get percentage elapsed based on time it was set to, returns 0 if not set
+    /** Get percentage elapsed based on time it was set to, returns 0 if not set.
+     *  Zero-duration timers report 1 (already elapsed).
      * @return {number} */
-    getPercent() { return this.isSet()? 1-percent(this.time - this.getGlobalTime(), 0, this.setTime) : 0; }
+    getPercent()
+    {
+        if (!this.isSet()) return 0;
+        if (!this.setTime) return 1;
+        return 1 - percent(this.time - this.getGlobalTime(), 0, this.setTime);
+    }
 
     /** Get the time this timer was set to, returns 0 if not set
      * @return {number} */
@@ -102,9 +108,9 @@ class Timer
  *  @memberof Utilities */
 function formatTime(t)
 {
-    const sign = t < 0 ? '-' : '';
+    const signStr = t < 0 ? '-' : '';
     t = abs(t)|0;
-    return sign + (t/60|0) + ':' + (t%60<10?'0':'') + t%60;
+    return signStr + (t/60|0) + ':' + (t%60<10?'0':'') + t%60;
 }
 
 /** Fetches a JSON file from a URL and returns the parsed JSON object. Must be used with await!
