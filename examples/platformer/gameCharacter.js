@@ -38,6 +38,7 @@ export class Character extends GameObjects.GameObject
         this.color = hsl(LJS.rand(),1,.7);
         this.renderOrder = 10;
         this.walkCyclePercent = 0;
+        this.walkSoundTime = 0;
         this.health = 1;
         this.climbingLadder = false;
         this.setCollision(true,false);
@@ -287,7 +288,7 @@ export class Character extends GameObjects.GameObject
                 return false;
 
             if (LJS.tileCollisionGetData(pos.add(vec2(0,1)))      // above
-                && !LJS.tileCollisionGetData(pos.add(vec2(1,0)))  // left
+                && !LJS.tileCollisionGetData(pos.add(vec2(-1,0))) // left
                 && !LJS.tileCollisionGetData(pos.add(vec2(1,0)))) // right
                 return false; // don't collide if something above it and nothing to left or right
 
