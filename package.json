@@ -40,6 +40,9 @@
     "build": "node src/engineBuild.mjs",
     "test": "node --test --import ./test/setup.mjs \"test/**/*.test.mjs\""
   },
+  "engines": {
+    "node": ">=18"
+  },
   "devDependencies": {
     "bestzip": "^2.2.1",
     "electron": "^38.2.0",
