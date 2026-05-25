@@ -103,7 +103,7 @@ class Sound
         /** @property {SoundLoadCallback} - function to call when sound is loaded */
         this.onloadCallback = onloadCallback;
 
-        if (Array.isArray(asset))
+        if (isArray(asset))
         {
             // generate zzfx sound — copy so we don't mutate the caller's array
             const zzfxSound = asset.slice();
