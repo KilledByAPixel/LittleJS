@@ -431,29 +431,32 @@ function tweenProperty(target, propertyPath, start, end, duration = 1, options =
 }
 
 // Continuation that schedules the next loop iteration when one finishes.
-// Called from the completed tween's `then` slot. Decrements the counter and
-// only spawns a new tween if more iterations remain.
-function loopContinuation(prev)
+// Reuses the same Tween object across iterations so the user's handle
+// from `.loop()` keeps working — calling `.stop()` mid-loop now cancels
+// the entire chain instead of just the current iteration.
+function loopContinuation(tween)
 {
-    if (prev.loopRemaining !== Infinity && prev.loopRemaining <= 1) return;
-    const next = new Tween(prev.callback, prev.start, prev.end, prev.duration,
-        { ease: prev.ease, useRealTime: prev.useRealTime });
-    next.loopRemaining = prev.loopRemaining === Infinity
-        ? Infinity
-        : prev.loopRemaining - 1;
-    next.thenCallback = () => loopContinuation(next);
+    if (tween.loopRemaining !== Infinity && tween.loopRemaining <= 1) return;
+    if (tween.loopRemaining !== Infinity) tween.loopRemaining -= 1;
+    tween.life = tween.duration;
+    tween.thenCallback = () => loopContinuation(tween);
+    tweenActive.push(tween);
+    // snap to start for the new iteration (matches Tween constructor behavior)
+    tween.callback(tween.interp(tween.duration));
 }
 
-// Continuation for pingPong: spawns a new tween with start and end swapped.
-function pingPongContinuation(prev)
+// Continuation for pingPong: swaps start and end on the same tween each iteration.
+function pingPongContinuation(tween)
 {
-    if (prev.loopRemaining !== Infinity && prev.loopRemaining <= 1) return;
-    const next = new Tween(prev.callback, prev.end, prev.start, prev.duration,
-        { ease: prev.ease, useRealTime: prev.useRealTime });
-    next.loopRemaining = prev.loopRemaining === Infinity
-        ? Infinity
-        : prev.loopRemaining - 1;
-    next.thenCallback = () => pingPongContinuation(next);
+    if (tween.loopRemaining !== Infinity && tween.loopRemaining <= 1) return;
+    if (tween.loopRemaining !== Infinity) tween.loopRemaining -= 1;
+    const tmp = tween.start;
+    tween.start = tween.end;
+    tween.end = tmp;
+    tween.life = tween.duration;
+    tween.thenCallback = () => pingPongContinuation(tween);
+    tweenActive.push(tween);
+    tween.callback(tween.interp(tween.duration));
 }
 
 /** Engine plugin hook: advance every active tween by the appropriate delta.
