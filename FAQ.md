@@ -198,7 +198,7 @@ Another option is to setup a simple local web server like [http-server](https://
 
 LittleJS drawing functions are all handled in world coordinates by default.
 The conversion from world to screen is determined by the camera position and scale as well as the canvas size in pixels.
-Camera scale determines how many screen pixels equals 1 world unit while the cameraPosition is the offset in world units.
+Camera scale determines how many screen pixels equals 1 world unit while the cameraPos is the offset in world units.
 There is also a function you can use called getCameraSize() to get the viewable camera window in world coordinates.
 
 ### How do I use Vite with LittleJS?
@@ -390,8 +390,8 @@ this.tileInfo = playerSprite.frame(animationFrame);
 ### How do I control the camera in LittleJS?
 
 LittleJS uses a world space rendering system, so objects can move independently of the camera.
-The camera is easy to control using cameraPosition and cameraScale, which indicate the world space position and how many pixels is equivalent to one world unit.
-The default cameraScale is 32 while the default cameraPosition is just the origin.
+The camera is easy to control using cameraPos and cameraScale, which indicate the world space position and how many pixels is equivalent to one world unit.
+The default cameraScale is 32 while the default cameraPos is just the origin.
 It is also possible to draw using screen space pixel coordinates by passing in true as the screenSpace parameter to most drawing functions.
 
 ```javascript
@@ -427,8 +427,8 @@ The constructor has two optional positional arguments after the shader source:
 new PostProcessPlugin(shader, includeMainCanvas, feedbackTexture);
 ```
 
-- `includeMainCanvas=true` composites the Canvas2D layer (where some debug and text rendering goes) onto the WebGL canvas before the shader runs. Pass `true` if your post-process effect should apply to *everything* on screen, not just the WebGL-rendered objects.
-- `feedbackTexture=true` makes the previous frame available as `iChannel0` for effects like motion trails or feedback loops. Mutually exclusive with `includeMainCanvas`.
+- `includeMainCanvas` (default `false`) composites the Canvas2D layer (where some debug and text rendering goes) onto the WebGL canvas before the shader runs. Pass `true` if your post-process effect should apply to *everything* on screen, not just the WebGL-rendered objects.
+- `feedbackTexture` (default `false`) makes the previous frame available as `iChannel0` for effects like motion trails or feedback loops. Mutually exclusive with `includeMainCanvas`.
 
 See [plugins/postProcess.js](plugins/postProcess.js) and the [Breakout example](https://killedbyapixel.github.io/LittleJS/examples/breakout/) for working post-process effects.
 
