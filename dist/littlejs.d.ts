@@ -2917,20 +2917,6 @@ declare module "littlejsengine" {
         *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
         *  @memberof Draw */
         draw(pos: Vector2, size?: Vector2, color?: Color, angle?: number, mirror?: boolean, additiveColor?: Color, screenSpace?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
-        /** Draw a tile onto the layer canvas in world space
-         *  @param {Vector2}  pos
-         *  @param {Vector2}  [size=vec2(1)]
-         *  @param {TileInfo} [tileInfo]
-         *  @param {Color}    [color=WHITE]
-         *  @param {number}   [angle]
-         *  @param {boolean}  [mirror] */
-        drawTile(pos: Vector2, size?: Vector2, tileInfo?: TileInfo, color?: Color, angle?: number, mirror?: boolean): void;
-        /** Draw a rectangle onto the layer canvas in world space
-         *  @param {Vector2} pos
-         *  @param {Vector2} [size=vec2(1)]
-         *  @param {Color}   [color=WHITE]
-         *  @param {number}  [angle] */
-        drawRect(pos: Vector2, size?: Vector2, color?: Color, angle?: number): void;
         /** Create WebGL texture if necessary and copy layer canvas to it */
         updateWebGL(): void;
         /** Check if this layer is using WebGL
@@ -3001,6 +2987,20 @@ declare module "littlejsengine" {
          *  @param {number} [angle] - Angle to rotate by
          */
         drawLayerRect(pos: Vector2, size: Vector2, color?: Color, angle?: number): void;
+        /** Draw a tile onto the layer canvas in world space
+         *  @param {Vector2}  pos
+         *  @param {Vector2}  [size=vec2(1)]
+         *  @param {TileInfo} [tileInfo]
+         *  @param {Color}    [color=WHITE]
+         *  @param {number}   [angle]
+         *  @param {boolean}  [mirror] */
+        drawTile(pos: Vector2, size?: Vector2, tileInfo?: TileInfo, color?: Color, angle?: number, mirror?: boolean): void;
+        /** Draw a rectangle onto the layer canvas in world space
+         *  @param {Vector2} pos
+         *  @param {Vector2} [size=vec2(1)]
+         *  @param {Color}   [color=WHITE]
+         *  @param {number}  [angle] */
+        drawRect(pos: Vector2, size?: Vector2, color?: Color, angle?: number): void;
         /** Clear a rectangle in layer space
          *  @param {Vector2} pos - position in pixel coordinates
          *  @param {Vector2} size
@@ -3017,8 +3017,8 @@ declare module "littlejsengine" {
         clearData(layerPos: Vector2, redraw?: boolean): void;
         /** Get data at a given position in the array
          *  @param {Vector2} layerPos - Local position in array
-         *  @return {TileLayerData} */
-        getData(layerPos: Vector2): TileLayerData;
+         *  @return {TileLayerData|undefined} */
+        getData(layerPos: Vector2): TileLayerData | undefined;
         /** Called after this layer is redrawn, does nothing by default */
         onRedraw(): void;
         /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, Color]} */

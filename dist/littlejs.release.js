@@ -2947,13 +2947,16 @@ class EngineObject
                     const restitution = max(this.restitution, hitLayer.restitution);
                     if (isBlockedX)
                     {
-                        // try to move up a tiny bit
+                        // try to step over a 1-tile bump (direction follows gravity sign
+                        // so inverted gravity steps down off a ceiling bump instead of up)
                         const epsilon = 1e-3;
-                        const maxMoveUp = .1;
-                        const y = floor(oldPos.y-this.size.y/2+1) +
-                            this.size.y/2 + epsilon;
-                        const delta = y - this.pos.y;
-                        if (delta < maxMoveUp)
+                        const maxMove = .1;
+                        const gravitySign = gravity.y < 0 ? 1 : -1;
+                        const y = gravitySign > 0 ?
+                            floor(oldPos.y-this.size.y/2+1) + this.size.y/2 + epsilon :
+                            ceil( oldPos.y+this.size.y/2-1) - this.size.y/2 - epsilon;
+                        const delta = abs(y - this.pos.y);
+                        if (delta < maxMove)
                         if (!tileCollisionTest(vec2(this.pos.x, y), this.size, this))
                         {
                             this.pos.y = y;
@@ -6209,14 +6212,29 @@ function tileCollisionTest(pos, size=vec2(), callbackObject, solidOnly=true)
  *  @memberof TileLayers */
 function tileCollisionRaycast(posStart, posEnd, callbackObject, normal, solidOnly=true)
 {
+    // check every layer and keep the closest hit so a far hit in an
+    // earlier-registered layer doesn't shadow a closer hit in a later one
+    let closestHit, closestDistSq, closestNormal;
+    const scratchNormal = normal && vec2();
     for (const layer of tileCollisionLayers)
     {
         if (!solidOnly || layer.isSolid)
         {
-            const hitPos = layer.collisionRaycast(posStart, posEnd, callbackObject, normal)
-            if (hitPos) return hitPos;
+            const hitPos = layer.collisionRaycast(posStart, posEnd, callbackObject, scratchNormal);
+            if (hitPos)
+            {
+                const d = posStart.distanceSquared(hitPos);
+                if (closestHit === undefined || d < closestDistSq)
+                {
+                    closestHit = hitPos;
+                    closestDistSq = d;
+                    if (normal) closestNormal = scratchNormal.copy();
+                }
+            }
         }
     }
+    if (closestHit && normal) normal.setFrom(closestNormal);
+    return closestHit;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -6390,38 +6408,6 @@ class CanvasLayer extends EngineObject
         drawTile(pos, size, tileInfo, color, angle, mirror, additiveColor, useWebGL, screenSpace, context);
     }
 
-    /** Draw a tile onto the layer canvas in world space
-     *  @param {Vector2}  pos
-     *  @param {Vector2}  [size=vec2(1)]
-     *  @param {TileInfo} [tileInfo]
-     *  @param {Color}    [color=WHITE]
-     *  @param {number}   [angle]
-     *  @param {boolean}  [mirror] */
-    drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle=0, mirror=false)
-    {
-        pos = pos.subtract(this.pos).multiply(this.tileInfo.size);
-        size = size.multiply(this.tileInfo.size);
-        pos.y = this.canvas.height - pos.y;
-
-        // draw the tile onto the layer canvas
-        const oldMainCanvasSize = mainCanvasSize;
-        mainCanvasSize = vec2(this.canvas.width, this.canvas.height);
-        const useWebGL = this.hasWebGL();
-        useWebGL && glSetRenderTarget(this.textureInfo.glTexture);
-        const drawContext = useWebGL ? undefined : this.context;
-        drawTile(pos, size, tileInfo, color, angle, mirror, undefined, useWebGL, true, drawContext);
-        useWebGL && glSetRenderTarget();
-        mainCanvasSize = oldMainCanvasSize;
-    }
-
-    /** Draw a rectangle onto the layer canvas in world space
-     *  @param {Vector2} pos
-     *  @param {Vector2} [size=vec2(1)]
-     *  @param {Color}   [color=WHITE]
-     *  @param {number}  [angle] */
-    drawRect(pos, size, color, angle)
-    { this.drawTile(pos, size, undefined, color, angle); }
-
     /** Create WebGL texture if necessary and copy layer canvas to it */
     updateWebGL()
     { this.textureInfo.createWebGLTexture(); }
@@ -6477,6 +6463,8 @@ class TileLayer extends CanvasLayer
             this.redrawTileData = ()=> {};
             this.drawLayerTile  = ()=> {};
             this.drawLayerRect  = ()=> {};
+            this.drawTile       = ()=> {};
+            this.drawRect       = ()=> {};
             this.clearLayerRect = ()=> {};
             return;
         }
@@ -6519,11 +6507,11 @@ class TileLayer extends CanvasLayer
 
     /** Get data at a given position in the array
      *  @param {Vector2} layerPos - Local position in array
-     *  @return {TileLayerData} */
+     *  @return {TileLayerData|undefined} */
     getData(layerPos)
-    { 
+    {
         ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
-        return layerPos.arrayCheck(this.size) && this.data[(layerPos.y|0)*this.size.x + (layerPos.x|0)];
+        return layerPos.arrayCheck(this.size) ? this.data[(layerPos.y|0)*this.size.x + (layerPos.x|0)] : undefined;
     }
 
     // Update the tile layer, refresh texture if needed
@@ -6631,7 +6619,7 @@ class TileLayer extends CanvasLayer
 
         // draw the tile if it has layer data
         const d = this.getData(layerPos);
-        if (!d.tile) return;
+        if (!d || !d.tile) return;
 
         const tileInfo = this.tileInfo && this.tileInfo.tile(d.tile);
         this.drawLayerTile(drawPos, drawSize, tileInfo, d.color, d.direction*PI/2, d.mirror);
@@ -6676,6 +6664,38 @@ class TileLayer extends CanvasLayer
      */
     drawLayerRect(pos, size, color, angle=0)
     { this.drawLayerTile(pos, size, undefined, color, angle); }
+
+    /** Draw a tile onto the layer canvas in world space
+     *  @param {Vector2}  pos
+     *  @param {Vector2}  [size=vec2(1)]
+     *  @param {TileInfo} [tileInfo]
+     *  @param {Color}    [color=WHITE]
+     *  @param {number}   [angle]
+     *  @param {boolean}  [mirror] */
+    drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle=0, mirror=false)
+    {
+        pos = pos.subtract(this.pos).multiply(this.tileInfo.size);
+        size = size.multiply(this.tileInfo.size);
+        pos.y = this.canvas.height - pos.y;
+
+        // draw the tile onto the layer canvas
+        const oldMainCanvasSize = mainCanvasSize;
+        mainCanvasSize = vec2(this.canvas.width, this.canvas.height);
+        const useWebGL = this.hasWebGL();
+        useWebGL && glSetRenderTarget(this.textureInfo.glTexture);
+        const drawContext = useWebGL ? undefined : this.context;
+        drawTile(pos, size, tileInfo, color, angle, mirror, undefined, useWebGL, true, drawContext);
+        useWebGL && glSetRenderTarget();
+        mainCanvasSize = oldMainCanvasSize;
+    }
+
+    /** Draw a rectangle onto the layer canvas in world space
+     *  @param {Vector2} pos
+     *  @param {Vector2} [size=vec2(1)]
+     *  @param {Color}   [color=WHITE]
+     *  @param {number}  [angle] */
+    drawRect(pos, size, color, angle)
+    { this.drawTile(pos, size, undefined, color, angle); }
 
     /** Clear a rectangle in layer space
      *  @param {Vector2} pos - position in pixel coordinates
@@ -6795,8 +6815,10 @@ class TileCollisionLayer extends TileLayer
         const posY = pos.y - this.pos.y;
         const minX = max(posX - size.x/2|0, 0);
         const minY = max(posY - size.y/2|0, 0);
-        const maxX = min(posX + size.x/2, this.size.x);
-        const maxY = min(posY + size.y/2, this.size.y);
+        // ensure at least one cell is visited even when size is 0 and pos
+        // lands exactly on an integer boundary (documented point-test mode)
+        const maxX = min(max(posX + size.x/2, minX + 1), this.size.x);
+        const maxY = min(max(posY + size.y/2, minY + 1), this.size.y);
         const hitPos = new Vector2;
         for (let y = minY; y < maxY; ++y)
         for (let x = minX; x < maxX; ++x)
@@ -7463,6 +7485,10 @@ function glInit(rootElement)
         for (const info of glTextureInfos)
             info.glTexture = undefined;
         glActiveTexture = undefined;
+        // drop any partially-filled batch so the next glFlush doesn't
+        // upload stale glBatchCount against fresh empty buffers on restore
+        glBatchCount = 0;
+        glPolyMode = false;
         pluginList.forEach(plugin=>plugin.glContextLost?.());
     });
     glCanvas.addEventListener('webglcontextrestored', ()=>
@@ -8995,9 +9021,13 @@ class PostProcessPlugin
         function postProcessRender()
         {
             if (headlessMode || !glEnable) return;
-            
+
             // clear out the buffer
             glFlush();
+
+            // ensure we render to the default framebuffer (in case any earlier
+            // caller this frame left a render target bound)
+            glContext.bindFramebuffer(glContext.FRAMEBUFFER, null);
 
             // setup shader program to draw a quad
             glContext.useProgram(postProcess.shader);
