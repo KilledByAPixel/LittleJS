@@ -165,6 +165,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
 {
     showEngineVersion && console.log(`${engineName} Engine v${engineVersion}`);
     ASSERT(!mainContext, 'engine already initialized');
+    // runtime guard so release builds (where the assert is stripped) don't
+    // double-register listeners / double-add canvases on a second call
+    if (mainContext) return;
     ASSERT(isArray(imageSources), 'pass in images as array');
 
     // allow passing in empty functions
@@ -192,6 +195,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     {
         // update time keeping
         let frameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
+        // skip delta on the very first frame so timeReal doesn't jump
+        // by ~page-load-time when RAF starts handing real timestamps
+        if (!frameTimeLastMS) frameTimeDeltaMS = 0;
         frameTimeLastMS = frameTimeMS;
         if (debug || debugWatermark)
             averageFPS = lerp(averageFPS, 1e3/(frameTimeDeltaMS||1), .05);
