@@ -926,16 +926,16 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
     ASSERT(isStringLike(fontStyle), 'fontStyle must be a string');
     ASSERT(isNumber(angle), 'angle must be a number');
     
+    const lines = (text+'').split('\n');
+    const posY = pos.y - (lines.length-1) * size/2; // center vertically
+    // save before style mutations so caller's context state is preserved
+    context.save();
     context.fillStyle = color.toString();
     context.strokeStyle = lineColor.toString();
     context.lineWidth = lineWidth;
     context.textAlign = textAlign;
     context.font = fontStyle + ' ' + size + 'px '+ font;
     context.textBaseline = 'middle';
-
-    const lines = (text+'').split('\n');
-    const posY = pos.y - (lines.length-1) * size/2; // center vertically
-    context.save();
     context.translate(pos.x, posY);
     context.rotate(-angle);
     let yOffset = 0;
@@ -1095,6 +1095,9 @@ function isOnScreen(pos, size=0)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isVector2(size) || isNumber(size), 'size must be a vec2 or number');
+
+    // cameraScale of 0 collapses world coords; nothing is visible
+    if (!cameraScale) return false;
 
     // optimized circle on screen test
     // pos = worldToScreen(pos);
