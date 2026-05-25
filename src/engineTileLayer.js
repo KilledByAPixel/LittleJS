@@ -620,7 +620,7 @@ class TileCollisionLayer extends TileLayer
     setCollisionData(layerPos, data=1)
     {
         ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
-        const i = (layerPos.y|0)*this.size.x + layerPos.x|0;
+        const i = (layerPos.y|0)*this.size.x + (layerPos.x|0);
         layerPos.arrayCheck(this.size) && (this.collisionData[i] = data);
     }
 
@@ -635,7 +635,7 @@ class TileCollisionLayer extends TileLayer
     getCollisionData(layerPos)
     {
         ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
-        const i = (layerPos.y|0)*this.size.x + layerPos.x|0;
+        const i = (layerPos.y|0)*this.size.x + (layerPos.x|0);
         return layerPos.arrayCheck(this.size) ? this.collisionData[i] : 0;
     }
 
