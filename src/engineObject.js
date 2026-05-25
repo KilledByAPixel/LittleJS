@@ -312,13 +312,16 @@ class EngineObject
                     const restitution = max(this.restitution, hitLayer.restitution);
                     if (isBlockedX)
                     {
-                        // try to move up a tiny bit
+                        // try to step over a 1-tile bump (direction follows gravity sign
+                        // so inverted gravity steps down off a ceiling bump instead of up)
                         const epsilon = 1e-3;
-                        const maxMoveUp = .1;
-                        const y = floor(oldPos.y-this.size.y/2+1) +
-                            this.size.y/2 + epsilon;
-                        const delta = y - this.pos.y;
-                        if (delta < maxMoveUp)
+                        const maxMove = .1;
+                        const gravitySign = gravity.y < 0 ? 1 : -1;
+                        const y = gravitySign > 0 ?
+                            floor(oldPos.y-this.size.y/2+1) + this.size.y/2 + epsilon :
+                            ceil( oldPos.y+this.size.y/2-1) - this.size.y/2 - epsilon;
+                        const delta = abs(y - this.pos.y);
+                        if (delta < maxMove)
                         if (!tileCollisionTest(vec2(this.pos.x, y), this.size, this))
                         {
                             this.pos.y = y;
