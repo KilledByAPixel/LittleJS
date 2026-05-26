@@ -675,6 +675,11 @@ class TileCollisionLayer extends TileLayer
         // check any tiles in the area for collision
         const posX = pos.x - this.pos.x;
         const posY = pos.y - this.pos.y;
+        // reject AABBs entirely past either edge; without this, the negative
+        // side leaks into row/col 0 because minX/minY clamp to 0 and the
+        // point-test floor below forces maxX/maxY up to 1
+        if (posX + size.x/2 < 0 || posX - size.x/2 > this.size.x) return false;
+        if (posY + size.y/2 < 0 || posY - size.y/2 > this.size.y) return false;
         const minX = max(posX - size.x/2|0, 0);
         const minY = max(posY - size.y/2|0, 0);
         // ensure at least one cell is visited even when size is 0 and pos
