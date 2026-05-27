@@ -3298,6 +3298,9 @@ declare module "littlejsengine" {
      *  @param {MedalCallbackFunction} callback
      *  @memberof Medals */
     export function medalsForEach(callback: MedalCallbackFunction): void;
+    /** Reset all medals to locked and persist the cleared catalog
+     *  @memberof Medals */
+    export function medalsReset(): void;
     /** Set how long to show medals for in seconds
      *  @param {number} time
      *  @memberof Settings */
@@ -3348,6 +3351,7 @@ declare module "littlejsengine" {
         unlocked: boolean;
         /** @property {HTMLImageElement|undefined} - Source image for the medal icon, if any */
         image: HTMLImageElement;
+        src: string;
         /** Unlocks a medal if not already unlocked */
         unlock(): void;
         /** Render a medal

@@ -12,6 +12,7 @@ export
     medalDisplaySize,
     medalsInit,
     medalsForEach,
+    medalsReset,
     setMedalDisplayTime,
     setMedalDisplaySlideTime,
     setMedalDisplaySize,

@@ -9311,6 +9311,7 @@ function medalsSave()
             unlocked: medal.unlocked,
         };
         if (medal.image) entry.src = medal.image.src;
+        else if (medal.src) entry.src = medal.src;
         data[medal.id] = entry;
     });
     localStorage[medalsSaveName] = JSON.stringify(data);
@@ -9362,7 +9363,10 @@ class Medal
         /** @property {HTMLImageElement|undefined} - Source image for the medal icon, if any */
         this.image = undefined;
         if (src)
-            (this.image = new Image).src = src;
+            if (typeof Image !== 'undefined')
+                (this.image = new Image).src = src;
+            else
+                this.src = src;
 
         // add this to list of medals
         medals[id] = this;
