@@ -6950,10 +6950,10 @@ class ParticleEmitter extends EngineObject
      *  @param {number} [particleTime]      - How long particles live
      *  @param {number} [sizeStart]         - How big are particles at start
      *  @param {number} [sizeEnd]           - How big are particles at end
-     *  @param {number} [speed]             - How fast are particles when spawned
-     *  @param {number} [angleSpeed]        - How fast are particles rotating
-     *  @param {number} [damping]           - How much to dampen particle speed
-     *  @param {number} [angleDamping]      - How much to dampen particle angular speed
+     *  @param {number} [speed]             - How fast are particles when spawned, in world units per frame (at 60fps, so multiply units/sec by 1/60)
+     *  @param {number} [angleSpeed]        - How fast are particles rotating, in radians per frame (at 60fps)
+     *  @param {number} [damping]           - How much to dampen particle speed, per-frame velocity multiplier (1 = no damping, .9 = lose 10% speed each frame)
+     *  @param {number} [angleDamping]      - How much to dampen particle angular speed, per-frame multiplier (1 = no damping)
      *  @param {number} [gravityScale]      - How much gravity effect particles
      *  @param {number} [particleConeAngle] - Cone for start particle angle
      *  @param {number} [fadeRate]          - Fraction of life spent fading: half at fade-in (start), half at fade-out (end). e.g. .2 = 10% fade-in, 80% full opacity, 10% fade-out
@@ -7028,13 +7028,13 @@ class ParticleEmitter extends EngineObject
         this.sizeStart         = sizeStart;
         /** @property {number} - How big are particles at end */
         this.sizeEnd           = sizeEnd;
-        /** @property {number} - How fast are particles when spawned */
+        /** @property {number} - Particle speed when spawned, in world units per frame (at 60fps) */
         this.speed             = speed;
-        /** @property {number} - How fast are particles rotating */
+        /** @property {number} - Particle angular speed when spawned, in radians per frame (at 60fps) */
         this.angleSpeed        = angleSpeed;
-        /** @property {number} - How much to dampen particle speed */
+        /** @property {number} - Per-frame velocity multiplier (1 = no damping, .9 = lose 10% speed each frame) */
         this.damping           = damping;
-        /** @property {number} - How much to dampen particle angular speed */
+        /** @property {number} - Per-frame angular velocity multiplier (1 = no damping) */
         this.angleDamping      = angleDamping;
         /** @property {number} - How much gravity affects particles */
         this.gravityScale      = gravityScale;
@@ -8561,7 +8561,15 @@ function medalsInit(saveName)
     // check if medals are unlocked
     medalsSaveName = saveName;
     if (!debugMedals)
-        medalsForEach(medal=> medal.unlocked = !!localStorage[medal.storageKey()]);
+    {
+        let saved = {};
+        try { saved = JSON.parse(localStorage[saveName] || '{}'); }
+        catch (e) { saved = {}; }
+        medalsForEach(medal => {
+            medal.unlocked = !!(saved[medal.id] && saved[medal.id].unlocked);
+        });
+        medalsSave();
+    }
 
     // engine automatically renders medals
     engineAddPlugin(undefined, medalsRender);
@@ -8604,6 +8612,33 @@ function medalsInit(saveName)
  *  @memberof Medals */
 function medalsForEach(callback)
 { Object.values(medals).forEach(medal=>callback(medal)); }
+
+/** Reset all medals to locked and persist the cleared catalog
+ *  @memberof Medals */
+function medalsReset()
+{
+    medalsForEach(medal => medal.unlocked = false);
+    medalsSave();
+}
+
+// Write the full medal catalog (metadata + unlocked flag) to localStorage
+// under medalsSaveName. Called by medalsInit, Medal.unlock, and medalsReset.
+function medalsSave()
+{
+    if (!medalsSaveName) return;
+    const data = {};
+    medalsForEach(medal => {
+        const entry = {
+            name: medal.name,
+            description: medal.description,
+            icon: medal.icon,
+            unlocked: medal.unlocked,
+        };
+        if (medal.image) entry.src = medal.image.src;
+        data[medal.id] = entry;
+    });
+    localStorage[medalsSaveName] = JSON.stringify(data);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -8664,7 +8699,8 @@ class Medal
 
         // save the medal
         ASSERT(medalsSaveName, 'save name must be set');
-        localStorage[this.storageKey()] = this.unlocked = true;
+        this.unlocked = true;
+        medalsSave();
         medalsDisplayQueue.push(this);
     }
 
@@ -8722,8 +8758,6 @@ class Medal
             drawTextScreen(this.icon, pos, size*.7, BLACK);
     }
 
-    // Get local storage key used by the medal
-    storageKey() { return medalsSaveName + '_' + this.id; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

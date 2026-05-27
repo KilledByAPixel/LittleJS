@@ -3121,10 +3121,10 @@ declare module "littlejsengine" {
          *  @param {number} [particleTime]      - How long particles live
          *  @param {number} [sizeStart]         - How big are particles at start
          *  @param {number} [sizeEnd]           - How big are particles at end
-         *  @param {number} [speed]             - How fast are particles when spawned
-         *  @param {number} [angleSpeed]        - How fast are particles rotating
-         *  @param {number} [damping]           - How much to dampen particle speed
-         *  @param {number} [angleDamping]      - How much to dampen particle angular speed
+         *  @param {number} [speed]             - How fast are particles when spawned, in world units per frame (at 60fps, so multiply units/sec by 1/60)
+         *  @param {number} [angleSpeed]        - How fast are particles rotating, in radians per frame (at 60fps)
+         *  @param {number} [damping]           - How much to dampen particle speed, per-frame velocity multiplier (1 = no damping, .9 = lose 10% speed each frame)
+         *  @param {number} [angleDamping]      - How much to dampen particle angular speed, per-frame multiplier (1 = no damping)
          *  @param {number} [gravityScale]      - How much gravity effect particles
          *  @param {number} [particleConeAngle] - Cone for start particle angle
          *  @param {number} [fadeRate]          - Fraction of life spent fading: half at fade-in (start), half at fade-out (end). e.g. .2 = 10% fade-in, 80% full opacity, 10% fade-out
@@ -3162,9 +3162,9 @@ declare module "littlejsengine" {
         sizeStart: number;
         /** @property {number} - How big are particles at end */
         sizeEnd: number;
-        /** @property {number} - How fast are particles when spawned */
+        /** @property {number} - Particle speed when spawned, in world units per frame (at 60fps) */
         speed: number;
-        /** @property {number} - How fast are particles rotating */
+        /** @property {number} - Particle angular speed when spawned, in radians per frame (at 60fps) */
         angleSpeed: number;
         /** @property {number} - Cone for start particle angle */
         particleConeAngle: number;
@@ -3359,7 +3359,6 @@ declare module "littlejsengine" {
          *  @param {number} size - Screen space size
          */
         renderIcon(pos: Vector2, size: number): void;
-        storageKey(): string;
     }
     /**
      * LittleJS Newgrounds Plugin

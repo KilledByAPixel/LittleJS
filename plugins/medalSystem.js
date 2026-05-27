@@ -60,7 +60,15 @@ function medalsInit(saveName)
     // check if medals are unlocked
     medalsSaveName = saveName;
     if (!debugMedals)
-        medalsForEach(medal=> medal.unlocked = !!localStorage[medal.storageKey()]);
+    {
+        let saved = {};
+        try { saved = JSON.parse(localStorage[saveName] || '{}'); }
+        catch (e) { saved = {}; }
+        medalsForEach(medal => {
+            medal.unlocked = !!(saved[medal.id] && saved[medal.id].unlocked);
+        });
+        medalsSave();
+    }
 
     // engine automatically renders medals
     engineAddPlugin(undefined, medalsRender);
@@ -103,6 +111,33 @@ function medalsInit(saveName)
  *  @memberof Medals */
 function medalsForEach(callback)
 { Object.values(medals).forEach(medal=>callback(medal)); }
+
+/** Reset all medals to locked and persist the cleared catalog
+ *  @memberof Medals */
+function medalsReset()
+{
+    medalsForEach(medal => medal.unlocked = false);
+    medalsSave();
+}
+
+// Write the full medal catalog (metadata + unlocked flag) to localStorage
+// under medalsSaveName. Called by medalsInit, Medal.unlock, and medalsReset.
+function medalsSave()
+{
+    if (!medalsSaveName) return;
+    const data = {};
+    medalsForEach(medal => {
+        const entry = {
+            name: medal.name,
+            description: medal.description,
+            icon: medal.icon,
+            unlocked: medal.unlocked,
+        };
+        if (medal.image) entry.src = medal.image.src;
+        data[medal.id] = entry;
+    });
+    localStorage[medalsSaveName] = JSON.stringify(data);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -163,7 +198,8 @@ class Medal
 
         // save the medal
         ASSERT(medalsSaveName, 'save name must be set');
-        localStorage[this.storageKey()] = this.unlocked = true;
+        this.unlocked = true;
+        medalsSave();
         medalsDisplayQueue.push(this);
     }
 
@@ -221,8 +257,6 @@ class Medal
             drawTextScreen(this.icon, pos, size*.7, BLACK);
     }
 
-    // Get local storage key used by the medal
-    storageKey() { return medalsSaveName + '_' + this.id; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
