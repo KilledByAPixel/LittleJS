@@ -9299,8 +9299,6 @@ function medalsReset()
     medalsSave();
 }
 
-// Write the full medal catalog (metadata + unlocked flag) to localStorage
-// under medalsSaveName. Called by medalsInit, Medal.unlock, and medalsReset.
 function medalsSave()
 {
     if (!medalsSaveName) return;
@@ -9375,7 +9373,6 @@ class Medal
     {
         if (medalsPreventUnlock || this.unlocked) return;
 
-        // save the medal
         ASSERT(medalsSaveName, 'save name must be set');
         this.unlocked = true;
         medalsSave();
