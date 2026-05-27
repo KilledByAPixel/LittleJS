@@ -1889,7 +1889,10 @@ declare module "littlejsengine" {
      * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
      * @memberof Draw
      */
-    /** Draw directly to a 2d canvas context in world space
+    /** Draw directly to a 2d canvas context in world space.
+     *  The Y axis is flipped so world-Y-up coordinates render right-side up
+     *  (matches the WebGL path). Callers whose drawing depends on Y direction
+     *  (e.g. linear gradients) should flip their own Y endpoints accordingly.
      *  @param {Vector2}  pos
      *  @param {Vector2}  size
      *  @param {number}   angle

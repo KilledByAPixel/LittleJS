@@ -3524,11 +3524,12 @@ function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
         // normal canvas 2D rendering method (slower)
         ++drawCount;
         ++primitiveCount;
-        size = new Vector2(size.x, -size.y); // flip upside down sprites
         drawCanvas2D(pos, size, angle, mirror, (context)=>
         {
             if (textureInfo)
             {
+                // un-flip Y so the image renders right-side up under drawCanvas2D's Y flip
+                context.scale(1, -1);
                 // calculate uvs and render
                 const x = tileInfo.pos.x,  y = tileInfo.pos.y;
                 const w = tileInfo.size.x, h = tileInfo.size.y;
@@ -3536,7 +3537,7 @@ function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
             }
             else
             {
-                // if no tile info, use untextured rect
+                // if no tile info, use untextured rect (Y-symmetric, no compensation needed)
                 const c = additiveColor ? color.add(additiveColor) : color;
                 context.fillStyle = c.toString();
                 context.fillRect(-.5, -.5, 1, 1);
@@ -3610,11 +3611,10 @@ function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=CLEAR_WHITE, an
         // normal canvas 2D rendering method (slower)
         ++drawCount;
         ++primitiveCount;
-        size = new Vector2(size.x, -size.y); // fix upside down sprites
         drawCanvas2D(pos, size, angle, false, (context)=>
         {
-            // if no tile info, use untextured rect
-            const gradient = context.createLinearGradient(0, -.5, 0, .5);
+            // gradient endpoints are flipped to match the Y flip inside drawCanvas2D
+            const gradient = context.createLinearGradient(0, .5, 0, -.5);
             gradient.addColorStop(0, colorTop.toString());
             gradient.addColorStop(1, colorBottom.toString());
             context.fillStyle = gradient;
@@ -4033,7 +4033,10 @@ function drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=CLEAR_WHIT
  * @memberof Draw
  */
 
-/** Draw directly to a 2d canvas context in world space
+/** Draw directly to a 2d canvas context in world space.
+ *  The Y axis is flipped so world-Y-up coordinates render right-side up
+ *  (matches the WebGL path). Callers whose drawing depends on Y direction
+ *  (e.g. linear gradients) should flip their own Y endpoints accordingly.
  *  @param {Vector2}  pos
  *  @param {Vector2}  size
  *  @param {number}   angle
