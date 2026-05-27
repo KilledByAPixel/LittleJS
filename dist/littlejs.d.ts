@@ -2760,9 +2760,6 @@ declare module "littlejsengine" {
         /** Apply force to this object (adjust velocity, affected by mass)
          *  @param {Vector2} force */
         applyForce(force: Vector2): void;
-        /** Get the direction of the mirror
-         *  @return {number} -1 if this.mirror is true, or 1 if not mirrored */
-        getMirrorSign(): number;
         /** Attaches a child to this with a local transform, returns child for chaining
          *  @param {EngineObject} child
          *  @param {Vector2}      [localPos=vec2()]

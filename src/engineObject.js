@@ -133,7 +133,7 @@ class EngineObject
         if (parent)
         {
             // compose with parent transform inline to avoid intermediate vector allocs
-            const mirror = parent.getMirrorSign();
+            const mirror = parent.mirror ? -1 : 1;
             const lp = this.localPos, pp = parent.pos;
             const lx = lp.x*mirror, ly = lp.y, pa = parent.angle;
             if (pa)
@@ -450,10 +450,6 @@ class EngineObject
      *  @param {Vector2} force */
     applyForce(force)
     { if (this.mass) this.applyAcceleration(force.scale(1/this.mass)); }
-
-    /** Get the direction of the mirror
-     *  @return {number} -1 if this.mirror is true, or 1 if not mirrored */
-    getMirrorSign() { return this.mirror ? -1 : 1; }
 
     /** Attaches a child to this with a local transform, returns child for chaining
      *  @param {EngineObject} child
