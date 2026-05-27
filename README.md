@@ -13,7 +13,7 @@ LittleJS is a fast, lightweight, and fully open source HTML5 game engine designe
 Its small footprint is packed with a comprehensive feature set including hybrid rendering, physics, particles, sound, and input handling.
 The code is clean and well documented with some fun examples to get you started right away. Choo-Choo!
 
-## 🙌 Js13k + LittleJS
+## 🤝 Js13k + LittleJS
 
 This special branch of LittleJS engine designed speficially for size coding compititons like JS13k!
 This was done to allow the main line LittleJS engine to continue evoling while also being able to continue minifying this version.
@@ -30,7 +30,7 @@ This was done to allow the main line LittleJS engine to continue evoling while a
 
 ## 🎮 Examples
 
-Many amazing JS13K games have been made using LittleJS incuding a few in the top 10. Here are a few to check out...
+Many amazing JS13K games have been made using LittleJS incuding a few in the top 10. Here some to check out...
 
 - [Space Huggers](https://js13kgames.com/2021/games/space-huggers) - Rogulike platformer shoot-em-up game with procedural levels. by KilledByAPixel
 - [Black Cat Squadron](https://js13kgames.com/games/black-cat-squadron) - One button shooter based on a WW2 Navy squadron. by repsej
