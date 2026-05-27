@@ -21,6 +21,10 @@ globalThis.AudioContext = class AudioContext
 // methods required.
 globalThis.localStorage = {};
 
+// Minimal Image stub. The Medal constructor does `new Image; img.src = url`
+// which only requires a settable `src` property in the headless test path.
+globalThis.Image = class Image {};
+
 // Enable headless mode on the shared bundle instance. ES module caching
 // means every test file that imports the bundle gets this same instance,
 // so tile() / audio paths / input setup all take their headless branches.

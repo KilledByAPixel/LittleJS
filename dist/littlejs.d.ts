@@ -3351,7 +3351,6 @@ declare module "littlejsengine" {
         unlocked: boolean;
         /** @property {HTMLImageElement|undefined} - Source image for the medal icon, if any */
         image: HTMLImageElement;
-        src: string;
         /** Unlocks a medal if not already unlocked */
         unlock(): void;
         /** Render a medal
