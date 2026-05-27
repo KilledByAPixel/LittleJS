@@ -139,10 +139,10 @@ class EngineObject
             if (pa)
             {
                 const c = cos(-pa), s = sin(-pa);
-                this.pos = new Vector2(lx*c - ly*s + pp.x, lx*s + ly*c + pp.y);
+                this.pos.set(lx*c - ly*s + pp.x, lx*s + ly*c + pp.y);
             }
             else
-                this.pos = new Vector2(lx + pp.x, ly + pp.y);
+                this.pos.set(lx + pp.x, ly + pp.y);
             this.angle = mirror*this.localAngle + pa;
         }
 

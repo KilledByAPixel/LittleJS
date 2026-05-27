@@ -215,12 +215,16 @@ class ParticleEmitter extends EngineObject
         else if (this.particles.length === 0)
             this.destroy(true);
             
-        // update and remove destroyed particles
-        this.particles = this.particles.filter((p)=>
+        // update and remove destroyed particles in place to avoid per-frame array allocation
+        const particles = this.particles;
+        let alive = 0;
+        for (let i = 0; i < particles.length; ++i)
         {
+            const p = particles[i];
             p.update();
-            return !p.destroyed;
-        });
+            if (!p.destroyed) particles[alive++] = p;
+        }
+        particles.length = alive;
 
         if (debugParticles)
         {

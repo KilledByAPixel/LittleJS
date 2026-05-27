@@ -2785,10 +2785,10 @@ class EngineObject
             if (pa)
             {
                 const c = cos(-pa), s = sin(-pa);
-                this.pos = new Vector2(lx*c - ly*s + pp.x, lx*s + ly*c + pp.y);
+                this.pos.set(lx*c - ly*s + pp.x, lx*s + ly*c + pp.y);
             }
             else
-                this.pos = new Vector2(lx + pp.x, ly + pp.y);
+                this.pos.set(lx + pp.x, ly + pp.y);
             this.angle = mirror*this.localAngle + pa;
         }
 
@@ -7103,12 +7103,16 @@ class ParticleEmitter extends EngineObject
         else if (this.particles.length === 0)
             this.destroy(true);
             
-        // update and remove destroyed particles
-        this.particles = this.particles.filter((p)=>
+        // update and remove destroyed particles in place to avoid per-frame array allocation
+        const particles = this.particles;
+        let alive = 0;
+        for (let i = 0; i < particles.length; ++i)
         {
+            const p = particles[i];
             p.update();
-            return !p.destroyed;
-        });
+            if (!p.destroyed) particles[alive++] = p;
+        }
+        particles.length = alive;
 
         if (debugParticles)
         {
@@ -11186,23 +11190,19 @@ class Box2dObject extends EngineObject
 
         function box2dCreatePolygonShape(points)
         {
-            function box2dCreatePointList(points)
-            {
-                const buffer = box2d.instance._malloc(points.length * 8);
-                for (let i=0, offset=0; i<points.length; ++i)
-                {
-                    box2d.instance.HEAPF32[buffer + offset >> 2] = points[i].x;
-                    offset += 4;
-                    box2d.instance.HEAPF32[buffer + offset >> 2] = points[i].y;
-                    offset += 4;
-                }
-                return box2d.instance.wrapPointer(buffer, box2d.instance.b2Vec2);
-            }
-
             ASSERT(3 <= points.length && points.length <= 8);
+            const buffer = box2d.instance._malloc(points.length * 8);
+            for (let i=0, offset=0; i<points.length; ++i)
+            {
+                box2d.instance.HEAPF32[buffer + offset >> 2] = points[i].x;
+                offset += 4;
+                box2d.instance.HEAPF32[buffer + offset >> 2] = points[i].y;
+                offset += 4;
+            }
+            const box2dPoints = box2d.instance.wrapPointer(buffer, box2d.instance.b2Vec2);
             const shape = new box2d.instance.b2PolygonShape();
-            const box2dPoints = box2dCreatePointList(points);
             shape.Set(box2dPoints, points.length);
+            box2d.instance._free(buffer);
             return shape;
         }
 

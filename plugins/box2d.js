@@ -207,23 +207,19 @@ class Box2dObject extends EngineObject
 
         function box2dCreatePolygonShape(points)
         {
-            function box2dCreatePointList(points)
-            {
-                const buffer = box2d.instance._malloc(points.length * 8);
-                for (let i=0, offset=0; i<points.length; ++i)
-                {
-                    box2d.instance.HEAPF32[buffer + offset >> 2] = points[i].x;
-                    offset += 4;
-                    box2d.instance.HEAPF32[buffer + offset >> 2] = points[i].y;
-                    offset += 4;
-                }
-                return box2d.instance.wrapPointer(buffer, box2d.instance.b2Vec2);
-            }
-
             ASSERT(3 <= points.length && points.length <= 8);
+            const buffer = box2d.instance._malloc(points.length * 8);
+            for (let i=0, offset=0; i<points.length; ++i)
+            {
+                box2d.instance.HEAPF32[buffer + offset >> 2] = points[i].x;
+                offset += 4;
+                box2d.instance.HEAPF32[buffer + offset >> 2] = points[i].y;
+                offset += 4;
+            }
+            const box2dPoints = box2d.instance.wrapPointer(buffer, box2d.instance.b2Vec2);
             const shape = new box2d.instance.b2PolygonShape();
-            const box2dPoints = box2dCreatePointList(points);
             shape.Set(box2dPoints, points.length);
+            box2d.instance._free(buffer);
             return shape;
         }
 
