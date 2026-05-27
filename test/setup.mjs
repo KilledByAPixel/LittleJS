@@ -15,6 +15,12 @@ globalThis.AudioContext = class AudioContext
     resume() { return Promise.resolve(); }
 };
 
+// Minimal in-memory localStorage stub. The bundle reads/writes via
+// bracket-notation (e.g. localStorage[key] = value), which proxies through
+// to plain own-property assignment on this object — no Storage prototype
+// methods required.
+globalThis.localStorage = {};
+
 // Enable headless mode on the shared bundle instance. ES module caching
 // means every test file that imports the bundle gets this same instance,
 // so tile() / audio paths / input setup all take their headless branches.
