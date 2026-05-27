@@ -612,11 +612,11 @@ new Box2dGearJoint(jointA, jointB, ratio)
 new Medal(id, name, description='', icon='🏆', src)  // src is optional image url
 medal.unlock()                       // Mark unlocked, save, and queue the popup
 medal.unlocked                       // True after unlock
-medal.storageKey()                   // localStorage key for this medal
 
 medals                               // Global { [id]: Medal } map
 medalsInit(saveName)                 // Restore unlocked state from localStorage under saveName
 medalsForEach(callback)              // Iterate all registered medals
+medalsReset()                        // Lock all medals and persist the cleared catalog
 medalsPreventUnlock                  // Block unlocks (testing / debug)
 
 // Display tuning
