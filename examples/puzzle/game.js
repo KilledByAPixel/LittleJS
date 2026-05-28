@@ -18,6 +18,7 @@ LJS.setCanvasPixelated(false);
 LJS.setTilesPixelated(false);
 
 const fallTime = .2;
+const swapTime = .2;
 const cameraOffset = vec2(0,-.5);
 const backgroundColor = hsl(0,0,.2);
 const minMatchCount = 3;
@@ -28,7 +29,7 @@ const sound_goodMove = new LJS.Sound([.4,.2,250,.04,,.04,,,1,,,,,3]);
 const sound_badMove  = new LJS.Sound([,,700,,,.07,,,,3.7,,,,3,,,.1]);
 const sound_fall     = new LJS.Sound([.2,,1900,,,.01,,1.4,,91,,,,,,,,,,.7]);
 
-let level, levelSize, levelFall, fallTimer, dragStartPos, comboCount, score, bestScore;
+let level, levelSize, levelFall, fallTimer, swapTimer, swapPosA, swapPosB, swapReverse, dragStartPos, comboCount, score, bestScore;
 
 ///////////////////////////////////////////////////////////////////////////////
 // tiles
@@ -62,6 +63,7 @@ function gameReset()
 
     comboCount = score = 0;
     fallTimer = new LJS.Timer;
+    swapTimer = new LJS.Timer;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -86,7 +88,40 @@ function gameInit()
 ///////////////////////////////////////////////////////////////////////////////
 function gameUpdate()
 {
-    if (fallTimer.isSet())
+    if (swapTimer.isSet())
+    {
+        // wait for swap animation to finish
+        if (swapTimer.elapsed())
+        {
+            if (swapReverse)
+            {
+                // reverse animation done, nothing more to do
+                swapTimer.unset();
+            }
+            else
+            {
+                // try to clear matches now that the swap is visually complete
+                clearMatches();
+                if (fallTimer.isSet())
+                {
+                    sound_goodMove.play();
+                    swapTimer.unset();
+                }
+                else
+                {
+                    // no matches, undo swap and animate back
+                    sound_badMove.play();
+                    const a = getTile(swapPosA);
+                    const b = getTile(swapPosB);
+                    setTile(swapPosA, b);
+                    setTile(swapPosB, a);
+                    swapReverse = 1;
+                    swapTimer.set(swapTime);
+                }
+            }
+        }
+    }
+    else if (fallTimer.isSet())
     {
         // update falling tiles
         if (fallTimer.elapsed())
@@ -156,22 +191,13 @@ function gameUpdate()
                     const endTile =   getTile(mouseTilePos);
                     if (startTile >= 0 && endTile >= 0)
                     {
-                        // swap tiles
+                        // swap tiles and start the swap animation
                         setTile(mouseTilePos, startTile);
                         setTile(dragStartPos, endTile);
-
-                        // try to clear matches
-                        clearMatches();
-
-                        // undo if no matches
-                        if (!fallTimer.isSet())
-                        {
-                            sound_badMove.play();
-                            setTile(mouseTilePos, endTile);
-                            setTile(dragStartPos, startTile);
-                        }
-                        else
-                            sound_goodMove.play();
+                        swapPosA = dragStartPos.copy();
+                        swapPosB = mouseTilePos.copy();
+                        swapReverse = 0;
+                        swapTimer.set(swapTime);
                         dragStartPos = 0;
                     }
                 }
@@ -221,6 +247,22 @@ function gameRender()
         // make pieces fall gradually
         if (fallTimer.active() && levelFall[pos.x + pos.y*levelSize.x])
             drawPos.y += 1-fallTimer.getPercent();
+
+        // animate swapping pieces sliding past each other
+        if (swapTimer.active())
+        {
+            const p = 1 - swapTimer.getPercent();
+            if (pos.x == swapPosA.x && pos.y == swapPosA.y)
+            {
+                drawPos.x += (swapPosB.x - swapPosA.x) * p;
+                drawPos.y += (swapPosB.y - swapPosA.y) * p;
+            }
+            else if (pos.x == swapPosB.x && pos.y == swapPosB.y)
+            {
+                drawPos.x += (swapPosA.x - swapPosB.x) * p;
+                drawPos.y += (swapPosA.y - swapPosB.y) * p;
+            }
+        }
 
         // draw background
         const color = tileColors[data];
