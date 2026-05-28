@@ -2427,7 +2427,7 @@ declare module "littlejsengine" {
          *  @param {number}  [randomnessScale] - How much to scale pitch randomness
          *  @param {boolean} [loop] - Should the sound loop?
          *  @param {boolean} [paused] - Should the sound start paused
-         *  @return {SoundInstance} - The audio source node
+         *  @return {SoundInstance} - The sound instance, or undefined if sound is disabled, not loaded, or running in headless mode
          */
         play(pos?: Vector2, volume?: number, pitch?: number, randomnessScale?: number, loop?: boolean, paused?: boolean): SoundInstance;
         /** Play a music track that loops by default

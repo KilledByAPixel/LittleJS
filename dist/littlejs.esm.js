@@ -6276,7 +6276,7 @@ class Sound
      *  @param {number}  [randomnessScale] - How much to scale pitch randomness
      *  @param {boolean} [loop] - Should the sound loop?
      *  @param {boolean} [paused] - Should the sound start paused
-     *  @return {SoundInstance} - The audio source node
+     *  @return {SoundInstance} - The sound instance, or undefined if sound is disabled, not loaded, or running in headless mode
      */
     play(pos, volume=1, pitch=1, randomnessScale=1, loop=false, paused=false)
     {
