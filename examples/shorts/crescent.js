@@ -14,5 +14,4 @@ function gameRender()
     const percent = mod(time/4, 1);
     drawCrescent(vec2(0,-3), 4, percent, hsl(.12,.5,.1), time/4, true, .15, hsl(.6,.4,.3));
     drawCrescent(vec2(0,-3), 4, percent, hsl(.12,.5,.9), time/4, false, .15, hsl(.6,.4,.3));
-    drawText('percent: ' + percent.toFixed(2), vec2(0,-8.7), .7, WHITE);
 }
