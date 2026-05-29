@@ -2715,6 +2715,8 @@ declare module "littlejsengine" {
         update(): void;
         /** Render the object, draws a tile by default, automatically called each frame, sorted by renderOrder */
         render(): void;
+        /** Optional hook called during the light system plugin's lightmap pass to draw this object's lightmap contribution. Does nothing by default. */
+        renderLight(): void;
         /** Destroy this object, destroy its children, detach its parent, and mark it for removal
          *  @param {boolean} [immediate] - should attached effects be allowed to die off? */
         destroy(immediate?: boolean): void;
@@ -3470,6 +3472,85 @@ declare module "littlejsengine" {
         texture: any;
         /** @property {WebGLVertexArrayObject} - Vertex array object */
         vao: any;
+    }
+    /**
+     * LittleJS Light System Plugin
+     * - Adds 2D dynamic lighting to the scene
+     * - Lights are first-class EngineObjects (the Light class)
+     * - Each Light draws a soft falloff blob of its color into a shared lightmap
+     * - Lights accumulate ADDITIVELY in the lightmap (red + blue = magenta)
+     * - The lightmap is then MULTIPLIED with the scene during composite, so unlit
+     *   areas go to the ambient color and lit areas show the scene tinted by the
+     *   accumulated light color
+     * - Draw the world at full brightness — the lightmap does the darkening
+     * - Any EngineObject may override renderLight() to additively contribute to the
+     *   lightmap (e.g. emissive lava tiles, weapon flashes, glowing crystals)
+     * - Must be constructed BEFORE PostProcessPlugin so post-process sees lit pixels
+     * @namespace LightSystem
+     */
+    /** Global Light System plugin object
+     *  @type {LightSystemPlugin}
+     *  @memberof LightSystem */
+    export let lightSystem: LightSystemPlugin;
+    /**
+     * LightSystemPlugin
+     * - Owns the offscreen lightmap texture, falloff/composite shaders, and the
+     *   per-frame render pass that multiplies the lightmap onto the WebGL scene
+     * - The composite is MULTIPLICATIVE: unlit areas get the ambient color, lit
+     *   areas show the scene tinted by the accumulated light color. So you should
+     *   draw your world at full brightness — the lightmap handles the darkening.
+     * @memberof LightSystem
+     */
+    export class LightSystemPlugin {
+        /** Create the global light system plugin.
+         *  @param {Vector2} [textureSize]  - Size of the lightmap texture (defaults to mainCanvasSize)
+         *  @param {Color}   [ambientColor] - Color applied to unlit areas of the scene (defaults to BLACK = pitch dark). Set a small RGB like rgb(0.1,0.1,0.15) for a faint "moonlight" baseline so unlit areas aren't fully black.
+         *  @example
+         *  // simplest usage
+         *  new LightSystemPlugin();
+         */
+        constructor(textureSize?: Vector2, ambientColor?: Color);
+        /** @property {boolean} - When false, the render pass is skipped entirely */
+        enabled: boolean;
+        /** @property {Color} - Baseline color applied to unlit areas of the scene. Defaults to BLACK (pitch dark). Set to a small RGB for a faint ambient. The lightmap is cleared to this color each frame, then lights add on top, then the result multiplies the scene. */
+        ambientColor: Color;
+        /** @property {Vector2} - Size of the lightmap texture (set at construction; falls back to mainCanvasSize at init time) */
+        textureSize: Vector2;
+        /** @property {WebGLTexture} - The lightmap texture */
+        texture: any;
+        /** @property {WebGLProgram} - Shader for drawing per-Light falloff blobs into the lightmap */
+        lightShader: any;
+        /** @property {WebGLProgram} - Shader for compositing the lightmap over the main scene */
+        compositeShader: any;
+        /** @property {WebGLVertexArrayObject} - Vertex array object for the light shader */
+        lightVAO: any;
+        /** @property {WebGLVertexArrayObject} - Vertex array object for the composite shader */
+        compositeVAO: any;
+        /** Draw a single Light's falloff blob into the currently bound lightmap.
+         *  Called by Light.renderLight() during the plugin's render pass.
+         *  @param {Light} light */
+        drawLight(light: Light): void;
+    }
+    /**
+     * A Light is an EngineObject that contributes a soft additive blob of color
+     * to the LightSystem plugin's lightmap.
+     * @extends EngineObject
+     * @memberof LightSystem
+     * @example
+     * new Light(vec2(5, 5), 4, rgb(1, 0.5, 0));        // orange light, full soft blob
+     * new Light(vec2(0, 0), 8, rgb(1, 1, 1), 2);       // white core with 2-unit soft halo
+     */
+    export class Light extends EngineObject {
+        /** Create a light object and add it to the engine object list
+         *  @param {Vector2} pos - World space position
+         *  @param {number} radius - Total extent of the light in world units
+         *  @param {Color} [color] - Color of the light; alpha modulates intensity
+         *  @param {number} [fadeRange] - Width of the soft edge in world units (defaults to radius) */
+        constructor(pos: Vector2, radius: number, color?: Color, fadeRange?: number);
+        /** @property {number} - Total extent of the light in world units */
+        radius: number;
+        /** @property {number} - Width of the soft edge in world units */
+        fadeRange: number;
     }
     /**
      * LittleJS ZzFXM Plugin

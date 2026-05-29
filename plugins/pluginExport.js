@@ -28,6 +28,11 @@ export
     postProcess,
     PostProcessPlugin,
 
+    // Light System
+    lightSystem,
+    LightSystemPlugin,
+    Light,
+
     // ZzFXMusic
     ZzFXMusic,
     zzfxM,

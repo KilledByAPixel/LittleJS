@@ -69,6 +69,7 @@ const exampleList =
     new ExampleInfo('UI Layout', 'uiLayout.js', 'Auto-arranging container for vertical, horizontal, and grid menus', false, 'ui, grid, menu, container, level select'),
     new ExampleInfo('WebGL Shader', 'shader.js', 'Full canvas webgl shader', false, 'webgl, visual, effect'),
     new ExampleInfo('Post Processing', 'postProcess.js', 'Shader effects and filters', false, 'webgl, visual, effect'),
+    new ExampleInfo('Light System', 'lightSystem.js', 'Additive 2D lighting overlay with soft falloff lights', false, 'webgl, visual, lighting, additive, color, falloff, glow'),
     new ExampleInfo('--- MINI GAMES ---'),
     new ExampleInfo('Pong Game', 'pongGame.js', 'Classic paddle ball bouncing', false, 'objects, collision'),
     new ExampleInfo('Flappy Game', 'flappyGame.js', 'Flappy bird style game', false, 'objects, obstacles'),

@@ -546,6 +546,42 @@ UILayout.addChild(child)               // Triggers relayout
 UILayout.relayout()                    // Call manually if you mutate a child's size
 ```
 
+## LittleJS Light System
+- 2D dynamic lighting overlay
+- Lights are first-class EngineObjects (the `Light` class) that draw soft falloff blobs
+- Lights accumulate ADDITIVELY in the lightmap (red + blue = magenta)
+- The lightmap is MULTIPLIED with the scene during composite — draw your world at full brightness and the lightmap handles the darkening
+- Any EngineObject can override `renderLight()` to additively contribute to the lightmap (lava tiles, weapon flashes, glowing crystals, etc.)
+- Must be constructed BEFORE `PostProcessPlugin` so post-process sees lit pixels
+- See `examples/shorts/lightSystem.js` for a demo
+
+```javascript
+// Setup
+new LightSystemPlugin()                       // Defaults: full-canvas lightmap, BLACK ambient
+new LightSystemPlugin(vec2(512, 512))         // Lower-res lightmap (perf knob)
+new LightSystemPlugin(undefined, rgb(.1,.1,.15)) // Faint moonlight ambient
+
+// Tunables
+lightSystem.enabled       = true              // Skip the render pass entirely when false
+lightSystem.ambientColor  = rgb(0, 0, 0)      // Color of unlit areas
+
+// Lights are EngineObjects — auto-register, destroy() to remove
+new Light(pos, radius, color=WHITE, fadeRange=radius)
+//   pos       Vector2  World space position
+//   radius    number   Total extent in world units
+//   color     Color    Light color; alpha modulates intensity
+//   fadeRange number   Width of the soft edge (0 = hard disc, radius = fully soft blob)
+
+// Per-object lightmap contribution hook (on every EngineObject)
+class LavaTile extends EngineObject {
+    renderLight() {
+        // Called during the lightmap pass with additive blending active.
+        // drawRect / drawTile / drawCircle all land in the lightmap.
+        drawRect(this.pos, vec2(3), rgb(1, 0.4, 0));
+    }
+}
+```
+
 ## LittleJS Box2D Physics
 - Optional plugin wrapping the Box2D physics engine (via box2d.wasm.js)
 - Drop-in replacement for engine objects: `Box2dObject extends EngineObject`
