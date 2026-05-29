@@ -9,8 +9,8 @@ function gameInit()
 
     // stationary Lights
     new Light(vec2(-6, 0), 6, RED);
-    new Light(vec2( 0, 4), 6, GREEN);
-    new Light(vec2( 6, 0), 6, BLUE);
+    new Light(vec2( 0, 4), 4, GREEN);
+    new Light(vec2( 6, 0), 8, BLUE);
 
     // emissive object
     const lava = new EngineObject(vec2(0, -5), vec2(2));
@@ -20,7 +20,7 @@ function gameInit()
         drawRect(this.pos, vec2(2), ORANGE);
     }
 
-    // mouse-follow light - scroll wheel adjusts radius
+    // mouse light - scroll wheel adjusts radius
     mouseLight = new Light(vec2(), 4, WHITE);
 }
 
@@ -36,8 +36,8 @@ function gameUpdate()
 {
     mouseLight.pos = mousePos;
 
-    // mouse wheel adjusts the radius of the mouse light
+    // mouse wheel adjusts radius of the mouse light
     mouseLight.radius -= mouseWheel*0.5;
     mouseLight.radius = clamp(mouseLight.radius, 1, 20);
-    mouseLight.fadeRange = mouseLight.radius; // keep it fully soft
+    mouseLight.fadeRange = mouseLight.radius; // keep it soft
 }
