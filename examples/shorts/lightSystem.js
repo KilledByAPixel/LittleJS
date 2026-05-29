@@ -5,14 +5,14 @@ class LavaTile extends EngineObject
 {
     constructor(pos)
     {
-        super(pos, vec2(1), undefined, 0, rgb(0.9, 0.3, 0));
+        super(pos, vec2(2), undefined, 0, rgb(0.9, 0.3, 0));
     }
 
     renderLight()
     {
         // additive emissive contribution into the lightmap
         // (drawRect honors the additive blend the plugin set up)
-        drawRect(this.pos, vec2(3), rgb(1, 0.4, 0));
+        drawRect(this.pos, vec2(2), rgb(1, 0.4, 0));
     }
 }
 
@@ -34,8 +34,7 @@ function gameInit()
     new Light(vec2( 0, 4), 6, rgb(0, 1, 0));
 
     // emissive non-Light objects — use the EngineObject.renderLight() hook
-    new LavaTile(vec2(-8, -5));
-    new LavaTile(vec2( 8, -5));
+    new LavaTile(vec2(0, -5));
 
     // mouse-follow light — scroll wheel adjusts radius
     mouseLight = new Light(vec2(), 4, rgb(1, 1, 1));
