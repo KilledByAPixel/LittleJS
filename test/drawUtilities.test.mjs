@@ -92,10 +92,14 @@ test('first quarter (percent .25) has a flat terminator on the axis', () =>
 
 test('invert negates the terminator curve (flips illuminated side)', () =>
 {
-    const a = captureCrescent(vec2(0,0), 1, .1, WHITE, 0, false, 0, BLACK, 8);
-    const b = captureCrescent(vec2(0,0), 1, .1, WHITE, 0, true,  0, BLACK, 8);
-    const ia = a.points.slice(a.points.length/2);
-    const ib = b.points.slice(b.points.length/2);
-    for (let i = 0; i < ia.length; i++)
-        assert.ok(Math.abs(ia[i].y + ib[i].y) < 1e-9);
+    // check both halves of the cycle: .1 (first half) and .6 (second half)
+    for (const percent of [.1, .6])
+    {
+        const a = captureCrescent(vec2(0,0), 1, percent, WHITE, 0, false, 0, BLACK, 8);
+        const b = captureCrescent(vec2(0,0), 1, percent, WHITE, 0, true,  0, BLACK, 8);
+        const ia = a.points.slice(a.points.length/2);
+        const ib = b.points.slice(b.points.length/2);
+        for (let i = 0; i < ia.length; i++)
+            assert.ok(Math.abs(ia[i].y + ib[i].y) < 1e-9);
+    }
 });

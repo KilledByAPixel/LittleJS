@@ -671,9 +671,9 @@ new NewgroundsMedal(id, name, description, icon)
 ```
 
 ## LittleJS Drawing Utilities
-- Optional plugin: nine-slice and three-slice helpers for scalable UI panels
+- Optional plugin: nine-slice and three-slice helpers for scalable UI panels, plus a crescent shape
 - World-space (WebGL or 2D) and screen-space (always 2D) variants
-- See `examples/shorts/nineSlice.js` and `examples/shorts/threeSlice.js`
+- See `examples/shorts/nineSlice.js` and `examples/shorts/crescent.js`
 
 ```javascript
 // Nine-slice — 3x3 tile grid scaled to fit
@@ -683,6 +683,9 @@ drawNineSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, angle=0)
 // Three-slice — 1x3 tile strip (corner / side / center) rotated around the box
 drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
 drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, angle=0)
+
+// Crescent — moon-phase shape (percent: 0=new, .25=first quarter, .5=full, .75=last quarter)
+drawCrescent(pos, radius=1, percent=0, color=WHITE, angle=0, invert=false, lineWidth=0, lineColor=BLACK, sides=glCircleSides, useWebGL=glEnable, screenSpace, context)
 ```
 
 ## LittleJS Debugging System
