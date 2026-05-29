@@ -5200,6 +5200,22 @@ declare module "littlejsengine" {
      *  @param {number} [angle] - Angle to rotate by
      *  @memberof DrawUtilities */
     export function drawThreeSliceScreen(pos: Vector2, size: Vector2, startTile: TileInfo, borderSize?: number, extraSpace?: number, angle?: number): void;
+    /** Draw a crescent / moon-phase shape built from a polygon
+     *  Routes through drawPoly, so it supports WebGL, screen space, color, and outlines
+     *  @param {Vector2} pos - Center position
+     *  @param {number}  [radius] - Outer radius of the crescent
+     *  @param {number}  [percent] - Moon phase over a full cycle (0=new, .25=first quarter, .5=full, .75=last quarter), wraps
+     *  @param {Color}   [color] - Fill color
+     *  @param {number}  [angle] - Angle to rotate by
+     *  @param {boolean} [invert] - Flip which side is illuminated
+     *  @param {number}  [lineWidth] - Outline width, 0 for no outline
+     *  @param {Color}   [lineColor] - Outline color
+     *  @param {number}  [sides=glCircleSides] - Number of sides for a full circle (halved per arc)
+     *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
+     *  @param {boolean} [screenSpace] - Use screen space coordinates
+     *  @param {CanvasRenderingContext2D} [context] - Canvas context to use
+     *  @memberof DrawUtilities */
+    export function drawCrescent(pos: Vector2, radius?: number, percent?: number, color?: Color, angle?: number, invert?: boolean, lineWidth?: number, lineColor?: Color, sides?: number, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
     /** A numeric tween: drives a callback with a value interpolated between
      *  `start` and `end` over `duration` seconds. Pauses with the game by default.
      *  @memberof TweenSystem
