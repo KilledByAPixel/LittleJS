@@ -596,6 +596,7 @@ const debugPhysics = 0;
 const debugParticles = 0;
 const debugRaycast = 0;
 const debugGamepads = 0;
+const debugSound = 0;
 const debugPointSize = .5;
 
 // debug commands are automatically removed from the final build
@@ -5632,9 +5633,23 @@ class Sound
             pan = worldToScreen(pos).x * 2/mainCanvas.width - 1;
         }
         
-        // Create and return sound instance
+        // Create sound instance
         const rate = pitch + pitch * this.randomness*randomnessScale*rand(-1,1);
-        return new SoundInstance(this, volume, rate, pan, loop, paused);
+        const instance = new SoundInstance(this, volume, rate, pan, loop, paused);
+
+        if (debug && debugSound && pos)
+        {
+            // visualize where positioned sounds play and their falloff range
+            debugCircle(pos, .5, '#0ff', .5, true);
+            if (this.range)
+            {
+                debugCircle(pos, 2*this.range, '#0ff', .5);            // silent radius
+                debugCircle(pos, 2*this.range*this.taper, '#0ff', .5); // full volume radius
+            }
+            debugText('vol '+volume.toFixed(2)+' pitch '+rate.toFixed(2), pos, .5, '#0ff', .5);
+        }
+
+        return instance;
     }
     
     /** Play a music track that loops by default
@@ -6000,6 +6015,10 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
     // play and return sound
     const startOffset = offset * rate;
     source.start(0, startOffset);
+
+    if (debug && debugSound)
+        LOG('sound', 'vol', volume.toFixed(2), 'rate', rate.toFixed(2), 'pan', pan.toFixed(2), loop ? 'loop' : '');
+
     return source;
 }
 

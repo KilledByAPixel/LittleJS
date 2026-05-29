@@ -622,7 +622,7 @@ let debugKey = 'Escape';
 let debugOverlay = false;
 
 // Engine internal variables not exposed to documentation
-let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugTakeScreenshot;
+let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugSound = false, debugTakeScreenshot;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Debug helper functions
@@ -862,6 +862,8 @@ function debugUpdate()
             debugRaycast = !debugRaycast;
         if (keyWasPressed('Digit5'))
             debugScreenshot();
+        if (keyWasPressed('Digit7'))
+            debugSound = !debugSound;
     }
     if (debugVideoCaptureIsActive())
     {
@@ -1092,6 +1094,8 @@ function debugRender()
             debugContext.fillStyle = '#fff';
             debugContext.fillText('5: Save Screenshot', x, y += h);
             debugContext.fillText('6: Toggle Video Capture', x, y += h);
+            debugContext.fillStyle = debugSound ? '#f00' : '#fff';
+            debugContext.fillText('7: Debug Sound', x, y += h);
 
             let keysPressed = '';
             let mousePressed = '';
@@ -1126,6 +1130,7 @@ function debugRender()
             debugContext.fillText(debugParticles ? 'Debug Particles' : '', x, y += h);
             debugContext.fillText(debugRaycast ? 'Debug Raycasts' : '', x, y += h);
             debugContext.fillText(debugGamepads ? 'Debug Gamepads' : '', x, y += h);
+            debugContext.fillText(debugSound ? 'Debug Sound' : '', x, y += h);
         }
 
         debugContext.restore();
@@ -6310,9 +6315,23 @@ class Sound
             pan = worldToScreen(pos).x * 2/mainCanvas.width - 1;
         }
         
-        // Create and return sound instance
+        // Create sound instance
         const rate = pitch + pitch * this.randomness*randomnessScale*rand(-1,1);
-        return new SoundInstance(this, volume, rate, pan, loop, paused);
+        const instance = new SoundInstance(this, volume, rate, pan, loop, paused);
+
+        if (debug && debugSound && pos)
+        {
+            // visualize where positioned sounds play and their falloff range
+            debugCircle(pos, .5, '#0ff', .5, true);
+            if (this.range)
+            {
+                debugCircle(pos, 2*this.range, '#0ff', .5);            // silent radius
+                debugCircle(pos, 2*this.range*this.taper, '#0ff', .5); // full volume radius
+            }
+            debugText('vol '+volume.toFixed(2)+' pitch '+rate.toFixed(2), pos, .5, '#0ff', .5);
+        }
+
+        return instance;
     }
     
     /** Play a music track that loops by default
@@ -6678,6 +6697,10 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
     // play and return sound
     const startOffset = offset * rate;
     source.start(0, startOffset);
+
+    if (debug && debugSound)
+        LOG('sound', 'vol', volume.toFixed(2), 'rate', rate.toFixed(2), 'pan', pan.toFixed(2), loop ? 'loop' : '');
+
     return source;
 }
 

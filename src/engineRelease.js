@@ -18,6 +18,7 @@ const debugPhysics = 0;
 const debugParticles = 0;
 const debugRaycast = 0;
 const debugGamepads = 0;
+const debugSound = 0;
 const debugPointSize = .5;
 
 // debug commands are automatically removed from the final build

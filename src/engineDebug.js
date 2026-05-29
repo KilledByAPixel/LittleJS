@@ -44,7 +44,7 @@ let debugKey = 'Escape';
 let debugOverlay = false;
 
 // Engine internal variables not exposed to documentation
-let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugTakeScreenshot;
+let debugPrimitives = [], debugPhysics = false, debugRaycast = false, debugParticles = false, debugGamepads = false, debugSound = false, debugTakeScreenshot;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Debug helper functions
@@ -284,6 +284,8 @@ function debugUpdate()
             debugRaycast = !debugRaycast;
         if (keyWasPressed('Digit5'))
             debugScreenshot();
+        if (keyWasPressed('Digit7'))
+            debugSound = !debugSound;
     }
     if (debugVideoCaptureIsActive())
     {
@@ -514,6 +516,8 @@ function debugRender()
             debugContext.fillStyle = '#fff';
             debugContext.fillText('5: Save Screenshot', x, y += h);
             debugContext.fillText('6: Toggle Video Capture', x, y += h);
+            debugContext.fillStyle = debugSound ? '#f00' : '#fff';
+            debugContext.fillText('7: Debug Sound', x, y += h);
 
             let keysPressed = '';
             let mousePressed = '';
@@ -548,6 +552,7 @@ function debugRender()
             debugContext.fillText(debugParticles ? 'Debug Particles' : '', x, y += h);
             debugContext.fillText(debugRaycast ? 'Debug Raycasts' : '', x, y += h);
             debugContext.fillText(debugGamepads ? 'Debug Gamepads' : '', x, y += h);
+            debugContext.fillText(debugSound ? 'Debug Sound' : '', x, y += h);
         }
 
         debugContext.restore();
