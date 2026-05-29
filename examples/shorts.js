@@ -65,6 +65,7 @@ const exampleList =
     new ExampleInfo('Medals', 'medals.js', 'Achievement system', false, 'unlock, progress, newgrounds'),
     new ExampleInfo('Tween', 'tween.js', 'Numeric, Vector2, and Color tweens with easing', false, 'animation, easing, lerp, pingpong, interpolation'),
     new ExampleInfo('Nine Slice', 'nineSlice.js', 'Scalable UI panels', false, 'three slice, stretch, corners, text, tiles'),
+    new ExampleInfo('Crescent', 'crescent.js', 'Moon phase crescent shapes', false, 'moon, phase, polygon, draw, circle, lunar'),
     new ExampleInfo('UI System', 'uiSystem.js', 'Buttons, sliders, and checkboxes', false, 'objects, widgets, interactive'),
     new ExampleInfo('UI Layout', 'uiLayout.js', 'Auto-arranging container for vertical, horizontal, and grid menus', false, 'ui, grid, menu, container, level select'),
     new ExampleInfo('WebGL Shader', 'shader.js', 'Full canvas webgl shader', false, 'webgl, visual, effect'),
