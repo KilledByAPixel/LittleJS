@@ -10070,6 +10070,12 @@ class LightSystemPlugin
     {
         if (headlessMode || !glEnable || !this.lightShader) return;
 
+        // drain any sprite-batched draws queued by a previous custom
+        // renderLight() override (e.g. drawRect inside a LavaTile). They were
+        // queued in the engine's instanced-vertex format and must flush with
+        // the engine's shader+VAO bound — NOT this plugin's light shader.
+        glFlush();
+
         glContext.useProgram(this.lightShader);
         glContext.bindVertexArray(this.lightVAO);
 
@@ -10099,6 +10105,10 @@ class LightSystemPlugin
         glContext.uniform4f(glContext.getUniformLocation(ls, 'color'), c.r, c.g, c.b, c.a);
 
         glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, 4);
+
+        // restore engine's instanced shader+VAO so subsequent renderLight()
+        // overrides that batch through drawRect/drawTile work correctly
+        glSetInstancedMode(true);
     }
 }
 
