@@ -506,7 +506,7 @@ class Particle
         {
             // in local space of emitter
             const a = emitter.angle;
-            const c = cos(a), s = sin(a);
+            const c = cos(-a), s = sin(-a);
             pos.set(emitter.pos.x + pos.x*c - pos.y*s,
                 emitter.pos.y + pos.x*s + pos.y*c);
             angle += a;
@@ -514,8 +514,8 @@ class Particle
         if (trailScale)
         {
             // trail style particles
-            const velocity = localSpace ? 
-                this.velocity.rotate(-emitter.angle) : this.velocity;
+            const velocity = localSpace ?
+                this.velocity.rotate(emitter.angle) : this.velocity;
             const speed = velocity.length();
             if (speed)
             {
