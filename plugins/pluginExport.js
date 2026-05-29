@@ -82,6 +82,7 @@ export
     drawNineSliceScreen,
     drawThreeSlice,
     drawThreeSliceScreen,
+    drawCrescent,
 
     // Tween System
     Tween,

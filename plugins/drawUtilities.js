@@ -130,3 +130,51 @@ function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor
         drawTile(pos.add(cornerPos.rotate(rotateAngle)), cornerSize, cornerTile, color, a, false, additiveColor, useWebGL, screenSpace, context);
     }
 }
+
+/** Draw a crescent / moon-phase shape built from a polygon
+ *  Routes through drawPoly, so it supports WebGL, screen space, color, and outlines
+ *  @param {Vector2} pos - Center position
+ *  @param {number}  [radius] - Outer radius of the crescent
+ *  @param {number}  [percent] - Moon phase over a full cycle (0=new, .25=first quarter, .5=full, .75=last quarter), wraps
+ *  @param {Color}   [color] - Fill color
+ *  @param {number}  [angle] - Angle to rotate by
+ *  @param {boolean} [invert] - Flip which side is illuminated
+ *  @param {number}  [lineWidth] - Outline width, 0 for no outline
+ *  @param {Color}   [lineColor] - Outline color
+ *  @param {number}  [sides=glCircleSides] - Number of sides for a full circle (halved per arc)
+ *  @param {boolean} [useWebGL=glEnable] - Use WebGL for rendering
+ *  @param {boolean} [screenSpace] - Use screen space coordinates
+ *  @param {CanvasRenderingContext2D} [context] - Canvas context to use
+ *  @memberof DrawUtilities */
+function drawCrescent(pos, radius=1, percent=0, color=WHITE, angle=0, invert=false, lineWidth=0, lineColor=BLACK, sides=glCircleSides, useWebGL=glEnable, screenSpace=false, context)
+{
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(isNumber(radius) && isNumber(percent), 'radius and percent must be numbers');
+    ASSERT(isColor(color) && isColor(lineColor), 'color is invalid');
+
+    // map phase to a signed terminator curve: -1 new, 0 half, 1 full
+    let p = mod(percent*4, 4); // quarter phase 0..4
+    if (p >= 2)                // second half of cycle flips orientation
+        angle += PI;
+    p = p <= 2 ? p-1 : 3-p;
+    if (invert)                // flip the illuminated side
+    {
+        p = -p;
+        angle += PI;
+    }
+
+    // build the crescent: outer semicircle, then inner half-ellipse traced back
+    const points = [];
+    const segs = max(3, sides>>1);
+    for (let i=0; i<=segs; i++)
+    {
+        const t = i/segs*PI;
+        points.push(vec2(radius*cos(t), radius*sin(t)));
+    }
+    for (let i=segs; i>=0; i--)
+    {
+        const t = i/segs*PI;
+        points.push(vec2(radius*cos(t), -radius*p*sin(t)));
+    }
+    drawPoly(points, color, lineWidth, lineColor, pos, angle, useWebGL, screenSpace, context);
+}
