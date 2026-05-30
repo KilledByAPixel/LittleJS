@@ -18,10 +18,10 @@ function captureCrescent(...args)
         lineTo(x, y){ points.push(vec2(x, y)); },
         set fillStyle(v){}, set strokeStyle(v){}, set lineWidth(v){},
     };
-    // pad leading params through `sides` (index 8) so the trailing render flags
-    // + context land in the correct slots regardless of how many args the
-    // caller supplied; undefined lets drawCrescent's own defaults apply
-    while (args.length < 9)
+    // pad leading params through lineColor (index 7) so the trailing render
+    // flags + context land in the correct slots regardless of how many args
+    // the caller supplied; undefined lets drawCrescent's own defaults apply
+    while (args.length < 8)
         args.push(undefined);
     drawCrescent(...args, false, false, ctx);  // useWebGL=false, screenSpace=false, context=ctx
     return { points, rotation };
@@ -44,24 +44,20 @@ test('drawCrescent is exported as a function', () =>
     assert.equal(typeof drawCrescent, 'function');
 });
 
-test('drawCrescent builds 2*(sides/2 + 1) points', () =>
+test('drawCrescent builds 2*(glCircleSides/2 + 1) points', () =>
 {
-    // default sides = glCircleSides (32) -> segs 16 -> 17 points per arc -> 34
+    // glCircleSides (32) -> segs 16 -> 17 points per arc -> 34
     const { points } = captureCrescent(vec2(0,0), 1, .25, WHITE, 0, false, 0, BLACK);
     assert.equal(points.length, 34);
-
-    // explicit sides = 8 -> segs 4 -> 5 points per arc -> 10
-    const { points: few } = captureCrescent(vec2(0,0), 1, .25, WHITE, 0, false, 0, BLACK, 8);
-    assert.equal(few.length, 10);
 });
 
 test('crescent horns sit at (+/-radius, 0)', () =>
 {
-    const r = 2;
-    const { points } = captureCrescent(vec2(0,0), r, .25, WHITE, 0, false, 0, BLACK, 8);
-    // index 0 is the right horn, index 4 (end of outer arc) is the left horn
-    assert.ok(Math.abs(points[0].x - r) < 1e-9 && Math.abs(points[0].y) < 1e-9);
-    assert.ok(Math.abs(points[4].x + r) < 1e-9 && Math.abs(points[4].y) < 1e-9);
+    const size = 4, radius = size/2;
+    const { points } = captureCrescent(vec2(0,0), size, .25, WHITE, 0, false, 0, BLACK);
+    // segs = glCircleSides/2 = 16; index 0 is the right horn, index 16 the left
+    assert.ok(Math.abs(points[0].x - radius) < 1e-9 && Math.abs(points[0].y) < 1e-9);
+    assert.ok(Math.abs(points[16].x + radius) < 1e-9 && Math.abs(points[16].y) < 1e-9);
 });
 
 test('new moon (percent 0) has ~zero area', () =>
@@ -72,18 +68,18 @@ test('new moon (percent 0) has ~zero area', () =>
 
 test('full moon (percent .5) approximates a full circle and flips orientation', () =>
 {
-    const r = 1;
-    const { points, rotation } = captureCrescent(vec2(0,0), r, .5, WHITE, 0, false, 0, BLACK);
+    const size = 2, radius = size/2;
+    const { points, rotation } = captureCrescent(vec2(0,0), size, .5, WHITE, 0, false, 0, BLACK);
     const area = Math.abs(polygonArea(points));
-    // default sides = glCircleSides (32); a 32-gon's area is slightly under PI*r^2
-    assert.ok(Math.abs(area - Math.PI*r*r) < 0.05);
+    // glCircleSides (32); a 32-gon's area is slightly under PI*radius^2
+    assert.ok(Math.abs(area - Math.PI*radius*radius) < 0.05);
     // second half of the cycle flips orientation by PI
     assert.ok(Math.abs(Math.abs(rotation) - Math.PI) < 1e-9);
 });
 
 test('first quarter (percent .25) has a flat terminator on the axis', () =>
 {
-    const { points } = captureCrescent(vec2(0,0), 1, .25, WHITE, 0, false, 0, BLACK, 8);
+    const { points } = captureCrescent(vec2(0,0), 1, .25, WHITE, 0, false, 0, BLACK);
     // inner arc is the second half of the point list; all its y values are ~0
     const inner = points.slice(points.length/2);
     for (const p of inner)
@@ -95,8 +91,8 @@ test('invert negates the terminator curve (flips illuminated side)', () =>
     // check both halves of the cycle: .1 (first half) and .6 (second half)
     for (const percent of [.1, .6])
     {
-        const a = captureCrescent(vec2(0,0), 1, percent, WHITE, 0, false, 0, BLACK, 8);
-        const b = captureCrescent(vec2(0,0), 1, percent, WHITE, 0, true,  0, BLACK, 8);
+        const a = captureCrescent(vec2(0,0), 1, percent, WHITE, 0, false, 0, BLACK);
+        const b = captureCrescent(vec2(0,0), 1, percent, WHITE, 0, true,  0, BLACK);
         const ia = a.points.slice(a.points.length/2);
         const ib = b.points.slice(b.points.length/2);
         for (let i = 0; i < ia.length; i++)

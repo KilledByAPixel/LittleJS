@@ -685,7 +685,7 @@ drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSp
 drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, angle=0)
 
 // Crescent — moon-phase shape (percent: 0=new, .25=first quarter, .5=full, .75=last quarter)
-drawCrescent(pos, radius=1, percent=0, color=WHITE, angle=0, invert=false, lineWidth=0, lineColor=BLACK, sides=glCircleSides, useWebGL=glEnable, screenSpace, context)
+drawCrescent(pos, size=1, percent=0, color=WHITE, angle=0, invert=false, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace, context)
 ```
 
 ## LittleJS Debugging System
