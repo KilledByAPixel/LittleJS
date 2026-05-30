@@ -147,9 +147,25 @@ function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor
  *  @memberof DrawUtilities */
 function drawCrescent(pos, size=1, percent=0, color=WHITE, angle=0, invert=false, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
 {
+    ASSERT(isColor(color) && isColor(lineColor), 'color is invalid');
+    const points = getCrescentPoints(pos, size, percent, angle, invert);
+    drawPoly(points, color, lineWidth, lineColor, vec2(), 0, useWebGL, screenSpace, context);
+}
+
+/** Get the list of points that make up a crescent / moon-phase shape
+ *  Returns world-space points with pos and angle baked in, ready for drawPoly or other use
+ *  @param {Vector2} pos - Center position
+ *  @param {number}  [size] - Diameter
+ *  @param {number}  [percent] - Moon phase over a full cycle (0=new, .25=first quarter, .5=full, .75=last quarter), wraps
+ *  @param {number}  [angle] - Angle to rotate by
+ *  @param {boolean} [invert] - Flip which side is illuminated
+ *  @param {number}  [sides=glCircleSides] - Number of sides for a full circle (halved per arc)
+ *  @return {Array<Vector2>} - List of points making up the crescent
+ *  @memberof DrawUtilities */
+function getCrescentPoints(pos, size=1, percent=0, angle=0, invert=false, sides=glCircleSides)
+{
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isNumber(size) && isNumber(percent), 'size and percent must be numbers');
-    ASSERT(isColor(color) && isColor(lineColor), 'color is invalid');
 
     // map phase to a signed terminator curve: -1 new, 0 half, 1 full
     let p = mod(percent*4, 4); // quarter phase 0..4
@@ -163,19 +179,18 @@ function drawCrescent(pos, size=1, percent=0, color=WHITE, angle=0, invert=false
     }
 
     // build the crescent: outer semicircle, then inner half-ellipse traced back
-    const sides = glCircleSides;
     const points = [];
     const segs = max(3, sides>>1);
     const radius = size/2;
     for (let i=0; i<=segs; i++)
     {
         const t = i/segs*PI;
-        points.push(vec2(radius*cos(t), radius*sin(t)));
+        points.push(vec2(radius*cos(t), radius*sin(t)).rotate(angle).add(pos));
     }
     for (let i=segs; i>=0; i--)
     {
         const t = i/segs*PI;
-        points.push(vec2(radius*cos(t), -radius*p*sin(t)));
+        points.push(vec2(radius*cos(t), -radius*p*sin(t)).rotate(angle).add(pos));
     }
-    drawPoly(points, color, lineWidth, lineColor, pos, angle, useWebGL, screenSpace, context);
+    return points;
 }

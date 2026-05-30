@@ -5215,6 +5215,17 @@ declare module "littlejsengine" {
      *  @param {CanvasRenderingContext2D} [context] - Canvas context to use
      *  @memberof DrawUtilities */
     export function drawCrescent(pos: Vector2, size?: number, percent?: number, color?: Color, angle?: number, invert?: boolean, lineWidth?: number, lineColor?: Color, useWebGL?: boolean, screenSpace?: boolean, context?: CanvasRenderingContext2D): void;
+    /** Get the list of points that make up a crescent / moon-phase shape
+     *  Returns world-space points with pos and angle baked in, ready for drawPoly or other use
+     *  @param {Vector2} pos - Center position
+     *  @param {number}  [size] - Diameter
+     *  @param {number}  [percent] - Moon phase over a full cycle (0=new, .25=first quarter, .5=full, .75=last quarter), wraps
+     *  @param {number}  [angle] - Angle to rotate by
+     *  @param {boolean} [invert] - Flip which side is illuminated
+     *  @param {number}  [sides=glCircleSides] - Number of sides for a full circle (halved per arc)
+     *  @return {Array<Vector2>} - List of points making up the crescent
+     *  @memberof DrawUtilities */
+    export function getCrescentPoints(pos: Vector2, size?: number, percent?: number, angle?: number, invert?: boolean, sides?: number): Array<Vector2>;
     /** A numeric tween: drives a callback with a value interpolated between
      *  `start` and `end` over `duration` seconds. Pauses with the game by default.
      *  @memberof TweenSystem

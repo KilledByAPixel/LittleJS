@@ -686,6 +686,7 @@ drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, angle=0)
 
 // Crescent — moon-phase shape (percent: 0=new, .25=first quarter, .5=full, .75=last quarter)
 drawCrescent(pos, size=1, percent=0, color=WHITE, angle=0, invert=false, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace, context)
+getCrescentPoints(pos, size=1, percent=0, angle=0, invert=false, sides=glCircleSides) // crescent points for drawPoly
 ```
 
 ## LittleJS Debugging System
