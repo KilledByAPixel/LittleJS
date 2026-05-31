@@ -287,7 +287,6 @@ let touchGamepadAnalog = true;
  *  @memberof Settings */
 let touchGamepadFloating = false;
 
-
 /** Size of virtual gamepad for touch devices in pixels
  *  @type {number}
  *  @default
@@ -571,7 +570,6 @@ function setTouchGamepadAnalog(analog) { touchGamepadAnalog = analog; }
  *  @param {boolean} floating
  *  @memberof Settings */
 function setTouchGamepadFloating(floating) { touchGamepadFloating = floating; }
-
 
 /** Set size of virtual gamepad for touch devices in pixels
  *  @param {number} size

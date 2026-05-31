@@ -90,7 +90,6 @@ export
     touchGamepadLeftStick,
     touchGamepadAnalog,
     touchGamepadFloating,
-
     touchGamepadSize,
     touchGamepadAlpha,
     touchGamepadDisplayTime,
@@ -142,7 +141,6 @@ export
     setTouchGamepadLeftStick,
     setTouchGamepadAnalog,
     setTouchGamepadFloating,
-
     setTouchGamepadSize,
     setTouchGamepadAlpha,
     setTouchGamepadDisplayTime,
