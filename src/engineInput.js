@@ -571,7 +571,7 @@ function inputInit()
                     else if (touchGamepadButtonCount === 2)
                     {
                         const delta = buttonCenter.subtract(touchPos);
-                        button = -delta.x < delta.y ? 1 : 0;
+                        button = delta.x < delta.y ? 1 : 0;
                     }
                     // fix button locations (swap 2 and 3 to match gamepad layout)
                     button = button === 3 ? 2 : button === 2 ? 3 : button;
@@ -860,7 +860,10 @@ function inputRender()
                     j : min(j, touchGamepadButtonCount-1);
                 // fix button locations (swap 2 and 3 to match gamepad layout)
                 button = button === 3 ? 2 : button === 2 ? 3 : button;
-                const pos = buttonCenter.add(vec2().setDirection(j, touchGamepadSize/2));
+                const offset = vec2().setDirection(j, touchGamepadSize/2);
+                if (touchGamepadButtonCount === 2)
+                    offset.x *= -1;
+                const pos = buttonCenter.add(offset);
                 context.fillStyle = touchGamepadButtons[button] ? '#fff' : '#000';
                 context.beginPath();
                 context.arc(pos.x, pos.y, touchGamepadSize/4, 0,9);
@@ -879,6 +882,6 @@ function touchGamepadButtonCenter()
 {
     const center = mainCanvasSize.subtract(vec2(touchGamepadSize));
     if (touchGamepadButtonCount === 2)
-        center.x += touchGamepadSize/2;
+        center.y -= touchGamepadSize/4; // move up a bit
     return center;
 }
