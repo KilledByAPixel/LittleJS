@@ -5570,6 +5570,55 @@ function touchGamepadBuildSvg(W, H)
             els.face[button] = circle(pos.x, pos.y, S/4, '#000');
         }
     }
+
+    // debug: draw the proximity hit regions the hit-test actually uses
+    if (debug && debugGamepads) touchGamepadBuildDebug(W, H);
+}
+
+// draw debug outlines of the touch control hit regions into the overlay svg
+function touchGamepadBuildDebug(W, H)
+{
+    const S = touchGamepadSize, svg = touchGamepadSvg;
+    const shape = (tag, attrs, stroke)=>
+    {
+        const el = document.createElementNS(touchGamepadSvgNS, tag);
+        for (const k in attrs) el.setAttribute(k, attrs[k]);
+        el.setAttribute('stroke', stroke);
+        el.setAttribute('stroke-width', 2);
+        el.setAttribute('fill', 'none');
+        svg.appendChild(el);
+    };
+    const ring = (c, rr, stroke)=> shape('circle', {cx:c.x, cy:c.y, r:rr}, stroke);
+
+    // green line: the left/right split that assigns a stick press to a side
+    shape('line', {x1:W/2, y1:0, x2:W/2, y2:H}, '#0f0');
+
+    // cyan: where each directional control can be grabbed
+    if (touchGamepadFloating)
+    {
+        const top = H*.4, half = touchGamepadButtonCount ? W/2 : W;
+        if (touchGamepadLeftStick)
+            shape('rect', {x:0, y:top, width:half, height:H-top}, '#0ff');
+        if (touchGamepadButtonCount === 1)
+            shape('rect', {x:W/2, y:top, width:W/2, height:H-top}, '#0ff');
+    }
+    else
+    {
+        if (touchGamepadLeftStick)
+            ring(touchGamepadStickCenter(0, W, H), 2*S, '#0ff');
+        if (touchGamepadButtonCount === 1)
+            ring(touchGamepadStickCenter(1, W, H), 2*S, '#0ff');
+    }
+    if (touchGamepadButtonCount >= 2)
+        ring(touchGamepadButtonCenter(W, H), S, '#0ff'); // face button cluster radius
+
+    // yellow: start button radius; magenta: where start is blocked (near the sticks)
+    if (touchGamepadCenterButtonSize)
+    {
+        ring(vec2(W/2, H/2), touchGamepadCenterButtonSize, '#ff0');
+        if (touchGamepadLeftStick) ring(touchGamepadStickCenter(0, W, H), 2*S, '#f0f');
+        if (touchGamepadButtonCount) ring(touchGamepadStickCenter(1, W, H), 2*S, '#f0f');
+    }
 }
 
 // per-frame: fade the overlay and move the thumbs / set pressed states
@@ -5595,9 +5644,10 @@ function touchGamepadRender()
     }
     touchGamepadOverlay.style.display = '';
 
-    // relayout when the paused state or any layout-affecting setting changes
+    // relayout when the paused state, a layout setting, or the debug view changes
+    const dbg = debug && debugGamepads;
     const layout = [touchGamepadButtonCount, touchGamepadLeftStick, touchGamepadAnalog,
-        touchGamepadSize, touchGamepadFloating, touchGamepadCenterButtonSize, paused].join();
+        touchGamepadSize, touchGamepadFloating, touchGamepadCenterButtonSize, paused, dbg].join();
     if (layout !== touchGamepadLastLayout)
     {
         touchGamepadLastLayout = layout;
@@ -5606,11 +5656,11 @@ function touchGamepadRender()
     // relayout before the visibility bail-out so the paused full-screen start zone applies
     if (touchGamepadNeedRelayout) touchGamepadRelayout();
 
-    // fade out when idle (always show when displayTime is 0)
+    // fade out when idle (always show when displayTime is 0, or while debugging)
     const fade = touchGamepadDisplayTime ?
         percent(touchGamepadTimer.get(), touchGamepadDisplayTime+1, touchGamepadDisplayTime) : 1;
-    const visible = touchGamepadTimer.isSet() && fade > 0 && !paused;
-    touchGamepadOverlay.style.opacity = visible ? fade*touchGamepadAlpha : 0;
+    const visible = dbg || (touchGamepadTimer.isSet() && fade > 0 && !paused);
+    touchGamepadOverlay.style.opacity = !visible ? 0 : dbg ? 1 : fade*touchGamepadAlpha;
     if (!visible) return;
 
     const r = touchGamepadStageRect();
@@ -5669,6 +5719,52 @@ function touchGamepadFaceButtonAt(p, W, H)
     return button < touchGamepadButtonCount ? button : -1;
 }
 
+// pick which control a stage-local press activates, by priority then proximity,
+// independent of which zone element captured it - so overlapping zones on small
+// screens resolve to the nearest control instead of whichever zone is topmost
+// returns {role:'L'|'R'|'start'} or {role:'face', btn} or undefined for no control
+function touchGamepadControlAt(p, W, H)
+{
+    const S = touchGamepadSize;
+    const leftHalf = p.x < W/2;
+    const floatTop = H*.4; // floating grab region is the bottom 60% of the screen
+
+    // left directional stick (checked first so it always wins its own region)
+    if (touchGamepadLeftStick)
+    {
+        const grab = touchGamepadFloating ?
+            (!touchGamepadButtonCount || leftHalf) && p.y > floatTop :
+            leftHalf && touchGamepadStickCenter(0, W, H).distance(p) < 2*S;
+        if (grab) return {role:'L'};
+    }
+
+    // right side: a second analog stick (buttonCount===1) or face buttons (>=2)
+    if (touchGamepadButtonCount === 1)
+    {
+        const grab = touchGamepadFloating ?
+            !leftHalf && p.y > floatTop :
+            !leftHalf && touchGamepadStickCenter(1, W, H).distance(p) < 2*S;
+        if (grab) return {role:'R'};
+    }
+    else if (touchGamepadButtonCount >= 2)
+    {
+        const btn = touchGamepadFaceButtonAt(p, W, H);
+        if (btn >= 0) return {role:'face', btn};
+    }
+
+    // center start button, blocked within 2*size of either stick so drift off the
+    // sticks can't accidentally fire start (matches the original exclusion logic)
+    if (touchGamepadCenterButtonSize)
+    {
+        const farFromLeft = !touchGamepadLeftStick ||
+            touchGamepadStickCenter(0, W, H).distance(p) >= 2*S;
+        const farFromRight = !touchGamepadButtonCount ||
+            touchGamepadStickCenter(1, W, H).distance(p) >= 2*S;
+        if (vec2(W/2, H/2).distance(p) < touchGamepadCenterButtonSize && farFromLeft && farFromRight)
+            return {role:'start'};
+    }
+}
+
 function touchGamepadPointerDown(e, zone)
 {
     if (!touchGamepadEnable) return;
@@ -5696,39 +5792,34 @@ function touchGamepadPointerDown(e, zone)
     const W = r.width, H = r.height;
     const p = vec2(e.clientX - r.left, e.clientY - r.top);
 
-    if (zone === touchGamepadZoneC)
+    // choose the control by proximity/priority, not by which zone captured the touch
+    const hit = touchGamepadControlAt(p, W, H);
+    if (!hit) return;
+    if (hit.role === 'L')
     {
-        touchGamepadButtons[9] = 1;
-        touchGamepadPointerRole.set(e.pointerId, 'start');
-    }
-    else if (zone === touchGamepadZoneL)
-    {
-        if (!touchGamepadLeftStick) return;
         touchGamepadStickAnchors[0] = touchGamepadFloating ? p : touchGamepadStickHome(W, H);
         touchGamepadStickPointerId[0] = e.pointerId;
         touchGamepadPointerRole.set(e.pointerId, 'L');
         touchGamepadNeedRelayout = true; // base may have re-anchored
         touchGamepadApplyStick(0, p);
     }
-    else if (zone === touchGamepadZoneR)
+    else if (hit.role === 'R')
     {
-        if (touchGamepadButtonCount === 1)
-        {
-            touchGamepadStickAnchors[1] = touchGamepadFloating ? p : touchGamepadButtonCenter(W, H);
-            touchGamepadStickPointerId[1] = e.pointerId;
-            touchGamepadPointerRole.set(e.pointerId, 'R');
-            touchGamepadNeedRelayout = true;
-            touchGamepadApplyStick(1, p);
-        }
-        else
-        {
-            const btn = touchGamepadFaceButtonAt(p, W, H);
-            if (btn >= 0)
-            {
-                touchGamepadButtons[btn] = 1;
-                touchGamepadPointerRole.set(e.pointerId, 'face'+btn);
-            }
-        }
+        touchGamepadStickAnchors[1] = touchGamepadFloating ? p : touchGamepadButtonCenter(W, H);
+        touchGamepadStickPointerId[1] = e.pointerId;
+        touchGamepadPointerRole.set(e.pointerId, 'R');
+        touchGamepadNeedRelayout = true;
+        touchGamepadApplyStick(1, p);
+    }
+    else if (hit.role === 'face')
+    {
+        touchGamepadButtons[hit.btn] = 1;
+        touchGamepadPointerRole.set(e.pointerId, 'face'+hit.btn);
+    }
+    else // 'start'
+    {
+        touchGamepadButtons[9] = 1;
+        touchGamepadPointerRole.set(e.pointerId, 'start');
     }
 }
 
