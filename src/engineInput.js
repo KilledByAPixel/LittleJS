@@ -583,6 +583,12 @@ function inputUpdate()
         // update touch gamepad if enabled
         if (touchGamepadEnable && isTouchDevice)
         {
+            // a side is either a stick or buttons - setting both is ambiguous
+            ASSERT(!touchGamepadLeftStick || !touchGamepadLeftButtonCount,
+                'set touchGamepadLeftStick or touchGamepadLeftButtonCount, not both');
+            ASSERT(!touchGamepadRightStick || !touchGamepadButtonCount,
+                'set touchGamepadRightStick or touchGamepadButtonCount, not both');
+
             if (!touchGamepadTimer.isSet()) return;
 
             // read virtual analog stick
@@ -908,6 +914,11 @@ function touchGamepadBuildSvg(W, H)
             button = button === 3 ? 2 : button === 2 ? 3 : button; // match gamepad layout
             const offset = vec2().setDirection(j, S/2);
             if (count === 2) offset.x *= -1;
+            if (!side) // left side mirrors the right layout (e.g. 2 buttons -> bottom + left)
+            {
+                offset.x *= -1;
+                button = button === 1 ? 2 : button === 2 ? 1 : button;
+            }
             const pos = ctr.add(offset);
             els.face[base + button] = circle(pos.x, pos.y, S/4, '#000');
         }
@@ -1049,13 +1060,11 @@ function touchGamepadFaceButtonAt(side, p, W, H)
     const bc = touchGamepadSideCenter(side, W, H);
     if (bc.distance(p) >= touchGamepadSize) return -1;
     if (count === 1) return base; // single large button
-    let button = mod(bc.subtract(p).direction()+2, 4);
-    if (count === 2)
-    {
-        const d = bc.subtract(p);
-        button = d.x < d.y ? 1 : 0;
-    }
+    const d = bc.subtract(p);
+    if (!side) d.x *= -1; // left side mirrors the right layout horizontally
+    let button = count === 2 ? (d.x < d.y ? 1 : 0) : mod(d.direction()+2, 4);
     button = button === 3 ? 2 : button === 2 ? 3 : button; // match gamepad layout
+    if (!side) button = button === 1 ? 2 : button === 2 ? 1 : button; // mirror swap
     return button < count ? base + button : -1;
 }
 
