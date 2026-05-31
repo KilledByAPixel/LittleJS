@@ -19,11 +19,12 @@ export class Player extends GameCharacter.Character
     update()
     {
         // movement control
+        const mouseMode = !LJS.isUsingGamepad && !LJS.isTouchDevice;
         this.moveInput     = LJS.isUsingGamepad ? LJS.gamepadStick(0) : LJS.keyDirection();
         this.holdingJump   = LJS.keyIsDown('ArrowUp') || LJS.gamepadIsDown(0);
-        this.holdingShoot  = !LJS.isUsingGamepad && LJS.mouseIsDown(0) || LJS.keyIsDown('KeyZ') || LJS.gamepadIsDown(2);
-        this.pressingThrow = LJS.keyIsDown('KeyC') || LJS.mouseIsDown(1) || LJS.gamepadIsDown(1);
-        this.pressedDodge  = LJS.keyIsDown('KeyX') || LJS.mouseIsDown(2) || LJS.gamepadIsDown(3);
+        this.holdingShoot  = mouseMode && LJS.mouseIsDown(0) || LJS.keyIsDown('KeyZ') || LJS.gamepadIsDown(2);
+        this.pressingThrow = mouseMode && LJS.mouseIsDown(1) || LJS.keyIsDown('KeyC') || LJS.gamepadIsDown(1);
+        this.pressedDodge  = mouseMode && LJS.mouseIsDown(2) || LJS.keyIsDown('KeyX') || LJS.gamepadIsDown(3);
         super.update();
     }
 
