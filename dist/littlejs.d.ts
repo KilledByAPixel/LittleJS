@@ -510,7 +510,7 @@ declare module "littlejsengine" {
      *  - Supports left analog stick, 4 face buttons and start button (button 9)
      *  - setTouchGamepadButtonCount(1) to use face buttons as right analog stick
      *  - Analog stick buttons 10 and 11 are also activated when virtual sticks are touched
-    
+     *  - Rendered as a full-viewport HTML/SVG overlay, so controls may sit outside the game canvas
      *  @type {boolean}
      *  @default
      *  @memberof Settings */
@@ -518,6 +518,7 @@ declare module "littlejsengine" {
     /** Size of center button if touch gamepad should have start button in the center
      *  - Prevents activating when pressed near virtual stick or face buttons
      *  - When the game is paused, any touch will press the button
+     *  - Measured in viewport CSS pixels
      *  @type {number}
      *  @default
      *  @memberof Settings */
@@ -540,14 +541,14 @@ declare module "littlejsengine" {
     export let touchGamepadAnalog: boolean;
     /** True if touch gamepad directional controls should float to where you press
      *  - Only affects analog sticks and dpads, not face buttons
-     *  - The left stick uses the left half of the screen, or the whole screen if there are no face buttons (touchGamepadButtonCount is 0)
-     *  - The right stick uses the right half of the screen when it is enabled (touchGamepadButtonCount is 1)
+     *  - Directional controls re-anchor to where you press within the bottom ~60% of their screen half; the top ~40% passes through to the game
+     *  - The right side floats only when it acts as the right analog stick (touchGamepadButtonCount is 1)
      *  - A center button (touchGamepadCenterButtonSize) still works since it ignores touches near the sticks
      *  @type {boolean}
      *  @default
      *  @memberof Settings */
     export let touchGamepadFloating: boolean;
-    /** Size of virtual gamepad for touch devices in pixels
+    /** Size of virtual gamepad for touch devices in viewport CSS pixels
      *  @type {number}
      *  @default
      *  @memberof Settings */
