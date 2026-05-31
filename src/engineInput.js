@@ -881,7 +881,7 @@ function inputRender()
 function touchGamepadButtonCenter()
 {
     const center = mainCanvasSize.subtract(vec2(touchGamepadSize));
-    if (touchGamepadButtonCount === 2)
+    if (touchGamepadButtonCount === 2 || touchGamepadButtonCount === 3)
         center.y -= touchGamepadSize/4; // move up a bit
     return center;
 }
