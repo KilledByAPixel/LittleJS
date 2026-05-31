@@ -814,6 +814,10 @@ function touchGamepadStickCenter(index, W, H)
     return index ? touchGamepadButtonCenter(W, H) : touchGamepadStickHome(W, H);
 }
 
+// true if the touch gamepad has a right side control (a stick or at least one button)
+function touchGamepadHasRight()
+{ return touchGamepadRightStick || touchGamepadButtonCount > 0; }
+
 // position the input zones for the current mode and rebuild the SVG visuals
 function touchGamepadRelayout()
 {
@@ -834,15 +838,15 @@ function touchGamepadRelayout()
     else
     {
         touchGamepadZoneL.style.display = touchGamepadLeftStick ? '' : 'none';
-        touchGamepadZoneR.style.display = touchGamepadButtonCount > 0 ? '' : 'none';
+        touchGamepadZoneR.style.display = touchGamepadHasRight() ? '' : 'none';
         touchGamepadZoneC.style.display = touchGamepadCenterButtonSize ? '' : 'none';
 
         if (touchGamepadFloating)
         {
-            // bottom 60% grabs the stick; the top 40% passes through. With no face
-            // buttons the left stick uses the full width (matching the hit-test)
+            // bottom 60% grabs the stick; the top 40% passes through. With no right
+            // control the left stick uses the full width (matching the hit-test)
             setZone(touchGamepadZoneL,
-                `left:0;bottom:0;width:${touchGamepadButtonCount ? '50%' : '100%'};height:60%`);
+                `left:0;bottom:0;width:${touchGamepadHasRight() ? '50%' : '100%'};height:60%`);
             setZone(touchGamepadZoneR, 'right:0;bottom:0;width:50%;height:60%');
         }
         else
@@ -946,7 +950,7 @@ function touchGamepadBuildDebug(W, H)
     shape('line', {x1:W/2, y1:0, x2:W/2, y2:H}, '#0f0');
 
     // cyan: where each directional control can be grabbed
-    const hasRight = touchGamepadRightStick || touchGamepadButtonCount > 0;
+    const hasRight = touchGamepadHasRight();
     if (touchGamepadFloating)
     {
         const top = H*.4, half = hasRight ? W/2 : W;
@@ -1083,7 +1087,7 @@ function touchGamepadControlAt(p, W, H)
     const S = touchGamepadSize;
     const leftHalf = p.x < W/2;
     const floatTop = H*.4; // floating grab region is the bottom 60% of the screen
-    const hasRight = touchGamepadRightStick || touchGamepadButtonCount > 0;
+    const hasRight = touchGamepadHasRight();
 
     // left directional stick (checked first so it always wins its own region)
     if (touchGamepadLeftStick)
