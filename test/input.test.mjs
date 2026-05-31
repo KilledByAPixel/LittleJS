@@ -14,11 +14,12 @@ test('setTouchGamepadFloatingTopMargin is no longer exported', () =>
 test('retained touch gamepad setters are exported and headless-safe', () =>
 {
     const setters = [
-        'setTouchGamepadEnable', 'setTouchGamepadCenterButtonSize',
-        'setTouchGamepadButtonCount', 'setTouchGamepadLeftStick',
-        'setTouchGamepadAnalog', 'setTouchGamepadFloating',
-        'setTouchGamepadSize', 'setTouchGamepadAlpha',
-        'setTouchGamepadDisplayTime', 'setTouchGamepadVibration',
+        'setTouchGamepadEnable', 'setTouchGamepadPassthrough',
+        'setTouchGamepadCenterButtonSize', 'setTouchGamepadButtonCount',
+        'setTouchGamepadLeftStick', 'setTouchGamepadAnalog',
+        'setTouchGamepadFloating', 'setTouchGamepadSize',
+        'setTouchGamepadAlpha', 'setTouchGamepadDisplayTime',
+        'setTouchGamepadVibration',
     ];
     for (const name of setters)
         assert.equal(typeof LJS[name], 'function', `${name} should be exported`);
@@ -26,6 +27,7 @@ test('retained touch gamepad setters are exported and headless-safe', () =>
     assert.doesNotThrow(() =>
     {
         LJS.setTouchGamepadEnable(true);
+        LJS.setTouchGamepadPassthrough(true);
         LJS.setTouchGamepadSize(120);
         LJS.setTouchGamepadButtonCount(2);
         LJS.setTouchGamepadFloating(true);

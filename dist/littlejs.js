@@ -2988,6 +2988,15 @@ let touchInputEnable = true;
  *  @memberof Settings */
 let touchGamepadEnable = false;
 
+/** True if touches outside the gamepad controls should still drive mouse/touch input
+ *  - When false (the default), enabling the touch gamepad suppresses touch-to-mouse input entirely
+ *  - Set true to also pass touches outside the controls through to the game as mouse/touch input
+ *  - Touches on the gamepad controls never drive the mouse regardless of this setting
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let touchGamepadPassthrough = false;
+
 /** Size of center button if touch gamepad should have start button in the center
  *  - Prevents activating when pressed near virtual stick or face buttons
  *  - When the game is paused, any touch will press the button
@@ -3282,6 +3291,11 @@ function setTouchInputEnable(enable) { touchInputEnable = enable; }
  *  @param {boolean} enable
  *  @memberof Settings */
 function setTouchGamepadEnable(enable) { touchGamepadEnable = enable; }
+
+/** Set if touches outside the gamepad controls should still drive mouse/touch input
+ *  @param {boolean} passthrough
+ *  @memberof Settings */
+function setTouchGamepadPassthrough(passthrough) { touchGamepadPassthrough = passthrough; }
 
 /** Set if touch gamepad should have start button in the center
  *  - Set size to enable the center button
@@ -5829,36 +5843,42 @@ function inputInit()
             if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
                 audioContext.resume();
 
-            // touches that landed on a virtual gamepad zone are owned by the gamepad
-            // (handled by its own pointer listeners) and must not drive the game mouse
-            const isGamepadTouch = (t)=> t.target === touchGamepadZoneL ||
-                t.target === touchGamepadZoneR || t.target === touchGamepadZoneC;
-            const gameTouches = [];
-            for (const t of e.touches)
-                if (!isGamepadTouch(t)) gameTouches.push(t);
-
-            // check if touching and pass to mouse events
-            const touching = gameTouches.length;
-            const button = 0; // all touches are left mouse button
-            if (touching)
+            // when the touch gamepad is enabled it owns touch input: suppress the
+            // touch->mouse passthrough entirely unless touchGamepadPassthrough is set
+            // (its own zones drive gameplay via pointer events)
+            if (!touchGamepadEnable || touchGamepadPassthrough)
             {
-                // set event pos and pass it along
-                const pos = vec2(gameTouches[0].clientX, gameTouches[0].clientY);
-                const mousePosScreenLast = mousePosScreen;
-                mousePosScreen = mouseEventToScreen(pos);
-                if (wasTouching)
-                    mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
-                else
-                {
-                    inputData[0][button] = 3;
-                    isUsingGamepad = false; // a passthrough tap is mouse-style input
-                }
-            }
-            else if (wasTouching)
-                inputData[0][button] = inputData[0][button] & 2 | 4;
+                // touches that landed on a virtual gamepad zone are owned by the gamepad
+                // (handled by its own pointer listeners) and must not drive the game mouse
+                const isGamepadTouch = (t)=> t.target === touchGamepadZoneL ||
+                    t.target === touchGamepadZoneR || t.target === touchGamepadZoneC;
+                const gameTouches = [];
+                for (const t of e.touches)
+                    if (!isGamepadTouch(t)) gameTouches.push(t);
 
-            // set was touching
-            wasTouching = touching;
+                // check if touching and pass to mouse events
+                const touching = gameTouches.length;
+                const button = 0; // all touches are left mouse button
+                if (touching)
+                {
+                    // set event pos and pass it along
+                    const pos = vec2(gameTouches[0].clientX, gameTouches[0].clientY);
+                    const mousePosScreenLast = mousePosScreen;
+                    mousePosScreen = mouseEventToScreen(pos);
+                    if (wasTouching)
+                        mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
+                    else
+                    {
+                        inputData[0][button] = 3;
+                        isUsingGamepad = false; // a passthrough tap is mouse-style input
+                    }
+                }
+                else if (wasTouching)
+                    inputData[0][button] = inputData[0][button] & 2 | 4;
+
+                // set was touching
+                wasTouching = touching;
+            }
 
             // prevent default handling like copy, magnifier lens, and scrolling
             if (inputPreventDefault && e.cancelable && document.hasFocus())

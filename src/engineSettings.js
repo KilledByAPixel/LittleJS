@@ -250,6 +250,15 @@ let touchInputEnable = true;
  *  @memberof Settings */
 let touchGamepadEnable = false;
 
+/** True if touches outside the gamepad controls should still drive mouse/touch input
+ *  - When false (the default), enabling the touch gamepad suppresses touch-to-mouse input entirely
+ *  - Set true to also pass touches outside the controls through to the game as mouse/touch input
+ *  - Touches on the gamepad controls never drive the mouse regardless of this setting
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let touchGamepadPassthrough = false;
+
 /** Size of center button if touch gamepad should have start button in the center
  *  - Prevents activating when pressed near virtual stick or face buttons
  *  - When the game is paused, any touch will press the button
@@ -544,6 +553,11 @@ function setTouchInputEnable(enable) { touchInputEnable = enable; }
  *  @param {boolean} enable
  *  @memberof Settings */
 function setTouchGamepadEnable(enable) { touchGamepadEnable = enable; }
+
+/** Set if touches outside the gamepad controls should still drive mouse/touch input
+ *  @param {boolean} passthrough
+ *  @memberof Settings */
+function setTouchGamepadPassthrough(passthrough) { touchGamepadPassthrough = passthrough; }
 
 /** Set if touch gamepad should have start button in the center
  *  - Set size to enable the center button
