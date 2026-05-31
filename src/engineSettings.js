@@ -268,7 +268,9 @@ let touchGamepadPassthrough = false;
  *  @memberof Settings */
 let touchGamepadCenterButtonSize = 0;
 
-/** Number of buttons on touch gamepad (0-4), if 1 also acts as right analog stick
+/** Number of buttons on touch gamepad (0-4)
+ *  - A count of 1 is a single large button (the size of a stick)
+ *  - Ignored when touchGamepadRightStick is set (the right side is a stick instead)
  *  @type {number}
  *  @default
  *  @memberof Settings */
@@ -281,6 +283,14 @@ let touchGamepadButtonCount = 4;
  *  @memberof Settings */
 let touchGamepadLeftStick = true;
 
+/** True if the touch gamepad right side should be an analog stick (or dpad) instead of face buttons
+ *  - When set, touchGamepadButtonCount is ignored and the right side is a stick
+ *  - Uses an analog stick when touchGamepadAnalog is true, otherwise an 8 way dpad
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let touchGamepadRightStick = false;
+
 /** True if touch gamepad should be analog stick or false to use if 8 way dpad
  *  @type {boolean}
  *  @default
@@ -290,7 +300,7 @@ let touchGamepadAnalog = true;
 /** True if touch gamepad directional controls should float to where you press
  *  - Only affects analog sticks and dpads, not face buttons
  *  - Directional controls re-anchor to where you press within the bottom ~60% of their screen half; the top ~40% passes through to the game
- *  - The right side floats only when it acts as the right analog stick (touchGamepadButtonCount is 1)
+ *  - The right side floats only when it acts as the right analog stick (touchGamepadRightStick is set)
  *  - A center button (touchGamepadCenterButtonSize) still works since it ignores touches near the sticks
  *  @type {boolean}
  *  @default
@@ -575,6 +585,11 @@ function setTouchGamepadButtonCount(count) { touchGamepadButtonCount = count; }
  *  @param {boolean} enable
  *  @memberof Settings */
 function setTouchGamepadLeftStick(enable) { touchGamepadLeftStick = enable; }
+
+/** Set if the touch gamepad right side is an analog stick (or dpad) instead of face buttons
+ *  @param {boolean} rightStick
+ *  @memberof Settings */
+function setTouchGamepadRightStick(rightStick) { touchGamepadRightStick = rightStick; }
 
 /** Set if touch gamepad should be analog stick or 8 way dpad
  *  @param {boolean} analog

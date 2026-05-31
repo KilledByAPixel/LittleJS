@@ -606,7 +606,7 @@ function inputUpdate()
                     sticks[0] = dpad.clampLength(); // clamp to circle
                 }
             }
-            if (touchGamepadButtonCount === 1)
+            if (touchGamepadRightStick)
             {
                 sticks[1] = vec2();
                 const rightTouchStick = touchGamepadSticks[1] ?? vec2();
@@ -629,9 +629,9 @@ function inputUpdate()
                 data[i] = touchGamepadButtons[i] ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
 
                 // haptic tap when a face button or start button is first pressed (3 = newly down)
-                // skip stick touches (10, 11) and the dual-stick button 0 so movement doesn't buzz
+                // skip stick touches (10, 11) and the right-stick button 0 so movement doesn't buzz
                 if (touchGamepadVibration && data[i] === 3 &&
-                    (i === 9 || (i < touchGamepadButtonCount && touchGamepadButtonCount !== 1)))
+                    (i === 9 || (!touchGamepadRightStick && i < touchGamepadButtonCount)))
                     vibrate(touchGamepadVibration);
             }
 
@@ -800,8 +800,8 @@ function touchGamepadStickHome(W, H)
 function touchGamepadButtonCenter(W, H)
 {
     let y = H - touchGamepadSize;
-    if (touchGamepadButtonCount === 2 || touchGamepadButtonCount === 3)
-        y -= touchGamepadSize/4; // nudge up a bit
+    if (!touchGamepadRightStick && (touchGamepadButtonCount === 2 || touchGamepadButtonCount === 3))
+        y -= touchGamepadSize/4; // nudge the 2/3 face button cluster up a bit
     return vec2(W - touchGamepadSize, y);
 }
 
@@ -809,7 +809,7 @@ function touchGamepadButtonCenter(W, H)
 function touchGamepadStickCenter(index, W, H)
 {
     if (touchGamepadFloating && touchGamepadStickAnchors[index] &&
-        (!index || touchGamepadButtonCount === 1))
+        (!index || touchGamepadRightStick))
         return touchGamepadStickAnchors[index];
     return index ? touchGamepadButtonCenter(W, H) : touchGamepadStickHome(W, H);
 }
@@ -894,12 +894,19 @@ function touchGamepadBuildSvg(W, H)
         els.leftThumb = circle(ctr.x, ctr.y, S/4, '#fff');
     }
 
-    // right side: a second stick (buttonCount===1, circle or cross) or face buttons
-    if (touchGamepadButtonCount === 1)
+    // right side: a directional stick (touchGamepadRightStick), a single large
+    // button (buttonCount===1), or a cluster of face buttons (buttonCount>=2)
+    if (touchGamepadRightStick)
     {
         const ctr = touchGamepadStickCenter(1, W, H);
         if (touchGamepadAnalog) circle(ctr.x, ctr.y, S/2); else cross(ctr);
         els.rightThumb = circle(ctr.x, ctr.y, S/4, '#fff');
+    }
+    else if (touchGamepadButtonCount === 1)
+    {
+        // single large button, same size as a stick background
+        const bc = touchGamepadButtonCenter(W, H);
+        els.face[0] = circle(bc.x, bc.y, S/2, '#000');
     }
     else
     {
@@ -939,30 +946,31 @@ function touchGamepadBuildDebug(W, H)
     shape('line', {x1:W/2, y1:0, x2:W/2, y2:H}, '#0f0');
 
     // cyan: where each directional control can be grabbed
+    const hasRight = touchGamepadRightStick || touchGamepadButtonCount > 0;
     if (touchGamepadFloating)
     {
-        const top = H*.4, half = touchGamepadButtonCount ? W/2 : W;
+        const top = H*.4, half = hasRight ? W/2 : W;
         if (touchGamepadLeftStick)
             shape('rect', {x:0, y:top, width:half, height:H-top}, '#0ff');
-        if (touchGamepadButtonCount === 1)
+        if (touchGamepadRightStick)
             shape('rect', {x:W/2, y:top, width:W/2, height:H-top}, '#0ff');
     }
     else
     {
         if (touchGamepadLeftStick)
             ring(touchGamepadStickCenter(0, W, H), 2*S, '#0ff');
-        if (touchGamepadButtonCount === 1)
+        if (touchGamepadRightStick)
             ring(touchGamepadStickCenter(1, W, H), 2*S, '#0ff');
     }
-    if (touchGamepadButtonCount >= 2)
-        ring(touchGamepadButtonCenter(W, H), S, '#0ff'); // face button cluster radius
+    if (!touchGamepadRightStick && touchGamepadButtonCount >= 1)
+        ring(touchGamepadButtonCenter(W, H), S, '#0ff'); // face / single-button hit radius
 
     // yellow: start button radius; magenta: where start is blocked (near the sticks)
     if (touchGamepadCenterButtonSize)
     {
         ring(vec2(W/2, H/2), touchGamepadCenterButtonSize, '#ff0');
         if (touchGamepadLeftStick) ring(touchGamepadStickCenter(0, W, H), 2*S, '#f0f');
-        if (touchGamepadButtonCount) ring(touchGamepadStickCenter(1, W, H), 2*S, '#f0f');
+        if (hasRight) ring(touchGamepadStickCenter(1, W, H), 2*S, '#f0f');
     }
 }
 
@@ -991,8 +999,9 @@ function touchGamepadRender()
 
     // relayout when the paused state, a layout setting, or the debug view changes
     const dbg = debug && debugGamepads;
-    const layout = [touchGamepadButtonCount, touchGamepadLeftStick, touchGamepadAnalog,
-        touchGamepadSize, touchGamepadFloating, touchGamepadCenterButtonSize, paused, dbg].join();
+    const layout = [touchGamepadButtonCount, touchGamepadLeftStick, touchGamepadRightStick,
+        touchGamepadAnalog, touchGamepadSize, touchGamepadFloating,
+        touchGamepadCenterButtonSize, paused, dbg].join();
     if (layout !== touchGamepadLastLayout)
     {
         touchGamepadLastLayout = layout;
@@ -1020,7 +1029,7 @@ function touchGamepadRender()
         els.leftThumb.setAttribute('cx', t.x);
         els.leftThumb.setAttribute('cy', t.y);
     }
-    if (touchGamepadButtonCount === 1 && els.rightThumb)
+    if (touchGamepadRightStick && els.rightThumb)
     {
         const ctr = touchGamepadStickCenter(1, W, H);
         const t = ctr.add((touchGamepadSticks[1] ?? vec2()).scale(S/2));
@@ -1054,6 +1063,7 @@ function touchGamepadFaceButtonAt(p, W, H)
 {
     const bc = touchGamepadButtonCenter(W, H);
     if (bc.distance(p) >= touchGamepadSize) return -1;
+    if (touchGamepadButtonCount === 1) return 0; // single large button
     let button = mod(bc.subtract(p).direction()+2, 4);
     if (touchGamepadButtonCount === 2)
     {
@@ -1073,25 +1083,26 @@ function touchGamepadControlAt(p, W, H)
     const S = touchGamepadSize;
     const leftHalf = p.x < W/2;
     const floatTop = H*.4; // floating grab region is the bottom 60% of the screen
+    const hasRight = touchGamepadRightStick || touchGamepadButtonCount > 0;
 
     // left directional stick (checked first so it always wins its own region)
     if (touchGamepadLeftStick)
     {
         const grab = touchGamepadFloating ?
-            (!touchGamepadButtonCount || leftHalf) && p.y > floatTop :
+            (!hasRight || leftHalf) && p.y > floatTop :
             leftHalf && touchGamepadStickCenter(0, W, H).distance(p) < 2*S;
         if (grab) return {role:'L'};
     }
 
-    // right side: a second analog stick (buttonCount===1) or face buttons (>=2)
-    if (touchGamepadButtonCount === 1)
+    // right side: a directional stick (touchGamepadRightStick) or face buttons
+    if (touchGamepadRightStick)
     {
         const grab = touchGamepadFloating ?
             !leftHalf && p.y > floatTop :
             !leftHalf && touchGamepadStickCenter(1, W, H).distance(p) < 2*S;
         if (grab) return {role:'R'};
     }
-    else if (touchGamepadButtonCount >= 2)
+    else if (touchGamepadButtonCount >= 1)
     {
         const btn = touchGamepadFaceButtonAt(p, W, H);
         if (btn >= 0) return {role:'face', btn};
@@ -1103,7 +1114,7 @@ function touchGamepadControlAt(p, W, H)
     {
         const farFromLeft = !touchGamepadLeftStick ||
             touchGamepadStickCenter(0, W, H).distance(p) >= 2*S;
-        const farFromRight = !touchGamepadButtonCount ||
+        const farFromRight = !hasRight ||
             touchGamepadStickCenter(1, W, H).distance(p) >= 2*S;
         if (vec2(W/2, H/2).distance(p) < touchGamepadCenterButtonSize && farFromLeft && farFromRight)
             return {role:'start'};
