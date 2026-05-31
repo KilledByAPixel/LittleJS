@@ -587,23 +587,43 @@ function setTouchGamepadCenterButtonSize(size) { touchGamepadCenterButtonSize = 
 /** Set number of buttons on the right side of the touch gamepad (0-4, gamepad buttons 0-3)
  *  @param {number} count
  *  @memberof Settings */
-function setTouchGamepadButtonCount(count) { touchGamepadButtonCount = count; }
+function setTouchGamepadButtonCount(count)
+{
+    touchGamepadButtonCount = count;
+    if (count > 0)
+        touchGamepadRightStick = false;
+}
 
 /** Set if the touch gamepad should have a left analog stick (or dpad)
  *  @param {boolean} enable
  *  @memberof Settings */
-function setTouchGamepadLeftStick(enable) { touchGamepadLeftStick = enable; }
+function setTouchGamepadLeftStick(enable)
+{
+    touchGamepadLeftStick = enable;
+    if (enable)
+        touchGamepadLeftButtonCount = 0;
+}
 
 /** Set number of buttons on the left side of the touch gamepad (0-4, gamepad buttons 4-7)
  *  - Only used when touchGamepadLeftStick is false
  *  @param {number} count
  *  @memberof Settings */
-function setTouchGamepadLeftButtonCount(count) { touchGamepadLeftButtonCount = count; }
+function setTouchGamepadLeftButtonCount(count)
+{
+    touchGamepadLeftButtonCount = count;
+    if (count > 0)
+        touchGamepadLeftStick = false;
+}
 
 /** Set if the touch gamepad right side is an analog stick (or dpad) instead of face buttons
  *  @param {boolean} rightStick
  *  @memberof Settings */
-function setTouchGamepadRightStick(rightStick) { touchGamepadRightStick = rightStick; }
+function setTouchGamepadRightStick(rightStick)
+{
+    touchGamepadRightStick = rightStick;
+    if (rightStick)
+        touchGamepadButtonCount = 0;
+}
 
 /** Set if touch gamepad should be analog stick or 8 way dpad
  *  @param {boolean} analog
