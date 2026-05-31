@@ -90,6 +90,7 @@ function inputClear()
     inputData[0] = [];
     touchGamepadButtons.length = 0;
     touchGamepadSticks.length = 0;
+    touchGamepadStickHeld.length = 0; // release floating sticks so they re-anchor
     gamepadStickData.length = 0;
     gamepadDpadData.length = 0;
 }
@@ -332,6 +333,8 @@ const gamepadStickData = [], gamepadDpadData = [], gamepadHadInput = [];
 
 // touch gamepad internal variables
 const touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadSticks = [];
+// floating stick anchor positions and held state, indexed by stick (0=left, 1=right)
+const touchGamepadStickAnchors = [], touchGamepadStickHeld = [];
 
 ///////////////////////////////////////////////////////////////////////////////
 // Input system functions used by engine
@@ -541,22 +544,85 @@ function inputInit()
             const buttonCenter = touchGamepadButtonCenter();
             const startCenter = mainCanvasSize.scale(.5);
 
-            // check each touch point
+            // get screen position of each touch
+            const touchPositions = [];
             for (const touch of e.touches)
+                touchPositions.push(mouseEventToScreen(vec2(touch.clientX, touch.clientY)));
+
+            // float a directional stick to where it is pressed, returns true if held
+            function applyFloatingStick(index, buttonIndex, touchPos)
             {
-                const touchPos = mouseEventToScreen(vec2(touch.clientX, touch.clientY));
-                const isStickTouch = touchPos.x < mainCanvasSize.x/2 &&
-                    stickCenter.distance(touchPos) < touchGamepadSize*2;
-                if (isStickTouch)
+                // re-anchor the base to the press position when first pressed down
+                let reanchor = touchPos && !touchGamepadStickHeld[index];
+                if (reanchor && touchPos.y < touchGamepadFloatingTopMargin)
                 {
-                    // virtual analog stick
+                    // too close to the top to move the base there: still control the stick from
+                    // its current anchor if the press is on it, otherwise ignore the press, so
+                    // the base can't be placed where there is no room to push up
+                    const anchor = touchGamepadStickAnchors[index];
+                    if (anchor && anchor.distance(touchPos) < touchGamepadSize)
+                        reanchor = false;
+                    else
+                        touchPos = undefined;
+                }
+                if (!touchPos)
+                {
+                    touchGamepadStickHeld[index] = 0;
+                    return false;
+                }
+                if (reanchor)
+                    touchGamepadStickAnchors[index] = touchPos;
+                touchGamepadStickHeld[index] = 1;
+
+                const delta = touchPos.subtract(touchGamepadStickAnchors[index]);
+                touchGamepadSticks[index] = delta.scale(2/touchGamepadSize).clampLength();
+                touchGamepadButtons[buttonIndex] = 1; // also press a button when touching stick
+                return true;
+            }
+
+            if (touchGamepadFloating)
+            {
+                // floating directional sticks re-anchor to wherever you press down,
+                // and stay at their last position (the fixed centers until first used)
+                if (!touchGamepadStickAnchors[0]) touchGamepadStickAnchors[0] = stickCenter;
+                if (!touchGamepadStickAnchors[1]) touchGamepadStickAnchors[1] = buttonCenter;
+
+                // left stick uses the whole screen if there are no face buttons, else the left half
+                const leftTouch = touchPositions.find(p =>
+                    !touchGamepadButtonCount || p.x < mainCanvasSize.x/2);
+                applyFloatingStick(0, 10, leftTouch);
+
+                // right stick uses the right half of the screen when it is enabled
+                if (touchGamepadButtonCount === 1)
+                {
+                    const rightTouch = touchPositions.find(p => p.x >= mainCanvasSize.x/2);
+                    if (applyFloatingStick(1, 11, rightTouch))
+                        touchGamepadButtons[0] = 1; // the single right control also acts as button 0
+                }
+            }
+
+            // check each touch point for face buttons and the center start button
+            for (const touchPos of touchPositions)
+            {
+                if (touchGamepadFloating)
+                {
+                    // directional sticks are handled above; only right-half face buttons remain
+                    if (touchGamepadButtonCount < 2 || touchPos.x < mainCanvasSize.x/2)
+                        continue;
+                }
+                else if (touchPos.x < mainCanvasSize.x/2 &&
+                    stickCenter.distance(touchPos) < touchGamepadSize*2)
+                {
+                    // virtual left analog stick
                     const delta = touchPos.subtract(stickCenter);
                     touchGamepadSticks[0] = delta.scale(2/touchGamepadSize).clampLength();
                     touchGamepadButtons[10] = 1; // also press a button when touching stick
+                    continue;
                 }
-                else if (buttonCenter.distance(touchPos) < touchGamepadSize)
+
+                if (buttonCenter.distance(touchPos) < touchGamepadSize)
                 {
-                    if (touchGamepadButtonCount === 1)
+                    if (!touchGamepadFloating && touchGamepadButtonCount === 1)
                     {
                         // virtual right analog stick
                         const delta = touchPos.subtract(buttonCenter);
@@ -578,14 +644,16 @@ function inputInit()
                     if (button < touchGamepadButtonCount)
                         touchGamepadButtons[button] = 1;
                 }
-                else if (startCenter.distance(touchPos)  < touchGamepadCenterButtonSize &&
-                         stickCenter.distance(touchPos)  >= 2 * touchGamepadSize &&
-                         buttonCenter.distance(touchPos) >= 2 * touchGamepadSize)
+                else if (startCenter.distance(touchPos) < touchGamepadCenterButtonSize &&
+                         touchGamepadStickCenter(0).distance(touchPos) >= 2 * touchGamepadSize &&
+                         (!touchGamepadButtonCount ||
+                          touchGamepadStickCenter(1).distance(touchPos) >= 2 * touchGamepadSize))
                 {
                     // virtual start button in center
-                    // require a fat-finger buffer of touchGamepadSize beyond the
-                    // edge of the stick/buttons so drift off those controls can't
-                    // accidentally fire start
+                    // require a fat-finger buffer of touchGamepadSize (the magenta debug circle
+                    // radius) beyond each control, tracking the floating anchors, so drift off
+                    // those controls can't accidentally fire start
+                    // controls with no face buttons (touchGamepadButtonCount 0) block nothing
                     touchGamepadButtons[9] = 1;
                 }
             }
@@ -634,18 +702,22 @@ function inputUpdate()
         {
             if (debugGamepads)
             {
-                const stickCenter = vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
-                const buttonCenter = touchGamepadButtonCenter();
+                // draw at the floating anchors when enabled, matching the rendered positions
+                const stickCenter = touchGamepadStickCenter(0);
+                const buttonCenter = touchGamepadStickCenter(1);
                 const startCenter = mainCanvasSize.scale(.5);
+                const hasButtons = touchGamepadButtonCount > 0;
 
                 debugCircle(stickCenter, 2*touchGamepadSize, 'cyan', 0, false, true);
-                debugCircle(buttonCenter, 2*touchGamepadSize, 'cyan', 0, false, true);
+                if (hasButtons)
+                    debugCircle(buttonCenter, 2*touchGamepadSize, 'cyan', 0, false, true);
                 if (touchGamepadCenterButtonSize)
                 {
                     debugCircle(startCenter, 2*touchGamepadCenterButtonSize, 'cyan', 0, false, true);
-                    // exclusion bubbles around controls (where start is blocked)
-                    debugCircle(stickCenter,  4*touchGamepadSize, 'magenta', 0, false, true);
-                    debugCircle(buttonCenter, 4*touchGamepadSize, 'magenta', 0, false, true);
+                    // exclusion bubbles around controls (where start is blocked), matching the start logic
+                    debugCircle(stickCenter, 4*touchGamepadSize, 'magenta', 0, false, true);
+                    if (hasButtons)
+                        debugCircle(buttonCenter, 4*touchGamepadSize, 'magenta', 0, false, true);
                 }
             }
 
@@ -827,17 +899,16 @@ function inputRender()
             context.stroke();
         }
 
-        // draw left analog stick
-        const stickCenter = vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
-        drawTouchGamepadStick(stickCenter, touchGamepadSticks[0] ?? vec2());
+        // draw left analog stick (at its floating anchor when enabled)
+        drawTouchGamepadStick(touchGamepadStickCenter(0), touchGamepadSticks[0] ?? vec2());
 
         // draw right side: virtual analog stick if buttonCount===1, face buttons otherwise
         {
             const buttonCenter = touchGamepadButtonCenter();
             if (touchGamepadButtonCount === 1)
             {
-                // virtual right analog stick, matching left stick
-                drawTouchGamepadStick(buttonCenter, touchGamepadSticks[1] ?? vec2());
+                // virtual right analog stick, matching left stick (at its floating anchor when enabled)
+                drawTouchGamepadStick(touchGamepadStickCenter(1), touchGamepadSticks[1] ?? vec2());
             }
             else for (let i=0; i<touchGamepadButtonCount; i++)
             {
@@ -870,4 +941,16 @@ function touchGamepadButtonCenter()
     if (touchGamepadButtonCount === 2 || touchGamepadButtonCount === 3)
         center.y -= touchGamepadSize/4; // move up a bit
     return center;
+}
+
+// effective screen center of a touch gamepad directional stick (index 0=left, 1=right)
+// returns the floating anchor when enabled, otherwise the fixed home position
+// the right side only floats when it is the right analog stick (touchGamepadButtonCount === 1)
+function touchGamepadStickCenter(index)
+{
+    if (touchGamepadFloating && touchGamepadStickAnchors[index] &&
+        (!index || touchGamepadButtonCount === 1))
+        return touchGamepadStickAnchors[index];
+    return index ? touchGamepadButtonCenter() :
+        vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
 }

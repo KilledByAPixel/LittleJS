@@ -270,6 +270,25 @@ let touchGamepadButtonCount = 4;
  *  @memberof Settings */
 let touchGamepadAnalog = true;
 
+/** True if touch gamepad directional controls should float to where you press
+ *  - Only affects analog sticks and dpads, not face buttons
+ *  - The left stick uses the left half of the screen, or the whole screen if there are no face buttons (touchGamepadButtonCount is 0)
+ *  - The right stick uses the right half of the screen when it is enabled (touchGamepadButtonCount is 1)
+ *  - A center button (touchGamepadCenterButtonSize) still works since it ignores touches near the sticks
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let touchGamepadFloating = false;
+
+/** Distance in pixels from the top of the screen where a floating stick will not re-anchor
+ *  - Prevents the stick base from being placed too close to the top, where there is no room to push up
+ *  - A stick that is already held can still be dragged up into this margin
+ *  - Set to 0 to allow the stick to anchor anywhere
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let touchGamepadFloatingTopMargin = 100;
+
 /** Size of virtual gamepad for touch devices in pixels
  *  @type {number}
  *  @default
@@ -536,6 +555,16 @@ function setTouchGamepadButtonCount(count) { touchGamepadButtonCount = count; }
  *  @param {boolean} analog
  *  @memberof Settings */
 function setTouchGamepadAnalog(analog) { touchGamepadAnalog = analog; }
+
+/** Set if touch gamepad directional controls should float to where you press
+ *  @param {boolean} floating
+ *  @memberof Settings */
+function setTouchGamepadFloating(floating) { touchGamepadFloating = floating; }
+
+/** Set the distance from the top of the screen where a floating stick will not re-anchor
+ *  @param {number} margin
+ *  @memberof Settings */
+function setTouchGamepadFloatingTopMargin(margin) { touchGamepadFloatingTopMargin = margin; }
 
 /** Set size of virtual gamepad for touch devices in pixels
  *  @param {number} size
