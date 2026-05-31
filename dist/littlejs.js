@@ -5958,8 +5958,17 @@ function inputUpdate()
             }
             if (touchGamepadButtonCount === 1)
             {
+                sticks[1] = vec2();
                 const rightTouchStick = touchGamepadSticks[1] ?? vec2();
-                sticks[1] = applyDeadZones(rightTouchStick);
+                if (touchGamepadAnalog)
+                    sticks[1] = applyDeadZones(rightTouchStick);
+                else if (rightTouchStick.lengthSquared() > .3)
+                {
+                    // convert to 8 way dpad, matching the left stick
+                    const x = clamp(round(rightTouchStick.x), -1, 1);
+                    const y = clamp(round(rightTouchStick.y), -1, 1);
+                    sticks[1] = vec2(x, -y).clampLength(); // clamp to circle
+                }
             }
 
             // read virtual gamepad buttons
@@ -6235,11 +6244,11 @@ function touchGamepadBuildSvg(W, H)
         els.leftThumb = circle(ctr.x, ctr.y, S/4, '#fff');
     }
 
-    // right side: a second analog stick (buttonCount===1) or face buttons
+    // right side: a second stick (buttonCount===1, circle or cross) or face buttons
     if (touchGamepadButtonCount === 1)
     {
         const ctr = touchGamepadStickCenter(1, W, H);
-        circle(ctr.x, ctr.y, S/2);
+        if (touchGamepadAnalog) circle(ctr.x, ctr.y, S/2); else cross(ctr);
         els.rightThumb = circle(ctr.x, ctr.y, S/4, '#fff');
     }
     else
