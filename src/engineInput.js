@@ -340,7 +340,7 @@ const touchGamepadPointerRole = new Map();
 // overlay DOM elements (created lazily on touch devices) and cached SVG shapes
 let touchGamepadOverlay, touchGamepadStage, touchGamepadSvg, touchGamepadSvgEls;
 let touchGamepadZoneL, touchGamepadZoneR, touchGamepadZoneC;
-let touchGamepadNeedRelayout = true, touchGamepadLastPaused;
+let touchGamepadNeedRelayout = true, touchGamepadLastLayout;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Input system functions used by engine
@@ -728,7 +728,8 @@ const touchGamepadSvgNS = 'http://www.w3.org/2000/svg';
 // build the overlay DOM once; no-op if already built, disabled, headless, or non-touch
 function touchGamepadInit()
 {
-    if (touchGamepadOverlay || !touchGamepadEnable || !isTouchDevice || headlessMode)
+    if (touchGamepadOverlay || !touchGamepadEnable || !isTouchDevice || headlessMode ||
+        !document.body) // body may not exist yet; retry on a later frame
         return;
 
     // full-viewport overlay; only the input zones receive pointer events. The
@@ -902,14 +903,25 @@ function touchGamepadBuildSvg(W, H)
 // per-frame: fade the overlay and move the thumbs / set pressed states
 function touchGamepadRender()
 {
-    if (!touchGamepadEnable || !isTouchDevice || headlessMode || !touchGamepadOverlay) return;
+    if (!touchGamepadOverlay || headlessMode) return;
 
-    // relayout when paused state flips (zone layout differs while paused)
-    if (paused !== touchGamepadLastPaused)
+    // hide and bail if disabled at runtime (overlay stays in the DOM for reuse)
+    if (!touchGamepadEnable || !isTouchDevice)
     {
-        touchGamepadLastPaused = paused;
+        touchGamepadOverlay.style.opacity = 0;
+        return;
+    }
+
+    // relayout when the paused state or any layout-affecting setting changes
+    const layout = [touchGamepadButtonCount, touchGamepadLeftStick, touchGamepadAnalog,
+        touchGamepadSize, touchGamepadFloating, touchGamepadCenterButtonSize, paused].join();
+    if (layout !== touchGamepadLastLayout)
+    {
+        touchGamepadLastLayout = layout;
         touchGamepadNeedRelayout = true;
     }
+    // relayout before the visibility bail-out so the paused full-screen start zone applies
+    if (touchGamepadNeedRelayout) touchGamepadRelayout();
 
     // fade out when idle (always show when displayTime is 0)
     const fade = touchGamepadDisplayTime ?
@@ -917,8 +929,6 @@ function touchGamepadRender()
     const visible = touchGamepadTimer.isSet() && fade > 0 && !paused;
     touchGamepadOverlay.style.opacity = visible ? fade*touchGamepadAlpha : 0;
     if (!visible) return;
-
-    if (touchGamepadNeedRelayout) touchGamepadRelayout();
 
     const r = touchGamepadStageRect();
     const W = r.width, H = r.height, S = touchGamepadSize;
