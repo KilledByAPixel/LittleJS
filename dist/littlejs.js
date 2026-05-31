@@ -6242,11 +6242,22 @@ function touchGamepadRender()
     if (!touchGamepadOverlay || headlessMode) return;
 
     // hide and bail if disabled at runtime (overlay stays in the DOM for reuse)
+    // display:none also takes the input zones out of hit-testing so touches are
+    // not silently captured away from the game while disabled
     if (!touchGamepadEnable || !isTouchDevice)
     {
-        touchGamepadOverlay.style.opacity = 0;
+        if (touchGamepadOverlay.style.display !== 'none')
+        {
+            // just disabled: hide the overlay and release any held controls
+            touchGamepadOverlay.style.display = 'none';
+            touchGamepadPointerRole.clear();
+            touchGamepadButtons.length = 0;
+            touchGamepadSticks.length = 0;
+            touchGamepadStickPointerId.length = 0;
+        }
         return;
     }
+    touchGamepadOverlay.style.display = '';
 
     // relayout when the paused state or any layout-affecting setting changes
     const layout = [touchGamepadButtonCount, touchGamepadLeftStick, touchGamepadAnalog,
