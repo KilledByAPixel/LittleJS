@@ -515,11 +515,9 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let touchGamepadEnable: boolean;
-    /** True if touch gamepad should have start button in the center
-     *  - Prevents activating within 2*touchGamepadSize of the virtual stick or face buttons
-     *    (one radius for the visible control + one radius of buffer beyond its edge)
+    /** Size of center button if touch gamepad should have start button in the center
+     *  - Prevents activating when pressed near virtual stick or face buttons
      *  - When the game is paused, any touch will press the button
-     *  - Set size to enable the center button
      *  @type {number}
      *  @default
      *  @memberof Settings */
@@ -529,11 +527,34 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let touchGamepadButtonCount: number;
+    /** True if the touch gamepad should have a left analog stick (or dpad)
+     *  - Set to false to disable the left side, leaving only the right side controls
+     *  @type {boolean}
+     *  @default
+     *  @memberof Settings */
+    export let touchGamepadLeftStick: boolean;
     /** True if touch gamepad should be analog stick or false to use if 8 way dpad
      *  @type {boolean}
      *  @default
      *  @memberof Settings */
     export let touchGamepadAnalog: boolean;
+    /** True if touch gamepad directional controls should float to where you press
+     *  - Only affects analog sticks and dpads, not face buttons
+     *  - The left stick uses the left half of the screen, or the whole screen if there are no face buttons (touchGamepadButtonCount is 0)
+     *  - The right stick uses the right half of the screen when it is enabled (touchGamepadButtonCount is 1)
+     *  - A center button (touchGamepadCenterButtonSize) still works since it ignores touches near the sticks
+     *  @type {boolean}
+     *  @default
+     *  @memberof Settings */
+    export let touchGamepadFloating: boolean;
+    /** Distance in pixels from the top of the screen where a floating stick will not re-anchor
+     *  - Prevents the stick base from being placed too close to the top, where there is no room to push up
+     *  - A stick that is already held can still be dragged up into this margin
+     *  - Set to 0 to allow the stick to anchor anywhere
+     *  @type {number}
+     *  @default
+     *  @memberof Settings */
+    export let touchGamepadFloatingTopMargin: number;
     /** Size of virtual gamepad for touch devices in pixels
      *  @type {number}
      *  @default
@@ -728,10 +749,22 @@ declare module "littlejsengine" {
      *  @param {number} count
      *  @memberof Settings */
     export function setTouchGamepadButtonCount(count: number): void;
+    /** Set if the touch gamepad should have a left analog stick (or dpad)
+     *  @param {boolean} enable
+     *  @memberof Settings */
+    export function setTouchGamepadLeftStick(enable: boolean): void;
     /** Set if touch gamepad should be analog stick or 8 way dpad
      *  @param {boolean} analog
      *  @memberof Settings */
     export function setTouchGamepadAnalog(analog: boolean): void;
+    /** Set if touch gamepad directional controls should float to where you press
+     *  @param {boolean} floating
+     *  @memberof Settings */
+    export function setTouchGamepadFloating(floating: boolean): void;
+    /** Set the distance from the top of the screen where a floating stick will not re-anchor
+     *  @param {number} margin
+     *  @memberof Settings */
+    export function setTouchGamepadFloatingTopMargin(margin: number): void;
     /** Set size of virtual gamepad for touch devices in pixels
      *  @param {number} size
      *  @memberof Settings */
