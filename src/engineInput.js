@@ -565,17 +565,6 @@ function inputInit()
                     const otherId = touchGamepadStickTouchId[index ? 0 : 1];
                     touch = touchPoints.find(t => t.id !== otherId && regionTest(t.pos));
                     reanchor = !!touch;
-                    if (touch && touch.pos.y < touchGamepadFloatingTopMargin)
-                    {
-                        // too close to the top to move the base there: control from the current
-                        // anchor if the press is on the stick, otherwise ignore the press, so the
-                        // base can't be placed where there is no room to push up
-                        const anchor = touchGamepadStickAnchors[index];
-                        if (anchor && anchor.distance(touch.pos) < touchGamepadSize)
-                            reanchor = false;
-                        else
-                            touch = undefined;
-                    }
                 }
                 if (!touch)
                 {

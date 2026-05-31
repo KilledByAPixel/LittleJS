@@ -2341,14 +2341,6 @@ let touchGamepadAnalog = true;
  *  @memberof Settings */
 let touchGamepadFloating = false;
 
-/** Distance in pixels from the top of the screen where a floating stick will not re-anchor
- *  - Prevents the stick base from being placed too close to the top, where there is no room to push up
- *  - A stick that is already held can still be dragged up into this margin
- *  - Set to 0 to allow the stick to anchor anywhere
- *  @type {number}
- *  @default
- *  @memberof Settings */
-let touchGamepadFloatingTopMargin = 100;
 
 /** Size of virtual gamepad for touch devices in pixels
  *  @type {number}
@@ -2634,10 +2626,6 @@ function setTouchGamepadAnalog(analog) { touchGamepadAnalog = analog; }
  *  @memberof Settings */
 function setTouchGamepadFloating(floating) { touchGamepadFloating = floating; }
 
-/** Set the distance from the top of the screen where a floating stick will not re-anchor
- *  @param {number} margin
- *  @memberof Settings */
-function setTouchGamepadFloatingTopMargin(margin) { touchGamepadFloatingTopMargin = margin; }
 
 /** Set size of virtual gamepad for touch devices in pixels
  *  @param {number} size
@@ -5230,17 +5218,6 @@ function inputInit()
                     const otherId = touchGamepadStickTouchId[index ? 0 : 1];
                     touch = touchPoints.find(t => t.id !== otherId && regionTest(t.pos));
                     reanchor = !!touch;
-                    if (touch && touch.pos.y < touchGamepadFloatingTopMargin)
-                    {
-                        // too close to the top to move the base there: control from the current
-                        // anchor if the press is on the stick, otherwise ignore the press, so the
-                        // base can't be placed where there is no room to push up
-                        const anchor = touchGamepadStickAnchors[index];
-                        if (anchor && anchor.distance(touch.pos) < touchGamepadSize)
-                            reanchor = false;
-                        else
-                            touch = undefined;
-                    }
                 }
                 if (!touch)
                 {

@@ -547,14 +547,6 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let touchGamepadFloating: boolean;
-    /** Distance in pixels from the top of the screen where a floating stick will not re-anchor
-     *  - Prevents the stick base from being placed too close to the top, where there is no room to push up
-     *  - A stick that is already held can still be dragged up into this margin
-     *  - Set to 0 to allow the stick to anchor anywhere
-     *  @type {number}
-     *  @default
-     *  @memberof Settings */
-    export let touchGamepadFloatingTopMargin: number;
     /** Size of virtual gamepad for touch devices in pixels
      *  @type {number}
      *  @default
@@ -767,10 +759,6 @@ declare module "littlejsengine" {
      *  @param {boolean} floating
      *  @memberof Settings */
     export function setTouchGamepadFloating(floating: boolean): void;
-    /** Set the distance from the top of the screen where a floating stick will not re-anchor
-     *  @param {number} margin
-     *  @memberof Settings */
-    export function setTouchGamepadFloatingTopMargin(margin: number): void;
     /** Set size of virtual gamepad for touch devices in pixels
      *  @param {number} size
      *  @memberof Settings */
