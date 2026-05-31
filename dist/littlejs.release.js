@@ -5034,7 +5034,7 @@ const touchGamepadStickAnchors = [], touchGamepadStickPointerId = [];
 const touchGamepadPointerRole = new Map();
 // overlay DOM elements (created lazily on touch devices) and cached SVG shapes
 let touchGamepadOverlay, touchGamepadStage, touchGamepadSvg, touchGamepadSvgEls;
-let touchGamepadZoneL, touchGamepadZoneR, touchGamepadZoneC;
+let touchGamepadSideZones = [], touchGamepadZoneC;
 let touchGamepadNeedRelayout = true, touchGamepadLastLayout;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -5195,8 +5195,8 @@ function inputInit()
             {
                 // touches that landed on a virtual gamepad zone are owned by the gamepad
                 // (handled by its own pointer listeners) and must not drive the game mouse
-                const isGamepadTouch = (t)=> t.target === touchGamepadZoneL ||
-                    t.target === touchGamepadZoneR || t.target === touchGamepadZoneC;
+                const isGamepadTouch = (t)=>
+                    touchGamepadSideZones.includes(t.target) || t.target === touchGamepadZoneC;
                 const gameTouches = [];
                 for (const t of e.touches)
                     if (!isGamepadTouch(t)) gameTouches.push(t);
@@ -5462,9 +5462,9 @@ function touchGamepadInit()
         stage.appendChild(z);
         return z;
     };
-    touchGamepadZoneL = makeZone();
-    touchGamepadZoneR = makeZone();
-    touchGamepadZoneC = makeZone(); // appended last so it sits above L/R in the center
+    touchGamepadSideZones[0] = makeZone(); // left
+    touchGamepadSideZones[1] = makeZone(); // right
+    touchGamepadZoneC = makeZone(); // center/start, appended last so it sits above the sides
 
     addEventListener('resize', ()=> touchGamepadNeedRelayout = true);
     document.body.appendChild(overlay);
@@ -5526,31 +5526,27 @@ function touchGamepadRelayout()
     {
         // while paused, any touch presses start
         setZone(touchGamepadZoneC, 'inset:0');
-        touchGamepadZoneL.style.display = 'none';
-        touchGamepadZoneR.style.display = 'none';
+        for (const zone of touchGamepadSideZones) zone.style.display = 'none';
         touchGamepadZoneC.style.display = '';
     }
     else
     {
-        touchGamepadZoneL.style.display = touchGamepadSideHasControl(0) ? '' : 'none';
-        touchGamepadZoneR.style.display = touchGamepadSideHasControl(1) ? '' : 'none';
+        // position each side zone (left/right differ only by which edge they hug)
+        for (let side = 0; side < 2; side++)
+        {
+            const zone = touchGamepadSideZones[side], edge = side ? 'right' : 'left';
+            zone.style.display = touchGamepadSideHasControl(side) ? '' : 'none';
+            if (touchGamepadFloating)
+            {
+                // bottom 60% grabs the control; the top 40% passes through. A side with no
+                // control on the other side uses the full width (matching the hit-test)
+                const width = touchGamepadSideHasControl(side ? 0 : 1) ? '50%' : '100%';
+                setZone(zone, `${edge}:0;bottom:0;width:${width};height:60%`);
+            }
+            else // fixed: a compact box hugging the corner control
+                setZone(zone, `${edge}:0;bottom:0;width:${3*S}px;height:${3*S}px`);
+        }
         touchGamepadZoneC.style.display = touchGamepadCenterButtonSize ? '' : 'none';
-
-        if (touchGamepadFloating)
-        {
-            // bottom 60% grabs the control; the top 40% passes through. A side with no
-            // control on the other side uses the full width (matching the hit-test)
-            const leftW = touchGamepadSideHasControl(1) ? '50%' : '100%';
-            const rightW = touchGamepadSideHasControl(0) ? '50%' : '100%';
-            setZone(touchGamepadZoneL, `left:0;bottom:0;width:${leftW};height:60%`);
-            setZone(touchGamepadZoneR, `right:0;bottom:0;width:${rightW};height:60%`);
-        }
-        else
-        {
-            // fixed: compact boxes hugging each corner control
-            setZone(touchGamepadZoneL, `left:0;bottom:0;width:${3*S}px;height:${3*S}px`);
-            setZone(touchGamepadZoneR, `right:0;bottom:0;width:${3*S}px;height:${3*S}px`);
-        }
         const c = touchGamepadCenterButtonSize;
         setZone(touchGamepadZoneC,
             `left:50%;top:50%;width:${2*c}px;height:${2*c}px;transform:translate(-50%,-50%)`);
@@ -5858,8 +5854,8 @@ function touchGamepadPointerMove(e)
     if (!role) return;
     e.preventDefault();
     const p = touchGamepadEventPos(e);
-    if (role === 'stick0') touchGamepadApplyStick(0, p);
-    else if (role === 'stick1') touchGamepadApplyStick(1, p);
+    if (role === 'stick0' || role === 'stick1')
+        touchGamepadApplyStick(role === 'stick1' ? 1 : 0, p);
     // face buttons & start are held until release (no slide-between this pass)
 }
 
