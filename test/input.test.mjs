@@ -16,8 +16,9 @@ test('retained touch gamepad setters are exported and headless-safe', () =>
     const setters = [
         'setTouchGamepadEnable', 'setTouchGamepadPassthrough',
         'setTouchGamepadCenterButtonSize', 'setTouchGamepadButtonCount',
-        'setTouchGamepadLeftStick', 'setTouchGamepadRightStick',
-        'setTouchGamepadAnalog', 'setTouchGamepadFloating', 'setTouchGamepadSize',
+        'setTouchGamepadLeftStick', 'setTouchGamepadLeftButtonCount',
+        'setTouchGamepadRightStick', 'setTouchGamepadAnalog',
+        'setTouchGamepadFloating', 'setTouchGamepadSize',
         'setTouchGamepadAlpha', 'setTouchGamepadDisplayTime',
         'setTouchGamepadVibration',
     ];
@@ -33,6 +34,7 @@ test('retained touch gamepad setters are exported and headless-safe', () =>
         LJS.setTouchGamepadFloating(true);
         LJS.setTouchGamepadAnalog(false);
         LJS.setTouchGamepadLeftStick(true);
+        LJS.setTouchGamepadLeftButtonCount(4);
         LJS.setTouchGamepadRightStick(true);
         LJS.setTouchGamepadCenterButtonSize(50);
         LJS.setTouchGamepadAlpha(0.5);
