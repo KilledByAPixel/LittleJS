@@ -797,61 +797,47 @@ function inputRender()
         context.strokeStyle = '#fff';
         context.lineWidth = 3;
 
-        // draw left analog stick
-        const leftTouchStick = touchGamepadSticks[0] ?? vec2();
-        const stickCenter = vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
-
-        // soft touch zone: shows the wide hit region around the stick/dpad
-        if (!touchGamepadAnalog)
+        // draw an analog stick (circle or cross shaped) with a thumb dot at its offset
+        function drawTouchGamepadStick(center, stick)
         {
-            context.fillStyle = 'rgba(255,255,255,.12)';
             context.beginPath();
-            context.arc(stickCenter.x, stickCenter.y, touchGamepadSize*2, 0, 9);
-            context.fill();
-        }
-
-        context.beginPath();
-        if (touchGamepadAnalog)
-        {
-            // draw circle shaped gamepad
-            context.arc(stickCenter.x, stickCenter.y, touchGamepadSize/2, 0, 9);
-        }
-        else
-        {
-            // draw cross shaped gamepad
-            for (let i=10; --i;)
+            if (touchGamepadAnalog)
             {
-                const angle = i*PI/4;
-                context.arc(stickCenter.x, stickCenter.y,touchGamepadSize*.6, angle + PI/8, angle + PI/8);
-                i%2 && context.arc(stickCenter.x, stickCenter.y, touchGamepadSize*.33, angle, angle);
+                // draw circle shaped gamepad
+                context.arc(center.x, center.y, touchGamepadSize/2, 0, 9);
             }
-        }
-        context.stroke();
+            else
+            {
+                // draw cross shaped gamepad
+                for (let i=10; --i;)
+                {
+                    const angle = i*PI/4;
+                    context.arc(center.x, center.y, touchGamepadSize*.6, angle + PI/8, angle + PI/8);
+                    i%2 && context.arc(center.x, center.y, touchGamepadSize*.33, angle, angle);
+                }
+            }
+            context.stroke();
 
-        // draw thumb dot at the input offset
-        const thumb = stickCenter.add(leftTouchStick.scale(touchGamepadSize/2));
-        context.fillStyle = '#fff';
-        context.beginPath();
-        context.arc(thumb.x, thumb.y, touchGamepadSize/4, 0, 9);
-        context.fill();
-        context.stroke();
+            // draw thumb dot at the input offset
+            const thumb = center.add(stick.scale(touchGamepadSize/2));
+            context.fillStyle = '#fff';
+            context.beginPath();
+            context.arc(thumb.x, thumb.y, touchGamepadSize/4, 0, 9);
+            context.fill();
+            context.stroke();
+        }
+
+        // draw left analog stick
+        const stickCenter = vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
+        drawTouchGamepadStick(stickCenter, touchGamepadSticks[0] ?? vec2());
 
         // draw right side: virtual analog stick if buttonCount===1, face buttons otherwise
         {
             const buttonCenter = touchGamepadButtonCenter();
             if (touchGamepadButtonCount === 1)
             {
-                // virtual right analog stick: ring + thumb dot, matching left stick
-                const rightTouchStick = touchGamepadSticks[1] ?? vec2();
-                context.beginPath();
-                context.arc(buttonCenter.x, buttonCenter.y, touchGamepadSize/2, 0, 9);
-                context.stroke();
-                const rightThumb = buttonCenter.add(rightTouchStick.scale(touchGamepadSize/2));
-                context.fillStyle = '#fff';
-                context.beginPath();
-                context.arc(rightThumb.x, rightThumb.y, touchGamepadSize/4, 0, 9);
-                context.fill();
-                context.stroke();
+                // virtual right analog stick, matching left stick
+                drawTouchGamepadStick(buttonCenter, touchGamepadSticks[1] ?? vec2());
             }
             else for (let i=0; i<touchGamepadButtonCount; i++)
             {
