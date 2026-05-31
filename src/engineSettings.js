@@ -250,15 +250,13 @@ let touchInputEnable = true;
  *  @memberof Settings */
 let touchGamepadEnable = false;
 
-/** True if touch gamepad should have start button in the center
- *  - Prevents activating within 2*touchGamepadSize of the virtual stick or face buttons
- *    (one radius for the visible control + one radius of buffer beyond its edge)
+/** Size of center button if touch gamepad should have start button in the center
+ *  - Prevents activating when pressed near virtual stick or face buttons
  *  - When the game is paused, any touch will press the button
- *  - Set size to enable the center button
  *  @type {number}
  *  @default
  *  @memberof Settings */
-let touchGamepadCenterButtonSize = 300;
+let touchGamepadCenterButtonSize = 0;
 
 /** Number of buttons on touch gamepad (0-4), if 1 also acts as right analog stick
  *  @type {number}
