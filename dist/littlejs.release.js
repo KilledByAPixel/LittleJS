@@ -5759,8 +5759,9 @@ function touchGamepadFaceButtonAt(side, p, W, H)
     if (!side) d.x *= -1; // left side mirrors the right layout horizontally
     let button = count === 2 ? (d.x < d.y ? 1 : 0) : mod(d.direction()+2, 4);
     button = button === 3 ? 2 : button === 2 ? 3 : button; // match gamepad layout
+    if (button >= count) return -1; // guard before the mirror remaps the index range
     if (!side) button = button === 1 ? 2 : button === 2 ? 1 : button; // mirror swap
-    return button < count ? base + button : -1;
+    return base + button;
 }
 
 // pick which control a stage-local press activates, by priority then proximity,
