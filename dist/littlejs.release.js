@@ -5030,7 +5030,7 @@ const gamepadStickData = [], gamepadDpadData = [], gamepadHadInput = [];
 const touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadSticks = [];
 // floating stick anchors (stage-local CSS pixels) and owning pointer ids, indexed by stick (0=left, 1=right)
 const touchGamepadStickAnchors = [], touchGamepadStickPointerId = [];
-// pointerId -> control role ('L', 'R', 'face<n>', or 'start')
+// pointerId -> control role ('stick0', 'stick1', 'face<n>', or 'start')
 const touchGamepadPointerRole = new Map();
 // overlay DOM elements (created lazily on touch devices) and cached SVG shapes
 let touchGamepadOverlay, touchGamepadStage, touchGamepadSvg, touchGamepadSvgEls;
