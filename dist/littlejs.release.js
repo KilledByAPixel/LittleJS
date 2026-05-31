@@ -5496,8 +5496,10 @@ function touchGamepadRelayout()
 
         if (touchGamepadFloating)
         {
-            // bottom 60% of each half grabs the stick; the top 40% passes through
-            setZone(touchGamepadZoneL, 'left:0;bottom:0;width:50%;height:60%');
+            // bottom 60% grabs the stick; the top 40% passes through. With no face
+            // buttons the left stick uses the full width (matching the hit-test)
+            setZone(touchGamepadZoneL,
+                `left:0;bottom:0;width:${touchGamepadButtonCount ? '50%' : '100%'};height:60%`);
             setZone(touchGamepadZoneR, 'right:0;bottom:0;width:50%;height:60%');
         }
         else
