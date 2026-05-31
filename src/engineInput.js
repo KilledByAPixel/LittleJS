@@ -335,6 +335,8 @@ const gamepadStickData = [], gamepadDpadData = [], gamepadHadInput = [];
 const touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadSticks = [];
 // floating stick anchor positions and owning touch identifiers, indexed by stick (0=left, 1=right)
 const touchGamepadStickAnchors = [], touchGamepadStickTouchId = [];
+// device safe area insets in canvas pixels and the hidden element used to read them
+let touchGamepadInsetL = 0, touchGamepadInsetR = 0, touchGamepadInsetB = 0, touchGamepadSafeAreaProbe;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Input system functions used by engine
@@ -540,7 +542,7 @@ function inputInit()
             if (paused) return;
 
             // get center of left and right sides
-            const stickCenter = vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
+            const stickCenter = touchGamepadStickHome();
             const buttonCenter = touchGamepadButtonCenter();
             const startCenter = mainCanvasSize.scale(.5);
 
@@ -695,6 +697,9 @@ function inputUpdate()
     mousePos = screenToWorld(mousePosScreen);
     mouseDelta = screenToWorldDelta(mouseDeltaScreen);
 
+    // update touch gamepad safe area insets
+    touchGamepadUpdateSafeArea();
+
     // update gamepads if enabled
     gamepadsUpdate();
         
@@ -771,6 +776,12 @@ function inputUpdate()
             {
                 const wasDown = gamepadIsDown(i,0);
                 data[i] = touchGamepadButtons[i] ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
+
+                // haptic tap when a face button or start button is first pressed (3 = newly down)
+                // skip stick touches (10, 11) and the dual-stick button 0 so movement doesn't buzz
+                if (touchGamepadVibration && data[i] === 3 &&
+                    (i === 9 || (i < touchGamepadButtonCount && touchGamepadButtonCount !== 1)))
+                    vibrate(touchGamepadVibration);
             }
 
             // disable normal gamepads when touch gamepad is active
@@ -954,13 +965,22 @@ function inputRender()
     }
 }
 
-// center position for right touch pad face buttons
+// center position for right touch pad face buttons, inset from the bottom-right safe area
 function touchGamepadButtonCenter()
 {
     const center = mainCanvasSize.subtract(vec2(touchGamepadSize));
     if (touchGamepadButtonCount === 2 || touchGamepadButtonCount === 3)
         center.y -= touchGamepadSize/4; // move up a bit
+    center.x -= touchGamepadInsetR;
+    center.y -= touchGamepadInsetB;
     return center;
+}
+
+// home (resting) position of the left touch gamepad stick, inset from the bottom-left safe area
+function touchGamepadStickHome()
+{
+    return vec2(touchGamepadSize + touchGamepadInsetL,
+        mainCanvasSize.y - touchGamepadSize - touchGamepadInsetB);
 }
 
 // effective screen center of a touch gamepad directional stick (index 0=left, 1=right)
@@ -971,6 +991,40 @@ function touchGamepadStickCenter(index)
     if (touchGamepadFloating && touchGamepadStickAnchors[index] &&
         (!index || touchGamepadButtonCount === 1))
         return touchGamepadStickAnchors[index];
-    return index ? touchGamepadButtonCenter() :
-        vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
+    return index ? touchGamepadButtonCenter() : touchGamepadStickHome();
+}
+
+// read device safe area insets, converting the part overlapping the canvas to canvas pixels
+function touchGamepadUpdateSafeArea()
+{
+    touchGamepadInsetL = touchGamepadInsetR = touchGamepadInsetB = 0;
+    if (!touchGamepadEnable || !isTouchDevice || headlessMode)
+        return;
+
+    // a hidden probe element resolves the CSS env() safe area insets as padding
+    if (!touchGamepadSafeAreaProbe)
+    {
+        touchGamepadSafeAreaProbe = document.createElement('div');
+        touchGamepadSafeAreaProbe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;' +
+            'visibility:hidden;pointer-events:none;padding:' +
+            'env(safe-area-inset-top) env(safe-area-inset-right) ' +
+            'env(safe-area-inset-bottom) env(safe-area-inset-left)';
+        document.body.appendChild(touchGamepadSafeAreaProbe);
+    }
+
+    // read the insets in css pixels
+    const style = getComputedStyle(touchGamepadSafeAreaProbe);
+    const cssL = parseFloat(style.paddingLeft)   || 0;
+    const cssR = parseFloat(style.paddingRight)  || 0;
+    const cssB = parseFloat(style.paddingBottom) || 0;
+    if (!cssL && !cssR && !cssB)
+        return; // no safe area insets
+
+    // only apply the part of each inset that actually overlaps the canvas, scaled to canvas pixels
+    const rect = mainCanvas.getBoundingClientRect();
+    const scaleX = rect.width  ? mainCanvas.width  / rect.width  : 1;
+    const scaleY = rect.height ? mainCanvas.height / rect.height : 1;
+    touchGamepadInsetL = max(0, cssL - rect.left) * scaleX;
+    touchGamepadInsetR = max(0, cssR - (window.innerWidth  - rect.right))  * scaleX;
+    touchGamepadInsetB = max(0, cssB - (window.innerHeight - rect.bottom)) * scaleY;
 }

@@ -314,6 +314,13 @@ let touchGamepadAlpha = .3;
  *  @memberof Settings */
 let touchGamepadDisplayTime = 3;
 
+/** Duration in ms to vibrate when a touch gamepad face button or start button is pressed
+ *  - Set to 0 to disable, also requires vibrateEnable and hardware support (ignored on iOS)
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let touchGamepadVibration = 0;
+
 /** Allow vibration hardware if it exists
  *  @type {boolean}
  *  @default
@@ -592,6 +599,11 @@ function setTouchGamepadAlpha(alpha) { touchGamepadAlpha = alpha; }
  *  @param {number} time
  *  @memberof Settings */
 function setTouchGamepadDisplayTime(time) { touchGamepadDisplayTime = time; }
+
+/** Set duration in ms to vibrate when a touch gamepad face or start button is pressed (0 disables)
+ *  @param {number} ms
+ *  @memberof Settings */
+function setTouchGamepadVibration(ms) { touchGamepadVibration = ms; }
 
 /** Set to allow vibration hardware if it exists
  *  @param {boolean} enable
