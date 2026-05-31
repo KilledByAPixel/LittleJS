@@ -790,7 +790,7 @@ function inputRender()
         const alpha = touchGamepadDisplayTime ? percent(touchGamepadTimer.get(), touchGamepadDisplayTime+1, touchGamepadDisplayTime) : 1;
         if (!alpha || paused) return;
 
-        // setup the canvas
+        // setup the canvas (arc calls use 9 radians as end angle - any value > 2*PI draws a full circle)
         const context = mainContext;
         context.save();
         context.globalAlpha = alpha*touchGamepadAlpha;
