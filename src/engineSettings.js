@@ -264,6 +264,13 @@ let touchGamepadCenterButtonSize = 0;
  *  @memberof Settings */
 let touchGamepadButtonCount = 4;
 
+/** True if the touch gamepad should have a left analog stick (or dpad)
+ *  - Set to false to disable the left side, leaving only the right side controls
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let touchGamepadLeftStick = true;
+
 /** True if touch gamepad should be analog stick or false to use if 8 way dpad
  *  @type {boolean}
  *  @default
@@ -550,6 +557,11 @@ function setTouchGamepadCenterButtonSize(size) { touchGamepadCenterButtonSize = 
  *  @param {number} count
  *  @memberof Settings */
 function setTouchGamepadButtonCount(count) { touchGamepadButtonCount = count; }
+
+/** Set if the touch gamepad should have a left analog stick (or dpad)
+ *  @param {boolean} enable
+ *  @memberof Settings */
+function setTouchGamepadLeftStick(enable) { touchGamepadLeftStick = enable; }
 
 /** Set if touch gamepad should be analog stick or 8 way dpad
  *  @param {boolean} analog

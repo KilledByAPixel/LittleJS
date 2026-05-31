@@ -588,9 +588,12 @@ function inputInit()
                 if (!touchGamepadStickAnchors[1]) touchGamepadStickAnchors[1] = buttonCenter;
 
                 // left stick uses the whole screen if there are no face buttons, else the left half
-                const leftTouch = touchPositions.find(p =>
-                    !touchGamepadButtonCount || p.x < mainCanvasSize.x/2);
-                applyFloatingStick(0, 10, leftTouch);
+                if (touchGamepadLeftStick)
+                {
+                    const leftTouch = touchPositions.find(p =>
+                        !touchGamepadButtonCount || p.x < mainCanvasSize.x/2);
+                    applyFloatingStick(0, 10, leftTouch);
+                }
 
                 // right stick uses the right half of the screen when it is enabled
                 if (touchGamepadButtonCount === 1)
@@ -610,7 +613,7 @@ function inputInit()
                     if (touchGamepadButtonCount < 2 || touchPos.x < mainCanvasSize.x/2)
                         continue;
                 }
-                else if (touchPos.x < mainCanvasSize.x/2 &&
+                else if (touchGamepadLeftStick && touchPos.x < mainCanvasSize.x/2 &&
                     stickCenter.distance(touchPos) < touchGamepadSize*2)
                 {
                     // virtual left analog stick
@@ -645,7 +648,8 @@ function inputInit()
                         touchGamepadButtons[button] = 1;
                 }
                 else if (startCenter.distance(touchPos) < touchGamepadCenterButtonSize &&
-                         touchGamepadStickCenter(0).distance(touchPos) >= 2 * touchGamepadSize &&
+                         (!touchGamepadLeftStick ||
+                          touchGamepadStickCenter(0).distance(touchPos) >= 2 * touchGamepadSize) &&
                          (!touchGamepadButtonCount ||
                           touchGamepadStickCenter(1).distance(touchPos) >= 2 * touchGamepadSize))
                 {
@@ -708,14 +712,16 @@ function inputUpdate()
                 const startCenter = mainCanvasSize.scale(.5);
                 const hasButtons = touchGamepadButtonCount > 0;
 
-                debugCircle(stickCenter, 2*touchGamepadSize, 'cyan', 0, false, true);
+                if (touchGamepadLeftStick)
+                    debugCircle(stickCenter, 2*touchGamepadSize, 'cyan', 0, false, true);
                 if (hasButtons)
                     debugCircle(buttonCenter, 2*touchGamepadSize, 'cyan', 0, false, true);
                 if (touchGamepadCenterButtonSize)
                 {
                     debugCircle(startCenter, 2*touchGamepadCenterButtonSize, 'cyan', 0, false, true);
                     // exclusion bubbles around controls (where start is blocked), matching the start logic
-                    debugCircle(stickCenter, 4*touchGamepadSize, 'magenta', 0, false, true);
+                    if (touchGamepadLeftStick)
+                        debugCircle(stickCenter, 4*touchGamepadSize, 'magenta', 0, false, true);
                     if (hasButtons)
                         debugCircle(buttonCenter, 4*touchGamepadSize, 'magenta', 0, false, true);
                 }
@@ -900,7 +906,8 @@ function inputRender()
         }
 
         // draw left analog stick (at its floating anchor when enabled)
-        drawTouchGamepadStick(touchGamepadStickCenter(0), touchGamepadSticks[0] ?? vec2());
+        if (touchGamepadLeftStick)
+            drawTouchGamepadStick(touchGamepadStickCenter(0), touchGamepadSticks[0] ?? vec2());
 
         // draw right side: virtual analog stick if buttonCount===1, face buttons otherwise
         {
