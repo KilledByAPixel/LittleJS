@@ -5841,9 +5841,7 @@ function inputInit()
             for (const touch of e.touches)
             {
                 const touchPos = mouseEventToScreen(vec2(touch.clientX, touch.clientY));
-                const isStickTouch = touchPos.x < mainCanvasSize.x/2 &&
-                    stickCenter.distance(touchPos) < touchGamepadSize*2;
-                if (isStickTouch)
+                if (stickCenter.distance(touchPos) < touchGamepadSize)
                 {
                     // virtual analog stick
                     const delta = touchPos.subtract(stickCenter);
@@ -6095,18 +6093,9 @@ function inputRender()
 
         // draw left analog stick
         const leftTouchStick = touchGamepadSticks[0] ?? vec2();
-        const stickCenter = vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
-
-        // soft touch zone: shows the wide hit region around the stick/dpad
-        if (!touchGamepadAnalog)
-        {
-            context.fillStyle = 'rgba(255,255,255,.12)';
-            context.beginPath();
-            context.arc(stickCenter.x, stickCenter.y, touchGamepadSize*2, 0, 9);
-            context.fill();
-        }
-
+        context.fillStyle = leftTouchStick.lengthSquared() > 0 ? '#fff' : '#000';
         context.beginPath();
+        const stickCenter = vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
         if (touchGamepadAnalog)
         {
             // draw circle shaped gamepad
@@ -6122,44 +6111,26 @@ function inputRender()
                 i%2 && context.arc(stickCenter.x, stickCenter.y, touchGamepadSize*.33, angle, angle);
             }
         }
-        context.stroke();
-
-        // draw thumb dot at the input offset
-        const thumb = stickCenter.add(leftTouchStick.scale(touchGamepadSize/2));
-        context.fillStyle = '#fff';
-        context.beginPath();
-        context.arc(thumb.x, thumb.y, touchGamepadSize/4, 0, 9);
         context.fill();
         context.stroke();
 
-        // draw right side: virtual analog stick if buttonCount===1, face buttons otherwise
+        // draw right face buttons
         {
             const buttonCenter = touchGamepadButtonCenter();
-            if (touchGamepadButtonCount === 1)
-            {
-                // virtual right analog stick: ring + thumb dot, matching left stick
-                const rightTouchStick = touchGamepadSticks[1] ?? vec2();
-                context.beginPath();
-                context.arc(buttonCenter.x, buttonCenter.y, touchGamepadSize/2, 0, 9);
-                context.stroke();
-                const rightThumb = buttonCenter.add(rightTouchStick.scale(touchGamepadSize/2));
-                context.fillStyle = '#fff';
-                context.beginPath();
-                context.arc(rightThumb.x, rightThumb.y, touchGamepadSize/4, 0, 9);
-                context.fill();
-                context.stroke();
-            }
-            else for (let i=0; i<touchGamepadButtonCount; i++)
+            const buttonSize = touchGamepadButtonCount > 1 ? 
+                touchGamepadSize/4 : touchGamepadSize/2;
+            for (let i=0; i<touchGamepadButtonCount; i++)
             {
                 const j = mod(i-1, 4);
-                let button = touchGamepadButtonCount > 2 ?
+                let button = touchGamepadButtonCount > 2 ? 
                     j : min(j, touchGamepadButtonCount-1);
                 // fix button locations (swap 2 and 3 to match gamepad layout)
                 button = button === 3 ? 2 : button === 2 ? 3 : button;
-                const pos = buttonCenter.add(vec2().setDirection(j, touchGamepadSize/2));
+                const pos = touchGamepadButtonCount < 2 ? buttonCenter :
+                    buttonCenter.add(vec2().setDirection(j, touchGamepadSize/2));
                 context.fillStyle = touchGamepadButtons[button] ? '#fff' : '#000';
                 context.beginPath();
-                context.arc(pos.x, pos.y, touchGamepadSize/4, 0,9);
+                context.arc(pos.x, pos.y, buttonSize, 0,9);
                 context.fill();
                 context.stroke();
             }
@@ -14266,9 +14237,11 @@ function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor
  *  @memberof DrawUtilities */
 function drawCrescent(pos, size=1, percent=0, color=WHITE, angle=0, invert=false, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
 {
+    ASSERT(isColor(color) && isColor(lineColor), 'color is invalid');
     const points = getCrescentPoints(pos, size, percent, angle, invert);
     drawPoly(points, color, lineWidth, lineColor, vec2(), 0, useWebGL, screenSpace, context);
 }
+
 
 /** Get the list of points that make up a crescent / moon-phase shape
  *  Returns world-space points with pos and angle baked in, ready for drawPoly or other use
