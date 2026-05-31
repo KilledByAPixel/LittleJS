@@ -733,18 +733,22 @@ function inputUpdate()
             gamepadPrimary = 0; // touch gamepad uses index 0
             const sticks = gamepadStickData[0] ?? (gamepadStickData[0] = []);
             const dpad = gamepadDpadData[0] ?? (gamepadDpadData[0] = vec2());
-            sticks[0] = vec2();
+            sticks.length = 0; // only report sticks that are enabled
             dpad.set();
-            const leftTouchStick = touchGamepadSticks[0] ?? vec2();
-            if (touchGamepadAnalog)
-                sticks[0] = applyDeadZones(leftTouchStick);
-            else if (leftTouchStick.lengthSquared() > .3)
+            if (touchGamepadLeftStick)
             {
-                // convert to 8 way dpad
-                const x = clamp(round(leftTouchStick.x), -1, 1);
-                const y = clamp(round(leftTouchStick.y), -1, 1);
-                dpad.set(x, -y);
-                sticks[0] = dpad.clampLength(); // clamp to circle
+                sticks[0] = vec2();
+                const leftTouchStick = touchGamepadSticks[0] ?? vec2();
+                if (touchGamepadAnalog)
+                    sticks[0] = applyDeadZones(leftTouchStick);
+                else if (leftTouchStick.lengthSquared() > .3)
+                {
+                    // convert to 8 way dpad
+                    const x = clamp(round(leftTouchStick.x), -1, 1);
+                    const y = clamp(round(leftTouchStick.y), -1, 1);
+                    dpad.set(x, -y);
+                    sticks[0] = dpad.clampLength(); // clamp to circle
+                }
             }
             if (touchGamepadButtonCount === 1)
             {

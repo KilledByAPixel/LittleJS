@@ -338,6 +338,8 @@ function debugRender()
             const stickCount = gamepadStickData[i].length;
             for (let j = 0; j < stickCount; j++)
             {
+                if (!(j in gamepadStickData[i]))
+                    continue; // skip sticks that are not present (eg a disabled touch left stick)
                 const stick = gamepadStick(j, i);
                 const drawPos = cornerPos.add(vec2(j*stickScale*2, 0));
                 const stickPos = drawPos.add(stick.scale(stickScale));
