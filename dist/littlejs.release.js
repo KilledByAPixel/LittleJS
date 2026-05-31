@@ -13555,11 +13555,9 @@ function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor
  *  @memberof DrawUtilities */
 function drawCrescent(pos, size=1, percent=0, color=WHITE, angle=0, invert=false, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace=false, context)
 {
-    ASSERT(isColor(color) && isColor(lineColor), 'color is invalid');
     const points = getCrescentPoints(pos, size, percent, angle, invert);
     drawPoly(points, color, lineWidth, lineColor, vec2(), 0, useWebGL, screenSpace, context);
 }
-
 
 /** Get the list of points that make up a crescent / moon-phase shape
  *  Returns world-space points with pos and angle baked in, ready for drawPoly or other use
