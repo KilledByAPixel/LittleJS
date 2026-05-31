@@ -570,6 +570,12 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let touchGamepadDisplayTime: number;
+    /** Duration in ms to vibrate when a touch gamepad face button or start button is pressed
+     *  - Set to 0 to disable, also requires vibrateEnable and hardware support (ignored on iOS)
+     *  @type {number}
+     *  @default
+     *  @memberof Settings */
+    export let touchGamepadVibration: number;
     /** Allow vibration hardware if it exists
      *  @type {boolean}
      *  @default
@@ -777,6 +783,10 @@ declare module "littlejsengine" {
      *  @param {number} time
      *  @memberof Settings */
     export function setTouchGamepadDisplayTime(time: number): void;
+    /** Set duration in ms to vibrate when a touch gamepad face or start button is pressed (0 disables)
+     *  @param {number} ms
+     *  @memberof Settings */
+    export function setTouchGamepadVibration(ms: number): void;
     /** Set to allow vibration hardware if it exists
      *  @param {boolean} enable
      *  @memberof Settings */
