@@ -19,7 +19,7 @@ export class Player extends GameCharacter.Character
     update()
     {
         // movement control
-        const mouseMode = !LJS.isUsingGamepad && !LJS.isTouchDevice;
+        const mouseMode = !LJS.isUsingGamepad;
         this.moveInput     = LJS.isUsingGamepad ? LJS.gamepadStick(0) : LJS.keyDirection();
         this.holdingJump   = LJS.keyIsDown('ArrowUp') || LJS.gamepadIsDown(0);
         this.holdingShoot  = mouseMode && LJS.mouseIsDown(0) || LJS.keyIsDown('KeyZ') || LJS.gamepadIsDown(2);
