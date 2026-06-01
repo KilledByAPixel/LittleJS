@@ -390,6 +390,8 @@ declare module "littlejsengine" {
      *  @memberof Settings */
     export let canvasPixelated: boolean;
     /** Disables texture filtering for crisper pixel art
+     *  - Leave true for pixel art so sprites stay sharp when scaled (uses NEAREST filtering)
+     *  - Set false for smooth/high-resolution art to enable bilinear filtering and mipmaps
      *  @type {boolean}
      *  @default
      *  @memberof Settings */
@@ -666,6 +668,7 @@ declare module "littlejsengine" {
      *  @memberof Settings */
     export function setCanvasPixelated(pixelated: boolean): void;
     /** Disables texture filtering for crisper pixel art
+     *  - Leave true for pixel art; set false for smooth/high-resolution art
      *  @param {boolean} pixelated
      *  @memberof Settings */
     export function setTilesPixelated(pixelated: boolean): void;

@@ -2143,6 +2143,8 @@ let canvasFixedSize = vec2();
 let canvasPixelated = false;
 
 /** Disables texture filtering for crisper pixel art
+ *  - Leave true for pixel art so sprites stay sharp when scaled (uses NEAREST filtering)
+ *  - Set false for smooth/high-resolution art to enable bilinear filtering and mipmaps
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -2496,6 +2498,7 @@ function setCanvasPixelated(pixelated)
 }
 
 /** Disables texture filtering for crisper pixel art
+ *  - Leave true for pixel art; set false for smooth/high-resolution art
  *  @param {boolean} pixelated
  *  @memberof Settings */
 function setTilesPixelated(pixelated) { tilesPixelated = pixelated; }
