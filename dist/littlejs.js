@@ -1141,7 +1141,7 @@ function debugRender()
         debugContext.restore();
     }
     
-    if (debugWatermark && debugOverlay)
+    if (debugWatermark || debugOverlay)
     {
         // show fps stats display
         mainContext.textAlign = 'right';
