@@ -305,6 +305,9 @@ function debugRender()
     // flush any gl sprites before drawing debug info
     glFlush();
 
+    const savedDrawCount = drawCount;
+    const savedPrimitiveCount = primitiveCount;
+
     if (debugTakeScreenshot)
     {
         // combine canvases, remove alpha and save
@@ -559,6 +562,19 @@ function debugRender()
 
         debugContext.restore();
     }
+    
+    // update fps display
+    mainContext.textAlign = 'right';
+    mainContext.textBaseline = 'top';
+    mainContext.font = '1em monospace';
+    mainContext.fillStyle = '#000';
+    const text = engineName + ' v' + engineVersion + ' / '
+        + savedDrawCount + ' / ' + savedPrimitiveCount + ' / '
+        + engineObjects.length + ' / ' + averageFPS.toFixed(1)
+        + (glEnable ? ' GL' : ' 2D') ;
+    mainContext.fillText(text, mainCanvas.width-3, 3);
+    mainContext.fillStyle = '#fff';
+    mainContext.fillText(text, mainCanvas.width-2, 2);
 }
 
 function debugRenderPost()
@@ -568,21 +584,6 @@ function debugRenderPost()
         debugVideoCaptureUpdate();
         return;
     }
-
-    if (!debugWatermark && !debugOverlay) return;
-    
-    // update fps display
-    mainContext.textAlign = 'right';
-    mainContext.textBaseline = 'top';
-    mainContext.font = '1em monospace';
-    mainContext.fillStyle = '#000';
-    const text = engineName + ' v' + engineVersion + ' / '
-        + drawCount + ' / ' + primitiveCount + ' / '
-        + engineObjects.length + ' / ' + averageFPS.toFixed(1)
-        + (glEnable ? ' GL' : ' 2D') ;
-    mainContext.fillText(text, mainCanvas.width-3, 3);
-    mainContext.fillStyle = '#fff';
-    mainContext.fillText(text, mainCanvas.width-2, 2);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
