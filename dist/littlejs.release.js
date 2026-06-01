@@ -5316,16 +5316,18 @@ function inputUpdate()
             for (let side = 0; side < 2; side++)
             {
                 if (!touchGamepadSideStick(side)) continue;
-                sticks[side] = vec2();
+                // the right stick reports on stick 0 when there is no left stick
+                const out = side && touchGamepadLeftStick ? 1 : 0;
+                sticks[out] = vec2();
                 const touchStick = touchGamepadSticks[side] ?? vec2();
                 if (touchGamepadAnalog)
-                    sticks[side] = applyDeadZones(touchStick);
+                    sticks[out] = applyDeadZones(touchStick);
                 else if (touchStick.lengthSquared() > .3)
                 {
                     const x = clamp(round(touchStick.x), -1, 1);
                     const y = clamp(round(touchStick.y), -1, 1);
-                    sticks[side] = vec2(x, -y).clampLength(); // clamp to circle
-                    if (!side) dpad.set(x, -y); // the left dpad also drives the dpad vector
+                    sticks[out] = vec2(x, -y).clampLength(); // clamp to circle
+                    if (!out) dpad.set(x, -y); // the primary (stick 0) also drives the dpad vector
                 }
             }
 
