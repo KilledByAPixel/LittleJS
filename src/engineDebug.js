@@ -563,18 +563,21 @@ function debugRender()
         debugContext.restore();
     }
     
-    // update fps display
-    mainContext.textAlign = 'right';
-    mainContext.textBaseline = 'top';
-    mainContext.font = '1em monospace';
-    mainContext.fillStyle = '#000';
-    const text = engineName + ' v' + engineVersion + ' / '
-        + savedDrawCount + ' / ' + savedPrimitiveCount + ' / '
-        + engineObjects.length + ' / ' + averageFPS.toFixed(1)
-        + (glEnable ? ' GL' : ' 2D') ;
-    mainContext.fillText(text, mainCanvas.width-3, 3);
-    mainContext.fillStyle = '#fff';
-    mainContext.fillText(text, mainCanvas.width-2, 2);
+    if (debugWatermark && debugOverlay)
+    {
+        // show fps stats display
+        mainContext.textAlign = 'right';
+        mainContext.textBaseline = 'top';
+        mainContext.font = '1em monospace';
+        mainContext.fillStyle = '#000';
+        const text = engineName + ' v' + engineVersion + ' / '
+            + savedDrawCount + ' / ' + savedPrimitiveCount + ' / '
+            + engineObjects.length + ' / ' + averageFPS.toFixed(1)
+            + (glEnable ? ' GL' : ' 2D') ;
+        mainContext.fillText(text, mainCanvas.width-3, 3);
+        mainContext.fillStyle = '#fff';
+        mainContext.fillText(text, mainCanvas.width-2, 2);
+    }
 }
 
 function debugRenderPost()
