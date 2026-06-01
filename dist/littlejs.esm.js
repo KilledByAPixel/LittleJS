@@ -6004,8 +6004,7 @@ function inputUpdate()
             for (let side = 0; side < 2; side++)
             {
                 if (!touchGamepadSideStick(side)) continue;
-                // the right stick reports on stick 0 when there is no left stick
-                const out = side && touchGamepadLeftStick ? 1 : 0;
+                const out = touchGamepadStickOut(side);
                 sticks[out] = vec2();
                 const touchStick = touchGamepadSticks[side] ?? vec2();
                 if (touchGamepadAnalog)
@@ -6199,6 +6198,9 @@ function touchGamepadSideButtonCount(side)
 // gamepad button index a side's buttons start at (right 0-3, left 4-7)
 function touchGamepadSideButtonBase(side)
 { return side ? 0 : 4; }
+// output stick index for a side: the right stick uses stick 0 when there is no left stick
+function touchGamepadStickOut(side)
+{ return side && touchGamepadLeftStick ? 1 : 0; }
 // true if the side has any control (a stick or at least one button)
 function touchGamepadSideHasControl(side)
 { return touchGamepadSideStick(side) || touchGamepadSideButtonCount(side) > 0; }
@@ -6447,12 +6449,12 @@ function touchGamepadEventPos(e)
 }
 
 // set a directional stick from a stage-local point and flag its stick-touch button
-// (left stick = button 10, right stick = button 11)
+// (stick 0 press = button 10, stick 1 press = button 11, following the output index)
 function touchGamepadApplyStick(side, p)
 {
     const delta = p.subtract(touchGamepadStickAnchors[side]);
     touchGamepadSticks[side] = delta.scale(2/touchGamepadSize).clampLength();
-    touchGamepadButtons[side ? 11 : 10] = 1;
+    touchGamepadButtons[touchGamepadStickOut(side) ? 11 : 10] = 1;
 }
 
 // pick a side's gamepad button index from a stage-local point, or -1 if outside the cluster
@@ -6585,7 +6587,7 @@ function touchGamepadPointerUp(e)
         const side = role === 'stick1' ? 1 : 0;
         touchGamepadStickPointerId[side] = undefined;
         touchGamepadSticks[side] = vec2();
-        delete touchGamepadButtons[side ? 11 : 10];
+        delete touchGamepadButtons[touchGamepadStickOut(side) ? 11 : 10];
     }
     else if (role === 'start')
         delete touchGamepadButtons[9];
