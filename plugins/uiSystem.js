@@ -252,13 +252,18 @@ class UISystemPlugin
 
             function updateObject(o)
             {
-                if (!o.visible) return;
+                if (o.destroyed || !o.visible) return;
 
                 // update in reverse order to detect mouse enter/leave
                 updateTransforms(o);
                 for (let i=o.children.length; i--;)
-                    updateObject(o.children[i]);
-                o.update();
+                {
+                    // a child may destroy siblings mid-update (e.g. dialog close)
+                    const child = o.children[i];
+                    child && updateObject(child);
+                }
+                if (!o.destroyed)
+                    o.update();
             }
         }
         function uiRender()

@@ -5555,12 +5555,19 @@ function touchGamepadRelayout()
     const setZone = (z, css)=> z.style.cssText =
         'position:absolute;pointer-events:auto;touch-action:none;' + css;
 
-    if (paused && touchGamepadCenterButtonSize)
+    if (paused)
     {
-        // while paused, any touch presses start
-        setZone(touchGamepadZoneC, 'inset:0');
+        // the gamepad is hidden while paused, so its side zones must not capture
+        // touches - otherwise they silently steal taps from menus and dialogs
         for (const zone of touchGamepadSideZones) zone.style.display = 'none';
-        touchGamepadZoneC.style.display = '';
+        if (touchGamepadCenterButtonSize)
+        {
+            // any touch presses start
+            setZone(touchGamepadZoneC, 'inset:0');
+            touchGamepadZoneC.style.display = '';
+        }
+        else
+            touchGamepadZoneC.style.display = 'none';
     }
     else
     {
@@ -10357,13 +10364,18 @@ class UISystemPlugin
 
             function updateObject(o)
             {
-                if (!o.visible) return;
+                if (o.destroyed || !o.visible) return;
 
                 // update in reverse order to detect mouse enter/leave
                 updateTransforms(o);
                 for (let i=o.children.length; i--;)
-                    updateObject(o.children[i]);
-                o.update();
+                {
+                    // a child may destroy siblings mid-update (e.g. dialog close)
+                    const child = o.children[i];
+                    child && updateObject(child);
+                }
+                if (!o.destroyed)
+                    o.update();
             }
         }
         function uiRender()

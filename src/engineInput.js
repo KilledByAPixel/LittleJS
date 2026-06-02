@@ -837,12 +837,19 @@ function touchGamepadRelayout()
     const setZone = (z, css)=> z.style.cssText =
         'position:absolute;pointer-events:auto;touch-action:none;' + css;
 
-    if (paused && touchGamepadCenterButtonSize)
+    if (paused)
     {
-        // while paused, any touch presses start
-        setZone(touchGamepadZoneC, 'inset:0');
+        // the gamepad is hidden while paused, so its side zones must not capture
+        // touches - otherwise they silently steal taps from menus and dialogs
         for (const zone of touchGamepadSideZones) zone.style.display = 'none';
-        touchGamepadZoneC.style.display = '';
+        if (touchGamepadCenterButtonSize)
+        {
+            // any touch presses start
+            setZone(touchGamepadZoneC, 'inset:0');
+            touchGamepadZoneC.style.display = '';
+        }
+        else
+            touchGamepadZoneC.style.display = 'none';
     }
     else
     {
