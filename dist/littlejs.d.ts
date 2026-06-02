@@ -3888,10 +3888,15 @@ declare module "littlejsengine" {
          *  @param {Vector2}  [size=vec2(1)]
          */
         constructor(pos?: Vector2, size?: Vector2);
-        /** @property {Vector2} - Local position of the object */
+        /** @property {Vector2} - Position you set: an offset from this object's
+         *  anchor point (the parent box, or the canvas for roots). This is the
+         *  input that controls placement — set this, not nativePos. */
         localPos: Vector2;
-        /** @property {Vector2} - Screen space position of the object */
-        pos: Vector2;
+        /** @property {Vector2} - Resolved position in native UI space, recomputed
+         *  every frame from localPos + anchor (and nativeHeight, if set). This is a
+         *  derived output used for drawing and hit-testing; assigning to it has no
+         *  effect since it is overwritten each frame. Set localPos instead. */
+        nativePos: Vector2;
         /** @property {Vector2} - Screen space size of the object */
         size: Vector2;
         /** @property {Color} - Color of the object */
