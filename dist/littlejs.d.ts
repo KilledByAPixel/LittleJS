@@ -2367,7 +2367,7 @@ declare module "littlejsengine" {
     /** Screen-pixel mouse movement per frame that counts as "using the mouse"
      *  (so sub-pixel hand jitter doesn't steal focus from the keyboard/gamepad).
      *  @type {number}
-     *  @default 2
+     *  @default
      *  @memberof Input */
     export let inputMouseMoveThreshold: number;
     /** Prevents input continuing to the default browser handling (true by default)

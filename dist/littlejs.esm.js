@@ -5540,9 +5540,9 @@ let lastInputDevice = 'mouse';
 /** Screen-pixel mouse movement per frame that counts as "using the mouse"
  *  (so sub-pixel hand jitter doesn't steal focus from the keyboard/gamepad).
  *  @type {number}
- *  @default 2
+ *  @default
  *  @memberof Input */
-let inputMouseMoveThreshold = 2;
+let inputMouseMoveThreshold = 6;
 
 /** Prevents input continuing to the default browser handling (true by default)
  *  @type {boolean}
@@ -6071,34 +6071,41 @@ function inputUpdate()
     // update gamepads if enabled
     gamepadsUpdate();
 
-    // ── most-recently-used input device (sticky while everything is idle) ──
-    // gamepad: any stick past a .2 magnitude (.04 = .2²), or any of the 17
-    // standard-mapping buttons (0..16) held
-    let gamepadActive = false;
-    for (let s = gamepadStickCount(); s-- && !gamepadActive;)
-        gamepadActive = gamepadStick(s).lengthSquared() > .04;
-    for (let b = 17; b-- && !gamepadActive;)
-        gamepadActive = gamepadIsDown(b);
+    // update most recently used input device
+    updateLastInputDevice();
 
-    // mouse: any button held, or moved past the jitter threshold (screen px)
-    const mouseActive = mouseIsDown(0) || mouseIsDown(1) || mouseIsDown(2) ||
-        mouseDeltaScreen.length() > inputMouseMoveThreshold;
+    function updateLastInputDevice()
+    {
+        // mouse: any button held or moved
+        const mouseActive = mouseIsDown(0) || mouseIsDown(1) || mouseIsDown(2) || mouseDeltaScreen.length() > inputMouseMoveThreshold;
 
-    // keyboard: any non-mouse key currently down. device 0 holds both keyboard
-    // codes (e.g. 'KeyA') and mouse buttons (numeric 0..4); skip the numeric
-    // ones with isNaN(+k) so keyboard detection is exact
-    let keyboardActive = false;
-    for (const k in inputData[0])
-        if (isNaN(+k) && (inputData[0][k] & 1)) { keyboardActive = true; break; }
+        // gamepad: any button held or stick moved
+        let gamepadActive = false;
+        for (let s = gamepadStickCount(); s-- && !gamepadActive;)
+            gamepadActive = gamepadStick(s).lengthSquared() > .04;
+        for (let b = 17; b-- && !gamepadActive;)
+            gamepadActive = gamepadIsDown(b);
 
-    // priority on a same-frame tie: gamepad > mouse > keyboard
-    if      (gamepadActive)  lastInputDevice = 'gamepad';
-    else if (mouseActive)    lastInputDevice = 'mouse';
-    else if (keyboardActive) lastInputDevice = 'keyboard';
-    // else keep the previous value — the whole point (idle never reverts)
+        // keyboard: any non-mouse key down
+        let keyboardActive = false;
+        for (const k in inputData[0])
+            if (isNaN(+k) && (inputData[0][k] & 1))
+            {
+                keyboardActive = true;
+                break;
+            }
 
-    // keep the legacy flag as an accurate derived view (single source of truth)
-    isUsingGamepad = lastInputDevice === 'gamepad';
+        // update the last input
+        if (gamepadActive)
+            lastInputDevice = 'gamepad';
+        else if (mouseActive)
+            lastInputDevice = 'mouse';
+        else if (keyboardActive)
+            lastInputDevice = 'keyboard';
+
+        // set flag if gamepad is last device
+        isUsingGamepad = lastInputDevice === 'gamepad';
+    }
 
     // gamepads are updated by engine every frame automatically
     function gamepadsUpdate()
