@@ -102,6 +102,7 @@ Color.HSLA()                              // Get the color in HSLA format
 Color.mutate(amount=.05, alphaAmount=0)   // Randomly diverge from this color
 Color.setHex(hex)                         // Set this color from a hex code
 Color.setAlpha(a=1)                       // Set the alpha of this color
+Color.withAlpha(a=1)                      // Get a copy of this color with the alpha set
 Color.rgbaInt()                           // Get this color as 32 bit RGBA value
 Color.toString(useAlpha=true)             // Get hex color code as a string
 

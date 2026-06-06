@@ -938,6 +938,11 @@ class Color
      * @return {Color} */
     copy() { return new Color(this.r, this.g, this.b, this.a); }
 
+    /** Returns a copy of this color with the alpha set
+     *  @param {number} [a] - alpha
+     *  @return {Color} */
+    withAlpha(a=1) { return new Color(this.r, this.g, this.b, a); }
+
     /** Returns a copy of this color plus the color passed in
      * @param {Color} c - other color
      * @return {Color} */

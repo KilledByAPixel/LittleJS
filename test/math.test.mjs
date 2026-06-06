@@ -647,6 +647,17 @@ test('Color setAlpha mutates alpha and returns self', () =>
     assert.equal(c.a, 1);
 });
 
+test('Color withAlpha returns a copy with new alpha', () =>
+{
+    const c = new Color(0.25, 0.5, 0.75, 1);
+    const r = c.withAlpha(0.5);
+    assert.equal(r.a, 0.5);                         // copy has the given alpha
+    assert.equal(r.r, 0.25); assert.equal(r.g, 0.5); assert.equal(r.b, 0.75); // rgb copied
+    assert.equal(c.a, 1);                           // original untouched
+    assert.notStrictEqual(r, c);                    // returns a new color, not self
+    assert.equal(new Color(1, 1, 1, 0.3).withAlpha().a, 1); // defaults to 1
+});
+
 test('Color divide', () =>
 {
     const r = new Color(1, 0.5, 0.25, 1).divide(new Color(2, 1, 0.5, 1));

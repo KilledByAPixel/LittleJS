@@ -1395,6 +1395,10 @@ declare module "littlejsengine" {
         /** Returns a new color that is a copy of this
          * @return {Color} */
         copy(): Color;
+        /** Returns a copy of this color with the alpha set
+         *  @param {number} [a] - alpha
+         *  @return {Color} */
+        withAlpha(a?: number): Color;
         /** Returns a copy of this color plus the color passed in
          * @param {Color} c - other color
          * @return {Color} */
