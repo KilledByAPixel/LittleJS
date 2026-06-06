@@ -13,5 +13,9 @@ jobs:
         with:
           node-version: '22'
       - run: npm install
+        env:
+          # Engine build/test never use Electron (only examples/electron does),
+          # so skip its large binary download to avoid flaky CDN timeouts.
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
       - run: npm run build
       - run: npm test
