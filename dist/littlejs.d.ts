@@ -2014,11 +2014,11 @@ declare module "littlejsengine" {
      *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context=drawContext]
      *  @memberof Draw */
     export function drawTextScreen(text: string | number, pos: Vector2, size: number, color?: Color, lineWidth?: number, lineColor?: Color, textAlign?: CanvasTextAlign, font?: string, fontStyle?: string, maxWidth?: number, angle?: number, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
-    /** Enable normal or additive blend mode
+    /** Enable additive blending
      *  @param {boolean} [additive]
-     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
+    *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
      *  @memberof Draw */
-    export function setBlendMode(additive?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
+    export function setAdditiveBlendMode(additive?: boolean, context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D): void;
     /** Combines LittleJS canvases onto the main canvas
      *  This is necessary for things like screenshots and video
      *  @memberof Draw */
