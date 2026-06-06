@@ -34,9 +34,9 @@ test('isUsingGamepad equals usingGamepadInput()', () =>
 // inputMouseMoveThreshold is exported with its default and is settable via the setter.
 test('setInputMouseMoveThreshold updates inputMouseMoveThreshold', () =>
 {
-    assert.equal(LJS.inputMouseMoveThreshold, 2); // default
+    assert.equal(LJS.inputMouseMoveThreshold, 6); // default
     assert.equal(typeof LJS.setInputMouseMoveThreshold, 'function');
     LJS.setInputMouseMoveThreshold(8);
     assert.equal(LJS.inputMouseMoveThreshold, 8);
-    LJS.setInputMouseMoveThreshold(2); // restore default
+    LJS.setInputMouseMoveThreshold(6); // restore default
 });
