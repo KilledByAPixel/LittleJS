@@ -182,6 +182,7 @@ cameraScale = 32         // Scale of camera in world space
 screenToWorld(screenPos) // Convert from screen to world space coordinates
 worldToScreen(worldPos)  // Convert from world to screen space coordinates
 getCameraSize()          // Get the camera's visible area in world space
+cameraFit(center, size, worldMargin, screenInset) // Fit the camera to a world space rectangle
 
 // Display settings
 canvasMaxSize = (1920, 1080)  // The max size of the canvas

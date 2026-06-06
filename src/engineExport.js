@@ -284,6 +284,7 @@ export
     toggleFullscreen,
     setCursor,
     getCameraSize,
+    cameraFit,
     isOnScreen,
 
     // WebGL

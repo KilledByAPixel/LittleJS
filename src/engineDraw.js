@@ -1087,6 +1087,60 @@ function screenToWorldTransform(screenPos, screenSize, screenAngle=0)
  *  @memberof Draw */
 function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
 
+/** Fit the camera to a rectangle in world space by setting cameraPos and cameraScale
+ *  - worldMargin pads the content rectangle in world units, so the gap scales with the content on resize
+ *  - screenInset reserves space in screen pixels on each viewport edge (for example a HUD band) and
+ *    re-centers the content away from that edge, so the reserved band stays a fixed pixel size on resize
+ *  - worldMargin and screenInset may each be a number for all sides, a Vector2 (x=left/right, y=top/bottom),
+ *    or an object with any of {top, right, bottom, left}
+ *  @param {Vector2} center - Center of the rectangle in world space
+ *  @param {Vector2} size - Size of the rectangle in world space
+ *  @param {number|Vector2|Object} [worldMargin] - World space padding added around the content rectangle
+ *  @param {number|Vector2|Object} [screenInset] - Screen space padding in pixels reserved on each viewport edge
+ *  @return {number} - The new camera scale
+ *  @memberof Draw */
+function cameraFit(center, size, worldMargin, screenInset)
+{
+    ASSERT(isVector2(center), 'center must be a vec2');
+    ASSERT(isVector2(size), 'size must be a vec2');
+
+    const m = padSides(worldMargin);
+    const i = padSides(screenInset);
+
+    const worldW = size.x + m.left + m.right;
+    const worldH = size.y + m.top  + m.bottom;
+    const viewW  = mainCanvasSize.x - i.left - i.right;
+    const viewH  = mainCanvasSize.y - i.top  - i.bottom;
+
+    // bail on a degenerate rect or viewport rather than NaN/Infinity the camera
+    if (!(worldW > 0) || !(worldH > 0) || !(viewW > 0) || !(viewH > 0))
+        return cameraScale;
+
+    const scale = min(viewW / worldW, viewH / worldH);
+    const rectCx = center.x + (m.right - m.left) / 2;
+    const rectCy = center.y + (m.top - m.bottom) / 2;
+
+    cameraScale = scale;
+    cameraPos = vec2(
+        rectCx - (i.left - i.right) / (2 * scale),
+        rectCy + (i.top  - i.bottom) / (2 * scale));
+    return scale;
+
+    function padSides(p)
+    {
+        // normalize a padding option to {top, right, bottom, left}
+        if (p === undefined) return { top: 0, right: 0, bottom: 0, left: 0 };
+        if (isNumber(p)) return { top: p, right: p, bottom: p, left: p };
+        if (isVector2(p)) return { top: p.y, right: p.x, bottom: p.y, left: p.x };
+        return {
+            top:    p.top    || 0,
+            right:  p.right  || 0,
+            bottom: p.bottom || 0,
+            left:   p.left   || 0,
+        };
+    }
+}
+
 /** Check if a box, point, or circle is on screen with a circle test
  *  If size is a Vector2, uses the length as diameter
  *  This can be used to cull offscreen objects from render or update
