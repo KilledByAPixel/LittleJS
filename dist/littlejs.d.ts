@@ -2349,10 +2349,27 @@ declare module "littlejsengine" {
      *  @type {boolean}
      *  @memberof Input */
     export let mouseInWindow: boolean;
-    /** Returns true if user is using gamepad (has more recently pressed a gamepad button)
+    /** True if a gamepad is the most recently used input device.
+     *  Equivalent to usingGamepadInput(); derived from lastInputDevice each frame.
      *  @type {boolean}
      *  @memberof Input */
     export let isUsingGamepad: boolean;
+    /** The most recently used input device: 'mouse' | 'keyboard' | 'gamepad'.
+     *  Sticky: it holds its value while every device is idle, so a mouse-follow
+     *  control (e.g. paddle = mousePos) won't snap back the instant the stick/keys
+     *  are released. With several devices in play at once (e.g. keyboard to move +
+     *  mouse to aim) it tracks whichever was touched last each frame, so it may
+     *  alternate — that's intended; use it to pick which control drives a shared
+     *  action. Updated every frame by inputUpdate().
+     *  @type {string}
+     *  @memberof Input */
+    export let lastInputDevice: string;
+    /** Screen-pixel mouse movement per frame that counts as "using the mouse"
+     *  (so sub-pixel hand jitter doesn't steal focus from the keyboard/gamepad).
+     *  @type {number}
+     *  @default 2
+     *  @memberof Input */
+    export let inputMouseMoveThreshold: number;
     /** Prevents input continuing to the default browser handling (true by default)
      *  @type {boolean}
      *  @memberof Input */
@@ -2369,6 +2386,16 @@ declare module "littlejsengine" {
      *  @param {boolean} preventDefault
      *  @memberof Input */
     export function setInputPreventDefault(preventDefault?: boolean): void;
+    /** Set the screen-pixel mouse movement per frame that counts as using the mouse
+     *  @param {number} threshold
+     *  @memberof Input */
+    export function setInputMouseMoveThreshold(threshold: number): void;
+    /** @return {boolean} - Is the mouse the most recently used input device?    @memberof Input */
+    export function usingMouseInput(): boolean;
+    /** @return {boolean} - Is the keyboard the most recently used input device? @memberof Input */
+    export function usingKeyboardInput(): boolean;
+    /** @return {boolean} - Is a gamepad the most recently used input device?    @memberof Input */
+    export function usingGamepadInput(): boolean;
     /** Returns true if gamepad button is down
      *  @param {number} button
      *  @param {number} [gamepad]

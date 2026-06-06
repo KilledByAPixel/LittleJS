@@ -271,8 +271,14 @@ mouseIsDown(button)                   // Is mouse button down?
 mouseWasPressed(button)               // Was mouse button pressed this frame?
 mouseWasReleased(button)              // Was mouse button released this frame?
 
+// Last input device (most recently used)
+lastInputDevice                       // 'mouse' | 'keyboard' | 'gamepad' (sticky while idle)
+usingMouseInput()                     // Is the mouse the most recently used device?
+usingKeyboardInput()                  // Is the keyboard the most recently used device?
+usingGamepadInput()                   // Is a gamepad the most recently used device?
+
 // Gamepad
-isUsingGamepad                        // Is user currently using gamepad?
+isUsingGamepad                        // Is a gamepad the most recently used device? (= usingGamepadInput())
 gamepadIsDown(button, gamepad=0)      // Is gamepad button down?
 gamepadWasPressed(button, gamepad=0)  // Was gamepad button pressed this frame?
 gamepadWasReleased(button, gamepad=0) // Was gamepad button released this frame?
@@ -292,6 +298,7 @@ vibrateStop()                         // Stop all vibration
 gamepadsEnable = true                 // Should gamepads be allowed?
 gamepadDirectionEmulateStick = true   // Should dpad be routed to the left analog stick?
 inputWASDEmulateDirection = true      // Should WASD keys be routed to the direction keys?
+inputMouseMoveThreshold = 2           // Screen-px mouse movement per frame that counts as mouse use
 vibrateEnable = true                  // Allow vibration hardware if it exists?
 touchGamepadEnable = false            // Should touch gamepad appear on mobile devices?
 touchGamepadAnalog = true             // Should touch gamepad be analog or 8 way dpad?
