@@ -636,6 +636,17 @@ test('Color copy / setFrom / set', () =>
     assert.equal(c.r, 1); assert.equal(c.g, 0);
 });
 
+test('Color setAlpha mutates alpha and returns self', () =>
+{
+    const c = new Color(0.25, 0.5, 0.75, 1);
+    const r = c.setAlpha(0.5);
+    assert.equal(c.a, 0.5);                         // alpha changed in place
+    assert.equal(c.r, 0.25); assert.equal(c.g, 0.5); assert.equal(c.b, 0.75); // rgb untouched
+    assert.strictEqual(r, c);                       // returns self for chaining
+    c.setAlpha();                                   // defaults to 1
+    assert.equal(c.a, 1);
+});
+
 test('Color divide', () =>
 {
     const r = new Color(1, 0.5, 0.25, 1).divide(new Color(2, 1, 0.5, 1));

@@ -924,6 +924,16 @@ class Color
      * @return {Color} */
     setFrom(c) { return this.set(c.r, c.g, c.b, c.a); }
 
+    /** Sets the alpha of this color and returns self
+     *  @param {number} [a] - alpha
+     *  @return {Color} */
+    setAlpha(a=1)
+    {
+        this.a = a;
+        ASSERT_COLOR_VALID(this);
+        return this;
+    }
+
     /** Returns a new color that is a copy of this
      * @return {Color} */
     copy() { return new Color(this.r, this.g, this.b, this.a); }
