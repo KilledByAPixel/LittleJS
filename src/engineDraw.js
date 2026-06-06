@@ -1181,13 +1181,14 @@ function isOnScreen(pos, size=0)
            y + size > -h && y - size < h;
 }
 
-/** Enable additive blend mode
+/** Enable additive blending
  *  @param {boolean} [additive]
+*  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function setAdditiveBlendMode(additive=true)
+function setAdditiveBlendMode(additive=true, context=drawContext)
 {
     glAdditive = additive;
-    drawContext.globalCompositeOperation = additive ? 'lighter' : 'source-over';
+    context.globalCompositeOperation = additive ? 'lighter' : 'source-over';
 }
 
 /** Combines LittleJS canvases onto the main canvas

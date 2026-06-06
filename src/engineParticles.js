@@ -496,9 +496,6 @@ class Particle
         this.color.b = p2 * this.colorStart.b + p1 * this.colorEnd.b;
         this.color.a = (p2 * this.colorStart.a + p1 * this.colorEnd.a) * alphaFade;
 
-        // draw the particle
-        setAdditiveBlendMode(additive);
-
         // update the position and angle for drawing
         const pos = particleDrawPos.set(this.pos.x, this.pos.y);
         let angle = this.angle;
@@ -511,6 +508,9 @@ class Particle
                 emitter.pos.y + pos.x*s + pos.y*c);
             angle += a;
         }
+
+        // draw the particle
+        additive && setAdditiveBlendMode();
         if (trailScale)
         {
             // trail style particles
@@ -528,7 +528,7 @@ class Particle
         }
         else
             drawTile(pos, size, this.tileInfo, this.color, angle, this.mirror);
-        setAdditiveBlendMode(false);
+        additive && setAdditiveBlendMode(false);
         debugParticles && debugRect(pos, size, '#f005', 0, angle);
     }
 }
