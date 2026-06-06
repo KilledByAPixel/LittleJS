@@ -5113,11 +5113,11 @@ function cameraFit(center, size, worldMargin, screenInset)
     const viewW  = mainCanvasSize.x - inset.left - inset.right;
     const viewH  = mainCanvasSize.y - inset.top  - inset.bottom;
 
-    // bail on a degenerate rect or viewport
+    // bail on a degenerate rect or viewport rather than NaN the camera
     if (!(worldW > 0 && worldH > 0 && viewW > 0 && viewH > 0))
         return cameraScale;
 
-    // bail on a degenerate rect or viewport rather than NaN the camera
+    // scale to fit the padded content
     cameraScale = min(viewW / worldW, viewH / worldH);
 
     // calculate offset vectors
