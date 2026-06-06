@@ -13,8 +13,8 @@
  *  This function can not apply color because it draws using the 2d context
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
- *  @param {TileInfo} startTile - Starting tile for the nine-slice pattern
- *  @param {number} [borderSize] - Width of the border sections
+ *  @param {TileInfo} startTile - Top-left tile of the 3x3 block to sample (see drawNineSlice)
+ *  @param {number} [borderSize] - Rendered thickness of the border sections
  *  @param {number} [extraSpace] - Extra spacing adjustment
  *  @param {number} [angle] - Angle to rotate by
  *  @memberof DrawUtilities */
@@ -25,11 +25,16 @@ function drawNineSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, 
 
 /** Draw a scalable nine-slice UI element in world space
  *  This function can apply color and additive color if WebGL is enabled
+ *  The nine-slice samples a 3x3 block of tiles from the tilesheet, it does not
+ *  subdivide a single tile. Pass the top-left tile of that block as startTile;
+ *  the other 8 tiles (edges, corners, and center) are taken automatically from
+ *  the 3x3 grid of tiles extending right and down from it. borderSize only sets
+ *  the rendered thickness of the edges and corners, not how the texture is cut.
  *  @param {Vector2} pos - World space position
  *  @param {Vector2} size - World space size
- *  @param {TileInfo} startTile - Starting tile for the nine-slice pattern
+ *  @param {TileInfo} startTile - Top-left tile of the 3x3 block to sample the nine-slice from
  *  @param {Color} [color] - Color to modulate with
- *  @param {number} [borderSize] - Width of the border sections
+ *  @param {number} [borderSize] - Rendered thickness of the border sections
  *  @param {Color} [additiveColor] - Additive color
  *  @param {number} [extraSpace] - Extra spacing adjustment
  *  @param {number} [angle] - Angle to rotate by
@@ -39,7 +44,8 @@ function drawNineSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, 
  *  @memberof DrawUtilities */
 function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
 {
-    // setup nine slice tiles
+    // setup nine slice tiles - startTile is the top-left of a 3x3 tile block,
+    // so the center tile is one tile down and right from it
     const centerTile = startTile.offset(startTile.size);
     const centerSize = size.add(vec2(extraSpace-borderSize*2));
     const cornerSize = vec2(borderSize);
@@ -73,8 +79,8 @@ function drawNineSlice(pos, size, startTile, color, borderSize=1, additiveColor,
  *  This function can not apply color because it draws using the 2d context
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
- *  @param {TileInfo} startTile - Starting tile for the three-slice pattern
- *  @param {number} [borderSize] - Width of the border sections
+ *  @param {TileInfo} startTile - First of 3 consecutive tiles: corner, side, center (see drawThreeSlice)
+ *  @param {number} [borderSize] - Rendered thickness of the border sections
  *  @param {number} [extraSpace] - Extra spacing adjustment
  *  @param {number} [angle] - Angle to rotate by
  *  @memberof DrawUtilities */
@@ -85,11 +91,15 @@ function drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2,
 
 /** Draw a scalable three-slice UI element in world space
  *  This function can apply color and additive color if WebGL is enabled
+ *  The three-slice samples 3 consecutive tiles from the tilesheet, it does not
+ *  subdivide a single tile. Pass the first tile as startTile; the three tiles
+ *  are used in order as corner, side, and center, then rotated and mirrored to
+ *  build all four edges and corners. borderSize only sets the rendered thickness.
  *  @param {Vector2} pos - World space position
  *  @param {Vector2} size - World space size
- *  @param {TileInfo} startTile - Starting tile for the three-slice pattern
+ *  @param {TileInfo} startTile - First of 3 consecutive tiles (corner, side, center) for the three-slice
  *  @param {Color} [color] - Color to modulate with
- *  @param {number} [borderSize] - Width of the border sections
+ *  @param {number} [borderSize] - Rendered thickness of the border sections
  *  @param {Color} [additiveColor] - Additive color
  *  @param {number} [extraSpace] - Extra spacing adjustment
  *  @param {number} [angle] - Angle to rotate by
@@ -99,7 +109,7 @@ function drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2,
  *  @memberof DrawUtilities */
 function drawThreeSlice(pos, size, startTile, color, borderSize=1, additiveColor, extraSpace=.05, angle=0, useWebGL=glEnable, screenSpace, context)
 {
-    // setup three slice tiles
+    // setup three slice tiles - 3 tiles in a row starting at startTile
     const cornerTile = startTile.frame(0);
     const sideTile   = startTile.frame(1);
     const centerTile = startTile.frame(2);
