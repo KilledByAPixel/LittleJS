@@ -6072,7 +6072,8 @@ function inputUpdate()
     gamepadsUpdate();
 
     // ── most-recently-used input device (sticky while everything is idle) ──
-    // gamepad: any stick past the deadzone, or any button held
+    // gamepad: any stick past a .2 magnitude (.04 = .2²), or any of the 17
+    // standard-mapping buttons (0..16) held
     let gamepadActive = false;
     for (let s = gamepadStickCount(); s-- && !gamepadActive;)
         gamepadActive = gamepadStick(s).lengthSquared() > .04;
@@ -6085,7 +6086,7 @@ function inputUpdate()
 
     // keyboard: any non-mouse key currently down. device 0 holds both keyboard
     // codes (e.g. 'KeyA') and mouse buttons (numeric 0..4); skip the numeric
-    // ones with isNaN(k) so keyboard detection is exact
+    // ones with isNaN(+k) so keyboard detection is exact
     let keyboardActive = false;
     for (const k in inputData[0])
         if (isNaN(+k) && (inputData[0][k] & 1)) { keyboardActive = true; break; }
