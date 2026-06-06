@@ -1104,34 +1104,36 @@ function cameraFit(center, size, worldMargin, screenInset)
     ASSERT(isVector2(center), 'center must be a vec2');
     ASSERT(isVector2(size), 'size must be a vec2');
 
-    const m = padSides(worldMargin);
-    const i = padSides(screenInset);
+    // pad the content
+    const margin = padSides(worldMargin);
+    const inset  = padSides(screenInset);
+    const worldW = size.x + margin.left + margin.right;
+    const worldH = size.y + margin.top  + margin.bottom;
+    const viewW  = mainCanvasSize.x - inset.left - inset.right;
+    const viewH  = mainCanvasSize.y - inset.top  - inset.bottom;
 
-    const worldW = size.x + m.left + m.right;
-    const worldH = size.y + m.top  + m.bottom;
-    const viewW  = mainCanvasSize.x - i.left - i.right;
-    const viewH  = mainCanvasSize.y - i.top  - i.bottom;
-
-    // bail on a degenerate rect or viewport rather than NaN/Infinity the camera
-    if (!(worldW > 0) || !(worldH > 0) || !(viewW > 0) || !(viewH > 0))
+    // bail on a degenerate rect or viewport
+    if (!(worldW > 0 && worldH > 0 && viewW > 0 && viewH > 0))
         return cameraScale;
 
-    const scale = min(viewW / worldW, viewH / worldH);
-    const rectCx = center.x + (m.right - m.left) / 2;
-    const rectCy = center.y + (m.top - m.bottom) / 2;
+    // bail on a degenerate rect or viewport rather than NaN the camera
+    cameraScale = min(viewW / worldW, viewH / worldH);
 
-    cameraScale = scale;
-    cameraPos = vec2(
-        rectCx - (i.left - i.right) / (2 * scale),
-        rectCy + (i.top  - i.bottom) / (2 * scale));
-    return scale;
+    // calculate offset vectors
+    const marginVector = vec2(margin.right - margin.left, margin.top - margin.bottom).scale(.5);
+    const insetVector = vec2(inset.right - inset.left, inset.top - inset.bottom).scale(.5 / cameraScale);
+
+    // apply the offsets and return camera scale
+    cameraPos = center.add(marginVector).add(insetVector);
+    return cameraScale;
 
     function padSides(p)
     {
         // normalize a padding option to {top, right, bottom, left}
-        if (p === undefined) return { top: 0, right: 0, bottom: 0, left: 0 };
-        if (isNumber(p)) return { top: p, right: p, bottom: p, left: p };
-        if (isVector2(p)) return { top: p.y, right: p.x, bottom: p.y, left: p.x };
+        if (p === undefined || isNumber(p))
+            p = vec2(p);
+        if (isVector2(p))
+            return { top: p.y, right: p.x, bottom: p.y, left: p.x };
         return {
             top:    p.top    || 0,
             right:  p.right  || 0,
