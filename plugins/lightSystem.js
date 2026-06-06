@@ -183,7 +183,7 @@ class LightSystemPlugin
 
             // 3. walk engineObjects calling renderLight() — additive blend
             //    (lightmap accumulates raw additive color contributions)
-            setBlendMode(true);
+            setAdditiveBlendMode();
             glContext.enable(glContext.BLEND);
             glContext.blendFunc(glContext.ONE, glContext.ONE);
 
@@ -217,7 +217,7 @@ class LightSystemPlugin
             //    is, and any debug text / future draw could sample the lightmap)
             if (glActiveTexture)
                 glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
-            setBlendMode(prevAdditive);
+            setAdditiveBlendMode(prevAdditive);
             glSetInstancedMode(true);
         }
         function lightSystemContextLost()

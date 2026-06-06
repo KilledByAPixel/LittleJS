@@ -219,10 +219,10 @@ export class Grenade extends GameObject
         LJS.drawTile(this.pos, vec2(.5), this.tileInfo, this.color, this.angle);
 
         // draw additive flash exploding
-        LJS.setBlendMode(true);
+        LJS.setAdditiveBlendMode();
         const flash = LJS.cos(this.getAliveTime()*2*LJS.PI);
         LJS.drawTile(this.pos, vec2(2), Game.spriteAtlas.circle, hsl(0,1,.5,.2-.2*flash));
-        LJS.setBlendMode(false);
+        LJS.setAdditiveBlendMode(false);
     }
 }
 

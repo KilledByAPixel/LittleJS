@@ -192,7 +192,7 @@ export class Sky extends LJS.EngineObject
         LJS.drawRectGradient(LJS.cameraPos, LJS.getCameraSize(), this.skyColor, this.horizonColor);
         
         // draw stars
-        LJS.setBlendMode(true);
+        LJS.setAdditiveBlendMode();
         const random = new LJS.RandomGenerator(this.seed);
         for (let i = 1e3; i--;)
         {
@@ -206,7 +206,7 @@ export class Sky extends LJS.EngineObject
                 (random.float(h)+LJS.time*speed*random.float())%h-extraSpace);
             LJS.drawRect(screenPos, vec2(size), color, 0, undefined, true)
         }
-        LJS.setBlendMode(false);
+        LJS.setAdditiveBlendMode(false);
     }
 }
 

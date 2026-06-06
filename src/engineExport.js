@@ -276,7 +276,7 @@ export
     drawCanvas2D,
     drawText,
     drawTextScreen,
-    setBlendMode,
+    setAdditiveBlendMode,
     combineCanvases,
     engineImageFont,
     ImageFont,

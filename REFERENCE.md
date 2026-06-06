@@ -150,7 +150,7 @@ drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK)
 drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK)
 
 // Utility drawing functions
-setBlendMode(additive)
+setAdditiveBlendMode(additive)
 isFullscreen()
 toggleFullscreen()
 

@@ -497,7 +497,7 @@ class Particle
         this.color.a = (p2 * this.colorStart.a + p1 * this.colorEnd.a) * alphaFade;
 
         // draw the particle
-        additive && setBlendMode(true);
+        setAdditiveBlendMode(additive);
 
         // update the position and angle for drawing
         const pos = particleDrawPos.set(this.pos.x, this.pos.y);
@@ -528,7 +528,7 @@ class Particle
         }
         else
             drawTile(pos, size, this.tileInfo, this.color, angle, this.mirror);
-        additive && setBlendMode();
+        setAdditiveBlendMode(false);
         debugParticles && debugRect(pos, size, '#f005', 0, angle);
     }
 }
