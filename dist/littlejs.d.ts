@@ -1388,6 +1388,10 @@ declare module "littlejsengine" {
          * @param {Color} c - other color
          * @return {Color} */
         setFrom(c: Color): Color;
+        /** Sets the alpha of this color and returns self
+         *  @param {number} [a] - alpha
+         *  @return {Color} */
+        setAlpha(a?: number): Color;
         /** Returns a new color that is a copy of this
          * @return {Color} */
         copy(): Color;
@@ -2077,6 +2081,19 @@ declare module "littlejsengine" {
      *  @return {Vector2}
      *  @memberof Draw */
     export function getCameraSize(): Vector2;
+    /** Fit the camera to a rectangle in world space by setting cameraPos and cameraScale
+     *  - worldMargin pads the content rectangle in world units, so the gap scales with the content on resize
+     *  - screenInset reserves space in screen pixels on each viewport edge (for example a HUD band) and
+     *    re-centers the content away from that edge, so the reserved band stays a fixed pixel size on resize
+     *  - worldMargin and screenInset may each be a number for all sides, a Vector2 (x=left/right, y=top/bottom),
+     *    or an object with any of {top, right, bottom, left}
+     *  @param {Vector2} center - Center of the rectangle in world space
+     *  @param {Vector2} size - Size of the rectangle in world space
+     *  @param {number|Vector2|Object} [worldMargin] - World space padding added around the content rectangle
+     *  @param {number|Vector2|Object} [screenInset] - Screen space padding in pixels reserved on each viewport edge
+     *  @return {number} - The new camera scale
+     *  @memberof Draw */
+    export function cameraFit(center: Vector2, size: Vector2, worldMargin?: number | Vector2 | any, screenInset?: number | Vector2 | any): number;
     /** Check if a box, point, or circle is on screen with a circle test
      *  If size is a Vector2, uses the length as diameter
      *  This can be used to cull offscreen objects from render or update

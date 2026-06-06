@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.18.17';
+const engineVersion = '1.18.17.1';
 
 /** Frames per second to update
  *  @type {number}
@@ -2232,6 +2232,16 @@ class Color
      * @param {Color} c - other color
      * @return {Color} */
     setFrom(c) { return this.set(c.r, c.g, c.b, c.a); }
+
+    /** Sets the alpha of this color and returns self
+     *  @param {number} [a] - alpha
+     *  @return {Color} */
+    setAlpha(a=1)
+    {
+        this.a = a;
+        ASSERT_COLOR_VALID(this);
+        return this;
+    }
 
     /** Returns a new color that is a copy of this
      * @return {Color} */
@@ -5077,6 +5087,62 @@ function screenToWorldTransform(screenPos, screenSize, screenAngle=0)
  *  @return {Vector2}
  *  @memberof Draw */
 function getCameraSize() { return mainCanvasSize.scale(1/cameraScale); }
+
+/** Fit the camera to a rectangle in world space by setting cameraPos and cameraScale
+ *  - worldMargin pads the content rectangle in world units, so the gap scales with the content on resize
+ *  - screenInset reserves space in screen pixels on each viewport edge (for example a HUD band) and
+ *    re-centers the content away from that edge, so the reserved band stays a fixed pixel size on resize
+ *  - worldMargin and screenInset may each be a number for all sides, a Vector2 (x=left/right, y=top/bottom),
+ *    or an object with any of {top, right, bottom, left}
+ *  @param {Vector2} center - Center of the rectangle in world space
+ *  @param {Vector2} size - Size of the rectangle in world space
+ *  @param {number|Vector2|Object} [worldMargin] - World space padding added around the content rectangle
+ *  @param {number|Vector2|Object} [screenInset] - Screen space padding in pixels reserved on each viewport edge
+ *  @return {number} - The new camera scale
+ *  @memberof Draw */
+function cameraFit(center, size, worldMargin, screenInset)
+{
+    ASSERT(isVector2(center), 'center must be a vec2');
+    ASSERT(isVector2(size), 'size must be a vec2');
+
+    // pad the content
+    const margin = padSides(worldMargin);
+    const inset  = padSides(screenInset);
+    const worldW = size.x + margin.left + margin.right;
+    const worldH = size.y + margin.top  + margin.bottom;
+    const viewW  = mainCanvasSize.x - inset.left - inset.right;
+    const viewH  = mainCanvasSize.y - inset.top  - inset.bottom;
+
+    // bail on a degenerate rect or viewport
+    if (!(worldW > 0 && worldH > 0 && viewW > 0 && viewH > 0))
+        return cameraScale;
+
+    // bail on a degenerate rect or viewport rather than NaN the camera
+    cameraScale = min(viewW / worldW, viewH / worldH);
+
+    // calculate offset vectors
+    const marginVector = vec2(margin.right - margin.left, margin.top - margin.bottom).scale(.5);
+    const insetVector = vec2(inset.right - inset.left, inset.top - inset.bottom).scale(.5 / cameraScale);
+
+    // apply the offsets and return camera scale
+    cameraPos = center.add(marginVector).add(insetVector);
+    return cameraScale;
+
+    function padSides(p)
+    {
+        // normalize a padding option to {top, right, bottom, left}
+        if (p === undefined || isNumber(p))
+            p = vec2(p);
+        if (isVector2(p))
+            return { top: p.y, right: p.x, bottom: p.y, left: p.x };
+        return {
+            top:    p.top    || 0,
+            right:  p.right  || 0,
+            bottom: p.bottom || 0,
+            left:   p.left   || 0,
+        };
+    }
+}
 
 /** Check if a box, point, or circle is on screen with a circle test
  *  If size is a Vector2, uses the length as diameter
@@ -16346,6 +16412,7 @@ export
     toggleFullscreen,
     setCursor,
     getCameraSize,
+    cameraFit,
     isOnScreen,
 
     // WebGL
