@@ -606,6 +606,7 @@ declare module "littlejsengine" {
      *  @memberof Settings */
     export let soundEnable: boolean;
     /** Volume scale to apply to all sound, music and speech
+     *  Use setSoundVolume to also update the audio master gain immediately
      *  @type {number}
      *  @default
      *  @memberof Settings */
@@ -3572,7 +3573,7 @@ declare module "littlejsengine" {
      *  @memberof PostProcess */
     export let postProcess: PostProcessPlugin;
     /**
-     * UI System Global Object
+     * Post Process Plugin - Applies a full screen shader to the rendered output
      * @memberof PostProcess
      */
     export class PostProcessPlugin {

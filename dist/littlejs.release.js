@@ -892,7 +892,7 @@ function isIntersecting(start, end, pos, size)
  *  @memberof Math */
 function oscillate(frequency=1, amplitude=1, t=time, offset=0, type=0)
 {
-    const phase = (offset + t*frequency) % 1;
+    const phase = mod(offset + t*frequency, 1);
     let value;
     
     if (type === 1) // triangle
@@ -2427,6 +2427,7 @@ let vibrateEnable = true;
 let soundEnable = true;
 
 /** Volume scale to apply to all sound, music and speech
+ *  Use setSoundVolume to also update the audio master gain immediately
  *  @type {number}
  *  @default
  *  @memberof Settings */
@@ -9602,8 +9603,8 @@ class NewgroundsPlugin
 let postProcess;
 
 /////////////////////////////////////////////////////////////////////////
-/** 
- * UI System Global Object
+/**
+ * Post Process Plugin - Applies a full screen shader to the rendered output
  * @memberof PostProcess
  */
 class PostProcessPlugin
