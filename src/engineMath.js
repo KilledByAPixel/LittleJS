@@ -271,7 +271,7 @@ function isIntersecting(start, end, pos, size)
  *  @memberof Math */
 function oscillate(frequency=1, amplitude=1, t=time, offset=0, type=0)
 {
-    const phase = (offset + t*frequency) % 1;
+    const phase = mod(offset + t*frequency, 1);
     let value;
     
     if (type === 1) // triangle
