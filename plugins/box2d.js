@@ -1848,7 +1848,7 @@ class Box2dPlugin
      *  @param {number} [lineWidth]
      *  @param {boolean} [useWebGL=glEnable]
      *  @param {CanvasRenderingContext2D} [context] */
-    drawFixture(fixture, pos, angle, color=WHITE, lineColor=BLACK, lineWidth=.1, useWebgl, context)
+    drawFixture(fixture, pos, angle, color=WHITE, lineColor=BLACK, lineWidth=.1, useWebGL, context)
     {
         const shape = box2d.castShapeObject(fixture.GetShape());
         switch (shape.GetType())
@@ -1858,20 +1858,20 @@ class Box2dPlugin
                 let points = [];
                 for (let i=shape.GetVertexCount(); i--;)
                     points.push(box2d.vec2From(shape.GetVertex(i)));
-                drawPoly(points, color, lineWidth, lineColor, pos, angle, useWebgl, false, context);
+                drawPoly(points, color, lineWidth, lineColor, pos, angle, useWebGL, false, context);
                 break;
             }
             case box2d.instance.b2Shape.e_circle:
             {
                 const radius = shape.get_m_radius();
-                drawCircle(pos, radius*2, color, lineWidth, lineColor, useWebgl, false, context);
+                drawCircle(pos, radius*2, color, lineWidth, lineColor, useWebGL, false, context);
                 break;
             }
             case box2d.instance.b2Shape.e_edge:
             {
                 const v1 = box2d.vec2From(shape.get_m_vertex1());
                 const v2 = box2d.vec2From(shape.get_m_vertex2());
-                drawLine(v1, v2, lineWidth, lineColor, pos, angle, useWebgl, false, context);
+                drawLine(v1, v2, lineWidth, lineColor, pos, angle, useWebGL, false, context);
                 break;
             }
         }
