@@ -659,6 +659,7 @@ function debugVideoCaptureStart()
     {
         LOG('Video capture not supported in this browser!');
         silentAudioSource?.stop();
+        audioStreamDestination && audioMasterGain.disconnect(audioStreamDestination);
         return;
     }
 
@@ -687,6 +688,8 @@ function debugVideoCaptureStop()
     debugVideoCapture.silentAudioSource?.stop();
     debugVideoCapture.mediaRecorder?.stop();
     debugVideoCapture.videoTrack?.stop();
+    if (debugVideoCapture.audioStreamDestination)
+        audioMasterGain.disconnect(debugVideoCapture.audioStreamDestination);
     debugVideoCapture = undefined;
 }
 
