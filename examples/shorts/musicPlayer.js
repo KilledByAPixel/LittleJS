@@ -80,8 +80,8 @@ function gameInit()
         function onDragLeave() { musicPlayer.color = WHITE; };
         function onDrop(e)
         {
-            musicPlayer.color = WHITE
-            
+            musicPlayer.color = WHITE;
+
             // get the dropped file
             const file = e.dataTransfer.files[0];
             if (!file || !file.type.startsWith('audio'))

@@ -19,7 +19,7 @@ class Player extends EngineObject
         if (keyIsDown('Space') || mouseIsDown(0))
         {
             // shoot bullet
-            const pos = this.pos.add(vec2(0,1).rotate(cameraAngle));
+            const pos = this.pos.add(vec2(0,1).rotate(this.angle));
             const bullet = new EngineObject(pos, vec2(.2,.5), 0, this.angle);
             bullet.velocity = this.getUp(.5);
             bullet.velocity = bullet.velocity.add(this.velocity);

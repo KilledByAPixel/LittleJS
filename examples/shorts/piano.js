@@ -35,7 +35,7 @@ function gameInit()
     for (let i=10; i--;)
     {
         // black keys
-        const pos = vec2([1,2,4,5,6][i%5]+(i/5|0)*7-7.5, 0)
+        const pos = vec2([1,2,4,5,6][i%5]+(i/5|0)*7-7.5, 0);
         const size = vec2(1, 2);
         const semitone = [1,3,6,8,10][i%5]+(i/5|0)*12;
         new PianoKey(pos, size, semitone, hsl(0,0,.3), hsl(0,1,.3));

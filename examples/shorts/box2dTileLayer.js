@@ -20,7 +20,7 @@ async function gameInit()
         
         // set tile data
         const tileIndex = 11;
-        const direction = randInt(4)
+        const direction = randInt(4);
         const mirror = randBool();
         const color = randColor(WHITE, hsl(0,0,.2));
         const data = new TileLayerData(tileIndex, direction, mirror, color);
