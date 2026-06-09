@@ -580,7 +580,7 @@ class UISystemPlugin
     }
 
     /** Get other axis navigation direction from gamepad or keyboard
-     *  @return {Vector2} */
+     *  @return {number} */
     getNavigationOtherDirection()
     {
         if (uiSystem.navigationDirection === 2)
@@ -669,6 +669,7 @@ class UISystemPlugin
             uiSystem.navigationDirection = savedNavigationDirection;
             inputClear();
         }
+        return confirmMenu;
     }
 }
 
@@ -1102,7 +1103,7 @@ class UITextInput extends UIObject
         this.onClick();
     }
 
-    /** Stop editing the text edited */
+    /** Stop editing the text */
     stopEditing()
     {
         if (!this.isKeyInputObject())
@@ -1265,7 +1266,7 @@ class UICheckbox extends UIObject
         ASSERT(isStringLike(text), 'ui checkbox must be a string');
         ASSERT(isColor(color), 'ui checkbox color must be a color');
 
-        /** @property {boolean} - Current percentage value of this slider 0-1 */
+        /** @property {boolean} - Is the checkbox currently checked? */
         this.checked = checked;
         // set properties
         this.text = text;
