@@ -1043,7 +1043,7 @@ class Box2dRevoluteJoint extends Box2dJoint
         jointDef.set_bodyB(objectB.body);
         jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
         jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
-        jointDef.set_referenceAngle(objectA.body.GetAngle() - objectB.body.GetAngle());
+        jointDef.set_referenceAngle(objectB.body.GetAngle() - objectA.body.GetAngle());
         jointDef.set_collideConnected(collide);
         super(jointDef);
     }
@@ -1197,7 +1197,7 @@ class Box2dPrismaticJoint extends Box2dJoint
         jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
         jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
         jointDef.set_localAxisA(box2d.vec2dTo(localAxisA));
-        jointDef.set_referenceAngle(objectA.body.GetAngle() - objectB.body.GetAngle());
+        jointDef.set_referenceAngle(objectB.body.GetAngle() - objectA.body.GetAngle());
         jointDef.set_collideConnected(collide);
         super(jointDef);
     }
@@ -1400,7 +1400,7 @@ class Box2dWeldJoint extends Box2dJoint
         jointDef.set_bodyB(objectB.body);
         jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
         jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
-        jointDef.set_referenceAngle(objectA.body.GetAngle() - objectB.body.GetAngle());
+        jointDef.set_referenceAngle(objectB.body.GetAngle() - objectA.body.GetAngle());
         jointDef.set_collideConnected(collide);
         super(jointDef);
     }
