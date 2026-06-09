@@ -14,6 +14,18 @@ To start LittleJS, you need to create a few functions and pass them to engineIni
 ```javascript
 // Start up LittleJS engine with your callback functions
 engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement=document.body)
+
+// Engine globals
+engineName            // Name of the engine: 'LittleJS'
+engineVersion         // Version of the engine
+frameRate             // Fixed frame rate for updates (60)
+frame                 // Current update frame
+time                  // Game time since start in seconds (stops when paused)
+timeReal              // Real time since start in seconds (keeps running when paused)
+timeDelta             // Time between updates (1/60)
+timeScale = 1         // Scales deltaTime applied to the game
+paused                // Is the game paused? (set with setPaused)
+headlessMode = false  // Run without rendering for testing/servers (set before engineInit)
 ```
 
 ## LittleJS Utilities Classes and Functions
@@ -46,10 +58,31 @@ lerpWrap(valueA, valueB, percent, wrapSize=1) // Linearly interpolates with wrap
 distanceAngle(angleA, angleB)                 // Signed wrapped distance between angles
 lerpAngle(angleA, angleB, percent)            // Linearly interpolates with wrapping
 smoothStep(percent)                           // Applies smoothstep function
+isPowerOfTwo(value)                           // Checks if the value is a power of two
 nearestPowerOfTwo(value)                      // Returns the nearest power of two
 isOverlapping(pointA, sizeA, pointB, sizeB)   // Checks if bounding boxes overlap
 isIntersecting(start, end, pos, size)         // Checks if ray intersects box
-formatTime(t)                                 // Formats seconds for display 
+oscillate(frequency=1, amplitude=1, t=time, offset=0, type=0) // Oscillating wave
+lineTest(posStart, posEnd, testFunction, normal) // Step along a line until test passes
+formatTime(t)                                 // Formats seconds for display
+
+// Math aliases (prefer over Math.X)
+PI, abs, floor, ceil, round, min, max, sign, hypot, log2, sin, cos, tan, atan2
+
+// Type checking helpers
+isNumber(n)     // Is it a number and not NaN?
+isStringLike(s) // Can it be converted to a string?
+isArray(a)      // Is it an array?
+isVector2(v)    // Is it a valid Vector2?
+isColor(c)      // Is it a valid Color?
+
+// Utility functions
+noise1D(x)                            // Smooth 1D value noise (-1 to 1)
+noise2D(x, y)                         // Smooth 2D value noise (-1 to 1)
+fetchJSON(url)                        // Fetch and parse a JSON file (async)
+shareURL(title, url, callback)        // Share a URL via the navigator share API
+readSaveData(saveName, defaultSaveData) // Read game save data from localStorage
+writeSaveData(saveName, saveData)     // Write game save data to localStorage
 
 // Random functions
 rand(valueA=1, valueB=0)             // Random float between values
@@ -113,6 +146,10 @@ Color.setAlpha(a=1)                       // Set the alpha of this color
 Color.withAlpha(a=1)                      // Get a copy of this color with the alpha set
 Color.rgbaInt()                           // Get this color as 32 bit RGBA value
 Color.toString(useAlpha=true)             // Get hex color code as a string
+
+// Color constants (frozen, use .copy() to modify)
+WHITE, BLACK, GRAY, CLEAR_WHITE, CLEAR_BLACK
+RED, ORANGE, YELLOW, GREEN, CYAN, BLUE, PURPLE, MAGENTA
 
 // Seeded random number generator
 RandomGenerator(seed)                     // Create a random number generator
@@ -190,6 +227,7 @@ ImageFont.drawTextScreen(text, pos, scale, center)  // Draw text in screen space
 
 // Camera settings
 cameraPos = (0,0)        // Position of camera in world space
+cameraAngle = 0          // Rotation angle of camera in world space
 cameraScale = 32         // Scale of camera in world space
 screenToWorld(screenPos) // Convert from screen to world space coordinates
 worldToScreen(worldPos)  // Convert from world to screen space coordinates
@@ -202,7 +240,11 @@ cameraFit(center, size, worldMargin, screenInset) // Fit the camera to a world s
 // Display settings
 canvasMaxSize = (1920, 1080)  // The max size of the canvas
 canvasFixedSize = (0, 0)      // Fixed size of the canvas
+canvasMinAspect = 0           // Min aspect ratio, fits to height (0 = disabled)
+canvasMaxAspect = 0           // Max aspect ratio, fits to width (0 = disabled)
+canvasPixelRatio = 1          // Scales canvas resolution (use devicePixelRatio for HD)
 canvasClearColor = BLACK      // Color used to clear the canvas at start of frame
+canvasColorTiles = true       // Allow tiles to be tinted when drawn
 fontDefault = 'arial'         // Default font used for text rendering
 canvasPixelated = false       // Use nearest neighbor canvas scaling for more pixelated look
 tilesPixelated = true         // Disable filtering for crisper pixel art
@@ -211,7 +253,17 @@ glEnable = true               // Enable fast WebGL rendering
 
 // Tile sheet settings
 tileDefaultSize = (16,16) // Default size of tiles in pixels
+tileDefaultPadding = 0    // Default padding around tiles in pixels
 tileDefaultBleed = 0      // How much smaller to draw tiles to prevent bleeding
+
+// Canvas and context globals
+mainCanvas / mainContext     // The main 2D canvas and its context
+drawContext                  // Context currently being drawn to
+glCanvas / glContext         // The WebGL canvas and context
+mainCanvasSize               // Size of the main canvas in pixels
+setCursor(cursorStyle)       // Set the CSS cursor style
+isOnScreen(pos, size)        // Is a world space area visible on screen?
+combineCanvases()            // Combine all canvases onto mainCanvas (for screenshots)
 ```
 
 ## LittleJS Audio System
@@ -256,9 +308,15 @@ getNoteFrequency(semitoneOffset, rootFrequency=220)  // Get frequency for musica
 
 // Audio settings
 soundEnable = true      // Should sound be enabled?
-soundVolume = .5        // Volume scale to apply to all sound
+soundVolume = .3        // Volume scale to apply to all sound
 soundDefaultRange = 40  // Default range where sound no longer plays
 soundDefaultTaper = .7  // Default range percent to taper off sound (0-1)
+
+// Audio globals
+audioContext            // The shared Web Audio context
+audioMasterGain         // Master gain node all sound routes through
+audioIsRunning()        // Is the audio context running? (requires user interaction)
+playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sampleRate, gainNode, offset=0, onended) // Low level sample playback
 ```
 
 ## LittleJS Input System
@@ -286,6 +344,8 @@ mouseWheel                            // Delta mouse wheel this frame
 mouseIsDown(button)                   // Is mouse button down?
 mouseWasPressed(button)               // Was mouse button pressed this frame?
 mouseWasReleased(button)              // Was mouse button released this frame?
+mouseInWindow                         // Is the mouse inside the window?
+isTouchDevice                         // Is this a touch capable device?
 
 // Pointer Lock
 pointerLockRequest()                  // Request pointer lock on the canvas
@@ -300,6 +360,7 @@ usingGamepadInput()                   // Is a gamepad the most recently used dev
 
 // Gamepad
 isUsingGamepad                        // Is a gamepad the most recently used device? (= usingGamepadInput())
+gamepadPrimary                        // Index of the primary gamepad (most recently used)
 gamepadIsDown(button, gamepad=0)      // Is gamepad button down?
 gamepadWasPressed(button, gamepad=0)  // Was gamepad button pressed this frame?
 gamepadWasReleased(button, gamepad=0) // Was gamepad button released this frame?
@@ -311,10 +372,19 @@ gamepadVibrate(gamepad=0, duration=200, strongMagnitude=1, weakMagnitude=1) // R
 gamepadVibrateStop(gamepad=0)         // Stop gamepad vibration
 
 // Touch Gamepad
-touchGamepadEnable                    // Is on screen touch gamepad enabled?
-touchGamepadAnalog                    // Is touch gamepad analog or 8 way dpad?
-touchGamepadSize                      // Size of touch gamepad
-touchGamepadAlpha                     // Alpha of touch gamepad
+touchGamepadEnable = false            // Is on screen touch gamepad enabled?
+touchGamepadAnalog = true             // Is touch gamepad analog or 8 way dpad?
+touchGamepadSize = 100                // Size of touch gamepad
+touchGamepadAlpha = .3                // Alpha of touch gamepad
+touchGamepadPassthrough = false       // Also route touches outside the gamepad to mouse?
+touchGamepadButtonCount = 4           // Number of right side buttons (0-4)
+touchGamepadCenterButtonSize = 0      // Size of center start button (0 = disabled)
+touchGamepadLeftStick = true          // Show analog stick on the left side?
+touchGamepadLeftButtonCount = 0       // Number of left side buttons (when left stick is off)
+touchGamepadRightStick = false        // Use a stick instead of buttons on the right side?
+touchGamepadFloating = false          // Directional controls float to where you press?
+touchGamepadDisplayTime = 3           // Seconds to display when unused (0 = always show)
+touchGamepadVibration = 0             // Vibrate duration in ms on button press (0 = off)
 
 // Vibration
 vibrate(pattern=100)                  // Pulse the vibration hardware if it exists
@@ -327,10 +397,7 @@ inputWASDEmulateDirection = true      // Should WASD keys be routed to the direc
 inputPreventDefault = true            // Should input events prevent default browser handling?
 inputMouseMoveThreshold = 6           // Screen-px mouse movement per frame that counts as mouse use
 vibrateEnable = true                  // Allow vibration hardware if it exists?
-touchGamepadEnable = false            // Should touch gamepad appear on mobile devices?
-touchGamepadAnalog = true             // Should touch gamepad be analog or 8 way dpad?
-touchGamepadSize = 100                // Size of virtual gamepad for touch devices
-touchGamepadAlpha = .3                // Transparency of touch gamepad overlay
+touchInputEnable = true               // Should touch input route to mouse events?
 ```
 
 ## LittleJS Object System
@@ -436,6 +503,7 @@ TileCollisionLayer.setCollisionData(pos, data=1)    // Set tile collision data a
 tileCollisionGetData(pos)                           // Get tile collision data at pos
 tileCollisionTest(pos, size=(0,0), object)          // Check if collision should occur
 tileCollisionRaycast(posStart, posEnd, object)      // Return the center of tile if hit
+tileCollisionLayers                                 // List of all tile collision layers
 tileLayersLoad(tileMapData, tileInfo)               // Load tile layers from exported data
 
 ```
@@ -548,6 +616,7 @@ uiSystem.defaultHoverColor
 uiSystem.defaultFont
 uiSystem.nativeHeight                  // If set, UI coords are normalized to this height
 uiSystem.destroyObjects()              // Remove all UI elements
+uiSetDebug(enable)                     // Toggle uiDebug rendering of widget bounds
 
 // Confirm dialog
 uiSystem.showConfirmDialog(text='Are you sure?', yes, no, size, exitKey='Escape')
@@ -619,6 +688,16 @@ class LavaTile extends EngineObject {
 }
 ```
 
+## LittleJS Post Processing
+- Optional plugin that applies a full screen WebGL shader to the rendered output
+- Shadertoy style uniforms: iTime, iResolution, iChannel0
+- See `examples/shorts/postProcess.js` for a demo
+
+```javascript
+new PostProcessPlugin(shaderCode, includeMainCanvas=false, feedbackTexture=false)
+postProcess                    // Global instance created by the plugin
+```
+
 ## LittleJS Box2D Physics
 - Optional plugin wrapping the Box2D physics engine (via box2d.wasm.js)
 - Drop-in replacement for engine objects: `Box2dObject extends EngineObject`
@@ -628,7 +707,7 @@ class LavaTile extends EngineObject {
 ```javascript
 // Setup (call once before engineInit)
 await box2dInit()              // Loads the WASM and creates global box2d / Box2dPlugin
-box2dSetDebug(true)            // Toggle debug rendering of physics shapes
+box2dSetDebug(true)            // Toggle debug rendering of physics shapes (box2dDebug)
 box2d.setGravity(vec2(0,-20))  // World gravity
 
 // Bodies — extend EngineObject, integrate with physics
@@ -735,6 +814,7 @@ getCrescentPoints(pos, size=1, percent=0, angle=0, invert=false, sides=glCircleS
 
 ```javascript
 ASSERT(assert, output) // Asserts if the expression is false
+LOG(...output)         // Logs output to the console (stripped from release builds)
 debugRect(pos, size, color='#fff', time=0, angle=0, fill) // Draw debug rectangle
 debugCircle(pos, size, color='#fff', time=0, fill)        // Draw debug circle
 debugPoint(pos, color, time, angle)                         // Draw debug point
@@ -744,6 +824,10 @@ debugText(text, pos, size=1, color='#fff', time=0, angle=0) // Draw debug text
 debugOverlap(pA, sA, pB, sB, color) // Draw a debug overlap between two boxes
 debugClear()                     // Clear all debug primitives
 debugScreenshot()                // Save a screenshot at the end of this frame
+debugShowErrors()                // Show full page error message when an error occurs
+debugVideoCaptureStart()         // Start capturing a video of the canvas
+debugVideoCaptureStop()          // Stop capturing and save the video to disk
+debugVideoCaptureIsActive()      // Is video currently being captured?
 saveCanvas(canvas, filename='screenshot', type='image/png') // Save canvas to a file
 saveText(text, filename='text', type='text/plain')          // Save text to a file
 saveDataURL(dataURL, filename='download')                   // Save url to a file
