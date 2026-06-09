@@ -9,6 +9,46 @@ test('setTouchGamepadFloatingTopMargin is no longer exported', () =>
     assert.equal(LJS.touchGamepadFloatingTopMargin, undefined);
 });
 
+// Key state queries are safe with no input system running: everything reads
+// as not-down / not-pressed / not-released, and keyDirection is the zero vector.
+test('key state defaults to inactive', () =>
+{
+    for (const key of ['ArrowUp', 'KeyW', 'Space'])
+    {
+        assert.equal(LJS.keyIsDown(key), false);
+        assert.equal(LJS.keyWasPressed(key), false);
+        assert.equal(LJS.keyWasReleased(key), false);
+    }
+    const dir = LJS.keyDirection();
+    assert.equal(dir.x, 0);
+    assert.equal(dir.y, 0);
+});
+
+// Mouse state queries are safe with no input system running.
+test('mouse state defaults to inactive', () =>
+{
+    for (const button of [0, 1, 2])
+    {
+        assert.equal(LJS.mouseIsDown(button), false);
+        assert.equal(LJS.mouseWasPressed(button), false);
+        assert.equal(LJS.mouseWasReleased(button), false);
+    }
+    assert.equal(LJS.mouseWheel, 0);
+});
+
+// inputClear and inputClearKey are callable any time and leave input inactive.
+test('inputClear and inputClearKey are safe to call', () =>
+{
+    assert.doesNotThrow(() =>
+    {
+        LJS.inputClearKey('Space');
+        LJS.inputClearKey('Space', 0, true, false, false);
+        LJS.inputClearKey('Space', 9); // device with no state
+        LJS.inputClear();
+    });
+    assert.equal(LJS.keyIsDown('Space'), false);
+});
+
 // All retained touch-gamepad setters stay exported and are callable in headless
 // mode without throwing or creating DOM (headless guards short-circuit).
 test('retained touch gamepad setters are exported and headless-safe', () =>
