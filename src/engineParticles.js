@@ -434,8 +434,6 @@ class Particle
             const hitLayer = tileCollisionTest(this.pos);
             if (!testCollision(oldPos))
             {
-                // testCollision already invoked collideCallback with the
-                // correct (this, data, pos) args; no need to re-check here.
                 // test which side we bounced off (or both if a corner)
                 const isBlockedX = testCollision(vec2(this.pos.x, oldPos.y));
                 const isBlockedY = testCollision(vec2(oldPos.x, this.pos.y));
