@@ -63,6 +63,8 @@ randColor(colorA, colorB, linear)    // Random color between values
 // 2D vector math
 Vector2(x=0, y=0)                         // Create a 2D vector
 Vector2.copy()                            // Copy this vector    
+Vector2.set(x=0, y=0)                     // Set this vector's components
+Vector2.setFrom(v)                        // Set this vector from another vector
 Vector2.add(v)                            // Add a vector
 Vector2.subtract(v)                       // Subtract a vector
 Vector2.multiply(v)                       // Multiply by a vector 
@@ -76,7 +78,11 @@ Vector2.normalize(length=1)               // Normalize this vector to length
 Vector2.clampLength(length=1)             // Clamp this vector to length
 Vector2.dot(v)                            // Dot product with vector
 Vector2.cross(v)                          // Cross product with vector
+Vector2.reflect(normal, restitution=1)    // Reflect off a surface normal
 Vector2.floor()                           // Floor this vector
+Vector2.abs()                             // Get copy with absolute value components
+Vector2.snap(grid)                        // Snap to the nearest grid increment
+Vector2.mod(divisor=1)                    // Get modulo of each component
 Vector2.area()                            // Get area covered by this vector as a rectangle
 Vector2.lerp(v, percent)                  // Interpolate between vectors
 Vector2.arrayCheck(arraySize)             // Check if in bounds of array size
@@ -90,6 +96,8 @@ Vector2.toString(digits=3)                // Get string representation
 // RGBA color object
 Color(r=1, g=1, b=1, a=1)                 // Create an RGBA color
 Color.copy()                              // Copy this color
+Color.set(r=1, g=1, b=1, a=1)             // Set this color's values
+Color.setFrom(c)                          // Set this color from another color
 Color.add(c)                              // Add a color
 Color.subtract(c)                         // Subtract a color
 Color.multiply(c)                         // Multiply by a color
@@ -113,16 +121,17 @@ RandomGenerator.int(valueA, valueB=0)     // Random integer between values
 RandomGenerator.sign()                    // Randomly either -1 or 1
 
 // Time tracking system
-Timer(timeLeft)       // Create a timer object
-Timer.set(timeLeft=0) // Set the timer with seconds passed in
-Timer.unset()         // Unset the timer
-Timer.isSet()         // Returns true if set
-Timer.active()        // Returns true if set and has not elapsed
-Timer.elapsed()       // Returns true if set and elapsed
-Timer.get()           // Get how long since elapsed, 0 if not set
-Timer.getPercent()    // Get percent elapsed, 0 if not set
-Timer.toString()      // Get this timer expressed as a string
-Timer.valueOf()       // Get how long since elapsed, 0 if not set
+Timer(timeLeft, useRealTime=false)    // Create a timer object
+Timer.set(timeLeft=0)                 // Set the timer with seconds passed in
+Timer.setUseRealTime(useRealTime=true) // Keep running while the game is paused
+Timer.unset()                         // Unset the timer
+Timer.isSet()                         // Returns true if set
+Timer.active()                        // Returns true if set and has not elapsed
+Timer.elapsed()                       // Returns true if set and elapsed
+Timer.get()                           // Get how long since elapsed, 0 if not set
+Timer.getPercent()                    // Get percent elapsed, 0 if not set
+Timer.toString()                      // Get this timer expressed as a string
+Timer.valueOf()                       // Get how long since elapsed, 0 if not set
 ```
 
 ## LittleJS Drawing System
@@ -133,21 +142,24 @@ Timer.valueOf()       // Get how long since elapsed, 0 if not set
 
 ```javascript
 // Drawing functions
+// Most also accept optional trailing params: useWebGL=glEnable, screenSpace=false, context
 drawTile(pos, size, tileInfo, color=WHITE, angle=0, mirror, additiveColor)
 drawRect(pos, size, color=WHITE, angle=0)
 drawRectGradient(pos, size, colorTop=WHITE, colorBottom=BLACK, angle=0)
 drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE, angle=0, additiveColor)
 drawLine(posA, posB, width=.1, color=WHITE, pos=(0,0), angle=0)
-drawLineList(points, width=.1, color, wrap=false, pos=(0,0), angle=0)
+drawLineList(points, width=.1, color=WHITE, wrap=false, pos=(0,0), angle=0)
 drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos, angle=0)
 drawRegularPoly(pos, size=(1,1), sides=3, color=WHITE, lineWidth=0, lineColor=BLACK, angle=0)
 drawEllipse(pos, size=(1,1), color=WHITE, angle=0, lineWidth=0, lineColor=BLACK)
 drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK)
-drawCanvas2D(pos, size, angle=0, mirror, drawFunction, screenSpace, context)
+drawEllipseGradient(pos, size=(1,1), colorInner=WHITE, colorOuter=CLEAR_WHITE, angle=0)
+drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=CLEAR_WHITE)
+drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpace=false, context)
 
 // Text functions
-drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK)
-drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK)
+drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font, fontStyle, maxWidth, angle=0)
+drawTextScreen(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font, fontStyle, maxWidth, angle=0)
 
 // Utility drawing functions
 setAdditiveBlendMode(additive)
@@ -158,7 +170,6 @@ toggleFullscreen()
 TileInfo(pos, size, textureInfo, padding=0, bleed=0) // Create a tile info object
 TileInfo.pos            // Top left corner of tile in pixels
 TileInfo.size           // Size of tile in pixels
-TileInfo.textureIndex   // Texture index to use
 TileInfo.padding        // How many pixels padding around tiles
 TileInfo.offset(offset) // Offset this tile by a certain amount in pixels
 TileInfo.frame(frame)   // Offset this tile by a number of animation frames
@@ -182,6 +193,9 @@ cameraPos = (0,0)        // Position of camera in world space
 cameraScale = 32         // Scale of camera in world space
 screenToWorld(screenPos) // Convert from screen to world space coordinates
 worldToScreen(worldPos)  // Convert from world to screen space coordinates
+screenToWorldDelta(screenDelta) // Convert a screen space delta to world space
+worldToScreenDelta(worldDelta)  // Convert a world space delta to screen space
+screenToWorldTransform(screenPos, screenSize, screenAngle=0) // Convert a whole transform
 getCameraSize()          // Get the camera's visible area in world space
 cameraFit(center, size, worldMargin, screenInset) // Fit the camera to a world space rectangle
 
@@ -260,6 +274,8 @@ keyIsDown(key)                        // Is key down?
 keyWasPressed(key)                    // Was key pressed this frame?
 keyWasReleased(key)                   // Was key released this frame?
 keyDirection(up, down, left, right)   // Get input vector from arrow keys or wasd
+inputClear()                          // Clear all input state
+inputClearKey(key)                    // Clear input state for a specific key
 
 // Mouse / Touch
 mousePos                              // World space mouse position
@@ -270,6 +286,11 @@ mouseWheel                            // Delta mouse wheel this frame
 mouseIsDown(button)                   // Is mouse button down?
 mouseWasPressed(button)               // Was mouse button pressed this frame?
 mouseWasReleased(button)              // Was mouse button released this frame?
+
+// Pointer Lock
+pointerLockRequest()                  // Request pointer lock on the canvas
+pointerLockExit()                     // Exit pointer lock
+pointerLockIsActive()                 // Is pointer lock currently active?
 
 // Last input device (most recently used)
 lastInputDevice                       // 'mouse' | 'keyboard' | 'gamepad' (sticky while idle)
@@ -283,6 +304,11 @@ gamepadIsDown(button, gamepad=0)      // Is gamepad button down?
 gamepadWasPressed(button, gamepad=0)  // Was gamepad button pressed this frame?
 gamepadWasReleased(button, gamepad=0) // Was gamepad button released this frame?
 gamepadStick(stickIndex, gamepad=0)   // Get gamepad analog stick value
+gamepadDpad(gamepad=0)                // Get gamepad dpad as a direction vector
+gamepadStickCount(gamepad=0)          // Get number of analog sticks
+gamepadConnected(gamepad=0)           // Is the gamepad connected?
+gamepadVibrate(gamepad=0, duration=200, strongMagnitude=1, weakMagnitude=1) // Rumble
+gamepadVibrateStop(gamepad=0)         // Stop gamepad vibration
 
 // Touch Gamepad
 touchGamepadEnable                    // Is on screen touch gamepad enabled?
@@ -298,7 +324,8 @@ vibrateStop()                         // Stop all vibration
 gamepadsEnable = true                 // Should gamepads be allowed?
 gamepadDirectionEmulateStick = true   // Should dpad be routed to the left analog stick?
 inputWASDEmulateDirection = true      // Should WASD keys be routed to the direction keys?
-inputMouseMoveThreshold = 2           // Screen-px mouse movement per frame that counts as mouse use
+inputPreventDefault = true            // Should input events prevent default browser handling?
+inputMouseMoveThreshold = 6           // Screen-px mouse movement per frame that counts as mouse use
 vibrateEnable = true                  // Allow vibration hardware if it exists?
 touchGamepadEnable = false            // Should touch gamepad appear on mobile devices?
 touchGamepadAnalog = true             // Should touch gamepad be analog or 8 way dpad?
@@ -712,12 +739,14 @@ debugRect(pos, size, color='#fff', time=0, angle=0, fill) // Draw debug rectangl
 debugCircle(pos, size, color='#fff', time=0, fill)        // Draw debug circle
 debugPoint(pos, color, time, angle)                         // Draw debug point
 debugLine(posA, posB, color, width=.1, time)                // Draw debug line
+debugPoly(pos, points, color=WHITE, time=0, angle=0, fill)  // Draw debug polygon
 debugText(text, pos, size=1, color='#fff', time=0, angle=0) // Draw debug text
 debugOverlap(pA, sA, pB, sB, color) // Draw a debug overlap between two boxes
 debugClear()                     // Clear all debug primitives
-saveCanvas(canvas, filename)     // Save canvas to a file
-saveText(text, filename)         // Save text to a file 
-saveDataURL(dataURL, filename)   // Save url to a file
+debugScreenshot()                // Save a screenshot at the end of this frame
+saveCanvas(canvas, filename='screenshot', type='image/png') // Save canvas to a file
+saveText(text, filename='text', type='text/plain')          // Save text to a file
+saveDataURL(dataURL, filename='download')                   // Save url to a file
 
 // Debug settings
 debug                // Is debug enabled?
