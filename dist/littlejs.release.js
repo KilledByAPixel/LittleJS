@@ -7068,7 +7068,7 @@ class TileLayer extends CanvasLayer
         
         /** @property {TileInfo} - Default tile info for layer */
         this.tileInfo = undefined;
-        /** @property {Array<TileLayerData>} - Default tile info for layer */
+        /** @property {Array<TileLayerData>} - Array of tile data for the layer */
         this.data = [];
         /** @property {boolean} - Is this layer using a webgl texture? */
         this.isUsingWebGL = false;
@@ -7153,7 +7153,7 @@ class TileLayer extends CanvasLayer
 
         const size = this.drawSize || this.size;
         const pos = this.pos.add(size.scale(.5));
-        this.draw(pos, this.size, this.color, this.angle, this.mirror, this.additiveColor);
+        this.draw(pos, size, this.color, this.angle, this.mirror, this.additiveColor);
     }
 
     /** Called after this layer is redrawn, does nothing by default */
@@ -7536,8 +7536,8 @@ class TileCollisionLayer extends TileLayer
  *     rgb(1,1,1,1), rgb(0,0,0,1), // colorStartA, colorStartB
  *     rgb(1,1,1,0), rgb(0,0,0,0), // colorEndA, colorEndB
  *     1, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
- *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate,
- *     .5, 1                // randomness, collide, additive, randomColorLinear, renderOrder
+ *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate
+ *     .5, 1                // randomness, collide
  * );
  */
 class ParticleEmitter extends EngineObject
@@ -9582,7 +9582,8 @@ class NewgroundsPlugin
             return;
         }
         debugMedals && LOG(xmlHttp.responseText);
-        return xmlHttp.responseText && JSON.parse(xmlHttp.responseText);
+        try { return xmlHttp.responseText && JSON.parse(xmlHttp.responseText); }
+        catch(e) { debugMedals && LOG('newgrounds response is not valid JSON', e); }
     }
 }
 /**
@@ -13777,7 +13778,7 @@ class Box2dPlugin
      *  @param {number} [lineWidth]
      *  @param {boolean} [useWebGL=glEnable]
      *  @param {CanvasRenderingContext2D} [context] */
-    drawFixture(fixture, pos, angle, color=WHITE, lineColor=BLACK, lineWidth=.1, useWebgl, context)
+    drawFixture(fixture, pos, angle, color=WHITE, lineColor=BLACK, lineWidth=.1, useWebGL, context)
     {
         const shape = box2d.castShapeObject(fixture.GetShape());
         switch (shape.GetType())
@@ -13787,20 +13788,20 @@ class Box2dPlugin
                 let points = [];
                 for (let i=shape.GetVertexCount(); i--;)
                     points.push(box2d.vec2From(shape.GetVertex(i)));
-                drawPoly(points, color, lineWidth, lineColor, pos, angle, useWebgl, false, context);
+                drawPoly(points, color, lineWidth, lineColor, pos, angle, useWebGL, false, context);
                 break;
             }
             case box2d.instance.b2Shape.e_circle:
             {
                 const radius = shape.get_m_radius();
-                drawCircle(pos, radius*2, color, lineWidth, lineColor, useWebgl, false, context);
+                drawCircle(pos, radius*2, color, lineWidth, lineColor, useWebGL, false, context);
                 break;
             }
             case box2d.instance.b2Shape.e_edge:
             {
                 const v1 = box2d.vec2From(shape.get_m_vertex1());
                 const v2 = box2d.vec2From(shape.get_m_vertex2());
-                drawLine(v1, v2, lineWidth, lineColor, pos, angle, useWebgl, false, context);
+                drawLine(v1, v2, lineWidth, lineColor, pos, angle, useWebGL, false, context);
                 break;
             }
         }
@@ -14631,7 +14632,11 @@ function tweenProperty(target, propertyPath, start, end, duration = 1, options =
     const callback = (value) =>
     {
         let obj = target;
-        for (const k of parts) obj = obj[k];
+        for (const k of parts)
+        {
+            obj = obj[k];
+            ASSERT(obj != null, 'tweenProperty path does not resolve: ' + propertyPath);
+        }
         obj[lastKey] = value;
     };
     return new Tween(callback, start, end, duration, options);

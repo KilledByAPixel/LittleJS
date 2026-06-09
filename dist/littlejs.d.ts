@@ -3068,7 +3068,7 @@ declare module "littlejsengine" {
         *  @param {boolean}  [useWebGL] - Should this layer use WebGL for rendering
         */
         constructor(pos: Vector2, size: Vector2, tileInfo?: TileInfo, renderOrder?: number, useWebGL?: boolean);
-        /** @property {Array<TileLayerData>} - Default tile info for layer */
+        /** @property {Array<TileLayerData>} - Array of tile data for the layer */
         data: TileLayerData[];
         /** @property {boolean} - Is this layer using a webgl texture? */
         isUsingWebGL: boolean;
@@ -3225,8 +3225,8 @@ declare module "littlejsengine" {
      *     rgb(1,1,1,1), rgb(0,0,0,1), // colorStartA, colorStartB
      *     rgb(1,1,1,0), rgb(0,0,0,0), // colorEndA, colorEndB
      *     1, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
-     *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate,
-     *     .5, 1                // randomness, collide, additive, randomColorLinear, renderOrder
+     *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate
+     *     .5, 1                // randomness, collide
      * );
      */
     export class ParticleEmitter extends EngineObject {
@@ -4390,7 +4390,7 @@ declare module "littlejsengine" {
          *  @param {number} [lineWidth]
          *  @param {boolean} [useWebGL=glEnable]
          *  @param {CanvasRenderingContext2D} [context] */
-        drawFixture(fixture: any, pos: Vector2, angle: number, color?: Color, lineColor?: Color, lineWidth?: number, useWebgl: any, context?: CanvasRenderingContext2D): void;
+        drawFixture(fixture: any, pos: Vector2, angle: number, color?: Color, lineColor?: Color, lineWidth?: number, useWebGL?: boolean, context?: CanvasRenderingContext2D): void;
         /** converts a box2d vec2 to a Vector2
          *  @param {Object} v */
         vec2From(v: any): Vector2;
