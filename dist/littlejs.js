@@ -5990,7 +5990,7 @@ function inputInit()
         document.addEventListener('touchend',   (e)=> handleTouch(e), { passive: false });
 
         // handle all touch events the same way
-        let wasTouching;
+        let wasTouching, touchIdentifier;
         function handleTouch(e)
         {
             if (!touchInputEnable) return;
@@ -6021,10 +6021,11 @@ function inputInit()
                     const pos = vec2(gameTouches[0].clientX, gameTouches[0].clientY);
                     const mousePosScreenLast = mousePosScreen;
                     mousePosScreen = mouseEventToScreen(pos);
-                    if (wasTouching)
+                    if (wasTouching && gameTouches[0].identifier === touchIdentifier)
                         mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
-                    else
+                    else if (!wasTouching)
                         inputData[0][button] = 3;
+                    touchIdentifier = gameTouches[0].identifier;
                 }
                 else if (wasTouching)
                     inputData[0][button] = inputData[0][button] & 2 | 4;
@@ -11510,7 +11511,7 @@ class UISystemPlugin
     }
 
     /** Get other axis navigation direction from gamepad or keyboard
-     *  @return {Vector2} */
+     *  @return {number} */
     getNavigationOtherDirection()
     {
         if (uiSystem.navigationDirection === 2)
@@ -11599,6 +11600,7 @@ class UISystemPlugin
             uiSystem.navigationDirection = savedNavigationDirection;
             inputClear();
         }
+        return confirmMenu;
     }
 }
 
@@ -12032,7 +12034,7 @@ class UITextInput extends UIObject
         this.onClick();
     }
 
-    /** Stop editing the text edited */
+    /** Stop editing the text */
     stopEditing()
     {
         if (!this.isKeyInputObject())
@@ -12195,7 +12197,7 @@ class UICheckbox extends UIObject
         ASSERT(isStringLike(text), 'ui checkbox must be a string');
         ASSERT(isColor(color), 'ui checkbox color must be a color');
 
-        /** @property {boolean} - Current percentage value of this slider 0-1 */
+        /** @property {boolean} - Is the checkbox currently checked? */
         this.checked = checked;
         // set properties
         this.text = text;
@@ -12960,7 +12962,7 @@ class Box2dObject extends EngineObject
             shape.set_m_vertex3(box2d.vec2dTo(getPoint(i+2)));
             const f = this.addShape(shape, density, friction, restitution, isSensor);
             fixtures.push(f);
-            i < points.length && edgePoints.push(points[i].copy());
+            edgePoints.push(points[i].copy());
         }
         this.edgeLoops.push(edgePoints);
         return fixtures;
@@ -13026,7 +13028,7 @@ class Box2dObject extends EngineObject
     /** Sets the position
      *  @param {Vector2} pos */
     setPosition(pos)
-    { this.setTransform(pos, this.body.GetAngle()); }
+    { this.setTransform(pos, -this.body.GetAngle()); }
 
     /** Sets the angle
      *  @param {number} angle */
@@ -13123,6 +13125,7 @@ class Box2dObject extends EngineObject
             filter.set_categoryBits(categoryBits);
             filter.set_maskBits(0xffff & ~ignoreCategoryBits);
             filter.set_groupIndex(groupIndex);
+            fixture.SetFilterData(filter); // applies and refilters contacts
         });
     }
 
@@ -13658,7 +13661,7 @@ class Box2dRevoluteJoint extends Box2dJoint
         jointDef.set_bodyB(objectB.body);
         jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
         jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
-        jointDef.set_referenceAngle(objectA.body.GetAngle() - objectB.body.GetAngle());
+        jointDef.set_referenceAngle(objectB.body.GetAngle() - objectA.body.GetAngle());
         jointDef.set_collideConnected(collide);
         super(jointDef);
     }
@@ -13805,14 +13808,14 @@ class Box2dPrismaticJoint extends Box2dJoint
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchor);
         const localAnchorB = objectB.worldToLocal(anchor);
-        const localAxisA = objectB.worldToLocalVector(worldAxis);
+        const localAxisA = objectA.worldToLocalVector(worldAxis);
         const jointDef = new box2d.instance.b2PrismaticJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
         jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
         jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
         jointDef.set_localAxisA(box2d.vec2dTo(localAxisA));
-        jointDef.set_referenceAngle(objectA.body.GetAngle() - objectB.body.GetAngle());
+        jointDef.set_referenceAngle(objectB.body.GetAngle() - objectA.body.GetAngle());
         jointDef.set_collideConnected(collide);
         super(jointDef);
     }
@@ -13915,7 +13918,7 @@ class Box2dWheelJoint extends Box2dJoint
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchor);
         const localAnchorB = objectB.worldToLocal(anchor);
-        const localAxisA = objectB.worldToLocalVector(worldAxis);
+        const localAxisA = objectA.worldToLocalVector(worldAxis);
         const jointDef = new box2d.instance.b2WheelJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
@@ -14015,7 +14018,7 @@ class Box2dWeldJoint extends Box2dJoint
         jointDef.set_bodyB(objectB.body);
         jointDef.set_localAnchorA(box2d.vec2dTo(localAnchorA));
         jointDef.set_localAnchorB(box2d.vec2dTo(localAnchorB));
-        jointDef.set_referenceAngle(objectA.body.GetAngle() - objectB.body.GetAngle());
+        jointDef.set_referenceAngle(objectB.body.GetAngle() - objectA.body.GetAngle());
         jointDef.set_collideConnected(collide);
         super(jointDef);
     }

@@ -3910,8 +3910,8 @@ declare module "littlejsengine" {
          *  @return {number} */
         getNavigationDirection(): number;
         /** Get other axis navigation direction from gamepad or keyboard
-         *  @return {Vector2} */
-        getNavigationOtherDirection(): Vector2;
+         *  @return {number} */
+        getNavigationOtherDirection(): number;
         /** Get if navigation button was pressed from gamepad or keyboard
          *  @return {boolean} */
         getNavigationWasPressed(): boolean;
@@ -4111,7 +4111,7 @@ declare module "littlejsengine" {
         maxLength: number;
         text: string;
         click(): void;
-        /** Stop editing the text edited */
+        /** Stop editing the text */
         stopEditing(): void;
         /** Key down event handler if this object is being edited
          *  @param {KeyboardEvent} [e] */
@@ -4170,7 +4170,7 @@ declare module "littlejsengine" {
          *  @param {Color}   [color=uiSystem.defaultButtonColor]
          */
         constructor(pos?: Vector2, size?: Vector2, checked?: boolean, text?: string, color?: Color);
-        /** @property {boolean} - Current percentage value of this slider 0-1 */
+        /** @property {boolean} - Is the checkbox currently checked? */
         checked: boolean;
         text: string;
         click(): void;
