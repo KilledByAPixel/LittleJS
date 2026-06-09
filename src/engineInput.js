@@ -516,7 +516,7 @@ function inputInit()
         document.addEventListener('touchend',   (e)=> handleTouch(e), { passive: false });
 
         // handle all touch events the same way
-        let wasTouching;
+        let wasTouching, touchIdentifier;
         function handleTouch(e)
         {
             if (!touchInputEnable) return;
@@ -547,10 +547,11 @@ function inputInit()
                     const pos = vec2(gameTouches[0].clientX, gameTouches[0].clientY);
                     const mousePosScreenLast = mousePosScreen;
                     mousePosScreen = mouseEventToScreen(pos);
-                    if (wasTouching)
+                    if (wasTouching && gameTouches[0].identifier === touchIdentifier)
                         mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
-                    else
+                    else if (!wasTouching)
                         inputData[0][button] = 3;
+                    touchIdentifier = gameTouches[0].identifier;
                 }
                 else if (wasTouching)
                     inputData[0][button] = inputData[0][button] & 2 | 4;
