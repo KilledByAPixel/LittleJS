@@ -345,7 +345,7 @@ class Box2dObject extends EngineObject
             shape.set_m_vertex3(box2d.vec2dTo(getPoint(i+2)));
             const f = this.addShape(shape, density, friction, restitution, isSensor);
             fixtures.push(f);
-            i < points.length && edgePoints.push(points[i].copy());
+            edgePoints.push(points[i].copy());
         }
         this.edgeLoops.push(edgePoints);
         return fixtures;
