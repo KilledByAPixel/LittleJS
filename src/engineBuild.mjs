@@ -12,7 +12,7 @@
 import fs from 'node:fs';
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -76,7 +76,7 @@ try
 
     // copy extra files to build folder
     for (const file of engineExtraFiles)
-        fs.copyFileSync(file, `${BUILD_FOLDER}/${file.substring(file.lastIndexOf('/')+1)}`);
+        fs.copyFileSync(file, join(BUILD_FOLDER, basename(file)));
 
 }
 catch (e) { handleError(e, 'Failed to create build folder!'); }
