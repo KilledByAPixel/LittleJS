@@ -411,7 +411,7 @@ class Box2dObject extends EngineObject
     /** Sets the position
      *  @param {Vector2} pos */
     setPosition(pos)
-    { this.setTransform(pos, this.body.GetAngle()); }
+    { this.setTransform(pos, -this.body.GetAngle()); }
 
     /** Sets the angle
      *  @param {number} angle */
