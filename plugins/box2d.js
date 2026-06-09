@@ -508,6 +508,7 @@ class Box2dObject extends EngineObject
             filter.set_categoryBits(categoryBits);
             filter.set_maskBits(0xffff & ~ignoreCategoryBits);
             filter.set_groupIndex(groupIndex);
+            fixture.SetFilterData(filter); // applies and refilters contacts
         });
     }
 
