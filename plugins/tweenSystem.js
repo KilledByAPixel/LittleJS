@@ -426,7 +426,11 @@ function tweenProperty(target, propertyPath, start, end, duration = 1, options =
     const callback = (value) =>
     {
         let obj = target;
-        for (const k of parts) obj = obj[k];
+        for (const k of parts)
+        {
+            obj = obj[k];
+            ASSERT(obj != null, 'tweenProperty path does not resolve: ' + propertyPath);
+        }
         obj[lastKey] = value;
     };
     return new Tween(callback, start, end, duration, options);
