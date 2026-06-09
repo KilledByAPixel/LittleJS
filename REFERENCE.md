@@ -237,7 +237,7 @@ Sound.loadedPercent                                    // Get loading progress (
 SoundInstance.setVolume(volume)   // Change volume during playback
 SoundInstance.stop(fadeTime=0)    // Stop with optional fade out
 SoundInstance.pause()             // Pause the sound
-SoundInstance.unpause()           // Resume paused sound
+SoundInstance.resume()            // Resume paused sound
 SoundInstance.isPlaying()         // Check if currently playing
 SoundInstance.isPaused()          // Check if paused
 SoundInstance.isStopped()         // Check if stopped
