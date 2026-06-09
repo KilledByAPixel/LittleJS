@@ -131,8 +131,9 @@ class PostProcessPlugin
                 workCanvas.height = mainCanvasSize.y;
                 glCopyToContext(workContext);
                 workContext.drawImage(mainCanvas, 0, 0);
-                mainCanvas.width |= 0
-                
+                mainCanvas.width |= 0; // setting size clears the main canvas
+
+
                 // copy work canvas to texture
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, workCanvas);
             }
