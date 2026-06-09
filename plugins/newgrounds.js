@@ -193,6 +193,7 @@ class NewgroundsPlugin
             return;
         }
         debugMedals && LOG(xmlHttp.responseText);
-        return xmlHttp.responseText && JSON.parse(xmlHttp.responseText);
+        try { return xmlHttp.responseText && JSON.parse(xmlHttp.responseText); }
+        catch(e) { debugMedals && LOG('newgrounds response is not valid JSON', e); }
     }
 }
