@@ -1190,7 +1190,7 @@ class Box2dPrismaticJoint extends Box2dJoint
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchor);
         const localAnchorB = objectB.worldToLocal(anchor);
-        const localAxisA = objectB.worldToLocalVector(worldAxis);
+        const localAxisA = objectA.worldToLocalVector(worldAxis);
         const jointDef = new box2d.instance.b2PrismaticJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
@@ -1300,7 +1300,7 @@ class Box2dWheelJoint extends Box2dJoint
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchor);
         const localAnchorB = objectB.worldToLocal(anchor);
-        const localAxisA = objectB.worldToLocalVector(worldAxis);
+        const localAxisA = objectA.worldToLocalVector(worldAxis);
         const jointDef = new box2d.instance.b2WheelJointDef();
         jointDef.set_bodyA(objectA.body);
         jointDef.set_bodyB(objectB.body);
