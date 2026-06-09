@@ -446,7 +446,7 @@ class SoundInstance
  *  @param {number} [rate] - How quickly to speak
  *  @param {number} [pitch] - How much to change the pitch by
  *  @param {string} [language] - The language/accent to use (examples: en, it, ru, ja, zh)
- *  @return {SpeechSynthesisUtterance} - The utterance that was spoken
+ *  @return {SpeechSynthesisUtterance|undefined} - The utterance that was spoken, or undefined if speech is unavailable
  *  @memberof Audio */
 function speak(text, volume=1, rate=1, pitch=1, language='')
 {
@@ -499,7 +499,7 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
  *  @param {number}   [pan] - How much to apply stereo panning
  *  @param {boolean}  [loop] - True if the sound should loop when it reaches the end
  *  @param {number}   [sampleRate=44100] - Sample rate for the sound
- *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing
+ *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing (disconnected when the sound ends)
  *  @param {number}   [offset] - Offset in seconds to start playback from
  *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
  *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails

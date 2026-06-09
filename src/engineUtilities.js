@@ -25,7 +25,7 @@
 class Timer
 {
     /** Create a timer object set time passed in
-     *  @param {number} [timeLeft] - How much time left before the timer 
+     *  @param {number} [timeLeft] - How much time left before the timer is elapsed in seconds (undefined = unset)
      *  @param {boolean} [useRealTime] - Should the timer keep running even when the game is paused? (useful for UI) */
     constructor(timeLeft, useRealTime=false)
     {
