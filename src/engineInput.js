@@ -438,7 +438,10 @@ function inputInit()
     {
         inputData[0][e.code] = (inputData[0][e.code]&2) | 4;
         if (inputWASDEmulateDirection)
-            inputData[0][remapKey(e.code)] = 4;
+        {
+            const remap = remapKey(e.code);
+            inputData[0][remap] = (inputData[0][remap]&2) | 4;
+        }
     }
     function remapKey(k)
     {
