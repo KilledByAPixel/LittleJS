@@ -1481,7 +1481,7 @@ declare module "littlejsengine" {
      */
     export class Timer {
         /** Create a timer object set time passed in
-         *  @param {number} [timeLeft] - How much time left before the timer
+         *  @param {number} [timeLeft] - How much time left before the timer is elapsed in seconds (undefined = unset)
          *  @param {boolean} [useRealTime] - Should the timer keep running even when the game is paused? (useful for UI) */
         constructor(timeLeft?: number, useRealTime?: boolean);
         useRealTime: boolean;
@@ -2660,9 +2660,9 @@ declare module "littlejsengine" {
      *  @param {number} [rate] - How quickly to speak
      *  @param {number} [pitch] - How much to change the pitch by
      *  @param {string} [language] - The language/accent to use (examples: en, it, ru, ja, zh)
-     *  @return {SpeechSynthesisUtterance} - The utterance that was spoken
+     *  @return {SpeechSynthesisUtterance|undefined} - The utterance that was spoken, or undefined if speech is unavailable
      *  @memberof Audio */
-    export function speak(text: string, volume?: number, rate?: number, pitch?: number, language?: string): SpeechSynthesisUtterance;
+    export function speak(text: string, volume?: number, rate?: number, pitch?: number, language?: string): SpeechSynthesisUtterance | undefined;
     /** Stop all queued speech
      *  @memberof Audio */
     export function speakStop(): void;
@@ -2684,7 +2684,7 @@ declare module "littlejsengine" {
      *  @param {number}   [pan] - How much to apply stereo panning
      *  @param {boolean}  [loop] - True if the sound should loop when it reaches the end
      *  @param {number}   [sampleRate=44100] - Sample rate for the sound
-     *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing
+     *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing (disconnected when the sound ends)
      *  @param {number}   [offset] - Offset in seconds to start playback from
      *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
      *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails

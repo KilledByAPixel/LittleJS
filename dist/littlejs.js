@@ -1503,7 +1503,7 @@ function smoothStep(percent) { return percent * percent * (3 - 2 * percent); }
  *  @param {number} value
  *  @return {boolean}
  *  @memberof Math */
-function isPowerOfTwo(value) { return !(value & (value - 1)); }
+function isPowerOfTwo(value) { return value > 0 && !(value & (value - 1)); }
 
 /** Returns the nearest power of two not less than the value
  *  @param {number} value
@@ -2516,7 +2516,7 @@ const MAGENTA = debugProtectConstant(rgb(1,0,1));
 class Timer
 {
     /** Create a timer object set time passed in
-     *  @param {number} [timeLeft] - How much time left before the timer 
+     *  @param {number} [timeLeft] - How much time left before the timer is elapsed in seconds (undefined = unset)
      *  @param {boolean} [useRealTime] - Should the timer keep running even when the game is paused? (useful for UI) */
     constructor(timeLeft, useRealTime=false)
     {
@@ -5912,7 +5912,10 @@ function inputInit()
     {
         inputData[0][e.code] = (inputData[0][e.code]&2) | 4;
         if (inputWASDEmulateDirection)
-            inputData[0][remapKey(e.code)] = 4;
+        {
+            const remap = remapKey(e.code);
+            inputData[0][remap] = (inputData[0][remap]&2) | 4;
+        }
     }
     function remapKey(k)
     {
@@ -7179,7 +7182,7 @@ class SoundInstance
  *  @param {number} [rate] - How quickly to speak
  *  @param {number} [pitch] - How much to change the pitch by
  *  @param {string} [language] - The language/accent to use (examples: en, it, ru, ja, zh)
- *  @return {SpeechSynthesisUtterance} - The utterance that was spoken
+ *  @return {SpeechSynthesisUtterance|undefined} - The utterance that was spoken, or undefined if speech is unavailable
  *  @memberof Audio */
 function speak(text, volume=1, rate=1, pitch=1, language='')
 {
@@ -7232,7 +7235,7 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
  *  @param {number}   [pan] - How much to apply stereo panning
  *  @param {boolean}  [loop] - True if the sound should loop when it reaches the end
  *  @param {number}   [sampleRate=44100] - Sample rate for the sound
- *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing
+ *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing (disconnected when the sound ends)
  *  @param {number}   [offset] - Offset in seconds to start playback from
  *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
  *  @return {AudioBufferSourceNode} - The source node of the sound played, may be undefined if play fails
@@ -8613,8 +8616,6 @@ class Particle
             const hitLayer = tileCollisionTest(this.pos);
             if (!testCollision(oldPos))
             {
-                // testCollision already invoked collideCallback with the
-                // correct (this, data, pos) args; no need to re-check here.
                 // test which side we bounced off (or both if a corner)
                 const isBlockedX = testCollision(vec2(this.pos.x, oldPos.y));
                 const isBlockedY = testCollision(vec2(oldPos.x, this.pos.y));
@@ -10402,8 +10403,9 @@ class PostProcessPlugin
                 workCanvas.height = mainCanvasSize.y;
                 glCopyToContext(workContext);
                 workContext.drawImage(mainCanvas, 0, 0);
-                mainCanvas.width |= 0
-                
+                mainCanvas.width |= 0; // setting size clears the main canvas
+
+
                 // copy work canvas to texture
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, workCanvas);
             }
