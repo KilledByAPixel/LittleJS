@@ -309,7 +309,7 @@ class TileLayer extends CanvasLayer
         
         /** @property {TileInfo} - Default tile info for layer */
         this.tileInfo = undefined;
-        /** @property {Array<TileLayerData>} - Default tile info for layer */
+        /** @property {Array<TileLayerData>} - Array of tile data for the layer */
         this.data = [];
         /** @property {boolean} - Is this layer using a webgl texture? */
         this.isUsingWebGL = false;
@@ -394,7 +394,7 @@ class TileLayer extends CanvasLayer
 
         const size = this.drawSize || this.size;
         const pos = this.pos.add(size.scale(.5));
-        this.draw(pos, this.size, this.color, this.angle, this.mirror, this.additiveColor);
+        this.draw(pos, size, this.color, this.angle, this.mirror, this.additiveColor);
     }
 
     /** Called after this layer is redrawn, does nothing by default */
