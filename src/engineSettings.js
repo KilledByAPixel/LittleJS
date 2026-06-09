@@ -358,6 +358,7 @@ let vibrateEnable = true;
 let soundEnable = true;
 
 /** Volume scale to apply to all sound, music and speech
+ *  Use setSoundVolume to also update the audio master gain immediately
  *  @type {number}
  *  @default
  *  @memberof Settings */

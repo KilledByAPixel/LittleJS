@@ -16,8 +16,8 @@
 let postProcess;
 
 /////////////////////////////////////////////////////////////////////////
-/** 
- * UI System Global Object
+/**
+ * Post Process Plugin - Applies a full screen shader to the rendered output
  * @memberof PostProcess
  */
 class PostProcessPlugin
