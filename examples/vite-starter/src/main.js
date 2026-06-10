@@ -28,9 +28,5 @@ function gameRenderPost() {
 }
 
 // tiles.png lives in public/, served from the site root in dev and build
+// (on save, the vite config forces a full page reload instead of HMR)
 engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']);
-
-// LittleJS owns global engine state (canvas, WebGL, input, RAF loop), so
-// partial HMR would leave ghost listeners and a duplicate render loop.
-// Force a full page reload on every save instead.
-if (import.meta.hot) import.meta.hot.accept(() => location.reload());
