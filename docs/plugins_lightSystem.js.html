@@ -1,0 +1,333 @@
+<!DOCTYPE html><html lang="en" style="font-size:16px"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="./static/favicon.png"><meta name="description" content="LittleJS is a lightweight HTML5 game engine with fast WebGL rendering, physics, particles, sound, and more!"><meta name="keywords" content="javascript, game engine, html5, webgl, 2d, game development, indie games"><meta name="author" content="Frank Force"><meta property="og:title" content="LittleJS - The Tiny JavaScript Game Engine"><meta property="og:description" content="Lightweight HTML5 game engine with WebGL rendering, physics, and sound"><meta property="og:type" content="website"><title>Source: plugins/lightSystem.js</title><!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]--><script src="scripts/third-party/hljs.js" defer="defer"></script><script src="scripts/third-party/hljs-line-num.js" defer="defer"></script><script src="scripts/third-party/popper.js" defer="defer"></script><script src="scripts/third-party/tippy.js" defer="defer"></script><script src="scripts/third-party/tocbot.min.js"></script><script>var baseURL="/",locationPathname="";baseURL=(baseURL=(baseURL="https://killedbyapixel.github.io/LittleJS/docs/").replace(/https?:\/\//i,"")).substr(baseURL.indexOf("/"))</script><link rel="stylesheet" href="styles/clean-jsdoc-theme.min.css"><svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><defs><symbol id="copy-icon" viewbox="0 0 488.3 488.3"><g><path d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z"/><path d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z"/></g></symbol><symbol id="search-icon" viewBox="0 0 512 512"><g><g><path d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z"/></g></g><g><g><path d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z"/></g></g></symbol><symbol id="font-size-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11.246 15H4.754l-2 5H.6L7 4h2l6.4 16h-2.154l-2-5zm-.8-2L8 6.885 5.554 13h4.892zM21 12.535V12h2v8h-2v-.535a4 4 0 1 1 0-6.93zM19 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="add-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></symbol><symbol id="minus-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 11h14v2H5z"/></symbol><symbol id="dark-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z"/></symbol><symbol id="light-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/></symbol><symbol id="reset-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.537 19.567A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10c0 2.136-.67 4.116-1.81 5.74L17 12h3a8 8 0 1 0-2.46 5.772l.997 1.795z"/></symbol><symbol id="down-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"></path></symbol><symbol id="codepen-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M16.5 13.202L13 15.535v3.596L19.197 15 16.5 13.202zM14.697 12L12 10.202 9.303 12 12 13.798 14.697 12zM20 10.869L18.303 12 20 13.131V10.87zM19.197 9L13 4.869v3.596l3.5 2.333L19.197 9zM7.5 10.798L11 8.465V4.869L4.803 9 7.5 10.798zM4.803 15L11 19.131v-3.596l-3.5-2.333L4.803 15zM4 13.131L5.697 12 4 10.869v2.262zM2 9a1 1 0 0 1 .445-.832l9-6a1 1 0 0 1 1.11 0l9 6A1 1 0 0 1 22 9v6a1 1 0 0 1-.445.832l-9 6a1 1 0 0 1-1.11 0l-9-6A1 1 0 0 1 2 15V9z"/></symbol><symbol id="close-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z"/></symbol><symbol id="menu-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/></symbol></defs></svg></head><body data-theme="dark"><div class="sidebar-container"><div class="sidebar" id="sidebar"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="sidebar-items-container"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div></div></div><div class="navbar-container" id="VuAckcnZhf"><nav class="navbar"><div class="navbar-left-items"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="navbar-right-items"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div><nav></nav></nav></div><div class="toc-container"><div class="toc-content"><span class="bold">On this page</span><div id="eed4d2a0bfd64539bb9df78095dec881"></div></div></div><div class="body-wrapper"><div class="main-content"><div class="main-wrapper"><section id="source-page" class="source-page"><header><h1 id="title" class="has-anchor">plugins_lightSystem.js</h1></header><article><pre class="prettyprint source lang-js"><code>/**
+ * LittleJS Light System Plugin
+ * - Adds 2D dynamic lighting to the scene
+ * - Lights are first-class EngineObjects (the Light class)
+ * - Each Light draws a soft falloff blob of its color into a shared lightmap
+ * - Lights accumulate ADDITIVELY in the lightmap (red + blue = magenta)
+ * - The lightmap is then MULTIPLIED with the scene during composite, so unlit
+ *   areas go to the ambient color and lit areas show the scene tinted by the
+ *   accumulated light color
+ * - Draw the world at full brightness — the lightmap does the darkening
+ * - Any EngineObject may override renderLight() to additively contribute to the
+ *   lightmap (e.g. emissive lava tiles, weapon flashes, glowing crystals)
+ * - Must be constructed BEFORE PostProcessPlugin so post-process sees lit pixels
+ * @namespace LightSystem
+ */
+
+'use strict';
+
+///////////////////////////////////////////////////////////////////////////////
+
+/** Global Light System plugin object
+ *  @type {LightSystemPlugin}
+ *  @memberof LightSystem */
+let lightSystem;
+
+///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * LightSystemPlugin
+ * - Owns the offscreen lightmap texture, falloff/composite shaders, and the
+ *   per-frame render pass that multiplies the lightmap onto the WebGL scene
+ * - The composite is MULTIPLICATIVE: unlit areas get the ambient color, lit
+ *   areas show the scene tinted by the accumulated light color. So you should
+ *   draw your world at full brightness — the lightmap handles the darkening.
+ * @memberof LightSystem
+ */
+class LightSystemPlugin
+{
+    /** Create the global light system plugin.
+     *  @param {Vector2} [textureSize]  - Size of the lightmap texture (defaults to mainCanvasSize)
+     *  @param {Color}   [ambientColor] - Color applied to unlit areas of the scene (defaults to BLACK = pitch dark). Set a small RGB like rgb(0.1,0.1,0.15) for a faint "moonlight" baseline so unlit areas aren't fully black.
+     *  @example
+     *  // simplest usage
+     *  new LightSystemPlugin();
+     */
+    constructor(textureSize, ambientColor)
+    {
+        ASSERT(!lightSystem, 'LightSystemPlugin already initialized');
+        ASSERT(!postProcess, 'LightSystemPlugin must be created before PostProcessPlugin');
+        lightSystem = this;
+
+        /** @property {boolean} - When false, the render pass is skipped entirely */
+        this.enabled = true;
+        /** @property {Color} - Baseline color applied to unlit areas of the scene. Defaults to BLACK (pitch dark). Set to a small RGB for a faint ambient. The lightmap is cleared to this color each frame, then lights add on top, then the result multiplies the scene. */
+        this.ambientColor = (ambientColor || BLACK).copy();
+        /** @property {Vector2} - Size of the lightmap texture (set at construction; falls back to mainCanvasSize at init time) */
+        this.textureSize = textureSize ? textureSize.copy() : undefined;
+
+        /** @property {WebGLTexture} - The lightmap texture */
+        this.texture = undefined;
+        /** @property {WebGLProgram} - Shader for drawing per-Light falloff blobs into the lightmap */
+        this.lightShader = undefined;
+        /** @property {WebGLProgram} - Shader for compositing the lightmap over the main scene */
+        this.compositeShader = undefined;
+        /** @property {WebGLVertexArrayObject} - Vertex array object for the light shader */
+        this.lightVAO = undefined;
+        /** @property {WebGLVertexArrayObject} - Vertex array object for the composite shader */
+        this.compositeVAO = undefined;
+
+        initLightSystem();
+        engineAddPlugin(undefined, lightSystemRender,
+            lightSystemContextLost, lightSystemContextRestored);
+
+        function initLightSystem()
+        {
+            if (headlessMode) return;
+            if (!glEnable)
+            {
+                console.warn('LightSystemPlugin: WebGL not enabled!');
+                return;
+            }
+
+            // resolve texture size default at init time (mainCanvasSize may
+            // not be set yet at the moment the constructor first ran)
+            if (!lightSystem.textureSize)
+                lightSystem.textureSize = mainCanvasSize.copy();
+
+            // allocate the lightmap texture with null data at textureSize
+            lightSystem.texture = glContext.createTexture();
+            glContext.bindTexture(glContext.TEXTURE_2D, lightSystem.texture);
+            glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA,
+                lightSystem.textureSize.x, lightSystem.textureSize.y, 0,
+                glContext.RGBA, glContext.UNSIGNED_BYTE, null);
+            glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, glContext.LINEAR);
+            glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, glContext.LINEAR);
+            glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, glContext.CLAMP_TO_EDGE);
+            glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, glContext.CLAMP_TO_EDGE);
+
+            // light falloff shader: one quad per Light, fragment computes radial falloff
+            lightSystem.lightShader = glCreateProgram(
+                '#version 300 es\n' +
+                'precision highp float;'+
+                'uniform mat4 m;'+
+                'uniform vec2 lightPos;'+
+                'uniform float radius;'+
+                'in vec2 g;'+              // unit quad geometry [0..1]
+                'out vec2 vWorldPos;'+
+                'void main(){'+
+                'vec2 worldP=lightPos+(g-.5)*2.*radius;'+
+                'gl_Position=m*vec4(worldP,1,1);'+
+                'vWorldPos=worldP;'+
+                '}'
+                ,
+                '#version 300 es\n' +
+                'precision highp float;'+
+                'uniform vec2 lightPos;'+
+                'uniform float radius;'+
+                'uniform float fadeRange;'+
+                'uniform vec4 color;'+
+                'in vec2 vWorldPos;'+
+                'out vec4 c;'+
+                'void main(){'+
+                'float dist=distance(vWorldPos,lightPos);'+
+                'float t=clamp((radius-dist)/max(fadeRange,1e-6),0.,1.);'+
+                'c=vec4(color.rgb*t*color.a,1.);'+
+                '}'
+            );
+
+            // composite shader: fullscreen quad, samples the lightmap
+            lightSystem.compositeShader = glCreateProgram(
+                '#version 300 es\n' +
+                'precision highp float;'+
+                'in vec2 p;'+
+                'void main(){'+
+                'gl_Position=vec4(p+p-1.,1,1);'+
+                '}'
+                ,
+                '#version 300 es\n' +
+                'precision highp float;'+
+                'uniform sampler2D s;'+
+                'uniform vec3 iResolution;'+
+                'out vec4 c;'+
+                'void main(){'+
+                'vec2 uv=gl_FragCoord.xy/iResolution.xy;'+
+                'c=vec4(texture(s,uv).rgb,1.);'+
+                '}'
+            );
+
+            // VAO for the per-Light quad — reuses the engine unit triangle-strip
+            lightSystem.lightVAO = glContext.createVertexArray();
+            glContext.bindVertexArray(lightSystem.lightVAO);
+            glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
+            const gLight = glContext.getAttribLocation(lightSystem.lightShader, 'g');
+            glContext.enableVertexAttribArray(gLight);
+            glContext.vertexAttribPointer(gLight, 2, glContext.FLOAT, false, 8, 0);
+
+            // VAO for the composite fullscreen quad — same buffer, attribute named 'p'
+            lightSystem.compositeVAO = glContext.createVertexArray();
+            glContext.bindVertexArray(lightSystem.compositeVAO);
+            glContext.bindBuffer(glContext.ARRAY_BUFFER, glGeometryBuffer);
+            const pComp = glContext.getAttribLocation(lightSystem.compositeShader, 'p');
+            glContext.enableVertexAttribArray(pComp);
+            glContext.vertexAttribPointer(pComp, 2, glContext.FLOAT, false, 8, 0);
+        }
+        function lightSystemRender()
+        {
+            if (headlessMode || !glEnable) return;
+            if (!lightSystem.enabled) return;
+            if (!lightSystem.texture) return;     // init failed or context lost
+
+            // 1. flush any in-flight sprite batch from earlier render passes
+            glFlush();
+            const prevAdditive = glAdditive;
+
+            // 2. bind lightmap as render target, clear to ambientColor
+            const ac = lightSystem.ambientColor;
+            glContext.bindFramebuffer(glContext.FRAMEBUFFER, glFramebuffer);
+            glContext.framebufferTexture2D(glContext.FRAMEBUFFER,
+                glContext.COLOR_ATTACHMENT0, glContext.TEXTURE_2D, lightSystem.texture, 0);
+            glContext.viewport(0, 0, lightSystem.textureSize.x, lightSystem.textureSize.y);
+            glContext.clearColor(ac.r, ac.g, ac.b, ac.a);
+            glContext.clear(glContext.COLOR_BUFFER_BIT);
+
+            // 3. walk engineObjects calling renderLight() — additive blend
+            //    (lightmap accumulates raw additive color contributions)
+            setAdditiveBlendMode();
+            glContext.enable(glContext.BLEND);
+            glContext.blendFunc(glContext.ONE, glContext.ONE);
+
+            for (const o of engineObjects)
+                o.destroyed || o.renderLight();
+
+            // 4. drain any sprite-batched draws (e.g. drawTile inside a
+            //    custom renderLight override) so they hit the FBO, not the
+            //    canvas after we unbind
+            glFlush();
+            glContext.bindFramebuffer(glContext.FRAMEBUFFER, null);
+            glContext.viewport(0, 0, mainCanvasSize.x, mainCanvasSize.y);
+
+            // 5. composite: fullscreen quad, multiplicative blend onto glCanvas
+            //    (scene * lightmap — unlit areas go to black, lit areas are
+            //    the scene tinted by the accumulated light color)
+            glContext.useProgram(lightSystem.compositeShader);
+            glContext.bindVertexArray(lightSystem.compositeVAO);
+            glContext.activeTexture(glContext.TEXTURE0);
+            glContext.bindTexture(glContext.TEXTURE_2D, lightSystem.texture);
+            const cs = lightSystem.compositeShader;
+            glContext.uniform1i(glContext.getUniformLocation(cs, 's'), 0);
+            glContext.uniform3f(glContext.getUniformLocation(cs, 'iResolution'),
+                mainCanvas.width, mainCanvas.height, 1);
+            glContext.blendFunc(glContext.DST_COLOR, glContext.ZERO);
+            glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, 4);
+
+            // 6. restore engine state so subsequent draws use the engine's
+            //    tracked texture binding (otherwise glSetTexture would think
+            //    the prior texture was still bound when actually the lightmap
+            //    is, and any debug text / future draw could sample the lightmap)
+            if (glActiveTexture)
+                glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
+            setAdditiveBlendMode(prevAdditive);
+            glSetInstancedMode(true);
+        }
+        function lightSystemContextLost()
+        {
+            lightSystem.texture = undefined;
+            lightSystem.lightShader = undefined;
+            lightSystem.compositeShader = undefined;
+            lightSystem.lightVAO = undefined;
+            lightSystem.compositeVAO = undefined;
+            LOG('LightSystemPlugin: WebGL context lost');
+        }
+        function lightSystemContextRestored()
+        {
+            initLightSystem();
+            LOG('LightSystemPlugin: WebGL context restored');
+        }
+    }
+
+    /** Draw a single Light's falloff blob into the currently bound lightmap.
+     *  Called by Light.renderLight() during the plugin's render pass.
+     *  @param {Light} light */
+    drawLight(light)
+    {
+        if (headlessMode || !glEnable || !this.lightShader) return;
+
+        // drain any sprite-batched draws queued by a previous custom
+        // renderLight() override (e.g. drawRect inside a LavaTile). They were
+        // queued in the engine's instanced-vertex format and must flush with
+        // the engine's shader+VAO bound — NOT this plugin's light shader.
+        glFlush();
+
+        glContext.useProgram(this.lightShader);
+        glContext.bindVertexArray(this.lightVAO);
+
+        // re-apply the engine camera transform onto this shader. Divide by
+        // mainCanvasSize (not textureSize) so world→NDC matches the main
+        // pass; the viewport handles the lightmap's actual resolution.
+        // No y-flip here: the composite samples this FBO with
+        // gl_FragCoord/iResolution (origin bottom-left), so storing world
+        // +Y at the top of the texture lines up with the canvas convention.
+        const s = vec2(2*cameraScale).divide(mainCanvasSize);
+        const rotatedCam = cameraPos.rotate(-cameraAngle);
+        const p = vec2(-1).subtract(rotatedCam.multiply(s));
+        const ca = cos(cameraAngle);
+        const sa = sin(cameraAngle);
+        const transform = [
+            s.x  * ca,  s.y * sa, 0, 0,
+            -s.x * sa,  s.y * ca, 0, 0,
+            1,          1,        1, 0,
+            p.x,        p.y,      0, 1];
+
+        const ls = this.lightShader;
+        glContext.uniformMatrix4fv(glContext.getUniformLocation(ls, 'm'), false, transform);
+        glContext.uniform2f(glContext.getUniformLocation(ls, 'lightPos'), light.pos.x, light.pos.y);
+        glContext.uniform1f(glContext.getUniformLocation(ls, 'radius'), light.radius);
+        glContext.uniform1f(glContext.getUniformLocation(ls, 'fadeRange'), light.fadeRange);
+        const c = light.color;
+        glContext.uniform4f(glContext.getUniformLocation(ls, 'color'), c.r, c.g, c.b, c.a);
+
+        glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, 4);
+
+        // restore engine's instanced shader+VAO so subsequent renderLight()
+        // overrides that batch through drawRect/drawTile work correctly
+        glSetInstancedMode(true);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * A Light is an EngineObject that contributes a soft additive blob of color
+ * to the LightSystem plugin's lightmap.
+ * @extends EngineObject
+ * @memberof LightSystem
+ * @example
+ * new Light(vec2(5, 5), 4, rgb(1, 0.5, 0));        // orange light, full soft blob
+ * new Light(vec2(0, 0), 8, rgb(1, 1, 1), 2);       // white core with 2-unit soft halo
+ */
+class Light extends EngineObject
+{
+    /** Create a light object and add it to the engine object list
+     *  @param {Vector2} pos - World space position
+     *  @param {number} radius - Total extent of the light in world units
+     *  @param {Color} [color] - Color of the light; alpha modulates intensity
+     *  @param {number} [fadeRange] - Width of the soft edge in world units (defaults to radius) */
+    constructor(pos, radius, color, fadeRange)
+    {
+        super(pos, vec2(1), undefined, 0, color);
+        ASSERT(isNumber(radius) &amp;&amp; radius >= 0, 'Light radius must be a non-negative number');
+        ASSERT(fadeRange === undefined || (isNumber(fadeRange) &amp;&amp; fadeRange >= 0),
+            'Light fadeRange must be a non-negative number when provided');
+
+        /** @property {number} - Total extent of the light in world units */
+        this.radius = radius;
+        /** @property {number} - Width of the soft edge in world units */
+        this.fadeRange = fadeRange === undefined ? radius : fadeRange;
+    }
+
+    /** Lights are invisible in the main render pass — they only contribute
+     *  to the lightmap via renderLight(). */
+    render() {}
+
+    /** Draw this light's falloff blob into the lightmap.
+     *  Called by LightSystemPlugin during its render pass. No-op when the
+     *  plugin or WebGL is unavailable. */
+    renderLight()
+    {
+        lightSystem &amp;&amp; lightSystem.drawLight(this);
+    }
+}
+</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>

@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="en" style="font-size:16px"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="./static/favicon.png"><meta name="description" content="LittleJS is a lightweight HTML5 game engine with fast WebGL rendering, physics, particles, sound, and more!"><meta name="keywords" content="javascript, game engine, html5, webgl, 2d, game development, indie games"><meta name="author" content="Frank Force"><meta property="og:title" content="LittleJS - The Tiny JavaScript Game Engine"><meta property="og:description" content="Lightweight HTML5 game engine with WebGL rendering, physics, and sound"><meta property="og:type" content="website"><title>Source: src/engineInput.js</title><!--[if lt IE 9]>
       <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]--><script src="scripts/third-party/hljs.js" defer="defer"></script><script src="scripts/third-party/hljs-line-num.js" defer="defer"></script><script src="scripts/third-party/popper.js" defer="defer"></script><script src="scripts/third-party/tippy.js" defer="defer"></script><script src="scripts/third-party/tocbot.min.js"></script><script>var baseURL="/",locationPathname="";baseURL=(baseURL=(baseURL="https://killedbyapixel.github.io/LittleJS/docs/").replace(/https?:\/\//i,"")).substr(baseURL.indexOf("/"))</script><link rel="stylesheet" href="styles/clean-jsdoc-theme.min.css"><svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><defs><symbol id="copy-icon" viewbox="0 0 488.3 488.3"><g><path d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z"/><path d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z"/></g></symbol><symbol id="search-icon" viewBox="0 0 512 512"><g><g><path d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z"/></g></g><g><g><path d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z"/></g></g></symbol><symbol id="font-size-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11.246 15H4.754l-2 5H.6L7 4h2l6.4 16h-2.154l-2-5zm-.8-2L8 6.885 5.554 13h4.892zM21 12.535V12h2v8h-2v-.535a4 4 0 1 1 0-6.93zM19 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="add-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></symbol><symbol id="minus-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 11h14v2H5z"/></symbol><symbol id="dark-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z"/></symbol><symbol id="light-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/></symbol><symbol id="reset-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.537 19.567A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10c0 2.136-.67 4.116-1.81 5.74L17 12h3a8 8 0 1 0-2.46 5.772l.997 1.795z"/></symbol><symbol id="down-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"></path></symbol><symbol id="codepen-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M16.5 13.202L13 15.535v3.596L19.197 15 16.5 13.202zM14.697 12L12 10.202 9.303 12 12 13.798 14.697 12zM20 10.869L18.303 12 20 13.131V10.87zM19.197 9L13 4.869v3.596l3.5 2.333L19.197 9zM7.5 10.798L11 8.465V4.869L4.803 9 7.5 10.798zM4.803 15L11 19.131v-3.596l-3.5-2.333L4.803 15zM4 13.131L5.697 12 4 10.869v2.262zM2 9a1 1 0 0 1 .445-.832l9-6a1 1 0 0 1 1.11 0l9 6A1 1 0 0 1 22 9v6a1 1 0 0 1-.445.832l-9 6a1 1 0 0 1-1.11 0l-9-6A1 1 0 0 1 2 15V9z"/></symbol><symbol id="close-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z"/></symbol><symbol id="menu-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/></symbol></defs></svg></head><body data-theme="dark"><div class="sidebar-container"><div class="sidebar" id="sidebar"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="sidebar-items-container"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div></div></div><div class="navbar-container" id="VuAckcnZhf"><nav class="navbar"><div class="navbar-left-items"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="navbar-right-items"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div><nav></nav></nav></div><div class="toc-container"><div class="toc-content"><span class="bold">On this page</span><div id="eed4d2a0bfd64539bb9df78095dec881"></div></div></div><div class="body-wrapper"><div class="main-content"><div class="main-wrapper"><section id="source-page" class="source-page"><header><h1 id="title" class="has-anchor">src_engineInput.js</h1></header><article><pre class="prettyprint source lang-js"><code>/**
+    <![endif]--><script src="scripts/third-party/hljs.js" defer="defer"></script><script src="scripts/third-party/hljs-line-num.js" defer="defer"></script><script src="scripts/third-party/popper.js" defer="defer"></script><script src="scripts/third-party/tippy.js" defer="defer"></script><script src="scripts/third-party/tocbot.min.js"></script><script>var baseURL="/",locationPathname="";baseURL=(baseURL=(baseURL="https://killedbyapixel.github.io/LittleJS/docs/").replace(/https?:\/\//i,"")).substr(baseURL.indexOf("/"))</script><link rel="stylesheet" href="styles/clean-jsdoc-theme.min.css"><svg aria-hidden="true" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="display:none"><defs><symbol id="copy-icon" viewbox="0 0 488.3 488.3"><g><path d="M314.25,85.4h-227c-21.3,0-38.6,17.3-38.6,38.6v325.7c0,21.3,17.3,38.6,38.6,38.6h227c21.3,0,38.6-17.3,38.6-38.6V124    C352.75,102.7,335.45,85.4,314.25,85.4z M325.75,449.6c0,6.4-5.2,11.6-11.6,11.6h-227c-6.4,0-11.6-5.2-11.6-11.6V124    c0-6.4,5.2-11.6,11.6-11.6h227c6.4,0,11.6,5.2,11.6,11.6V449.6z"/><path d="M401.05,0h-227c-21.3,0-38.6,17.3-38.6,38.6c0,7.5,6,13.5,13.5,13.5s13.5-6,13.5-13.5c0-6.4,5.2-11.6,11.6-11.6h227    c6.4,0,11.6,5.2,11.6,11.6v325.7c0,6.4-5.2,11.6-11.6,11.6c-7.5,0-13.5,6-13.5,13.5s6,13.5,13.5,13.5c21.3,0,38.6-17.3,38.6-38.6    V38.6C439.65,17.3,422.35,0,401.05,0z"/></g></symbol><symbol id="search-icon" viewBox="0 0 512 512"><g><g><path d="M225.474,0C101.151,0,0,101.151,0,225.474c0,124.33,101.151,225.474,225.474,225.474    c124.33,0,225.474-101.144,225.474-225.474C450.948,101.151,349.804,0,225.474,0z M225.474,409.323    c-101.373,0-183.848-82.475-183.848-183.848S124.101,41.626,225.474,41.626s183.848,82.475,183.848,183.848    S326.847,409.323,225.474,409.323z"/></g></g><g><g><path d="M505.902,476.472L386.574,357.144c-8.131-8.131-21.299-8.131-29.43,0c-8.131,8.124-8.131,21.306,0,29.43l119.328,119.328    c4.065,4.065,9.387,6.098,14.715,6.098c5.321,0,10.649-2.033,14.715-6.098C514.033,497.778,514.033,484.596,505.902,476.472z"/></g></g></symbol><symbol id="font-size-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11.246 15H4.754l-2 5H.6L7 4h2l6.4 16h-2.154l-2-5zm-.8-2L8 6.885 5.554 13h4.892zM21 12.535V12h2v8h-2v-.535a4 4 0 1 1 0-6.93zM19 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></symbol><symbol id="add-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2z"/></symbol><symbol id="minus-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M5 11h14v2H5z"/></symbol><symbol id="dark-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M10 7a7 7 0 0 0 12 4.9v.1c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2h.1A6.979 6.979 0 0 0 10 7zm-6 5a8 8 0 0 0 15.062 3.762A9 9 0 0 1 8.238 4.938 7.999 7.999 0 0 0 4 12z"/></symbol><symbol id="light-theme-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.515 4.929l1.414-1.414L7.05 5.636 5.636 7.05 3.515 4.93zM16.95 18.364l1.414-1.414 2.121 2.121-1.414 1.414-2.121-2.121zm2.121-14.85l1.414 1.415-2.121 2.121-1.414-1.414 2.121-2.121zM5.636 16.95l1.414 1.414-2.121 2.121-1.414-1.414 2.121-2.121zM23 11v2h-3v-2h3zM4 11v2H1v-2h3z"/></symbol><symbol id="reset-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.537 19.567A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10c0 2.136-.67 4.116-1.81 5.74L17 12h3a8 8 0 1 0-2.46 5.772l.997 1.795z"/></symbol><symbol id="down-icon" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M12.7803 6.21967C13.0732 6.51256 13.0732 6.98744 12.7803 7.28033L8.53033 11.5303C8.23744 11.8232 7.76256 11.8232 7.46967 11.5303L3.21967 7.28033C2.92678 6.98744 2.92678 6.51256 3.21967 6.21967C3.51256 5.92678 3.98744 5.92678 4.28033 6.21967L8 9.93934L11.7197 6.21967C12.0126 5.92678 12.4874 5.92678 12.7803 6.21967Z"></path></symbol><symbol id="codepen-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M16.5 13.202L13 15.535v3.596L19.197 15 16.5 13.202zM14.697 12L12 10.202 9.303 12 12 13.798 14.697 12zM20 10.869L18.303 12 20 13.131V10.87zM19.197 9L13 4.869v3.596l3.5 2.333L19.197 9zM7.5 10.798L11 8.465V4.869L4.803 9 7.5 10.798zM4.803 15L11 19.131v-3.596l-3.5-2.333L4.803 15zM4 13.131L5.697 12 4 10.869v2.262zM2 9a1 1 0 0 1 .445-.832l9-6a1 1 0 0 1 1.11 0l9 6A1 1 0 0 1 22 9v6a1 1 0 0 1-.445.832l-9 6a1 1 0 0 1-1.11 0l-9-6A1 1 0 0 1 2 15V9z"/></symbol><symbol id="close-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z"/></symbol><symbol id="menu-icon" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0z"/><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"/></symbol></defs></svg></head><body data-theme="dark"><div class="sidebar-container"><div class="sidebar" id="sidebar"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="sidebar-items-container"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div></div></div><div class="navbar-container" id="VuAckcnZhf"><nav class="navbar"><div class="navbar-left-items"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="navbar-right-items"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div><nav></nav></nav></div><div class="toc-container"><div class="toc-content"><span class="bold">On this page</span><div id="eed4d2a0bfd64539bb9df78095dec881"></div></div></div><div class="body-wrapper"><div class="main-content"><div class="main-wrapper"><section id="source-page" class="source-page"><header><h1 id="title" class="has-anchor">src_engineInput.js</h1></header><article><pre class="prettyprint source lang-js"><code>/**
  * LittleJS Input System
  * - Keyboard input with key down, pressed, and released states
  * - Mouse input with position (world and screen space), buttons, and wheel
@@ -45,10 +45,29 @@ let mouseWheel = 0;
  *  @memberof Input */
 let mouseInWindow = true;
 
-/** Returns true if user is using gamepad (has more recently pressed a gamepad button)
+/** True if a gamepad is the most recently used input device.
+ *  Equivalent to usingGamepadInput(); derived from lastInputDevice each frame.
  *  @type {boolean}
  *  @memberof Input */
 let isUsingGamepad = false;
+
+/** The most recently used input device: 'mouse' | 'keyboard' | 'gamepad'.
+ *  Sticky: it holds its value while every device is idle, so a mouse-follow
+ *  control (e.g. paddle = mousePos) won't snap back the instant the stick/keys
+ *  are released. With several devices in play at once (e.g. keyboard to move +
+ *  mouse to aim) it tracks whichever was touched last each frame, so it may
+ *  alternate — that's intended; use it to pick which control drives a shared
+ *  action. Updated every frame by inputUpdate().
+ *  @type {string}
+ *  @memberof Input */
+let lastInputDevice = 'mouse';
+
+/** Screen-pixel mouse movement per frame that counts as "using the mouse"
+ *  (so sub-pixel hand jitter doesn't steal focus from the keyboard/gamepad).
+ *  @type {number}
+ *  @default
+ *  @memberof Input */
+let inputMouseMoveThreshold = 6;
 
 /** Prevents input continuing to the default browser handling (true by default)
  *  @type {boolean}
@@ -69,6 +88,18 @@ const isTouchDevice = !headlessMode &amp;&amp; window.ontouchstart !== undefined
  *  @param {boolean} preventDefault
  *  @memberof Input */
 function setInputPreventDefault(preventDefault=true) { inputPreventDefault = preventDefault; }
+
+/** Set the screen-pixel mouse movement per frame that counts as using the mouse
+ *  @param {number} threshold
+ *  @memberof Input */
+function setInputMouseMoveThreshold(threshold) { inputMouseMoveThreshold = threshold; }
+
+/** @return {boolean} - Is the mouse the most recently used input device?    @memberof Input */
+function usingMouseInput()    { return lastInputDevice === 'mouse'; }
+/** @return {boolean} - Is the keyboard the most recently used input device? @memberof Input */
+function usingKeyboardInput() { return lastInputDevice === 'keyboard'; }
+/** @return {boolean} - Is a gamepad the most recently used input device?    @memberof Input */
+function usingGamepadInput()  { return lastInputDevice === 'gamepad'; }
 
 /** Clears an input key state
  *  @param {string|number} key
@@ -92,6 +123,7 @@ function inputClear()
     inputData[0] = [];
     touchGamepadButtons.length = 0;
     touchGamepadSticks.length = 0;
+    touchGamepadStickPointerId.length = 0; // release floating sticks so they re-anchor
     gamepadStickData.length = 0;
     gamepadDpadData.length = 0;
 }
@@ -334,6 +366,14 @@ const gamepadStickData = [], gamepadDpadData = [], gamepadHadInput = [];
 
 // touch gamepad internal variables
 const touchGamepadTimer = new Timer, touchGamepadButtons = [], touchGamepadSticks = [];
+// floating stick anchors (stage-local CSS pixels) and owning pointer ids, indexed by stick (0=left, 1=right)
+const touchGamepadStickAnchors = [], touchGamepadStickPointerId = [];
+// pointerId -> control role ('stick0', 'stick1', 'face&lt;n>', or 'start')
+const touchGamepadPointerRole = new Map();
+// overlay DOM elements (created lazily on touch devices) and cached SVG shapes
+let touchGamepadOverlay, touchGamepadStage, touchGamepadSvg, touchGamepadSvgEls;
+let touchGamepadSideZones = [], touchGamepadZoneC;
+let touchGamepadNeedRelayout = true, touchGamepadLastLayout;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Input system functions used by engine
@@ -361,7 +401,6 @@ function inputInit()
     {
         if (!e.repeat)
         {
-            isUsingGamepad = false;
             inputData[0][e.code] = 3;
             if (inputWASDEmulateDirection)
                 inputData[0][remapKey(e.code)] = 3;
@@ -401,7 +440,10 @@ function inputInit()
     {
         inputData[0][e.code] = (inputData[0][e.code]&amp;2) | 4;
         if (inputWASDEmulateDirection)
-            inputData[0][remapKey(e.code)] = 4;
+        {
+            const remap = remapKey(e.code);
+            inputData[0][remap] = (inputData[0][remap]&amp;2) | 4;
+        }
     }
     function remapKey(k)
     {
@@ -420,7 +462,6 @@ function inputInit()
         if (soundEnable &amp;&amp; !headlessMode &amp;&amp; audioContext &amp;&amp; !audioIsRunning())
             audioContext.resume();
 
-        isUsingGamepad = false;
         inputData[0][e.button] = 3;
 
         const mousePosScreenLast = mousePosScreen;
@@ -458,7 +499,15 @@ function inputInit()
             e.preventDefault(); // prevent page scrolling
     }
     function onContextMenu(e) { e.preventDefault(); } // prevent right click menu
-    function onBlur() { inputClear(); } // reset input when focus is lost
+    function onBlur()
+    {
+        inputClear();
+        // release any held virtual gamepad controls so they don't stick
+        touchGamepadPointerRole.clear();
+        touchGamepadButtons.length = 0;
+        touchGamepadSticks.length = 0;
+        touchGamepadStickPointerId.length = 0;
+    }
 
     // enable touch input mouse passthrough
     function touchInputInit()
@@ -469,41 +518,49 @@ function inputInit()
         document.addEventListener('touchend',   (e)=> handleTouch(e), { passive: false });
 
         // handle all touch events the same way
-        let wasTouching;
+        let wasTouching, touchIdentifier;
         function handleTouch(e)
         {
             if (!touchInputEnable) return;
-
-            // route touch to gamepad
-            if (touchGamepadEnable)
-                handleTouchGamepad(e);
 
             // fix stalled audio requiring user interaction
             if (soundEnable &amp;&amp; !headlessMode &amp;&amp; audioContext &amp;&amp; !audioIsRunning())
                 audioContext.resume();
 
-            // check if touching and pass to mouse events
-            const touching = e.touches.length;
-            const button = 0; // all touches are left mouse button
-            if (touching)
+            // when the touch gamepad is enabled it owns touch input: suppress the
+            // touch->mouse passthrough entirely unless touchGamepadPassthrough is set
+            // (its own zones drive gameplay via pointer events)
+            if (!touchGamepadEnable || touchGamepadPassthrough)
             {
-                // set event pos and pass it along
-                const pos = vec2(e.touches[0].clientX, e.touches[0].clientY);
-                const mousePosScreenLast = mousePosScreen;
-                mousePosScreen = mouseEventToScreen(pos);
-                if (wasTouching)
-                {
-                    mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
-                    isUsingGamepad = touchGamepadEnable;
-                }
-                else
-                    inputData[0][button] = 3;
-            }
-            else if (wasTouching)
-                inputData[0][button] = inputData[0][button] &amp; 2 | 4;
+                // touches that landed on a virtual gamepad zone are owned by the gamepad
+                // (handled by its own pointer listeners) and must not drive the game mouse
+                const isGamepadTouch = (t)=>
+                    touchGamepadSideZones.includes(t.target) || t.target === touchGamepadZoneC;
+                const gameTouches = [];
+                for (const t of e.touches)
+                    if (!isGamepadTouch(t)) gameTouches.push(t);
 
-            // set was touching
-            wasTouching = touching;
+                // check if touching and pass to mouse events
+                const touching = gameTouches.length;
+                const button = 0; // all touches are left mouse button
+                if (touching)
+                {
+                    // set event pos and pass it along
+                    const pos = vec2(gameTouches[0].clientX, gameTouches[0].clientY);
+                    const mousePosScreenLast = mousePosScreen;
+                    mousePosScreen = mouseEventToScreen(pos);
+                    if (wasTouching &amp;&amp; gameTouches[0].identifier === touchIdentifier)
+                        mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
+                    else if (!wasTouching)
+                        inputData[0][button] = 3;
+                    touchIdentifier = gameTouches[0].identifier;
+                }
+                else if (wasTouching)
+                    inputData[0][button] = inputData[0][button] &amp; 2 | 4;
+
+                // set was touching
+                wasTouching = touching;
+            }
 
             // prevent default handling like copy, magnifier lens, and scrolling
             if (inputPreventDefault &amp;&amp; e.cancelable &amp;&amp; document.hasFocus())
@@ -513,83 +570,6 @@ function inputInit()
             return true;
         }
 
-        // special handling for virtual gamepad mode
-        function handleTouchGamepad(e)
-        {
-            // clear touch gamepad input
-            touchGamepadSticks.length = 0;
-            touchGamepadSticks[0] = vec2();
-            touchGamepadSticks[1] = vec2();
-            touchGamepadButtons.length = 0;
-            isUsingGamepad = true;
-
-            const touching = e.touches.length;
-            if (touching)
-            {
-                touchGamepadTimer.set();
-                if (touchGamepadCenterButtonSize &amp;&amp; !wasTouching &amp;&amp; paused)
-                {
-                    // touch anywhere to press start when paused
-                    touchGamepadButtons[9] = 1;
-                    return;
-                }
-            }
-
-            // don't process touch gamepad if paused
-            if (paused) return;
-
-            // get center of left and right sides
-            const stickCenter = vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
-            const buttonCenter = touchGamepadButtonCenter();
-            const startCenter = mainCanvasSize.scale(.5);
-
-            // check each touch point
-            for (const touch of e.touches)
-            {
-                const touchPos = mouseEventToScreen(vec2(touch.clientX, touch.clientY));
-                if (stickCenter.distance(touchPos) &lt; touchGamepadSize)
-                {
-                    // virtual analog stick
-                    const delta = touchPos.subtract(stickCenter);
-                    touchGamepadSticks[0] = delta.scale(2/touchGamepadSize).clampLength();
-                    touchGamepadButtons[10] = 1; // also press a button when touching stick
-                }
-                else if (buttonCenter.distance(touchPos) &lt; touchGamepadSize)
-                {
-                    if (touchGamepadButtonCount === 1)
-                    {
-                        // virtual right analog stick
-                        const delta = touchPos.subtract(buttonCenter);
-                        touchGamepadSticks[1] = delta.scale(2/touchGamepadSize).clampLength();
-                        touchGamepadButtons[11] = 1; // also press a button when touching right stick
-                    }
-                    // virtual face buttons
-                    let button = buttonCenter.subtract(touchPos).direction();
-                    button = mod(button+2, 4);
-                    if (touchGamepadButtonCount === 1)
-                        button = 0;
-                    else if (touchGamepadButtonCount === 2)
-                    {
-                        const delta = buttonCenter.subtract(touchPos);
-                        button = -delta.x &lt; delta.y ? 1 : 0;
-                    }
-                    // fix button locations (swap 2 and 3 to match gamepad layout)
-                    button = button === 3 ? 2 : button === 2 ? 3 : button;
-                    if (button &lt; touchGamepadButtonCount)
-                        touchGamepadButtons[button] = 1;
-                }
-                else if (startCenter.distance(touchPos)  &lt; touchGamepadCenterButtonSize &amp;&amp;
-                         stickCenter.distance(touchPos)  >= 2 * touchGamepadSize &amp;&amp;
-                         buttonCenter.distance(touchPos) >= 2 * touchGamepadSize)
-                {
-                    // virtual start button in center
-                    // require a fat-finger buffer of touchGamepadSize beyond the
-                    // edge of the stick/buttons so drift off those controls can't
-                    // accidentally fire start
-                    touchGamepadButtons[9] = 1;
-                }
-            }
-        }
     }
 
     // convert a mouse or touch event position to screen space
@@ -614,9 +594,48 @@ function inputUpdate()
     mousePos = screenToWorld(mousePosScreen);
     mouseDelta = screenToWorldDelta(mouseDeltaScreen);
 
+    // build the touch gamepad overlay lazily once enabled on a touch device
+    touchGamepadInit();
+
     // update gamepads if enabled
     gamepadsUpdate();
-        
+
+    // update most recently used input device
+    updateLastInputDevice();
+
+    function updateLastInputDevice()
+    {
+        // mouse: any button held or moved
+        const mouseActive = mouseIsDown(0) || mouseIsDown(1) || mouseIsDown(2) || mouseDeltaScreen.length() > inputMouseMoveThreshold;
+
+        // gamepad: any button held or stick moved
+        let gamepadActive = false;
+        for (let s = gamepadStickCount(); s-- &amp;&amp; !gamepadActive;)
+            gamepadActive = gamepadStick(s).lengthSquared() > .04;
+        for (let b = 17; b-- &amp;&amp; !gamepadActive;)
+            gamepadActive = gamepadIsDown(b);
+
+        // keyboard: any non-mouse key down
+        let keyboardActive = false;
+        for (const k in inputData[0])
+            if (isNaN(+k) &amp;&amp; (inputData[0][k] &amp; 1))
+            {
+                keyboardActive = true;
+                break;
+            }
+
+        // update the last input
+        if (gamepadActive)
+            lastInputDevice = 'gamepad';
+        else if (mouseActive)
+            lastInputDevice = 'mouse';
+        else if (keyboardActive)
+            lastInputDevice = 'keyboard';
+
+        // set flag if gamepad is last device
+        isUsingGamepad = lastInputDevice === 'gamepad';
+    }
+
     // gamepads are updated by engine every frame automatically
     function gamepadsUpdate()
     {
@@ -632,22 +651,11 @@ function inputUpdate()
         // update touch gamepad if enabled
         if (touchGamepadEnable &amp;&amp; isTouchDevice)
         {
-            if (debugGamepads)
-            {
-                const stickCenter = vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
-                const buttonCenter = touchGamepadButtonCenter();
-                const startCenter = mainCanvasSize.scale(.5);
-
-                debugCircle(stickCenter, 2*touchGamepadSize, 'cyan', 0, false, true);
-                debugCircle(buttonCenter, 2*touchGamepadSize, 'cyan', 0, false, true);
-                if (touchGamepadCenterButtonSize)
-                {
-                    debugCircle(startCenter, 2*touchGamepadCenterButtonSize, 'cyan', 0, false, true);
-                    // exclusion bubbles around controls (where start is blocked)
-                    debugCircle(stickCenter,  4*touchGamepadSize, 'magenta', 0, false, true);
-                    debugCircle(buttonCenter, 4*touchGamepadSize, 'magenta', 0, false, true);
-                }
-            }
+            // a side is either a stick or buttons - setting both is ambiguous
+            ASSERT(!touchGamepadLeftStick || !touchGamepadLeftButtonCount,
+                'set touchGamepadLeftStick or touchGamepadLeftButtonCount, not both');
+            ASSERT(!touchGamepadRightStick || !touchGamepadButtonCount,
+                'set touchGamepadRightStick or touchGamepadButtonCount, not both');
 
             if (!touchGamepadTimer.isSet()) return;
 
@@ -655,23 +663,24 @@ function inputUpdate()
             gamepadPrimary = 0; // touch gamepad uses index 0
             const sticks = gamepadStickData[0] ?? (gamepadStickData[0] = []);
             const dpad = gamepadDpadData[0] ?? (gamepadDpadData[0] = vec2());
-            sticks[0] = vec2();
+            sticks.length = 0; // only report sticks that are enabled
             dpad.set();
-            const leftTouchStick = touchGamepadSticks[0] ?? vec2();
-            if (touchGamepadAnalog)
-                sticks[0] = applyDeadZones(leftTouchStick);
-            else if (leftTouchStick.lengthSquared() > .3)
+            // read each side's directional stick (analog, or quantized to an 8 way dpad)
+            for (let side = 0; side &lt; 2; side++)
             {
-                // convert to 8 way dpad
-                const x = clamp(round(leftTouchStick.x), -1, 1);
-                const y = clamp(round(leftTouchStick.y), -1, 1);
-                dpad.set(x, -y);
-                sticks[0] = dpad.clampLength(); // clamp to circle
-            }
-            if (touchGamepadButtonCount === 1)
-            {
-                const rightTouchStick = touchGamepadSticks[1] ?? vec2();
-                sticks[1] = applyDeadZones(rightTouchStick);
+                if (!touchGamepadSideStick(side)) continue;
+                const out = touchGamepadStickOut(side);
+                sticks[out] = vec2();
+                const touchStick = touchGamepadSticks[side] ?? vec2();
+                if (touchGamepadAnalog)
+                    sticks[out] = applyDeadZones(touchStick);
+                else if (touchStick.lengthSquared() > .3)
+                {
+                    const x = clamp(round(touchStick.x), -1, 1);
+                    const y = clamp(round(touchStick.y), -1, 1);
+                    sticks[out] = vec2(x, -y).clampLength(); // clamp to circle
+                    if (!out) dpad.set(x, -y); // the primary (stick 0) also drives the dpad vector
+                }
             }
 
             // read virtual gamepad buttons
@@ -680,6 +689,12 @@ function inputUpdate()
             {
                 const wasDown = gamepadIsDown(i,0);
                 data[i] = touchGamepadButtons[i] ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
+
+                // haptic tap when a face button or start button is first pressed (3 = newly down)
+                // skip stick touches (10, 11) so movement doesn't buzz
+                if (touchGamepadVibration &amp;&amp; data[i] === 3 &amp;&amp;
+                    (i === 9 || touchGamepadIsFaceButton(i)))
+                    vibrate(touchGamepadVibration);
             }
 
             // disable normal gamepads when touch gamepad is active
@@ -743,7 +758,6 @@ function inputUpdate()
                 gamepadHadInput[i] = true;
                 if (!gamepadHadInput[gamepadPrimary])
                     gamepadPrimary = i;
-                isUsingGamepad ||= (gamepadPrimary === i);
             }
 
             if (gamepad.mapping === 'standard')
@@ -752,13 +766,6 @@ function inputUpdate()
                 dpad.set(
                     (gamepadIsDown(15,i)&amp;&amp;1) - (gamepadIsDown(14,i)&amp;&amp;1),
                     (gamepadIsDown(12,i)&amp;&amp;1) - (gamepadIsDown(13,i)&amp;&amp;1));
-            }
-            else if (gamepad.axes &amp;&amp; gamepad.axes.length >= 2)
-            {
-                // digital style dpad from axes
-                const x = clamp(round(gamepad.axes[0]), -1, 1);
-                const y = clamp(round(gamepad.axes[1]), -1, 1);
-                dpad.set(x, -y);
             }
 
             // copy dpad to left analog stick when pressed
@@ -787,78 +794,474 @@ function inputUpdatePost()
 function inputRender()
 {
     touchGamepadRender();
+}
 
-    function touchGamepadRender()
+///////////////////////////////////////////////////////////////////////////////
+// Touch gamepad - full-viewport HTML/SVG overlay driven by Pointer Events
+
+const touchGamepadSvgNS = 'http://www.w3.org/2000/svg';
+
+// build the overlay DOM once; no-op if already built, disabled, headless, or non-touch
+function touchGamepadInit()
+{
+    if (touchGamepadOverlay || !touchGamepadEnable || !isTouchDevice || headlessMode ||
+        !document.body) // body may not exist yet; retry on a later frame
+        return;
+
+    // full-viewport overlay; only the input zones receive pointer events. The
+    // env() padding insets the stage out of notches / home indicators natively.
+    const overlay = touchGamepadOverlay = document.createElement('div');
+    overlay.style.cssText =
+        'position:fixed;inset:0;z-index:50;pointer-events:none;opacity:0;' +
+        'touch-action:none;user-select:none;-webkit-user-select:none;' +
+        '-webkit-touch-callout:none;transition:opacity .2s;box-sizing:border-box;' +
+        'padding:env(safe-area-inset-top) env(safe-area-inset-right) ' +
+        'env(safe-area-inset-bottom) env(safe-area-inset-left)';
+
+    // stage fills the padded (safe-area) content box; all controls live inside it
+    const stage = touchGamepadStage = document.createElement('div');
+    stage.style.cssText = 'position:relative;width:100%;height:100%;pointer-events:none';
+    overlay.appendChild(stage);
+
+    // svg draws every visual and never blocks input
+    const svg = touchGamepadSvg = document.createElementNS(touchGamepadSvgNS, 'svg');
+    svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;' +
+        'pointer-events:none;overflow:visible;fill:none;stroke:#fff;stroke-width:3';
+    stage.appendChild(svg);
+
+    // invisible input zones (left stick, right buttons/stick, center start)
+    const makeZone = ()=>
     {
-        if (!touchInputEnable || !isTouchDevice || headlessMode) return;
-        if (!touchGamepadEnable || !touchGamepadTimer.isSet() &amp;&amp; touchGamepadDisplayTime) return;
+        const z = document.createElement('div');
+        z.style.cssText = 'position:absolute;pointer-events:auto;touch-action:none';
+        z.addEventListener('pointerdown', e=> touchGamepadPointerDown(e, z));
+        z.addEventListener('pointermove', e=> touchGamepadPointerMove(e));
+        z.addEventListener('pointerup', e=> touchGamepadPointerUp(e));
+        z.addEventListener('pointercancel', e=> touchGamepadPointerUp(e));
+        stage.appendChild(z);
+        return z;
+    };
+    touchGamepadSideZones[0] = makeZone(); // left
+    touchGamepadSideZones[1] = makeZone(); // right
+    touchGamepadZoneC = makeZone(); // center/start, appended last so it sits above the sides
 
-        // fade off when not touching or paused
-        const alpha = touchGamepadDisplayTime ? percent(touchGamepadTimer.get(), touchGamepadDisplayTime+1, touchGamepadDisplayTime) : 1;
-        if (!alpha || paused) return;
+    addEventListener('resize', ()=> touchGamepadNeedRelayout = true);
+    document.body.appendChild(overlay);
+    touchGamepadNeedRelayout = true;
+}
 
-        // setup the canvas
-        const context = mainContext;
-        context.save();
-        context.globalAlpha = alpha*touchGamepadAlpha;
-        context.strokeStyle = '#fff';
-        context.lineWidth = 3;
+// stage-local size in CSS pixels (excludes safe-area insets)
+function touchGamepadStageRect() { return touchGamepadStage.getBoundingClientRect(); }
 
-        // draw left analog stick
-        const leftTouchStick = touchGamepadSticks[0] ?? vec2();
-        context.fillStyle = leftTouchStick.lengthSquared() > 0 ? '#fff' : '#000';
-        context.beginPath();
-        const stickCenter = vec2(touchGamepadSize, mainCanvasSize.y-touchGamepadSize);
-        if (touchGamepadAnalog)
+// per-side touch gamepad config (side 0 = left, 1 = right) - the left and right
+// sides behave identically, differing only in position and gamepad button indices
+function touchGamepadSideStick(side)
+{ return side ? touchGamepadRightStick : touchGamepadLeftStick; }
+function touchGamepadSideButtonCount(side)
+{ return side ? touchGamepadButtonCount : touchGamepadLeftButtonCount; }
+// gamepad button index a side's buttons start at (right 0-3, left 4-7)
+function touchGamepadSideButtonBase(side)
+{ return side ? 0 : 4; }
+// output stick index for a side: the right stick uses stick 0 when there is no left stick
+function touchGamepadStickOut(side)
+{ return side &amp;&amp; touchGamepadLeftStick ? 1 : 0; }
+// true if the side has any control (a stick or at least one button)
+function touchGamepadSideHasControl(side)
+{ return touchGamepadSideStick(side) || touchGamepadSideButtonCount(side) > 0; }
+
+// true if gamepad button index i is an active touch gamepad face/single button
+function touchGamepadIsFaceButton(i)
+{
+    for (let side = 0; side &lt; 2; side++)
+    {
+        const base = touchGamepadSideButtonBase(side);
+        if (!touchGamepadSideStick(side) &amp;&amp;
+            i >= base &amp;&amp; i &lt; base + touchGamepadSideButtonCount(side))
+            return true;
+    }
+    return false;
+}
+
+// center of a side's controls in stage-local CSS pixels (stick rest / button cluster)
+// returns the floating stick anchor when that side is an active floating stick
+function touchGamepadSideCenter(side, W, H)
+{
+    if (touchGamepadFloating &amp;&amp; touchGamepadSideStick(side) &amp;&amp; touchGamepadStickAnchors[side])
+        return touchGamepadStickAnchors[side];
+    let y = H - touchGamepadSize;
+    const count = touchGamepadSideButtonCount(side);
+    if (!touchGamepadSideStick(side) &amp;&amp; (count === 2 || count === 3))
+        y -= touchGamepadSize/4; // nudge a 2/3 button cluster up a bit
+    return vec2(side ? W - touchGamepadSize : touchGamepadSize, y);
+}
+
+// position the input zones for the current mode and rebuild the SVG visuals
+function touchGamepadRelayout()
+{
+    if (!touchGamepadOverlay) return;
+    const r = touchGamepadStageRect();
+    const W = r.width, H = r.height, S = touchGamepadSize;
+    const setZone = (z, css)=> z.style.cssText =
+        'position:absolute;pointer-events:auto;touch-action:none;' + css;
+
+    if (paused)
+    {
+        // the gamepad is hidden while paused, so its side zones must not capture
+        // touches - otherwise they silently steal taps from menus and dialogs
+        for (const zone of touchGamepadSideZones) zone.style.display = 'none';
+        if (touchGamepadCenterButtonSize)
         {
-            // draw circle shaped gamepad
-            context.arc(stickCenter.x, stickCenter.y, touchGamepadSize/2, 0, 9);
+            // any touch presses start
+            setZone(touchGamepadZoneC, 'inset:0');
+            touchGamepadZoneC.style.display = '';
         }
         else
+            touchGamepadZoneC.style.display = 'none';
+    }
+    else
+    {
+        // position each side zone (left/right differ only by which edge they hug)
+        for (let side = 0; side &lt; 2; side++)
         {
-            // draw cross shaped gamepad
-            for (let i=10; --i;)
+            const zone = touchGamepadSideZones[side], edge = side ? 'right' : 'left';
+            zone.style.display = touchGamepadSideHasControl(side) ? '' : 'none';
+            if (touchGamepadFloating)
             {
-                const angle = i*PI/4;
-                context.arc(stickCenter.x, stickCenter.y,touchGamepadSize*.6, angle + PI/8, angle + PI/8);
-                i%2 &amp;&amp; context.arc(stickCenter.x, stickCenter.y, touchGamepadSize*.33, angle, angle);
+                // bottom 60% grabs the control; the top 40% passes through. A side with no
+                // control on the other side uses the full width (matching the hit-test)
+                const width = touchGamepadSideHasControl(side ? 0 : 1) ? '50%' : '100%';
+                setZone(zone, `${edge}:0;bottom:0;width:${width};height:60%`);
             }
+            else // fixed: a compact box hugging the corner control
+                setZone(zone, `${edge}:0;bottom:0;width:${3*S}px;height:${3*S}px`);
         }
-        context.fill();
-        context.stroke();
+        touchGamepadZoneC.style.display = touchGamepadCenterButtonSize ? '' : 'none';
+        const c = touchGamepadCenterButtonSize;
+        setZone(touchGamepadZoneC,
+            `left:50%;top:50%;width:${2*c}px;height:${2*c}px;transform:translate(-50%,-50%)`);
+    }
 
-        // draw right face buttons
+    touchGamepadBuildSvg(W, H);
+    touchGamepadNeedRelayout = false;
+}
+
+// (re)build the SVG shapes for the current layout; dynamic bits update per-frame
+function touchGamepadBuildSvg(W, H)
+{
+    const svg = touchGamepadSvg;
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const els = touchGamepadSvgEls = { face: [], thumb: [] };
+    const S = touchGamepadSize;
+    const circle = (cx, cy, rr, fill)=>
+    {
+        const c = document.createElementNS(touchGamepadSvgNS, 'circle');
+        c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', rr);
+        if (fill) c.setAttribute('fill', fill);
+        svg.appendChild(c);
+        return c;
+    };
+    const cross = (ctr)=>
+    {
+        // plus-shaped dpad outline centered at ctr
+        const a = S*.18, b = S*.5, x = ctr.x, y = ctr.y;
+        const p = document.createElementNS(touchGamepadSvgNS, 'path');
+        p.setAttribute('d',
+            `M ${x-a} ${y-b} H ${x+a} V ${y-a} H ${x+b} V ${y+a} H ${x+a} ` +
+            `V ${y+b} H ${x-a} V ${y+a} H ${x-b} V ${y-a} H ${x-a} Z`);
+        svg.appendChild(p);
+    };
+
+    // draw each side: a directional stick, a single large button, or face buttons
+    for (let side = 0; side &lt; 2; side++)
+    {
+        const count = touchGamepadSideButtonCount(side);
+        const base = touchGamepadSideButtonBase(side);
+        const ctr = touchGamepadSideCenter(side, W, H);
+        if (touchGamepadSideStick(side))
         {
-            const buttonCenter = touchGamepadButtonCenter();
-            const buttonSize = touchGamepadButtonCount > 1 ? 
-                touchGamepadSize/4 : touchGamepadSize/2;
-            for (let i=0; i&lt;touchGamepadButtonCount; i++)
-            {
-                const j = mod(i-1, 4);
-                let button = touchGamepadButtonCount > 2 ? 
-                    j : min(j, touchGamepadButtonCount-1);
-                // fix button locations (swap 2 and 3 to match gamepad layout)
-                button = button === 3 ? 2 : button === 2 ? 3 : button;
-                const pos = touchGamepadButtonCount &lt; 2 ? buttonCenter :
-                    buttonCenter.add(vec2().setDirection(j, touchGamepadSize/2));
-                context.fillStyle = touchGamepadButtons[button] ? '#fff' : '#000';
-                context.beginPath();
-                context.arc(pos.x, pos.y, buttonSize, 0,9);
-                context.fill();
-                context.stroke();
-            }
+            // directional stick (circle or cross) with a thumb dot that moves per-frame
+            if (touchGamepadAnalog) circle(ctr.x, ctr.y, S/2); else cross(ctr);
+            els.thumb[side] = circle(ctr.x, ctr.y, S/4, '#fff');
         }
+        else if (count === 1)
+            els.face[base] = circle(ctr.x, ctr.y, S/2, '#000'); // single large button
+        else for (let i = 0; i &lt; count; i++)
+        {
+            const j = mod(i-1, 4);
+            let button = count > 2 ? j : min(j, count-1);
+            button = button === 3 ? 2 : button === 2 ? 3 : button; // match gamepad layout
+            const offset = vec2().setDirection(j, S/2);
+            if (count === 2) offset.x *= -1;
+            // left side mirrors the right layout's positions, keeping indices in order
+            // (e.g. 2 buttons -> button 4 at bottom, button 5 at left)
+            if (!side) offset.x *= -1;
+            const pos = ctr.add(offset);
+            els.face[base + button] = circle(pos.x, pos.y, S/4, '#000');
+        }
+    }
 
-        // set canvas back to normal
-        context.restore();
+    // debug: draw the proximity hit regions the hit-test actually uses
+    if (debug &amp;&amp; debugGamepads) touchGamepadBuildDebug(W, H);
+}
+
+// draw debug outlines of the touch control hit regions into the overlay svg
+function touchGamepadBuildDebug(W, H)
+{
+    const S = touchGamepadSize, svg = touchGamepadSvg;
+    const shape = (tag, attrs, stroke)=>
+    {
+        const el = document.createElementNS(touchGamepadSvgNS, tag);
+        for (const k in attrs) el.setAttribute(k, attrs[k]);
+        el.setAttribute('stroke', stroke);
+        el.setAttribute('stroke-width', 2);
+        el.setAttribute('fill', 'none');
+        svg.appendChild(el);
+    };
+    const ring = (c, rr, stroke)=> shape('circle', {cx:c.x, cy:c.y, r:rr}, stroke);
+
+    // green line: the left/right split that assigns a stick press to a side
+    shape('line', {x1:W/2, y1:0, x2:W/2, y2:H}, '#0f0');
+
+    // cyan: where each side's control can be grabbed
+    for (let side = 0; side &lt; 2; side++)
+    {
+        if (touchGamepadSideStick(side))
+        {
+            if (touchGamepadFloating)
+            {
+                // grab region: this side's half (or the full width if the other side is empty)
+                const top = H*.4, full = !touchGamepadSideHasControl(side ? 0 : 1);
+                const x = full ? 0 : (side ? W/2 : 0);
+                shape('rect', {x, y:top, width:full ? W : W/2, height:H-top}, '#0ff');
+            }
+            else
+                ring(touchGamepadSideCenter(side, W, H), 2*S, '#0ff');
+        }
+        else if (touchGamepadSideButtonCount(side) >= 1)
+            ring(touchGamepadSideCenter(side, W, H), S, '#0ff'); // face / single-button radius
+    }
+
+    // yellow: start button radius; magenta: where start is blocked (near a control)
+    if (touchGamepadCenterButtonSize)
+    {
+        ring(vec2(W/2, H/2), touchGamepadCenterButtonSize, '#ff0');
+        for (let side = 0; side &lt; 2; side++)
+            if (touchGamepadSideHasControl(side))
+                ring(touchGamepadSideCenter(side, W, H), 2*S, '#f0f');
     }
 }
 
-// center position for right touch pad face buttons
-function touchGamepadButtonCenter()
+// per-frame: fade the overlay and move the thumbs / set pressed states
+function touchGamepadRender()
 {
-    const center = mainCanvasSize.subtract(vec2(touchGamepadSize));
-    if (touchGamepadButtonCount === 2)
-        center.x += touchGamepadSize/2;
-    return center;
-}</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>
+    if (!touchGamepadOverlay || headlessMode) return;
+
+    // hide and bail if disabled at runtime (overlay stays in the DOM for reuse)
+    // display:none also takes the input zones out of hit-testing so touches are
+    // not silently captured away from the game while disabled
+    if (!touchGamepadEnable || !isTouchDevice)
+    {
+        if (touchGamepadOverlay.style.display !== 'none')
+        {
+            // just disabled: hide the overlay and release any held controls
+            touchGamepadOverlay.style.display = 'none';
+            touchGamepadPointerRole.clear();
+            touchGamepadButtons.length = 0;
+            touchGamepadSticks.length = 0;
+            touchGamepadStickPointerId.length = 0;
+        }
+        return;
+    }
+    touchGamepadOverlay.style.display = '';
+
+    // relayout when the paused state, a layout setting, or the debug view changes
+    const dbg = debug &amp;&amp; debugGamepads;
+    const layout = [touchGamepadButtonCount, touchGamepadLeftButtonCount, touchGamepadLeftStick,
+        touchGamepadRightStick, touchGamepadAnalog, touchGamepadSize, touchGamepadFloating,
+        touchGamepadCenterButtonSize, paused, dbg].join();
+    if (layout !== touchGamepadLastLayout)
+    {
+        touchGamepadLastLayout = layout;
+        touchGamepadNeedRelayout = true;
+    }
+    // relayout before the visibility bail-out so the paused full-screen start zone applies
+    if (touchGamepadNeedRelayout) touchGamepadRelayout();
+
+    // fade out when idle (always show when displayTime is 0, or while debugging)
+    const fade = touchGamepadDisplayTime ?
+        percent(touchGamepadTimer.get(), touchGamepadDisplayTime+1, touchGamepadDisplayTime) : 1;
+    const visible = dbg || (touchGamepadTimer.isSet() &amp;&amp; fade > 0 &amp;&amp; !paused);
+    touchGamepadOverlay.style.opacity = !visible ? 0 : dbg ? 1 : fade*touchGamepadAlpha;
+    if (!visible) return;
+
+    const r = touchGamepadStageRect();
+    const W = r.width, H = r.height, S = touchGamepadSize;
+    const els = touchGamepadSvgEls;
+    if (!els) return;
+
+    for (let side = 0; side &lt; 2; side++)
+        if (touchGamepadSideStick(side) &amp;&amp; els.thumb[side])
+        {
+            const ctr = touchGamepadSideCenter(side, W, H);
+            const t = ctr.add((touchGamepadSticks[side] ?? vec2()).scale(S/2));
+            els.thumb[side].setAttribute('cx', t.x);
+            els.thumb[side].setAttribute('cy', t.y);
+        }
+    for (let i = 0; i &lt; els.face.length; i++)
+        if (els.face[i])
+            els.face[i].setAttribute('fill', touchGamepadButtons[i] ? '#fff' : '#000');
+}
+
+// convert a pointer event to stage-local CSS pixels
+function touchGamepadEventPos(e)
+{
+    const r = touchGamepadStageRect();
+    return vec2(e.clientX - r.left, e.clientY - r.top);
+}
+
+// set a directional stick from a stage-local point and flag its stick-touch button
+// (stick 0 press = button 10, stick 1 press = button 11, following the output index)
+function touchGamepadApplyStick(side, p)
+{
+    const delta = p.subtract(touchGamepadStickAnchors[side]);
+    touchGamepadSticks[side] = delta.scale(2/touchGamepadSize).clampLength();
+    touchGamepadButtons[touchGamepadStickOut(side) ? 11 : 10] = 1;
+}
+
+// pick a side's gamepad button index from a stage-local point, or -1 if outside the cluster
+function touchGamepadFaceButtonAt(side, p, W, H)
+{
+    const count = touchGamepadSideButtonCount(side);
+    const base = touchGamepadSideButtonBase(side);
+    const bc = touchGamepadSideCenter(side, W, H);
+    if (bc.distance(p) >= touchGamepadSize) return -1;
+    if (count === 1) return base; // single large button
+    const d = bc.subtract(p);
+    if (!side) d.x *= -1; // left side mirrors the right layout's positions horizontally
+    let button = count === 2 ? (d.x &lt; d.y ? 1 : 0) : mod(d.direction()+2, 4);
+    button = button === 3 ? 2 : button === 2 ? 3 : button; // match gamepad layout
+    return button &lt; count ? base + button : -1;
+}
+
+// pick which control a stage-local press activates, by priority then proximity,
+// independent of which zone element captured it - so overlapping zones on small
+// screens resolve to the nearest control instead of whichever zone is topmost
+// returns {role:'stick', side} or {role:'face', btn} or {role:'start'} or undefined
+function touchGamepadControlAt(p, W, H)
+{
+    const S = touchGamepadSize;
+    const leftHalf = p.x &lt; W/2;
+    const floatTop = H*.4; // floating grab region is the bottom 60% of the screen
+
+    // check each side (left first for priority); a side is a stick or buttons
+    for (let side = 0; side &lt; 2; side++)
+    {
+        const onHalf = side ? !leftHalf : leftHalf;
+        if (touchGamepadSideStick(side))
+        {
+            // a side with no control on the other side uses the full width
+            const otherControl = touchGamepadSideHasControl(side ? 0 : 1);
+            const grab = touchGamepadFloating ?
+                (!otherControl || onHalf) &amp;&amp; p.y > floatTop :
+                onHalf &amp;&amp; touchGamepadSideCenter(side, W, H).distance(p) &lt; 2*S;
+            if (grab) return {role:'stick', side};
+        }
+        else if (touchGamepadSideButtonCount(side) >= 1)
+        {
+            const btn = touchGamepadFaceButtonAt(side, p, W, H);
+            if (btn >= 0) return {role:'face', btn};
+        }
+    }
+
+    // center start button, blocked within 2*size of a control so drift off a
+    // control can't accidentally fire start (matches the original exclusion logic)
+    if (touchGamepadCenterButtonSize)
+    {
+        for (let side = 0; side &lt; 2; side++)
+            if (touchGamepadSideHasControl(side) &amp;&amp;
+                touchGamepadSideCenter(side, W, H).distance(p) &lt; 2*S)
+                return;
+        if (vec2(W/2, H/2).distance(p) &lt; touchGamepadCenterButtonSize)
+            return {role:'start'};
+    }
+}
+
+function touchGamepadPointerDown(e, zone)
+{
+    if (!touchGamepadEnable) return;
+    e.preventDefault();
+    zone.setPointerCapture(e.pointerId);
+    touchGamepadTimer.set();
+
+    // resume audio on first interaction
+    if (soundEnable &amp;&amp; !headlessMode &amp;&amp; audioContext &amp;&amp; !audioIsRunning())
+        audioContext.resume();
+
+    // while paused, any touch is the start button
+    if (paused)
+    {
+        if (touchGamepadCenterButtonSize)
+        {
+            touchGamepadButtons[9] = 1;
+            touchGamepadPointerRole.set(e.pointerId, 'start');
+        }
+        return;
+    }
+
+    const r = touchGamepadStageRect();
+    const W = r.width, H = r.height;
+    const p = vec2(e.clientX - r.left, e.clientY - r.top);
+
+    // choose the control by proximity/priority, not by which zone captured the touch
+    const hit = touchGamepadControlAt(p, W, H);
+    if (!hit) return;
+    if (hit.role === 'stick')
+    {
+        const side = hit.side;
+        touchGamepadStickAnchors[side] = touchGamepadFloating ? p : touchGamepadSideCenter(side, W, H);
+        touchGamepadStickPointerId[side] = e.pointerId;
+        touchGamepadPointerRole.set(e.pointerId, 'stick'+side);
+        touchGamepadNeedRelayout = true; // base may have re-anchored
+        touchGamepadApplyStick(side, p);
+    }
+    else if (hit.role === 'face')
+    {
+        touchGamepadButtons[hit.btn] = 1;
+        touchGamepadPointerRole.set(e.pointerId, 'face'+hit.btn);
+    }
+    else // 'start'
+    {
+        touchGamepadButtons[9] = 1;
+        touchGamepadPointerRole.set(e.pointerId, 'start');
+    }
+}
+
+function touchGamepadPointerMove(e)
+{
+    const role = touchGamepadPointerRole.get(e.pointerId);
+    if (!role) return;
+    e.preventDefault();
+    const p = touchGamepadEventPos(e);
+    if (role === 'stick0' || role === 'stick1')
+        touchGamepadApplyStick(role === 'stick1' ? 1 : 0, p);
+    // face buttons &amp; start are held until release (no slide-between this pass)
+}
+
+function touchGamepadPointerUp(e)
+{
+    const role = touchGamepadPointerRole.get(e.pointerId);
+    if (!role) return;
+    touchGamepadPointerRole.delete(e.pointerId);
+    if (role === 'stick0' || role === 'stick1')
+    {
+        const side = role === 'stick1' ? 1 : 0;
+        touchGamepadStickPointerId[side] = undefined;
+        touchGamepadSticks[side] = vec2();
+        delete touchGamepadButtons[touchGamepadStickOut(side) ? 11 : 10];
+    }
+    else if (role === 'start')
+        delete touchGamepadButtons[9];
+    else // 'face&lt;n>'
+        delete touchGamepadButtons[+role.slice(4)];
+    touchGamepadTimer.set();
+}</code></pre></article></section><footer class="footer" id="PeOAagUepe"><div class="wrapper"><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></div></footer></div></div></div><div class="search-container" id="PkfLWpAbet" style="display:none"><div class="wrapper" id="iCxFxjkHbP"><button class="icon-button search-close-button" id="VjLlGakifb" aria-label="close search"><svg><use xlink:href="#close-icon"></use></svg></button><div class="search-box-c"><svg><use xlink:href="#search-icon"></use></svg> <input type="text" id="vpcKVYIppa" class="search-input" placeholder="Search..." autofocus></div><div class="search-result-c" id="fWwVHRuDuN"><span class="search-result-c-text">Type anything to view search result</span></div></div></div><div class="mobile-menu-icon-container"><button class="icon-button" id="mobile-menu" data-isopen="false" aria-label="menu"><svg><use xlink:href="#menu-icon"></use></svg></button></div><div id="mobile-sidebar" class="mobile-sidebar-container"><div class="mobile-sidebar-wrapper"><a href="/" class="sidebar-title sidebar-title-anchor">LittleJS - The Tiny JavaScript Game Engine That Can!</a><div class="mobile-nav-links"><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS" target="_blank">GitHub</a></div><div class="navbar-item"><a id="" href="https://killedbyapixel.github.io/LittleJS/examples/" target="_blank">Examples</a></div><div class="navbar-item"><a id="" href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md" target="_blank">FAQ</a></div></div><div class="mobile-sidebar-items-c"><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-classes"><div>Classes</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.Sound.html">Sound</a></div><div class="sidebar-section-children"><a href="Audio.SoundInstance.html">SoundInstance</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dDistanceJoint.html">Box2dDistanceJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dFrictionJoint.html">Box2dFrictionJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dGearJoint.html">Box2dGearJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dJoint.html">Box2dJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dKinematicObject.html">Box2dKinematicObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dMotorJoint.html">Box2dMotorJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dObject.html">Box2dObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPinJoint.html">Box2dPinJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPlugin.html">Box2dPlugin</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPrismaticJoint.html">Box2dPrismaticJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dPulleyJoint.html">Box2dPulleyJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRevoluteJoint.html">Box2dRevoluteJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dRopeJoint.html">Box2dRopeJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dStaticObject.html">Box2dStaticObject</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTargetJoint.html">Box2dTargetJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dTileLayer.html">Box2dTileLayer</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWeldJoint.html">Box2dWeldJoint</a></div><div class="sidebar-section-children"><a href="Box2D.Box2dWheelJoint.html">Box2dWheelJoint</a></div><div class="sidebar-section-children"><a href="Box2dRaycastResult.html">Box2dRaycastResult</a></div><div class="sidebar-section-children"><a href="Draw.ImageFont.html">ImageFont</a></div><div class="sidebar-section-children"><a href="Draw.TextureInfo.html">TextureInfo</a></div><div class="sidebar-section-children"><a href="Draw.TileInfo.html">TileInfo</a></div><div class="sidebar-section-children"><a href="Engine.Color.html">Color</a></div><div class="sidebar-section-children"><a href="Engine.EngineObject.html">EngineObject</a></div><div class="sidebar-section-children"><a href="Engine.RandomGenerator.html">RandomGenerator</a></div><div class="sidebar-section-children"><a href="Engine.Timer.html">Timer</a></div><div class="sidebar-section-children"><a href="Engine.Vector2.html">Vector2</a></div><div class="sidebar-section-children"><a href="LightSystem.Light.html">Light</a></div><div class="sidebar-section-children"><a href="LightSystem.LightSystemPlugin.html">LightSystemPlugin</a></div><div class="sidebar-section-children"><a href="Medals.Medal.html">Medal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsMedal.html">NewgroundsMedal</a></div><div class="sidebar-section-children"><a href="Newgrounds.NewgroundsPlugin.html">NewgroundsPlugin</a></div><div class="sidebar-section-children"><a href="Particles.Particle.html">Particle</a></div><div class="sidebar-section-children"><a href="Particles.ParticleEmitter.html">ParticleEmitter</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinder.html">PathFinder</a></div><div class="sidebar-section-children"><a href="PathFinding.PathFinderNode.html">PathFinderNode</a></div><div class="sidebar-section-children"><a href="PostProcess.PostProcessPlugin.html">PostProcessPlugin</a></div><div class="sidebar-section-children"><a href="TileLayers.CanvasLayer.html">CanvasLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileCollisionLayer.html">TileCollisionLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayer.html">TileLayer</a></div><div class="sidebar-section-children"><a href="TileLayers.TileLayerData.html">TileLayerData</a></div><div class="sidebar-section-children"><a href="TweenSystem.Tween.html">Tween</a></div><div class="sidebar-section-children"><a href="UISystem.UIButton.html">UIButton</a></div><div class="sidebar-section-children"><a href="UISystem.UICheckbox.html">UICheckbox</a></div><div class="sidebar-section-children"><a href="UISystem.UILayout.html">UILayout</a></div><div class="sidebar-section-children"><a href="UISystem.UIObject.html">UIObject</a></div><div class="sidebar-section-children"><a href="UISystem.UISlider.html">UISlider</a></div><div class="sidebar-section-children"><a href="UISystem.UISystemPlugin.html">UISystemPlugin</a></div><div class="sidebar-section-children"><a href="UISystem.UIText.html">UIText</a></div><div class="sidebar-section-children"><a href="UISystem.UITextInput.html">UITextInput</a></div><div class="sidebar-section-children"><a href="UISystem.UITile.html">UITile</a></div><div class="sidebar-section-children"><a href="UISystem.UIVideo.html">UIVideo</a></div><div class="sidebar-section-children"><a href="ZzFXM.ZzFXMusic.html">ZzFXMusic</a></div></div><div class="sidebar-section-title with-arrow" data-isopen="false" id="sidebar-namespaces"><div>Namespaces</div><svg><use xlink:href="#down-icon"></use></svg></div><div class="sidebar-section-children-container"><div class="sidebar-section-children"><a href="Audio.html">Audio</a></div><div class="sidebar-section-children"><a href="Box2D.html">Box2D</a></div><div class="sidebar-section-children"><a href="Debug.html">Debug</a></div><div class="sidebar-section-children"><a href="Draw.html">Draw</a></div><div class="sidebar-section-children"><a href="DrawUtilities.html">DrawUtilities</a></div><div class="sidebar-section-children"><a href="Engine.html">Engine</a></div><div class="sidebar-section-children"><a href="Input.html">Input</a></div><div class="sidebar-section-children"><a href="LightSystem.html">LightSystem</a></div><div class="sidebar-section-children"><a href="Math.html">Math</a></div><div class="sidebar-section-children"><a href="Medals.html">Medals</a></div><div class="sidebar-section-children"><a href="Newgrounds.html">Newgrounds</a></div><div class="sidebar-section-children"><a href="Particles.html">Particles</a></div><div class="sidebar-section-children"><a href="PathFinding.html">PathFinding</a></div><div class="sidebar-section-children"><a href="PostProcess.html">PostProcess</a></div><div class="sidebar-section-children"><a href="Random.html">Random</a></div><div class="sidebar-section-children"><a href="Settings.html">Settings</a></div><div class="sidebar-section-children"><a href="TileLayers.html">TileLayers</a></div><div class="sidebar-section-children"><a href="TweenSystem.html">TweenSystem</a></div><div class="sidebar-section-children"><a href="UISystem.html">UISystem</a></div><div class="sidebar-section-children"><a href="Utilities.html">Utilities</a></div><div class="sidebar-section-children"><a href="WebGL.html">WebGL</a></div><div class="sidebar-section-children"><a href="ZzFXM.html">ZzFXM</a></div></div></div><div class="mobile-navbar-actions"><div class="navbar-right-item"><button class="icon-button search-button" aria-label="open-search"><svg><use xlink:href="#search-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button theme-toggle" aria-label="toggle-theme"><svg><use class="theme-svg-use" xlink:href="#light-theme-icon"></use></svg></button></div><div class="navbar-right-item"><button class="icon-button font-size" aria-label="change-font-size"><svg><use xlink:href="#font-size-icon"></use></svg></button></div></div></div></div><script type="text/javascript" src="scripts/core.min.js"></script><script src="scripts/search.min.js" defer="defer"></script><script src="scripts/third-party/fuse.js" defer="defer"></script><script type="text/javascript">var tocbotInstance=tocbot.init({tocSelector:"#eed4d2a0bfd64539bb9df78095dec881",contentSelector:".main-content",headingSelector:"h1, h2, h3",hasInnerContainers:!0,scrollContainer:".main-content",headingsOffset:130,onClick:bringLinkToView})</script></body></html>
