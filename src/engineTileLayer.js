@@ -483,7 +483,7 @@ class TileLayer extends CanvasLayer
         const d = this.getData(layerPos);
         if (!d || !d.tile) return;
 
-        const tileInfo = this.tileInfo && this.tileInfo.tile(d.tile);
+        const tileInfo = this.tileInfo && this.tileInfo.index(d.tile);
         this.drawLayerTile(drawPos, drawSize, tileInfo, d.color, d.direction*PI/2, d.mirror);
     }
 

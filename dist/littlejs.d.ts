@@ -1692,17 +1692,17 @@ declare module "littlejsengine" {
         */
         frame(frame: number): TileInfo;
         /**
+         * Returns a tile info for an index using this tile as reference
+         * @param {Vector2|number} [index=0]
+         * @return {TileInfo}
+         */
+        index(index?: Vector2 | number): TileInfo;
+        /**
          * Set this tile to use a full image in a texture info
          * @param {TextureInfo} [textureInfo]
          * @return {TileInfo}
          */
         setFullImage(textureInfo?: TextureInfo): TileInfo;
-        /**
-         * Returns a tile info for an index using this tile as reference
-         * @param {Vector2|number} [index=0]
-         * @return {TileInfo}
-         */
-        tile(index?: Vector2 | number): TileInfo;
     }
     /**
      * Tile Info - Stores info about each texture

@@ -191,6 +191,14 @@ class TileInfo
     }
 
     /**
+     * Returns a tile info for an index using this tile as reference
+     * @param {Vector2|number} [index=0]
+     * @return {TileInfo}
+     */
+    index(index)
+    { return tile(index, this.size, this.textureInfo, this.padding, this.bleed); }
+
+    /**
      * Set this tile to use a full image in a texture info
      * @param {TextureInfo} [textureInfo]
      * @return {TileInfo}
@@ -203,14 +211,6 @@ class TileInfo
         this.bleed = this.padding = 0;
         return this;
     }
-
-    /**
-     * Returns a tile info for an index using this tile as reference
-     * @param {Vector2|number} [index=0]
-     * @return {TileInfo}
-     */
-    tile(index)
-    { return tile(index, this.size, this.textureInfo, this.padding, this.bleed); }
 }
 
 /**
