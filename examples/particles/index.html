@@ -87,6 +87,28 @@ function makeEmitter()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// custom texture drag and drop
+
+let defaultTextureInfo; // original tiles.png texture, captured at startup
+
+function setCustomTexture(image)
+{
+    // swap texture 0 so tile() and the generated code keep working
+    const old = LJS.textureInfos[0];
+    if (old != defaultTextureInfo)
+        old.destroyWebGLTexture();
+    LJS.textureInfos[0] = new LJS.TextureInfo(image);
+    updateParticles(1);
+}
+
+function loadCustomTexture(dataURL)
+{
+    const image = new Image;
+    image.onload = ()=> setCustomTexture(image);
+    image.src = dataURL;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
     makeEmitter();
@@ -98,6 +120,11 @@ function gameInit()
     title.innerText = 'LittleJS Particle Tool';
     title.style = 'font-size:20px;font-weight:bold;';
     div.appendChild(title);
+
+    const hint = document.createElement('div');
+    hint.innerText = 'Drop an image to use it as the texture';
+    hint.style = 'font-size:12px;color:#aaa;';
+    div.appendChild(hint);
 
     for (const setting of particleSettings)
     {
@@ -182,6 +209,15 @@ function gameInit()
         {
             if (!confirm('Reset to default?'))
                 return;
+
+            // restore default texture
+            delete localStorage[storagePrefix + 'textureData'];
+            if (LJS.textureInfos[0] != defaultTextureInfo)
+            {
+                LJS.textureInfos[0].destroyWebGLTexture();
+                LJS.textureInfos[0] = defaultTextureInfo;
+            }
+
             makeEmitter();
             updateInputs();
             LJS.setCameraScale(50);
@@ -204,6 +240,31 @@ function gameInit()
     particleSystemCode.disabled = true;
 
     updateInputs(0);
+
+    // setup drag and drop for custom texture
+    defaultTextureInfo = LJS.textureInfos[0];
+    document.addEventListener('dragover', (e)=> e.preventDefault());
+    document.addEventListener('drop', (e)=>
+    {
+        e.preventDefault();
+        const file = e.dataTransfer.files[0];
+        if (!file || !file.type.startsWith('image/'))
+            return;
+        const reader = new FileReader();
+        reader.onload = ()=>
+        {
+            const dataURL = reader.result;
+            try { localStorage[storagePrefix + 'textureData'] = dataURL; }
+            catch { delete localStorage[storagePrefix + 'textureData']; }
+            loadCustomTexture(dataURL);
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // load custom texture from storage
+    const savedTexture = localStorage[storagePrefix + 'textureData'];
+    if (savedTexture)
+        loadCustomTexture(savedTexture);
 
     // load from storage
     for (const setting of particleSettings)
