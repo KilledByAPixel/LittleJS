@@ -54,6 +54,7 @@ addSetting('emitRate',         '', 0, 1e9, 1,  'How many particles per second to
 addSetting('emitConeAngle',    '', 0, 1e9, .01,'Local angle to apply velocity to particles from emitter');
 addSetting('tileIndex',        '', -1, 1e9, 1, 'Tile to use to render object (-1 is untextured)');
 addSetting('tileSize',         '', 0, 1e9, 1,  'Size of texture tile in source pixels');
+addSetting('tilePadding',      '', 0, 1e9, 1,  'How many pixels padding around tiles');
 addSetting('colorStartA',      'color',0,0,0, 'Color at start of life 1');
 addSetting('colorStartA_alpha', 'alpha', 0,    1,   .01, 'Alpha at start of life 1');
 addSetting('colorStartB',      'color',0,0,0, 'Color at start of life 2');
@@ -90,6 +91,10 @@ function makeEmitter()
 // custom texture drag and drop
 
 let defaultTextureInfo; // original tiles.png texture, captured at startup
+let buttonDefaultTexture; // enabled only while a custom texture is active
+
+function updateTextureButton()
+{ buttonDefaultTexture.disabled = LJS.textureInfos[0] == defaultTextureInfo; }
 
 function setCustomTexture(image)
 {
@@ -98,7 +103,19 @@ function setCustomTexture(image)
     if (old != defaultTextureInfo)
         old.destroyWebGLTexture();
     LJS.textureInfos[0] = new LJS.TextureInfo(image);
+    updateTextureButton();
     updateParticles(1);
+}
+
+function restoreDefaultTexture()
+{
+    delete localStorage[storagePrefix + 'textureData'];
+    if (LJS.textureInfos[0] != defaultTextureInfo)
+    {
+        LJS.textureInfos[0].destroyWebGLTexture();
+        LJS.textureInfos[0] = defaultTextureInfo;
+    }
+    updateTextureButton();
 }
 
 function loadCustomTexture(dataURL)
@@ -153,6 +170,8 @@ function gameInit()
             }
             else if (name == 'tileSize')
                 defaultValue = particleSystem.tileInfo.size.x;
+            else if (name == 'tilePadding')
+                defaultValue = particleSystem.tileInfo.padding;
             else if (name == 'emitSize')
                 defaultValue = particleSystem.emitSize.x;
             else if (type == 'checkbox')
@@ -196,6 +215,25 @@ function gameInit()
     div.appendChild(document.createElement('br'));
 
     {
+        buttonDefaultTexture = document.createElement('button');
+        div.appendChild(buttonDefaultTexture);
+        buttonDefaultTexture.innerHTML = 'Use Default Texture';
+        buttonDefaultTexture.disabled = true;
+        buttonDefaultTexture.onclick = (e)=>
+        {
+            restoreDefaultTexture();
+            for (const setting of particleSettings)
+            {
+                if (setting.name == 'tileSize')
+                    setting.input.value = 16;
+                if (setting.name == 'tilePadding')
+                    setting.input.value = 0;
+            }
+            updateParticles(1);
+        }
+        div.appendChild(document.createElement('br'));
+    }
+    {
         const button = document.createElement('button')
         div.appendChild(button);
         button.innerHTML = 'Copy To Clipboard';
@@ -209,15 +247,7 @@ function gameInit()
         {
             if (!confirm('Reset to default?'))
                 return;
-
-            // restore default texture
-            delete localStorage[storagePrefix + 'textureData'];
-            if (LJS.textureInfos[0] != defaultTextureInfo)
-            {
-                LJS.textureInfos[0].destroyWebGLTexture();
-                LJS.textureInfos[0] = defaultTextureInfo;
-            }
-
+            restoreDefaultTexture();
             makeEmitter();
             updateInputs();
             LJS.setCameraScale(50);
@@ -315,10 +345,19 @@ function updateParticles(shouldUpdateInput)
         {
             const tileIndex = parseInt(input.value);
             particleSystem.tileIndex = tileIndex
-            particleSystem.tileInfo = LJS.tile(tileIndex, particleSystem.tileInfo.size);
+            // only rebuild the tile if the size and padding fit the texture,
+            // otherwise tile() asserts and updates stop working
+            const size = particleSystem.tileInfo.size;
+            const padding = particleSystem.tileInfo.padding;
+            const textureSize = LJS.textureInfos[0].size;
+            if (size.x > 0 && size.y > 0 &&
+                size.x + padding*2 <= textureSize.x && size.y + padding*2 <= textureSize.y)
+                particleSystem.tileInfo = LJS.tile(tileIndex, size, 0, padding);
         }
         else if (name == 'tileSize')
             particleSystem.tileInfo.size = vec2(parseInt(input.value));
+        else if (name == 'tilePadding')
+            particleSystem.tileInfo.padding = parseInt(input.value) || 0;
         else if (name == 'emitSize')
             particleSystem.emitSize = vec2(LJS.clamp(inputFloat, setting.min, setting.max));
         else if (type == 'checkbox')
@@ -362,6 +401,8 @@ function updateSetting(setting, save=1)
     }
     else if (name == 'tileSize')
         input.value = particleSystem.tileInfo.size.x;
+    else if (name == 'tilePadding')
+        input.value = particleSystem.tileInfo.padding;
     else if (name == 'emitSize')
         input.value = particleSystem.emitSize.x;
     else if (type == 'checkbox')
@@ -398,11 +439,15 @@ function getCode()
         const name = setting.name;
         const type = setting.type;
         let value;
-        if (name == 'tileSize' || type == 'alpha')
+        if (name == 'tileSize' || name == 'tilePadding' || type == 'alpha')
             continue;
 
         if (name == 'tileIndex')
-            value = `tile(${particleSystem.tileIndex}, ${particleSystem.tileInfo.size.x})`;
+        {
+            const padding = particleSystem.tileInfo.padding;
+            value = `tile(${particleSystem.tileIndex}, ${particleSystem.tileInfo.size.x}` +
+                (padding ? `, 0, ${padding})` : ')');
+        }
         else if (type == 'color')
         {
             const c = particleSystem[name];
