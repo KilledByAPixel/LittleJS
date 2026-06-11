@@ -31,8 +31,8 @@ const {vec2} = LJS;
 
 'use strict';
 
-// fix texture bleeding by shrinking tiles slightly
-LJS.setTileDefaultBleed(.5);
+// tiles.png has 1 pixel of padding around each tile
+LJS.setTileDefaultPadding(1);
 
 // allow html input controls
 LJS.setInputPreventDefault(false);
@@ -225,9 +225,9 @@ function gameInit()
             for (const setting of particleSettings)
             {
                 if (setting.name == 'tileSize')
-                    setting.input.value = 16;
+                    setting.input.value = LJS.tileDefaultSize.x;
                 if (setting.name == 'tilePadding')
-                    setting.input.value = 0;
+                    setting.input.value = LJS.tileDefaultPadding;
             }
             updateParticles(1);
         }
