@@ -437,8 +437,9 @@ class Particle
                 // test which side we bounced off (or both if a corner)
                 const isBlockedX = testCollision(vec2(this.pos.x, oldPos.y));
                 const isBlockedY = testCollision(vec2(oldPos.x, this.pos.y));
-                const hitRestitution = max(restitution, hitLayer.restitution);
-                const hitFriction = max(friction, hitLayer.friction);
+                // collide callback may hit where the layer test does not, so hitLayer can be undefined
+                const hitRestitution = hitLayer ? max(restitution, hitLayer.restitution) : restitution;
+                const hitFriction = hitLayer ? max(friction, hitLayer.friction) : friction;
                 if (isBlockedX)
                 {
                     // move to previous X position and bounce

@@ -7482,10 +7482,14 @@ function tileCollisionGetData(pos, solidOnly=true)
     // check all tile collision layers
     for (const layer of tileCollisionLayers)
         if (!solidOnly || layer.isSolid)
-        if (pos.arrayCheck(layer.size))
         {
-            const data = layer.getCollisionData(pos);
-            if (data) return data;
+            // convert world pos to layer local space
+            const layerPos = pos.subtract(layer.pos);
+            if (layerPos.arrayCheck(layer.size))
+            {
+                const data = layer.getCollisionData(layerPos);
+                if (data) return data;
+            }
         }
     return 0;
 }
@@ -8624,8 +8628,9 @@ class Particle
                 // test which side we bounced off (or both if a corner)
                 const isBlockedX = testCollision(vec2(this.pos.x, oldPos.y));
                 const isBlockedY = testCollision(vec2(oldPos.x, this.pos.y));
-                const hitRestitution = max(restitution, hitLayer.restitution);
-                const hitFriction = max(friction, hitLayer.friction);
+                // collide callback may hit where the layer test does not, so hitLayer can be undefined
+                const hitRestitution = hitLayer ? max(restitution, hitLayer.restitution) : restitution;
+                const hitFriction = hitLayer ? max(friction, hitLayer.friction) : friction;
                 if (isBlockedX)
                 {
                     // move to previous X position and bounce

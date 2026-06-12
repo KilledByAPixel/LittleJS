@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { TileCollisionLayer, tile, vec2 } from '../dist/littlejs.esm.js';
+import { TileCollisionLayer, tileCollisionGetData, tile, vec2 } from '../dist/littlejs.esm.js';
 
 // Regression for the negative-edge ghost-collision bug:
 // collisionTest() clamped minX/minY to 0 and then forced maxX/maxY to at least
@@ -56,4 +56,27 @@ test('collisionTest: AABB entirely off the positive Y edge does not collide', ()
 {
     const layer = makeLayer();
     assert.equal(layer.collisionTest(vec2(0.5, 100), vec2(1, 1)), false);
+});
+
+// Regression for the layer-offset bug: tileCollisionGetData() passed the world
+// position directly to layer.getCollisionData(), which expects layer-local
+// coordinates. A layer placed away from the origin would report collision as
+// if it were still at (0,0) even though rendering honored the offset.
+
+test('tileCollisionGetData: honors layer position offset', () =>
+{
+    const layer = new TileCollisionLayer(vec2(2, 2), vec2(4, 4), tile(0, 16), 0, false);
+    layer.setCollisionData(vec2(1, 1), 1);
+    // tile at local (1,1) occupies world cell (3,3)
+    assert.equal(tileCollisionGetData(vec2(3.5, 3.5)), 1);
+    layer.destroy();
+});
+
+test('tileCollisionGetData: no collision at the unoffset position', () =>
+{
+    const layer = new TileCollisionLayer(vec2(2, 2), vec2(4, 4), tile(0, 16), 0, false);
+    layer.setCollisionData(vec2(1, 1), 1);
+    // world (1.5, 1.5) is local (-0.5, -0.5), outside the layer
+    assert.equal(tileCollisionGetData(vec2(1.5, 1.5)), 0);
+    layer.destroy();
 });

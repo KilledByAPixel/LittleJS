@@ -31,10 +31,14 @@ function tileCollisionGetData(pos, solidOnly=true)
     // check all tile collision layers
     for (const layer of tileCollisionLayers)
         if (!solidOnly || layer.isSolid)
-        if (pos.arrayCheck(layer.size))
         {
-            const data = layer.getCollisionData(pos);
-            if (data) return data;
+            // convert world pos to layer local space
+            const layerPos = pos.subtract(layer.pos);
+            if (layerPos.arrayCheck(layer.size))
+            {
+                const data = layer.getCollisionData(layerPos);
+                if (data) return data;
+            }
         }
     return 0;
 }
