@@ -73,6 +73,12 @@ The code is very clean and well documented with many examples to get you started
 - Medal tracking system with [Newgrounds](https://www.newgrounds.com/) support
 - Node.js build system
 
+### 🤖 AI Friendly
+
+- The entire API is small and well documented so LLMs can produce high quality results
+- [LittleJS AI Tools](https://github.com/KilledByAPixel/LittleJS-AI) - Templates, examples, and prompts tuned for AI + LittleJS workflows
+- [LittleJS GPT](https://chatgpt.com/g/g-67c7c080b5bc81919736bc8815836be6-littlejs-game-maker) - Build LittleJS games right inside ChatGPT
+
 ## How To Use LittleJS
 
 To get started download the latest LittleJS package from GitHub or install via npm: 
@@ -113,7 +119,6 @@ engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
 - [LittleJS Quick Reference Sheet](https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md) - A reference sheet to help you get started.
 - [Little JS FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md) - Answers to common questions about LittleJS.
 - [JS13k Branch](https://github.com/KilledByAPixel/LittleJS/tree/js13k) - For size coding events like JS13k there is a special branch that builds to a 7KB zip.
-- [LittleJS AI Tools](https://github.com/KilledByAPixel/LittleJS-AI) - Experiments, games, and templates to improve LittleJS + AI workflows.
 
 ## Examples
 
