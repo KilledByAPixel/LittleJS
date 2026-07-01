@@ -471,6 +471,11 @@ function engineObjectsUpdate()
     // get list of solid objects for physics optimization
     engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);
 
+    // update physics before object update
+    for (const o of engineObjects)
+        if (!o.parent && !o.destroyed)
+            o.updatePhysics();
+
     // recursive object update
     function updateChildObject(o)
     {
@@ -486,7 +491,6 @@ function engineObjectsUpdate()
 
         // update top level objects
         o.update();
-        o.updatePhysics();
         for (const child of o.children)
             updateChildObject(child);
         o.updateTransforms();
