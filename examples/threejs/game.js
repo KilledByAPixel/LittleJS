@@ -217,7 +217,6 @@ function gameRender()
 
     // 2D crosshair marker on the player to prove z=0 world alignment
     const pos = player.pos;
-    LJS.drawRect(pos, player.size, hsl(0, 0, 1, .1));
     LJS.drawLine(pos.add(vec2(-.7, 0)), pos.add(vec2(.7, 0)), .05, hsl(0, 0, 1, .5));
     LJS.drawLine(pos.add(vec2(0, -.7)), pos.add(vec2(0, .7)), .05, hsl(0, 0, 1, .5));
 }
