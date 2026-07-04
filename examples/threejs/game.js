@@ -100,6 +100,10 @@ class MeshObject extends LJS.EngineObject
         this.mesh.position.set(this.pos.x, this.pos.y, this.z);
         this.mesh.rotation.z = -this.angle; // littlejs angles are clockwise
     }
+    render()
+    {
+        // the mesh is this object's visual, skip the default 2D rect
+    }
     destroy(immediate)
     {
         if (this.destroyed) return;
