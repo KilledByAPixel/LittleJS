@@ -78,9 +78,7 @@ function threeRender()
     if (threeCanvas.style.cssText != LJS.mainCanvas.style.cssText)
         threeCanvas.style.cssText = LJS.mainCanvas.style.cssText;
 
-    // fixed offset chase camera, smoothly following the player
-    const eye = new THREE.Vector3(player.pos.x, player.pos.y, player.zPos).add(cameraOffset);
-    camera.position.lerp(eye, cameraLerp);
+    // aim at the player and render
     camera.lookAt(player.pos.x, player.pos.y, player.zPos + 1);
     renderer.render(scene, camera);
 }
@@ -272,11 +270,15 @@ function gameInit()
     }
 
     // start with the camera behind the player
-    camera.position.set(player.pos.x, player.pos.y - 9, 6);
+    camera.position.set(player.pos.x, player.pos.y, player.zPos).add(cameraOffset);
 }
 
 function gameUpdate()
 {
+    // fixed offset chase camera, smoothly following the player
+    // updated at the fixed 60 fps rate so the feel is refresh rate independent
+    const eye = new THREE.Vector3(player.pos.x, player.pos.y, player.zPos).add(cameraOffset);
+    camera.position.lerp(eye, cameraLerp);
 }
 
 function gameUpdatePost()
