@@ -17,6 +17,7 @@ const {vec2, hsl} = LJS;
 
 // disable LittleJS WebGL so the 2D canvas is the only LittleJS canvas
 // must be called before engineInit so the WebGL canvas is never created
+// note: LittleJS then renders with Canvas2D, not the high-sprite-count path
 LJS.setGLEnable(false);
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -35,7 +36,7 @@ function threeInit()
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x102030);
     scene.fog = new THREE.Fog(0x102030, 30, 90);
-    camera = new THREE.PerspectiveCamera(cameraFOV, 1, .1, 100);
+    camera = new THREE.PerspectiveCamera(cameraFOV, 1, .1, 1000);
     const sun = new THREE.DirectionalLight(0xffffff, 3);
     sun.position.set(1, 2, 3);
     scene.add(sun);
@@ -59,7 +60,8 @@ function threeRender()
         camera.aspect = size.x / size.y;
         camera.updateProjectionMatrix();
     }
-    threeCanvas.style.cssText = LJS.mainCanvas.style.cssText;
+    if (threeCanvas.style.cssText != LJS.mainCanvas.style.cssText)
+        threeCanvas.style.cssText = LJS.mainCanvas.style.cssText;
 
     // sync the three.js camera to the LittleJS camera
     // distance is set so the z=0 plane matches LittleJS world space exactly
@@ -67,6 +69,10 @@ function threeRender()
     const distance = halfHeight / Math.tan(cameraFOV/2 * Math.PI/180);
     camera.position.set(LJS.cameraPos.x, LJS.cameraPos.y, distance);
     camera.rotation.z = -LJS.cameraAngle; // littlejs angles are clockwise
+
+    // scale fog with camera distance so depth cueing holds at every zoom
+    scene.fog.near = distance + 10;
+    scene.fog.far = distance + 70;
     renderer.render(scene, camera);
 }
 
@@ -94,11 +100,12 @@ class MeshObject extends LJS.EngineObject
         this.mesh.position.set(this.pos.x, this.pos.y, this.z);
         this.mesh.rotation.z = -this.angle; // littlejs angles are clockwise
     }
-    destroy()
+    destroy(immediate)
     {
         if (this.destroyed) return;
         scene.remove(this.mesh);
-        super.destroy();
+        // note: a real game should also dispose the mesh geometry and material
+        super.destroy(immediate);
     }
 }
 
@@ -189,7 +196,7 @@ function gameUpdate()
             color, color,           // colorStartA, colorStartB
             color.scale(1,0), color.scale(1,0), // colorEndA, colorEndB
             .5, .3, .1, .1, .05,    // time, sizeStart, sizeEnd, speed, angleSpeed
-            .95, 1, 1, Math.PI,     // damping, angleDamping, gravityScale, cone
+            .95, 1, 0, Math.PI,     // damping, angleDamping, gravityScale, cone
             .1, .5, false, true     // fadeRate, randomness, collide, additive
         );
     }
