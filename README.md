@@ -132,6 +132,7 @@ LittleJS comes with several demos both for learning and using as starter project
 - [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter demo that loads level data
 - [Box2D Demo](https://killedbyapixel.github.io/LittleJS/examples/box2d/) - Box2D plugin demonstration and testbed
 - [Three.js Demo](https://killedbyapixel.github.io/LittleJS/examples/threejs/) - 3D rendering with Three.js behind the 2D canvas
+- [Three.js Platformer](https://killedbyapixel.github.io/LittleJS/examples/threejsPlatformer/) - 3D platformer with LittleJS gameplay and Three.js rendering
 - [Stress Test](https://killedbyapixel.github.io/LittleJS/examples/stress/) - Sprite rendering benchmark and music system demo
 - [Particle System Designer](https://killedbyapixel.github.io/LittleJS/examples/particles/) - Particle system editor and visualizer
 
