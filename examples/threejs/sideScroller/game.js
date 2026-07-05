@@ -14,9 +14,7 @@ import * as LJS from '../../../dist/littlejs.esm.js';
 import * as THREE from 'three';
 const {vec2, hsl} = LJS;
 
-// disable LittleJS WebGL so the 2D canvas is the only LittleJS canvas
-// must be called before engineInit so the WebGL canvas is never created
-// note: LittleJS then renders with Canvas2D, not the high-sprite-count path
+// disable LittleJS WebGL so the 2D canvas is only used for UI and HUD stuff
 LJS.setGLEnable(false);
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -38,7 +36,7 @@ class SpinObject extends LJS.ThreeJSObject
     }
 }
 
-// player controlled object, littlejs physics drives the mesh
+// player object, littlejs physics drives the mesh
 class Player extends LJS.ThreeJSObject
 {
     constructor(pos)
@@ -52,7 +50,7 @@ class Player extends LJS.ThreeJSObject
     {
         // accelerate with arrows or wasd
         this.velocity = this.velocity.add(LJS.keyDirection().scale(.02));
-        this.mesh.rotation.y += LJS.timeDelta; // slow tumble to show depth
+        this.mesh.rotation.y += LJS.timeDelta;
         super.update();
     }
 }
@@ -143,7 +141,7 @@ function gameUpdatePost()
 
 function gameRender()
 {
-    // 2D crosshair marker on the player to prove z=0 world alignment
+    // 2D crosshair on the player to prove z=0 world alignment
     const pos = player.pos;
     LJS.drawLine(pos.add(vec2(-.7, 0)), pos.add(vec2(.7, 0)), .05, hsl(0, 0, 1, .5));
     LJS.drawLine(pos.add(vec2(0, -.7)), pos.add(vec2(0, .7)), .05, hsl(0, 0, 1, .5));

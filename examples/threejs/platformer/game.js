@@ -16,9 +16,7 @@ import * as LJS from '../../../dist/littlejs.esm.js';
 import * as THREE from 'three';
 const {vec2} = LJS;
 
-// disable LittleJS WebGL so the 2D canvas is only used for HUD text
-// must be called before engineInit so the WebGL canvas is never created
-// note: LittleJS then renders with Canvas2D, not the high-sprite-count path
+// disable LittleJS WebGL so the 2D canvas is only used for UI and HUD stuff
 LJS.setGLEnable(false);
 
 // platforming constants
