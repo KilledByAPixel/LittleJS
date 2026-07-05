@@ -63,9 +63,12 @@ class PlatformerObject extends LJS.ThreeJSObject
                 continue; // top is above our feet, sides handled by 2d collision
             if (platform.height < groundHeight)
                 continue; // already found something higher
-            // check if this object is inside the platform footprint
+            // check if this object's footprint overlaps the platform
+            // use the full aabb so support matches the 2d collision solver,
+            // otherwise the solid gate can flip on while already overlapping
             const delta = this.pos.subtract(platform.pos);
-            if (Math.abs(delta.x) < platform.size.x/2 && Math.abs(delta.y) < platform.size.y/2)
+            const sizeBoth = this.size.add(platform.size);
+            if (Math.abs(delta.x) < sizeBoth.x/2 && Math.abs(delta.y) < sizeBoth.y/2)
                 groundHeight = platform.height;
         }
         return groundHeight;
@@ -119,6 +122,7 @@ class Coin extends PlatformerObject
         super(pos, vec2(.6), group, zPos);
         this.angleVelocity = .03; // spin, the plugin syncs the mesh from angle
         this.angleDamping = 1;    // do not slow down
+        this.angle = pos.x + pos.y; // offset spin phase by position so coins are not in sync
     }
     update()
     {
