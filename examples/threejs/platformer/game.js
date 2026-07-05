@@ -61,7 +61,6 @@ class PlatformerObject extends LJS.ThreeJSObject
                 continue; // top is above our feet, sides handled by 2d collision
             if (platform.height < groundHeight)
                 continue; // already found something higher
-            // check if this object's footprint overlaps the platform
             // use the full aabb so support matches the 2d collision solver,
             // otherwise the solid gate can flip on while already overlapping
             const delta = this.pos.subtract(platform.pos);
@@ -217,11 +216,9 @@ function gameInit()
         [vec2( 4,  5), 2.3], // above the third step
         [vec2( 0, -2),  .8], // reachable from the ground
     ];
+    coinsTotal = coinSpots.length;
     for (const [pos, zPos] of coinSpots)
-    {
         new Coin(pos, zPos);
-        ++coinsTotal;
-    }
 
     // start with the camera behind the player
     threeJS.camera.position.set(player.pos.x, player.pos.y, player.zPos).add(cameraOffset);

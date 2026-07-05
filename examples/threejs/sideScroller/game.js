@@ -74,7 +74,7 @@ function gameInit()
     scene.add(sun);
     scene.add(new THREE.AmbientLight(0x806040));
 
-    // grid to make depth visible, rotated from XZ onto the XY plane
+    // grid to make depth visible
     const grid = new THREE.GridHelper(200, 100, 0x00aaff, 0x004488);
     grid.rotation.x = Math.PI/2; // rotate from XZ onto the XY plane
     grid.position.z = -10;       // behind the 2D world plane

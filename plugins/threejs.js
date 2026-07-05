@@ -2,7 +2,6 @@
  * LittleJS Three.js Plugin
  * - Renders a three.js scene on a canvas behind the LittleJS canvases
  * - The three.js module is passed in by the user, nothing is bundled
- * - Canvas size and layout are kept in sync with the engine automatically
  * - Keep canvasClearColor transparent so the 3D scene shows through
  * - Aligned camera mode locks the 3D camera to the LittleJS 2D camera
  * - ThreeJSObject lets LittleJS physics drive a three.js mesh
@@ -66,7 +65,7 @@ class ThreeJSPlugin
      *  called automatically when cameraAlign2D is set */
     alignCamera2D()
     {
-        const halfHeight = mainCanvasSize.y / 2 / cameraScale; // world units visible
+        const halfHeight = mainCanvasSize.y / 2 / cameraScale; // half visible height in world units
         const distance = halfHeight / tan(this.camera.fov/2 * PI/180);
         this.camera.position.set(cameraPos.x, cameraPos.y, distance);
         // reset all axes in case a free camera was used, littlejs angles are clockwise
