@@ -1,10 +1,10 @@
 /*
     LittleJS Three.js Platformer Example
     - A tiny 3D platformer driven entirely by LittleJS game logic
+    - Uses the three.js plugin with a free camera (cameraAlign2D disabled)
     - LittleJS XY is the ground plane and z is height above the ground
     - LittleJS handles input, physics, and collision on the ground plane
     - Objects track zPos and zVelocity for jumping with manual gravity
-    - Three.js renders the whole world with a fixed offset chase camera
     - The LittleJS canvas on top only draws HUD text
     - Controls: arrows or WASD to run, space to jump
 */
@@ -12,7 +12,7 @@
 'use strict';
 
 // import LittleJS module and three.js
-import * as LJS from '../../dist/littlejs.esm.js';
+import * as LJS from '../../../dist/littlejs.esm.js';
 import * as THREE from 'three';
 const {vec2} = LJS;
 
@@ -26,82 +26,32 @@ const zGravity = .012;     // fall acceleration per update
 const jumpVelocity = .22;  // takeoff speed
 const groundEpsilon = .01; // tolerance for standing on a surface
 
+// camera constants
+const cameraOffset = new THREE.Vector3(0, -9, 6); // fixed follow offset
+const cameraLerp = .1; // camera smoothing per update
+
 // game globals
-let player;
+let player, threeJS;
 const platforms = [];
 let coinsCollected = 0, coinsTotal = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
-// three.js rendering layer
+// engine objects with height physics for jumping and landing
 
-let renderer, scene, camera;
-const cameraOffset = new THREE.Vector3(0, -9, 6); // fixed follow offset
-const cameraLerp = .1; // camera smoothing per frame
-
-function threeInit()
-{
-    // create the renderer and insert its canvas behind the LittleJS canvas
-    renderer = new THREE.WebGLRenderer({antialias: true});
-    LJS.mainCanvas.parentElement.insertBefore(renderer.domElement, LJS.mainCanvas);
-
-    // sky, fog, and lights
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x66aaee);
-    scene.fog = new THREE.Fog(0x66aaee, 40, 90);
-    camera = new THREE.PerspectiveCamera(60, 1, .1, 200);
-    camera.up.set(0, 0, 1); // littlejs z is up
-    const sun = new THREE.DirectionalLight(0xffffff, 3);
-    sun.position.set(2, 1, 4);
-    scene.add(sun);
-    scene.add(new THREE.AmbientLight(0x668866));
-
-    // ground plane with a grid on top
-    const groundMaterial = new THREE.MeshStandardMaterial({color: 0x55aa55});
-    scene.add(new THREE.Mesh(new THREE.PlaneGeometry(300, 300), groundMaterial));
-    const grid = new THREE.GridHelper(300, 150, 0x448844, 0x448844);
-    grid.rotation.x = Math.PI/2; // rotate from XZ onto the XY ground plane
-    grid.position.z = .01;       // sit just above the ground to avoid z-fighting
-    scene.add(grid);
-}
-
-function threeRender()
-{
-    // keep renderer size and css in sync with the LittleJS canvas
-    const size = LJS.mainCanvasSize;
-    const threeCanvas = renderer.domElement;
-    if (threeCanvas.width != size.x || threeCanvas.height != size.y)
-    {
-        renderer.setSize(size.x, size.y, false);
-        camera.aspect = size.x / size.y;
-        camera.updateProjectionMatrix();
-    }
-    if (threeCanvas.style.cssText != LJS.mainCanvas.style.cssText)
-        threeCanvas.style.cssText = LJS.mainCanvas.style.cssText;
-
-    // aim at the player and render
-    camera.lookAt(player.pos.x, player.pos.y, player.zPos + 1);
-    renderer.render(scene, camera);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// engine objects that drive three.js meshes
-
-class MeshObject3D extends LJS.EngineObject
+class PlatformerObject extends LJS.ThreeJSObject
 {
     constructor(pos, size, mesh, zPos=0)
     {
-        super(pos, size);
-        this.mesh = mesh;
+        super(pos, size, mesh, zPos);
         this.meshZOffset = 0;  // lift for meshes with centered pivots
         this.zPos = zPos;      // height of the object base above the ground
         this.zVelocity = 0;    // vertical speed for jumping and falling
-        scene.add(mesh);
-        this.syncMesh();
     }
     update()
     {
+        // the plugin syncs the mesh from z, keep it at the base plus pivot lift
+        this.z = this.zPos + this.meshZOffset;
         super.update();
-        this.syncMesh();
     }
     getGroundHeight()
     {
@@ -136,27 +86,10 @@ class MeshObject3D extends LJS.EngineObject
     {
         return this.zVelocity <= 0 && this.zPos <= this.getGroundHeight() + groundEpsilon;
     }
-    syncMesh()
-    {
-        // copy the 2D physics transform and height to the 3D mesh
-        this.mesh.position.set(this.pos.x, this.pos.y, this.zPos + this.meshZOffset);
-        this.mesh.rotation.z = -this.angle; // littlejs angles are clockwise
-    }
-    render()
-    {
-        // the mesh is this object's visual, skip the default 2D rect
-    }
-    destroy(immediate)
-    {
-        if (this.destroyed) return;
-        scene.remove(this.mesh);
-        // note: a real game should also dispose the mesh geometry and material
-        super.destroy(immediate);
-    }
 }
 
 // static box that can be walked into, jumped over, and stood on
-class Platform extends MeshObject3D
+class Platform extends PlatformerObject
 {
     constructor(pos, size, height, color)
     {
@@ -167,13 +100,12 @@ class Platform extends MeshObject3D
         this.height = height;        // top surface used for landing and walls
         this.mass = 0;               // static object
         this.setCollision();         // solid on the ground plane
-        this.syncMesh();
         platforms.push(this);
     }
 }
 
 // spinning collectible, destroying it removes the mesh from the scene
-class Coin extends MeshObject3D
+class Coin extends PlatformerObject
 {
     constructor(pos, zPos)
     {
@@ -185,7 +117,7 @@ class Coin extends MeshObject3D
         const group = new THREE.Group();
         group.add(ring);
         super(pos, vec2(.6), group, zPos);
-        this.angleVelocity = .03; // spin, syncMesh drives the mesh from angle
+        this.angleVelocity = .03; // spin, the plugin syncs the mesh from angle
         this.angleDamping = 1;    // do not slow down
     }
     update()
@@ -203,7 +135,7 @@ class Coin extends MeshObject3D
 }
 
 // player cube, littlejs physics moves it and littlejs input controls it
-class Player extends MeshObject3D
+class Player extends PlatformerObject
 {
     constructor(pos)
     {
@@ -240,7 +172,27 @@ class Player extends MeshObject3D
 
 function gameInit()
 {
-    threeInit();
+    // setup the three.js plugin with a free camera for the chase cam
+    threeJS = new LJS.ThreeJSPlugin(THREE);
+    threeJS.cameraAlign2D = false; // this example drives the camera itself
+    threeJS.camera.up.set(0, 0, 1); // littlejs z is up
+
+    // sky, fog, and lights
+    const scene = threeJS.scene;
+    scene.background = new THREE.Color(0x66aaee);
+    scene.fog = new THREE.Fog(0x66aaee, 40, 90);
+    const sun = new THREE.DirectionalLight(0xffffff, 3);
+    sun.position.set(2, 1, 4);
+    scene.add(sun);
+    scene.add(new THREE.AmbientLight(0x668866));
+
+    // ground plane with a grid on top
+    const groundMaterial = new THREE.MeshStandardMaterial({color: 0x55aa55});
+    scene.add(new THREE.Mesh(new THREE.PlaneGeometry(300, 300), groundMaterial));
+    const grid = new THREE.GridHelper(300, 150, 0x448844, 0x448844);
+    grid.rotation.x = Math.PI/2; // rotate from XZ onto the XY ground plane
+    grid.position.z = .01;       // sit just above the ground to avoid z-fighting
+    scene.add(grid);
 
     // player near the front of the scene
     player = new Player(vec2(0, -5));
@@ -270,15 +222,17 @@ function gameInit()
     }
 
     // start with the camera behind the player
-    camera.position.set(player.pos.x, player.pos.y, player.zPos).add(cameraOffset);
+    threeJS.camera.position.set(player.pos.x, player.pos.y, player.zPos).add(cameraOffset);
 }
 
 function gameUpdate()
 {
     // fixed offset chase camera, smoothly following the player
     // updated at the fixed 60 fps rate so the feel is refresh rate independent
+    const camera = threeJS.camera;
     const eye = new THREE.Vector3(player.pos.x, player.pos.y, player.zPos).add(cameraOffset);
     camera.position.lerp(eye, cameraLerp);
+    camera.lookAt(player.pos.x, player.pos.y, player.zPos + 1);
 }
 
 function gameUpdatePost()
@@ -287,8 +241,6 @@ function gameUpdatePost()
 
 function gameRender()
 {
-    // render the three.js scene behind the 2D canvas
-    threeRender();
 }
 
 function gameRenderPost()
