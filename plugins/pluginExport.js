@@ -95,4 +95,9 @@ export
     // Path Finding
     PathFinder,
     PathFinderNode,
+
+    // Three.js
+    threeJS,
+    ThreeJSPlugin,
+    ThreeJSObject,
 }

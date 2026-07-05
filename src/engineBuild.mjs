@@ -48,6 +48,7 @@ const enginePluginFiles =
     `${PLUGIN_FOLDER}/drawUtilities.js`,
     `${PLUGIN_FOLDER}/tweenSystem.js`,
     `${PLUGIN_FOLDER}/pathFinder.js`,
+    `${PLUGIN_FOLDER}/threejs.js`,
 ];
 const engineExtraFiles =
 [

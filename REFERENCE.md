@@ -698,6 +698,28 @@ new PostProcessPlugin(shaderCode, includeMainCanvas=false, feedbackTexture=false
 postProcess                    // Global instance created by the plugin
 ```
 
+## LittleJS Three.js Integration
+- Optional plugin that renders a three.js scene on a canvas behind the LittleJS canvas
+- You load three.js yourself (import map or bundler) and pass the module in
+- Aligned camera mode locks the 3D camera to the 2D camera so the z=0 plane matches world space
+- Recommended: `setGLEnable(false)` before engineInit so three.js owns the only WebGL context
+- See `examples/threejs/` for a side scroller and a 3D platformer demo
+
+```javascript
+// Setup (call in gameInit), THREE is the three.js module you loaded
+new ThreeJSPlugin(THREE, cameraFOV=60) // creates global threeJS, renders automatically
+threeJS.scene                  // three.js scene, add lights and meshes here
+threeJS.camera                 // three.js perspective camera
+threeJS.cameraAlign2D = true   // lock camera to the LittleJS 2D camera (default)
+threeJS.alignCamera2D()        // align manually, called automatically when locked
+
+// Objects - littlejs physics drives a three.js mesh
+new ThreeJSObject(pos, size, mesh, z=0) // adds mesh to the scene, syncs transform
+obj.mesh                       // the three.js object3d
+obj.z                          // mesh height above the 2D plane
+obj.syncMesh()                 // copy the 2D transform to the mesh
+```
+
 ## LittleJS Box2D Physics
 - Optional plugin wrapping the Box2D physics engine (via box2d.wasm.js)
 - Drop-in replacement for engine objects: `Box2dObject extends EngineObject`

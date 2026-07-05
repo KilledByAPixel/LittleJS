@@ -5708,4 +5708,68 @@ declare module "littlejsengine" {
         /** True if walkable and not blocked by cost. */
         isClear(): boolean;
     }
+    /**
+     * LittleJS Three.js Plugin
+     * - Renders a three.js scene on a canvas behind the LittleJS canvases
+     * - The three.js module is passed in by the user, nothing is bundled
+     * - Canvas size and layout are kept in sync with the engine automatically
+     * - Aligned camera mode locks the 3D camera to the LittleJS 2D camera
+     * - ThreeJSObject lets LittleJS physics drive a three.js mesh
+     * - Call new ThreeJSPlugin(THREE) in gameInit to set up
+     * @namespace ThreeJS
+     */
+    /** Global ThreeJS plugin object
+     *  @type {ThreeJSPlugin}
+     *  @memberof ThreeJS */
+    export let threeJS: ThreeJSPlugin;
+    /**
+     * ThreeJS Plugin - Renders a three.js scene behind the LittleJS canvas
+     * @example
+     * // in gameInit, with three.js loaded by the user
+     * new ThreeJSPlugin(THREE);
+     * threeJS.scene.add(new THREE.AmbientLight);
+     * @memberof ThreeJS
+     */
+    export class ThreeJSPlugin {
+        /** Set up the three.js rendering layer, call in gameInit
+         *  @param {Object} THREE - The three.js module, supplied by the user
+         *  @param {number} [cameraFOV] - Vertical field of view in degrees */
+        constructor(THREE: any, cameraFOV?: number);
+        /** @property {Object} - The three.js module passed into the constructor */
+        THREE: any;
+        /** @property {Object} - The three.js renderer */
+        renderer: any;
+        /** @property {Object} - The three.js scene, add lights and meshes here */
+        scene: any;
+        /** @property {Object} - The three.js perspective camera */
+        camera: any;
+        /** @property {boolean} - Lock the camera to the LittleJS 2D camera so the z=0 plane matches world space */
+        cameraAlign2D: boolean;
+        /** Position the camera so the z=0 plane exactly matches LittleJS world space,
+         *  called automatically when cameraAlign2D is set */
+        alignCamera2D(): void;
+        /** Sync the canvas layout and render the scene, called automatically each frame */
+        render(): void;
+    }
+    /**
+     * ThreeJS Object - EngineObject that drives a three.js mesh
+     * - LittleJS physics moves the object and the mesh follows automatically
+     * - Destroying the object removes the mesh from the scene
+     * @extends EngineObject
+     * @memberof ThreeJS
+     */
+    export class ThreeJSObject extends EngineObject {
+        /** Create an engine object that drives a three.js mesh
+         *  @param {Vector2} [pos] - World space position
+         *  @param {Vector2} [size] - World space size
+         *  @param {Object} [mesh] - The three.js object3d to drive
+         *  @param {number} [z] - Mesh height above the 2D plane */
+        constructor(pos?: Vector2, size?: Vector2, mesh?: any, z?: number);
+        /** @property {Object} - The three.js object3d this object drives */
+        mesh: any;
+        /** @property {number} - Mesh height above the 2D plane */
+        z: number;
+        /** Copy this object's transform to the mesh */
+        syncMesh(): void;
+    }
 }
