@@ -1,17 +1,16 @@
 /*
-    LittleJS with Three.js Example
-    - Renders a Three.js 3D scene on a canvas behind the LittleJS canvas
-    - LittleJS WebGL is disabled so Three.js owns the only WebGL context
+    LittleJS Three.js Side Scroller Example
+    - Uses the three.js plugin to render a 3D scene behind the LittleJS canvas
+    - Aligned camera mode locks the 3D camera to the 2D camera at z=0
     - LittleJS draws 2D shapes, particles, and HUD text with Canvas2D on top
-    - Cameras are synced so 1 LittleJS world unit = 1 Three.js unit at z=0
-    - MeshObject shows how LittleJS objects can drive Three.js meshes
+    - ThreeJSObject shows how LittleJS objects can drive three.js meshes
     - Controls: arrows or WASD to move, mouse wheel to zoom, click for particles
 */
 
 'use strict';
 
 // import LittleJS module and three.js
-import * as LJS from '../../dist/littlejs.esm.js';
+import * as LJS from '../../../dist/littlejs.esm.js';
 import * as THREE from 'three';
 const {vec2, hsl} = LJS;
 
@@ -21,100 +20,10 @@ const {vec2, hsl} = LJS;
 LJS.setGLEnable(false);
 
 ///////////////////////////////////////////////////////////////////////////////
-// three.js rendering layer
-
-let renderer, scene, camera;
-const cameraFOV = 60; // vertical field of view in degrees
-
-function threeInit()
-{
-    // create the renderer and insert its canvas behind the LittleJS canvas
-    renderer = new THREE.WebGLRenderer({antialias: true});
-    LJS.mainCanvas.parentElement.insertBefore(renderer.domElement, LJS.mainCanvas);
-
-    // basic scene with lights and fog
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x102030);
-    scene.fog = new THREE.Fog(0x102030, 30, 90);
-    camera = new THREE.PerspectiveCamera(cameraFOV, 1, .1, 1000);
-    const sun = new THREE.DirectionalLight(0xffffff, 3);
-    sun.position.set(1, 2, 3);
-    scene.add(sun);
-    scene.add(new THREE.AmbientLight(0x806040));
-
-    // grid to make depth visible, rotated from XZ onto the XY plane
-    const grid = new THREE.GridHelper(200, 100, 0x00aaff, 0x004488);
-    grid.rotation.x = Math.PI/2;
-    grid.position.z = -10;
-    scene.add(grid);
-}
-
-function threeRender()
-{
-    // keep renderer size and css in sync with the LittleJS canvas
-    const size = LJS.mainCanvasSize;
-    const threeCanvas = renderer.domElement;
-    if (threeCanvas.width != size.x || threeCanvas.height != size.y)
-    {
-        renderer.setSize(size.x, size.y, false);
-        camera.aspect = size.x / size.y;
-        camera.updateProjectionMatrix();
-    }
-    if (threeCanvas.style.cssText != LJS.mainCanvas.style.cssText)
-        threeCanvas.style.cssText = LJS.mainCanvas.style.cssText;
-
-    // sync the three.js camera to the LittleJS camera
-    // distance is set so the z=0 plane matches LittleJS world space exactly
-    const halfHeight = size.y / 2 / LJS.cameraScale;
-    const distance = halfHeight / Math.tan(cameraFOV/2 * Math.PI/180);
-    camera.position.set(LJS.cameraPos.x, LJS.cameraPos.y, distance);
-    camera.rotation.z = -LJS.cameraAngle; // littlejs angles are clockwise
-
-    // scale fog with camera distance so depth cueing holds at every zoom
-    scene.fog.near = distance + 10;
-    scene.fog.far = distance + 70;
-    renderer.render(scene, camera);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// engine objects that drive three.js meshes
-
-class MeshObject extends LJS.EngineObject
-{
-    constructor(pos, size, mesh, z=0)
-    {
-        super(pos, size);
-        this.mesh = mesh;
-        this.z = z; // mesh depth, z=0 aligns with the 2D world plane
-        scene.add(mesh);
-        this.syncMesh();
-    }
-    update()
-    {
-        super.update();
-        this.syncMesh();
-    }
-    syncMesh()
-    {
-        // copy the 2D physics transform to the 3D mesh
-        this.mesh.position.set(this.pos.x, this.pos.y, this.z);
-        this.mesh.rotation.z = -this.angle; // littlejs angles are clockwise
-    }
-    render()
-    {
-        // the mesh is this object's visual, skip the default 2D rect
-    }
-    destroy(immediate)
-    {
-        if (this.destroyed) return;
-        scene.remove(this.mesh);
-        // note: a real game should also dispose the mesh geometry and material
-        super.destroy(immediate);
-    }
-}
+// objects that drive three.js meshes
 
 // a mesh object that tumbles in 3D
-class SpinObject extends MeshObject
+class SpinObject extends LJS.ThreeJSObject
 {
     constructor(pos, size, mesh, z, spinSpeed=1)
     {
@@ -130,7 +39,7 @@ class SpinObject extends MeshObject
 }
 
 // player controlled object, littlejs physics drives the mesh
-class Player extends MeshObject
+class Player extends LJS.ThreeJSObject
 {
     constructor(pos)
     {
@@ -151,11 +60,27 @@ class Player extends MeshObject
 ///////////////////////////////////////////////////////////////////////////////
 // game hooks
 
-let player;
+let player, threeJS;
 
 function gameInit()
 {
-    threeInit();
+    // setup the three.js plugin, the camera aligns to the 2D camera by default
+    threeJS = new LJS.ThreeJSPlugin(THREE);
+
+    // scene background, fog, and lights
+    const scene = threeJS.scene;
+    scene.background = new THREE.Color(0x102030);
+    scene.fog = new THREE.Fog(0x102030, 30, 100);
+    const sun = new THREE.DirectionalLight(0xffffff, 3);
+    sun.position.set(1, 2, 3);
+    scene.add(sun);
+    scene.add(new THREE.AmbientLight(0x806040));
+
+    // grid to make depth visible, rotated from XZ onto the XY plane
+    const grid = new THREE.GridHelper(200, 100, 0x00aaff, 0x004488);
+    grid.rotation.x = Math.PI/2; // rotate from XZ onto the XY plane
+    grid.position.z = -10;       // behind the 2D world plane
+    scene.add(grid);
 
     // player at the world origin
     player = new Player(vec2(0, 0));
@@ -189,6 +114,12 @@ function gameUpdate()
     if (LJS.mouseWheel)
         LJS.setCameraScale(LJS.clamp(LJS.cameraScale * (1 - LJS.mouseWheel*.1), 16, 128));
 
+    // scale fog with camera distance so depth cueing holds at every zoom
+    // the plugin positions the camera during render, so read last frame's distance
+    const distance = threeJS.camera.position.z;
+    threeJS.scene.fog.near = distance + 10;
+    threeJS.scene.fog.far = distance + 70;
+
     // click for a 2D particle burst, aligned with the 3D world at z=0
     if (LJS.mouseWasPressed(0))
     {
@@ -212,9 +143,6 @@ function gameUpdatePost()
 
 function gameRender()
 {
-    // render the three.js scene behind the 2D canvas
-    threeRender();
-
     // 2D crosshair marker on the player to prove z=0 world alignment
     const pos = player.pos;
     LJS.drawLine(pos.add(vec2(-.7, 0)), pos.add(vec2(.7, 0)), .05, hsl(0, 0, 1, .5));

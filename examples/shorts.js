@@ -98,7 +98,7 @@ const exampleList =
     new ExampleInfo('HTML Menus', 'htmlMenu', 'HTML UI integration', true, 'web, browser, overlay, button, slider, textbox'),
     new ExampleInfo('UI System Plugin Demo', 'uiSystem', 'Complete UI system demo', true, 'menu, overlay, button, slider, checkbox'),
     new ExampleInfo('Tween System Plugin Demo', 'tweenSystem', 'Tween plugin demo with easing, looping, and ping-pong', true, 'animation, easing, interpolation, loop, pingpong'),
-    new ExampleInfo('Three.js 3D Rendering', 'threejs', 'Three.js 3D scene behind LittleJS 2D', true, '3d, mesh, camera, parallax, webgl'),
+    new ExampleInfo('Three.js Side Scroller', 'threejs/sideScroller', 'Three.js 3D scene behind LittleJS 2D', true, '3d, mesh, camera, parallax, webgl'),
     new ExampleInfo('Three.js 3D Platformer', 'threejsPlatformer', '3D platformer game with LittleJS logic and Three.js rendering', true, '3d, jump, coins, camera, mesh, webgl'),
 ];
 
