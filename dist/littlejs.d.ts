@@ -5713,6 +5713,7 @@ declare module "littlejsengine" {
      * - Renders a three.js scene on a canvas behind the LittleJS canvases
      * - The three.js module is passed in by the user, nothing is bundled
      * - Canvas size and layout are kept in sync with the engine automatically
+     * - Keep canvasClearColor transparent so the 3D scene shows through
      * - Aligned camera mode locks the 3D camera to the LittleJS 2D camera
      * - ThreeJSObject lets LittleJS physics drive a three.js mesh
      * - Call new ThreeJSPlugin(THREE) in gameInit to set up

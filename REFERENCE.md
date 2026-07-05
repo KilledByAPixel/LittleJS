@@ -703,6 +703,8 @@ postProcess                    // Global instance created by the plugin
 - You load three.js yourself (import map or bundler) and pass the module in
 - Aligned camera mode locks the 3D camera to the 2D camera so the z=0 plane matches world space
 - Recommended: `setGLEnable(false)` before engineInit so three.js owns the only WebGL context
+- Keep `canvasClearColor` transparent (the default) so the 3D scene shows through, set the background with `threeJS.scene.background`
+- Do not call `renderer.setPixelRatio`, the plugin manages canvas size and DPR
 - See `examples/threejs/` for a side scroller and a 3D platformer demo
 
 ```javascript

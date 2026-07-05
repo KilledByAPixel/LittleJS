@@ -16225,6 +16225,7 @@ class PathFinder
  * - Renders a three.js scene on a canvas behind the LittleJS canvases
  * - The three.js module is passed in by the user, nothing is bundled
  * - Canvas size and layout are kept in sync with the engine automatically
+ * - Keep canvasClearColor transparent so the 3D scene shows through
  * - Aligned camera mode locks the 3D camera to the LittleJS 2D camera
  * - ThreeJSObject lets LittleJS physics drive a three.js mesh
  * - Call new ThreeJSPlugin(THREE) in gameInit to set up
@@ -16257,6 +16258,7 @@ class ThreeJSPlugin
         ASSERT(!threeJS, 'ThreeJS plugin already initialized');
         threeJS = this;
         if (headlessMode) return;
+        ASSERT(mainCanvas, 'ThreeJS plugin must be created after engineInit, call in gameInit');
         ASSERT(THREE && THREE.WebGLRenderer, 'three.js module must be passed in');
 
         /** @property {Object} - The three.js module passed into the constructor */
@@ -16287,12 +16289,15 @@ class ThreeJSPlugin
         const halfHeight = mainCanvasSize.y / 2 / cameraScale; // world units visible
         const distance = halfHeight / tan(this.camera.fov/2 * PI/180);
         this.camera.position.set(cameraPos.x, cameraPos.y, distance);
-        this.camera.rotation.z = -cameraAngle; // littlejs angles are clockwise
+        // reset all axes in case a free camera was used, littlejs angles are clockwise
+        this.camera.rotation.set(0, 0, -cameraAngle);
     }
 
     /** Sync the canvas layout and render the scene, called automatically each frame */
     render()
     {
+        if (!this.renderer) return; // headless mode
+
         // keep renderer size and css in sync with the LittleJS canvas
         const threeCanvas = this.renderer.domElement;
         if (threeCanvas.width != mainCanvasSize.x || threeCanvas.height != mainCanvasSize.y)
