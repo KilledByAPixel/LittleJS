@@ -14,9 +14,6 @@ import * as LJS from '../../../dist/littlejs.esm.js';
 import * as THREE from 'three';
 const {vec2, hsl} = LJS;
 
-// disable LittleJS WebGL so the 2D canvas is only used for UI and HUD stuff
-LJS.setGLEnable(false);
-
 ///////////////////////////////////////////////////////////////////////////////
 // objects that drive three.js meshes
 

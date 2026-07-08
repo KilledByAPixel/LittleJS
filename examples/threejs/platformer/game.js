@@ -16,9 +16,6 @@ import * as LJS from '../../../dist/littlejs.esm.js';
 import * as THREE from 'three';
 const {vec2} = LJS;
 
-// disable LittleJS WebGL so the 2D canvas is only used for UI and HUD stuff
-LJS.setGLEnable(false);
-
 // platforming constants
 const zGravity = .012;     // fall acceleration per update
 const jumpVelocity = .22;  // takeoff speed
