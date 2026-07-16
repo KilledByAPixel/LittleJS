@@ -82,6 +82,7 @@ const exampleList =
     new ExampleInfo('Tilted View Game', 'tiltedView.js', 'Pseudo-3D oblique view', false, 'isometric, depth'),
     new ExampleInfo('Space Game', 'spaceGame.js', 'Spaceship shooter with parallax', false, 'objects, weapons, stars, camera, rotation'),
     new ExampleInfo('3D FPS Game', 'fps.js', 'Pseudo 3D raycasting demo', false, '3D, FPS, maze, camera'),
+    new ExampleInfo('Sky Dreams', 'skydreams.js', 'Pseudo 3D endless flyer over a procedural track', false, '3D, projection, screen space, jump, procedural'),
     new ExampleInfo('--- BOX2D PHYSICS ---'),
     new ExampleInfo('Box2d Demo', 'box2d.js', 'Box2D physics plugin', false, 'objects, mouse'),
     new ExampleInfo('Box2d Car', 'box2dCar.js', 'Drivable car with Box2D physics', false, 'objects, vehicle, suspension, wheels'),
