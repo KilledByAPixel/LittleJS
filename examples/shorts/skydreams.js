@@ -68,7 +68,7 @@ function gameRender()
             project(i - 2.5, 0, dz),
             project(i - 2.5, 0, dz + 1),
             project(i - 3.5, 0, dz + 1)];
-        drawPoly(p, hsl(.3, .6, r+i&1?.4:.9));
+        drawPoly(p, hsl(.3, .7, r+i&1?.4:.9));
     }
 
     // draw player shadow
