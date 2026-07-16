@@ -1,4 +1,3 @@
-
 let musicVolume = .8, musicSound, musicInstance;
 
 function gameInit()

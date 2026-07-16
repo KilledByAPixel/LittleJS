@@ -1,5 +1,3 @@
-let mouseLight;
-
 function gameInit()
 {
     new LightSystemPlugin;
@@ -39,5 +37,5 @@ function gameUpdate()
     // mouse wheel adjusts radius of the mouse light
     mouseLight.radius -= mouseWheel*0.5;
     mouseLight.radius = clamp(mouseLight.radius, 1, 20);
-    mouseLight.fadeRange = mouseLight.radius; // keep it soft
+    mouseLight.fadeRange = mouseLight.radius;
 }

@@ -1,5 +1,3 @@
-let cometEmitter;
-
 function gameInit()
 {
     gravity.y = -.01; // set default gravity

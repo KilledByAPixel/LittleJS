@@ -1,12 +1,10 @@
 const saveName = 'LittleJS Save Demo';
-let saveData;
 
 function gameInit()
 {
-    canvasClearColor = hsl(.6,.3,.2);
-
-    // load saved data, falling back to defaults on first run
-    saveData = readSaveData(saveName, { clicks: 0, hue: 0 });
+    // load saved data with defaults on first run
+    saveData = { clicks: 0, hue: 0 };
+    saveData = readSaveData(saveName, saveData);
 }
 
 function gameUpdate()

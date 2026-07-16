@@ -1,15 +1,15 @@
-// helper to draw an arrow from origin along v
-function drawArrow(origin, v, color=WHITE)
+function drawArrow(origin, v, color)
 {
     const tip = origin.add(v);
-    drawLine(origin, tip, .12, color);
-    drawCircle(tip, .25, color);
+    drawLine(origin, tip, .1, color);
+    drawCircle(tip, .3, color);
 }
 
 function gameRender()
 {
-    const a = vec2(0, 2).rotate(time); // rotating vector
-    const b = vec2(2, 0);              // fixed vector
+    // rotating and fixed vectors
+    const a = vec2(0, 2).rotate(time);
+    const b = vec2(2, 0);
 
     // addition: chain head to tail
     let o = vec2(-7, 3);
