@@ -52,7 +52,7 @@ function gameRender()
 {
     // background sky gradient
     const cameraSize = getCameraSize();
-    drawRectGradient(vec2(), cameraSize, hsl(.5,1,.7), hsl(.7,1,.2));
+    drawRectGradient(vec2(), cameraSize, hsl(.5,1,.8), hsl(.7,1,.1));
 
     // draw track from far to near
     for (let r = playerZ + 40 | 0; r > playerZ; r--)
