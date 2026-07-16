@@ -490,7 +490,8 @@ function setCode(code, filename)
         // create a script element that overrides the default functions
         const overrideScript = iframeDocument.createElement('script');
         iframeDocument.body.appendChild(overrideScript);
-        overrideScript.text = code;
+        // prepend without a newline so error line numbers stay correct
+        overrideScript.text = (checkboxUseStrict.checked ? `'use strict';` : '') + code;
 
         if (textareaError.style.display === 'block')
             return;
@@ -749,6 +750,7 @@ function loadTheme()
 selectTheme.addEventListener('change', loadTheme);
 selectFontSize.addEventListener('change', loadTheme);
 checkboxLiveEdit.addEventListener('change', writeSaveData);
+checkboxUseStrict.addEventListener('change', restartCode);
 textareaCode.addEventListener('input', codeInput);
 inputSearch.addEventListener('input', ()=> filterExamples());
 inputSearch.addEventListener('keydown', e=> { if (e.key === 'Escape') filterExamples(1); });
