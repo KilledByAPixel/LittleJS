@@ -8,8 +8,7 @@ function project(px, py, dz)
     // project a 3d point to 2d camera space
     const s = getCameraSize().y * focalLength / dz;
     const lift = dz**2 / 50;
-    const sway = (dz - cameraDistance)**2 * cos((playerZ + dz) / 50) / 50;
-    return vec2((px - playerPos.x + sway) * s, (py - 2 + lift) * s);
+    return vec2((px - playerPos.x) * s, (py - 2 + lift) * s);
 }
 
 function gameUpdate()
