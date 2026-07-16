@@ -46,13 +46,14 @@ function gameUpdate()
     // player land and jump
     if (playerPos.y < 0 && playerPos.y > -.3)
     if (trackRows[playerZ + cameraDistance | 0][round(playerPos.x + 3)])
-        playerPos.y = playerYSpeed = mouseWasPressed(0) && .1;
+        playerPos.y = playerYSpeed = mouseWasPressed(0) ? .1 : 0;
 }
 
 function gameRender()
 {
     // background sky gradient
-    drawRectGradient(vec2(), vec2(30), hsl(.5,1,.7), hsl(.7,1,.2));
+    const cameraSize = getCameraSize();
+    drawRectGradient(vec2(), cameraSize, hsl(.5,1,.7), hsl(.7,1,.2));
 
     // draw track from far to near
     for (let r = playerZ + 40 | 0; r > playerZ; r--)
@@ -72,7 +73,7 @@ function gameRender()
     }
 
     // draw player shadow
-    const s = getCameraSize().y * focalLength / cameraDistance;
+    const s = cameraSize.y * focalLength / cameraDistance;
     if (playerPos.y >= 0)
     if (trackRows[playerZ + cameraDistance | 0][round(playerPos.x + 3)])
     {
