@@ -1,10 +1,11 @@
 const cameraDistance = 3, focalLength = .7;
-let playerPos = vec2(), playerYSpeed = 0, playerZ = 0
+let playerPos = vec2(), playerYSpeed = 0, playerZ = 0;
 let trackX = 0, trackWidth = 3, trackGap = 0;
 let trackRows = [];
 
 function project(px, py, dz)
 {
+    // project a 3d point to 2d camera space
     const s = getCameraSize().y * focalLength / dz;
     const lift = dz**2 / 50;
     const sway = (dz - cameraDistance)**2 * cos((playerZ + dz) / 50) / 50;
@@ -19,6 +20,7 @@ function gameUpdate()
     // create more track if needed
     for (let i = trackRows.length; i <= playerZ + 50; )
     {
+        // randomize the track generation
         if (trackGap < -8 && rand() < .1)
             trackGap = randInt(2, 5);
         if (rand() < .1)
@@ -41,9 +43,9 @@ function gameUpdate()
     playerPos.y += playerYSpeed -= .006;
     playerZ += min(.5, .2 + playerZ/5e3);
 
-    // land and jump
-    if (trackRows[playerZ + cameraDistance | 0][round(playerPos.x + 3)])
+    // player land and jump
     if (playerPos.y < 0 && playerPos.y > -.3)
+    if (trackRows[playerZ + cameraDistance | 0][round(playerPos.x + 3)])
         playerPos.y = playerYSpeed = mouseWasPressed(0) && .1;
 }
 
@@ -56,15 +58,17 @@ function gameRender()
     for (let r = playerZ + 40 | 0; r > playerZ; r--)
     for (let i = 7; i--;)
     {
+        if (!trackRows[r][i])
+            continue;
+
+        // draw track tile as a projected polygon
         const dz = r - playerZ;
         const p = [
             project(i - 3.5, 0, dz),
             project(i - 2.5, 0, dz),
             project(i - 2.5, 0, dz + 1),
             project(i - 3.5, 0, dz + 1)];
-        const c = hsl(.3, .6, r+i&1?.4:.9);
-        if (trackRows[r][i])
-           drawPoly(p, c);
+        drawPoly(p, hsl(.3, .6, r+i&1?.4:.9));
     }
 
     // draw player shadow
