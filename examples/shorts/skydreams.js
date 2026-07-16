@@ -31,26 +31,26 @@ function gameUpdate()
         // fill in the row with track data
         let row = trackRows[i++] = [];
         for (let j = 7; j--;)
-            row[j] = i < 40 || trackGap < 0
+            row[j] = i < 30 || trackGap < 0
                 && trackX <= j && j < trackX + trackWidth;
     }
 
     // player control and physics
-    playerPos.x += keyDirection().x * .1;
+    playerPos.x += mousePos.x * .01;
+    playerPos.x = clamp(playerPos.x, -3.4, 3.4);
     playerPos.y += playerYSpeed -= .006;
     playerZ += min(.5, .2 + playerZ/5e3);
 
     // land and jump
     if (trackRows[playerZ + cameraDistance | 0][round(playerPos.x + 3)])
     if (playerPos.y < 0 && playerPos.y > -.3)
-        playerPos.y = playerYSpeed = keyIsDown('Space') && .1;
+        playerPos.y = playerYSpeed = mouseWasPressed(0) && .1;
 }
 
 function gameRender()
 {
     // background sky gradient
-    drawRectGradient(vec2(), getCameraSize(),
-        hsl(.5, .8, .7), hsl(.7, .8, .2));
+    drawRectGradient(vec2(), vec2(30), hsl(.5,1,.7), hsl(.7,1,.2));
 
     // draw track from far to near
     for (let r = playerZ + 40 | 0; r > playerZ; r--)
@@ -73,15 +73,11 @@ function gameRender()
     if (trackRows[playerZ + cameraDistance | 0][round(playerPos.x + 3)])
     {
         const p = project(playerPos.x, 0, cameraDistance);
-        const c = hsl(0, 0, 0, .5);
-        drawEllipse(p, vec2(s/2, s/4), c);
+        drawEllipse(p, vec2(s/2, s/4), hsl(0,0,0,.5));
     }
 
     // draw player
     const p = project(playerPos.x, playerPos.y + .25, cameraDistance);
     for (let i = 99; i--;)
-    {
-        const c = hsl(0, .9, 1 - i/150);
-        drawCircle(p.add(vec2(-i*s/1e3)), i*s/150, c);
-    }
+        drawCircle(p.add(vec2((99-i)*s/1e3)), i*s/150, hsl(0,1,1-i/150));
 }
