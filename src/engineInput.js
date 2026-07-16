@@ -193,12 +193,11 @@ function mouseIsDown(button)
 }
 
 /** Returns true if mouse button was pressed
- *  Default button is 0 (left mouse button)
  *  @function
- *  @param {number} [button]
+ *  @param {number} button
  *  @return {boolean}
  *  @memberof Input */
-function mouseWasPressed(button=0)
+function mouseWasPressed(button)
 {
     ASSERT(isNumber(button), 'mouse button must be a number');
     return keyWasPressed(button);
