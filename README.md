@@ -80,6 +80,12 @@ The code is very clean and well documented with many examples to get you started
 - [LittleJS AI Tools](https://github.com/KilledByAPixel/LittleJS-AI) - Templates, examples, and prompts tuned for AI + LittleJS workflows
 - [LittleJS GPT](https://chatgpt.com/g/g-67c7c080b5bc81919736bc8815836be6-littlejs-game-maker) - Build LittleJS games right inside ChatGPT
 
+### 🧊 3D with Three.js
+
+- Optional [Three.js](https://threejs.org) plugin renders a 3D scene behind the LittleJS canvas
+- 2D camera and 3D camera stay aligned so sprites and meshes share the same world space
+- LittleJS physics drive Three.js meshes with `ThreeJSObject`
+
 ## How To Use LittleJS
 
 To get started download the latest LittleJS package from GitHub or install via npm: 
