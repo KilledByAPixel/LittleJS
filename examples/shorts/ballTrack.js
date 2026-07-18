@@ -56,19 +56,32 @@ function gameRender()
 
     // draw track from far to near
     for (let r = playerZ + 40 | 0; r > playerZ; r--)
+    for (let j = 3;j--;)
     for (let i = 7; i--;)
     {
+        const dz = r - playerZ;
+                // calculate grid points
+                a = project(i-3.5, 0, dz);
+                b = project(i-2.5, 0, dz);
+                e = project(i-3.5, 0, dz+1);
+                f = project(i-2.5, 0, dz+1);
+            const height = (40 - dz)  ;
+
         if (!trackRows[r][i])
             continue;
 
-        // draw track tile as a projected polygon
-        const dz = r - playerZ;
-        const p = [
-            project(i - 3.5, 0, dz),
-            project(i - 2.5, 0, dz),
-            project(i - 2.5, 0, dz + 1),
-            project(i - 3.5, 0, dz + 1)];
-        drawPoly(p, hsl(.3, .7, r+i&1?.4:.9));
+        const c = hsl(.3, .7, (r+i&1 ? .4 : .9) / (j==2 ? 2 : j ? 9 : 1));
+        if (j)
+        {
+            // front face (near edge)
+            if (j==2) [a, b] = [e, f];
+            drawRect(vec2((a.x + b.x)/2, a.y - height/2), vec2(b.x - a.x, height), c);
+        }
+        else
+        {
+            // draw track tile as a projected polygon
+           drawPoly([a, b, f, e], c);
+        }
     }
 
     // draw player shadow
