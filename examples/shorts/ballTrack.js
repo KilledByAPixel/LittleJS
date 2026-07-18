@@ -1,7 +1,6 @@
 const cameraDistance = 3, focalLength = .7;
-let playerPos = vec2(), playerYSpeed = 0, playerZ = 0;
-let trackX = 0, trackWidth = 3, trackGap = 0;
-let trackRows = [];
+let playerPos, playerYSpeed, playerZ;
+let trackX, trackWidth, trackGap, trackRows;
 
 function project(px, py, dz)
 {
@@ -11,10 +10,23 @@ function project(px, py, dz)
     return vec2((px - playerPos.x) * s, (py - 2 + lift) * s);
 }
 
+function gameInit()
+{
+    playerPos = vec2();
+    playerYSpeed = 0, playerZ = 0;
+    trackX = 0, trackWidth = 3, trackGap = 0;
+    trackRows = [];
+}
+
 function gameUpdate()
 {
     if (playerPos.y < -4)
-        return;
+    {
+        // restart when mouse is pressed
+        if (!mouseWasPressed(0))
+            return;
+        gameInit();
+    }
     
     // create more track if needed
     for (let i = trackRows.length; i <= playerZ + 50; )
@@ -52,36 +64,33 @@ function gameRender()
 {
     // background sky gradient
     const cameraSize = getCameraSize();
-    drawRectGradient(vec2(), cameraSize, hsl(.5,1,.8), hsl(.7,1,.1));
+    drawRectGradient(vec2(), cameraSize, hsl(.5,1,.7), hsl(.75,1,.2));
 
     // draw track from far to near
     for (let r = playerZ + 40 | 0; r > playerZ; r--)
-    for (let j = 3;j--;)
     for (let i = 7; i--;)
     {
-        const dz = r - playerZ;
-                // calculate grid points
-                a = project(i-3.5, 0, dz);
-                b = project(i-2.5, 0, dz);
-                e = project(i-3.5, 0, dz+1);
-                f = project(i-2.5, 0, dz+1);
-            const height = (40 - dz)  ;
-
         if (!trackRows[r][i])
             continue;
 
-        const c = hsl(.3, .7, (r+i&1 ? .4 : .9) / (j==2 ? 2 : j ? 9 : 1));
-        if (j)
-        {
-            // front face (near edge)
-            if (j==2) [a, b] = [e, f];
-            drawRect(vec2((a.x + b.x)/2, a.y - height/2), vec2(b.x - a.x, height), c);
-        }
-        else
-        {
-            // draw track tile as a projected polygon
-           drawPoly([a, b, f, e], c);
-        }
+        // calculate grid points
+        const dz = r - playerZ;
+        const a = project(i - 3.5, 0, dz);
+        const b = project(i - 2.5, 0, dz);
+        const e = project(i - 3.5, 0, dz + 1);
+        const f = project(i - 2.5, 0, dz + 1);
+
+        // get tile color
+        const color = hsl(.3, .7, (r+i&1 ? .4 : .9));
+
+        // draw front face as projected rectangle
+        const height = 40 - dz;
+        const center = vec2((a.x + b.x)/2, a.y - height/2);
+        const size = vec2(b.x - a.x, height);
+        drawRect(center, size, color.scale(.2, 1));
+
+        // draw top face as projected polygon
+        drawPoly([a, b, f, e], color);
     }
 
     // draw player shadow
