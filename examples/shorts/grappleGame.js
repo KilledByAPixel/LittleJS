@@ -86,11 +86,11 @@ function gameRender()
 
     // draw nodes
     for (let n = firstNode(), i=5; i--; n++)
-        drawCircle(nodePos(n), nodeSize*2, hsl(n/9, 1, .5));
+        drawCircle(nodePos(n), nodeSize*2, hsl(n/7, 1, .5));
 
     // draw player trail
     for (let i = trail.length; i--;)
-        drawCircle(trail[i], i/trail.length, hsl(i/300, 1, .5));
+        drawCircle(trail[i], i/trail.length, hsl(-i/99, 1, .5));
 
     // draw player
     drawCircle(playerPos, .7);
