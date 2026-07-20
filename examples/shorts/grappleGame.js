@@ -5,7 +5,7 @@ let nearNode, grabNode, grabRadius, grabPhi, grabSpin;
 // get world position of a node
 const nodePos = (n)=> nodeSpread.multiply(vec2(n, sin(n**3.3 + seed)));
 
-// get the first node index near the camera, node 0 is unused as a null value
+// get first node index behind the camera
 const firstNode = ()=> max(1, cameraPos.x/nodeSpread.x - 1 | 0);
 
 function gameInit()
@@ -90,10 +90,7 @@ function gameRender()
 
     // draw player trail
     for (let i = trail.length; i--;)
-    {
-        const color = hsl(playerPos.x/99 + i/300, 1, .5);
-        drawCircle(trail[i], i/trail.length, color);
-    }
+        drawCircle(trail[i], i/trail.length, hsl(i/300, 1, .5));
 
     // draw player
     drawCircle(playerPos, .7);
