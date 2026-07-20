@@ -4,7 +4,7 @@ function gameInit()
 
     // fire
     new ParticleEmitter(
-        vec2(-5,-2), 0,                // pos, angle
+        vec2(-5,0), 0,                 // pos, angle
         2, 0, 200, PI,                 // emitSize, emitTime, rate, cone
         tile(0),                       // tileInfo
         rgb(1,.5,.1), rgb(1,.1,.1),    // colorStartA, colorStartB
@@ -16,7 +16,7 @@ function gameInit()
 
     // smoke
     new ParticleEmitter(
-        vec2(5,-2), 0,               // pos, angle
+        vec2(5,0), 0,                // pos, angle
         3, 0, 100, PI,               // emitSize, emitTime, rate, cone
         tile(0),                     // tileInfo
         hsl(0,0,0,.5), hsl(0,0,1,.5),// colorStartA, colorStartB
@@ -31,16 +31,16 @@ function gameInit()
         vec2(), 0,                   // pos, angle
         0, 0, 100, PI,               // emitSize, emitTime, rate, cone
         tile(0),                     // tileInfo
-        rgb(1,1,.5), rgb(1,.5,.5),   // colorStartA, colorStartB
-        rgb(1,0,0,0), rgb(.5,0,1,0), // colorEndA, colorEndB
-        .8, .5, .1, .01, 0,   // time, sizeStart, sizeEnd, speed, angleSpeed
-        .95, 1, .02, PI, .1,// damp, angleDamp, gravity, particleCone, fade
-        .3, 0, 1, 0        // randomness, collide, additive, colorLinear
+        rgb(1,1,.3,.2), rgb(1,.5,.1,.2),// colorStartA, colorStartB
+        rgb(1,0,0,0), rgb(.5,0,1,0),    // colorEndA, colorEndB
+        1, 1, 3, .01, 0,    // time, sizeStart, sizeEnd, speed, angleSpeed
+        .95, 1, .02, PI, .2,// damp, angleDamp, gravity, particleCone, fade
+        .3, 0, 1, 0         // randomness, collide, additive, colorLinear
     );
 }
 
 function gameUpdate()
 {
     // move comet emitter back and forth so it trails particles
-    cometEmitter.pos = vec2(sin(time)*9, 5);
+    cometEmitter.pos = vec2(sin(time)*9, cos(time)-5);
 }
