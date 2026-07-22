@@ -109,5 +109,7 @@ export
     textureSheets,
     TextureSheet,
     loadSprite,
+    loadAtlas,
+    parseAtlas,
     spritesReady,
 }

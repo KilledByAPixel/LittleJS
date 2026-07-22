@@ -1,6 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { TextureSheet, TileInfo, loadSprite, spritesReady, textureSheets, vec2 } from '../dist/littlejs.esm.js';
+import { TextureSheet, TileInfo, loadSprite, loadAtlas, parseAtlas, spritesReady, textureSheets, vec2 } from '../dist/littlejs.esm.js';
+
+// build a TexturePacker style frame entry
+function texturePackerFrame(x, y, w, h, extra={})
+{
+    return {frame: {x, y, w, h}, rotated: false, trimmed: false,
+        spriteSourceSize: {x: 0, y: 0, w, h}, sourceSize: {w, h}, ...extra};
+}
 
 // tests cover the packing math, drawImage needs a real canvas so it is not tested here
 
@@ -177,4 +184,82 @@ test('loadSprite returns an empty tile in headless mode', () =>
 test('spritesReady resolves when nothing is loading', async () =>
 {
     await spritesReady();
+});
+
+test('loadAtlas returns an empty object in headless mode', () =>
+{
+    assert.deepEqual(loadAtlas('atlas.png', 'atlas.json'), {});
+});
+
+test('parseAtlas groups numbered TexturePacker hash frames', () =>
+{
+    const groups = parseAtlas({frames: {
+        'run_0.png': texturePackerFrame(0, 0, 16, 16),
+        'run_1.png': texturePackerFrame(16, 0, 16, 16),
+        'player.png': texturePackerFrame(32, 0, 24, 24),
+    }});
+    assert.deepEqual(groups.map(g=> [g.name, g.frames.length]),
+        [['run', 2], ['player', 1]]);
+    // frames are sorted by their trailing number
+    assert.deepEqual([groups[0].frames[0].pos.x, groups[0].frames[1].pos.x], [0, 16]);
+});
+
+test('parseAtlas accepts the TexturePacker array layout', () =>
+{
+    const groups = parseAtlas({frames: [
+        {filename: 'jump-1.png', ...texturePackerFrame(0, 0, 8, 8)},
+        {filename: 'jump-2.png', ...texturePackerFrame(8, 0, 8, 8)},
+    ]});
+    assert.deepEqual(groups.map(g=> [g.name, g.frames.length]), [['jump', 2]]);
+});
+
+test('parseAtlas does not group non-contiguous or mismatched frames', () =>
+{
+    const groups = parseAtlas({frames: {
+        'a_0.png': texturePackerFrame(0, 0, 8, 8),
+        'a_2.png': texturePackerFrame(8, 0, 8, 8),  // gap in indices
+        'b_0.png': texturePackerFrame(0, 8, 8, 8),
+        'b_1.png': texturePackerFrame(8, 8, 16, 16), // different source size
+    }});
+    assert.deepEqual(groups.map(g=> g.name).sort(), ['a_0', 'a_2', 'b_0', 'b_1']);
+});
+
+test('parseAtlas keeps all digit and digit-ending names individual', () =>
+{
+    const groups = parseAtlas({frames: {
+        '10.png': texturePackerFrame(0, 0, 8, 8),
+        'player2.png': texturePackerFrame(8, 0, 8, 8),
+    }});
+    assert.deepEqual(groups.map(g=> g.name).sort(), ['10', 'player2']);
+});
+
+test('parseAtlas captures trim offset and rotated flag', () =>
+{
+    const groups = parseAtlas({frames: {
+        'gem.png': {frame: {x: 4, y: 6, w: 10, h: 12}, rotated: true, trimmed: true,
+            spriteSourceSize: {x: 3, y: 5, w: 10, h: 12}, sourceSize: {w: 16, h: 20}},
+    }});
+    const f = groups[0].frames[0];
+    assert.deepEqual([f.pos.x, f.pos.y, f.size.x, f.size.y], [4, 6, 10, 12]);
+    assert.deepEqual([f.offset.x, f.offset.y], [3, 5]);
+    assert.deepEqual([f.sourceSize.x, f.sourceSize.y], [16, 20]);
+    assert.equal(f.rotated, true);
+});
+
+test('parseAtlas uses Aseprite frame tags as animations', () =>
+{
+    const groups = parseAtlas({
+        frames: {
+            'hero 0.ase': texturePackerFrame(0, 0, 16, 16),
+            'hero 1.ase': texturePackerFrame(16, 0, 16, 16),
+            'hero 2.ase': texturePackerFrame(32, 0, 16, 16),
+            'hero 3.ase': texturePackerFrame(48, 0, 16, 16),
+        },
+        meta: {frameTags: [
+            {name: 'walk', from: 0, to: 2, direction: 'forward'},
+        ]},
+    });
+    // walk covers frames 0-2, frame 3 is untagged so it stays individual
+    assert.deepEqual(groups.map(g=> [g.name, g.frames.length]),
+        [['walk', 3], ['hero 3', 1]]);
 });

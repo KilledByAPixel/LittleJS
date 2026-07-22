@@ -5784,11 +5784,12 @@ declare module "littlejsengine" {
     /**
      * LittleJS Texture Sheet Plugin
      * - Packs images into texture sheets as they are loaded
-     * - Sprites are placed automatically, callers just get back a TileInfo
-     * - Sheets are created and filled as needed, there is nothing to set up first
-     * - Sheets fill in call order even though images decode in parallel
-     * - Animation frames keep their source layout and wrap across rows as needed
-     * - WebGL textures upload once per batch of loads, not once per image
+     * - Sprites are placed automatically, callers get a TileInfo
+     * - Sheets are created and filled as needed
+     * - Sheets fill in call order, images decode in parallel
+     * - Animation frames keep layout and wrap across rows as needed
+     * - WebGL textures upload once per batch of loads
+     * - loadAtlas imports pre-packed atlases (TexturePacker and Aseprite json)
      * @namespace TextureSheets
      */
     /** Width and height in pixels of texture sheets created by loadSprite
@@ -5865,7 +5866,32 @@ declare module "littlejsengine" {
      *  const runTile = loadSprite('run.png', vec2(16)); // a 16x16 frame animation
      *  @memberof TextureSheets */
     export function loadSprite(src: string, frameSize?: Vector2 | number, padding?: number): TileInfo;
-    /** Wait for every sprite started by loadSprite to finish packing
+    /** Load a pre-packed texture atlas and repack it onto texture sheets
+     *  - Supports TexturePacker json (hash and array) and Aseprite json
+     *  - Returns an empty object which is filled with TileInfos when loaded
+     *  - Frames are named by the json, animations are grouped automatically
+     *  - Aseprite frame tags become animations, so do names like run_0, run_1
+     *  - Trimmed frames are restored to their full source size when packed
+     *  - Rotated frames are rotated back upright when packed
+     *  @param {string} imageSrc - Atlas image path
+     *  @param {string|Object} jsonSrc - Atlas json path, or already parsed json data
+     *  @param {number} [padding] - How many pixels padding around each frame
+     *  @return {Object} Object mapping frame and animation names to TileInfos
+     *  @example
+     *  const atlas = loadAtlas('sprites.png', 'sprites.json');
+     *  await spritesReady();
+     *  drawTile(pos, size, atlas.player);          // a single frame
+     *  drawTile(pos, size, atlas.run.frame(2));    // frame 2 of the run animation
+     *  @memberof TextureSheets */
+    export function loadAtlas(imageSrc: string, jsonSrc: string | any, padding?: number): any;
+    /** Parse atlas json into a list of named frame groups, used by loadAtlas
+     *  - Accepts TexturePacker json (hash and array) and Aseprite json
+     *  - Frames tagged in Aseprite or named like run_0, run_1 group into animations
+     *  @param {Object} data - Parsed atlas json data
+     *  @return {Array<Object>} List of {name, frames} groups in atlas order
+     *  @memberof TextureSheets */
+    export function parseAtlas(data: any): Array<any>;
+    /** Wait for everything started by loadSprite and loadAtlas to finish packing
      *  @return {Promise}
      *  @example
      *  async function gameInit()

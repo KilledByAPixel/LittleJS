@@ -6,6 +6,7 @@
  * - Sheets fill in call order, images decode in parallel
  * - Animation frames keep layout and wrap across rows as needed
  * - WebGL textures upload once per batch of loads
+ * - loadAtlas imports pre-packed atlases (TexturePacker and Aseprite json)
  * @namespace TextureSheets
  */
 
@@ -203,21 +204,10 @@ function loadSprite(src, frameSize, padding=textureSheetPadding)
         await imagePromise;
         if (image.width)
         {
-            // use the first sheet with enough space, or make a new one
+            // pack onto a sheet, then fill in the tile that was already handed out,
+            // copying every field so nothing is missed if TileInfo gains more of them
             const imageSize = vec2(image.width, image.height);
-            let sheet, tile;
-            for (sheet of textureSheets)
-                if (tile = sheet.tryAdd(imageSize, frameSize, padding))
-                    break;
-            if (!tile)
-            {
-                sheet = textureSheetCreate();
-                tile = sheet.tryAdd(imageSize, frameSize, padding);
-                ASSERT(!!tile, 'image is too large to fit on a texture sheet');
-            }
-
-            // fill in the tile that was already handed out, copying every field the
-            // packer set, so nothing is missed if TileInfo gains more of them later
+            const {sheet, tile} = textureSheetAdd(imageSize, frameSize, padding);
             Object.assign(tileInfo, tile);
             sheet.drawImage(image, tileInfo, false); // upload once per batch below
         }
@@ -235,7 +225,166 @@ function loadSprite(src, frameSize, padding=textureSheetPadding)
     return tileInfo;
 }
 
-/** Wait for every sprite started by loadSprite to finish packing
+/** Load a pre-packed texture atlas and repack it onto texture sheets
+ *  - Supports TexturePacker json (hash and array) and Aseprite json
+ *  - Returns an empty object which is filled with TileInfos when loaded
+ *  - Frames are named by the json, animations are grouped automatically
+ *  - Aseprite frame tags become animations, so do names like run_0, run_1
+ *  - Trimmed frames are restored to their full source size when packed
+ *  - Rotated frames are rotated back upright when packed
+ *  @param {string} imageSrc - Atlas image path
+ *  @param {string|Object} jsonSrc - Atlas json path, or already parsed json data
+ *  @param {number} [padding] - How many pixels padding around each frame
+ *  @return {Object} Object mapping frame and animation names to TileInfos
+ *  @example
+ *  const atlas = loadAtlas('sprites.png', 'sprites.json');
+ *  await spritesReady();
+ *  drawTile(pos, size, atlas.player);          // a single frame
+ *  drawTile(pos, size, atlas.run.frame(2));    // frame 2 of the run animation
+ *  @memberof TextureSheets */
+function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
+{
+    ASSERT(isStringLike(imageSrc), 'atlas image src must be a string');
+    ASSERT(isStringLike(jsonSrc) || typeof jsonSrc === 'object', 'atlas json must be a path or object');
+    ASSERT(isNumber(padding), 'padding must be a number');
+
+    const atlas = {};
+    if (headlessMode) return atlas;
+
+    // start fetching the json and decoding the image right away, in parallel
+    const jsonPromise = typeof jsonSrc === 'object' ? Promise.resolve(jsonSrc) :
+        fetch(jsonSrc).then(r=> r.ok && r.json()).catch(()=> undefined);
+    const image = new Image;
+    const imagePromise = new Promise(resolve =>
+    {
+        image.onerror = image.onload = resolve;
+        image.crossOrigin = 'anonymous';
+        image.src = imageSrc;
+    });
+
+    // pack through a queue so sheets fill in call order, not decode order
+    ++textureSheetPendingCount;
+    textureSheetQueue = textureSheetQueue.then(async ()=>
+    {
+        const data = await jsonPromise;
+        await imagePromise;
+        if (image.width && data)
+        {
+            for (const group of parseAtlas(data))
+            {
+                // reserve a block of full size cells, one per frame
+                const sourceSize = group.frames[0].sourceSize;
+                const blockSize = vec2(sourceSize.x*group.frames.length, sourceSize.y);
+                const {sheet, tile} = textureSheetAdd(blockSize, sourceSize, padding);
+
+                // draw each frame untrimmed into its cell
+                const context = sheet.context;
+                const cellWidth = sourceSize.x + padding*2;
+                const cellHeight = sourceSize.y + padding*2;
+                group.frames.forEach((f, i)=>
+                {
+                    const x = tile.pos.x + (i % tile.columns)*cellWidth + f.offset.x;
+                    const y = tile.pos.y + (i / tile.columns |0)*cellHeight + f.offset.y;
+                    if (f.rotated)
+                    {
+                        // stored rotated 90 degrees clockwise, draw it back upright
+                        context.save();
+                        context.translate(x, y);
+                        context.rotate(-PI/2);
+                        context.drawImage(image, f.pos.x, f.pos.y, f.size.y, f.size.x,
+                            -f.size.y, 0, f.size.y, f.size.x);
+                        context.restore();
+                    }
+                    else
+                        context.drawImage(image, f.pos.x, f.pos.y, f.size.x, f.size.y,
+                            x, y, f.size.x, f.size.y);
+                });
+                sheet.glDirty = true;
+                atlas[group.name] = tile;
+            }
+        }
+        else
+        {
+            // leave the atlas empty if either file failed to load
+            LOG('loadAtlas failed to load:', imageSrc, jsonSrc);
+        }
+
+        // upload to webgl once per batch, when the last pending load finishes
+        if (!--textureSheetPendingCount)
+            textureSheets.forEach(s=> s.updateTexture());
+    });
+
+    return atlas;
+}
+
+/** Parse atlas json into a list of named frame groups, used by loadAtlas
+ *  - Accepts TexturePacker json (hash and array) and Aseprite json
+ *  - Frames tagged in Aseprite or named like run_0, run_1 group into animations
+ *  @param {Object} data - Parsed atlas json data
+ *  @return {Array<Object>} List of {name, frames} groups in atlas order
+ *  @memberof TextureSheets */
+function parseAtlas(data)
+{
+    ASSERT(!!data?.frames, 'unrecognized atlas format, expected TexturePacker or Aseprite json');
+
+    // normalize both hash and array frame layouts into a single list
+    const frames = (isArray(data.frames) ?
+        data.frames.map(f=> [f.filename, f]) : Object.entries(data.frames))
+        .map(([name, f])=> ({
+            name: name.replace(/\.[^.\\/]+$/, ''), // strip file extension
+            pos:        vec2(f.frame.x, f.frame.y),
+            size:       vec2(f.frame.w, f.frame.h),
+            offset:     vec2(f.spriteSourceSize?.x ?? 0, f.spriteSourceSize?.y ?? 0),
+            sourceSize: vec2(f.sourceSize?.w ?? f.frame.w, f.sourceSize?.h ?? f.frame.h),
+            rotated:    !!f.rotated,
+        }));
+
+    const groups = [];
+    const tags = data.meta?.frameTags;
+    if (tags?.length)
+    {
+        // aseprite tags are authoritative, untagged frames stay individual
+        const tagged = new Set;
+        for (const tag of tags)
+        {
+            groups.push({name: tag.name, frames: frames.slice(tag.from, tag.to + 1)});
+            for (let i = tag.from; i <= tag.to; ++i)
+                tagged.add(i);
+        }
+        frames.forEach((f, i)=> tagged.has(i) || groups.push({name: f.name, frames: [f]}));
+        return groups;
+    }
+
+    // group frames that share a name stem with contiguous trailing numbers
+    // run_0.png and run_1.png become a 2 frame animation named run
+    const stems = new Map;
+    for (const f of frames)
+    {
+        let match = f.name.match(/^(.+?)([-_ ])?(\d+)$/);
+        if (match && !match[2] && /\d$/.test(match[1]))
+            match = undefined; // all digit tails like 10 are a name, not frame 0 of 1
+        const stem = match ? match[1] : f.name;
+        f.groupIndex = match ? Number(match[3]) : undefined;
+        stems.has(stem) || stems.set(stem, []);
+        stems.get(stem).push(f);
+    }
+    for (const [stem, list] of stems)
+    {
+        // only group 2 or more frames with contiguous indices and matching sizes
+        list.sort((a, b)=> a.groupIndex - b.groupIndex);
+        const grouped = list.length > 1 &&
+            list.every((f, i)=> f.groupIndex === list[0].groupIndex + i) &&
+            list.every(f=> f.sourceSize.x === list[0].sourceSize.x &&
+                           f.sourceSize.y === list[0].sourceSize.y);
+        if (grouped)
+            groups.push({name: stem, frames: list});
+        else
+            list.forEach(f=> groups.push({name: f.name, frames: [f]}));
+    }
+    return groups;
+}
+
+/** Wait for everything started by loadSprite and loadAtlas to finish packing
  *  @return {Promise}
  *  @example
  *  async function gameInit()
@@ -258,6 +407,22 @@ function textureSheetCreate()
     const sheet = new TextureSheet;
     textureSheets.push(sheet);
     return sheet;
+}
+
+// use the first sheet with enough space, or make a new one
+function textureSheetAdd(imageSize, frameSize, padding)
+{
+    let sheet, tile;
+    for (sheet of textureSheets)
+        if (tile = sheet.tryAdd(imageSize, frameSize, padding))
+            break;
+    if (!tile)
+    {
+        sheet = textureSheetCreate();
+        tile = sheet.tryAdd(imageSize, frameSize, padding);
+        ASSERT(!!tile, 'image is too large to fit on a texture sheet');
+    }
+    return {sheet, tile};
 }
 
 ///////////////////////////////////////////////////////////////////////////////

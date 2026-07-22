@@ -839,6 +839,8 @@ getCrescentPoints(pos, size=1, percent=0, angle=0, invert=false, sides=glCircleS
 
 ```javascript
 loadSprite(src, frameSize, padding=1) // Load an image and pack it, returns a TileInfo
+loadAtlas(imageSrc, jsonSrc, padding=1) // Load a TexturePacker or Aseprite atlas, returns name->TileInfo object
+parseAtlas(data)                      // Parse atlas json into named frame groups, used by loadAtlas
 spritesReady()                        // Promise resolved when all sprites are packed
 textureSheets                         // Array of TextureSheet created by loadSprite
 new TextureSheet(size=2048)           // A texture that images are packed into
