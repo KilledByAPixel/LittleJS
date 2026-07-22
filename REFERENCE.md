@@ -841,13 +841,13 @@ getCrescentPoints(pos, size=1, percent=0, angle=0, invert=false, sides=glCircleS
 loadSprite(src, frameSize, padding=1) // Load an image and pack it, returns a TileInfo
 spritesReady()                        // Promise resolved when all sprites are packed
 textureSheets                         // Array of TextureSheet created by loadSprite
-new TextureSheet(size=1024)           // A texture that images are packed into
+new TextureSheet(size=2048)           // A texture that images are packed into
 sheet.tryAdd(imageSize, frameSize, padding) // Reserve a spot, returns a TileInfo
 sheet.drawImage(image, tileInfo, update=true) // Draw an image into a reserved spot
 sheet.updateTexture()                 // Upload batched images to WebGL
 
 // Settings
-textureSheetSize = 1024   // Size in pixels of texture sheets created by loadSprite
+textureSheetSize = 2048   // Size in pixels of texture sheets created by loadSprite
 textureSheetPadding = 1   // Default padding around each frame packed by loadSprite
 
 // Load a sprite and an animation, then wait for both

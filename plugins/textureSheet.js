@@ -15,7 +15,7 @@
  *  @type {number}
  *  @default
  *  @memberof Settings */
-let textureSheetSize = 1024;
+let textureSheetSize = 2048;
 
 /** Default padding pixels around each frame packed by loadSprite
  *  @type {number}
