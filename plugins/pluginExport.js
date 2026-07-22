@@ -100,4 +100,14 @@ export
     threeJS,
     ThreeJSPlugin,
     ThreeJSObject,
+
+    // Texture Sheets
+    textureSheetSize,
+    textureSheetPadding,
+    setTextureSheetSize,
+    setTextureSheetPadding,
+    textureSheets,
+    TextureSheet,
+    loadSprite,
+    spritesReady,
 }

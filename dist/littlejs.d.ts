@@ -1669,8 +1669,9 @@ declare module "littlejsengine" {
          *  @param {TextureInfo} [textureInfo] - Texture info to use
          *  @param {number} [padding] - How many pixels padding around all sides of each tile (increases grid size, does not affect tile size)
          *  @param {number} [bleed] - How many pixels smaller to shrink UVS of tiles (does not affect grid size, only UVs)
+         *  @param {number} [columns] - How many frames per row for frame(), 0 to keep frames on a single row
          */
-        constructor(pos?: Vector2, size?: Vector2, textureInfo?: TextureInfo, padding?: number, bleed?: number);
+        constructor(pos?: Vector2, size?: Vector2, textureInfo?: TextureInfo, padding?: number, bleed?: number, columns?: number);
         /** @property {Vector2} - Top left corner of tile in pixels */
         pos: Vector2;
         /** @property {Vector2} - Size of tile in pixels */
@@ -1681,16 +1682,24 @@ declare module "littlejsengine" {
         textureInfo: TextureInfo;
         /** @property {number} - Shrinks tile by this many pixels to prevent neighbors bleeding */
         bleed: number;
+        /** @property {number} - How many frames per row for frame(), 0 to keep frames on a single row */
+        columns: number;
         /** Returns a copy of this tile offset by a vector
         *  @param {Vector2} offset - Offset to apply in pixels
         *  @return {TileInfo}
         */
         offset(offset: Vector2): TileInfo;
         /** Returns a copy of this tile offset by a number of animation frames
+        *  Frames wrap down to the next row if columns is set
         *  @param {number} frame - Offset to apply in animation frames
         *  @return {TileInfo}
         */
         frame(frame: number): TileInfo;
+        /** Set how many frames per row this tile uses, so frame() can wrap
+        *  @param {number} [columns] - Frames per row, 0 to keep frames on a single row
+        *  @return {TileInfo}
+        */
+        setColumns(columns?: number): TileInfo;
         /**
          * Returns a tile info for an index using this tile as reference
          * @param {Vector2|number} [index=0]
@@ -5772,4 +5781,99 @@ declare module "littlejsengine" {
         /** Copy this object's transform to the mesh */
         syncMesh(): void;
     }
+    /**
+     * LittleJS Texture Sheet Plugin
+     * - Packs images into texture sheets as they are loaded
+     * - Sprites are placed automatically, callers just get back a TileInfo
+     * - Sheets are created and filled as needed, there is nothing to set up first
+     * - Sheets fill in call order even though images decode in parallel
+     * - Animation frames keep their source layout and wrap across rows as needed
+     * - WebGL textures upload once per batch of loads, not once per image
+     * @namespace TextureSheets
+     */
+    /** Width and height in pixels of texture sheets created by loadSprite
+     *  @type {number}
+     *  @default
+     *  @memberof Settings */
+    export let textureSheetSize: number;
+    /** Default padding pixels around each frame packed by loadSprite
+     *  @type {number}
+     *  @default
+     *  @memberof Settings */
+    export let textureSheetPadding: number;
+    /** Set width and height in pixels of texture sheets created by loadSprite
+     *  @param {number} size
+     *  @memberof Settings */
+    export function setTextureSheetSize(size: number): void;
+    /** Set default padding pixels around each frame packed by loadSprite
+     *  @param {number} padding
+     *  @memberof Settings */
+    export function setTextureSheetPadding(padding: number): void;
+    /** Array of texture sheets created by loadSprite
+     *  @type {Array<TextureSheet>}
+     *  @memberof TextureSheets */
+    export let textureSheets: Array<TextureSheet>;
+    /**
+     * Texture Sheet - A texture that images are packed into as they load
+     * Uses shelf packing, images are placed left to right then wrap to a new row
+     * @memberof TextureSheets
+     */
+    export class TextureSheet {
+        /** Create a texture sheet, called automatically by loadSprite
+         *  @param {number} [size] - Width and height of the sheet in pixels */
+        constructor(size?: number);
+        /** @property {number} - Width and height of the sheet in pixels */
+        size: number;
+        /** @property {OffscreenCanvas} - Canvas holding the packed images */
+        canvas: OffscreenCanvas;
+        /** @property {OffscreenCanvasRenderingContext2D} - 2d context for the canvas */
+        context: OffscreenCanvasRenderingContext2D;
+        /** @property {TextureInfo} - The texture info for this sheet */
+        textureInfo: TextureInfo;
+        /** @property {Vector2} - Where the next image will be packed */
+        cursor: Vector2;
+        /** @property {number} - Height of the row being packed */
+        rowHeight: number;
+        /** @property {boolean} - Has the canvas changed since the last webgl upload? */
+        glDirty: boolean;
+        /** Find a spot for an image on this sheet without drawing it
+         *  @param {Vector2} imageSize - Size of the source image in pixels
+         *  @param {Vector2} [frameSize] - Size of each frame, or the whole image if not passed
+         *  @param {number} [padding] - How many pixels padding around each frame
+         *  @return {TileInfo} Tile for the packed image, or undefined if the sheet is full */
+        tryAdd(imageSize: Vector2, frameSize?: Vector2, padding?: number): TileInfo;
+        /** Draw an image into this sheet at a tile returned by tryAdd
+         *  @param {HTMLImageElement} image - Source image to copy from
+         *  @param {TileInfo} tileInfo - Where to put it, from tryAdd
+         *  @param {boolean} [update] - Upload to webgl now, pass false when batching */
+        drawImage(image: HTMLImageElement, tileInfo: TileInfo, update?: boolean): void;
+        /** Upload the canvas to webgl if it has changed since the last upload
+         *  Only needed after batching, drawImage uploads automatically by default */
+        updateTexture(): void;
+    }
+    /** Load an image and pack it into a texture sheet
+     *  - Returns a TileInfo immediately which is filled in when the image loads
+     *  - Nothing is visible until it loads, use spritesReady to wait for it
+     *  - Pass frameSize for animations, then step through them with TileInfo.frame
+     *  - Grid images keep their layout and frames wrap down to the next row
+     *  @param {string} src - Image source path
+     *  @param {Vector2|number} [frameSize] - Size of each animation frame in pixels
+     *  @param {number} [padding] - How many pixels padding around each frame
+     *  @return {TileInfo}
+     *  @example
+     *  const playerTile = loadSprite('player.png');     // a single sprite
+     *  const runTile = loadSprite('run.png', vec2(16)); // a 16x16 frame animation
+     *  @memberof TextureSheets */
+    export function loadSprite(src: string, frameSize?: Vector2 | number, padding?: number): TileInfo;
+    /** Wait for every sprite started by loadSprite to finish packing
+     *  @return {Promise}
+     *  @example
+     *  async function gameInit()
+     *  {
+     *      playerTile = loadSprite('player.png');
+     *      runTile = loadSprite('run.png', vec2(16));
+     *      await spritesReady();
+     *  }
+     *  @memberof TextureSheets */
+    export function spritesReady(): Promise<any>;
 }

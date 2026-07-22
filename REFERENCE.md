@@ -42,6 +42,8 @@ vec2(x=0, y=x)                                // Create a 2D vector with Vector 
 rgb(r=1, g=1, b=1, a=1)                       // Create a color object with RGBA values
 hsl(h=0, s=0, l=1, a=1)                       // Create a color object with HSLA values
 tile(index=0, size=(16,16), texture=0, padding=0, bleed=0) // Create a tile info object
+tileInfo.frame(n)                             // Tile offset by n animation frames
+tileInfo.setColumns(columns)                  // Frames per row, so frame() wraps to the next row
 
 // Helper functions 
 abs(value)                                    // Get absolute value
@@ -827,6 +829,34 @@ drawThreeSliceScreen(pos, size, startTile, borderSize=32, extraSpace=2, angle=0)
 // Crescent — moon-phase shape (percent: 0=new, .25=first quarter, .5=full, .75=last quarter)
 drawCrescent(pos, size=1, percent=0, color=WHITE, angle=0, invert=false, lineWidth=0, lineColor=BLACK, useWebGL=glEnable, screenSpace, context)
 getCrescentPoints(pos, size=1, percent=0, angle=0, invert=false, sides=glCircleSides) // crescent points for drawPoly
+```
+
+## LittleJS Texture Sheets
+- Optional plugin: packs images into texture sheets at runtime and returns a TileInfo
+- Sheets are created and filled automatically, there is nothing to set up first
+- Frames are packed into a contiguous row so `tileInfo.frame(n)` works
+- See `examples/shorts/textureSheet.js`
+
+```javascript
+loadSprite(src, frameSize, padding=1) // Load an image and pack it, returns a TileInfo
+spritesReady()                        // Promise resolved when all sprites are packed
+textureSheets                         // Array of TextureSheet created by loadSprite
+new TextureSheet(size=1024)           // A texture that images are packed into
+sheet.tryAdd(imageSize, frameSize, padding) // Reserve a spot, returns a TileInfo
+sheet.drawImage(image, tileInfo, update=true) // Draw an image into a reserved spot
+sheet.updateTexture()                 // Upload batched images to WebGL
+
+// Settings
+textureSheetSize = 1024   // Size in pixels of texture sheets created by loadSprite
+textureSheetPadding = 1   // Default padding around each frame packed by loadSprite
+
+// Load a sprite and an animation, then wait for both
+async function gameInit()
+{
+    playerTile = loadSprite('player.png');
+    runTile = loadSprite('run.png', vec2(16));
+    await spritesReady();
+}
 ```
 
 ## LittleJS Debugging System

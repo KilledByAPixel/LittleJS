@@ -32,6 +32,7 @@ const exampleList =
     new ExampleInfo('Texture Wrapped', 'textureWrapped.js', 'Tiled texture rendering with wrap counts', false, 'background, pattern, repeat, tile, sprites'),
     new ExampleInfo('Sprite Atlas', 'spriteAtlas.js', 'Sprite atlas and tile rendering', false, 'sheet, frames, tiles'),
     new ExampleInfo('Animation', 'animation.js', 'Sprite animation system', false, 'frames, loop, tiles, sprites'),
+    new ExampleInfo('Texture Sheet', 'textureSheet.js', 'Pack images into a texture sheet at runtime', false, 'loadSprite, atlas, packing, sprites, frames'),
     new ExampleInfo('Blending', 'blending.js', 'Additive blending and transparency', false, 'alpha, color, tiles, smooth'),
     new ExampleInfo('Image Font', 'imageFont.js', 'Bitmap font system with built-in system font', false, 'text, characters'),
     new ExampleInfo('Particles', 'particles.js', 'Particle system', false, 'effects, emitter, physics, fire, smoke, comet'),
