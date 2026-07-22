@@ -1,11 +1,11 @@
 /**
  * LittleJS Texture Sheet Plugin
  * - Packs images into texture sheets as they are loaded
- * - Sprites are placed automatically, callers just get back a TileInfo
- * - Sheets are created and filled as needed, there is nothing to set up first
- * - Sheets fill in call order even though images decode in parallel
- * - Animation frames keep their source layout and wrap across rows as needed
- * - WebGL textures upload once per batch of loads, not once per image
+ * - Sprites are placed automatically, callers get a TileInfo
+ * - Sheets are created and filled as needed
+ * - Sheets fill in call order, images decode in parallel
+ * - Animation frames keep layout and wrap across rows as needed
+ * - WebGL textures upload once per batch of loads
  * @namespace TextureSheets
  */
 
