@@ -154,6 +154,15 @@ test('source padding derives the grid from padded source cells', () =>
     assert.equal(sheet.cursor.x, 4*18);
 });
 
+test('source padding accepts a vec2 for asymmetric gutters', () =>
+{
+    // 16px frames with 2px horizontal and no vertical source padding are 20x16 cells
+    const sheet = new TextureSheet(256);
+    const tile = sheet.tryAdd(vec2(80, 16), vec2(16), 1, vec2(2, 0));
+    assert.equal(tile.columns, 4);
+    assert.deepEqual([tile.size.x, tile.size.y], [16, 16]);
+});
+
 test('source padding works with grid sources', () =>
 {
     // a 36x36 source of 16px frames with 1px source padding is a 2x2 grid

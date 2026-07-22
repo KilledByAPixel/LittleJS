@@ -14307,17 +14307,21 @@ class TextureSheet
      *  @param {Vector2} imageSize - Size of the source image in pixels
      *  @param {Vector2} [frameSize] - Size of each frame, or the whole image if not passed
      *  @param {number} [padding] - How many pixels padding around each frame
-     *  @param {number} [sourcePadding] - How many pixels padding around each frame in the source image
+     *  @param {number|Vector2} [sourcePadding] - How many pixels padding around each frame in the source image
      *  @return {TileInfo} Tile for the packed image, or undefined if the sheet is full */
     tryAdd(imageSize, frameSize=imageSize, padding=textureSheetPadding, sourcePadding=0)
     {
         ASSERT(isVector2(imageSize) && isVector2(frameSize), 'sizes must be vec2');
         ASSERT(frameSize.x > 0 && frameSize.y > 0, 'frame size must be positive');
-        ASSERT(isNumber(sourcePadding) && sourcePadding >= 0, 'sourcePadding must be a number >= 0');
+
+        if (isNumber(sourcePadding))
+            sourcePadding = vec2(sourcePadding);
+        ASSERT(isVector2(sourcePadding) && sourcePadding.x >= 0 && sourcePadding.y >= 0,
+            'sourcePadding must be a number or vec2 >= 0');
 
         // the source may have its own padding baked in around each frame
-        const sourceCellWidth = frameSize.x + sourcePadding*2;
-        const sourceCellHeight = frameSize.y + sourcePadding*2;
+        const sourceCellWidth = frameSize.x + sourcePadding.x*2;
+        const sourceCellHeight = frameSize.y + sourcePadding.y*2;
         ASSERT(imageSize.x % sourceCellWidth === 0 && imageSize.y % sourceCellHeight === 0,
             'image size must be a multiple of the padded frame size');
 
@@ -14359,16 +14363,19 @@ class TextureSheet
      *  @param {HTMLImageElement} image - Source image to copy from
      *  @param {TileInfo} tileInfo - Where to put it, from tryAdd
      *  @param {boolean} [update] - Upload to webgl now, pass false when batching
-     *  @param {number} [sourcePadding] - How many pixels padding around each frame in the source image */
+     *  @param {number|Vector2} [sourcePadding] - How many pixels padding around each frame in the source image */
     drawImage(image, tileInfo, update=true, sourcePadding=0)
     {
         ASSERT(!!this.context, 'texture sheet has no canvas');
 
+        if (isNumber(sourcePadding))
+            sourcePadding = vec2(sourcePadding);
+
         // copy frames in order, reading the source left to right, top to bottom
         // the destination wraps at tileInfo.columns which may be narrower than the source
         const frameSize = tileInfo.size;
-        const sourceCellWidth = frameSize.x + sourcePadding*2;
-        const sourceCellHeight = frameSize.y + sourcePadding*2;
+        const sourceCellWidth = frameSize.x + sourcePadding.x*2;
+        const sourceCellHeight = frameSize.y + sourcePadding.y*2;
         const sourceColumns = image.width / sourceCellWidth;
         const frameCount = sourceColumns * (image.height / sourceCellHeight);
         const columns = tileInfo.columns || frameCount;
@@ -14376,8 +14383,8 @@ class TextureSheet
         const cellHeight = frameSize.y + tileInfo.padding*2;
         for (let i = frameCount; i--;)
         {
-            const sourceX = (i % sourceColumns) * sourceCellWidth + sourcePadding;
-            const sourceY = (i / sourceColumns | 0) * sourceCellHeight + sourcePadding;
+            const sourceX = (i % sourceColumns) * sourceCellWidth + sourcePadding.x;
+            const sourceY = (i / sourceColumns | 0) * sourceCellHeight + sourcePadding.y;
             this.context.drawImage(image,
                 sourceX, sourceY, frameSize.x, frameSize.y,
                 tileInfo.pos.x + (i % columns) * cellWidth,
@@ -14411,7 +14418,7 @@ class TextureSheet
  *  @param {string} src - Image source path
  *  @param {Vector2|number} [frameSize] - Size of each animation frame in pixels
  *  @param {number} [padding] - How many pixels padding around each frame
- *  @param {number} [sourcePadding] - How many pixels padding around each frame in the source image
+ *  @param {number|Vector2} [sourcePadding] - How many pixels padding around each frame in the source image
  *  @return {TileInfo}
  *  @example
  *  const playerTile = loadSprite('player.png');     // a single sprite
@@ -14422,6 +14429,7 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
     ASSERT(isStringLike(src), 'image src must be a string');
     ASSERT(!frameSize || isVector2(frameSize) || isNumber(frameSize), 'frameSize must be a vec2 or number');
     ASSERT(isNumber(padding), 'padding must be a number');
+    ASSERT(isNumber(sourcePadding) || isVector2(sourcePadding), 'sourcePadding must be a number or vec2');
 
     if (isNumber(frameSize))
         frameSize = vec2(frameSize);
