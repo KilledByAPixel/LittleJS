@@ -155,8 +155,9 @@ class TileInfo
      *  @param {TextureInfo} [textureInfo] - Texture info to use
      *  @param {number} [padding] - How many pixels padding around all sides of each tile (increases grid size, does not affect tile size)
      *  @param {number} [bleed] - How many pixels smaller to shrink UVS of tiles (does not affect grid size, only UVs)
+     *  @param {number} [columns] - How many frames per row for frame(), 0 to keep frames on a single row
      */
-    constructor(pos=vec2(), size=tileDefaultSize, textureInfo=textureInfos[0], padding=tileDefaultPadding, bleed=tileDefaultBleed)
+    constructor(pos=vec2(), size=tileDefaultSize, textureInfo=textureInfos[0], padding=tileDefaultPadding, bleed=tileDefaultBleed, columns=0)
     {
         /** @property {Vector2} - Top left corner of tile in pixels */
         this.pos = pos.copy();
@@ -168,6 +169,8 @@ class TileInfo
         this.textureInfo = textureInfo;
         /** @property {number} - Shrinks tile by this many pixels to prevent neighbors bleeding */
         this.bleed = bleed;
+        /** @property {number} - How many frames per row for frame(), 0 to keep frames on a single row */
+        this.columns = columns;
     }
 
     /** Returns a copy of this tile offset by a vector
@@ -175,9 +178,10 @@ class TileInfo
     *  @return {TileInfo}
     */
     offset(offset)
-    { return new TileInfo(this.pos.add(offset), this.size, this.textureInfo, this.padding, this.bleed); }
+    { return new TileInfo(this.pos.add(offset), this.size, this.textureInfo, this.padding, this.bleed, this.columns); }
 
     /** Returns a copy of this tile offset by a number of animation frames
+    *  Frames wrap down to the next row if columns is set
     *  @param {number} frame - Offset to apply in animation frames
     *  @return {TileInfo}
     */
@@ -185,9 +189,23 @@ class TileInfo
     {
         ASSERT(typeof frame === 'number');
         const w = this.size.x + this.padding*2;
-        const x = frame*w;
-        ASSERT(x + this.size.x <= this.textureInfo.size.x, 'frame extends beyond texture width!');
-        return this.offset(new Vector2(x));
+        const h = this.size.y + this.padding*2;
+        const x = (this.columns ? frame % this.columns : frame) * w;
+        const y = (this.columns ? frame / this.columns | 0 : 0) * h;
+        ASSERT(this.pos.x + x + this.size.x <= this.textureInfo.size.x, 'frame extends beyond texture width!');
+        ASSERT(this.pos.y + y + this.size.y <= this.textureInfo.size.y, 'frame extends beyond texture height!');
+        return this.offset(new Vector2(x, y));
+    }
+
+    /** Set how many frames per row this tile uses, so frame() can wrap
+    *  @param {number} [columns] - Frames per row, 0 to keep frames on a single row
+    *  @return {TileInfo}
+    */
+    setColumns(columns=0)
+    {
+        ASSERT(isNumber(columns) && columns >= 0, 'columns must be a number >= 0');
+        this.columns = columns;
+        return this;
     }
 
     /**
@@ -196,7 +214,7 @@ class TileInfo
      * @return {TileInfo}
      */
     index(index)
-    { return tile(index, this.size, this.textureInfo, this.padding, this.bleed); }
+    { return tile(index, this.size, this.textureInfo, this.padding, this.bleed).setColumns(this.columns); }
 
     /**
      * Set this tile to use a full image in a texture info
@@ -208,7 +226,7 @@ class TileInfo
         this.textureInfo = textureInfo;
         this.pos = new Vector2;
         this.size = textureInfo.size.copy();
-        this.bleed = this.padding = 0;
+        this.bleed = this.padding = this.columns = 0;
         return this;
     }
 }
