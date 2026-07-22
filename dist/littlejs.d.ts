@@ -5841,13 +5841,15 @@ declare module "littlejsengine" {
          *  @param {Vector2} imageSize - Size of the source image in pixels
          *  @param {Vector2} [frameSize] - Size of each frame, or the whole image if not passed
          *  @param {number} [padding] - How many pixels padding around each frame
+         *  @param {number} [sourcePadding] - How many pixels padding around each frame in the source image
          *  @return {TileInfo} Tile for the packed image, or undefined if the sheet is full */
-        tryAdd(imageSize: Vector2, frameSize?: Vector2, padding?: number): TileInfo;
+        tryAdd(imageSize: Vector2, frameSize?: Vector2, padding?: number, sourcePadding?: number): TileInfo;
         /** Draw an image into this sheet at a tile returned by tryAdd
          *  @param {HTMLImageElement} image - Source image to copy from
          *  @param {TileInfo} tileInfo - Where to put it, from tryAdd
-         *  @param {boolean} [update] - Upload to webgl now, pass false when batching */
-        drawImage(image: HTMLImageElement, tileInfo: TileInfo, update?: boolean): void;
+         *  @param {boolean} [update] - Upload to webgl now, pass false when batching
+         *  @param {number} [sourcePadding] - How many pixels padding around each frame in the source image */
+        drawImage(image: HTMLImageElement, tileInfo: TileInfo, update?: boolean, sourcePadding?: number): void;
         /** Upload the canvas to webgl if it has changed since the last upload
          *  Only needed after batching, drawImage uploads automatically by default */
         updateTexture(): void;
@@ -5857,15 +5859,17 @@ declare module "littlejsengine" {
      *  - Nothing is visible until it loads, use spritesReady to wait for it
      *  - Pass frameSize for animations, then step through them with TileInfo.frame
      *  - Grid images keep their layout and frames wrap down to the next row
+     *  - Pass sourcePadding if the source image has padding baked in around frames
      *  @param {string} src - Image source path
      *  @param {Vector2|number} [frameSize] - Size of each animation frame in pixels
      *  @param {number} [padding] - How many pixels padding around each frame
+     *  @param {number} [sourcePadding] - How many pixels padding around each frame in the source image
      *  @return {TileInfo}
      *  @example
      *  const playerTile = loadSprite('player.png');     // a single sprite
      *  const runTile = loadSprite('run.png', vec2(16)); // a 16x16 frame animation
      *  @memberof TextureSheets */
-    export function loadSprite(src: string, frameSize?: Vector2 | number, padding?: number): TileInfo;
+    export function loadSprite(src: string, frameSize?: Vector2 | number, padding?: number, sourcePadding?: number): TileInfo;
     /** Load a pre-packed texture atlas and repack it onto texture sheets
      *  - Supports TexturePacker json (hash and array) and Aseprite json
      *  - Returns an empty object which is filled with TileInfos when loaded

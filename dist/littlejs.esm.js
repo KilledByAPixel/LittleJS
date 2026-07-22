@@ -14998,13 +14998,19 @@ class TextureSheet
      *  @param {Vector2} imageSize - Size of the source image in pixels
      *  @param {Vector2} [frameSize] - Size of each frame, or the whole image if not passed
      *  @param {number} [padding] - How many pixels padding around each frame
+     *  @param {number} [sourcePadding] - How many pixels padding around each frame in the source image
      *  @return {TileInfo} Tile for the packed image, or undefined if the sheet is full */
-    tryAdd(imageSize, frameSize=imageSize, padding=textureSheetPadding)
+    tryAdd(imageSize, frameSize=imageSize, padding=textureSheetPadding, sourcePadding=0)
     {
         ASSERT(isVector2(imageSize) && isVector2(frameSize), 'sizes must be vec2');
         ASSERT(frameSize.x > 0 && frameSize.y > 0, 'frame size must be positive');
-        ASSERT(imageSize.x % frameSize.x === 0 && imageSize.y % frameSize.y === 0,
-            'image size must be a multiple of the frame size');
+        ASSERT(isNumber(sourcePadding) && sourcePadding >= 0, 'sourcePadding must be a number >= 0');
+
+        // the source may have its own padding baked in around each frame
+        const sourceCellWidth = frameSize.x + sourcePadding*2;
+        const sourceCellHeight = frameSize.y + sourcePadding*2;
+        ASSERT(imageSize.x % sourceCellWidth === 0 && imageSize.y % sourceCellHeight === 0,
+            'image size must be a multiple of the padded frame size');
 
         const cellWidth = frameSize.x + padding*2;
         const cellHeight = frameSize.y + padding*2;
@@ -15013,8 +15019,8 @@ class TextureSheet
 
         // keep the layout of the source image, but narrow it if a row is too wide
         // frames wrap down to the next row, which TileInfo.frame handles via columns
-        const sourceColumns = imageSize.x / frameSize.x;
-        const frameCount = sourceColumns * (imageSize.y / frameSize.y);
+        const sourceColumns = imageSize.x / sourceCellWidth;
+        const frameCount = sourceColumns * (imageSize.y / sourceCellHeight);
         const columns = min(sourceColumns, maxColumns);
         const blockWidth = columns * cellWidth;
         const blockHeight = ceil(frameCount / columns) * cellHeight;
@@ -15043,23 +15049,26 @@ class TextureSheet
     /** Draw an image into this sheet at a tile returned by tryAdd
      *  @param {HTMLImageElement} image - Source image to copy from
      *  @param {TileInfo} tileInfo - Where to put it, from tryAdd
-     *  @param {boolean} [update] - Upload to webgl now, pass false when batching */
-    drawImage(image, tileInfo, update=true)
+     *  @param {boolean} [update] - Upload to webgl now, pass false when batching
+     *  @param {number} [sourcePadding] - How many pixels padding around each frame in the source image */
+    drawImage(image, tileInfo, update=true, sourcePadding=0)
     {
         ASSERT(!!this.context, 'texture sheet has no canvas');
 
         // copy frames in order, reading the source left to right, top to bottom
         // the destination wraps at tileInfo.columns which may be narrower than the source
         const frameSize = tileInfo.size;
-        const sourceColumns = image.width / frameSize.x;
-        const frameCount = sourceColumns * (image.height / frameSize.y);
+        const sourceCellWidth = frameSize.x + sourcePadding*2;
+        const sourceCellHeight = frameSize.y + sourcePadding*2;
+        const sourceColumns = image.width / sourceCellWidth;
+        const frameCount = sourceColumns * (image.height / sourceCellHeight);
         const columns = tileInfo.columns || frameCount;
         const cellWidth = frameSize.x + tileInfo.padding*2;
         const cellHeight = frameSize.y + tileInfo.padding*2;
         for (let i = frameCount; i--;)
         {
-            const sourceX = (i % sourceColumns) * frameSize.x;
-            const sourceY = (i / sourceColumns | 0) * frameSize.y;
+            const sourceX = (i % sourceColumns) * sourceCellWidth + sourcePadding;
+            const sourceY = (i / sourceColumns | 0) * sourceCellHeight + sourcePadding;
             this.context.drawImage(image,
                 sourceX, sourceY, frameSize.x, frameSize.y,
                 tileInfo.pos.x + (i % columns) * cellWidth,
@@ -15089,15 +15098,17 @@ class TextureSheet
  *  - Nothing is visible until it loads, use spritesReady to wait for it
  *  - Pass frameSize for animations, then step through them with TileInfo.frame
  *  - Grid images keep their layout and frames wrap down to the next row
+ *  - Pass sourcePadding if the source image has padding baked in around frames
  *  @param {string} src - Image source path
  *  @param {Vector2|number} [frameSize] - Size of each animation frame in pixels
  *  @param {number} [padding] - How many pixels padding around each frame
+ *  @param {number} [sourcePadding] - How many pixels padding around each frame in the source image
  *  @return {TileInfo}
  *  @example
  *  const playerTile = loadSprite('player.png');     // a single sprite
  *  const runTile = loadSprite('run.png', vec2(16)); // a 16x16 frame animation
  *  @memberof TextureSheets */
-function loadSprite(src, frameSize, padding=textureSheetPadding)
+function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0)
 {
     ASSERT(isStringLike(src), 'image src must be a string');
     ASSERT(!frameSize || isVector2(frameSize) || isNumber(frameSize), 'frameSize must be a vec2 or number');
@@ -15132,9 +15143,9 @@ function loadSprite(src, frameSize, padding=textureSheetPadding)
             // pack onto a sheet, then fill in the tile that was already handed out,
             // copying every field so nothing is missed if TileInfo gains more of them
             const imageSize = vec2(image.width, image.height);
-            const {sheet, tile} = textureSheetAdd(imageSize, frameSize, padding);
+            const {sheet, tile} = textureSheetAdd(imageSize, frameSize, padding, sourcePadding);
             Object.assign(tileInfo, tile);
-            sheet.drawImage(image, tileInfo, false); // upload once per batch below
+            sheet.drawImage(image, tileInfo, false, sourcePadding); // upload once per batch below
         }
         else
         {
@@ -15335,16 +15346,16 @@ function textureSheetCreate()
 }
 
 // use the first sheet with enough space, or make a new one
-function textureSheetAdd(imageSize, frameSize, padding)
+function textureSheetAdd(imageSize, frameSize, padding, sourcePadding)
 {
     let sheet, tile;
     for (sheet of textureSheets)
-        if (tile = sheet.tryAdd(imageSize, frameSize, padding))
+        if (tile = sheet.tryAdd(imageSize, frameSize, padding, sourcePadding))
             break;
     if (!tile)
     {
         sheet = textureSheetCreate();
-        tile = sheet.tryAdd(imageSize, frameSize, padding);
+        tile = sheet.tryAdd(imageSize, frameSize, padding, sourcePadding);
         ASSERT(!!tile, 'image is too large to fit on a texture sheet');
     }
     return {sheet, tile};

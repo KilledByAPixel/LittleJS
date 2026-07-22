@@ -143,6 +143,26 @@ test('a full sheet refuses instead of overflowing', () =>
     assert.equal(sheet.tryAdd(vec2(32), vec2(32), 0), undefined);
 });
 
+test('source padding derives the grid from padded source cells', () =>
+{
+    // a 72x18 source of 16px frames with 1px baked in padding is 4 cells of 18px
+    const sheet = new TextureSheet(256);
+    const tile = sheet.tryAdd(vec2(72, 18), vec2(16), 1, 1);
+    assert.equal(tile.columns, 4);
+    assert.deepEqual([tile.size.x, tile.size.y], [16, 16]);
+    // the packed block is 4 cells of the sheet's own padded size
+    assert.equal(sheet.cursor.x, 4*18);
+});
+
+test('source padding works with grid sources', () =>
+{
+    // a 36x36 source of 16px frames with 1px source padding is a 2x2 grid
+    const sheet = new TextureSheet(256);
+    const tile = sheet.tryAdd(vec2(36), vec2(16), 0, 1);
+    assert.equal(tile.columns, 2);
+    assert.deepEqual([tile.frame(3).pos.x, tile.frame(3).pos.y], [16, 16]);
+});
+
 test('a failed tryAdd leaves the sheet unchanged', () =>
 {
     // loadSprite probes full sheets before making a new one, so a failed
