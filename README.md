@@ -38,6 +38,7 @@ The code is very clean and well documented with many examples to get you started
 - Blazing fast WebGL2 + Canvas2D hybrid rendering system
 - Apply [Shadertoy](https://www.shadertoy.com) style shaders for post-processing effects
 - Robust particle effect system and [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
+- Load sprites and animations into texture sheets at runtime, or import [TexturePacker](https://www.codeandweb.com/texturepacker) and [Aseprite](https://www.aseprite.org) atlases
 - Optional 3D rendering with the [Three.js](https://threejs.org) plugin
 
 ### 🔊 Audio
