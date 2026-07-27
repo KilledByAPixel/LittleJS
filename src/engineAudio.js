@@ -438,7 +438,7 @@ function zzfxG
         {
             s = shape? shape>1? shape>2? shape>3?      // wave shape
                 Math.sin(t**3) :                       // 4 noise
-                clamp(Math.tan(t),1,-1):               // 3 tan
+                clamp(Math.tan(t),-1,1):               // 3 tan
                 1-(2*t/PI2%2+2)%2:                     // 2 saw
                 1-4*abs(Math.round(t/PI2)-t/PI2):      // 1 triangle
                 Math.sin(t);                           // 0 sin
