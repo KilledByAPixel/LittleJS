@@ -238,16 +238,28 @@ class TileLayer extends EngineObject
         !glOverlay && !this.isOverlay && glCopyToContext(mainContext);
         
         // draw the entire cached level onto the canvas
-        const pos = worldToScreen(this.pos.add(vec2(0,this.size.y*this.scale.y)));
-        
-        // fix canvas jitter in some browsers if position is not an integer
-        pos.x |= 0; pos.y |= 0;
+        const context = this.isOverlay ? overlayContext : mainContext;
+        const sx = this.size.x*this.scale.x, sy = this.size.y*this.scale.y;
+        const w = cameraScale*sx, h = cameraScale*sy;
 
-        (this.isOverlay ? overlayContext : mainContext).drawImage
-        (
-            this.canvas, pos.x, pos.y,
-            cameraScale*this.size.x*this.scale.x, cameraScale*this.size.y*this.scale.y
-        );
+        if (cameraAngle)
+        {
+            // the cache is axis aligned in layer space, so draw it from its
+            // center and spin it about the camera to match everything else
+            const center = worldToScreen(vec2(this.pos.x + sx/2, this.pos.y + sy/2));
+            context.save();
+            context.translate(center.x|0, center.y|0);
+            context.rotate(-cameraAngle);
+            context.drawImage(this.canvas, -w/2, -h/2, w, h);
+            context.restore();
+        }
+        else
+        {
+            const pos = worldToScreen(vec2(this.pos.x, this.pos.y + sy));
+
+            // fix canvas jitter in some browsers if position is not an integer
+            context.drawImage(this.canvas, pos.x|0, pos.y|0, w, h);
+        }
     }
 
     /** Draw all the tile data to an offscreen canvas 
@@ -267,8 +279,8 @@ class TileLayer extends EngineObject
     redrawStart(clear=false)
     {
         // save current render settings
-        /** @type {[HTMLCanvasElement, CanvasRenderingContext2D, Vector2, Vector2, number]} */
-        this.savedRenderSettings = [mainCanvas, mainContext, mainCanvasSize, cameraPos, cameraScale];
+        /** @type {[HTMLCanvasElement, CanvasRenderingContext2D, Vector2, Vector2, number, number]} */
+        this.savedRenderSettings = [mainCanvas, mainContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle];
 
         // use webgl rendering system to render the tiles if enabled
         // this works by temporally taking control of the rendering system
@@ -277,6 +289,10 @@ class TileLayer extends EngineObject
         mainCanvasSize = this.size.multiply(this.tileInfo.size);
         cameraPos = this.size.scale(.5);
         cameraScale = this.tileInfo.size.x;
+
+        // the cache is axis aligned in layer space, so ignore camera rotation
+        // while drawing into it or the rotation gets baked into the image
+        cameraAngle = 0;
 
         if (clear)
         {
@@ -300,7 +316,7 @@ class TileLayer extends EngineObject
         //debugSaveCanvas(this.canvas);
 
         // set stuff back to normal
-        [mainCanvas, mainContext, mainCanvasSize, cameraPos, cameraScale] = this.savedRenderSettings;
+        [mainCanvas, mainContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle] = this.savedRenderSettings;
     }
 
     /** Draw the tile at a given position in the tile grid
