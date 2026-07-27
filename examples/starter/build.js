@@ -174,7 +174,9 @@ function zipBuildStep(filename)
     try
     {
         const ectLocation = require('ect-bin');
-        child_process.spawnSync(ectLocation, args, {stdio: 'inherit', cwd: BUILD_FOLDER});
+        const result = child_process.spawnSync(ectLocation, args, {stdio: 'inherit', cwd: BUILD_FOLDER});
+        if (result.error || result.status)
+            handleError(result.error || `exit code ${result.status}`, 'Zip step failed!');
     }
     catch (e) { handleError(e, 'Zip step failed!'); }
 };

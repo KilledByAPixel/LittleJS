@@ -34,12 +34,23 @@ const MIME =
 
 http.createServer((req, res) =>
 {
-    // strip query string and decode, then resolve inside ROOT
-    const urlPath = decodeURIComponent(req.url.split('?')[0]);
-    let filePath = path.join(ROOT, urlPath);
+    let urlPath, filePath;
+    try
+    {
+        // strip query string and decode, then resolve inside ROOT
+        urlPath = decodeURIComponent(req.url.split('?')[0]);
+        filePath = path.join(ROOT, urlPath);
+    }
+    catch (e)
+    {
+        // malformed percent-encoding in the url
+        res.writeHead(400);
+        res.end('Bad request');
+        return;
+    }
 
     // prevent escaping the root directory
-    if (!filePath.startsWith(ROOT))
+    if (filePath !== ROOT && !filePath.startsWith(ROOT + path.sep))
     {
         res.writeHead(403);
         res.end('Forbidden');
