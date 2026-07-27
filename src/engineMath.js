@@ -18,28 +18,28 @@
 const PI = Math.PI;
 
 /** Returns absolute value of value passed in
- *  @param {number} value
+ *  @param {number} x
  *  @return {number}
  *  @memberof Math */
-function abs(value) { return Math.abs(value); }
+const abs = Math.abs;
 
 /** Returns lowest value passed in
  *  @param {...number} values
  *  @return {number}
  *  @memberof Math */
-function min(...values) { return Math.min(...values); }
+const min = Math.min;
 
 /** Returns highest value passed in
  *  @param {...number} values
  *  @return {number}
  *  @memberof Math */
-function max(...values) { return Math.max(...values); }
+const max = Math.max;
 
 /** Returns the sign of value passed in
- *  @param {number} value
+ *  @param {number} x
  *  @return {number}
  *  @memberof Math */
-function sign(value) { return Math.sign(value); }
+const sign = (x) => Math.sign(x);
 
 /** Returns first parm modulo the second param, but adjusted so negative numbers work as expected
  *  @param {number} dividend
