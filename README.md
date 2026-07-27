@@ -13,7 +13,7 @@ LittleJS is a fast, lightweight, and fully open source HTML5 game engine designe
 Its small footprint is packed with a comprehensive feature set including hybrid rendering, physics, particles, sound, and input handling.
 The code is clean and well documented with some fun examples to get you started right away. Choo-Choo!
 
-## 🙌 Js13k + LittleJS
+## 🤝 Js13k + LittleJS
 
 A size-optimized fork of LittleJS for size coding competitions like [JS13K](https://js13kgames.com/). It exists so the main line engine can keep growing while this version stays small enough to keep minifying.
 
@@ -154,13 +154,17 @@ The free functions `tileCollisionTest` and `tileCollisionRaycast` **survive unch
 Not taken from upstream: the large `engineDraw` / `engineInput` / `engineWebGL` feature growth, and the plugin system.
 
 ## 💥 [Live Demo of Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter)
+## 🛠️ [Main LittleJS Repo](https://killedbyapixel.github.io/LittleJS)
+## 🧙 [LittleJS13k Wizard](https://github.com/eoinmcg/create-js13k-littlejs) by [eoinmcg](https://github.com/eoinmcg)
 
 ## 🎮 JS13K games made with LittleJS
 
 Many amazing JS13K games have been made using LittleJS, including a few in the top 10...
 
-- [L1ttL3 Paws](https://github.com/KilledByAPixel/JS13K2025) - Cat glider with procedural art and levels. by Frank Force
-- [The Way of the Dodo](https://js13kgames.com/2024/games/the-way-of-the-dodo) - Single button flapping platformer. by repsej
 - [Space Huggers](https://js13kgames.com/2021/games/space-huggers) - Roguelike platformer shoot-em-up game with procedural levels. by KilledByAPixel
+- [Black Cat Squadron](https://js13kgames.com/games/black-cat-squadron) - One button shooter based on a WW2 Navy squadron. by repsej
+- [L1ttL3 Paws](https://js13kgames.com/2025/games/l1ttl3-paws) - Cat glider with procedural art and levels. by Frank Force
+- [The Way of the Dodo](https://js13kgames.com/2024/games/the-way-of-the-dodo) - Single button flapping platformer. by repsej
+- [KleptoKitty](https://js13kgames.com/games/kleptokitty) - Cat themed heist puzzle. by eoinmcg
 - [Wendol Village](https://js13kgames.com/games/dead-again) - Warcraft inspired RTS game. by sanojian
 - [Dead Again](https://js13kgames.com/games/dead-again) - Top down survival horror. by sanojian & repsej
