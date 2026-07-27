@@ -41,9 +41,13 @@ class EngineObject
      */
     constructor(pos=vec2(), size=vec2(1), tileInfo, angle=0, color=new Color, renderOrder=0)
     {
-        // set passed in params
-        ASSERT(isVector2(pos) && isVector2(size), 'ensure pos and size are vec2s');
-        ASSERT(typeof tileInfo !== 'number' || !tileInfo, 'old style tile setup');
+        // check passed in params
+        ASSERT(isVector2(pos) && pos.isValid(), 'object pos should be a vec2');
+        ASSERT(isVector2(size) && size.isValid(), 'object size should be a vec2');
+        ASSERT(!tileInfo || tileInfo instanceof TileInfo, 'object tileInfo should be a TileInfo or undefined');
+        ASSERT(typeof angle == 'number' && isFinite(angle), 'object angle should be a number');
+        ASSERT(isColor(color) && color.isValid(), 'object color should be a valid rgba color');
+        ASSERT(typeof renderOrder == 'number', 'object renderOrder should be a number');
 
         /** @property {Vector2} - World space position of the object */
         this.pos = pos.copy();
@@ -85,8 +89,10 @@ class EngineObject
         this.spawnTime = time;
         /** @property {Array}   - List of children of this object */
         this.children = [];
-        /** @property {Boolean}  - Limit object speed using linear or circular math */
-        this.clampSpeedLinear = true;
+        /** @property {Boolean} - Limit object speed along x and y axis */
+        this.clampSpeed = true;
+        /** @property {EngineObject} - Object we are standing on, if any  */
+        this.groundObject = undefined;
 
         // parent child system
         /** @property {EngineObject} - Parent of object if in local space  */
@@ -134,21 +140,11 @@ class EngineObject
         if (this.parent)
             return;
 
-        // limit max speed to prevent missing collisions
-        if (this.clampSpeedLinear)
+        if (this.clampSpeed)
         {
+            // limit max speed to prevent missing collisions
             this.velocity.x = clamp(this.velocity.x, -objectMaxSpeed, objectMaxSpeed);
             this.velocity.y = clamp(this.velocity.y, -objectMaxSpeed, objectMaxSpeed);
-        }
-        else
-        {
-            const length2 = this.velocity.lengthSquared();
-            if (length2 > objectMaxSpeed*objectMaxSpeed)
-            {
-                const s = objectMaxSpeed / length2**.5;
-                this.velocity.x *= s;
-                this.velocity.y *= s;
-            }
         }
 
         // apply physics
@@ -174,7 +170,8 @@ class EngineObject
         if (this.groundObject)
         {
             // apply friction in local space of ground object
-            const groundSpeed = this.groundObject.velocity ? this.groundObject.velocity.x : 0;
+            const groundSpeed = this.groundObject != this && this.groundObject.velocity ?
+                this.groundObject.velocity.x : 0;
             this.velocity.x = groundSpeed + (this.velocity.x - groundSpeed) * this.friction;
             this.groundObject = 0;
             //debugOverlay && debugPhysics && debugPoint(this.pos.subtract(vec2(0,this.size.y/2)), '#0f0');
@@ -349,11 +346,11 @@ class EngineObject
 
     /** Convert from local space to world space for a vector (rotation only)
      *  @param {Vector2} vec - local space vector */
-    localToWorldVector(vec) { return vec.rotate(-this.angle); }
+    localToWorldVector(vec) { return vec.rotate(this.angle); }
 
     /** Convert from world space to local space for a vector (rotation only)
      *  @param {Vector2} vec - world space vector */
-    worldToLocalVector(vec) { return vec.rotate(this.angle); }
+    worldToLocalVector(vec) { return vec.rotate(-this.angle); }
     
     /** Called to check if a tile collision should be resolved
      *  @param {Number}  tileData - the value of the tile at the position
@@ -374,6 +371,10 @@ class EngineObject
     /** Apply acceleration to this object (adjust velocity, not affected by mass)
      *  @param {Vector2} acceleration */
     applyAcceleration(acceleration)   { if (this.mass) this.velocity = this.velocity.add(acceleration); }
+
+    /** Apply angular acceleration to this object
+     *  @param {Number} acceleration */
+    applyAngularAcceleration(acceleration) { if (this.mass) this.angleVelocity += acceleration; }
 
     /** Apply force to this object (adjust velocity, affected by mass)
      *  @param {Vector2} force */
