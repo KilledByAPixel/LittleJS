@@ -128,16 +128,34 @@ function glPreRender()
     initVertexAttribArray('r', gl_FLOAT, 4, 1); // rotation
 
     // build the transform matrix
+    // the rotated form is kept in its own branch so builds with camera
+    // rotation disabled fold it away instead of paying for the trig
     const s = vec2(2*cameraScale).divide(mainCanvasSize);
-    const p = vec2(-1).subtract(cameraPos.multiply(s));
-    glContext.uniformMatrix4fv(glContext.getUniformLocation(glShader, 'm'), false,
+    let transform;
+    if (cameraAngle)
+    {
+        const p = vec2(-1).subtract(cameraPos.rotate(-cameraAngle).multiply(s));
+        const ca = Math.cos(cameraAngle), sa = Math.sin(cameraAngle);
+        transform =
+        [
+            s.x*ca,  s.y*sa, 0,   0,
+            -s.x*sa, s.y*ca, 0,   0,
+            1,       1,      1,   1,
+            p.x,     p.y,    0,   0
+        ];
+    }
+    else
+    {
+        const p = vec2(-1).subtract(cameraPos.multiply(s));
+        transform =
         [
             s.x, 0,   0,   0,
             0,   s.y, 0,   0,
             1,   1,   1,   1,
             p.x, p.y, 0,   0
-        ]
-    );
+        ];
+    }
+    glContext.uniformMatrix4fv(glContext.getUniformLocation(glShader, 'm'), false, transform);
 }
 
 /** Clear the canvas and setup the viewport

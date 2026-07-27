@@ -15,6 +15,12 @@
  *  @memberof Settings */
 let cameraPos = vec2();
 
+/** Rotation angle of camera in world space
+ *  @type {Number}
+ *  @default
+ *  @memberof Settings */
+let cameraAngle = 0;
+
 /** Scale of camera in world space
  *  @type {Number}
  *  @default
@@ -281,6 +287,11 @@ let medalsPreventUnlock = false;
  *  @param {Vector2} pos
  *  @memberof Settings */
 function setCameraPos(pos) { cameraPos = pos; }
+
+/** Set angle of camera in world space
+ *  @param {Number} angle
+ *  @memberof Settings */
+function setCameraAngle(angle) { cameraAngle = angle; }
 
 /** Set scale of camera in world space
  *  @param {Number} scale

@@ -175,11 +175,16 @@ class TextureInfo
  *  @memberof Draw */
 function screenToWorld(screenPos)
 {
-    return new Vector2
-    (
-        (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale + cameraPos.x,
-        (screenPos.y - mainCanvasSize.y/2 + .5) / -cameraScale + cameraPos.y
-    );
+    let x = (screenPos.x - mainCanvasSize.x/2 + .5) /  cameraScale;
+    let y = (screenPos.y - mainCanvasSize.y/2 + .5) / -cameraScale;
+    if (cameraAngle)
+    {
+        // apply camera rotation
+        const c = Math.cos(-cameraAngle), s = Math.sin(-cameraAngle);
+        const xr = x * c - y * s, yr = x * s + y * c;
+        x = xr; y = yr;
+    }
+    return new Vector2(x + cameraPos.x, y + cameraPos.y);
 }
 
 /** Convert from world to screen space coordinates
@@ -188,11 +193,95 @@ function screenToWorld(screenPos)
  *  @memberof Draw */
 function worldToScreen(worldPos)
 {
+    let x = worldPos.x - cameraPos.x;
+    let y = worldPos.y - cameraPos.y;
+    if (cameraAngle)
+    {
+        // apply inverse camera rotation
+        const c = Math.cos(cameraAngle), s = Math.sin(cameraAngle);
+        const xr = x * c - y * s, yr = x * s + y * c;
+        x = xr; y = yr;
+    }
     return new Vector2
     (
-        (worldPos.x - cameraPos.x) *  cameraScale + mainCanvasSize.x/2 - .5,
-        (worldPos.y - cameraPos.y) * -cameraScale + mainCanvasSize.y/2 - .5
+        x *  cameraScale + mainCanvasSize.x/2 - .5,
+        y * -cameraScale + mainCanvasSize.y/2 - .5
     );
+}
+
+/** Convert a screen space delta to world space, applying camera rotation but not position
+ *  @param {Vector2} screenDelta
+ *  @return {Vector2}
+ *  @memberof Draw */
+function screenToWorldDelta(screenDelta)
+{
+    ASSERT(isVector2(screenDelta), 'screenDelta must be a vec2');
+
+    let x = screenDelta.x /  cameraScale;
+    let y = screenDelta.y / -cameraScale;
+    if (cameraAngle)
+    {
+        // apply camera rotation
+        const c = Math.cos(-cameraAngle), s = Math.sin(-cameraAngle);
+        const xr = x * c - y * s, yr = x * s + y * c;
+        x = xr; y = yr;
+    }
+    return new Vector2(x, y);
+}
+
+/** Convert a world space delta to screen space, applying camera rotation but not position
+ *  @param {Vector2} worldDelta
+ *  @return {Vector2}
+ *  @memberof Draw */
+function worldToScreenDelta(worldDelta)
+{
+    ASSERT(isVector2(worldDelta), 'worldDelta must be a vec2');
+
+    let x = worldDelta.x;
+    let y = worldDelta.y;
+    if (cameraAngle)
+    {
+        // apply inverse camera rotation
+        const c = Math.cos(cameraAngle), s = Math.sin(cameraAngle);
+        const xr = x * c - y * s, yr = x * s + y * c;
+        x = xr; y = yr;
+    }
+    return new Vector2(x * cameraScale, y * -cameraScale);
+}
+
+/** Returns true if a world space circle is at least partly on screen
+ *  @param {Vector2} pos
+ *  @param {Vector2|Number} [size] - Diameter, or a vec2 whose length is used
+ *  @return {Boolean}
+ *  @memberof Draw */
+function isOnScreen(pos, size=0)
+{
+    ASSERT(isVector2(pos), 'pos must be a vec2');
+    ASSERT(isVector2(size) || isNumber(size), 'size must be a vec2 or number');
+
+    // cameraScale of 0 collapses world coords, nothing is visible
+    if (!cameraScale) return false;
+
+    // optimized circle on screen test
+    let x = pos.x - cameraPos.x;
+    let y = pos.y - cameraPos.y;
+    if (cameraAngle)
+    {
+        // apply inverse camera rotation
+        const c = Math.cos(cameraAngle), s = Math.sin(cameraAngle);
+        const xr = x * c - y * s, yr = x * s + y * c;
+        x = xr; y = yr;
+    }
+    x *= cameraScale*2; y *= -cameraScale*2;
+
+    if (size instanceof Vector2)
+        size = size.length(); // use length of vector as diameter
+    size *= cameraScale;
+
+    // check against screen bounds
+    const w = mainCanvasSize.x, h = mainCanvasSize.y;
+    return x + size > -w && x - size < w &&
+           y + size > -h && y - size < h;
 }
 
 /** Get the camera's visible area in world space
@@ -401,6 +490,7 @@ function drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, conte
         // transform from world space to screen space
         pos = worldToScreen(pos);
         size = size.scale(cameraScale);
+        angle -= cameraAngle;
     }
     context.save();
     context.translate(pos.x+.5, pos.y+.5);

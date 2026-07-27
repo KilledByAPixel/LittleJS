@@ -49,6 +49,7 @@ export {
 
 	// Settings
 	cameraPos,
+	cameraAngle,
 	cameraScale,
 	canvasMaxSize,
 	canvasFixedSize,
@@ -89,6 +90,7 @@ export {
 
 	// Setters for globals
 	setCameraPos,
+	setCameraAngle,
 	setCameraScale,
 	setCanvasMaxSize,
 	setCanvasFixedSize,
@@ -211,6 +213,9 @@ export {
 	mainCanvasSize,
 	screenToWorld,
 	worldToScreen,
+	screenToWorldDelta,
+	worldToScreenDelta,
+	isOnScreen,
 	drawTile,
 	drawRect,
 	drawLine,
