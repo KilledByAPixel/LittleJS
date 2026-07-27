@@ -48,7 +48,7 @@ That writes `examples/starter/game.zip` and prints the size against the limit, f
 | Concatenate | Joins `sourceFiles` into one file. No modules — everything shares one global scope. |
 | Feature flags | Rewrites anything disabled in `FEATURES` to a compile time constant so the next stage can delete it. |
 | Closure Compiler | `ADVANCED` mode. Renames everything and deletes every function the game never calls. |
-| UglifyJS | A second `-c -m` pass. |
+| UglifyJS | A second `-c -m --toplevel` pass. `--toplevel` also mangles and drops top level names, worth 54 bytes. Safe here because the build inlines everything into one script that nothing external references — but if you hand-write an HTML page with its own `<script>` calling into your game, remove it. |
 | Roadroller | Re-encodes the JavaScript as self-extracting compressed data. Slowest stage, biggest win. |
 | ect zip | Zips the inlined HTML plus `dataFiles`. This is what you submit. |
 
