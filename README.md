@@ -1,5 +1,4 @@
-# LittleJS - The Tiny Fast JavaScript Game Engine
-## Special Js13k Branch
+# LittleJS Engine - Special Js13k Branch
 
 <div align="center">
 
@@ -9,9 +8,7 @@
 
 ## 🚂 All aboard!
 
-LittleJS is a fast, lightweight, and fully open source HTML5 game engine designed for simplicity and performance.
-Its small footprint is packed with a comprehensive feature set including hybrid rendering, physics, particles, sound, and input handling.
-The code is clean and well documented with some fun examples to get you started right away. Choo-Choo!
+LittleJS is a fast, lightweight, and fully open source HTML5 game engine designed for simplicity and performance. Its small footprint is packed with a comprehensive feature set including rendering, physics, particles, sound, and input handling. The code is very clean and well documented with many examples to get you started quickly.
 
 ## 🤝 Js13k + LittleJS
 
