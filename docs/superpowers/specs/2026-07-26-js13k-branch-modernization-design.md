@@ -230,8 +230,11 @@ necessarily show in the other.
 aliases cost bytes, and the point of the renames is to match `main`'s documentation so users can
 follow the existing tutorial. The README's differences table documents them.
 
-**`inputPreventDefault` defaulting to `true` changes runtime behavior**, not just naming. Games
-relying on browser default key handling will notice. Called out in the README.
+~~**`inputPreventDefault` defaulting to `true` changes runtime behavior.**~~ Corrected during
+planning: it does not. Today `preventDefaultInput` defaults to `false` and gates only the keydown
+handler, while mousedown calls `preventDefault` unconditionally. After the change, keydown never
+calls `preventDefault` (matching `main`) and mousedown is gated by a flag defaulting to `true` —
+producing identical default behavior, with the flag now actually useful.
 
 **Deleting `FAQ.md` and `reference.md` removes content some may link to.** They describe an API this
 branch does not implement, so they actively mislead. The README's differences table replaces the part
