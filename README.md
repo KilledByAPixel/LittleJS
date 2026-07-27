@@ -217,6 +217,7 @@ The debug overlay here is also an older one: it does not show FPS or Draw Count.
 | `class Music` (built into `engineAudio.js`) | Rename to `ZzFXMusic` and include `plugins/zzfxm.js`. The class body is otherwise identical — same constructor, same `playMusic(volume, loop)`. |
 | Medals (`src/engineMedals.js`, built into the engine) | Include `plugins/medalSystem.js`. `main` moved the whole medal system out of the engine into a plugin; the API (`medalsInit`, `class Medal`) is the same, it just lives elsewhere. Kept in-engine here because it is cheap and Closure strips it entirely when unused. |
 | `tileInfo.getTextureInfo()` | Becomes the property `tileInfo.textureInfo`. |
+| `class FontImage` | Becomes `class ImageFont`, and **the constructor is different, not just the name**. Here: `FontImage(image, tileSize, paddingSize, context)`. In `main`: `ImageFont(tileInfo)` — it takes a `TileInfo` for the first character and derives the rest. Renaming alone would compile and then behave wrongly, so rework the call rather than find-and-replace it. |
 | `isVector2`, `isNumber` | Not removed — they exist in `main`'s `engineMath.js` and behave the same, but `main`'s `engineExport.js` does not export them. A module (ESM) consumer needs another way to reach them (e.g. copy the one-line implementation into your own code) instead of importing them from the package. |
 
 ### Tile collision — the one part that is real work
