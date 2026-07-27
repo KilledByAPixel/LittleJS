@@ -78,6 +78,17 @@ function lerp(valueA, valueB, percent)
     return valueA + clamp(percent) * (valueB-valueA);
  }
 
+/** Applies a percent range to a lerp range
+ *  @param {number} value
+ *  @param {number} percentA
+ *  @param {number} percentB
+ *  @param {number} lerpA
+ *  @param {number} lerpB
+ *  @return {number}
+ *  @memberof Math */
+function percentLerp(value, percentA, percentB, lerpA, lerpB)
+{ return lerp(lerpA, lerpB, percent(value, percentA, percentB)); }
+
 /** Returns signed wrapped distance between the two values passed in
  *  @param {number} valueA
  *  @param {number} valueB
@@ -189,14 +200,113 @@ function isIntersecting(start, end, pos, size)
     return true;
 }
 
+/** Walks a line through a grid of unit cells, calling testFunction for each cell
+ *  @param {Vector2}  posStart     - Start of the line
+ *  @param {Vector2}  posEnd       - End of the line
+ *  @param {Function} testFunction - Called with each cell pos, return true to stop
+ *  @param {Vector2}  [normal]     - If passed, set to the surface normal of the hit
+ *  @return {Vector2}              - Hit position, or undefined if nothing was hit
+ *  @memberof Math */
+function lineTest(posStart, posEnd, testFunction, normal)
+{
+    ASSERT(isVector2(posStart), 'posStart must be a vec2');
+    ASSERT(isVector2(posEnd), 'posEnd must be a vec2');
+    ASSERT(typeof testFunction === 'function', 'testFunction must be a function');
+    ASSERT(!normal || isVector2(normal), 'normal must be a vec2');
+
+    // get ray direction and length
+    const dx = posEnd.x - posStart.x;
+    const dy = posEnd.y - posStart.y;
+    const totalLength = (dx*dx + dy*dy)**.5;
+    if (!totalLength) return;
+
+    // current integer cell we are in
+    const pos = posStart.floor();
+
+    // normalize ray direction
+    const dirX = dx / totalLength;
+    const dirY = dy / totalLength;
+
+    // step direction in grid
+    const stepX = sign(dirX);
+    const stepY = sign(dirY);
+
+    // distance along the ray to cross one full cell in X or Y
+    const tDeltaX = dirX ? abs(1 / dirX) : Infinity;
+    const tDeltaY = dirY ? abs(1 / dirY) : Infinity;
+
+    // distance along the ray from start to the first grid boundary
+    const nextGridX = stepX > 0 ? pos.x + 1 : pos.x;
+    const nextGridY = stepY > 0 ? pos.y + 1 : pos.y;
+    const tMaxX = dirX ? (nextGridX - posStart.x) / dirX : Infinity;
+    const tMaxY = dirY ? (nextGridY - posStart.y) / dirY : Infinity;
+
+    // use line drawing algorithm to test for collisions
+    let t = 0, tX = tMaxX, tY = tMaxY, wasX = tDeltaX < tDeltaY;
+    while (t < totalLength)
+    {
+        if (testFunction(pos))
+        {
+            // set hit point
+            const hitPos = vec2(posStart.x + dirX*t, posStart.y + dirY*t);
+
+            // ensure result is inside the tile
+            const e = 1e-9;
+            const hitPosFloor = hitPos.floor();
+            if (hitPosFloor.x < pos.x)
+                hitPos.x = pos.x;
+            else if (hitPosFloor.x > pos.x)
+                hitPos.x = pos.x + 1 - e;
+            if (hitPosFloor.y < pos.y)
+                hitPos.y = pos.y;
+            else if (hitPosFloor.y > pos.y)
+                hitPos.y = pos.y + 1 - e;
+
+            // set normal
+            if (normal)
+                wasX ? normal.set(-stepX,0) : normal.set(0,-stepY);
+            return hitPos;
+        }
+
+        // advance to the next grid boundary
+        if (wasX = tX < tY)
+        {
+            pos.x += stepX;
+            t = tX;
+            tX += tDeltaX;
+        }
+        else
+        {
+            pos.y += stepY;
+            t = tY;
+            tY += tDeltaY;
+        }
+    }
+}
+
 /** Returns an oscillating wave between 0 and amplitude with frequency of 1 Hz by default
  *  @param {number} [frequency] - Frequency of the wave in Hz
  *  @param {number} [amplitude] - Amplitude (max height) of the wave
  *  @param {number} [t=time]    - Value to use for time of the wave
+ *  @param {number} [offset]    - Phase offset of the wave
+ *  @param {number} [type]      - 0 sine, 1 triangle, 2 square, 3 sawtooth
  *  @return {number}            - Value waving between 0 and amplitude
  *  @memberof Math */
-function wave(frequency=1, amplitude=1, t=time)
-{ return amplitude/2 * (1 - Math.cos(t*frequency*2*PI)); }
+function oscillate(frequency=1, amplitude=1, t=time, offset=0, type=0)
+{
+    const phase = mod(offset + t*frequency, 1);
+    let value;
+
+    if (type === 1) // triangle
+        value = 2 * abs(2 * phase - 1) - 1;
+    else if (type === 2) // square
+        value = phase < .5 ? -1 : 1;
+    else if (type === 3) // sawtooth
+        value = 2 * phase - 1;
+    else // sine
+        value = -Math.cos(phase * 2*PI);
+    return amplitude/2 * (value + 1);
+}
 
 /** 
  * Check if object is a valid number, not NaN or undefined, but it may be infinite
@@ -205,6 +315,15 @@ function wave(frequency=1, amplitude=1, t=time)
  * @memberof Math
  */
 function isNumber(n) { return typeof n == 'number' && !isNaN(n); }
+
+/**
+ * Check if object can be converted to a string
+ * - Returns true for strings, numbers, and most objects
+ * - Returns false for null and undefined
+ * @param {any} s
+ * @return {boolean}
+ * @memberof Math */
+function isStringLike(s) { return s != null && typeof s?.toString() === 'string'; }
 
 ///////////////////////////////////////////////////////////////////////////////
 

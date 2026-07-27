@@ -69,11 +69,16 @@ function setDebugKey(key) { debugKey = key; }
  *  @param {boolean} assert 
  *  @param {...Object} [output] - error message output
  *  @memberof Debug */
-function ASSERT(assert, ...output) 
+function ASSERT(assert, ...output)
 {
     if (enableAsserts)
         console.assert(assert, ...output);
 }
+
+/** Log to the console, removed from release builds
+ *  @param {...any} output
+ *  @memberof Debug */
+function LOG(...output) { console.log(...output); }
 
 /** Draw a debug rectangle in world space
  *  @param {Vector2} pos

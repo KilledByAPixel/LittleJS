@@ -145,13 +145,23 @@ export {
 	distanceAngle,
 	lerpAngle,
 	lerp,
+	percentLerp,
 	smoothStep,
 	nearestPowerOfTwo,
 	isOverlapping,
 	isIntersecting,
-	wave,
+	lineTest,
+	oscillate,
 	formatTime,
 	fetchJSON,
+	saveText,
+	saveCanvas,
+	saveDataURL,
+	shareURL,
+	readSaveData,
+	writeSaveData,
+	noise1D,
+	noise2D,
 
 	// Random
 	rand,
@@ -172,6 +182,7 @@ export {
 	isColor,
 	isVector2,
 	isNumber,
+	isStringLike,
 
 	// Default Colors
 	WHITE,

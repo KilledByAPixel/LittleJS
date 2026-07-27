@@ -508,7 +508,7 @@ function drawEngineSplashScreen(t)
     };
     const color = (c=0, l=0) =>
         hsl([.98,.3,.57,.14][c%4]-10,.8,[0,.3,.5,.8,.9][l]).toString();
-    const alpha = wave(1,1,t);
+    const alpha = oscillate(1,1,t);
     const p = percent(alpha, .1, .5);
 
     // setup
