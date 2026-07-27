@@ -15,6 +15,7 @@ export {
 	time,
 	timeReal,
 	paused,
+	getPaused,
 	setPaused,
 	engineInit,
 	engineObjectsUpdate,

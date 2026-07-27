@@ -30,7 +30,7 @@ const engineName = 'LittleJS';
  *  @type {String}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.11.8.2';
+const engineVersion = '1.13.1-js13k';
 
 /** Frames per second to update
  *  @type {Number}
@@ -74,10 +74,15 @@ let timeReal = 0;
  *  @default false
  *  @memberof Engine */
 let paused = false;
-/** Set if game is paused
- *  @param {Boolean} isPaused
+/** Get if game is paused
+ *  @return {Boolean}
  *  @memberof Engine */
-function setPaused(isPaused) { paused = isPaused; }
+function getPaused() { return paused; }
+
+/** Set if game is paused
+ *  @param {Boolean} [isPaused]
+ *  @memberof Engine */
+function setPaused(isPaused=true) { paused = isPaused; }
 
 // Frame time tracking
 let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
@@ -115,6 +120,13 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
 {
     ASSERT(!mainContext, 'engine already initialized');
     ASSERT(Array.isArray(imageSources), 'pass in images as array');
+
+    // allow passing in empty functions
+    gameInit       ||= ()=>{};
+    gameUpdate     ||= ()=>{};
+    gameUpdatePost ||= ()=>{};
+    gameRender     ||= ()=>{};
+    gameRenderPost ||= ()=>{};
 
     // Called automatically by engine to setup render system
     function enginePreRender()
@@ -273,6 +285,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     // setup html
     const styleRoot = 
         'margin:0;' +                 // fill the window
+        'overflow:hidden;' +          // no scroll bars
         'background:#000;' +          // set background color
         (canvasPixelated ? 'image-rendering:pixelated;' : '') + // pixel art
         'user-select:none;' +         // prevent hold to select
