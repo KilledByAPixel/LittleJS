@@ -22,6 +22,26 @@ const PROGRAM_NAME = 'game';
 const BUILD_FOLDER = 'build';
 const SIZE_LIMIT = 13312; // JS13K limit in bytes
 
+// Turn off engine features your game does not use to save space.
+// Each disabled feature becomes a compile time constant, which lets Closure
+// delete the whole subsystem. See "Saving space" in README.md for measurements.
+const FEATURES =
+{
+    webgl:   true, // WebGL renderer, disabling falls back to canvas 2D
+    touch:   true, // touch input and the on screen touch gamepad
+    gamepad: true, // gamepad input
+    sound:   true, // all audio
+};
+
+// feature name -> [engine flag, its setter]
+const FEATURE_FLAGS =
+{
+    webgl:   ['glEnable',         'setGLEnable'],
+    touch:   ['touchInputEnable', 'setTouchInputEnable'],
+    gamepad: ['gamepadsEnable',   'setGamepadsEnable'],
+    sound:   ['soundEnable',      'setSoundEnable'],
+};
+
 // Set true to keep intermediate .closure.js / .uglify.js files for debugging
 const DEBUG_BUILD = false;
 // Roadroller shrinks the code a lot but is the slowest step
@@ -105,12 +125,45 @@ function Build(outputFile, files=[], buildSteps=[])
     for (const file of files)
         buffer += fs.readFileSync(file) + '\n';
 
+    // strip out disabled features before minifying
+    buffer = applyFeatureFlags(buffer);
+
     // output file
     fs.writeFileSync(outputFile, buffer, {flag: 'w+'});
 
     // execute build steps in order
     for (const buildStep of buildSteps)
         buildStep(outputFile);
+}
+
+// Rewrite disabled feature flags to compile time constants
+// - the engine declares them as mutable 'let' so setters can change them
+// - Closure cannot fold a mutable binding, so it keeps both branches and the
+//   whole subsystem behind them survives even in a game that never uses it
+// - turning the flag into 'const false' and emptying its setter lets Closure
+//   prove the branch is dead and delete it
+function applyFeatureFlags(buffer)
+{
+    for (const feature in FEATURE_FLAGS)
+    {
+        if (FEATURES[feature])
+            continue;
+
+        const [flag, setter] = FEATURE_FLAGS[feature];
+        const flagPattern = new RegExp(`^let ${flag} = \\w+;`, 'm');
+        const setterPattern = new RegExp(`^function ${setter}\\(([^)]*)\\)[^\\n]*$`, 'm');
+
+        // fail loudly rather than silently skipping the optimization
+        if (!flagPattern.test(buffer))
+            handleError(`could not find "let ${flag}"`, 'Failed to disable feature: ' + feature);
+        if (!setterPattern.test(buffer))
+            handleError(`could not find "function ${setter}"`, 'Failed to disable feature: ' + feature);
+
+        buffer = buffer.replace(flagPattern, `const ${flag} = false;`);
+        buffer = buffer.replace(setterPattern, `function ${setter}($1) {}`);
+        console.log(`Feature disabled: ${feature}`);
+    }
+    return buffer;
 }
 
 function closureCompilerStep(filename)
