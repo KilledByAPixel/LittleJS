@@ -53,6 +53,7 @@ There is also `npm run build:engine`, which generates the `dist/` bundles (`litt
 | Stage | What it does |
 |---|---|
 | Concatenate | Joins every file in `sourceFiles` into one `build/index.js`. No modules, no imports — everything shares one global scope. |
+| Feature flags | Rewrites any subsystem disabled in `FEATURES` to a compile time constant, so the next stage can delete it. |
 | Closure Compiler | `ADVANCED` mode. Renames everything and **deletes every function the game never calls**. This is what makes the engine cheap. |
 | UglifyJS | A second `-c -m` pass that picks up what Closure left. |
 | Roadroller | Re-encodes the JavaScript as self-extracting compressed data. The slowest stage and the biggest single win. |
@@ -66,7 +67,7 @@ game.zip: 7645 / 13312 bytes (57.4%)
 5667 bytes remaining
 ```
 
-Three toggles at the top of `build.mjs`:
+Config at the top of `build.mjs` — `FEATURES` is covered under [Saving space](#-saving-space); the other three are:
 
 - `DEBUG_BUILD` — keep the intermediate `.closure.js` and `.uglify.js` files so you can see what each stage produced. Useful when Closure eliminates something you needed.
 - `USE_ROADROLLER` — set to `false` to skip the Roadroller stage. Much faster builds, much bigger output. Handy while iterating.
@@ -78,53 +79,65 @@ Add your own source files to the `sourceFiles` array (after the engine files) an
 
 **Start by not worrying about it.** Closure Compiler in `ADVANCED` mode already deletes every engine function your game never calls, so unused features mostly cost nothing. The numbers below prove that rather than assume it.
 
-All figures are zip bytes from `npm run build`, measured against an unmodified starter that built to **7655 bytes** at the time of measurement. The current starter builds to ~7645; later changes shifted the baseline slightly but not the savings, so read the **Saving** column rather than the absolute sizes.
+All figures are zip bytes from `npm run build`. The starter baseline is ~7645.
 
 Roadroller's optimizer search is not fully deterministic — repeated builds of identical source vary by about 3 bytes. Every saving below is far larger than that, so they are all real, but do not chase a 3 byte "improvement".
 
-| Change | Zip size | Saving |
-|---|---:|---:|
-| *(unmodified starter)* | 7655 | — |
-| Remove `engineMedals.js` from `sourceFiles` | 7655 | **0** |
-| Stop using particles, keep `engineParticles.js` | 6802 | 853 |
-| ...and also remove `engineParticles.js` | 6802 | **+0** |
-| Stop using tile layers, keep `engineTileLayer.js` | 7164 | 491 |
-| ...and also remove `engineTileLayer.js` | 7092 | **+72** |
-| Disable and remove WebGL (see below) | 6692 | **963** |
+### Turning off engine features
 
-Read that table as two separate things: how much a *feature* costs your game, and how much *deleting the file* buys you on top.
-
-- **Medals cost nothing.** The starter never calls `medalsInit`, and `engineMedals.js` only hooks into the engine from inside that function. Closure already removes all of it. Deleting the file from `sourceFiles` changed the zip by literally zero bytes.
-- **Particles are the same story.** Removing the starter's emitter saved 853 bytes, but that saving comes entirely from Closure noticing `ParticleEmitter` is now unreachable. Removing the file afterwards saved nothing further.
-- **Tile layers leave a 72 byte residue.** `engineObject.js` calls `tileCollisionTest` from inside `if (this.collideTiles)`, which Closure cannot prove is unreachable, so a little of `engineTileLayer.js` survives even in a game that never uses it. Removing the file recovers those 72 bytes — but only if *nothing* enables tile collision, or you will get a `ReferenceError` at runtime. Note the starter's own particle emitter passes `collide = 1`, which sets `collideTiles`; set it to `0` first.
-- **WebGL is the one that actually pays.** 963 bytes, and it is the only entry worth real effort.
-
-### Disabling WebGL
-
-Rendering falls back to canvas 2D, which is slower and drops additive blending, but it is a big chunk of the budget. It takes three steps:
-
-1. Delete `` `../../src/engineWebGL.js` `` from `sourceFiles` in `build.mjs`.
-2. Set `glEnable = false` at the top of `game.js`, before `engineInit`.
-3. In the same place, stub the symbols other engine files still reference unconditionally:
+The `FEATURES` block at the top of `build.mjs` is the main lever. Set one to `false` and the whole subsystem disappears from the zip:
 
 ```js
-glEnable = false;
-let glCanvas, glAdditive;
-function glInit() {}
-function glPreRender() {}
-function glClearCanvas() {}
-function glSetTexture(t) {}
-function glCreateTexture(i) {}
-function glCopyToContext(c, f) {}
-function glDraw(x, y, sx, sy, a, u0x, u0y, u1x, u1y, rgba, rgbaAdditive) {}
+const FEATURES =
+{
+    webgl:   true, // WebGL renderer, disabling falls back to canvas 2D
+    touch:   true, // touch input and the on screen touch gamepad
+    gamepad: true, // gamepad input
+    sound:   true, // all audio
+};
 ```
 
-Step 3 is not optional. `engine.js` calls `glInit`, `glPreRender` and `glCopyToContext` unconditionally, and `engineDraw.js` / `engineTileLayer.js` reference the rest, so dropping the file without stubs throws on startup. The stubs are empty and Closure strips them; they are there to keep the names defined.
+Measured against the unmodified starter, all figures from `npm run build`:
 
-Two things measured while working this out, so you do not repeat them:
+| Disabled | Zip size | Saving |
+|---|---:|---:|
+| *(nothing — baseline)* | 7645 | — |
+| `touch` | 7491 | 154 |
+| `gamepad` | 7391 | 254 |
+| `touch` + `gamepad` | 7237 | 408 |
+| `webgl` | 6913 | **732** |
+| `sound` | 6837 | **808** |
+| **all four** | **5692** | **1953** |
 
-- **Setting `glEnable = false` without removing the file costs you 50 bytes** (7705 vs 7655). Closure cannot fold the flag, so it keeps both render paths *and* the whole WebGL implementation. Do the whole thing or none of it.
-- Also changing the default to `let glEnable = false;` in `engineSettings.js` gains nothing further (6693 vs 6692). Not worth touching an engine file for.
+Nearly 2KB — about 15% of the whole budget — for a silent, keyboard-and-mouse-only game.
+
+**Why this works, and why it is a build step rather than something you set in `game.js`.** The engine declares these flags as mutable `let` bindings so their setters can change them at runtime. Closure cannot fold a mutable binding, so it has to keep *both* branches of every `if (glEnable)` — which is why the whole WebGL implementation survives even in a game that never draws with it. The build rewrites a disabled flag to `const false` and empties its setter *before* Closure runs, so the branch becomes provably dead and gets deleted.
+
+That is also why setting `glEnable = false` in your own code does the opposite of what you would hope: it **costs 50 bytes** rather than saving any, because the flag is still mutable and now you have added an assignment. Use the `FEATURES` block instead.
+
+**The flags only affect the built zip.** `npm start` loads `src/` directly with no build step, so the dev page always runs with everything enabled. To develop against the same configuration you ship, call the setter in `gameInit`:
+
+```js
+setGLEnable(false); // matches FEATURES.webgl = false
+```
+
+In the built zip that call compiles to nothing (the setter is empty and the flag is constant), so it costs no bytes — measured at 6908 with `webgl: false`, versus 6913 without the call.
+
+### Removing whole source files
+
+Beyond the flags, you can delete an unused engine file from `sourceFiles` entirely. This is sharper and riskier — nothing checks it, and `--jscomp_off=*` means Closure will not warn you, so if anything still references the file you get a `ReferenceError` at runtime rather than a build error.
+
+Measured at an earlier 7655-byte baseline, so read the savings rather than the absolute sizes:
+
+| Change | Saving |
+|---|---:|
+| Remove `engineMedals.js` | **0** — Closure already strips it |
+| Stop using particles (keep the file) | 853 |
+| ...then also remove `engineParticles.js` | **+0** |
+| Stop using tile layers (keep the file) | 491 |
+| ...then also remove `engineTileLayer.js` | **+72** |
+
+The pattern to take from that: **the saving comes from your game not using the feature, not from deleting the file.** Once Closure can see `ParticleEmitter` is unreachable it removes all of it, and deleting the file afterwards gains nothing. Tile layers are the one exception, leaving a 72 byte residue because `engineObject.js` calls `tileCollisionTest` from inside `if (this.collideTiles)`, which Closure cannot prove unreachable. Recovering those 72 bytes is only safe if nothing enables tile collision — note the starter's own emitter passes `collide = 1`, which sets `collideTiles`, so set that to `0` first.
 
 ### Other places to look
 
