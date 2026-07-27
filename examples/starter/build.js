@@ -27,6 +27,7 @@ const sourceFiles =
 [
     // LittleJS engine files
     `../../src/engineRelease.js`,
+    `../../src/engineMath.js`,
     `../../src/engineUtilities.js`,
     `../../src/engineSettings.js`,
     `../../src/engineObject.js`,
