@@ -1,14 +1,7 @@
 {
-  "name": "littlejsengine",
-  "version": "1.11.8.2",
-  "description": "LittleJS - Tiny and Fast HTML5 Game Engine",
-  "main": "dist/littlejs.esm.js",
-  "types": "dist/littlejs.d.ts",
-  "exports": {
-    "types": "./dist/littlejs.d.ts",
-    "production": "./dist/littlejs.esm.min.js",
-    "default": "./dist/littlejs.esm.js"
-  },
+  "name": "littlejs-js13k",
+  "version": "1.13.1-js13k",
+  "description": "LittleJS - Tiny and Fast HTML5 Game Engine - JS13K Edition",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/KilledByAPixel/LittleJS.git"
@@ -30,7 +23,9 @@
   },
   "homepage": "https://github.com/KilledByAPixel/LittleJS",
   "scripts": {
-    "build": "node src/engineBuild.js"
+    "start": "node serve.js",
+    "build": "node examples/starter/build.js",
+    "build:engine": "node src/engineBuild.js"
   },
   "devDependencies": {
     "ect-bin": "~1.4.1",
