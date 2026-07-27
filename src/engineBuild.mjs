@@ -8,7 +8,12 @@
  * - Output to build folder
  */
 
-'use strict';
+import fs from 'node:fs';
+import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const ENGINE_NAME = 'littlejs';
 const BUILD_FOLDER = 'dist';
@@ -41,12 +46,9 @@ const license = '// LittleJS Engine - MIT License - Copyright 2021 Frank Force\n
 console.log(asciiArt);
 console.log('Choo Choo... Building LittleJS Engine!\n');
 const startTime = Date.now();
-const fs = require('node:fs');
-const path = require('node:path');
-const child_process = require('node:child_process');
 
 // always run relative to the repo root so npm run build:engine works from anywhere
-process.chdir(path.join(__dirname, '..'));
+process.chdir(join(__dirname, '..'));
 
 try
 {
@@ -143,7 +145,7 @@ function closureCompilerStep(filename)
     fs.copyFileSync(filename, filenameTemp);
     try
     {
-        child_process.execSync(`npx google-closure-compiler --js=${filenameTemp} --js_output_file=${filename} --warning_level=VERBOSE --jscomp_off=*`);
+        execSync(`npx google-closure-compiler --js=${filenameTemp} --js_output_file=${filename} --warning_level=VERBOSE --jscomp_off=*`);
         fs.rmSync(filenameTemp);
     }
     catch (e) { handleError(e, 'Failed to run Closure Compiler step!'); }
@@ -154,7 +156,7 @@ function uglifyBuildStep(filename)
 {
     try
     {
-        child_process.execSync(`npx uglifyjs ${filename} -o ${filename}`);
+        execSync(`npx uglifyjs ${filename} -o ${filename}`);
     }
     catch (e) { handleError(e,'Failed to run Uglify minification step!'); }
 };
@@ -165,7 +167,7 @@ function typeScriptBuildStep(filename)
     try
     {
         const tsFilename = `${BUILD_FOLDER}/${ENGINE_NAME}.d.ts`
-        child_process.execSync(`npx tsc ${filename} --declaration --allowJs --emitDeclarationOnly --outFile ${tsFilename}`);
+        execSync(`npx tsc ${filename} --declaration --allowJs --emitDeclarationOnly --outFile ${tsFilename}`);
 
         // Make declare module part use the package name "littlejs-js13k"
         let fileContent = fs.readFileSync(tsFilename, 'utf8');

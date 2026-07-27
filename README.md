@@ -19,7 +19,7 @@ This is a size-optimized fork of the LittleJS engine, designed specifically for 
 It exists so the main line LittleJS engine can keep evolving while this version stays small enough to keep minifying.
 Changes from `main` are ported over selectively: correctness fixes and API renames are taken, features that would cost bytes are not.
 
-**The starter project builds to a 7655 byte zip against the 13312 byte JS13K limit** — about 57% of the budget, leaving roughly 5.6KB for your game — and that includes the whole engine: WebGL rendering, physics, particles, tile layers, sound, medals, and input.
+**The starter project builds to a ~7645 byte zip against the 13312 byte JS13K limit** — about 57% of the budget, leaving roughly 5.6KB for your game — and that includes the whole engine: WebGL rendering, physics, particles, tile layers, sound, medals, and input.
 
 A game written here is meant to port back to regular LittleJS after the compo. See [Migrating to main LittleJS](#-migrating-to-main-littlejs) for exactly what differs.
 
@@ -48,7 +48,7 @@ There is also `npm run build:engine`, which generates the `dist/` bundles (`litt
 
 ## 🔧 How the build works
 
-`examples/starter/build.js` is a standalone Node script with no bundler. It runs these stages in order:
+`examples/starter/build.mjs` is a standalone Node script with no bundler. It runs these stages in order:
 
 | Stage | What it does |
 |---|---|
@@ -62,11 +62,11 @@ There is also `npm run build:engine`, which generates the `dist/` bundles (`litt
 The final readout is the size of that zip:
 
 ```
-game.zip: 7655 / 13312 bytes (57.5%)
-5657 bytes remaining
+game.zip: 7645 / 13312 bytes (57.4%)
+5667 bytes remaining
 ```
 
-Three toggles at the top of `build.js`:
+Three toggles at the top of `build.mjs`:
 
 - `DEBUG_BUILD` — keep the intermediate `.closure.js` and `.uglify.js` files so you can see what each stage produced. Useful when Closure eliminates something you needed.
 - `USE_ROADROLLER` — set to `false` to skip the Roadroller stage. Much faster builds, much bigger output. Handy while iterating.
@@ -78,7 +78,9 @@ Add your own source files to the `sourceFiles` array (after the engine files) an
 
 **Start by not worrying about it.** Closure Compiler in `ADVANCED` mode already deletes every engine function your game never calls, so unused features mostly cost nothing. The numbers below prove that rather than assume it.
 
-All figures are zip bytes from `npm run build`, measured against the unmodified starter at **7655 bytes**. The build is deterministic: four builds of unmodified source all produced exactly 7655 bytes, so the noise floor is 0 and every difference below is real.
+All figures are zip bytes from `npm run build`, measured against an unmodified starter that built to **7655 bytes** at the time of measurement. The current starter builds to ~7645; later changes shifted the baseline slightly but not the savings, so read the **Saving** column rather than the absolute sizes.
+
+Roadroller's optimizer search is not fully deterministic — repeated builds of identical source vary by about 3 bytes. Every saving below is far larger than that, so they are all real, but do not chase a 3 byte "improvement".
 
 | Change | Zip size | Saving |
 |---|---:|---:|
@@ -101,7 +103,7 @@ Read that table as two separate things: how much a *feature* costs your game, an
 
 Rendering falls back to canvas 2D, which is slower and drops additive blending, but it is a big chunk of the budget. It takes three steps:
 
-1. Delete `` `../../src/engineWebGL.js` `` from `sourceFiles` in `build.js`.
+1. Delete `` `../../src/engineWebGL.js` `` from `sourceFiles` in `build.mjs`.
 2. Set `glEnable = false` at the top of `game.js`, before `engineInit`.
 3. In the same place, stub the symbols other engine files still reference unconditionally:
 
@@ -156,6 +158,11 @@ These were historically named differently on this branch. They have all been ren
 | `engineObjectsCollect` | `engineObjectsCollect` | matches (`src/engine.js:411`, `main:427`) — exported in `main`, not exported here. Present and usable here too, just not in `engineExport.js`; the build concatenates all engine sources into one scope, so a game here can call it directly. |
 | `zzfxG` | `zzfxG` | matches (`src/engineAudio.js:395`, `main:362`) — exported in `main`, not exported here; same note as above. |
 | `zzfxR` | `audioDefaultSampleRate` | **renamed in `main`.** A constant (`= 44100`), not a function. Rename it on port. |
+| `oscillate` | `oscillate` | matches, including the `offset` and `type` parameters |
+| `percentLerp`, `lineTest`, `isStringLike` | same | matches |
+| `noise1D`, `noise2D` | same | matches — gradient noise, useful for procedural generation |
+| `readSaveData`, `writeSaveData`, `saveText`, `saveCanvas`, `saveDataURL`, `shareURL` | same | matches |
+| `LOG` | `LOG` | matches — console logging, compiled out of release builds like `ASSERT` |
 
 `getPaused` and `applyAngularAcceleration` were *added* here to match `main` rather than renamed, so they are new either way.
 
@@ -170,6 +177,7 @@ If you are upgrading a game started on an older revision of this branch, apply t
 | `clampSpeedLinear` | `clampSpeed` |
 | `elasticity` | `restitution` |
 | `audioGainNode` | `audioMasterGain` |
+| `wave` | `oscillate` (same waveform for the 3-argument form; gains optional `offset` and `type`) |
 
 ### Absent here, present in main — purely additive
 
@@ -265,7 +273,16 @@ This branch reports `engineVersion` as `1.13.1-js13k`. The `1.13.1` names the Li
 
 That gap is deliberate. This branch does not track mainline release for release; it stays small and selectively takes fixes, renames, and structural changes from upstream when they do not cost bytes. Everything in the migration guide above was verified name by name against 1.18.24, so the porting instructions are current even though the base revision is not.
 
-What has been taken from beyond 1.13.1 so far: the `engineMath.js` / `engineUtilities.js` file split. What has not: the large `engineDraw`, `engineInput`, and `engineWebGL` feature growth, and the plugin system.
+Taken from beyond 1.13.1 so far:
+
+- the `engineMath.js` / `engineUtilities.js` file split, matching mainline's layout
+- `abs`/`min`/`max`/`sign` as aliases rather than wrapper functions
+- gradient noise (`noise1D`, `noise2D`), save/share helpers (`readSaveData`, `writeSaveData`, `saveText`, `saveCanvas`, `saveDataURL`, `shareURL`), and math helpers (`percentLerp`, `lineTest`, `isStringLike`)
+- `wave` renamed to `oscillate` with mainline's body
+- `LOG`, compiled out of release builds
+- ESM build scripts (`build.mjs`, `engineBuild.mjs`)
+
+Not taken: the large `engineDraw`, `engineInput` and `engineWebGL` feature growth, and the plugin system. Everything above was free or near-free — Closure strips any of it a game does not call.
 
 ## 💥 [Live Demo of Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter)
 

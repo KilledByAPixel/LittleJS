@@ -24,8 +24,8 @@
   "homepage": "https://github.com/KilledByAPixel/LittleJS",
   "scripts": {
     "start": "node serve.js",
-    "build": "node examples/starter/build.js",
-    "build:engine": "node src/engineBuild.js"
+    "build": "node examples/starter/build.mjs",
+    "build:engine": "node src/engineBuild.mjs"
   },
   "devDependencies": {
     "ect-bin": "~1.4.1",

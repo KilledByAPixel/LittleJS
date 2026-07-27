@@ -9,7 +9,13 @@
  * - Zips with ect and checks against the JS13K size limit
  */
 
-'use strict';
+import fs from 'node:fs';
+import { execSync, spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
+import ectLocation from 'ect-bin';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const PROGRAM_TITLE = 'LittleJS JS13K Project';
 const PROGRAM_NAME = 'game';
@@ -51,8 +57,6 @@ const dataFiles =
 
 console.log(`Building ${PROGRAM_NAME}...`);
 const startTime = Date.now();
-const fs = require('node:fs');
-const child_process = require('node:child_process');
 
 // always run relative to this script's folder so npm run build works from anywhere
 process.chdir(__dirname);
@@ -116,7 +120,7 @@ function closureCompilerStep(filename)
     fs.copyFileSync(filename, filenameTemp);
     try
     {
-        child_process.execSync(`npx google-closure-compiler --js=${filenameTemp} --js_output_file=${filename} --compilation_level=ADVANCED --warning_level=VERBOSE --jscomp_off=* --assume_function_wrapper`, {stdio: 'inherit'});
+        execSync(`npx google-closure-compiler --js=${filenameTemp} --js_output_file=${filename} --compilation_level=ADVANCED --warning_level=VERBOSE --jscomp_off=* --assume_function_wrapper`, {stdio: 'inherit'});
     }
     catch (e) { handleError(e, 'Closure Compiler step failed!'); }
     if (DEBUG_BUILD)
@@ -129,7 +133,7 @@ function uglifyBuildStep(filename)
     console.log(`Running uglify...`);
     try
     {
-        child_process.execSync(`npx uglifyjs ${filename} -c -m -o ${filename}`, {stdio: 'inherit'});
+        execSync(`npx uglifyjs ${filename} -c -m -o ${filename}`, {stdio: 'inherit'});
     }
     catch (e) { handleError(e, 'Uglify step failed!'); }
     if (DEBUG_BUILD)
@@ -142,7 +146,7 @@ function roadrollerBuildStep(filename)
     const optimize = ROADROLLER_EXTREME ? ' --optimize 2' : '';
     try
     {
-        child_process.execSync(`npx roadroller ${filename} -o ${filename}${optimize}`, {stdio: 'inherit'});
+        execSync(`npx roadroller ${filename} -o ${filename}${optimize}`, {stdio: 'inherit'});
     }
     catch (e) { handleError(e, 'Roadroller step failed!'); }
 };
@@ -174,8 +178,7 @@ function zipBuildStep(filename)
     // run ect zip compressor
     try
     {
-        const ectLocation = require('ect-bin');
-        const result = child_process.spawnSync(ectLocation, args, {stdio: 'inherit', cwd: BUILD_FOLDER});
+        const result = spawnSync(ectLocation, args, {stdio: 'inherit', cwd: BUILD_FOLDER});
         if (result.error || result.status)
             handleError(result.error || `exit code ${result.status}`, 'Zip step failed!');
     }
