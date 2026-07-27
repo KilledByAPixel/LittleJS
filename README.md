@@ -19,7 +19,7 @@ This is a size-optimized fork of the LittleJS engine, designed specifically for 
 It exists so the main line LittleJS engine can keep evolving while this version stays small enough to keep minifying.
 Changes from `main` are ported over selectively: correctness fixes and API renames are taken, features that would cost bytes are not.
 
-**The starter project builds to a ~7645 byte zip against the 13312 byte JS13K limit** — about 57% of the budget, leaving roughly 5.6KB for your game — and that includes the whole engine: WebGL rendering, physics, particles, tile layers, sound, medals, and input.
+**The starter project builds to a ~7649 byte zip against the 13312 byte JS13K limit** — about 57% of the budget, leaving roughly 5.6KB for your game — and that includes the whole engine: WebGL rendering, physics, particles, tile layers, sound, medals, and input.
 
 A game written here is meant to port back to regular LittleJS after the compo. See [Migrating to main LittleJS](#-migrating-to-main-littlejs) for exactly what differs.
 
@@ -63,8 +63,8 @@ There is also `npm run build:engine`, which generates the `dist/` bundles (`litt
 The final readout is the size of that zip:
 
 ```
-game.zip: 7645 / 13312 bytes (57.4%)
-5667 bytes remaining
+game.zip: 7649 / 13312 bytes (57.5%)
+5663 bytes remaining
 ```
 
 Config at the top of `build.mjs` — `FEATURES` is covered under [Saving space](#-saving-space); the other three are:
@@ -79,7 +79,7 @@ Add your own source files to the `sourceFiles` array (after the engine files) an
 
 **Start by not worrying about it.** Closure Compiler in `ADVANCED` mode already deletes every engine function your game never calls, so unused features mostly cost nothing. The numbers below prove that rather than assume it.
 
-All figures are zip bytes from `npm run build`. The starter baseline is ~7645.
+All figures are zip bytes from `npm run build`. The starter baseline is ~7649.
 
 Roadroller's optimizer search is not fully deterministic — repeated builds of identical source vary by about 3 bytes. Every saving below is far larger than that, so they are all real, but do not chase a 3 byte "improvement".
 
@@ -97,11 +97,11 @@ const FEATURES =
 };
 ```
 
-Measured against the unmodified starter, all figures from `npm run build`:
+Measured against the unmodified starter at a 7645 byte baseline, a few bytes below the current one. The savings are what matter and they still hold — `webgl` re-measured at 733 after the baseline moved:
 
 | Disabled | Zip size | Saving |
 |---|---:|---:|
-| *(nothing — baseline)* | 7645 | — |
+| *(nothing — baseline at time of measurement)* | 7645 | — |
 | `touch` | 7491 | 154 |
 | `gamepad` | 7391 | 254 |
 | `touch` + `gamepad` | 7237 | 408 |
@@ -176,6 +176,8 @@ These were historically named differently on this branch. They have all been ren
 | `noise1D`, `noise2D` | same | matches — gradient noise, useful for procedural generation |
 | `readSaveData`, `writeSaveData`, `saveText`, `saveCanvas`, `saveDataURL`, `shareURL` | same | matches |
 | `LOG` | `LOG` | matches — console logging, compiled out of release builds like `ASSERT` |
+| `cameraAngle`, `setCameraAngle` | same | matches — camera rotation, applied in `screenToWorld`, `worldToScreen`, `drawCanvas2D` and the WebGL transform |
+| `isOnScreen`, `screenToWorldDelta`, `worldToScreenDelta` | same | matches |
 
 `getPaused` and `applyAngularAcceleration` were *added* here to match `main` rather than renamed, so they are new either way.
 
@@ -196,7 +198,6 @@ If you are upgrading a game started on an older revision of this branch, apply t
 
 None of these exist on this branch, so a game written here cannot be using them. Porting is a no-op; they simply become available.
 
-- **Camera rotation** — `cameraAngle`, `setCameraAngle`
 - **Pointer lock** — `pointerLockRequest`, `pointerLockExit`, `pointerLockIsActive`
 - **Mouse delta** — `mouseDelta`, `mouseDeltaScreen`
 - **`CanvasLayer`** — in `main`, `TileLayer` extends it; here `TileLayer` extends `EngineObject` directly
@@ -293,6 +294,7 @@ Taken from beyond 1.13.1 so far:
 - `abs`/`min`/`max`/`sign` as aliases rather than wrapper functions
 - gradient noise (`noise1D`, `noise2D`), save/share helpers (`readSaveData`, `writeSaveData`, `saveText`, `saveCanvas`, `saveDataURL`, `shareURL`), and math helpers (`percentLerp`, `lineTest`, `isStringLike`)
 - `wave` renamed to `oscillate` with mainline's body
+- `cameraAngle` camera rotation, plus `isOnScreen`, `screenToWorldDelta` and `worldToScreenDelta`
 - `LOG`, compiled out of release builds
 - ESM build scripts (`build.mjs`, `engineBuild.mjs`)
 
