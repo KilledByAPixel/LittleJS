@@ -153,6 +153,9 @@ These were historically named differently on this branch. They have all been ren
 | `getPaused` | `getPaused` | matches |
 | `applyAngularAcceleration` | `applyAngularAcceleration` | matches |
 | `audioMasterGain` | `audioMasterGain` | matches (internal — not exported on either branch) |
+| `engineObjectsCollect` | `engineObjectsCollect` | matches (`src/engine.js:411`, `main:427`) — exported in `main`, not exported here. Present and usable here too, just not in `engineExport.js`; the build concatenates all engine sources into one scope, so a game here can call it directly. |
+| `zzfxG` | `zzfxG` | matches (`src/engineAudio.js:395`, `main:362`) — exported in `main`, not exported here; same note as above. |
+| `zzfxR` | `zzfxR` | matches — a constant (`= 44100`), not a function; exported in `main`, not exported here. |
 
 `getPaused` and `applyAngularAcceleration` were *added* here to match `main` rather than renamed, so they are new either way.
 
@@ -181,8 +184,6 @@ None of these exist on this branch, so a game written here cannot be using them.
 - **`glDeleteTexture`**, **`glSetTextureData`**, and mipmap filtering for power-of-two textures
 - **All plugins** — `box2d`, `uiSystem`, `postProcess`, `newgrounds`, `drawUtilities`, `zzfxm`
 - **The redirectable draw target** — `main` has `drawCanvas` / `drawContext`; this branch always draws to the main canvas
-- **`engineObjectsCollect`**
-- **`zzfxG`**, **`zzfxR`**
 
 The debug overlay here is also an older one: it does not show FPS or Draw Count. That is dev tooling only — `engineDebug.js` is replaced wholesale by `engineRelease.js` in release builds, so it costs nothing in the zip and has no effect on the shipped game.
 
@@ -242,7 +243,7 @@ new TileLayer(position, size=tileCollisionSize, tileInfo=tile(), scale=vec2(1), 
 new TileCollisionLayer(position, size, tileInfo=tile(), renderOrder=0, useWebGL=glEnable)
 ```
 
-The 4th and 5th positional arguments mean different things: this branch's `scale` (a `Vector2`) lands in `main`'s `renderOrder` slot, and this branch's `renderOrder` (a `Number`) lands in `main`'s `useWebGL` slot — both arguments still type-check (a truthy `Vector2` counts as "enable WebGL"), so nothing throws; the layer just silently gets the wrong render order and scale is lost. Re-check each `TileLayer`/`TileCollisionLayer` call site by hand rather than porting the arguments positionally. Also note `size` has a default here (`tileCollisionSize`), but no default in `main` — `new TileLayer(pos)` works here and throws in `main` if `size` is omitted.
+The 4th and 5th positional arguments mean different things: this branch's `scale` (a `Vector2`) lands in `main`'s `renderOrder` slot, and this branch's `renderOrder` (a `Number`) lands in `main`'s `useWebGL` slot — both arguments still type-check (`renderOrder` defaults to `0`, a falsy value, so `useWebGL` becomes falsy too), so nothing throws; the layer just silently gets the wrong render order, loses its scale, and never creates a WebGL texture for that layer (`main:src/engineTileLayer.js:338`). Re-check each `TileLayer`/`TileCollisionLayer` call site by hand rather than porting the arguments positionally. Also note `size` has a default here (`tileCollisionSize`), but no default in `main` — `new TileLayer(pos)` works here and throws in `main` if `size` is omitted.
 
 Two more TileLayer members do not survive the port:
 
