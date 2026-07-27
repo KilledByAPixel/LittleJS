@@ -31,6 +31,7 @@ const FEATURES =
     touch:   true, // touch input and the on screen touch gamepad
     gamepad: true, // gamepad input
     sound:   true, // all audio
+    physics: true, // object vs object collision, tile collision still works
 };
 
 // feature name -> [engine flag, its setter]
@@ -40,6 +41,7 @@ const FEATURE_FLAGS =
     touch:   ['touchInputEnable', 'setTouchInputEnable'],
     gamepad: ['gamepadsEnable',   'setGamepadsEnable'],
     sound:   ['soundEnable',      'setSoundEnable'],
+    physics: ['enablePhysicsSolver', 'setEnablePhysicsSolver'],
 };
 
 // Set true to keep intermediate .closure.js / .uglify.js files for debugging
@@ -186,7 +188,7 @@ function uglifyBuildStep(filename)
     console.log(`Running uglify...`);
     try
     {
-        execSync(`npx uglifyjs ${filename} -c -m -o ${filename}`, {stdio: 'inherit'});
+        execSync(`npx uglifyjs ${filename} -c -m --toplevel -o ${filename}`, {stdio: 'inherit'});
     }
     catch (e) { handleError(e, 'Uglify step failed!'); }
     if (DEBUG_BUILD)

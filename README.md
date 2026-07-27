@@ -14,7 +14,7 @@ LittleJS is a fast, lightweight, and fully open source HTML5 game engine designe
 
 A size-optimized fork of LittleJS for size coding competitions like [JS13K](https://js13kgames.com/). It exists so the main line engine can keep growing while this version stays small enough to keep minifying.
 
-**The starter builds to a ~7650 byte zip against the 13312 byte limit** — 57% of the budget, with the whole engine included: WebGL rendering, physics, particles, tile layers, sound, medals and input. Turning off features you do not use frees up nearly 2KB more.
+**The starter builds to a ~7735 byte zip against the 13312 byte limit** — 57% of the budget, with the whole engine included: WebGL rendering, physics, particles, tile layers, sound, medals and input. Turning off features you do not use frees up nearly 2KB more.
 
 Games written here are meant to port back to regular LittleJS after the compo — see [Migrating to main LittleJS](#-migrating-to-main-littlejs).
 
@@ -60,7 +60,9 @@ Add your own files to `sourceFiles`, and runtime assets to `dataFiles`.
 
 **Start by not worrying about it.** Closure in `ADVANCED` mode already deletes every engine function your game never calls, so unused features mostly cost nothing.
 
-What it *cannot* delete is code behind a feature flag. The engine declares those as mutable `let` bindings so their setters work, and Closure has to keep both branches of every `if (glEnable)` — which is why the whole WebGL implementation survives in a game that never draws with it. The `FEATURES` block fixes that by rewriting a disabled flag to `const false` and emptying its setter before Closure runs:
+It also folds away flags that default to `false` on its own: it sees the initializer, sees nothing ever writes it, and deletes the block. So `showSplashScreen` and `headlessMode` already cost nothing.
+
+What it *cannot* delete is code behind a flag that defaults to `true`. The engine declares those as mutable `let` bindings so their setters work, and Closure has to keep both branches of every `if (glEnable)` — which is why the whole WebGL implementation survives in a game that never draws with it. The `FEATURES` block fixes that by rewriting a disabled flag to `const false` and emptying its setter before Closure runs:
 
 ```js
 const FEATURES =
@@ -69,6 +71,7 @@ const FEATURES =
     touch:   true, // touch input and the on screen touch gamepad
     gamepad: true, // gamepad input
     sound:   true, // all audio
+    physics: true, // object vs object collision, tile collision still works
 };
 ```
 
@@ -78,9 +81,10 @@ const FEATURES =
 | `gamepad` | 254 |
 | `webgl` | **733** |
 | `sound` | **808** |
-| all four | **1953** |
+| `physics` | **554** |
+| all five | **~2500** |
 
-Nearly 2KB, about 15% of the budget, for a silent keyboard-and-mouse game.
+Around 2.5KB, roughly 19% of the budget, for a silent keyboard-and-mouse game that only needs tile collision.
 
 Two things worth knowing:
 
