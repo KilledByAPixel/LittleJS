@@ -73,7 +73,7 @@ http.createServer((req, res) =>
         res.writeHead(200, {'Content-Type': type, 'Cache-Control': 'no-cache'});
         res.end(data);
     });
-}).listen(PORT, () =>
+}).listen(PORT, '127.0.0.1', () =>
 {
     console.log(`LittleJS dev server running at http://localhost:${PORT}`);
     console.log(`Starter project: http://localhost:${PORT}/examples/starter/`);

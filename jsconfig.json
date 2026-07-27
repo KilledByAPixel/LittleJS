@@ -3,8 +3,7 @@
   },
   "include": [
     "./src/*.js",
-    "./plugins/*.js",
-    "./examples/**/*.js",
+    "./examples/starter/*.js",
   ],
   "exclude": [
   ]

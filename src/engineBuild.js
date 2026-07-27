@@ -41,7 +41,11 @@ console.log(asciiArt);
 console.log('Choo Choo... Building LittleJS Engine!\n');
 const startTime = Date.now();
 const fs = require('node:fs');
+const path = require('node:path');
 const child_process = require('node:child_process');
+
+// always run relative to the repo root so npm run build:engine works from anywhere
+process.chdir(path.join(__dirname, '..'));
 
 try
 {
@@ -162,9 +166,9 @@ function typeScriptBuildStep(filename)
         const tsFilename = `${BUILD_FOLDER}/${ENGINE_NAME}.d.ts`
         child_process.execSync(`npx tsc ${filename} --declaration --allowJs --emitDeclarationOnly --outFile ${tsFilename}`);
 
-        // Make declare module part use the package name "littlejsengine"
+        // Make declare module part use the package name "littlejs-js13k"
         let fileContent = fs.readFileSync(tsFilename, 'utf8');
-        fileContent = fileContent.replace(`${ENGINE_NAME}\.esm`, 'littlejsengine')
+        fileContent = fileContent.replace(`${ENGINE_NAME}\.esm`, 'littlejs-js13k')
         fs.writeFileSync(tsFilename, fileContent);
 
     }

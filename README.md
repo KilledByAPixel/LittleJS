@@ -44,7 +44,7 @@ That produces `examples/starter/game.zip` and prints the size against the 13312 
 
 **Use `npm start` rather than opening `index.html` directly.** Over `file://` the browser treats `tiles.png` as cross-origin, so uploading it as a WebGL texture throws a `SecurityError` and nothing renders. The dev server (`serve.js`) is a dependency-free static file server that exists only to avoid that. Set `PORT` to use a different port.
 
-There is also `npm run build:engine`, which generates the `dist/` bundles (`littlejs.js`, `littlejs.min.js`, ESM builds, and TypeScript definitions). You do not need it to make a game — it is for consuming this branch as a library.
+There is also `npm run build:engine`, which generates the `dist/` bundles (`littlejs.js`, `littlejs.min.js`, ESM builds, and TypeScript definitions). You do not need it to make a game — it produces a standalone `littlejs.js` you can load with a `<script src>` tag (the package has no `main`/`types`/`exports` field, so `dist/` is not resolvable as an npm dependency).
 
 ## 🔧 How the build works
 
@@ -152,6 +152,7 @@ These were historically named differently on this branch. They have all been ren
 | `restitution` | `restitution` | matches |
 | `getPaused` | `getPaused` | matches |
 | `applyAngularAcceleration` | `applyAngularAcceleration` | matches |
+| `audioMasterGain` | `audioMasterGain` | matches (internal — not exported on either branch) |
 
 `getPaused` and `applyAngularAcceleration` were *added* here to match `main` rather than renamed, so they are new either way.
 
@@ -180,6 +181,8 @@ None of these exist on this branch, so a game written here cannot be using them.
 - **`glDeleteTexture`**, **`glSetTextureData`**, and mipmap filtering for power-of-two textures
 - **All plugins** — `box2d`, `uiSystem`, `postProcess`, `newgrounds`, `drawUtilities`, `zzfxm`
 - **The redirectable draw target** — `main` has `drawCanvas` / `drawContext`; this branch always draws to the main canvas
+- **`engineObjectsCollect`**
+- **`zzfxG`**, **`zzfxR`**
 
 The debug overlay here is also an older one: it does not show FPS or Draw Count. That is dev tooling only — `engineDebug.js` is replaced wholesale by `engineRelease.js` in release builds, so it costs nothing in the zip and has no effect on the shipped game.
 
@@ -191,6 +194,7 @@ The debug overlay here is also an older one: it does not show FPS or Draw Count.
 | `medalDisplayIconSize` / `setMedalDisplayIconSize` | Delete. `main` derives the medal icon size from the display height instead of exposing a setting. |
 | `class Music` (built into `engineAudio.js`) | Rename to `ZzFXMusic` and include `plugins/zzfxm.js`. The class body is otherwise identical — same constructor, same `playMusic(volume, loop)`. |
 | `tileInfo.getTextureInfo()` | Becomes the property `tileInfo.textureInfo`. |
+| `isVector2`, `isNumber` | Not removed — they exist in `main`'s `engineUtilities.js` and behave the same, but `main`'s `engineExport.js` does not export them. A module (ESM) consumer needs another way to reach them (e.g. copy the one-line implementation into your own code) instead of importing them from the package. |
 
 ### Tile collision — the one part that is real work
 
@@ -225,6 +229,25 @@ layer.collisionRaycast(posStart, posEnd, object);
 `main` additionally has `tileCollisionGetData` (read a cell across all layers) and `tileCollisionLoad` (build a layer from tilemap data); neither exists here, but both are additive, so nothing needs changing on their account.
 
 To port: create a `TileCollisionLayer` instead of the separate `initTileCollision` + `TileLayer` pair, and move every `setTileCollisionData` / `getTileCollisionData` call onto it. If your game only ever had one collision grid — which is the usual case here, since that is all this branch supports — the conversion is close to mechanical. If you were relying on the grid being global, reachable from anywhere without a reference, you will need to decide who owns the layer object. **This is the one change that cannot be done by find-and-replace, and it is worth doing first when you port.**
+
+**Watch the constructor signature — a positional port corrupts silently instead of failing to compile.** Here:
+
+```js
+new TileLayer(position, size=tileCollisionSize, tileInfo=tile(), scale=vec2(1), renderOrder=0)
+```
+
+`main`'s `TileCollisionLayer`:
+
+```js
+new TileCollisionLayer(position, size, tileInfo=tile(), renderOrder=0, useWebGL=glEnable)
+```
+
+The 4th and 5th positional arguments mean different things: this branch's `scale` (a `Vector2`) lands in `main`'s `renderOrder` slot, and this branch's `renderOrder` (a `Number`) lands in `main`'s `useWebGL` slot — both arguments still type-check (a truthy `Vector2` counts as "enable WebGL"), so nothing throws; the layer just silently gets the wrong render order and scale is lost. Re-check each `TileLayer`/`TileCollisionLayer` call site by hand rather than porting the arguments positionally. Also note `size` has a default here (`tileCollisionSize`), but no default in `main` — `new TileLayer(pos)` works here and throws in `main` if `size` is omitted.
+
+Two more TileLayer members do not survive the port:
+
+- **`layer.isOverlay`** (`src/engineTileLayer.js:191,238,246`) is js13k-only — `main` has no equivalent on `CanvasLayer` or `TileLayer`. A game that sets `layer.isOverlay = true` to draw a foreground layer above all objects loses that behavior silently on port; you will need another way to layer your draws (e.g. `renderOrder`, or drawing to the overlay canvas directly).
+- **`layer.scale`** is stored and used here (it scales the rendered image), but in `main` it is accepted by the constructor and never stored or used again — a dead parameter. A non-unit scale renders correctly here and is silently ignored after porting; setting `layer.scale` after construction is a no-op in `main`.
 
 ### Behavior differences worth knowing
 
