@@ -138,7 +138,7 @@ This is the point of the branch: build during the compo here, then port to regul
 
 ### Renames — nothing to do
 
-These were historically named differently on this branch. They have all been renamed to match `main`, verified against `src/` and against `main`'s definitions:
+These were historically named differently on this branch. They have all been renamed to match `main`, verified name by name against `src/` here and against **LittleJS 1.18.24** upstream:
 
 | This branch | main LittleJS | Notes |
 |---|---|---|
@@ -155,7 +155,7 @@ These were historically named differently on this branch. They have all been ren
 | `audioMasterGain` | `audioMasterGain` | matches (internal — not exported on either branch) |
 | `engineObjectsCollect` | `engineObjectsCollect` | matches (`src/engine.js:411`, `main:427`) — exported in `main`, not exported here. Present and usable here too, just not in `engineExport.js`; the build concatenates all engine sources into one scope, so a game here can call it directly. |
 | `zzfxG` | `zzfxG` | matches (`src/engineAudio.js:395`, `main:362`) — exported in `main`, not exported here; same note as above. |
-| `zzfxR` | `zzfxR` | matches — a constant (`= 44100`), not a function; exported in `main`, not exported here. |
+| `zzfxR` | `audioDefaultSampleRate` | **renamed in `main`.** A constant (`= 44100`), not a function. Rename it on port. |
 
 `getPaused` and `applyAngularAcceleration` were *added* here to match `main` rather than renamed, so they are new either way.
 
@@ -182,7 +182,7 @@ None of these exist on this branch, so a game written here cannot be using them.
 - **`TileInfo.setFullImage`**
 - **`debugScreenshot`**
 - **`glDeleteTexture`**, **`glSetTextureData`**, and mipmap filtering for power-of-two textures
-- **All plugins** — `box2d`, `uiSystem`, `postProcess`, `newgrounds`, `drawUtilities`, `zzfxm`
+- **All plugins** — `box2d`, `uiSystem`, `postProcess`, `newgrounds`, `drawUtilities`, `zzfxm`, `lightSystem`, `pathFinder`, `textureSheet`, `threejs`, `tweenSystem`, `medalSystem`
 - **The redirectable draw target** — `main` has `drawCanvas` / `drawContext`; this branch always draws to the main canvas
 
 The debug overlay here is also an older one: it does not show FPS or Draw Count. That is dev tooling only — `engineDebug.js` is replaced wholesale by `engineRelease.js` in release builds, so it costs nothing in the zip and has no effect on the shipped game.
@@ -194,8 +194,9 @@ The debug overlay here is also an older one: it does not show FPS or Draw Count.
 | `glOverlay` / `setGlOverlay` | Delete. `main` removed the WebGL overlay compositing mode. |
 | `medalDisplayIconSize` / `setMedalDisplayIconSize` | Delete. `main` derives the medal icon size from the display height instead of exposing a setting. |
 | `class Music` (built into `engineAudio.js`) | Rename to `ZzFXMusic` and include `plugins/zzfxm.js`. The class body is otherwise identical — same constructor, same `playMusic(volume, loop)`. |
+| Medals (`src/engineMedals.js`, built into the engine) | Include `plugins/medalSystem.js`. `main` moved the whole medal system out of the engine into a plugin; the API (`medalsInit`, `class Medal`) is the same, it just lives elsewhere. Kept in-engine here because it is cheap and Closure strips it entirely when unused. |
 | `tileInfo.getTextureInfo()` | Becomes the property `tileInfo.textureInfo`. |
-| `isVector2`, `isNumber` | Not removed — they exist in `main`'s `engineUtilities.js` and behave the same, but `main`'s `engineExport.js` does not export them. A module (ESM) consumer needs another way to reach them (e.g. copy the one-line implementation into your own code) instead of importing them from the package. |
+| `isVector2`, `isNumber` | Not removed — they exist in `main`'s `engineMath.js` and behave the same, but `main`'s `engineExport.js` does not export them. A module (ESM) consumer needs another way to reach them (e.g. copy the one-line implementation into your own code) instead of importing them from the package. |
 
 ### Tile collision — the one part that is real work
 
@@ -227,7 +228,7 @@ layer.collisionRaycast(posStart, posEnd, object);
 
 **The free functions `tileCollisionTest` and `tileCollisionRaycast` survive the port unchanged.** `main` keeps both names and only *adds* an optional trailing `solidOnly=true` parameter, so existing call sites still compile and behave the same — they just iterate every registered layer instead of the one global grid. The only nuance is the return value of `tileCollisionTest`: a `Boolean` here, the hit `TileCollisionLayer` (or `undefined`) in `main`. Truthiness tests, which is how it is normally used, are unaffected.
 
-`main` additionally has `tileCollisionGetData` (read a cell across all layers) and `tileCollisionLoad` (build a layer from tilemap data); neither exists here, but both are additive, so nothing needs changing on their account.
+`main` additionally has `tileCollisionGetData` (read a cell across all layers), which does not exist here — but it is additive, so nothing needs changing on its account.
 
 To port: create a `TileCollisionLayer` instead of the separate `initTileCollision` + `TileLayer` pair, and move every `setTileCollisionData` / `getTileCollisionData` call onto it. If your game only ever had one collision grid — which is the usual case here, since that is all this branch supports — the conversion is close to mechanical. If you were relying on the grid being global, reachable from anywhere without a reference, you will need to decide who owns the layer object. **This is the one change that cannot be done by find-and-replace, and it is worth doing first when you port.**
 
@@ -260,7 +261,11 @@ Two more TileLayer members do not survive the port:
 
 ### Version
 
-This branch reports `engineVersion` as `1.13.1-js13k`; it tracks LittleJS `1.13.1`.
+This branch reports `engineVersion` as `1.13.1-js13k`. The `1.13.1` names the LittleJS release its engine source is **derived from**, not the current upstream release — mainline is well ahead (1.18.24 at the time of writing).
+
+That gap is deliberate. This branch does not track mainline release for release; it stays small and selectively takes fixes, renames, and structural changes from upstream when they do not cost bytes. Everything in the migration guide above was verified name by name against 1.18.24, so the porting instructions are current even though the base revision is not.
+
+What has been taken from beyond 1.13.1 so far: the `engineMath.js` / `engineUtilities.js` file split. What has not: the large `engineDraw`, `engineInput`, and `engineWebGL` feature growth, and the plugin system.
 
 ## 💥 [Live Demo of Starter Project](https://killedbyapixel.github.io/LittleJS/examples/starter)
 
