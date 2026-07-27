@@ -146,7 +146,7 @@ These were historically named differently on this branch. They have all been ren
 | `inputClearKey` | `inputClearKey` | matches |
 | `inputPreventDefault` | `inputPreventDefault` | matches, defaults to `true` in both |
 | `setInputPreventDefault` | `setInputPreventDefault` | matches |
-| `mouseEventToScreen` | `mouseEventToScreen` | matches |
+| `mouseEventToScreen` | `mouseEventToScreen` | matches (internal — not exported on either branch) |
 | `setGLEnable` | `setGLEnable` | matches |
 | `clampSpeed` | `clampSpeed` | matches |
 | `restitution` | `restitution` | matches |
@@ -176,7 +176,7 @@ None of these exist on this branch, so a game written here cannot be using them.
 - **Mouse delta** — `mouseDelta`, `mouseDeltaScreen`
 - **`CanvasLayer`** — in `main`, `TileLayer` extends it; here `TileLayer` extends `EngineObject` directly
 - **`TileInfo.setFullImage`**
-- **`debugScreenshot`**, and debug video capture (the `● REC` overlay)
+- **`debugScreenshot`**
 - **`glDeleteTexture`**, **`glSetTextureData`**, and mipmap filtering for power-of-two textures
 - **All plugins** — `box2d`, `uiSystem`, `postProcess`, `newgrounds`, `drawUtilities`, `zzfxm`
 - **The redirectable draw target** — `main` has `drawCanvas` / `drawContext`; this branch always draws to the main canvas
@@ -206,7 +206,7 @@ tileCollisionTest(pos, size, object);
 tileCollisionRaycast(posStart, posEnd, object);
 
 const layer = new TileLayer(pos, size);   // visuals, separate from collision
-layer.setData(pos, data);
+layer.setData(layerPos, data, redraw);    // redraw defaults to false
 layer.redraw();
 ```
 
@@ -220,13 +220,15 @@ layer.collisionTest(pos, size, object);
 layer.collisionRaycast(posStart, posEnd, object);
 ```
 
-`main` also has free functions `tileCollisionTest` / `tileCollisionRaycast` / `tileCollisionGetData` that query every registered layer at once, plus `tileCollisionLoad` for building a layer from tilemap data — none of which exist here.
+**The free functions `tileCollisionTest` and `tileCollisionRaycast` survive the port unchanged.** `main` keeps both names and only *adds* an optional trailing `solidOnly=true` parameter, so existing call sites still compile and behave the same — they just iterate every registered layer instead of the one global grid. The only nuance is the return value of `tileCollisionTest`: a `Boolean` here, the hit `TileCollisionLayer` (or `undefined`) in `main`. Truthiness tests, which is how it is normally used, are unaffected.
+
+`main` additionally has `tileCollisionGetData` (read a cell across all layers) and `tileCollisionLoad` (build a layer from tilemap data); neither exists here, but both are additive, so nothing needs changing on their account.
 
 To port: create a `TileCollisionLayer` instead of the separate `initTileCollision` + `TileLayer` pair, and move every `setTileCollisionData` / `getTileCollisionData` call onto it. If your game only ever had one collision grid — which is the usual case here, since that is all this branch supports — the conversion is close to mechanical. If you were relying on the grid being global, reachable from anywhere without a reference, you will need to decide who owns the layer object. **This is the one change that cannot be done by find-and-replace, and it is worth doing first when you port.**
 
 ### Behavior differences worth knowing
 
-- **Keyboard `preventDefault` is gone.** On older revisions of this branch, setting `preventDefaultInput = true` suppressed the browser's default handling of *keyboard* events. That `preventDefault` call has been removed to match `main`. `inputPreventDefault` (now `true` by default) affects **mousedown only**. If your game relied on the flag to stop arrow keys scrolling the page, call `preventDefault` yourself in your own key handler.
+- **Keyboard `preventDefault` is gone.** On older revisions of this branch, setting `preventDefaultInput = true` suppressed the browser's default handling of *keyboard* events. That `preventDefault` call has been removed to match `main`. What remains is a single mousedown guard, `inputPreventDefault && e.button && e.preventDefault()` — and because `e.button` is `0` for the primary button, the flag only ever suppresses **middle and right clicks**, never a left click and never a key. `main` has the identical line, so this is not a porting difference; it just means the flag does far less than its name suggests. If your game relied on it to stop arrow keys scrolling the page, call `preventDefault` yourself in your own key handler.
 - **Touch events always `preventDefault` here.** `main` guards its touch handler with `if (inputPreventDefault && document.hasFocus())`; this branch only checks `document.hasFocus()`. So `setInputPreventDefault(false)` does not release touch events here, and will start doing so after you port.
 - **ZzFX sounds with an explicit non-zero `attack` will sound very slightly different.** This branch adds a fixed 9-sample ramp (`attack*sampleRate + 9`); `main` uses `attack*sampleRate || 9`, which drops that ramp once you set an attack. The difference is 9 samples, about 0.2 ms at 44.1 kHz — inaudible in practice, but it is a real waveform change. Sounds that leave `attack` at its default of 0 are identical.
 - **`main` has extra ZzFX wave shapes.** Shape 5 (square with duty cycle) and the `shape > 4` shape-curve branch exist only in `main`. Anything you write here will play the same there.

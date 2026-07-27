@@ -13,8 +13,7 @@ const sound_click = new Sound([1,.5]);
 // game variables
 let particleEmitter;
 
-// webgl can be disabled to save even more space
-//glEnable = false;
+// WebGL can be removed to save ~963 bytes - see "Disabling WebGL" in README.md
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
