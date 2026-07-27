@@ -57,7 +57,21 @@ function keyDirection(up='ArrowUp', down='ArrowDown', left='ArrowLeft', right='A
 
 /** Clears all input
  *  @memberof Input */
-function clearInput() { inputData = [[]]; touchGamepadButtons = []; }
+function inputClear() { inputData = [[]]; touchGamepadButtons = []; }
+
+/** Clears an input key state
+ *  @param {String|Number} key
+ *  @param {Number} [device]
+ *  @param {Boolean} [clearDown=true]
+ *  @param {Boolean} [clearPressed=true]
+ *  @param {Boolean} [clearReleased=true]
+ *  @memberof Input */
+function inputClearKey(key, device=0, clearDown=true, clearPressed=true, clearReleased=true)
+{
+    if (!inputData[device])
+        return;
+    inputData[device][key] &= ~((clearDown?1:0)|(clearPressed?2:0)|(clearReleased?4:0));
+}
 
 /** Returns true if mouse button is down
  *  @function
@@ -100,10 +114,15 @@ let mouseWheel = 0;
  *  @memberof Input */
 let isUsingGamepad = false;
 
-/** Prevents input continuing to the default browser handling (false by default)
+/** Prevents input continuing to the default browser handling (true by default)
  *  @type {Boolean}
  *  @memberof Input */
-let preventDefaultInput = false;
+let inputPreventDefault = true;
+
+/** Set to prevent input continuing to the default browser handling
+ *  @param {Boolean} preventDefault
+ *  @memberof Input */
+function setInputPreventDefault(preventDefault) { inputPreventDefault = preventDefault; }
 
 /** Returns true if gamepad button is down
  *  @param {Number} button
@@ -150,7 +169,7 @@ function inputUpdate()
 
     // clear input when lost focus (prevent stuck keys)
     if(!(touchInputEnable && isTouchDevice) && !document.hasFocus())
-        clearInput();
+        inputClear();
 
     // update mouse world space position
     mousePos = screenToWorld(mousePosScreen);
@@ -186,7 +205,6 @@ function inputInit()
             if (inputWASDEmulateDirection)
                 inputData[0][remapKey(e.code)] = 3;
         }
-        preventDefaultInput && e.preventDefault();
     }
 
     onkeyup = (e)=>
@@ -213,16 +231,16 @@ function inputInit()
         if (soundEnable && !headlessMode && audioContext && audioContext.state != 'running')
             audioContext.resume();
         
-        isUsingGamepad = false; 
-        inputData[0][e.button] = 3; 
-        mousePosScreen = mouseToScreen(e); 
-        e.button && e.preventDefault();
+        isUsingGamepad = false;
+        inputData[0][e.button] = 3;
+        mousePosScreen = mouseEventToScreen(e);
+        inputPreventDefault && e.button && e.preventDefault();
     }
     onmouseup     = (e)=> inputData[0][e.button] = inputData[0][e.button] & 2 | 4;
-    onmousemove   = (e)=> mousePosScreen = mouseToScreen(e);
+    onmousemove   = (e)=> mousePosScreen = mouseEventToScreen(e);
     onwheel       = (e)=> mouseWheel = e.ctrlKey ? 0 : sign(e.deltaY);
     oncontextmenu = (e)=> false; // prevent right click menu
-    onblur        = (e) => clearInput(); // reset input when focus is lost
+    onblur        = (e) => inputClear(); // reset input when focus is lost
 
     // init touch input
     if (isTouchDevice && touchInputEnable)
@@ -230,7 +248,7 @@ function inputInit()
 }
 
 // convert a mouse or touch event position to screen space
-function mouseToScreen(mousePos)
+function mouseEventToScreen(mousePos)
 {
     if (!mainCanvas || headlessMode)
         return vec2(); // fix bug that can occur if user clicks before page loads
@@ -394,7 +412,7 @@ function touchInputInit()
         {
             // set event pos and pass it along
             const p = vec2(e.touches[0].clientX, e.touches[0].clientY);
-            mousePosScreen = mouseToScreen(p);
+            mousePosScreen = mouseEventToScreen(p);
             wasTouching ? isUsingGamepad = touchGamepadEnable : inputData[0][button] = 3;
         }
         else if (wasTouching)
@@ -442,7 +460,7 @@ function touchInputInit()
         // check each touch point
         for (const touch of e.touches)
         {
-            const touchPos = mouseToScreen(vec2(touch.clientX, touch.clientY));
+            const touchPos = mouseEventToScreen(vec2(touch.clientX, touch.clientY));
             if (touchPos.distance(stickCenter) < touchGamepadSize)
             {
                 // virtual analog stick
