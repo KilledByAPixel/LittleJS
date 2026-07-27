@@ -14,6 +14,28 @@ stale artifacts (`dist/`, `FAQ.md`, `reference.md`) that describe an API this br
 This branch exists for other people to build JS13K games with. It should be small, correct, and
 obvious to start using.
 
+## Primary Goal: Portability to main LittleJS
+
+Beyond being small and correct, this branch has a specific target: **someone should be able to build
+a game here during the compo, then port it to regular LittleJS afterward with very few changes** —
+few enough that an AI assistant can do the conversion from the documented differences alone.
+
+This goal drives several decisions that would otherwise be judgment calls:
+
+- Where an API name differs from `main` and matching it costs no bytes, match it. Renames are not
+  churn; they are the deliverable.
+- No back-compat aliases. Two names for one thing is the opposite of a clean migration story, and it
+  costs bytes.
+- The README's differences section is written as a **migration guide**, not a trivia table — for each
+  divergence, what it is called here, what it is called in `main`, and what a port requires.
+- It also means users can rely on the regular LittleJS documentation, which is why this branch does
+  not need its own API reference.
+
+The honest exception is tile collision. Everything else on the list is a rename or an absence; the
+flat `tileCollision` array versus `main`'s `TileCollisionLayer` objects is a genuine structural
+difference and the one area where a port takes real work. The migration guide says so plainly rather
+than implying the whole surface is drop-in.
+
 ## Non-Goals
 
 This branch is deliberately not a copy of `main`. `main` has expanded in ways that cost bytes, and
@@ -143,7 +165,8 @@ over `file://` makes `tiles.png` cross-origin, and `gl.texImage2D` on a tainted 
 
 - `dist/` — stale since the last `src/` change; now gitignored and generated on demand
 - `FAQ.md`, `reference.md` — both document `main`'s API, including functions this branch does not
-  have. Wrong documentation is worse than none.
+  have. Wrong documentation is worse than none, and because the API is kept deliberately close to
+  `main`, users are better served by the regular LittleJS docs plus the migration guide.
 
 **Keep:**
 
@@ -171,9 +194,17 @@ New structure:
 4. **How to disable features to save space** — WebGL, particles, medals, tile layers, touch gamepad.
    The current README promises this ("Individual features like WebGL can be disabled to save even
    more space") and documents it nowhere. Each entry lists the actual measured savings.
-5. **Differences from main LittleJS** — an explicit table of what is absent (tile collision layers,
-   plugins, `cameraAngle`, pointer lock) and what is renamed, so anyone following `main`'s docs or
-   tutorial knows where they will diverge
+5. **Migrating to main LittleJS** — the section that carries the portability goal. Points users at
+   the regular LittleJS docs as the API reference, then lists every divergence with what a port
+   requires:
+   - *Renames* — old name, new name, mechanical find-and-replace
+   - *Absent features* — `cameraAngle`, pointer lock, `mouseDelta`, plugins; adding them back is
+     additive, so a game that never used them ports cleanly
+   - *Inline vs plugin* — `Music`/zzfxm lives in `engineAudio.js` here, in a plugin on `main`
+   - *Tile collision* — flagged explicitly as the one structural difference requiring real work,
+     with a sketch of what changes
+   This section is written so an AI assistant handed the game source and this table can do the
+   conversion.
 6. **JS13K games built with it** — existing showcase list, typos fixed
 
 ## Verification
