@@ -19,16 +19,16 @@ let audioContext = new AudioContext;
 /** Master gain node for all audio to pass through
  *  @type {GainNode}
  *  @memberof Audio */
-let audioGainNode;
+let audioMasterGain;
 
 function audioInit()
 {
     if (!soundEnable || headlessMode) return;
-    
+
     // (createGain is more widely supported then GainNode constructor)
-    audioGainNode = audioContext.createGain();
-    audioGainNode.connect(audioContext.destination);
-    audioGainNode.gain.value = soundVolume; // set starting value
+    audioMasterGain = audioContext.createGain();
+    audioMasterGain.connect(audioContext.destination);
+    audioMasterGain.gain.value = soundVolume; // set starting value
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -332,7 +332,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
     // create and connect gain node
     gainNode = gainNode || audioContext.createGain();
     gainNode.gain.value = volume;
-    gainNode.connect(audioGainNode);
+    gainNode.connect(audioMasterGain);
 
     // connect source to stereo panner and gain
     const pannerNode = new StereoPannerNode(audioContext, {'pan':clamp(pan, -1, 1)});

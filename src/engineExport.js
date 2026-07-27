@@ -96,7 +96,7 @@ export {
 	setFontDefault,
 	setShowSplashScreen,
 	setHeadlessMode,
-	setGlEnable,
+	setGLEnable,
 	setGlOverlay,
 	setTileSizeDefault,
 	setTileFixBleedScale,

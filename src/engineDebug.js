@@ -519,11 +519,11 @@ function debugVideoCaptureStart()
         URL.revokeObjectURL(url);
     };
 
-    if (audioGainNode)
+    if (audioMasterGain)
     {
         // connect to audio master gain node
         const audioStreamDestination = audioContext.createMediaStreamDestination();
-        audioGainNode.connect(audioStreamDestination);
+        audioMasterGain.connect(audioStreamDestination);
         for (const track of audioStreamDestination.stream.getAudioTracks())
             stream.addTrack(track); // add audio tracks to capture stream
     }

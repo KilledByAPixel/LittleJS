@@ -325,7 +325,7 @@ function setHeadlessMode(headless) { headlessMode = headless; }
 /** Set if webgl rendering is enabled
  *  @param {Boolean} enable
  *  @memberof Settings */
-function setGlEnable(enable) { glEnable = enable; }
+function setGLEnable(enable) { glEnable = enable; }
 
 /** Set to not composite the WebGL canvas
  *  @param {Boolean} overlay
@@ -443,8 +443,8 @@ function setSoundEnable(enable) { soundEnable = enable; }
 function setSoundVolume(volume)
 {
     soundVolume = volume;
-    if (soundEnable && !headlessMode && audioGainNode)
-        audioGainNode.gain.value = volume; // update gain immediately
+    if (soundEnable && !headlessMode && audioMasterGain)
+        audioMasterGain.gain.value = volume; // update gain immediately
 }
 
 /** Set default range where sound no longer plays
