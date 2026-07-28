@@ -23,6 +23,8 @@ The code is very clean and well documented with many examples to get you started
 
 *The Third Annual LittleJS Game Jam will take place From Oct 2 to Nov 2! Unleash your creativity and develop amazing games using the LittleJS game engine.*
 
+### 😼👍 [LittleJS + JS13k](https://github.com/KilledByAPixel/LittleJS/tree/js13k) - We made a special branch designed for size coding events like JS13k.
+
 <div align='center' markdown='1'>
 
 ## [Demos](https://killedbyapixel.github.io/LittleJS/examples) | [Arcade](https://killedbyapixel.github.io/LittleJSArcade) | [Docs](https://killedbyapixel.github.io/LittleJS/docs) | [FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md) | [Trailer](https://youtu.be/chuBzGjv7Ms) | [Discord](https://discord.gg/zb7hcGkyZe)
