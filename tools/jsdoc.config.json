@@ -1,0 +1,91 @@
+{
+    "plugins": ["plugins/markdown"],
+    "recurseDepth": 10,
+    "source": {
+        "include": ["src", "plugins", "README.md"],
+        "exclude": ["src/engineBuild.mjs"]
+    },
+    "sourceType": "module",
+    "tags": {
+        "allowUnknownTags": true,
+        "dictionaries": ["jsdoc","closure"]
+    },
+    "templates": {
+        "cleverLinks": false,
+        "monospaceLinks": false
+    },
+    "opts": {
+        "encoding": "utf8",
+        "readme": "./README.md",
+        "destination": "./docs/",
+        "recurse": true,
+        "verbose": true,
+        "template": "./node_modules/clean-jsdoc-theme",
+        "theme_opts": {
+            "theme": "dark",
+            "favicon": "./static/favicon.png",
+            "title": "LittleJS - The Tiny JavaScript Game Engine That Can!",
+            "footer": "<a href=https://github.com/KilledByAPixel/LittleJS>LittleJS - MIT License - Copyright 2021 Frank Force</a>",
+            "menu": [
+                {
+                    "title": "GitHub",
+                    "link": "https://github.com/KilledByAPixel/LittleJS",
+                    "target": "_blank"
+                },
+                {
+                    "title": "Examples",
+                    "link": "https://killedbyapixel.github.io/LittleJS/examples/",
+                    "target": "_blank"
+                },
+                {
+                    "title": "FAQ",
+                    "link": "https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md",
+                    "target": "_blank"
+                }
+            ],
+            "meta": [
+                {
+                    "name": "description",
+                    "content": "LittleJS is a lightweight HTML5 game engine with fast WebGL rendering, physics, particles, sound, and more!"
+                },
+                {
+                    "name": "keywords",
+                    "content": "javascript, game engine, html5, webgl, 2d, game development, indie games"
+                },
+                {
+                    "name": "author",
+                    "content": "Frank Force"
+                },
+                {
+                    "property": "og:title",
+                    "content": "LittleJS - The Tiny JavaScript Game Engine"
+                },
+                {
+                    "property": "og:description",
+                    "content": "Lightweight HTML5 game engine with WebGL rendering, physics, and sound"
+                },
+                {
+                    "property": "og:type",
+                    "content": "website"
+                }
+            ],
+            "search": true,
+            "default_theme": "dark",
+            "homepageTitle": "LittleJS Documentation",
+            "base_url": "https://killedbyapixel.github.io/LittleJS/docs/",
+            "sections": [
+                "Classes",
+                "Namespaces"
+            ],
+            "include_date": false,
+            "displayModuleHeader": true,
+            "sort": true,
+            "collapse": false,
+            "outputSourceFiles": true
+        }
+    },
+    "markdown": {
+        "hardwrap": false,
+        "idInHeadings": true
+    }
+}

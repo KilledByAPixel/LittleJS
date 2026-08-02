@@ -38,6 +38,7 @@
   ],
   "scripts": {
     "build": "node src/engineBuild.mjs",
+    "build-docs": "node tools/buildDocs.mjs",
     "test": "node --test --import ./test/setup.mjs \"test/**/*.test.mjs\""
   },
   "engines": {
@@ -45,9 +46,11 @@
   },
   "devDependencies": {
     "bestzip": "^2.2.1",
+    "clean-jsdoc-theme": "~4.2.9",
     "electron": "^38.2.0",
     "electron-packager": "^17.1.2",
     "google-closure-compiler": "~20230502.0.0",
+    "jsdoc": "~4.0.2",
     "roadroller": "~2.1.0",
     "typescript": "~5.1.6",
     "uglify-js": "~3.17.4"
