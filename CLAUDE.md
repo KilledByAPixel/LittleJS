@@ -11,7 +11,7 @@ These instructions are for making changes in the LittleJS repo safely. Optimize 
   - Make changes in `src/` (and `plugins/` when appropriate), then run the build.
 - **Match surrounding style.** Follow the conventions in the files you touch.
 - **Avoid breaking public APIs.** If a change could break users, call it out clearly and offer a compatible alternative.
-- **Keep agent-generated working files under `.claude/`.** `docs/` is the published JSDoc API site — do not write into it. Superpowers plans go in `.claude/superpowers/plans/` and specs in `.claude/superpowers/specs/` (overrides the skill defaults). The `.claude/` folder is gitignored.
+- **Keep agent-generated working files under `.claude/`.** `docs/` is the published JSDoc API site and is fully generated — never hand-edit it, and don't regenerate it unless asked (see Documentation below). Superpowers plans go in `.claude/superpowers/plans/` and specs in `.claude/superpowers/specs/` (overrides the skill defaults). The `.claude/` folder is gitignored.
 
 If anything in this doc conflicts with the actual repo behavior, follow the repo behavior and update this doc.
 
@@ -171,9 +171,21 @@ npm test
 ```
 
 - Tests target `dist/littlejs.esm.js` — rebuild with `npm run build` after changing source.
-- [test/setup.mjs](test/setup.mjs) stubs minimal DOM and enables headless mode. Tests shouldn't call `engineInit`, `render()`, or assume `time` advances.
+- [test/setup.mjs](test/setup.mjs) stubs minimal DOM and enables headless mode. Most tests shouldn't call `engineInit` or `render()`, or assume `time` advances — construct objects directly instead.
+- To test time-driven logic (timers, cooldowns, spawns), call `setEngineManualStep(true)` before `engineInit`, then advance with `engineStep(frames)`. See [test/engineStep.test.mjs](test/engineStep.test.mjs). Call `engineInit` once per file at module scope: `frame` and `time` are module globals and monotonic, and `node --test` gives each test file its own process.
 - Zero test dependencies — uses Node's built-in `node --test`. Match the style in [test/](test/) when adding new ones.
 - CI runs build + test on every push/PR ([.github/workflows/test.yml](.github/workflows/test.yml)).
+
+### Documentation
+```bash
+npm run build-docs
+```
+
+- Generates the JSDoc site into `docs/` from `src/` and `plugins/`, with `README.md` as the homepage. Tooling lives in [tools/](tools/).
+- **This is not part of the normal workflow — do not run it after editing source.** It takes ~17s, rewrites ~100 files, and produces a large diff. The docs do not need to be current on every change. The repo owner asks for it when they want it.
+- It is worth *suggesting* when a major feature or new plugin lands, after a significant rework, or before a release. A plugin that never gets regenerated never appears on the site at all — `textureSheet` and `threejs` were both missing from the published docs for exactly that reason.
+- CI does not run it. `jsdoc` and `clean-jsdoc-theme` are devDependencies.
+- jsdoc exits non-zero on the TypeScript-flavored JSDoc used across the engine (tuples like `[Vector2, Vector2, number]`, predicates like `a is Array<any>`) which it cannot parse but which `dist/littlejs.d.ts` needs for precise types. The script verifies the generated output instead of the exit code — don't "fix" those JSDoc types to silence the errors.
 
 ### Debug features
 - Press `Esc` to toggle debug overlay
