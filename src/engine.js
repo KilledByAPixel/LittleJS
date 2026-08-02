@@ -473,7 +473,7 @@ const engineStepMaxFrames = 36000;
 /** Advance the engine by a number of frames
  *  Requires setEngineManualStep(true) before engineInit
  *  Respects paused exactly as the normal update loop does
- *  @param {number} [frames] - number of fixed updates to advance, max engineStepMaxFrames
+ *  @param {number} [frames] - number of engine update ticks, max 36000, each running one fixed update at timeScale 1
  *  @example
  *  setHeadlessMode(true);
  *  setEngineManualStep(true);
@@ -485,6 +485,9 @@ function engineStep(frames=1)
     ASSERT(engineManualStep,
         'engineStep requires setEngineManualStep(true) before engineInit');
     ASSERT(engineUpdateInternal, 'engineStep requires engineInit to complete');
+    // runtime guard so release builds (where the asserts are stripped) can't
+    // start a second requestAnimationFrame chain or call an undefined update
+    if (!engineManualStep || !engineUpdateInternal) return;
     ASSERT(Number.isInteger(frames) && frames >= 0 && frames <= engineStepMaxFrames,
         'engineStep requires a whole frame count from 0 to ' + engineStepMaxFrames);
     frames = min(frames, engineStepMaxFrames); // release has no asserts, don't freeze

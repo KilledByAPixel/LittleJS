@@ -34,9 +34,11 @@ engineStep(frames=1)  // Advance the engine manually, needs engineManualStep
 
 `headlessMode` disables rendering, audio, and input. `engineManualStep` additionally
 stops the engine driving itself with `requestAnimationFrame`, so it only advances when
-you call `engineStep`. Together they make time-driven game logic deterministic and
-testable — `Timer`, time-based spawns, cooldowns, and physics all advance exactly as
-many frames as you ask for.
+you call `engineStep`. Together they make time-driven game logic deterministic and testable —
+`Timer`, time-based spawns, cooldowns, and physics all advance exactly as many frames as you
+ask for. `engineStep` drives the real update loop, so `timeScale` scales fixed updates per
+step just as it does under `requestAnimationFrame`: at `timeScale = .5`, ten steps run five
+fixed updates. Leave `timeScale` at 1 when you want frame counts to match exactly.
 
 ```javascript
 setHeadlessMode(true);        // no rendering, audio, or input
@@ -46,7 +48,7 @@ await engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPos
 // In manual step mode engineInit runs gameInit but no update frame, so this
 // is where you assert on what initialization produced.
 engineStep();                 // advance exactly one fixed update
-engineStep(600);              // advance 10 seconds of game time at 60fps
+engineStep(600);              // advance 10 seconds of game time at 60fps (timeScale 1)
 
 // engineStep respects paused, exactly as the normal update loop does
 setPaused(true);
@@ -128,7 +130,7 @@ noise1D(x)                            // Smooth 1D value noise (-1 to 1)
 noise2D(x, y)                         // Smooth 2D value noise (-1 to 1)
 fetchJSON(url)                        // Fetch and parse a JSON file (async)
 shareURL(title, url, callback)        // Share a URL via the navigator share API
-readSaveData(saveName, defaultSaveData) // Read game save data from localStorage
+readSaveData(saveName, defaultSaveData) // Read game save data from localStorage, default must be an object
 writeSaveData(saveName, saveData)     // Write game save data to localStorage
 
 // Random functions

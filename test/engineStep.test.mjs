@@ -19,7 +19,7 @@ const near = (a, b, eps=1e-9) => Math.abs(a - b) <= eps;
 // engineManualStep is still false here, so this exercises the
 // "manual step not enabled" assert.
 let preInitThrew = false;
-try { LJS.engineStep(); } catch { preInitThrew = true; }
+try { LJS.engineStep(); } catch (e) { preInitThrew = /Assert failed/.test(e.message); }
 
 let updateCount = 0, updatePostCount = 0;
 LJS.setEngineManualStep(true);
@@ -30,7 +30,7 @@ await LJS.engineInit(
     ()=>{},                      // gameRender
     ()=>{});                     // gameRenderPost
 
-test('engineStep throws before setup is complete', () =>
+test('engineStep throws when manual step is not enabled', () =>
 {
     assert.equal(preInitThrew, true);
 });
