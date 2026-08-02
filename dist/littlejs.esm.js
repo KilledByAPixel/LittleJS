@@ -2688,12 +2688,17 @@ function shareURL(title, url, callback)
 
 /** Read save data from local storage
  *  @param {string} saveName - unique name for the game/save
- *  @param {Object} [defaultSaveData] - default values for save
+ *  @param {Object} [defaultSaveData] - default values, result is {...default, ...loaded} so this must be an object
  *  @return {Object}
  *  @memberof Utilities */
 function readSaveData(saveName, defaultSaveData)
 {
-    ASSERT(isStringLike(saveName), 'loadData requires saveName string');
+    ASSERT(isStringLike(saveName), 'readSaveData requires saveName string');
+    ASSERT(defaultSaveData === undefined ||
+        (typeof defaultSaveData === 'object' && defaultSaveData !== null),
+        'readSaveData: default must be an object - the result is ' +
+        '{...default, ...loaded}, so a scalar default yields {}. ' +
+        'Use readSaveData(key, {best:0}).best');
 
     // tolerate localStorage being unavailable (iOS private mode, sandboxed
     // iframes) and corrupt JSON in stored data
@@ -2717,7 +2722,7 @@ function readSaveData(saveName, defaultSaveData)
  *  @memberof Utilities */
 function writeSaveData(saveName, saveData)
 {
-    ASSERT(isStringLike(saveName), 'saveData requires saveName string');
+    ASSERT(isStringLike(saveName), 'writeSaveData requires saveName string');
     // tolerate localStorage being unavailable or quota exceeded
     try { localStorage[saveName] = JSON.stringify(saveData); }
     catch { LOG('writeSaveData: failed to write', saveName); }

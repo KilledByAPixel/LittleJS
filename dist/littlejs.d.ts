@@ -1087,7 +1087,7 @@ declare module "littlejsengine" {
     export function shareURL(title: string, url: string, callback?: Function): void;
     /** Read save data from local storage
      *  @param {string} saveName - unique name for the game/save
-     *  @param {Object} [defaultSaveData] - default values for save
+     *  @param {Object} [defaultSaveData] - default values, result is {...default, ...loaded} so this must be an object
      *  @return {Object}
      *  @memberof Utilities */
     export function readSaveData(saveName: string, defaultSaveData?: any): any;
