@@ -149,7 +149,7 @@ declare module "littlejsengine" {
     /** Advance the engine by a number of frames
      *  Requires setEngineManualStep(true) before engineInit
      *  Respects paused exactly as the normal update loop does
-     *  @param {number} [frames] - number of fixed updates to advance
+     *  @param {number} [frames] - number of fixed updates to advance, max engineStepMaxFrames
      *  @example
      *  setHeadlessMode(true);
      *  setEngineManualStep(true);

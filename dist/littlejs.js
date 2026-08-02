@@ -469,10 +469,14 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     }
 }
 
+// max frames engineStep can advance in one call, 10 minutes at 60fps
+// large counts block until they finish, so this catches runaway values
+const engineStepMaxFrames = 36000;
+
 /** Advance the engine by a number of frames
  *  Requires setEngineManualStep(true) before engineInit
  *  Respects paused exactly as the normal update loop does
- *  @param {number} [frames] - number of fixed updates to advance
+ *  @param {number} [frames] - number of fixed updates to advance, max engineStepMaxFrames
  *  @example
  *  setHeadlessMode(true);
  *  setEngineManualStep(true);
@@ -484,9 +488,10 @@ function engineStep(frames=1)
     ASSERT(engineManualStep,
         'engineStep requires setEngineManualStep(true) before engineInit');
     ASSERT(engineUpdateInternal, 'engineStep requires engineInit to complete');
-    ASSERT(isNumber(frames) && frames >= 0 && frames === Math.trunc(frames),
-        'engineStep requires a non-negative whole frame count');
-    for (let i = frames; i--;)
+    ASSERT(Number.isInteger(frames) && frames >= 0 && frames <= engineStepMaxFrames,
+        'engineStep requires a whole frame count from 0 to ' + engineStepMaxFrames);
+    frames = min(frames, engineStepMaxFrames); // release has no asserts, don't freeze
+    for (let i = frames; i > 0; --i)
         engineUpdateInternal(frameTimeLastMS + 1e3 / frameRate);
 }
 

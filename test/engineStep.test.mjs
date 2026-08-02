@@ -113,4 +113,6 @@ test('engineStep rejects a non-whole or negative frame count', () =>
     assert.throws(()=> LJS.engineStep(1.5), /Assert failed/);
     assert.throws(()=> LJS.engineStep('3'), /Assert failed/);
     assert.throws(()=> LJS.engineStep(NaN), /Assert failed/);
+    assert.throws(()=> LJS.engineStep(Infinity), /Assert failed/);
+    assert.throws(()=> LJS.engineStep(36001), /Assert failed/);   // engineStepMaxFrames is 36000
 });
