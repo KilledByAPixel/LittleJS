@@ -25,9 +25,9 @@ timeReal              // Real time since start in seconds (keeps running when pa
 timeDelta             // Time between updates (1/60)
 timeScale = 1         // Scales deltaTime applied to the game
 paused                // Is the game paused? (set with setPaused)
-headlessMode = false      // Run without rendering for testing/servers (set before engineInit)
-engineManualStep = false  // Only advance when engineStep is called (set before engineInit)
-engineStep(frames=1)       // Advance the engine manually, needs engineManualStep
+headlessMode = false  // Run without rendering for testing/servers (set before engineInit)
+engineManualStep      // Advance only via engineStep, default false (set before engineInit)
+engineStep(frames=1)  // Advance the engine manually, needs engineManualStep
 ```
 
 ### Headless testing
